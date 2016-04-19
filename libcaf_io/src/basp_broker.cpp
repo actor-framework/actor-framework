@@ -434,7 +434,7 @@ basp_broker::basp_broker(actor_config& cfg)
 }
 
 behavior basp_broker::make_behavior() {
-  CAF_LOG_TRACE("");
+  CAF_LOG_TRACE(CAF_ARG(system().node()));
   if (system().middleman().enable_automatic_connections()) {
     CAF_LOG_INFO("enable automatic connections");
     // open a random port and store a record for our peers how to

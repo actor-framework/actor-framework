@@ -48,7 +48,7 @@ instance::instance(abstract_broker* parent, callee& lstnr)
 connection_state instance::handle(execution_unit* ctx,
                                   new_data_msg& dm, header& hdr,
                                   bool is_payload) {
-  CAF_LOG_TRACE("");
+  CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(hdr) << CAF_ARG(is_payload));
   // function object providing cleanup code on errors
   auto err = [&]() -> connection_state {
     auto cb = make_callback([&](const node_id& nid){
@@ -206,6 +206,7 @@ connection_state instance::handle(execution_unit* ctx,
 }
 
 void instance::handle_heartbeat(execution_unit* ctx) {
+  CAF_LOG_TRACE("");
   for (auto& kvp: tbl_.direct_by_hdl_) {
     CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
     write_heartbeat(ctx, tbl_.parent_->wr_buf(kvp.first), kvp.second);
@@ -234,6 +235,7 @@ void instance::flush(const routing_table::route& path) {
 
 void instance::write(execution_unit* ctx, const routing_table::route& r,
                      header& hdr, payload_writer* writer) {
+  CAF_LOG_TRACE(CAF_ARG(hdr));
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
   write(ctx, r.wr_buf, hdr, writer);
   tbl_.flush(r);
@@ -242,6 +244,8 @@ void instance::write(execution_unit* ctx, const routing_table::route& r,
 void instance::add_published_actor(uint16_t port,
                                    strong_actor_ptr published_actor,
                                    std::set<std::string> published_interface) {
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(published_actor)
+                << CAF_ARG(published_interface));
   using std::swap;
   auto& entry = published_actors_[port];
   swap(entry.first, published_actor);
@@ -251,6 +255,7 @@ void instance::add_published_actor(uint16_t port,
 
 size_t instance::remove_published_actor(uint16_t port,
                                         removed_published_actor* cb) {
+  CAF_LOG_TRACE(CAF_ARG(port));
   auto i = published_actors_.find(port);
   if (i == published_actors_.end())
     return 0;
@@ -263,6 +268,7 @@ size_t instance::remove_published_actor(uint16_t port,
 size_t instance::remove_published_actor(const actor_addr& whom,
                                         uint16_t port,
                                         removed_published_actor* cb) {
+  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   size_t result = 0;
   if (port != 0) {
     auto i = published_actors_.find(port);
@@ -292,7 +298,8 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                         const std::vector<strong_actor_ptr>& forwarding_stack,
                         const strong_actor_ptr& receiver, message_id mid,
                         const message& msg) {
-  CAF_LOG_TRACE("");
+  CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
+                << CAF_ARG(mid) << CAF_ARG(msg));
   CAF_ASSERT(receiver && system().node() != receiver->node());
   auto path = lookup(receiver->node());
   if (! path) {
@@ -321,7 +328,11 @@ void instance::write(execution_unit* ctx,
                      actor_id source_actor,
                      actor_id dest_actor,
                      payload_writer* pw) {
-  if (! pw) {
+  CAF_LOG_TRACE(CAF_ARG(operation)
+                << CAF_ARG(payload_len) << CAF_ARG(operation_data)
+                << CAF_ARG(source_node) << CAF_ARG(dest_node)
+                << CAF_ARG(source_actor) << CAF_ARG(dest_actor));
+  if (!pw) {
     uint32_t zero = 0;
     binary_serializer bs{ctx, std::back_inserter(buf)};
     bs << source_node
@@ -358,6 +369,7 @@ void instance::write(execution_unit* ctx,
 
 void instance::write(execution_unit* ctx, buffer_type& buf,
                      header& hdr, payload_writer* pw) {
+  CAF_LOG_TRACE(CAF_ARG(hdr));
   write(ctx, buf, hdr.operation, &hdr.payload_len, hdr.operation_data,
         hdr.source_node, hdr.dest_node, hdr.source_actor, hdr.dest_actor, pw);
 }
@@ -365,6 +377,7 @@ void instance::write(execution_unit* ctx, buffer_type& buf,
 void instance::write_server_handshake(execution_unit* ctx,
                                       buffer_type& out_buf,
                                       optional<uint16_t> port) {
+  CAF_LOG_TRACE(CAF_ARG(port));
   using namespace detail;
   published_actor* pa = nullptr;
   if (port) {
@@ -372,6 +385,7 @@ void instance::write_server_handshake(execution_unit* ctx,
     if (i != published_actors_.end())
       pa = &i->second;
   }
+  CAF_LOG_DEBUG_IF(! pa && port, "no actor published");
   auto writer = make_callback([&](serializer& sink) {
     if (pa) {
       auto i = pa->first ? pa->first->id() : invalid_actor_id;
@@ -388,6 +402,7 @@ void instance::write_server_handshake(execution_unit* ctx,
 void instance::write_client_handshake(execution_unit* ctx,
                                       buffer_type& buf,
                                       const node_id& remote_side) {
+  CAF_LOG_TRACE(CAF_ARG(remote_side));
   write(ctx, buf, message_type::client_handshake, nullptr, 0,
         this_node_, remote_side, invalid_actor_id, invalid_actor_id);
 }
@@ -399,6 +414,8 @@ void instance::write_dispatch_error(execution_unit* ctx,
                                     error_code ec,
                                     const header& original_hdr,
                                     buffer_type* payload) {
+  CAF_LOG_TRACE(CAF_ARG(source_node) << CAF_ARG(dest_node)
+                << CAF_ARG(ec) << CAF_ARG(original_hdr));
   auto writer = make_callback([&](serializer& sink) {
     sink << original_hdr;
     if (payload)
@@ -416,6 +433,7 @@ void instance::write_kill_proxy_instance(execution_unit* ctx,
                                          const node_id& dest_node,
                                          actor_id aid,
                                          exit_reason rsn) {
+  CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
   header hdr{message_type::kill_proxy_instance, 0, static_cast<uint32_t>(rsn),
              this_node_, dest_node, aid, invalid_actor_id};
   write(ctx, buf, hdr);
@@ -424,6 +442,7 @@ void instance::write_kill_proxy_instance(execution_unit* ctx,
 void instance::write_heartbeat(execution_unit* ctx,
                                buffer_type& buf,
                                const node_id& remote_side) {
+  CAF_LOG_TRACE(CAF_ARG(remote_side));
   write(ctx, buf, message_type::heartbeat, nullptr, 0,
         this_node_, remote_side, invalid_actor_id, invalid_actor_id);
 }

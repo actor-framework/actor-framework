@@ -55,6 +55,7 @@ result<message> skip_unexpected(local_actor*, const type_erased_tuple*) {
 
 result<message> print_and_drop_unexpected(local_actor* self,
                                           const type_erased_tuple* x) {
+  CAF_LOG_WARNING("unexpected message" << CAF_ARG(*x));
   aout(self) << "*** unexpected message [id: " << self->id()
              << ", name: " << self->name() << "]: " << x->stringify()
              << std::endl;
