@@ -51,13 +51,13 @@ class stream_serializer : public serializer {
 public:
   template <class... Ts>
   explicit stream_serializer(actor_system& sys, Ts&&... xs)
-    : serializer{sys},
+    : serializer(sys),
       streambuf_{std::forward<Ts>(xs)...} {
   }
 
   template <class... Ts>
   explicit stream_serializer(execution_unit* ctx, Ts&&... xs)
-    : serializer{ctx},
+    : serializer(ctx),
       streambuf_{std::forward<Ts>(xs)...} {
   }
 
@@ -71,8 +71,8 @@ public:
     >::type
   >
   explicit stream_serializer(S&& sb)
-    : serializer{nullptr},
-      streambuf_{std::forward<S>(sb)} {
+    : serializer(nullptr),
+      streambuf_(std::forward<S>(sb)) {
   }
 
   void begin_object(uint16_t& typenr, std::string& name) override {

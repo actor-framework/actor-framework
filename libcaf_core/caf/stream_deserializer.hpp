@@ -53,14 +53,14 @@ class stream_deserializer : public deserializer {
 public:
   template <class... Ts>
   explicit stream_deserializer(actor_system& sys, Ts&&... xs)
-    : deserializer{sys},
-      streambuf_{std::forward<Ts>(xs)...} {
+    : deserializer(sys),
+      streambuf_(std::forward<Ts>(xs)...) {
   }
 
   template <class... Ts>
   explicit stream_deserializer(execution_unit* ctx, Ts&&... xs)
-    : deserializer{ctx},
-      streambuf_{std::forward<Ts>(xs)...} {
+    : deserializer(ctx),
+      streambuf_(std::forward<Ts>(xs)...) {
   }
 
   template <
@@ -73,8 +73,8 @@ public:
     >::type
   >
   explicit stream_deserializer(S&& sb)
-    : deserializer{nullptr},
-      streambuf_{std::forward<S>(sb)} {
+    : deserializer(nullptr),
+      streambuf_(std::forward<S>(sb)) {
   }
 
   void begin_object(uint16_t& typenr, std::string& name) override {

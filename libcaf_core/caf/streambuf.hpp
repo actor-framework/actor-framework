@@ -114,7 +114,7 @@ protected:
 };
 
 /// A streambuffer abstraction over a contiguous container. It supports
-/// reading in the same style as arraybuf, but is unbounded for output.
+/// reading in the same style as `arraybuf`, but is unbounded for output.
 template <class Container>
 class containerbuf
   : public std::basic_streambuf<
@@ -149,7 +149,7 @@ public:
   // See note in arraybuf(arraybuf&&).
   // TODO: remove after having raised the minimum GCC version to 5.
   containerbuf(containerbuf&& other)
-    : container_{other.container_} {
+    : container_(other.container_) {
     this->setg(other.eback(), other.gptr(), other.egptr());
     other.setg(nullptr, nullptr, nullptr);
   }
