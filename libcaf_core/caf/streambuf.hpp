@@ -54,8 +54,8 @@ public:
       && detail::has_size_member<Container>::value
     >::type
   >
-  arraybuf(Container& c)
-    : arraybuf{const_cast<CharT*>(c.data()), c.size()} {
+  arraybuf(Container& c) : arraybuf(const_cast<CharT*>(c.data()), c.size()) {
+    // nop
   }
 
   /// Constructs an array streambuffer from a raw character sequence.
@@ -140,7 +140,7 @@ public:
       detail::has_data_member<C>::value && detail::has_size_member<C>::value
     >::type
   >
-  containerbuf(Container& c) : container_{c} {
+  containerbuf(Container& c) : container_(c) {
     this->setg(const_cast<char_type*>(c.data()),
                const_cast<char_type*>(c.data()),
                const_cast<char_type*>(c.data()) + c.size());
