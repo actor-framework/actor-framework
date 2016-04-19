@@ -148,6 +148,7 @@ actor_pool::actor_pool(actor_config& cfg)
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
                         const strong_actor_ptr& sender, message_id mid,
                         const message& msg, execution_unit* eu) {
+  CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(msg));
   auto rsn = planned_reason_;
   if (rsn != caf::exit_reason::not_exited) {
     guard.unlock();
@@ -165,9 +166,8 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     workers_.swap(workers);
     planned_reason_ = msg.get_as<exit_msg>(0).reason;
     unique_guard.unlock();
-    for (auto& w : workers) {
+    for (auto& w : workers)
       anon_send(w, msg);
-    }
     quit(eu);
     return true;
   }
@@ -177,9 +177,9 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), workers_.end(), dm.source);
-    if (i != last) {
+    CAF_LOG_DEBUG_IF(i == last, "received down message for an unknown worker");
+    if (i != last)
       workers_.erase(i);
-    }
     if (workers_.empty()) {
       planned_reason_ = exit_reason::out_of_workers;
       unique_guard.unlock();
