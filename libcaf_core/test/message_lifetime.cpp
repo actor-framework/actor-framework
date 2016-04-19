@@ -42,14 +42,8 @@ public:
   }
 
   behavior make_behavior() override {
-    auto f = [](local_actor* self, const type_erased_tuple* x) {
-      auto ptr = dynamic_cast<const detail::message_data*>(x);
-      CAF_REQUIRE(ptr);
-      CAF_CHECK_EQUAL(ptr->get_reference_count(), 2u);
-      self->quit();
-      return message::from(x);
-    };
-    set_unexpected_handler(f);
+    // reflecting a message increases its reference count by one
+    set_unexpected_handler(reflect_unexpected_and_quit);
     return {
       [] {
         // nop
@@ -67,31 +61,30 @@ public:
     // nop
   }
 
-  behavior make_behavior() override;
+  behavior make_behavior() override {
+    monitor(aut_);
+    send(aut_, msg_);
+    return {
+      [=](int a, int b, int c) {
+        CAF_CHECK_EQUAL(a, 1);
+        CAF_CHECK_EQUAL(b, 2);
+        CAF_CHECK_EQUAL(c, 3);
+        CAF_CHECK_GREATER(current_message().cvals()->get_reference_count(), 1u);
+        CAF_CHECK_EQUAL(current_message().cvals().get(), msg_.cvals().get());
+      },
+      [=](const down_msg& dm) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+        CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 1u);
+        CAF_CHECK_EQUAL(dm.source, aut_.address());
+        quit();
+      }
+    };
+  }
+
 private:
   actor aut_;
   message msg_;
 };
-
-behavior tester::make_behavior() {
-  monitor(aut_);
-  send(aut_, msg_);
-  return {
-    [=](int a, int b, int c) {
-      CAF_CHECK_EQUAL(a, 1);
-      CAF_CHECK_EQUAL(b, 2);
-      CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2u);
-      CAF_CHECK_EQUAL(current_message().cvals().get(), msg_.cvals().get());
-    },
-    [=](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 1u);
-      CAF_CHECK_EQUAL(dm.source, aut_.address());
-      quit();
-    }
-  };
-}
 
 struct fixture {
   actor_system system;
@@ -118,7 +111,6 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
       CAF_CHECK_EQUAL(b, 2);
       CAF_CHECK_EQUAL(c, 3);
       CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
-      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 2u);
       CAF_CHECK_EQUAL(self->current_message().cvals().get(), msg.cvals().get());
     }
   );
@@ -128,7 +120,8 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
   self->receive(
     [&](int& value) {
       CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
-      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 1u);
+      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(),
+                      1u);
       CAF_CHECK_NOT_EQUAL(self->current_message().cvals().get(),
                           msg.cvals().get());
       value = 10;
