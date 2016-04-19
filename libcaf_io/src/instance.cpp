@@ -19,6 +19,7 @@
 
 #include "caf/io/basp/instance.hpp"
 
+#include "caf/streambuf.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 
@@ -65,7 +66,7 @@ connection_state instance::handle(execution_unit* ctx,
       return err();
     }
   } else {
-    binary_deserializer bd{ctx, dm.buf.data(), dm.buf.size()};
+    binary_deserializer bd{ctx, dm.buf};
     bd >> hdr;
     CAF_LOG_DEBUG(CAF_ARG(hdr));
     if (! valid(hdr)) {
@@ -81,7 +82,7 @@ connection_state instance::handle(execution_unit* ctx,
       && hdr.dest_node != this_node_) {
     auto path = lookup(hdr.dest_node);
     if (path) {
-      binary_serializer bs{ctx, std::back_inserter(path->wr_buf)};
+      binary_serializer bs{ctx, path->wr_buf};
       bs << hdr;
       if (payload)
         bs.apply_raw(payload->size(), payload->data());
@@ -119,7 +120,7 @@ connection_state instance::handle(execution_unit* ctx,
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
       if (payload_valid()) {
-        binary_deserializer bd{ctx, payload->data(), payload->size()};
+        binary_deserializer bd{ctx, *payload};
         bd >> aid >> sigs;
       }
       // close self connection after handshake is done
@@ -176,7 +177,7 @@ connection_state instance::handle(execution_unit* ctx,
           && tbl_.lookup_direct(hdr.source_node) == invalid_connection_handle
           && tbl_.add_indirect(last_hop, hdr.source_node))
         callee_.learned_new_node_indirectly(hdr.source_node);
-      binary_deserializer bd{ctx, payload->data(), payload->size()};
+      binary_deserializer bd{ctx, *payload};
       std::vector<strong_actor_ptr> forwarding_stack;
       message msg;
       bd >> forwarding_stack >> msg;
@@ -334,7 +335,7 @@ void instance::write(execution_unit* ctx,
                 << CAF_ARG(source_actor) << CAF_ARG(dest_actor));
   if (!pw) {
     uint32_t zero = 0;
-    binary_serializer bs{ctx, std::back_inserter(buf)};
+    binary_serializer bs{ctx, buf};
     bs << source_node
        << dest_node
        << source_actor
@@ -344,16 +345,16 @@ void instance::write(execution_unit* ctx,
        << operation_data;
   } else {
     // reserve space in the buffer to write the payload later on
-    auto wr_pos = static_cast<ptrdiff_t>(buf.size());
+    auto wr_pos = buf.size();
     char placeholder[basp::header_size];
     buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
     auto pl_pos = buf.size();
     { // lifetime scope of first serializer (write payload)
-      binary_serializer bs{ctx, std::back_inserter(buf)};
+      binary_serializer bs{ctx, buf};
       (*pw)(bs);
     }
     // write broker message to the reserved space
-    binary_serializer bs2{ctx, buf.begin() + wr_pos};
+    stream_serializer<charbuf> bs2{ctx, buf.data() + wr_pos, pl_pos - wr_pos};
     auto plen = static_cast<uint32_t>(buf.size() - pl_pos);
     bs2 << source_node
         << dest_node

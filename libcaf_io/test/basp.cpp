@@ -140,7 +140,7 @@ public:
 
   uint32_t serialized_size(const message& msg) {
     buffer buf;
-    binary_serializer bs{mpx_, back_inserter(buf)};
+    binary_serializer bs{mpx_, buf};
     bs << msg;
     return static_cast<uint32_t>(buf.size());
   }
@@ -233,7 +233,7 @@ public:
 
   template <class... Ts>
   void to_payload(buffer& buf, const Ts&... xs) {
-    binary_serializer bs{mpx_, std::back_inserter(buf)};
+    binary_serializer bs{mpx_, buf};
     to_payload(bs, xs...);
   }
 
@@ -254,7 +254,7 @@ public:
 
   std::pair<basp::header, buffer> from_buf(const buffer& buf) {
     basp::header hdr;
-    binary_deserializer bd{mpx_, buf.data(), buf.size()};
+    binary_deserializer bd{mpx_, buf};
     bd >> hdr;
     buffer payload;
     if (hdr.payload_len > 0) {
@@ -327,7 +327,7 @@ public:
     std::tie(hdr, buf) = read_from_out_buf(hdl);
     CAF_MESSAGE("dispatch output buffer for connection " << hdl.id());
     CAF_REQUIRE(hdr.operation == basp::message_type::dispatch_message);
-    binary_deserializer source{mpx_, buf.data(), buf.size()};
+    binary_deserializer source{mpx_, buf};
     std::vector<strong_actor_ptr> stages;
     message msg;
     source >> stages >> msg;
@@ -372,7 +372,7 @@ public:
       CAF_MESSAGE("output buffer has " << ob.size() << " bytes");
       basp::header hdr;
       { // lifetime scope of source
-        binary_deserializer source{this_->mpx(), ob.data(), ob.size()};
+        binary_deserializer source{this_->mpx(), ob};
         source >> hdr;
       }
       buffer payload;

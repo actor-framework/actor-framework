@@ -39,6 +39,7 @@
 #include "caf/duration.hpp"
 #include "caf/exception.hpp"
 #include "caf/resumable.hpp"
+#include "caf/streambuf.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_pool.hpp"
 #include "caf/attachable.hpp"

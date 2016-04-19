@@ -254,7 +254,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           return;
         }
         std::vector<char> buf;
-        binary_serializer bs{self->context(), std::back_inserter(buf)};
+        binary_serializer bs{std::back_inserter(buf), self->context()};
         self->save_state(bs, 0);
         auto sender = node.sender;
         // request(...)
@@ -300,7 +300,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
           self->bhvr_stack().pop_back();
           self->is_migrated_from(false);
         }
-        binary_deserializer bd{self->context(), buf.data(), buf.size()};
+        binary_deserializer bd{buf.data(), buf.size(), self->context()};
         self->load_state(bd, 0);
         node.sender->enqueue(
           mailbox_element::make_joint(self->address(), node.mid.response_id(),

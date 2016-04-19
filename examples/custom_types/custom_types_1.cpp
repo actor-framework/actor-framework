@@ -8,8 +8,6 @@
 #include <iostream>
 
 #include "caf/all.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/binary_deserializer.hpp"
 
 using std::cout;
 using std::cerr;
