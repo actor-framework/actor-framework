@@ -141,7 +141,7 @@ std::atomic<uint8_t> system_id;
 } // <anonymous>
 
 // initializes singleton
-node_id::data* node_id::data::create_singleton() {
+intrusive_ptr<node_id::data> node_id::data::create_singleton() {
   CAF_LOG_TRACE("");
   auto ifs = detail::get_mac_addresses();
   std::vector<std::string> macs;
@@ -157,7 +157,9 @@ node_id::data* node_id::data::create_singleton() {
   // by overriding the last byte in the node ID with the actor system "ID"
   nid.back() = system_id.fetch_add(1);
   // note: pointer has a ref count of 1 -> implicitly held by detail::singletons
-  return new node_id::data(detail::get_process_id(), nid);
+  intrusive_ptr<data> result;
+  result.reset(new node_id::data(detail::get_process_id(), nid), false);
+  return result;
 }
 
 uint32_t node_id::process_id() const {

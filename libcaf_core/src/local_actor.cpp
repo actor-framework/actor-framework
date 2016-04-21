@@ -99,6 +99,7 @@ local_actor::local_actor(int init_flags)
 }
 
 local_actor::~local_actor() {
+  CAF_LOG_TRACE(CAF_ARG(planned_exit_reason()));
   if (planned_exit_reason() == exit_reason::not_exited)
     cleanup(exit_reason::unreachable, nullptr);
 }

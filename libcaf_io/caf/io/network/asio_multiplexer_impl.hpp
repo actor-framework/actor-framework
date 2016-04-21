@@ -300,6 +300,7 @@ void asio_multiplexer::exec_later(resumable* rptr) {
             exec_later(ptr.get());
             break;
           case resumable::done:
+          case resumable::awaiting_message:
             intrusive_ptr_release(ptr.get());
             break;
           default:

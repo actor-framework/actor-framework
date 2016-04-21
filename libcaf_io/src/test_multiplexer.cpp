@@ -33,7 +33,9 @@ test_multiplexer::test_multiplexer(actor_system* sys) : multiplexer(sys) {
 }
 
 test_multiplexer::~test_multiplexer() {
-  // nop
+  // get rid of extra ref count
+  for (auto& ptr : resumables_)
+    intrusive_ptr_release(ptr.get());
 }
 
 connection_handle
@@ -393,6 +395,7 @@ void test_multiplexer::exec(resumable_ptr& ptr) {
       exec_later(ptr.get());
       break;
     case resumable::done:
+    case resumable::awaiting_message:
       intrusive_ptr_release(ptr.get());
       break;
     default:

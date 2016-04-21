@@ -44,9 +44,7 @@ public:
   void set_parent(abstract_broker* ptr);
 
   /// Returns the parent broker of this manager.
-  inline abstract_broker* parent() {
-    return parent_;
-  }
+  abstract_broker* parent();
 
   /// Returns `true` if this manager has a parent, `false` otherwise.
   inline bool detached() const {
@@ -78,7 +76,7 @@ protected:
   virtual void detach_from(abstract_broker* ptr) = 0;
 
 private:
-  abstract_broker* parent_;
+  strong_actor_ptr parent_;
 };
 
 } // namespace network

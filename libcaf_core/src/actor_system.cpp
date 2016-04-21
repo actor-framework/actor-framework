@@ -131,6 +131,7 @@ actor_system::actor_system(actor_system_config&& cfg)
   for (auto& mod : modules_)
     if (mod)
       mod->start();
+  groups_.start();
   // store config parameters in ConfigServ
   auto cs = actor_cast<actor>(registry_.get(atom("ConfigServ")));
   anon_send(cs, put_atom::value, "middleman.enable-automatic-connections",
@@ -140,6 +141,7 @@ actor_system::actor_system(actor_system_config&& cfg)
 actor_system::~actor_system() {
   if (await_actors_before_shutdown_)
     await_all_actors_done();
+  groups_.stop();
   // stop modules in reverse order
   for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)
     if (*i)

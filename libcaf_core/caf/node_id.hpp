@@ -115,7 +115,7 @@ public:
       // nop
     }
 
-    static data* create_singleton();
+    static intrusive_ptr<data> create_singleton();
 
     int compare(const node_id& other) const;
 

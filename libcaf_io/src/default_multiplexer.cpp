@@ -978,16 +978,17 @@ void pipe_reader::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
   switch (op) {
     case operation::read: {
-      auto cb = try_read_next();
+    auto cb = try_read_next();
       switch (cb->resume(&backend(), backend().max_throughput())) {
         case resumable::resume_later:
           backend().exec_later(cb);
           break;
         case resumable::done:
+        case resumable::awaiting_message:
           intrusive_ptr_release(cb);
           break;
         default:
-          ; // ignored
+          break; // ignored
       }
       break;
     }

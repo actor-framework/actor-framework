@@ -27,7 +27,7 @@ namespace caf {
 namespace io {
 namespace network {
 
-manager::manager(abstract_broker* ptr) : parent_(ptr) {
+manager::manager(abstract_broker* ptr) : parent_(ptr->ctrl()) {
   // nop
 }
 
@@ -37,7 +37,11 @@ manager::~manager() {
 
 void manager::set_parent(abstract_broker* ptr) {
   if (! detached())
-    parent_ = ptr;
+    parent_ = ptr ? ptr->ctrl() : nullptr;
+}
+
+abstract_broker* manager::parent() {
+  return parent_ ? static_cast<abstract_broker*>(parent_->get()) : nullptr;
 }
 
 void manager::detach(execution_unit* ctx, bool invoke_disconnect_message) {

@@ -42,41 +42,19 @@ void abstract_broker::enqueue(strong_actor_ptr src, message_id mid,
 
 void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_PUSH_AID(id());
-  CAF_LOG_TRACE("enqueue " << CAF_ARG(ptr->msg));
-  auto mid = ptr->mid;
-  auto sender = ptr->sender;
-  switch (mailbox().enqueue(ptr.release())) {
-    case detail::enqueue_result::unblocked_reader: {
-      // re-schedule broker
-      CAF_LOG_DEBUG("unblocked_reader");
-      backend().exec_later(this);
-      break;
-    }
-    case detail::enqueue_result::queue_closed: {
-      CAF_LOG_DEBUG("queue_closed");
-      if (mid.is_request()) {
-        detail::sync_request_bouncer f{exit_reason()};
-        f(sender, mid);
-      }
-      break;
-    }
-    case detail::enqueue_result::success:
-      // enqueued to a running actors' mailbox; nothing to do
-      CAF_LOG_DEBUG("success");
-      break;
-  }
+  local_actor::enqueue(std::move(ptr), &backend());
 }
 
 void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
   // add implicit reference count held by middleman/multiplexer
-  intrusive_ptr_add_ref(ctrl());
   is_registered(! is_hidden);
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE("init and launch broker:" << CAF_ARG(id()));
   if (is_lazy && mailbox().try_block())
     return;
+  intrusive_ptr_add_ref(ctrl());
   eu->exec_later(this);
 }
 

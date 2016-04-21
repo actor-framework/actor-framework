@@ -301,7 +301,6 @@ void middleman::stop() {
         ptr->context(&backend());
         ptr->planned_exit_reason(exit_reason::normal);
         ptr->finished();
-        //intrusive_ptr_release(ptr);
       }
     }
   });
