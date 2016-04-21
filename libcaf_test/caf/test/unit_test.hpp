@@ -305,6 +305,8 @@ public:
 
   static std::vector<std::string> available_suites();
 
+  static std::vector<std::string> available_tests(const std::string& suite);
+
 private:
   engine() = default;
 

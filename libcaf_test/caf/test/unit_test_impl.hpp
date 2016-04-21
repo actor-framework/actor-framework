@@ -514,9 +514,18 @@ test* engine::current_test() {
 
 std::vector<std::string> engine::available_suites() {
   std::vector<std::string> result;
-  for (auto& kvp : instance().suites_) {
+  for (auto& kvp : instance().suites_)
     result.push_back(kvp.first);
-  }
+  return result;
+}
+
+std::vector<std::string> engine::available_tests(const std::string& suite) {
+  std::vector<std::string> result;
+  auto i = instance().suites_.find(suite);
+  if (i == instance().suites_.end())
+    return result;
+  for (auto& ptr : i->second)
+    result.push_back(ptr->name());
   return result;
 }
 
@@ -546,6 +555,7 @@ int main(int argc, char** argv) {
   std::string not_suites;
   std::string tests = ".*";
   std::string not_tests;
+  std::string suite_query;
   // use all arguments after '--' for the test engine.
   std::string delimiter = "--";
   auto divider = argc;
@@ -570,17 +580,23 @@ int main(int argc, char** argv) {
     {"not-suites,S", "exclude suites", not_suites},
     {"tests,t", "set tests", tests},
     {"not-tests,T", "exclude tests", not_tests},
-    {"available-suites,a", "print available suites"}
+    {"available-suites,a", "print available suites"},
+    {"available-tests,A", "print available tests for given suite", suite_query}
   });
   if (res.opts.count("help") > 0) {
     std::cout << res.helptext << std::endl;
     return 0;
   }
+  if (! suite_query.empty()) {
+    std::cout << "available tests in suite " << suite_query << ":" << std::endl;
+    for (auto& t : engine::available_tests(suite_query))
+      std::cout << "  - " << t << std::endl;
+    return 0;
+  }
   if (res.opts.count("available-suites") > 0) {
     std::cout << "available suites:" << std::endl;
-    for (auto& s : engine::available_suites()) {
+    for (auto& s : engine::available_suites())
       std::cout << "  - " << s << std::endl;
-    }
     return 0;
   }
   if (! res.remainder.empty()) {
