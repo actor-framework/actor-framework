@@ -75,7 +75,6 @@ protected:
   /// Detaches this manager from `ptr`.
   virtual void detach_from(abstract_broker* ptr) = 0;
 
-private:
   strong_actor_ptr parent_;
 };
 

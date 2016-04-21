@@ -47,6 +47,9 @@ void scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
     // further activities for the broker
     return;
   }
+  // keep a strong reference to our parent until we leave scope
+  // to avoid UB when becoming detached during invocation
+  auto guard = parent_;
   auto& buf = rd_buf();
   CAF_ASSERT(buf.size() >= num_bytes);
   // make sure size is correct, swap into message, and then call client
