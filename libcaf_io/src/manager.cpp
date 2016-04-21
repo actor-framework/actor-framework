@@ -48,13 +48,15 @@ void manager::detach(execution_unit* ctx, bool invoke_disconnect_message) {
   CAF_LOG_TRACE("");
   if (! detached()) {
     CAF_LOG_DEBUG("disconnect servant from broker");
-    auto ptr = parent();
-    set_parent(nullptr);
-    detach_from(ptr);
+    auto raw_ptr = parent();
+    // keep the strong reference until we go out of scope
+    strong_actor_ptr ptr;
+    ptr.swap(parent_);
+    detach_from(raw_ptr);
     if (invoke_disconnect_message) {
       auto mptr = mailbox_element::make(nullptr, invalid_message_id,
                                         {}, detach_message());
-      ptr->exec_single_event(ctx, mptr);
+      raw_ptr->exec_single_event(ctx, mptr);
     }
   }
 }
