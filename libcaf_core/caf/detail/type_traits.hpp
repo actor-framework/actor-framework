@@ -25,6 +25,7 @@
 #include <utility>
 #include <functional>
 #include <type_traits>
+#include <vector>
 
 #include "caf/fwd.hpp"
 
@@ -209,7 +210,7 @@ public:
                   std::is_same<bool, result_type>::value;
 };
 
-/// Checks wheter `T` has `begin()` and `end()` member
+/// Checks whether `T` has `begin()` and `end()` member
 /// functions returning forward iterators.
 template <class T>
 class is_iterable {
@@ -241,8 +242,21 @@ public:
                   std::is_same<bool, result_type>::value;
 };
 
-template<class T>
+template <class T>
 constexpr bool is_iterable<T>::value;
+
+/// Checks whether T is a contiguous sequence of byte.
+template <class T>
+struct is_byte_sequence : std::false_type { };
+
+template <>
+struct is_byte_sequence<std::vector<char>> : std::true_type { };
+
+template <>
+struct is_byte_sequence<std::vector<unsigned char>> : std::true_type { };
+
+template <>
+struct is_byte_sequence<std::string> : std::true_type { };
 
 /// Checks whether `T` is an `std::tuple` or `std::pair`.
 template <class T>

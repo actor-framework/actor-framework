@@ -184,7 +184,9 @@ public:
 
   // Applies this processor as Derived to `xs` in saving mode.
   template <class D, class T>
-  static typename std::enable_if<D::is_saving::value>::type
+  static typename std::enable_if<
+    D::is_saving::value && ! detail::is_byte_sequence<T>::value
+  >::type
   apply_sequence(D& self, T& xs) {
     auto s = xs.size();
     self.begin_sequence(s);
@@ -196,7 +198,9 @@ public:
 
   // Applies this processor as Derived to `xs` in loading mode.
   template <class D, class T>
-  static typename std::enable_if<! D::is_saving::value>::type
+  static typename std::enable_if<
+    ! D::is_saving::value && ! detail::is_byte_sequence<T>::value
+  >::type
   apply_sequence(D& self, T& xs) {
     size_t num_elements;
     self.begin_sequence(num_elements);
@@ -206,6 +210,31 @@ public:
       self.apply(x);
       *insert_iter++ = std::move(x);
     }
+    self.end_sequence();
+  }
+
+  // Optimized saving for contiguous byte sequences.
+  template <class D, class T>
+  static typename std::enable_if<
+    D::is_saving::value && detail::is_byte_sequence<T>::value
+  >::type
+  apply_sequence(D& self, T& xs) {
+    auto s = xs.size();
+    self.begin_sequence(s);
+    self.apply_raw(xs.size(), &xs[0]);
+    self.end_sequence();
+  }
+
+  // Optimized loading for contiguous byte sequences.
+  template <class D, class T>
+  static typename std::enable_if<
+    ! D::is_saving::value && detail::is_byte_sequence<T>::value
+  >::type
+  apply_sequence(D& self, T& xs) {
+    size_t num_elements;
+    self.begin_sequence(num_elements);
+    xs.resize(num_elements);
+    self.apply_raw(xs.size(), &xs[0]);
     self.end_sequence();
   }
 

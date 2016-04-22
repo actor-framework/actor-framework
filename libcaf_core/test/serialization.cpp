@@ -437,4 +437,18 @@ CAF_TEST(streambuf_serialization) {
   CAF_CHECK(data == target);
 }
 
+CAF_TEST(byte_sequence_optimization) {
+  std::vector<char> data(42);
+  std::fill(data.begin(), data.end(), 'a');
+  std::vector<char> buf;
+  stream_serializer<vectorbuf> bs{vectorbuf{buf}};
+  bs << data;
+  data.clear();
+  stream_deserializer<charbuf> bd{charbuf{buf}};
+  bd >> data;
+  CAF_CHECK_EQUAL(data.size(), 42u);
+  CAF_CHECK(std::all_of(data.begin(), data.end(),
+                        [](char c) { return c == 'a'; }));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
