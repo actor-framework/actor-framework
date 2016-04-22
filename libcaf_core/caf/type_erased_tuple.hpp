@@ -108,7 +108,6 @@ public:
   }
 };
 
-
 /// @relates type_erased_tuple
 template <class Processor>
 typename std::enable_if<Processor::is_saving::value>::type

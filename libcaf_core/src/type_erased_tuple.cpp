@@ -21,6 +21,8 @@
 
 #include "caf/config.hpp"
 
+#include "caf/detail/dynamic_message_data.hpp"
+
 namespace caf {
 
 type_erased_tuple::~type_erased_tuple() {

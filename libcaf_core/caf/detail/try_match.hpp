@@ -38,12 +38,14 @@ struct meta_element {
   atom_value v;
   uint16_t typenr;
   const std::type_info* type;
-  bool (*fun)(const meta_element&, const message&, size_t, void**);
+  bool (*fun)(const meta_element&, const type_erased_tuple*, size_t, void**);
 };
 
-bool match_element(const meta_element&, const message&, size_t, void**);
+bool match_element(const meta_element&, const type_erased_tuple*,
+                   size_t, void**);
 
-bool match_atom_constant(const meta_element&, const message&, size_t, void**);
+bool match_atom_constant(const meta_element&, const type_erased_tuple*,
+                         size_t, void**);
 
 template <class T, uint16_t TN = detail::type_nr<T>::value>
 struct meta_element_factory {
@@ -78,7 +80,7 @@ struct meta_elements<type_list<Ts...>> {
   }
 };
 
-bool try_match(const message& msg, const meta_element* pattern_begin,
+bool try_match(const type_erased_tuple* xs, const meta_element* pattern_begin,
                size_t pattern_size, void** out);
 
 } // namespace detail

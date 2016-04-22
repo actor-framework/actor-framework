@@ -55,7 +55,7 @@ public:
 
   virtual ~match_case();
 
-  virtual result invoke(detail::invoke_result_visitor&, message&) = 0;
+  virtual result invoke(detail::invoke_result_visitor&, type_erased_tuple*) = 0;
 
   inline uint32_t type_token() const {
     return token_;
@@ -63,18 +63,6 @@ public:
 
 private:
   uint32_t token_;
-};
-
-struct match_case_zipper {
-  template <class F, typename T>
-  auto operator()(const F& fun, T& arg) -> decltype(fun(arg)) const {
-    return fun(arg);
-  }
-  // forward everything as reference if no guard/transformation is set
-  template <class T>
-  auto operator()(const unit_t&, T& arg) const -> decltype(std::ref(arg)) {
-    return std::ref(arg);
-  }
 };
 
 template <class T>
@@ -188,21 +176,24 @@ public:
     // nop
   }
 
-  match_case::result invoke(detail::invoke_result_visitor& f, message& msg) override {
-    intermediate_tuple it{msg.shared()};
+  match_case::result invoke(detail::invoke_result_visitor& f,
+                            type_erased_tuple* xs) override {
+    intermediate_tuple it{xs ? xs->shared() : false};
     detail::meta_elements<pattern> ms;
+    message tmp;
     // check if try_match() reports success
-    if (! detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data))
+    if (! detail::try_match(xs, ms.arr.data(), ms.arr.size(), it.data))
       return match_case::no_match;
     // detach msg before invoking fun_ if needed
     if (is_manipulator && it.shared_access) {
-      msg.force_unshare();
+      tmp = message::from(xs);
+      tmp.force_unshare();
       it.shared_access = false;
       // update pointers in our intermediate tuple
-      for (size_t i = 0; i < msg.size(); ++i) {
+      for (size_t i = 0; i < tmp.size(); ++i) {
         // msg is guaranteed to be detached, hence we don't need to
         // check this condition over and over again via get_mutable
-        it[i] = const_cast<void*>(msg.at(i));
+        it[i] = const_cast<void*>(tmp.at(i));
       }
     }
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};

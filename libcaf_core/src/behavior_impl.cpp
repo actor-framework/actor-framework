@@ -94,7 +94,7 @@ match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
   auto msg_token = msg.type_token();
   for (auto i = begin_; i != end_; ++i)
     if (i->type_token == msg_token)
-      switch (i->ptr->invoke(f, msg)) {
+      switch (i->ptr->invoke(f, msg.cvals().get())) {
         case match_case::no_match:
           break;
         case match_case::match:
