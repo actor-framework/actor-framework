@@ -30,11 +30,6 @@ event_based_actor::~event_based_actor() {
   // nop
 }
 
-void event_based_actor::forward_to(const actor& whom,
-                                   message_priority prio) {
-  forward_current_message(whom, prio);
-}
-
 void event_based_actor::initialize() {
   CAF_LOG_TRACE("subtype =" << logger::render_type_name(typeid(*this)).c_str());
   is_initialized(true);

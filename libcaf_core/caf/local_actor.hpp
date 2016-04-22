@@ -381,11 +381,9 @@ public:
   /// @endcond
 
   /// Returns the address of the sender of the current message.
-  /// @warning Only set during callback invocation. Calling this member function
-  ///          is undefined behavior (dereferencing a `nullptr`) when not in a
-  ///          callback or `forward_to` has been called previously.
   inline actor_addr current_sender() {
-    return actor_cast<actor_addr>(current_element_->sender);
+    return current_element_ ? actor_cast<actor_addr>(current_element_->sender)
+                            : invalid_actor_addr;
   }
 
   /// Adds a unidirectional `monitor` to `whom`.
@@ -533,10 +531,6 @@ public:
     auto mid = current_element_->mid;
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
-
-  void forward_current_message(const actor& dest);
-
-  void forward_current_message(const actor& dest, message_priority mp);
 
   template <class... Ts>
   void delegate(message_priority mp, const actor& dest, Ts&&... xs) {

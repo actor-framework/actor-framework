@@ -555,13 +555,6 @@ CAF_TEST(constructor_attach) {
     behavior make_behavior() {
       trap_exit(true);
       testee_ = spawn<testee, monitored>(this);
-      auto f = [=](local_actor*, const type_erased_tuple*) -> result<message> {
-        CAF_MESSAGE("forward to testee");
-        //auto msg = message::from(x);
-        forward_to(testee_);
-        return delegated<message>{};
-      };
-      set_unexpected_handler(f);
       return {
         [=](const down_msg& msg) {
           CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
@@ -574,6 +567,9 @@ CAF_TEST(constructor_attach) {
           if (++downs_ == 2) {
             quit(reason);
           }
+        },
+        [=](exit_msg& msg) {
+          delegate(testee_, std::move(msg));
         }
       };
     }

@@ -160,23 +160,6 @@ std::vector<group> local_actor::joined_groups() const {
   return result;
 }
 
-void local_actor::forward_current_message(const actor& dest) {
-  if (! dest)
-    return;
-  dest->enqueue(std::move(current_element_), context());
-}
-
-void local_actor::forward_current_message(const actor& dest,
-                                          message_priority prio) {
-  if (! dest)
-    return;
-  auto mid = current_element_->mid;
-  current_element_->mid = prio == message_priority::high
-                           ? mid.with_high_priority()
-                           : mid.with_normal_priority();
-  dest->enqueue(std::move(current_element_), context());
-}
-
 uint32_t local_actor::request_timeout(const duration& d) {
   if (! d.valid()) {
     has_timeout(false);

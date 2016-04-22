@@ -137,26 +137,26 @@ public:
         );
         return {};
       },
-      [=](unpublish_atom, const actor_addr&, uint16_t) -> del_res {
+      [=](unpublish_atom atm, actor_addr addr, uint16_t p) -> del_res {
         CAF_LOG_TRACE("");
-        forward_current_message(broker_);
+        delegate(broker_, atm, std::move(addr), p);
         return {};
       },
-      [=](close_atom, uint16_t) -> del_res {
+      [=](close_atom atm, uint16_t p) -> del_res {
         CAF_LOG_TRACE("");
-        forward_current_message(broker_);
+        delegate(broker_, atm, p);
         return {};
       },
-      [=](spawn_atom, const node_id&, const std::string&, const message&)
+      [=](spawn_atom atm, node_id& nid, std::string& str, message& msg)
       -> delegated<ok_atom, strong_actor_ptr, mpi_set> {
         CAF_LOG_TRACE("");
-        forward_current_message(broker_);
+        delegate(broker_, atm, std::move(nid), std::move(str), std::move(msg));
         return {};
       },
-      [=](get_atom, const node_id&)
+      [=](get_atom atm, node_id nid)
       -> delegated<node_id, std::string, uint16_t> {
         CAF_LOG_TRACE("");
-        forward_current_message(broker_);
+        delegate(broker_, atm, std::move(nid));
         return {};
       },
       [=](const down_msg& dm) {

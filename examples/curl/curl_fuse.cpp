@@ -301,14 +301,14 @@ behavior curl_master(stateful_actor<master_state>* self) {
   self->state.print() << "spawned " << self->state.idle.size()
                       << " worker(s)" << color::reset_endl;
   return {
-    [=](read_atom, const std::string&, uint64_t, uint64_t) {
+    [=](read_atom rd, std::string& str, uint64_t x, uint64_t y) {
       auto& st = self->state;
       st.print() << "received {'read'}" << color::reset_endl;
       // forward job to an idle worker
       actor worker = st.idle.back();
       st.idle.pop_back();
       st.busy.push_back(worker);
-      self->forward_to(worker);
+      self->delegate(worker, rd, std::move(str), x, y);
       st.print() << st.busy.size() << " active jobs" << color::reset_endl;
       if (st.idle.empty()) {
         // wait until at least one worker finished its job

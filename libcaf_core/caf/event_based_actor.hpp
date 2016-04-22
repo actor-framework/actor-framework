@@ -42,10 +42,6 @@ public:
 
   ~event_based_actor();
 
-  /// Forwards the last received message to `whom`.
-  void forward_to(const actor& whom,
-                  message_priority = message_priority::normal);
-
   void initialize() override;
 
 protected:
