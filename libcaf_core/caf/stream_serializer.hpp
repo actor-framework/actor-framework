@@ -41,7 +41,9 @@ namespace caf {
 template <class Streambuf>
 class stream_serializer : public serializer {
   using streambuf_type = typename std::remove_reference<Streambuf>::type;
-  static_assert(std::is_base_of<std::streambuf, streambuf_type>::value,
+  using char_type = typename streambuf_type::char_type;
+  using streambuf_base = std::basic_streambuf<char_type>;
+  static_assert(std::is_base_of<streambuf_base, streambuf_type>::value,
                 "Streambuf must inherit from std::streambuf");
 
 public:
@@ -90,7 +92,7 @@ public:
   }
 
   void apply_raw(size_t num_bytes, void* data) override {
-    streambuf_.sputn(reinterpret_cast<char*>(data), num_bytes);
+    streambuf_.sputn(reinterpret_cast<char_type*>(data), num_bytes);
   }
 
 protected:
@@ -107,7 +109,6 @@ protected:
       x >>= 7;
     }
     *i++ = static_cast<uint8_t>(x) & 0x7f;
-    using char_type = typename streambuf_type::traits_type::char_type;
     return streambuf_.sputn(reinterpret_cast<char_type*>(buf), i - buf);
   }
 
@@ -143,16 +144,15 @@ protected:
         oss << std::setprecision(std::numeric_limits<long double>::digits)
             << *reinterpret_cast<long double*>(val);
         auto tmp = oss.str();
-        auto s = static_cast<uint32_t>(tmp.size());
-        apply(s);
-        apply_raw(tmp.size(), const_cast<char*>(tmp.c_str()));
+        apply(tmp);
         break;
       }
       case string8_v: {
         auto str = reinterpret_cast<std::string*>(val);
         auto s = str->size();
         begin_sequence(s);
-        apply_raw(str->size(), const_cast<char*>(str->c_str()));
+        auto data = const_cast<std::string::value_type*>(str->data());
+        apply_raw(str->size(), reinterpret_cast<char_type*>(data));
         end_sequence();
         break;
       }

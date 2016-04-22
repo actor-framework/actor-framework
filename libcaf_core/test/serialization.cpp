@@ -438,17 +438,20 @@ CAF_TEST(streambuf_serialization) {
 }
 
 CAF_TEST(byte_sequence_optimization) {
-  std::vector<char> data(42);
-  std::fill(data.begin(), data.end(), 'a');
-  std::vector<char> buf;
-  stream_serializer<vectorbuf> bs{vectorbuf{buf}};
+  std::vector<uint8_t> data(42);
+  std::fill(data.begin(), data.end(), 0x2a);
+  std::vector<uint8_t> buf;
+  using streambuf_type = containerbuf<std::vector<uint8_t>>;
+  streambuf_type cb{buf};
+  stream_serializer<streambuf_type&> bs{cb};
   bs << data;
   data.clear();
-  stream_deserializer<charbuf> bd{charbuf{buf}};
+  streambuf_type cb2{buf};
+  stream_deserializer<streambuf_type&> bd{cb2};
   bd >> data;
   CAF_CHECK_EQUAL(data.size(), 42u);
   CAF_CHECK(std::all_of(data.begin(), data.end(),
-                        [](char c) { return c == 'a'; }));
+                        [](uint8_t c) { return c == 0x2a; }));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

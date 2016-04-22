@@ -43,7 +43,9 @@ namespace caf {
 template <class Streambuf>
 class stream_deserializer : public deserializer {
   using streambuf_type = typename std::remove_reference<Streambuf>::type;
-  static_assert(std::is_base_of<std::streambuf, streambuf_type>::value,
+  using char_type = typename streambuf_type::char_type;
+  using streambuf_base = std::basic_streambuf<char_type>;
+  static_assert(std::is_base_of<streambuf_base, streambuf_type>::value,
                 "Streambuf must inherit from std::streambuf");
 
 public:
@@ -93,7 +95,7 @@ public:
 
   void apply_raw(size_t num_bytes, void* data) override {
     range_check(num_bytes);
-    streambuf_.sgetn(reinterpret_cast<char*>(data), num_bytes);
+    streambuf_.sgetn(reinterpret_cast<char_type*>(data), num_bytes);
   }
 
 protected:
@@ -158,7 +160,8 @@ protected:
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
-        size_t n = streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), str_size);
+        auto data = reinterpret_cast<char_type*>(&str[0]);
+        size_t n = streambuf_.sgetn(data, str_size);
         CAF_ASSERT(n == str_size);
         end_sequence();
         break;
@@ -172,7 +175,8 @@ protected:
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
-        size_t n = streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), bytes);
+        auto data = reinterpret_cast<char_type*>(&str[0]);
+        size_t n = streambuf_.sgetn(data, bytes);
         CAF_ASSERT(n == bytes);
         end_sequence();
         break;
@@ -186,7 +190,8 @@ protected:
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
-        size_t n = streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), bytes);
+        auto data = reinterpret_cast<char_type*>(&str[0]);
+        size_t n = streambuf_.sgetn(data, bytes);
         CAF_ASSERT(n == bytes);
         end_sequence();
         break;
