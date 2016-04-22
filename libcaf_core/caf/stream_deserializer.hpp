@@ -42,13 +42,9 @@ namespace caf {
 /// Implements the deserializer interface with a binary serialization protocol.
 template <class Streambuf>
 class stream_deserializer : public deserializer {
-  static_assert(
-    std::is_base_of<
-      std::streambuf,
-      typename std::remove_reference<Streambuf>::type
-    >::value,
-    "Streambuf must inherit from std::streambuf"
-  );
+  using streambuf_type = typename std::remove_reference<Streambuf>::type;
+  static_assert(std::is_base_of<std::streambuf, streambuf_type>::value,
+                "Streambuf must inherit from std::streambuf");
 
 public:
   template <class... Ts>
@@ -88,11 +84,7 @@ public:
   }
 
   void begin_sequence(size_t& num_elements) override {
-    static_assert(sizeof(size_t) >= sizeof(uint32_t),
-                  "sizeof(size_t) < sizeof(uint32_t)");
-    uint32_t tmp;
-    apply_int(tmp);
-    num_elements = static_cast<size_t>(tmp);
+    varbyte_decode(num_elements);
   }
 
   void end_sequence() override {
@@ -105,6 +97,25 @@ public:
   }
 
 protected:
+  // Decode an unsigned integral type as variable-byte-encoded byte sequence.
+  template <class T>
+  size_t varbyte_decode(T& x) {
+    static_assert(std::is_unsigned<T>::value, "T must be an unsigned type");
+    auto n = T{0};
+    x = 0;
+    uint8_t low7;
+    do {
+       auto c = streambuf_.sbumpc();
+       using traits = typename streambuf_type::traits_type;
+       if (traits::eq_int_type(c, traits::eof()))
+         throw std::out_of_range{"stream_deserializer<T>::begin_sequence"};
+      low7 = static_cast<uint8_t>(traits::to_char_type(c));
+      x |= (low7 & 0x7F) << (7 * n);
+      ++n;
+    } while (low7 & 0x80);
+    return n;
+  }
+
   void apply_builtin(builtin type, void* val) override {
     CAF_ASSERT(val != nullptr);
     switch (type) {
@@ -141,37 +152,43 @@ protected:
       }
       case string8_v: {
         auto& str = *reinterpret_cast<std::string*>(val);
-        uint32_t str_size;
-        apply_int(str_size);
+        size_t str_size;
+        begin_sequence(str_size);
         range_check(str_size);
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
-        streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), str_size);
+        size_t n = streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), str_size);
+        CAF_ASSERT(n == str_size);
+        end_sequence();
         break;
       }
       case string16_v: {
         auto& str = *reinterpret_cast<std::u16string*>(val);
-        uint32_t str_size;
-        apply_int(str_size);
+        size_t str_size;
+        begin_sequence(str_size);
         auto bytes = str_size * sizeof(std::u16string::value_type);
         range_check(bytes);
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
-        streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), bytes);
+        size_t n = streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), bytes);
+        CAF_ASSERT(n == bytes);
+        end_sequence();
         break;
       }
       case string32_v: {
         auto& str = *reinterpret_cast<std::u32string*>(val);
-        uint32_t str_size;
-        apply_int(str_size);
+        size_t str_size;
+        begin_sequence(str_size);
         auto bytes = str_size * sizeof(std::u32string::value_type);
         range_check(bytes);
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
-        streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), bytes);
+        size_t n = streambuf_.sgetn(reinterpret_cast<char*>(&str[0]), bytes);
+        CAF_ASSERT(n == bytes);
+        end_sequence();
         break;
       }
     }

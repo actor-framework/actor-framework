@@ -40,13 +40,9 @@ namespace caf {
 /// Implements the serializer interface with a binary serialization protocol.
 template <class Streambuf>
 class stream_serializer : public serializer {
-  static_assert(
-    std::is_base_of<
-      std::streambuf,
-      typename std::remove_reference<Streambuf>::type
-    >::value,
-    "Streambuf must inherit from std::streambuf"
-  );
+  using streambuf_type = typename std::remove_reference<Streambuf>::type;
+  static_assert(std::is_base_of<std::streambuf, streambuf_type>::value,
+                "Streambuf must inherit from std::streambuf");
 
 public:
   template <class... Ts>
@@ -86,8 +82,7 @@ public:
   }
 
   void begin_sequence(size_t& list_size) override {
-    auto s = static_cast<uint32_t>(list_size);
-    apply(s);
+    varbyte_encode(list_size);
   }
 
   void end_sequence() override {
@@ -99,6 +94,23 @@ public:
   }
 
 protected:
+  // Encode an unsigned integral type as variable-byte sequence.
+  template <class T>
+  size_t varbyte_encode(T x) {
+    static_assert(std::is_unsigned<T>::value, "T must be an unsigned type");
+    // For 64-bit values, the encoded representation cannot get larger than 10
+    // bytes. A scratch space of 16 bytes suffices as upper bound.
+    uint8_t buf[16];
+    auto i = buf;
+    while (x > 0x7f) {
+      *i++ = (static_cast<uint8_t>(x) & 0x7f) | 0x80;
+      x >>= 7;
+    }
+    *i++ = static_cast<uint8_t>(x) & 0x7f;
+    using char_type = typename streambuf_type::traits_type::char_type;
+    return streambuf_.sputn(reinterpret_cast<char_type*>(buf), i - buf);
+  }
+
   void apply_builtin(builtin type, void* val) override {
     CAF_ASSERT(val != nullptr);
     switch (type) {
@@ -138,31 +150,34 @@ protected:
       }
       case string8_v: {
         auto str = reinterpret_cast<std::string*>(val);
-        auto s = static_cast<uint32_t>(str->size());
-        apply(s);
+        auto s = str->size();
+        begin_sequence(s);
         apply_raw(str->size(), const_cast<char*>(str->c_str()));
+        end_sequence();
         break;
       }
       case string16_v: {
-        auto& str = *reinterpret_cast<std::u16string*>(val);
-        auto s = static_cast<uint32_t>(str.size());
-        apply(s);
-        for (auto c : str) {
+        auto str = reinterpret_cast<std::u16string*>(val);
+        auto s = str->size();
+        begin_sequence(s);
+        for (auto c : *str) {
           // the standard does not guarantee that char16_t is exactly 16 bits...
           auto tmp = static_cast<uint16_t>(c);
           apply_raw(sizeof(tmp), &tmp);
         }
+        end_sequence();
         break;
       }
       case string32_v: {
-        auto& str = *reinterpret_cast<std::u32string*>(val);
-        auto s = static_cast<uint32_t>(str.size());
-        apply(s);
-        for (auto c : str) {
+        auto str = reinterpret_cast<std::u32string*>(val);
+        auto s = str->size();
+        begin_sequence(s);
+        for (auto c : *str) {
           // the standard does not guarantee that char32_t is exactly 32 bits...
           auto tmp = static_cast<uint32_t>(c);
           apply_raw(sizeof(tmp), &tmp);
         }
+        end_sequence();
         break;
       }
     }
