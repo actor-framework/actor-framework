@@ -163,6 +163,7 @@ protected:
         auto data = reinterpret_cast<char_type*>(&str[0]);
         size_t n = streambuf_.sgetn(data, str_size);
         CAF_ASSERT(n == str_size);
+        CAF_IGNORE_UNUSED(n);
         end_sequence();
         break;
       }
@@ -178,6 +179,7 @@ protected:
         auto data = reinterpret_cast<char_type*>(&str[0]);
         size_t n = streambuf_.sgetn(data, bytes);
         CAF_ASSERT(n == bytes);
+        CAF_IGNORE_UNUSED(n);
         end_sequence();
         break;
       }
@@ -193,6 +195,7 @@ protected:
         auto data = reinterpret_cast<char_type*>(&str[0]);
         size_t n = streambuf_.sgetn(data, bytes);
         CAF_ASSERT(n == bytes);
+        CAF_IGNORE_UNUSED(n);
         end_sequence();
         break;
       }
