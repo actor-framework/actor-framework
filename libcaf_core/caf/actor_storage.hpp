@@ -26,6 +26,7 @@
 #include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 
 #ifdef CAF_GCC
@@ -75,6 +76,7 @@ public:
 private:
   static void data_dtor(abstract_actor* ptr) {
     // safe due to static assert #3
+    ptr->destroy();
     static_cast<T*>(ptr)->~T();
   }
 

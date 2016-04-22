@@ -52,12 +52,12 @@ public:
   }
 
   /// Destroys the state of this actor (no further overriding allowed).
-  void on_exit() override final {
+  void on_exit() final {
     CAF_LOG_TRACE("");
     state_.~State();
   }
 
-  const char* name() const override final {
+  const char* name() const final {
     return get_name(state_);
   }
 

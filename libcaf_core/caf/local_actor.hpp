@@ -129,6 +129,8 @@ public:
 
   ~local_actor();
 
+  void destroy() override;
+
   // -- spawn functions --------------------------------------------------------
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>

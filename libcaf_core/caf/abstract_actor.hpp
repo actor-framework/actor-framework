@@ -64,6 +64,13 @@ public:
 
   virtual ~abstract_actor();
 
+  /// Cleans up any remaining state before the destructor is called.
+  /// This function makes sure it is safe to call virtual functions
+  /// in sub classes before destroying the object, because calling
+  /// virtual function in the destructor itself is not safe. Any override
+  /// implementation is required to call `super::destroy()` at the end.
+  virtual void destroy();
+
   void enqueue(strong_actor_ptr sender, message_id mid,
                message content, execution_unit* host) override;
 

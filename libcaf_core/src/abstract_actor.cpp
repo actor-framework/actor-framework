@@ -54,6 +54,10 @@ abstract_actor::~abstract_actor() {
   // nop
 }
 
+void abstract_actor::destroy() {
+  // nop
+}
+
 void abstract_actor::enqueue(strong_actor_ptr sender, message_id mid,
                              message msg, execution_unit* host) {
   enqueue(mailbox_element::make(sender, mid, {}, std::move(msg)), host);

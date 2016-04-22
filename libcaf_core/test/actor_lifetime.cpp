@@ -43,7 +43,12 @@ public:
   }
 
   ~testee() {
+printf("%s %d\n", __FILE__, __LINE__);
     --s_testees;
+  }
+
+  const char* name() const override {
+    return "testee";
   }
 
   void on_exit() override {
@@ -104,6 +109,15 @@ struct fixture {
 };
 
 } // namespace <anonymous>
+
+CAF_TEST(destructor_call) {
+  { // lifetime scope of actor systme
+    actor_system system;
+    system.spawn<testee>();
+  }
+  CAF_CHECK_EQUAL(s_testees.load(), 0);
+  CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
+}
 
 CAF_TEST_FIXTURE_SCOPE(actor_lifetime_tests, fixture)
 
