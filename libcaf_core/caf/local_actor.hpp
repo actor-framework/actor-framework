@@ -374,14 +374,6 @@ public:
 
   /// @cond PRIVATE
 
-  /// Returns the currently processed message.
-  /// @warning Only set during callback invocation. Calling this member function
-  ///          is undefined behavior (dereferencing a `nullptr`) when not in a
-  ///          callback or `forward_to` has been called previously.
-  inline message& current_message() {
-    return current_element_->msg;
-  }
-
   void monitor(abstract_actor* whom);
 
   /// @endcond

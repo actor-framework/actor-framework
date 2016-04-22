@@ -135,12 +135,6 @@ public:
    *                      miscellaneous actor operations                      *
    ****************************************************************************/
 
-  /// @cond PRIVATE
-  message& current_message() {
-    return self_->current_message();
-  }
-  /// @endcond
-
   actor_system& system() const {
     return self_->system();
   }

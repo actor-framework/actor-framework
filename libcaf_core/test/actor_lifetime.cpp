@@ -73,8 +73,6 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // must be still alive at this point
       CAF_CHECK_EQUAL(s_testees.load(), 1);
       CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-      CAF_CHECK_EQUAL(self->current_message().vals()->get_reference_count(), 1u);
-      CAF_CHECK_EQUAL(&msg, self->current_message().at(0));
       // testee might be still running its cleanup code in
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
