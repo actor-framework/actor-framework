@@ -22,12 +22,15 @@
 
 #include <cstddef>
 
+#include "caf/config.hpp"
+#include "caf/param.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
 
-// tuple-like access to an array of void pointers
+// tuple-like access to an array of void pointers that is
+// also aware of the semantics of param<T>
 template <class... T>
 struct pseudo_tuple {
   using pointer = void*;
@@ -35,29 +38,84 @@ struct pseudo_tuple {
 
   pointer data[sizeof...(T) > 0 ? sizeof...(T) : 1];
 
-  inline const_pointer at(size_t p) const { return data[p]; }
+  bool shared_access;
 
-  inline pointer get_mutable(size_t p) { return data[p]; }
+  pseudo_tuple(bool is_shared) : shared_access(is_shared) {
+    // nop
+  }
 
-  inline pointer& operator[](size_t p) { return data[p]; }
+  inline const_pointer at(size_t p) const {
+    return data[p];
+  }
 
+  inline pointer get_mutable(size_t p) {
+    return data[p];
+  }
+
+  inline pointer& operator[](size_t p) {
+    return data[p];
+  }
+};
+
+template <class T>
+struct pseudo_tuple_access {
+  using result_type = T&;
+
+  template <class Tuple>
+  static T& get(Tuple& xs, size_t pos) {
+    auto vp = xs.get_mutable(pos);
+    CAF_ASSERT(vp != nullptr);
+    return *reinterpret_cast<T*>(vp);
+  }
+};
+
+template <class T>
+struct pseudo_tuple_access<const T> {
+  using result_type = const T&;
+
+  template <class Tuple>
+  static const T& get(const Tuple& xs, size_t pos) {
+    auto vp = xs.at(pos);
+    CAF_ASSERT(vp != nullptr);
+    return *reinterpret_cast<const T*>(vp);
+  }
+};
+
+template <class T>
+struct pseudo_tuple_access<param<T>> {
+  using result_type = param<T>;
+
+  template <class Tuple>
+  static result_type get(const Tuple& xs, size_t pos) {
+    auto vp = xs.at(pos);
+    CAF_ASSERT(vp != nullptr);
+    return {vp, xs.shared_access};
+  }
+};
+
+template <class T>
+struct pseudo_tuple_access<const param<T>> : pseudo_tuple_access<param<T>> {
+  // nop
 };
 
 template <size_t N, class... Ts>
-const typename detail::type_at<N, Ts...>::type&
+typename pseudo_tuple_access<
+  const typename detail::type_at<N, Ts...>::type
+>::result_type
 get(const detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  auto vp = tv.at(N);
-  CAF_ASSERT(vp != nullptr);
-  return *reinterpret_cast<const typename detail::type_at<N, Ts...>::type*>(vp);
+  pseudo_tuple_access<const typename detail::type_at<N, Ts...>::type> f;
+  return f.get(tv, N);
 }
 
 template <size_t N, class... Ts>
-typename detail::type_at<N, Ts...>::type& get(detail::pseudo_tuple<Ts...>& tv) {
+typename pseudo_tuple_access<
+  typename detail::type_at<N, Ts...>::type
+>::result_type
+get(detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  auto vp = tv.get_mutable(N);
-  CAF_ASSERT(vp != nullptr);
-  return *reinterpret_cast<typename detail::type_at<N, Ts...>::type*>(vp);
+  pseudo_tuple_access<typename detail::type_at<N, Ts...>::type> f;
+  return f.get(tv, N);
 }
 
 } // namespace detail

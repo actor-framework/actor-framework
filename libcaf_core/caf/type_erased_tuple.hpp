@@ -61,6 +61,9 @@ public:
   /// Returns the size of this tuple.
   virtual size_t size() const = 0;
 
+  /// Returns whether multiple references to this tuple exist.
+  virtual bool shared() const = 0;
+
   /// Returns a type hint for the element types.
   virtual uint32_t type_token() const = 0;
 
@@ -156,6 +159,10 @@ public:
 
   size_t size() const override {
     return sizeof...(Ts);
+  }
+
+  bool shared() const override {
+    return false;
   }
 
   uint32_t type_token() const override {

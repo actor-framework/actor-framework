@@ -92,20 +92,16 @@ public:
     return "dictionary";
   }
 
-  result<std::string> operator()(get_atom, const std::string& key) override {
+  result<std::string> operator()(get_atom, param<std::string> key) override {
     auto i = values_.find(key);
     if (i == values_.end())
       return "";
     return i->second;
   }
 
-  result<void> operator()(put_atom put, const std::string& key,
-                          const std::string& value) override {
-    return invoke_mutable(this, put, key, value);
-  }
-
-  result<void> operator()(put_atom, std::string& key, std::string& value) {
-    values_.emplace(std::move(key), std::move(value));
+  result<void> operator()(put_atom, param<std::string> key,
+                          param<std::string> value) override {
+    values_.emplace(key.move(), value.move());
     return unit;
   }
 

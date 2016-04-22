@@ -298,6 +298,10 @@ public:
     vals_.unshare();
   }
 
+  inline bool shared() const {
+    return vals_ ? vals_->shared() : false;
+  }
+
   void reset(raw_ptr new_ptr = nullptr, bool add_ref = true);
 
   void swap(message& other);

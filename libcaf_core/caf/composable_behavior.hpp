@@ -20,6 +20,7 @@
 #ifndef CAF_COMPOSABLE_STATE_HPP
 #define CAF_COMPOSABLE_STATE_HPP
 
+#include "caf/param.hpp"
 #include "caf/behavior.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/typed_actor.hpp"
@@ -42,7 +43,7 @@ public:
     // nop
   }
 
-  virtual result<Ys...> operator()(handler_input_t<Xs>...) = 0;
+  virtual result<Ys...> operator()(param_t<Xs>...) = 0;
 };
 
 // this class works around compiler issues on GCC
@@ -74,8 +75,8 @@ void init_behavior_impl(T* thisptr,
                                                     detail::type_list<Ys...>>,
                                           Ts...>,
                         behavior& storage, Fs... fs) {
-  auto f = [=](handler_input_t<Xs>... xs) {
-    return (*thisptr)(xs...);
+  auto f = [=](param_t<Xs>... xs) {
+    return (*thisptr)(std::move(xs)...);
   };
   detail::type_list<Ts...> token;
   init_behavior_impl(thisptr, token, storage, fs..., f);

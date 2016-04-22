@@ -28,6 +28,10 @@ message_data::~message_data() {
   // nop
 }
 
+bool message_data::shared() const {
+  return ! unique();
+}
+
 message_data* message_data::cow_ptr::get_unshared() {
   auto p = ptr_.get();
   if (! p->unique()) {

@@ -20,7 +20,7 @@
 #ifndef CAF_COMPOSED_STATE_HPP
 #define CAF_COMPOSED_STATE_HPP
 
-#include "caf/handler_input.hpp"
+#include "caf/param.hpp"
 #include "caf/composable_behavior.hpp"
 #include "caf/typed_actor_pointer.hpp"
 
@@ -71,7 +71,7 @@ public:
 
   using super::operator();
 
-  virtual result<Ys...> operator()(handler_input_t<Xs>...) override = 0;
+  virtual result<Ys...> operator()(param_t<Xs>...) override = 0;
 };
 
 template <class... Ts>

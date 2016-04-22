@@ -62,6 +62,16 @@ struct atom_constant {
   static const atom_constant value;
 };
 
+template <class T>
+struct is_atom_constant {
+  static constexpr bool value = false;
+};
+
+template <atom_value X>
+struct is_atom_constant<atom_constant<X>> {
+  static constexpr bool value = true;
+};
+
 template <atom_value V>
 std::string to_string(const atom_constant<V>&) {
   return to_string(V);

@@ -43,6 +43,8 @@ public:
 
   ~message_data();
 
+  bool shared() const override;
+
   // nested types
 
   class cow_ptr {

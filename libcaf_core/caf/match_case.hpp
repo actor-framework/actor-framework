@@ -20,11 +20,13 @@
 #ifndef CAF_MATCH_CASE_HPP
 #define CAF_MATCH_CASE_HPP
 
-#include "caf/none.hpp"
-#include "caf/optional.hpp"
+#include <type_traits>
 
-#include "caf/skip_message.hpp"
+#include "caf/none.hpp"
+#include "caf/param.hpp"
+#include "caf/optional.hpp"
 #include "caf/match_case.hpp"
+#include "caf/skip_message.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/try_match.hpp"
@@ -74,6 +76,12 @@ struct match_case_zipper {
     return std::ref(arg);
   }
 };
+
+template <class T>
+T&& unopt(T&& v,
+          typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type* = 0) {
+  return std::move(v);
+}
 
 template <class T>
 T& unopt(T& v) {
@@ -159,12 +167,15 @@ public:
   using pattern =
     typename detail::tl_map<
       arg_types,
-      std::decay
+      param_decay
     >::type;
 
   using intermediate_tuple =
     typename detail::tl_apply<
-      pattern,
+      typename detail::tl_map<
+        arg_types,
+        std::decay
+      >::type,
       detail::pseudo_tuple
     >::type;
 
@@ -178,15 +189,15 @@ public:
   }
 
   match_case::result invoke(detail::invoke_result_visitor& f, message& msg) override {
-    intermediate_tuple it;
+    intermediate_tuple it{msg.shared()};
     detail::meta_elements<pattern> ms;
     // check if try_match() reports success
-    if (! detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data)) {
+    if (! detail::try_match(msg, ms.arr.data(), ms.arr.size(), it.data))
       return match_case::no_match;
-    }
     // detach msg before invoking fun_ if needed
-    if (is_manipulator) {
+    if (is_manipulator && it.shared_access) {
       msg.force_unshare();
+      it.shared_access = false;
       // update pointers in our intermediate tuple
       for (size_t i = 0; i < msg.size(); ++i) {
         // msg is guaranteed to be detached, hence we don't need to
