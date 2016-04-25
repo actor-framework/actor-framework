@@ -155,16 +155,17 @@ public:
     remove_backlink_op
   };
 
-  // flags storing runtime information                   used by ...
-  static constexpr int trap_exit_flag         = 0x01; // local_actor
-  static constexpr int has_timeout_flag       = 0x02; // single_timeout
-  static constexpr int is_registered_flag     = 0x04; // (several actors)
-  static constexpr int is_initialized_flag    = 0x08; // event-based actors
-  static constexpr int is_blocking_flag       = 0x10; // blocking_actor
-  static constexpr int is_detached_flag       = 0x20; // local_actor
-  static constexpr int is_priority_aware_flag = 0x40; // local_actor
-  static constexpr int is_serializable_flag   = 0x40; // local_actor
-  static constexpr int is_migrated_from_flag  = 0x80; // local_actor
+  // flags storing runtime information                     used by ...
+  static constexpr int trap_exit_flag         = 0x0001; // local_actor
+  static constexpr int has_timeout_flag       = 0x0002; // single_timeout
+  static constexpr int is_registered_flag     = 0x0004; // (several actors)
+  static constexpr int is_initialized_flag    = 0x0008; // event-based actors
+  static constexpr int is_blocking_flag       = 0x0010; // blocking_actor
+  static constexpr int is_detached_flag       = 0x0020; // local_actor
+  static constexpr int is_priority_aware_flag = 0x0040; // local_actor
+  static constexpr int is_serializable_flag   = 0x0040; // local_actor
+  static constexpr int is_migrated_from_flag  = 0x0080; // local_actor
+  static constexpr int has_used_aout_flag     = 0x0100; // local_actor
 
   inline void set_flag(bool enable_flag, int mask) {
     auto x = flags();

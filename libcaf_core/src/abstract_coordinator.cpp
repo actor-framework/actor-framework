@@ -25,6 +25,7 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 #include <condition_variable>
 
 #include "caf/send.hpp"
@@ -239,24 +240,21 @@ void printer_loop(blocking_actor* self) {
       // nop
     }
   };
-  using data_map = std::map<actor_addr, actor_data>;
+  using data_map = std::unordered_map<actor_id, actor_data>;
   sink_cache fcache;
   sink_handle global_redirect;
   data_map data;
-  auto get_data = [&](const actor_addr& addr, bool insert_missing)
-                  -> optional<actor_data&> {
-    if (addr == invalid_actor_addr)
-      return none;
+  auto get_data = [&](actor_id addr, bool insert_missing) -> actor_data* {
+    if (addr == invalid_actor_id)
+      return nullptr;
     auto i = data.find(addr);
-    if (i == data.end() && insert_missing) {
+    if (i == data.end() && insert_missing)
       i = data.emplace(addr, actor_data{}).first;
-      self->monitor(addr);
-    }
     if (i != data.end())
-      return i->second;
-    return none;
+      return &(i->second);
+    return nullptr;
   };
-  auto flush = [&](optional<actor_data&> what, bool forced) {
+  auto flush = [&](actor_data* what, bool forced) {
     if (! what)
       return;
     auto& line = what->current_line;
@@ -273,33 +271,35 @@ void printer_loop(blocking_actor* self) {
   self->trap_exit(true);
   bool running = true;
   self->receive_while([&] { return running; })(
-    [&](add_atom, std::string& str) {
-      auto s = self->current_sender();
-      if (str.empty() || s == invalid_actor_addr)
+    [&](add_atom, actor_id aid, std::string& str) {
+      if (str.empty() || aid == invalid_actor_id)
         return;
-      auto d = get_data(s, true);
+      auto d = get_data(aid, true);
       if (d) {
         d->current_line += str;
         flush(d, false);
       }
     },
-    [&](flush_atom) {
-      flush(get_data(self->current_sender(), false), true);
+    [&](flush_atom, actor_id aid) {
+      flush(get_data(aid, false), true);
     },
-    [&](const down_msg& dm) {
-      flush(get_data(dm.source, false), true);
-      data.erase(dm.source);
-    },
-    [&](const exit_msg&) {
-      running = false;
+    [&](delete_atom, actor_id aid) {
+      auto data_ptr = get_data(aid, false);
+      if (data_ptr) {
+        flush(data_ptr, true);
+        data.erase(aid);
+      }
     },
     [&](redirect_atom, const std::string& fn, int flag) {
       global_redirect = get_sink_handle(self->system(), fcache, fn, flag);
     },
-    [&](redirect_atom, const actor_addr& src, const std::string& fn, int flag) {
-      auto d = get_data(src, true);
+    [&](redirect_atom, actor_id aid, const std::string& fn, int flag) {
+      auto d = get_data(aid, true);
       if (d)
         d->redirect = get_sink_handle(self->system(), fcache, fn, flag);
+    },
+    [&](const exit_msg&) {
+      running = false;
     }
   );
 }

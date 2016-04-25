@@ -83,7 +83,9 @@ public:
   }
 
 private:
-  actor self_;
+  void init(abstract_actor*);
+
+  actor_id self_;
   actor printer_;
 };
 

@@ -22,43 +22,60 @@
 #include "caf/send.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/default_attachable.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
 
 actor_ostream::actor_ostream(local_actor* self)
-    : self_(actor_cast<actor>(self)),
+    : self_(self->id()),
       printer_(self->home_system().scheduler().printer()) {
-  // nop
+  init(self);
 }
 
 actor_ostream::actor_ostream(scoped_actor& self)
-    : self_(actor_cast<actor>(self)),
+    : self_(self->id()),
       printer_(self->home_system().scheduler().printer()) {
-  // nop
+  init(actor_cast<abstract_actor*>(self));
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-  send_as(self_, printer_, add_atom::value, std::move(arg));
+  printer_->enqueue(mailbox_element::make_joint(nullptr, message_id::make(), {},
+                                                add_atom::value, self_,
+                                                std::move(arg)),
+                    nullptr);
   return *this;
 }
 
 actor_ostream& actor_ostream::flush() {
-  send_as(self_, printer_, flush_atom::value);
+  printer_->enqueue(mailbox_element::make_joint(nullptr, message_id::make(), {},
+                                                flush_atom::value, self_),
+                    nullptr);
   return *this;
 }
 
 void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (! self)
     return;
-  send_as(actor_cast<actor>(self), self->home_system().scheduler().printer(),
-          redirect_atom::value, self->address(), std::move(fn), flags);
+  auto pr = self->home_system().scheduler().printer();
+  pr->enqueue(mailbox_element::make_joint(nullptr, message_id::make(), {},
+                                          redirect_atom::value, self->id(),
+                                          std::move(fn), flags),
+              nullptr);
 }
 
 void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
-  anon_send(sys.scheduler().printer(),
-            redirect_atom::value, std::move(fn), flags);
+  auto pr = sys.scheduler().printer();
+  pr->enqueue(mailbox_element::make_joint(nullptr, message_id::make(), {},
+                                          redirect_atom::value,
+                                          std::move(fn), flags),
+              nullptr);
+}
+
+void actor_ostream::init(abstract_actor* self) {
+  if (! self->get_flag(abstract_actor::has_used_aout_flag))
+    self->set_flag(true, abstract_actor::has_used_aout_flag);
 }
 
 actor_ostream aout(local_actor* self) {

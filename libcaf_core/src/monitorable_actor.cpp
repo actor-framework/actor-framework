@@ -27,6 +27,8 @@
 #include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
 namespace caf {
 
 const char* monitorable_actor::name() const {
@@ -73,6 +75,13 @@ void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(reason, host);
+  // tell printer to purge its state for us if we ever used aout()
+  if (get_flag(abstract_actor::has_used_aout_flag)) {
+    auto pr = home_system().scheduler().printer();
+    pr->enqueue(mailbox_element::make_joint(nullptr, message_id::make(), {},
+                                            delete_atom::value, id()),
+                nullptr);
+  }
 }
 
 monitorable_actor::monitorable_actor(actor_config& cfg)

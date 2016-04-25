@@ -41,15 +41,15 @@ public:
   virtual void enqueue(strong_actor_ptr sender, message_id mid, message content,
                        execution_unit* host = nullptr) = 0;
 
-  static constexpr int is_abstract_actor_flag       = 0x100000;
+  static constexpr int is_abstract_actor_flag       = 0x01000000;
 
-  static constexpr int is_abstract_group_flag       = 0x200000;
+  static constexpr int is_abstract_group_flag       = 0x02000000;
 
-  static constexpr int is_actor_bind_decorator_flag = 0x400000;
+  static constexpr int is_actor_bind_decorator_flag = 0x04000000;
 
-  static constexpr int is_actor_dot_decorator_flag  = 0x800000;
+  static constexpr int is_actor_dot_decorator_flag  = 0x08000000;
 
-  static constexpr int is_actor_decorator_mask      = 0xC00000;
+  static constexpr int is_actor_decorator_mask      = 0x0C000000;
 
   inline bool is_abstract_actor() const {
     return static_cast<bool>(flags() & is_abstract_actor_flag);
