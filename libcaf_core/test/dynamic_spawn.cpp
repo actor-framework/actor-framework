@@ -211,7 +211,7 @@ public:
   }
 
   behavior make_behavior() override {
-    set_unexpected_handler(reflect_unexpected);
+    set_default_handler(reflect);
     return {
       [] {
         // nop
@@ -231,7 +231,7 @@ public:
   }
 
   behavior make_behavior() override {
-    set_unexpected_handler(reflect_unexpected);
+    set_default_handler(reflect);
     return {
       [] {
         // nop

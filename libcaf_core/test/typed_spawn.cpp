@@ -192,10 +192,10 @@ public:
         become(wait4int());
       },
       [](float) {
-        return skip_message();
+        return skip();
       },
       [](int) {
-        return skip_message();
+        return skip();
       }
     };
   }
@@ -210,10 +210,10 @@ public:
         return 42;
       },
       [](float) {
-        return skip_message();
+        return skip();
       },
       [](const string&) {
-        return skip_message();
+        return skip();
       }
     };
   }
@@ -227,10 +227,10 @@ public:
         become(wait4string());
       },
       [](const string&) {
-        return skip_message();
+        return skip();
       },
       [](int) {
-        return skip_message();
+        return skip();
       }
     };
   }

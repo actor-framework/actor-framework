@@ -65,10 +65,10 @@ public:
         }
         return delegated<message>{};
       };
-      set_unexpected_handler(g);
+      set_default_handler(g);
       return delegated<message>{};
     };
-    set_unexpected_handler(f);
+    set_default_handler(f);
     return {
       [] {
         // nop

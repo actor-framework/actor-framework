@@ -244,9 +244,9 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
   // store any occurred error in a temporary variable returned at the end
   std::string error;
   auto res = extract({
-    [&](const std::string& arg) -> optional<skip_message_t> {
+    [&](const std::string& arg) -> optional<skip_t> {
       if (arg.empty() || arg.front() != '-') {
-        return skip_message();
+        return skip();
       }
       auto i = shorts.find(arg.substr(0, 2));
       if (i != shorts.end()) {
@@ -256,13 +256,13 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
              // this short opt comes with a value (no space), e.g., -x2
             if (! i->second->fun(arg.substr(2))) {
               error = "invalid value for " + i->second->name + ": " + arg;
-              return skip_message();
+              return skip();
             }
             insert_opt_name(i->second);
             return none;
           }
           // no value given, try two-argument form below
-          return skip_message();
+          return skip();
         }
         insert_opt_name(i->second);
         return none;
@@ -273,11 +273,11 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
         if (j->second->fun) {
           if (eq_pos == std::string::npos) {
             error =  "missing argument to " + arg;
-            return skip_message();
+            return skip();
           }
           if (! j->second->fun(arg.substr(eq_pos + 1))) {
             error = "invalid value for " + j->second->name + ": " + arg;
-            return skip_message();
+            return skip();
           }
           insert_opt_name(j->second);
           return none;
@@ -286,12 +286,12 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
         return none;
       }
       error = "unknown command line option: " + arg;
-      return skip_message();
+      return skip();
     },
     [&](const std::string& arg1,
-        const std::string& arg2) -> optional<skip_message_t> {
+        const std::string& arg2) -> optional<skip_t> {
       if (arg1.size() < 2 || arg1[0] != '-' || arg1[1] == '-') {
-        return skip_message();
+        return skip();
       }
       auto i = shorts.find(arg1.substr(0, 2));
       if (i != shorts.end()) {
@@ -299,18 +299,18 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           // this short opt either expects no argument or comes with a value
           // (no  space), e.g., -x2, so we have to parse it with the
           // one-argument form above
-          return skip_message();
+          return skip();
         }
         CAF_ASSERT(arg1.size() == 2);
         if (! i->second->fun(arg2)) {
           error = "invalid value for option " + i->second->name + ": " + arg2;
-          return skip_message();
+          return skip();
         }
         insert_opt_name(i->second);
         return none;
       }
       error = "unknown command line option: " + arg1;
-      return skip_message();
+      return skip();
     }
   });
   return {res, std::move(opts), std::move(helpstr), std::move(error)};

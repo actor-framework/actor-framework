@@ -153,7 +153,7 @@ private:
         );
       },
       // simply ignore all requests until we have a connection
-      others >> skip_message
+      others >> skip
     };
     */
   }

@@ -28,7 +28,7 @@
 #include "caf/optional.hpp"
 #include "caf/result.hpp"
 #include "caf/message.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
 #include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/int_list.hpp"
@@ -120,15 +120,15 @@ public:
     return true;
   }
 
-  inline bool visit(skip_message_t&) {
+  inline bool visit(skip_t&) {
     return false;
   }
 
-  inline bool visit(const skip_message_t&) {
+  inline bool visit(const skip_t&) {
     return false;
   }
 
-  inline bool visit(optional<skip_message_t>& x) {
+  inline bool visit(optional<skip_t>& x) {
     if (x)
       return false;
     (*this)(x);

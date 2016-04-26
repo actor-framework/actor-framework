@@ -54,7 +54,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/function_view.hpp"
 #include "caf/index_mapping.hpp"

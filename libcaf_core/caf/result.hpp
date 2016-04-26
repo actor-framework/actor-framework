@@ -21,10 +21,10 @@
 #define CAF_RESULT_HPP
 
 #include "caf/none.hpp"
+#include "caf/skip.hpp"
 #include "caf/error.hpp"
 #include "caf/message.hpp"
 #include "caf/delegated.hpp"
-#include "caf/skip_message.hpp"
 
 namespace caf {
 
@@ -32,11 +32,11 @@ enum result_runtime_type {
   rt_value,
   rt_error,
   rt_delegated,
-  rt_skip_message
+  rt_skip
 };
 
 template <class... Ts>
-struct result {
+class result {
 public:
   result(Ts... xs) : flag(rt_value), value(make_message(std::move(xs)...)) {
     // nop
@@ -62,7 +62,7 @@ public:
     // nop
   }
 
-  result(skip_message_t) : flag(rt_skip_message) {
+  result(skip_t) : flag(rt_skip) {
     // nop
   }
 
@@ -106,7 +106,7 @@ public:
     // nop
   }
 
-  result(skip_message_t) : flag(rt_skip_message) {
+  result(skip_t) : flag(rt_skip) {
     // nop
   }
 

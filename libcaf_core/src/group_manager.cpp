@@ -169,7 +169,7 @@ public:
       send_to_acquaintances(message::from(ptr));
       return message{};
     };
-    set_unexpected_handler(fwd);
+    set_default_handler(fwd);
     // return behavior
     return {
       [=](join_atom, const actor& other) {
@@ -329,7 +329,7 @@ behavior proxy_broker::make_behavior() {
                                  context());
     return message{};
   };
-  set_unexpected_handler(fwd);
+  set_default_handler(fwd);
   // return dummy behavior
   return {
     [](const down_msg&) {

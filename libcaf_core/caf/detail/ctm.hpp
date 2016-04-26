@@ -72,7 +72,7 @@ struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
 
 template <class In, class Out>
 struct ctm_cmp<typed_mpi<In, Out>,
-               typed_mpi<In, type_list<skip_message_t>>>
+               typed_mpi<In, type_list<skip_t>>>
     : std::true_type { };
 
 template <class In, class... Ts>

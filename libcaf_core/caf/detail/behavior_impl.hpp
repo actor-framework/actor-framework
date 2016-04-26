@@ -34,7 +34,7 @@
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -55,9 +55,9 @@ namespace caf {
 namespace detail {
 
 template <class... Ts>
-struct has_skip_message {
+struct has_skip {
   static constexpr bool value =
-    disjunction<std::is_same<Ts, skip_message_t>::value...>::value;
+    disjunction<std::is_same<Ts, skip_t>::value...>::value;
 };
 
 class behavior_impl : public ref_counted {

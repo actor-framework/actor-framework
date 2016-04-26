@@ -49,7 +49,7 @@ CAF_TEST(metaprogramming) {
   using if2 = type_list<replies_to<int>::with<int>,
                         replies_to<int, double>::with<void>>;
   using if3 = type_list<replies_to<int, double>::with<void>>;
-  using if4 = type_list<replies_to<int>::with<skip_message_t>,
+  using if4 = type_list<replies_to<int>::with<skip_t>,
                         replies_to<int, double>::with<void>>;
   CAF_CHECK_EQUAL((ctm<if1, if2>::value), -1);
   CAF_CHECK_NOT_EQUAL((ctm<if1, if3>::value), -1);

@@ -17,31 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SKIP_MESSAGE_HPP
-#define CAF_SKIP_MESSAGE_HPP
+#ifndef CAF_SKIP_HPP
+#define CAF_SKIP_HPP
 
-#include <ostream>
+#include <functional>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
 
-/// Optional return type for functors used in pattern matching
-/// expressions. This type is evaluated by the runtime system
-/// and can be used to intentionally skip messages.
-struct skip_message_t {
-  constexpr skip_message_t() {}
+/// @relates local_actor
+/// Default handler function that leaves messages in the mailbox.
+/// Can also be used inside custom message handlers to signalize
+/// skipping to the runtime.
+class skip_t {
+public:
+  using fun = std::function<result<message>(local_actor* self,
+                                            const type_erased_tuple*)>;
 
+  constexpr skip_t() {
+    // nop
+  }
+
+  constexpr skip_t operator()() const {
+    return *this;
+  }
+
+  operator fun() const;
+
+private:
+  static result<message> skip_fun_impl(local_actor*, const type_erased_tuple*);
 };
 
 /// Tells the runtime system to skip a message when used as message
 /// handler, i.e., causes the runtime to leave the message in
 /// the mailbox of an actor.
-constexpr skip_message_t skip_message() {
-  return {};
-}
-
-// implemented in string_serialization.cpp
-std::ostream& operator<<(std::ostream&, skip_message_t);
+constexpr skip_t skip = skip_t{};
 
 } // namespace caf
 
-#endif // CAF_SKIP_MESSAGE_HPP
+#endif // CAF_SKIP_HPP

@@ -264,13 +264,13 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   tmp = system().spawn<hidden>([=](event_based_actor* this_actor) -> behavior {
     CAF_LOG_TRACE("");
     // skip messages until we receive the initial ok_atom
-    this_actor->set_unexpected_handler(skip_unexpected);
+    this_actor->set_default_handler(skip);
     return {
       [=](ok_atom, const std::string& /* key == "info" */,
           const actor_addr& config_serv_addr, const std::string& /* name */) {
         CAF_LOG_TRACE(CAF_ARG(config_serv_addr));
         // drop unexpected messages from this point on
-        this_actor->set_unexpected_handler(print_and_drop_unexpected);
+        this_actor->set_default_handler(print_and_drop);
         auto config_serv = actor_cast<actor>(config_serv_addr);
         this_actor->monitor(config_serv);
         this_actor->become(

@@ -85,32 +85,24 @@ struct make_response_promise_helper<response_promise> {
 } // namespace detail
 
 /// @relates local_actor
-/// Default handler function for unexpected messages
-/// that sends the message back to the sender.
-result<message> reflect_unexpected(local_actor*, const type_erased_tuple*);
+/// Default handler function that sends the message back to the sender.
+result<message> reflect(local_actor*, const type_erased_tuple*);
 
 /// @relates local_actor
-/// Default handler function for unexpected messages
-/// that sends the message back to the sender and then quits.
-result<message> reflect_unexpected_and_quit(local_actor*,
+/// Default handler function that sends
+/// the message back to the sender and then quits.
+result<message> reflect_and_quit(local_actor*,
                                             const type_erased_tuple*);
 
 /// @relates local_actor
-/// Default handler function for unexpected messages that
-/// skips an unexpected message in order to handle it again
-/// after a behavior change.
-result<message> skip_unexpected(local_actor*, const type_erased_tuple*);
-
-/// @relates local_actor
-/// Default handler function for unexpected messages that prints
-/// an unexpected message via `aout` and drops it afterwards.
-result<message> print_and_drop_unexpected(local_actor*,
+/// Default handler function that prints messages
+/// message via `aout` and drops them afterwards.
+result<message> print_and_drop(local_actor*,
                                           const type_erased_tuple*);
 
 /// @relates local_actor
-/// Default handler function for unexpected messages that
-/// drops unexpected messages without printing them.
-result<message> drop_unexpected(local_actor*, const type_erased_tuple*);
+/// Default handler function that simply drops messages.
+result<message> drop(local_actor*, const type_erased_tuple*);
 
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
@@ -318,7 +310,7 @@ public:
   // -- miscellaneous actor operations -----------------------------------------
 
   /// Sets a custom handler for unexpected messages.
-  inline void set_unexpected_handler(unexpected_handler fun) {
+  inline void set_default_handler(unexpected_handler fun) {
     unexpected_handler_ = std::move(fun);
   }
 

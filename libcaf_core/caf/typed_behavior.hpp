@@ -41,17 +41,17 @@ struct input_only<detail::type_list<Ts...>> {
   using type = detail::type_list<typename Ts::input_types...>;
 };
 
-using skip_list = detail::type_list<skip_message_t>;
+using skip_list = detail::type_list<skip_t>;
 
 template <class Input, class RepliesToWith>
 struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
 
 template <class Output, class RepliesToWith>
-struct same_output_or_skip_message_t {
+struct same_output_or_skip_t {
   using other = typename RepliesToWith::output_types;
   static constexpr bool value =
     std::is_same<Output, typename RepliesToWith::output_types>::value ||
-    std::is_same<Output, type_list<skip_message_t>>::value;
+    std::is_same<Output, type_list<skip_t>>::value;
 };
 
 template <class SList>
@@ -72,7 +72,7 @@ struct valid_input_predicate {
                   "contains at least one pattern that is "
                   "not defined in the actor's type");
     static constexpr bool value = tl_exists<
-      filtered_slist, tbind<same_output_or_skip_message_t,
+      filtered_slist, tbind<same_output_or_skip_t,
                             output_types>::template type>::value;
     // check whether given output matches in the filtered list
     static_assert(value,
@@ -110,7 +110,7 @@ struct valid_input {
   // check for each element in IList that there's an element in SList that
   // (1) has an identical input type list
   // (2)  has an identical output type list
-  //   OR the output of the element in IList is skip_message_t
+  //   OR the output of the element in IList is skip_t
   static_assert(detail::tl_is_distinct<IList>::value,
                 "given pattern is not distinct");
   static constexpr bool value =

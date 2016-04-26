@@ -26,7 +26,7 @@
 #include "caf/param.hpp"
 #include "caf/optional.hpp"
 #include "caf/match_case.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/try_match.hpp"

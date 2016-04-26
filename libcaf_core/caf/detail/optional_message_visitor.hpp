@@ -24,7 +24,7 @@
 #include "caf/unit.hpp"
 #include "caf/optional.hpp"
 #include "caf/delegated.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
 #include "caf/static_visitor.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -63,8 +63,8 @@ struct optional_message_visitor_enable_tpl {
         typename std::remove_const<T>::type,
         none_t,
         unit_t,
-        skip_message_t,
-        optional<skip_message_t>
+        skip_t,
+        optional<skip_t>
       >::value
       && ! is_message_id_wrapper<T>::value
       && ! is_response_promise<T>::value;
@@ -80,7 +80,7 @@ public:
     return none;
   }
 
-  inline opt_msg operator()(const skip_message_t&) const {
+  inline opt_msg operator()(const skip_t&) const {
     return none;
   }
 
@@ -88,7 +88,7 @@ public:
     return message{};
   }
 
-  inline opt_msg operator()(optional<skip_message_t>& val) const {
+  inline opt_msg operator()(optional<skip_t>& val) const {
     if (val)
       return none;
     return message{};

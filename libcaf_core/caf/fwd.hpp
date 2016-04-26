@@ -39,6 +39,7 @@ template <class, class, int> class actor_cast_access;
 
 // -- variadic templates -------------------------------------------------------
 
+template <class...> class result;
 template <class...> class delegated;
 template <class...> class typed_actor;
 template <class...> class typed_response_promise;

@@ -29,7 +29,7 @@
 #include "caf/config.hpp"
 #include "caf/optional.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
 #include "caf/index_mapping.hpp"
 #include "caf/allowed_unsafe_message_type.hpp"
 

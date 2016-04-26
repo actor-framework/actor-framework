@@ -43,7 +43,7 @@ public:
 
   behavior make_behavior() override {
     // reflecting a message increases its reference count by one
-    set_unexpected_handler(reflect_unexpected_and_quit);
+    set_default_handler(reflect_and_quit);
     return {
       [] {
         // nop

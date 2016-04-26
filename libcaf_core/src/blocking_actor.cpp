@@ -28,7 +28,7 @@ namespace caf {
 
 blocking_actor::blocking_actor(actor_config& sys) : super(sys) {
   is_blocking(true);
-  set_unexpected_handler(skip_unexpected);
+  set_default_handler(skip);
 }
 
 blocking_actor::~blocking_actor() {

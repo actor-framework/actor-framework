@@ -39,21 +39,17 @@
 
 namespace caf {
 
-result<message> reflect_unexpected(local_actor*, const type_erased_tuple* x) {
+result<message> reflect(local_actor*, const type_erased_tuple* x) {
   return message::from(x);
 }
 
-result<message> reflect_unexpected_and_quit(local_actor* self,
+result<message> reflect_and_quit(local_actor* self,
                                        const type_erased_tuple* x) {
   self->quit();
-  return reflect_unexpected(self, x);
+  return reflect(self, x);
 }
 
-result<message> skip_unexpected(local_actor*, const type_erased_tuple*) {
-  return skip_message();
-}
-
-result<message> print_and_drop_unexpected(local_actor* self,
+result<message> print_and_drop(local_actor* self,
                                           const type_erased_tuple* x) {
   CAF_LOG_WARNING("unexpected message" << CAF_ARG(*x));
   aout(self) << "*** unexpected message [id: " << self->id()
@@ -62,7 +58,7 @@ result<message> print_and_drop_unexpected(local_actor* self,
   return sec::unexpected_message;
 }
 
-result<message> drop_unexpected(local_actor*,
+result<message> drop(local_actor*,
                                          const type_erased_tuple*) {
   return sec::unexpected_message;
 }
@@ -76,7 +72,7 @@ local_actor::local_actor(actor_config& cfg)
       planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0),
       initial_behavior_fac_(std::move(cfg.init_fun)),
-      unexpected_handler_(print_and_drop_unexpected) {
+      unexpected_handler_(print_and_drop) {
   if (cfg.groups != nullptr)
     for (auto& grp : *cfg.groups)
       join(grp);
@@ -86,7 +82,7 @@ local_actor::local_actor()
     : monitorable_actor(abstract_channel::is_abstract_actor_flag),
       planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0),
-      unexpected_handler_(print_and_drop_unexpected) {
+      unexpected_handler_(print_and_drop) {
   // nop
 }
 
@@ -94,7 +90,7 @@ local_actor::local_actor(int init_flags)
     : monitorable_actor(init_flags),
       planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0),
-      unexpected_handler_(print_and_drop_unexpected) {
+      unexpected_handler_(print_and_drop) {
   // nop
 }
 
@@ -532,7 +528,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
             has_timeout(true);
           auto sres = unexpected_handler_(this,
                                           current_element_->msg.cvals().get());
-          if (sres.flag != rt_skip_message)
+          if (sres.flag != rt_skip)
             visitor.visit(sres);
           else
             skipped = true;

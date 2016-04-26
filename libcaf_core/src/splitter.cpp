@@ -65,7 +65,7 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
       );
     return delegated<message>{};
   };
-  self->set_unexpected_handler(f);
+  self->set_default_handler(f);
   return [] {
     // nop
   };
@@ -85,7 +85,7 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
         }
       );
   };
-  set_unexpected_handler(f);
+  set_default_handler(f);
   return {
     others >> [=](const message& msg) {
       self->state.rp = self->make_response_promise();
