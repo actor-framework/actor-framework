@@ -43,23 +43,20 @@ result<message> reflect(local_actor*, const type_erased_tuple* x) {
   return message::from(x);
 }
 
-result<message> reflect_and_quit(local_actor* self,
-                                       const type_erased_tuple* x) {
-  self->quit();
-  return reflect(self, x);
+result<message> reflect_and_quit(local_actor* ptr, const type_erased_tuple* x) {
+  ptr->quit();
+  return reflect(ptr, x);
 }
 
-result<message> print_and_drop(local_actor* self,
-                                          const type_erased_tuple* x) {
+result<message> print_and_drop(local_actor* ptr, const type_erased_tuple* x) {
   CAF_LOG_WARNING("unexpected message" << CAF_ARG(*x));
-  aout(self) << "*** unexpected message [id: " << self->id()
-             << ", name: " << self->name() << "]: " << x->stringify()
+  aout(ptr) << "*** unexpected message [id: " << ptr->id()
+             << ", name: " << ptr->name() << "]: " << x->stringify()
              << std::endl;
   return sec::unexpected_message;
 }
 
-result<message> drop(local_actor*,
-                                         const type_erased_tuple*) {
+result<message> drop(local_actor*, const type_erased_tuple*) {
   return sec::unexpected_message;
 }
 
@@ -116,14 +113,12 @@ void local_actor::intrusive_ptr_release_impl() {
 }
 
 void local_actor::monitor(abstract_actor* ptr) {
-  if (! ptr)
-    return;
+  CAF_ASSERT(ptr != nullptr);
   ptr->attach(default_attachable::make_monitor(ptr->address(), address()));
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
-  if (! whom)
-    return;
+  CAF_LOG_TRACE(CAF_ARG(whom));
   auto ptr = actor_cast<strong_actor_ptr>(whom);
   if (! ptr)
     return;
