@@ -205,7 +205,7 @@ public:
     return super::add_tcp_doorman(fd);
   }
 
-  typed_broker(actor_config& cfg) : super(cfg) {
+  explicit typed_broker(actor_config& cfg) : super(cfg) {
     // nop
   }
 

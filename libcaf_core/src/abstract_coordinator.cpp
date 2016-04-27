@@ -74,7 +74,7 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
 
 class timer_actor : public blocking_actor {
 public:
-  timer_actor(actor_config& cfg) : blocking_actor(cfg) {
+  explicit timer_actor(actor_config& cfg) : blocking_actor(cfg) {
     // nop
   }
 

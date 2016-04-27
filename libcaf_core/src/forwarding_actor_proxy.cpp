@@ -26,7 +26,9 @@
 
 namespace caf {
 
-forwarding_actor_proxy::forwarding_actor_proxy(actor mgr) : manager_(mgr) {
+forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor mgr)
+    : actor_proxy(cfg),
+      manager_(mgr) {
   CAF_ASSERT(mgr != invalid_actor);
 }
 

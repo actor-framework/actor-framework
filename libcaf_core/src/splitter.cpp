@@ -115,7 +115,7 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
 
 splitter::splitter(std::vector<strong_actor_ptr> workers,
                    message_types_set msg_types)
-    : monitorable_actor(is_abstract_actor_flag | is_actor_dot_decorator_flag),
+    : monitorable_actor(actor_config{}.add_flag(is_actor_dot_decorator_flag)),
       workers_(std::move(workers)),
       msg_types_(std::move(msg_types)) {
   // composed actor has dependency on constituent actors by default;

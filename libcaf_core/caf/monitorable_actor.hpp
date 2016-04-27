@@ -78,9 +78,6 @@ protected:
   /// Creates a new actor instance.
   explicit monitorable_actor(actor_config& cfg);
 
-  /// Creates a new actor instance.
-  explicit monitorable_actor(int flags);
-
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/

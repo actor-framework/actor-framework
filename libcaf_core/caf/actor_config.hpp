@@ -24,6 +24,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/input_range.hpp"
+#include "caf/abstract_channel.hpp"
 
 namespace caf {
 
@@ -31,14 +32,19 @@ class actor_config {
 public:
   execution_unit* host;
   int flags;
-  input_range<const group>* groups = nullptr;
+  input_range<const group>* groups;
   std::function<behavior (local_actor*)> init_fun;
 
-  explicit actor_config(execution_unit* ptr = nullptr,
-                        int preset_flags = 0)
+  explicit actor_config(execution_unit* ptr = nullptr)
       : host(ptr),
-        flags(preset_flags) {
+        flags(abstract_channel::is_abstract_actor_flag),
+        groups(nullptr) {
     // nop
+  }
+
+  inline actor_config& add_flag(int x) {
+    flags |= x;
+    return *this;
   }
 };
 

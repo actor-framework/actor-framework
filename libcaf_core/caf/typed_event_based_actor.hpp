@@ -41,7 +41,7 @@ public:
   using base_type =
     abstract_event_based_actor<typed_behavior<Sigs...>, true>;
 
-  typed_event_based_actor(actor_config& cfg) : base_type(cfg) {
+  explicit typed_event_based_actor(actor_config& cfg) : base_type(cfg) {
     // nop
   }
 

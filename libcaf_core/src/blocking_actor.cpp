@@ -26,8 +26,8 @@
 
 namespace caf {
 
-blocking_actor::blocking_actor(actor_config& sys) : super(sys) {
-  is_blocking(true);
+blocking_actor::blocking_actor(actor_config& sys)
+    : super(sys.add_flag(local_actor::is_blocking_flag)) {
   set_default_handler(skip);
 }
 

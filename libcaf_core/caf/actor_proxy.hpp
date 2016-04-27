@@ -34,7 +34,7 @@ namespace caf {
 /// or different hardware, or in a separate process.
 class actor_proxy : public monitorable_actor {
 public:
-  actor_proxy();
+  explicit actor_proxy(actor_config& cfg);
 
   ~actor_proxy();
 

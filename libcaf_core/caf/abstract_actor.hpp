@@ -250,9 +250,6 @@ protected:
   /// Creates a new actor instance.
   explicit abstract_actor(actor_config& cfg);
 
-  /// Creates a new actor instance.
-  explicit abstract_actor(int flags = 0);
-
 private:
   // prohibit copies, assigments, and heap allocations
   void* operator new(size_t);

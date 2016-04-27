@@ -68,10 +68,6 @@ abstract_actor::abstract_actor(actor_config& cfg)
   // nop
 }
 
-abstract_actor::abstract_actor(int flags) : abstract_channel(flags) {
-  // nop
-}
-
 actor_addr abstract_actor::address() const {
   return actor_addr{actor_control_block::from(this)};
 }

@@ -63,7 +63,7 @@ public:
 
   void initialize() override;
 
-  broker(actor_config& cfg);
+  explicit broker(actor_config& cfg);
 
 protected:
   virtual behavior make_behavior();

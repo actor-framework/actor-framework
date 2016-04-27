@@ -479,10 +479,6 @@ public:
   // handle `ptr` in an event-based actor, not suitable to be called in a loop
   virtual void exec_single_event(execution_unit* ctx, mailbox_element_ptr& ptr);
 
-  local_actor();
-
-  local_actor(int init_flags);
-
   local_actor(actor_config& sys);
 
   void intrusive_ptr_add_ref_impl() override;

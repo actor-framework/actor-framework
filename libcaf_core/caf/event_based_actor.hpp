@@ -38,7 +38,7 @@ class event_based_actor : public abstract_event_based_actor<behavior, true> {
 public:
   using super = abstract_event_based_actor<behavior, true>;
 
-  event_based_actor(actor_config& cfg);
+  explicit event_based_actor(actor_config& cfg);
 
   ~event_based_actor();
 

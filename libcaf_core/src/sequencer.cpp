@@ -30,7 +30,7 @@ namespace decorator {
 
 sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
                      message_types_set msg_types)
-    : monitorable_actor(is_abstract_actor_flag | is_actor_dot_decorator_flag),
+    : monitorable_actor(actor_config{}.add_flag(is_actor_dot_decorator_flag)),
       f_(std::move(f)),
       g_(std::move(g)),
       msg_types_(std::move(msg_types)) {

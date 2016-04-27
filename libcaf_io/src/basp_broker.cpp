@@ -86,8 +86,9 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // create proxy and add functor that will be called if we
   // receive a kill_proxy_instance message
   auto mm = &system().middleman();
+  actor_config cfg;
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
-        aid, nid, &(self->home_system()), self);
+    aid, nid, &(self->home_system()), cfg, self);
   auto selfptr = actor_cast<strong_actor_ptr>(self);
   res->get()->attach_functor([=](exit_reason rsn) {
     mm->backend().post([=] {

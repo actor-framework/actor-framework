@@ -32,7 +32,7 @@ class forwarding_actor_proxy : public actor_proxy {
 public:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
-  forwarding_actor_proxy(actor parent);
+  forwarding_actor_proxy(actor_config& cfg, actor parent);
 
   ~forwarding_actor_proxy();
 

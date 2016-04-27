@@ -40,7 +40,7 @@ template <class State, class Base = event_based_actor>
 class stateful_actor : public Base {
 public:
   template <class... Ts>
-  stateful_actor(actor_config& cfg, Ts&&... xs)
+  explicit stateful_actor(actor_config& cfg, Ts&&... xs)
       : Base(cfg, std::forward<Ts>(xs)...),
         state(state_) {
     if (detail::is_serializable<State>::value)

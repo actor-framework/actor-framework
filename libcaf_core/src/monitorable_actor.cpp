@@ -90,12 +90,6 @@ monitorable_actor::monitorable_actor(actor_config& cfg)
   // nop
 }
 
-monitorable_actor::monitorable_actor(int init_flags)
-    : abstract_actor(init_flags),
-      exit_reason_(exit_reason::not_exited) {
-  // nop
-}
-
 optional<exit_reason> monitorable_actor::handle(const std::exception_ptr& eptr) {
   std::unique_lock<std::mutex> guard{mtx_};
   for (auto i = attachables_head_.get(); i != nullptr; i = i->next.get()) {

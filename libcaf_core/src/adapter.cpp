@@ -34,7 +34,7 @@ namespace caf {
 namespace decorator {
 
 adapter::adapter(strong_actor_ptr decorated, message msg)
-    : monitorable_actor(is_abstract_actor_flag | is_actor_bind_decorator_flag),
+    : monitorable_actor(actor_config{}.add_flag(is_actor_bind_decorator_flag)),
       decorated_(std::move(decorated)),
       merger_(std::move(msg)) {
   // bound actor has dependency on the decorated actor by default;

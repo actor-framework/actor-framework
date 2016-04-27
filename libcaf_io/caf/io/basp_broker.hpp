@@ -138,7 +138,7 @@ class basp_broker : public stateful_actor<basp_broker_state, broker> {
 public:
   using super = stateful_actor<basp_broker_state, broker>;
 
-  basp_broker(actor_config& cfg);
+  explicit basp_broker(actor_config& cfg);
   behavior make_behavior() override;
   resume_result resume(execution_unit*, size_t) override;
   void exec_single_event(execution_unit*, mailbox_element_ptr&) override;

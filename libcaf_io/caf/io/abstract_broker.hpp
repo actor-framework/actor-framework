@@ -209,7 +209,7 @@ public:
 protected:
   void init_broker();
 
-  abstract_broker(actor_config& cfg);
+  explicit abstract_broker(actor_config& cfg);
 
   using doorman_map = std::unordered_map<accept_handle, intrusive_ptr<doorman>>;
 

@@ -75,22 +75,6 @@ local_actor::local_actor(actor_config& cfg)
       join(grp);
 }
 
-local_actor::local_actor()
-    : monitorable_actor(abstract_channel::is_abstract_actor_flag),
-      planned_exit_reason_(exit_reason::not_exited),
-      timeout_id_(0),
-      unexpected_handler_(print_and_drop) {
-  // nop
-}
-
-local_actor::local_actor(int init_flags)
-    : monitorable_actor(init_flags),
-      planned_exit_reason_(exit_reason::not_exited),
-      timeout_id_(0),
-      unexpected_handler_(print_and_drop) {
-  // nop
-}
-
 local_actor::~local_actor() {
   // nop
 }

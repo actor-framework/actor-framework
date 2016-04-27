@@ -28,8 +28,7 @@
 
 namespace caf {
 
-actor_proxy::actor_proxy()
-    : monitorable_actor(abstract_channel::is_abstract_actor()) {
+actor_proxy::actor_proxy(actor_config& cfg) : monitorable_actor(cfg) {
   // nop
 }
 
