@@ -20,7 +20,7 @@ using calculator_type =
   typed_actor<replies_to<plus_atom, int, int>::with<result_atom, int>,
               replies_to<minus_atom, int, int>::with<result_atom, int>>;
 
-calculator_type::behavior_type typed_calculator(calculator_type::pointer) {
+calculator_type::behavior_type typed_calculator_fun(calculator_type::pointer) {
   return {
     [](plus_atom, int x, int y) {
       return std::make_tuple(result_atom::value, x + y);
@@ -79,7 +79,7 @@ void tester(event_based_actor* self, const calculator_type& testee) {
 int main() {
   actor_system system;
   // test function-based impl
-  system.spawn(tester, system.spawn(typed_calculator));
+  system.spawn(tester, system.spawn(typed_calculator_fun));
   system.await_all_actors_done();
   // test class-based impl
   system.spawn(tester, system.spawn<typed_calculator_class>());

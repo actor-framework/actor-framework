@@ -22,12 +22,7 @@ struct foo {
   int b;
 };
 
-// foo needs to be comparable ...
-bool operator==(const foo& lhs, const foo& rhs) {
-  return lhs.a == rhs.a && lhs.b == rhs.b;
-}
-
-// ... and to be serializable
+// foo needs to be serializable
 template <class T>
 void serialize(T& in_or_out, foo& x, const unsigned int) {
   in_or_out & x.a;
@@ -52,12 +47,7 @@ struct foo2 {
   vector<vector<double>> b;
 };
 
-// foo2 also needs to be comparable ...
-bool operator==(const foo2& lhs, const foo2& rhs) {
-  return lhs.a == rhs.a && lhs.b == rhs.b;
-}
-
-// ... and to be serializable
+// foo2 also needs to be serializable
 template <class T>
 void serialize(T& in_or_out, foo2& x, const unsigned int) {
   in_or_out & x.a;
@@ -115,7 +105,7 @@ int main(int, char**) {
   binary_deserializer bd{system, buf};
   bd >> f2;
   // must be equal
-  assert(f1 == f2);
+  assert(to_string(f1) == to_string(f2));
   // spawn a testee that receives two messages of user-defined type
   auto t = system.spawn(testee, 2);
   scoped_actor self{system};

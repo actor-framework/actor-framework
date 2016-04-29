@@ -5,7 +5,7 @@
 
 // This example is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 17-21, 24-26, 28-68, 70-104, and 137-143 (Actor.tex)
+// Manual references: lines 17-21, 31-65, 67-101, and 135-140 (Actor.tex)
 
 #include <iostream>
 

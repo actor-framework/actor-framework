@@ -38,7 +38,7 @@ using rebind_atom = atom_constant<atom("rebind")>;
 using reconnect_atom = atom_constant<atom("reconnect")>;
 
 // our "service"
-behavior calculator() {
+behavior calculator_fun() {
   return {
     [](plus_atom, int a, int b) -> message {
       return make_message(result_atom::value, a + b);
@@ -55,7 +55,7 @@ public:
       : event_based_actor(cfg),
         host_(std::move(hostaddr)),
         port_(port) {
-    // nop
+    set_default_handler(skip);
   }
 
   behavior make_behavior() override {
@@ -105,8 +105,6 @@ private:
   }
 
   behavior reconnecting(std::function<void()> continuation = nullptr) {
-    return {};
-    /* TODO: implement me
     using std::chrono::seconds;
     auto mm = system().middleman().actor_handle();
     send(mm, connect_atom::value, host_, port_);
@@ -151,11 +149,8 @@ private:
             send_mm();
           }
         );
-      },
-      // simply ignore all requests until we have a connection
-      others >> skip
+      }
     };
-    */
   }
 
   actor server_;
@@ -283,7 +278,7 @@ int main(int argc, char** argv) {
   cfg.load<io::middleman>();
   actor_system system{cfg};
   if (is_server) {
-    auto calc = system.spawn(calculator);
+    auto calc = system.spawn(calculator_fun);
     // try to publish math actor at given port
     cout << "*** try publish at port " << port << endl;
     auto p = system.middleman().publish(calc, port);

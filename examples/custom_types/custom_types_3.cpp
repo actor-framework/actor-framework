@@ -44,12 +44,7 @@ private:
   int b_;
 };
 
-// comparing is straightforward ...
-bool operator==(const foo& x, const foo& y) {
-  return x.a() == y.a() && x.b() == y.b();
-}
-
-// ... and so is to_string, ...
+// to_string is straightforward ...
 std::string to_string(const foo& x) {
   return "foo" + deep_to_string(std::forward_as_tuple(x.a(), x.b()));
 }
@@ -72,21 +67,17 @@ serialize(T& in, foo& x, const unsigned int) {
   x.set_b(tmp);
 }
 
-void testee(event_based_actor* self) {
-  self->become (
+behavior testee(event_based_actor* self) {
+  return {
     [=](const foo& x) {
       aout(self) << to_string(x) << endl;
-      self->quit();
     }
-  );
+  };
 }
 
 int main(int, char**) {
   actor_system_config cfg;
   cfg.add_message_type<foo>("foo");
   actor_system system{cfg};
-  scoped_actor self{system};
-  auto t = self->spawn(testee);
-  self->send(t, foo{1, 2});
-  self->await_all_other_actors_done();
+  anon_send(system.spawn(testee), foo{1, 2});
 }

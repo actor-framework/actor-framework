@@ -16,8 +16,6 @@ behavior mirror(event_based_actor* self) {
     [=](const string& what) -> string {
       // prints "Hello World!" via aout (thread-safe cout wrapper)
       aout(self) << what << endl;
-      // terminates this actor ('become' otherwise loops forever)
-      self->quit();
       // reply "!dlroW olleH"
       return string(what.rbegin(), what.rend());
     }
@@ -42,5 +40,5 @@ int main() {
   auto mirror_actor = system.spawn(mirror);
   // create another actor that calls 'hello_world(mirror_actor)';
   system.spawn(hello_world, mirror_actor);
-  // system will wait until both actors are done before leaving main
+  // system will wait until both actors are destroyed before leaving main
 }
