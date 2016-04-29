@@ -47,6 +47,6 @@ using calculator_bhvr = composed_behavior<adder_bhvr, multiplier_bhvr>;
 int main() {
   actor_system system;
   auto f = make_function_view(system.spawn<calculator_bhvr>());
-  cout << "10 + 30 = " << f(add_atom::value, 10, 20) << endl;
+  cout << "10 + 20 = " << f(add_atom::value, 10, 20) << endl;
   cout << "7 * 9 = " << f(multiply_atom::value, 7, 9) << endl;
 }
