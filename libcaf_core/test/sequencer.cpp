@@ -92,10 +92,6 @@ CAF_TEST(identity) {
   CAF_CHECK_NOT_EQUAL(h->id(), g->id());
   CAF_CHECK_NOT_EQUAL(h.address(), g.address());
   CAF_CHECK_EQUAL(h->message_types(), g->home_system().message_types(h));
-  anon_send_exit(f, exit_reason::kill);
-  anon_send_exit(g, exit_reason::kill);
-  // killing both f and g triggers down messages to h,
-  // ultimately clearing up held references and h will become unreachable
 }
 
 // spawned dead if `g` is already dead upon spawning
@@ -107,7 +103,6 @@ CAF_TEST(lifetime_1a) {
   wait_until_is_terminated();
   auto h = f * g;
   CAF_CHECK(exited(h));
-  anon_send_exit(f, exit_reason::kill);
 }
 
 // spawned dead if `f` is already dead upon spawning
@@ -119,7 +114,6 @@ CAF_TEST(lifetime_1b) {
   wait_until_is_terminated();
   auto h = f * g;
   CAF_CHECK(exited(h));
-  anon_send_exit(g, exit_reason::kill);
 }
 
 // `f.g` exits when `g` exits
@@ -129,8 +123,6 @@ CAF_TEST(lifetime_2a) {
   auto h = f * g;
   self->monitor(h);
   anon_send(g, message{});
-  wait_until_is_terminated();
-  anon_send_exit(f, exit_reason::kill);
 }
 
 // `f.g` exits when `f` exits
@@ -140,8 +132,6 @@ CAF_TEST(lifetime_2b) {
   auto h = f * g;
   self->monitor(h);
   anon_send(f, message{});
-  wait_until_is_terminated();
-  anon_send_exit(g, exit_reason::kill);
 }
 
 CAF_TEST(request_response_promise) {
@@ -158,8 +148,6 @@ CAF_TEST(request_response_promise) {
       CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::request_receiver_down));
     }
   );
-  anon_send_exit(f, exit_reason::kill);
-  anon_send_exit(g, exit_reason::kill);
 }
 
 // single composition of distinct actors
@@ -172,8 +160,6 @@ CAF_TEST(dot_composition_1) {
       CAF_CHECK_EQUAL(res, (42 * 2.0) * (42 * 4.0));
     }
   );
-  anon_send_exit(first, exit_reason::kill);
-  anon_send_exit(second, exit_reason::kill);
 }
 
 // multiple self composition
@@ -189,7 +175,6 @@ CAF_TEST(dot_composition_2) {
       CAF_CHECK(false);
     }
   );
-  anon_send_exit(dbl_actor, exit_reason::kill);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

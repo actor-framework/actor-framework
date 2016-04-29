@@ -98,7 +98,6 @@ struct fixture {
         CAF_CHECK_EQUAL(x, 20);
       }
     );
-    anon_send_exit(aut, exit_reason::kill);
   }
 
   template <class State>

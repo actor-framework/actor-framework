@@ -19,7 +19,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE request
+#define CAF_SUITE request_response
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
@@ -409,24 +409,22 @@ CAF_TEST(client_server_worker_user_case) {
   );
 }
 
-behavior snyc_send_no_then_A(event_based_actor * self) {
+behavior request_no_then_A(event_based_actor*) {
   return [=](int number) {
     CAF_MESSAGE("got " << number);
-    self->quit();
   };
 }
 
-behavior snyc_send_no_then_B(event_based_actor * self) {
+behavior request_no_then_B(event_based_actor* self) {
   return {
     [=](int number) {
-      self->request(self->spawn(snyc_send_no_then_A), infinite, number);
-      self->quit();
+      self->request(self->spawn(request_no_then_A), infinite, number);
     }
   };
 }
 
 CAF_TEST(request_no_then) {
-  anon_send(system.spawn(snyc_send_no_then_B), 8);
+  anon_send(system.spawn(request_no_then_B), 8);
 }
 
 CAF_TEST(async_request) {

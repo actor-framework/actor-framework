@@ -127,45 +127,6 @@ void client(event_based_actor* self, actor parent, server_type serv) {
   );
 }
 
-void test_typed_spawn(server_type ts) {
-  actor_system system;
-  scoped_actor self{system};
-  self->send(ts, my_request{1, 2});
-  self->receive(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, false);
-    }
-  );
-  self->send(ts, my_request{42, 42});
-  self->receive(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, true);
-    }
-  );
-  self->request(ts, infinite, my_request{10, 20}).receive(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, false);
-    }
-  );
-  self->request(ts, infinite, my_request{0, 0}).receive(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, true);
-    }
-  );
-  self->spawn<monitored>(client, self, ts);
-  self->receive(
-    [](passed_atom) {
-      CAF_MESSAGE("received `passed_atom`");
-    }
-  );
-  self->receive(
-    [](const down_msg& dmsg) {
-      CAF_CHECK_EQUAL(dmsg.reason, exit_reason::normal);
-    }
-  );
-  self->send_exit(ts, exit_reason::user_shutdown);
-}
-
 /******************************************************************************
  *          test skipping of messages intentionally + using become()          *
  ******************************************************************************/
@@ -308,12 +269,6 @@ behavior foo(event_based_actor* self) {
     [=](int i, int_actor server) {
       self->delegate(server, i);
       self->quit();
-      /*
-      return self->request(server, i).then([=](int result) -> int {
-        self->quit(exit_reason::normal);
-        return result;
-      });
-      */
     }
   };
 }
@@ -346,10 +301,50 @@ behavior foo2(event_based_actor* self) {
 
 struct fixture {
   actor_system system;
+  scoped_actor self;
 
   fixture() : system(actor_system_config()
-                     .add_message_type<get_state_msg>("get_state_msg")) {
+                     .add_message_type<get_state_msg>("get_state_msg")),
+              self(system) {
     // nop
+  }
+
+  void test_typed_spawn(server_type ts) {
+    self->send(ts, my_request{1, 2});
+    self->receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, false);
+      }
+    );
+    self->send(ts, my_request{42, 42});
+    self->receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, true);
+      }
+    );
+    self->request(ts, infinite, my_request{10, 20}).receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, false);
+      }
+    );
+    self->request(ts, infinite, my_request{0, 0}).receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, true);
+      }
+    );
+    CAF_CHECK_EQUAL(system.registry().running(), 2u);
+    self->spawn<monitored>(client, self, ts);
+    self->receive(
+      [](passed_atom) {
+        CAF_MESSAGE("received `passed_atom`");
+      }
+    );
+    self->receive(
+      [](const down_msg& dm) {
+        CAF_CHECK(dm.reason == exit_reason::normal);
+      }
+    );
+    CAF_CHECK_EQUAL(system.registry().running(), 2u);
   }
 };
 
@@ -364,23 +359,20 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 CAF_TEST(typed_spawns) {
   // run test series with typed_server(1|2)
   test_typed_spawn(system.spawn(typed_server1));
-  system.await_all_actors_done();
+  self->await_all_other_actors_done();
   CAF_MESSAGE("finished test series with `typed_server1`");
   test_typed_spawn(system.spawn(typed_server2));
-  system.await_all_actors_done();
+  self->await_all_other_actors_done();
   CAF_MESSAGE("finished test series with `typed_server2`");
-  scoped_actor self{system};
   test_typed_spawn(self->spawn<typed_server3>("hi there", self));
   self->receive(
     [](const string& str) {
-      CAF_REQUIRE(str == "hi there");
+      CAF_REQUIRE_EQUAL(str, "hi there");
     }
   );
 }
 
 CAF_TEST(event_testee_series) {
-  // run test series with event_testee
-  scoped_actor self{system};
   auto et = self->spawn<event_testee>();
   string result;
   self->send(et, 1);
@@ -411,15 +403,11 @@ CAF_TEST(event_testee_series) {
       throw runtime_error("event_testee does not reply");
     }
   );
-  self->send_exit(et, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
   CAF_CHECK_EQUAL(result, "wait4int");
 }
 
 CAF_TEST(string_delegator_chain) {
   // run test series with string reverter
-  scoped_actor self{system};
-  // actor-under-test
   auto aut = self->spawn<monitored>(string_delegator,
                                     system.spawn(string_reverter),
                                     true);
@@ -430,7 +418,6 @@ CAF_TEST(string_delegator_chain) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
   );
-  anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
 CAF_TEST(maybe_string_delegator_chain) {
@@ -453,12 +440,8 @@ CAF_TEST(maybe_string_delegator_chain) {
   self->request(aut, infinite, "abcd").receive(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
-    },
-    [](const error&) {
-      throw std::logic_error("unexpected error!");
     }
   );
-  anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
 CAF_TEST(sending_typed_actors) {
@@ -470,7 +453,6 @@ CAF_TEST(sending_typed_actors) {
       CAF_CHECK_EQUAL(i, 100);
     }
   );
-  self->send_exit(aut, exit_reason::user_shutdown);
 }
 
 CAF_TEST(sending_typed_actors_and_down_msg) {
@@ -503,7 +485,6 @@ CAF_TEST(check_signature) {
       }
     };
   };
-  scoped_actor self{system};
   self->spawn<monitored>(bar_action);
   self->receive(
     [](const down_msg& dm) {

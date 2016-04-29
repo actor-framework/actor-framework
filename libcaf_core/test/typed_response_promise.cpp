@@ -131,10 +131,6 @@ struct fixture {
     // nop
   }
 
-  ~fixture() {
-    self->send_exit(foo, exit_reason::kill);
-  }
-
   actor_system system;
   scoped_actor self;
   foo_actor foo;
@@ -146,6 +142,7 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 
 CAF_TEST(typed_response_promise) {
   typed_response_promise<int> resp;
+  CAF_MESSAGE("trigger 'invalid response promise' error");
   resp.deliver(1); // delivers on an invalid promise has no effect
   self->request(foo, infinite, get_atom::value, 42).receive(
     [](int x) {

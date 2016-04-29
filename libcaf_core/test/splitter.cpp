@@ -133,8 +133,8 @@ CAF_TEST(typed_splicing) {
       CAF_CHECK_EQUAL(z, (23.0 * 42.0));
     }
   );
-  anon_send_exit(x, exit_reason::kill);
-  anon_send_exit(y, exit_reason::kill);
+  // x and y go out of scope, leaving only the references
+  // in x_and_y, which will also go out of scope
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

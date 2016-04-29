@@ -101,5 +101,4 @@ CAF_TEST(test_serial_reply) {
     }
   );
   CAF_REQUIRE(self->mailbox().count() == 0);
-  self->send_exit(master, exit_reason::user_shutdown);
 }

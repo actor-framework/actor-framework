@@ -29,6 +29,9 @@
 
 using namespace caf;
 
+using std::chrono::seconds;
+using std::chrono::milliseconds;
+
 namespace {
 
 using ping_atom = atom_constant<atom("ping")>;
@@ -38,7 +41,7 @@ using send_ping_atom = atom_constant<atom("send_ping")>;
 behavior pong() {
   return {
     [=] (ping_atom) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::this_thread::sleep_for(seconds(1));
       return pong_atom::value;
     }
   };
@@ -49,7 +52,7 @@ behavior ping1(event_based_actor* self, const actor& pong_actor) {
   self->send(self, send_ping_atom::value);
   return {
     [=](send_ping_atom) {
-      self->request(pong_actor, std::chrono::milliseconds(100), ping_atom::value).then(
+      self->request(pong_actor, milliseconds(100), ping_atom::value).then(
         [=](pong_atom) {
           CAF_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
@@ -69,7 +72,7 @@ behavior ping2(event_based_actor* self, const actor& pong_actor) {
   auto received_inner = std::make_shared<bool>(false);
   return {
     [=](send_ping_atom) {
-      self->request(pong_actor, std::chrono::milliseconds(100), ping_atom::value).then(
+      self->request(pong_actor, milliseconds(100), ping_atom::value).then(
         [=](pong_atom) {
           CAF_ERROR("received pong atom");
           self->quit(exit_reason::user_shutdown);
@@ -81,7 +84,7 @@ behavior ping2(event_based_actor* self, const actor& pong_actor) {
         }
       );
     },
-    after(std::chrono::milliseconds(100)) >> [=] {
+    after(milliseconds(100)) >> [=] {
       CAF_CHECK_EQUAL(*received_inner, true);
       self->quit(exit_reason::user_shutdown);
     }
@@ -93,7 +96,7 @@ behavior ping3(event_based_actor* self, const actor& pong_actor) {
   self->send(self, send_ping_atom::value);
   return {
     [=](send_ping_atom) {
-      self->request(pong_actor, std::chrono::milliseconds(100),
+      self->request(pong_actor, milliseconds(100),
                     ping_atom::value).then(
         [=](pong_atom) {
           CAF_ERROR("received pong atom");
@@ -115,7 +118,7 @@ behavior ping4(event_based_actor* self, const actor& pong_actor) {
   auto received_outer = std::make_shared<bool>(false);
   return {
     [=](send_ping_atom) {
-      self->request(pong_actor, std::chrono::milliseconds(100),
+      self->request(pong_actor, milliseconds(100),
                     ping_atom::value).then(
         [=](pong_atom) {
           CAF_ERROR("received pong atom");
@@ -128,7 +131,7 @@ behavior ping4(event_based_actor* self, const actor& pong_actor) {
         }
       );
     },
-    after(std::chrono::milliseconds(50)) >> [=] {
+    after(milliseconds(50)) >> [=] {
       CAF_MESSAGE("outer timeout: check");
       *received_outer = true;
     }
@@ -138,7 +141,7 @@ behavior ping4(event_based_actor* self, const actor& pong_actor) {
 void ping5(event_based_actor* self, const actor& pong_actor) {
   self->link_to(pong_actor);
   auto timeouts = std::make_shared<int>(0);
-  self->request(pong_actor, std::chrono::milliseconds(100),
+  self->request(pong_actor, milliseconds(100),
                 ping_atom::value).then(
     [=](pong_atom) {
       CAF_ERROR("received pong atom");
@@ -149,7 +152,7 @@ void ping5(event_based_actor* self, const actor& pong_actor) {
         self->quit();
     }
   );
-  self->request(pong_actor, std::chrono::milliseconds(100),
+  self->request(pong_actor, milliseconds(100),
                 ping_atom::value).await(
     [=](pong_atom) {
       CAF_ERROR("received pong atom");

@@ -61,36 +61,33 @@ CAF_TEST(test_custom_exception_handler) {
     }
     return exit_reason::unhandled_exception;
   };
-  {
-    scoped_actor self{system};
-    auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
-      eb_self->set_exception_handler(handler);
-      throw std::runtime_error("ping");
-    });
-    auto testee2 = self->spawn<monitored>([=](event_based_actor* eb_self) {
-      eb_self->set_exception_handler(handler);
-      throw std::logic_error("pong");
-    });
-    auto testee3 = self->spawn<exception_testee, monitored>();
-    self->send(testee3, "foo");
-    // receive all down messages
-    auto i = 0;
-    self->receive_for(i, 3)(
-      [&](const down_msg& dm) {
-        if (dm.source == testee1) {
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-        }
-        else if (dm.source == testee2) {
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
-        }
-        else if (dm.source == testee3) {
-          CAF_CHECK_EQUAL(dm.reason, exit_reason::remote_link_unreachable);
-        }
-        else {
-          throw std::runtime_error("received message from unexpected source");
-        }
+  scoped_actor self{system};
+  auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+    eb_self->set_exception_handler(handler);
+    throw std::runtime_error("ping");
+  });
+  auto testee2 = self->spawn<monitored>([=](event_based_actor* eb_self) {
+    eb_self->set_exception_handler(handler);
+    throw std::logic_error("pong");
+  });
+  auto testee3 = self->spawn<exception_testee, monitored>();
+  self->send(testee3, "foo");
+  // receive all down messages
+  auto i = 0;
+  self->receive_for(i, 3)(
+    [&](const down_msg& dm) {
+      if (dm.source == testee1) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
       }
-    );
-    self->await_all_other_actors_done();
-  }
+      else if (dm.source == testee2) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
+      }
+      else if (dm.source == testee3) {
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::remote_link_unreachable);
+      }
+      else {
+        throw std::runtime_error("received message from unexpected source");
+      }
+    }
+  );
 }

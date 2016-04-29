@@ -564,9 +564,8 @@ CAF_TEST(constructor_attach) {
         },
         [=](ok_atom, const error& reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
-          if (++downs_ == 2) {
+          if (++downs_ == 2)
             quit(reason);
-          }
         },
         [=](exit_msg& msg) {
           delegate(testee_, std::move(msg));
