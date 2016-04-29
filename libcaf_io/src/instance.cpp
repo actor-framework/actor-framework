@@ -24,7 +24,6 @@
 #include "caf/binary_deserializer.hpp"
 
 #include "caf/io/basp/version.hpp"
-#include "caf/io/basp/error_code.hpp"
 
 namespace caf {
 namespace io {
@@ -91,17 +90,12 @@ connection_state instance::handle(execution_unit* ctx,
     } else {
       CAF_LOG_INFO("cannot forward message, no route to destination");
       if (hdr.source_node != this_node_) {
+        // TODO: signalize error back to sending node
         auto reverse_path = lookup(hdr.source_node);
         if (! reverse_path) {
           CAF_LOG_WARNING("cannot send error message: no route to source");
         } else {
-          write_dispatch_error(ctx,
-                               reverse_path->wr_buf,
-                               this_node_,
-                               hdr.source_node,
-                               error_code::no_route_to_destination,
-                               hdr,
-                               payload);
+          CAF_LOG_WARNING("not implemented yet: signalize forward failure");
         }
       } else {
         CAF_LOG_WARNING("lost packet with probably spoofed source");
@@ -190,10 +184,15 @@ connection_state instance::handle(execution_unit* ctx,
     case message_type::announce_proxy_instance:
       callee_.proxy_announced(hdr.source_node, hdr.dest_actor);
       break;
-    case message_type::kill_proxy_instance:
-      callee_.kill_proxy(hdr.source_node, hdr.source_actor,
-                         static_cast<exit_reason>(hdr.operation_data));
+    case message_type::kill_proxy_instance: {
+      if (! payload_valid())
+        return err();
+      binary_deserializer bd{ctx, *payload};
+      error fail_state;
+      bd >> fail_state;
+      callee_.kill_proxy(hdr.source_node, hdr.source_actor, fail_state);
       break;
+    }
     case message_type::heartbeat: {
       CAF_LOG_TRACE("received heartbeat: " << CAF_ARG(hdr.source_node));
       callee_.handle_heartbeat(hdr.source_node);
@@ -408,36 +407,18 @@ void instance::write_client_handshake(execution_unit* ctx,
         this_node_, remote_side, invalid_actor_id, invalid_actor_id);
 }
 
-void instance::write_dispatch_error(execution_unit* ctx,
-                                    buffer_type& buf,
-                                    const node_id& source_node,
-                                    const node_id& dest_node,
-                                    error_code ec,
-                                    const header& original_hdr,
-                                    buffer_type* payload) {
-  CAF_LOG_TRACE(CAF_ARG(source_node) << CAF_ARG(dest_node)
-                << CAF_ARG(ec) << CAF_ARG(original_hdr));
-  auto writer = make_callback([&](serializer& sink) {
-    sink << original_hdr;
-    if (payload)
-      sink.apply_raw(payload->size(), payload->data());
-  });
-  header hdr{message_type::kill_proxy_instance, 0,
-             static_cast<uint64_t>(ec),
-             source_node, dest_node,
-             invalid_actor_id, invalid_actor_id};
-  write(ctx, buf, hdr, &writer);
-}
-
 void instance::write_kill_proxy_instance(execution_unit* ctx,
                                          buffer_type& buf,
                                          const node_id& dest_node,
                                          actor_id aid,
-                                         exit_reason rsn) {
+                                         const error& rsn) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
-  header hdr{message_type::kill_proxy_instance, 0, static_cast<uint32_t>(rsn),
+  auto writer = make_callback([&](serializer& sink) {
+    sink << rsn;
+  });
+  header hdr{message_type::kill_proxy_instance, 0, 0,
              this_node_, dest_node, aid, invalid_actor_id};
-  write(ctx, buf, hdr);
+  write(ctx, buf, hdr, &writer);
 }
 
 void instance::write_heartbeat(execution_unit* ctx,

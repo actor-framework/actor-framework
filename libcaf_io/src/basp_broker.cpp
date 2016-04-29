@@ -90,13 +90,13 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
     aid, nid, &(self->home_system()), cfg, self);
   auto selfptr = actor_cast<strong_actor_ptr>(self);
-  res->get()->attach_functor([=](exit_reason rsn) {
+  res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
       auto bptr = static_cast<basp_broker*>(selfptr->get());
-      if (! bptr->exited())
+      if (! bptr->is_terminated())
         bptr->state.proxies().erase(nid, res->id(), rsn);
     });
   });
@@ -140,7 +140,7 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   strong_actor_ptr ptr;
   if (nid == this_node()) {
     // connected to self
-    ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid).first);
+    ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid));
     CAF_LOG_INFO_IF(! ptr, "actor not found:" << CAF_ARG(aid));
   } else {
     ptr = namespace_.get_or_put(nid, aid);
@@ -171,8 +171,8 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
   // source node has created a proxy for one of our actors
   auto entry = system().registry().get(aid);
-  auto send_kill_proxy_instance = [=](exit_reason rsn) {
-    if (rsn == exit_reason::not_exited)
+  auto send_kill_proxy_instance = [=](error rsn) {
+    if (! rsn)
       rsn = exit_reason::unknown;
     auto path = instance.tbl().lookup(nid);
     if (! path) {
@@ -184,29 +184,29 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
                                        nid, aid, rsn);
     instance.tbl().flush(*path);
   };
-  auto ptr = actor_cast<strong_actor_ptr>(entry.first);
-  if (! ptr || entry.second != exit_reason::not_exited) {
+  auto ptr = actor_cast<strong_actor_ptr>(entry);
+  if (! ptr) {
     CAF_LOG_DEBUG("kill proxy immediately");
     // kill immediately if actor has already terminated
-    send_kill_proxy_instance(entry.second);
+    send_kill_proxy_instance(exit_reason::unknown);
   } else {
     auto tmp = actor_cast<strong_actor_ptr>(self); // keep broker alive ...
     auto mm = &system().middleman();
-    ptr->get()->attach_functor([=](exit_reason reason) {
+    ptr->get()->attach_functor([=](const error& fail_state) {
       mm->backend().dispatch([=] {
-        CAF_LOG_TRACE(CAF_ARG(reason));
+        CAF_LOG_TRACE(CAF_ARG(fail_state));
         auto bptr = static_cast<basp_broker*>(tmp->get());
         // ... to make sure this is safe
         if (bptr == mm->named_broker<basp_broker>(atom("BASP"))
-            && ! bptr->exited())
-          send_kill_proxy_instance(reason);
+            && ! bptr->is_terminated())
+          send_kill_proxy_instance(fail_state);
       });
     });
   }
 }
 
 void basp_broker_state::kill_proxy(const node_id& nid, actor_id aid,
-                                   exit_reason rsn) {
+                                   const error& rsn) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
   proxies().erase(nid, aid, rsn);
 }
@@ -223,7 +223,7 @@ void basp_broker_state::deliver(const node_id& src_nid,
                 << CAF_ARG(dest_aid) << CAF_ARG(msg) << CAF_ARG(mid));
   strong_actor_ptr src;
   if (src_nid == this_node())
-    src = actor_cast<strong_actor_ptr>(system().registry().get(src_aid).first);
+    src = actor_cast<strong_actor_ptr>(system().registry().get(src_aid));
   else
     src = proxies().get_or_put(src_nid, src_aid);
   strong_actor_ptr dest;
@@ -240,7 +240,7 @@ void basp_broker_state::deliver(const node_id& src_nid,
       mid = message_id::make(); // override this since the message is async
       dest = actor_cast<strong_actor_ptr>(system().registry().get(dest_name));
     } else {
-      std::tie(dest, rsn) = system().registry().get(dest_aid);
+      dest = system().registry().get(dest_aid);
     }
   }
   if (! dest) {

@@ -38,15 +38,15 @@ public:
 
   ~actor_proxy();
 
-  /// Establishes a local link state that's not synchronized back
-  ///    to the remote instance.
-  virtual void local_link_to(const actor_addr& other) = 0;
+  /// Establishes a local link state that's
+  /// not synchronized back to the remote instance.
+  virtual void local_link_to(abstract_actor* other) = 0;
 
   /// Removes a local link state.
-  virtual void local_unlink_from(const actor_addr& other) = 0;
+  virtual void local_unlink_from(abstract_actor* other) = 0;
 
   /// Invokes cleanup code.
-  virtual void kill_proxy(execution_unit* ctx, exit_reason reason) = 0;
+  virtual void kill_proxy(execution_unit* ctx, error reason) = 0;
 };
 
 } // namespace caf

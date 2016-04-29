@@ -139,36 +139,33 @@ void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   policy_(home_system(), guard, workers_, what, eu);
 }
 
-actor_pool::actor_pool(actor_config& cfg)
-    : monitorable_actor(cfg),
-      planned_reason_(exit_reason::not_exited) {
+actor_pool::actor_pool(actor_config& cfg) : monitorable_actor(cfg) {
   is_registered(true);
+}
+
+void actor_pool::on_cleanup() {
+  // nop
 }
 
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
                         const strong_actor_ptr& sender, message_id mid,
                         const message& msg, execution_unit* eu) {
   CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(msg));
-  auto rsn = planned_reason_;
-  if (rsn != caf::exit_reason::not_exited) {
-    guard.unlock();
-    if (mid.valid()) {
-      detail::sync_request_bouncer srq{rsn};
-      srq(sender, mid);
-    }
-    return true;
-  }
   if (msg.match_elements<exit_msg>()) {
+    // acquire second mutex as well
     std::vector<actor> workers;
-    // send exit messages *always* to all workers and clear vector afterwards
-    // but first swap workers_ out of the critical section
-    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-    workers_.swap(workers);
-    planned_reason_ = msg.get_as<exit_msg>(0).reason;
-    unique_guard.unlock();
-    for (auto& w : workers)
-      anon_send(w, msg);
-    quit(eu);
+    auto tmp = msg.get_as<exit_msg>(0).reason;
+    if (cleanup(std::move(tmp), eu)) {
+      // send exit messages *always* to all workers and clear vector afterwards
+      // but first swap workers_ out of the critical section
+      upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
+      workers_.swap(workers);
+      unique_guard.unlock();
+      for (auto& w : workers)
+        anon_send(w, msg);
+      quit(eu);
+      is_registered(false);
+    }
     return true;
   }
   if (msg.match_elements<down_msg>()) {

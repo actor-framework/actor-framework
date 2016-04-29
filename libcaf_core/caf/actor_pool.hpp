@@ -105,6 +105,9 @@ public:
 
   actor_pool(actor_config& cfg);
 
+protected:
+  void on_cleanup() override;
+
 private:
   bool filter(upgrade_lock<detail::shared_spinlock>&,
               const strong_actor_ptr& sender, message_id mid,

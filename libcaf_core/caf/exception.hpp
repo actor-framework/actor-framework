@@ -53,17 +53,17 @@ private:
 class actor_exited : public caf_exception {
 public:
   ~actor_exited() noexcept;
-  explicit actor_exited(exit_reason exit_reason);
+  explicit actor_exited(error exit_reason);
   actor_exited(const actor_exited&) = default;
   actor_exited& operator=(const actor_exited&) = default;
 
   /// Returns the exit reason.
-  inline exit_reason reason() const noexcept {
+  inline error reason() const noexcept {
     return reason_;
   }
 
 private:
-  exit_reason reason_;
+  error reason_;
 };
 
 /// Thrown to indicate that either an actor publishing failed or

@@ -59,13 +59,13 @@ actor_registry::actor_registry(actor_system& sys) : running_(0), system_(sys) {
   // nop
 }
 
-actor_registry::id_entry actor_registry::get(actor_id key) const {
+strong_actor_ptr actor_registry::get(actor_id key) const {
   shared_guard guard(instances_mtx_);
   auto i = entries_.find(key);
   if (i != entries_.end())
     return i->second;
   CAF_LOG_DEBUG("key invalid, assume actor no longer exists:" << CAF_ARG(key));
-  return {nullptr, exit_reason::unknown};
+  return nullptr;
 }
 
 void actor_registry::put(actor_id key, actor_control_block* val) {
@@ -76,18 +76,14 @@ void actor_registry::put(actor_id key, actor_control_block* val) {
     return;
   { // lifetime scope of guard
     exclusive_guard guard(instances_mtx_);
-    if (! entries_.emplace(key,
-                           id_entry{actor_cast<strong_actor_ptr>(val),
-                                    exit_reason::not_exited}).second) {
-      // already defined
+    if (! entries_.emplace(key, actor_cast<strong_actor_ptr>(val)).second)
       return;
-    }
   }
   // attach functor without lock
   CAF_LOG_INFO("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
-  strong_val->attach_functor([key, reg](exit_reason reason) {
-    reg->erase(key, reason);
+  strong_val->attach_functor([key, reg]() {
+    reg->erase(key);
   });
 }
 
@@ -95,15 +91,9 @@ void actor_registry::put(actor_id key, const strong_actor_ptr& val) {
   put(key, actor_cast<actor_control_block*>(val));
 }
 
-void actor_registry::erase(actor_id key, exit_reason reason) {
+void actor_registry::erase(actor_id key) {
   exclusive_guard guard(instances_mtx_);
-  auto i = entries_.find(key);
-  if (i != entries_.end()) {
-    auto& entry = i->second;
-    CAF_LOG_INFO("erased actor:" << CAF_ARG(key) << CAF_ARG(reason));
-    entry.first = nullptr;
-    entry.second = reason;
-  }
+  entries_.erase(key);
 }
 
 void actor_registry::inc_running() {

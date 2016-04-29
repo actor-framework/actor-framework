@@ -23,8 +23,6 @@ namespace caf {
 
 const char* to_string(exit_reason x) {
   switch (x) {
-    case exit_reason::not_exited:
-      return "not_exited";
     case exit_reason::normal:
       return "normal";
     case exit_reason::unhandled_exception:
@@ -41,9 +39,19 @@ const char* to_string(exit_reason x) {
       return "kill";
     case exit_reason::remote_link_unreachable:
       return "remote_link_unreachable";
+    case exit_reason::unhandled_error:
+      return "unhandled_error";
     default:
       return "-invalid-";
   }
+}
+
+error make_error(exit_reason x) {
+  return {static_cast<uint8_t>(x), atom("exit")};
+}
+
+error make_error(exit_reason x, message context) {
+  return {static_cast<uint8_t>(x), atom("exit"), std::move(context)};
 }
 
 } // namespace caf

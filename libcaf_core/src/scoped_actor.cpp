@@ -58,12 +58,11 @@ scoped_actor::~scoped_actor() {
   CAF_LOG_TRACE("");
   if (! self_)
     return;
-  if (ptr()->is_registered()) {
+  auto x = ptr();
+  if (x->is_registered())
     CAF_SET_AID(prev_);
-  }
-  auto r = ptr()->planned_exit_reason();
-  ptr()->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r,
-                     &context_);
+  if (! x->is_terminated())
+    x->cleanup(exit_reason::normal, &context_);
 }
 
 blocking_actor* scoped_actor::ptr() const {

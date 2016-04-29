@@ -20,16 +20,13 @@
 #ifndef CAF_EXIT_REASON_HPP
 #define CAF_EXIT_REASON_HPP
 
-#include <cstdint>
+#include "caf/error.hpp"
 
 namespace caf {
 
 enum class exit_reason : uint8_t {
-  /// Indicates that the actor is still alive.
-  not_exited = 0x00,
-
-  /// Indicates that an actor finished execution.
-  normal = 0x01,
+  /// Indicates that an actor finished execution without error.
+  normal = 0x00,
 
   /// Indicates that an actor finished execution because of an unhandled exception.
   unhandled_exception = 0x02,
@@ -55,11 +52,20 @@ enum class exit_reason : uint8_t {
   remote_link_unreachable = 0x21,
 
   /// Indicates that the actor was killed because it became unreachable.
-  unreachable = 0x40
+  unreachable = 0x40,
+
+  /// Indicates that the actor was killed after receiving an error message.
+  unhandled_error = 0x41
 };
 
 /// Returns a string representation of given exit reason.
 const char* to_string(exit_reason x);
+
+/// @relates exit_reason
+error make_error(exit_reason);
+
+/// @relates exit_reason
+error make_error(exit_reason, message context);
 
 } // namespace caf
 

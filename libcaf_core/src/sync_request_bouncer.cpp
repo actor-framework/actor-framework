@@ -32,20 +32,17 @@
 namespace caf {
 namespace detail {
 
-sync_request_bouncer::sync_request_bouncer(exit_reason r)
-    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) {
+sync_request_bouncer::sync_request_bouncer(error r) : rsn(std::move(r)) {
   // nop
 }
 
 void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
                                       const message_id& mid) const {
-  CAF_ASSERT(rsn != exit_reason::not_exited);
-  if (sender && mid.is_request()) {
+  if (sender && mid.is_request())
     sender->enqueue(nullptr, mid.response_id(),
                     make_message(make_error(sec::request_receiver_down)),
                     // TODO: this breaks out of the execution unit
                     nullptr);
-  }
 }
 
 void sync_request_bouncer::operator()(const mailbox_element& e) const {

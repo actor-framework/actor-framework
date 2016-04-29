@@ -90,7 +90,7 @@ void proxy_registry::erase(const key_type& nid) {
   proxies_.erase(i);
 }
 
-void proxy_registry::erase(const key_type& inf, actor_id aid, exit_reason rsn) {
+void proxy_registry::erase(const key_type& inf, actor_id aid, error rsn) {
   CAF_LOG_TRACE(CAF_ARG(inf) << CAF_ARG(aid));
   auto i = proxies_.find(inf);
   if (i != proxies_.end()) {
@@ -112,7 +112,7 @@ void proxy_registry::clear() {
   proxies_.clear();
 }
 
-void proxy_registry::kill_proxy(strong_actor_ptr& ptr, exit_reason rsn) {
+void proxy_registry::kill_proxy(strong_actor_ptr& ptr, error rsn) {
   if (! ptr)
     return;
   auto pptr = static_cast<actor_proxy*>(actor_cast<abstract_actor*>(ptr));

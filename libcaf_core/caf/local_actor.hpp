@@ -32,6 +32,7 @@
 #include "caf/fwd.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
@@ -354,7 +355,7 @@ public:
   /// @warning This member function throws immediately in thread-based actors
   ///          that do not use the behavior stack, i.e., actors that use
   ///          blocking API calls such as {@link receive()}.
-  void quit(exit_reason reason = exit_reason::normal);
+  void quit(error reason = error{});
 
   /// Checks whether this actor traps exit messages.
   inline bool trap_exit() const {
@@ -364,6 +365,16 @@ public:
   /// Enables or disables trapping of exit messages.
   inline void trap_exit(bool value) {
     set_flag(value, trap_exit_flag);
+  }
+
+  /// Checks whether this actor traps error messages.
+  inline bool trap_error() const {
+    return get_flag(trap_error_flag);
+  }
+
+  /// Enables or disables trapping of error messages.
+  inline void trap_error(bool value) {
+    set_flag(value, trap_error_flag);
   }
 
   /// @cond PRIVATE
@@ -583,14 +594,6 @@ public:
     return delegate(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
-  inline exit_reason planned_exit_reason() const {
-    return planned_exit_reason_;
-  }
-
-  inline void planned_exit_reason(exit_reason value) {
-    planned_exit_reason_ = value;
-  }
-
   inline detail::behavior_stack& bhvr_stack() {
     return bhvr_stack_;
   }
@@ -611,7 +614,7 @@ public:
   // valid behavior left or has set a planned exit reason
   bool finished();
 
-  void cleanup(exit_reason reason, execution_unit* host) override;
+  bool cleanup(error&& reason, execution_unit* host) override;
 
   // an actor can have multiple pending timeouts, but only
   // the latest one is active (i.e. the pending_timeouts_.back())
@@ -702,9 +705,6 @@ protected:
   // points to dummy_node_ if no callback is currently invoked,
   // points to the node under processing otherwise
   mailbox_element_ptr current_element_;
-
-  // set by quit
-  exit_reason planned_exit_reason_;
 
   // identifies the timeout messages we are currently waiting for
   uint32_t timeout_id_;

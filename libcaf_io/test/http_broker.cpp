@@ -77,9 +77,7 @@ struct http_state {
   }
 
   ~http_state() {
-    aout(self_) << "http worker finished with exit reason: "
-                << self_->planned_exit_reason()
-                << endl;
+    aout(self_) << "http worker is destroyed";
   }
 
   std::vector<std::string> lines;

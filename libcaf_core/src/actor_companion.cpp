@@ -37,14 +37,14 @@ void actor_companion::on_enqueue(enqueue_handler handler) {
 }
 
 void actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+  CAF_ASSERT(ptr);
   shared_lock<lock_type> guard(lock_);
-  if (on_enqueue_) {
+  if (on_enqueue_)
     on_enqueue_(std::move(ptr));
-  }
 }
 
-void actor_companion::enqueue(strong_actor_ptr sender, message_id mid, message content,
-                              execution_unit* eu) {
+void actor_companion::enqueue(strong_actor_ptr sender, message_id mid,
+                              message content, execution_unit* eu) {
   using detail::memory;
   auto ptr = mailbox_element::make(sender, mid, {}, std::move(content));
   enqueue(std::move(ptr), eu);

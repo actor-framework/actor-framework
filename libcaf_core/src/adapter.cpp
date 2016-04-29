@@ -44,38 +44,34 @@ adapter::adapter(strong_actor_ptr decorated, message msg)
     default_attachable::make_monitor(decorated_->get()->address(), address()));
 }
 
-void adapter::enqueue(mailbox_element_ptr what, execution_unit* host) {
-  if (! what)
-    return; // not even an empty message
-  auto reason = get_exit_reason();
-  if (reason != exit_reason::not_exited) {
-    // actor has exited
-    auto& mid = what->mid;
-    if (mid.is_request()) {
-      // make sure that a request always gets a response;
-      // the exit reason reflects the first actor on the
-      // forwarding chain that is out of service
-      detail::sync_request_bouncer rb{reason};
-      rb(what->sender, mid);
-    }
+void adapter::enqueue(mailbox_element_ptr what, execution_unit* context) {
+  CAF_ASSERT(what);
+  auto down_msg_handler = [&](down_msg& dm) {
+    cleanup(std::move(dm.reason), context);
+  };
+  if (handle_system_message(*what, context, false, down_msg_handler))
+    return;
+  strong_actor_ptr decorated;
+  message merger;
+  error fail_state;
+  shared_critical_section([&] {
+    decorated = decorated_;
+    merger = merger_;
+    fail_state = fail_state_;
+  });
+  if (! decorated) {
+    bounce(what, fail_state);
     return;
   }
-  auto down_handler = [&](const down_msg& dm) {
-    if (dm.source == decorated_)
-      cleanup(dm.reason, host);
-  };
-  // handle and consume the system message;
-  // the only effect that MAY result from handling a system message
-  // is to exit the actor if it hasn't exited already;
-  // `handle_system_message()` is thread-safe, and if the actor
-  // has already exited upon the invocation, nothing is done
-  if (handle_system_message(*what, host, false, down_handler))
-    return;
-  // process and forward non-system messages
   auto& msg = what->msg;
-  message tmp{detail::merged_tuple::make(merger_, std::move(msg))};
+  message tmp{detail::merged_tuple::make(merger, std::move(msg))};
   msg.swap(tmp);
-  decorated_->enqueue(std::move(what), host);
+  decorated->enqueue(std::move(what), context);
+}
+
+void adapter::on_cleanup() {
+  decorated_.reset();
+  merger_.reset();
 }
 
 } // namespace decorator

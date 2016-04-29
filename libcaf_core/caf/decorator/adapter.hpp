@@ -43,6 +43,9 @@ public:
   // in either case, the processing is done synchronously
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
+protected:
+  void on_cleanup() override;
+
 private:
   strong_actor_ptr decorated_;
   message merger_;

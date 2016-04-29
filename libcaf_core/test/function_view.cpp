@@ -126,8 +126,8 @@ CAF_TEST(single_res_function_view) {
     g(1, 0);
     CAF_ERROR("expected exception");
   }
-  catch (actor_exited&) {
-    // nop
+  catch (actor_exited& e) {
+    CAF_MESSAGE("e: " << system.render(e.reason()));
   }
   CAF_CHECK(g == nullptr);
   g.assign(system.spawn(divider));

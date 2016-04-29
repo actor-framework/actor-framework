@@ -33,9 +33,9 @@
 
 namespace {
 
-std::string ae_what(caf::exit_reason reason) {
+std::string ae_what(caf::error reason) {
   std::ostringstream oss;
-  oss << "actor exited with reason " << to_string(reason);
+  oss << "actor exited with reason: " << to_string(reason);
   return oss.str();
 }
 
@@ -59,7 +59,7 @@ actor_exited::~actor_exited() noexcept {
   // nop
 }
 
-actor_exited::actor_exited(exit_reason x) : caf_exception(ae_what(x)) {
+actor_exited::actor_exited(error x) : caf_exception(ae_what(x)) {
   reason_ = x;
 }
 

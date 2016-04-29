@@ -43,7 +43,6 @@ public:
   }
 
   ~testee() {
-printf("%s %d\n", __FILE__, __LINE__);
     --s_testees;
   }
 

@@ -20,11 +20,12 @@
 #ifndef CAF_IO_BASP_INSTANCE_HPP
 #define CAF_IO_BASP_INSTANCE_HPP
 
+#include "caf/error.hpp"
+
 #include "caf/io/hook.hpp"
 #include "caf/io/middleman.hpp"
 
 #include "caf/io/basp/header.hpp"
-#include "caf/io/basp/error_code.hpp"
 #include "caf/io/basp/buffer_type.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"
@@ -65,7 +66,7 @@ public:
     /// Called whenever a remote actor died to destroy
     /// the proxy instance on our end.
     virtual void kill_proxy(const node_id& nid, actor_id aid,
-                            exit_reason rsn) = 0;
+                            const error& rsn) = 0;
 
     /// Called whenever a `dispatch_message` arrived for a local actor.
     virtual void deliver(const node_id& source_node, actor_id source_actor,
@@ -202,21 +203,12 @@ public:
   void write_client_handshake(execution_unit* ctx,
                               buffer_type& buf, const node_id& remote_side);
 
-  /// Writes a `dispatch_error` to `buf`.
-  void write_dispatch_error(execution_unit* ctx,
-                            buffer_type& buf,
-                            const node_id& source_node,
-                            const node_id& dest_node,
-                            error_code ec,
-                            const header& original_hdr,
-                            buffer_type* payload);
-
   /// Writes a `kill_proxy_instance` to `buf`.
   void write_kill_proxy_instance(execution_unit* ctx,
                                  buffer_type& buf,
                                  const node_id& dest_node,
                                  actor_id aid,
-                                 exit_reason rsn);
+                                 const error& fail_state);
 
   /// Writes a `heartbeat` to `buf`.
   void write_heartbeat(execution_unit* ctx,

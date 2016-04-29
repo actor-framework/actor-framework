@@ -50,6 +50,7 @@ public:
   message_types_set message_types() const override;
 
 private:
+  const size_t num_workers;
   std::vector<strong_actor_ptr> workers_;
   message_types_set msg_types_;
 };

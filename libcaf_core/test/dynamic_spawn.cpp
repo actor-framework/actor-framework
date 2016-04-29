@@ -527,7 +527,7 @@ CAF_TEST(constructor_attach) {
     testee(actor_config& cfg, actor buddy)
         : event_based_actor(cfg),
           buddy_(buddy) {
-      attach_functor([=](exit_reason reason) {
+      attach_functor([=](const error& reason) {
         send(buddy, ok_atom::value, reason);
       });
     }
@@ -562,7 +562,7 @@ CAF_TEST(constructor_attach) {
             quit(msg.reason);
           }
         },
-        [=](ok_atom, exit_reason reason) {
+        [=](ok_atom, const error& reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++downs_ == 2) {
             quit(reason);
@@ -668,18 +668,6 @@ CAF_TEST(kill_the_immortal) {
       CAF_CHECK_EQUAL(dm.source, wannabe_immortal.address());
     }
   );
-}
-
-CAF_TEST(exit_reason_in_scoped_actor) {
-  scoped_actor self{system};
-  self->spawn<linked>(
-    []() -> behavior {
-      return [] {
-        // nop
-      };
-    }
-  );
-  self->planned_exit_reason(exit_reason::unhandled_exception);
 }
 
 CAF_TEST(move_only_argument) {

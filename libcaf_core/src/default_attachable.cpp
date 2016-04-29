@@ -29,13 +29,13 @@ namespace caf {
 namespace {
 
 template <class MsgType>
-message make(abstract_actor* self, exit_reason reason) {
+message make(abstract_actor* self, const error& reason) {
   return make_message(MsgType{self->address(), reason});
 }
 
 } // namespace <anonymous>
 
-void default_attachable::actor_exited(exit_reason rsn, execution_unit* host) {
+void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
   CAF_ASSERT(observed_ != observer_);
   auto factory = type_ == monitor ? &make<down_msg> : &make<exit_msg>;
   auto observer = actor_cast<strong_actor_ptr>(observer_);

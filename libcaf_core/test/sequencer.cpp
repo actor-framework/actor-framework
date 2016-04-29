@@ -55,7 +55,7 @@ second_stage::behavior_type typed_second_stage() {
 }
 
 struct fixture {
-  void wait_until_exited() {
+  void wait_until_is_terminated() {
     self->receive(
       [](const down_msg&) {
         CAF_CHECK(true);
@@ -68,7 +68,7 @@ struct fixture {
     auto ptr = actor_cast<abstract_actor*>(handle);
     auto dptr = dynamic_cast<monitorable_actor*>(ptr);
     CAF_REQUIRE(dptr != nullptr);
-    return dptr->exited();
+    return dptr->is_terminated();
   }
 
   actor_system system;
@@ -104,7 +104,7 @@ CAF_TEST(lifetime_1a) {
   auto f = system.spawn(testee);
   self->monitor(g);
   anon_send_exit(g, exit_reason::kill);
-  wait_until_exited();
+  wait_until_is_terminated();
   auto h = f * g;
   CAF_CHECK(exited(h));
   anon_send_exit(f, exit_reason::kill);
@@ -116,7 +116,7 @@ CAF_TEST(lifetime_1b) {
   auto f = system.spawn(testee);
   self->monitor(f);
   anon_send_exit(f, exit_reason::kill);
-  wait_until_exited();
+  wait_until_is_terminated();
   auto h = f * g;
   CAF_CHECK(exited(h));
   anon_send_exit(g, exit_reason::kill);
@@ -129,7 +129,7 @@ CAF_TEST(lifetime_2a) {
   auto h = f * g;
   self->monitor(h);
   anon_send(g, message{});
-  wait_until_exited();
+  wait_until_is_terminated();
   anon_send_exit(f, exit_reason::kill);
 }
 
@@ -140,41 +140,7 @@ CAF_TEST(lifetime_2b) {
   auto h = f * g;
   self->monitor(h);
   anon_send(f, message{});
-  wait_until_exited();
-  anon_send_exit(g, exit_reason::kill);
-}
-
-// 1) ignores down message not from constituent actors
-// 2) exits by receiving an exit message
-// 3) exit has no effect on constituent actors
-CAF_TEST(lifetime_3) {
-  auto g = system.spawn(testee);
-  auto f = system.spawn(testee);
-  auto h = f * g;
-  self->monitor(h);
-  anon_send(h, down_msg{self->address(), exit_reason::kill});
-  CAF_CHECK(! exited(h));
-  auto em_sender = system.spawn(testee);
-  em_sender->link_to(h.address());
-  anon_send_exit(em_sender, exit_reason::kill);
-  wait_until_exited();
-  self->request(f, infinite, 1).receive(
-    [](int v) {
-      CAF_CHECK_EQUAL(v, 2);
-    },
-    [](error) {
-      CAF_CHECK(false);
-    }
-  );
-  self->request(g, infinite, 1).receive(
-    [](int v) {
-      CAF_CHECK_EQUAL(v, 2);
-    },
-    [](error) {
-      CAF_CHECK(false);
-    }
-  );
-  anon_send_exit(f, exit_reason::kill);
+  wait_until_is_terminated();
   anon_send_exit(g, exit_reason::kill);
 }
 

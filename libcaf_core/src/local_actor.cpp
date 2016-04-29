@@ -66,7 +66,6 @@ result<message> drop(local_actor*, const type_erased_tuple*) {
 local_actor::local_actor(actor_config& cfg)
     : monitorable_actor(cfg),
       context_(cfg.host),
-      planned_exit_reason_(exit_reason::not_exited),
       timeout_id_(0),
       initial_behavior_fac_(std::move(cfg.init_fun)),
       unexpected_handler_(print_and_drop) {
@@ -80,12 +79,12 @@ local_actor::~local_actor() {
 }
 
 void local_actor::destroy() {
-  CAF_LOG_TRACE(CAF_ARG(planned_exit_reason()));
-  if (planned_exit_reason() == exit_reason::not_exited) {
+  CAF_LOG_TRACE(CAF_ARG(is_terminated()));
+  if (! is_cleaned_up()) {
     on_exit();
     cleanup(exit_reason::unreachable, nullptr);
+    monitorable_actor::destroy();
   }
-  monitorable_actor::destroy();
 }
 
 void local_actor::intrusive_ptr_add_ref_impl() {
@@ -290,7 +289,7 @@ msg_type filter_msg(local_actor* self, mailbox_element& node) {
         node.sender->enqueue(
           mailbox_element::make_joint(self->ctrl(),
                                       node.mid.response_id(),
-                                      {}, sec::invalid_sys_key),
+                                      {}, sec::unsupported_sys_key),
           self->context());
       }
     });
@@ -663,8 +662,8 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
 }
 
 void local_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
-  CAF_ASSERT(ptr != nullptr);
   CAF_PUSH_AID(id());
+  CAF_ASSERT(ptr);
   CAF_LOG_TRACE(CAF_ARG(*ptr));
   if (is_detached()) {
     // actor lives in its own thread
@@ -719,7 +718,7 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
     // actor lives in its own thread
     CAF_ASSERT(dynamic_cast<blocking_actor*>(this) != 0);
     auto self = static_cast<blocking_actor*>(this);
-    auto rsn = exit_reason::normal;
+    error rsn;
     std::exception_ptr eptr = nullptr;
     try {
       self->act();
@@ -736,7 +735,6 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
       rsn = opt_reason ? *opt_reason
                        : exit_reason::unhandled_exception;
     }
-    self->planned_exit_reason(rsn);
     try {
       self->on_exit();
     }
@@ -744,16 +742,14 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
       // simply ignore exception
     }
     // exit reason might have been changed by on_exit()
-    self->cleanup(self->planned_exit_reason(), context());
+    self->cleanup(std::move(rsn), context());
     return resumable::done;
   }
-  if (is_initialized()
-      && (! has_behavior()
-          || planned_exit_reason() != exit_reason::not_exited)) {
+  if (is_initialized() && (! has_behavior() || is_terminated())) {
     CAF_LOG_DEBUG_IF(! has_behavior(),
                      "resume called on an actor without behavior");
-    CAF_LOG_DEBUG_IF(planned_exit_reason() != exit_reason::not_exited,
-                     "resume called on an actor with exit reason");
+    CAF_LOG_DEBUG_IF(is_terminated(),
+                     "resume called on a terminated actor");
     return resumable::done;
   }
   std::exception_ptr eptr = nullptr;
@@ -799,30 +795,27 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
   }
   catch (actor_exited& what) {
     CAF_LOG_INFO("actor died because of exception:" << CAF_ARG(what.reason()));
-    if (exit_reason() == exit_reason::not_exited) {
+    if (! is_terminated())
       quit(what.reason());
-    }
   }
   catch (std::exception& e) {
     CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
     static_cast<void>(e); // keep compiler happy when not logging
-    if (exit_reason() == exit_reason::not_exited) {
+    if (! is_terminated())
       quit(exit_reason::unhandled_exception);
-    }
     eptr = std::current_exception();
   }
   catch (...) {
     CAF_LOG_INFO("actor died because of an unknown exception");
-    if (exit_reason() == exit_reason::not_exited) {
+    if (! is_terminated())
       quit(exit_reason::unhandled_exception);
-    }
     eptr = std::current_exception();
   }
   if (eptr) {
     auto opt_reason = handle(eptr);
     if (opt_reason) {
       // use exit reason defined by custom handler
-      planned_exit_reason(*opt_reason);
+      quit(*opt_reason);
     }
   }
   if (! finished()) {
@@ -882,11 +875,11 @@ void local_actor::exec_single_event(execution_unit* ctx,
       return;
     }
   }
-  if (! has_behavior() || planned_exit_reason() != exit_reason::not_exited) {
+  if (! has_behavior() || is_terminated()) {
     CAF_LOG_DEBUG_IF(! has_behavior(),
                      "resume called on an actor without behavior");
-    CAF_LOG_DEBUG_IF(planned_exit_reason() != exit_reason::not_exited,
-                     "resume called on an actor with exit reason");
+    CAF_LOG_DEBUG_IF(is_terminated(),
+                     "resume called on a terminated actor");
     return;
   }
   try {
@@ -897,8 +890,7 @@ void local_actor::exec_single_event(execution_unit* ctx,
     auto eptr = std::current_exception();
     auto opt_reason = this->handle(eptr);
     if (opt_reason)
-      planned_exit_reason(*opt_reason);
-    //finalize();
+      quit(*opt_reason);
   }
 }
 
@@ -1022,26 +1014,21 @@ void local_actor::load_state(deserializer&, const unsigned int) {
 }
 
 bool local_actor::finished() {
-  if (has_behavior() && planned_exit_reason() == exit_reason::not_exited)
+  if (has_behavior() && ! is_terminated())
     return false;
   CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
   on_exit();
   bhvr_stack().clear();
   bhvr_stack().cleanup();
-  auto rsn = planned_exit_reason();
-  if (rsn == exit_reason::not_exited) {
-    rsn = exit_reason::normal;
-    planned_exit_reason(rsn);
-  }
-  cleanup(rsn, context());
+  cleanup(std::move(fail_state_), context());
   return true;
 }
 
-void local_actor::cleanup(exit_reason reason, execution_unit* host) {
-  CAF_LOG_TRACE(CAF_ARG(reason));
+bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
+  CAF_LOG_TRACE(CAF_ARG(fail_state));
   current_mailbox_element().reset();
   if (! mailbox_.closed()) {
-    detail::sync_request_bouncer f{reason};
+    detail::sync_request_bouncer f{fail_state};
     mailbox_.close(f);
   }
   awaited_responses_.clear();
@@ -1050,16 +1037,18 @@ void local_actor::cleanup(exit_reason reason, execution_unit* host) {
   for (auto& subscription : subscriptions_)
     subscription->unsubscribe(me);
   subscriptions_.clear();
-  monitorable_actor::cleanup(reason, host);
+  monitorable_actor::cleanup(std::move(fail_state), host);
   // tell registry we're done
   is_registered(false);
+  return true;
 }
 
-void local_actor::quit(exit_reason reason) {
-  CAF_LOG_TRACE(CAF_ARG(reason));
-  planned_exit_reason(reason);
+void local_actor::quit(error x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  fail_state_ = std::move(x);
+  is_terminated(true);
   if (is_blocking()) {
-    throw actor_exited(reason);
+    throw actor_exited(fail_state_);
   }
 }
 

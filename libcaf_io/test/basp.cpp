@@ -331,8 +331,8 @@ public:
     std::vector<strong_actor_ptr> stages;
     message msg;
     source >> stages >> msg;
-    auto src = actor_cast<strong_actor_ptr>(registry_->get(hdr.source_actor).first);
-    auto dest = actor_cast<actor>(registry_->get(hdr.dest_actor).first);
+    auto src = actor_cast<strong_actor_ptr>(registry_->get(hdr.source_actor));
+    auto dest = actor_cast<actor>(registry_->get(hdr.dest_actor));
     CAF_REQUIRE(dest);
     dest->enqueue(mailbox_element::make(src, message_id::make(),
                                         std::move(stages), std::move(msg)),

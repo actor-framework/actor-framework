@@ -38,13 +38,13 @@ public:
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-  bool link_impl(linking_operation op, const actor_addr& other) override;
+  bool link_impl(linking_operation op, abstract_actor* other) override;
 
-  void local_link_to(const actor_addr& other) override;
+  void local_link_to(abstract_actor* other) override;
 
-  void local_unlink_from(const actor_addr& other) override;
+  void local_unlink_from(abstract_actor* other) override;
 
-  void kill_proxy(execution_unit* ctx, exit_reason reason) override;
+  void kill_proxy(execution_unit* ctx, error reason) override;
 
   actor manager() const;
 

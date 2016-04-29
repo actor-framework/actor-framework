@@ -40,8 +40,8 @@ using kickoff_atom = atom_constant<atom("kickoff")>;
 
 // utility function to print an exit message with custom name
 void print_on_exit(const actor& hdl, const std::string& name) {
-  hdl->attach_functor([=](exit_reason reason) {
-    cout << name << " exited with reason " << to_string(reason) << endl;
+  hdl->attach_functor([=](const error& reason) {
+    cout << name << " exited: " << to_string(reason) << endl;
   });
 }
 

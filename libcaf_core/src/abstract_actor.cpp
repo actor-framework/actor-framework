@@ -43,7 +43,7 @@
 
 namespace caf {
 
-// exit_reason_ is guaranteed to be set to 0, i.e., exit_reason::not_exited,
+// exit_state_ is guaranteed to be set to 0, i.e., exit_reason::not_exited,
 // by std::atomic<> constructor
 
 actor_control_block* abstract_actor::ctrl() const {

@@ -36,8 +36,8 @@ struct functor_attachable : attachable {
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(exit_reason reason, execution_unit*) override {
-    functor_(reason);
+  void actor_exited(const error& fail_state, execution_unit*) override {
+    functor_(fail_state);
   }
   static constexpr size_t token_type = attachable::token::anonymous;
 };
@@ -48,7 +48,7 @@ struct functor_attachable<F, 0> : attachable {
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(exit_reason, execution_unit*) override {
+  void actor_exited(const error&, execution_unit*) override {
     functor_();
   }
 };

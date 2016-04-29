@@ -213,7 +213,6 @@ public:
 \******************************************************************************/
 
 behavior server(event_based_actor* self) {
-printf("server id: %d\n", (int) self->id());
   return {
     [=](idle_atom, actor worker) {
       self->become(

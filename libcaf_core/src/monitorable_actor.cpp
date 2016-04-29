@@ -27,6 +27,8 @@
 #include "caf/system_messages.hpp"
 #include "caf/default_attachable.hpp"
 
+#include "caf/detail/sync_request_bouncer.hpp"
+
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
@@ -37,19 +39,19 @@ const char* monitorable_actor::name() const {
 
 void monitorable_actor::attach(attachable_ptr ptr) {
   CAF_LOG_TRACE("");
-  if (ptr == nullptr)
-    return;
-  caf::exit_reason reason;
-  { // lifetime scope of guard
-    std::unique_lock<std::mutex> guard{mtx_};
-    reason = get_exit_reason();
-    if (reason == exit_reason::not_exited) {
-      attach_impl(ptr);
-      return;
+  CAF_ASSERT(ptr);
+  error fail_state;
+  auto attached = exclusive_critical_section([&] {
+    if (is_terminated()) {
+      fail_state = fail_state_;
+      return false;
     }
-  }
+    attach_impl(ptr);
+    return true;
+  });
   CAF_LOG_DEBUG("cannot attach functor to terminated actor: call immediately");
-  ptr->actor_exited(reason, nullptr);
+  if (! attached)
+    ptr->actor_exited(fail_state, nullptr);
 }
 
 size_t monitorable_actor::detach(const attachable::token& what) {
@@ -58,18 +60,23 @@ size_t monitorable_actor::detach(const attachable::token& what) {
   return detach_impl(what, attachables_head_);
 }
 
-void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
+bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  CAF_ASSERT(reason != exit_reason::not_exited);
-  // move everything out of the critical section before processing it
   attachable_ptr head;
-  { // lifetime scope of guard
-    std::unique_lock<std::mutex> guard{mtx_};
-    if (get_exit_reason() != exit_reason::not_exited)
-      return;
-    exit_reason_.store(reason, std::memory_order_relaxed);
-    attachables_head_.swap(head);
-  }
+  bool set_fail_state = exclusive_critical_section([&]() -> bool {
+    if (! is_cleaned_up()) {
+      // local actors pass fail_state_ as first argument
+      if (&fail_state_ != &reason)
+        fail_state_ = std::move(reason);
+      attachables_head_.swap(head);
+      flags(flags() | is_terminated_flag | is_cleaned_up_flag);
+      on_cleanup();
+      return true;
+    }
+    return false;
+  });
+  if (! set_fail_state)
+    return false;
   CAF_LOG_INFO_IF(host && host->system().node() == node(),
                   "cleanup" << CAF_ARG(id()) << CAF_ARG(reason));
   // send exit messages
@@ -82,11 +89,30 @@ void monitorable_actor::cleanup(exit_reason reason, execution_unit* host) {
                                             delete_atom::value, id()),
                 nullptr);
   }
+  return true;
 }
 
-monitorable_actor::monitorable_actor(actor_config& cfg)
-    : abstract_actor(cfg),
-      exit_reason_(exit_reason::not_exited) {
+void monitorable_actor::on_cleanup() {
+  // nop
+}
+
+void monitorable_actor::bounce(mailbox_element_ptr& what) {
+  error err;
+  shared_critical_section([&] {
+    err = fail_state_;
+  });
+  bounce(what, err);
+}
+
+void monitorable_actor::bounce(mailbox_element_ptr& what, const error& err) {
+  // make sure that a request always gets a response;
+  // the exit reason reflects the first actor on the
+  // forwarding chain that is out of service
+  detail::sync_request_bouncer rb{err};
+  rb(*what);
+}
+
+monitorable_actor::monitorable_actor(actor_config& cfg) : abstract_actor(cfg) {
   // nop
 }
 
@@ -105,7 +131,7 @@ optional<exit_reason> monitorable_actor::handle(const std::exception_ptr& eptr) 
   return none;
 }
 
-bool monitorable_actor::link_impl(linking_operation op, const actor_addr& other) {
+bool monitorable_actor::link_impl(linking_operation op, abstract_actor* other) {
   CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(other));
   switch (op) {
     case establish_link_op:
@@ -120,82 +146,75 @@ bool monitorable_actor::link_impl(linking_operation op, const actor_addr& other)
   }
 }
 
-bool monitorable_actor::establish_link_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_ARG(other));
-  if (other && other != this) {
-    std::unique_lock<std::mutex> guard{mtx_};
-    auto ptr = actor_cast<actor>(other);
-    if (! ptr)
+bool monitorable_actor::establish_link_impl(abstract_actor* x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_ASSERT(x);
+  error fail_state;
+  bool send_exit_immediately = false;
+  auto tmp = default_attachable::make_link(address(), x->address());
+  auto success = exclusive_critical_section([&]() -> bool {
+    if (is_terminated()) {
+      fail_state = fail_state_;
+      send_exit_immediately = true;
       return false;
-    auto reason = get_exit_reason();
-    // send exit message if already exited
-    if (reason != exit_reason::not_exited) {
-      guard.unlock();
-      ptr->enqueue(ctrl(), invalid_message_id,
-                   make_message(exit_msg{address(), reason}), nullptr);
-    } else if (ptr->establish_backlink(address())) {
-      // add link if not already linked to other
-      // (checked by establish_backlink)
-      auto tmp = default_attachable::make_link(address(), other);
+    }
+    // add link if not already linked to other (checked by establish_backlink)
+    if (x->establish_backlink(this)) {
       attach_impl(tmp);
       return true;
     }
-  }
-  return false;
+    return false;
+  });
+  if (send_exit_immediately)
+    x->enqueue(nullptr, invalid_message_id,
+                 make_message(exit_msg{address(), fail_state}), nullptr);
+  return success;
 }
 
-bool monitorable_actor::establish_backlink_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_ARG(other));
-  auto reason = exit_reason::not_exited;
-  default_attachable::observe_token tk{other, default_attachable::link};
-  if (other && other != this) {
-    std::unique_lock<std::mutex> guard{mtx_};
-    reason = get_exit_reason();
-    if (reason == exit_reason::not_exited) {
-      if (detach_impl(tk, attachables_head_, true, true) == 0) {
-        auto tmp = default_attachable::make_link(address(), other);
-        attach_impl(tmp);
-        return true;
-      }
+bool monitorable_actor::establish_backlink_impl(abstract_actor* x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_ASSERT(x);
+  error fail_state;
+  bool send_exit_immediately = false;
+  default_attachable::observe_token tk{x->address(),
+                                       default_attachable::link};
+  auto tmp = default_attachable::make_link(address(), x->address());
+  auto success = exclusive_critical_section([&]() -> bool {
+    if (is_terminated()) {
+      fail_state = fail_state_;
+      send_exit_immediately = true;
+      return false;
     }
-  }
-  // send exit message without lock
-  if (reason != exit_reason::not_exited) {
-    auto hdl = actor_cast<actor>(other);
-    if (hdl)
-      hdl->enqueue(ctrl(), invalid_message_id,
-                   make_message(exit_msg{address(), reason}), nullptr);
-  }
-  return false;
+    if (detach_impl(tk, attachables_head_, true, true) == 0) {
+      attach_impl(tmp);
+      return true;
+    }
+    return false;
+  });
+  if (send_exit_immediately)
+    x->enqueue(nullptr, invalid_message_id,
+                 make_message(exit_msg{address(), fail_state}), nullptr);
+  return success;
 }
 
-bool monitorable_actor::remove_link_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_ARG(other));
-  if (other == invalid_actor_addr || other == this)
-    return false;
-  default_attachable::observe_token tk{other, default_attachable::link};
-  std::unique_lock<std::mutex> guard{mtx_};
-  // remove_backlink returns true if this actor is linked to other
-  auto hdl = actor_cast<actor>(other);
-  if (! hdl)
-    return false;
-  if (detach_impl(tk, attachables_head_, true) > 0) {
-    guard.unlock();
-    // tell remote side to remove link as well
-    hdl->remove_backlink(address());
-    return true;
-  }
-  return false;
-}
-
-bool monitorable_actor::remove_backlink_impl(const actor_addr& other) {
-  CAF_LOG_TRACE(CAF_ARG(other));
-  default_attachable::observe_token tk{other, default_attachable::link};
-  if (other && other != this) {
-    std::unique_lock<std::mutex> guard{mtx_};
+bool monitorable_actor::remove_link_impl(abstract_actor* x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  default_attachable::observe_token tk{x->address(), default_attachable::link};
+  auto success = exclusive_critical_section([&]() -> bool {
     return detach_impl(tk, attachables_head_, true) > 0;
-  }
-  return false;
+  });
+  if (success)
+    x->remove_backlink(this);
+  return success;
+}
+
+bool monitorable_actor::remove_backlink_impl(abstract_actor* x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  default_attachable::observe_token tk{x->address(), default_attachable::link};
+  auto success = exclusive_critical_section([&]() -> bool {
+    return detach_impl(tk, attachables_head_, true) > 0;
+  });
+  return success;
 }
 
 size_t monitorable_actor::detach_impl(const attachable::token& what,
@@ -224,10 +243,9 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
   auto& msg = node.msg;
   if (! trap_exit && msg.size() == 1 && msg.match_element<exit_msg>(0)) {
     // exits for non-normal exit reasons
-    auto& em = msg.get_as<exit_msg>(0);
-    CAF_ASSERT(em.reason != exit_reason::not_exited);
-    if (em.reason != exit_reason::normal)
-      cleanup(em.reason, context);
+    auto& em = msg.get_as_mutable<exit_msg>(0);
+    if (em.reason)
+      cleanup(std::move(em.reason), context);
     return true;
   } else if (msg.size() > 1 && msg.match_element<sys_atom>(0)) {
     if (! node.sender)
@@ -238,7 +256,7 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
       [&](sys_atom, get_atom, std::string& what) {
         CAF_LOG_TRACE(CAF_ARG(what));
         if (what != "info") {
-          err = sec::invalid_sys_key;
+          err = sec::unsupported_sys_key;
           return;
         }
         res = mailbox_element::make_joint(ctrl(),

@@ -95,38 +95,16 @@ public:
   /// Detaches the first attached object that matches `what`.
   virtual size_t detach(const attachable::token& what) = 0;
 
-  /// Links this actor to `whom`.
-  inline void link_to(const actor_addr& whom) {
-    link_impl(establish_link_op, whom);
-  }
-
-  /// Links this actor to `whom`.
-  template <class ActorHandle>
-  void link_to(const ActorHandle& whom) {
-    link_to(whom.address());
-  }
-
-  /// Unlinks this actor from `whom`.
-  inline void unlink_from(const actor_addr& other) {
-    link_impl(remove_link_op, other);
-  }
-
-  /// Unlinks this actor from `whom`.
-  template <class ActorHandle>
-  void unlink_from(const ActorHandle& other) {
-    unlink_from(other.address());
-  }
-
-  /// Establishes a link relation between this actor and `other`
+  /// Establishes a link relation between this actor and `x`
   /// and returns whether the operation succeeded.
-  inline bool establish_backlink(const actor_addr& other) {
-    return link_impl(establish_backlink_op, other);
+  inline bool establish_backlink(abstract_actor* x) {
+    return link_impl(establish_backlink_op, x);
   }
 
-  /// Removes the link relation between this actor and `other`
+  /// Removes the link relation between this actor and `x`
   /// and returns whether the operation succeeded.
-  inline bool remove_backlink(const actor_addr& other) {
-    return link_impl(remove_backlink_op, other);
+  inline bool remove_backlink(abstract_actor* x) {
+    return link_impl(remove_backlink_op, x);
   }
 
   /// Returns the set of accepted messages types as strings or
@@ -157,15 +135,18 @@ public:
 
   // flags storing runtime information                     used by ...
   static constexpr int trap_exit_flag         = 0x0001; // local_actor
-  static constexpr int has_timeout_flag       = 0x0002; // single_timeout
-  static constexpr int is_registered_flag     = 0x0004; // (several actors)
-  static constexpr int is_initialized_flag    = 0x0008; // event-based actors
-  static constexpr int is_blocking_flag       = 0x0010; // blocking_actor
-  static constexpr int is_detached_flag       = 0x0020; // local_actor
-  static constexpr int is_priority_aware_flag = 0x0040; // local_actor
-  static constexpr int is_serializable_flag   = 0x0040; // local_actor
-  static constexpr int is_migrated_from_flag  = 0x0080; // local_actor
-  static constexpr int has_used_aout_flag     = 0x0100; // local_actor
+  static constexpr int trap_error_flag        = 0x0002; // local_actor
+  static constexpr int has_timeout_flag       = 0x0004; // single_timeout
+  static constexpr int is_registered_flag     = 0x0008; // (several actors)
+  static constexpr int is_initialized_flag    = 0x0010; // event-based actors
+  static constexpr int is_blocking_flag       = 0x0020; // blocking_actor
+  static constexpr int is_detached_flag       = 0x0040; // local_actor
+  static constexpr int is_priority_aware_flag = 0x0080; // local_actor
+  static constexpr int is_serializable_flag   = 0x0100; // local_actor
+  static constexpr int is_migrated_from_flag  = 0x0200; // local_actor
+  static constexpr int has_used_aout_flag     = 0x0400; // local_actor
+  static constexpr int is_terminated_flag     = 0x0800; // local_actor
+  static constexpr int is_cleaned_up_flag     = 0x1000; // monitorable_actor
 
   inline void set_flag(bool enable_flag, int mask) {
     auto x = flags();
@@ -242,7 +223,23 @@ public:
     return static_cast<bool>(flags() & is_actor_decorator_mask);
   }
 
-  virtual bool link_impl(linking_operation op, const actor_addr& other) = 0;
+  inline bool is_terminated() const {
+    return get_flag(is_terminated_flag);
+  }
+
+  inline void is_terminated(bool value) {
+    set_flag(value, is_terminated_flag);
+  }
+
+  inline bool is_cleaned_up() const {
+    return get_flag(is_cleaned_up_flag);
+  }
+
+  inline void is_cleaned_up(bool value) {
+    set_flag(value, is_cleaned_up_flag);
+  }
+
+  virtual bool link_impl(linking_operation op, abstract_actor* other) = 0;
 
  /// @endcond
 

@@ -49,20 +49,15 @@ public:
 
   ~actor_registry();
 
-  /// A registry entry consists of a pointer to the actor and an
-  /// exit reason. An entry with a nullptr means the actor has finished
-  /// execution for given reason.
-  using id_entry = std::pair<strong_actor_ptr, exit_reason>;
-
   /// Returns the the local actor associated to `key`.
-  id_entry get(actor_id key) const;
+  strong_actor_ptr get(actor_id key) const;
 
   /// Associates a local actor with its ID.
   void put(actor_id key, const strong_actor_ptr& value);
 
   /// Removes an actor from this registry,
   /// leaving `reason` for future reference.
-  void erase(actor_id key, exit_reason reason);
+  void erase(actor_id key);
 
   /// Increases running-actors-count by one.
   void inc_running();
@@ -103,7 +98,7 @@ private:
   // Stops this component.
   void stop();
 
-  using entries = std::unordered_map<actor_id, id_entry>;
+  using entries = std::unordered_map<actor_id, strong_actor_ptr>;
 
   actor_registry(actor_system& sys);
 

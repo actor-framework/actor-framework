@@ -52,10 +52,6 @@ const message& error::context() const {
   return context_;
 }
 
-error::operator bool() const {
-  return code_ != 0;
-}
-
 void error::clear() {
   code_ = 0;
 }
@@ -98,6 +94,9 @@ void serialize(deserializer& source, error& x, const unsigned int) {
 }
 
 int error::compare(uint8_t x, atom_value y) const {
+  // exception: all errors with default value are considered no error -> equal
+  if (code_ == 0 && x == 0)
+    return 0;
   if (category_ < y)
     return -1;
   if (category_ > y)
@@ -110,6 +109,8 @@ int error::compare(const error& x) const {
 }
 
 std::string to_string(const error& x) {
+  if (! x)
+    return "no-error";
   std::string result = "error(";
   result += to_string(x.category());
   result += ", ";

@@ -90,7 +90,7 @@ public:
 
   /// Deletes the proxy with id `aid` for `node`.
   void erase(const key_type& node, actor_id aid,
-             exit_reason rsn = exit_reason::remote_link_unreachable);
+             error rsn = exit_reason::remote_link_unreachable);
 
   /// Queries whether there are any proxies left.
   bool empty() const;
@@ -103,7 +103,7 @@ public:
   }
 
 private:
-  void kill_proxy(strong_actor_ptr&, exit_reason);
+  void kill_proxy(strong_actor_ptr&, error);
 
   actor_system& system_;
   backend& backend_;

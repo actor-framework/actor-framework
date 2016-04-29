@@ -38,11 +38,10 @@ namespace caf {
 namespace detail {
 
 struct sync_request_bouncer {
-  exit_reason rsn;
-  explicit sync_request_bouncer(exit_reason r);
+  error rsn;
+  explicit sync_request_bouncer(error r);
   void operator()(const strong_actor_ptr& sender, const message_id& mid) const;
   void operator()(const mailbox_element& e) const;
-
 };
 
 } // namespace detail

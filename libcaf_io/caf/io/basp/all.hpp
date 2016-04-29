@@ -23,7 +23,6 @@
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp/version.hpp"
 #include "caf/io/basp/instance.hpp"
-#include "caf/io/basp/error_code.hpp"
 #include "caf/io/basp/buffer_type.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"

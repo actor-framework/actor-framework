@@ -96,7 +96,7 @@ void load_actor(deserializer& source, T& storage) {
   CAF_LOG_DEBUG(CAF_ARG(aid) << CAF_ARG(nid));
   // deal with local actors
   if (sys.node() == nid) {
-    storage = actor_cast<T>(sys.registry().get(aid).first);
+    storage = actor_cast<T>(sys.registry().get(aid));
     CAF_LOG_DEBUG("fetch actor handle from local actor registry: "
                   << (storage ? "found" : "not found"));
     return;

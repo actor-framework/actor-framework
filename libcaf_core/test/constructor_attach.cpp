@@ -37,7 +37,7 @@ CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
   public:
     testee(actor_config& cfg, actor buddy) : event_based_actor(cfg) {
-      attach_functor([=](exit_reason reason) {
+      attach_functor([=](const error& reason) {
         send(buddy, done_atom::value, reason);
       });
     }
@@ -66,7 +66,7 @@ CAF_TEST(constructor_attach) {
             quit(msg.reason);
           }
         },
-        [=](done_atom, exit_reason reason) {
+        [=](done_atom, const error& reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++downs_ == 2) {
             quit(reason);

@@ -116,6 +116,7 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
 splitter::splitter(std::vector<strong_actor_ptr> workers,
                    message_types_set msg_types)
     : monitorable_actor(actor_config{}.add_flag(is_actor_dot_decorator_flag)),
+      num_workers(workers.size()),
       workers_(std::move(workers)),
       msg_types_(std::move(msg_types)) {
   // composed actor has dependency on constituent actors by default;
@@ -128,38 +129,24 @@ splitter::splitter(std::vector<strong_actor_ptr> workers,
 }
 
 void splitter::enqueue(mailbox_element_ptr what, execution_unit* context) {
-  if (! what)
-    return; // not even an empty message
-  auto reason = get_exit_reason();
-  if (reason != exit_reason::not_exited) {
-    // actor has exited
-    auto& mid = what->mid;
-    if (mid.is_request()) {
-      // make sure that a request always gets a response;
-      // the exit reason reflects the first actor on the
-      // forwarding chain that is out of service
-      detail::sync_request_bouncer rb{reason};
-      rb(what->sender, mid);
-    }
-    return;
-  }
-  auto down_msg_handler = [&](const down_msg& dm) {
-    // quit if either `f` or `g` are no longer available
-    auto pred = [&](const strong_actor_ptr& x) {
-      return actor_addr::compare(
-               x.get(), actor_cast<actor_control_block*>(dm.source)) == 0;
-    };
-    if (std::any_of(workers_.begin(), workers_.end(), pred))
-      monitorable_actor::cleanup(dm.reason, context);
+  auto down_msg_handler = [&](down_msg& dm) {
+    // quit if any worker fails
+    cleanup(std::move(dm.reason), context);
   };
-  // handle and consume the system message;
-  // the only effect that MAY result from handling a system message
-  // is to exit the actor if it hasn't exited already;
-  // `handle_system_message()` is thread-safe, and if the actor
-  // has already exited upon the invocation, nothing is done
   if (handle_system_message(*what, context, false, down_msg_handler))
     return;
-  auto helper = context->system().spawn(fan_out_fan_in, workers_);
+  std::vector<strong_actor_ptr> workers;
+  workers.reserve(num_workers);
+  error fail_state;
+  shared_critical_section([&] {
+    workers = workers_;
+    fail_state = fail_state_;
+  });
+  if (workers.empty()) {
+    bounce(what, fail_state);
+    return;
+  }
+  auto helper = context->system().spawn(fan_out_fan_in, std::move(workers));
   helper->enqueue(std::move(what), context);
 }
 

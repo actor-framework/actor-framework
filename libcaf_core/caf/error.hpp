@@ -47,7 +47,7 @@ namespace caf {
 ///
 /// # Why not `std::error_code` or `std::error_condition`?
 ///
-/// First, the standard does///not* define the values for `std::errc`.
+/// First, the standard does *not* define the values for `std::errc`.
 /// This means serializing error conditions (which are meant to be portable)
 /// is not safe in a distributed setting unless all machines are running the
 /// same operating system and version of the C++ standard library.
@@ -100,7 +100,14 @@ public:
   const message& context() const;
 
   /// Returns `code() != 0`.
-  explicit operator bool() const;
+  inline explicit operator bool() const noexcept {
+    return code_ != 0;
+  }
+
+  /// Returns `code() == 0`.
+  inline bool operator!() const noexcept {
+    return code_ == 0;
+  }
 
   /// Sets the error code to 0.
   void clear();

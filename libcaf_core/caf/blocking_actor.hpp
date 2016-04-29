@@ -187,6 +187,10 @@ public:
 
   /// @cond PRIVATE
 
+  inline const error& fail_state() {
+    return fail_state_;
+  }
+
   void initialize() override;
 
   void dequeue(behavior& bhvr, message_id mid = invalid_message_id);

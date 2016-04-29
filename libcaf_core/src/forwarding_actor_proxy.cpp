@@ -69,22 +69,21 @@ void forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
 void forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
                                      execution_unit*) {
   CAF_PUSH_AID(0);
-  if (! what)
-    return;
+  CAF_ASSERT(what);
   forward_msg(std::move(what->sender), what->mid,
               std::move(what->msg), &what->stages);
 }
 
 
 bool forwarding_actor_proxy::link_impl(linking_operation op,
-                                       const actor_addr& other) {
+                                       abstract_actor* other) {
   switch (op) {
     case establish_link_op:
       if (establish_link_impl(other)) {
         // causes remote actor to link to (proxy of) other
         // receiving peer will call: this->local_link_to(other)
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(link_atom::value, other));
+                    make_message(link_atom::value, other->address()));
         return true;
       }
       break;
@@ -92,7 +91,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (remove_link_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(unlink_atom::value, other));
+                    make_message(unlink_atom::value, other->address()));
         return true;
       }
       break;
@@ -100,7 +99,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (establish_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(link_atom::value, other));
+                    make_message(link_atom::value, other->address()));
         return true;
       }
       break;
@@ -108,7 +107,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (remove_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(unlink_atom::value, other));
+                    make_message(unlink_atom::value, other->address()));
         return true;
       }
       break;
@@ -116,18 +115,18 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
   return false;
 }
 
-void forwarding_actor_proxy::local_link_to(const actor_addr& other) {
+void forwarding_actor_proxy::local_link_to(abstract_actor* other) {
   establish_link_impl(other);
 }
 
-void forwarding_actor_proxy::local_unlink_from(const actor_addr& other) {
+void forwarding_actor_proxy::local_unlink_from(abstract_actor* other) {
   remove_link_impl(other);
 }
 
-void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, exit_reason rsn) {
+void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
   CAF_ASSERT(ctx != nullptr);
   manager(invalid_actor);
-  cleanup(rsn, ctx);
+  cleanup(std::move(rsn), ctx);
 }
 
 } // namespace caf

@@ -43,8 +43,8 @@ enum class sec : uint8_t {
   no_actor_published_at_port,
   /// Migration failed because the state of an actor is not serializable.
   state_not_serializable,
-  /// An actor received an invalid key for `('sys', 'get', key)` messages.
-  invalid_sys_key,
+  /// An actor received an unsupported key for `('sys', 'get', key)` messages.
+  unsupported_sys_key,
   /// An actor received an unsupported system message.
   unsupported_sys_message,
   /// A remote node disconnected during CAF handshake.

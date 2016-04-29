@@ -34,6 +34,8 @@ sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
       f_(std::move(f)),
       g_(std::move(g)),
       msg_types_(std::move(msg_types)) {
+  CAF_ASSERT(f_);
+  CAF_ASSERT(g_);
   // composed actor has dependency on constituent actors by default;
   // if either constituent actor is already dead upon establishing
   // the dependency, the actor is spawned dead
@@ -45,42 +47,39 @@ sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
 }
 
 void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
-  if (! what)
-    return; // not even an empty message
-  auto reason = get_exit_reason();
-  if (reason != exit_reason::not_exited) {
-    // actor has exited
-    auto& mid = what->mid;
-    if (mid.is_request()) {
-      // make sure that a request always gets a response;
-      // the exit reason reflects the first actor on the
-      // forwarding chain that is out of service
-      detail::sync_request_bouncer rb{reason};
-      rb(what->sender, mid);
-    }
-    return;
-  }
-  auto down_msg_handler = [&](const down_msg& dm) {
+  auto down_msg_handler = [&](down_msg& dm) {
     // quit if either `f` or `g` are no longer available
-    if (dm.source == f_ || dm.source == g_)
-      monitorable_actor::cleanup(dm.reason, context);
+    cleanup(std::move(dm.reason), context);
   };
-  // handle and consume the system message;
-  // the only effect that MAY result from handling a system message
-  // is to exit the actor if it hasn't exited already;
-  // `handle_system_message()` is thread-safe, and if the actor
-  // has already exited upon the invocation, nothing is done
   if (handle_system_message(*what, context, false, down_msg_handler))
     return;
+  strong_actor_ptr f;
+  strong_actor_ptr g;
+  error err;
+  shared_critical_section([&] {
+    f = f_;
+    g = g_;
+    err = fail_state_;
+  });
+  if (! f) {
+    // f and g are invalid only after the sequencer terminated
+    bounce(what, err);
+    return;
+  }
   // process and forward the non-system message;
   // store `f` as the next stage in the forwarding chain
-  what->stages.push_back(f_);
+  what->stages.push_back(std::move(f));
   // forward modified message to `g`
-  g_->enqueue(std::move(what), context);
+  g->enqueue(std::move(what), context);
 }
 
 sequencer::message_types_set sequencer::message_types() const {
   return msg_types_;
+}
+
+void sequencer::on_cleanup() {
+  f_.reset();
+  g_.reset();
 }
 
 } // namespace decorator

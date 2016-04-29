@@ -33,7 +33,7 @@ const char* sec_strings[] = {
   "no_actor_to_unpublish",
   "no_actor_published_at_port",
   "state_not_serializable",
-  "invalid_sys_key",
+  "unsupported_sys_key",
   "unsupported_sys_message",
   "disconnect_during_handshake",
   "cannot_forward_to_invalid_actor",

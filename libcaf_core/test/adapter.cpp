@@ -40,7 +40,7 @@ behavior testee(event_based_actor* self) {
 }
 
 struct fixture {
-  void wait_until_exited() {
+  void wait_until_is_terminated() {
     self->receive(
       [](const down_msg&) {
         // nop
@@ -53,7 +53,7 @@ struct fixture {
     auto ptr = actor_cast<abstract_actor*>(handle);
     auto dptr = dynamic_cast<monitorable_actor*>(ptr);
     CAF_REQUIRE(dptr != nullptr);
-    return dptr->exited();
+    return dptr->is_terminated();
   }
 
   actor_system system;
@@ -85,7 +85,7 @@ CAF_TEST(lifetime_1) {
   auto dbl = system.spawn(testee);
   self->monitor(dbl);
   anon_send_exit(dbl, exit_reason::kill);
-  wait_until_exited();
+  wait_until_is_terminated();
   auto bound = dbl.bind(1);
   CAF_CHECK(exited(bound));
 }
@@ -96,29 +96,7 @@ CAF_TEST(lifetime_2) {
   auto bound = dbl.bind(1);
   self->monitor(bound);
   anon_send(dbl, message{});
-  wait_until_exited();
-}
-
-// 1) ignores down message not from the decorated actor
-// 2) exits by receiving an exit message
-// 3) exit has no effect on decorated actor
-CAF_TEST(lifetime_3) {
-  auto dbl = system.spawn(testee);
-  auto bound = dbl.bind(1);
-  anon_send(bound, down_msg{self->address(),
-                             exit_reason::kill});
-  CAF_CHECK(! exited(bound));
-  self->monitor(bound);
-  auto em_sender = system.spawn(testee);
-  em_sender->link_to(bound->address());
-  anon_send_exit(em_sender, exit_reason::kill);
-  wait_until_exited();
-  self->request(dbl, infinite, 1).receive(
-    [](int v) {
-      CAF_CHECK_EQUAL(v, 2);
-    }
-  );
-  anon_send_exit(dbl, exit_reason::kill);
+  wait_until_is_terminated();
 }
 
 CAF_TEST(request_response_promise) {
