@@ -107,7 +107,10 @@ public:
   }
 
   function_view(function_view&& x) : impl_(std::move(x.impl_)) {
-    new_self(impl_);
+    if (impl_) {
+      new (&self_) scoped_actor(std::move(x.self_));
+      x.self_.~scoped_actor();
+    }
   }
 
   function_view& operator=(function_view&& x) {
