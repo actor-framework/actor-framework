@@ -29,6 +29,8 @@ using namespace caf;
 
 namespace {
 
+// -- composable behaviors using primitive data types --------------------------
+
 using i3_actor = typed_actor<replies_to<int, int, int>::with<int>>;
 
 using d_actor = typed_actor<replies_to<double>::with<double, double>>;
@@ -67,109 +69,214 @@ public:
   }
 };
 
-struct foo_actor_state2 : composed_behavior<i3_actor_state2, i3_actor_state, d_actor_state> {
+// checks whether CAF resolves "diamonds" properly by inheriting
+// from two behaviors that both implement i3_actor
+struct foo_actor_state2
+    : composed_behavior<i3_actor_state2, i3_actor_state, d_actor_state> {
   result<int> operator()(int x, int y, int z) override {
     return x - y - z;
   }
 };
 
-using add_atom = atom_constant<atom("Add")>;
-using get_name_atom = atom_constant<atom("GetName")>;
+// -- composable behaviors using param<T> arguments ----------------------------
+
+std::atomic<long> counting_strings_created;
+std::atomic<long> counting_strings_moved;
+std::atomic<long> counting_strings_destroyed;
+
+// counts how many instances where created
+struct counting_string {
+public:
+  counting_string() {
+    ++counting_strings_created;
+  }
+
+  counting_string(const char* cstr) : str_(cstr) {
+    ++counting_strings_created;
+  }
+
+  counting_string(const counting_string& x) : str_(x.str_) {
+    ++counting_strings_created;
+  }
+
+  counting_string(counting_string&& x) : str_(std::move(x.str_)) {
+    ++counting_strings_created;
+    ++counting_strings_moved;
+  }
+
+  ~counting_string() {
+    ++counting_strings_destroyed;
+  }
+
+  counting_string& operator=(const char* cstr) {
+    str_ = cstr;
+    return *this;
+  }
+
+  const std::string& str() const {
+    return str_;
+  }
+
+  template <class Processor>
+  friend void serialize(Processor& proc, counting_string& x) {
+    proc & x.str_;
+  }
+
+private:
+  std::string str_;
+};
+
+bool operator==(const counting_string& x, const counting_string& y) {
+  return x.str() == y.str();
+}
+
+bool operator==(const counting_string& x, const char* y) {
+  return x.str() == y;
+}
+
+} // namespace <anonymous>
+
+namespace std {
+
+template <>
+struct hash<counting_string> {
+  inline size_t operator()(const counting_string& ref) const {
+    hash<string> f;
+    return f(ref.str());
+  }
+};
+
+} // namespace std
+
+namespace {
+
+using add_atom = atom_constant<atom("add")>;
+using get_name_atom = atom_constant<atom("getName")>;
 
 // "base" interface
-using named_actor = typed_actor<replies_to<get_name_atom>::with<std::string>>;
+using named_actor = typed_actor<replies_to<get_name_atom>::with<counting_string>>;
 
 // a simple dictionary
-using dict = named_actor::extend<replies_to<get_atom, std::string>::with<std::string>,
-                                 replies_to<put_atom, std::string, std::string>::with<void>>;
-
-// a simple calculator
-using calc = named_actor::extend<replies_to<add_atom, int, int>::with<int>>;
+using dict = named_actor::extend<replies_to<get_atom, counting_string>::with<counting_string>,
+                                 replies_to<put_atom, counting_string, counting_string>::with<void>>;
 
 class dict_state : public composable_behavior<dict> {
 public:
-  result<std::string> operator()(get_name_atom) override {
+  result<counting_string> operator()(get_name_atom) override {
     return "dictionary";
   }
 
-  result<std::string> operator()(get_atom, param<std::string> key) override {
+  result<counting_string> operator()(get_atom, param<counting_string> key) override {
     auto i = values_.find(key);
     if (i == values_.end())
       return "";
     return i->second;
   }
 
-  result<void> operator()(put_atom, param<std::string> key,
-                          param<std::string> value) override {
+  result<void> operator()(put_atom, param<counting_string> key,
+                          param<counting_string> value) override {
+    if (values_.count(key) != 0)
+      return unit;
     values_.emplace(key.move(), value.move());
     return unit;
   }
 
 protected:
-  std::unordered_map<std::string, std::string> values_;
+  std::unordered_map<counting_string, counting_string> values_;
 };
 
-class calc_state : public composable_behavior<calc> {
-public:
-  result<std::string> operator()(get_name_atom) override {
-    return "calculator";
-  }
-
-  result<int> operator()(add_atom, int x, int y) override {
-    return x + y;
-  }
-};
-
-class dict_calc_state : public composed_behavior<dict_state, calc_state> {
-public:
-  // composed_behavior<...> will mark this operator pure virtual, because
-  // of conflicting declarations in dict_state and calc_state
-  result<std::string> operator()(get_name_atom) override {
-    return "calculating dictionary";
-  }
+struct fixture {
+  actor_system system;
 };
 
 } // namespace <anonymous>
 
-CAF_TEST(composable_behaviors) {
-  actor_system sys;
-  //auto x1 = sys.spawn<stateful_impl<foo_actor_state>>();
-  auto x1 = sys.spawn<foo_actor_state>();
-  scoped_actor self{sys};
-  self->request(x1, infinite, 1, 2, 4).receive(
-    [](int y) {
-      CAF_CHECK_EQUAL(y, 7);
-    }
-  );
-  self->send_exit(x1, exit_reason::kill);
-  //auto x2 = sys.spawn<stateful_impl<composed_behavior<i3_actor_state, d_actor_state>>>();
-  auto x2 = sys.spawn<composed_behavior<i3_actor_state, d_actor_state>>();
-  self->request(x2, infinite, 1, 2, 4).receive(
-    [](int y) {
-      CAF_CHECK_EQUAL(y, 7);
-    }
-  );
-  self->request(x2, infinite, 1.0).receive(
-    [](double y1, double y2) {
-      CAF_CHECK_EQUAL(y1, 1.0);
-      CAF_CHECK_EQUAL(y1, y2);
-    }
-  );
-  self->send_exit(x2, exit_reason::kill);
-  //auto x3 = sys.spawn<stateful_impl<foo_actor_state2>>();
-  auto x3 = sys.spawn<foo_actor_state2>();
-  self->request(x3, infinite, 1, 2, 4).receive(
-    [](int y) {
-      CAF_CHECK_EQUAL(y, -5);
-    }
-  );
-  self->send_exit(x3, exit_reason::kill);
-  //auto x4 = sys.spawn<stateful_impl<dict_calc_state>>();
-  auto x4 = sys.spawn<dict_calc_state>();
-  self->request(x4, infinite, add_atom::value, 10, 20).receive(
-    [](int y) {
-      CAF_CHECK_EQUAL(y, 30);
-    }
-  );
-  self->send_exit(x4, exit_reason::kill);
+CAF_TEST_FIXTURE_SCOPE(composable_behaviors_tests, fixture)
+
+CAF_TEST(composition) {
+  // test foo_foo_actor_state
+  auto f1 = make_function_view(system.spawn<foo_actor_state>());
+  CAF_CHECK_EQUAL(f1(1, 2, 4), 7);
+  CAF_CHECK_EQUAL(f1(42.0), std::make_tuple(42.0, 42.0));
+  // test on-the-fly composition of i3_actor_state and d_actor_state
+  f1.assign(system.spawn<composed_behavior<i3_actor_state, d_actor_state>>());
+  CAF_CHECK_EQUAL(f1(1, 2, 4), 7);
+  CAF_CHECK_EQUAL(f1(42.0), std::make_tuple(42.0, 42.0));
+  // test on-the-fly composition of i3_actor_state2 and d_actor_state
+  f1.assign(system.spawn<composed_behavior<i3_actor_state2, d_actor_state>>());
+  CAF_CHECK_EQUAL(f1(1, 2, 4), 8);
+  CAF_CHECK_EQUAL(f1(42.0), std::make_tuple(42.0, 42.0));
+  // test foo_actor_state2
+  f1.assign(system.spawn<foo_actor_state2>());
+  CAF_CHECK_EQUAL(f1(1, 2, 4), -5);
+  CAF_CHECK_EQUAL(f1(42.0), std::make_tuple(42.0, 42.0));
 }
+
+CAF_TEST(param_detaching) {
+  auto dict = actor_cast<actor>(system.spawn<dict_state>());
+  scoped_actor self{system};
+  // Using CAF is the key to success!
+  counting_string key = "CAF";
+  counting_string value = "success";
+  CAF_CHECK_EQUAL(counting_strings_created.load(), 2);
+  CAF_CHECK_EQUAL(counting_strings_moved.load(), 0);
+  CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 0);
+  // wrap two strings into messages
+  auto put_msg = make_message(put_atom::value, key, value);
+  auto get_msg = make_message(get_atom::value, key);
+  CAF_CHECK_EQUAL(counting_strings_created.load(), 5);
+  CAF_CHECK_EQUAL(counting_strings_moved.load(), 0);
+  CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 0);
+  // send put message to dictionary
+  self->request(dict, infinite, put_msg).receive(
+    [] {
+      // the handler of put_atom calls .move() on key and value,
+      // both causing to detach + move into the map
+      CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
+      CAF_CHECK_EQUAL(counting_strings_moved.load(), 2);
+      CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 2);
+    }
+  );
+  // send put message to dictionary again
+  self->request(dict, infinite, put_msg).receive(
+    [] {
+      // the handler checks whether key already exists -> no copies
+      CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
+      CAF_CHECK_EQUAL(counting_strings_moved.load(), 2);
+      CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 2);
+    }
+  );
+  // alter our initial put, this time moving it to the dictionary
+  put_msg.get_as_mutable<counting_string>(1) = "neverlord";
+  put_msg.get_as_mutable<counting_string>(2) = "CAF";
+  // send put message to dictionary
+  self->request(dict, infinite, std::move(put_msg)).receive(
+    [] {
+      // the handler of put_atom calls .move() on key and value,
+      // but no detaching occurs this time (unique access) -> move into the map
+      CAF_CHECK_EQUAL(counting_strings_created.load(), 11);
+      CAF_CHECK_EQUAL(counting_strings_moved.load(), 4);
+      CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 4);
+    }
+  );
+  // finally, check for original key
+  self->request(dict, infinite, std::move(get_msg)).receive(
+    [](const counting_string& str) {
+      // we receive a copy of the value, which is copied out of the map and
+      // then moved into the result message;
+      // the string from our get_msg is destroyed
+      CAF_CHECK_EQUAL(counting_strings_created.load(), 13);
+      CAF_CHECK_EQUAL(counting_strings_moved.load(), 5);
+      CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 6);
+      CAF_CHECK_EQUAL(str, "success");
+    }
+  );
+  // temporary of our handler is destroyed
+  CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 7);
+  self->send_exit(dict, exit_reason::kill);
+  self->await_all_other_actors_done();
+  // only `key` and `value` from this scope remain
+  CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 11);
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
