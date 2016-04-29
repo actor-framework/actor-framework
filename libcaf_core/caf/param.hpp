@@ -63,6 +63,11 @@ public:
     return *x_;
   }
 
+  const T* operator->() const {
+    return x_;
+  }
+
+  /// Detaches the value if needed and returns a mutable reference to it.
   T& get_mutable() {
     if (flag_ == shared_access) {
       auto cpy = new T(get());
@@ -72,6 +77,7 @@ public:
     return *x_;
   }
 
+  /// Moves the value out of the `param`.
   T&& move() {
     return std::move(get_mutable());
   }
