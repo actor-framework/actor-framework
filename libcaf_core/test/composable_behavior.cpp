@@ -152,9 +152,12 @@ namespace {
 
 using add_atom = atom_constant<atom("add")>;
 using get_name_atom = atom_constant<atom("getName")>;
+using ping_atom = atom_constant<atom("ping")>;
+using pong_atom = atom_constant<atom("pong")>;
 
 // "base" interface
-using named_actor = typed_actor<replies_to<get_name_atom>::with<counting_string>>;
+using named_actor = typed_actor<replies_to<get_name_atom>::with<counting_string>,
+                                replies_to<ping_atom>::with<pong_atom>>;
 
 // a simple dictionary
 using dict = named_actor::extend<replies_to<get_atom, counting_string>::with<counting_string>,
@@ -164,6 +167,10 @@ class dict_state : public composable_behavior<dict> {
 public:
   result<counting_string> operator()(get_name_atom) override {
     return "dictionary";
+  }
+
+  result<pong_atom> operator()(ping_atom) override {
+    return pong_atom::value;
   }
 
   result<counting_string> operator()(get_atom, param<counting_string> key) override {
@@ -215,6 +222,14 @@ CAF_TEST(composition) {
 CAF_TEST(param_detaching) {
   auto dict = actor_cast<actor>(system.spawn<dict_state>());
   scoped_actor self{system};
+  // this ping-pong makes sure that dict has cleaned up all state related
+  // to a test before moving to the second test; otherwise, reference counts
+  // can diverge from what we expect
+  auto ping_pong = [&] {
+    self->request(dict, infinite, ping_atom::value).receive([](pong_atom) {
+      // nop
+    });
+  };
   // Using CAF is the key to success!
   counting_string key = "CAF";
   counting_string value = "success";
@@ -229,7 +244,8 @@ CAF_TEST(param_detaching) {
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 0);
   // send put message to dictionary
   self->request(dict, infinite, put_msg).receive(
-    [] {
+    [&] {
+      ping_pong();
       // the handler of put_atom calls .move() on key and value,
       // both causing to detach + move into the map
       CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
@@ -239,7 +255,8 @@ CAF_TEST(param_detaching) {
   );
   // send put message to dictionary again
   self->request(dict, infinite, put_msg).receive(
-    [] {
+    [&] {
+      ping_pong();
       // the handler checks whether key already exists -> no copies
       CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
       CAF_CHECK_EQUAL(counting_strings_moved.load(), 2);
@@ -251,7 +268,8 @@ CAF_TEST(param_detaching) {
   put_msg.get_as_mutable<counting_string>(2) = "CAF";
   // send put message to dictionary
   self->request(dict, infinite, std::move(put_msg)).receive(
-    [] {
+    [&] {
+      ping_pong();
       // the handler of put_atom calls .move() on key and value,
       // but no detaching occurs this time (unique access) -> move into the map
       CAF_CHECK_EQUAL(counting_strings_created.load(), 11);
@@ -261,7 +279,8 @@ CAF_TEST(param_detaching) {
   );
   // finally, check for original key
   self->request(dict, infinite, std::move(get_msg)).receive(
-    [](const counting_string& str) {
+    [&](const counting_string& str) {
+      ping_pong();
       // we receive a copy of the value, which is copied out of the map and
       // then moved into the result message;
       // the string from our get_msg is destroyed
