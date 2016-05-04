@@ -1037,9 +1037,9 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   for (auto& subscription : subscriptions_)
     subscription->unsubscribe(me);
   subscriptions_.clear();
-  monitorable_actor::cleanup(std::move(fail_state), host);
   // tell registry we're done
   is_registered(false);
+  monitorable_actor::cleanup(std::move(fail_state), host);
   return true;
 }
 
