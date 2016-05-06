@@ -21,7 +21,6 @@
 #define CAF_ABSTRACT_ACTOR_HPP
 
 #include <set>
-#include <mutex>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -29,7 +28,6 @@
 #include <cstdint>
 #include <exception>
 #include <type_traits>
-#include <condition_variable>
 
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
@@ -134,8 +132,6 @@ public:
   };
 
   // flags storing runtime information                     used by ...
-  static constexpr int trap_exit_flag         = 0x0001; // local_actor
-  static constexpr int trap_error_flag        = 0x0002; // local_actor
   static constexpr int has_timeout_flag       = 0x0004; // single_timeout
   static constexpr int is_registered_flag     = 0x0008; // (several actors)
   static constexpr int is_initialized_flag    = 0x0010; // event-based actors

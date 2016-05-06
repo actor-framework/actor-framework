@@ -310,13 +310,8 @@ void middleman::stop() {
   hooks_.reset();
   named_brokers_.clear();
   scoped_actor self{system(), true};
-  self->monitor(manager_);
   self->send_exit(manager_, exit_reason::user_shutdown);
-  self->receive(
-    [](const down_msg&) {
-      // nop
-    }
-  );
+  self->wait_for(manager_);
 }
 
 void middleman::init(actor_system_config& cfg) {

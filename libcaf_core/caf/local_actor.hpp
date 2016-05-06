@@ -114,9 +114,19 @@ public:
   using mailbox_type = detail::single_reader_queue<mailbox_element,
                                                    detail::disposer>;
 
-  using unexpected_handler
-    = std::function<result<message>(local_actor* self,
-                                    const type_erased_tuple*)>;
+  /// Function object for handling unmatched messages.
+  using default_handler
+    = std::function<result<message> (local_actor* self,
+                                     const type_erased_tuple*)>;
+
+  /// Function object for handling error messages.
+  using error_handler = std::function<void (local_actor* self, error&)>;
+
+  /// Function object for handling down messages.
+  using down_handler = std::function<void (local_actor* self, down_msg&)>;
+
+  /// Function object for handling exit messages.
+  using exit_handler = std::function<void (local_actor* self, exit_msg&)>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -246,12 +256,12 @@ public:
   }
 
   /// Sends an exit message to `dest`.
-  void send_exit(const actor_addr& dest, exit_reason reason);
+  void send_exit(const actor_addr& dest, error reason);
 
   /// Sends an exit message to `dest`.
   template <class ActorHandle>
-  void send_exit(const ActorHandle& dest, exit_reason reason) {
-    send_exit(dest.address(), reason);
+  void send_exit(const ActorHandle& dest, error reason) {
+    send_exit(dest.address(), std::move(reason));
   }
 
   /// Sends a message to `dest` that is delayed by `rel_time`
@@ -311,8 +321,41 @@ public:
   // -- miscellaneous actor operations -----------------------------------------
 
   /// Sets a custom handler for unexpected messages.
-  inline void set_default_handler(unexpected_handler fun) {
-    unexpected_handler_ = std::move(fun);
+  inline void set_default_handler(default_handler fun) {
+    default_handler_ = std::move(fun);
+  }
+
+  /// Sets a custom handler for error messages.
+  inline void set_error_handler(error_handler fun) {
+    error_handler_ = std::move(fun);
+  }
+
+  /// Sets a custom handler for error messages.
+  template <class T>
+  auto set_error_handler(T fun) -> decltype(fun(std::declval<error&>())) {
+    set_error_handler([fun](local_actor*, error& x) { fun(x); });
+  }
+
+  /// Sets a custom handler for down messages.
+  inline void set_down_handler(down_handler fun) {
+    down_handler_ = std::move(fun);
+  }
+
+  /// Sets a custom handler for down messages.
+  template <class T>
+  auto set_down_handler(T fun) -> decltype(fun(std::declval<down_msg&>())) {
+    set_down_handler([fun](local_actor*, down_msg& x) { fun(x); });
+  }
+
+  /// Sets a custom handler for error messages.
+  inline void set_exit_handler(exit_handler fun) {
+    exit_handler_ = std::move(fun);
+  }
+
+  /// Sets a custom handler for exit messages.
+  template <class T>
+  auto set_exit_handler(T fun) -> decltype(fun(std::declval<exit_msg&>())) {
+    set_exit_handler([fun](local_actor*, exit_msg& x) { fun(x); });
   }
 
   /// Returns the execution unit currently used by this actor.
@@ -356,26 +399,6 @@ public:
   ///          that do not use the behavior stack, i.e., actors that use
   ///          blocking API calls such as {@link receive()}.
   void quit(error reason = error{});
-
-  /// Checks whether this actor traps exit messages.
-  inline bool trap_exit() const {
-    return get_flag(trap_exit_flag);
-  }
-
-  /// Enables or disables trapping of exit messages.
-  inline void trap_exit(bool value) {
-    set_flag(value, trap_exit_flag);
-  }
-
-  /// Checks whether this actor traps error messages.
-  inline bool trap_error() const {
-    return get_flag(trap_error_flag);
-  }
-
-  /// Enables or disables trapping of error messages.
-  inline void trap_error(bool value) {
-    set_flag(value, trap_error_flag);
-  }
 
   /// @cond PRIVATE
 
@@ -635,8 +658,6 @@ public:
                                        behavior& fun,
                                        message_id awaited_response);
 
-  using error_handler = std::function<void (error&)>;
-
   using pending_response = std::pair<const message_id, behavior>;
 
   message_id new_request_id(message_priority mp);
@@ -684,9 +705,6 @@ public:
   void do_become(behavior bhvr, bool discard_old);
 
 protected:
-  // used only in thread-mapped actors
-  void await_data();
-
   // used by both event-based and blocking actors
   mailbox_type mailbox_;
 
@@ -719,7 +737,16 @@ protected:
   std::set<group> subscriptions_;
 
   // used for setting custom functions for handling unexpected messages
-  unexpected_handler unexpected_handler_;
+  default_handler default_handler_;
+
+  // used for setting custom error handlers
+  error_handler error_handler_;
+
+  // used for setting custom down message handlers
+  down_handler down_handler_;
+
+  // used for setting custom exit message handlers
+  exit_handler exit_handler_;
 
   /// @endcond
 
@@ -741,6 +768,22 @@ private:
 
   void delayed_send_impl(message_id mid, strong_actor_ptr whom,
                          const duration& rtime, message data);
+
+  enum class msg_type {
+    expired_timeout,       // an 'old & obsolete' timeout
+    timeout,               // triggers currently active timeout
+    ordinary,              // an asynchronous message or sync. request
+    response,              // a response
+    sys_message            // a system message, e.g., exit_msg or down_msg
+  };
+
+  msg_type filter_msg(mailbox_element& node);
+
+  void handle_response(mailbox_element_ptr&, local_actor::pending_response&);
+
+  class private_thread;
+
+  private_thread* private_thread_;
 };
 
 /// A smart pointer to a {@link local_actor} instance.

@@ -74,6 +74,7 @@ class proxy_registry;
 class continue_helper;
 class mailbox_element;
 class message_handler;
+class sync_timeout_msg;
 class response_promise;
 class event_based_actor;
 class type_erased_tuple;

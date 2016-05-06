@@ -55,14 +55,6 @@ second_stage::behavior_type typed_second_stage() {
 }
 
 struct fixture {
-  void wait_until_is_terminated() {
-    self->receive(
-      [](const down_msg&) {
-        CAF_CHECK(true);
-      }
-    );
-  }
-
   template <class Actor>
   static bool exited(const Actor& handle) {
     auto ptr = actor_cast<abstract_actor*>(handle);
@@ -98,9 +90,8 @@ CAF_TEST(identity) {
 CAF_TEST(lifetime_1a) {
   auto g = system.spawn(testee);
   auto f = system.spawn(testee);
-  self->monitor(g);
   anon_send_exit(g, exit_reason::kill);
-  wait_until_is_terminated();
+  self->wait_for(g);
   auto h = f * g;
   CAF_CHECK(exited(h));
 }
@@ -109,9 +100,8 @@ CAF_TEST(lifetime_1a) {
 CAF_TEST(lifetime_1b) {
   auto g = system.spawn(testee);
   auto f = system.spawn(testee);
-  self->monitor(f);
   anon_send_exit(f, exit_reason::kill);
-  wait_until_is_terminated();
+  self->wait_for(f);
   auto h = f * g;
   CAF_CHECK(exited(h));
 }

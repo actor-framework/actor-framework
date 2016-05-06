@@ -274,19 +274,15 @@ behavior foo(event_based_actor* self) {
 }
 
 int_actor::behavior_type int_fun2(int_actor::pointer self) {
-  self->trap_exit(true);
+  self->set_down_handler([=](down_msg& dm) {
+    CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+    self->quit();
+  });
   return {
     [=](int i) {
       self->monitor(self->current_sender());
       return i * i;
     },
-    [=](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      self->quit();
-    },
-    [=](const exit_msg&) {
-      CAF_ERROR("Unexpected message");
-    }
   };
 }
 
@@ -333,17 +329,13 @@ struct fixture {
       }
     );
     CAF_CHECK_EQUAL(system.registry().running(), 2u);
-    self->spawn<monitored>(client, self, ts);
+    auto c1 = self->spawn(client, self, ts);
     self->receive(
       [](passed_atom) {
         CAF_MESSAGE("received `passed_atom`");
       }
     );
-    self->receive(
-      [](const down_msg& dm) {
-        CAF_CHECK(dm.reason == exit_reason::normal);
-      }
-    );
+    self->wait_for(c1);
     CAF_CHECK_EQUAL(system.registry().running(), 2u);
   }
 };
@@ -485,12 +477,8 @@ CAF_TEST(check_signature) {
       }
     };
   };
-  self->spawn<monitored>(bar_action);
-  self->receive(
-    [](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-    }
-  );
+  auto x = self->spawn(bar_action);
+  self->wait_for(x);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

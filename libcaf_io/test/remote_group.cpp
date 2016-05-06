@@ -60,25 +60,23 @@ behavior make_reflector_behavior(event_based_actor* self) {
 using spawn_atom = atom_constant<atom("Spawn")>;
 using get_group_atom = atom_constant<atom("GetGroup")>;
 
-struct await_reflector_down_behavior {
-  event_based_actor* self;
-  int cnt;
-
-  void operator()(const down_msg&) {
-    if (++cnt == 5)
-      self->quit();
-  }
-};
-
 struct await_reflector_reply_behavior {
   event_based_actor* self;
   int cnt;
+  int downs;
+  std::vector<actor> vec;
 
   void operator()(const std::string& str, double val) {
     CAF_CHECK_EQUAL(str, "Hello reflector!");
     CAF_CHECK_EQUAL(val, 5.0);
-    if (++cnt == 7)
-      self->become(await_reflector_down_behavior{self, 0});
+    if (++cnt == 7) {
+      for (auto actor : vec)
+        self->monitor(actor);
+      self->set_down_handler([=](down_msg&) {
+        if (++downs == 5)
+          self->quit();
+      });
+    }
   }
 };
 
@@ -95,10 +93,7 @@ void make_client_behavior(event_based_actor* self,
       };
       CAF_CHECK(std::all_of(vec.begin(), vec.end(), is_remote));
       self->send(grp, "Hello reflector!", 5.0);
-      for (auto actor : vec) {
-        self->monitor(actor);
-      }
-      self->become(await_reflector_reply_behavior{self, 0});
+      self->become(await_reflector_reply_behavior{self, 0, 0, vec});
     }
   );
 }

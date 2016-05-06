@@ -78,30 +78,25 @@ public:
     // nop
   }
 
-  inline mailbox_element_ptr dequeue() {
+  bool await_data(const hrc::time_point& tp) {
+    if (has_next_message())
+      return true;
+    return mailbox().synchronized_await(mtx_, cv_, tp);
+  }
+
+  mailbox_element_ptr try_dequeue() {
     blocking_actor::await_data();
     return next_message();
   }
 
-  bool await_data(const hrc::time_point& tp) {
-    if (has_next_message()) {
-      return true;
-    }
-    return mailbox().synchronized_await(mtx_, cv_, tp);
-  }
-
   mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
-    if (await_data(tp)) {
+    if (await_data(tp))
       return next_message();
-    }
     return mailbox_element_ptr{};
   }
 
   void act() override {
-    trap_exit(true);
     // setup & local variables
-    bool received_exit = false;
-    mailbox_element_ptr msg_ptr;
     std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{
@@ -109,17 +104,14 @@ public:
           message_id mid, message& msg) {
          insert_dmsg(messages, d, std::move(from),
                      std::move(to), mid, std::move(msg));
-      },
-      [&](const exit_msg&) {
-        received_exit = true;
       }
     };
-    // loop
-    while (! received_exit) {
+    mailbox_element_ptr msg_ptr;
+    for (;;) {
       while (! msg_ptr) {
-        if (messages.empty())
-          msg_ptr = dequeue();
-        else {
+        if (messages.empty()) {
+          msg_ptr = try_dequeue();
+        } else {
           auto tout = hrc::now();
           // handle timeouts (send messages)
           auto it = messages.begin();
@@ -128,10 +120,14 @@ public:
             it = messages.erase(it);
           }
           // wait for next message or next timeout
-          if (it != messages.end()) {
+          if (it != messages.end())
             msg_ptr = try_dequeue(it->first);
-          }
         }
+      }
+      if (msg_ptr->msg.match_element<exit_msg>(0)) {
+        auto& em = msg_ptr->msg.get_as<exit_msg>(0);
+        if (em.reason)
+          quit(em.reason);
       }
       mfun(msg_ptr->msg);
       msg_ptr.reset();
@@ -268,9 +264,14 @@ void printer_loop(blocking_actor* self) {
       std::cout << line << std::flush;
     line.clear();
   };
-  self->trap_exit(true);
+  /*
   bool running = true;
+  self->set_exit_handler([&](exit_msg&) {
+    running = false;
+  });
   self->receive_while([&] { return running; })(
+  */
+  self->receive_loop(
     [&](add_atom, actor_id aid, std::string& str) {
       if (str.empty() || aid == invalid_actor_id)
         return;
@@ -297,9 +298,6 @@ void printer_loop(blocking_actor* self) {
       auto d = get_data(aid, true);
       if (d)
         d->redirect = get_sink_handle(self->system(), fcache, fn, flag);
-    },
-    [&](const exit_msg&) {
-      running = false;
     }
   );
 }
@@ -333,16 +331,9 @@ void* abstract_coordinator::subtype_ptr() {
 void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
   scoped_actor self{system_, true};
-  self->monitor(timer_);
-  self->monitor(printer_);
   anon_send_exit(timer_, exit_reason::user_shutdown);
   anon_send_exit(printer_, exit_reason::user_shutdown);
-  int i = 0;
-  self->receive_for(i, 2)(
-    [](const down_msg&) {
-      // nop
-    }
-  );
+  self->wait_for(timer_, printer_);
 }
 
 abstract_coordinator::abstract_coordinator(actor_system& sys)

@@ -62,17 +62,6 @@ struct deduce_rhs_result {
 };
 
 template <class T>
-struct is_hidden_msg_handler : std::false_type { };
-
-template <>
-struct is_hidden_msg_handler<typed_mpi<type_list<exit_msg>,
-                                       type_list<void>>> : std::true_type { };
-
-template <>
-struct is_hidden_msg_handler<typed_mpi<type_list<down_msg>,
-                                       type_list<void>>> : std::true_type { };
-
-template <class T>
 struct deduce_mpi {
   using result = typename implicit_conversions<typename T::result_type>::type;
   using arg_t = typename tl_map<typename T::arg_types, std::decay>::type;

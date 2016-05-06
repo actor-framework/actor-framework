@@ -278,11 +278,13 @@ behavior master(event_based_actor* self) {
 
 behavior slave(event_based_actor* self, actor master) {
   self->link_to(master);
-  self->trap_exit(true);
+  self->set_exit_handler([=](exit_msg& msg) {
+    CAF_MESSAGE("slave: received exit message");
+    self->quit(msg.reason);
+  });
   return {
-    [=](const exit_msg& msg) {
-      CAF_MESSAGE("slave: received exit message");
-      self->quit(msg.reason);
+    [] {
+      // nop
     }
   };
 }
@@ -358,61 +360,34 @@ CAF_TEST(self_receive_with_zero_timeout) {
 
 CAF_TEST(mirror) {
   scoped_actor self{system};
-  auto mirror = self->spawn<simple_mirror, monitored>();
+  auto mirror = self->spawn<simple_mirror>();
   self->send(mirror, "hello mirror");
   self->receive (
     [](const std::string& msg) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
-    }
-  );
-  self->send_exit(mirror, exit_reason::user_shutdown);
-  self->receive (
-    [&](const down_msg& dm) {
-      if (dm.reason == exit_reason::user_shutdown)
-        CAF_MESSAGE("received `down_msg`");
-      else
-        CAF_ERROR("Unexpected message");
     }
   );
 }
 
 CAF_TEST(detached_mirror) {
   scoped_actor self{system};
-  auto mirror = self->spawn<simple_mirror, monitored+detached>();
+  auto mirror = self->spawn<simple_mirror, detached>();
   self->send(mirror, "hello mirror");
   self->receive (
     [](const std::string& msg) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
-    }
-  );
-  self->send_exit(mirror, exit_reason::user_shutdown);
-  self->receive (
-    [&](const down_msg& dm) {
-      if (dm.reason == exit_reason::user_shutdown)
-        CAF_MESSAGE("received `down_msg`");
-      else
-        CAF_ERROR("Unexpected message");
     }
   );
 }
 
 CAF_TEST(priority_aware_mirror) {
   scoped_actor self{system};
-  auto mirror = self->spawn<simple_mirror, monitored + priority_aware>();
+  auto mirror = self->spawn<simple_mirror, priority_aware>();
   CAF_MESSAGE("spawned mirror");
   self->send(mirror, "hello mirror");
   self->receive (
     [](const std::string& msg) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
-    }
-  );
-  self->send_exit(mirror, exit_reason::user_shutdown);
-  self->receive (
-    [&](const down_msg& dm) {
-      if (dm.reason == exit_reason::user_shutdown)
-        CAF_MESSAGE("received `down_msg`");
-      else
-        CAF_ERROR("Unexpected message");
     }
   );
 }
@@ -550,25 +525,22 @@ CAF_TEST(constructor_attach) {
   class spawner : public event_based_actor {
   public:
     spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
-      // nop
+      set_down_handler([=](down_msg& msg) {
+        CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+        if (++downs_ == 2)
+          quit(msg.reason);
+      });
+      set_exit_handler([=](exit_msg& msg) {
+        send_exit(testee_, std::move(msg.reason));
+      });
     }
     behavior make_behavior() {
-      trap_exit(true);
       testee_ = spawn<testee, monitored>(this);
       return {
-        [=](const down_msg& msg) {
-          CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-          if (++downs_ == 2) {
-            quit(msg.reason);
-          }
-        },
         [=](ok_atom, const error& reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++downs_ == 2)
             quit(reason);
-        },
-        [=](exit_msg& msg) {
-          delegate(testee_, std::move(msg));
         }
       };
     }
@@ -630,28 +602,36 @@ CAF_TEST(custom_exception_handler) {
   auto testee3 = self->spawn<exception_testee, monitored>();
   self->send(testee3, "foo");
   // receive all down messages
-  auto i = 0;
-  self->receive_for(i, 3)(
-    [&](const down_msg& dm) {
-      if (dm.source == testee1) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
-      }
-      else if (dm.source == testee2) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::unknown);
-      }
-      else if (dm.source == testee3) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
-      }
-      else {
-        throw std::runtime_error("received message from unexpected source");
-      }
+  int downs_received = 0;
+  self->set_down_handler([&](down_msg& dm) {
+    if (dm.source == testee1) {
+      ++downs_received;
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
     }
-  );
+    else if (dm.source == testee2) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::unknown);
+      ++downs_received;
+    }
+    else if (dm.source == testee3) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
+      ++downs_received;
+    }
+    else {
+      throw std::runtime_error("received message from unexpected source");
+    }
+    if (downs_received == 3)
+      self->send(self, message{});
+  });
+  // this exploits the fact that down messages are counted by dequeue
+  behavior dummy{[] {}};
+  self->dequeue(dummy);
 }
 
 CAF_TEST(kill_the_immortal) {
   auto wannabe_immortal = system.spawn([](event_based_actor* self) -> behavior {
-    self->trap_exit(true);
+    self->set_exit_handler([](local_actor*, exit_msg&) {
+      // nop
+    });
     return {
       [] {
         // nop
@@ -659,14 +639,8 @@ CAF_TEST(kill_the_immortal) {
     };
   });
   scoped_actor self{system};
-  self->monitor(wannabe_immortal);
   self->send_exit(wannabe_immortal, exit_reason::kill);
-  self->receive(
-    [&](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::kill);
-      CAF_CHECK_EQUAL(dm.source, wannabe_immortal.address());
-    }
-  );
+  self->wait_for(wannabe_immortal);
 }
 
 CAF_TEST(move_only_argument) {

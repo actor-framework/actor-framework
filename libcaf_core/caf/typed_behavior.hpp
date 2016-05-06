@@ -209,11 +209,7 @@ private:
 
   template <class... Ts>
   void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {
-    using mpi =
-      typename detail::tl_filter_not<
-        detail::type_list<typename detail::deduce_mpi<Ts>::type...>,
-        detail::is_hidden_msg_handler
-      >::type;
+    using mpi = detail::type_list<typename detail::deduce_mpi<Ts>::type...>;
     static_assert(detail::tl_is_distinct<mpi>::value,
                   "multiple handler defintions found");
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();

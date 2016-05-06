@@ -46,7 +46,16 @@ public:
   middleman_actor_impl(actor_config& cfg, actor default_broker)
       : middleman_actor::base(cfg),
         broker_(default_broker) {
-    // nop
+    set_down_handler([=](down_msg& dm) {
+      auto i = cached_.begin();
+      auto e = cached_.end();
+      while (i != e) {
+        if (get<1>(i->second) == dm.source)
+          i = cached_.erase(i);
+        else
+          ++i;
+      }
+    });
   }
 
   void on_exit() override {
@@ -158,16 +167,6 @@ public:
         CAF_LOG_TRACE("");
         delegate(broker_, atm, std::move(nid));
         return {};
-      },
-      [=](const down_msg& dm) {
-        auto i = cached_.begin();
-        auto e = cached_.end();
-        while (i != e) {
-          if (get<1>(i->second) == dm.source)
-            i = cached_.erase(i);
-          else
-            ++i;
-        }
       }
     };
   }

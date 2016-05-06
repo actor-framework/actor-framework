@@ -78,6 +78,7 @@ const char* numbered_type_names[] = {
   "@strong_actor_ptr",
   "@strset",
   "@strvec",
+  "@sync_timeout_msg",
   "@timeout",
   "@u16",
   "@u16str",

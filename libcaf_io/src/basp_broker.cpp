@@ -264,6 +264,11 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   auto& tmp = spawn_servers[nid];
   tmp = system().spawn<hidden>([=](event_based_actor* this_actor) -> behavior {
     CAF_LOG_TRACE("");
+    // terminate when receiving a down message
+    this_actor->set_down_handler([=](down_msg& dm) {
+      CAF_LOG_TRACE(CAF_ARG(dm));
+      this_actor->quit(std::move(dm.reason));
+    });
     // skip messages until we receive the initial ok_atom
     this_actor->set_default_handler(skip);
     return {
@@ -281,10 +286,6 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
             this_actor->delegate(config_serv, get_atom::value,
                                  std::move(type), std::move(args));
             return {};
-          },
-          [=](const down_msg& dm) {
-            CAF_LOG_TRACE(CAF_ARG(dm));
-            this_actor->quit(dm.reason);
           }
         );
       },
@@ -339,6 +340,10 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   auto connection_helper = [=](event_based_actor* helper, actor s) -> behavior {
     CAF_LOG_TRACE(CAF_ARG(s));
     helper->monitor(s);
+    helper->set_down_handler([=](down_msg& dm) {
+      CAF_LOG_TRACE(CAF_ARG(dm));
+      helper->quit(std::move(dm.reason));
+    });
     return {
       // this config is send from the remote `ConfigServ`
       [=](ok_atom, const std::string&, message& msg) {
@@ -367,10 +372,6 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
             CAF_LOG_INFO("could not connect to node directly:" << CAF_ARG(nid));
           }
         });
-      },
-      [=](const down_msg& dm) {
-        CAF_LOG_TRACE(CAF_ARG(dm));
-        helper->quit(dm.reason);
       },
       after(std::chrono::minutes(10)) >> [=] {
         CAF_LOG_TRACE(CAF_ARG(""));

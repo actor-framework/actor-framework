@@ -64,11 +64,11 @@ int main() {
     cells.emplace_back(system.spawn(cell_impl, i * i));
   scoped_actor self{system};
   aout(self) << "waiting_testee" << endl;
-  self->spawn<monitored>(waiting_testee, cells);
-  self->receive([](const down_msg&) {});
+  auto x1 = self->spawn(waiting_testee, cells);
+  self->wait_for(x1);
   aout(self) << "multiplexed_testee" << endl;
-  self->spawn<monitored>(multiplexed_testee, cells);
-  self->receive([](const down_msg&) {});
+  auto x2 = self->spawn(multiplexed_testee, cells);
+  self->wait_for(x2);
   aout(self) << "blocking_testee" << endl;
   system.spawn(blocking_testee, cells);
 }

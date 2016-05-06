@@ -64,6 +64,7 @@ using sorted_builtin_types =
     strong_actor_ptr,         // @strong_actor_ptr
     std::set<std::string>,    // @strset
     std::vector<std::string>, // @strvec
+    sync_timeout_msg,         // @sync_timeout_msg
     timeout_msg,              // @timeout
     uint16_t,                 // @u16
     std::u16string,           // @u16_str

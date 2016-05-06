@@ -48,23 +48,14 @@ class local_group_module;
 
 void await_all_locals_down(actor_system& sys, std::initializer_list<actor> xs) {
   CAF_LOG_TRACE("");
-  size_t awaited_down_msgs = 0;
   scoped_actor self{sys, true};
+  std::vector<actor> ys;
   for (auto& x : xs)
-    if (x != invalid_actor && x.node() == sys.node()) {
-      self->monitor(x);
+    if (x.node() == sys.node()) {
       self->send_exit(x, exit_reason::kill);
-      ++awaited_down_msgs;
+      ys.push_back(x);
     }
-  size_t i = 0;
-  self->receive_for(i, awaited_down_msgs) (
-    [](const down_msg&) {
-      // nop
-    },
-    after(std::chrono::seconds(1)) >> [&] {
-      throw std::logic_error("at least one actor did not quit within 1s");
-    }
-  );
+  self->wait_for(ys);
 }
 
 class local_group : public abstract_group {
@@ -170,6 +161,18 @@ public:
       return message{};
     };
     set_default_handler(fwd);
+    set_down_handler([=](down_msg& dm) {
+      CAF_LOG_TRACE(CAF_ARG(dm));
+      if (dm.source) {
+        auto first = acquaintances_.begin();
+        auto last = acquaintances_.end();
+        auto i = std::find_if(first, last, [&](const actor& a) {
+          return a == dm.source;
+        });
+        if (i != last)
+          acquaintances_.erase(i);
+      }
+    });
     // return behavior
     return {
       [=](join_atom, const actor& other) {
@@ -190,18 +193,6 @@ public:
         group_->send_all_subscribers(current_element_->sender, what, context());
         // forward to all acquaintances
         send_to_acquaintances(what);
-      },
-      [=](const down_msg& dm) {
-        CAF_LOG_TRACE(CAF_ARG(dm));
-        if (dm.source) {
-          auto first = acquaintances_.begin();
-          auto last = acquaintances_.end();
-          auto i = std::find_if(first, last, [&](const actor& a) {
-            return a == dm.source;
-          });
-          if (i != last)
-            acquaintances_.erase(i);
-        }
       }
     };
   }
@@ -305,13 +296,16 @@ private:
                                        local_group_proxy* grp) {
     CAF_LOG_TRACE("");
     self->monitor(grp->broker_);
+    self->set_down_handler([=](down_msg& down) {
+      CAF_LOG_TRACE(CAF_ARG(down));
+      auto msg = make_message(group_down_msg{group(grp)});
+      grp->send_all_subscribers(self->ctrl(), std::move(msg),
+                                self->context());
+      self->quit(down.reason);
+    });
     return {
-      [=](const down_msg& down) {
-        CAF_LOG_TRACE(CAF_ARG(down));
-        auto msg = make_message(group_down_msg{group(grp)});
-        grp->send_all_subscribers(self->ctrl(), std::move(msg),
-                                  self->context());
-        self->quit(down.reason);
+      [] {
+        // nop
       }
     };
   }
@@ -332,7 +326,7 @@ behavior proxy_broker::make_behavior() {
   set_default_handler(fwd);
   // return dummy behavior
   return {
-    [](const down_msg&) {
+    [] {
       // nop
     }
   };

@@ -182,6 +182,10 @@ void actor_registry::start() {
         self->state.data[key].second.erase(subscriber);
       subscribers.erase(i);
     };
+    self->set_down_handler([=](down_msg& dm) {
+      CAF_LOG_TRACE(CAF_ARG(dm));
+      unsubscribe_all(actor_cast<actor>(dm.source));
+    });
     return {
       [=](put_atom, const std::string& key, message& msg) {
         CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(msg));
@@ -237,10 +241,6 @@ void actor_registry::start() {
         }
         self->state.subscribers[subscriber].erase(key);
         self->state.data[key].second.erase(subscriber);
-      },
-      [=](const down_msg& dm) {
-        CAF_LOG_TRACE(CAF_ARG(dm));
-        unsubscribe_all(actor_cast<actor>(dm.source));
       }
     };
   };

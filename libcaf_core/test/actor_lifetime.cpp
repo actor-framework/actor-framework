@@ -66,14 +66,7 @@ public:
 template <class ExitMsgType>
 behavior tester(event_based_actor* self, const actor& aut) {
   if (std::is_same<ExitMsgType, exit_msg>::value) {
-    self->trap_exit(true);
-    self->link_to(aut);
-  } else {
-    self->monitor(aut);
-  }
-  anon_send_exit(aut, exit_reason::user_shutdown);
-  return {
-    [self](const ExitMsgType& msg) {
+    self->set_exit_handler([self](exit_msg& msg) {
       // must be still alive at this point
       CAF_CHECK_EQUAL(s_testees.load(), 1);
       CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
@@ -83,7 +76,24 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // which in turn destroys it by dropping the last remaining reference
       self->delayed_send(self, std::chrono::milliseconds(30),
                          check_atom::value);
-    },
+    });
+    self->link_to(aut);
+  } else {
+    self->set_down_handler([self](down_msg& msg) {
+      // must be still alive at this point
+      CAF_CHECK_EQUAL(s_testees.load(), 1);
+      CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+      // testee might be still running its cleanup code in
+      // another worker thread; by waiting some milliseconds, we make sure
+      // testee had enough time to return control to the scheduler
+      // which in turn destroys it by dropping the last remaining reference
+      self->delayed_send(self, std::chrono::milliseconds(30),
+                         check_atom::value);
+    });
+    self->monitor(aut);
+  }
+  anon_send_exit(aut, exit_reason::user_shutdown);
+  return {
     [self](check_atom) {
       // make sure aut's dtor and on_exit() have been called
       CAF_CHECK_EQUAL(s_testees.load(), 0);

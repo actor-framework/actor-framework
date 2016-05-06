@@ -108,50 +108,29 @@ CAF_TEST(round_robin_actor_pool) {
     }
   );
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
-  self->receive(
-    [&](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.source, workers.back().address());
-      workers.pop_back();
-      // poll actor pool up to 10 times or until it removes the failed worker
-      bool success = false;
-      size_t i = 0;
-      while (! success && ++i <= 10) {
-        self->request(w, infinite, sys_atom::value, get_atom::value).receive(
-          [&](std::vector<actor>& ws) {
-            success = workers.size() == ws.size();
-            if (success) {
-              std::sort(ws.begin(), ws.end());
-              CAF_CHECK_EQUAL(workers, ws);
-            } else {
-              // wait a bit until polling again
-              std::this_thread::sleep_for(std::chrono::milliseconds(5));
-            }
-          }
-        );
-      }
-      CAF_REQUIRE(success);
-    },
-    after(std::chrono::milliseconds(250)) >> [] {
-      CAF_ERROR("didn't receive a down message");
-    }
-  );
-  CAF_MESSAGE("about to send exit to workers");
-  self->send_exit(w, exit_reason::user_shutdown);
-  for (int i = 0; i < 6; ++i) {
-    self->receive(
-      [&](const down_msg& dm) {
-        auto last = workers.end();
-        auto src = dm.source;
-        CAF_CHECK_NOT_EQUAL(src, invalid_actor_addr);
-        auto pos = std::find(workers.begin(), last, src);
-        if (pos != last)
-          workers.erase(pos);
-      },
-      after(std::chrono::milliseconds(250)) >> [] {
-        CAF_ERROR("didn't receive a down message");
+  self->wait_for(workers.back());
+  workers.pop_back();
+  // poll actor pool up to 10 times or until it removes the failed worker
+  bool success = false;
+  size_t i = 0;
+  while (! success && ++i <= 10) {
+    self->request(w, infinite, sys_atom::value, get_atom::value).receive(
+      [&](std::vector<actor>& ws) {
+        success = workers.size() == ws.size();
+        if (success) {
+          std::sort(ws.begin(), ws.end());
+          CAF_CHECK_EQUAL(workers, ws);
+        } else {
+          // wait a bit until polling again
+          std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
       }
     );
   }
+  CAF_REQUIRE(success);
+  CAF_MESSAGE("about to send exit to workers");
+  self->send_exit(w, exit_reason::user_shutdown);
+  self->wait_for(workers);
 }
 
 CAF_TEST(broadcast_actor_pool) {

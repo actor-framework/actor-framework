@@ -46,15 +46,15 @@ behavior connection_worker(broker* self, connection_handle hdl) {
 
 behavior server(broker* self) {
   auto counter = std::make_shared<int>(0);
+  self->set_down_handler([=](down_msg&) {
+    ++*counter;
+  });
   self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
   return {
     [=](const new_connection_msg& ncm) {
       auto worker = self->fork(connection_worker, ncm.handle);
       self->monitor(worker);
       self->link_to(worker);
-    },
-    [=](const down_msg&) {
-      ++*counter;
     },
     [=](tick_atom) {
       aout(self) << "Finished " << *counter << " requests per second." << endl;

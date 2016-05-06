@@ -43,7 +43,9 @@ struct fixture {
   actor testee;
 
   fixture() : self(system), mirror(system.spawn(mirror_impl)) {
-    // nop
+    self->set_down_handler([](local_actor*, down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+    });
   }
 
   template <class... Ts>
@@ -52,11 +54,7 @@ struct fixture {
   }
 
   ~fixture() {
-    self->receive(
-      [](const down_msg& dm) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      }
-    );
+    self->wait_for(testee);
   }
 };
 

@@ -70,17 +70,6 @@ struct fixture {
     second = system.spawn(untyped_second_stage);
     first_and_second = splice(first, second.bind(23.0, _1));
   }
-
-  void await_down(const actor& x) {
-    self->monitor(x);
-    self->receive(
-      [&](const down_msg& dm) -> optional<skip_t> {
-        if (dm.source != x)
-          return skip();
-        return none;
-      }
-    );
-  }
 };
 
 } // namespace <anonymous>
@@ -97,13 +86,13 @@ CAF_TEST(identity) {
 CAF_TEST(kill_first) {
   init_untyped();
   anon_send_exit(first, exit_reason::kill);
-  await_down(first_and_second);
+  self->wait_for(first_and_second);
 }
 
 CAF_TEST(kill_second) {
   init_untyped();
   anon_send_exit(second, exit_reason::kill);
-  await_down(first_and_second);
+  self->wait_for(first_and_second);
 }
 
 CAF_TEST(untyped_splicing) {

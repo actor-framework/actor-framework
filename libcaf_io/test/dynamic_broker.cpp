@@ -64,6 +64,10 @@ void ping(event_based_actor* self, size_t num_pings) {
 
 void pong(event_based_actor* self) {
   CAF_MESSAGE("pong actor started");
+  self->set_down_handler([=](down_msg& dm) {
+    CAF_MESSAGE("received down_msg{" << to_string(dm.reason) << "}");
+    self->quit(dm.reason);
+  });
   self->become(
     [=](ping_atom, int value) -> std::tuple<atom_value, int> {
       CAF_MESSAGE("received `ping_atom`");
@@ -72,10 +76,6 @@ void pong(event_based_actor* self) {
       self->become(
         [](ping_atom, int val) {
           return std::make_tuple(pong_atom::value, val);
-        },
-        [=](const down_msg& dm) {
-          CAF_MESSAGE("received down_msg{" << to_string(dm.reason) << "}");
-          self->quit(dm.reason);
         }
       );
       // reply to 'ping'
@@ -102,6 +102,11 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
     buf.insert(buf.end(), first, first + sizeof(int));
     self->flush(hdl);
   };
+  self->set_down_handler([=](down_msg& dm) {
+    CAF_MESSAGE("received: " << to_string(dm));
+    if (dm.source == buddy)
+      self->quit(dm.reason);
+  });
   self->become(
     [=](const connection_closed_msg&) {
       CAF_MESSAGE("received connection_closed_msg");
@@ -122,11 +127,6 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
     [=](pong_atom, int value) {
       CAF_MESSAGE("received: pong " << value);
       write(pong_atom::value, value);
-    },
-    [=](const down_msg& dm) {
-      CAF_MESSAGE("received: " << to_string(dm));
-      if (dm.source == buddy)
-        self->quit(dm.reason);
     }
   );
 }

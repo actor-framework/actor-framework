@@ -106,6 +106,13 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
   assert(self->num_connections() == 1);
   // monitor buddy to quit broker if buddy is done
   self->monitor(buddy);
+  self->set_down_handler([=](down_msg& dm) {
+    if (dm.source == buddy) {
+      aout(self) << "our buddy is down" << endl;
+      // quit for same reason
+      self->quit(dm.reason);
+    }
+  });
   // setup: we are exchanging only messages consisting of an atom
   // (as uint64_t) and an integer value (int32_t)
   self->configure_read(hdl, receive_policy::exactly(sizeof(uint64_t) +
@@ -129,13 +136,6 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       // cast atom to its underlying type, i.e., uint64_t
       write_int(self, hdl, static_cast<uint64_t>(av));
       write_int(self, hdl, i);
-    },
-    [=](const down_msg& dm) {
-      if (dm.source == buddy) {
-        aout(self) << "our buddy is down" << endl;
-        // quit for same reason
-        self->quit(dm.reason);
-      }
     },
     [=](const new_data_msg& msg) {
       // read the atom value as uint64_t from buffer

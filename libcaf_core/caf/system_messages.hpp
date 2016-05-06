@@ -34,9 +34,8 @@
 namespace caf {
 
 /// Sent to all links when an actor is terminated.
-/// @note This message can be handled manually by calling
-///       `local_actor::trap_exit(true)` and is otherwise handled
-///       implicitly by the runtime system.
+/// @note Actors can override the default handler by calling
+///       `self->set_exit_handler(...)`.
 struct exit_msg {
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
@@ -46,6 +45,12 @@ struct exit_msg {
 
 inline std::string to_string(const exit_msg& x) {
   return "exit" + deep_to_string(std::tie(x.source, x.reason));
+}
+
+template <class Processor>
+void serialize(Processor& proc, exit_msg& x, const unsigned int) {
+  proc & x.source;
+  proc & x.reason;
 }
 
 /// Sent to all actors monitoring an actor when it is terminated.
@@ -60,41 +65,8 @@ inline std::string to_string(const down_msg& x) {
   return "down" + deep_to_string(std::tie(x.source, x.reason));
 }
 
-template <class T>
-typename std::enable_if<
-  detail::tl_exists<
-    detail::type_list<exit_msg, down_msg>,
-    detail::tbind<std::is_same, T>::template type
-  >::value,
-  bool
->::type
-operator==(const T& lhs, const T& rhs) {
-  return lhs.source == rhs.source && lhs.reason == rhs.reason;
-}
-
-template <class T>
-typename std::enable_if<
-  detail::tl_exists<
-    detail::type_list<exit_msg, down_msg>,
-    detail::tbind<std::is_same, T>::template type
-  >::value,
-  bool
->::type
-operator!=(const T& lhs, const T& rhs) {
-  return !(lhs == rhs);
-}
-
-template <class Processor, class T>
-typename std::enable_if<
-  detail::tl_exists<
-    detail::type_list<exit_msg, down_msg>,
-    detail::tbind<
-      std::is_same,
-      typename std::remove_const<T>::type
-    >::template type
-  >::value
->::type
-serialize(Processor& proc, T& x, const unsigned int) {
+template <class Processor>
+void serialize(Processor& proc, down_msg& x, const unsigned int) {
   proc & x.source;
   proc & x.reason;
 }
@@ -110,16 +82,6 @@ inline std::string to_string(const group_down_msg& x) {
 }
 
 /// @relates group_down_msg
-inline bool operator==(const group_down_msg& lhs, const group_down_msg& rhs) {
-  return lhs.source == rhs.source;
-}
-
-/// @relates group_down_msg
-inline bool operator!=(const group_down_msg& lhs, const group_down_msg& rhs) {
-  return !(lhs == rhs);
-}
-
-/// @relates group_down_msg
 template <class Processor>
 void serialize(Processor& proc, group_down_msg& x, const unsigned int) {
   proc & x.source;
@@ -128,20 +90,16 @@ void serialize(Processor& proc, group_down_msg& x, const unsigned int) {
 /// Sent whenever a timeout occurs during a synchronous send.
 /// This system message does not have any fields, because the message ID
 /// sent alongside this message identifies the matching request that timed out.
-struct sync_timeout_msg { };
+class sync_timeout_msg { };
 
 inline std::string to_string(const sync_timeout_msg&) {
   return "sync_timeout";
 }
 
-/// @relates sync_timeout_msg
-inline bool operator==(const sync_timeout_msg&, const sync_timeout_msg&) {
-  return true;
-}
-
-/// @relates sync_timeout_msg
-inline bool operator!=(const sync_timeout_msg&, const sync_timeout_msg&) {
-  return false;
+/// @relates group_down_msg
+template <class Processor>
+void serialize(Processor&, sync_timeout_msg&, const unsigned int) {
+  // nop
 }
 
 /// Signalizes a timeout event.
@@ -153,16 +111,6 @@ struct timeout_msg {
 
 inline std::string to_string(const timeout_msg& x) {
   return "timeout" + deep_to_string(std::tie(x.timeout_id));
-}
-
-/// @relates timeout_msg
-inline bool operator==(const timeout_msg& lhs, const timeout_msg& rhs) {
-  return lhs.timeout_id == rhs.timeout_id;
-}
-
-/// @relates timeout_msg
-inline bool operator!=(const timeout_msg& lhs, const timeout_msg& rhs) {
-  return !(lhs == rhs);
 }
 
 /// @relates timeout_msg

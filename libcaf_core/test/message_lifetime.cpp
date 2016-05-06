@@ -58,7 +58,11 @@ public:
       : event_based_actor(cfg),
         aut_(std::move(aut)),
         msg_(make_message(1, 2, 3)) {
-    // nop
+    set_down_handler([=](down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+      CAF_CHECK_EQUAL(dm.source, aut_.address());
+      quit();
+    });
   }
 
   behavior make_behavior() override {
@@ -69,11 +73,6 @@ public:
         CAF_CHECK_EQUAL(a, 1);
         CAF_CHECK_EQUAL(b, 2);
         CAF_CHECK_EQUAL(c, 3);
-      },
-      [=](const down_msg& dm) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-        CAF_CHECK_EQUAL(dm.source, aut_.address());
-        quit();
       }
     };
   }

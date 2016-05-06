@@ -32,6 +32,8 @@ using std::endl;
 
 namespace {
 
+using down_atom = atom_constant<atom("down")>;
+
 struct fixture {
   actor_system_config cfg;
 
@@ -52,12 +54,8 @@ struct fixture {
     CAF_CHECK(ifs.empty());
     auto aut = actor_cast<actor>(res);
     CAF_REQUIRE(aut != invalid_actor);
-    self->monitor(aut);
-    self->receive(
-      [](const down_msg& dm) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      }
-    );
+    self->wait_for(aut);
+    CAF_MESSAGE("aut done");
   }
 };
 

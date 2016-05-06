@@ -40,14 +40,6 @@ behavior testee(event_based_actor* self) {
 }
 
 struct fixture {
-  void wait_until_is_terminated() {
-    self->receive(
-      [](const down_msg&) {
-        // nop
-      }
-    );
-  }
-
   template <class Actor>
   static bool exited(const Actor& handle) {
     auto ptr = actor_cast<abstract_actor*>(handle);
@@ -85,7 +77,7 @@ CAF_TEST(lifetime_1) {
   auto dbl = system.spawn(testee);
   self->monitor(dbl);
   anon_send_exit(dbl, exit_reason::kill);
-  wait_until_is_terminated();
+  self->wait_for(dbl);
   auto bound = dbl.bind(1);
   CAF_CHECK(exited(bound));
 }
@@ -96,7 +88,7 @@ CAF_TEST(lifetime_2) {
   auto bound = dbl.bind(1);
   self->monitor(bound);
   anon_send(dbl, message{});
-  wait_until_is_terminated();
+  self->wait_for(dbl);
 }
 
 CAF_TEST(request_response_promise) {

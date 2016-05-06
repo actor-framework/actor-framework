@@ -186,11 +186,10 @@ CAF_TEST(error_response_message) {
     [](double) {
       CAF_ERROR("unexpected ordinary response message received");
     },
-    [](const error& err) {
+    [](error& err) {
       CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::unexpected_message));
     }
   );
-  self->send(foo, get_atom::value, 3.14);
   self->send(foo, get_atom::value, 42);
   self->receive(
     [](int x) {
@@ -200,6 +199,12 @@ CAF_TEST(error_response_message) {
       CAF_ERROR("unexpected ordinary response message received: " << x);
     }
   );
+  self->set_error_handler([&](error& err) {
+    CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::unexpected_message));
+    self->send(self, message{});
+  });
+  self->send(foo, get_atom::value, 3.14);
+  self->receive([] {});
 }
 
 // verify that delivering to a satisfied promise has no effect

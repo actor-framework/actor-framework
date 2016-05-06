@@ -134,6 +134,10 @@ bool operator==(const counting_string& x, const char* y) {
   return x.str() == y;
 }
 
+std::string to_string(const counting_string& ref) {
+  return ref.str();
+}
+
 } // namespace <anonymous>
 
 namespace std {

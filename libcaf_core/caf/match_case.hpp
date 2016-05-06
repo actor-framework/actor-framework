@@ -158,6 +158,14 @@ public:
       param_decay
     >::type;
 
+  static_assert(! std::is_same<pattern, detail::type_list<exit_msg>>::value,
+                "exit_msg not allowed in message handlers, "
+                "did you mean to use set_exit_handler()?");
+
+  static_assert(! std::is_same<pattern, detail::type_list<down_msg>>::value,
+                "down_msg not allowed in message handlers, "
+                "did you mean to use set_down_handler()?");
+
   using intermediate_tuple =
     typename detail::tl_apply<
       typename detail::tl_map<
