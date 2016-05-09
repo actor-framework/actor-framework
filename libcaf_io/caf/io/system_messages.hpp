@@ -79,7 +79,7 @@ inline std::string to_string(const new_data_msg& x) {
   os << std::setfill('0') << std::hex << std::right;
   for (auto c : x.buf)
     os << std::setw(2) << static_cast<int>(c);
-  return "new_data" + deep_to_string(std::forward_as_tuple(x.handle, os.str()));
+  return "new_data" + deep_to_string_as_tuple(x.handle, os.str());
 }
 
 /// @relates new_data_msg
@@ -112,8 +112,7 @@ struct data_transferred_msg {
 /// @relates data_transferred_msg
 inline std::string to_string(const data_transferred_msg& x) {
   return "data_transferred_msg"
-         + deep_to_string(std::forward_as_tuple(x.handle, x.written,
-                                                x.remaining));
+         + deep_to_string_as_tuple(x.handle, x.written, x.remaining);
 }
 
 /// @relates data_transferred_msg

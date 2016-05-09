@@ -17,6 +17,10 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 31-51 (Error.tex)
+
 #ifndef CAF_EXIT_REASON_HPP
 #define CAF_EXIT_REASON_HPP
 
@@ -24,38 +28,26 @@
 
 namespace caf {
 
+/// This error category represents fail conditions for actors.
 enum class exit_reason : uint8_t {
   /// Indicates that an actor finished execution without error.
-  normal = 0x00,
-
-  /// Indicates that an actor finished execution because of an unhandled exception.
-  unhandled_exception = 0x02,
-
-  /// Indicates that the actor received an unexpected synchronous reply message.
-  unhandled_request_error = 0x04,
-
+  normal = 0,
+  /// Indicates that an actor died because of an unhandled exception.
+  unhandled_exception,
   /// Indicates that the exit reason for this actor is unknown, i.e.,
   /// the actor has been terminated and no longer exists.
-  unknown = 0x06,
-
+  unknown,
   /// Indicates that an actor pool unexpectedly ran out of workers.
-  out_of_workers = 0x07,
-
-  /// Indicates that the actor was forced to shutdown by a user-generated event.
-  user_shutdown = 0x10,
-
-  /// Indicates that the actor was killed unconditionally.
-  kill = 0x11,
-
+  out_of_workers,
+  /// Indicates that an actor was forced to shutdown by a user-generated event.
+  user_shutdown,
+  /// Indicates that an actor was killed unconditionally.
+  kill,
   /// Indicates that an actor finishied execution because a connection
   /// to a remote link was closed unexpectedly.
-  remote_link_unreachable = 0x21,
-
-  /// Indicates that the actor was killed because it became unreachable.
-  unreachable = 0x40,
-
-  /// Indicates that the actor was killed after receiving an error message.
-  unhandled_error = 0x41
+  remote_link_unreachable,
+  /// Indicates that an actor was killed because it became unreachable.
+  unreachable
 };
 
 /// Returns a string representation of given exit reason.
@@ -63,9 +55,6 @@ const char* to_string(exit_reason x);
 
 /// @relates exit_reason
 error make_error(exit_reason);
-
-/// @relates exit_reason
-error make_error(exit_reason, message context);
 
 } // namespace caf
 

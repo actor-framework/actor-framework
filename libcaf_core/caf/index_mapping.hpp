@@ -55,7 +55,7 @@ void serialize(Processor& proc, index_mapping& x, const unsigned int) {
 }
 
 inline std::string to_string(const index_mapping& x) {
-  return "idx" + deep_to_string(std::forward_as_tuple(x.value));
+  return "idx" + deep_to_string_as_tuple(x.value);
 }
 
 } // namespace caf

@@ -46,7 +46,7 @@ private:
 
 // to_string is straightforward ...
 std::string to_string(const foo& x) {
-  return "foo" + deep_to_string(std::forward_as_tuple(x.a(), x.b()));
+  return "foo" + deep_to_string_as_tuple(x.a(), x.b());
 }
 
 // ... but we need to split serialization into a saving ...

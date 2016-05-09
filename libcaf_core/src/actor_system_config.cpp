@@ -244,9 +244,8 @@ actor_system_config::actor_system_config()
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
   // add renderers for default error categories
-  error_renderers_.emplace(atom("system"), [](uint8_t x) -> std::string {
-    return to_string(static_cast<sec>(x));
-  });
+  error_renderers_.emplace(atom("system"), render_sec);
+  error_renderers_.emplace(atom("exit"), render_exit_reason);
 }
 
 actor_system_config::actor_system_config(int argc, char** argv)
@@ -358,6 +357,16 @@ actor_system_config::set(const char* config_name, config_value config_value) {
     }
   }
   return *this;
+}
+
+std::string actor_system_config::render_sec(uint8_t x, atom_value,
+                                            const message&) {
+  return "system_error" + deep_to_string_as_tuple(static_cast<sec>(x));
+}
+
+std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
+                                                    const message&) {
+  return "exit_reason" + deep_to_string_as_tuple(static_cast<exit_reason>(x));
 }
 
 } // namespace caf

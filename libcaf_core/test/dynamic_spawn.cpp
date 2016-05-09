@@ -261,12 +261,6 @@ behavior high_priority_testee(event_based_actor* self) {
   };
 }
 
-struct high_priority_testee_class : event_based_actor {
-  behavior make_behavior() override {
-    return high_priority_testee(this);
-  }
-};
-
 behavior master(event_based_actor* self) {
   return (
     [=](ok_atom) {
@@ -334,6 +328,10 @@ struct fixture {
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+
+CAF_TEST(priorities) {
+  system.spawn<priority_aware>(high_priority_testee);
+}
 
 CAF_TEST(count_mailbox) {
   system.spawn<counting_actor>();

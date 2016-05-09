@@ -176,16 +176,7 @@ const uniform_type_info_map& actor_system::types() const {
 
 std::string actor_system::render(const error& x) const {
   auto f = types().renderer(x.category());
-  std::string result = "error(";
-  result += to_string(x.category());
-  result += ", ";
-  result += f ? f(x.code()) : std::to_string(static_cast<int>(x.code()));
-  if (! x.context().empty()) {
-    result += ", ";
-    result += to_string(x.context());
-  }
-  result += ")";
-  return result;
+  return f ? f(x.code(), x.category(), x.context()) : to_string(x);
 }
 
 group_manager& actor_system::groups() {

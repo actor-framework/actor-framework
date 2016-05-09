@@ -1,6 +1,10 @@
 #include <iostream>
 #include "caf/all.hpp"
 
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 15-42 (MessagePassing.tex)
+
 using std::endl;
 using namespace caf;
 
@@ -12,13 +16,11 @@ void actor_a(event_based_actor* self, calc worker) {
   self->request(worker, std::chrono::seconds(10), add_atom::value, 1, 2).then(
     [=](int result) {
       aout(self) << "1 + 2 = " << result << endl;
-      self->send_exit(worker, exit_reason::user_shutdown);
     }
   );
 }
 
 calc::behavior_type actor_b(calc::pointer self, calc worker) {
-  self->link_to(worker);
   return {
     [=](add_atom add, int x, int y) {
       return self->delegate(worker, add, x, y);

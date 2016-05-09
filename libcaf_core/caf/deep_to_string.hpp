@@ -172,6 +172,13 @@ private:
 /// provide a `to_string` is mapped to `<unprintable>`.
 constexpr deep_to_string_t deep_to_string = deep_to_string_t{};
 
+/// Convenience function returning
+/// `deep_to_string(std::forward_as_tuple(xs...))`.
+template <class... Ts>
+std::string deep_to_string_as_tuple(Ts&&... xs) {
+  return deep_to_string(std::forward_as_tuple(std::forward<Ts>(xs)...));
+}
+
 } // namespace caf
 
 #endif // CAF_DETAIL_DEEP_TO_STRING_HPP

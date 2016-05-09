@@ -21,29 +21,28 @@
 
 namespace caf {
 
+namespace {
+
+const char* exit_reason_strings[] = {
+  "normal",
+  "unhandled_exception",
+  "unhandled_request_error",
+  "unknown",
+  "out_of_workers",
+  "user_shutdown",
+  "kill",
+  "remote_link_unreachable",
+  "unreachable"
+};
+
+} // namespace <anonymous>
+
+
 const char* to_string(exit_reason x) {
-  switch (x) {
-    case exit_reason::normal:
-      return "normal";
-    case exit_reason::unhandled_exception:
-      return "unhandled_exception";
-    case exit_reason::unhandled_request_error:
-      return "unhandled_request_error";
-    case exit_reason::unknown:
-      return "unknown";
-    case exit_reason::out_of_workers:
-      return "out_of_workers";
-    case exit_reason::user_shutdown:
-      return "user_shutdown";
-    case exit_reason::kill:
-      return "kill";
-    case exit_reason::remote_link_unreachable:
-      return "remote_link_unreachable";
-    case exit_reason::unhandled_error:
-      return "unhandled_error";
-    default:
-      return "-invalid-";
-  }
+  auto index = static_cast<size_t>(x);
+  if (index > static_cast<size_t>(exit_reason::unreachable))
+    return "<unknown>";
+  return exit_reason_strings[index];
 }
 
 error make_error(exit_reason x) {

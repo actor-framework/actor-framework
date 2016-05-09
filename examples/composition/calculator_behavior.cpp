@@ -3,7 +3,7 @@
  * using composable states.                                                   *
 \******************************************************************************/
 
-// This example is partially included in the manual, do not modify
+// This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
 // Manual references: lines 18-50 (Actor.tex)
 
@@ -23,8 +23,6 @@ using multiply_atom = atom_constant<atom("multiply")>;
 using adder = typed_actor<replies_to<add_atom, int, int>::with<int>>;
 using multiplier = typed_actor<replies_to<multiply_atom, int, int>::with<int>>;
 
-using calculator = adder::extend_with<multiplier>;
-
 class adder_bhvr : public composable_behavior<adder> {
 public:
   result<int> operator()(add_atom, int x, int y) override {
@@ -39,7 +37,7 @@ public:
   }
 };
 
-// calculator_bhvr can be inherited or composed further
+// calculator_bhvr can be inherited from or composed further
 using calculator_bhvr = composed_behavior<adder_bhvr, multiplier_bhvr>;
 
 } // namespace <anonymous>

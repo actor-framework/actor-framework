@@ -2,9 +2,10 @@
  * A very basic, interactive divider.                                         *
 \******************************************************************************/
 
-// This example is partially included in the manual, do not modify
+// This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 18-24, 34-47, and 62-72 (MessagePassing.tex)
+// Manual references: lines 19-25, 35-48, and 63-73 (MessagePassing.tex);
+//                    lines 19-34, and 51-56 (Error.tex)
 
 #include <iostream>
 
@@ -47,8 +48,8 @@ divider::behavior_type divider_impl() {
 }
 
 int main() {
-  auto renderer = [](uint8_t x) {
-    return to_string(static_cast<math_error>(x));
+  auto renderer = [](uint8_t x, atom_value, const message&) {
+    return "math_error" + deep_to_string_as_tuple(static_cast<math_error>(x));
   };
   actor_system_config cfg;
   cfg.add_error_category(atom("math"), renderer);

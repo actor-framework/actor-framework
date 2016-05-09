@@ -45,7 +45,7 @@ public:
   }
 
   friend std::string to_string(const foo& x) {
-    return "foo" + deep_to_string(std::forward_as_tuple(x.a_, x.b_));
+    return "foo" + deep_to_string_as_tuple(x.a_, x.b_);
   }
 
 private:

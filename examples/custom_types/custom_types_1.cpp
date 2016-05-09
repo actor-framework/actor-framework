@@ -32,7 +32,7 @@ void serialize(T& in_or_out, foo& x, const unsigned int) {
 // also, CAF gives us `deep_to_string` for implementing `to_string` easily
 std::string to_string(const foo& x) {
   // `to_string(foo{{1, 2, 3}, 4})` prints: "foo([1, 2, 3], 4)"
-  return "foo" + deep_to_string(std::forward_as_tuple(x.a, x.b));
+  return "foo" + deep_to_string_as_tuple(x.a, x.b);
 }
 
 // a pair of two ints
@@ -56,7 +56,7 @@ void serialize(T& in_or_out, foo2& x, const unsigned int) {
 
 // `deep_to_string` also traverses nested containers
 std::string to_string(const foo2& x) {
-  return "foo" + deep_to_string(std::forward_as_tuple(x.a, x.b));
+  return "foo" + deep_to_string_as_tuple(x.a, x.b);
 }
 
 // receives our custom message types

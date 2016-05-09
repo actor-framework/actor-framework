@@ -7,6 +7,10 @@
  * - ./build/bin/broker -c localhost 4242                                     *
 \ ******************************************************************************/
 
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 46-50 (Actors.tex)
+
 #include "caf/config.hpp"
 
 #ifdef WIN32

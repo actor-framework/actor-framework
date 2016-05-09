@@ -2,7 +2,7 @@
  * Illustrates semantics of request().{then|await|receive}.                   *
 \******************************************************************************/
 
-// This example is partially included in the manual, do not modify
+// This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
 // Manual references: lines 20-37, 39-51, 53-58, 62-64 (MessagePassing.tex)
 

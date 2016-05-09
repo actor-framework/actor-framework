@@ -7,6 +7,10 @@
 #include <algorithm>
 #include "caf/all.hpp"
 
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 56-75 (MessagePassing.tex)
+
 using std::cout;
 using std::endl;
 using std::pair;

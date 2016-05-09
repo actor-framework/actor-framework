@@ -54,7 +54,7 @@ public:
 
   using portable_names = std::unordered_map<std::type_index, std::string>;
 
-  using error_renderer = std::function<std::string (uint8_t)>;
+  using error_renderer = std::function<std::string (uint8_t, atom_value, const message&)>;
 
   using error_renderers = std::unordered_map<atom_value, error_renderer>;
 
@@ -214,6 +214,10 @@ public:
   proxy_registry* network_proxies;
 
 private:
+  static std::string render_sec(uint8_t, atom_value, const message&);
+
+  static std::string render_exit_reason(uint8_t, atom_value, const message&);
+
   value_factories_by_name value_factories_by_name_;
   value_factories_by_rtti value_factories_by_rtti_;
   portable_names type_names_by_rtti_;

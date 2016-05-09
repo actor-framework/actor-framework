@@ -17,6 +17,10 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 31-70 (Error.tex)
+
 #ifndef CAF_SEC_HPP
 #define CAF_SEC_HPP
 
@@ -27,10 +31,8 @@ namespace caf {
 /// SEC stands for "System Error Code". This enum contains
 /// error codes used internally by CAF.
 enum class sec : uint8_t {
-  /// Indicates that a dynamically typed actor dropped an unexpected message.
+  /// Indicates that an actor dropped an unexpected message.
   unexpected_message = 1,
-  /// Indicates that a call to `invoke_mutable` failed in a composable state.
-  invalid_invoke_mutable,
   /// Indicates that a response message did not match the provided handler.
   unexpected_response,
   /// Indicates that the receiver of a request is no longer alive.

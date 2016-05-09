@@ -3,7 +3,7 @@
  * for both the blocking and the event-based API.                             *
 \******************************************************************************/
 
-// This example is partially included in the manual, do not modify
+// This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
 // Manual references: lines 18-44, and 50-51 (Actor.tex)
 
