@@ -94,8 +94,8 @@ public:
   }
 
   void apply_raw(size_t num_bytes, void* data) override {
-    range_check(num_bytes);
-    streambuf_.sgetn(reinterpret_cast<char_type*>(data), num_bytes);
+    auto n = streambuf_.sgetn(reinterpret_cast<char_type*>(data), num_bytes);
+    range_check(n, num_bytes);
   }
 
 protected:
@@ -156,14 +156,12 @@ protected:
         auto& str = *reinterpret_cast<std::string*>(val);
         size_t str_size;
         begin_sequence(str_size);
-        range_check(str_size);
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
         auto data = reinterpret_cast<char_type*>(&str[0]);
         size_t n = streambuf_.sgetn(data, str_size);
-        CAF_ASSERT(n == str_size);
-        CAF_IGNORE_UNUSED(n);
+        range_check(n, str_size);
         end_sequence();
         break;
       }
@@ -172,14 +170,12 @@ protected:
         size_t str_size;
         begin_sequence(str_size);
         auto bytes = str_size * sizeof(std::u16string::value_type);
-        range_check(bytes);
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
         auto data = reinterpret_cast<char_type*>(&str[0]);
         size_t n = streambuf_.sgetn(data, bytes);
-        CAF_ASSERT(n == bytes);
-        CAF_IGNORE_UNUSED(n);
+        range_check(n, bytes);
         end_sequence();
         break;
       }
@@ -188,14 +184,12 @@ protected:
         size_t str_size;
         begin_sequence(str_size);
         auto bytes = str_size * sizeof(std::u32string::value_type);
-        range_check(bytes);
         str.resize(str_size);
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
         auto data = reinterpret_cast<char_type*>(&str[0]);
         size_t n = streambuf_.sgetn(data, bytes);
-        CAF_ASSERT(n == bytes);
-        CAF_IGNORE_UNUSED(n);
+        range_check(n, bytes);
         end_sequence();
         break;
       }
@@ -203,12 +197,10 @@ protected:
   }
 
 private:
-  void range_check(size_t read_size) {
-    static_assert(sizeof(std::streamsize) <= sizeof(size_t),
-                  "std::streamsize > std::size_t");
-    if (static_cast<size_t>(streambuf_.in_avail()) < read_size) {
+  void range_check(size_t got, size_t need) {
+    if (got != need) {
       CAF_LOG_ERROR("range_check failed");
-      throw std::out_of_range("stream_deserializer<T>::read_range()");
+      throw std::out_of_range("stream_deserializer<T>::range_check()");
     }
   }
 
