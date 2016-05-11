@@ -26,7 +26,7 @@
 
 namespace caf {
 
-/// Represents "nothing", e.g., for clearing a `maybe` by assigning `none`.
+/// Represents "nothing", e.g., for clearing an `optional` by assigning `none`.
 struct none_t : detail::comparable<none_t> {
   constexpr none_t() {
     // nop

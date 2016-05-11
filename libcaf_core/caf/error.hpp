@@ -40,10 +40,10 @@ namespace caf {
 /// # Design goals
 ///
 /// The error type in CAF is meant to allow efficient packing of errors
-/// in either `maybe` or on the wire. For this purpose, CAF limits the
-/// error code to 255 to allow storing the context size along the code
-/// in a 32-bit integer (1 bit invaldity flag, 23 bit context size, 8 bit code;
-/// if the validity flag is 1, then the error is invalid and has no category).
+/// on the wire. For this purpose, CAF limits the error code to 255 to allow
+/// storing the context size along the code in a 32-bit integer (1 bit
+/// invaldity flag, 23 bit context size, 8 bit code; if the validity flag is 1,
+/// then the error is invalid and has no category).
 ///
 /// # Why not `std::error_code` or `std::error_condition`?
 ///

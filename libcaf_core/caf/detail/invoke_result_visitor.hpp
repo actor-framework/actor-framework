@@ -64,7 +64,7 @@ public:
     (*this)(empty_msg);
   }
 
-  // unwrap maybes
+  // unwrap optionals
   template <class T>
   void operator()(optional<T>& x) {
     if (x)
