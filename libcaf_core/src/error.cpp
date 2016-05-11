@@ -56,41 +56,12 @@ void error::clear() {
   code_ = 0;
 }
 
-uint32_t error::compress_code_and_size() const {
-  auto res = static_cast<uint32_t>(context_.size());
-  res <<= 8;
-  res |= static_cast<uint32_t>(code_);
-  return res;
-}
-
 void serialize(serializer& sink, error& x, const unsigned int) {
-  auto flag_size_and_code = x.compress_code_and_size();
-  if (x.category_ == atom("") || x.code_ == 0) {
-    flag_size_and_code |= 0x80000000;
-    sink << flag_size_and_code;
-    return;
-  }
-  sink << flag_size_and_code;
-  sink << x.category_;
-  if (! x.context_.empty())
-    sink << x.context_;
-    //sink.apply_raw(x.context_.size(), const_cast<char*>(x.context_.data()));
+  sink << x.code_ << x.category_ << x.context_;
 }
 
 void serialize(deserializer& source, error& x, const unsigned int) {
-  x.context_.reset();
-  uint32_t flag_size_and_code;
-  source >> flag_size_and_code;
-  if (flag_size_and_code & 0x80000000) {
-    x.category_ = atom("");
-    x.code_ = 0;
-    return;
-  }
-  source >> x.category_;
-  x.code_ = static_cast<uint8_t>(flag_size_and_code & 0xFF);
-  auto size = flag_size_and_code >> 8;
-  if (size > 0)
-    source >> x.context_;
+  source >> x.code_ >> x.category_ >> x.context_;
 }
 
 int error::compare(uint8_t x, atom_value y) const {

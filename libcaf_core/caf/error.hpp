@@ -32,18 +32,9 @@ namespace caf {
 
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
-/// the C++ standard library, this type is serializable and
-/// optimized for (on-the-wire) size. Note, error codes are limited to 255
-/// and the string for storing context information is limited to
-/// 8,388,608 characters.
-///
-/// # Design goals
-///
-/// The error type in CAF is meant to allow efficient packing of errors
-/// on the wire. For this purpose, CAF limits the error code to 255 to allow
-/// storing the context size along the code in a 32-bit integer (1 bit
-/// invaldity flag, 23 bit context size, 8 bit code; if the validity flag is 1,
-/// then the error is invalid and has no category).
+/// the C++ standard library, this type is serializable. It consists of an
+/// 8-bit code, a 64-bit atom constant, plus optionally a ::message to store
+/// additional information.
 ///
 /// # Why not `std::error_code` or `std::error_condition`?
 ///
@@ -53,13 +44,15 @@ namespace caf {
 /// same operating system and version of the C++ standard library.
 ///
 /// Second, the standard library primitives, unlike exceptions, do not offer
-/// an API for storing additional context to an error. The error handling API
-/// offered by the standard is meant to wrap C system calls and defines
-/// in a (source code) portable way. In a distributed setting, an error does
-/// not occur locally. Error code and category often are simply not
-/// satisfactory information when signalling errors back to end users.
+/// an API for attaching additional context to an error. The error handling API
+/// offered by the standard is meant to wrap C system calls in a (source code)
+/// portable way. In a distributed setting, an error may not occur locally.
+/// In this case, an error code and category alone is often not satisfactory
+/// information when signalling errors back to end users. The additional
+/// context also enables *composition* of errors by modifying the message
+/// details as needed.
 ///
-/// # Why is there no `message()` member function?
+/// # Why is there no `string()` member function?
 ///
 /// The C++ standard library uses category singletons and virtual dispatching
 /// to correlate error codes to descriptive strings. However, singletons are
