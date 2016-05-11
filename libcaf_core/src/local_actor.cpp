@@ -48,10 +48,10 @@ public:
   }
 
   void run() {
-    CAF_SET_LOGGER_SYS(&self_->system());
-    CAF_PUSH_AID(self_->id());
-    CAF_LOG_TRACE("");
     auto job = const_cast<local_actor*>(self_);
+    CAF_SET_LOGGER_SYS(&job->system());
+    CAF_PUSH_AID(job->id());
+    CAF_LOG_TRACE("");
     scoped_execution_unit ctx{&job->system()};
     auto max_throughput = std::numeric_limits<size_t>::max();
     for (;;) {
@@ -408,7 +408,6 @@ private:
 void local_actor::handle_response(mailbox_element_ptr& ptr,
                                   local_actor::pending_response& pr) {
   CAF_ASSERT(ptr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(*ptr) << CAF_ARG(awaited_id));
   auto& ref_fun = pr.second;
   ptr.swap(current_element_);
   auto& msg = current_element_->msg;
