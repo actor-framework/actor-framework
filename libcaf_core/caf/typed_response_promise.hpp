@@ -53,7 +53,8 @@ public:
   /// Satisfies the promise by sending a non-error response message.
   template <class U, class... Us>
   typename std::enable_if<
-    (sizeof...(Us) > 0) || ! std::is_convertible<U, error>::value
+    (sizeof...(Us) > 0) || ! std::is_convertible<U, error>::value,
+    typed_response_promise
   >::type
   deliver(U&& x, Us&&... xs) {
     static_assert(
@@ -62,12 +63,14 @@ public:
                                      typename std::decay<Us>::type...>>::value,
       "typed_response_promise: message type mismatched");
     promise_.deliver(std::forward<U>(x), std::forward<Us>(xs)...);
+    return *this;
   }
 
   /// Satisfies the promise by sending an error response message.
   /// For non-requests, nothing is done.
-  inline void deliver(error x) {
+  inline typed_response_promise deliver(error x) {
     promise_.deliver(std::move(x));
+    return *this;
   }
 
   /// Queries whether this promise is a valid promise that is not satisfied yet.

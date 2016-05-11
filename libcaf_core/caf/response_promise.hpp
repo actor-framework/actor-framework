@@ -46,16 +46,16 @@ public:
   /// Satisfies the promise by sending a non-error response message.
   template <class T, class... Ts>
   typename std::enable_if<
-    (sizeof...(Ts) > 0) ||
-    ! std::is_convertible<T, error>::value
+    (sizeof...(Ts) > 0) || ! std::is_convertible<T, error>::value,
+    response_promise
   >::type
   deliver(T&&x, Ts&&... xs) {
-    deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
+    return deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
   /// Satisfies the promise by sending an error response message.
   /// For non-requests, nothing is done.
-  void deliver(error x);
+  response_promise deliver(error x);
 
   /// Returns whether this response promise replies to an asynchronous message.
   bool async() const;
@@ -76,7 +76,7 @@ public:
 private:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
-  void deliver_impl(message response_message);
+  response_promise deliver_impl(message response_message);
 
   local_actor* self_;
   strong_actor_ptr source_;

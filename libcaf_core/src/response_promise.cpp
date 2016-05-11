@@ -41,34 +41,35 @@ response_promise::response_promise(local_actor* self, mailbox_element& src)
   }
 }
 
-void response_promise::deliver(error x) {
+response_promise response_promise::deliver(error x) {
   //if (id_.valid())
-  deliver_impl(make_message(std::move(x)));
+  return deliver_impl(make_message(std::move(x)));
 }
 
 bool response_promise::async() const {
   return id_.is_async();
 }
 
-void response_promise::deliver_impl(message msg) {
+response_promise response_promise::deliver_impl(message msg) {
   if (! stages_.empty()) {
     auto next = std::move(stages_.back());
     stages_.pop_back();
     next->enqueue(mailbox_element::make(std::move(source_), id_,
                                         std::move(stages_), std::move(msg)),
                   self_->context());
-    return;
+    return *this;
   }
   if (source_) {
     source_->enqueue(self_->ctrl(), id_.response_id(),
                      std::move(msg), self_->context());
     source_.reset();
-    return;
+    return *this;
   }
   if (self_)
     CAF_LOG_ERROR("response promise already satisfied");
   else
     CAF_LOG_ERROR("invalid response promise");
+  return *this;
 }
 
 } // namespace caf

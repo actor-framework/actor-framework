@@ -54,8 +54,7 @@ public:
       [=](int x) -> foo_promise {
          auto resp = response(x * 2);
          CAF_CHECK(! resp.pending());
-         resp.deliver(x * 4); // has no effect
-         return resp;
+         return resp.deliver(x * 4); // has no effect
       },
       [=](get_atom, int x) -> foo_promise {
         auto calculator = spawn([](event_based_actor* self) -> behavior {
@@ -95,8 +94,7 @@ public:
       },
       [=](get_atom, double) -> foo3_promise {
         auto resp = make_response_promise<double>();
-        resp.deliver(make_error(sec::unexpected_message));
-        return resp;
+        return resp.deliver(make_error(sec::unexpected_message));
       },
       [=](get_atom, double x, double y) {
         return response(x * 2, y * 2);
