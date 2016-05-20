@@ -24,9 +24,12 @@
 
 #if defined(CAF_MACOS) || defined(CAF_IOS)
 #include <mach/mach.h>
-#else
+#elif defined(CAF_WINDOWS)
+#include <Windows.h>
+#include <Psapi.h>
+#else 
 #include <sys/resource.h>
-#endif // CAF_MACOS
+#endif
 
 #include <cmath>
 #include <mutex>
@@ -65,11 +68,19 @@ public:
     static usec to_usec(const ::time_value_t& tv) {
       return std::chrono::seconds(tv.seconds) + usec(tv.microseconds);
     }
+#   elif defined(CAF_WINDOWS)
+    static usec to_usec(FILETIME const& ft) {
+      ULARGE_INTEGER time;
+      time.LowPart = ft.dwLowDateTime;
+      time.HighPart = ft.dwHighDateTime;
+
+      return std::chrono::seconds(time.QuadPart / 10000000) + usec((time.QuadPart % 10000000) / 10);
+    }
 #   else
     static usec to_usec(const ::timeval& tv) {
       return std::chrono::seconds(tv.tv_sec) + usec(tv.tv_usec);
     }
-#   endif // CAF_MACOS
+#   endif
 
     static measurement take() {
       auto now = clock_type::now().time_since_epoch();
@@ -87,13 +98,25 @@ public:
         m.sys = to_usec(info.system_time);
       }
       ::mach_port_deallocate(mach_task_self(), tself);
+#     elif defined(CAF_WINDOWS)
+      FILETIME creation_time, exit_time, kernel_time, user_time;
+      PROCESS_MEMORY_COUNTERS pmc;
+
+      GetProcessTimes(GetCurrentProcess(), &creation_time, &exit_time,
+        &kernel_time, &user_time));
+        
+      GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+
+      m.mem = pmc.PeakWorkingSetSize / 1024;
+      m.usr = to_usec(user_time);
+      m.sys = to_usec(kernel_time);
 #     else
       ::rusage ru;
       ::getrusage(RUSAGE_THREAD, &ru);
       m.usr = to_usec(ru.ru_utime);
       m.sys = to_usec(ru.ru_stime);
       m.mem = ru.ru_maxrss;
-#     endif // CAF_MACOS
+#     endif
       return m;
     }
 
