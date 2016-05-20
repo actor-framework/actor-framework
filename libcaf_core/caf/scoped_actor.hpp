@@ -65,7 +65,7 @@ public:
 
   blocking_actor* ptr() const;
 
-  constexpr explicit operator bool() const {
+  inline explicit operator bool() const {
     return true;
   }
 
