@@ -34,53 +34,48 @@
 namespace caf {
 
 /// Sends `to` a message under the identity of `from` with priority `prio`.
-template <class Dest, class... Ts>
-typename std::enable_if<is_message_sink<Dest>::value>::type
-send_as(actor from, message_priority prio, const Dest& to, Ts&&... xs) {
+template <message_priority P = message_priority::normal,
+          class Source = actor, class Dest = actor, class... Ts>
+void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
+  static_assert(sizeof...(Ts) > 0, "no message to send");
   using token =
     detail::type_list<
       typename detail::implicit_conversions<
         typename std::decay<Ts>::type
       >::type...>;
-  token tk;
-  check_typed_input(to, tk);
-  if (! to)
+  static_assert(! statically_typed<Source>() || statically_typed<Dest>(),
+                "statically typed actors can only send() to other "
+                "statically typed actors; use anon_send() or request() when "
+                "communicating with dynamically typed actors");
+  static_assert(actor_accepts_message(signatures_of<Dest>(), token{}),
+                "receiver does not accept given message");
+  // TODO: this only checks one way, we should check for loops
+  static_assert(is_void_response(response_to(signatures_of<Dest>(),
+                                             token{}))
+                ||  actor_accepts_message(signatures_of<Source>(),
+                                          response_to(signatures_of<Dest>(),
+                                                      token{})),
+                "this actor does not accept the response message");
+  if (! dest)
     return;
-  message_id mid;
-  to->enqueue(actor_cast<strong_actor_ptr>(std::move(from)),
-              prio == message_priority::high ? mid.with_high_priority() : mid,
-              make_message(std::forward<Ts>(xs)...), nullptr);
+  dest->eq_impl(message_id::make(P), actor_cast<strong_actor_ptr>(src),
+                nullptr, std::forward<Ts>(xs)...);
 }
 
-/// Sends `to` a message under the identity of `from`.
-template <class Dest, class... Ts>
-typename std::enable_if<is_message_sink<Dest>::value>::type
-send_as(actor from, const Dest& to, Ts&&... xs) {
-  send_as(std::move(from), message_priority::normal,
-          to, std::forward<Ts>(xs)...);
+/// Anonymously sends `dest` a message.
+template <message_priority P = message_priority::normal,
+          class Dest = actor, class... Ts>
+void anon_send(const Dest& dest, Ts&&... xs) {
+  send_as<P>(actor{}, dest, std::forward<Ts>(xs)...);
 }
 
-/// Anonymously sends `to` a message with priority `prio`.
-template <class Dest, class... Ts>
-typename std::enable_if<is_message_sink<Dest>::value>::type
-anon_send(message_priority prio, const Dest& to, Ts&&... xs) {
-  send_as(invalid_actor, prio, to, std::forward<Ts>(xs)...);
-}
-
-/// Anonymously sends `to` a message.
-template <class Dest, class... Ts>
-typename std::enable_if<is_message_sink<Dest>::value>::type
-anon_send(const Dest& to, Ts&&... xs) {
-  send_as(invalid_actor, message_priority::normal, to, std::forward<Ts>(xs)...);
-}
-
-/// Anonymously sends `to` an exit message.
-template <class ActorHandle>
-void anon_send_exit(const ActorHandle& to, exit_reason reason) {
-  if (! to)
+/// Anonymously sends `dest` an exit message.
+template <class Dest>
+void anon_send_exit(const Dest& dest, exit_reason reason) {
+  if (! dest)
     return;
-  to->enqueue(nullptr, message_id{}.with_high_priority(),
-              make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
+  dest->enqueue(nullptr, message_id::make(),
+                make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
 }
 
 /// Anonymously sends `to` an exit message.

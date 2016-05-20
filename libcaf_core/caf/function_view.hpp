@@ -126,7 +126,7 @@ public:
             class R =
               typename function_view_flattened_result<
                 typename detail::deduce_output_type<
-                  typename type::signatures,
+                  type,
                   detail::type_list<
                     typename detail::implicit_conversions<
                       typename std::decay<Ts>::type

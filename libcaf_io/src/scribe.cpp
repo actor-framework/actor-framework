@@ -71,7 +71,7 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
   if (detached())
     return;
   data_transferred_msg tmp{hdl(), written, remaining};
-  auto ptr = mailbox_element::make_joint(nullptr, invalid_message_id, {}, tmp);
+  auto ptr = mailbox_element::make(nullptr, invalid_message_id, {}, tmp);
   parent()->exec_single_event(ctx, ptr);
 }
 

@@ -242,7 +242,7 @@ public:
 
 behavior high_priority_testee(event_based_actor* self) {
   self->send(self, b_atom::value);
-  self->send(message_priority::high, self, a_atom::value);
+  self->send<message_priority::high>(self, a_atom::value);
   // 'a' must be self->received before 'b'
   return {
     [=](b_atom) {

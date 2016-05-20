@@ -29,6 +29,7 @@ namespace caf {
 
 template <class> class optional;
 template <class> class intrusive_ptr;
+template <class> class behavior_type_of;
 template <class> class weak_intrusive_ptr;
 template <class> class typed_continue_helper;
 
@@ -42,6 +43,7 @@ template <class...> class result;
 template <class...> class delegated;
 template <class...> class typed_actor;
 template <class...> class typed_response_promise;
+template <class...> class typed_event_based_actor;
 
 // -- classes ------------------------------------------------------------------
 

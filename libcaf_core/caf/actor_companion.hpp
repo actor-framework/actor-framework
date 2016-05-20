@@ -23,11 +23,12 @@
 #include <memory>
 #include <functional>
 
+#include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/abstract_event_based_actor.hpp"
 
-#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/behavior_changer.hpp"
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/shared_spinlock.hpp"
@@ -38,7 +39,8 @@ namespace caf {
 /// callback to another object, thus serving as gateway to
 /// allow any object to interact with other actors.
 /// @extends local_actor
-class actor_companion : public abstract_event_based_actor<behavior, true> {
+class actor_companion : public extend<local_actor, actor_companion>::
+                               with<mixin::sender> {
 public:
   using lock_type = detail::shared_spinlock;
   using message_pointer = std::unique_ptr<mailbox_element, detail::disposer>;

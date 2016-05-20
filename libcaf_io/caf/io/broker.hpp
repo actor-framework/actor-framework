@@ -23,25 +23,41 @@
 #include <map>
 #include <vector>
 
+#include "caf/fwd.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/stateful_actor.hpp"
-#include "caf/abstract_event_based_actor.hpp"
 
 #include "caf/io/scribe.hpp"
 #include "caf/io/doorman.hpp"
 #include "caf/io/abstract_broker.hpp"
 
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/behavior_changer.hpp"
+
 namespace caf {
+
+template <>
+class behavior_type_of<io::broker> {
+public:
+  using type = behavior;
+};
+
 namespace io {
 
 /// Describes a dynamically typed broker.
 /// @extends abstract_broker
 /// @ingroup Broker
-class broker : public abstract_event_based_actor<behavior, false,
-                                                 abstract_broker> {
+class broker : public extend<abstract_broker, broker>::
+                      with<mixin::sender, mixin::requester,
+                           mixin::behavior_changer>,
+               public dynamically_typed_actor_base {
 public:
-  using super = abstract_event_based_actor<behavior, false, abstract_broker>;
+  using super = extend<abstract_broker, broker>::
+                with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+
+  using signatures = none_t;
 
   template <class F, class... Ts>
   typename infer_handle_from_fun<F>::type

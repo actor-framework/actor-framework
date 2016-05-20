@@ -36,14 +36,23 @@
 #include "caf/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/behavior_changer.hpp"
+
+#include "caf/io/fwd.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/abstract_broker.hpp"
 
 namespace caf {
-namespace io {
 
 template <class... Sigs>
-class typed_broker;
+class behavior_type_of<io::typed_broker<Sigs...>> {
+public:
+  using type = typed_behavior<Sigs...>;
+};
+
+namespace io {
 
 /// Denotes a minimal "client" broker managing one or more connection
 /// handles by reacting to `new_data_msg` and `connection_closed_msg`.
@@ -63,8 +72,11 @@ using accept_handler = typed_actor<reacts_to<new_connection_msg>,
 /// components in the network.
 /// @extends local_actor
 template <class... Sigs>
-class typed_broker : public abstract_event_based_actor<typed_behavior<Sigs...>,
-                                                       false, abstract_broker> {
+class typed_broker : public extend<abstract_broker,
+                                   typed_broker<Sigs...>>::template
+                            with<mixin::sender, mixin::requester,
+                                 mixin::behavior_changer>,
+                     public statically_typed_actor_base {
 public:
   using signatures = detail::type_list<Sigs...>;
 
@@ -72,69 +84,8 @@ public:
 
   using behavior_type = typed_behavior<Sigs...>;
 
-  using super = abstract_event_based_actor<behavior_type, false,
-                                           abstract_broker>;
-
-  using super::send;
-  using super::delayed_send;
-
-  template <class... Dest, class... Ts>
-  void send(message_priority mp, const typed_actor<Dest...>& dest, Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<Dest...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    super::send(mp, dest, std::forward<Ts>(xs)...);
-  }
-
-  template <class... Dest, class... Ts>
-  void send(const typed_actor<Dest...>& dest, Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<Dest...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    super::send(dest, std::forward<Ts>(xs)...);
-  }
-
-  template <class... Dest, class... Ts>
-  void delayed_send(message_priority mp, const typed_actor<Dest...>& dest,
-                    const duration& rtime, Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<Dest...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    super::delayed_send(mp, dest, rtime, std::forward<Ts>(xs)...);
-  }
-
-  template <class... Dest, class... Ts>
-  void delayed_send(const typed_actor<Dest...>& dest,
-                    const duration& rtime, Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<Dest...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    super::delayed_send(dest, rtime, std::forward<Ts>(xs)...);
-  }
+  using super = typename extend<abstract_broker, typed_broker<Sigs...>>::
+    template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   /// @cond PRIVATE
   std::set<std::string> message_types() const override {

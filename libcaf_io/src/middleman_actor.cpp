@@ -23,6 +23,7 @@
 #include <stdexcept>
 
 #include "caf/sec.hpp"
+#include "caf/send.hpp"
 #include "caf/actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
@@ -187,8 +188,8 @@ private:
                                                                 reuse_addr);
       hdl = res.first;
       actual_port = res.second;
-      send(broker_, publish_atom::value, hdl, actual_port,
-           std::move(whom), std::move(sigs));
+      anon_send(broker_, publish_atom::value, hdl, actual_port,
+                std::move(whom), std::move(sigs));
       return {ok_atom::value, actual_port};
     }
     catch (std::exception&) {

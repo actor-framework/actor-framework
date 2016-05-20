@@ -119,10 +119,12 @@ public:
     return result;
   }
 
-  static inline message_id make(message_priority prio
-                                = message_priority::normal) {
-    message_id res;
-    return prio == message_priority::high ? res.with_high_priority() : res;
+  static constexpr message_id make() {
+    return message_id{};
+  }
+
+  static constexpr message_id make(message_priority prio) {
+    return prio == message_priority::high ? high_prioity_flag_mask : 0;
   }
 
   long compare(const message_id& other) const {
@@ -136,9 +138,10 @@ public:
   }
 
 private:
-  explicit inline message_id(uint64_t value) : value_(value) {
+  constexpr message_id(uint64_t value) : value_(value) {
     // nop
   }
+
   uint64_t value_;
 };
 

@@ -85,8 +85,8 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   // tell printer to purge its state for us if we ever used aout()
   if (get_flag(abstract_actor::has_used_aout_flag)) {
     auto pr = home_system().scheduler().printer();
-    pr->enqueue(mailbox_element::make_joint(nullptr, message_id::make(), {},
-                                            delete_atom::value, id()),
+    pr->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+                                      delete_atom::value, id()),
                 nullptr);
   }
   return true;
@@ -259,17 +259,16 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
           err = sec::unsupported_sys_key;
           return;
         }
-        res = mailbox_element::make_joint(ctrl(),
-                                          node.mid.response_id(), {},
-                                          ok_atom::value, std::move(what),
-                                          address(), name());
+        res = mailbox_element::make(ctrl(), node.mid.response_id(), {},
+                                    ok_atom::value, std::move(what),
+                                    address(), name());
       }
     });
     if (! res && ! err)
       err = sec::unsupported_sys_message;
     if (err && node.mid.is_request())
-      res = mailbox_element::make_joint(ctrl(), node.mid.response_id(),
-                                        {}, std::move(err));
+      res = mailbox_element::make(ctrl(), node.mid.response_id(),
+                                  {}, std::move(err));
     if (res) {
       auto s = actor_cast<actor>(node.sender);
       if (s)

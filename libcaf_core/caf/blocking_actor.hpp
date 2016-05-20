@@ -32,10 +32,10 @@
 #include "caf/actor_config.hpp"
 #include "caf/actor_marker.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/response_handle.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
+#include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
 
 namespace caf {
@@ -45,13 +45,15 @@ namespace caf {
 /// @extends local_actor
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
-             with<mixin::requester<blocking_response_handle_tag>::impl>,
+             with<mixin::requester, mixin::sender>,
       public dynamically_typed_actor_base {
 public:
+  using super = extend<local_actor, blocking_actor>::
+                with<mixin::requester, mixin::sender>;
+
   using behavior_type = behavior;
 
-  using super = extend<local_actor, blocking_actor>::
-                with<mixin::requester<blocking_response_handle_tag>::impl>;
+  using signatures = none_t;
 
   blocking_actor(actor_config& sys);
 

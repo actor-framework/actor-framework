@@ -17,11 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ABSTRACT_EVENT_BASED_ACTOR_HPP
-#define CAF_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#ifndef CAF_MIXIN_BEHAVIOR_CHANGER_HPP
+#define CAF_MIXIN_BEHAVIOR_CHANGER_HPP
 
 #include <type_traits>
 
+#include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_marker.hpp"
@@ -29,28 +30,23 @@
 #include "caf/behavior_policy.hpp"
 #include "caf/response_handle.hpp"
 
+#include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
 
 namespace caf {
+namespace mixin {
 
-/// Base type for statically and dynamically typed event-based actors.
-/// @tparam BehaviorType Denotes the expected type for become().
-/// @tparam HasSyncSend Configures whether this base extends `requester`.
-/// @tparam Base Either `local_actor` (default) or a subtype thereof.
-template <class BehaviorType, bool HasSyncSend, class Base = local_actor>
-class abstract_event_based_actor : public Base,
-                                   public actor_marker<BehaviorType>::type {
+/// A `behavior_changer` is an actor that supports
+/// `self->become(...)` and `self->unbecome()`.
+template <class Base, class Derived>
+class behavior_changer : public Base {
 public:
-  using behavior_type = BehaviorType;
+  using behavior_type = typename behavior_type_of<Derived>::type;
 
   template <class... Ts>
-  abstract_event_based_actor(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+  behavior_changer(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
-
-  /****************************************************************************
-   *                     become() member function family                      *
-   ****************************************************************************/
 
   void become(behavior_type bhvr) {
     this->do_become(std::move(bhvr.unbox()), true);
@@ -84,23 +80,7 @@ public:
   }
 };
 
-template <class BehaviorType, class Base>
-class abstract_event_based_actor<BehaviorType, true, Base>
-  : public extend<abstract_event_based_actor<BehaviorType, false, Base>>
-           ::template with<mixin::requester<nonblocking_response_handle_tag>
-                           ::template impl> {
-public:
-  using super
-    = typename extend<abstract_event_based_actor<BehaviorType, false, Base>>
-      ::template with<mixin::requester<nonblocking_response_handle_tag>
-                      ::template impl>;
-
-  template <class... Ts>
-  abstract_event_based_actor(Ts&&... xs) : super(std::forward<Ts>(xs)...) {
-    // nop
-  }
-};
-
+} // namespace mixin
 } // namespace caf
 
-#endif // CAF_ABSTRACT_EVENT_BASED_ACTOR_HPP
+#endif // CAF_MIXIN_BEHAVIOR_CHANGER_HPP

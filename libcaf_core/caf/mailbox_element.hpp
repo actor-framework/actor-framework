@@ -22,11 +22,11 @@
 
 #include <cstddef>
 
-#include "caf/actor.hpp"
 #include "caf/extend.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/actor_control_block.hpp"
 
 #include "caf/detail/memory.hpp"
 #include "caf/detail/embedded.hpp"
@@ -80,11 +80,19 @@ public:
   static unique_ptr make(strong_actor_ptr sender, message_id id,
                          forwarding_stack stages, message msg);
 
-  template <class... Ts>
-  static unique_ptr make_joint(strong_actor_ptr sender, message_id id,
-                               forwarding_stack stages, Ts&&... xs) {
+  template <class T, class... Ts>
+  static typename std::enable_if<
+    ! std::is_same<typename std::decay<T>::type, message>::value
+    || (sizeof...(Ts) > 0),
+    unique_ptr
+  >::type
+  make(strong_actor_ptr sender, message_id id,
+       forwarding_stack stages, T&& x, Ts&&... xs) {
     using value_storage =
       detail::tuple_vals<
+        typename unbox_message_element<
+          typename detail::strip_and_convert<T>::type
+        >::type,
         typename unbox_message_element<
           typename detail::strip_and_convert<Ts>::type
         >::type...
@@ -93,6 +101,7 @@ public:
     using storage = detail::pair_storage<mailbox_element, value_storage>;
     auto ptr = detail::memory::create<storage>(tk, std::move(sender), id,
                                                std::move(stages),
+                                               std::forward<T>(x),
                                                std::forward<Ts>(xs)...);
     ptr->first.msg.reset(&(ptr->second), false);
     return unique_ptr{&(ptr->first)};

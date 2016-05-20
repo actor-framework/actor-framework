@@ -123,15 +123,6 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
   return res;
 }
 
-void actor_pool::enqueue(strong_actor_ptr sender, message_id mid,
-                         message content, execution_unit* eu) {
-  upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
-  if (filter(guard, sender, mid, content, eu))
-    return;
-  auto ptr = mailbox_element::make(sender, mid, {}, std::move(content));
-  policy_(home_system(), guard, workers_, ptr, eu);
-}
-
 void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, what->sender, what->mid, what->msg, eu))
@@ -163,7 +154,6 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
       unique_guard.unlock();
       for (auto& w : workers)
         anon_send(w, msg);
-      quit(eu);
       is_registered(false);
     }
     return true;
@@ -226,8 +216,8 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
 void actor_pool::quit(execution_unit* host) {
   // we can safely run our cleanup code here without holding
   // workers_mtx_ because abstract_actor has its own lock
-  cleanup(planned_reason_, host);
-  is_registered(false);
+  if (cleanup(planned_reason_, host))
+    is_registered(false);
 }
 
 } // namespace caf

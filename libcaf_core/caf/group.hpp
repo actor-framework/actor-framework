@@ -23,6 +23,7 @@
 #include <string>
 
 #include "caf/fwd.hpp"
+#include "caf/none.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/abstract_group.hpp"
 
@@ -44,6 +45,8 @@ class group : detail::comparable<group>,
 public:
   template <class, class, int>
   friend class actor_cast_access;
+
+  using signatures = none_t;
 
   group() = default;
 

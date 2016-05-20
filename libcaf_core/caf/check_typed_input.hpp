@@ -28,32 +28,69 @@
 
 namespace caf {
 
-/// Checks whether `R` does support an input of type `{Ts...}`
-/// via static assertion.
-template <class... Sigs, class... Ts>
-void check_typed_input(const typed_actor<Sigs...>&,
-                       const detail::type_list<Ts...>&) {
-  static_assert(detail::tl_index_of<
-                  detail::type_list<Ts...>,
-                  atom_value
-                >::value == -1,
-                "atom(...) notation is not sufficient for static type "
-                "checking, please use atom_constant instead in this context");
-  static_assert(detail::tl_exists<
-                  detail::type_list<Sigs...>,
-                  detail::input_is<detail::type_list<Ts...>>::template eval
-                >::value >= 0,
-                "typed actor does not support given input");
+template <class T>
+struct output_types_of {
+  // nop
+};
+
+template <class In, class Out>
+struct output_types_of<typed_mpi<In, Out>> {
+  using type = Out;
+};
+
+template <class T>
+constexpr typename std::remove_pointer<T>::type::signatures signatures_of() {
+  return {};
+}
+
+template <class T>
+constexpr bool statically_typed() {
+  return ! std::is_same<
+           none_t,
+           typename std::remove_pointer<T>::type::signatures
+         >::value;
+}
+
+template <class Signatures, class MessageTypes>
+constexpr bool actor_accepts_message(Signatures, MessageTypes) {
+  return detail::tl_exists<
+           Signatures,
+           detail::input_is<MessageTypes>::template eval
+         >::value;
+}
+
+template <class MessageTypes>
+constexpr bool actor_accepts_message(none_t, MessageTypes) {
+  return true;
+}
+
+template <class Signatures, class MessageTypes>
+constexpr typename output_types_of<
+  typename detail::tl_find<
+    Signatures,
+    detail::input_is<MessageTypes>::template eval
+  >::type
+>::type
+response_to(Signatures, MessageTypes) {
+  return {};
+}
+
+template <class MessageTypes>
+constexpr none_t response_to(none_t, MessageTypes) {
+  return {};
 }
 
 template <class... Ts>
-void check_typed_input(const actor&, const detail::type_list<Ts...>&) {
-  // nop
+constexpr bool is_void_response(detail::type_list<Ts...>) {
+  return false;
 }
 
-template <class... Ts>
-void check_typed_input(const group&, const detail::type_list<Ts...>&) {
-  // nop
+constexpr bool is_void_response(detail::type_list<void>) {
+  return true;
+}
+
+constexpr bool is_void_response(none_t) {
+  return true; // true for the purpose of type checking performed by send()
 }
 
 } // namespace caf

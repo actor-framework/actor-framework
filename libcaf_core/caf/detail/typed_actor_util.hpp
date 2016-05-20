@@ -73,8 +73,11 @@ template <class Arguments>
 struct input_is {
   template <class Signature>
   struct eval {
-    static constexpr bool value =
-      std::is_same<Arguments, typename Signature::input_types>::value;
+    static constexpr bool value = false;
+  };
+  template <class Out>
+  struct eval<typed_mpi<Arguments, Out>> {
+    static constexpr bool value = true;
   };
 };
 
@@ -166,7 +169,7 @@ struct deduce_lifted_output_type<type_list<typed_continue_helper<R>>> {
 };
 
 template <class Signatures, class InputTypes>
-struct deduce_output_type {
+struct deduce_output_type_impl {
   using signature =
     typename tl_find<
       Signatures,
@@ -179,6 +182,25 @@ struct deduce_output_type {
   using delegated_type = typename detail::tl_apply<type, delegated>::type;
   // generates the appropriate `std::tuple<...>` type from given signature
   using tuple_type = typename detail::tl_apply<type, std::tuple>::type;
+};
+
+template <class InputTypes>
+struct deduce_output_type_impl<none_t, InputTypes> {
+  using type = message;
+  using delegated_type = delegated<message>;
+  using tuple_type = std::tuple<message>;
+};
+
+template <class Handle, class InputTypes>
+struct deduce_output_type
+    : deduce_output_type_impl<typename Handle::signatures, InputTypes> {
+  // nop
+};
+
+template <class T, class InputTypes>
+struct deduce_output_type<T*, InputTypes>
+  : deduce_output_type_impl<typename T::signatures, InputTypes> {
+  // nop
 };
 
 template <class... Ts>

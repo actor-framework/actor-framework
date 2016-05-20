@@ -35,7 +35,8 @@ namespace caf {
 template <class T>
 class weak_intrusive_ptr : detail::comparable<weak_intrusive_ptr<T>>,
                            detail::comparable<weak_intrusive_ptr<T>, const T*>,
-                           detail::comparable<weak_intrusive_ptr<T>, std::nullptr_t> {
+                           detail::comparable<weak_intrusive_ptr<T>,
+                                              std::nullptr_t> {
 public:
   using pointer = T*;
   using const_pointer = const T*;
@@ -170,13 +171,15 @@ private:
 
 /// @relates weak_intrusive_ptr
 template <class X, typename Y>
-bool operator==(const weak_intrusive_ptr<X>& lhs, const weak_intrusive_ptr<Y>& rhs) {
+bool operator==(const weak_intrusive_ptr<X>& lhs,
+                const weak_intrusive_ptr<Y>& rhs) {
   return lhs.get() == rhs.get();
 }
 
 /// @relates weak_intrusive_ptr
 template <class X, typename Y>
-bool operator!=(const weak_intrusive_ptr<X>& lhs, const weak_intrusive_ptr<Y>& rhs) {
+bool operator!=(const weak_intrusive_ptr<X>& lhs,
+                const weak_intrusive_ptr<Y>& rhs) {
   return !(lhs == rhs);
 }
 

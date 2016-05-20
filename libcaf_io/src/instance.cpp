@@ -48,7 +48,7 @@ instance::instance(abstract_broker* parent, callee& lstnr)
 connection_state instance::handle(execution_unit* ctx,
                                   new_data_msg& dm, header& hdr,
                                   bool is_payload) {
-  CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(hdr) << CAF_ARG(is_payload));
+  CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
   // function object providing cleanup code on errors
   auto err = [&]() -> connection_state {
     auto cb = make_callback([&](const node_id& nid){
@@ -67,18 +67,19 @@ connection_state instance::handle(execution_unit* ctx,
   } else {
     binary_deserializer bd{ctx, dm.buf};
     bd >> hdr;
-    CAF_LOG_DEBUG(CAF_ARG(hdr));
     if (! valid(hdr)) {
-      CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr.operation));
+      CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
       return err();
     }
-    if (hdr.payload_len > 0)
+    if (hdr.payload_len > 0) {
+      CAF_LOG_DEBUG("await payload before processing further");
       return await_payload;
+    }
   }
+  CAF_LOG_DEBUG(CAF_ARG(hdr));
   // needs forwarding?
-  if (! is_handshake(hdr)
-      && ! is_heartbeat(hdr)
-      && hdr.dest_node != this_node_) {
+  if (!is_handshake(hdr) && !is_heartbeat(hdr) && hdr.dest_node != this_node_) {
+    CAF_LOG_DEBUG("forward message");
     auto path = lookup(hdr.dest_node);
     if (path) {
       binary_serializer bs{ctx, path->wr_buf};
@@ -175,6 +176,7 @@ connection_state instance::handle(execution_unit* ctx,
       std::vector<strong_actor_ptr> forwarding_stack;
       message msg;
       bd >> forwarding_stack >> msg;
+      CAF_LOG_DEBUG(CAF_ARG(forwarding_stack) << CAF_ARG(msg));
       callee_.deliver(hdr.source_node, hdr.source_actor,
                       hdr.dest_node, hdr.dest_actor,
                       message_id::from_integer_value(hdr.operation_data),
@@ -328,11 +330,11 @@ void instance::write(execution_unit* ctx,
                      actor_id source_actor,
                      actor_id dest_actor,
                      payload_writer* pw) {
-  CAF_LOG_TRACE(CAF_ARG(operation)
-                << CAF_ARG(payload_len) << CAF_ARG(operation_data)
+  CAF_LOG_TRACE(CAF_ARG(operation) << CAF_ARG(operation_data)
                 << CAF_ARG(source_node) << CAF_ARG(dest_node)
                 << CAF_ARG(source_actor) << CAF_ARG(dest_actor));
-  if (!pw) {
+  if (! pw) {
+    CAF_LOG_DEBUG("send message without payload");
     uint32_t zero = 0;
     binary_serializer bs{ctx, buf};
     bs << source_node
@@ -342,29 +344,34 @@ void instance::write(execution_unit* ctx,
        << zero
        << operation
        << operation_data;
-  } else {
-    // reserve space in the buffer to write the payload later on
-    auto wr_pos = buf.size();
-    char placeholder[basp::header_size];
-    buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
-    auto pl_pos = buf.size();
-    { // lifetime scope of first serializer (write payload)
-      binary_serializer bs{ctx, buf};
-      (*pw)(bs);
-    }
-    // write broker message to the reserved space
-    stream_serializer<charbuf> bs2{ctx, buf.data() + wr_pos, pl_pos - wr_pos};
-    auto plen = static_cast<uint32_t>(buf.size() - pl_pos);
-    bs2 << source_node
-        << dest_node
-        << source_actor
-        << dest_actor
-        << plen
-        << operation
-        << operation_data;
-    if (payload_len)
-      *payload_len = plen;
+    return;
   }
+  // reserve space in the buffer to write the payload later on
+  auto wr_pos = buf.size();
+  char placeholder[basp::header_size];
+  buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
+  auto pl_pos = buf.size();
+  try { // lifetime scope of first serializer (write payload)
+    binary_serializer bs{ctx, buf};
+    (*pw)(bs);
+  }
+  catch (std::exception& e) {
+printf("EXCEPTION: %s\n", e.what());
+    CAF_LOG_ERROR(CAF_ARG(e.what()));
+  }
+  // write broker message to the reserved space
+  stream_serializer<charbuf> bs2{ctx, buf.data() + wr_pos, pl_pos - wr_pos};
+  auto plen = static_cast<uint32_t>(buf.size() - pl_pos);
+  bs2 << source_node
+      << dest_node
+      << source_actor
+      << dest_actor
+      << plen
+      << operation
+      << operation_data;
+  CAF_LOG_DEBUG("wrote payload" << CAF_ARG(plen));
+  if (payload_len)
+    *payload_len = plen;
 }
 
 void instance::write(execution_unit* ctx, buffer_type& buf,

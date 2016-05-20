@@ -68,27 +68,21 @@ strong_actor_ptr actor_registry::get(actor_id key) const {
   return nullptr;
 }
 
-void actor_registry::put(actor_id key, actor_control_block* val) {
+void actor_registry::put(actor_id key, strong_actor_ptr val) {
+  CAF_LOG_TRACE(CAF_ARG(key));
   if (! val)
-    return;
-  auto strong_val = actor_cast<actor>(val);
-  if (! strong_val)
     return;
   { // lifetime scope of guard
     exclusive_guard guard(instances_mtx_);
-    if (! entries_.emplace(key, actor_cast<strong_actor_ptr>(val)).second)
+    if (! entries_.emplace(key, val).second)
       return;
   }
   // attach functor without lock
   CAF_LOG_INFO("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
-  strong_val->attach_functor([key, reg]() {
+  val->get()->attach_functor([key, reg]() {
     reg->erase(key);
   });
-}
-
-void actor_registry::put(actor_id key, const strong_actor_ptr& val) {
-  put(key, actor_cast<actor_control_block*>(val));
 }
 
 void actor_registry::erase(actor_id key) {
@@ -101,7 +95,7 @@ void actor_registry::inc_running() {
   auto value = ++running_;
   CAF_LOG_DEBUG(CAF_ARG(value));
 # else
-    ++running_;
+  ++running_;
 # endif
 }
 
@@ -283,11 +277,9 @@ void actor_registry::stop() {
   // the scheduler is already stopped -> invoke exit messages manually
   dropping_execution_unit dummy{&system_};
   for (auto& kvp : named_entries_) {
-    auto mp = mailbox_element::make_joint(nullptr,
-                                          invalid_message_id,
-                                          {},
-                                          exit_msg{invalid_actor_addr,
-                                                   exit_reason::kill});
+    auto mp = mailbox_element::make(nullptr,invalid_message_id, {},
+                                    exit_msg{invalid_actor_addr,
+                                             exit_reason::kill});
     auto ptr = static_cast<local_actor*>(actor_cast<abstract_actor*>(kvp.second));
     ptr->exec_single_event(&dummy, mp);
   }

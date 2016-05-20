@@ -20,6 +20,7 @@
 #ifndef CAF_SCOPED_ACTOR_HPP
 #define CAF_SCOPED_ACTOR_HPP
 
+#include "caf/none.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_storage.hpp"
@@ -35,6 +36,8 @@ public:
   // allow conversion via actor_cast
   template <class, class, int>
   friend class actor_cast_access;
+
+  using signatures = none_t;
 
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
@@ -61,6 +64,10 @@ public:
   }
 
   blocking_actor* ptr() const;
+
+  constexpr explicit operator bool() const {
+    return true;
+  }
 
 private:
 

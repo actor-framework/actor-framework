@@ -50,7 +50,6 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/execution_unit.hpp"
-#include "caf/mailbox_element.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/message_priority.hpp"
@@ -58,6 +57,8 @@
 #include "caf/monitorable_actor.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
@@ -191,39 +192,11 @@ public:
 
   // -- sending asynchronous messages ------------------------------------------
 
+  /*
   /// Sends `{xs...}` to `dest` using the priority `mp`.
-  template <class... Ts>
-  void send(message_priority mp, const actor& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(message_id::make(mp), actor_cast<abstract_actor*>(dest),
-              std::forward<Ts>(xs)...);
-  }
-
-  /// Sends `{xs...}` to `dest` using normal priority.
-  template <class... Ts>
-  void send(const actor& dest, Ts&&... xs) {
-    send_impl(message_id::make(), actor_cast<abstract_actor*>(dest),
-              std::forward<Ts>(xs)...);
-  }
-
-  /// Sends `{xs...}` to `dest` using the priority `mp`.
-  template <class... Ts>
-  void send(message_priority mp, const group& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    send_impl(message_id::make(mp), actor_cast<abstract_channel*>(dest),
-              make_message(std::forward<Ts>(xs)...));
-  }
-
-  /// Sends `{xs...}` to `dest` using normal priority.
-  template <class... Ts>
-  void send(const group& dest, Ts&&... xs) {
-    send_impl(message_id::make(), dest.get(),
-              make_message(std::forward<Ts>(xs)...));
-  }
-
-  /// Sends `{xs...}` to `dest` using the priority `mp`.
-  template <class... Sigs, class... Ts>
-  void send(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
+  template <message_priority P = message_priority::normal,
+            class Handle = actor, class... Ts>
+  void send(const Handle& dest, Ts&&... xs) {
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
@@ -231,29 +204,12 @@ public:
         >::type...>;
     token tk;
     check_typed_input(dest, tk);
-    send_impl(message_id::make(mp), actor_cast<abstract_actor*>(dest),
-              std::forward<Ts>(xs)...);
+    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
+    if (! dest)
+      return;
+    dest->eq_impl(P, ctrl(), context(), std::forward<Ts>(xs)...);
   }
-
-  /// Sends `{xs...}` to `dest` using normal priority.
-  template <class... Sigs, class... Ts>
-  void send(const typed_actor<Sigs...>& dest, Ts&&... xs) {
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
-    token tk;
-    check_typed_input(dest, tk);
-    send_impl(message_id::make(), actor_cast<abstract_actor*>(dest),
-              std::forward<Ts>(xs)...);
-  }
-
-  /// Sends `{xs...}` to `dest` using normal priority.
-  template <class... Sigs, class... Ts>
-  void send(typed_event_based_actor<Sigs...>* dest, Ts&&... xs) {
-    send(typed_actor<Sigs...>{dest}, std::forward<Ts>(xs)...);
-  }
+  */
 
   /// Sends an exit message to `dest`.
   void send_exit(const actor_addr& dest, error reason);
@@ -262,60 +218,6 @@ public:
   template <class ActorHandle>
   void send_exit(const ActorHandle& dest, error reason) {
     send_exit(dest.address(), std::move(reason));
-  }
-
-  /// Sends a message to `dest` that is delayed by `rel_time`
-  /// using the priority `mp`.
-  template <class... Ts>
-  void delayed_send(message_priority mp, const actor& dest,
-                    const duration& rtime, Ts&&... xs) {
-    delayed_send_impl(message_id::make(mp), dest, rtime,
-                      make_message(std::forward<Ts>(xs)...));
-  }
-
-  /// Sends a message to `dest` that is delayed by `rel_time`.
-  template <class... Ts>
-  void delayed_send(const actor& dest, const duration& rtime, Ts&&... xs) {
-    delayed_send_impl(message_id::make(), actor_cast<strong_actor_ptr>(dest),
-                      rtime, make_message(std::forward<Ts>(xs)...));
-  }
-
-  /// Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
-  template <class... Sigs, class... Ts>
-  void delayed_send(message_priority mp, const typed_actor<Sigs...>& dest,
-                    const duration& rtime, Ts&&... xs) {
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
-    token tk;
-    check_typed_input(dest, tk);
-    delayed_send_impl(message_id::make(mp), actor_cast<abstract_actor*>(dest),
-                      rtime, make_message(std::forward<Ts>(xs)...));
-  }
-
-
-  /// Sends `{xs...}` delayed by `rtime` to `dest` using the priority `mp`.
-  template <class... Sigs, class... Ts>
-  void delayed_send(const typed_actor<Sigs...>& dest,
-                    const duration& rtime, Ts&&... xs) {
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
-    token tk;
-    check_typed_input(dest, tk);
-    delayed_send_impl(message_id::make(), actor_cast<strong_actor_ptr>(dest),
-                      rtime, make_message(std::forward<Ts>(xs)...));
-  }
-
-  /// Sends `{xs...}` to `dest` using normal priority.
-  template <class... Sigs, class... Ts>
-  void delayed_send(typed_event_based_actor<Sigs...>* dest,
-                    const duration& rtime, Ts&&... xs) {
-    delayed_send(typed_actor<Sigs...>{dest}, rtime, std::forward<Ts>(xs)...);
   }
 
   // -- miscellaneous actor operations -----------------------------------------
@@ -540,6 +442,9 @@ public:
     if (! dh)
       throw std::invalid_argument("cannot send requests to invalid actors");
     auto req_id = new_request_id(mp);
+    dh->eq_impl(req_id, ctrl(), context(), std::forward<Ts>(xs)...);
+
+
     send_impl(req_id, actor_cast<abstract_actor*>(dh), std::forward<Ts>(xs)...);
     request_sync_timeout_msg(timeout, req_id);
     return req_id.response_id();
@@ -554,67 +459,37 @@ public:
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
-  template <class... Ts>
-  void delegate(message_priority mp, const actor& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    if (! dest)
-      return;
-    auto mid = current_element_->mid;
-    current_element_->mid = mp == message_priority::high
-                             ? mid.with_high_priority()
-                             : mid.with_normal_priority();
-    // make sure our current message is not
-    // destroyed before the end of the scope
-    auto next = make_message(std::forward<Ts>(xs)...);
-    next.swap(current_element_->msg);
-    dest->enqueue(std::move(current_element_), context());
-  }
-
-  template <class... Ts>
-  void delegate(const actor& dest, Ts&&... xs) {
-    delegate(message_priority::normal, dest, std::forward<Ts>(xs)...);
-  }
-
-  template <class... Sigs, class... Ts>
+  template <message_priority P = message_priority::normal,
+            class Handle = actor, class... Ts>
   typename detail::deduce_output_type<
-    detail::type_list<Sigs...>,
+    Handle,
     detail::type_list<
       typename detail::implicit_conversions<
         typename std::decay<Ts>::type
       >::type...
     >
   >::delegated_type
-  delegate(message_priority mp, const typed_actor<Sigs...>& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
+  delegate(const Handle& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "nothing to delegate");
     using token =
       detail::type_list<
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    token tk;
-    check_typed_input(dest, tk);
+    static_assert(actor_accepts_message(signatures_of<Handle>(), token{}),
+                  "receiver does not accept given message");
     if (! dest)
       return {};
     auto mid = current_element_->mid;
-    current_element_->mid = mp == message_priority::high
-                             ? mid.with_high_priority()
-                             : mid.with_normal_priority();
-    current_element_->msg = make_message(std::forward<Ts>(xs)...);
+    current_element_->mid = P == message_priority::high
+                            ? mid.with_high_priority()
+                            : mid.with_normal_priority();
+    // make sure our current message is not
+    // destroyed before the end of the scope
+    auto next = make_message(std::forward<Ts>(xs)...);
+    next.swap(current_element_->msg);
     dest->enqueue(std::move(current_element_), context());
     return {};
-  }
-
-  template <class... Sigs, class... Ts>
-  typename detail::deduce_output_type<
-    detail::type_list<Sigs...>,
-    detail::type_list<
-      typename detail::implicit_conversions<
-        typename std::decay<Ts>::type
-      >::type...
-    >
-  >::delegated_type
-  delegate(const typed_actor<Sigs...>& dest, Ts&&... xs) {
-    return delegate(message_priority::normal, dest, std::forward<Ts>(xs)...);
   }
 
   inline detail::behavior_stack& bhvr_stack() {
@@ -758,16 +633,13 @@ private:
   send_impl(message_id mid, abstract_actor* dest, T&& x, Ts&&... xs) const {
     if (! dest)
       return;
-    dest->enqueue(mailbox_element::make_joint(ctrl(), mid, {},
-                                              std::forward<T>(x),
-                                              std::forward<Ts>(xs)...),
+    dest->enqueue(mailbox_element::make(ctrl(), mid, {},
+                                        std::forward<T>(x),
+                                        std::forward<Ts>(xs)...),
                   context());
   }
 
   void send_impl(message_id mid, abstract_channel* dest, message what) const;
-
-  void delayed_send_impl(message_id mid, strong_actor_ptr whom,
-                         const duration& rtime, message data);
 
   enum class msg_type {
     expired_timeout,       // an 'old & obsolete' timeout

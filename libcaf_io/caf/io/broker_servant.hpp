@@ -68,8 +68,8 @@ protected:
   void reset_mailbox_element() {
     SysMsgType tmp;
     set_hdl(tmp, hdl_);
-    mailbox_elem_ptr_ = mailbox_element::make_joint(nullptr, invalid_message_id,
-                                                    {}, tmp);
+    mailbox_elem_ptr_ = mailbox_element::make(nullptr, invalid_message_id,
+                                              {}, tmp);
   }
 
   Handle hdl_;

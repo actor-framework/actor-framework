@@ -46,14 +46,15 @@ struct blocking_response_handle_tag {};
 
 /// This helper class identifies an expected response message
 /// and enables `request(...).then(...)`.
-template <class Self, class Output, class Tag>
+template <class Self, class Output,
+          bool IsBlocking = std::is_same<Self, blocking_actor>::value>
 class response_handle;
 
 /******************************************************************************
  *                                 nonblocking                                *
  ******************************************************************************/
 template <class Self, class Output>
-class response_handle<Self, Output, nonblocking_response_handle_tag> {
+class response_handle<Self, Output, false> {
 public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
@@ -146,7 +147,7 @@ private:
  *                                  blocking                                  *
  ******************************************************************************/
 template <class Self, class Output>
-class response_handle<Self, Output, blocking_response_handle_tag> {
+class response_handle<Self, Output, true> {
 public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;

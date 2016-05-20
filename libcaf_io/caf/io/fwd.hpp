@@ -31,6 +31,9 @@ class basp_broker;
 class receive_policy;
 class abstract_broker;
 
+template <class... Sigs>
+class typed_broker;
+
 namespace network {
 
 class multiplexer;

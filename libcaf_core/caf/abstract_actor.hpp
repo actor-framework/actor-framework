@@ -36,6 +36,7 @@
 #include "caf/exit_reason.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/execution_unit.hpp"
+#include "caf/mailbox_element.hpp"
 #include "caf/abstract_channel.hpp"
 
 #include "caf/detail/type_traits.hpp"
@@ -123,6 +124,14 @@ public:
    ****************************************************************************/
 
   /// @cond PRIVATE
+
+  template <class... Ts>
+  void eq_impl(message_id mid, strong_actor_ptr sender,
+               execution_unit* ctx, Ts&&... xs) {
+    enqueue(mailbox_element::make(std::move(sender), mid,
+                                  {}, std::forward<Ts>(xs)...),
+            ctx);
+  }
 
   enum linking_operation {
     establish_link_op,

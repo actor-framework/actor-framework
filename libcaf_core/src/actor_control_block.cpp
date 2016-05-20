@@ -78,7 +78,7 @@ void safe_actor(serializer& sink, T& storage) {
     nid = ptr->nid;
     // register locally running actors to be able to deserialize them later
     if (nid == sys.node())
-      sys.registry().put(aid, ptr);
+      sys.registry().put(aid, actor_cast<strong_actor_ptr>(storage));
   }
   sink << aid << nid;
 }

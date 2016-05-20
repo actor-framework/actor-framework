@@ -42,7 +42,7 @@ namespace caf {
 
 class local_actor::private_thread {
 public:
-  private_thread(local_actor* self) : self_(self) {
+  private_thread(local_actor* self) : self_destroyed_(false), self_(self) {
     intrusive_ptr_add_ref(self->ctrl());
     scheduler::inc_detached_threads();
   }
@@ -54,6 +54,9 @@ public:
     CAF_LOG_TRACE("");
     scoped_execution_unit ctx{&job->system()};
     auto max_throughput = std::numeric_limits<size_t>::max();
+    auto wait_pred = [&] {
+      return ! job->mailbox().empty();
+    };
     for (;;) {
       bool resume_later;
       do {
@@ -74,7 +77,7 @@ public:
       } while (resume_later);
       // wait until actor becomes ready again or was destroyed
       std::unique_lock<std::mutex> guard(mtx_);
-      cv_.wait(guard);
+      cv_.wait(guard, wait_pred);
       job = const_cast<local_actor*>(self_);
       if (! job)
         return;
@@ -94,11 +97,31 @@ public:
 
   static void exec(private_thread* this_ptr) {
     this_ptr->run();
-    delete this_ptr;
     scheduler::dec_detached_threads();
+    // make sure to not destroy the private thread object before the
+    // detached actor is destroyed and this object is unreachable
+    this_ptr->await_self_destroyed();
+    delete this_ptr;
+  }
+
+  void notify_self_destroyed() {
+    std::unique_lock<std::mutex> guard(mtx_);
+    self_destroyed_ = true;
+    cv_.notify_one();
+  }
+
+  void await_self_destroyed() {
+    std::unique_lock<std::mutex> guard(mtx_);
+    while (! self_destroyed_)
+      cv_.wait(guard);
+  }
+
+  void start() {
+    std::thread{exec, this}.detach();
   }
 
 private:
+  volatile bool self_destroyed_;
   std::mutex mtx_;
   std::condition_variable cv_;
   volatile local_actor* self_;
@@ -159,7 +182,11 @@ local_actor::local_actor(actor_config& cfg)
 }
 
 local_actor::~local_actor() {
-  // nop
+  CAF_LOG_TRACE("");
+  // signalize to the private thread object that it is
+  // unrachable and can be destroyed as well
+  if (private_thread_)
+    private_thread_->notify_self_destroyed();
 }
 
 void local_actor::destroy() {
@@ -180,7 +207,8 @@ void local_actor::intrusive_ptr_release_impl() {
 }
 
 void local_actor::monitor(abstract_actor* ptr) {
-  CAF_ASSERT(ptr != nullptr);
+  if (! ptr)
+    return;
   ptr->attach(default_attachable::make_monitor(ptr->address(), address()));
 }
 
@@ -227,13 +255,13 @@ uint32_t local_actor::request_timeout(const duration& d) {
   auto result = ++timeout_id_;
   auto msg = make_message(timeout_msg{++timeout_id_});
   CAF_LOG_TRACE("send new timeout_msg, " << CAF_ARG(timeout_id_));
-  if (d.is_zero()) {
+  if (d.is_zero())
     // immediately enqueue timeout message if duration == 0s
-    enqueue(ctrl(), invalid_message_id,
-            std::move(msg), context());
-  } else {
-    delayed_send(actor_cast<actor>(this), d, std::move(msg));
-  }
+    enqueue(ctrl(), invalid_message_id, std::move(msg), context());
+  else
+    system().scheduler().delayed_send(d, ctrl(),
+                                      actor_cast<strong_actor_ptr>(this),
+                                      message_id::make(), std::move(msg));
   return result;
 }
 
@@ -241,8 +269,10 @@ void local_actor::request_sync_timeout_msg(const duration& d, message_id mid) {
   CAF_LOG_TRACE(CAF_ARG(d) << CAF_ARG(mid));
   if (! d.valid())
     return;
-  delayed_send_impl(mid.response_id(), ctrl(), d,
-                    make_message(sec::request_timeout));
+  system().scheduler().delayed_send(d, ctrl(),
+                                    ctrl(),
+                                    mid.response_id(),
+                                    make_message(sec::request_timeout));
 }
 
 void local_actor::handle_timeout(behavior& bhvr, uint32_t timeout_id) {
@@ -286,16 +316,14 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& node) {
         if (what == "info") {
           CAF_LOG_DEBUG("reply to 'info' message");
           node.sender->enqueue(
-            mailbox_element::make_joint(ctrl(),
-                                        node.mid.response_id(),
-                                        {}, ok_atom::value, std::move(what),
-                                        address(), name()),
+            mailbox_element::make(ctrl(), node.mid.response_id(),
+                                  {}, ok_atom::value, std::move(what),
+                                  address(), name()),
             context());
         } else {
           node.sender->enqueue(
-            mailbox_element::make_joint(ctrl(),
-                                        node.mid.response_id(),
-                                        {}, sec::unsupported_sys_key),
+            mailbox_element::make(ctrl(), node.mid.response_id(),
+                                  {}, sec::unsupported_sys_key),
             context());
         }
         return msg_type::sys_message;
@@ -385,19 +413,16 @@ public:
 
   void operator()(error& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
-    CAF_LOG_DEBUG("report error back to requesting actor");
     delegate(x);
   }
 
   void operator()(message& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
-    CAF_LOG_DEBUG("respond via response_promise");
     delegate(x);
   }
 
   void operator()(const none_t& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
-    CAF_LOG_DEBUG("message handler returned none");
     delegate(x);
   }
 
@@ -636,6 +661,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
         std::exception_ptr eptr = nullptr;
         try {
           self->act();
+          rsn = self->fail_state_;
         }
         catch (actor_exited& e) {
           rsn = e.reason();
@@ -660,7 +686,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
       return;
     }
     private_thread_ = new private_thread(this);
-    std::thread(private_thread::exec, private_thread_).detach();
+    private_thread_->start();
     return;
   }
   CAF_ASSERT(eu != nullptr);
@@ -803,6 +829,7 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
 
 std::pair<resumable::resume_result, invoke_message_result>
 local_actor::exec_event(mailbox_element_ptr& ptr) {
+  CAF_LOG_TRACE(CAF_ARG(*ptr));
   behavior empty_bhvr;
   auto& bhvr =
     awaits_response() ? awaited_response_handler()
@@ -810,6 +837,7 @@ local_actor::exec_event(mailbox_element_ptr& ptr) {
                                              : bhvr_stack().back();
   auto mid = awaited_response_id();
   auto res = invoke_message(ptr, bhvr, mid);
+  CAF_LOG_DEBUG(CAF_ARG(mid) << CAF_ARG(res));
   switch (res) {
     case im_success:
       bhvr_stack().cleanup();
@@ -877,9 +905,8 @@ void local_actor::exec_single_event(execution_unit* ctx,
 }
 
 mailbox_element_ptr local_actor::next_message() {
-  if (! is_priority_aware()) {
+  if (! is_priority_aware())
     return mailbox_element_ptr{mailbox().try_pop()};
-  }
   // we partition the mailbox into four segments in this case:
   // <-------- ! was_skipped --------> | <--------  was_skipped -------->
   // <-- high prio --><-- low prio -->|<-- high prio --><-- low prio -->
@@ -901,9 +928,8 @@ mailbox_element_ptr local_actor::next_message() {
     }
   }
   mailbox_element_ptr result;
-  if (! cache.first_empty()) {
+  if (! cache.first_empty())
     result.reset(cache.take_first_front());
-  }
   return result;
 }
 
@@ -958,22 +984,12 @@ void local_actor::do_become(behavior bhvr, bool discard_old) {
   bhvr_stack_.push_back(std::move(bhvr));
 }
 
-void local_actor::send_impl(message_id mid, abstract_channel* dest,
-                            message what) const {
-  if (! dest)
-    return;
-  dest->enqueue(ctrl(), mid, std::move(what), context());
-}
-
 void local_actor::send_exit(const actor_addr& whom, error reason) {
-  send(message_priority::high, actor_cast<actor>(whom),
-       exit_msg{address(), reason});
-}
-
-void local_actor::delayed_send_impl(message_id mid, strong_actor_ptr dest,
-                                    const duration& rel_time, message msg) {
-  system().scheduler().delayed_send(rel_time, ctrl(), std::move(dest),
-                                    mid, std::move(msg));
+  auto ptr = actor_cast<actor>(whom);
+  if (! ptr)
+    return;
+  ptr->eq_impl(message_id::make(), nullptr, context(),
+               exit_msg{address(), std::move(reason)});
 }
 
 const char* local_actor::name() const {

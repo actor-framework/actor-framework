@@ -53,7 +53,7 @@ public:
   strong_actor_ptr get(actor_id key) const;
 
   /// Associates a local actor with its ID.
-  void put(actor_id key, const strong_actor_ptr& value);
+  void put(actor_id key, strong_actor_ptr value);
 
   /// Removes an actor from this registry,
   /// leaving `reason` for future reference.
@@ -80,12 +80,6 @@ public:
 
   /// Removes a name mapping.
   void erase(atom_value key);
-
-  /// @cond PRIVATE
-
-  void put(actor_id, actor_control_block*);
-
-  /// @endcond
 
   using name_map = std::unordered_map<atom_value, strong_actor_ptr>;
 

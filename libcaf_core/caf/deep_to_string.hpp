@@ -62,7 +62,7 @@ public:
 
   template <class T>
   typename std::enable_if<
-    ! detail::is_iterable<T>::value,
+    ! detail::is_iterable<T>::value && ! std::is_pointer<T>::value,
     std::string
   >::type
   operator()(const T& x) const {
@@ -143,6 +143,15 @@ public:
   template <class T, size_t S>
   std::string operator()(const T (&xs)[S]) const {
     return decompose_array(xs, S);
+  }
+
+  template <class T>
+  typename std::enable_if<
+    std::is_pointer<T>::value,
+    std::string
+  >::type
+  operator()(const T ptr) const {
+    return ptr ? "*" + (*this)(*ptr) : "<nullptr>";
   }
 
 private:

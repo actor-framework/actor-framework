@@ -44,7 +44,7 @@ struct exit_msg {
 };
 
 inline std::string to_string(const exit_msg& x) {
-  return "exit" + deep_to_string(std::tie(x.source, x.reason));
+  return "exit_msg" + deep_to_string(std::tie(x.source, x.reason));
 }
 
 template <class Processor>
@@ -62,7 +62,7 @@ struct down_msg {
 };
 
 inline std::string to_string(const down_msg& x) {
-  return "down" + deep_to_string(std::tie(x.source, x.reason));
+  return "down_msg" + deep_to_string(std::tie(x.source, x.reason));
 }
 
 template <class Processor>

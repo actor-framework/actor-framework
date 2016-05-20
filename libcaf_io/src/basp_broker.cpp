@@ -223,7 +223,7 @@ void basp_broker_state::deliver(const node_id& src_nid,
                 << CAF_ARG(dest_aid) << CAF_ARG(msg) << CAF_ARG(mid));
   strong_actor_ptr src;
   if (src_nid == this_node())
-    src = actor_cast<strong_actor_ptr>(system().registry().get(src_aid));
+    src = system().registry().get(src_aid);
   else
     src = proxies().get_or_put(src_nid, src_aid);
   strong_actor_ptr dest;
@@ -231,6 +231,7 @@ void basp_broker_state::deliver(const node_id& src_nid,
   if (dest_nid != this_node()) {
     dest = proxies().get_or_put(dest_nid, dest_aid);
   } else {
+    // TODO: replace hack with clean solution
     if (dest_aid == std::numeric_limits<actor_id>::max()) {
       // this hack allows CAF to talk to older CAF versions; CAF <= 0.14 will
       // discard this message silently as the receiver is not found, while
@@ -238,7 +239,7 @@ void basp_broker_state::deliver(const node_id& src_nid,
       auto dest_name = static_cast<atom_value>(mid.integer_value());
       CAF_LOG_DEBUG(CAF_ARG(dest_name));
       mid = message_id::make(); // override this since the message is async
-      dest = actor_cast<strong_actor_ptr>(system().registry().get(dest_name));
+      dest = system().registry().get(dest_name);
     } else {
       dest = system().registry().get(dest_aid);
     }

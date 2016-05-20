@@ -43,6 +43,9 @@ using foo_promise = typed_response_promise<int>;
 using foo2_promise = typed_response_promise<int, int>;
 using foo3_promise = typed_response_promise<double>;
 
+using get1_helper = typed_actor<replies_to<int, int>::with<put_atom, int, int>>;
+using get2_helper = typed_actor<replies_to<int, int, int>::with<put_atom, int, int, int>>;
+
 class foo_actor_impl : public foo_actor::base {
 public:
   foo_actor_impl(actor_config& cfg) : foo_actor::base(cfg) {
@@ -57,11 +60,10 @@ public:
          return resp.deliver(x * 4); // has no effect
       },
       [=](get_atom, int x) -> foo_promise {
-        auto calculator = spawn([](event_based_actor* self) -> behavior {
+        auto calculator = spawn([]() -> get1_helper::behavior_type {
           return {
-            [self](int promise_id, int value) -> message {
-              self->quit();
-              return make_message(put_atom::value, promise_id, value * 2);
+            [](int promise_id, int value) -> result<put_atom, int, int> {
+              return {put_atom::value, promise_id, value * 2};
             }
           };
         });
@@ -71,11 +73,10 @@ public:
         return entry;
       },
       [=](get_atom, int x, int y) -> foo2_promise {
-        auto calculator = spawn([](event_based_actor* self) -> behavior {
+        auto calculator = spawn([]() -> get2_helper::behavior_type {
           return {
-            [self](int promise_id, int v0, int v1) -> message {
-              self->quit();
-              return make_message(put_atom::value, promise_id, v0 * 2, v1 * 2);
+            [](int promise_id, int v0, int v1) -> result<put_atom, int, int, int> {
+              return {put_atom::value, promise_id, v0 * 2, v1 * 2};
             }
           };
         });

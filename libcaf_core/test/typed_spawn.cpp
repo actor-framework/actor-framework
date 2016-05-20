@@ -105,7 +105,7 @@ class typed_server3 : public server_type::base {
 public:
   typed_server3(actor_config& cfg, const string& line, actor buddy)
       : server_type::base(cfg) {
-    send(buddy, line);
+    anon_send(buddy, line);
   }
 
   behavior_type make_behavior() override {

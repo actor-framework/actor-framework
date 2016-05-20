@@ -79,16 +79,15 @@ CAF_TEST_FIXTURE_SCOPE(actor_pool_tests, fixture)
 
 CAF_TEST(round_robin_actor_pool) {
   scoped_actor self{system};
-  auto w = actor_pool::make(&context, 5, spawn_worker, actor_pool::round_robin());
-  self->monitor(w);
-  self->send(w, sys_atom::value, put_atom::value, spawn_worker());
+  auto pool = actor_pool::make(&context, 5, spawn_worker,
+                               actor_pool::round_robin());
+  self->send(pool, sys_atom::value, put_atom::value, spawn_worker());
   std::vector<actor> workers;
   for (int i = 0; i < 6; ++i) {
-    self->request(w, infinite, i, i).receive(
+    self->request(pool, infinite, i, i).receive(
       [&](int res) {
         CAF_CHECK_EQUAL(res, i + i);
         auto sender = self->current_sender();
-        self->monitor(sender);
         workers.push_back(actor_cast<actor>(sender));
       }
     );
@@ -99,7 +98,7 @@ CAF_TEST(round_robin_actor_pool) {
     return x == invalid_actor;
   };
   CAF_CHECK(std::none_of(workers.begin(), workers.end(), is_invalid));
-  self->request(w, infinite, sys_atom::value, get_atom::value).receive(
+  self->request(pool, infinite, sys_atom::value, get_atom::value).receive(
     [&](std::vector<actor>& ws) {
       std::sort(workers.begin(), workers.end());
       std::sort(ws.begin(), ws.end());
@@ -114,7 +113,7 @@ CAF_TEST(round_robin_actor_pool) {
   bool success = false;
   size_t i = 0;
   while (! success && ++i <= 10) {
-    self->request(w, infinite, sys_atom::value, get_atom::value).receive(
+    self->request(pool, infinite, sys_atom::value, get_atom::value).receive(
       [&](std::vector<actor>& ws) {
         success = workers.size() == ws.size();
         if (success) {
@@ -129,7 +128,7 @@ CAF_TEST(round_robin_actor_pool) {
   }
   CAF_REQUIRE(success);
   CAF_MESSAGE("about to send exit to workers");
-  self->send_exit(w, exit_reason::user_shutdown);
+  self->send_exit(pool, exit_reason::user_shutdown);
   self->wait_for(workers);
 }
 
@@ -139,8 +138,8 @@ CAF_TEST(broadcast_actor_pool) {
     return actor_pool::make(&context, 5, fixture::spawn_worker,
                             actor_pool::broadcast());
   };
-  auto w = actor_pool::make(&context, 5, spawn5, actor_pool::broadcast());
-  self->send(w, 1, 2);
+  auto pool = actor_pool::make(&context, 5, spawn5, actor_pool::broadcast());
+  self->send(pool, 1, 2);
   std::vector<int> results;
   int i = 0;
   self->receive_for(i, 25)(
@@ -154,20 +153,20 @@ CAF_TEST(broadcast_actor_pool) {
   CAF_CHECK_EQUAL(results.size(), 25u);
   CAF_CHECK(std::all_of(results.begin(), results.end(),
                         [](int res) { return res == 3; }));
-  self->send_exit(w, exit_reason::user_shutdown);
+  self->send_exit(pool, exit_reason::user_shutdown);
 }
 
 CAF_TEST(random_actor_pool) {
   scoped_actor self{system};
-  auto w = actor_pool::make(&context, 5, spawn_worker, actor_pool::random());
+  auto pool = actor_pool::make(&context, 5, spawn_worker, actor_pool::random());
   for (int i = 0; i < 5; ++i) {
-    self->request(w, std::chrono::milliseconds(250), 1, 2).receive(
+    self->request(pool, std::chrono::milliseconds(250), 1, 2).receive(
       [&](int res) {
         CAF_CHECK_EQUAL(res, 3);
       }
     );
   }
-  self->send_exit(w, exit_reason::user_shutdown);
+  self->send_exit(pool, exit_reason::user_shutdown);
 }
 
 CAF_TEST(split_join_actor_pool) {
@@ -191,19 +190,19 @@ CAF_TEST(split_join_actor_pool) {
     });
   };
   scoped_actor self{system};
-  auto w = actor_pool::make(&context, 5, spawn_split_worker,
+  auto pool = actor_pool::make(&context, 5, spawn_split_worker,
                             actor_pool::split_join<int>(join_fun, split_fun));
-  self->request(w, infinite, std::vector<int>{1, 2, 3, 4, 5}).receive(
+  self->request(pool, infinite, std::vector<int>{1, 2, 3, 4, 5}).receive(
     [&](int res) {
       CAF_CHECK_EQUAL(res, 15);
     }
   );
-  self->request(w, infinite, std::vector<int>{6, 7, 8, 9, 10}).receive(
+  self->request(pool, infinite, std::vector<int>{6, 7, 8, 9, 10}).receive(
     [&](int res) {
       CAF_CHECK_EQUAL(res, 40);
     }
   );
-  self->send_exit(w, exit_reason::user_shutdown);
+  self->send_exit(pool, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

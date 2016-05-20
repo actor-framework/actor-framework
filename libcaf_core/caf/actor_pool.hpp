@@ -98,9 +98,6 @@ public:
   /// function `fac` using the dispatch policy `pol`.
   static actor make(execution_unit* ptr, size_t n, factory fac, policy pol);
 
-  void enqueue(strong_actor_ptr sender, message_id mid, message content,
-               execution_unit* host) override;
-
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
   actor_pool(actor_config& cfg);

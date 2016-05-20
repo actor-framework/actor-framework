@@ -42,10 +42,13 @@ using pong_atom = caf::atom_constant<atom("pong")>;
 using kickoff_atom = caf::atom_constant<atom("kickoff")>;
 
 using peer = connection_handler::extend<reacts_to<ping_atom, int>,
-                                    reacts_to<pong_atom, int>>;
+                                        reacts_to<pong_atom, int>>;
 
-using acceptor =
-  accept_handler::extend<replies_to<publish_atom>::with<uint16_t>>;
+using acceptor = accept_handler::extend<replies_to<publish_atom>::with<uint16_t>>;
+
+using ping_actor = typed_actor<replies_to<pong_atom, int>::with<ping_atom, int>>;
+
+using pong_actor = typed_actor<replies_to<ping_atom, int>::with<pong_atom, int>>;
 
 behavior ping(event_based_actor* self, size_t num_pings) {
   CAF_MESSAGE("num_pings: " << num_pings);
@@ -71,16 +74,17 @@ behavior ping(event_based_actor* self, size_t num_pings) {
 behavior pong(event_based_actor* self) {
   CAF_MESSAGE("pong actor started");
   self->set_down_handler([=](down_msg& dm) {
-    CAF_MESSAGE("received down_msg{" << to_string(dm.reason) << "}");
+    CAF_MESSAGE("received: " << to_string(dm.reason));
     self->quit(dm.reason);
   });
   return {
     [=](ping_atom, int value) -> std::tuple<atom_value, int> {
-      CAF_MESSAGE("received `ping_atom`");
+      CAF_MESSAGE("received: 'ping', " << value);
       self->monitor(self->current_sender());
       // set next behavior
       self->become(
         [](ping_atom, int val) {
+          //CAF_MESSAGE("received: 'ping', " << val);
           return std::make_tuple(pong_atom::value, val);
         }
       );
@@ -97,19 +101,13 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
   CAF_CHECK(buddy != invalid_actor);
   self->monitor(buddy);
   // assume exactly one connection
-  auto cons = self->connections();
-  if (cons.size() != 1) {
-    cerr << "expected 1 connection, found " << cons.size() << endl;
-    throw std::logic_error("num_connections() != 1");
-  }
+  CAF_REQUIRE_EQUAL(self->connections().size(), 1u);
   self->configure_read(
     hdl, receive_policy::exactly(sizeof(atom_value) + sizeof(int)));
-  auto write = [=](atom_value type, int value) {
+  auto write = [=](atom_value x, int y) {
     auto& buf = self->wr_buf(hdl);
-    auto first = reinterpret_cast<char*>(&type);
-    buf.insert(buf.end(), first, first + sizeof(atom_value));
-    first = reinterpret_cast<char*>(&value);
-    buf.insert(buf.end(), first, first + sizeof(int));
+    binary_serializer sink{self->system(), buf};
+    sink << x << y;
     self->flush(hdl);
   };
   self->set_down_handler([=](down_msg& dm) {
@@ -124,18 +122,21 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
     },
     [=](const new_data_msg& msg) {
       CAF_MESSAGE("received new_data_msg");
-      atom_value type;
-      int value;
-      memcpy(&type, msg.buf.data(), sizeof(atom_value));
-      memcpy(&value, msg.buf.data() + sizeof(atom_value), sizeof(int));
-      self->send(buddy, type, value);
+      atom_value x;
+      int y;
+      binary_deserializer source{self->system(), msg.buf};
+      source >> x >> y;
+      if (x == pong_atom::value)
+        self->send(actor_cast<ping_actor>(buddy), pong_atom::value, y);
+      else
+        self->send(actor_cast<pong_actor>(buddy), ping_atom::value, y);
     },
     [=](ping_atom, int value) {
-      CAF_MESSAGE("received ping{" << value << "}");
+      CAF_MESSAGE("received: 'ping', " << value);
       write(ping_atom::value, value);
     },
     [=](pong_atom, int value) {
-      CAF_MESSAGE("received pong{" << value << "}");
+      CAF_MESSAGE("received: 'pong', " << value);
       write(pong_atom::value, value);
     }
   };

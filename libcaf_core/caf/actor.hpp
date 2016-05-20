@@ -71,6 +71,8 @@ public:
   // grant access to private ctor
   friend class local_actor;
 
+  using signatures = none_t;
+
   // allow conversion via actor_cast
   template <class, class, int>
   friend class actor_cast_access;

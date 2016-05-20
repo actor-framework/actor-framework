@@ -22,10 +22,17 @@
 
 #include "caf/local_actor.hpp"
 
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/requester.hpp"
+
 namespace caf {
 
+struct typed_actor_view_base { };
+
 template <class... Sigs>
-class typed_actor_view {
+class typed_actor_view : public extend<typed_actor_view_base,
+                                       typed_actor_view<Sigs...>>::template
+                                with<mixin::sender, mixin::requester> {
 public:
   typed_actor_view(local_actor* selfptr) : self_(selfptr) {
     // nop
@@ -45,90 +52,6 @@ public:
   typename infer_handle_from_fun<F>::type
   spawn(F fun, Ts&&... xs) {
     return self_->spawn<Os>(std::move(fun), std::forward<Ts>(xs)...);
-  }
-
-  /****************************************************************************
-   *                        send asynchronous messages                        *
-   ****************************************************************************/
-
-  template <class... Ts>
-  void send(message_priority mp, const actor& dest, Ts&&... xs) {
-    self_->send(mp, dest, std::forward<Ts>(xs)...);
-  }
-
-  template <class... Ts>
-  void send(const actor& dest, Ts&&... xs) {
-    self_->send(dest, std::forward<Ts>(xs)...);
-  }
-
-  template <class... DestSigs, class... Ts>
-  void send(message_priority mp, const typed_actor<DestSigs...>& dest,
-            Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    self_->send(mp, dest, std::forward<Ts>(xs)...);
-  }
-
-  template <class... DestSigs, class... Ts>
-  void send(const typed_actor<DestSigs...>& dest, Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    self_->send(dest, std::forward<Ts>(xs)...);
-  }
-
-  template <class... Ts>
-  void delayed_send(message_priority mp, const actor& dest,
-                    const duration& rtime, Ts&&... xs) {
-    self_->delayed_send(mp, dest, rtime, std::forward<Ts>(xs)...);
-  }
-
-  template <class... Ts>
-  void delayed_send(const actor& dest, const duration& rtime, Ts&&... xs) {
-    self_->delayed_send(dest, rtime, std::forward<Ts>(xs)...);
-  }
-
-  template <class... DestSigs, class... Ts>
-  void delayed_send(message_priority mp, const typed_actor<DestSigs...>& dest,
-                    const duration& rtime, Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    self_->delayed_send(mp, dest, rtime, std::forward<Ts>(xs)...);
-  }
-
-  template <class... DestSigs, class... Ts>
-  void delayed_send(const typed_actor<DestSigs...>& dest,
-                    const duration& rtime, Ts&&... xs) {
-    detail::sender_signature_checker<
-      detail::type_list<Sigs...>,
-      detail::type_list<DestSigs...>,
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...
-      >
-    >::check();
-    self_->delayed_send(dest, rtime, std::forward<Ts>(xs)...);
   }
 
   /****************************************************************************
