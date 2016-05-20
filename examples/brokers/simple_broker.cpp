@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     {"server,s", "run in server mode"},
     {"client,c", "run in client mode"},
     {"port,p", "set port", port},
-    {"host,H", "set host (client mode only"}
+    {"host,H", "set host (client mode only)", host}
   });
   if (! res.error.empty())
     return cerr << res.error << endl, 1;
