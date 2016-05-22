@@ -133,7 +133,6 @@ CAF_TEST(server_side_group_comm) {
   CAF_REQUIRE(port != 0);
   // client side
   auto server = client_side_mm.remote_actor(local_host, port);
-  CAF_REQUIRE(server);
   scoped_actor group_resolver(client_side, true);
   group grp;
   group_resolver->request(server, infinite, get_group_atom::value).receive(
@@ -151,7 +150,6 @@ CAF_TEST(client_side_group_comm) {
   CAF_REQUIRE(port != 0);
   // client side
   auto server = client_side_mm.remote_actor(local_host, port);
-  CAF_REQUIRE(server);
   client_side.spawn(make_client_behavior, server,
                     client_side.groups().get("local", "foobar"));
 }

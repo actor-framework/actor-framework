@@ -88,7 +88,6 @@ void peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   CAF_MESSAGE("peer_fun called");
   CAF_REQUIRE(self->subtype() == resumable::io_actor);
   CAF_CHECK(self != nullptr);
-  CAF_CHECK(buddy != invalid_actor);
   self->monitor(buddy);
   // assume exactly one connection
   CAF_REQUIRE(self->connections().size() == 1);

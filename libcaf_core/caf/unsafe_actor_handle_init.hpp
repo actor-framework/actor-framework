@@ -17,70 +17,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SCOPED_ACTOR_HPP
-#define CAF_SCOPED_ACTOR_HPP
-
-#include "caf/none.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/actor_storage.hpp"
-#include "caf/intrusive_ptr.hpp"
-#include "caf/blocking_actor.hpp"
-#include "caf/scoped_execution_unit.hpp"
+#ifndef CAF_UNSAFE_ACTOR_HANDLE_INIT_HPP
+#define CAF_UNSAFE_ACTOR_HANDLE_INIT_HPP
 
 namespace caf {
 
-/// A scoped handle to a blocking actor.
-class scoped_actor {
-public:
-  // allow conversion via actor_cast
-  template <class, class, int>
-  friend class actor_cast_access;
+/// Tag type to select the unsafe constructor of actor handles.
+struct unsafe_actor_handle_init_t { };
 
-  using signatures = none_t;
-
-  // tell actor_cast which semantic this type uses
-  static constexpr bool has_weak_ptr_semantics = false;
-
-  // tell actor_cast this is a non-null handle type
-  static constexpr bool has_non_null_guarantee = true;
-
-  scoped_actor(const scoped_actor&) = delete;
-
-  scoped_actor(actor_system& sys, bool hide_actor = false);
-
-  scoped_actor(scoped_actor&&) = default;
-  scoped_actor& operator=(scoped_actor&&) = default;
-
-  ~scoped_actor();
-
-  inline blocking_actor* operator->() const {
-    return ptr();
-  }
-
-  inline blocking_actor& operator*() const {
-    return *ptr();
-  }
-
-  inline actor_addr address() const {
-    return ptr()->address();
-  }
-
-  blocking_actor* ptr() const;
-
-private:
-
-  inline actor_control_block* get() const {
-    return self_.get();
-  }
-
-  actor_id prev_; // used for logging/debugging purposes only
-  scoped_execution_unit context_;
-  strong_actor_ptr self_;
-};
-
-std::string to_string(const scoped_actor& x);
+static constexpr unsafe_actor_handle_init_t unsafe_actor_handle_init
+  = unsafe_actor_handle_init_t{};
 
 } // namespace caf
 
-#endif // CAF_SCOPED_ACTOR_HPP
+#endif // CAF_UNSAFE_ACTOR_HANDLE_INIT_HPP

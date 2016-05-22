@@ -53,7 +53,6 @@ struct fixture {
     CAF_REQUIRE(res);
     CAF_CHECK(ifs.empty());
     auto aut = actor_cast<actor>(res);
-    CAF_REQUIRE(aut != invalid_actor);
     self->wait_for(aut);
     CAF_MESSAGE("aut done");
   }

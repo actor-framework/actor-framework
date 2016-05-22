@@ -156,7 +156,7 @@ actor_factory make_actor_factory(F fun) {
     };
     handle hdl = cfg.host->system().spawn_class<impl, no_spawn_options>(cfg);
     return {actor_cast<strong_actor_ptr>(std::move(hdl)),
-            cfg.host->system().message_types(hdl)};
+            cfg.host->system().message_types(detail::type_list<handle>{})};
   };
 }
 
@@ -174,13 +174,12 @@ template <class T, class... Ts>
 actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
   CAF_ASSERT(cfg.host);
   using handle = typename infer_handle_from_class<T>::type;
-  handle hdl;
+  handle hdl{unsafe_actor_handle_init};
   dyn_spawn_class_helper<handle, T, Ts...> factory{hdl, cfg};
   msg.apply(factory);
-  if (hdl == invalid_actor)
-    return {};
+  detail::type_list<handle> token;
   return {actor_cast<strong_actor_ptr>(std::move(hdl)),
-          cfg.host->system().message_types(hdl)};
+          cfg.host->system().message_types(token)};
 }
 
 template <class T, class... Ts>

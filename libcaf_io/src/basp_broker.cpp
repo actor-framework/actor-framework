@@ -89,7 +89,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   actor_config cfg;
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
     aid, nid, &(self->home_system()), cfg, self);
-  auto selfptr = actor_cast<strong_actor_ptr>(self);
+  strong_actor_ptr selfptr{self->ctrl()};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
@@ -129,15 +129,12 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   auto cleanup = detail::make_scope_guard([&] {
     cb = none;
   });
+  strong_actor_ptr ptr;
   if (aid == invalid_actor_id) {
     // can occur when connecting to the default port of a node
-    cb->deliver(make_message(ok_atom::value,
-                             nid,
-                             actor_addr{invalid_actor_addr},
-                             std::move(sigs)));
+    cb->deliver(ok_atom::value, nid, ptr, std::move(sigs));
     return;
   }
-  strong_actor_ptr ptr;
   if (nid == this_node()) {
     // connected to self
     ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid));
@@ -190,7 +187,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
     // kill immediately if actor has already terminated
     send_kill_proxy_instance(exit_reason::unknown);
   } else {
-    auto tmp = actor_cast<strong_actor_ptr>(self); // keep broker alive ...
+    strong_actor_ptr tmp{self->ctrl()};
     auto mm = &system().middleman();
     ptr->get()->attach_functor([=](const error& fail_state) {
       mm->backend().dispatch([=] {
@@ -262,8 +259,11 @@ void basp_broker_state::deliver(const node_id& src_nid,
 
 void basp_broker_state::learned_new_node(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
-  auto& tmp = spawn_servers[nid];
-  tmp = system().spawn<hidden>([=](event_based_actor* this_actor) -> behavior {
+  if (spawn_servers.count(nid) > 0) {
+    CAF_LOG_ERROR("learned_new_node called for known node " << CAF_ARG(nid));
+    return;
+  }
+  auto tmp = system().spawn<hidden>([=](event_based_actor* this_actor) -> behavior {
     CAF_LOG_TRACE("");
     // terminate when receiving a down message
     this_actor->set_down_handler([=](down_msg& dm) {
@@ -278,14 +278,17 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
         CAF_LOG_TRACE(CAF_ARG(config_serv_addr));
         // drop unexpected messages from this point on
         this_actor->set_default_handler(print_and_drop);
-        auto config_serv = actor_cast<actor>(config_serv_addr);
+        auto config_serv = actor_cast<strong_actor_ptr>(config_serv_addr);
+        if (! config_serv)
+          return;
         this_actor->monitor(config_serv);
         this_actor->become(
           [=](spawn_atom, std::string& type, message& args)
           -> delegated<ok_atom, strong_actor_ptr, std::set<std::string>> {
             CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
-            this_actor->delegate(config_serv, get_atom::value,
-                                 std::move(type), std::move(args));
+            this_actor->delegate(actor_cast<actor>(std::move(config_serv)),
+                                 get_atom::value, std::move(type),
+                                 std::move(args));
             return {};
           }
         );
@@ -296,6 +299,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
       }
     };
   });
+  spawn_servers.emplace(nid, tmp);
   using namespace detail;
   system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) {
@@ -471,10 +475,10 @@ behavior basp_broker::make_behavior() {
         if (ctx.callback) {
           CAF_LOG_WARNING("failed to handshake with remote node"
                           << CAF_ARG(msg.handle));
-          ctx.callback->deliver(make_message(ok_atom::value,
+          ctx.callback->deliver(ok_atom::value,
                                 node_id{invalid_node_id},
-                                actor_addr{invalid_actor_addr},
-                                std::set<std::string>{}));
+                                strong_actor_ptr{nullptr},
+                                std::set<std::string>{});
         }
         close(msg.handle);
         state.ctx.erase(msg.handle);
@@ -613,8 +617,6 @@ behavior basp_broker::make_behavior() {
     },
     [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
-      if (whom == invalid_actor_addr)
-        return sec::no_actor_to_unpublish;
       auto cb = make_callback([&](const strong_actor_ptr&, uint16_t x) {
         try { close(hdl_by_port(x)); }
         catch (std::exception&) { }

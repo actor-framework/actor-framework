@@ -97,8 +97,6 @@ behavior pong(event_based_actor* self) {
 peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
                              const actor& buddy) {
   CAF_MESSAGE("peer_fun called");
-  CAF_CHECK(self != nullptr);
-  CAF_CHECK(buddy != invalid_actor);
   self->monitor(buddy);
   // assume exactly one connection
   CAF_REQUIRE_EQUAL(self->connections().size(), 1u);
@@ -165,7 +163,6 @@ void run_client(int argc, char** argv, uint16_t port) {
   auto p = system.spawn(ping, size_t{10});
   CAF_MESSAGE("spawn_client_typed...");
   auto cl = system.middleman().spawn_client(peer_fun, "localhost", port, p);
-  CAF_REQUIRE(cl);
   CAF_MESSAGE("spawn_client_typed finished");
   anon_send(p, kickoff_atom::value, cl);
   CAF_MESSAGE("`kickoff_atom` has been send");

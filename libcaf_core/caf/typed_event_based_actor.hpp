@@ -61,8 +61,8 @@ public:
   using behavior_type = typed_behavior<Sigs...>;
 
   std::set<std::string> message_types() const override {
-    typed_actor<Sigs...> hdl;
-    return this->system().message_types(hdl);
+    detail::type_list<typed_actor<Sigs...>> token;
+    return this->system().message_types(token);
   }
 
   void initialize() override {

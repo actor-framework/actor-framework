@@ -29,20 +29,17 @@ namespace caf {
 forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor mgr)
     : actor_proxy(cfg),
       manager_(mgr) {
-  CAF_ASSERT(mgr != invalid_actor);
+  // nop
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
-  anon_send(manager_, make_message(delete_atom::value, node(), id()));
+  if (! manager_.unsafe())
+    anon_send(manager_, make_message(delete_atom::value, node(), id()));
 }
 
 actor forwarding_actor_proxy::manager() const {
-  actor result;
-  {
-    shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
-    result = manager_;
-  }
-  return result;
+  shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
+  return manager_;
 }
 
 void forwarding_actor_proxy::manager(actor new_manager) {
@@ -57,11 +54,11 @@ void forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
                 << CAF_ARG(mid) << CAF_ARG(msg));
   forwarding_stack tmp;
   shared_lock<detail::shared_spinlock> guard_(manager_mtx_);
-  if (manager_)
+  if (! manager_.unsafe())
     manager_->enqueue(nullptr, invalid_message_id,
                       make_message(forward_atom::value, std::move(sender),
                                    fwd ? *fwd : tmp,
-                                   actor_cast<strong_actor_ptr>(this),
+                                   strong_actor_ptr{ctrl()},
                                    mid, std::move(msg)),
                       nullptr);
 }
@@ -125,7 +122,7 @@ void forwarding_actor_proxy::local_unlink_from(abstract_actor* other) {
 
 void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
   CAF_ASSERT(ctx != nullptr);
-  manager(invalid_actor);
+  actor tmp{std::move(manager_)}; // manually break cycle
   cleanup(std::move(rsn), ctx);
 }
 

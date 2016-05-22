@@ -27,6 +27,10 @@
 
 namespace caf {
 
+actor_addr actor_control_block::address() {
+  return {this, true};
+}
+
 void actor_control_block::enqueue(strong_actor_ptr sender, message_id mid,
                                   message content, execution_unit* host) {
   get()->enqueue(std::move(sender), mid, std::move(content), host);
@@ -60,6 +64,14 @@ void intrusive_ptr_release(actor_control_block* x) {
     x->data_dtor(x->get());
     intrusive_ptr_release_weak(x);
   }
+}
+
+bool operator==(const strong_actor_ptr& x, const abstract_actor* y) {
+  return x.get() == actor_control_block::from(y);
+}
+
+bool operator==(const abstract_actor* x, const strong_actor_ptr& y) {
+  return actor_control_block::from(x) == y.get();
 }
 
 template <class T>

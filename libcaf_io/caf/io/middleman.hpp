@@ -54,8 +54,9 @@ public:
   template <class Handle>
   uint16_t publish(Handle&& whom, uint16_t port,
                    const char* in = nullptr, bool reuse_addr = false) {
+    detail::type_list<typename std::decay<Handle>::type> tk;
     return publish(actor_cast<strong_actor_ptr>(std::forward<Handle>(whom)),
-                   system().message_types(whom), port, in, reuse_addr);
+                   system().message_types(tk), port, in, reuse_addr);
   }
 
   /// Makes *all* local groups accessible via network
@@ -69,8 +70,6 @@ public:
   /// @param port TCP port.
   template <class Handle>
   void unpublish(const Handle& whom, uint16_t port = 0) {
-    if (! whom)
-      return;
     unpublish(whom.address(), port);
   }
 
@@ -83,10 +82,11 @@ public:
   ///                       to an untyped otherwise unexpected actor.
   template <class ActorHandle>
   ActorHandle typed_remote_actor(std::string host, uint16_t port) {
-    ActorHandle hdl;
-    auto res = remote_actor(system().message_types(hdl),
-                            std::move(host), port);
-    return actor_cast<ActorHandle>(res);
+    detail::type_list<ActorHandle> tk;
+    auto x = remote_actor(system().message_types(tk), std::move(host), port);
+    if (! x)
+      throw std::runtime_error("received nullptr from middleman");
+    return actor_cast<ActorHandle>(std::move(x));
   }
 
   /// Establish a new connection to the actor at `host` on given `port`.
@@ -179,11 +179,13 @@ public:
     add_hook<impl>(std::move(fun));
   }
 
+/*
   /// Returns the actor associated with `name` at `nid` or
   /// `invalid_actor` if `nid` is not connected or has no actor
   /// associated to this `name`.
   /// @warning Blocks the caller until `nid` responded to the lookup.
   actor remote_lookup(atom_value name, const node_id& nid);
+*/
 
   /// Smart pointer for `network::multiplexer`.
   using backend_pointer = std::unique_ptr<network::multiplexer>;

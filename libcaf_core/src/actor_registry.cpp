@@ -148,10 +148,10 @@ namespace {
 struct kvstate {
   using key_type = std::string;
   using mapped_type = message;
-  using subscriber_set = std::unordered_set<actor>;
+  using subscriber_set = std::unordered_set<strong_actor_ptr>;
   using topic_set = std::unordered_set<std::string>;
   std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
-  std::unordered_map<actor,topic_set> subscribers;
+  std::unordered_map<strong_actor_ptr, topic_set> subscribers;
   const char* name = "caf.config_server";
   template <class Processor>
   friend void serialize(Processor& proc, kvstate& x, const unsigned int) {
@@ -166,19 +166,20 @@ void actor_registry::start() {
     CAF_LOG_TRACE("");
     std::string wildcard = "*";
     auto unsubscribe_all = [=](actor subscriber) {
-      if (! subscriber)
-        return;
       auto& subscribers = self->state.subscribers;
-      auto i = subscribers.find(subscriber);
+      auto ptr = actor_cast<strong_actor_ptr>(subscriber);
+      auto i = subscribers.find(ptr);
       if (i == subscribers.end())
         return;
       for (auto& key : i->second)
-        self->state.data[key].second.erase(subscriber);
+        self->state.data[key].second.erase(ptr);
       subscribers.erase(i);
     };
     self->set_down_handler([=](down_msg& dm) {
       CAF_LOG_TRACE(CAF_ARG(dm));
-      unsubscribe_all(actor_cast<actor>(dm.source));
+      auto ptr = actor_cast<strong_actor_ptr>(dm.source);
+      if (ptr)
+        unsubscribe_all(actor_cast<actor>(std::move(ptr)));
     });
     return {
       [=](put_atom, const std::string& key, message& msg) {
@@ -187,13 +188,17 @@ void actor_registry::start() {
           return;
         auto& vp = self->state.data[key];
         vp.first = std::move(msg);
-        for (auto& subscriber : vp.second)
+        for (auto& subscriber_ptr : vp.second) {
+          // we never put a nullptr in our map
+          auto subscriber = actor_cast<actor>(subscriber_ptr);
           if (subscriber != self->current_sender())
             self->send(subscriber, update_atom::value, key, vp.second);
+        }
         // also iterate all subscribers for '*'
         for (auto& subscriber : self->state.data[wildcard].second)
           if (subscriber != self->current_sender())
-            self->send(subscriber, update_atom::value, key, vp.second);
+            self->send(actor_cast<actor>(subscriber), update_atom::value,
+                       key, vp.second);
       },
       [=](get_atom, std::string& key) -> message {
         CAF_LOG_TRACE(CAF_ARG(key));
@@ -210,7 +215,7 @@ void actor_registry::start() {
                                                         : make_message());
       },
       [=](subscribe_atom, const std::string& key) {
-        auto subscriber = actor_cast<actor>(self->current_sender());
+        auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
         CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
         if (! subscriber)
           return;
@@ -225,12 +230,12 @@ void actor_registry::start() {
         }
       },
       [=](unsubscribe_atom, const std::string& key) {
-        auto subscriber = actor_cast<actor>(self->current_sender());
-        CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
+        auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
         if (! subscriber)
           return;
+        CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
         if (key == wildcard) {
-          unsubscribe_all(actor_cast<actor>(subscriber));
+          unsubscribe_all(actor_cast<actor>(std::move(subscriber)));
           return;
         }
         self->state.subscribers[subscriber].erase(key);
@@ -277,8 +282,8 @@ void actor_registry::stop() {
   // the scheduler is already stopped -> invoke exit messages manually
   dropping_execution_unit dummy{&system_};
   for (auto& kvp : named_entries_) {
-    auto mp = mailbox_element::make(nullptr,invalid_message_id, {},
-                                    exit_msg{invalid_actor_addr,
+    auto mp = mailbox_element::make(nullptr, invalid_message_id, {},
+                                    exit_msg{kvp.second->address(),
                                              exit_reason::kill});
     auto ptr = static_cast<local_actor*>(actor_cast<abstract_actor*>(kvp.second));
     ptr->exec_single_event(&dummy, mp);

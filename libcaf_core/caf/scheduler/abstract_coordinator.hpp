@@ -44,9 +44,7 @@ public:
   explicit abstract_coordinator(actor_system& sys);
 
   /// Returns a handle to the central printing actor.
-  inline actor printer() const {
-    return printer_;
-  }
+  actor printer() const;
 
   /// Puts `what` into the queue of a randomly chosen worker.
   virtual void enqueue(resumable* what) = 0;
@@ -92,8 +90,8 @@ protected:
   // configured number of workers
   size_t num_workers_;
 
-  actor timer_;
-  actor printer_;
+  strong_actor_ptr timer_;
+  strong_actor_ptr printer_;
 
   actor_system& system_;
 };

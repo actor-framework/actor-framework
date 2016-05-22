@@ -53,15 +53,17 @@ behavior untyped_second_stage() {
 
 struct fixture {
   actor_system system;
-  scoped_actor self{system, true};
-
+  scoped_actor self;
   actor first;
   actor second;
   actor first_and_second;
 
-  ~fixture() {
-    anon_send_exit(first, exit_reason::kill);
-    anon_send_exit(second, exit_reason::kill);
+  fixture()
+      : self(system, true),
+        first(unsafe_actor_handle_init),
+        second(unsafe_actor_handle_init),
+        first_and_second(unsafe_actor_handle_init) {
+    // nop
   }
 
   void init_untyped() {

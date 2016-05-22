@@ -34,7 +34,7 @@ using think_atom = atom_constant<atom("think")>;
 using chopstick = typed_actor<replies_to<take_atom>::with<taken_atom, bool>,
                               reacts_to<put_atom>>;
 
-chopstick::behavior_type taken_chopstick(chopstick::pointer self, actor_addr);
+chopstick::behavior_type taken_chopstick(chopstick::pointer, strong_actor_ptr);
 
 // either taken by a philosopher or available
 chopstick::behavior_type available_chopstick(chopstick::pointer self) {
@@ -50,7 +50,7 @@ chopstick::behavior_type available_chopstick(chopstick::pointer self) {
 }
 
 chopstick::behavior_type taken_chopstick(chopstick::pointer self,
-                                         actor_addr user) {
+                                         strong_actor_ptr user) {
   return {
     [](take_atom) -> std::tuple<taken_atom, bool> {
       return std::make_tuple(taken_atom::value, false);

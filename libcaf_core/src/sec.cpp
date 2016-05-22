@@ -30,7 +30,6 @@ const char* sec_strings[] = {
   "unexpected_response",
   "request_receiver_down",
   "request_timeout",
-  "no_actor_to_unpublish",
   "no_actor_published_at_port",
   "state_not_serializable",
   "unsupported_sys_key",

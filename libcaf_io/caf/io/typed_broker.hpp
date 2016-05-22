@@ -89,7 +89,7 @@ public:
 
   /// @cond PRIVATE
   std::set<std::string> message_types() const override {
-    typed_actor<Sigs...> hdl;
+    detail::type_list<typed_actor<Sigs...>> hdl;
     return this->system().message_types(hdl);
   }
 

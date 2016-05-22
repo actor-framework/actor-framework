@@ -115,14 +115,14 @@ public:
   void stop() override {
     CAF_LOG_TRACE("");
     await_all_locals_down(system(), {broker_});
-    broker_ = invalid_actor;
+    actor tmp{std::move(broker_)}; // manually break cycle
   }
 
   const actor& broker() const {
     return broker_;
   }
 
-  local_group(actor_system& sys, bool spawn_local_broker,
+  local_group(actor_system& sys, optional<actor> local_broker,
               local_group_module* mod, std::string id, const node_id& nid);
 
   ~local_group();
@@ -163,28 +163,26 @@ public:
     set_default_handler(fwd);
     set_down_handler([=](down_msg& dm) {
       CAF_LOG_TRACE(CAF_ARG(dm));
-      if (dm.source) {
-        auto first = acquaintances_.begin();
-        auto last = acquaintances_.end();
-        auto i = std::find_if(first, last, [&](const actor& a) {
-          return a == dm.source;
-        });
-        if (i != last)
-          acquaintances_.erase(i);
-      }
+      auto first = acquaintances_.begin();
+      auto last = acquaintances_.end();
+      auto i = std::find_if(first, last, [&](const actor& a) {
+        return a == dm.source;
+      });
+      if (i != last)
+        acquaintances_.erase(i);
     });
     // return behavior
     return {
       [=](join_atom, const actor& other) {
         CAF_LOG_TRACE(CAF_ARG(other));
-        if (other && acquaintances_.insert(other).second) {
+        if (acquaintances_.insert(other).second) {
           monitor(other);
         }
       },
       [=](leave_atom, const actor& other) {
         CAF_LOG_TRACE(CAF_ARG(other));
         acquaintances_.erase(other);
-        if (other && acquaintances_.erase(other) > 0)
+        if (acquaintances_.erase(other) > 0)
           demonitor(other);
       },
       [=](forward_atom, const message& what) {
@@ -243,13 +241,10 @@ public:
 
   template <class... Ts>
   local_group_proxy(actor_system& sys, actor remote_broker, Ts&&... xs)
-      : super(sys, false, std::forward<Ts>(xs)...) {
-    CAF_ASSERT(broker_ == invalid_actor);
-    CAF_ASSERT(remote_broker != invalid_actor);
-    CAF_LOG_TRACE(CAF_ARG(remote_broker));
-    broker_ = std::move(remote_broker);
-    proxy_broker_ = system().spawn<proxy_broker, hidden>(this);
-    monitor_ = system().spawn<hidden>(broker_monitor_actor, this);
+      : super(sys, std::move(remote_broker), std::forward<Ts>(xs)...),
+        proxy_broker_{sys.spawn<proxy_broker, hidden>(this)},
+        monitor_{sys.spawn<hidden>(broker_monitor_actor, this)} {
+    // nop
   }
 
   bool subscribe(strong_actor_ptr who) override {
@@ -286,9 +281,9 @@ public:
   void stop() override {
     CAF_LOG_TRACE("");
     await_all_locals_down(system_, {monitor_, proxy_broker_, broker_});
-    monitor_ = invalid_actor;
-    proxy_broker_ = invalid_actor;
-    broker_ = invalid_actor;
+    invalidate(monitor_);
+    invalidate(proxy_broker_);
+    invalidate(broker_);
   }
 
 private:
@@ -346,7 +341,7 @@ public:
     auto i = instances_.find(identifier);
     if (i != instances_.end())
       return {i->second};
-    auto tmp = make_counted<local_group>(system(), true, this, identifier,
+    auto tmp = make_counted<local_group>(system(), none, this, identifier,
                                          system().node());
     upgrade_to_unique_guard uguard(guard);
     auto p = instances_.emplace(identifier, tmp);
@@ -362,18 +357,19 @@ public:
     CAF_LOG_TRACE("");
     // deserialize identifier and broker
     std::string identifier;
-    actor broker;
-    source >> identifier >> broker;
-    CAF_LOG_DEBUG(CAF_ARG(identifier) << CAF_ARG(broker));
-    if (! broker)
+    strong_actor_ptr broker_ptr;
+    source >> identifier >> broker_ptr;
+    CAF_LOG_DEBUG(CAF_ARG(identifier) << CAF_ARG(broker_ptr));
+    if (! broker_ptr)
       return invalid_group;
+    auto broker = actor_cast<actor>(broker_ptr);
     if (broker->node() == system().node())
       return this->get(identifier);
     upgrade_guard guard(proxies_mtx_);
     auto i = proxies_.find(broker);
     if (i != proxies_.end())
       return {i->second};
-    local_group_ptr tmp = make_counted<local_group_proxy>(system(),broker,
+    local_group_ptr tmp = make_counted<local_group_proxy>(system(), broker,
                                                           this, identifier,
                                                           broker->node());
     upgrade_to_unique_guard uguard(guard);
@@ -385,7 +381,7 @@ public:
   void save(const local_group* ptr, serializer& sink) const {
     CAF_ASSERT(ptr != nullptr);
     CAF_LOG_TRACE("");
-    sink << ptr->identifier() << ptr->broker();
+    sink << ptr->identifier() << actor_cast<strong_actor_ptr>(ptr->broker());
   }
 
   void stop() override {
@@ -411,14 +407,12 @@ private:
   std::map<actor, local_group_ptr> proxies_;
 };
 
-local_group::local_group(actor_system& sys, bool do_spawn,
+local_group::local_group(actor_system& sys, optional<actor> lb,
                          local_group_module* mod, std::string id,
                          const node_id& nid)
-    : abstract_group(sys, mod, std::move(id), nid) {
-  CAF_LOG_TRACE(CAF_ARG(do_spawn) << CAF_ARG(id) << CAF_ARG(nid));
-  if (do_spawn)
-    broker_ = sys.spawn<local_broker, hidden>(this);
-  // else: derived class spawns broker_
+    : abstract_group(sys, mod, std::move(id), nid),
+      broker_(lb ? *lb : sys.spawn<local_broker, hidden>(this)) {
+  CAF_LOG_TRACE(CAF_ARG(id) << CAF_ARG(nid));
 }
 
 local_group::~local_group() {

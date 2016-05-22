@@ -92,7 +92,6 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_MESSAGE("connect to typed_remote_actor");
   auto serv = system.middleman().typed_remote_actor<server_type>("127.0.0.1",
                                                                  port);
-  CAF_REQUIRE(serv);
   scoped_actor self{system};
   self->request(serv, infinite, ping{42}).receive(
     [](const pong& p) {

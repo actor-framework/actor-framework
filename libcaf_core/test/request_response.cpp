@@ -390,7 +390,7 @@ CAF_TEST(client_server_worker_user_case) {
   self->request(serv, infinite, request_atom::value).receive(
     [&](response_atom) {
       CAF_MESSAGE("received 'response'");
-      CAF_CHECK_EQUAL(self->current_sender(), work.address());
+      CAF_CHECK_EQUAL(self->current_sender(), work);
     },
     [&](const error& err) {
       CAF_ERROR("error: " << self->system().render(err));

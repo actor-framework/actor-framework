@@ -55,7 +55,7 @@ public:
 };
 
 struct fixture {
-  fixture() {
+  fixture() : testee(unsafe_actor_handle_init) {
     new (&system) actor_system(actor_system_config{test::engine::argc(),
                                                    test::engine::argv()}
                                .load<io::middleman>());
@@ -64,29 +64,30 @@ struct fixture {
 
   ~fixture() {
     anon_send_exit(testee, exit_reason::user_shutdown);
-    testee = invalid_actor;
+    invalidate(testee);
     system.~actor_system();
     CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
   }
 
   actor remote_actor(const char* hostname, uint16_t port,
                      bool expect_fail = false) {
-    actor result;
+    actor result{unsafe_actor_handle_init};
     scoped_actor self{system, true};
     self->request(system.middleman().actor_handle(), infinite,
                   connect_atom::value, hostname, port).receive(
       [&](ok_atom, node_id&, strong_actor_ptr& res, std::set<std::string>& xs) {
         CAF_REQUIRE(xs.empty());
-        result = actor_cast<actor>(std::move(res));
+        if (res)
+          result = actor_cast<actor>(std::move(res));
       },
       [&](error&) {
         // nop
       }
     );
-    if (! expect_fail)
-      CAF_REQUIRE(result != invalid_actor);
+    if (expect_fail)
+      CAF_REQUIRE(result.unsafe());
     else
-      CAF_REQUIRE(result == invalid_actor);
+      CAF_REQUIRE(! result.unsafe());
     return result;
   }
 
@@ -119,7 +120,7 @@ CAF_TEST(unpublishing) {
             down_msg{testee.address(), exit_reason::normal});
   // must fail now
   auto x2 = remote_actor("127.0.0.1", port, true);
-  CAF_CHECK(! x2);
+  CAF_CHECK(x2.unsafe());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

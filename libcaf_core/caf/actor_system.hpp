@@ -171,17 +171,37 @@ public:
 
   using message_types_set = std::set<std::string>;
 
+  inline message_types_set message_types(detail::type_list<scoped_actor>) {
+    return message_types_set{};
+  }
+
+  inline message_types_set message_types(detail::type_list<actor>) {
+    return message_types_set{};
+  }
+
+  template <class... Ts>
+  message_types_set message_types(detail::type_list<typed_actor<Ts...>>) {
+    static_assert(sizeof...(Ts) > 0, "empty typed actor handle given");
+    message_types_set result{get_rtti_from_mpi<Ts>(types())...};
+    return result;
+  }
+
   inline message_types_set message_types(const actor&) {
     return message_types_set{};
   }
 
-  /// Returns a string representation of the messaging
-  /// interface using portable names;
   template <class... Ts>
   message_types_set message_types(const typed_actor<Ts...>&) {
-    static_assert(sizeof...(Ts) > 0, "empty typed actor handle given");
-    message_types_set result{get_rtti_from_mpi<Ts>(types())...};
-    return result;
+    detail::type_list<typed_actor<Ts...>> token;
+    return message_types(token);
+  }
+
+  /// Returns a string representation of the messaging
+  /// interface using portable names;
+  template <class T>
+  message_types_set message_types() {
+    detail::type_list<T> token;
+    return message_types(token);
   }
 
   /// Returns the host-local identifier for this system.

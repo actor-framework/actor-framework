@@ -22,7 +22,6 @@
 
 #include "caf/intrusive_ptr.hpp"
 
-#include "caf/actor.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/replies_to.hpp"
@@ -31,6 +30,7 @@
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
+#include "caf/unsafe_actor_handle_init.hpp"
 
 #include "caf/decorator/adapter.hpp"
 #include "caf/decorator/splitter.hpp"
@@ -58,10 +58,7 @@ class typed_broker;
 template <class... Sigs>
 class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     detail::comparable<typed_actor<Sigs...>, actor_addr>,
-                    detail::comparable<typed_actor<Sigs...>, strong_actor_ptr>,
-                    detail::comparable<typed_actor<Sigs...>, invalid_actor_t>,
-                    detail::comparable<typed_actor<Sigs...>,
-                                       invalid_actor_addr_t> {
+                    detail::comparable<typed_actor<Sigs...>, strong_actor_ptr> {
  public:
   static_assert(sizeof...(Sigs) > 0, "Empty typed actor handle");
 
@@ -78,6 +75,9 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
+
+  // tell actor_cast this is a non-null handle type
+  static constexpr bool has_non_null_guarantee = true;
 
   /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
@@ -126,7 +126,8 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   using stateful_broker_pointer =
     stateful_actor<State, broker_base>*;
 
-  typed_actor() = default;
+  typed_actor() = delete;
+
   typed_actor(typed_actor&&) = default;
   typed_actor(const typed_actor&) = default;
   typed_actor& operator=(typed_actor&&) = default;
@@ -150,7 +151,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                                       typename TypedActor::signatures())
               >::type>
   typed_actor(TypedActor* ptr) : ptr_(ptr->ctrl()) {
-    // nop
+    CAF_ASSERT(ptr != nullptr);
   }
 
   template <class TypedActor,
@@ -174,12 +175,8 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     // nop
   }
 
-  typed_actor(const invalid_actor_t&) {
+  typed_actor(const unsafe_actor_handle_init_t&) {
     // nop
-  }
-
-  typed_actor& operator=(const invalid_actor_t&) {
-    ptr_.reset();
   }
 
   /// Queries the address of the stored actor.
@@ -187,24 +184,14 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return {ptr_.get(), true};
   }
 
-  /// Returns `*this != invalid_actor`.
-  explicit operator bool() const noexcept {
-    return static_cast<bool>(ptr_);
-  }
-
-  /// Returns `*this == invalid_actor`.
-  bool operator!() const noexcept {
-    return !ptr_;
-  }
-
   /// Returns the origin node of this actor.
   node_id node() const noexcept {
-    return ptr_ ? ptr_->node() : invalid_node_id;
+    return ptr_->node();
   }
 
   /// Returns the ID of this actor.
   actor_id id() const noexcept {
-    return ptr_ ? ptr_->id() : invalid_actor_id;
+    return ptr_->id();
   }
 
   /// Exchange content of `*this` and `other`.
@@ -219,12 +206,16 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     typename std::decay<Ts>::type...
   >::type
   bind(Ts&&... xs) const {
-    if (! ptr_)
-      return invalid_actor;
     auto& sys = *(ptr_->home_system);
     auto ptr = make_actor<decorator::adapter, strong_actor_ptr>(
       sys.next_actor_id(), sys.node(), &sys, ptr_, make_message(xs...));
     return {ptr.release(), false};
+  }
+
+  /// Queries whether this object was constructed using
+  /// `unsafe_actor_handle_init` or is in moved-from state.
+  bool unsafe() const {
+    return ! ptr_;
   }
 
   /// @cond PRIVATE
@@ -249,14 +240,6 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return actor_addr::compare(get(), actor_cast<actor_control_block*>(x));
   }
 
-  intptr_t compare(const invalid_actor_t&) const noexcept {
-    return ptr_ ? 1 : 0;
-  }
-
-  intptr_t compare(const invalid_actor_addr_t&) const noexcept {
-    return ptr_ ? 1 : 0;
-  }
-
   typed_actor(actor_control_block* ptr, bool add_ref) : ptr_(ptr, add_ref) {
     // nop
   }
@@ -268,6 +251,12 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   friend inline std::string to_string(const typed_actor& x) {
     return to_string(x.ptr_);
+  }
+
+  /// Releases the reference held by handle `x`. Using the
+  /// handle after invalidating it is undefined behavior.
+  friend void invalidate(typed_actor& x) {
+    x.ptr_.reset();
   }
 
   /// @endcond
@@ -318,10 +307,8 @@ operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
       detail::type_list<Xs...>,
       Ys...
     >::type;
-  if (! f || ! g)
-    return invalid_actor;
   auto& sys = g->home_system();
-  auto mts = sys.message_types(result{});
+  auto mts = sys.message_types(detail::type_list<result>{});
   return make_actor<decorator::sequencer, result>(
     sys.next_actor_id(), sys.node(), &sys,
     actor_cast<strong_actor_ptr>(std::move(f)),
@@ -343,11 +330,8 @@ splice(const typed_actor<Xs...>& x, const Ts&... xs) {
     >::type;
   std::vector<strong_actor_ptr> tmp{actor_cast<strong_actor_ptr>(x),
                                     actor_cast<strong_actor_ptr>(xs)...};
-  for (auto& addr : tmp)
-    if (! addr)
-      return invalid_actor;
   auto& sys = x->home_system();
-  auto mts = sys.message_types(result{});
+  auto mts = sys.message_types(detail::type_list<result>{});
   return make_actor<decorator::splitter, result>(sys.next_actor_id(),
                                                  sys.node(), &sys,
                                                  std::move(tmp),

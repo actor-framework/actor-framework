@@ -176,8 +176,6 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   }
   if (msg.match_elements<sys_atom, put_atom, actor>()) {
     auto& worker = msg.get_as<actor>(2);
-    if (worker == invalid_actor)
-      return true;
     worker->attach(default_attachable::make_monitor(worker.address(),
                                                     address()));
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};

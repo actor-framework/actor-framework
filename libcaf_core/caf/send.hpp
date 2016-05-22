@@ -56,8 +56,6 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
                                           response_to(signatures_of<Dest>(),
                                                       token{})),
                 "this actor does not accept the response message");
-  if (! dest)
-    return;
   dest->eq_impl(message_id::make(P), actor_cast<strong_actor_ptr>(src),
                 nullptr, std::forward<Ts>(xs)...);
 }
@@ -66,21 +64,29 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
 template <message_priority P = message_priority::normal,
           class Dest = actor, class... Ts>
 void anon_send(const Dest& dest, Ts&&... xs) {
-  send_as<P>(actor{}, dest, std::forward<Ts>(xs)...);
+  static_assert(sizeof...(Ts) > 0, "no message to send");
+  using token =
+    detail::type_list<
+      typename detail::implicit_conversions<
+        typename std::decay<Ts>::type
+      >::type...>;
+  static_assert(actor_accepts_message(signatures_of<Dest>(), token{}),
+                "receiver does not accept given message");
+  dest->eq_impl(message_id::make(P), nullptr, nullptr, std::forward<Ts>(xs)...);
 }
 
 /// Anonymously sends `dest` an exit message.
 template <class Dest>
 void anon_send_exit(const Dest& dest, exit_reason reason) {
-  if (! dest)
-    return;
   dest->enqueue(nullptr, message_id::make(),
-                make_message(exit_msg{invalid_actor_addr, reason}), nullptr);
+                make_message(exit_msg{dest->address(), reason}), nullptr);
 }
 
 /// Anonymously sends `to` an exit message.
 inline void anon_send_exit(const actor_addr& to, exit_reason reason) {
-  anon_send_exit(actor_cast<actor>(to), reason);
+  auto ptr = actor_cast<strong_actor_ptr>(to);
+  if (ptr)
+    anon_send_exit(ptr, reason);
 }
 
 } // namespace caf

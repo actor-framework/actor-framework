@@ -106,6 +106,8 @@ public:
 
   /// @cond PRIVATE
 
+  actor_addr address();
+
   inline actor_id id() const noexcept {
     return aid;
   }
@@ -145,6 +147,22 @@ void intrusive_ptr_release(actor_control_block* x);
 /// @relates actor_control_block
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
+/// @relates strong_actor_ptr
+bool operator==(const strong_actor_ptr&, const abstract_actor*);
+
+/// @relates strong_actor_ptr
+bool operator==(const abstract_actor*, const strong_actor_ptr&);
+
+/// @relates strong_actor_ptr
+inline bool operator!=(const strong_actor_ptr& x, const abstract_actor* y) {
+  return !(x == y);
+}
+
+/// @relates strong_actor_ptr
+inline bool operator!=(const abstract_actor* x, const strong_actor_ptr& y) {
+  return !(x == y);
+}
+
 /// @relates abstract_actor
 /// @relates actor_control_block
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
@@ -168,5 +186,24 @@ std::string to_string(const strong_actor_ptr&);
 std::string to_string(const weak_actor_ptr&);
 
 } // namespace caf
+
+// allow actor pointers to be used in hash maps
+namespace std {
+
+template <>
+struct hash<caf::strong_actor_ptr> {
+  inline size_t operator()(const caf::strong_actor_ptr& ptr) const {
+    return ptr ? static_cast<size_t>(ptr->id()) : 0;
+  }
+};
+
+template <>
+struct hash<caf::weak_actor_ptr> {
+  inline size_t operator()(const caf::weak_actor_ptr& ptr) const {
+    return ptr ? static_cast<size_t>(ptr->id()) : 0;
+  }
+};
+
+} // namespace std
 
 #endif // CAF_ACTOR_CONTROL_BLOCK_HPP

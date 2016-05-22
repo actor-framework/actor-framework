@@ -214,10 +214,13 @@ public:
   /// Sends an exit message to `dest`.
   void send_exit(const actor_addr& dest, error reason);
 
+  void send_exit(const strong_actor_ptr& dest, error reason);
+
   /// Sends an exit message to `dest`.
   template <class ActorHandle>
   void send_exit(const ActorHandle& dest, error reason) {
-    send_exit(dest.address(), std::move(reason));
+    dest->eq_impl(message_id::make(), nullptr, context(),
+                  exit_msg{address(), std::move(reason)});
   }
 
   // -- miscellaneous actor operations -----------------------------------------
@@ -308,10 +311,9 @@ public:
 
   /// @endcond
 
-  /// Returns the address of the sender of the current message.
-  inline actor_addr current_sender() {
-    return current_element_ ? actor_cast<actor_addr>(current_element_->sender)
-                            : invalid_actor_addr;
+  /// Returns a pointer to the sender of the current message.
+  inline strong_actor_ptr current_sender() {
+    return current_element_ ? current_element_->sender : nullptr;
   }
 
   /// Adds a unidirectional `monitor` to `whom`.
@@ -478,8 +480,6 @@ public:
         >::type...>;
     static_assert(actor_accepts_message(signatures_of<Handle>(), token{}),
                   "receiver does not accept given message");
-    if (! dest)
-      return {};
     auto mid = current_element_->mid;
     current_element_->mid = P == message_priority::high
                             ? mid.with_high_priority()

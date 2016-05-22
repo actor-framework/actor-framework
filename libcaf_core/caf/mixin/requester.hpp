@@ -68,9 +68,8 @@ public:
     static_assert(actor_accepts_message(signatures_of<Handle>(), token{}),
                   "receiver does not accept given message");
     auto req_id = dptr()->new_request_id(P);
-    if (dest)
-      dest->eq_impl(req_id, dptr()->ctrl(), dptr()->context(),
-                    std::forward<Ts>(xs)...);
+    dest->eq_impl(req_id, dptr()->ctrl(), dptr()->context(),
+                  std::forward<Ts>(xs)...);
     dptr()->request_sync_timeout_msg(timeout, req_id);
     return {req_id.response_id(), dptr()};
   }

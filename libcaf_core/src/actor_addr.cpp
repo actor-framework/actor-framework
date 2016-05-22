@@ -28,7 +28,7 @@
 
 namespace caf {
 
-actor_addr::actor_addr(const invalid_actor_addr_t&) : ptr_(nullptr) {
+actor_addr::actor_addr(const unsafe_actor_handle_init_t&) {
   // nop
 }
 
@@ -39,11 +39,6 @@ actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr) {
 actor_addr::actor_addr(actor_control_block* ptr, bool add_ref)
     : ptr_(ptr, add_ref) {
   // nop
-}
-
-actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
-  ptr_.reset();
-  return *this;
 }
 
 intptr_t actor_addr::compare(const actor_control_block* lhs,

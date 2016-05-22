@@ -52,7 +52,10 @@ CAF_TEST(constructor_attach) {
   };
   class spawner : public event_based_actor {
   public:
-    spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
+    spawner(actor_config& cfg)
+        : event_based_actor(cfg),
+          downs_(0),
+          testee_(spawn<testee, monitored>(this)) {
       set_down_handler([=](down_msg& msg) {
         CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
         CAF_CHECK_EQUAL(msg.source, testee_.address());
@@ -62,7 +65,6 @@ CAF_TEST(constructor_attach) {
     }
 
     behavior make_behavior() {
-      testee_ = spawn<testee, monitored>(this);
       return {
         [=](done_atom, const error& reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
@@ -77,7 +79,7 @@ CAF_TEST(constructor_attach) {
     }
 
     void on_exit() {
-      testee_ = invalid_actor;
+      invalidate(testee_);
     }
 
   private:

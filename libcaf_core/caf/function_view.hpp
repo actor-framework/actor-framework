@@ -93,7 +93,7 @@ class function_view {
 public:
   using type = Actor;
 
-  function_view() {
+  function_view() : impl_(unsafe_actor_handle_init) {
     // nop
   }
 
@@ -102,12 +102,12 @@ public:
   }
 
   ~function_view() {
-    if (impl_)
+    if (! impl_.unsafe())
       self_.~scoped_actor();
   }
 
   function_view(function_view&& x) : impl_(std::move(x.impl_)) {
-    if (impl_) {
+    if (! impl_.unsafe()) {
       new (&self_) scoped_actor(std::move(x.self_));
       x.self_.~scoped_actor();
     }
@@ -115,7 +115,7 @@ public:
 
   function_view& operator=(function_view&& x) {
     assign(x.impl_);
-    x.assign(invalid_actor);
+    x.assign(unsafe_actor_handle_init);
     return *this;
   }
 
@@ -134,7 +134,7 @@ public:
                 >::tuple_type
               >::type>
   R operator()(Ts&&... xs) {
-    if (! impl_)
+    if (impl_.unsafe())
       throw std::bad_function_call();
     R result;
     function_view_storage<R> h{result};
@@ -142,23 +142,23 @@ public:
       self_->request(impl_, infinite, std::forward<Ts>(xs)...).receive(h);
     }
     catch (std::exception&) {
-      assign(invalid_actor);
+      assign(unsafe_actor_handle_init);
       throw;
     }
     return flatten(result);
   }
 
   void assign(type x) {
-    if (! impl_ && x)
+    if (impl_.unsafe() && ! x.unsafe())
       new_self(x);
-    if (impl_ && ! x)
+    if (! impl_.unsafe() && x.unsafe())
       self_.~scoped_actor();
     impl_.swap(x);
   }
 
   /// Checks whether this function view has an actor assigned to it.
   explicit operator bool() const {
-    return static_cast<bool>(impl_);
+    return ! impl_.unsafe();
   }
 
 private:
@@ -173,7 +173,7 @@ private:
   }
 
   void new_self(const Actor& x) {
-    if (x)
+    if (! x.unsafe())
       new (&self_) scoped_actor(x->home_system());
   }
 

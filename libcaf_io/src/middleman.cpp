@@ -103,6 +103,7 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 
 middleman::middleman(actor_system& sys)
     : system_(sys),
+      manager_(unsafe_actor_handle_init),
       heartbeat_interval_(0),
       enable_automatic_connections_(false) {
   // nop
@@ -243,19 +244,18 @@ group middleman::remote_group(const std::string& group_identifier,
   return result;
 }
 
+/*
 actor middleman::remote_lookup(atom_value name, const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(nid));
   auto basp = named_broker<basp_broker>(atom("BASP"));
-  if (! basp)
-    return invalid_actor;
   actor result;
   scoped_actor self{system(), true};
   try {
     self->send(basp, forward_atom::value, self.address(), nid, name,
                make_message(sys_atom::value, get_atom::value, "info"));
     self->receive(
-      [&](ok_atom, const std::string& /* key == "info" */,
-          const actor_addr& addr, const std::string& /* name */) {
+      [&](ok_atom, const std::string&,
+          const actor_addr& addr, const std::string&) {
         result = actor_cast<actor>(addr);
       },
       after(std::chrono::minutes(5)) >> [] {
@@ -267,6 +267,7 @@ actor middleman::remote_lookup(atom_value name, const node_id& nid) {
   }
   return result;
 }
+*/
 
 void middleman::start() {
   CAF_LOG_TRACE("");

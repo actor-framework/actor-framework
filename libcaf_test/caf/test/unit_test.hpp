@@ -40,8 +40,8 @@ namespace caf {
 namespace test {
 
 template <class T, class U,
-          class Common = typename std::common_type<T, U>::type,
-          typename std::enable_if<std::is_floating_point<Common>::value,
+          typename std::enable_if<std::is_floating_point<T>::value
+                                  || std::is_floating_point<U>::value,
                                   int>::type = 0>
 bool equal_to(const T& t, const U& u) {
   auto x = static_cast<double>(t);
@@ -52,8 +52,8 @@ bool equal_to(const T& t, const U& u) {
 }
 
 template <class T, class U,
-          class Common = typename std::common_type<T, U>::type,
-          typename std::enable_if<! std::is_floating_point<Common>::value,
+          typename std::enable_if<! std::is_floating_point<T>::value
+                                  && !std::is_floating_point<U>::value,
                                   int>::type = 0>
 bool equal_to(const T& x, const U& y) {
   return x == y;

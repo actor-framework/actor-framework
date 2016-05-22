@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "caf/fwd.hpp"
 #include "caf/group.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/deep_to_string.hpp"
@@ -36,11 +37,34 @@ namespace caf {
 /// Sent to all links when an actor is terminated.
 /// @note Actors can override the default handler by calling
 ///       `self->set_exit_handler(...)`.
-struct exit_msg {
+class exit_msg {
+public:
+  // -- friend types that need access to private ctors -------------------------
+
+  template <class>
+  friend class data_processor;
+
+  template <class>
+  friend class type_erased_value_impl;
+
+  // -- constructors -----------------------------------------------------------
+
+  inline exit_msg(actor_addr x, error y)
+      : source(std::move(x)),
+        reason(std::move(y)) {
+    // nop
+  }
+
+  // -- data members -----------------------------------------------------------
+
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
+
   /// The exit reason of the terminated actor.
   error reason;
+
+private:
+  exit_msg() = default;
 };
 
 inline std::string to_string(const exit_msg& x) {
@@ -54,11 +78,34 @@ void serialize(Processor& proc, exit_msg& x, const unsigned int) {
 }
 
 /// Sent to all actors monitoring an actor when it is terminated.
-struct down_msg {
+class down_msg {
+public:
+  // -- friend types that need access to private ctors -------------------------
+
+  template <class>
+  friend class data_processor;
+
+  template <class>
+  friend class type_erased_value_impl;
+
+  // -- constructors -----------------------------------------------------------
+
+  inline down_msg(actor_addr x, error y)
+      : source(std::move(x)),
+        reason(std::move(y)) {
+    // nop
+  }
+
+  // -- data members -----------------------------------------------------------
+
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
+
   /// The exit reason of the terminated actor.
   error reason;
+
+private:
+  down_msg() = default;
 };
 
 inline std::string to_string(const down_msg& x) {

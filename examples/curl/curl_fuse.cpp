@@ -111,8 +111,7 @@ struct base_state {
     return aout(self) << color << name << " (id = " << self->id() << "): ";
   }
 
-  virtual void init(actor m_parent, std::string m_name, std::string m_color) {
-    parent = std::move(m_parent);
+  virtual void init(std::string m_name, std::string m_color) {
     name = std::move(m_name);
     color = std::move(m_color);
     print() << "started" << color::reset_endl;
@@ -123,15 +122,14 @@ struct base_state {
   }
 
   local_actor* self;
-  actor parent;
   std::string name;
   std::string color;
 };
 
 // encapsulates an HTTP request
 behavior client_job(stateful_actor<base_state>* self, actor parent) {
-  self->state.init(std::move(parent), "client-job", color::blue);
-  self->send(self->state.parent, read_atom::value,
+  self->state.init("client-job", color::blue);
+  self->send(parent, read_atom::value,
              "http://www.example.com/index.html",
              uint64_t{0}, uint64_t{4095});
   return {
@@ -166,7 +164,7 @@ struct client_state : base_state {
 behavior client(stateful_actor<client_state>* self, actor parent) {
   using std::chrono::milliseconds;
   self->link_to(parent);
-  self->state.init(std::move(parent), "client", color::green);
+  self->state.init("client", color::green);
   self->send(self, next_atom::value);
   return {
     [=](next_atom) {
@@ -175,7 +173,7 @@ behavior client(stateful_actor<client_state>* self, actor parent) {
                  << color::reset_endl;
       // client_job will use IO
       // and should thus be spawned in a separate thread
-      self->spawn<detached+linked>(client_job, st.parent);
+      self->spawn<detached+linked>(client_job, parent);
       // compute random delay until next job is launched
       auto delay = st.dist(st.re);
       self->delayed_send(self, milliseconds(delay), next_atom::value);
@@ -202,14 +200,13 @@ struct curl_state : base_state {
     return size;
   }
 
-  void init(actor m_parent, std::string m_name, std::string m_color) override {
+  void init(std::string m_name, std::string m_color) override {
     curl = curl_easy_init();
     if (! curl)
       throw std::runtime_error("Unable initialize CURL.");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curl_state::callback);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-    base_state::init(std::move(m_parent), std::move(m_name),
-                     std::move(m_color));
+    base_state::init(std::move(m_name), std::move(m_color));
   }
 
   CURL*       curl = nullptr;
@@ -218,7 +215,7 @@ struct curl_state : base_state {
 
 // manages a CURL session
 behavior curl_worker(stateful_actor<curl_state>* self, actor parent) {
-  self->state.init(std::move(parent), "curl-worker", color::yellow);
+  self->state.init("curl-worker", color::yellow);
   return {
     [=](read_atom, const std::string& fname, uint64_t offset, uint64_t range)
     -> message {
@@ -259,7 +256,7 @@ behavior curl_worker(stateful_actor<curl_state>* self, actor parent) {
                          << hc
                          << color::reset_endl;
               // tell parent that this worker is done
-              self->send(st.parent, finished_atom::value);
+              self->send(parent, finished_atom::value);
               return make_message(reply_atom::value, std::move(st.buf));
             case 404: // file does not exist
               st.print() << "http error: download failed with "
@@ -284,7 +281,7 @@ struct master_state : base_state {
 };
 
 behavior curl_master(stateful_actor<master_state>* self) {
-  self->state.init(invalid_actor, "curl-master", color::magenta);
+  self->state.init("curl-master", color::magenta);
   // spawn workers
   for(size_t i = 0; i < num_curl_workers; ++i)
     self->state.idle.push_back(self->spawn<detached+linked>(curl_worker, self));

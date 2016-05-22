@@ -39,8 +39,6 @@ enum class sec : uint8_t {
   request_receiver_down,
   /// Indicates that a request message timed out.
   request_timeout,
-  /// Unpublishing failed because the actor is `invalid_actor`.
-  no_actor_to_unpublish,
   /// Unpublishing failed because the actor is not bound to given port.
   no_actor_published_at_port,
   /// Migration failed because the state of an actor is not serializable.

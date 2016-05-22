@@ -259,8 +259,7 @@ uint32_t local_actor::request_timeout(const duration& d) {
     // immediately enqueue timeout message if duration == 0s
     enqueue(ctrl(), invalid_message_id, std::move(msg), context());
   else
-    system().scheduler().delayed_send(d, ctrl(),
-                                      actor_cast<strong_actor_ptr>(this),
+    system().scheduler().delayed_send(d, ctrl(), strong_actor_ptr(ctrl()),
                                       message_id::make(), std::move(msg));
   return result;
 }
@@ -985,11 +984,14 @@ void local_actor::do_become(behavior bhvr, bool discard_old) {
 }
 
 void local_actor::send_exit(const actor_addr& whom, error reason) {
-  auto ptr = actor_cast<actor>(whom);
-  if (! ptr)
+  send_exit(actor_cast<strong_actor_ptr>(whom), std::move(reason));
+}
+
+void local_actor::send_exit(const strong_actor_ptr& dest, error reason) {
+  if (! dest)
     return;
-  ptr->eq_impl(message_id::make(), nullptr, context(),
-               exit_msg{address(), std::move(reason)});
+  dest->get()->eq_impl(message_id::make(), nullptr, context(),
+                       exit_msg{address(), std::move(reason)});
 }
 
 const char* local_actor::name() const {

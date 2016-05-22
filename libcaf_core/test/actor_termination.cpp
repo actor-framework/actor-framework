@@ -42,7 +42,10 @@ struct fixture {
   actor mirror;
   actor testee;
 
-  fixture() : self(system), mirror(system.spawn(mirror_impl)) {
+  fixture()
+      : self(system),
+        mirror(system.spawn(mirror_impl)),
+        testee(unsafe_actor_handle_init) {
     self->set_down_handler([](local_actor*, down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
     });

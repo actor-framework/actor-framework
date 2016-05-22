@@ -53,6 +53,7 @@ class client_impl : public event_based_actor {
 public:
   client_impl(actor_config& cfg, string hostaddr, uint16_t port)
       : event_based_actor(cfg),
+        server_(unsafe_actor_handle_init),
         host_(std::move(hostaddr)),
         port_(port) {
     set_default_handler(skip);
@@ -109,8 +110,8 @@ private:
     auto mm = system().middleman().actor_handle();
     send(mm, connect_atom::value, host_, port_);
     return {
-      [=](ok_atom, node_id&, actor_addr& new_server, std::set<std::string>&) {
-        if (new_server == invalid_actor_addr) {
+      [=](ok_atom, node_id&, strong_actor_ptr& new_server, std::set<std::string>&) {
+        if (! new_server) {
           aout(this) << "*** received invalid remote actor" << endl;
           return;
         }

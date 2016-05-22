@@ -93,7 +93,9 @@ using config_value = detail::parse_ini_t::value;
 struct fixture {
   actor_system system;
 
-  fixture() : system(test::engine::argc(), test::engine::argv()) {
+  fixture()
+      : system(test::engine::argc(), test::engine::argv()),
+        config_server(unsafe_actor_handle_init) {
     // nop
   }
 
@@ -108,7 +110,6 @@ struct fixture {
 
   void load_to_config_server(const char* str) {
     config_server = actor_cast<actor>(system.registry().get(atom("ConfigServ")));
-    CAF_REQUIRE(config_server != invalid_actor);
     // clear config
     scoped_actor self{system};
     self->request(config_server, infinite, get_atom::value, "*").receive(
@@ -165,7 +166,7 @@ struct fixture {
 
   template <class T>
   bool value_is(const char* key, const T& what) {
-    if (config_server != invalid_actor)
+    if (! config_server.unsafe())
       return config_server_has(key, what);
     auto& cv = values[key];
     using type =
@@ -183,7 +184,7 @@ struct fixture {
   }
 
   size_t num_values() {
-    if (config_server != invalid_actor) {
+    if (! config_server.unsafe()) {
       size_t result = 0;
       scoped_actor self{system};
       self->request(config_server, infinite, get_atom::value, "*").receive(

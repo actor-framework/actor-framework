@@ -70,8 +70,6 @@ public:
                                             response_to(signatures_of<Dest>(),
                                                         token{})),
                   "this actor does not accept the response message");
-    if (! dest)
-      return;
     dest->eq_impl(message_id::make(P), this->ctrl(),
                   this->context(), std::forward<Ts>(xs)...);
   }
@@ -97,8 +95,6 @@ public:
                                             response_to(signatures_of<Dest>(),
                                                         token{})),
                   "this actor does not accept the response message");
-    if (! dest)
-      return;
     this->system().scheduler().delayed_send(
       rtime, this->ctrl(), actor_cast<strong_actor_ptr>(dest),
       message_id::make(P), make_message(std::forward<Ts>(xs)...));

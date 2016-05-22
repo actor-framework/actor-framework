@@ -270,7 +270,7 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
       res = mailbox_element::make(ctrl(), node.mid.response_id(),
                                   {}, std::move(err));
     if (res) {
-      auto s = actor_cast<actor>(node.sender);
+      auto s = actor_cast<strong_actor_ptr>(node.sender);
       if (s)
         s->enqueue(std::move(res), context);
     }

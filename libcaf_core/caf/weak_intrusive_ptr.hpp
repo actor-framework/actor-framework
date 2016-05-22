@@ -47,6 +47,9 @@ public:
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = true;
 
+  // tell actor_cast this pointer can be null
+  static constexpr bool has_non_null_guarantee = false;
+
   constexpr weak_intrusive_ptr() : ptr_(nullptr) {
     // nop
   }

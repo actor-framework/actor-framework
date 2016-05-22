@@ -308,11 +308,15 @@ void printer_loop(blocking_actor* self) {
  *                       implementation of coordinator                        *
  ******************************************************************************/
 
+actor abstract_coordinator::printer() const {
+  return actor_cast<actor>(printer_);
+}
+
 void abstract_coordinator::start() {
   CAF_LOG_TRACE("");
   // launch utility actors
-  timer_ = system_.spawn<timer_actor, hidden + detached>();
-  printer_ = system_.spawn<hidden + detached>(printer_loop);
+  timer_ = actor_cast<strong_actor_ptr>(system_.spawn<timer_actor, hidden + detached>());
+  printer_ = actor_cast<strong_actor_ptr>(system_.spawn<hidden + detached>(printer_loop));
 }
 
 void abstract_coordinator::init(actor_system_config& cfg) {

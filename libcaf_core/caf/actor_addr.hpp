@@ -28,19 +28,11 @@
 #include "caf/fwd.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/unsafe_actor_handle_init.hpp"
 
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
-
-struct invalid_actor_addr_t {
-  constexpr invalid_actor_addr_t() {}
-
-};
-
-/// Identifies an invalid {@link actor_addr}.
-/// @relates actor_addr
-constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
 
 /// Stores the address of typed as well as untyped actors.
 class actor_addr : detail::comparable<actor_addr>,
@@ -49,9 +41,19 @@ class actor_addr : detail::comparable<actor_addr>,
                    detail::comparable<actor_addr, abstract_actor*>,
                    detail::comparable<actor_addr, actor_control_block*> {
 public:
+  // -- friend types that need access to private ctors
+
+  template <class>
+  friend class type_erased_value_impl;
+
+  template <class>
+  friend class data_processor;
+
   // grant access to private ctor
   friend class actor;
   friend class abstract_actor;
+  friend class down_msg;
+  friend class exit_msg;
 
   // allow conversion via actor_cast
   template <class, class, int>
@@ -60,25 +62,15 @@ public:
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = true;
 
-  actor_addr() = default;
+  // tell actor_cast this is a nullable handle type
+  static constexpr bool has_non_null_guarantee = true;
+
   actor_addr(actor_addr&&) = default;
   actor_addr(const actor_addr&) = default;
   actor_addr& operator=(actor_addr&&) = default;
   actor_addr& operator=(const actor_addr&) = default;
 
-  actor_addr(const invalid_actor_addr_t&);
-
-  actor_addr operator=(const invalid_actor_addr_t&);
-
-  /// Returns `*this != invalid_actor_addr`.
-  inline explicit operator bool() const noexcept {
-    return static_cast<bool>(ptr_);
-  }
-
-  /// Returns `*this == invalid_actor_addr`.
-  inline bool operator!() const noexcept {
-    return !ptr_;
-  }
+  actor_addr(const unsafe_actor_handle_init_t&);
 
   /// Returns the ID of this actor.
   actor_id id() const noexcept;
@@ -120,11 +112,19 @@ public:
     return to_string(x.ptr_);
   }
 
+  /// Releases the reference held by handle `x`. Using the
+  /// handle after invalidating it is undefined behavior.
+  friend void invalidate(actor_addr& x) {
+    x.ptr_.reset();
+  }
+
   actor_addr(actor_control_block*, bool);
 
   /// @endcond
 
 private:
+  actor_addr() = default;
+
   inline actor_control_block* get() const noexcept {
     return ptr_.get();
   }
