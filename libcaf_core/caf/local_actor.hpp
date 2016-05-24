@@ -93,14 +93,12 @@ result<message> reflect(local_actor*, const type_erased_tuple*);
 /// @relates local_actor
 /// Default handler function that sends
 /// the message back to the sender and then quits.
-result<message> reflect_and_quit(local_actor*,
-                                            const type_erased_tuple*);
+result<message> reflect_and_quit(local_actor*, const type_erased_tuple*);
 
 /// @relates local_actor
 /// Default handler function that prints messages
 /// message via `aout` and drops them afterwards.
-result<message> print_and_drop(local_actor*,
-                                          const type_erased_tuple*);
+result<message> print_and_drop(local_actor*, const type_erased_tuple*);
 
 /// @relates local_actor
 /// Default handler function that simply drops messages.
@@ -191,25 +189,6 @@ public:
   }
 
   // -- sending asynchronous messages ------------------------------------------
-
-  /*
-  /// Sends `{xs...}` to `dest` using the priority `mp`.
-  template <message_priority P = message_priority::normal,
-            class Handle = actor, class... Ts>
-  void send(const Handle& dest, Ts&&... xs) {
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
-    token tk;
-    check_typed_input(dest, tk);
-    static_assert(sizeof...(Ts) > 0, "sizeof...(Ts) == 0");
-    if (! dest)
-      return;
-    dest->eq_impl(P, ctrl(), context(), std::forward<Ts>(xs)...);
-  }
-  */
 
   /// Sends an exit message to `dest`.
   void send_exit(const actor_addr& dest, error reason);
@@ -438,20 +417,6 @@ public:
     return current_element_;
   }
 
-  template <class ActorHandle, class... Ts>
-  message_id request_impl(message_priority mp, const ActorHandle& dh,
-                          const duration& timeout, Ts&&... xs) {
-    if (! dh)
-      throw std::invalid_argument("cannot send requests to invalid actors");
-    auto req_id = new_request_id(mp);
-    dh->eq_impl(req_id, ctrl(), context(), std::forward<Ts>(xs)...);
-
-
-    send_impl(req_id, actor_cast<abstract_actor*>(dh), std::forward<Ts>(xs)...);
-    request_sync_timeout_msg(timeout, req_id);
-    return req_id.response_id();
-  }
-
   void request_sync_timeout_msg(const duration& dr, message_id mid);
 
   // returns 0 if last_dequeued() is an asynchronous or sync request message,
@@ -626,21 +591,6 @@ protected:
   /// @endcond
 
 private:
-  template <class T, class... Ts>
-  typename std::enable_if<
-    ! std::is_same<typename std::decay<T>::type, message>::value
-  >::type
-  send_impl(message_id mid, abstract_actor* dest, T&& x, Ts&&... xs) const {
-    if (! dest)
-      return;
-    dest->enqueue(mailbox_element::make(ctrl(), mid, {},
-                                        std::forward<T>(x),
-                                        std::forward<Ts>(xs)...),
-                  context());
-  }
-
-  void send_impl(message_id mid, abstract_channel* dest, message what) const;
-
   enum class msg_type {
     expired_timeout,       // an 'old & obsolete' timeout
     timeout,               // triggers currently active timeout

@@ -532,7 +532,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
           if (had_timeout)
             has_timeout(true);
           auto sres = default_handler_(this,
-                                          current_element_->msg.cvals().get());
+                                       current_element_->msg.cvals().get());
           if (sres.flag != rt_skip)
             visitor.visit(sres);
           else
