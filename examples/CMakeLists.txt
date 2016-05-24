@@ -11,7 +11,7 @@ else ()
   set(WSLIB)
 endif()
 
-macro(add name folder)
+macro(add folder name)
   add_executable(${name} ${folder}/${name}.cpp ${ARGN})
   target_link_libraries(${name}
                         ${LD_FLAGS}
@@ -22,32 +22,46 @@ macro(add name folder)
   add_dependencies(${name} all_examples)
 endmacro()
 
-add(custom_types_1 custom_types)
-add(custom_types_2 custom_types)
-add(custom_types_3 custom_types)
-add(dancing_kirby message_passing)
-add(request message_passing)
-add(delegating message_passing)
-add(fixed_stack message_passing)
-add(cell message_passing)
-add(divider message_passing)
-add(hello_world .)
-add(aout .)
-add(calculator message_passing)
-add(distributed_calculator remote_actors)
-add(group_server remote_actors)
-add(group_chat remote_actors)
-add(simple_broker brokers)
-add(simple_http_broker brokers)
-add(dining_philosophers dynamic_behavior)
-add(skip_messages dynamic_behavior)
-add(calculator_behavior composition)
-add(dictionary_behavior composition)
+# introductionary applications
+add(. aout)
+add(. hello_world)
+
+# basic message passing primitives
+add(message_passing cell)
+add(message_passing divider)
+add(message_passing request)
+add(message_passing calculator)
+add(message_passing delegating)
+add(message_passing fixed_stack)
+add(message_passing prioritizing)
+add(message_passing dancing_kirby)
+
+# dynamic behavior changes using 'become'
+add(dynamic_behavior skip_messages)
+add(dynamic_behavior dining_philosophers)
+
+# composing actors using states or other actors
+add(composition calculator_behavior)
+add(composition dictionary_behavior)
+
+# adding custom message types
+add(custom_type custom_types_1)
+add(custom_type custom_types_2)
+add(custom_type custom_types_3)
+
+# basic remoting
+add(remoting group_chat)
+add(remoting group_server)
+add(remoting distributed_calculator)
+
+# basic I/O with brokers
+add(broker simple_broker)
+add(broker simple_http_broker)
 
 if(NOT CAF_NO_PROTOBUF_EXAMPLES)
   find_package(Protobuf)
   if(PROTOBUF_FOUND AND PROTOBUF_PROTOC_EXECUTABLE)
-    PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders "${CMAKE_CURRENT_SOURCE_DIR}/remote_actors/pingpong.proto")
+    PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders "${CMAKE_CURRENT_SOURCE_DIR}/remoting/pingpong.proto")
     include_directories(${PROTOBUF_INCLUDE_DIR})
     # add binary dir as include path as generated headers will be located there
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
