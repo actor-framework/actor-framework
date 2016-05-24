@@ -34,20 +34,9 @@
 
 namespace caf {
 
-/// This tag identifies response handles featuring a
-/// nonblocking API by providing a `then` member function.
-/// @relates response_handle
-struct nonblocking_response_handle_tag {};
-
-/// This tag identifies response handles featuring a
-/// blocking API by providing an `await` member function.
-/// @relates response_handle
-struct blocking_response_handle_tag {};
-
 /// This helper class identifies an expected response message
 /// and enables `request(...).then(...)`.
-template <class Self, class Output,
-          bool IsBlocking = std::is_same<Self, blocking_actor>::value>
+template <class Self, class Output, bool IsBlocking>
 class response_handle;
 
 /******************************************************************************

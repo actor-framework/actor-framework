@@ -34,6 +34,9 @@
 namespace caf {
 namespace mixin {
 
+template <class T>
+struct is_blocking_requester : std::false_type { };
+
 /// A `requester` is an actor that supports
 /// `self->request(...).{then|await|receive}`.
 template <class Base, class Subtype>
@@ -43,6 +46,8 @@ public:
   requester(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
+
+  static constexpr bool is_blocking_subtype = is_blocking_requester<Subtype>::value;
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
   /// @returns A handle identifying a future-like handle to the response.
@@ -57,7 +62,8 @@ public:
                       typename detail::implicit_conversions<
                         typename std::decay<Ts>::type
                       >::type...>
-                  >::type>
+                  >::type,
+                  is_blocking_subtype>
   request(const Handle& dest, const duration& timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =

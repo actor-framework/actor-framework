@@ -23,6 +23,7 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "caf/fwd.hpp"
 #include "caf/send.hpp"
 #include "caf/none.hpp"
 #include "caf/extend.hpp"
@@ -37,6 +38,15 @@
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
+
+namespace caf {
+namespace mixin {
+
+template <>
+struct is_blocking_requester<blocking_actor> : std::true_type { };
+
+} // namespace caf
+} // namespace mixin
 
 namespace caf {
 
