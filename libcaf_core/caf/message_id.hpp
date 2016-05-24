@@ -66,7 +66,7 @@ public:
   }
 
   inline bool is_async() const {
-    return value_ == 0;
+    return value_ == 0 || value_ == high_prioity_flag_mask;
   }
 
   inline bool is_response() const {
