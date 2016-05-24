@@ -35,7 +35,7 @@ response_promise::response_promise(local_actor* self, mailbox_element& src)
       id_(src.mid) {
   // form an invalid request promise when initialized from a
   // response ID, since CAF always drops messages in this case
-  if (! src.mid.is_response()) {
+  if (src.mid.is_request()) {
     source_ = std::move(src.sender);
     stages_ = std::move(src.stages);
   }
