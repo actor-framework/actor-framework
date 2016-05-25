@@ -91,9 +91,8 @@ public:
   /// call to {@link try_pop} would succeeed.
   /// @pre !closed()
   bool can_fetch_more() {
-    if (head_ != nullptr) {
+    if (head_ != nullptr)
       return true;
-    }
     auto ptr = stack_.load();
     CAF_ASSERT(ptr != nullptr);
     return ! is_dummy(ptr);
@@ -120,10 +119,8 @@ public:
   /// Tries to set this queue from state `empty` to state `blocked`.
   bool try_block() {
     auto e = stack_empty_dummy();
-    bool res = stack_.compare_exchange_strong(e, reader_blocked_dummy());
-    CAF_ASSERT(e != nullptr);
-    // return true in case queue was already blocked
-    return res || e == reader_blocked_dummy();
+    return stack_.compare_exchange_strong(e, reader_blocked_dummy());
+    //return res || e == reader_blocked_dummy();
   }
 
   /// Tries to set this queue from state `blocked` to state `empty`.
@@ -145,9 +142,8 @@ public:
   template <class F>
   void close(const F& f) {
     clear_cached_elements(f);
-    if (! blocked() && fetch_new_data(nullptr)) {
+    if (! blocked() && fetch_new_data(nullptr))
       clear_cached_elements(f);
-    }
     cache_.clear(f);
   }
 
@@ -156,16 +152,14 @@ public:
   }
 
   ~single_reader_queue() {
-    if (! closed()) {
+    if (! closed())
       close();
-    }
   }
 
   size_t count(size_t max_count = std::numeric_limits<size_t>::max()) {
     size_t res = cache_.count(max_count);
-    if (res >= max_count) {
+    if (res >= max_count)
       return res;
-    }
     fetch_new_data();
     auto ptr = head_;
     while (ptr && res < max_count) {
@@ -212,9 +206,8 @@ public:
     CAF_ASSERT(! closed());
     if (! can_fetch_more() && try_block()) {
       std::unique_lock<Mutex> guard(mtx);
-      while (blocked()) {
+      while (blocked())
         cv.wait(guard);
-      }
     }
   }
 

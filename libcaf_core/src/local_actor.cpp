@@ -691,9 +691,8 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   CAF_ASSERT(eu != nullptr);
   // do not schedule immediately when spawned with `lazy_init`
   // mailbox could be set to blocked
-  if (lazy && mailbox().try_block()) {
+  if (lazy && mailbox().try_block())
     return;
-  }
   // scheduler has a reference count to the actor as long as
   // it is waiting to get scheduled
   intrusive_ptr_add_ref(ctrl());
@@ -782,9 +781,8 @@ resumable::resume_result local_actor::resume(execution_unit* eu,
       } else {
         CAF_LOG_DEBUG("no more element in mailbox; going to block");
         reset_timeout_if_needed();
-        if (mailbox().try_block()) {
+        if (mailbox().try_block())
           return resumable::awaiting_message;
-        }
         CAF_LOG_DEBUG("try_block() interrupted by new message");
       }
     }
