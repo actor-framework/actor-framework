@@ -20,6 +20,7 @@
 #ifndef CAF_RESULT_HPP
 #define CAF_RESULT_HPP
 
+#include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/skip.hpp"
 #include "caf/error.hpp"
@@ -70,6 +71,14 @@ public:
     // nop
   }
 
+  result(const typed_response_promise<Ts...>&) : flag(rt_delegated) {
+    // nop
+  }
+
+  result(const response_promise&) : flag(rt_delegated) {
+    // nop
+  }
+
   result_runtime_type flag;
   message value;
   error err;
@@ -111,6 +120,14 @@ public:
   }
 
   result(delegated<void>) : flag(rt_delegated) {
+    // nop
+  }
+
+  result(const typed_response_promise<void>&) : flag(rt_delegated) {
+    // nop
+  }
+
+  result(const response_promise&) : flag(rt_delegated) {
     // nop
   }
 
