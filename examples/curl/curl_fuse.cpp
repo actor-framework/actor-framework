@@ -329,7 +329,7 @@ std::atomic<bool> shutdown_flag{false};
 
 } // namespace <anonymous>
 
-int main() {
+int main(int argc, char** argv) {
   // random number setup
   // install signal handler
   struct sigaction act;
@@ -343,7 +343,7 @@ int main() {
   set_sighandler();
   // initialize CURL
   curl_global_init(CURL_GLOBAL_DEFAULT);
-  actor_system system;
+  actor_system system{argc, argv};
   scoped_actor self{system};
   // spawn client and curl_master
   auto master = self->spawn<detached>(curl_master);

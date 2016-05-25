@@ -61,8 +61,8 @@ behavior testee(event_based_actor* self) {
   };
 }
 
-int main(int, char**) {
-  actor_system_config cfg;
+int main(int argc, char** argv) {
+  actor_system_config cfg{argc, argv};
   cfg.add_message_type<foo>("foo");
   actor_system system{cfg};
   anon_send(system.spawn(testee), foo{1, 2});

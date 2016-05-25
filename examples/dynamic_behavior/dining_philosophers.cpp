@@ -191,8 +191,8 @@ private:
 
 } // namespace <anonymous>
 
-int main(int, char**) {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   scoped_actor self{system};
   // create five chopsticks
   aout(self) << "chopstick ids are:";

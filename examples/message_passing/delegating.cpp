@@ -36,7 +36,7 @@ calc::behavior_type actor_c() {
   };
 }
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   system.spawn(actor_a, system.spawn(actor_b, system.spawn(actor_c)));
 }

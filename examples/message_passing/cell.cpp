@@ -44,8 +44,8 @@ behavior unchecked_cell(stateful_actor<cell_state>* self) {
   };
 }
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   // create one cell for each implementation
   auto cell1 = system.spawn(type_checked_cell);
   auto cell2 = system.spawn(unchecked_cell);

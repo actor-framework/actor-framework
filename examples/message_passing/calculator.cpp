@@ -127,8 +127,8 @@ void tester(scoped_actor& self, const Handle& hdl, int x, int y, Ts&&... xs) {
   tester(self, std::forward<Ts>(xs)...);
 }
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   auto a1 = system.spawn(blocking_calculator_fun);
   auto a2 = system.spawn(calculator_fun);
   auto a3 = system.spawn(typed_calculator_fun);

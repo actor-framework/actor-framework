@@ -57,8 +57,8 @@ void blocking_testee(blocking_actor* self, vector<cell> cells) {
     });
 }
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   vector<cell> cells;
   for (auto i = 0; i < 5; ++i)
     cells.emplace_back(system.spawn(cell_impl, i * i));

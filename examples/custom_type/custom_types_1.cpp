@@ -81,8 +81,8 @@ void testee(event_based_actor* self, size_t remaining) {
   );
 }
 
-int main(int, char**) {
-  actor_system_config cfg;
+int main(int argc, char** argv) {
+  actor_system_config cfg{argc, argv};
   cfg.add_message_type<foo>("foo");
   cfg.add_message_type<foo2>("foo2");
   cfg.add_message_type<foo_pair>("foo_pair");

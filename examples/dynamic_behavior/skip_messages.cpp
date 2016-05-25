@@ -36,8 +36,8 @@ behavior client(event_based_actor* self, const actor& serv) {
   };
 }
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   auto serv = system.spawn(server);
   auto worker = system.spawn(client, serv);
   scoped_actor self{system};

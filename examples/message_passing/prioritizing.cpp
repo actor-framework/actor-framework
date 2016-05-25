@@ -14,8 +14,8 @@ behavior foo(event_based_actor* self) {
   };
 }
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   scoped_actor self{system};
   aout(self) << "spawn foo" << endl;
   self->spawn(foo);

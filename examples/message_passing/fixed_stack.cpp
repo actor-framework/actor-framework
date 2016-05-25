@@ -69,8 +69,8 @@ private:
   behavior empty_;
 };
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   auto st = system.spawn<fixed_stack>(5);
   scoped_actor self{system};
   // fill stack

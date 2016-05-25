@@ -47,11 +47,11 @@ divider::behavior_type divider_impl() {
   };
 }
 
-int main() {
+int main(int argc, char** argv) {
   auto renderer = [](uint8_t x, atom_value, const message&) {
     return "math_error" + deep_to_string_as_tuple(static_cast<math_error>(x));
   };
-  actor_system_config cfg;
+  actor_system_config cfg{argc, argv};
   cfg.add_error_category(atom("math"), renderer);
   actor_system system{cfg};
   double x;

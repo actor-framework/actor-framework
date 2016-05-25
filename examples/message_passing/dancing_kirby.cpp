@@ -74,7 +74,7 @@ void dancing_kirby(event_based_actor* self) {
   );
 }
 
-int main() {
-  actor_system system;
+int main(int argc, char** argv) {
+  actor_system system{argc, argv};
   system.spawn(dancing_kirby);
 }
