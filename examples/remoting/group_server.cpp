@@ -28,7 +28,7 @@ public:
   }
 };
 
-void caf_main(actor_system& system, config& cfg) {
+void caf_main(actor_system& system, const config& cfg) {
   system.middleman().publish_local_groups(cfg.port);
   cout << "type 'quit' to shutdown the server" << endl;
   string line;

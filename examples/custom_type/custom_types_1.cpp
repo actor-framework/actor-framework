@@ -90,7 +90,7 @@ public:
   }
 };
 
-void caf_main(actor_system& system, config&) {
+void caf_main(actor_system& system, const config&) {
   // two variables for testing serialization
   foo2 f1;
   foo2 f2;

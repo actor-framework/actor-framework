@@ -339,6 +339,8 @@ void middleman::init(actor_system_config& cfg) {
   // set options relevant to BASP
   heartbeat_interval_ = cfg.middleman_heartbeat_interval;
   enable_automatic_connections_ = cfg.middleman_enable_automatic_connections;
+  // enable slave mode
+  cfg.slave_mode_fun = &middleman::exec_slave_mode;
 }
 
 actor_system::module::id_t middleman::id() const {
@@ -355,6 +357,11 @@ middleman::~middleman() {
 
 middleman_actor middleman::actor_handle() {
   return manager_;
+}
+
+int middleman::exec_slave_mode(actor_system&, const actor_system_config&) {
+  // TODO
+  return 0;
 }
 
 } // namespace io

@@ -57,7 +57,7 @@ public:
   }
 };
 
-void caf_main(actor_system& system, config&) {
+void caf_main(actor_system& system, const config&) {
   double x;
   double y;
   cout << "x: " << flush;

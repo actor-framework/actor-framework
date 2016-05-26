@@ -263,7 +263,7 @@ public:
   }
 };
 
-void caf_main(actor_system& system, config& cfg) {
+void caf_main(actor_system& system, const config& cfg) {
   if (! cfg.server_mode && cfg.port == 0) {
     cerr << "*** no port to server specified" << endl;
     return;

@@ -74,7 +74,7 @@ public:
   }
 };
 
-void caf_main(actor_system& system, config& cfg) {
+void caf_main(actor_system& system, const config& cfg) {
   cout << "*** run in server mode listen on: " << cfg.port << endl;
   cout << "*** to quit the program, simply press <enter>" << endl;
   auto server_actor = system.middleman().spawn_server(server, cfg.port);

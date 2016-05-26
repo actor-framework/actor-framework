@@ -207,6 +207,8 @@ public:
   node_id network_id;
   proxy_registry* network_proxies;
 
+  int (*slave_mode_fun)(actor_system&, const actor_system_config&);
+
 protected:
   virtual void init();
 

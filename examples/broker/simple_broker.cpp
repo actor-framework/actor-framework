@@ -193,7 +193,7 @@ public:
   }
 };
 
-void caf_main(actor_system& system, config& cfg) {
+void caf_main(actor_system& system, const config& cfg) {
   if (cfg.server_mode) {
     cout << "run in server mode" << endl;
     auto pong_actor = system.spawn(pong);

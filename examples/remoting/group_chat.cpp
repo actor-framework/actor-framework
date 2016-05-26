@@ -73,15 +73,16 @@ public:
   }
 };
 
-void caf_main(actor_system& system, config& cfg) {
-  while (cfg.name.empty()) {
+void caf_main(actor_system& system, const config& cfg) {
+  auto name = cfg.name;
+  while (name.empty()) {
     cout << "please enter your name: " << flush;
-    if (! getline(cin, cfg.name)) {
+    if (! getline(cin, name)) {
       cerr << "*** no name given... terminating" << endl;
       return;
     }
   }
-  auto client_actor = system.spawn(client, cfg.name);
+  auto client_actor = system.spawn(client, name);
   // evaluate group parameters
   if (! cfg.group_id.empty()) {
     auto p = cfg.group_id.find(':');
