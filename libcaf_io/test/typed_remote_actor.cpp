@@ -75,10 +75,11 @@ server_type::behavior_type server() {
 }
 
 void run_client(int argc, char** argv, uint16_t port) {
-  actor_system_config cfg{argc, argv};
+  actor_system_config cfg;
   cfg.load<io::middleman>()
      .add_message_type<ping>("ping")
-     .add_message_type<pong>("pong");
+     .add_message_type<pong>("pong")
+     .parse(argc, argv);
   actor_system system{cfg};
   // check whether invalid_argument is thrown
   // when trying to connect to get an untyped
@@ -103,10 +104,11 @@ void run_client(int argc, char** argv, uint16_t port) {
 }
 
 void run_server(int argc, char** argv) {
-  actor_system_config cfg{argc, argv};
+  actor_system_config cfg;
   cfg.load<io::middleman>()
      .add_message_type<ping>("ping")
-     .add_message_type<pong>("pong");
+     .add_message_type<pong>("pong")
+     .parse(argc, argv);
   actor_system system{cfg};
   auto port = system.middleman().publish(system.spawn(server), 0, "127.0.0.1");
   CAF_REQUIRE(port != 0);

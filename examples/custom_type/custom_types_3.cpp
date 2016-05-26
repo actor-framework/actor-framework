@@ -75,9 +75,15 @@ behavior testee(event_based_actor* self) {
   };
 }
 
-int main(int argc, char** argv) {
-  actor_system_config cfg{argc, argv};
-  cfg.add_message_type<foo>("foo");
-  actor_system system{cfg};
+class config : public actor_system_config {
+public:
+  void init() override {
+    add_message_type<foo>("foo");
+  }
+};
+
+void caf_main(actor_system& system, config&) {
   anon_send(system.spawn(testee), foo{1, 2});
 }
+
+CAF_MAIN()

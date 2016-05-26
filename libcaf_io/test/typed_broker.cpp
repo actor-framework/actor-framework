@@ -159,7 +159,7 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
 }
 
 void run_client(int argc, char** argv, uint16_t port) {
-  actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
+  actor_system system{actor_system_config{}.load<io::middleman>().parse(argc, argv)};
   auto p = system.spawn(ping, size_t{10});
   CAF_MESSAGE("spawn_client_typed...");
   auto cl = system.middleman().spawn_client(peer_fun, "localhost", port, p);
@@ -169,7 +169,7 @@ void run_client(int argc, char** argv, uint16_t port) {
 }
 
 void run_server(int argc, char** argv) {
-  actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
+  actor_system system{actor_system_config{}.load<io::middleman>().parse(argc, argv)};
   scoped_actor self{system};
   auto serv = system.middleman().spawn_broker(acceptor_fun, system.spawn(pong));
   std::thread child;

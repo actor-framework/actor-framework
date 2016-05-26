@@ -56,9 +56,10 @@ public:
 
 struct fixture {
   fixture() : testee(unsafe_actor_handle_init) {
-    new (&system) actor_system(actor_system_config{test::engine::argc(),
-                                                   test::engine::argv()}
-                               .load<io::middleman>());
+    new (&system) actor_system(actor_system_config{}
+                               .load<io::middleman>()
+                               .parse(test::engine::argc(),
+                                      test::engine::argv()));
     testee = system.spawn<dummy>();
   }
 

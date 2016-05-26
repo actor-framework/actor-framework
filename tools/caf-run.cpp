@@ -233,7 +233,8 @@ void bootstrap(actor_system& system,
 }
 
 int main(int argc, char** argv) {
-  actor_system_config cfg{argc, argv};
+  actor_system_config cfg;
+  cfg.parse(argc, argv);
   if (cfg.cli_helptext_printed)
     return 0;
   if (cfg.slave_mode)

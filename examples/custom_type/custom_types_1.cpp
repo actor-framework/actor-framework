@@ -81,14 +81,16 @@ void testee(event_based_actor* self, size_t remaining) {
   );
 }
 
-int main(int argc, char** argv) {
-  actor_system_config cfg{argc, argv};
-  cfg.add_message_type<foo>("foo");
-  cfg.add_message_type<foo2>("foo2");
-  cfg.add_message_type<foo_pair>("foo_pair");
-  // this actor system can now serialize our custom types when running
-  // a distributed CAF application or we can serialize them manually
-  actor_system system{cfg};
+class config : public actor_system_config {
+public:
+  void init() override {
+    add_message_type<foo>("foo");
+    add_message_type<foo2>("foo2");
+    add_message_type<foo_pair>("foo_pair");
+  }
+};
+
+void caf_main(actor_system& system, config&) {
   // two variables for testing serialization
   foo2 f1;
   foo2 f2;
@@ -115,3 +117,5 @@ int main(int argc, char** argv) {
   self->send(t, foo_pair2{3, 4});
   self->await_all_other_actors_done();
 }
+
+CAF_MAIN()

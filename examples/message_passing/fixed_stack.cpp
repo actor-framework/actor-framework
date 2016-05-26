@@ -69,10 +69,9 @@ private:
   behavior empty_;
 };
 
-int main(int argc, char** argv) {
-  actor_system system{argc, argv};
-  auto st = system.spawn<fixed_stack>(5);
+void caf_main(actor_system& system) {
   scoped_actor self{system};
+  auto st = self->spawn<fixed_stack>(5);
   // fill stack
   for (int i = 0; i < 10; ++i)
     self->send(st, push_atom::value, i);
@@ -92,3 +91,5 @@ int main(int argc, char** argv) {
   aout(self) << "}" << endl;
   self->send_exit(st, exit_reason::user_shutdown);
 }
+
+CAF_MAIN()

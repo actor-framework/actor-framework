@@ -14,8 +14,7 @@ behavior foo(event_based_actor* self) {
   };
 }
 
-int main(int argc, char** argv) {
-  actor_system system{argc, argv};
+void caf_main(actor_system& system) {
   scoped_actor self{system};
   aout(self) << "spawn foo" << endl;
   self->spawn(foo);
@@ -23,3 +22,5 @@ int main(int argc, char** argv) {
   aout(self) << "spawn foo again with priority_aware flag" << endl;
   self->spawn<priority_aware>(foo);
 }
+
+CAF_MAIN()

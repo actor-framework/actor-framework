@@ -31,77 +31,29 @@ namespace caf {
 
 namespace {
 
-struct type_name_visitor : static_visitor<const char*> {
-  const char* operator()(const std::string&) const {
-    return "a string";
-  }
-  const char* operator()(double) const {
-    return "a double";
-  }
-  const char* operator()(int64_t) const {
-    return "an integer";
-  }
-  const char* operator()(size_t) const {
-    return "an unsigned integer";
-  }
-  const char* operator()(uint16_t) const {
-    return "an unsigned short integer";
-  }
-  const char* operator()(bool) const {
-    return "a boolean";
-  }
-  const char* operator()(atom_value) const {
-    return "an atom";
-  }
-};
-
-template <class T, class U>
-bool assign_config_value(T& x, U& y) {
-  x = std::move(y);
-  return true;
-}
-
-// 32-bit platforms
-template <class T>
-inline typename std::enable_if<sizeof(T) == sizeof(uint32_t), bool>::type
-unsigned_assign_in_range(T&, int64_t& x) {
-  return x <= std::numeric_limits<T>::max();
-}
-
-// 64-bit platforms
-template <class T>
-inline typename std::enable_if<sizeof(T) == sizeof(uint64_t), bool>::type
-unsigned_assign_in_range(T&, int64_t&) {
-  return true;
-}
-
-bool assign_config_value(size_t& x, int64_t& y) {
-  if (y < 0 || ! unsigned_assign_in_range(x, y))
-    return false;
-  x = std::move(y);
-  return true;
-}
-
-bool assign_config_value(uint16_t& x, int64_t& y) {
-  if (y < 0 || y > std::numeric_limits<uint16_t>::max())
-    return false;
-  x = std::move(y);
-  return true;
-}
-
 using options_vector = actor_system_config::options_vector;
 
 class actor_system_config_reader {
 public:
-  using config_value = actor_system_config::config_value;
-
   using sink = std::function<void (size_t, config_value&)>;
 
-  actor_system_config_reader(options_vector& xs) {
+  actor_system_config_reader(options_vector& xs, options_vector& ys) {
+    add_opts(xs);
+    add_opts(ys);
+  }
+
+  void add_opts(options_vector& xs) {
     for (auto& x : xs) {
       std::string key = x->category();
       key += '.';
-      key += x->name();
+      // name can have format "<long>,<short>"; consider only long name
+      auto name_begin = x->name();
+      auto name_end = name_begin;
+      for (auto c = *name_end; c != ',' && c != 0; ++name_end) {
+        // nop
+      }
+      key.insert(key.end(), name_begin, name_end);
+      //key += x->name();
       sinks_.emplace(std::move(key), x->to_sink());
     }
   }
@@ -119,78 +71,16 @@ private:
   std::map<std::string, sink> sinks_;
 };
 
-using cstr = const char*;
-
-template <class T>
-void add_option(options_vector& xs,
-                T& storage, cstr category, cstr name, cstr explanation) {
-  using option = actor_system_config::option;
-  using config_value = actor_system_config::config_value;
-  class impl : public option {
-  public:
-    impl(cstr ctg, cstr nm, cstr xp, T& ref) : option(ctg, nm, xp), ref_(ref) {
-      // nop
-    }
-    std::string to_string() const override {
-      return deep_to_string(ref_);
-    }
-    message::cli_arg to_cli_arg() const override {
-      std::string argname = "caf#";
-      argname += category();
-      argname += ".";
-      argname += name();
-      return {std::move(argname), explanation(), ref_};
-    }
-    config_reader_sink to_sink() const override {
-      return [=](size_t ln, config_value& x) {
-        // the INI parser accepts all integers as int64_t
-        using cfg_type =
-          typename std::conditional<
-            std::is_integral<T>::value && ! std::is_same<bool, T>::value,
-            int64_t,
-            T
-          >::type;
-        if (get<cfg_type>(&x) && assign_config_value(ref_, get<cfg_type>(x)))
-          return;
-        type_name_visitor tnv;
-        std::cerr << "error in line " << ln << ": expected "
-                  << tnv(ref_) << " found "
-                  << apply_visitor(tnv, x) << std::endl;
-      };
-    }
-  private:
-    T& ref_;
-  };
-  return xs.emplace_back(new impl(category, name, explanation, storage));
-}
-
-class opt_group {
-public:
-  opt_group(options_vector& xs, cstr category) : xs_(xs), category_(category) {
-    // nop
-  }
-
-  template <class T>
-  opt_group& add(T& storage, cstr option_name, cstr explanation) {
-    add_option(xs_, storage, category_, option_name, explanation);
-    return *this;
-  }
-
-private:
-  options_vector& xs_;
-  cstr category_;
-};
-
 } // namespace <anonymous>
 
-actor_system_config::option::option(cstr ct, cstr nm, cstr xp)
-    : category_(ct),
-      name_(nm),
-      explanation_(xp) {
+actor_system_config::opt_group::opt_group(options_vector& xs,
+                                          const char* category)
+    : xs_(xs),
+      cat_(category) {
   // nop
 }
 
-actor_system_config::option::~option() {
+actor_system_config::~actor_system_config() {
   // nop
 }
 
@@ -238,7 +128,7 @@ actor_system_config::actor_system_config()
   opt_group{options_, "probe"}
   .add(nexus_host, "nexus-host",
        "sets the hostname or IP address for connecting to the Nexus")
-  .add(nexus_port, "probe.nexus-port",
+  .add(nexus_port, "nexus-port",
        "sets the port for connecting to the Nexus");
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
@@ -248,13 +138,49 @@ actor_system_config::actor_system_config()
   error_renderers_.emplace(atom("exit"), render_exit_reason);
 }
 
-actor_system_config::actor_system_config(int argc, char** argv)
-    : actor_system_config() {
-  if (argc < 1)
-    return;
+std::string
+actor_system_config::make_help_text(const std::vector<message::cli_arg>& xs) {
+  auto is_no_caf_option = [](const message::cli_arg& arg) {
+    return arg.name.compare(0, 4, "caf#") != 0;
+  };
+  auto op = [](size_t tmp, const message::cli_arg& arg) {
+    return std::max(tmp, arg.helptext.size());
+  };
+  // maximum string lenght of all options
+  auto name_width = std::accumulate(xs.begin(), xs.end(), size_t{0}, op);
+  // iterators to the vector with respect to partition point
+  auto first = xs.begin();
+  auto last = xs.end();
+  auto sep = std::find_if(first, last, is_no_caf_option);
+  // output stream
+  std::ostringstream oss;
+  oss << std::left;
+  oss << "CAF Options:" << std::endl;
+  for (auto i = first; i != sep; ++i) {
+    oss << "  ";
+    oss.width(static_cast<std::streamsize>(name_width));
+    oss << i->helptext << "  : " << i->text << std::endl;
+  }
+  if (sep != last) {
+    oss << std::endl;
+    oss << "Application Options:" << std::endl;
+    for (auto i = sep; i != last; ++i) {
+      oss << "  ";
+      oss.width(static_cast<std::streamsize>(name_width));
+      oss << i->helptext << "  : " << i->text << std::endl;
+    }
+  }
+  return oss.str();
+}
+
+actor_system_config& actor_system_config::parse(int argc, char** argv,
+                                                const char* ini_file_cstr) {
+  init();
   auto args = message_builder(argv + 1, argv + argc).move_to_message();
   // extract config file name first, since INI files are overruled by CLI args
   std::string config_file_name;
+  if (ini_file_cstr)
+    config_file_name = ini_file_cstr;
   args.extract_opts({
     {"caf#config-file", "", config_file_name}
   });
@@ -262,27 +188,39 @@ actor_system_config::actor_system_config(int argc, char** argv)
   if (! config_file_name.empty()) {
     std::ifstream ini{config_file_name};
     if (ini.good()) {
-      actor_system_config_reader consumer{options_};
+      actor_system_config_reader consumer{options_, custom_options_};
       detail::parse_ini(ini, consumer, std::cerr);
     }
   }
   // (3) CLI options override the content of the INI file
   std::vector<message::cli_arg> cargs;
   for (auto& x : options_)
-    cargs.emplace_back(x->to_cli_arg());
+    cargs.emplace_back(x->to_cli_arg(true));
   cargs.emplace_back("caf#dump-config", "print config in INI format to stdout");
-  cargs.emplace_back("caf#help", "print this text");
+  //cargs.emplace_back("caf#help", "print this text");
   cargs.emplace_back("caf#config-file", "parse INI file", config_file_name);
   cargs.emplace_back("caf#slave-mode", "run in slave mode");
   cargs.emplace_back("caf#slave-name", "set name for this slave", slave_name);
   cargs.emplace_back("caf#bootstrap-node", "set bootstrapping", bootstrap_node);
-  auto res = args.extract_opts(std::move(cargs), nullptr, true);
+  for (auto& x : custom_options_)
+    cargs.emplace_back(x->to_cli_arg(false));
+  using std::placeholders::_1;
+  auto res = args.extract_opts(std::move(cargs),
+                               std::bind(&actor_system_config::make_help_text,
+                                         this, _1));
   using std::cerr;
   using std::cout;
   using std::endl;
-  if (res.opts.count("caf#help")) {
+  args_remainder = std::move(res.remainder);
+  if (! res.error.empty()) {
+    cli_helptext_printed = true;
+    std::cerr << res.error << endl;
+    return *this;
+  }
+  if (res.opts.count("help")) {
     cli_helptext_printed = true;
     cout << res.helptext << endl;
+    return *this;
   }
   if (res.opts.count("caf#slave-mode")) {
     slave_mode = true;
@@ -309,26 +247,19 @@ actor_system_config::actor_system_config(int argc, char** argv)
                   scheduler_policy, "scheduler.policy ");
   if (res.opts.count("caf#dump-config")) {
     cli_helptext_printed = true;
-    cout << std::boolalpha
-         << "[scheduler]" << endl
-         << "policy=" << deep_to_string(scheduler_policy) << endl
-         << "max-threads=" << scheduler_max_threads << endl
-         << "max-throughput=" << scheduler_max_throughput << endl
-         << "enable-profiling=" << scheduler_enable_profiling << endl;
-    if (scheduler_enable_profiling)
-      cout << "profiling-ms-resolution="
-           << scheduler_profiling_ms_resolution << endl
-           << "profiling_output_file="
-           << deep_to_string(scheduler_profiling_output_file) << endl;
-    cout << "[middleman]" << endl
-         << "network-backend="
-         << deep_to_string(middleman_network_backend) << endl
-         << "enable-automatic-connections="
-         << deep_to_string(middleman_enable_automatic_connections) << endl
-         << "heartbeat-interval="
-         << middleman_heartbeat_interval << endl;
+    std::string category;
+    options_vector* all_options[] = { &options_, &custom_options_ };
+    for (auto& opt_vec : all_options) {
+      for (auto& opt : *opt_vec) {
+        if (category != opt->category()) {
+          category = opt->category();
+          cout << "[" << category << "]" << endl;
+        }
+        cout << opt->name() << "=" << opt->to_string() << endl;
+      }
+    }
   }
-  args_remainder = std::move(res.remainder);
+  return *this;
 }
 
 actor_system_config&
@@ -357,6 +288,10 @@ actor_system_config::set(const char* config_name, config_value config_value) {
     }
   }
   return *this;
+}
+
+void actor_system_config::init() {
+  // nop
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,

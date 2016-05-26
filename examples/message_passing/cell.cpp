@@ -44,8 +44,7 @@ behavior unchecked_cell(stateful_actor<cell_state>* self) {
   };
 }
 
-int main(int argc, char** argv) {
-  actor_system system{argc, argv};
+void caf_main(actor_system& system) {
   // create one cell for each implementation
   auto cell1 = system.spawn(type_checked_cell);
   auto cell2 = system.spawn(unchecked_cell);
@@ -56,3 +55,5 @@ int main(int argc, char** argv) {
   // get an unchecked cell and send it some garbage
   anon_send(cell2, "hello there!");
 }
+
+CAF_MAIN()

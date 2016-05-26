@@ -18,26 +18,25 @@
 using namespace std;
 using namespace caf;
 
-int main(int argc, char** argv) {
+class config : public actor_system_config {
+public:
   uint16_t port = 0;
-  auto res = message_builder(argv + 1, argv + argc).extract_opts({
-    {"port,p", "set port", port}
-  });
-  if (! res.error.empty())
-    return cerr << res.error << endl, 1;
-  if (res.opts.count("help") > 0)
-    return cout << res.helptext << endl, 0;
-  if (! res.remainder.empty())
-    return cerr << "*** too many arguments" << endl << res.helptext << endl, 1;
-  if (res.opts.count("port") == 0 || port <= 1024)
-    return cerr << "*** no valid port given" << endl << res.helptext << endl, 1;
-  actor_system system{actor_system_config{}.load<io::middleman>()};
-  system.middleman().publish_local_groups(port);
+
+  void init() override {
+    opt_group{custom_options_, "global"}
+    .add(port, "port,p", "set port");
+  }
+};
+
+void caf_main(actor_system& system, config& cfg) {
+  system.middleman().publish_local_groups(cfg.port);
   cout << "type 'quit' to shutdown the server" << endl;
   string line;
   while (getline(cin, line))
     if (line == "quit")
-      return 0;
+      return;
     else
       cerr << "illegal command" << endl;
 }
+
+CAF_MAIN(io::middleman)

@@ -61,48 +61,45 @@ void client(event_based_actor* self, const string& name) {
   );
 }
 
-int main(int argc, char** argv) {
-  string name;
-  string group_id;
-  auto res = message_builder(argv + 1, argv + argc).extract_opts({
-    {"name,n", "set name", name},
-    {"group,g", "join group", group_id}
-  });
-  if (! res.error.empty())
-    return cerr << res.error << endl, 1;
-  if (! res.remainder.empty())
-    return std::cout << res.helptext << std::endl, 1;
-  if (res.opts.count("help") > 0)
-    return cout << res.helptext << endl, 0;
-  while (name.empty()) {
+class config : public actor_system_config {
+public:
+  std::string name;
+  std::string group_id;
+
+  void init() override {
+    opt_group{custom_options_, "global"}
+    .add(name, "name,n", "set name")
+    .add(group_id, "group,g", "join group");
+  }
+};
+
+void caf_main(actor_system& system, config& cfg) {
+  while (cfg.name.empty()) {
     cout << "please enter your name: " << flush;
-    if (! getline(cin, name)) {
+    if (! getline(cin, cfg.name)) {
       cerr << "*** no name given... terminating" << endl;
-      return 1;
+      return;
     }
   }
-  actor_system_config cfg;
-  cfg.load<io::middleman>();
-  actor_system system{cfg};
-  auto client_actor = system.spawn(client, name);
+  auto client_actor = system.spawn(client, cfg.name);
   // evaluate group parameters
-  if (! group_id.empty()) {
-    auto p = group_id.find(':');
+  if (! cfg.group_id.empty()) {
+    auto p = cfg.group_id.find(':');
     if (p == std::string::npos) {
-      cerr << "*** error parsing argument " << group_id
+      cerr << "*** error parsing argument " << cfg.group_id
          << ", expected format: <module_name>:<group_id>";
     } else {
       try {
-        auto module = group_id.substr(0, p);
-        auto group_uri = group_id.substr(p + 1);
+        auto module = cfg.group_id.substr(0, p);
+        auto group_uri = cfg.group_id.substr(p + 1);
         auto g = (module == "remote")
                  ? system.middleman().remote_group(group_uri)
                  : system.groups().get(module, group_uri);
         anon_send(client_actor, join_atom::value, g);
       }
       catch (exception& e) {
-        cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
-           << "\", \"" << group_id.substr(p + 1) << "\") failed: "
+        cerr << "*** exception: group::get(\"" << cfg.group_id.substr(0, p)
+           << "\", \"" << cfg.group_id.substr(p + 1) << "\") failed: "
            << e.what() << endl;
       }
     }
@@ -154,3 +151,5 @@ int main(int argc, char** argv) {
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);
 }
+
+CAF_MAIN(io::middleman)

@@ -45,9 +45,10 @@ protected:
 
 } // namespace <anonymous>
 
-int main(int argc, char** argv) {
-  actor_system system{argc, argv};
+void caf_main(actor_system& system) {
   auto f = make_function_view(system.spawn<dict_behavior>());
   f(put_atom::value, "CAF", "success");
   cout << "CAF is the key to " << f(get_atom::value, "CAF") << endl;
 }
+
+CAF_MAIN()

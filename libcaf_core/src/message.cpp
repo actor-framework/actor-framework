@@ -263,6 +263,8 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           }
           // no value given, try two-argument form below
           return skip();
+        } else if (i->second->flag) {
+          *i->second->flag = true;
         }
         insert_opt_name(i->second);
         return none;
@@ -281,6 +283,8 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           }
           insert_opt_name(j->second);
           return none;
+        } else if (j->second->flag) {
+          *j->second->flag = true;
         }
         insert_opt_name(j->second);
         return none;
@@ -318,14 +322,23 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr)
     : name(std::move(nstr)),
-      text(std::move(tstr)) {
+      text(std::move(tstr)),
+      flag(nullptr) {
   // nop
+}
+
+message::cli_arg::cli_arg(std::string nstr, std::string tstr, bool& arg)
+  : name(std::move(nstr)),
+    text(std::move(tstr)),
+    flag(&arg) {
+  arg = false;
 }
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, consumer f)
     : name(std::move(nstr)),
       text(std::move(tstr)),
-      fun(std::move(f)) {
+      fun(std::move(f)),
+      flag(nullptr) {
   // nop
 }
 
@@ -338,7 +351,8 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr, atom_value& arg)
           return true;
         }
         return false;
-      }) {
+      }),
+      flag(nullptr) {
   // nop
 }
 
@@ -348,7 +362,8 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::string& arg)
       fun([&arg](const std::string& str) -> bool {
             arg = str;
             return true;
-          }) {
+          }),
+      flag(nullptr) {
   // nop
 }
 
@@ -359,7 +374,8 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr,
       fun([&arg](const std::string& str) -> bool {
         arg.push_back(str);
         return true;
-      }) {
+      }),
+      flag(nullptr) {
   // nop
 }
 

@@ -249,48 +249,39 @@ void client_repl(actor_system& system, string host, uint16_t port) {
 
 } // namespace <anonymous>
 
-int main(int argc, char** argv) {
+class config : public actor_system_config {
+public:
   uint16_t port = 0;
-  string host = "localhost";
-  auto res = message_builder(argv + 1, argv + argc).extract_opts({
-    {"port,p", "set port (either to publish at or to connect to)", port},
-    {"host,H", "set host (client mode only, default: localhost)", host},
-    {"server,s", "run in server mode"},
-    {"client,c", "run in client mode"}
-  });
-  if (! res.error.empty())
-    return cerr << res.error << endl, 1;
-  if (res.opts.count("help") > 0)
-    return cout << res.helptext << endl, 0;
-  // not all CLI arguments could be consumed
-  if (! res.remainder.empty())
-    return cerr << "*** invalid CLI options" << endl << res.helptext << endl, 1;
-  bool is_server = res.opts.count("server") > 0;
-  if (is_server == (res.opts.count("client") > 0)) {
-    if (is_server)
-      cerr << "*** cannot be server and client at the same time" << endl;
-    else
-      cerr << "*** either --server or --client option must be set" << endl;
-    return 1;
+  std::string host = "localhost";
+  bool server_mode = false;
+
+  void init() override {
+    opt_group{custom_options_, "global"}
+    .add(port, "port,p", "set port")
+    .add(host, "host,H", "set host (ignored in server mode)")
+    .add(server_mode, "server-mode,s", "enable server mode");
   }
-  if (! is_server && port == 0)
-    return cerr << "*** no port to server specified" << endl, 1;
-  actor_system_config cfg;
-  cfg.load<io::middleman>();
-  actor_system system{cfg};
-  if (is_server) {
+};
+
+void caf_main(actor_system& system, config& cfg) {
+  if (! cfg.server_mode && cfg.port == 0) {
+    cerr << "*** no port to server specified" << endl;
+    return;
+  }
+  if (cfg.server_mode) {
     auto calc = system.spawn(calculator_fun);
     // try to publish math actor at given port
-    cout << "*** try publish at port " << port << endl;
-    auto p = system.middleman().publish(calc, port);
+    cout << "*** try publish at port " << cfg.port << endl;
+    auto p = system.middleman().publish(calc, cfg.port);
     cout << "*** server successfully published at port " << p << endl;
     cout << "*** press [enter] to quit" << endl;
     string dummy;
     std::getline(std::cin, dummy);
     cout << "... cya" << endl;
     anon_send_exit(calc, exit_reason::user_shutdown);
+    return;
   }
-  else {
-    client_repl(system, host, port);
-  }
+  client_repl(system, cfg.host, cfg.port);
 }
+
+CAF_MAIN(io::middleman)

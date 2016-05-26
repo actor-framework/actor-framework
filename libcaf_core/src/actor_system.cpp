@@ -40,7 +40,7 @@ actor_system::actor_system() : actor_system(actor_system_config{}) {
 }
 
 actor_system::actor_system(int argc, char** argv)
-    : actor_system(actor_system_config{argc, argv}) {
+    : actor_system(actor_system_config{}.parse(argc, argv)) {
   // nop
 }
 

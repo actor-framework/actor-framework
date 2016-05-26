@@ -106,8 +106,9 @@ behavior server(stateful_actor<server_state>* self) {
 }
 
 void run_client(int argc, char** argv, uint16_t port) {
-  actor_system_config cfg{argc, argv};
-  cfg.load<io::middleman>()
+  actor_system_config cfg;
+  cfg.parse(argc, argv)
+     .load<io::middleman>()
      .add_actor_type("mirror", mirror);
   actor_system system{cfg};
   auto serv = system.middleman().remote_actor("localhost", port);
@@ -115,7 +116,7 @@ void run_client(int argc, char** argv, uint16_t port) {
 }
 
 void run_server(int argc, char** argv) {
-  actor_system system{actor_system_config{argc, argv}.load<io::middleman>()};
+  actor_system system{actor_system_config{}.load<io::middleman>().parse(argc, argv)};
   auto serv = system.spawn(server);
   auto port = system.middleman().publish(serv, 0);
   CAF_REQUIRE(port != 0);

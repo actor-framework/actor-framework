@@ -35,6 +35,7 @@ set (LIBCAF_CORE_SRCS
      src/behavior_impl.cpp
      src/blocking_actor.cpp
      src/concatenated_tuple.cpp
+     src/config_option.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
      src/deep_to_string.cpp

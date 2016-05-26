@@ -23,11 +23,14 @@
 #include <atomic>
 #include <string>
 #include <memory>
+#include <typeindex>
 #include <functional>
 #include <type_traits>
 #include <unordered_map>
 
-#include "caf/actor_system.hpp"
+#include "caf/fwd.hpp"
+#include "caf/config_value.hpp"
+#include "caf/config_option.hpp"
 #include "caf/actor_factory.hpp"
 #include "caf/type_erased_value.hpp"
 
@@ -36,6 +39,7 @@
 
 namespace caf {
 
+/// Configures an `actor_system` on startup.
 class actor_system_config {
 public:
   friend class actor_system;
@@ -58,61 +62,51 @@ public:
 
   using error_renderers = std::unordered_map<atom_value, error_renderer>;
 
-  /// A variant type for config parameters.
-  using config_value = variant<std::string, double, int64_t, bool, atom_value>;
-
-  /// Helper class to generate config readers for different input types.
-  class option {
-  public:
-    using config_reader_sink = std::function<void (size_t, config_value&)>;
-
-    option(const char* category, const char* name, const char* explanation);
-
-    virtual ~option();
-
-    inline const char* name() const {
-      return name_;
-    }
-
-    inline const char* category() const {
-      return category_;
-    }
-
-    inline const char* explanation() const {
-      return explanation_;
-    }
-
-    virtual std::string to_string() const = 0;
-
-    virtual config_reader_sink to_sink() const = 0;
-
-    virtual message::cli_arg to_cli_arg() const = 0;
-
-  protected:
-    const char* category_;
-    const char* name_;
-    const char* explanation_;
-  };
-
-  using option_ptr = std::unique_ptr<option>;
+  using option_ptr = std::unique_ptr<config_option>;
 
   using options_vector = std::vector<option_ptr>;
 
+  class opt_group {
+  public:
+    opt_group(options_vector& xs, const char* category);
+
+    template <class T>
+    opt_group& add(T& storage, const char* name, const char* explanation) {
+      xs_.emplace_back(make_config_option(storage, cat_, name, explanation));
+      return *this;
+    }
+
+  private:
+    options_vector& xs_;
+    const char* cat_;
+  };
+
+  virtual ~actor_system_config();
+
   actor_system_config();
 
-  actor_system_config(int argc, char** argv);
+  actor_system_config(const actor_system_config&) = delete;
+  actor_system_config& operator=(const actor_system_config&) = delete;
 
+  actor_system_config& parse(int argc, char** argv,
+                             const char* config_file_name = nullptr);
+
+  /// Allows other nodes to spawn actors created by `fun`
+  /// dynamically by using `name` as identifier.
+  /// @experimental
   actor_system_config& add_actor_factory(std::string name, actor_factory fun);
 
-  /// Allows others to spawn actors of type `T`
+  /// Allows other nodes to spawn actors of type `T`
   /// dynamically by using `name` as identifier.
+  /// @experimental
   template <class T, class... Ts>
   actor_system_config& add_actor_type(std::string name) {
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
   }
 
-  /// Allows others to spawn actors implemented by function `f`
+  /// Allows other nodes to spawn actors implemented by function `f`
   /// dynamically by using `name` as identifier.
+  /// @experimental
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
@@ -212,6 +206,13 @@ public:
   // System parameters that are set while initializing modules.
   node_id network_id;
   proxy_registry* network_proxies;
+
+protected:
+  virtual void init();
+
+  virtual std::string make_help_text(const std::vector<message::cli_arg>&);
+
+  options_vector custom_options_;
 
 private:
   static std::string render_sec(uint8_t, atom_value, const message&);

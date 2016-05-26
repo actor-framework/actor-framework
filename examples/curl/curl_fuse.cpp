@@ -43,6 +43,7 @@
 
 // CAF
 #include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 CAF_PUSH_WARNINGS
 #include <curl/curl.h>
@@ -329,8 +330,7 @@ std::atomic<bool> shutdown_flag{false};
 
 } // namespace <anonymous>
 
-int main(int argc, char** argv) {
-  // random number setup
+void caf_main(actor_system& system) {
   // install signal handler
   struct sigaction act;
   act.sa_handler = [](int) { shutdown_flag = true; };
@@ -343,7 +343,7 @@ int main(int argc, char** argv) {
   set_sighandler();
   // initialize CURL
   curl_global_init(CURL_GLOBAL_DEFAULT);
-  actor_system system{argc, argv};
+  // get a scoped actor for the communication with our CURL actors
   scoped_actor self{system};
   // spawn client and curl_master
   auto master = self->spawn<detached>(curl_master);
@@ -365,3 +365,5 @@ int main(int argc, char** argv) {
   // shutdown CURL
   curl_global_cleanup();
 }
+
+CAF_MAIN(io::middleman)

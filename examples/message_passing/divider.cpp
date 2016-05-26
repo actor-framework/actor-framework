@@ -47,13 +47,17 @@ divider::behavior_type divider_impl() {
   };
 }
 
-int main(int argc, char** argv) {
-  auto renderer = [](uint8_t x, atom_value, const message&) {
-    return "math_error" + deep_to_string_as_tuple(static_cast<math_error>(x));
-  };
-  actor_system_config cfg{argc, argv};
-  cfg.add_error_category(atom("math"), renderer);
-  actor_system system{cfg};
+class config : public actor_system_config {
+public:
+  void init() override {
+    auto renderer = [](uint8_t x, atom_value, const message&) {
+      return "math_error" + deep_to_string_as_tuple(static_cast<math_error>(x));
+    };
+    add_error_category(atom("math"), renderer);
+  }
+};
+
+void caf_main(actor_system& system, config&) {
   double x;
   double y;
   cout << "x: " << flush;
@@ -72,3 +76,5 @@ int main(int argc, char** argv) {
     }
   );
 }
+
+CAF_MAIN()

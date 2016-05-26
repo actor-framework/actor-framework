@@ -74,7 +74,8 @@ void dancing_kirby(event_based_actor* self) {
   );
 }
 
-int main(int argc, char** argv) {
-  actor_system system{argc, argv};
+void caf_main(actor_system& system) {
   system.spawn(dancing_kirby);
 }
+
+CAF_MAIN()

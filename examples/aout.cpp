@@ -4,12 +4,12 @@
 #include <iostream>
 
 #include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 using namespace caf;
 using std::endl;
 
-int main() {
-  actor_system system;
+void caf_main(actor_system& system) {
   for (int i = 1; i <= 50; ++i) {
     system.spawn([i](blocking_actor* self) {
       aout(self) << "Hi there! This is actor nr. "
@@ -27,3 +27,5 @@ int main() {
     });
   }
 }
+
+CAF_MAIN()

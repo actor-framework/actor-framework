@@ -191,8 +191,7 @@ private:
 
 } // namespace <anonymous>
 
-int main(int argc, char** argv) {
-  actor_system system{argc, argv};
+void caf_main(actor_system& system) {
   scoped_actor self{system};
   // create five chopsticks
   aout(self) << "chopstick ids are:";
@@ -208,3 +207,5 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < 5; ++i)
     self->spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i + 1) % 5]);
 }
+
+CAF_MAIN()

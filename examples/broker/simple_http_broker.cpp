@@ -64,39 +64,25 @@ behavior server(broker* self) {
   };
 }
 
-optional<uint16_t> as_u16(const std::string& str) {
-  return static_cast<uint16_t>(stoul(str));
-}
-
-int main(int argc, const char** argv) {
+class config : public actor_system_config {
+public:
   uint16_t port = 0;
-  auto res = message_builder(argv + 1, argv + argc).extract_opts({
-    {"port,p", "set port", port},
-  });
-  if (! res.error.empty()) {
-    cerr << res.error << endl;
-    return 1;
+
+  void init() override {
+    opt_group{custom_options_, "global"}
+    .add(port, "port,p", "set port");
   }
-  if (res.opts.count("help") > 0) {
-    cout << res.helptext << endl;
-    return 0;
-  }
-  if (! res.remainder.empty()) {
-    // not all CLI arguments could be consumed
-    cerr << "*** too many arguments" << endl << res.helptext << endl;
-    return 1;
-  }
-  if (res.opts.count("port") == 0) {
-    cerr << "*** no port given" << endl << res.helptext << endl;
-    return 1;
-  }
-  cout << "*** run in server mode listen on: " << port << endl;
+};
+
+void caf_main(actor_system& system, config& cfg) {
+  cout << "*** run in server mode listen on: " << cfg.port << endl;
   cout << "*** to quit the program, simply press <enter>" << endl;
-  actor_system system;
-  auto server_actor = system.middleman().spawn_server(server, port);
+  auto server_actor = system.middleman().spawn_server(server, cfg.port);
   // wait for any input
   std::string dummy;
   std::getline(std::cin, dummy);
   // kill server
   anon_send_exit(server_actor, exit_reason::user_shutdown);
 }
+
+CAF_MAIN(io::middleman)

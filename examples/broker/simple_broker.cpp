@@ -179,46 +179,36 @@ optional<uint16_t> as_u16(const std::string& str) {
   return static_cast<uint16_t>(stoul(str));
 }
 
-int main(int argc, char** argv) {
-  using std::string;
-  actor_system_config cfg{argc, argv};
-  if (cfg.cli_helptext_printed)
-    return 0;
-  cfg.load<io::middleman>();
+class config : public actor_system_config {
+public:
   uint16_t port = 0;
-  string host = "localhost";
-  auto res = cfg.args_remainder.extract_opts({
-    {"server,s", "run in server mode"},
-    {"client,c", "run in client mode"},
-    {"port,p", "set port", port},
-    {"host,H", "set host (client mode only)", host}
-  });
-  if (! res.error.empty())
-    return cerr << res.error << endl, 1;
-  if (res.opts.count("help") > 0)
-    return cout << res.helptext << endl, 0;
-  if (! res.remainder.empty())
-    // not all CLI arguments could be consumed
-    return cerr << "*** too many arguments" << endl << res.helptext << endl, 1;
-  if (res.opts.count("port") == 0)
-    return cerr << "*** no port given" << endl << res.helptext << endl, 1;
-  actor_system system{cfg};
-  if (res.opts.count("server") > 0) {
+  std::string host = "localhost";
+  bool server_mode = false;
+
+  void init() override {
+    opt_group{custom_options_, "global"}
+    .add(port, "port,p", "set port")
+    .add(host, "host,H", "set host (ignored in server mode)")
+    .add(server_mode, "server-mode,s", "enable server mode");
+  }
+};
+
+void caf_main(actor_system& system, config& cfg) {
+  if (cfg.server_mode) {
     cout << "run in server mode" << endl;
     auto pong_actor = system.spawn(pong);
-    auto server_actor = system.middleman().spawn_server(server, port, pong_actor);
+    auto server_actor = system.middleman().spawn_server(server, cfg.port,
+                                                        pong_actor);
     print_on_exit(server_actor, "server");
     print_on_exit(pong_actor, "pong");
-  } else if (res.opts.count("client") > 0) {
-    auto ping_actor = system.spawn(ping, size_t{20});
-    auto io_actor = system.middleman().spawn_client(broker_impl, host,
-                                                    port, ping_actor);
-    print_on_exit(ping_actor, "ping");
-    print_on_exit(io_actor, "protobuf_io");
-    send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
-  } else {
-    cerr << "*** neither client nor server mode set" << endl
-         << res.helptext << endl;
-    return 1;
+    return;
   }
+  auto ping_actor = system.spawn(ping, size_t{20});
+  auto io_actor = system.middleman().spawn_client(broker_impl, cfg.host,
+                                                  cfg.port, ping_actor);
+  print_on_exit(ping_actor, "ping");
+  print_on_exit(io_actor, "protobuf_io");
+  send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
 }
+
+CAF_MAIN(io::middleman)

@@ -171,8 +171,15 @@ public:
     /// Evaluates option arguments.
     consumer fun;
 
+    /// Set to true for zero-argument options.
+    bool* flag;
+
     /// Creates a CLI argument without data.
     cli_arg(std::string name, std::string text);
+
+    /// Creates a CLI flag option. The `flag` is set to `true` if the option
+    /// was set, otherwise it is `false`.
+    cli_arg(std::string name, std::string text, bool& flag);
 
     /// Creates a CLI argument storing its matched argument in `dest`.
     cli_arg(std::string name, std::string text, atom_value& dest);
@@ -454,12 +461,14 @@ message::cli_arg::cli_arg(typename std::enable_if<
           return true;
         }
         return false;
-      }) {
+      }),
+      flag(nullptr) {
   // nop
 }
 
 template <class T>
-message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
+message::cli_arg::cli_arg(std::string nstr, std::string tstr,
+                          std::vector<T>& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),
       fun([&arg](const std::string& str) -> bool {
@@ -470,7 +479,8 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::vector<T>& ar
           return true;
         }
         return false;
-          }) {
+          }),
+      flag(nullptr) {
   // nop
 }
 

@@ -36,8 +36,7 @@ behavior client(event_based_actor* self, const actor& serv) {
   };
 }
 
-int main(int argc, char** argv) {
-  actor_system system{argc, argv};
+void caf_main(actor_system& system) {
   auto serv = system.spawn(server);
   auto worker = system.spawn(client, serv);
   scoped_actor self{system};
@@ -48,3 +47,5 @@ int main(int argc, char** argv) {
   });
   self->send_exit(serv, exit_reason::user_shutdown);
 }
+
+CAF_MAIN()
