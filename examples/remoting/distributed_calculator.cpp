@@ -1,15 +1,17 @@
-/******************************************************************************\
- * This program is a distributed version of the math_actor example.           *
- * Client and server use a stateless request/response protocol and the client *
- * is failure resilient by using a FIFO request queue.                        *
- * The client auto-reconnects and also allows for server reconfiguration.     *
- *                                                                            *
- * Run server at port 4242:                                                   *
- * - ./build/bin/distributed_math_actor -s -p 4242                            *
- *                                                                            *
- * Run client at the same host:                                               *
- * - ./build/bin/distributed_math_actor -c -p 4242                            *
-\ ******************************************************************************/
+//  This program is a distributed version of the math_actor example.
+// Client and server use a stateless request/response protocol and the client
+// is failure resilient by using a FIFO request queue.
+// The client auto-reconnects and also allows for server reconfiguration.
+//
+// Run server at port 4242:
+// - ./build/bin/distributed_math_actor -s -p 4242
+//
+// Run client at the same host:
+// - ./build/bin/distributed_math_actor -c -p 4242
+
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 254-266 (ConfiguringActorSystems.tex)
 
 #include <array>
 #include <vector>
