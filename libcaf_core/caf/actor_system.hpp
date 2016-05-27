@@ -58,7 +58,7 @@ using rtti_pair_vec_triple = std::tuple<rtti_pair_vec,
 template <class T>
 struct mpi_field_access {
   std::string operator()(const uniform_type_info_map& types) {
-    auto nr = detail::type_nr<T>::value;
+    auto nr = type_nr<T>::value;
     if (nr != 0)
       return *types.portable_name(nr, nullptr);
     auto ptr = types.portable_name(0, &typeid(T));

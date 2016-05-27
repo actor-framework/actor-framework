@@ -308,7 +308,7 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& node) {
   if (mid.is_response())
     return msg_type::response;
   switch (msg.type_token()) {
-    case detail::make_type_token<atom_value, atom_value, std::string>():
+    case make_type_token<atom_value, atom_value, std::string>():
       if (msg.get_as<atom_value>(0) == sys_atom::value
           && msg.get_as<atom_value>(1) == get_atom::value) {
         auto& what = msg.get_as<std::string>(2);
@@ -328,14 +328,14 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& node) {
         return msg_type::sys_message;
       }
       return msg_type::ordinary;
-    case detail::make_type_token<timeout_msg>(): {
+    case make_type_token<timeout_msg>(): {
       auto& tm = msg.get_as<timeout_msg>(0);
       auto tid = tm.timeout_id;
       CAF_ASSERT(! mid.valid());
       return is_active_timeout(tid) ? msg_type::timeout
                                     : msg_type::expired_timeout;
     }
-    case detail::make_type_token<exit_msg>(): {
+    case make_type_token<exit_msg>(): {
       auto& em = msg.get_as_mutable<exit_msg>(0);
       // make sure to get rid of attachables if they're no longer needed
       unlink_from(em.source);
@@ -346,12 +346,12 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& node) {
         exit_handler_(this, em);
       return msg_type::sys_message;
     }
-    case detail::make_type_token<down_msg>(): {
+    case make_type_token<down_msg>(): {
       auto& dm = msg.get_as_mutable<down_msg>(0);
       down_handler_(this, dm);
       return msg_type::sys_message;
     }
-    case detail::make_type_token<error>(): {
+    case make_type_token<error>(): {
       auto& err = msg.get_as_mutable<error>(0);
       error_handler_(this, err);
       return msg_type::sys_message;
@@ -447,13 +447,13 @@ void local_actor::handle_response(mailbox_element_ptr& ptr,
       error_handler_(this, err);
     }
   };
-  if (msg.type_token() == detail::make_type_token<sync_timeout_msg>()) {
+  if (msg.type_token() == make_type_token<sync_timeout_msg>()) {
     // TODO: check if condition can ever be true
     if (ref_fun.timeout().valid())
       ref_fun.handle_timeout();
     invoke_error(sec::request_timeout);
   } else if (ref_fun(visitor, msg) == match_case::no_match) {
-    if (msg.type_token() == detail::make_type_token<error>()) {
+    if (msg.type_token() == make_type_token<error>()) {
       error_handler_(this, msg.get_as_mutable<error>(0));
     } else {
       // wrap unhandled message into an error object and try invoke again

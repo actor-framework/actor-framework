@@ -1,5 +1,9 @@
-// showcases how to add custom message types to CAF
-// if no friend access for serialization is possible
+// Showcases how to add custom message types to CAF
+// if no friend access for serialization is possible.
+
+// This file is referenced in the manual, do not modify without updating refs!
+// ConfiguringActorApplications: 57-59, 64-66
+
 
 #include <utility>
 #include <iostream>

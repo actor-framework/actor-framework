@@ -27,7 +27,7 @@
 #include "caf/deserializer.hpp"
 #include "caf/deep_to_string.hpp"
 
-#include "caf/detail/type_nr.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/message_data.hpp"
@@ -115,7 +115,7 @@ struct tup_ptr_access<Pos, Max, false> {
   }
 };
 
-template <class T, uint16_t N = detail::type_nr<T>::value>
+template <class T, uint16_t N = type_nr<T>::value>
 struct tuple_vals_type_helper {
   static typename message_data::rtti_pair get() {
     return {N, nullptr};

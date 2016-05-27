@@ -179,7 +179,7 @@ public:
   trivial_match_case& operator=(const trivial_match_case&) = default;
 
   trivial_match_case(F f)
-      : match_case(detail::make_type_token_from_list<pattern>()),
+      : match_case(make_type_token_from_list<pattern>()),
         fun_(std::move(f)) {
     // nop
   }

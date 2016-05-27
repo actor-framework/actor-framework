@@ -107,14 +107,14 @@ public:
   /// Returns the value at position `p` as const reference of type `T`.
   template <class T>
   const T& get_as(size_t p) const {
-    CAF_ASSERT(match_element(p, detail::type_nr<T>::value, &typeid(T)));
+    CAF_ASSERT(match_element(p, type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<const T*>(at(p));
   }
 
   /// Returns the value at position `p` as mutable reference of type `T`.
   template <class T>
   T& get_as_mutable(size_t p) {
-    CAF_ASSERT(match_element(p, detail::type_nr<T>::value, &typeid(T)));
+    CAF_ASSERT(match_element(p, type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<T*>(get_mutable(p));
   }
 
@@ -197,7 +197,7 @@ public:
     /// storing its matched argument in `dest`.
     template <class T>
     cli_arg(typename std::enable_if<
-              detail::type_nr<T>::value != 0,
+              type_nr<T>::value != 0,
               std::string
             >::type name,
             std::string text, T& dest);
@@ -258,10 +258,10 @@ public:
   template <class T>
   bool match_element(size_t p) const {
     const std::type_info* rtti = nullptr;
-    if (detail::type_nr<T>::value == 0) {
+    if (type_nr<T>::value == 0) {
       rtti = &typeid(T);
     }
-    return match_element(p, detail::type_nr<T>::value, rtti);
+    return match_element(p, type_nr<T>::value, rtti);
   }
 
   /// Queries whether the types of this message are `Ts...`.
@@ -444,7 +444,7 @@ inline message make_message() {
 
 template <class T>
 message::cli_arg::cli_arg(typename std::enable_if<
-                            detail::type_nr<T>::value != 0,
+                            type_nr<T>::value != 0,
                             std::string
                           >::type
                           nstr, std::string tstr, T& arg)

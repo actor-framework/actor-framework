@@ -27,7 +27,7 @@
 #include "caf/atom.hpp"
 #include "caf/message.hpp"
 
-#include "caf/detail/type_nr.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
 
@@ -47,7 +47,7 @@ bool match_element(const meta_element&, const type_erased_tuple*,
 bool match_atom_constant(const meta_element&, const type_erased_tuple*,
                          size_t, void**);
 
-template <class T, uint16_t TN = detail::type_nr<T>::value>
+template <class T, uint16_t TN = type_nr<T>::value>
 struct meta_element_factory {
   static meta_element create() {
     return {static_cast<atom_value>(0), TN, nullptr, match_element};
@@ -64,7 +64,7 @@ struct meta_element_factory<T, 0> {
 template <atom_value V>
 struct meta_element_factory<atom_constant<V>, type_nr<atom_value>::value> {
   static meta_element create() {
-    return {V, detail::type_nr<atom_value>::value,
+    return {V, type_nr<atom_value>::value,
             nullptr, match_atom_constant};
   }
 };

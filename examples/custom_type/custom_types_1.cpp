@@ -1,4 +1,7 @@
-// showcases how to add custom POD message types to CAF
+// Showcases how to add custom POD message types.
+
+// This file is referenced in the manual, do not modify without updating refs!
+// ConfiguringActorApplications: 23-26, 29-33, 87-90, 93-96
 
 #include <tuple>
 #include <string>
@@ -16,17 +19,17 @@ using std::vector;
 
 using namespace caf;
 
-// POD struct
+// POD struct foo
 struct foo {
   std::vector<int> a;
   int b;
 };
 
 // foo needs to be serializable
-template <class T>
-void serialize(T& in_or_out, foo& x, const unsigned int) {
-  in_or_out & x.a;
-  in_or_out & x.b;
+template <class Processor>
+void serialize(Processor& proc, foo& x, const unsigned int) {
+  proc & x.a;
+  proc & x.b;
 }
 
 // also, CAF gives us `deep_to_string` for implementing `to_string` easily
@@ -48,10 +51,10 @@ struct foo2 {
 };
 
 // foo2 also needs to be serializable
-template <class T>
-void serialize(T& in_or_out, foo2& x, const unsigned int) {
-  in_or_out & x.a;
-  in_or_out & x.b; // traversed automatically and recursively
+template <class Processor>
+void serialize(Processor& proc, foo2& x, const unsigned int) {
+  proc & x.a;
+  proc & x.b; // traversed automatically and recursively
 }
 
 // `deep_to_string` also traverses nested containers

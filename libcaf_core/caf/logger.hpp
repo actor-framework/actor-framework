@@ -33,7 +33,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/deep_to_string.hpp"
 
-#include "caf/detail/type_nr.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/single_reader_queue.hpp"

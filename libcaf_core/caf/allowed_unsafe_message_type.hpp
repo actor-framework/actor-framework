@@ -17,6 +17,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+// This file is referenced in the manual, do not modify without updating refs!
+// ConfiguringActorApplications: 36-40
+
 #ifndef CAF_ALLOWED_UNSAFE_MESSAGE_TYPE_HPP
 #define CAF_ALLOWED_UNSAFE_MESSAGE_TYPE_HPP
 

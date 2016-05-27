@@ -39,7 +39,7 @@
 #include "caf/system_messages.hpp"
 #include "caf/type_erased_value.hpp"
 
-#include "caf/detail/type_nr.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -103,14 +103,14 @@ private:
   actor_system& system_;
 
   // message types
-  std::array<value_factory_kvp, detail::type_nrs - 1> builtin_;
+  std::array<value_factory_kvp, type_nrs - 1> builtin_;
   value_factories_by_name custom_by_name_;
   value_factories_by_rtti custom_by_rtti_;
   value_factories_by_name ad_hoc_;
   mutable detail::shared_spinlock ad_hoc_mtx_;
 
   // message type names
-  std::array<std::string, detail::type_nrs - 1> builtin_names_;
+  std::array<std::string, type_nrs - 1> builtin_names_;
   portable_names custom_names_;
 
   // actor types

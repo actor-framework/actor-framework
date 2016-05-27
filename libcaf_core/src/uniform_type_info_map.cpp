@@ -43,14 +43,12 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/message_builder.hpp"
 
-#include "caf/detail/type_nr.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
-
-namespace detail {
 
 const char* numbered_type_names[] = {
   "@actor",
@@ -93,12 +91,10 @@ const char* numbered_type_names[] = {
   "float"
 };
 
-} // namespace detail
-
 namespace {
 
 using builtins = std::array<uniform_type_info_map::value_factory_kvp,
-                            detail::type_nrs - 1>;
+                            type_nrs - 1>;
 
 void fill_builtins(builtins&, detail::type_list<>, size_t) {
   // end of recursion
@@ -108,7 +104,7 @@ template <class List>
 void fill_builtins(builtins& arr, List, size_t pos) {
   using type = typename detail::tl_head<List>::type;
   typename detail::tl_tail<List>::type next;
-  arr[pos].first = detail::numbered_type_names[pos];
+  arr[pos].first = numbered_type_names[pos];
   arr[pos].second = &make_type_erased_value<type>;
   fill_builtins(arr, next, pos + 1);
 }
@@ -175,10 +171,10 @@ actor_factory_result uniform_type_info_map::make_actor(const std::string& name,
 }
 
 uniform_type_info_map::uniform_type_info_map(actor_system& sys) : system_(sys) {
-  detail::sorted_builtin_types list;
+  sorted_builtin_types list;
   fill_builtins(builtin_, list, 0);
   for (size_t i = 0; i < builtin_names_.size(); ++i)
-    builtin_names_[i] = detail::numbered_type_names[i];
+    builtin_names_[i] = numbered_type_names[i];
 }
 
 } // namespace caf

@@ -26,9 +26,8 @@
 #include <typeinfo>
 
 #include "caf/fwd.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/type_erased_value.hpp"
-
-#include "caf/detail/type_nr.hpp"
 
 namespace caf {
 
@@ -84,6 +83,8 @@ public:
   virtual void save(size_t pos, serializer& sink) const = 0;
 
   // -- observers --------------------------------------------------------------
+
+  bool empty() const;
 
   /// Returns a string representation of the tuple.
   std::string stringify() const;
@@ -165,7 +166,7 @@ public:
   }
 
   uint32_t type_token() const override {
-    return detail::make_type_token<Ts...>();
+    return make_type_token<Ts...>();
   }
 
   rtti_pair type(size_t pos) const override {

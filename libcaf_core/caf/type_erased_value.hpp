@@ -25,9 +25,9 @@
 #include <functional>
 
 #include "caf/fwd.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/deep_to_string.hpp"
 
-#include "caf/detail/type_nr.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/try_serialize.hpp"
 
@@ -154,7 +154,7 @@ public:
   // -- overridden observers ---------------------------------------------------
 
   rtti_pair type() const override {
-    auto nr = detail::type_nr<T>::value;
+    auto nr = caf::type_nr<T>::value;
     return {nr, &typeid(T)};
   }
 

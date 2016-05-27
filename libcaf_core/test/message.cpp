@@ -150,7 +150,7 @@ CAF_TEST(extract_opts) {
 
 CAF_TEST(type_token) {
   auto m1 = make_message(get_atom::value);
-  CAF_CHECK_EQUAL(m1.type_token(), detail::make_type_token<get_atom>());
+  CAF_CHECK_EQUAL(m1.type_token(), make_type_token<get_atom>());
 }
 
 CAF_TEST(concat) {

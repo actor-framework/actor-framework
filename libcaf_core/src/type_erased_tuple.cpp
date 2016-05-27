@@ -34,6 +34,10 @@ void type_erased_tuple::load(deserializer& source) {
     load(i, source);
 }
 
+bool type_erased_tuple::empty() const {
+  return size() == 0;
+}
+
 std::string type_erased_tuple::stringify() const {
   if (size() == 0)
     return "()";
