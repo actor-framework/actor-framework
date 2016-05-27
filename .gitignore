@@ -1,6 +1,5 @@
 *.DS_Store
 Doxyfile
-cppa.creator.user*
 html/
 build/*
 cli_build/*
@@ -9,11 +8,7 @@ build-gcc/*
 Makefile
 bin/*
 lib/*
-manual/build-pdf/*
-manual/build-html/*
-manual/*.toc
-manual/manual.html
-manual/variables.tex
+manual/*
 *.swp
 bii/*
 libcaf_core/caf/detail/build_config.hpp
