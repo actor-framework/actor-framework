@@ -262,7 +262,7 @@ public:
     return heartbeat_interval_;
   }
 
-  /// Retruns whether the middleman tries to establish
+  /// Returns whether the middleman tries to establish
   /// a direct connection to each of its peers.
   inline bool enable_automatic_connections() const {
     return enable_automatic_connections_;
