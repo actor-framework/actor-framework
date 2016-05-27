@@ -17,51 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 31-51 (Error.tex)
+
 #ifndef CAF_EXIT_REASON_HPP
 #define CAF_EXIT_REASON_HPP
 
-#include <cstdint>
+#include "caf/error.hpp"
 
 namespace caf {
-namespace exit_reason {
 
-/// Indicates that the actor is still alive.
-static constexpr uint32_t not_exited = 0x00000;
-
-/// Indicates that an actor finished execution.
-static constexpr uint32_t normal = 0x00001;
-
-/// Indicates that an actor finished execution because of an unhandled exception.
-static constexpr uint32_t unhandled_exception = 0x00002;
-
-/// Indicates that the actor received an unexpected synchronous reply message.
-static constexpr uint32_t unhandled_sync_failure = 0x00004;
-
-/// Indicates that the exit reason for this actor is unknown, i.e.,
-/// the actor has been terminated and no longer exists.
-static constexpr uint32_t unknown = 0x00006;
-
-/// Indicates that an actor pool unexpectedly ran out of workers.
-static constexpr uint32_t out_of_workers = 0x00007;
-
-/// Indicates that the actor was forced to shutdown by a user-generated event.
-static constexpr uint32_t user_shutdown = 0x00010;
-
-/// Indicates that the actor was killed unconditionally.
-static constexpr uint32_t kill = 0x00011;
-
-/// Indicates that an actor finishied execution because a connection
-/// to a remote link was closed unexpectedly.
-static constexpr uint32_t remote_link_unreachable = 0x00101;
-
-/// Any user defined exit reason should have a value greater or
-/// equal to prevent collisions with default defined exit reasons.
-static constexpr uint32_t user_defined = 0x10000;
+/// This error category represents fail conditions for actors.
+enum class exit_reason : uint8_t {
+  /// Indicates that an actor finished execution without error.
+  normal = 0,
+  /// Indicates that an actor died because of an unhandled exception.
+  unhandled_exception,
+  /// Indicates that the exit reason for this actor is unknown, i.e.,
+  /// the actor has been terminated and no longer exists.
+  unknown,
+  /// Indicates that an actor pool unexpectedly ran out of workers.
+  out_of_workers,
+  /// Indicates that an actor was forced to shutdown by a user-generated event.
+  user_shutdown,
+  /// Indicates that an actor was killed unconditionally.
+  kill,
+  /// Indicates that an actor finishied execution because a connection
+  /// to a remote link was closed unexpectedly.
+  remote_link_unreachable,
+  /// Indicates that an actor was killed because it became unreachable.
+  unreachable
+};
 
 /// Returns a string representation of given exit reason.
-const char* as_string(uint32_t value);
+const char* to_string(exit_reason x);
 
-} // namespace exit_reason
+/// @relates exit_reason
+error make_error(exit_reason);
+
 } // namespace caf
 
 #endif // CAF_EXIT_REASON_HPP

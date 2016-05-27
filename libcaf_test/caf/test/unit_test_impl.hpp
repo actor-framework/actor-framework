@@ -21,6 +21,7 @@
 #define CAF_TEST_UNIT_TEST_IMPL_HPP
 
 #include <regex>
+#include <cctype>
 #include <thread>
 #include <cassert>
 #include <cstdlib>
@@ -140,6 +141,29 @@ const char* fill(size_t line) {
   }
 }
 
+void remove_trailing_spaces(std::string& x) {
+  x.erase(std::find_if_not(x.rbegin(), x.rend(), ::isspace).base(), x.end());
+}
+
+bool check(test* parent, const char *file, size_t line,
+           const char *expr, bool should_fail, bool result) {
+  std::stringstream ss;
+  if (result) {
+    ss << engine::color(green) << "** "
+       << engine::color(blue) << file << engine::color(yellow) << ":"
+       << engine::color(blue) << line << fill(line) << engine::color(reset)
+       << expr;
+    parent->pass(ss.str());
+  } else {
+    ss << engine::color(red) << "!! "
+       << engine::color(blue) << file << engine::color(yellow) << ":"
+       << engine::color(blue) << line << fill(line) << engine::color(reset)
+       << expr;
+    parent->fail(ss.str(), should_fail);
+  }
+  return result;
+}
+
 } // namespace detail
 
 logger::stream::stream(logger& l, level lvl) : logger_(l), level_(lvl) {
@@ -183,11 +207,16 @@ logger::stream& logger::stream::operator<<(const std::string& str) {
   return *this;
 }
 
-void logger::stream::flush() {
-  logger_.log(level_, buf_.str());
-  buf_.str("");
+std::string logger::stream::str() const {
+  return str_;
 }
 
+void logger::stream::flush() {
+  auto str = buf_.str();
+  buf_.str("");
+  logger_.log(level_, str);
+  str_ += str;
+}
 
 bool logger::init(int lvl_cons, int lvl_file, const std::string& logfile) {
   instance().level_console_ = static_cast<level>(lvl_cons);
@@ -345,18 +374,17 @@ bool engine::run(bool colorize,
            && ! std::regex_search(x, blacklist);
   };
 # endif
+  std::vector<std::string> failed_tests;
   for (auto& p : instance().suites_) {
-    if (! enabled(suites, not_suites, p.first)) {
+    if (! enabled(suites, not_suites, p.first))
       continue;
-    }
     auto suite_name = p.first.empty() ? "<unnamed>" : p.first;
     auto pad = std::string((bar.size() - suite_name.size()) / 2, ' ');
     bool displayed_header = false;
     size_t tests_ran = 0;
     for (auto& t : p.second) {
-      if (! enabled(tests, not_tests, t->name())) {
+      if (! enabled(tests, not_tests, t->name()))
         continue;
-      }
       instance().current_test_ = t.get();
       ++tests_ran;
       if (! displayed_header) {
@@ -396,6 +424,10 @@ bool engine::run(bool colorize,
                     << "took " << color(cyan) << render(elapsed)
                     << color(reset) << '\n';
       if (bad > 0) {
+        // concat suite name + test name
+        failed_tests.emplace_back(p.first);
+        failed_tests.back() += ":";
+        failed_tests.back() += t->name();
         log.verbose() << " (" << color(green) << good << color(reset) << '/'
                       << color(red) << bad << color(reset) << ")" << '\n';
       } else {
@@ -445,8 +477,14 @@ bool engine::run(bool colorize,
              << render(runtime) << '\n' << color(reset) << indent
              << "success: "
              << (total_bad == total_bad_expected ? color(green) : color(red))
-             << percent_good << "%" << color(reset) << "\n\n" << color(cyan)
-             << bar << color(reset) << '\n';
+             << percent_good << "%" << color(reset) << "\n\n";
+  if (! failed_tests.empty()) {
+    log.info() << indent << "failed tests:" << '\n';
+    for (auto& name : failed_tests)
+      log.info() << indent << "- " << name << '\n';
+    log.info() << '\n';
+  }
+  log.info() << color(cyan) << bar << color(reset) << '\n';
   return total_bad == total_bad_expected;
 }
 
@@ -476,9 +514,18 @@ test* engine::current_test() {
 
 std::vector<std::string> engine::available_suites() {
   std::vector<std::string> result;
-  for (auto& kvp : instance().suites_) {
+  for (auto& kvp : instance().suites_)
     result.push_back(kvp.first);
-  }
+  return result;
+}
+
+std::vector<std::string> engine::available_tests(const std::string& suite) {
+  std::vector<std::string> result;
+  auto i = instance().suites_.find(suite);
+  if (i == instance().suites_.end())
+    return result;
+  for (auto& ptr : i->second)
+    result.push_back(ptr->name());
   return result;
 }
 
@@ -508,6 +555,7 @@ int main(int argc, char** argv) {
   std::string not_suites;
   std::string tests = ".*";
   std::string not_tests;
+  std::string suite_query;
   // use all arguments after '--' for the test engine.
   std::string delimiter = "--";
   auto divider = argc;
@@ -532,17 +580,23 @@ int main(int argc, char** argv) {
     {"not-suites,S", "exclude suites", not_suites},
     {"tests,t", "set tests", tests},
     {"not-tests,T", "exclude tests", not_tests},
-    {"available-suites,a", "print available suites"}
+    {"available-suites,a", "print available suites"},
+    {"available-tests,A", "print available tests for given suite", suite_query}
   });
   if (res.opts.count("help") > 0) {
     std::cout << res.helptext << std::endl;
     return 0;
   }
+  if (! suite_query.empty()) {
+    std::cout << "available tests in suite " << suite_query << ":" << std::endl;
+    for (auto& t : engine::available_tests(suite_query))
+      std::cout << "  - " << t << std::endl;
+    return 0;
+  }
   if (res.opts.count("available-suites") > 0) {
     std::cout << "available suites:" << std::endl;
-    for (auto& s : engine::available_suites()) {
+    for (auto& s : engine::available_suites())
       std::cout << "  - " << s << std::endl;
-    }
     return 0;
   }
   if (! res.remainder.empty()) {
@@ -551,10 +605,16 @@ int main(int argc, char** argv) {
     return 1;
   }
   auto colorize = res.opts.count("no-colors") == 0;
-  if (divider < argc)
-    engine::args(argc - divider - 1, argv + divider + 1);
-  else
-    engine::args(0, argv);
+  std::vector<char*> args;
+  if (divider < argc) {
+    // make a new args vector that contains argv[0] and all remaining args
+    args.push_back(argv[0]);
+    for (int i = divider + 1; i < argc; ++i)
+      args.push_back(argv[i]);
+    engine::args(static_cast<int>(args.size()), args.data());
+  } else {
+    engine::args(1, argv);
+  }
   if (res.opts.count("max-runtime") > 0)
     engine::max_runtime(max_runtime);
   auto result = engine::run(colorize, log_file, verbosity_console,
@@ -563,19 +623,6 @@ int main(int argc, char** argv) {
   return result ? 0 : 1;
 }
 
-namespace detail {
-
-expr::expr(test* parent, const char* filename, size_t lineno,
-           bool should_fail, const char* expression)
-    : test_{parent},
-      filename_{filename},
-      line_{lineno},
-      should_fail_{should_fail},
-      expr_{expression} {
-  assert(test_ != nullptr);
-}
-
-} // namespace detail
 } // namespace test
 } // namespace caf
 

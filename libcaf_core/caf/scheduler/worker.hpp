@@ -22,9 +22,10 @@
 
 #include <cstddef>
 
+#include "caf/logger.hpp"
+#include "caf/resumable.hpp"
 #include "caf/execution_unit.hpp"
 
-#include "caf/detail/logging.hpp"
 #include "caf/detail/double_ended_queue.hpp"
 
 namespace caf {
@@ -42,9 +43,11 @@ public:
   using policy_data = typename Policy::worker_data;
 
   worker(size_t worker_id, coordinator_ptr worker_parent, size_t throughput)
-      : max_throughput_(throughput),
+      : execution_unit(&worker_parent->system()),
+        max_throughput_(throughput),
         id_(worker_id),
-        parent_(worker_parent) {
+        parent_(worker_parent),
+        data_(worker_parent) {
     // nop
   }
 
@@ -52,7 +55,7 @@ public:
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
     auto this_worker = this;
     this_thread_ = std::thread{[this_worker] {
-      CAF_LOGF_TRACE("id = " << this_worker->id());
+      CAF_LOG_TRACE(CAF_ARG(this_worker->id()));
       this_worker->run();
     }};
   }
@@ -64,7 +67,7 @@ public:
   /// source, i.e., from any other thread.
   void external_enqueue(job_ptr job) {
     CAF_ASSERT(job != nullptr);
-    CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
+    CAF_LOG_TRACE(CAF_ARG(id()) << CAF_ARG(id_of(job)));
     policy_.external_enqueue(this, job);
   }
 
@@ -73,7 +76,7 @@ public:
   /// @warning Must not be called from other threads.
   void exec_later(job_ptr job) override {
     CAF_ASSERT(job != nullptr);
-    CAF_LOG_TRACE("id = " << id() << " actor id " << id_of(job));
+    CAF_LOG_TRACE(CAF_ARG(id()) << CAF_ARG(id_of(job)));
     policy_.internal_enqueue(this, job);
   }
 
@@ -87,13 +90,6 @@ public:
 
   std::thread& get_thread() {
     return this_thread_;
-  }
-
-  void detach_all() {
-    CAF_LOG_TRACE("");
-    policy_.foreach_resumable(this, [](resumable* job) {
-      job->detach_from_scheduler();
-    });
   }
 
   actor_id id_of(resumable* ptr) {
@@ -112,33 +108,35 @@ public:
 
 private:
   void run() {
-    CAF_LOG_TRACE("worker with ID " << id_);
+    CAF_SET_LOGGER_SYS(&system());
+    CAF_LOG_TRACE(CAF_ARG(id_));
     // scheduling loop
     for (;;) {
       auto job = policy_.dequeue(this);
       CAF_ASSERT(job != nullptr);
-      CAF_LOG_DEBUG("resume actor " << id_of(job));
+      CAF_ASSERT(job->subtype() != resumable::io_actor);
+      CAF_LOG_DEBUG("resume actor:" << CAF_ARG(id_of(job)));
       CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
       policy_.before_resume(this, job);
-      switch (job->resume(this, max_throughput_)) {
+      auto res = job->resume(this, max_throughput_);
+      policy_.after_resume(this, job);
+      switch (res) {
         case resumable::resume_later: {
-          policy_.after_resume(this, job);
+          // keep reference to this actor, as it remains in the "loop"
           policy_.resume_job_later(this, job);
           break;
         }
         case resumable::done: {
-          policy_.after_resume(this, job);
           policy_.after_completion(this, job);
-          job->detach_from_scheduler();
+          intrusive_ptr_release(job);
           break;
         }
         case resumable::awaiting_message: {
-          // resumable will be enqueued again later
-          policy_.after_resume(this, job);
+          // resumable will maybe be enqueued again later, deref it for now
+          intrusive_ptr_release(job);
           break;
         }
         case resumable::shutdown_execution_unit: {
-          policy_.after_resume(this, job);
           policy_.after_completion(this, job);
           policy_.before_shutdown(this);
           return;

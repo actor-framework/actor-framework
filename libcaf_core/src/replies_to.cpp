@@ -18,8 +18,6 @@
  ******************************************************************************/
 
 #include "caf/replies_to.hpp"
-
-#include "caf/to_string.hpp"
 #include "caf/string_algorithms.hpp"
 
 namespace caf {
@@ -27,9 +25,7 @@ namespace caf {
 std::string replies_to_type_name(size_t input_size,
                                  const std::string* input,
                                  size_t output_opt1_size,
-                                 const std::string* output_opt1,
-                                 size_t output_opt2_size,
-                                 const std::string* output_opt2) {
+                                 const std::string* output_opt1) {
   using irange = iterator_range<const std::string*>;
   std::string glue = ",";
   std::string result;
@@ -38,15 +34,8 @@ std::string replies_to_type_name(size_t input_size,
   // possibility of false positives, but those will be catched anyways)
   result = "caf::replies_to<";
   result += join(irange{input, input + input_size}, glue);
-  if (output_opt2_size == 0) {
-    result += ">::with<";
-    result += join(irange{output_opt1, output_opt1 + output_opt1_size}, glue);
-  } else {
-    result += ">::with_either<";
-    result += join(irange{output_opt1, output_opt1 + output_opt1_size}, glue);
-    result += ">::or_else<";
-    result += join(irange{output_opt2, output_opt2 + output_opt2_size}, glue);
-  }
+  result += ">::with<";
+  result += join(irange{output_opt1, output_opt1 + output_opt1_size}, glue);
   result += ">";
   return result;
 }

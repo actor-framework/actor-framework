@@ -28,41 +28,8 @@ message_data::~message_data() {
   // nop
 }
 
-bool message_data::equals(const message_data& other) const {
-  if (this == &other) {
-    return true;
-  }
-  auto n = size();
-  if (n != other.size()) {
-    return false;
-  }
-  // step 1, get and compare type names
-  std::vector<const char*> type_names;
-  for (size_t i = 0; i < n; ++i) {
-    auto lhs = uniform_name_at(i);
-    auto rhs = other.uniform_name_at(i);
-    if (lhs != rhs && strcmp(lhs, rhs) != 0) {
-      return false; // type mismatch
-    }
-    type_names.push_back(lhs);
-  }
-  // step 2: compare each value individually
-  for (size_t i = 0; i < n; ++i) {
-    auto uti = uniform_type_info::from(type_names[i]);
-    if (! uti->equals(at(i), other.at(i))) {
-      return false;
-    }
-  }
-  return true;
-}
-
-std::string message_data::tuple_type_names() const {
-  std::string result = "@<>";
-  for (size_t i = 0; i < size(); ++i) {
-    result += "+";
-    result += uniform_name_at(i);
-  }
-  return result;
+bool message_data::shared() const {
+  return ! unique();
 }
 
 message_data* message_data::cow_ptr::get_unshared() {

@@ -37,57 +37,63 @@ std::atomic<long> s_pending_on_exits;
 
 class testee : public event_based_actor {
 public:
-  testee();
-  ~testee();
-  void on_exit() override;
-  behavior make_behavior() override;
+  testee(actor_config& cfg) : event_based_actor(cfg) {
+    ++s_testees;
+    ++s_pending_on_exits;
+  }
+
+  ~testee() {
+    --s_testees;
+  }
+
+  const char* name() const override {
+    return "testee";
+  }
+
+  void on_exit() override {
+    --s_pending_on_exits;
+  }
+
+  behavior make_behavior() override {
+    return {
+      [=](int x) {
+        return x;
+      }
+    };
+  }
 };
-
-testee::testee() {
-  ++s_testees;
-  ++s_pending_on_exits;
-}
-
-testee::~testee() {
-  // avoid weak-vtables warning
-  --s_testees;
-}
-
-void testee::on_exit() {
-  --s_pending_on_exits;
-}
-
-behavior testee::make_behavior() {
-  return {
-    others >> [=] {
-      return current_message();
-    }
-  };
-}
 
 template <class ExitMsgType>
 behavior tester(event_based_actor* self, const actor& aut) {
   if (std::is_same<ExitMsgType, exit_msg>::value) {
-    self->trap_exit(true);
-    self->link_to(aut);
-  } else {
-    self->monitor(aut);
-  }
-  anon_send_exit(aut, exit_reason::user_shutdown);
-  return {
-    [self](const ExitMsgType& msg) {
+    self->set_exit_handler([self](exit_msg& msg) {
       // must be still alive at this point
       CAF_CHECK_EQUAL(s_testees.load(), 1);
       CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-      CAF_CHECK_EQUAL(self->current_message().vals()->get_reference_count(), 1);
-      CAF_CHECK(&msg == self->current_message().at(0));
       // testee might be still running its cleanup code in
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
       // which in turn destroys it by dropping the last remaining reference
       self->delayed_send(self, std::chrono::milliseconds(30),
                          check_atom::value);
-    },
+    });
+    self->link_to(aut);
+  } else {
+    self->set_down_handler([self](down_msg& msg) {
+      // must be still alive at this point
+      CAF_CHECK_EQUAL(s_testees.load(), 1);
+      CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+      // testee might be still running its cleanup code in
+      // another worker thread; by waiting some milliseconds, we make sure
+      // testee had enough time to return control to the scheduler
+      // which in turn destroys it by dropping the last remaining reference
+      self->delayed_send(self, std::chrono::milliseconds(30),
+                         check_atom::value);
+    });
+    self->monitor(aut);
+  }
+  anon_send_exit(aut, exit_reason::user_shutdown);
+  return {
     [self](check_atom) {
       // make sure aut's dtor and on_exit() have been called
       CAF_CHECK_EQUAL(s_testees.load(), 0);
@@ -98,13 +104,29 @@ behavior tester(event_based_actor* self, const actor& aut) {
 }
 
 struct fixture {
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
+  actor_system system;
+
+  template <spawn_options Os, class... Ts>
+  actor spawn(Ts&&... xs) {
+    return system.spawn<Os>(xs...);
+  }
+
+  template <class T, spawn_options Os, class... Ts>
+  actor spawn(Ts&&... xs) {
+    return system.spawn<T, Os>(xs...);
   }
 };
 
 } // namespace <anonymous>
+
+CAF_TEST(destructor_call) {
+  { // lifetime scope of actor systme
+    actor_system system;
+    system.spawn<testee>();
+  }
+  CAF_CHECK_EQUAL(s_testees.load(), 0);
+  CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
+}
 
 CAF_TEST_FIXTURE_SCOPE(actor_lifetime_tests, fixture)
 

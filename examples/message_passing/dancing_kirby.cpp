@@ -7,6 +7,10 @@
 #include <algorithm>
 #include "caf/all.hpp"
 
+// This file is partially included in the manual, do not modify
+// without updating the references in the *.tex files!
+// Manual references: lines 56-75 (MessagePassing.tex)
+
 using std::cout;
 using std::endl;
 using std::pair;
@@ -70,8 +74,8 @@ void dancing_kirby(event_based_actor* self) {
   );
 }
 
-int main() {
-  spawn(dancing_kirby);
-  await_all_actors_done();
-  shutdown();
+void caf_main(actor_system& system) {
+  system.spawn(dancing_kirby);
 }
+
+CAF_MAIN()

@@ -25,12 +25,11 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "caf/ref_counted.hpp"
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
 
-/// An intrusive, reference counting smart pointer impelementation.
+/// An intrusive, reference counting smart pointer implementation.
 /// @relates ref_counted
 template <class T>
 class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
@@ -42,6 +41,12 @@ public:
   using element_type = T;
   using reference = T&;
   using const_reference = const T&;
+
+  // tell actor_cast which semantic this type uses
+  static constexpr bool has_weak_ptr_semantics = false;
+
+  // tell actor_cast this pointer can be null
+  static constexpr bool has_non_null_guarantee = false;
 
   constexpr intrusive_ptr() : ptr_(nullptr) {
     // nop
@@ -66,9 +71,8 @@ public:
   }
 
   ~intrusive_ptr() {
-    if (ptr_) {
+    if (ptr_)
       intrusive_ptr_release(ptr_);
-    }
   }
 
   void swap(intrusive_ptr& other) noexcept {
@@ -79,7 +83,8 @@ public:
   /// count and sets this to `nullptr`.
   pointer detach() noexcept {
     auto result = ptr_;
-    ptr_ = nullptr;
+    if (result)
+      ptr_ = nullptr;
     return result;
   }
 
@@ -92,14 +97,8 @@ public:
   void reset(pointer new_value = nullptr, bool add_ref = true) {
     auto old = ptr_;
     set_ptr(new_value, add_ref);
-    if (old) {
+    if (old)
       intrusive_ptr_release(old);
-    }
-  }
-
-  template <class... Ts>
-  void emplace(Ts&&... xs) {
-    reset(new T(std::forward<Ts>(xs)...));
   }
 
   intrusive_ptr& operator=(pointer ptr) {
@@ -107,21 +106,8 @@ public:
     return *this;
   }
 
-  intrusive_ptr& operator=(intrusive_ptr&& other) {
+  intrusive_ptr& operator=(intrusive_ptr other) {
     swap(other);
-    return *this;
-  }
-
-  intrusive_ptr& operator=(const intrusive_ptr& other) {
-    intrusive_ptr tmp{other};
-    swap(tmp);
-    return *this;
-  }
-
-  template <class Y>
-  intrusive_ptr& operator=(intrusive_ptr<Y> other) {
-    intrusive_ptr tmp{std::move(other)};
-    swap(tmp);
     return *this;
   }
 
@@ -170,9 +156,8 @@ public:
 private:
   void set_ptr(pointer raw_ptr, bool add_ref) {
     ptr_ = raw_ptr;
-    if (raw_ptr && add_ref) {
+    if (raw_ptr && add_ref)
       intrusive_ptr_add_ref(raw_ptr);
-    }
   }
 
   pointer ptr_;

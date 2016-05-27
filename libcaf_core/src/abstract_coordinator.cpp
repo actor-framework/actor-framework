@@ -25,23 +25,22 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 #include <condition_variable>
 
-#include "caf/on.hpp"
 #include "caf/send.hpp"
-#include "caf/spawn.hpp"
-#include "caf/anything.hpp"
-#include "caf/to_string.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/actor_system_config.hpp"
 
 #include "caf/scheduler/coordinator.hpp"
 
 #include "caf/policy/work_stealing.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -55,8 +54,8 @@ namespace {
 using hrc = std::chrono::high_resolution_clock;
 
 struct delayed_msg {
-  actor_addr from;
-  channel to;
+  strong_actor_ptr from;
+  strong_actor_ptr to;
   message_id mid;
   message msg;
 };
@@ -75,51 +74,44 @@ inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
 
 class timer_actor : public blocking_actor {
 public:
-  inline mailbox_element_ptr dequeue() {
+  explicit timer_actor(actor_config& cfg) : blocking_actor(cfg) {
+    // nop
+  }
+
+  bool await_data(const hrc::time_point& tp) {
+    if (has_next_message())
+      return true;
+    return mailbox().synchronized_await(mtx_, cv_, tp);
+  }
+
+  mailbox_element_ptr try_dequeue() {
     blocking_actor::await_data();
     return next_message();
   }
 
-  bool await_data(const hrc::time_point& tp) {
-    if (has_next_message()) {
-      return true;
-    }
-    return mailbox().synchronized_await(mtx_, cv_, tp);
-  }
-
   mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
-    if (await_data(tp)) {
+    if (await_data(tp))
       return next_message();
-    }
     return mailbox_element_ptr{};
   }
 
   void act() override {
-    trap_exit(true);
     // setup & local variables
-    bool received_exit = false;
-    mailbox_element_ptr msg_ptr;
     std::multimap<hrc::time_point, delayed_msg> messages;
     // message handling rules
     message_handler mfun{
-      [&](const duration& d, actor_addr& from, channel& to,
+      [&](const duration& d, strong_actor_ptr& from, strong_actor_ptr& to,
           message_id mid, message& msg) {
          insert_dmsg(messages, d, std::move(from),
                      std::move(to), mid, std::move(msg));
-      },
-      [&](const exit_msg&) {
-        received_exit = true;
-      },
-      others >> [&] {
-        CAF_LOG_ERROR("unexpected: " << to_string(msg_ptr->msg));
       }
     };
-    // loop
-    while (! received_exit) {
+    mailbox_element_ptr msg_ptr;
+    for (;;) {
       while (! msg_ptr) {
-        if (messages.empty())
-          msg_ptr = dequeue();
-        else {
+        if (messages.empty()) {
+          msg_ptr = try_dequeue();
+        } else {
           auto tout = hrc::now();
           // handle timeouts (send messages)
           auto it = messages.begin();
@@ -128,10 +120,14 @@ public:
             it = messages.erase(it);
           }
           // wait for next message or next timeout
-          if (it != messages.end()) {
+          if (it != messages.end())
             msg_ptr = try_dequeue(it->first);
-          }
         }
+      }
+      if (msg_ptr->msg.match_element<exit_msg>(0)) {
+        auto& em = msg_ptr->msg.get_as<exit_msg>(0);
+        if (em.reason)
+          quit(em.reason);
       }
       mfun(msg_ptr->msg);
       msg_ptr.reset();
@@ -201,12 +197,12 @@ private:
   sink_cache::iterator iter_;
 };
 
-string_sink make_sink(const std::string& fn, int flags) {
+string_sink make_sink(actor_system& sys, const std::string& fn, int flags) {
   if (fn.empty())
     return nullptr;
   if (fn.front() == ':') {
     // "virtual file" name given, translate this to group communication
-    auto grp = group::get("local", fn);
+    auto grp = sys.groups().get("local", fn);
     return [grp, fn](std::string&& out) { anon_send(grp, fn, std::move(out)); };
   }
   auto append = static_cast<bool>(flags & actor_ostream::append);
@@ -219,11 +215,12 @@ std::cerr << "cannot open file: " << fn << std::endl;
   return nullptr;
 }
 
-sink_handle get_sink_handle(sink_cache& fc, const std::string& fn, int flags) {
+sink_handle get_sink_handle(actor_system& sys, sink_cache& fc,
+                            const std::string& fn, int flags) {
   auto i = fc.find(fn);
   if (i != fc.end())
     return {&fc, i};
-  auto fs = make_sink(fn, flags);
+  auto fs = make_sink(sys, fn, flags);
   if (fs) {
     i = fc.emplace(fn, sink_cache::mapped_type{0, std::move(fs)}).first;
     return {&fc, i};
@@ -239,24 +236,21 @@ void printer_loop(blocking_actor* self) {
       // nop
     }
   };
-  using data_map = std::map<actor_addr, actor_data>;
+  using data_map = std::unordered_map<actor_id, actor_data>;
   sink_cache fcache;
   sink_handle global_redirect;
   data_map data;
-  auto get_data = [&](const actor_addr& addr, bool insert_missing)
-                  -> maybe<actor_data&> {
-    if (addr == invalid_actor_addr)
-      return none;
+  auto get_data = [&](actor_id addr, bool insert_missing) -> actor_data* {
+    if (addr == invalid_actor_id)
+      return nullptr;
     auto i = data.find(addr);
-    if (i == data.end() && insert_missing) {
+    if (i == data.end() && insert_missing)
       i = data.emplace(addr, actor_data{}).first;
-      self->monitor(addr);
-    }
     if (i != data.end())
-      return i->second;
-    return none;
+      return &(i->second);
+    return nullptr;
   };
-  auto flush = [&](maybe<actor_data&> what, bool forced) {
+  auto flush = [&](actor_data* what, bool forced) {
     if (! what)
       return;
     auto& line = what->current_line;
@@ -270,40 +264,40 @@ void printer_loop(blocking_actor* self) {
       std::cout << line << std::flush;
     line.clear();
   };
-  self->trap_exit(true);
+  /*
   bool running = true;
+  self->set_exit_handler([&](exit_msg&) {
+    running = false;
+  });
   self->receive_while([&] { return running; })(
-    [&](add_atom, std::string& str) {
-      auto s = self->current_sender();
-      if (str.empty() || s == invalid_actor_addr)
+  */
+  self->receive_loop(
+    [&](add_atom, actor_id aid, std::string& str) {
+      if (str.empty() || aid == invalid_actor_id)
         return;
-      auto d = get_data(s, true);
+      auto d = get_data(aid, true);
       if (d) {
         d->current_line += str;
         flush(d, false);
       }
     },
-    [&](flush_atom) {
-      flush(get_data(self->current_sender(), false), true);
+    [&](flush_atom, actor_id aid) {
+      flush(get_data(aid, false), true);
     },
-    [&](const down_msg& dm) {
-      flush(get_data(dm.source, false), true);
-      data.erase(dm.source);
-    },
-    [&](const exit_msg&) {
-      running = false;
+    [&](delete_atom, actor_id aid) {
+      auto data_ptr = get_data(aid, false);
+      if (data_ptr) {
+        flush(data_ptr, true);
+        data.erase(aid);
+      }
     },
     [&](redirect_atom, const std::string& fn, int flag) {
-      global_redirect = get_sink_handle(fcache, fn, flag);
+      global_redirect = get_sink_handle(self->system(), fcache, fn, flag);
     },
-    [&](redirect_atom, const actor_addr& src, const std::string& fn, int flag) {
-      auto d = get_data(src, true);
+    [&](redirect_atom, actor_id aid, const std::string& fn, int flag) {
+      auto d = get_data(aid, true);
       if (d)
-        d->redirect = get_sink_handle(fcache, fn, flag);
-    },
-    others >> [&] {
-      std::cerr << "*** unexpected: "
-                << to_string(self->current_message()) << std::endl;
+        d->redirect = get_sink_handle(self->system(), fcache, fn, flag);
     }
   );
 }
@@ -311,44 +305,46 @@ void printer_loop(blocking_actor* self) {
 } // namespace <anonymous>
 
 /******************************************************************************
- *            implementation of coordinator             *
+ *                       implementation of coordinator                        *
  ******************************************************************************/
 
-abstract_coordinator::~abstract_coordinator() {
-  // nop
+actor abstract_coordinator::printer() const {
+  return actor_cast<actor>(printer_);
 }
 
-// creates a default instance
-abstract_coordinator* abstract_coordinator::create_singleton() {
-  return new coordinator<policy::work_stealing>;
-}
-
-void abstract_coordinator::initialize() {
+void abstract_coordinator::start() {
   CAF_LOG_TRACE("");
   // launch utility actors
-  timer_ = spawn<timer_actor, hidden + detached + blocking_api>();
-  printer_ = spawn<hidden + detached + blocking_api>(printer_loop);
+  timer_ = actor_cast<strong_actor_ptr>(system_.spawn<timer_actor, hidden + detached>());
+  printer_ = actor_cast<strong_actor_ptr>(system_.spawn<hidden + detached>(printer_loop));
+}
+
+void abstract_coordinator::init(actor_system_config& cfg) {
+  max_throughput_ = cfg.scheduler_max_throughput;
+  num_workers_ = cfg.scheduler_max_threads;
+}
+
+actor_system::module::id_t abstract_coordinator::id() const {
+  return module::scheduler;
+}
+
+void* abstract_coordinator::subtype_ptr() {
+  return this;
 }
 
 void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
-  scoped_actor self{true};
-  self->monitor(timer_);
-  self->monitor(printer_);
+  scoped_actor self{system_, true};
   anon_send_exit(timer_, exit_reason::user_shutdown);
   anon_send_exit(printer_, exit_reason::user_shutdown);
-  int i = 0;
-  self->receive_for(i, 2)(
-    [](const down_msg&) {
-      // nop
-    }
-  );
+  self->wait_for(timer_, printer_);
 }
 
-abstract_coordinator::abstract_coordinator(size_t nw, size_t mt)
+abstract_coordinator::abstract_coordinator(actor_system& sys)
     : next_worker_(0),
-      max_throughput_(mt),
-      num_workers_(nw) {
+      max_throughput_(0),
+      num_workers_(0),
+      system_(sys) {
   // nop
 }
 

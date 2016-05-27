@@ -22,8 +22,6 @@
 
 #include "caf/config.hpp"
 
-#define CAF_CACHE_LINE_SIZE 64
-
 #include <chrono>
 #include <thread>
 #include <atomic>

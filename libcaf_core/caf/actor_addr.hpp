@@ -25,59 +25,52 @@
 #include <functional>
 #include <type_traits>
 
-#include "caf/intrusive_ptr.hpp"
-
 #include "caf/fwd.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/unsafe_actor_handle_init.hpp"
 
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
 
-struct invalid_actor_addr_t {
-  constexpr invalid_actor_addr_t() {}
-
-};
-
-/// Identifies an invalid {@link actor_addr}.
-/// @relates actor_addr
-constexpr invalid_actor_addr_t invalid_actor_addr = invalid_actor_addr_t{};
-
 /// Stores the address of typed as well as untyped actors.
 class actor_addr : detail::comparable<actor_addr>,
+                   detail::comparable<actor_addr, weak_actor_ptr>,
+                   detail::comparable<actor_addr, strong_actor_ptr>,
                    detail::comparable<actor_addr, abstract_actor*>,
-                   detail::comparable<actor_addr, abstract_actor_ptr> {
+                   detail::comparable<actor_addr, actor_control_block*> {
 public:
+  // -- friend types that need access to private ctors
+
+  template <class>
+  friend class type_erased_value_impl;
+
+  template <class>
+  friend class data_processor;
+
   // grant access to private ctor
   friend class actor;
   friend class abstract_actor;
+  friend class down_msg;
+  friend class exit_msg;
 
-  template <class T, typename U>
-  friend T actor_cast(const U&);
+  // allow conversion via actor_cast
+  template <class, class, int>
+  friend class actor_cast_access;
 
+  // tell actor_cast which semantic this type uses
+  static constexpr bool has_weak_ptr_semantics = true;
 
-  actor_addr() = default;
+  // tell actor_cast this is a nullable handle type
+  static constexpr bool has_non_null_guarantee = true;
+
   actor_addr(actor_addr&&) = default;
   actor_addr(const actor_addr&) = default;
   actor_addr& operator=(actor_addr&&) = default;
   actor_addr& operator=(const actor_addr&) = default;
 
-  actor_addr(const invalid_actor_addr_t&);
-
-  actor_addr operator=(const invalid_actor_addr_t&);
-
-  /// Returns `*this != invalid_actor_addr`.
-  inline explicit operator bool() const noexcept {
-    return static_cast<bool>(ptr_);
-  }
-
-  /// Returns `*this == invalid_actor_addr`.
-  inline bool operator!() const noexcept {
-    return !ptr_;
-  }
-
-  /// Returns whether this is an handle to a remote actor.
-  bool is_remote() const noexcept;
+  actor_addr(const unsafe_actor_handle_init_t&);
 
   /// Returns the ID of this actor.
   actor_id id() const noexcept;
@@ -85,34 +78,70 @@ public:
   /// Returns the origin node of this actor.
   node_id node() const noexcept;
 
+  /// Returns the hosting actor system.
+  actor_system* home_system() const noexcept;
+
   /// Exchange content of `*this` and `other`.
   void swap(actor_addr& other) noexcept;
 
   /// @cond PRIVATE
 
-  inline abstract_actor* operator->() const noexcept {
-    return ptr_.get();
-  }
+  static intptr_t compare(const actor_control_block* lhs,
+                          const actor_control_block* rhs);
 
   intptr_t compare(const actor_addr& other) const noexcept;
 
   intptr_t compare(const abstract_actor* other) const noexcept;
 
-  inline intptr_t compare(const abstract_actor_ptr& other) const noexcept {
+  intptr_t compare(const actor_control_block* other) const noexcept;
+
+  inline intptr_t compare(const weak_actor_ptr& other) const noexcept {
     return compare(other.get());
   }
+
+  inline intptr_t compare(const strong_actor_ptr& other) const noexcept {
+    return compare(other.get());
+  }
+
+  template <class Processor>
+  friend void serialize(Processor& proc, actor_addr& x, const unsigned int v) {
+    serialize(proc, x.ptr_, v);
+  }
+
+  friend inline std::string to_string(const actor_addr& x) {
+    return to_string(x.ptr_);
+  }
+
+  /// Releases the reference held by handle `x`. Using the
+  /// handle after invalidating it is undefined behavior.
+  friend void invalidate(actor_addr& x) {
+    x.ptr_.reset();
+  }
+
+  actor_addr(actor_control_block*, bool);
 
   /// @endcond
 
 private:
-  inline abstract_actor* get() const noexcept {
+  actor_addr() = default;
+
+  inline actor_control_block* get() const noexcept {
     return ptr_.get();
   }
 
-  explicit actor_addr(abstract_actor*);
+  inline actor_control_block* release() noexcept {
+    return ptr_.release();
+  }
 
-  abstract_actor_ptr ptr_;
+  inline actor_control_block* get_locked() const noexcept {
+    return ptr_.get_locked();
+  }
+
+  actor_addr(actor_control_block*);
+
+  weak_actor_ptr ptr_;
 };
+
 
 } // namespace caf
 
@@ -123,7 +152,6 @@ struct hash<caf::actor_addr> {
   inline size_t operator()(const caf::actor_addr& ref) const {
     return static_cast<size_t>(ref.id());
   }
-
 };
 } // namespace std
 

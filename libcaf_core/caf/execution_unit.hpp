@@ -20,14 +20,17 @@
 #ifndef CAF_EXECUTION_UNIT_HPP
 #define CAF_EXECUTION_UNIT_HPP
 
+#include "caf/fwd.hpp"
+
+#include "caf/config.hpp"
+
 namespace caf {
 
-class resumable;
-
-/// Identifies an execution unit, e.g., a worker thread of the scheduler.
+/// Identifies an execution unit, e.g., a worker thread of the scheduler. By
+/// querying its execution unit, an actor can access other context information.
 class execution_unit {
-
 public:
+  explicit execution_unit(actor_system* sys);
 
   virtual ~execution_unit();
 
@@ -36,6 +39,26 @@ public:
   ///          executed by this execution unit.
   virtual void exec_later(resumable* ptr) = 0;
 
+  /// Returns the enclosing actor system.
+  /// @warning Must be set before the execution unit calls `resume` on an actor.
+  actor_system& system() const {
+    CAF_ASSERT(system_ != nullptr);
+    return *system_;
+  }
+
+  /// Returns a pointer to the proxy factory currently associated to this unit.
+  proxy_registry* proxy_registry_ptr() {
+    return proxies_;
+  }
+
+  /// Associated a new proxy factory to this unit.
+  void proxy_registry_ptr(proxy_registry* ptr) {
+    proxies_ = ptr;
+  }
+
+protected:
+  actor_system* system_;
+  proxy_registry* proxies_;
 };
 
 } // namespace caf

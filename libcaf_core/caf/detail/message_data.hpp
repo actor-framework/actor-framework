@@ -24,56 +24,28 @@
 #include <iterator>
 #include <typeinfo>
 
-#include "caf/intrusive_ptr.hpp"
 
+#include "caf/fwd.hpp"
 #include "caf/config.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/uniform_type_info.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/type_erased_tuple.hpp"
 
 #include "caf/detail/type_list.hpp"
 
 namespace caf {
 namespace detail {
 
-class message_data : public ref_counted {
+class message_data : public ref_counted, public type_erased_tuple {
 public:
   message_data() = default;
   message_data(const message_data&) = default;
+
   ~message_data();
 
-  /****************************************************************************
-   *                                modifiers                                 *
-   ****************************************************************************/
+  bool shared() const override;
 
-  virtual void* mutable_at(size_t pos) = 0;
-
-  /****************************************************************************
-   *                                observers                                 *
-   ****************************************************************************/
-
-  // computes "@<>+..." formatted type name
-  std::string tuple_type_names() const;
-
-  // compares each element using uniform_type_info objects
-  bool equals(const message_data& other) const;
-
-  virtual size_t size() const = 0;
-
-  virtual const void* at(size_t pos) const = 0;
-
-  // Tries to match element at position `pos` to given RTTI.
-  virtual bool match_element(size_t pos, uint16_t typenr,
-                             const std::type_info* rtti) const = 0;
-
-  virtual uint32_t type_token() const = 0;
-
-  virtual const char* uniform_name_at(size_t pos) const = 0;
-
-  virtual uint16_t type_nr_at(size_t pos) const = 0;
-
-  /****************************************************************************
-   *                               nested types                               *
-   ****************************************************************************/
+  // nested types
 
   class cow_ptr {
   public:
@@ -92,9 +64,7 @@ public:
       // nop
     }
 
-    /**************************************************************************
-     *                               modifiers                                *
-     **************************************************************************/
+    // modifiers
 
     inline void swap(cow_ptr& other) {
       ptr_.swap(other.ptr_);
@@ -119,9 +89,8 @@ public:
     inline message_data& operator*() {
       return *get_unshared();
     }
-    /**************************************************************************
-     *                               observers                                *
-     **************************************************************************/
+
+    // observers
 
     inline const message_data* operator->() const {
       return ptr_.get();
@@ -143,6 +112,8 @@ public:
     message_data* get_unshared();
     intrusive_ptr<message_data> ptr_;
   };
+
+  using type_erased_tuple::copy;
 
   virtual cow_ptr copy() const = 0;
 };

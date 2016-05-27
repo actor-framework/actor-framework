@@ -34,11 +34,15 @@ enum class receive_policy_flag {
   exactly
 };
 
+constexpr const char* to_string(receive_policy_flag x) {
+  return x == receive_policy_flag::at_least
+         ? "at_least"
+         : (x == receive_policy_flag::at_most ? "at_most" : "exactly");
+}
+
 class receive_policy {
-
-  receive_policy() = delete;
-
 public:
+  receive_policy() = delete;
 
   using config = std::pair<receive_policy_flag, size_t>;
 
@@ -56,7 +60,6 @@ public:
     CAF_ASSERT(num_bytes > 0);
     return {receive_policy_flag::exactly, num_bytes};
   }
-
 };
 
 } // namespace io

@@ -31,9 +31,38 @@
 #include <sstream>
 #include <iostream>
 
+#include "caf/fwd.hpp"
+#include "caf/optional.hpp"
+
+#include "caf/deep_to_string.hpp"
+
 namespace caf {
-class message;
 namespace test {
+
+template <class T, class U,
+          typename std::enable_if<std::is_floating_point<T>::value
+                                  || std::is_floating_point<U>::value,
+                                  int>::type = 0>
+bool equal_to(const T& t, const U& u) {
+  auto x = static_cast<double>(t);
+  auto y = static_cast<double>(u);
+  auto max = std::max(std::abs(x), std::abs(y));
+  auto dif = std::abs(x - y);
+  return dif <= max * 1e-5;
+}
+
+template <class T, class U,
+          typename std::enable_if<! std::is_floating_point<T>::value
+                                  && !std::is_floating_point<U>::value,
+                                  int>::type = 0>
+bool equal_to(const T& x, const U& y) {
+  return x == y;
+}
+
+template <class T, class U>
+bool not_equal_to(const T& t, const U& u) {
+  return ! equal_to(t, u);
+}
 
 /// Default test-running function.
 /// This function will be called automatically unless you define
@@ -103,6 +132,8 @@ public:
 // constructs spacing given a line number.
 const char* fill(size_t line);
 
+void remove_trailing_spaces(std::string& x);
+
 } // namespace detail
 
 /// Logs messages for the test framework.
@@ -133,11 +164,20 @@ public:
       return *this;
     }
 
+    template <class T>
+    stream& operator<<(const optional<T>& x) {
+      if (! x)
+        return *this << "-none-";
+      return *this << *x;
+    }
+
     stream& operator<<(const char& c);
 
     stream& operator<<(const char* cstr);
 
     stream& operator<<(const std::string& str);
+
+    std::string str() const;
 
   private:
     void flush();
@@ -145,6 +185,7 @@ public:
     logger& logger_;
     level level_;
     std::ostringstream buf_;
+    std::string str_;
   };
 
   static bool init(int lvl_cons, int lvl_file, const std::string& logfile);
@@ -264,6 +305,8 @@ public:
 
   static std::vector<std::string> available_suites();
 
+  static std::vector<std::string> available_tests(const std::string& suite);
+
 private:
   engine() = default;
 
@@ -302,228 +345,71 @@ struct adder {
 };
 
 template <class T>
-struct showable_base {};
+struct showable_base {
+  explicit showable_base(const T& x) : value(x) {
+    // nop
+  }
 
+  const T& value;
+};
+
+// showable_base<T> picks up to_string() via ADL
 template <class T>
-std::ostream& operator<<(std::ostream& out, const showable_base<T>&) {
-  out << engine::color(blue) << "<unprintable>" << engine::color(reset);
+std::ostream& operator<<(std::ostream& out, const showable_base<T>& x) {
+  auto str = caf::deep_to_string(x.value);
+  if (str == "<unprintable>")
+    out << engine::color(blue) << "<unprintable>" << engine::color(reset);
+  else
+    out << str;
   return out;
 }
 
 template <class T>
 class showable : public showable_base<T> {
 public:
-  explicit showable(const T& x) : value_(x) { }
-
-  template <class U = T>
-  friend auto operator<<(std::ostream& out, const showable& p)
-    -> decltype(out << std::declval<const U&>()) {
-    return out << p.value_;
+  explicit showable(const T& x) : showable_base<T>(x) {
+    // nop
   }
-
-private:
-  const T& value_;
 };
 
+// showable<T> picks up custom operator<< overloads for std::ostream
 template <class T>
-showable<T> show(T const &x) {
+auto operator<<(std::ostream& out, const showable<T>& p)
+-> decltype(out << std::declval<const T&>()) {
+  return out << p.value;
+}
+
+template <class T>
+showable<T> show(const T &x) {
   return showable<T>{x};
 }
 
-template <class T,
-          bool IsFloat = std::is_floating_point<T>::value,
-          bool IsIntegral = std::is_integral<T>::value>
-class lhs_cmp {
-public:
-  template <class U>
-  bool operator()(const T& x, const U& y) {
-    return x == y;
-  }
-};
+bool check(test* parent, const char *file, size_t line,
+           const char *expr, bool should_fail, bool result);
 
-template <class T>
-class lhs_cmp<T, true, false> {
-public:
-  template <class U>
-  bool operator()(const T& x, const U& y) {
-    using rt = decltype(x - y);
-    return std::fabs(x - y) <= std::numeric_limits<rt>::epsilon();
-  }
-};
-
-template <class T>
-class lhs_cmp<T, false, true> {
-public:
-  template <class U>
-  bool operator()(const T& x, const U& y) {
-    return x == static_cast<T>(y);
-  }
-};
-
-template <class T>
-struct lhs {
-public:
-  lhs(test* parent, const char *file, size_t line, const char *expr,
-      bool should_fail, const T& x)
-    : test_(parent),
-      filename_(file),
-      line_(line),
-      expr_(expr),
-      should_fail_(should_fail),
-      value_(x) {
-  }
-
-  lhs(const lhs&) = default;
-
-  ~lhs() {
-    if (evaluated_) {
-      return;
-    }
-    if (eval(0)) {
-      pass();
-    } else {
-      fail_unary();
-    }
-  }
-
-  template <class U>
-  using elevated =
-    typename std::conditional<
-      std::is_convertible<U, T>::value,
-      T,
-      U
-    >::type;
-
-  explicit operator bool() {
-    evaluated_ = true;
-    return static_cast<bool>(value_) ? pass() : fail_unary();
-  }
-
-  // pass-or-fail
-  template <class U>
-  bool pof(bool res, const U& x) {
-    evaluated_ = true;
-    return res ? pass() : fail(x);
-  }
-
-  template <class U>
-  bool operator==(const U& x) {
-    lhs_cmp<T> cmp;
-    return pof(cmp(value_, x), x);
-  }
-
-  template <class U>
-  bool operator!=(const U& x) {
-    lhs_cmp<T> cmp;
-    return pof(! cmp(value_, x), x);
-  }
-
-  template <class U>
-  bool operator<(const U& x) {
-    return pof(value_ < static_cast<elevated<U>>(x), x);
-  }
-
-  template <class U>
-  bool operator<=(const U& x) {
-    return pof(value_ <= static_cast<elevated<U>>(x), x);
-  }
-
-  template <class U>
-  bool operator>(const U& x) {
-    return pof(value_ > static_cast<elevated<U>>(x), x);
-  }
-
-  template <class U>
-  bool operator>=(const U& x) {
-    return pof(value_ >= static_cast<elevated<U>>(x), x);
-  }
-
-private:
-  template<class V = T>
-  typename std::enable_if<
-    std::is_convertible<V, bool>::value
-    && ! std::is_floating_point<V>::value,
-    bool
-  >::type
-  eval(int) {
-    return static_cast<bool>(value_);
-  }
-
-  template<class V = T>
-  typename std::enable_if<
-    std::is_floating_point<V>::value,
-    bool
-  >::type
-  eval(int) {
-    return std::fabs(value_) <= std::numeric_limits<V>::epsilon();
-  }
-
-  bool eval(long) {
-    return true;
-  }
-
-  bool pass() {
-    passed_ = true;
-    std::stringstream ss;
+template <class T, class U>
+bool check(test* parent, const char *file, size_t line,
+           const char *expr, bool should_fail, bool result,
+           const T& x, const U& y) {
+  std::stringstream ss;
+  if (result) {
     ss << engine::color(green) << "** "
-       << engine::color(blue) << filename_ << engine::color(yellow) << ":"
-       << engine::color(blue) << line_ << fill(line_) << engine::color(reset)
-       << expr_;
-    test_->pass(ss.str());
-    return true;
-  }
-
-  bool fail_unary() {
-    std::stringstream ss;
+       << engine::color(blue) << file << engine::color(yellow) << ":"
+       << engine::color(blue) << line << fill(line) << engine::color(reset)
+       << expr;
+    parent->pass(ss.str());
+  } else {
     ss << engine::color(red) << "!! "
-       << engine::color(blue) << filename_ << engine::color(yellow) << ":"
-       << engine::color(blue) << line_ << fill(line_) << engine::color(reset)
-       << expr_;
-    test_->fail(ss.str(), should_fail_);
-    return false;
-  }
-
-  template <class U>
-  bool fail(const U& u) {
-    std::stringstream ss;
-    ss << engine::color(red) << "!! "
-       << engine::color(blue) << filename_ << engine::color(yellow) << ":"
-       << engine::color(blue) << line_ << fill(line_) << engine::color(reset)
-       << expr_ << engine::color(magenta) << " ("
-       << engine::color(red) << show(value_) << engine::color(magenta)
-       << " !! " << engine::color(red) << show(u) << engine::color(magenta)
+       << engine::color(blue) << file << engine::color(yellow) << ":"
+       << engine::color(blue) << line << fill(line) << engine::color(reset)
+       << expr << engine::color(magenta) << " ("
+       << engine::color(red) << show(x) << engine::color(magenta)
+       << " !! " << engine::color(red) << show(y) << engine::color(magenta)
        << ')' << engine::color(reset);
-    test_->fail(ss.str(), should_fail_);
-    return false;
+    parent->fail(ss.str(), should_fail);
   }
-
-  bool evaluated_ = false;
-  bool passed_ = false;
-  test* test_;
-  const char* filename_;
-  size_t line_;
-  const char* expr_;
-  bool should_fail_;
-  const T& value_;
-};
-
-struct expr {
-public:
-  expr(test* parent, const char* filename, size_t lineno, bool should_fail,
-       const char* expression);
-
-  template <class T>
-  lhs<T> operator->*(const T& x) {
-    return {test_, filename_, line_, expr_, should_fail_, x};
-  }
-
-private:
-  test* test_;
-  const char* filename_;
-  size_t line_;
-  bool should_fail_;
-  const char* expr_;
-};
+  return result;
+}
 
 } // namespace detail
 } // namespace test
@@ -532,19 +418,15 @@ private:
 // on the global namespace so that it can hidden via namespace-scoping
 using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
-#define CAF_TEST_PR(level, msg, colorcode)                                     \
-  ::caf::test::logger::instance(). level ()                                    \
+#define CAF_TEST_PRINT(level, msg, colorcode)                                  \
+  (::caf::test::logger::instance(). level ()                                   \
     << ::caf::test::engine::color(::caf::test:: colorcode )                    \
-    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg << '\n'
+    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg        \
+    << " [line " << __LINE__ << "]\n")
 
-#define CAF_TEST_ERROR(msg)                                                    \
-  CAF_TEST_PR(info, msg, red)
-
-#define CAF_TEST_INFO(msg)                                                     \
-  CAF_TEST_PR(info, msg, yellow)
-
-#define CAF_TEST_VERBOSE(msg)                                                  \
-  CAF_TEST_PR(verbose, msg, yellow)
+#define CAF_TEST_PRINT_ERROR(msg)   CAF_TEST_PRINT(info, msg, red)
+#define CAF_TEST_PRINT_INFO(msg)    CAF_TEST_PRINT(info, msg, yellow)
+#define CAF_TEST_PRINT_VERBOSE(msg) CAF_TEST_PRINT(verbose, msg, yellow)
 
 #define CAF_PASTE_CONCAT(lhs, rhs) lhs ## rhs
 
@@ -560,38 +442,108 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_XSTR(s) CAF_STR(s)
 
+#define CAF_PRED_EXPR(pred, x_expr, y_expr) "("#x_expr") "#pred" ("#y_expr")"
+#define CAF_FUNC_EXPR(func, x_expr, y_expr) #func"("#x_expr", "#y_expr")"
+
+#define CAF_ERROR(msg)                                                         \
+  do {                                                                         \
+    auto CAF_UNIQUE(__str) = CAF_TEST_PRINT_ERROR(msg).str();                  \
+    ::caf::test::detail::remove_trailing_spaces(CAF_UNIQUE(__str));            \
+    ::caf::test::engine::current_test()->fail(CAF_UNIQUE(__str), false);       \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } while(false)
+
 #define CAF_CHECK(...)                                                         \
   do {                                                                         \
-    static_cast<void>(::caf::test::detail::expr{                               \
-             ::caf::test::engine::current_test(), __FILE__, __LINE__,          \
-             false, #__VA_ARGS__} ->* __VA_ARGS__);                            \
+    static_cast<void>(::caf::test::detail::check(                              \
+      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
+      #__VA_ARGS__, false, static_cast<bool>(__VA_ARGS__)));                   \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } while(false)
+
+#define CAF_CHECK_PRED(pred, x_expr, y_expr)                                   \
+  do {                                                                         \
+    const auto& x_val___ = x_expr;                                             \
+    const auto& y_val___ = y_expr;                                             \
+    static_cast<void>(::caf::test::detail::check(                              \
+      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
+      CAF_PRED_EXPR(pred, x_expr, y_expr), false,                              \
+      x_val___ pred y_val___, x_val___, y_val___));                            \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } while(false)
+
+#define CAF_CHECK_FUNC(func, x_expr, y_expr)                                   \
+  do {                                                                         \
+    const auto& x_val___ = x_expr;                                             \
+    const auto& y_val___ = y_expr;                                             \
+    static_cast<void>(::caf::test::detail::check(                              \
+      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
+      CAF_FUNC_EXPR(func, x_expr, y_expr), false,                              \
+      func(x_val___, y_val___), x_val___, y_val___));                          \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
   } while(false)
 
 #define CAF_CHECK_FAIL(...)                                                    \
-   do {                                                                        \
-    (void)(::caf::test::detail::expr{                                          \
-             ::caf::test::engine::current_test(), __FILE__, __LINE__,          \
-             true, #__VA_ARGS__} ->* __VA_ARGS__);                             \
+  do {                                                                         \
+    static_cast<void>(::caf::test::detail::check(                              \
+      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
+      #__VA_ARGS__, true, static_cast<bool>(__VA_ARGS__)));                    \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
   } while(false)
 
-
 #define CAF_FAIL(msg)                                                          \
   do {                                                                         \
-    CAF_TEST_ERROR(msg);                                                       \
+    auto CAF_UNIQUE(__str) = CAF_TEST_PRINT_ERROR(msg).str();                  \
+    ::caf::test::detail::remove_trailing_spaces(CAF_UNIQUE(__str));            \
+    ::caf::test::engine::current_test()->fail(CAF_UNIQUE(__str), false);       \
     throw ::caf::test::detail::require_error{"test failure"};                  \
   } while(false)
 
 #define CAF_REQUIRE(...)                                                       \
   do {                                                                         \
     auto CAF_UNIQUE(__result) =                                                \
-      ::caf::test::detail::expr{::caf::test::engine::current_test(),           \
-      __FILE__, __LINE__, false, #__VA_ARGS__} ->* __VA_ARGS__;                \
+      ::caf::test::detail::check(::caf::test::engine::current_test(),          \
+      __FILE__, __LINE__, #__VA_ARGS__, false,                                 \
+      static_cast<bool>(__VA_ARGS__));                                         \
     if (! CAF_UNIQUE(__result)) {                                              \
       throw ::caf::test::detail::require_error{#__VA_ARGS__};                  \
+    }                                                                          \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } while(false)
+
+#define CAF_REQUIRE_PRED(pred, x_expr, y_expr)                                 \
+  do {                                                                         \
+    const auto& x_val___ = x_expr;                                             \
+    const auto& y_val___ = y_expr;                                             \
+    auto CAF_UNIQUE(__result) =                                                \
+      ::caf::test::detail::check(::caf::test::engine::current_test(),          \
+      __FILE__, __LINE__, CAF_PRED_EXPR(pred, x_expr, y_expr), false,          \
+      x_val___ pred y_val___, x_val___, y_val___);                             \
+    if (! CAF_UNIQUE(__result)) {                                              \
+      throw ::caf::test::detail::require_error{                                \
+              CAF_PRED_EXPR(pred, x_expr, y_expr)};                            \
+    }                                                                          \
+    ::caf::test::engine::last_check_file(__FILE__);                            \
+    ::caf::test::engine::last_check_line(__LINE__);                            \
+  } while(false)
+
+#define CAF_REQUIRE_FUNC(func, x_expr, y_expr)                                 \
+  do {                                                                         \
+    const auto& x_val___ = x_expr;                                             \
+    const auto& y_val___ = y_expr;                                             \
+    auto CAF_UNIQUE(__result) =                                                \
+      ::caf::test::detail::check(::caf::test::engine::current_test(),          \
+      __FILE__, __LINE__, CAF_FUNC_EXPR(func, x_expr, y_expr), false,          \
+      func(x_val___, y_val___), x_val___, y_val___);                           \
+    if (! CAF_UNIQUE(__result)) {                                              \
+      throw ::caf::test::detail::require_error{                                \
+              CAF_FUNC_EXPR(func, x_expr, y_expr)};                            \
     }                                                                          \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
@@ -613,8 +565,22 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_TEST_FIXTURE_SCOPE_END()                                           \
   } // namespace <scope_name>
 
-// Boost Test compatibility macro
-#define CAF_CHECK_EQUAL(x, y) CAF_CHECK(x == y)
-#define CAF_MESSAGE(msg) CAF_TEST_VERBOSE(msg)
+// check predicate family
+#define CAF_CHECK_EQUAL(x, y)         CAF_CHECK_FUNC(::caf::test::equal_to, x, y)
+#define CAF_CHECK_NOT_EQUAL(x, y)     CAF_CHECK_FUNC(::caf::test::not_equal_to, x, y)
+#define CAF_CHECK_LESS(x, y)          CAF_CHECK_PRED(< , x, y)
+#define CAF_CHECK_LESS_EQUAL(x, y)    CAF_CHECK_PRED(<=, x, y)
+#define CAF_CHECK_GREATER(x, y)       CAF_CHECK_PRED(> , x, y)
+#define CAF_CHECK_GREATER_EQUAL(x, y) CAF_CHECK_PRED(>=, x, y)
+
+// require predicate family
+#define CAF_REQUIRE_EQUAL(x, y)         CAF_REQUIRE_FUNC(::caf::test::equal_to, x, y)
+#define CAF_REQUIRE_NOT_EQUAL(x, y)     CAF_REQUIRE_FUNC(::caf::test::not_equal_to, x, y)
+#define CAF_REQUIRE_LESS(x, y)          CAF_REQUIRE_PRED(< , x, y)
+#define CAF_REQUIRE_LESS_EQUAL(x, y)    CAF_REQUIRE_PRED(<=, x, y)
+#define CAF_REQUIRE_GREATER(x, y)       CAF_REQUIRE_PRED(> , x, y)
+#define CAF_REQUIRE_GREATER_EQUAL(x, y) CAF_REQUIRE_PRED(>=, x, y)
+
+#define CAF_MESSAGE(msg) CAF_TEST_PRINT_VERBOSE(msg)
 
 #endif // CAF_TEST_UNIT_TEST_HPP

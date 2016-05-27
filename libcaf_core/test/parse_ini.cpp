@@ -22,12 +22,12 @@
 #define CAF_SUITE parse_ini
 #include "caf/test/unit_test.hpp"
 
-#include <iostream>
 #include <sstream>
+#include <iostream>
+
+#include "caf/string_algorithms.hpp"
 
 #include "caf/all.hpp"
-
-#include "caf/experimental/whereis.hpp"
 
 #include "caf/detail/parse_ini.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -80,36 +80,57 @@ hu=0779
 hop=--"hiho"
 )__";
 
+class message_visitor : public static_visitor<message> {
+public:
+  template <class T>
+  message operator()(T& value) const {
+    return make_message(std::move(value));
+  }
+};
+
+using config_value = detail::parse_ini_t::value;
+
 struct fixture {
-  ~fixture() {
-    shutdown();
+  actor_system system;
+
+  fixture()
+      : system(test::engine::argc(), test::engine::argv()),
+        config_server(unsafe_actor_handle_init) {
+    // nop
   }
 
   template <class F>
-  void load_impl(F loader, const char* str) {
+  void load_impl(F consumer, const char* str) {
     std::stringstream ss;
     std::stringstream err;
     ss << str;
-    loader(ss, err);
+    detail::parse_ini(ss, consumer, err);
     split(errors, err.str(), is_any_of("\n"), token_compress_on);
   }
 
   void load_to_config_server(const char* str) {
-    config_server = experimental::whereis(atom("ConfigServ"));;
-    auto f = [&](std::istream& in, std::ostream& out) {
-      parse_config(in, config_format::ini, out);
+    config_server = actor_cast<actor>(system.registry().get(atom("ConfigServ")));
+    // clear config
+    scoped_actor self{system};
+    self->request(config_server, infinite, get_atom::value, "*").receive(
+      [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
+        for (auto& kvp : msgs)
+          self->send(config_server, put_atom::value, kvp.first, message{});
+      }
+    );
+    auto consume = [&](size_t, std::string key, config_value& value) {
+      message_visitor mv;
+      anon_send(config_server, put_atom::value,
+                std::move(key), apply_visitor(mv, value));
     };
-    load_impl(f, str);
+    load_impl(consume, str);
   }
 
   void load(const char* str) {
-    auto consume = [&](std::string key, config_value value) {
+    auto consume = [&](size_t, std::string key, config_value& value) {
       values.emplace(std::move(key), std::move(value));
     };
-    auto f = [&](std::istream& in, std::ostream& out) {
-      detail::parse_ini(in, consume, out);
-    };
-    load_impl(f, str);
+    load_impl(consume, str);
   }
 
   bool has_error(const char* err) {
@@ -130,8 +151,8 @@ struct fixture {
         >::type
       >::type;
     bool result = false;
-    scoped_actor self;
-    self->sync_send(config_server, get_atom::value, key).await(
+    scoped_actor self{system};
+    self->request(config_server, infinite, get_atom::value, key).receive(
       [&](ok_atom, std::string&, message& msg) {
         msg.apply(
           [&](type& val) {
@@ -145,7 +166,7 @@ struct fixture {
 
   template <class T>
   bool value_is(const char* key, const T& what) {
-    if (config_server != invalid_actor)
+    if (! config_server.unsafe())
       return config_server_has(key, what);
     auto& cv = values[key];
     using type =
@@ -163,12 +184,14 @@ struct fixture {
   }
 
   size_t num_values() {
-    if (config_server != invalid_actor) {
+    if (! config_server.unsafe()) {
       size_t result = 0;
-      scoped_actor self;
-      self->sync_send(config_server, get_atom::value, "*").await(
+      scoped_actor self{system};
+      self->request(config_server, infinite, get_atom::value, "*").receive(
         [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
-          result = msgs.size();
+          for (auto& kvp : msgs)
+            if (! kvp.second.empty())
+              ++result;
         }
       );
       return result;
@@ -199,19 +222,19 @@ struct fixture {
   }
 
   void check_case3() {
-    CAF_CHECK(has_error("error in line 2: missing ] at end of line"));
-    CAF_CHECK(has_error("error in line 3: value outside of a group"));
-    CAF_CHECK(has_error("error in line 6: no '=' found"));
-    CAF_CHECK(has_error("error in line 7: line starting with '='"));
-    CAF_CHECK(has_error("error in line 8: line ends with '='"));
-    CAF_CHECK(has_error("error in line 9: stray '\"'"));
-    CAF_CHECK(has_error("error in line 10: string not terminated by '\"'"));
-    CAF_CHECK(has_error("warning in line 12: trailing quotation mark escaped"));
-    CAF_CHECK(has_error("error in line 13: '-' is not a number"));
-    CAF_CHECK(has_error("error in line 14: invalid hex value"));
-    CAF_CHECK(has_error("error in line 15: invalid binary value"));
-    CAF_CHECK(has_error("error in line 16: invalid oct value"));
-    CAF_CHECK(has_error("error in line 17: invalid value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 2: missing ] at end of line"));
+    CAF_CHECK(has_error("[ERROR] INI file line 3: value outside of a group"));
+    CAF_CHECK(has_error("[ERROR] INI file line 6: no '=' found"));
+    CAF_CHECK(has_error("[ERROR] INI file line 7: line starting with '='"));
+    CAF_CHECK(has_error("[ERROR] INI file line 8: line ends with '='"));
+    CAF_CHECK(has_error("[ERROR] INI file line 9: stray '\"'"));
+    CAF_CHECK(has_error("[ERROR] INI file line 10: string not terminated by '\"'"));
+    CAF_CHECK(has_error("[WARNING] INI file line 12: trailing quotation mark escaped"));
+    CAF_CHECK(has_error("[ERROR] INI file line 13: '-' is not a number"));
+    CAF_CHECK(has_error("[ERROR] INI file line 14: invalid hex value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 15: invalid binary value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 16: invalid oct value"));
+    CAF_CHECK(has_error("[ERROR] INI file line 17: invalid value"));
     CAF_CHECK(num_values() == 2);
     CAF_CHECK(value_is("test.some-int", 42));
     CAF_CHECK(value_is("test.some-string", "hi there!"));
@@ -226,12 +249,9 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(parse_ini_tests, fixture)
 
-
-
 CAF_TEST(simple_ini) {
   load(case1);
   check_case1();
-
 }
 
 CAF_TEST(numbers) {
@@ -240,7 +260,7 @@ CAF_TEST(numbers) {
 }
 
 CAF_TEST(errors) {
-  load_to_config_server(case3);
+  load(case3);
   check_case3();
 }
 

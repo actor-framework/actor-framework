@@ -20,22 +20,36 @@
 #ifndef CAF_DETAIL_PARSE_INI_HPP
 #define CAF_DETAIL_PARSE_INI_HPP
 
+#include <string>
 #include <istream>
+#include <functional>
 
-#include "caf/maybe.hpp"
-#include "caf/parse_config.hpp"
+#include "caf/atom.hpp"
+#include "caf/optional.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace detail {
 
-/// Parse the given input stream as INI formatted data and calls the consumer
-/// with every key-value pair.
-/// @param raw_data Input stream of INI formatted text.
-/// @param errors Output stream for parser errors.
-/// @param consumer Callback consuming generated key-value pairs.
-void parse_ini(std::istream& raw_data,
-               config_consumer consumer,
-               maybe<std::ostream&> errors = none);
+struct parse_ini_t {
+  /// Denotes a configuration value.
+  using value = variant<std::string, double, int64_t, bool, atom_value>;
+
+  /// Denotes a callback for consuming configuration values.
+  using config_consumer = std::function<void (size_t, std::string, value&)>;
+
+  /// Parse the given input stream as INI formatted data and
+  /// calls the consumer with every key-value pair.
+  /// @param raw_data Input stream of INI formatted text.
+  /// @param errors Output stream for parser errors.
+  /// @param consumer Callback consuming generated key-value pairs.
+  void operator()(std::istream& raw_data,
+                  config_consumer consumer,
+                  optional<std::ostream&> errors = none) const;
+
+};
+
+constexpr parse_ini_t parse_ini = parse_ini_t{};
 
 } // namespace detail
 } // namespace caf

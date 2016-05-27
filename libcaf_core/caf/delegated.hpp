@@ -20,13 +20,21 @@
 #ifndef CAF_DELEGATED_HPP
 #define CAF_DELEGATED_HPP
 
+#include <type_traits>
+
 namespace caf {
 
 /// Helper class to indicate that a request has been forwarded.
 template <class... Ts>
-struct delegated {
+class delegated {
   // nop
 };
+
+
+template <class... Ts>
+inline bool operator==(const delegated<Ts...>&, const delegated<Ts...>&) {
+  return true;
+}
 
 } // namespace caf
 

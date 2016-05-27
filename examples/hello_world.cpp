@@ -16,8 +16,6 @@ behavior mirror(event_based_actor* self) {
     [=](const string& what) -> string {
       // prints "Hello World!" via aout (thread-safe cout wrapper)
       aout(self) << what << endl;
-      // terminates this actor ('become' otherwise loops forever)
-      self->quit();
       // reply "!dlroW olleH"
       return string(what.rbegin(), what.rend());
     }
@@ -26,8 +24,8 @@ behavior mirror(event_based_actor* self) {
 
 void hello_world(event_based_actor* self, const actor& buddy) {
   // send "Hello World!" to our buddy ...
-  self->sync_send(buddy, "Hello World!").then(
-    // ... wait for a response ...
+  self->request(buddy, std::chrono::seconds(10), "Hello World!").then(
+    // ... wait up to 10s for a response ...
     [=](const string& what) {
       // ... and print it
       aout(self) << what << endl;
@@ -36,12 +34,11 @@ void hello_world(event_based_actor* self, const actor& buddy) {
 }
 
 int main() {
+  // our CAF environment
+  actor_system system;
   // create a new actor that calls 'mirror()'
-  auto mirror_actor = spawn(mirror);
+  auto mirror_actor = system.spawn(mirror);
   // create another actor that calls 'hello_world(mirror_actor)';
-  spawn(hello_world, mirror_actor);
-  // wait until all other actors we have spawned are done
-  await_all_actors_done();
-  // run cleanup code before exiting main
-  shutdown();
+  system.spawn(hello_world, mirror_actor);
+  // system will wait until both actors are destroyed before leaving main
 }

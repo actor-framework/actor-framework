@@ -58,7 +58,7 @@ void dec_actor_instances() {
 
 class event_testee : public event_based_actor {
 public:
-  event_testee() {
+  event_testee(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
     wait4string.assign(
       [=](const std::string&) {
@@ -100,10 +100,12 @@ public:
 };
 
 // quits after 5 timeouts
-actor spawn_event_testee2(actor parent) {
+actor spawn_event_testee2(scoped_actor& parent) {
   struct impl : event_based_actor {
     actor parent;
-    explicit impl(actor parent_actor) : parent(std::move(parent_actor)) {
+    impl(actor_config& cfg, actor parent_actor)
+        : event_based_actor(cfg),
+          parent(std::move(parent_actor)) {
       inc_actor_instances();
     }
     ~impl() {
@@ -112,7 +114,7 @@ actor spawn_event_testee2(actor parent) {
     behavior wait4timeout(int remaining) {
       return {
         after(chrono::milliseconds(1)) >> [=] {
-          CAF_MESSAGE(CAF_ARG(remaining));
+          CAF_MESSAGE("remaining: " << to_string(remaining));
           if (remaining == 1) {
             send(parent, ok_atom::value);
             quit();
@@ -125,145 +127,126 @@ actor spawn_event_testee2(actor parent) {
       return wait4timeout(5);
     }
   };
-  return spawn<impl>(parent);
+  return parent->spawn<impl>(parent);
 }
 
 class testee_actor : public blocking_actor {
 public:
-  testee_actor();
-  ~testee_actor();
-  void act() override;
+  testee_actor(actor_config& cfg) : blocking_actor(cfg) {
+    inc_actor_instances();
+  }
+
+  ~testee_actor() {
+    dec_actor_instances();
+  }
+
+  void act() override {
+    receive_loop (
+      [&](int) {
+        wait4float();
+      },
+      [&](get_atom) {
+        return "wait4int";
+      }
+    );
+  }
 
 private:
-  void wait4string();
-  void wait4float();
+  void wait4string() {
+    bool string_received = false;
+    do_receive (
+      [&](const string&) {
+        string_received = true;
+      },
+      [&](get_atom) {
+        return "wait4string";
+      }
+    )
+    .until([&] { return string_received; });
+  }
+
+  void wait4float() {
+    bool float_received = false;
+    do_receive (
+      [&](float) {
+        float_received = true;
+      },
+      [&](get_atom) {
+        return "wait4float";
+      }
+    )
+    .until([&] { return float_received; });
+    wait4string();
+  }
 };
-
-testee_actor::testee_actor() {
-  inc_actor_instances();
-}
-
-testee_actor::~testee_actor() {
-  dec_actor_instances();
-}
-
-void testee_actor::act() {
-  receive_loop (
-    [&](int) {
-      wait4float();
-    },
-    [&](get_atom) {
-      return "wait4int";
-    }
-  );
-}
-
-void testee_actor::wait4string() {
-  bool string_received = false;
-  do_receive (
-    [&](const string&) {
-      string_received = true;
-    },
-    [&](get_atom) {
-      return "wait4string";
-    }
-  )
-  .until([&] { return string_received; });
-}
-
-void testee_actor::wait4float() {
-  bool float_received = false;
-  do_receive (
-    [&](float) {
-      float_received = true;
-    },
-    [&](get_atom) {
-      return "wait4float";
-    }
-  )
-  .until([&] { return float_received; });
-  wait4string();
-}
 
 // self->receives one timeout and quits
 class testee1 : public event_based_actor {
 public:
-  testee1();
-  ~testee1();
-  behavior make_behavior() override;
+  testee1(actor_config& cfg) : event_based_actor(cfg) {
+    inc_actor_instances();
+  }
+
+  ~testee1() {
+    dec_actor_instances();
+  }
+
+  behavior make_behavior() override {
+    return {
+      after(chrono::milliseconds(10)) >> [=] {
+        unbecome();
+      }
+    };
+  }
 };
-
-testee1::testee1() {
-  inc_actor_instances();
-}
-
-testee1::~testee1() {
-  dec_actor_instances();
-}
-
-behavior testee1::make_behavior() {
-  return {
-    after(chrono::milliseconds(10)) >> [=] {
-      unbecome();
-    }
-  };
-}
 
 class echo_actor : public event_based_actor {
 public:
-  echo_actor();
-  ~echo_actor();
-  behavior make_behavior() override;
+  echo_actor(actor_config& cfg) : event_based_actor(cfg) {
+    inc_actor_instances();
+  }
+
+  ~echo_actor() {
+    dec_actor_instances();
+  }
+
+  behavior make_behavior() override {
+    set_default_handler(reflect);
+    return {
+      [] {
+        // nop
+      }
+    };
+  }
 };
-
-echo_actor::echo_actor() {
-  inc_actor_instances();
-}
-
-echo_actor::~echo_actor() {
-  dec_actor_instances();
-}
-
-behavior echo_actor::make_behavior() {
-  return {
-    others >> [=]() -> message {
-      quit(exit_reason::normal);
-      return current_message();
-    }
-  };
-}
 
 class simple_mirror : public event_based_actor {
 public:
-  simple_mirror();
-  ~simple_mirror();
-  behavior make_behavior() override;
+  simple_mirror(actor_config& cfg) : event_based_actor(cfg) {
+    inc_actor_instances();
+  }
+
+  ~simple_mirror() {
+    dec_actor_instances();
+  }
+
+  behavior make_behavior() override {
+    set_default_handler(reflect);
+    return {
+      [] {
+        // nop
+      }
+    };
+  }
 };
-
-simple_mirror::simple_mirror() {
-  inc_actor_instances();
-}
-
-simple_mirror::~simple_mirror() {
-  dec_actor_instances();
-}
-
-behavior simple_mirror::make_behavior() {
-  return {
-    others >> [=] {
-      CAF_MESSAGE("simple_mirror: return current message");
-      return current_message();
-    }
-  };
-}
 
 behavior high_priority_testee(event_based_actor* self) {
   self->send(self, b_atom::value);
-  self->send(message_priority::high, self, a_atom::value);
+  self->send<message_priority::high>(self, a_atom::value);
   // 'a' must be self->received before 'b'
   return {
     [=](b_atom) {
-      CAF_TEST_ERROR("received 'b' before 'a'");
+      CAF_ERROR("received 'b' before 'a'");
       self->quit();
     },
     [=](a_atom) {
@@ -272,92 +255,71 @@ behavior high_priority_testee(event_based_actor* self) {
         [=](b_atom) {
           CAF_MESSAGE("received \"b\" atom, about to quit");
           self->quit();
-        },
-        others >> [&] {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(self->current_message()));
         }
       );
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
     }
   };
 }
 
-struct high_priority_testee_class : event_based_actor {
-  behavior make_behavior() override {
-    return high_priority_testee(this);
-  }
-};
+behavior master(event_based_actor* self) {
+  return (
+    [=](ok_atom) {
+      CAF_MESSAGE("master: received done");
+      self->quit(exit_reason::user_shutdown);
+    }
+  );
+}
 
-struct master : event_based_actor {
-  behavior make_behavior() override {
-    return (
-      [=](ok_atom) {
-        CAF_MESSAGE("master: received done");
-        quit(exit_reason::user_shutdown);
-      }
-    );
-  }
-};
-
-struct slave : event_based_actor {
-
-  explicit slave(actor master_actor) : master{master_actor} {
-    // nop
-  }
-
-  behavior make_behavior() override {
-    link_to(master);
-    trap_exit(true);
-    return {
-      [=](const exit_msg& msg) {
-        CAF_MESSAGE("slave: received exit message");
-        quit(msg.reason);
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: " << to_string(current_message()));
-      }
-    };
-  }
-
-  actor master;
-
-};
+behavior slave(event_based_actor* self, actor master) {
+  self->link_to(master);
+  self->set_exit_handler([=](exit_msg& msg) {
+    CAF_MESSAGE("slave: received exit message");
+    self->quit(msg.reason);
+  });
+  return {
+    [] {
+      // nop
+    }
+  };
+}
 
 class counting_actor : public event_based_actor {
 public:
-  counting_actor();
-  ~counting_actor();
-  behavior make_behavior() override;
+  counting_actor(actor_config& cfg) : event_based_actor(cfg) {
+    inc_actor_instances();
+  }
+
+  ~counting_actor() {
+    dec_actor_instances();
+  }
+
+  behavior make_behavior() override {
+    for (int i = 0; i < 100; ++i) {
+      send(this, ok_atom::value);
+    }
+    CAF_CHECK_EQUAL(mailbox().count(), 100u);
+    for (int i = 0; i < 100; ++i) {
+      send(this, ok_atom::value);
+    }
+    CAF_CHECK_EQUAL(mailbox().count(), 200u);
+    return {};
+  }
 };
 
-counting_actor::counting_actor() {
-  inc_actor_instances();
-}
-
-counting_actor::~counting_actor() {
-  dec_actor_instances();
-}
-
-behavior counting_actor::make_behavior() {
-  for (int i = 0; i < 100; ++i) {
-    send(this, ok_atom::value);
-  }
-  CAF_CHECK_EQUAL(mailbox().count(), 100);
-  for (int i = 0; i < 100; ++i) {
-    send(this, ok_atom::value);
-  }
-  CAF_CHECK_EQUAL(mailbox().count(), 200);
-  return {};
-}
-
 struct fixture {
+  // put inside a union to control ctor/dtor timing
+  union {
+    actor_system system;
+  };
+
+  fixture() {
+    new (&system) actor_system();
+  }
+
   ~fixture() {
-    await_all_actors_done();
-    shutdown();
+    system.~actor_system();
+    // destructor of actor_system must make sure all
+    // destructors of all actors have been run
     CAF_CHECK_EQUAL(s_actor_instances.load(), 0);
     CAF_MESSAGE("max. # of actor instances: " << s_max_actor_instances.load());
   }
@@ -367,125 +329,69 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
+CAF_TEST(priorities) {
+  system.spawn<priority_aware>(high_priority_testee);
+}
+
 CAF_TEST(count_mailbox) {
-  spawn<counting_actor>();
+  system.spawn<counting_actor>();
 }
 
 CAF_TEST(detached_actors_and_schedulued_actors) {
-  scoped_actor self;
+  scoped_actor self{system};
   // check whether detached actors and scheduled actors interact w/o errors
-  auto m = spawn<master, detached>();
-  spawn<slave>(m);
-  spawn<slave>(m);
+  auto m = system.spawn<detached>(master);
+  system.spawn(slave, m);
+  system.spawn(slave, m);
   self->send(m, ok_atom::value);
 }
 
 CAF_TEST(self_receive_with_zero_timeout) {
-  scoped_actor self;
+  scoped_actor self{system};
   self->receive(
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
+    [&] {
+      CAF_ERROR("Unexpected message");
     },
     after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
   );
 }
 
 CAF_TEST(mirror) {
-  scoped_actor self;
-  auto mirror = self->spawn<simple_mirror, monitored>();
+  scoped_actor self{system};
+  auto mirror = self->spawn<simple_mirror>();
   self->send(mirror, "hello mirror");
   self->receive (
     [](const std::string& msg) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
-    }
-  );
-  self->send_exit(mirror, exit_reason::user_shutdown);
-  self->receive (
-    [&](const down_msg& dm) {
-      if (dm.reason == exit_reason::user_shutdown) {
-        CAF_MESSAGE("received `down_msg`");
-      }
-      else {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
-      }
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message"
-                     << to_string(self->current_message()));
     }
   );
 }
 
 CAF_TEST(detached_mirror) {
-  scoped_actor self;
-  auto mirror = self->spawn<simple_mirror, monitored+detached>();
+  scoped_actor self{system};
+  auto mirror = self->spawn<simple_mirror, detached>();
   self->send(mirror, "hello mirror");
   self->receive (
     [](const std::string& msg) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
-    }
-  );
-  self->send_exit(mirror, exit_reason::user_shutdown);
-  self->receive (
-    [&](const down_msg& dm) {
-      if (dm.reason == exit_reason::user_shutdown) {
-        CAF_MESSAGE("received `down_msg`");
-      }
-      else {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
-      }
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
     }
   );
 }
 
 CAF_TEST(priority_aware_mirror) {
-  scoped_actor self;
-  auto mirror = self->spawn<simple_mirror, monitored + priority_aware>();
+  scoped_actor self{system};
+  auto mirror = self->spawn<simple_mirror, priority_aware>();
   CAF_MESSAGE("spawned mirror");
   self->send(mirror, "hello mirror");
   self->receive (
     [](const std::string& msg) {
       CAF_CHECK_EQUAL(msg, "hello mirror");
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: " << to_string(self->current_message()));
-    }
-  );
-  self->send_exit(mirror, exit_reason::user_shutdown);
-  self->receive (
-    [&](const down_msg& dm) {
-      if (dm.reason == exit_reason::user_shutdown) {
-        CAF_MESSAGE("received `down_msg`");
-      }
-      else {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
-      }
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
     }
   );
 }
 
 CAF_TEST(send_to_self) {
-  scoped_actor self;
+  scoped_actor self{system};
   self->send(self, 1, 2, 3, true);
   self->receive(
     [](int a, int b, int c, bool d) {
@@ -496,25 +402,22 @@ CAF_TEST(send_to_self) {
     }
   );
   self->send(self, message{});
-  self->receive(on() >> [] {});
+  self->receive([] {});
 }
 
 CAF_TEST(echo_actor_messaging) {
-  scoped_actor self;
-  auto mecho = spawn<echo_actor>();
+  scoped_actor self{system};
+  auto mecho = system.spawn<echo_actor>();
   self->send(mecho, "hello echo");
   self->receive(
     [](const std::string& arg) {
       CAF_CHECK_EQUAL(arg, "hello echo");
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: " << to_string(self->current_message()));
     }
   );
 }
 
 CAF_TEST(delayed_send) {
-  scoped_actor self;
+  scoped_actor self{system};
   self->delayed_send(self, chrono::milliseconds(1), 1, 2, 3);
   self->receive(
     [](int a, int b, int c) {
@@ -526,13 +429,13 @@ CAF_TEST(delayed_send) {
 }
 
 CAF_TEST(delayed_spawn) {
-  scoped_actor self;
+  scoped_actor self{system};
   self->receive(after(chrono::milliseconds(1)) >> [] { });
-  spawn<testee1>();
+  system.spawn<testee1>();
 }
 
 CAF_TEST(spawn_event_testee2_test) {
-  scoped_actor self;
+  scoped_actor self{system};
   spawn_event_testee2(self);
   self->receive(
     [](ok_atom) {
@@ -541,117 +444,8 @@ CAF_TEST(spawn_event_testee2_test) {
   );
 }
 
-// exclude this tests; advanced match cases are currently not supported on MSVC
-#ifndef CAF_WINDOWS
-CAF_TEST(chopsticks) {
-  struct chopstick : event_based_actor {
-    behavior make_behavior() override {
-      return available;
-    }
-
-    behavior taken_by(actor whom) {
-      return {
-        [=](get_atom) {
-          return error_atom::value;
-        },
-        on(put_atom::value, whom) >> [=]() {
-          become(available);
-        }
-      };
-    }
-
-    chopstick() {
-      inc_actor_instances();
-      available.assign(
-        [=](get_atom, actor whom) -> atom_value {
-          become(taken_by(whom));
-          return ok_atom::value;
-        }
-      );
-    }
-
-    ~chopstick() {
-      dec_actor_instances();
-    }
-
-    behavior available;
-  };
-  scoped_actor self;
-  auto cstk = spawn<chopstick>();
-  self->send(cstk, get_atom::value, self);
-  self->receive(
-    [&](ok_atom) {
-      self->send(cstk, put_atom::value, self);
-      self->send_exit(cstk, exit_reason::kill);
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: " <<
-                     to_string(self->current_message()));
-    }
-  );
-}
-
-CAF_TEST(sync_sends) {
-  scoped_actor self;
-  auto sync_testee = spawn<blocking_api>([](blocking_actor* s) {
-    s->receive (
-      on("hi", arg_match) >> [&](actor from) {
-        s->sync_send(from, "whassup?", s).await(
-          on_arg_match >> [&](const string& str) -> string {
-            CAF_CHECK(s->current_sender() != nullptr);
-            CAF_CHECK_EQUAL(str, "nothing");
-            return "goodbye!";
-          },
-          after(chrono::minutes(1)) >> [] {
-            CAF_TEST_ERROR("Error in unit test.");
-            abort();
-          }
-        );
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(s->current_message()));
-      }
-    );
-  });
-  self->monitor(sync_testee);
-  self->send(sync_testee, "hi", self);
-  self->receive (
-    on("whassup?", arg_match) >> [&](actor other) -> std::string {
-      CAF_MESSAGE("received \"whassup?\" message");
-      // this is NOT a reply, it's just an asynchronous message
-      self->send(other, "a lot!");
-      return "nothing";
-    }
-  );
-  self->receive (
-    on("goodbye!") >> [] { CAF_MESSAGE("Received \"goodbye!\""); },
-    after(chrono::seconds(1)) >> [] { CAF_TEST_ERROR("Unexpected timeout"); }
-  );
-  self->receive (
-    [&](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      CAF_CHECK(dm.source == sync_testee);
-    }
-  );
-  self->await_all_other_actors_done();
-  self->sync_send(sync_testee, "!?").await(
-    on<sync_exited_msg>() >> [] {
-      CAF_MESSAGE("received `sync_exited_msg`");
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
-    },
-    after(chrono::microseconds(1)) >> [] {
-      CAF_TEST_ERROR("Unexpected timeout");
-    }
-  );
-}
-#endif // CAF_WINDOWS
-
 CAF_TEST(function_spawn) {
-  scoped_actor self;
+  scoped_actor self{system};
   auto f = [](const string& name) -> behavior {
     return (
       [name](get_atom) {
@@ -659,8 +453,8 @@ CAF_TEST(function_spawn) {
       }
     );
   };
-  auto a1 = spawn(f, "alice");
-  auto a2 = spawn(f, "bob");
+  auto a1 = system.spawn(f, "alice");
+  auto a2 = system.spawn(f, "bob");
   self->send(a1, get_atom::value);
   self->receive (
     [&](name_atom, const string& name) {
@@ -689,9 +483,9 @@ typed_testee::behavior_type testee() {
 }
 
 CAF_TEST(typed_await) {
-  scoped_actor self;
-  auto x = spawn(testee);
-  self->sync_send(x, abc_atom::value).await(
+  scoped_actor self{system};
+  auto x = system.spawn(testee);
+  self->request(x, infinite, abc_atom::value).receive(
     [](const std::string& str) {
       CAF_CHECK_EQUAL(str, "abc");
     }
@@ -703,23 +497,24 @@ CAF_TEST(typed_await) {
 CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
   public:
-    explicit testee(actor buddy) : buddy_(buddy) {
-      attach_functor([=](uint32_t reason) {
+    testee(actor_config& cfg, actor buddy)
+        : event_based_actor(cfg),
+          buddy_(buddy) {
+      attach_functor([=](const error& reason) {
         send(buddy, ok_atom::value, reason);
       });
     }
 
     behavior make_behavior() {
       return {
-        others >> [=] {
-          CAF_TEST_ERROR("Unexpected message: "
-                         << to_string(current_message()));
+        [] {
+          // nop
         }
       };
     }
 
     void on_exit() {
-      buddy_ = invalid_actor;
+      invalidate(buddy_);
     }
 
   private:
@@ -727,58 +522,55 @@ CAF_TEST(constructor_attach) {
   };
   class spawner : public event_based_actor {
   public:
-    spawner() : downs_(0) {
-      // nop
+    spawner(actor_config& cfg)
+        : event_based_actor(cfg),
+          downs_(0),
+          testee_(spawn<testee, monitored>(this)) {
+      set_down_handler([=](down_msg& msg) {
+        CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+        if (++downs_ == 2)
+          quit(msg.reason);
+      });
+      set_exit_handler([=](exit_msg& msg) {
+        send_exit(testee_, std::move(msg.reason));
+      });
     }
+
     behavior make_behavior() {
-      trap_exit(true);
-      testee_ = spawn<testee, monitored>(this);
       return {
-        [=](const down_msg& msg) {
-          CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-          if (++downs_ == 2) {
-            quit(msg.reason);
-          }
-        },
-        [=](ok_atom, uint32_t reason) {
+        [=](ok_atom, const error& reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
-          if (++downs_ == 2) {
+          if (++downs_ == 2)
             quit(reason);
-          }
-        },
-        others >> [=] {
-          CAF_MESSAGE("forward to testee: "
-                           << to_string(current_message()));
-          forward_to(testee_);
         }
       };
     }
 
     void on_exit() {
       CAF_MESSAGE("spawner::on_exit()");
-      testee_ = invalid_actor;
+      invalidate(testee_);
     }
 
   private:
     int downs_;
     actor testee_;
   };
-  anon_send_exit(spawn<spawner>(), exit_reason::user_shutdown);
+  anon_send_exit(system.spawn<spawner>(), exit_reason::user_shutdown);
 }
 
 namespace {
 
 class exception_testee : public event_based_actor {
 public:
-  exception_testee() {
-    set_exception_handler([](const std::exception_ptr&) -> maybe<uint32_t> {
-      return exit_reason::user_defined + 2;
+  exception_testee(actor_config& cfg) : event_based_actor(cfg) {
+    set_exception_handler([](const std::exception_ptr&) -> optional<exit_reason> {
+      return exit_reason::unhandled_exception;
     });
   }
   behavior make_behavior() override {
     return {
-      others >> [] {
-        throw std::runtime_error("whatever");
+      [](const std::string& str) {
+        throw std::runtime_error(str);
       }
     };
   }
@@ -787,19 +579,19 @@ public:
 } // namespace <anonymous>
 
 CAF_TEST(custom_exception_handler) {
-  auto handler = [](const std::exception_ptr& eptr) -> maybe<uint32_t> {
+  auto handler = [](const std::exception_ptr& eptr) -> optional<exit_reason> {
     try {
       std::rethrow_exception(eptr);
     }
     catch (std::runtime_error&) {
-      return exit_reason::user_defined;
+      return exit_reason::unhandled_exception;
     }
     catch (...) {
       // "fall through"
     }
-    return exit_reason::user_defined + 1;
+    return exit_reason::unknown;
   };
-  scoped_actor self;
+  scoped_actor self{system};
   auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
     eb_self->set_exception_handler(handler);
     throw std::runtime_error("ping");
@@ -811,50 +603,45 @@ CAF_TEST(custom_exception_handler) {
   auto testee3 = self->spawn<exception_testee, monitored>();
   self->send(testee3, "foo");
   // receive all down messages
-  auto i = 0;
-  self->receive_for(i, 3)(
-    [&](const down_msg& dm) {
-      if (dm.source == testee1) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined);
-      }
-      else if (dm.source == testee2) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 1);
-      }
-      else if (dm.source == testee3) {
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::user_defined + 2);
-      }
-      else {
-        CAF_CHECK(false); // report error
-      }
+  int downs_received = 0;
+  self->set_down_handler([&](down_msg& dm) {
+    if (dm.source == testee1) {
+      ++downs_received;
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
     }
-  );
+    else if (dm.source == testee2) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::unknown);
+      ++downs_received;
+    }
+    else if (dm.source == testee3) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
+      ++downs_received;
+    }
+    else {
+      throw std::runtime_error("received message from unexpected source");
+    }
+    if (downs_received == 3)
+      self->send(self, message{});
+  });
+  // this exploits the fact that down messages are counted by dequeue
+  behavior dummy{[] {}};
+  self->dequeue(dummy);
 }
 
 CAF_TEST(kill_the_immortal) {
-  auto wannabe_immortal = spawn([](event_based_actor* self) -> behavior {
-    self->trap_exit(true);
+  auto wannabe_immortal = system.spawn([](event_based_actor* self) -> behavior {
+    self->set_exit_handler([](local_actor*, exit_msg&) {
+      // nop
+    });
     return {
-      others >> [=] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
+      [] {
+        // nop
       }
     };
   });
-  scoped_actor self;
-  self->monitor(wannabe_immortal);
+  scoped_actor self{system};
   self->send_exit(wannabe_immortal, exit_reason::kill);
-  self->receive(
-    [&](const down_msg& dm) {
-      CAF_CHECK(dm.reason == exit_reason::kill);
-      CAF_CHECK(dm.source == wannabe_immortal);
-    }
-  );
-}
-
-CAF_TEST(exit_reason_in_scoped_actor) {
-  scoped_actor self;
-  self->spawn<linked>([]() -> behavior { return others >> [] {}; });
-  self->planned_exit_reason(exit_reason::user_defined);
+  self->wait_for(wannabe_immortal);
 }
 
 CAF_TEST(move_only_argument) {
@@ -863,17 +650,17 @@ CAF_TEST(move_only_argument) {
   auto f = [](event_based_actor* self, unique_int ptr) -> behavior {
     auto i = *ptr;
     return {
-      others >> [=] {
+      [=](float) {
         self->quit();
         return i;
       }
     };
   };
-  auto testee = spawn(f, std::move(uptr));
-  scoped_actor self;
-  self->sync_send(testee, 1.f).await(
+  auto testee = system.spawn(f, std::move(uptr));
+  scoped_actor self{system};
+  self->request(testee, infinite, 1.f).receive(
     [](int i) {
-      CAF_CHECK(i == 42);
+      CAF_CHECK_EQUAL(i, 42);
     }
   );
 }

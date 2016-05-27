@@ -216,9 +216,9 @@ std::vector<std::string> interfaces::list_addresses(protocol proc,
   return list_addresses({proc}, include_localhost);
 }
 
-maybe<std::pair<std::string, protocol>>
+optional<std::pair<std::string, protocol>>
 interfaces::native_address(const std::string& host,
-                           maybe<protocol> preferred) {
+                           optional<protocol> preferred) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
@@ -232,7 +232,8 @@ interfaces::native_address(const std::string& host,
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
     auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
     if (family != AF_UNSPEC)
-      return {{buffer, family == AF_INET ? protocol::ipv4 : protocol::ipv6}};
+      return std::make_pair(buffer, family == AF_INET ? protocol::ipv4
+                                                      : protocol::ipv6);
   }
   return none;
 }

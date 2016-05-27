@@ -40,13 +40,16 @@ using sub4_atom = atom_constant<atom("sub4")>;
 
 
 CAF_TEST(test_serial_reply) {
-  auto mirror_behavior = [=](event_based_actor* self) {
-    self->become(others >> [=]() -> message {
-      CAF_MESSAGE("return self->current_message()");
-      return self->current_message();
-    });
+  actor_system system;
+  auto mirror_behavior = [=](event_based_actor* self) -> behavior {
+    self->set_default_handler(reflect);
+    return {
+      [] {
+        // nop
+      }
+    };
   };
-  auto master = spawn([=](event_based_actor* self) {
+  auto master = system.spawn([=](event_based_actor* self) {
     CAF_MESSAGE("ID of master: " << self->id());
     // spawn 5 mirror actors
     auto c0 = self->spawn<linked>(mirror_behavior);
@@ -55,24 +58,25 @@ CAF_TEST(test_serial_reply) {
     auto c3 = self->spawn<linked>(mirror_behavior);
     auto c4 = self->spawn<linked>(mirror_behavior);
     self->become (
-      [=](hi_atom) -> continue_helper {
+      [=](hi_atom) mutable {
+        auto rp = self->make_response_promise();
         CAF_MESSAGE("received 'hi there'");
-        return self->sync_send(c0, sub0_atom::value).then(
-          [=](sub0_atom) -> continue_helper {
+        self->request(c0, infinite, sub0_atom::value).then(
+          [=](sub0_atom) mutable {
             CAF_MESSAGE("received 'sub0'");
-            return self->sync_send(c1, sub1_atom::value).then(
-              [=](sub1_atom) -> continue_helper {
+            self->request(c1, infinite, sub1_atom::value).then(
+              [=](sub1_atom) mutable {
                 CAF_MESSAGE("received 'sub1'");
-                return self->sync_send(c2, sub2_atom::value).then(
-                  [=](sub2_atom) -> continue_helper {
+                self->request(c2, infinite, sub2_atom::value).then(
+                  [=](sub2_atom) mutable {
                     CAF_MESSAGE("received 'sub2'");
-                    return self->sync_send(c3, sub3_atom::value).then(
-                      [=](sub3_atom) -> continue_helper {
+                    self->request(c3, infinite, sub3_atom::value).then(
+                      [=](sub3_atom) mutable {
                         CAF_MESSAGE("received 'sub3'");
-                        return self->sync_send(c4, sub4_atom::value).then(
-                          [=](sub4_atom) -> atom_value {
+                        self->request(c4, infinite, sub4_atom::value).then(
+                          [=](sub4_atom) mutable {
                             CAF_MESSAGE("received 'sub4'");
-                            return ho_atom::value;
+                            rp.deliver(ho_atom::value);
                           }
                         );
                       }
@@ -86,20 +90,15 @@ CAF_TEST(test_serial_reply) {
       }
     );
   });
-  { // lifetime scope of self
-    scoped_actor self;
-    CAF_MESSAGE("ID of main: " << self->id());
-    self->sync_send(master, hi_atom::value).await(
-      [](ho_atom) {
-        CAF_MESSAGE("received 'ho'");
-      },
-      others >> [&] {
-        CAF_TEST_ERROR("Unexpected message: "
-                       << to_string(self->current_message()));
-      }
-    );
-    self->send_exit(master, exit_reason::user_shutdown);
-  }
-  await_all_actors_done();
-  shutdown();
+  scoped_actor self{system};
+  CAF_MESSAGE("ID of main: " << self->id());
+  self->request(master, infinite, hi_atom::value).receive(
+    [](ho_atom) {
+      CAF_MESSAGE("received 'ho'");
+    },
+    [&](const error& err) {
+      CAF_ERROR("Error: " << self->system().render(err));
+    }
+  );
+  CAF_REQUIRE(self->mailbox().count() == 0);
 }

@@ -20,21 +20,14 @@
 #ifndef CAF_IO_ALL_HPP
 #define CAF_IO_ALL_HPP
 
-#include "caf/io/basp.hpp"
+#include "caf/io/basp/all.hpp"
 #include "caf/io/broker.hpp"
-#include "caf/io/publish.hpp"
-#include "caf/io/spawn_io.hpp"
 #include "caf/io/middleman.hpp"
-#include "caf/io/unpublish.hpp"
 #include "caf/io/basp_broker.hpp"
-#include "caf/io/max_msg_size.hpp"
-#include "caf/io/remote_actor.hpp"
-#include "caf/io/remote_group.hpp"
-#include "caf/io/set_middleman.hpp"
+#include "caf/io/typed_broker.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/middleman_actor.hpp"
 #include "caf/io/system_messages.hpp"
-#include "caf/io/publish_local_groups.hpp"
 
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/interfaces.hpp"

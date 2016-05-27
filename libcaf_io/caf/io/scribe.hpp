@@ -46,6 +46,9 @@ public:
   /// Implicitly starts the read loop on first call.
   virtual void configure_read(receive_policy::config config) = 0;
 
+  /// Enables or disables write notifications.
+  virtual void ack_writes(bool enable) = 0;
+
   /// Returns the current output buffer.
   virtual std::vector<char>& wr_buf() = 0;
 
@@ -56,9 +59,11 @@ public:
   /// content of the buffer via the network.
   virtual void flush() = 0;
 
-  void io_failure(network::operation op) override;
+  void io_failure(execution_unit* ctx, network::operation op) override;
 
-  void consume(const void* data, size_t num_bytes) override;
+  void consume(execution_unit*, const void*, size_t) override;
+
+  void data_transferred(execution_unit*, size_t, size_t) override;
 
 protected:
   message detach_message() override;

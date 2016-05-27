@@ -49,13 +49,13 @@ CAF_TEST(metaprogramming) {
   using if2 = type_list<replies_to<int>::with<int>,
                         replies_to<int, double>::with<void>>;
   using if3 = type_list<replies_to<int, double>::with<void>>;
-  using if4 = type_list<replies_to<int>::with<skip_message_t>,
+  using if4 = type_list<replies_to<int>::with<skip_t>,
                         replies_to<int, double>::with<void>>;
-  CAF_CHECK((ctm<if1, if2>::value) == -1);
-  CAF_CHECK((ctm<if1, if3>::value) != -1);
-  CAF_CHECK((ctm<if2, if3>::value) != -1);
-  CAF_CHECK((ctm<if1, if4>::value) == -1);
-  CAF_CHECK((ctm<if2, if4>::value) == -1);
+  CAF_CHECK_EQUAL((ctm<if1, if2>::value), -1);
+  CAF_CHECK_NOT_EQUAL((ctm<if1, if3>::value), -1);
+  CAF_CHECK_NOT_EQUAL((ctm<if2, if3>::value), -1);
+  CAF_CHECK_EQUAL((ctm<if1, if4>::value), -1);
+  CAF_CHECK_EQUAL((ctm<if2, if4>::value), -1);
 
   using l1 = type_list<int, float, std::string>;
   using r1 = tl_reverse<l1>::type;
@@ -64,7 +64,7 @@ CAF_TEST(metaprogramming) {
   CAF_CHECK((is_same<float, tl_at<l1, 1>::type>::value));
   CAF_CHECK((is_same<std::string, tl_at<l1, 2>::type>::value));
 
-  CAF_CHECK_EQUAL(3, tl_size<l1>::value);
+  CAF_CHECK_EQUAL(3u, tl_size<l1>::value);
   CAF_CHECK_EQUAL(tl_size<r1>::value, tl_size<l1>::value);
   CAF_CHECK((is_same<tl_at<l1, 0>::type, tl_at<r1, 2>::type>::value));
   CAF_CHECK((is_same<tl_at<l1, 1>::type, tl_at<r1, 1>::type>::value));
@@ -75,8 +75,8 @@ CAF_TEST(metaprogramming) {
   CAF_CHECK((is_same<int, tl_head<l2>::type>::value));
   CAF_CHECK((is_same<l1, tl_tail<l2>::type>::value));
 
-  CAF_CHECK_EQUAL((detail::tl_count<l1, is_int>::value), 1);
-  CAF_CHECK_EQUAL((detail::tl_count<l2, is_int>::value), 2);
+  CAF_CHECK_EQUAL((detail::tl_count<l1, is_int>::value), 1u);
+  CAF_CHECK_EQUAL((detail::tl_count<l2, is_int>::value), 2u);
 
   using il0 = int_list<0, 1, 2, 3, 4, 5>;
   using il1 = int_list<4, 5>;

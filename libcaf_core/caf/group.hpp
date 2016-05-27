@@ -20,9 +20,11 @@
 #ifndef CAF_GROUP_HPP
 #define CAF_GROUP_HPP
 
-#include "caf/intrusive_ptr.hpp"
+#include <string>
 
 #include "caf/fwd.hpp"
+#include "caf/none.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/abstract_group.hpp"
 
 #include "caf/detail/comparable.hpp"
@@ -30,12 +32,8 @@
 
 namespace caf {
 
-class channel;
-class message;
-
 struct invalid_group_t {
   constexpr invalid_group_t() {}
-
 };
 
 /// Identifies an invalid {@link group}.
@@ -44,11 +42,11 @@ constexpr invalid_group_t invalid_group = invalid_group_t{};
 
 class group : detail::comparable<group>,
               detail::comparable<group, invalid_group_t> {
-
-  template <class T, typename U>
-  friend T actor_cast(const U&);
-
 public:
+  template <class, class, int>
+  friend class actor_cast_access;
+
+  using signatures = none_t;
 
   group() = default;
 
@@ -64,50 +62,55 @@ public:
 
   group& operator=(const invalid_group_t&);
 
+  group(abstract_group*);
+
   group(intrusive_ptr<abstract_group> ptr);
 
-  inline explicit operator bool() const { return static_cast<bool>(ptr_); }
+  inline explicit operator bool() const noexcept {
+    return static_cast<bool>(ptr_);
+  }
 
-  inline bool operator!() const { return ! static_cast<bool>(ptr_); }
+  inline bool operator!() const noexcept {
+    return ! ptr_;
+  }
 
   /// Returns a handle that grants access to actor operations such as enqueue.
-  inline abstract_group* operator->() const { return ptr_.get(); }
+  inline abstract_group* operator->() const noexcept {
+    return get();
+  }
 
-  inline abstract_group& operator*() const { return *ptr_; }
+  inline abstract_group& operator*() const noexcept {
+    return *get();
+  }
 
-  intptr_t compare(const group& other) const;
+  static intptr_t compare(const abstract_group* lhs, const abstract_group* rhs);
 
-  inline intptr_t compare(const invalid_actor_t&) const {
+  intptr_t compare(const group& other) const noexcept;
+
+  inline intptr_t compare(const invalid_group_t&) const noexcept {
     return ptr_ ? 1 : 0;
   }
 
-  /// Get a pointer to the group associated with
-  /// `identifier` from the module `mod_name`.
-  /// @threadsafe
-  static group get(const std::string& mod_name, const std::string& identifier);
+  friend void serialize(serializer& sink, const group& x, const unsigned int);
 
-  /// Returns an anonymous group.
-  /// Each calls to this member function returns a new instance
-  /// of an anonymous group. Anonymous groups can be used whenever
-  /// a set of actors wants to communicate using an exclusive channel.
-  static group anonymous();
+  friend void serialize(deserializer& sink, group& x, const unsigned int);
 
-  /// Add a new group module to the group management.
-  /// @threadsafe
-  static void add_module(abstract_group::unique_module_ptr);
-
-  /// Returns the module associated with `module_name`.
-  /// @threadsafe
-  static abstract_group::module_ptr
-  get_module(const std::string& module_name);
-
-  inline const abstract_group_ptr& ptr() const {
-    return ptr_;
+  inline abstract_group* get() const noexcept {
+    return ptr_.get();
   }
 
 private:
+  inline abstract_group* release() noexcept {
+    return ptr_.release();
+  }
+
+  group(abstract_group*, bool);
+
   abstract_group_ptr ptr_;
 };
+
+/// @relates group
+std::string to_string(const group& x);
 
 } // namespace caf
 

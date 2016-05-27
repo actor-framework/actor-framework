@@ -32,12 +32,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/detail/run_sub_unit_test.hpp"
-
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#endif // CAF_USE_ASIO
-
 using namespace std;
 using namespace caf;
 
@@ -45,14 +39,23 @@ struct ping {
   int32_t value;
 };
 
+template <class Processor>
+void serialize(Processor& proc, ping& x, const unsigned int) {
+  proc & x.value;
+}
+
 bool operator==(const ping& lhs, const ping& rhs) {
   return lhs.value == rhs.value;
 }
 
 struct pong {
   int32_t value;
-
 };
+
+template <class Processor>
+void serialize(Processor& proc, pong& x, const unsigned int) {
+  proc & x.value;
+}
 
 bool operator==(const pong& lhs, const pong& rhs) {
   return lhs.value == rhs.value;
@@ -71,85 +74,51 @@ server_type::behavior_type server() {
   };
 }
 
-void run_client(const char* host, uint16_t port) {
+void run_client(int argc, char** argv, uint16_t port) {
+  actor_system_config cfg;
+  cfg.load<io::middleman>()
+     .add_message_type<ping>("ping")
+     .add_message_type<pong>("pong")
+     .parse(argc, argv);
+  actor_system system{cfg};
   // check whether invalid_argument is thrown
   // when trying to connect to get an untyped
   // handle to the server
   try {
-    io::remote_actor(host, port);
+    system.middleman().remote_actor("127.0.0.1", port);
   }
   catch (network_error& e) {
     CAF_MESSAGE(e.what());
   }
   CAF_MESSAGE("connect to typed_remote_actor");
-  auto serv = io::typed_remote_actor<server_type>(host, port);
-  scoped_actor self;
-  self->sync_send(serv, ping{42})
-    .await([](const pong& p) { CAF_CHECK_EQUAL(p.value, 42); });
+  auto serv = system.middleman().typed_remote_actor<server_type>("127.0.0.1",
+                                                                 port);
+  scoped_actor self{system};
+  self->request(serv, infinite, ping{42}).receive(
+    [](const pong& p) {
+      CAF_CHECK_EQUAL(p.value, 42);
+    }
+  );
   anon_send_exit(serv, exit_reason::user_shutdown);
-  self->monitor(serv);
-  self->receive([&](const down_msg& dm) {
-    CAF_CHECK_EQUAL(dm.reason, exit_reason::user_shutdown);
-    CAF_CHECK(dm.source == serv);
-  });
+  self->wait_for(serv);
 }
 
-uint16_t run_server() {
-  auto port = io::typed_publish(spawn(server), 0, "127.0.0.1");
-  CAF_MESSAGE("running on port " << port);
-  return port;
+void run_server(int argc, char** argv) {
+  actor_system_config cfg;
+  cfg.load<io::middleman>()
+     .add_message_type<ping>("ping")
+     .add_message_type<pong>("pong")
+     .parse(argc, argv);
+  actor_system system{cfg};
+  auto port = system.middleman().publish(system.spawn(server), 0, "127.0.0.1");
+  CAF_REQUIRE(port != 0);
+  CAF_MESSAGE("running on port " << port << ", start client");
+  std::thread child{[=] { run_client(argc, argv, port); }};
+  child.join();
 }
 
 CAF_TEST(test_typed_remote_actor) {
-  auto argv = test::engine::argv();
   auto argc = test::engine::argc();
-  announce<ping>("ping", &ping::value);
-  announce<pong>("pong", &pong::value);
-  uint16_t port = 0;
-  auto r = message_builder(argv, argv + argc).extract_opts({
-    {"client-port,c", "set port for client", port},
-    {"server,s", "run in server mode"},
-    {"use-asio", "use ASIO network backend (if available)"}
-  });
-  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-    cout << r.error << endl << endl << r.helptext << endl;
-    return;
-  }
-  auto use_asio = r.opts.count("use-asio") > 0;
-  if (use_asio) {
-#   ifdef CAF_USE_ASIO
-    CAF_MESSAGE("enable ASIO backend");
-    io::set_middleman<io::network::asio_multiplexer>();
-#   endif // CAF_USE_ASIO
-  }
-  if (r.opts.count("client-port") > 0) {
-    CAF_MESSAGE("run in client mode");
-    run_client("localhost", port);
-  } else if (r.opts.count("server") > 0) {
-    CAF_MESSAGE("run in server mode");
-    run_server();
-  } else {
-    port = run_server();
-    // execute client_part() in a separate process,
-    // connected via localhost socket
-    scoped_actor self;
-    auto child = detail::run_sub_unit_test(self,
-                                           test::engine::path(),
-                                           test::engine::max_runtime(),
-                                           CAF_XSTR(CAF_SUITE),
-                                           use_asio,
-                                           {"--client-port="
-                                            + std::to_string(port)});
-    CAF_MESSAGE("block till child process has finished");
-    child.join();
-    self->await_all_other_actors_done();
-    self->receive(
-      [](const std::string& output) {
-        cout << endl << endl << "*** output of client program ***"
-             << endl << output << endl;
-      }
-    );
-  }
-  await_all_actors_done();
-  shutdown();
+  auto argv = test::engine::argv();
+  run_server(argc, argv);
 }

@@ -23,44 +23,33 @@
 #include <atomic>
 
 #include "caf/fwd.hpp"
-#include "caf/node_id.hpp"
 #include "caf/message_id.hpp"
-#include "caf/ref_counted.hpp"
 
 namespace caf {
 
 /// Interface for all message receivers. * This interface describes an
 /// entity that can receive messages and is implemented by {@link actor}
 /// and {@link group}.
-class abstract_channel : public ref_counted {
+class abstract_channel {
 public:
   friend class abstract_actor;
   friend class abstract_group;
 
   virtual ~abstract_channel();
 
-  /// Enqueues a new message to the channel.
-  virtual void enqueue(const actor_addr& sender, message_id mid,
-                       message content, execution_unit* host) = 0;
+  /// Enqueues a new message without forwarding stack to the channel.
+  virtual void enqueue(strong_actor_ptr sender, message_id mid, message content,
+                       execution_unit* host = nullptr) = 0;
 
-  /// Enqueues a new message wrapped in a `mailbox_element` to the channel.
-  /// This variant is used by actors whenever it is possible to allocate
-  /// mailbox element and message on the same memory block and is thus
-  /// more efficient. Non-actors use the default implementation which simply
-  /// calls the pure virtual version.
-  virtual void enqueue(mailbox_element_ptr what, execution_unit* host);
+  static constexpr int is_abstract_actor_flag       = 0x01000000;
 
-  /// Returns the ID of the node this actor is running on.
-  inline node_id node() const {
-    return node_;
-  }
+  static constexpr int is_abstract_group_flag       = 0x02000000;
 
-  /// Returns true if {@link node_ptr} returns
-  bool is_remote() const;
+  static constexpr int is_actor_bind_decorator_flag = 0x04000000;
 
-  static constexpr int is_abstract_actor_flag = 0x100000;
+  static constexpr int is_actor_dot_decorator_flag  = 0x08000000;
 
-  static constexpr int is_abstract_group_flag = 0x200000;
+  static constexpr int is_actor_decorator_mask      = 0x0C000000;
 
   inline bool is_abstract_actor() const {
     return static_cast<bool>(flags() & is_abstract_actor_flag);
@@ -68,6 +57,10 @@ public:
 
   inline bool is_abstract_group() const {
     return static_cast<bool>(flags() & is_abstract_group_flag);
+  }
+
+  inline bool is_actor_decorator() const {
+    return static_cast<bool>(flags() & is_actor_decorator_mask);
   }
 
 protected:
@@ -87,22 +80,13 @@ protected:
 
 private:
   // can only be called from abstract_actor and abstract_group
-  explicit abstract_channel(int init_flags);
-  abstract_channel(int init_flags, node_id nid);
+  abstract_channel(int init_flags);
 
-  /*
-   * Accumulates several state and type flags. Subtypes may use only the
-   * first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
-   * channel-related flags.
-   */
+  // Accumulates several state and type flags. Subtypes may use only the
+  // first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for
+  // channel-related flags.
   std::atomic<int> flags_;
-  // identifies the node of this channel
-  node_id node_;
 };
-
-/// A smart pointer to an abstract channel.
-/// @relates abstract_channel_ptr
-using abstract_channel_ptr = intrusive_ptr<abstract_channel>;
 
 } // namespace caf
 

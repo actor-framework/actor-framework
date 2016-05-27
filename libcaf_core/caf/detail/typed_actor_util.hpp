@@ -56,92 +56,57 @@ struct deduce_lhs_result {
   using type = typename unwrap_std_tuple<T>::type;
 };
 
-template <class L, class R>
-struct deduce_lhs_result<either_or_t<L, R>> {
-  using type = L;
-};
-
 template <class T>
 struct deduce_rhs_result {
   using type = type_list<>;
 };
-
-template <class L, class R>
-struct deduce_rhs_result<either_or_t<L, R>> {
-  using type = R;
-};
-
-template <class T>
-struct is_hidden_msg_handler : std::false_type { };
-
-template <>
-struct is_hidden_msg_handler<typed_mpi<type_list<exit_msg>,
-                                       type_list<void>,
-                                       empty_type_list>> : std::true_type { };
-
-template <>
-struct is_hidden_msg_handler<typed_mpi<type_list<down_msg>,
-                                       type_list<void>,
-                                       empty_type_list>> : std::true_type { };
 
 template <class T>
 struct deduce_mpi {
   using result = typename implicit_conversions<typename T::result_type>::type;
   using arg_t = typename tl_map<typename T::arg_types, std::decay>::type;
   using type = typed_mpi<arg_t,
-                         typename deduce_lhs_result<result>::type,
-                         typename deduce_rhs_result<result>::type>;
+                         typename deduce_lhs_result<result>::type>;
 };
 
 template <class Arguments>
 struct input_is {
   template <class Signature>
   struct eval {
-    static constexpr bool value =
-      std::is_same<Arguments, typename Signature::input_types>::value;
+    static constexpr bool value = false;
+  };
+  template <class Out>
+  struct eval<typed_mpi<Arguments, Out>> {
+    static constexpr bool value = true;
   };
 };
 
-template <class OutputPair, class... Fs>
-struct type_checker;
-
-template <class OutputList, class F1>
-struct type_checker<OutputList, F1> {
+template <class Output, class F>
+struct type_checker {
   static void check() {
     using arg_types =
       typename tl_map<
-        typename get_callable_trait<F1>::arg_types,
+        typename get_callable_trait<F>::arg_types,
         std::decay
       >::type;
-    static_assert(std::is_same<OutputList, arg_types>::value
-                  || (std::is_same<OutputList, type_list<void>>::value
+    static_assert(std::is_same<Output, arg_types>::value
+                  || (std::is_same<Output, type_list<void>>::value
                      && std::is_same<arg_types, type_list<>>::value),
                   "wrong functor signature");
   }
 };
 
-template <class Opt1, class Opt2, class F1>
-struct type_checker<type_pair<Opt1, Opt2>, F1> {
-  static void check() {
-    type_checker<Opt1, F1>::check();
-  }
-};
 
-template <class OutputPair, class F1>
-struct type_checker<OutputPair, F1, none_t> : type_checker<OutputPair, F1> { };
-
-template <class Opt1, class Opt2, class F1, class F2>
-struct type_checker<type_pair<Opt1, Opt2>, F1, F2> {
+template <class F>
+struct type_checker<message, F> {
   static void check() {
-    type_checker<Opt1, F1>::check();
-    type_checker<Opt2, F2>::check();
+    // nop
   }
 };
 
 template <int X, int Pos, class A>
 struct static_error_printer {
   static_assert(X != Pos, "unexpected handler some position > 20");
-
 };
 
 template <int X, class A>
@@ -177,8 +142,8 @@ template <class A, class B, template <class, class> class Predicate>
 struct static_asserter {
   static void verify_match() {
     static constexpr int x = Predicate<A, B>::value;
-    using type_at_x = typename tl_at<B, (x < 0 ? 0 : x)>::type;
-    static_error_printer<x, x, type_at_x> dummy;
+    using type_x = typename tl_at<B, (x < 0 ? 0 : x)>::type;
+    static_error_printer<x, x, type_x> dummy;
     static_cast<void>(dummy);
   }
 };
@@ -204,24 +169,38 @@ struct deduce_lifted_output_type<type_list<typed_continue_helper<R>>> {
 };
 
 template <class Signatures, class InputTypes>
-struct deduce_output_type {
-  static constexpr int input_pos =
-    tl_find_if<
+struct deduce_output_type_impl {
+  using signature =
+    typename tl_find<
       Signatures,
       input_is<InputTypes>::template eval
-    >::value;
-  static_assert(input_pos != -1, "typed actor does not support given input");
-  using signature = typename tl_at<Signatures, input_pos>::type;
-  using opt1 = typename signature::output_opt1_types;
-  using opt2 = typename signature::output_opt2_types;
-  using type = detail::type_pair<opt1, opt2>;
-  // generates the appropriate `delegated<...>` type from given signatures
-  using delegated_type =
-    typename std::conditional<
-      std::is_same<opt2, detail::empty_type_list>::value,
-      typename detail::tl_apply<opt1, delegated>::type,
-      delegated<either_or_t<opt1, opt2>>
     >::type;
+  static_assert(! std::is_same<signature, none_t>::value,
+                "typed actor does not support given input");
+  using type = typename signature::output_types;
+  // generates the appropriate `delegated<...>` type from given signatures
+  using delegated_type = typename detail::tl_apply<type, delegated>::type;
+  // generates the appropriate `std::tuple<...>` type from given signature
+  using tuple_type = typename detail::tl_apply<type, std::tuple>::type;
+};
+
+template <class InputTypes>
+struct deduce_output_type_impl<none_t, InputTypes> {
+  using type = message;
+  using delegated_type = delegated<message>;
+  using tuple_type = std::tuple<message>;
+};
+
+template <class Handle, class InputTypes>
+struct deduce_output_type
+    : deduce_output_type_impl<typename Handle::signatures, InputTypes> {
+  // nop
+};
+
+template <class T, class InputTypes>
+struct deduce_output_type<T*, InputTypes>
+  : deduce_output_type_impl<typename T::signatures, InputTypes> {
+  // nop
 };
 
 template <class... Ts>
@@ -249,14 +228,7 @@ struct sender_signature_checker {
       typename deduce_output_type<
         DestSigs, ArgTypes
       >::type;
-    sender_signature_checker<
-      DestSigs, OrigSigs,
-      typename dest_output_types::first
-    >::check();
-    sender_signature_checker<
-      DestSigs, OrigSigs,
-      typename dest_output_types::second
-    >::check();
+    sender_signature_checker<DestSigs, OrigSigs, dest_output_types>::check();
   }
 };
 
@@ -270,12 +242,18 @@ struct sender_signature_checker<OrigSigs, DestSigs, detail::type_list<>> {
   static void check() {}
 };
 
-template <class T, class... Ts>
+template <class... Ts>
 struct extend_with_helper;
 
-template <class... Ts, class... Es>
-struct extend_with_helper<typed_actor<Es...>, Ts...> {
-  using type = typed_actor<Ts..., Es...>;
+template <class... Xs>
+struct extend_with_helper<typed_actor<Xs...>> {
+  using type = typed_actor<Xs...>;
+};
+
+template <class... Xs, class... Ys, class... Ts>
+struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
+  : extend_with_helper<typed_actor<Xs..., Ys...>, Ts...> {
+  // nop
 };
 
 } // namespace detail

@@ -13,33 +13,38 @@ file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
 set (LIBCAF_CORE_SRCS
      src/abstract_actor.cpp
      src/abstract_channel.cpp
+     src/abstract_composable_behavior.cpp
      src/abstract_group.cpp
      src/abstract_coordinator.cpp
      src/actor.cpp
      src/actor_addr.cpp
+     src/actor_config.cpp
+     src/actor_control_block.cpp
      src/actor_companion.cpp
-     src/actor_namespace.cpp
      src/actor_ostream.cpp
      src/actor_pool.cpp
      src/actor_proxy.cpp
      src/actor_registry.cpp
+     src/actor_system.cpp
+     src/actor_system_config.cpp
+     src/adapter.cpp
+     src/atom.cpp
      src/attachable.cpp
-     src/announce_actor_type.cpp
      src/behavior.cpp
      src/behavior_stack.cpp
      src/behavior_impl.cpp
-     src/binary_deserializer.cpp
-     src/binary_serializer.cpp
      src/blocking_actor.cpp
-     src/channel.cpp
      src/concatenated_tuple.cpp
+     src/config_option.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
+     src/deep_to_string.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
      src/detached_threads.cpp
      src/duration.cpp
-     src/either.cpp
+     src/dynamic_message_data.cpp
+     src/error.cpp
      src/event_based_actor.cpp
      src/exception.cpp
      src/execution_unit.cpp
@@ -50,9 +55,12 @@ set (LIBCAF_CORE_SRCS
      src/get_root_uuid.cpp
      src/group.cpp
      src/group_manager.cpp
+     src/invoke_result_visitor.cpp
      src/match_case.cpp
+     src/merged_tuple.cpp
+     src/monitorable_actor.cpp
      src/local_actor.cpp
-     src/logging.cpp
+     src/logger.cpp
      src/mailbox_element.cpp
      src/memory.cpp
      src/memory_managed.cpp
@@ -61,26 +69,26 @@ set (LIBCAF_CORE_SRCS
      src/message_data.cpp
      src/message_handler.cpp
      src/node_id.cpp
-     src/parse_config.cpp
      src/parse_ini.cpp
      src/ref_counted.cpp
+     src/proxy_registry.cpp
      src/response_promise.cpp
      src/replies_to.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
-     src/run_sub_unit_test.cpp
      src/scoped_actor.cpp
-     src/set_scheduler.cpp
+     src/scoped_execution_unit.cpp
+     src/sec.cpp
      src/serializer.cpp
+     src/sequencer.cpp
      src/shared_spinlock.cpp
-     src/shutdown.cpp
-     src/singletons.cpp
-     src/string_serialization.cpp
+     src/skip.cpp
+     src/splitter.cpp
      src/sync_request_bouncer.cpp
      src/try_match.cpp
-     src/uniform_type_info.cpp
-     src/uniform_type_info_map.cpp
-     src/whereis.cpp)
+     src/type_erased_value.cpp
+     src/type_erased_tuple.cpp
+     src/uniform_type_info_map.cpp)
 
 add_custom_target(libcaf_core)
 

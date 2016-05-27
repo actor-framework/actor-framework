@@ -30,11 +30,11 @@ attachable::token::token(size_t typenr, const void* vptr)
   // nop
 }
 
-maybe<uint32_t> attachable::handle_exception(const std::exception_ptr&) {
+optional<exit_reason> attachable::handle_exception(const std::exception_ptr&) {
   return none;
 }
 
-void attachable::actor_exited(abstract_actor*, uint32_t) {
+void attachable::actor_exited(const error&, execution_unit*) {
   // nop
 }
 

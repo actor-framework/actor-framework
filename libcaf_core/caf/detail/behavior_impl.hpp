@@ -21,22 +21,20 @@
 #define CAF_DETAIL_BEHAVIOR_IMPL_HPP
 
 #include <tuple>
-#include <iterator>
 #include <type_traits>
 
 #include "caf/none.hpp"
 #include "caf/variant.hpp"
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 #include "caf/match_case.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/atom.hpp"
-#include "caf/either.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -45,12 +43,11 @@
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/tail_argument_token.hpp"
-#include "caf/detail/optional_message_visitor.hpp"
+#include "caf/detail/invoke_result_visitor.hpp"
 
 namespace caf {
 
 class message_handler;
-using bhvr_invoke_result = maybe<message>;
 
 } // namespace caf
 
@@ -58,9 +55,9 @@ namespace caf {
 namespace detail {
 
 template <class... Ts>
-struct has_skip_message {
+struct has_skip {
   static constexpr bool value =
-    disjunction<std::is_same<Ts, skip_message_t>::value...>::value;
+    disjunction<std::is_same<Ts, skip_t>::value...>::value;
 };
 
 class behavior_impl : public ref_counted {
@@ -71,12 +68,15 @@ public:
 
   behavior_impl(duration tout = duration{});
 
-  bhvr_invoke_result invoke(message&);
+  virtual match_case::result invoke(detail::invoke_result_visitor& f, message&);
 
-  inline bhvr_invoke_result invoke(message&& x) {
-    message tmp(std::move(x));
-    return invoke(tmp);
+  inline match_case::result invoke(detail::invoke_result_visitor& f,
+                                   message&& arg) {
+    message tmp(std::move(arg));
+    return invoke(f, tmp);
   }
+
+  optional<message> invoke(message&);
 
   virtual void handle_timeout();
 
@@ -88,24 +88,10 @@ public:
 
   pointer or_else(const pointer& other);
 
-  using iterator = match_case_info*;
-
-  inline iterator begin() {
-    return begin_;
-  }
-
-  inline iterator end() {
-    return end_;
-  }
-
-  inline size_t size() const {
-    return std::distance(begin_, end_);
-  }
-
 protected:
-  iterator begin_;
-  iterator end_;
   duration timeout_;
+  match_case_info* begin_;
+  match_case_info* end_;
 };
 
 template <size_t Pos, size_t Size>
@@ -114,7 +100,6 @@ struct defaut_bhvr_impl_init {
   static void init(Array& arr, Tuple& tup) {
     auto& x = arr[Pos];
     x.ptr = &std::get<Pos>(tup);
-    x.has_wildcard = x.ptr->has_wildcard();
     x.type_token = x.ptr->type_token();
     defaut_bhvr_impl_init<Pos + 1, Size>::init(arr, tup);
   }

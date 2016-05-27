@@ -17,25 +17,40 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/exception.hpp"
 #include "caf/blocking_actor.hpp"
 
-#include "caf/detail/logging.hpp"
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/logger.hpp"
+#include "caf/exception.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_registry.hpp"
+
+#include "caf/detail/sync_request_bouncer.hpp"
 
 namespace caf {
 
-blocking_actor::blocking_actor() {
-  is_blocking(true);
+blocking_actor::blocking_actor(actor_config& sys)
+    : super(sys.add_flag(local_actor::is_blocking_flag)) {
+  set_default_handler(skip);
 }
 
 blocking_actor::~blocking_actor() {
   // avoid weak-vtables warning
 }
 
+void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+  auto mid = ptr->mid;
+  auto sender = ptr->sender;
+  // returns false if mailbox has been closed
+  if (! mailbox().synchronized_enqueue(mtx_, cv_, ptr.release())) {
+    if (mid.is_request()) {
+      detail::sync_request_bouncer srb{exit_reason()};
+      srb(sender, mid);
+    }
+  }
+}
+
 void blocking_actor::await_all_other_actors_done() {
-  detail::singletons::get_actor_registry()->await_running_count_equal(1);
+  system().registry().await_running_count_equal(is_registered() ? 1 : 0);
 }
 
 void blocking_actor::act() {
@@ -49,38 +64,59 @@ void blocking_actor::initialize() {
 }
 
 void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
-  CAF_LOG_TRACE(CAF_MARG(mid, integer_value));
+  CAF_LOG_TRACE(CAF_ARG(mid));
   // try to dequeue from cache first
-  if (invoke_from_cache(bhvr, mid)) {
+  if (invoke_from_cache(bhvr, mid))
     return;
-  }
-  // requesting an invalid timeout will reset our active timeout
   uint32_t timeout_id = 0;
-  if (mid == invalid_message_id) {
+  if (mid != invalid_message_id)
+    awaited_responses_.emplace_front(mid, bhvr);
+  else
     timeout_id = request_timeout(bhvr.timeout());
-  } else {
-    request_sync_timeout_msg(bhvr.timeout(), mid);
-  }
+  if (mid != invalid_message_id && ! find_awaited_response(mid))
+    awaited_responses_.emplace_front(mid, behavior{});
   // read incoming messages
   for (;;) {
     await_data();
     auto msg = next_message();
     switch (invoke_message(msg, bhvr, mid)) {
       case im_success:
-        if (mid == invalid_message_id) {
+        if (mid == invalid_message_id)
           reset_timeout(timeout_id);
-        }
         return;
       case im_skipped:
-        if (msg) {
+        if (msg)
           push_to_cache(std::move(msg));
-        }
         break;
       default:
         // delete msg
         break;
     }
   }
+}
+
+void blocking_actor::await_data() {
+  if (! has_next_message())
+    mailbox().synchronized_await(mtx_, cv_);
+}
+
+size_t blocking_actor::attach_functor(const actor& x) {
+  return attach_functor(actor_cast<strong_actor_ptr>(x));
+}
+
+size_t blocking_actor::attach_functor(const actor_addr& x) {
+  return attach_functor(actor_cast<strong_actor_ptr>(x));
+}
+
+size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
+  using wait_for_atom = atom_constant<atom("waitFor")>;
+  if (! ptr)
+    return 0;
+  actor self{this};
+  ptr->get()->attach_functor([=](const error&) {
+    anon_send(self, wait_for_atom::value);
+  });
+  return 1;
 }
 
 } // namespace caf

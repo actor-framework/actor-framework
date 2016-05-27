@@ -19,10 +19,16 @@
 
 #include "caf/resumable.hpp"
 
+#include "caf/ref_counted.hpp"
+
 namespace caf {
 
 resumable::~resumable() {
   // nop
+}
+
+resumable::subtype_t resumable::subtype() const {
+  return unspecified;
 }
 
 } // namespace caf

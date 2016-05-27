@@ -17,53 +17,70 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/local_actor.hpp"
 
-#include "caf/detail/singletons.hpp"
+#include "caf/actor.hpp"
+#include "caf/node_id.hpp"
+#include "caf/serializer.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/proxy_registry.hpp"
 
 namespace caf {
 
-namespace {
-
-intptr_t compare_impl(const abstract_actor* lhs, const abstract_actor* rhs) {
-  return reinterpret_cast<intptr_t>(lhs) - reinterpret_cast<intptr_t>(rhs);
-}
-
-} // namespace <anonymous>
-
-actor_addr::actor_addr(const invalid_actor_addr_t&) : ptr_(nullptr) {
+actor_addr::actor_addr(const unsafe_actor_handle_init_t&) {
   // nop
 }
 
-actor_addr::actor_addr(abstract_actor* ptr) : ptr_(ptr) {
+actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr) {
   // nop
 }
 
-actor_addr actor_addr::operator=(const invalid_actor_addr_t&) {
-  ptr_.reset();
-  return *this;
+actor_addr::actor_addr(actor_control_block* ptr, bool add_ref)
+    : ptr_(ptr, add_ref) {
+  // nop
 }
+
+intptr_t actor_addr::compare(const actor_control_block* lhs,
+                             const actor_control_block* rhs) {
+  // invalid actors are always "less" than valid actors
+  if (! lhs)
+    return rhs ? -1 : 0;
+  if (! rhs)
+    return 1;
+  // check for identity
+  if (lhs == rhs)
+    return 0;
+  // check for equality (a decorator is equal to the actor it represents)
+  auto x = lhs->id();
+  auto y = rhs->id();
+  if (x == y)
+    return lhs->node().compare(rhs->node());
+  return static_cast<intptr_t>(x) - static_cast<intptr_t>(y);
+}
+
 intptr_t actor_addr::compare(const actor_addr& other) const noexcept {
-  return compare_impl(ptr_.get(), other.ptr_.get());
+  return compare(ptr_.get(), other.ptr_.get());
 }
 
 intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
-  return compare_impl(ptr_.get(), other);
+  return compare(ptr_.get(), actor_control_block::from(other));
 }
 
+intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {
+  return compare(ptr_.get(), other);
+}
 
 actor_id actor_addr::id() const noexcept {
   return (ptr_) ? ptr_->id() : 0;
 }
 
 node_id actor_addr::node() const noexcept {
-  return ptr_ ? ptr_->node() : detail::singletons::get_node_id();
+  return ptr_ ? ptr_->node() : node_id{};
 }
 
-bool actor_addr::is_remote() const noexcept {
-  return ptr_ ? ptr_->is_remote() : false;
+actor_system* actor_addr::home_system() const noexcept {
+  return ptr_ ? ptr_->home_system : nullptr;
 }
 
 void actor_addr::swap(actor_addr& other) noexcept {

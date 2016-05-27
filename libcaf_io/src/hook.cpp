@@ -28,14 +28,15 @@ hook::~hook() {
   // nop
 }
 
-void hook::message_received_cb(const node_id& source, const actor_addr& from,
-                               const actor_addr& dest, message_id mid,
+void hook::message_received_cb(const node_id& source,
+                               const strong_actor_ptr& from,
+                               const strong_actor_ptr& dest, message_id mid,
                                const message& msg) {
   call_next<message_received>(source, from, dest, mid, msg);
 }
 
-void hook::message_sent_cb(const actor_addr& from, const node_id& dest_node,
-                           const actor_addr& dest, message_id mid,
+void hook::message_sent_cb(const strong_actor_ptr& from, const node_id& dest_node,
+                           const strong_actor_ptr& dest, message_id mid,
                            const message& payload) {
   call_next<message_sent>(from, dest_node, dest, mid, payload);
 }
@@ -50,20 +51,20 @@ void hook::message_forwarding_failed_cb(const basp::header& hdr,
   call_next<message_forwarding_failed>(hdr, payload);
 }
 
-void hook::message_sending_failed_cb(const actor_addr& from,
-                                     const actor_addr& dest,
+void hook::message_sending_failed_cb(const strong_actor_ptr& from,
+                                     const strong_actor_ptr& dest,
                                      message_id mid,
                                      const message& payload) {
   call_next<message_sending_failed>(from, dest, mid, payload);
 }
 
-void hook::actor_published_cb(const actor_addr& addr,
+void hook::actor_published_cb(const strong_actor_ptr& addr,
                               const std::set<std::string>& ifs,
                               uint16_t port) {
   call_next<actor_published>(addr, ifs, port);
 }
 
-void hook::new_remote_actor_cb(const actor_addr& addr) {
+void hook::new_remote_actor_cb(const strong_actor_ptr& addr) {
   call_next<new_remote_actor>(addr);
 }
 
@@ -84,7 +85,7 @@ void hook::route_lost_cb(const node_id& hop, const node_id& dest) {
 }
 
 void hook::invalid_message_received_cb(const node_id& source,
-                                       const actor_addr& sender,
+                                       const strong_actor_ptr& sender,
                                        actor_id invalid_dest,
                                        message_id mid,
                                        const message& msg) {

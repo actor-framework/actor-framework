@@ -22,27 +22,42 @@
 
 #include <type_traits>
 
-#include "caf/on.hpp"
+#include "caf/fwd.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/actor_marker.hpp"
 #include "caf/response_handle.hpp"
-#include "caf/abstract_event_based_actor.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/behavior_changer.hpp"
+
+#include "caf/logger.hpp"
 
 namespace caf {
 
-/// A cooperatively scheduled, event-based actor implementation. This is the
-/// recommended base class for user-defined actors and is used implicitly when
-/// spawning functor-based actors without the `blocking_api` flag.
-/// @extends local_actor
-class event_based_actor : public abstract_event_based_actor<behavior, true> {
+template <>
+class behavior_type_of<event_based_actor> {
 public:
-  /// Forwards the last received message to `whom`.
-  void forward_to(const actor& whom,
-                  message_priority = message_priority::normal);
+  using type = behavior;
+};
 
-  event_based_actor() = default;
+/// A cooperatively scheduled, event-based actor implementation. This is the
+/// recommended base class for user-defined actors.
+/// @extends local_actor
+class event_based_actor : public extend<local_actor, event_based_actor>::
+                                 with<mixin::sender, mixin::requester,
+                                      mixin::behavior_changer>,
+                          public dynamically_typed_actor_base {
+public:
+  using super = extend<local_actor, event_based_actor>::
+                with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+
+  using signatures = none_t;
+
+  using behavior_type = behavior;
+
+  explicit event_based_actor(actor_config& cfg);
 
   ~event_based_actor();
 

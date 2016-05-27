@@ -20,50 +20,57 @@
 #include "caf/scoped_actor.hpp"
 
 #include "caf/spawn_options.hpp"
-
-#include "caf/detail/singletons.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/actor_registry.hpp"
+#include "caf/scoped_execution_unit.hpp"
 
 namespace caf {
 
 namespace {
 
-struct impl : blocking_actor {
-  impl() {
+class impl : public blocking_actor {
+public:
+  impl(actor_config& cfg) : blocking_actor(cfg) {
     is_detached(true);
   }
 
   void act() override {
     CAF_LOG_ERROR("act() of scoped_actor impl called");
   }
+
+  const char* name() const override {
+    return "scoped_actor";
+  }
 };
 
 } // namespace <anonymous>
 
-void scoped_actor::init(bool hide_actor) {
-  self_.reset(new impl, false);
-  if (! hide_actor) {
+scoped_actor::scoped_actor(actor_system& sys, bool hidden) : context_{&sys} {
+  actor_config cfg{&context_};
+  self_ = make_actor<impl, strong_actor_ptr>(sys.next_actor_id(), sys.node(),
+                                             &sys, cfg);
+  if (! hidden)
     prev_ = CAF_SET_AID(self_->id());
-  }
-  CAF_LOG_TRACE(CAF_ARG(hide_actor));
-  self_->is_registered(! hide_actor);
-}
-
-scoped_actor::scoped_actor() {
-  init(false);
-}
-
-scoped_actor::scoped_actor(bool hide_actor) {
-  init(hide_actor);
+  CAF_LOG_TRACE(CAF_ARG(hidden));
+  ptr()->is_registered(! hidden);
 }
 
 scoped_actor::~scoped_actor() {
   CAF_LOG_TRACE("");
-  if (self_->is_registered()) {
+  if (! self_)
+    return;
+  auto x = ptr();
+  if (x->is_registered())
     CAF_SET_AID(prev_);
-  }
-  auto r = self_->planned_exit_reason();
-  self_->cleanup(r == exit_reason::not_exited ? exit_reason::normal : r);
+  if (! x->is_terminated())
+    x->cleanup(exit_reason::normal, &context_);
+}
+
+blocking_actor* scoped_actor::ptr() const {
+  return static_cast<blocking_actor*>(actor_cast<abstract_actor*>(self_));
+}
+
+std::string to_string(const scoped_actor& x) {
+  return to_string(x.address());
 }
 
 } // namespace caf

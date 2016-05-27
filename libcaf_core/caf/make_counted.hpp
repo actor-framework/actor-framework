@@ -20,6 +20,8 @@
 #ifndef CAF_MAKE_COUNTED_HPP
 #define CAF_MAKE_COUNTED_HPP
 
+#include <type_traits>
+
 #include "caf/ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
 

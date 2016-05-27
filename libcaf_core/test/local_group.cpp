@@ -31,30 +31,29 @@ using namespace caf;
 using msg_atom = atom_constant<atom("msg")>;
 using timeout_atom = atom_constant<atom("timeout")>;
 
-void testee(event_based_actor* self) {
+behavior testee(event_based_actor* self) {
   auto counter = std::make_shared<int>(0);
-  auto grp = group::get("local", "test");
+  auto grp = self->system().groups().get("local", "test");
   self->join(grp);
   CAF_MESSAGE("self joined group");
-  self->become(
+  self->send(grp, msg_atom::value);
+  return {
     [=](msg_atom) {
       CAF_MESSAGE("received `msg_atom`");
       ++*counter;
       self->leave(grp);
       self->send(grp, msg_atom::value);
+      self->send(self, timeout_atom::value);
     },
     [=](timeout_atom) {
       // this actor should receive only 1 message
-      CAF_CHECK(*counter == 1);
+      CAF_CHECK_EQUAL(*counter, 1);
       self->quit();
     }
-  );
-  self->send(grp, msg_atom::value);
-  self->delayed_send(self, std::chrono::seconds(1), timeout_atom::value);
+  };
 }
 
 CAF_TEST(test_local_group) {
-  spawn(testee);
-  await_all_actors_done();
-  shutdown();
+  actor_system system;
+  system.spawn(testee);
 }

@@ -21,14 +21,17 @@
 #define CAF_MESSAGE_HPP
 
 #include <tuple>
+#include <sstream>
 #include <type_traits>
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
-#include "caf/from_string.hpp"
+#include "caf/optional.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/skip.hpp"
+#include "caf/index_mapping.hpp"
+#include "caf/allowed_unsafe_message_type.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
@@ -91,16 +94,10 @@ public:
   }
 
   /// Returns a mutable pointer to the element at position `p`.
-  void* mutable_at(size_t p);
+  void* get_mutable(size_t p);
 
   /// Returns a const pointer to the element at position `p`.
   const void* at(size_t p) const;
-
-  /// Returns the uniform type name for the element at position `p`.
-  const char* uniform_name_at(size_t p) const;
-
-  /// Returns @c true if `*this == other, otherwise false.
-  bool equals(const message& other) const;
 
   /// Returns true if `size() == 0, otherwise false.
   inline bool empty() const {
@@ -110,19 +107,19 @@ public:
   /// Returns the value at position `p` as const reference of type `T`.
   template <class T>
   const T& get_as(size_t p) const {
-    CAF_ASSERT(match_element(p, detail::type_nr<T>::value, &typeid(T)));
+    CAF_ASSERT(match_element(p, type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<const T*>(at(p));
   }
 
   /// Returns the value at position `p` as mutable reference of type `T`.
   template <class T>
   T& get_as_mutable(size_t p) {
-    CAF_ASSERT(match_element(p, detail::type_nr<T>::value, &typeid(T)));
-    return *reinterpret_cast<T*>(mutable_at(p));
+    CAF_ASSERT(match_element(p, type_nr<T>::value, &typeid(T)));
+    return *reinterpret_cast<T*>(get_mutable(p));
   }
 
   /// Returns `handler(*this)`.
-  maybe<message> apply(message_handler handler);
+  optional<message> apply(message_handler handler);
 
   /// Filters this message by applying slices of it to `handler` and  returns
   /// the remaining elements of this operation. Slices are generated in the
@@ -174,8 +171,18 @@ public:
     /// Evaluates option arguments.
     consumer fun;
 
+    /// Set to true for zero-argument options.
+    bool* flag;
+
     /// Creates a CLI argument without data.
     cli_arg(std::string name, std::string text);
+
+    /// Creates a CLI flag option. The `flag` is set to `true` if the option
+    /// was set, otherwise it is `false`.
+    cli_arg(std::string name, std::string text, bool& flag);
+
+    /// Creates a CLI argument storing its matched argument in `dest`.
+    cli_arg(std::string name, std::string text, atom_value& dest);
 
     /// Creates a CLI argument storing its matched argument in `dest`.
     cli_arg(std::string name, std::string text, std::string& dest);
@@ -190,7 +197,7 @@ public:
     /// storing its matched argument in `dest`.
     template <class T>
     cli_arg(typename std::enable_if<
-              detail::type_nr<T>::value != 0,
+              type_nr<T>::value != 0,
               std::string
             >::type name,
             std::string text, T& dest);
@@ -251,10 +258,10 @@ public:
   template <class T>
   bool match_element(size_t p) const {
     const std::type_info* rtti = nullptr;
-    if (detail::type_nr<T>::value == 0) {
+    if (type_nr<T>::value == 0) {
       rtti = &typeid(T);
     }
-    return match_element(p, detail::type_nr<T>::value, rtti);
+    return match_element(p, type_nr<T>::value, rtti);
   }
 
   /// Queries whether the types of this message are `Ts...`.
@@ -265,11 +272,12 @@ public:
     return size() == sizeof...(Ts) && match_elements_impl(p0, tlist);
   }
 
+  message& operator+=(const message& x);
+
+  /// Creates a message object from `ptr`.
+  static message from(const type_erased_tuple* ptr);
+
   /// @cond PRIVATE
-
-  void serialize(serializer& sink) const;
-
-  void deserialize(deserializer& source);
 
   using raw_ptr = detail::message_data*;
 
@@ -297,13 +305,13 @@ public:
     vals_.unshare();
   }
 
+  inline bool shared() const {
+    return vals_ ? vals_->shared() : false;
+  }
+
   void reset(raw_ptr new_ptr = nullptr, bool add_ref = true);
 
   void swap(message& other);
-
-  inline std::string tuple_type_names() const {
-    return vals_->tuple_type_names();
-  }
 
   bool match_element(size_t p, uint16_t tnr, const std::type_info* rtti) const;
 
@@ -337,6 +345,15 @@ private:
   data_ptr vals_;
 };
 
+/// @relates message
+void serialize(serializer& sink, const message& msg, const unsigned int);
+
+/// @relates message
+void serialize(deserializer& sink, message& msg, const unsigned int);
+
+/// @relates message
+std::string to_string(const message& msg);
+
 /// Stores the result of `message::extract_opts`.
 struct message::cli_res {
   /// Stores the remaining (unmatched) arguments.
@@ -350,57 +367,69 @@ struct message::cli_res {
 };
 
 /// @relates message
-inline bool operator==(const message& lhs, const message& rhs) {
-  return lhs.equals(rhs);
-}
-
-/// @relates message
-inline bool operator!=(const message& lhs, const message& rhs) {
-  return !(lhs == rhs);
-}
-
-/// @relates message
 inline message operator+(const message& lhs, const message& rhs) {
   return message::concat(lhs, rhs);
 }
 
 /// Unboxes atom constants, i.e., converts `atom_constant<V>` to `V`.
 /// @relates message
-template <class T>
+template <class T, int IsPlaceholderRes = std::is_placeholder<T>::value>
 struct unbox_message_element {
+  using type = index_mapping;
+};
+
+template <class T>
+struct unbox_message_element<T, 0> {
   using type = T;
 };
 
 template <atom_value V>
-struct unbox_message_element<atom_constant<V>> {
+struct unbox_message_element<atom_constant<V>, 0> {
   using type = atom_value;
+};
+
+///
+template <class T>
+struct is_serializable_or_whitelisted {
+  static constexpr bool value = detail::is_serializable<T>::value
+                                || allowed_unsafe_message_type<T>::value;
 };
 
 /// Returns a new `message` containing the values `(x, xs...)`.
 /// @relates message
-template <class V, class... Ts>
+template <class T, class... Ts>
 typename std::enable_if<
-  ! std::is_same<message, typename std::decay<V>::type>::value
+  ! std::is_same<message, typename std::decay<T>::type>::value
   || (sizeof...(Ts) > 0),
   message
 >::type
-make_message(V&& x, Ts&&... xs) {
-  using storage
-    = detail::tuple_vals<typename unbox_message_element<
-                           typename detail::strip_and_convert<V>::type
-                         >::type,
-                         typename unbox_message_element<
-                           typename detail::strip_and_convert<Ts>::type
-                         >::type...>;
-
-  auto ptr = make_counted<storage>(std::forward<V>(x), std::forward<Ts>(xs)...);
+make_message(T&& x, Ts&&... xs) {
+  using namespace caf::detail;
+  using stored_types =
+    type_list<
+      typename unbox_message_element<
+        typename strip_and_convert<T>::type
+      >::type,
+      typename unbox_message_element<
+        typename strip_and_convert<Ts>::type
+      >::type...
+    >;
+  static_assert(tl_forall<stored_types, is_serializable_or_whitelisted>::value,
+                "at least one type is not serializable via free "
+                "'serialize(Processor&, T&, const unsigned int)' or "
+                "`T::serialize(Processor&, const unsigned int)` "
+                "member function; you can whitelist individual types by "
+                "specializing `caf::allowed_unsafe_message_type<T>` "
+                "or using the macro CAF_ALLOW_UNSAFE_MESSAGE_TYPE");
+  using storage = typename tl_apply<stored_types, tuple_vals>::type;
+  auto ptr = make_counted<storage>(std::forward<T>(x), std::forward<Ts>(xs)...);
   return message{detail::message_data::cow_ptr{std::move(ptr)}};
 }
 
 /// Returns a copy of @p other.
 /// @relates message
 inline message make_message(message other) {
-  return std::move(other);
+  return other;
 }
 
 /// Returns an empty `message`.
@@ -415,33 +444,43 @@ inline message make_message() {
 
 template <class T>
 message::cli_arg::cli_arg(typename std::enable_if<
-                            detail::type_nr<T>::value != 0,
+                            type_nr<T>::value != 0,
                             std::string
                           >::type
                           nstr, std::string tstr, T& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),
       fun([&arg](const std::string& str) -> bool {
-            auto res = from_string<T>(str);
-            if (! res)
-              return false;
-            arg = *res;
-            return true;
-          }) {
+        T x;
+        // TODO: using this stream is a workaround for the missing
+        //       from_string<T>() interface and has downsides such as
+        //       not performing overflow/underflow checks etc.
+        std::istringstream iss{str};
+        if (iss >> x) {
+          arg = x;
+          return true;
+        }
+        return false;
+      }),
+      flag(nullptr) {
   // nop
 }
 
 template <class T>
-message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
+message::cli_arg::cli_arg(std::string nstr, std::string tstr,
+                          std::vector<T>& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),
       fun([&arg](const std::string& str) -> bool {
-            auto res = from_string<T>(str);
-            if (! res)
-              return false;
-            arg.push_back(*res);
-            return true;
-          }) {
+        T x;
+        std::istringstream iss{str};
+        if (iss >> x) {
+          arg.emplace_back(std::move(x));
+          return true;
+        }
+        return false;
+          }),
+      flag(nullptr) {
   // nop
 }
 

@@ -20,10 +20,15 @@
 #ifndef CAF_UNIT_HPP
 #define CAF_UNIT_HPP
 
+#include <string>
+
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
 
+/// Unit is analogous to `void`, but can be safely returned, stored, etc.
+/// to enable higher-order abstraction without cluttering code with
+/// exceptions for `void` (which can't be stored, for example).
 struct unit_t : detail::comparable<unit_t> {
   constexpr unit_t() {
     // nop
@@ -44,6 +49,18 @@ struct unit_t : detail::comparable<unit_t> {
 };
 
 static constexpr unit_t unit = unit_t{};
+
+/// @relates unit_t
+template <class Processor>
+void serialize(Processor&, const unit_t&, const unsigned int) {
+  // nop
+}
+
+/// @relates unit_t
+template <class T>
+std::string to_string(const unit_t&) {
+  return "<unit>";
+}
 
 template <class T>
 struct lift_void {

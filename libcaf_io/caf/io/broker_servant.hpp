@@ -20,6 +20,7 @@
 #ifndef CAF_IO_BROKER_SERVANT_HPP
 #define CAF_IO_BROKER_SERVANT_HPP
 
+#include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 
 #include "caf/io/abstract_broker.hpp"
@@ -46,8 +47,8 @@ protected:
     ptr->erase(hdl_);
   }
 
-  void invoke_mailbox_element() {
-    this->parent()->exec_single_event(mailbox_elem_ptr_);
+  void invoke_mailbox_element(execution_unit* ctx) {
+    this->parent()->exec_single_event(ctx, mailbox_elem_ptr_);
   }
 
   SysMsgType& msg() {
@@ -67,8 +68,8 @@ protected:
   void reset_mailbox_element() {
     SysMsgType tmp;
     set_hdl(tmp, hdl_);
-    mailbox_elem_ptr_ = mailbox_element::make_joint(invalid_actor_addr,
-                                                    invalid_message_id, tmp);
+    mailbox_elem_ptr_ = mailbox_element::make(nullptr, invalid_message_id,
+                                              {}, tmp);
   }
 
   Handle hdl_;

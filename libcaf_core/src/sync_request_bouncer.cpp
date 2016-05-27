@@ -17,7 +17,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/sec.hpp"
 #include "caf/atom.hpp"
+#include "caf/actor.hpp"
 #include "caf/config.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/message_id.hpp"
@@ -30,21 +32,17 @@
 namespace caf {
 namespace detail {
 
-sync_request_bouncer::sync_request_bouncer(uint32_t r)
-    : rsn(r == exit_reason::not_exited ? exit_reason::normal : r) {
+sync_request_bouncer::sync_request_bouncer(error r) : rsn(std::move(r)) {
   // nop
 }
 
-void sync_request_bouncer::operator()(const actor_addr& sender,
+void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
                                       const message_id& mid) const {
-  CAF_ASSERT(rsn != exit_reason::not_exited);
-  if (sender && mid.is_request()) {
-    auto ptr = actor_cast<abstract_actor_ptr>(sender);
-    ptr->enqueue(invalid_actor_addr, mid.response_id(),
-                 make_message(sync_exited_msg{sender, rsn}),
-                 // TODO: this breaks out of the execution unit
-                 nullptr);
-  }
+  if (sender && mid.is_request())
+    sender->enqueue(nullptr, mid.response_id(),
+                    make_message(make_error(sec::request_receiver_down)),
+                    // TODO: this breaks out of the execution unit
+                    nullptr);
 }
 
 void sync_request_bouncer::operator()(const mailbox_element& e) const {

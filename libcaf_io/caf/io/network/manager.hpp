@@ -44,9 +44,7 @@ public:
   void set_parent(abstract_broker* ptr);
 
   /// Returns the parent broker of this manager.
-  inline abstract_broker* parent() {
-    return parent_;
-  }
+  abstract_broker* parent();
 
   /// Returns `true` if this manager has a parent, `false` otherwise.
   inline bool detached() const {
@@ -55,14 +53,14 @@ public:
 
   /// Detach this manager from its parent and invoke `detach_message()``
   /// if `invoke_detach_message == true`.
-  void detach(bool invoke_detach_message);
+  void detach(execution_unit* ctx, bool invoke_detach_message);
 
   /// Causes the manager to stop read operations on its IO device.
   /// Unwritten bytes are still send before the socket will be closed.
   virtual void stop_reading() = 0;
 
   /// Called by the underlying IO device to report failures.
-  virtual void io_failure(operation op) = 0;
+  virtual void io_failure(execution_unit* ctx, operation op) = 0;
 
   /// Get the address of the underlying IO device.
   virtual std::string addr() const = 0;
@@ -77,8 +75,7 @@ protected:
   /// Detaches this manager from `ptr`.
   virtual void detach_from(abstract_broker* ptr) = 0;
 
-private:
-  abstract_broker* parent_;
+  strong_actor_ptr parent_;
 };
 
 } // namespace network

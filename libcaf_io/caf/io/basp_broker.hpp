@@ -29,24 +29,28 @@
 #include <unordered_set>
 
 #include "caf/stateful_actor.hpp"
-#include "caf/actor_namespace.hpp"
+#include "caf/proxy_registry.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 
-#include "caf/io/basp.hpp"
+#include "caf/io/basp/all.hpp"
 #include "caf/io/broker.hpp"
+#include "caf/io/typed_broker.hpp"
 
 namespace caf {
 namespace io {
 
-struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
+struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   basp_broker_state(broker* self);
 
   ~basp_broker_state();
 
-  // inherited from actor_namespace::backend
-  actor_proxy_ptr make_proxy(const node_id& nid, actor_id aid) override;
+  // inherited from proxy_registry::backend
+  strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
+
+  // inherited from proxy_registry::backend
+  execution_unit* registry_context() override;
 
   // inherited from basp::instance::listener
   void finalize_handshake(const node_id& nid, actor_id aid,
@@ -59,12 +63,13 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   void proxy_announced(const node_id& nid, actor_id aid) override;
 
   // inherited from basp::instance::listener
-  void kill_proxy(const node_id& nid, actor_id aid, uint32_t rsn) override;
+  void kill_proxy(const node_id& nid, actor_id aid, const error& rsn) override;
 
   // inherited from basp::instance::listener
   void deliver(const node_id& source_node, actor_id source_actor,
                const node_id& dest_node, actor_id dest_actor,
-               message& msg, message_id mid) override;
+               message_id mid, std::vector<strong_actor_ptr>& stages,
+               message& msg) override;
 
   // performs bookkeeping such as managing `spawn_servers`
   void learned_new_node(const node_id& nid);
@@ -76,18 +81,27 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   // inherited from basp::instance::listener
   void learned_new_node_indirectly(const node_id& nid) override;
 
+  void handle_heartbeat(const node_id&) override {
+    // nop
+  }
+
+  // stores meta information for open connections
   struct connection_context {
+    // denotes what message we expect from the remote node next
     basp::connection_state cstate;
+    // our currently processed BASP header
     basp::header hdr;
+    // the connection handle for I/O operations
     connection_handle hdl;
+    // network-agnostic node identifier
     node_id id;
+    // connected port
     uint16_t remote_port;
-    maybe<response_promise> callback;
+    // pending operations to be performed after handhsake completed
+    optional<response_promise> callback;
   };
 
   void set_context(connection_handle hdl);
-
-  bool erase_context(connection_handle hdl);
 
   // pointer to ourselves
   broker* self;
@@ -101,10 +115,6 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   // points to the current context for callbacks such as `make_proxy`
   connection_context* this_context = nullptr;
 
-  // stores all published actors we know from other nodes, this primarily
-  // keeps the associated proxies alive to work around subtle bugs
-  std::unordered_map<node_id, std::pair<uint16_t, actor_addr>> known_remotes;
-
   // stores handles to spawn servers for other nodes; these servers
   // are spawned whenever the broker learns a new node ID and try to
   // get a 'SpawnServ' instance on the remote side
@@ -115,17 +125,23 @@ struct basp_broker_state : actor_namespace::backend, basp::instance::callee {
   // routing paths by forming a mesh between all nodes
   bool enable_automatic_connections = false;
 
+  // returns the node identifier of the underlying BASP instance
   const node_id& this_node() const {
     return instance.this_node();
   }
+
+  static const char* name;
 };
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).
-class basp_broker : public caf::stateful_actor<basp_broker_state,
-                                                             broker> {
+class basp_broker : public stateful_actor<basp_broker_state, broker> {
 public:
-  basp_broker(middleman& mm);
+  using super = stateful_actor<basp_broker_state, broker>;
+
+  explicit basp_broker(actor_config& cfg);
   behavior make_behavior() override;
+  resume_result resume(execution_unit*, size_t) override;
+  void exec_single_event(execution_unit*, mailbox_element_ptr&) override;
 };
 
 } // namespace io

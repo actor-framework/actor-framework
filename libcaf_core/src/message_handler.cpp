@@ -17,8 +17,6 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/to_string.hpp"
-
 #include "caf/config.hpp"
 #include "caf/message_handler.hpp"
 

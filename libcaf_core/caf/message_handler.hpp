@@ -30,7 +30,6 @@
 #include "caf/none.hpp"
 #include "caf/intrusive_ptr.hpp"
 
-#include "caf/on.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/behavior.hpp"
@@ -90,7 +89,7 @@ public:
   void assign(message_handler other);
 
   /// Runs this handler and returns its (optional) result.
-  inline maybe<message> operator()(message& arg) {
+  inline optional<message> operator()(message& arg) {
     return (impl_) ? impl_->invoke(arg) : none;
   }
 

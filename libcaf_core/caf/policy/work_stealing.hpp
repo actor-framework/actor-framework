@@ -27,6 +27,7 @@
 #include <cstddef>
 
 #include "caf/resumable.hpp"
+#include "caf/policy/unprofiled.hpp"
 
 #include "caf/detail/double_ended_queue.hpp"
 
@@ -49,39 +50,38 @@ namespace policy {
 /// [1] http://dl.acm.org/citation.cfm?doid=2398857.2384639
 ///
 /// @extends scheduler_policy
-class work_stealing {
+class work_stealing : public unprofiled {
 public:
-  // A thead-safe queue implementation.
+  // A thread-safe queue implementation.
   using queue_type = detail::double_ended_queue<resumable>;
 
   // The coordinator has only a counter for round-robin enqueue to its workers.
   struct coordinator_data {
-    std::atomic<size_t> next_worker;
-    inline coordinator_data() : next_worker(0) {
+    inline explicit coordinator_data(scheduler::abstract_coordinator*)
+        : next_worker(0) {
       // nop
     }
+
+    std::atomic<size_t> next_worker;
   };
 
   // Holds job job queue of a worker and a random number generator.
   struct worker_data {
+    inline explicit worker_data(scheduler::abstract_coordinator* p)
+        : rengine(std::random_device{}()),
+          // no need to worry about wrap-around; if `p->num_workers() < 2`,
+          // `uniform` will not be used anyway
+          uniform(0, p->num_workers() - 2) {
+      // nop
+    }
+
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
     queue_type queue;
-    // needed by our engine
-    std::random_device rdevice;
     // needed to generate pseudo random numbers
     std::default_random_engine rengine;
-    // initialize random engine
-    inline worker_data() : rdevice(), rengine(rdevice()) {
-      // nop
-    }
+    std::uniform_int_distribution<size_t> uniform;
   };
-
-  // Convenience function to access the data field.
-  template <class WorkerOrCoordinator>
-  static auto d(WorkerOrCoordinator* self) -> decltype(self->data()) {
-    return self->data();
-  }
 
   // Goes on a raid in quest for a shiny new job.
   template <class Worker>
@@ -92,7 +92,7 @@ public:
       return nullptr;
     }
     // roll the dice to pick a victim other than ourselves
-    size_t victim = d(self).rengine() % (p->num_workers() - 1);
+    auto victim = d(self).uniform(d(self).rengine);
     if (victim == self->id())
       victim = p->num_workers() - 1;
     // steal oldest element from the victim's queue
@@ -165,26 +165,6 @@ public:
     // unreachable, because the last strategy loops
     // until a job has been dequeued
     return nullptr;
-  }
-
-  template <class Worker>
-  void before_shutdown(Worker*) {
-    // nop
-  }
-
-  template <class Worker>
-  void before_resume(Worker*, resumable*) {
-    // nop
-  }
-
-  template <class Worker>
-  void after_resume(Worker*, resumable*) {
-    // nop
-  }
-
-  template <class Worker>
-  void after_completion(Worker*, resumable*) {
-    // nop
   }
 
   template <class Worker, class UnaryFunction>

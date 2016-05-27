@@ -49,6 +49,11 @@ public:
     // nop
   }
 
+  template <class Procesor>
+  friend void serialize(Procesor& proc, accept_handle& x, const unsigned int) {
+    proc & x.id_;
+  }
+
 private:
   inline accept_handle(int64_t handle_id) : super(handle_id) {
     // nop

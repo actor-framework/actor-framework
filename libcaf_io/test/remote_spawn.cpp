@@ -32,23 +32,15 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/detail/run_sub_unit_test.hpp"
-
-#include "caf/experimental/announce_actor_type.hpp"
-
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#endif // CAF_USE_ASIO
-
 using namespace caf;
-using namespace caf::experimental;
 
 namespace {
 
 behavior mirror(event_based_actor* self) {
+  self->set_default_handler(reflect);
   return {
-    others >> [=] {
-      return self->current_message();
+    [] {
+      // nop
     }
   };
 }
@@ -56,9 +48,8 @@ behavior mirror(event_based_actor* self) {
 behavior client(event_based_actor* self, actor serv) {
   self->send(serv, ok_atom::value);
   return {
-    others >> [=] {
-      CAF_TEST_ERROR("unexpected message: "
-                     << to_string(self->current_message()));
+    [] {
+      // nop
     }
   };
 }
@@ -66,89 +57,78 @@ behavior client(event_based_actor* self, actor serv) {
 struct server_state {
   actor client; // the spawn we connect to the server in our main
   actor aut; // our mirror
+  server_state()
+      : client(unsafe_actor_handle_init),
+        aut(unsafe_actor_handle_init) {
+    // nop
+  }
 };
 
 behavior server(stateful_actor<server_state>* self) {
-  self->on_sync_failure([=] {
-    CAF_TEST_ERROR("unexpected sync response: "
-                   << to_string(self->current_message()));
-  });
+  CAF_LOG_TRACE("");
   return {
     [=](ok_atom) {
+      CAF_LOG_TRACE("");
       auto s = self->current_sender();
-      CAF_REQUIRE(s != invalid_actor_addr);
-      CAF_REQUIRE(s.is_remote());
-      self->state.client = actor_cast<actor>(s);
-      auto mm = io::get_middleman_actor();
-      self->sync_send(mm, spawn_atom::value,
-                      s.node(), "mirror", make_message()).then(
-        [=](ok_atom, const actor_addr& addr, const std::set<std::string>& ifs) {
-          CAF_REQUIRE(addr != invalid_actor_addr);
+      CAF_REQUIRE(s != nullptr);
+      CAF_REQUIRE(self->node() != s->node());
+      auto opt = actor_cast<actor>(s);
+      //CAF_REQUIRE(opt);
+      self->state.client = opt;
+      auto mm = self->system().middleman().actor_handle();
+      self->request(mm, infinite, spawn_atom::value,
+                    s->node(), "mirror", make_message()).then(
+        [=](ok_atom, const strong_actor_ptr& ptr,
+            const std::set<std::string>& ifs) {
+          CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(ifs));
+          CAF_REQUIRE(ptr);
           CAF_CHECK(ifs.empty());
-          self->state.aut = actor_cast<actor>(addr);
+          self->state.aut = actor_cast<actor>(ptr);
           self->send(self->state.aut, "hello mirror");
           self->become(
             [=](const std::string& str) {
-              CAF_CHECK(self->current_sender() == self->state.aut);
-              CAF_CHECK(str == "hello mirror");
+              CAF_CHECK_EQUAL(self->current_sender(),
+                              self->state.aut.address());
+              CAF_CHECK_EQUAL(str, "hello mirror");
               self->send_exit(self->state.aut, exit_reason::kill);
               self->send_exit(self->state.client, exit_reason::kill);
               self->quit();
             }
           );
-        },
-        [=](error_atom, const std::string& errmsg) {
-          CAF_TEST_ERROR("could not spawn mirror: " << errmsg);
         }
       );
+    },
+    [=](const error& err) {
+      CAF_LOG_TRACE("");
+      CAF_ERROR("Error: " << self->system().render(err));
     }
   };
+}
+
+void run_client(int argc, char** argv, uint16_t port) {
+  actor_system_config cfg;
+  cfg.parse(argc, argv)
+     .load<io::middleman>()
+     .add_actor_type("mirror", mirror);
+  actor_system system{cfg};
+  auto serv = system.middleman().remote_actor("localhost", port);
+  system.spawn(client, serv);
+}
+
+void run_server(int argc, char** argv) {
+  actor_system system{actor_system_config{}.load<io::middleman>().parse(argc, argv)};
+  auto serv = system.spawn(server);
+  auto port = system.middleman().publish(serv, 0);
+  CAF_REQUIRE(port != 0);
+  CAF_MESSAGE("published server at port " << port);
+  std::thread child([=] { run_client(argc, argv, port); });
+  child.join();
 }
 
 } // namespace <anonymous>
 
 CAF_TEST(remote_spawn) {
-  announce_actor_type("mirror", mirror);
-  auto argv = test::engine::argv();
   auto argc = test::engine::argc();
-  uint16_t port = 0;
-  auto r = message_builder(argv, argv + argc).extract_opts({
-    {"server,s", "run as server (don't run client"},
-    {"client,c", "add client port (two needed)", port},
-    {"port,p", "force a port in server mode", port},
-    {"use-asio", "use ASIO network backend (if available)"}
-  });
-  if (! r.error.empty() || r.opts.count("help") > 0 || ! r.remainder.empty()) {
-    std::cout << r.error << std::endl << std::endl << r.helptext << std::endl;
-    return;
-  }
-  auto use_asio = r.opts.count("use-asio") > 0;
-# ifdef CAF_USE_ASIO
-  if (use_asio) {
-    CAF_MESSAGE("enable ASIO backend");
-    io::set_middleman<io::network::asio_multiplexer>();
-  }
-# endif // CAF_USE_ASIO
-  if (r.opts.count("client") > 0) {
-    auto serv = io::remote_actor("localhost", port);
-    spawn(client, serv);
-    await_all_actors_done();
-    return;
-  }
-  auto serv = spawn(server);
-  port = io::publish(serv, port);
-  CAF_MESSAGE("published server at port " << port);
-  if (r.opts.count("server") == 0) {
-    CAF_MESSAGE("run client program");
-    auto child = detail::run_sub_unit_test(invalid_actor,
-                                           test::engine::path(),
-                                           test::engine::max_runtime(),
-                                           CAF_XSTR(CAF_SUITE),
-                                           use_asio,
-                                           {"--client="
-                                            + std::to_string(port)});
-    child.join();
-  }
-  await_all_actors_done();
-  shutdown();
+  auto argv = test::engine::argv();
+  run_server(argc, argv);
 }

@@ -26,9 +26,8 @@
 
 #include "caf/atom.hpp"
 #include "caf/message.hpp"
-#include "caf/uniform_typeid.hpp"
 
-#include "caf/detail/type_nr.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
 
@@ -39,14 +38,16 @@ struct meta_element {
   atom_value v;
   uint16_t typenr;
   const std::type_info* type;
-  bool (*fun)(const meta_element&, const message&, size_t, void**);
+  bool (*fun)(const meta_element&, const type_erased_tuple*, size_t, void**);
 };
 
-bool match_element(const meta_element&, const message&, size_t, void**);
+bool match_element(const meta_element&, const type_erased_tuple*,
+                   size_t, void**);
 
-bool match_atom_constant(const meta_element&, const message&, size_t, void**);
+bool match_atom_constant(const meta_element&, const type_erased_tuple*,
+                         size_t, void**);
 
-template <class T, uint16_t TN = detail::type_nr<T>::value>
+template <class T, uint16_t TN = type_nr<T>::value>
 struct meta_element_factory {
   static meta_element create() {
     return {static_cast<atom_value>(0), TN, nullptr, match_element};
@@ -63,15 +64,8 @@ struct meta_element_factory<T, 0> {
 template <atom_value V>
 struct meta_element_factory<atom_constant<V>, type_nr<atom_value>::value> {
   static meta_element create() {
-    return {V, detail::type_nr<atom_value>::value,
+    return {V, type_nr<atom_value>::value,
             nullptr, match_atom_constant};
-  }
-};
-
-template <>
-struct meta_element_factory<anything, 0> {
-  static meta_element create() {
-    return {static_cast<atom_value>(0), 0, nullptr, nullptr};
   }
 };
 
@@ -86,7 +80,7 @@ struct meta_elements<type_list<Ts...>> {
   }
 };
 
-bool try_match(const message& msg, const meta_element* pattern_begin,
+bool try_match(const type_erased_tuple* xs, const meta_element* pattern_begin,
                size_t pattern_size, void** out);
 
 } // namespace detail

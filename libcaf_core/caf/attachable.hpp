@@ -25,7 +25,10 @@
 #include <typeinfo>
 #include <exception>
 
-#include "caf/maybe.hpp"
+#include "caf/error.hpp"
+#include "caf/optional.hpp"
+#include "caf/exit_reason.hpp"
+#include "caf/execution_unit.hpp"
 
 namespace caf {
 
@@ -70,11 +73,12 @@ public:
   /// Note that the first handler to handle `eptr` "wins" and no other
   /// handler will be invoked.
   /// @returns The exit reason the actor should use.
-  virtual maybe<uint32_t> handle_exception(const std::exception_ptr& eptr);
+  virtual optional<exit_reason> handle_exception(const std::exception_ptr& eptr);
 
   /// Executed if the actor finished execution with given `reason`.
   /// The default implementation does nothing.
-  virtual void actor_exited(abstract_actor* self, uint32_t reason);
+  /// @warning `host` can be `nullptr`
+  virtual void actor_exited(const error& fail_state, execution_unit* host);
 
   /// Returns `true` if `what` selects this instance, otherwise `false`.
   virtual bool matches(const token& what);

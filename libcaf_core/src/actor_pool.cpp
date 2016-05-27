@@ -37,7 +37,7 @@ actor_pool::policy actor_pool::round_robin() {
     impl(const impl&) : pos_(0) {
       // nop
     }
-    void operator()(uplock& guard, const actor_vec& vec,
+    void operator()(actor_system&, uplock& guard, const actor_vec& vec,
                     mailbox_element_ptr& ptr, execution_unit* host) {
       CAF_ASSERT(!vec.empty());
       actor selected = vec[pos_++ % vec.size()];
@@ -51,12 +51,12 @@ actor_pool::policy actor_pool::round_robin() {
 
 namespace {
 
-void broadcast_dispatch(actor_pool::uplock&, const actor_pool::actor_vec& vec,
+void broadcast_dispatch(actor_system&, actor_pool::uplock&,
+                        const actor_pool::actor_vec& vec,
                         mailbox_element_ptr& ptr, execution_unit* host) {
   CAF_ASSERT(!vec.empty());
-  for (size_t i = 1; i < vec.size(); ++i) {
+  for (size_t i = 1; i < vec.size(); ++i)
     vec[i]->enqueue(ptr->sender, ptr->mid, ptr->msg, host);
-  }
   vec.front()->enqueue(std::move(ptr), host);
 }
 
@@ -75,15 +75,16 @@ actor_pool::policy actor_pool::random() {
     impl(const impl&) : rd_() {
       // nop
     }
-    void operator()(uplock& guard, const actor_vec& vec,
+    void operator()(actor_system&, uplock& guard, const actor_vec& vec,
                     mailbox_element_ptr& ptr, execution_unit* host) {
-      std::uniform_int_distribution<size_t> dis(0, vec.size() - 1);
       upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-      actor selected = vec[dis(rd_)];
+      auto selected =
+          vec[dis_(rd_, decltype(dis_)::param_type(0, vec.size() - 1))];
       unique_guard.unlock();
       selected->enqueue(std::move(ptr), host);
     }
     std::random_device rd_;
+    std::uniform_int_distribution<size_t> dis_;
   };
   return impl{};
 }
@@ -92,71 +93,69 @@ actor_pool::~actor_pool() {
   // nop
 }
 
-actor actor_pool::make(policy pol) {
+actor actor_pool::make(execution_unit* eu, policy pol) {
+  CAF_ASSERT(eu);
+  auto& sys = eu->system();
+  actor_config cfg{eu};
+  auto res = make_actor<actor_pool, actor>(sys.next_actor_id(), sys.node(),
+                                           &sys, cfg);
+  auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
+  ptr->policy_ = std::move(pol);
+  return res;
+  /*
   intrusive_ptr<actor_pool> ptr;
-  ptr = make_counted<actor_pool>();
+  ptr = make_counted<actor_pool>(cfg);
   ptr->policy_ = std::move(pol);
   return actor_cast<actor>(ptr);
+  */
 }
 
-actor actor_pool::make(size_t num_workers, factory fac, policy pol) {
-  auto res = make(std::move(pol));
+actor actor_pool::make(execution_unit* eu, size_t num_workers,
+                       factory fac, policy pol) {
+  auto res = make(eu, std::move(pol));
   auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
   auto res_addr = ptr->address();
   for (size_t i = 0; i < num_workers; ++i) {
     auto worker = fac();
-    worker->attach(default_attachable::make_monitor(res_addr));
-    ptr->workers_.push_back(worker);
+    worker->attach(default_attachable::make_monitor(worker.address(), res_addr));
+    ptr->workers_.push_back(std::move(worker));
   }
   return res;
 }
 
-void actor_pool::enqueue(const actor_addr& sender, message_id mid,
-                         message content, execution_unit* eu) {
-  upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
-  if (filter(guard, sender, mid, content, eu)) {
-    return;
-  }
-  auto ptr = mailbox_element::make(sender, mid, std::move(content));
-  policy_(guard, workers_, ptr, eu);
-}
-
 void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
-  if (filter(guard, what->sender, what->mid, what->msg, eu)) {
+  if (filter(guard, what->sender, what->mid, what->msg, eu))
     return;
-  }
-  policy_(guard, workers_, what, eu);
+  policy_(home_system(), guard, workers_, what, eu);
 }
 
-actor_pool::actor_pool() : planned_reason_(caf::exit_reason::not_exited) {
+actor_pool::actor_pool(actor_config& cfg) : monitorable_actor(cfg) {
   is_registered(true);
 }
 
+void actor_pool::on_cleanup() {
+  // nop
+}
+
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
-                        const actor_addr& sender, message_id mid,
+                        const strong_actor_ptr& sender, message_id mid,
                         const message& msg, execution_unit* eu) {
-  auto rsn = planned_reason_;
-  if (rsn != caf::exit_reason::not_exited) {
-    guard.unlock();
-    if (mid.valid()) {
-      detail::sync_request_bouncer srq{rsn};
-      srq(sender, mid);
-    }
-    return true;
-  }
+  CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(msg));
   if (msg.match_elements<exit_msg>()) {
+    // acquire second mutex as well
     std::vector<actor> workers;
-    // send exit messages *always* to all workers and clear vector afterwards
-    // but first swap workers_ out of the critical section
-    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-    workers_.swap(workers);
-    planned_reason_ = msg.get_as<exit_msg>(0).reason;
-    unique_guard.unlock();
-    for (auto& w : workers) {
-      anon_send(w, msg);
+    auto tmp = msg.get_as<exit_msg>(0).reason;
+    if (cleanup(std::move(tmp), eu)) {
+      // send exit messages *always* to all workers and clear vector afterwards
+      // but first swap workers_ out of the critical section
+      upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
+      workers_.swap(workers);
+      unique_guard.unlock();
+      for (auto& w : workers)
+        anon_send(w, msg);
+      is_registered(false);
     }
-    quit();
     return true;
   }
   if (msg.match_elements<down_msg>()) {
@@ -165,22 +164,20 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), workers_.end(), dm.source);
-    if (i != last) {
+    CAF_LOG_DEBUG_IF(i == last, "received down message for an unknown worker");
+    if (i != last)
       workers_.erase(i);
-    }
     if (workers_.empty()) {
       planned_reason_ = exit_reason::out_of_workers;
       unique_guard.unlock();
-      quit();
+      quit(eu);
     }
     return true;
   }
   if (msg.match_elements<sys_atom, put_atom, actor>()) {
     auto& worker = msg.get_as<actor>(2);
-    if (worker == invalid_actor) {
-      return true;
-    }
-    worker->attach(default_attachable::make_monitor(address()));
+    worker->attach(default_attachable::make_monitor(worker.address(),
+                                                    address()));
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     workers_.push_back(worker);
     return true;
@@ -198,30 +195,27 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   if (msg.match_elements<sys_atom, get_atom>()) {
     auto cpy = workers_;
     guard.unlock();
-    actor_cast<abstract_actor*>(sender)->enqueue(invalid_actor_addr,
-                                                 mid.response_id(),
-                                                 make_message(std::move(cpy)),
-                                                 eu);
+    sender->enqueue(nullptr, mid.response_id(),
+                    make_message(std::move(cpy)), eu);
     return true;
   }
   if (workers_.empty()) {
     guard.unlock();
-    if (sender != invalid_actor_addr && mid.valid()) {
+    if (sender && mid.valid()) {
       // tell client we have ignored this sync message by sending
       // and empty message back
-      auto ptr = actor_cast<abstract_actor_ptr>(sender);
-      ptr->enqueue(invalid_actor_addr, mid.response_id(), message{}, eu);
+      sender->enqueue(nullptr, mid.response_id(), message{}, eu);
     }
     return true;
   }
   return false;
 }
 
-void actor_pool::quit() {
+void actor_pool::quit(execution_unit* host) {
   // we can safely run our cleanup code here without holding
   // workers_mtx_ because abstract_actor has its own lock
-  cleanup(planned_reason_);
-  is_registered(false);
+  if (cleanup(planned_reason_, host))
+    is_registered(false);
 }
 
 } // namespace caf

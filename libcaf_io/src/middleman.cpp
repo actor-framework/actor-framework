@@ -24,275 +24,284 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "caf/on.hpp"
+#include "caf/sec.hpp"
+#include "caf/send.hpp"
 #include "caf/actor.hpp"
+#include "caf/after.hpp"
 #include "caf/config.hpp"
+#include "caf/logger.hpp"
 #include "caf/node_id.hpp"
-#include "caf/announce.hpp"
 #include "caf/exception.hpp"
-#include "caf/to_string.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/uniform_type_info.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
+
 #include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-#include "caf/detail/logging.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
-#include "caf/detail/singletons.hpp"
 #include "caf/detail/get_root_uuid.hpp"
-#include "caf/detail/actor_registry.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
+#ifdef CAF_USE_ASIO
+#include "caf/io/network/asio_multiplexer.hpp"
+#include "caf/io/network/asio_multiplexer_impl.hpp"
+#endif // CAF_USE_ASIO
+
 #ifdef CAF_WINDOWS
-# include <io.h>
-# include <fcntl.h>
-#endif
+#include <io.h>
+#include <fcntl.h>
+#endif // CAF_WINDOWS
 
 namespace caf {
 namespace io {
 
-namespace {
+actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
+  class impl : public middleman {
+  public:
+    impl(actor_system& ref) : middleman(ref), backend_(&ref) {
+      // nop
+    }
 
-void serialize(serializer& sink, std::vector<char>& buf) {
-  sink << static_cast<uint32_t>(buf.size());
-  sink.write_raw(buf.size(), buf.data());
+    network::multiplexer& backend() override {
+      return backend_;
+    }
+
+  private:
+    network::default_multiplexer backend_;
+  };
+# ifdef CAF_USE_ASIO
+  class asio_impl : public middleman {
+  public:
+    asio_impl(actor_system& ref) : middleman(ref), backend_(&ref) {
+      // nop
+    }
+
+    network::multiplexer& backend() override {
+      return backend_;
+    }
+
+  private:
+    network::asio_multiplexer backend_;
+  };
+  if (sys.backend_name() == atom("asio"))
+    return new asio_impl(sys);
+# endif // CAF_USE_ASIO
+  return new impl(sys);
 }
 
-void serialize(deserializer& source, std::vector<char>& buf) {
-  auto bs = source.read<uint32_t>();
-  buf.resize(bs);
-  source.read_raw(buf.size(), buf.data());
+middleman::middleman(actor_system& sys)
+    : system_(sys),
+      manager_(unsafe_actor_handle_init),
+      heartbeat_interval_(0),
+      enable_automatic_connections_(false) {
+  // nop
 }
 
-template <class Subtype, class I>
-void serialize(serializer& sink, handle<Subtype, I>& hdl) {
-  sink.write_value(hdl.id());
-}
-
-template <class Subtype, class I>
-void serialize(deserializer& source, handle<Subtype, I>& hdl) {
-  hdl.set_id(source.read<int64_t>());
-}
-
-template <class Archive>
-void serialize(Archive& ar, new_connection_msg& msg) {
-  serialize(ar, msg.source);
-  serialize(ar, msg.handle);
-}
-
-template <class Archive>
-void serialize(Archive& ar, new_data_msg& msg) {
-  serialize(ar, msg.handle);
-  serialize(ar, msg.buf);
-}
-
-
-// connection_closed_msg & acceptor_closed_msg have the same fields
-template <class Archive, class T>
-typename std::enable_if<
-  std::is_same<T, connection_closed_msg>::value
-  || std::is_same<T, acceptor_closed_msg>::value
->::type
-serialize(Archive& ar, T& dm) {
-  serialize(ar, dm.handle);
-}
-
-template <class T>
-class uti_impl : public abstract_uniform_type_info<T> {
-public:
-  using super = abstract_uniform_type_info<T>;
-
-  explicit uti_impl(const char* tname) : super(tname) {
-    // nop
+uint16_t middleman::publish(const strong_actor_ptr& whom,
+                            std::set<std::string> sigs,
+                            uint16_t port, const char* in, bool ru) {
+  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port)
+                << CAF_ARG(in) << CAF_ARG(ru));
+  if (! whom)
+    throw network_error("cannot publish an invalid actor");
+  std::string str;
+  if (in != nullptr)
+    str = in;
+  auto mm = actor_handle();
+  scoped_actor self{system()};
+  uint16_t result;
+  std::string error_msg;
+  try {
+    self->request(mm, infinite, publish_atom::value, port,
+                  std::move(whom), std::move(sigs), str, ru).receive(
+      [&](ok_atom, uint16_t res) {
+        result = res;
+      },
+      [&](const error& err) {
+        error_msg = system().render(err);
+      }
+    );
   }
-
-  void serialize(const void* instance, serializer* sink) const {
-    io::serialize(*sink, super::deref(const_cast<void*>(instance)));
+  catch (actor_exited& e) {
+    error_msg = "scoped actor in caf::publish quit unexpectedly: ";
+    error_msg += e.what();
   }
-
-  void deserialize(void* instance, deserializer* source) const {
-    io::serialize(*source, super::deref(instance));
-  }
-};
-
-template <class T>
-void do_announce(const char* tname) {
-  announce(typeid(T), uniform_type_info_ptr{new uti_impl<T>(tname)});
+  if (! error_msg.empty())
+    throw network_error(std::move(error_msg));
+  return result;
 }
 
-class middleman_actor_impl : public middleman_actor::base {
-public:
-  middleman_actor_impl(middleman& mref, actor default_broker)
-      : broker_(default_broker),
-        parent_(mref) {
-    // nop
-  }
-
-  void on_exit() override {
-    CAF_LOG_TRACE("");
-    broker_ = invalid_actor;
-  }
-
-  const char* name() const override {
-    return "middleman_actor";
-  }
-
-  using put_res = either<ok_atom, uint16_t>::or_else<error_atom, std::string>;
-
-  using get_res = delegated<either<ok_atom, node_id, actor_addr,
-                                   std::set<std::string>>
-                            ::or_else<error_atom, std::string>>;
-
-  using del_res = delegated<either<ok_atom>::or_else<error_atom, std::string>>;
-
-  behavior_type make_behavior() override {
+uint16_t middleman::publish_local_groups(uint16_t port, const char* in) {
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
+  auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
-      [=](publish_atom, uint16_t port, actor_addr& whom,
-          std::set<std::string>& sigs, std::string& addr, bool reuse) {
-        return put(port, whom, sigs, addr.c_str(), reuse);
-      },
-      [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
-        actor_addr whom = invalid_actor_addr;
-        std::set<std::string> sigs;
-        return put(port, whom, sigs, addr.c_str(), reuse);
-      },
-      [=](connect_atom, const std::string& hostname, uint16_t port) -> get_res {
-        CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
-        try {
-          auto hdl = parent_.backend().new_tcp_scribe(hostname, port);
-          delegate(broker_, connect_atom::value, hdl, port);
-        }
-        catch (network_error& err) {
-          // fullfil promise immediately
-          std::string msg = "network_error: ";
-          msg += err.what();
-          auto rp = make_response_promise();
-          rp.deliver(make_message(error_atom::value, std::move(msg)));
-        }
-        return {};
-      },
-      [=](unpublish_atom, const actor_addr&, uint16_t) -> del_res {
-        forward_current_message(broker_);
-        return {};
-      },
-      [=](close_atom, uint16_t) -> del_res {
-        forward_current_message(broker_);
-        return {};
-      },
-      [=](spawn_atom, const node_id&, const std::string&, const message&)
-      -> delegated<either<ok_atom, actor_addr, std::set<std::string>>
-                   ::or_else<error_atom, std::string>> {
-        forward_current_message(broker_);
-        return {};
+      [self](get_atom, const std::string& name) {
+        return self->system().groups().get("local", name);
       }
     };
+  };
+  auto gn = system().spawn<hidden>(group_nameserver);
+  try {
+    auto result = publish(gn, port, in);
+    add_shutdown_cb([gn] {
+      anon_send_exit(gn, exit_reason::user_shutdown);
+    });
+    return result;
   }
+  catch (std::exception&) {
+    anon_send_exit(gn, exit_reason::user_shutdown);
+    throw;
+  }
+}
 
-private:
-  put_res put(uint16_t port, actor_addr& whom,
-              std::set<std::string>& sigs, const char* in = nullptr,
-              bool reuse_addr = false) {
-    CAF_LOG_TRACE(CAF_TSARG(whom) << ", " << CAF_ARG(port) << ", "
-                                  << CAF_ARG(reuse_addr));
-    accept_handle hdl;
-    uint16_t actual_port;
-    try {
-      // treat empty strings like nullptr
-      if (in != nullptr && in[0] == '\0') {
-        in = nullptr;
+void middleman::unpublish(const actor_addr& whom, uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
+  scoped_actor self{system(), true};
+  self->request(actor_handle(), infinite,
+                unpublish_atom::value, whom, port).receive(
+    [] {
+      // ok, basp_broker is done
+    },
+    [](const error&) {
+      // ok, ignore errors
+    }
+  );
+}
+
+strong_actor_ptr middleman::remote_actor(std::set<std::string> ifs,
+                                         std::string host, uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
+  auto mm = actor_handle();
+  strong_actor_ptr result;
+  scoped_actor self{system(), true};
+  self->request(mm, infinite, connect_atom::value,
+                std::move(host), port).receive(
+    [&](ok_atom, const node_id&, strong_actor_ptr res, std::set<std::string>& xs) {
+      CAF_LOG_TRACE(CAF_ARG(res) << CAF_ARG(xs));
+      if (!res)
+        throw network_error("no actor published at port "
+                            + std::to_string(port));
+      if (! (xs.empty() && ifs.empty())
+          && ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end())) {
+        std::string what = "expected signature: ";
+        what += deep_to_string(ifs);
+        what += ", found: ";
+        what += deep_to_string(xs);
+
+        throw network_error(std::move(what));
       }
-      auto res = parent_.backend().new_tcp_doorman(port, in, reuse_addr);
-      hdl = res.first;
-      actual_port = res.second;
+      result.swap(res);
+    },
+    [&](const error& msg) {
+      CAF_LOG_TRACE(CAF_ARG(msg));
+      throw network_error(system().render(msg));
     }
-    catch (bind_failure& err) {
-      return {error_atom::value, std::string("bind_failure: ") + err.what()};
-    }
-    catch (network_error& err) {
-      return {error_atom::value, std::string("network_error: ") + err.what()};
-    }
-    send(broker_, publish_atom::value, hdl, actual_port,
-         std::move(whom), std::move(sigs));
-    return {ok_atom::value, actual_port};
+  );
+  return result;
+}
+
+group middleman::remote_group(const std::string& group_uri) {
+  CAF_LOG_TRACE(CAF_ARG(group_uri));
+  // format of group_identifier is group@host:port
+  // a regex would be the natural choice here, but we want to support
+  // older compilers that don't have <regex> implemented (e.g. GCC < 4.9)
+  auto pos1 = group_uri.find('@');
+  auto pos2 = group_uri.find(':');
+  auto last = std::string::npos;
+  if (pos1 == last || pos2 == last || pos1 >= pos2) {
+    throw std::invalid_argument("group_uri has an invalid format");
   }
-
-  actor broker_;
-  middleman& parent_;
-};
-
-} // namespace <anonymous>
-
-middleman* middleman::instance() {
-  CAF_LOGF_TRACE("");
-  // store lambda in a plain old function pointer to make sure
-  // std::function has minimal overhead
-  using funptr = backend_pointer (*)();
-  funptr backend_fac = [] { return network::multiplexer::make(); };
-  auto fac = [&] { return new middleman(backend_fac); };
-  auto sid = detail::singletons::middleman_plugin_id;
-  auto res = detail::singletons::get_plugin_singleton(sid, fac);
-  return static_cast<middleman*>(res);
+  auto name = group_uri.substr(0, pos1);
+  auto host = group_uri.substr(pos1 + 1, pos2 - pos1 - 1);
+  auto port = static_cast<uint16_t>(std::stoi(group_uri.substr(pos2 + 1)));
+  return remote_group(name, host, port);
 }
 
-void middleman::add_broker(broker_ptr bptr) {
-  brokers_.insert(bptr);
-  bptr->attach_functor([=](uint32_t) { brokers_.erase(bptr); });
+group middleman::remote_group(const std::string& group_identifier,
+                              const std::string& host, uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(group_identifier) << CAF_ARG(host) << CAF_ARG(port));
+  auto group_server = remote_actor(host, port);
+  scoped_actor self{system(), true};
+  self->send(group_server, get_atom::value, group_identifier);
+  group result;
+  self->receive(
+    [&](group& grp) {
+      result = std::move(grp);
+    }
+  );
+  return result;
 }
 
-void middleman::initialize() {
+/*
+actor middleman::remote_lookup(atom_value name, const node_id& nid) {
+  CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(nid));
+  auto basp = named_broker<basp_broker>(atom("BASP"));
+  actor result;
+  scoped_actor self{system(), true};
+  try {
+    self->send(basp, forward_atom::value, self.address(), nid, name,
+               make_message(sys_atom::value, get_atom::value, "info"));
+    self->receive(
+      [&](ok_atom, const std::string&,
+          const actor_addr& addr, const std::string&) {
+        result = actor_cast<actor>(addr);
+      },
+      after(std::chrono::minutes(5)) >> [] {
+        // nop
+      }
+    );
+  } catch (...) {
+    // nop
+  }
+  return result;
+}
+*/
+
+void middleman::start() {
   CAF_LOG_TRACE("");
-  auto sc = detail::singletons::get_scheduling_coordinator();
-  max_throughput_ = sc->max_throughput();
-  backend_supervisor_ = backend_->make_supervisor();
+  backend_supervisor_ = backend().make_supervisor();
   if (backend_supervisor_ == nullptr) {
     // the only backend that returns a `nullptr` is the `test_multiplexer`
     // which does not have its own thread but uses the main thread instead
-    backend_->thread_id(std::this_thread::get_id());
+    backend().thread_id(std::this_thread::get_id());
   } else {
     thread_ = std::thread{[this] {
+      CAF_SET_LOGGER_SYS(&system());
       CAF_LOG_TRACE("");
-      backend_->run();
+      backend().run();
     }};
-    backend_->thread_id(thread_.get_id());
+    backend().thread_id(thread_.get_id());
   }
-  // announce io-related types
-  announce<network::protocol>("caf::io::network::protocol");
-  announce<network::address_listing>("caf::io::network::address_listing");
-  do_announce<new_data_msg>("caf::io::new_data_msg");
-  do_announce<new_connection_msg>("caf::io::new_connection_msg");
-  do_announce<acceptor_closed_msg>("caf::io::acceptor_closed_msg");
-  do_announce<connection_closed_msg>("caf::io::connection_closed_msg");
-  do_announce<accept_handle>("caf::io::accept_handle");
-  do_announce<acceptor_closed_msg>("caf::io::acceptor_closed_msg");
-  do_announce<connection_closed_msg>("caf::io::connection_closed_msg");
-  do_announce<connection_handle>("caf::io::connection_handle");
-  do_announce<new_connection_msg>("caf::io::new_connection_msg");
-  do_announce<new_data_msg>("caf::io::new_data_msg");
-  actor mgr = get_named_broker<basp_broker>(atom("BASP"));
-  detail::singletons::get_actor_registry()->put_named(atom("BASP"), mgr);
-  manager_ = spawn<middleman_actor_impl, detached + hidden>(*this, mgr);
+  auto basp = named_broker<basp_broker>(atom("BASP"));
+  manager_ = make_middleman_actor(system(), basp);
 }
 
 void middleman::stop() {
   CAF_LOG_TRACE("");
-  backend_->dispatch([=] {
+  backend().dispatch([=] {
     CAF_LOG_TRACE("");
     notify<hook::before_shutdown>();
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {
-      auto& ptr = kvp.second;
-      if (ptr->exit_reason() == exit_reason::not_exited) {
-        ptr->planned_exit_reason(exit_reason::normal);
-        ptr->finalize();
+      auto& hdl = kvp.second;
+      auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(hdl));
+      if (! ptr->is_terminated()) {
+        ptr->context(&backend());
+        ptr->is_terminated(true);
+        ptr->finished();
       }
     }
   });
@@ -301,24 +310,45 @@ void middleman::stop() {
     thread_.join();
   hooks_.reset();
   named_brokers_.clear();
-  scoped_actor self(true);
-  self->monitor(manager_);
+  scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::user_shutdown);
-  self->receive(
-    [](const down_msg&) {
-      // nop
-    }
-  );
+  self->wait_for(manager_);
 }
 
-void middleman::dispose() {
-  delete this;
+void middleman::init(actor_system_config& cfg) {
+  // logging not available at this stage
+  // add I/O-related types to config
+  cfg.add_message_type<network::protocol>("@protocol")
+     .add_message_type<network::address_listing>("@address_listing")
+     .add_message_type<new_data_msg>("@new_data_msg")
+     .add_message_type<new_connection_msg>("@new_connection_msg")
+     .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")
+     .add_message_type<connection_closed_msg>("@connection_closed_msg")
+     .add_message_type<accept_handle>("@accept_handle")
+     .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")
+     .add_message_type<connection_closed_msg>("@connection_closed_msg")
+     .add_message_type<connection_handle>("@connection_handle")
+     .add_message_type<new_connection_msg>("@new_connection_msg")
+     .add_message_type<new_data_msg>("@new_data_msg");
+  // compute and set ID for this network node
+  node_id this_node{node_id::data::create_singleton()};
+  cfg.network_id.swap(this_node);
+  // set scheduling parameters for multiplexer
+  backend().max_throughput(cfg.scheduler_max_throughput);
+  backend().max_consecutive_reads(cfg.middleman_max_consecutive_reads);
+  // set options relevant to BASP
+  heartbeat_interval_ = cfg.middleman_heartbeat_interval;
+  enable_automatic_connections_ = cfg.middleman_enable_automatic_connections;
+  // enable slave mode
+  cfg.slave_mode_fun = &middleman::exec_slave_mode;
 }
 
-middleman::middleman(const backend_factory& factory)
-    : backend_(factory()),
-      max_throughput_(std::numeric_limits<size_t>::max()) {
-  // nop
+actor_system::module::id_t middleman::id() const {
+  return module::middleman;
+}
+
+void* middleman::subtype_ptr() {
+  return this;
 }
 
 middleman::~middleman() {
@@ -329,8 +359,9 @@ middleman_actor middleman::actor_handle() {
   return manager_;
 }
 
-middleman_actor get_middleman_actor() {
-  return middleman::instance()->actor_handle();
+int middleman::exec_slave_mode(actor_system&, const actor_system_config&) {
+  // TODO
+  return 0;
 }
 
 } // namespace io

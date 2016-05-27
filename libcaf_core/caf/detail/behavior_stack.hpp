@@ -25,7 +25,7 @@
 #include <utility>
 #include <algorithm>
 
-#include "caf/maybe.hpp"
+#include "caf/optional.hpp"
 
 #include "caf/config.hpp"
 #include "caf/behavior.hpp"

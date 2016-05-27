@@ -38,16 +38,20 @@ public:
     static constexpr size_t token_type = attachable::token::observer;
   };
 
-  void actor_exited(abstract_actor* self, uint32_t reason) override;
+  void actor_exited(const error& fail_state, execution_unit* host) override;
 
   bool matches(const token& what) override;
 
-  inline static attachable_ptr make_monitor(actor_addr observer) {
-    return attachable_ptr{new default_attachable(std::move(observer), monitor)};
+  inline static attachable_ptr make_monitor(actor_addr observed,
+                                            actor_addr observer) {
+    return attachable_ptr{new default_attachable(std::move(observed),
+                                                 std::move(observer), monitor)};
   }
 
-  inline static attachable_ptr make_link(actor_addr observer) {
-    return attachable_ptr{new default_attachable(std::move(observer), link)};
+  inline static attachable_ptr make_link(actor_addr observed,
+                                         actor_addr observer) {
+    return attachable_ptr{new default_attachable(std::move(observed),
+                                                 std::move(observer), link)};
   }
 
   class predicate {
@@ -68,7 +72,8 @@ public:
   };
 
 private:
-  default_attachable(actor_addr observer, observe_type type);
+  default_attachable(actor_addr observed, actor_addr observer, observe_type ot);
+  actor_addr observed_;
   actor_addr observer_;
   observe_type type_;
 };

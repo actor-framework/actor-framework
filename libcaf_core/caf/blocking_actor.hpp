@@ -23,19 +23,30 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "caf/fwd.hpp"
+#include "caf/send.hpp"
 #include "caf/none.hpp"
-
-#include "caf/on.hpp"
 #include "caf/extend.hpp"
 #include "caf/behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/actor_config.hpp"
+#include "caf/actor_marker.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/response_handle.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
-#include "caf/mixin/sync_sender.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/requester.hpp"
+
+namespace caf {
+namespace mixin {
+
+template <>
+struct is_blocking_requester<blocking_actor> : std::true_type { };
+
+} // namespace caf
+} // namespace mixin
 
 namespace caf {
 
@@ -44,13 +55,21 @@ namespace caf {
 /// @extends local_actor
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
-             with<mixin::sync_sender<blocking_response_handle_tag>::impl> {
+             with<mixin::requester, mixin::sender>,
+      public dynamically_typed_actor_base {
 public:
+  using super = extend<local_actor, blocking_actor>::
+                with<mixin::requester, mixin::sender>;
+
   using behavior_type = behavior;
 
-  blocking_actor();
+  using signatures = none_t;
+
+  blocking_actor(actor_config& sys);
 
   ~blocking_actor();
+
+  void enqueue(mailbox_element_ptr, execution_unit*) override;
 
   /**************************************************************************
    *           utility stuff and receive() member function family           *
@@ -67,7 +86,8 @@ public:
       static_assert(sizeof...(Ts) > 0,
               "operator() requires at least one argument");
       behavior bhvr{std::forward<Ts>(xs)...};
-      while (stmt_()) dq_(bhvr);
+      while (stmt_())
+        dq_(bhvr);
     }
   };
 
@@ -180,11 +200,37 @@ public:
   /// Implements the actor's behavior.
   virtual void act();
 
+  /// Blocks this actor until all `xs...` have terminated.
+  template <class... Ts>
+  void wait_for(Ts&&... xs) {
+    using wait_for_atom = atom_constant<atom("waitFor")>;
+    auto old = default_handler_;
+    default_handler_ = skip;
+    size_t expected = 0;
+    size_t i = 0;
+    size_t attach_results[] = {attach_functor(xs)...};
+    for (auto res : attach_results)
+      expected += res;
+    receive_for(i, expected)(
+      [](wait_for_atom) {
+        // nop
+      }
+    );
+    // restore custom default handler
+    default_handler_ = old;
+  }
+
   /// @cond PRIVATE
+
+  inline const error& fail_state() {
+    return fail_state_;
+  }
 
   void initialize() override;
 
   void dequeue(behavior& bhvr, message_id mid = invalid_message_id);
+
+  void await_data();
 
   /// @endcond
 
@@ -192,6 +238,26 @@ protected:
   // helper function to implement receive_(for|while) and do_receive
   std::function<void(behavior&)> make_dequeue_callback() {
     return [=](behavior& bhvr) { dequeue(bhvr); };
+  }
+
+private:
+  size_t attach_functor(const actor&);
+
+  size_t attach_functor(const actor_addr&);
+
+  size_t attach_functor(const strong_actor_ptr&);
+
+  template <class... Ts>
+  size_t attach_functor(const typed_actor<Ts...>& x) {
+    return attach_functor(actor_cast<strong_actor_ptr>(x));
+  }
+
+  template <class Container>
+  size_t attach_functor(const Container& xs) {
+    size_t res = 0;
+    for (auto& x : xs)
+      res += attach_functor(x);
+    return res;
   }
 };
 

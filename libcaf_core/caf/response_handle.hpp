@@ -22,6 +22,7 @@
 
 #include <type_traits>
 
+#include "caf/sec.hpp"
 #include "caf/message_id.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/continue_helper.hpp"
@@ -33,26 +34,16 @@
 
 namespace caf {
 
-/// This tag identifies response handles featuring a
-/// nonblocking API by providing a `then` member function.
-/// @relates response_handle
-struct nonblocking_response_handle_tag {};
-
-/// This tag identifies response handles featuring a
-/// blocking API by providing an `await` member function.
-/// @relates response_handle
-struct blocking_response_handle_tag {};
-
 /// This helper class identifies an expected response message
-/// and enables `sync_send(...).then(...)`.
-template <class Self, class ResultOptPairOrMessage, class Tag>
+/// and enables `request(...).then(...)`.
+template <class Self, class Output, bool IsBlocking>
 class response_handle;
 
 /******************************************************************************
- *                            nonblocking + untyped                           *
+ *                                 nonblocking                                *
  ******************************************************************************/
-template <class Self>
-class response_handle<Self, message, nonblocking_response_handle_tag> {
+template <class Self, class Output>
+class response_handle<Self, Output, false> {
 public:
   response_handle() = delete;
   response_handle(const response_handle&) = default;
@@ -62,124 +53,140 @@ public:
     // nop
   }
 
-  template <class... Ts>
-  continue_helper then(Ts&&... xs) const {
-    self_->set_response_handler(mid_, behavior{std::forward<Ts>(xs)...});
-    return {mid_};
+  template <class F, class E = detail::is_callable_t<F>>
+  void await(F f) const {
+    await_impl(f);
+  }
+
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void await(F f, OnError e) const {
+    await_impl(f, e);
+  }
+
+  template <class F, class E = detail::is_callable_t<F>>
+  void then(F f) const {
+    then_impl(f);
+  }
+
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void then(F f, OnError e) const {
+    then_impl(f, e);
   }
 
 private:
-  message_id mid_;
-  Self* self_;
-};
-
-/******************************************************************************
- *                            nonblocking + typed                             *
- ******************************************************************************/
-template <class Self, class TypedOutputPair>
-class response_handle<Self, TypedOutputPair, nonblocking_response_handle_tag> {
-public:
-  response_handle() = delete;
-  response_handle(const response_handle&) = default;
-  response_handle& operator=(const response_handle&) = default;
-
-  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
-    // nop
-  }
-
-  template <class... Fs>
-  typed_continue_helper<
-    typename detail::lifted_result_type<
-      typename detail::common_result_type<
-        typename detail::get_callable_trait<Fs>::result_type...
-      >::type
-    >::type>
-  then(Fs... fs) {
-    static_assert(sizeof...(Fs) > 0, "at least one functor is requried");
-    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
-                  "all arguments must be callable");
-    static_assert(detail::conjunction<
-                    ! std::is_base_of<match_case, Fs>::value...
+  template <class F>
+  void await_impl(F& f) const {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
                   >::value,
-                  "match cases are not allowed in this context");
-    detail::type_checker<TypedOutputPair, Fs...>::check();
-    self_->set_response_handler(mid_, behavior{std::move(fs)...});
-    return {mid_};
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    self_->set_awaited_response_handler(mid_, message_handler{std::move(f)});
   }
 
-private:
-  message_id mid_;
-  Self* self_;
-};
-
-/******************************************************************************
- *                             blocking + untyped                             *
- ******************************************************************************/
-template <class Self>
-class response_handle<Self, message, blocking_response_handle_tag> {
-public:
-  response_handle() = delete;
-  response_handle(const response_handle&) = default;
-  response_handle& operator=(const response_handle&) = default;
-
-  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
-    // nop
-  }
-
-  void await(behavior& bhvr) {
-    self_->dequeue(bhvr, mid_);
-  }
-
-  template <class... Ts>
-  void await(Ts&&... xs) const {
-    behavior bhvr{std::forward<Ts>(xs)...};
-    self_->dequeue(bhvr, mid_);
-  }
-
-private:
-  message_id mid_;
-  Self* self_;
-};
-
-/******************************************************************************
- *                              blocking + typed                              *
- ******************************************************************************/
-template <class Self, class OutputPair>
-class response_handle<Self, OutputPair, blocking_response_handle_tag> {
-public:
-  response_handle() = delete;
-  response_handle(const response_handle&) = default;
-  response_handle& operator=(const response_handle&) = default;
-
-  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
-    // nop
-  }
-
-  static constexpr bool is_either_or_handle =
-    ! std::is_same<
-      none_t,
-      typename OutputPair::second
-    >::value;
-
-  template <class... Fs>
-  void await(Fs... fs) {
-    static_assert(sizeof...(Fs) > 0,
-                  "at least one argument is required");
-    static_assert((is_either_or_handle && sizeof...(Fs) == 2)
-                  || sizeof...(Fs) == 1,
-                  "wrong number of functors");
-    static_assert(detail::conjunction<detail::is_callable<Fs>::value...>::value,
-                  "all arguments must be callable");
-    static_assert(detail::conjunction<
-                    ! std::is_base_of<match_case, Fs>::value...
+  template <class F, class OnError>
+  void await_impl(F& f, OnError& ef) const {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
                   >::value,
-                  "match cases are not allowed in this context");
-    detail::type_checker<OutputPair, Fs...>::check();
-    behavior tmp{std::move(fs)...};
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    self_->set_awaited_response_handler(mid_, behavior{std::move(f),
+                                                       std::move(ef)});
+  }
+
+  template <class F>
+  void then_impl(F& f) const {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    self_->set_multiplexed_response_handler(mid_, behavior{std::move(f)});
+  }
+
+  template <class F, class OnError>
+  void then_impl(F& f, OnError& ef) const {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    self_->set_multiplexed_response_handler(mid_, behavior{std::move(f),
+                                                           std::move(ef)});
+  }
+
+  message_id mid_;
+  Self* self_;
+};
+
+/******************************************************************************
+ *                                  blocking                                  *
+ ******************************************************************************/
+template <class Self, class Output>
+class response_handle<Self, Output, true> {
+public:
+  response_handle() = delete;
+  response_handle(const response_handle&) = default;
+  response_handle& operator=(const response_handle&) = default;
+
+  response_handle(message_id mid, Self* self) : mid_(mid), self_(self) {
+    // nop
+  }
+
+  using error_handler = std::function<void (error&)>;
+
+  template <class F, class E = detail::is_callable_t<F>>
+  void receive(F f) {
+    receive_impl(f);
+  }
+
+  template <class F, class OnError,
+            class E1 = detail::is_callable_t<F>,
+            class E2 = detail::is_handler_for_ef<OnError, error>>
+  void receive(F f, OnError ef) {
+    receive_impl(f, ef);
+  }
+
+private:
+  template <class F>
+  void receive_impl(F& f) {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    behavior tmp{std::move(f)};
     self_->dequeue(tmp, mid_);
   }
 
-private:
+  template <class F, class OnError>
+  void receive_impl(F& f, OnError& ef) {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    behavior tmp{std::move(f), std::move(ef)};
+    self_->dequeue(tmp, mid_);
+  }
+
   message_id mid_;
   Self* self_;
 };

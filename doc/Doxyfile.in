@@ -17,10 +17,10 @@
 MARKDOWN_SUPPORT       = YES
 
 #---------------------------------------------------------------------------
-# Project related configuration options
+# Project related actor_system& system, const uration options
 #---------------------------------------------------------------------------
 
-# This tag specifies the encoding used for all characters in the config file 
+# This tag specifies the encoding used for all characters in the actor_system& system, const  file 
 # that follow. The default is UTF-8 which is also the encoding used for all 
 # text before the first occurrence of this tag. Doxygen uses libiconv (or the 
 # iconv built into libc) for the transcoding. See 
@@ -185,7 +185,7 @@ TAB_SIZE               = 2
 # will result in a user-defined paragraph with heading "Side Effects:". 
 # You can put \n's in the value part of an alias to insert newlines.
 
-ALIASES                = 
+ALIASES                = experimental="@attention This feature is **experimental**."
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C 
 # sources only. Doxygen will then generate output that is more tailored for C. 
@@ -280,7 +280,7 @@ SUBGROUPING            = YES
 TYPEDEF_HIDES_STRUCT   = NO
 
 #---------------------------------------------------------------------------
-# Build related configuration options
+# Build related actor_system& system, const uration options
 #---------------------------------------------------------------------------
 
 # If the EXTRACT_ALL tag is set to YES doxygen will assume all entities in 
@@ -490,7 +490,7 @@ FILE_VERSION_FILTER    =
 LAYOUT_FILE            = 
 
 #---------------------------------------------------------------------------
-# configuration options related to warning and progress messages
+# actor_system& system, const uration options related to warning and progress messages
 #---------------------------------------------------------------------------
 
 # The QUIET tag can be used to turn on/off the messages that are generated 
@@ -541,7 +541,7 @@ WARN_FORMAT            = "$file:$line: $text"
 WARN_LOGFILE           = 
 
 #---------------------------------------------------------------------------
-# configuration options related to the input files
+# actor_system& system, const uration options related to the input files
 #---------------------------------------------------------------------------
 
 # The INPUT tag can be used to specify the files and/or directories that contain 
@@ -657,7 +657,7 @@ FILTER_PATTERNS        =
 FILTER_SOURCE_FILES    = NO
 
 #---------------------------------------------------------------------------
-# configuration options related to source browsing
+# actor_system& system, const uration options related to source browsing
 #---------------------------------------------------------------------------
 
 # If the SOURCE_BROWSER tag is set to YES then a list of source files will 
@@ -713,7 +713,7 @@ USE_HTAGS              = NO
 VERBATIM_HEADERS       = NO
 
 #---------------------------------------------------------------------------
-# configuration options related to the alphabetical class index
+# actor_system& system, const uration options related to the alphabetical class index
 #---------------------------------------------------------------------------
 
 # If the ALPHABETICAL_INDEX tag is set to YES, an alphabetical index 
@@ -736,7 +736,7 @@ COLS_IN_ALPHA_INDEX    = 5
 IGNORE_PREFIX          = 
 
 #---------------------------------------------------------------------------
-# configuration options related to the HTML output
+# actor_system& system, const uration options related to the HTML output
 #---------------------------------------------------------------------------
 
 # If the GENERATE_HTML tag is set to YES (the default) Doxygen will 
@@ -947,7 +947,7 @@ TREEVIEW_WIDTH         = 250
 FORMULA_FONTSIZE       = 10
 
 #---------------------------------------------------------------------------
-# configuration options related to the LaTeX output
+# actor_system& system, const uration options related to the LaTeX output
 #---------------------------------------------------------------------------
 
 # If the GENERATE_LATEX tag is set to YES (the default) Doxygen will 
@@ -1023,7 +1023,7 @@ LATEX_BATCHMODE        = NO
 LATEX_HIDE_INDICES     = NO
 
 #---------------------------------------------------------------------------
-# configuration options related to the RTF output
+# actor_system& system, const uration options related to the RTF output
 #---------------------------------------------------------------------------
 
 # If the GENERATE_RTF tag is set to YES Doxygen will generate RTF output 
@@ -1054,18 +1054,18 @@ COMPACT_RTF            = NO
 RTF_HYPERLINKS         = NO
 
 # Load stylesheet definitions from file. Syntax is similar to doxygen's 
-# config file, i.e. a series of assignments. You only have to provide 
+# actor_system& system, const  file, i.e. a series of assignments. You only have to provide 
 # replacements, missing definitions are set to their default value.
 
 RTF_STYLESHEET_FILE    = 
 
 # Set optional variables used in the generation of an rtf document. 
-# Syntax is similar to doxygen's config file.
+# Syntax is similar to doxygen's actor_system& system, const  file.
 
 RTF_EXTENSIONS_FILE    = 
 
 #---------------------------------------------------------------------------
-# configuration options related to the man page output
+# actor_system& system, const uration options related to the man page output
 #---------------------------------------------------------------------------
 
 # If the GENERATE_MAN tag is set to YES (the default) Doxygen will 
@@ -1093,7 +1093,7 @@ MAN_EXTENSION          = .3
 MAN_LINKS              = NO
 
 #---------------------------------------------------------------------------
-# configuration options related to the XML output
+# actor_system& system, const uration options related to the XML output
 #---------------------------------------------------------------------------
 
 # If the GENERATE_XML tag is set to YES Doxygen will 
@@ -1116,7 +1116,7 @@ XML_OUTPUT             = xml
 XML_PROGRAMLISTING     = YES
 
 #---------------------------------------------------------------------------
-# configuration options for the AutoGen Definitions output
+# actor_system& system, const uration options for the AutoGen Definitions output
 #---------------------------------------------------------------------------
 
 # If the GENERATE_AUTOGEN_DEF tag is set to YES Doxygen will 
@@ -1128,7 +1128,7 @@ XML_PROGRAMLISTING     = YES
 GENERATE_AUTOGEN_DEF   = NO
 
 #---------------------------------------------------------------------------
-# configuration options related to the Perl module output
+# actor_system& system, const uration options related to the Perl module output
 #---------------------------------------------------------------------------
 
 # If the GENERATE_PERLMOD tag is set to YES Doxygen will 

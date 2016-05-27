@@ -18,11 +18,16 @@
  ******************************************************************************/
 
 #include "caf/serializer.hpp"
-#include "caf/uniform_type_info.hpp"
+
+#include "caf/actor_system.hpp"
 
 namespace caf {
 
-serializer::serializer(actor_namespace* ns) : namespace_{ns} {
+serializer::serializer(actor_system& sys) : super(sys.dummy_execution_unit()) {
+  // nop
+}
+
+serializer::serializer(execution_unit* ctx) : super(ctx) {
   // nop
 }
 

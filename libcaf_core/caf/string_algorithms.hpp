@@ -129,26 +129,9 @@ void replace_all(std::string& str,
   }
 }
 
-/// Compares two values by using `operator==` unless two floating
-/// point numbers are compared. In the latter case, the function
-/// performs an epsilon comparison.
-template <class T, typename U>
-typename std::enable_if<
-  ! std::is_floating_point<T>::value && ! std::is_floating_point<U>::value,
-  bool
->::type
-safe_equal(const T& lhs, const U& rhs) {
-  return lhs == rhs;
-}
-
-template <class T, typename U>
-typename std::enable_if<
-  std::is_floating_point<T>::value || std::is_floating_point<U>::value,
-  bool
->::type
-safe_equal(const T& lhs, const U& rhs) {
-  using res_type = decltype(lhs - rhs);
-  return std::fabs(lhs - rhs) <= std::numeric_limits<res_type>::epsilon();
+template<size_t S>
+bool starts_with(const std::string& str, const char (&prefix)[S]) {
+  return str.compare(0, S, prefix);
 }
 
 template <class T>
@@ -161,18 +144,7 @@ convert_to_str(T value) {
 }
 
 inline std::string convert_to_str(std::string value) {
-  return std::move(value);
-}
-
-// string projection
-template <class T>
-caf::maybe<T> spro(const std::string& str) {
-  T value;
-  std::istringstream iss(str);
-  if (iss >> value) {
-    return value;
-  }
-  return caf::none;
+  return value;
 }
 
 } // namespace caf

@@ -20,6 +20,7 @@
 #ifndef CAF_IO_HANDLE_HPP
 #define CAF_IO_HANDLE_HPP
 
+#include <string>
 #include <cstdint>
 
 #include "caf/detail/comparable.hpp"
@@ -81,12 +82,15 @@ public:
     return {id};
   }
 
+  friend std::string to_string(const Subtype& x) {
+    return std::to_string(x.id());
+  }
+
 protected:
   handle(int64_t handle_id) : id_{handle_id} {
     // nop
   }
 
-private:
   int64_t id_;
 };
 

@@ -20,10 +20,13 @@
 #ifndef CAF_NONE_HPP
 #define CAF_NONE_HPP
 
+#include <string>
+
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
 
+/// Represents "nothing", e.g., for clearing an `optional` by assigning `none`.
 struct none_t : detail::comparable<none_t> {
   constexpr none_t() {
     // nop
@@ -38,6 +41,18 @@ struct none_t : detail::comparable<none_t> {
 };
 
 static constexpr none_t none = none_t{};
+
+/// @relates none_t
+template <class Processor>
+void serialize(Processor&, const none_t&, const unsigned int) {
+  // nop
+}
+
+/// @relates none_t
+template <class T>
+std::string to_string(const none_t&) {
+  return "<none>";
+}
 
 } // namespace caf
 

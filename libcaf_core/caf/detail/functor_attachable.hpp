@@ -31,25 +31,25 @@ namespace detail {
 template <class F,
           int Args = tl_size<typename get_callable_trait<F>::arg_types>::value>
 struct functor_attachable : attachable {
-  static_assert(Args == 2, "Only 1 and 2 arguments for F are supported");
+  static_assert(Args == 1, "Only 0 or 1 arguments for F are supported");
   F functor_;
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(abstract_actor* self, uint32_t reason) override {
-    functor_(self, reason);
+  void actor_exited(const error& fail_state, execution_unit*) override {
+    functor_(fail_state);
   }
   static constexpr size_t token_type = attachable::token::anonymous;
 };
 
 template <class F>
-struct functor_attachable<F, 1> : attachable {
+struct functor_attachable<F, 0> : attachable {
   F functor_;
   functor_attachable(F arg) : functor_(std::move(arg)) {
     // nop
   }
-  void actor_exited(abstract_actor*, uint32_t reason) override {
-    functor_(reason);
+  void actor_exited(const error&, execution_unit*) override {
+    functor_();
   }
 };
 

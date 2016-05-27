@@ -1,20 +1,17 @@
-/******************************************************************************\
- * This example illustrates how to use aout.                                  *
-\******************************************************************************/
-
 #include <random>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
 
 #include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 using namespace caf;
 using std::endl;
 
-int main() {
+void caf_main(actor_system& system) {
   for (int i = 1; i <= 50; ++i) {
-    spawn<blocking_api>([i](blocking_actor* self) {
+    system.spawn([i](blocking_actor* self) {
       aout(self) << "Hi there! This is actor nr. "
                  << i << "!" << endl;
       std::random_device rd;
@@ -29,8 +26,6 @@ int main() {
       );
     });
   }
-  // wait until all other actors we've spawned are done
-  await_all_actors_done();
-  // done
-  shutdown();
 }
+
+CAF_MAIN()

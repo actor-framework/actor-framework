@@ -33,78 +33,63 @@ namespace {
 
 class testee : public event_based_actor {
 public:
-  testee();
-  ~testee();
-  behavior make_behavior() override;
-};
-
-testee::testee() {
-  // nop
-}
-
-testee::~testee() {
-  // nop
-}
-
-behavior testee::make_behavior() {
-  return {
-    others >> [=] {
-      CAF_CHECK_EQUAL(current_message().cvals()->get_reference_count(), 2);
-      quit();
-      return std::move(current_message());
-    }
-  };
-}
-
-class tester : public event_based_actor {
-public:
-  explicit tester(actor aut)
-      : aut_(std::move(aut)),
-        msg_(make_message(1, 2, 3)) {
+  testee(actor_config& cfg) : event_based_actor(cfg) {
     // nop
   }
 
-  behavior make_behavior() override;
+  ~testee() {
+    // nop
+  }
+
+  behavior make_behavior() override {
+    // reflecting a message increases its reference count by one
+    set_default_handler(reflect_and_quit);
+    return {
+      [] {
+        // nop
+      }
+    };
+  }
+};
+
+class tester : public event_based_actor {
+public:
+  tester(actor_config& cfg, actor aut)
+      : event_based_actor(cfg),
+        aut_(std::move(aut)),
+        msg_(make_message(1, 2, 3)) {
+    set_down_handler([=](down_msg& dm) {
+      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+      CAF_CHECK_EQUAL(dm.source, aut_.address());
+      quit();
+    });
+  }
+
+  behavior make_behavior() override {
+    monitor(aut_);
+    send(aut_, msg_);
+    return {
+      [=](int a, int b, int c) {
+        CAF_CHECK_EQUAL(a, 1);
+        CAF_CHECK_EQUAL(b, 2);
+        CAF_CHECK_EQUAL(c, 3);
+      }
+    };
+  }
+
 private:
   actor aut_;
   message msg_;
 };
 
-behavior tester::make_behavior() {
-  monitor(aut_);
-  send(aut_, msg_);
-  return {
-    [=](int a, int b, int c) {
-      CAF_CHECK_EQUAL(a, 1);
-      CAF_CHECK_EQUAL(b, 2);
-      CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK(current_message().cvals()->get_reference_count() == 2
-                && current_message().cvals().get() == msg_.cvals().get());
-    },
-    [=](const down_msg& dm) {
-      CAF_CHECK(dm.source == aut_
-                && dm.reason == exit_reason::normal
-                && current_message().cvals()->get_reference_count() == 1);
-      quit();
-    },
-    others >> [&] {
-      CAF_TEST_ERROR("Unexpected message: " << to_string(current_message()));
-    }
-  };
-}
-
-template <spawn_options Os>
-void test_message_lifetime() {
-  // put some preassure on the scheduler (check for thread safety)
-  for (size_t i = 0; i < 100; ++i) {
-    spawn<tester>(spawn<testee, Os>());
-  }
-}
-
 struct fixture {
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
+  actor_system system;
+
+  template <spawn_options Os>
+  void test_message_lifetime() {
+    // put some preassure on the scheduler (check for thread safety)
+    for (size_t i = 0; i < 100; ++i)
+      system.spawn<tester>(system.spawn<testee, Os>());
   }
 };
 
@@ -114,26 +99,23 @@ CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, fixture)
 
 CAF_TEST(message_lifetime_in_scoped_actor) {
   auto msg = make_message(1, 2, 3);
-  scoped_actor self;
+  scoped_actor self{system};
   self->send(self, msg);
   self->receive(
     [&](int a, int b, int c) {
       CAF_CHECK_EQUAL(a, 1);
       CAF_CHECK_EQUAL(b, 2);
       CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2);
-      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 2);
-      CAF_CHECK(self->current_message().cvals().get() == msg.cvals().get());
+      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
     }
   );
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
+  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
   msg = make_message(42);
   self->send(self, msg);
   self->receive(
     [&](int& value) {
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1);
-      CAF_CHECK_EQUAL(self->current_message().cvals()->get_reference_count(), 1);
-      CAF_CHECK(self->current_message().cvals().get() != msg.cvals().get());
+      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+      CAF_CHECK_NOT_EQUAL(&value, msg.at(0));
       value = 10;
     }
   );

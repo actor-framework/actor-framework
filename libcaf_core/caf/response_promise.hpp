@@ -20,6 +20,8 @@
 #ifndef CAF_RESPONSE_PROMISE_HPP
 #define CAF_RESPONSE_PROMISE_HPP
 
+#include <vector>
+
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
@@ -32,32 +34,53 @@ namespace caf {
 /// to the client (i.e. the sender of the request).
 class response_promise {
 public:
-  response_promise() = default;
+  /// Constructs an invalid response promise.
+  response_promise();
+  response_promise(local_actor* self, mailbox_element& src);
+
   response_promise(response_promise&&) = default;
   response_promise(const response_promise&) = default;
   response_promise& operator=(response_promise&&) = default;
   response_promise& operator=(const response_promise&) = default;
 
-  response_promise(const actor_addr& from, const actor_addr& to,
-                   const message_id& response_id);
-
-  /// Queries whether this promise is still valid, i.e., no response
-  /// was yet delivered to the client.
-  inline explicit operator bool() const {
-    // handle is valid if it has a receiver
-    return static_cast<bool>(to_);
+  /// Satisfies the promise by sending a non-error response message.
+  template <class T, class... Ts>
+  typename std::enable_if<
+    (sizeof...(Ts) > 0) || ! std::is_convertible<T, error>::value,
+    response_promise
+  >::type
+  deliver(T&&x, Ts&&... xs) {
+    return deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
-  /// Sends `response_message` and invalidates this handle afterwards.
-  template <class... Ts>
-  void deliver(Ts&&... xs) const {
-    deliver_impl(make_message(std::forward<Ts>(xs)...));
+  /// Satisfies the promise by sending an error response message.
+  /// For non-requests, nothing is done.
+  response_promise deliver(error x);
+
+  /// Returns whether this response promise replies to an asynchronous message.
+  bool async() const;
+
+  /// Queries whether this promise is a valid promise that is not satisfied yet.
+  inline bool pending() const {
+    return ! stages_.empty() || source_;
   }
+
+  /// @cond PRIVATE
+
+  inline local_actor* self() {
+    return self_;
+  }
+
+  /// @endcond
 
 private:
-  void deliver_impl(message response_message) const;
-  actor_addr from_;
-  actor_addr to_;
+  using forwarding_stack = std::vector<strong_actor_ptr>;
+
+  response_promise deliver_impl(message response_message);
+
+  local_actor* self_;
+  strong_actor_ptr source_;
+  forwarding_stack stages_;
   message_id id_;
 };
 

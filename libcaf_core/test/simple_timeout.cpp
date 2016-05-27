@@ -51,10 +51,7 @@ timer::behavior_type timer_impl(timer::pointer self) {
 }
 
 struct fixture {
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
-  }
+  actor_system system;
 };
 
 } // namespace <anonymous>
@@ -62,7 +59,7 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(timeout_tests, fixture)
 
 CAF_TEST(single_timeout) {
-  spawn(timer_impl);
+  system.spawn(timer_impl);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

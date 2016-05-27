@@ -35,12 +35,14 @@ enum class atom_value : uint64_t {
   /// @endcond
 };
 
+std::string to_string(const atom_value& x);
+
 /// Creates an atom from given string literal.
 template <size_t Size>
 constexpr atom_value atom(char const (&str)[Size]) {
   // last character is the NULL terminator
   static_assert(Size <= 11, "only 10 characters are allowed");
-  return static_cast<atom_value>(detail::atom_val(str, 0xF));
+  return static_cast<atom_value>(detail::atom_val(str));
 }
 
 /// Lifts an `atom_value` to a compile-time constant.
@@ -60,83 +62,95 @@ struct atom_constant {
   static const atom_constant value;
 };
 
+template <class T>
+struct is_atom_constant {
+  static constexpr bool value = false;
+};
+
+template <atom_value X>
+struct is_atom_constant<atom_constant<X>> {
+  static constexpr bool value = true;
+};
+
+template <atom_value V>
+std::string to_string(const atom_constant<V>&) {
+  return to_string(V);
+}
+
 template <atom_value V>
 const atom_constant<V> atom_constant<V>::value = atom_constant<V>{};
 
-/// Generic 'ADD' atom for request operations.
-using add_atom = atom_constant<atom("ADD")>;
+/// Used for request operations.
+using add_atom = atom_constant<atom("add")>;
 
-/// Generic 'GET' atom for request operations.
-using get_atom = atom_constant<atom("GET")>;
+/// Used for request operations.
+using get_atom = atom_constant<atom("get")>;
 
-/// Generic 'PUT' atom for request operations.
-using put_atom = atom_constant<atom("PUT")>;
+/// Used for request operations.
+using put_atom = atom_constant<atom("put")>;
 
-/// Generic 'UPDATE' atom, e.g., or signalizing updates in a key-value store.
-using update_atom = atom_constant<atom("UPDATE")>;
+/// Used for signalizing updates, e.g., in a key-value store.
+using update_atom = atom_constant<atom("update")>;
 
-/// Generic 'DELETE' atom for request operations.
-using delete_atom = atom_constant<atom("DELETE")>;
+/// Used for request operations.
+using delete_atom = atom_constant<atom("delete")>;
 
-/// Generic 'OK' atom for response messages.
-using ok_atom = atom_constant<atom("OK")>;
+/// Used for response messages.
+using ok_atom = atom_constant<atom("ok")>;
 
-/// Generic 'ERROR' atom for response messages.
-using error_atom = atom_constant<atom("ERROR")>;
+/// Used for triggering system-level message handling.
+using sys_atom = atom_constant<atom("sys")>;
 
-/// Marker 'SYS' atom for prefixing messages to a forwarding chain
-/// to address an otherwise transparent actor.
-using sys_atom = atom_constant<atom("SYS")>;
+/// Used for signaling group subscriptions.
+using join_atom = atom_constant<atom("join")>;
 
-/// Generic 'JOIN' atom, e.g., for signaling group subscriptions.
-using join_atom = atom_constant<atom("JOIN")>;
+/// Used for signaling group unsubscriptions.
+using leave_atom = atom_constant<atom("leave")>;
 
-/// Generic 'LEAVE' atom, e.g., for signaling group unsubscriptions.
-using leave_atom = atom_constant<atom("LEAVE")>;
+/// Used for signaling forwarding paths.
+using forward_atom = atom_constant<atom("forward")>;
 
-/// Generic 'FORWARD' atom, e.g., for signaling an actor that it
-/// should drop the first element and forward the remainder to
-/// a list of predefined receivers.
-using forward_atom = atom_constant<atom("FORWARD")>;
+/// Used for buffer management.
+using flush_atom = atom_constant<atom("flush")>;
 
-/// Generic 'FLUSH' atom, e.g., used by `aout`.
-using flush_atom = atom_constant<atom("FLUSH")>;
+/// Used for I/O redirection.
+using redirect_atom = atom_constant<atom("redirect")>;
 
-/// Generic 'REDIRECT' atom, e.g., used by `aout`.
-using redirect_atom = atom_constant<atom("REDIRECT")>;
+/// Used for link requests over network.
+using link_atom = atom_constant<atom("link")>;
 
-/// Generic 'LINK' atom for link requests over network.
-using link_atom = atom_constant<atom("LINK")>;
+/// Used for removing networked links.
+using unlink_atom = atom_constant<atom("unlink")>;
 
-/// Generic 'UNLINK' atom for removing networked links.
-using unlink_atom = atom_constant<atom("UNLINK")>;
+/// Used for publishing actors at a given port.
+using publish_atom = atom_constant<atom("publish")>;
 
-/// Generic 'PUBLISH' atom, e.g., for publishing actors at a given port.
-using publish_atom = atom_constant<atom("PUBLISH")>;
+/// Used for removing an actor/port mapping.
+using unpublish_atom = atom_constant<atom("unpublish")>;
 
-/// Generic 'UNPUBLISH' atom, e.g., for removing an actor/port mapping.
-using unpublish_atom = atom_constant<atom("UNPUBLISH")>;
+/// Used for signalizing group membership.
+using subscribe_atom = atom_constant<atom("subscribe")>;
 
-/// Generic 'PUBLISH' atom, e.g., for publishing actors at a given port.
-using subscribe_atom = atom_constant<atom("SUBSCRIBE")>;
+/// Used for withdrawing group membership.
+using unsubscribe_atom = atom_constant<atom("unsubscrib")>;
 
-/// Generic 'UNPUBLISH' atom, e.g., for removing an actor/port mapping.
-using unsubscribe_atom = atom_constant<atom("UNSUBSCRIB")>;
+/// Used for establishing network connections.
+using connect_atom = atom_constant<atom("connect")>;
 
-/// Generic 'CONNECT' atom, e.g., for connecting to remote CAF instances.
-using connect_atom = atom_constant<atom("CONNECT")>;
+/// Used for opening ports or files.
+using open_atom = atom_constant<atom("open")>;
 
-/// Generic 'OPEN' atom, e.g., for opening a port or file.
-using open_atom = atom_constant<atom("OPEN")>;
+/// Used for closing ports or files.
+using close_atom = atom_constant<atom("close")>;
 
-/// Generic 'CLOSE' atom, e.g., for closing a port or file.
-using close_atom = atom_constant<atom("CLOSE")>;
+/// Used for spawning remote actors.
+using spawn_atom = atom_constant<atom("spawn")>;
 
-/// Generic 'SPAWN' atom, e.g., for spawning remote actors.
-using spawn_atom = atom_constant<atom("SPAWN")>;
+/// Used for migrating actors to other nodes.
+using migrate_atom = atom_constant<atom("migrate")>;
 
-/// Atom to signalize an actor to migrate its state to another actor.
-using migrate_atom = atom_constant<atom("MIGRATE")>;
+/// Used for triggering periodic operations.
+using tick_atom = atom_constant<atom("tick")>;
 
 } // namespace caf
 

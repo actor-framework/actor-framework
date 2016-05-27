@@ -28,7 +28,6 @@ struct tbind {
   template <class Arg2>
   struct type {
     static constexpr bool value = Tpl<Arg1, Arg2>::value;
-
   };
 };
 

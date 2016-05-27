@@ -32,10 +32,18 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/experimental/whereis.hpp"
+#include "caf/deep_to_string.hpp"
 
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
+
+namespace {
+
+struct anything { };
+
+anything any_vals;
+
+} // namespace <anonymous>
 
 namespace std {
 
@@ -44,11 +52,11 @@ ostream& operator<<(ostream& out, const caf::io::basp::message_type& x) {
 }
 
 template <class T>
-ostream& operator<<(ostream& out, const caf::variant<caf::anything, T>& x) {
+ostream& operator<<(ostream& out, const caf::variant<anything, T>& x) {
   using std::to_string;
   using caf::to_string;
   using caf::io::basp::to_string;
-  if (get<caf::anything>(&x) != nullptr)
+  if (get<anything>(&x) != nullptr)
     return out << "*";
   return out << to_string(get<T>(x));
 }
@@ -69,7 +77,7 @@ bool operator==(const T& x, const variant<anything, T>& y) {
 
 template <class T>
 std::string to_string(const variant<anything, T>& x) {
-  return get<anything>(&x) == nullptr ? std::string{"*"} : to_string(get<T>(x));
+  return ! get<anything>(&x) ? std::string{"*"} : deep_to_string(get<T>(x));
 }
 
 } // namespace caf
@@ -77,18 +85,8 @@ std::string to_string(const variant<anything, T>& x) {
 using namespace std;
 using namespace caf;
 using namespace caf::io;
-using namespace caf::experimental;
 
 namespace {
-
-#define THROW_ON_UNEXPECTED(selfref)                                           \
-  others >> [&] {                                                              \
-    throw std::logic_error("unexpected message: "                              \
-                           + to_string(selfref->current_message()));           \
-  },                                                                           \
-  after(std::chrono::seconds(0)) >> [&] {                                      \
-    throw std::logic_error("unexpected timeout");                              \
-  }
 
 static constexpr uint32_t num_remote_nodes = 2;
 
@@ -107,19 +105,23 @@ string hexstr(const buffer& buf) {
 
 class fixture {
 public:
-  fixture() {
-    mpx_ = new network::test_multiplexer;
-    set_middleman(mpx_);
-    auto mm = middleman::instance();
-    aut_ = mm->get_named_broker<basp_broker>(atom("BASP"));
-    this_node_ = detail::singletons::get_node_id();
+  fixture(bool autoconn = false)
+      : system(actor_system_config{}
+               .load<io::middleman, network::test_multiplexer>()
+               .set("middleman.enable-automatic-connections", autoconn)) {
+    auto& mm = system.middleman();
+    mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
+    CAF_REQUIRE(mpx_ != nullptr);
+    CAF_REQUIRE(&system == &mpx_->system());
+    auto hdl = mm.named_broker<basp_broker>(atom("BASP"));
+    aut_ = static_cast<basp_broker*>(actor_cast<abstract_actor*>(hdl));
+    this_node_ = system.node();
     CAF_MESSAGE("this node: " << to_string(this_node_));
-    self_.reset(new scoped_actor);
+    self_.reset(new scoped_actor{system});
     ahdl_ = accept_handle::from_int(1);
-    mpx_->assign_tcp_doorman(aut_.get(), ahdl_);
-    registry_ = detail::singletons::get_actor_registry();
-    registry_->put((*self_)->id(),
-                  actor_cast<abstract_actor_ptr>((*self_)->address()));
+    mpx_->assign_tcp_doorman(aut_, ahdl_);
+    registry_ = &system.registry();
+    registry_->put((*self_)->id(), actor_cast<strong_actor_ptr>(*self_));
     // first remote node is everything of this_node + 1, then +2, etc.
     for (uint32_t i = 0; i < num_remote_nodes; ++i) {
       node_id::host_id_type tmp = this_node_.host_id();
@@ -128,10 +130,9 @@ public:
       remote_node_[i] = node_id{this_node_.process_id() + i + 1, tmp};
       remote_hdl_[i] = connection_handle::from_int(i + 1);
       auto& ptr = pseudo_remote_[i];
-      ptr.reset(new scoped_actor);
+      ptr.reset(new scoped_actor{system});
       // register all pseudo remote actors in the registry
-      registry_->put((*ptr)->id(),
-                    actor_cast<abstract_actor_ptr>((*ptr)->address()));
+      registry_->put((*ptr)->id(), actor_cast<strong_actor_ptr>(*ptr));
     }
     // make sure all init messages are handled properly
     mpx_->flush_runnables();
@@ -139,7 +140,7 @@ public:
 
   uint32_t serialized_size(const message& msg) {
     buffer buf;
-    binary_serializer bs{back_inserter(buf), &get_namespace()};
+    binary_serializer bs{mpx_, buf};
     bs << msg;
     return static_cast<uint32_t>(buf.size());
   }
@@ -151,8 +152,6 @@ public:
       nid = invalid_node_id;
     for (auto& ptr : pseudo_remote_)
       ptr.reset();
-    await_all_actors_done();
-    shutdown();
   }
 
   // our "virtual communication backend"
@@ -162,7 +161,7 @@ public:
 
   // actor-under-test
   basp_broker* aut() {
-    return aut_.get();
+    return aut_;
   }
 
   // our node ID
@@ -211,12 +210,12 @@ public:
   }
 
   // access to proxy instances
-  actor_namespace& get_namespace() {
-    return aut()->state.get_namespace();
+  proxy_registry& proxies() {
+    return aut()->state.proxies();
   }
 
   // stores the singleton pointer for convenience
-  detail::actor_registry* registry() {
+  actor_registry* registry() {
     return registry_;
   }
 
@@ -234,12 +233,12 @@ public:
 
   template <class... Ts>
   void to_payload(buffer& buf, const Ts&... xs) {
-    binary_serializer bs{std::back_inserter(buf), &get_namespace()};
+    binary_serializer bs{mpx_, buf};
     to_payload(bs, xs...);
   }
 
   void to_buf(buffer& buf, basp::header& hdr, payload_writer* writer) {
-    instance().write(buf, hdr, writer);
+    instance().write(mpx_, buf, hdr, writer);
   }
 
   template <class T, class... Ts>
@@ -253,14 +252,10 @@ public:
     to_buf(buf, hdr, &pw, xs...);
   }
 
-  binary_deserializer make_deserializer(const buffer& buf) {
-    return binary_deserializer{buf.data(), buf.size(), &get_namespace()};
-  }
-
   std::pair<basp::header, buffer> from_buf(const buffer& buf) {
     basp::header hdr;
-    auto bd = make_deserializer(buf);
-    read_hdr(bd, hdr);
+    binary_deserializer bd{mpx_, buf};
+    bd >> hdr;
     buffer payload;
     if (hdr.payload_len > 0) {
       std::copy(buf.begin() + basp::header_size, buf.end(),
@@ -270,7 +265,7 @@ public:
   }
 
   void connect_node(size_t i,
-                    maybe<accept_handle> ax = none,
+                    optional<accept_handle> ax = none,
                     actor_id published_actor_id = invalid_actor_id,
                     set<string> published_actor_ifs = std::set<std::string>{}) {
     auto src = ax ? *ax : ahdl_;
@@ -305,19 +300,21 @@ public:
              static_cast<uint64_t>(atom("SpawnServ")),
              this_node(), remote_node(i),
              any_vals, std::numeric_limits<actor_id>::max(),
+             std::vector<actor_addr>{},
              make_message(sys_atom::value, get_atom::value, "info"));
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
     auto path = tbl().lookup(remote_node(i));
-    CAF_REQUIRE(path != none);
-    CAF_CHECK(path->hdl == remote_hdl(i));
-    CAF_CHECK(path->next_hop == remote_node(i));
+    CAF_REQUIRE(path);
+    CAF_CHECK_EQUAL(path->hdl, remote_hdl(i));
+    CAF_CHECK_EQUAL(path->next_hop, remote_node(i));
   }
 
   std::pair<basp::header, buffer> read_from_out_buf(connection_handle hdl) {
     CAF_MESSAGE("read from output buffer for connection " << hdl.id());
     auto& buf = mpx_->output_buffer(hdl);
-    CAF_REQUIRE(buf.size() >= basp::header_size);
+    while (buf.size() < basp::header_size)
+      mpx()->exec_runnable();
     auto result = from_buf(buf);
     buf.erase(buf.begin(),
               buf.begin() + basp::header_size + result.first.payload_len);
@@ -330,14 +327,16 @@ public:
     std::tie(hdr, buf) = read_from_out_buf(hdl);
     CAF_MESSAGE("dispatch output buffer for connection " << hdl.id());
     CAF_REQUIRE(hdr.operation == basp::message_type::dispatch_message);
+    binary_deserializer source{mpx_, buf};
+    std::vector<strong_actor_ptr> stages;
     message msg;
-    auto source = make_deserializer(buf);
-    msg.deserialize(source);
-    auto src = registry_->get(hdr.source_actor);
+    source >> stages >> msg;
+    auto src = actor_cast<strong_actor_ptr>(registry_->get(hdr.source_actor));
     auto dest = registry_->get(hdr.dest_actor);
-    CAF_REQUIRE(dest != nullptr);
-    dest->enqueue(src ? src->address() : invalid_actor_addr,
-                  message_id::make(), std::move(msg), nullptr);
+    CAF_REQUIRE(dest);
+    dest->enqueue(mailbox_element::make(src, message_id::make(),
+                                       std::move(stages), std::move(msg)),
+                  nullptr);
   }
 
   class mock_t {
@@ -364,17 +363,17 @@ public:
                    variant<anything, actor_id> source_actor,
                    variant<anything, actor_id> dest_actor,
                    const Ts&... xs) {
-      CAF_MESSAGE("expect " << num << ". sent message to be a "
-                  << operation);
+      CAF_MESSAGE("expect " << num);
       buffer buf;
       this_->to_payload(buf, xs...);
       buffer& ob = this_->mpx()->output_buffer(hdl);
+      while (ob.size() < basp::header_size)
+        this_->mpx()->exec_runnable();
       CAF_MESSAGE("output buffer has " << ob.size() << " bytes");
-      CAF_REQUIRE(ob.size() >= basp::header_size);
       basp::header hdr;
       { // lifetime scope of source
-        auto source = this_->make_deserializer(ob);
-        basp::read_hdr(source, hdr);
+        binary_deserializer source{this_->mpx(), ob};
+        source >> hdr;
       }
       buffer payload;
       if (hdr.payload_len > 0) {
@@ -408,9 +407,11 @@ public:
 
   template <class... Ts>
   mock_t mock(connection_handle hdl, basp::header hdr, const Ts&... xs) {
-    CAF_MESSAGE("virtually send " << to_string(hdr.operation));
     buffer buf;
     to_buf(buf, hdr, nullptr, xs...);
+    CAF_MESSAGE("virtually send " << to_string(hdr.operation)
+                << " with " << (buf.size() - basp::header_size)
+                << " bytes payload");
     mpx()->virtual_send(hdl, buf);
     return {this};
   }
@@ -419,8 +420,10 @@ public:
     return {this};
   }
 
+  actor_system system;
+
 private:
-  intrusive_ptr<basp_broker> aut_;
+  basp_broker* aut_;
   accept_handle ahdl_;
   network::test_multiplexer* mpx_;
   node_id this_node_;
@@ -428,7 +431,14 @@ private:
   array<node_id, num_remote_nodes> remote_node_;
   array<connection_handle, num_remote_nodes> remote_hdl_;
   array<unique_ptr<scoped_actor>, num_remote_nodes> pseudo_remote_;
-  detail::actor_registry* registry_;
+  actor_registry* registry_;
+};
+
+class autoconn_enabled_fixture : public fixture {
+public:
+  autoconn_enabled_fixture() : fixture(true) {
+    // nop
+  }
 };
 
 } // namespace <anonymous>
@@ -439,7 +449,7 @@ CAF_TEST(empty_server_handshake) {
   // test whether basp instance correctly sends a
   // server handshake whene there's no actor published
   buffer buf;
-  instance().write_server_handshake(buf, none);
+  instance().write_server_handshake(mpx(), buf, none);
   basp::header hdr;
   buffer payload;
   std::tie(hdr, payload) = from_buf(buf);
@@ -457,16 +467,36 @@ CAF_TEST(non_empty_server_handshake) {
   // test whether basp instance correctly sends a
   // server handshake with published actors
   buffer buf;
-  instance().add_published_actor(4242, self().address(),
+  instance().add_published_actor(4242, actor_cast<strong_actor_ptr>(self()),
                                  {"caf::replies_to<@u16>::with<@u16>"});
-  instance().write_server_handshake(buf, 4242);
+  instance().write_server_handshake(mpx(), buf, 4242);
   buffer expected_buf;
   basp::header expected{basp::message_type::server_handshake, 0, basp::version,
                         this_node(), invalid_node_id,
                         self()->id(), invalid_actor_id};
   to_buf(expected_buf, expected, nullptr,
          self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
-  CAF_CHECK(hexstr(buf) == hexstr(expected_buf));
+  CAF_CHECK_EQUAL(hexstr(buf), hexstr(expected_buf));
+}
+
+CAF_TEST(remote_address_and_port) {
+  CAF_MESSAGE("connect node 1");
+  connect_node(1);
+  auto mm = system.middleman().actor_handle();
+  CAF_MESSAGE("ask MM about node 1");
+  self()->send(mm, get_atom::value, remote_node(1));
+  do {
+    mpx()->exec_runnable();
+  } while (! self()->has_next_message());
+  CAF_MESSAGE("receive result of MM");
+  self()->receive(
+    [&](const node_id& nid, const std::string& addr, uint16_t port) {
+      CAF_CHECK_EQUAL(nid, remote_node(1));
+      // all test nodes have address "test" and connection handle ID as port
+      CAF_CHECK_EQUAL(addr, "test");
+      CAF_CHECK_EQUAL(port, remote_hdl(1).id());
+    }
+  );
 }
 
 CAF_TEST(client_handshake_and_dispatch) {
@@ -475,32 +505,31 @@ CAF_TEST(client_handshake_and_dispatch) {
   mock(remote_hdl(0),
        {basp::message_type::dispatch_message, 0, 0,
         remote_node(0), this_node(), pseudo_remote(0)->id(), self()->id()},
+       std::vector<actor_addr>{},
        make_message(1, 2, 3))
   .expect(remote_hdl(0),
           basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
           this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
   // must've created a proxy for our remote actor
-  CAF_REQUIRE(get_namespace().count_proxies(remote_node(0)) == 1);
+  CAF_REQUIRE(proxies().count_proxies(remote_node(0)) == 1);
   // must've send remote node a message that this proxy is monitored now
   // receive the message
   self()->receive(
     [](int a, int b, int c) {
-      CAF_CHECK(a == 1);
-      CAF_CHECK(b == 2);
-      CAF_CHECK(c == 3);
+      CAF_CHECK_EQUAL(a, 1);
+      CAF_CHECK_EQUAL(b, 2);
+      CAF_CHECK_EQUAL(c, 3);
       return a + b + c;
-    },
-    THROW_ON_UNEXPECTED(self())
+    }
   );
   CAF_MESSAGE("exec message of forwarding proxy");
   mpx()->exec_runnable();
   dispatch_out_buf(remote_hdl(0)); // deserialize and send message from out buf
   pseudo_remote(0)->receive(
     [](int i) {
-      CAF_CHECK(i == 6);
-    },
-    THROW_ON_UNEXPECTED(pseudo_remote(0))
+      CAF_CHECK_EQUAL(i, 6);
+    }
   );
 }
 
@@ -525,8 +554,9 @@ CAF_TEST(message_forwarding) {
 CAF_TEST(publish_and_connect) {
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
-  publish(self(), 4242);
-  mpx()->exec_runnable(); // process publish message in basp_broker
+  auto res = system.middleman().publish(self(), 4242);
+  CAF_REQUIRE(res == 4242);
+  mpx()->flush_runnables(); // process publish message in basp_broker
   connect_node(0, ax, self()->id());
 }
 
@@ -535,10 +565,10 @@ CAF_TEST(remote_actor_and_send) {
   CAF_MESSAGE("self: " << to_string(self()->address()));
   mpx()->provide_scribe(lo, 4242, remote_hdl(0));
   CAF_REQUIRE(mpx()->pending_scribes().count(make_pair(lo, 4242)) == 1);
-  auto mm1 = get_middleman_actor();
-  actor result;
-  auto f = self()->sync_send(mm1, connect_atom::value,
-                             lo, uint16_t{4242});
+  auto mm1 = system.middleman().actor_handle();
+  actor result{unsafe_actor_handle_init};
+  auto f = self()->request(mm1, infinite,
+                           connect_atom::value, lo, uint16_t{4242});
   // wait until BASP broker has received and processed the connect message
   while (! aut()->valid(remote_hdl(0)))
     mpx()->exec_runnable();
@@ -561,39 +591,39 @@ CAF_TEST(remote_actor_and_send) {
           static_cast<uint64_t>(atom("SpawnServ")),
           this_node(), remote_node(0),
           any_vals, std::numeric_limits<actor_id>::max(),
+          std::vector<actor_id>{},
           make_message(sys_atom::value, get_atom::value, "info"))
   .expect(remote_hdl(0),
           basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
           this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
-  // basp broker should've send the proxy
-  f.await(
-    [&](ok_atom, node_id nid, actor_addr res, std::set<std::string> ifs) {
-      auto aptr = actor_cast<abstract_actor_ptr>(res);
-      CAF_REQUIRE(aptr.downcast<forwarding_actor_proxy>() != nullptr);
-      CAF_CHECK(get_namespace().get_all().size() == 1);
-      CAF_CHECK(get_namespace().count_proxies(remote_node(0)) == 1);
-      CAF_CHECK(nid == remote_node(0));
-      CAF_CHECK(res.node() == remote_node(0));
-      CAF_CHECK(res.id() == pseudo_remote(0)->id());
+  CAF_MESSAGE("BASP broker should've send the proxy");
+  f.receive(
+    [&](ok_atom, node_id nid, strong_actor_ptr res, std::set<std::string> ifs) {
+      CAF_REQUIRE(res);
+      auto aptr = actor_cast<abstract_actor*>(res);
+      CAF_REQUIRE(dynamic_cast<forwarding_actor_proxy*>(aptr) != nullptr);
+      CAF_CHECK_EQUAL(proxies().count_proxies(remote_node(0)), 1u);
+      CAF_CHECK_EQUAL(nid, remote_node(0));
+      CAF_CHECK_EQUAL(res->node(), remote_node(0));
+      CAF_CHECK_EQUAL(res->id(), pseudo_remote(0)->id());
       CAF_CHECK(ifs.empty());
-      auto proxy = get_namespace().get(remote_node(0), pseudo_remote(0)->id());
+      auto proxy = proxies().get(remote_node(0), pseudo_remote(0)->id());
       CAF_REQUIRE(proxy != nullptr);
-      CAF_REQUIRE(proxy->address() == res);
+      CAF_REQUIRE(proxy == res);
       result = actor_cast<actor>(res);
-    },
-    [&](error_atom, std::string& msg) {
-      throw logic_error(std::move(msg));
     }
   );
   CAF_MESSAGE("send message to proxy");
   anon_send(actor_cast<actor>(result), 42);
-  mpx()->exec_runnable(); // process forwarded message in basp_broker
+  mpx()->flush_runnables();
+//  mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock()
   .expect(remote_hdl(0),
           basp::message_type::dispatch_message, any_vals, uint64_t{0},
           this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id(),
+          std::vector<actor_id>{},
           make_message(42));
   auto msg = make_message("hi there!");
   CAF_MESSAGE("send message via BASP (from proxy)");
@@ -601,43 +631,44 @@ CAF_TEST(remote_actor_and_send) {
        {basp::message_type::dispatch_message, 0, 0,
         remote_node(0), this_node(),
         pseudo_remote(0)->id(), self()->id()},
+       std::vector<actor_id>{},
        make_message("hi there!"));
   self()->receive(
     [&](const string& str) {
-      CAF_CHECK(to_string(self()->current_sender()) == to_string(result));
-      CAF_CHECK(self()->current_sender() == result);
-      CAF_CHECK(str == "hi there!");
-    },
-    THROW_ON_UNEXPECTED(self())
+      CAF_CHECK_EQUAL(to_string(self()->current_sender()), to_string(result));
+      CAF_CHECK_EQUAL(self()->current_sender(), result.address());
+      CAF_CHECK_EQUAL(str, "hi there!");
+    }
   );
 }
 
 CAF_TEST(actor_serialize_and_deserialize) {
   auto testee_impl = [](event_based_actor* testee_self) -> behavior {
+    testee_self->set_default_handler(reflect_and_quit);
     return {
-      others >> [=] {
-        testee_self->quit();
-        return testee_self->current_message();
+      [] {
+        // nop
       }
     };
   };
   connect_node(0);
-  auto prx = get_namespace().get_or_put(remote_node(0), pseudo_remote(0)->id());
+  auto prx = proxies().get_or_put(remote_node(0), pseudo_remote(0)->id());
   mock()
   .expect(remote_hdl(0),
           basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
           this_node(), prx->node(),
           invalid_actor_id, prx->id());
-  CAF_CHECK(prx->node() == remote_node(0));
-  CAF_CHECK(prx->id() == pseudo_remote(0)->id());
-  auto testee = spawn(testee_impl);
-  registry()->put(testee->id(), testee->address());
+  CAF_CHECK_EQUAL(prx->node(), remote_node(0));
+  CAF_CHECK_EQUAL(prx->id(), pseudo_remote(0)->id());
+  auto testee = system.spawn(testee_impl);
+  registry()->put(testee->id(), actor_cast<strong_actor_ptr>(testee));
   CAF_MESSAGE("send message via BASP (from proxy)");
-  auto msg = make_message(prx->address());
+  auto msg = make_message(actor_cast<actor_addr>(prx));
   mock(remote_hdl(0),
        {basp::message_type::dispatch_message, 0, 0,
         prx->node(), this_node(),
         prx->id(), testee->id()},
+       std::vector<actor_id>{},
        msg);
   // testee must've responded (process forwarded message in BASP broker)
   CAF_MESSAGE("wait until BASP broker writes to its output buffer");
@@ -649,17 +680,19 @@ CAF_TEST(actor_serialize_and_deserialize) {
           basp::message_type::dispatch_message, any_vals, uint64_t{0},
           this_node(), prx->node(),
           testee->id(), prx->id(),
+          std::vector<actor_id>{},
           msg);
 }
 
 CAF_TEST(indirect_connections) {
-  // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node]
-  // (this node receives a message from jupiter via mars and responds via mars)
+  // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node];
+  // this node receives a message from jupiter via mars and responds via mars
+  // and any ad-hoc automatic connection requests are ignored
   CAF_MESSAGE("self: " << to_string(self()->address()));
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
-  publish(self(), 4242);
-  mpx()->exec_runnable(); // process publish message in basp_broker
+  system.middleman().publish(self(), 4242);
+  mpx()->flush_runnables(); // process publish message in basp_broker
   // connect to mars
   connect_node(1, ax, self()->id());
   // now, an actor from jupiter sends a message to us via mars
@@ -667,6 +700,7 @@ CAF_TEST(indirect_connections) {
        {basp::message_type::dispatch_message, 0, 0,
         remote_node(0), this_node(),
         pseudo_remote(0)->id(), self()->id()},
+       std::vector<actor_id>{},
        make_message("hello from jupiter!"))
   // this asks Jupiter if it has a 'SpawnServ'
   .expect(remote_hdl(1),
@@ -674,6 +708,7 @@ CAF_TEST(indirect_connections) {
           static_cast<uint64_t>(atom("SpawnServ")),
           this_node(), remote_node(0),
           any_vals, std::numeric_limits<actor_id>::max(),
+          std::vector<actor_id>{},
           make_message(sys_atom::value, get_atom::value, "info"))
   // this tells Jupiter that Earth learned the address of one its actors
   .expect(remote_hdl(1),
@@ -683,10 +718,9 @@ CAF_TEST(indirect_connections) {
   CAF_MESSAGE("receive message from jupiter");
   self()->receive(
     [](const std::string& str) -> std::string {
-      CAF_CHECK(str == "hello from jupiter!");
+      CAF_CHECK_EQUAL(str, "hello from jupiter!");
       return "hello from earth!";
-    },
-    THROW_ON_UNEXPECTED(self())
+    }
   );
   mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock()
@@ -694,38 +728,47 @@ CAF_TEST(indirect_connections) {
           basp::message_type::dispatch_message, any_vals, uint64_t{0},
           this_node(), remote_node(0),
           self()->id(), pseudo_remote(0)->id(),
+          std::vector<actor_id>{},
           make_message("hello from earth!"));
 }
 
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(basp_tests_with_autoconn, autoconn_enabled_fixture)
+
 CAF_TEST(automatic_connection) {
   // this tells our BASP broker to enable the automatic connection feature
-  anon_send(aut(), ok_atom::value,
-            "global.enable-automatic-connections", make_message(true));
-  mpx()->exec_runnable(); // process publish message in basp_broker
+  //anon_send(aut(), ok_atom::value,
+  //          "middleman.enable-automatic-connections", make_message(true));
+  //mpx()->exec_runnable(); // process publish message in basp_broker
   // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node]
   // (this node receives a message from jupiter via mars and responds via mars,
   //  but then also establishes a connection to jupiter directly)
   mpx()->provide_scribe("jupiter", 8080, remote_hdl(0));
-  CAF_CHECK(mpx()->pending_scribes().count(make_pair("jupiter", 8080)) == 1);
+  CAF_CHECK_EQUAL(mpx()->pending_scribes().count(make_pair("jupiter", 8080)),
+                  1u);
   CAF_MESSAGE("self: " << to_string(self()->address()));
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
-  publish(self(), 4242);
-  mpx()->exec_runnable(); // process publish message in basp_broker
+  system.middleman().publish(self(), 4242);
+  mpx()->flush_runnables(); // process publish message in basp_broker
   // connect to mars
   connect_node(1, ax, self()->id());
   CAF_CHECK_EQUAL(tbl().lookup_direct(remote_node(1)).id(), remote_hdl(1).id());
-  // now, an actor from jupiter sends a message to us via mars
+  CAF_MESSAGE("simulate that an actor from jupiter "
+              "sends a message to us via mars");
   mock(remote_hdl(1),
        {basp::message_type::dispatch_message, 0, 0,
         remote_node(0), this_node(),
         pseudo_remote(0)->id(), self()->id()},
+       std::vector<actor_id>{},
        make_message("hello from jupiter!"))
   .expect(remote_hdl(1),
           basp::message_type::dispatch_message, any_vals,
           static_cast<uint64_t>(atom("SpawnServ")),
           this_node(), remote_node(0),
           any_vals, std::numeric_limits<actor_id>::max(),
+          std::vector<actor_id>{},
           make_message(sys_atom::value, get_atom::value, "info"))
   .expect(remote_hdl(1),
           basp::message_type::dispatch_message, any_vals,
@@ -733,16 +776,17 @@ CAF_TEST(automatic_connection) {
           this_node(), remote_node(0),
           any_vals, // actor ID of an actor spawned by the BASP broker
           std::numeric_limits<actor_id>::max(),
+          std::vector<actor_id>{},
           make_message(get_atom::value, "basp.default-connectivity"))
   .expect(remote_hdl(1),
           basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
           this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
-  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0);
+  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0u);
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(0)), remote_node(1));
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(1)), invalid_node_id);
-  auto connection_helper = abstract_actor::latest_actor_id();
-  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0);
+  auto connection_helper = system.latest_actor_id();
+  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0u);
   // create a dummy config server and respond to the name lookup
   CAF_MESSAGE("receive ConfigServ of jupiter");
   network::address_listing res;
@@ -751,13 +795,14 @@ CAF_TEST(automatic_connection) {
        {basp::message_type::dispatch_message, 0, 0,
         this_node(), this_node(),
         invalid_actor_id, connection_helper},
+       std::vector<actor_id>{},
        make_message(ok_atom::value, "basp.default-connectivity",
                     make_message(uint16_t{8080}, std::move(res))));
   // our connection helper should now connect to jupiter and
   // send the scribe handle over to the BASP broker
-  mpx()->exec_runnable();
-  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0);
-  CAF_CHECK(mpx()->pending_scribes().count(make_pair("jupiter", 8080)) == 0);
+  while (mpx()->pending_scribes().count(make_pair("jupiter", 8080)) != 0)
+    mpx()->flush_runnables();
+  CAF_REQUIRE(mpx()->output_buffer(remote_hdl(1)).size() == 0);
   // send handshake from jupiter
   mock(remote_hdl(0),
        {basp::message_type::server_handshake, 0, basp::version,
@@ -776,10 +821,9 @@ CAF_TEST(automatic_connection) {
   CAF_MESSAGE("receive message from jupiter");
   self()->receive(
     [](const std::string& str) -> std::string {
-      CAF_CHECK(str == "hello from jupiter!");
+      CAF_CHECK_EQUAL(str, "hello from jupiter!");
       return "hello from earth!";
-    },
-    THROW_ON_UNEXPECTED(self())
+    }
   );
   mpx()->exec_runnable(); // process forwarded message in basp_broker
   CAF_MESSAGE("response message must take direct route now");
@@ -788,8 +832,9 @@ CAF_TEST(automatic_connection) {
           basp::message_type::dispatch_message, any_vals, uint64_t{0},
           this_node(), remote_node(0),
           self()->id(), pseudo_remote(0)->id(),
+          std::vector<actor_id>{},
           make_message("hello from earth!"));
-  CAF_CHECK(mpx()->output_buffer(remote_hdl(1)).size() == 0);
+  CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0u);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -20,6 +20,9 @@
 #ifndef CAF_DETAIL_CTM_HPP
 #define CAF_DETAIL_CTM_HPP
 
+#include <tuple>
+
+#include "caf/optional.hpp"
 #include "caf/delegated.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -36,46 +39,45 @@ namespace detail {
 template <class A, class B>
 struct ctm_cmp : std::false_type { };
 
-template <class In, class L, class R1, class R2>
-struct ctm_cmp<typed_mpi<In, L, R1>,
-               typed_mpi<In, L, R2>> {
-  static constexpr bool value = std::is_same<R1, R2>::value
-                                || std::is_same<R2, empty_type_list>::value;
+template <class In, class Out>
+struct ctm_cmp<typed_mpi<In, Out>,
+               typed_mpi<In, Out>> {
+  static constexpr bool value = true;
 };
 
+template <class In, class OutList>
+struct ctm_cmp<typed_mpi<In, OutList>,
+               typed_mpi<In, type_list<typed_continue_helper<OutList>>>>
+    : std::true_type { };
+
 template <class In, class Out>
-struct ctm_cmp<typed_mpi<In, Out, empty_type_list>,
-               typed_mpi<In, type_list<typed_continue_helper<Out>>, empty_type_list>>
+struct ctm_cmp<typed_mpi<In, type_list<Out>>,
+               typed_mpi<In, type_list<optional<Out>>>>
     : std::true_type { };
 
 template <class In, class... Ts>
-struct ctm_cmp<typed_mpi<In, type_list<Ts...>, empty_type_list>,
-               typed_mpi<In, type_list<typed_response_promise<Ts...>>, empty_type_list>>
-    : std::true_type { };
-
-template <class In, class L, class R>
-struct ctm_cmp<typed_mpi<In, L, R>,
-               typed_mpi<In, type_list<skip_message_t>, empty_type_list>>
-    : std::true_type { };
-
-template <class In, class L, class R>
-struct ctm_cmp<typed_mpi<In, L, R>,
-               typed_mpi<In, type_list<typed_response_promise<either_or_t<L, R>>>, empty_type_list>>
+struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
+               typed_mpi<In, type_list<typed_response_promise<Ts...>>>>
     : std::true_type { };
 
 template <class In, class... Ts>
-struct ctm_cmp<typed_mpi<In, type_list<Ts...>, empty_type_list>,
-               typed_mpi<In, type_list<delegated<Ts...>>, empty_type_list>>
+struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
+               typed_mpi<In, type_list<optional<std::tuple<Ts...>>>>>
     : std::true_type { };
 
-template <class In, class L, class R>
-struct ctm_cmp<typed_mpi<In, L, R>,
-               typed_mpi<In, type_list<delegated<either_or_t<L, R>>>, empty_type_list>>
+template <class In, class... Ts>
+struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
+               typed_mpi<In, type_list<result<Ts...>>>>
     : std::true_type { };
 
-template <class In, class L, class R>
-struct ctm_cmp<typed_mpi<In, L, R>,
-               typed_mpi<In, R, empty_type_list>>
+template <class In, class Out>
+struct ctm_cmp<typed_mpi<In, Out>,
+               typed_mpi<In, type_list<skip_t>>>
+    : std::true_type { };
+
+template <class In, class... Ts>
+struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
+               typed_mpi<In, type_list<delegated<Ts...>>>>
     : std::true_type { };
 
 template <class Xs, class Ys>

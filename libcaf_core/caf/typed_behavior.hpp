@@ -20,7 +20,6 @@
 #ifndef CAF_TYPED_BEHAVIOR_HPP
 #define CAF_TYPED_BEHAVIOR_HPP
 
-#include "caf/either.hpp"
 #include "caf/behavior.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
@@ -42,27 +41,17 @@ struct input_only<detail::type_list<Ts...>> {
   using type = detail::type_list<typename Ts::input_types...>;
 };
 
-using skip_list = detail::type_list<skip_message_t>;
-
-template <class Opt1, class Opt2>
-struct collapse_replies_to_statement {
-  using type = typename either<Opt1>::template or_else<Opt2>;
-};
-
-template <class List>
-struct collapse_replies_to_statement<List, none_t> {
-  using type = List;
-};
+using skip_list = detail::type_list<skip_t>;
 
 template <class Input, class RepliesToWith>
 struct same_input : std::is_same<Input, typename RepliesToWith::input_types> {};
 
 template <class Output, class RepliesToWith>
-struct same_output_or_skip_message_t {
+struct same_output_or_skip_t {
   using other = typename RepliesToWith::output_types;
   static constexpr bool value =
     std::is_same<Output, typename RepliesToWith::output_types>::value ||
-    std::is_same<Output, type_list<skip_message_t>>::value;
+    std::is_same<Output, type_list<skip_t>>::value;
 };
 
 template <class SList>
@@ -70,11 +59,7 @@ struct valid_input_predicate {
   template <class Expr>
   struct inner {
     using input_types = typename Expr::input_types;
-    using output_types =
-      typename collapse_replies_to_statement<
-        typename Expr::output_opt1_types,
-        typename Expr::output_opt2_types
-      >::type;
+    using output_types = typename Expr::output_types;
     // get matching elements for input type
     using filtered_slist =
       typename tl_filter<
@@ -87,7 +72,7 @@ struct valid_input_predicate {
                   "contains at least one pattern that is "
                   "not defined in the actor's type");
     static constexpr bool value = tl_exists<
-      filtered_slist, tbind<same_output_or_skip_message_t,
+      filtered_slist, tbind<same_output_or_skip_t,
                             output_types>::template type>::value;
     // check whether given output matches in the filtered list
     static_assert(value,
@@ -125,7 +110,7 @@ struct valid_input {
   // check for each element in IList that there's an element in SList that
   // (1) has an identical input type list
   // (2)  has an identical output type list
-  //   OR the output of the element in IList is skip_message_t
+  //   OR the output of the element in IList is skip_t
   static_assert(detail::tl_is_distinct<IList>::value,
                 "given pattern is not distinct");
   static constexpr bool value =
@@ -182,6 +167,16 @@ public:
     set(detail::make_behavior(x, xs...));
   }
 
+  struct unsafe_init { };
+
+  typed_behavior(unsafe_init, behavior bhvr) : bhvr_(std::move(bhvr)) {
+    // nop
+  }
+
+  inline void swap(typed_behavior& other) {
+    bhvr_.swap(other.bhvr_);
+  }
+
   explicit operator bool() const {
     return static_cast<bool>(bhvr_);
   }
@@ -214,11 +209,7 @@ private:
 
   template <class... Ts>
   void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {
-    using mpi =
-      typename detail::tl_filter_not<
-        detail::type_list<typename detail::deduce_mpi<Ts>::type...>,
-        detail::is_hidden_msg_handler
-      >::type;
+    using mpi = detail::type_list<typename detail::deduce_mpi<Ts>::type...>;
     static_assert(detail::tl_is_distinct<mpi>::value,
                   "multiple handler defintions found");
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();

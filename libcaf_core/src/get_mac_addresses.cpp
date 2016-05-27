@@ -169,8 +169,6 @@ std::vector<iface_info> get_mac_addresses() {
 #include <iterator>
 #include <algorithm>
 
-#include "caf/detail/singletons.hpp"
-
 namespace {
 
 constexpr size_t working_buffer_size = 15 * 1024; // 15kb by default

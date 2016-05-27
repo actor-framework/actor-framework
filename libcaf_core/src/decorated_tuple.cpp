@@ -24,6 +24,20 @@
 namespace caf {
 namespace detail {
 
+decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
+    : decorated_(std::move(d)),
+      mapping_(std::move(v)),
+      type_token_(0xFFFFFFFF) {
+  CAF_ASSERT(mapping_.empty()
+              || *(std::max_element(mapping_.begin(), mapping_.end()))
+                 < static_cast<const cow_ptr&>(decorated_)->size());
+  // calculate type token
+  for (size_t i = 0; i < mapping_.size(); ++i) {
+    type_token_ <<= 6;
+    type_token_ |= decorated_->type_nr(mapping_[i]);
+  }
+}
+
 decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
   auto ptr = dynamic_cast<const decorated_tuple*>(d.get());
   if (ptr) {
@@ -36,53 +50,50 @@ decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
   return make_counted<decorated_tuple>(std::move(d), std::move(v));
 }
 
-void* decorated_tuple::mutable_at(size_t pos) {
+message_data::cow_ptr decorated_tuple::copy() const {
+  return cow_ptr(new decorated_tuple(*this), false);
+}
+
+void* decorated_tuple::get_mutable(size_t pos) {
   CAF_ASSERT(pos < size());
-  return decorated_->mutable_at(mapping_[pos]);
+  return decorated_->get_mutable(mapping_[pos]);
+}
+
+void decorated_tuple::load(size_t pos, deserializer& source) {
+  CAF_ASSERT(pos < size());
+  return decorated_->load(mapping_[pos], source);
 }
 
 size_t decorated_tuple::size() const {
   return mapping_.size();
 }
 
-message_data::cow_ptr decorated_tuple::copy() const {
-  return cow_ptr(new decorated_tuple(*this), false);
-}
-
-const void* decorated_tuple::at(size_t pos) const {
-  CAF_ASSERT(pos < size());
-  return decorated_->at(mapping_[pos]);
-}
-
-bool decorated_tuple::match_element(size_t pos, uint16_t typenr,
-                                    const std::type_info* rtti) const {
-  return decorated_->match_element(mapping_[pos], typenr, rtti);
-}
-
 uint32_t decorated_tuple::type_token() const {
   return type_token_;
 }
 
-const char* decorated_tuple::uniform_name_at(size_t pos) const {
-  return decorated_->uniform_name_at(mapping_[pos]);
+message_data::rtti_pair decorated_tuple::type(size_t pos) const {
+  return decorated_->type(mapping_[pos]);
 }
 
-uint16_t decorated_tuple::type_nr_at(size_t pos) const {
-  return decorated_->type_nr_at(mapping_[pos]);
+const void* decorated_tuple::get(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  return decorated_->get(mapping_[pos]);
 }
 
-decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
-    : decorated_(std::move(d)),
-      mapping_(std::move(v)),
-      type_token_(0xFFFFFFFF) {
-  CAF_ASSERT(mapping_.empty()
-              || *(std::max_element(mapping_.begin(), mapping_.end()))
-                 < static_cast<const cow_ptr&>(decorated_)->size());
-  // calculate type token
-  for (size_t i = 0; i < mapping_.size(); ++i) {
-    type_token_ <<= 6;
-    type_token_ |= decorated_->type_nr_at(mapping_[i]);
-  }
+std::string decorated_tuple::stringify(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  return decorated_->stringify(mapping_[pos]);
+}
+
+type_erased_value_ptr decorated_tuple::copy(size_t pos) const {
+  CAF_ASSERT(pos < size());
+  return decorated_->copy(mapping_[pos]);
+}
+
+void decorated_tuple::save(size_t pos, serializer& sink) const {
+  CAF_ASSERT(pos < size());
+  return decorated_->save(mapping_[pos], sink);
 }
 
 } // namespace detail

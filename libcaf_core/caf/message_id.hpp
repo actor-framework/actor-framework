@@ -20,7 +20,9 @@
 #ifndef CAF_MESSAGE_ID_HPP
 #define CAF_MESSAGE_ID_HPP
 
+#include <string>
 #include <cstdint>
+#include <functional>
 
 #include "caf/config.hpp"
 #include "caf/message_priority.hpp"
@@ -61,6 +63,10 @@ public:
   inline message_id& operator++() {
     ++value_;
     return *this;
+  }
+
+  inline bool is_async() const {
+    return value_ == 0 || value_ == high_prioity_flag_mask;
   }
 
   inline bool is_response() const {
@@ -113,10 +119,12 @@ public:
     return result;
   }
 
-  static inline message_id make(message_priority prio
-                                = message_priority::normal) {
-    message_id res;
-    return prio == message_priority::high ? res.with_high_priority() : res;
+  static constexpr message_id make() {
+    return message_id{};
+  }
+
+  static constexpr message_id make(message_priority prio) {
+    return prio == message_priority::high ? high_prioity_flag_mask : 0;
   }
 
   long compare(const message_id& other) const {
@@ -124,13 +132,36 @@ public:
                                       : (value_ < other.value_ ? -1 : 1);
   }
 
+  template <class T>
+  friend void serialize(T& in_or_out, message_id& mid, const unsigned int) {
+    in_or_out & mid.value_;
+  }
+
 private:
-  explicit inline message_id(uint64_t value) : value_(value) {
+  constexpr message_id(uint64_t value) : value_(value) {
     // nop
   }
+
   uint64_t value_;
 };
 
+/// @relates message_id
+inline std::string to_string(const message_id& x) {
+  return std::to_string(x.integer_value());
+}
+
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::message_id> {
+  inline size_t operator()(caf::message_id x) const {
+    hash<uint64_t> f;
+    return f(x.integer_value());
+  }
+};
+
+} // namespace std
 
 #endif // CAF_MESSAGE_ID_HPP

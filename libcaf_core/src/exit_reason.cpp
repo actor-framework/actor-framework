@@ -20,36 +20,37 @@
 #include "caf/exit_reason.hpp"
 
 namespace caf {
-namespace exit_reason {
 
 namespace {
-constexpr const char* s_names_table[] = {
-  "not_exited",
+
+const char* exit_reason_strings[] = {
   "normal",
   "unhandled_exception",
-  "-invalid-",
-  "unhandled_sync_failure",
-  "-invalid-",
+  "unhandled_request_error",
   "unknown",
-  "out_of_workers"
+  "out_of_workers",
+  "user_shutdown",
+  "kill",
+  "remote_link_unreachable",
+  "unreachable"
 };
+
 } // namespace <anonymous>
 
-const char* as_string(uint32_t value) {
-  if (value <= out_of_workers) {
-    return s_names_table[value];
-  }
-  switch (value) {
-    case user_shutdown: return "user_shutdown";
-    case kill: return "kill";
-    case remote_link_unreachable: return "remote_link_unreachable";
-    default:
-      if (value < user_defined) {
-        return "-invalid-";
-      }
-      return "user_defined";
-  }
+
+const char* to_string(exit_reason x) {
+  auto index = static_cast<size_t>(x);
+  if (index > static_cast<size_t>(exit_reason::unreachable))
+    return "<unknown>";
+  return exit_reason_strings[index];
 }
 
-} // namespace exit_reason
+error make_error(exit_reason x) {
+  return {static_cast<uint8_t>(x), atom("exit")};
+}
+
+error make_error(exit_reason x, message context) {
+  return {static_cast<uint8_t>(x), atom("exit"), std::move(context)};
+}
+
 } // namespace caf

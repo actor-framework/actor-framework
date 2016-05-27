@@ -22,6 +22,9 @@
 
 #include <cstdint>
 
+#include "caf/fwd.hpp"
+#include "caf/exit_reason.hpp"
+
 namespace caf {
 
 class actor_addr;
@@ -35,11 +38,10 @@ namespace caf {
 namespace detail {
 
 struct sync_request_bouncer {
-  uint32_t rsn;
-  explicit sync_request_bouncer(uint32_t r);
-  void operator()(const actor_addr& sender, const message_id& mid) const;
+  error rsn;
+  explicit sync_request_bouncer(error r);
+  void operator()(const strong_actor_ptr& sender, const message_id& mid) const;
   void operator()(const mailbox_element& e) const;
-
 };
 
 } // namespace detail

@@ -7,28 +7,26 @@ file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set (LIBCAF_IO_SRCS
-     src/basp.cpp
      src/basp_broker.cpp
      src/abstract_broker.cpp
      src/broker.cpp
      src/default_multiplexer.cpp
      src/doorman.cpp
-     src/max_msg_size.cpp
      src/middleman.cpp
+     src/middleman_actor.cpp
      src/hook.cpp
      src/interfaces.cpp
-     src/publish.cpp
-     src/publish_local_groups.cpp
-     src/remote_actor.cpp
-     src/remote_group.cpp
      src/manager.cpp
-     src/set_middleman.cpp
      src/scribe.cpp
      src/stream_manager.cpp
      src/test_multiplexer.cpp
-     src/unpublish.cpp
      src/acceptor_manager.cpp
-     src/multiplexer.cpp)
+     src/multiplexer.cpp
+     # BASP files
+     src/header.cpp
+     src/message_type.cpp
+     src/routing_table.cpp
+     src/instance.cpp)
 
 add_custom_target(libcaf_io)
 

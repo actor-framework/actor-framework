@@ -25,22 +25,11 @@
 
 #include "caf/fwd.hpp"
 
-#include "caf/detail/logging.hpp"
+#include "caf/logger.hpp"
+
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
-
-template <class Archive, class U>
-typename std::enable_if<detail::is_serializable<U>::value>::type
-serialize_state(Archive& ar, U& st, const unsigned int version) {
-  serialize(ar, st, version);
-}
-
-template <class Archive, class U>
-typename std::enable_if<! detail::is_serializable<U>::value>::type
-serialize_state(Archive&, U&, const unsigned int) {
-  throw std::logic_error("serialize_state with unserializable type called");
-}
 
 /// An event-based actor with managed state. The state is constructed
 /// before `make_behavior` will get called and destroyed after the
@@ -51,7 +40,9 @@ template <class State, class Base = event_based_actor>
 class stateful_actor : public Base {
 public:
   template <class... Ts>
-  stateful_actor(Ts&&... xs) : Base(std::forward<Ts>(xs)...), state(state_) {
+  explicit stateful_actor(actor_config& cfg, Ts&&... xs)
+      : Base(cfg, std::forward<Ts>(xs)...),
+        state(state_) {
     if (detail::is_serializable<State>::value)
       this->is_serializable(true);
   }
@@ -61,12 +52,12 @@ public:
   }
 
   /// Destroys the state of this actor (no further overriding allowed).
-  void on_exit() override final {
+  void on_exit() final {
     CAF_LOG_TRACE("");
     state_.~State();
   }
 
-  const char* name() const override final {
+  const char* name() const final {
     return get_name(state_);
   }
 
@@ -91,6 +82,18 @@ public:
   /// @endcond
 
 private:
+  template <class Archive, class U>
+  typename std::enable_if<detail::is_serializable<U>::value>::type
+  serialize_state(Archive& ar, U& st, const unsigned int) {
+    ar & st;
+  }
+
+  template <class Archive, class U>
+  typename std::enable_if<! detail::is_serializable<U>::value>::type
+  serialize_state(Archive&, U&, const unsigned int) {
+    throw std::logic_error("serialize_state with unserializable type called");
+  }
+
   template <class T>
   typename std::enable_if<std::is_constructible<State, T>::value>::type
   cr_state(T arg) {

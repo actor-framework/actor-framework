@@ -25,8 +25,9 @@
 
 #include "caf/locks.hpp"
 #include "caf/actor.hpp"
-#include "caf/abstract_actor.hpp"
+#include "caf/execution_unit.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/monitorable_actor.hpp"
 
 #include "caf/detail/split_join.hpp"
 #include "caf/detail/shared_spinlock.hpp"
@@ -53,12 +54,12 @@ namespace caf {
 /// during the enqueue operation. Any user-defined policy thus has to dispatch
 /// messages with as little overhead as possible, because the dispatching
 /// runs in the context of the sender.
-class actor_pool : public abstract_actor {
+class actor_pool : public monitorable_actor {
 public:
   using uplock = upgrade_lock<detail::shared_spinlock>;
   using actor_vec = std::vector<actor>;
   using factory = std::function<actor ()>;
-  using policy = std::function<void (uplock&, const actor_vec&,
+  using policy = std::function<void (actor_system&, uplock&, const actor_vec&,
                                      mailbox_element_ptr&, execution_unit*)>;
 
   /// Returns a simple round robin dispatching policy.
@@ -91,30 +92,31 @@ public:
   ~actor_pool();
 
   /// Returns an actor pool without workers using the dispatch policy `pol`.
-  static actor make(policy pol);
+  static actor make(execution_unit* ptr, policy pol);
 
   /// Returns an actor pool with `n` workers created by the factory
   /// function `fac` using the dispatch policy `pol`.
-  static actor make(size_t n, factory fac, policy pol);
-
-  void enqueue(const actor_addr& sender, message_id mid,
-               message content, execution_unit* host) override;
+  static actor make(execution_unit* ptr, size_t n, factory fac, policy pol);
 
   void enqueue(mailbox_element_ptr what, execution_unit* host) override;
 
-  actor_pool();
+  actor_pool(actor_config& cfg);
+
+protected:
+  void on_cleanup() override;
 
 private:
-  bool filter(upgrade_lock<detail::shared_spinlock>&, const actor_addr& sender,
-              message_id mid, const message& content, execution_unit* host);
+  bool filter(upgrade_lock<detail::shared_spinlock>&,
+              const strong_actor_ptr& sender, message_id mid,
+              const message& content, execution_unit* host);
 
   // call without workers_mtx_ held
-  void quit();
+  void quit(execution_unit* host);
 
   detail::shared_spinlock workers_mtx_;
   std::vector<actor> workers_;
   policy policy_;
-  uint32_t planned_reason_;
+  exit_reason planned_reason_;
 };
 
 } // namespace caf

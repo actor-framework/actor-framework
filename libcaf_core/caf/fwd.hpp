@@ -25,17 +25,32 @@
 
 namespace caf {
 
-template <class>
-class intrusive_ptr;
+// -- 1 param templates --------------------------------------------------------
 
-template <class>
-class maybe;
+template <class> class optional;
+template <class> class intrusive_ptr;
+template <class> class behavior_type_of;
+template <class> class weak_intrusive_ptr;
+template <class> class typed_continue_helper;
 
-// classes
+// -- 3 param templates --------------------------------------------------------
+
+template <class, class, int> class actor_cast_access;
+
+// -- variadic templates -------------------------------------------------------
+
+template <class...> class result;
+template <class...> class delegated;
+template <class...> class typed_actor;
+template <class...> class typed_response_promise;
+template <class...> class typed_event_based_actor;
+
+// -- classes ------------------------------------------------------------------
+
 class actor;
 class group;
+class error;
 class message;
-class channel;
 class node_id;
 class duration;
 class behavior;
@@ -44,44 +59,53 @@ class actor_addr;
 class actor_pool;
 class message_id;
 class serializer;
-class local_actor;
 class actor_proxy;
+class ref_counted;
+class local_actor;
+class actor_config;
+class actor_system;
 class deserializer;
 class scoped_actor;
-class execution_unit;
 class abstract_actor;
 class abstract_group;
+class actor_registry;
 class blocking_actor;
+class execution_unit;
+class proxy_registry;
+class continue_helper;
 class mailbox_element;
 class message_handler;
-class uniform_type_info;
+class sync_timeout_msg;
+class response_promise;
 class event_based_actor;
-class binary_serializer;
-class binary_deserializer;
+class type_erased_tuple;
+class type_erased_value;
+class actor_control_block;
+class actor_system_config;
+class uniform_type_info_map;
 class forwarding_actor_proxy;
 
-// structs
+// -- structs ------------------------------------------------------------------
+
 struct unit_t;
-struct anything;
-struct exit_msg;
-struct down_msg;
+class exit_msg;
+class down_msg;
 struct timeout_msg;
 struct group_down_msg;
 struct invalid_actor_t;
-struct sync_exited_msg;
-struct sync_timeout_msg;
 struct invalid_actor_addr_t;
 struct illegal_message_element;
+struct prohibit_top_level_spawn_marker;
 
-// enums
+// -- enums --------------------------------------------------------------------
+
 enum class atom_value : uint64_t;
 
-// aliases
-using actor_id = uint32_t;
+// -- aliases ------------------------------------------------------------------
 
-// functions
-template <class T, typename U>
-T actor_cast(const U&);
+using actor_id = uint64_t;
+
+// -- I/O classes --------------------------------------------------------------
 
 namespace io {
 
@@ -96,21 +120,53 @@ struct header;
 
 } // namespace io
 
+// -- OpenCL classes -----------------------------------------------------------
+
+namespace opencl {
+
+class manager;
+
+} // namespace opencl
+
+// -- RIAC classes -------------------------------------------------------------
+
+namespace riac {
+
+class probe;
+
+} // namespace riac
+
+// -- scheduler classes --------------------------------------------------------
+
 namespace scheduler {
-  class abstract_worker;
-  class abstract_coordinator;
+
+class abstract_worker;
+class abstract_coordinator;
+
 } // namespace scheduler
 
+// -- detail classes -----------------------------------------------------------
+
 namespace detail {
-  class logging;
-  class disposer;
-  class singletons;
-  class message_data;
-  class group_manager;
-  class actor_registry;
-  class uniform_type_info_map;
+
+class disposer;
+class message_data;
+class group_manager;
+class dynamic_message_data;
+
 } // namespace detail
 
+// -- weak pointer aliases -----------------------------------------------------
+
+using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
+
+// -- intrusive pointer aliases ------------------------------------------------
+
+using strong_actor_ptr = intrusive_ptr<actor_control_block>;
+
+// -- unique pointer aliases ---------------------------------------------------
+
+using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf

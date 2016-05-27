@@ -60,11 +60,13 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-protobuf-examples      build without Google Protobuf examples
     --no-curl-examples          build without libcurl examples
     --no-unit-tests             build without unit tests
-    --no-opencl                 build without opencl
+    --no-opencl                 build without OpenCL module
     --no-nexus                  build without nexus
     --no-cash                   build without cash
     --no-benchmarks             build without benchmarks
-    --no-riac                   build without riac
+    --no-riac                   build without RIAC module
+    --no-tools                  build without CAF tools such as caf-run
+    --no-io                     build without I/O module
     --no-summary                do not print configuration before building
 
   Testing:
@@ -349,6 +351,12 @@ while [ $# -ne 0 ]; do
             ;;
         --no-riac)
             append_cache_entry CAF_NO_RIAC BOOL yes
+            ;;
+        --no-tools)
+            append_cache_entry CAF_NO_TOOLS BOOL yes
+            ;;
+        --no-io)
+            append_cache_entry CAF_NO_IO BOOL yes
             ;;
         --no-summary)
             append_cache_entry CAF_NO_SUMMARY BOOL yes

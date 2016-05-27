@@ -17,7 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/actor_registry.hpp"
+#include "caf/actor_registry.hpp"
 
 #include <mutex>
 #include <limits>
@@ -25,30 +25,29 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "caf/spawn.hpp"
+#include "caf/sec.hpp"
 #include "caf/locks.hpp"
+#include "caf/logger.hpp"
 #include "caf/exception.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/event_based_actor.hpp"
-
-#include "caf/experimental/announce_actor_type.hpp"
+#include "caf/uniform_type_info_map.hpp"
 
 #include "caf/scheduler/detached_threads.hpp"
 
-#include "caf/detail/logging.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
-namespace detail {
 
 namespace {
 
-using exclusive_guard = unique_lock<shared_spinlock>;
-using shared_guard = shared_lock<shared_spinlock>;
+using exclusive_guard = unique_lock<detail::shared_spinlock>;
+using shared_guard = shared_lock<detail::shared_spinlock>;
 
 } // namespace <anonymous>
 
@@ -56,59 +55,47 @@ actor_registry::~actor_registry() {
   // nop
 }
 
-actor_registry::actor_registry() : running_(0) {
+actor_registry::actor_registry(actor_system& sys) : running_(0), system_(sys) {
   // nop
 }
 
-actor_registry::value_type actor_registry::get_entry(actor_id key) const {
+strong_actor_ptr actor_registry::get(actor_id key) const {
   shared_guard guard(instances_mtx_);
   auto i = entries_.find(key);
-  if (i != entries_.end()) {
+  if (i != entries_.end())
     return i->second;
-  }
-  CAF_LOG_DEBUG("key not found, assume the actor no longer exists: " << key);
-  return {nullptr, exit_reason::unknown};
+  CAF_LOG_DEBUG("key invalid, assume actor no longer exists:" << CAF_ARG(key));
+  return nullptr;
 }
 
-void actor_registry::put(actor_id key, const abstract_actor_ptr& val) {
-  if (val == nullptr) {
+void actor_registry::put(actor_id key, strong_actor_ptr val) {
+  CAF_LOG_TRACE(CAF_ARG(key));
+  if (! val)
     return;
-  }
   { // lifetime scope of guard
     exclusive_guard guard(instances_mtx_);
-    if (! entries_.emplace(key,
-                           value_type{val, exit_reason::not_exited}).second) {
-      // already defined
+    if (! entries_.emplace(key, val).second)
       return;
-    }
   }
   // attach functor without lock
-  CAF_LOG_INFO("added actor with ID " << key);
+  CAF_LOG_INFO("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
-  val->attach_functor([key, reg](uint32_t reason) { reg->erase(key, reason); });
+  val->get()->attach_functor([key, reg]() {
+    reg->erase(key);
+  });
 }
 
-void actor_registry::put(actor_id key, const actor_addr& value) {
-  auto ptr = actor_cast<abstract_actor_ptr>(value);
-  put(key, ptr);
-}
-
-void actor_registry::erase(actor_id key, uint32_t reason) {
+void actor_registry::erase(actor_id key) {
   exclusive_guard guard(instances_mtx_);
-  auto i = entries_.find(key);
-  if (i != entries_.end()) {
-    auto& entry = i->second;
-    CAF_LOG_INFO("erased actor with ID " << key << ", reason " << reason);
-    entry.first = nullptr;
-    entry.second = reason;
-  }
+  entries_.erase(key);
 }
 
 void actor_registry::inc_running() {
 # if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_DEBUG
-    CAF_LOG_DEBUG("new value = " << ++running_);
+  auto value = ++running_;
+  CAF_LOG_DEBUG(CAF_ARG(value));
 # else
-    ++running_;
+  ++running_;
 # endif
 }
 
@@ -125,106 +112,96 @@ void actor_registry::dec_running() {
   CAF_LOG_DEBUG(CAF_ARG(new_val));
 }
 
-void actor_registry::await_running_count_equal(size_t expected) {
+void actor_registry::await_running_count_equal(size_t expected) const {
   CAF_ASSERT(expected == 0 || expected == 1);
   CAF_LOG_TRACE(CAF_ARG(expected));
   std::unique_lock<std::mutex> guard{running_mtx_};
   while (running_ != expected) {
-    CAF_LOG_DEBUG("count = " << running_.load());
+    CAF_LOG_DEBUG(CAF_ARG(running_.load()));
     running_cv_.wait(guard);
   }
 }
 
-actor actor_registry::get_named(atom_value key) const {
+strong_actor_ptr actor_registry::get(atom_value key) const {
   shared_guard guard{named_entries_mtx_};
   auto i = named_entries_.find(key);
   if (i == named_entries_.end())
-    return invalid_actor;
+    return nullptr;
   return i->second;
 }
 
-void actor_registry::put_named(atom_value key, actor value) {
+void actor_registry::put(atom_value key, strong_actor_ptr value) {
   if (value)
-    value->attach_functor([=](uint32_t) {
-      detail::singletons::get_actor_registry()->put_named(key, invalid_actor);
+    value->get()->attach_functor([=] {
+      system_.registry().put(key, nullptr);
     });
   exclusive_guard guard{named_entries_mtx_};
   named_entries_.emplace(key, std::move(value));
 }
 
-auto actor_registry::named_actors() const -> named_entries {
+auto actor_registry::named_actors() const -> name_map {
   shared_guard guard{named_entries_mtx_};
   return named_entries_;
 }
 
-actor_registry* actor_registry::create_singleton() {
-  return new actor_registry;
-}
-
-void actor_registry::dispose() {
-  delete this;
-}
-
-void actor_registry::stop() {
-  scoped_actor self{true};
-  try {
-    for (auto& kvp : named_entries_) {
-      self->monitor(kvp.second);
-      self->send_exit(kvp.second, exit_reason::kill);
-      self->receive(
-        [](const down_msg&) {
-          // nop
-        }
-      );
-    }
+namespace {
+struct kvstate {
+  using key_type = std::string;
+  using mapped_type = message;
+  using subscriber_set = std::unordered_set<strong_actor_ptr>;
+  using topic_set = std::unordered_set<std::string>;
+  std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
+  std::unordered_map<strong_actor_ptr, topic_set> subscribers;
+  const char* name = "caf.config_server";
+  template <class Processor>
+  friend void serialize(Processor& proc, kvstate& x, const unsigned int) {
+    proc & x.data;
+    proc & x.subscribers;
   }
-  catch (actor_exited&) {
-    CAF_LOG_ERROR("actor_exited thrown in actor_registry::stop");
-  }
-  named_entries_.clear();
-}
+};
+} // namespace <anonymous>
 
-void actor_registry::initialize() {
-  using namespace experimental;
-  struct kvstate {
-    using key_type = std::string;
-    using mapped_type = message;
-    using subscriber_set = std::unordered_set<actor>;
-    using topic_set = std::unordered_set<std::string>;
-    std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
-    std::unordered_map<actor,topic_set> subscribers;
-    const char* name = "caf.config_server";
-  };
+void actor_registry::start() {
   auto kvstore = [](stateful_actor<kvstate>* self) -> behavior {
+    CAF_LOG_TRACE("");
     std::string wildcard = "*";
     auto unsubscribe_all = [=](actor subscriber) {
-      if (! subscriber)
-        return;
       auto& subscribers = self->state.subscribers;
-      auto i = subscribers.find(subscriber);
+      auto ptr = actor_cast<strong_actor_ptr>(subscriber);
+      auto i = subscribers.find(ptr);
       if (i == subscribers.end())
         return;
       for (auto& key : i->second)
-        self->state.data[key].second.erase(subscriber);
+        self->state.data[key].second.erase(ptr);
       subscribers.erase(i);
     };
+    self->set_down_handler([=](down_msg& dm) {
+      CAF_LOG_TRACE(CAF_ARG(dm));
+      auto ptr = actor_cast<strong_actor_ptr>(dm.source);
+      if (ptr)
+        unsubscribe_all(actor_cast<actor>(std::move(ptr)));
+    });
     return {
       [=](put_atom, const std::string& key, message& msg) {
+        CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(msg));
         if (key == "*")
           return;
         auto& vp = self->state.data[key];
-        if (vp.first == msg)
-          return;
         vp.first = std::move(msg);
-        for (auto& subscriber : vp.second)
+        for (auto& subscriber_ptr : vp.second) {
+          // we never put a nullptr in our map
+          auto subscriber = actor_cast<actor>(subscriber_ptr);
           if (subscriber != self->current_sender())
             self->send(subscriber, update_atom::value, key, vp.second);
+        }
         // also iterate all subscribers for '*'
         for (auto& subscriber : self->state.data[wildcard].second)
           if (subscriber != self->current_sender())
-            self->send(subscriber, update_atom::value, key, vp.second);
+            self->send(actor_cast<actor>(subscriber), update_atom::value,
+                       key, vp.second);
       },
       [=](get_atom, std::string& key) -> message {
+        CAF_LOG_TRACE(CAF_ARG(key));
         if (key == wildcard) {
           std::vector<std::pair<std::string, message>> msgs;
           for (auto& kvp : self->state.data)
@@ -238,7 +215,8 @@ void actor_registry::initialize() {
                                                         : make_message());
       },
       [=](subscribe_atom, const std::string& key) {
-        auto subscriber = actor_cast<actor>(self->current_sender());
+        auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
+        CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
         if (! subscriber)
           return;
         self->state.data[key].second.insert(subscriber);
@@ -252,21 +230,30 @@ void actor_registry::initialize() {
         }
       },
       [=](unsubscribe_atom, const std::string& key) {
-        auto subscriber = actor_cast<actor>(self->current_sender());
+        auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
         if (! subscriber)
           return;
+        CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
         if (key == wildcard) {
-          unsubscribe_all(actor_cast<actor>(subscriber));
+          unsubscribe_all(actor_cast<actor>(std::move(subscriber)));
           return;
         }
         self->state.subscribers[subscriber].erase(key);
         self->state.data[key].second.erase(subscriber);
-      },
-      [=](const down_msg& dm) {
-        unsubscribe_all(actor_cast<actor>(dm.source));
-      },
-      others >> [] {
-        return make_message(error_atom::value, "unsupported operation");
+      }
+    };
+  };
+  auto spawn_serv = [](event_based_actor* self) -> behavior {
+    CAF_LOG_TRACE("");
+    return {
+      [=](get_atom, const std::string& name, message& args)
+      -> result<ok_atom, strong_actor_ptr, std::set<std::string>> {
+        CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
+        actor_config cfg{self->context()};
+        auto res = self->system().types().make_actor(name, cfg, args);
+        if (! res.first)
+          return sec::cannot_spawn_actor_from_arguments;
+        return {ok_atom::value, res.first, res.second};
       }
     };
   };
@@ -274,9 +261,34 @@ void actor_registry::initialize() {
   //       because the scheduler will make sure that the registry is running
   //       as part of its initialization; hence, all actors have to
   //       use the lazy_init flag
-  named_entries_.emplace(atom("SpawnServ"), spawn_announce_actor_type_server());
-  named_entries_.emplace(atom("ConfigServ"), spawn<hidden+lazy_init>(kvstore));
+  //named_entries_.emplace(atom("SpawnServ"), system_.spawn_announce_actor_type_server());
+  auto cs = system_.spawn<hidden+lazy_init>(kvstore);
+  put(atom("ConfigServ"), actor_cast<strong_actor_ptr>(std::move(cs)));
+  auto ss = system_.spawn<hidden+lazy_init>(spawn_serv);
+  put(atom("SpawnServ"), actor_cast<strong_actor_ptr>(std::move(ss)));
 }
 
-} // namespace detail
+void actor_registry::stop() {
+  class dropping_execution_unit : public execution_unit {
+  public:
+    dropping_execution_unit(actor_system* sys) : execution_unit(sys) {
+      // nop
+    }
+    void exec_later(resumable*) override {
+      // should not happen in the first place
+      CAF_LOG_ERROR("actor registry actor called exec_later during shutdown");
+    }
+  };
+  // the scheduler is already stopped -> invoke exit messages manually
+  dropping_execution_unit dummy{&system_};
+  for (auto& kvp : named_entries_) {
+    auto mp = mailbox_element::make(nullptr, invalid_message_id, {},
+                                    exit_msg{kvp.second->address(),
+                                             exit_reason::kill});
+    auto ptr = static_cast<local_actor*>(actor_cast<abstract_actor*>(kvp.second));
+    ptr->exec_single_event(&dummy, mp);
+  }
+  named_entries_.clear();
+}
+
 } // namespace caf

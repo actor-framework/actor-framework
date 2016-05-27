@@ -40,7 +40,7 @@ namespace io {
 ///   // ifs: Interface of given actor.
 ///   // addr: IP address to listen to or empty for any.
 ///   // reuse:_addr: Enables or disables SO_REUSEPORT option.
-///   (publish_atom, uint16_t port, actor_addr whom,
+///   (publish_atom, uint16_t port, strong_actor_ptr whom,
 ///    set<string> ifs, string addr, bool reuse_addr)
 ///   -> either (ok_atom, uint16_t port)
 ///      or     (error_atom, string error_string)
@@ -57,19 +57,19 @@ namespace io {
 ///      or     (error_atom, string error_string)
 ///
 ///   // Queries a remote node and returns an ID to this node as well as
-///   // an `actor_addr` to a remote actor if an actor was published at this
+///   // an `strong_actor_ptr` to a remote actor if an actor was published at this
 ///   // port. The actor address must be cast to either `actor` or
 ///   // `typed_actor` using `actor_cast` after validating `ifs`.
 ///   // hostname: IP address or DNS hostname.
 ///   // port: TCP port.
 ///   (connect_atom, string hostname, uint16_t port)
-///   -> either (ok_atom, node_id nid, actor_addr remote_actor, set<string> ifs)
+///   -> either (ok_atom, node_id nid, strong_actor_ptr remote_actor, set<string> ifs)
 ///      or     (error_atom, string error_string)
 ///
 ///   // Closes `port` if it is mapped to `whom`.
 ///   // whom: A published actor.
 ///   // port: Used TCP port.
-///   (unpublish_atom, actor_addr whom, uint16_t port)
+///   (unpublish_atom, strong_actor_ptr whom, uint16_t port)
 ///   -> either (ok_atom)
 ///      or     (error_atom, string error_string)
 ///
@@ -87,40 +87,34 @@ namespace io {
 ///   // name: Announced type name of the actor.
 ///   // args: Initialization arguments for the actor.
 ///   (spawn_atom, node_id nid, string name, message args)
-///   -> either (ok_atom, actor_addr, set<string>
+///   -> either (ok_atom, strong_actor_ptr, set<string>
 ///      or     (error_atom, string error_string)
 ///
 /// }
 /// ~~~
 using middleman_actor =
   typed_actor<
-    replies_to<publish_atom, uint16_t, actor_addr,
+    replies_to<publish_atom, uint16_t, strong_actor_ptr,
                std::set<std::string>, std::string, bool>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
+    ::with<ok_atom, uint16_t>,
 
     replies_to<open_atom, uint16_t, std::string, bool>
-    ::with_either<ok_atom, uint16_t>
-    ::or_else<error_atom, std::string>,
+    ::with<ok_atom, uint16_t>,
 
     replies_to<connect_atom, std::string, uint16_t>
-    ::with_either<ok_atom, node_id, actor_addr, std::set<std::string>>
-    ::or_else<error_atom, std::string>,
+    ::with<ok_atom, node_id, strong_actor_ptr, std::set<std::string>>,
 
-    replies_to<unpublish_atom, actor_addr, uint16_t>
-    ::with_either<ok_atom>
-    ::or_else<error_atom, std::string>,
+    reacts_to<unpublish_atom, actor_addr, uint16_t>,
 
-    replies_to<close_atom, uint16_t>
-    ::with_either<ok_atom>
-    ::or_else<error_atom, std::string>,
+    reacts_to<close_atom, uint16_t>,
 
     replies_to<spawn_atom, node_id, std::string, message>
-    ::with_either<ok_atom, actor_addr, std::set<std::string>>
-    ::or_else<error_atom, std::string>>;
+    ::with<ok_atom, strong_actor_ptr, std::set<std::string>>,
 
-/// Returns a handle for asynchronous networking operations.
-middleman_actor get_middleman_actor(); // implemented in middleman.cpp
+    replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
+
+/// @relates middleman_actor
+middleman_actor make_middleman_actor(actor_system& sys, actor default_broker);
 
 } // namespace io
 } // namespace caf

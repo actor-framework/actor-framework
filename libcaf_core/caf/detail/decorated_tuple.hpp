@@ -25,7 +25,6 @@
 
 #include "caf/config.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/uniform_type_info.hpp"
 
 #include "caf/detail/type_list.hpp"
 
@@ -37,33 +36,47 @@ namespace detail {
 
 class decorated_tuple : public message_data {
 public:
-  decorated_tuple& operator=(const decorated_tuple&) = delete;
-
-  using vector_type = std::vector<size_t>;
+  // -- member types -----------------------------------------------------------
 
   using message_data::cow_ptr;
 
+  using vector_type = std::vector<size_t>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   decorated_tuple(cow_ptr&&, vector_type&&);
 
-  // creates a typed subtuple from `d` with mapping `v`
   static cow_ptr make(cow_ptr d, vector_type v);
 
-  void* mutable_at(size_t pos) override;
+  decorated_tuple& operator=(const decorated_tuple&) = delete;
 
-  size_t size() const override;
+  // -- overridden observers of message_data -----------------------------------
 
   cow_ptr copy() const override;
 
-  const void* at(size_t pos) const override;
+  // -- overridden modifiers of type_erased_tuple ------------------------------
 
-  bool match_element(size_t pos, uint16_t typenr,
-                     const std::type_info* rtti) const override;
+  void* get_mutable(size_t pos) override;
+
+  void load(size_t pos, deserializer& source) override;
+
+  // -- overridden observers of type_erased_tuple ------------------------------
+
+  size_t size() const override;
 
   uint32_t type_token() const override;
 
-  const char* uniform_name_at(size_t pos) const override;
+  rtti_pair type(size_t pos) const override;
 
-  uint16_t type_nr_at(size_t pos) const override;
+  const void* get(size_t pos) const override;
+
+  std::string stringify(size_t pos) const override;
+
+  type_erased_value_ptr copy(size_t pos) const override;
+
+  void save(size_t pos, serializer& sink) const override;
+
+  // -- inline observers -------------------------------------------------------
 
   inline const cow_ptr& decorated() const {
     return decorated_;
@@ -74,7 +87,11 @@ public:
   }
 
 private:
+  // -- constructors, destructors, and assignment operators --------------------
+
   decorated_tuple(const decorated_tuple&) = default;
+
+  // -- data members -----------------------------------------------------------
 
   cow_ptr decorated_;
   vector_type mapping_;

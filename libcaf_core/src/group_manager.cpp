@@ -27,16 +27,14 @@
 
 #include "caf/all.hpp"
 #include "caf/group.hpp"
-#include "caf/to_string.hpp"
 #include "caf/message.hpp"
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/event_based_actor.hpp"
 
-#include "caf/detail/group_manager.hpp"
+#include "caf/group_manager.hpp"
 
 namespace caf {
-namespace detail {
 
 namespace {
 
@@ -48,98 +46,90 @@ using upgrade_to_unique_guard = upgrade_to_unique_lock<detail::shared_spinlock>;
 class local_broker;
 class local_group_module;
 
-void await_all_locals_down(std::initializer_list<actor> xs) {
-  CAF_LOGF_TRACE("");
-  size_t awaited_down_msgs = 0;
-  scoped_actor self{true};
-  for (auto& x : xs) {
-    if (x != invalid_actor && ! x.is_remote()) {
-      self->monitor(x);
-      self->send_exit(x, exit_reason::user_shutdown);
-      ++awaited_down_msgs;
+void await_all_locals_down(actor_system& sys, std::initializer_list<actor> xs) {
+  CAF_LOG_TRACE("");
+  scoped_actor self{sys, true};
+  std::vector<actor> ys;
+  for (auto& x : xs)
+    if (x.node() == sys.node()) {
+      self->send_exit(x, exit_reason::kill);
+      ys.push_back(x);
     }
-  }
-  for (size_t i = 0; i < awaited_down_msgs; ++i) {
-    self->receive(
-      [](const down_msg&) {
-        // nop
-      },
-      after(std::chrono::seconds(1)) >> [&] {
-        throw std::logic_error("at least one actor did not quit within 1s");
-      }
-    );
-  }
+  self->wait_for(ys);
 }
 
 class local_group : public abstract_group {
 public:
-  void send_all_subscribers(const actor_addr& sender, const message& msg,
+  void send_all_subscribers(const strong_actor_ptr& sender, const message& msg,
                             execution_unit* host) {
-    CAF_LOG_TRACE(CAF_TARG(sender, to_string) << ", "
-                  << CAF_TARG(msg, to_string));
+    CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(msg));
     shared_guard guard(mtx_);
-    for (auto& s : subscribers_) {
-      actor_cast<abstract_actor_ptr>(s)->enqueue(sender, invalid_message_id,
-                                                 msg, host);
-    }
+    for (auto& s : subscribers_)
+      s->enqueue(sender, invalid_message_id, msg, host);
   }
 
-  void enqueue(const actor_addr& sender, message_id, message msg,
+  void enqueue(strong_actor_ptr sender, message_id, message msg,
                execution_unit* host) override {
-    CAF_LOG_TRACE(CAF_TARG(sender, to_string) << ", "
-                  << CAF_TARG(msg, to_string));
+    CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(msg));
     send_all_subscribers(sender, msg, host);
     broker_->enqueue(sender, invalid_message_id, msg, host);
   }
 
-  std::pair<bool, size_t> add_subscriber(const actor_addr& who) {
-    CAF_LOG_TRACE(CAF_TSARG(who));
+  std::pair<bool, size_t> add_subscriber(strong_actor_ptr who) {
+    CAF_LOG_TRACE(CAF_ARG(who));
+    if (! who)
+      return {false, subscribers_.size()};
     exclusive_guard guard(mtx_);
-    if (who && subscribers_.insert(who).second) {
-      return {true, subscribers_.size()};
-    }
-    return {false, subscribers_.size()};
+    auto res = subscribers_.emplace(std::move(who)).second;
+    return {res, subscribers_.size()};
   }
 
-  std::pair<bool, size_t> erase_subscriber(const actor_addr& who) {
+  std::pair<bool, size_t> erase_subscriber(const actor_control_block* who) {
     CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     exclusive_guard guard(mtx_);
-    auto success = subscribers_.erase(who) > 0;
-    return {success, subscribers_.size()};
+    auto cmp = [](const strong_actor_ptr& lhs, const actor_control_block* rhs) {
+      return actor_addr::compare(lhs.get(), rhs) < 0;
+    };
+    auto e = subscribers_.end();
+    auto i = std::lower_bound(subscribers_.begin(), e, who, cmp);
+    if (i == e || actor_addr::compare(i->get(), who) != 0)
+      return {false, subscribers_.size()};
+    subscribers_.erase(i);
+    return {true, subscribers_.size()};
   }
 
-  bool subscribe(const actor_addr& who) override {
-    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
-    if (add_subscriber(who).first)
+  bool subscribe(strong_actor_ptr who) override {
+    CAF_LOG_TRACE(CAF_ARG(who));
+    if (add_subscriber(std::move(who)).first)
       return true;
     return false;
   }
 
-  void unsubscribe(const actor_addr& who) override {
-    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
+  void unsubscribe(const actor_control_block* who) override {
+    CAF_LOG_TRACE(CAF_ARG(who));
     erase_subscriber(who);
   }
 
-  void serialize(serializer* sink) override;
+  void save(serializer& sink) const override;
 
   void stop() override {
     CAF_LOG_TRACE("");
-    await_all_locals_down({broker_});
-    broker_ = invalid_actor;
+    await_all_locals_down(system(), {broker_});
+    actor tmp{std::move(broker_)}; // manually break cycle
   }
 
   const actor& broker() const {
     return broker_;
   }
 
-  local_group(bool spawn_local_broker, local_group_module* mod,
-              std::string id, const node_id& nid);
+  local_group(actor_system& sys, optional<actor> local_broker,
+              local_group_module* mod, std::string id, const node_id& nid);
 
   ~local_group();
 
 protected:
   detail::shared_spinlock mtx_;
-  std::set<actor_addr> subscribers_;
+  std::set<strong_actor_ptr> subscribers_;
   actor broker_;
 };
 
@@ -147,7 +137,9 @@ using local_group_ptr = intrusive_ptr<local_group>;
 
 class local_broker : public event_based_actor {
 public:
-  explicit local_broker(local_group_ptr g) : group_(std::move(g)) {
+  explicit local_broker(actor_config& cfg, local_group_ptr g)
+      : event_based_actor(cfg),
+        group_(std::move(g)) {
     // nop
   }
 
@@ -156,45 +148,49 @@ public:
     group_.reset();
   }
 
+  const char* name() const override {
+    return "local_broker";
+  }
+
   behavior make_behavior() override {
+    CAF_LOG_TRACE("");
+    // instead of dropping "unexpected" messages,
+    // we simply forward them to our acquaintances
+    auto fwd = [=](local_actor*, const type_erased_tuple* ptr) -> result<message> {
+      send_to_acquaintances(message::from(ptr));
+      return message{};
+    };
+    set_default_handler(fwd);
+    set_down_handler([=](down_msg& dm) {
+      CAF_LOG_TRACE(CAF_ARG(dm));
+      auto first = acquaintances_.begin();
+      auto last = acquaintances_.end();
+      auto i = std::find_if(first, last, [&](const actor& a) {
+        return a == dm.source;
+      });
+      if (i != last)
+        acquaintances_.erase(i);
+    });
+    // return behavior
     return {
       [=](join_atom, const actor& other) {
-        CAF_LOG_TRACE(CAF_TSARG(other));
-        if (other && acquaintances_.insert(other).second) {
+        CAF_LOG_TRACE(CAF_ARG(other));
+        if (acquaintances_.insert(other).second) {
           monitor(other);
         }
       },
       [=](leave_atom, const actor& other) {
-        CAF_LOG_TRACE(CAF_TSARG(other));
-        if (other && acquaintances_.erase(other) > 0) {
+        CAF_LOG_TRACE(CAF_ARG(other));
+        acquaintances_.erase(other);
+        if (acquaintances_.erase(other) > 0)
           demonitor(other);
-        }
       },
       [=](forward_atom, const message& what) {
-        CAF_LOG_TRACE(CAF_TSARG(what));
+        CAF_LOG_TRACE(CAF_ARG(what));
         // local forwarding
-        group_->send_all_subscribers(current_sender(), what, host());
+        group_->send_all_subscribers(current_element_->sender, what, context());
         // forward to all acquaintances
         send_to_acquaintances(what);
-      },
-      [=](const down_msg&) {
-        auto sender = current_sender();
-        CAF_LOG_TRACE(CAF_TSARG(sender));
-        if (sender) {
-          auto first = acquaintances_.begin();
-          auto last = acquaintances_.end();
-          auto i = std::find_if(first, last, [=](const actor& a) {
-            return a == sender;
-          });
-          if (i != last) {
-            acquaintances_.erase(i);
-          }
-        }
-      },
-      others >> [=] {
-        auto msg = current_message();
-        CAF_LOG_TRACE(CAF_TSARG(msg));
-        send_to_acquaintances(msg);
       }
     };
   }
@@ -202,13 +198,11 @@ public:
 private:
   void send_to_acquaintances(const message& what) {
     // send to all remote subscribers
-    auto sender = current_sender();
-    CAF_LOG_DEBUG("forward message to " << acquaintances_.size()
-                  << " acquaintances; " << CAF_TSARG(sender) << ", "
-                  << CAF_TSARG(what));
-    for (auto& acquaintance : acquaintances_) {
-      acquaintance->enqueue(sender, invalid_message_id, what, host());
-    }
+    auto sender = current_element_->sender;
+    CAF_LOG_DEBUG(CAF_ARG(acquaintances_.size())
+                  << CAF_ARG(sender) << CAF_ARG(what));
+    for (auto& acquaintance : acquaintances_)
+      acquaintance->enqueue(sender, invalid_message_id, what, context());
   }
 
   local_group_ptr group_;
@@ -225,8 +219,10 @@ using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
 
 class proxy_broker : public event_based_actor {
 public:
-  explicit proxy_broker(local_group_proxy_ptr grp) : group_(std::move(grp)) {
-    // nop
+  proxy_broker(actor_config& cfg, local_group_proxy_ptr grp)
+      : event_based_actor(cfg),
+        group_(std::move(grp)) {
+    CAF_LOG_TRACE("");
   }
 
   behavior make_behavior();
@@ -244,18 +240,16 @@ public:
   using super = local_group;
 
   template <class... Ts>
-  local_group_proxy(actor remote_broker, Ts&&... xs)
-      : super(false, std::forward<Ts>(xs)...) {
-    CAF_ASSERT(broker_ == invalid_actor);
-    CAF_ASSERT(remote_broker != invalid_actor);
-    broker_ = std::move(remote_broker);
-    proxy_broker_ = spawn<proxy_broker, hidden>(this);
-    monitor_ = spawn(broker_monitor_actor, this);
+  local_group_proxy(actor_system& sys, actor remote_broker, Ts&&... xs)
+      : super(sys, std::move(remote_broker), std::forward<Ts>(xs)...),
+        proxy_broker_{sys.spawn<proxy_broker, hidden>(this)},
+        monitor_{sys.spawn<hidden>(broker_monitor_actor, this)} {
+    // nop
   }
 
-  bool subscribe(const actor_addr& who) override {
-    CAF_LOG_TRACE(CAF_TSARG(who));
-    auto res = add_subscriber(who);
+  bool subscribe(strong_actor_ptr who) override {
+    CAF_LOG_TRACE(CAF_ARG(who));
+    auto res = add_subscriber(std::move(who));
     if (res.first) {
       // join remote source
       if (res.second == 1)
@@ -266,8 +260,8 @@ public:
     return false;
   }
 
-  void unsubscribe(const actor_addr& who) override {
-    CAF_LOG_TRACE(""); // serializing who would cause a deadlock
+  void unsubscribe(const actor_control_block* who) override {
+    CAF_LOG_TRACE(CAF_ARG(who));
     auto res = erase_subscriber(who);
     if (res.first && res.second == 0) {
       // leave the remote source,
@@ -276,32 +270,37 @@ public:
     }
   }
 
-  void enqueue(const actor_addr& sender, message_id mid, message msg,
-               execution_unit* eu) override {
+  void enqueue(strong_actor_ptr sender, message_id mid,
+               message msg, execution_unit* eu) override {
+    CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
     // forward message to the broker
-    broker_->enqueue(sender, mid,
-                      make_message(forward_atom::value, std::move(msg)),
-                      eu);
+    broker_->enqueue(std::move(sender), mid,
+                     make_message(forward_atom::value, std::move(msg)), eu);
   }
 
   void stop() override {
     CAF_LOG_TRACE("");
-    await_all_locals_down({monitor_, proxy_broker_, broker_});
-    monitor_ = invalid_actor;
-    proxy_broker_ = invalid_actor;
-    broker_ = invalid_actor;
+    await_all_locals_down(system_, {monitor_, proxy_broker_, broker_});
+    invalidate(monitor_);
+    invalidate(proxy_broker_);
+    invalidate(broker_);
   }
 
 private:
   static behavior broker_monitor_actor(event_based_actor* self,
                                        local_group_proxy* grp) {
+    CAF_LOG_TRACE("");
     self->monitor(grp->broker_);
+    self->set_down_handler([=](down_msg& down) {
+      CAF_LOG_TRACE(CAF_ARG(down));
+      auto msg = make_message(group_down_msg{group(grp)});
+      grp->send_all_subscribers(self->ctrl(), std::move(msg),
+                                self->context());
+      self->quit(down.reason);
+    });
     return {
-      [=](const down_msg& down) {
-        auto msg = make_message(group_down_msg{group(grp)});
-        grp->send_all_subscribers(self->address(), std::move(msg),
-                                  self->host());
-        self->quit(down.reason);
+      [] {
+        // nop
       }
     };
   }
@@ -311,10 +310,19 @@ private:
 };
 
 behavior proxy_broker::make_behavior() {
+  CAF_LOG_TRACE("");
+  // instead of dropping "unexpected" messages,
+  // we simply forward them to our acquaintances
+  auto fwd = [=](local_actor*, const type_erased_tuple* x) -> result<message> {
+    group_->send_all_subscribers(current_element_->sender, message::from(x),
+                                 context());
+    return message{};
+  };
+  set_default_handler(fwd);
+  // return dummy behavior
   return {
-    others >> [=] {
-      group_->send_all_subscribers(current_sender(), current_message(),
-                                   host());
+    [] {
+      // nop
     }
   };
 }
@@ -323,49 +331,46 @@ class local_group_module : public abstract_group::module {
 public:
   using super = abstract_group::module;
 
-  local_group_module()
-      : super("local"), actor_utype_(uniform_typeid<actor>()) {
-    // nop
+  local_group_module(actor_system& sys) : super(sys, "local") {
+    CAF_LOG_TRACE("");
   }
 
   group get(const std::string& identifier) override {
+    CAF_LOG_TRACE(CAF_ARG(identifier));
     upgrade_guard guard(instances_mtx_);
     auto i = instances_.find(identifier);
-    if (i != instances_.end()) {
+    if (i != instances_.end())
       return {i->second};
-    }
-    auto tmp = make_counted<local_group>(true, this, identifier,
-                                         singletons::get_node_id());
+    auto tmp = make_counted<local_group>(system(), none, this, identifier,
+                                         system().node());
     upgrade_to_unique_guard uguard(guard);
     auto p = instances_.emplace(identifier, tmp);
     auto result = p.first->second;
     uguard.unlock();
     // someone might preempt us
-    if (result != tmp) {
+    if (result != tmp)
       tmp->stop();
-    }
     return {result};
   }
 
-  group deserialize(deserializer* source) override {
-    // deserialize {identifier, process_id, node_id}
-    auto identifier = source->read<std::string>();
-    // deserialize broker
-    actor broker;
-    actor_utype_->deserialize(&broker, source);
-    if (! broker) {
+  group load(deserializer& source) override {
+    CAF_LOG_TRACE("");
+    // deserialize identifier and broker
+    std::string identifier;
+    strong_actor_ptr broker_ptr;
+    source >> identifier >> broker_ptr;
+    CAF_LOG_DEBUG(CAF_ARG(identifier) << CAF_ARG(broker_ptr));
+    if (! broker_ptr)
       return invalid_group;
-    }
-    if (! broker->is_remote()) {
+    auto broker = actor_cast<actor>(broker_ptr);
+    if (broker->node() == system().node())
       return this->get(identifier);
-    }
     upgrade_guard guard(proxies_mtx_);
     auto i = proxies_.find(broker);
-    if (i != proxies_.end()) {
+    if (i != proxies_.end())
       return {i->second};
-    }
-    local_group_ptr tmp = make_counted<local_group_proxy>(broker, this,
-                                                          identifier,
+    local_group_ptr tmp = make_counted<local_group_proxy>(system(), broker,
+                                                          this, identifier,
                                                           broker->node());
     upgrade_to_unique_guard uguard(guard);
     auto p = proxies_.emplace(broker, tmp);
@@ -373,10 +378,10 @@ public:
     return {p.first->second};
   }
 
-  void serialize(local_group* ptr, serializer* sink) {
-    sink->write_value(ptr->identifier());
-    CAF_ASSERT(ptr->broker() != invalid_actor);
-    actor_utype_->serialize(&ptr->broker(), sink);
+  void save(const local_group* ptr, serializer& sink) const {
+    CAF_ASSERT(ptr != nullptr);
+    CAF_LOG_TRACE("");
+    sink << ptr->identifier() << actor_cast<strong_actor_ptr>(ptr->broker());
   }
 
   void stop() override {
@@ -389,46 +394,48 @@ public:
       imap.swap(instances_);
       pmap.swap(proxies_);
     }
-    for (auto& kvp : imap) {
+    for (auto& kvp : imap)
       kvp.second->stop();
-    }
-    for (auto& kvp : pmap) {
+    for (auto& kvp : pmap)
       kvp.second->stop();
-    }
   }
 
 private:
-  const uniform_type_info* actor_utype_;
   detail::shared_spinlock instances_mtx_;
   std::map<std::string, local_group_ptr> instances_;
   detail::shared_spinlock proxies_mtx_;
   std::map<actor, local_group_ptr> proxies_;
 };
 
-local_group::local_group(bool do_spawn, local_group_module* mod,
-                         std::string id, const node_id& nid)
-    : abstract_group(mod, std::move(id), nid) {
-  if (do_spawn) {
-    broker_ = spawn<local_broker, hidden>(this);
-  }
-  // else: derived class spawns broker_
+local_group::local_group(actor_system& sys, optional<actor> lb,
+                         local_group_module* mod, std::string id,
+                         const node_id& nid)
+    : abstract_group(sys, mod, std::move(id), nid),
+      broker_(lb ? *lb : sys.spawn<local_broker, hidden>(this)) {
+  CAF_LOG_TRACE(CAF_ARG(id) << CAF_ARG(nid));
 }
 
 local_group::~local_group() {
   // nop
 }
 
-void local_group::serialize(serializer* sink) {
+void local_group::save(serializer& sink) const {
+  CAF_LOG_TRACE("");
   // this cast is safe, because the only available constructor accepts
   // local_group_module* as module pointer
-  static_cast<local_group_module*>(module_)->serialize(this, sink);
+  static_cast<local_group_module*>(module_)->save(this, sink);
 }
 
 std::atomic<size_t> s_ad_hoc_id;
 
 } // namespace <anonymous>
 
+void group_manager::start() {
+  CAF_LOG_TRACE("");
+}
+
 void group_manager::stop() {
+  CAF_LOG_TRACE("");
   modules_map mm;
   { // critical section
     std::lock_guard<std::mutex> guard(mmap_mtx_);
@@ -443,12 +450,14 @@ group_manager::~group_manager() {
   // nop
 }
 
-group_manager::group_manager() {
-  abstract_group::unique_module_ptr ptr{new local_group_module};
+group_manager::group_manager(actor_system& sys) : system_(sys) {
+  CAF_LOG_TRACE("");
+  abstract_group::unique_module_ptr ptr{new local_group_module(sys)};
   mmap_.emplace(std::string("local"), std::move(ptr));
 }
 
 group group_manager::anonymous() {
+  CAF_LOG_TRACE("");
   std::string id = "__#";
   id += std::to_string(++s_ad_hoc_id);
   return get_module("local")->get(id);
@@ -456,6 +465,7 @@ group group_manager::anonymous() {
 
 group group_manager::get(const std::string& module_name,
                          const std::string& group_identifier) {
+  CAF_LOG_TRACE(CAF_ARG(module_name) << CAF_ARG(group_identifier));
   auto mod = get_module(module_name);
   if (mod) {
     return mod->get(group_identifier);
@@ -467,15 +477,14 @@ group group_manager::get(const std::string& module_name,
 }
 
 void group_manager::add_module(std::unique_ptr<abstract_group::module> mptr) {
-  if (! mptr) {
+  CAF_LOG_TRACE("");
+  if (! mptr)
     return;
-  }
   auto& mname = mptr->name();
   { // lifetime scope of guard
     std::lock_guard<std::mutex> guard(mmap_mtx_);
-    if (mmap_.emplace(mname, std::move(mptr)).second) {
+    if (mmap_.emplace(mname, std::move(mptr)).second)
       return; // success; don't throw
-    }
   }
   std::string error_msg = "module name \"";
   error_msg += mname;
@@ -484,10 +493,10 @@ void group_manager::add_module(std::unique_ptr<abstract_group::module> mptr) {
 }
 
 abstract_group::module* group_manager::get_module(const std::string& mname) {
+  CAF_LOG_TRACE(CAF_ARG(mname));
   std::lock_guard<std::mutex> guard(mmap_mtx_);
   auto i = mmap_.find(mname);
   return (i != mmap_.end()) ? i->second.get() : nullptr;
 }
 
-} // namespace detail
 } // namespace caf

@@ -44,25 +44,22 @@ message_handler handle_c() {
   return [](c_atom) { return 3; };
 }
 
-void run_testee(actor testee) {
-  scoped_actor self;
-  self->sync_send(testee, a_atom::value).await([](int i) {
-    CAF_CHECK_EQUAL(i, 1);
-  });
-  self->sync_send(testee, b_atom::value).await([](int i) {
-    CAF_CHECK_EQUAL(i, 2);
-  });
-  self->sync_send(testee, c_atom::value).await([](int i) {
-    CAF_CHECK_EQUAL(i, 3);
-  });
-  self->send_exit(testee, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
-}
-
 struct fixture {
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
+  actor_system system;
+
+  void run_testee(actor testee) {
+    scoped_actor self{system};
+    self->request(testee, infinite, a_atom::value).receive([](int i) {
+      CAF_CHECK_EQUAL(i, 1);
+    });
+    self->request(testee, infinite, b_atom::value).receive([](int i) {
+      CAF_CHECK_EQUAL(i, 2);
+    });
+    self->request(testee, infinite, c_atom::value).receive([](int i) {
+      CAF_CHECK_EQUAL(i, 3);
+    });
+    self->send_exit(testee, exit_reason::user_shutdown);
+    self->await_all_other_actors_done();
   }
 };
 
@@ -72,7 +69,7 @@ CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(composition1) {
   run_testee(
-    spawn([=] {
+    system.spawn([=] {
       return handle_a().or_else(handle_b()).or_else(handle_c());
     })
   );
@@ -80,7 +77,7 @@ CAF_TEST(composition1) {
 
 CAF_TEST(composition2) {
   run_testee(
-    spawn([=] {
+    system.spawn([=] {
       return handle_a().or_else(handle_b()).or_else([](c_atom) { return 3; });
     })
   );
@@ -88,39 +85,11 @@ CAF_TEST(composition2) {
 
 CAF_TEST(composition3) {
   run_testee(
-    spawn([=] {
+    system.spawn([=] {
       return message_handler{[](a_atom) { return 1; }}.
              or_else(handle_b()).or_else(handle_c());
     })
   );
-}
-
-CAF_TEST(composition4) {
-  auto impl = [](event_based_actor* self, const actor& buddy) {
-    return
-      message_handler{
-        [=](int i) -> skip_message_t {
-          self->send(buddy, "skip: " + std::to_string(i));
-          return skip_message();
-        }
-      }.or_else(message_handler{
-        [=](int i) {
-          self->send(buddy, "handle: " + std::to_string(i));
-        }
-      });
-  };
-  scoped_actor self;
-  auto testee = spawn(impl, self);
-  for (int i = 0; i < 3; ++i)
-    self->send(testee, i);
-  int i = 0;
-  self->receive_for(i, 3)(
-    [&](const std::string& str) {
-      CAF_CHECK_EQUAL(str, "skip: " + std::to_string(i));
-    }
-  );
-  self->send_exit(testee, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -33,30 +33,37 @@ template <class T>
 struct implicit_conversions {
   // convert C strings to std::string if possible
   using step1 =
-    typename replace_type<
-      T, std::string,
-      std::is_same<T, const char*>, std::is_same<T, char*>,
-      std::is_same<T, char[]>, is_array_of<T, char>,
-      is_array_of<T, const char>
+    typename std::conditional<
+      std::is_convertible<T, std::string>::value,
+      std::string,
+      T
     >::type;
   // convert C strings to std::u16string if possible
   using step2 =
-    typename replace_type<
-      step1, std::u16string,
-      std::is_same<step1, const char16_t*>, std::is_same<step1, char16_t*>,
-      is_array_of<step1, char16_t>
+    typename std::conditional<
+      std::is_convertible<step1, std::u16string>::value,
+      std::u16string,
+      step1
     >::type;
   // convert C strings to std::u32string if possible
   using step3 =
-    typename replace_type<
-      step2, std::u32string,
-      std::is_same<step2, const char32_t*>, std::is_same<step2, char32_t*>,
-      is_array_of<step2, char32_t>
+    typename std::conditional<
+      std::is_convertible<step2, std::u32string>::value,
+      std::u32string,
+      step2
+    >::type;
+  using step4 =
+    typename std::conditional<
+      std::is_convertible<step3, abstract_actor*>::value
+      || std::is_same<scoped_actor, step3>::value,
+      actor,
+      step3
     >::type;
   using type =
-    typename replace_type<
-      step3, actor,
-      std::is_convertible<T, abstract_actor*>, std::is_same<scoped_actor, T>
+    typename std::conditional<
+      std::is_convertible<step4, error>::value,
+      error,
+      step4
     >::type;
 };
 
@@ -64,7 +71,11 @@ template <class T>
 struct strip_and_convert {
   using type =
     typename implicit_conversions<
-      typename std::decay<T>::type
+      typename std::remove_const<
+        typename std::remove_reference<
+          T
+        >::type
+      >::type
     >::type;
 };
 

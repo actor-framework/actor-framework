@@ -13,22 +13,37 @@ endif()
 if(NOT CAF_ENABLE_RUNTIME_CHECKS)
   set(CAF_ENABLE_RUNTIME_CHECKS no)
 endif()
+
 if(NOT CAF_NO_MEM_MANAGEMENT)
   set(CAF_NO_MEM_MANAGEMENT no)
 endif()
+
 if(NOT CAF_BUILD_STATIC_ONLY)
   set(CAF_BUILD_STATIC_ONLY no)
 endif()
+
 if(NOT CAF_BUILD_STATIC)
   set(CAF_BUILD_STATIC no)
 endif()
+
 if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
 endif()
+
+if(NOT CAF_NO_TOOLS)
+  set(CAF_NO_TOOLS no)
+endif()
+
 if(NOT CAF_NO_SUMMARY)
   set(CAF_NO_SUMMARY no)
 endif()
 
+if(NOT CAF_NO_IO)
+  set(CAF_NO_IO no)
+else()
+  set(CAF_NO_RIAC yes)
+  set(CAF_NO_TOOLS yes)
+endif()
 
 ################################################################################
 #                              get version of CAF                              #
@@ -109,7 +124,7 @@ set(EXTRA_FLAGS "")
 # increase max. template depth on GCC and Clang
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
    OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  set(EXTRA_FLAGS "-ftemplate-depth=512")
+  set(EXTRA_FLAGS "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
 endif()
 # add "-Werror" flag if --pedantic-build is used
 if(CAF_CXX_WARNINGS_AS_ERRORS)
@@ -429,7 +444,7 @@ endmacro()
 
 # build core and I/O library
 add_caf_lib(core)
-add_caf_lib(io)
+add_optional_caf_lib(io)
 
 # build opencl library if not told otherwise and OpenCL package was found
 if(NOT CAF_NO_OPENCL)
@@ -445,6 +460,9 @@ add_optional_caf_lib(riac)
 
 # build examples if not being told otherwise
 add_optional_caf_binaries(examples)
+
+# build tools if not being told otherwise
+add_optional_caf_binaries(tools)
 
 # build nexus if not being told otherwise
 add_optional_caf_binaries(nexus CAF_NO_RIAC)
@@ -492,7 +510,7 @@ if(NOT CAF_NO_UNIT_TESTS)
     # add some extra unit testing options when testing ASIO as well
     if(CAF_USE_ASIO AND "${suite}" MATCHES "^io_.+$")
       add_test(${test_name}_asio ${caf_test} -n -v 5 -s
-               "${suite}" ${ARGN} -- --use-asio)
+               "${suite}" ${ARGN} -- "--caf#middleman.network-backend=asio")
     endif()
   endmacro ()
   list(LENGTH suites num_suites)
@@ -501,15 +519,6 @@ if(NOT CAF_NO_UNIT_TESTS)
     make_test("${suite}")
   endforeach ()
 endif()
-
-
-################################################################################
-#                                 LateX setup                                  #
-################################################################################
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex.in"
-               "${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex"
-               @ONLY)
 
 
 ################################################################################
@@ -567,7 +576,9 @@ macro(invertYesNo in out)
   endif()
 endmacro()
 # invert CAF_NO_* variables for nicer output
+invertYesNo(CAF_NO_IO CAF_BUILD_IO)
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
+invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_RIAC CAF_BUILD_RIAC)
 invertYesNo(CAF_NO_NEXUS CAF_BUILD_NEXUS)
@@ -592,6 +603,8 @@ if(NOT CAF_NO_SUMMARY)
         "\nLog level:         ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
         "\n"
+        "\nBuild I/O module:  ${CAF_BUILD_IO}"
+        "\nBuild tools:       ${CAF_BUILD_TOOLS}"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
         "\nBuild riac:        ${CAF_BUILD_RIAC}"

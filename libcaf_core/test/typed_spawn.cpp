@@ -36,6 +36,14 @@ using passed_atom = caf::atom_constant<caf::atom("passed")>;
 
 namespace {
 
+enum class mock_errc : uint8_t {
+  cannot_revert_empty = 1
+};
+
+error make_error(mock_errc x) {
+  return {static_cast<uint8_t>(x), atom("mock")};
+}
+
 // check invariants of type system
 using dummy1 = typed_actor<reacts_to<int, int>,
                            replies_to<double>::with<double>>;
@@ -73,11 +81,13 @@ struct my_request {
   int b;
 };
 
-using server_type = typed_actor<replies_to<my_request>::with<bool>>;
-
-bool operator==(const my_request& lhs, const my_request& rhs) {
-  return lhs.a == rhs.a && lhs.b == rhs.b;
+template <class Processor>
+void serialize(Processor& proc, my_request& x, const unsigned int) {
+  proc & x.a;
+  proc & x.b;
 }
+
+using server_type = typed_actor<replies_to<my_request>::with<bool>>;
 
 server_type::behavior_type typed_server1() {
   return {
@@ -92,20 +102,22 @@ server_type::behavior_type typed_server2(server_type::pointer) {
 }
 
 class typed_server3 : public server_type::base {
-
 public:
+  typed_server3(actor_config& cfg, const string& line, actor buddy)
+      : server_type::base(cfg) {
+    anon_send(buddy, line);
+  }
 
-  typed_server3(const string& line, actor buddy) { send(buddy, line); }
-
-  behavior_type make_behavior() override { return typed_server2(this); }
-
+  behavior_type make_behavior() override {
+    return typed_server2(this);
+  }
 };
 
 void client(event_based_actor* self, actor parent, server_type serv) {
-  self->sync_send(serv, my_request{0, 0}).then(
+  self->request(serv, infinite, my_request{0, 0}).then(
     [=](bool val1) {
       CAF_CHECK_EQUAL(val1, true);
-      self->sync_send(serv, my_request{10, 20}).then(
+      self->request(serv, infinite, my_request{10, 20}).then(
         [=](bool val2) {
           CAF_CHECK_EQUAL(val2, false);
           self->send(parent, passed_atom::value);
@@ -113,44 +125,6 @@ void client(event_based_actor* self, actor parent, server_type serv) {
       );
     }
   );
-}
-
-void test_typed_spawn(server_type ts) {
-  scoped_actor self;
-  self->send(ts, my_request{1, 2});
-  self->receive(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, false);
-    }
-  );
-  self->send(ts, my_request{42, 42});
-  self->receive(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, true);
-    }
-  );
-  self->sync_send(ts, my_request{10, 20}).await(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, false);
-    }
-  );
-  self->sync_send(ts, my_request{0, 0}).await(
-    [](bool value) {
-      CAF_CHECK_EQUAL(value, true);
-    }
-  );
-  self->spawn<monitored>(client, self, ts);
-  self->receive(
-    [](passed_atom) {
-      CAF_MESSAGE("received `passed_atom`");
-    }
-  );
-  self->receive(
-    [](const down_msg& dmsg) {
-      CAF_CHECK_EQUAL(dmsg.reason, exit_reason::normal);
-    }
-  );
-  self->send_exit(ts, exit_reason::user_shutdown);
 }
 
 /******************************************************************************
@@ -165,38 +139,66 @@ using event_testee_type = typed_actor<replies_to<get_state_msg>::with<string>,
                                       replies_to<int>::with<int>>;
 
 class event_testee : public event_testee_type::base {
-
 public:
+  event_testee(actor_config& cfg) : event_testee_type::base(cfg) {
+    // nop
+  }
 
   behavior_type wait4string() {
-    return {on<get_state_msg>() >> [] { return "wait4string"; },
-        on<string>() >> [=] { become(wait4int()); },
-        (on<float>() || on<int>()) >> skip_message};
+    return {
+      [](const get_state_msg&) {
+        return "wait4string";
+      },
+      [=](const string&) {
+        become(wait4int());
+      },
+      [](float) {
+        return skip();
+      },
+      [](int) {
+        return skip();
+      }
+    };
   }
 
   behavior_type wait4int() {
     return {
-      on<get_state_msg>() >> [] { return "wait4int"; },
-      on<int>() >> [=]()->int {become(wait4float());
+      [](const get_state_msg&) {
+        return "wait4int";
+      },
+      [=](int) -> int {
+        become(wait4float());
         return 42;
       },
-      (on<float>() || on<string>()) >> skip_message
+      [](float) {
+        return skip();
+      },
+      [](const string&) {
+        return skip();
+      }
     };
   }
 
   behavior_type wait4float() {
     return {
-      on<get_state_msg>() >> [] {
+      [](const get_state_msg&) {
         return "wait4float";
       },
-      on<float>() >> [=] { become(wait4string()); },
-      (on<string>() || on<int>()) >> skip_message};
+      [=](float) {
+        become(wait4string());
+      },
+      [](const string&) {
+        return skip();
+      },
+      [](int) {
+        return skip();
+      }
+    };
   }
 
   behavior_type make_behavior() override {
     return wait4int();
   }
-
 };
 
 /******************************************************************************
@@ -214,26 +216,10 @@ string_actor::behavior_type string_reverter() {
   };
 }
 
-// uses `return sync_send(...).then(...)`
-string_actor::behavior_type string_relay(string_actor::pointer self,
-                                         string_actor master, bool leaf) {
-  auto next = leaf ? spawn(string_relay, master, false) : master;
-  self->link_to(next);
-  return {
-    [=](const string& str) {
-      return self->sync_send(next, str).then(
-        [](string& answer) -> string {
-          return std::move(answer);
-        }
-      );
-    }
-  };
-}
-
 // uses `return delegate(...)`
 string_actor::behavior_type string_delegator(string_actor::pointer self,
                                              string_actor master, bool leaf) {
-  auto next = leaf ? spawn(string_delegator, master, false) : master;
+  auto next = leaf ? self->spawn(string_delegator, master, false) : master;
   self->link_to(next);
   return {
     [=](string& str) -> delegated<string> {
@@ -243,14 +229,13 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
 }
 
 using maybe_string_actor = typed_actor<replies_to<string>
-                                       ::with_either<ok_atom, string>
-                                       ::or_else<error_atom>>;
+                                       ::with<ok_atom, string>>;
 
 maybe_string_actor::behavior_type maybe_string_reverter() {
   return {
-    [](string& str) -> either<ok_atom, string>::or_else<error_atom> {
+    [](string& str) -> result<ok_atom, string> {
       if (str.empty())
-        return {error_atom::value};
+        return mock_errc::cannot_revert_empty;
       std::reverse(str.begin(), str.end());
       return {ok_atom::value, std::move(str)};
     }
@@ -261,7 +246,7 @@ maybe_string_actor::behavior_type
 maybe_string_delegator(maybe_string_actor::pointer self, maybe_string_actor x) {
   self->link_to(x);
   return {
-    [=](string& s) -> delegated<either<ok_atom, string>::or_else<error_atom>> {
+    [=](string& s) -> delegated<ok_atom, string> {
       return self->delegate(x, std::move(s));
     }
   };
@@ -282,53 +267,76 @@ int_actor::behavior_type int_fun() {
 behavior foo(event_based_actor* self) {
   return {
     [=](int i, int_actor server) {
-      return self->sync_send(server, i).then([=](int result) -> int {
-        self->quit(exit_reason::normal);
-        return result;
-      });
+      self->delegate(server, i);
+      self->quit();
     }
   };
 }
 
 int_actor::behavior_type int_fun2(int_actor::pointer self) {
-  self->trap_exit(true);
+  self->set_down_handler([=](down_msg& dm) {
+    CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
+    self->quit();
+  });
   return {
     [=](int i) {
       self->monitor(self->current_sender());
       return i * i;
     },
-    [=](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-      self->quit();
-    },
-    [=](const exit_msg&) {
-      CAF_TEST_ERROR("Unexpected message: "
-                     << to_string(self->current_message()));
-    }
   };
 }
 
 behavior foo2(event_based_actor* self) {
   return {
     [=](int i, int_actor server) {
-      return self->sync_send(server, i).then([=](int result) -> int {
-        self->quit(exit_reason::normal);
-        return result;
-      });
+      self->delegate(server, i);
+      self->quit();
     }
   };
 }
 
 struct fixture {
-  fixture() {
-    announce<get_state_msg>("get_state_msg");
-    announce<int_actor>("int_actor");
-    announce<my_request>("my_request", &my_request::a, &my_request::b);
+  actor_system system;
+  scoped_actor self;
+
+  fixture() : system(actor_system_config()
+                     .add_message_type<get_state_msg>("get_state_msg")),
+              self(system) {
+    // nop
   }
 
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
+  void test_typed_spawn(server_type ts) {
+    self->send(ts, my_request{1, 2});
+    self->receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, false);
+      }
+    );
+    self->send(ts, my_request{42, 42});
+    self->receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, true);
+      }
+    );
+    self->request(ts, infinite, my_request{10, 20}).receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, false);
+      }
+    );
+    self->request(ts, infinite, my_request{0, 0}).receive(
+      [](bool value) {
+        CAF_CHECK_EQUAL(value, true);
+      }
+    );
+    CAF_CHECK_EQUAL(system.registry().running(), 2u);
+    auto c1 = self->spawn(client, self, ts);
+    self->receive(
+      [](passed_atom) {
+        CAF_MESSAGE("received `passed_atom`");
+      }
+    );
+    self->wait_for(c1);
+    CAF_CHECK_EQUAL(system.registry().running(), 2u);
   }
 };
 
@@ -342,25 +350,21 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 
 CAF_TEST(typed_spawns) {
   // run test series with typed_server(1|2)
-  test_typed_spawn(spawn(typed_server1));
-  await_all_actors_done();
+  test_typed_spawn(system.spawn(typed_server1));
+  self->await_all_other_actors_done();
   CAF_MESSAGE("finished test series with `typed_server1`");
-
-  test_typed_spawn(spawn(typed_server2));
-  await_all_actors_done();
+  test_typed_spawn(system.spawn(typed_server2));
+  self->await_all_other_actors_done();
   CAF_MESSAGE("finished test series with `typed_server2`");
-  {
-    scoped_actor self;
-    test_typed_spawn(spawn<typed_server3>("hi there", self));
-    self->receive(on("hi there") >> [] {
-      CAF_MESSAGE("received \"hi there\"");
-    });
-  }
+  test_typed_spawn(self->spawn<typed_server3>("hi there", self));
+  self->receive(
+    [](const string& str) {
+      CAF_REQUIRE_EQUAL(str, "hi there");
+    }
+  );
 }
 
-CAF_TEST(test_event_testee) {
-  // run test series with event_testee
-  scoped_actor self;
+CAF_TEST(event_testee_series) {
   auto et = self->spawn<event_testee>();
   string result;
   self->send(et, 1);
@@ -373,7 +377,6 @@ CAF_TEST(test_event_testee) {
   self->send(et, "hello again event testee!");
   self->send(et, "goodbye event testee!");
   typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
-  // $:: is the anonymous namespace
   set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
                     "caf::replies_to<@str>::with<void>",
                     "caf::replies_to<float>::with<void>",
@@ -388,94 +391,75 @@ CAF_TEST(test_event_testee) {
       result = str;
     },
     after(chrono::minutes(1)) >> [&] {
-      CAF_TEST_ERROR("event_testee does not reply");
+      CAF_ERROR("event_testee does not reply");
       throw runtime_error("event_testee does not reply");
     }
   );
-  self->send_exit(et, exit_reason::user_shutdown);
-  self->await_all_other_actors_done();
   CAF_CHECK_EQUAL(result, "wait4int");
-}
-
-CAF_TEST(reverter_relay_chain) {
-  // run test series with string reverter
-  scoped_actor self;
-  // actor-under-test
-  auto aut = self->spawn<monitored>(string_relay,
-                                          spawn(string_reverter),
-                                          true);
-  set<string> iface{"caf::replies_to<@str>::with<@str>"};
-  CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await(
-    [](const string& answer) {
-      CAF_CHECK_EQUAL(answer, "!dlroW olleH");
-    }
-  );
-  anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
 CAF_TEST(string_delegator_chain) {
   // run test series with string reverter
-  scoped_actor self;
-  // actor-under-test
   auto aut = self->spawn<monitored>(string_delegator,
-                                          spawn(string_reverter),
-                                          true);
+                                    system.spawn(string_reverter),
+                                    true);
   set<string> iface{"caf::replies_to<@str>::with<@str>"};
-  CAF_CHECK(aut->message_types() == iface);
-  self->sync_send(aut, "Hello World!").await(
+  CAF_CHECK_EQUAL(aut->message_types(), iface);
+  self->request(aut, infinite, "Hello World!").receive(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
     }
   );
-  anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
 CAF_TEST(maybe_string_delegator_chain) {
-  scoped_actor self;
-  auto aut = spawn(maybe_string_delegator,
-                   spawn(maybe_string_reverter));
-  self->sync_send(aut, "").await(
+  scoped_actor self{system};
+  CAF_LOG_TRACE(CAF_ARG(self));
+  auto aut = system.spawn(maybe_string_delegator,
+                          system.spawn(maybe_string_reverter));
+  CAF_MESSAGE("send empty string, expect error");
+  self->request(aut, infinite, "").receive(
     [](ok_atom, const string&) {
       throw std::logic_error("unexpected result!");
     },
-    [](error_atom) {
-      // nop
+    [](const error& err) {
+      CAF_CHECK_EQUAL(err.category(), atom("mock"));
+      CAF_CHECK_EQUAL(err.code(),
+                      static_cast<uint8_t>(mock_errc::cannot_revert_empty));
     }
   );
-  self->sync_send(aut, "abcd").await(
+  CAF_MESSAGE("send abcd string, expect dcba");
+  self->request(aut, infinite, "abcd").receive(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
-    },
-    [](error_atom) {
-      throw std::logic_error("unexpected error_atom!");
     }
   );
-  anon_send_exit(aut, exit_reason::user_shutdown);
 }
 
-CAF_TEST(test_sending_typed_actors) {
-  scoped_actor self;
-  auto aut = spawn(int_fun);
-  self->send(spawn(foo), 10, aut);
+CAF_TEST(sending_typed_actors) {
+  scoped_actor self{system};
+  auto aut = system.spawn(int_fun);
+  self->send(self->spawn(foo), 10, aut);
   self->receive(
-    [](int i) { CAF_CHECK_EQUAL(i, 100); }
+    [](int i) {
+      CAF_CHECK_EQUAL(i, 100);
+    }
   );
-  self->send_exit(aut, exit_reason::user_shutdown);
 }
 
-CAF_TEST(test_sending_typed_actors_and_down_msg) {
-  scoped_actor self;
-  auto aut = spawn(int_fun2);
-  self->send(spawn(foo2), 10, aut);
-  self->receive([](int i) { CAF_CHECK_EQUAL(i, 100); });
+CAF_TEST(sending_typed_actors_and_down_msg) {
+  scoped_actor self{system};
+  auto aut = system.spawn(int_fun2);
+  self->send(self->spawn(foo2), 10, aut);
+  self->receive([](int i) {
+    CAF_CHECK_EQUAL(i, 100);
+  });
 }
 
 CAF_TEST(check_signature) {
-  using foo_type = typed_actor<replies_to<put_atom>::
-                               with_either<ok_atom>::or_else<error_atom>>;
-  using foo_result_type = either<ok_atom>::or_else<error_atom>;
-  using bar_type = typed_actor<reacts_to<ok_atom>, reacts_to<error_atom>>;
+  using foo_type = typed_actor<replies_to<put_atom>::with<ok_atom>>;
+  using foo_result_type = optional<ok_atom>;
+  using bar_type = typed_actor<reacts_to<ok_atom>>;
   auto foo_action = [](foo_type::pointer self) -> foo_type::behavior_type {
     return {
       [=] (put_atom) -> foo_result_type {
@@ -490,19 +474,11 @@ CAF_TEST(check_signature) {
     return {
       [=](ok_atom) {
         self->quit();
-      },
-      [=](error_atom) {
-        self->quit(exit_reason::user_defined);
       }
     };
   };
-  scoped_actor self;
-  self->spawn<monitored>(bar_action);
-  self->receive(
-    [](const down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-    }
-  );
+  auto x = self->spawn(bar_action);
+  self->wait_for(x);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

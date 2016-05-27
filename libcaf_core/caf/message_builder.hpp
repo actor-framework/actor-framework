@@ -22,9 +22,10 @@
 
 #include <vector>
 
+#include "caf/fwd.hpp"
 #include "caf/message.hpp"
 #include "caf/message_handler.hpp"
-#include "caf/uniform_type_info.hpp"
+#include "caf/type_erased_value.hpp"
 
 namespace caf {
 
@@ -32,6 +33,8 @@ namespace caf {
 /// from a series of values using the member function `append`.
 class message_builder {
 public:
+  friend class message;
+
   message_builder(const message_builder&) = delete;
   message_builder& operator=(const message_builder&) = delete;
 
@@ -45,35 +48,23 @@ public:
     append(first, last);
   }
 
-  /// Creates a new instance and immediately
-  /// calls `append(xs.begin(), xs.end())`.
-  template <class T>
-  message_builder(const std::vector<T>& xs) {
-    init();
-    append(xs.begin(), xs.end());
-  }
-
-  /// Adds `what` to the elements of the buffer.
-  message_builder& append(uniform_value what);
-
   /// Appends all values in range [first, last).
   template <class Iter>
   message_builder& append(Iter first, Iter last) {
-    using vtype = typename std::decay<decltype(*first)>::type;
-    using converted = typename detail::implicit_conversions<vtype>::type;
-    auto uti = uniform_typeid<converted>();
-    for (; first != last; ++first) {
-      auto uval = uti->create();
-      *reinterpret_cast<converted*>(uval->val) = *first;
-      append(std::move(uval));
-    }
+    for (; first != last; ++first)
+      append(*first);
     return *this;
   }
 
   /// Adds `x` to the elements of the buffer.
   template <class T>
-  message_builder& append(T x) {
-    return append_impl<T>(std::move(x));
+  message_builder& append(T&& x) {
+    using type = typename unbox_message_element<
+                   typename detail::implicit_conversions<
+                    typename std::decay<T>::type
+                   >::type
+                 >::type;
+    return emplace(make_type_erased_value<type>(std::forward<T>(x)));
   }
 
   /// Converts the buffer to an actual message object without
@@ -99,7 +90,7 @@ public:
   }
 
   /// @copydoc message::apply
-  maybe<message> apply(message_handler handler);
+  optional<message> apply(message_handler handler);
 
   /// Removes all elements from the buffer.
   void clear();
@@ -113,25 +104,13 @@ public:
 private:
   void init();
 
-  template <class T>
-  message_builder&
-  append_impl(typename unbox_message_element<
-                typename detail::implicit_conversions<T>::type
-              >::type what) {
-    using type = decltype(what);
-    auto uti = uniform_typeid<type>();
-    auto uval = uti->create();
-    *reinterpret_cast<type*>(uval->val) = std::move(what);
-    return append(std::move(uval));
-  }
+  message_builder& emplace(type_erased_value_ptr);
 
-  class dynamic_msg_data;
+  detail::dynamic_message_data* data();
 
-  dynamic_msg_data* data();
+  const detail::dynamic_message_data* data() const;
 
-  const dynamic_msg_data* data() const;
-
-  intrusive_ptr<ref_counted> data_; // hide dynamic_msg_data implementation
+  intrusive_ptr<ref_counted> data_; // hide dynamic_message_data implementation
 };
 
 } // namespace caf

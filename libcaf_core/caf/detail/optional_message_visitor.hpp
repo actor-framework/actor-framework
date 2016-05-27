@@ -22,8 +22,9 @@
 
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
-#include "caf/maybe.hpp"
-#include "caf/skip_message.hpp"
+#include "caf/optional.hpp"
+#include "caf/delegated.hpp"
+#include "caf/skip.hpp"
 #include "caf/static_visitor.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -32,7 +33,6 @@
 
 namespace caf {
 namespace detail {
-
 
 template <class T>
 struct is_message_id_wrapper {
@@ -49,8 +49,12 @@ struct is_response_promise : std::false_type { };
 template <>
 struct is_response_promise<response_promise> : std::true_type { };
 
-template <class T>
-struct is_response_promise<typed_response_promise<T>> : std::true_type { };
+template <class... Ts>
+struct is_response_promise<typed_response_promise<Ts...>> : std::true_type { };
+
+template <class... Ts>
+struct is_response_promise<delegated<Ts...>> : std::true_type { };
+
 
 template <class T>
 struct optional_message_visitor_enable_tpl {
@@ -59,24 +63,24 @@ struct optional_message_visitor_enable_tpl {
         typename std::remove_const<T>::type,
         none_t,
         unit_t,
-        skip_message_t,
-        maybe<skip_message_t>
+        skip_t,
+        optional<skip_t>
       >::value
       && ! is_message_id_wrapper<T>::value
       && ! is_response_promise<T>::value;
 };
 
-class optional_message_visitor : public static_visitor<maybe<message>> {
+class optional_message_visitor : public static_visitor<optional<message>> {
 public:
   optional_message_visitor() = default;
 
-  using opt_msg = maybe<message>;
+  using opt_msg = optional<message>;
 
   inline opt_msg operator()(const none_t&) const {
     return none;
   }
 
-  inline opt_msg operator()(const skip_message_t&) const {
+  inline opt_msg operator()(const skip_t&) const {
     return none;
   }
 
@@ -84,19 +88,19 @@ public:
     return message{};
   }
 
-  inline opt_msg operator()(const maybe<skip_message_t>& val) const {
-    if (val) {
+  inline opt_msg operator()(optional<skip_t>& val) const {
+    if (val)
       return none;
-    }
     return message{};
   }
 
-  inline opt_msg operator()(const response_promise&) const {
-    return message{};
+  inline opt_msg operator()(opt_msg& msg) {
+    return msg;
   }
 
   template <class T>
-  inline opt_msg operator()(const typed_response_promise<T>&) const {
+  typename std::enable_if<is_response_promise<T>::value, opt_msg>::type
+  operator()(const T&) const {
     return message{};
   }
 
@@ -110,23 +114,24 @@ public:
   }
 
   template <class T>
-  typename std::enable_if<
-    is_message_id_wrapper<T>::value,
-    opt_msg
-  >::type
+  typename std::enable_if<is_message_id_wrapper<T>::value, opt_msg>::type
   operator()(T& value) const {
     return make_message(atom("MESSAGE_ID"),
-              value.get_message_id().integer_value());
-  }
-
-  template <class L, class R>
-  opt_msg operator()(either_or_t<L, R>& value) const {
-    return std::move(value.value);
+                        value.get_message_id().integer_value());
   }
 
   template <class... Ts>
   opt_msg operator()(std::tuple<Ts...>& value) const {
     return apply_args(*this, get_indices(value), value);
+  }
+
+  template <class T>
+  opt_msg operator()(optional<T>& value) const {
+    if (value)
+      return (*this)(*value);
+    if (value.empty())
+      return message{};
+    return value.error();
   }
 };
 

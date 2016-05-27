@@ -23,9 +23,15 @@
 #include <tuple>
 #include <stdexcept>
 
-#include "caf/detail/type_list.hpp"
+#include "caf/serializer.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/deep_to_string.hpp"
 
+#include "caf/type_nr.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/safe_equal.hpp"
 #include "caf/detail/message_data.hpp"
+#include "caf/detail/try_serialize.hpp"
 
 namespace caf {
 namespace detail {
@@ -33,37 +39,92 @@ namespace detail {
 template <size_t Pos, size_t Max, bool InRange = (Pos < Max)>
 struct tup_ptr_access {
   template <class T>
-  static inline typename std::conditional<std::is_const<T>::value,
-                      const void*, void*>::type
+  static typename std::conditional<
+    std::is_const<T>::value,
+    const void*,
+    void*
+  >::type
   get(size_t pos, T& tup) {
     if (pos == Pos) return &std::get<Pos>(tup);
     return tup_ptr_access<Pos + 1, Max>::get(pos, tup);
+  }
+
+  template <class T>
+  static bool cmp(size_t pos, T& tup, const void* x) {
+    using type = typename std::tuple_element<Pos, T>::type;
+    if (pos == Pos)
+      return safe_equal(std::get<Pos>(tup), *reinterpret_cast<const type*>(x));
+    return tup_ptr_access<Pos + 1, Max>::cmp(pos, tup, x);
+  }
+
+  template <class T, class Processor>
+  static void serialize(size_t pos, T& tup, Processor& proc) {
+    if (pos == Pos)
+      try_serialize(proc, &std::get<Pos>(tup));
+    else
+      tup_ptr_access<Pos + 1, Max>::serialize(pos, tup, proc);
+  }
+
+  template <class T>
+  static std::string stringify(size_t pos, const T& tup) {
+    if (pos == Pos)
+      return deep_to_string(std::get<Pos>(tup));
+    return tup_ptr_access<Pos + 1, Max>::stringify(pos, tup);
+  }
+
+  template <class T>
+  static type_erased_value_ptr copy(size_t pos, const T& tup) {
+    using value_type = typename std::tuple_element<Pos, T>::type;
+    if (pos == Pos)
+      return make_type_erased_value<value_type>(std::get<Pos>(tup));
+    return tup_ptr_access<Pos + 1, Max>::copy(pos, tup);;
   }
 };
 
 template <size_t Pos, size_t Max>
 struct tup_ptr_access<Pos, Max, false> {
   template <class T>
-  static inline typename std::conditional<std::is_const<T>::value,
-                      const void*, void*>::type
+  static typename std::conditional<
+    std::is_const<T>::value,
+    const void*,
+    void*
+  >::type
   get(size_t, T&) {
     // end of recursion
     return nullptr;
   }
-};
 
-using tuple_vals_rtti = std::pair<uint16_t, const std::type_info*>;
+  template <class T>
+  static bool cmp(size_t, T&, const void*) {
+    return false;
+  }
+
+  template <class T, class Processor>
+  static void serialize(size_t, T&, Processor&) {
+    // end of recursion
+  }
+
+  template <class T>
+  static std::string stringify(size_t, const T&) {
+    return "<unprintable>";
+  }
+
+  template <class T>
+  static type_erased_value_ptr copy(size_t, const T&) {
+    return nullptr;
+  }
+};
 
 template <class T, uint16_t N = type_nr<T>::value>
 struct tuple_vals_type_helper {
-  static tuple_vals_rtti get() {
+  static typename message_data::rtti_pair get() {
     return {N, nullptr};
   }
 };
 
 template <class T>
 struct tuple_vals_type_helper<T, 0> {
-  static tuple_vals_rtti get() {
+  static typename message_data::rtti_pair get() {
     return {0, &typeid(T)};
   }
 };
@@ -74,6 +135,8 @@ public:
   static_assert(sizeof...(Ts) > 0, "tuple_vals is not allowed to be empty");
 
   using super = message_data;
+
+  using rtti_pair = typename message_data::rtti_pair;
 
   using data_type = std::tuple<Ts...>;
 
@@ -102,46 +165,46 @@ public:
     return message_data::cow_ptr(new tuple_vals(*this), false);
   }
 
-  const void* at(size_t pos) const override {
+  const void* get(size_t pos) const override {
     CAF_ASSERT(pos < size());
     return tup_ptr_access<0, sizeof...(Ts)>::get(pos, data_);
   }
 
-  void* mutable_at(size_t pos) override {
+  void* get_mutable(size_t pos) override {
     CAF_ASSERT(pos < size());
-    return const_cast<void*>(at(pos));
+    return const_cast<void*>(get(pos));
   }
 
-  bool match_element(size_t pos, uint16_t typenr,
-                     const std::type_info* rtti) const override {
-    CAF_ASSERT(pos < size());
-    auto& et = types_[pos];
-    if (et.first != typenr) {
-      return false;
-    }
-    return et.first != 0 || et.second == rtti || *et.second == *rtti;
+  std::string stringify(size_t pos) const override {
+    return tup_ptr_access<0, sizeof...(Ts)>::stringify(pos, data_);
+  }
+
+  type_erased_value_ptr copy(size_t pos) const override {
+    return tup_ptr_access<0, sizeof...(Ts)>::copy(pos, data_);
+  }
+
+  void load(size_t pos, deserializer& source) override {
+    return tup_ptr_access<0, sizeof...(Ts)>::serialize(pos, data_, source);
   }
 
   uint32_t type_token() const override {
     return make_type_token<Ts...>();
   }
 
-  const char* uniform_name_at(size_t pos) const override {
-    auto& et = types_[pos];
-    if (et.first != 0) {
-      return numbered_type_names[et.first - 1];
-    }
-    auto uti = uniform_typeid(*et.second, true);
-    return uti ? uti->name() : "-invalid-";
+  rtti_pair type(size_t pos) const override {
+    return types_[pos];
   }
 
-  uint16_t type_nr_at(size_t pos) const override {
-    return types_[pos].first;
+  void save(size_t pos, serializer& sink) const override {
+    // the serialization framework uses non-const arguments for deserialization,
+    // but this cast is safe since the values are not actually changed
+    auto& nc_data = const_cast<data_type&>(data_);
+    return tup_ptr_access<0, sizeof...(Ts)>::serialize(pos, nc_data, sink);
   }
 
 private:
   data_type data_;
-  std::array<tuple_vals_rtti, sizeof...(Ts)> types_;
+  std::array<rtti_pair, sizeof...(Ts)> types_;
 };
 
 } // namespace detail

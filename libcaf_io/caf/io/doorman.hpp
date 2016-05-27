@@ -44,7 +44,7 @@ public:
 
   ~doorman();
 
-  void io_failure(network::operation op) override;
+  void io_failure(execution_unit* ctx, network::operation op) override;
 
   // needs to be launched explicitly
   virtual void launch() = 0;

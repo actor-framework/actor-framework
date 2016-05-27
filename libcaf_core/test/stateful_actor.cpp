@@ -50,6 +50,10 @@ behavior adder(stateful_actor<counter>* self) {
 
 class adder_class : public stateful_actor<counter> {
 public:
+  adder_class(actor_config& cfg) : stateful_actor<counter>(cfg) {
+    // nop
+  }
+
   behavior make_behavior() override {
     return adder(this);
   }
@@ -69,66 +73,69 @@ typed_adder(typed_adder_actor::stateful_pointer<counter> self) {
 
 class typed_adder_class : public typed_adder_actor::stateful_base<counter> {
 public:
+  using super = typed_adder_actor::stateful_base<counter>;
+
+  typed_adder_class(actor_config& cfg) : super(cfg) {
+    // nop
+  }
+
   behavior_type make_behavior() override {
     return typed_adder(this);
   }
 };
 
 struct fixture {
-  ~fixture() {
-    await_all_actors_done();
-    shutdown();
+  actor_system system;
+
+  template <class ActorUnderTest>
+  void test_adder(ActorUnderTest aut) {
+    scoped_actor self{system};
+    self->send(aut, add_atom::value, 7);
+    self->send(aut, add_atom::value, 4);
+    self->send(aut, add_atom::value, 9);
+    self->request(aut, infinite, get_atom::value).receive(
+      [](int x) {
+        CAF_CHECK_EQUAL(x, 20);
+      }
+    );
+  }
+
+  template <class State>
+  void test_name(const char* expected) {
+    auto aut = system.spawn([](stateful_actor<State>* self) -> behavior {
+      return [=](get_atom) {
+        self->quit();
+        return self->name();
+      };
+    });
+    scoped_actor self{system};
+    self->request(aut, infinite, get_atom::value).receive(
+      [&](const string& str) {
+        CAF_CHECK_EQUAL(str, expected);
+      }
+    );
   }
 };
-
-template <class ActorUnderTest>
-void test_adder(ActorUnderTest aut) {
-  scoped_actor self;
-  self->send(aut, add_atom::value, 7);
-  self->send(aut, add_atom::value, 4);
-  self->send(aut, add_atom::value, 9);
-  self->sync_send(aut, get_atom::value).await(
-    [](int x) {
-      CAF_CHECK_EQUAL(x, 20);
-    }
-  );
-  anon_send_exit(aut, exit_reason::kill);
-}
-
-template <class State>
-void test_name(const char* expected) {
-  auto aut = spawn([](stateful_actor<State>* self) -> behavior {
-    return [=](get_atom) {
-      self->quit();
-      return self->name();
-    };
-  });
-  scoped_actor self;
-  self->sync_send(aut, get_atom::value).await(
-    [&](const string& str) {
-      CAF_CHECK_EQUAL(str, expected);
-    }
-  );
-}
 
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_stateful_actor_tests, fixture)
 
 CAF_TEST(dynamic_stateful_actor) {
-  test_adder(spawn(adder));
+  CAF_REQUIRE(monitored + monitored == monitored);
+  test_adder(system.spawn(adder));
 }
 
 CAF_TEST(typed_stateful_actor) {
-  test_adder(spawn(typed_adder));
+  test_adder(system.spawn(typed_adder));
 }
 
 CAF_TEST(dynamic_stateful_actor_class) {
-  test_adder(spawn<adder_class>());
+  test_adder(system.spawn<adder_class>());
 }
 
 CAF_TEST(typed_stateful_actor_class) {
-  test_adder(spawn<typed_adder_class>());
+  test_adder(system.spawn<typed_adder_class>());
 }
 
 CAF_TEST(no_name) {

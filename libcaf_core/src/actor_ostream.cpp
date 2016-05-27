@@ -19,48 +19,71 @@
 
 #include "caf/actor_ostream.hpp"
 
-#include "caf/all.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/send.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/abstract_actor.hpp"
+#include "caf/default_attachable.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-#include "caf/detail/singletons.hpp"
-
 namespace caf {
 
-actor_ostream::actor_ostream(actor self)
-    : self_(std::move(self)),
-      printer_(detail::singletons::get_scheduling_coordinator()->printer()) {
-  // nop
+actor_ostream::actor_ostream(local_actor* self)
+    : self_(self->id()),
+      printer_(self->home_system().scheduler().printer()) {
+  init(self);
+}
+
+actor_ostream::actor_ostream(scoped_actor& self)
+    : self_(self->id()),
+      printer_(self->home_system().scheduler().printer()) {
+  init(actor_cast<abstract_actor*>(self));
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-  send_as(self_, printer_, add_atom::value, std::move(arg));
+  printer_->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+                                          add_atom::value, self_,
+                                          std::move(arg)),
+                    nullptr);
   return *this;
 }
 
 actor_ostream& actor_ostream::flush() {
-  send_as(self_, printer_, flush_atom::value);
+  printer_->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+                                          flush_atom::value, self_),
+                    nullptr);
   return *this;
 }
 
-void actor_ostream::redirect(const actor& src, std::string f, int flags) {
-  send_as(src, detail::singletons::get_scheduling_coordinator()->printer(),
-          redirect_atom::value, src.address(), std::move(f), flags);
+void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
+  if (! self)
+    return;
+  auto pr = self->home_system().scheduler().printer();
+  pr->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+                                    redirect_atom::value, self->id(),
+                                    std::move(fn), flags),
+              nullptr);
 }
 
-void actor_ostream::redirect_all(std::string f, int flags) {
-  anon_send(detail::singletons::get_scheduling_coordinator()->printer(),
-            redirect_atom::value, std::move(f), flags);
+void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
+  auto pr = sys.scheduler().printer();
+  pr->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+                                    redirect_atom::value,
+                                    std::move(fn), flags),
+              nullptr);
 }
 
-actor_ostream aout(const scoped_actor& self) {
+void actor_ostream::init(abstract_actor* self) {
+  if (! self->get_flag(abstract_actor::has_used_aout_flag))
+    self->set_flag(true, abstract_actor::has_used_aout_flag);
+}
+
+actor_ostream aout(local_actor* self) {
   return actor_ostream{self};
 }
 
-actor_ostream aout(abstract_actor* self) {
-  return actor_ostream{actor_cast<actor>(intrusive_ptr<abstract_actor>{self})};
+actor_ostream aout(scoped_actor& self) {
+  return actor_ostream{self};
 }
 
 } // namespace caf

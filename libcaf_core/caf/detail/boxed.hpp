@@ -20,7 +20,6 @@
 #ifndef CAF_DETAIL_BOXED_HPP
 #define CAF_DETAIL_BOXED_HPP
 
-#include "caf/anything.hpp"
 #include "caf/detail/wrapped.hpp"
 
 namespace caf {
@@ -40,14 +39,6 @@ struct boxed<detail::wrapped<T>> {
     // nop
   }
   using type = detail::wrapped<T>;
-};
-
-template <>
-struct boxed<anything> {
-  constexpr boxed() {
-    // nop
-  }
-  using type = anything;
 };
 
 template <class T>
