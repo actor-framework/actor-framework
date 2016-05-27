@@ -33,9 +33,10 @@ void throwcl(const char* fname, cl_int err) {
 }
 
 void pfn_notify(const char* errinfo, const void*, size_t, void*) {
-  CAF_LOGF_ERROR("\n##### Error message via pfn_notify #####\n"
-                 << errinfo <<
-                 "\n########################################");
+  CAF_LOG_ERROR("\n##### Error message via pfn_notify #####\n"
+                << errinfo <<
+                "\n########################################");
+  static_cast<void>(errinfo); // remove warning
 }
 
 } // namespace opencl

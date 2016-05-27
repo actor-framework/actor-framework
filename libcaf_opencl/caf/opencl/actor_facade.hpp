@@ -27,7 +27,6 @@
 
 #include "caf/all.hpp"
 
-#include "caf/channel.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/detail/int_list.hpp"
@@ -45,7 +44,7 @@
 namespace caf {
 namespace opencl {
 
-class metainfo;
+class manager;
 
 template <class List>
 struct function_sig_from_outputs;
@@ -64,7 +63,7 @@ struct command_sig_from_outputs<T, detail::type_list<Ts...>> {
 };
 
 template <class... Ts>
-class actor_facade : public abstract_actor {
+class actor_facade : public monitorable_actor {
 public:
   using arg_types = detail::type_list<Ts...>;
   using unpacked_types = typename detail::tl_map<arg_types, extract_type>::type;
@@ -73,7 +72,7 @@ public:
     typename detail::tl_filter<arg_types, is_input_arg>::type;
   using input_types =
     typename detail::tl_map<input_wrapped_types, extract_type>::type;
-  using input_mapping = std::function<maybe<message> (message&)>;
+  using input_mapping = std::function<optional<message> (message&)>;
 
   using output_wrapped_types =
     typename detail::tl_filter<arg_types, is_output_arg>::type;
@@ -90,40 +89,57 @@ public:
   using command_type =
     typename command_sig_from_outputs<actor_facade, output_types>::type;
 
-  static intrusive_ptr<actor_facade> create(const program& prog,
-                                            const char* kernel_name,
-                                            const spawn_config& config,
-                                            input_mapping map_args,
-                                            output_mapping map_result,
-                                            Ts&&... xs) {
-    if (config.dimensions().empty()) {
+  const char* name() const override {
+    return "OpenCL actor";
+  }
+
+
+  static actor create(actor_config actor_cfg, const program& prog,
+                      const char* kernel_name, const spawn_config& spawn_cfg,
+                      input_mapping map_args, output_mapping map_result,
+                      Ts&&... xs) {
+    if (spawn_cfg.dimensions().empty()) {
       auto str = "OpenCL kernel needs at least 1 global dimension.";
-      CAF_LOGF_ERROR(str);
+      CAF_LOG_ERROR(str);
       throw std::runtime_error(str);
     }
     auto check_vec = [&](const dim_vec& vec, const char* name) {
-      if (! vec.empty() && vec.size() != config.dimensions().size()) {
+      if (! vec.empty() && vec.size() != spawn_cfg.dimensions().size()) {
         std::ostringstream oss;
         oss << name << " vector is not empty, but "
             << "its size differs from global dimensions vector's size";
-        CAF_LOGF_ERROR(oss.str());
+        CAF_LOG_ERROR(CAF_ARG(oss.str()));
         throw std::runtime_error(oss.str());
       }
     };
-    check_vec(config.offsets(), "offsets");
-    check_vec(config.local_dimensions(), "local dimensions");
-    cl_int err = 0;
-    kernel_ptr kernel;
-    kernel.reset(clCreateKernel(prog.program_.get(), kernel_name, &err), false);
-    if (err != CL_SUCCESS)
-      return nullptr;
-    return new actor_facade(prog, kernel, config,
-                            std::move(map_args), std::move(map_result),
-                            std::forward_as_tuple(xs...));
+    check_vec(spawn_cfg.offsets(), "offsets");
+    check_vec(spawn_cfg.local_dimensions(), "local dimensions");
+    auto& sys = actor_cfg.host->system();
+    auto itr = prog.available_kernels_.find(kernel_name);
+    if (itr == prog.available_kernels_.end()) {
+      kernel_ptr kernel;
+      kernel.reset(v2get(CAF_CLF(clCreateKernel), prog.program_.get(),
+                                 kernel_name),
+                   false);
+      return make_actor<actor_facade, actor>(sys.next_actor_id(), sys.node(),
+                                             &sys, std::move(actor_cfg),
+                                             prog, kernel, spawn_cfg,
+                                             std::move(map_args),
+                                             std::move(map_result),
+                                             std::forward_as_tuple(xs...));
+    } else {
+      return make_actor<actor_facade, actor>(sys.next_actor_id(), sys.node(),
+                                             &sys, std::move(actor_cfg),
+                                             prog, itr->second, spawn_cfg,
+                                             std::move(map_args),
+                                             std::move(map_result),
+                                             std::forward_as_tuple(xs...));
+    }
   }
 
-  void enqueue(const actor_addr &sender, message_id mid, message content,
+  void enqueue(strong_actor_ptr sender, message_id mid, message content,
                execution_unit*) override {
+    CAF_PUSH_AID(id());
     CAF_LOG_TRACE("");
     if (map_args_) {
       auto mapped = map_args_(content);
@@ -135,14 +151,15 @@ public:
     if (! content.match_elements(input_types{})) {
       return;
     }
-    response_promise hdl{this->address(), sender, mid.response_id()};
+    auto hdl = std::make_tuple(sender, mid.response_id());
     evnt_vec events;
     args_vec input_buffers;
     args_vec output_buffers;
     size_vec result_sizes;
     add_kernel_arguments(events, input_buffers, output_buffers,
                          result_sizes, content, indices);
-    auto cmd = make_counted<command_type>(hdl, this,
+    auto cmd = make_counted<command_type>(std::move(hdl),
+                                          actor_cast<strong_actor_ptr>(this),
                                           std::move(events),
                                           std::move(input_buffers),
                                           std::move(output_buffers),
@@ -151,21 +168,29 @@ public:
     cmd->enqueue();
   }
 
-  actor_facade(const program& prog, kernel_ptr kernel,
-               const spawn_config& config,
+  void enqueue(mailbox_element_ptr ptr, execution_unit* eu) override {
+    CAF_ASSERT(ptr != nullptr);
+    CAF_LOG_TRACE(CAF_ARG(*ptr));
+    enqueue(ptr->sender, ptr->mid, ptr->msg, eu);
+  }
+
+  actor_facade(actor_config actor_cfg,
+               const program& prog, kernel_ptr kernel,
+               const spawn_config& spawn_cfg,
                input_mapping map_args, output_mapping map_result,
                std::tuple<Ts...> xs)
-      : kernel_(kernel),
+      : monitorable_actor(actor_cfg),
+        kernel_(kernel),
         program_(prog.program_),
         context_(prog.context_),
         queue_(prog.queue_),
-        config_(config),
+        spawn_cfg_(spawn_cfg),
         map_args_(std::move(map_args)),
         map_results_(std::move(map_result)),
         argument_types_(xs) {
-    CAF_LOG_TRACE("id: " << this->id());
-    default_output_size_ = std::accumulate(config_.dimensions().begin(),
-                                           config_.dimensions().end(),
+    CAF_LOG_TRACE(CAF_ARG(this->id()));
+    default_output_size_ = std::accumulate(spawn_cfg_.dimensions().begin(),
+                                           spawn_cfg_.dimensions().end(),
                                            size_t{1},
                                            std::multiplies<size_t>{});
   }
@@ -258,7 +283,7 @@ public:
   program_ptr program_;
   context_ptr context_;
   command_queue_ptr queue_;
-  spawn_config config_;
+  spawn_config spawn_cfg_;
   input_mapping map_args_;
   output_mapping map_results_;
   std::tuple<Ts...> argument_types_;

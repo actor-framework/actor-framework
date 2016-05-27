@@ -17,40 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_PROGRAM_HPP
-#define CAF_OPENCL_PROGRAM_HPP
+#ifndef CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP
+#define CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP
 
-#include <map>
-#include <memory>
-
-#include "caf/opencl/device.hpp"
-#include "caf/opencl/global.hpp"
-#include "caf/opencl/smart_ptr.hpp"
+#include "caf/opencl/actor_facade.hpp"
 
 namespace caf {
 namespace opencl {
+namespace detail {
+
+struct tuple_construct { };
 
 template <class... Ts>
-class actor_facade;
+struct cl_spawn_helper {
+  using impl = opencl::actor_facade<Ts...>;
+  using map_in_fun = std::function<optional<message> (message&)>;
+  using map_out_fun = typename impl::output_mapping;
 
-/// @brief A wrapper for OpenCL's cl_program.
-class program {
-public:
-  friend class manager;
-  template <class... Ts>
-  friend class actor_facade;
-
-private:
-  program(context_ptr context, command_queue_ptr queue, program_ptr prog,
-          std::map<std::string,kernel_ptr> available_kernels);
-
-  context_ptr context_;
-  program_ptr program_;
-  command_queue_ptr queue_;
-  std::map<std::string,kernel_ptr> available_kernels_;
+  actor operator()(actor_config actor_cfg, const opencl::program& p,
+                   const char* fn, const opencl::spawn_config& spawn_cfg,
+                   Ts&&... xs) const {
+    return actor_cast<actor>(impl::create(std::move(actor_cfg),
+                                          p, fn, spawn_cfg,
+                                          map_in_fun{}, map_out_fun{},
+                                          std::move(xs)...));
+  }
+  actor operator()(actor_config actor_cfg, const opencl::program& p,
+                   const char* fn, const opencl::spawn_config& spawn_cfg,
+                   map_in_fun map_input, map_out_fun map_output,
+                   Ts&&... xs) const {
+    return actor_cast<actor>(impl::create(std::move(actor_cfg),
+                                          p, fn, spawn_cfg,
+                                          std::move(map_input),
+                                          std::move(map_output),
+                                          std::move(xs)...));
+  }
 };
 
+} // namespace detail
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_PROGRAM_HPP
+ #endif // CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP

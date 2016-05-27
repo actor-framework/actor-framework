@@ -63,7 +63,7 @@ platform platform::create(cl_platform_id platform_id,
   }
   if (device_information.empty()) {
     string errstr = "no devices for the platform found";
-    CAF_LOGF_ERROR(errstr);
+    CAF_LOG_ERROR(CAF_ARG(errstr));
     throw runtime_error(move(errstr));
   }
   auto name = platform_info(platform_id, CL_PLATFORM_NAME);

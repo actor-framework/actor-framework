@@ -26,10 +26,9 @@ namespace caf {
 namespace opencl {
 
 class platform {
-
+public:
   friend class program;
 
-public:
   inline const std::vector<device>& get_devices() const;
   inline const std::string& get_name() const;
   inline const std::string& get_vendor() const;
