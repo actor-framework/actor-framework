@@ -469,7 +469,7 @@ CAF_TEST(non_empty_server_handshake) {
   buffer buf;
   instance().add_published_actor(4242, actor_cast<strong_actor_ptr>(self()),
                                  {"caf::replies_to<@u16>::with<@u16>"});
-  instance().write_server_handshake(mpx(), buf, 4242);
+  instance().write_server_handshake(mpx(), buf, uint16_t{4242});
   buffer expected_buf;
   basp::header expected{basp::message_type::server_handshake, 0, basp::version,
                         this_node(), invalid_node_id,

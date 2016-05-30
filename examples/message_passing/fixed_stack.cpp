@@ -5,6 +5,8 @@
 using std::endl;
 using namespace caf;
 
+namespace {
+
 using pop_atom = atom_constant<atom("pop")>;
 using push_atom = atom_constant<atom("push")>;
 
@@ -71,7 +73,7 @@ private:
 
 void caf_main(actor_system& system) {
   scoped_actor self{system};
-  auto st = self->spawn<fixed_stack>(5);
+  auto st = self->spawn<fixed_stack>(5u);
   // fill stack
   for (int i = 0; i < 10; ++i)
     self->send(st, push_atom::value, i);
@@ -91,5 +93,7 @@ void caf_main(actor_system& system) {
   aout(self) << "}" << endl;
   self->send_exit(st, exit_reason::user_shutdown);
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()

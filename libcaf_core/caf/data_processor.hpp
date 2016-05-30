@@ -151,11 +151,11 @@ public:
   apply(T& x) {
     using underlying = typename std::underlying_type<T>::type;
     struct {
-      void operator()(T& x, underlying& y) const {
-        x = static_cast<T>(y);
+      void operator()(T& lhs, underlying& rhs) const {
+        lhs = static_cast<T>(rhs);
       }
-      void operator()(underlying& x, T& y) const {
-        x = static_cast<underlying>(y);
+      void operator()(underlying& lhs, T& rhs) const {
+        lhs = static_cast<underlying>(rhs);
       }
     } assign;
     underlying tmp;
@@ -171,11 +171,11 @@ public:
 
   void apply(bool& x) {
     struct {
-      void operator()(bool& x, uint8_t& y) const {
-        x = y != 0;
+      void operator()(bool& lhs, uint8_t& rhs) const {
+        lhs = rhs != 0;
       }
-      void operator()(uint8_t& x, bool& y) const {
-        x = y ? 1 : 0;
+      void operator()(uint8_t& lhs, bool& rhs) const {
+        lhs = rhs ? 1 : 0;
       }
     } assign;
     uint8_t tmp;
@@ -324,12 +324,12 @@ public:
     // always save/store durations as int64_t to work around possibly
     // different integer types on different plattforms for standard typedefs
     struct {
-      void operator()(duration_type& x, int64_t& y) const {
-        duration_type tmp{y};
-        x = tmp;
+      void operator()(duration_type& lhs, int64_t& rhs) const {
+        duration_type tmp{rhs};
+        lhs = tmp;
       }
-      void operator()(int64_t& x, duration_type& y) const {
-        x = y.count();
+      void operator()(int64_t& lhs, duration_type& rhs) const {
+        lhs = rhs.count();
       }
     } assign;
     int64_t tmp;
@@ -345,12 +345,12 @@ public:
     // always save/store floating point durations
     // as doubles for the same reason as above
     struct {
-      void operator()(duration_type& x, double& y) const {
-        duration_type tmp{y};
-        x = tmp;
+      void operator()(duration_type& lhs, double& rhs) const {
+        duration_type tmp{rhs};
+        lhs = tmp;
       }
-      void operator()(double& x, duration_type& y) const {
-        x = y.count();
+      void operator()(double& lhs, duration_type& rhs) const {
+        lhs = rhs.count();
       }
     } assign;
     double tmp;

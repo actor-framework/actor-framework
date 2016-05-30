@@ -29,6 +29,14 @@ namespace caf {
 template <class T>
 class input_range {
 public:
+  virtual ~input_range() {
+    // nop
+  }
+
+  input_range() = default;
+  input_range(const input_range&) = default;
+  input_range& operator=(const input_range&) = default;
+
   class iterator : public std::iterator<std::input_iterator_tag, T> {
   public:
     iterator(input_range* range) : xs_(range) {

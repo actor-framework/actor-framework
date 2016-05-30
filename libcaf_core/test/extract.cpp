@@ -31,24 +31,6 @@ using namespace caf;
 
 using std::string;
 
-namespace {
-
-bool msg_equals_rec(const message&, size_t) {
-  return true;
-}
-
-template <class T, class... Ts>
-bool msg_equals_rec(const message& msg, size_t pos, const T& x, const Ts&... xs) {
-  return msg.get_as<T>(pos) == x && msg_equals_rec(msg, pos + 1, xs...);
-}
-
-template <class... Ts>
-bool msg_equals(const message& msg, const Ts&... xs) {
-  return msg.match_elements<Ts...>() && msg_equals_rec(msg, 0, xs...);
-}
-
-} // namespace <anonymous>
-
 CAF_TEST(type_sequences) {
   auto _64 = uint64_t{64};
   std::string str = "str";
@@ -56,9 +38,12 @@ CAF_TEST(type_sequences) {
   auto df = [](double, float) { };
   auto fs = [](float, const string&) { };
   auto iu = [](int, uint64_t) { };
-  CAF_CHECK(msg_equals(msg.extract(df), str, 42,  _64));
-  CAF_CHECK(msg_equals(msg.extract(fs), 1.0, 42,  _64));
-  CAF_CHECK(msg_equals(msg.extract(iu), 1.0, 2.f, str));
+  CAF_CHECK_EQUAL(to_string(msg.extract(df)),
+                  to_string(make_message(str, 42,  _64)));
+  CAF_CHECK_EQUAL(to_string(msg.extract(fs)),
+                  to_string(make_message(1.0, 42,  _64)));
+  CAF_CHECK_EQUAL(to_string(msg.extract(iu)),
+                  to_string(make_message(1.0, 2.f, str)));
 }
 
 CAF_TEST(cli_args) {

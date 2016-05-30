@@ -88,7 +88,10 @@ set (LIBCAF_CORE_SRCS
      src/try_match.cpp
      src/type_erased_value.cpp
      src/type_erased_tuple.cpp
-     src/uniform_type_info_map.cpp)
+     src/uniform_type_info_map.cpp
+     src/unprofiled.cpp
+     src/work_stealing.cpp
+     src/work_sharing.cpp)
 
 add_custom_target(libcaf_core)
 

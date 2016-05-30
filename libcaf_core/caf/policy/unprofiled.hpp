@@ -32,21 +32,7 @@ namespace policy {
 /// factor common utilities for implementing actual policies.
 class unprofiled {
 public:
-  virtual ~unprofiled() = default;
-
-  /// Policy-specific data fields for the coordinator.
-  struct coordinator_data {
-    inline explicit coordinator_data(scheduler::abstract_coordinator*) {
-      // nop
-    }
-  };
-
-  /// Policy-specific data fields for the worker.
-  struct worker_data {
-    inline explicit worker_data(scheduler::abstract_coordinator*) {
-      // nop
-    }
-  };
+  virtual ~unprofiled();
 
   /// Performs cleanup action before a shutdown takes place.
   template <class Worker>

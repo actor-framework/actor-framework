@@ -246,7 +246,7 @@ void node_id::from_string(const std::string& str) {
       // nop
     }
     uint8_t operator*() const {
-      return (hex_nibble(*i) << 4) | hex_nibble(*(i + 1));
+      return static_cast<uint8_t>(hex_nibble(*i) << 4) | hex_nibble(*(i + 1));
     }
     hex_byte_iter& operator++() {
       i += 2;

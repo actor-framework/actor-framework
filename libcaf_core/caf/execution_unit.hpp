@@ -32,6 +32,9 @@ class execution_unit {
 public:
   explicit execution_unit(actor_system* sys);
 
+  execution_unit(execution_unit&&) = delete;
+  execution_unit(const execution_unit&) = delete;
+
   virtual ~execution_unit();
 
   /// Enqueues `ptr` to the job list of the execution unit.

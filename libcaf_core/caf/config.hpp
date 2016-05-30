@@ -97,6 +97,7 @@
     _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
     _Pragma("clang diagnostic ignored \"-Wunreachable-code\"")                 \
     _Pragma("clang diagnostic ignored \"-Wreserved-id-macro\"")                \
+    _Pragma("clang diagnostic ignored \"-Wdouble-promotion\"")                 \
     _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("clang diagnostic push")                                           \

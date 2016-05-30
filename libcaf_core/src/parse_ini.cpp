@@ -29,13 +29,13 @@ namespace detail {
 
 void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
                              optional<std::ostream&> errors) const {
-  std::string group;
-  std::string line;
-  size_t ln = 0; // line number
   // wraps a temporary into an (lvalue) config_value and calls `consumer_fun`
   auto consumer = [&](size_t ln, std::string name, value x) {
     consumer_fun(ln, std::move(name), x);
   };
+  std::string group;
+  std::string line;
+  size_t ln = 0; // line number
   auto print = [&](const char* category, const char* str) {
     if (errors)
       *errors << category << " INI file line "

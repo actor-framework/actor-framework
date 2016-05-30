@@ -9,9 +9,7 @@
 // Run client at the same host:
 // - ./build/bin/distributed_math_actor -c -p 4242
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 254-266 (ConfiguringActorSystems.tex)
+// Manual refs: 250-262 (ConfiguringActorSystems)
 
 #include <array>
 #include <vector>
@@ -249,8 +247,6 @@ void client_repl(actor_system& system, string host, uint16_t port) {
   }
 }
 
-} // namespace <anonymous>
-
 class config : public actor_system_config {
 public:
   uint16_t port = 0;
@@ -285,5 +281,7 @@ void caf_main(actor_system& system, const config& cfg) {
   }
   client_repl(system, cfg.host, cfg.port);
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN(io::middleman)

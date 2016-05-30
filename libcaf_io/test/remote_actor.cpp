@@ -86,9 +86,8 @@ caf::behavior make_ping_behavior(caf::event_based_actor* self,
 
 std::string to_string(const std::vector<int>& vec) {
   std::ostringstream os;
-  for (auto i = 0; i + 1 < static_cast<int>(vec.size()); ++i) {
+  for (size_t i = 0; i + 1 < vec.size(); ++i)
     os << vec[i] << ", ";
-  }
   os << vec.back();
   return os.str();
 }
@@ -106,14 +105,12 @@ caf::behavior make_sort_behavior() {
 
 caf::behavior make_sort_requester_behavior(caf::event_based_actor* self,
                                            caf::actor sorter) {
-  std::vector<int> vec = {5, 4, 3, 2, 1};
-  self->send(sorter, std::move(vec));
+  self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
   return {
     [=](const std::vector<int>& vec) {
       CAF_MESSAGE("sort requester received: " << to_string(vec));
-      for (int i = 1; i <= 5; ++i) {
-        CAF_CHECK_EQUAL(i, vec[i - 1]);
-      }
+      for (size_t i = 1; i < vec.size(); ++i)
+        CAF_CHECK_EQUAL(static_cast<int>(i), vec[i - 1]);
       self->send_exit(sorter, caf::exit_reason::user_shutdown);
       self->quit();
     }

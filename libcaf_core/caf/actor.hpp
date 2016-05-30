@@ -117,14 +117,19 @@ public:
   /// Returns the address of the stored actor.
   actor_addr address() const noexcept;
 
+  /// Returns the ID of this actor.
+  inline actor_id id() const noexcept {
+    return ptr_->id();
+  }
+
   /// Returns the origin node of this actor.
   inline node_id node() const noexcept {
     return ptr_->node();
   }
 
-  /// Returns the ID of this actor.
-  inline actor_id id() const noexcept {
-    return ptr_->id();
+  /// Returns the hosting actor system.
+  inline actor_system& home_system() const noexcept {
+    return *ptr_->home_system;
   }
 
   /// Exchange content of `*this` and `other`.

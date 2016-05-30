@@ -49,8 +49,8 @@ public:
   }
 
   behavior make_behavior() override {
-    auto f = [=](local_actor*, const type_erased_tuple* x) -> result<message> {
-      auto msg = message::from(x);
+    auto f = [=](local_actor*, const type_erased_tuple* tup) -> result<message> {
+      auto msg = message::from(tup);
       auto rp = this->make_response_promise();
       split_(workset_, msg);
       for (auto& x : workset_)

@@ -71,18 +71,6 @@ intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {
   return compare(ptr_.get(), other);
 }
 
-actor_id actor_addr::id() const noexcept {
-  return (ptr_) ? ptr_->id() : 0;
-}
-
-node_id actor_addr::node() const noexcept {
-  return ptr_ ? ptr_->node() : node_id{};
-}
-
-actor_system* actor_addr::home_system() const noexcept {
-  return ptr_ ? ptr_->home_system : nullptr;
-}
-
 void actor_addr::swap(actor_addr& other) noexcept {
   ptr_.swap(other.ptr_);
 }

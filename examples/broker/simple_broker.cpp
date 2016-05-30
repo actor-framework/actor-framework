@@ -7,9 +7,7 @@
  * - ./build/bin/broker -c localhost 4242                                     *
 \ ******************************************************************************/
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 46-50 (Actors.tex)
+// Manual refs: 46-50 (Actors.tex)
 
 #include "caf/config.hpp"
 
@@ -37,6 +35,8 @@ using std::endl;
 
 using namespace caf;
 using namespace caf::io;
+
+namespace {
 
 using ping_atom = atom_constant<atom("ping")>;
 using pong_atom = atom_constant<atom("pong")>;
@@ -175,10 +175,6 @@ behavior server(broker* self, const actor& buddy) {
   };
 }
 
-optional<uint16_t> as_u16(const std::string& str) {
-  return static_cast<uint16_t>(stoul(str));
-}
-
 class config : public actor_system_config {
 public:
   uint16_t port = 0;
@@ -210,5 +206,7 @@ void caf_main(actor_system& system, const config& cfg) {
   print_on_exit(io_actor, "protobuf_io");
   send_as(io_actor, ping_actor, kickoff_atom::value, io_actor);
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN(io::middleman)

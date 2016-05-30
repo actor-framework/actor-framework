@@ -40,6 +40,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  type_erased_tuple() = default;
+  type_erased_tuple(const type_erased_tuple&) = default;
+
   virtual ~type_erased_tuple();
 
   // -- pure virtual modifiers -------------------------------------------------
@@ -141,7 +144,9 @@ public:
     init();
   }
 
-  type_erased_tuple_view(const type_erased_tuple_view& other) : xs_(other.xs_) {
+  type_erased_tuple_view(const type_erased_tuple_view& other)
+      : type_erased_tuple(),
+        xs_(other.xs_) {
     init();
   }
 

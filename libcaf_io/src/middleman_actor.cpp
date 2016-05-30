@@ -132,16 +132,16 @@ public:
               cached_.emplace(key, std::make_tuple(nid, addr, sigs));
             auto res = make_message(ok_atom::value, std::move(nid),
                                     std::move(addr), std::move(sigs));
-            for (auto& x : i->second)
-              x.deliver(res);
+            for (auto& promise : i->second)
+              promise.deliver(res);
             pending_.erase(i);
           },
           [=](error& err) {
             auto i = pending_.find(key);
             if (i == pending_.end())
               return;
-            for (auto& x : i->second)
-              x.deliver(err);
+            for (auto& promise : i->second)
+              promise.deliver(err);
             pending_.erase(i);
           }
         );

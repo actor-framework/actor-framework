@@ -600,6 +600,7 @@ behavior basp_broker::make_behavior() {
       }
       catch (std::exception& e) {
         CAF_LOG_DEBUG("failed to assign scribe from handle: " << e.what());
+        CAF_IGNORE_UNUSED(e);
         rp.deliver(sec::failed_to_assign_scribe_from_handle);
         return;
       }

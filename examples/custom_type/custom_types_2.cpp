@@ -12,6 +12,8 @@ using std::make_pair;
 
 using namespace caf;
 
+namespace {
+
 // a simple class using getter and setter member functions
 class foo {
 public:
@@ -71,5 +73,7 @@ public:
 void caf_main(actor_system& system, const config&) {
   anon_send(system.spawn(testee), foo{1, 2});
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()

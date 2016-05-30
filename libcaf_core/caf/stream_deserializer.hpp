@@ -94,8 +94,10 @@ public:
   }
 
   void apply_raw(size_t num_bytes, void* data) override {
-    auto n = streambuf_.sgetn(reinterpret_cast<char_type*>(data), num_bytes);
-    range_check(n, num_bytes);
+    auto n = streambuf_.sgetn(reinterpret_cast<char_type*>(data),
+                              static_cast<std::streamsize>(num_bytes));
+    CAF_ASSERT(n >= 0);
+    range_check(static_cast<size_t>(n), num_bytes);
   }
 
 protected:
@@ -112,7 +114,7 @@ protected:
        if (traits::eq_int_type(c, traits::eof()))
          throw std::out_of_range{"stream_deserializer<T>::begin_sequence"};
       low7 = static_cast<uint8_t>(traits::to_char_type(c));
-      x |= (low7 & 0x7F) << (7 * n);
+      x |= static_cast<T>((low7 & 0x7F) << (7 * n));
       ++n;
     } while (low7 & 0x80);
     return n;
@@ -160,8 +162,9 @@ protected:
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
         auto data = reinterpret_cast<char_type*>(&str[0]);
-        size_t n = streambuf_.sgetn(data, str_size);
-        range_check(n, str_size);
+        auto n = streambuf_.sgetn(data, static_cast<std::streamsize>(str_size));
+        CAF_ASSERT(n >= 0);
+        range_check(static_cast<size_t>(n), str_size);
         end_sequence();
         break;
       }
@@ -174,8 +177,9 @@ protected:
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
         auto data = reinterpret_cast<char_type*>(&str[0]);
-        size_t n = streambuf_.sgetn(data, bytes);
-        range_check(n, bytes);
+        auto n = streambuf_.sgetn(data, static_cast<std::streamsize>(bytes));
+        CAF_ASSERT(n >= 0);
+        range_check(static_cast<size_t>(n), str_size);
         end_sequence();
         break;
       }
@@ -188,8 +192,9 @@ protected:
         // TODO: When using C++14, switch to str.data(), which then has a
         // non-const overload.
         auto data = reinterpret_cast<char_type*>(&str[0]);
-        size_t n = streambuf_.sgetn(data, bytes);
-        range_check(n, bytes);
+        auto n = streambuf_.sgetn(data, static_cast<std::streamsize>(bytes));
+        CAF_ASSERT(n >= 0);
+        range_check(static_cast<size_t>(n), str_size);
         end_sequence();
         break;
       }

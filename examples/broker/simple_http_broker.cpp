@@ -11,6 +11,8 @@ using std::endl;
 using namespace caf;
 using namespace caf::io;
 
+namespace {
+
 using tick_atom = atom_constant<atom("tick")>;
 
 constexpr const char http_ok[] = R"__(HTTP/1.1 200 OK
@@ -84,5 +86,7 @@ void caf_main(actor_system& system, const config& cfg) {
   // kill server
   anon_send_exit(server_actor, exit_reason::user_shutdown);
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN(io::middleman)

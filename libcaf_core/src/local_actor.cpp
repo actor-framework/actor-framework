@@ -361,6 +361,8 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& node) {
   }
 }
 
+namespace {
+
 class invoke_result_visitor_helper {
 public:
   invoke_result_visitor_helper(response_promise x) : rp(x) {
@@ -428,6 +430,8 @@ public:
 private:
   local_actor* self_;
 };
+
+} // namespace <anonymous>
 
 void local_actor::handle_response(mailbox_element_ptr& ptr,
                                   local_actor::pending_response& pr) {

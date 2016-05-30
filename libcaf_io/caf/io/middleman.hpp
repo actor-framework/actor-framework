@@ -146,13 +146,14 @@ public:
 
   /// Adds a new hook to the middleman.
   template<class C, typename... Ts>
-  void add_hook(Ts&&... xs) {
+  C* add_hook(Ts&&... xs) {
     // if only we could move a unique_ptr into a lambda in C++11
     auto ptr = new C(system_, std::forward<Ts>(xs)...);
     backend().dispatch([=] {
       ptr->next.swap(hooks_);
       hooks_.reset(ptr);
     });
+    return ptr;
   }
 
   /// Returns whether this middleman has any hooks installed.

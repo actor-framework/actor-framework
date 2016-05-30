@@ -48,10 +48,7 @@ public:
       key += '.';
       // name can have format "<long>,<short>"; consider only long name
       auto name_begin = x->name();
-      auto name_end = name_begin;
-      for (auto c = *name_end; c != ',' && c != 0; ++name_end) {
-        // nop
-      }
+      const char* name_end = strchr(x->name(), ',');
       key.insert(key.end(), name_begin, name_end);
       //key += x->name();
       sinks_.emplace(std::move(key), x->to_sink());

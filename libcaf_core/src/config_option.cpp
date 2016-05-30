@@ -69,14 +69,14 @@ const char* config_option::type_name_visitor::operator()(atom_value) const {
 bool config_option::assign_config_value(size_t& x, int64_t& y) {
   if (y < 0 || ! unsigned_assign_in_range(x, y))
     return false;
-  x = std::move(y);
+  x = static_cast<size_t>(y);
   return true;
 }
 
 bool config_option::assign_config_value(uint16_t& x, int64_t& y) {
   if (y < 0 || y > std::numeric_limits<uint16_t>::max())
     return false;
-  x = std::move(y);
+  x = static_cast<uint16_t>(y);
   return true;
 }
 

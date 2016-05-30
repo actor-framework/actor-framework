@@ -2,10 +2,8 @@
  * A very basic, interactive divider.                                         *
 \******************************************************************************/
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 19-25, 35-48, and 63-73 (MessagePassing.tex);
-//                    lines 19-34, and 51-56 (Error.tex)
+// Manual refs: 19-25, 35-48, 63-73 (MessagePassing);
+//              19-34, 51-56 (Error)
 
 #include <iostream>
 
@@ -15,6 +13,8 @@ using std::cout;
 using std::endl;
 using std::flush;
 using namespace caf;
+
+namespace {
 
 enum class math_error : uint8_t {
   division_by_zero = 1
@@ -76,5 +76,7 @@ void caf_main(actor_system& system, const config&) {
     }
   );
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()

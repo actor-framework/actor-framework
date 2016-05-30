@@ -44,7 +44,6 @@ public:
   }
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
-  /// @returns A handle identifying a future-like handle to the response.
   /// @warning The returned handle is actor specific and the response to the
   ///          sent message cannot be received by another actor.
   /// @throws std::invalid_argument if `dest == invalid_actor`
@@ -71,6 +70,21 @@ public:
                                                         token{})),
                   "this actor does not accept the response message");
     dest->eq_impl(message_id::make(P), this->ctrl(),
+                  this->context(), std::forward<Ts>(xs)...);
+  }
+
+  template <message_priority P = message_priority::normal,
+            class Source = actor, class Dest = actor, class... Ts>
+  void anon_send(const Dest& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    static_assert(actor_accepts_message(signatures_of<Dest>(), token{}),
+                  "receiver does not accept given message");
+    dest->eq_impl(message_id::make(P), nullptr,
                   this->context(), std::forward<Ts>(xs)...);
   }
 

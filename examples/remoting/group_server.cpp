@@ -18,6 +18,8 @@
 using namespace std;
 using namespace caf;
 
+namespace {
+
 class config : public actor_system_config {
 public:
   uint16_t port = 0;
@@ -38,5 +40,7 @@ void caf_main(actor_system& system, const config& cfg) {
     else
       cerr << "illegal command" << endl;
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN(io::middleman)

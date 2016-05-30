@@ -17,53 +17,22 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DESERIALIZER_HPP
-#define CAF_DESERIALIZER_HPP
-
-#include <string>
-#include <cstddef>
-#include <utility>
-#include <type_traits>
+#ifndef CAF_IS_TYPED_ACTOR_HPP
+#define CAF_IS_TYPED_ACTOR_HPP
 
 #include "caf/fwd.hpp"
-#include "caf/data_processor.hpp"
 
 namespace caf {
 
-/// @ingroup TypeSystem
-/// Technology-independent deserialization interface.
-class deserializer : public data_processor<deserializer> {
-public:
-  ~deserializer();
-
-  using super = data_processor<deserializer>;
-
-  using is_saving = std::false_type;
-
-  using is_loading = std::true_type;
-
-  explicit deserializer(actor_system& sys);
-
-  explicit deserializer(execution_unit* ctx = nullptr);
-};
-
-/// Reads `x` from `source`.
-/// @relates serializer
+/**
+ * Evaluates to true if `T` is a `typed_actor<...>`.
+ */
 template <class T>
-auto operator>>(deserializer& source, T& x)
--> typename std::enable_if<
-  std::is_same<decltype(source.apply(x)), void>::value,
-  deserializer&
->::type {
-  source.apply(x);
-  return source;
-}
+struct is_typed_actor : std::false_type { };
 
-template <class T>
-auto operator&(deserializer& source, T& x) -> decltype(source.apply(x)) {
-  source.apply(x);
-}
+template <class... Ts>
+struct is_typed_actor<typed_actor<Ts...>> : std::true_type { };
 
 } // namespace caf
 
-#endif // CAF_DESERIALIZER_HPP
+#endif //CAF_IS_TYPED_ACTOR_HPP

@@ -23,6 +23,10 @@
 
 namespace caf {
 
+deserializer::~deserializer() {
+  // nop
+}
+
 deserializer::deserializer(actor_system& x) : super(x.dummy_execution_unit()) {
   // nop
 }

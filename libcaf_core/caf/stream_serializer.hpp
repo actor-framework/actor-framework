@@ -92,7 +92,8 @@ public:
   }
 
   void apply_raw(size_t num_bytes, void* data) override {
-    streambuf_.sputn(reinterpret_cast<char_type*>(data), num_bytes);
+    streambuf_.sputn(reinterpret_cast<char_type*>(data),
+                     static_cast<std::streamsize>(num_bytes));
   }
 
 protected:
@@ -109,7 +110,10 @@ protected:
       x >>= 7;
     }
     *i++ = static_cast<uint8_t>(x) & 0x7f;
-    return streambuf_.sputn(reinterpret_cast<char_type*>(buf), i - buf);
+    auto res = streambuf_.sputn(reinterpret_cast<char_type*>(buf),
+                                static_cast<std::streamsize>(i - buf));
+    CAF_ASSERT(res >= 0);
+    return static_cast<size_t>(res);
   }
 
   void apply_builtin(builtin type, void* val) override {

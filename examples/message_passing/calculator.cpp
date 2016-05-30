@@ -3,9 +3,7 @@
  * for both the blocking and the event-based API.                             *
 \******************************************************************************/
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 17-21, 31-65, 67-101, and 134-139 (Actor.tex)
+// Manual refs: lines 19-21, 31-65, 67-101, 134-139 (Actor)
 
 #include <iostream>
 
@@ -13,6 +11,8 @@
 
 using std::endl;
 using namespace caf;
+
+namespace {
 
 using add_atom = atom_constant<atom("add")>;
 using sub_atom = atom_constant<atom("sub")>;
@@ -137,5 +137,7 @@ void caf_main(actor_system& system) {
   scoped_actor self{system};
   tester(self, a1, 1, 2, a2, 3, 4, a3, 5, 6, a4, 7, 8, a5, 9, 10, a6, 11, 12);
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()

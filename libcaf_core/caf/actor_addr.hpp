@@ -73,13 +73,19 @@ public:
   actor_addr(const unsafe_actor_handle_init_t&);
 
   /// Returns the ID of this actor.
-  actor_id id() const noexcept;
+  inline actor_id id() const noexcept {
+    return ptr_->id();
+  }
 
   /// Returns the origin node of this actor.
-  node_id node() const noexcept;
+  inline node_id node() const noexcept {
+    return ptr_->node();
+  }
 
   /// Returns the hosting actor system.
-  actor_system* home_system() const noexcept;
+  inline actor_system& home_system() const noexcept {
+    return *ptr_->home_system;
+  }
 
   /// Exchange content of `*this` and `other`.
   void swap(actor_addr& other) noexcept;

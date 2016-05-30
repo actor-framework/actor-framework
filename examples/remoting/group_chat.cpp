@@ -23,6 +23,8 @@
 using namespace std;
 using namespace caf;
 
+namespace {
+
 using broadcast_atom = atom_constant<atom("broadcast")>;
 
 struct line { string str; };
@@ -152,5 +154,7 @@ void caf_main(actor_system& system, const config& cfg) {
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN(io::middleman)

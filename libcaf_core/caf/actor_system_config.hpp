@@ -32,6 +32,7 @@
 #include "caf/config_value.hpp"
 #include "caf/config_option.hpp"
 #include "caf/actor_factory.hpp"
+#include "caf/is_typed_actor.hpp"
 #include "caf/type_erased_value.hpp"
 
 #include "caf/detail/safe_equal.hpp"
@@ -116,6 +117,7 @@ public:
   template <class T>
   actor_system_config& add_message_type(std::string name) {
     static_assert(std::is_empty<T>::value
+                  || is_typed_actor<T>::value
                   || (std::is_default_constructible<T>::value
                       && std::is_copy_constructible<T>::value),
                   "T must provide default and copy constructors");

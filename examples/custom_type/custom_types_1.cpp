@@ -1,9 +1,7 @@
 // Showcases how to add custom POD message types.
 
-// This file is referenced in the manual, do not modify without updating refs!
-// ConfiguringActorApplications: 23-26, 29-33, 87-90, 93-96
+// Manual refs: 23-26, 29-33, 87-90, 93-96 (ConfiguringActorApplications)
 
-#include <tuple>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -18,6 +16,8 @@ using std::endl;
 using std::vector;
 
 using namespace caf;
+
+namespace {
 
 // POD struct foo
 struct foo {
@@ -112,7 +112,7 @@ void caf_main(actor_system& system, const config&) {
   // must be equal
   assert(to_string(f1) == to_string(f2));
   // spawn a testee that receives two messages of user-defined type
-  auto t = system.spawn(testee, 2);
+  auto t = system.spawn(testee, 2u);
   scoped_actor self{system};
   // send t a foo
   self->send(t, foo{std::vector<int>{1, 2, 3, 4}, 5});
@@ -120,5 +120,7 @@ void caf_main(actor_system& system, const config&) {
   self->send(t, foo_pair2{3, 4});
   self->await_all_other_actors_done();
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()

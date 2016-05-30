@@ -62,10 +62,15 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
  public:
   static_assert(sizeof...(Sigs) > 0, "Empty typed actor handle");
 
-  // grant access to private ctor
+  // -- friend types that need access to private ctors
   friend class local_actor;
 
-  // friend with all possible instantiations
+  template <class>
+  friend class data_processor;
+
+  template <class>
+  friend class type_erased_value_impl;
+
   template <class...>
   friend class typed_actor;
 
@@ -126,8 +131,6 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   using stateful_broker_pointer =
     stateful_actor<State, broker_base>*;
 
-  typed_actor() = delete;
-
   typed_actor(typed_actor&&) = default;
   typed_actor(const typed_actor&) = default;
   typed_actor& operator=(typed_actor&&) = default;
@@ -184,14 +187,19 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return {ptr_.get(), true};
   }
 
+  /// Returns the ID of this actor.
+  actor_id id() const noexcept {
+    return ptr_->id();
+  }
+
   /// Returns the origin node of this actor.
   node_id node() const noexcept {
     return ptr_->node();
   }
 
-  /// Returns the ID of this actor.
-  actor_id id() const noexcept {
-    return ptr_->id();
+  /// Returns the hosting actor system.
+  inline actor_system& home_system() const noexcept {
+    return *ptr_->home_system;
   }
 
   /// Exchange content of `*this` and `other`.
@@ -262,6 +270,8 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   /// @endcond
 
 private:
+  typed_actor() = default;
+
   actor_control_block* get() const noexcept {
     return ptr_.get();
   }

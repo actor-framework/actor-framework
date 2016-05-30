@@ -214,12 +214,12 @@ void bootstrap(actor_system& system,
   std::string slaveslist;
   for (size_t i = 0; i < slaves.size(); ++i) {
     self->receive(
-      [&](ok_atom, const string& host, uint16_t port) {
+      [&](ok_atom, const string& host, uint16_t slave_port) {
         if (! slaveslist.empty())
           slaveslist += ',';
         slaveslist += host;
         slaveslist += '/';
-        slaveslist += std::to_string(port);
+        slaveslist += std::to_string(slave_port);
       },
       [](const string& node) {
         cerr << "unable to launch process via SSH at node " << node << endl;

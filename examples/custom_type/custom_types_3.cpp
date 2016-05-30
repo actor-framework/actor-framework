@@ -1,9 +1,7 @@
-// Showcases how to add custom message types to CAF
-// if no friend access for serialization is possible.
+// Showcases custom message types that cannot provide
+// friend access to the serialize() function.
 
-// This file is referenced in the manual, do not modify without updating refs!
-// ConfiguringActorApplications: 57-59, 64-66
-
+// Manual refs: 57-59, 64-66 (ConfiguringActorApplications)
 
 #include <utility>
 #include <iostream>
@@ -15,6 +13,8 @@ using std::endl;
 using std::make_pair;
 
 using namespace caf;
+
+namespace {
 
 // identical to our second custom type example,
 // but without friend declarations
@@ -89,5 +89,7 @@ public:
 void caf_main(actor_system& system, const config&) {
   anon_send(system.spawn(testee), foo{1, 2});
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()

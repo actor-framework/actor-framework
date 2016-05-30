@@ -44,14 +44,14 @@ public:
 
 } // namespace <anonymous>
 
-scoped_actor::scoped_actor(actor_system& sys, bool hidden) : context_{&sys} {
+scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
   actor_config cfg{&context_};
   self_ = make_actor<impl, strong_actor_ptr>(sys.next_actor_id(), sys.node(),
                                              &sys, cfg);
-  if (! hidden)
+  if (! hide)
     prev_ = CAF_SET_AID(self_->id());
-  CAF_LOG_TRACE(CAF_ARG(hidden));
-  ptr()->is_registered(! hidden);
+  CAF_LOG_TRACE(CAF_ARG(hide));
+  ptr()->is_registered(! hide);
 }
 
 scoped_actor::~scoped_actor() {

@@ -110,22 +110,22 @@ CAF_TEST(untyped_splicing) {
 
 CAF_TEST(typed_splicing) {
   using namespace std::placeholders;
-  auto x = system.spawn(typed_first_stage);
-  auto y = system.spawn(typed_second_stage);
-  auto x_and_y = splice(x, y.bind(23.0, _1));
+  auto stage0 = system.spawn(typed_first_stage);
+  auto stage1 = system.spawn(typed_second_stage);
+  auto stages = splice(stage0, stage1.bind(23.0, _1));
   using expected_type = typed_actor<replies_to<double>
                                     ::with<double, double, double>>;
-  static_assert(std::is_same<decltype(x_and_y), expected_type>::value,
+  static_assert(std::is_same<decltype(stages), expected_type>::value,
                 "splice() did not compute the correct result");
-  self->request(x_and_y, infinite, 42.0).receive(
+  self->request(stages, infinite, 42.0).receive(
     [](double x, double y, double z) {
       CAF_CHECK_EQUAL(x, (42.0 * 2.0));
       CAF_CHECK_EQUAL(y, (42.0 * 4.0));
       CAF_CHECK_EQUAL(z, (23.0 * 42.0));
     }
   );
-  // x and y go out of scope, leaving only the references
-  // in x_and_y, which will also go out of scope
+  // stage0 and stage1 go out of scope, leaving only the references
+  // in stages, which will also go out of scope
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

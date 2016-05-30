@@ -45,14 +45,19 @@ public:
   // tell actor_cast this is a non-null handle type
   static constexpr bool has_non_null_guarantee = true;
 
-  scoped_actor(const scoped_actor&) = delete;
-
   scoped_actor(actor_system& sys, bool hide_actor = false);
+
+  scoped_actor(const scoped_actor&) = delete;
+  scoped_actor& operator=(const scoped_actor&) = delete;
 
   scoped_actor(scoped_actor&&) = default;
   scoped_actor& operator=(scoped_actor&&) = default;
 
   ~scoped_actor();
+
+  inline actor_system& home_system() const {
+    return *self_->home_system;
+  }
 
   inline blocking_actor* operator->() const {
     return ptr();

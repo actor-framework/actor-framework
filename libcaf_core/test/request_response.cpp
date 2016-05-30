@@ -183,11 +183,11 @@ public:
 
   behavior make_behavior() override {
     return {
-      [=](gogo_atom x) -> response_promise {
+      [=](gogo_atom gogo) -> response_promise {
         auto rp = make_response_promise();
-        request(buddy(), infinite, x).then(
-          [=](ok_atom x) mutable {
-            rp.deliver(x);
+        request(buddy(), infinite, gogo).then(
+          [=](ok_atom ok) mutable {
+            rp.deliver(ok);
             quit();
           }
         );
@@ -429,10 +429,10 @@ CAF_TEST(request_no_then) {
 
 CAF_TEST(async_request) {
   auto foo = system.spawn([](event_based_actor* self) -> behavior {
-    auto receiver = self->spawn<linked>([](event_based_actor* self) -> behavior{
+    auto receiver = self->spawn<linked>([](event_based_actor* ptr) -> behavior {
       return {
         [=](int) {
-          return self->make_response_promise();
+          return ptr->make_response_promise();
         }
       };
     });

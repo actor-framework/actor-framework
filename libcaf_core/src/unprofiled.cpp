@@ -17,53 +17,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DESERIALIZER_HPP
-#define CAF_DESERIALIZER_HPP
-
-#include <string>
-#include <cstddef>
-#include <utility>
-#include <type_traits>
-
-#include "caf/fwd.hpp"
-#include "caf/data_processor.hpp"
+#include "caf/policy/unprofiled.hpp"
 
 namespace caf {
+namespace policy {
 
-/// @ingroup TypeSystem
-/// Technology-independent deserialization interface.
-class deserializer : public data_processor<deserializer> {
-public:
-  ~deserializer();
-
-  using super = data_processor<deserializer>;
-
-  using is_saving = std::false_type;
-
-  using is_loading = std::true_type;
-
-  explicit deserializer(actor_system& sys);
-
-  explicit deserializer(execution_unit* ctx = nullptr);
-};
-
-/// Reads `x` from `source`.
-/// @relates serializer
-template <class T>
-auto operator>>(deserializer& source, T& x)
--> typename std::enable_if<
-  std::is_same<decltype(source.apply(x)), void>::value,
-  deserializer&
->::type {
-  source.apply(x);
-  return source;
+unprofiled::~unprofiled() {
+  // nop
 }
 
-template <class T>
-auto operator&(deserializer& source, T& x) -> decltype(source.apply(x)) {
-  source.apply(x);
-}
-
+} // namespace policy
 } // namespace caf
-
-#endif // CAF_DESERIALIZER_HPP

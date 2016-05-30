@@ -31,11 +31,14 @@
 namespace caf {
 namespace policy {
 
+/// Implements scheduling of actors via work sharing (central job queue).
 /// @extends scheduler_policy
 class work_sharing : public unprofiled {
 public:
   // A thread-safe queue implementation.
   using queue_type = std::list<resumable*>;
+
+  ~work_sharing();
 
   struct coordinator_data {
     inline explicit coordinator_data(scheduler::abstract_coordinator*) {
@@ -45,6 +48,12 @@ public:
     queue_type queue;
     std::mutex lock;
     std::condition_variable cv;
+  };
+
+  struct worker_data {
+    inline explicit worker_data(scheduler::abstract_coordinator*) {
+      // nop
+    }
   };
 
   template <class Coordinator>

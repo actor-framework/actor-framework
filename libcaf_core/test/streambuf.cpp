@@ -34,21 +34,21 @@ CAF_TEST(signed_arraybuf) {
   CAF_CHECK_EQUAL(ab.sgetc(), 'T');
   std::string buf;
   buf.resize(3);
-  size_t got = ab.sgetn(&buf[0], 3);
-  CAF_CHECK_EQUAL(got, 3u);
+  auto got = ab.sgetn(&buf[0], 3);
+  CAF_CHECK_EQUAL(got, 3);
   CAF_CHECK_EQUAL(buf, "The");
   CAF_CHECK_EQUAL(ab.sgetc(), ' ');
   // Exhaust the stream.
   buf.resize(data.size());
-  got = ab.sgetn(&buf[0] + 3, data.size() - 3);
-  CAF_CHECK_EQUAL(got, data.size() - 3);
+  got = ab.sgetn(&buf[0] + 3, static_cast<std::streamsize>(data.size() - 3));
+  CAF_CHECK_EQUAL(static_cast<size_t>(got), data.size() - 3);
   CAF_CHECK_EQUAL(data, buf);
   CAF_CHECK_EQUAL(ab.in_avail(), 0);
   // No more.
   auto c = ab.sgetc();
   CAF_CHECK_EQUAL(c, charbuf::traits_type::eof());
   // Reset the stream and write into it.
-  ab.setbuf(&data[0], data.size());
+  ab.setbuf(&data[0], static_cast<std::streamsize>(data.size()));
   CAF_CHECK_EQUAL(static_cast<size_t>(ab.in_avail()), data.size());
   auto put = ab.sputn("One", 3);
   CAF_CHECK_EQUAL(put, 3);
@@ -77,7 +77,7 @@ CAF_TEST(containerbuf) {
   // Write some data.
   std::vector<char> buf;
   vectorbuf vb{buf};
-  auto put = vb.sputn(data.data(), data.size());
+  auto put = vb.sputn(data.data(), static_cast<std::streamsize>(data.size()));
   CAF_CHECK_EQUAL(static_cast<size_t>(put), data.size());
   put = vb.sputn(";", 1);
   CAF_CHECK_EQUAL(put, 1);
@@ -103,8 +103,8 @@ CAF_TEST(containerbuf) {
   buf.clear();
   containerbuf<std::string> sib2{data};
   buf.resize(data.size());
-  size_t got = sib2.sgetn(&buf[0], buf.size());
-  CAF_CHECK_EQUAL(got, data.size());
+  auto got = sib2.sgetn(&buf[0], static_cast<std::streamsize>(buf.size()));
+  CAF_CHECK_EQUAL(static_cast<size_t>(got), data.size());
   CAF_CHECK_EQUAL(buf.size(), data.size());
   CAF_CHECK(std::equal(buf.begin(), buf.end(), data.begin() /*, data.end() */));
 }

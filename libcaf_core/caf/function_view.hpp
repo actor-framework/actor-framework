@@ -108,7 +108,7 @@ public:
 
   function_view(function_view&& x) : impl_(std::move(x.impl_)) {
     if (! impl_.unsafe()) {
-      new (&self_) scoped_actor(std::move(x.self_));
+      new (&self_) scoped_actor(impl_.home_system()); //(std::move(x.self_));
       x.self_.~scoped_actor();
     }
   }
