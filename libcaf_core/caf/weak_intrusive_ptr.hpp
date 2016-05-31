@@ -126,11 +126,11 @@ public:
   }
 
   bool operator!() const {
-    return ptr_ == nullptr;
+    return ! ptr_;
   }
 
   explicit operator bool() const {
-    return ptr_ != nullptr;
+    return static_cast<bool>(ptr_);
   }
 
   ptrdiff_t compare(const_pointer ptr) const {

@@ -443,7 +443,7 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(actor_accepts_message(signatures_of<Handle>(), token{}),
+    static_assert(actor_accepts_message<typename signatures_of<Handle>::type, token>::value,
                   "receiver does not accept given message");
     auto mid = current_element_->mid;
     current_element_->mid = P == message_priority::high

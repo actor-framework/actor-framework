@@ -17,7 +17,7 @@ using namespace caf;
 
 namespace {
 
-using add_atom = atom_constant<atom("add")>;
+// using add_atom = atom_constant<atom("add")>; (defined in atom.hpp)
 using multiply_atom = atom_constant<atom("multiply")>;
 
 using adder = typed_actor<replies_to<add_atom, int, int>::with<int>>;

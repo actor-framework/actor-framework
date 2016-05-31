@@ -136,46 +136,35 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   typed_actor& operator=(typed_actor&&) = default;
   typed_actor& operator=(const typed_actor&) = default;
 
-  template <class TypedActor,
-            class Enable =
-              typename std::enable_if<
-                detail::tlf_is_subset(signatures(),
-                                      typename TypedActor::signatures())
-              >::type>
-  typed_actor(const TypedActor& other) : ptr_(other.ptr_) {
-    // nop
+  template <class... Ts>
+  typed_actor(const typed_actor<Ts...>& other) : ptr_(other.ptr_) {
+    static_assert(detail::tl_subset_of<
+                    signatures,
+                    detail::type_list<Ts...>
+                  >::value,
+                  "Cannot assign invalid handle");
   }
 
   // allow `handle_type{this}` for typed actors
-  template <class TypedActor,
-            class Enable =
-              typename std::enable_if<
-                detail::tlf_is_subset(signatures(),
-                                      typename TypedActor::signatures())
-              >::type>
-  typed_actor(TypedActor* ptr) : ptr_(ptr->ctrl()) {
+  template <class... Ts>
+  typed_actor(typed_actor<Ts...>* ptr) : ptr_(ptr->ctrl()) {
+    static_assert(detail::tl_subset_of<
+                    signatures,
+                    detail::type_list<Ts...>
+                  >::value,
+                  "Cannot assign invalid handle");
     CAF_ASSERT(ptr != nullptr);
   }
 
-  template <class TypedActor,
-            class Enable =
-              typename std::enable_if<
-                detail::tlf_is_subset(signatures(),
-                                      typename TypedActor::signatures())
-              >::type>
-  typed_actor& operator=(const TypedActor& other) {
+  template <class... Ts>
+  typed_actor& operator=(const typed_actor<Ts...>& other) {
+    static_assert(detail::tl_subset_of<
+                    signatures,
+                    detail::type_list<Ts...>
+                  >::value,
+                  "Cannot assign invalid handle");
     ptr_ = other.ptr_;
     return *this;
-  }
-
-  template <class Impl,
-            class Enable =
-              typename std::enable_if<
-                detail::tlf_is_subset(signatures(),
-                                      typename Impl::signatures())
-              >::type>
-  typed_actor(intrusive_ptr<Impl> other) : ptr_(std::move(other)) {
-    // nop
   }
 
   typed_actor(const unsafe_actor_handle_init_t&) {

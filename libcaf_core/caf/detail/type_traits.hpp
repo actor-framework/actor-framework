@@ -283,39 +283,23 @@ template <class T,
                         || std::is_function<T>::value>
 struct has_serialize {
   template <class U>
-  static auto test_serialize(caf::serializer* sink, U* x)
-  -> decltype(serialize(*sink, *x, 0u), std::true_type());
+  static auto test_serialize(caf::serializer* sink, U* x, const unsigned int y = 0)
+  -> decltype(serialize(*sink, *x, y));
 
   template <class U>
   static auto test_serialize(caf::serializer* sink, U* x)
-  -> decltype(serialize(*sink, *x), std::true_type());
-
-  template <class U>
-  static auto test_serialize(caf::serializer* sink, U* x)
-  -> decltype(x->serialize(*sink, 0u), std::true_type());
-
-  template <class U>
-  static auto test_serialize(caf::serializer* sink, U* x)
-  -> decltype(x->serialize(*sink), std::true_type());
+  -> decltype(serialize(*sink, *x));
 
   template <class>
   static auto test_serialize(...) -> std::false_type;
 
   template <class U>
-  static auto test_deserialize(caf::deserializer* source, U* x)
-  -> decltype(serialize(*source, *x, 0u), std::true_type());
+  static auto test_deserialize(caf::deserializer* source, U* x, const unsigned int y = 0)
+  -> decltype(serialize(*source, *x, y));
 
   template <class U>
   static auto test_deserialize(caf::deserializer* source, U* x)
-  -> decltype(serialize(*source, *x), std::true_type());
-
-  template <class U>
-  static auto test_deserialize(caf::deserializer* source, U* x)
-  -> decltype(x->serialize(*source, 0u), std::true_type());
-
-  template <class U>
-  static auto test_deserialize(caf::deserializer* source, U* x)
-  -> decltype(x->serialize(*source), std::true_type());
+  -> decltype(serialize(*source, *x));
 
   template <class>
   static auto test_deserialize(...) -> std::false_type;
@@ -324,7 +308,8 @@ struct has_serialize {
   using deserialize_type = decltype(test_deserialize<T>(nullptr, nullptr));
   using type = std::integral_constant<
     bool,
-    serialize_type::value && deserialize_type::value
+    std::is_same<serialize_type, void>::value
+    && std::is_same<deserialize_type, void>::value
   >;
 
   static constexpr bool value = type::value;

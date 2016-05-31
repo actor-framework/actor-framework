@@ -220,7 +220,7 @@ private:
   template <class... Us>
   void set(const variant<Us...>& other) {
     using namespace detail;
-    static_assert(tlf_is_subset<type_list<Us...>, types>(),
+    static_assert(tl_subset_of<type_list<Us...>, types>::value,
                   "cannot set variant of type A to variant of type B "
                   "unless the element types of A are a strict subset of "
                   "the element types of B");
@@ -231,7 +231,7 @@ private:
   template <class... Us>
   void set(variant<Us...>&& other) {
     using namespace detail;
-    static_assert(tlf_is_subset<type_list<Us...>, types>(),
+    static_assert(tl_subset_of<type_list<Us...>, types>::value,
                   "cannot set variant of type A to variant of type B "
                   "unless the element types of A are a strict subset of "
                   "the element types of B");

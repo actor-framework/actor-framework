@@ -1011,39 +1011,41 @@ struct tl_apply<type_list<Ts...>, VarArgTemplate> {
   using type = VarArgTemplate<Ts...>;
 };
 
-// bool is_strict_subset(list,list)
+// contains(list, x)
 
-template <class T>
-constexpr int tlf_find(type_list<>, int = 0) {
-  return -1;
-}
+template <class List, class X>
+struct tl_contains;
 
-template <class T, class U, class... Us>
-constexpr int tlf_find(type_list<U, Us...>, int pos = 0) {
-  return std::is_same<T, U>::value ? pos
-                                   : tlf_find<T>(type_list<Us...>{}, pos + 1);
-}
+template <class X>
+struct tl_contains<type_list<>, X> : std::false_type {};
 
-constexpr bool tlf_no_negative() {
-  return true;
-}
+template <class... Ts, class X>
+struct tl_contains<type_list<X, Ts...>, X> : std::true_type {};
 
-template <class... Ts>
-constexpr bool tlf_no_negative(int x, Ts... xs) {
-  return x < 0 ? false : tlf_no_negative(xs...);
-}
+template <class T, class... Ts, class X>
+struct tl_contains<type_list<T, Ts...>, X> : tl_contains<type_list<Ts...>, X> {};
 
-template <class... Ts, class List>
-constexpr bool tlf_is_subset(type_list<Ts...>, List) {
-  return tlf_no_negative(tlf_find<Ts>(List{})...);
-}
+// subset_of(list, list)
+
+template <class ListA, class ListB, bool Fwd = true>
+struct tl_subset_of;
+
+template <class List>
+struct tl_subset_of<type_list<>, List, true> : std::true_type {};
+
+template <class ListA, class ListB>
+struct tl_subset_of<ListA, ListB, false> : std::false_type {};
+
+template <class T, class... Ts, class List>
+struct tl_subset_of<type_list<T, Ts...>, List> 
+    : tl_subset_of<type_list<Ts...>, List, tl_contains<List, T>::value> {};
 
 /// Tests whether ListA contains the same elements as ListB
 /// and vice versa. This comparison ignores element positions.
 template <class ListA, class ListB>
 struct tl_equal {
-  static constexpr bool value = tlf_is_subset(ListA{}, ListB{})
-                                && tlf_is_subset(ListB{}, ListA{});
+  static constexpr bool value = tl_subset_of<ListA, ListB>::value
+                                && tl_subset_of<ListB, ListA>::value;
 };
 
 template <size_t N, class T>

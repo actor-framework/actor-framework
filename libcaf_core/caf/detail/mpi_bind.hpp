@@ -39,7 +39,7 @@ template <class T,
           int PlaceholderValue,
           size_t Pos,
           size_t Size,
-          bool InRange = PlaceholderValue <= Size>
+          bool InRange = PlaceholderValue <= static_cast<int>(Size)>
 struct mpi_bind_sig_single {
   using type =
     mpi_bind_sig_arg_t<

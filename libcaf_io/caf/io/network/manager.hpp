@@ -48,7 +48,7 @@ public:
 
   /// Returns `true` if this manager has a parent, `false` otherwise.
   inline bool detached() const {
-    return parent_ == nullptr;
+    return ! parent_;
   }
 
   /// Detach this manager from its parent and invoke `detach_message()``

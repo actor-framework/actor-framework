@@ -52,10 +52,10 @@ namespace detail {
 // to enable both ADL and picking up existing boost code.
 
 template <class Processor, class U>
-auto delegate_serialize(Processor& proc, U& x)
-  -> decltype(serialize(proc, x, 0)) {
+auto delegate_serialize(Processor& proc, U& x, const unsigned int y = 0)
+  -> decltype(serialize(proc, x, y)) {
   using namespace boost::serialization;
-  serialize(proc, x, 0);
+  serialize(proc, x, y);
 }
 
 // Calls `serialize(...)` without the unused version argument, which CAF

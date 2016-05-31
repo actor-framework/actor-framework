@@ -32,8 +32,10 @@ public:
   template <class Supertype>
   typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
     using namespace caf::detail;
-    static_assert(tlf_is_subset(type_list<Sigs...>{},
-                                typename Supertype::signatures{}),
+    static_assert(tl_subset_of<
+                    type_list<Sigs...>,
+                    typename Supertype::signatures
+                  >::value,
                   "cannot create a pointer view to an unrelated actor type");
   }
 

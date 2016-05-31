@@ -104,8 +104,8 @@ typename pseudo_tuple_access<
 >::result_type
 get(const detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  pseudo_tuple_access<const typename detail::type_at<N, Ts...>::type> f;
-  return f.get(tv, N);
+  using f = pseudo_tuple_access<const typename detail::type_at<N, Ts...>::type>;
+  return f::get(tv, N);
 }
 
 template <size_t N, class... Ts>
@@ -114,8 +114,8 @@ typename pseudo_tuple_access<
 >::result_type
 get(detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
-  pseudo_tuple_access<typename detail::type_at<N, Ts...>::type> f;
-  return f.get(tv, N);
+  using f = pseudo_tuple_access<typename detail::type_at<N, Ts...>::type>;
+  return f::get(tv, N);
 }
 
 } // namespace detail

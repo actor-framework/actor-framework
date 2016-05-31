@@ -53,11 +53,13 @@ public:
                   "data is not at cache line size boundary");
     // 4) make sure static_cast and reinterpret_cast
     //    between T* and abstract_actor* are identical
+/*
     constexpr abstract_actor* dummy = nullptr;
     constexpr T* derived_dummy = static_cast<T*>(dummy);
     static_assert(derived_dummy == nullptr,
                   "actor subtype has illegal memory alignment "
                   "(probably due to virtual inheritance)");
+*/
     // construct data member
     new (&data) T(std::forward<Us>(zs)...);
   }
@@ -68,6 +70,9 @@ public:
 
   actor_storage(const actor_storage&) = delete;
   actor_storage& operator=(const actor_storage&) = delete;
+
+  static_assert(sizeof(actor_control_block) < CAF_CACHE_LINE_SIZE,
+                "actor_control_block exceeds 64 bytes");
 
   actor_control_block ctrl;
   char pad[CAF_CACHE_LINE_SIZE - sizeof(actor_control_block)];

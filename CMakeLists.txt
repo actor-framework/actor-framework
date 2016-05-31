@@ -6,6 +6,12 @@ if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
 endif()
 
+# shared libs currently not supported on Windows
+if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
+  message(STATUS "CAF currently only supports static-only builds on Windows")
+  set(CAF_BUILD_STATIC_ONLY yes)
+endif()
+
 ################################################################################
 #   make sure all variables are set to "no" if undefined for summary output    #
 ################################################################################

@@ -171,7 +171,7 @@ const node_id::host_id_type& node_id::host_id() const {
 }
 
 node_id::operator bool() const {
-  return data_ != nullptr;
+  return static_cast<bool>(data_);
 }
 
 void node_id::swap(node_id& x) {

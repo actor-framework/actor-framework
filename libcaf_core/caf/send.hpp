@@ -47,14 +47,22 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
                 "statically typed actors can only send() to other "
                 "statically typed actors; use anon_send() or request() when "
                 "communicating with dynamically typed actors");
-  static_assert(actor_accepts_message(signatures_of<Dest>(), token{}),
+  static_assert(actor_accepts_message<typename signatures_of<Dest>::type, token>::value,
                 "receiver does not accept given message");
   // TODO: this only checks one way, we should check for loops
-  static_assert(is_void_response(response_to(signatures_of<Dest>(),
-                                             token{}))
-                ||  actor_accepts_message(signatures_of<Source>(),
-                                          response_to(signatures_of<Dest>(),
-                                                      token{})),
+  static_assert(is_void_response<
+                  typename response_to<
+                    typename signatures_of<Dest>::type,
+                    token
+                  >::type
+                >::value
+                ||  actor_accepts_message<
+                      typename signatures_of<Source>::type,
+                      typename response_to<
+                        typename signatures_of<Dest>::type,
+                        token
+                      >::type
+                    >::value,
                 "this actor does not accept the response message");
   dest->eq_impl(message_id::make(P), actor_cast<strong_actor_ptr>(src),
                 nullptr, std::forward<Ts>(xs)...);
@@ -70,7 +78,10 @@ void anon_send(const Dest& dest, Ts&&... xs) {
       typename detail::implicit_conversions<
         typename std::decay<Ts>::type
       >::type...>;
-  static_assert(actor_accepts_message(signatures_of<Dest>(), token{}),
+  static_assert(actor_accepts_message<
+                  typename signatures_of<Dest>::type,
+                  token
+                >::value,
                 "receiver does not accept given message");
   dest->eq_impl(message_id::make(P), nullptr, nullptr, std::forward<Ts>(xs)...);
 }

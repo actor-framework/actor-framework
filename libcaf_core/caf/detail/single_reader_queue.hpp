@@ -102,12 +102,12 @@ public:
   /// @warning Call only from the reader (owner).
   bool empty() {
     CAF_ASSERT(! closed());
-    return cache_.empty() && head_ == nullptr && is_dummy(stack_.load());
+    return cache_.empty() && ! head_ && is_dummy(stack_.load());
   }
 
   /// Queries whether this has been closed.
   bool closed() {
-    return stack_.load() == nullptr;
+    return ! stack_.load();
   }
 
   /// Queries whether this has been marked as blocked, i.e.,
@@ -238,7 +238,7 @@ private:
 
   // atomically sets stack_ back and enqueues all elements to the cache
   bool fetch_new_data(pointer end_ptr) {
-    CAF_ASSERT(end_ptr == nullptr || end_ptr == stack_empty_dummy());
+    CAF_ASSERT(! end_ptr || end_ptr == stack_empty_dummy());
     pointer e = stack_.load();
     // must not be called on a closed queue
     CAF_ASSERT(e != nullptr);
@@ -253,7 +253,7 @@ private:
         CAF_ASSERT(e != reader_blocked_dummy());
         if (is_dummy(e)) {
           // only use-case for this is closing a queue
-          CAF_ASSERT(end_ptr == nullptr);
+          CAF_ASSERT(! end_ptr);
           return false;
         }
         while (e) {

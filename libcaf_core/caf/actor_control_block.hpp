@@ -89,6 +89,18 @@ public:
   const data_destructor data_dtor;
   const block_destructor block_dtor;
 
+  static_assert(sizeof(std::atomic<size_t>) == sizeof(void*),
+                "std::atomic not lockfree on this platform");
+
+  static_assert(sizeof(intrusive_ptr<node_id::data>) == sizeof(void*),
+                "intrusive_ptr<T> and T* have different size");
+
+  static_assert(sizeof(node_id) == sizeof(void*),
+                "sizeof(node_id) != sizeof(size_t)");
+
+  static_assert(sizeof(data_destructor) == sizeof(void*),
+                "functiion pointer and regular pointers have different size");
+
   /// Returns a pointer to the actual actor instance.
   inline abstract_actor* get() {
     // this pointer arithmetic is compile-time checked in actor_storage's ctor

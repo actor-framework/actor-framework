@@ -392,7 +392,7 @@ message message::concat_impl(std::initializer_list<data_ptr> xs) {
 }
 
 void serialize(serializer& sink, const message& msg, const unsigned int) {
-  if (sink.context() == nullptr)
+  if (! sink.context())
     throw std::logic_error("Cannot serialize message without context.");
   // build type name
   uint16_t zero = 0;
@@ -424,7 +424,7 @@ void serialize(serializer& sink, const message& msg, const unsigned int) {
 }
 
 void serialize(deserializer& source, message& msg, const unsigned int) {
-  if (source.context() == nullptr)
+  if (! source.context())
     throw std::logic_error("Cannot deserialize message without context.");
   uint16_t zero;
   std::string tname;

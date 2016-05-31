@@ -169,17 +169,23 @@ void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
         continue;
       }
       auto set_ival = [&](int base, int prefix_len, const char* err) {
+        auto advanced_bov = bov + prefix_len;
+        const char* str_begin = &*(advanced_bov);
+        const char* str_end = str_begin + std::distance(advanced_bov, eol);
         char* e;
-        int64_t res = std::strtoll(&*(bov + prefix_len), &e, base);
-        if (e != &*eol)
+        int64_t res = std::strtoll(str_begin, &e, base);
+        // check if we reached the end
+        if (e != str_end)
           print_error(err);
         else
           consumer(ln, std::move(key), is_neg ? -res : res);
       };
       auto set_dval = [&] {
+        const char* str_begin = &*(bov);
+        const char* str_end = str_begin + std::distance(bov, eol);
         char* e;
-        double res = std::strtod(&*bov, &e);
-        if (e != &*eol)
+        double res = std::strtod(str_begin, &e);
+        if (e != str_end)
           print_error("invalid value");
         else
           consumer(ln, std::move(key), is_neg ? -res : res);

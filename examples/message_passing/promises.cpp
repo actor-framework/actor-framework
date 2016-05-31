@@ -15,7 +15,7 @@ using std::endl;
 
 using namespace caf;
 
-using add_atom = atom_constant<atom("add")>;
+// using add_atom = atom_constant<atom("add")>; (defined in atom.hpp)
 
 using adder = typed_actor<replies_to<add_atom, int, int>::with<int>>;
 

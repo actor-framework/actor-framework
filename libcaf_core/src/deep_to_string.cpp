@@ -36,7 +36,7 @@ bool is_escaped(const char* cstr) {
 } // namespace <anonymous>
 
 std::string deep_to_string_t::operator()(const char* cstr) const {
-  if (cstr == nullptr || *cstr == '\0')
+  if (! cstr || *cstr == '\0')
     return "\"\"";
   if (is_escaped(cstr))
     return cstr;

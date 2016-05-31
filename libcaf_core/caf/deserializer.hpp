@@ -50,11 +50,14 @@ public:
 /// Reads `x` from `source`.
 /// @relates serializer
 template <class T>
-auto operator>>(deserializer& source, T& x)
--> typename std::enable_if<
-  std::is_same<decltype(source.apply(x)), void>::value,
+typename std::enable_if<
+  std::is_same<
+    void,
+    decltype(std::declval<deserializer&>().apply(std::declval<T&>()))
+  >::value,
   deserializer&
->::type {
+>::type
+operator>>(deserializer& source, T& x) {
   source.apply(x);
   return source;
 }

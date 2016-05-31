@@ -103,7 +103,7 @@ public:
       PROCESS_MEMORY_COUNTERS pmc;
 
       GetProcessTimes(GetCurrentProcess(), &creation_time, &exit_time,
-        &kernel_time, &user_time));
+        &kernel_time, &user_time);
         
       GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
 

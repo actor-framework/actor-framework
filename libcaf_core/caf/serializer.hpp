@@ -46,32 +46,36 @@ public:
   virtual ~serializer();
 };
 
-/// Stores `x` in `sink`.
-/// @relates serializer
 template <class T>
-auto operator<<(serializer& sink, T& x)
--> typename std::enable_if<
-  std::is_same<decltype(sink.apply(x)), void>::value,
+typename std::enable_if<
+  std::is_same<
+    void,
+    decltype(std::declval<serializer&>().apply(std::declval<T&>()))
+  >::value,
   serializer&
->::type {
-  sink.apply(x);
-  return sink;
-}
-
-template <class T>
-auto operator<<(serializer& sink, const T& x)
--> typename std::enable_if<
-  std::is_same<decltype(sink.apply(const_cast<T&>(x))), void>::value,
-  serializer&
->::type {
-  // implementations are required to never change a value while deserializing
+>::type
+operator<<(serializer& sink, const T& x) {
+  // implementations are required to not change an object while serializing
   sink.apply(const_cast<T&>(x));
   return sink;
 }
 
 template <class T>
+typename std::enable_if<
+  std::is_same<
+    void,
+    decltype(std::declval<serializer&>().apply(std::declval<T&>()))
+  >::value,
+  serializer&
+>::type
+operator<<(serializer& sink, T& x) {
+  sink.apply(x);
+  return sink;
+}
+
+template <class T>
 auto operator&(serializer& sink, T& x) -> decltype(sink.apply(x)) {
-  sink << x;
+  sink.apply(x);
 }
 
 } // namespace caf

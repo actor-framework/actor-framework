@@ -272,7 +272,7 @@ actor middleman::remote_lookup(atom_value name, const node_id& nid) {
 void middleman::start() {
   CAF_LOG_TRACE("");
   backend_supervisor_ = backend().make_supervisor();
-  if (backend_supervisor_ == nullptr) {
+  if (! backend_supervisor_) {
     // the only backend that returns a `nullptr` is the `test_multiplexer`
     // which does not have its own thread but uses the main thread instead
     backend().thread_id(std::this_thread::get_id());

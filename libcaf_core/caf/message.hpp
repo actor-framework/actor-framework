@@ -450,20 +450,19 @@ message::cli_arg::cli_arg(typename std::enable_if<
                           nstr, std::string tstr, T& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),
-      fun([&arg](const std::string& str) -> bool {
-        T x;
-        // TODO: using this stream is a workaround for the missing
-        //       from_string<T>() interface and has downsides such as
-        //       not performing overflow/underflow checks etc.
-        std::istringstream iss{str};
-        if (iss >> x) {
-          arg = x;
-          return true;
-        }
-        return false;
-      }),
       flag(nullptr) {
-  // nop
+  fun = [&arg](const std::string& str) -> bool {
+    T x;
+    // TODO: using this stream is a workaround for the missing
+    //       from_string<T>() interface and has downsides such as
+    //       not performing overflow/underflow checks etc.
+    std::istringstream iss{str};
+    if (iss >> x) {
+      arg = x;
+      return true;
+    }
+    return false;
+  };
 }
 
 template <class T>
@@ -471,17 +470,16 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr,
                           std::vector<T>& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),
-      fun([&arg](const std::string& str) -> bool {
-        T x;
-        std::istringstream iss{str};
-        if (iss >> x) {
-          arg.emplace_back(std::move(x));
-          return true;
-        }
-        return false;
-          }),
       flag(nullptr) {
-  // nop
+  fun = [&arg](const std::string& str) -> bool {
+    T x;
+    std::istringstream iss{ str };
+    if (iss >> x) {
+      arg.emplace_back(std::move(x));
+      return true;
+    }
+    return false;
+  };
 }
 
 } // namespace caf

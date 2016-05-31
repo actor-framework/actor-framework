@@ -174,7 +174,7 @@ struct fixture {
 
   // serializes `x` and then deserializes and returns the serialized value
   template <class T>
-  T roundtrip(const T& x) {
+  T roundtrip(T x) {
     T result;
     deserialize(serialize(x), result);
     return result;

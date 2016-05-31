@@ -32,9 +32,7 @@ namespace caf {
 /// An intrusive, reference counting smart pointer implementation.
 /// @relates ref_counted
 template <class T>
-class intrusive_ptr : detail::comparable<intrusive_ptr<T>>,
-                      detail::comparable<intrusive_ptr<T>, const T*>,
-                      detail::comparable<intrusive_ptr<T>, std::nullptr_t> {
+class intrusive_ptr {
 public:
   using pointer = T*;
   using const_pointer = const T*;
@@ -124,7 +122,7 @@ public:
   }
 
   bool operator!() const {
-    return ptr_ == nullptr;
+    return ! ptr_;
   }
 
   explicit operator bool() const {
@@ -163,16 +161,76 @@ private:
   pointer ptr_;
 };
 
+// -- comparison to nullptr ----------------------------------------------------
+
 /// @relates intrusive_ptr
-template <class X, typename Y>
-bool operator==(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
-  return lhs.get() == rhs.get();
+template <class T>
+bool operator==(const intrusive_ptr<T>& x, std::nullptr_t) {
+  return ! x;
 }
 
 /// @relates intrusive_ptr
-template <class X, typename Y>
-bool operator!=(const intrusive_ptr<X>& lhs, const intrusive_ptr<Y>& rhs) {
-  return !(lhs == rhs);
+template <class T>
+bool operator==(std::nullptr_t, const intrusive_ptr<T>& x) {
+  return ! x;
+}
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator!=(const intrusive_ptr<T>& x, std::nullptr_t) {
+  return static_cast<bool>(x);
+}
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator!=(std::nullptr_t, const intrusive_ptr<T>& x) {
+  return static_cast<bool>(x);
+}
+
+// -- comparison to raw pointer ------------------------------------------------
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator==(const intrusive_ptr<T>& x, const T* y) {
+  return x.get() == y;
+}
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator==(const T* x, const intrusive_ptr<T>& y) {
+  return x == y.get();
+}
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator!=(const intrusive_ptr<T>& x, const T* y) {
+  return x.get() != y;
+}
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator!=(const T* x, const intrusive_ptr<T>& y) {
+  return x != y.get();
+}
+
+// -- comparison to intrusive_pointer ------------------------------------------
+
+/// @relates intrusive_ptr
+template <class T, class U>
+bool operator==(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
+  return x.get() == y.get();
+}
+
+/// @relates intrusive_ptr
+template <class T, class U>
+bool operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
+  return x.get() != y.get();
+}
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator<(const intrusive_ptr<T>& x, const intrusive_ptr<T>& y) {
+  return x.get() < y.get();
 }
 
 } // namespace caf

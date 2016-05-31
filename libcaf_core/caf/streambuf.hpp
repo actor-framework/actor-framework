@@ -26,6 +26,7 @@
 #include <streambuf>
 #include <vector>
 
+#include "caf/config.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -98,7 +99,7 @@ public:
 protected:
   std::streamsize xsputn(const char_type* s, std::streamsize n) override {
     auto available = this->epptr() - this->pptr();
-    auto actual = std::min(n, available);
+    auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(this->pptr(), s,
                 static_cast<size_t>(actual) * sizeof(char_type));
     this->pbump(static_cast<int>(actual));
@@ -107,7 +108,7 @@ protected:
 
   std::streamsize xsgetn(char_type* s, std::streamsize n) override {
     auto available = this->egptr() - this->gptr();
-    auto actual = std::min(n, available);
+    auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
                 static_cast<size_t>(actual) * sizeof(char_type));
     this->gbump(static_cast<int>(actual));
@@ -181,7 +182,7 @@ protected:
   // multi-character sequential reads.
   std::streamsize xsgetn(char_type* s, std::streamsize n) override {
     auto available = this->egptr() - this->gptr();
-    auto actual = std::min(n, available);
+    auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
                 static_cast<size_t>(actual) * sizeof(char_type));
     this->gbump(static_cast<int>(actual));

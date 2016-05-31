@@ -49,8 +49,7 @@ constexpr invalid_node_id_t invalid_node_id = invalid_node_id_t{};
 /// A node ID consists of a host ID and process ID. The host ID identifies
 /// the physical machine in the network, whereas the process ID identifies
 /// the running system-level process on that machine.
-class node_id : detail::comparable<node_id>,
-                detail::comparable<node_id, invalid_node_id_t> {
+class node_id {
 public:
   ~node_id();
 
@@ -151,6 +150,26 @@ public:
 private:
   intrusive_ptr<data> data_;
 };
+
+inline bool operator==(const node_id& lhs, const node_id& rhs) {
+  return lhs.compare(rhs) == 0;
+}
+
+inline bool operator==(const node_id& lhs, invalid_node_id_t) {
+  return ! static_cast<bool>(lhs);
+}
+
+inline bool operator!=(const node_id& lhs, const node_id& rhs) {
+  return ! (lhs == rhs);
+}
+
+inline bool operator!=(const node_id& lhs, invalid_node_id_t) {
+  return static_cast<bool>(lhs);
+}
+
+inline bool operator<(const node_id& lhs, const node_id& rhs) {
+  return lhs.compare(rhs) < 0;
+}
 
 /// @relates node_id
 std::string to_string(const node_id& x);

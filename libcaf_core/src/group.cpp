@@ -73,7 +73,7 @@ void serialize(deserializer& source, group& x, const unsigned int) {
     x = invalid_group;
     return;
   }
-  if (source.context() == nullptr)
+  if (! source.context())
     throw std::logic_error("Cannot serialize group without context.");
   auto& sys = source.context()->system();
   auto mod = sys.groups().get_module(module_name);

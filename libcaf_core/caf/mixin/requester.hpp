@@ -71,7 +71,7 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(actor_accepts_message(signatures_of<Handle>(), token{}),
+    static_assert(actor_accepts_message<typename signatures_of<Handle>::type, token>::value,
                   "receiver does not accept given message");
     auto req_id = dptr()->new_request_id(P);
     dest->eq_impl(req_id, dptr()->ctrl(), dptr()->context(),

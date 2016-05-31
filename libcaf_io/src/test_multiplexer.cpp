@@ -268,7 +268,7 @@ test_multiplexer::pending_scribes_map& test_multiplexer::pending_scribes() {
 
 void test_multiplexer::accept_connection(accept_handle hdl) {
   auto& dd = doorman_data_[hdl];
-  if (dd.ptr == nullptr)
+  if (! dd.ptr)
     throw std::logic_error("accept_connection: this doorman was not "
                            "assigned to a broker yet");
   dd.ptr->new_connection();
@@ -277,7 +277,7 @@ void test_multiplexer::accept_connection(accept_handle hdl) {
 void test_multiplexer::read_data(connection_handle hdl) {
   flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
-  while (sd.ptr == nullptr)
+  while (! sd.ptr)
     exec_runnable();
   switch (sd.recv_conf.first) {
     case receive_policy_flag::exactly:

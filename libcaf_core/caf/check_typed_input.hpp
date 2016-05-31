@@ -39,9 +39,9 @@ struct output_types_of<typed_mpi<In, Out>> {
 };
 
 template <class T>
-constexpr typename std::remove_pointer<T>::type::signatures signatures_of() {
-  return {};
-}
+struct signatures_of {
+  using type = typename std::remove_pointer<T>::type::signatures;
+};
 
 template <class T>
 constexpr bool statically_typed() {
@@ -51,47 +51,45 @@ constexpr bool statically_typed() {
          >::value;
 }
 
-template <class Signatures, class MessageTypes>
-constexpr bool actor_accepts_message(Signatures, MessageTypes) {
-  return detail::tl_exists<
-           Signatures,
-           detail::input_is<MessageTypes>::template eval
-         >::value;
-}
+template <class Signatures, class Input>
+struct actor_accepts_message;
 
-template <class MessageTypes>
-constexpr bool actor_accepts_message(none_t, MessageTypes) {
-  return true;
-}
+template <class Input>
+struct actor_accepts_message<none_t, Input> : std::true_type {};
 
-template <class Signatures, class MessageTypes>
-constexpr typename output_types_of<
-  typename detail::tl_find<
-    Signatures,
-    detail::input_is<MessageTypes>::template eval
-  >::type
->::type
-response_to(Signatures, MessageTypes) {
-  return {};
-}
+template <class... Ts, class Input>
+struct actor_accepts_message<detail::type_list<Ts...>, Input> 
+    : detail::tl_exists<detail::type_list<Ts...>, 
+                        detail::input_is<Input>::template eval> {};
 
-template <class MessageTypes>
-constexpr none_t response_to(none_t, MessageTypes) {
-  return {};
-}
+template <class Signatures, class Input>
+struct response_to;
 
-template <class... Ts>
-constexpr bool is_void_response(detail::type_list<Ts...>) {
-  return false;
-}
+template <class Input>
+struct response_to<none_t, Input> {
+  using type = none_t;
+};
 
-constexpr bool is_void_response(detail::type_list<void>) {
-  return true;
-}
+template <class... Ts, class Input>
+struct response_to<detail::type_list<Ts...>, Input> {
+  using type =
+    typename output_types_of<
+      typename detail::tl_find<
+        detail::type_list<Ts...>,
+        detail::input_is<Input>::template eval
+      >::type
+    >::type;
+};
 
-constexpr bool is_void_response(none_t) {
-  return true; // true for the purpose of type checking performed by send()
-}
+template <class T>
+struct is_void_response : std::false_type {};
+
+template <>
+struct is_void_response<detail::type_list<void>> : std::true_type {};
+
+// true for the purpose of type checking performed by send()
+template <>
+struct is_void_response<none_t> : std::true_type {};
 
 } // namespace caf
 

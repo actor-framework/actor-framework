@@ -69,16 +69,16 @@ struct deduce_mpi {
                          typename deduce_lhs_result<result>::type>;
 };
 
+template <class Arguments, class Signature>
+struct input_is_eval_impl : std::false_type {};
+
+template <class Arguments, class Out>
+struct input_is_eval_impl<Arguments, typed_mpi<Arguments, Out>> : std::true_type {};
+
 template <class Arguments>
 struct input_is {
   template <class Signature>
-  struct eval {
-    static constexpr bool value = false;
-  };
-  template <class Out>
-  struct eval<typed_mpi<Arguments, Out>> {
-    static constexpr bool value = true;
-  };
+  struct eval : input_is_eval_impl<Arguments, Signature> { };
 };
 
 template <class Output, class F>

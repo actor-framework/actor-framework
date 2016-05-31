@@ -22,5 +22,8 @@ macro(add name)
   add_dependencies(${name} all_tools)
 endmacro()
 
-add(caf-run)
-
+if(WIN32)
+  message(STATUS "skip caf-run (not supported on Windows)")
+else()
+  add(caf-run)
+endif()

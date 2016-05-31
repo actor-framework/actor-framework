@@ -1333,10 +1333,6 @@ uint16_t new_ip_acceptor_impl(native_socket fd, uint16_t port,
                               const char* addr) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-# ifdef CAF_WINDOWS
-    // make sure TCP has been initialized via WSAStartup
-    get_multiplexer_singleton();
-# endif
   using sockaddr_type =
     typename std::conditional<
       Family == AF_INET,
