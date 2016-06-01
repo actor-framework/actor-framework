@@ -42,7 +42,16 @@ namespace caf {
 
 class local_actor::private_thread {
 public:
-  private_thread(local_actor* self) : self_destroyed_(false), self_(self) {
+  enum worker_state {
+    active,
+    shutdown_requested,
+    await_resume_or_shutdown
+  };
+
+  private_thread(local_actor* self)
+      : self_destroyed_(false),
+        self_(self),
+        state_(active) {
     intrusive_ptr_add_ref(self->ctrl());
     scheduler::inc_detached_threads();
   }
@@ -54,11 +63,9 @@ public:
     CAF_LOG_TRACE("");
     scoped_execution_unit ctx{&job->system()};
     auto max_throughput = std::numeric_limits<size_t>::max();
-    auto wait_pred = [&] {
-      return ! job->mailbox().empty();
-    };
+    bool resume_later;
     for (;;) {
-      bool resume_later;
+      state_ = await_resume_or_shutdown;
       do {
         resume_later = false;
         switch (job->resume(&ctx, max_throughput)) {
@@ -76,22 +83,27 @@ public:
         }
       } while (resume_later);
       // wait until actor becomes ready again or was destroyed
-      std::unique_lock<std::mutex> guard(mtx_);
-      cv_.wait(guard, wait_pred);
-      job = const_cast<local_actor*>(self_);
-      if (! job)
+      if (! await_resume())
         return;
     }
   }
 
+  bool await_resume() {
+    std::unique_lock<std::mutex> guard(mtx_);
+    while (state_ == await_resume_or_shutdown)
+      cv_.wait(guard);
+    return state_ == active;
+  }
+
   void resume() {
     std::unique_lock<std::mutex> guard(mtx_);
+    state_ = active;
     cv_.notify_one();
   }
 
   void shutdown() {
     std::unique_lock<std::mutex> guard(mtx_);
-    self_ = nullptr;
+    state_ = shutdown_requested;
     cv_.notify_one();
   }
 
@@ -121,10 +133,11 @@ public:
   }
 
 private:
-  volatile bool self_destroyed_;
   std::mutex mtx_;
   std::condition_variable cv_;
+  volatile bool self_destroyed_;
   volatile local_actor* self_;
+  volatile worker_state state_;
 };
 
 result<message> reflect(local_actor*, const type_erased_tuple* x) {
