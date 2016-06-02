@@ -25,10 +25,20 @@ namespace caf {
 namespace io {
 namespace basp {
 
+const uint8_t header::named_receiver_flag;
+
+std::string to_bin(uint8_t x) {
+  std::string res;
+  for (auto offset = 7; offset > 0; --offset)
+    res += std::to_string((x >> offset) & 0x01);
+  return res;
+}
+
 std::string to_string(const header &hdr) {
   std::ostringstream oss;
   oss << "{"
       << to_string(hdr.operation) << ", "
+      << to_bin(hdr.flags) << ", "
       << hdr.payload_len << ", "
       << hdr.operation_data << ", "
       << to_string(hdr.source_node) << ", "
@@ -41,6 +51,7 @@ std::string to_string(const header &hdr) {
 
 bool operator==(const header& lhs, const header& rhs) {
   return lhs.operation == rhs.operation
+      && lhs.flags == rhs.flags
       && lhs.payload_len == rhs.payload_len
       && lhs.operation_data == rhs.operation_data
       && lhs.source_node == rhs.source_node
@@ -79,7 +90,7 @@ bool client_handshake_valid(const header& hdr) {
 
 bool dispatch_message_valid(const header& hdr) {
   return  valid(hdr.dest_node)
-       && ! zero(hdr.dest_actor)
+       && (! zero(hdr.dest_actor) || hdr.has(header::named_receiver_flag))
        && ! zero(hdr.payload_len);
 }
 
@@ -125,9 +136,9 @@ bool valid(const header& hdr) {
       return client_handshake_valid(hdr);
     case message_type::dispatch_message:
       return dispatch_message_valid(hdr);
-    case message_type::announce_proxy_instance:
+    case message_type::announce_proxy:
       return announce_proxy_instance_valid(hdr);
-    case message_type::kill_proxy_instance:
+    case message_type::kill_proxy:
       return kill_proxy_instance_valid(hdr);
     case message_type::heartbeat:
       return heartbeat_valid(hdr);

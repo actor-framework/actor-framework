@@ -104,11 +104,8 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
                "write announce_proxy_instance:"
                << CAF_ARG(nid) << CAF_ARG(aid));
   // tell remote side we are monitoring this actor now
-  instance.write(self->context(),
-                 self->wr_buf(this_context->hdl),
-                 basp::message_type::announce_proxy_instance, nullptr, 0,
-                 this_node(), nid,
-                 invalid_actor_id, aid);
+  instance.write_announce_proxy(self->context(),
+                                self->wr_buf(this_context->hdl), nid, aid);
   instance.tbl().flush(*path);
   mm->notify<hook::new_remote_actor>(res);
   return res;
@@ -177,7 +174,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
                    << CAF_ARG(nid));
       return;
     }
-    instance.write_kill_proxy_instance(self->context(), path->wr_buf,
+    instance.write_kill_proxy(self->context(), path->wr_buf,
                                        nid, aid, rsn);
     instance.tbl().flush(*path);
   };
@@ -208,43 +205,39 @@ void basp_broker_state::kill_proxy(const node_id& nid, actor_id aid,
   proxies().erase(nid, aid, rsn);
 }
 
-void basp_broker_state::deliver(const node_id& src_nid,
-                                actor_id src_aid,
-                                const node_id& dest_nid,
-                                actor_id dest_aid,
-                                message_id mid,
+void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
+                                actor_id dest_aid, message_id mid,
                                 std::vector<strong_actor_ptr>& stages,
                                 message& msg) {
-  CAF_LOG_TRACE(CAF_ARG(src_nid)
-                << CAF_ARG(src_aid) << CAF_ARG(dest_nid)
+  CAF_LOG_TRACE(CAF_ARG(src_nid) << CAF_ARG(src_aid)
                 << CAF_ARG(dest_aid) << CAF_ARG(msg) << CAF_ARG(mid));
-  strong_actor_ptr src;
-  if (src_nid == this_node())
-    src = system().registry().get(src_aid);
-  else
-    src = proxies().get_or_put(src_nid, src_aid);
-  strong_actor_ptr dest;
-  auto rsn = exit_reason::remote_link_unreachable;
-  if (dest_nid != this_node()) {
-    dest = proxies().get_or_put(dest_nid, dest_aid);
-  } else {
-    // TODO: replace hack with clean solution
-    if (dest_aid == std::numeric_limits<actor_id>::max()) {
-      // this hack allows CAF to talk to older CAF versions; CAF <= 0.14 will
-      // discard this message silently as the receiver is not found, while
-      // CAF >= 0.14.1 will use the operation data to identify named actors
-      auto dest_name = static_cast<atom_value>(mid.integer_value());
-      CAF_LOG_DEBUG(CAF_ARG(dest_name));
-      mid = message_id::make(); // override this since the message is async
-      dest = system().registry().get(dest_name);
-    } else {
-      dest = system().registry().get(dest_aid);
-    }
-  }
+  deliver(src_nid, src_aid, system().registry().get(dest_aid),
+          mid, stages, msg);
+}
+
+void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
+                                atom_value dest_name, message_id mid,
+                                std::vector<strong_actor_ptr>& stages,
+                                message& msg) {
+  CAF_LOG_TRACE(CAF_ARG(src_nid) << CAF_ARG(src_aid)
+                << CAF_ARG(dest_name) << CAF_ARG(msg) << CAF_ARG(mid));
+  deliver(src_nid, src_aid, system().registry().get(dest_name),
+          mid, stages, msg);
+}
+
+void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
+                                strong_actor_ptr dest, message_id mid,
+                                std::vector<strong_actor_ptr>& stages,
+                                message& msg) {
+  CAF_LOG_TRACE(CAF_ARG(src_nid) << CAF_ARG(src_aid) << CAF_ARG(dest)
+                << CAF_ARG(msg) << CAF_ARG(mid));
+  auto src = src_nid == this_node() ? system().registry().get(src_aid)
+                                    : proxies().get_or_put(src_nid, src_aid);
   if (! dest) {
+    auto rsn = exit_reason::remote_link_unreachable;
     CAF_LOG_INFO("cannot deliver message, destination not found");
     self->parent().notify<hook::invalid_message_received>(src_nid, src,
-                                                          dest_aid, mid, msg);
+                                                          0, mid, msg);
     if (mid.valid() && src) {
       detail::sync_request_bouncer srb{rsn};
       srb(src, mid);
@@ -303,24 +296,30 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   using namespace detail;
   system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) {
+    auto name = atom("SpawnServ");
     std::vector<actor_id> stages;
     auto msg = make_message(sys_atom::value, get_atom::value, "info");
-    sink << stages << msg;
+    sink << name << stages << msg;
   });
   auto path = instance.tbl().lookup(nid);
   if (! path) {
     CAF_LOG_ERROR("learned_new_node called, but no route to nid");
     return;
   }
+  // send message to SpawnServ of remote node
+  basp::header hdr{basp::message_type::dispatch_message,
+                   basp::header::named_receiver_flag,
+                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id};
   // writing std::numeric_limits<actor_id>::max() is a hack to get
   // this send-to-named-actor feature working with older CAF releases
-  instance.write(self->context(),
-                 path->wr_buf,
+  instance.write(self->context(), path->wr_buf, hdr, &writer);
+  /*
                  basp::message_type::dispatch_message,
                  nullptr, static_cast<uint64_t>(atom("SpawnServ")),
                  this_node(), nid,
                  tmp.id(), std::numeric_limits<actor_id>::max(),
                  &writer);
+  */
   instance.flush(*path);
 }
 
@@ -400,19 +399,15 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   auto tmp = system().spawn<detached + hidden>(connection_helper, self);
   system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) {
-      std::vector<actor_id> stages;
-      auto msg = make_message(get_atom::value, "basp.default-connectivity");
-    sink << stages << msg;
+    auto name = atom("ConfigServ");
+    std::vector<actor_id> stages;
+    auto msg = make_message(get_atom::value, "basp.default-connectivity");
+    sink << name << stages << msg;
   });
-  // writing std::numeric_limits<actor_id>::max() is a hack to get
-  // this send-to-named-actor feature working with older CAF releases
-  instance.write(self->context(),
-                 path->wr_buf,
-                 basp::message_type::dispatch_message,
-                 nullptr, static_cast<uint64_t>(atom("ConfigServ")),
-                 this_node(), nid,
-                 tmp.id(), std::numeric_limits<actor_id>::max(),
-                 &writer);
+  basp::header hdr{basp::message_type::dispatch_message,
+                   basp::header::named_receiver_flag,
+                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id};
+  instance.write(self->context(), path->wr_buf, hdr, &writer);
   instance.flush(*path);
 }
 
@@ -424,8 +419,8 @@ void basp_broker_state::set_context(connection_handle hdl) {
     i = ctx.emplace(hdl,
                     connection_context{
                       basp::await_header,
-                      basp::header{basp::message_type::server_handshake, 0, 0,
-                                   invalid_node_id, invalid_node_id,
+                      basp::header{basp::message_type::server_handshake, 0,
+                                   0, 0, invalid_node_id, invalid_node_id,
                                    invalid_actor_id, invalid_actor_id},
                       hdl,
                       invalid_node_id,
@@ -524,23 +519,18 @@ behavior basp_broker::make_behavior() {
         system().registry().put(sender->id(), sender);
       auto writer = make_callback([&](serializer& sink) {
         std::vector<actor_addr> stages;
-        sink << stages << msg;
+        sink << receiver_name << stages << msg;
       });
       auto path = this->state.instance.tbl().lookup(receiving_node);
       if (! path) {
         CAF_LOG_ERROR("no route to receiving node");
         return sec::no_route_to_receiving_node;
       }
-      // writing std::numeric_limits<actor_id>::max() is a hack to get
-      // this send-to-named-actor feature working with older CAF releases
-      this->state.instance.write(context(),
-                                 path->wr_buf,
-                                 basp::message_type::dispatch_message,
-                                 nullptr, static_cast<uint64_t>(receiver_name),
-                                 state.this_node(), receiving_node,
-                                 sender->id(),
-                                 std::numeric_limits<actor_id>::max(),
-                                 &writer);
+      basp::header hdr{basp::message_type::dispatch_message,
+                       basp::header::named_receiver_flag,
+                       0, 0, state.this_node(), receiving_node,
+                       sender->id(), invalid_actor_id};
+      state.instance.write(context(), path->wr_buf, hdr, &writer);
       state.instance.flush(*path);
       return unit;
     },

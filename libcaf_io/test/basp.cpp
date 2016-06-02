@@ -43,6 +43,17 @@ struct anything { };
 
 anything any_vals;
 
+template <class T>
+using maybe = caf::variant<anything, T>;
+
+constexpr uint8_t no_flags = 0;
+constexpr uint32_t no_payload = 0;
+constexpr uint64_t no_operation_data = 0;
+
+constexpr auto basp_atom = caf::atom("BASP");
+constexpr auto spawn_serv_atom = caf::atom("SpawnServ");
+constexpr auto config_serv_atom = caf::atom("ConfigServ");
+
 } // namespace <anonymous>
 
 namespace std {
@@ -52,7 +63,7 @@ ostream& operator<<(ostream& out, const caf::io::basp::message_type& x) {
 }
 
 template <class T>
-ostream& operator<<(ostream& out, const caf::variant<anything, T>& x) {
+ostream& operator<<(ostream& out, const maybe<T>& x) {
   using std::to_string;
   using caf::to_string;
   using caf::io::basp::to_string;
@@ -65,18 +76,18 @@ ostream& operator<<(ostream& out, const caf::variant<anything, T>& x) {
 
 namespace caf {
 
-template <class T>
-bool operator==(const variant<anything, T>& x, const T& y) {
+template <class T, class U>
+bool operator==(const maybe<T>& x, const U& y) {
   return get<anything>(&x) != nullptr || get<T>(x) == y;
 }
 
-template <class T>
-bool operator==(const T& x, const variant<anything, T>& y) {
+template <class T, class U>
+bool operator==(const T& x, const maybe<U>& y) {
   return (y == x);
 }
 
 template <class T>
-std::string to_string(const variant<anything, T>& x) {
+std::string to_string(const maybe<T>& x) {
   return ! get<anything>(&x) ? std::string{"*"} : deep_to_string(get<T>(x));
 }
 
@@ -98,7 +109,7 @@ string hexstr(const buffer& buf) {
   oss.fill('0');
   for (auto& c : buf) {
     oss.width(2);
-    oss << int{c};
+    oss << int{static_cast<uint8_t>(c)};
   }
   return oss.str();
 }
@@ -113,7 +124,7 @@ public:
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);
     CAF_REQUIRE(&system == &mpx_->system());
-    auto hdl = mm.named_broker<basp_broker>(atom("BASP"));
+    auto hdl = mm.named_broker<basp_broker>(basp_atom);
     aut_ = static_cast<basp_broker*>(actor_cast<abstract_actor*>(hdl));
     this_node_ = system.node();
     CAF_MESSAGE("this node: " << to_string(this_node_));
@@ -278,28 +289,30 @@ public:
     // technically, the server handshake arrives
     // before we send the client handshake
     auto m = mock(hdl,
-                  {basp::message_type::client_handshake, 0, 0,
+                  {basp::message_type::client_handshake, 0, 0, 0,
                    remote_node(i), this_node(),
                    invalid_actor_id, invalid_actor_id});
     if (published_actor_id != invalid_actor_id)
       m.expect(hdl,
-               basp::message_type::server_handshake, any_vals, basp::version,
-               this_node(), node_id{invalid_node_id},
+               basp::message_type::server_handshake, no_flags,
+               any_vals, basp::version, this_node(), node_id{invalid_node_id},
                published_actor_id, invalid_actor_id,
                published_actor_id,
                published_actor_ifs);
     else
       m.expect(hdl,
-               basp::message_type::server_handshake, any_vals, basp::version,
-               this_node(), node_id{invalid_node_id},
+               basp::message_type::server_handshake, no_flags, any_vals,
+               basp::version, this_node(), node_id{invalid_node_id},
                invalid_actor_id, invalid_actor_id);
     // upon receiving our client handshake, BASP will check
     // whether there is a SpawnServ actor on this node
     m.expect(hdl,
-             basp::message_type::dispatch_message, any_vals,
-             static_cast<uint64_t>(atom("SpawnServ")),
+             basp::message_type::dispatch_message,
+             basp::header::named_receiver_flag, any_vals,
+             no_operation_data,
              this_node(), remote_node(i),
-             any_vals, std::numeric_limits<actor_id>::max(),
+             any_vals, invalid_actor_id,
+             spawn_serv_atom,
              std::vector<actor_addr>{},
              make_message(sys_atom::value, get_atom::value, "info"));
     // test whether basp instance correctly updates the
@@ -355,15 +368,16 @@ public:
 
     template <class... Ts>
     mock_t& expect(connection_handle hdl,
-                   variant<anything, basp::message_type> operation,
-                   variant<anything, uint32_t> payload_len,
-                   variant<anything, uint64_t> operation_data,
-                   variant<anything, node_id> source_node,
-                   variant<anything, node_id> dest_node,
-                   variant<anything, actor_id> source_actor,
-                   variant<anything, actor_id> dest_actor,
+                   maybe<basp::message_type> operation,
+                   maybe<uint8_t> flags,
+                   maybe<uint32_t> payload_len,
+                   maybe<uint64_t> operation_data,
+                   maybe<node_id> source_node,
+                   maybe<node_id> dest_node,
+                   maybe<actor_id> source_actor,
+                   maybe<actor_id> dest_actor,
                    const Ts&... xs) {
-      CAF_MESSAGE("expect " << num);
+      CAF_MESSAGE("expect #" << num);
       buffer buf;
       this_->to_payload(buf, xs...);
       buffer& ob = this_->mpx()->output_buffer(hdl);
@@ -388,14 +402,16 @@ public:
         ob.erase(ob.begin(), ob.begin() + basp::header_size);
       }
       CAF_CHECK_EQUAL(operation, hdr.operation);
+      CAF_CHECK_EQUAL(flags, static_cast<size_t>(hdr.flags));
       CAF_CHECK_EQUAL(payload_len, hdr.payload_len);
       CAF_CHECK_EQUAL(operation_data, hdr.operation_data);
       CAF_CHECK_EQUAL(source_node, hdr.source_node);
       CAF_CHECK_EQUAL(dest_node, hdr.dest_node);
       CAF_CHECK_EQUAL(source_actor, hdr.source_actor);
       CAF_CHECK_EQUAL(dest_actor, hdr.dest_actor);
-      CAF_REQUIRE(payload.size() == buf.size());
-      CAF_REQUIRE(hexstr(payload) == hexstr(buf));
+printf("buf.size: %d, payload.size: %d\n", (int) buf.size(), (int) payload.size());
+      CAF_REQUIRE_EQUAL(buf.size(), payload.size());
+      CAF_REQUIRE_EQUAL(hexstr(buf), hexstr(payload));
       ++num;
       return *this;
     }
@@ -453,7 +469,7 @@ CAF_TEST(empty_server_handshake) {
   basp::header hdr;
   buffer payload;
   std::tie(hdr, payload) = from_buf(buf);
-  basp::header expected{basp::message_type::server_handshake,
+  basp::header expected{basp::message_type::server_handshake, 0,
                         static_cast<uint32_t>(payload.size()),
                         basp::version,
                         this_node(), invalid_node_id,
@@ -471,8 +487,8 @@ CAF_TEST(non_empty_server_handshake) {
                                  {"caf::replies_to<@u16>::with<@u16>"});
   instance().write_server_handshake(mpx(), buf, uint16_t{4242});
   buffer expected_buf;
-  basp::header expected{basp::message_type::server_handshake, 0, basp::version,
-                        this_node(), invalid_node_id,
+  basp::header expected{basp::message_type::server_handshake, 0, 0,
+                        basp::version, this_node(), invalid_node_id,
                         self()->id(), invalid_actor_id};
   to_buf(expected_buf, expected, nullptr,
          self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
@@ -503,13 +519,13 @@ CAF_TEST(client_handshake_and_dispatch) {
   connect_node(0);
   // send a message via `dispatch` from node 0
   mock(remote_hdl(0),
-       {basp::message_type::dispatch_message, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, 0,
         remote_node(0), this_node(), pseudo_remote(0)->id(), self()->id()},
        std::vector<actor_addr>{},
        make_message(1, 2, 3))
   .expect(remote_hdl(0),
-          basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::announce_proxy, no_flags, no_payload,
+          no_operation_data, this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
   // must've created a proxy for our remote actor
   CAF_REQUIRE(proxies().count_proxies(remote_node(0)) == 1);
@@ -540,13 +556,13 @@ CAF_TEST(message_forwarding) {
   auto msg = make_message(1, 2, 3);
   // send a message from node 0 to node 1, forwarded by this node
   mock(remote_hdl(0),
-       {basp::message_type::dispatch_message, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, 0,
         remote_node(0), remote_node(1),
         invalid_actor_id, pseudo_remote(1)->id()},
        msg)
   .expect(remote_hdl(1),
-          basp::message_type::dispatch_message, any_vals, uint64_t{0},
-          remote_node(0), remote_node(1),
+          basp::message_type::dispatch_message, no_flags, any_vals,
+          no_operation_data, remote_node(0), remote_node(1),
           invalid_actor_id, pseudo_remote(1)->id(),
           msg);
 }
@@ -577,25 +593,26 @@ CAF_TEST(remote_actor_and_send) {
   CAF_MESSAGE("server handshake => client handshake + proxy announcement");
   auto na = registry()->named_actors();
   mock(remote_hdl(0),
-       {basp::message_type::server_handshake, 0, basp::version,
+       {basp::message_type::server_handshake, 0, 0, basp::version,
         remote_node(0), invalid_node_id,
         pseudo_remote(0)->id(), invalid_actor_id},
        pseudo_remote(0)->id(),
        uint32_t{0})
   .expect(remote_hdl(0),
-          basp::message_type::client_handshake, uint32_t{0}, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::client_handshake, no_flags, no_payload,
+          no_operation_data, this_node(), remote_node(0),
           invalid_actor_id, invalid_actor_id)
   .expect(remote_hdl(0),
-          basp::message_type::dispatch_message, any_vals,
-          static_cast<uint64_t>(atom("SpawnServ")),
-          this_node(), remote_node(0),
-          any_vals, std::numeric_limits<actor_id>::max(),
+          basp::message_type::dispatch_message,
+          basp::header::named_receiver_flag, any_vals,
+          no_operation_data, this_node(), remote_node(0),
+          any_vals, invalid_actor_id,
+          spawn_serv_atom,
           std::vector<actor_id>{},
           make_message(sys_atom::value, get_atom::value, "info"))
   .expect(remote_hdl(0),
-          basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::announce_proxy, no_flags, no_payload,
+          no_operation_data, this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
   CAF_MESSAGE("BASP broker should've send the proxy");
   f.receive(
@@ -620,15 +637,15 @@ CAF_TEST(remote_actor_and_send) {
 //  mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock()
   .expect(remote_hdl(0),
-          basp::message_type::dispatch_message, any_vals, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::dispatch_message, no_flags, any_vals,
+          no_operation_data, this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id(),
           std::vector<actor_id>{},
           make_message(42));
   auto msg = make_message("hi there!");
   CAF_MESSAGE("send message via BASP (from proxy)");
   mock(remote_hdl(0),
-       {basp::message_type::dispatch_message, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, 0,
         remote_node(0), this_node(),
         pseudo_remote(0)->id(), self()->id()},
        std::vector<actor_id>{},
@@ -655,8 +672,8 @@ CAF_TEST(actor_serialize_and_deserialize) {
   auto prx = proxies().get_or_put(remote_node(0), pseudo_remote(0)->id());
   mock()
   .expect(remote_hdl(0),
-          basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
-          this_node(), prx->node(),
+          basp::message_type::announce_proxy, no_flags, no_payload,
+          no_operation_data, this_node(), prx->node(),
           invalid_actor_id, prx->id());
   CAF_CHECK_EQUAL(prx->node(), remote_node(0));
   CAF_CHECK_EQUAL(prx->id(), pseudo_remote(0)->id());
@@ -665,7 +682,7 @@ CAF_TEST(actor_serialize_and_deserialize) {
   CAF_MESSAGE("send message via BASP (from proxy)");
   auto msg = make_message(actor_cast<actor_addr>(prx));
   mock(remote_hdl(0),
-       {basp::message_type::dispatch_message, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, 0,
         prx->node(), this_node(),
         prx->id(), testee->id()},
        std::vector<actor_id>{},
@@ -677,11 +694,9 @@ CAF_TEST(actor_serialize_and_deserialize) {
   // output buffer must contain the reflected message
   mock()
   .expect(remote_hdl(0),
-          basp::message_type::dispatch_message, any_vals, uint64_t{0},
-          this_node(), prx->node(),
-          testee->id(), prx->id(),
-          std::vector<actor_id>{},
-          msg);
+          basp::message_type::dispatch_message, no_flags, any_vals,
+          no_operation_data, this_node(), prx->node(), testee->id(), prx->id(),
+          std::vector<actor_id>{}, msg);
 }
 
 CAF_TEST(indirect_connections) {
@@ -697,23 +712,24 @@ CAF_TEST(indirect_connections) {
   connect_node(1, ax, self()->id());
   // now, an actor from jupiter sends a message to us via mars
   mock(remote_hdl(1),
-       {basp::message_type::dispatch_message, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, 0,
         remote_node(0), this_node(),
         pseudo_remote(0)->id(), self()->id()},
        std::vector<actor_id>{},
        make_message("hello from jupiter!"))
   // this asks Jupiter if it has a 'SpawnServ'
   .expect(remote_hdl(1),
-          basp::message_type::dispatch_message, any_vals,
-          static_cast<uint64_t>(atom("SpawnServ")),
-          this_node(), remote_node(0),
-          any_vals, std::numeric_limits<actor_id>::max(),
+          basp::message_type::dispatch_message,
+          basp::header::named_receiver_flag, any_vals,
+          no_operation_data, this_node(), remote_node(0),
+          any_vals, invalid_actor_id,
+          spawn_serv_atom,
           std::vector<actor_id>{},
           make_message(sys_atom::value, get_atom::value, "info"))
   // this tells Jupiter that Earth learned the address of one its actors
   .expect(remote_hdl(1),
-          basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::announce_proxy, no_flags, no_payload,
+          no_operation_data, this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
   CAF_MESSAGE("receive message from jupiter");
   self()->receive(
@@ -725,8 +741,8 @@ CAF_TEST(indirect_connections) {
   mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock()
   .expect(remote_hdl(1),
-          basp::message_type::dispatch_message, any_vals, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::dispatch_message, no_flags, any_vals,
+          no_operation_data, this_node(), remote_node(0),
           self()->id(), pseudo_remote(0)->id(),
           std::vector<actor_id>{},
           make_message("hello from earth!"));
@@ -752,35 +768,36 @@ CAF_TEST(automatic_connection) {
   mpx()->provide_acceptor(4242, ax);
   system.middleman().publish(self(), 4242);
   mpx()->flush_runnables(); // process publish message in basp_broker
-  // connect to mars
+  CAF_MESSAGE("connect to mars");
   connect_node(1, ax, self()->id());
   CAF_CHECK_EQUAL(tbl().lookup_direct(remote_node(1)).id(), remote_hdl(1).id());
   CAF_MESSAGE("simulate that an actor from jupiter "
               "sends a message to us via mars");
   mock(remote_hdl(1),
-       {basp::message_type::dispatch_message, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, 0,
         remote_node(0), this_node(),
         pseudo_remote(0)->id(), self()->id()},
        std::vector<actor_id>{},
        make_message("hello from jupiter!"))
   .expect(remote_hdl(1),
-          basp::message_type::dispatch_message, any_vals,
-          static_cast<uint64_t>(atom("SpawnServ")),
-          this_node(), remote_node(0),
-          any_vals, std::numeric_limits<actor_id>::max(),
+          basp::message_type::dispatch_message,
+          basp::header::named_receiver_flag, any_vals, no_operation_data,
+          this_node(), remote_node(0), any_vals, invalid_actor_id,
+          spawn_serv_atom,
           std::vector<actor_id>{},
           make_message(sys_atom::value, get_atom::value, "info"))
   .expect(remote_hdl(1),
-          basp::message_type::dispatch_message, any_vals,
-          static_cast<uint64_t>(atom("ConfigServ")),
-          this_node(), remote_node(0),
+          basp::message_type::dispatch_message,
+          basp::header::named_receiver_flag, any_vals,
+          no_operation_data, this_node(), remote_node(0),
           any_vals, // actor ID of an actor spawned by the BASP broker
-          std::numeric_limits<actor_id>::max(),
+          invalid_actor_id,
+          config_serv_atom,
           std::vector<actor_id>{},
           make_message(get_atom::value, "basp.default-connectivity"))
   .expect(remote_hdl(1),
-          basp::message_type::announce_proxy_instance, uint32_t{0}, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::announce_proxy, no_flags, no_payload,
+          no_operation_data, this_node(), remote_node(0),
           invalid_actor_id, pseudo_remote(0)->id());
   CAF_CHECK_EQUAL(mpx()->output_buffer(remote_hdl(1)).size(), 0u);
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(0)), remote_node(1));
@@ -792,7 +809,7 @@ CAF_TEST(automatic_connection) {
   network::address_listing res;
   res[network::protocol::ipv4].push_back("jupiter");
   mock(remote_hdl(1),
-       {basp::message_type::dispatch_message, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, 0,
         this_node(), this_node(),
         invalid_actor_id, connection_helper},
        std::vector<actor_id>{},
@@ -805,14 +822,14 @@ CAF_TEST(automatic_connection) {
   CAF_REQUIRE(mpx()->output_buffer(remote_hdl(1)).size() == 0);
   // send handshake from jupiter
   mock(remote_hdl(0),
-       {basp::message_type::server_handshake, 0, basp::version,
+       {basp::message_type::server_handshake, 0, 0, basp::version,
         remote_node(0), invalid_node_id,
         pseudo_remote(0)->id(), invalid_actor_id},
        pseudo_remote(0)->id(),
        uint32_t{0})
   .expect(remote_hdl(0),
-          basp::message_type::client_handshake, uint32_t{0}, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::client_handshake, no_flags, no_payload,
+          no_operation_data, this_node(), remote_node(0),
           invalid_actor_id, invalid_actor_id);
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(0)), invalid_node_id);
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(1)), invalid_node_id);
@@ -829,8 +846,8 @@ CAF_TEST(automatic_connection) {
   CAF_MESSAGE("response message must take direct route now");
   mock()
   .expect(remote_hdl(0),
-          basp::message_type::dispatch_message, any_vals, uint64_t{0},
-          this_node(), remote_node(0),
+          basp::message_type::dispatch_message, no_flags, any_vals,
+          no_operation_data, this_node(), remote_node(0),
           self()->id(), pseudo_remote(0)->id(),
           std::vector<actor_id>{},
           make_message("hello from earth!"));

@@ -31,9 +31,9 @@ std::string to_string(message_type x) {
       return "client_handshake";
     case message_type::dispatch_message:
       return "dispatch_message";
-    case message_type::announce_proxy_instance:
+    case message_type::announce_proxy:
       return "announce_proxy_instance";
-    case message_type::kill_proxy_instance:
+    case message_type::kill_proxy:
       return "kill_proxy_instance";
     case message_type::heartbeat:
       return "heartbeat";

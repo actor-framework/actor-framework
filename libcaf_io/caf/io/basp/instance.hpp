@@ -68,10 +68,15 @@ public:
     virtual void kill_proxy(const node_id& nid, actor_id aid,
                             const error& rsn) = 0;
 
-    /// Called whenever a `dispatch_message` arrived for a local actor.
+    /// Called for each `dispatch_message` without `named_receiver_flag`.
     virtual void deliver(const node_id& source_node, actor_id source_actor,
-                         const node_id& dest_node, actor_id dest_actor,
-                         message_id mid,
+                         actor_id dest_actor, message_id mid,
+                         std::vector<strong_actor_ptr>& forwarding_stack,
+                         message& msg) = 0;
+
+    /// Called for each `dispatch_message` with `named_receiver_flag`.
+    virtual void deliver(const node_id& source_node, actor_id source_actor,
+                         atom_value dest_actor, message_id mid,
                          std::vector<strong_actor_ptr>& forwarding_stack,
                          message& msg) = 0;
 
@@ -175,19 +180,6 @@ public:
     return published_actors_;
   }
 
-  /// Writes a header (build from the arguments)
-  /// followed by its payload to `storage`.
-  void write(execution_unit* ctx,
-             buffer_type& storage,
-             message_type operation,
-             uint32_t* payload_len,
-             uint64_t operation_data,
-             const node_id& source_node,
-             const node_id& dest_node,
-             actor_id source_actor,
-             actor_id dest_actor,
-             payload_writer* writer = nullptr);
-
   /// Writes a header followed by its payload to `storage`.
   void write(execution_unit* ctx, buffer_type& storage, header& hdr,
              payload_writer* writer = nullptr);
@@ -203,12 +195,14 @@ public:
   void write_client_handshake(execution_unit* ctx,
                               buffer_type& buf, const node_id& remote_side);
 
-  /// Writes a `kill_proxy_instance` to `buf`.
-  void write_kill_proxy_instance(execution_unit* ctx,
-                                 buffer_type& buf,
-                                 const node_id& dest_node,
-                                 actor_id aid,
-                                 const error& fail_state);
+  /// Writes an `announce_proxy` to `buf`.
+  void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
+                            const node_id& dest_node, actor_id aid);
+
+  /// Writes a `kill_proxy` to `buf`.
+  void write_kill_proxy(execution_unit* ctx, buffer_type& buf,
+                        const node_id& dest_node, actor_id aid,
+                        const error& fail_state);
 
   /// Writes a `heartbeat` to `buf`.
   void write_heartbeat(execution_unit* ctx,

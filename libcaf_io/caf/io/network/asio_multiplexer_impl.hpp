@@ -293,15 +293,14 @@ void asio_multiplexer::exec_later(resumable* rptr) {
   switch (rptr->subtype()) {
     case resumable::io_actor:
     case resumable::function_object: {
-      intrusive_ptr<resumable> ptr{rptr};
-      service().post([=]() {
+      intrusive_ptr<resumable> ptr{rptr, false};
+      service().post([=]() mutable {
         switch (ptr->resume(this, max_throughput())) {
           case resumable::resume_later:
-            exec_later(ptr.get());
+            exec_later(ptr.release());
             break;
           case resumable::done:
           case resumable::awaiting_message:
-            intrusive_ptr_release(ptr.get());
             break;
           default:
             ; // ignored

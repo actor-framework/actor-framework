@@ -31,7 +31,7 @@ namespace basp {
 
 /// Describes the first header field of a BASP message and determines the
 /// interpretation of the other header fields.
-enum class message_type : uint32_t {
+enum class message_type : uint8_t {
   /// Send from server, i.e., the node with a published actor, to client,
   /// i.e., node that initiates a new connection using remote_actor().
   ///
@@ -56,15 +56,16 @@ enum class message_type : uint32_t {
   /// message on termination.
   ///
   /// ![](announce_proxy_instance.png)
-  announce_proxy_instance = 0x03,
+  announce_proxy = 0x03,
 
   /// Informs the receiving node that it has a proxy for an actor
   /// that has been terminated.
   ///
   /// ![](kill_proxy_instance.png)
-  kill_proxy_instance = 0x04,
+  kill_proxy = 0x04,
 
-  /// Send to remote node which has direct connection.
+  /// Used to generate periodic traffic between two nodes
+  /// in order to detect disconnects.
   ///
   /// ![](heartbeat.png)
   heartbeat = 0x05,

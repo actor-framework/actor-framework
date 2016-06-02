@@ -456,6 +456,8 @@ private:
   opencl::manager* opencl_manager_;
   riac::probe* probe_;
   bool await_actors_before_shutdown_;
+  strong_actor_ptr config_serv_;
+  strong_actor_ptr spawn_serv_;
 };
 
 } // namespace caf

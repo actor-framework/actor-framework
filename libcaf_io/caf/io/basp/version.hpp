@@ -29,7 +29,7 @@ namespace basp {
 
 /// The current BASP version. Different BASP versions will not
 /// be able to exchange messages.
-constexpr uint64_t version = 1;
+constexpr uint64_t version = 2;
 
 /// @}
 

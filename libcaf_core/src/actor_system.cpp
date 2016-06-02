@@ -19,7 +19,10 @@
 
 #include "caf/actor_system.hpp"
 
+#include <unordered_set>
+
 #include "caf/send.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
 
 #include "caf/policy/work_sharing.hpp"
@@ -30,6 +33,134 @@
 #include "caf/scheduler/profiled_coordinator.hpp"
 
 namespace caf {
+
+namespace {
+
+struct kvstate {
+  using key_type = std::string;
+  using mapped_type = message;
+  using subscriber_set = std::unordered_set<strong_actor_ptr>;
+  using topic_set = std::unordered_set<std::string>;
+  std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
+  std::unordered_map<strong_actor_ptr, topic_set> subscribers;
+  const char* name = "caf.config_server";
+  template <class Processor>
+  friend void serialize(Processor& proc, kvstate& x, const unsigned int) {
+    proc & x.data;
+    proc & x.subscribers;
+  }
+};
+
+behavior config_serv_impl(stateful_actor<kvstate>* self) {
+  CAF_LOG_TRACE("");
+  std::string wildcard = "*";
+  auto unsubscribe_all = [=](actor subscriber) {
+    auto& subscribers = self->state.subscribers;
+    auto ptr = actor_cast<strong_actor_ptr>(subscriber);
+    auto i = subscribers.find(ptr);
+    if (i == subscribers.end())
+      return;
+    for (auto& key : i->second)
+      self->state.data[key].second.erase(ptr);
+    subscribers.erase(i);
+  };
+  self->set_down_handler([=](down_msg& dm) {
+    CAF_LOG_TRACE(CAF_ARG(dm));
+    auto ptr = actor_cast<strong_actor_ptr>(dm.source);
+    if (ptr)
+      unsubscribe_all(actor_cast<actor>(std::move(ptr)));
+  });
+  return {
+    [=](put_atom, const std::string& key, message& msg) {
+      CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(msg));
+      if (key == "*")
+        return;
+      auto& vp = self->state.data[key];
+      vp.first = std::move(msg);
+      for (auto& subscriber_ptr : vp.second) {
+        // we never put a nullptr in our map
+        auto subscriber = actor_cast<actor>(subscriber_ptr);
+        if (subscriber != self->current_sender())
+          self->send(subscriber, update_atom::value, key, vp.second);
+      }
+      // also iterate all subscribers for '*'
+      for (auto& subscriber : self->state.data[wildcard].second)
+        if (subscriber != self->current_sender())
+          self->send(actor_cast<actor>(subscriber), update_atom::value,
+                     key, vp.second);
+    },
+    [=](get_atom, std::string& key) -> message {
+      CAF_LOG_TRACE(CAF_ARG(key));
+      if (key == wildcard) {
+        std::vector<std::pair<std::string, message>> msgs;
+        for (auto& kvp : self->state.data)
+          if (kvp.first != "*")
+            msgs.emplace_back(kvp.first, kvp.second.first);
+        return make_message(ok_atom::value, std::move(msgs));
+      }
+      auto i = self->state.data.find(key);
+      return make_message(ok_atom::value, std::move(key),
+                          i != self->state.data.end() ? i->second.first
+                                                      : make_message());
+    },
+    [=](subscribe_atom, const std::string& key) {
+      auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
+      CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
+      if (! subscriber)
+        return;
+      self->state.data[key].second.insert(subscriber);
+      auto& subscribers = self->state.subscribers;
+      auto i = subscribers.find(subscriber);
+      if (i != subscribers.end()) {
+        i->second.insert(key);
+      } else {
+        self->monitor(subscriber);
+        subscribers.emplace(subscriber, kvstate::topic_set{key});
+      }
+    },
+    [=](unsubscribe_atom, const std::string& key) {
+      auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
+      if (! subscriber)
+        return;
+      CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
+      if (key == wildcard) {
+        unsubscribe_all(actor_cast<actor>(std::move(subscriber)));
+        return;
+      }
+      self->state.subscribers[subscriber].erase(key);
+      self->state.data[key].second.erase(subscriber);
+    }
+  };
+}
+
+behavior spawn_serv_impl(event_based_actor* self) {
+  CAF_LOG_TRACE("");
+  return {
+    [=](get_atom, const std::string& name, message& args)
+    -> result<ok_atom, strong_actor_ptr, std::set<std::string>> {
+      CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
+      actor_config cfg{self->context()};
+      auto res = self->system().types().make_actor(name, cfg, args);
+      if (! res.first)
+        return sec::cannot_spawn_actor_from_arguments;
+      return {ok_atom::value, res.first, res.second};
+    }
+  };
+}
+
+class dropping_execution_unit : public execution_unit {
+public:
+  dropping_execution_unit(actor_system* sys) : execution_unit(sys) {
+    // nop
+  }
+
+  void exec_later(resumable*) override {
+    // should not happen in the first place
+    CAF_LOG_ERROR("actor registry actor called exec_later during shutdown");
+  }
+};
+
+} // namespace <anonymous>
 
 actor_system::module::~module() {
   // nop
@@ -125,22 +256,31 @@ actor_system::actor_system(actor_system_config&& cfg)
   types_.error_renderers_ = std::move(cfg.error_renderers_);
   // move remaining config
   node_.swap(cfg.network_id);
+  // spawn config and spawn servers (lazily to not access the scheduler yet)
+  static constexpr auto Flags = hidden + lazy_init;
+  spawn_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl));
+  config_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl));
   // fire up remaining modules
   logger_.start();
   registry_.start();
+  registry_.put(atom("SpawnServ"), spawn_serv_);
+  registry_.put(atom("ConfigServ"), config_serv_);
   for (auto& mod : modules_)
     if (mod)
       mod->start();
   groups_.start();
-  // store config parameters in ConfigServ
-  auto cs = actor_cast<actor>(registry_.get(atom("ConfigServ")));
-  anon_send(cs, put_atom::value, "middleman.enable-automatic-connections",
-            make_message(cfg.middleman_enable_automatic_connections));
 }
 
 actor_system::~actor_system() {
   if (await_actors_before_shutdown_)
     await_all_actors_done();
+  // shutdown system-level servers
+  anon_send_exit(spawn_serv_, exit_reason::user_shutdown);
+  anon_send_exit(config_serv_, exit_reason::user_shutdown);
+  // release memory as soon as possible
+  spawn_serv_ = nullptr;
+  config_serv_ = nullptr;
+  // group module is the first one, relies on MM
   groups_.stop();
   // stop modules in reverse order
   for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)

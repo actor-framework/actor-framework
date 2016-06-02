@@ -67,9 +67,18 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // inherited from basp::instance::listener
   void deliver(const node_id& source_node, actor_id source_actor,
-               const node_id& dest_node, actor_id dest_actor,
-               message_id mid, std::vector<strong_actor_ptr>& stages,
-               message& msg) override;
+               actor_id dest_actor, message_id mid,
+               std::vector<strong_actor_ptr>& stages, message& msg) override;
+
+  // inherited from basp::instance::listener
+  void deliver(const node_id& source_node, actor_id source_actor,
+               atom_value dest_actor, message_id mid,
+               std::vector<strong_actor_ptr>& stages, message& msg) override;
+
+  // called from both overriden functions
+  void deliver(const node_id& source_node, actor_id source_actor,
+               strong_actor_ptr dest, message_id mid,
+               std::vector<strong_actor_ptr>& stages, message& msg);
 
   // performs bookkeeping such as managing `spawn_servers`
   void learned_new_node(const node_id& nid);

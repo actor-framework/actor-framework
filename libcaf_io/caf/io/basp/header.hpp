@@ -39,24 +39,56 @@ namespace basp {
 /// message types consist of only a header.
 struct header {
   message_type operation;
+  uint8_t padding1;
+  uint8_t padding2;
+  uint8_t flags;
   uint32_t payload_len;
   uint64_t operation_data;
   node_id source_node;
   node_id dest_node;
   actor_id source_actor;
   actor_id dest_actor;
+
+  inline header(message_type m_operation, uint8_t m_flags,
+                uint32_t m_payload_len, uint64_t m_operation_data,
+                node_id m_source_node, node_id m_dest_node,
+                actor_id m_source_actor, actor_id m_dest_actor)
+      : operation(m_operation),
+        flags(m_flags),
+        payload_len(m_payload_len),
+        operation_data(m_operation_data),
+        source_node(std::move(m_source_node)),
+        dest_node(std::move(m_dest_node)),
+        source_actor(m_source_actor),
+        dest_actor(m_dest_actor) {
+    // nop
+  }
+
+  header() = default;
+
+  /// Identifies a receiver by name rather than ID.
+  static const uint8_t named_receiver_flag = 0x01;
+
+  /// Queries whether this header has the given flag.
+  inline bool has(uint8_t flag) const {
+    return (flags & flag) != 0;
+  }
 };
 
 /// @relates header
 template <class Processor>
 void serialize(Processor& proc, header& hdr, const unsigned int) {
+  uint8_t pad = 0;
+  proc & hdr.operation;
+  proc & pad;
+  proc & pad;
+  proc & hdr.flags;
+  proc & hdr.payload_len;
+  proc & hdr.operation_data;
   proc & hdr.source_node;
   proc & hdr.dest_node;
   proc & hdr.source_actor;
   proc & hdr.dest_actor;
-  proc & hdr.payload_len;
-  proc & hdr.operation;
-  proc & hdr.operation_data;
 }
 
 /// @relates header

@@ -173,20 +173,27 @@ connection_state instance::handle(execution_unit* ctx,
           && tbl_.add_indirect(last_hop, hdr.source_node))
         callee_.learned_new_node_indirectly(hdr.source_node);
       binary_deserializer bd{ctx, *payload};
+      auto receiver_name = static_cast<atom_value>(0);
       std::vector<strong_actor_ptr> forwarding_stack;
       message msg;
+      if (hdr.has(header::named_receiver_flag))
+        bd >> receiver_name;
       bd >> forwarding_stack >> msg;
       CAF_LOG_DEBUG(CAF_ARG(forwarding_stack) << CAF_ARG(msg));
-      callee_.deliver(hdr.source_node, hdr.source_actor,
-                      hdr.dest_node, hdr.dest_actor,
-                      message_id::from_integer_value(hdr.operation_data),
-                      forwarding_stack, msg);
+      if (hdr.has(header::named_receiver_flag))
+        callee_.deliver(hdr.source_node, hdr.source_actor, receiver_name,
+                        message_id::from_integer_value(hdr.operation_data),
+                        forwarding_stack, msg);
+      else
+        callee_.deliver(hdr.source_node, hdr.source_actor, hdr.dest_actor,
+                        message_id::from_integer_value(hdr.operation_data),
+                        forwarding_stack, msg);
       break;
     }
-    case message_type::announce_proxy_instance:
+    case message_type::announce_proxy:
       callee_.proxy_announced(hdr.source_node, hdr.dest_actor);
       break;
-    case message_type::kill_proxy_instance: {
+    case message_type::kill_proxy: {
       if (! payload_valid())
         return err();
       binary_deserializer bd{ctx, *payload};
@@ -311,7 +318,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   auto writer = make_callback([&](serializer& sink) {
     sink << forwarding_stack << msg;
   });
-  header hdr{message_type::dispatch_message, 0, mid.integer_value(),
+  header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
              sender ? sender->node() : this_node(), receiver->node(),
              sender ? sender->id() : invalid_actor_id, receiver->id()};
   write(ctx, path->wr_buf, hdr, &writer);
@@ -320,65 +327,30 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   return true;
 }
 
-void instance::write(execution_unit* ctx,
-                     buffer_type& buf,
-                     message_type operation,
-                     uint32_t* payload_len,
-                     uint64_t operation_data,
-                     const node_id& source_node,
-                     const node_id& dest_node,
-                     actor_id source_actor,
-                     actor_id dest_actor,
-                     payload_writer* pw) {
-  CAF_LOG_TRACE(CAF_ARG(operation) << CAF_ARG(operation_data)
-                << CAF_ARG(source_node) << CAF_ARG(dest_node)
-                << CAF_ARG(source_actor) << CAF_ARG(dest_actor));
-  if (! pw) {
-    CAF_LOG_DEBUG("send message without payload");
-    uint32_t zero = 0;
-    binary_serializer bs{ctx, buf};
-    bs << source_node
-       << dest_node
-       << source_actor
-       << dest_actor
-       << zero
-       << operation
-       << operation_data;
-    return;
-  }
-  // reserve space in the buffer to write the payload later on
-  auto wr_pos = buf.size();
-  char placeholder[basp::header_size];
-  buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
-  auto pl_pos = buf.size();
-  try { // lifetime scope of first serializer (write payload)
-    binary_serializer bs{ctx, buf};
-    (*pw)(bs);
-  }
-  catch (std::exception& e) {
-printf("EXCEPTION: %s\n", e.what());
-    CAF_LOG_ERROR(CAF_ARG(e.what()));
-  }
-  // write broker message to the reserved space
-  stream_serializer<charbuf> bs2{ctx, buf.data() + wr_pos, pl_pos - wr_pos};
-  auto plen = static_cast<uint32_t>(buf.size() - pl_pos);
-  bs2 << source_node
-      << dest_node
-      << source_actor
-      << dest_actor
-      << plen
-      << operation
-      << operation_data;
-  CAF_LOG_DEBUG("wrote payload" << CAF_ARG(plen));
-  if (payload_len)
-    *payload_len = plen;
-}
-
 void instance::write(execution_unit* ctx, buffer_type& buf,
                      header& hdr, payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
-  write(ctx, buf, hdr.operation, &hdr.payload_len, hdr.operation_data,
-        hdr.source_node, hdr.dest_node, hdr.source_actor, hdr.dest_actor, pw);
+  try {
+    if (pw) {
+      auto pos = buf.size();
+      // write payload first (skip first 72 bytes and write header later)
+      char placeholder[basp::header_size];
+      buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
+      binary_serializer bs{ctx, buf};
+      (*pw)(bs);
+      auto plen = buf.size() - pos - basp::header_size;
+      CAF_ASSERT(plen <= std::numeric_limits<uint32_t>::max());
+      hdr.payload_len = static_cast<uint32_t>(plen);
+      stream_serializer<charbuf> out{ctx, buf.data() + pos, basp::header_size};
+      out << hdr;
+    } else {
+      binary_serializer bs{ctx, buf};
+      bs << hdr;
+    }
+  }
+  catch (std::exception& e) {
+    CAF_LOG_ERROR(CAF_ARG(e.what()));
+  }
 }
 
 void instance::write_server_handshake(execution_unit* ctx,
@@ -399,7 +371,7 @@ void instance::write_server_handshake(execution_unit* ctx,
       sink << i << pa->second;
     }
   });
-  header hdr{message_type::server_handshake, 0, version,
+  header hdr{message_type::server_handshake, 0, 0, version,
              this_node_, invalid_node_id,
              pa && pa->first ? pa->first->id() : invalid_actor_id,
              invalid_actor_id};
@@ -410,20 +382,27 @@ void instance::write_client_handshake(execution_unit* ctx,
                                       buffer_type& buf,
                                       const node_id& remote_side) {
   CAF_LOG_TRACE(CAF_ARG(remote_side));
-  write(ctx, buf, message_type::client_handshake, nullptr, 0,
-        this_node_, remote_side, invalid_actor_id, invalid_actor_id);
+  header hdr{message_type::client_handshake, 0, 0, 0,
+             this_node_, remote_side, invalid_actor_id, invalid_actor_id};
+  write(ctx, buf, hdr);
 }
 
-void instance::write_kill_proxy_instance(execution_unit* ctx,
-                                         buffer_type& buf,
-                                         const node_id& dest_node,
-                                         actor_id aid,
-                                         const error& rsn) {
+void instance::write_announce_proxy(execution_unit* ctx, buffer_type& buf,
+                                    const node_id& dest_node, actor_id aid) {
+  CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid));
+  header hdr{message_type::announce_proxy, 0, 0, 0,
+             this_node_, dest_node, invalid_actor_id, aid};
+  write(ctx, buf, hdr);
+}
+
+void instance::write_kill_proxy(execution_unit* ctx, buffer_type& buf,
+                                const node_id& dest_node, actor_id aid,
+                                const error& rsn) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
   auto writer = make_callback([&](serializer& sink) {
     sink << rsn;
   });
-  header hdr{message_type::kill_proxy_instance, 0, 0,
+  header hdr{message_type::kill_proxy, 0, 0, 0,
              this_node_, dest_node, aid, invalid_actor_id};
   write(ctx, buf, hdr, &writer);
 }
@@ -432,8 +411,9 @@ void instance::write_heartbeat(execution_unit* ctx,
                                buffer_type& buf,
                                const node_id& remote_side) {
   CAF_LOG_TRACE(CAF_ARG(remote_side));
-  write(ctx, buf, message_type::heartbeat, nullptr, 0,
-        this_node_, remote_side, invalid_actor_id, invalid_actor_id);
+  header hdr{message_type::heartbeat, 0, 0, 0,
+             this_node_, remote_side, invalid_actor_id, invalid_actor_id};
+  write(ctx, buf, hdr);
 }
 
 } // namespace basp
