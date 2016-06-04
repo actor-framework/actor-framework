@@ -8,6 +8,8 @@ network transparent messaging, and more.
 (https://gitter.im/actor-framework/chat)
 [![Jenkins][jenkins-badge]]
 (https://jenkins.inet.haw-hamburg.de/view/CAF%20Dashboard)
+[![Documentation Status][docs-badge]]
+(http://actor-framework.readthedocs.io/en/latest/?badge=latest)
 [![Coverity][coverity-badge]]
 (https://scan.coverity.com/projects/5555)
 [![In Progress][in-progress-badge]]
@@ -15,15 +17,25 @@ network transparent messaging, and more.
 [![Fixed in Develop][fixed-in-develop-badge]]
 (https://waffle.io/actor-framework/actor-framework)
 
-## On the Web
+## Community
 
 * __Chat__: https://gitter.im/actor-framework/chat
+* __Mailing List__: https://groups.google.com/d/forum/actor-framework
+* __Twitter__: https://twitter.com/actor_framework
+
+## Online Resources
+
 * __Homepage__: http://www.actor-framework.org
 * __Developer Blog__: http://blog.actor-framework.org
-* __Doxygen (HTML)__: http://www.actor-framework.org/doc
-* __Manual (HTML)__: http://www.actor-framework.org/manual
-* __Manual (PDF)__: http://www.actor-framework.org/pdf/manual.pdf
-* __Mailing List__: https://groups.google.com/d/forum/actor-framework
+* __Doxygen__: http://www.actor-framework.org/doc
+* __HTML Manual__: https://actor-framework.readthedocs.io
+* __PDF Manual (stable)__: http://www.actor-framework.org/pdf/manual.pdf
+* __PDF Manual (latest)__: http://www.actor-framework.org/develop/pdf/manual.pdf
+
+## Report Bugs / Get Help
+
+* __Open Issues on GitHub__: https://github.com/actor-framework/actor-framework/issues/new
+* __Ask Questions on StackOverflow__: https://stackoverflow.com/questions/ask?tags=c%2b%2b-actor-framework
 
 ## Get CAF
 
@@ -161,6 +173,9 @@ https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Ani
 
 [jenkins-badge]:
 https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
+
+[docs-badge]:
+https://readthedocs.org/projects/actor-framework/badge/?version=latest
 
 [coverity-badge]:
 https://scan.coverity.com/projects/5555/badge.svg?flat=1
