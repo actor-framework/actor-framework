@@ -263,26 +263,6 @@ endif()
 # needed by subprojects
 set(LD_FLAGS ${LD_FLAGS} ${CMAKE_LD_LIBS})
 
-
-################################################################################
-#                    check for biicode build pipeline                          #
-################################################################################
-IF(BIICODE)
-  # define the biicode target and let it do its thing
-  ADD_BII_TARGETS()
-
-  # but first specify the compiled/linker options calculated above
-  string(REPLACE " " ";" REPLACED_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-  target_compile_options(${BII_BLOCK_TARGET} INTERFACE ${REPLACED_CXX_FLAGS})
-
-  IF (LD_FLAGS STREQUAL "")
-    string(REPLACE " " ";" REPLACED_LD_FLAGS ${LD_FLAGS})
-    target_link_libraries(${BII_BLOCK_TARGET} INTERFACE ${REPLACED_LD_FLAGS})
-  ENDIF()
-
-  RETURN()
-ENDIF()
-
 ################################################################################
 #                       configure build_config.hpp header                      #
 ################################################################################
@@ -544,6 +524,33 @@ if(DOXYGEN_FOUND)
                     VERBATIM)
 endif(DOXYGEN_FOUND)
 
+################################################################################
+#                                Manual setup                                  #
+################################################################################
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/manual/")
+  # retrieve current branch name
+  execute_process(COMMAND git rev-parse --abbrev-ref HEAD
+                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                  OUTPUT_VARIABLE GIT_BRANCH
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  # retrieve current SHA1 hash
+  execute_process(COMMAND git log --pretty=format:%h -n 1
+                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                  OUTPUT_VARIABLE GIT_HASH
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(${GIT_BRANCH} STREQUAL "master")
+    set(CAF_RELEASE "${CAF_VERSION}")
+  else()
+    set(CAF_RELEASE "${CAF_VERSION}+exp.sha.${GIT_HASH}")
+  endif()
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex.in"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex"
+                 IMMEDIATE @ONLY)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/manual/conf.py.in"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/manual/conf.py"
+                 IMMEDIATE @ONLY)
+endif()
 
 ################################################################################
 #                     Add additional project files to GUI                      #
