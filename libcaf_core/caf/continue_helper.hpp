@@ -28,7 +28,7 @@ namespace caf {
 ///  when dealing with synchronous sends.
 class continue_helper {
 public:
-  continue_helper(message_id mid);
+  explicit continue_helper(message_id mid);
 
   /// Returns the ID of the expected response message.
   message_id get_message_id() const {
