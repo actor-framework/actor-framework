@@ -27,7 +27,7 @@
 #elif defined(CAF_WINDOWS)
 #include <Windows.h>
 #include <Psapi.h>
-#else 
+#else
 #include <sys/resource.h>
 #endif
 
@@ -104,7 +104,7 @@ public:
 
       GetProcessTimes(GetCurrentProcess(), &creation_time, &exit_time,
         &kernel_time, &user_time);
-        
+
       GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
 
       m.mem = pmc.PeakWorkingSetSize / 1024;
@@ -256,11 +256,11 @@ public:
   }
 
   template <class Time, class Label>
-  void record(Time t, Label label, size_t id, const measurement& m) {
+  void record(Time t, Label label, size_t rec_id, const measurement& m) {
     using std::setw;
     file_ << setw(21) << t.time_since_epoch().count()
            << setw(10) << label
-           << setw(10) << id
+           << setw(10) << rec_id
            << m
            << '\n';
   }

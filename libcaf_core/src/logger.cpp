@@ -285,18 +285,18 @@ void logger::run() {
         << "_" << to_string(system_.node())
         << ".log";
   std::fstream out(fname.str().c_str(), std::ios::out | std::ios::app);
-  std::unique_ptr<event> event;
+  std::unique_ptr<event> ptr;
   for (;;) {
     // make sure we have data to read
     queue_.synchronized_await(queue_mtx_, queue_cv_);
     // read & process event
-    event.reset(queue_.try_pop());
-    CAF_ASSERT(event != nullptr);
-    if (event->msg.empty()) {
+    ptr.reset(queue_.try_pop());
+    CAF_ASSERT(ptr != nullptr);
+    if (ptr->msg.empty()) {
       out.close();
       return;
     }
-    out << event->msg << std::flush;
+    out << ptr->msg << std::flush;
   }
 }
 

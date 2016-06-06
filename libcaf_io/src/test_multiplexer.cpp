@@ -39,9 +39,9 @@ test_multiplexer::~test_multiplexer() {
 }
 
 connection_handle
-test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
+test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
   connection_handle result;
-  auto i = scribes_.find(std::make_pair(host, port));
+  auto i = scribes_.find(std::make_pair(host, port_hint));
   if (i != scribes_.end()) {
     result = i->second;
     scribes_.erase(i);

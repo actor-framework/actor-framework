@@ -272,17 +272,16 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
   return *this;
 }
 
-actor_system_config&
-actor_system_config::set(const char* config_name, config_value config_value) {
-  std::string cn;
+actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
+  std::string full_name;
   for (auto& x : options_) {
     // config_name has format "$category.$name"
-    cn = x->category();
-    cn += '.';
-    cn += x->name();
-    if (cn == config_name) {
+    full_name = x->category();
+    full_name += '.';
+    full_name += x->name();
+    if (full_name == cn) {
       auto f = x->to_sink();
-      f(0, config_value);
+      f(0, cv);
     }
   }
   return *this;

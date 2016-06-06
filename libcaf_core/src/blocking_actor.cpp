@@ -39,12 +39,12 @@ blocking_actor::~blocking_actor() {
 
 void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   auto mid = ptr->mid;
-  auto sender = ptr->sender;
+  auto src = ptr->sender;
   // returns false if mailbox has been closed
   if (! mailbox().synchronized_enqueue(mtx_, cv_, ptr.release())) {
     if (mid.is_request()) {
       detail::sync_request_bouncer srb{exit_reason()};
-      srb(sender, mid);
+      srb(src, mid);
     }
   }
 }

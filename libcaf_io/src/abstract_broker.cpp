@@ -194,10 +194,10 @@ resumable::subtype_t abstract_broker::subtype() const {
 }
 
 resumable::resume_result
-abstract_broker::resume(execution_unit* context, size_t mt) {
-  CAF_ASSERT(context != nullptr);
-  CAF_ASSERT(context == &backend());
-  return local_actor::resume(context, mt);
+abstract_broker::resume(execution_unit* ctx, size_t mt) {
+  CAF_ASSERT(ctx != nullptr);
+  CAF_ASSERT(ctx == &backend());
+  return local_actor::resume(ctx, mt);
 }
 
 const char* abstract_broker::name() const {

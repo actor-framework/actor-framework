@@ -152,14 +152,14 @@ protected:
   // handles `exit_msg`, `sys_atom` messages, and additionally `down_msg`
   // with `down_msg_handler`; returns true if the message is handled
   template <class F>
-  bool handle_system_message(mailbox_element& node, execution_unit* context,
+  bool handle_system_message(mailbox_element& x, execution_unit* context,
                              bool trap_exit, F& down_msg_handler) {
-    auto& msg = node.msg;
+    auto& msg = x.msg;
     if (msg.size() == 1 && msg.match_element<down_msg>(0)) {
       down_msg_handler(msg.get_as_mutable<down_msg>(0));
       return true;
     }
-    return handle_system_message(node, context, trap_exit);
+    return handle_system_message(x, context, trap_exit);
   }
 
   // Calls `fun` with exclusive access to an actor's state.

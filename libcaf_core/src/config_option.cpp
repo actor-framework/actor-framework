@@ -23,11 +23,10 @@
 
 namespace caf {
 
-config_option::config_option(const char* category, const char* name,
-                             const char* explanation)
-    : category_(category),
-      name_(name),
-      explanation_(explanation),
+config_option::config_option(const char* cat, const char* nm, const char* expl)
+    : category_(cat),
+      name_(nm),
+      explanation_(expl),
       short_name_('\0') {
   auto last = name_.end();
   auto comma = std::find(name_.begin(), last, ',');

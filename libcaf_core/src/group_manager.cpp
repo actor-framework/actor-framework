@@ -198,11 +198,11 @@ public:
 private:
   void send_to_acquaintances(const message& what) {
     // send to all remote subscribers
-    auto sender = current_element_->sender;
+    auto src = current_element_->sender;
     CAF_LOG_DEBUG(CAF_ARG(acquaintances_.size())
-                  << CAF_ARG(sender) << CAF_ARG(what));
+                  << CAF_ARG(src) << CAF_ARG(what));
     for (auto& acquaintance : acquaintances_)
-      acquaintance->enqueue(sender, invalid_message_id, what, context());
+      acquaintance->enqueue(src, invalid_message_id, what, context());
   }
 
   local_group_ptr group_;

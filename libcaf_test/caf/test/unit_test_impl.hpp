@@ -196,14 +196,12 @@ logger::stream& logger::stream::operator<<(const char* cstr) {
   return *this;
 }
 
-logger::stream& logger::stream::operator<<(const std::string& str) {
-  if (str.empty()) {
+logger::stream& logger::stream::operator<<(const std::string& x) {
+  if (x.empty())
     return *this;
-  }
-  buf_ << str;
-  if (str.back() == '\n') {
+  buf_ << x;
+  if (x.back() == '\n')
     flush();
-  }
   return *this;
 }
 
@@ -212,10 +210,10 @@ std::string logger::stream::str() const {
 }
 
 void logger::stream::flush() {
-  auto str = buf_.str();
+  auto x = buf_.str();
   buf_.str("");
-  logger_.log(level_, str);
-  str_ += str;
+  logger_.log(level_, x);
+  str_ += x;
 }
 
 bool logger::init(int lvl_cons, int lvl_file, const std::string& logfile) {

@@ -237,18 +237,18 @@ size_t monitorable_actor::detach_impl(const attachable::token& what,
   return detach_impl(what, ptr->next, stop_on_hit, dry_run);
 }
 
-bool monitorable_actor::handle_system_message(mailbox_element& node,
-                                              execution_unit* context,
+bool monitorable_actor::handle_system_message(mailbox_element& x,
+                                              execution_unit* ctx,
                                               bool trap_exit) {
-  auto& msg = node.msg;
+  auto& msg = x.msg;
   if (! trap_exit && msg.size() == 1 && msg.match_element<exit_msg>(0)) {
     // exits for non-normal exit reasons
     auto& em = msg.get_as_mutable<exit_msg>(0);
     if (em.reason)
-      cleanup(std::move(em.reason), context);
+      cleanup(std::move(em.reason), ctx);
     return true;
   } else if (msg.size() > 1 && msg.match_element<sys_atom>(0)) {
-    if (! node.sender)
+    if (! x.sender)
       return true;
     error err;
     mailbox_element_ptr res;
@@ -259,20 +259,20 @@ bool monitorable_actor::handle_system_message(mailbox_element& node,
           err = sec::unsupported_sys_key;
           return;
         }
-        res = mailbox_element::make(ctrl(), node.mid.response_id(), {},
+        res = mailbox_element::make(ctrl(), x.mid.response_id(), {},
                                     ok_atom::value, std::move(what),
                                     address(), name());
       }
     });
     if (! res && ! err)
       err = sec::unsupported_sys_message;
-    if (err && node.mid.is_request())
-      res = mailbox_element::make(ctrl(), node.mid.response_id(),
+    if (err && x.mid.is_request())
+      res = mailbox_element::make(ctrl(), x.mid.response_id(),
                                   {}, std::move(err));
     if (res) {
-      auto s = actor_cast<strong_actor_ptr>(node.sender);
+      auto s = actor_cast<strong_actor_ptr>(x.sender);
       if (s)
-        s->enqueue(std::move(res), context);
+        s->enqueue(std::move(res), ctx);
     }
     return true;
   }

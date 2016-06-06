@@ -724,10 +724,10 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
   CAF_LOG_TRACE("");
   class impl : public scribe {
   public:
-    impl(abstract_broker* ptr, default_multiplexer& ref, native_socket sockfd)
+    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
         : scribe(ptr, network::conn_hdl_from_socket(sockfd)),
           launched_(false),
-          stream_(ref, sockfd) {
+          stream_(mx, sockfd) {
       // nop
     }
     void configure_read(receive_policy::config config) override {
@@ -782,9 +782,9 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
   CAF_ASSERT(fd != network::invalid_native_socket);
   class impl : public doorman {
   public:
-    impl(abstract_broker* ptr, default_multiplexer& ref, native_socket sockfd)
+    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
         : doorman(ptr, network::accept_hdl_from_socket(sockfd)),
-          acceptor_(ref, sockfd) {
+          acceptor_(mx, sockfd) {
       // nop
     }
     void new_connection() override {
@@ -998,8 +998,8 @@ void pipe_reader::handle_event(operation op) {
   }
 }
 
-void pipe_reader::init(native_socket fd) {
-  fd_ = fd;
+void pipe_reader::init(native_socket sock_fd) {
+  fd_ = sock_fd;
 }
 
 stream::stream(default_multiplexer& backend_ref, native_socket sockfd)

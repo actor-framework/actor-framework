@@ -319,9 +319,9 @@ uint32_t local_actor::active_timeout_id() const {
   return timeout_id_;
 }
 
-local_actor::msg_type local_actor::filter_msg(mailbox_element& node) {
-  message& msg = node.msg;
-  auto mid = node.mid;
+local_actor::msg_type local_actor::filter_msg(mailbox_element& x) {
+  message& msg = x.msg;
+  auto mid = x.mid;
   if (mid.is_response())
     return msg_type::response;
   switch (msg.type_token()) {
@@ -331,14 +331,14 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& node) {
         auto& what = msg.get_as<std::string>(2);
         if (what == "info") {
           CAF_LOG_DEBUG("reply to 'info' message");
-          node.sender->enqueue(
-            mailbox_element::make(ctrl(), node.mid.response_id(),
+          x.sender->enqueue(
+            mailbox_element::make(ctrl(), x.mid.response_id(),
                                   {}, ok_atom::value, std::move(what),
                                   address(), name()),
             context());
         } else {
-          node.sender->enqueue(
-            mailbox_element::make(ctrl(), node.mid.response_id(),
+          x.sender->enqueue(
+            mailbox_element::make(ctrl(), x.mid.response_id(),
                                   {}, sec::unsupported_sys_key),
             context());
         }

@@ -47,8 +47,8 @@ public:
 
   using worker_type = worker<Policy>;
 
-  worker_type* worker_by_id(size_t id) {//override {
-    return workers_[id].get();
+  worker_type* worker_by_id(size_t x) {
+    return workers_[x].get();
   }
 
   policy_data& data() {

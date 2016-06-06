@@ -413,7 +413,6 @@ CAF_TEST(string_delegator_chain) {
 }
 
 CAF_TEST(maybe_string_delegator_chain) {
-  scoped_actor self{system};
   CAF_LOG_TRACE(CAF_ARG(self));
   auto aut = system.spawn(maybe_string_delegator,
                           system.spawn(maybe_string_reverter));
@@ -437,7 +436,6 @@ CAF_TEST(maybe_string_delegator_chain) {
 }
 
 CAF_TEST(sending_typed_actors) {
-  scoped_actor self{system};
   auto aut = system.spawn(int_fun);
   self->send(self->spawn(foo), 10, aut);
   self->receive(
@@ -448,7 +446,6 @@ CAF_TEST(sending_typed_actors) {
 }
 
 CAF_TEST(sending_typed_actors_and_down_msg) {
-  scoped_actor self{system};
   auto aut = system.spawn(int_fun2);
   self->send(self->spawn(foo2), 10, aut);
   self->receive([](int i) {
@@ -460,20 +457,20 @@ CAF_TEST(check_signature) {
   using foo_type = typed_actor<replies_to<put_atom>::with<ok_atom>>;
   using foo_result_type = optional<ok_atom>;
   using bar_type = typed_actor<reacts_to<ok_atom>>;
-  auto foo_action = [](foo_type::pointer self) -> foo_type::behavior_type {
+  auto foo_action = [](foo_type::pointer ptr) -> foo_type::behavior_type {
     return {
       [=] (put_atom) -> foo_result_type {
-        self->quit();
+        ptr->quit();
         return {ok_atom::value};
       }
     };
   };
-  auto bar_action = [=](bar_type::pointer self) -> bar_type::behavior_type {
-    auto foo = self->spawn<linked>(foo_action);
-    self->send(foo, put_atom::value);
+  auto bar_action = [=](bar_type::pointer ptr) -> bar_type::behavior_type {
+    auto foo = ptr->spawn<linked>(foo_action);
+    ptr->send(foo, put_atom::value);
     return {
       [=](ok_atom) {
-        self->quit();
+        ptr->quit();
       }
     };
   };

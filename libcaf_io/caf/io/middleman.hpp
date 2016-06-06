@@ -279,10 +279,10 @@ private:
     auto hdl = backend().new_tcp_scribe(host, port);
     detail::init_fun_factory<Impl, F> fac;
     actor_config cfg{&backend()};
-    auto init = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
-    cfg.init_fun = [hdl, init](local_actor* ptr) -> behavior {
+    auto init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
+    cfg.init_fun = [hdl, init_fun](local_actor* ptr) -> behavior {
       static_cast<abstract_broker*>(ptr)->assign_tcp_scribe(hdl);
-      return init(ptr);
+      return init_fun(ptr);
     };
     return system().spawn_class<Impl, Os>(cfg);
   }
@@ -291,12 +291,12 @@ private:
   typename infer_handle_from_class<Impl>::type
   spawn_server_impl(F fun, uint16_t port, Ts&&... xs) {
     detail::init_fun_factory<Impl, F> fac;
-    auto init = fac(std::move(fun), std::forward<Ts>(xs)...);
+    auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
     auto hdl = backend().new_tcp_doorman(port).first;
     actor_config cfg{&backend()};
-    cfg.init_fun = [hdl, init](local_actor* ptr) -> behavior {
+    cfg.init_fun = [hdl, init_fun](local_actor* ptr) -> behavior {
       static_cast<abstract_broker*>(ptr)->assign_tcp_doorman(hdl);
-      return init(ptr);
+      return init_fun(ptr);
     };
     return system().spawn_class<Impl, Os>(cfg);
   }

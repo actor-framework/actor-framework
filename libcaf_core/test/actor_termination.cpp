@@ -38,26 +38,26 @@ behavior mirror_impl(event_based_actor* self) {
 
 struct fixture {
   actor_system system;
-  scoped_actor self;
+  scoped_actor scoped_self;
   actor mirror;
   actor testee;
 
   fixture()
-      : self(system),
+      : scoped_self(system),
         mirror(system.spawn(mirror_impl)),
         testee(unsafe_actor_handle_init) {
-    self->set_down_handler([](local_actor*, down_msg& dm) {
+    scoped_self->set_down_handler([](local_actor*, down_msg& dm) {
       CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
     });
   }
 
   template <class... Ts>
   void spawn(Ts&&... xs) {
-    testee = self->spawn<monitored>(std::forward<Ts>(xs)...);
+    testee = scoped_self->spawn<monitored>(std::forward<Ts>(xs)...);
   }
 
   ~fixture() {
-    self->wait_for(testee);
+    scoped_self->wait_for(testee);
   }
 };
 

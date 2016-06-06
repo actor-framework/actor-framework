@@ -259,16 +259,16 @@ CAF_TEST(test_void_res) {
 }
 
 CAF_TEST(pending_quit) {
-  auto mirror = system.spawn([](event_based_actor* self) -> behavior {
-    self->set_default_handler(reflect);
+  auto mirror = system.spawn([](event_based_actor* ptr) -> behavior {
+    ptr->set_default_handler(reflect);
     return {
       [] {
         // nop
       }
     };
   });
-  system.spawn([mirror](event_based_actor* self) {
-    self->request(mirror, infinite, 42).then(
+  system.spawn([mirror](event_based_actor* ptr) {
+    ptr->request(mirror, infinite, 42).then(
       [](int) {
         CAF_ERROR("received result, should've been terminated already");
       },
@@ -276,7 +276,7 @@ CAF_TEST(pending_quit) {
         CAF_CHECK_EQUAL(err, sec::request_receiver_down);
       }
     );
-    self->quit();
+    ptr->quit();
   });
 }
 
@@ -334,7 +334,6 @@ CAF_TEST(request_to_mirror) {
 }
 
 CAF_TEST(request_to_a_fwd2_b_fwd2_c) {
-  scoped_actor self{system};
   self->request(self->spawn<A, monitored>(self), infinite,
                 go_atom::value, self->spawn<B>(self->spawn<C>())).receive(
     [](ok_atom) {
@@ -428,21 +427,21 @@ CAF_TEST(request_no_then) {
 }
 
 CAF_TEST(async_request) {
-  auto foo = system.spawn([](event_based_actor* self) -> behavior {
-    auto receiver = self->spawn<linked>([](event_based_actor* ptr) -> behavior {
+  auto foo = system.spawn([](event_based_actor* ptr) -> behavior {
+    auto receiver = ptr->spawn<linked>([](event_based_actor* ptr2) -> behavior {
       return {
         [=](int) {
-          return ptr->make_response_promise();
+          return ptr2->make_response_promise();
         }
       };
     });
-    self->request(receiver, infinite, 1).then(
+    ptr->request(receiver, infinite, 1).then(
       [=](int) {}
     );
     return {
       [=](int) {
         CAF_MESSAGE("int received");
-        self->quit(exit_reason::user_shutdown);
+        ptr->quit(exit_reason::user_shutdown);
       }
     };
   });

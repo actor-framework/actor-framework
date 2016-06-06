@@ -49,8 +49,8 @@ class optional {
             class E = typename std::enable_if<
                         std::is_convertible<U, T>::value
                       >::type>
-  optional(U value) : m_valid(false) {
-    cr(std::move(value));
+  optional(U x) : m_valid(false) {
+    cr(std::move(x));
   }
 
   optional(const optional& other) : m_valid(false) {
@@ -151,10 +151,10 @@ class optional {
   }
 
   template <class V>
-  void cr(V&& value) {
+  void cr(V&& x) {
     CAF_ASSERT(! m_valid);
     m_valid = true;
-    new (&m_value) T(std::forward<V>(value));
+    new (&m_value) T(std::forward<V>(x));
   }
 
   bool m_valid;
@@ -172,7 +172,7 @@ class optional<T&> {
     // nop
   }
 
-  optional(T& value) : m_value(&value) {
+  optional(T& x) : m_value(&x) {
     // nop
   }
 

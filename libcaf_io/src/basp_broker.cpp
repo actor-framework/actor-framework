@@ -486,50 +486,50 @@ behavior basp_broker::make_behavior() {
       }
     },
     // received from proxy instances
-    [=](forward_atom, strong_actor_ptr& sender,
+    [=](forward_atom, strong_actor_ptr& src,
         const std::vector<strong_actor_ptr>& fwd_stack,
-        strong_actor_ptr& receiver, message_id mid, const message& msg) {
-      CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
+        strong_actor_ptr& dest, message_id mid, const message& msg) {
+      CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(dest)
                     << CAF_ARG(mid) << CAF_ARG(msg));
-      if (! receiver || system().node() == receiver->node()) {
+      if (! dest || system().node() == dest->node()) {
         CAF_LOG_WARNING("cannot forward to invalid or local actor:"
-                        << CAF_ARG(receiver));
+                        << CAF_ARG(dest));
         return;
       }
-      if (sender && system().node() == sender->node())
-        system().registry().put(sender->id(), sender);
-      if (! state.instance.dispatch(context(), sender, fwd_stack,
-                                    receiver, mid, msg)
+      if (src && system().node() == src->node())
+        system().registry().put(src->id(), src);
+      if (! state.instance.dispatch(context(), src, fwd_stack,
+                                    dest, mid, msg)
           && mid.is_request()) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
-        srb(sender, mid);
+        srb(src, mid);
       }
     },
     // received from some system calls like whereis
-    [=](forward_atom, strong_actor_ptr& sender,
-        const node_id& receiving_node, atom_value receiver_name,
+    [=](forward_atom, strong_actor_ptr& src,
+        const node_id& dest_node, atom_value dest_name,
         const message& msg) -> result<void> {
-      CAF_LOG_TRACE(CAF_ARG(sender)
-                    << ", " << CAF_ARG(receiving_node)
-                    << ", " << CAF_ARG(receiver_name)
+      CAF_LOG_TRACE(CAF_ARG(src)
+                    << ", " << CAF_ARG(dest_node)
+                    << ", " << CAF_ARG(dest_name)
                     << ", " << CAF_ARG(msg));
-      if (! sender)
+      if (! src)
         return sec::cannot_forward_to_invalid_actor;
-      if (system().node() == sender->node())
-        system().registry().put(sender->id(), sender);
+      if (system().node() == src->node())
+        system().registry().put(src->id(), src);
       auto writer = make_callback([&](serializer& sink) {
         std::vector<actor_addr> stages;
-        sink << receiver_name << stages << msg;
+        sink << dest_name << stages << msg;
       });
-      auto path = this->state.instance.tbl().lookup(receiving_node);
+      auto path = this->state.instance.tbl().lookup(dest_node);
       if (! path) {
         CAF_LOG_ERROR("no route to receiving node");
         return sec::no_route_to_receiving_node;
       }
       basp::header hdr{basp::message_type::dispatch_message,
                        basp::header::named_receiver_flag,
-                       0, 0, state.this_node(), receiving_node,
-                       sender->id(), invalid_actor_id};
+                       0, 0, state.this_node(), dest_node,
+                       src->id(), invalid_actor_id};
       state.instance.write(context(), path->wr_buf, hdr, &writer);
       state.instance.flush(*path);
       return unit;

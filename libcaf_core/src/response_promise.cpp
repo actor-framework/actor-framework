@@ -30,8 +30,8 @@ response_promise::response_promise()
   // nop
 }
 
-response_promise::response_promise(local_actor* self, mailbox_element& src)
-    : self_(self),
+response_promise::response_promise(local_actor* ptr, mailbox_element& src)
+    : self_(ptr),
       id_(src.mid) {
   // form an invalid request promise when initialized from a
   // response ID, since CAF always drops messages in this case
