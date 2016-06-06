@@ -409,7 +409,6 @@ public:
       CAF_CHECK_EQUAL(dest_node, hdr.dest_node);
       CAF_CHECK_EQUAL(source_actor, hdr.source_actor);
       CAF_CHECK_EQUAL(dest_actor, hdr.dest_actor);
-printf("buf.size: %d, payload.size: %d\n", (int) buf.size(), (int) payload.size());
       CAF_REQUIRE_EQUAL(buf.size(), payload.size());
       CAF_REQUIRE_EQUAL(hexstr(buf), hexstr(payload));
       ++num;
