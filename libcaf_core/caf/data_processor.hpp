@@ -32,8 +32,10 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/delegate_serialize.hpp"
+#include "caf/detail/select_integer_type.hpp"
 
 namespace caf {
+
 
 /// A data processor translates an object into a format that can be
 /// stored or vice versa. A data processor can be either in saving
@@ -111,10 +113,26 @@ public:
 
   /// Applies this processor to an arithmetic type.
   template <class T>
-  typename std::enable_if<std::is_arithmetic<T>::value>::type
+  typename std::enable_if<std::is_floating_point<T>::value>::type
   apply(T& x) {
-    apply_builtin(static_cast<builtin>(detail::tl_index_of<builtin_t, T>::value),
-                  &x);
+    static constexpr auto tlindex = detail::tl_index_of<builtin_t, T>::value;
+    static_assert(tlindex >= 0, "T not recognized as builtiln type");
+    apply_builtin(static_cast<builtin>(tlindex), &x);
+  }
+
+  template <class T>
+  typename std::enable_if<
+    std::is_integral<T>::value
+    && ! std::is_same<bool, T>::value
+  >::type
+  apply(T& x) {
+    using type =
+      typename detail::select_integer_type<
+        static_cast<int>(sizeof(T)) * (std::is_signed<T>::value ? -1 : 1)
+      >::type;
+    static constexpr auto tlindex = detail::tl_index_of<builtin_t, type>::value;
+    static_assert(tlindex >= 0, "T not recognized as builtiln type");
+    apply_builtin(static_cast<builtin>(tlindex), &x);
   }
 
   void apply(std::string& x) {
