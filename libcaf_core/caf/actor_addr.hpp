@@ -120,7 +120,7 @@ public:
 
   /// Releases the reference held by handle `x`. Using the
   /// handle after invalidating it is undefined behavior.
-  friend void invalidate(actor_addr& x) {
+  friend void destroy(actor_addr& x) {
     x.ptr_.reset();
   }
 

@@ -68,7 +68,7 @@ public:
   /// in sub classes before destroying the object, because calling
   /// virtual function in the destructor itself is not safe. Any override
   /// implementation is required to call `super::destroy()` at the end.
-  virtual void destroy();
+  virtual void on_destroy();
 
   void enqueue(strong_actor_ptr sender, message_id mid,
                message content, execution_unit* host) override;

@@ -514,7 +514,7 @@ CAF_TEST(constructor_attach) {
     }
 
     void on_exit() {
-      invalidate(buddy_);
+      destroy(buddy_);
     }
 
   private:
@@ -548,7 +548,7 @@ CAF_TEST(constructor_attach) {
 
     void on_exit() {
       CAF_MESSAGE("spawner::on_exit()");
-      invalidate(testee_);
+      destroy(testee_);
     }
 
   private:

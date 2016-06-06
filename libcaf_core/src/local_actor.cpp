@@ -206,12 +206,12 @@ local_actor::~local_actor() {
     private_thread_->notify_self_destroyed();
 }
 
-void local_actor::destroy() {
+void local_actor::on_destroy() {
   CAF_LOG_TRACE(CAF_ARG(is_terminated()));
   if (! is_cleaned_up()) {
     on_exit();
     cleanup(exit_reason::unreachable, nullptr);
-    monitorable_actor::destroy();
+    monitorable_actor::on_destroy();
   }
 }
 

@@ -131,7 +131,7 @@ public:
 
   ~local_actor();
 
-  void destroy() override;
+  void on_destroy() override;
 
   // -- spawn functions --------------------------------------------------------
 

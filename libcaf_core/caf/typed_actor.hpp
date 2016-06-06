@@ -252,7 +252,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   /// Releases the reference held by handle `x`. Using the
   /// handle after invalidating it is undefined behavior.
-  friend void invalidate(typed_actor& x) {
+  friend void destroy(typed_actor& x) {
     x.ptr_.reset();
   }
 

@@ -54,7 +54,7 @@ abstract_actor::~abstract_actor() {
   // nop
 }
 
-void abstract_actor::destroy() {
+void abstract_actor::on_destroy() {
   // nop
 }
 

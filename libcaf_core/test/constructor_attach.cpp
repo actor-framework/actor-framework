@@ -79,7 +79,7 @@ CAF_TEST(constructor_attach) {
     }
 
     void on_exit() {
-      invalidate(testee_);
+      destroy(testee_);
     }
 
   private:

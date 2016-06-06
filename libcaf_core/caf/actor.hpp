@@ -177,7 +177,7 @@ public:
 
   /// Releases the reference held by handle `x`. Using the
   /// handle after invalidating it is undefined behavior.
-  friend void invalidate(actor& x) {
+  friend void destroy(actor& x) {
     x.ptr_.reset();
   }
 

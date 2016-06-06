@@ -65,7 +65,7 @@ struct fixture {
 
   ~fixture() {
     anon_send_exit(testee, exit_reason::user_shutdown);
-    invalidate(testee);
+    destroy(testee);
     system.~actor_system();
     CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
   }

@@ -61,7 +61,7 @@ public:
 
   void on_exit() override {
     CAF_LOG_TRACE("");
-    invalidate(broker_);
+    destroy(broker_);
   }
 
   const char* name() const override {
