@@ -173,7 +173,6 @@ actor_system_config::make_help_text(const std::vector<message::cli_arg>& xs) {
 
 actor_system_config& actor_system_config::parse(int argc, char** argv,
                                                 const char* ini_file_cstr) {
-  init();
   auto args = message_builder(argv + 1, argv + argc).move_to_message();
   // extract config file name first, since INI files are overruled by CLI args
   std::string config_file_name;
@@ -285,10 +284,6 @@ actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
     }
   }
   return *this;
-}
-
-void actor_system_config::init() {
-  // nop
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,

@@ -68,7 +68,7 @@ public:
   std::string name;
   std::string group_id;
 
-  void init() override {
+  config() {
     opt_group{custom_options_, "global"}
     .add(name, "name,n", "set name")
     .add(group_id, "group,g", "join group");

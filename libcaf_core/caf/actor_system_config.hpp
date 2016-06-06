@@ -212,8 +212,6 @@ public:
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 
 protected:
-  virtual void init();
-
   virtual std::string make_help_text(const std::vector<message::cli_arg>&);
 
   options_vector custom_options_;

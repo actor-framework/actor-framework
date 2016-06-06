@@ -70,7 +70,7 @@ class config : public actor_system_config {
 public:
   uint16_t port = 0;
 
-  void init() override {
+  config() {
     opt_group{custom_options_, "global"}
     .add(port, "port,p", "set port");
   }

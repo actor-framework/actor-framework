@@ -34,24 +34,23 @@ namespace {
 
 constexpr char local_host[] = "127.0.0.1";
 
-class custom_config : public caf::actor_system_config {
+class config : public caf::actor_system_config {
 public:
-  void init() override {
+  config() {
     load<caf::io::middleman>();
     add_message_type<std::vector<int>>("std::vector<int>");
   }
 
-  using actor_system_config::parse;
-
-  custom_config& parse() {
-    parse(caf::test::engine::argc(), caf::test::engine::argv());
+  config& parse() {
+    actor_system_config::parse(caf::test::engine::argc(),
+                               caf::test::engine::argv());
     return *this;
   }
 };
 
 struct fixture {
-  caf::actor_system server_side{custom_config{}.parse()};
-  caf::actor_system client_side{custom_config{}.parse()};
+  caf::actor_system server_side{config{}.parse()};
+  caf::actor_system client_side{config{}.parse()};
   caf::io::middleman& server_side_mm = server_side.middleman();
   caf::io::middleman& client_side_mm = client_side.middleman();
 };

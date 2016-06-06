@@ -86,7 +86,7 @@ void testee(event_based_actor* self, size_t remaining) {
 
 class config : public actor_system_config {
 public:
-  void init() override {
+  config() {
     add_message_type<foo>("foo");
     add_message_type<foo2>("foo2");
     add_message_type<foo_pair>("foo_pair");

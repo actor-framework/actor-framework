@@ -81,7 +81,7 @@ behavior testee(event_based_actor* self) {
 
 class config : public actor_system_config {
 public:
-  void init() override {
+  config() {
     add_message_type<foo>("foo");
   }
 };
