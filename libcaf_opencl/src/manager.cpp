@@ -30,15 +30,15 @@ using namespace std;
 namespace caf {
 namespace opencl {
 
-const optional<const device&> manager::get_device(size_t id) const {
+const optional<const device&> manager::get_device(size_t dev_id) const {
   if (platforms_.empty())
     return none;
   size_t to = 0;
   for (auto& pl : platforms_) {
     auto from = to;
     to += pl.get_devices().size();
-    if (id >= from && id < to)
-      return pl.get_devices()[id - from];
+    if (dev_id >= from && dev_id < to)
+      return pl.get_devices()[dev_id - from];
   }
   return none;
 }
@@ -53,8 +53,8 @@ void manager::init(actor_system_config&) {
     throw std::runtime_error("no OpenCL platform found");
   // initialize platforms (device discovery)
   unsigned current_device_id = 0;
-  for (auto& id : platform_ids) {
-    platforms_.push_back(platform::create(id, current_device_id));
+  for (auto& pl_id : platform_ids) {
+    platforms_.push_back(platform::create(pl_id, current_device_id));
     current_device_id +=
       static_cast<unsigned>(platforms_.back().get_devices().size());
   }
