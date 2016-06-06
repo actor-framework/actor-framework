@@ -261,7 +261,7 @@ bool monitorable_actor::handle_system_message(mailbox_element& x,
         }
         res = mailbox_element::make(ctrl(), x.mid.response_id(), {},
                                     ok_atom::value, std::move(what),
-                                    address(), name());
+                                    strong_actor_ptr{ctrl()}, name());
       }
     });
     if (! res && ! err)

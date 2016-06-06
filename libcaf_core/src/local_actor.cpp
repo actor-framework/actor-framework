@@ -334,7 +334,7 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& x) {
           x.sender->enqueue(
             mailbox_element::make(ctrl(), x.mid.response_id(),
                                   {}, ok_atom::value, std::move(what),
-                                  address(), name()),
+                                  strong_actor_ptr{ctrl()}, name()),
             context());
         } else {
           x.sender->enqueue(

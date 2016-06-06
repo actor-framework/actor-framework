@@ -257,30 +257,29 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
     CAF_LOG_ERROR("learned_new_node called for known node " << CAF_ARG(nid));
     return;
   }
-  auto tmp = system().spawn<hidden>([=](event_based_actor* this_actor) -> behavior {
+  auto tmp = system().spawn<hidden>([=](event_based_actor* tself) -> behavior {
     CAF_LOG_TRACE("");
     // terminate when receiving a down message
-    this_actor->set_down_handler([=](down_msg& dm) {
+    tself->set_down_handler([=](down_msg& dm) {
       CAF_LOG_TRACE(CAF_ARG(dm));
-      this_actor->quit(std::move(dm.reason));
+      tself->quit(std::move(dm.reason));
     });
     // skip messages until we receive the initial ok_atom
-    this_actor->set_default_handler(skip);
+    tself->set_default_handler(skip);
     return {
       [=](ok_atom, const std::string& /* key == "info" */,
-          const actor_addr& config_serv_addr, const std::string& /* name */) {
-        CAF_LOG_TRACE(CAF_ARG(config_serv_addr));
+          const strong_actor_ptr& config_serv, const std::string& /* name */) {
+        CAF_LOG_TRACE(CAF_ARG(config_serv));
         // drop unexpected messages from this point on
-        this_actor->set_default_handler(print_and_drop);
-        auto config_serv = actor_cast<strong_actor_ptr>(config_serv_addr);
+        tself->set_default_handler(print_and_drop);
         if (! config_serv)
           return;
-        this_actor->monitor(config_serv);
-        this_actor->become(
+        tself->monitor(config_serv);
+        tself->become(
           [=](spawn_atom, std::string& type, message& args)
           -> delegated<ok_atom, strong_actor_ptr, std::set<std::string>> {
             CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
-            this_actor->delegate(actor_cast<actor>(std::move(config_serv)),
+            tself->delegate(actor_cast<actor>(std::move(config_serv)),
                                  get_atom::value, std::move(type),
                                  std::move(args));
             return {};
@@ -289,7 +288,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
       },
       after(std::chrono::minutes(5)) >> [=] {
         CAF_LOG_INFO("no spawn server found:" << CAF_ARG(nid));
-        this_actor->quit();
+        tself->quit();
       }
     };
   });

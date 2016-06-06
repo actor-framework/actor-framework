@@ -180,13 +180,11 @@ public:
     add_hook<impl>(std::move(fun));
   }
 
-/*
   /// Returns the actor associated with `name` at `nid` or
   /// `invalid_actor` if `nid` is not connected or has no actor
   /// associated to this `name`.
   /// @warning Blocks the caller until `nid` responded to the lookup.
-  actor remote_lookup(atom_value name, const node_id& nid);
-*/
+  strong_actor_ptr remote_lookup(atom_value name, const node_id& nid);
 
   /// Smart pointer for `network::multiplexer`.
   using backend_pointer = std::unique_ptr<network::multiplexer>;
