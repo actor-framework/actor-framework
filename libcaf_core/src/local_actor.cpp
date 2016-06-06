@@ -156,7 +156,8 @@ result<message> reflect_and_quit(local_actor* ptr, const type_erased_tuple* x) {
 result<message> print_and_drop(local_actor* ptr, const type_erased_tuple* x) {
   CAF_LOG_WARNING("unexpected message" << CAF_ARG(*x));
   aout(ptr) << "*** unexpected message [id: " << ptr->id()
-             << ", name: " << ptr->name() << "]: " << x->stringify()
+             << ", name: " << ptr->name() << "]: "
+             << (x ? x->stringify() : "()")
              << std::endl;
   return sec::unexpected_message;
 }
