@@ -313,6 +313,7 @@ void middleman::stop() {
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::user_shutdown);
   self->wait_for(manager_);
+  invalidate(manager_);
 }
 
 void middleman::init(actor_system_config& cfg) {

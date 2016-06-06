@@ -237,7 +237,8 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
     auto rsn = exit_reason::remote_link_unreachable;
     CAF_LOG_INFO("cannot deliver message, destination not found");
     self->parent().notify<hook::invalid_message_received>(src_nid, src,
-                                                          0, mid, msg);
+                                                          invalid_actor_id,
+                                                          mid, msg);
     if (mid.valid() && src) {
       detail::sync_request_bouncer srb{rsn};
       srb(src, mid);
@@ -296,10 +297,10 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   using namespace detail;
   system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) {
-    auto name = atom("SpawnServ");
+    auto name_atm = atom("SpawnServ");
     std::vector<actor_id> stages;
     auto msg = make_message(sys_atom::value, get_atom::value, "info");
-    sink << name << stages << msg;
+    sink << name_atm << stages << msg;
   });
   auto path = instance.tbl().lookup(nid);
   if (! path) {
@@ -399,10 +400,10 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   auto tmp = system().spawn<detached + hidden>(connection_helper, self);
   system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) {
-    auto name = atom("ConfigServ");
+    auto name_atm = atom("ConfigServ");
     std::vector<actor_id> stages;
     auto msg = make_message(get_atom::value, "basp.default-connectivity");
-    sink << name << stages << msg;
+    sink << name_atm << stages << msg;
   });
   basp::header hdr{basp::message_type::dispatch_message,
                    basp::header::named_receiver_flag,

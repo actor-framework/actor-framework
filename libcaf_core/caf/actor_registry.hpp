@@ -72,15 +72,6 @@ public:
   /// (must be either 0 or 1).
   void await_running_count_equal(size_t expected) const;
 
-  /// Increases running-detached-threads-count by one.
-  void inc_detached_threads();
-
-  /// Decreases running-detached-threads-count by one.
-  void dec_detached_threads();
-
-  /// Blocks the caller until all detached threads are done.
-  void await_detached_threads();
-
   /// Returns the actor associated with `key` or `invalid_actor`.
   strong_actor_ptr get(atom_value key) const;
 
@@ -114,10 +105,6 @@ private:
 
   name_map named_entries_;
   mutable detail::shared_spinlock named_entries_mtx_;
-
-  std::atomic<size_t> detached;
-  mutable std::mutex detached_mtx;
-  mutable std::condition_variable detached_cv;
 
   actor_system& system_;
 };

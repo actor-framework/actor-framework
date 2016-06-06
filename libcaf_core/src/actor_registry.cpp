@@ -84,7 +84,7 @@ void actor_registry::put(actor_id key, strong_actor_ptr val) {
 }
 
 void actor_registry::erase(actor_id key) {
-  exclusive_guard guard(instances_mtx_);
+  exclusive_guard guard{instances_mtx_};
   entries_.erase(key);
 }
 
@@ -120,24 +120,6 @@ void actor_registry::await_running_count_equal(size_t expected) const {
   }
 }
 
-void actor_registry::inc_detached_threads() {
-  ++detached;
-}
-
-void actor_registry::dec_detached_threads() {
-  if (--detached == 0) {
-    std::unique_lock<std::mutex> guard{detached_mtx};
-    detached_cv.notify_all();
-  }
-}
-
-void actor_registry::await_detached_threads() {
-  std::unique_lock<std::mutex> guard{detached_mtx};
-  while (detached != 0) {
-    detached_cv.wait(guard);
-  }
-}
-
 strong_actor_ptr actor_registry::get(atom_value key) const {
   shared_guard guard{named_entries_mtx_};
   auto i = named_entries_.find(key);
@@ -153,6 +135,11 @@ void actor_registry::put(atom_value key, strong_actor_ptr value) {
     });
   exclusive_guard guard{named_entries_mtx_};
   named_entries_.emplace(key, std::move(value));
+}
+
+void actor_registry::erase(atom_value key) {
+  exclusive_guard guard{named_entries_mtx_};
+  named_entries_.erase(key);
 }
 
 auto actor_registry::named_actors() const -> name_map {

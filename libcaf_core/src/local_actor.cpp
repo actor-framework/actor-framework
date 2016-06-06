@@ -52,9 +52,9 @@ public:
       : self_destroyed_(false),
         self_(self),
         state_(active),
-        registry(self->system().registry()) {
+        system_(self->system()) {
     intrusive_ptr_add_ref(self->ctrl());
-    registry.inc_detached_threads();
+    system_.inc_detached_threads();
   }
 
   void run() {
@@ -114,7 +114,7 @@ public:
     // detached actor is destroyed and this object is unreachable
     this_ptr->await_self_destroyed();
     // signalize destruction of detached thread to registry
-    this_ptr->registry.dec_detached_threads();
+    this_ptr->system_.dec_detached_threads();
     // done
     delete this_ptr;
   }
@@ -141,7 +141,7 @@ private:
   volatile bool self_destroyed_;
   volatile local_actor* self_;
   volatile worker_state state_;
-  actor_registry& registry;
+  actor_system& system_;
 };
 
 result<message> reflect(local_actor*, const type_erased_tuple* x) {

@@ -20,11 +20,13 @@
 #ifndef CAF_ACTOR_SYSTEM_HPP
 #define CAF_ACTOR_SYSTEM_HPP
 
+#include <mutex>
 #include <atomic>
 #include <string>
 #include <memory>
 #include <cstddef>
 #include <functional>
+#include <condition_variable>
 
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
@@ -408,9 +410,20 @@ public:
   }
 
   /// @cond PRIVATE
+
+  /// Increases running-detached-threads-count by one.
+  void inc_detached_threads();
+
+  /// Decreases running-detached-threads-count by one.
+  void dec_detached_threads();
+
+  /// Blocks the caller until all detached threads are done.
+  void await_detached_threads();
+
   inline atom_value backend_name() const {
     return backend_name_;
   }
+
   /// @endcond
 
 private:
@@ -458,6 +471,10 @@ private:
   bool await_actors_before_shutdown_;
   strong_actor_ptr config_serv_;
   strong_actor_ptr spawn_serv_;
+  std::atomic<size_t> detached;
+  mutable std::mutex detached_mtx;
+  mutable std::condition_variable detached_cv;
+
 };
 
 } // namespace caf

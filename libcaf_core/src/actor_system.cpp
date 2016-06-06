@@ -43,13 +43,15 @@ struct kvstate {
   using topic_set = std::unordered_set<std::string>;
   std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
   std::unordered_map<strong_actor_ptr, topic_set> subscribers;
-  const char* name = "caf.config_server";
+  static const char* name;
   template <class Processor>
   friend void serialize(Processor& proc, kvstate& x, const unsigned int) {
     proc & x.data;
     proc & x.subscribers;
   }
 };
+
+const char* kvstate::name = "caf.config_server";
 
 behavior config_serv_impl(stateful_actor<kvstate>* self) {
   CAF_LOG_TRACE("");
@@ -188,7 +190,8 @@ actor_system::actor_system(actor_system_config&& cfg)
       groups_(*this),
       middleman_(nullptr),
       dummy_execution_unit_(this),
-      await_actors_before_shutdown_(true) {
+      await_actors_before_shutdown_(true),
+      detached(0) {
   CAF_SET_LOGGER_SYS(this);
   backend_name_ = cfg.middleman_network_backend;
   for (auto& f : cfg.module_factories_) {
@@ -280,12 +283,15 @@ actor_system::~actor_system() {
   // release memory as soon as possible
   spawn_serv_ = nullptr;
   config_serv_ = nullptr;
+  registry_.erase(atom("SpawnServ"));
+  registry_.erase(atom("ConfigServ"));
   // group module is the first one, relies on MM
   groups_.stop();
   // stop modules in reverse order
   for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)
     if (*i)
       (*i)->stop();
+  await_detached_threads();
   registry_.stop();
   logger_.stop();
   CAF_SET_LOGGER_SYS(nullptr);
@@ -368,6 +374,23 @@ actor_id actor_system::latest_actor_id() const {
 
 void actor_system::await_all_actors_done() const {
   registry_.await_running_count_equal(0);
+}
+
+void actor_system::inc_detached_threads() {
+  ++detached;
+}
+
+void actor_system::dec_detached_threads() {
+  if (--detached == 0) {
+    std::unique_lock<std::mutex> guard{detached_mtx};
+    detached_cv.notify_all();
+  }
+}
+
+void actor_system::await_detached_threads() {
+  std::unique_lock<std::mutex> guard{detached_mtx};
+  while (detached != 0)
+    detached_cv.wait(guard);
 }
 
 } // namespace caf
