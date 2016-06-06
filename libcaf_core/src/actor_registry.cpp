@@ -38,8 +38,6 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/uniform_type_info_map.hpp"
 
-#include "caf/scheduler/detached_threads.hpp"
-
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
@@ -119,6 +117,24 @@ void actor_registry::await_running_count_equal(size_t expected) const {
   while (running_ != expected) {
     CAF_LOG_DEBUG(CAF_ARG(running_.load()));
     running_cv_.wait(guard);
+  }
+}
+
+void actor_registry::inc_detached_threads() {
+  ++detached;
+}
+
+void actor_registry::dec_detached_threads() {
+  if (--detached == 0) {
+    std::unique_lock<std::mutex> guard{detached_mtx};
+    detached_cv.notify_all();
+  }
+}
+
+void actor_registry::await_detached_threads() {
+  std::unique_lock<std::mutex> guard{detached_mtx};
+  while (detached != 0) {
+    detached_cv.wait(guard);
   }
 }
 

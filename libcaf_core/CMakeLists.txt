@@ -41,7 +41,6 @@ set (LIBCAF_CORE_SRCS
      src/deep_to_string.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
-     src/detached_threads.cpp
      src/duration.cpp
      src/dynamic_message_data.cpp
      src/error.cpp
