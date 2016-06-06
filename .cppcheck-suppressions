@@ -2,15 +2,14 @@
 // make it harder to use and its a library internal anyways
 noExplicitConstructor:libcaf_core/caf/attachable.hpp
 
-// cppcheck has all kinds of false positives in the maybe<T> header, mostly
-// const and static suggestions that are flat out wrong and would cause
-// compiler errors ("Technically the member function 'caf::maybe::destroy' can
-// be const.", wtf?)
-*:libcaf_core/caf/maybe.hpp
+// cppcheck complains about padding1 and padding2 not
+// being initialized, which is silly (never used anywhere)
+uninitMemberVar:libcaf_io/caf/io/basp/header.hpp
 
-// cppcheck fails to recognize the pattern of converting
-// `intrusive_ptr<T>` from `intrusive_ptr<U>`
+// converting raw pointers to intrusive pointers is
+// a common operation (e.g. getting a smart pointer to self)
 noExplicitConstructor:libcaf_core/caf/intrusive_ptr.hpp
+noExplicitConstructor:libcaf_core/caf/weak_intrusive_ptr.hpp
 
 // cppcheck complains about `node_id(const invalid_node_id_t&)`,
 // which must not be explicit because `invalid_node_id_t` would
@@ -54,3 +53,5 @@ functionStatic:bcaf_core/caf/abstract_uniform_type_info.hpp
 // functions are used in a macro in opencl/smart_ptr.hpp
 unusedFunction:libcaf_opencl/src/global.cpp
 
+// suppress false positives
+unusedStructMember:libcaf_core/test/serialization.cpp
