@@ -61,9 +61,7 @@ if [ ! -f "$sourceDir/libcaf_core/caf/config.hpp" ] ; then
   exit 1
 fi
 
-if [ ! -d "$sourceDir/html" \
-  -o ! -f "$sourceDir/manual/manual.html"\
-  -o ! -f "$sourceDir/manual/manual.pdf" ] ; then
+if [ ! -f "$sourceDir/manual.pdf" ] ; then
   echo "Documentation must be generated before calling this script." >&2
   exit 1
 fi
