@@ -93,6 +93,11 @@ public:
     return (impl_) ? impl_->invoke(arg) : none;
   }
 
+  /// Runs this handler and returns its (optional) result.
+  inline optional<message> operator()(type_erased_tuple& xs) {
+    return impl_ ? impl_->invoke(xs) : none;
+  }
+
   /// Returns a new handler that concatenates this handler
   /// with a new handler from `xs...`.
   template <class... Ts>
@@ -110,9 +115,8 @@ public:
     if (! tmp) {
       return *this;
     }
-    if (impl_) {
+    if (impl_)
       return impl_->or_else(tmp.as_behavior_impl());
-    }
     return tmp.as_behavior_impl();
   }
 

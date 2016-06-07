@@ -112,9 +112,9 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
   CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
   msg = make_message(42);
   self->send(self, msg);
+  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
   self->receive(
     [&](int& value) {
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
       CAF_CHECK_NOT_EQUAL(&value, msg.at(0));
       value = 10;
     }

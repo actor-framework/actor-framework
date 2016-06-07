@@ -463,7 +463,7 @@ void local_actor::handle_response(mailbox_element_ptr& ptr,
   });
   local_actor_invoke_result_visitor visitor{this};
   auto invoke_error = [&](error err) {
-    auto tmp = make_message(err);
+    auto tmp = make_type_erased_tuple_view(err);
     if (ref_fun(visitor, tmp) == match_case::no_match) {
       CAF_LOG_WARNING("multiplexed response failure occured:"
                       << CAF_ARG(id()));

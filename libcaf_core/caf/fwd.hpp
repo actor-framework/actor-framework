@@ -27,6 +27,7 @@ namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
 
+template <class> class param;
 template <class> class optional;
 template <class> class intrusive_ptr;
 template <class> class behavior_type_of;

@@ -24,43 +24,30 @@ namespace detail {
 
 using pattern_iterator = const meta_element*;
 
-bool match_element(const meta_element& me, const type_erased_tuple* xs,
-                   size_t pos, void** storage) {
+bool match_element(const meta_element& me, const type_erased_tuple& xs,
+                   size_t pos) {
   CAF_ASSERT(me.typenr != 0 || me.type != nullptr);
-  if (! xs->matches(pos, me.typenr, me.type))
-    return false;
-  *storage = const_cast<void*>(xs->get(pos));
-  return true;
+  return xs.matches(pos, me.typenr, me.type);
 }
 
-bool match_atom_constant(const meta_element& me, const type_erased_tuple* xs,
-                         size_t pos, void** storage) {
+bool match_atom_constant(const meta_element& me, const type_erased_tuple& xs,
+                         size_t pos) {
   CAF_ASSERT(me.typenr == type_nr<atom_value>::value);
-  if (! xs->matches(pos, type_nr<atom_value>::value, nullptr))
+  if (! xs.matches(pos, type_nr<atom_value>::value, nullptr))
     return false;
-  auto ptr = xs->get(pos);
+  auto ptr = xs.get(pos);
   if (me.v != *reinterpret_cast<const atom_value*>(ptr))
     return false;
-  // This assignment casts `atom_value` to `atom_constant<V>*`.
-  // This type violation could theoretically cause undefined behavior.
-  // However, `uti` does have an address that is guaranteed to be valid
-  // throughout the runtime of the program and the atom constant
-  // does not have any members. Hence, this is nonetheless safe since
-  // we are never actually going to dereference the pointer.
-  *storage = const_cast<void*>(ptr);
   return true;
 }
 
-bool try_match(const type_erased_tuple* xs,
-               pattern_iterator iter, size_t ps, void** out) {
-  CAF_ASSERT(out != nullptr);
-  if (! xs)
-    return ps == 0;
-  if (xs->size() != ps)
+bool try_match(const type_erased_tuple& xs,
+               pattern_iterator iter, size_t ps) {
+  if (xs.size() != ps)
     return false;
-  for (size_t i = 0; i < ps; ++i, ++iter, ++out)
+  for (size_t i = 0; i < ps; ++i, ++iter)
     // inspect current element
-    if (! iter->fun(*iter, xs, i, out))
+    if (! iter->fun(*iter, xs, i))
       // type mismatch
       return false;
   return true;

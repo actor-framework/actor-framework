@@ -215,7 +215,7 @@ private:
   // -- data members -----------------------------------------------------------
 
   std::tuple<type_erased_value_impl<std::reference_wrapper<Ts>>...> xs_;
-  type_erased_value* ptrs_[sizeof...(Ts)];
+  type_erased_value* ptrs_[sizeof...(Ts) == 0 ? 1 : sizeof...(Ts)];
 };
 
 template <class... Ts>

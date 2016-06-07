@@ -178,7 +178,7 @@ public:
   }
 
   result<counting_string> operator()(get_atom, param<counting_string> key) override {
-    auto i = values_.find(key);
+    auto i = values_.find(key.get());
     if (i == values_.end())
       return "";
     return i->second;
@@ -186,7 +186,7 @@ public:
 
   result<void> operator()(put_atom, param<counting_string> key,
                           param<counting_string> value) override {
-    if (values_.count(key) != 0)
+    if (values_.count(key.get()) != 0)
       return unit;
     values_.emplace(key.move(), value.move());
     return unit;

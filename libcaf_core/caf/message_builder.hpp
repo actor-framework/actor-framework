@@ -67,6 +67,16 @@ public:
     return emplace(make_type_erased_value<type>(std::forward<T>(x)));
   }
 
+  inline message_builder& append_all() {
+    return *this;
+  }
+
+  template <class T, class... Ts>
+  message_builder& append_all(T&& x, Ts&&... xs) {
+    append(std::forward<T>(x));
+    return append_all(std::forward<Ts>(xs)...);
+  }
+
   /// Converts the buffer to an actual message object without
   /// invalidating this message builder (nor clearing it).
   message to_message() const;

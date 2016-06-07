@@ -705,6 +705,16 @@ template <class F, class T>
 using is_handler_for_ef =
   typename std::enable_if<is_handler_for<F, T>::value>::type;
 
+template <class T>
+struct strip_reference_wrapper {
+  using type = T;
+};
+
+template <class T>
+struct strip_reference_wrapper<std::reference_wrapper<T>> {
+  using type = T;
+};
+
 } // namespace detail
 } // namespace caf
 

@@ -97,14 +97,20 @@ public:
   }
 
   /// Runs this handler and returns its (optional) result.
-  inline optional<message> operator()(message& x) {
-    return impl_ ? impl_->invoke(x) : none;
+  inline optional<message> operator()(message& xs) {
+    return impl_ ? impl_->invoke(xs) : none;
   }
 
   /// Runs this handler with callback.
   inline match_case::result operator()(detail::invoke_result_visitor& f,
-                                       message& x) {
-    return impl_ ? impl_->invoke(f, x) : match_case::no_match;
+                                       type_erased_tuple& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
+  }
+
+  /// Runs this handler with callback.
+  inline match_case::result operator()(detail::invoke_result_visitor& f,
+                                       message& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
   }
 
   /// Checks whether this behavior is not empty.

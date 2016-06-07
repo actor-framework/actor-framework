@@ -112,6 +112,10 @@ inline std::string to_string(const type_erased_value& x) {
 template <class T>
 class type_erased_value_impl : public type_erased_value {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using value_type = typename detail::strip_reference_wrapper<T>::type;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
@@ -153,9 +157,18 @@ public:
 
   // -- overridden observers ---------------------------------------------------
 
+  static rtti_pair type(std::integral_constant<uint16_t, 0>) {
+    return {0, &typeid(value_type)};
+  }
+
+  template <uint16_t V>
+  static rtti_pair type(std::integral_constant<uint16_t, V>) {
+    return {V, nullptr};
+  }
+
   rtti_pair type() const override {
-    auto nr = caf::type_nr<T>::value;
-    return {nr, &typeid(T)};
+    std::integral_constant<uint16_t, caf::type_nr<value_type>::value> token;
+    return type(token);
   }
 
   const void* get() const override {
@@ -196,18 +209,6 @@ private:
   template <class U>
   static inline U* addr_of(const std::reference_wrapper<U>& x) {
     return &x.get();
-  }
-
-  // -- typeid utility ---------------------------------------------------------
-
-  template <class U>
-  static inline const std::type_info* typeid_of(U&) {
-    return &typeid(U);
-  }
-
-  template <class U>
-  static inline const std::type_info* typeid_of(std::reference_wrapper<U>&) {
-    return &typeid(U);
   }
 
   // -- array copying utility --------------------------------------------------

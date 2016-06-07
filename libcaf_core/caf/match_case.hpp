@@ -20,6 +20,7 @@
 #ifndef CAF_MATCH_CASE_HPP
 #define CAF_MATCH_CASE_HPP
 
+#include <tuple>
 #include <type_traits>
 
 #include "caf/none.hpp"
@@ -55,7 +56,9 @@ public:
 
   virtual ~match_case();
 
-  virtual result invoke(detail::invoke_result_visitor&, type_erased_tuple*) = 0;
+  /// Tries to invoke this match case with the contents of `xs`.
+  virtual result invoke(detail::invoke_result_visitor& rv,
+                        type_erased_tuple& xs) = 0;
 
   inline uint32_t type_token() const {
     return token_;
@@ -63,38 +66,6 @@ public:
 
 private:
   uint32_t token_;
-};
-
-template <class T>
-T&& unopt(T&& v,
-          typename std::enable_if<std::is_rvalue_reference<T&&>::value>::type* = 0) {
-  return std::move(v);
-}
-
-template <class T>
-T& unopt(T& v) {
-  return v;
-}
-
-template <class T>
-T& unopt(optional<T>& v) {
-  return *v;
-}
-
-struct has_none {
-  inline bool operator()() const {
-    return false;
-  }
-
-  template <class T, class... Ts>
-  bool operator()(const T&, const Ts&... xs) const {
-    return (*this)(xs...);
-  }
-
-  template <class T, class... Ts>
-  bool operator()(const optional<T>& x, const Ts&... xs) const {
-    return ! x || (*this)(xs...);
-  }
 };
 
 template <bool IsVoid, class F>
@@ -106,7 +77,7 @@ public:
 
   template <class... Ts>
   typename detail::get_callable_trait<F>::result_type operator()(Ts&&... xs) {
-    return fun_(unopt(std::forward<Ts>(xs))...);
+    return fun_(std::forward<Ts>(xs)...);
   }
 
 private:
@@ -122,7 +93,7 @@ public:
 
   template <class... Ts>
   unit_t operator()(Ts&&... xs) {
-    fun_(unopt(std::forward<Ts>(xs))...);
+    fun_(std::forward<Ts>(xs)...);
     return unit;
   }
 
@@ -166,12 +137,15 @@ public:
                 "down_msg not allowed in message handlers, "
                 "did you mean to use set_down_handler()?");
 
-  using intermediate_tuple =
+  using decayed_arg_types =
+    typename detail::tl_map<
+      arg_types,
+      std::decay
+    >::type;
+
+  using intermediate_pseudo_tuple =
     typename detail::tl_apply<
-      typename detail::tl_map<
-        arg_types,
-        std::decay
-      >::type,
+      decayed_arg_types,
       detail::pseudo_tuple
     >::type;
 
@@ -185,27 +159,25 @@ public:
   }
 
   match_case::result invoke(detail::invoke_result_visitor& f,
-                            type_erased_tuple* xs) override {
-    intermediate_tuple it{xs ? xs->shared() : false};
+                            type_erased_tuple& xs) override {
     detail::meta_elements<pattern> ms;
-    message tmp;
     // check if try_match() reports success
-    if (! detail::try_match(xs, ms.arr.data(), ms.arr.size(), it.data))
+    if (! detail::try_match(xs, ms.arr.data(), ms.arr.size()))
       return match_case::no_match;
-    // detach msg before invoking fun_ if needed
-    if (is_manipulator && it.shared_access) {
-      tmp = message::from(xs);
-      tmp.force_unshare();
-      it.shared_access = false;
-      // update pointers in our intermediate tuple
-      for (size_t i = 0; i < tmp.size(); ++i) {
-        // msg is guaranteed to be detached, hence we don't need to
-        // check this condition over and over again via get_mutable
-        it[i] = const_cast<void*>(tmp.at(i));
-      }
-    }
+    typename detail::il_indices<decayed_arg_types>::type indices;
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
-    auto fun_res = apply_args(fun, detail::get_indices(it), it);
+    message tmp;
+    intermediate_pseudo_tuple tup{xs.shared()};
+    if (is_manipulator && tup.shared_access) {
+      tmp = message::copy_from(&xs);
+      tup.shared_access = false;
+      for (size_t i = 0; i < tmp.size(); ++i)
+        tup[i] = const_cast<void*>(tmp.at(i));
+    } else {
+      for (size_t i = 0; i < xs.size(); ++i)
+        tup[i] = const_cast<void*>(xs.get(i));
+    }
+    auto fun_res = apply_args(fun, indices, tup);
     return f.visit(fun_res) ? match_case::match : match_case::skip;
   }
 

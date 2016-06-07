@@ -79,6 +79,13 @@ message message::from(const type_erased_tuple* ptr) {
   return mb.move_to_message();
 }
 
+message message::copy_from(const type_erased_tuple* ptr) {
+  message_builder mb;
+  for (size_t i = 0; i < ptr->size(); ++i)
+    mb.emplace(ptr->copy(i));
+  return mb.move_to_message();
+}
+
 bool message::match_element(size_t pos, uint16_t typenr,
                             const std::type_info* rtti) const {
   return vals_->matches(pos, typenr, rtti);

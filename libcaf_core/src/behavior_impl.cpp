@@ -28,9 +28,10 @@ namespace {
 
 class combinator final : public behavior_impl {
 public:
-  match_case::result invoke(detail::invoke_result_visitor& f, message& arg) override {
-    auto x = first->invoke(f, arg);
-    return x == match_case::no_match ? second->invoke(f, arg) : x;
+  match_case::result invoke(detail::invoke_result_visitor& f,
+                            type_erased_tuple& xs) override {
+    auto x = first->invoke(f, xs);
+    return x == match_case::no_match ? second->invoke(f, xs) : x;
   }
 
   void handle_timeout() override {
@@ -89,12 +90,18 @@ behavior_impl::behavior_impl(duration tout)
   // nop
 }
 
+match_case::result
+behavior_impl::invoke_empty(detail::invoke_result_visitor& f) {
+  auto xs = make_type_erased_tuple_view();
+  return invoke(f, xs);
+}
+
 match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
-                                         message& msg) {
-  auto msg_token = msg.type_token();
+                                         type_erased_tuple& xs) {
+  auto msg_token = xs.type_token();
   for (auto i = begin_; i != end_; ++i)
     if (i->type_token == msg_token)
-      switch (i->ptr->invoke(f, msg.cvals().get())) {
+      switch (i->ptr->invoke(f, xs)) {
         case match_case::no_match:
           break;
         case match_case::match:
@@ -105,10 +112,30 @@ match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
   return match_case::no_match;
 }
 
-optional<message> behavior_impl::invoke(message& x) {
+optional<message> behavior_impl::invoke(message& xs) {
   maybe_message_visitor f;
-  invoke(f, x);
+  // the following const-cast is safe, because invoke() is aware of
+  // copy-on-write and does not modify x if it's shared
+  if (! xs.empty())
+    invoke(f, *const_cast<message_data*>(xs.cvals().get()));
+  else
+    invoke_empty(f);
   return std::move(f.value);
+}
+
+optional<message> behavior_impl::invoke(type_erased_tuple& xs) {
+  maybe_message_visitor f;
+  invoke(f, xs);
+  return std::move(f.value);
+}
+
+match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
+                                         message& xs) {
+  // the following const-cast is safe, because invoke() is aware of
+  // copy-on-write and does not modify x if it's shared
+  if (! xs.empty())
+    return invoke(f, *const_cast<message_data*>(xs.cvals().get()));
+  return invoke_empty(f);
 }
 
 void behavior_impl::handle_timeout() {

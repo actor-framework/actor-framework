@@ -68,15 +68,16 @@ public:
 
   behavior_impl(duration tout = duration{});
 
-  virtual match_case::result invoke(detail::invoke_result_visitor& f, message&);
+  virtual match_case::result invoke_empty(detail::invoke_result_visitor& f);
 
-  inline match_case::result invoke(detail::invoke_result_visitor& f,
-                                   message&& arg) {
-    message tmp(std::move(arg));
-    return invoke(f, tmp);
-  }
+  virtual match_case::result invoke(detail::invoke_result_visitor& f,
+                                    type_erased_tuple& xs);
+
+  match_case::result invoke(detail::invoke_result_visitor& f, message& xs);
 
   optional<message> invoke(message&);
+
+  optional<message> invoke(type_erased_tuple&);
 
   virtual void handle_timeout();
 

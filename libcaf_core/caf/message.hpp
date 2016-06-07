@@ -272,13 +272,18 @@ public:
     return size() == sizeof...(Ts) && match_elements_impl(p0, tlist);
   }
 
+  inline std::pair<uint16_t, const std::type_info*> type(size_t pos) const {
+    return vals_->type(pos);
+  }
+
   message& operator+=(const message& x);
 
   /// Creates a message object from `ptr`.
   static message from(const type_erased_tuple* ptr);
 
-  /// @cond PRIVATE
+  static message copy_from(const type_erased_tuple* ptr);
 
+  /// @cond PRIVATE
   using raw_ptr = detail::message_data*;
 
   using data_ptr = detail::message_data::cow_ptr;
