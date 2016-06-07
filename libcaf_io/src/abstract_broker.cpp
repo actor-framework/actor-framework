@@ -36,8 +36,9 @@ namespace caf {
 namespace io {
 
 void abstract_broker::enqueue(strong_actor_ptr src, message_id mid,
-                              message msg, execution_unit* eu) {
-  enqueue(mailbox_element::make(std::move(src), mid, {}, std::move(msg)), eu);
+                              message msg, execution_unit*) {
+  enqueue(mailbox_element::make(std::move(src), mid, {}, std::move(msg)),
+          &backend());
 }
 
 void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
