@@ -47,6 +47,7 @@ struct fixture {
   using array_type = std::array<bool, 4>;
 
   fixture() {
+    reset();
   }
 
   void reset() {
@@ -99,7 +100,11 @@ struct fixture {
     auto first = begin(invoked);
     auto last = end(invoked);
     auto i = find(first, last, true);
-    return i != last && count(i, last, true) == 1 ? distance(first, i) : -1;
+    if (i != last) {
+      CAF_REQUIRE_EQUAL(count(i, last, true), 1u);
+      return distance(first, i);
+    }
+    return -1;
   }
 
   array_type invoked;
