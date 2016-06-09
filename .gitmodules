@@ -10,6 +10,9 @@
 [submodule "libcaf_riac"]
 	path = libcaf_riac
 	url = ../riac.git
+[submodule "libcaf_python"]
+	path = libcaf_python
+	url = ../python.git
 [submodule "cash"]
 	path = cash
 	url = ../cash.git

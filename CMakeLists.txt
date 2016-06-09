@@ -36,6 +36,10 @@ if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
 endif()
 
+if(NOT CAF_NO_PYTHON)
+  set(CAF_NO_PYTHON no)
+endif()
+
 if(NOT CAF_NO_TOOLS)
   set(CAF_NO_TOOLS no)
 endif()
@@ -49,6 +53,7 @@ if(NOT CAF_NO_IO)
 else()
   set(CAF_NO_RIAC yes)
   set(CAF_NO_TOOLS yes)
+  set(CAF_NO_PYTHON yes)
 endif()
 
 ################################################################################
@@ -444,6 +449,11 @@ endif()
 # build RIAC library if not being told otherwise
 add_optional_caf_lib(riac)
 
+# build Python binding if not being told otherwise
+if(NOT CAF_NO_PYTHON AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_python/CMakeLists.txt")
+  add_subdirectory(libcaf_python)
+endif()
+
 # build examples if not being told otherwise
 add_optional_caf_binaries(examples)
 
@@ -599,6 +609,7 @@ invertYesNo(CAF_NO_CASH CAF_BUILD_CASH)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
+invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
 set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
@@ -625,6 +636,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild cash:        ${CAF_BUILD_CASH}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
+        "\nBuild Python:      ${CAF_BUILD_PYTHON}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${ALL_CXX_FLAGS}"
