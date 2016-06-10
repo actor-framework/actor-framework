@@ -100,6 +100,12 @@ void blocking_actor::await_data() {
     mailbox().synchronized_await(mtx_, cv_);
 }
 
+bool blocking_actor::await_data(std::chrono::high_resolution_clock::time_point timeout) {
+  if (has_next_message())
+    return true;
+  return mailbox().synchronized_await(mtx_, cv_, timeout);
+}
+
 size_t blocking_actor::attach_functor(const actor& x) {
   return attach_functor(actor_cast<strong_actor_ptr>(x));
 }

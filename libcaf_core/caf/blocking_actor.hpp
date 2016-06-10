@@ -20,6 +20,7 @@
 #ifndef CAF_BLOCKING_ACTOR_HPP
 #define CAF_BLOCKING_ACTOR_HPP
 
+#include <chrono>
 #include <mutex>
 #include <condition_variable>
 
@@ -231,6 +232,8 @@ public:
   void dequeue(behavior& bhvr, message_id mid = invalid_message_id);
 
   void await_data();
+
+  bool await_data(std::chrono::high_resolution_clock::time_point timeout);
 
   /// @endcond
 
