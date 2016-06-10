@@ -34,24 +34,79 @@ CAF_POP_WARNINGS
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-static_assert(PY_MAJOR_VERSION > 3
-              || (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 5),
-              "CAF requires Python >= 3.5");
-
-using namespace caf;
-using namespace std;
-
-constexpr char default_banner[] = R"__(
-    _________   _____ __  __
-   / ____/   | / ___// / / /
-  / /   / /| | \__ \/ /_/ /   CAF
- / /___/ ___ |___/ / __  /   Shell
- \____/_/  |_/____/_/ /_/
-)__";
-
-namespace py = pybind11;
+using std::cout;
+using std::cerr;
+using std::endl;
 
 namespace {
+
+constexpr char default_banner[] = R"__(
+                  ____                __  __
+      _________  / __/   ____  __  __/ /_/ /_  ____  ____
+     / ___/ __ `/ /_____/ __ \/ / / / __/ __ \/ __ \/ __ `
+    / /__/ /_/ / __/___/ /_/ / /_/ / /_/ / / / /_/ / / / /
+    \___/\__,_/_/     / .___/\__, /\__/_/ /_/\____/_/ /_/
+                     /_/    /____/
+
+)__";
+
+constexpr char init_script[] = R"__(
+from CAF import *
+
+caf_mail_cache=[]
+
+def select_from_mail_cache(msg_filter):
+    global caf_mail_cache
+    for i, v in enumerate(caf_mail_cache):
+        if msg_filter(v):
+            return caf_mail_cache.pop(i)
+
+def no_receive_filter(x):
+    return True
+
+def receive_one(abs_timeout):
+    if abs_timeout:
+        return dequeue_message_with_timeout(abs_timeout)
+    else:
+        return dequeue_message()
+
+def receive(timeout = None, msg_filter = no_receive_filter):
+    # try to get an element from the mailbox for predicate
+    msg = select_from_mail_cache(msg_filter)
+    if msg:
+        return msg
+    # calculate absolute timeout
+    abs_timeout = None
+    if timeout:
+      abs_timeout = absolute_receive_timeout(int(timeout))
+    # receive message via mailbox
+    msg = receive_one(abs_timeout)
+    while msg and not msg_filter(msg):
+        caf_mail_cache.append(msg)
+        msg = receive_one(abs_timeout)
+    return msg
+
+)__";
+
+} // namespace <anonymous>
+
+namespace caf {
+
+void register_class(atom_value*, pybind11::module& m,
+                    const std::string& name) {
+  auto repr_fun = [](atom_value x) {
+    return "atom('" + to_string(x) + "')";
+  };
+  auto cmp = [](atom_value x, atom_value y) {
+    return x == y;
+  };
+  pybind11::class_<atom_value>(m, name.c_str())
+  .def("__str__", (std::string (*)(const atom_value&)) &to_string)
+  .def("__repr__", repr_fun)
+  .def("__eq__", cmp);
+}
+
+namespace python {
 
 class binding {
 public:
@@ -81,7 +136,7 @@ public:
     return builtin_;
   }
 
-  virtual void append(message_builder& xs, py::handle x) const = 0;
+  virtual void append(message_builder& xs, pybind11::handle x) const = 0;
 
 private:
   std::string python_name_;
@@ -101,8 +156,7 @@ class default_py_binding : public py_binding {
 public:
   using py_binding::py_binding;
 
-  void append(message_builder& xs, py::handle x) const override {
-    //xs.append(*reinterpret_cast<T*>(x.cast<void*>()));
+  void append(message_builder& xs, pybind11::handle x) const override {
     xs.append(x.cast<T>());
   }
 };
@@ -111,56 +165,20 @@ class cpp_binding : public binding {
 public:
   using binding::binding;
 
-  virtual void register_type(pybind11::module& target) const = 0;
-
-  virtual py::object to_object(message& xs, size_t pos) const = 0;
+  virtual pybind11::object to_object(message& xs, size_t pos) const = 0;
 };
-
-template <class T>
-std::string py_repr(const T& x) {
-  return deep_to_string(x);
-}
-
-std::string py_repr(const atom_value& x) {
-  return "<atom:'" + to_string(x) + "'>";
-}
 
 template <class T>
 class default_cpp_binding : public cpp_binding {
 public:
   using cpp_binding::cpp_binding;
 
-  void append(message_builder& xs, py::handle x) const override {
-    /*
-    auto typeinfo = py::detail::get_type_info(typeid(T));
-    CAF_ASSERT(PyType_IsSubtype(Py_TYPE(x.ptr()), typeinfo->type));
-    auto vptr = ((py::detail::instance<void>*) x.ptr())->value;
-    xs.append(*reinterpret_cast<T*>(vptr));
-    */
+  void append(message_builder& xs, pybind11::handle x) const override {
     xs.append(x.cast<T>());
   }
 
-  void register_type(pybind11::module& target) const override {
-    py::class_<T>(target, this->python_name().c_str())
-    .def("__str__", &default_cpp_binding::str_impl, this->docstring().c_str())
-    .def("__repr__", &default_cpp_binding::repr_impl, this->docstring().c_str());
-  }
-
-  py::object to_object(message& xs, size_t pos) const override {
-    return py::object(
-      py::detail::type_caster<typename py::detail::intrinsic_type<T>::type>::
-        cast(xs.get_as<T>(pos), py::return_value_policy::automatic_reference,
-             nullptr),
-      false);
-  }
-
-private:
-  static std::string str_impl(T* ptr) {
-    return deep_to_string(*ptr);
-  }
-
-  static std::string repr_impl(T* ptr) {
-    return py_repr(*ptr);
+  pybind11::object to_object(message& xs, size_t pos) const override {
+    return pybind11::cast(xs.get_as<T>(pos));
   }
 };
 
@@ -169,16 +187,124 @@ using py_binding_ptr = std::unique_ptr<py_binding>;
 using cpp_binding_ptr = std::unique_ptr<cpp_binding>;
 
 atom_value atom_from_string(const std::string& str) {
-  char buf[11];
-  strncpy(buf, str.c_str(), std::min<size_t>(10, str.size()));
-  buf[10] = '\0';
+  static constexpr size_t buf_size = 11;
+  char buf[buf_size];
+  memset(buf, 0, buf_size);
+  strncpy(buf, str.c_str(), std::min<size_t>(buf_size - 1, str.size()));
   return atom(buf);
+}
+
+template <class T>
+class has_register_class {
+private:
+  template <class U>
+  static auto test(U* x) -> decltype(register_class(x,
+                                                    std::declval<pybind11::module&>(),
+                                                    std::declval<const std::string&>()));
+
+  static auto test(...) -> std::false_type;
+
+  using type = decltype(test(static_cast<T*>(nullptr)));
+public:
+  static constexpr bool value = std::is_same<type, void>::value;
+};
+
+template <class T>
+class has_to_string {
+private:
+  template <class U>
+  static auto test(U* x) -> decltype(to_string(*x));
+
+  static auto test(...) -> void;
+
+  using type = decltype(test(static_cast<T*>(nullptr)));
+public:
+  static constexpr bool value = std::is_same<type, std::string>::value;
+};
+
+template <class T>
+typename std::enable_if<
+  ! has_register_class<T>::value
+  && has_to_string<T>::value
+>::type
+default_python_class_init(pybind11::module& m, const std::string& name) {
+  auto str_impl = [](const T& x) {
+    return to_string(x);
+  };
+  pybind11::class_<T>(m, name.c_str())
+  .def("__str__", str_impl);
+}
+
+template <class T>
+typename std::enable_if<
+  ! has_register_class<T>::value
+  && ! has_to_string<T>::value
+>::type
+default_python_class_init(pybind11::module& m, const std::string& name) {
+  auto str_impl = [](const T& x) {
+    return to_string(x);
+  };
+  pybind11::class_<T>(m, name.c_str());
+}
+
+template <class T>
+typename std::enable_if<
+  has_register_class<T>::value
+>::type
+default_python_class_init(pybind11::module& m, const std::string& name) {
+  register_class(static_cast<T*>(nullptr), m, name);
+}
+
+struct absolute_receive_timeout {
+public:
+  using ms = std::chrono::milliseconds;
+  using clock_type = std::chrono::high_resolution_clock;
+
+  absolute_receive_timeout(int msec) {
+    x_ = clock_type::now() + ms(msec);
+  }
+
+  absolute_receive_timeout() = default;
+  absolute_receive_timeout(const absolute_receive_timeout&) = default;
+  absolute_receive_timeout& operator=(const absolute_receive_timeout&) = default;
+
+  const clock_type::time_point& value() const {
+    return x_;
+  }
+
+  friend void serialize(serializer& sink, absolute_receive_timeout& x,
+                        const unsigned int) {
+    auto tse = x.x_.time_since_epoch();
+    uint64_t ms_since_epoch = std::chrono::duration_cast<ms>(tse).count();
+    sink << ms_since_epoch;
+  }
+
+  friend void serialize(deserializer& source, absolute_receive_timeout& x,
+                        const unsigned int) {
+    uint64_t ms_since_epoch;
+    source >> ms_since_epoch;
+    clock_type::time_point y;
+    y += ms(static_cast<ms::rep>(ms_since_epoch));
+    x.x_ = y;
+  }
+
+private:
+  clock_type::time_point x_;
+};
+
+void register_class(absolute_receive_timeout*, pybind11::module& m,
+                    const std::string& name) {
+  pybind11::class_<absolute_receive_timeout>(m, name.c_str())
+  .def(pybind11::init<>())
+  .def(pybind11::init<int>());
 }
 
 class py_config : public actor_system_config {
 public:
   std::string pre_run;
   std::string banner = default_banner;
+
+  using register_fun = std::function<void (pybind11::module&, const std::string&)>;
 
   py_config() {
     // allow CAF to convert native Python types to C++ types
@@ -191,28 +317,37 @@ public:
     add_cpp<message>("message", "@message");
     add_cpp<atom_value>("atom_value", "@atom");
     // fill list for native type bindings
-    add_cpp<bool>("bool", "bool", true);
-    add_cpp<float>("float", "float", true);
-    add_cpp<int32_t>("int32_t", "@i32", true);
-    add_cpp<std::string>("str", "@str", true);
+    add_cpp<bool>("bool", "bool", nullptr);
+    add_cpp<float>("float", "float", nullptr);
+    add_cpp<int32_t>("int32_t", "@i32", nullptr);
+    add_cpp<std::string>("str", "@str", nullptr);
+    // custom types of caf_python
+    add_message_type<absolute_receive_timeout>("absolute_receive_timeout");
   }
 
   template <class T>
-  actor_system_config& add_message_type(std::string name) {
-    add_cpp<T>(name, name);
+  py_config&
+  add_message_type(std::string name,
+                   register_fun reg = &default_python_class_init<T>) {
+    add_cpp<T>(name, name, std::move(reg));
     actor_system_config::add_message_type<T>(std::move(name));
+    return *this;
   }
 
-  void py_init(py::module& x) const {
-    for (auto& kvp : cpp_bindings_)
-      if (! kvp.second->builtin())
-        kvp.second->register_type(x);
+  void py_init(pybind11::module& x) const {
+    for (auto& f : register_funs_)
+      f(x);
+  }
+
+  std::string full_pre_run_script() const {
+    return init_script + pre_run;
   }
 
   std::string ipython_script() const {
     // prepare preload script by formatting it with <space><space>'...'
     std::vector<std::string> lines;
-    split(lines, pre_run, is_any_of("\n"), token_compress_on);
+    auto full_pre_run = full_pre_run_script();
+    split(lines, full_pre_run, is_any_of("\n"), token_compress_on);
     for (auto& line : lines) {
       line.insert(0, "  '");
       line += "'";
@@ -221,7 +356,10 @@ public:
     oss << "import IPython" << endl
         << "c = IPython.Config()" << endl
         << "c.InteractiveShellApp.exec_lines = [" << endl
-        <<   join(lines, "\n") << endl
+        << "\"\"\""
+        << full_pre_run
+        << "\"\"\"" << endl
+        //<<   join(lines, ",\n") << endl
         << "]" << endl
         << "c.PromptManager.in_template  = ' $: '" << endl
         << "c.PromptManager.in2_template = ' -> '" << endl
@@ -255,8 +393,11 @@ private:
   }
 
   template <class T>
-  void add_cpp(std::string py_name, std::string cpp_name, bool builtin = false) {
-    auto ptr = new default_cpp_binding<T>(py_name, builtin);
+  void add_cpp(std::string py_name, std::string cpp_name,
+               register_fun reg = &default_python_class_init<T>) {
+    if (reg)
+      register_funs_.push_back([=](pybind11::module& m) { reg(m, py_name); });
+    auto ptr = new default_cpp_binding<T>(py_name, reg != nullptr);
     // all type names are prefix with "CAF."
     py_name.insert(0, "CAF.");
     cpp_bindings_.emplace(py_name, cpp_binding_ptr{ptr});
@@ -264,13 +405,18 @@ private:
     portable_bindings_.emplace(std::move(cpp_name), ptr);
   }
 
-  std::unordered_map<std::string, cpp_binding*> portable_bindings_;
+  template <class T>
+  void add_cpp(std::string name) {
+    add_cpp<T>(name, name);
+  }
 
+  std::unordered_map<std::string, cpp_binding*> portable_bindings_;
   std::unordered_map<std::string, binding*> bindings_;
   std::unordered_map<std::string, cpp_binding_ptr> cpp_bindings_;
   std::unordered_map<std::string, py_binding_ptr> py_bindings_;
-};
 
+  std::vector<std::function<void (pybind11::module&)>> register_funs_;
+};
 struct py_context {
   const py_config& cfg;
   actor_system& system;
@@ -296,7 +442,7 @@ void set_py_exception(Ts&&... xs) {
   PyErr_SetString(PyExc_RuntimeError, oss.str().c_str());
 }
 
-void py_send(py::args xs) {
+void py_send(pybind11::args xs) {
   if (xs.size() < 2) {
     set_py_exception("Too few arguments to call CAF.send");
     return;
@@ -319,13 +465,10 @@ void py_send(py::args xs) {
   s_context->self->send(dest, mb.move_to_message());
 }
 
-py::tuple py_dequeue() {
+pybind11::tuple tuple_from_message(message msg) {
   auto& self = s_context->self;
-  self->await_data();
-  auto ptr = self->next_message();
-  auto& msg = ptr->msg;
   auto& bindings = s_context->cfg.portable_bindings();
-  py::tuple result(msg.size());
+  pybind11::tuple result(msg.size());
   for (size_t i = 0; i  < msg.size(); ++i) {
     auto rtti = msg.type(i);
     auto str_ptr = self->system().types().portable_name(rtti);
@@ -346,8 +489,60 @@ py::tuple py_dequeue() {
   return result;
 }
 
+pybind11::tuple py_dequeue() {
+  auto& self = s_context->self;
+  auto ptr = self->next_message();
+  while (! ptr) {
+    self->await_data();
+    ptr = self->next_message();
+  }
+  return tuple_from_message(std::move(ptr->msg));
+}
+
+pybind11::tuple py_dequeue_with_timeout(absolute_receive_timeout timeout) {
+  auto& self = s_context->self;
+  auto ptr = self->next_message();
+  while (! ptr) {
+    if (! self->await_data(timeout.value()))
+      return pybind11::none{};
+    ptr = self->next_message();
+  }
+  return tuple_from_message(std::move(ptr->msg));
+}
+
 actor py_self() {
   return s_context->self;
+}
+
+struct foo {
+  int x;
+  int y;
+  foo() : x(0), y(0) {
+    // nop
+  }
+  foo(int a, int b) : x(a), y(b) {
+    // nop
+  }
+};
+
+template <class Processor>
+void serialize(Processor& proc, foo& f, const unsigned int) {
+  proc & f.x;
+  proc & f.y;
+}
+
+std::string to_string(const foo& x) {
+  return "foo" + deep_to_string_as_tuple(x.x, x.y);
+}
+
+void register_class(foo*, pybind11::module& m, const std::string& name) {
+  pybind11::class_<foo>(m, name.c_str())
+  .def(pybind11::init<>())
+  .def(pybind11::init<int, int>())
+  .def("__str__", (std::string (*)(const foo&)) &to_string)
+  .def("__repr__", (std::string (*)(const foo&)) &to_string)
+  .def_readwrite("x", &foo::x)
+  .def_readwrite("y", &foo::y);
 }
 
 class config : public py_config {
@@ -355,25 +550,32 @@ public:
   std::string py_file;
 
   config() {
-    pre_run = "from CAF import *";
-    opt_group{custom_options_, "global"}
+    add_message_type<foo>("foo");
+    opt_group{custom_options_, "python"}
     .add(py_file, "file,f", "Run script instead of interactive shell.");
   }
 };
 
 PyObject* caf_module_init() {
-  py::module m("CAF", "Python binding for CAF");
+  pybind11::module m("CAF", "Python binding for CAF");
   s_context->cfg.py_init(m);
   // add classes
   // add free functions
   m.def("send", &py_send, "Sends a message to an actor")
    .def("dequeue_message", &py_dequeue, "Receives the next message")
+   .def("dequeue_message_with_timeout", &py_dequeue_with_timeout, "Receives the next message")
    .def("self", &py_self, "Returns the global self handle")
    .def("atom", &atom_from_string, "Creates an atom from a string");
   return m.ptr();
 }
 
-} // namespace <anonymous>
+} // namespace python
+} // namespace caf
+
+namespace {
+
+using namespace caf;
+using namespace caf::python;
 
 void caf_main(actor_system& system, const config& cfg) {
   // register system and scoped actor in global variables
@@ -392,7 +594,8 @@ void caf_main(actor_system& system, const config& cfg) {
       Py_Finalize();
       return;
     }
-    py_res = PyRun_SimpleString(cfg.pre_run.c_str());
+    auto full_pre_run = cfg.full_pre_run_script();
+    py_res = PyRun_SimpleString(full_pre_run.c_str());
     if (py_res == 0)
       py_res = PyRun_SimpleFileEx(fp, cfg.py_file.c_str(), 1);
   } else {
@@ -405,5 +608,7 @@ void caf_main(actor_system& system, const config& cfg) {
   }
   Py_Finalize();
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()
