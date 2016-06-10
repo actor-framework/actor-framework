@@ -55,9 +55,8 @@ namespace {
 
 class binding {
 public:
-  binding(std::string python_name, std::string portable_name, bool builtin_type)
+  binding(std::string python_name, bool builtin_type)
       : python_name_(std::move(python_name)),
-        portable_name_(std::move(portable_name)),
         builtin_(builtin_type) {
     // nop
   }
@@ -71,15 +70,11 @@ public:
   }
 
   inline const std::string& docstring() const {
-    return portable_name_;
+    return docstring_;
   }
 
   inline const std::string& python_name() const {
     return python_name_;
-  }
-
-  inline const std::string& portable_name() const {
-    return portable_name_;
   }
 
   inline bool builtin() const {
@@ -90,14 +85,13 @@ public:
 
 private:
   std::string python_name_;
-  std::string portable_name_;
   std::string docstring_;
   bool builtin_;
 };
 
 class py_binding : public binding {
 public:
-  py_binding(std::string name) : binding(name, name, true) {
+  py_binding(std::string name) : binding(name, true) {
     // nop
   }
 };
@@ -108,6 +102,7 @@ public:
   using py_binding::py_binding;
 
   void append(message_builder& xs, py::handle x) const override {
+    //xs.append(*reinterpret_cast<T*>(x.cast<void*>()));
     xs.append(x.cast<T>());
   }
 };
@@ -122,21 +117,36 @@ public:
 };
 
 template <class T>
+std::string py_repr(const T& x) {
+  return deep_to_string(x);
+}
+
+std::string py_repr(const atom_value& x) {
+  return "<atom:'" + to_string(x) + "'>";
+}
+
+template <class T>
 class default_cpp_binding : public cpp_binding {
 public:
   using cpp_binding::cpp_binding;
 
   void append(message_builder& xs, py::handle x) const override {
+    /*
+    auto typeinfo = py::detail::get_type_info(typeid(T));
+    CAF_ASSERT(PyType_IsSubtype(Py_TYPE(x.ptr()), typeinfo->type));
+    auto vptr = ((py::detail::instance<void>*) x.ptr())->value;
+    xs.append(*reinterpret_cast<T*>(vptr));
+    */
     xs.append(x.cast<T>());
   }
 
   void register_type(pybind11::module& target) const override {
     py::class_<T>(target, this->python_name().c_str())
-    .def("__str__", &default_cpp_binding::str_impl, this->docstring().c_str());
+    .def("__str__", &default_cpp_binding::str_impl, this->docstring().c_str())
+    .def("__repr__", &default_cpp_binding::repr_impl, this->docstring().c_str());
   }
 
   py::object to_object(message& xs, size_t pos) const override {
-printf("to_object %s\n", portable_name().c_str());
     return py::object(
       py::detail::type_caster<typename py::detail::intrinsic_type<T>::type>::
         cast(xs.get_as<T>(pos), py::return_value_policy::automatic_reference,
@@ -150,7 +160,7 @@ private:
   }
 
   static std::string repr_impl(T* ptr) {
-
+    return py_repr(*ptr);
   }
 };
 
@@ -158,35 +168,11 @@ using binding_ptr = std::unique_ptr<binding>;
 using py_binding_ptr = std::unique_ptr<py_binding>;
 using cpp_binding_ptr = std::unique_ptr<cpp_binding>;
 
-actor_system* s_system;
-scoped_actor* s_self;
-
-int add(int i, int j) {
-  return i + j;
-}
-
-message receive() {
-  return message{};
-}
-
 atom_value atom_from_string(const std::string& str) {
   char buf[11];
   strncpy(buf, str.c_str(), std::min<size_t>(10, str.size()));
   buf[10] = '\0';
   return atom(buf);
-}
-
-std::string atom_to_string(atom_value* ptr) {
-  return to_string(*ptr);
-}
-
-std::string message_to_string(message* ptr) {
-  return to_string(*ptr);
-}
-
-inline actor_system& system() {
-  CAF_ASSERT(s_system);
-  return *s_system;
 }
 
 class py_config : public actor_system_config {
@@ -205,7 +191,8 @@ public:
     add_cpp<message>("message", "@message");
     add_cpp<atom_value>("atom_value", "@atom");
     // fill list for native type bindings
-    add_cpp<actor>("bool", "bool", true);
+    add_cpp<bool>("bool", "bool", true);
+    add_cpp<float>("float", "float", true);
     add_cpp<int32_t>("int32_t", "@i32", true);
     add_cpp<std::string>("str", "@str", true);
   }
@@ -269,7 +256,7 @@ private:
 
   template <class T>
   void add_cpp(std::string py_name, std::string cpp_name, bool builtin = false) {
-    auto ptr = new default_cpp_binding<T>(py_name, cpp_name, builtin);
+    auto ptr = new default_cpp_binding<T>(py_name, builtin);
     // all type names are prefix with "CAF."
     py_name.insert(0, "CAF.");
     cpp_bindings_.emplace(py_name, cpp_binding_ptr{ptr});
@@ -332,7 +319,7 @@ void py_send(py::args xs) {
   s_context->self->send(dest, mb.move_to_message());
 }
 
-py::tuple py_receive() {
+py::tuple py_dequeue() {
   auto& self = s_context->self;
   self->await_data();
   auto ptr = self->next_message();
@@ -379,9 +366,8 @@ PyObject* caf_module_init() {
   s_context->cfg.py_init(m);
   // add classes
   // add free functions
-  m.def("add", &add, "A function which adds two numbers")
-   .def("send", &py_send, "Sends a message to an actor")
-   .def("receive", &py_receive, "Receives the next message")
+  m.def("send", &py_send, "Sends a message to an actor")
+   .def("dequeue_message", &py_dequeue, "Receives the next message")
    .def("self", &py_self, "Returns the global self handle")
    .def("atom", &atom_from_string, "Creates an atom from a string");
   return m.ptr();
