@@ -17,68 +17,63 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#include "caf/stream_stage.hpp"
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
-
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/sec.hpp"
+#include "caf/logger.hpp"
+#include "caf/downstream_path.hpp"
+#include "caf/abstract_upstream.hpp"
+#include "caf/downstream_policy.hpp"
+#include "caf/abstract_downstream.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
+stream_stage::stream_stage(abstract_upstream* in_ptr,
+                           abstract_downstream* out_ptr)
+    : in_ptr_(in_ptr),
+      out_ptr_(out_ptr) {
+  // nop
+}
 
-class behavior_stack {
-public:
-  friend struct behavior_stack_mover;
+bool stream_stage::done() const {
+  return in_ptr_->closed() && out_ptr_->closed();
+}
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
-
-  behavior_stack() = default;
-
-  // erases the last (asynchronous) behavior
-  void pop_back();
-
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
+error stream_stage::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
+                     message& xs) {
+  auto err = in_ptr_->pull(hdl, xs_size);
+  if (!err) {
+    process_batch(xs);
+    strong_actor_ptr dummy;
+    trigger_send(dummy);
   }
+  return err;
+}
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
+error stream_stage::downstream_demand(strong_actor_ptr& hdl, size_t value) {
+  auto path = out_ptr_->find(hdl);
+  if (path) {
+    path->open_credit += value;
+    if(out_ptr_->buf_size() > 0) {
+      return trigger_send(hdl);
+    } else if (in_ptr_->closed()) {
+      if (!out_ptr_->remove_path(hdl)) {
+        return sec::invalid_downstream;
+      }
     }
-
-  inline void cleanup() {
-    erased_elements_.clear();
+    return none;
   }
+  return sec::invalid_downstream;
+}
 
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
-};
+void stream_stage::abort(strong_actor_ptr& cause, const error& reason) {
+  in_ptr_->abort(cause, reason);
+  out_ptr_->abort(cause, reason);
+}
 
-} // namespace detail
+void stream_stage::last_upstream_closed() {
+  if (out().buf_size() == 0)
+    out().close();
+}
+
 } // namespace caf
-
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP

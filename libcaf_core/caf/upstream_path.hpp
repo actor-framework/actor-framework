@@ -17,68 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_UPSTREAM_PATH_HPP
+#define CAF_UPSTREAM_PATH_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/stream_id.hpp"
+#include "caf/stream_priority.hpp"
+#include "caf/actor_control_block.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+/// Denotes an upstream actor in a stream topology. Each upstream actor can
+/// refer to the stream using a different stream ID.
+class upstream_path {
 public:
-  friend struct behavior_stack_mover;
+  /// Handle to the upstream actor.
+  strong_actor_ptr hdl;
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  /// Stream ID used on this upstream path.
+  stream_id sid;
 
-  behavior_stack() = default;
+  /// Priority of this input channel.
+  stream_priority prio;
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  /// ID of the last received batch we have acknowledged.
+  int64_t last_acked_batch_id;
 
-  void clear();
+  /// ID of the last received batch.
+  int64_t last_batch_id;
 
-  inline bool empty() const {
-    return elements_.empty();
-  }
+  /// Amount of credit we have signaled upstream.
+  size_t assigned_credit;
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
-
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  upstream_path(strong_actor_ptr hdl, const stream_id& id, stream_priority p);
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_UPSTREAM_PATH_HPP

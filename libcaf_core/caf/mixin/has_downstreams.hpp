@@ -17,68 +17,52 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_MIXIN_HAS_DOWNSTREAMS_HPP
+#define CAF_MIXIN_HAS_DOWNSTREAMS_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
+#include <cstddef>
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/sec.hpp"
+#include "caf/actor_control_block.hpp"
 
 namespace caf {
-namespace detail {
+namespace mixin {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+/// Mixin for streams with any number of downstreams.
+template <class Base, class Subtype>
+class has_downstreams : public Base {
 public:
-  friend struct behavior_stack_mover;
+  using topics = typename Base::topics;
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
-
-  behavior_stack() = default;
-
-  // erases the last (asynchronous) behavior
-  void pop_back();
-
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
-  }
-
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
+  error add_downstream(strong_actor_ptr& ptr, const topics& filter,
+                       size_t init, bool is_redeployable) final {
+    if (!ptr)
+      return sec::invalid_argument;
+    if (out().add_path(ptr, filter, is_redeployable)) {
+      dptr()->downstream_demand(ptr, init);
+      return none;
     }
+    return sec::downstream_already_exists;
+  }
 
-  inline void cleanup() {
-    erased_elements_.clear();
+  error trigger_send(strong_actor_ptr&) {
+  if (out().buf_size() > 0)
+    out().policy().push(out());
+  return none;
+
   }
 
 private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
+  }
+
+  abstract_downstream& out() {
+    return dptr()->out();
+  }
 };
 
-} // namespace detail
+} // namespace mixin
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_MIXIN_HAS_DOWNSTREAMS_HPP

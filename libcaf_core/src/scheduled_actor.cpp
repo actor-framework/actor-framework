@@ -22,6 +22,7 @@
 #include "caf/config.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_ostream.hpp"
+#include "caf/stream_msg_visitor.hpp"
 
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -368,6 +369,24 @@ scheduled_actor::categorize(mailbox_element& x) {
     case make_type_token<error>(): {
       auto err = content.move_if_unshared<error>(0);
       call_handler(error_handler_, this, err);
+      return message_category::internal;
+    }
+    case make_type_token<stream_msg>(): {
+      auto sm = content.move_if_unshared<stream_msg>(0);
+      auto e = streams_.end();
+      stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e};
+      auto res = apply_visitor(f, sm.content);
+      auto i = res.second;
+      if (res.first) {
+        if (i != e) {
+          i->second->abort(current_sender(), std::move(res.first));
+          streams_.erase(i);
+        }
+      } else if (i != e) {
+        if (i->second->done()) {
+          streams_.erase(i);
+        }
+      }
       return message_category::internal;
     }
     default:

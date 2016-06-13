@@ -17,68 +17,63 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_STREAM_SINK_IMPL_HPP
+#define CAF_STREAM_SINK_IMPL_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
-
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/upstream.hpp"
+#include "caf/stream_sink.hpp"
+#include "caf/stream_sink_trait.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+template <class Fun, class Finalize>
+class stream_sink_impl : public stream_sink {
 public:
-  friend struct behavior_stack_mover;
+  using trait = stream_sink_trait_t<Fun, Finalize>;
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  using state_type = typename trait::state;
 
-  behavior_stack() = default;
+  using input_type = typename trait::input;
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  using output_type = typename trait::output;
 
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
+  stream_sink_impl(local_actor* self, std::unique_ptr<upstream_policy> policy,
+                   strong_actor_ptr&& orig_sender,
+                   std::vector<strong_actor_ptr>&& svec, message_id mid,
+                   Fun fun, Finalize fin)
+      : stream_sink(&in_, std::move(orig_sender), std::move(svec), mid),
+        fun_(std::move(fun)),
+        fin_(std::move(fin)),
+        in_(self, std::move(policy)) {
+    // nop
   }
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
+  error consume(message& msg) final {
+    using vec_type = std::vector<output_type>;
+    if (msg.match_elements<vec_type>()) {
+      auto& xs = msg.get_as<vec_type>(0);
+      for (auto& x : xs)
+        fun_(state_, x);
+      return none;
     }
+    return sec::unexpected_message;
+  }
 
-  inline void cleanup() {
-    erased_elements_.clear();
+  message finalize() final {
+    return make_message(fin_(state_));
+  }
+
+  state_type& state() {
+    return state_;
   }
 
 private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  state_type state_;
+  Fun fun_;
+  Finalize fin_;
+  upstream<output_type> in_;
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_STREAM_SINK_IMPL_HPP

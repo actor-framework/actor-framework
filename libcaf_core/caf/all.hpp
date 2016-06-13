@@ -36,6 +36,7 @@
 #include "caf/logger.hpp"
 #include "caf/others.hpp"
 #include "caf/result.hpp"
+#include "caf/stream.hpp"
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"
 #include "caf/behavior.hpp"

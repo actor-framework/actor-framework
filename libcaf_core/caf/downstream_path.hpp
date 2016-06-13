@@ -17,68 +17,48 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_DOWNSTREAM_PATH_HPP
+#define CAF_DOWNSTREAM_PATH_HPP
 
+#include <deque>
 #include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
+#include <cstdint>
+#include <cstddef>
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/fwd.hpp"
+#include "caf/stream_msg.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+/// Denotes a downstream actor in a stream topology. All downstream actors use
+/// the stream ID registered with the hosting downstream object.
+class downstream_path {
 public:
-  friend struct behavior_stack_mover;
+  using topics = std::vector<atom_value>;
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  /// Handle to the downstream actor.
+  strong_actor_ptr ptr;
 
-  behavior_stack() = default;
+  /// Next expected batch ID.
+  int64_t next_batch_id;
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  /// Currently available credit for this path.
+  size_t open_credit;
 
-  void clear();
+  /// Subscribed topics on this path (empty for all).
+  topics filter;
 
-  inline bool empty() const {
-    return elements_.empty();
-  }
+  /// Stores whether the downstream actor is failsafe, i.e., allows the runtime
+  /// to redeploy it on failure. If this field is set to `false` then
+  /// `unacknowledged_batches` is unused.
+  bool redeployable;
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
+  /// Caches batches until receiving an ACK.
+  std::deque<std::pair<int64_t, stream_msg::batch>> unacknowledged_batches;
 
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
-
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  downstream_path(strong_actor_ptr p, topics ts, bool redeploy);
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_DOWNSTREAM_PATH_HPP
