@@ -43,6 +43,18 @@ config_option::~config_option() {
   // nop
 }
 
+std::string config_option::full_name() const {
+  std::string res = category();
+  res += '.';
+  auto name_begin = name();
+  const char* name_end = strchr(name(), ',');
+  if (name_end)
+    res.insert(res.end(), name_begin, name_end);
+  else
+    res += name();
+  return res;
+}
+
 const char* config_option::type_name_visitor::operator()(const std::string&) const {
   return "a string";
 }

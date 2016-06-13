@@ -60,6 +60,9 @@ public:
     return explanation_;
   }
 
+  /// Returns the full name for this config option as "<category>.<long name>".
+  std::string full_name() const;
+
   /// Returns the held value as string.
   virtual std::string to_string() const = 0;
 

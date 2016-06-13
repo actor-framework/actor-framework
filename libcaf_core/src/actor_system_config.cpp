@@ -43,16 +43,8 @@ public:
   }
 
   void add_opts(options_vector& xs) {
-    for (auto& x : xs) {
-      std::string key = x->category();
-      key += '.';
-      // name can have format "<long>,<short>"; consider only long name
-      auto name_begin = x->name();
-      const char* name_end = strchr(x->name(), ',');
-      key.insert(key.end(), name_begin, name_end);
-      //key += x->name();
-      sinks_.emplace(std::move(key), x->to_sink());
-    }
+    for (auto& x : xs)
+      sinks_.emplace(x->full_name(), x->to_sink());
   }
 
   void operator()(size_t ln, std::string name, config_value& cv) {
