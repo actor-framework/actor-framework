@@ -17,68 +17,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
-
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
-
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/upstream_path.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
+upstream_path::upstream_path(strong_actor_ptr ptr, const stream_id& id,
+                             stream_priority p)
+    : hdl(std::move(ptr)),
+      sid(id),
+      prio(p),
+      last_acked_batch_id(0),
+      last_batch_id(0),
+      assigned_credit(0) {
+  // nop
+}
 
-class behavior_stack {
-public:
-  friend struct behavior_stack_mover;
-
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
-
-  behavior_stack() = default;
-
-  // erases the last (asynchronous) behavior
-  void pop_back();
-
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
-  }
-
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
-
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
-};
-
-} // namespace detail
 } // namespace caf
-
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP

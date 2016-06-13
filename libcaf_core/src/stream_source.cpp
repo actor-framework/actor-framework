@@ -17,68 +17,53 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#include "caf/stream_source.hpp"
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
-
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/sec.hpp"
+#include "caf/error.hpp"
+#include "caf/logger.hpp"
+#include "caf/downstream_path.hpp"
+#include "caf/abstract_downstream.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
+stream_source::stream_source(abstract_downstream* out_ptr) : out_ptr_(out_ptr) {
+  // nop
+}
 
-class behavior_stack {
-public:
-  friend struct behavior_stack_mover;
+stream_source::~stream_source() {
+  // nop
+}
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+bool stream_source::done() const {
+  // we are done streaming if no downstream paths remain
+  return out_ptr_->closed();
+}
 
-  behavior_stack() = default;
-
-  // erases the last (asynchronous) behavior
-  void pop_back();
-
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
-  }
-
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
+error stream_source::downstream_demand(strong_actor_ptr& hdl, size_t value) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(value));
+  auto path = out_ptr_->find(hdl);
+  if (path) {
+    path->open_credit += value;
+    if (!at_end()) {
+      // produce new elements
+      auto current_size = buf_size();
+      auto size_hint = out_ptr_->policy().desired_buffer_size(*out_ptr_);
+      if (current_size < size_hint)
+        generate(size_hint - current_size);
+      return trigger_send(hdl);
+    } else if(buf_size() > 0) {
+      // transmit cached elements before closing paths
+      return trigger_send(hdl);
+    } else if (out_ptr_->remove_path(hdl)) {
+      return none;
     }
-
-  inline void cleanup() {
-    erased_elements_.clear();
   }
+  return sec::invalid_downstream;
+}
 
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
-};
+void stream_source::abort(strong_actor_ptr& cause, const error& reason) {
+  out_ptr_->abort(cause, reason);
+}
 
-} // namespace detail
 } // namespace caf
-
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP

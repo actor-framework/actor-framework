@@ -17,68 +17,70 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_ABSTRACT_UPSTREAM_HPP
+#define CAF_ABSTRACT_UPSTREAM_HPP
 
 #include <vector>
 #include <memory>
-#include <utility>
-#include <algorithm>
+#include <unordered_map>
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/fwd.hpp"
+#include "caf/upstream_path.hpp"
+#include "caf/upstream_policy.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+class abstract_upstream {
 public:
-  friend struct behavior_stack_mover;
+  using path = upstream_path;
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  using path_cref = const path&;
 
-  behavior_stack() = default;
+  using path_uptr = std::unique_ptr<path>;
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  using path_ptr = path*;
 
-  void clear();
+  using path_list = std::vector<path_uptr>;
 
-  inline bool empty() const {
-    return elements_.empty();
+  using path_ptr_list = std::vector<path_ptr>;
+
+  /// Stores available paths sorted by priority.
+  using path_map = std::unordered_map<stream_priority, path_ptr_list>;
+
+  using policy_ptr = std::unique_ptr<upstream_policy>;
+
+  /// @pre `self != nullptr`
+  /// @pre `policy != nullptr`
+  abstract_upstream(local_actor* self, policy_ptr policy);
+
+  virtual ~abstract_upstream();
+
+  void abort(strong_actor_ptr& cause, const error& reason);
+
+  error pull(strong_actor_ptr& hdl, size_t n);
+
+  error pull(size_t n);
+
+  expected<size_t> add_path(strong_actor_ptr hdl, const stream_id& sid,
+                            stream_priority prio);
+
+  bool remove_path(const strong_actor_ptr& hdl);
+
+  inline local_actor* self() const {
+    return self_;
   }
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
+  /// Queries whether all upstream paths were closed.
+  inline bool closed() const {
+    return paths_.empty();
   }
 
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
-
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+protected:
+  local_actor* self_;
+  path_list paths_;
+  policy_ptr policy_;
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_ABSTRACT_UPSTREAM_HPP

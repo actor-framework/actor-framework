@@ -316,6 +316,7 @@ public:
  ******************************************************************************/
 
 actor abstract_coordinator::printer() const {
+  CAF_ASSERT(printer_ != nullptr);
   return actor_cast<actor>(printer_);
 }
 

@@ -136,6 +136,12 @@ public:
   error err;
 };
 
+template <class T>
+struct is_result : std::false_type {};
+
+template <class... Ts>
+struct is_result<result<Ts...>> : std::true_type {};
+
 } // namespace caf
 
 #endif // CAF_RESULT_HPP

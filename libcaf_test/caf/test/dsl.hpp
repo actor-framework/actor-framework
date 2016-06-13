@@ -185,7 +185,10 @@ public:
   std::tuple<const Ts&...> peek() {
     CAF_REQUIRE(dest_ != nullptr);
     auto ptr = dest_->mailbox().peek();
-    CAF_REQUIRE(ptr->content().match_elements<Ts...>());
+    if (!ptr->content().match_elements<Ts...>()) {
+      CAF_FAIL("Message does not match expected pattern: " << to_string(ptr->content()));
+    }
+    //CAF_REQUIRE(ptr->content().match_elements<Ts...>());
     return ptr->content().get_as_tuple<Ts...>();
   }
 

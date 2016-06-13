@@ -17,68 +17,46 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_STREAM_ID_HPP
+#define CAF_STREAM_ID_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
+#include <cstdint>
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/meta/type_name.hpp"
+#include "caf/actor_control_block.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
-public:
-  friend struct behavior_stack_mover;
-
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
-
-  behavior_stack() = default;
-
-  // erases the last (asynchronous) behavior
-  void pop_back();
-
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
-  }
-
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
-
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+struct stream_id {
+  strong_actor_ptr origin;
+  uint64_t nr;
 };
 
-} // namespace detail
+inline bool operator==(const stream_id& x, const stream_id& y) {
+  return x.origin == y.origin && x.nr == y.nr;
+}
+
+inline bool operator<(const stream_id& x, const stream_id& y) {
+  return x.origin == y.origin ? x.nr < y.nr : x.origin < y.origin;
+}
+
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, stream_id& x) {
+  return f(meta::type_name("stream_id"), x.origin, x.nr);
+}
+
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+namespace std {
+template <>
+struct hash<caf::stream_id> {
+  size_t operator()(const caf::stream_id& x) const {
+    auto tmp = reinterpret_cast<ptrdiff_t>(x.origin.get())
+               ^ static_cast<ptrdiff_t>(x.nr);
+    return static_cast<size_t>(tmp);
+  }
+};
+} // namespace std
+
+
+#endif // CAF_STREAM_ID_HPP

@@ -155,6 +155,15 @@ public:
     return type_ == Pos;
   }
 
+  template <class T>
+  bool is() const {
+    using namespace detail;
+    int_token<tl_index_where<type_list<Ts...>,
+                             tbind<is_same_ish, T>::template type>::value>
+      token;
+    return is(token);
+  }
+
   template <int Pos>
   const typename detail::tl_at<types, Pos>::type&
   get(std::integral_constant<int, Pos> token) const {
@@ -316,6 +325,11 @@ template <class Visitor, class... Ts>
 typename Visitor::result_type
 apply_visitor(Visitor& visitor, variant<Ts...>& data) {
   return data.apply(visitor);
+}
+
+template <class T, class... Ts>
+bool holds_alternative(const variant<Ts...>& data) {
+  return data.template is<T>();
 }
 
 /// @relates variant

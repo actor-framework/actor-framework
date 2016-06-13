@@ -17,68 +17,51 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_STREAM_MSG_VISITOR_HPP
+#define CAF_STREAM_MSG_VISITOR_HPP
 
-#include <vector>
-#include <memory>
 #include <utility>
-#include <algorithm>
+#include <unordered_map>
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/fwd.hpp"
+#include "caf/stream_msg.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/stream_handler.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+class stream_msg_visitor {
 public:
-  friend struct behavior_stack_mover;
+  using map_type = std::unordered_map<stream_id, intrusive_ptr<stream_handler>>;
+  using iterator = typename map_type::iterator;
+  using result_type = std::pair<error, iterator>;
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  stream_msg_visitor(scheduled_actor* self, stream_id& sid,
+                     iterator pos, iterator end);
 
-  behavior_stack() = default;
+  result_type operator()(stream_msg::open& x);
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  result_type operator()(stream_msg::ack_open&);
 
-  void clear();
+  result_type operator()(stream_msg::batch&);
 
-  inline bool empty() const {
-    return elements_.empty();
-  }
+  result_type operator()(stream_msg::ack_batch&);
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
+  result_type operator()(stream_msg::close&);
 
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
+  result_type operator()(stream_msg::abort&);
 
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
+  result_type operator()(stream_msg::downstream_failed&);
 
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
+  result_type operator()(stream_msg::upstream_failed&);
 
 private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  scheduled_actor* self_;
+  stream_id& sid_;
+  iterator i_;
+  iterator e_;
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_STREAM_MSG_VISITOR_HPP

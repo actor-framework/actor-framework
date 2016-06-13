@@ -17,68 +17,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_POLICY_BROADCAST_HPP
+#define CAF_POLICY_BROADCAST_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
-
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/downstream_policy.hpp"
 
 namespace caf {
-namespace detail {
+namespace policy {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+class broadcast final : public downstream_policy {
 public:
-  friend struct behavior_stack_mover;
-
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
-
-  behavior_stack() = default;
-
-  // erases the last (asynchronous) behavior
-  void pop_back();
-
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
-  }
-
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
-
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  void push(abstract_downstream& out) override;
+  size_t desired_buffer_size(const abstract_downstream& out) override;
 };
 
-} // namespace detail
+} // namespace policy
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_POLICY_BROADCAST_HPP

@@ -95,8 +95,24 @@ set (LIBCAF_CORE_SRCS
      src/type_erased_tuple.cpp
      src/uniform_type_info_map.cpp
      src/unprofiled.cpp
+     src/greedy.cpp
+     src/broadcast.cpp
+     src/anycast.cpp
      src/work_stealing.cpp
-     src/work_sharing.cpp)
+     src/work_sharing.cpp
+     src/abstract_downstream.cpp
+     src/abstract_upstream.cpp
+     src/downstream_path.cpp
+     src/downstream_policy.cpp
+     src/stream.cpp
+     src/stream_handler.cpp
+     src/stream_msg_visitor.cpp
+     src/stream_priority.cpp
+     src/stream_sink.cpp
+     src/stream_source.cpp
+     src/stream_stage.cpp
+     src/upstream_path.cpp
+     src/upstream_policy.cpp)
 
 add_custom_target(libcaf_core)
 

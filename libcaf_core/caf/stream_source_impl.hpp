@@ -17,68 +17,58 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_STREAM_SOURCE_IMPL_HPP
+#define CAF_STREAM_SOURCE_IMPL_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
-
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/downstream.hpp"
+#include "caf/stream_source.hpp"
+#include "caf/stream_source_trait.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+template <class Fun, class Predicate>
+class stream_source_impl : public stream_source {
 public:
-  friend struct behavior_stack_mover;
+  using trait = stream_source_trait_t<Fun>;
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  using state_type = typename trait::state;
 
-  behavior_stack() = default;
+  using output_type = typename trait::output;
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
-
-  void clear();
-
-  inline bool empty() const {
-    return elements_.empty();
+  stream_source_impl(local_actor* self,
+                     const stream_id& sid,
+                     std::unique_ptr<downstream_policy> policy, Fun fun,
+                     Predicate pred)
+      : stream_source(&out_),
+        fun_(std::move(fun)),
+        pred_(std::move(pred)),
+        out_(self, sid, std::move(policy)) {
+    // nop
   }
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
+  void generate(size_t num) final {
+    fun_(state_, out_, num);
   }
 
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
+  size_t buf_size() const final {
+    return out_.buf().size();
   }
 
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
+  bool at_end() const final {
+    return pred_(state_);
+  }
 
-  inline void cleanup() {
-    erased_elements_.clear();
+  state_type& state() {
+    return state_;
   }
 
 private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  state_type state_;
+  Fun fun_;
+  Predicate pred_;
+  downstream<output_type> out_;
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_STREAM_SOURCE_IMPL_HPP

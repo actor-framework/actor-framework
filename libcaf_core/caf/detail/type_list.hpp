@@ -70,6 +70,9 @@ struct tl_head<type_list<T0, Ts...>> {
   using type = T0;
 };
 
+template <class List>
+using tl_head_t = typename tl_head<List>::type;
+
 // type_list tail(type_list)
 
 /// Gets the tail of `List`.
@@ -377,7 +380,7 @@ struct tl_reverse {
   using type = typename tl_reverse_impl<List>::type;
 };
 
-// bool find(list, type)
+// type find(list, predicate)
 
 /// Finds the first element of type `What` beginning at index `Pos`.
 template <template <class> class Pred, class... Ts>
@@ -406,6 +409,9 @@ template <class... Ts, template <class> class Pred>
 struct tl_find<type_list<Ts...>, Pred> {
   using type = typename tl_find_impl<Pred, Ts...>::type;
 };
+
+template <class List, template <class> class Pred>
+using tl_find_t = typename tl_find<List, Pred>::type;
 
 // bool forall(predicate)
 
@@ -592,6 +598,9 @@ struct tl_map<type_list<Ts...>, Funs...> {
   using type = type_list<typename tl_apply_all<Ts, Funs...>::type...>;
 };
 
+template <class List, template <class> class... Funs>
+using tl_map_t = typename tl_map<List, Funs...>::type;
+
 /// Creates a new list by applying a `Fun` to each element which
 ///    returns `TraitResult` for `Trait`.
 template <class List, template <class> class Trait, bool TRes,
@@ -761,6 +770,9 @@ struct tl_filter_type<type_list<T...>, Type> {
       !std::is_same<T, Type>::value...
     >::type;
 };
+
+template <class List, class T>
+using tl_filter_type_t = typename tl_filter_type<List, T>::type;
 
 /// Creates a new list containing all elements which
 ///    are not equal to `Type`.

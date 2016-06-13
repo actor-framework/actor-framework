@@ -17,68 +17,36 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_DOWNSTREAM_POLICY_HPP
+#define CAF_DOWNSTREAM_POLICY_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
+#include <cstddef>
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+/// Implements dispatching to downstream paths.
+class downstream_policy {
 public:
-  friend struct behavior_stack_mover;
+  virtual ~downstream_policy();
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  /// Returns the topic name for `x`. The default implementation returns an
+  /// empty atom value, indicating a stream without topics.
+  virtual atom_value categorize(type_erased_value& x) const;
 
-  behavior_stack() = default;
+  /// Queries the optimal amount of data for the next `push` operation to `x`.
+  virtual size_t desired_buffer_size(const abstract_downstream& x) = 0;
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  /// Pushes data to the downstream paths of `x`.
+  virtual void push(abstract_downstream& x) = 0;
 
-  void clear();
+  // TODO: callbacks für new and closed downstream pahts
 
-  inline bool empty() const {
-    return elements_.empty();
-  }
-
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
-
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
-
-private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  /// Reclaim credit of closed downstream `y`.
+  //virtual void reclaim(abstract_downstream& x, downstream_path& y) = 0;
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_DOWNSTREAM_POLICY_HPP

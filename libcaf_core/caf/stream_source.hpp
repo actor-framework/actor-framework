@@ -17,68 +17,51 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_STREAM_SOURCE_HPP
+#define CAF_STREAM_SOURCE_HPP
 
-#include <vector>
 #include <memory>
-#include <utility>
-#include <algorithm>
 
-#include "caf/optional.hpp"
+#include "caf/extend.hpp"
+#include "caf/stream_handler.hpp"
+#include "caf/downstream_policy.hpp"
 
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/mixin/has_downstreams.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+class stream_source : public extend<stream_handler, stream_source>::
+                             with<mixin::has_downstreams> {
 public:
-  friend struct behavior_stack_mover;
+  stream_source(abstract_downstream* out_ptr);
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  ~stream_source();
 
-  behavior_stack() = default;
+  bool done() const final;
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  error downstream_demand(strong_actor_ptr& hdl, size_t value) final;
 
-  void clear();
+  void abort(strong_actor_ptr& cause, const error& reason) final;
 
-  inline bool empty() const {
-    return elements_.empty();
+  inline abstract_downstream& out() {
+    return *out_ptr_;
   }
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
-  }
+protected:
+  /// Queries the current amount of elements in the output buffer.
+  virtual size_t buf_size() const = 0;
 
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
+  /// Generate new elements for the output buffer. The size hint `n` indicates
+  /// how much elements can be shipped immediately.
+  virtual void generate(size_t n) = 0;
 
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
+  /// Queries whether the source is exhausted.
+  virtual bool at_end() const = 0;
 
 private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  abstract_downstream* out_ptr_;
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_STREAM_SOURCE_HPP

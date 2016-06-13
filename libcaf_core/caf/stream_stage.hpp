@@ -17,68 +17,54 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_STACK_HPP
-#define CAF_DETAIL_BEHAVIOR_STACK_HPP
+#ifndef CAF_STREAM_STAGE_HPP
+#define CAF_STREAM_STAGE_HPP
 
-#include <vector>
-#include <memory>
-#include <utility>
-#include <algorithm>
+#include "caf/fwd.hpp"
+#include "caf/extend.hpp"
+#include "caf/stream_handler.hpp"
 
-#include "caf/optional.hpp"
-
-#include "caf/config.hpp"
-#include "caf/behavior.hpp"
-#include "caf/message_id.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/mixin/has_upstreams.hpp"
+#include "caf/mixin/has_downstreams.hpp"
 
 namespace caf {
-namespace detail {
 
-struct behavior_stack_mover;
-
-class behavior_stack {
+/// Models a stream stage with up- and downstreams.
+class stream_stage : public extend<stream_handler, stream_stage>::
+                            with<mixin::has_upstreams, mixin::has_downstreams> {
 public:
-  friend struct behavior_stack_mover;
+  // -- constructors, destructors, and assignment operators --------------------
 
-  behavior_stack(const behavior_stack&) = delete;
-  behavior_stack& operator=(const behavior_stack&) = delete;
+  stream_stage(abstract_upstream* in_ptr, abstract_downstream* out_ptr);
 
-  behavior_stack() = default;
+  // -- overrides --------------------------------------------------------------
 
-  // erases the last (asynchronous) behavior
-  void pop_back();
+  bool done() const final;
 
-  void clear();
+  void abort(strong_actor_ptr&, const error&) final;
 
-  inline bool empty() const {
-    return elements_.empty();
+  error downstream_demand(strong_actor_ptr&, size_t) final;
+
+  error upstream_batch(strong_actor_ptr&, size_t, message&) final;
+
+  void last_upstream_closed();
+
+  inline abstract_upstream& in() {
+    return *in_ptr_;
   }
 
-  inline behavior& back() {
-    CAF_ASSERT(!empty());
-    return elements_.back();
+  inline abstract_downstream& out() {
+    return *out_ptr_;
   }
 
-  inline void push_back(behavior&& what) {
-    elements_.emplace_back(std::move(what));
-  }
-
-  template <class... Ts>
-    inline void emplace_back(Ts&&... xs) {
-      elements_.emplace_back(std::forward<Ts>(xs)...);
-    }
-
-  inline void cleanup() {
-    erased_elements_.clear();
-  }
+protected:
+  virtual error process_batch(message& msg) = 0;
 
 private:
-  std::vector<behavior> elements_;
-  std::vector<behavior> erased_elements_;
+  abstract_upstream* in_ptr_;
+  abstract_downstream* out_ptr_;
 };
 
-} // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_STACK_HPP
+#endif // CAF_STREAM_STAGE_HPP
