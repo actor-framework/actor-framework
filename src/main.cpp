@@ -556,7 +556,16 @@ public:
   }
 };
 
-PyObject* caf_module_init() {
+#if PY_MAJOR_VERSION == 3
+#define CAF_MODULE_INIT_RES PyObject*
+#define CAF_MODULE_INIT_RET(res) return res;
+#else
+#define CAF_MODULE_INIT_RES void
+#define CAF_MODULE_INIT_RET(unused)
+#endif
+
+
+CAF_MODULE_INIT_RES caf_module_init() {
   pybind11::module m("CAF", "Python binding for CAF");
   s_context->cfg.py_init(m);
   // add classes
@@ -566,7 +575,7 @@ PyObject* caf_module_init() {
    .def("dequeue_message_with_timeout", &py_dequeue_with_timeout, "Receives the next message")
    .def("self", &py_self, "Returns the global self handle")
    .def("atom", &atom_from_string, "Creates an atom from a string");
-  return m.ptr();
+  CAF_MODULE_INIT_RET(m.ptr())
 }
 
 } // namespace python
