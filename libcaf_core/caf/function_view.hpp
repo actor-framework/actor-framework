@@ -85,6 +85,21 @@ struct function_view_flattened_result<std::tuple<void>> {
   using type = unit_t;
 };
 
+template <class T>
+struct function_view_result {
+  T value;
+};
+
+template <class... Ts>
+struct function_view_result<typed_actor<Ts...>> {
+  typed_actor<Ts...> value{unsafe_actor_handle_init};
+};
+
+template <>
+struct function_view_result<actor> {
+  actor value{unsafe_actor_handle_init};
+};
+
 /// A function view for an actor hides any messaging from the caller.
 /// Internally, a function view uses a `scoped_actor` and uses
 /// blocking send and receive operations.
@@ -136,8 +151,8 @@ public:
   R operator()(Ts&&... xs) {
     if (impl_.unsafe())
       throw std::bad_function_call();
-    R result;
-    function_view_storage<R> h{result};
+    function_view_result<R> result;
+    function_view_storage<R> h{result.value};
     try {
       self_->request(impl_, infinite, std::forward<Ts>(xs)...).receive(h);
     }
@@ -145,7 +160,7 @@ public:
       assign(unsafe_actor_handle_init);
       throw;
     }
-    return flatten(result);
+    return flatten(result.value);
   }
 
   void assign(type x) {
