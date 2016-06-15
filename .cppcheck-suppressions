@@ -33,6 +33,9 @@ uninitMemberVar:libcaf_core/caf/detail/double_ended_queue.hpp
 // but conceptionally questionable
 functionStatic:libcaf_core/caf/policy/work_stealing.hpp
 
+// ignore warnings from any 3rd party module
+*:*/third_party/*
+
 // 6 false positives
 *:libcaf_core/caf/detail/limited_vector.hpp
 
