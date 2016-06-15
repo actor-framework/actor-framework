@@ -54,7 +54,8 @@ public:
   /// Destroys the state of this actor (no further overriding allowed).
   void on_exit() final {
     CAF_LOG_TRACE("");
-    state_.~State();
+    if (this->is_initialized())
+      state_.~State();
   }
 
   const char* name() const final {
