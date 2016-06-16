@@ -26,7 +26,6 @@ namespace {
 const char* sec_strings[] = {
   "<no-error>",
   "unexpected_message",
-  "invalid_invoke_mutable",
   "unexpected_response",
   "request_receiver_down",
   "request_timeout",
