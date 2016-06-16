@@ -515,17 +515,17 @@ behavior basp_broker::make_behavior() {
                     << ", " << CAF_ARG(msg));
       if (! src)
         return sec::cannot_forward_to_invalid_actor;
+      auto path = this->state.instance.tbl().lookup(dest_node);
+      if (! path) {
+        CAF_LOG_ERROR("no route to receiving node");
+        return sec::no_route_to_receiving_node;
+      }
       if (system().node() == src->node())
         system().registry().put(src->id(), src);
       auto writer = make_callback([&](serializer& sink) {
         std::vector<actor_addr> stages;
         sink << dest_name << stages << msg;
       });
-      auto path = this->state.instance.tbl().lookup(dest_node);
-      if (! path) {
-        CAF_LOG_ERROR("no route to receiving node");
-        return sec::no_route_to_receiving_node;
-      }
       basp::header hdr{basp::message_type::dispatch_message,
                        basp::header::named_receiver_flag,
                        0, 0, state.this_node(), dest_node,

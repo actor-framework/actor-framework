@@ -246,11 +246,14 @@ group middleman::remote_group(const std::string& group_identifier,
 
 strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(nid));
+  if (system().node() == nid)
+    return system().registry().get(name);
   auto basp = named_broker<basp_broker>(atom("BASP"));
   strong_actor_ptr result;
   scoped_actor self{system(), true};
   try {
-    self->send(basp, forward_atom::value, self.address(), nid, name,
+    self->send(basp, forward_atom::value, actor_cast<strong_actor_ptr>(self),
+               nid, name,
                make_message(sys_atom::value, get_atom::value, "info"));
     self->receive(
       [&](ok_atom, std::string&, strong_actor_ptr& addr, std::string&) {
@@ -260,7 +263,7 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
         // nop
       }
     );
-  } catch (...) {
+  } catch (std::exception& e) {
     // nop
   }
   return result;
