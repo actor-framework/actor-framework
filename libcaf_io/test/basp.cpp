@@ -117,9 +117,8 @@ string hexstr(const buffer& buf) {
 class fixture {
 public:
   fixture(bool autoconn = false)
-      : system(actor_system_config{}
-               .load<io::middleman, network::test_multiplexer>()
-               .set("middleman.enable-automatic-connections", autoconn)) {
+      : system(cfg.load<io::middleman, network::test_multiplexer>()
+                  .set("middleman.enable-automatic-connections", autoconn)) {
     auto& mm = system.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);
@@ -435,6 +434,7 @@ public:
     return {this};
   }
 
+  actor_system_config cfg;
   actor_system system;
 
 private:

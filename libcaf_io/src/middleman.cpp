@@ -95,7 +95,7 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   private:
     network::asio_multiplexer backend_;
   };
-  if (sys.backend_name() == atom("asio"))
+  if (sys.config().middleman_network_backend == atom("asio"))
     return new asio_impl(sys);
 # endif // CAF_USE_ASIO
   return new impl(sys);
@@ -333,7 +333,7 @@ void middleman::init(actor_system_config& cfg) {
      .add_message_type<new_data_msg>("@new_data_msg");
   // compute and set ID for this network node
   node_id this_node{node_id::data::create_singleton()};
-  cfg.network_id.swap(this_node);
+  system().node_.swap(this_node);
   // set scheduling parameters for multiplexer
   backend().max_throughput(cfg.scheduler_max_throughput);
   backend().max_consecutive_reads(cfg.middleman_max_consecutive_reads);

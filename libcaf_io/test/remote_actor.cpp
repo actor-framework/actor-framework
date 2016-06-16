@@ -39,18 +39,16 @@ public:
   config() {
     load<caf::io::middleman>();
     add_message_type<std::vector<int>>("std::vector<int>");
-  }
-
-  config& parse() {
     actor_system_config::parse(caf::test::engine::argc(),
                                caf::test::engine::argv());
-    return *this;
   }
 };
 
 struct fixture {
-  caf::actor_system server_side{config{}.parse()};
-  caf::actor_system client_side{config{}.parse()};
+  config server_side_config;
+  caf::actor_system server_side{server_side_config};
+  config client_side_config;
+  caf::actor_system client_side{client_side_config};
   caf::io::middleman& server_side_mm = server_side.middleman();
   caf::io::middleman& client_side_mm = client_side.middleman();
 };

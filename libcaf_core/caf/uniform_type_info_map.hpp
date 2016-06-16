@@ -104,20 +104,11 @@ private:
 
   // message types
   std::array<value_factory_kvp, type_nrs - 1> builtin_;
-  value_factories_by_name custom_by_name_;
-  value_factories_by_rtti custom_by_rtti_;
   value_factories_by_name ad_hoc_;
   mutable detail::shared_spinlock ad_hoc_mtx_;
 
   // message type names
   std::array<std::string, type_nrs - 1> builtin_names_;
-  portable_names custom_names_;
-
-  // actor types
-  actor_factories factories_;
-
-  // error types
-  error_renderers error_renderers_;
 };
 
 } // namespace caf

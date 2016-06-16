@@ -49,11 +49,11 @@ public:
 
   void operator()(size_t ln, std::string name, config_value& cv) {
     auto i = sinks_.find(name);
-    if (i == sinks_.end())
+    if (i != sinks_.end())
+      (i->second)(ln, cv);
+    else
       std::cerr << "error in line " << ln
                 << ": unrecognized parameter name \"" << name << "\"";
-    else
-      (i->second)(ln, cv);
   }
 
 private:
@@ -124,8 +124,8 @@ actor_system_config::actor_system_config()
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
   // add renderers for default error categories
-  error_renderers_.emplace(atom("system"), render_sec);
-  error_renderers_.emplace(atom("exit"), render_exit_reason);
+  error_renderers.emplace(atom("system"), render_sec);
+  error_renderers.emplace(atom("exit"), render_exit_reason);
 }
 
 std::string
@@ -165,29 +165,46 @@ actor_system_config::make_help_text(const std::vector<message::cli_arg>& xs) {
 
 actor_system_config& actor_system_config::parse(int argc, char** argv,
                                                 const char* ini_file_cstr) {
-  auto args = message_builder(argv + 1, argv + argc).move_to_message();
-  // extract config file name first, since INI files are overruled by CLI args
+  message args;
+  if (argc > 1)
+    args = message_builder(argv + 1, argv + argc).move_to_message();
+  // set default config file name if not set by user
+  if (! ini_file_cstr)
+    ini_file_cstr = "caf-application.ini";
   std::string config_file_name;
-  if (ini_file_cstr)
-    config_file_name = ini_file_cstr;
+  // CLI file name has priority over default file name
   args.extract_opts({
     {"caf#config-file", "", config_file_name}
   });
+  if (config_file_name.empty())
+    config_file_name = ini_file_cstr;
+  std::ifstream ini{config_file_name};
+  return parse(args, ini);
+}
+
+actor_system_config& actor_system_config::parse(int argc, char** argv,
+                                                std::istream& ini) {
+  message args;
+  if (argc > 1)
+    args = message_builder(argv + 1, argv + argc).move_to_message();
+  return parse(args, ini);
+}
+
+actor_system_config& actor_system_config::parse(message& args,
+                                                std::istream& ini) {
   // (2) content of the INI file overrides hard-coded defaults
-  if (! config_file_name.empty()) {
-    std::ifstream ini{config_file_name};
-    if (ini.good()) {
-      actor_system_config_reader consumer{options_, custom_options_};
-      detail::parse_ini(ini, consumer, std::cerr);
-    }
+  if (ini.good()) {
+    actor_system_config_reader consumer{options_, custom_options_};
+    detail::parse_ini(ini, consumer, std::cerr);
   }
   // (3) CLI options override the content of the INI file
+  std::string dummy; // caf#config-file either ignored or already open
   std::vector<message::cli_arg> cargs;
   for (auto& x : options_)
     cargs.emplace_back(x->to_cli_arg(true));
   cargs.emplace_back("caf#dump-config", "print config in INI format to stdout");
   //cargs.emplace_back("caf#help", "print this text");
-  cargs.emplace_back("caf#config-file", "parse INI file", config_file_name);
+  cargs.emplace_back("caf#config-file", "parse INI file", dummy);
   cargs.emplace_back("caf#slave-mode", "run in slave mode");
   cargs.emplace_back("caf#slave-name", "set name for this slave", slave_name);
   cargs.emplace_back("caf#bootstrap-node", "set bootstrapping", bootstrap_node);
@@ -253,13 +270,13 @@ actor_system_config& actor_system_config::parse(int argc, char** argv,
 
 actor_system_config&
 actor_system_config::add_actor_factory(std::string name, actor_factory fun) {
-  actor_factories_.emplace(std::move(name), std::move(fun));
+  actor_factories.emplace(std::move(name), std::move(fun));
   return *this;
 }
 
 actor_system_config&
 actor_system_config::add_error_category(atom_value x, error_renderer y) {
-  error_renderers_.emplace(x, y);
+  error_renderers.emplace(x, y);
   return *this;
 }
 

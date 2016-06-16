@@ -296,11 +296,11 @@ behavior foo2(event_based_actor* self) {
 }
 
 struct fixture {
+  actor_system_config cfg;
   actor_system system;
   scoped_actor self;
 
-  fixture() : system(actor_system_config()
-                     .add_message_type<get_state_msg>("get_state_msg")),
+  fixture() : system(cfg.add_message_type<get_state_msg>("get_state_msg")),
               self(system) {
     // nop
   }

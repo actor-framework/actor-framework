@@ -42,6 +42,7 @@
 #include "caf/abstract_group.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/message_builder.hpp"
+#include "caf/actor_system_config.hpp"
 
 #include "caf/type_nr.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -124,16 +125,18 @@ uniform_type_info_map::make_value(const std::string& x) const {
   auto i = std::find_if(builtin_.begin(), e, pred);
   if (i != e)
     return i->second();
-  auto j = custom_by_name_.find(x);
-  if (j != custom_by_name_.end())
+  auto& custom_names = system().config().value_factories_by_name;
+  auto j = custom_names.find(x);
+  if (j != custom_names.end())
     return j->second();
   return nullptr;
 }
 
 type_erased_value_ptr
 uniform_type_info_map::make_value(const std::type_info& x) const {
-  auto i = custom_by_rtti_.find(std::type_index(x));
-  if (i != custom_by_rtti_.end())
+  auto& custom_by_rtti = system().config().value_factories_by_rtti;
+  auto i = custom_by_rtti.find(std::type_index(x));
+  if (i != custom_by_rtti.end())
     return i->second();
   return nullptr;
 }
@@ -145,16 +148,18 @@ uniform_type_info_map::portable_name(uint16_t nr,
     return &builtin_names_[nr - 1];
   if (! ti)
     return nullptr;
-  auto i = custom_names_.find(std::type_index(*ti));
-  if (i != custom_names_.end())
+  auto& custom_names = system().config().type_names_by_rtti;
+  auto i = custom_names.find(std::type_index(*ti));
+  if (i != custom_names.end())
     return &(i->second);
   return nullptr;
 }
 
 uniform_type_info_map::error_renderer
 uniform_type_info_map::renderer(atom_value x) const {
-  auto i = error_renderers_.find(x);
-  if (i != error_renderers_.end())
+  auto& error_renderers = system().config().error_renderers;
+  auto i = error_renderers.find(x);
+  if (i != error_renderers.end())
     return i->second;
   return nullptr;
 }
@@ -164,8 +169,9 @@ actor_factory_result uniform_type_info_map::make_actor(const std::string& name,
                                                        message& msg) const {
   strong_actor_ptr res;
   std::set<std::string> ifs;
-  auto i = factories_.find(name);
-  if (i != factories_.end())
+  auto& factories = system().config().actor_factories;
+  auto i = factories.find(name);
+  if (i != factories.end())
     std::tie(res, ifs) = i->second(cfg, msg);
   return std::make_pair(std::move(res), std::move(ifs));
 }

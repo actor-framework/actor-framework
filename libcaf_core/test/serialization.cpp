@@ -127,6 +127,16 @@ void serialize(Processor&, test_empty_non_pod&, const unsigned int) {
   // nop
 }
 
+class config : public actor_system_config {
+public:
+  config() {
+    add_message_type<test_enum>("test_enum");
+    add_message_type<raw_struct>("raw_struct");
+    add_message_type<test_array>("test_array");
+    add_message_type<test_empty_non_pod>("test_empty_non_pod");
+  }
+};
+
 struct fixture {
   int32_t i32 = -345;
   float f32 = 3.45f;
@@ -143,6 +153,7 @@ struct fixture {
   };
   int ra[3] = {1, 2, 3};
 
+  config cfg;
   actor_system system;
   scoped_execution_unit context;
   message msg;
@@ -192,11 +203,7 @@ struct fixture {
   }
 
   fixture()
-      : system(actor_system_config{}
-               .add_message_type<test_enum>("test_enum")
-               .add_message_type<raw_struct>("raw_struct")
-               .add_message_type<test_array>("test_array")
-               .add_message_type<test_empty_non_pod>("test_empty_non_pod")),
+      : system(cfg),
         context(&system) {
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, te, str, rs);

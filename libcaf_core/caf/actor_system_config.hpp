@@ -43,25 +43,23 @@ namespace caf {
 /// Configures an `actor_system` on startup.
 class actor_system_config {
 public:
-  friend class actor_system;
-
   using module_factory = std::function<actor_system::module* (actor_system&)>;
 
-  using module_factories = std::vector<module_factory>;
+  using module_factory_vector = std::vector<module_factory>;
 
   using value_factory = std::function<type_erased_value_ptr ()>;
 
-  using value_factories_by_name = std::unordered_map<std::string, value_factory>;
+  using value_factory_string_map = std::unordered_map<std::string, value_factory>;
 
-  using value_factories_by_rtti = std::unordered_map<std::type_index, value_factory>;
+  using value_factory_rtti_map = std::unordered_map<std::type_index, value_factory>;
 
-  using actor_factories = std::unordered_map<std::string, actor_factory>;
+  using actor_factory_map = std::unordered_map<std::string, actor_factory>;
 
-  using portable_names = std::unordered_map<std::type_index, std::string>;
+  using portable_name_map = std::unordered_map<std::type_index, std::string>;
 
   using error_renderer = std::function<std::string (uint8_t, atom_value, const message&)>;
 
-  using error_renderers = std::unordered_map<atom_value, error_renderer>;
+  using error_renderer_map = std::unordered_map<atom_value, error_renderer>;
 
   using option_ptr = std::unique_ptr<config_option>;
 
@@ -86,8 +84,14 @@ public:
 
   actor_system_config();
 
+  actor_system_config(actor_system_config&&) = default;
+
   actor_system_config(const actor_system_config&) = delete;
   actor_system_config& operator=(const actor_system_config&) = delete;
+
+  actor_system_config& parse(message& args, std::istream& ini_stream);
+
+  actor_system_config& parse(int argc, char** argv, std::istream& ini_stream);
 
   actor_system_config& parse(int argc, char** argv,
                              const char* config_file_name = nullptr);
@@ -122,9 +126,9 @@ public:
                       && std::is_copy_constructible<T>::value),
                   "T must provide default and copy constructors");
     static_assert(detail::is_serializable<T>::value, "T must be serializable");
-    type_names_by_rtti_.emplace(std::type_index(typeid(T)), name);
-    value_factories_by_name_.emplace(std::move(name), &make_type_erased_value<T>);
-    value_factories_by_rtti_.emplace(std::type_index(typeid(T)),
+    type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
+    value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
+    value_factories_by_rtti.emplace(std::type_index(typeid(T)),
                                      &make_type_erased_value<T>);
     return *this;
   }
@@ -156,7 +160,7 @@ public:
   /// Loads module `T` with optional template parameters `Ts...`.
   template <class T, class... Ts>
   actor_system_config& load() {
-    module_factories_.push_back([](actor_system& sys) -> actor_system::module* {
+    module_factories.push_back([](actor_system& sys) -> actor_system::module* {
       return T::make(sys, detail::type_list<Ts...>{});
     });
     return *this;
@@ -205,9 +209,12 @@ public:
   // Config parameters of the OpenCL module.
   std::string opencl_device_ids;
 
-  // System parameters that are set while initializing modules.
-  node_id network_id;
-  proxy_registry* network_proxies;
+  value_factory_string_map value_factories_by_name;
+  value_factory_rtti_map value_factories_by_rtti;
+  portable_name_map type_names_by_rtti;
+  actor_factory_map actor_factories;
+  module_factory_vector module_factories;
+  error_renderer_map error_renderers;
 
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 
@@ -221,12 +228,8 @@ private:
 
   static std::string render_exit_reason(uint8_t, atom_value, const message&);
 
-  value_factories_by_name value_factories_by_name_;
-  value_factories_by_rtti value_factories_by_rtti_;
-  portable_names type_names_by_rtti_;
-  actor_factories actor_factories_;
-  module_factories module_factories_;
-  error_renderers error_renderers_;
+  std::string extract_config_file_name(message& args);
+
   options_vector options_;
 };
 

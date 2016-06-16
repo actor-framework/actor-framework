@@ -168,21 +168,33 @@ actor_system::module::~module() {
   // nop
 }
 
-actor_system::actor_system() : actor_system(actor_system_config{}) {
+actor_system::actor_system(actor_system_config&& cfg)
+    : actor_system(new actor_system_config(std::move(cfg)), true) {
   // nop
 }
 
+actor_system::actor_system()
+    : actor_system(new actor_system_config, true) {
+  // nop
+}
+
+actor_system_config* new_parsed_config(int argc, char** argv) {
+  auto ptr = new actor_system_config;
+  ptr->parse(argc, argv);
+  return ptr;
+}
+
 actor_system::actor_system(int argc, char** argv)
-    : actor_system(actor_system_config{}.parse(argc, argv)) {
+    : actor_system(new_parsed_config(argc, argv), true) {
   // nop
 }
 
 actor_system::actor_system(actor_system_config& cfg)
-    : actor_system(std::move(cfg)) {
+    : actor_system(&cfg, false) {
   // nop
 }
 
-actor_system::actor_system(actor_system_config&& cfg)
+actor_system::actor_system(actor_system_config* ptr, bool owns_ptr)
     : ids_(0),
       types_(*this),
       logger_(*this),
@@ -191,12 +203,15 @@ actor_system::actor_system(actor_system_config&& cfg)
       middleman_(nullptr),
       dummy_execution_unit_(this),
       await_actors_before_shutdown_(true),
-      detached(0) {
+      detached(0),
+      cfg_(ptr),
+      owns_cfg_(owns_ptr) {
+  CAF_ASSERT(ptr != nullptr);
   CAF_SET_LOGGER_SYS(this);
-  backend_name_ = cfg.middleman_network_backend;
-  for (auto& f : cfg.module_factories_) {
-    auto ptr = f(*this);
-    modules_[ptr->id()].reset(ptr);
+  auto& cfg = *ptr;
+  for (auto& f : cfg.module_factories) {
+    auto mod_ptr = f(*this);
+    modules_[mod_ptr->id()].reset(mod_ptr);
   }
   auto& mmptr = modules_[module::middleman];
   if (mmptr)
@@ -251,14 +266,6 @@ actor_system::actor_system(actor_system_config&& cfg)
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);
-  // move all custom factories into our map
-  types_.custom_names_ = std::move(cfg.type_names_by_rtti_);
-  types_.custom_by_name_ = std::move(cfg.value_factories_by_name_);
-  types_.custom_by_rtti_ = std::move(cfg.value_factories_by_rtti_);
-  types_.factories_ = std::move(cfg.actor_factories_);
-  types_.error_renderers_ = std::move(cfg.error_renderers_);
-  // move remaining config
-  node_.swap(cfg.network_id);
   // spawn config and spawn servers (lazily to not access the scheduler yet)
   static constexpr auto Flags = hidden + lazy_init;
   spawn_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl));
@@ -294,6 +301,8 @@ actor_system::~actor_system() {
   await_detached_threads();
   registry_.stop();
   logger_.stop();
+  if (owns_cfg_)
+    delete cfg_;
   CAF_SET_LOGGER_SYS(nullptr);
 }
 

@@ -165,6 +165,8 @@ public:
 
   actor_system(int argc, char** argv);
 
+  /// @warning The system stores a reference to `cfg`, which means the
+  ///          config object must outlive the actor system.
   explicit actor_system(actor_system_config& cfg);
 
   explicit actor_system(actor_system_config&& cfg);
@@ -409,6 +411,11 @@ public:
     await_actors_before_shutdown_ = x;
   }
 
+  /// Returns the configuration of this actor system.
+  const actor_system_config& config() const {
+    return *cfg_;
+  }
+
   /// @cond PRIVATE
 
   /// Increases running-detached-threads-count by one.
@@ -420,13 +427,11 @@ public:
   /// Blocks the caller until all detached threads are done.
   void await_detached_threads();
 
-  inline atom_value backend_name() const {
-    return backend_name_;
-  }
-
   /// @endcond
 
 private:
+  actor_system(actor_system_config* cfg, bool owns_cfg);
+
   template <class T>
   void check_invariants() {
     static_assert(! std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
@@ -465,7 +470,6 @@ private:
   module_array modules_;
   io::middleman* middleman_;
   scoped_execution_unit dummy_execution_unit_;
-  atom_value backend_name_;
   opencl::manager* opencl_manager_;
   riac::probe* probe_;
   bool await_actors_before_shutdown_;
@@ -475,6 +479,8 @@ private:
   mutable std::mutex detached_mtx;
   mutable std::condition_variable detached_cv;
 
+  actor_system_config* cfg_;
+  bool owns_cfg_;
 };
 
 } // namespace caf
