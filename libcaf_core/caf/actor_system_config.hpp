@@ -196,6 +196,15 @@ public:
   size_t scheduler_profiling_ms_resolution;
   std::string scheduler_profiling_output_file;
 
+  // Config parameters for work-stealing strategy
+  size_t work_stealing_aggressive_poll_attempts;
+  size_t work_stealing_aggressive_steal_interval;
+  size_t work_stealing_moderate_poll_attempts;
+  size_t work_stealing_moderate_steal_interval;
+  size_t work_stealing_moderate_sleep_duration_us;
+  size_t work_stealing_relaxed_steal_interval;
+  size_t work_stealing_relaxed_sleep_duration_us;
+
   // Config parameters of middleman.
   atom_value middleman_network_backend;
   bool middleman_enable_automatic_connections;

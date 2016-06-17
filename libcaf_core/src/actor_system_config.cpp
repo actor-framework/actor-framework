@@ -87,6 +87,13 @@ actor_system_config::actor_system_config()
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
   scheduler_enable_profiling = false;
   scheduler_profiling_ms_resolution = 100;
+  work_stealing_aggressive_poll_attempts = 100;
+  work_stealing_aggressive_steal_interval = 10;
+  work_stealing_moderate_poll_attempts = 500;
+  work_stealing_moderate_steal_interval = 5;
+  work_stealing_moderate_sleep_duration_us = 50;
+  work_stealing_relaxed_steal_interval = 1;
+  work_stealing_relaxed_sleep_duration_us = 10000;
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
@@ -106,6 +113,21 @@ actor_system_config::actor_system_config()
        "sets the rate in ms in which the profiler collects data")
   .add(scheduler_profiling_output_file, "profiling-output-file",
        "sets the output file for the profiler");
+  opt_group(options_, "work-stealing")
+  .add(work_stealing_aggressive_poll_attempts, "aggressive-poll-attempts",
+       "sets the number of zero-sleep-interval polling attempts")
+  .add(work_stealing_aggressive_steal_interval, "aggressive-steal-interval",
+       "sets the frequency of steal attempts during aggressive polling")
+  .add(work_stealing_moderate_poll_attempts, "moderate-poll-attempts",
+       "sets the number of moderately aggressive polling attempts")
+  .add(work_stealing_moderate_steal_interval, "moderate-steal-interval",
+       "sets the frequency of steal attempts during moderate polling")
+  .add(work_stealing_moderate_sleep_duration_us, "moderate-sleep-duration",
+       "sets the sleep interval between poll attempts during moderate polling")
+  .add(work_stealing_relaxed_steal_interval, "relaxed-steal-interval",
+       "sets the frequency of steal attempts during relaxed polling")
+  .add(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
+       "sets the sleep interval between poll attempts during relaxed polling");
   opt_group{options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
