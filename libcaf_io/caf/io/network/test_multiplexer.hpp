@@ -109,7 +109,7 @@ public:
   using pending_scribes_map = std::map<std::pair<std::string, uint16_t>,
                                        connection_handle>;
 
-  pending_scribes_map& pending_scribes();
+  bool has_pending_scribe(std::string host, uint16_t port);
 
   /// Accepts a pending connect on `hdl`.
   void accept_connection(accept_handle hdl);
@@ -157,6 +157,7 @@ private:
     intrusive_ptr<doorman> ptr;
   };
 
+  // guards resumables_ and scribes_
   std::mutex mx_;
   std::condition_variable cv_;
   std::list<resumable_ptr> resumables_;

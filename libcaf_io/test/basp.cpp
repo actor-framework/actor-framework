@@ -579,7 +579,7 @@ CAF_TEST(remote_actor_and_send) {
   constexpr const char* lo = "localhost";
   CAF_MESSAGE("self: " << to_string(self()->address()));
   mpx()->provide_scribe(lo, 4242, remote_hdl(0));
-  CAF_REQUIRE(mpx()->pending_scribes().count(make_pair(lo, 4242)) == 1);
+  CAF_REQUIRE(mpx()->has_pending_scribe(lo, 4242));
   auto mm1 = system.middleman().actor_handle();
   actor result{unsafe_actor_handle_init};
   auto f = self()->request(mm1, infinite,
@@ -587,7 +587,7 @@ CAF_TEST(remote_actor_and_send) {
   // wait until BASP broker has received and processed the connect message
   while (! aut()->valid(remote_hdl(0)))
     mpx()->exec_runnable();
-  CAF_REQUIRE(mpx()->pending_scribes().count(make_pair(lo, 4242)) == 0);
+  CAF_REQUIRE(! mpx()->has_pending_scribe(lo, 4242));
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_MESSAGE("server handshake => client handshake + proxy announcement");
   auto na = registry()->named_actors();
@@ -760,8 +760,7 @@ CAF_TEST(automatic_connection) {
   // (this node receives a message from jupiter via mars and responds via mars,
   //  but then also establishes a connection to jupiter directly)
   mpx()->provide_scribe("jupiter", 8080, remote_hdl(0));
-  CAF_CHECK_EQUAL(mpx()->pending_scribes().count(make_pair("jupiter", 8080)),
-                  1u);
+  CAF_CHECK(mpx()->has_pending_scribe("jupiter", 8080));
   CAF_MESSAGE("self: " << to_string(self()->address()));
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);
@@ -816,7 +815,7 @@ CAF_TEST(automatic_connection) {
                     make_message(uint16_t{8080}, std::move(res))));
   // our connection helper should now connect to jupiter and
   // send the scribe handle over to the BASP broker
-  while (mpx()->pending_scribes().count(make_pair("jupiter", 8080)) != 0)
+  while (mpx()->has_pending_scribe("jupiter", 8080))
     mpx()->flush_runnables();
   CAF_REQUIRE(mpx()->output_buffer(remote_hdl(1)).size() == 0);
   // send handshake from jupiter

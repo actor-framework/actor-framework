@@ -40,6 +40,7 @@ test_multiplexer::~test_multiplexer() {
 
 connection_handle
 test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
+  guard_type guard{mx_};
   connection_handle result;
   auto i = scribes_.find(std::make_pair(host, port_hint));
   if (i != scribes_.end()) {
@@ -199,6 +200,7 @@ void test_multiplexer::run() {
 
 void test_multiplexer::provide_scribe(std::string host, uint16_t desired_port,
                                       connection_handle hdl) {
+  guard_type guard{mx_};
   scribes_.emplace(std::make_pair(std::move(host), desired_port), hdl);
 }
 
@@ -262,8 +264,9 @@ test_multiplexer::pending_connects_map& test_multiplexer::pending_connects() {
   return pending_connects_;
 }
 
-test_multiplexer::pending_scribes_map& test_multiplexer::pending_scribes() {
-  return scribes_;
+bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
+  guard_type guard{mx_};
+  return scribes_.count(std::make_pair(std::move(x), y)) > 0;
 }
 
 void test_multiplexer::accept_connection(accept_handle hdl) {
