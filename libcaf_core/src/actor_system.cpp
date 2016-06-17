@@ -73,6 +73,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       unsubscribe_all(actor_cast<actor>(std::move(ptr)));
   });
   return {
+    // set a key/value pair
     [=](put_atom, const std::string& key, message& msg) {
       CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(msg));
       if (key == "*")
@@ -91,6 +92,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
           self->send(actor_cast<actor>(subscriber), update_atom::value,
                      key, vp.second);
     },
+    // get a key/value pair
     [=](get_atom, std::string& key) -> message {
       CAF_LOG_TRACE(CAF_ARG(key));
       if (key == wildcard) {
@@ -105,6 +107,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
                           i != self->state.data.end() ? i->second.first
                                                       : make_message());
     },
+    // subscribe to a key
     [=](subscribe_atom, const std::string& key) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
       CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
@@ -120,6 +123,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
         subscribers.emplace(subscriber, kvstate::topic_set{key});
       }
     },
+    // unsubscribe from a key
     [=](unsubscribe_atom, const std::string& key) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
       if (! subscriber)
@@ -131,6 +135,10 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       }
       self->state.subscribers[subscriber].erase(key);
       self->state.data[key].second.erase(subscriber);
+    },
+    // get a 'named' actor from local registry
+    [=](get_atom, atom_value name) {
+      return self->home_system().registry().get(name);
     }
   };
 }

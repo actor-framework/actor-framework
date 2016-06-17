@@ -29,7 +29,7 @@ const uint8_t header::named_receiver_flag;
 
 std::string to_bin(uint8_t x) {
   std::string res;
-  for (auto offset = 7; offset > 0; --offset)
+  for (auto offset = 7; offset > -1; --offset)
     res += std::to_string((x >> offset) & 0x01);
   return res;
 }
