@@ -43,6 +43,8 @@ class middleman : public actor_system::module {
 public:
   friend class actor_system;
 
+  using hook_vector = std::vector<hook_uptr>;
+
   ~middleman();
 
   /// Publishes `whom` at `port`.
@@ -140,44 +142,18 @@ public:
   /// Invokes the callback(s) associated with given event.
   template <hook::event_type Event, typename... Ts>
   void notify(Ts&&... ts) {
-    if (hooks_)
-      hooks_->handle<Event>(std::forward<Ts>(ts)...);
-  }
-
-  /// Adds a new hook to the middleman.
-  template<class C, typename... Ts>
-  C* add_hook(Ts&&... xs) {
-    // if only we could move a unique_ptr into a lambda in C++11
-    auto ptr = new C(system_, std::forward<Ts>(xs)...);
-    backend().dispatch([=] {
-      ptr->next.swap(hooks_);
-      hooks_.reset(ptr);
-    });
-    return ptr;
+    for (auto& hook : hooks_)
+      hook->handle<Event>(std::forward<Ts>(ts)...);
   }
 
   /// Returns whether this middleman has any hooks installed.
   inline bool has_hook() const {
-    return hooks_ != nullptr;
+    return ! hooks_.empty();
   }
 
-  /// Adds a function object to this middleman that is called
-  /// when shutting down this middleman.
-  template <class F>
-  void add_shutdown_cb(F fun) {
-    struct impl : hook {
-      impl(actor_system&, F&& f) : fun_(std::move(f)) {
-        // nop
-      }
-
-      void before_shutdown_cb() override {
-        fun_();
-        call_next<hook::before_shutdown>();
-      }
-
-      F fun_;
-    };
-    add_hook<impl>(std::move(fun));
+  /// Returns all installed hooks.
+  const hook_vector& hooks() const {
+    return hooks_;
   }
 
   /// Returns the actor associated with `name` at `nid` or
@@ -256,17 +232,6 @@ public:
     return new impl(sys);
   }
 
-  /// Returns the heartbeat interval in milliseconds.
-  inline size_t heartbeat_interval() const {
-    return heartbeat_interval_;
-  }
-
-  /// Returns whether the middleman tries to establish
-  /// a direct connection to each of its peers.
-  inline bool enable_automatic_connections() const {
-    return enable_automatic_connections_;
-  }
-
 protected:
   middleman(actor_system& ref);
 
@@ -318,13 +283,9 @@ private:
   // keeps track of "singleton-like" brokers
   std::map<atom_value, actor> named_brokers_;
   // user-defined hooks
-  hook_uptr hooks_;
+  hook_vector hooks_;
   // actor offering asyncronous IO by managing this singleton instance
   middleman_actor manager_;
-  // heartbeat interval of BASP in milliseconds
-  size_t heartbeat_interval_;
-  // configures whether BASP tries to connect to all known peers
-  bool enable_automatic_connections_;
 };
 
 } // namespace io

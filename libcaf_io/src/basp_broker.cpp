@@ -28,6 +28,7 @@
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/actor_registry.hpp"
@@ -441,7 +442,7 @@ basp_broker::basp_broker(actor_config& cfg)
 
 behavior basp_broker::make_behavior() {
   CAF_LOG_TRACE(CAF_ARG(system().node()));
-  if (system().middleman().enable_automatic_connections()) {
+  if (system().config().middleman_enable_automatic_connections) {
     CAF_LOG_INFO("enable automatic connections");
     // open a random port and store a record for our peers how to
     // connect to this broker directly in the configuration server
@@ -453,7 +454,7 @@ behavior basp_broker::make_behavior() {
          make_message(port.second, std::move(addrs)));
     state.enable_automatic_connections = true;
   }
-  auto heartbeat_interval = system().middleman().heartbeat_interval();
+  auto heartbeat_interval = system().config().middleman_heartbeat_interval;
   if (heartbeat_interval > 0) {
     CAF_LOG_INFO("enable heartbeat" << CAF_ARG(heartbeat_interval));
     send(this, tick_atom::value, heartbeat_interval);

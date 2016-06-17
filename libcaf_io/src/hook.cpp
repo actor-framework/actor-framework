@@ -24,76 +24,73 @@
 namespace caf {
 namespace io {
 
+hook::hook(actor_system& sys) : system_(sys) {
+  // nop
+}
+
 hook::~hook() {
   // nop
 }
 
-void hook::message_received_cb(const node_id& source,
-                               const strong_actor_ptr& from,
-                               const strong_actor_ptr& dest, message_id mid,
-                               const message& msg) {
-  call_next<message_received>(source, from, dest, mid, msg);
+void hook::message_received_cb(const node_id&, const strong_actor_ptr&,
+                               const strong_actor_ptr&, message_id,
+                               const message&) {
+  // nop
 }
 
-void hook::message_sent_cb(const strong_actor_ptr& from, const node_id& dest_node,
-                           const strong_actor_ptr& dest, message_id mid,
-                           const message& payload) {
-  call_next<message_sent>(from, dest_node, dest, mid, payload);
+void hook::message_sent_cb(const strong_actor_ptr&, const node_id&,
+                           const strong_actor_ptr&, message_id,
+                           const message&) {
+  // nop
 }
 
-void hook::message_forwarded_cb(const basp::header& hdr,
-                                const std::vector<char>* payload) {
-  call_next<message_forwarded>(hdr, payload);
+void hook::message_forwarded_cb(const basp::header&, const std::vector<char>*) {
+  // nop
 }
 
-void hook::message_forwarding_failed_cb(const basp::header& hdr,
-                                        const std::vector<char>* payload) {
-  call_next<message_forwarding_failed>(hdr, payload);
+void hook::message_forwarding_failed_cb(const basp::header&,
+                                        const std::vector<char>*) {
+  // nop
 }
 
-void hook::message_sending_failed_cb(const strong_actor_ptr& from,
-                                     const strong_actor_ptr& dest,
-                                     message_id mid,
-                                     const message& payload) {
-  call_next<message_sending_failed>(from, dest, mid, payload);
+void hook::message_sending_failed_cb(const strong_actor_ptr&,
+                                     const strong_actor_ptr&,
+                                     message_id, const message&) {
+  // nop
 }
 
-void hook::actor_published_cb(const strong_actor_ptr& addr,
-                              const std::set<std::string>& ifs,
-                              uint16_t port) {
-  call_next<actor_published>(addr, ifs, port);
+void hook::actor_published_cb(const strong_actor_ptr&,
+                              const std::set<std::string>&, uint16_t) {
+  // nop
 }
 
-void hook::new_remote_actor_cb(const strong_actor_ptr& addr) {
-  call_next<new_remote_actor>(addr);
+void hook::new_remote_actor_cb(const strong_actor_ptr&) {
+  // nop
 }
 
-void hook::new_connection_established_cb(const node_id& node) {
-  call_next<new_connection_established>(node);
+void hook::new_connection_established_cb(const node_id&) {
+  // nop
 }
 
-void hook::new_route_added_cb(const node_id& via, const node_id& node) {
-  call_next<new_route_added>(via, node);
+void hook::new_route_added_cb(const node_id&, const node_id&) {
+  // nop
 }
 
-void hook::connection_lost_cb(const node_id& dest) {
-  call_next<connection_lost>(dest);
+void hook::connection_lost_cb(const node_id&) {
+  // nop
 }
 
-void hook::route_lost_cb(const node_id& hop, const node_id& dest) {
-  call_next<route_lost>(hop, dest);
+void hook::route_lost_cb(const node_id&, const node_id&) {
+  // nop
 }
 
-void hook::invalid_message_received_cb(const node_id& source,
-                                       const strong_actor_ptr& sender,
-                                       actor_id invalid_dest,
-                                       message_id mid,
-                                       const message& msg) {
-  call_next<invalid_message_received>(source, sender, invalid_dest, mid, msg);
+void hook::invalid_message_received_cb(const node_id&, const strong_actor_ptr&,
+                                       actor_id, message_id, const message&) {
+  // nop
 }
 
 void hook::before_shutdown_cb() {
-  call_next<before_shutdown>();
+  // nop
 }
 
 } // namespace io

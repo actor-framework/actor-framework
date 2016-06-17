@@ -57,6 +57,10 @@ public:
           ++i;
       }
     });
+    set_exit_handler([=](exit_msg&) {
+      // ignored, the MM links group nameservers
+      // to this actor for proper shutdown ordering
+    });
   }
 
   void on_exit() override {

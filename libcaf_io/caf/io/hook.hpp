@@ -44,6 +44,8 @@ using hook_uptr = std::unique_ptr<hook>;
 /// Interface to define hooks into the IO layer.
 class hook {
 public:
+  hook(actor_system& sys);
+
   virtual ~hook();
 
   /// Called whenever a message has arrived via the network.
@@ -138,22 +140,15 @@ public:
     dispatch(event<Event>{}, std::forward<Ts>(ts)...);
   }
 
-  /// Forwards an event to the next hook.
-  template <event_type Event, typename... Ts>
-  void call_next(Ts&&... ts) {
-    if (next) {
-      next->dispatch(event<Event>{}, std::forward<Ts>(ts)...);
-    }
+  inline actor_system& system() const {
+    return system_;
   }
-
-  /// Intrusive pointer to the next hook. Hooks are stored as a simple,
-  /// singly linked list.
-  hook_uptr next;
 
 private:
   // ------------ convenience interface based on static dispatching ------------
   template <event_type Id>
   using event = std::integral_constant<event_type, Id>;
+
   CAF_IO_HOOK_DISPATCH(message_received)
   CAF_IO_HOOK_DISPATCH(message_sent)
   CAF_IO_HOOK_DISPATCH(message_forwarded)
@@ -167,6 +162,8 @@ private:
   CAF_IO_HOOK_DISPATCH(route_lost)
   CAF_IO_HOOK_DISPATCH(invalid_message_received)
   CAF_IO_HOOK_DISPATCH(before_shutdown)
+
+  actor_system& system_;
 };
 
 } // namespace io

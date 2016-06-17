@@ -43,6 +43,12 @@ namespace caf {
 /// Configures an `actor_system` on startup.
 class actor_system_config {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using hook_factory = std::function<io::hook* (actor_system&)>;
+
+  using hook_factory_vector = std::vector<hook_factory>;
+
   using module_factory = std::function<actor_system::module* (actor_system&)>;
 
   using module_factory_vector = std::vector<module_factory>;
@@ -63,11 +69,13 @@ public:
 
   using option_ptr = std::unique_ptr<config_option>;
 
-  using options_vector = std::vector<option_ptr>;
+  using option_vector = std::vector<option_ptr>;
+
+  // -- nested classes ---------------------------------------------------------
 
   class opt_group {
   public:
-    opt_group(options_vector& xs, const char* category);
+    opt_group(option_vector& xs, const char* category);
 
     template <class T>
     opt_group& add(T& storage, const char* name, const char* explanation) {
@@ -76,9 +84,11 @@ public:
     }
 
   private:
-    options_vector& xs_;
+    option_vector& xs_;
     const char* cat_;
   };
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   virtual ~actor_system_config();
 
@@ -89,10 +99,20 @@ public:
   actor_system_config(const actor_system_config&) = delete;
   actor_system_config& operator=(const actor_system_config&) = delete;
 
+  // -- modifiers --------------------------------------------------------------
+
+  /// Parses `args` as tuple of strings containing CLI options
+  /// and `ini_stream` as INI formatted input stream.
   actor_system_config& parse(message& args, std::istream& ini_stream);
 
+  /// Parses the CLI options `{argc, argv}` and
+  /// `ini_stream` as INI formatted input stream.
   actor_system_config& parse(int argc, char** argv, std::istream& ini_stream);
 
+  /// Parses the CLI options `{argc, argv}` and
+  /// tries to open `config_file_name` as INI formatted config file.
+  /// The parsers tries to open `caf-application.ini` if `config_file_name`
+  /// is `nullptr`.
   actor_system_config& parse(int argc, char** argv,
                              const char* config_file_name = nullptr);
 
@@ -166,6 +186,21 @@ public:
     return *this;
   }
 
+  /// Adds a factory for a new hook type to the middleman (if loaded).
+  template <class Factory>
+  actor_system_config& add_hook_factory(Factory f) {
+    hook_factories.push_back(f);
+    return *this;
+  }
+
+  /// Adds a hook type to the middleman (if loaded).
+  template <class Hook>
+  actor_system_config& add_hook_type() {
+    return add_hook_factory([](actor_system& sys) -> Hook* {
+      return new Hook(sys);
+    });
+  }
+
   /// Stores whether the help text for this config object was
   /// printed. If set to `true`, the application should not use
   /// this config object to initialize an `actor_system` and
@@ -224,13 +259,14 @@ public:
   actor_factory_map actor_factories;
   module_factory_vector module_factories;
   error_renderer_map error_renderers;
+  hook_factory_vector hook_factories;
 
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 
 protected:
   virtual std::string make_help_text(const std::vector<message::cli_arg>&);
 
-  options_vector custom_options_;
+  option_vector custom_options_;
 
 private:
   static std::string render_sec(uint8_t, atom_value, const message&);
@@ -239,7 +275,7 @@ private:
 
   std::string extract_config_file_name(message& args);
 
-  options_vector options_;
+  option_vector options_;
 };
 
 } // namespace caf

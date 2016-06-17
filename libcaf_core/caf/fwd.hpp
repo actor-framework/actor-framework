@@ -110,6 +110,7 @@ using actor_id = uint64_t;
 
 namespace io {
 
+class hook;
 class broker;
 class middleman;
 

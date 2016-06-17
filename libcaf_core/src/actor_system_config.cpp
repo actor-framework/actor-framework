@@ -31,18 +31,18 @@ namespace caf {
 
 namespace {
 
-using options_vector = actor_system_config::options_vector;
+using option_vector = actor_system_config::option_vector;
 
 class actor_system_config_reader {
 public:
   using sink = std::function<void (size_t, config_value&)>;
 
-  actor_system_config_reader(options_vector& xs, options_vector& ys) {
+  actor_system_config_reader(option_vector& xs, option_vector& ys) {
     add_opts(xs);
     add_opts(ys);
   }
 
-  void add_opts(options_vector& xs) {
+  void add_opts(option_vector& xs) {
     for (auto& x : xs)
       sinks_.emplace(x->full_name(), x->to_sink());
   }
@@ -62,7 +62,7 @@ private:
 
 } // namespace <anonymous>
 
-actor_system_config::opt_group::opt_group(options_vector& xs,
+actor_system_config::opt_group::opt_group(option_vector& xs,
                                           const char* category)
     : xs_(xs),
       cat_(category) {
@@ -276,7 +276,7 @@ actor_system_config& actor_system_config::parse(message& args,
   if (res.opts.count("caf#dump-config")) {
     cli_helptext_printed = true;
     std::string category;
-    options_vector* all_options[] = { &options_, &custom_options_ };
+    option_vector* all_options[] = { &options_, &custom_options_ };
     for (auto& opt_vec : all_options) {
       for (auto& opt : *opt_vec) {
         if (category != opt->category()) {

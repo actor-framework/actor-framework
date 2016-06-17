@@ -103,9 +103,7 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 
 middleman::middleman(actor_system& sys)
     : system_(sys),
-      manager_(unsafe_actor_handle_init),
-      heartbeat_interval_(0),
-      enable_automatic_connections_(false) {
+      manager_(unsafe_actor_handle_init) {
   // nop
 }
 
@@ -155,9 +153,9 @@ uint16_t middleman::publish_local_groups(uint16_t port, const char* in) {
   auto gn = system().spawn<hidden>(group_nameserver);
   try {
     auto result = publish(gn, port, in);
-    add_shutdown_cb([gn] {
-      anon_send_exit(gn, exit_reason::user_shutdown);
-    });
+    // link gn to our manager
+    manager_->link_impl(abstract_actor::establish_link_op,
+                        actor_cast<abstract_actor*>(gn));
     return result;
   }
   catch (std::exception&) {
@@ -272,6 +270,10 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
 
 void middleman::start() {
   CAF_LOG_TRACE("");
+  // create hooks
+  for (auto& f : system().config().hook_factories)
+    hooks_.emplace_back(f(system_));
+  // launch backend
   backend_supervisor_ = backend().make_supervisor();
   if (! backend_supervisor_) {
     // the only backend that returns a `nullptr` is the `test_multiplexer`
@@ -309,10 +311,10 @@ void middleman::stop() {
   backend_supervisor_.reset();
   if (thread_.joinable())
     thread_.join();
-  hooks_.reset();
+  hooks_.clear();
   named_brokers_.clear();
   scoped_actor self{system(), true};
-  self->send_exit(manager_, exit_reason::user_shutdown);
+  self->send_exit(manager_, exit_reason::kill);
   self->wait_for(manager_);
   destroy(manager_);
 }
@@ -338,10 +340,7 @@ void middleman::init(actor_system_config& cfg) {
   // set scheduling parameters for multiplexer
   backend().max_throughput(cfg.scheduler_max_throughput);
   backend().max_consecutive_reads(cfg.middleman_max_consecutive_reads);
-  // set options relevant to BASP
-  heartbeat_interval_ = cfg.middleman_heartbeat_interval;
-  enable_automatic_connections_ = cfg.middleman_enable_automatic_connections;
-  // enable slave mode
+  // give config access to slave mode implementation
   cfg.slave_mode_fun = &middleman::exec_slave_mode;
 }
 
