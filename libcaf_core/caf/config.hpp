@@ -115,6 +115,12 @@
 #  define CAF_DEPRECATED __attribute__((__deprecated__))
 #  define CAF_DEPRECATED_MSG(msg) __attribute__((__deprecated__(msg)))
 #  define CAF_PUSH_WARNINGS
+    _Pragma("GCC diagnostic push")                                             \
+    _Pragma("GCC diagnostic ignored \"-Wfloat-equal\"")                        \
+    _Pragma("GCC diagnostic ignored \"-Wconversion\"")                         \
+    _Pragma("GCC diagnostic ignored \"-Wcast-qual\"")                          \
+    _Pragma("GCC diagnostic ignored \"-Wpedantic\"")                           \
+    _Pragma("GCC diagnostic ignored \"-Wshadow\"")
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
