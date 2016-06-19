@@ -679,6 +679,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
         auto this_ptr = ptr->get();
         CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != 0);
         auto self = static_cast<blocking_actor*>(this_ptr);
+        CAF_SET_LOGGER_SYS(&self->system());
         error rsn;
         std::exception_ptr eptr = nullptr;
         try {
