@@ -110,8 +110,8 @@ namespace python {
 
 class binding {
 public:
-  binding(std::string python_name, bool builtin_type)
-      : python_name_(std::move(python_name)),
+  binding(std::string py_name, bool builtin_type)
+      : python_name_(std::move(py_name)),
         builtin_(builtin_type) {
     // nop
   }
