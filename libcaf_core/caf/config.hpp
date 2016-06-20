@@ -116,6 +116,7 @@
 #  define CAF_DEPRECATED_MSG(msg) __attribute__((__deprecated__(msg)))
 #  define CAF_PUSH_WARNINGS
     _Pragma("GCC diagnostic push")                                             \
+    _Pragma("GCC diagnostic ignored \"-Wpragmas\"")                            \
     _Pragma("GCC diagnostic ignored \"-Wc++14-extensions\"")                   \
     _Pragma("GCC diagnostic ignored \"-Wfloat-equal\"")                        \
     _Pragma("GCC diagnostic ignored \"-Wconversion\"")                         \
