@@ -136,6 +136,14 @@ logger::line_builder::line_builder() : behind_arg_(false) {
   // nop
 }
 
+logger::line_builder& logger::line_builder::operator<<(const std::string& str) {
+  if (! str_.empty())
+    str_ += " ";
+  str_ += str;
+  behind_arg_ = false;
+  return *this;
+}
+
 logger::line_builder& logger::line_builder::operator<<(const char* str) {
   if (! str_.empty())
     str_ += " ";

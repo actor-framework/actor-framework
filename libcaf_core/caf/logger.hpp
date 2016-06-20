@@ -88,6 +88,17 @@ public:
     line_builder();
 
     template <class T>
+    line_builder& operator<<(const T& x) {
+      if (! str_.empty())
+        str_ += " ";
+      std::stringstream ss;
+      ss << x;
+      str_ += ss.str();
+      behind_arg_ = false;
+      return *this;
+    }
+
+    template <class T>
     line_builder& operator<<(const arg_wrapper<T>& x) {
       if (behind_arg_)
         str_ += ", ";
@@ -99,6 +110,8 @@ public:
       behind_arg_ = true;
       return *this;
     }
+
+    line_builder& operator<<(const std::string& str);
 
     line_builder& operator<<(const char* str);
 
