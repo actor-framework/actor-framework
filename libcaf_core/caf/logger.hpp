@@ -123,7 +123,7 @@ public:
   actor_id thread_local_aid(actor_id aid);
 
   /// Writes an entry to the log file.
-  void log(int level, const std::string& class_name,
+  void log(int level, const char* component, const std::string& class_name,
            const char* function_name, const char* file_name,
            int line_num, const std::string& msg);
 
@@ -133,13 +133,15 @@ public:
 
   class trace_helper {
   public:
-    trace_helper(std::string class_name, const char* fun_name,
-                 const char* file_name, int line_num, const std::string& msg);
+    trace_helper(const char* component, std::string class_name,
+                 const char* fun_name, const char* file_name, int line_num,
+                 const std::string& msg);
 
     ~trace_helper();
 
   private:
     logger* parent_;
+    const char* component_;
     std::string class_;
     const char* fun_name_;
     const char* file_name_;
@@ -150,9 +152,11 @@ public:
 
   static logger* current_logger();
 
-  static void log_static(int level, const std::string& class_name,
-                         const char* function_name, const char* file_name,
-                         int line_num, const std::string& msg);
+  static void log_static(int level, const char* component,
+                         const std::string& class_name,
+                         const char* function_name,
+                         const char* file_name, int line_num,
+                         const std::string& msg);
 
   /** @endcond */
 
@@ -229,9 +233,13 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #else // CAF_LOG_LEVEL
 
+#ifndef CAF_LOG_COMPONENT
+#define CAF_LOG_COMPONENT "caf"
+#endif
+
 #define CAF_LOG_IMPL(loglvl, message)                                          \
-  caf::logger::log_static(loglvl, CAF_GET_CLASS_NAME, __func__,                \
-                          __FILE__, __LINE__,                                  \
+  caf::logger::log_static(loglvl, CAF_LOG_COMPONENT, CAF_GET_CLASS_NAME,       \
+                          __func__, __FILE__, __LINE__,                        \
                           (caf::logger::line_builder{} << message).get())
 
 #define CAF_PUSH_AID(aarg)                                                     \
