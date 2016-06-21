@@ -674,6 +674,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   is_registered(! hide);
   if (is_detached()) {
     if (is_blocking()) {
+      home_system().inc_detached_threads();
       std::thread([](strong_actor_ptr ptr) {
         // actor lives in its own thread
         auto this_ptr = ptr->get();
@@ -705,6 +706,7 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
           // simply ignore exception
         }
         self->cleanup(std::move(rsn), self->context());
+        ptr->home_system->dec_detached_threads();
       }, ctrl()).detach();
       return;
     }
