@@ -58,13 +58,13 @@ public:
 
   // -- overridden observers of type_erased_tuple ------------------------------
 
-  size_t size() const override;
+  size_t size() const noexcept override;
 
-  uint32_t type_token() const override;
+  uint32_t type_token() const noexcept override;
 
-  rtti_pair type(size_t pos) const override;
+  rtti_pair type(size_t pos) const noexcept override;
 
-  const void* get(size_t pos) const override;
+  const void* get(size_t pos) const noexcept override;
 
   std::string stringify(size_t pos) const override;
 

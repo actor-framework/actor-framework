@@ -1,10 +1,10 @@
-This document specifies how to contribute code to this repository.
+This document specifies how to contribute code to CAF.
 
 
 Git Workflow
 ============
 
-CAF's git workflow encompasses the following key aspects. (For general git
+Our git workflow encompasses the following key aspects. (For general git
 style guidelines, see <https://github.com/agis-/git-style-guide>.)
 
 - The `master` branch always reflects a *production-ready* state, i.e.,
@@ -87,7 +87,7 @@ public:
 
   // suppress redundant @return if you start the brief description with "Returns"
   /// Returns the name of this instance.
-  inline const std::string& name() const {
+  inline const std::string& name() const noexcept {
     return name_;
   }
 
@@ -100,10 +100,10 @@ public:
   void print_name() const;
 
   /// Does something (maybe).
-  void do_something();
+  void do_something() noexcept;
 
-  /// Does something else.
-  void do_something_else();
+  /// Does something else but is guaranteed to never throw.
+  void do_something_else() noexcept;
 
 private:
   std::string name_;
@@ -156,7 +156,7 @@ void my_class::do_something() {
   }
 }
 
-void my_class::do_something_else() {
+void my_class::do_something_else() noexcept {
   switch (default_name[0]) {
     case 'a':
       // handle a
@@ -272,6 +272,9 @@ General
   This follows the parameter order from the STL.
 
 - Protect single-argument constructors with `explicit` to avoid implicit conversions.
+
+- Use noexcept whenever it makes sense, in particular for move construction and assignment,
+  as long as it does not limit future design space.
 
 Naming
 ------

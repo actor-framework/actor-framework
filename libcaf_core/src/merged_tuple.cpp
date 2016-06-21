@@ -71,21 +71,21 @@ void merged_tuple::load(size_t pos, deserializer& source) {
   data_[p.first]->load(p.second, source);
 }
 
-size_t merged_tuple::size() const {
+size_t merged_tuple::size() const noexcept {
   return mapping_.size();
 }
 
-uint32_t merged_tuple::type_token() const {
+uint32_t merged_tuple::type_token() const noexcept {
   return type_token_;
 }
 
-merged_tuple::rtti_pair merged_tuple::type(size_t pos) const {
+merged_tuple::rtti_pair merged_tuple::type(size_t pos) const noexcept {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
   return data_[p.first]->type(p.second);
 }
 
-const void* merged_tuple::get(size_t pos) const {
+const void* merged_tuple::get(size_t pos) const noexcept {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
   return data_[p.first]->get(p.second);

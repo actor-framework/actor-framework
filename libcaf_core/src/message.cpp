@@ -34,35 +34,34 @@
 
 namespace caf {
 
-message::message(message&& other) : vals_(std::move(other.vals_)) {
+message::message(message&& other) noexcept : vals_(std::move(other.vals_)) {
   // nop
 }
 
-message::message(const data_ptr& ptr) : vals_(ptr) {
+message::message(const data_ptr& ptr) noexcept : vals_(ptr) {
   // nop
 }
 
-message& message::operator=(message&& other) {
+message& message::operator=(message&& other) noexcept {
   vals_.swap(other.vals_);
   return *this;
 }
 
-void message::reset(raw_ptr new_ptr, bool add_ref) {
+message::~message() {
+  // nop
+}
+
+void message::reset(raw_ptr new_ptr, bool add_ref) noexcept {
   vals_.reset(new_ptr, add_ref);
 }
 
-void message::swap(message& other) {
+void message::swap(message& other) noexcept {
   vals_.swap(other.vals_);
 }
 
 void* message::get_mutable(size_t p) {
   CAF_ASSERT(vals_);
   return vals_->get_mutable(p);
-}
-
-const void* message::at(size_t p) const {
-  CAF_ASSERT(vals_);
-  return vals_->get(p);
 }
 
 message message::from(const type_erased_tuple* ptr) {
@@ -84,11 +83,6 @@ message message::copy_from(const type_erased_tuple* ptr) {
   for (size_t i = 0; i < ptr->size(); ++i)
     mb.emplace(ptr->copy(i));
   return mb.move_to_message();
-}
-
-bool message::match_element(size_t pos, uint16_t typenr,
-                            const std::type_info* rtti) const {
-  return vals_->matches(pos, typenr, rtti);
 }
 
 message& message::operator+=(const message& x) {

@@ -46,24 +46,24 @@ public:
   // tell actor_cast this pointer can be null
   static constexpr bool has_non_null_guarantee = false;
 
-  constexpr intrusive_ptr() : ptr_(nullptr) {
+  constexpr intrusive_ptr() noexcept : ptr_(nullptr) {
     // nop
   }
 
-  intrusive_ptr(pointer raw_ptr, bool add_ref = true) {
+  intrusive_ptr(pointer raw_ptr, bool add_ref = true) noexcept {
     set_ptr(raw_ptr, add_ref);
   }
 
-  intrusive_ptr(intrusive_ptr&& other) : ptr_(other.detach()) {
+  intrusive_ptr(intrusive_ptr&& other) noexcept : ptr_(other.detach()) {
     // nop
   }
 
-  intrusive_ptr(const intrusive_ptr& other) {
+  intrusive_ptr(const intrusive_ptr& other) noexcept {
     set_ptr(other.get(), true);
   }
 
   template <class Y>
-  intrusive_ptr(intrusive_ptr<Y> other) : ptr_(other.detach()) {
+  intrusive_ptr(intrusive_ptr<Y> other) noexcept : ptr_(other.detach()) {
     static_assert(std::is_convertible<Y*, T*>::value,
                   "Y* is not assignable to T*");
   }
@@ -92,67 +92,67 @@ public:
     return detach();
   }
 
-  void reset(pointer new_value = nullptr, bool add_ref = true) {
+  void reset(pointer new_value = nullptr, bool add_ref = true) noexcept {
     auto old = ptr_;
     set_ptr(new_value, add_ref);
     if (old)
       intrusive_ptr_release(old);
   }
 
-  intrusive_ptr& operator=(pointer ptr) {
+  intrusive_ptr& operator=(pointer ptr) noexcept {
     reset(ptr);
     return *this;
   }
 
-  intrusive_ptr& operator=(intrusive_ptr other) {
+  intrusive_ptr& operator=(intrusive_ptr other) noexcept {
     swap(other);
     return *this;
   }
 
-  pointer get() const {
+  pointer get() const noexcept {
     return ptr_;
   }
 
-  pointer operator->() const {
+  pointer operator->() const noexcept {
     return ptr_;
   }
 
-  reference operator*() const {
+  reference operator*() const noexcept {
     return *ptr_;
   }
 
-  bool operator!() const {
+  bool operator!() const noexcept {
     return ! ptr_;
   }
 
-  explicit operator bool() const {
+  explicit operator bool() const noexcept {
     return ptr_ != nullptr;
   }
 
-  ptrdiff_t compare(const_pointer ptr) const {
+  ptrdiff_t compare(const_pointer ptr) const noexcept {
     return static_cast<ptrdiff_t>(get() - ptr);
   }
 
-  ptrdiff_t compare(const intrusive_ptr& other) const {
+  ptrdiff_t compare(const intrusive_ptr& other) const noexcept {
     return compare(other.get());
   }
 
-  ptrdiff_t compare(std::nullptr_t) const {
+  ptrdiff_t compare(std::nullptr_t) const noexcept {
     return reinterpret_cast<ptrdiff_t>(get());
   }
 
   template <class C>
-  intrusive_ptr<C> downcast() const {
+  intrusive_ptr<C> downcast() const noexcept {
     return (ptr_) ? dynamic_cast<C*>(get()) : nullptr;
   }
 
   template <class C>
-  intrusive_ptr<C> upcast() const {
+  intrusive_ptr<C> upcast() const noexcept {
     return (ptr_) ? static_cast<C*>(get()) : nullptr;
   }
 
 private:
-  void set_ptr(pointer raw_ptr, bool add_ref) {
+  void set_ptr(pointer raw_ptr, bool add_ref) noexcept {
     ptr_ = raw_ptr;
     if (raw_ptr && add_ref)
       intrusive_ptr_add_ref(raw_ptr);

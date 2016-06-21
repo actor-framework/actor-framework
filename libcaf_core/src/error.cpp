@@ -25,35 +25,19 @@
 
 namespace caf {
 
-error::error() : code_(0), category_(atom("")) {
+error::error() noexcept : code_(0), category_(atom("")) {
   // nop
 }
 
-error::error(uint8_t x, atom_value y, message z)
+error::error(uint8_t x, atom_value y) noexcept : code_(x), category_(y) {
+  // nop
+}
+
+error::error(uint8_t x, atom_value y, message z) noexcept
     : code_(x),
       category_(y),
       context_(std::move(z)) {
   // nop
-}
-
-uint8_t error::code() const {
-  return code_;
-}
-
-atom_value error::category() const {
-  return category_;
-}
-
-message& error::context() {
-  return context_;
-}
-
-const message& error::context() const {
-  return context_;
-}
-
-void error::clear() {
-  code_ = 0;
 }
 
 void serialize(serializer& sink, error& x, const unsigned int) {
@@ -64,7 +48,11 @@ void serialize(deserializer& source, error& x, const unsigned int) {
   source >> x.code_ >> x.category_ >> x.context_;
 }
 
-int error::compare(uint8_t x, atom_value y) const {
+int error::compare(const error& x) const noexcept {
+  return compare(x.code(), x.category());
+}
+
+int error::compare(uint8_t x, atom_value y) const noexcept {
   // exception: all errors with default value are considered no error -> equal
   if (code_ == 0 && x == 0)
     return 0;
@@ -73,10 +61,6 @@ int error::compare(uint8_t x, atom_value y) const {
   if (category_ > y)
     return 1;
   return static_cast<int>(code_) - x;
-}
-
-int error::compare(const error& x) const {
-  return compare(x.code(), x.category());
 }
 
 std::string to_string(const error& x) {

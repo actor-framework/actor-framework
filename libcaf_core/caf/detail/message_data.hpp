@@ -38,84 +38,95 @@ namespace detail {
 
 class message_data : public ref_counted, public type_erased_tuple {
 public:
+  // -- nested types -----------------------------------------------------------
+
+  class cow_ptr;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   message_data() = default;
   message_data(const message_data&) = default;
 
   ~message_data();
 
-  bool shared() const override;
+  // -- pure virtual observers -------------------------------------------------
 
-  // nested types
+  virtual cow_ptr copy() const = 0;
 
-  class cow_ptr {
-  public:
-    cow_ptr() = default;
-    cow_ptr(cow_ptr&&) = default;
-    cow_ptr(const cow_ptr&) = default;
-    cow_ptr& operator=(cow_ptr&&) = default;
-    cow_ptr& operator=(const cow_ptr&) = default;
-
-    template <class T>
-    cow_ptr(intrusive_ptr<T> p) : ptr_(std::move(p)) {
-      // nop
-    }
-
-    inline cow_ptr(message_data* ptr, bool add_ref) : ptr_(ptr, add_ref) {
-      // nop
-    }
-
-    // modifiers
-
-    inline void swap(cow_ptr& other) {
-      ptr_.swap(other.ptr_);
-    }
-
-    inline void reset(message_data* p = nullptr, bool add_ref = true) {
-      ptr_.reset(p, add_ref);
-    }
-
-    inline message_data* release() {
-      return ptr_.detach();
-    }
-
-    inline void unshare() {
-      static_cast<void>(get_unshared());
-    }
-
-    inline message_data* operator->() {
-      return get_unshared();
-    }
-
-    inline message_data& operator*() {
-      return *get_unshared();
-    }
-
-    // observers
-
-    inline const message_data* operator->() const {
-      return ptr_.get();
-    }
-
-    inline const message_data& operator*() const {
-      return *ptr_.get();
-    }
-
-    inline explicit operator bool() const {
-      return static_cast<bool>(ptr_);
-    }
-
-    inline message_data* get() const {
-      return ptr_.get();
-    }
-
-  private:
-    message_data* get_unshared();
-    intrusive_ptr<message_data> ptr_;
-  };
+  // -- observers --------------------------------------------------------------
 
   using type_erased_tuple::copy;
 
-  virtual cow_ptr copy() const = 0;
+  bool shared() const noexcept override;
+};
+
+class message_data::cow_ptr {
+public:
+  // -- constructors, destructors, and assignment operators ------------------
+
+  cow_ptr() noexcept = default;
+  cow_ptr(cow_ptr&&) noexcept = default;
+  cow_ptr(const cow_ptr&) noexcept = default;
+  cow_ptr& operator=(cow_ptr&&) noexcept = default;
+  cow_ptr& operator=(const cow_ptr&) noexcept = default;
+
+  template <class T>
+  cow_ptr(intrusive_ptr<T> p) noexcept : ptr_(std::move(p)) {
+    // nop
+  }
+
+  inline cow_ptr(message_data* ptr, bool add_ref) noexcept
+      : ptr_(ptr, add_ref) {
+    // nop
+  }
+
+  // -- modifiers ------------------------------------------------------------
+
+  inline void swap(cow_ptr& other) noexcept {
+    ptr_.swap(other.ptr_);
+  }
+
+  inline void reset(message_data* p = nullptr, bool add_ref = true) noexcept {
+    ptr_.reset(p, add_ref);
+  }
+
+  inline message_data* release() noexcept {
+    return ptr_.detach();
+  }
+
+  inline void unshare() {
+    static_cast<void>(get_unshared());
+  }
+
+  inline message_data* operator->() {
+    return get_unshared();
+  }
+
+  inline message_data& operator*() {
+    return *get_unshared();
+  }
+
+  // -- observers ------------------------------------------------------------
+
+  inline const message_data* operator->() const noexcept {
+    return ptr_.get();
+  }
+
+  inline const message_data& operator*() const noexcept {
+    return *ptr_.get();
+  }
+
+  inline explicit operator bool() const noexcept {
+    return static_cast<bool>(ptr_);
+  }
+
+  inline message_data* get() const noexcept {
+    return ptr_.get();
+  }
+
+private:
+  message_data* get_unshared();
+  intrusive_ptr<message_data> ptr_;
 };
 
 } // namespace detail

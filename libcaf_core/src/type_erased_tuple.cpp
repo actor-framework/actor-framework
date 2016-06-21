@@ -57,7 +57,7 @@ void type_erased_tuple::save(serializer& sink) const {
 }
 
 bool type_erased_tuple::matches(size_t pos, uint16_t nr,
-                                const std::type_info* ptr) const {
+                                const std::type_info* ptr) const noexcept {
   CAF_ASSERT(pos < size());
   auto tp = type(pos);
   if (tp.first != nr)

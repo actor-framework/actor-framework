@@ -61,20 +61,20 @@ public:
   // -- pure virtual observers -------------------------------------------------
 
   /// Returns the size of this tuple.
-  virtual size_t size() const = 0;
+  virtual size_t size() const noexcept = 0;
 
   /// Returns whether multiple references to this tuple exist.
-  virtual bool shared() const = 0;
+  virtual bool shared() const noexcept = 0;
 
   /// Returns a type hint for the element types.
-  virtual uint32_t type_token() const = 0;
+  virtual uint32_t type_token() const noexcept = 0;
 
   /// Returns the type number and `std::type_info` object for
   /// the element at position `pos`.
-  virtual rtti_pair type(size_t pos) const = 0;
+  virtual rtti_pair type(size_t pos) const noexcept = 0;
 
   /// Returns the element at position `pos`.
-  virtual const void* get(size_t pos) const = 0;
+  virtual const void* get(size_t pos) const noexcept = 0;
 
   /// Returns a string representation of the element at position `pos`.
   virtual std::string stringify(size_t pos) const = 0;
@@ -95,19 +95,19 @@ public:
   /// Saves the content of the tuple to `sink`.
   void save(serializer& sink) const;
 
-  /// Checks whether the type of the stored value matches
-  /// the type nr and type info object.
-  bool matches(size_t pos, uint16_t tnr, const std::type_info* tinf) const;
+  /// Checks whether the type of the stored value at position `pos`
+  /// matches type number `n` and run-time type information `p`.
+  bool matches(size_t pos, uint16_t n, const std::type_info* p) const  noexcept;
 
   // -- inline observers -------------------------------------------------------
 
   /// Returns the type number for the element at position `pos`.
-  inline uint16_t type_nr(size_t pos) const {
+  inline uint16_t type_nr(size_t pos) const noexcept {
     return type(pos).first;
   }
 
   /// Checks whether the type of the stored value matches `rtti`.
-  inline bool matches(size_t pos, const rtti_pair& rtti) const {
+  inline bool matches(size_t pos, const rtti_pair& rtti) const noexcept {
     return matches(pos, rtti.first, rtti.second);
   }
 };
@@ -162,23 +162,23 @@ public:
 
   // -- overridden observers ---------------------------------------------------
 
-  size_t size() const override {
+  size_t size() const noexcept override {
     return sizeof...(Ts);
   }
 
-  bool shared() const override {
+  bool shared() const noexcept override {
     return false;
   }
 
-  uint32_t type_token() const override {
+  uint32_t type_token() const noexcept override {
     return make_type_token<Ts...>();
   }
 
-  rtti_pair type(size_t pos) const override {
+  rtti_pair type(size_t pos) const noexcept override {
     return ptrs_[pos]->type();
   }
 
-  const void* get(size_t pos) const override {
+  const void* get(size_t pos) const noexcept override {
     return ptrs_[pos]->get();
   }
 

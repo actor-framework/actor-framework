@@ -62,12 +62,14 @@ namespace caf {
 /// rendering error messages via `actor_system::render(const error&)`.
 class error : detail::comparable<error> {
 public:
-  error();
-  error(error&&) = default;
-  error(const error&) = default;
-  error& operator=(error&&) = default;
-  error& operator=(const error&) = default;
-  error(uint8_t code, atom_value category, message context = message{});
+  error() noexcept;
+  error(error&&) noexcept = default;
+  error(const error&) noexcept = default;
+  error& operator=(error&&) noexcept = default;
+  error& operator=(const error&) noexcept = default;
+
+  error(uint8_t code, atom_value category) noexcept;
+  error(uint8_t code, atom_value category, message msg) noexcept;
 
   template <class E,
             class = typename std::enable_if<
@@ -81,16 +83,24 @@ public:
   }
 
   /// Returns the category-specific error code, whereas `0` means "no error".
-  uint8_t code() const;
+  inline uint8_t code() const noexcept {
+    return code_;
+  }
 
   /// Returns the category of this error.
-  atom_value category() const;
+  inline atom_value category() const noexcept {
+    return category_;
+  }
 
   /// Returns optional context information to this error.
-  message& context();
+  inline message& context() noexcept {
+    return context_;
+  }
 
   /// Returns optional context information to this error.
-  const message& context() const;
+  inline const message& context() const noexcept {
+    return context_;
+  }
 
   /// Returns `code() != 0`.
   inline explicit operator bool() const noexcept {
@@ -103,18 +113,18 @@ public:
   }
 
   /// Sets the error code to 0.
-  void clear();
-
-  /// Creates a flag storing the context size and the error code.
-  uint32_t compress_code_and_size() const;
+  inline void clear() noexcept {
+    code_ = 0;
+    context_.reset();
+  }
 
   friend void serialize(serializer& sink, error& x, const unsigned int);
 
   friend void serialize(deserializer& source, error& x, const unsigned int);
 
-  int compare(uint8_t code, atom_value category) const;
+  int compare(const error&) const noexcept;
 
-  int compare(const error&) const;
+  int compare(uint8_t code, atom_value category) const noexcept;
 
 private:
   uint8_t code_;

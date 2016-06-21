@@ -50,24 +50,26 @@ public:
   // tell actor_cast this pointer can be null
   static constexpr bool has_non_null_guarantee = false;
 
-  constexpr weak_intrusive_ptr() : ptr_(nullptr) {
+  constexpr weak_intrusive_ptr() noexcept : ptr_(nullptr) {
     // nop
   }
 
-  weak_intrusive_ptr(pointer raw_ptr, bool add_ref = true) {
+  weak_intrusive_ptr(pointer raw_ptr, bool add_ref = true) noexcept {
     set_ptr(raw_ptr, add_ref);
   }
 
-  weak_intrusive_ptr(weak_intrusive_ptr&& other) : ptr_(other.detach()) {
+  weak_intrusive_ptr(weak_intrusive_ptr&& other) noexcept
+      : ptr_(other.detach()) {
     // nop
   }
 
-  weak_intrusive_ptr(const weak_intrusive_ptr& other) {
+  weak_intrusive_ptr(const weak_intrusive_ptr& other) noexcept {
     set_ptr(other.get(), true);
   }
 
   template <class Y>
-  weak_intrusive_ptr(weak_intrusive_ptr<Y> other) : ptr_(other.detach()) {
+  weak_intrusive_ptr(weak_intrusive_ptr<Y> other) noexcept
+      : ptr_(other.detach()) {
     static_assert(std::is_convertible<Y*, T*>::value,
                   "Y* is not assignable to T*");
   }
@@ -103,50 +105,50 @@ public:
       intrusive_ptr_release_weak(old);
   }
 
-  weak_intrusive_ptr& operator=(pointer ptr) {
+  weak_intrusive_ptr& operator=(pointer ptr) noexcept {
     reset(ptr);
     return *this;
   }
 
-  weak_intrusive_ptr& operator=(weak_intrusive_ptr other) {
+  weak_intrusive_ptr& operator=(weak_intrusive_ptr other) noexcept {
     swap(other);
     return *this;
   }
 
-  pointer get() const {
+  pointer get() const noexcept {
     return ptr_;
   }
 
-  pointer operator->() const {
+  pointer operator->() const noexcept {
     return ptr_;
   }
 
-  reference operator*() const {
+  reference operator*() const noexcept {
     return *ptr_;
   }
 
-  bool operator!() const {
+  bool operator!() const noexcept {
     return ! ptr_;
   }
 
-  explicit operator bool() const {
+  explicit operator bool() const noexcept {
     return static_cast<bool>(ptr_);
   }
 
-  ptrdiff_t compare(const_pointer ptr) const {
+  ptrdiff_t compare(const_pointer ptr) const noexcept {
     return static_cast<ptrdiff_t>(get() - ptr);
   }
 
-  ptrdiff_t compare(const weak_intrusive_ptr& other) const {
+  ptrdiff_t compare(const weak_intrusive_ptr& other) const noexcept {
     return compare(other.get());
   }
 
-  ptrdiff_t compare(std::nullptr_t) const {
+  ptrdiff_t compare(std::nullptr_t) const noexcept {
     return reinterpret_cast<ptrdiff_t>(get());
   }
 
   /// Tries to upgrade this weak reference to a strong reference.
-  intrusive_ptr<T> lock() const {
+  intrusive_ptr<T> lock() const noexcept {
     if (! ptr_ || ! intrusive_ptr_upgrade_weak(ptr_))
       return nullptr;
     // reference count already increased by intrusive_ptr_upgrade_weak
@@ -156,14 +158,14 @@ public:
   /// Tries to upgrade this weak reference to a strong reference.
   /// Returns a pointer with increased strong reference count
   /// on success, `nullptr` otherwise.
-  pointer get_locked() const {
+  pointer get_locked() const noexcept {
     if (! ptr_ || ! intrusive_ptr_upgrade_weak(ptr_))
       return nullptr;
     return ptr_;
   }
 
 private:
-  void set_ptr(pointer raw_ptr, bool add_ref) {
+  void set_ptr(pointer raw_ptr, bool add_ref) noexcept {
     ptr_ = raw_ptr;
     if (raw_ptr && add_ref)
       intrusive_ptr_add_weak_ref(raw_ptr);

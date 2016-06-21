@@ -62,21 +62,20 @@ void dynamic_message_data::load(size_t pos, deserializer& source) {
   elements_[pos]->load(source);
 }
 
-size_t dynamic_message_data::size() const {
+size_t dynamic_message_data::size() const noexcept {
   return elements_.size();
 }
 
-uint32_t dynamic_message_data::type_token() const {
+uint32_t dynamic_message_data::type_token() const noexcept {
   return type_token_;
 }
 
-auto dynamic_message_data::type(size_t pos) const -> rtti_pair {
+auto dynamic_message_data::type(size_t pos) const noexcept -> rtti_pair {
   CAF_ASSERT(pos < size());
   return elements_[pos]->type();
 }
 
-const void* dynamic_message_data::get(size_t pos) const {
-  CAF_ASSERT(pos < size());
+const void* dynamic_message_data::get(size_t pos) const noexcept {
   CAF_ASSERT(pos < size());
   return elements_[pos]->get();
 }

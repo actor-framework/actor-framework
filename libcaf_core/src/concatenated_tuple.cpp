@@ -69,21 +69,21 @@ void concatenated_tuple::load(size_t pos, deserializer& source) {
   selected.first->load(selected.second, source);
 }
 
-size_t concatenated_tuple::size() const {
+size_t concatenated_tuple::size() const noexcept {
   return size_;
 }
 
-uint32_t concatenated_tuple::type_token() const {
+uint32_t concatenated_tuple::type_token() const noexcept {
   return type_token_;
 }
 
-message_data::rtti_pair concatenated_tuple::type(size_t pos) const {
+message_data::rtti_pair concatenated_tuple::type(size_t pos) const noexcept {
   CAF_ASSERT(pos < size());
   auto selected = select(pos);
   return selected.first->type(selected.second);
 }
 
-const void* concatenated_tuple::get(size_t pos) const {
+const void* concatenated_tuple::get(size_t pos) const noexcept {
   CAF_ASSERT(pos < size());
   auto selected = select(pos);
   return selected.first->get(selected.second);

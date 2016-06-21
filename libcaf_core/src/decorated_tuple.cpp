@@ -64,19 +64,20 @@ void decorated_tuple::load(size_t pos, deserializer& source) {
   return decorated_->load(mapping_[pos], source);
 }
 
-size_t decorated_tuple::size() const {
+size_t decorated_tuple::size() const noexcept {
   return mapping_.size();
 }
 
-uint32_t decorated_tuple::type_token() const {
+uint32_t decorated_tuple::type_token() const noexcept {
   return type_token_;
 }
 
-message_data::rtti_pair decorated_tuple::type(size_t pos) const {
+message_data::rtti_pair decorated_tuple::type(size_t pos) const noexcept {
+  CAF_ASSERT(pos < size());
   return decorated_->type(mapping_[pos]);
 }
 
-const void* decorated_tuple::get(size_t pos) const {
+const void* decorated_tuple::get(size_t pos) const noexcept {
   CAF_ASSERT(pos < size());
   return decorated_->get(mapping_[pos]);
 }

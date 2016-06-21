@@ -157,7 +157,7 @@ public:
     return data_;
   }
 
-  size_t size() const override {
+  size_t size() const noexcept override {
     return sizeof...(Ts);
   }
 
@@ -165,7 +165,7 @@ public:
     return message_data::cow_ptr(new tuple_vals(*this), false);
   }
 
-  const void* get(size_t pos) const override {
+  const void* get(size_t pos) const noexcept override {
     CAF_ASSERT(pos < size());
     return tup_ptr_access<0, sizeof...(Ts)>::get(pos, data_);
   }
@@ -187,11 +187,11 @@ public:
     return tup_ptr_access<0, sizeof...(Ts)>::serialize(pos, data_, source);
   }
 
-  uint32_t type_token() const override {
+  uint32_t type_token() const noexcept override {
     return make_type_token<Ts...>();
   }
 
-  rtti_pair type(size_t pos) const override {
+  rtti_pair type(size_t pos) const noexcept override {
     return types_[pos];
   }
 
