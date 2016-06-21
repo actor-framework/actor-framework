@@ -142,22 +142,35 @@ A SNocs workspace is provided by GitHub user
 
 ## Scientific Use
 
-If you use CAF in a scientific context, please use the following citation:
+If you use CAF in a scientific context, please use one of the following citations:
 
 ```latex
-@inproceedings{chs-ccafs-14,
-  author = {Dominik Charousset and Raphael Hiesgen and Thomas C. Schmidt},
-  title = {{CAF - The C++ Actor Framework for Scalable and Resource-efficient Applications}},
-  booktitle = {Proc. of the 5th ACM SIGPLAN Conf. on Systems, Programming, and Applications (SPLASH '14), Workshop AGERE!},
+@inproceedings{cshw-nassp-13,
+  author = {Dominik Charousset and Thomas C. Schmidt and Raphael Hiesgen and Matthias W{\"a}hlisch},
+  title = {{Native Actors -- A Scalable Software Platform for Distributed, Heterogeneous Environments}},
+  booktitle = {Proc. of the 4rd ACM SIGPLAN Conference on Systems, Programming, and Applications (SPLASH '13), Workshop AGERE!},
+  pages = {87--96},
   month = {Oct.},
-  year = {2014},
+  year = {2013},
   publisher = {ACM},
-  address = {New York, NY, USA},
-  location = {Portland, OR},
+  address = {New York, NY, USA}
+}
+
+@article{chs-rapc-16,
+  author = {Dominik Charousset and Raphael Hiesgen and Thomas C. Schmidt},
+  title = {{Revisiting Actor Programming in C++}},
+  journal = {Computer Languages, Systemsa \& Structures},
+  volume = {45},
+  year = {2016},
+  month = "April",
+  pages = {105--131},
+  publisher = {Elsevier}
 }
 ```
 
-You will find the paper online at http://dx.doi.org/10.1145/2687357.2687363
+You can find the papers online at
+http://dx.doi.org/10.1145/2541329.2541336 and
+http://dx.doi.org/10.1016/j.cl.2016.01.002.
 
 [obs]:
 https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf
