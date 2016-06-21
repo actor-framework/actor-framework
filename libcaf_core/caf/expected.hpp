@@ -1,0 +1,372 @@
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright (C) 2011 - 2015                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
+
+#ifndef CAF_EXPECTED_HPP
+#define CAF_EXPECTED_HPP
+
+#include "caf/config.hpp"
+
+#include <new>
+#include <memory>
+#include <type_traits>
+
+#include "caf/unit.hpp"
+#include "caf/error.hpp"
+
+namespace caf {
+
+/// Represents the result of a computation which can either complete
+/// successfully with an instance of type `T` or fail with an `error`.
+/// @tparam The type of the result.
+template <typename T>
+class expected {
+public:
+  // -- static member variables ------------------------------------------------
+
+  /// Stores whether move construct and move assign never throw.
+  static constexpr bool nothrow_move
+    = std::is_nothrow_move_constructible<T>::value
+      && std::is_nothrow_move_assignable<T>::value;
+
+  /// Stores whether copy construct and copy assign never throw.
+  static constexpr bool nothrow_copy
+    = std::is_nothrow_copy_constructible<T>::value
+      && std::is_nothrow_copy_assignable<T>::value;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  expected(T&& x) noexcept(nothrow_move) : engaged_(true) {
+    new (&value_) T(std::move(x));
+  }
+
+  expected(const T& x) noexcept(nothrow_copy) : engaged_(true) {
+    new (&value_) T(x);
+  }
+
+  expected(caf::error e) noexcept : engaged_(false) {
+    new (&error_) caf::error{std::move(e)};
+  }
+
+  expected(const expected& other) noexcept(nothrow_copy) {
+    construct(other);
+  }
+
+  expected(expected&& other) noexcept(nothrow_move) {
+    construct(std::move(other));
+  }
+
+  ~expected() {
+    destroy();
+  }
+
+  expected& operator=(const expected& other) noexcept(nothrow_copy) {
+    if (engaged_ && other.engaged_)
+      value_ = other.value_;
+    else if (! engaged_ && ! other.engaged_)
+      error_ = other.error_;
+    else {
+      destroy();
+      construct(other);
+    }
+    return *this;
+  }
+
+  expected& operator=(expected&& other) noexcept(nothrow_move) {
+    if (engaged_ && other.engaged_)
+      value_ = std::move(other.value_);
+    else if (! engaged_ && ! other.engaged_)
+      error_ = std::move(other.error_);
+    else {
+      destroy();
+      construct(std::move(other));
+    }
+    return *this;
+  }
+
+  expected& operator=(const T& x) noexcept(nothrow_copy) {
+    if (engaged_) {
+      value_ = x;
+    } else {
+      destroy();
+      engaged_ = true;
+      new (&value_) T(x);
+    }
+    return *this;
+  }
+
+  expected& operator=(T&& x) noexcept(nothrow_move) {
+    if (engaged_) {
+      value_ = std::move(x);
+    } else {
+      destroy();
+      engaged_ = true;
+      new (&value_) T(std::move(x));
+    }
+    return *this;
+  }
+
+  expected& operator=(caf::error e) noexcept {
+    if (! engaged_)
+      error_ = std::move(e);
+    else {
+      destroy();
+      engaged_ = false;
+      new (&value_) caf::error(std::move(e));
+    }
+    return *this;
+  }
+
+  // -- modifiers --------------------------------------------------------------
+
+  /// @copydoc cvalue
+  T& value() noexcept {
+    CAF_ASSERT(engaged_);
+    return value_;
+  }
+
+  /// @copydoc cvalue
+  T& operator*() noexcept {
+    return value();
+  }
+
+  /// @copydoc cvalue
+  T* operator->() noexcept {
+    return &value();
+  }
+
+  /// @copydoc cerror
+  caf::error& error() noexcept {
+    CAF_ASSERT(! engaged_);
+    return error_;
+  }
+
+  // -- observers --------------------------------------------------------------
+
+  /// Returns the contained value.
+  /// @pre `engaged() == true`.
+  const T& cvalue() const noexcept {
+    CAF_ASSERT(engaged_);
+    return value_;
+  }
+
+  /// @copydoc cvalue
+  const T& value() const noexcept {
+    CAF_ASSERT(engaged_);
+    return value_;
+  }
+
+  /// @copydoc cvalue
+  const T& operator*() const noexcept {
+    return value();
+  }
+
+  /// @copydoc cvalue
+  const T* operator->() const noexcept {
+    return &value();
+  }
+
+  /// @copydoc engaged
+  explicit operator bool() const noexcept {
+    return engaged();
+  }
+
+  /// Returns `true` if the object holds a value (is engaged).
+  bool engaged() const noexcept {
+    return engaged_;
+  }
+
+  /// Returns the contained error.
+  /// @pre `engaged() == false`.
+  const caf::error& cerror() const noexcept {
+    CAF_ASSERT(! engaged_);
+    return error_;
+  }
+
+  /// @copydoc cerror
+  const caf::error& error() const noexcept {
+    CAF_ASSERT(! engaged_);
+    return error_;
+  }
+
+private:
+  void construct(expected&& other) noexcept(nothrow_move) {
+    if (other.engaged_)
+      new (&value_) T(std::move(other.value_));
+    else
+      new (&error_) caf::error(std::move(other.error_));
+    engaged_ = other.engaged_;
+  }
+
+  void construct(const expected& other) noexcept(nothrow_copy) {
+    if (other.engaged_)
+      new (&value_) T(other.value_);
+    else
+      new (&error_) caf::error(other.error_);
+    engaged_ = other.engaged_;
+  }
+
+  void destroy() {
+    if (engaged_)
+      value_.~T();
+    else
+      error_.~error();
+  }
+
+  bool engaged_;
+
+  union {
+    T value_;
+    caf::error error_;
+  };
+};
+
+/// @relates expected
+template <class T>
+auto operator==(const expected<T>& x, const expected<T>& y)
+-> decltype(*x == *y) {
+  return x && y ? *x == *y : (! x && ! y ? x.error() == y.error() : false);
+}
+
+/// @relates expected
+template <class T, class U>
+auto operator==(const expected<T>& x, const U& y) -> decltype(*x == y) {
+  return x ? *x == y : false;
+}
+
+/// @relates expected
+template <class T, class U>
+auto operator==(const T& x, const expected<U>& y) -> decltype(x == *y) {
+  return y == x;
+}
+
+/// @relates expected
+template <class T>
+bool operator==(const expected<T>& x, const error& y) {
+  return x ? false : x.error() == y;
+}
+
+/// @relates expected
+template <class T>
+bool operator==(const error& x, const expected<T>& y) {
+  return y == x;
+}
+
+/// @relates expected
+template <class T, class E>
+enable_if_has_make_error_t<E, bool> operator==(const expected<T>& x, E y) {
+  return x == make_error(y);
+}
+
+/// @relates expected
+template <class T, class E>
+enable_if_has_make_error_t<E, bool> operator==(E x, const expected<T>& y) {
+  return y == make_error(x);
+}
+
+/// @relates expected
+template <class T>
+auto operator!=(const expected<T>& x, const expected<T>& y)
+-> decltype(*x == *y) {
+  return ! (x == y);
+}
+
+/// @relates expected
+template <class T, class U>
+auto operator!=(const expected<T>& x, const U& y) -> decltype(*x == y) {
+  return ! (x == y);
+}
+
+/// @relates expected
+template <class T, class U>
+auto operator!=(const T& x, const expected<U>& y) -> decltype(x == *y) {
+  return ! (x == y);
+}
+
+/// @relates expected
+template <class T>
+bool operator!=(const expected<T>& x, const error& y) {
+  return ! (x == y);
+}
+
+/// @relates expected
+template <class T>
+bool operator!=(const error& x, const expected<T>& y) {
+  return ! (x == y);
+}
+
+/// @relates expected
+template <class T, class E>
+enable_if_has_make_error_t<E, bool> operator!=(const expected<T>& x, E y) {
+  return ! (x == y);
+}
+
+/// @relates expected
+template <class T, class E>
+enable_if_has_make_error_t<E, bool> operator!=(E x, const expected<T>& y) {
+  return ! (x == y);
+}
+
+/// The pattern `expected<void>` shall be used for functions that may generate
+/// an error but would otherwise return `bool`.
+template <>
+class expected<void> {
+public:
+  expected() = default;
+
+  expected(unit_t) noexcept {
+    // nop
+  }
+
+  expected(caf::error e) noexcept : error_(std::move(e)) {
+    // nop
+  }
+
+  expected(const expected& other)  noexcept : error_(other.error_) {
+    // nop
+  }
+
+  expected(expected&& other) noexcept : error_(std::move(other.error_)) {
+    // nop
+  }
+
+  expected& operator=(const expected& other) noexcept {
+    error_ = other.error_;
+    return *this;
+  }
+
+  expected& operator=(expected&& other) noexcept {
+    error_ = std::move(other.error_);
+    return *this;
+  }
+
+  explicit operator bool() const {
+    return ! error_;
+  }
+
+  const caf::error& error() const {
+    return error_;
+  }
+
+private:
+  caf::error error_;
+};
+
+} // namespace caf
+
+#endif

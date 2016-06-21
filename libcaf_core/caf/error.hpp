@@ -30,6 +30,31 @@
 
 namespace caf {
 
+class error;
+
+/// Evaluates to true if `T` is an enum with a free function
+/// `make_error` for converting it to an `error`.
+template <class T>
+struct has_make_error {
+private:
+  template <class U>
+  static auto test_make_error(U* x) -> decltype(make_error(*x));
+
+  template <class U>
+  static auto test_make_error(...) -> void;
+
+  using type = decltype(test_make_error<T>(nullptr));
+
+public:
+  static constexpr bool value = std::is_enum<T>::value
+                                && std::is_same<error, type>::value;
+};
+
+/// Convenience alias for `std::enable_if<has_make_error<T>::value, U>::type`.
+template <class T, class U = void>
+using enable_if_has_make_error_t
+  = typename std::enable_if<has_make_error<T>::value, U>::type;
+
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
 /// the C++ standard library, this type is serializable. It consists of an
@@ -71,13 +96,7 @@ public:
   error(uint8_t code, atom_value category) noexcept;
   error(uint8_t code, atom_value category, message msg) noexcept;
 
-  template <class E,
-            class = typename std::enable_if<
-                      std::is_same<
-                        decltype(make_error(std::declval<const E&>())),
-                        error
-                      >::value
-                    >::type>
+  template <class E, class = enable_if_has_make_error_t<E>>
   error(E error_value) : error(make_error(error_value)) {
     // nop
   }
@@ -133,49 +152,25 @@ private:
 };
 
 /// @relates error
-template <class E,
-          class = typename std::enable_if<
-                    std::is_same<
-                      decltype(make_error(std::declval<const E&>())),
-                      error
-                    >::value
-                  >::type>
+template <class E, class = enable_if_has_make_error_t<E>>
 bool operator==(const error& x, E y) {
   return x == make_error(y);
 }
 
 /// @relates error
-template <class E,
-          class = typename std::enable_if<
-                    std::is_same<
-                      decltype(make_error(std::declval<const E&>())),
-                      error
-                    >::value
-                  >::type>
+template <class E, class = enable_if_has_make_error_t<E>>
 bool operator==(E x, const error& y) {
   return make_error(x) == y;
 }
 
 /// @relates error
-template <class E,
-          class = typename std::enable_if<
-                    std::is_same<
-                      decltype(make_error(std::declval<const E&>())),
-                      error
-                    >::value
-                  >::type>
+template <class E, class = enable_if_has_make_error_t<E>>
 bool operator!=(const error& x, E y) {
   return ! (x == y);
 }
 
 /// @relates error
-template <class E,
-          class = typename std::enable_if<
-                    std::is_same<
-                      decltype(make_error(std::declval<const E&>())),
-                      error
-                    >::value
-                  >::type>
+template <class E, class = enable_if_has_make_error_t<E>>
 bool operator!=(E x, const error& y) {
   return ! (x == y);
 }
