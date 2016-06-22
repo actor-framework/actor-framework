@@ -21,6 +21,7 @@
 #define CAF_TIMEOUT_DEFINITION_HPP
 
 #include <functional>
+#include <type_traits>
 
 #include "caf/duration.hpp"
 
@@ -37,12 +38,36 @@ behavior_impl* new_default_behavior(duration d, std::function<void()> fun);
 template <class F>
 struct timeout_definition {
   static constexpr bool may_have_timeout = true;
+
   duration timeout;
+
   F handler;
+
   detail::behavior_impl* as_behavior_impl() const {
     return detail::new_default_behavior(timeout, handler);
   }
+
+  timeout_definition() = default;
+  timeout_definition(timeout_definition&&) = default;
+  timeout_definition(const timeout_definition&) = default;
+
+  timeout_definition(duration d, F&& f) : timeout(d), handler(std::move(f)) {
+    // nop
+  }
+
+  template <class U>
+  timeout_definition(const timeout_definition<U>& other)
+      : timeout(other.timeout),
+        handler(other.handler) {
+    // nop
+  }
 };
+
+template <class T>
+struct is_timeout_definition : std::false_type {};
+
+template <class T>
+struct is_timeout_definition<timeout_definition<T>> : std::true_type {};
 
 using generic_timeout_definition = timeout_definition<std::function<void()>>;
 

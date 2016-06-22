@@ -164,7 +164,7 @@ public:
 
   template <class T, class... Ts>
   typed_behavior(T x, Ts... xs) {
-    set(detail::make_behavior(x, xs...));
+    set(detail::make_behavior(std::move(x), std::move(xs)...));
   }
 
   struct unsafe_init { };
@@ -209,7 +209,12 @@ private:
 
   template <class... Ts>
   void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {
-    using mpi = detail::type_list<typename detail::deduce_mpi<Ts>::type...>;
+    using impl = detail::default_behavior_impl<std::tuple<Ts...>>;
+    using mpi =
+      typename detail::tl_map<
+        typename impl::cases,
+        detail::deduce_mpi
+      >::type;
     static_assert(detail::tl_is_distinct<mpi>::value,
                   "multiple handler defintions found");
     detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();

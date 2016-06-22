@@ -632,6 +632,22 @@ struct tl_pop_back<empty_type_list> {
   using type = empty_type_list;
 };
 
+// list replace_back()
+
+/// Creates a new list with all but the last element of `List`
+/// and append `T` to the new list.
+template <class List, class Back, class Intermediate = type_list<>>
+struct tl_replace_back;
+
+template <class T0, class T1, class... Ts, class Back, class... Us>
+struct tl_replace_back<type_list<T0, T1, Ts...>, Back, type_list<Us...>>
+    : tl_replace_back<type_list<T1, Ts...>, Back, type_list<Us..., T0>> {};
+
+template <class T, class Back, class... Us>
+struct tl_replace_back<type_list<T>, Back, type_list<Us...>> {
+  using type = type_list<Us..., Back>;
+};
+
 // type at(size_t)
 
 template <size_t N, class... E>
@@ -1037,7 +1053,7 @@ template <class ListA, class ListB>
 struct tl_subset_of<ListA, ListB, false> : std::false_type {};
 
 template <class T, class... Ts, class List>
-struct tl_subset_of<type_list<T, Ts...>, List> 
+struct tl_subset_of<type_list<T, Ts...>, List>
     : tl_subset_of<type_list<Ts...>, List, tl_contains<List, T>::value> {};
 
 /// Tests whether ListA contains the same elements as ListB

@@ -111,6 +111,14 @@ get_right_indices(const T&) {
   return {};
 }
 
+template <long First, long Last, long... Is>
+struct il_range : il_range<First + 1, Last, Is..., First> {};
+
+template <long Last, long... Is>
+struct il_range<Last, Last, Is...> {
+  using type = int_list<Is...>;
+};
+
 } // namespace detail
 } // namespace caf
 
