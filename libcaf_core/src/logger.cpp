@@ -136,6 +136,14 @@ logger::line_builder::line_builder() : behind_arg_(false) {
   // nop
 }
 
+logger::line_builder& logger::line_builder::operator<<(const std::string& str) {
+  if (! str_.empty())
+    str_ += " ";
+  str_ += str;
+  behind_arg_ = false;
+  return *this;
+}
+
 logger::line_builder& logger::line_builder::operator<<(const char* str) {
   if (! str_.empty())
     str_ += " ";
@@ -211,9 +219,10 @@ actor_id logger::thread_local_aid(actor_id aid) {
   return 0; // was empty before
 }
 
-void logger::log(int level, const std::string& class_name,
-                 const char* function_name, const char* c_full_file_name,
-                 int line_num, const std::string& msg) {
+void logger::log(int level, const char* component,
+                 const std::string& class_name, const char* function_name,
+                 const char* c_full_file_name, int line_num,
+                 const std::string& msg) {
   CAF_ASSERT(level >= 0 && level <= 4);
   std::string file_name;
   std::string full_file_name = c_full_file_name;
@@ -230,7 +239,7 @@ void logger::log(int level, const std::string& class_name,
   auto t0 = std::chrono::high_resolution_clock::now().time_since_epoch();
   auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t0).count();
   std::ostringstream line;
-  line << ms << " " << log_level_name[level] << " "
+  line << ms << " " << component << " " << log_level_name[level] << " "
        << "actor" << thread_local_aid() << " " << std::this_thread::get_id()
        << " " << class_name << " " << function_name << " " << file_name << ":"
        << line_num << " " << msg << std::endl;
@@ -245,14 +254,15 @@ logger* logger::current_logger() {
   return get_current_logger();
 }
 
-void logger::log_static(int level, const std::string& class_name,
-                       const char* function_name, const char* file_name,
-                       int line_num, const std::string& msg) {
+void logger::log_static(int level, const char* component,
+                        const std::string& class_name,
+                        const char* function_name, const char* file_name,
+                        int line_num, const std::string& msg) {
   auto ptr = get_current_logger();
   if (ptr)
-    ptr->log(level, class_name, function_name, file_name, line_num, msg);
+    ptr->log(level, component, class_name, function_name, file_name, line_num,
+             msg);
 }
-
 
 logger::~logger() {
   // nop
@@ -289,13 +299,13 @@ void logger::start() {
   thread_ = std::thread{[this] { this->run(); }};
   std::string msg = "ENTRY log level = ";
   msg += log_level_table[global_log_level];
-  log(4, "caf::logger", "run", __FILE__, __LINE__, msg);
+  log(4, "caf", "caf::logger", "run", __FILE__, __LINE__, msg);
 # endif
 }
 
 void logger::stop() {
 # ifdef CAF_LOG_LEVEL
-  log(4, "caf::logger", "run", __FILE__, __LINE__, "EXIT");
+  log(4, "caf", "caf::logger", "run", __FILE__, __LINE__, "EXIT");
   // an empty string means: shut down
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{""});
   thread_.join();
