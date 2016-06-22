@@ -44,7 +44,7 @@ using hook_uptr = std::unique_ptr<hook>;
 /// Interface to define hooks into the IO layer.
 class hook {
 public:
-  hook(actor_system& sys);
+  explicit hook(actor_system& sys);
 
   virtual ~hook();
 
