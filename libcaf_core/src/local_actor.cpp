@@ -59,7 +59,6 @@ public:
 
   void run() {
     auto job = const_cast<local_actor*>(self_);
-    CAF_SET_LOGGER_SYS(&job->system());
     CAF_PUSH_AID(job->id());
     CAF_LOG_TRACE("");
     scoped_execution_unit ctx{&job->system()};
@@ -209,7 +208,11 @@ local_actor::~local_actor() {
 }
 
 void local_actor::on_destroy() {
-  CAF_LOG_TRACE(CAF_ARG(is_terminated()));
+  // disable logging from this point on, because on_destroy can
+  // be called after the logger is already destroyed;
+  // alternatively, we would have to use a reference-counted,
+  // heap-allocated logger
+  CAF_SET_LOGGER_SYS(nullptr);
   if (! is_cleaned_up()) {
     on_exit();
     cleanup(exit_reason::unreachable, nullptr);
@@ -680,7 +683,6 @@ void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
         auto this_ptr = ptr->get();
         CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != 0);
         auto self = static_cast<blocking_actor*>(this_ptr);
-        CAF_SET_LOGGER_SYS(&self->system());
         error rsn;
         std::exception_ptr eptr = nullptr;
         try {
