@@ -51,7 +51,6 @@ endif()
 if(NOT CAF_NO_IO)
   set(CAF_NO_IO no)
 else()
-  set(CAF_NO_RIAC yes)
   set(CAF_NO_TOOLS yes)
   set(CAF_NO_PYTHON yes)
 endif()
@@ -393,7 +392,7 @@ macro(add_caf_lib name)
     set(${lib_varname_static} ${static_target})
   endif()
   add_unit_tests("${full_name}/test/*.cpp")
-  # add headers to include directories so other subprojects can use RIAC
+  # add headers to include directories so other subprojects can use them
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/libcaf_${name}")
 endmacro()
 
@@ -446,9 +445,6 @@ if(NOT CAF_NO_OPENCL)
   endif()
 endif()
 
-# build RIAC library if not being told otherwise
-add_optional_caf_lib(riac)
-
 # build Python binding if not being told otherwise
 if(NOT CAF_NO_PYTHON AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_python/CMakeLists.txt")
   add_subdirectory(libcaf_python)
@@ -459,12 +455,6 @@ add_optional_caf_binaries(examples)
 
 # build tools if not being told otherwise
 add_optional_caf_binaries(tools)
-
-# build nexus if not being told otherwise
-add_optional_caf_binaries(nexus CAF_NO_RIAC)
-
-# build cash if not being told otherwise
-add_optional_caf_binaries(cash CAF_NO_RIAC)
 
 # build benchmarks if not being told otherwise
 add_optional_caf_binaries(benchmarks)
@@ -603,9 +593,6 @@ invertYesNo(CAF_NO_IO CAF_BUILD_IO)
 invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
-invertYesNo(CAF_NO_RIAC CAF_BUILD_RIAC)
-invertYesNo(CAF_NO_NEXUS CAF_BUILD_NEXUS)
-invertYesNo(CAF_NO_CASH CAF_BUILD_CASH)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
@@ -631,9 +618,6 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild tools:       ${CAF_BUILD_TOOLS}"
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
-        "\nBuild riac:        ${CAF_BUILD_RIAC}"
-        "\nBuild nexus:       ${CAF_BUILD_NEXUS}"
-        "\nBuild cash:        ${CAF_BUILD_CASH}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
         "\nBuild Python:      ${CAF_BUILD_PYTHON}"
