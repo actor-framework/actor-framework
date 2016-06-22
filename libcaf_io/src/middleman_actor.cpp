@@ -131,9 +131,10 @@ public:
             auto i = pending_.find(key);
             if (i == pending_.end())
               return;
-            monitor(addr);
-            if (nid && addr)
+            if (nid && addr) {
+              monitor(addr);
               cached_.emplace(key, std::make_tuple(nid, addr, sigs));
+            }
             auto res = make_message(ok_atom::value, std::move(nid),
                                     std::move(addr), std::move(sigs));
             for (auto& promise : i->second)

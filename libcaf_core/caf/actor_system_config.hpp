@@ -242,6 +242,7 @@ public:
 
   // Config parameters of middleman.
   atom_value middleman_network_backend;
+  std::string middleman_app_identifier;
   bool middleman_enable_automatic_connections;
   size_t middleman_max_consecutive_reads;
   size_t middleman_heartbeat_interval;

@@ -131,6 +131,8 @@ actor_system_config::actor_system_config()
   opt_group{options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
+  .add(middleman_app_identifier, "app-identifier",
+       "sets the application identifier of this node")
   .add(middleman_enable_automatic_connections, "enable-automatic-connections",
        "enables or disables automatic connection management (off per default)")
   .add(middleman_max_consecutive_reads, "max-consecutive-reads",

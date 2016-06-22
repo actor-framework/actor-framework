@@ -287,33 +287,27 @@ public:
     mpx_->accept_connection(src);
     // technically, the server handshake arrives
     // before we send the client handshake
-    auto m = mock(hdl,
-                  {basp::message_type::client_handshake, 0, 0, 0,
-                   remote_node(i), this_node(),
-                   invalid_actor_id, invalid_actor_id});
-    if (published_actor_id != invalid_actor_id)
-      m.expect(hdl,
-               basp::message_type::server_handshake, no_flags,
-               any_vals, basp::version, this_node(), node_id{invalid_node_id},
-               published_actor_id, invalid_actor_id,
-               published_actor_id,
-               published_actor_ifs);
-    else
-      m.expect(hdl,
-               basp::message_type::server_handshake, no_flags, any_vals,
-               basp::version, this_node(), node_id{invalid_node_id},
-               invalid_actor_id, invalid_actor_id);
+    mock(hdl,
+         {basp::message_type::client_handshake, 0, 0, 0,
+          remote_node(i), this_node(),
+          invalid_actor_id, invalid_actor_id}, std::string{})
+    .expect(hdl,
+            basp::message_type::server_handshake, no_flags,
+            any_vals, basp::version, this_node(), node_id{invalid_node_id},
+            published_actor_id, invalid_actor_id, std::string{},
+            published_actor_id,
+            published_actor_ifs)
     // upon receiving our client handshake, BASP will check
     // whether there is a SpawnServ actor on this node
-    m.expect(hdl,
-             basp::message_type::dispatch_message,
-             basp::header::named_receiver_flag, any_vals,
-             no_operation_data,
-             this_node(), remote_node(i),
-             any_vals, invalid_actor_id,
-             spawn_serv_atom,
-             std::vector<actor_addr>{},
-             make_message(sys_atom::value, get_atom::value, "info"));
+    .expect(hdl,
+            basp::message_type::dispatch_message,
+            basp::header::named_receiver_flag, any_vals,
+            no_operation_data,
+            this_node(), remote_node(i),
+            any_vals, invalid_actor_id,
+            spawn_serv_atom,
+            std::vector<actor_addr>{},
+            make_message(sys_atom::value, get_atom::value, "info"));
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
     auto path = tbl().lookup(remote_node(i));
@@ -489,7 +483,7 @@ CAF_TEST(non_empty_server_handshake) {
   basp::header expected{basp::message_type::server_handshake, 0, 0,
                         basp::version, this_node(), invalid_node_id,
                         self()->id(), invalid_actor_id};
-  to_buf(expected_buf, expected, nullptr,
+  to_buf(expected_buf, expected, nullptr, std::string{},
          self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
   CAF_CHECK_EQUAL(hexstr(buf), hexstr(expected_buf));
 }
@@ -595,12 +589,13 @@ CAF_TEST(remote_actor_and_send) {
        {basp::message_type::server_handshake, 0, 0, basp::version,
         remote_node(0), invalid_node_id,
         pseudo_remote(0)->id(), invalid_actor_id},
+       std::string{},
        pseudo_remote(0)->id(),
        uint32_t{0})
   .expect(remote_hdl(0),
-          basp::message_type::client_handshake, no_flags, no_payload,
+          basp::message_type::client_handshake, no_flags, 1u,
           no_operation_data, this_node(), remote_node(0),
-          invalid_actor_id, invalid_actor_id)
+          invalid_actor_id, invalid_actor_id, std::string{})
   .expect(remote_hdl(0),
           basp::message_type::dispatch_message,
           basp::header::named_receiver_flag, any_vals,
@@ -823,12 +818,13 @@ CAF_TEST(automatic_connection) {
        {basp::message_type::server_handshake, 0, 0, basp::version,
         remote_node(0), invalid_node_id,
         pseudo_remote(0)->id(), invalid_actor_id},
+       std::string{},
        pseudo_remote(0)->id(),
        uint32_t{0})
   .expect(remote_hdl(0),
-          basp::message_type::client_handshake, no_flags, no_payload,
+          basp::message_type::client_handshake, no_flags, 1u,
           no_operation_data, this_node(), remote_node(0),
-          invalid_actor_id, invalid_actor_id);
+          invalid_actor_id, invalid_actor_id, std::string{});
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(0)), invalid_node_id);
   CAF_CHECK_EQUAL(tbl().lookup_indirect(remote_node(1)), invalid_node_id);
   CAF_CHECK_EQUAL(tbl().lookup_direct(remote_node(0)).id(), remote_hdl(0).id());
