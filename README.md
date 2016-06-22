@@ -159,7 +159,7 @@ If you use CAF in a scientific context, please use one of the following citation
 @article{chs-rapc-16,
   author = {Dominik Charousset and Raphael Hiesgen and Thomas C. Schmidt},
   title = {{Revisiting Actor Programming in C++}},
-  journal = {Computer Languages, Systemsa \& Structures},
+  journal = {Computer Languages, Systems \& Structures},
   volume = {45},
   year = {2016},
   month = "April",
