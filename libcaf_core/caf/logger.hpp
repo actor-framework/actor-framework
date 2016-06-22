@@ -131,21 +131,6 @@ public:
 
   /** @cond PRIVATE */
 
-  class trace_helper {
-  public:
-    trace_helper(std::string class_name, const char* fun_name,
-                 const char* file_name, int line_num, const std::string& msg);
-
-    ~trace_helper();
-
-  private:
-    logger* parent_;
-    std::string class_;
-    const char* fun_name_;
-    const char* file_name_;
-    int line_num_;
-  };
-
   static void set_current_actor_system(actor_system*);
 
   static logger* current_logger();
@@ -266,10 +251,13 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #else // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 
 #define CAF_LOG_TRACE(entry_message)                                           \
-  caf::logger::trace_helper CAF_UNIFYN(caf_log_trace_) {                       \
-    CAF_GET_CLASS_NAME, __func__, __FILE__, __LINE__,                          \
-    (caf::logger::line_builder{} << entry_message).get()                       \
-  }
+  const char* CAF_UNIFYN(func_name_) = __func__;                               \
+  CAF_LOG_IMPL(CAF_LOG_LEVEL_TRACE, "ENTRY" << entry_message);                 \
+  auto CAF_UNIFYN(caf_log_trace_guard_) = ::caf::detail::make_scope_guard([=] {\
+    caf::logger::log_static(CAF_LOG_LEVEL_TRACE, CAF_GET_CLASS_NAME,           \
+                            CAF_UNIFYN(func_name_), __FILE__, __LINE__,        \
+                            "EXIT");                                           \
+  })
 
 #endif // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 

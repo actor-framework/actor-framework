@@ -237,23 +237,6 @@ void logger::log(int level, const std::string& class_name,
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{line.str()});
 }
 
-logger::trace_helper::trace_helper(std::string class_name, const char* fun_name,
-                                   const char* file_name, int line_num,
-                                   const std::string& msg)
-    : parent_(current_logger()),
-      class_(std::move(class_name)),
-      fun_name_(fun_name),
-      file_name_(file_name),
-      line_num_(line_num) {
-  if (parent_)
-    parent_->log(4, class_, fun_name, file_name, line_num, "ENTRY " + msg);
-}
-
-logger::trace_helper::~trace_helper() {
-  if (parent_)
-    parent_->log(4, class_.c_str(), fun_name_, file_name_, line_num_, "EXIT");
-}
-
 void logger::set_current_actor_system(actor_system* x) {
   current_logger_system(x);
 }
