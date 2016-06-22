@@ -348,5 +348,43 @@ abstract_coordinator::abstract_coordinator(actor_system& sys)
   // nop
 }
 
+void abstract_coordinator::cleanup_and_release(resumable* ptr) {
+  class dummy_unit : public execution_unit {
+  public:
+    dummy_unit(local_actor* ptr) : execution_unit(&ptr->home_system()) {
+      // nop
+    }
+    void exec_later(resumable* ptr) override {
+      resumables.push_back(ptr);
+    }
+    std::vector<resumable*> resumables;
+  };
+  switch (ptr->subtype()) {
+    case resumable::scheduled_actor:
+    case resumable::io_actor: {
+      auto dptr = static_cast<local_actor*>(ptr);
+      dummy_unit dummy{dptr};
+      dptr->cleanup(make_error(exit_reason::user_shutdown), &dummy);
+      while (! dummy.resumables.empty()) {
+        auto sub = dummy.resumables.back();
+        dummy.resumables.pop_back();
+        switch (sub->subtype()) {
+          case resumable::scheduled_actor:
+          case resumable::io_actor: {
+            auto dsub = static_cast<local_actor*>(sub);
+            dsub->cleanup(make_error(exit_reason::user_shutdown), &dummy);
+          }
+          default:
+            break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  intrusive_ptr_release(ptr);
+}
+
 } // namespace scheduler
 } // namespace caf

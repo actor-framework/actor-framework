@@ -695,17 +695,16 @@ default_multiplexer::~default_multiplexer() {
   nonblocking(pipe_.first, true);
   auto ptr = pipe_reader_.try_read_next();
   while (ptr) {
-    intrusive_ptr_release(ptr);
+    scheduler::abstract_coordinator::cleanup_and_release(ptr);
     ptr = pipe_reader_.try_read_next();
   }
   // do cleanup for pipe reader manually, since WSACleanup needs to happen last
   closesocket(pipe_reader_.fd());
   pipe_reader_.init(invalid_native_socket);
 # ifdef CAF_WINDOWS
-    WSACleanup();
+  WSACleanup();
 # endif
 }
-
 
 void default_multiplexer::exec_later(resumable* ptr) {
   CAF_ASSERT(ptr);

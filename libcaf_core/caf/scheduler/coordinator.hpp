@@ -123,9 +123,7 @@ protected:
       w->get_thread().join();
     }
     // run cleanup code for each resumable
-    auto f = [](resumable* job) {
-      intrusive_ptr_release(job);
-    };
+    auto f = &abstract_coordinator::cleanup_and_release;
     for (auto& w : workers_)
       policy_.foreach_resumable(w.get(), f);
     policy_.foreach_central_resumable(this, f);

@@ -78,6 +78,8 @@ public:
 
   void* subtype_ptr() override;
 
+  static void cleanup_and_release(resumable*);
+
 protected:
   void stop_actors();
 
