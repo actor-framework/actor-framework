@@ -100,8 +100,9 @@ void register_class(atom_value*, pybind11::module& m,
   auto cmp = [](atom_value x, atom_value y) {
     return x == y;
   };
+  std::string (*to_string_fun)(const atom_value&) = &to_string;
   pybind11::class_<atom_value>(m, name.c_str())
-  .def("__str__", (std::string (*)(const atom_value&)) &to_string)
+  .def("__str__", to_string_fun)
   .def("__repr__", repr_fun)
   .def("__eq__", cmp);
 }
@@ -275,8 +276,8 @@ public:
   friend void serialize(serializer& sink, absolute_receive_timeout& x,
                         const unsigned int) {
     auto tse = x.x_.time_since_epoch();
-    uint64_t ms_since_epoch = std::chrono::duration_cast<ms>(tse).count();
-    sink << ms_since_epoch;
+    auto ms_since_epoch = std::chrono::duration_cast<ms>(tse).count();
+    sink << static_cast<uint64_t>(ms_since_epoch);
   }
 
   friend void serialize(deserializer& source, absolute_receive_timeout& x,
@@ -359,7 +360,6 @@ public:
         << "\"\"\""
         << full_pre_run
         << "\"\"\"" << endl
-        //<<   join(lines, ",\n") << endl
         << "]" << endl
         << "c.PromptManager.in_template  = ' $: '" << endl
         << "c.PromptManager.in2_template = ' -> '" << endl
@@ -423,7 +423,11 @@ struct py_context {
   scoped_actor& self;
 };
 
+namespace {
+
 py_context* s_context;
+
+} // namespace <anonymous>
 
 inline void set_py_exception_fill(std::ostream&) {
   // end of recursion
