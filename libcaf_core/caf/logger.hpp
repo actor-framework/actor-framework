@@ -243,9 +243,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   caf::actor_id CAF_UNIFYN(caf_aid_tmp) = 0;                                   \
   if (CAF_UNIFYN(caf_tmp_ptr))                                                 \
     CAF_UNIFYN(caf_aid_tmp) = CAF_UNIFYN(caf_tmp_ptr)->thread_local_aid(aarg); \
-  else                                                                         \
-    printf("[ERROR] CAF_PUSH_AID called in file %s on line %d "                \
-           "without thread-local logger pointer", __FILE__, __LINE__);         \
   auto CAF_UNIFYN(aid_aid_tmp_guard) = caf::detail::make_scope_guard([=] {     \
     auto CAF_UNIFYN(caf_tmp2_ptr) = caf::logger::current_logger();             \
     if (CAF_UNIFYN(caf_tmp2_ptr))                                              \
