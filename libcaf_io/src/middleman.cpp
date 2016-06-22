@@ -262,7 +262,7 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
         // nop
       }
     );
-  } catch (std::exception& e) {
+  } catch (std::exception&) {
     // nop
   }
   return result;

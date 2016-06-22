@@ -89,7 +89,7 @@ void actor_registry::erase(actor_id key) {
 }
 
 void actor_registry::inc_running() {
-# if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_DEBUG
+# if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
   auto value = ++running_;
   CAF_LOG_DEBUG(CAF_ARG(value));
 # else

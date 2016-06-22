@@ -351,11 +351,11 @@ abstract_coordinator::abstract_coordinator(actor_system& sys)
 void abstract_coordinator::cleanup_and_release(resumable* ptr) {
   class dummy_unit : public execution_unit {
   public:
-    dummy_unit(local_actor* ptr) : execution_unit(&ptr->home_system()) {
+    dummy_unit(local_actor* job) : execution_unit(&job->home_system()) {
       // nop
     }
-    void exec_later(resumable* ptr) override {
-      resumables.push_back(ptr);
+    void exec_later(resumable* job) override {
+      resumables.push_back(job);
     }
     std::vector<resumable*> resumables;
   };
@@ -373,6 +373,7 @@ void abstract_coordinator::cleanup_and_release(resumable* ptr) {
           case resumable::io_actor: {
             auto dsub = static_cast<local_actor*>(sub);
             dsub->cleanup(make_error(exit_reason::user_shutdown), &dummy);
+            break;
           }
           default:
             break;

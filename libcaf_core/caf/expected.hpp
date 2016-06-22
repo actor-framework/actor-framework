@@ -33,7 +33,7 @@ namespace caf {
 
 /// Represents the result of a computation which can either complete
 /// successfully with an instance of type `T` or fail with an `error`.
-/// @tparam The type of the result.
+/// @tparam T The type of the result.
 template <typename T>
 class expected {
 public:
