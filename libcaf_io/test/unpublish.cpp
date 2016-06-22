@@ -56,10 +56,9 @@ public:
 
 struct fixture {
   fixture() : testee(unsafe_actor_handle_init) {
-    new (&system) actor_system(actor_system_config{}
-                               .load<io::middleman>()
-                               .parse(test::engine::argc(),
-                                      test::engine::argv()));
+    new (&system) actor_system(cfg.load<io::middleman>()
+                                  .parse(test::engine::argc(),
+                                         test::engine::argv()));
     testee = system.spawn<dummy>();
   }
 
@@ -92,6 +91,7 @@ struct fixture {
     return result;
   }
 
+  actor_system_config cfg;
   union { actor_system system; }; // manually control ctor/dtor
   actor testee;
 };

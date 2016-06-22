@@ -171,8 +171,7 @@ behavior server(broker* self) {
 
 class fixture {
 public:
-  fixture() : system(actor_system_config{}
-                     .load<io::middleman, network::test_multiplexer>()),
+  fixture() : system(cfg.load<io::middleman, network::test_multiplexer>()),
               aut_(unsafe_actor_handle_init) {
     mpx_ = dynamic_cast<network::test_multiplexer*>(&system.middleman().backend());
     CAF_REQUIRE(mpx_ != nullptr);
@@ -227,6 +226,7 @@ public:
     return {this};
   }
 
+  actor_system_config cfg;
   actor_system system;
   actor aut_;
   abstract_broker* aut_ptr_;

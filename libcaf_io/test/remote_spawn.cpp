@@ -116,7 +116,8 @@ void run_client(int argc, char** argv, uint16_t port) {
 }
 
 void run_server(int argc, char** argv) {
-  actor_system system{actor_system_config{}.load<io::middleman>().parse(argc, argv)};
+  actor_system_config cfg;
+  actor_system system{cfg.load<io::middleman>().parse(argc, argv)};
   auto serv = system.spawn(server);
   auto port = system.middleman().publish(serv, 0);
   CAF_REQUIRE(port != 0);
