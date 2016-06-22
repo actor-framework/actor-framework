@@ -49,8 +49,10 @@ public:
 };
 
 struct fixture {
-  caf::actor_system server_side{config{}.parse()};
-  caf::actor_system client_side{config{}.parse()};
+  config server_side_cfg;
+  caf::actor_system server_side{server_side_cfg.parse()};
+  config client_side_cfg;
+  caf::actor_system client_side{client_side_cfg.parse()};
   io::middleman& server_side_mm = server_side.middleman();
   io::middleman& client_side_mm = client_side.middleman();
 };
