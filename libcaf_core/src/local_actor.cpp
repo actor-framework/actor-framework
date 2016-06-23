@@ -1025,11 +1025,11 @@ const char* local_actor::name() const {
 }
 
 void local_actor::save_state(serializer&, const unsigned int) {
-  throw std::logic_error("local_actor::serialize called");
+  CAF_RAISE_ERROR("local_actor::serialize called");
 }
 
 void local_actor::load_state(deserializer&, const unsigned int) {
-  throw std::logic_error("local_actor::deserialize called");
+  CAF_RAISE_ERROR("local_actor::deserialize called");
 }
 
 bool local_actor::finished() {
@@ -1071,7 +1071,7 @@ void local_actor::quit(error x) {
   fail_state_ = std::move(x);
   is_terminated(true);
   if (is_blocking())
-    throw actor_exited(fail_state_);
+    CAF_RAISE_ERROR(to_string(fail_state_));
 }
 
 } // namespace caf

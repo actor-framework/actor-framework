@@ -29,7 +29,9 @@ const char* sec_strings[] = {
   "unexpected_response",
   "request_receiver_down",
   "request_timeout",
+  "no_such_group_module",
   "no_actor_published_at_port",
+  "unexpected_actor_messaging_interface",
   "state_not_serializable",
   "unsupported_sys_key",
   "unsupported_sys_message",
@@ -40,6 +42,10 @@ const char* sec_strings[] = {
   "cannot_close_invalid_port",
   "cannot_connect_to_node",
   "cannot_open_port",
+  "network_syscall_failed",
+  "invalid_argument",
+  "invalid_protocol_family",
+  "cannot_publish_invalid_actor",
   "cannot_spawn_actor_from_arguments"
 };
 
@@ -54,10 +60,6 @@ const char* to_string(sec x) {
 
 error make_error(sec x) {
   return {static_cast<uint8_t>(x), atom("system")};
-}
-
-error make_error(sec x, message context) {
-  return {static_cast<uint8_t>(x), atom("system"), std::move(context)};
 }
 
 } // namespace caf

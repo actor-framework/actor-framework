@@ -394,7 +394,7 @@ message message::concat_impl(std::initializer_list<data_ptr> xs) {
 
 void serialize(serializer& sink, const message& msg, const unsigned int) {
   if (! sink.context())
-    throw std::logic_error("Cannot serialize message without context.");
+    CAF_RAISE_ERROR("Cannot serialize message without context.");
   // build type name
   uint16_t zero = 0;
   std::string tname = "@<>";
@@ -413,7 +413,7 @@ void serialize(serializer& sink, const message& msg, const unsigned int) {
                    "not added to the types list, typeid name: "
                 << (rtti.second ? rtti.second->name() : "-not-available-")
                 << std::endl;
-      throw std::logic_error("unknown type while serializing");
+      CAF_RAISE_ERROR("unknown type while serializing");
     }
     tname += '+';
     tname += *ptr;
@@ -426,18 +426,18 @@ void serialize(serializer& sink, const message& msg, const unsigned int) {
 
 void serialize(deserializer& source, message& msg, const unsigned int) {
   if (! source.context())
-    throw std::logic_error("Cannot deserialize message without context.");
+    CAF_RAISE_ERROR("Cannot deserialize message without context.");
   uint16_t zero;
   std::string tname;
   source.begin_object(zero, tname);
   if (zero != 0)
-    throw std::logic_error("unexpected builtin type found in message");
+    CAF_RAISE_ERROR("unexpected builtin type found in message");
   if (tname == "@<>") {
     msg = message{};
     return;
   }
   if (tname.compare(0, 4, "@<>+") != 0)
-    throw std::logic_error("type name does not start with @<>+: " + tname);
+    CAF_RAISE_ERROR("type name does not start with @<>+: " + tname);
   // iterate over concatenated type names
   auto eos = tname.end();
   auto next = [&](std::string::iterator iter) {
@@ -453,7 +453,7 @@ void serialize(deserializer& source, message& msg, const unsigned int) {
     tmp.assign(i, n);
     auto ptr = types.make_value(tmp);
     if (! ptr)
-      throw std::logic_error("cannot serialize a value of type " + tmp);
+      CAF_RAISE_ERROR("cannot serialize a value of type " + tmp);
     ptr->load(source);
     dmd->append(std::move(ptr));
     if (n != eos)

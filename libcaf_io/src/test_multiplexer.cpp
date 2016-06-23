@@ -38,7 +38,7 @@ test_multiplexer::~test_multiplexer() {
     intrusive_ptr_release(ptr.get());
 }
 
-connection_handle
+expected<connection_handle>
 test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
   guard_type guard{mx_};
   connection_handle result;
@@ -50,8 +50,8 @@ test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
   return result;
 }
 
-void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
-                                         connection_handle hdl) {
+expected<void> test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
+                                                   connection_handle hdl) {
   class impl : public scribe {
   public:
     impl(abstract_broker* self, connection_handle ch, test_multiplexer* mpx)
@@ -100,6 +100,7 @@ void test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
   auto sptr = make_counted<impl>(ptr, hdl, this);
   impl_ptr(hdl) = sptr;
   ptr->add_scribe(sptr);
+  return unit;
 }
 
 connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
@@ -109,15 +110,17 @@ connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
   abort();
 }
 
-connection_handle
+expected<connection_handle>
 test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
                                  uint16_t desired_port) {
   auto hdl = new_tcp_scribe(host, desired_port);
-  assign_tcp_scribe(ptr, hdl);
+  if (! hdl)
+    return std::move(hdl.error());
+  assign_tcp_scribe(ptr, *hdl);
   return hdl;
 }
 
-std::pair<accept_handle, uint16_t>
+expected<std::pair<accept_handle, uint16_t>>
 test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
   accept_handle result;
   auto i = doormen_.find(desired_port);
@@ -128,8 +131,8 @@ test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
   return std::make_pair(result, desired_port);
 }
 
-void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
-                                          accept_handle hdl) {
+expected<void> test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
+                                                    accept_handle hdl) {
   class impl : public doorman {
   public:
     impl(abstract_broker* self, accept_handle ah, test_multiplexer* mpx)
@@ -171,6 +174,7 @@ void test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
   auto dptr = make_counted<impl>(ptr, hdl, this);
   impl_ptr(hdl) = dptr;
   ptr->add_doorman(dptr);
+  return unit;
 }
 
 accept_handle test_multiplexer::add_tcp_doorman(abstract_broker*,
@@ -180,12 +184,14 @@ accept_handle test_multiplexer::add_tcp_doorman(abstract_broker*,
   abort();
 }
 
-std::pair<accept_handle, uint16_t>
+expected<std::pair<accept_handle, uint16_t>>
 test_multiplexer::add_tcp_doorman(abstract_broker* ptr, uint16_t prt,
                                   const char* in, bool reuse_addr) {
   auto result = new_tcp_doorman(prt, in, reuse_addr);
-  port(result.first) = prt;
-  assign_tcp_doorman(ptr, result.first);
+  if (! result)
+    return std::move(result.error());
+  port(result->first) = prt;
+  assign_tcp_doorman(ptr, result->first);
   return result;
 }
 

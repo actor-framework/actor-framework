@@ -112,7 +112,7 @@ protected:
        auto c = streambuf_.sbumpc();
        using traits = typename streambuf_type::traits_type;
        if (traits::eq_int_type(c, traits::eof()))
-         throw std::out_of_range{"stream_deserializer<T>::begin_sequence"};
+         CAF_RAISE_ERROR("stream_deserializer<T>::begin_sequence");
       low7 = static_cast<uint8_t>(traits::to_char_type(c));
       x |= static_cast<T>((low7 & 0x7F) << (7 * n));
       ++n;
@@ -205,7 +205,7 @@ private:
   void range_check(size_t got, size_t need) {
     if (got != need) {
       CAF_LOG_ERROR("range_check failed");
-      throw std::out_of_range("stream_deserializer<T>::range_check()");
+      CAF_RAISE_ERROR("stream_deserializer<T>::range_check()");
     }
   }
 

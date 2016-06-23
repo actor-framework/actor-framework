@@ -97,7 +97,7 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
       free(tmp);
     tmp = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(malloc(tmp_size));
     if (! tmp)
-      throw std::bad_alloc();
+      CAF_RAISE_ERROR("malloc() failed");
     retval = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX,
                                   nullptr, tmp, &tmp_size);
   } while (retval == ERROR_BUFFER_OVERFLOW && ++try_nr < max_tries);

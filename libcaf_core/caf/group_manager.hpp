@@ -25,6 +25,7 @@
 #include <thread>
 
 #include "caf/fwd.hpp"
+#include "caf/expected.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -46,8 +47,13 @@ public:
   /// Get a pointer to the group associated with
   /// `identifier` from the module `mod_name`.
   /// @threadsafe
-  group get(const std::string& module_name,
-            const std::string& group_identifier);
+  expected<group> get(const std::string& module_name,
+                      const std::string& group_identifier);
+
+  /// Get a pointer to the group associated with
+  /// `identifier` from the module `local`.
+  /// @threadsafe
+  group get_local(const std::string& group_identifier);
 
   /// Returns an anonymous group.
   /// Each calls to this member function returns a new instance

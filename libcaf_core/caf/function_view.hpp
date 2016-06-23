@@ -23,6 +23,7 @@
 #include <new>
 #include <functional>
 
+#include "caf/expected.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/scoped_actor.hpp"
 
@@ -103,6 +104,7 @@ struct function_view_result<actor> {
 /// A function view for an actor hides any messaging from the caller.
 /// Internally, a function view uses a `scoped_actor` and uses
 /// blocking send and receive operations.
+/// @experimental
 template <class Actor>
 class function_view {
 public:
@@ -135,8 +137,8 @@ public:
   }
 
   /// Sends a request message to the assigned actor and returns the result.
-  /// @throws std::bad_function_call if no actor is assigned to view
-  /// @throws actor_exited if the requests resulted in an error
+  /// @throws std::runtime_error if no valid actor is assigned or
+  ///                            if the request fails
   template <class... Ts,
             class R =
               typename function_view_flattened_result<
@@ -150,16 +152,15 @@ public:
               >::type>
   R operator()(Ts&&... xs) {
     if (impl_.unsafe())
-      throw std::bad_function_call();
+      CAF_RAISE_ERROR("bad function call");
     function_view_result<R> result;
     function_view_storage<R> h{result.value};
-    try {
-      self_->request(impl_, infinite, std::forward<Ts>(xs)...).receive(h);
-    }
-    catch (std::exception&) {
-      assign(unsafe_actor_handle_init);
-      throw;
-    }
+    self_->request(impl_, infinite, std::forward<Ts>(xs)...).receive(
+      h,
+      [] (error& x) {
+        CAF_RAISE_ERROR(to_string(x));
+      }
+    );
     return flatten(result.value);
   }
 
@@ -222,6 +223,7 @@ bool operator!=(std::nullptr_t x, const function_view<T>& y) {
 
 /// Creates a new function view for `x`.
 /// @relates function_view
+/// @experimental
 template <class T>
 function_view<T> make_function_view(const T& x) {
   return {x};

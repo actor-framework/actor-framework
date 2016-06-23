@@ -362,18 +362,16 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
             for (auto& kvp : addresses)
               if (kvp.first != network::protocol::ethernet)
                 for (auto& addr : kvp.second) {
-                  try {
-                    auto hdl = mx.new_tcp_scribe(addr, port);
-                    // gotcha! send scribe to our BASP broker
-                    // to initiate handshake etc.
-                    CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
-                    helper->send(s, connect_atom::value, hdl, port);
-                    return;
-                  }
-                  catch (...) {
-                    // simply try next address
-                  }
+                auto hdl = mx.new_tcp_scribe(addr, port);
+                if (hdl) {
+                  // gotcha! send scribe to our BASP broker
+                  // to initiate handshake etc.
+                  CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
+                  helper->send(s, connect_atom::value, *hdl, port);
+                  return;
                 }
+                // else: simply try next address
+              }
             CAF_LOG_INFO("could not connect to node directly:" << CAF_ARG(nid));
           }
         });
@@ -446,13 +444,17 @@ behavior basp_broker::make_behavior() {
     CAF_LOG_INFO("enable automatic connections");
     // open a random port and store a record for our peers how to
     // connect to this broker directly in the configuration server
-    auto port = add_tcp_doorman(uint16_t{0});
-    auto addrs = network::interfaces::list_addresses(false);
-    auto config_server = system().registry().get(atom("ConfigServ"));
-    send(actor_cast<actor>(config_server), put_atom::value,
-         "basp.default-connectivity",
-         make_message(port.second, std::move(addrs)));
-    state.enable_automatic_connections = true;
+    //auto port =
+    auto res = add_tcp_doorman(uint16_t{0});
+    if (res) {
+      auto port = res->second;
+      auto addrs = network::interfaces::list_addresses(false);
+      auto config_server = system().registry().get(atom("ConfigServ"));
+      send(actor_cast<actor>(config_server), put_atom::value,
+           "basp.default-connectivity",
+           make_message(port, std::move(addrs)));
+      state.enable_automatic_connections = true;
+    }
   }
   auto heartbeat_interval = system().config().middleman_heartbeat_interval;
   if (heartbeat_interval > 0) {

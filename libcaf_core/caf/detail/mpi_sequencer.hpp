@@ -55,7 +55,7 @@ struct mpi_sequencer {
     >::type;
   // drop all mismatches (void results)
   using filtered = typename tl_filter_not_type<all, void>::type;
-  // throw error if we don't have a single match
+  // raise error if we don't have a single match
   static_assert(tl_size<filtered>::value > 0,
                 "Left-hand actor type does not produce a single result which "
                 "is valid as input to the right-hand actor type.");

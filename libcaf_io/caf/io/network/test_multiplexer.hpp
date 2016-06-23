@@ -35,25 +35,27 @@ public:
 
   ~test_multiplexer();
 
-  connection_handle new_tcp_scribe(const std::string& host,
+  expected<connection_handle> new_tcp_scribe(const std::string& host,
                                    uint16_t port) override;
 
-  void assign_tcp_scribe(abstract_broker* ptr, connection_handle hdl) override;
+  expected<void> assign_tcp_scribe(abstract_broker* ptr,
+                                   connection_handle hdl) override;
 
   connection_handle add_tcp_scribe(abstract_broker*, native_socket) override;
 
-  connection_handle add_tcp_scribe(abstract_broker* ptr,
-                                   const std::string& host,
-                                   uint16_t port) override;
+  expected<connection_handle> add_tcp_scribe(abstract_broker* ptr,
+                                             const std::string& host,
+                                             uint16_t port) override;
 
-  std::pair<accept_handle, uint16_t>
+  expected<std::pair<accept_handle, uint16_t>>
   new_tcp_doorman(uint16_t port, const char*, bool) override;
 
-  void assign_tcp_doorman(abstract_broker* ptr, accept_handle hdl) override;
+  expected<void> assign_tcp_doorman(abstract_broker* ptr,
+                                    accept_handle hdl) override;
 
   accept_handle add_tcp_doorman(abstract_broker*, native_socket) override;
 
-  std::pair<accept_handle, uint16_t>
+  expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(abstract_broker* ptr, uint16_t prt,
                   const char* in, bool reuse_addr) override;
 

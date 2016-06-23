@@ -74,12 +74,12 @@ void serialize(deserializer& source, group& x, const unsigned int) {
     return;
   }
   if (! source.context())
-    throw std::logic_error("Cannot serialize group without context.");
+    CAF_RAISE_ERROR("Cannot serialize group without context.");
   auto& sys = source.context()->system();
   auto mod = sys.groups().get_module(module_name);
   if (! mod)
-    throw std::logic_error("Cannot deserialize a group for "
-                           "unknown module: " + module_name);
+    CAF_RAISE_ERROR("Cannot deserialize a group for unknown module: "
+                    + module_name);
   x = mod->load(source);
 }
 

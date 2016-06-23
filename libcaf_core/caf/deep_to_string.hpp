@@ -33,6 +33,10 @@
 
 namespace caf {
 
+struct deep_to_string_append_t {};
+
+constexpr deep_to_string_append_t deep_to_string_append = deep_to_string_append_t{};
+
 class deep_to_string_t {
 public:
   constexpr deep_to_string_t() {
@@ -85,11 +89,25 @@ public:
     return result;
   }
 
+  inline void operator()(const deep_to_string_append_t&, std::string&,
+                         const char*) const {
+    // end of recursion
+  }
+
+  template <class T, class... Ts>
+  void operator()(const deep_to_string_append_t& tk, std::string& str,
+                  const char* glue, const T& x, const Ts&... xs) const {
+    if (! str.empty())
+      str += glue;
+    str += (*this)(x);
+    (*this)(tk, str, glue, xs...);
+  }
+
+
   template <class T, class U, class... Us>
   std::string operator()(const T& x, const U& y, const Us&... ys) const {
-    std::string result = (*this)(x);
-    result += ", ";
-    result += (*this)(y, ys...);
+    std::string result;
+    (*this)(deep_to_string_append, result, ", ", x, y, ys...);
     return result;
   }
 

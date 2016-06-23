@@ -204,7 +204,19 @@
 #define CAF_IGNORE_UNUSED(x) static_cast<void>(x);
 
 #define CAF_CRITICAL(error)                                                    \
-  printf("%s:%u: critical error: '%s'\n", __FILE__, __LINE__, error);          \
-  abort()
+  do {                                                                         \
+    fprintf(stderr, "[FATAL] %s:%u: critical error: '%s'\n",                   \
+            __FILE__, __LINE__, error);                                        \
+    abort();                                                                   \
+  } while (false)
+
+#ifdef CAF_NO_EXCEPTIONS
+# define CAF_RAISE_ERROR(msg)                                                  \
+  do { std::string str = msg; CAF_CRITICAL(str.c_str()); } while (false)
+#else // CAF_NO_EXCEPTIONS
+# define CAF_RAISE_ERROR(msg)                                                  \
+  throw std::runtime_error(msg)
+#endif // CAF_NO_EXCEPTIONS
+
 
 #endif // CAF_CONFIG_HPP

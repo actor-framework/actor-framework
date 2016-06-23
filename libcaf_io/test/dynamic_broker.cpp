@@ -138,8 +138,11 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
-    [=](publish_atom) -> uint16_t {
-      return self->add_tcp_doorman(0, "127.0.0.1").second;
+    [=](publish_atom) -> expected<uint16_t> {
+      auto res = self->add_tcp_doorman(0, "127.0.0.1");
+      if (! res)
+        return std::move(res.error());
+      return res->second;
     }
   };
 }
@@ -149,7 +152,8 @@ void run_client(int argc, char** argv, uint16_t port) {
   actor_system system{cfg.load<io::middleman>().parse(argc, argv)};
   auto p = system.spawn(ping, size_t{10});
   CAF_MESSAGE("spawn_client...");
-  auto cl = system.middleman().spawn_client(peer_fun, "127.0.0.1", port, p);
+  CAF_EXP_THROW(cl, system.middleman().spawn_client(peer_fun, "127.0.0.1",
+                                                    port, p));
   CAF_MESSAGE("spawn_client finished");
   anon_send(p, kickoff_atom::value, cl);
   CAF_MESSAGE("`kickoff_atom` has been send");

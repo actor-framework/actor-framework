@@ -23,6 +23,8 @@
 #include "caf/optional.hpp"
 #include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/actor_system_config.hpp"
+
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/io/broker.hpp"
@@ -83,20 +85,21 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
   return fd != caf::io::network::invalid_native_socket;
 }
 
-// calls a C function and throws a `network_error` if `p` returns false
-template <class Predicate, class F, class... Ts>
-auto ccall(Predicate p, const char* errmsg, F f, Ts&&... xs)
--> decltype(f(std::forward<Ts>(xs)...)) {
-  using namespace caf::io::network;
-  auto result = f(std::forward<Ts>(xs)...);
-  if (! p(result)) {
-    std::ostringstream oss;
-    oss << errmsg << ": " << last_socket_error_as_string()
-        << " [errno: " << last_socket_error() << "]";
-    throw caf::network_error(oss.str());
-  }
-  return result;
-}
+// calls a C functions and returns an error if `predicate(var)`  returns false
+#define CALL_CFUN(var, predicate, fun_name, expr)                              \
+  auto var = expr;                                                             \
+  if (! predicate(var))                                                        \
+    return make_error(sec::network_syscall_failed,                             \
+                      fun_name, last_socket_error_as_string())
+
+// calls a C functions and calls exit() if `predicate(var)`  returns false
+#define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
+  auto var = expr;                                                             \
+  if (! predicate(var)) {                                                      \
+    fprintf(stderr, "[FATAL] %s:%u: syscall failed: %s returned %s\n",         \
+           __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
+    abort();                                                                   \
+  } static_cast<void>(0)
 
 } // namespace <anonymous>
 
@@ -105,10 +108,10 @@ namespace io {
 namespace network {
 
 // helper function
-std::string local_addr_of_fd(native_socket fd);
-uint16_t local_port_of_fd(native_socket fd);
-std::string remote_addr_of_fd(native_socket fd);
-uint16_t remote_port_of_fd(native_socket fd);
+expected<std::string> local_addr_of_fd(native_socket fd);
+expected<uint16_t> local_port_of_fd(native_socket fd);
+expected<std::string> remote_addr_of_fd(native_socket fd);
+expected<uint16_t> remote_port_of_fd(native_socket fd);
 
 /******************************************************************************
  *                     platform-dependent implementations                     *
@@ -120,25 +123,28 @@ uint16_t remote_port_of_fd(native_socket fd);
     return strerror(errno);
   }
 
-  void nonblocking(native_socket fd, bool new_value) {
+  expected<void> nonblocking(native_socket fd, bool new_value) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
     // read flags for fd
-    auto rf = ccall(cc_not_minus1, "cannot read flags", fcntl, fd, F_GETFL, 0);
+    CALL_CFUN(rf, cc_not_minus1, "fcntl", fcntl(fd, F_GETFL, 0));
     // calculate and set new flags
     auto wf = new_value ? (rf | O_NONBLOCK) : (rf & (~(O_NONBLOCK)));
-    ccall(cc_not_minus1, "cannot set flags", fcntl, fd, F_SETFL, wf);
+    CALL_CFUN(set_res, cc_not_minus1, "fcntl", fcntl(fd, F_SETFL, wf));
+    return unit;
   }
 
-  void allow_sigpipe(native_socket fd, bool new_value) {
+  expected<void> allow_sigpipe(native_socket fd, bool new_value) {
 #   ifndef CAF_LINUX
     int value = new_value ? 0 : 1;
-    ccall(cc_zero, "cannot set SO_NOSIGPIPE", setsockopt, fd, SOL_SOCKET,
-          SO_NOSIGPIPE, &value, static_cast<unsigned>(sizeof(value)));
+    CALL_CFUN(res, cc_zero, "setsockopt",
+              setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value,
+                         static_cast<unsigned>(sizeof(value))));
 #   else
     // SO_NOSIGPIPE does not exist on Linux, suppress unused warnings
     static_cast<void>(fd);
     static_cast<void>(new_value);
 #   endif
+    return unit;
   }
 
   std::pair<native_socket, native_socket> create_pipe() {
@@ -176,13 +182,14 @@ uint16_t remote_port_of_fd(native_socket fd);
     return result;
   }
 
-  void nonblocking(native_socket fd, bool new_value) {
+  expected<void> nonblocking(native_socket fd, bool new_value) {
     u_long mode = new_value ? 1 : 0;
-    ccall(cc_zero, "unable to set FIONBIO", ioctlsocket, fd, FIONBIO, &mode);
+    CALL_CFUN(res, cc_zero, "ioctlsocket", ioctlsocket(fd, FIONBIO, &mode));
   }
 
-  void allow_sigpipe(native_socket, bool) {
+  expected<void> allow_sigpipe(native_socket, bool) {
     // nop; SIGPIPE does not exist on Windows
+    return unit;
   }
 
   /**************************************************************************\
@@ -219,8 +226,8 @@ uint16_t remote_port_of_fd(native_socket fd);
   std::pair<native_socket, native_socket> create_pipe() {
     socklen_t addrlen = sizeof(sockaddr_in);
     native_socket socks[2] = {invalid_native_socket, invalid_native_socket};
-    auto listener = ccall(cc_valid_socket, "socket() failed", socket, AF_INET,
-                          SOCK_STREAM, IPPROTO_TCP);
+    CALL_CRITICAL_CFUN(listener, cc_valid_socket, "socket",
+                       socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     union {
       sockaddr_in inaddr;
       sockaddr addr;
@@ -239,29 +246,31 @@ uint16_t remote_port_of_fd(native_socket fd);
     });
     // bind listener to a local port
     int reuse = 1;
-    ccall(cc_zero, "setsockopt() failed", setsockopt, listener, SOL_SOCKET,
-          SO_REUSEADDR, reinterpret_cast<char*>(&reuse),
-          int{sizeof(reuse)});
-    ccall(cc_zero, "bind() failed", bind, listener,
-          &a.addr, int{sizeof(a.inaddr)});
+    CALL_CRITICAL_CFUN(tmp1, cc_zero, "setsockopt",
+                       setsockopt(listener, SOL_SOCKET, SO_REUSEADDR,
+                                  reinterpret_cast<char*>(&reuse),
+                                  static_cast<int>(sizeof(reuse))));
+    CALL_CRITICAL_CFUN(tmp2, cc_zero, "bind",
+                       bind(listener, &a.addr,
+                            static_cast<int>(sizeof(a.inaddr))));
     // read the port in use: win32 getsockname may only set the port number
     // (http://msdn.microsoft.com/library/ms738543.aspx):
     memset(&a, 0, sizeof(a));
-    ccall(cc_zero, "getsockname() failed", getsockname,
-          listener, &a.addr, &addrlen);
+    CALL_CRITICAL_CFUN(tmp3, cc_zero, "getsockname",
+                       getsockname(listener, &a.addr, &addrlen));
     a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     a.inaddr.sin_family = AF_INET;
     // set listener to listen mode
-    ccall(cc_zero, "listen() failed", listen, listener, 1);
+    CALL_CRITICAL_CFUN(tmp5, cc_zero, "listen", listen(listener, 1));
     // create read-only end of the pipe
     DWORD flags = 0;
-    auto read_fd = ccall(cc_valid_socket, "WSASocketW() failed", WSASocketW,
-                         AF_INET, SOCK_STREAM, 0, nullptr, 0, flags);
-    ccall(cc_zero, "connect() failed", connect, read_fd,
-          &a.addr, int{sizeof(a.inaddr)});
+    CALL_CRITICAL_CFUN(read_fd, cc_valid_socket, "WSASocketW",
+                       WSASocketW(AF_INET, SOCK_STREAM, 0, nullptr, 0, flags));
+    CALL_CRITICAL_CFUN(tmp6, cc_zero, "connect",
+                       connect(read_fd, &a.addr,
+                               static_cast<int>(sizeof(a.inaddr))));
     // get write-only end of the pipe
-    auto write_fd = ccall(cc_valid_socket, "accept() failed",
-                          accept, listener, nullptr, nullptr);
+    CALL_CRITICAL_CFUN(write_fd, "accept", accept(listener, nullptr, nullptr));
     closesocket(listener);
     guard.disable();
     return std::make_pair(read_fd, write_fd);
@@ -755,10 +764,16 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
       stream_.flush(this);
     }
     std::string addr() const override {
-      return remote_addr_of_fd(stream_.fd());
+      auto x = remote_addr_of_fd(stream_.fd());
+      if (! x)
+        return "";
+      return *x;
     }
     uint16_t port() const override {
-      return remote_port_of_fd(stream_.fd());
+      auto x = remote_port_of_fd(stream_.fd());
+      if (! x)
+        return 0;
+      return *x;
     }
     void launch() {
       CAF_LOG_TRACE("");
@@ -803,10 +818,16 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
       acceptor_.start(this);
     }
     std::string addr() const override {
-      return local_addr_of_fd(acceptor_.fd());
+      auto x = local_addr_of_fd(acceptor_.fd());
+      if (! x)
+        return "";
+      return std::move(*x);
     }
     uint16_t port() const override {
-      return local_port_of_fd(acceptor_.fd());
+      auto x = local_port_of_fd(acceptor_.fd());
+      if (! x)
+        return 0;
+      return *x;
     }
  private:
     network::acceptor acceptor_;
@@ -816,57 +837,69 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
   return ptr->hdl();
 }
 
-connection_handle default_multiplexer::new_tcp_scribe(const std::string& host,
-                                                      uint16_t port) {
+expected<connection_handle>
+default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
   auto fd = new_tcp_connection(host, port);
-  return connection_handle::from_int(int64_from_native_socket(fd));
+  if (! fd)
+    return std::move(fd.error());
+  return connection_handle::from_int(int64_from_native_socket(*fd));
 }
 
-void default_multiplexer::assign_tcp_scribe(abstract_broker* self,
+expected<void> default_multiplexer::assign_tcp_scribe(abstract_broker* self,
                                             connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
   add_tcp_scribe(self, static_cast<native_socket>(hdl.id()));
+  return unit;
 }
 
-
-connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
-                                                      const std::string& host,
-                                                      uint16_t port) {
+expected<connection_handle>
+default_multiplexer::add_tcp_scribe(abstract_broker* self,
+                                    const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(host) << CAF_ARG(port));
-  return add_tcp_scribe(self, new_tcp_connection(host, port));
+  auto fd = new_tcp_connection(host, port);
+  if (! fd)
+    return std::move(fd.error());
+  return add_tcp_scribe(self, *fd);
 }
 
-std::pair<accept_handle, uint16_t>
+expected<std::pair<accept_handle, uint16_t>>
 default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
                                      bool reuse_addr) {
   auto res = new_tcp_acceptor_impl(port, in, reuse_addr);
-  return {accept_handle::from_int(int64_from_native_socket(res.first)),
-          res.second};
+  if (! res)
+    return std::move(res.error());
+  return std::make_pair(accept_handle::from_int(int64_from_native_socket(res->first)),
+                        res->second);
 }
 
-void default_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
+expected<void> default_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
                                              accept_handle hdl) {
   add_tcp_doorman(ptr, static_cast<native_socket>(hdl.id()));
+  return unit;
 }
 
-std::pair<accept_handle, uint16_t>
+expected<std::pair<accept_handle, uint16_t>>
 default_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port,
                                      const char* host, bool reuse_addr) {
   auto acceptor = new_tcp_acceptor_impl(port, host, reuse_addr);
-  auto bound_port = acceptor.second;
-  return {add_tcp_doorman(self, acceptor.first), bound_port};
+  if (! acceptor)
+    return std::move(acceptor.error());
+  auto bound_port = acceptor->second;
+  return std::make_pair(add_tcp_doorman(self, acceptor->first), bound_port);
 }
 
 /******************************************************************************
  *               platform-independent implementations (finally)               *
  ******************************************************************************/
 
-void tcp_nodelay(native_socket fd, bool new_value) {
+expected<void> tcp_nodelay(native_socket fd, bool new_value) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
   int flag = new_value ? 1 : 0;
-  ccall(cc_zero, "unable to set TCP_NODELAY", setsockopt, fd, IPPROTO_TCP,
-        TCP_NODELAY, reinterpret_cast<setsockopt_ptr>(&flag),
-        socklen_t{sizeof(flag)});
+  CALL_CFUN(res, cc_zero, "setsockopt",
+            setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+                       reinterpret_cast<setsockopt_ptr>(&flag),
+                       static_cast<socklen_t>(sizeof(flag))));
+  return unit;
 }
 
 bool is_error(ssize_t res, bool is_nonblock) {
@@ -975,10 +1008,11 @@ resumable* pipe_reader::try_read_next() {
 
 void pipe_reader::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
+  auto mt = backend().system().config().scheduler_max_throughput;
   switch (op) {
     case operation::read: {
     auto cb = try_read_next();
-      switch (cb->resume(&backend(), backend().max_throughput())) {
+      switch (cb->resume(&backend(), mt)) {
         case resumable::resume_later:
           backend().exec_later(cb);
           break;
@@ -1061,12 +1095,13 @@ void stream::removed_from_loop(operation op) {
 
 void stream::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
+  auto mcr = backend().system().config().middleman_max_consecutive_reads;
   switch (op) {
     case operation::read: {
       // loop until an error occurs or we have nothing more to read
       // or until we have handled 50 reads
       size_t rb;
-      for (size_t i = 0; i < backend().max_consecutive_reads(); ++i) {
+      for (size_t i = 0; i < mcr; ++i) {
         if (! read_some(rb, fd(),
                         rd_buf_.data() + collected_,
                         rd_buf_.size() - collected_)) {
@@ -1254,7 +1289,7 @@ in_port_t& port_of(sockaddr& what) {
     default:
       break;
   }
-  throw std::invalid_argument("invalid protocol family");
+  CAF_CRITICAL("invalid protocol family");
 }
 
 template <int Family>
@@ -1276,19 +1311,20 @@ bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
   return connect(fd, reinterpret_cast<const sockaddr*>(&sa), sizeof(sa)) == 0;
 }
 
-native_socket new_tcp_connection(const std::string& host, uint16_t port,
-                                 optional<protocol> preferred) {
+expected<native_socket> new_tcp_connection(const std::string& host,
+                                           uint16_t port,
+                                           optional<protocol> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
   CAF_LOG_INFO("try to connect to:" << CAF_ARG(host) << CAF_ARG(port));
   auto res = interfaces::native_address(host, preferred);
   if (! res) {
     CAF_LOG_INFO("no such host");
-    throw network_error("no such host: " + host);
+    return make_error(sec::cannot_connect_to_node, "no such host", host, port);
   }
   auto proto = res->second;
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
-  auto fd = ccall(cc_valid_socket, "socket creation failed", socket,
-                  proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
+  CALL_CFUN(fd, cc_valid_socket, "socket",
+            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
   socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
@@ -1300,36 +1336,41 @@ native_socket new_tcp_connection(const std::string& host, uint16_t port,
     return new_tcp_connection(host, port, ipv4);
   }
   if (! ip_connect<AF_INET>(fd, res->first, port)) {
-    CAF_LOG_ERROR("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
-    throw network_error("could not connect to " + host);
+    CAF_LOG_INFO("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
+    return make_error(sec::cannot_connect_to_node,
+                      "ip_connect failed", host, port);
   }
   CAF_LOG_INFO("successfully connected to host via IPv4");
   return sguard.release();
 }
 
 template <class SockAddrType>
-void read_port(native_socket fd, SockAddrType& sa) {
+expected<void> read_port(native_socket fd, SockAddrType& sa) {
   socklen_t len = sizeof(SockAddrType);
-  ccall(cc_zero, "read_port failed", getsockname, fd,
-        reinterpret_cast<sockaddr*>(&sa), &len);
+  CALL_CFUN(res, cc_zero, "getsockname",
+            getsockname(fd, reinterpret_cast<sockaddr*>(&sa), &len));
+  return unit;
 }
 
-void set_inaddr_any(native_socket, sockaddr_in& sa) {
+expected<void> set_inaddr_any(native_socket, sockaddr_in& sa) {
   sa.sin_addr.s_addr = INADDR_ANY;
+  return unit;
 }
 
-void set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
+expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
   sa.sin6_addr = in6addr_any;
   // also accept ipv4 requests on this socket
   int off = 0;
-  ccall(cc_zero, "unable to unset IPV6_V6ONLY", setsockopt, fd, IPPROTO_IPV6,
-        IPV6_V6ONLY, reinterpret_cast<setsockopt_ptr>(&off),
-        socklen_t{sizeof(off)});
+  CALL_CFUN(res, cc_zero, "setsockopt",
+            setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
+                       reinterpret_cast<setsockopt_ptr>(&off),
+                       static_cast<socklen_t>(sizeof(off))));
+  return unit;
 }
 
 template <int Family>
-uint16_t new_ip_acceptor_impl(native_socket fd, uint16_t port,
-                              const char* addr) {
+expected<uint16_t> new_ip_acceptor_impl(native_socket fd, uint16_t port,
+                                        const char* addr) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   using sockaddr_type =
@@ -1344,53 +1385,54 @@ uint16_t new_ip_acceptor_impl(native_socket fd, uint16_t port,
   if (! addr) {
     set_inaddr_any(fd, sa);
   } else {
-    ccall(cc_one, "invalid IP address", inet_pton, Family, addr, &addr_of(sa));
+    CALL_CFUN(res, cc_one, "inet_pton",
+              inet_pton(Family, addr, &addr_of(sa)));
   }
   port_of(sa) = htons(port);
-  ccall(cc_zero, "cannot bind socket", bind, fd,
-        reinterpret_cast<sockaddr*>(&sa), socklen_t{sizeof(sa)});
+  CALL_CFUN(res, cc_zero, "bind",
+            bind(fd, reinterpret_cast<sockaddr*>(&sa),
+                 static_cast<socklen_t>(sizeof(sa))));
   read_port(fd, sa);
   return ntohs(port_of(sa));
 }
 
-std::pair<native_socket, uint16_t>
+expected<std::pair<native_socket, uint16_t>>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   protocol proto = ipv6;
   if (addr) {
     auto addrs = interfaces::native_address(addr);
-    if (! addrs) {
-      std::string errmsg = "invalid IP address: ";
-      errmsg += addr;
-      throw network_error(errmsg);
-    }
+    if (! addrs)
+      return make_error(sec::cannot_open_port, "Invalid ADDR", addr);
     proto = addrs->second;
     CAF_ASSERT(proto == ipv4 || proto == ipv6);
   }
-  auto fd = ccall(cc_valid_socket, "could not create server socket", socket,
-                  proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
+  CALL_CFUN(fd, cc_valid_socket, "socket",
+            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
   // sguard closes the socket in case of exception
   socket_guard sguard(fd);
   if (reuse_addr) {
     int on = 1;
-    ccall(cc_zero, "unable to set SO_REUSEADDR", setsockopt, fd, SOL_SOCKET,
-          SO_REUSEADDR, reinterpret_cast<setsockopt_ptr>(&on),
-          socklen_t{sizeof(on)});
+    CALL_CFUN(tmp1, cc_zero, "setsockopt",
+              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                         reinterpret_cast<setsockopt_ptr>(&on),
+                         static_cast<socklen_t>(sizeof(on))));
   }
   auto p = proto == ipv4 ? new_ip_acceptor_impl<AF_INET>(fd, port, addr)
                          : new_ip_acceptor_impl<AF_INET6>(fd, port, addr);
-  ccall(cc_zero, "listen() failed", listen, fd, SOMAXCONN);
-  // ok, no exceptions so far
+  if (! p)
+    return std::move(p.error());
+  CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
+  // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
-  return {sguard.release(), p};
+  return std::make_pair(sguard.release(), *p);
 }
 
-std::string local_addr_of_fd(native_socket fd) {
+expected<std::string> local_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
   sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
-  ccall(cc_zero, "getsockname() failed",
-        getsockname, fd, sa, &st_len);
+  CALL_CFUN(tmp1, cc_zero, "getsockname", getsockname(fd, sa, &st_len));
   char addr[INET6_ADDRSTRLEN] {0};
   switch (sa->sa_family) {
     case AF_INET:
@@ -1403,23 +1445,23 @@ std::string local_addr_of_fd(native_socket fd) {
     default:
       break;
   }
-  throw std::invalid_argument("invalid protocol family");
+  return make_error(sec::invalid_protocol_family,
+                    "local_addr_of_fd", sa->sa_family);
 }
 
-uint16_t local_port_of_fd(native_socket fd) {
+expected<uint16_t> local_port_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
-  ccall(cc_zero, "getsockname() failed", getsockname,
-        fd, reinterpret_cast<sockaddr*>(&st), &st_len);
+  CALL_CFUN(tmp, cc_zero, "getsockname",
+            getsockname(fd, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
 
-std::string remote_addr_of_fd(native_socket fd) {
+expected<std::string> remote_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
   sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
-  ccall(cc_zero, "getpeername() failed",
-        getpeername, fd, sa, &st_len);
+  CALL_CFUN(tmp, cc_zero, "getpeername", getpeername(fd, sa, &st_len));
   char addr[INET6_ADDRSTRLEN] {0};
   switch (sa->sa_family) {
     case AF_INET:
@@ -1432,14 +1474,15 @@ std::string remote_addr_of_fd(native_socket fd) {
     default:
       break;
   }
-  throw std::invalid_argument("invalid protocol family");
+  return make_error(sec::invalid_protocol_family,
+                    "remote_addr_of_fd", sa->sa_family);
 }
 
-uint16_t remote_port_of_fd(native_socket fd) {
+expected<uint16_t> remote_port_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
-  ccall(cc_zero, "getpeername() failed", getpeername,
-        fd, reinterpret_cast<sockaddr*>(&st), &st_len);
+  CALL_CFUN(tmp, cc_zero, "getpeername",
+            getpeername(fd, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
 

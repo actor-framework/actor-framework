@@ -102,7 +102,7 @@ CAF_TEST(empty_function_fiew) {
     f(10, 20);
     CAF_ERROR("line must be unreachable");
   }
-  catch (std::bad_function_call&) {
+  catch (std::runtime_error&) {
     // nop
   }
 }
@@ -126,10 +126,9 @@ CAF_TEST(single_res_function_view) {
     g(1, 0);
     CAF_ERROR("expected exception");
   }
-  catch (actor_exited& e) {
-    CAF_MESSAGE("e: " << system.render(e.reason()));
+  catch (std::runtime_error& e) {
+    CAF_MESSAGE(e.what());
   }
-  CAF_CHECK(g == nullptr);
   g.assign(system.spawn(divider));
   CAF_CHECK_EQUAL(g(4, 2), 2);
 }

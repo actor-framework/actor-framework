@@ -463,8 +463,8 @@ group group_manager::anonymous() {
   return get_module("local")->get(id);
 }
 
-group group_manager::get(const std::string& module_name,
-                         const std::string& group_identifier) {
+expected<group> group_manager::get(const std::string& module_name,
+                                   const std::string& group_identifier) {
   CAF_LOG_TRACE(CAF_ARG(module_name) << CAF_ARG(group_identifier));
   auto mod = get_module(module_name);
   if (mod) {
@@ -473,7 +473,12 @@ group group_manager::get(const std::string& module_name,
   std::string error_msg = "no module named \"";
   error_msg += module_name;
   error_msg += "\" found";
-  throw std::logic_error(error_msg);
+  return make_error(sec::no_such_group_module, std::move(error_msg));
+}
+
+group group_manager::get_local(const std::string& group_identifier) {
+  // guaranteed to never return an error
+  return *get("local", group_identifier);
 }
 
 void group_manager::add_module(std::unique_ptr<abstract_group::module> mptr) {
@@ -489,7 +494,7 @@ void group_manager::add_module(std::unique_ptr<abstract_group::module> mptr) {
   std::string error_msg = "module name \"";
   error_msg += mname;
   error_msg += "\" already defined";
-  throw std::logic_error(error_msg);
+  CAF_RAISE_ERROR(std::move(error_msg));
 }
 
 abstract_group::module* group_manager::get_module(const std::string& mname) {

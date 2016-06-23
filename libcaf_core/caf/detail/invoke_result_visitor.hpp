@@ -25,10 +25,11 @@
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
-#include "caf/optional.hpp"
+#include "caf/skip.hpp"
 #include "caf/result.hpp"
 #include "caf/message.hpp"
-#include "caf/skip.hpp"
+#include "caf/expected.hpp"
+#include "caf/optional.hpp"
 #include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/int_list.hpp"
@@ -71,6 +72,15 @@ public:
       (*this)(*x);
     else
       (*this)(none);
+  }
+
+  // unwrap expecteds
+  template <class T>
+  void operator()(expected<T>& x) {
+    if (x)
+      (*this)(*x);
+    else
+      (*this)(x.error());
   }
 
   // convert values to messages

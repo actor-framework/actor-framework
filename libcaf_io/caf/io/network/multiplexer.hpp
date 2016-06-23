@@ -25,6 +25,7 @@
 #include <functional>
 
 #include "caf/extend.hpp"
+#include "caf/expected.hpp"
 #include "caf/resumable.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/execution_unit.hpp"
@@ -57,36 +58,36 @@ public:
   /// Tries to connect to `host` on given `port` and returns an unbound
   /// connection handle on success.
   /// @threadsafe
-  virtual connection_handle new_tcp_scribe(const std::string& host,
-                                           uint16_t port) = 0;
+  virtual expected<connection_handle>
+  new_tcp_scribe(const std::string& host, uint16_t port) = 0;
 
   /// Assigns an unbound scribe identified by `hdl` to `ptr`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual void assign_tcp_scribe(abstract_broker* ptr,
-                                 connection_handle hdl) = 0;
+  virtual expected<void>
+  assign_tcp_scribe(abstract_broker* ptr, connection_handle hdl) = 0;
 
   /// Creates a new TCP doorman from a native socket handle.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual connection_handle add_tcp_scribe(abstract_broker* ptr,
                                            native_socket fd) = 0;
 
-  /// Tries to connect to host `h` on given `port` and returns a
+  /// Tries to connect to `host` on `port` and returns a
   /// new scribe managing the connection on success.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual connection_handle add_tcp_scribe(abstract_broker* ptr,
-                                           const std::string& host,
-                                           uint16_t port) = 0;
+  virtual expected<connection_handle>
+  add_tcp_scribe(abstract_broker*, const std::string& host, uint16_t port) = 0;
 
-  /// Tries to create an unbound TCP doorman running `port`, optionally
+  /// Tries to create an unbound TCP doorman bound to `port`, optionally
   /// accepting only connections from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual std::pair<accept_handle, uint16_t>
+  virtual expected<std::pair<accept_handle, uint16_t>>
   new_tcp_doorman(uint16_t port, const char* in = nullptr,
                   bool reuse_addr = false) = 0;
 
   /// Assigns an unbound doorman identified by `hdl` to `ptr`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual void assign_tcp_doorman(abstract_broker* ptr, accept_handle hdl) = 0;
+  virtual expected<void>
+  assign_tcp_doorman(abstract_broker* ptr, accept_handle hdl) = 0;
 
   /// Creates a new TCP doorman from a native socket handle.
   /// @warning Do not call from outside the multiplexer's event loop.
@@ -96,7 +97,7 @@ public:
   /// Tries to create a new TCP doorman running on port `p`, optionally
   /// accepting only connections from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual std::pair<accept_handle, uint16_t>
+  virtual expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(abstract_broker* ptr, uint16_t port, const char* in = nullptr,
                   bool reuse_addr = false) = 0;
 
@@ -167,29 +168,10 @@ public:
     tid_ = std::move(tid);
   }
 
-  inline size_t max_throughput() const {
-    return max_throughput_;
-  }
-
-  inline void max_throughput(size_t x) {
-    max_throughput_ = x;
-  }
-
-  inline size_t max_consecutive_reads() const {
-    return max_consecutive_reads_;
-  }
-
-  inline void max_consecutive_reads(size_t x) {
-    max_consecutive_reads_ = x;
-  }
-
 protected:
   /// Identifies the thread this multiplexer
   /// is running in. Must be set by the subclass.
   std::thread::id tid_;
-
-  size_t max_throughput_;
-  size_t max_consecutive_reads_;
 };
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;

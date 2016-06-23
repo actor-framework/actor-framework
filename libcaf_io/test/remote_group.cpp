@@ -110,7 +110,7 @@ void make_client_behavior(event_based_actor* self,
 behavior make_server_behavior(event_based_actor* self) {
   return {
     [=](get_group_atom) {
-      return self->system().groups().get("local", "foobar");
+      return self->system().groups().get_local("foobar");
     },
     [=](spawn_atom, group group) -> std::vector<actor> {
       std::vector<actor> vec;
@@ -129,7 +129,7 @@ CAF_TEST_FIXTURE_SCOPE(dynamic_remote_group_tests, fixture)
 
 CAF_TEST(remote_group_conn) {
   // server side
-  auto port = server_side_mm.publish_local_groups(0);
+  CAF_EXP_THROW(port, server_side_mm.publish_local_groups(0));
   CAF_REQUIRE(port != 0);
   // client side
   CAF_CHECK(client_side_mm.remote_group("whatever", local_host, port));
@@ -137,11 +137,12 @@ CAF_TEST(remote_group_conn) {
 
 CAF_TEST(server_side_group_comm) {
   // server side
-  auto port = server_side_mm.publish(server_side.spawn(make_server_behavior),
-                                     0, local_host);
+  CAF_EXP_THROW(port,
+                server_side_mm.publish(server_side.spawn(make_server_behavior),
+                                       0, local_host));
   CAF_REQUIRE(port != 0);
   // client side
-  auto server = client_side_mm.remote_actor(local_host, port);
+  CAF_EXP_THROW(server, client_side_mm.remote_actor(local_host, port));
   scoped_actor group_resolver(client_side, true);
   group grp;
   group_resolver->request(server, infinite, get_group_atom::value).receive(
@@ -154,13 +155,14 @@ CAF_TEST(server_side_group_comm) {
 
 CAF_TEST(client_side_group_comm) {
   // server side
-  auto port = server_side_mm.publish(server_side.spawn(make_server_behavior),
-                                     0, local_host);
+  CAF_EXP_THROW(port,
+                server_side_mm.publish(server_side.spawn(make_server_behavior),
+                                       0, local_host));
   CAF_REQUIRE(port != 0);
   // client side
-  auto server = client_side_mm.remote_actor(local_host, port);
+  CAF_EXP_THROW(server, client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_client_behavior, server,
-                    client_side.groups().get("local", "foobar"));
+                    client_side.groups().get_local("foobar"));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

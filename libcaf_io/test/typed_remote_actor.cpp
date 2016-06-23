@@ -91,8 +91,9 @@ void run_client(int argc, char** argv, uint16_t port) {
     CAF_MESSAGE(e.what());
   }
   CAF_MESSAGE("connect to typed_remote_actor");
-  auto serv = system.middleman().typed_remote_actor<server_type>("127.0.0.1",
-                                                                 port);
+  CAF_EXP_THROW(serv,
+                system.middleman().typed_remote_actor<server_type>("127.0.0.1",
+                                                                   port));
   scoped_actor self{system};
   self->request(serv, infinite, ping{42}).receive(
     [](const pong& p) {
@@ -110,7 +111,8 @@ void run_server(int argc, char** argv) {
      .add_message_type<pong>("pong")
      .parse(argc, argv);
   actor_system system{cfg};
-  auto port = system.middleman().publish(system.spawn(server), 0, "127.0.0.1");
+  CAF_EXP_THROW(port, system.middleman().publish(system.spawn(server),
+                                                 0, "127.0.0.1"));
   CAF_REQUIRE(port != 0);
   CAF_MESSAGE("running on port " << port << ", start client");
   std::thread child{[=] { run_client(argc, argv, port); }};

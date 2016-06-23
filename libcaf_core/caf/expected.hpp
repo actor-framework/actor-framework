@@ -28,6 +28,7 @@
 
 #include "caf/unit.hpp"
 #include "caf/error.hpp"
+#include "caf/unifyn.hpp"
 
 namespace caf {
 
@@ -37,6 +38,10 @@ namespace caf {
 template <typename T>
 class expected {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using value_type = T;
+
   // -- static member variables ------------------------------------------------
 
   /// Stores whether move construct and move assign never throw.
@@ -50,6 +55,13 @@ public:
       && std::is_nothrow_copy_assignable<T>::value;
 
   // -- constructors, destructors, and assignment operators --------------------
+
+  template <class U>
+  expected(U x,
+           typename std::enable_if<std::is_convertible<U, T>::value>::type* = 0)
+      : engaged_(true) {
+    new (&value_) T(std::move(x));
+  }
 
   expected(T&& x) noexcept(nothrow_move) : engaged_(true) {
     new (&value_) T(std::move(x));
@@ -65,6 +77,11 @@ public:
 
   expected(const expected& other) noexcept(nothrow_copy) {
     construct(other);
+  }
+
+  template <class Code, class E = enable_if_has_make_error_t<Code>>
+  expected(Code code) : engaged_(false) {
+    new (&error_) caf::error(make_error(code));
   }
 
   expected(expected&& other) noexcept(nothrow_move) {
@@ -110,6 +127,7 @@ public:
     return *this;
   }
 
+
   expected& operator=(T&& x) noexcept(nothrow_move) {
     if (engaged_) {
       value_ = std::move(x);
@@ -121,6 +139,12 @@ public:
     return *this;
   }
 
+  template <class U>
+  typename std::enable_if<std::is_convertible<U, T>::value, expected&>::type
+  operator=(U x) {
+    return *this = T{std::move(x)};
+  }
+
   expected& operator=(caf::error e) noexcept {
     if (! engaged_)
       error_ = std::move(e);
@@ -130,6 +154,11 @@ public:
       new (&value_) caf::error(std::move(e));
     }
     return *this;
+  }
+
+  template <class Code>
+  enable_if_has_make_error_t<Code, expected&> operator=(Code code) {
+    return *this = make_error(code);
   }
 
   // -- modifiers --------------------------------------------------------------
@@ -366,6 +395,18 @@ public:
 private:
   caf::error error_;
 };
+
+/// @cond PRIVATE
+/// Assigns the value of `expr` (which must return an `expected`)
+/// to a new variable named `var` or throws a `std::runtime_error` on error.
+/// @relates expected
+/// @experimental
+#define CAF_EXP_THROW(var, expr)                                               \
+  auto CAF_UNIFYN(tmp_var_) = expr;                                            \
+  if (! CAF_UNIFYN(tmp_var_))                                                  \
+    CAF_RAISE_ERROR(to_string(CAF_UNIFYN(tmp_var_).error()));                  \
+  auto& var = *CAF_UNIFYN(tmp_var_)
+/// @endcond
 
 } // namespace caf
 

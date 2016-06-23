@@ -111,7 +111,7 @@ void run_client(int argc, char** argv, uint16_t port) {
      .load<io::middleman>()
      .add_actor_type("mirror", mirror);
   actor_system system{cfg};
-  auto serv = system.middleman().remote_actor("localhost", port);
+  CAF_EXP_THROW(serv, system.middleman().remote_actor("localhost", port));
   system.spawn(client, serv);
 }
 
@@ -119,7 +119,7 @@ void run_server(int argc, char** argv) {
   actor_system_config cfg;
   actor_system system{cfg.load<io::middleman>().parse(argc, argv)};
   auto serv = system.spawn(server);
-  auto port = system.middleman().publish(serv, 0);
+  CAF_EXP_THROW(port, system.middleman().publish(serv, 0));
   CAF_REQUIRE(port != 0);
   CAF_MESSAGE("published server at port " << port);
   std::thread child([=] { run_client(argc, argv, port); });

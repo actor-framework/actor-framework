@@ -120,14 +120,10 @@ void caf_main(actor_system& system, const config& cfg) {
     auto res = message_builder(words.begin(), words.end()).apply({
       [&](const string& cmd, const string& mod, const string& id) {
         if (cmd == "/join") {
-          try {
-            group grp = (mod == "remote") ? system.middleman().remote_group(id)
-                                          : system.groups().get(mod, id);
-            anon_send(client_actor, join_atom::value, grp);
-          }
-          catch (exception& e) {
-            cerr << "*** exception: " << e.what() << endl;
-          }
+          auto grp = (mod == "remote") ? system.middleman().remote_group(id)
+                                       : system.groups().get(mod, id);
+          if (grp)
+            anon_send(client_actor, join_atom::value, *grp);
         }
         else {
           send_input();

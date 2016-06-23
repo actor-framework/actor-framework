@@ -107,110 +107,106 @@ middleman::middleman(actor_system& sys)
   // nop
 }
 
-uint16_t middleman::publish(const strong_actor_ptr& whom,
-                            std::set<std::string> sigs,
-                            uint16_t port, const char* in, bool ru) {
+expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
+                                      std::set<std::string> sigs,
+                                      uint16_t port, const char* in, bool ru) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port)
                 << CAF_ARG(in) << CAF_ARG(ru));
   if (! whom)
-    throw network_error("cannot publish an invalid actor");
+    return sec::cannot_publish_invalid_actor;
   std::string str;
   if (in != nullptr)
     str = in;
   auto mm = actor_handle();
   scoped_actor self{system()};
-  uint16_t result;
-  std::string error_msg;
-  try {
-    self->request(mm, infinite, publish_atom::value, port,
-                  std::move(whom), std::move(sigs), str, ru).receive(
-      [&](ok_atom, uint16_t res) {
-        result = res;
-      },
-      [&](const error& err) {
-        error_msg = system().render(err);
-      }
-    );
-  }
-  catch (actor_exited& e) {
-    error_msg = "scoped actor in caf::publish quit unexpectedly: ";
-    error_msg += e.what();
-  }
-  if (! error_msg.empty())
-    throw network_error(std::move(error_msg));
+  expected<uint16_t> result{port};
+  self->request(mm, infinite, publish_atom::value, port,
+                std::move(whom), std::move(sigs), str, ru).receive(
+    [&](ok_atom, uint16_t res) {
+      result = res;
+    },
+    [&](error& err) {
+      result = std::move(err);
+    }
+  );
   return result;
 }
 
-uint16_t middleman::publish_local_groups(uint16_t port, const char* in) {
+expected<uint16_t> middleman::publish_local_groups(uint16_t port,
+                                                   const char* in) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
   auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
       [self](get_atom, const std::string& name) {
-        return self->system().groups().get("local", name);
+        return self->system().groups().get_local(name);
       }
     };
   };
   auto gn = system().spawn<hidden>(group_nameserver);
-  try {
-    auto result = publish(gn, port, in);
-    // link gn to our manager
+  auto result = publish(gn, port, in);
+  // link gn to our manager
+  if (result)
     manager_->link_impl(abstract_actor::establish_link_op,
                         actor_cast<abstract_actor*>(gn));
-    return result;
-  }
-  catch (std::exception&) {
+  else
     anon_send_exit(gn, exit_reason::user_shutdown);
-    throw;
-  }
+  return result;
 }
 
-void middleman::unpublish(const actor_addr& whom, uint16_t port) {
+expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   scoped_actor self{system(), true};
+  expected<void> result{unit};
   self->request(actor_handle(), infinite,
                 unpublish_atom::value, whom, port).receive(
     [] {
       // ok, basp_broker is done
     },
-    [](const error&) {
-      // ok, ignore errors
+    [&](error& x) {
+      result = std::move(x);
     }
   );
+  return result;
 }
 
-strong_actor_ptr middleman::remote_actor(std::set<std::string> ifs,
-                                         std::string host, uint16_t port) {
+expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
+                                                   std::string host,
+                                                   uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
   auto mm = actor_handle();
+  error err;
   strong_actor_ptr result;
   scoped_actor self{system(), true};
   self->request(mm, infinite, connect_atom::value,
                 std::move(host), port).receive(
     [&](ok_atom, const node_id&, strong_actor_ptr res, std::set<std::string>& xs) {
       CAF_LOG_TRACE(CAF_ARG(res) << CAF_ARG(xs));
-      if (!res)
-        throw network_error("no actor published at port "
-                            + std::to_string(port));
+      if (!res) {
+        err = make_error(sec::no_actor_published_at_port,
+                         "no actor published at port", port);
+        return;
+      }
       if (! (xs.empty() && ifs.empty())
           && ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end())) {
-        std::string what = "expected signature: ";
-        what += deep_to_string(ifs);
-        what += ", found: ";
-        what += deep_to_string(xs);
-
-        throw network_error(std::move(what));
+        err = make_error(sec::unexpected_actor_messaging_interface,
+                         "expected signature:", deep_to_string(ifs),
+                         "found:", deep_to_string(xs));
+        return;
       }
       result.swap(res);
     },
-    [&](const error& msg) {
+    [&](error& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg));
-      throw network_error(system().render(msg));
+      err = std::move(msg);
     }
   );
+  CAF_ASSERT(result || err);
+  if (! result)
+    return err;
   return result;
 }
 
-group middleman::remote_group(const std::string& group_uri) {
+expected<group> middleman::remote_group(const std::string& group_uri) {
   CAF_LOG_TRACE(CAF_ARG(group_uri));
   // format of group_identifier is group@host:port
   // a regex would be the natural choice here, but we want to support
@@ -218,25 +214,29 @@ group middleman::remote_group(const std::string& group_uri) {
   auto pos1 = group_uri.find('@');
   auto pos2 = group_uri.find(':');
   auto last = std::string::npos;
-  if (pos1 == last || pos2 == last || pos1 >= pos2) {
-    throw std::invalid_argument("group_uri has an invalid format");
-  }
+  if (pos1 == last || pos2 == last || pos1 >= pos2)
+    return make_error(sec::invalid_argument, "invalid URI format", group_uri);
   auto name = group_uri.substr(0, pos1);
   auto host = group_uri.substr(pos1 + 1, pos2 - pos1 - 1);
   auto port = static_cast<uint16_t>(std::stoi(group_uri.substr(pos2 + 1)));
   return remote_group(name, host, port);
 }
 
-group middleman::remote_group(const std::string& group_identifier,
-                              const std::string& host, uint16_t port) {
+expected<group> middleman::remote_group(const std::string& group_identifier,
+                                        const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(group_identifier) << CAF_ARG(host) << CAF_ARG(port));
   auto group_server = remote_actor(host, port);
+  if (! group_server)
+    return std::move(group_server.error());
   scoped_actor self{system(), true};
-  self->send(group_server, get_atom::value, group_identifier);
-  group result;
+  self->send(*group_server, get_atom::value, group_identifier);
+  expected<group> result{sec::cannot_connect_to_node};
   self->receive(
     [&](group& grp) {
       result = std::move(grp);
+    },
+    [&](error& err) {
+      result = std::move(err);
     }
   );
   return result;
@@ -337,9 +337,6 @@ void middleman::init(actor_system_config& cfg) {
   // compute and set ID for this network node
   node_id this_node{node_id::data::create_singleton()};
   system().node_.swap(this_node);
-  // set scheduling parameters for multiplexer
-  backend().max_throughput(cfg.scheduler_max_throughput);
-  backend().max_consecutive_reads(cfg.middleman_max_consecutive_reads);
   // give config access to slave mode implementation
   cfg.slave_mode_fun = &middleman::exec_slave_mode;
 }

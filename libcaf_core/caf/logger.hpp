@@ -30,6 +30,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/config.hpp"
+#include "caf/unifyn.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/deep_to_string.hpp"
 
@@ -185,10 +186,6 @@ private:
 #define CAF_LOG_LEVEL_INFO 2
 #define CAF_LOG_LEVEL_DEBUG 3
 #define CAF_LOG_LEVEL_TRACE 4
-
-#define CAF_CONCAT_(LHS, RHS) LHS ## RHS
-#define CAF_CONCAT(LHS, RHS) CAF_CONCAT_(LHS, RHS)
-#define CAF_UNIFYN(NAME) CAF_CONCAT(NAME, __LINE__)
 
 #define CAF_PRINT_ERROR_IMPL(nclass, nfun, message)                            \
   do {                                                                         \

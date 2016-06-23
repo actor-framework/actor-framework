@@ -111,18 +111,18 @@ void abstract_broker::add_scribe(const intrusive_ptr<scribe>& ptr) {
   scribes_.emplace(ptr->hdl(), ptr);
 }
 
-connection_handle abstract_broker::add_tcp_scribe(const std::string& hostname,
+expected<connection_handle> abstract_broker::add_tcp_scribe(const std::string& hostname,
                                                   uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
   return backend().add_tcp_scribe(this, hostname, port);
 }
 
-void abstract_broker::assign_tcp_scribe(connection_handle hdl) {
+expected<void> abstract_broker::assign_tcp_scribe(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  backend().assign_tcp_scribe(this, hdl);
+  return backend().assign_tcp_scribe(this, hdl);
 }
 
-connection_handle
+expected<connection_handle>
 abstract_broker::add_tcp_scribe(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   return backend().add_tcp_scribe(this, fd);
@@ -134,19 +134,19 @@ void abstract_broker::add_doorman(const intrusive_ptr<doorman>& ptr) {
     ptr->launch();
 }
 
-std::pair<accept_handle, uint16_t>
+expected<std::pair<accept_handle, uint16_t>>
 abstract_broker::add_tcp_doorman(uint16_t port, const char* in,
                                  bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(reuse_addr));
   return backend().add_tcp_doorman(this, port, in, reuse_addr);
 }
 
-void abstract_broker::assign_tcp_doorman(accept_handle hdl) {
+expected<void> abstract_broker::assign_tcp_doorman(accept_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  backend().assign_tcp_doorman(this, hdl);
+  return backend().assign_tcp_doorman(this, hdl);
 }
 
-accept_handle abstract_broker::add_tcp_doorman(network::native_socket fd) {
+expected<accept_handle> abstract_broker::add_tcp_doorman(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   return backend().add_tcp_doorman(this, fd);
 }
@@ -175,7 +175,7 @@ accept_handle abstract_broker::hdl_by_port(uint16_t port) {
   for (auto& kvp : doormen_)
     if (kvp.second->port() == port)
       return kvp.first;
-  throw std::logic_error("no such port");
+  CAF_RAISE_ERROR("no such port");
 }
 
 void abstract_broker::close_all() {

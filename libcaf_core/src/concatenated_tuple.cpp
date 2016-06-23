@@ -116,7 +116,7 @@ std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
     else
       return {m.get(), idx};
   }
-  throw std::out_of_range("out of range: concatenated_tuple::select");
+  CAF_RAISE_ERROR("out of range: concatenated_tuple::select");
 }
 
 } // namespace detail

@@ -117,13 +117,12 @@ public:
           return {};
         }
         // connect to endpoint and initiate handhsake etc.
-        connection_handle hdl;
-        try {
-          hdl = system().middleman().backend().new_tcp_scribe(key.first, port);
-        } catch(std::exception&) {
-          rp.deliver(sec::cannot_connect_to_node);
+        auto y = system().middleman().backend().new_tcp_scribe(key.first, port);
+        if (! y) {
+          rp.deliver(std::move(y.error()));
           return {};
         }
+        auto hdl = *y;
         std::vector<response_promise> tmp{std::move(rp)};
         pending_.emplace(key, std::move(tmp));
         request(broker_, infinite, connect_atom::value, hdl, port).then(
@@ -188,18 +187,15 @@ private:
     // treat empty strings like nullptr
     if (in != nullptr && in[0] == '\0')
       in = nullptr;
-    try {
-      auto res = system().middleman().backend().new_tcp_doorman(port, in,
-                                                                reuse_addr);
-      hdl = res.first;
-      actual_port = res.second;
-      anon_send(broker_, publish_atom::value, hdl, actual_port,
-                std::move(whom), std::move(sigs));
-      return {ok_atom::value, actual_port};
-    }
-    catch (std::exception&) {
-      return sec::cannot_open_port;
-    }
+    auto res = system().middleman().backend().new_tcp_doorman(port, in,
+                                                              reuse_addr);
+    if (! res)
+      return std::move(res.error());
+    hdl = res->first;
+    actual_port = res->second;
+    anon_send(broker_, publish_atom::value, hdl, actual_port,
+              std::move(whom), std::move(sigs));
+    return {ok_atom::value, actual_port};
   }
 
   optional<endpoint_data&> cached(const endpoint& ep) {

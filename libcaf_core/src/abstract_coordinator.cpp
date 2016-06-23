@@ -202,7 +202,7 @@ string_sink make_sink(actor_system& sys, const std::string& fn, int flags) {
     return nullptr;
   if (fn.front() == ':') {
     // "virtual file" name given, translate this to group communication
-    auto grp = sys.groups().get("local", fn);
+    auto grp = sys.groups().get_local(fn);
     return [grp, fn](std::string&& out) { anon_send(grp, fn, std::move(out)); };
   }
   auto append = static_cast<bool>(flags & actor_ostream::append);

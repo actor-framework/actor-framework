@@ -270,13 +270,18 @@ void caf_main(actor_system& system, const config& cfg) {
     auto calc = system.spawn(calculator_fun);
     // try to publish math actor at given port
     cout << "*** try publish at port " << cfg.port << endl;
-    auto p = system.middleman().publish(calc, cfg.port);
-    cout << "*** server successfully published at port " << p << endl;
-    cout << "*** press [enter] to quit" << endl;
-    string dummy;
-    std::getline(std::cin, dummy);
-    cout << "... cya" << endl;
-    anon_send_exit(calc, exit_reason::user_shutdown);
+    auto expected_port = system.middleman().publish(calc, cfg.port);
+    if (! expected_port) {
+      std::cerr << "*** publish failed: "
+                << system.render(expected_port.error()) << endl;
+    } else {
+      cout << "*** server successfully published at port " << *expected_port
+           << endl  << "*** press [enter] to quit" << endl;
+      string dummy;
+      std::getline(std::cin, dummy);
+      cout << "... cya" << endl;
+      anon_send_exit(calc, exit_reason::user_shutdown);
+    }
     return;
   }
   client_repl(system, cfg.host, cfg.port);

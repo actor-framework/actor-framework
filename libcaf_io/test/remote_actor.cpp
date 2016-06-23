@@ -121,36 +121,35 @@ CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 CAF_TEST(identity_semantics) {
   // server side
   auto server = server_side.spawn(make_pong_behavior);
-  auto port1 = server_side_mm.publish(server, 0, local_host);
-  auto port2 = server_side_mm.publish(server, 0, local_host);
+  CAF_EXP_THROW(port1, server_side_mm.publish(server, 0, local_host));
+  CAF_EXP_THROW(port2, server_side_mm.publish(server, 0, local_host));
   CAF_REQUIRE_NOT_EQUAL(port1, port2);
-  auto same_server = server_side_mm.remote_actor(local_host, port2);
+  CAF_EXP_THROW(same_server, server_side_mm.remote_actor(local_host, port2));
   CAF_REQUIRE_EQUAL(same_server, server);
   CAF_CHECK_EQUAL(same_server->node(), server_side.node());
-  // client side
-  auto server1 = client_side_mm.remote_actor(local_host, port1);
-  auto server2 = client_side_mm.remote_actor(local_host, port2);
+  CAF_EXP_THROW(server1, client_side_mm.remote_actor(local_host, port1));
+  CAF_EXP_THROW(server2, client_side_mm.remote_actor(local_host, port2));
   CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(local_host, port1));
   CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(local_host, port2));
-  // cleanup
   caf::anon_send_exit(server, caf::exit_reason::user_shutdown);
 }
 
 CAF_TEST(ping_pong) {
   // server side
-  auto port = server_side_mm.publish(server_side.spawn(make_pong_behavior),
-                                     0, local_host);
+  CAF_EXP_THROW(port,
+                server_side_mm.publish(server_side.spawn(make_pong_behavior),
+                                       0, local_host));
   // client side
-  auto pong = client_side_mm.remote_actor(local_host, port);
+  CAF_EXP_THROW(pong, client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_ping_behavior, pong);
 }
 
 CAF_TEST(custom_message_type) {
   // server side
-  auto port = server_side_mm.publish(server_side.spawn(make_sort_behavior),
-                                     0, local_host);
+  CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(make_sort_behavior),
+                                             0, local_host));
   // client side
-  auto sorter = client_side_mm.remote_actor(local_host, port);
+  CAF_EXP_THROW(sorter, client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_sort_requester_behavior, sorter);
 }
 

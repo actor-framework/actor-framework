@@ -54,12 +54,12 @@ asio_tcp_socket new_tcp_connection(io_service& backend, const std::string& host,
   boost::system::error_code ec;
   auto i = r.resolve(q, ec);
   if (ec) {
-    throw network_error("could not resolve host: " + host);
+    CAF_RAISE_ERROR("could not resolve host: " + host);
   }
   boost::asio::connect(fd, i, ec);
   if (ec) {
-    throw network_error("could not connect to host: " + host +
-                        ":" + std::to_string(port));
+    CAF_RAISE_ERROR("could not connect to host: " + host +
+                    ":" + std::to_string(port));
   }
   return fd;
 }
@@ -90,9 +90,9 @@ void ip_bind(asio_tcp_socket_acceptor& fd, uint16_t port,
     }
   } catch (boost::system::system_error& se) {
     if (se.code() == boost::system::errc::address_in_use) {
-      throw bind_failure(se.code().message());
+      CAF_RAISE_ERROR(se.code().message());
     }
-    throw network_error(se.code().message());
+    CAF_RAISE_ERROR(se.code().message());
   }
 }
 
@@ -181,12 +181,10 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
   boost::system::error_code ec;
   asio_tcp_socket sock{service()};
   sock.assign(boost::asio::ip::tcp::v6(), fd, ec);
-  if (ec) {
+  if (ec)
     sock.assign(boost::asio::ip::tcp::v4(), fd, ec);
-  }
-  if (ec) {
-    throw network_error(ec.message());
-  }
+  if (ec)
+    CAF_RAISE_ERROR(ec.message());
   return add_tcp_scribe(self, std::move(sock));
 }
 
@@ -270,12 +268,10 @@ accept_handle asio_multiplexer::add_tcp_doorman(abstract_broker* self,
   asio_tcp_socket_acceptor sock{service()};
   boost::system::error_code ec;
   sock.assign(boost::asio::ip::tcp::v6(), fd, ec);
-  if (ec) {
+  if (ec)
     sock.assign(boost::asio::ip::tcp::v4(), fd, ec);
-  }
-  if (ec) {
-    throw network_error(ec.message());
-  }
+  if (ec)
+    CAF_RAISE_ERROR(ec.message());
   return add_tcp_doorman(self, std::move(sock));
 }
 
@@ -330,7 +326,7 @@ void asio_multiplexer::run() {
   boost::system::error_code ec;
   service().run(ec);
   if (ec)
-    throw std::runtime_error(ec.message());
+    CAF_RAISE_ERROR(ec.message());
 }
 
 boost::asio::io_service* asio_multiplexer::pimpl() {

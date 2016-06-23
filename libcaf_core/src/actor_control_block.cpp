@@ -79,7 +79,7 @@ void safe_actor(serializer& sink, T& storage) {
   CAF_LOG_TRACE(CAF_ARG(storage));
   if (! sink.context()) {
     CAF_LOG_ERROR("Cannot serialize actors without context.");
-    throw std::logic_error("Cannot serialize actors without context.");
+    CAF_RAISE_ERROR("Cannot serialize actors without context.");
   }
   auto& sys = sink.context()->system();
   auto ptr = storage.get();
@@ -100,7 +100,7 @@ void load_actor(deserializer& source, T& storage) {
   CAF_LOG_TRACE("");
   storage.reset();
   if (! source.context())
-    throw std::logic_error("Cannot deserialize actor_addr without context.");
+    CAF_RAISE_ERROR("Cannot deserialize actor_addr without context.");
   auto& sys = source.context()->system();
   actor_id aid;
   node_id nid;
@@ -115,8 +115,7 @@ void load_actor(deserializer& source, T& storage) {
   }
   auto prp = source.context()->proxy_registry_ptr();
   if (! prp)
-    throw std::logic_error("Cannot deserialize remote actors "
-                           "without proxy registry.");
+    CAF_RAISE_ERROR("Cannot deserialize remote actors without proxy registry.");
   // deal with (proxies for) remote actors
   storage = actor_cast<T>(prp->get_or_put(nid, aid));
 }

@@ -349,7 +349,7 @@ bool actor_system::has_middleman() const {
 
 io::middleman& actor_system::middleman() {
   if (! middleman_)
-    throw std::logic_error("cannot access middleman: module not loaded");
+    CAF_RAISE_ERROR("cannot access middleman: module not loaded");
   return *middleman_;
 }
 
@@ -359,7 +359,7 @@ bool actor_system::has_opencl_manager() const {
 
 opencl::manager& actor_system::opencl_manager() const {
   if (! opencl_manager_)
-    throw std::logic_error("cannot access opencl manager: module not loaded");
+    CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
   return *opencl_manager_;
 }
 

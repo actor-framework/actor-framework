@@ -92,7 +92,7 @@ private:
   template <class Archive, class U>
   typename std::enable_if<! detail::is_serializable<U>::value>::type
   serialize_state(Archive&, U&, const unsigned int) {
-    throw std::logic_error("serialize_state with unserializable type called");
+    CAF_RAISE_ERROR("serialize_state with unserializable type called");
   }
 
   template <class T>

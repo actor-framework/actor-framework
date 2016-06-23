@@ -131,8 +131,9 @@ private:
   template <class Rep, intmax_t Num, intmax_t D>
   static uint64_t rd(const std::chrono::duration<Rep, std::ratio<Num, D>>& d) {
     // assertion (via ctors): Num == 1 || (Num == 60 && D == 1)
+      // negative durations are not supported, map to 0
     if (d.count() < 0)
-      throw std::invalid_argument("negative durations are not supported");
+      return 0;
     return static_cast<uint64_t>(d.count()) * static_cast<uint64_t>(Num);
   }
 };

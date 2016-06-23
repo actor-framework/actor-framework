@@ -176,7 +176,13 @@ void bootstrap(actor_system& system,
   scoped_actor self{system};
   // open a random port and generate a list of all
   // possible addresses slaves can use to connect to us
-  auto port = system.middleman().publish(self, 0);
+  auto port_res = system.middleman().publish(self, 0);
+  if (! port_res) {
+    cerr << "fatal: unable to publish actor: "
+         << system.render(port_res.error()) << endl;
+    return;
+  }
+  auto port = *port_res;
   // run a slave process at master host if user defined slots > 1 for it
   if (master.cpu_slots > 1)
     slaves.emplace_back(master.host, master.cpu_slots - 1,

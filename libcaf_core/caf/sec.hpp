@@ -39,8 +39,13 @@ enum class sec : uint8_t {
   request_receiver_down,
   /// Indicates that a request message timed out.
   request_timeout,
-  /// Unpublishing failed because the actor is not bound to given port.
+  /// Indicates that requested group module does not exist.
+  no_such_group_module,
+  /// Unpublishing or connecting failed because
+  /// requested actor is not bound to given port.
   no_actor_published_at_port,
+  /// Connecting failed because a remote actor had an unexpected interface.
+  unexpected_actor_messaging_interface,
   /// Migration failed because the state of an actor is not serializable.
   state_not_serializable,
   /// An actor received an unsupported key for `('sys', 'get', key)` messages.
@@ -61,6 +66,14 @@ enum class sec : uint8_t {
   cannot_connect_to_node,
   /// Middleman could not open requested port.
   cannot_open_port,
+  /// A C system call in the middleman failed.
+  network_syscall_failed,
+  /// A function received one or more invalid arguments.
+  invalid_argument,
+  /// A network socket reported an invalid network protocol family.
+  invalid_protocol_family,
+  /// Middleman could not publish an actor because it was invalid.
+  cannot_publish_invalid_actor,
   /// A remote spawn failed because the provided types did not match.
   cannot_spawn_actor_from_arguments
 };
@@ -72,7 +85,11 @@ const char* to_string(sec);
 error make_error(sec);
 
 /// @relates sec
-error make_error(sec, message context);
+template <class T, class... Ts>
+error make_error(sec code, T&& x, Ts&&... xs) {
+  return {static_cast<uint8_t>(code), atom("system"),
+          make_message(std::forward<T>(x), std::forward<Ts>(xs)...)};
+}
 
 } // namespace caf
 

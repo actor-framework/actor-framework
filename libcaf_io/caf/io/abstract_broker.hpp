@@ -129,14 +129,14 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  connection_handle add_tcp_scribe(const std::string& host, uint16_t port);
+  expected<connection_handle> add_tcp_scribe(const std::string& host, uint16_t port);
 
   /// Assigns a detached `scribe` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
-  void assign_tcp_scribe(connection_handle hdl);
+  expected<void> assign_tcp_scribe(connection_handle hdl);
 
   /// Creates and assigns a new `scribe` from given native socked `fd`.
-  connection_handle add_tcp_scribe(network::native_socket fd);
+  expected<connection_handle> add_tcp_scribe(network::native_socket fd);
 
   /// Adds a `doorman` instance to this broker.
   void add_doorman(const intrusive_ptr<doorman>& ptr);
@@ -145,16 +145,16 @@ public:
   /// it on success. If `port == 0`, then the broker will ask
   /// the operating system to pick a random port.
   /// @returns The handle of the new `doorman` and the assigned port.
-  std::pair<accept_handle, uint16_t>
+  expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(uint16_t port = 0, const char* in = nullptr,
                   bool reuse_addr = false);
 
   /// Assigns a detached `doorman` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
-  void assign_tcp_doorman(accept_handle hdl);
+  expected<void> assign_tcp_doorman(accept_handle hdl);
 
   /// Creates and assigns a new `doorman` from given native socked `fd`.
-  accept_handle add_tcp_doorman(network::native_socket fd);
+  expected<accept_handle> add_tcp_doorman(network::native_socket fd);
 
   /// Returns the remote address associated to `hdl`
   /// or empty string if `hdl` is invalid.
@@ -245,7 +245,7 @@ protected:
     auto& elements = get_map(hdl);
     auto i = elements.find(hdl);
     if (i == elements.end())
-      throw std::invalid_argument("invalid handle");
+      CAF_RAISE_ERROR("invalid handle");
     return *(i->second);
   }
 
@@ -258,7 +258,7 @@ protected:
     decltype(ptr_of(hdl)) result;
     auto i = elements.find(hdl);
     if (i == elements.end())
-      throw std::invalid_argument("invalid handle");
+      CAF_RAISE_ERROR("invalid handle");
     swap(result, i->second);
     elements.erase(i);
     return result;

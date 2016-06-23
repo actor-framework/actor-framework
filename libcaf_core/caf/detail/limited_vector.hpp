@@ -226,7 +226,7 @@ public:
     CAF_ASSERT(first <= last);
     auto num_elements = static_cast<size_t>(std::distance(first, last));
     if ((size() + num_elements) > MaxSize) {
-      throw std::length_error("limited_vector::insert: too much elements");
+      CAF_RAISE_ERROR("limited_vector::insert: too much elements");
     }
     if (pos == end()) {
       resize(size() + num_elements);

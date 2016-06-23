@@ -20,6 +20,7 @@
 #ifndef CAF_VARIANT_HPP
 #define CAF_VARIANT_HPP
 
+#include "caf/config.hpp"
 #include "caf/static_visitor.hpp"
 
 #include "caf/detail/type_list.hpp"
@@ -166,7 +167,7 @@ private:
   template <class Self, typename Visitor>
   static typename Visitor::result_type  apply_impl(Self& from, Visitor& visitor) {
     switch (from.type_) {
-      default: throw std::runtime_error("invalid type found");
+      default: CAF_RAISE_ERROR("invalid type found");
       CAF_VARIANT_CASE(0);
       CAF_VARIANT_CASE(1);
       CAF_VARIANT_CASE(2);

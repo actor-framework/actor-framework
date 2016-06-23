@@ -70,6 +70,11 @@ struct ctm_cmp<typed_mpi<In, type_list<Ts...>>,
                typed_mpi<In, type_list<result<Ts...>>>>
     : std::true_type { };
 
+template <class In, class T>
+struct ctm_cmp<typed_mpi<In, type_list<T>>,
+               typed_mpi<In, type_list<expected<T>>>>
+    : std::true_type { };
+
 template <class In, class Out>
 struct ctm_cmp<typed_mpi<In, Out>,
                typed_mpi<In, type_list<skip_t>>>

@@ -77,14 +77,19 @@ public:
 };
 
 void caf_main(actor_system& system, const config& cfg) {
+  auto server_actor = system.middleman().spawn_server(server, cfg.port);
+  if (! server_actor) {
+    cerr << "*** cannot spawn server: "
+         << system.render(server_actor.error()) << endl;
+    return;
+  }
   cout << "*** run in server mode listen on: " << cfg.port << endl;
   cout << "*** to quit the program, simply press <enter>" << endl;
-  auto server_actor = system.middleman().spawn_server(server, cfg.port);
   // wait for any input
   std::string dummy;
   std::getline(std::cin, dummy);
   // kill server
-  anon_send_exit(server_actor, exit_reason::user_shutdown);
+  anon_send_exit(*server_actor, exit_reason::user_shutdown);
 }
 
 } // namespace <anonymous>

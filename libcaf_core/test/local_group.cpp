@@ -33,7 +33,7 @@ using timeout_atom = atom_constant<atom("timeout")>;
 
 behavior testee(event_based_actor* self) {
   auto counter = std::make_shared<int>(0);
-  auto grp = self->system().groups().get("local", "test");
+  auto grp = self->system().groups().get_local("test");
   self->join(grp);
   CAF_MESSAGE("self joined group");
   self->send(grp, msg_atom::value);

@@ -51,7 +51,7 @@ void chattier_actor(event_based_actor* self, const std::string& fn) {
 CAF_TEST(redirect_aout_globally) {
   actor_system system;
   scoped_actor self{system};
-  self->join(system.groups().get("local", global_redirect));
+  self->join(system.groups().get_local(global_redirect));
   actor_ostream::redirect_all(system, global_redirect);
   system.spawn(chatty_actor);
   self->receive(
@@ -70,8 +70,8 @@ CAF_TEST(redirect_aout_globally) {
 CAF_TEST(global_and_local_redirect) {
   actor_system system;
   scoped_actor self{system};
-  self->join(system.groups().get("local", global_redirect));
-  self->join(system.groups().get("local", local_redirect));
+  self->join(system.groups().get_local(global_redirect));
+  self->join(system.groups().get_local(local_redirect));
   actor_ostream::redirect_all(system, global_redirect);
   system.spawn(chatty_actor);
   system.spawn(chattier_actor, local_redirect);
