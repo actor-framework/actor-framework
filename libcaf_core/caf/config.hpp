@@ -70,41 +70,31 @@
     _Pragma("clang diagnostic ignored \"-Wall\"")                              \
     _Pragma("clang diagnostic ignored \"-Wextra\"")                            \
     _Pragma("clang diagnostic ignored \"-Werror\"")                            \
-    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                       \
-    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
-    _Pragma("clang diagnostic ignored \"-Wextra-semi\"")                       \
-    _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                    \
-    _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                     \
-    _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")                 \
-    _Pragma("clang diagnostic ignored \"-Wswitch-enum\"")                      \
+    _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
     _Pragma("clang diagnostic ignored \"-Wshadow\"")                           \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                       \
+    _Pragma("clang diagnostic ignored \"-Wextra-semi\"")                       \
     _Pragma("clang diagnostic ignored \"-Wconversion\"")                       \
     _Pragma("clang diagnostic ignored \"-Wcast-align\"")                       \
-    _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
-    _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")                \
-    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                       \
-    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
-    _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                    \
     _Pragma("clang diagnostic ignored \"-Wfloat-equal\"")                      \
-    _Pragma("clang diagnostic ignored \"-Wimplicit-fallthrough\"")             \
-    _Pragma("clang diagnostic ignored \"-Wold-style-cast\"")                   \
-    _Pragma("clang diagnostic ignored \"-Wshadow\"")                           \
-    _Pragma("clang diagnostic ignored \"-Wshorten-64-to-32\"")                 \
-    _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")                  \
-    _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
+    _Pragma("clang diagnostic ignored \"-Wswitch-enum\"")                      \
     _Pragma("clang diagnostic ignored \"-Wweak-vtables\"")                     \
-    _Pragma("clang diagnostic ignored \"-Wused-but-marked-unused\"")           \
-    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")         \
+    _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                    \
+    _Pragma("clang diagnostic ignored \"-Wold-style-cast\"")                   \
+    _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")                  \
+    _Pragma("clang diagnostic ignored \"-Wshorten-64-to-32\"")                 \
     _Pragma("clang diagnostic ignored \"-Wunreachable-code\"")                 \
-    _Pragma("clang diagnostic ignored \"-Wreserved-id-macro\"")                \
     _Pragma("clang diagnostic ignored \"-Wdouble-promotion\"")                 \
-    _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")
+    _Pragma("clang diagnostic ignored \"-Wc++14-extensions\"")                 \
+    _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")                 \
+    _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")                \
+    _Pragma("clang diagnostic ignored \"-Wreserved-id-macro\"")                \
+    _Pragma("clang diagnostic ignored \"-Wimplicit-fallthrough\"")             \
+    _Pragma("clang diagnostic ignored \"-Wused-but-marked-unused\"")           \
+    _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wnon-virtual-dtor\"")
-#  define CAF_PUSH_NO_DEPRECATED_WARNING                                       \
-    _Pragma("clang diagnostic push")                                           \
-    _Pragma("clang diagnostic ignored \"-Wdeprecated\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
@@ -116,19 +106,16 @@
 #  define CAF_DEPRECATED_MSG(msg) __attribute__((__deprecated__(msg)))
 #  define CAF_PUSH_WARNINGS
     _Pragma("GCC diagnostic push")                                             \
+    _Pragma("GCC diagnostic ignored \"-Wshadow\"")                             \
     _Pragma("GCC diagnostic ignored \"-Wpragmas\"")                            \
-    _Pragma("GCC diagnostic ignored \"-Wc++14-extensions\"")                   \
-    _Pragma("GCC diagnostic ignored \"-Wfloat-equal\"")                        \
-    _Pragma("GCC diagnostic ignored \"-Wconversion\"")                         \
-    _Pragma("GCC diagnostic ignored \"-Wcast-qual\"")                          \
     _Pragma("GCC diagnostic ignored \"-Wpedantic\"")                           \
-    _Pragma("GCC diagnostic ignored \"-Wshadow\"")
+    _Pragma("GCC diagnostic ignored \"-Wcast-qual\"")                          \
+    _Pragma("GCC diagnostic ignored \"-Wconversion\"")                         \
+    _Pragma("GCC diagnostic ignored \"-Wfloat-equal\"")                        \
+    _Pragma("GCC diagnostic ignored \"-Wc++14-extensions\"")
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
-#  define CAF_PUSH_NO_DEPRECATED_WARNING                                       \
-    _Pragma("GCC diagnostic push")                                             \
-    _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("GCC diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
