@@ -20,6 +20,7 @@
 #ifndef CAF_IO_BASP_VERSION_HPP
 #define CAF_IO_BASP_VERSION_HPP
 
+#include <cstdint>
 
 namespace caf {
 namespace io {
