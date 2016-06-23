@@ -118,7 +118,8 @@ std::string get_rtti_from_mpi(const uniform_type_info_map& types) {
   return f(types);
 }
 
-///
+/// Actor environment including scheduler, registry, and optional components
+/// such as a middleman.
 class actor_system {
 public:
   friend class abstract_actor;
@@ -134,7 +135,6 @@ public:
       scheduler,
       middleman,
       opencl_manager,
-      riac_probe,
       num_ids
     };
 
@@ -242,13 +242,6 @@ public:
 
   /// Returns `true` if the opencl module is available, `false` otherwise.
   bool has_opencl_manager() const;
-
-  /// Returns `true` if the RIAC probe module is available, `false` otherwise.
-  bool has_probe() const;
-
-  /// Returns the RIAC probe instance.
-  /// @throws `std::logic_error` if module is not loaded.
-  riac::probe& probe();
 
   /// Returns a dummy execution unit that forwards
   /// everything to the scheduler.
@@ -471,7 +464,6 @@ private:
   io::middleman* middleman_;
   scoped_execution_unit dummy_execution_unit_;
   opencl::manager* opencl_manager_;
-  riac::probe* probe_;
   bool await_actors_before_shutdown_;
   strong_actor_ptr config_serv_;
   strong_actor_ptr spawn_serv_;

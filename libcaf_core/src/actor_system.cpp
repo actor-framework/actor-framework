@@ -227,9 +227,6 @@ actor_system::actor_system(actor_system_config* ptr, bool owns_ptr)
   auto& clptr = modules_[module::opencl_manager];
   if (clptr)
     opencl_manager_ = reinterpret_cast<opencl::manager*>(clptr->subtype_ptr());
-  auto& pptr = modules_[module::riac_probe];
-  if (pptr)
-    probe_ = reinterpret_cast<riac::probe*>(pptr->subtype_ptr());
   auto& sched = modules_[module::scheduler];
   using share = scheduler::coordinator<policy::work_sharing>;
   using steal = scheduler::coordinator<policy::work_stealing>;
@@ -365,17 +362,6 @@ opencl::manager& actor_system::opencl_manager() const {
     throw std::logic_error("cannot access opencl manager: module not loaded");
   return *opencl_manager_;
 }
-
-bool actor_system::has_probe() const {
-  return probe_ != nullptr;
-}
-
-riac::probe& actor_system::probe() {
-  if (! probe_)
-    throw std::logic_error("cannot access RIAC probe: module not loaded");
-  return *probe_;
-}
-
 
 scoped_execution_unit* actor_system::dummy_execution_unit() {
   return &dummy_execution_unit_;

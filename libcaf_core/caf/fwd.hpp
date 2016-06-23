@@ -130,14 +130,6 @@ class manager;
 
 } // namespace opencl
 
-// -- RIAC classes -------------------------------------------------------------
-
-namespace riac {
-
-class probe;
-
-} // namespace riac
-
 // -- scheduler classes --------------------------------------------------------
 
 namespace scheduler {

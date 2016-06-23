@@ -62,9 +62,7 @@ enum class sec : uint8_t {
   /// Middleman could not open requested port.
   cannot_open_port,
   /// A remote spawn failed because the provided types did not match.
-  cannot_spawn_actor_from_arguments,
-  /// Requested RIAC information about a node that does not exist.
-  no_such_riac_node
+  cannot_spawn_actor_from_arguments
 };
 
 /// @relates sec

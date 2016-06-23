@@ -247,10 +247,6 @@ public:
   size_t middleman_max_consecutive_reads;
   size_t middleman_heartbeat_interval;
 
-  // Config parameters of RIAC probes.
-  std::string nexus_host;
-  uint16_t nexus_port;
-
   // Config parameters of the OpenCL module.
   std::string opencl_device_ids;
 

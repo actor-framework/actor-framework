@@ -40,15 +40,14 @@ const char* sec_strings[] = {
   "cannot_close_invalid_port",
   "cannot_connect_to_node",
   "cannot_open_port",
-  "cannot_spawn_actor_from_arguments",
-  "no_such_riac_node"
+  "cannot_spawn_actor_from_arguments"
 };
 
 } // namespace <anonymous>
 
 const char* to_string(sec x) {
   auto index = static_cast<size_t>(x);
-  if (index > static_cast<size_t>(sec::no_such_riac_node))
+  if (index > static_cast<size_t>(sec::cannot_spawn_actor_from_arguments))
     return "<unknown>";
   return sec_strings[index];
 }

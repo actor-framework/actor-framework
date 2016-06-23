@@ -98,7 +98,6 @@ actor_system_config::actor_system_config()
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
   middleman_heartbeat_interval = 0;
-  nexus_port = 0;
   // fill our options vector for creating INI and CLI parsers
   opt_group{options_, "scheduler"}
   .add(scheduler_policy, "policy",
@@ -139,11 +138,6 @@ actor_system_config::actor_system_config()
        "sets the maximum number of consecutive I/O reads per broker")
   .add(middleman_heartbeat_interval, "heartbeat-interval",
        "sets the interval (ms) of heartbeat, 0 (default) means disabling it");
-  opt_group{options_, "probe"}
-  .add(nexus_host, "nexus-host",
-       "sets the hostname or IP address for connecting to the Nexus")
-  .add(nexus_port, "nexus-port",
-       "sets the port for connecting to the Nexus");
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
