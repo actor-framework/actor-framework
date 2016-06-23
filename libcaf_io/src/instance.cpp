@@ -22,6 +22,7 @@
 #include "caf/streambuf.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/actor_system_config.hpp"
 
 #include "caf/io/basp/version.hpp"
 
@@ -116,7 +117,16 @@ connection_state instance::handle(execution_unit* ctx,
       std::set<std::string> sigs;
       if (payload_valid()) {
         binary_deserializer bd{ctx, *payload};
+        std::string remote_appid;
+        bd >> remote_appid;
+        if (remote_appid != callee_.system().config().middleman_app_identifier) {
+          CAF_LOG_ERROR("app identifier mismatch");
+          return err();
+        }
         bd >> aid >> sigs;
+      } else {
+        CAF_LOG_ERROR("fail to receive the app identifier");
+        return err();
       }
       // close self connection after handshake is done
       if (hdr.source_node == this_node_) {
@@ -152,6 +162,18 @@ connection_state instance::handle(execution_unit* ctx,
         CAF_LOG_INFO("received second client handshake:"
                      << CAF_ARG(hdr.source_node));
         break;
+      }
+      if (payload_valid()) {
+        binary_deserializer bd{ctx, *payload};
+        std::string remote_appid;
+        bd >> remote_appid;
+        if (remote_appid != callee_.system().config().middleman_app_identifier) {
+          CAF_LOG_ERROR("app identifier mismatch");
+          return err();
+        }
+      } else {
+        CAF_LOG_ERROR("fail to receive the app identifier");
+        return err();
       }
       // add direct route to this node and remove any indirect entry
       CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
@@ -366,9 +388,12 @@ void instance::write_server_handshake(execution_unit* ctx,
   }
   CAF_LOG_DEBUG_IF(! pa && port, "no actor published");
   auto writer = make_callback([&](serializer& sink) {
+    sink << callee_.system().config().middleman_app_identifier;
     if (pa) {
       auto i = pa->first ? pa->first->id() : invalid_actor_id;
       sink << i << pa->second;
+    } else {
+      sink << invalid_actor_id << std::set<std::string>{};
     }
   });
   header hdr{message_type::server_handshake, 0, 0, version,
@@ -382,9 +407,12 @@ void instance::write_client_handshake(execution_unit* ctx,
                                       buffer_type& buf,
                                       const node_id& remote_side) {
   CAF_LOG_TRACE(CAF_ARG(remote_side));
+  auto writer = make_callback([&](serializer& sink) {
+    sink << callee_.system().config().middleman_app_identifier;
+  });
   header hdr{message_type::client_handshake, 0, 0, 0,
              this_node_, remote_side, invalid_actor_id, invalid_actor_id};
-  write(ctx, buf, hdr);
+  write(ctx, buf, hdr, &writer);
 }
 
 void instance::write_announce_proxy(execution_unit* ctx, buffer_type& buf,

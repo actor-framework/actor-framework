@@ -84,7 +84,6 @@ bool client_handshake_valid(const header& hdr) {
        && hdr.source_node != hdr.dest_node
        && zero(hdr.source_actor)
        && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
        && zero(hdr.operation_data);
 }
 
