@@ -24,6 +24,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace caf;
 
 namespace {
@@ -104,7 +107,8 @@ CAF_TEST(untyped_splicing) {
       CAF_CHECK_EQUAL(x, (42.0 * 2.0));
       CAF_CHECK_EQUAL(y, (42.0 * 4.0));
       CAF_CHECK_EQUAL(z, (23.0 * 42.0));
-    }
+    },
+    ERROR_HANDLER
   );
 }
 
@@ -122,7 +126,8 @@ CAF_TEST(typed_splicing) {
       CAF_CHECK_EQUAL(x, (42.0 * 2.0));
       CAF_CHECK_EQUAL(y, (42.0 * 4.0));
       CAF_CHECK_EQUAL(z, (23.0 * 42.0));
-    }
+    },
+    ERROR_HANDLER
   );
   // stage0 and stage1 go out of scope, leaving only the references
   // in stages, which will also go out of scope

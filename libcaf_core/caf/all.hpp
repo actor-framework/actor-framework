@@ -39,7 +39,6 @@
 #include "caf/behavior.hpp"
 #include "caf/duration.hpp"
 #include "caf/expected.hpp"
-#include "caf/exception.hpp"
 #include "caf/exec_main.hpp"
 #include "caf/resumable.hpp"
 #include "caf/streambuf.hpp"

@@ -28,7 +28,6 @@
 
 #include "caf/config.hpp"
 #include "caf/extend.hpp"
-#include "caf/exception.hpp"
 #include "caf/ref_counted.hpp"
 
 #include "caf/io/fwd.hpp"

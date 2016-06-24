@@ -623,6 +623,9 @@ CAF_TEST(remote_actor_and_send) {
       CAF_REQUIRE(proxy != nullptr);
       CAF_REQUIRE(proxy == res);
       result = actor_cast<actor>(res);
+    },
+    [&](error& err) {
+      CAF_FAIL("error: " << system.render(err));
     }
   );
   CAF_MESSAGE("send message to proxy");

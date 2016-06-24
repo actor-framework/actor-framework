@@ -185,6 +185,9 @@ void run_server(int argc, char** argv) {
       child = std::thread([=] {
         run_client(argc, argv, port);
       });
+    },
+    [&](error& err) {
+      CAF_FAIL("error: " << system.render(err));
     }
   );
   self->await_all_other_actors_done();

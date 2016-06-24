@@ -24,6 +24,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace caf;
 
 namespace {
@@ -148,7 +151,8 @@ CAF_TEST(dot_composition_1) {
   self->request(first_then_second, infinite, 42).receive(
     [](double res) {
       CAF_CHECK_EQUAL(res, (42 * 2.0) * (42 * 4.0));
-    }
+    },
+    ERROR_HANDLER
   );
 }
 
@@ -161,9 +165,7 @@ CAF_TEST(dot_composition_2) {
     [](int v) {
       CAF_CHECK_EQUAL(v, 16);
     },
-    [](error) {
-      CAF_CHECK(false);
-    }
+    ERROR_HANDLER
   );
 }
 

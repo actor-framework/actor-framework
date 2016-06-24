@@ -24,6 +24,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace std;
 using namespace caf;
 
@@ -230,9 +233,14 @@ CAF_TEST(param_detaching) {
   // to a test before moving to the second test; otherwise, reference counts
   // can diverge from what we expect
   auto ping_pong = [&] {
-    self->request(dict, infinite, ping_atom::value).receive([](pong_atom) {
-      // nop
-    });
+    self->request(dict, infinite, ping_atom::value).receive(
+      [](pong_atom) {
+        // nop
+      },
+      [&](error& err) {
+        CAF_FAIL("error: " << system.render(err));
+      }
+    );
   };
   // Using CAF is the key to success!
   counting_string key = "CAF";
@@ -255,7 +263,8 @@ CAF_TEST(param_detaching) {
       CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
       CAF_CHECK_EQUAL(counting_strings_moved.load(), 2);
       CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 2);
-    }
+    },
+    ERROR_HANDLER
   );
   // send put message to dictionary again
   self->request(dict, infinite, put_msg).receive(
@@ -265,7 +274,8 @@ CAF_TEST(param_detaching) {
       CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
       CAF_CHECK_EQUAL(counting_strings_moved.load(), 2);
       CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 2);
-    }
+    },
+    ERROR_HANDLER
   );
   // alter our initial put, this time moving it to the dictionary
   put_msg.get_as_mutable<counting_string>(1) = "neverlord";
@@ -279,7 +289,8 @@ CAF_TEST(param_detaching) {
       CAF_CHECK_EQUAL(counting_strings_created.load(), 11);
       CAF_CHECK_EQUAL(counting_strings_moved.load(), 4);
       CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 4);
-    }
+    },
+    ERROR_HANDLER
   );
   // finally, check for original key
   self->request(dict, infinite, std::move(get_msg)).receive(
@@ -292,7 +303,8 @@ CAF_TEST(param_detaching) {
       CAF_CHECK_EQUAL(counting_strings_moved.load(), 5);
       CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 6);
       CAF_CHECK_EQUAL(str, "success");
-    }
+    },
+    ERROR_HANDLER
   );
   // temporary of our handler is destroyed
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 7);

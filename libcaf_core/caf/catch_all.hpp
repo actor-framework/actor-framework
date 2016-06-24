@@ -17,74 +17,42 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <sstream>
-#include <stdlib.h>
+#ifndef CAF_CATCH_ALL_HPP
+#define CAF_CATCH_ALL_HPP
 
-#include "caf/config.hpp"
-#include "caf/exception.hpp"
-
-#ifdef CAF_WINDOWS
-#include <winerror.h>
-#else
-#include <errno.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#endif
-
-namespace {
-
-std::string ae_what(caf::error reason) {
-  std::ostringstream oss;
-  oss << "actor exited with reason: " << to_string(reason);
-  return oss.str();
-}
-
-} // namespace <anonymous>
+#include <functional>
+#include <type_traits>
 
 namespace caf {
 
-caf_exception::~caf_exception() noexcept {
-  // nop
-}
+template <class F>
+struct catch_all {
+  using fun_type = std::function<result<message> (const type_erased_tuple*)>;
 
-caf_exception::caf_exception(std::string x) : what_(std::move(x)) {
-  // nop
-}
+  F handler;
 
-const char* caf_exception::what() const noexcept {
-  return what_.c_str();
-}
+  catch_all(catch_all&&) = default;
 
-actor_exited::~actor_exited() noexcept {
-  // nop
-}
+  template <class T>
+  catch_all(T&& x) : handler(std::forward<T>(x)) {
+    // nop
+  }
 
-actor_exited::actor_exited(error x) : caf_exception(ae_what(x)) {
-  reason_ = x;
-}
+  static_assert(std::is_convertible<F, fun_type>::value,
+                "catch-all handler must have signature "
+                "result<message> (const type_erased_tuple*)");
 
-network_error::network_error(const std::string& x) : caf_exception(x) {
-  // nop
-}
+  fun_type lift() const {
+    return handler;
+  }
+};
 
-network_error::network_error(std::string&& x) : caf_exception(std::move(x)) {
-  // nop
-}
+template <class T>
+struct is_catch_all : std::false_type {};
 
-network_error::~network_error() noexcept {
-  // nop
-}
-
-bind_failure::bind_failure(const std::string& x) : network_error(x) {
-  // nop
-}
-
-bind_failure::bind_failure(std::string&& x) : network_error(std::move(x)) {
-  // nop
-}
-
-bind_failure::~bind_failure() noexcept {
-  // nop
-}
+template <class T>
+struct is_catch_all<catch_all<T>> : std::true_type {};
 
 } // namespace caf
+
+#endif // CAF_CATCH_ALL_HPP

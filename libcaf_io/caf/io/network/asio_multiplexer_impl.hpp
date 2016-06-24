@@ -18,8 +18,6 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/exception.hpp"
-
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 

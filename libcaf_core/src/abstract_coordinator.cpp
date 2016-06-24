@@ -29,11 +29,11 @@
 #include <condition_variable>
 
 #include "caf/send.hpp"
-#include "caf/local_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/actor_system_config.hpp"
 
 #include "caf/scheduler/coordinator.hpp"
@@ -126,8 +126,10 @@ public:
       }
       if (msg_ptr->msg.match_element<exit_msg>(0)) {
         auto& em = msg_ptr->msg.get_as<exit_msg>(0);
-        if (em.reason)
-          quit(em.reason);
+        if (em.reason) {
+          fail_state(em.reason);
+          return;
+        }
       }
       mfun(msg_ptr->msg);
       msg_ptr.reset();
@@ -264,14 +266,8 @@ void printer_loop(blocking_actor* self) {
       std::cout << line << std::flush;
     line.clear();
   };
-  /*
-  bool running = true;
-  self->set_exit_handler([&](exit_msg&) {
-    running = false;
-  });
-  self->receive_while([&] { return running; })(
-  */
-  self->receive_loop(
+  bool done = false;
+  self->do_receive(
     [&](add_atom, actor_id aid, std::string& str) {
       if (str.empty() || aid == invalid_actor_id)
         return;
@@ -298,8 +294,12 @@ void printer_loop(blocking_actor* self) {
       auto d = get_data(aid, true);
       if (d)
         d->redirect = get_sink_handle(self->system(), fcache, fn, flag);
+    },
+    [&](exit_msg& em) {
+      self->fail_state(std::move(em.reason));
+      done = true;
     }
-  );
+  ).until([&] { return done; });
 }
 
 } // namespace <anonymous>
@@ -362,7 +362,7 @@ void abstract_coordinator::cleanup_and_release(resumable* ptr) {
   switch (ptr->subtype()) {
     case resumable::scheduled_actor:
     case resumable::io_actor: {
-      auto dptr = static_cast<local_actor*>(ptr);
+      auto dptr = static_cast<scheduled_actor*>(ptr);
       dummy_unit dummy{dptr};
       dptr->cleanup(make_error(exit_reason::user_shutdown), &dummy);
       while (! dummy.resumables.empty()) {
@@ -371,7 +371,7 @@ void abstract_coordinator::cleanup_and_release(resumable* ptr) {
         switch (sub->subtype()) {
           case resumable::scheduled_actor:
           case resumable::io_actor: {
-            auto dsub = static_cast<local_actor*>(sub);
+            auto dsub = static_cast<scheduled_actor*>(sub);
             dsub->cleanup(make_error(exit_reason::user_shutdown), &dummy);
             break;
           }

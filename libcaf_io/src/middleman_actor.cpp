@@ -27,7 +27,6 @@
 #include "caf/actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
-#include "caf/exception.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/typed_event_based_actor.hpp"
 

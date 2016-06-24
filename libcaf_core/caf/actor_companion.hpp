@@ -59,8 +59,6 @@ public:
   void enqueue(strong_actor_ptr sender, message_id mid, message content,
                execution_unit* host) override;
 
-  void initialize() override;
-
 private:
   // set by parent to define custom enqueue action
   enqueue_handler on_enqueue_;

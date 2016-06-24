@@ -25,7 +25,6 @@
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/after.hpp"
-#include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"

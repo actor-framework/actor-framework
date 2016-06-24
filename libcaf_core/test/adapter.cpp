@@ -52,6 +52,10 @@ struct fixture {
   scoped_actor self{system, true};
 };
 
+void handle_err(const error& err) {
+  throw std::runtime_error("AUT responded with an error: " + to_string(err));
+}
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(adapter_tests, fixture)
@@ -130,12 +134,14 @@ CAF_TEST(partial_currying) {
   self->request(bound, infinite, 2.0).receive(
     [](double y) {
       CAF_CHECK_EQUAL(y, 2.0);
-    }
+    },
+    handle_err
   );
   self->request(bound, infinite, 10).receive(
     [](int y) {
       CAF_CHECK_EQUAL(y, 10);
-    }
+    },
+    handle_err
   );
   self->send_exit(aut, exit_reason::kill);
 }
@@ -146,7 +152,8 @@ CAF_TEST(full_currying) {
   self->request(bound, infinite, message{}).receive(
     [](int v) {
       CAF_CHECK_EQUAL(v, 2);
-    }
+    },
+    handle_err
   );
   anon_send_exit(bound, exit_reason::kill);
   anon_send_exit(dbl_actor, exit_reason::kill);
@@ -178,12 +185,14 @@ CAF_TEST(type_safe_currying) {
   self->request(bound, infinite, 2.0).receive(
     [](double y) {
       CAF_CHECK_EQUAL(y, 2.0);
-    }
+    },
+    handle_err
   );
   self->request(bound, infinite, 10).receive(
     [](int y) {
       CAF_CHECK_EQUAL(y, 10);
-    }
+    },
+    handle_err
   );
   self->send_exit(aut, exit_reason::kill);
 }
@@ -205,7 +214,8 @@ CAF_TEST(reordering) {
   self->request(bound, infinite, 2.0, 10).receive(
     [](double y) {
       CAF_CHECK_EQUAL(y, 20.0);
-    }
+    },
+    handle_err
   );
   self->send_exit(aut, exit_reason::kill);
 }
@@ -231,7 +241,8 @@ CAF_TEST(type_safe_reordering) {
   self->request(bound, infinite, 2.0, 10).receive(
     [](double y) {
       CAF_CHECK_EQUAL(y, 20.0);
-    }
+    },
+    handle_err
   );
   self->send_exit(aut, exit_reason::kill);
 }

@@ -31,7 +31,6 @@
 #include "caf/config.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
-#include "caf/exception.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/scoped_actor.hpp"
@@ -181,16 +180,17 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                 std::move(host), port).receive(
     [&](ok_atom, const node_id&, strong_actor_ptr res, std::set<std::string>& xs) {
       CAF_LOG_TRACE(CAF_ARG(res) << CAF_ARG(xs));
-      if (!res) {
+      if (! res) {
         err = make_error(sec::no_actor_published_at_port,
                          "no actor published at port", port);
         return;
       }
-      if (! (xs.empty() && ifs.empty())
-          && ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end())) {
+      if (ifs.empty() != xs.empty()
+          || ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end())) {
+        using kvpair = std::pair<std::string, std::set<std::string>>;
         err = make_error(sec::unexpected_actor_messaging_interface,
-                         "expected signature:", deep_to_string(ifs),
-                         "found:", deep_to_string(xs));
+                         kvpair("expected", ifs),
+                         kvpair("found", xs));
         return;
       }
       result.swap(res);
@@ -249,7 +249,6 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
   auto basp = named_broker<basp_broker>(atom("BASP"));
   strong_actor_ptr result;
   scoped_actor self{system(), true};
-  self->set_default_handler(print_and_drop);
   try {
     self->send(basp, forward_atom::value, actor_cast<strong_actor_ptr>(self),
                nid, atom("ConfigServ"),

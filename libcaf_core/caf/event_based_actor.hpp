@@ -27,6 +27,7 @@
 #include "caf/local_actor.hpp"
 #include "caf/actor_marker.hpp"
 #include "caf/response_handle.hpp"
+#include "caf/scheduled_actor.hpp"
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
@@ -45,12 +46,13 @@ public:
 /// A cooperatively scheduled, event-based actor implementation. This is the
 /// recommended base class for user-defined actors.
 /// @extends local_actor
-class event_based_actor : public extend<local_actor, event_based_actor>::
+class event_based_actor : public extend<scheduled_actor,
+                                        event_based_actor>::
                                  with<mixin::sender, mixin::requester,
                                       mixin::behavior_changer>,
                           public dynamically_typed_actor_base {
 public:
-  using super = extend<local_actor, event_based_actor>::
+  using super = extend<scheduled_actor, event_based_actor>::
                 with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   using signatures = none_t;

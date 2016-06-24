@@ -75,7 +75,9 @@ enum class sec : uint8_t {
   /// Middleman could not publish an actor because it was invalid.
   cannot_publish_invalid_actor,
   /// A remote spawn failed because the provided types did not match.
-  cannot_spawn_actor_from_arguments
+  cannot_spawn_actor_from_arguments,
+  /// A function view was called without assigning an actor first.
+  bad_function_call
 };
 
 /// @relates sec

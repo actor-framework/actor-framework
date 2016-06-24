@@ -148,6 +148,9 @@ CAF_TEST(server_side_group_comm) {
   group_resolver->request(server, infinite, get_group_atom::value).receive(
     [&](const group& x) {
       grp = x;
+    },
+    [&](error& err) {
+      CAF_FAIL("error: " << client_side.render(err));
     }
   );
   client_side.spawn(make_client_behavior, server, grp);

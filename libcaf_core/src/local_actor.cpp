@@ -23,7 +23,6 @@
 #include "caf/sec.hpp"
 #include "caf/atom.hpp"
 #include "caf/logger.hpp"
-#include "caf/exception.hpp"
 #include "caf/scheduler.hpp"
 #include "caf/resumable.hpp"
 #include "caf/actor_cast.hpp"
@@ -36,119 +35,19 @@
 #include "caf/default_attachable.hpp"
 #include "caf/binary_deserializer.hpp"
 
+#include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/detail/default_invoke_result_visitor.hpp"
 
 namespace caf {
-
-class local_actor::private_thread {
-public:
-  enum worker_state {
-    active,
-    shutdown_requested,
-    await_resume_or_shutdown
-  };
-
-  private_thread(local_actor* self)
-      : self_destroyed_(false),
-        self_(self),
-        state_(active),
-        system_(self->system()) {
-    intrusive_ptr_add_ref(self->ctrl());
-    system_.inc_detached_threads();
-  }
-
-  void run() {
-    auto job = const_cast<local_actor*>(self_);
-    CAF_PUSH_AID(job->id());
-    CAF_LOG_TRACE("");
-    scoped_execution_unit ctx{&job->system()};
-    auto max_throughput = std::numeric_limits<size_t>::max();
-    bool resume_later;
-    for (;;) {
-      state_ = await_resume_or_shutdown;
-      do {
-        resume_later = false;
-        switch (job->resume(&ctx, max_throughput)) {
-          case resumable::resume_later:
-            resume_later = true;
-            break;
-          case resumable::done:
-            intrusive_ptr_release(job->ctrl());
-            return;
-          case resumable::awaiting_message:
-            intrusive_ptr_release(job->ctrl());
-            break;
-          case resumable::shutdown_execution_unit:
-            return;
-        }
-      } while (resume_later);
-      // wait until actor becomes ready again or was destroyed
-      if (! await_resume())
-        return;
-    }
-  }
-
-  bool await_resume() {
-    std::unique_lock<std::mutex> guard(mtx_);
-    while (state_ == await_resume_or_shutdown)
-      cv_.wait(guard);
-    return state_ == active;
-  }
-
-  void resume() {
-    std::unique_lock<std::mutex> guard(mtx_);
-    state_ = active;
-    cv_.notify_one();
-  }
-
-  void shutdown() {
-    std::unique_lock<std::mutex> guard(mtx_);
-    state_ = shutdown_requested;
-    cv_.notify_one();
-  }
-
-  static void exec(private_thread* this_ptr) {
-    this_ptr->run();
-    // make sure to not destroy the private thread object before the
-    // detached actor is destroyed and this object is unreachable
-    this_ptr->await_self_destroyed();
-    // signalize destruction of detached thread to registry
-    this_ptr->system_.dec_detached_threads();
-    // done
-    delete this_ptr;
-  }
-
-  void notify_self_destroyed() {
-    std::unique_lock<std::mutex> guard(mtx_);
-    self_destroyed_ = true;
-    cv_.notify_one();
-  }
-
-  void await_self_destroyed() {
-    std::unique_lock<std::mutex> guard(mtx_);
-    while (! self_destroyed_)
-      cv_.wait(guard);
-  }
-
-  void start() {
-    std::thread{exec, this}.detach();
-  }
-
-private:
-  std::mutex mtx_;
-  std::condition_variable cv_;
-  volatile bool self_destroyed_;
-  volatile local_actor* self_;
-  volatile worker_state state_;
-  actor_system& system_;
-};
 
 result<message> reflect(local_actor*, const type_erased_tuple* x) {
   return message::from(x);
 }
 
 result<message> reflect_and_quit(local_actor* ptr, const type_erased_tuple* x) {
-  ptr->quit();
+  error err = exit_reason::normal;
+  local_actor::default_error_handler(ptr, err);
   return reflect(ptr, x);
 }
 
@@ -166,19 +65,20 @@ result<message> drop(local_actor*, const type_erased_tuple*) {
   return sec::unexpected_message;
 }
 
-void default_error_handler(local_actor* ptr, error& x) {
-  ptr->quit(std::move(x));
+void local_actor::default_error_handler(local_actor* ptr, error& x) {
+  ptr->fail_state_ = std::move(x);
+  ptr->is_terminated(true);
 }
 
-void default_down_handler(local_actor* ptr, down_msg& x) {
+void local_actor::default_down_handler(local_actor* ptr, down_msg& x) {
   aout(ptr) << "*** unhandled down message [id: " << ptr->id()
              << ", name: " << ptr->name() << "]: " << to_string(x)
              << std::endl;
 }
 
-void default_exit_handler(local_actor* ptr, exit_msg& x) {
+void local_actor::default_exit_handler(local_actor* ptr, exit_msg& x) {
   if (x.reason)
-    ptr->quit(std::move(x.reason));
+    default_error_handler(ptr, x.reason);
 }
 
 // local actors are created with a reference count of one that is adjusted
@@ -218,14 +118,6 @@ void local_actor::on_destroy() {
     cleanup(exit_reason::unreachable, nullptr);
     monitorable_actor::on_destroy();
   }
-}
-
-void local_actor::intrusive_ptr_add_ref_impl() {
-  intrusive_ptr_add_ref(ctrl());
-}
-
-void local_actor::intrusive_ptr_release_impl() {
-  intrusive_ptr_release(ctrl());
 }
 
 void local_actor::monitor(abstract_actor* ptr) {
@@ -358,22 +250,30 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& x) {
                                     : msg_type::expired_timeout;
     }
     case make_type_token<exit_msg>(): {
+      if (is_blocking())
+        return msg_type::ordinary;
       auto& em = msg.get_as_mutable<exit_msg>(0);
       // make sure to get rid of attachables if they're no longer needed
       unlink_from(em.source);
       // exit_reason::kill is always fatal
-      if (em.reason == exit_reason::kill)
-        quit(std::move(em.reason));
-      else
+      if (em.reason == exit_reason::kill) {
+        fail_state_ = std::move(em.reason);
+        is_terminated(true);
+      } else {
         exit_handler_(this, em);
+      }
       return msg_type::sys_message;
     }
     case make_type_token<down_msg>(): {
+      if (is_blocking())
+        return msg_type::ordinary;
       auto& dm = msg.get_as_mutable<down_msg>(0);
       down_handler_(this, dm);
       return msg_type::sys_message;
     }
     case make_type_token<error>(): {
+      if (is_blocking())
+        return msg_type::ordinary;
       auto& err = msg.get_as_mutable<error>(0);
       error_handler_(this, err);
       return msg_type::sys_message;
@@ -382,78 +282,6 @@ local_actor::msg_type local_actor::filter_msg(mailbox_element& x) {
       return msg_type::ordinary;
   }
 }
-
-namespace {
-
-class invoke_result_visitor_helper {
-public:
-  invoke_result_visitor_helper(response_promise x) : rp(x) {
-    // nop
-  }
-
-  void operator()(error& x) {
-    CAF_LOG_DEBUG("report error back to requesting actor");
-    rp.deliver(std::move(x));
-  }
-
-  void operator()(message& x) {
-    CAF_LOG_DEBUG("respond via response_promise");
-    // suppress empty messages for asynchronous messages
-    if (x.empty() && rp.async())
-      return;
-    rp.deliver(std::move(x));
-  }
-
-  void operator()(const none_t&) {
-    error err = sec::unexpected_response;
-    (*this)(err);
-  }
-
-private:
-  response_promise rp;
-};
-
-class local_actor_invoke_result_visitor : public detail::invoke_result_visitor {
-public:
-  local_actor_invoke_result_visitor(local_actor* ptr) : self_(ptr) {
-    // nop
-  }
-
-  void operator()() override {
-    // nop
-  }
-
-  template <class T>
-  void delegate(T& x) {
-    auto rp = self_->make_response_promise();
-    if (! rp.pending()) {
-      CAF_LOG_DEBUG("suppress response message: invalid response promise");
-      return;
-    }
-    invoke_result_visitor_helper f{std::move(rp)};
-    f(x);
-  }
-
-  void operator()(error& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
-    delegate(x);
-  }
-
-  void operator()(message& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
-    delegate(x);
-  }
-
-  void operator()(const none_t& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
-    delegate(x);
-  }
-
-private:
-  local_actor* self_;
-};
-
-} // namespace <anonymous>
 
 void local_actor::handle_response(mailbox_element_ptr& ptr,
                                   local_actor::pending_response& pr) {
@@ -464,7 +292,7 @@ void local_actor::handle_response(mailbox_element_ptr& ptr,
   auto guard = detail::make_scope_guard([&] {
     ptr.swap(current_element_);
   });
-  local_actor_invoke_result_visitor visitor{this};
+  detail::default_invoke_result_visitor visitor{this};
   auto invoke_error = [&](error err) {
     auto tmp = make_type_erased_tuple_view(err);
     if (ref_fun(visitor, tmp) == match_case::no_match) {
@@ -538,7 +366,7 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
       return im_dropped;
     }
     case msg_type::ordinary: {
-      local_actor_invoke_result_visitor visitor{this};
+      detail::default_invoke_result_visitor visitor{this};
       if (awaited_id.valid()) {
         CAF_LOG_DEBUG("skipped asynchronous message:" << CAF_ARG(awaited_id));
         return im_skipped;
@@ -557,12 +385,16 @@ invoke_message_result local_actor::invoke_message(mailbox_element_ptr& ptr,
         case match_case::no_match: {
           if (had_timeout)
             has_timeout(true);
-          auto sres = default_handler_(this,
-                                       current_element_->msg.cvals().get());
-          if (sres.flag != rt_skip)
-            visitor.visit(sres);
-          else
+          if (is_blocking()) {
             skipped = true;
+          } else {
+            auto sres = default_handler_(this,
+                                         current_element_->msg.cvals().get());
+            if (sres.flag != rt_skip)
+              visitor.visit(sres);
+            else
+              skipped = true;
+          }
         }
       }
       ptr.swap(current_element_);
@@ -672,186 +504,6 @@ void local_actor::set_multiplexed_response_handler(message_id response_id, behav
     multiplexed_responses_.emplace(response_id, std::move(bhvr));
 }
 
-void local_actor::launch(execution_unit* eu, bool lazy, bool hide) {
-  CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
-  is_registered(! hide);
-  if (is_detached()) {
-    if (is_blocking()) {
-      home_system().inc_detached_threads();
-      std::thread([](strong_actor_ptr ptr) {
-        // actor lives in its own thread
-        auto this_ptr = ptr->get();
-        CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != 0);
-        auto self = static_cast<blocking_actor*>(this_ptr);
-        error rsn;
-        std::exception_ptr eptr = nullptr;
-        try {
-          self->act();
-          rsn = self->fail_state_;
-        }
-        catch (actor_exited& e) {
-          rsn = e.reason();
-        }
-        catch (...) {
-          rsn = exit_reason::unhandled_exception;
-          eptr = std::current_exception();
-        }
-        if (eptr) {
-          auto opt_reason = self->handle(eptr);
-          rsn = opt_reason ? *opt_reason
-                           : exit_reason::unhandled_exception;
-        }
-        try {
-          self->on_exit();
-        }
-        catch (...) {
-          // simply ignore exception
-        }
-        self->cleanup(std::move(rsn), self->context());
-        ptr->home_system->dec_detached_threads();
-      }, ctrl()).detach();
-      return;
-    }
-    private_thread_ = new private_thread(this);
-    private_thread_->start();
-    return;
-  }
-  CAF_ASSERT(eu != nullptr);
-  // do not schedule immediately when spawned with `lazy_init`
-  // mailbox could be set to blocked
-  if (lazy && mailbox().try_block())
-    return;
-  // scheduler has a reference count to the actor as long as
-  // it is waiting to get scheduled
-  intrusive_ptr_add_ref(ctrl());
-  eu->exec_later(this);
-}
-
-void local_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
-  CAF_PUSH_AID(id());
-  CAF_LOG_TRACE(CAF_ARG(*ptr));
-  CAF_ASSERT(ptr != nullptr);
-  CAF_ASSERT(! is_blocking());
-  auto mid = ptr->mid;
-  auto sender = ptr->sender;
-  switch (mailbox().enqueue(ptr.release())) {
-    case detail::enqueue_result::unblocked_reader: {
-      // add a reference count to this actor and re-schedule it
-      intrusive_ptr_add_ref(ctrl());
-      if (is_detached()) {
-        CAF_ASSERT(private_thread_ != nullptr);
-        private_thread_->resume();
-      } else {
-        if (eu)
-          eu->exec_later(this);
-        else
-          home_system().scheduler().enqueue(this);
-      }
-      break;
-    }
-    case detail::enqueue_result::queue_closed: {
-      if (mid.is_request()) {
-        detail::sync_request_bouncer f{exit_reason()};
-        f(sender, mid);
-      }
-      break;
-    }
-    case detail::enqueue_result::success:
-      // enqueued to a running actors' mailbox; nothing to do
-      break;
-  }
-}
-
-resumable::subtype_t local_actor::subtype() const {
-  return scheduled_actor;
-}
-
-resumable::resume_result local_actor::resume(execution_unit* eu,
-                                             size_t max_throughput) {
-  CAF_PUSH_AID(id());
-  CAF_LOG_TRACE("");
-  CAF_ASSERT(eu != nullptr);
-  CAF_ASSERT(! is_blocking());
-  context(eu);
-  if (is_initialized() && (! has_behavior() || is_terminated())) {
-    CAF_LOG_DEBUG_IF(! has_behavior(),
-                     "resume called on an actor without behavior");
-    CAF_LOG_DEBUG_IF(is_terminated(),
-                     "resume called on a terminated actor");
-    return resumable::done;
-  }
-  std::exception_ptr eptr = nullptr;
-  try {
-    if (! is_initialized()) {
-      initialize();
-      if (finished()) {
-        CAF_LOG_DEBUG("actor_done() returned true right "
-                      << "after make_behavior()");
-        return resumable::resume_result::done;
-      } else {
-        CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
-      }
-    }
-    int handled_msgs = 0;
-    auto reset_timeout_if_needed = [&] {
-      if (handled_msgs > 0 && ! bhvr_stack_.empty()) {
-        request_timeout(bhvr_stack_.back().timeout());
-      }
-    };
-    for (size_t i = 0; i < max_throughput; ++i) {
-      auto ptr = next_message();
-      if (ptr) {
-        auto res = exec_event(ptr);
-        if (res.first == resumable::resume_result::done)
-          return resumable::resume_result::done;
-        if (res.second == im_success)
-          ++handled_msgs;
-      } else {
-        CAF_LOG_DEBUG("no more element in mailbox; going to block");
-        reset_timeout_if_needed();
-        if (mailbox().try_block())
-          return resumable::awaiting_message;
-        CAF_LOG_DEBUG("try_block() interrupted by new message");
-      }
-    }
-    reset_timeout_if_needed();
-    if (! has_next_message() && mailbox().try_block())
-      return resumable::awaiting_message;
-    // time's up
-    return resumable::resume_later;
-  }
-  catch (actor_exited& what) {
-    CAF_LOG_INFO("actor died because of exception:" << CAF_ARG(what.reason()));
-    if (! is_terminated())
-      quit(what.reason());
-  }
-  catch (std::exception& e) {
-    CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
-    static_cast<void>(e); // keep compiler happy when not logging
-    if (! is_terminated())
-      quit(exit_reason::unhandled_exception);
-    eptr = std::current_exception();
-  }
-  catch (...) {
-    CAF_LOG_INFO("actor died because of an unknown exception");
-    if (! is_terminated())
-      quit(exit_reason::unhandled_exception);
-    eptr = std::current_exception();
-  }
-  if (eptr) {
-    auto opt_reason = handle(eptr);
-    if (opt_reason) {
-      // use exit reason defined by custom handler
-      quit(*opt_reason);
-    }
-  }
-  if (! finished()) {
-    // actor has been "revived", try running it again later
-    return resumable::resume_later;
-  }
-  return resumable::done;
-}
-
 std::pair<resumable::resume_result, invoke_message_result>
 local_actor::exec_event(mailbox_element_ptr& ptr) {
   CAF_LOG_TRACE(CAF_ARG(*ptr));
@@ -895,38 +547,6 @@ local_actor::exec_event(mailbox_element_ptr& ptr) {
       break;
   }
   return {resumable::resume_result::resume_later, res};
-}
-
-void local_actor::exec_single_event(execution_unit* ctx,
-                                    mailbox_element_ptr& ptr) {
-  CAF_ASSERT(ctx != nullptr);
-  context(ctx);
-  if (! is_initialized()) {
-    CAF_LOG_DEBUG("initialize actor");
-    initialize();
-    if (finished()) {
-      CAF_LOG_DEBUG("actor_done() returned true right "
-                    << "after make_behavior()");
-      return;
-    }
-  }
-  if (! has_behavior() || is_terminated()) {
-    CAF_LOG_DEBUG_IF(! has_behavior(),
-                     "resume called on an actor without behavior");
-    CAF_LOG_DEBUG_IF(is_terminated(),
-                     "resume called on a terminated actor");
-    return;
-  }
-  try {
-    exec_event(ptr);
-  }
-  catch (...) {
-    CAF_LOG_INFO("broker died because of an exception");
-    auto eptr = std::current_exception();
-    auto opt_reason = this->handle(eptr);
-    if (opt_reason)
-      quit(*opt_reason);
-  }
 }
 
 mailbox_element_ptr local_actor::next_message() {
@@ -1032,6 +652,10 @@ void local_actor::load_state(deserializer&, const unsigned int) {
   CAF_RAISE_ERROR("local_actor::deserialize called");
 }
 
+void local_actor::initialize() {
+  // nop
+}
+
 bool local_actor::finished() {
   if (has_behavior() && ! is_terminated())
     return false;
@@ -1064,14 +688,6 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   is_registered(false);
   monitorable_actor::cleanup(std::move(fail_state), host);
   return true;
-}
-
-void local_actor::quit(error x) {
-  CAF_LOG_TRACE(CAF_ARG(x));
-  fail_state_ = std::move(x);
-  is_terminated(true);
-  if (is_blocking())
-    CAF_RAISE_ERROR(to_string(fail_state_));
 }
 
 } // namespace caf

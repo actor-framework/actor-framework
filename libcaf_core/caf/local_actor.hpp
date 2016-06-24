@@ -106,8 +106,16 @@ result<message> drop(local_actor*, const type_erased_tuple*);
 
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
-class local_actor : public monitorable_actor, public resumable {
+class local_actor : public monitorable_actor {
 public:
+  // -- static helper functions to implement default handlers ------------------
+
+  static void default_error_handler(local_actor* ptr, error& x);
+
+  static void default_down_handler(local_actor* ptr, down_msg& x);
+
+  static void default_exit_handler(local_actor* ptr, exit_msg& x);
+
   // -- member types -----------------------------------------------------------
 
   using mailbox_type = detail::single_reader_queue<mailbox_element,
@@ -132,6 +140,10 @@ public:
   ~local_actor();
 
   void on_destroy() override;
+
+  // -- pure virtual modifiers -------------------------------------------------
+
+  virtual void launch(execution_unit* eu, bool lazy, bool hide) = 0;
 
   // -- spawn functions --------------------------------------------------------
 
@@ -204,44 +216,6 @@ public:
 
   // -- miscellaneous actor operations -----------------------------------------
 
-  /// Sets a custom handler for unexpected messages.
-  inline void set_default_handler(default_handler fun) {
-    default_handler_ = std::move(fun);
-  }
-
-  /// Sets a custom handler for error messages.
-  inline void set_error_handler(error_handler fun) {
-    error_handler_ = std::move(fun);
-  }
-
-  /// Sets a custom handler for error messages.
-  template <class T>
-  auto set_error_handler(T fun) -> decltype(fun(std::declval<error&>())) {
-    set_error_handler([fun](local_actor*, error& x) { fun(x); });
-  }
-
-  /// Sets a custom handler for down messages.
-  inline void set_down_handler(down_handler fun) {
-    down_handler_ = std::move(fun);
-  }
-
-  /// Sets a custom handler for down messages.
-  template <class T>
-  auto set_down_handler(T fun) -> decltype(fun(std::declval<down_msg&>())) {
-    set_down_handler([fun](local_actor*, down_msg& x) { fun(x); });
-  }
-
-  /// Sets a custom handler for error messages.
-  inline void set_exit_handler(exit_handler fun) {
-    exit_handler_ = std::move(fun);
-  }
-
-  /// Sets a custom handler for exit messages.
-  template <class T>
-  auto set_exit_handler(T fun) -> decltype(fun(std::declval<exit_msg&>())) {
-    set_exit_handler([fun](local_actor*, exit_msg& x) { fun(x); });
-  }
-
   /// Returns the execution unit currently used by this actor.
   inline execution_unit* context() const {
     return context_;
@@ -264,25 +238,6 @@ public:
 
   /// Causes this actor to leave the group `what`.
   void leave(const group& what);
-
-  /// Finishes execution of this actor after any currently running
-  /// message handler is done.
-  /// This member function clears the behavior stack of the running actor
-  /// and invokes `on_exit()`. The actors does not finish execution
-  /// if the implementation of `on_exit()` sets a new behavior.
-  /// When setting a new behavior in `on_exit()`, one has to make sure
-  /// to not produce an infinite recursion.
-  ///
-  /// If `on_exit()` did not set a new behavior, the actor sends an
-  /// exit message to all of its linked actors, sets its state to exited
-  /// and finishes execution.
-  ///
-  /// In case this actor uses the blocking API, this member function unwinds
-  /// the stack by throwing an `actor_exited` exception.
-  /// @warning This member function throws immediately in thread-based actors
-  ///          that do not use the behavior stack, i.e., actors that use
-  ///          blocking API calls such as {@link receive()}.
-  void quit(error reason = error{});
 
   /// @cond PRIVATE
 
@@ -379,11 +334,6 @@ public:
   /// The default implementation throws a `std::logic_error`.
   virtual void load_state(deserializer& source, const unsigned int version);
 
-  // -- overridden member functions of resumable -------------------------------
-
-  subtype_t subtype() const override;
-
-  resume_result resume(execution_unit*, size_t) override;
 
   // -- here be dragons: end of public interface -------------------------------
 
@@ -393,14 +343,7 @@ public:
   std::pair<resumable::resume_result, invoke_message_result>
   exec_event(mailbox_element_ptr& ptr);
 
-  // handle `ptr` in an event-based actor, not suitable to be called in a loop
-  virtual void exec_single_event(execution_unit* ctx, mailbox_element_ptr& ptr);
-
   local_actor(actor_config& sys);
-
-  void intrusive_ptr_add_ref_impl() override;
-
-  void intrusive_ptr_release_impl() override;
 
   template <class ActorHandle>
   inline ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
@@ -471,7 +414,7 @@ public:
            || ! multiplexed_responses_.empty();
   }
 
-  virtual void initialize() = 0;
+  virtual void initialize();
 
   // clear behavior stack and call cleanup if actor either has no
   // valid behavior left or has set a planned exit reason
@@ -523,14 +466,6 @@ public:
   pending_response* find_multiplexed_response(message_id mid);
 
   void set_multiplexed_response_handler(message_id response_id, behavior bhvr);
-
-  // these functions are dispatched via the actor policies table
-
-  void launch(execution_unit* eu, bool lazy, bool hide);
-
-  using abstract_actor::enqueue;
-
-  void enqueue(mailbox_element_ptr, execution_unit*) override;
 
   mailbox_element_ptr next_message();
 
@@ -588,6 +523,9 @@ protected:
   // used for setting custom exit message handlers
   exit_handler exit_handler_;
 
+  // used when detaching actors
+  detail::private_thread* private_thread_;
+
   /// @endcond
 
 private:
@@ -602,10 +540,6 @@ private:
   msg_type filter_msg(mailbox_element& node);
 
   void handle_response(mailbox_element_ptr&, local_actor::pending_response&);
-
-  class private_thread;
-
-  private_thread* private_thread_;
 };
 
 /// A smart pointer to a {@link local_actor} instance.

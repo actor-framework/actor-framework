@@ -24,6 +24,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace std;
 using namespace caf;
 
@@ -254,7 +257,8 @@ CAF_TEST(test_void_res) {
   self->request(buddy, infinite, 1, 2).receive(
     [] {
       CAF_MESSAGE("received void res");
-    }
+    },
+    ERROR_HANDLER
   );
 }
 
@@ -309,28 +313,25 @@ CAF_TEST(request_float_or_int) {
   );
   CAF_CHECK_EQUAL(invocations, 2);
   CAF_MESSAGE("trigger sync failure");
-  bool error_handler_called = false;
-  bool int_handler_called = false;
   self->request(foi, infinite, f_atom::value).receive(
     [&](int) {
-      CAF_ERROR("int handler called");
-      int_handler_called = true;
+      CAF_FAIL("int handler called");
     },
-    [&](const error& err) {
+    [&](error& err) {
       CAF_MESSAGE("error received");
       CAF_CHECK_EQUAL(err, sec::unexpected_response);
-      error_handler_called = true;
     }
   );
-  CAF_CHECK_EQUAL(error_handler_called, true);
-  CAF_CHECK_EQUAL(int_handler_called, false);
 }
 
 CAF_TEST(request_to_mirror) {
   auto mirror = system.spawn<sync_mirror>();
-  self->request(mirror, infinite, 42).receive([&](int value) {
-    CAF_CHECK_EQUAL(value, 42);
-  });
+  self->request(mirror, infinite, 42).receive(
+    [&](int value) {
+      CAF_CHECK_EQUAL(value, 42);
+    },
+    ERROR_HANDLER
+  );
 }
 
 CAF_TEST(request_to_a_fwd2_b_fwd2_c) {
@@ -338,7 +339,8 @@ CAF_TEST(request_to_a_fwd2_b_fwd2_c) {
                 go_atom::value, self->spawn<B>(self->spawn<C>())).receive(
     [](ok_atom) {
       CAF_MESSAGE("received 'ok'");
-    }
+    },
+    ERROR_HANDLER
   );
 }
 
@@ -347,7 +349,8 @@ CAF_TEST(request_to_a_fwd2_d_fwd2_c) {
                 go_atom::value, self->spawn<D>(self->spawn<C>())).receive(
     [](ok_atom) {
       CAF_MESSAGE("received 'ok'");
-    }
+    },
+    ERROR_HANDLER
   );
 }
 

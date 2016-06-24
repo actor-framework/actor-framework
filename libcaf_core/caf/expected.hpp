@@ -24,6 +24,7 @@
 
 #include <new>
 #include <memory>
+#include <ostream>
 #include <type_traits>
 
 #include "caf/unit.hpp"
@@ -396,6 +397,13 @@ private:
   caf::error error_;
 };
 
+template <class T>
+auto to_string(const expected<T>& x) -> decltype(to_string(*x)) {
+  if (x)
+    return to_string(*x);
+  return "!" + to_string(x.error());
+}
+
 /// @cond PRIVATE
 /// Assigns the value of `expr` (which must return an `expected`)
 /// to a new variable named `var` or throws a `std::runtime_error` on error.
@@ -409,5 +417,19 @@ private:
 /// @endcond
 
 } // namespace caf
+
+namespace std {
+
+template <class T>
+auto operator<<(ostream& oss, const caf::expected<T>& x)
+-> decltype(oss << *x) {
+  if (x)
+    oss << *x;
+  else
+    oss << "!" << to_string(x.error());
+  return oss;
+}
+
+} // namespace std
 
 #endif

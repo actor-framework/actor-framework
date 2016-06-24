@@ -78,6 +78,7 @@ CAF_TEST(fun_no_args) {
   };
   cfg.add_actor_type("test_actor", test_actor_one_arg);
   test_spawn(make_message());
+  CAF_MESSAGE("test_spawn done");
 }
 
 CAF_TEST(fun_no_args_selfptr) {

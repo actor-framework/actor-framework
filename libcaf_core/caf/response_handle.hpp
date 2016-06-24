@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "caf/sec.hpp"
+#include "caf/catch_all.hpp"
 #include "caf/message_id.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/continue_helper.hpp"
@@ -148,45 +149,35 @@ public:
 
   using error_handler = std::function<void (error&)>;
 
-  template <class F, class E = detail::is_callable_t<F>>
-  void receive(F f) {
-    receive_impl(f);
+  template <class F, class OnError,
+            class E = detail::is_handler_for_ef<OnError, error>>
+  detail::is_callable_t<F> receive(F f, OnError ef) {
+    static_assert(std::is_same<
+                    void,
+                    typename detail::get_callable_trait<F>::result_type
+                  >::value,
+                  "response handlers are not allowed to have a return "
+                  "type other than void");
+    detail::type_checker<Output, F>::check();
+    typename Self::accept_one_cond rc;
+    self_->varargs_receive(rc, mid_, std::move(f), std::move(ef));
   }
 
-  template <class F, class OnError,
-            class E1 = detail::is_callable_t<F>,
-            class E2 = detail::is_handler_for_ef<OnError, error>>
-  void receive(F f, OnError ef) {
-    receive_impl(f, ef);
+  template <class OnError, class F,
+            class E = detail::is_callable_t<F>>
+  detail::is_handler_for_ef<OnError, error> receive(OnError ef, F f) {
+    receive(std::move(f), std::move(ef));
   }
+
+  template <class OnError, class F,
+            class E = detail::is_handler_for_ef<OnError, error>>
+  void receive(OnError ef, catch_all<F> ca) {
+    typename Self::accept_one_cond rc;
+    self_->varargs_receive(rc, mid_, std::move(ef), std::move(ca));
+  }
+
 
 private:
-  template <class F>
-  void receive_impl(F& f) {
-    static_assert(std::is_same<
-                    void,
-                    typename detail::get_callable_trait<F>::result_type
-                  >::value,
-                  "response handlers are not allowed to have a return "
-                  "type other than void");
-    detail::type_checker<Output, F>::check();
-    behavior tmp{std::move(f)};
-    self_->dequeue(tmp, mid_);
-  }
-
-  template <class F, class OnError>
-  void receive_impl(F& f, OnError& ef) {
-    static_assert(std::is_same<
-                    void,
-                    typename detail::get_callable_trait<F>::result_type
-                  >::value,
-                  "response handlers are not allowed to have a return "
-                  "type other than void");
-    detail::type_checker<Output, F>::check();
-    behavior tmp{std::move(f), std::move(ef)};
-    self_->dequeue(tmp, mid_);
-  }
-
   message_id mid_;
   Self* self_;
 };

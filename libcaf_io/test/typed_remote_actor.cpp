@@ -84,24 +84,16 @@ void run_client(int argc, char** argv, uint16_t port) {
   // check whether invalid_argument is thrown
   // when trying to connect to get an untyped
   // handle to the server
-  try {
-    system.middleman().remote_actor("127.0.0.1", port);
-  }
-  catch (network_error& e) {
-    CAF_MESSAGE(e.what());
-  }
+  auto res = system.middleman().remote_actor("127.0.0.1", port);
+  CAF_REQUIRE(! res);
+  CAF_MESSAGE(system.render(res.error()));
   CAF_MESSAGE("connect to typed_remote_actor");
   CAF_EXP_THROW(serv,
                 system.middleman().typed_remote_actor<server_type>("127.0.0.1",
                                                                    port));
-  scoped_actor self{system};
-  self->request(serv, infinite, ping{42}).receive(
-    [](const pong& p) {
-      CAF_CHECK_EQUAL(p.value, 42);
-    }
-  );
+  auto f = make_function_view(serv);
+  CAF_CHECK_EQUAL(f(ping{42}), pong{42});
   anon_send_exit(serv, exit_reason::user_shutdown);
-  self->wait_for(serv);
 }
 
 void run_server(int argc, char** argv) {

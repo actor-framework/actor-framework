@@ -17,50 +17,53 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/sec.hpp"
+#ifndef CAF_DETAIL_PRIVATE_THREAD_HPP
+#define CAF_DETAIL_PRIVATE_THREAD_HPP
+
+#include <mutex>
+#include <condition_variable>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
+namespace detail {
 
-namespace {
+class private_thread {
+public:
+  enum worker_state {
+    active,
+    shutdown_requested,
+    await_resume_or_shutdown
+  };
 
-const char* sec_strings[] = {
-  "<no-error>",
-  "unexpected_message",
-  "unexpected_response",
-  "request_receiver_down",
-  "request_timeout",
-  "no_such_group_module",
-  "no_actor_published_at_port",
-  "unexpected_actor_messaging_interface",
-  "state_not_serializable",
-  "unsupported_sys_key",
-  "unsupported_sys_message",
-  "disconnect_during_handshake",
-  "cannot_forward_to_invalid_actor",
-  "no_route_to_receiving_node",
-  "failed_to_assign_scribe_from_handle",
-  "cannot_close_invalid_port",
-  "cannot_connect_to_node",
-  "cannot_open_port",
-  "network_syscall_failed",
-  "invalid_argument",
-  "invalid_protocol_family",
-  "cannot_publish_invalid_actor",
-  "cannot_spawn_actor_from_arguments",
-  "bad_function_call"
+  private_thread(scheduled_actor* self);
+
+  void run();
+
+  bool await_resume();
+
+  void resume();
+
+  void shutdown();
+
+  static void exec(private_thread* this_ptr);
+
+  void notify_self_destroyed();
+
+  void await_self_destroyed();
+
+  void start();
+
+private:
+  std::mutex mtx_;
+  std::condition_variable cv_;
+  volatile bool self_destroyed_;
+  volatile scheduled_actor* self_;
+  volatile worker_state state_;
+  actor_system& system_;
 };
 
-} // namespace <anonymous>
-
-const char* to_string(sec x) {
-  auto index = static_cast<size_t>(x);
-  if (index > static_cast<size_t>(sec::bad_function_call))
-    return "<unknown>";
-  return sec_strings[index];
-}
-
-error make_error(sec x) {
-  return {static_cast<uint8_t>(x), atom("system")};
-}
-
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_PRIVATE_THREAD_HPP

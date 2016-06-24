@@ -25,6 +25,7 @@
 #include "caf/typed_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/typed_behavior.hpp"
+#include "caf/scheduled_actor.hpp"
 
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/behavior_changer.hpp"
@@ -41,7 +42,7 @@ public:
 /// implementation with static type-checking.
 /// @extends local_actor
 template <class... Sigs>
-class typed_event_based_actor : public extend<local_actor,
+class typed_event_based_actor : public extend<scheduled_actor,
                                               typed_event_based_actor<Sigs...>
                                        >::template
                                        with<mixin::sender, mixin::requester,
@@ -49,7 +50,8 @@ class typed_event_based_actor : public extend<local_actor,
                                 public statically_typed_actor_base {
 public:
   using super = typename
-                extend<local_actor, typed_event_based_actor<Sigs...>>::template
+                extend<scheduled_actor,
+                       typed_event_based_actor<Sigs...>>::template
                 with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   explicit typed_event_based_actor(actor_config& cfg) : super(cfg) {

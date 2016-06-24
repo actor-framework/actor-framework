@@ -34,10 +34,12 @@ set (LIBCAF_CORE_SRCS
      src/behavior_stack.cpp
      src/behavior_impl.cpp
      src/blocking_actor.cpp
+     src/blocking_behavior.cpp
      src/concatenated_tuple.cpp
      src/config_option.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
+     src/default_invoke_result_visitor.cpp
      src/deep_to_string.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
@@ -45,7 +47,6 @@ set (LIBCAF_CORE_SRCS
      src/dynamic_message_data.cpp
      src/error.cpp
      src/event_based_actor.cpp
-     src/exception.cpp
      src/execution_unit.cpp
      src/exit_reason.cpp
      src/forwarding_actor_proxy.cpp
@@ -69,12 +70,14 @@ set (LIBCAF_CORE_SRCS
      src/message_handler.cpp
      src/node_id.cpp
      src/parse_ini.cpp
+     src/private_thread.cpp
      src/ref_counted.cpp
      src/proxy_registry.cpp
      src/response_promise.cpp
      src/replies_to.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
+     src/scheduled_actor.cpp
      src/scoped_actor.cpp
      src/scoped_execution_unit.cpp
      src/sec.cpp

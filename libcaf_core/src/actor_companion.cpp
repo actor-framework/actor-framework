@@ -50,8 +50,4 @@ void actor_companion::enqueue(strong_actor_ptr src, message_id mid,
   enqueue(std::move(ptr), eu);
 }
 
-void actor_companion::initialize() {
-  // nop
-}
-
 } // namespace caf

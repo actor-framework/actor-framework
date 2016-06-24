@@ -24,6 +24,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace caf;
 
 namespace {
@@ -49,15 +52,24 @@ struct fixture {
 
   void run_testee(actor testee) {
     scoped_actor self{system};
-    self->request(testee, infinite, a_atom::value).receive([](int i) {
-      CAF_CHECK_EQUAL(i, 1);
-    });
-    self->request(testee, infinite, b_atom::value).receive([](int i) {
-      CAF_CHECK_EQUAL(i, 2);
-    });
-    self->request(testee, infinite, c_atom::value).receive([](int i) {
-      CAF_CHECK_EQUAL(i, 3);
-    });
+    self->request(testee, infinite, a_atom::value).receive(
+      [](int i) {
+        CAF_CHECK_EQUAL(i, 1);
+      },
+      ERROR_HANDLER
+    );
+    self->request(testee, infinite, b_atom::value).receive(
+      [](int i) {
+        CAF_CHECK_EQUAL(i, 2);
+      },
+      ERROR_HANDLER
+    );
+    self->request(testee, infinite, c_atom::value).receive(
+      [](int i) {
+        CAF_CHECK_EQUAL(i, 3);
+      },
+      ERROR_HANDLER
+    );
     self->send_exit(testee, exit_reason::user_shutdown);
     self->await_all_other_actors_done();
   }

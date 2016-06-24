@@ -32,6 +32,8 @@ namespace caf {
 template <class T>
 class function_view_storage {
 public:
+  using type = function_view_storage;
+
   function_view_storage(T& storage) : storage_(&storage) {
     // nop
   }
@@ -47,6 +49,8 @@ private:
 template <class... Ts>
 class function_view_storage<std::tuple<Ts...>> {
 public:
+  using type = function_view_storage;
+
   function_view_storage(std::tuple<Ts...>& storage) : storage_(&storage) {
     // nop
   }
@@ -62,6 +66,8 @@ private:
 template <>
 class function_view_storage<unit_t> {
 public:
+  using type = function_view_storage;
+
   function_view_storage(unit_t&) {
     // nop
   }
@@ -69,6 +75,25 @@ public:
   void operator()() {
     // nop
   }
+};
+
+struct function_view_storage_catch_all {
+  message* storage_;
+
+  function_view_storage_catch_all(message& ptr) : storage_(&ptr) {
+    // nop
+  }
+
+  result<message> operator()(const type_erased_tuple* x) {
+    *storage_ = message::from(x);
+    return message{};
+  }
+};
+
+template <>
+class function_view_storage<message> {
+public:
+  using type = catch_all<function_view_storage_catch_all>;
 };
 
 template <class T>
@@ -137,8 +162,6 @@ public:
   }
 
   /// Sends a request message to the assigned actor and returns the result.
-  /// @throws std::runtime_error if no valid actor is assigned or
-  ///                            if the request fails
   template <class... Ts,
             class R =
               typename function_view_flattened_result<
@@ -150,17 +173,19 @@ public:
                     >::type...>
                 >::tuple_type
               >::type>
-  R operator()(Ts&&... xs) {
+  expected<R> operator()(Ts&&... xs) {
     if (impl_.unsafe())
-      CAF_RAISE_ERROR("bad function call");
+      return sec::bad_function_call;
+    error err;
     function_view_result<R> result;
-    function_view_storage<R> h{result.value};
     self_->request(impl_, infinite, std::forward<Ts>(xs)...).receive(
-      h,
-      [] (error& x) {
-        CAF_RAISE_ERROR(to_string(x));
-      }
+      [&](error& x) {
+        err = std::move(x);
+      },
+      typename function_view_storage<R>::type{result.value}
     );
+    if (err)
+      return err;
     return flatten(result.value);
   }
 

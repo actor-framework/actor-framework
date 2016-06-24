@@ -92,7 +92,8 @@ CAF_TEST(receive_atoms) {
       [&](a_atom, b_atom, c_atom, float value) {
         matched_pattern[2] = true;
         CAF_CHECK_EQUAL(value, 23.f);
-      });
+      }
+    );
   }
   CAF_CHECK(matched_pattern[0] && matched_pattern[1] && matched_pattern[2]);
   self->receive(
@@ -129,6 +130,9 @@ CAF_TEST(request_atom_constants) {
   self->request(tst, infinite, abc_atom::value).receive(
     [](int i) {
       CAF_CHECK_EQUAL(i, 42);
+    },
+    [&](error& err) {
+      CAF_FAIL("err: " << system.render(err));
     }
   );
 }

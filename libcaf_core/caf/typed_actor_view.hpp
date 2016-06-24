@@ -20,7 +20,7 @@
 #ifndef CAF_TYPED_ACTOR_VIEW_HPP
 #define CAF_TYPED_ACTOR_VIEW_HPP
 
-#include "caf/local_actor.hpp"
+#include "caf/scheduled_actor.hpp"
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
@@ -34,7 +34,7 @@ class typed_actor_view : public extend<typed_actor_view_base,
                                        typed_actor_view<Sigs...>>::template
                                 with<mixin::sender, mixin::requester> {
 public:
-  typed_actor_view(local_actor* selfptr) : self_(selfptr) {
+  typed_actor_view(scheduled_actor* selfptr) : self_(selfptr) {
     // nop
   }
 
@@ -96,7 +96,7 @@ public:
   }
 
 private:
-  local_actor* self_;
+  scheduled_actor* self_;
 };
 
 } // namespace caf

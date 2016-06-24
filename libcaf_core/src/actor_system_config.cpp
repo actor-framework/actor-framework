@@ -314,8 +314,10 @@ actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,
-                                            const message&) {
-  return "system_error" + deep_to_string_as_tuple(static_cast<sec>(x));
+                                            const message& xs) {
+  return "system_error"
+         + (xs.empty() ? deep_to_string_as_tuple(static_cast<sec>(x))
+                       : deep_to_string_as_tuple(static_cast<sec>(x), xs));
 }
 
 std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,

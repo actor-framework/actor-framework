@@ -21,7 +21,6 @@
 
 #include "caf/config.hpp"
 #include "caf/optional.hpp"
-#include "caf/exception.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/actor_system_config.hpp"
 
@@ -93,6 +92,7 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
                       fun_name, last_socket_error_as_string())
 
 // calls a C functions and calls exit() if `predicate(var)`  returns false
+#ifdef CAF_WINDOWS
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
   auto var = expr;                                                             \
   if (! predicate(var)) {                                                      \
@@ -100,6 +100,7 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
            __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
     abort();                                                                   \
   } static_cast<void>(0)
+#endif // CAF_WINDOWS
 
 } // namespace <anonymous>
 

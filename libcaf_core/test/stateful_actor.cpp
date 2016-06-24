@@ -24,6 +24,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace std;
 using namespace caf;
 
@@ -96,7 +99,8 @@ struct fixture {
     self->request(aut, infinite, get_atom::value).receive(
       [](int x) {
         CAF_CHECK_EQUAL(x, 20);
-      }
+      },
+      ERROR_HANDLER
     );
   }
 
@@ -112,7 +116,8 @@ struct fixture {
     self->request(aut, infinite, get_atom::value).receive(
       [&](const string& str) {
         CAF_CHECK_EQUAL(str, expected);
-      }
+      },
+      ERROR_HANDLER
     );
   }
 };

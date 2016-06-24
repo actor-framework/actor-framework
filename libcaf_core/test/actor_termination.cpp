@@ -46,14 +46,12 @@ struct fixture {
       : scoped_self(system),
         mirror(system.spawn(mirror_impl)),
         testee(unsafe_actor_handle_init) {
-    scoped_self->set_down_handler([](local_actor*, down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-    });
+    // nop
   }
 
   template <class... Ts>
   void spawn(Ts&&... xs) {
-    testee = scoped_self->spawn<monitored>(std::forward<Ts>(xs)...);
+    testee = scoped_self->spawn(std::forward<Ts>(xs)...);
   }
 
   ~fixture() {

@@ -28,7 +28,6 @@
 #include "caf/sec.hpp"
 #include "caf/locks.hpp"
 #include "caf/logger.hpp"
-#include "caf/exception.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"

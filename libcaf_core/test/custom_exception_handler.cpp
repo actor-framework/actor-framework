@@ -73,19 +73,5 @@ CAF_TEST(test_custom_exception_handler) {
   auto testee3 = self->spawn<exception_testee, monitored>();
   self->send(testee3, "foo");
   // receive all down messages
-  self->set_down_handler([&](down_msg& dm) {
-    if (dm.source == testee1) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::normal);
-    }
-    else if (dm.source == testee2) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
-    }
-    else if (dm.source == testee3) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::remote_link_unreachable);
-    }
-    else {
-      throw std::runtime_error("received message from unexpected source");
-    }
-  });
   self->wait_for(testee1, testee2, testee3);
 }

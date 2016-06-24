@@ -98,13 +98,7 @@ CAF_TEST_FIXTURE_SCOPE(function_view_tests, fixture)
 
 CAF_TEST(empty_function_fiew) {
   function_view<calculator> f;
-  try {
-    f(10, 20);
-    CAF_ERROR("line must be unreachable");
-  }
-  catch (std::runtime_error&) {
-    // nop
-  }
+  CAF_CHECK_EQUAL(f(10, 20), sec::bad_function_call);
 }
 
 CAF_TEST(single_res_function_view) {
@@ -122,13 +116,7 @@ CAF_TEST(single_res_function_view) {
   g.assign(system.spawn(multiplier));
   CAF_CHECK_EQUAL(g(10, 20), 200);
   g.assign(system.spawn(divider));
-  try {
-    g(1, 0);
-    CAF_ERROR("expected exception");
-  }
-  catch (std::runtime_error& e) {
-    CAF_MESSAGE(e.what());
-  }
+  CAF_CHECK(! g(1, 0));
   g.assign(system.spawn(divider));
   CAF_CHECK_EQUAL(g(4, 2), 2);
 }

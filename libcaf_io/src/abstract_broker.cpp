@@ -43,7 +43,7 @@ void abstract_broker::enqueue(strong_actor_ptr src, message_id mid,
 
 void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_PUSH_AID(id());
-  local_actor::enqueue(std::move(ptr), &backend());
+  scheduled_actor::enqueue(std::move(ptr), &backend());
 }
 
 void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
@@ -198,7 +198,7 @@ resumable::resume_result
 abstract_broker::resume(execution_unit* ctx, size_t mt) {
   CAF_ASSERT(ctx != nullptr);
   CAF_ASSERT(ctx == &backend());
-  return local_actor::resume(ctx, mt);
+  return scheduled_actor::resume(ctx, mt);
 }
 
 const char* abstract_broker::name() const {
@@ -215,7 +215,7 @@ void abstract_broker::init_broker() {
 
 }
 
-abstract_broker::abstract_broker(actor_config& cfg) : local_actor(cfg) {
+abstract_broker::abstract_broker(actor_config& cfg) : scheduled_actor(cfg) {
   // nop
 }
 

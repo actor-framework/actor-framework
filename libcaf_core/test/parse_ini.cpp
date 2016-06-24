@@ -32,6 +32,9 @@
 #include "caf/detail/parse_ini.hpp"
 #include "caf/detail/safe_equal.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace caf;
 
 namespace {
@@ -116,7 +119,8 @@ struct fixture {
       [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
         for (auto& kvp : msgs)
           self->send(config_server, put_atom::value, kvp.first, message{});
-      }
+      },
+      ERROR_HANDLER
     );
     auto consume = [&](size_t, std::string key, config_value& value) {
       message_visitor mv;
@@ -159,7 +163,8 @@ struct fixture {
             result = detail::safe_equal(what, val);
           }
         );
-      }
+      },
+      ERROR_HANDLER
     );
     return result;
   }
@@ -192,7 +197,8 @@ struct fixture {
           for (auto& kvp : msgs)
             if (! kvp.second.empty())
               ++result;
-        }
+        },
+        ERROR_HANDLER
       );
       return result;
     }

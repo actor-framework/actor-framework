@@ -40,11 +40,20 @@ void caf_main(actor_system& system) {
   auto serv = system.spawn(server);
   auto worker = system.spawn(client, serv);
   scoped_actor self{system};
-  self->request(serv, std::chrono::seconds(10),
-                request_atom::value).receive([&](response_atom) {
-    aout(self) << "received response from "
-               << (self->current_sender() == worker ? "worker\n" : "server\n");
-  });
+  self->request(serv, std::chrono::seconds(10), request_atom::value).receive(
+    [&](response_atom) {
+      aout(self) << "received response from "
+                 << (self->current_sender() == worker ? "worker\n"
+                                                      : "server\n");
+    },
+    [&](error& err) {
+      aout(self) << "received error "
+                 << system.render(err)
+                 << " from "
+                 << (self->current_sender() == worker ? "worker\n"
+                                                      : "server\n");
+    }
+  );
   self->send_exit(serv, exit_reason::user_shutdown);
 }
 

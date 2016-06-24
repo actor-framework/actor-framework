@@ -77,6 +77,7 @@ class proxy_registry;
 class continue_helper;
 class mailbox_element;
 class message_handler;
+class scheduled_actor;
 class sync_timeout_msg;
 class response_promise;
 class event_based_actor;
@@ -147,6 +148,7 @@ namespace detail {
 class disposer;
 class message_data;
 class group_manager;
+class private_thread;
 class dynamic_message_data;
 
 } // namespace detail

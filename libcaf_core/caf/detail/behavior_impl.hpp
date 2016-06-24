@@ -221,14 +221,36 @@ default_behavior_impl<std::tuple<Ts...>>::copy(const generic_timeout_definition&
   return apply_args_suffxied(factory, indices, cases_, td);
 }
 
-template <class... Ts>
-intrusive_ptr<default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>>
-  make_behavior(Ts... xs) {
-  using type = default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>;
-  return make_counted<type>(std::move(xs)...);
-}
+struct make_behavior_t {
+  constexpr make_behavior_t() {
+    // nop
+  }
+
+  template <class... Ts>
+  intrusive_ptr<default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>>
+  operator()(Ts... xs) const {
+    using type = default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>;
+    return make_counted<type>(std::move(xs)...);
+  }
+};
+
+constexpr make_behavior_t make_behavior = make_behavior_t{};
 
 using behavior_impl_ptr = intrusive_ptr<behavior_impl>;
+
+// utility for getting a type-erased version of make_behavior
+struct make_behavior_impl_t {
+  constexpr make_behavior_impl_t() {
+    // nop
+  }
+
+  template <class... Ts>
+  behavior_impl_ptr operator()(Ts&&... xs) const {
+    return make_behavior(std::forward<Ts>(xs)...);
+  }
+};
+
+constexpr make_behavior_impl_t make_behavior_impl = make_behavior_impl_t{};
 
 } // namespace detail
 } // namespace caf

@@ -73,6 +73,10 @@ struct fixture {
   }
 };
 
+void handle_err(const error& err) {
+  throw std::runtime_error("AUT responded with an error: " + to_string(err));
+}
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(actor_pool_tests, fixture)
@@ -90,7 +94,8 @@ CAF_TEST(round_robin_actor_pool) {
         auto sender = actor_cast<strong_actor_ptr>(self->current_sender());
         CAF_REQUIRE(sender);
         workers.push_back(actor_cast<actor>(std::move(sender)));
-      }
+      },
+      handle_err
     );
   }
   CAF_CHECK_EQUAL(workers.size(), 6u);
@@ -101,7 +106,8 @@ CAF_TEST(round_robin_actor_pool) {
       std::sort(ws.begin(), ws.end());
       CAF_REQUIRE_EQUAL(workers.size(), ws.size());
       CAF_CHECK(std::equal(workers.begin(), workers.end(), ws.begin()));
-    }
+    },
+    handle_err
   );
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
   self->wait_for(workers.back());
@@ -120,7 +126,8 @@ CAF_TEST(round_robin_actor_pool) {
           // wait a bit until polling again
           std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
-      }
+      },
+      handle_err
     );
   }
   CAF_REQUIRE(success);
@@ -160,7 +167,8 @@ CAF_TEST(random_actor_pool) {
     self->request(pool, std::chrono::milliseconds(250), 1, 2).receive(
       [&](int res) {
         CAF_CHECK_EQUAL(res, 3);
-      }
+      },
+      handle_err
     );
   }
   self->send_exit(pool, exit_reason::user_shutdown);
@@ -192,12 +200,14 @@ CAF_TEST(split_join_actor_pool) {
   self->request(pool, infinite, std::vector<int>{1, 2, 3, 4, 5}).receive(
     [&](int res) {
       CAF_CHECK_EQUAL(res, 15);
-    }
+    },
+    handle_err
   );
   self->request(pool, infinite, std::vector<int>{6, 7, 8, 9, 10}).receive(
     [&](int res) {
       CAF_CHECK_EQUAL(res, 40);
-    }
+    },
+    handle_err
   );
   self->send_exit(pool, exit_reason::user_shutdown);
 }

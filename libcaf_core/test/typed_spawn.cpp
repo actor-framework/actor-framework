@@ -29,6 +29,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace std;
 using namespace caf;
 
@@ -321,12 +324,14 @@ struct fixture {
     self->request(ts, infinite, my_request{10, 20}).receive(
       [](bool value) {
         CAF_CHECK_EQUAL(value, false);
-      }
+      },
+      ERROR_HANDLER
     );
     self->request(ts, infinite, my_request{0, 0}).receive(
       [](bool value) {
         CAF_CHECK_EQUAL(value, true);
-      }
+      },
+      ERROR_HANDLER
     );
     CAF_CHECK_EQUAL(system.registry().running(), 2u);
     auto c1 = self->spawn(client, self, ts);
@@ -408,7 +413,8 @@ CAF_TEST(string_delegator_chain) {
   self->request(aut, infinite, "Hello World!").receive(
     [](const string& answer) {
       CAF_CHECK_EQUAL(answer, "!dlroW olleH");
-    }
+    },
+    ERROR_HANDLER
   );
 }
 
@@ -431,7 +437,8 @@ CAF_TEST(maybe_string_delegator_chain) {
   self->request(aut, infinite, "abcd").receive(
     [](ok_atom, const string& str) {
       CAF_CHECK_EQUAL(str, "dcba");
-    }
+    },
+    ERROR_HANDLER
   );
 }
 

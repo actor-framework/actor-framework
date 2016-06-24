@@ -17,50 +17,30 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/sec.hpp"
+#include "caf/detail/blocking_behavior.hpp"
 
 namespace caf {
+namespace detail {
 
-namespace {
-
-const char* sec_strings[] = {
-  "<no-error>",
-  "unexpected_message",
-  "unexpected_response",
-  "request_receiver_down",
-  "request_timeout",
-  "no_such_group_module",
-  "no_actor_published_at_port",
-  "unexpected_actor_messaging_interface",
-  "state_not_serializable",
-  "unsupported_sys_key",
-  "unsupported_sys_message",
-  "disconnect_during_handshake",
-  "cannot_forward_to_invalid_actor",
-  "no_route_to_receiving_node",
-  "failed_to_assign_scribe_from_handle",
-  "cannot_close_invalid_port",
-  "cannot_connect_to_node",
-  "cannot_open_port",
-  "network_syscall_failed",
-  "invalid_argument",
-  "invalid_protocol_family",
-  "cannot_publish_invalid_actor",
-  "cannot_spawn_actor_from_arguments",
-  "bad_function_call"
-};
-
-} // namespace <anonymous>
-
-const char* to_string(sec x) {
-  auto index = static_cast<size_t>(x);
-  if (index > static_cast<size_t>(sec::bad_function_call))
-    return "<unknown>";
-  return sec_strings[index];
+blocking_behavior::~blocking_behavior() {
+  // nop
 }
 
-error make_error(sec x) {
-  return {static_cast<uint8_t>(x), atom("system")};
+blocking_behavior::blocking_behavior(behavior x) : nested(std::move(x)) {
+  // nop
 }
 
+result<message> blocking_behavior::fallback(const type_erased_tuple*) {
+  return skip;
+}
+
+duration blocking_behavior::timeout() {
+  return {};
+}
+
+void blocking_behavior::handle_timeout() {
+  // nop
+}
+
+} // namespace detail
 } // namespace caf

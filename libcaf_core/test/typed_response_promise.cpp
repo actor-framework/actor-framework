@@ -26,6 +26,9 @@
 
 #include "caf/all.hpp"
 
+#define ERROR_HANDLER                                                          \
+  [&](error& err) { CAF_FAIL(system.render(err)); }
+
 using namespace caf;
 
 namespace {
@@ -146,13 +149,15 @@ CAF_TEST(typed_response_promise) {
   self->request(foo, infinite, get_atom::value, 42).receive(
     [](int x) {
       CAF_CHECK_EQUAL(x, 84);
-    }
+    },
+    ERROR_HANDLER
   );
   self->request(foo, infinite, get_atom::value, 42, 52).receive(
     [](int x, int y) {
       CAF_CHECK_EQUAL(x, 84);
       CAF_CHECK_EQUAL(y, 104);
-    }
+    },
+    ERROR_HANDLER
   );
   self->request(foo, infinite, get_atom::value, 3.14, 3.14).receive(
     [](double x, double y) {
@@ -198,12 +203,13 @@ CAF_TEST(error_response_message) {
       CAF_ERROR("unexpected ordinary response message received: " << x);
     }
   );
-  self->set_error_handler([&](error& err) {
-    CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::unexpected_message));
-    self->send(self, message{});
-  });
   self->send(foo, get_atom::value, 3.14);
-  self->receive([] {});
+  self->receive(
+    [&](error& err) {
+      CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::unexpected_message));
+      self->send(self, message{});
+    }
+  );
 }
 
 // verify that delivering to a satisfied promise has no effect

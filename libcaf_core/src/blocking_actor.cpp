@@ -20,17 +20,38 @@
 #include "caf/blocking_actor.hpp"
 
 #include "caf/logger.hpp"
-#include "caf/exception.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_registry.hpp"
 
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/detail/default_invoke_result_visitor.hpp"
 
 namespace caf {
 
+blocking_actor::receive_cond::~receive_cond() {
+  // nop
+}
+
+bool blocking_actor::receive_cond::pre() {
+  return true;
+}
+
+bool blocking_actor::receive_cond::post() {
+  return true;
+}
+
+blocking_actor::accept_one_cond::~accept_one_cond() {
+  // nop
+}
+
+bool blocking_actor::accept_one_cond::post() {
+  return false;
+}
+
 blocking_actor::blocking_actor(actor_config& sys)
     : super(sys.add_flag(local_actor::is_blocking_flag)) {
-  set_default_handler(skip);
+  // nop
 }
 
 blocking_actor::~blocking_actor() {
@@ -49,6 +70,52 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   }
 }
 
+void blocking_actor::launch(execution_unit*, bool, bool hide) {
+  CAF_LOG_TRACE(CAF_ARG(hide));
+  CAF_ASSERT(is_blocking());
+  is_registered(! hide);
+  home_system().inc_detached_threads();
+  std::thread([](strong_actor_ptr ptr) {
+    // actor lives in its own thread
+    auto this_ptr = ptr->get();
+    CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != 0);
+    auto self = static_cast<blocking_actor*>(this_ptr);
+    error rsn;
+    std::exception_ptr eptr = nullptr;
+    try {
+      self->act();
+      rsn = self->fail_state_;
+    }
+    catch (...) {
+      rsn = exit_reason::unhandled_exception;
+      eptr = std::current_exception();
+    }
+    if (eptr) {
+      auto opt_reason = self->handle(eptr);
+      rsn = opt_reason ? *opt_reason
+                       : exit_reason::unhandled_exception;
+    }
+    try {
+      self->on_exit();
+    }
+    catch (...) {
+      // simply ignore exception
+    }
+    self->cleanup(std::move(rsn), self->context());
+    ptr->home_system->dec_detached_threads();
+  }, ctrl()).detach();
+}
+
+blocking_actor::receive_while_helper
+blocking_actor::receive_while(std::function<bool()> stmt) {
+  return {this, stmt};
+}
+
+blocking_actor::receive_while_helper
+blocking_actor::receive_while(const bool& ref) {
+  return receive_while([&] { return ref; });
+}
+
 void blocking_actor::await_all_other_actors_done() {
   system().registry().await_running_count_equal(is_registered() ? 1 : 0);
 }
@@ -59,39 +126,78 @@ void blocking_actor::act() {
     initial_behavior_fac_(this);
 }
 
-void blocking_actor::initialize() {
-  // nop
+void blocking_actor::fail_state(error err) {
+  fail_state_ = std::move(err);
 }
 
-void blocking_actor::dequeue(behavior& bhvr, message_id mid) {
+void blocking_actor::receive_impl(receive_cond& rcc,
+                                  message_id mid,
+                                  detail::blocking_behavior& bhvr) {
   CAF_LOG_TRACE(CAF_ARG(mid));
+  // calculate absolute timeout if requested by user
+  auto rel_tout = bhvr.timeout();
+  std::chrono::high_resolution_clock::time_point abs_tout;
+  if (rel_tout.valid()) {
+    abs_tout = std::chrono::high_resolution_clock::now();
+    abs_tout += rel_tout;
+  }
   // try to dequeue from cache first
-  if (invoke_from_cache(bhvr, mid))
+  if (invoke_from_cache(bhvr.nested, mid))
     return;
-  uint32_t timeout_id = 0;
-  if (mid != invalid_message_id)
-    awaited_responses_.emplace_front(mid, bhvr);
-  else
-    timeout_id = request_timeout(bhvr.timeout());
-  if (mid != invalid_message_id && ! find_awaited_response(mid))
-    awaited_responses_.emplace_front(mid, behavior{});
-  // read incoming messages
+  // read incoming messages until we have a match or a timeout
+  detail::default_invoke_result_visitor visitor{this};
   for (;;) {
-    await_data();
-    auto msg = next_message();
-    switch (invoke_message(msg, bhvr, mid)) {
-      case im_success:
-        if (mid == invalid_message_id)
-          reset_timeout(timeout_id);
-        return;
-      case im_skipped:
-        if (msg)
-          push_to_cache(std::move(msg));
-        break;
-      default:
-        // delete msg
-        break;
-    }
+    if (! rcc.pre())
+      return;
+    bool skipped;
+    do {
+      skipped = false;
+      if (rel_tout.valid()) {
+        if (! await_data(abs_tout)) {
+          bhvr.handle_timeout();
+          return;
+        }
+      } else {
+        await_data();
+      }
+      auto ptr = next_message();
+      CAF_ASSERT(ptr != nullptr);
+      // skip messages that don't match our message ID
+      if (ptr->mid != mid) {
+        push_to_cache(std::move(ptr));
+        continue;
+      }
+      ptr.swap(current_element_);
+      switch (bhvr.nested(visitor, current_element_->msg)) {
+        case match_case::skip:
+          skipped = true;
+          break;
+        default:
+          break;
+        case match_case::no_match: {
+          auto sres = bhvr.fallback(current_element_->msg.cvals().get());
+          // when dealing with response messages, there's either a match
+          // on the first handler or we produce an error to
+          // get a match on the second (error) handler
+          if (sres.flag != rt_skip) {
+            visitor.visit(sres);
+          } else if (mid.valid()) {
+            // make new message to replace current_element_->msg
+            auto x = make_message(make_error(sec::unexpected_response,
+                                             std::move(current_element_->msg)));
+            current_element_->msg = std::move(x);
+            bhvr.nested(current_element_->msg);
+          } else {
+            skipped = true;
+          }
+        }
+      }
+      ptr.swap(current_element_);
+      if (skipped)
+        push_to_cache(std::move(ptr));
+    } while (skipped);
+    if (! rcc.post())
+      return;
   }
 }
 
@@ -100,7 +206,7 @@ void blocking_actor::await_data() {
     mailbox().synchronized_await(mtx_, cv_);
 }
 
-bool blocking_actor::await_data(std::chrono::high_resolution_clock::time_point timeout) {
+bool blocking_actor::await_data(timeout_type timeout) {
   if (has_next_message())
     return true;
   return mailbox().synchronized_await(mtx_, cv_, timeout);

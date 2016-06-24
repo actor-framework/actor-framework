@@ -141,12 +141,19 @@ public:
   }
 
   void act() override {
-    receive_loop (
+    bool running = true;
+    receive_while(running) (
       [&](int) {
         wait4float();
       },
       [&](get_atom) {
         return "wait4int";
+      },
+      [&](exit_msg& em) {
+        if (em.reason) {
+          fail_state(std::move(em.reason));
+          running = false;
+        }
       }
     );
   }
@@ -484,13 +491,8 @@ typed_testee::behavior_type testee() {
 
 CAF_TEST(typed_await) {
   scoped_actor self{system};
-  auto x = system.spawn(testee);
-  self->request(x, infinite, abc_atom::value).receive(
-    [](const std::string& str) {
-      CAF_CHECK_EQUAL(str, "abc");
-    }
-  );
-  self->send_exit(x, exit_reason::user_shutdown);
+  auto f = make_function_view(system.spawn(testee));
+  CAF_CHECK_EQUAL(f(abc_atom::value), "abc");
 }
 
 // tests attach_functor() inside of an actor's constructor
@@ -604,28 +606,18 @@ CAF_TEST(custom_exception_handler) {
   self->send(testee3, "foo");
   // receive all down messages
   int downs_received = 0;
-  self->set_down_handler([&](down_msg& dm) {
-    if (dm.source == testee1) {
-      ++downs_received;
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
+  self->receive_for(downs_received, 3) (
+    [&](down_msg& dm) {
+      if (dm.source == testee1)
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
+      else if (dm.source == testee2)
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::unknown);
+      else if (dm.source == testee3)
+        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
+      else
+        throw std::runtime_error("received message from unexpected source");
     }
-    else if (dm.source == testee2) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::unknown);
-      ++downs_received;
-    }
-    else if (dm.source == testee3) {
-      CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
-      ++downs_received;
-    }
-    else {
-      throw std::runtime_error("received message from unexpected source");
-    }
-    if (downs_received == 3)
-      self->send(self, message{});
-  });
-  // this exploits the fact that down messages are counted by dequeue
-  behavior dummy{[] {}};
-  self->dequeue(dummy);
+  );
 }
 
 CAF_TEST(kill_the_immortal) {
@@ -647,7 +639,7 @@ CAF_TEST(kill_the_immortal) {
 CAF_TEST(move_only_argument) {
   using unique_int = std::unique_ptr<int>;
   unique_int uptr{new int(42)};
-  auto f = [](event_based_actor* self, unique_int ptr) -> behavior {
+  auto impl = [](event_based_actor* self, unique_int ptr) -> behavior {
     auto i = *ptr;
     return {
       [=](float) {
@@ -656,13 +648,18 @@ CAF_TEST(move_only_argument) {
       }
     };
   };
+  auto f = make_function_view(system.spawn(impl, std::move(uptr)));
+  CAF_CHECK_EQUAL(to_string(f(1.f)), "(42)");
+  /*
   auto testee = system.spawn(f, std::move(uptr));
   scoped_actor self{system};
   self->request(testee, infinite, 1.f).receive(
     [](int i) {
       CAF_CHECK_EQUAL(i, 42);
-    }
+    },
+    ERROR_HANDLER
   );
+  */
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -23,7 +23,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "caf/local_actor.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 #include "caf/detail/intrusive_partitioned_list.hpp"
 
@@ -74,7 +74,7 @@ class middleman;
 
 /// A broker mediates between actor systems and other components in the network.
 /// @ingroup Broker
-class abstract_broker : public local_actor,
+class abstract_broker : public scheduled_actor,
                         public prohibit_top_level_spawn_marker {
 public:
   virtual ~abstract_broker();
@@ -83,15 +83,25 @@ public:
   friend class scribe;
   friend class doorman;
 
-  void enqueue(strong_actor_ptr, message_id, message, execution_unit*) override;
+  // -- overridden modifiers of abstract_actor ---------------------------------
 
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 
-  /// Called after this broker has finished execution.
+  void enqueue(strong_actor_ptr, message_id, message, execution_unit*) override;
+
+  // -- overridden modifiers of local_actor ------------------------------------
+
+  void launch(execution_unit* eu, bool lazy, bool hide) override;
+
+  // -- overridden modifiers of abstract_broker --------------------------------
+
   bool cleanup(error&& reason, execution_unit* host) override;
 
-  /// Starts running this broker in the `middleman`.
-  void launch(execution_unit* eu, bool lazy, bool hide);
+  // -- overridden modifiers of resumable --------------------------------------
+
+  resume_result resume(execution_unit*, size_t) override;
+
+  // -- modifiers --------------------------------------------------------------
 
   /// Modifies the receive policy for given connection.
   /// @param hdl Identifies the affected connection.
@@ -109,14 +119,6 @@ public:
 
   /// Sends the content of the buffer for given connection.
   void flush(connection_handle hdl);
-
-  /// Returns the number of open connections.
-  inline size_t num_connections() const {
-    return scribes_.size();
-  }
-
-  /// Returns all handles of all `scribe` instances attached to this broker.
-  std::vector<connection_handle> connections() const;
 
   /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
@@ -190,10 +192,6 @@ public:
     return get_map(hdl).count(hdl) > 0;
   }
 
-  subtype_t subtype() const override;
-
-  resume_result resume(execution_unit*, size_t) override;
-
   /// @cond PRIVATE
   template <class Handle>
   void erase(Handle hdl) {
@@ -204,7 +202,23 @@ public:
   }
   /// @endcond
 
+  // -- overridden observers of abstract_actor ---------------------------------
+
   const char* name() const override;
+
+  // -- overridden observers of resumable --------------------------------------
+
+  subtype_t subtype() const override;
+
+  // -- observers --------------------------------------------------------------
+
+  /// Returns the number of open connections.
+  inline size_t num_connections() const {
+    return scribes_.size();
+  }
+
+  /// Returns all handles of all `scribe` instances attached to this broker.
+  std::vector<connection_handle> connections() const;
 
 protected:
   void init_broker();

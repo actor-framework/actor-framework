@@ -52,9 +52,15 @@ void multiplexed_testee(event_based_actor* self, vector<cell> cells) {
 
 void blocking_testee(blocking_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, seconds(1), get_atom::value).receive([&](int y) {
-      aout(self) << "cell #" << x.id() << " -> " << y << endl;
-    });
+    self->request(x, seconds(1), get_atom::value).receive(
+      [&](int y) {
+        aout(self) << "cell #" << x.id() << " -> " << y << endl;
+      },
+      [&](error& err) {
+        aout(self) << "cell #" << x.id()
+                   << " -> " << self->system().render(err) << endl;
+      }
+    );
 }
 
 void caf_main(actor_system& system) {

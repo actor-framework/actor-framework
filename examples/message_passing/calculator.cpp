@@ -42,12 +42,19 @@ behavior calculator_fun(event_based_actor*) {
 
 // function-based, dynamically typed, blocking API
 void blocking_calculator_fun(blocking_actor* self) {
-  self->receive_loop (
+  bool running = true;
+  self->receive_while(running) (
     [](add_atom, int a, int b) {
       return a + b;
     },
     [](sub_atom, int a, int b) {
       return a - b;
+    },
+    [&](exit_msg& em) {
+      if (em.reason) {
+        self->fail_state(std::move(em.reason));
+        running = false;
+      }
     }
   );
 }
@@ -107,6 +114,11 @@ void tester(scoped_actor&) {
 // tests a calculator instance
 template <class Handle, class... Ts>
 void tester(scoped_actor& self, const Handle& hdl, int x, int y, Ts&&... xs) {
+  auto handle_err = [&](const error& err) {
+    aout(self) << "AUT (actor under test) failed: "
+               << self->system().render(err) << endl;
+    throw std::runtime_error("AUT responded with an error");
+  };
   // first test: x + y = z
   self->request(hdl, infinite, add_atom::value, x, y).receive(
     [&](int res1) {
@@ -115,14 +127,11 @@ void tester(scoped_actor& self, const Handle& hdl, int x, int y, Ts&&... xs) {
       self->request(hdl, infinite, sub_atom::value, x, y).receive(
         [&](int res2) {
           aout(self) << x << " - " << y << " = " << res2 << endl;
-        }
+        },
+        handle_err
       );
     },
-    [&](const error& err) {
-      aout(self) << "AUT (actor under test) failed: "
-                 << self->system().render(err) << endl;
-      self->quit(exit_reason::user_shutdown);
-    }
+    handle_err
   );
   tester(self, std::forward<Ts>(xs)...);
 }
