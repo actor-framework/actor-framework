@@ -246,7 +246,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
     return;
   }
   self->parent().notify<hook::message_received>(src_nid, src, dest, mid, msg);
-  dest->enqueue(mailbox_element::make(std::move(src), mid, std::move(stages),
+  dest->enqueue(make_mailbox_element(std::move(src), mid, std::move(stages),
                                       std::move(msg)),
                 nullptr);
 }
@@ -671,14 +671,8 @@ resumable::resume_result basp_broker::resume(execution_unit* ctx, size_t mt) {
   return super::resume(ctx, mt);
 }
 
-void basp_broker::exec_single_event(execution_unit* ctx,
-                                    mailbox_element_ptr& ptr) {
-  CAF_ASSERT(ctx != nullptr);
-  ctx->proxy_registry_ptr(&state.instance.proxies());
-  auto guard = detail::make_scope_guard([=] {
-    ctx->proxy_registry_ptr(nullptr);
-  });
-  super::exec_single_event(ctx, ptr);
+proxy_registry* basp_broker::proxy_registry_ptr() {
+  return &state.instance.proxies();
 }
 
 } // namespace io

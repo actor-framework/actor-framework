@@ -34,8 +34,12 @@ namespace io {
 template <class Base, class Handle, class SysMsgType>
 class broker_servant : public Base {
 public:
-  broker_servant(abstract_broker* ptr, Handle x) : Base(ptr), hdl_(x) {
-    // nop
+  broker_servant(abstract_broker* ptr, Handle x)
+      : Base(ptr),
+        hdl_(x),
+        value_(strong_actor_ptr{}, message_id::make(),
+               mailbox_element::forwarding_stack{}, SysMsgType{}) {
+    set_hdl(msg(), x);
   }
 
   Handle hdl() const {
@@ -48,13 +52,19 @@ protected:
   }
 
   void invoke_mailbox_element(execution_unit* ctx) {
-    this->parent()->exec_single_event(ctx, mailbox_elem_ptr_);
+    auto self = this->parent();
+    auto pfac = self->proxy_registry_ptr();
+    if (pfac)
+      ctx->proxy_registry_ptr(pfac);
+    auto guard = detail::make_scope_guard([=] {
+      if (pfac)
+        ctx->proxy_registry_ptr(nullptr);
+    });
+    self->activate(ctx, value_);
   }
 
   SysMsgType& msg() {
-    if (! mailbox_elem_ptr_)
-      reset_mailbox_element();
-    return mailbox_elem_ptr_->msg.get_as_mutable<SysMsgType>(0);
+    return value_.template get_mutable_as<SysMsgType>(0);
   }
 
   static void set_hdl(new_connection_msg& lhs, Handle& hdl) {
@@ -65,15 +75,8 @@ protected:
     lhs.handle = hdl;
   }
 
-  void reset_mailbox_element() {
-    SysMsgType tmp;
-    set_hdl(tmp, hdl_);
-    mailbox_elem_ptr_ = mailbox_element::make(nullptr, invalid_message_id,
-                                              {}, tmp);
-  }
-
   Handle hdl_;
-  mailbox_element_ptr mailbox_elem_ptr_;
+  mailbox_element_vals<SysMsgType> value_;
 };
 
 } // namespace io

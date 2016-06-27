@@ -85,7 +85,7 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   // tell printer to purge its state for us if we ever used aout()
   if (get_flag(abstract_actor::has_used_aout_flag)) {
     auto pr = home_system().scheduler().printer();
-    pr->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+    pr->enqueue(make_mailbox_element(nullptr, message_id::make(), {},
                                       delete_atom::value, id()),
                 nullptr);
   }
@@ -114,21 +114,6 @@ void monitorable_actor::bounce(mailbox_element_ptr& what, const error& err) {
 
 monitorable_actor::monitorable_actor(actor_config& cfg) : abstract_actor(cfg) {
   // nop
-}
-
-optional<exit_reason> monitorable_actor::handle(const std::exception_ptr& eptr) {
-  std::unique_lock<std::mutex> guard{mtx_};
-  for (auto i = attachables_head_.get(); i != nullptr; i = i->next.get()) {
-    try {
-      auto result = i->handle_exception(eptr);
-      if (result)
-        return *result;
-    }
-    catch (...) {
-      // ignore exceptions
-    }
-  }
-  return none;
 }
 
 bool monitorable_actor::link_impl(linking_operation op, abstract_actor* other) {
@@ -240,10 +225,10 @@ size_t monitorable_actor::detach_impl(const attachable::token& what,
 bool monitorable_actor::handle_system_message(mailbox_element& x,
                                               execution_unit* ctx,
                                               bool trap_exit) {
-  auto& msg = x.msg;
+  auto& msg = x.content();
   if (! trap_exit && msg.size() == 1 && msg.match_element<exit_msg>(0)) {
     // exits for non-normal exit reasons
-    auto& em = msg.get_as_mutable<exit_msg>(0);
+    auto& em = msg.get_mutable_as<exit_msg>(0);
     if (em.reason)
       cleanup(std::move(em.reason), ctx);
     return true;
@@ -252,22 +237,22 @@ bool monitorable_actor::handle_system_message(mailbox_element& x,
       return true;
     error err;
     mailbox_element_ptr res;
-    msg.apply({
+    msg.apply(
       [&](sys_atom, get_atom, std::string& what) {
         CAF_LOG_TRACE(CAF_ARG(what));
         if (what != "info") {
           err = sec::unsupported_sys_key;
           return;
         }
-        res = mailbox_element::make(ctrl(), x.mid.response_id(), {},
+        res = make_mailbox_element(ctrl(), x.mid.response_id(), {},
                                     ok_atom::value, std::move(what),
                                     strong_actor_ptr{ctrl()}, name());
       }
-    });
+    );
     if (! res && ! err)
       err = sec::unsupported_sys_message;
     if (err && x.mid.is_request())
-      res = mailbox_element::make(ctrl(), x.mid.response_id(),
+      res = make_mailbox_element(ctrl(), x.mid.response_id(),
                                   {}, std::move(err));
     if (res) {
       auto s = actor_cast<strong_actor_ptr>(x.sender);

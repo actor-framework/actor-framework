@@ -21,6 +21,31 @@
 
 namespace caf {
 
+namespace {
+
+/// Wraps a `message` into a mailbox element.
+class mailbox_element_wrapper : public mailbox_element {
+public:
+  /// Stores the elements for this mailbox element.
+  message msg;
+
+  mailbox_element_wrapper(strong_actor_ptr&& x0, message_id x1,
+                          forwarding_stack&& x2, message&& x3)
+      : mailbox_element(std::move(x0), x1, std::move(x2)),
+        msg(std::move(x3)) {
+    // nop
+  }
+
+  type_erased_tuple& content() override {
+    auto ptr = msg.vals().raw_ptr();
+    if (ptr)
+      return *ptr;
+    return dummy_;
+  }
+};
+
+} // namespace <anonymous>
+
 mailbox_element::mailbox_element()
     : next(nullptr),
       prev(nullptr),
@@ -28,8 +53,8 @@ mailbox_element::mailbox_element()
   // nop
 }
 
-mailbox_element::mailbox_element(strong_actor_ptr x, message_id y,
-                                 forwarding_stack z)
+mailbox_element::mailbox_element(strong_actor_ptr&& x, message_id y,
+                                 forwarding_stack&& z)
     : next(nullptr),
       prev(nullptr),
       marked(false),
@@ -39,39 +64,35 @@ mailbox_element::mailbox_element(strong_actor_ptr x, message_id y,
   // nop
 }
 
-mailbox_element::mailbox_element(strong_actor_ptr x, message_id y,
-                                 forwarding_stack z, message m)
-    : next(nullptr),
-      prev(nullptr),
-      marked(false),
-      sender(std::move(x)),
-      mid(y),
-      stages(std::move(z)),
-      msg(std::move(m)) {
-  // nop
-}
-
 mailbox_element::~mailbox_element() {
   // nop
 }
 
-mailbox_element_ptr mailbox_element::make(strong_actor_ptr sender,
-                                          message_id id,
-                                          forwarding_stack stages,
-                                          message msg) {
-  auto ptr = detail::memory::create<mailbox_element>(std::move(sender), id,
-                                                     std::move(stages),
-                                                     std::move(msg));
+type_erased_tuple& mailbox_element::content() {
+  return dummy_;
+}
+
+const type_erased_tuple& mailbox_element::content() const {
+  return const_cast<mailbox_element*>(this)->content();
+}
+
+mailbox_element_ptr make_mailbox_element(strong_actor_ptr sender, message_id id,
+                                         mailbox_element::forwarding_stack stages,
+                                         message msg) {
+  auto ptr = new mailbox_element_wrapper(std::move(sender), id,
+                                         std::move(stages), std::move(msg));
   return mailbox_element_ptr{ptr};
 }
 
 std::string to_string(const mailbox_element& x) {
-  std::string result = "(";
+  std::string result = "mailbox_element(";
   result += to_string(x.sender);
   result += ", ";
   result += to_string(x.mid);
   result += ", ";
-  result += to_string(x.msg);
+  result += deep_to_string(x.stages);
+  result += ", ";
+  result += to_string(x.content());
   result += ")";
   return result;
 }

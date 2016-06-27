@@ -124,14 +124,15 @@ public:
             msg_ptr = try_dequeue(it->first);
         }
       }
-      if (msg_ptr->msg.match_element<exit_msg>(0)) {
-        auto& em = msg_ptr->msg.get_as<exit_msg>(0);
+      auto& content = msg_ptr->content();
+      if (content.type_token() == make_type_token<exit_msg>()) {
+        auto& em = content.get_as<exit_msg>(0);
         if (em.reason) {
           fail_state(em.reason);
           return;
         }
       }
-      mfun(msg_ptr->msg);
+      mfun(content);
       msg_ptr.reset();
     }
   }

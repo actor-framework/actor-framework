@@ -27,9 +27,7 @@ namespace caf {
 namespace detail {
 
 void behavior_stack::pop_back() {
-  if (elements_.empty()) {
-    return;
-  }
+  CAF_ASSERT(! elements_.empty());
   erased_elements_.push_back(std::move(elements_.back()));
   elements_.pop_back();
 }

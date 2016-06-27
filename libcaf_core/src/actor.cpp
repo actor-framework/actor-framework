@@ -28,7 +28,6 @@
 #include "caf/local_actor.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/blocking_actor.hpp"
 #include "caf/event_based_actor.hpp"
 
 #include "caf/decorator/adapter.hpp"

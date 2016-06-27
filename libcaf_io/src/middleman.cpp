@@ -303,7 +303,7 @@ void middleman::stop() {
       if (! ptr->is_terminated()) {
         ptr->context(&backend());
         ptr->is_terminated(true);
-        ptr->finished();
+        ptr->finalize();
       }
     }
   });

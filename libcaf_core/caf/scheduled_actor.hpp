@@ -20,9 +20,16 @@
 #ifndef CAF_ABSTRACT_EVENT_BASED_ACTOR_HPP
 #define CAF_ABSTRACT_EVENT_BASED_ACTOR_HPP
 
+#include "caf/config.hpp"
+
+#ifndef CAF_NO_EXCEPTIONS
+#include <exception>
+#endif // CAF_NO_EXCEPTIONS
+
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_marker.hpp"
@@ -37,26 +44,122 @@
 
 namespace caf {
 
+// -- related free functions ---------------------------------------------------
+
+/// @relates scheduled_actor
+/// Default handler function that sends the message back to the sender.
+result<message> reflect(scheduled_actor*, const type_erased_tuple&);
+
+/// @relates scheduled_actor
+/// Default handler function that sends
+/// the message back to the sender and then quits.
+result<message> reflect_and_quit(scheduled_actor*, const type_erased_tuple&);
+
+/// @relates scheduled_actor
+/// Default handler function that prints messages
+/// message via `aout` and drops them afterwards.
+result<message> print_and_drop(scheduled_actor*, const type_erased_tuple&);
+
+/// @relates scheduled_actor
+/// Default handler function that simply drops messages.
+result<message> drop(scheduled_actor*, const type_erased_tuple&);
+
 /// A cooperatively scheduled, event-based actor implementation. This is the
 /// recommended base class for user-defined actors.
 /// @extends local_actor
 class scheduled_actor : public local_actor, public resumable {
 public:
+  // -- member types -----------------------------------------------------------
+
+  /// The message ID of an outstanding response with its callback.
+  using pending_response = std::pair<const message_id, behavior>;
+
+  /// A pointer to a scheduled actor.
+  using pointer = scheduled_actor*;
+
+  /// A constant pointer to a `type_erased_tuple`.
+  using tuple_cref = const type_erased_tuple&;
+
+  /// Function object for handling unmatched messages.
+  using default_handler = std::function<result<message> (pointer, tuple_cref)>;
+
+  /// Function object for handling error messages.
+  using error_handler = std::function<void (pointer, error&)>;
+
+  /// Function object for handling down messages.
+  using down_handler = std::function<void (pointer, down_msg&)>;
+
+  /// Function object for handling exit messages.
+  using exit_handler = std::function<void (pointer, exit_msg&)>;
+
+# ifndef CAF_NO_EXCEPTIONS
+  /// Function object for handling exit messages.
+  using exception_handler = std::function<error (pointer, std::exception_ptr&)>;
+# endif // CAF_NO_EXCEPTIONS
+
+  // -- nested enums -----------------------------------------------------------
+
+  /// @cond PRIVATE
+
+  /// Categorizes incoming messages.
+  enum class message_category {
+    /// Denotes an expired and thus obsolete timeout.
+    expired_timeout,
+    /// Triggers the currently active timeout.
+    timeout,
+    /// Triggers the current behavior.
+    ordinary,
+    /// Triggers handlers for system messages such as `exit_msg` or `down_msg`.
+    internal
+  };
+
+  /// Result of one-shot activations.
+  enum class activation_result {
+    /// Actor is still alive and handled the activation message.
+    success,
+    /// Actor handled the activation message and terminated.
+    terminated,
+    /// Actor skipped the activation message.
+    skipped,
+    /// Actor dropped the activation message.
+    dropped
+  };
+
+  /// @endcond
+
+  // -- static helper functions ------------------------------------------------
+
+  static void default_error_handler(pointer ptr, error& x);
+
+  static void default_down_handler(pointer ptr, down_msg& x);
+
+  static void default_exit_handler(pointer ptr, exit_msg& x);
+
+# ifndef CAF_NO_EXCEPTIONS
+  static error default_exception_handler(pointer ptr, std::exception_ptr& x);
+# endif // CAF_NO_EXCEPTIONS
+
   // -- constructors and destructors -------------------------------------------
 
-  scheduled_actor(actor_config& cfg);
+  explicit scheduled_actor(actor_config& cfg);
 
   ~scheduled_actor();
 
-  // -- overridden modifiers of abstract_actor ---------------------------------
+  // -- overridden functions of abstract_actor ---------------------------------
+
+  using abstract_actor::enqueue;
 
   void enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
 
-  // -- overridden modifiers of local_actor ------------------------------------
+  // -- overridden functions of local_actor ------------------------------------
+
+  const char* name() const override;
 
   void launch(execution_unit* eu, bool lazy, bool hide) override;
 
-  // -- overridden modifiers of resumable --------------------------------------
+  bool cleanup(error&& fail_state, execution_unit* host) override;
+
+  // -- overridden functions of resumable --------------------------------------
 
   subtype_t subtype() const override;
 
@@ -66,12 +169,13 @@ public:
 
   resume_result resume(execution_unit*, size_t) override;
 
-  // -- virtual modifiers ------------------------------------------------------
+  // -- scheduler callbacks ----------------------------------------------------
 
-  /// Invoke `ptr`, not suitable to be called in a loop.
-  virtual void exec_single_event(execution_unit* ctx, mailbox_element_ptr& ptr);
+  /// Returns a factory for proxies created
+  /// and managed by this actor or `nullptr`.
+  virtual proxy_registry* proxy_registry_ptr();
 
-  // -- modifiers --------------------------------------------------------------
+  // -- state modifiers --------------------------------------------------------
 
   /// Finishes execution of this actor after any currently running
   /// message handler is done.
@@ -92,9 +196,25 @@ public:
   ///          blocking API calls such as {@link receive()}.
   void quit(error reason = error{});
 
+  // -- event handlers ---------------------------------------------------------
+
   /// Sets a custom handler for unexpected messages.
   inline void set_default_handler(default_handler fun) {
     default_handler_ = std::move(fun);
+  }
+
+  /// Sets a custom handler for unexpected messages.
+  template <class F>
+  typename std::enable_if<
+    std::is_convertible<
+      F,
+      std::function<result<message> (type_erased_tuple&)>
+    >::value
+  >::type
+  set_default_handler(F fun) {
+    default_handler_ = [=](scheduled_actor*, const type_erased_tuple& xs) {
+      return fun(xs);
+    };
   }
 
   /// Sets a custom handler for error messages.
@@ -105,7 +225,7 @@ public:
   /// Sets a custom handler for error messages.
   template <class T>
   auto set_error_handler(T fun) -> decltype(fun(std::declval<error&>())) {
-    set_error_handler([fun](local_actor*, error& x) { fun(x); });
+    set_error_handler([fun](scheduled_actor*, error& x) { fun(x); });
   }
 
   /// Sets a custom handler for down messages.
@@ -116,7 +236,7 @@ public:
   /// Sets a custom handler for down messages.
   template <class T>
   auto set_down_handler(T fun) -> decltype(fun(std::declval<down_msg&>())) {
-    set_down_handler([fun](local_actor*, down_msg& x) { fun(x); });
+    set_down_handler([fun](scheduled_actor*, down_msg& x) { fun(x); });
   }
 
   /// Sets a custom handler for error messages.
@@ -127,8 +247,140 @@ public:
   /// Sets a custom handler for exit messages.
   template <class T>
   auto set_exit_handler(T fun) -> decltype(fun(std::declval<exit_msg&>())) {
-    set_exit_handler([fun](local_actor*, exit_msg& x) { fun(x); });
+    set_exit_handler([fun](scheduled_actor*, exit_msg& x) { fun(x); });
   }
+
+# ifndef CAF_NO_EXCEPTIONS
+  /// Sets a custom exception handler for this actor. If multiple handlers are
+  /// defined, only the functor that was added *last* is being executed.
+  inline void set_exception_handler(exception_handler f) {
+    exception_handler_ = std::move(f);
+  }
+
+  /// Sets a custom exception handler for this actor. If multiple handlers are
+  /// defined, only the functor that was added *last* is being executed.
+  template <class F>
+  typename std::enable_if<
+    std::is_convertible<
+      F,
+      std::function<error (std::exception_ptr&)>
+    >::value
+  >::type
+  set_exception_handler(F f) {
+    set_exception_handler([f](scheduled_actor*, std::exception_ptr& x) {
+      return f(x);
+    });
+  }
+# endif // CAF_NO_EXCEPTIONS
+
+  /// @cond PRIVATE
+
+  // -- timeout management -----------------------------------------------------
+
+  /// Requests a new timeout and returns its ID.
+  uint32_t request_timeout(const duration& d);
+
+  /// Resets the timeout if `timeout_id` is the active timeout.
+  void reset_timeout(uint32_t timeout_id);
+
+  /// Returns whether `timeout_id` is currently active.
+  bool is_active_timeout(uint32_t timeout_id) const;
+
+  // -- message processing -----------------------------------------------------
+
+  /// Adds a callback for an awaited response.
+  void add_awaited_response_handler(message_id response_id, behavior bhvr);
+
+  /// Adds a callback for a multiplexed response.
+  void add_multiplexed_response_handler(message_id response_id, behavior bhvr);
+
+  /// Returns the category of `x`.
+  message_category categorize(mailbox_element& x);
+
+  /// Tries to consume `x`.
+  invoke_message_result consume(mailbox_element& x);
+
+  /// Tries to consume `x`.
+  void consume(mailbox_element_ptr x);
+
+  /// Tries to consume one element form the cache using the current behavior.
+  bool consume_from_cache();
+
+  /// Activates an actor and runs initialization code if necessary.
+  /// @returns `true` if the actor is alive and ready for `reactivate`,
+  ///          `false` otherwise.
+  bool activate(execution_unit* ctx);
+
+  /// One-shot interface for activating an actor for a single message.
+  activation_result activate(execution_unit* ctx, mailbox_element& x);
+
+  /// Interface for activating an actor any
+  /// number of additional times after `activate`.
+  activation_result reactivate(mailbox_element& x);
+
+  // -- behavior management ----------------------------------------------------
+
+  /// Returns whether `true` if the behavior stack is not empty or
+  /// if outstanding responses exist, `false` otherwise.
+  inline bool has_behavior() const {
+    return ! bhvr_stack_.empty()
+           || ! awaited_responses_.empty()
+           || ! multiplexed_responses_.empty();
+  }
+
+  inline behavior& current_behavior() {
+    return ! awaited_responses_.empty() ? awaited_responses_.front().second
+                                        : bhvr_stack_.back();
+  }
+
+  /// Installs a new behavior without performing any type checks.
+  void do_become(behavior bhvr, bool discard_old);
+
+  /// Performs cleanup code for the actor if it has no active
+  /// behavior or was explicitly terminated.
+  /// @returns `true` if cleanup code was called, `false` otherwise.
+  bool finalize();
+
+  /// @endcond
+
+protected:
+  /// @cond PRIVATE
+
+  // -- member variables -------------------------------------------------------
+
+  /// Stores user-defined callbacks for message handling.
+  detail::behavior_stack bhvr_stack_;
+
+  /// Identifies the timeout messages we are currently waiting for.
+  uint32_t timeout_id_;
+
+  /// Stores callbacks for awaited responses.
+  std::forward_list<pending_response> awaited_responses_;
+
+  /// Stores callbacks for multiplexed responses.
+  std::unordered_map<message_id, behavior> multiplexed_responses_;
+
+  /// Customization point for setting a default `message` callback.
+  default_handler default_handler_;
+
+  /// Customization point for setting a default `error` callback.
+  error_handler error_handler_;
+
+  /// Customization point for setting a default `down_msg` callback.
+  down_handler down_handler_;
+
+  /// Customization point for setting a default `exit_msg` callback.
+  exit_handler exit_handler_;
+
+  /// Pointer to a private thread object associated with a detached actor.
+  detail::private_thread* private_thread_;
+
+# ifndef CAF_NO_EXCEPTIONS
+  /// Customization point for setting a default exception callback.
+  exception_handler exception_handler_;
+# endif // CAF_NO_EXCEPTIONS
+
+  /// @endcond
 };
 
 } // namespace caf

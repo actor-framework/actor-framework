@@ -26,7 +26,6 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <exception>
 #include <type_traits>
 
 #include "caf/fwd.hpp"
@@ -128,8 +127,8 @@ public:
   template <class... Ts>
   void eq_impl(message_id mid, strong_actor_ptr sender,
                execution_unit* ctx, Ts&&... xs) {
-    enqueue(mailbox_element::make(std::move(sender), mid,
-                                  {}, std::forward<Ts>(xs)...),
+    enqueue(make_mailbox_element(std::move(sender), mid,
+                                 {}, std::forward<Ts>(xs)...),
             ctx);
   }
 

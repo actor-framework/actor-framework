@@ -23,7 +23,6 @@
 #include <type_traits>
 
 #include "caf/atom.hpp"
-#include "caf/type_erased_tuple.hpp"
 
 namespace caf {
 

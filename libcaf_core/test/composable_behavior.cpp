@@ -278,8 +278,8 @@ CAF_TEST(param_detaching) {
     ERROR_HANDLER
   );
   // alter our initial put, this time moving it to the dictionary
-  put_msg.get_as_mutable<counting_string>(1) = "neverlord";
-  put_msg.get_as_mutable<counting_string>(2) = "CAF";
+  put_msg.get_mutable_as<counting_string>(1) = "neverlord";
+  put_msg.get_mutable_as<counting_string>(2) = "CAF";
   // send put message to dictionary
   self->request(dict, infinite, std::move(put_msg)).receive(
     [&] {

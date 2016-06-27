@@ -101,6 +101,10 @@ public:
     return impl_ ? impl_->invoke(xs) : none;
   }
 
+  inline optional<message> operator()(type_erased_tuple& xs) {
+    return impl_ ? impl_->invoke(xs) : none;
+  }
+
   /// Runs this handler with callback.
   inline match_case::result operator()(detail::invoke_result_visitor& f,
                                        type_erased_tuple& xs) {

@@ -26,93 +26,131 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/type_erased_tuple.hpp"
 #include "caf/actor_control_block.hpp"
 
-#include "caf/detail/memory.hpp"
 #include "caf/detail/embedded.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/tuple_vals.hpp"
-#include "caf/detail/pair_storage.hpp"
 #include "caf/detail/message_data.hpp"
 #include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace caf {
 
-class mailbox_element : public memory_managed {
+class mailbox_element {
 public:
-  static constexpr auto memory_cache_flag = detail::needs_embedding;
-
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
-  // intrusive pointer to the next mailbox element
+  /// Intrusive pointer to the next mailbox element.
   mailbox_element* next;
-  // intrusive pointer to the previous mailbox element
+
+  /// Intrusive pointer to the previous mailbox element.
   mailbox_element* prev;
-  // avoid multi-processing in blocking actors via flagging
+
+  /// Avoids multi-processing in blocking actors via flagging.
   bool marked;
-  // source of this message and receiver of the final response
+
+  /// Source of this message and receiver of the final response.
   strong_actor_ptr sender;
-  // denotes whether this a sync or async message
+
+  /// Denotes whether this an asynchronous message or a request.
   message_id mid;
-  // stages.back() is the next actor in the forwarding chain,
-  // if this is empty then the original sender receives the response
+
+  /// `stages.back()` is the next actor in the forwarding chain,
+  /// if this is empty then the original sender receives the response.
   forwarding_stack stages;
-  // content of this element
-  message msg;
 
   mailbox_element();
 
-  mailbox_element(strong_actor_ptr sender, message_id id,
-                  forwarding_stack stages);
+  mailbox_element(strong_actor_ptr&& sender, message_id id,
+                  forwarding_stack&& stages);
 
-  mailbox_element(strong_actor_ptr sender, message_id id,
-                  forwarding_stack stages, message data);
+  virtual ~mailbox_element();
 
-  ~mailbox_element();
+  virtual type_erased_tuple& content();
+
+  const type_erased_tuple& content() const;
 
   mailbox_element(mailbox_element&&) = delete;
   mailbox_element(const mailbox_element&) = delete;
   mailbox_element& operator=(mailbox_element&&) = delete;
   mailbox_element& operator=(const mailbox_element&) = delete;
 
-  using unique_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
-
-  static unique_ptr make(strong_actor_ptr sender, message_id id,
-                         forwarding_stack stages, message msg);
-
-  template <class T, class... Ts>
-  static typename std::enable_if<
-    ! std::is_same<typename std::decay<T>::type, message>::value
-    || (sizeof...(Ts) > 0),
-    unique_ptr
-  >::type
-  make(strong_actor_ptr sender, message_id id,
-       forwarding_stack stages, T&& x, Ts&&... xs) {
-    using value_storage =
-      detail::tuple_vals<
-        typename unbox_message_element<
-          typename detail::strip_and_convert<T>::type
-        >::type,
-        typename unbox_message_element<
-          typename detail::strip_and_convert<Ts>::type
-        >::type...
-      >;
-    std::integral_constant<size_t, 3> tk;
-    using storage = detail::pair_storage<mailbox_element, value_storage>;
-    auto ptr = detail::memory::create<storage>(tk, std::move(sender), id,
-                                               std::move(stages),
-                                               std::forward<T>(x),
-                                               std::forward<Ts>(xs)...);
-    ptr->first.msg.reset(&(ptr->second), false);
-    return unique_ptr{&(ptr->first)};
-  }
-
   inline bool is_high_priority() const {
     return mid.is_high_priority();
   }
+
+protected:
+  empty_type_erased_tuple dummy_;
 };
 
+/// Encapsulates arbitrary data in a message element.
+template <class... Ts>
+class mailbox_element_vals
+    : public mailbox_element,
+      public detail::tuple_vals_impl<type_erased_tuple, Ts...> {
+public:
+  template <class... Us>
+  mailbox_element_vals(strong_actor_ptr&& sender, message_id id,
+                       forwarding_stack&& stages, Us&&... xs)
+    : mailbox_element(std::move(sender), id, std::move(stages)),
+      detail::tuple_vals_impl<type_erased_tuple, Ts...>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  type_erased_tuple& content() {
+    return *this;
+  }
+};
+
+/// Provides a view for treating arbitrary data as message element.
+template <class... Ts>
+class mailbox_element_view : public mailbox_element,
+                             public type_erased_tuple_view<Ts...> {
+public:
+  mailbox_element_view(strong_actor_ptr&& sender, message_id id,
+                       forwarding_stack&& stages, Ts&... xs)
+    : mailbox_element(std::move(sender), id, std::move(stages)),
+      type_erased_tuple_view<Ts...>(xs...) {
+    // nop
+  }
+
+  type_erased_tuple& content() {
+    return *this;
+  }
+};
+
+/// @relates mailbox_element
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
+
+/// @relates mailbox_element
+mailbox_element_ptr
+make_mailbox_element(strong_actor_ptr sender, message_id id,
+                     mailbox_element::forwarding_stack stages, message msg);
+
+/// @relates mailbox_element
+template <class T, class... Ts>
+typename std::enable_if<
+  ! std::is_same<typename std::decay<T>::type, message>::value
+  || (sizeof...(Ts) > 0),
+  mailbox_element_ptr
+>::type
+make_mailbox_element(strong_actor_ptr sender, message_id id,
+                     mailbox_element::forwarding_stack stages,
+                     T&& x, Ts&&... xs) {
+  using impl =
+    mailbox_element_vals<
+      typename unbox_message_element<
+        typename detail::strip_and_convert<T>::type
+      >::type,
+      typename unbox_message_element<
+        typename detail::strip_and_convert<Ts>::type
+      >::type...
+    >;
+  auto ptr = new impl(std::move(sender), id, std::move(stages),
+                      std::forward<T>(x), std::forward<Ts>(xs)...);
+  return mailbox_element_ptr{ptr};
+}
 
 std::string to_string(const mailbox_element&);
 

@@ -23,7 +23,6 @@
 #include <memory>
 #include <cstdint>
 #include <typeinfo>
-#include <exception>
 
 #include "caf/error.hpp"
 #include "caf/optional.hpp"
@@ -67,13 +66,6 @@ public:
   };
 
   virtual ~attachable();
-
-  /// Executed if the actor did not handle an exception and must
-  /// not return `none` if this attachable did handle `eptr`.
-  /// Note that the first handler to handle `eptr` "wins" and no other
-  /// handler will be invoked.
-  /// @returns The exit reason the actor should use.
-  virtual optional<exit_reason> handle_exception(const std::exception_ptr& eptr);
 
   /// Executed if the actor finished execution with given `reason`.
   /// The default implementation does nothing.

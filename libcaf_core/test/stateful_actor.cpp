@@ -147,7 +147,7 @@ CAF_TEST(no_name) {
   struct state {
     // empty
   };
-  test_name<state>("actor");
+  test_name<state>("scheduled_actor");
 }
 
 CAF_TEST(char_name) {

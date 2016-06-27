@@ -257,7 +257,7 @@ int main(int argc, char** argv) {
   auto& remainder = res.remainder;
   if (remainder.empty())
     return cerr << "empty command line" << endl, 1;
-  auto cmd = std::move(remainder.get_as_mutable<std::string>(0));
+  auto cmd = std::move(remainder.get_mutable_as<std::string>(0));
   vector<string> xs;
   remainder.drop(1).extract([&](string& x) { xs.emplace_back(std::move(x)); });
   auto hosts = read_hostfile(hostfile);

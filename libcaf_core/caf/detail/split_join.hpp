@@ -49,15 +49,15 @@ public:
   }
 
   behavior make_behavior() override {
-    auto f = [=](local_actor*, const type_erased_tuple* tup) -> result<message> {
-      auto msg = message::from(tup);
+    auto f = [=](scheduled_actor*, const type_erased_tuple& tup) -> result<message> {
+      auto msg = message::from(&tup);
       auto rp = this->make_response_promise();
       split_(workset_, msg);
       for (auto& x : workset_)
         this->send(x.first, std::move(x.second));
-      auto g = [=](local_actor*, const type_erased_tuple* x) mutable
+      auto g = [=](scheduled_actor*, const type_erased_tuple& x) mutable
                 -> result<message> {
-        auto res = message::from(x);
+        auto res = message::from(&x);
         join_(value_, res);
         if (--awaited_results_ == 0) {
           rp.deliver(value_);

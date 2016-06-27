@@ -37,7 +37,7 @@ namespace io {
 
 void abstract_broker::enqueue(strong_actor_ptr src, message_id mid,
                               message msg, execution_unit*) {
-  enqueue(mailbox_element::make(std::move(src), mid, {}, std::move(msg)),
+  enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
           &backend());
 }
 

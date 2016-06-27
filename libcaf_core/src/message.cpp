@@ -65,8 +65,7 @@ void* message::get_mutable(size_t p) {
 }
 
 message message::from(const type_erased_tuple* ptr) {
-  if (! ptr)
-    return message{};
+  CAF_ASSERT(ptr != nullptr);
   auto dptr = dynamic_cast<const detail::message_data*>(ptr);
   if (dptr) {
     data_ptr dp{const_cast<detail::message_data*>(dptr), true};

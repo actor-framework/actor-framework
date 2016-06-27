@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPE_ERASED_COLLECTION_HPP
-#define CAF_TYPE_ERASED_COLLECTION_HPP
+#ifndef CAF_TYPE_ERASED_TUPLE_HPP
+#define CAF_TYPE_ERASED_TUPLE_HPP
 
 #include <tuple>
 #include <cstddef>
@@ -27,7 +27,12 @@
 
 #include "caf/fwd.hpp"
 #include "caf/type_nr.hpp"
+#include "caf/optional.hpp"
 #include "caf/type_erased_value.hpp"
+
+#include "caf/detail/try_match.hpp"
+#include "caf/detail/apply_args.hpp"
+#include "caf/detail/pseudo_tuple.hpp"
 
 namespace caf {
 
@@ -63,9 +68,6 @@ public:
   /// Returns the size of this tuple.
   virtual size_t size() const noexcept = 0;
 
-  /// Returns whether multiple references to this tuple exist.
-  virtual bool shared() const noexcept = 0;
-
   /// Returns a type hint for the element types.
   virtual uint32_t type_token() const noexcept = 0;
 
@@ -87,6 +89,11 @@ public:
 
   // -- observers --------------------------------------------------------------
 
+  /// Returns whether multiple references to this tuple exist.
+  /// The default implementation returns false.
+  virtual bool shared() const noexcept;
+
+  ///  Returns `size() == 0`.
   bool empty() const;
 
   /// Returns a string representation of the tuple.
@@ -99,7 +106,7 @@ public:
   /// matches type number `n` and run-time type information `p`.
   bool matches(size_t pos, uint16_t n, const std::type_info* p) const  noexcept;
 
-  // -- inline observers -------------------------------------------------------
+  // -- convenience functions --------------------------------------------------
 
   /// Returns the type number for the element at position `pos`.
   inline uint16_t type_nr(size_t pos) const noexcept {
@@ -110,6 +117,98 @@ public:
   inline bool matches(size_t pos, const rtti_pair& rtti) const noexcept {
     return matches(pos, rtti.first, rtti.second);
   }
+
+  /// Convenience function for `*reinterpret_cast<const T*>(get())`.
+  template <class T>
+  const T& get_as(size_t pos) const {
+    return *reinterpret_cast<const T*>(get(pos));
+  }
+
+  /// Convenience function for `*reinterpret_cast<T*>(get_mutable())`.
+  template <class T>
+  T& get_mutable_as(size_t pos) {
+    return *reinterpret_cast<T*>(get_mutable(pos));
+  }
+
+  /// Returns `true` if the element at `pos` matches `T`.
+  template <class T>
+  bool match_element(size_t pos) const noexcept {
+    CAF_ASSERT(pos < size());
+    auto x = detail::meta_element_factory<T>::create();
+    return detail::match_element(x, *this, pos);
+  }
+
+  /// Returns `true` if the pattern `Ts...` matches the content of this tuple.
+  template <class... Ts>
+  bool match_elements() const noexcept {
+    if (sizeof...(Ts) != size())
+      return false;
+    detail::meta_elements<detail::type_list<Ts...>> xs;
+    for (size_t i = 0; i < xs.arr.size(); ++i)
+      if (! detail::match_element(xs.arr[i], *this, i))
+        return false;
+    return true;
+  }
+
+  template <class F>
+  auto apply(F fun)
+  -> optional<typename detail::get_callable_trait<F>::result_type> {
+    using trait = typename detail::get_callable_trait<F>::type;
+    detail::type_list<typename trait::result_type> result_token;
+    typename trait::arg_types args_token;
+    return apply(fun, result_token, args_token);
+  }
+
+private:
+  template <class F, class R, class... Ts>
+  optional<R> apply(F& fun, detail::type_list<R>,
+                    detail::type_list<Ts...> tk) {
+    if (! match_elements<Ts...>())
+      return none;
+    detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{shared()};
+    for (size_t i = 0; i < size(); ++i)
+      xs[i] = const_cast<void*>(get(i)); // pseud_tuple figures out const-ness
+    return detail::apply_args(fun, detail::get_indices(tk), xs);
+  }
+
+  template <class F, class... Ts>
+  optional<void> apply(F& fun, detail::type_list<void>,
+                       detail::type_list<Ts...> tk) {
+    if (! match_elements<Ts...>())
+      return none;
+    detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{shared()};
+    for (size_t i = 0; i < size(); ++i)
+      xs[i] = const_cast<void*>(get(i)); // pseud_tuple figures out const-ness
+    detail::apply_args(fun, detail::get_indices(tk), xs);
+    return unit;
+  }
+};
+
+/// @relates type_erased_tuple
+/// Dummy objects representing empty tuples.
+class empty_type_erased_tuple : public type_erased_tuple {
+public:
+  empty_type_erased_tuple() = default;
+
+  ~empty_type_erased_tuple();
+
+  void* get_mutable(size_t pos) override;
+
+  void load(size_t pos, deserializer& source) override;
+
+  size_t size() const noexcept override;
+
+  uint32_t type_token() const noexcept override;
+
+  rtti_pair type(size_t pos) const noexcept override;
+
+  const void* get(size_t pos) const noexcept override;
+
+  std::string stringify(size_t pos) const override;
+
+  type_erased_value_ptr copy(size_t pos) const override;
+
+  void save(size_t pos, serializer& sink) const override;
 };
 
 /// @relates type_erased_tuple
@@ -164,10 +263,6 @@ public:
 
   size_t size() const noexcept override {
     return sizeof...(Ts);
-  }
-
-  bool shared() const noexcept override {
-    return false;
   }
 
   uint32_t type_token() const noexcept override {
@@ -225,4 +320,4 @@ type_erased_tuple_view<Ts...> make_type_erased_tuple_view(Ts&... xs) {
 
 } // namespace caf
 
-#endif // CAF_TYPE_ERASED_COLLECTION_HPP
+#endif // CAF_TYPE_ERASED_TUPLE_HPP

@@ -228,6 +228,34 @@ class optional<T&> {
   T* m_value;
 };
 
+template <>
+class optional<void> {
+ public:
+  optional(none_t = none) : m_value(false) {
+    // nop
+  }
+
+  optional(unit_t) : m_value(true) {
+    // nop
+  }
+
+  optional(const optional& other) = default;
+
+  optional& operator=(const optional& other) = default;
+
+  explicit operator bool() const {
+    return m_value;
+  }
+
+  bool operator!() const {
+    return ! m_value;
+  }
+
+ private:
+  bool m_value;
+};
+
+
 /// @relates optional
 template <class T>
 std::string to_string(const optional<T>& x) {

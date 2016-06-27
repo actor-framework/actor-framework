@@ -108,7 +108,7 @@ protected:
 private:
   bool filter(upgrade_lock<detail::shared_spinlock>&,
               const strong_actor_ptr& sender, message_id mid,
-              const message& content, execution_unit* host);
+              const type_erased_tuple& content, execution_unit* host);
 
   // call without workers_mtx_ held
   void quit(execution_unit* host);

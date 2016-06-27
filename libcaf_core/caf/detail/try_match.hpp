@@ -25,9 +25,8 @@
 #include <typeinfo>
 
 #include "caf/atom.hpp"
-#include "caf/message.hpp"
-
 #include "caf/type_nr.hpp"
+
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
 

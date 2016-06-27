@@ -24,7 +24,8 @@
 
 namespace caf {
 
-result<message> skip_t::skip_fun_impl(local_actor*, const type_erased_tuple*) {
+result<message> skip_t::skip_fun_impl(scheduled_actor*,
+                                      const type_erased_tuple&) {
   return skip();
 }
 

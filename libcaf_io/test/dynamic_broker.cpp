@@ -170,7 +170,9 @@ void run_server(int argc, char** argv) {
   self->request(serv, infinite, publish_atom::value).receive(
     [&](uint16_t port) {
       CAF_MESSAGE("server is running on port " << port);
-      child = std::thread([=] { run_client(argc, argv, port); });
+      child = std::thread([=] {
+        run_client(argc, argv, port);
+      });
     },
     [&](const error& err) {
       CAF_ERROR("Error: " << self->system().render(err));

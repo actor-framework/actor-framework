@@ -109,8 +109,10 @@ CAF_TEST(round_robin_actor_pool) {
     },
     handle_err
   );
+  CAF_MESSAGE("await last worker");
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
   self->wait_for(workers.back());
+  CAF_MESSAGE("last worker shut down");
   workers.pop_back();
   // poll actor pool up to 10 times or until it removes the failed worker
   bool success = false;
@@ -130,7 +132,7 @@ CAF_TEST(round_robin_actor_pool) {
       handle_err
     );
   }
-  CAF_REQUIRE(success);
+  CAF_REQUIRE_EQUAL(success, true);
   CAF_MESSAGE("about to send exit to workers");
   self->send_exit(pool, exit_reason::user_shutdown);
   self->wait_for(workers);
@@ -178,7 +180,7 @@ CAF_TEST(split_join_actor_pool) {
   auto spawn_split_worker = [&] {
     return system.spawn<lazy_init>([]() -> behavior {
       return {
-        [](size_t pos, std::vector<int> xs) {
+        [](size_t pos, const std::vector<int>& xs) {
           return xs[pos];
         }
       };
@@ -195,6 +197,7 @@ CAF_TEST(split_join_actor_pool) {
     });
   };
   scoped_actor self{system};
+  CAF_MESSAGE("create actor pool");
   auto pool = actor_pool::make(&context, 5, spawn_split_worker,
                             actor_pool::split_join<int>(join_fun, split_fun));
   self->request(pool, infinite, std::vector<int>{1, 2, 3, 4, 5}).receive(

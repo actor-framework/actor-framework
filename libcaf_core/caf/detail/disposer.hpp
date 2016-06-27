@@ -20,6 +20,8 @@
 #ifndef CAF_DETAIL_DISPOSER_HPP
 #define CAF_DETAIL_DISPOSER_HPP
 
+#include <type_traits>
+
 #include "caf/memory_managed.hpp"
 
 namespace caf {
@@ -29,6 +31,12 @@ class disposer {
 public:
   inline void operator()(memory_managed* ptr) const {
     ptr->request_deletion(false);
+  }
+
+  template <class T>
+  typename std::enable_if<! std::is_base_of<memory_managed, T>::value>::type
+  operator()(T* ptr) const {
+    delete ptr;
   }
 };
 

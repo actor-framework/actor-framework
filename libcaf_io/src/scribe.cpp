@@ -57,12 +57,9 @@ void scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   auto& msg_buf = msg().buf;
   msg_buf.swap(buf);
   invoke_mailbox_element(ctx);
-  // `mailbox_elem_ptr_ == nullptr` if the broker moved it to the cache
-  if (mailbox_elem_ptr_) {
-    // swap buffer back to stream and implicitly flush wr_buf()
-    msg_buf.swap(buf);
-    flush();
-  }
+  // swap buffer back to stream and implicitly flush wr_buf()
+  msg_buf.swap(buf);
+  flush();
 }
 
 void scribe::data_transferred(execution_unit* ctx, size_t written,
@@ -71,8 +68,9 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
   if (detached())
     return;
   data_transferred_msg tmp{hdl(), written, remaining};
-  auto ptr = mailbox_element::make(nullptr, invalid_message_id, {}, tmp);
-  parent()->exec_single_event(ctx, ptr);
+  auto ptr = make_mailbox_element(nullptr, invalid_message_id, {}, tmp);
+  parent()->context(ctx);
+  parent()->consume(std::move(ptr));
 }
 
 void scribe::io_failure(execution_unit* ctx, network::operation op) {

@@ -64,13 +64,18 @@ class blocking_actor
       public dynamically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------
+
+  /// Direct base type.
   using super = extend<local_actor, blocking_actor>::
                 with<mixin::requester, mixin::sender>;
 
+  /// Absolute timeout type.
   using timeout_type = std::chrono::high_resolution_clock::time_point;
 
+  /// Supported behavior type.
   using behavior_type = behavior;
 
+  /// Declared message passing interface.
   using signatures = none_t;
 
   // -- nested classes ---------------------------------------------------------
@@ -176,11 +181,13 @@ public:
 
   ~blocking_actor();
 
-  // -- overridden modifiers of abstract_actor ---------------------------------
+  // -- overridden functions of abstract_actor ---------------------------------
 
   void enqueue(mailbox_element_ptr, execution_unit*) override;
 
-  // -- overridden modifiers of local_actor ------------------------------------
+  // -- overridden functions of local_actor ------------------------------------
+
+  const char* name() const override;
 
   void launch(execution_unit* eu, bool lazy, bool hide) override;
 

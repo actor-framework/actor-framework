@@ -101,7 +101,7 @@ public:
 
   /// Returns the value at position `p` as mutable reference of type `T`.
   template <class T>
-  T& get_as_mutable(size_t p) {
+  T& get_mutable_as(size_t p) {
     CAF_ASSERT(match_element(p, type_nr<T>::value, &typeid(T)));
     return *reinterpret_cast<T*>(get_mutable(p));
   }
@@ -115,8 +115,8 @@ public:
     vals_.unshare();
   }
 
-  /// Returns a mutable reference to the content. Causes the message
-  /// to unshare its content if necessary.
+  /// Returns a mutable reference to the content. Callers are responsible
+  /// for unsharing content if necessary.
   inline data_ptr& vals() {
     return vals_;
   }

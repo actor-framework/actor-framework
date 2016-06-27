@@ -44,12 +44,12 @@ adapter::adapter(strong_actor_ptr decorated, message msg)
     default_attachable::make_monitor(decorated_->get()->address(), address()));
 }
 
-void adapter::enqueue(mailbox_element_ptr what, execution_unit* context) {
-  CAF_ASSERT(what);
+void adapter::enqueue(mailbox_element_ptr x, execution_unit* context) {
+  CAF_ASSERT(x);
   auto down_msg_handler = [&](down_msg& dm) {
     cleanup(std::move(dm.reason), context);
   };
-  if (handle_system_message(*what, context, false, down_msg_handler))
+  if (handle_system_message(*x, context, false, down_msg_handler))
     return;
   strong_actor_ptr decorated;
   message merger;
@@ -60,13 +60,14 @@ void adapter::enqueue(mailbox_element_ptr what, execution_unit* context) {
     fail_state = fail_state_;
   });
   if (! decorated) {
-    bounce(what, fail_state);
+    bounce(x, fail_state);
     return;
   }
-  auto& msg = what->msg;
-  message tmp{detail::merged_tuple::make(merger, std::move(msg))};
-  msg.swap(tmp);
-  decorated->enqueue(std::move(what), context);
+  message tmp{detail::merged_tuple::make(merger,
+                                         message::from(&x->content()))};
+  decorated->enqueue(make_mailbox_element(std::move(x->sender), x->mid,
+                                          std::move(x->stages), std::move(tmp)),
+                     context);
 }
 
 void adapter::on_cleanup() {

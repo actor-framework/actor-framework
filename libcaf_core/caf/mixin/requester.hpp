@@ -76,7 +76,7 @@ public:
     auto req_id = dptr()->new_request_id(P);
     dest->eq_impl(req_id, dptr()->ctrl(), dptr()->context(),
                   std::forward<Ts>(xs)...);
-    dptr()->request_sync_timeout_msg(timeout, req_id);
+    dptr()->request_response_timeout(timeout, req_id);
     return {req_id.response_id(), dptr()};
   }
 

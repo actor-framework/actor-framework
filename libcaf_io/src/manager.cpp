@@ -44,7 +44,7 @@ abstract_broker* manager::parent() {
   return parent_ ? static_cast<abstract_broker*>(parent_->get()) : nullptr;
 }
 
-void manager::detach(execution_unit* ctx, bool invoke_disconnect_message) {
+void manager::detach(execution_unit*, bool invoke_disconnect_message) {
   CAF_LOG_TRACE("");
   if (! detached()) {
     CAF_LOG_DEBUG("disconnect servant from broker");
@@ -54,9 +54,10 @@ void manager::detach(execution_unit* ctx, bool invoke_disconnect_message) {
     ptr.swap(parent_);
     detach_from(raw_ptr);
     if (invoke_disconnect_message) {
-      auto mptr = mailbox_element::make(nullptr, invalid_message_id,
-                                        {}, detach_message());
-      raw_ptr->exec_single_event(ctx, mptr);
+      auto mptr = make_mailbox_element(nullptr, invalid_message_id,
+                                       {}, detach_message());
+      if (raw_ptr->consume(*mptr) == im_skipped)
+        raw_ptr->push_to_cache(std::move(mptr));
     }
   }
 }

@@ -45,8 +45,7 @@ void actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
 
 void actor_companion::enqueue(strong_actor_ptr src, message_id mid,
                               message content, execution_unit* eu) {
-  using detail::memory;
-  auto ptr = mailbox_element::make(std::move(src), mid, {}, std::move(content));
+  auto ptr = make_mailbox_element(std::move(src), mid, {}, std::move(content));
   enqueue(std::move(ptr), eu);
 }
 

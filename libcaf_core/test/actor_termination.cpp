@@ -102,6 +102,7 @@ CAF_TEST(multiple_awaited_requests) {
     for (int i = 0; i < 3; ++i)
       self->request(server, infinite, 42).await(
         [=](int x) {
+          CAF_MESSAGE("received response #" << (i + 1));
           CAF_REQUIRE_EQUAL(x, 42);
         }
       );

@@ -25,7 +25,6 @@
 #include "caf/ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
 
-#include "caf/detail/memory.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -34,24 +33,7 @@ namespace caf {
 /// @relates ref_counted
 /// @relates intrusive_ptr
 template <class T, class... Ts>
-typename std::enable_if<
-  detail::is_memory_cached<T>::value,
-  intrusive_ptr<T>
->::type
-make_counted(Ts&&... xs) {
-  return intrusive_ptr<T>(detail::memory::create<T>(std::forward<Ts>(xs)...),
-                          false);
-}
-
-/// Constructs an object of type `T` in an `intrusive_ptr`.
-/// @relates ref_counted
-/// @relates intrusive_ptr
-template <class T, class... Ts>
-typename std::enable_if<
-  ! detail::is_memory_cached<T>::value,
-  intrusive_ptr<T>
->::type
-make_counted(Ts&&... xs) {
+intrusive_ptr<T> make_counted(Ts&&... xs) {
   return intrusive_ptr<T>(new T(std::forward<Ts>(xs)...), false);
 }
 

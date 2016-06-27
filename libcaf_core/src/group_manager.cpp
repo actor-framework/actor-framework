@@ -156,8 +156,8 @@ public:
     CAF_LOG_TRACE("");
     // instead of dropping "unexpected" messages,
     // we simply forward them to our acquaintances
-    auto fwd = [=](local_actor*, const type_erased_tuple* ptr) -> result<message> {
-      send_to_acquaintances(message::from(ptr));
+    auto fwd = [=](scheduled_actor*, const type_erased_tuple& x) -> result<message> {
+      send_to_acquaintances(message::from(&x));
       return message{};
     };
     set_default_handler(fwd);
@@ -313,8 +313,8 @@ behavior proxy_broker::make_behavior() {
   CAF_LOG_TRACE("");
   // instead of dropping "unexpected" messages,
   // we simply forward them to our acquaintances
-  auto fwd = [=](local_actor*, const type_erased_tuple* x) -> result<message> {
-    group_->send_all_subscribers(current_element_->sender, message::from(x),
+  auto fwd = [=](local_actor*, const type_erased_tuple& x) -> result<message> {
+    group_->send_all_subscribers(current_element_->sender, message::from(&x),
                                  context());
     return message{};
   };

@@ -27,10 +27,10 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include <exception>
 #include <type_traits>
 #include <condition_variable>
 
+#include "caf/type_nr.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/abstract_actor.hpp"
@@ -129,9 +129,6 @@ protected:
 
   bool remove_backlink_impl(abstract_actor* other);
 
-  // tries to run a custom exception handler for `eptr`
-  optional<exit_reason> handle(const std::exception_ptr& eptr);
-
   // precondition: `mtx_` is acquired
   inline void attach_impl(attachable_ptr& ptr) {
     ptr->next.swap(attachables_head_);
@@ -154,9 +151,14 @@ protected:
   template <class F>
   bool handle_system_message(mailbox_element& x, execution_unit* context,
                              bool trap_exit, F& down_msg_handler) {
-    auto& msg = x.msg;
-    if (msg.size() == 1 && msg.match_element<down_msg>(0)) {
-      down_msg_handler(msg.get_as_mutable<down_msg>(0));
+    auto& content = x.content();
+    if (content.type_token() == make_type_token<down_msg>()) {
+      if (content.shared()) {
+        auto vptr = content.copy(0);
+        down_msg_handler(vptr->get_mutable_as<down_msg>());
+      } else {
+        down_msg_handler(content.get_mutable_as<down_msg>(0));
+      }
       return true;
     }
     return handle_system_message(x, context, trap_exit);

@@ -32,6 +32,11 @@
 namespace caf {
 namespace detail {
 
+/// Describes a partitioned list of elements. The first part
+/// of the list is described by the iterator pair `[begin, separator)`.
+/// The second part by `[continuation, end)`. Actors use the second half
+/// of the list to store previously skipped elements. Priority-aware actors
+/// also use the first half of the list to sort messages by priority.
 template <class T, class Delete = std::default_delete<T>>
 class intrusive_partitioned_list {
 public:
@@ -86,6 +91,10 @@ public:
     bool operator!=(const iterator& other) const {
       return ptr != other.ptr;
     }
+
+    iterator next() const {
+      return ptr->next;
+    }
   };
 
   intrusive_partitioned_list() {
@@ -99,41 +108,55 @@ public:
     clear();
   }
 
-  void clear() {
-    while (! first_empty()) {
-      erase(first_begin());
-    }
-    while (! second_empty()) {
-      erase(second_begin());
-    }
+  iterator begin() {
+    return head_.next;
+  }
+
+  iterator separator() {
+    return &separator_;
+  }
+
+  iterator continuation() {
+    return separator_.next;
+  }
+
+  iterator end() {
+    return &tail_;
+  }
+
+  using range = std::pair<iterator, iterator>;
+
+  /// Returns the two iterator pairs describing the first and second part
+  /// of the partitioned list.
+  std::array<range, 2> ranges() {
+    return {{range{begin(), separator()}, range{continuation(), end()}}};
   }
 
   template <class F>
   void clear(F f) {
-    while (! first_empty()) {
-      f(first_front());
-      erase(first_begin());
+    for (auto& range : ranges()) {
+      auto i = range.first;
+      auto e = range.second;
+      while (i != e) {
+        auto ptr = i.ptr;
+        ++i;
+        f(*ptr);
+        delete_(ptr);
+      }
     }
-    while (! second_empty()) {
-      f(second_front());
-      erase(second_begin());
+    if (head_.next != &separator_) {
+      head_.next = &separator_;
+      separator_.prev = &head_;
+    }
+    if (separator_.next != &tail_) {
+      separator_.next = &tail_;
+      tail_.prev = &separator_;
     }
   }
 
-  iterator first_begin() {
-    return head_.next;
-  }
-
-  iterator first_end() {
-    return &separator_;
-  }
-
-  iterator second_begin() {
-    return separator_.next;
-  }
-
-  iterator second_end() {
-    return &tail_;
+  void clear() {
+    auto nop = [](value_type&) {};
+    clear(nop);
   }
 
   iterator insert(iterator next, pointer val) {
@@ -145,16 +168,8 @@ public:
     return val;
   }
 
-  bool first_empty() {
-    return first_begin() == first_end();
-  }
-
-  bool second_empty() {
-    return second_begin() == second_end();
-  }
-
-  bool empty() {
-    return first_empty() && second_empty();
+  bool empty() const {
+    return head_.next == &separator_ && separator_.next == &tail_;
   }
 
   pointer take(iterator pos) {
@@ -172,94 +187,13 @@ public:
     return next;
   }
 
-  pointer take_first_front() {
-    return take(first_begin());
-  }
-
-  pointer take_second_front() {
-    return take(second_begin());
-  }
-
-  value_type& first_front() {
-    return *first_begin();
-  }
-
-  value_type& second_front() {
-    return *second_begin();
-  }
-
-  void pop_first_front() {
-    erase(first_begin());
-  }
-
-  void pop_second_front() {
-    erase(second_begin());
-  }
-
-  void push_first_back(pointer val) {
-    insert(first_end(), val);
-  }
-
-  void push_second_back(pointer val) {
-    insert(second_end(), val);
-  }
-
-  template <class Actor>
-  bool invoke(Actor* self, iterator first, iterator last,
-              behavior& bhvr, message_id mid) {
-    pointer prev = first->prev;
-    pointer next = first->next;
-    auto move_on = [&](bool first_valid) {
-      if (first_valid) {
-        prev = first.ptr;
-      }
-      first = next;
-      next = first->next;
-    };
-    while (first != last) {
-      std::unique_ptr<value_type, deleter_type> tmp{first.ptr};
-      // since this function can be called recursively during
-      // self->invoke_message(tmp, xs...), we have to remove the
-      // element from the list proactively and put it back in if
-      // it's safe, i.e., if invoke_message returned im_skipped
-      prev->next = next;
-      next->prev = prev;
-      switch (self->invoke_message(tmp, bhvr, mid)) {
-        case im_dropped:
-          move_on(false);
-          break;
-        case im_success:
-          return true;
-        case im_skipped:
-          if (tmp) {
-            // re-integrate tmp and move on
-            prev->next = tmp.get();
-            next->prev = tmp.release();
-            move_on(true);
-          }
-          else {
-            // only happens if the user does something
-            // really, really stupid; check it nonetheless
-            move_on(false);
-          }
-          break;
-      }
-    }
-    return false;
-  }
-
-  size_t count(iterator first, iterator last, size_t max_count) {
-    size_t result = 0;
-    while (first != last && result < max_count) {
-      ++first;
-      ++result;
-    }
-    return result;
-  }
-
   size_t count(size_t max_count = std::numeric_limits<size_t>::max()) {
-    auto r1 = count(first_begin(), first_end(), max_count);
-    return r1 + count(second_begin(), second_end(), max_count - r1);
+    size_t result = 0;
+    for (auto& range : ranges())
+      for (auto i = range.first; i != range.second; ++i)
+        if (++result == max_count)
+          return max_count;
+    return result;
   }
 
 private:

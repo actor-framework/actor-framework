@@ -41,15 +41,15 @@ actor_ostream::actor_ostream(scoped_actor& self)
 }
 
 actor_ostream& actor_ostream::write(std::string arg) {
-  printer_->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
-                                          add_atom::value, self_,
-                                          std::move(arg)),
+  printer_->enqueue(make_mailbox_element(nullptr, message_id::make(), {},
+                                         add_atom::value, self_,
+                                         std::move(arg)),
                     nullptr);
   return *this;
 }
 
 actor_ostream& actor_ostream::flush() {
-  printer_->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+  printer_->enqueue(make_mailbox_element(nullptr, message_id::make(), {},
                                           flush_atom::value, self_),
                     nullptr);
   return *this;
@@ -59,7 +59,7 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
   if (! self)
     return;
   auto pr = self->home_system().scheduler().printer();
-  pr->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+  pr->enqueue(make_mailbox_element(nullptr, message_id::make(), {},
                                     redirect_atom::value, self->id(),
                                     std::move(fn), flags),
               nullptr);
@@ -67,7 +67,7 @@ void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
 
 void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
   auto pr = sys.scheduler().printer();
-  pr->enqueue(mailbox_element::make(nullptr, message_id::make(), {},
+  pr->enqueue(make_mailbox_element(nullptr, message_id::make(), {},
                                     redirect_atom::value,
                                     std::move(fn), flags),
               nullptr);

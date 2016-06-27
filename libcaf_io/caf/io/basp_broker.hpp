@@ -148,9 +148,10 @@ public:
   using super = stateful_actor<basp_broker_state, broker>;
 
   explicit basp_broker(actor_config& cfg);
+
   behavior make_behavior() override;
+  proxy_registry* proxy_registry_ptr() override;
   resume_result resume(execution_unit*, size_t) override;
-  void exec_single_event(execution_unit*, mailbox_element_ptr&) override;
 };
 
 } // namespace io

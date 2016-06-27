@@ -29,7 +29,6 @@
 #include "caf/resumable.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/execution_unit.hpp"
-#include "caf/memory_managed.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"

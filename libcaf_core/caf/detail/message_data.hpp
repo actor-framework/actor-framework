@@ -106,6 +106,12 @@ public:
     return *get_unshared();
   }
 
+  /// Returns the raw pointer. Callers are responsible for unsharing
+  /// the content if necessary.
+  inline message_data* raw_ptr() {
+    return ptr_.get();
+  }
+
   // -- observers ------------------------------------------------------------
 
   inline const message_data* operator->() const noexcept {

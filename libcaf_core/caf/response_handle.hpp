@@ -88,7 +88,7 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->set_awaited_response_handler(mid_, message_handler{std::move(f)});
+    self_->add_awaited_response_handler(mid_, message_handler{std::move(f)});
   }
 
   template <class F, class OnError>
@@ -100,7 +100,7 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->set_awaited_response_handler(mid_, behavior{std::move(f),
+    self_->add_awaited_response_handler(mid_, behavior{std::move(f),
                                                        std::move(ef)});
   }
 
@@ -113,7 +113,7 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->set_multiplexed_response_handler(mid_, behavior{std::move(f)});
+    self_->add_multiplexed_response_handler(mid_, behavior{std::move(f)});
   }
 
   template <class F, class OnError>
@@ -125,7 +125,7 @@ private:
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->set_multiplexed_response_handler(mid_, behavior{std::move(f),
+    self_->add_multiplexed_response_handler(mid_, behavior{std::move(f),
                                                            std::move(ef)});
   }
 

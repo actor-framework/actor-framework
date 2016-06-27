@@ -129,8 +129,8 @@ struct tuple_vals_type_helper<T, 0> {
   }
 };
 
-template <class... Ts>
-class tuple_vals : public message_data {
+template <class Base, class... Ts>
+class tuple_vals_impl : public Base {
 public:
   static_assert(sizeof...(Ts) > 0, "tuple_vals is not allowed to be empty");
 
@@ -140,10 +140,10 @@ public:
 
   using data_type = std::tuple<Ts...>;
 
-  tuple_vals(const tuple_vals&) = default;
+  tuple_vals_impl(const tuple_vals_impl&) = default;
 
   template <class... Us>
-  tuple_vals(Us&&... xs)
+  tuple_vals_impl(Us&&... xs)
       : data_(std::forward<Us>(xs)...),
         types_{{tuple_vals_type_helper<Ts>::get()...}} {
     // nop
@@ -161,10 +161,6 @@ public:
     return sizeof...(Ts);
   }
 
-  message_data::cow_ptr copy() const override {
-    return message_data::cow_ptr(new tuple_vals(*this), false);
-  }
-
   const void* get(size_t pos) const noexcept override {
     CAF_ASSERT(pos < size());
     return tup_ptr_access<0, sizeof...(Ts)>::get(pos, data_);
@@ -178,6 +174,8 @@ public:
   std::string stringify(size_t pos) const override {
     return tup_ptr_access<0, sizeof...(Ts)>::stringify(pos, data_);
   }
+
+  using Base::copy;
 
   type_erased_value_ptr copy(size_t pos) const override {
     return tup_ptr_access<0, sizeof...(Ts)>::copy(pos, data_);
@@ -205,6 +203,22 @@ public:
 private:
   data_type data_;
   std::array<rtti_pair, sizeof...(Ts)> types_;
+};
+
+template <class... Ts>
+class tuple_vals : public tuple_vals_impl<message_data, Ts...> {
+public:
+  static_assert(sizeof...(Ts) > 0, "tuple_vals is not allowed to be empty");
+
+  using super = tuple_vals_impl<message_data, Ts...>;
+
+  using super::super;
+
+  using super::copy;
+
+  message_data::cow_ptr copy() const override {
+    return message_data::cow_ptr(new tuple_vals(*this), false);
+  }
 };
 
 } // namespace detail

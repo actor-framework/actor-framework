@@ -55,8 +55,9 @@ void broadcast_dispatch(actor_system&, actor_pool::uplock&,
                         const actor_pool::actor_vec& vec,
                         mailbox_element_ptr& ptr, execution_unit* host) {
   CAF_ASSERT(!vec.empty());
+  auto msg = message::from(&ptr->content());
   for (size_t i = 1; i < vec.size(); ++i)
-    vec[i]->enqueue(ptr->sender, ptr->mid, ptr->msg, host);
+    vec[i]->enqueue(ptr->sender, ptr->mid, msg, host);
   vec.front()->enqueue(std::move(ptr), host);
 }
 
@@ -125,7 +126,7 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
 
 void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
-  if (filter(guard, what->sender, what->mid, what->msg, eu))
+  if (filter(guard, what->sender, what->mid, what->content(), eu))
     return;
   policy_(home_system(), guard, workers_, what, eu);
 }
@@ -140,20 +141,21 @@ void actor_pool::on_cleanup() {
 
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
                         const strong_actor_ptr& sender, message_id mid,
-                        const message& msg, execution_unit* eu) {
+                        const type_erased_tuple& msg, execution_unit* eu) {
   CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(msg));
   if (msg.match_elements<exit_msg>()) {
     // acquire second mutex as well
     std::vector<actor> workers;
     auto tmp = msg.get_as<exit_msg>(0).reason;
     if (cleanup(std::move(tmp), eu)) {
+      auto tmp = message::from(&msg);
       // send exit messages *always* to all workers and clear vector afterwards
       // but first swap workers_ out of the critical section
       upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
       workers_.swap(workers);
       unique_guard.unlock();
       for (auto& w : workers)
-        anon_send(w, msg);
+        anon_send(w, tmp);
       is_registered(false);
     }
     return true;

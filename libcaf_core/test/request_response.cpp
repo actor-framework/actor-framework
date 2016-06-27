@@ -373,7 +373,7 @@ CAF_TEST(invalid_request) {
       CAF_ERROR("C did reply to 'HiThere'");
     },
     [&](const error& err) {
-      CAF_REQUIRE(err == sec::unexpected_message);
+      CAF_REQUIRE_EQUAL(err, sec::unexpected_message);
     }
   );
 }

@@ -34,6 +34,10 @@ void type_erased_tuple::load(deserializer& source) {
     load(i, source);
 }
 
+bool type_erased_tuple::shared() const noexcept {
+  return false;
+}
+
 bool type_erased_tuple::empty() const {
   return size() == 0;
 }
@@ -65,6 +69,46 @@ bool type_erased_tuple::matches(size_t pos, uint16_t nr,
   if (nr == 0)
     return ptr ? *tp.second == *ptr : false;
   return true;
+}
+
+empty_type_erased_tuple::~empty_type_erased_tuple() {
+  // nop
+}
+
+void* empty_type_erased_tuple::get_mutable(size_t) {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::get_mutable");
+}
+
+void empty_type_erased_tuple::load(size_t, deserializer&) {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::get_mutable");
+}
+
+size_t empty_type_erased_tuple::size() const noexcept {
+  return 0;
+}
+
+uint32_t empty_type_erased_tuple::type_token() const noexcept {
+  return make_type_token();
+}
+
+auto empty_type_erased_tuple::type(size_t) const noexcept -> rtti_pair {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::type");
+}
+
+const void* empty_type_erased_tuple::get(size_t) const noexcept {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::get");
+}
+
+std::string empty_type_erased_tuple::stringify(size_t) const {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::stringify");
+}
+
+type_erased_value_ptr empty_type_erased_tuple::copy(size_t) const {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::copy");
+}
+
+void empty_type_erased_tuple::save(size_t, serializer&) const {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::save");
 }
 
 } // namespace caf

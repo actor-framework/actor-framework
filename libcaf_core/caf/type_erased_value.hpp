@@ -75,7 +75,7 @@ public:
   /// the type nr and type info object.
   bool matches(uint16_t tnr, const std::type_info* tinf) const;
 
-  // -- inline observers -------------------------------------------------------
+  // -- convenience functions --------------------------------------------------
 
   /// Returns the type number for the stored value.
   inline uint16_t type_nr() const {
@@ -85,6 +85,18 @@ public:
   /// Checks whether the type of the stored value matches `rtti`.
   inline bool matches(const rtti_pair& rtti) const {
     return matches(rtti.first, rtti.second);
+  }
+
+  /// Convenience function for `reinterpret_cast<const T*>(get())`.
+  template <class T>
+  const T& get_as() const {
+    return *reinterpret_cast<const T*>(get());
+  }
+
+  /// Convenience function for `reinterpret_cast<T*>(get_mutable())`.
+  template <class T>
+  T& get_mutable_as() {
+    return *reinterpret_cast<T*>(get_mutable());
   }
 };
 

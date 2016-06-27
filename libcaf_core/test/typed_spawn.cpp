@@ -315,18 +315,21 @@ struct fixture {
         CAF_CHECK_EQUAL(value, false);
       }
     );
+    CAF_MESSAGE("async send + receive");
     self->send(ts, my_request{42, 42});
     self->receive(
       [](bool value) {
         CAF_CHECK_EQUAL(value, true);
       }
     );
+    CAF_MESSAGE("request + receive with result true");
     self->request(ts, infinite, my_request{10, 20}).receive(
       [](bool value) {
         CAF_CHECK_EQUAL(value, false);
       },
       ERROR_HANDLER
     );
+    CAF_MESSAGE("request + receive with result false");
     self->request(ts, infinite, my_request{0, 0}).receive(
       [](bool value) {
         CAF_CHECK_EQUAL(value, true);

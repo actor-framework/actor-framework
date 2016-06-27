@@ -19,6 +19,8 @@
 
 #include "caf/detail/try_match.hpp"
 
+#include "caf/type_erased_tuple.hpp"
+
 namespace caf {
 namespace detail {
 
