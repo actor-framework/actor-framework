@@ -92,19 +92,18 @@ void caf_main(actor_system& system, const config& cfg) {
       cerr << "*** error parsing argument " << cfg.group_id
          << ", expected format: <module_name>:<group_id>";
     } else {
-      try {
-        auto module = cfg.group_id.substr(0, p);
-        auto group_uri = cfg.group_id.substr(p + 1);
-        auto g = (module == "remote")
-                 ? system.middleman().remote_group(group_uri)
-                 : system.groups().get(module, group_uri);
-        anon_send(client_actor, join_atom::value, g);
+      auto module = cfg.group_id.substr(0, p);
+      auto group_uri = cfg.group_id.substr(p + 1);
+      auto g = (module == "remote")
+               ? system.middleman().remote_group(group_uri)
+               : system.groups().get(module, group_uri);
+      if (! g) {
+        cerr << "*** unable to get group " << group_uri
+             << " from module " << module << ": "
+             << system.render(g.error()) << endl;
+        return;
       }
-      catch (exception& e) {
-        cerr << "*** exception: group::get(\"" << cfg.group_id.substr(0, p)
-           << "\", \"" << cfg.group_id.substr(p + 1) << "\") failed: "
-           << e.what() << endl;
-      }
+      anon_send(client_actor, join_atom::value, *g);
     }
   }
   cout << "*** starting client, type '/help' for a list of commands" << endl;
