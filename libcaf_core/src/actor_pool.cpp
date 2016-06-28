@@ -54,11 +54,10 @@ namespace {
 void broadcast_dispatch(actor_system&, actor_pool::uplock&,
                         const actor_pool::actor_vec& vec,
                         mailbox_element_ptr& ptr, execution_unit* host) {
-  CAF_ASSERT(!vec.empty());
-  auto msg = message::from(&ptr->content());
-  for (size_t i = 1; i < vec.size(); ++i)
-    vec[i]->enqueue(ptr->sender, ptr->mid, msg, host);
-  vec.front()->enqueue(std::move(ptr), host);
+  CAF_ASSERT(! vec.empty());
+  auto msg = ptr->move_content_to_message();
+  for (auto& worker : vec)
+    worker->enqueue(ptr->sender, ptr->mid, msg, host);
 }
 
 } // namespace <anonymous>
@@ -66,7 +65,6 @@ void broadcast_dispatch(actor_system&, actor_pool::uplock&,
 actor_pool::policy actor_pool::broadcast() {
   return broadcast_dispatch;
 }
-
 
 actor_pool::policy actor_pool::random() {
   struct impl {
@@ -103,12 +101,6 @@ actor actor_pool::make(execution_unit* eu, policy pol) {
   auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
   ptr->policy_ = std::move(pol);
   return res;
-  /*
-  intrusive_ptr<actor_pool> ptr;
-  ptr = make_counted<actor_pool>(cfg);
-  ptr->policy_ = std::move(pol);
-  return actor_cast<actor>(ptr);
-  */
 }
 
 actor actor_pool::make(execution_unit* eu, size_t num_workers,
@@ -126,7 +118,7 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
 
 void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
-  if (filter(guard, what->sender, what->mid, what->content(), eu))
+  if (filter(guard, what->sender, what->mid, *what, eu))
     return;
   policy_(home_system(), guard, workers_, what, eu);
 }
@@ -141,14 +133,15 @@ void actor_pool::on_cleanup() {
 
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
                         const strong_actor_ptr& sender, message_id mid,
-                        const type_erased_tuple& msg, execution_unit* eu) {
-  CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(msg));
-  if (msg.match_elements<exit_msg>()) {
+                        message_view& mv, execution_unit* eu) {
+  auto& content = mv.content();
+  CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(content));
+  if (content.match_elements<exit_msg>()) {
     // acquire second mutex as well
     std::vector<actor> workers;
-    auto tmp = msg.get_as<exit_msg>(0).reason;
-    if (cleanup(std::move(tmp), eu)) {
-      auto tmp = message::from(&msg);
+    auto em = content.get_as<exit_msg>(0).reason;
+    if (cleanup(std::move(em), eu)) {
+      auto tmp = mv.move_content_to_message();
       // send exit messages *always* to all workers and clear vector afterwards
       // but first swap workers_ out of the critical section
       upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
@@ -160,9 +153,9 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     }
     return true;
   }
-  if (msg.match_elements<down_msg>()) {
+  if (content.match_elements<down_msg>()) {
     // remove failed worker from pool
-    auto& dm = msg.get_as<down_msg>(0);
+    auto& dm = content.get_as<down_msg>(0);
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), workers_.end(), dm.source);
@@ -176,17 +169,17 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     }
     return true;
   }
-  if (msg.match_elements<sys_atom, put_atom, actor>()) {
-    auto& worker = msg.get_as<actor>(2);
+  if (content.match_elements<sys_atom, put_atom, actor>()) {
+    auto& worker = content.get_as<actor>(2);
     worker->attach(default_attachable::make_monitor(worker.address(),
                                                     address()));
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     workers_.push_back(worker);
     return true;
   }
-  if (msg.match_elements<sys_atom, delete_atom, actor>()) {
+  if (content.match_elements<sys_atom, delete_atom, actor>()) {
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-    auto& what = msg.get_as<actor>(2);
+    auto& what = content.get_as<actor>(2);
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), last, what);
     if (i != last) {
@@ -194,7 +187,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     }
     return true;
   }
-  if (msg.match_elements<sys_atom, get_atom>()) {
+  if (content.match_elements<sys_atom, get_atom>()) {
     auto cpy = workers_;
     guard.unlock();
     sender->enqueue(nullptr, mid.response_id(),

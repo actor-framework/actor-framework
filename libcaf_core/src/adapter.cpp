@@ -63,8 +63,7 @@ void adapter::enqueue(mailbox_element_ptr x, execution_unit* context) {
     bounce(x, fail_state);
     return;
   }
-  message tmp{detail::merged_tuple::make(merger,
-                                         message::from(&x->content()))};
+  message tmp{detail::merged_tuple::make(merger, x->move_content_to_message())};
   decorated->enqueue(make_mailbox_element(std::move(x->sender), x->mid,
                                           std::move(x->stages), std::move(tmp)),
                      context);

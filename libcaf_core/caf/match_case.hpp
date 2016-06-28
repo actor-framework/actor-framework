@@ -171,7 +171,7 @@ public:
     message tmp;
     intermediate_pseudo_tuple tup{xs.shared()};
     if (is_manipulator && tup.shared_access) {
-      tmp = message::copy_from(&xs);
+      tmp = message::copy(xs);
       tup.shared_access = false;
       for (size_t i = 0; i < tmp.size(); ++i)
         tup[i] = const_cast<void*>(tmp.at(i));

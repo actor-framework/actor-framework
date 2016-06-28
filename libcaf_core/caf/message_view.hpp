@@ -17,30 +17,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/blocking_behavior.hpp"
+#ifndef CAF_MESSAGE_VIEW_HPP
+#define CAF_MESSAGE_VIEW_HPP
+
+#include "caf/fwd.hpp"
 
 namespace caf {
-namespace detail {
 
-blocking_behavior::~blocking_behavior() {
-  // nop
-}
+/// Represents an object pointing to a `type_erased_tuple` that
+/// is convertible to a `message`
+class message_view {
+public:
+  virtual ~message_view();
 
-blocking_behavior::blocking_behavior(behavior x) : nested(std::move(x)) {
-  // nop
-}
+  virtual type_erased_tuple& content() = 0;
 
-result<message> blocking_behavior::fallback(message_view&) {
-  return skip;
-}
+  virtual message move_content_to_message() = 0;
+};
 
-duration blocking_behavior::timeout() {
-  return {};
-}
-
-void blocking_behavior::handle_timeout() {
-  // nop
-}
-
-} // namespace detail
 } // namespace caf
+
+#endif // CAF_MESSAGE_VIEW_HPP

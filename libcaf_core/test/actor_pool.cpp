@@ -144,7 +144,9 @@ CAF_TEST(broadcast_actor_pool) {
     return actor_pool::make(&context, 5, fixture::spawn_worker,
                             actor_pool::broadcast());
   };
+  CAF_CHECK_EQUAL(system.registry().running(), 1u);
   auto pool = actor_pool::make(&context, 5, spawn5, actor_pool::broadcast());
+  CAF_CHECK_EQUAL(system.registry().running(), 32u);
   self->send(pool, 1, 2);
   std::vector<int> results;
   int i = 0;

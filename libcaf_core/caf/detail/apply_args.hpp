@@ -40,6 +40,12 @@ auto apply_args(F& f, detail::int_list<Is...>, Tuple& tup)
   return f(get<Is>(tup)...);
 }
 
+template <class F, long... Is, class Tuple>
+auto apply_moved_args(F& f, detail::int_list<Is...>, Tuple& tup)
+-> decltype(f(std::move(get<Is>(tup))...)) {
+  return f(std::move(get<Is>(tup))...);
+}
+
 template <class F, class Tuple, class... Ts>
 auto apply_args_prefixed(F& f, detail::int_list<>, Tuple&, Ts&&... xs)
 -> decltype(f(std::forward<Ts>(xs)...)) {

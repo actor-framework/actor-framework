@@ -17,30 +17,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/blocking_behavior.hpp"
+#include "caf/message_view.hpp"
 
 namespace caf {
-namespace detail {
 
-blocking_behavior::~blocking_behavior() {
+message_view::~message_view() {
   // nop
 }
 
-blocking_behavior::blocking_behavior(behavior x) : nested(std::move(x)) {
-  // nop
-}
-
-result<message> blocking_behavior::fallback(message_view&) {
-  return skip;
-}
-
-duration blocking_behavior::timeout() {
-  return {};
-}
-
-void blocking_behavior::handle_timeout() {
-  // nop
-}
-
-} // namespace detail
 } // namespace caf

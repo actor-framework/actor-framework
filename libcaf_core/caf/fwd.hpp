@@ -67,6 +67,7 @@ class local_actor;
 class actor_config;
 class actor_system;
 class deserializer;
+class message_view;
 class scoped_actor;
 class abstract_actor;
 class abstract_group;

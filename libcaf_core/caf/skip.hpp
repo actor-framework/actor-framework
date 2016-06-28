@@ -32,8 +32,8 @@ namespace caf {
 /// skipping to the runtime.
 class skip_t {
 public:
-  using fun = std::function<result<message>(scheduled_actor* self,
-                                            const type_erased_tuple&)>;
+  using fun = std::function<result<message> (scheduled_actor* self,
+                                             message_view&)>;
 
   constexpr skip_t() {
     // nop
@@ -46,8 +46,7 @@ public:
   operator fun() const;
 
 private:
-  static result<message> skip_fun_impl(scheduled_actor*,
-                                       const type_erased_tuple&);
+  static result<message> skip_fun_impl(scheduled_actor*, message_view&);
 };
 
 /// Tells the runtime system to skip a message when used as message

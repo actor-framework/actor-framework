@@ -26,22 +26,27 @@ namespace {
 /// Wraps a `message` into a mailbox element.
 class mailbox_element_wrapper : public mailbox_element {
 public:
-  /// Stores the elements for this mailbox element.
-  message msg;
-
   mailbox_element_wrapper(strong_actor_ptr&& x0, message_id x1,
                           forwarding_stack&& x2, message&& x3)
       : mailbox_element(std::move(x0), x1, std::move(x2)),
-        msg(std::move(x3)) {
+        msg_(std::move(x3)) {
     // nop
   }
 
   type_erased_tuple& content() override {
-    auto ptr = msg.vals().raw_ptr();
+    auto ptr = msg_.vals().raw_ptr();
     if (ptr)
       return *ptr;
     return dummy_;
   }
+
+  message move_content_to_message() override {
+    return std::move(msg_);
+  }
+
+private:
+  /// Stores the content of this mailbox element.
+  message msg_;
 };
 
 } // namespace <anonymous>
@@ -70,6 +75,10 @@ mailbox_element::~mailbox_element() {
 
 type_erased_tuple& mailbox_element::content() {
   return dummy_;
+}
+
+message mailbox_element::move_content_to_message() {
+  return {};
 }
 
 const type_erased_tuple& mailbox_element::content() const {

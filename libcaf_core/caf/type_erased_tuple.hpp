@@ -237,6 +237,8 @@ public:
   template <size_t X>
   using num_token = std::integral_constant<size_t, X>;
 
+  using tuple_type = std::tuple<type_erased_value_impl<std::reference_wrapper<Ts>>...>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   type_erased_tuple_view(Ts&... xs) : xs_(xs...) {
@@ -289,6 +291,16 @@ public:
     return ptrs_[pos]->save(sink);
   }
 
+  // -- member variables access ------------------------------------------------
+
+  tuple_type& data() {
+    return xs_;
+  }
+
+  const tuple_type& data() const {
+    return xs_;
+  }
+
 private:
   // -- pointer "lookup table" utility -----------------------------------------
 
@@ -309,9 +321,11 @@ private:
 
   // -- data members -----------------------------------------------------------
 
-  std::tuple<type_erased_value_impl<std::reference_wrapper<Ts>>...> xs_;
+  tuple_type xs_;
   type_erased_value* ptrs_[sizeof...(Ts) == 0 ? 1 : sizeof...(Ts)];
 };
+
+
 
 template <class... Ts>
 type_erased_tuple_view<Ts...> make_type_erased_tuple_view(Ts&... xs) {

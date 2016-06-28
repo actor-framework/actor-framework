@@ -27,7 +27,7 @@ namespace caf {
 
 template <class F>
 struct catch_all {
-  using fun_type = std::function<result<message> (const type_erased_tuple*)>;
+  using fun_type = std::function<result<message> (message_view&)>;
 
   F handler;
 
@@ -40,7 +40,7 @@ struct catch_all {
 
   static_assert(std::is_convertible<F, fun_type>::value,
                 "catch-all handler must have signature "
-                "result<message> (const type_erased_tuple*)");
+                "result<message> (message_view&)");
 
   fun_type lift() const {
     return handler;

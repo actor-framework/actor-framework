@@ -200,6 +200,12 @@ public:
     return type_erased_value_ptr{new type_erased_value_impl(x_)};
   }
 
+  // -- conversion operators ---------------------------------------------------
+
+  operator value_type&() {
+    return x_;
+  }
+
 private:
   // -- address-of-member utility ----------------------------------------------
 

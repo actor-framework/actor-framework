@@ -29,28 +29,26 @@ namespace caf {
 
 // -- related free functions ---------------------------------------------------
 
-result<message> reflect(scheduled_actor*, const type_erased_tuple& x) {
-  return message::from(&x);
+result<message> reflect(scheduled_actor*, message_view& x) {
+  return x.move_content_to_message();
 }
 
-result<message> reflect_and_quit(scheduled_actor* ptr,
-                                 const type_erased_tuple& x) {
+result<message> reflect_and_quit(scheduled_actor* ptr, message_view& x) {
   error err = exit_reason::normal;
   scheduled_actor::default_error_handler(ptr, err);
   return reflect(ptr, x);
 }
 
-result<message> print_and_drop(scheduled_actor* ptr,
-                               const type_erased_tuple& x) {
-  CAF_LOG_WARNING("unexpected message" << CAF_ARG(x));
+result<message> print_and_drop(scheduled_actor* ptr, message_view& x) {
+  CAF_LOG_WARNING("unexpected message" << CAF_ARG(x.content()));
   aout(ptr) << "*** unexpected message [id: " << ptr->id()
             << ", name: " << ptr->name() << "]: "
-            << x.stringify()
+            << x.content().stringify()
             << std::endl;
   return sec::unexpected_message;
 }
 
-result<message> drop(scheduled_actor*, const type_erased_tuple&) {
+result<message> drop(scheduled_actor*, message_view&) {
   return sec::unexpected_message;
 }
 
@@ -360,7 +358,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     if (! pr.second(x.content())) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
-                                         message::from(&x.content())));
+                                         x.move_content_to_message()));
       pr.second(msg);
     }
     awaited_responses_.pop_front();
@@ -375,7 +373,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     if (! mrh->second(x.content())) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
-                                         message::from(&x.content())));
+                                         x.move_content_to_message()));
       mrh->second(msg);
     }
     multiplexed_responses_.erase(mrh);
@@ -408,7 +406,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
           has_timeout(true);
       });
       auto call_default_handler = [&] {
-        auto sres = default_handler_(this, x.content());
+        auto sres = default_handler_(this, x);
         switch (sres.flag) {
           default:
             break;

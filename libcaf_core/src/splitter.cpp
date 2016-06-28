@@ -41,8 +41,8 @@ struct splitter_state {
 
 behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
                         const std::vector<strong_actor_ptr>& workers) {
-  auto f = [=](local_actor*, const type_erased_tuple& x) -> result<message> {
-    auto msg = message::from(&x);
+  auto f = [=](local_actor*, message_view& x) -> result<message> {
+    auto msg = x.move_content_to_message();
     self->state.rp = self->make_response_promise();
     self->state.pending = workers.size();
     // request().await() has LIFO ordering
@@ -69,46 +69,6 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
   return [] {
     // nop
   };
-  /*
-
-      // TODO: maybe infer some useful timeout or use config parameter?
-      self->request(actor_cast<actor>(*i), infinite, msg)
-      .generic_await(
-        [=](const message& tmp) {
-          self->state.result += tmp;
-          if (--self->state.pending == 0)
-            self->state.rp.deliver(std::move(self->state.result));
-        },
-        [=](const error& err) {
-          self->state.rp.deliver(err);
-          self->quit();
-        }
-      );
-  };
-  set_default_handler(f);
-  return {
-    others >> [=](const message& msg) {
-      self->state.rp = self->make_response_promise();
-      self->state.pending = workers.size();
-      // request().await() has LIFO ordering
-      for (auto i = workers.rbegin(); i != workers.rend(); ++i)
-        // TODO: maybe infer some useful timeout or use config parameter?
-        self->request(actor_cast<actor>(*i), infinite, msg)
-        .generic_await(
-          [=](const message& tmp) {
-            self->state.result += tmp;
-            if (--self->state.pending == 0)
-              self->state.rp.deliver(std::move(self->state.result));
-          },
-          [=](const error& err) {
-            self->state.rp.deliver(err);
-            self->quit();
-          }
-        );
-      self->unbecome();
-    }
-  };
-*/
 }
 
 } // namespace <anonymous>

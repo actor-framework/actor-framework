@@ -48,21 +48,21 @@ namespace caf {
 
 /// @relates scheduled_actor
 /// Default handler function that sends the message back to the sender.
-result<message> reflect(scheduled_actor*, const type_erased_tuple&);
+result<message> reflect(scheduled_actor*, message_view&);
 
 /// @relates scheduled_actor
 /// Default handler function that sends
 /// the message back to the sender and then quits.
-result<message> reflect_and_quit(scheduled_actor*, const type_erased_tuple&);
+result<message> reflect_and_quit(scheduled_actor*, message_view&);
 
 /// @relates scheduled_actor
 /// Default handler function that prints messages
 /// message via `aout` and drops them afterwards.
-result<message> print_and_drop(scheduled_actor*, const type_erased_tuple&);
+result<message> print_and_drop(scheduled_actor*, message_view&);
 
 /// @relates scheduled_actor
 /// Default handler function that simply drops messages.
-result<message> drop(scheduled_actor*, const type_erased_tuple&);
+result<message> drop(scheduled_actor*, message_view&);
 
 /// A cooperatively scheduled, event-based actor implementation. This is the
 /// recommended base class for user-defined actors.
@@ -77,11 +77,8 @@ public:
   /// A pointer to a scheduled actor.
   using pointer = scheduled_actor*;
 
-  /// A constant pointer to a `type_erased_tuple`.
-  using tuple_cref = const type_erased_tuple&;
-
   /// Function object for handling unmatched messages.
-  using default_handler = std::function<result<message> (pointer, tuple_cref)>;
+  using default_handler = std::function<result<message> (pointer, message_view&)>;
 
   /// Function object for handling error messages.
   using error_handler = std::function<void (pointer, error&)>;

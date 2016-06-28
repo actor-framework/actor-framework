@@ -85,11 +85,8 @@ public:
     return concat_impl({xs.vals()...});
   }
 
-  /// Creates a new message from a type-erased tuple.
-  static message from(const type_erased_tuple* ptr);
-
   /// Creates a new message by copying all elements in a type-erased tuple.
-  static message copy_from(const type_erased_tuple* ptr);
+  static message copy(const type_erased_tuple& xs);
 
   // -- modifiers --------------------------------------------------------------
 
@@ -501,6 +498,13 @@ inline message make_message(message other) {
 inline message make_message() {
   return message{};
 }
+
+struct message_factory {
+  template <class... Ts>
+  message operator()(Ts&&... xs) const {
+    return make_message(std::forward<Ts>(xs)...);
+  }
+};
 
 } // namespace caf
 

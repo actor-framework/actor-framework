@@ -131,6 +131,9 @@ namespace {
 
 class message_sequence {
 public:
+  virtual ~message_sequence() {
+    // nop
+  }
   virtual bool at_end() = 0;
   virtual bool await_value(bool reset_timeout) = 0;
   virtual mailbox_element& value() = 0;
@@ -335,7 +338,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
           default:
             break;
           case match_case::no_match: {
-            auto sres = bhvr.fallback(&current_element_->content());
+            auto sres = bhvr.fallback(*current_element_);
             // when dealing with response messages, there's either a match
             // on the first handler or we produce an error to
             // get a match on the second (error) handler
@@ -345,7 +348,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
              // invoke again with an unexpected_response error
              auto& old = *current_element_;
              auto err = make_error(sec::unexpected_response,
-                                   message::from(&old.content()));
+                                   old.move_content_to_message());
              mailbox_element_view<error> tmp{std::move(old.sender), old.mid,
                                              std::move(old.stages), err};
              current_element_ = &tmp;

@@ -84,8 +84,8 @@ struct function_view_storage_catch_all {
     // nop
   }
 
-  result<message> operator()(const type_erased_tuple* x) {
-    *storage_ = message::from(x);
+  result<message> operator()(message_view& xs) {
+    *storage_ = xs.move_content_to_message();
     return message{};
   }
 };

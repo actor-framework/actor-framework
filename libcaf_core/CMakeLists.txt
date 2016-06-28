@@ -68,6 +68,7 @@ set (LIBCAF_CORE_SRCS
      src/message_builder.cpp
      src/message_data.cpp
      src/message_handler.cpp
+     src/message_view.cpp
      src/node_id.cpp
      src/parse_ini.cpp
      src/private_thread.cpp

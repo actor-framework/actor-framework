@@ -25,6 +25,8 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/mailbox_element.hpp"
 
+#include "caf/detail/disposer.hpp"
+
 namespace caf {
 
 actor_addr actor_control_block::address() {

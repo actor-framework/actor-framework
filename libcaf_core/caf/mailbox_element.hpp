@@ -26,18 +26,17 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/message_view.hpp"
+#include "caf/memory_managed.hpp"
 #include "caf/type_erased_tuple.hpp"
 #include "caf/actor_control_block.hpp"
 
-#include "caf/detail/embedded.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/tuple_vals.hpp"
-#include "caf/detail/message_data.hpp"
-#include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace caf {
 
-class mailbox_element {
+class mailbox_element : public memory_managed, public message_view {
 public:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
@@ -67,7 +66,9 @@ public:
 
   virtual ~mailbox_element();
 
-  virtual type_erased_tuple& content();
+  type_erased_tuple& content() override;
+
+  message move_content_to_message() override;
 
   const type_erased_tuple& content() const;
 
@@ -93,13 +94,23 @@ public:
   template <class... Us>
   mailbox_element_vals(strong_actor_ptr&& sender, message_id id,
                        forwarding_stack&& stages, Us&&... xs)
-    : mailbox_element(std::move(sender), id, std::move(stages)),
-      detail::tuple_vals_impl<type_erased_tuple, Ts...>(std::forward<Us>(xs)...) {
+      : mailbox_element(std::move(sender), id, std::move(stages)),
+        detail::tuple_vals_impl<type_erased_tuple, Ts...>(std::forward<Us>(xs)...) {
     // nop
   }
 
   type_erased_tuple& content() {
     return *this;
+  }
+
+  message move_content_to_message() {
+    message_factory f;
+    auto& xs = this->data();
+    return detail::apply_moved_args(f, detail::get_indices(xs), xs);
+  }
+
+  void dispose() noexcept {
+    this->deref();
   }
 };
 
@@ -115,8 +126,14 @@ public:
     // nop
   }
 
-  type_erased_tuple& content() {
+  type_erased_tuple& content() override {
     return *this;
+  }
+
+  message move_content_to_message() override {
+    message_factory f;
+    auto& xs = this->data();
+    return detail::apply_moved_args(f, detail::get_indices(xs), xs);
   }
 };
 

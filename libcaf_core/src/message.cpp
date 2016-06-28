@@ -64,23 +64,10 @@ void* message::get_mutable(size_t p) {
   return vals_->get_mutable(p);
 }
 
-message message::from(const type_erased_tuple* ptr) {
-  CAF_ASSERT(ptr != nullptr);
-  auto dptr = dynamic_cast<const detail::message_data*>(ptr);
-  if (dptr) {
-    data_ptr dp{const_cast<detail::message_data*>(dptr), true};
-    return message{std::move(dp)};
-  }
+message message::copy(const type_erased_tuple& xs) {
   message_builder mb;
-  for (size_t i = 0; i < ptr->size(); ++i)
-    mb.emplace(ptr->copy(i));
-  return mb.move_to_message();
-}
-
-message message::copy_from(const type_erased_tuple* ptr) {
-  message_builder mb;
-  for (size_t i = 0; i < ptr->size(); ++i)
-    mb.emplace(ptr->copy(i));
+  for (size_t i = 0; i < xs.size(); ++i)
+    mb.emplace(xs.copy(i));
   return mb.move_to_message();
 }
 

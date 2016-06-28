@@ -38,6 +38,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/abstract_channel.hpp"
 
+#include "caf/detail/disposer.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/functor_attachable.hpp"
 

@@ -36,7 +36,7 @@ public:
 
   virtual ~blocking_behavior();
 
-  virtual result<message> fallback(const type_erased_tuple*);
+  virtual result<message> fallback(message_view&);
 
   virtual duration timeout();
 
@@ -56,7 +56,7 @@ public:
 
   blocking_behavior_v2(blocking_behavior_v2&&) = default;
 
-  result<message> fallback(const type_erased_tuple* x) override {
+  result<message> fallback(message_view& x) override {
     return f.handler(x);
   }
 };
@@ -98,7 +98,7 @@ public:
 
   blocking_behavior_v4(blocking_behavior_v4&&) = default;
 
-  result<message> fallback(const type_erased_tuple* x) override {
+  result<message> fallback(message_view& x) override {
     return f1.handler(x);
   }
 
