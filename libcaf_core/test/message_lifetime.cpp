@@ -83,7 +83,9 @@ private:
 };
 
 struct fixture {
-  actor_system system;
+  fixture() : system(cfg) {
+    // nop
+  }
 
   template <spawn_options Os>
   void test_message_lifetime() {
@@ -91,6 +93,9 @@ struct fixture {
     for (size_t i = 0; i < 100; ++i)
       system.spawn<tester>(system.spawn<testee, Os>());
   }
+
+  actor_system_config cfg;
+  actor_system system;
 };
 
 } // namespace <anonymous>

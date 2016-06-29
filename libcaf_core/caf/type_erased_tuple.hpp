@@ -56,12 +56,12 @@ public:
   virtual void* get_mutable(size_t pos) = 0;
 
   /// Load the content for the element at position `pos` from `source`.
-  virtual void load(size_t pos, deserializer& source) = 0;
+  virtual error load(size_t pos, deserializer& source) = 0;
 
   // -- modifiers --------------------------------------------------------------
 
   /// Load the content for the tuple from `source`.
-  void load(deserializer& source);
+  error load(deserializer& source);
 
   // -- pure virtual observers -------------------------------------------------
 
@@ -85,7 +85,7 @@ public:
   virtual type_erased_value_ptr copy(size_t pos) const = 0;
 
   /// Saves the element at position `pos` to `sink`.
-  virtual void save(size_t pos, serializer& sink) const = 0;
+  virtual error save(size_t pos, serializer& sink) const = 0;
 
   // -- observers --------------------------------------------------------------
 
@@ -100,7 +100,7 @@ public:
   std::string stringify() const;
 
   /// Saves the content of the tuple to `sink`.
-  void save(serializer& sink) const;
+  error save(serializer& sink) const;
 
   /// Checks whether the type of the stored value at position `pos`
   /// matches type number `n` and run-time type information `p`.
@@ -185,33 +185,6 @@ private:
 };
 
 /// @relates type_erased_tuple
-/// Dummy objects representing empty tuples.
-class empty_type_erased_tuple : public type_erased_tuple {
-public:
-  empty_type_erased_tuple() = default;
-
-  ~empty_type_erased_tuple();
-
-  void* get_mutable(size_t pos) override;
-
-  void load(size_t pos, deserializer& source) override;
-
-  size_t size() const noexcept override;
-
-  uint32_t type_token() const noexcept override;
-
-  rtti_pair type(size_t pos) const noexcept override;
-
-  const void* get(size_t pos) const noexcept override;
-
-  std::string stringify(size_t pos) const override;
-
-  type_erased_value_ptr copy(size_t pos) const override;
-
-  void save(size_t pos, serializer& sink) const override;
-};
-
-/// @relates type_erased_tuple
 template <class Processor>
 typename std::enable_if<Processor::is_saving::value>::type
 serialize(Processor& proc, type_erased_tuple& x) {
@@ -230,107 +203,32 @@ inline std::string to_string(const type_erased_tuple& x) {
   return x.stringify();
 }
 
-template <class... Ts>
-class type_erased_tuple_view : public type_erased_tuple {
+/// @relates type_erased_tuple
+/// Dummy objects representing empty tuples.
+class empty_type_erased_tuple : public type_erased_tuple {
 public:
-  // -- member types -----------------------------------------------------------
-  template <size_t X>
-  using num_token = std::integral_constant<size_t, X>;
+  empty_type_erased_tuple() = default;
 
-  using tuple_type = std::tuple<type_erased_value_impl<std::reference_wrapper<Ts>>...>;
+  ~empty_type_erased_tuple();
 
-  // -- constructors, destructors, and assignment operators --------------------
+  void* get_mutable(size_t pos) override;
 
-  type_erased_tuple_view(Ts&... xs) : xs_(xs...) {
-    init();
-  }
+  error load(size_t pos, deserializer& source) override;
 
-  type_erased_tuple_view(const type_erased_tuple_view& other)
-      : type_erased_tuple(),
-        xs_(other.xs_) {
-    init();
-  }
+  size_t size() const noexcept override;
 
-  // -- overridden modifiers ---------------------------------------------------
+  uint32_t type_token() const noexcept override;
 
-  void* get_mutable(size_t pos) override {
-    return ptrs_[pos]->get_mutable();
-  }
+  rtti_pair type(size_t pos) const noexcept override;
 
-  void load(size_t pos, deserializer& source) override {
-    ptrs_[pos]->load(source);
-  }
+  const void* get(size_t pos) const noexcept override;
 
-  // -- overridden observers ---------------------------------------------------
+  std::string stringify(size_t pos) const override;
 
-  size_t size() const noexcept override {
-    return sizeof...(Ts);
-  }
+  type_erased_value_ptr copy(size_t pos) const override;
 
-  uint32_t type_token() const noexcept override {
-    return make_type_token<Ts...>();
-  }
-
-  rtti_pair type(size_t pos) const noexcept override {
-    return ptrs_[pos]->type();
-  }
-
-  const void* get(size_t pos) const noexcept override {
-    return ptrs_[pos]->get();
-  }
-
-  std::string stringify(size_t pos) const override {
-    return ptrs_[pos]->stringify();
-  }
-
-  type_erased_value_ptr copy(size_t pos) const override {
-    return ptrs_[pos]->copy();
-  }
-
-  void save(size_t pos, serializer& sink) const override {
-    return ptrs_[pos]->save(sink);
-  }
-
-  // -- member variables access ------------------------------------------------
-
-  tuple_type& data() {
-    return xs_;
-  }
-
-  const tuple_type& data() const {
-    return xs_;
-  }
-
-private:
-  // -- pointer "lookup table" utility -----------------------------------------
-
-  template <size_t N>
-  void init(num_token<N>, num_token<N>) {
-    // end of recursion
-  }
-
-  template <size_t P, size_t N>
-  void init(num_token<P>, num_token<N> last) {
-    ptrs_[P] = &std::get<P>(xs_);
-    init(num_token<P + 1>{}, last);
-  }
-
-  void init() {
-    init(num_token<0>{}, num_token<sizeof...(Ts)>{});
-  }
-
-  // -- data members -----------------------------------------------------------
-
-  tuple_type xs_;
-  type_erased_value* ptrs_[sizeof...(Ts) == 0 ? 1 : sizeof...(Ts)];
+  error save(size_t pos, serializer& sink) const override;
 };
-
-
-
-template <class... Ts>
-type_erased_tuple_view<Ts...> make_type_erased_tuple_view(Ts&... xs) {
-  return {xs...};
-}
 
 } // namespace caf
 

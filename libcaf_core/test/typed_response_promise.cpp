@@ -128,11 +128,13 @@ private:
 
 struct fixture {
   fixture()
-      : self(system, true),
+      : system(cfg),
+        self(system, true),
         foo(system.spawn<foo_actor_impl>()) {
     // nop
   }
 
+  actor_system_config cfg;
   actor_system system;
   scoped_actor self;
   foo_actor foo;

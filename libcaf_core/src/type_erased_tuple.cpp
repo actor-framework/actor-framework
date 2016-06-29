@@ -19,9 +19,8 @@
 
 #include "caf/type_erased_tuple.hpp"
 
+#include "caf/error.hpp"
 #include "caf/config.hpp"
-
-#include "caf/detail/dynamic_message_data.hpp"
 
 namespace caf {
 
@@ -29,9 +28,11 @@ type_erased_tuple::~type_erased_tuple() {
   // nop
 }
 
-void type_erased_tuple::load(deserializer& source) {
+error type_erased_tuple::load(deserializer& source) {
   for (size_t i = 0; i < size(); ++i)
     load(i, source);
+  // TODO: refactor after visit API is in place (#470)
+  return {};
 }
 
 bool type_erased_tuple::shared() const noexcept {
@@ -55,9 +56,11 @@ std::string type_erased_tuple::stringify() const {
   return result;
 }
 
-void type_erased_tuple::save(serializer& sink) const {
+error type_erased_tuple::save(serializer& sink) const {
   for (size_t i = 0; i < size(); ++i)
     save(i, sink);
+  // TODO: refactor after visit API is in place (#470)
+  return {};
 }
 
 bool type_erased_tuple::matches(size_t pos, uint16_t nr,
@@ -79,7 +82,7 @@ void* empty_type_erased_tuple::get_mutable(size_t) {
   CAF_RAISE_ERROR("empty_type_erased_tuple::get_mutable");
 }
 
-void empty_type_erased_tuple::load(size_t, deserializer&) {
+error empty_type_erased_tuple::load(size_t, deserializer&) {
   CAF_RAISE_ERROR("empty_type_erased_tuple::get_mutable");
 }
 
@@ -107,8 +110,8 @@ type_erased_value_ptr empty_type_erased_tuple::copy(size_t) const {
   CAF_RAISE_ERROR("empty_type_erased_tuple::copy");
 }
 
-void empty_type_erased_tuple::save(size_t, serializer&) const {
-  CAF_RAISE_ERROR("empty_type_erased_tuple::save");
+error empty_type_erased_tuple::save(size_t, serializer&) const {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::copy");
 }
 
 } // namespace caf

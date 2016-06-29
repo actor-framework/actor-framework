@@ -62,12 +62,16 @@ public:
     return get_name(state_);
   }
 
-  void save_state(serializer& sink, const unsigned int version) override {
+  error save_state(serializer& sink, const unsigned int version) override {
     serialize_state(sink, state, version);
+    // TODO: refactor after visit API is in place (#470)
+    return {};
   }
 
-  void load_state(deserializer& source, const unsigned int version) override {
+  error load_state(deserializer& source, const unsigned int version) override {
     serialize_state(source, state, version);
+    // TODO: refactor after visit API is in place (#470)
+    return {};
   }
 
   /// A reference to the actor's state.

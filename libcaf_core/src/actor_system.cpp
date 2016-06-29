@@ -176,33 +176,7 @@ actor_system::module::~module() {
   // nop
 }
 
-actor_system::actor_system(actor_system_config&& cfg)
-    : actor_system(new actor_system_config(std::move(cfg)), true) {
-  // nop
-}
-
-actor_system::actor_system()
-    : actor_system(new actor_system_config, true) {
-  // nop
-}
-
-actor_system_config* new_parsed_config(int argc, char** argv) {
-  auto ptr = new actor_system_config;
-  ptr->parse(argc, argv);
-  return ptr;
-}
-
-actor_system::actor_system(int argc, char** argv)
-    : actor_system(new_parsed_config(argc, argv), true) {
-  // nop
-}
-
 actor_system::actor_system(actor_system_config& cfg)
-    : actor_system(&cfg, false) {
-  // nop
-}
-
-actor_system::actor_system(actor_system_config* ptr, bool owns_ptr)
     : ids_(0),
       types_(*this),
       logger_(*this),
@@ -212,11 +186,8 @@ actor_system::actor_system(actor_system_config* ptr, bool owns_ptr)
       dummy_execution_unit_(this),
       await_actors_before_shutdown_(true),
       detached(0),
-      cfg_(ptr),
-      owns_cfg_(owns_ptr) {
-  CAF_ASSERT(ptr != nullptr);
+      cfg_(cfg) {
   CAF_SET_LOGGER_SYS(this);
-  auto& cfg = *ptr;
   for (auto& f : cfg.module_factories) {
     auto mod_ptr = f(*this);
     modules_[mod_ptr->id()].reset(mod_ptr);
@@ -306,8 +277,6 @@ actor_system::~actor_system() {
   await_detached_threads();
   registry_.stop();
   logger_.stop();
-  if (owns_cfg_)
-    delete cfg_;
   CAF_SET_LOGGER_SYS(nullptr);
 }
 

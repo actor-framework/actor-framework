@@ -93,12 +93,17 @@ public:
 
 using config_value = detail::parse_ini_t::value;
 
+struct config : actor_system_config {
+  config() {
+    parse(test::engine::argc(), test::engine::argv());
+  }
+};
+
 struct fixture {
+  actor_system_config cfg;
   actor_system system;
 
-  fixture()
-      : system(test::engine::argc(), test::engine::argv()),
-        config_server(unsafe_actor_handle_init) {
+  fixture() : system(cfg), config_server(unsafe_actor_handle_init) {
     // nop
   }
 

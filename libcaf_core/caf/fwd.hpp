@@ -146,6 +146,8 @@ class abstract_coordinator;
 
 namespace detail {
 
+template <class> class type_erased_value_impl;
+
 class disposer;
 class message_data;
 class group_manager;

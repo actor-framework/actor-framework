@@ -44,7 +44,7 @@ public:
   // -- friend types that need access to private ctors
 
   template <class>
-  friend class type_erased_value_impl;
+  friend class detail::type_erased_value_impl;
 
   template <class>
   friend class data_processor;

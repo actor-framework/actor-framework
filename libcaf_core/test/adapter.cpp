@@ -48,6 +48,11 @@ struct fixture {
     return dptr->is_terminated();
   }
 
+  fixture() : system(cfg) {
+    // nop
+  }
+
+  actor_system_config cfg;
   actor_system system;
   scoped_actor self{system, true};
 };

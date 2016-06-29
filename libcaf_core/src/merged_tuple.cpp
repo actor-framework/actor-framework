@@ -65,10 +65,10 @@ void* merged_tuple::get_mutable(size_t pos) {
   return data_[p.first]->get_mutable(p.second);
 }
 
-void merged_tuple::load(size_t pos, deserializer& source) {
+error merged_tuple::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  data_[p.first]->load(p.second, source);
+  return data_[p.first]->load(p.second, source);
 }
 
 size_t merged_tuple::size() const noexcept {
@@ -103,10 +103,10 @@ type_erased_value_ptr merged_tuple::copy(size_t pos) const {
   return data_[p.first]->copy(p.second);
 }
 
-void merged_tuple::save(size_t pos, serializer& sink) const {
+error merged_tuple::save(size_t pos, serializer& sink) const {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  data_[p.first]->save(p.second, sink);
+  return data_[p.first]->save(p.second, sink);
 }
 
 const merged_tuple::mapping_type& merged_tuple::mapping() const {

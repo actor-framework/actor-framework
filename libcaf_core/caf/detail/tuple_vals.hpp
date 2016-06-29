@@ -32,6 +32,7 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/message_data.hpp"
 #include "caf/detail/try_serialize.hpp"
+#include "caf/make_type_erased_value.hpp"
 
 namespace caf {
 namespace detail {
@@ -58,11 +59,13 @@ struct tup_ptr_access {
   }
 
   template <class T, class Processor>
-  static void serialize(size_t pos, T& tup, Processor& proc) {
+  static error serialize(size_t pos, T& tup, Processor& proc) {
     if (pos == Pos)
       try_serialize(proc, &std::get<Pos>(tup));
     else
       tup_ptr_access<Pos + 1, Max>::serialize(pos, tup, proc);
+    // TODO: refactor after visit API is in place (#470)
+    return {};
   }
 
   template <class T>
@@ -181,7 +184,7 @@ public:
     return tup_ptr_access<0, sizeof...(Ts)>::copy(pos, data_);
   }
 
-  void load(size_t pos, deserializer& source) override {
+  error load(size_t pos, deserializer& source) override {
     return tup_ptr_access<0, sizeof...(Ts)>::serialize(pos, data_, source);
   }
 
@@ -193,7 +196,7 @@ public:
     return types_[pos];
   }
 
-  void save(size_t pos, serializer& sink) const override {
+  error save(size_t pos, serializer& sink) const override {
     // the serialization framework uses non-const arguments for deserialization,
     // but this cast is safe since the values are not actually changed
     auto& nc_data = const_cast<data_type&>(data_);

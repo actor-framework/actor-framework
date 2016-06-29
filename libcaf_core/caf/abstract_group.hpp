@@ -72,7 +72,7 @@ public:
   using module_ptr = module*;
   using unique_module_ptr = std::unique_ptr<module>;
 
-  virtual void save(serializer& sink) const = 0;
+  virtual error save(serializer& sink) const = 0;
 
   /// Returns a string representation of the group identifier, e.g.,
   /// "224.0.0.1" for IPv4 multicast or a user-defined string for local groups.

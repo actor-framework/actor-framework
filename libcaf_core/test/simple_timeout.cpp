@@ -51,6 +51,11 @@ timer::behavior_type timer_impl(timer::pointer self) {
 }
 
 struct fixture {
+  fixture() : system(cfg) {
+    // nop
+  }
+
+  actor_system_config cfg;
   actor_system system;
 };
 

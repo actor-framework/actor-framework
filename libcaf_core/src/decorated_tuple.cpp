@@ -59,7 +59,7 @@ void* decorated_tuple::get_mutable(size_t pos) {
   return decorated_->get_mutable(mapping_[pos]);
 }
 
-void decorated_tuple::load(size_t pos, deserializer& source) {
+error decorated_tuple::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < size());
   return decorated_->load(mapping_[pos], source);
 }
@@ -92,7 +92,7 @@ type_erased_value_ptr decorated_tuple::copy(size_t pos) const {
   return decorated_->copy(mapping_[pos]);
 }
 
-void decorated_tuple::save(size_t pos, serializer& sink) const {
+error decorated_tuple::save(size_t pos, serializer& sink) const {
   CAF_ASSERT(pos < size());
   return decorated_->save(mapping_[pos], sink);
 }

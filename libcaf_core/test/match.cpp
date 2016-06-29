@@ -26,6 +26,7 @@
 
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
+#include "caf/make_type_erased_tuple_view.hpp"
 
 using namespace caf;
 using namespace std;

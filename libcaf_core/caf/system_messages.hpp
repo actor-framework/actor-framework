@@ -45,7 +45,7 @@ public:
   friend class data_processor;
 
   template <class>
-  friend class type_erased_value_impl;
+  friend class detail::type_erased_value_impl;
 
   // -- constructors -----------------------------------------------------------
 
@@ -86,7 +86,7 @@ public:
   friend class data_processor;
 
   template <class>
-  friend class type_erased_value_impl;
+  friend class detail::type_erased_value_impl;
 
   // -- constructors -----------------------------------------------------------
 

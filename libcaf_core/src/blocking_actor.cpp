@@ -49,8 +49,8 @@ bool blocking_actor::accept_one_cond::post() {
   return false;
 }
 
-blocking_actor::blocking_actor(actor_config& sys)
-    : extended_base(sys.add_flag(local_actor::is_blocking_flag)) {
+blocking_actor::blocking_actor(actor_config& cfg)
+    : extended_base(cfg.add_flag(local_actor::is_blocking_flag)) {
   // nop
 }
 

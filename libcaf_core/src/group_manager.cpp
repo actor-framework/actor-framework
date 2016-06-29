@@ -110,7 +110,7 @@ public:
     erase_subscriber(who);
   }
 
-  void save(serializer& sink) const override;
+  error save(serializer& sink) const override;
 
   void stop() override {
     CAF_LOG_TRACE("");
@@ -378,10 +378,12 @@ public:
     return {p.first->second};
   }
 
-  void save(const local_group* ptr, serializer& sink) const {
+  error save(const local_group* ptr, serializer& sink) const {
     CAF_ASSERT(ptr != nullptr);
     CAF_LOG_TRACE("");
     sink << ptr->identifier() << actor_cast<strong_actor_ptr>(ptr->broker());
+    // TODO: refactor after visit API is in place (#470)
+    return {};
   }
 
   void stop() override {
@@ -419,11 +421,13 @@ local_group::~local_group() {
   // nop
 }
 
-void local_group::save(serializer& sink) const {
+error local_group::save(serializer& sink) const {
   CAF_LOG_TRACE("");
   // this cast is safe, because the only available constructor accepts
   // local_group_module* as module pointer
   static_cast<local_group_module*>(module_)->save(this, sink);
+  // TODO: refactor after visit API is in place (#470)
+  return {};
 }
 
 std::atomic<size_t> s_ad_hoc_id;

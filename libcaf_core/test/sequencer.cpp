@@ -58,6 +58,10 @@ second_stage::behavior_type typed_second_stage() {
 }
 
 struct fixture {
+  fixture() : system(cfg), self(system, true) {
+    // nop
+  }
+
   template <class Actor>
   static bool exited(const Actor& handle) {
     auto ptr = actor_cast<abstract_actor*>(handle);
@@ -66,8 +70,9 @@ struct fixture {
     return dptr->is_terminated();
   }
 
+  actor_system_config cfg;
   actor_system system;
-  scoped_actor self{system, true};
+  scoped_actor self;
 };
 
 } // namespace <anonymous>
@@ -75,8 +80,10 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(sequencer_tests, fixture)
 
 CAF_TEST(identity) {
-  actor_system system_of_g;
-  actor_system system_of_f;
+  actor_system_config cfg_g;
+  actor_system system_of_g{cfg_g};
+  actor_system_config cfg_f;
+  actor_system system_of_f{cfg_f};
   auto g = system_of_g.spawn(typed_first_stage);
   auto f = system_of_f.spawn(typed_second_stage);
   CAF_CHECK_EQUAL(system_of_g.registry().running(), 1u);

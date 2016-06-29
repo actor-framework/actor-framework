@@ -58,6 +58,8 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/make_type_erased_view.hpp"
+#include "caf/make_type_erased_tuple_view.hpp"
 
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
@@ -67,6 +69,7 @@
 
 using namespace std;
 using namespace caf;
+using caf::detail::type_erased_value_impl;
 
 namespace {
 

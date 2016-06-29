@@ -46,11 +46,21 @@ void chattier_actor(event_based_actor* self, const std::string& fn) {
   aout(self) << chattier_line << endl;
 }
 
+struct fixture {
+  fixture() : system(cfg) {
+    // nop
+  }
+
+  actor_system_config cfg;
+  actor_system system;
+  scoped_actor self{system, true};
+};
+
 } // namespace <anonymous>
 
+CAF_TEST_FIXTURE_SCOPE(adapter_tests, fixture)
+
 CAF_TEST(redirect_aout_globally) {
-  actor_system system;
-  scoped_actor self{system};
   self->join(system.groups().get_local(global_redirect));
   actor_ostream::redirect_all(system, global_redirect);
   system.spawn(chatty_actor);
@@ -68,8 +78,6 @@ CAF_TEST(redirect_aout_globally) {
 }
 
 CAF_TEST(global_and_local_redirect) {
-  actor_system system;
-  scoped_actor self{system};
   self->join(system.groups().get_local(global_redirect));
   self->join(system.groups().get_local(local_redirect));
   actor_ostream::redirect_all(system, global_redirect);
@@ -94,3 +102,5 @@ CAF_TEST(global_and_local_redirect) {
   self->await_all_other_actors_done();
   CAF_CHECK_EQUAL(self->mailbox().count(), 0u);
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

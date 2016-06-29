@@ -232,9 +232,6 @@ public:
   /// finished execution.
   virtual void on_exit();
 
-  /// Returns all joined groups.
-  std::vector<group> joined_groups() const;
-
   /// Creates a `typed_response_promise` to respond to a request later on.
   /// `make_response_promise<typed_response_promise<int, int>>()`
   /// is equivalent to `make_response_promise<int, int>()`.
@@ -274,12 +271,12 @@ public:
   /// Serializes the state of this actor to `sink`. This function is
   /// only called if this actor has set the `is_serializable` flag.
   /// The default implementation throws a `std::logic_error`.
-  virtual void save_state(serializer& sink, const unsigned int version);
+  virtual error save_state(serializer& sink, const unsigned int version);
 
   /// Deserializes the state of this actor from `source`. This function is
   /// only called if this actor has set the `is_serializable` flag.
   /// The default implementation throws a `std::logic_error`.
-  virtual void load_state(deserializer& source, const unsigned int version);
+  virtual error load_state(deserializer& source, const unsigned int version);
 
   // -- here be dragons: end of public interface -------------------------------
 

@@ -89,6 +89,11 @@ simple_cell(cell::stateful_pointer<cell_state> self) {
 }
 
 struct fixture {
+  fixture() : system(cfg) {
+    // nop
+  }
+
+  actor_system_config cfg;
   actor_system system;
 };
 

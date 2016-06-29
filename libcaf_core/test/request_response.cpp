@@ -236,9 +236,10 @@ behavior server(event_based_actor* self) {
 }
 
 struct fixture {
+  actor_system_config cfg;
   actor_system system;
   scoped_actor self;
-  fixture() : system(), self(system) {
+  fixture() : system(cfg), self(system) {
     // nop
   }
 };

@@ -52,13 +52,14 @@ public:
 
 struct fixture {
   // allows us to check s_dtors after dtor of actor_system
+  actor_system_config cfg;
   union { actor_system system; };
   union { scoped_execution_unit context; };
 
   std::function<actor ()> spawn_worker;
 
   fixture() {
-    new (&system) actor_system();
+    new (&system) actor_system(cfg);
     new (&context) scoped_execution_unit(&system);
     spawn_worker = [&] {
       return system.spawn<worker>();

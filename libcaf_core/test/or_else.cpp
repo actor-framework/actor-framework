@@ -48,6 +48,11 @@ message_handler handle_c() {
 }
 
 struct fixture {
+  fixture() : system(cfg) {
+    // nop
+  }
+
+  actor_system_config cfg;
   actor_system system;
 
   void run_testee(actor testee) {

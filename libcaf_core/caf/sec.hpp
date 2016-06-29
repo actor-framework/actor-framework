@@ -19,12 +19,13 @@
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 31-70 (Error.tex)
+// Manual references: lines 31-81 (Error.tex)
 
 #ifndef CAF_SEC_HPP
 #define CAF_SEC_HPP
 
 #include "caf/error.hpp"
+#include "caf/make_message.hpp"
 
 namespace caf {
 

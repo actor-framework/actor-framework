@@ -54,7 +54,7 @@ public:
 
   void* get_mutable(size_t pos) override;
 
-  void load(size_t pos, deserializer& source) override;
+  error load(size_t pos, deserializer& source) override;
 
   // -- overridden observers of type_erased_tuple ------------------------------
 
@@ -70,7 +70,7 @@ public:
 
   type_erased_value_ptr copy(size_t pos) const override;
 
-  void save(size_t pos, serializer& sink) const override;
+  error save(size_t pos, serializer& sink) const override;
 
   // -- observers --------------------------------------------------------------
 

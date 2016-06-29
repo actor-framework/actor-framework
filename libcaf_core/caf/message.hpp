@@ -25,18 +25,17 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/skip.hpp"
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/optional.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/skip.hpp"
 #include "caf/index_mapping.hpp"
 #include "caf/allowed_unsafe_message_type.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/comparable.hpp"
-#include "caf/detail/tuple_vals.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/message_data.hpp"
 #include "caf/detail/implicit_conversions.hpp"
@@ -431,80 +430,6 @@ struct message::cli_res {
 inline message operator+(const message& lhs, const message& rhs) {
   return message::concat(lhs, rhs);
 }
-
-/// Unboxes atom constants, i.e., converts `atom_constant<V>` to `V`.
-/// @relates message
-template <class T, int IsPlaceholderRes = std::is_placeholder<T>::value>
-struct unbox_message_element {
-  using type = index_mapping;
-};
-
-template <class T>
-struct unbox_message_element<T, 0> {
-  using type = T;
-};
-
-template <atom_value V>
-struct unbox_message_element<atom_constant<V>, 0> {
-  using type = atom_value;
-};
-
-///
-template <class T>
-struct is_serializable_or_whitelisted {
-  static constexpr bool value = detail::is_serializable<T>::value
-                                || allowed_unsafe_message_type<T>::value;
-};
-
-/// Returns a new `message` containing the values `(x, xs...)`.
-/// @relates message
-template <class T, class... Ts>
-typename std::enable_if<
-  ! std::is_same<message, typename std::decay<T>::type>::value
-  || (sizeof...(Ts) > 0),
-  message
->::type
-make_message(T&& x, Ts&&... xs) {
-  using namespace caf::detail;
-  using stored_types =
-    type_list<
-      typename unbox_message_element<
-        typename strip_and_convert<T>::type
-      >::type,
-      typename unbox_message_element<
-        typename strip_and_convert<Ts>::type
-      >::type...
-    >;
-  static_assert(tl_forall<stored_types, is_serializable_or_whitelisted>::value,
-                "at least one type is not serializable via free "
-                "'serialize(Processor&, T&, const unsigned int)' or "
-                "`T::serialize(Processor&, const unsigned int)` "
-                "member function; you can whitelist individual types by "
-                "specializing `caf::allowed_unsafe_message_type<T>` "
-                "or using the macro CAF_ALLOW_UNSAFE_MESSAGE_TYPE");
-  using storage = typename tl_apply<stored_types, tuple_vals>::type;
-  auto ptr = make_counted<storage>(std::forward<T>(x), std::forward<Ts>(xs)...);
-  return message{detail::message_data::cow_ptr{std::move(ptr)}};
-}
-
-/// Returns a copy of @p other.
-/// @relates message
-inline message make_message(message other) {
-  return other;
-}
-
-/// Returns an empty `message`.
-/// @relates message
-inline message make_message() {
-  return message{};
-}
-
-struct message_factory {
-  template <class... Ts>
-  message operator()(Ts&&... xs) const {
-    return make_message(std::forward<Ts>(xs)...);
-  }
-};
 
 } // namespace caf
 

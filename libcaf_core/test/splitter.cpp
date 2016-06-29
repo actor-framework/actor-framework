@@ -55,6 +55,7 @@ behavior untyped_second_stage() {
 }
 
 struct fixture {
+  actor_system_config cfg;
   actor_system system;
   scoped_actor self;
   actor first;
@@ -62,7 +63,8 @@ struct fixture {
   actor first_and_second;
 
   fixture()
-      : self(system, true),
+      : system(cfg),
+        self(system, true),
         first(unsafe_actor_handle_init),
         second(unsafe_actor_handle_init),
         first_and_second(unsafe_actor_handle_init) {

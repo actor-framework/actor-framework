@@ -31,61 +31,64 @@ namespace {
 using die_atom = atom_constant<atom("die")>;
 using done_atom = atom_constant<atom("done")>;
 
+class testee : public event_based_actor {
+public:
+  testee(actor_config& cfg, actor buddy) : event_based_actor(cfg) {
+    attach_functor([=](const error& reason) {
+      send(buddy, done_atom::value, reason);
+    });
+  }
+
+  behavior make_behavior() {
+    return {
+      [=](die_atom) {
+        quit(exit_reason::user_shutdown);
+      }
+    };
+  }
+};
+
+class spawner : public event_based_actor {
+public:
+  spawner(actor_config& cfg)
+      : event_based_actor(cfg),
+        downs_(0),
+        testee_(spawn<testee, monitored>(this)) {
+    set_down_handler([=](down_msg& msg) {
+      CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+      CAF_CHECK_EQUAL(msg.source, testee_.address());
+      if (++downs_ == 2)
+        quit(msg.reason);
+    });
+  }
+
+  behavior make_behavior() {
+    return {
+      [=](done_atom, const error& reason) {
+        CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
+        if (++downs_ == 2) {
+          quit(reason);
+        }
+      },
+      [=](die_atom x) {
+        return delegate(testee_, x);
+      }
+    };
+  }
+
+  void on_exit() {
+    destroy(testee_);
+  }
+
+private:
+  int downs_;
+  actor testee_;
+};
+
 } // namespace <anonymous>
 
 CAF_TEST(constructor_attach) {
-  class testee : public event_based_actor {
-  public:
-    testee(actor_config& cfg, actor buddy) : event_based_actor(cfg) {
-      attach_functor([=](const error& reason) {
-        send(buddy, done_atom::value, reason);
-      });
-    }
-
-    behavior make_behavior() {
-      return {
-        [=](die_atom) {
-          quit(exit_reason::user_shutdown);
-        }
-      };
-    }
-  };
-  class spawner : public event_based_actor {
-  public:
-    spawner(actor_config& cfg)
-        : event_based_actor(cfg),
-          downs_(0),
-          testee_(spawn<testee, monitored>(this)) {
-      set_down_handler([=](down_msg& msg) {
-        CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-        CAF_CHECK_EQUAL(msg.source, testee_.address());
-        if (++downs_ == 2)
-          quit(msg.reason);
-      });
-    }
-
-    behavior make_behavior() {
-      return {
-        [=](done_atom, const error& reason) {
-          CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
-          if (++downs_ == 2) {
-            quit(reason);
-          }
-        },
-        [=](die_atom x) {
-          return delegate(testee_, x);
-        }
-      };
-    }
-
-    void on_exit() {
-      destroy(testee_);
-    }
-
-  private:
-    int downs_;
-    actor testee_;
-  };
-  actor_system system;
+  actor_system_config cfg;
+  actor_system system{cfg};
   anon_send(system.spawn<spawner>(), die_atom::value);
 }

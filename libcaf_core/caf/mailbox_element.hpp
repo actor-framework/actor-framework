@@ -26,6 +26,7 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/make_message.hpp"
 #include "caf/message_view.hpp"
 #include "caf/memory_managed.hpp"
 #include "caf/type_erased_tuple.hpp"
@@ -33,6 +34,7 @@
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/type_erased_tuple_view.hpp"
 
 namespace caf {
 
@@ -117,12 +119,12 @@ public:
 /// Provides a view for treating arbitrary data as message element.
 template <class... Ts>
 class mailbox_element_view : public mailbox_element,
-                             public type_erased_tuple_view<Ts...> {
+                             public detail::type_erased_tuple_view<Ts...> {
 public:
   mailbox_element_view(strong_actor_ptr&& sender, message_id id,
                        forwarding_stack&& stages, Ts&... xs)
     : mailbox_element(std::move(sender), id, std::move(stages)),
-      type_erased_tuple_view<Ts...>(xs...) {
+      detail::type_erased_tuple_view<Ts...>(xs...) {
     // nop
   }
 

@@ -200,6 +200,11 @@ protected:
 };
 
 struct fixture {
+  fixture() : system(cfg) {
+    // nop
+  }
+
+  actor_system_config cfg;
   actor_system system;
 };
 

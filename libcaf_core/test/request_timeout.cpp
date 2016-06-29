@@ -166,12 +166,17 @@ void ping5(event_based_actor* self, const actor& pong_actor) {
 }
 
 struct fixture {
+  fixture() : system(cfg) {
+    // nop
+  }
+
+  actor_system_config cfg;
   actor_system system;
 };
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(request_timeout_tests, fixture)
 
 CAF_TEST(single_timeout) {
   system.spawn(ping1, system.spawn(pong));

@@ -17,44 +17,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#ifndef CAF_MAKE_TYPE_ERASED_VIEW_HPP
+#define CAF_MAKE_TYPE_ERASED_VIEW_HPP
 
-#define CAF_SUITE local_group
-#include "caf/test/unit_test.hpp"
+#include <functional>
 
-#include <chrono>
+#include "caf/type_erased_value.hpp"
 
-#include "caf/all.hpp"
+#include "caf/detail/type_erased_value_impl.hpp"
 
-using namespace caf;
+namespace caf {
 
-using msg_atom = atom_constant<atom("msg")>;
-using timeout_atom = atom_constant<atom("timeout")>;
-
-behavior testee(event_based_actor* self) {
-  auto counter = std::make_shared<int>(0);
-  auto grp = self->system().groups().get_local("test");
-  self->join(grp);
-  CAF_MESSAGE("self joined group");
-  self->send(grp, msg_atom::value);
-  return {
-    [=](msg_atom) {
-      CAF_MESSAGE("received `msg_atom`");
-      ++*counter;
-      self->leave(grp);
-      self->send(grp, msg_atom::value);
-      self->send(self, timeout_atom::value);
-    },
-    [=](timeout_atom) {
-      // this actor should receive only 1 message
-      CAF_CHECK_EQUAL(*counter, 1);
-      self->quit();
-    }
-  };
+/// @relates type_erased_value
+/// Creates a type-erased view for `x`.
+template <class T>
+detail::type_erased_value_impl<std::reference_wrapper<T>>
+make_type_erased_view(T& x) {
+  return {std::ref(x)};
 }
 
-CAF_TEST(test_local_group) {
-  actor_system_config cfg;
-  actor_system system{cfg};
-  system.spawn(testee);
-}
+} // namespace caf
+
+#endif // CAF_MAKE_TYPE_ERASED_VIEW_HPP

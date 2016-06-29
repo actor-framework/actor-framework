@@ -314,13 +314,12 @@ public:
 };
 
 struct fixture {
+  actor_system_config cfg;
   // put inside a union to control ctor/dtor timing
-  union {
-    actor_system system;
-  };
+  union { actor_system system; };
 
   fixture() {
-    new (&system) actor_system();
+    new (&system) actor_system(cfg);
   }
 
   ~fixture() {

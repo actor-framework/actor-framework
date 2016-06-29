@@ -125,6 +125,7 @@ public:
   friend class abstract_actor;
   friend class io::middleman;
 
+  actor_system() = delete;
   actor_system(const actor_system&) = delete;
   actor_system& operator=(const actor_system&) = delete;
 
@@ -161,15 +162,9 @@ public:
 
   using module_array = std::array<module_ptr, module::num_ids>;
 
-  actor_system();
-
-  actor_system(int argc, char** argv);
-
   /// @warning The system stores a reference to `cfg`, which means the
   ///          config object must outlive the actor system.
   explicit actor_system(actor_system_config& cfg);
-
-  explicit actor_system(actor_system_config&& cfg);
 
   virtual ~actor_system();
 
@@ -406,7 +401,7 @@ public:
 
   /// Returns the configuration of this actor system.
   const actor_system_config& config() const {
-    return *cfg_;
+    return cfg_;
   }
 
   /// @cond PRIVATE
@@ -423,8 +418,6 @@ public:
   /// @endcond
 
 private:
-  actor_system(actor_system_config* cfg, bool owns_cfg);
-
   template <class T>
   void check_invariants() {
     static_assert(! std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
@@ -470,9 +463,7 @@ private:
   std::atomic<size_t> detached;
   mutable std::mutex detached_mtx;
   mutable std::condition_variable detached_cv;
-
-  actor_system_config* cfg_;
-  bool owns_cfg_;
+  actor_system_config& cfg_;
 };
 
 } // namespace caf

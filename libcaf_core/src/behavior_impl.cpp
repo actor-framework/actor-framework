@@ -20,6 +20,7 @@
 #include "caf/detail/behavior_impl.hpp"
 
 #include "caf/message_handler.hpp"
+#include "caf/make_type_erased_tuple_view.hpp"
 
 namespace caf {
 namespace detail {

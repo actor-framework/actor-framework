@@ -19,6 +19,7 @@
 
 #include "caf/detail/dynamic_message_data.hpp"
 
+#include "caf/error.hpp"
 #include "caf/make_counted.hpp"
 
 namespace caf {
@@ -57,9 +58,9 @@ void* dynamic_message_data::get_mutable(size_t pos) {
   return elements_[pos]->get_mutable();
 }
 
-void dynamic_message_data::load(size_t pos, deserializer& source) {
+error dynamic_message_data::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < size());
-  elements_[pos]->load(source);
+  return elements_[pos]->load(source);
 }
 
 size_t dynamic_message_data::size() const noexcept {
@@ -90,9 +91,9 @@ type_erased_value_ptr dynamic_message_data::copy(size_t pos) const {
   return elements_[pos]->copy();
 }
 
-void dynamic_message_data::save(size_t pos, serializer& sink) const {
+error dynamic_message_data::save(size_t pos, serializer& sink) const {
   CAF_ASSERT(pos < size());
-  elements_[pos]->save(sink);
+  return elements_[pos]->save(sink);
 }
 
 void dynamic_message_data::clear() {

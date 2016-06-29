@@ -88,7 +88,12 @@ public:
 };
 
 struct fixture {
+  actor_system_config cfg;
   actor_system system;
+
+  fixture() : system(cfg) {
+    // nop
+  }
 
   template <class ActorUnderTest>
   void test_adder(ActorUnderTest aut) {

@@ -104,7 +104,12 @@ behavior tester(event_based_actor* self, const actor& aut) {
 }
 
 struct fixture {
+  actor_system_config cfg;
   actor_system system;
+
+  fixture() : system(cfg) {
+    // nop
+  }
 
   template <spawn_options Os, class... Ts>
   actor spawn(Ts&&... xs) {
@@ -121,7 +126,8 @@ struct fixture {
 
 CAF_TEST(destructor_call) {
   { // lifetime scope of actor systme
-    actor_system system;
+    actor_system_config cfg;
+    actor_system system{cfg};
     system.spawn<testee>();
   }
   CAF_CHECK_EQUAL(s_testees.load(), 0);

@@ -37,13 +37,15 @@ behavior mirror_impl(event_based_actor* self) {
 }
 
 struct fixture {
+  actor_system_config cfg;
   actor_system system;
   scoped_actor scoped_self;
   actor mirror;
   actor testee;
 
   fixture()
-      : scoped_self(system),
+      : system(cfg),
+        scoped_self(system),
         mirror(system.spawn(mirror_impl)),
         testee(unsafe_actor_handle_init) {
     // nop
