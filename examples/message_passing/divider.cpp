@@ -2,8 +2,8 @@
  * A very basic, interactive divider.                                         *
 \******************************************************************************/
 
-// Manual refs: 19-25, 35-48, 63-73 (MessagePassing);
-//              19-34, 51-56 (Error)
+// Manual refs: 19-25, 35-48, 68-77 (MessagePassing);
+//              19-34, 50-58 (Error)
 
 #include <iostream>
 
@@ -33,7 +33,7 @@ std::string to_string(math_error x) {
   }
 }
 
-using div_atom = atom_constant<atom("add")>;
+using div_atom = atom_constant<atom("div")>;
 
 using divider = typed_actor<replies_to<div_atom, double, double>::with<double>>;
 

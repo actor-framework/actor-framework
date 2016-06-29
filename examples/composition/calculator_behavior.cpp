@@ -5,7 +5,7 @@
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 18-50 (Actor.tex)
+// Manual references: lines 20-52 (Actor.tex)
 
 #include <iostream>
 
