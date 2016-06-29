@@ -347,7 +347,7 @@ scheduled_actor::categorize(mailbox_element& x) {
 }
 
 invoke_message_result scheduled_actor::consume(mailbox_element& x) {
-  CAF_LOG_TRACE(CAF_ARG(*x));
+  CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
   // short-circuit awaited responses
   if (! awaited_responses_.empty()) {
@@ -508,7 +508,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
 
 auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
 -> activation_result {
-  CAF_LOG_TRACE(x);
+  CAF_LOG_TRACE(CAF_ARG(x));
   if (! activate(ctx))
     return activation_result::terminated;
   return reactivate(x);
