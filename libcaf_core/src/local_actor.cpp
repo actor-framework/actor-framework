@@ -47,9 +47,7 @@ local_actor::local_actor(actor_config& cfg)
     : monitorable_actor(cfg),
       context_(cfg.host),
       initial_behavior_fac_(std::move(cfg.init_fun)) {
-  if (cfg.groups != nullptr)
-    for (auto& grp : *cfg.groups)
-      join(grp);
+  // nop
 }
 
 local_actor::~local_actor() {
@@ -92,30 +90,10 @@ void local_actor::demonitor(const actor_addr& whom) {
   ptr->get()->detach(tk);
 }
 
-void local_actor::join(const group& what) {
-  CAF_LOG_TRACE(CAF_ARG(what));
-  if (what == invalid_group)
-    return;
-  if (what->subscribe(ctrl()))
-    subscriptions_.emplace(what);
-}
-
-void local_actor::leave(const group& what) {
-  CAF_LOG_TRACE(CAF_ARG(what));
-  if (subscriptions_.erase(what) > 0)
-    what->unsubscribe(ctrl());
-}
-
 void local_actor::on_exit() {
   // nop
 }
 
-std::vector<group> local_actor::joined_groups() const {
-  std::vector<group> result;
-  for (auto& x : subscriptions_)
-    result.emplace_back(x);
-  return result;
-}
 
 message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++last_request_id_;
@@ -211,10 +189,6 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
     detail::sync_request_bouncer f{fail_state};
     mailbox_.close(f);
   }
-  auto me = ctrl();
-  for (auto& subscription : subscriptions_)
-    subscription->unsubscribe(me);
-  subscriptions_.clear();
   // tell registry we're done
   is_registered(false);
   monitorable_actor::cleanup(std::move(fail_state), host);

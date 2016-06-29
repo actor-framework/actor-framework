@@ -38,10 +38,18 @@ namespace mixin {
 template <class Base, class Subtype>
 class sender : public Base {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using extended_base = sender;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   template <class... Ts>
   sender(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
+
+  // -- send function family ---------------------------------------------------
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
   /// @warning The returned handle is actor specific and the response to the

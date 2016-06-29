@@ -202,13 +202,6 @@ public:
     return context_->system();
   }
 
-  /// Causes this actor to subscribe to the group `what`.
-  /// The group will be unsubscribed if the actor finishes execution.
-  void join(const group& what);
-
-  /// Causes this actor to leave the group `what`.
-  void leave(const group& what);
-
   /// @cond PRIVATE
 
   void monitor(abstract_actor* whom);
@@ -376,9 +369,6 @@ protected:
 
   // last used request ID
   message_id last_request_id_;
-
-  // used for group management
-  std::set<group> subscriptions_;
 
   /// Factory function for returning initial behavior in function-based actors.
   std::function<behavior (local_actor*)> initial_behavior_fac_;

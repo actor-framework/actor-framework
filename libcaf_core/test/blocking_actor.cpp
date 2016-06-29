@@ -17,40 +17,47 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/message_id.hpp"
-#include "caf/event_based_actor.hpp"
+#include "caf/config.hpp"
 
-namespace caf {
+#define CAF_SUITE blocking_actor
+#include "caf/test/unit_test.hpp"
 
-event_based_actor::event_based_actor(actor_config& cfg) : extended_base(cfg) {
-  // nop
-}
+#include "caf/all.hpp"
 
-event_based_actor::~event_based_actor() {
-  // nop
-}
+using namespace caf;
 
-void event_based_actor::initialize() {
-  CAF_LOG_TRACE("subtype =" << logger::render_type_name(typeid(*this)).c_str());
-  is_initialized(true);
-  auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior:"
-                           << CAF_ARG(has_behavior()));
-  if (bhvr) {
-    // make_behavior() did return a behavior instead of using become()
-    CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
-    become(std::move(bhvr));
+namespace {
+
+struct fixture {
+  actor_system_config cfg;
+  actor_system system;
+  scoped_actor self;
+
+  fixture() : system(cfg), self(system) {
+    // nop
   }
+};
+
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(blocking_actor_tests, fixture)
+
+CAF_TEST(catch_all) {
+  self->send(self, 42);
+  self->receive(
+    [](float) {
+      CAF_FAIL("received unexpected float");
+    },
+    others >> [](message_view& x) -> result<message> {
+      CAF_CHECK_EQUAL(to_string(x.content()), "(42)");
+      return sec::unexpected_message;
+    }
+  );
+  self->receive(
+    [](const error& err) {
+      CAF_CHECK_EQUAL(err, sec::unexpected_message);
+    }
+  );
 }
 
-behavior event_based_actor::make_behavior() {
-  CAF_LOG_TRACE("");
-  behavior res;
-  if (initial_behavior_fac_) {
-    res = initial_behavior_fac_(this);
-    initial_behavior_fac_ = nullptr;
-  }
-  return res;
-}
-
-} // namespace caf
+CAF_TEST_FIXTURE_SCOPE_END()

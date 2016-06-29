@@ -43,6 +43,7 @@
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
+#include "caf/mixin/subscriber.hpp"
 
 namespace caf {
 namespace mixin {
@@ -60,14 +61,12 @@ namespace caf {
 /// @extends local_actor
 class blocking_actor
     : public extend<local_actor, blocking_actor>::
-             with<mixin::requester, mixin::sender>,
+             with<mixin::requester,
+                  mixin::sender,
+                  mixin::subscriber>,
       public dynamically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------
-
-  /// Direct base type.
-  using super = extend<local_actor, blocking_actor>::
-                with<mixin::requester, mixin::sender>;
 
   /// Absolute timeout type.
   using timeout_type = std::chrono::high_resolution_clock::time_point;

@@ -21,6 +21,8 @@
 #define CAF_GROUP_HPP
 
 #include <string>
+#include <utility>
+#include <functional>
 
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
@@ -113,5 +115,15 @@ private:
 std::string to_string(const group& x);
 
 } // namespace caf
+
+namespace std {
+template <>
+struct hash<caf::group> {
+  inline size_t operator()(const caf::group& x) const {
+    // groups are singleton objects, the address is thus the best possible hash
+    return ! x ? 0 : reinterpret_cast<size_t>(x.get());
+  }
+};
+} // namespace std
 
 #endif // CAF_GROUP_HPP

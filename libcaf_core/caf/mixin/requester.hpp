@@ -42,12 +42,18 @@ struct is_blocking_requester : std::false_type { };
 template <class Base, class Subtype>
 class requester : public Base {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using extended_base = requester;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   template <class... Ts>
   requester(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
 
-  static constexpr bool is_blocking_subtype = is_blocking_requester<Subtype>::value;
+  // -- request ----------------------------------------------------------------
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
   /// @returns A handle identifying a future-like handle to the response.
@@ -63,7 +69,7 @@ public:
                         typename std::decay<Ts>::type
                       >::type...>
                   >::type,
-                  is_blocking_subtype>
+                  is_blocking_requester<Subtype>::value>
   request(const Handle& dest, const duration& timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
@@ -73,16 +79,12 @@ public:
         >::type...>;
     static_assert(actor_accepts_message<typename signatures_of<Handle>::type, token>::value,
                   "receiver does not accept given message");
-    auto req_id = dptr()->new_request_id(P);
-    dest->eq_impl(req_id, dptr()->ctrl(), dptr()->context(),
+    auto dptr = static_cast<Subtype*>(this);
+    auto req_id = dptr->new_request_id(P);
+    dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
                   std::forward<Ts>(xs)...);
-    dptr()->request_response_timeout(timeout, req_id);
-    return {req_id.response_id(), dptr()};
-  }
-
-private:
-  Subtype* dptr() {
-    return static_cast<Subtype*>(this);
+    dptr->request_response_timeout(timeout, req_id);
+    return {req_id.response_id(), dptr};
   }
 };
 

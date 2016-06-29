@@ -41,12 +41,20 @@ namespace mixin {
 template <class Base, class Derived>
 class behavior_changer : public Base {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using extended_base = behavior_changer;
+
   using behavior_type = typename behavior_type_of<Derived>::type;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
   behavior_changer(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
     // nop
   }
+
+  // -- behavior management ----------------------------------------------------
 
   void become(behavior_type bhvr) {
     this->do_become(std::move(bhvr.unbox()), true);

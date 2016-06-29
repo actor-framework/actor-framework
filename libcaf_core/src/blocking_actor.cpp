@@ -50,7 +50,7 @@ bool blocking_actor::accept_one_cond::post() {
 }
 
 blocking_actor::blocking_actor(actor_config& sys)
-    : super(sys.add_flag(local_actor::is_blocking_flag)) {
+    : extended_base(sys.add_flag(local_actor::is_blocking_flag)) {
   // nop
 }
 

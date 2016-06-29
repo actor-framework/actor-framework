@@ -104,14 +104,13 @@ public:
             make_message(std::forward<Ts>(xs)...), ctx);
   }
 
+  virtual void unsubscribe(const actor_control_block* who) = 0;
+
   /// @endcond
 
 protected:
   abstract_group(actor_system& sys, module_ptr module,
                  std::string group_id, const node_id& nid);
-
-  // called by local_actor
-  virtual void unsubscribe(const actor_control_block* who) = 0;
 
   actor_system& system_;
   module_ptr module_;

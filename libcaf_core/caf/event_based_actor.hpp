@@ -31,6 +31,7 @@
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
+#include "caf/mixin/subscriber.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 
 #include "caf/logger.hpp"
@@ -49,23 +50,31 @@ public:
 class event_based_actor : public extend<scheduled_actor,
                                         event_based_actor>::
                                  with<mixin::sender, mixin::requester,
-                                      mixin::behavior_changer>,
+                                      mixin::behavior_changer,
+                                      mixin::subscriber>,
                           public dynamically_typed_actor_base {
 public:
-  using super = extend<scheduled_actor, event_based_actor>::
-                with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+  // -- member types -----------------------------------------------------------
 
+  /// Required by `spawn` for type deduction.
   using signatures = none_t;
 
+  /// Required by `spawn` for type deduction.
   using behavior_type = behavior;
+
+  // -- constructors, destructors ----------------------------------------------
 
   explicit event_based_actor(actor_config& cfg);
 
   ~event_based_actor();
 
+  // -- overridden functions of local_actor ------------------------------------
+
   void initialize() override;
 
 protected:
+  // -- behavior management ----------------------------------------------------
+
   /// Returns the initial actor behavior.
   virtual behavior make_behavior();
 };
