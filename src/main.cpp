@@ -166,7 +166,8 @@ class cpp_binding : public binding {
 public:
   using binding::binding;
 
-  virtual pybind11::object to_object(message& xs, size_t pos) const = 0;
+  virtual pybind11::object to_object(const type_erased_tuple& xs,
+                                     size_t pos) const = 0;
 };
 
 template <class T>
@@ -178,7 +179,8 @@ public:
     xs.append(x.cast<T>());
   }
 
-  pybind11::object to_object(message& xs, size_t pos) const override {
+  pybind11::object to_object(const type_erased_tuple& xs,
+                             size_t pos) const override {
     return pybind11::cast(xs.get_as<T>(pos));
   }
 };
@@ -469,7 +471,7 @@ void py_send(pybind11::args xs) {
   s_context->self->send(dest, mb.move_to_message());
 }
 
-pybind11::tuple tuple_from_message(message msg) {
+pybind11::tuple tuple_from_message(const type_erased_tuple& msg) {
   auto& self = s_context->self;
   auto& bindings = s_context->cfg.portable_bindings();
   pybind11::tuple result(msg.size());
@@ -500,7 +502,7 @@ pybind11::tuple py_dequeue() {
     self->await_data();
     ptr = self->next_message();
   }
-  return tuple_from_message(std::move(ptr->msg));
+  return tuple_from_message(std::move(ptr->content()));
 }
 
 pybind11::tuple py_dequeue_with_timeout(absolute_receive_timeout timeout) {
@@ -511,7 +513,7 @@ pybind11::tuple py_dequeue_with_timeout(absolute_receive_timeout timeout) {
       return pybind11::none{};
     ptr = self->next_message();
   }
-  return tuple_from_message(std::move(ptr->msg));
+  return tuple_from_message(std::move(ptr->content()));
 }
 
 actor py_self() {
