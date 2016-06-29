@@ -43,74 +43,76 @@ private:
 
 } // namespace anonymous
 
-asio_tcp_socket new_tcp_connection(io_service& backend, const std::string& host,
-                                  uint16_t port) {
-  asio_tcp_socket fd{backend};
+expected<asio_tcp_socket>
+new_tcp_connection(io_service& ios, const std::string& host, uint16_t port) {
+  asio_tcp_socket fd{ios};
   using boost::asio::ip::tcp;
   tcp::resolver r(fd.get_io_service());
   tcp::resolver::query q(host, std::to_string(port));
   boost::system::error_code ec;
   auto i = r.resolve(q, ec);
-  if (ec) {
-    CAF_RAISE_ERROR("could not resolve host: " + host);
-  }
+  if (ec)
+    return make_error(sec::cannot_connect_to_node);
   boost::asio::connect(fd, i, ec);
-  if (ec) {
-    CAF_RAISE_ERROR("could not connect to host: " + host +
-                    ":" + std::to_string(port));
-  }
-  return fd;
+  if (ec)
+    return make_error(sec::cannot_connect_to_node);
+  return asio_tcp_socket{std::move(fd)};
 }
 
-void ip_bind(asio_tcp_socket_acceptor& fd, uint16_t port,
-             const char* addr, bool reuse_addr) {
+error ip_bind(asio_tcp_socket_acceptor& fd, uint16_t port,
+              const char* addr, bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(reuse_addr));
   using boost::asio::ip::tcp;
-  try {
-    auto bind_and_listen = [&](tcp::endpoint& ep) {
-      CAF_LOG_DEBUG("created IP endpoint:" << CAF_ARG(ep.address().to_string())
-                    << CAF_ARG(ep.port()));
-      fd.open(ep.protocol());
-      if (reuse_addr)
-        fd.set_option(tcp::acceptor::reuse_address(reuse_addr));
-      fd.bind(ep);
-      fd.listen();
-    };
-    if (addr) {
-      CAF_LOG_DEBUG(CAF_ARG(addr));
-      tcp::endpoint ep(boost::asio::ip::address::from_string(addr), port);
-      CAF_LOG_DEBUG("got 'em");
-      bind_and_listen(ep);
-    } else {
-      CAF_LOG_DEBUG("addr = nullptr");
-      tcp::endpoint ep(tcp::v6(), port);
-      bind_and_listen(ep);
+  auto bind_and_listen = [&](tcp::endpoint& ep) -> error {
+    CAF_LOG_DEBUG("created IP endpoint:" << CAF_ARG(ep.address().to_string())
+                  << CAF_ARG(ep.port()));
+    boost::system::error_code ec;
+    fd.open(ep.protocol());
+    if (reuse_addr) {
+      fd.set_option(tcp::acceptor::reuse_address(reuse_addr), ec);
+      if (ec)
+        return sec::cannot_open_port;
     }
-  } catch (boost::system::system_error& se) {
-    if (se.code() == boost::system::errc::address_in_use) {
-      CAF_RAISE_ERROR(se.code().message());
-    }
-    CAF_RAISE_ERROR(se.code().message());
+    fd.bind(ep, ec);
+    if (ec)
+      return sec::cannot_open_port;
+    fd.listen();
+    return {};
+  };
+  if (addr) {
+    CAF_LOG_DEBUG(CAF_ARG(addr));
+    tcp::endpoint ep(boost::asio::ip::address::from_string(addr), port);
+    CAF_LOG_DEBUG("got 'em");
+    return bind_and_listen(ep);
+  } else {
+    CAF_LOG_DEBUG("addr = nullptr");
+    tcp::endpoint ep(tcp::v6(), port);
+    return bind_and_listen(ep);
   }
 }
 
-connection_handle asio_multiplexer::new_tcp_scribe(const std::string& host,
-                                                   uint16_t port) {
-  asio_tcp_socket fd{new_tcp_connection(service(), host, port)};
+expected<connection_handle>
+asio_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
+  auto sck = new_tcp_connection(service(), host, port);
+  if (! sck)
+    return std::move(sck.error());
+  asio_tcp_socket fd{std::move(*sck)};
   auto id = int64_from_native_socket(fd.native_handle());
   std::lock_guard<std::mutex> lock(mtx_sockets_);
   unassigned_sockets_.insert(std::make_pair(id, std::move(fd)));
   return connection_handle::from_int(id);
 }
 
-void asio_multiplexer::assign_tcp_scribe(abstract_broker* self,
-                                         connection_handle hdl) {
+expected<void> asio_multiplexer::assign_tcp_scribe(abstract_broker* self,
+                                                   connection_handle hdl) {
   std::lock_guard<std::mutex> lock(mtx_sockets_);
   auto itr = unassigned_sockets_.find(hdl.id());
   if (itr != unassigned_sockets_.end()) {
     add_tcp_scribe(self, std::move(itr->second));
     unassigned_sockets_.erase(itr);
+    return unit;
   }
+  return sec::failed_to_assign_scribe_from_handle;
 }
 
 template <class Socket>
@@ -186,26 +188,31 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
   return add_tcp_scribe(self, std::move(sock));
 }
 
-connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
-                                                   const std::string& host,
-                                                   uint16_t port) {
+expected<connection_handle>
+asio_multiplexer::add_tcp_scribe(abstract_broker* self,
+                                 const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(host) << ":" << CAF_ARG(port));
-  return add_tcp_scribe(self, new_tcp_connection(service(), host, port));
+  auto conn = new_tcp_connection(service(), host, port);
+  if (! conn)
+    return std::move(conn.error());
+  return add_tcp_scribe(self, std::move(*conn));
 }
 
-std::pair<accept_handle, uint16_t>
+expected<std::pair<accept_handle, uint16_t>>
 asio_multiplexer::new_tcp_doorman(uint16_t port, const char* in, bool rflag) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (in ? in : "nullptr"));
   asio_tcp_socket_acceptor fd{service()};
-  ip_bind(fd, port, in, rflag);
+  auto err = ip_bind(fd, port, in, rflag);
+  if (err)
+    return err;
   auto id = int64_from_native_socket(fd.native_handle());
   auto assigned_port = fd.local_endpoint().port();
   std::lock_guard<std::mutex> lock(mtx_acceptors_);
   unassigned_acceptors_.insert(std::make_pair(id, std::move(fd)));
-  return {accept_handle::from_int(id), assigned_port};
+  return std::make_pair(accept_handle::from_int(id), assigned_port);
 }
 
-void asio_multiplexer::assign_tcp_doorman(abstract_broker* self,
+expected<void> asio_multiplexer::assign_tcp_doorman(abstract_broker* self,
                                           accept_handle hdl) {
   CAF_LOG_TRACE("");
   std::lock_guard<std::mutex> lock(mtx_acceptors_);
@@ -213,7 +220,9 @@ void asio_multiplexer::assign_tcp_doorman(abstract_broker* self,
   if (itr != unassigned_acceptors_.end()) {
     add_tcp_doorman(self, std::move(itr->second));
     unassigned_acceptors_.erase(itr);
+    return unit;
   }
+  return sec::failed_to_assign_doorman_from_handle;
 }
 
 accept_handle
@@ -273,23 +282,26 @@ accept_handle asio_multiplexer::add_tcp_doorman(abstract_broker* self,
   return add_tcp_doorman(self, std::move(sock));
 }
 
-std::pair<accept_handle, uint16_t>
+expected<std::pair<accept_handle, uint16_t>>
 asio_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port,
                                   const char* in, bool rflag) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(rflag));
   asio_tcp_socket_acceptor fd{service()};
-  ip_bind(fd, port, in, rflag);
+  auto err = ip_bind(fd, port, in, rflag);
+  if (err)
+    return err;
   auto p = fd.local_endpoint().port();
-  return {add_tcp_doorman(self, std::move(fd)), p};
+  return std::make_pair(add_tcp_doorman(self, std::move(fd)), p);
 }
 
 void asio_multiplexer::exec_later(resumable* rptr) {
+  auto mt = system().config().scheduler_max_throughput;
   switch (rptr->subtype()) {
     case resumable::io_actor:
     case resumable::function_object: {
       intrusive_ptr<resumable> ptr{rptr, false};
       service().post([=]() mutable {
-        switch (ptr->resume(this, max_throughput())) {
+        switch (ptr->resume(this, mt)) {
           case resumable::resume_later:
             exec_later(ptr.release());
             break;

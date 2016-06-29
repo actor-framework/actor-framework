@@ -55,31 +55,33 @@ public:
   friend class io::middleman;
   friend class supervisor;
 
-  connection_handle new_tcp_scribe(const std::string&, uint16_t) override;
+  expected<connection_handle>
+  new_tcp_scribe(const std::string&, uint16_t) override;
 
-  void assign_tcp_scribe(abstract_broker*, connection_handle hdl) override;
+  expected<void>
+  assign_tcp_scribe(abstract_broker*, connection_handle hdl) override;
 
   template <class Socket>
   connection_handle add_tcp_scribe(abstract_broker*, Socket&& sock);
 
   connection_handle add_tcp_scribe(abstract_broker*, native_socket fd) override;
 
-  connection_handle add_tcp_scribe(abstract_broker*, const std::string& host,
-                                   uint16_t port) override;
+  expected<connection_handle>
+  add_tcp_scribe(abstract_broker*, const std::string&, uint16_t) override;
 
-  std::pair<accept_handle, uint16_t> new_tcp_doorman(uint16_t p, const char* in,
-                                                     bool rflag) override;
+  expected<std::pair<accept_handle, uint16_t>>
+  new_tcp_doorman(uint16_t p, const char* in, bool rflag) override;
 
-  void assign_tcp_doorman(abstract_broker*, accept_handle hdl) override;
+  expected<void>
+  assign_tcp_doorman(abstract_broker*, accept_handle hdl) override;
 
   accept_handle add_tcp_doorman(abstract_broker*,
                                 asio_tcp_socket_acceptor&& sock);
 
   accept_handle add_tcp_doorman(abstract_broker*, native_socket fd) override;
 
-  std::pair<accept_handle, uint16_t>
-  add_tcp_doorman(abstract_broker*, uint16_t port,
-                  const char* in, bool rflag) override;
+  expected<std::pair<accept_handle, uint16_t>>
+  add_tcp_doorman(abstract_broker*, uint16_t, const char*, bool) override;
 
   void exec_later(resumable* ptr) override;
 
