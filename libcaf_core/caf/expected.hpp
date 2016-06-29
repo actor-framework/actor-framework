@@ -375,6 +375,11 @@ public:
     // nop
   }
 
+  template <class Code, class E = enable_if_has_make_error_t<Code>>
+  expected(Code code) : error_(make_error(code)) {
+    // nop
+  }
+
   expected& operator=(const expected& other) noexcept {
     error_ = other.error_;
     return *this;
