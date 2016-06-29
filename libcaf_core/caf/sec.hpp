@@ -19,7 +19,7 @@
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 31-81 (Error.tex)
+// Manual references: lines 32-84 (Error.tex)
 
 #ifndef CAF_SEC_HPP
 #define CAF_SEC_HPP
@@ -59,8 +59,10 @@ enum class sec : uint8_t {
   cannot_forward_to_invalid_actor,
   /// Tried to forward a message via BASP to an unknown node ID.
   no_route_to_receiving_node,
-  /// Middleman could not assign a connected handle to a broker.
+  /// Middleman could not assign a connection handle to a broker.
   failed_to_assign_scribe_from_handle,
+  /// Middleman could not assign an acceptor handle to a broker.
+  failed_to_assign_doorman_from_handle,
   /// User requested to close port 0 or to close a port not managed by CAF.
   cannot_close_invalid_port,
   /// Middleman could not connect to a remote node.

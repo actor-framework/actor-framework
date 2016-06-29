@@ -39,6 +39,7 @@ const char* sec_strings[] = {
   "cannot_forward_to_invalid_actor",
   "no_route_to_receiving_node",
   "failed_to_assign_scribe_from_handle",
+  "failed_to_assign_doorman_from_handle",
   "cannot_close_invalid_port",
   "cannot_connect_to_node",
   "cannot_open_port",
