@@ -224,12 +224,6 @@ void test_opencl(actor_system& sys) {
     CAF_ERROR("No OpenCL device found.");
   auto dev = *opt;
   scoped_actor self{sys};
-  self->set_default_handler(
-    [=](local_actor*, const type_erased_tuple* x) -> result<message> {
-      CAF_ERROR("unexpected message" << x->stringify());
-      return sec::unexpected_message;
-    }
-   );
   const ivec expected1{ 56,  62,  68,  74,
                        152, 174, 196, 218,
                        248, 286, 324, 362,

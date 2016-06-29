@@ -171,7 +171,7 @@ public:
   void enqueue(mailbox_element_ptr ptr, execution_unit* eu) override {
     CAF_ASSERT(ptr != nullptr);
     CAF_LOG_TRACE(CAF_ARG(*ptr));
-    enqueue(ptr->sender, ptr->mid, ptr->msg, eu);
+    enqueue(ptr->sender, ptr->mid, ptr->move_content_to_message(), eu);
   }
 
   actor_facade(actor_config actor_cfg,
