@@ -213,7 +213,10 @@ actor_system_config& actor_system_config::parse(message& args,
   // (2) content of the INI file overrides hard-coded defaults
   if (ini.good()) {
     actor_system_config_reader consumer{options_, custom_options_};
-    detail::parse_ini(ini, consumer, std::cerr);
+    auto f = [&](size_t ln, std::string str, config_value& x) {
+      consumer(ln, std::move(str), x);
+    };
+    detail::parse_ini(ini, f, std::cerr);
   }
   // (3) CLI options override the content of the INI file
   std::string dummy; // caf#config-file either ignored or already open

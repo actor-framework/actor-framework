@@ -30,7 +30,6 @@
 #include "caf/ref_counted.hpp"
 
 #include "caf/detail/embedded.hpp"
-#include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace caf {
 class mailbox_element;
@@ -114,12 +113,7 @@ public:
 
   static_assert(dsize > 0, "dsize == 0");
 
-  using embedded_t =
-    typename std::conditional<
-      T::memory_cache_flag == needs_embedding,
-      embedded<T>,
-      T
-     >::type;
+  using embedded_t = embedded<T>;
 
   struct wrapper {
     union {
@@ -192,12 +186,7 @@ public:
   // Allocates storage, initializes a new object, and returns the new instance.
   template <class T, class... Ts>
   static T* create(Ts&&... xs) {
-    using embedded_t =
-      typename std::conditional<
-        T::memory_cache_flag == needs_embedding,
-        embedded<T>,
-        T
-       >::type;
+    using embedded_t = embedded<T>;
     auto mc = get_or_set_cache_map_entry<T>();
     auto es = mc->new_embedded_storage();
     auto ptr = reinterpret_cast<embedded_t*>(es.second);

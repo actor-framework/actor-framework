@@ -25,18 +25,16 @@
 #include <functional>
 
 #include "caf/atom.hpp"
-#include "caf/optional.hpp"
 #include "caf/variant.hpp"
+#include "caf/optional.hpp"
+#include "caf/config_value.hpp"
 
 namespace caf {
 namespace detail {
 
 struct parse_ini_t {
-  /// Denotes a configuration value.
-  using value = variant<std::string, double, int64_t, bool, atom_value>;
-
   /// Denotes a callback for consuming configuration values.
-  using config_consumer = std::function<void (size_t, std::string, value&)>;
+  using config_consumer = std::function<void (size_t, std::string, config_value&)>;
 
   /// Parse the given input stream as INI formatted data and
   /// calls the consumer with every key-value pair.

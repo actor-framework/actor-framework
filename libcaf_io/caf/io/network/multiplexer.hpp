@@ -37,8 +37,6 @@
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-#include "caf/detail/memory_cache_flag_type.hpp"
-
 namespace boost {
 namespace asio {
 class io_service;
@@ -144,7 +142,6 @@ public:
   template <class F>
   void post(F fun) {
     struct impl : runnable {
-      //static constexpr auto memory_cache_flag = detail::needs_embedding;
       F f;
       impl(F&& mf) : f(std::move(mf)) { }
       resume_result resume(execution_unit*, size_t) override {

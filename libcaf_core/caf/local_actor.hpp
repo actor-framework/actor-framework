@@ -64,7 +64,6 @@
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/single_reader_queue.hpp"
-#include "caf/detail/memory_cache_flag_type.hpp"
 
 namespace caf {
 

@@ -91,8 +91,6 @@ public:
   }
 };
 
-using config_value = detail::parse_ini_t::value;
-
 struct config : actor_system_config {
   config() {
     parse(test::engine::argc(), test::engine::argv());
