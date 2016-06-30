@@ -186,6 +186,7 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
   expected<void> nonblocking(native_socket fd, bool new_value) {
     u_long mode = new_value ? 1 : 0;
     CALL_CFUN(res, cc_zero, "ioctlsocket", ioctlsocket(fd, FIONBIO, &mode));
+    return unit;
   }
 
   expected<void> allow_sigpipe(native_socket, bool) {
@@ -271,7 +272,7 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
                        connect(read_fd, &a.addr,
                                static_cast<int>(sizeof(a.inaddr))));
     // get write-only end of the pipe
-    CALL_CRITICAL_CFUN(write_fd, "accept", accept(listener, nullptr, nullptr));
+    CALL_CRITICAL_CFUN(write_fd, cc_valid_socket, "accept", accept(listener, nullptr, nullptr));
     closesocket(listener);
     guard.disable();
     return std::make_pair(read_fd, write_fd);
