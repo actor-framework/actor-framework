@@ -36,7 +36,7 @@ public:
     await_resume_or_shutdown
   };
 
-  private_thread(scheduled_actor* self);
+  explicit private_thread(scheduled_actor* self);
 
   void run();
 
