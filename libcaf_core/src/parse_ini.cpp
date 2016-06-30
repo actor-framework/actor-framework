@@ -29,30 +29,24 @@ namespace detail {
 
 void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
                              optional<std::ostream&> errors) const {
-printf("%s %d\n", __FILE__, __LINE__);
   // wraps a temporary into an (lvalue) config_value and calls `consumer_fun`
   auto consumer = [&](size_t ln, std::string name, config_value x) {
     consumer_fun(ln, std::move(name), x);
   };
-printf("%s %d\n", __FILE__, __LINE__);
   std::string group;
   std::string line;
   size_t ln = 0; // line number
-printf("%s %d\n", __FILE__, __LINE__);
   auto print = [&](const char* category, const char* str) {
     if (errors)
       *errors << category << " INI file line "
               << ln << ": " << str << std::endl;
   };
-printf("%s %d\n", __FILE__, __LINE__);
   auto print_error = [&](const char* str) {
     print("[ERROR]", str);
   };
-printf("%s %d\n", __FILE__, __LINE__);
   auto print_warning = [&](const char* str) {
     print("[WARNING]", str);
   };
-printf("%s %d\n", __FILE__, __LINE__);
   while (std::getline(input, line)) {
     ++ln;
     // get begin-of-line (bol) and end-of-line (eol), ignoring whitespaces
