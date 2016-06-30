@@ -534,7 +534,10 @@ endif(DOXYGEN_FOUND)
 #                                Manual setup                                  #
 ################################################################################
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/manual/")
+set(MANUAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/manual")
+if(EXISTS "${MANUAL_DIR}"
+   AND EXISTS "${MANUAL_DIR}/variables.tex.in"
+   AND EXISTS "${MANUAL_DIR}/conf.py.in")
   # retrieve current branch name
   execute_process(COMMAND git rev-parse --abbrev-ref HEAD
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -546,15 +549,28 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/manual/")
                   OUTPUT_VARIABLE GIT_HASH
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
   if(${GIT_BRANCH} STREQUAL "master")
-    set(CAF_RELEASE "${CAF_VERSION}")
+    # retrieve current tag name
+    execute_process(COMMAND git describe --tags --contains ${GIT_HASH}
+                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                    RESULT_VARIABLE GIT_TAG_RES
+                    OUTPUT_VARIABLE GIT_TAG
+                    ERROR_QUIET
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    # prefer tag name over regular version
+    if("${GIT_TAG_RES}" STREQUAL "0")
+      set(CAF_RELEASE "${GIT_TAG}")
+    else()
+      set(CAF_RELEASE "${CAF_VERSION}")
+    endif()
   else()
     set(CAF_RELEASE "${CAF_VERSION}+exp.sha.${GIT_HASH}")
   endif()
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex.in"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/manual/variables.tex"
+  MESSAGE(STATUS "Set manual version to ${CAF_RELEASE}")
+  configure_file("${MANUAL_DIR}/variables.tex.in"
+                 "${MANUAL_DIR}/variables.tex"
                  IMMEDIATE @ONLY)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/manual/conf.py.in"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/manual/conf.py"
+  configure_file("${MANUAL_DIR}/conf.py.in"
+                 "${MANUAL_DIR}/conf.py"
                  IMMEDIATE @ONLY)
 endif()
 
