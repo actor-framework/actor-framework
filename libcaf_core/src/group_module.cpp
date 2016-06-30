@@ -17,27 +17,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/abstract_group.hpp"
-
-#include "caf/group.hpp"
-#include "caf/message.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/group_module.hpp"
-#include "caf/group_manager.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
 
-abstract_group::abstract_group(group_module& mod, std::string id, node_id nid)
-    : abstract_channel(abstract_channel::is_abstract_group_flag),
-      system_(mod.system()),
-      parent_(mod),
-      identifier_(std::move(id)),
-      origin_(std::move(nid)) {
+group_module::group_module(actor_system& sys, std::string mname)
+    : system_(sys),
+      name_(std::move(mname)) {
   // nop
 }
 
-abstract_group::~abstract_group() {
+group_module::~group_module() {
   // nop
 }
 

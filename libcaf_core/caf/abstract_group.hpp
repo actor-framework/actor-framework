@@ -34,64 +34,47 @@ namespace caf {
 /// A multicast group.
 class abstract_group : public ref_counted, public abstract_channel {
 public:
+  // -- member types -----------------------------------------------------------
+
   friend class local_actor;
   friend class subscription;
   friend class detail::group_manager;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   ~abstract_group();
 
-  /// Interface for user-defined multicast implementations.
-  class module {
-  public:
-    module(actor_system& sys, std::string module_name);
+  // -- pure virtual member functions ------------------------------------------
 
-    virtual ~module();
-
-    /// Stops all groups from this module.
-    virtual void stop() = 0;
-
-    inline actor_system& system() const {
-      return system_;
-    }
-
-    /// Returns the name of this module implementation.
-    /// @threadsafe
-    const std::string& name() const;
-
-    /// Returns a pointer to the group associated with the name `group_name`.
-    /// @threadsafe
-    virtual group get(const std::string& group_name) = 0;
-
-    virtual group load(deserializer& source) = 0;
-
-  private:
-    actor_system& system_;
-    std::string name_;
-  };
-
-  using module_ptr = module*;
-  using unique_module_ptr = std::unique_ptr<module>;
-
+  /// Serialize this group to `sink`.
   virtual error save(serializer& sink) const = 0;
-
-  /// Returns a string representation of the group identifier, e.g.,
-  /// "224.0.0.1" for IPv4 multicast or a user-defined string for local groups.
-  const std::string& identifier() const;
-
-  module_ptr get_module() const;
-
-  /// Returns the name of the module.
-  const std::string& module_name() const;
 
   /// Subscribes `who` to this group and returns `true` on success
   /// or `false` if `who` is already subscribed.
   virtual bool subscribe(strong_actor_ptr who) = 0;
 
+  /// Unsubscribes `who` from this group.
+  virtual void unsubscribe(const actor_control_block* who) = 0;
+
   /// Stops any background actors or threads and IO handles.
   virtual void stop() = 0;
 
-  inline actor_system& system() {
+  // -- observers --------------------------------------------------------------
+
+  /// Returns the parent module.
+  inline group_module& module() const {
+    return parent_;
+  }
+
+  /// Returns the hosting system.
+  inline actor_system& system() const {
     return system_;
+  }
+
+  /// Returns a string representation of the group identifier, e.g.,
+  /// "224.0.0.1" for IPv4 multicast or a user-defined string for local groups.
+  const std::string& identifier() const {
+    return identifier_;
   }
 
   /// @cond PRIVATE
@@ -104,16 +87,13 @@ public:
             make_message(std::forward<Ts>(xs)...), ctx);
   }
 
-  virtual void unsubscribe(const actor_control_block* who) = 0;
-
   /// @endcond
 
 protected:
-  abstract_group(actor_system& sys, module_ptr module,
-                 std::string group_id, const node_id& nid);
+  abstract_group(group_module& parent, std::string id, node_id origin);
 
   actor_system& system_;
-  module_ptr module_;
+  group_module& parent_;
   std::string identifier_;
   node_id origin_;
 };

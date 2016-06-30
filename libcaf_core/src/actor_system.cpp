@@ -242,6 +242,7 @@ actor_system::actor_system(actor_system_config& cfg)
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);
+  groups_.init(cfg);
   // spawn config and spawn servers (lazily to not access the scheduler yet)
   static constexpr auto Flags = hidden + lazy_init;
   spawn_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl));

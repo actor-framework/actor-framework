@@ -43,6 +43,7 @@ template <class... Ts>
 class type_erased_tuple_view : public type_erased_tuple {
 public:
   // -- member types -----------------------------------------------------------
+
   template <size_t X>
   using num_token = std::integral_constant<size_t, X>;
 

@@ -61,7 +61,7 @@ void serialize(serializer& sink, const group& x, const unsigned int) {
     std::string dummy;
     sink << dummy;
   } else {
-    sink << ptr->module_name();
+    sink << ptr->module().name();
     ptr->save(sink);
   }
 }
@@ -80,13 +80,13 @@ void serialize(deserializer& source, group& x, const unsigned int) {
   if (! mod)
     CAF_RAISE_ERROR("Cannot deserialize a group for unknown module: "
                     + module_name);
-  x = mod->load(source);
+  mod->load(source, x);
 }
 
 std::string to_string(const group& x) {
   if (x == invalid_group)
     return "<invalid-group>";
-  std::string result = x->get_module()->name();
+  std::string result = x->module().name();
   result += "/";
   result += x->identifier();
   return result;

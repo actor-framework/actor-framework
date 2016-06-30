@@ -23,9 +23,12 @@
 #include <map>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 
 #include "caf/fwd.hpp"
+#include "caf/optional.hpp"
 #include "caf/expected.hpp"
+#include "caf/group_module.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
@@ -35,43 +38,57 @@ namespace caf {
 
 class group_manager {
 public:
+  // -- friends ----------------------------------------------------------------
+
   friend class actor_system;
 
-  void start();
+  // -- member types -----------------------------------------------------------
 
-  void stop();
+  using modules_map = std::unordered_map<std::string,
+                                         std::unique_ptr<group_module>>;
 
+  // -- constructors, destructors, and assignment operators --------------------
 
   ~group_manager();
 
-  /// Get a pointer to the group associated with
+  // -- observers --------------------------------------------------------------
+
+  /// Get a handle to the group associated with
   /// `identifier` from the module `mod_name`.
   /// @threadsafe
   expected<group> get(const std::string& module_name,
-                      const std::string& group_identifier);
+                      const std::string& group_identifier) const;
 
   /// Get a pointer to the group associated with
   /// `identifier` from the module `local`.
   /// @threadsafe
-  group get_local(const std::string& group_identifier);
+  group get_local(const std::string& identifier) const;
 
   /// Returns an anonymous group.
   /// Each calls to this member function returns a new instance
   /// of an anonymous group. Anonymous groups can be used whenever
   /// a set of actors wants to communicate using an exclusive channel.
-  group anonymous();
+  group anonymous() const;
 
-  void add_module(abstract_group::unique_module_ptr);
-
-  abstract_group::module_ptr get_module(const std::string& module_name);
+  /// Returns the module named `name` if it exists, otherwise `none`.
+  optional<group_module&> get_module(const std::string& name) const;
 
 private:
-  using modules_map = std::map<std::string, abstract_group::unique_module_ptr>;
+  // -- constructors, destructors, and assignment operators --------------------
 
   group_manager(actor_system& sys);
 
+  // -- member functions required by actor_system ------------------------------
+
+  void init(actor_system_config& cfg);
+
+  void start();
+
+  void stop();
+
+  // -- data members -----------------------------------------------------------
+
   modules_map mmap_;
-  std::mutex mmap_mtx_;
   actor_system& system_;
 };
 

@@ -55,6 +55,7 @@ set (LIBCAF_CORE_SRCS
      src/get_root_uuid.cpp
      src/group.cpp
      src/group_manager.cpp
+     src/group_module.cpp
      src/invoke_result_visitor.cpp
      src/match_case.cpp
      src/merged_tuple.cpp

@@ -71,6 +71,10 @@ public:
 
   using option_vector = std::vector<option_ptr>;
 
+  using group_module_factory = std::function<group_module* ()>;
+
+  using group_module_factory_vector = std::vector<group_module_factory>;
+
   // -- nested classes ---------------------------------------------------------
 
   class opt_group {
@@ -223,7 +227,7 @@ public:
   /// Sets a config by using its INI name `config_name` to `config_value`.
   actor_system_config& set(const char* config_name, config_value config_value);
 
-  // Config parameters of scheduler.
+  // -- config parameters of the scheduler -------------------------------------
   atom_value scheduler_policy;
   size_t scheduler_max_threads;
   size_t scheduler_max_throughput;
@@ -231,7 +235,8 @@ public:
   size_t scheduler_profiling_ms_resolution;
   std::string scheduler_profiling_output_file;
 
-  // Config parameters for work-stealing strategy
+  // -- config parameters for work-stealing ------------------------------------
+
   size_t work_stealing_aggressive_poll_attempts;
   size_t work_stealing_aggressive_steal_interval;
   size_t work_stealing_moderate_poll_attempts;
@@ -240,23 +245,36 @@ public:
   size_t work_stealing_relaxed_steal_interval;
   size_t work_stealing_relaxed_sleep_duration_us;
 
-  // Config parameters of middleman.
+  // -- config parameters of the middleman -------------------------------------
+
   atom_value middleman_network_backend;
   std::string middleman_app_identifier;
   bool middleman_enable_automatic_connections;
   size_t middleman_max_consecutive_reads;
   size_t middleman_heartbeat_interval;
 
-  // Config parameters of the OpenCL module.
+  // -- config parameters of the OpenCL module ---------------------------------
+
   std::string opencl_device_ids;
+
+  // -- factories --------------------------------------------------------------
 
   value_factory_string_map value_factories_by_name;
   value_factory_rtti_map value_factories_by_rtti;
-  portable_name_map type_names_by_rtti;
   actor_factory_map actor_factories;
   module_factory_vector module_factories;
-  error_renderer_map error_renderers;
   hook_factory_vector hook_factories;
+  group_module_factory_vector group_module_factories;
+
+  // -- run-time type information ----------------------------------------------
+
+  portable_name_map type_names_by_rtti;
+
+  // -- rendering of user-defined types ----------------------------------------
+
+  error_renderer_map error_renderers;
+
+  // -- utility for caf-run ----------------------------------------------------
 
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 

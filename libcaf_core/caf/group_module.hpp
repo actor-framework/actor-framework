@@ -17,28 +17,58 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/abstract_group.hpp"
+#ifndef CAF_GROUP_MODULE_HPP
+#define CAF_GROUP_MODULE_HPP
 
-#include "caf/group.hpp"
-#include "caf/message.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/group_module.hpp"
-#include "caf/group_manager.hpp"
-#include "caf/detail/shared_spinlock.hpp"
+#include <string>
+#include <memory>
+
+#include "caf/fwd.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/attachable.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/abstract_channel.hpp"
 
 namespace caf {
 
-abstract_group::abstract_group(group_module& mod, std::string id, node_id nid)
-    : abstract_channel(abstract_channel::is_abstract_group_flag),
-      system_(mod.system()),
-      parent_(mod),
-      identifier_(std::move(id)),
-      origin_(std::move(nid)) {
-  // nop
-}
+/// Interface for user-defined multicast implementations.
+class group_module {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
 
-abstract_group::~abstract_group() {
-  // nop
-}
+  group_module(actor_system& sys, std::string module_name);
+
+  virtual ~group_module();
+
+  // -- pure virtual member functions ------------------------------------------
+
+  /// Stops all groups from this module.
+  virtual void stop() = 0;
+
+  /// Returns a pointer to the group associated with the name `group_name`.
+  /// @threadsafe
+  virtual group get(const std::string& group_name) = 0;
+
+  /// Loads a group of this module from `source` and stores it in `storage`.
+  virtual error load(deserializer& source, group& storage) = 0;
+
+  // -- observers --------------------------------------------------------------
+
+  /// Returns the hosting actor system.
+  inline actor_system& system() const {
+    return system_;
+  }
+
+  /// Returns the name of this module implementation.
+  inline const std::string& name() const {
+    return name_;
+  }
+
+private:
+  actor_system& system_;
+  std::string name_;
+};
 
 } // namespace caf
+
+#endif // CAF_GROUP_MODULE_HPP
