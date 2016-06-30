@@ -566,7 +566,7 @@ int main(int argc, char** argv) {
   }
   // our simple command line parser.
   auto res = message_builder(cli_argv, cli_argv + divider - 1).extract_opts({
-    {"no-colors,n", "disable coloring"},
+    {"no-colors,n", "disable coloring (ignored on Windows)"},
     {"log-file,l", "set output file", log_file},
     {"console-verbosity,v", "set verbosity level of console (1-5)",
      verbosity_console},
@@ -602,7 +602,11 @@ int main(int argc, char** argv) {
               << res.helptext << std::endl;
     return 1;
   }
+# ifndef CAF_WINDOWS
   auto colorize = res.opts.count("no-colors") == 0;
+# else
+  auto colorize = false;
+# endif
   std::vector<char*> args;
   if (divider < argc) {
     // make a new args vector that contains argv[0] and all remaining args
