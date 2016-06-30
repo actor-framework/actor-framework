@@ -115,7 +115,6 @@ public:
   void stop() override {
     CAF_LOG_TRACE("");
     await_all_locals_down(system(), {broker_});
-    actor tmp{std::move(broker_)}; // manually break cycle
   }
 
   const actor& broker() const {
@@ -281,9 +280,6 @@ public:
   void stop() override {
     CAF_LOG_TRACE("");
     await_all_locals_down(system_, {monitor_, proxy_broker_, broker_});
-    destroy(monitor_);
-    destroy(proxy_broker_);
-    destroy(broker_);
   }
 
 private:
