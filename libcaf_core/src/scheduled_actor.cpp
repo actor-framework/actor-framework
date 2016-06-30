@@ -19,6 +19,7 @@
 
 #include "caf/scheduled_actor.hpp"
 
+#include "caf/config.hpp"
 #include "caf/actor_ostream.hpp"
 
 #include "caf/detail/private_thread.hpp"
@@ -481,9 +482,9 @@ bool scheduled_actor::activate(execution_unit* ctx) {
                      "resume called on a terminated actor");
     return false;
   }
-# ifndef CAF_NO_EXCEPTION
+# ifndef CAF_NO_EXCEPTIONS
   try {
-# endif // CAF_NO_EXCEPTION
+# endif // CAF_NO_EXCEPTIONS
     if (! is_initialized()) {
       initialize();
       if (finalize()) {
@@ -493,7 +494,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
         CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
       }
     }
-# ifndef CAF_NO_EXCEPTION
+# ifndef CAF_NO_EXCEPTIONS
   }
   catch (...) {
     CAF_LOG_ERROR("actor died during initialization");
@@ -502,7 +503,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
     finalize();
     return false;
   }
-# endif // CAF_NO_EXCEPTION
+# endif // CAF_NO_EXCEPTIONS
   return true;
 }
 
@@ -516,9 +517,9 @@ auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
 
 auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   CAF_LOG_TRACE(CAF_ARG(x));
-# ifndef CAF_NO_EXCEPTION
+# ifndef CAF_NO_EXCEPTIONS
   try {
-# endif // CAF_NO_EXCEPTION
+# endif // CAF_NO_EXCEPTIONS
     switch (consume(x)) {
       case im_dropped:
         return activation_result::dropped;
@@ -532,7 +533,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
       case im_skipped:
         return activation_result::skipped;
     }
-# ifndef CAF_NO_EXCEPTION
+# ifndef CAF_NO_EXCEPTIONS
   }
   catch (std::exception& e) {
     CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
@@ -547,7 +548,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   }
   finalize();
   return activation_result::terminated;
-# endif // CAF_NO_EXCEPTION
+# endif // CAF_NO_EXCEPTIONS
 }
 
 // -- behavior management ----------------------------------------------------

@@ -26,6 +26,8 @@
 
 using namespace caf;
 
+#ifndef CAF_NO_EXCEPTIONS
+
 class exception_testee : public event_based_actor {
 public:
   ~exception_testee();
@@ -77,3 +79,11 @@ CAF_TEST(test_custom_exception_handler) {
   // receive all down messages
   self->wait_for(testee1, testee2, testee3);
 }
+
+#else // CAF_NO_EXCEPTIONS
+
+CAF_TEST(no_exceptions_dummy) {
+  CAF_CHECK_EQUAL(true, true);
+}
+
+#endif // CAF_NO_EXCEPTIONS

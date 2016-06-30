@@ -559,66 +559,6 @@ CAF_TEST(constructor_attach) {
   anon_send_exit(system.spawn<spawner>(), exit_reason::user_shutdown);
 }
 
-namespace {
-
-class exception_testee : public event_based_actor {
-public:
-  exception_testee(actor_config& cfg) : event_based_actor(cfg) {
-    set_exception_handler([](std::exception_ptr&) -> exit_reason {
-      return exit_reason::unhandled_exception;
-    });
-  }
-  behavior make_behavior() override {
-    return {
-      [](const std::string& str) {
-        throw std::runtime_error(str);
-      }
-    };
-  }
-};
-
-} // namespace <anonymous>
-
-CAF_TEST(custom_exception_handler) {
-  auto handler = [](std::exception_ptr& eptr) -> error {
-    try {
-      std::rethrow_exception(eptr);
-    }
-    catch (std::runtime_error&) {
-      return exit_reason::unhandled_exception;
-    }
-    catch (...) {
-      // "fall through"
-    }
-    return exit_reason::unknown;
-  };
-  scoped_actor self{system};
-  auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
-    eb_self->set_exception_handler(handler);
-    throw std::runtime_error("ping");
-  });
-  auto testee2 = self->spawn<monitored>([=](event_based_actor* eb_self) {
-    eb_self->set_exception_handler(handler);
-    throw std::logic_error("pong");
-  });
-  auto testee3 = self->spawn<exception_testee, monitored>();
-  self->send(testee3, "foo");
-  // receive all down messages
-  int downs_received = 0;
-  self->receive_for(downs_received, 3) (
-    [&](down_msg& dm) {
-      if (dm.source == testee1)
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
-      else if (dm.source == testee2)
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::unknown);
-      else if (dm.source == testee3)
-        CAF_CHECK_EQUAL(dm.reason, exit_reason::unhandled_exception);
-      else
-        throw std::runtime_error("received message from unexpected source");
-    }
-  );
-}
-
 CAF_TEST(kill_the_immortal) {
   auto wannabe_immortal = system.spawn([](event_based_actor* self) -> behavior {
     self->set_exit_handler([](local_actor*, exit_msg&) {
