@@ -116,27 +116,29 @@ struct make_blocking_behavior_t {
     // nop
   }
 
-  inline blocking_behavior operator()(behavior& x) const {
+  inline blocking_behavior operator()(behavior x) const {
     return {std::move(x)};
   }
 
   template <class F>
-  blocking_behavior_v2<F> operator()(behavior& x, catch_all<F>& y) const {
+  blocking_behavior_v2<F> operator()(behavior x, catch_all<F> y) const {
     return {std::move(x), std::move(y)};
   }
 
   template <class F>
-  blocking_behavior_v3<F> operator()(behavior& x,
-                                     timeout_definition<F>& y) const {
+  blocking_behavior_v3<F> operator()(behavior x,
+                                     timeout_definition<F> y) const {
     return {std::move(x), std::move(y)};
   }
 
   template <class F1, class F2>
-  blocking_behavior_v4<F1, F2> operator()(behavior& x, catch_all<F1>& y,
-                                          timeout_definition<F2>& z) const {
+  blocking_behavior_v4<F1, F2> operator()(behavior x, catch_all<F1> y,
+                                          timeout_definition<F2> z) const {
     return {std::move(x), std::move(y), std::move(z)};
   }
 };
+
+constexpr make_blocking_behavior_t make_blocking_behavior = make_blocking_behavior_t{};
 
 } // namespace detail
 } // namespace caf

@@ -302,14 +302,16 @@ public:
     return fail_state_;
   }
 
-  /// @cond PRIVATE
+  // -- customization points ---------------------------------------------------
 
   /// Blocks until at least one message is in the mailbox.
-  void await_data();
+  virtual void await_data();
 
   /// Blocks until at least one message is in the mailbox or
   /// the absolute `timeout` was reached.
-  bool await_data(timeout_type timeout);
+  virtual bool await_data(timeout_type timeout);
+
+  /// @cond PRIVATE
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
   template <class... Ts>
@@ -325,12 +327,12 @@ public:
         is_timeout_or_catch_all
       >::type;
     filtered tk;
-    behavior bhvr{apply_args(make_behavior_impl, get_indices(tk), tup)};
+    behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
     using tail_indices = typename il_range<
                            tl_size<filtered>::value, sizeof...(Ts)
                          >::type;
     make_blocking_behavior_t factory;
-    auto fun = apply_args_prefixed(factory, tail_indices{}, tup, bhvr);
+    auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, bhvr);
     receive_impl(rcc, mid, fun);
   }
 
