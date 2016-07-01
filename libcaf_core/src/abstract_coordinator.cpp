@@ -29,6 +29,9 @@
 #include <condition_variable>
 
 #include "caf/send.hpp"
+#include "caf/after.hpp"
+#include "caf/others.hpp"
+#include "caf/duration.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/actor_ostream.hpp"
@@ -53,87 +56,74 @@ namespace {
 
 using hrc = std::chrono::high_resolution_clock;
 
-struct delayed_msg {
-  strong_actor_ptr from;
-  strong_actor_ptr to;
-  message_id mid;
-  message msg;
-};
-
-inline void deliver(delayed_msg& dm) {
-  dm.to->enqueue(dm.from, dm.mid, std::move(dm.msg), nullptr);
-}
-
-template <class Map, class... Ts>
-inline void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
-  auto tout = hrc::now();
-  tout += d;
-  delayed_msg dmsg{std::forward<Ts>(xs)...};
-  storage.emplace(std::move(tout), std::move(dmsg));
-}
-
 class timer_actor : public blocking_actor {
 public:
   explicit timer_actor(actor_config& cfg) : blocking_actor(cfg) {
     // nop
   }
 
-  bool await_data(const hrc::time_point& tp) {
-    if (has_next_message())
-      return true;
-    return mailbox().synchronized_await(mtx_, cv_, tp);
+  struct delayed_msg {
+    strong_actor_ptr from;
+    strong_actor_ptr to;
+    message_id mid;
+    message msg;
+  };
+
+  void deliver(delayed_msg& dm) {
+    dm.to->enqueue(dm.from, dm.mid, std::move(dm.msg), nullptr);
   }
 
-  mailbox_element_ptr try_dequeue() {
-    blocking_actor::await_data();
-    return next_message();
-  }
-
-  mailbox_element_ptr try_dequeue(const hrc::time_point& tp) {
-    if (await_data(tp))
-      return next_message();
-    return mailbox_element_ptr{};
+  template <class Map, class... Ts>
+  void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
+    auto tout = hrc::now();
+    tout += d;
+    delayed_msg dmsg{std::forward<Ts>(xs)...};
+    storage.emplace(std::move(tout), std::move(dmsg));
   }
 
   void act() override {
-    // setup & local variables
+    // local state
+    accept_one_cond rc;
+    bool running = true;
     std::multimap<hrc::time_point, delayed_msg> messages;
-    // message handling rules
-    message_handler mfun{
-      [&](const duration& d, strong_actor_ptr& from, strong_actor_ptr& to,
-          message_id mid, message& msg) {
-         insert_dmsg(messages, d, std::move(from),
-                     std::move(to), mid, std::move(msg));
+    // our message handler
+    auto bhvr = detail::make_blocking_behavior(
+      behavior{
+        [&](const duration& d, strong_actor_ptr& from,
+                           strong_actor_ptr& to, message_id mid, message& msg) {
+          insert_dmsg(messages, d, std::move(from),
+                      std::move(to), mid, std::move(msg));
+        },
+        [&](const exit_msg& dm) {
+          if (dm.reason) {
+            fail_state(dm.reason);
+            running = false;
+          }
+        }
+      },
+      others >> [&](message_view& x) -> result<message> {
+        std::cerr << "*** unexpected message in timer_actor: "
+                  << to_string(x.content()) << std::endl;
+        return sec::unexpected_message;
       }
-    };
-    mailbox_element_ptr msg_ptr;
-    for (;;) {
-      while (! msg_ptr) {
-        if (messages.empty()) {
-          msg_ptr = try_dequeue();
+    );
+    // loop until receiving an exit message
+    while (running) {
+      if (messages.empty()) {
+        // use regular receive as long as we don't have a pending timeout
+        receive_impl(rc, message_id::make(), bhvr);
+      } else {
+        auto tout = messages.begin()->first;
+        if (await_data(tout)) {
+          receive_impl(rc, message_id::make(), bhvr);
         } else {
-          auto tout = hrc::now();
-          // handle timeouts (send messages)
           auto it = messages.begin();
           while (it != messages.end() && (it->first) <= tout) {
             deliver(it->second);
             it = messages.erase(it);
           }
-          // wait for next message or next timeout
-          if (it != messages.end())
-            msg_ptr = try_dequeue(it->first);
         }
       }
-      auto& content = msg_ptr->content();
-      if (content.type_token() == make_type_token<exit_msg>()) {
-        auto& em = content.get_as<exit_msg>(0);
-        if (em.reason) {
-          fail_state(em.reason);
-          return;
-        }
-      }
-      mfun(content);
-      msg_ptr.reset();
     }
   }
 };
