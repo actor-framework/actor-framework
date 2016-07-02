@@ -185,7 +185,7 @@ https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&pack
 https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf-devel
 
 [jenkins-badge]:
-https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/master%20branch
+https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/develop%20branch
 
 [docs-badge]:
 https://readthedocs.org/projects/actor-framework/badge/?version=latest
