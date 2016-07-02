@@ -21,9 +21,11 @@
 #define CAF_MIXIN_ACTOR_WIDGET_HPP
 
 #include "caf/config.hpp"
-#include "caf/make_counted.hpp"
+#include "caf/make_actor.hpp"
 #include "caf/actor_companion.hpp"
 #include "caf/message_handler.hpp"
+
+#include "caf/scoped_execution_unit.hpp"
 
 CAF_PUSH_WARNINGS
 #include <QEvent>
@@ -36,36 +38,56 @@ namespace mixin {
 template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
 class actor_widget : public Base {
 public:
-  typedef typename actor_companion::message_pointer message_pointer;
-
   struct event_type : public QEvent {
-    message_pointer mptr;
-    event_type(message_pointer ptr)
+    mailbox_element_ptr mptr;
+    event_type(mailbox_element_ptr ptr)
         : QEvent(static_cast<QEvent::Type>(EventId)), mptr(std::move(ptr)) {
       // nop
     }
   };
 
   template <typename... Ts>
-  actor_widget(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
-    companion_ = make_counted<actor_companion>();
-    companion_->on_enqueue([=](message_pointer ptr) {
+  actor_widget(Ts&&... xs) : Base(std::forward<Ts>(xs)...), alive_(false) {
+    // nop
+  }
+
+  ~actor_widget() {
+    if (companion_)
+      self()->cleanup(error{}, &dummy_);
+  }
+
+
+  void init(actor_system& system) {
+    alive_ = true;
+    companion_ = actor_cast<strong_actor_ptr>(system.spawn<actor_companion>());
+    self()->on_enqueue([=](mailbox_element_ptr ptr) {
       qApp->postEvent(this, new event_type(std::move(ptr)));
+    });
+    self()->on_exit([=] {
+      // close widget if actor companion dies
+      this->close();
     });
   }
 
-  template <typename T>
-  void set_message_handler(T pfun) {
-    companion_->become(pfun(companion_.get()));
+  template <class F>
+  void set_message_handler(F pfun) {
+    self()->become(pfun(self()));
+  }
+
+  /// Terminates the actor companion and closes this widget.
+  void quit_and_close(error exit_state = error{}) {
+    self()->quit(std::move(exit_state));
+    this->close();
   }
 
   bool event(QEvent* event) override {
     if (event->type() == static_cast<QEvent::Type>(EventId)) {
       auto ptr = dynamic_cast<event_type*>(event);
-      if (ptr) {
-        companion_->invoke_message(ptr->mptr,
-                                    companion_->get_behavior(),
-                                    companion_->awaited_response_id());
+      if (ptr && alive_) {
+        switch (self()->activate(&dummy_, *(ptr->mptr))) {
+          default:
+            break;
+        };
         return true;
       }
     }
@@ -73,11 +95,22 @@ public:
   }
 
   actor as_actor() const {
-    return companion_;
+    CAF_ASSERT(companion_);
+    return actor_cast<actor>(companion_);
+  }
+
+  actor_companion* self() {
+    using bptr = abstract_actor*;  // base pointer
+    using dptr = actor_companion*; // derived pointer
+    return companion_ ? static_cast<dptr>(actor_cast<bptr>(companion_))
+                      : nullptr;
   }
 
 private:
-    actor_companion_ptr companion_;
+
+  scoped_execution_unit dummy_;
+  strong_actor_ptr companion_;
+  bool alive_;
 };
 
 } // namespace mixin

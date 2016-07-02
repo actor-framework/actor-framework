@@ -77,18 +77,6 @@ public:
     return identifier_;
   }
 
-  /// @cond PRIVATE
-
-  template <class... Ts>
-  void eq_impl(message_id mid, strong_actor_ptr sender,
-               execution_unit* ctx, Ts&&... xs) {
-    CAF_ASSERT(! mid.is_request());
-    enqueue(std::move(sender), mid,
-            make_message(std::forward<Ts>(xs)...), ctx);
-  }
-
-  /// @endcond
-
 protected:
   abstract_group(group_module& parent, std::string id, node_id origin);
 

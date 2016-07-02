@@ -319,6 +319,33 @@ void middleman::stop() {
 }
 
 void middleman::init(actor_system_config& cfg) {
+  // add remote group module to config
+  struct remote_groups : group_module {
+  public:
+    remote_groups(middleman& parent)
+        : group_module(parent.system(), "remote"),
+          parent_(parent) {
+      // nop
+    }
+
+    void stop() {
+      // nop
+    }
+
+    expected<group> get(const std::string& group_name) {
+      return parent_.remote_group(group_name);
+    }
+
+    error load(deserializer&, group&) {
+      // never called, because we hand out group instances of the local module
+      return sec::no_such_group_module;
+    }
+
+  private:
+    middleman& parent_;
+  };
+  auto gfactory = [=]() -> group_module* { return new remote_groups(*this); };
+  cfg.group_module_factories.emplace_back(gfactory);
   // logging not available at this stage
   // add I/O-related types to config
   cfg.add_message_type<network::protocol>("@protocol")

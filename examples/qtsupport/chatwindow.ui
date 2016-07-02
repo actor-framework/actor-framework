@@ -18,7 +18,16 @@
     <property name="spacing">
      <number>0</number>
     </property>
-    <property name="margin">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
      <number>0</number>
     </property>
     <item>
@@ -62,7 +71,16 @@
        <property name="spacing">
         <number>0</number>
        </property>
-       <property name="margin">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
         <number>0</number>
        </property>
       </layout>
@@ -116,7 +134,7 @@
  <connections>
   <connection>
    <sender>actionJoin_Group</sender>
-   <signal>activated()</signal>
+   <signal>triggered()</signal>
    <receiver>chatwidget</receiver>
    <slot>joinGroup()</slot>
    <hints>
@@ -132,7 +150,7 @@
   </connection>
   <connection>
    <sender>actionSet_Name</sender>
-   <signal>activated()</signal>
+   <signal>triggered()</signal>
    <receiver>chatwidget</receiver>
    <slot>changeName()</slot>
    <hints>

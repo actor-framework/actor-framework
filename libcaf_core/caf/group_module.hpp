@@ -47,7 +47,7 @@ public:
 
   /// Returns a pointer to the group associated with the name `group_name`.
   /// @threadsafe
-  virtual group get(const std::string& group_name) = 0;
+  virtual expected<group> get(const std::string& group_name) = 0;
 
   /// Loads a group of this module from `source` and stores it in `storage`.
   virtual error load(deserializer& source, group& storage) = 0;

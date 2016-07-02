@@ -21,6 +21,15 @@
 
 namespace caf {
 
+atom_value atom_from_string(const std::string& x) {
+  if (x.size() > 10)
+    return atom("");
+  char buf[11];
+  memcpy(buf, x.c_str(), x.size());
+  buf[x.size()] = '\0';
+  return atom(buf);
+}
+
 std::string to_string(const atom_value& what) {
   auto x = static_cast<uint64_t>(what);
   std::string result;

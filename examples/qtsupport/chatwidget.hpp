@@ -10,49 +10,62 @@ CAF_PUSH_WARNINGS
 CAF_POP_WARNINGS
 
 class ChatWidget : public caf::mixin::actor_widget<QWidget> {
+private:
+  // -- Qt boilerplate code ----------------------------------------------------
 
-    Q_OBJECT
-
-    typedef caf::mixin::actor_widget<QWidget> super;
+  Q_OBJECT
 
 public:
+  // -- member types -----------------------------------------------------------
 
-    ChatWidget(QWidget* parent = nullptr, Qt::WindowFlags f = 0);
+  using super = caf::mixin::actor_widget<QWidget>;
 
- public slots:
+  using set_name_atom = caf::atom_constant<caf::atom("setName")>;
 
-    void sendChatMessage();
-    void joinGroup();
-    void changeName();
+  using quit_atom = caf::atom_constant<caf::atom("quit")>;
+
+  ChatWidget(QWidget* parent = nullptr, Qt::WindowFlags f = 0);
+
+  ~ChatWidget();
+
+  void init(caf::actor_system& system);
+
+public slots:
+
+  void sendChatMessage();
+  void joinGroup();
+  void changeName();
 
 private:
 
-    template<typename T>
-    T* get(T*& member, const char* name) {
-        if (member == nullptr) {
-            member = findChild<T*>(name);
-            if (member == nullptr)
-                throw std::runtime_error("unable to find child: "
-                                         + std::string(name));
-        }
-        return member;
+  template<typename T>
+  T* get(T*& member, const char* name) {
+    if (member == nullptr) {
+      member = findChild<T*>(name);
+      if (member == nullptr)
+        throw std::runtime_error("unable to find child: " + std::string(name));
     }
+    return member;
+  }
 
-    inline QLineEdit* input() {
-        return get(input_, "input");
-    }
+  inline QLineEdit* input() {
+    return get(input_, "input");
+  }
 
-    inline QTextEdit* output() {
-        return get(output_, "output");
-    }
+  inline QTextEdit* output() {
+    return get(output_, "output");
+  }
 
-    inline void print(const QString& what) {
-        output()->append(what);
-    }
+  inline void print(const QString& what) {
+    output()->append(what);
+  }
 
-    QLineEdit* input_;
-    QTextEdit* output_;
-    std::string name_;
-    caf::group chatroom_;
+  caf::actor_system& system() {
+    return self()->home_system();
+  }
 
+  QLineEdit* input_;
+  QTextEdit* output_;
+  std::string name_;
+  caf::group chatroom_;
 };

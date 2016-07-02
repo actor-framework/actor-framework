@@ -76,6 +76,7 @@ class actor_registry;
 class blocking_actor;
 class execution_unit;
 class proxy_registry;
+class actor_companion;
 class continue_helper;
 class mailbox_element;
 class message_handler;

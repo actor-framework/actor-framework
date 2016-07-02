@@ -76,15 +76,6 @@ public:
     return ! ptr_;
   }
 
-  /// Returns a handle that grants access to actor operations such as enqueue.
-  inline abstract_group* operator->() const noexcept {
-    return get();
-  }
-
-  inline abstract_group& operator*() const noexcept {
-    return *get();
-  }
-
   static intptr_t compare(const abstract_group* lhs, const abstract_group* rhs);
 
   intptr_t compare(const group& other) const noexcept;
@@ -100,6 +91,36 @@ public:
   inline abstract_group* get() const noexcept {
     return ptr_.get();
   }
+
+  /// @cond PRIVATE
+
+  template <class... Ts>
+  void eq_impl(message_id mid, strong_actor_ptr sender,
+               execution_unit* ctx, Ts&&... xs) const {
+    CAF_ASSERT(! mid.is_request());
+    if (ptr_)
+      ptr_->enqueue(std::move(sender), mid,
+                    make_message(std::forward<Ts>(xs)...), ctx);
+  }
+
+  inline bool subscribe(strong_actor_ptr who) const {
+    if (! ptr_)
+      return false;
+    return ptr_->subscribe(std::move(who));
+  }
+
+  inline void unsubscribe(const actor_control_block* who) const {
+    if (ptr_)
+      ptr_->unsubscribe(who);
+  }
+
+  /// CAF's messaging primitives assume a non-null guarantee. A group
+  /// object indirects pointer-like access to a group to prevent UB.
+  inline const group* operator->() const noexcept {
+    return this;
+  }
+
+  /// @endcond
 
 private:
   inline abstract_group* release() noexcept {

@@ -13,6 +13,14 @@ if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
 endif()
 
 ################################################################################
+#                        set prefix paths if available                         #
+################################################################################
+
+if(DEFINED CAF_QT_PREFIX_PATH)
+  set(CMAKE_PREFIX_PATH "${CAF_QT_PREFIX_PATH}")
+endif()
+
+################################################################################
 #   make sure all variables are set to "no" if undefined for summary output    #
 ################################################################################
 

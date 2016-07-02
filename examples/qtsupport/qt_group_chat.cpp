@@ -18,6 +18,7 @@
 #include <cstdlib>
 
 #include "caf/all.hpp"
+#include "caf/io/all.hpp"
 
 CAF_PUSH_WARNINGS
 #include <QMainWindow>
@@ -28,57 +29,55 @@ CAF_POP_WARNINGS
 using namespace std;
 using namespace caf;
 
+class config : public actor_system_config {
+public:
+  std::string name;
+  std::string group_id;
+
+  config(int argc, char** argv) {
+    opt_group{custom_options_, "global"}
+    .add(name, "name,n", "set name")
+    .add(group_id, "group,g", "join group (format: <module>:<id>");
+    parse(argc, argv);
+    load<io::middleman>();
+  }
+};
+
 int main(int argc, char** argv) {
-  string name;
-  string group_id;
-  auto res = message_builder(argv + 1, argv + argc).extract_opts({
-    {"name,n", "set chat name", name},
-    {"group,g", "join chat group", group_id}
-  });
-  if (! res.error.empty()) {
-    cerr << res.error << endl;
-    return 1;
-  }
-  if (! res.remainder.empty()) {
-    std::cerr << res.helptext << std::endl;
-    return 1;
-  }
-  if (res.opts.count("help") > 0) {
-    cout << res.helptext << endl;
-    return 0;
-  }
-  group gptr;
-  // evaluate group parameter
-  if (! group_id.empty()) {
-    auto p = group_id.find(':');
+  config cfg{argc, argv};
+  actor_system system{cfg};
+  auto name = cfg.name;
+  group grp;
+  // evaluate group parameters
+  if (! cfg.group_id.empty()) {
+    auto p = cfg.group_id.find(':');
     if (p == std::string::npos) {
-      cerr << "*** error parsing argument " << group_id
-           << ", expected format: <module_name>:<group_id>";
+      cerr << "*** error parsing argument " << cfg.group_id
+         << ", expected format: <module_name>:<group_id>";
     } else {
-      try {
-        gptr = group::get(group_id.substr(0, p), group_id.substr(p + 1));
-      } catch (exception& e) {
-        cerr << "*** exception: group::get(\"" << group_id.substr(0, p)
-             << "\", \"" << group_id.substr(p + 1) << "\") failed; "
-             << to_verbose_string(e) << endl;
+      auto module = cfg.group_id.substr(0, p);
+      auto group_uri = cfg.group_id.substr(p + 1);
+      auto g = system.groups().get(module, group_uri);
+      if (! g) {
+        cerr << "*** unable to get group " << group_uri
+             << " from module " << module << ": "
+             << system.render(g.error()) << endl;
+        return -1;
       }
+      grp = std::move(*g);
     }
   }
-  QApplication app(argc, argv);
+  QApplication app{argc, argv};
   app.setQuitOnLastWindowClosed(true);
   QMainWindow mw;
   Ui::ChatWindow helper;
   helper.setupUi(&mw);
+  helper.chatwidget->init(system);
   auto client = helper.chatwidget->as_actor();
-  if (! name.empty()) {
+  if (! name.empty())
     send_as(client, client, atom("setName"), move(name));
-  }
-  if (gptr) {
-    send_as(client, client, atom("join"), gptr);
-  }
+  if (grp)
+    send_as(client, client, atom("join"), std::move(grp));
   mw.show();
-  auto app_res = app.exec();
-  await_all_actors_done();
-  shutdown();
-  return app_res;
+  return app.exec();
 }

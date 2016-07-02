@@ -94,9 +94,7 @@ void caf_main(actor_system& system, const config& cfg) {
     } else {
       auto module = cfg.group_id.substr(0, p);
       auto group_uri = cfg.group_id.substr(p + 1);
-      auto g = (module == "remote")
-               ? system.middleman().remote_group(group_uri)
-               : system.groups().get(module, group_uri);
+      auto g = system.groups().get(module, group_uri);
       if (! g) {
         cerr << "*** unable to get group " << group_uri
              << " from module " << module << ": "
@@ -119,8 +117,7 @@ void caf_main(actor_system& system, const config& cfg) {
     auto res = message_builder(words.begin(), words.end()).apply({
       [&](const string& cmd, const string& mod, const string& id) {
         if (cmd == "/join") {
-          auto grp = (mod == "remote") ? system.middleman().remote_group(id)
-                                       : system.groups().get(mod, id);
+          auto grp = system.groups().get(mod, id);
           if (grp)
             anon_send(client_actor, join_atom::value, *grp);
         }

@@ -49,9 +49,10 @@ public:
 /// @extends local_actor
 class event_based_actor : public extend<scheduled_actor,
                                         event_based_actor>::
-                                 with<mixin::sender, mixin::requester,
-                                      mixin::behavior_changer,
-                                      mixin::subscriber>,
+                                 with<mixin::sender,
+                                      mixin::requester,
+                                      mixin::subscriber,
+                                      mixin::behavior_changer>,
                           public dynamically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------

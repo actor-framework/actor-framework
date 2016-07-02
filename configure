@@ -42,6 +42,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --lib-dir=DIR               library directory [build/lib]
     --with-clang=FILE           path to clang++ executable
     --with-gcc=FILE             path to g++ executable
+    --with-qt-prefix=PATH       prefix path for Qt5 cmake modules
     --dual-build                build using both gcc and clang
     --build-static              build as static and shared library
     --build-static-only         build as static library only
@@ -287,6 +288,9 @@ while [ $# -ne 0 ]; do
             ;;
         --with-gcc=*)
             gcc=$optarg
+            ;;
+        --with-qt-prefix=*)
+            append_cache_entry CAF_QT_PREFIX_PATH STRING "$optarg"
             ;;
         --build-type=*)
             append_cache_entry CMAKE_BUILD_TYPE STRING $optarg

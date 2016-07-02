@@ -327,12 +327,12 @@ public:
     CAF_LOG_TRACE("");
   }
 
-  group get(const std::string& identifier) override {
+  expected<group> get(const std::string& identifier) override {
     CAF_LOG_TRACE(CAF_ARG(identifier));
     upgrade_guard guard(instances_mtx_);
     auto i = instances_.find(identifier);
     if (i != instances_.end())
-      return {i->second};
+      return group{i->second};
     auto tmp = make_counted<local_group>(*this, identifier,
                                          system().node(), none);
     upgrade_to_unique_guard uguard(guard);
@@ -342,7 +342,7 @@ public:
     // someone might preempt us
     if (result != tmp)
       tmp->stop();
-    return {result};
+    return group{result};
   }
 
   error load(deserializer& source, group& storage) override {
@@ -358,7 +358,7 @@ public:
     }
     auto broker = actor_cast<actor>(broker_ptr);
     if (broker->node() == system().node()) {
-      storage = this->get(identifier);
+      storage = *this->get(identifier);
       return {};
     }
     upgrade_guard guard(proxies_mtx_);
@@ -465,7 +465,8 @@ group group_manager::anonymous() const {
   CAF_LOG_TRACE("");
   std::string id = "__#";
   id += std::to_string(++s_ad_hoc_id);
-  return get_module("local")->get(id);
+  // local module is guaranteed to not return an error
+  return *get_module("local")->get(id);
 }
 
 expected<group> group_manager::get(const std::string& module_name,

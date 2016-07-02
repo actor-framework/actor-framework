@@ -22,18 +22,21 @@
 
 namespace caf {
 
-void actor_companion::disconnect(exit_reason rsn) {
-  enqueue_handler tmp;
-  { // lifetime scope of guard
-    std::lock_guard<lock_type> guard(lock_);
-    on_enqueue_.swap(tmp);
-  }
-  cleanup(rsn, context());
+actor_companion::actor_companion(actor_config& cfg) : extended_base(cfg) {
+  // nop
+}
+
+actor_companion::~actor_companion() {
+  // nop
 }
 
 void actor_companion::on_enqueue(enqueue_handler handler) {
   std::lock_guard<lock_type> guard(lock_);
   on_enqueue_ = std::move(handler);
+}
+
+void actor_companion::on_exit(on_exit_handler handler) {
+  on_exit_ = std::move(handler);
 }
 
 void actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
@@ -47,6 +50,20 @@ void actor_companion::enqueue(strong_actor_ptr src, message_id mid,
                               message content, execution_unit* eu) {
   auto ptr = make_mailbox_element(std::move(src), mid, {}, std::move(content));
   enqueue(std::move(ptr), eu);
+}
+
+void actor_companion::launch(execution_unit*, bool, bool hide) {
+  is_registered(! hide);
+}
+
+void actor_companion::on_exit() {
+  enqueue_handler tmp;
+  { // lifetime scope of guard
+    std::lock_guard<lock_type> guard(lock_);
+    on_enqueue_.swap(tmp);
+  }
+  if (on_exit_)
+    on_exit_();
 }
 
 } // namespace caf

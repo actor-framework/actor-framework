@@ -84,11 +84,11 @@ void serialize(deserializer& source, group& x, const unsigned int) {
 }
 
 std::string to_string(const group& x) {
-  if (x == invalid_group)
+  if (! x)
     return "<invalid-group>";
-  std::string result = x->module().name();
+  std::string result = x.get()->module().name();
   result += "/";
-  result += x->identifier();
+  result += x.get()->identifier();
   return result;
 }
 

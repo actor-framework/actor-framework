@@ -73,7 +73,7 @@ if(NOT CAF_NO_PROTOBUF_EXAMPLES)
 endif()
 
 if(NOT CAF_NO_QT_EXAMPLES)
-  find_package(Qt5 COMPONENTS Core Gui Widgets)
+  find_package(Qt5 COMPONENTS Core Gui Widgets QUIET)
   if(Qt5_FOUND)
     message(STATUS "Found Qt5")
     #include(${QT_USE_FILE})
