@@ -60,27 +60,6 @@ class basic_memory_cache;
 
 #ifdef CAF_NO_MEM_MANAGEMENT
 
-template <class T>
-struct rc_storage : public ref_counted {
-  T instance;
-  template <class... Ts>
-  rc_storage(Ts&&... xs)
-      : instance(intrusive_ptr<ref_counted>(this, false),
-        std::forward<Ts>(xs)...) {
-    CAF_ASSERT(get_reference_count() >= 1);
-  }
-};
-
-template <class T>
-T* unbox_rc_storage(T* ptr) {
-  return ptr;
-}
-
-template <class T>
-T* unbox_rc_storage(rc_storage<T>* ptr) {
-  return &(ptr->instance);
-}
-
 class memory {
 public:
   memory() = delete;
@@ -88,13 +67,7 @@ public:
   // Allocates storage, initializes a new object, and returns the new instance.
   template <class T, class... Ts>
   static T* create(Ts&&... xs) {
-    using embedded_t =
-      typename std::conditional<
-        T::memory_cache_flag == provides_embedding,
-        rc_storage<T>,
-        T
-       >::type;
-    return unbox_rc_storage(new embedded_t(std::forward<Ts>(xs)...));
+    return new T(std::forward<Ts>(xs)...);
   }
 
   static inline memory_cache* get_cache_map_entry(const std::type_info*) {
