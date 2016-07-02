@@ -44,8 +44,12 @@
 #include "caf/logger.hpp"
 
 #ifdef CAF_WINDOWS
-# define WIN32_LEAN_AND_MEAN
-# define NOMINMAX
+# ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+# endif // WIN32_LEAN_AND_MEAN
+# ifndef NOMINMAX
+#   define NOMINMAX
+# endif
 # ifdef CAF_MINGW
 #   undef _WIN32_WINNT
 #   undef WINVER

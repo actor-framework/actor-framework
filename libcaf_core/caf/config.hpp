@@ -133,7 +133,9 @@
 #  pragma warning( disable : 4624 )
 #  pragma warning( disable : 4800 )
 #  pragma warning( disable : 4503 )
-#  define NOMINMAX
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif // NOMINMAX
 #else
 #  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS
