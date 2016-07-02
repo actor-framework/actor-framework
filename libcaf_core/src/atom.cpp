@@ -19,6 +19,8 @@
 
 #include "caf/atom.hpp"
 
+#include <cstring>
+
 namespace caf {
 
 atom_value atom_from_string(const std::string& x) {
