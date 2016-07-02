@@ -1253,7 +1253,7 @@ private:
   native_socket fd_;
 };
 
-#ifdef CAF_WINDOWS
+#if defined(CAF_WINDOWS) && ! defined(__MINGW32__)
 using sa_family_t = unsigned short;
 using in_port_t = unsigned short;
 #endif
