@@ -1253,36 +1253,31 @@ private:
   native_socket fd_;
 };
 
-#if defined(CAF_WINDOWS) && ! defined(__MINGW32__)
-using sa_family_t = unsigned short;
-using in_port_t = unsigned short;
-#endif
-
-in_addr& addr_of(sockaddr_in& what) {
+auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
   return what.sin_addr;
 }
 
-sa_family_t& family_of(sockaddr_in& what) {
+auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
   return what.sin_family;
 }
 
-in_port_t& port_of(sockaddr_in& what) {
+auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
   return what.sin_port;
 }
 
-in6_addr& addr_of(sockaddr_in6& what) {
+auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
   return what.sin6_addr;
 }
 
-sa_family_t& family_of(sockaddr_in6& what) {
+auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
   return what.sin6_family;
 }
 
-in_port_t& port_of(sockaddr_in6& what) {
+auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
   return what.sin6_port;
 }
 
-in_port_t& port_of(sockaddr& what) {
+auto port_of(sockaddr& what) -> decltype(port_of(std::declval<sockaddr_in&>())) {
   switch (what.sa_family) {
     case AF_INET:
       return port_of(reinterpret_cast<sockaddr_in&>(what));
