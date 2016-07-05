@@ -21,10 +21,16 @@
 #define CAF_ERROR_HPP
 
 #include <cstdint>
+#include <utility>
+#include <functional>
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
-#include "caf/message.hpp"
+#include "caf/none.hpp"
+#include "caf/atom.hpp"
+
+#include "caf/meta/type_name.hpp"
+#include "caf/meta/omittable_if_empty.hpp"
 
 #include "caf/detail/comparable.hpp"
 
@@ -87,69 +93,131 @@ using enable_if_has_make_error_t
 /// rendering error messages via `actor_system::render(const error&)`.
 class error : detail::comparable<error> {
 public:
-  error() noexcept;
-  error(error&&) noexcept = default;
-  error(const error&) noexcept = default;
-  error& operator=(error&&) noexcept = default;
-  error& operator=(const error&) noexcept = default;
+  // -- member types -----------------------------------------------------------
 
-  error(uint8_t code, atom_value category) noexcept;
-  error(uint8_t code, atom_value category, message msg) noexcept;
+  using inspect_fun = std::function<error (meta::type_name_t,
+                                           uint8_t&, atom_value&,
+                                           meta::omittable_if_empty_t,
+                                           message&)>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  error() noexcept;
+  error(none_t) noexcept;
+
+  error(error&&) noexcept;
+  error& operator=(error&&) noexcept;
+
+  error(const error&);
+  error& operator=(const error&);
+
+  error(uint8_t code, atom_value category);
+  error(uint8_t code, atom_value category, message msg);
 
   template <class E, class = enable_if_has_make_error_t<E>>
   error(E error_value) : error(make_error(error_value)) {
     // nop
   }
 
-  /// Returns the category-specific error code, whereas `0` means "no error".
-  inline uint8_t code() const noexcept {
-    return code_;
+  template <class E, class = enable_if_has_make_error_t<E>>
+  error& operator=(E error_value) {
+    auto tmp = make_error(error_value);
+    std::swap(data_, tmp.data_);
+    return *this;
   }
+
+  ~error();
+
+  // -- observers --------------------------------------------------------------
+
+  /// Returns the category-specific error code, whereas `0` means "no error".
+  /// @pre `*this != none`
+  uint8_t code() const noexcept;
 
   /// Returns the category of this error.
-  inline atom_value category() const noexcept {
-    return category_;
-  }
+  /// @pre `*this != none`
+  atom_value category() const noexcept;
 
-  /// Returns optional context information to this error.
-  inline message& context() noexcept {
-    return context_;
-  }
+  /// Returns context information to this error.
+  /// @pre `*this != none`
+  const message& context() const noexcept;
 
-  /// Returns optional context information to this error.
-  inline const message& context() const noexcept {
-    return context_;
-  }
-
-  /// Returns `code() != 0`.
+  /// Returns `*this != none`.
   inline explicit operator bool() const noexcept {
-    return code_ != 0;
+    return data_ != nullptr;
   }
 
-  /// Returns `code() == 0`.
+  /// Returns `*this == none`.
   inline bool operator!() const noexcept {
-    return code_ == 0;
+    return data_ == nullptr;
   }
-
-  /// Sets the error code to 0.
-  inline void clear() noexcept {
-    code_ = 0;
-    context_.reset();
-  }
-
-  friend void serialize(serializer& sink, error& x, const unsigned int);
-
-  friend void serialize(deserializer& source, error& x, const unsigned int);
 
   int compare(const error&) const noexcept;
 
   int compare(uint8_t code, atom_value category) const noexcept;
 
+  // -- modifiers --------------------------------------------------------------
+
+  /// Returns context information to this error.
+  /// @pre `*this != none`
+  message& context() noexcept;
+
+  /// Sets the error code to 0.
+  void clear() noexcept;
+
+  // -- static convenience functions -------------------------------------------
+
+  /// @cond PRIVATE
+
+  static inline error eval() {
+    return none;
+  }
+
+  template <class F, class... Fs>
+  static error eval(F&& f, Fs&&... fs) {
+    auto x = f();
+    return x ? x : eval(std::forward<Fs>(fs)...);
+  }
+
+  /// @endcond
+
+  // -- friend functions -------------------------------------------------------
+
+  template <class Inspector>
+  friend error inspect(Inspector& f, error& x) {
+    auto fun = [&](meta::type_name_t x0, uint8_t& x1, atom_value& x2,
+                   meta::omittable_if_empty_t x3, message& x4) -> error{
+      return f(x0, x1, x2, x3, x4);
+    };
+    return x.apply(fun);
+  }
+
 private:
-  uint8_t code_;
-  atom_value category_;
-  message context_;
+  // -- inspection support -----------------------------------------------------
+
+  error apply(inspect_fun f);
+
+  // -- nested classes ---------------------------------------------------------
+
+  struct data;
+
+  // -- member variables -------------------------------------------------------
+
+  data* data_;
 };
+
+/// @relates error
+std::string to_string(const error& x);
+
+/// @relates error
+inline bool operator==(const error& x, none_t) {
+  return ! x;
+}
+
+/// @relates error
+inline bool operator==(none_t, const error& x) {
+  return ! x;
+}
 
 /// @relates error
 template <class E, class = enable_if_has_make_error_t<E>>
@@ -164,6 +232,16 @@ bool operator==(E x, const error& y) {
 }
 
 /// @relates error
+inline bool operator!=(const error& x, none_t) {
+  return static_cast<bool>(x);
+}
+
+/// @relates error
+inline bool operator!=(none_t, const error& x) {
+  return static_cast<bool>(x);
+}
+
+/// @relates error
 template <class E, class = enable_if_has_make_error_t<E>>
 bool operator!=(const error& x, E y) {
   return ! (x == y);
@@ -174,9 +252,6 @@ template <class E, class = enable_if_has_make_error_t<E>>
 bool operator!=(E x, const error& y) {
   return ! (x == y);
 }
-
-/// @relates error
-std::string to_string(const error& x);
 
 } // namespace caf
 

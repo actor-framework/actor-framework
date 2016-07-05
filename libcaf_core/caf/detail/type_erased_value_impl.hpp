@@ -78,9 +78,7 @@ public:
   }
 
   error load(deserializer& source) override {
-    detail::try_serialize(source, addr_of(x_));
-    // TODO: refactor after visit API is in place (#470)
-    return {};
+    return source(*addr_of(x_));
   }
 
   // -- overridden observers ---------------------------------------------------
@@ -105,9 +103,7 @@ public:
   }
 
   error save(serializer& sink) const override {
-    detail::try_serialize(sink, addr_of(x_));
-    // TODO: refactor after visit API is in place (#470)
-    return {};
+    return sink(*addr_of(const_cast<T&>(x_)));
   }
 
   std::string stringify() const override {

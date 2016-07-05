@@ -23,111 +23,60 @@
 #include <tuple>
 #include <stdexcept>
 
+#include "caf/type_nr.hpp"
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/make_type_erased_value.hpp"
 
-#include "caf/type_nr.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/message_data.hpp"
 #include "caf/detail/try_serialize.hpp"
-#include "caf/make_type_erased_value.hpp"
+#include "caf/detail/stringification_inspector.hpp"
+
+#define CAF_TUPLE_VALS_DISPATCH(x)                                             \
+  case x:                                                                      \
+    return tuple_inspect_delegate<x, sizeof...(Ts)-1>(data_, f)
 
 namespace caf {
 namespace detail {
 
-template <size_t Pos, size_t Max, bool InRange = (Pos < Max)>
-struct tup_ptr_access {
-  template <class T>
-  static typename std::conditional<
-    std::is_const<T>::value,
-    const void*,
-    void*
-  >::type
-  get(size_t pos, T& tup) {
-    if (pos == Pos) return &std::get<Pos>(tup);
-    return tup_ptr_access<Pos + 1, Max>::get(pos, tup);
-  }
+// avoids triggering static asserts when using CAF_TUPLE_VALS_DISPATCH
+template <size_t X, size_t Max, class T, class F>
+auto tuple_inspect_delegate(T& data, F& f) -> decltype(f(std::get<Max>(data))) {
+  return f(std::get<(X < Max ? X : Max)>(data));
+}
 
-  template <class T>
-  static bool cmp(size_t pos, T& tup, const void* x) {
-    using type = typename std::tuple_element<Pos, T>::type;
-    if (pos == Pos)
-      return safe_equal(std::get<Pos>(tup), *reinterpret_cast<const type*>(x));
-    return tup_ptr_access<Pos + 1, Max>::cmp(pos, tup, x);
-  }
-
-  template <class T, class Processor>
-  static error serialize(size_t pos, T& tup, Processor& proc) {
-    if (pos == Pos)
-      try_serialize(proc, &std::get<Pos>(tup));
-    else
-      tup_ptr_access<Pos + 1, Max>::serialize(pos, tup, proc);
-    // TODO: refactor after visit API is in place (#470)
-    return {};
-  }
-
-  template <class T>
-  static std::string stringify(size_t pos, const T& tup) {
-    if (pos == Pos)
-      return deep_to_string(std::get<Pos>(tup));
-    return tup_ptr_access<Pos + 1, Max>::stringify(pos, tup);
-  }
-
-  template <class T>
-  static type_erased_value_ptr copy(size_t pos, const T& tup) {
-    using value_type = typename std::tuple_element<Pos, T>::type;
-    if (pos == Pos)
-      return make_type_erased_value<value_type>(std::get<Pos>(tup));
-    return tup_ptr_access<Pos + 1, Max>::copy(pos, tup);;
+template <size_t X, size_t N>
+struct tup_ptr_access_pos {
+  constexpr tup_ptr_access_pos() {
+    // nop
   }
 };
 
-template <size_t Pos, size_t Max>
-struct tup_ptr_access<Pos, Max, false> {
-  template <class T>
-  static typename std::conditional<
-    std::is_const<T>::value,
-    const void*,
-    void*
-  >::type
-  get(size_t, T&) {
-    // end of recursion
-    return nullptr;
-  }
+template <size_t X, size_t N>
+constexpr tup_ptr_access_pos<X + 1, N> next(tup_ptr_access_pos<X, N>) {
+  return {};
+}
 
+struct void_ptr_access {
   template <class T>
-  static bool cmp(size_t, T&, const void*) {
-    return false;
-  }
-
-  template <class T, class Processor>
-  static void serialize(size_t, T&, Processor&) {
-    // end of recursion
-  }
-
-  template <class T>
-  static std::string stringify(size_t, const T&) {
-    return "<unprintable>";
-  }
-
-  template <class T>
-  static type_erased_value_ptr copy(size_t, const T&) {
-    return nullptr;
+  void* operator()(T& x) const noexcept {
+    return &x;
   }
 };
 
 template <class T, uint16_t N = type_nr<T>::value>
 struct tuple_vals_type_helper {
-  static typename message_data::rtti_pair get() {
+  static typename message_data::rtti_pair get() noexcept {
     return {N, nullptr};
   }
 };
 
 template <class T>
 struct tuple_vals_type_helper<T, 0> {
-  static typename message_data::rtti_pair get() {
+  static typename message_data::rtti_pair get() noexcept {
     return {0, &typeid(T)};
   }
 };
@@ -135,13 +84,24 @@ struct tuple_vals_type_helper<T, 0> {
 template <class Base, class... Ts>
 class tuple_vals_impl : public Base {
 public:
+  // -- static invariants ------------------------------------------------------
+
   static_assert(sizeof...(Ts) > 0, "tuple_vals is not allowed to be empty");
+
+  // -- member types -----------------------------------------------------------
 
   using super = message_data;
 
   using rtti_pair = typename message_data::rtti_pair;
 
   using data_type = std::tuple<Ts...>;
+
+  // -- friend functions -------------------------------------------------------
+
+  template <class Inspector>
+  friend error inspect(Inspector& f, tuple_vals_impl& x) {
+    return apply_args(f, get_indices(x.data_), x.data_);
+  }
 
   tuple_vals_impl(const tuple_vals_impl&) = default;
 
@@ -166,26 +126,32 @@ public:
 
   const void* get(size_t pos) const noexcept override {
     CAF_ASSERT(pos < size());
-    return tup_ptr_access<0, sizeof...(Ts)>::get(pos, data_);
+    void_ptr_access f;
+    return mptr()->dispatch(pos, f);
   }
 
   void* get_mutable(size_t pos) override {
     CAF_ASSERT(pos < size());
-    return const_cast<void*>(get(pos));
+    void_ptr_access f;
+    return this->dispatch(pos, f);
   }
 
   std::string stringify(size_t pos) const override {
-    return tup_ptr_access<0, sizeof...(Ts)>::stringify(pos, data_);
+    std::string result;
+    stringification_inspector f{result};
+    mptr()->dispatch(pos, f);
+    return result;
   }
 
   using Base::copy;
 
   type_erased_value_ptr copy(size_t pos) const override {
-    return tup_ptr_access<0, sizeof...(Ts)>::copy(pos, data_);
+    type_erased_value_factory f;
+    return mptr()->dispatch(pos, f);
   }
 
   error load(size_t pos, deserializer& source) override {
-    return tup_ptr_access<0, sizeof...(Ts)>::serialize(pos, data_, source);
+    return dispatch(pos, source);
   }
 
   uint32_t type_token() const noexcept override {
@@ -197,13 +163,49 @@ public:
   }
 
   error save(size_t pos, serializer& sink) const override {
-    // the serialization framework uses non-const arguments for deserialization,
-    // but this cast is safe since the values are not actually changed
-    auto& nc_data = const_cast<data_type&>(data_);
-    return tup_ptr_access<0, sizeof...(Ts)>::serialize(pos, nc_data, sink);
+    return mptr()->dispatch(pos, sink);
   }
 
 private:
+  template <class F>
+  auto dispatch(size_t pos, F& f) -> decltype(f(std::declval<int&>())) {
+    CAF_ASSERT(pos < sizeof...(Ts));
+    switch (pos) {
+      CAF_TUPLE_VALS_DISPATCH(0);
+      CAF_TUPLE_VALS_DISPATCH(1);
+      CAF_TUPLE_VALS_DISPATCH(2);
+      CAF_TUPLE_VALS_DISPATCH(3);
+      CAF_TUPLE_VALS_DISPATCH(4);
+      CAF_TUPLE_VALS_DISPATCH(5);
+      CAF_TUPLE_VALS_DISPATCH(6);
+      CAF_TUPLE_VALS_DISPATCH(7);
+      CAF_TUPLE_VALS_DISPATCH(8);
+      CAF_TUPLE_VALS_DISPATCH(9);
+      default:
+        // fall back to recursive dispatch function
+        static constexpr size_t max_pos = sizeof...(Ts) - 1;
+        tup_ptr_access_pos<(10 < max_pos ? 10 : max_pos), max_pos> first;
+        return rec_dispatch(pos, f, first);
+    }
+  }
+
+  template <class F, size_t N>
+  auto rec_dispatch(size_t, F& f, tup_ptr_access_pos<N, N>)
+  -> decltype(f(std::declval<int&>())) {
+    return tuple_inspect_delegate<N, N>(data_, f);
+  }
+
+  template <class F, size_t X, size_t N>
+  auto rec_dispatch(size_t pos, F& f, tup_ptr_access_pos<X, N> token)
+  -> decltype(f(std::declval<int&>())) {
+    return pos == X ? tuple_inspect_delegate<X, N>(data_, f)
+                    : rec_dispatch(pos, f, next(token));
+  }
+
+  tuple_vals_impl* mptr() const {
+    return const_cast<tuple_vals_impl*>(this);
+  }
+
   data_type data_;
   std::array<rtti_pair, sizeof...(Ts)> types_;
 };

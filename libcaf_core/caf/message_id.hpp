@@ -24,8 +24,11 @@
 #include <cstdint>
 #include <functional>
 
-#include "caf/config.hpp"
+#include "caf/error.hpp"
 #include "caf/message_priority.hpp"
+
+#include "caf/meta/type_name.hpp"
+
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
@@ -132,9 +135,9 @@ public:
                                       : (value_ < other.value_ ? -1 : 1);
   }
 
-  template <class T>
-  friend void serialize(T& in_or_out, message_id& mid, const unsigned int) {
-    in_or_out & mid.value_;
+  template <class Inspector>
+  friend error inspect(Inspector& f, message_id& x) {
+    return f(meta::type_name("message_id"), x.value_);
   }
 
 private:
@@ -144,11 +147,6 @@ private:
 
   uint64_t value_;
 };
-
-/// @relates message_id
-inline std::string to_string(const message_id& x) {
-  return std::to_string(x.integer_value());
-}
 
 } // namespace caf
 

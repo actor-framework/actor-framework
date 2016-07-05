@@ -55,36 +55,34 @@ intptr_t group::compare(const group& other) const noexcept {
   return compare(ptr_.get(), other.ptr_.get());
 }
 
-void serialize(serializer& sink, const group& x, const unsigned int) {
+error inspect(serializer& f, group& x) {
+  std::string mod_name;
   auto ptr = x.get();
-  if (! ptr) {
-    std::string dummy;
-    sink << dummy;
-  } else {
-    sink << ptr->module().name();
-    ptr->save(sink);
-  }
+  if (! ptr)
+    return f(mod_name);
+  mod_name = ptr->module().name();
+  auto e = f(mod_name);
+  return e ? e : ptr->save(f);
 }
 
-void serialize(deserializer& source, group& x, const unsigned int) {
+error inspect(deserializer& f, group& x) {
   std::string module_name;
-  source >> module_name;
+  f(module_name);
   if (module_name.empty()) {
     x = invalid_group;
-    return;
+    return none;
   }
-  if (! source.context())
-    CAF_RAISE_ERROR("Cannot serialize group without context.");
-  auto& sys = source.context()->system();
+  if (! f.context())
+    return sec::no_context;
+  auto& sys = f.context()->system();
   auto mod = sys.groups().get_module(module_name);
   if (! mod)
-    CAF_RAISE_ERROR("Cannot deserialize a group for unknown module: "
-                    + module_name);
-  mod->load(source, x);
+    return sec::no_such_group_module;
+  return mod->load(f, x);
 }
 
 std::string to_string(const group& x) {
-  if (! x)
+  if (x == invalid_group)
     return "<invalid-group>";
   std::string result = x.get()->module().name();
   result += "/";

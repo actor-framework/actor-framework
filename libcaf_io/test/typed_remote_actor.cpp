@@ -39,9 +39,9 @@ struct ping {
   int32_t value;
 };
 
-template <class Processor>
-void serialize(Processor& proc, ping& x, const unsigned int) {
-  proc & x.value;
+template <class Inspector>
+error inspect(Inspector& f, ping& x) {
+  return f(meta::type_name("ping"), x.value);
 }
 
 bool operator==(const ping& lhs, const ping& rhs) {
@@ -52,9 +52,9 @@ struct pong {
   int32_t value;
 };
 
-template <class Processor>
-void serialize(Processor& proc, pong& x, const unsigned int) {
-  proc & x.value;
+template <class Inspector>
+error inspect(Inspector& f, pong& x) {
+  return f(meta::type_name("pong"), x.value);
 }
 
 bool operator==(const pong& lhs, const pong& rhs) {

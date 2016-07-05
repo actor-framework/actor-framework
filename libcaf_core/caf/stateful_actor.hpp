@@ -24,6 +24,7 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/sec.hpp"
 
 #include "caf/logger.hpp"
 
@@ -63,15 +64,11 @@ public:
   }
 
   error save_state(serializer& sink, const unsigned int version) override {
-    serialize_state(sink, state, version);
-    // TODO: refactor after visit API is in place (#470)
-    return {};
+    return serialize_state(&sink, state, version);
   }
 
   error load_state(deserializer& source, const unsigned int version) override {
-    serialize_state(source, state, version);
-    // TODO: refactor after visit API is in place (#470)
-    return {};
+    return serialize_state(&source, state, version);
   }
 
   /// A reference to the actor's state.
@@ -87,16 +84,15 @@ public:
   /// @endcond
 
 private:
-  template <class Archive, class U>
-  typename std::enable_if<detail::is_serializable<U>::value>::type
-  serialize_state(Archive& ar, U& st, const unsigned int) {
-    ar & st;
+  template <class Inspector, class T>
+  auto serialize_state(Inspector* f, T& x, const unsigned int)
+  -> decltype(inspect(*f, x)) {
+    return inspect(*f, x);
   }
 
-  template <class Archive, class U>
-  typename std::enable_if<! detail::is_serializable<U>::value>::type
-  serialize_state(Archive&, U&, const unsigned int) {
-    CAF_RAISE_ERROR("serialize_state with unserializable type called");
+  template <class T>
+  error serialize_state(void*, T&, const unsigned int) {
+    return sec::invalid_argument;
   }
 
   template <class T>

@@ -17,44 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INDEX_MAPPING_HPP
-#define CAF_INDEX_MAPPING_HPP
+#ifndef CAF_META_TYPE_NAME_HPP
+#define CAF_META_TYPE_NAME_HPP
 
-#include <tuple>
-#include <string>
-#include <functional>
-
-#include "caf/meta/type_name.hpp"
+#include "caf/meta/annotation.hpp"
 
 namespace caf {
+namespace meta {
 
-/// Marker for representing placeholders at runtime.
-struct index_mapping {
-  int value;
-
-  explicit index_mapping(int x) : value(x) {
+struct type_name_t : annotation {
+  constexpr type_name_t(const char* cstr) : value(cstr) {
     // nop
   }
 
-  template <class T,
-            class E = typename std::enable_if<
-                        std::is_placeholder<T>::value != 0
-                      >::type>
-  index_mapping(T) : value(std::is_placeholder<T>::value) {
-    // nop
-  }
+  const char* value;
 };
 
-inline bool operator==(const index_mapping& x, const index_mapping& y) {
-  return x.value == y.value;
+/// Returns a type name annotation.
+type_name_t constexpr type_name(const char* cstr) {
+  return {cstr};
 }
-
-template <class Inspector>
-auto inspect(Inspector& f, index_mapping& x)
--> decltype(f(meta::type_name("index_mapping"), x.value)) {
-  return f(meta::type_name("index_mapping"), x.value);
-}
-
+} // namespace meta
 } // namespace caf
 
-#endif // CAF_INDEX_MAPPING_HPP
+#endif // CAF_META_TYPE_NAME_HPP

@@ -68,9 +68,7 @@ public:
   }
 
   error load(size_t pos, deserializer& source) override {
-    ptrs_[pos]->load(source);
-    // TODO: refactor after visit API is in place (#470)
-    return {};
+    return ptrs_[pos]->load(source);
   }
 
   // -- overridden observers ---------------------------------------------------

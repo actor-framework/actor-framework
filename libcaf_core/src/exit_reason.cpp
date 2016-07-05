@@ -19,6 +19,8 @@
 
 #include "caf/exit_reason.hpp"
 
+#include "caf/message.hpp"
+
 namespace caf {
 
 namespace {

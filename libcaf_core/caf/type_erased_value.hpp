@@ -97,17 +97,17 @@ public:
 };
 
 /// @relates type_erased_value_impl
-template <class Processor>
-typename std::enable_if<Processor::is_saving::value>::type
-serialize(Processor& proc, type_erased_value& x) {
-  x.save(proc);
+template <class Inspector>
+typename std::enable_if<Inspector::is_saving::value, error>::type
+inspect(Inspector& f, type_erased_value& x) {
+  return x.save(f);
 }
 
 /// @relates type_erased_value_impl
-template <class Processor>
-typename std::enable_if<Processor::is_loading::value>::type
-serialize(Processor& proc, type_erased_value& x) {
-  x.load(proc);
+template <class Inspector>
+typename std::enable_if<Inspector::is_loading::value, error>::type
+inspect(Inspector& f, type_erased_value& x) {
+  return x.load(f);
 }
 
 /// @relates type_erased_value_impl

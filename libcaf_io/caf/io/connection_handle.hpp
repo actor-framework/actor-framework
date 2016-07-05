@@ -22,7 +22,11 @@
 
 #include <functional>
 
+#include "caf/error.hpp"
+
 #include "caf/io/handle.hpp"
+
+#include "caf/meta/type_name.hpp"
 
 namespace caf {
 namespace io {
@@ -52,10 +56,9 @@ public:
     // nop
   }
 
-  template <class Processor>
-  friend void serialize(Processor& proc, connection_handle& x,
-                        const unsigned int) {
-    proc & x.id_;
+  template <class Inspector>
+  friend error inspect(Inspector& f, connection_handle& x) {
+    return f(meta::type_name("connection_handle"), x.id_);
   }
 
  private:

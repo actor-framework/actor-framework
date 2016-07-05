@@ -50,11 +50,11 @@ node_id::~node_id() {
   // nop
 }
 
-node_id::node_id(const invalid_node_id_t&) {
+node_id::node_id(const none_t&) {
   // nop
 }
 
-node_id& node_id::operator=(const invalid_node_id_t&) {
+node_id& node_id::operator=(const none_t&) {
   data_.reset();
   return *this;
 }
@@ -73,7 +73,7 @@ node_id::node_id(uint32_t procid, const host_id_type& hid)
   // nop
 }
 
-int node_id::compare(const invalid_node_id_t&) const {
+int node_id::compare(const none_t&) const {
   return data_ ? 1 : 0; // invalid instances are always smaller
 }
 
@@ -95,7 +95,7 @@ int node_id::compare(const node_id& other) const {
 }
 
 node_id::data::data() : pid_(0) {
-  // nop
+  memset(host_.data(), 0, host_.size());
 }
 
 node_id::data::data(uint32_t procid, host_id_type hid)
@@ -130,8 +130,9 @@ node_id::data::~data() {
   // nop
 }
 
-void node_id::data::stop() {
-  // nop
+bool node_id::data::valid() const {
+  auto is_zero = [](uint8_t x) { return x == 0; };
+  return pid_ != 0 && ! std::all_of(host_.begin(), host_.end(), is_zero);
 }
 
 namespace {
@@ -178,104 +179,13 @@ void node_id::swap(node_id& x) {
   data_.swap(x.data_);
 }
 
-void serialize(serializer& sink, node_id& x, const unsigned int) {
-  if (! x.data_) {
-    node_id::host_id_type zero_id;
-    std::fill(zero_id.begin(), zero_id.end(), 0);
-    uint32_t zero_pid = 0;
-    sink.apply_raw(zero_id.size(), zero_id.data());
-    sink << zero_pid;
-  } else {
-    sink.apply_raw(x.data_->host_.size(), x.data_->host_.data());
-    sink.apply(x.data_->pid_);
-  }
-}
-
-void serialize(deserializer& source, node_id& x, const unsigned int) {
-  node_id::host_id_type tmp_hid;
-  uint32_t tmp_pid;
-  source.apply_raw(tmp_hid.size(), tmp_hid.data());
-  source >> tmp_pid;
-  auto is_zero = [](uint8_t value) { return value == 0; };
-  // no need to keep the data if it is invalid
-  if (tmp_pid == 0 && std::all_of(tmp_hid.begin(), tmp_hid.end(), is_zero)) {
-    x = invalid_node_id;
-    return;
-  }
-  if (! x.data_ || ! x.data_->unique()) {
-    x.data_ = make_counted<node_id::data>(tmp_pid, tmp_hid);
-  } else {
-    x.data_->pid_ = tmp_pid;
-    x.data_->host_ = tmp_hid;
-  }
-}
-
-namespace {
-
-inline uint8_t hex_nibble(char c) {
-  return static_cast<uint8_t>(c >= '0' && c <= '9'
-                              ? c - '0'
-                              : (c >= 'a' && c <= 'f' ? (c - 'a') + 10
-                                                      : (c - 'A') + 10));
-}
-
-} // namespace <anonymous>
-
-void node_id::from_string(const std::string& str) {
-  data_.reset();
-  if (str == "<invalid-node>")
-    return;
-  static constexpr size_t hexstr_size = host_id_size * 2;
-  // node id format is: "[0-9a-zA-Z]{40}:[0-9]+"
-  if (str.size() < hexstr_size + 2)
-    return;
-  auto beg = str.begin();
-  auto sep = beg + hexstr_size; // separator ':' / end of hex-string
-  auto eos = str.end(); // end-of-string
-  if (*sep != ':')
-    return;
-  if (! std::all_of(beg, sep, ::isxdigit))
-    return;
-  if (! std::all_of(sep + 1, eos, ::isdigit))
-    return;
-  // iterate two digits in the input string as one byte in hex format
-  struct hex_byte_iter : std::iterator<std::input_iterator_tag, uint8_t> {
-    using const_iterator = std::string::const_iterator;
-    const_iterator i;
-    hex_byte_iter(const_iterator x) : i(x) {
-      // nop
-    }
-    uint8_t operator*() const {
-      return static_cast<uint8_t>(hex_nibble(*i) << 4) | hex_nibble(*(i + 1));
-    }
-    hex_byte_iter& operator++() {
-      i += 2;
-      return *this;
-    }
-    bool operator!=(const hex_byte_iter& x) const {
-      return i != x.i;
-    }
-  };
-  hex_byte_iter first{beg};
-  hex_byte_iter last{sep};
-  data_.reset(new data);
-  std::copy(first, last, data_->host_.begin());
-  data_->pid_ = static_cast<uint32_t>(atoll(&*(sep + 1)));
-}
-
 std::string to_string(const node_id& x) {
   if (! x)
-    return "<invalid-node>";
-  std::ostringstream oss;
-  oss << std::hex;
-  oss.fill('0');
-  auto& hid = x.host_id();
-  for (auto val : hid) {
-    oss.width(2);
-    oss << static_cast<uint32_t>(val);
-  }
-  oss << ":" << std::dec << x.process_id();
-  return oss.str();
+    return "none";
+  return deep_to_string(meta::type_name("node_id"),
+                        x.process_id(),
+                        meta::hex_formatted(),
+                        x.host_id());
 }
 
 } // namespace caf

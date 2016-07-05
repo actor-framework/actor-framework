@@ -130,6 +130,15 @@ public:
     return *reinterpret_cast<T*>(get_mutable(pos));
   }
 
+  /// Convenience function for moving a value out of the tuple if it is
+  /// unshared. Returns a copy otherwise.
+  template <class T>
+  T move_if_unshared(size_t pos) {
+    if (shared())
+      return get_as<T>(pos);
+    return std::move(get_mutable_as<T>(pos));
+  }
+
   /// Returns `true` if the element at `pos` matches `T`.
   template <class T>
   bool match_element(size_t pos) const noexcept {

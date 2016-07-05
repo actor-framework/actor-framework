@@ -39,9 +39,12 @@ namespace {
 using rtti_pair = std::pair<uint16_t, const std::type_info*>;
 
 std::string to_string(const rtti_pair& x) {
-  if (x.second)
-    return deep_to_string_as_tuple(x.first, x.second->name());
-  return deep_to_string_as_tuple(x.first, "<null>");
+  std::string result = "(";
+  result += std::to_string(x.first);
+  result += ", ";
+  result += x.second ? x.second->name() : "<null>";
+  result += ")";
+  return result;
 }
 
 struct fixture {

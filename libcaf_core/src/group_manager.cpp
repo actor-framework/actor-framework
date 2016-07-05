@@ -350,22 +350,24 @@ public:
     // deserialize identifier and broker
     std::string identifier;
     strong_actor_ptr broker_ptr;
-    source >> identifier >> broker_ptr;
+    auto e = source(identifier, broker_ptr);
+    if (e)
+      return e;
     CAF_LOG_DEBUG(CAF_ARG(identifier) << CAF_ARG(broker_ptr));
     if (! broker_ptr) {
       storage = invalid_group;
-      return {};
+      return none;
     }
     auto broker = actor_cast<actor>(broker_ptr);
     if (broker->node() == system().node()) {
       storage = *this->get(identifier);
-      return {};
+      return none;
     }
     upgrade_guard guard(proxies_mtx_);
     auto i = proxies_.find(broker);
     if (i != proxies_.end()) {
       storage = group{i->second};
-      return {};
+      return none;
     }
     local_group_ptr tmp = make_counted<local_group_proxy>(system(), broker,
                                                           *this, identifier,
@@ -374,15 +376,15 @@ public:
     auto p = proxies_.emplace(broker, tmp);
     // someone might preempt us
     storage = group{p.first->second};
-    return {};
+    return none;
   }
 
   error save(const local_group* ptr, serializer& sink) const {
     CAF_ASSERT(ptr != nullptr);
     CAF_LOG_TRACE("");
-    sink << ptr->identifier() << actor_cast<strong_actor_ptr>(ptr->broker());
-    // TODO: refactor after visit API is in place (#470)
-    return {};
+    auto bro = actor_cast<strong_actor_ptr>(ptr->broker());
+    auto& id = const_cast<std::string&>(ptr->identifier());
+    return sink(id, bro);
   }
 
   void stop() override {
@@ -423,9 +425,7 @@ error local_group::save(serializer& sink) const {
   CAF_LOG_TRACE("");
   // this cast is safe, because the only available constructor accepts
   // local_group_module* as module pointer
-  static_cast<local_group_module&>(parent_).save(this, sink);
-  // TODO: refactor after visit API is in place (#470)
-  return {};
+  return static_cast<local_group_module&>(parent_).save(this, sink);
 }
 
 std::atomic<size_t> s_ad_hoc_id;

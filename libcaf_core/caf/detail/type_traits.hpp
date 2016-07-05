@@ -22,10 +22,10 @@
 
 #include <tuple>
 #include <string>
+#include <vector>
 #include <utility>
 #include <functional>
 #include <type_traits>
-#include <vector>
 
 #include "caf/fwd.hpp"
 
@@ -33,6 +33,48 @@
 
 namespace caf {
 namespace detail {
+
+template <class T>
+using decay_t = typename std::decay<T>::type;
+
+template <bool V, class T = void>
+using enable_if_t = typename std::enable_if<V, T>::type;
+
+template <class Trait, class T = void>
+using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
+
+template <class Inspector, class T>
+class is_inspectable {
+private:
+  template <class U>
+  static auto sfinae(Inspector& x, U& y) -> decltype(inspect(x, y));
+
+  static std::false_type sfinae(Inspector&, ...);
+
+  using result_type = decltype(sfinae(std::declval<Inspector&>(),
+                                      std::declval<T&>()));
+
+public:
+  static constexpr bool value = ! std::is_same<result_type, std::false_type>::value;
+};
+
+template <class T>
+class has_to_string {
+private:
+  template <class U>
+  static auto sfinae(const U& x) -> decltype(to_string(x));
+
+  static void sfinae(...);
+
+  using result = decltype(sfinae(std::declval<const T&>()));
+
+public:
+  static constexpr bool value = std::is_convertible<result, std::string>::value;
+};
+
+// pointers are never inspectable
+template <class Inspector, class T>
+class is_inspectable<Inspector, T*> : std::false_type {};
 
 template <bool X>
 using bool_token = std::integral_constant<bool, X>;
@@ -80,17 +122,17 @@ struct is_array_of {
 /// Deduces the reference type of T0 and applies it to T1.
 template <class T0, typename T1>
 struct deduce_ref_type {
-  using type = typename std::decay<T1>::type;
+  using type = decay_t<T1>;
 };
 
 template <class T0, typename T1>
 struct deduce_ref_type<T0&, T1> {
-  using type = typename std::decay<T1>::type&;
+  using type = decay_t<T1>&;
 };
 
 template <class T0, typename T1>
 struct deduce_ref_type<const T0&, T1> {
-  using type = const typename std::decay<T1>::type&;
+  using type = const decay_t<T1>&;
 };
 
 /// Checks wheter `X` is in the template parameter pack Ts.
@@ -143,11 +185,10 @@ class is_comparable {
   //     candidate and thus decltype(cmp_help_fun(...)) is void.
   template <class A, typename B>
   static bool cmp_help_fun(const A* arg0, const B* arg1,
-               decltype(*arg0 == *arg1)* = nullptr) {
-    return true;
-  }
+                           decltype(*arg0 == *arg1)* = nullptr);
+
   template <class A, typename B>
-  static void cmp_help_fun(const A*, const B*, void* = nullptr) { }
+  static void cmp_help_fun(const A*, const B*, void* = nullptr);
 
   using result_type = decltype(cmp_help_fun(static_cast<T1*>(nullptr),
                                             static_cast<T2*>(nullptr),
@@ -160,25 +201,19 @@ public:
 template <class T>
 class is_forward_iterator {
   template <class C>
-  static bool sfinae_fun(
-    C* iter,
-    // check for 'C::value_type C::operator*()' returning a non-void type
-    typename std::decay<decltype(*(*iter))>::type* = 0,
-    // check for 'C& C::operator++()'
-    typename std::enable_if<
-      std::is_same<C&, decltype(++(*iter))>::value>::type* = 0,
-    // check for 'bool C::operator==()'
-    typename std::enable_if<
-      std::is_same<bool, decltype(*iter == *iter)>::value>::type* = 0,
-    // check for 'bool C::operator!=()'
-    typename std::enable_if<
-      std::is_same<bool, decltype(*iter != *iter)>::value>::type* = 0) {
-    return true;
-  }
+  static bool sfinae(C& x, C& y,
+                     // check for operator*
+                     decay_t<decltype(*x)>* = 0,
+                     // check for operator++ returning an iterator
+                     decay_t<decltype(x = ++y)>* = 0,
+                     // check for operator==
+                     decay_t<decltype(x == y)>* = 0,
+                     // check for operator!=
+                     decay_t<decltype(x != y)>* = 0);
 
-  static void sfinae_fun(void*) {}
+  static void sfinae(...);
 
-  using result_type = decltype(sfinae_fun(static_cast<T*>(nullptr)));
+  using result_type = decltype(sfinae(std::declval<T&>(), std::declval<T&>()));
 
 public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
@@ -189,21 +224,15 @@ public:
 template <class T>
 class has_char_insert {
   template <class C>
-  static bool sfinae_fun(C* cc,
-                         const char* first = nullptr,
-                         const char* last = nullptr,
-                         decltype(cc->insert(cc->end(), first, last))* = 0) {
-    return true;
-  }
+  static bool sfinae(C* cc,
+                     const char* first = nullptr,
+                     const char* last = nullptr,
+                     decltype(cc->insert(cc->end(), first, last))* = 0);
 
   // SFNINAE default
-  static void sfinae_fun(const void*) {
-    // nop
-  }
+  static void sfinae(const void*);
 
-  using decayed = typename std::decay<T>::type;
-
-  using result_type = decltype(sfinae_fun(static_cast<decayed*>(nullptr)));
+  using result_type = decltype(sfinae(static_cast<decay_t<T>>(nullptr)));
 
 public:
   static constexpr bool value = is_primitive<T>::value == false &&
@@ -216,30 +245,20 @@ template <class T>
 class is_iterable {
   // this horrible code would just disappear if we had concepts
   template <class C>
-  static bool sfinae_fun(
-    const C* cc,
-    // check for 'C::begin()' returning a forward iterator
-    typename std::enable_if<is_forward_iterator<decltype(cc->begin())>::value>::
-      type* = 0,
-    // check for 'C::end()' returning the same kind of forward iterator
-    typename std::enable_if<std::is_same<decltype(cc->begin()),
-                                         decltype(cc->end())>::value>::type
-    * = 0) {
-    return true;
-  }
+  static bool sfinae(C* cc,
+                     // check if 'C::begin()' returns a forward iterator
+                     enable_if_tt<is_forward_iterator<decltype(cc->begin())>>* = 0,
+                     // check if begin() and end() both exist and are comparable
+                     decltype(cc->begin() != cc->end())* = 0);
 
   // SFNINAE default
-  static void sfinae_fun(const void*) {
-    // nop
-  }
+  static void sfinae(void*);
 
-  using decayed = typename std::decay<T>::type;
-
-  using result_type = decltype(sfinae_fun(static_cast<const decayed*>(nullptr)));
+  using result_type = decltype(sfinae(static_cast<decay_t<T>*>(nullptr)));
 
 public:
-  static constexpr bool value = is_primitive<T>::value == false &&
-                  std::is_same<bool, result_type>::value;
+  static constexpr bool value = is_primitive<T>::value == false
+                                && std::is_same<bool, result_type>::value;
 };
 
 template <class T>
@@ -320,6 +339,7 @@ struct has_serialize<T, true> {
   static constexpr bool value = false;
 };
 
+/// Any inspectable type is considered to be serializable.
 template <class T>
 struct is_serializable;
 
@@ -329,11 +349,13 @@ template <class T,
                         || std::is_function<T>::value>
 struct is_serializable_impl;
 
+
 /// Checks whether `T` is builtin or provides a `serialize`
 /// (free or member) function.
 template <class T>
 struct is_serializable_impl<T, false, false> {
   static constexpr bool value = has_serialize<T>::value
+                                || is_inspectable<serializer, T>::value
                                 || is_builtin<T>::value;
 };
 
@@ -371,6 +393,7 @@ struct is_serializable_impl<T, IsIterable, true> {
 template <class T>
 struct is_serializable {
   static constexpr bool value = is_serializable_impl<T>::value
+                                || is_inspectable<serializer, T>::value
                                 || std::is_empty<T>::value
                                 || std::is_enum<T>::value;
 };
@@ -413,11 +436,13 @@ private:
             class = typename std::enable_if<
                       ! std::is_member_pointer<decltype(&U::static_type_name)>::value
                     >::type>
-  static std::true_type sfinae_fun(int);
+  static std::true_type sfinae(int);
+
   template <class>
-  static std::false_type sfinae_fun(...);
+  static std::false_type sfinae(...);
+
 public:
-  static constexpr bool value = decltype(sfinae_fun<T>(0))::value;
+  static constexpr bool value = decltype(sfinae<T>(0))::value;
 };
 
 /// Checks whether `T::memory_cache_flag` exists.
@@ -494,7 +519,7 @@ struct get_callable_trait_helper<false, false, C> {
 template <class T>
 struct get_callable_trait {
   // type without cv qualifiers
-  using bare_type = typename std::decay<T>::type;
+  using bare_type = decay_t<T>;
   // if T is a function pointer, this type identifies the function
   using signature_type = typename std::remove_pointer<bare_type>::type;
   using type =
@@ -527,9 +552,7 @@ struct is_callable {
 
   static void _fun(void*) { }
 
-  using pointer = typename std::decay<T>::type*;
-
-  using result_type = decltype(_fun(static_cast<pointer>(nullptr)));
+  using result_type = decltype(_fun(static_cast<decay_t<T>*>(nullptr)));
 
 public:
   static constexpr bool value = std::is_same<bool, result_type>::value;

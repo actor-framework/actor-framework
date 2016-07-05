@@ -79,6 +79,14 @@ enum class sec : uint8_t {
   cannot_publish_invalid_actor,
   /// A remote spawn failed because the provided types did not match.
   cannot_spawn_actor_from_arguments,
+  /// Serialization failed because there was not enough data to read.
+  end_of_stream,
+  /// Serialization failed because no CAF context is available.
+  no_context,
+  /// Serialization failed because CAF misses run-time type information.
+  unknown_type,
+  /// Serialization of actors failed because no proxy registry is available.
+  no_proxy_registry,
   /// A function view was called without assigning an actor first.
   bad_function_call
 };

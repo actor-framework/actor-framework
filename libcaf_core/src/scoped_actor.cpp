@@ -19,6 +19,7 @@
 
 #include "caf/scoped_actor.hpp"
 
+#include "caf/to_string.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/scoped_execution_unit.hpp"

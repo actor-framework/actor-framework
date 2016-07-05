@@ -27,6 +27,7 @@
 #include "caf/fwd.hpp"
 #include "caf/skip.hpp"
 #include "caf/atom.hpp"
+#include "caf/none.hpp"
 #include "caf/config.hpp"
 #include "caf/optional.hpp"
 #include "caf/make_counted.hpp"
@@ -67,6 +68,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   message() noexcept = default;
+  message(none_t) noexcept;
   message(const message&) noexcept = default;
   message& operator=(const message&) noexcept = default;
 
@@ -322,10 +324,10 @@ private:
 };
 
 /// @relates message
-void serialize(serializer& sink, const message& msg, const unsigned int);
+error inspect(serializer& sink, message& msg);
 
 /// @relates message
-void serialize(deserializer& sink, message& msg, const unsigned int);
+error inspect(deserializer& sink, message& msg);
 
 /// @relates message
 std::string to_string(const message& msg);

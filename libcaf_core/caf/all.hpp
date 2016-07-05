@@ -43,6 +43,7 @@
 #include "caf/exec_main.hpp"
 #include "caf/resumable.hpp"
 #include "caf/streambuf.hpp"
+#include "caf/to_string.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_pool.hpp"
 #include "caf/attachable.hpp"
@@ -98,6 +99,12 @@
 
 #include "caf/decorator/adapter.hpp"
 #include "caf/decorator/sequencer.hpp"
+
+#include "caf/meta/type_name.hpp"
+#include "caf/meta/annotation.hpp"
+#include "caf/meta/save_callback.hpp"
+#include "caf/meta/load_callback.hpp"
+#include "caf/meta/omittable_if_empty.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 

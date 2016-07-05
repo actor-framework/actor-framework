@@ -25,6 +25,12 @@
 #include <utility>
 #include <type_traits>
 
+#include "caf/config.hpp"
+
+#ifndef CAF_NO_EXCEPTIONS
+#include <exception>
+#endif // CAF_NO_EXCEPTIONS
+
 #include "caf/fwd.hpp"
 #include "caf/data_processor.hpp"
 
@@ -47,25 +53,35 @@ public:
   explicit deserializer(execution_unit* ctx = nullptr);
 };
 
-/// Reads `x` from `source`.
-/// @relates serializer
+#ifndef CAF_NO_EXCEPTIONS
+
 template <class T>
 typename std::enable_if<
   std::is_same<
-    void,
+    error,
+    decltype(std::declval<deserializer&>().apply(std::declval<T&>()))
+  >::value
+>::type
+operator&(deserializer& source, T& x) {
+  auto e = source.apply(x);
+  if (e)
+    throw std::runtime_error(to_string(e));
+}
+
+template <class T>
+typename std::enable_if<
+  std::is_same<
+    error,
     decltype(std::declval<deserializer&>().apply(std::declval<T&>()))
   >::value,
   deserializer&
 >::type
 operator>>(deserializer& source, T& x) {
-  source.apply(x);
+  source & x;
   return source;
 }
 
-template <class T>
-auto operator&(deserializer& source, T& x) -> decltype(source.apply(x)) {
-  source.apply(x);
-}
+#endif // CAF_NO_EXCEPTIONS
 
 } // namespace caf
 

@@ -75,16 +75,25 @@ abstract_broker::~abstract_broker() {
 void abstract_broker::configure_read(connection_handle hdl,
                                      receive_policy::config cfg) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(cfg));
-  by_id(hdl).configure_read(cfg);
+  auto x = by_id(hdl);
+  if (x)
+    x->configure_read(cfg);
 }
 
 void abstract_broker::ack_writes(connection_handle hdl, bool enable) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(enable));
-  by_id(hdl).ack_writes(enable);
+  auto x = by_id(hdl);
+  if (x)
+    x->ack_writes(enable);
 }
 
 std::vector<char>& abstract_broker::wr_buf(connection_handle hdl) {
-  return by_id(hdl).wr_buf();
+  auto x = by_id(hdl);
+  if (! x) {
+    CAF_LOG_ERROR("tried to access wr_buf() of an unknown connection_handle");
+    return dummy_wr_buf_;
+  }
+  return x->wr_buf();
 }
 
 void abstract_broker::write(connection_handle hdl, size_t bs, const void* buf) {
@@ -95,7 +104,9 @@ void abstract_broker::write(connection_handle hdl, size_t bs, const void* buf) {
 }
 
 void abstract_broker::flush(connection_handle hdl) {
-  by_id(hdl).flush();
+  auto x = by_id(hdl);
+  if (x)
+    x->flush();
 }
 
 std::vector<connection_handle> abstract_broker::connections() const {
@@ -175,7 +186,7 @@ accept_handle abstract_broker::hdl_by_port(uint16_t port) {
   for (auto& kvp : doormen_)
     if (kvp.second->port() == port)
       return kvp.first;
-  CAF_RAISE_ERROR("no such port");
+  return invalid_accept_handle;
 }
 
 void abstract_broker::close_all() {

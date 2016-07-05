@@ -241,13 +241,9 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     // nop
   }
 
-  template <class Processor>
-  friend void serialize(Processor& proc, typed_actor& x, const unsigned int v) {
-    serialize(proc, x.ptr_, v);
-  }
-
-  friend inline std::string to_string(const typed_actor& x) {
-    return to_string(x.ptr_);
+  template <class Inspector>
+  friend error inspect(Inspector& f, typed_actor& x) {
+    return f(x.ptr_);
   }
 
   /// Releases the reference held by handle `x`. Using the

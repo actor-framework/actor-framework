@@ -25,6 +25,8 @@
 #include <cstdint>
 #include <stdexcept>
 
+#include "caf/error.hpp"
+
 namespace caf {
 
 /// SI time units to specify timeouts.
@@ -138,14 +140,14 @@ private:
   }
 };
 
-std::string to_string(const duration& x);
-
 /// @relates duration
-template <class Processor>
-void serialize(Processor& proc, duration& x, const unsigned int) {
-  proc & x.unit;
-  proc & x.count;
+template <class Inspector>
+error inspect(Inspector& f, duration& x) {
+  return f(x.unit, x.count);
 }
+
+
+std::string to_string(const duration& x);
 
 /// @relates duration
 bool operator==(const duration& lhs, const duration& rhs);

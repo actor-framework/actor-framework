@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2015                                                  *
+ * Copyright (C) 2011 - 2016                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,44 +17,33 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INDEX_MAPPING_HPP
-#define CAF_INDEX_MAPPING_HPP
+#include "caf/config.hpp"
 
-#include <tuple>
-#include <string>
-#include <functional>
+#define CAF_SUITE to_string
+#include "caf/test/unit_test.hpp"
 
-#include "caf/meta/type_name.hpp"
+#include "caf/to_string.hpp"
 
-namespace caf {
+using namespace std;
+using namespace caf;
 
-/// Marker for representing placeholders at runtime.
-struct index_mapping {
-  int value;
-
-  explicit index_mapping(int x) : value(x) {
-    // nop
-  }
-
-  template <class T,
-            class E = typename std::enable_if<
-                        std::is_placeholder<T>::value != 0
-                      >::type>
-  index_mapping(T) : value(std::is_placeholder<T>::value) {
-    // nop
-  }
-};
-
-inline bool operator==(const index_mapping& x, const index_mapping& y) {
-  return x.value == y.value;
+CAF_TEST(buffer) {
+  std::vector<char> buf;
+  CAF_CHECK_EQUAL(deep_to_string(buf), "[]");
+  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "00");
+  buf.push_back(-1);
+  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1]");
+  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "FF");
+  buf.push_back(0);
+  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0]");
+  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "FF00");
+  buf.push_back(127);
+  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0, 127]");
+  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "FF007F");
+  buf.push_back(10);
+  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0, 127, 10]");
+  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "FF007F0A");
+  buf.push_back(16);
+  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0, 127, 10, 16]");
+  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "FF007F0A10");
 }
-
-template <class Inspector>
-auto inspect(Inspector& f, index_mapping& x)
--> decltype(f(meta::type_name("index_mapping"), x.value)) {
-  return f(meta::type_name("index_mapping"), x.value);
-}
-
-} // namespace caf
-
-#endif // CAF_INDEX_MAPPING_HPP

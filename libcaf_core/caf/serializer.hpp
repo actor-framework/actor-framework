@@ -24,6 +24,12 @@
 #include <cstddef> // size_t
 #include <type_traits>
 
+#include "caf/config.hpp"
+
+#ifndef CAF_NO_EXCEPTIONS
+#include <exception>
+#endif // CAF_NO_EXCEPTIONS
+
 #include "caf/fwd.hpp"
 #include "caf/data_processor.hpp"
 
@@ -46,37 +52,36 @@ public:
   virtual ~serializer();
 };
 
+#ifndef CAF_NO_EXCEPTIONS
+
 template <class T>
 typename std::enable_if<
   std::is_same<
-    void,
+    error,
+    decltype(std::declval<serializer&>().apply(std::declval<T&>()))
+  >::value
+>::type
+operator&(serializer& sink, const T& x) {
+  // implementations are required to never modify `x` while saving
+  auto e = sink.apply(const_cast<T&>(x));
+  if (e)
+    throw std::runtime_error(to_string(e));
+}
+
+template <class T>
+typename std::enable_if<
+  std::is_same<
+    error,
     decltype(std::declval<serializer&>().apply(std::declval<T&>()))
   >::value,
   serializer&
 >::type
 operator<<(serializer& sink, const T& x) {
-  // implementations are required to not change an object while serializing
-  sink.apply(const_cast<T&>(x));
+  sink & x;
   return sink;
 }
 
-template <class T>
-typename std::enable_if<
-  std::is_same<
-    void,
-    decltype(std::declval<serializer&>().apply(std::declval<T&>()))
-  >::value,
-  serializer&
->::type
-operator<<(serializer& sink, T& x) {
-  sink.apply(x);
-  return sink;
-}
-
-template <class T>
-auto operator&(serializer& sink, T& x) -> decltype(sink.apply(x)) {
-  sink.apply(x);
-}
+#endif // CAF_NO_EXCEPTIONS
 
 } // namespace caf
 

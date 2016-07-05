@@ -26,6 +26,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
+#include "caf/group_module.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/abstract_group.hpp"
 
@@ -84,9 +85,23 @@ public:
     return ptr_ ? 1 : 0;
   }
 
-  friend void serialize(serializer& sink, const group& x, const unsigned int);
+  template <class Inspector>
+  friend error inspect(Inspector& f, group& x) {
+    std::string x_id;
+    std::string x_mod;
+    auto ptr = x.get();
+    if (ptr) {
+      x_id = ptr->identifier();
+      x_mod = ptr->module().name();
+    }
+    return f(meta::type_name("group"),
+             meta::omittable_if_empty(), x_id,
+             meta::omittable_if_empty(), x_mod);
+  }
 
-  friend void serialize(deserializer& sink, group& x, const unsigned int);
+  friend error inspect(serializer&, group&);
+
+  friend error inspect(deserializer&, group&);
 
   inline abstract_group* get() const noexcept {
     return ptr_.get();

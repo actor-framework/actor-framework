@@ -79,9 +79,9 @@ struct raw_struct {
   string str;
 };
 
-template <class Processor>
-void serialize(Processor& proc, raw_struct& x) {
-  proc & x.str;
+template <class Inspector>
+error inspect(Inspector& f, raw_struct& x) {
+  return f(x.str);
 }
 
 bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
@@ -108,10 +108,9 @@ struct test_array {
   int value2[2][4];
 };
 
-template <class Processor>
-void serialize(Processor& proc, test_array& x, const unsigned int) {
-  proc & x.value;
-  proc & x.value2;
+template <class Inspector>
+error inspect(Inspector& f, test_array& x) {
+  return f(x.value, x.value2);
 }
 
 struct test_empty_non_pod {
@@ -125,9 +124,9 @@ struct test_empty_non_pod {
   }
 };
 
-template <class Processor>
-void serialize(Processor&, test_empty_non_pod&, const unsigned int) {
-  // nop
+template <class Inspector>
+error inspect(Inspector&, test_empty_non_pod&) {
+  return none;
 }
 
 class config : public actor_system_config {
@@ -161,29 +160,18 @@ struct fixture {
   scoped_execution_unit context;
   message msg;
 
-  template <class Processor>
-  void apply(Processor&) {
-    // end of recursion
-  }
-
-  template <class Processor, class T, class... Ts>
-  void apply(Processor& proc, T& x, Ts&... xs) {
-    proc & x;
-    apply(proc, xs...);
-  }
-
   template <class T, class... Ts>
   vector<char> serialize(T& x, Ts&... xs) {
     vector<char> buf;
     binary_serializer bs{&context, buf};
-    apply(bs, x, xs...);
+    bs(x, xs...);
     return buf;
   }
 
   template <class T, class... Ts>
   void deserialize(const vector<char>& buf, T& x, Ts&... xs) {
     binary_deserializer bd{&context, buf};
-    apply(bd, x, xs...);
+    bd(x, xs...);
   }
 
   // serializes `x` and then deserializes and returns the serialized value
@@ -429,21 +417,25 @@ CAF_TEST(streambuf_serialization) {
   // First, we check the standard use case in CAF where stream serializers own
   // their stream buffers.
   stream_serializer<vectorbuf> bs{vectorbuf{buf}};
-  bs << data;
+  auto e = bs(data);
+  CAF_REQUIRE_EQUAL(e, none);
   stream_deserializer<charbuf> bd{charbuf{buf}};
   std::string target;
-  bd >> target;
-  CAF_CHECK(data == target);
+  e = bd(target);
+  CAF_REQUIRE_EQUAL(e, none);
+  CAF_CHECK_EQUAL(data, target);
   // Second, we test another use case where the serializers only keep
   // references of the stream buffers.
   buf.clear();
   target.clear();
   vectorbuf vb{buf};
   stream_serializer<vectorbuf&> vs{vb};
-  vs << data;
+  e = vs(data);
+  CAF_REQUIRE_EQUAL(e, none);
   charbuf cb{buf};
   stream_deserializer<charbuf&> vd{cb};
-  vd >> target;
+  e = vd(target);
+  CAF_REQUIRE_EQUAL(e, none);
   CAF_CHECK(data == target);
 }
 
@@ -454,11 +446,13 @@ CAF_TEST(byte_sequence_optimization) {
   using streambuf_type = containerbuf<std::vector<uint8_t>>;
   streambuf_type cb{buf};
   stream_serializer<streambuf_type&> bs{cb};
-  bs << data;
+  auto e = bs(data);
+  CAF_REQUIRE(! e);
   data.clear();
   streambuf_type cb2{buf};
   stream_deserializer<streambuf_type&> bd{cb2};
-  bd >> data;
+  e = bd(data);
+  CAF_REQUIRE(! e);
   CAF_CHECK_EQUAL(data.size(), 42u);
   CAF_CHECK(std::all_of(data.begin(), data.end(),
                         [](uint8_t c) { return c == 0x2a; }));

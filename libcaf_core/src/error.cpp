@@ -20,62 +20,154 @@
 #include "caf/error.hpp"
 
 #include "caf/config.hpp"
+#include "caf/message.hpp"
 #include "caf/serializer.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/deep_to_string.hpp"
 
 namespace caf {
 
-error::error() noexcept : code_(0), category_(atom("")) {
+// -- nested classes -----------------------------------------------------------
+
+struct error::data {
+  uint8_t code;
+  atom_value category;
+  message context;
+};
+
+// -- constructors, destructors, and assignment operators ----------------------
+
+error::error() noexcept : data_(nullptr) {
   // nop
 }
 
-error::error(uint8_t x, atom_value y) noexcept : code_(x), category_(y) {
+error::error(none_t) noexcept : data_(nullptr) {
   // nop
 }
 
-error::error(uint8_t x, atom_value y, message z) noexcept
-    : code_(x),
-      category_(y),
-      context_(std::move(z)) {
+error::error(error&& x) noexcept : data_(x.data_) {
+  if (data_)
+    x.data_ = nullptr;
+}
+
+error& error::operator=(error&& x) noexcept {
+  std::swap(data_, x.data_);
+  return *this;
+}
+
+error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
   // nop
 }
 
-void serialize(serializer& sink, error& x, const unsigned int) {
-  sink << x.code_ << x.category_ << x.context_;
+error& error::operator=(const error& x) {
+  if (x) {
+    if (! data_)
+      data_ = new data(*x.data_);
+    else
+      *data_ = *x.data_;
+  } else {
+    clear();
+  }
+  return *this;
 }
 
-void serialize(deserializer& source, error& x, const unsigned int) {
-  source >> x.code_ >> x.category_ >> x.context_;
+error::error(uint8_t x, atom_value y)
+    : data_(x != 0 ? new data{x, y, none} : nullptr) {
+  // nop
+}
+
+error::error(uint8_t x, atom_value y, message z)
+    : data_(x != 0 ? new data{x, y, std::move(z)} : nullptr) {
+  // nop
+}
+
+error::~error() {
+  delete data_;
+}
+
+// -- observers ----------------------------------------------------------------
+
+uint8_t error::code() const noexcept {
+  CAF_ASSERT(data_ != nullptr);
+  return data_->code;
+}
+
+atom_value error::category() const noexcept {
+  CAF_ASSERT(data_ != nullptr);
+  return data_->category;
+}
+
+const message& error::context() const noexcept {
+  CAF_ASSERT(data_ != nullptr);
+  return data_->context;
 }
 
 int error::compare(const error& x) const noexcept {
-  return compare(x.code(), x.category());
+  uint8_t x_code;
+  atom_value x_category;
+  if (x) {
+    x_code = x.data_->code;
+    x_category = x.data_->category;
+  } else {
+    x_code = 0;
+    x_category = atom("");
+  }
+  return compare(x_code, x_category);
 }
 
 int error::compare(uint8_t x, atom_value y) const noexcept {
-  // exception: all errors with default value are considered no error -> equal
-  if (code_ == 0 && x == 0)
+  uint8_t mx;
+  atom_value my;
+  if (data_) {
+    mx = data_->code;
+    my = data_->category;
+  } else {
+    mx = 0;
+    my = atom("");
+  }
+  // all errors with default value are considered no error -> equal
+  if (mx == x && x == 0)
     return 0;
-  if (category_ < y)
+  if (my < y)
     return -1;
-  if (category_ > y)
+  if (my > y)
     return 1;
-  return static_cast<int>(code_) - x;
+  return static_cast<int>(mx) - x;
+}
+
+// -- modifiers --------------------------------------------------------------
+
+message& error::context() noexcept {
+  CAF_ASSERT(data_ != nullptr);
+  return data_->context;
+}
+
+void error::clear() noexcept {
+  if (data_) {
+    delete data_;
+    data_ = nullptr;
+  }
+}
+
+// -- inspection support -----------------------------------------------------
+
+error error::apply(inspect_fun f) {
+  data tmp{0, atom(""), message{}};
+  data& ref = data_ ? *data_ : tmp;
+  auto result = f(meta::type_name("error"), ref.code, ref.category,
+                  meta::omittable_if_empty(), ref.context);
+  if (ref.code == 0)
+    clear();
+  else if (&tmp == &ref)
+    data_ = new data(std::move(tmp));
+  return result;
 }
 
 std::string to_string(const error& x) {
   if (! x)
-    return "no-error";
-  std::string result = "error(";
-  result += to_string(x.category());
-  result += ", ";
-  result += std::to_string(static_cast<int>(x.code()));
-  if (! x.context().empty()) {
-    result += ", ";
-    result += to_string(x.context());
-  }
-  result += ")";
-  return result;
+    return "none";
+  return deep_to_string(meta::type_name("error"), x.code(), x.category(),
+                        meta::omittable_if_empty(), x.context());
 }
 
 } // namespace caf

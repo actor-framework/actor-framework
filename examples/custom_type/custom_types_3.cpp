@@ -1,5 +1,5 @@
 // Showcases custom message types that cannot provide
-// friend access to the serialize() function.
+// friend access to the inspect() function.
 
 // Manual refs: 57-59, 64-66 (ConfiguringActorApplications)
 
@@ -48,27 +48,18 @@ private:
   int b_;
 };
 
-// to_string is straightforward ...
-std::string to_string(const foo& x) {
-  return "foo" + deep_to_string_as_tuple(x.a(), x.b());
-}
-
-// ... but we need to split serialization into a saving ...
-template <class T>
-typename std::enable_if<T::is_saving::value>::type
-serialize(T& out, const foo& x, const unsigned int) {
-  out << x.a() << x.b();
-}
-
-// ... and a loading function
-template <class T>
-typename std::enable_if<T::is_loading::value>::type
-serialize(T& in, foo& x, const unsigned int) {
-  int tmp;
-  in >> tmp;
-  x.set_a(tmp);
-  in >> tmp;
-  x.set_b(tmp);
+template <class Inspector>
+error inspect(Inspector& f, foo& x) {
+  // store current state into temporaries, then give the inspector references
+  // to temporaries that are written back only when the inspector is saving
+  auto a = x.a();
+  auto b = x.b();
+  auto save = [&]() -> error {
+    x.set_a(a);
+    x.set_b(b);
+    return none;
+  };
+  return f(meta::type_name("foo"), a, b, meta::save_callback(save));
 }
 
 behavior testee(event_based_actor* self) {

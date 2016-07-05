@@ -40,7 +40,6 @@ set (LIBCAF_CORE_SRCS
      src/continue_helper.cpp
      src/decorated_tuple.cpp
      src/default_invoke_result_visitor.cpp
-     src/deep_to_string.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
      src/duration.cpp
@@ -89,6 +88,7 @@ set (LIBCAF_CORE_SRCS
      src/skip.cpp
      src/splitter.cpp
      src/sync_request_bouncer.cpp
+     src/stringification_inspector.cpp
      src/try_match.cpp
      src/type_erased_value.cpp
      src/type_erased_tuple.cpp

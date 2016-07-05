@@ -23,9 +23,15 @@
 #include <atomic>
 
 #include "caf/fwd.hpp"
+#include "caf/error.hpp"
 #include "caf/node_id.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/weak_intrusive_ptr.hpp"
+
+#include "caf/meta/type_name.hpp"
+#include "caf/meta/save_callback.hpp"
+#include "caf/meta/load_callback.hpp"
+#include "caf/meta/omittable_if_none.hpp"
 
 namespace caf {
 
@@ -179,23 +185,43 @@ inline bool operator!=(const abstract_actor* x, const strong_actor_ptr& y) {
 /// @relates actor_control_block
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
-/// @relates strong_actor_ptr
-void serialize(serializer&, strong_actor_ptr&, const unsigned int);
+error load_actor(strong_actor_ptr& storage, execution_unit*,
+                 actor_id aid, const node_id& nid);
 
-/// @relates strong_actor_ptr
-void serialize(deserializer&, strong_actor_ptr&, const unsigned int);
+error save_actor(strong_actor_ptr& storage, execution_unit*,
+                 actor_id aid, const node_id& nid);
 
-/// @relates weak_actor_ptr
-void serialize(serializer&, weak_actor_ptr&, const unsigned int);
+template <class Inspector>
+auto context_of(Inspector* f) -> decltype(f->context()) {
+  return f->context();
+}
 
-/// @relates weak_actor_ptr
-void serialize(deserializer&, weak_actor_ptr&, const unsigned int);
+inline execution_unit* context_of(void*) {
+  return nullptr;
+}
 
-/// @relates strong_actor_ptr
-std::string to_string(const strong_actor_ptr&);
+template <class Inspector>
+error inspect(Inspector& f, strong_actor_ptr& x) {
+  actor_id aid = 0;
+  node_id nid;
+  if (x) {
+    aid = x->aid;
+    nid = x->nid;
+  }
+  auto load = [&] { return load_actor(x, context_of(&f), aid, nid); };
+  auto save = [&] { return save_actor(x, context_of(&f), aid, nid); };
+  return f(meta::type_name("actor"), aid,
+           meta::omittable_if_none(), nid,
+           meta::load_callback(load), meta::save_callback(save));
+}
 
-/// @relates weak_actor_ptr
-std::string to_string(const weak_actor_ptr&);
+template <class Inspector>
+error inspect(Inspector& f, weak_actor_ptr& x) {
+  // inspect as strong pointer, then write back to weak pointer on save
+  auto tmp = x.lock();
+  auto load = [&]() -> error { x.reset(tmp.get()); return none; };
+  return f(tmp, meta::load_callback(load));
+}
 
 } // namespace caf
 

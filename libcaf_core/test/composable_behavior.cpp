@@ -120,9 +120,9 @@ public:
     return str_;
   }
 
-  template <class Processor>
-  friend void serialize(Processor& proc, counting_string& x) {
-    proc & x.str_;
+  template <class Inspector>
+  friend error inspect(Inspector& f, counting_string& x) {
+    return f(x.str_);
   }
 
 private:

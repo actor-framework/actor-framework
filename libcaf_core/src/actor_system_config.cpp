@@ -318,14 +318,16 @@ actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,
                                             const message& xs) {
-  return "system_error"
-         + (xs.empty() ? deep_to_string_as_tuple(static_cast<sec>(x))
-                       : deep_to_string_as_tuple(static_cast<sec>(x), xs));
+  auto tmp = static_cast<sec>(x);
+  return deep_to_string(meta::type_name("system_error"), tmp,
+                        meta::omittable_if_empty(), xs);
 }
 
 std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
-                                                    const message&) {
-  return "exit_reason" + deep_to_string_as_tuple(static_cast<exit_reason>(x));
+                                                    const message& xs) {
+  auto tmp = static_cast<sec>(x);
+  return deep_to_string(meta::type_name("exit_reason"), tmp,
+                        meta::omittable_if_empty(), xs);
 }
 
 } // namespace caf

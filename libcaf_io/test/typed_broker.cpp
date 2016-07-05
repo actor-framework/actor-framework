@@ -105,7 +105,8 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
   auto write = [=](atom_value x, int y) {
     auto& buf = self->wr_buf(hdl);
     binary_serializer sink{self->system(), buf};
-    sink << x << y;
+    auto e = sink(x, y);
+    CAF_REQUIRE(! e);
     self->flush(hdl);
   };
   self->set_down_handler([=](down_msg& dm) {
@@ -123,7 +124,8 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
       atom_value x;
       int y;
       binary_deserializer source{self->system(), msg.buf};
-      source >> x >> y;
+      auto e = source(x, y);
+      CAF_REQUIRE(! e);
       if (x == pong_atom::value)
         self->send(actor_cast<ping_actor>(buddy), pong_atom::value, y);
       else

@@ -17,44 +17,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INDEX_MAPPING_HPP
-#define CAF_INDEX_MAPPING_HPP
+#ifndef CAF_META_HEX_FORMATTED_HPP
+#define CAF_META_HEX_FORMATTED_HPP
 
-#include <tuple>
-#include <string>
-#include <functional>
-
-#include "caf/meta/type_name.hpp"
+#include "caf/meta/annotation.hpp"
 
 namespace caf {
+namespace meta {
 
-/// Marker for representing placeholders at runtime.
-struct index_mapping {
-  int value;
-
-  explicit index_mapping(int x) : value(x) {
-    // nop
-  }
-
-  template <class T,
-            class E = typename std::enable_if<
-                        std::is_placeholder<T>::value != 0
-                      >::type>
-  index_mapping(T) : value(std::is_placeholder<T>::value) {
+struct hex_formatted_t : annotation {
+  constexpr hex_formatted_t() {
     // nop
   }
 };
 
-inline bool operator==(const index_mapping& x, const index_mapping& y) {
-  return x.value == y.value;
+/// Allows an inspector to omit the following data field if it is empty.
+constexpr hex_formatted_t hex_formatted() {
+  return {};
 }
 
-template <class Inspector>
-auto inspect(Inspector& f, index_mapping& x)
--> decltype(f(meta::type_name("index_mapping"), x.value)) {
-  return f(meta::type_name("index_mapping"), x.value);
-}
-
+} // namespace meta
 } // namespace caf
 
-#endif // CAF_INDEX_MAPPING_HPP
+#endif // CAF_META_HEX_FORMATTED_HPP

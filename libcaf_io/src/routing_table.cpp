@@ -58,7 +58,7 @@ void routing_table::flush(const route& r) {
 }
 
 node_id routing_table::lookup_direct(const connection_handle& hdl) const {
-  return get_opt(direct_by_hdl_, hdl, invalid_node_id);
+  return get_opt(direct_by_hdl_, hdl, none);
 }
 
 connection_handle routing_table::lookup_direct(const node_id& nid) const {
@@ -68,9 +68,9 @@ connection_handle routing_table::lookup_direct(const node_id& nid) const {
 node_id routing_table::lookup_indirect(const node_id& nid) const {
   auto i = indirect_.find(nid);
   if (i == indirect_.end())
-    return invalid_node_id;
+    return none;
   if (i->second.empty())
-    return invalid_node_id;
+    return none;
   return *i->second.begin();
 }
 

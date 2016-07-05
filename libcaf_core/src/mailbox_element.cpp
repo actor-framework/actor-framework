@@ -93,17 +93,4 @@ mailbox_element_ptr make_mailbox_element(strong_actor_ptr sender, message_id id,
   return mailbox_element_ptr{ptr};
 }
 
-std::string to_string(const mailbox_element& x) {
-  std::string result = "mailbox_element(";
-  result += to_string(x.sender);
-  result += ", ";
-  result += to_string(x.mid);
-  result += ", ";
-  result += deep_to_string(x.stages);
-  result += ", ";
-  result += to_string(x.content());
-  result += ")";
-  return result;
-}
-
 } // namespace caf

@@ -39,6 +39,15 @@ type_erased_value_ptr make_type_erased_value(Ts&&... xs) {
   return result;
 }
 
+/// @relates type_erased_value
+/// Converts values to type-erased values.
+struct type_erased_value_factory {
+  template <class T>
+  type_erased_value_ptr operator()(T&& x) const {
+    return make_type_erased_value<typename std::decay<T>::type>(std::forward<T>(x));
+  }
+};
+
 } // namespace caf
 
 #endif // CAF_MAKE_TYPE_ERASED_VALUE_HPP

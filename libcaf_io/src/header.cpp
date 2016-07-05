@@ -63,7 +63,7 @@ bool operator==(const header& lhs, const header& rhs) {
 namespace {
 
 bool valid(const node_id& val) {
-  return val != invalid_node_id;
+  return val != none;
 }
 
 template <class T>

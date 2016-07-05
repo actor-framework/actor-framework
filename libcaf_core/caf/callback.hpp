@@ -20,6 +20,7 @@
 #ifndef CAF_NAMED_CALLBACK_HPP
 #define CAF_NAMED_CALLBACK_HPP
 
+#include "caf/error.hpp"
 #include "caf/config.hpp"
 
 #include "caf/detail/type_traits.hpp"
@@ -40,7 +41,7 @@ namespace caf {
 template <class... Ts>
 class callback {
 public:
-  virtual void operator()(Ts...) = 0;
+  virtual error operator()(Ts...) = 0;
 };
 
 /// Utility class for wrapping a function object of type `Base`.
@@ -54,8 +55,8 @@ public:
   callback_impl(callback_impl&&) = default;
   callback_impl& operator=(callback_impl&&) = default;
 
-  void operator()(Ts... xs) override {
-    f_(xs...);
+  error operator()(Ts... xs) override {
+    return f_(xs...);
   }
 
 private:

@@ -20,17 +20,18 @@
 #ifndef CAF_STREAM_SERIALIZER_HPP
 #define CAF_STREAM_SERIALIZER_HPP
 
+#include <string>
+#include <limits>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
-#include <limits>
-#include <streambuf>
 #include <sstream>
-#include <string>
+#include <streambuf>
 #include <type_traits>
 
-#include "caf/serializer.hpp"
+#include "caf/sec.hpp"
 #include "caf/streambuf.hpp"
+#include "caf/serializer.hpp"
 
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
@@ -73,33 +74,36 @@ public:
       streambuf_(std::forward<S>(sb)) {
   }
 
-  void begin_object(uint16_t& typenr, std::string& name) override {
-    apply(typenr);
-    if (typenr == 0)
-      apply(name);
+  error begin_object(uint16_t& typenr, std::string& name) override {
+    return error::eval([&] { return apply(typenr); },
+                       [&] { return typenr == 0 ? apply(name) : error{}; });
+
   }
 
-  void end_object() override {
-    // nop
+  error end_object() override {
+    return none;
   }
 
-  void begin_sequence(size_t& list_size) override {
-    varbyte_encode(list_size);
+  error begin_sequence(size_t& list_size) override {
+    return varbyte_encode(list_size);
   }
 
-  void end_sequence() override {
-    // nop
+  error end_sequence() override {
+    return none;
   }
 
-  void apply_raw(size_t num_bytes, void* data) override {
-    streambuf_.sputn(reinterpret_cast<char_type*>(data),
-                     static_cast<std::streamsize>(num_bytes));
+  error apply_raw(size_t num_bytes, void* data) override {
+    auto ssize = static_cast<std::streamsize>(num_bytes);
+    auto n = streambuf_.sputn(reinterpret_cast<char_type*>(data), ssize);
+    if (n != ssize)
+      return sec::end_of_stream;
+    return none;
   }
 
 protected:
   // Encode an unsigned integral type as variable-byte sequence.
   template <class T>
-  size_t varbyte_encode(T x) {
+  error varbyte_encode(T x) {
     static_assert(std::is_unsigned<T>::value, "T must be an unsigned type");
     // For 64-bit values, the encoded representation cannot get larger than 10
     // bytes. A scratch space of 16 bytes suffices as upper bound.
@@ -112,35 +116,30 @@ protected:
     *i++ = static_cast<uint8_t>(x) & 0x7f;
     auto res = streambuf_.sputn(reinterpret_cast<char_type*>(buf),
                                 static_cast<std::streamsize>(i - buf));
-    CAF_ASSERT(res >= 0);
-    return static_cast<size_t>(res);
+    if (res != (i - buf))
+      return sec::end_of_stream;
+    return none;
   }
 
-  void apply_builtin(builtin type, void* val) override {
+  error apply_builtin(builtin type, void* val) override {
     CAF_ASSERT(val != nullptr);
     switch (type) {
       case i8_v:
       case u8_v:
-        apply_raw(sizeof(uint8_t), val);
-        break;
+        return apply_raw(sizeof(uint8_t), val);
       case i16_v:
       case u16_v:
-        apply_int(*reinterpret_cast<uint16_t*>(val));
-        break;
+        return apply_int(*reinterpret_cast<uint16_t*>(val));
       case i32_v:
       case u32_v:
-        apply_int(*reinterpret_cast<uint32_t*>(val));
-        break;
+        return apply_int(*reinterpret_cast<uint32_t*>(val));
       case i64_v:
       case u64_v:
-        apply_int(*reinterpret_cast<uint64_t*>(val));
-        break;
+        return apply_int(*reinterpret_cast<uint64_t*>(val));
       case float_v:
-        apply_int(detail::pack754(*reinterpret_cast<float*>(val)));
-        break;
+        return apply_int(detail::pack754(*reinterpret_cast<float*>(val)));
       case double_v:
-        apply_int(detail::pack754(*reinterpret_cast<double*>(val)));
-        break;
+        return apply_int(detail::pack754(*reinterpret_cast<double*>(val)));
       case ldouble_v: {
         // the IEEE-754 conversion does not work for long double
         // => fall back to string serialization (event though it sucks)
@@ -148,50 +147,41 @@ protected:
         oss << std::setprecision(std::numeric_limits<long double>::digits)
             << *reinterpret_cast<long double*>(val);
         auto tmp = oss.str();
-        apply(tmp);
-        break;
+        return apply(tmp);
       }
       case string8_v: {
         auto str = reinterpret_cast<std::string*>(val);
         auto s = str->size();
-        begin_sequence(s);
-        auto data = const_cast<std::string::value_type*>(str->data());
-        apply_raw(str->size(), reinterpret_cast<char_type*>(data));
-        end_sequence();
-        break;
+        auto data = reinterpret_cast<char_type*>(
+                      const_cast<std::string::value_type*>(str->data()));
+        return error::eval([&] { return begin_sequence(s); },
+                           [&] { return apply_raw(str->size(),  data); },
+                           [&] { return end_sequence(); });
       }
       case string16_v: {
         auto str = reinterpret_cast<std::u16string*>(val);
         auto s = str->size();
-        begin_sequence(s);
-        for (auto c : *str) {
-          // the standard does not guarantee that char16_t is exactly 16 bits...
-          auto tmp = static_cast<uint16_t>(c);
-          apply_raw(sizeof(tmp), &tmp);
-        }
-        end_sequence();
-        break;
+        // the standard does not guarantee that char16_t is exactly 16 bits...
+        return error::eval([&] { return begin_sequence(s); },
+                           [&] { return consume_range_c<uint16_t>(*str); },
+                           [&] { return end_sequence(); });
       }
       case string32_v: {
         auto str = reinterpret_cast<std::u32string*>(val);
         auto s = str->size();
-        begin_sequence(s);
-        for (auto c : *str) {
-          // the standard does not guarantee that char32_t is exactly 32 bits...
-          auto tmp = static_cast<uint32_t>(c);
-          apply_raw(sizeof(tmp), &tmp);
-        }
-        end_sequence();
-        break;
+        // the standard does not guarantee that char32_t is exactly 32 bits...
+        return error::eval([&] { return begin_sequence(s); },
+                           [&] { return consume_range_c<uint32_t>(*str); },
+                           [&] { return end_sequence(); });
       }
     }
   }
 
 private:
   template <class T>
-  void apply_int(T x) {
+  error apply_int(T x) {
     auto y = detail::to_network_order(x);
-    apply_raw(sizeof(T), &y);
+    return apply_raw(sizeof(T), &y);
   }
 
   Streambuf streambuf_;

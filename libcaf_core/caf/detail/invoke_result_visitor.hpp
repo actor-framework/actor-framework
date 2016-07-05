@@ -142,7 +142,7 @@ public:
   inline bool visit(optional<skip_t>& x) {
     if (x)
       return false;
-    (*this)(x);
+    (*this)();
     return true;
   }
 

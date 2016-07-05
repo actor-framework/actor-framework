@@ -76,8 +76,10 @@ error ip_bind(asio_tcp_socket_acceptor& fd, uint16_t port,
     fd.bind(ep, ec);
     if (ec)
       return sec::cannot_open_port;
-    fd.listen();
-    return {};
+    fd.listen(ec);
+    if (ec)
+      return sec::cannot_open_port;
+    return none;
   };
   if (addr) {
     CAF_LOG_DEBUG(CAF_ARG(addr));

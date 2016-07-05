@@ -22,6 +22,7 @@
 #include <unordered_set>
 
 #include "caf/send.hpp"
+#include "caf/to_string.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
 

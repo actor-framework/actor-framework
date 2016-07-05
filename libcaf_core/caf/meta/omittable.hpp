@@ -17,52 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/deep_to_string.hpp"
+#ifndef CAF_META_OMITTABLE_HPP
+#define CAF_META_OMITTABLE_HPP
+
+#include "caf/meta/annotation.hpp"
 
 namespace caf {
+namespace meta {
 
-namespace {
-
-bool is_escaped(const char* cstr) {
-  if (*cstr != '"')
-    return false;
-  char last_char = *cstr++;
-  for (auto c = *cstr; c != '\0'; ++cstr)
-    if (c == '"' && last_char != '\\')
-      return false;
-  return last_char == '"';
-}
-
-} // namespace <anonymous>
-
-std::string deep_to_string_t::operator()(const char* cstr) const {
-  if (! cstr || *cstr == '\0')
-    return "\"\"";
-  if (is_escaped(cstr))
-    return cstr;
-  std::string result = "\"";
-  char c;
-  while ((c = *cstr++) != '\0') {
-    switch (c) {
-      case '\\':
-        result += "\\\\";
-        break;
-      case '"':
-        result += "\\\"";
-        break;
-      default:
-        result += c;
-    }
+struct omittable_t : annotation {
+  constexpr omittable_t() {
+    // nop
   }
-  result += "\"";
-  return result;
+};
+
+/// Allows an inspector to omit the following data field
+/// unconditionally when producing human-friendly output.
+constexpr omittable_t omittable() {
+  return {};
 }
 
-std::string deep_to_string_t::operator()(const atom_value& x) const {
-  std::string result = "'";
-  result += to_string(x);
-  result += "'";
-  return result;
-}
-
+} // namespace meta
 } // namespace caf
+
+#endif // CAF_META_OMITTABLE_HPP

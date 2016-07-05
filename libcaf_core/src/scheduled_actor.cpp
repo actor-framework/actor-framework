@@ -20,6 +20,7 @@
 #include "caf/scheduled_actor.hpp"
 
 #include "caf/config.hpp"
+#include "caf/to_string.hpp"
 #include "caf/actor_ostream.hpp"
 
 #include "caf/detail/private_thread.hpp"
@@ -320,7 +321,7 @@ scheduled_actor::categorize(mailbox_element& x) {
                                     : message_category::expired_timeout;
     }
     case make_type_token<exit_msg>(): {
-      auto& em = content.get_mutable_as<exit_msg>(0);
+      auto em = content.move_if_unshared<exit_msg>(0);
       // make sure to get rid of attachables if they're no longer needed
       unlink_from(em.source);
       // exit_reason::kill is always fatal
@@ -333,12 +334,12 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case make_type_token<down_msg>(): {
-      auto& dm = content.get_mutable_as<down_msg>(0);
+      auto dm = content.move_if_unshared<down_msg>(0);
       down_handler_(this, dm);
       return message_category::internal;
     }
     case make_type_token<error>(): {
-      auto& err = content.get_mutable_as<error>(0);
+      auto err = content.move_if_unshared<error>(0);
       error_handler_(this, err);
       return message_category::internal;
     }

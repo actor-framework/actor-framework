@@ -17,44 +17,33 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INDEX_MAPPING_HPP
-#define CAF_INDEX_MAPPING_HPP
+#ifndef CAF_META_LOAD_CALLBACK_HPP
+#define CAF_META_LOAD_CALLBACK_HPP
 
-#include <tuple>
-#include <string>
-#include <functional>
-
-#include "caf/meta/type_name.hpp"
+#include "caf/meta/annotation.hpp"
 
 namespace caf {
+namespace meta {
 
-/// Marker for representing placeholders at runtime.
-struct index_mapping {
-  int value;
-
-  explicit index_mapping(int x) : value(x) {
+template <class F>
+struct load_callback_t : annotation {
+  load_callback_t(F&& f) : fun(f) {
     // nop
   }
 
-  template <class T,
-            class E = typename std::enable_if<
-                        std::is_placeholder<T>::value != 0
-                      >::type>
-  index_mapping(T) : value(std::is_placeholder<T>::value) {
-    // nop
-  }
+  load_callback_t(load_callback_t&&) = default;
+
+  F fun;
 };
 
-inline bool operator==(const index_mapping& x, const index_mapping& y) {
-  return x.value == y.value;
+/// Returns an annotation that allows inspectors to call
+/// user-defined code after performing load operations.
+template <class F>
+load_callback_t<F> load_callback(F fun) {
+  return {std::move(fun)};
 }
 
-template <class Inspector>
-auto inspect(Inspector& f, index_mapping& x)
--> decltype(f(meta::type_name("index_mapping"), x.value)) {
-  return f(meta::type_name("index_mapping"), x.value);
-}
-
+} // namespace meta
 } // namespace caf
 
-#endif // CAF_INDEX_MAPPING_HPP
+#endif // CAF_META_LOAD_CALLBACK_HPP

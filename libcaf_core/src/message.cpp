@@ -34,6 +34,10 @@
 
 namespace caf {
 
+message::message(none_t) noexcept {
+  // nop
+}
+
 message::message(message&& other) noexcept : vals_(std::move(other.vals_)) {
   // nop
 }
@@ -378,17 +382,15 @@ message message::concat_impl(std::initializer_list<data_ptr> xs) {
   }
 }
 
-void serialize(serializer& sink, const message& msg, const unsigned int) {
+error inspect(serializer& sink, message& msg) {
   if (! sink.context())
-    CAF_RAISE_ERROR("Cannot serialize message without context.");
+    return sec::no_context;
   // build type name
   uint16_t zero = 0;
   std::string tname = "@<>";
-  if (msg.empty()) {
-    sink.begin_object(zero, tname);
-    sink.end_object();
-    return;
-  }
+  if (msg.empty())
+    return error::eval([&] { return sink.begin_object(zero, tname); },
+                       [&] { return sink.end_object(); });
   auto& types = sink.context()->system().types();
   auto n = msg.size();
   for (size_t i = 0; i < n; ++i) {
@@ -399,31 +401,42 @@ void serialize(serializer& sink, const message& msg, const unsigned int) {
                    "not added to the types list, typeid name: "
                 << (rtti.second ? rtti.second->name() : "-not-available-")
                 << std::endl;
-      CAF_RAISE_ERROR("unknown type while serializing");
+      return make_error(sec::unknown_type,
+                        rtti.second ? rtti.second->name() : "-not-available-");
     }
     tname += '+';
     tname += *ptr;
   }
-  sink.begin_object(zero, tname);
-  for (size_t i = 0; i < n; ++i)
-    msg.cvals()->save(i, sink);
-  sink.end_object();
+  auto save_loop = [&]() -> error {
+    for (size_t i = 0; i < n; ++i) {
+      auto e = msg.cvals()->save(i, sink);
+      if (e)
+        return e;
+    }
+    return none;
+  };
+  return error::eval([&] { return sink.begin_object(zero, tname); },
+                     [&] { return save_loop();  },
+                     [&] { return sink.end_object(); });
 }
 
-void serialize(deserializer& source, message& msg, const unsigned int) {
+error inspect(deserializer& source, message& msg) {
   if (! source.context())
-    CAF_RAISE_ERROR("Cannot deserialize message without context.");
+    return sec::no_context;
   uint16_t zero;
   std::string tname;
-  source.begin_object(zero, tname);
+  error err;
+  err = source.begin_object(zero, tname);
+  if (err)
+    return err;
   if (zero != 0)
-    CAF_RAISE_ERROR("unexpected builtin type found in message");
+    return sec::unknown_type;
   if (tname == "@<>") {
     msg = message{};
-    return;
+    return none;
   }
   if (tname.compare(0, 4, "@<>+") != 0)
-    CAF_RAISE_ERROR("type name does not start with @<>+: " + tname);
+    return sec::unknown_type;
   // iterate over concatenated type names
   auto eos = tname.end();
   auto next = [&](std::string::iterator iter) {
@@ -439,17 +452,22 @@ void serialize(deserializer& source, message& msg, const unsigned int) {
     tmp.assign(i, n);
     auto ptr = types.make_value(tmp);
     if (! ptr)
-      CAF_RAISE_ERROR("cannot serialize a value of type " + tmp);
-    ptr->load(source);
+      return make_error(sec::unknown_type, tmp);
+    err = ptr->load(source);
+    if (err)
+      return err;
     dmd->append(std::move(ptr));
     if (n != eos)
       i = n + 1;
     else
       i = eos;
   } while (i != eos);
-  source.end_object();
+  err = source.end_object();
+  if (err)
+    return err;
   message result{std::move(dmd)};
   msg.swap(result);
+  return none;
 }
 
 std::string to_string(const message& msg) {

@@ -23,7 +23,11 @@
 #include <string>
 #include <cstdint>
 
+#include "caf/error.hpp"
 #include "caf/node_id.hpp"
+
+#include "caf/meta/omittable.hpp"
+#include "caf/meta/type_name.hpp"
 
 #include "caf/io/basp/message_type.hpp"
 
@@ -76,23 +80,16 @@ struct header {
 };
 
 /// @relates header
-template <class Processor>
-void serialize(Processor& proc, header& hdr, const unsigned int) {
+template <class Inspector>
+error inspect(Inspector& f, header& hdr) {
   uint8_t pad = 0;
-  proc & hdr.operation;
-  proc & pad;
-  proc & pad;
-  proc & hdr.flags;
-  proc & hdr.payload_len;
-  proc & hdr.operation_data;
-  proc & hdr.source_node;
-  proc & hdr.dest_node;
-  proc & hdr.source_actor;
-  proc & hdr.dest_actor;
+  return f(meta::type_name("header"),
+           hdr.operation,
+           meta::omittable(), pad,
+           meta::omittable(), pad,
+           hdr.flags, hdr.payload_len, hdr.operation_data, hdr.source_node,
+           hdr.dest_node, hdr.source_actor, hdr.dest_actor);
 }
-
-/// @relates header
-std::string to_string(const header& hdr);
 
 /// @relates header
 bool operator==(const header& lhs, const header& rhs);

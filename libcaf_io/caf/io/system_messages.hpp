@@ -25,7 +25,7 @@
 #include <sstream>
 #include <iomanip>
 
-#include "caf/deep_to_string.hpp"
+#include "caf/meta/type_name.hpp"
 
 #include "caf/io/handle.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -42,8 +42,9 @@ struct new_connection_msg {
   connection_handle handle;
 };
 
-inline std::string to_string(const new_connection_msg& x) {
-  return "new_connection" + deep_to_string(std::tie(x.source, x.handle));
+template <class Inspector>
+error inspect(Inspector& f, new_connection_msg& x) {
+  return f(meta::type_name("new_connection_msg"), x.source, x.handle);
 }
 
 /// @relates new_connection_msg
@@ -58,13 +59,6 @@ inline bool operator!=(const new_connection_msg& lhs,
   return !(lhs == rhs);
 }
 
-/// @relates new_connection_msg
-template <class Processor>
-void serialize(Processor& proc, new_connection_msg& x, const unsigned int) {
-  proc & x.source;
-  proc & x.handle;
-}
-
 /// Signalizes newly arrived data for a {@link broker}.
 struct new_data_msg {
   /// Handle to the related connection.
@@ -74,12 +68,9 @@ struct new_data_msg {
 };
 
 /// @relates new_data_msg
-inline std::string to_string(const new_data_msg& x) {
-  std::ostringstream os;
-  os << std::setfill('0') << std::hex << std::right;
-  for (auto c : x.buf)
-    os << std::setw(2) << static_cast<int>(c);
-  return "new_data" + deep_to_string_as_tuple(x.handle, os.str());
+template <class Inspector>
+error inspect(Inspector& f, new_data_msg& x) {
+  return f(meta::type_name("new_data_msg"), x.handle, x.buf);
 }
 
 /// @relates new_data_msg
@@ -90,13 +81,6 @@ inline bool operator==(const new_data_msg& lhs, const new_data_msg& rhs) {
 /// @relates new_data_msg
 inline bool operator!=(const new_data_msg& lhs, const new_data_msg& rhs) {
   return !(lhs == rhs);
-}
-
-/// @relates new_data_msg
-template <class Processor>
-void serialize(Processor& proc, new_data_msg& x, const unsigned int) {
-  proc & x.handle;
-  proc & x.buf;
 }
 
 /// Signalizes that a certain amount of bytes has been written.
@@ -110,9 +94,10 @@ struct data_transferred_msg {
 };
 
 /// @relates data_transferred_msg
-inline std::string to_string(const data_transferred_msg& x) {
-  return "data_transferred_msg"
-         + deep_to_string_as_tuple(x.handle, x.written, x.remaining);
+template <class Inspector>
+error inspect(Inspector& f, data_transferred_msg& x) {
+  return f(meta::type_name("data_transferred_msg"),
+           x.handle, x.written, x.remaining);
 }
 
 /// @relates data_transferred_msg
@@ -129,13 +114,6 @@ inline bool operator!=(const data_transferred_msg& x,
   return ! (x == y);
 }
 
-/// @relates new_data_msg
-template <class Processor>
-void serialize(Processor& proc, data_transferred_msg& x, const unsigned int) {
-  proc & x.handle;
-  proc & x.written;
-  proc & x.remaining;
-}
 
 /// Signalizes that a {@link broker} connection has been closed.
 struct connection_closed_msg {
@@ -143,8 +121,10 @@ struct connection_closed_msg {
   connection_handle handle;
 };
 
-inline std::string to_string(const connection_closed_msg& x) {
-  return "connection_closed" + deep_to_string(std::tie(x.handle));
+/// @relates connection_closed_msg
+template <class Inspector>
+error inspect(Inspector& f, connection_closed_msg& x) {
+  return f(meta::type_name("connection_closed_msg"), x.handle);
 }
 
 /// @relates connection_closed_msg
@@ -159,17 +139,17 @@ inline bool operator!=(const connection_closed_msg& lhs,
   return !(lhs == rhs);
 }
 
-/// @relates connection_closed_msg
-template <class Processor>
-void serialize(Processor& proc, connection_closed_msg& x, const unsigned int) {
-  proc & x.handle;
-}
-
 /// Signalizes that a {@link broker} acceptor has been closed.
 struct acceptor_closed_msg {
   /// Handle to the closed connection.
   accept_handle handle;
 };
+
+/// @relates connection_closed_msg
+template <class Inspector>
+error inspect(Inspector& f, acceptor_closed_msg& x) {
+  return f(meta::type_name("acceptor_closed_msg"), x.handle);
+}
 
 /// @relates acceptor_closed_msg
 inline bool operator==(const acceptor_closed_msg& lhs,
@@ -181,12 +161,6 @@ inline bool operator==(const acceptor_closed_msg& lhs,
 inline bool operator!=(const acceptor_closed_msg& lhs,
                        const acceptor_closed_msg& rhs) {
   return !(lhs == rhs);
-}
-
-/// @relates acceptor_closed_msg
-template <class Processor>
-void serialize(Processor& proc, acceptor_closed_msg& x, const unsigned int) {
-  proc & x.handle;
 }
 
 } // namespace io

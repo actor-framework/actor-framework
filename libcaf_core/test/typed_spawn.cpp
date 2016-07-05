@@ -84,10 +84,9 @@ struct my_request {
   int b;
 };
 
-template <class Processor>
-void serialize(Processor& proc, my_request& x, const unsigned int) {
-  proc & x.a;
-  proc & x.b;
+template <class Inspector>
+error inspect(Inspector& f, my_request& x) {
+  return f(x.a, x.b);
 }
 
 using server_type = typed_actor<replies_to<my_request>::with<bool>>;

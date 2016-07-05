@@ -28,6 +28,7 @@
 #include "caf/allowed_unsafe_message_type.hpp"
 
 #include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
@@ -75,10 +76,11 @@ make_message(T&& x, Ts&&... xs) {
       >::type...
     >;
   static_assert(tl_forall<stored_types, is_serializable_or_whitelisted>::value,
-                "at least one type is not serializable via free "
+                "at least one type is neither inspectable via "
+                "inspect(Inspector&, T&) nor serializable via "
                 "'serialize(Processor&, T&, const unsigned int)' or "
-                "`T::serialize(Processor&, const unsigned int)` "
-                "member function; you can whitelist individual types by "
+                "`T::serialize(Processor&, const unsigned int)`; "
+                "you can whitelist individual types by "
                 "specializing `caf::allowed_unsafe_message_type<T>` "
                 "or using the macro CAF_ALLOW_UNSAFE_MESSAGE_TYPE");
   using storage = typename tl_apply<stored_types, tuple_vals>::type;

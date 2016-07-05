@@ -40,14 +40,9 @@ public:
     b_ = val;
   }
 
-  template <class Processor>
-  friend void serialize(Processor& proc, foo& x, const unsigned int) {
-    proc & x.a_;
-    proc & x.b_;
-  }
-
-  friend std::string to_string(const foo& x) {
-    return "foo" + deep_to_string_as_tuple(x.a_, x.b_);
+  template <class Inspector>
+  friend error inspect(Inspector& f, foo& x) {
+    return f(meta::type_name("foo"), x.a_, x.b_);
   }
 
 private:

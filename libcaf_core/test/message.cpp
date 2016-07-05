@@ -170,26 +170,18 @@ struct s1 {
   int value[3] = {10, 20, 30};
 };
 
-template <class Processor>
-void serialize(Processor& proc, s1& x, const unsigned int) {
-  proc & x.value;
-}
-
-std::string to_string(const s1& x) {
-  return deep_to_string(x.value);
+template <class Inspector>
+error inspect(Inspector& f, s1& x) {
+  return f(x.value);
 }
 
 struct s2 {
   int value[4][2] = {{1, 10}, {2, 20}, {3, 30}, {4, 40}};
 };
 
-template <class Processor>
-void serialize(Processor& proc, s2& x, const unsigned int) {
-  proc & x.value;
-}
-
-std::string to_string(const s2& x) {
-  return deep_to_string(x.value);
+template <class Inspector>
+error inspect(Inspector& f, s2& x) {
+  return f(x.value);
 }
 
 struct s3 {
@@ -199,13 +191,9 @@ struct s3 {
   }
 };
 
-template <class Processor>
-void serialize(Processor& proc, s3& x, const unsigned int) {
-  proc & x.value;
-}
-
-std::string to_string(const s3& x) {
-  return deep_to_string(x.value);
+template <class Inspector>
+error inspect(Inspector& f, s3& x) {
+  return f(x.value);
 }
 
 template <class... Ts>
@@ -218,7 +206,8 @@ std::string msg_as_string(Ts&&... xs) {
 CAF_TEST(compare_custom_types) {
   s2 tmp;
   tmp.value[0][1] = 100;
-  CAF_CHECK(to_string(make_message(s2{})) != to_string(make_message(tmp)));
+  CAF_CHECK_NOT_EQUAL(to_string(make_message(s2{})),
+                      to_string(make_message(tmp)));
 }
 
 CAF_TEST(empty_to_string) {

@@ -24,7 +24,7 @@ namespace caf {
 namespace {
 
 const char* sec_strings[] = {
-  "<no-error>",
+  "none",
   "unexpected_message",
   "unexpected_response",
   "request_receiver_down",
@@ -48,6 +48,10 @@ const char* sec_strings[] = {
   "invalid_protocol_family",
   "cannot_publish_invalid_actor",
   "cannot_spawn_actor_from_arguments",
+  "end_of_stream",
+  "no_context",
+  "unknown_type",
+  "no_proxy_registry",
   "bad_function_call"
 };
 

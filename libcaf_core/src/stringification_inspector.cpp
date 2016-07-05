@@ -17,44 +17,74 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INDEX_MAPPING_HPP
-#define CAF_INDEX_MAPPING_HPP
-
-#include <tuple>
-#include <string>
-#include <functional>
-
-#include "caf/meta/type_name.hpp"
+#include "caf/detail/stringification_inspector.hpp"
 
 namespace caf {
+namespace detail {
 
-/// Marker for representing placeholders at runtime.
-struct index_mapping {
-  int value;
-
-  explicit index_mapping(int x) : value(x) {
-    // nop
-  }
-
-  template <class T,
-            class E = typename std::enable_if<
-                        std::is_placeholder<T>::value != 0
-                      >::type>
-  index_mapping(T) : value(std::is_placeholder<T>::value) {
-    // nop
-  }
-};
-
-inline bool operator==(const index_mapping& x, const index_mapping& y) {
-  return x.value == y.value;
+void stringification_inspector::sep() {
+  if (! result_.empty())
+    switch (result_.back()) {
+      case '(':
+      case '[':
+      case ' ': // only at back if we've printed ", " before
+        break;
+      default:
+        result_ += ", ";
+    }
 }
 
-template <class Inspector>
-auto inspect(Inspector& f, index_mapping& x)
--> decltype(f(meta::type_name("index_mapping"), x.value)) {
-  return f(meta::type_name("index_mapping"), x.value);
+void stringification_inspector::consume(atom_value& x) {
+  result_ += '\'';
+  result_ += to_string(x);
+  result_ += '\'';
 }
 
+void stringification_inspector::consume(const char* cstr) {
+  if (! cstr || *cstr == '\0') {
+    result_ += "\"\"";
+    return;
+  }
+  if (*cstr == '"') {
+    // assume an already escaped string
+    result_ += cstr;
+    return;
+  }
+  result_ += '"';
+  char c;
+  for(;;) {
+    switch (c = *cstr++) {
+      default:
+        result_ += c;
+        break;
+      case '\\':
+        result_ += "\\\\";
+        break;
+      case '"':
+        result_ += "\\\"";
+        break;
+      case '\0':
+        goto end_of_string;
+    }
+  }
+  end_of_string:
+  result_ += '"';
+}
+
+void stringification_inspector::consume_hex(const uint8_t* xs, size_t n) {
+  if (n == 0) {
+    result_ += "00";
+    return;
+  }
+  auto tbl = "0123456789ABCDEF";
+  char buf[3] = {0, 0, 0};
+  for (size_t i = 0; i < n; ++i) {
+    auto c = xs[i];
+    buf[0] = tbl[c >> 4];
+    buf[1] = tbl[c & 0x0F];
+    result_ += buf;
+  }
+}
+
+} // namespace detail
 } // namespace caf
-
-#endif // CAF_INDEX_MAPPING_HPP

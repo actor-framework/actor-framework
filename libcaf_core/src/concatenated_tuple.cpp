@@ -66,9 +66,7 @@ void* concatenated_tuple::get_mutable(size_t pos) {
 error concatenated_tuple::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < size());
   auto selected = select(pos);
-  selected.first->load(selected.second, source);
-  // TODO: refactor after visit API is in place (#470)
-  return {};
+  return selected.first->load(selected.second, source);
 }
 
 size_t concatenated_tuple::size() const noexcept {
@@ -106,9 +104,7 @@ type_erased_value_ptr concatenated_tuple::copy(size_t pos) const {
 error concatenated_tuple::save(size_t pos, serializer& sink) const {
   CAF_ASSERT(pos < size());
   auto selected = select(pos);
-  selected.first->save(selected.second, sink);
-  // TODO: refactor after visit API is in place (#470)
-  return {};
+  return selected.first->save(selected.second, sink);
 }
 
 std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {

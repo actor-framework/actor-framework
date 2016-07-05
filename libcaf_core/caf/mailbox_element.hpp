@@ -32,6 +32,9 @@
 #include "caf/type_erased_tuple.hpp"
 #include "caf/actor_control_block.hpp"
 
+#include "caf/meta/type_name.hpp"
+#include "caf/meta/omittable_if_empty.hpp"
+
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/tuple_vals.hpp"
 #include "caf/detail/type_erased_tuple_view.hpp"
@@ -86,6 +89,13 @@ public:
 protected:
   empty_type_erased_tuple dummy_;
 };
+
+/// @relates mailbox_element
+template <class Inspector>
+void inspect(Inspector& f, mailbox_element& x) {
+  return f(meta::type_name("mailbox_element"), x.sender, x.mid,
+           meta::omittable_if_empty(), x.stages, x.content());
+}
 
 /// Encapsulates arbitrary data in a message element.
 template <class... Ts>
@@ -170,8 +180,6 @@ make_mailbox_element(strong_actor_ptr sender, message_id id,
                       std::forward<T>(x), std::forward<Ts>(xs)...);
   return mailbox_element_ptr{ptr};
 }
-
-std::string to_string(const mailbox_element&);
 
 } // namespace caf
 

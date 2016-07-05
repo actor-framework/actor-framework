@@ -182,8 +182,12 @@ public:
   /// Closes the connection or acceptor identified by `handle`.
   /// Unwritten data will still be send.
   template <class Handle>
-  void close(Handle hdl) {
-    by_id(hdl).stop_reading();
+  bool close(Handle hdl) {
+    auto x = by_id(hdl);
+    if (! x)
+      return false;
+    x->stop_reading();
+    return true;
   }
 
   /// Checks whether `hdl` is assigned to broker.
@@ -255,11 +259,11 @@ protected:
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.
   template <class Handle>
-  auto by_id(Handle hdl) -> decltype(*ptr_of(hdl)) {
+  auto by_id(Handle hdl) -> optional<decltype(*ptr_of(hdl))> {
     auto& elements = get_map(hdl);
     auto i = elements.find(hdl);
     if (i == elements.end())
-      CAF_RAISE_ERROR("invalid handle");
+      return none;
     return *(i->second);
   }
 
@@ -272,7 +276,7 @@ protected:
     decltype(ptr_of(hdl)) result;
     auto i = elements.find(hdl);
     if (i == elements.end())
-      CAF_RAISE_ERROR("invalid handle");
+      return nullptr;
     swap(result, i->second);
     elements.erase(i);
     return result;
@@ -282,6 +286,7 @@ private:
   scribe_map scribes_;
   doorman_map doormen_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
+  std::vector<char> dummy_wr_buf_;
 };
 
 } // namespace io
