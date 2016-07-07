@@ -32,7 +32,6 @@
 #include "caf/optional.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/index_mapping.hpp"
-#include "caf/allowed_unsafe_message_type.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"

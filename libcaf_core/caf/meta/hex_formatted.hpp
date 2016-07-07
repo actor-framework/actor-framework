@@ -31,7 +31,7 @@ struct hex_formatted_t : annotation {
   }
 };
 
-/// Allows an inspector to omit the following data field if it is empty.
+/// Advises the inspector to format the following data field in hex format.
 constexpr hex_formatted_t hex_formatted() {
   return {};
 }

@@ -37,6 +37,15 @@ struct is_annotation {
   static constexpr bool value = std::is_base_of<annotation, T>::value;
 };
 
+template <class T>
+struct is_annotation<T&> : is_annotation<T> {};
+
+template <class T>
+struct is_annotation<const T&> : is_annotation<T> {};
+
+template <class T>
+struct is_annotation<T&&> : is_annotation<T> {};
+
 } // namespace meta
 } // namespace caf
 

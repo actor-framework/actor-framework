@@ -18,7 +18,7 @@
  ******************************************************************************/
 
 // This file is referenced in the manual, do not modify without updating refs!
-// ConfiguringActorApplications: 36-40
+// ConfiguringActorApplications: 50-54
 
 #ifndef CAF_ALLOWED_UNSAFE_MESSAGE_TYPE_HPP
 #define CAF_ALLOWED_UNSAFE_MESSAGE_TYPE_HPP
@@ -27,9 +27,23 @@
 
 namespace caf {
 
-///
+/// Template specializations can whitelist individual
+/// types for unsafe message passing operations.
 template <class T>
 struct allowed_unsafe_message_type : std::false_type {};
+
+template <class T>
+struct is_allowed_unsafe_message_type : allowed_unsafe_message_type<T> {};
+
+template <class T>
+struct is_allowed_unsafe_message_type<T&> : allowed_unsafe_message_type<T> {};
+
+template <class T>
+struct is_allowed_unsafe_message_type<T&&> : allowed_unsafe_message_type<T> {};
+
+template <class T>
+struct is_allowed_unsafe_message_type<const T&>
+    : allowed_unsafe_message_type<T> {};
 
 } // namespace caf
 

@@ -1,7 +1,7 @@
 // Showcases custom message types that cannot provide
 // friend access to the inspect() function.
 
-// Manual refs: 57-59, 64-66 (ConfiguringActorApplications)
+// Manual refs: 20-49, 51-76 (TypeInspection)
 
 #include <utility>
 #include <iostream>
@@ -16,8 +16,8 @@ using namespace caf;
 
 namespace {
 
-// identical to our second custom type example,
-// but without friend declarations
+// identical to our second custom type example, but
+// no friend access for `inspect`
 class foo {
 public:
   foo(int a0 = 0, int b0 = 0) : a_(a0), b_(b0) {
@@ -49,17 +49,30 @@ private:
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, foo& x) {
-  // store current state into temporaries, then give the inspector references
-  // to temporaries that are written back only when the inspector is saving
-  auto a = x.a();
-  auto b = x.b();
-  auto save = [&]() -> error {
-    x.set_a(a);
-    x.set_b(b);
-    return none;
-  };
-  return f(meta::type_name("foo"), a, b, meta::save_callback(save));
+typename std::enable_if<Inspector::is_saving::value,
+                        typename Inspector::result_type>::type
+inspect(Inspector& f, foo& x) {
+  return f(meta::type_name("foo"), x.a(), x.b());
+}
+
+template <class Inspector>
+typename std::enable_if<Inspector::is_loading::value,
+                        typename Inspector::result_type>::type
+inspect(Inspector& f, foo& x) {
+  struct tmp_t {
+    tmp_t(foo& ref) : x_(ref) {
+      // nop
+    }
+    ~tmp_t() {
+      // write back to x at scope exit
+      x_.set_a(a);
+      x_.set_b(b);
+    }
+    foo& x_;
+    int a;
+    int b;
+  } tmp{x};
+  return f(meta::type_name("foo"), tmp.a, tmp.b);
 }
 
 behavior testee(event_based_actor* self) {

@@ -463,21 +463,27 @@ public:
 
   template <class T, class... Ts>
   typename std::enable_if<
-    allowed_unsafe_message_type<T>::value,
+    is_allowed_unsafe_message_type<T>::value,
     error
   >::type
-  operator()(T&, Ts&&... xs) {
+  operator()(const T&, Ts&&... xs) {
     return (*this)(std::forward<Ts>(xs)...);
   }
 
   template <class T, class... Ts>
   typename std::enable_if<
     ! meta::is_annotation<T>::value
-    && ! allowed_unsafe_message_type<T>::value,
+    && ! is_allowed_unsafe_message_type<T>::value,
     error
   >::type
-  operator()(T& x, Ts&&... xs) {
-    auto e = apply(x);
+  operator()(T&& x, Ts&&... xs) {
+    static_assert(Derived::is_saving::value
+                  || (! std::is_rvalue_reference<T&&>::value
+                      && ! std::is_const<
+                             typename std::remove_reference<T>::type
+                           >::value),
+                  "a loading inspector requires mutable lvalue references");
+    auto e = apply(deconst(x));
     return e ? e : (*this)(std::forward<Ts>(xs)...);
   }
 
@@ -486,6 +492,11 @@ protected:
   virtual error apply_builtin(builtin in_out_type, void* in_out) = 0;
 
 private:
+  template <class T>
+  T& deconst(const T& x) {
+    return const_cast<T&>(x);
+  }
+
   template <class D, class T, class U, class F>
   static typename std::enable_if<D::is_saving::value, error>::type
   convert_apply(D& self, T& x, U& storage, F assign) {

@@ -1,6 +1,7 @@
 // Showcases how to add custom POD message types.
 
-// Manual refs: 23-26, 29-33, 87-90, 93-96 (ConfiguringActorApplications)
+// Manual refs: 24-27, 30-34, 75-78, 81-84 (ConfiguringActorApplications)
+//              23-33 (TypeInspection)
 
 #include <string>
 #include <vector>
