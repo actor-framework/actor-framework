@@ -4,7 +4,7 @@
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 20-37, 39-51, 53-64, 68-70 (MessagePassing.tex)
+// Manual references: lines 20-37, 39-51, 53-64, 67-69 (MessagePassing.tex)
 
 #include <vector>
 #include <chrono>

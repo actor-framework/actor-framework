@@ -19,7 +19,7 @@
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 32-84 (Error.tex)
+// Manual references: lines 32-91 (Error.tex)
 
 #ifndef CAF_SEC_HPP
 #define CAF_SEC_HPP
@@ -42,8 +42,7 @@ enum class sec : uint8_t {
   request_timeout,
   /// Indicates that requested group module does not exist.
   no_such_group_module,
-  /// Unpublishing or connecting failed because
-  /// requested actor is not bound to given port.
+  /// Unpublishing or connecting failed: no actor bound to given port.
   no_actor_published_at_port,
   /// Connecting failed because a remote actor had an unexpected interface.
   unexpected_actor_messaging_interface,
