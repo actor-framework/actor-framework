@@ -125,8 +125,8 @@ struct test_empty_non_pod {
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector&, test_empty_non_pod&) {
-  return none;
+typename Inspector::result_type inspect(Inspector& f, test_empty_non_pod&) {
+  return f();
 }
 
 class config : public actor_system_config {
@@ -347,25 +347,6 @@ CAF_TEST(messages) {
   CAF_CHECK_EQUAL(to_string(msg), to_string(y));
   CAF_CHECK(is_message(y).equal(i32, te, str, rs));
 }
-
-/*
-CAF_TEST(actor_addr_via_message) {
-  auto testee = system.spawn([] {});
-  auto addr = actor_cast<actor_addr>(testee);
-  auto addr_msg = make_message(addr);
-  // serialize original message which uses tuple_vals and
-  // deserialize into a message which uses message builder
-  message x;
-  deserialize(serialize(addr_msg), x);
-  CAF_CHECK_EQUAL(to_string(addr_msg), to_string(x));
-  CAF_CHECK(is_message(x).equal(addr));
-  // serialize fully dynamic message again (do another roundtrip)
-  message y;
-  deserialize(serialize(x), y);
-  CAF_CHECK_EQUAL(to_string(addr_msg), to_string(y));
-  CAF_CHECK(is_message(y).equal(addr));
-}
-*/
 
 CAF_TEST(multiple_messages) {
   auto m = make_message(rs, te);

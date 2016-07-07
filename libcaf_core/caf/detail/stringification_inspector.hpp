@@ -45,18 +45,23 @@ namespace detail {
 
 class stringification_inspector {
 public:
-  using result_type = error;
+  // -- member types required by Inspector concept -----------------------------
+
+  using result_type = void;
 
   using is_saving = std::true_type;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   stringification_inspector(std::string& result) : result_(result) {
     // nop
   }
 
+  // -- operator() -------------------------------------------------------------
+
   template <class... Ts>
-  error operator()(Ts&&... xs) {
+  void operator()(Ts&&... xs) {
     traverse(std::forward<Ts>(xs)...);
-    return none;
   }
 
 private:

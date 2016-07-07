@@ -37,6 +37,7 @@
 #include "caf/meta/hex_formatted.hpp"
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -140,15 +141,17 @@ public:
                              typename Inspector::result_type>
   inspect(Inspector& f, node_id& x) {
     data tmp;
-    auto result = f(meta::type_name("node_id"), tmp.pid_,
-                    meta::hex_formatted(), tmp.host_);
-    if (! tmp.valid())
-      x.data_.reset();
-    else if (! x || ! x.data_->unique())
-      x.data_.reset(new data(tmp));
-    else
-      *x.data_ = tmp;
-    return result;
+    // write changes to tmp back to x at scope exit
+    auto sg = detail::make_scope_guard([&] {
+      if (! tmp.valid())
+        x.data_.reset();
+      else if (! x || ! x.data_->unique())
+        x.data_.reset(new data(tmp));
+      else
+        *x.data_ = tmp;
+    });
+    return f(meta::type_name("node_id"), tmp.pid_,
+             meta::hex_formatted(), tmp.host_);
   }
 
   /// @endcond
