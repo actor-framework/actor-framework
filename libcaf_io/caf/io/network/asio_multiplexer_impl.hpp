@@ -76,7 +76,7 @@ error ip_bind(asio_tcp_socket_acceptor& fd, uint16_t port,
     fd.bind(ep, ec);
     if (ec)
       return sec::cannot_open_port;
-    fd.listen(ec);
+    fd.listen(asio_tcp_socket_acceptor::max_connections, ec);
     if (ec)
       return sec::cannot_open_port;
     return none;
