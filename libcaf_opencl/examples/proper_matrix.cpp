@@ -69,7 +69,8 @@ public:
 
   // allows serialization
   template <class Inspector>
-  friend error inspect(Inspector& f, square_matrix& m) {
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 square_matrix& m) {
     return f(meta::type_name("square_matrix"), m.data_);
   }
 
