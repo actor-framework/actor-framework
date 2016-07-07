@@ -68,9 +68,9 @@ public:
   static constexpr size_t num_elements = Size * Size;
 
   // allows serialization
-  template <class IO>
-  friend void serialize(IO& in_or_out, square_matrix& m, const unsigned int) {
-    in_or_out & m.data_;
+  template <class Inspector>
+  friend error inspect(Inspector& f, square_matrix& m) {
+    return f(meta::type_name("square_matrix"), m.data_);
   }
 
   square_matrix(square_matrix&&) = default;
@@ -116,9 +116,8 @@ string to_string(const square_matrix<Size>& m) {
   ostringstream oss;
   oss.fill(' ');
   for (size_t row = 0; row < Size; ++row) {
-    for (size_t column = 0; column < Size; ++column) {
+    for (size_t column = 0; column < Size; ++column)
       oss << fixed << setprecision(2) << setw(9) << m(column, row);
-    }
     oss << '\n';
   }
   return oss.str();

@@ -113,10 +113,9 @@ public:
   using value_type = ivec::value_type;
   static constexpr size_t num_elements = Size * Size;
 
-  // allows serialization
-  template <class IO>
-  friend void serialize(IO& in_or_out, square_matrix& m, const unsigned int) {
-    in_or_out & m.data_;
+  template <class Inspector>
+  friend error inspect(Inspector& f, square_matrix& x) {
+    return f(meta::type_name("square_matrix"), x.data_);
   }
 
   square_matrix(square_matrix&&) = default;
