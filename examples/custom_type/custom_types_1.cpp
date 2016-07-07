@@ -27,7 +27,7 @@ struct foo {
 
 // foo needs to be serializable
 template <class Inspector>
-error inspect(Inspector& f, foo& x) {
+typename Inspector::result_type inspect(Inspector& f, foo& x) {
   return f(meta::type_name("foo"), x.a, x.b);
 }
 
@@ -45,7 +45,7 @@ struct foo2 {
 
 // foo2 also needs to be serializable
 template <class Inspector>
-error inspect(Inspector& f, foo2& x) {
+typename Inspector::result_type inspect(Inspector& f, foo2& x) {
   return f(meta::type_name("foo2"), x.a, x.b);
 }
 

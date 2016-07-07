@@ -32,7 +32,6 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/try_match.hpp"
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/tuple_zip.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
@@ -169,16 +168,10 @@ public:
     typename detail::il_indices<decayed_arg_types>::type indices;
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
     message tmp;
-    intermediate_pseudo_tuple tup{xs.shared()};
-    if (is_manipulator && tup.shared_access) {
+    auto needs_detaching = is_manipulator && xs.shared();
+    if (needs_detaching)
       tmp = message::copy(xs);
-      tup.shared_access = false;
-      for (size_t i = 0; i < tmp.size(); ++i)
-        tup[i] = const_cast<void*>(tmp.at(i));
-    } else {
-      for (size_t i = 0; i < xs.size(); ++i)
-        tup[i] = const_cast<void*>(xs.get(i));
-    }
+    intermediate_pseudo_tuple tup{needs_detaching ? tmp.content() : xs};
     auto fun_res = apply_args(fun, indices, tup);
     return f.visit(fun_res) ? match_case::match : match_case::skip;
   }

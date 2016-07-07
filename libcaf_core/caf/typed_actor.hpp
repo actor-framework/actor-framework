@@ -242,7 +242,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   }
 
   template <class Inspector>
-  friend error inspect(Inspector& f, typed_actor& x) {
+  friend typename Inspector::result_type inspect(Inspector& f, typed_actor& x) {
     return f(x.ptr_);
   }
 

@@ -50,8 +50,7 @@ inline bool operator==(const index_mapping& x, const index_mapping& y) {
 }
 
 template <class Inspector>
-auto inspect(Inspector& f, index_mapping& x)
--> decltype(f(meta::type_name("index_mapping"), x.value)) {
+typename Inspector::result_type inspect(Inspector& f, index_mapping& x) {
   return f(meta::type_name("index_mapping"), x.value);
 }
 

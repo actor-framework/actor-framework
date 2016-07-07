@@ -40,7 +40,7 @@ enum connection_state {
 };
 
 /// @relates connection_state
-constexpr const char* to_string(connection_state x) {
+inline std::string to_string(connection_state x) {
   return x == await_header ? "await_header"
                            : (x == await_payload ? "await_payload"
                                                  : "close_connection");

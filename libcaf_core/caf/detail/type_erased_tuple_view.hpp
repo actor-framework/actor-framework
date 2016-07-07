@@ -34,7 +34,6 @@
 
 #include "caf/detail/try_match.hpp"
 #include "caf/detail/apply_args.hpp"
-#include "caf/detail/pseudo_tuple.hpp"
 
 namespace caf {
 namespace detail {

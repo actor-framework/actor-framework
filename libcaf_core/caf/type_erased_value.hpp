@@ -25,6 +25,7 @@
 #include <functional>
 
 #include "caf/fwd.hpp"
+#include "caf/error.hpp"
 #include "caf/type_nr.hpp"
 
 namespace caf {
@@ -97,16 +98,12 @@ public:
 };
 
 /// @relates type_erased_value_impl
-template <class Inspector>
-typename std::enable_if<Inspector::is_saving::value, error>::type
-inspect(Inspector& f, type_erased_value& x) {
+inline error inspect(serializer& f, type_erased_value& x) {
   return x.save(f);
 }
 
 /// @relates type_erased_value_impl
-template <class Inspector>
-typename std::enable_if<Inspector::is_loading::value, error>::type
-inspect(Inspector& f, type_erased_value& x) {
+inline error inspect(deserializer& f, type_erased_value& x) {
   return x.load(f);
 }
 

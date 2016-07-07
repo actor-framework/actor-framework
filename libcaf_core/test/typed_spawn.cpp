@@ -85,7 +85,7 @@ struct my_request {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, my_request& x) {
+typename Inspector::result_type inspect(Inspector& f, my_request& x) {
   return f(x.a, x.b);
 }
 

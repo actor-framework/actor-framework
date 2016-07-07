@@ -174,9 +174,7 @@ private:
                     detail::type_list<Ts...> tk) {
     if (! match_elements<Ts...>())
       return none;
-    detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{shared()};
-    for (size_t i = 0; i < size(); ++i)
-      xs[i] = const_cast<void*>(get(i)); // pseud_tuple figures out const-ness
+    detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{*this};
     return detail::apply_args(fun, detail::get_indices(tk), xs);
   }
 
@@ -185,9 +183,7 @@ private:
                        detail::type_list<Ts...> tk) {
     if (! match_elements<Ts...>())
       return none;
-    detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{shared()};
-    for (size_t i = 0; i < size(); ++i)
-      xs[i] = const_cast<void*>(get(i)); // pseud_tuple figures out const-ness
+    detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{*this};
     detail::apply_args(fun, detail::get_indices(tk), xs);
     return unit;
   }

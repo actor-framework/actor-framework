@@ -23,12 +23,6 @@
 #include <utility>
 
 #include "caf/fwd.hpp"
-#include "caf/sec.hpp"
-#include "caf/message.hpp"
-
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/pseudo_tuple.hpp"
 
 namespace caf {
 

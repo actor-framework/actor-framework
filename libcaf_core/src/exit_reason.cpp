@@ -40,7 +40,7 @@ const char* exit_reason_strings[] = {
 } // namespace <anonymous>
 
 
-const char* to_string(exit_reason x) {
+std::string to_string(exit_reason x) {
   auto index = static_cast<size_t>(x);
   if (index > static_cast<size_t>(exit_reason::unreachable))
     return "<unknown>";

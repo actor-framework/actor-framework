@@ -28,7 +28,7 @@ enum invoke_message_result {
   im_dropped
 };
 
-constexpr const char* to_string(invoke_message_result x) {
+inline std::string to_string(invoke_message_result x) {
   return x == im_success ? "im_success"
                          : (x == im_skipped ? "im_skipped" : "im_dropped" );
 }

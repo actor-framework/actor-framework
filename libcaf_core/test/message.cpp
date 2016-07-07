@@ -171,7 +171,7 @@ struct s1 {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, s1& x) {
+typename Inspector::result_type inspect(Inspector& f, s1& x) {
   return f(x.value);
 }
 
@@ -180,7 +180,7 @@ struct s2 {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, s2& x) {
+typename Inspector::result_type inspect(Inspector& f, s2& x) {
   return f(x.value);
 }
 
@@ -192,7 +192,7 @@ struct s3 {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, s3& x) {
+typename Inspector::result_type inspect(Inspector& f, s3& x) {
   return f(x.value);
 }
 

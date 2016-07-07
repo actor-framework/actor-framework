@@ -184,7 +184,7 @@ public:
   // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
-  friend error inspect(Inspector& f, error& x) {
+  friend typename Inspector::result_type inspect(Inspector& f, error& x) {
     auto fun = [&](meta::type_name_t x0, uint8_t& x1, atom_value& x2,
                    meta::omittable_if_empty_t x3, message& x4) -> error{
       return f(x0, x1, x2, x3, x4);

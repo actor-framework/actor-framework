@@ -121,7 +121,8 @@ public:
   }
 
   template <class Inspector>
-  friend error inspect(Inspector& f, counting_string& x) {
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 counting_string& x) {
     return f(x.str_);
   }
 

@@ -31,7 +31,7 @@ enum class operation {
   propagate_error
 };
 
-constexpr const char* to_string(operation op) {
+inline std::string to_string(operation op) {
   return op == operation::read ? "read"
                                : (op == operation::write ? "write"
                                                          : "propagate_error");

@@ -110,7 +110,7 @@ public:
   }
 
   template <class Inspector>
-  friend error inspect(Inspector& f, actor_addr& x) {
+  friend typename Inspector::result_type inspect(Inspector& f, actor_addr& x) {
     return inspect(f, x.ptr_);
   }
 

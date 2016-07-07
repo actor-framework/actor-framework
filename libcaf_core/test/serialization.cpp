@@ -80,7 +80,7 @@ struct raw_struct {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, raw_struct& x) {
+typename Inspector::result_type inspect(Inspector& f, raw_struct& x) {
   return f(x.str);
 }
 
@@ -109,7 +109,7 @@ struct test_array {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, test_array& x) {
+typename Inspector::result_type inspect(Inspector& f, test_array& x) {
   return f(x.value, x.value2);
 }
 
@@ -125,7 +125,7 @@ struct test_empty_non_pod {
 };
 
 template <class Inspector>
-error inspect(Inspector&, test_empty_non_pod&) {
+typename Inspector::result_type inspect(Inspector&, test_empty_non_pod&) {
   return none;
 }
 

@@ -43,7 +43,7 @@ struct new_connection_msg {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, new_connection_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, new_connection_msg& x) {
   return f(meta::type_name("new_connection_msg"), x.source, x.handle);
 }
 
@@ -69,7 +69,7 @@ struct new_data_msg {
 
 /// @relates new_data_msg
 template <class Inspector>
-error inspect(Inspector& f, new_data_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, new_data_msg& x) {
   return f(meta::type_name("new_data_msg"), x.handle, x.buf);
 }
 
@@ -95,7 +95,7 @@ struct data_transferred_msg {
 
 /// @relates data_transferred_msg
 template <class Inspector>
-error inspect(Inspector& f, data_transferred_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, data_transferred_msg& x) {
   return f(meta::type_name("data_transferred_msg"),
            x.handle, x.written, x.remaining);
 }
@@ -123,7 +123,7 @@ struct connection_closed_msg {
 
 /// @relates connection_closed_msg
 template <class Inspector>
-error inspect(Inspector& f, connection_closed_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, connection_closed_msg& x) {
   return f(meta::type_name("connection_closed_msg"), x.handle);
 }
 
@@ -147,7 +147,7 @@ struct acceptor_closed_msg {
 
 /// @relates connection_closed_msg
 template <class Inspector>
-error inspect(Inspector& f, acceptor_closed_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, acceptor_closed_msg& x) {
   return f(meta::type_name("acceptor_closed_msg"), x.handle);
 }
 

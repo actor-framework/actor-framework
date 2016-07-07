@@ -40,7 +40,7 @@ struct ping {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, ping& x) {
+typename Inspector::result_type inspect(Inspector& f, ping& x) {
   return f(meta::type_name("ping"), x.value);
 }
 
@@ -53,7 +53,7 @@ struct pong {
 };
 
 template <class Inspector>
-error inspect(Inspector& f, pong& x) {
+typename Inspector::result_type inspect(Inspector& f, pong& x) {
   return f(meta::type_name("pong"), x.value);
 }
 

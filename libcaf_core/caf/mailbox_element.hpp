@@ -92,7 +92,7 @@ protected:
 
 /// @relates mailbox_element
 template <class Inspector>
-void inspect(Inspector& f, mailbox_element& x) {
+typename Inspector::result_type inspect(Inspector& f, mailbox_element& x) {
   return f(meta::type_name("mailbox_element"), x.sender, x.mid,
            meta::omittable_if_empty(), x.stages, x.content());
 }

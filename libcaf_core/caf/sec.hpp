@@ -92,7 +92,7 @@ enum class sec : uint8_t {
 };
 
 /// @relates sec
-const char* to_string(sec);
+std::string to_string(sec);
 
 /// @relates sec
 error make_error(sec);

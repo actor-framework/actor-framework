@@ -49,7 +49,7 @@ private:
 };
 
 template <class Inspector>
-error inspect(Inspector& f, foo& x) {
+typename Inspector::result_type inspect(Inspector& f, foo& x) {
   // store current state into temporaries, then give the inspector references
   // to temporaries that are written back only when the inspector is saving
   auto a = x.a();

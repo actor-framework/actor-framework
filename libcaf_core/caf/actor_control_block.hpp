@@ -201,7 +201,7 @@ inline execution_unit* context_of(void*) {
 }
 
 template <class Inspector>
-error inspect(Inspector& f, strong_actor_ptr& x) {
+typename Inspector::result_type inspect(Inspector& f, strong_actor_ptr& x) {
   actor_id aid = 0;
   node_id nid;
   if (x) {
@@ -216,7 +216,7 @@ error inspect(Inspector& f, strong_actor_ptr& x) {
 }
 
 template <class Inspector>
-error inspect(Inspector& f, weak_actor_ptr& x) {
+typename Inspector::result_type inspect(Inspector& f, weak_actor_ptr& x) {
   // inspect as strong pointer, then write back to weak pointer on save
   auto tmp = x.lock();
   auto load = [&]() -> error { x.reset(tmp.get()); return none; };

@@ -32,17 +32,20 @@ namespace detail {
 
 // tuple-like access to an array of void pointers that is
 // also aware of the semantics of param<T>
-template <class... T>
+template <class... Ts>
 struct pseudo_tuple {
   using pointer = void*;
   using const_pointer = const void*;
 
-  pointer data[sizeof...(T) > 0 ? sizeof...(T) : 1];
+  pointer data[sizeof...(Ts) > 0 ? sizeof...(Ts) : 1];
 
   bool shared_access;
 
-  pseudo_tuple(bool is_shared) : shared_access(is_shared) {
-    // nop
+  template <class Tuple>
+  pseudo_tuple(const Tuple& xs) : data(), shared_access(xs.shared()) {
+    CAF_ASSERT(sizeof...(Ts) == xs.size());
+    for (size_t i = 0; i < xs.size(); ++i)
+      data[i] = const_cast<void*>(xs.get(i));
   }
 
   inline const_pointer at(size_t p) const {

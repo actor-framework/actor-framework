@@ -142,7 +142,7 @@ private:
 
 /// @relates duration
 template <class Inspector>
-error inspect(Inspector& f, duration& x) {
+typename Inspector::result_type inspect(Inspector& f, duration& x) {
   return f(x.unit, x.count);
 }
 

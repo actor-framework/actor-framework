@@ -34,7 +34,7 @@ enum class protocol : uint32_t {
 };
 
 /// @relates protocol
-constexpr const char* to_string(protocol value) {
+inline std::string to_string(protocol value) {
   return value == protocol::ethernet ? "ethernet"
                                      : (value == protocol::ipv4 ? "ipv4"
                                                                 : "ipv6");

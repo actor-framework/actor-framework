@@ -51,7 +51,7 @@ enum class exit_reason : uint8_t {
 };
 
 /// Returns a string representation of given exit reason.
-const char* to_string(exit_reason x);
+std::string to_string(exit_reason x);
 
 /// @relates exit_reason
 error make_error(exit_reason);

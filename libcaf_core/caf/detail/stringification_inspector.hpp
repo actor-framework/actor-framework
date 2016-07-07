@@ -45,6 +45,8 @@ namespace detail {
 
 class stringification_inspector {
 public:
+  using result_type = error;
+
   using is_saving = std::true_type;
 
   stringification_inspector(std::string& result) : result_(result) {

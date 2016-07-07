@@ -301,6 +301,16 @@ public:
     return size() == (sizeof...(Ts) + 1) && match_elements_impl(p0, list);
   }
 
+  /// @cond PRIVATE
+
+  /// @pre `! empty()`
+  type_erased_tuple& content() {
+    CAF_ASSERT(vals_);
+    return *vals_;
+  }
+
+  /// @endcond
+
 private:
   template <size_t P>
   static bool match_elements_impl(std::integral_constant<size_t, P>,

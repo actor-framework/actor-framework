@@ -165,7 +165,7 @@ public:
   actor(actor_control_block*, bool);
 
   template <class Inspector>
-  friend error inspect(Inspector& f, actor& x) {
+  friend typename Inspector::result_type inspect(Inspector& f, actor& x) {
     return inspect(f, x.ptr_);
   }
 

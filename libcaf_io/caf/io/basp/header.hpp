@@ -81,7 +81,7 @@ struct header {
 
 /// @relates header
 template <class Inspector>
-error inspect(Inspector& f, header& hdr) {
+typename Inspector::result_type inspect(Inspector& f, header& hdr) {
   uint8_t pad = 0;
   return f(meta::type_name("header"),
            hdr.operation,

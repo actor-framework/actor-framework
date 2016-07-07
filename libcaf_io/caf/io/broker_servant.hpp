@@ -38,8 +38,8 @@ public:
       : Base(ptr),
         hdl_(x),
         value_(strong_actor_ptr{}, message_id::make(),
-               mailbox_element::forwarding_stack{}, SysMsgType{}) {
-    set_hdl(msg(), x);
+               mailbox_element::forwarding_stack{}, SysMsgType{x, {}}) {
+    // nop
   }
 
   Handle hdl() const {
@@ -65,14 +65,6 @@ protected:
 
   SysMsgType& msg() {
     return value_.template get_mutable_as<SysMsgType>(0);
-  }
-
-  static void set_hdl(new_connection_msg& lhs, Handle& hdl) {
-    lhs.source = hdl;
-  }
-
-  static void set_hdl(new_data_msg& lhs, Handle& hdl) {
-    lhs.handle = hdl;
   }
 
   Handle hdl_;

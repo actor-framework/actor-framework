@@ -71,7 +71,7 @@ private:
 
 /// @relates exit_msg
 template <class Inspector>
-error inspect(Inspector& f, exit_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, exit_msg& x) {
   return f(meta::type_name("exit_msg"), x.source, x.reason);
 }
 
@@ -108,7 +108,7 @@ private:
 
 /// @relates down_msg
 template <class Inspector>
-error inspect(Inspector& f, down_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, down_msg& x) {
   return f(meta::type_name("down_msg"), x.source, x.reason);
 }
 
@@ -120,7 +120,7 @@ struct group_down_msg {
 
 /// @relates group_down_msg
 template <class Inspector>
-error inspect(Inspector& f, group_down_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, group_down_msg& x) {
   return f(meta::type_name("group_down_msg"), x.source);
 }
 
@@ -133,7 +133,7 @@ struct timeout_msg {
 
 /// @relates timeout_msg
 template <class Inspector>
-error inspect(Inspector& f, timeout_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, timeout_msg& x) {
   return f(meta::type_name("timeout_msg"), x.timeout_id);
 }
 

@@ -124,8 +124,8 @@ protected:
   error apply_builtin(builtin type, void* val) override {
     CAF_ASSERT(val != nullptr);
     switch (type) {
-      case i8_v:
-      case u8_v:
+      default: // i8_v or u8_v
+        CAF_ASSERT(type == i8_v || type == u8_v);
         return apply_raw(sizeof(uint8_t), val);
       case i16_v:
       case u16_v:

@@ -126,7 +126,8 @@ public:
   explicit node_id(intrusive_ptr<data> dataptr);
 
   template <class Inspector>
-  friend detail::enable_if_t<Inspector::is_saving::value, error>
+  friend detail::enable_if_t<Inspector::is_saving::value,
+                             typename Inspector::result_type>
   inspect(Inspector& f, node_id& x) {
     data tmp;
     data* ptr = x ? x.data_.get() : &tmp;
@@ -135,20 +136,19 @@ public:
   }
 
   template <class Inspector>
-  friend detail::enable_if_t<Inspector::is_loading::value, error>
+  friend detail::enable_if_t<Inspector::is_loading::value,
+                             typename Inspector::result_type>
   inspect(Inspector& f, node_id& x) {
     data tmp;
-    auto err = f(meta::type_name("node_id"), tmp.pid_,
-                 meta::hex_formatted(), tmp.host_);
-    if (! err) {
-      if (! tmp.valid())
-        x.data_.reset();
-      else if (! x || ! x.data_->unique())
-        x.data_.reset(new data(tmp));
-      else
-        *x.data_ = tmp;
-    }
-    return err;
+    auto result = f(meta::type_name("node_id"), tmp.pid_,
+                    meta::hex_formatted(), tmp.host_);
+    if (! tmp.valid())
+      x.data_.reset();
+    else if (! x || ! x.data_->unique())
+      x.data_.reset(new data(tmp));
+    else
+      *x.data_ = tmp;
+    return result;
   }
 
   /// @endcond

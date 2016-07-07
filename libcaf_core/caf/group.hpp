@@ -86,7 +86,7 @@ public:
   }
 
   template <class Inspector>
-  friend error inspect(Inspector& f, group& x) {
+  friend typename Inspector::result_type inspect(Inspector& f, group& x) {
     std::string x_id;
     std::string x_mod;
     auto ptr = x.get();

@@ -49,38 +49,12 @@ namespace caf {
 template <class Derived>
 class data_processor {
 public:
-  data_processor(const data_processor&) = delete;
-  data_processor& operator=(const data_processor&) = delete;
+  // -- member types -----------------------------------------------------------
 
-  data_processor(execution_unit* ctx = nullptr) : context_(ctx) {
-    // nop
-  }
+  /// Return type for `operator()`.
+  using result_type = error;
 
-  virtual ~data_processor() {
-    // nop
-  }
-
-  /// Begins processing of an object. Saves the type information
-  /// to the underlying storage when in saving mode, otherwise
-  /// extracts them and sets both arguments accordingly.
-  virtual error begin_object(uint16_t& typenr, std::string& name) = 0;
-
-  /// Ends processing of an object.
-  virtual error end_object() = 0;
-
-  /// Begins processing of a sequence. Saves the size
-  /// to the underlying storage when in saving mode, otherwise
-  /// sets `num` accordingly.
-  virtual error begin_sequence(size_t& num) = 0;
-
-  /// Ends processing of a sequence.
-  virtual error end_sequence() = 0;
-
-  /// Returns the actor system associated to this data processor.
-  execution_unit* context() {
-    return context_;
-  }
-
+  /// List of builtin types for data processors.
   using builtin_t =
     detail::type_list<
       int8_t,
@@ -99,7 +73,7 @@ public:
       std::u32string
     >;
 
-  /// Lists all types an implementation has to accept as builtin types.
+  /// List of builtin types for data processors as enum.
   enum builtin {
     i8_v,
     u8_v,
@@ -116,6 +90,46 @@ public:
     string16_v,
     string32_v
   };
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  data_processor(const data_processor&) = delete;
+  data_processor& operator=(const data_processor&) = delete;
+
+  data_processor(execution_unit* ctx = nullptr) : context_(ctx) {
+    // nop
+  }
+
+  virtual ~data_processor() {
+    // nop
+  }
+
+  // -- pure virtual functions -------------------------------------------------
+
+  /// Begins processing of an object. Saves the type information
+  /// to the underlying storage when in saving mode, otherwise
+  /// extracts them and sets both arguments accordingly.
+  virtual error begin_object(uint16_t& typenr, std::string& name) = 0;
+
+  /// Ends processing of an object.
+  virtual error end_object() = 0;
+
+  /// Begins processing of a sequence. Saves the size
+  /// to the underlying storage when in saving mode, otherwise
+  /// sets `num` accordingly.
+  virtual error begin_sequence(size_t& num) = 0;
+
+  /// Ends processing of a sequence.
+  virtual error end_sequence() = 0;
+
+  // -- getter -----------------------------------------------------------------
+
+  /// Returns the actor system associated to this data processor.
+  execution_unit* context() {
+    return context_;
+  }
+
+  // -- apply functions --------------------------------------------------------
 
   /// Applies this processor to an arithmetic type.
   template <class T>
@@ -419,6 +433,8 @@ public:
   auto apply(T& x) -> decltype(inspect(std::declval<Derived&>(), x)) {
     return inspect(dref(), x);
   }
+
+  // -- operator() -------------------------------------------------------------
 
   inline error operator()() {
     return none;

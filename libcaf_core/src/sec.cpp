@@ -57,7 +57,7 @@ const char* sec_strings[] = {
 
 } // namespace <anonymous>
 
-const char* to_string(sec x) {
+std::string to_string(sec x) {
   auto index = static_cast<size_t>(x);
   if (index > static_cast<size_t>(sec::bad_function_call))
     return "<unknown>";

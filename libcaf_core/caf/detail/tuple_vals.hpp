@@ -99,7 +99,8 @@ public:
   // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
-  friend error inspect(Inspector& f, tuple_vals_impl& x) {
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 tuple_vals_impl& x) {
     return apply_args(f, get_indices(x.data_), x.data_);
   }
 

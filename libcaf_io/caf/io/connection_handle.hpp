@@ -57,7 +57,8 @@ public:
   }
 
   template <class Inspector>
-  friend error inspect(Inspector& f, connection_handle& x) {
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 connection_handle& x) {
     return f(meta::type_name("connection_handle"), x.id_);
   }
 

@@ -136,7 +136,7 @@ public:
   }
 
   template <class Inspector>
-  friend error inspect(Inspector& f, message_id& x) {
+  friend typename Inspector::result_type inspect(Inspector& f, message_id& x) {
     return f(meta::type_name("message_id"), x.value_);
   }
 

@@ -28,7 +28,6 @@
 #include "caf/type_nr.hpp"
 
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/pseudo_tuple.hpp"
 
 namespace caf {
 namespace detail {
