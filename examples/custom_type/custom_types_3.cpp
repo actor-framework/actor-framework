@@ -1,7 +1,7 @@
 // Showcases custom message types that cannot provide
 // friend access to the inspect() function.
 
-// Manual refs: 20-49, 51-76 (TypeInspection)
+// Manual refs: 20-49, 76-103 (TypeInspection)
 
 #include <utility>
 #include <iostream>
@@ -48,6 +48,31 @@ private:
   int b_;
 };
 
+// A lightweight scope guard implementation.
+template <class Fun>
+class scope_guard {
+public:
+  scope_guard(Fun f) : fun_(std::move(f)), enabled_(true) { }
+
+  scope_guard(scope_guard&& x) : fun_(std::move(x.fun_)), enabled_(x.enabled_) {
+    x.enabled_ = false;
+  }
+
+  ~scope_guard() {
+    if (enabled_) fun_();
+  }
+
+private:
+  Fun fun_;
+  bool enabled_;
+};
+
+// Creates a guard that executes `f` as soon as it goes out of scope.
+template <class Fun>
+scope_guard<Fun> make_scope_guard(Fun f) {
+  return {std::move(f)};
+}
+
 template <class Inspector>
 typename std::enable_if<Inspector::is_saving::value,
                         typename Inspector::result_type>::type
@@ -59,20 +84,14 @@ template <class Inspector>
 typename std::enable_if<Inspector::is_loading::value,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, foo& x) {
-  struct tmp_t {
-    tmp_t(foo& ref) : x_(ref) {
-      // nop
-    }
-    ~tmp_t() {
-      // write back to x at scope exit
-      x_.set_a(a);
-      x_.set_b(b);
-    }
-    foo& x_;
-    int a;
-    int b;
-  } tmp{x};
-  return f(meta::type_name("foo"), tmp.a, tmp.b);
+  int a;
+  int b;
+  // write back to x at scope exit
+  auto g = make_scope_guard([&] {
+    x.set_a(a);
+    x.set_b(b);
+  });
+  return f(meta::type_name("foo"), a, b);
 }
 
 behavior testee(event_based_actor* self) {
