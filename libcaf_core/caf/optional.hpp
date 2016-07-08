@@ -28,6 +28,7 @@
 #include "caf/config.hpp"
 
 #include "caf/detail/safe_equal.hpp"
+#include "caf/detail/scope_guard.hpp"
 
 namespace caf {
 
@@ -230,6 +231,8 @@ class optional<T&> {
 template <>
 class optional<void> {
  public:
+  using type = unit_t;
+
   optional(none_t = none) : m_value(false) {
     // nop
   }
@@ -253,6 +256,41 @@ class optional<void> {
  private:
   bool m_value;
 };
+
+template <class Inspector, class T>
+typename std::enable_if<Inspector::is_saving::value,
+                        typename Inspector::result_type>::type
+inspect(Inspector& f, optional<T>& x) {
+  return x ? f(false) : f(true, *x);
+}
+
+template <class T>
+struct optional_inspect_helper {
+  bool& enabled;
+  T& storage;
+  template <class Inspector>
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 optional_inspect_helper& x) {
+    return x.enabled ? f(x.storage) : f();
+  }
+};
+
+template <class Inspector, class T>
+typename std::enable_if<Inspector::is_loading::value,
+                        typename Inspector::result_type>::type
+inspect(Inspector& f, optional<T>& x) {
+  bool flag;
+  typename optional<T>::type tmp;
+  optional_inspect_helper<T> helper{flag, tmp};
+  auto guard = detail::make_scope_guard([&] {
+    if (flag)
+      x = std::move(tmp);
+    else
+      x = none;
+  });
+  return f(flag, helper);
+}
+
 
 /// @relates optional
 template <class T>
