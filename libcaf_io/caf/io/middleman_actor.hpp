@@ -42,8 +42,7 @@ namespace io {
 ///   // reuse:_addr: Enables or disables SO_REUSEPORT option.
 ///   (publish_atom, uint16_t port, strong_actor_ptr whom,
 ///    set<string> ifs, string addr, bool reuse_addr)
-///   -> either (ok_atom, uint16_t port)
-///      or     (error_atom, string error_string)
+///   -> expected<uint16_t>
 ///
 ///   // Opens a new port other CAF instances can connect to. The
 ///   // difference between `PUBLISH` and `OPEN` is that no actor is mapped to
@@ -53,7 +52,7 @@ namespace io {
 ///   // addr: IP address to listen to or empty for any.
 ///   // reuse:_addr: Enables or disables SO_REUSEPORT option.
 ///   (open_atom, uint16_t port, string addr, bool reuse_addr)
-///   -> either (ok_atom, uint16_t port)
+///   -> expected<uint16_t)
 ///      or     (error_atom, string error_string)
 ///
 ///   // Queries a remote node and returns an ID to this node as well as
@@ -63,22 +62,20 @@ namespace io {
 ///   // hostname: IP address or DNS hostname.
 ///   // port: TCP port.
 ///   (connect_atom, string hostname, uint16_t port)
-///   -> either (ok_atom, node_id nid, strong_actor_ptr remote_actor, set<string> ifs)
+///   -> either (node_id nid, strong_actor_ptr remote_actor, set<string> ifs)
 ///      or     (error_atom, string error_string)
 ///
 ///   // Closes `port` if it is mapped to `whom`.
 ///   // whom: A published actor.
 ///   // port: Used TCP port.
 ///   (unpublish_atom, strong_actor_ptr whom, uint16_t port)
-///   -> either (ok_atom)
-///      or     (error_atom, string error_string)
+///   -> expected<void>
 ///
 ///   // Unconditionally closes `port`, removing any actor
 ///   // published at this port.
 ///   // port: Used TCP port.
 ///   (close_atom, uint16_t port)
-///   -> either (ok_atom)
-///      or     (error_atom, string error_string)
+///   -> expected<void>
 ///
 ///   // Spawns an actor on a remote node, initializing it using the arguments
 ///   // stored in `msg` and returns the address of the spawned actor and its
@@ -87,8 +84,7 @@ namespace io {
 ///   // name: Announced type name of the actor.
 ///   // args: Initialization arguments for the actor.
 ///   (spawn_atom, node_id nid, string name, message args)
-///   -> either (ok_atom, strong_actor_ptr, set<string>
-///      or     (error_atom, string error_string)
+///   -> expected<strong_actor_ptr, set<string>>
 ///
 /// }
 /// ~~~
@@ -96,20 +92,20 @@ using middleman_actor =
   typed_actor<
     replies_to<publish_atom, uint16_t, strong_actor_ptr,
                std::set<std::string>, std::string, bool>
-    ::with<ok_atom, uint16_t>,
+    ::with<uint16_t>,
 
     replies_to<open_atom, uint16_t, std::string, bool>
-    ::with<ok_atom, uint16_t>,
+    ::with<uint16_t>,
 
     replies_to<connect_atom, std::string, uint16_t>
-    ::with<ok_atom, node_id, strong_actor_ptr, std::set<std::string>>,
+    ::with<node_id, strong_actor_ptr, std::set<std::string>>,
 
     reacts_to<unpublish_atom, actor_addr, uint16_t>,
 
     reacts_to<close_atom, uint16_t>,
 
     replies_to<spawn_atom, node_id, std::string, message>
-    ::with<ok_atom, strong_actor_ptr, std::set<std::string>>,
+    ::with<strong_actor_ptr, std::set<std::string>>,
 
     replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
 

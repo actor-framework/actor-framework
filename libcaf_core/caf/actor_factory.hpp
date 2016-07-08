@@ -47,69 +47,75 @@ template <class F, class T, class Bhvr, class R, class... Ts>
 class fun_decorator<F, T, Bhvr, spawn_mode::function,
                     R, detail::type_list<Ts...>> {
 public:
-  fun_decorator(const F& f, Bhvr& res, T*) : f_(f), res_(res) {
+  fun_decorator(const F& f, T*) : f_(f) {
     // nop
   }
 
-  void operator()(Ts... xs) {
+  behavior operator()(Ts... xs) {
     detail::type_list<R> token;
-    apply(token, xs...);
+    return apply(token, xs...);
   }
 
   template <class U>
   typename std::enable_if<
-    std::is_convertible<U, Bhvr>::value
+    std::is_convertible<U, Bhvr>::value,
+    behavior
   >::type
   apply(detail::type_list<U>, Ts... xs) {
-    res_ = f_(xs...);
+    auto bhvr = f_(xs...);
+    return std::move(bhvr.unbox());
   }
 
   template <class U>
   typename std::enable_if<
-    ! std::is_convertible<U, Bhvr>::value
+    ! std::is_convertible<U, Bhvr>::value,
+    behavior
   >::type
   apply(detail::type_list<U>, Ts... xs) {
     f_(xs...);
+    return {};
   }
 
 private:
   F f_;
-  Bhvr& res_;
 };
 
 template <class F, class T, class Bhvr, class R, class... Ts>
 class fun_decorator<F, T, Bhvr, spawn_mode::function_with_selfptr,
                     R, detail::type_list<T*, Ts...>> {
 public:
-  fun_decorator(const F& f, Bhvr& res, T* ptr) : f_(f), ptr_(ptr), res_(res) {
+  fun_decorator(const F& f, T* ptr) : f_(f), ptr_(ptr) {
     // nop
   }
 
-  void operator()(Ts... xs) {
+  behavior operator()(Ts... xs) {
     detail::type_list<R> token;
-    apply(token, xs...);
+    return apply(token, xs...);
   }
 
   template <class U>
   typename std::enable_if<
-    std::is_convertible<U, Bhvr>::value
+    std::is_convertible<U, Bhvr>::value,
+    behavior
   >::type
   apply(detail::type_list<U>, Ts... xs) {
-    res_ = f_(ptr_, xs...);
+    auto bhvr = f_(ptr_, xs...);
+    return std::move(bhvr.unbox());
   }
 
   template <class U>
   typename std::enable_if<
-    ! std::is_convertible<U, Bhvr>::value
+    ! std::is_convertible<U, Bhvr>::value,
+    behavior
   >::type
   apply(detail::type_list<U>, Ts... xs) {
     f_(ptr_, xs...);
+    return {};
   }
 
 private:
   F f_;
   T* ptr_;
-  Bhvr& res_;
 };
 
 template <class Args>
@@ -143,20 +149,23 @@ actor_factory make_actor_factory(F fun) {
     message_verifier<typename trait::arg_types> mv;
     if (! mv(msg, tk))
       return {};
-    cfg.init_fun = [=](local_actor* x) -> behavior_t {
+    cfg.init_fun = [=](local_actor* x) -> behavior {
       CAF_ASSERT(cfg.host);
       using ctrait = typename detail::get_callable_trait<F>::type;
       using fd = fun_decorator<F, impl, behavior_t, trait::mode,
                                typename ctrait::result_type,
                                typename ctrait::arg_types>;
-      behavior_t result;
-      fd f{fun, result, static_cast<impl*>(x)};
-      const_cast<message&>(msg).apply(f);
-      return result;
+      fd f{fun, static_cast<impl*>(x)};
+      empty_type_erased_tuple dummy_;
+      auto& ct = msg.empty() ? dummy_ : const_cast<message&>(msg).content();
+      auto opt = ct.apply(f);
+      if (! opt)
+        return {};
+      return std::move(*opt);
     };
     handle hdl = cfg.host->system().spawn_class<impl, no_spawn_options>(cfg);
     return {actor_cast<strong_actor_ptr>(std::move(hdl)),
-            cfg.host->system().message_types(detail::type_list<handle>{})};
+            cfg.host->system().message_types<handle>()};
   };
 }
 
@@ -177,9 +186,8 @@ actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
   handle hdl{unsafe_actor_handle_init};
   dyn_spawn_class_helper<handle, T, Ts...> factory{hdl, cfg};
   msg.apply(factory);
-  detail::type_list<handle> token;
   return {actor_cast<strong_actor_ptr>(std::move(hdl)),
-          cfg.host->system().message_types(token)};
+          cfg.host->system().message_types<handle>()};
 }
 
 template <class T, class... Ts>

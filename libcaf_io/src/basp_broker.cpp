@@ -129,7 +129,7 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   strong_actor_ptr ptr;
   if (aid == invalid_actor_id) {
     // can occur when connecting to the default port of a node
-    cb->deliver(ok_atom::value, nid, ptr, std::move(sigs));
+    cb->deliver(nid, ptr, std::move(sigs));
     return;
   }
   if (nid == this_node()) {
@@ -140,7 +140,7 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
     ptr = namespace_.get_or_put(nid, aid);
     CAF_LOG_ERROR_IF(! ptr, "creating actor in finalize_handshake failed");
   }
-  cb->deliver(make_message(ok_atom::value, nid, ptr, std::move(sigs)));
+  cb->deliver(make_message(nid, ptr, std::move(sigs)));
   this_context->callback = none;
 }
 
@@ -277,7 +277,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
         tself->monitor(config_serv);
         tself->become(
           [=](spawn_atom, std::string& type, message& args)
-          -> delegated<ok_atom, strong_actor_ptr, std::set<std::string>> {
+          -> delegated<strong_actor_ptr, std::set<std::string>> {
             CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
             tself->delegate(actor_cast<actor>(std::move(config_serv)),
                                  get_atom::value, std::move(type),
@@ -350,7 +350,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
     });
     return {
       // this config is send from the remote `ConfigServ`
-      [=](ok_atom, const std::string&, message& msg) {
+      [=](const std::string&, message& msg) {
         CAF_LOG_TRACE(CAF_ARG(msg));
         CAF_LOG_DEBUG("received requested config:" << CAF_ARG(msg));
         // whatever happens, we are done afterwards
@@ -472,10 +472,7 @@ behavior basp_broker::make_behavior() {
         if (ctx.callback) {
           CAF_LOG_WARNING("failed to handshake with remote node"
                           << CAF_ARG(msg.handle));
-          ctx.callback->deliver(ok_atom::value,
-                                node_id{none},
-                                strong_actor_ptr{nullptr},
-                                std::set<std::string>{});
+          ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
         }
         close(msg.handle);
         state.ctx.erase(msg.handle);
@@ -508,15 +505,18 @@ behavior basp_broker::make_behavior() {
       }
     },
     // received from some system calls like whereis
-    [=](forward_atom, strong_actor_ptr& src,
-        const node_id& dest_node, atom_value dest_name,
-        const message& msg) -> result<void> {
+    [=](forward_atom, const node_id& dest_node, atom_value dest_name,
+        const message& msg) -> result<message> {
+      auto cme = current_mailbox_element();
+      if (! cme)
+        return sec::invalid_argument;
+      auto& src = cme->sender;
       CAF_LOG_TRACE(CAF_ARG(src)
                     << ", " << CAF_ARG(dest_node)
                     << ", " << CAF_ARG(dest_name)
                     << ", " << CAF_ARG(msg));
       if (! src)
-        return sec::cannot_forward_to_invalid_actor;
+        return sec::invalid_argument;
       auto path = this->state.instance.tbl().lookup(dest_node);
       if (! path) {
         CAF_LOG_ERROR("no route to receiving node");
@@ -525,16 +525,15 @@ behavior basp_broker::make_behavior() {
       if (system().node() == src->node())
         system().registry().put(src->id(), src);
       auto writer = make_callback([&](serializer& sink) -> error {
-        std::vector<actor_addr> stages;
-        return sink(dest_name, stages, const_cast<message&>(msg));
+        return sink(dest_name, cme->stages, const_cast<message&>(msg));
       });
       basp::header hdr{basp::message_type::dispatch_message,
                        basp::header::named_receiver_flag,
-                       0, 0, state.this_node(), dest_node,
-                       src->id(), invalid_actor_id};
+                       0, cme->mid.integer_value(), state.this_node(),
+                       dest_node, src->id(), invalid_actor_id};
       state.instance.write(context(), path->wr_buf, hdr, &writer);
       state.instance.flush(*path);
-      return unit;
+      return delegated<message>();
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
@@ -631,18 +630,6 @@ behavior basp_broker::make_behavior() {
         return sec::cannot_close_invalid_port;
       }
       return unit;
-    },
-    [=](spawn_atom, const node_id& nid, std::string& type, message& xs)
-    -> delegated<ok_atom, strong_actor_ptr, std::set<std::string>> {
-      CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(type) << CAF_ARG(xs));
-      auto i = state.spawn_servers.find(nid);
-      if (i == state.spawn_servers.end()) {
-        auto rp = make_response_promise();
-        rp.deliver(sec::no_route_to_receiving_node);
-      } else {
-        delegate(i->second, spawn_atom::value, std::move(type), std::move(xs));
-      }
-      return {};
     },
     [=](get_atom, const node_id& x)
     -> std::tuple<node_id, std::string, uint16_t> {

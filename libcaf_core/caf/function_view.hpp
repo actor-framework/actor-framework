@@ -135,11 +135,15 @@ class function_view {
 public:
   using type = Actor;
 
-  function_view() : impl_(unsafe_actor_handle_init) {
+  function_view(duration rel_timeout = infinite)
+      : timeout(rel_timeout),
+        impl_(unsafe_actor_handle_init) {
     // nop
   }
 
-  function_view(const type& impl) : impl_(impl) {
+  function_view(const type& impl, duration rel_timeout = infinite)
+      : timeout(rel_timeout),
+        impl_(impl) {
     new_self(impl_);
   }
 
@@ -148,7 +152,9 @@ public:
       self_.~scoped_actor();
   }
 
-  function_view(function_view&& x) : impl_(std::move(x.impl_)) {
+  function_view(function_view&& x)
+      : timeout(x.timeout),
+        impl_(std::move(x.impl_)) {
     if (! impl_.unsafe()) {
       new (&self_) scoped_actor(impl_.home_system()); //(std::move(x.self_));
       x.self_.~scoped_actor();
@@ -156,6 +162,7 @@ public:
   }
 
   function_view& operator=(function_view&& x) {
+    timeout = x.timeout;
     assign(x.impl_);
     x.assign(unsafe_actor_handle_init);
     return *this;
@@ -178,7 +185,7 @@ public:
       return sec::bad_function_call;
     error err;
     function_view_result<R> result;
-    self_->request(impl_, infinite, std::forward<Ts>(xs)...).receive(
+    self_->request(impl_, timeout, std::forward<Ts>(xs)...).receive(
       [&](error& x) {
         err = std::move(x);
       },
@@ -201,6 +208,8 @@ public:
   explicit operator bool() const {
     return ! impl_.unsafe();
   }
+
+  duration timeout;
 
 private:
   template <class T>

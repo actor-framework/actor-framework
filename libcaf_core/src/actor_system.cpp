@@ -101,10 +101,10 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
         for (auto& kvp : self->state.data)
           if (kvp.first != "*")
             msgs.emplace_back(kvp.first, kvp.second.first);
-        return make_message(ok_atom::value, std::move(msgs));
+        return make_message(std::move(msgs));
       }
       auto i = self->state.data.find(key);
-      return make_message(ok_atom::value, std::move(key),
+      return make_message(std::move(key),
                           i != self->state.data.end() ? i->second.first
                                                       : make_message());
     },
@@ -147,14 +147,15 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
 behavior spawn_serv_impl(event_based_actor* self) {
   CAF_LOG_TRACE("");
   return {
-    [=](get_atom, const std::string& name, message& args)
-    -> result<ok_atom, strong_actor_ptr, std::set<std::string>> {
+    [=](spawn_atom, const std::string& name, message& args)
+    -> result<strong_actor_ptr, std::set<std::string>> {
       CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
+printf("%s %d -- %s\n", __FILE__, __LINE__, to_string(self->current_mailbox_element()->content()).c_str());
       actor_config cfg{self->context()};
       auto res = self->system().types().make_actor(name, cfg, args);
       if (! res.first)
         return sec::cannot_spawn_actor_from_arguments;
-      return {ok_atom::value, res.first, res.second};
+      return {res.first, res.second};
     }
   };
 }

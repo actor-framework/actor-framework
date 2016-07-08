@@ -402,6 +402,12 @@ private:
   caf::error error_;
 };
 
+template <>
+class expected<unit_t> : public expected<void> {
+public:
+  using expected<void>::expected;
+};
+
 template <class T>
 auto to_string(const expected<T>& x) -> decltype(to_string(*x)) {
   if (x)

@@ -615,7 +615,7 @@ CAF_TEST(remote_actor_and_send) {
           invalid_actor_id, jupiter().dummy_actor->id());
   CAF_MESSAGE("BASP broker should've send the proxy");
   f.receive(
-    [&](ok_atom, node_id nid, strong_actor_ptr res, std::set<std::string> ifs) {
+    [&](node_id nid, strong_actor_ptr res, std::set<std::string> ifs) {
       CAF_REQUIRE(res);
       auto aptr = actor_cast<abstract_actor*>(res);
       CAF_REQUIRE(dynamic_cast<forwarding_actor_proxy*>(aptr) != nullptr);
@@ -815,7 +815,7 @@ CAF_TEST(automatic_connection) {
         this_node(), this_node(),
         invalid_actor_id, connection_helper},
        std::vector<actor_id>{},
-       make_message(ok_atom::value, "basp.default-connectivity",
+       make_message("basp.default-connectivity",
                     make_message(uint16_t{8080}, std::move(res))));
   // our connection helper should now connect to jupiter and
   // send the scribe handle over to the BASP broker

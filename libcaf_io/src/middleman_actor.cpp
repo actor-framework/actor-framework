@@ -71,11 +71,11 @@ public:
     return "middleman_actor";
   }
 
-  using put_res = result<ok_atom, uint16_t>;
+  using put_res = result<uint16_t>;
 
   using mpi_set = std::set<std::string>;
 
-  using get_res = delegated<ok_atom, node_id, strong_actor_ptr, mpi_set>;
+  using get_res = delegated<node_id, strong_actor_ptr, mpi_set>;
 
   using del_res = delegated<void>;
 
@@ -105,7 +105,7 @@ public:
         auto x = cached(key);
         if (x) {
           CAF_LOG_DEBUG("found cached entry" << CAF_ARG(*x));
-          rp.deliver(ok_atom::value, get<0>(*x), get<1>(*x), get<2>(*x));
+          rp.deliver(get<0>(*x), get<1>(*x), get<2>(*x));
           return {};
         }
         // attach this promise to a pending request if possible
@@ -125,7 +125,7 @@ public:
         std::vector<response_promise> tmp{std::move(rp)};
         pending_.emplace(key, std::move(tmp));
         request(broker_, infinite, connect_atom::value, hdl, port).then(
-          [=](ok_atom, node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
+          [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
             auto i = pending_.find(key);
             if (i == pending_.end())
               return;
@@ -133,8 +133,8 @@ public:
               monitor(addr);
               cached_.emplace(key, std::make_tuple(nid, addr, sigs));
             }
-            auto res = make_message(ok_atom::value, std::move(nid),
-                                    std::move(addr), std::move(sigs));
+            auto res = make_message(std::move(nid), std::move(addr),
+                                    std::move(sigs));
             for (auto& promise : i->second)
               promise.deliver(res);
             pending_.erase(i);
@@ -161,9 +161,12 @@ public:
         return {};
       },
       [=](spawn_atom atm, node_id& nid, std::string& str, message& msg)
-      -> delegated<ok_atom, strong_actor_ptr, mpi_set> {
+      -> delegated<strong_actor_ptr, mpi_set> {
         CAF_LOG_TRACE("");
-        delegate(broker_, atm, std::move(nid), std::move(str), std::move(msg));
+printf("%s %d -- %s\n", __FILE__, __LINE__, to_string(current_mailbox_element()->content()).c_str());
+        delegate(broker_, forward_atom::value, nid, atom("SpawnServ"),
+                 make_message(atm, std::move(str), std::move(msg)));
+        //delegate(broker_, atm, std::move(nid), std::move(str), std::move(msg));
         return {};
       },
       [=](get_atom atm, node_id nid)
@@ -194,7 +197,7 @@ private:
     actual_port = res->second;
     anon_send(broker_, publish_atom::value, hdl, actual_port,
               std::move(whom), std::move(sigs));
-    return {ok_atom::value, actual_port};
+    return actual_port;
   }
 
   optional<endpoint_data&> cached(const endpoint& ep) {

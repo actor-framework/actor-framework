@@ -168,29 +168,30 @@ public:
 
   virtual ~actor_system();
 
-  using message_types_set = std::set<std::string>;
+  /// A message passing interface (MPI) in run-time checkable representation.
+  using mpi = std::set<std::string>;
 
-  inline message_types_set message_types(detail::type_list<scoped_actor>) {
-    return message_types_set{};
+  inline mpi message_types(detail::type_list<scoped_actor>) const {
+    return mpi{};
   }
 
-  inline message_types_set message_types(detail::type_list<actor>) {
-    return message_types_set{};
+  inline mpi message_types(detail::type_list<actor>) const {
+    return mpi{};
   }
 
   template <class... Ts>
-  message_types_set message_types(detail::type_list<typed_actor<Ts...>>) {
+  mpi message_types(detail::type_list<typed_actor<Ts...>>) const {
     static_assert(sizeof...(Ts) > 0, "empty typed actor handle given");
-    message_types_set result{get_rtti_from_mpi<Ts>(types())...};
+    mpi result{get_rtti_from_mpi<Ts>(types())...};
     return result;
   }
 
-  inline message_types_set message_types(const actor&) {
-    return message_types_set{};
+  inline mpi message_types(const actor&) const {
+    return mpi{};
   }
 
   template <class... Ts>
-  message_types_set message_types(const typed_actor<Ts...>&) {
+  mpi message_types(const typed_actor<Ts...>&) const {
     detail::type_list<typed_actor<Ts...>> token;
     return message_types(token);
   }
@@ -198,9 +199,28 @@ public:
   /// Returns a string representation of the messaging
   /// interface using portable names;
   template <class T>
-  message_types_set message_types() {
+  mpi message_types() const {
     detail::type_list<T> token;
     return message_types(token);
+  }
+
+  /// Returns whether actor handles described by `xs`
+  /// can be assigned to actor handles described by `ys`.
+  /// @experimental
+  inline bool assignable(const mpi& xs, const mpi& ys) const {
+    if (ys.empty())
+      return xs.empty();
+    if (xs.size() == ys.size())
+      return xs == ys;
+    return std::includes(xs.begin(), xs.end(), ys.begin(), ys.end());
+  }
+
+  /// Returns whether actor handles described by `xs`
+  /// can be assigned to actor handles of type `T`.
+  /// @experimental
+  template <class T>
+  bool assignable(const std::set<std::string>& xs) const {
+    return assignable(xs, message_types<T>());
   }
 
   /// Returns the host-local identifier for this system.

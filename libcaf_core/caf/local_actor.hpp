@@ -208,8 +208,15 @@ public:
   /// @endcond
 
   /// Returns a pointer to the sender of the current message.
-  inline strong_actor_ptr current_sender() {
-    return current_element_ ? current_element_->sender : nullptr;
+  /// @pre `current_mailbox_element() != nullptr`
+  inline strong_actor_ptr& current_sender() {
+    CAF_ASSERT(current_element_);
+    return current_element_->sender;
+  }
+
+  /// Returns a pointer to the currently processed mailbox element.
+  inline mailbox_element* current_mailbox_element() {
+    return current_element_;
   }
 
   /// Adds a unidirectional `monitor` to `whom`.

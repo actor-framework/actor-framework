@@ -119,7 +119,7 @@ struct fixture {
     // clear config
     scoped_actor self{system};
     self->request(config_server, infinite, get_atom::value, "*").receive(
-      [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
+      [&](std::vector<std::pair<std::string, message>>& msgs) {
         for (auto& kvp : msgs)
           self->send(config_server, put_atom::value, kvp.first, message{});
       },
@@ -160,7 +160,7 @@ struct fixture {
     bool result = false;
     scoped_actor self{system};
     self->request(config_server, infinite, get_atom::value, key).receive(
-      [&](ok_atom, std::string&, message& msg) {
+      [&](std::string&, message& msg) {
         msg.apply(
           [&](type& val) {
             result = detail::safe_equal(what, val);
@@ -196,7 +196,7 @@ struct fixture {
       size_t result = 0;
       scoped_actor self{system};
       self->request(config_server, infinite, get_atom::value, "*").receive(
-        [&](ok_atom, std::vector<std::pair<std::string, message>>& msgs) {
+        [&](std::vector<std::pair<std::string, message>>& msgs) {
           for (auto& kvp : msgs)
             if (! kvp.second.empty())
               ++result;

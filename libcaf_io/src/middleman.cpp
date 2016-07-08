@@ -34,6 +34,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/function_view.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/typed_event_based_actor.hpp"
@@ -106,29 +107,52 @@ middleman::middleman(actor_system& sys)
   // nop
 }
 
+expected<std::pair<strong_actor_ptr, std::set<std::string>>>
+middleman::remote_spawn_impl(const node_id& nid, std::string& name,
+                             message& args, duration timeout) {
+  auto f = make_function_view(actor_handle());
+  f.timeout = timeout;
+  auto res = f(spawn_atom::value, nid, std::move(name), std::move(args));
+  // why can't we assign a tuple<T1, T2> to pair<T1, T2>? No one knows!
+  if (! res)
+    return std::move(res.error());
+  return std::make_pair(std::move(std::get<0>(*res)),
+                        std::move(std::get<1>(*res)));
+}
+
+expected<uint16_t> middleman::open(uint16_t port, const char* cstr, bool ru) {
+  std::string str;
+  if (cstr != nullptr)
+    str = cstr;
+  auto f = make_function_view(actor_handle());
+  return f(open_atom::value, port, std::move(str), ru);
+}
+
+expected<void> middleman::close(uint16_t port) {
+  auto f = make_function_view(actor_handle());
+  return f(close_atom::value, port);
+}
+
+expected<node_id> middleman::connect(std::string host, uint16_t port) {
+  auto f = make_function_view(actor_handle());
+  auto res = f(connect_atom::value, std::move(host), port);
+  if (! res)
+    return std::move(res.error());
+  return std::get<0>(*res);
+}
+
 expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
-                                      std::set<std::string> sigs,
-                                      uint16_t port, const char* in, bool ru) {
+                                      std::set<std::string> sigs, uint16_t port,
+                                      const char* cstr, bool ru) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port)
                 << CAF_ARG(in) << CAF_ARG(ru));
   if (! whom)
     return sec::cannot_publish_invalid_actor;
-  std::string str;
-  if (in != nullptr)
-    str = in;
-  auto mm = actor_handle();
-  scoped_actor self{system()};
-  expected<uint16_t> result{port};
-  self->request(mm, infinite, publish_atom::value, port,
-                std::move(whom), std::move(sigs), str, ru).receive(
-    [&](ok_atom, uint16_t res) {
-      result = res;
-    },
-    [&](error& err) {
-      result = std::move(err);
-    }
-  );
-  return result;
+  std::string in;
+  if (cstr)
+    in = cstr;
+  auto f = make_function_view(actor_handle());
+  return f(publish_atom::value, port, std::move(whom), std::move(sigs), in, ru);
 }
 
 expected<uint16_t> middleman::publish_local_groups(uint16_t port,
@@ -154,56 +178,25 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
 
 expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
-  scoped_actor self{system(), true};
-  expected<void> result{unit};
-  self->request(actor_handle(), infinite,
-                unpublish_atom::value, whom, port).receive(
-    [] {
-      // ok, basp_broker is done
-    },
-    [&](error& x) {
-      result = std::move(x);
-    }
-  );
-  return result;
+  auto f = make_function_view(actor_handle());
+  return f(unpublish_atom::value, whom, port);
 }
 
 expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                                                    std::string host,
                                                    uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
-  auto mm = actor_handle();
-  error err;
-  strong_actor_ptr result;
-  scoped_actor self{system(), true};
-  self->request(mm, infinite, connect_atom::value,
-                std::move(host), port).receive(
-    [&](ok_atom, const node_id&, strong_actor_ptr res, std::set<std::string>& xs) {
-      CAF_LOG_TRACE(CAF_ARG(res) << CAF_ARG(xs));
-      if (! res) {
-        err = make_error(sec::no_actor_published_at_port,
-                         "no actor published at port", port);
-        return;
-      }
-      if (ifs.empty() != xs.empty()
-          || ! std::includes(xs.begin(), xs.end(), ifs.begin(), ifs.end())) {
-        using kvpair = std::pair<std::string, std::set<std::string>>;
-        err = make_error(sec::unexpected_actor_messaging_interface,
-                         kvpair("expected", ifs),
-                         kvpair("found", xs));
-        return;
-      }
-      result.swap(res);
-    },
-    [&](error& msg) {
-      CAF_LOG_TRACE(CAF_ARG(msg));
-      err = std::move(msg);
-    }
-  );
-  CAF_ASSERT(result || err);
-  if (! result)
-    return err;
-  return result;
+  auto f = make_function_view(actor_handle());
+  auto res = f(connect_atom::value, std::move(host), port);
+  if (! res)
+    return std::move(res.error());
+  strong_actor_ptr ptr = std::move(std::get<1>(*res));
+  if (! ptr)
+    return make_error(sec::no_actor_published_at_port, port);
+  if (! system().assignable(std::get<2>(*res), ifs))
+    return make_error(sec::unexpected_actor_messaging_interface, std::move(ifs),
+                      std::move(std::get<2>(*res)));
+  return ptr;
 }
 
 expected<group> middleman::remote_group(const std::string& group_uri) {

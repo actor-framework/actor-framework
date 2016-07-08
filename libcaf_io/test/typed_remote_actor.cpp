@@ -89,8 +89,8 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_MESSAGE(system.render(res.error()));
   CAF_MESSAGE("connect to typed_remote_actor");
   CAF_EXP_THROW(serv,
-                system.middleman().typed_remote_actor<server_type>("127.0.0.1",
-                                                                   port));
+                system.middleman().remote_actor<server_type>("127.0.0.1",
+                                                             port));
   auto f = make_function_view(serv);
   CAF_CHECK_EQUAL(f(ping{42}), pong{42});
   anon_send_exit(serv, exit_reason::user_shutdown);

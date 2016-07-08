@@ -26,6 +26,7 @@
 #include <thread>
 
 #include "caf/fwd.hpp"
+#include "caf/send.hpp"
 #include "caf/node_id.hpp"
 #include "caf/expected.hpp"
 #include "caf/actor_system.hpp"
@@ -48,8 +49,20 @@ public:
 
   ~middleman();
 
-  /// Publishes `whom` at `port` and returns either an `error`
-  /// or the bound port.
+  /// Tries to open a port for other CAF instances to connect to.
+  /// @experimental
+  expected<uint16_t> open(uint16_t port, const char* in = nullptr,
+                          bool ru = false);
+
+  /// Closes port `port` regardless of whether an actor is published to it.
+  expected<void> close(uint16_t port);
+
+  /// Tries to connect to given node.
+  /// @experimental
+  expected<node_id> connect(std::string host, uint16_t port);
+
+  /// Tries to publish `whom` at `port` and returns either an
+  /// `error` or the bound port.
   /// @param whom Actor that should be published at `port`.
   /// @param port Unused TCP port.
   /// @param in The IP address to listen to or `INADDR_ANY` if `in == nullptr`.
@@ -79,28 +92,19 @@ public:
     return unpublish(whom.address(), port);
   }
 
-  /// Establish a new connection to the typed actor at `host` on given `port`.
+  /// Establish a new connection to the actor at `host` on given `port`.
   /// @param host Valid hostname or IP address.
   /// @param port TCP port.
   /// @returns An `actor` to the proxy instance representing
   ///          a remote actor or an `error`.
-  template <class ActorHandle>
-  expected<ActorHandle> typed_remote_actor(std::string host, uint16_t port) {
+  template <class ActorHandle = actor>
+  expected<ActorHandle> remote_actor(std::string host, uint16_t port) {
     detail::type_list<ActorHandle> tk;
     auto x = remote_actor(system().message_types(tk), std::move(host), port);
     if (! x)
       return x.error();
     CAF_ASSERT(x && *x);
     return actor_cast<ActorHandle>(std::move(*x));
-  }
-
-  /// Establish a new connection to the actor at `host` on given `port`.
-  /// @param host Valid hostname or IP address.
-  /// @param port TCP port.
-  /// @returns An `actor` to the proxy instance representing
-  ///          a remote actor or an `error`.
-  inline expected<actor> remote_actor(std::string host, uint16_t port) {
-    return typed_remote_actor<actor>(std::move(host), port);
   }
 
   /// <group-name>@<host>:<port>
@@ -163,6 +167,26 @@ public:
   /// @note Blocks the caller until `nid` responded to the lookup
   ///       or an error occurred.
   strong_actor_ptr remote_lookup(atom_value name, const node_id& nid);
+
+  /// @experimental
+  template <class Handle>
+  expected<Handle> remote_spawn(const node_id& nid, std::string name,
+                                message args,
+                                duration timeout = std::chrono::seconds(60)) {
+    if (! nid || name.empty())
+      return sec::invalid_argument;
+    auto res = remote_spawn_impl(nid, name, args, timeout);
+    if (! res)
+      return std::move(res.error());
+    if (! system().assignable<Handle>(res->second)) {
+      // kill remote actor immediately and return error on interfaces mismatch
+      anon_send_exit(res->first, exit_reason::kill);
+      return make_error(sec::unexpected_actor_messaging_interface,
+                        system().message_types<Handle>(),
+                        std::move(res->second));
+    }
+    return actor_cast<Handle>(res->first);
+  }
 
   /// Smart pointer for `network::multiplexer`.
   using backend_pointer = std::unique_ptr<network::multiplexer>;
@@ -273,9 +297,14 @@ private:
     return system().spawn_class<Impl, Os>(cfg);
   }
 
+  expected<std::pair<strong_actor_ptr, std::set<std::string>>>
+  remote_spawn_impl(const node_id& nid, std::string& name,
+                    message& args, duration timeout);
+
   expected<uint16_t> publish(const strong_actor_ptr& whom,
                              std::set<std::string> sigs,
                              uint16_t port, const char* in, bool ru);
+
 
   expected<void> unpublish(const actor_addr& whom, uint16_t port);
 

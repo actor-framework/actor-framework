@@ -36,94 +36,71 @@ using namespace caf;
 
 namespace {
 
-behavior mirror(event_based_actor* self) {
-  self->set_default_handler(reflect);
-  return {
-    [] {
-      // nop
+using add_atom = atom_constant<atom("add")>;
+using sub_atom = atom_constant<atom("sub")>;
+
+using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
+                               replies_to<sub_atom, int, int>::with<int>>;
+
+// function-based, dynamically typed, event-based API
+behavior calculator_fun(event_based_actor*) {
+  return behavior{
+    [](add_atom, int a, int b) {
+      return a + b;
+    },
+    [](sub_atom, int a, int b) {
+      return a - b;
     }
   };
 }
 
-behavior client(event_based_actor* self, actor serv) {
-  self->send(serv, ok_atom::value);
+// function-based, statically typed, event-based API
+calculator::behavior_type typed_calculator_fun() {
   return {
-    [] {
-      // nop
+    [](add_atom, int a, int b) {
+      return a + b;
+    },
+    [](sub_atom, int a, int b) {
+      return a - b;
     }
   };
 }
 
-struct server_state {
-  actor client; // the spawn we connect to the server in our main
-  actor aut; // our mirror
-  server_state()
-      : client(unsafe_actor_handle_init),
-        aut(unsafe_actor_handle_init) {
-    // nop
+struct config : actor_system_config {
+  config(int argc, char** argv) {
+    parse(argc, argv);
+    load<io::middleman>();
+    add_actor_type("calculator", calculator_fun);
+    add_actor_type("typed_calculator", typed_calculator_fun);
   }
 };
 
-behavior server(stateful_actor<server_state>* self) {
-  CAF_LOG_TRACE("");
-  return {
-    [=](ok_atom) {
-      CAF_LOG_TRACE("");
-      auto s = self->current_sender();
-      CAF_REQUIRE(s != nullptr);
-      CAF_REQUIRE(self->node() != s->node());
-      auto opt = actor_cast<actor>(s);
-      //CAF_REQUIRE(opt);
-      self->state.client = opt;
-      auto mm = self->system().middleman().actor_handle();
-      self->request(mm, infinite, spawn_atom::value,
-                    s->node(), "mirror", make_message()).then(
-        [=](ok_atom, const strong_actor_ptr& ptr,
-            const std::set<std::string>& ifs) {
-          CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(ifs));
-          CAF_REQUIRE(ptr);
-          CAF_CHECK(ifs.empty());
-          self->state.aut = actor_cast<actor>(ptr);
-          self->send(self->state.aut, "hello mirror");
-          self->become(
-            [=](const std::string& str) {
-              CAF_CHECK_EQUAL(self->current_sender(),
-                              self->state.aut.address());
-              CAF_CHECK_EQUAL(str, "hello mirror");
-              self->send_exit(self->state.aut, exit_reason::kill);
-              self->send_exit(self->state.client, exit_reason::kill);
-              self->quit();
-            }
-          );
-        }
-      );
-    },
-    [=](const error& err) {
-      CAF_LOG_TRACE("");
-      CAF_ERROR("Error: " << self->system().render(err));
-    }
-  };
-}
-
 void run_client(int argc, char** argv, uint16_t port) {
-  actor_system_config cfg;
-  cfg.parse(argc, argv)
-     .load<io::middleman>()
-     .add_actor_type("mirror", mirror);
+  config cfg{argc, argv};
   actor_system system{cfg};
-  CAF_EXP_THROW(serv, system.middleman().remote_actor("localhost", port));
-  system.spawn(client, serv);
+  auto& mm = system.middleman();
+  auto nid = mm.connect("localhost", port);
+  CAF_REQUIRE(nid);
+  CAF_REQUIRE_NOT_EQUAL(system.node(), *nid);
+  auto calc = mm.remote_spawn<calculator>(*nid, "calculator", make_message());
+  CAF_REQUIRE_EQUAL(calc, sec::unexpected_actor_messaging_interface);
+  calc = mm.remote_spawn<calculator>(*nid, "typed_calculator", make_message());
+  CAF_REQUIRE(calc);
+  auto f1 = make_function_view(*calc);
+  CAF_REQUIRE_EQUAL(f1(add_atom::value, 10, 20), 30);
+  CAF_REQUIRE_EQUAL(f1(sub_atom::value, 10, 20), -10);
+  f1.assign(unsafe_actor_handle_init);
+  anon_send_exit(*calc, exit_reason::kill);
+  mm.close(port);
 }
 
 void run_server(int argc, char** argv) {
-  actor_system_config cfg;
-  actor_system system{cfg.load<io::middleman>().parse(argc, argv)};
-  auto serv = system.spawn(server);
-  CAF_EXP_THROW(port, system.middleman().publish(serv, 0));
-  CAF_REQUIRE(port != 0);
-  CAF_MESSAGE("published server at port " << port);
-  std::thread child([=] { run_client(argc, argv, port); });
+  config cfg{argc, argv};
+  actor_system system{cfg};
+  CAF_EXP_THROW(port, system.middleman().open(0));
+  std::thread child{[=] { run_client(argc, argv, port); }};
   child.join();
+  printf("%s %d -- %d\n", __FILE__, __LINE__, (int) system.registry().running());
 }
 
 } // namespace <anonymous>
