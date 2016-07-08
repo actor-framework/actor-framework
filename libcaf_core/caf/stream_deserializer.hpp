@@ -182,8 +182,8 @@ protected:
   }
 
 private:
-  error range_check(size_t got, size_t need) {
-    if (got == need)
+  error range_check(std::streamsize got, size_t need) {
+    if (got > 0 && static_cast<size_t>(got) == need)
       return none;
     CAF_LOG_ERROR("range_check failed");
     return sec::end_of_stream;
