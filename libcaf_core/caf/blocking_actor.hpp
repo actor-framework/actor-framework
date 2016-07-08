@@ -311,6 +311,10 @@ public:
   /// the absolute `timeout` was reached.
   virtual bool await_data(timeout_type timeout);
 
+  /// Returns the next element from the mailbox or `nullptr`.
+  /// The default implementation simply returns `next_message()`.
+  virtual mailbox_element_ptr dequeue();
+
   /// @cond PRIVATE
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.

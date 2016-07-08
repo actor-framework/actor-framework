@@ -230,7 +230,7 @@ public:
   }
 
   mailbox_element& value() override {
-    ptr_ = self_->next_message();
+    ptr_ = self_->dequeue();
     CAF_ASSERT(ptr_ != nullptr);
     return *ptr_;
   }
@@ -388,6 +388,10 @@ bool blocking_actor::await_data(timeout_type timeout) {
   if (has_next_message())
     return true;
   return mailbox().synchronized_await(mtx_, cv_, timeout);
+}
+
+mailbox_element_ptr blocking_actor::dequeue() {
+  return next_message();
 }
 
 size_t blocking_actor::attach_functor(const actor& x) {
