@@ -144,8 +144,7 @@ expected<node_id> middleman::connect(std::string host, uint16_t port) {
 expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
                                       std::set<std::string> sigs, uint16_t port,
                                       const char* cstr, bool ru) {
-  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port)
-                << CAF_ARG(in) << CAF_ARG(ru));
+  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
   if (! whom)
     return sec::cannot_publish_invalid_actor;
   std::string in;
