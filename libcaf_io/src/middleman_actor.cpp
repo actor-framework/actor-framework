@@ -163,7 +163,6 @@ public:
       [=](spawn_atom atm, node_id& nid, std::string& str, message& msg)
       -> delegated<strong_actor_ptr, mpi_set> {
         CAF_LOG_TRACE("");
-printf("%s %d -- %s\n", __FILE__, __LINE__, to_string(current_mailbox_element()->content()).c_str());
         delegate(broker_, forward_atom::value, nid, atom("SpawnServ"),
                  make_message(atm, std::move(str), std::move(msg)));
         //delegate(broker_, atm, std::move(nid), std::move(str), std::move(msg));

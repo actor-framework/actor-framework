@@ -100,7 +100,6 @@ void run_server(int argc, char** argv) {
   CAF_EXP_THROW(port, system.middleman().open(0));
   std::thread child{[=] { run_client(argc, argv, port); }};
   child.join();
-  printf("%s %d -- %d\n", __FILE__, __LINE__, (int) system.registry().running());
 }
 
 } // namespace <anonymous>
