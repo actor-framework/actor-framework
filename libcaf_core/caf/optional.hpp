@@ -261,7 +261,7 @@ template <class Inspector, class T>
 typename std::enable_if<Inspector::is_saving::value,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, optional<T>& x) {
-  return x ? f(false) : f(true, *x);
+  return x ? f(true, *x) : f(false);
 }
 
 template <class T>
