@@ -109,6 +109,8 @@ public:
 
     data(uint32_t procid, const std::string& hash);
 
+    data(const data&) = default;
+
     data& operator=(const data&) = default;
 
     bool valid() const;
@@ -146,7 +148,7 @@ public:
       if (! tmp.valid())
         x.data_.reset();
       else if (! x || ! x.data_->unique())
-        x.data_.reset(new data(tmp));
+        x.data_ = make_counted<data>(tmp);
       else
         *x.data_ = tmp;
     });
