@@ -1,4 +1,4 @@
-//  This program is a distributed version of the math_actor example.
+// This program is a distributed version of the math_actor example.
 // Client and server use a stateless request/response protocol and the client
 // is failure resilient by using a FIFO request queue.
 // The client auto-reconnects and also allows for server reconfiguration.

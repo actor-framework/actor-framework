@@ -53,6 +53,7 @@ add(custom_type custom_types_3)
 # basic remoting
 add(remoting group_chat)
 add(remoting group_server)
+add(remoting remote_spawn)
 add(remoting distributed_calculator)
 
 # basic I/O with brokers
