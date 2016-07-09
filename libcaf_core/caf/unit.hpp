@@ -57,9 +57,8 @@ void serialize(Processor&, const unit_t&, const unsigned int) {
 }
 
 /// @relates unit_t
-template <class T>
-std::string to_string(const unit_t&) {
-  return "<unit>";
+inline std::string to_string(const unit_t&) {
+  return "unit";
 }
 
 template <class T>

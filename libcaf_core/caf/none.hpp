@@ -43,8 +43,7 @@ struct none_t : detail::comparable<none_t> {
 static constexpr none_t none = none_t{};
 
 /// @relates none_t
-template <class T>
-std::string to_string(const none_t&) {
+inline std::string to_string(const none_t&) {
   return "<none>";
 }
 
