@@ -259,8 +259,8 @@ bool operator!=(std::nullptr_t x, const function_view<T>& y) {
 /// @relates function_view
 /// @experimental
 template <class T>
-function_view<T> make_function_view(const T& x) {
-  return {x};
+function_view<T> make_function_view(const T& x, duration t = infinite) {
+  return {x, t};
 }
 
 } // namespace caf

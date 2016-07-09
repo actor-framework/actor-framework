@@ -160,12 +160,13 @@ public:
         delegate(broker_, atm, p);
         return {};
       },
-      [=](spawn_atom atm, node_id& nid, std::string& str, message& msg)
-      -> delegated<strong_actor_ptr, mpi_set> {
+      [=](spawn_atom atm, node_id& nid, std::string& str,
+          message& msg, std::set<std::string>& ifs)
+      -> delegated<strong_actor_ptr> {
         CAF_LOG_TRACE("");
         delegate(broker_, forward_atom::value, nid, atom("SpawnServ"),
-                 make_message(atm, std::move(str), std::move(msg)));
-        //delegate(broker_, atm, std::move(nid), std::move(str), std::move(msg));
+                 make_message(atm, std::move(str),
+                              std::move(msg), std::move(ifs)));
         return {};
       },
       [=](get_atom atm, node_id nid)

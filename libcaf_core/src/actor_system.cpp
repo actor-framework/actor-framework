@@ -147,15 +147,12 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
 behavior spawn_serv_impl(event_based_actor* self) {
   CAF_LOG_TRACE("");
   return {
-    [=](spawn_atom, const std::string& name, message& args)
-    -> result<strong_actor_ptr, std::set<std::string>> {
+    [=](spawn_atom, const std::string& name,
+        message& args, actor_system::mpi& xs)
+    -> expected<strong_actor_ptr> {
       CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
-printf("%s %d -- %s\n", __FILE__, __LINE__, to_string(self->current_mailbox_element()->content()).c_str());
-      actor_config cfg{self->context()};
-      auto res = self->system().types().make_actor(name, cfg, args);
-      if (! res.first)
-        return sec::cannot_spawn_actor_from_arguments;
-      return {res.first, res.second};
+      return self->system().spawn<strong_actor_ptr>(name, std::move(args),
+                                                    self->context(), true, &xs);
     }
   };
 }
@@ -307,8 +304,13 @@ const uniform_type_info_map& actor_system::types() const {
 }
 
 std::string actor_system::render(const error& x) const {
-  auto f = types().renderer(x.category());
-  return f ? f(x.code(), x.category(), x.context()) : to_string(x);
+  if (! x)
+    return to_string(x);
+  auto& xs = config().error_renderers;
+  auto i = xs.find(x.category());
+  if (i != xs.end())
+    return i->second(x.code(), x.category(), x.context());
+  return to_string(x);
 }
 
 group_manager& actor_system::groups() {
@@ -366,6 +368,27 @@ void actor_system::await_detached_threads() {
   std::unique_lock<std::mutex> guard{detached_mtx};
   while (detached != 0)
     detached_cv.wait(guard);
+}
+
+expected<strong_actor_ptr>
+actor_system::dyn_spawn_impl(const std::string& name, message& args,
+                             execution_unit* ctx, bool check_interface,
+                             optional<const mpi&> expected_ifs) {
+  CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args) << CAF_ARG(check_interface)
+                << CAF_ARG(expected_ifs));
+  if (name.empty())
+    return sec::invalid_argument;
+  auto& fs = cfg_.actor_factories;
+  auto i = fs.find(name);
+  if (i == fs.end())
+    return sec::unknown_type;
+  actor_config cfg{ctx ? ctx : &dummy_execution_unit_};
+  auto res = i->second(cfg, args);
+  if (! res.first)
+    return sec::cannot_spawn_actor_from_arguments;
+  if (check_interface && !assignable(res.second, *expected_ifs))
+    return sec::unexpected_actor_messaging_interface;
+  return std::move(res.first);
 }
 
 } // namespace caf

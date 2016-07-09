@@ -175,17 +175,11 @@ public:
                                 duration timeout = std::chrono::seconds(60)) {
     if (! nid || name.empty())
       return sec::invalid_argument;
-    auto res = remote_spawn_impl(nid, name, args, timeout);
+    auto res = remote_spawn_impl(nid, name, args,
+                                 system().message_types<Handle>(), timeout);
     if (! res)
       return std::move(res.error());
-    if (! system().assignable<Handle>(res->second)) {
-      // kill remote actor immediately and return error on interfaces mismatch
-      anon_send_exit(res->first, exit_reason::kill);
-      return make_error(sec::unexpected_actor_messaging_interface,
-                        system().message_types<Handle>(),
-                        std::move(res->second));
-    }
-    return actor_cast<Handle>(res->first);
+    return actor_cast<Handle>(std::move(*res));
   }
 
   /// Smart pointer for `network::multiplexer`.
@@ -297,9 +291,10 @@ private:
     return system().spawn_class<Impl, Os>(cfg);
   }
 
-  expected<std::pair<strong_actor_ptr, std::set<std::string>>>
-  remote_spawn_impl(const node_id& nid, std::string& name,
-                    message& args, duration timeout);
+  expected<strong_actor_ptr> remote_spawn_impl(const node_id& nid,
+                                               std::string& name, message& args,
+                                               std::set<std::string> ifs,
+                                               duration timeout);
 
   expected<uint16_t> publish(const strong_actor_ptr& whom,
                              std::set<std::string> sigs,

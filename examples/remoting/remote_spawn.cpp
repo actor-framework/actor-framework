@@ -7,7 +7,8 @@
 // Run client at the same host:
 // - remote_spawn -n localhost -p 4242
 
-// Manual refs: 250-262 ()
+// Manual refs: 137-139, 144, 148 (ConfiguringActorApplications)
+//              101-119 (RemoteSpawn)
 
 #include <array>
 #include <vector>
@@ -36,7 +37,6 @@ using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
                                replies_to<sub_atom, int, int>::with<int>>;
 
 
-// function-based, statically typed, event-based API
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
     [=](add_atom, int a, int b) -> int {
@@ -108,7 +108,8 @@ void client(actor_system& system, const std::string& host, uint16_t port) {
   auto type = "calculator"; // type of the actor we wish to spawn
   auto args = make_message(); // arguments to construct the actor
   auto tout = std::chrono::seconds(30); // wait no longer than 30s
-  auto worker = system.middleman().remote_spawn<calculator>(*node, type, args, tout);
+  auto worker = system.middleman().remote_spawn<calculator>(*node, type,
+                                                            args, tout);
   if (! worker) {
     std::cerr << "*** remote spawn failed: "
               << system.render(worker.error()) << std::endl;
@@ -130,15 +131,10 @@ void server(actor_system& system, uint16_t port) {
   std::cout << "*** running on port: "
             << *res << std::endl
             << "*** press <enter> to shutdown server" << std::endl;
-  int dummy;
-  std::cin >> dummy;
+  getchar();
 }
 
 struct config : actor_system_config {
-  uint16_t port = 0;
-  std::string host = "localhost";
-  bool server_mode = false;
-
   config() {
     add_actor_type("calculator", calculator_fun);
     opt_group{custom_options_, "global"}
@@ -146,6 +142,9 @@ struct config : actor_system_config {
     .add(host, "host,H", "set node (ignored in server mode)")
     .add(server_mode, "server-mode,s", "enable server mode");
   }
+  uint16_t port = 0;
+  std::string host = "localhost";
+  bool server_mode = false;
 };
 
 void caf_main(actor_system& system, const config& cfg) {

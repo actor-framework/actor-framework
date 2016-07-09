@@ -179,6 +179,10 @@ public:
     return mpi{};
   }
 
+  inline mpi message_types(detail::type_list<strong_actor_ptr>) const {
+    return mpi{};
+  }
+
   template <class... Ts>
   mpi message_types(detail::type_list<typed_actor<Ts...>>) const {
     static_assert(sizeof...(Ts) > 0, "empty typed actor handle given");
@@ -336,6 +340,26 @@ public:
     return spawn_functor<Os>(cfg, fun, std::forward<Ts>(xs)...);
   }
 
+  /// Returns a new actor with run-time type `name`, constructed
+  /// with the arguments stored in `args`.
+  /// @experimental
+  template <class Handle,
+            class E = typename std::enable_if<is_handle<Handle>::value>::type>
+  expected<Handle> spawn(const std::string& name, message args,
+                         execution_unit* ctx = nullptr,
+                         bool check_interface = true,
+                         const mpi* expected_ifs = nullptr) {
+    mpi tmp;
+    if (check_interface && ! expected_ifs) {
+      tmp = message_types<Handle>();
+      expected_ifs = &tmp;
+    }
+    auto res = dyn_spawn_impl(name, args, ctx, check_interface, expected_ifs);
+    if (! res)
+      return std::move(res.error());
+    return actor_cast<Handle>(std::move(*res));
+  }
+
   template <class T, spawn_options Os = no_spawn_options,
             class Iter, class F, class... Ts>
   infer_handle_from_class_t<T>
@@ -444,6 +468,12 @@ private:
                   "This actor type cannot be spawned throught an actor system. "
                   "Probably you have tried to spawn a broker or opencl actor.");
   }
+
+  expected<strong_actor_ptr> dyn_spawn_impl(const std::string& name,
+                                            message& args,
+                                            execution_unit* ctx,
+                                            bool check_interface,
+                                            optional<const mpi&> expected_ifs);
 
   template <class C, spawn_options Os, class... Ts>
   infer_handle_from_class_t<C>

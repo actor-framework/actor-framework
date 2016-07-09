@@ -176,6 +176,10 @@ class optional<T&> {
     // nop
   }
 
+  optional(T* x) : m_value(x) {
+    // nop
+  }
+
   optional(const optional& other) = default;
 
   optional& operator=(const optional& other) = default;

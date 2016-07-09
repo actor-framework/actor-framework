@@ -102,8 +102,8 @@ using middleman_actor =
 
     reacts_to<close_atom, uint16_t>,
 
-    replies_to<spawn_atom, node_id, std::string, message>
-    ::with<strong_actor_ptr, std::set<std::string>>,
+    replies_to<spawn_atom, node_id, std::string, message, std::set<std::string>>
+    ::with<strong_actor_ptr>,
 
     replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
 

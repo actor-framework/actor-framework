@@ -209,6 +209,18 @@ struct infer_handle_from_state<T, false> {
 template <class T>
 using infer_handle_from_state_t = typename infer_handle_from_state<T>::type;
 
+template <class T>
+struct is_handle : std::false_type {};
+
+template <>
+struct is_handle<actor> : std::true_type {};
+
+template <>
+struct is_handle<strong_actor_ptr> : std::true_type {};
+
+template <class... Ts>
+struct is_handle<typed_actor<Ts...>> : std::true_type {};
+
 } // namespace caf
 
 #endif // CAF_INFER_HANDLE_HPP

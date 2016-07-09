@@ -75,10 +75,6 @@ public:
 
   type_erased_value_ptr make_value(const std::type_info& ti) const;
 
-  actor_factory_result make_actor(const std::string& name,
-                                  actor_config& cfg,
-                                  message& msg) const;
-
   /// Returns the portable name for given type information or `nullptr`
   /// if no mapping was found.
   const std::string* portable_name(uint16_t nr, const std::type_info* ti) const;
@@ -89,8 +85,6 @@ public:
   portable_name(const std::pair<uint16_t, const std::type_info*>& x) const {
     return portable_name(x.first, x.second);
   }
-
-  error_renderer renderer(atom_value x) const;
 
   /// Returns the enclosing actor system.
   inline actor_system& system() const {

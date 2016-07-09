@@ -154,27 +154,6 @@ uniform_type_info_map::portable_name(uint16_t nr,
   return nullptr;
 }
 
-uniform_type_info_map::error_renderer
-uniform_type_info_map::renderer(atom_value x) const {
-  auto& error_renderers = system().config().error_renderers;
-  auto i = error_renderers.find(x);
-  if (i != error_renderers.end())
-    return i->second;
-  return nullptr;
-}
-
-actor_factory_result uniform_type_info_map::make_actor(const std::string& name,
-                                                       actor_config& cfg,
-                                                       message& msg) const {
-  strong_actor_ptr res;
-  std::set<std::string> ifs;
-  auto& factories = system().config().actor_factories;
-  auto i = factories.find(name);
-  if (i != factories.end())
-    std::tie(res, ifs) = i->second(cfg, msg);
-  return std::make_pair(std::move(res), std::move(ifs));
-}
-
 uniform_type_info_map::uniform_type_info_map(actor_system& sys) : system_(sys) {
   sorted_builtin_types list;
   fill_builtins(builtin_, list, 0);

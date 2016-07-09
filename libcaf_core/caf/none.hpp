@@ -44,7 +44,7 @@ static constexpr none_t none = none_t{};
 
 /// @relates none_t
 inline std::string to_string(const none_t&) {
-  return "<none>";
+  return "none";
 }
 
 } // namespace caf

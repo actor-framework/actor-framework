@@ -107,17 +107,14 @@ middleman::middleman(actor_system& sys)
   // nop
 }
 
-expected<std::pair<strong_actor_ptr, std::set<std::string>>>
-middleman::remote_spawn_impl(const node_id& nid, std::string& name,
-                             message& args, duration timeout) {
-  auto f = make_function_view(actor_handle());
-  f.timeout = timeout;
-  auto res = f(spawn_atom::value, nid, std::move(name), std::move(args));
-  // why can't we assign a tuple<T1, T2> to pair<T1, T2>? No one knows!
-  if (! res)
-    return std::move(res.error());
-  return std::make_pair(std::move(std::get<0>(*res)),
-                        std::move(std::get<1>(*res)));
+expected<strong_actor_ptr> middleman::remote_spawn_impl(const node_id& nid,
+                                                        std::string& name,
+                                                        message& args,
+                                                        std::set<std::string> s,
+                                                        duration timeout) {
+  auto f = make_function_view(actor_handle(), timeout);
+  return f(spawn_atom::value, nid, std::move(name),
+           std::move(args), std::move(s));
 }
 
 expected<uint16_t> middleman::open(uint16_t port, const char* cstr, bool ru) {
