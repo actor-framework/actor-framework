@@ -22,6 +22,9 @@ noExplicitConstructor:libcaf_core/caf/message_id.hpp
 // is not explicit on purpose
 noExplicitConstructor:libcaf_core/caf/duration.hpp
 
+// making this explicit only makes API worse
+noExplicitConstructor:libcaf_core/caf/detail/scope_guard.hpp
+
 // `operator=(const ref_counted&)` does not assign `rc_`
 // on purpose because this would corrupt reference counting
 operatorEqVarError:libcaf_core/src/ref_counted.cpp
@@ -32,6 +35,12 @@ uninitMemberVar:libcaf_core/caf/detail/double_ended_queue.hpp
 // making the policy functions static is technically possible,
 // but conceptionally questionable
 functionStatic:libcaf_core/caf/policy/work_stealing.hpp
+
+// 9 false positives
+*:libcaf_core/caf/optional.hpp
+
+// in theory always true, but the unit test still needs to check
+knownConditionTrueFalse:libcaf_core/test/optional.cpp
 
 // ignore warnings from any 3rd party module
 *:*/third_party/*
