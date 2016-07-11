@@ -54,11 +54,11 @@ public:
 
   template <class SelfPointer>
   unit_t init_selfptr(SelfPointer x) {
-    return unit(Ts::init_selfptr(x)...);
+    return unit(static_cast<Ts*>(this)->init_selfptr(x)...);
   }
 
   unit_t init_behavior(message_handler& x) override {
-    return unit(Ts::init_behavior(x)...);
+    return unit(static_cast<Ts*>(this)->init_behavior(x)...);
   }
 
 protected:
