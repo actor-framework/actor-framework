@@ -57,8 +57,12 @@ public:
     return unit(static_cast<Ts*>(this)->init_selfptr(x)...);
   }
 
-  unit_t init_behavior(message_handler& x) override {
-    return unit(static_cast<Ts*>(this)->init_behavior(x)...);
+  void init_behavior(message_handler& x) override {
+    init_behavior_impl(x);
+  }
+
+  unit_t init_behavior_impl(message_handler& x) {
+    return unit(static_cast<Ts*>(this)->init_behavior_impl(x)...);
   }
 
 protected:

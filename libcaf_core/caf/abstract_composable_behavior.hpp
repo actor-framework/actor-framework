@@ -31,7 +31,7 @@ class abstract_composable_behavior {
 public:
   virtual ~abstract_composable_behavior();
 
-  virtual unit_t init_behavior(message_handler& x) = 0;
+  virtual void init_behavior(message_handler& x) = 0;
 };
 
 } // namespace caf

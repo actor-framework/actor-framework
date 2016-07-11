@@ -89,7 +89,11 @@ public:
     return unit;
   }
 
-  unit_t init_behavior(message_handler& x) override {
+  void init_behavior(message_handler& x) override {
+    init_behavior_impl(x);
+  }
+
+  unit_t init_behavior_impl(message_handler& x) {
     if (x)
       x = x.or_else(composable_behavior_base<Clauses>::make_callback()...);
     else
