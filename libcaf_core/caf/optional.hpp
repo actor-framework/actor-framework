@@ -262,7 +262,7 @@ class optional<void> {
 };
 
 template <class Inspector, class T>
-typename std::enable_if<Inspector::is_saving::value,
+typename std::enable_if<Inspector::reads_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, optional<T>& x) {
   return x ? f(true, *x) : f(false);
@@ -280,7 +280,7 @@ struct optional_inspect_helper {
 };
 
 template <class Inspector, class T>
-typename std::enable_if<Inspector::is_loading::value,
+typename std::enable_if<Inspector::writes_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, optional<T>& x) {
   bool flag;

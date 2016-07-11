@@ -41,8 +41,11 @@ class serializer : public data_processor<serializer> {
 public:
   using super = data_processor<serializer>;
 
-  using is_saving = std::true_type;
+  static constexpr bool reads_state = true;
+  static constexpr bool writes_state = false;
 
+  // Boost Serialization compatibility
+  using is_saving = std::true_type;
   using is_loading = std::false_type;
 
   explicit serializer(actor_system& sys);

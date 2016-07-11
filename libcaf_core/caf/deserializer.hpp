@@ -44,8 +44,11 @@ public:
 
   using super = data_processor<deserializer>;
 
-  using is_saving = std::false_type;
+  static constexpr bool reads_state = false;
+  static constexpr bool writes_state = true;
 
+  // Boost Serialization compatibility
+  using is_saving = std::false_type;
   using is_loading = std::true_type;
 
   explicit deserializer(actor_system& sys);

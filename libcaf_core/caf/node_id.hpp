@@ -129,7 +129,7 @@ public:
   explicit node_id(intrusive_ptr<data> dataptr);
 
   template <class Inspector>
-  friend detail::enable_if_t<Inspector::is_saving::value,
+  friend detail::enable_if_t<Inspector::reads_state,
                              typename Inspector::result_type>
   inspect(Inspector& f, node_id& x) {
     data tmp;
@@ -139,7 +139,7 @@ public:
   }
 
   template <class Inspector>
-  friend detail::enable_if_t<Inspector::is_loading::value,
+  friend detail::enable_if_t<Inspector::writes_state,
                              typename Inspector::result_type>
   inspect(Inspector& f, node_id& x) {
     data tmp;

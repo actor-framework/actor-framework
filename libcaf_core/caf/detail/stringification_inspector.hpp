@@ -49,7 +49,7 @@ public:
 
   using result_type = void;
 
-  using is_saving = std::true_type;
+  static constexpr bool reads_state = true;
 
   // -- constructors, destructors, and assignment operators --------------------
 

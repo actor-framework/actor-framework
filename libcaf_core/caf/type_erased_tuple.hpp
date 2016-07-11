@@ -191,14 +191,14 @@ private:
 
 /// @relates type_erased_tuple
 template <class Processor>
-typename std::enable_if<Processor::is_saving::value>::type
+typename std::enable_if<Processor::reads_state>::type
 serialize(Processor& proc, type_erased_tuple& x) {
   x.save(proc);
 }
 
 /// @relates type_erased_tuple
 template <class Processor>
-typename std::enable_if<Processor::is_loading::value>::type
+typename std::enable_if<Processor::writes_state>::type
 serialize(Processor& proc, type_erased_tuple& x) {
   x.load(proc);
 }

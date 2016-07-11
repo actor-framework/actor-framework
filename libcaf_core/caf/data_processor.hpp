@@ -170,7 +170,7 @@ public:
 
   template <class D, atom_value V>
   static error apply_atom_constant(D& self, atom_constant<V>&) {
-    static_assert(D::is_saving::value, "cannot deserialize an atom_constant");
+    static_assert(!D::writes_state, "cannot deserialize an atom_constant");
     auto x = V;
     return self.apply(x);
   }
@@ -275,7 +275,7 @@ public:
   // Applies this processor as Derived to `xs` in saving mode.
   template <class D, class T>
   static typename std::enable_if<
-    D::is_saving::value && ! detail::is_byte_sequence<T>::value,
+    D::reads_state && ! detail::is_byte_sequence<T>::value,
     error
   >::type
   apply_sequence(D& self, T& xs) {
@@ -288,7 +288,7 @@ public:
   // Applies this processor as Derived to `xs` in loading mode.
   template <class D, class T>
   static typename std::enable_if<
-    ! D::is_saving::value && ! detail::is_byte_sequence<T>::value,
+    ! D::reads_state && ! detail::is_byte_sequence<T>::value,
     error
   >::type
   apply_sequence(D& self, T& xs) {
@@ -301,7 +301,7 @@ public:
   // Optimized saving for contiguous byte sequences.
   template <class D, class T>
   static typename std::enable_if<
-    D::is_saving::value && detail::is_byte_sequence<T>::value,
+    D::reads_state && detail::is_byte_sequence<T>::value,
     error
   >::type
   apply_sequence(D& self, T& xs) {
@@ -314,7 +314,7 @@ public:
   // Optimized loading for contiguous byte sequences.
   template <class D, class T>
   static typename std::enable_if<
-    ! D::is_saving::value && detail::is_byte_sequence<T>::value,
+    ! D::reads_state && detail::is_byte_sequence<T>::value,
     error
   >::type
   apply_sequence(D& self, T& xs) {
@@ -443,7 +443,7 @@ public:
   template <class F, class... Ts>
   error operator()(meta::save_callback_t<F> x, Ts&&... xs) {
     error e;
-    if (Derived::is_saving::value)
+    if (Derived::reads_state)
       e = x.fun();
     return e ? e : (*this)(std::forward<Ts>(xs)...);
   }
@@ -451,7 +451,7 @@ public:
   template <class F, class... Ts>
   error operator()(meta::load_callback_t<F> x, Ts&&... xs) {
     error e;
-    if (Derived::is_loading::value)
+    if (Derived::writes_state)
       e = x.fun();
     return e ? e : (*this)(std::forward<Ts>(xs)...);
   }
@@ -477,7 +477,7 @@ public:
     error
   >::type
   operator()(T&& x, Ts&&... xs) {
-    static_assert(Derived::is_saving::value
+    static_assert(Derived::reads_state
                   || (! std::is_rvalue_reference<T&&>::value
                       && ! std::is_const<
                              typename std::remove_reference<T>::type
@@ -498,14 +498,14 @@ private:
   }
 
   template <class D, class T, class U, class F>
-  static typename std::enable_if<D::is_saving::value, error>::type
+  static typename std::enable_if<D::reads_state, error>::type
   convert_apply(D& self, T& x, U& storage, F assign) {
     assign(storage, x);
     return self.apply(storage);
   }
 
   template <class D, class T, class U, class F>
-  static typename std::enable_if<! D::is_saving::value, error>::type
+  static typename std::enable_if<! D::reads_state, error>::type
   convert_apply(D& self, T& x, U& storage, F assign) {
     auto e = self.apply(storage);
     if (e)
