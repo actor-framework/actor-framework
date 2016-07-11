@@ -33,54 +33,30 @@ namespace caf {
 /// of the apply operator is derived from the typed message passing interface
 /// `MPI`.
 template <class MPI>
-class abstract_composable_behavior_mixin;
+class composable_behavior_base;
 
 template <class... Xs, class... Ys>
-class abstract_composable_behavior_mixin<typed_mpi<detail::type_list<Xs...>,
-                                                detail::type_list<Ys...>>> {
+class composable_behavior_base<typed_mpi<detail::type_list<Xs...>,
+                                         detail::type_list<Ys...>>> {
 public:
-  virtual ~abstract_composable_behavior_mixin() noexcept {
+  virtual ~composable_behavior_base() noexcept {
     // nop
   }
 
   virtual result<Ys...> operator()(param_t<Xs>...) = 0;
-};
 
-// this class works around compiler issues on GCC
-template <class... Ts>
-struct abstract_composable_behavior_mixin_helper;
-
-template <class T, class... Ts>
-struct abstract_composable_behavior_mixin_helper<T, Ts...>
-  : public abstract_composable_behavior_mixin<T>,
-    public abstract_composable_behavior_mixin_helper<Ts...> {
-  using abstract_composable_behavior_mixin<T>::operator();
-  using abstract_composable_behavior_mixin_helper<Ts...>::operator();
-};
-
-template <class T>
-struct abstract_composable_behavior_mixin_helper<T>
-  : public abstract_composable_behavior_mixin<T> {
-  using abstract_composable_behavior_mixin<T>::operator();
-};
-
-template <class T, class... Fs>
-void init_behavior_impl(T*, detail::type_list<>, behavior& storage, Fs... fs) {
-  storage.assign(std::move(fs)...);
-}
-
-template <class T, class... Xs, class... Ys, class... Ts, class... Fs>
-void init_behavior_impl(T* thisptr,
-                        detail::type_list<typed_mpi<detail::type_list<Xs...>,
-                                                    detail::type_list<Ys...>>,
-                                          Ts...>,
-                        behavior& storage, Fs... fs) {
-  auto f = [=](param_t<Xs>... xs) {
-    return (*thisptr)(std::move(xs)...);
+  // C++14 and later
+# if __cplusplus > 201103L
+  auto make_callback() {
+    return [=](param_t<Xs>... xs) { return (*this)(std::move(xs)...); };
   };
-  detail::type_list<Ts...> token;
-  init_behavior_impl(thisptr, token, storage, fs..., f);
-}
+# else
+  // C++11
+  std::function<result<Ys...> (param_t<Xs>...)> make_callback() {
+    return [=](param_t<Xs>... xs) { return (*this)(std::move(xs)...); };
+  };
+# endif
+};
 
 /// Base type for composable actor states.
 template <class TypedActor>
@@ -89,7 +65,7 @@ class composable_behavior;
 template <class... Clauses>
 class composable_behavior<typed_actor<Clauses...>>
   : virtual public abstract_composable_behavior,
-    public abstract_composable_behavior_mixin_helper<Clauses...> {
+    public composable_behavior_base<Clauses>... {
 public:
   using signatures = detail::type_list<Clauses...>;
 
@@ -108,13 +84,17 @@ public:
   }
 
   template <class SelfPointer>
-  void init_selfptr(SelfPointer selfptr) {
+  unit_t init_selfptr(SelfPointer selfptr) {
     self = selfptr;
+    return unit;
   }
 
-  void init_behavior(behavior& x) override {
-    signatures token;
-    init_behavior_impl(this, token, x);
+  unit_t init_behavior(message_handler& x) override {
+    if (x)
+      x = x.or_else(composable_behavior_base<Clauses>::make_callback()...);
+    else
+      x.assign(composable_behavior_base<Clauses>::make_callback()...);
+    return unit;
   }
 
   typed_actor_pointer<Clauses...> self;

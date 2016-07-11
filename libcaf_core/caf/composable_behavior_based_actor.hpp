@@ -42,7 +42,7 @@ class composable_behavior_based_actor : public stateful_actor<State, Base> {
 
   behavior_type make_behavior() override {
     this->state.init_selfptr(this);
-    behavior tmp;
+    message_handler tmp;
     this->state.init_behavior(tmp);
     return behavior_type{typename behavior_type::unsafe_init{}, std::move(tmp)};
   }

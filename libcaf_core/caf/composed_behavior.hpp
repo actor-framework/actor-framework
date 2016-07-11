@@ -26,67 +26,8 @@
 
 namespace caf {
 
-template <class InterfaceIntersection, class... States>
-class composed_behavior_base;
-
-template <class T>
-class composed_behavior_base<detail::type_list<>, T> : public T {
-public:
-  using T::operator();
-
-  // make this pure again, since the compiler can otherwise
-  // runs into a "multiple final overriders" error
-  virtual void init_behavior(behavior& x) override = 0;
-};
-
-template <class A, class B, class... Ts>
-class composed_behavior_base<detail::type_list<>, A, B, Ts...>
-  : public A,
-    public composed_behavior_base<detail::type_list<>, B, Ts...> {
-public:
-  using super = composed_behavior_base<detail::type_list<>, B, Ts...>;
-
-  using A::operator();
-  using super::operator();
-
-  template <class SelfPtr>
-  void init_selfptr(SelfPtr ptr) {
-    A::init_selfptr(ptr);
-    super::init_selfptr(ptr);
-  }
-
-  // make this pure again, since the compiler can otherwise
-  // runs into a "multiple final overriders" error
-  virtual void init_behavior(behavior& x) override = 0;
-};
-
-template <class... Xs, class... Ys, class... Ts, class... States>
-class composed_behavior_base<detail::type_list<typed_mpi<detail::type_list<Xs...>,
-                                              detail::type_list<Ys...>>,
-                                    Ts...>,
-                          States...>
-  : public composed_behavior_base<detail::type_list<Ts...>, States...> {
-public:
-  using super = composed_behavior_base<detail::type_list<Ts...>, States...>;
-
-  using super::operator();
-
-  virtual result<Ys...> operator()(param_t<Xs>...) override = 0;
-};
-
 template <class... Ts>
-class composed_behavior
-  : public composed_behavior_base<typename detail::tl_intersect<
-                                 typename Ts::signatures...
-                               >::type,
-                               Ts...> {
-private:
-  using super =
-    composed_behavior_base<typename detail::tl_intersect<
-                          typename Ts::signatures...
-                        >::type,
-                        Ts...>;
-
+class composed_behavior : public Ts... {
 public:
   using signatures =
     typename detail::tl_union<typename Ts::signatures...>::type;
@@ -98,8 +39,6 @@ public:
     >::type;
 
   using behavior_type = typename handle_type::behavior_type;
-
-  using combined_type = composed_behavior;
 
   using actor_base = typename handle_type::base;
 
@@ -113,17 +52,13 @@ public:
     // nop
   }
 
-  template <class SelfPtr>
-  void init_selfptr(SelfPtr ptr) {
-    self = ptr;
-    super::init_selfptr(ptr);
+  template <class SelfPointer>
+  unit_t init_selfptr(SelfPointer x) {
+    return unit(Ts::init_selfptr(x)...);
   }
 
-  using super::operator();
-
-  void init_behavior(behavior& x) override {
-    signatures token;
-    init_behavior_impl(this, token, x);
+  unit_t init_behavior(message_handler& x) override {
+    return unit(Ts::init_behavior(x)...);
   }
 
 protected:

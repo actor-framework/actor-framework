@@ -30,21 +30,26 @@ namespace caf {
 /// to enable higher-order abstraction without cluttering code with
 /// exceptions for `void` (which can't be stored, for example).
 struct unit_t : detail::comparable<unit_t> {
-  constexpr unit_t() {
+  constexpr unit_t() noexcept {
     // nop
   }
 
-  constexpr unit_t(const unit_t&) {
+  constexpr unit_t(const unit_t&) noexcept {
     // nop
   }
 
   template <class T>
-  explicit constexpr unit_t(T&&) {
+  explicit constexpr unit_t(T&&) noexcept {
     // nop
   }
 
-  static constexpr int compare(const unit_t&) {
+  static constexpr int compare(const unit_t&) noexcept {
     return 0;
+  }
+
+  template <class... Ts>
+  constexpr unit_t operator()(Ts&&...) const noexcept {
+    return {};
   }
 };
 

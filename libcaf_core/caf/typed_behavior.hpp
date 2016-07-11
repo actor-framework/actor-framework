@@ -21,6 +21,7 @@
 #define CAF_TYPED_BEHAVIOR_HPP
 
 #include "caf/behavior.hpp"
+#include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_continue_helper.hpp"
 
@@ -169,7 +170,11 @@ public:
 
   struct unsafe_init { };
 
-  typed_behavior(unsafe_init, behavior bhvr) : bhvr_(std::move(bhvr)) {
+  typed_behavior(unsafe_init, behavior x) : bhvr_(std::move(x)) {
+    // nop
+  }
+
+  typed_behavior(unsafe_init, message_handler x) : bhvr_(std::move(x)) {
     // nop
   }
 
