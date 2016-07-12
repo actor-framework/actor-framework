@@ -74,14 +74,14 @@ scope_guard<Fun> make_scope_guard(Fun f) {
 }
 
 template <class Inspector>
-typename std::enable_if<Inspector::is_saving::value,
+typename std::enable_if<Inspector::reads_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, foo& x) {
   return f(meta::type_name("foo"), x.a(), x.b());
 }
 
 template <class Inspector>
-typename std::enable_if<Inspector::is_loading::value,
+typename std::enable_if<Inspector::writes_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, foo& x) {
   int a;
