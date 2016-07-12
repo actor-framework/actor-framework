@@ -29,8 +29,9 @@ network transparent messaging, and more.
 * __Developer Blog__: http://blog.actor-framework.org
 * __Doxygen__: http://www.actor-framework.org/doc
 * __HTML Manual__: https://actor-framework.readthedocs.io
-* __PDF Manual (stable)__: http://www.actor-framework.org/pdf/manual.pdf
-* __PDF Manual (latest)__: http://www.actor-framework.org/develop/pdf/manual.pdf
+* __PDF Manual__: http://www.actor-framework.org/pdf/manual.pdf
+* __HTML Manual (develop version)__: https://actor-framework.readthedocs.io/en/develop/
+* __PDF Manual (develop version)__: http://www.actor-framework.org/develop/pdf/manual.pdf
 
 ## Report Bugs / Get Help
 
