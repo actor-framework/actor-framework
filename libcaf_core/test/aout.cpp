@@ -33,8 +33,8 @@ namespace {
 constexpr const char* global_redirect = ":test";
 constexpr const char* local_redirect = ":test2";
 
-constexpr const char* chatty_line = "hi there! :)";
-constexpr const char* chattier_line = "hello there, fellow friend! :)";
+constexpr const char* chatty_line = "hi there!:)";
+constexpr const char* chattier_line = "hello there, fellow friend!:)";
 
 void chatty_actor(event_based_actor* self) {
   aout(self) << chatty_line << endl;
@@ -67,7 +67,7 @@ CAF_TEST(redirect_aout_globally) {
   self->receive(
     [](const std::string& virtual_file, std::string& line) {
       // drop trailing '\n'
-      if (! line.empty())
+      if (!line.empty())
         line.pop_back();
       CAF_CHECK_EQUAL(virtual_file, ":test");
       CAF_CHECK_EQUAL(line, chatty_line);
@@ -93,7 +93,7 @@ CAF_TEST(global_and_local_redirect) {
   self->receive_for(i, 3)(
     [&](std::string& virtual_file, std::string& line) {
       // drop trailing '\n'
-      if (! line.empty())
+      if (!line.empty())
         line.pop_back();
       lines.emplace_back(std::move(virtual_file), std::move(line));
     }

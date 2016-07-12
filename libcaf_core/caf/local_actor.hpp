@@ -245,7 +245,7 @@ public:
   typename detail::make_response_promise_helper<Ts...>::type
   make_response_promise() {
     auto& ptr = current_element_;
-    if (! ptr)
+    if (!ptr)
       return {};
     auto& mid = ptr->mid;
     if (mid.is_answered())

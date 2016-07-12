@@ -201,7 +201,7 @@ public:
   ///          once the stream has been started.
   void flush(const manager_ptr& mgr) {
     CAF_ASSERT(mgr != nullptr);
-    if (! wr_offline_buf_.empty() && ! writing_) {
+    if (!wr_offline_buf_.empty() && !writing_) {
       writing_ = true;
       write_loop(mgr);
     }
@@ -227,7 +227,7 @@ private:
   void read_loop(const manager_ptr& mgr) {
     auto cb = [=](const boost::system::error_code& ec, size_t read_bytes) {
       CAF_LOG_TRACE("");
-      if (! ec) {
+      if (!ec) {
         mgr->consume(&backend(), rd_buf_.data(), read_bytes);
         read_loop(mgr);
       } else {
@@ -289,7 +289,7 @@ private:
                                             rd_buf_.size() - collected_bytes),
                         [=](const boost::system::error_code& ec, size_t nb) {
       CAF_LOG_TRACE(CAF_ARG(nb));
-      if (! ec) {
+      if (!ec) {
         auto sum = collected_bytes + nb;
         if (sum >= rd_size_) {
           mgr->consume(&backend(), rd_buf_.data(), sum);
@@ -374,7 +374,7 @@ private:
   void accept_loop(const manager_ptr& mgr) {
     accept_fd_.async_accept(fd_, [=](const boost::system::error_code& ec) {
       CAF_LOG_TRACE("");
-      if (! ec) {
+      if (!ec) {
         mgr->new_connection(); // probably moves fd_
         // reset fd_ for next accept operation
         fd_ = socket_type{accept_fd_.get_io_service()};

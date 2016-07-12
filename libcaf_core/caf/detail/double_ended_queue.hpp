@@ -28,7 +28,7 @@
 #include <cassert>
 
 // GCC hack
-#if defined(CAF_GCC) && ! defined(_GLIBCXX_USE_SCHED_YIELD)
+#if defined(CAF_GCC) && !defined(_GLIBCXX_USE_SCHED_YIELD)
 #include <time.h>
 namespace std {
 namespace this_thread {
@@ -45,7 +45,7 @@ inline void yield() noexcept {
 #endif
 
 // another GCC hack
-#if defined(CAF_GCC) && ! defined(_GLIBCXX_USE_NANOSLEEP)
+#if defined(CAF_GCC) && !defined(_GLIBCXX_USE_NANOSLEEP)
 #include <time.h>
 namespace std {
 namespace this_thread {

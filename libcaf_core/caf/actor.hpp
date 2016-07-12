@@ -42,7 +42,7 @@ namespace caf {
 template <class T>
 struct is_convertible_to_actor {
   static constexpr bool value =
-      ! std::is_base_of<statically_typed_actor_base, T>::value
+      !std::is_base_of<statically_typed_actor_base, T>::value
       && (std::is_base_of<actor_proxy, T>::value
           || std::is_base_of<local_actor, T>::value);
 };
@@ -144,7 +144,7 @@ public:
   /// Queries whether this object was constructed using
   /// `unsafe_actor_handle_init` or is in moved-from state.
   bool unsafe() const {
-    return ! ptr_;
+    return !ptr_;
   }
 
   /// @cond PRIVATE

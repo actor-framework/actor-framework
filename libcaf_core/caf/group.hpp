@@ -74,7 +74,7 @@ public:
   }
 
   inline bool operator!() const noexcept {
-    return ! ptr_;
+    return !ptr_;
   }
 
   static intptr_t compare(const abstract_group* lhs, const abstract_group* rhs);
@@ -112,14 +112,14 @@ public:
   template <class... Ts>
   void eq_impl(message_id mid, strong_actor_ptr sender,
                execution_unit* ctx, Ts&&... xs) const {
-    CAF_ASSERT(! mid.is_request());
+    CAF_ASSERT(!mid.is_request());
     if (ptr_)
       ptr_->enqueue(std::move(sender), mid,
                     make_message(std::forward<Ts>(xs)...), ctx);
   }
 
   inline bool subscribe(strong_actor_ptr who) const {
-    if (! ptr_)
+    if (!ptr_)
       return false;
     return ptr_->subscribe(std::move(who));
   }
@@ -157,7 +157,7 @@ template <>
 struct hash<caf::group> {
   inline size_t operator()(const caf::group& x) const {
     // groups are singleton objects, the address is thus the best possible hash
-    return ! x ? 0 : reinterpret_cast<size_t>(x.get());
+    return !x ? 0 : reinterpret_cast<size_t>(x.get());
   }
 };
 } // namespace std

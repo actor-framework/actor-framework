@@ -92,7 +92,7 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
   self->configure_read(hdl, receive_policy::at_most(1024));
   return {
     [=](const new_data_msg& msg) {
-      assert(! msg.buf.empty());
+      assert(!msg.buf.empty());
       assert(msg.handle == hdl);
       // extract lines from received buffer
       auto& lines = self->state.lines;

@@ -114,7 +114,7 @@ expected<connection_handle>
 test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
                                  uint16_t desired_port) {
   auto hdl = new_tcp_scribe(host, desired_port);
-  if (! hdl)
+  if (!hdl)
     return std::move(hdl.error());
   assign_tcp_scribe(ptr, *hdl);
   return hdl;
@@ -188,7 +188,7 @@ expected<std::pair<accept_handle, uint16_t>>
 test_multiplexer::add_tcp_doorman(abstract_broker* ptr, uint16_t prt,
                                   const char* in, bool reuse_addr) {
   auto result = new_tcp_doorman(prt, in, reuse_addr);
-  if (! result)
+  if (!result)
     return std::move(result.error());
   port(result->first) = prt;
   assign_tcp_doorman(ptr, result->first);
@@ -277,7 +277,7 @@ bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
 
 void test_multiplexer::accept_connection(accept_handle hdl) {
   auto& dd = doorman_data_[hdl];
-  if (! dd.ptr)
+  if (!dd.ptr)
     throw std::logic_error("accept_connection: this doorman was not "
                            "assigned to a broker yet");
   dd.ptr->new_connection();
@@ -286,7 +286,7 @@ void test_multiplexer::accept_connection(accept_handle hdl) {
 void test_multiplexer::read_data(connection_handle hdl) {
   flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
-  while (! sd.ptr)
+  while (!sd.ptr)
     exec_runnable();
   switch (sd.recv_conf.first) {
     case receive_policy_flag::exactly:
@@ -308,7 +308,7 @@ void test_multiplexer::read_data(connection_handle hdl) {
       break;
     case receive_policy_flag::at_most:
       auto max_bytes = static_cast<ptrdiff_t>(sd.recv_conf.second);
-      while (! sd.xbuf.empty()) {
+      while (!sd.xbuf.empty()) {
         sd.rd_buf.clear();
         auto xbuf_size = static_cast<ptrdiff_t>(sd.xbuf.size());
         auto first = sd.xbuf.begin();
@@ -368,14 +368,14 @@ void test_multiplexer::flush_runnables() {
     runnables.clear();
     { // critical section
       guard_type guard{mx_};
-      while (! resumables_.empty() && runnables.size() < max_runnable_count) {
+      while (!resumables_.empty() && runnables.size() < max_runnable_count) {
         runnables.emplace_back(std::move(resumables_.front()));
         resumables_.pop_front();
       }
     }
     for (auto& ptr : runnables)
       exec(ptr);
-  } while (! runnables.empty());
+  } while (!runnables.empty());
 }
 
 void test_multiplexer::exec_later(resumable* ptr) {

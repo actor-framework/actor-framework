@@ -8,7 +8,7 @@ build-gcc/*
 Makefile
 bin/*
 lib/*
-manual/*
+manual
 *.swp
 bii/*
 libcaf_core/caf/detail/build_config.hpp

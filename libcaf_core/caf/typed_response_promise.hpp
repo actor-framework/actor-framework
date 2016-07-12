@@ -53,7 +53,7 @@ public:
   /// Satisfies the promise by sending a non-error response message.
   template <class U, class... Us>
   typename std::enable_if<
-    (sizeof...(Us) > 0) || ! std::is_convertible<U, error>::value,
+    (sizeof...(Us) > 0) || !std::is_convertible<U, error>::value,
     typed_response_promise
   >::type
   deliver(U&& x, Us&&... xs) {

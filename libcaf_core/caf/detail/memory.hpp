@@ -127,7 +127,7 @@ public:
 
   embedded_storage new_embedded_storage() override {
     // allocate cache on-the-fly
-    if (! cache_) {
+    if (!cache_) {
       cache_.reset(new storage, false); // starts with ref count of 1
       CAF_ASSERT(cache_->unique());
     }
@@ -177,7 +177,7 @@ private:
   template <class T>
   static inline memory_cache* get_or_set_cache_map_entry() {
     auto mc = get_cache_map_entry(&typeid(T));
-    if (! mc) {
+    if (!mc) {
       mc = new basic_memory_cache<T>;
       add_cache_map_entry(&typeid(T), mc);
     }

@@ -195,7 +195,7 @@ void caf_main(actor_system& system, const config& cfg) {
     auto pong_actor = system.spawn(pong);
     auto server_actor = system.middleman().spawn_server(server, cfg.port,
                                                         pong_actor);
-    if (! server_actor) {
+    if (!server_actor) {
       std::cerr << "failed to spawn server: "
                  << system.render(server_actor.error()) << endl;
       return;
@@ -207,7 +207,7 @@ void caf_main(actor_system& system, const config& cfg) {
   auto ping_actor = system.spawn(ping, size_t{20});
   auto io_actor = system.middleman().spawn_client(broker_impl, cfg.host,
                                                   cfg.port, ping_actor);
-  if (! io_actor) {
+  if (!io_actor) {
     std::cerr << "failed to spawn client: "
                << system.render(io_actor.error()) << endl;
     return;

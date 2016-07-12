@@ -302,7 +302,7 @@ public:
 
   /// @cond PRIVATE
 
-  /// @pre `! empty()`
+  /// @pre `!empty()`
   type_erased_tuple& content() {
     CAF_ASSERT(vals_);
     return *vals_;

@@ -59,7 +59,7 @@ struct variant_move_helper {
 template <class T, class U,
           bool Enable = std::is_integral<T>::value
                         && std::is_integral<U>::value
-                        && ! std::is_same<T, bool>::value>
+                        && !std::is_same<T, bool>::value>
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
                                 && std::is_signed<T>::value
@@ -89,7 +89,7 @@ public:
 
   static constexpr int max_type_id = sizeof...(Ts) - 1;
 
-  static_assert(! detail::tl_exists<types, std::is_reference>::value,
+  static_assert(!detail::tl_exists<types, std::is_reference>::value,
                 "Cannot create a variant of references");
 
   variant& operator=(const variant& other) {

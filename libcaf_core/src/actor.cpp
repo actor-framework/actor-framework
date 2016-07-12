@@ -96,7 +96,7 @@ actor actor::splice_impl(std::initializer_list<actor> xs) {
   actor_system* sys = nullptr;
   std::vector<strong_actor_ptr> tmp;
   for (auto& x : xs) {
-    if (! sys)
+    if (!sys)
       sys = &(x->home_system());
     tmp.push_back(actor_cast<strong_actor_ptr>(x));
   }

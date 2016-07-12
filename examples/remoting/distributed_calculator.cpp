@@ -111,7 +111,7 @@ private:
     send(mm, connect_atom::value, host_, port_);
     return {
       [=](ok_atom, node_id&, strong_actor_ptr& new_server, std::set<std::string>&) {
-        if (! new_server) {
+        if (!new_server) {
           aout(this) << "*** received invalid remote actor" << endl;
           return;
         }
@@ -161,7 +161,7 @@ private:
 
 // removes leading and trailing whitespaces
 string trim(std::string s) {
-  auto not_space = [](char c) { return ! isspace(c); };
+  auto not_space = [](char c) { return !isspace(c); };
   // trim left
   s.erase(s.begin(), find_if(s.begin(), s.end(), not_space));
   // trim right
@@ -238,11 +238,11 @@ void client_repl(actor_system& system, string host, uint16_t port) {
   };
   // read next line, split it, and feed to the eval handler
   string line;
-  while (! done && std::getline(std::cin, line)) {
+  while (!done && std::getline(std::cin, line)) {
     line = trim(std::move(line)); // ignore leading and trailing whitespaces
     std::vector<string> words;
     split(words, line, is_any_of(" "), token_compress_on);
-    if (! message_builder(words.begin(), words.end()).apply(eval))
+    if (!message_builder(words.begin(), words.end()).apply(eval))
       usage();
   }
 }
@@ -262,7 +262,7 @@ public:
 };
 
 void caf_main(actor_system& system, const config& cfg) {
-  if (! cfg.server_mode && cfg.port == 0) {
+  if (!cfg.server_mode && cfg.port == 0) {
     cerr << "*** no port to server specified" << endl;
     return;
   }
@@ -271,7 +271,7 @@ void caf_main(actor_system& system, const config& cfg) {
     // try to publish math actor at given port
     cout << "*** try publish at port " << cfg.port << endl;
     auto expected_port = system.middleman().publish(calc, cfg.port);
-    if (! expected_port) {
+    if (!expected_port) {
       std::cerr << "*** publish failed: "
                 << system.render(expected_port.error()) << endl;
     } else {

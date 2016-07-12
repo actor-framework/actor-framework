@@ -54,7 +54,7 @@ namespace {
 void broadcast_dispatch(actor_system&, actor_pool::uplock&,
                         const actor_pool::actor_vec& vec,
                         mailbox_element_ptr& ptr, execution_unit* host) {
-  CAF_ASSERT(! vec.empty());
+  CAF_ASSERT(!vec.empty());
   auto msg = ptr->move_content_to_message();
   for (auto& worker : vec)
     worker->enqueue(ptr->sender, ptr->mid, msg, host);

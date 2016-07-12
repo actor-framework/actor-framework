@@ -28,7 +28,7 @@ namespace caf {
 template <class State, class Base = typename State::actor_base>
 class composable_behavior_based_actor : public stateful_actor<State, Base> {
  public:
-  static_assert(! std::is_abstract<State>::value,
+  static_assert(!std::is_abstract<State>::value,
                 "State is abstract, please make sure to override all "
                 "virtual operator() member functions");
 

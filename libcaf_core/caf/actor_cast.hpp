@@ -81,7 +81,7 @@ struct is_non_null_handle<T*> {
 
 template <class T>
 struct is_strong_non_null_handle {
-  static constexpr bool value = ! is_weak_ptr<T>::value
+  static constexpr bool value = !is_weak_ptr<T>::value
                                 && is_non_null_handle<T>::value;
 };
 
@@ -102,7 +102,7 @@ public:
   }
 
   template <class T,
-            class = typename std::enable_if<! std::is_pointer<T>::value>::type>
+            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
   To operator()(const T& x) const {
     return x.get();
   }
@@ -120,7 +120,7 @@ public:
   }
 
   template <class T,
-            class = typename std::enable_if<! std::is_pointer<T>::value>::type>
+            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
   To* operator()(const T& x) const {
     return (*this)(x.get());
   }
@@ -138,7 +138,7 @@ public:
   }
 
   template <class T,
-            class = typename std::enable_if<! std::is_pointer<T>::value>::type>
+            class = typename std::enable_if<!std::is_pointer<T>::value>::type>
   actor_control_block* operator()(const T& x) const {
     return x.get();
   }
@@ -187,7 +187,7 @@ T actor_cast(U&& what) {
   constexpr bool from_raw = std::is_pointer<from_type>::value;
   constexpr bool from_weak = is_weak_ptr<from_type>::value;
   // check whether this cast is legal
-  static_assert(! from_weak || ! is_strong_non_null_handle<T>::value,
+  static_assert(!from_weak || !is_strong_non_null_handle<T>::value,
                 "casts from actor_addr to actor or typed_actor are prohibited");
 
   // calculate x and y

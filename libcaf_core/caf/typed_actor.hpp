@@ -212,7 +212,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   /// Queries whether this object was constructed using
   /// `unsafe_actor_handle_init` or is in moved-from state.
   bool unsafe() const {
-    return ! ptr_;
+    return !ptr_;
   }
 
   /// @cond PRIVATE
@@ -284,7 +284,7 @@ bool operator==(const typed_actor<Xs...>& x,
 template <class... Xs, class... Ys>
 bool operator!=(const typed_actor<Xs...>& x,
                 const typed_actor<Ys...>& y) noexcept {
-  return ! (x == y);
+  return !(x == y);
 }
 
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.

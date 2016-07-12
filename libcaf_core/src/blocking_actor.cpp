@@ -62,7 +62,7 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   auto mid = ptr->mid;
   auto src = ptr->sender;
   // returns false if mailbox has been closed
-  if (! mailbox().synchronized_enqueue(mtx_, cv_, ptr.release())) {
+  if (!mailbox().synchronized_enqueue(mtx_, cv_, ptr.release())) {
     if (mid.is_request()) {
       detail::sync_request_bouncer srb{exit_reason()};
       srb(src, mid);
@@ -77,7 +77,7 @@ const char* blocking_actor::name() const {
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(is_blocking());
-  is_registered(! hide);
+  is_registered(!hide);
   home_system().inc_detached_threads();
   std::thread([](strong_actor_ptr ptr) {
     // actor lives in its own thread
@@ -181,7 +181,7 @@ public:
 public:
   iterator advance_impl(iterator i) {
     while (i != e_) {
-      if (! i->marked) {
+      if (!i->marked) {
         i->marked = true;
         return i;
       }
@@ -220,7 +220,7 @@ public:
   }
 
   bool await_value(bool reset_timeout) override {
-    if (! rel_tout_.valid()) {
+    if (!rel_tout_.valid()) {
       self_->await_data();
       return true;
     }
@@ -259,7 +259,7 @@ public:
 
   bool at_end() override {
     if (ptr_->at_end()) {
-      if (! fallback_)
+      if (!fallback_)
         return true;
       ptr_ = fallback_;
       fallback_ = nullptr;
@@ -303,17 +303,17 @@ void blocking_actor::receive_impl(receive_cond& rcc,
   // read incoming messages until we have a match or a timeout
   for (;;) {
     // check loop pre-condition
-    if (! rcc.pre())
+    if (!rcc.pre())
       return;
     // mailbox sequence is infinite, but at_end triggers the
     // transition from seq1 to seq2 if we iterated our cache
     if (seq.at_end())
       CAF_RAISE_ERROR("reached the end of an infinite sequence");
     // reset the timeout each iteration
-    if (! seq.await_value(true)) {
+    if (!seq.await_value(true)) {
       // short-circuit "loop body"
       bhvr.nested.handle_timeout();
-      if (! rcc.post())
+      if (!rcc.post())
         return;
       continue;
     }
@@ -364,23 +364,23 @@ void blocking_actor::receive_impl(receive_cond& rcc,
         seq.advance();
         if (seq.at_end())
           CAF_RAISE_ERROR("reached the end of an infinite sequence");
-        if (! seq.await_value(false)) {
+        if (!seq.await_value(false)) {
           timed_out = true;
         }
       }
-    } while (skipped && ! timed_out);
+    } while (skipped && !timed_out);
     if (timed_out)
       bhvr.nested.handle_timeout();
     else
       seq.erase_and_advance();
     // check loop post condition
-    if (! rcc.post())
+    if (!rcc.post())
       return;
   }
 }
 
 void blocking_actor::await_data() {
-  if (! has_next_message())
+  if (!has_next_message())
     mailbox().synchronized_await(mtx_, cv_);
 }
 
@@ -404,7 +404,7 @@ size_t blocking_actor::attach_functor(const actor_addr& x) {
 
 size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
   using wait_for_atom = atom_constant<atom("waitFor")>;
-  if (! ptr)
+  if (!ptr)
     return 0;
   actor self{this};
   ptr->get()->attach_functor([=](const error&) {

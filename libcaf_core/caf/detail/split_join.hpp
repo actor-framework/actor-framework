@@ -107,7 +107,7 @@ public:
                   const std::vector<actor>& workers,
                   mailbox_element_ptr& ptr,
                   execution_unit* host) {
-    if (! ptr->sender)
+    if (!ptr->sender)
       return;
     actor_msg_vec xs;
     xs.reserve(workers.size());

@@ -71,7 +71,7 @@ CAF_TEST(engaged_plus_not_engaged) {
   e_int x{42};
   e_int y{sec::unexpected_message};
   CHECK(x);
-  CHECK(! y);
+  CHECK(!y);
   CHECK_EQ(x, 42);
   CHECK_EQ(y, sec::unexpected_message);
   CHECK_NEQ(x, sec::unexpected_message);
@@ -83,8 +83,8 @@ CAF_TEST(engaged_plus_not_engaged) {
 CAF_TEST(both_not_engaged) {
   e_int x{sec::unexpected_message};
   e_int y{sec::unexpected_message};
-  CHECK(! x);
-  CHECK(! y);
+  CHECK(!x);
+  CHECK(!y);
   CHECK_EQ(x, y);
   CHECK_EQ(x, sec::unexpected_message);
   CHECK_EQ(y, sec::unexpected_message);

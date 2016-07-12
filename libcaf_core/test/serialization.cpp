@@ -428,12 +428,12 @@ CAF_TEST(byte_sequence_optimization) {
   streambuf_type cb{buf};
   stream_serializer<streambuf_type&> bs{cb};
   auto e = bs(data);
-  CAF_REQUIRE(! e);
+  CAF_REQUIRE(!e);
   data.clear();
   streambuf_type cb2{buf};
   stream_deserializer<streambuf_type&> bd{cb2};
   e = bd(data);
-  CAF_REQUIRE(! e);
+  CAF_REQUIRE(!e);
   CAF_CHECK_EQUAL(data.size(), 42u);
   CAF_CHECK(std::all_of(data.begin(), data.end(),
                         [](uint8_t c) { return c == 0x2a; }));

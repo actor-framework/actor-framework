@@ -91,7 +91,7 @@ public:
   resumable* dequeue(Worker* self) {
     auto& parent_data = d(self->parent());
     std::unique_lock<std::mutex> guard(parent_data.lock);
-    parent_data.cv.wait(guard, [&] { return ! parent_data.queue.empty(); });
+    parent_data.cv.wait(guard, [&] { return !parent_data.queue.empty(); });
     resumable* job = parent_data.queue.front();
     parent_data.queue.pop_front();
     return job;

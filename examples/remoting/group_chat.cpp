@@ -79,14 +79,14 @@ void caf_main(actor_system& system, const config& cfg) {
   auto name = cfg.name;
   while (name.empty()) {
     cout << "please enter your name: " << flush;
-    if (! getline(cin, name)) {
+    if (!getline(cin, name)) {
       cerr << "*** no name given... terminating" << endl;
       return;
     }
   }
   auto client_actor = system.spawn(client, name);
   // evaluate group parameters
-  if (! cfg.group_id.empty()) {
+  if (!cfg.group_id.empty()) {
     auto p = cfg.group_id.find(':');
     if (p == std::string::npos) {
       cerr << "*** error parsing argument " << cfg.group_id
@@ -95,7 +95,7 @@ void caf_main(actor_system& system, const config& cfg) {
       auto module = cfg.group_id.substr(0, p);
       auto group_uri = cfg.group_id.substr(p + 1);
       auto g = system.groups().get(module, group_uri);
-      if (! g) {
+      if (!g) {
         cerr << "*** unable to get group " << group_uri
              << " from module " << module << ": "
              << system.render(g.error()) << endl;
@@ -109,7 +109,7 @@ void caf_main(actor_system& system, const config& cfg) {
   vector<string> words;
   for (istream_iterator<line> i(cin); i != eof; ++i) {
     auto send_input = [&] {
-      if (! i->str.empty())
+      if (!i->str.empty())
         anon_send(client_actor, broadcast_atom::value, i->str);
     };
     words.clear();
@@ -140,7 +140,7 @@ void caf_main(actor_system& system, const config& cfg) {
         }
       }
     });
-    if (! res)
+    if (!res)
       send_input();
   }
   // force actor to quit

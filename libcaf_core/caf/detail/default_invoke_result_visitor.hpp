@@ -76,7 +76,7 @@ private:
   template <class T>
   void delegate(T& x) {
     auto rp = self_->make_response_promise();
-    if (! rp.pending()) {
+    if (!rp.pending()) {
       CAF_LOG_DEBUG("suppress response message: invalid response promise");
       return;
     }

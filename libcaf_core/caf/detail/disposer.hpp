@@ -34,7 +34,7 @@ public:
   }
 
   template <class T>
-  typename std::enable_if<! std::is_base_of<memory_managed, T>::value>::type
+  typename std::enable_if<!std::is_base_of<memory_managed, T>::value>::type
   operator()(T* ptr) const {
     delete ptr;
   }

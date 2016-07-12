@@ -143,7 +143,7 @@ public:
   template <class T>
   typename std::enable_if<
     std::is_integral<T>::value
-    && ! std::is_same<bool, T>::value,
+    && !std::is_same<bool, T>::value,
     error
   >::type
   apply(T& x) {
@@ -185,7 +185,7 @@ public:
   template <class T>
   typename std::enable_if<
     std::is_enum<T>::value
-    && ! detail::has_serialize<T>::value,
+    && !detail::has_serialize<T>::value,
     error
   >::type
   apply(T& x) {
@@ -275,7 +275,7 @@ public:
   // Applies this processor as Derived to `xs` in saving mode.
   template <class D, class T>
   static typename std::enable_if<
-    D::reads_state && ! detail::is_byte_sequence<T>::value,
+    D::reads_state && !detail::is_byte_sequence<T>::value,
     error
   >::type
   apply_sequence(D& self, T& xs) {
@@ -288,7 +288,7 @@ public:
   // Applies this processor as Derived to `xs` in loading mode.
   template <class D, class T>
   static typename std::enable_if<
-    ! D::reads_state && ! detail::is_byte_sequence<T>::value,
+    !D::reads_state && !detail::is_byte_sequence<T>::value,
     error
   >::type
   apply_sequence(D& self, T& xs) {
@@ -314,7 +314,7 @@ public:
   // Optimized loading for contiguous byte sequences.
   template <class D, class T>
   static typename std::enable_if<
-    ! D::reads_state && detail::is_byte_sequence<T>::value,
+    !D::reads_state && detail::is_byte_sequence<T>::value,
     error
   >::type
   apply_sequence(D& self, T& xs) {
@@ -328,8 +328,8 @@ public:
   template <class T>
   typename std::enable_if<
     detail::is_iterable<T>::value
-    && ! detail::has_serialize<T>::value
-    && ! detail::is_inspectable<Derived, T>::value,
+    && !detail::has_serialize<T>::value
+    && !detail::is_inspectable<Derived, T>::value,
     error
   >::type
   apply(T& xs) {
@@ -378,7 +378,7 @@ public:
 
   template <class T>
   typename std::enable_if<
-    ! std::is_empty<T>::value
+    !std::is_empty<T>::value
     && detail::has_serialize<T>::value,
     error
   >::type
@@ -472,14 +472,14 @@ public:
 
   template <class T, class... Ts>
   typename std::enable_if<
-    ! meta::is_annotation<T>::value
-    && ! is_allowed_unsafe_message_type<T>::value,
+    !meta::is_annotation<T>::value
+    && !is_allowed_unsafe_message_type<T>::value,
     error
   >::type
   operator()(T&& x, Ts&&... xs) {
     static_assert(Derived::reads_state
-                  || (! std::is_rvalue_reference<T&&>::value
-                      && ! std::is_const<
+                  || (!std::is_rvalue_reference<T&&>::value
+                      && !std::is_const<
                              typename std::remove_reference<T>::type
                            >::value),
                   "a loading inspector requires mutable lvalue references");
@@ -505,7 +505,7 @@ private:
   }
 
   template <class D, class T, class U, class F>
-  static typename std::enable_if<! D::reads_state, error>::type
+  static typename std::enable_if<!D::reads_state, error>::type
   convert_apply(D& self, T& x, U& storage, F assign) {
     auto e = self.apply(storage);
     if (e)

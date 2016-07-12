@@ -111,7 +111,7 @@ inline bool operator==(const data_transferred_msg& x,
 /// @relates data_transferred_msg
 inline bool operator!=(const data_transferred_msg& x,
                        const data_transferred_msg& y) {
-  return ! (x == y);
+  return !(x == y);
 }
 
 

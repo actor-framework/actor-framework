@@ -50,7 +50,7 @@ void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
   // add implicit reference count held by middleman/multiplexer
-  is_registered(! is_hidden);
+  is_registered(!is_hidden);
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE("init and launch broker:" << CAF_ARG(id()));
   if (is_lazy && mailbox().try_block())
@@ -89,7 +89,7 @@ void abstract_broker::ack_writes(connection_handle hdl, bool enable) {
 
 std::vector<char>& abstract_broker::wr_buf(connection_handle hdl) {
   auto x = by_id(hdl);
-  if (! x) {
+  if (!x) {
     CAF_LOG_ERROR("tried to access wr_buf() of an unknown connection_handle");
     return dummy_wr_buf_;
   }
@@ -191,11 +191,11 @@ accept_handle abstract_broker::hdl_by_port(uint16_t port) {
 
 void abstract_broker::close_all() {
   CAF_LOG_TRACE("");
-  while (! doormen_.empty()) {
+  while (!doormen_.empty()) {
     // stop_reading will remove the doorman from doormen_
     doormen_.begin()->second->stop_reading();
   }
-  while (! scribes_.empty()) {
+  while (!scribes_.empty()) {
     // stop_reading will remove the scribe from scribes_
     scribes_.begin()->second->stop_reading();
   }

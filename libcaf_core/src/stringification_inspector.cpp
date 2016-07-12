@@ -23,7 +23,7 @@ namespace caf {
 namespace detail {
 
 void stringification_inspector::sep() {
-  if (! result_.empty())
+  if (!result_.empty())
     switch (result_.back()) {
       case '(':
       case '[':
@@ -41,7 +41,7 @@ void stringification_inspector::consume(atom_value& x) {
 }
 
 void stringification_inspector::consume(const char* cstr) {
-  if (! cstr || *cstr == '\0') {
+  if (!cstr || *cstr == '\0') {
     result_ += "\"\"";
     return;
   }

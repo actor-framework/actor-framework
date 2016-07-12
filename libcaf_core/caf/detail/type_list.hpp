@@ -744,7 +744,7 @@ struct tl_filter_not<type_list<T...>, Pred> {
   using type =
     typename tl_filter_impl<
       type_list<T...>,
-      ! Pred<T>::value...
+      !Pred<T>::value...
     >::type;
 };
 
@@ -758,7 +758,7 @@ struct tl_filter_type<type_list<T...>, Type> {
   using type =
     typename tl_filter_impl<
       type_list<T...>,
-      ! std::is_same<T, Type>::value...
+      !std::is_same<T, Type>::value...
     >::type;
 };
 
@@ -772,7 +772,7 @@ struct tl_filter_not_type<type_list<T...>, Type> {
   using type =
     typename tl_filter_impl<
       type_list<T...>,
-      (! std::is_same<T, Type>::value)...
+      (!std::is_same<T, Type>::value)...
     >::type;
 };
 

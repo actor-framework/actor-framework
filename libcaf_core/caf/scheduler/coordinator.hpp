@@ -105,7 +105,7 @@ protected:
       sh.ref(); // make sure reference count is high enough
     }
     CAF_LOG_DEBUG("enqueue shutdown_helper into each worker");
-    while (! alive_workers.empty()) {
+    while (!alive_workers.empty()) {
       (*alive_workers.begin())->external_enqueue(&sh);
       // since jobs can be stolen, we cannot assume that we have
       // actually shut down the worker we've enqueued sh to

@@ -320,13 +320,13 @@ public:
   /// Returns whether `true` if the behavior stack is not empty or
   /// if outstanding responses exist, `false` otherwise.
   inline bool has_behavior() const {
-    return ! bhvr_stack_.empty()
-           || ! awaited_responses_.empty()
-           || ! multiplexed_responses_.empty();
+    return !bhvr_stack_.empty()
+           || !awaited_responses_.empty()
+           || !multiplexed_responses_.empty();
   }
 
   inline behavior& current_behavior() {
-    return ! awaited_responses_.empty() ? awaited_responses_.front().second
+    return !awaited_responses_.empty() ? awaited_responses_.front().second
                                         : bhvr_stack_.back();
   }
 

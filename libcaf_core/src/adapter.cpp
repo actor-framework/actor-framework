@@ -59,7 +59,7 @@ void adapter::enqueue(mailbox_element_ptr x, execution_unit* context) {
     merger = merger_;
     fail_state = fail_state_;
   });
-  if (! decorated) {
+  if (!decorated) {
     bounce(x, fail_state);
     return;
   }

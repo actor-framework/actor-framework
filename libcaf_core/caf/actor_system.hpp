@@ -350,12 +350,12 @@ public:
                          bool check_interface = true,
                          const mpi* expected_ifs = nullptr) {
     mpi tmp;
-    if (check_interface && ! expected_ifs) {
+    if (check_interface && !expected_ifs) {
       tmp = message_types<Handle>();
       expected_ifs = &tmp;
     }
     auto res = dyn_spawn_impl(name, args, ctx, check_interface, expected_ifs);
-    if (! res)
+    if (!res)
       return std::move(res.error());
     return actor_cast<Handle>(std::move(*res));
   }
@@ -464,7 +464,7 @@ public:
 private:
   template <class T>
   void check_invariants() {
-    static_assert(! std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
+    static_assert(!std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
                   "This actor type cannot be spawned throught an actor system. "
                   "Probably you have tried to spawn a broker or opencl actor.");
   }
@@ -485,7 +485,7 @@ private:
                 : 0;
     if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
       cfg.flags |= abstract_actor::is_detached_flag;
-    if (! cfg.host)
+    if (!cfg.host)
       cfg.host = dummy_execution_unit();
     auto res = make_actor<C>(next_actor_id(), node(), this,
                              cfg, std::forward<Ts>(xs)...);

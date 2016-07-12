@@ -88,7 +88,7 @@ bool operator==(const T& x, const maybe<U>& y) {
 
 template <class T>
 std::string to_string(const maybe<T>& x) {
-  return ! get<anything>(&x) ? std::string{"*"} : deep_to_string(get<T>(x));
+  return !get<anything>(&x) ? std::string{"*"} : deep_to_string(get<T>(x));
 }
 
 } // namespace caf
@@ -157,7 +157,7 @@ public:
     nodes_[0].name = "Jupiter";
     nodes_[1].name = "Mars";
     CAF_REQUIRE_NOT_EQUAL(jupiter().connection, mars().connection);
-    CAF_REQUIRE(! (jupiter().id == mars().id));
+    CAF_REQUIRE(!(jupiter().id == mars().id));
     CAF_REQUIRE(jupiter().id != mars().id);
     CAF_REQUIRE(jupiter().id < mars().id);
     CAF_MESSAGE("Earth:   " << to_string(this_node_));
@@ -178,7 +178,7 @@ public:
     buffer buf;
     binary_serializer bs{mpx_, buf};
     auto e = bs(const_cast<message&>(msg));
-    CAF_REQUIRE(! e);
+    CAF_REQUIRE(!e);
     return static_cast<uint32_t>(buf.size());
   }
 
@@ -263,7 +263,7 @@ public:
     basp::header hdr;
     binary_deserializer bd{mpx_, buf};
     auto e = bd(hdr);
-    CAF_REQUIRE(! e);
+    CAF_REQUIRE(!e);
     buffer payload;
     if (hdr.payload_len > 0) {
       std::copy(buf.begin() + basp::header_size, buf.end(),
@@ -336,7 +336,7 @@ public:
     std::vector<strong_actor_ptr> stages;
     message msg;
     auto e = source(stages, msg);
-    CAF_REQUIRE(! e);
+    CAF_REQUIRE(!e);
     auto src = actor_cast<strong_actor_ptr>(registry_->get(hdr.source_actor));
     auto dest = registry_->get(hdr.dest_actor);
     CAF_REQUIRE(dest);
@@ -500,7 +500,7 @@ CAF_TEST(remote_address_and_port) {
   self()->send(mm, get_atom::value, mars().id);
   do {
     mpx()->exec_runnable();
-  } while (! self()->has_next_message());
+  } while (!self()->has_next_message());
   CAF_MESSAGE("receive result of MM");
   self()->receive(
     [&](const node_id& nid, const std::string& addr, uint16_t port) {
@@ -584,9 +584,9 @@ CAF_TEST(remote_actor_and_send) {
   auto f = self()->request(mm1, infinite,
                            connect_atom::value, lo, uint16_t{4242});
   // wait until BASP broker has received and processed the connect message
-  while (! aut()->valid(jupiter().connection))
+  while (!aut()->valid(jupiter().connection))
     mpx()->exec_runnable();
-  CAF_REQUIRE(! mpx()->has_pending_scribe(lo, 4242));
+  CAF_REQUIRE(!mpx()->has_pending_scribe(lo, 4242));
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_MESSAGE("server handshake => client handshake + proxy announcement");
   auto na = registry()->named_actors();

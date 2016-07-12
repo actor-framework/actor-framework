@@ -129,11 +129,11 @@ public:
     >::type;
 
   /*
-  static_assert(! std::is_same<pattern, detail::type_list<exit_msg>>::value,
+  static_assert(!std::is_same<pattern, detail::type_list<exit_msg>>::value,
                 "exit_msg not allowed in message handlers, "
                 "did you mean to use set_exit_handler()?");
 
-  static_assert(! std::is_same<pattern, detail::type_list<down_msg>>::value,
+  static_assert(!std::is_same<pattern, detail::type_list<down_msg>>::value,
                 "down_msg not allowed in message handlers, "
                 "did you mean to use set_down_handler()?");
   */
@@ -163,7 +163,7 @@ public:
                             type_erased_tuple& xs) override {
     detail::meta_elements<pattern> ms;
     // check if try_match() reports success
-    if (! detail::try_match(xs, ms.arr.data(), ms.arr.size()))
+    if (!detail::try_match(xs, ms.arr.data(), ms.arr.size()))
       return match_case::no_match;
     typename detail::il_indices<decayed_arg_types>::type indices;
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
@@ -191,7 +191,7 @@ inline bool operator<(const match_case_info& x, const match_case_info& y) {
 
 template <class F>
 typename std::enable_if<
-  ! std::is_base_of<match_case, F>::value,
+  !std::is_base_of<match_case, F>::value,
   std::tuple<trivial_match_case<F>>
 >::type
 to_match_case_tuple(F fun) {
@@ -224,7 +224,7 @@ typename std::enable_if<
   std::is_base_of<match_case, T>::value || std::is_base_of<match_case, U>::value
 >::type
 operator,(T, U) {
-  static_assert(! std::is_same<T, T>::value,
+  static_assert(!std::is_same<T, T>::value,
                 "this syntax is not supported -> you probably did "
                 "something like 'return (...)' instead of 'return {...}'");
 }

@@ -184,7 +184,7 @@ public:
   template <class Handle>
   bool close(Handle hdl) {
     auto x = by_id(hdl);
-    if (! x)
+    if (!x)
       return false;
     x->stop_reading();
     return true;

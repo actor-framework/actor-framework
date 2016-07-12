@@ -61,7 +61,7 @@ void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
     g = g_;
     err = fail_state_;
   });
-  if (! f) {
+  if (!f) {
     // f and g are invalid only after the sequencer terminated
     bounce(what, err);
     return;

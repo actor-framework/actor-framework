@@ -160,7 +160,7 @@ make_mailbox_element(strong_actor_ptr sender, message_id id,
 /// @relates mailbox_element
 template <class T, class... Ts>
 typename std::enable_if<
-  ! std::is_same<typename std::decay<T>::type, message>::value
+  !std::is_same<typename std::decay<T>::type, message>::value
   || (sizeof...(Ts) > 0),
   mailbox_element_ptr
 >::type

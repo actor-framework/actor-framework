@@ -52,7 +52,7 @@ bool equal_to(const T& t, const U& u) {
 }
 
 template <class T, class U,
-          typename std::enable_if<! std::is_floating_point<T>::value
+          typename std::enable_if<!std::is_floating_point<T>::value
                                   && !std::is_floating_point<U>::value,
                                   int>::type = 0>
 bool equal_to(const T& x, const U& y) {
@@ -61,7 +61,7 @@ bool equal_to(const T& x, const U& y) {
 
 template <class T, class U>
 bool not_equal_to(const T& t, const U& u) {
-  return ! equal_to(t, u);
+  return !equal_to(t, u);
 }
 
 /// Default test-running function.
@@ -156,7 +156,7 @@ public:
 
     template <class T>
     typename std::enable_if<
-      ! std::is_same<T, char*>::value,
+      !std::is_same<T, char*>::value,
       stream&
     >::type
     operator<<(const T& x) {
@@ -166,7 +166,7 @@ public:
 
     template <class T>
     stream& operator<<(const optional<T>& x) {
-      if (! x)
+      if (!x)
         return *this << "-none-";
       return *this << *x;
     }
@@ -399,12 +399,12 @@ bool check(test* parent, const char *file, size_t line,
        << expr;
     parent->pass(ss.str());
   } else {
-    ss << engine::color(red) << "!! "
+    ss << engine::color(red) << "!!"
        << engine::color(blue) << file << engine::color(yellow) << ":"
        << engine::color(blue) << line << fill(line) << engine::color(reset)
        << expr << engine::color(magenta) << " ("
        << engine::color(red) << show(x) << engine::color(magenta)
-       << " !! " << engine::color(red) << show(y) << engine::color(magenta)
+       << " !!" << engine::color(red) << show(y) << engine::color(magenta)
        << ')' << engine::color(reset);
     parent->fail(ss.str(), should_fail);
   }

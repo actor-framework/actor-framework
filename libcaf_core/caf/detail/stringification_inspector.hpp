@@ -112,7 +112,7 @@ private:
   template <class T>
   enable_if_t<
     is_inspectable<stringification_inspector, T>::value
-    && ! has_to_string<T>::value>
+    && !has_to_string<T>::value>
   consume(T& x) {
     inspect(*this, x);
   }
@@ -133,8 +133,8 @@ private:
 
   template <class T>
   enable_if_t<is_iterable<T>::value
-              && ! is_inspectable<stringification_inspector, T>::value
-              && ! has_to_string<T>::value>
+              && !is_inspectable<stringification_inspector, T>::value
+              && !has_to_string<T>::value>
   consume(T& xs) {
     result_ += '[';
     for (auto& x : xs) {
@@ -177,11 +177,11 @@ private:
   /// Fallback printing `<unprintable>`.
   template <class T>
   enable_if_t<
-    ! is_iterable<T>::value
-    && ! std::is_pointer<T>::value
-    && ! is_inspectable<stringification_inspector, T>::value
-    && ! std::is_arithmetic<T>::value
-    && ! has_to_string<T>::value>
+    !is_iterable<T>::value
+    && !std::is_pointer<T>::value
+    && !is_inspectable<stringification_inspector, T>::value
+    && !std::is_arithmetic<T>::value
+    && !has_to_string<T>::value>
   consume(T&) {
     result_ += "<unprintable>";
   }
@@ -204,7 +204,7 @@ private:
 
   template <class T, class... Ts>
   void traverse(meta::omittable_if_empty_t, T& x, Ts&&... xs) {
-    if (! x.empty()) {
+    if (!x.empty()) {
       sep();
       consume(x);
     }
@@ -231,7 +231,7 @@ private:
   }
 
   template <class T, class... Ts>
-  enable_if_t<! meta::is_annotation<T>::value> traverse(T&& x, Ts&&... xs) {
+  enable_if_t<!meta::is_annotation<T>::value> traverse(T&& x, Ts&&... xs) {
     sep();
     consume(deconst(x));
     traverse(std::forward<Ts>(xs)...);

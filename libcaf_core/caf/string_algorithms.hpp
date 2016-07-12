@@ -48,7 +48,7 @@ void split(Container& result, const std::string& str, const Delim& delims,
   while ((pos = str.find_first_of(delims, prev)) != std::string::npos) {
     if (pos > prev) {
       auto substr = str.substr(prev, pos - prev);
-      if (! substr.empty() || keep_all) {
+      if (!substr.empty() || keep_all) {
         result.push_back(std::move(substr));
       }
     }

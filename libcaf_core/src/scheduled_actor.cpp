@@ -99,7 +99,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr,
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE(CAF_ARG(*ptr));
   CAF_ASSERT(ptr != nullptr);
-  CAF_ASSERT(! is_blocking());
+  CAF_ASSERT(!is_blocking());
   auto mid = ptr->mid;
   auto sender = ptr->sender;
   switch (mailbox().enqueue(ptr.release())) {
@@ -138,8 +138,8 @@ const char* scheduled_actor::name() const {
 
 void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
-  CAF_ASSERT(! is_blocking());
-  is_registered(! hide);
+  CAF_ASSERT(!is_blocking());
+  is_registered(!hide);
   if (is_detached()) {
     private_thread_ = new detail::private_thread(this);
     private_thread_->start();
@@ -183,22 +183,22 @@ void scheduled_actor::intrusive_ptr_release_impl() {
 resumable::resume_result
 scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   CAF_PUSH_AID(id());
-  if (! activate(ctx))
+  if (!activate(ctx))
     return resume_result::done;
   size_t handled_msgs = 0;
   auto reset_timeout_if_needed = [&] {
-    if (handled_msgs > 0 && ! bhvr_stack_.empty())
+    if (handled_msgs > 0 && !bhvr_stack_.empty())
       request_timeout(bhvr_stack_.back().timeout());
   };
   mailbox_element_ptr ptr;
   while (handled_msgs < max_throughput) {
     do {
       ptr = next_message();
-      if (! ptr && mailbox().try_block()) {
+      if (!ptr && mailbox().try_block()) {
         reset_timeout_if_needed();
         return resumable::awaiting_message;
       }
-    } while (! ptr);
+    } while (!ptr);
     switch (reactivate(*ptr)) {
       case activation_result::terminated:
         return resume_result::done;
@@ -223,7 +223,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
     }
   }
   reset_timeout_if_needed();
-  if (! has_next_message() && mailbox().try_block())
+  if (!has_next_message() && mailbox().try_block())
     return resumable::awaiting_message;
   // time's up
   return resumable::resume_later;
@@ -246,7 +246,7 @@ void scheduled_actor::quit(error x) {
 // -- timeout management -------------------------------------------------------
 
 uint32_t scheduled_actor::request_timeout(const duration& d) {
-  if (! d.valid()) {
+  if (!d.valid()) {
     has_timeout(false);
     return 0;
   }
@@ -316,7 +316,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     case make_type_token<timeout_msg>(): {
       auto& tm = content.get_as<timeout_msg>(0);
       auto tid = tm.timeout_id;
-      CAF_ASSERT(! x.mid.valid());
+      CAF_ASSERT(!x.mid.valid());
       return is_active_timeout(tid) ? message_category::timeout
                                     : message_category::expired_timeout;
     }
@@ -352,12 +352,12 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
   // short-circuit awaited responses
-  if (! awaited_responses_.empty()) {
+  if (!awaited_responses_.empty()) {
     auto& pr = awaited_responses_.front();
     // skip all messages until we receive the currently awaited response
     if (x.mid != pr.first)
       return im_skipped;
-    if (! pr.second(x.content())) {
+    if (!pr.second(x.content())) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
@@ -372,7 +372,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     // neither awaited nor multiplexed, probably an expired timeout
     if (mrh == multiplexed_responses_.end())
       return im_dropped;
-    if (! mrh->second(x.content())) {
+    if (!mrh->second(x.content())) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
@@ -422,7 +422,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       };
       if (bhvr_stack_.empty()) {
         call_default_handler();
-        return ! skipped ? im_success : im_skipped;
+        return !skipped ? im_success : im_skipped;
       }
       auto& bhvr = bhvr_stack_.back();
       switch (bhvr(visitor, x.content())) {
@@ -434,7 +434,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         case match_case::no_match:
           call_default_handler();
       }
-      return ! skipped ? im_success : im_skipped;
+      return !skipped ? im_success : im_skipped;
     }
   }
   // should be unreachable
@@ -474,10 +474,10 @@ bool scheduled_actor::consume_from_cache() {
 bool scheduled_actor::activate(execution_unit* ctx) {
   CAF_LOG_TRACE("");
   CAF_ASSERT(ctx != nullptr);
-  CAF_ASSERT(! is_blocking());
+  CAF_ASSERT(!is_blocking());
   context(ctx);
-  if (is_initialized() && (! has_behavior() || is_terminated())) {
-    CAF_LOG_DEBUG_IF(! has_behavior(),
+  if (is_initialized() && (!has_behavior() || is_terminated())) {
+    CAF_LOG_DEBUG_IF(!has_behavior(),
                      "resume called on an actor without behavior");
     CAF_LOG_DEBUG_IF(is_terminated(),
                      "resume called on a terminated actor");
@@ -486,7 +486,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
 # ifndef CAF_NO_EXCEPTIONS
   try {
 # endif // CAF_NO_EXCEPTIONS
-    if (! is_initialized()) {
+    if (!is_initialized()) {
       initialize();
       if (finalize()) {
         CAF_LOG_DEBUG("actor_done() returned true right after make_behavior()");
@@ -511,7 +511,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
 auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
 -> activation_result {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (! activate(ctx))
+  if (!activate(ctx))
     return activation_result::terminated;
   return reactivate(x);
 }
@@ -555,7 +555,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
 // -- behavior management ----------------------------------------------------
 
 void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
-  if (discard_old && ! bhvr_stack_.empty())
+  if (discard_old && !bhvr_stack_.empty())
     bhvr_stack_.pop_back();
   // request_timeout simply resets the timeout when it's invalid
   request_timeout(bhvr.timeout());
@@ -563,7 +563,7 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
 }
 
 bool scheduled_actor::finalize() {
-  if (has_behavior() && ! is_terminated())
+  if (has_behavior() && !is_terminated())
     return false;
   CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
   on_exit();

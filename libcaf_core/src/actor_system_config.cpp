@@ -187,7 +187,7 @@ actor_system_config& actor_system_config::parse(int argc, char** argv,
   if (argc > 1)
     args = message_builder(argv + 1, argv + argc).move_to_message();
   // set default config file name if not set by user
-  if (! ini_file_cstr)
+  if (!ini_file_cstr)
     ini_file_cstr = "caf-application.ini";
   std::string config_file_name;
   // CLI file name has priority over default file name
@@ -239,7 +239,7 @@ actor_system_config& actor_system_config::parse(message& args,
   using std::cout;
   using std::endl;
   args_remainder = std::move(res.remainder);
-  if (! res.error.empty()) {
+  if (!res.error.empty()) {
     cli_helptext_printed = true;
     std::cerr << res.error << endl;
     return *this;

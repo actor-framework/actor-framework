@@ -35,7 +35,7 @@ response_promise::response_promise(local_actor* ptr, mailbox_element& src)
       id_(src.mid) {
   // form an invalid request promise when initialized from a
   // response ID, since CAF always drops messages in this case
-  if (! src.mid.is_response()) {
+  if (!src.mid.is_response()) {
     source_ = std::move(src.sender);
     stages_ = std::move(src.stages);
   }
@@ -51,7 +51,7 @@ bool response_promise::async() const {
 }
 
 response_promise response_promise::deliver_impl(message msg) {
-  if (! stages_.empty()) {
+  if (!stages_.empty()) {
     auto next = std::move(stages_.back());
     stages_.pop_back();
     next->enqueue(make_mailbox_element(std::move(source_), id_,

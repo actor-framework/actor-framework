@@ -49,20 +49,20 @@ scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
   actor_config cfg{&context_};
   self_ = make_actor<impl, strong_actor_ptr>(sys.next_actor_id(), sys.node(),
                                              &sys, cfg);
-  if (! hide)
+  if (!hide)
     prev_ = CAF_SET_AID(self_->id());
   CAF_LOG_TRACE(CAF_ARG(hide));
-  ptr()->is_registered(! hide);
+  ptr()->is_registered(!hide);
 }
 
 scoped_actor::~scoped_actor() {
   CAF_LOG_TRACE("");
-  if (! self_)
+  if (!self_)
     return;
   auto x = ptr();
   if (x->is_registered())
     CAF_SET_AID(prev_);
-  if (! x->is_terminated())
+  if (!x->is_terminated())
     x->cleanup(exit_reason::normal, &context_);
 }
 

@@ -80,7 +80,7 @@ int node_id::compare(const none_t&) const {
 int node_id::compare(const node_id& other) const {
   if (this == &other || data_ == other.data_)
     return 0; // shortcut for comparing to self or identical instances
-  if (! data_ != ! other.data_)
+  if (!data_ != !other.data_)
     return data_ ? 1 : -1; // invalid instances are always smaller
   // use mismatch instead of strncmp because the
   // latter bails out on the first 0-byte
@@ -132,7 +132,7 @@ node_id::data::~data() {
 
 bool node_id::data::valid() const {
   auto is_zero = [](uint8_t x) { return x == 0; };
-  return pid_ != 0 && ! std::all_of(host_.begin(), host_.end(), is_zero);
+  return pid_ != 0 && !std::all_of(host_.begin(), host_.end(), is_zero);
 }
 
 namespace {
@@ -180,7 +180,7 @@ void node_id::swap(node_id& x) {
 }
 
 std::string to_string(const node_id& x) {
-  if (! x)
+  if (!x)
     return "none";
   return deep_to_string(meta::type_name("node_id"),
                         x.process_id(),

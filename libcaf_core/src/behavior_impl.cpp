@@ -117,7 +117,7 @@ optional<message> behavior_impl::invoke(message& xs) {
   maybe_message_visitor f;
   // the following const-cast is safe, because invoke() is aware of
   // copy-on-write and does not modify x if it's shared
-  if (! xs.empty())
+  if (!xs.empty())
     invoke(f, *const_cast<message_data*>(xs.cvals().get()));
   else
     invoke_empty(f);
@@ -134,7 +134,7 @@ match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
                                          message& xs) {
   // the following const-cast is safe, because invoke() is aware of
   // copy-on-write and does not modify x if it's shared
-  if (! xs.empty())
+  if (!xs.empty())
     return invoke(f, *const_cast<message_data*>(xs.cvals().get()));
   return invoke_empty(f);
 }

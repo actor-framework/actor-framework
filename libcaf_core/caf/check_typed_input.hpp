@@ -45,7 +45,7 @@ struct signatures_of {
 
 template <class T>
 constexpr bool statically_typed() {
-  return ! std::is_same<
+  return !std::is_same<
            none_t,
            typename std::remove_pointer<T>::type::signatures
          >::value;

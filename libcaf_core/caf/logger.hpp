@@ -90,7 +90,7 @@ public:
 
     template <class T>
     line_builder& operator<<(const T& x) {
-      if (! str_.empty())
+      if (!str_.empty())
         str_ += " ";
       std::stringstream ss;
       ss << x;
@@ -103,7 +103,7 @@ public:
     line_builder& operator<<(const arg_wrapper<T>& x) {
       if (behind_arg_)
         str_ += ", ";
-      else if (! str_.empty())
+      else if (!str_.empty())
         str_ += " ";
       str_ += x.name;
       str_ += " = ";

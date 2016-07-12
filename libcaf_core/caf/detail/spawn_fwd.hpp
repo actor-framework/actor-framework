@@ -49,7 +49,7 @@ typename std::conditional<
   T&&
 >::type
 spawn_fwd(typename std::remove_reference<T>::type&& arg) noexcept {
-  static_assert(! std::is_lvalue_reference<T>::value,
+  static_assert(!std::is_lvalue_reference<T>::value,
                 "silently converting an lvalue to an rvalue");
   return static_cast<T&&>(arg);
 }

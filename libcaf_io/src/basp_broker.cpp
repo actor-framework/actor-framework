@@ -76,7 +76,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // we need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node
   auto path = instance.tbl().lookup(nid);
-  if (! path) {
+  if (!path) {
     // this happens if and only if we don't have a path to `nid`
     // and current_context_->hdl has been blacklisted
     CAF_LOG_INFO("cannot create a proxy instance for an actor "
@@ -96,7 +96,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
       auto bptr = static_cast<basp_broker*>(selfptr->get());
-      if (! bptr->is_terminated())
+      if (!bptr->is_terminated())
         bptr->state.proxies().erase(nid, res->id(), rsn);
     });
   });
@@ -121,7 +121,7 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   CAF_ASSERT(this_context != nullptr);
   this_context->id = nid;
   auto& cb = this_context->callback;
-  if (! cb)
+  if (!cb)
     return;
   auto cleanup = detail::make_scope_guard([&] {
     cb = none;
@@ -135,10 +135,10 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   if (nid == this_node()) {
     // connected to self
     ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid));
-    CAF_LOG_INFO_IF(! ptr, "actor not found:" << CAF_ARG(aid));
+    CAF_LOG_INFO_IF(!ptr, "actor not found:" << CAF_ARG(aid));
   } else {
     ptr = namespace_.get_or_put(nid, aid);
-    CAF_LOG_ERROR_IF(! ptr, "creating actor in finalize_handshake failed");
+    CAF_LOG_ERROR_IF(!ptr, "creating actor in finalize_handshake failed");
   }
   cb->deliver(make_message(nid, ptr, std::move(sigs)));
   this_context->callback = none;
@@ -166,10 +166,10 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
   // source node has created a proxy for one of our actors
   auto entry = system().registry().get(aid);
   auto send_kill_proxy_instance = [=](error rsn) {
-    if (! rsn)
+    if (!rsn)
       rsn = exit_reason::unknown;
     auto path = instance.tbl().lookup(nid);
-    if (! path) {
+    if (!path) {
       CAF_LOG_INFO("cannot send exit message for proxy, no route to host:"
                    << CAF_ARG(nid));
       return;
@@ -179,7 +179,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
     instance.tbl().flush(*path);
   };
   auto ptr = actor_cast<strong_actor_ptr>(entry);
-  if (! ptr) {
+  if (!ptr) {
     CAF_LOG_DEBUG("kill proxy immediately");
     // kill immediately if actor has already terminated
     send_kill_proxy_instance(exit_reason::unknown);
@@ -192,7 +192,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
         auto bptr = static_cast<basp_broker*>(tmp->get());
         // ... to make sure this is safe
         if (bptr == mm->named_broker<basp_broker>(atom("BASP"))
-            && ! bptr->is_terminated())
+            && !bptr->is_terminated())
           send_kill_proxy_instance(fail_state);
       });
     });
@@ -233,7 +233,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
                 << CAF_ARG(msg) << CAF_ARG(mid));
   auto src = src_nid == this_node() ? system().registry().get(src_aid)
                                     : proxies().get_or_put(src_nid, src_aid);
-  if (! dest) {
+  if (!dest) {
     auto rsn = exit_reason::remote_link_unreachable;
     CAF_LOG_INFO("cannot deliver message, destination not found");
     self->parent().notify<hook::invalid_message_received>(src_nid, src,
@@ -272,7 +272,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
         CAF_LOG_TRACE(CAF_ARG(config_serv));
         // drop unexpected messages from this point on
         tself->set_default_handler(print_and_drop);
-        if (! config_serv)
+        if (!config_serv)
           return;
         tself->monitor(config_serv);
         tself->become(
@@ -302,7 +302,7 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
     return sink(name_atm, stages, msg);
   });
   auto path = instance.tbl().lookup(nid);
-  if (! path) {
+  if (!path) {
     CAF_LOG_ERROR("learned_new_node called, but no route to nid");
     return;
   }
@@ -327,7 +327,7 @@ void basp_broker_state::learned_new_node_directly(const node_id& nid,
                                                   bool was_indirectly_before) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
-  if (! was_indirectly_before)
+  if (!was_indirectly_before)
     learned_new_node(nid);
 }
 
@@ -335,7 +335,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
   learned_new_node(nid);
-  if (! enable_automatic_connections)
+  if (!enable_automatic_connections)
     return;
   // this member function gets only called once, after adding a new
   // indirect connection to the routing table; hence, spawning
@@ -385,7 +385,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
     };
   };
   auto path = instance.tbl().lookup(nid);
-  if (! path) {
+  if (!path) {
     CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
     return;
   }
@@ -490,14 +490,14 @@ behavior basp_broker::make_behavior() {
         strong_actor_ptr& dest, message_id mid, const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(dest)
                     << CAF_ARG(mid) << CAF_ARG(msg));
-      if (! dest || system().node() == dest->node()) {
+      if (!dest || system().node() == dest->node()) {
         CAF_LOG_WARNING("cannot forward to invalid or local actor:"
                         << CAF_ARG(dest));
         return;
       }
       if (src && system().node() == src->node())
         system().registry().put(src->id(), src);
-      if (! state.instance.dispatch(context(), src, fwd_stack,
+      if (!state.instance.dispatch(context(), src, fwd_stack,
                                     dest, mid, msg)
           && mid.is_request()) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
@@ -508,17 +508,17 @@ behavior basp_broker::make_behavior() {
     [=](forward_atom, const node_id& dest_node, atom_value dest_name,
         const message& msg) -> result<message> {
       auto cme = current_mailbox_element();
-      if (! cme)
+      if (!cme)
         return sec::invalid_argument;
       auto& src = cme->sender;
       CAF_LOG_TRACE(CAF_ARG(src)
                     << ", " << CAF_ARG(dest_node)
                     << ", " << CAF_ARG(dest_name)
                     << ", " << CAF_ARG(msg));
-      if (! src)
+      if (!src)
         return sec::invalid_argument;
       auto path = this->state.instance.tbl().lookup(dest_node);
-      if (! path) {
+      if (!path) {
         CAF_LOG_ERROR("no route to receiving node");
         return sec::no_route_to_receiving_node;
       }
@@ -555,7 +555,7 @@ behavior basp_broker::make_behavior() {
       // tell BASP instance we've lost connection
       state.instance.handle_node_shutdown(nid);
       CAF_ASSERT(nid == none
-                 || ! state.instance.tbl().reachable(nid));
+                 || !state.instance.tbl().reachable(nid));
     },
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {

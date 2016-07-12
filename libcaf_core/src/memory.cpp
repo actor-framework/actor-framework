@@ -62,7 +62,7 @@ void make_cache_map() {
 cache_map& get_cache_map() {
   pthread_once(&s_key_once, make_cache_map);
   auto cache = reinterpret_cast<cache_map*>(pthread_getspecific(s_key));
-  if (! cache) {
+  if (!cache) {
     cache = new cache_map;
     pthread_setspecific(s_key, cache);
     // insert default types
@@ -81,7 +81,7 @@ thread_local std::unique_ptr<cache_map> s_key;
 } // namespace <anonymous>
 
 cache_map& get_cache_map() {
-  if (! s_key) {
+  if (!s_key) {
     s_key = std::unique_ptr<cache_map>(new cache_map);
     // insert default types
     std::unique_ptr<memory_cache> tmp(new basic_memory_cache<mailbox_element>);

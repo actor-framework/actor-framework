@@ -151,7 +151,7 @@ public:
       // the INI parser accepts all integers as int64_t
       using cfg_type =
         typename std::conditional<
-          std::is_integral<T>::value && ! std::is_same<bool, T>::value,
+          std::is_integral<T>::value && !std::is_same<bool, T>::value,
           int64_t,
           T
         >::type;

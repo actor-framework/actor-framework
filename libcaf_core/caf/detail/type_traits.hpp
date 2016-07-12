@@ -55,7 +55,7 @@ private:
                                       std::declval<T&>()));
 
 public:
-  static constexpr bool value = ! std::is_same<result_type, std::false_type>::value;
+  static constexpr bool value = !std::is_same<result_type, std::false_type>::value;
 };
 
 template <class T>
@@ -434,7 +434,7 @@ class has_static_type_name {
 private:
   template <class U,
             class = typename std::enable_if<
-                      ! std::is_member_pointer<decltype(&U::static_type_name)>::value
+                      !std::is_member_pointer<decltype(&U::static_type_name)>::value
                     >::type>
   static std::true_type sfinae(int);
 

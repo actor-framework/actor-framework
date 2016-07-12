@@ -244,7 +244,7 @@ void printer_loop(blocking_actor* self) {
     return nullptr;
   };
   auto flush = [&](actor_data* what, bool forced) {
-    if (! what)
+    if (!what)
       return;
     auto& line = what->current_line;
     if (line.empty() || (line.back() != '\n' && !forced))
@@ -356,7 +356,7 @@ void abstract_coordinator::cleanup_and_release(resumable* ptr) {
       auto dptr = static_cast<scheduled_actor*>(ptr);
       dummy_unit dummy{dptr};
       dptr->cleanup(make_error(exit_reason::user_shutdown), &dummy);
-      while (! dummy.resumables.empty()) {
+      while (!dummy.resumables.empty()) {
         auto sub = dummy.resumables.back();
         dummy.resumables.pop_back();
         switch (sub->subtype()) {

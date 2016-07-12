@@ -120,7 +120,7 @@ constexpr bool has_lazy_init_flag(spawn_options opts) {
 /// @cond PRIVATE
 
 constexpr bool is_unbound(spawn_options opts) {
-  return ! has_monitor_flag(opts) && ! has_link_flag(opts);
+  return !has_monitor_flag(opts) && !has_link_flag(opts);
 }
 
 constexpr spawn_options make_unbound(spawn_options opts) {

@@ -85,7 +85,7 @@ void run_client(int argc, char** argv, uint16_t port) {
   // when trying to connect to get an untyped
   // handle to the server
   auto res = system.middleman().remote_actor("127.0.0.1", port);
-  CAF_REQUIRE(! res);
+  CAF_REQUIRE(!res);
   CAF_MESSAGE(system.render(res.error()));
   CAF_MESSAGE("connect to typed_remote_actor");
   CAF_EXP_THROW(serv,

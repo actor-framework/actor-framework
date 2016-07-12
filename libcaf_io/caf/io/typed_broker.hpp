@@ -97,7 +97,7 @@ public:
     CAF_LOG_TRACE("");
     this->init_broker();
     auto bhvr = make_behavior();
-    CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior:"
+    CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
                              << CAF_ARG(this->has_behavior()));
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()

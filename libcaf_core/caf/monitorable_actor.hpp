@@ -58,7 +58,7 @@ public:
   /// Links this actor to `x`.
   void link_to(const actor_addr& x) {
     auto ptr = actor_cast<strong_actor_ptr>(x);
-    if (! ptr || ptr->get() == this)
+    if (!ptr || ptr->get() == this)
       return;
     link_impl(establish_link_op, ptr->get());
   }
@@ -67,7 +67,7 @@ public:
   template <class ActorHandle>
   void link_to(const ActorHandle& x) {
     auto ptr = actor_cast<abstract_actor*>(x);
-    if (! ptr || ptr == this)
+    if (!ptr || ptr == this)
       return;
     link_impl(establish_link_op, ptr);
   }
@@ -75,7 +75,7 @@ public:
   /// Unlinks this actor from `x`.
   void unlink_from(const actor_addr& x) {
     auto ptr = actor_cast<strong_actor_ptr>(x);
-    if (! ptr || ptr->get() == this)
+    if (!ptr || ptr->get() == this)
       return;
     link_impl(remove_link_op, ptr->get());
   }
@@ -84,7 +84,7 @@ public:
   template <class ActorHandle>
   void unlink_from(const ActorHandle& x) {
     auto ptr = actor_cast<abstract_actor*>(x);
-    if (! ptr || ptr == this)
+    if (!ptr || ptr == this)
       return;
     link_impl(remove_link_op, ptr);
   }

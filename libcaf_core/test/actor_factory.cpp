@@ -47,7 +47,7 @@ struct fixture {
     actor_config actor_cfg{&context};
     auto aut = system.spawn<actor>("test_actor", std::move(args));
     if (expect_fail) {
-      CAF_REQUIRE(! aut);
+      CAF_REQUIRE(!aut);
       return;
     }
     CAF_REQUIRE(aut);

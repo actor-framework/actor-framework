@@ -175,7 +175,7 @@ struct deduce_output_type_impl {
       Signatures,
       input_is<InputTypes>::template eval
     >::type;
-  static_assert(! std::is_same<signature, none_t>::value,
+  static_assert(!std::is_same<signature, none_t>::value,
                 "typed actor does not support given input");
   using type = typename signature::output_types;
   // generates the appropriate `delegated<...>` type from given signatures

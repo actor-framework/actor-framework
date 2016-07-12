@@ -61,7 +61,7 @@ error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
 
 error& error::operator=(const error& x) {
   if (x) {
-    if (! data_)
+    if (!data_)
       data_ = new data(*x.data_);
     else
       *data_ = *x.data_;
@@ -164,7 +164,7 @@ error error::apply(inspect_fun f) {
 }
 
 std::string to_string(const error& x) {
-  if (! x)
+  if (!x)
     return "none";
   return deep_to_string(meta::type_name("error"), x.code(), x.category(),
                         meta::omittable_if_empty(), x.context());

@@ -72,7 +72,7 @@ void* fetch_in_addr(int family, sockaddr* addr) {
 int fetch_addr_str(bool get_ipv4, bool get_ipv6,
                    char (&buf)[INET6_ADDRSTRLEN],
                    sockaddr* addr) {
-  if (! addr)
+  if (!addr)
     return AF_UNSPEC;
   auto family = addr->sa_family;
   auto in_addr = fetch_in_addr(family, addr);
@@ -96,7 +96,7 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
     if (tmp)
       free(tmp);
     tmp = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(malloc(tmp_size));
-    if (! tmp)
+    if (!tmp)
       CAF_RAISE_ERROR("malloc() failed");
     retval = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX,
                                   nullptr, tmp, &tmp_size);
@@ -183,7 +183,7 @@ interfaces_map interfaces::list_all(bool include_localhost) {
   interfaces_map result;
   traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
                 [&](const char* name, protocol p, bool lo, const char* addr) {
-    if (include_localhost || ! lo)
+    if (include_localhost || !lo)
       result[name][p].push_back(addr);
   });
   return result;
@@ -194,7 +194,7 @@ interfaces::list_addresses(bool include_localhost) {
   std::map<protocol, std::vector<std::string>> result;
   traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
                 [&](const char*, protocol p, bool lo, const char* addr) {
-    if (include_localhost || ! lo)
+    if (include_localhost || !lo)
       result[p].push_back(addr);
   });
   return result;
@@ -205,7 +205,7 @@ interfaces::list_addresses(std::initializer_list<protocol> procs,
                            bool include_localhost) {
   std::vector<std::string> result;
   traverse_impl(procs, [&](const char*, protocol, bool lo, const char* addr) {
-    if (include_localhost || ! lo)
+    if (include_localhost || !lo)
       result.push_back(addr);
   });
   return result;

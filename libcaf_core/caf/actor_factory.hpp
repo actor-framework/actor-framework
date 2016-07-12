@@ -68,7 +68,7 @@ public:
 
   template <class U>
   typename std::enable_if<
-    ! std::is_convertible<U, Bhvr>::value,
+    !std::is_convertible<U, Bhvr>::value,
     behavior
   >::type
   apply(detail::type_list<U>, Ts... xs) {
@@ -105,7 +105,7 @@ public:
 
   template <class U>
   typename std::enable_if<
-    ! std::is_convertible<U, Bhvr>::value,
+    !std::is_convertible<U, Bhvr>::value,
     behavior
   >::type
   apply(detail::type_list<U>, Ts... xs) {
@@ -147,7 +147,7 @@ actor_factory make_actor_factory(F fun) {
     using behavior_t = typename trait::behavior_type;
     spawn_mode_token<trait::mode> tk;
     message_verifier<typename trait::arg_types> mv;
-    if (! mv(msg, tk))
+    if (!mv(msg, tk))
       return {};
     cfg.init_fun = [=](local_actor* x) -> behavior {
       CAF_ASSERT(cfg.host);
@@ -159,7 +159,7 @@ actor_factory make_actor_factory(F fun) {
       empty_type_erased_tuple dummy_;
       auto& ct = msg.empty() ? dummy_ : const_cast<message&>(msg).content();
       auto opt = ct.apply(f);
-      if (! opt)
+      if (!opt)
         return {};
       return std::move(*opt);
     };

@@ -162,7 +162,7 @@ public:
           // nop
         }
         bool post() override {
-          return ! f();
+          return !f();
         }
       };
       cond rc{std::move(stmt)};

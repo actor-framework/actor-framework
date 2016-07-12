@@ -29,12 +29,12 @@ message_data::~message_data() {
 }
 
 bool message_data::shared() const noexcept {
-  return ! unique();
+  return !unique();
 }
 
 message_data* message_data::cow_ptr::get_unshared() {
   auto p = ptr_.get();
-  if (! p->unique()) {
+  if (!p->unique()) {
     auto cptr = p->copy();
     ptr_.swap(cptr.ptr_);
     return ptr_.get();

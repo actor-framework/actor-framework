@@ -49,11 +49,11 @@ private:
       auto tp =
         std::chrono::high_resolution_clock::now() + std::chrono::seconds(secs);
         std::unique_lock<std::mutex> guard{mtx_};
-      while (! canceled_
+      while (!canceled_
              && cv_.wait_until(guard, tp) != std::cv_status::timeout) {
         // spin
       }
-      if (! canceled_) {
+      if (!canceled_) {
         logger::instance().error()
           << "WATCHDOG: unit test did not finish within "
           << secs << "s, abort\n";
@@ -155,7 +155,7 @@ bool check(test* parent, const char *file, size_t line,
        << expr;
     parent->pass(ss.str());
   } else {
-    ss << engine::color(red) << "!! "
+    ss << engine::color(red) << "!!"
        << engine::color(blue) << file << engine::color(yellow) << ":"
        << engine::color(blue) << line << fill(line) << engine::color(reset)
        << expr;
@@ -219,9 +219,9 @@ void logger::stream::flush() {
 bool logger::init(int lvl_cons, int lvl_file, const std::string& logfile) {
   instance().level_console_ = static_cast<level>(lvl_cons);
   instance().level_file_ = static_cast<level>(lvl_file);
-  if (! logfile.empty()) {
+  if (!logfile.empty()) {
     instance().file_.open(logfile, std::ofstream::out | std::ofstream::app);
-    return !! instance().file_;
+    return !!instance().file_;
   }
   return true;
 }
@@ -307,14 +307,14 @@ bool engine::run(bool colorize,
     // nothing to do
     return true;
   }
-  if (! colorize) {
+  if (!colorize) {
     for (size_t i = 0; i <= static_cast<size_t>(white); ++i) {
       for (size_t j = 0; j <= static_cast<size_t>(bold); ++j) {
         instance().colors_[i][j] = "";
       }
     }
   }
-  if (! logger::init(verbosity_console, verbosity_file, log_file)) {
+  if (!logger::init(verbosity_console, verbosity_file, log_file)) {
     return false;
   }
   auto& log = logger::instance();
@@ -328,7 +328,7 @@ bool engine::run(bool colorize,
   auto failed_require = false;
 # if (! defined(__clang__) && defined(__GNUC__)                                 \
       && __GNUC__ == 4 && __GNUC_MINOR__ < 9)                                  \
-     || (defined(__clang__) && ! defined(_LIBCPP_VERSION))
+     || (defined(__clang__) && !defined(_LIBCPP_VERSION))
   // regex implementation is broken prior to 4.9
   using strvec = std::vector<std::string>;
   auto from_psv = [](const std::string& psv) -> strvec {
@@ -348,7 +348,7 @@ bool engine::run(bool colorize,
                     const strvec& blacklist,
                     const std::string& x) {
     // an empty whitelist means original input was ".*", i.e., enable all
-    return ! std::binary_search(blacklist.begin(), blacklist.end(), x)
+    return !std::binary_search(blacklist.begin(), blacklist.end(), x)
            && (whitelist.empty()
                || std::binary_search(whitelist.begin(), whitelist.end(), x));
   };
@@ -358,10 +358,10 @@ bool engine::run(bool colorize,
   std::regex not_suites;
   std::regex not_tests;
   // a default constructored regex matches is not equal to an "empty" regex
-  if (! not_suites_str.empty()) {
+  if (!not_suites_str.empty()) {
     not_suites.assign(not_suites_str);
   }
-  if (! not_tests_str.empty()) {
+  if (!not_tests_str.empty()) {
     not_tests.assign(not_tests_str);
   }
   auto enabled = [](const std::regex& whitelist,
@@ -369,23 +369,23 @@ bool engine::run(bool colorize,
                     const std::string& x) {
     // an empty whitelist means original input was "*", i.e., enable all
     return std::regex_search(x, whitelist)
-           && ! std::regex_search(x, blacklist);
+           && !std::regex_search(x, blacklist);
   };
 # endif
   std::vector<std::string> failed_tests;
   for (auto& p : instance().suites_) {
-    if (! enabled(suites, not_suites, p.first))
+    if (!enabled(suites, not_suites, p.first))
       continue;
     auto suite_name = p.first.empty() ? "<unnamed>" : p.first;
     auto pad = std::string((bar.size() - suite_name.size()) / 2, ' ');
     bool displayed_header = false;
     size_t tests_ran = 0;
     for (auto& t : p.second) {
-      if (! enabled(tests, not_tests, t->name()))
+      if (!enabled(tests, not_tests, t->name()))
         continue;
       instance().current_test_ = t.get();
       ++tests_ran;
-      if (! displayed_header) {
+      if (!displayed_header) {
         log.verbose() << color(yellow) << bar << '\n' << pad << suite_name
                       << '\n' << bar << color(reset) << "\n\n";
         displayed_header = true;
@@ -476,7 +476,7 @@ bool engine::run(bool colorize,
              << "success: "
              << (total_bad == total_bad_expected ? color(green) : color(red))
              << percent_good << "%" << color(reset) << "\n\n";
-  if (! failed_tests.empty()) {
+  if (!failed_tests.empty()) {
     log.info() << indent << "failed tests:" << '\n';
     for (auto& name : failed_tests)
       log.info() << indent << "- " << name << '\n';
@@ -585,7 +585,7 @@ int main(int argc, char** argv) {
     std::cout << res.helptext << std::endl;
     return 0;
   }
-  if (! suite_query.empty()) {
+  if (!suite_query.empty()) {
     std::cout << "available tests in suite " << suite_query << ":" << std::endl;
     for (auto& t : engine::available_tests(suite_query))
       std::cout << "  - " << t << std::endl;
@@ -597,7 +597,7 @@ int main(int argc, char** argv) {
       std::cout << "  - " << s << std::endl;
     return 0;
   }
-  if (! res.remainder.empty()) {
+  if (!res.remainder.empty()) {
     std::cerr << "*** invalid command line options" << std::endl
               << res.helptext << std::endl;
     return 1;

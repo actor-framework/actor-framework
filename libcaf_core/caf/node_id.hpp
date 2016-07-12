@@ -145,9 +145,9 @@ public:
     data tmp;
     // write changes to tmp back to x at scope exit
     auto sg = detail::make_scope_guard([&] {
-      if (! tmp.valid())
+      if (!tmp.valid())
         x.data_.reset();
-      else if (! x || ! x.data_->unique())
+      else if (!x || !x.data_->unique())
         x.data_ = make_counted<data>(tmp);
       else
         *x.data_ = tmp;
@@ -164,12 +164,12 @@ private:
 
 /// @relates node_id
 inline bool operator==(const node_id& x, none_t) {
-  return ! x;
+  return !x;
 }
 
 /// @relates node_id
 inline bool operator==(none_t, const node_id& x) {
-  return ! x;
+  return !x;
 }
 
 /// @relates node_id
@@ -187,7 +187,7 @@ inline bool operator==(const node_id& lhs, const node_id& rhs) {
 }
 
 inline bool operator!=(const node_id& lhs, const node_id& rhs) {
-  return ! (lhs == rhs);
+  return !(lhs == rhs);
 }
 
 inline bool operator<(const node_id& lhs, const node_id& rhs) {

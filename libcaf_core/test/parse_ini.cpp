@@ -152,7 +152,7 @@ struct fixture {
         std::is_convertible<T, std::string>::value,
         std::string,
         typename std::conditional<
-          std::is_integral<T>::value && ! std::is_same<T, bool>::value,
+          std::is_integral<T>::value && !std::is_same<T, bool>::value,
           int64_t,
           T
         >::type
@@ -174,7 +174,7 @@ struct fixture {
 
   template <class T>
   bool value_is(const char* key, const T& what) {
-    if (! config_server.unsafe())
+    if (!config_server.unsafe())
       return config_server_has(key, what);
     auto& cv = values[key];
     using type =
@@ -182,7 +182,7 @@ struct fixture {
         std::is_convertible<T, std::string>::value,
         std::string,
         typename std::conditional<
-          std::is_integral<T>::value && ! std::is_same<T, bool>::value,
+          std::is_integral<T>::value && !std::is_same<T, bool>::value,
           int64_t,
           T
         >::type
@@ -192,13 +192,13 @@ struct fixture {
   }
 
   size_t num_values() {
-    if (! config_server.unsafe()) {
+    if (!config_server.unsafe()) {
       size_t result = 0;
       scoped_actor self{system};
       self->request(config_server, infinite, get_atom::value, "*").receive(
         [&](std::vector<std::pair<std::string, message>>& msgs) {
           for (auto& kvp : msgs)
-            if (! kvp.second.empty())
+            if (!kvp.second.empty())
               ++result;
         },
         ERROR_HANDLER

@@ -177,7 +177,7 @@ public:
   void init(actor_system_config& cfg) override {
     super::init(cfg);
     file_.open(cfg.scheduler_profiling_output_file);
-    if (! file_)
+    if (!file_)
       std::cerr << "[WARNING] could not open file \""
                 << cfg.scheduler_profiling_output_file
                 << "\" (no profiler output will be generated)"

@@ -50,7 +50,7 @@ void monitorable_actor::attach(attachable_ptr ptr) {
     return true;
   });
   CAF_LOG_DEBUG("cannot attach functor to terminated actor: call immediately");
-  if (! attached)
+  if (!attached)
     ptr->actor_exited(fail_state, nullptr);
 }
 
@@ -64,7 +64,7 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   attachable_ptr head;
   bool set_fail_state = exclusive_critical_section([&]() -> bool {
-    if (! is_cleaned_up()) {
+    if (!is_cleaned_up()) {
       // local actors pass fail_state_ as first argument
       if (&fail_state_ != &reason)
         fail_state_ = std::move(reason);
@@ -75,7 +75,7 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
     }
     return false;
   });
-  if (! set_fail_state)
+  if (!set_fail_state)
     return false;
   CAF_LOG_INFO("cleanup" << CAF_ARG(id())
                << CAF_ARG(node()) << CAF_ARG(reason));
@@ -206,12 +206,12 @@ size_t monitorable_actor::detach_impl(const attachable::token& what,
                                       attachable_ptr& ptr, bool stop_on_hit,
                                       bool dry_run) {
   CAF_LOG_TRACE("");
-  if (! ptr) {
+  if (!ptr) {
     CAF_LOG_DEBUG("invalid ptr");
     return 0;
   }
   if (ptr->matches(what)) {
-    if (! dry_run) {
+    if (!dry_run) {
       CAF_LOG_DEBUG("removed element");
       attachable_ptr next;
       next.swap(ptr->next);
@@ -226,14 +226,14 @@ bool monitorable_actor::handle_system_message(mailbox_element& x,
                                               execution_unit* ctx,
                                               bool trap_exit) {
   auto& msg = x.content();
-  if (! trap_exit && msg.size() == 1 && msg.match_element<exit_msg>(0)) {
+  if (!trap_exit && msg.size() == 1 && msg.match_element<exit_msg>(0)) {
     // exits for non-normal exit reasons
     auto& em = msg.get_mutable_as<exit_msg>(0);
     if (em.reason)
       cleanup(std::move(em.reason), ctx);
     return true;
   } else if (msg.size() > 1 && msg.match_element<sys_atom>(0)) {
-    if (! x.sender)
+    if (!x.sender)
       return true;
     error err;
     mailbox_element_ptr res;
@@ -249,7 +249,7 @@ bool monitorable_actor::handle_system_message(mailbox_element& x,
                                     strong_actor_ptr{ctrl()}, name());
       }
     );
-    if (! res && ! err)
+    if (!res && !err)
       err = sec::unsupported_sys_message;
     if (err && x.mid.is_request())
       res = make_mailbox_element(ctrl(), x.mid.response_id(),

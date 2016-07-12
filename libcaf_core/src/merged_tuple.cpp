@@ -45,8 +45,8 @@ merged_tuple::merged_tuple(data_type xs, mapping_type ys)
     : data_(std::move(xs)),
       type_token_(0xFFFFFFFF),
       mapping_(std::move(ys)) {
-  CAF_ASSERT(! data_.empty());
-  CAF_ASSERT(! mapping_.empty());
+  CAF_ASSERT(!data_.empty());
+  CAF_ASSERT(!mapping_.empty());
   // calculate type token
   for (size_t i = 0; i < mapping_.size(); ++i) {
     type_token_ <<= 6;

@@ -117,7 +117,7 @@ public:
         }
         // connect to endpoint and initiate handhsake etc.
         auto y = system().middleman().backend().new_tcp_scribe(key.first, port);
-        if (! y) {
+        if (!y) {
           rp.deliver(std::move(y.error()));
           return {};
         }
@@ -191,7 +191,7 @@ private:
       in = nullptr;
     auto res = system().middleman().backend().new_tcp_doorman(port, in,
                                                               reuse_addr);
-    if (! res)
+    if (!res)
       return std::move(res.error());
     hdl = res->first;
     actual_port = res->second;

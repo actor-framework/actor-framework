@@ -203,7 +203,7 @@ struct curl_state : base_state {
 
   void init(std::string m_name, std::string m_color) override {
     curl = curl_easy_init();
-    if (! curl)
+    if (!curl)
       throw std::runtime_error("Unable initialize CURL.");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curl_state::callback);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
@@ -349,7 +349,7 @@ void caf_main(actor_system& system) {
   auto master = self->spawn<detached>(curl_master);
   self->spawn<detached>(client, master);
   // poll CTRL+C flag every second
-  while (! shutdown_flag)
+  while (!shutdown_flag)
     std::this_thread::sleep_for(std::chrono::seconds(1));
   aout(self) << color::cyan << "received CTRL+C" << color::reset_endl;
   // shutdown actors

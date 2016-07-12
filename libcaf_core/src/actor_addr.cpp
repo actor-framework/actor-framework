@@ -44,9 +44,9 @@ actor_addr::actor_addr(actor_control_block* ptr, bool add_ref)
 intptr_t actor_addr::compare(const actor_control_block* lhs,
                              const actor_control_block* rhs) {
   // invalid actors are always "less" than valid actors
-  if (! lhs)
+  if (!lhs)
     return rhs ? -1 : 0;
-  if (! rhs)
+  if (!rhs)
     return 1;
   // check for identity
   if (lhs == rhs)

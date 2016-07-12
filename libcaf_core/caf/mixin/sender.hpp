@@ -64,7 +64,7 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(! statically_typed<Subtype>() || statically_typed<Dest>(),
+    static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),
                   "statically typed actors can only send() to other "
                   "statically typed actors; use anon_send() or request() when "
                   "communicating with dynamically typed actors");
@@ -118,7 +118,7 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(! statically_typed<Subtype>() || statically_typed<Dest>(),
+    static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),
                   "statically typed actors are only allowed to send() to other "
                   "statically typed actors; use anon_send() or request() when "
                   "communicating with dynamically typed actors");

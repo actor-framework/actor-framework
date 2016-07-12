@@ -47,11 +47,11 @@ struct typed_mpi<detail::type_list<Is...>,
   static_assert(sizeof...(Ls) > 0, "template parameter pack Ls empty");
   using input_types = detail::type_list<Is...>;
   using output_types = detail::type_list<Ls...>;
-  static_assert(! detail::tl_exists<
+  static_assert(!detail::tl_exists<
                   input_types,
                   is_illegal_message_element
                 >::value
-                && ! detail::tl_exists<
+                && !detail::tl_exists<
                   output_types,
                   is_illegal_message_element
                 >::value,

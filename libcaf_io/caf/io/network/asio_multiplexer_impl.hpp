@@ -96,7 +96,7 @@ error ip_bind(asio_tcp_socket_acceptor& fd, uint16_t port,
 expected<connection_handle>
 asio_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
   auto sck = new_tcp_connection(service(), host, port);
-  if (! sck)
+  if (!sck)
     return std::move(sck.error());
   asio_tcp_socket fd{std::move(*sck)};
   auto id = int64_from_native_socket(fd.native_handle());
@@ -132,7 +132,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
     void configure_read(receive_policy::config config) override {
       CAF_LOG_TRACE("");
       stream_.configure_read(config);
-      if (! launched_) {
+      if (!launched_) {
         launch();
       }
     }
@@ -164,7 +164,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
     }
     void launch() {
       CAF_LOG_TRACE("");
-      CAF_ASSERT(! launched_);
+      CAF_ASSERT(!launched_);
       launched_ = true;
       stream_.start(this);
     }
@@ -195,7 +195,7 @@ asio_multiplexer::add_tcp_scribe(abstract_broker* self,
                                  const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(host) << ":" << CAF_ARG(port));
   auto conn = new_tcp_connection(service(), host, port);
-  if (! conn)
+  if (!conn)
     return std::move(conn.error());
   return add_tcp_scribe(self, std::move(*conn));
 }

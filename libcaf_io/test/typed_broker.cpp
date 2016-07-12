@@ -106,7 +106,7 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
     auto& buf = self->wr_buf(hdl);
     binary_serializer sink{self->system(), buf};
     auto e = sink(x, y);
-    CAF_REQUIRE(! e);
+    CAF_REQUIRE(!e);
     self->flush(hdl);
   };
   self->set_down_handler([=](down_msg& dm) {
@@ -125,7 +125,7 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
       int y;
       binary_deserializer source{self->system(), msg.buf};
       auto e = source(x, y);
-      CAF_REQUIRE(! e);
+      CAF_REQUIRE(!e);
       if (x == pong_atom::value)
         self->send(actor_cast<ping_actor>(buddy), pong_atom::value, y);
       else

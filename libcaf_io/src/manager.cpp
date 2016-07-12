@@ -36,7 +36,7 @@ manager::~manager() {
 }
 
 void manager::set_parent(abstract_broker* ptr) {
-  if (! detached())
+  if (!detached())
     parent_ = ptr ? ptr->ctrl() : nullptr;
 }
 
@@ -46,7 +46,7 @@ abstract_broker* manager::parent() {
 
 void manager::detach(execution_unit*, bool invoke_disconnect_message) {
   CAF_LOG_TRACE("");
-  if (! detached()) {
+  if (!detached()) {
     CAF_LOG_DEBUG("disconnect servant from broker");
     auto raw_ptr = parent();
     // keep the strong reference until we go out of scope

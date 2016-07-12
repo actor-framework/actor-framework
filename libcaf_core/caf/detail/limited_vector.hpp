@@ -118,12 +118,12 @@ public:
   }
 
   void push_back(const_reference what) {
-    CAF_ASSERT(! full());
+    CAF_ASSERT(!full());
     data_[size_++] = what;
   }
 
   void pop_back() {
-    CAF_ASSERT(! empty());
+    CAF_ASSERT(!empty());
     --size_;
   }
 
@@ -194,22 +194,22 @@ public:
   }
 
   reference front() {
-    CAF_ASSERT(! empty());
+    CAF_ASSERT(!empty());
     return data_[0];
   }
 
   const_reference front() const {
-    CAF_ASSERT(! empty());
+    CAF_ASSERT(!empty());
     return data_[0];
   }
 
   reference back() {
-    CAF_ASSERT(! empty());
+    CAF_ASSERT(!empty());
     return data_[size_ - 1];
   }
 
   const_reference back() const {
-    CAF_ASSERT(! empty());
+    CAF_ASSERT(!empty());
     return data_[size_ - 1];
   }
 

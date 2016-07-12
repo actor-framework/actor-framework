@@ -211,12 +211,12 @@ std::string to_string(const error& x);
 
 /// @relates error
 inline bool operator==(const error& x, none_t) {
-  return ! x;
+  return !x;
 }
 
 /// @relates error
 inline bool operator==(none_t, const error& x) {
-  return ! x;
+  return !x;
 }
 
 /// @relates error
@@ -244,13 +244,13 @@ inline bool operator!=(none_t, const error& x) {
 /// @relates error
 template <class E, class = enable_if_has_make_error_t<E>>
 bool operator!=(const error& x, E y) {
-  return ! (x == y);
+  return !(x == y);
 }
 
 /// @relates error
 template <class E, class = enable_if_has_make_error_t<E>>
 bool operator!=(E x, const error& y) {
-  return ! (x == y);
+  return !(x == y);
 }
 
 } // namespace caf

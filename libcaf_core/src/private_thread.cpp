@@ -59,7 +59,7 @@ void private_thread::run() {
       }
     } while (resume_later);
     // wait until actor becomes ready again or was destroyed
-    if (! await_resume())
+    if (!await_resume())
       return;
   }
 }
@@ -102,7 +102,7 @@ void private_thread::notify_self_destroyed() {
 
 void private_thread::await_self_destroyed() {
   std::unique_lock<std::mutex> guard(mtx_);
-  while (! self_destroyed_)
+  while (!self_destroyed_)
     cv_.wait(guard);
 }
 

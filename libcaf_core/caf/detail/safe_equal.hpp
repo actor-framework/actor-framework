@@ -32,9 +32,9 @@ namespace detail {
 /// performs an epsilon comparison.
 template <class T, typename U>
 typename std::enable_if<
-  ! std::is_floating_point<T>::value
-  && ! std::is_floating_point<U>::value
-  && ! (std::is_same<T, U>::value && std::is_empty<T>::value),
+  !std::is_floating_point<T>::value
+  && !std::is_floating_point<U>::value
+  && !(std::is_same<T, U>::value && std::is_empty<T>::value),
   bool
 >::type
 safe_equal(const T& lhs, const U& rhs) {

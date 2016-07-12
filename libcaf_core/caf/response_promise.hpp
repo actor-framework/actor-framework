@@ -46,7 +46,7 @@ public:
   /// Satisfies the promise by sending a non-error response message.
   template <class T, class... Ts>
   typename std::enable_if<
-    (sizeof...(Ts) > 0) || ! std::is_convertible<T, error>::value,
+    (sizeof...(Ts) > 0) || !std::is_convertible<T, error>::value,
     response_promise
   >::type
   deliver(T&&x, Ts&&... xs) {
@@ -62,7 +62,7 @@ public:
 
   /// Queries whether this promise is a valid promise that is not satisfied yet.
   inline bool pending() const {
-    return ! stages_.empty() || source_;
+    return !stages_.empty() || source_;
   }
 
   /// @cond PRIVATE

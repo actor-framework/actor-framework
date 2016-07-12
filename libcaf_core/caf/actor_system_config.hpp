@@ -131,7 +131,7 @@ public:
   template <class T, class... Ts>
   actor_system_config& add_actor_type(std::string name) {
     using handle = typename infer_handle_from_class<T>::type;
-    if (! std::is_same<handle, actor>::value)
+    if (!std::is_same<handle, actor>::value)
       add_message_type<handle>(name);
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
   }
@@ -142,7 +142,7 @@ public:
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
     using handle = typename infer_handle_from_fun<F>::type;
-    if (! std::is_same<handle, actor>::value)
+    if (!std::is_same<handle, actor>::value)
       add_message_type<handle>(name);
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
   }
@@ -178,7 +178,7 @@ public:
       result = to_string(category);
       result += ": ";
       result += to_string(static_cast<T>(val));
-      if (! ctx.empty()) {
+      if (!ctx.empty()) {
         result += " (";
         result += ctx;
         result += ")";

@@ -84,7 +84,7 @@ int exec_main(F fun, int argc, char** argv,
   // pass config to the actor system
   actor_system system{cfg};
   if (cfg.slave_mode) {
-    if (! cfg.slave_mode_fun) {
+    if (!cfg.slave_mode_fun) {
       std::cerr << "cannot run slave mode, I/O module not loaded" << std::endl;
       return 1;
     }

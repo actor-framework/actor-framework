@@ -87,7 +87,7 @@ struct fixture {
     if (expect_fail)
       CAF_REQUIRE(result.unsafe());
     else
-      CAF_REQUIRE(! result.unsafe());
+      CAF_REQUIRE(!result.unsafe());
     return result;
   }
 

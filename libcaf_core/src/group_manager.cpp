@@ -77,7 +77,7 @@ public:
 
   std::pair<bool, size_t> add_subscriber(strong_actor_ptr who) {
     CAF_LOG_TRACE(CAF_ARG(who));
-    if (! who)
+    if (!who)
       return {false, subscribers_.size()};
     exclusive_guard guard(mtx_);
     auto res = subscribers_.emplace(std::move(who)).second;
@@ -354,7 +354,7 @@ public:
     if (e)
       return e;
     CAF_LOG_DEBUG(CAF_ARG(identifier) << CAF_ARG(broker_ptr));
-    if (! broker_ptr) {
+    if (!broker_ptr) {
       storage = invalid_group;
       return none;
     }

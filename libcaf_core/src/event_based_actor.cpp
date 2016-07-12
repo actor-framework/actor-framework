@@ -34,7 +34,7 @@ void event_based_actor::initialize() {
   CAF_LOG_TRACE("subtype =" << logger::render_type_name(typeid(*this)).c_str());
   is_initialized(true);
   auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(! bhvr, "make_behavior() did not return a behavior:"
+  CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
                            << CAF_ARG(has_behavior()));
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()

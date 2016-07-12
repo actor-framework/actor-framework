@@ -56,7 +56,7 @@ public:
   }
 
   inline behavior& back() {
-    CAF_ASSERT(! empty());
+    CAF_ASSERT(!empty());
     return elements_.back();
   }
 

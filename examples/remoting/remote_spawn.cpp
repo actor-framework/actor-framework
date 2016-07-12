@@ -52,7 +52,7 @@ calculator::behavior_type calculator_fun(calculator::pointer self) {
 
 // removes leading and trailing whitespaces
 string trim(std::string s) {
-  auto not_space = [](char c) { return ! isspace(c); };
+  auto not_space = [](char c) { return !isspace(c); };
   // trim left
   s.erase(s.begin(), find_if(s.begin(), s.end(), not_space));
   // trim right
@@ -100,7 +100,7 @@ void client_repl(function_view<calculator> f) {
 
 void client(actor_system& system, const std::string& host, uint16_t port) {
   auto node = system.middleman().connect(host, port);
-  if (! node) {
+  if (!node) {
     std::cerr << "*** connect failed: "
               << system.render(node.error()) << std::endl;
     return;
@@ -110,7 +110,7 @@ void client(actor_system& system, const std::string& host, uint16_t port) {
   auto tout = std::chrono::seconds(30); // wait no longer than 30s
   auto worker = system.middleman().remote_spawn<calculator>(*node, type,
                                                             args, tout);
-  if (! worker) {
+  if (!worker) {
     std::cerr << "*** remote spawn failed: "
               << system.render(worker.error()) << std::endl;
     return;
@@ -124,7 +124,7 @@ void client(actor_system& system, const std::string& host, uint16_t port) {
 
 void server(actor_system& system, uint16_t port) {
   auto res = system.middleman().open(port);
-  if (! res) {
+  if (!res) {
     std::cerr << "*** cannot open port: "
               << system.render(res.error()) << std::endl;
   }

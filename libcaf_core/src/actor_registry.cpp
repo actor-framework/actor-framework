@@ -67,11 +67,11 @@ strong_actor_ptr actor_registry::get(actor_id key) const {
 
 void actor_registry::put(actor_id key, strong_actor_ptr val) {
   CAF_LOG_TRACE(CAF_ARG(key));
-  if (! val)
+  if (!val)
     return;
   { // lifetime scope of guard
     exclusive_guard guard(instances_mtx_);
-    if (! entries_.emplace(key, val).second)
+    if (!entries_.emplace(key, val).second)
       return;
   }
   // attach functor without lock

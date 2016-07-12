@@ -102,7 +102,7 @@ private:
   }
 
   template <class T>
-  typename std::enable_if<! std::is_constructible<State, T>::value>::type
+  typename std::enable_if<!std::is_constructible<State, T>::value>::type
   cr_state(T) {
     new (&state_) State();
   }
@@ -123,7 +123,7 @@ private:
   }
 
   template <class U>
-  typename std::enable_if<! detail::has_name<U>::value, const char*>::type
+  typename std::enable_if<!detail::has_name<U>::value, const char*>::type
   get_name(const U&) const {
     return Base::name();
   }

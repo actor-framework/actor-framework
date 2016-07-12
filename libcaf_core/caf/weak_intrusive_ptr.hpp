@@ -128,7 +128,7 @@ public:
   }
 
   bool operator!() const noexcept {
-    return ! ptr_;
+    return !ptr_;
   }
 
   explicit operator bool() const noexcept {
@@ -149,7 +149,7 @@ public:
 
   /// Tries to upgrade this weak reference to a strong reference.
   intrusive_ptr<T> lock() const noexcept {
-    if (! ptr_ || ! intrusive_ptr_upgrade_weak(ptr_))
+    if (!ptr_ || !intrusive_ptr_upgrade_weak(ptr_))
       return nullptr;
     // reference count already increased by intrusive_ptr_upgrade_weak
     return {ptr_, false};
@@ -159,7 +159,7 @@ public:
   /// Returns a pointer with increased strong reference count
   /// on success, `nullptr` otherwise.
   pointer get_locked() const noexcept {
-    if (! ptr_ || ! intrusive_ptr_upgrade_weak(ptr_))
+    if (!ptr_ || !intrusive_ptr_upgrade_weak(ptr_))
       return nullptr;
     return ptr_;
   }

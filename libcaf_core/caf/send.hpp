@@ -43,7 +43,7 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
       typename detail::implicit_conversions<
         typename std::decay<Ts>::type
       >::type...>;
-  static_assert(! statically_typed<Source>() || statically_typed<Dest>(),
+  static_assert(!statically_typed<Source>() || statically_typed<Dest>(),
                 "statically typed actors can only send() to other "
                 "statically typed actors; use anon_send() or request() when "
                 "communicating with dynamically typed actors");

@@ -121,7 +121,7 @@ CAF_TEST(single_res_function_view) {
   g.assign(system.spawn(multiplier));
   CAF_CHECK_EQUAL(g(10, 20), 200);
   g.assign(system.spawn(divider));
-  CAF_CHECK(! g(1, 0));
+  CAF_CHECK(!g(1, 0));
   g.assign(system.spawn(divider));
   CAF_CHECK_EQUAL(g(4, 2), 2);
 }

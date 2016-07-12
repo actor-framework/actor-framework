@@ -77,7 +77,7 @@ public:
   private:
     void advance() {
       x_ = xs_->next();
-      if (! x_)
+      if (!x_)
         xs_ = nullptr;
     }
 

@@ -154,7 +154,7 @@ public:
       return false;
     detail::meta_elements<detail::type_list<Ts...>> xs;
     for (size_t i = 0; i < xs.arr.size(); ++i)
-      if (! detail::match_element(xs.arr[i], *this, i))
+      if (!detail::match_element(xs.arr[i], *this, i))
         return false;
     return true;
   }
@@ -172,7 +172,7 @@ private:
   template <class F, class R, class... Ts>
   optional<R> apply(F& fun, detail::type_list<R>,
                     detail::type_list<Ts...> tk) {
-    if (! match_elements<Ts...>())
+    if (!match_elements<Ts...>())
       return none;
     detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{*this};
     return detail::apply_args(fun, detail::get_indices(tk), xs);
@@ -181,7 +181,7 @@ private:
   template <class F, class... Ts>
   optional<void> apply(F& fun, detail::type_list<void>,
                        detail::type_list<Ts...> tk) {
-    if (! match_elements<Ts...>())
+    if (!match_elements<Ts...>())
       return none;
     detail::pseudo_tuple<typename std::decay<Ts>::type...> xs{*this};
     detail::apply_args(fun, detail::get_indices(tk), xs);

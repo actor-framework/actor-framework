@@ -62,7 +62,7 @@ strong_actor_ptr proxy_registry::get(const key_type& node, actor_id aid) {
 strong_actor_ptr proxy_registry::get_or_put(const key_type& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
   auto& result = proxies_[nid][aid];
-  if (! result)
+  if (!result)
     result = backend_.make_proxy(nid, aid);
   return result;
 }
@@ -113,7 +113,7 @@ void proxy_registry::clear() {
 }
 
 void proxy_registry::kill_proxy(strong_actor_ptr& ptr, error rsn) {
-  if (! ptr)
+  if (!ptr)
     return;
   auto pptr = static_cast<actor_proxy*>(actor_cast<abstract_actor*>(ptr));
   pptr->kill_proxy(backend_.registry_context(), rsn);

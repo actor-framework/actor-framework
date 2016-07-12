@@ -148,14 +148,14 @@ public:
   }
 
   ~function_view() {
-    if (! impl_.unsafe())
+    if (!impl_.unsafe())
       self_.~scoped_actor();
   }
 
   function_view(function_view&& x)
       : timeout(x.timeout),
         impl_(std::move(x.impl_)) {
-    if (! impl_.unsafe()) {
+    if (!impl_.unsafe()) {
       new (&self_) scoped_actor(impl_.home_system()); //(std::move(x.self_));
       x.self_.~scoped_actor();
     }
@@ -197,16 +197,16 @@ public:
   }
 
   void assign(type x) {
-    if (impl_.unsafe() && ! x.unsafe())
+    if (impl_.unsafe() && !x.unsafe())
       new_self(x);
-    if (! impl_.unsafe() && x.unsafe())
+    if (!impl_.unsafe() && x.unsafe())
       self_.~scoped_actor();
     impl_.swap(x);
   }
 
   /// Checks whether this function view has an actor assigned to it.
   explicit operator bool() const {
-    return ! impl_.unsafe();
+    return !impl_.unsafe();
   }
 
   duration timeout;
@@ -223,7 +223,7 @@ private:
   }
 
   void new_self(const Actor& x) {
-    if (! x.unsafe())
+    if (!x.unsafe())
       new (&self_) scoped_actor(x->home_system());
   }
 
@@ -234,7 +234,7 @@ private:
 /// @relates function_view
 template <class T>
 bool operator==(const function_view<T>& x, std::nullptr_t) {
-  return ! x;
+  return !x;
 }
 
 /// @relates function_view
@@ -246,13 +246,13 @@ bool operator==(std::nullptr_t x, const function_view<T>& y) {
 /// @relates function_view
 template <class T>
 bool operator!=(const function_view<T>& x, std::nullptr_t y) {
-  return ! (x == y);
+  return !(x == y);
 }
 
 /// @relates function_view
 template <class T>
 bool operator!=(std::nullptr_t x, const function_view<T>& y) {
-  return ! (y == x);
+  return !(y == x);
 }
 
 /// Creates a new function view for `x`.

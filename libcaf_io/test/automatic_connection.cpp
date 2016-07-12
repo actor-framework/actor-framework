@@ -137,7 +137,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
   std::thread mars_process;
   std::thread jupiter_process;
   // launch process for Mars
-  if (! as_server) {
+  if (!as_server) {
     CAF_MESSAGE("launch process for Mars");
     mars_process = run_prog("--mars", port, use_asio);
   }
@@ -171,7 +171,7 @@ void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
     }
   );
   // launch process for Jupiter
-  if (! as_server) {
+  if (!as_server) {
     CAF_MESSAGE("launch process for Jupiter");
     jupiter_process = run_prog("--jupiter", mars_port, use_asio);
   }
@@ -260,7 +260,7 @@ CAF_TEST(triangle_setup) {
   bool is_mars = r.opts.count("mars") > 0;
   bool is_jupiter = r.opts.count("jupiter") > 0;
   bool has_port = r.opts.count("port") > 0;
-  if (((is_mars || is_jupiter) && ! has_port) || (is_mars && is_jupiter)) {
+  if (((is_mars || is_jupiter) && !has_port) || (is_mars && is_jupiter)) {
     CAF_ERROR("need a port when running Mars or Jupiter and cannot "
               "both at the same time");
     return;

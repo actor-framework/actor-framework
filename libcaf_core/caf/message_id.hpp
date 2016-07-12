@@ -89,7 +89,7 @@ public:
   }
 
   inline bool is_request() const {
-    return valid() && ! is_response();
+    return valid() && !is_response();
   }
 
   inline message_id response_id() const {

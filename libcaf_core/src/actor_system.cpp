@@ -112,7 +112,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     [=](subscribe_atom, const std::string& key) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
       CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
-      if (! subscriber)
+      if (!subscriber)
         return;
       self->state.data[key].second.insert(subscriber);
       auto& subscribers = self->state.subscribers;
@@ -127,7 +127,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     // unsubscribe from a key
     [=](unsubscribe_atom, const std::string& key) {
       auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
-      if (! subscriber)
+      if (!subscriber)
         return;
       CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
       if (key == wildcard) {
@@ -203,7 +203,7 @@ actor_system::actor_system(actor_system_config& cfg)
   using profiled_share = scheduler::profiled_coordinator<policy::work_sharing>;
   using profiled_steal = scheduler::profiled_coordinator<policy::work_stealing>;
   // set scheduler only if not explicitly loaded by user
-  if (! sched) {
+  if (!sched) {
     enum sched_conf {
       stealing          = 0x0001,
       sharing           = 0x0002,
@@ -304,7 +304,7 @@ const uniform_type_info_map& actor_system::types() const {
 }
 
 std::string actor_system::render(const error& x) const {
-  if (! x)
+  if (!x)
     return to_string(x);
   auto& xs = config().error_renderers;
   auto i = xs.find(x.category());
@@ -322,7 +322,7 @@ bool actor_system::has_middleman() const {
 }
 
 io::middleman& actor_system::middleman() {
-  if (! middleman_)
+  if (!middleman_)
     CAF_RAISE_ERROR("cannot access middleman: module not loaded");
   return *middleman_;
 }
@@ -332,7 +332,7 @@ bool actor_system::has_opencl_manager() const {
 }
 
 opencl::manager& actor_system::opencl_manager() const {
-  if (! opencl_manager_)
+  if (!opencl_manager_)
     CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
   return *opencl_manager_;
 }
@@ -384,7 +384,7 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
     return sec::unknown_type;
   actor_config cfg{ctx ? ctx : &dummy_execution_unit_};
   auto res = i->second(cfg, args);
-  if (! res.first)
+  if (!res.first)
     return sec::cannot_spawn_actor_from_arguments;
   if (check_interface && !assignable(res.second, *expected_ifs))
     return sec::unexpected_actor_messaging_interface;

@@ -101,7 +101,7 @@ public:
   expected<ActorHandle> remote_actor(std::string host, uint16_t port) {
     detail::type_list<ActorHandle> tk;
     auto x = remote_actor(system().message_types(tk), std::move(host), port);
-    if (! x)
+    if (!x)
       return x.error();
     CAF_ASSERT(x && *x);
     return actor_cast<ActorHandle>(std::move(*x));
@@ -153,7 +153,7 @@ public:
 
   /// Returns whether this middleman has any hooks installed.
   inline bool has_hook() const {
-    return ! hooks_.empty();
+    return !hooks_.empty();
   }
 
   /// Returns all installed hooks.
@@ -173,11 +173,11 @@ public:
   expected<Handle> remote_spawn(const node_id& nid, std::string name,
                                 message args,
                                 duration timeout = std::chrono::seconds(60)) {
-    if (! nid || name.empty())
+    if (!nid || name.empty())
       return sec::invalid_argument;
     auto res = remote_spawn_impl(nid, name, args,
                                  system().message_types<Handle>(), timeout);
-    if (! res)
+    if (!res)
       return std::move(res.error());
     return actor_cast<Handle>(std::move(*res));
   }
@@ -261,7 +261,7 @@ private:
   expected<typename infer_handle_from_class<Impl>::type>
   spawn_client_impl(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
     auto ehdl = backend().new_tcp_scribe(host, port);
-    if (! ehdl)
+    if (!ehdl)
       return ehdl.error();
     auto hdl = *ehdl;
     detail::init_fun_factory<Impl, F> fac;
@@ -280,7 +280,7 @@ private:
     detail::init_fun_factory<Impl, F> fac;
     auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
     auto ehdl = backend().new_tcp_doorman(port);
-    if (! ehdl)
+    if (!ehdl)
       return ehdl.error();
     auto hdl = ehdl->first;
     actor_config cfg{&backend()};

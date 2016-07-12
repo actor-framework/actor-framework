@@ -133,7 +133,7 @@ expected<void> middleman::close(uint16_t port) {
 expected<node_id> middleman::connect(std::string host, uint16_t port) {
   auto f = make_function_view(actor_handle());
   auto res = f(connect_atom::value, std::move(host), port);
-  if (! res)
+  if (!res)
     return std::move(res.error());
   return std::get<0>(*res);
 }
@@ -142,7 +142,7 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
                                       std::set<std::string> sigs, uint16_t port,
                                       const char* cstr, bool ru) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
-  if (! whom)
+  if (!whom)
     return sec::cannot_publish_invalid_actor;
   std::string in;
   if (cstr)
@@ -184,12 +184,12 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
   auto res = f(connect_atom::value, std::move(host), port);
-  if (! res)
+  if (!res)
     return std::move(res.error());
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
-  if (! ptr)
+  if (!ptr)
     return make_error(sec::no_actor_published_at_port, port);
-  if (! system().assignable(std::get<2>(*res), ifs))
+  if (!system().assignable(std::get<2>(*res), ifs))
     return make_error(sec::unexpected_actor_messaging_interface, std::move(ifs),
                       std::move(std::get<2>(*res)));
   return ptr;
@@ -215,7 +215,7 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
                                         const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(group_identifier) << CAF_ARG(host) << CAF_ARG(port));
   auto group_server = remote_actor(host, port);
-  if (! group_server)
+  if (!group_server)
     return std::move(group_server.error());
   scoped_actor self{system(), true};
   self->send(*group_server, get_atom::value, group_identifier);
@@ -263,7 +263,7 @@ void middleman::start() {
     hooks_.emplace_back(f(system_));
   // launch backend
   backend_supervisor_ = backend().make_supervisor();
-  if (! backend_supervisor_) {
+  if (!backend_supervisor_) {
     // the only backend that returns a `nullptr` is the `test_multiplexer`
     // which does not have its own thread but uses the main thread instead
     backend().thread_id(std::this_thread::get_id());
@@ -289,7 +289,7 @@ void middleman::stop() {
     for (auto& kvp : named_brokers_) {
       auto& hdl = kvp.second;
       auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(hdl));
-      if (! ptr->is_terminated()) {
+      if (!ptr->is_terminated()) {
         ptr->context(&backend());
         ptr->is_terminated(true);
         ptr->finalize();

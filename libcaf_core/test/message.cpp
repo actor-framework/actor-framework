@@ -137,8 +137,8 @@ CAF_TEST(extract_opts) {
   CAF_CHECK(r.opts.count("foo") > 0);
   CAF_CHECK_EQUAL(foo, 42);
   CAF_CHECK_EQUAL(bar, 0);
-  CAF_CHECK(! r.error.empty()); // -b is an unknown option
-  CAF_CHECK(! r.remainder.empty()
+  CAF_CHECK(!r.error.empty()); // -b is an unknown option
+  CAF_CHECK(!r.remainder.empty()
             && to_string(r.remainder) == to_string(make_message("-b", "1337")));
   r = r.remainder.extract_opts({
     {"bar,b", "bar desc", bar}

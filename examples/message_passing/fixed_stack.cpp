@@ -80,7 +80,7 @@ void caf_main(actor_system& system) {
   // drain stack
   aout(self) << "stack: { ";
   bool stack_empty = false;
-  while (! stack_empty) {
+  while (!stack_empty) {
     self->request(st, std::chrono::seconds(10), pop_atom::value).receive(
       [&](int x) {
         aout(self) << x << "  ";

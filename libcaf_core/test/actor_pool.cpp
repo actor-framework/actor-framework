@@ -122,7 +122,7 @@ CAF_TEST(round_robin_actor_pool) {
   // poll actor pool up to 10 times or until it removes the failed worker
   bool success = false;
   size_t i = 0;
-  while (! success && ++i <= 10) {
+  while (!success && ++i <= 10) {
     self->request(pool, infinite, sys_atom::value, get_atom::value).receive(
       [&](std::vector<actor>& ws) {
         success = workers.size() == ws.size();

@@ -87,7 +87,7 @@ CAF_TEST(metaprogramming) {
     using list_a = type_list<int, float, double>;
     using list_b = type_list<float, int, double, std::string>;
     CAF_CHECK((tl_subset_of<list_a, list_b>::value));
-    CAF_CHECK(! (tl_subset_of<list_b, list_a>::value));
+    CAF_CHECK(!(tl_subset_of<list_b, list_a>::value));
     CAF_CHECK((tl_subset_of<list_a, list_a>::value));
     CAF_CHECK((tl_subset_of<list_b, list_b>::value));
   }

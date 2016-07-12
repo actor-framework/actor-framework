@@ -69,7 +69,7 @@ connection_state instance::handle(execution_unit* ctx,
   } else {
     binary_deserializer bd{ctx, dm.buf};
     auto e = bd(hdr);
-    if (e || ! valid(hdr)) {
+    if (e || !valid(hdr)) {
       CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
       return err();
     }
@@ -97,7 +97,7 @@ connection_state instance::handle(execution_unit* ctx,
       if (hdr.source_node != this_node_) {
         // TODO: signalize error back to sending node
         auto reverse_path = lookup(hdr.source_node);
-        if (! reverse_path) {
+        if (!reverse_path) {
           CAF_LOG_WARNING("cannot send error message: no route to source");
         } else {
           CAF_LOG_WARNING("not implemented yet: signalize forward failure");
@@ -192,7 +192,7 @@ connection_state instance::handle(execution_unit* ctx,
       break;
     }
     case message_type::dispatch_message: {
-      if (! payload_valid())
+      if (!payload_valid())
         return err();
       // in case the sender of this message was received via a third node,
       // we assume that that node to offers a route to the original source
@@ -230,7 +230,7 @@ connection_state instance::handle(execution_unit* ctx,
       callee_.proxy_announced(hdr.source_node, hdr.dest_actor);
       break;
     case message_type::kill_proxy: {
-      if (! payload_valid())
+      if (!payload_valid())
         return err();
       binary_deserializer bd{ctx, *payload};
       error fail_state;
@@ -350,7 +350,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                 << CAF_ARG(mid) << CAF_ARG(msg));
   CAF_ASSERT(receiver && system().node() != receiver->node());
   auto path = lookup(receiver->node());
-  if (! path) {
+  if (!path) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
   }
@@ -402,7 +402,7 @@ void instance::write_server_handshake(execution_unit* ctx,
     if (i != published_actors_.end())
       pa = &i->second;
   }
-  CAF_LOG_DEBUG_IF(! pa && port, "no actor published");
+  CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
   auto writer = make_callback([&](serializer& sink) -> error {
     auto& ref = callee_.system().config().middleman_app_identifier;
     auto e = sink(const_cast<std::string&>(ref));

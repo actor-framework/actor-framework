@@ -41,7 +41,7 @@ optional<routing_table::route> routing_table::lookup(const node_id& target) {
   auto i = indirect_.find(target);
   if (i != indirect_.end()) {
     auto& hops = i->second;
-    while (! hops.empty()) {
+    while (!hops.empty()) {
       auto& hop = *hops.begin();
       hdl = lookup_direct(hop);
       if (hdl != invalid_connection_handle)

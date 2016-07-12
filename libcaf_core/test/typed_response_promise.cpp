@@ -59,7 +59,7 @@ public:
     return {
       [=](int x) -> foo_promise {
          auto resp = response(x * 2);
-         CAF_CHECK(! resp.pending());
+         CAF_CHECK(!resp.pending());
          return resp.deliver(x * 4); // has no effect
       },
       [=](get_atom, int x) -> foo_promise {
@@ -89,11 +89,11 @@ public:
         // verify move semantics
         CAF_CHECK(entry.pending());
         foo2_promise tmp(std::move(entry));
-        CAF_CHECK(! entry.pending());
+        CAF_CHECK(!entry.pending());
         CAF_CHECK(tmp.pending());
         entry = std::move(tmp);
         CAF_CHECK(entry.pending());
-        CAF_CHECK(! tmp.pending());
+        CAF_CHECK(!tmp.pending());
         return entry;
       },
       [=](get_atom, double) -> foo3_promise {

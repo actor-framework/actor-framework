@@ -53,7 +53,7 @@ void actor_companion::enqueue(strong_actor_ptr src, message_id mid,
 }
 
 void actor_companion::launch(execution_unit*, bool, bool hide) {
-  is_registered(! hide);
+  is_registered(!hide);
 }
 
 void actor_companion::on_exit() {

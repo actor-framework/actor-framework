@@ -155,7 +155,7 @@
 #    define CAF_IOS
 #  else
 #    define CAF_MACOS
-#    if defined(CAF_GCC) && ! defined(_GLIBCXX_HAS_GTHREADS)
+#    if defined(CAF_GCC) && !defined(_GLIBCXX_HAS_GTHREADS)
 #      define _GLIBCXX_HAS_GTHREADS
 #    endif
 #  endif

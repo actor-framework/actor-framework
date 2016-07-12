@@ -165,7 +165,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
     return s[0] == "help"
            || std::find_if(s.begin() + 1, s.end(), has_short_help) != s.end();
   };
-  if (! no_help && std::none_of(xs.begin(), xs.end(), pred)) {
+  if (!no_help && std::none_of(xs.begin(), xs.end(), pred)) {
     xs.push_back(cli_arg{"help,h,?", "print this text"});
   }
   std::map<std::string, cli_arg*> shorts;
@@ -245,7 +245,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           // this short opt expects two arguments
           if (arg.size() > 2) {
              // this short opt comes with a value (no space), e.g., -x2
-            if (! i->second->fun(arg.substr(2))) {
+            if (!i->second->fun(arg.substr(2))) {
               error = "invalid value for " + i->second->name + ": " + arg;
               return skip();
             }
@@ -268,7 +268,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
             error =  "missing argument to " + arg;
             return skip();
           }
-          if (! j->second->fun(arg.substr(eq_pos + 1))) {
+          if (!j->second->fun(arg.substr(eq_pos + 1))) {
             error = "invalid value for " + j->second->name + ": " + arg;
             return skip();
           }
@@ -290,14 +290,14 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
       }
       auto i = shorts.find(arg1.substr(0, 2));
       if (i != shorts.end()) {
-        if (! i->second->fun || arg1.size() > 2) {
+        if (!i->second->fun || arg1.size() > 2) {
           // this short opt either expects no argument or comes with a value
           // (no  space), e.g., -x2, so we have to parse it with the
           // one-argument form above
           return skip();
         }
         CAF_ASSERT(arg1.size() == 2);
-        if (! i->second->fun(arg2)) {
+        if (!i->second->fun(arg2)) {
           error = "invalid value for option " + i->second->name + ": " + arg2;
           return skip();
         }
@@ -383,7 +383,7 @@ message message::concat_impl(std::initializer_list<data_ptr> xs) {
 }
 
 error inspect(serializer& sink, message& msg) {
-  if (! sink.context())
+  if (!sink.context())
     return sec::no_context;
   // build type name
   uint16_t zero = 0;
@@ -396,7 +396,7 @@ error inspect(serializer& sink, message& msg) {
   for (size_t i = 0; i < n; ++i) {
     auto rtti = msg.cvals()->type(i);
     auto ptr = types.portable_name(rtti);
-    if (! ptr) {
+    if (!ptr) {
       std::cerr << "[ERROR]: cannot serialize message because a type was "
                    "not added to the types list, typeid name: "
                 << (rtti.second ? rtti.second->name() : "-not-available-")
@@ -421,7 +421,7 @@ error inspect(serializer& sink, message& msg) {
 }
 
 error inspect(deserializer& source, message& msg) {
-  if (! source.context())
+  if (!source.context())
     return sec::no_context;
   uint16_t zero;
   std::string tname;
@@ -451,7 +451,7 @@ error inspect(deserializer& source, message& msg) {
     auto n = next(i);
     tmp.assign(i, n);
     auto ptr = types.make_value(tmp);
-    if (! ptr)
+    if (!ptr)
       return make_error(sec::unknown_type, tmp);
     err = ptr->load(source);
     if (err)

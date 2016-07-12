@@ -139,7 +139,7 @@ bool run_ssh(actor_system& system, const string& wdir,
   string line;
   std::cout << "popen: " << oss.str() << std::endl;
   auto fp = popen(oss.str().c_str(), "r");
-  if (! fp)
+  if (!fp)
     return false;
   char buf[512];
   auto eob = buf + sizeof(buf); // end-of-buf
@@ -159,7 +159,7 @@ bool run_ssh(actor_system& system, const string& wdir,
   }
   pclose(fp);
   std::cout << "host down: " << host << std::endl;
-  if (! line.empty())
+  if (!line.empty())
     aout(self) << line << std::endl;
   return true;
 }
@@ -171,13 +171,13 @@ void bootstrap(actor_system& system,
                const string& cmd,
                vector<string> args) {
   using io::network::interfaces;
-  if (! args.empty())
+  if (!args.empty())
     args.erase(args.begin());
   scoped_actor self{system};
   // open a random port and generate a list of all
   // possible addresses slaves can use to connect to us
   auto port_res = system.middleman().publish(self, 0);
-  if (! port_res) {
+  if (!port_res) {
     cerr << "fatal: unable to publish actor: "
          << system.render(port_res.error()) << endl;
     return;
@@ -195,7 +195,7 @@ void bootstrap(actor_system& system,
       oss << cmd;
       if (slave.cpu_slots > 0)
         oss << " --caf#scheduler.max-threads=" << slave.cpu_slots;
-      if (! slave.opencl_device_ids.empty())
+      if (!slave.opencl_device_ids.empty())
         oss << " --caf#opencl-devices=" << slave.opencl_device_ids;
       oss << " --caf#slave-mode"
           << " --caf#slave-name=" << slave.host
@@ -205,7 +205,7 @@ void bootstrap(actor_system& system,
                            [&](const char*, protocol, bool lo, const char* x) {
         if (lo)
           return;
-        if (! is_first)
+        if (!is_first)
           oss << ",";
         else
           is_first = false;
@@ -213,7 +213,7 @@ void bootstrap(actor_system& system,
       });
       for (auto& arg : args)
         oss << " " << arg;
-      if (! run_ssh(system, wdir, oss.str(), slave.host))
+      if (!run_ssh(system, wdir, oss.str(), slave.host))
         anon_send(bootstrapper, slave.host);
     }, actor{self}}.detach();
   }
@@ -221,7 +221,7 @@ void bootstrap(actor_system& system,
   for (size_t i = 0; i < slaves.size(); ++i) {
     self->receive(
       [&](const string& host, uint16_t slave_port) {
-        if (! slaveslist.empty())
+        if (!slaveslist.empty())
           slaveslist += ',';
         slaveslist += host;
         slaveslist += '/';

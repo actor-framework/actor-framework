@@ -122,7 +122,7 @@ public:
   }
 
   bool operator!() const noexcept {
-    return ! ptr_;
+    return !ptr_;
   }
 
   explicit operator bool() const noexcept {
@@ -166,13 +166,13 @@ private:
 /// @relates intrusive_ptr
 template <class T>
 bool operator==(const intrusive_ptr<T>& x, std::nullptr_t) {
-  return ! x;
+  return !x;
 }
 
 /// @relates intrusive_ptr
 template <class T>
 bool operator==(std::nullptr_t, const intrusive_ptr<T>& x) {
-  return ! x;
+  return !x;
 }
 
 /// @relates intrusive_ptr

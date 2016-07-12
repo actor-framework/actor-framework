@@ -35,7 +35,7 @@ bool match_element(const meta_element& me, const type_erased_tuple& xs,
 bool match_atom_constant(const meta_element& me, const type_erased_tuple& xs,
                          size_t pos) {
   CAF_ASSERT(me.typenr == type_nr<atom_value>::value);
-  if (! xs.matches(pos, type_nr<atom_value>::value, nullptr))
+  if (!xs.matches(pos, type_nr<atom_value>::value, nullptr))
     return false;
   auto ptr = xs.get(pos);
   if (me.v != *reinterpret_cast<const atom_value*>(ptr))
@@ -49,7 +49,7 @@ bool try_match(const type_erased_tuple& xs,
     return false;
   for (size_t i = 0; i < ps; ++i, ++iter)
     // inspect current element
-    if (! iter->fun(*iter, xs, i))
+    if (!iter->fun(*iter, xs, i))
       // type mismatch
       return false;
   return true;

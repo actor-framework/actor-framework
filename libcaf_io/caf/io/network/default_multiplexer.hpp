@@ -68,7 +68,7 @@
 #endif
 
 // poll xs epoll backend
-#if ! defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # define CAF_POLL_MULTIPLEXER
 # ifndef CAF_WINDOWS
 #   include <poll.h>
@@ -115,7 +115,7 @@ namespace network {
 #endif
 
 // poll vs epoll backend
-#if ! defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # ifdef CAF_WINDOWS
     // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
     //                Winsock provider, the WSAPoll function will fail.

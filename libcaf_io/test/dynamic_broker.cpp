@@ -140,7 +140,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
     },
     [=](publish_atom) -> expected<uint16_t> {
       auto res = self->add_tcp_doorman(0, "127.0.0.1");
-      if (! res)
+      if (!res)
         return std::move(res.error());
       return res->second;
     }

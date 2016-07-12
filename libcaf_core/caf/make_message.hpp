@@ -60,7 +60,7 @@ struct is_serializable_or_whitelisted {
 /// @relates message
 template <class T, class... Ts>
 typename std::enable_if<
-  ! std::is_same<message, typename std::decay<T>::type>::value
+  !std::is_same<message, typename std::decay<T>::type>::value
   || (sizeof...(Ts) > 0),
   message
 >::type
