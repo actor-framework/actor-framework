@@ -227,7 +227,7 @@ public:
 
 template <class T>
 typename std::enable_if<
-  ! has_register_class<T>::value
+  !has_register_class<T>::value
   && has_to_string<T>::value
 >::type
 default_python_class_init(pybind11::module& m, const std::string& name) {
@@ -240,8 +240,8 @@ default_python_class_init(pybind11::module& m, const std::string& name) {
 
 template <class T>
 typename std::enable_if<
-  ! has_register_class<T>::value
-  && ! has_to_string<T>::value
+  !has_register_class<T>::value
+  && !has_to_string<T>::value
 >::type
 default_python_class_init(pybind11::module& m, const std::string& name) {
   auto str_impl = [](const T& x) {
@@ -478,7 +478,7 @@ pybind11::tuple tuple_from_message(const type_erased_tuple& msg) {
   for (size_t i = 0; i  < msg.size(); ++i) {
     auto rtti = msg.type(i);
     auto str_ptr = self->system().types().portable_name(rtti);
-    if (! str_ptr) {
+    if (!str_ptr) {
       set_py_exception("Unable to extract element #", i, " from message: ",
                        "could not get portable name of ", rtti.second->name());
       return {};
@@ -498,7 +498,7 @@ pybind11::tuple tuple_from_message(const type_erased_tuple& msg) {
 pybind11::tuple py_dequeue() {
   auto& self = s_context->self;
   auto ptr = self->next_message();
-  while (! ptr) {
+  while (!ptr) {
     self->await_data();
     ptr = self->next_message();
   }
@@ -508,8 +508,8 @@ pybind11::tuple py_dequeue() {
 pybind11::tuple py_dequeue_with_timeout(absolute_receive_timeout timeout) {
   auto& self = s_context->self;
   auto ptr = self->next_message();
-  while (! ptr) {
-    if (! self->await_data(timeout.value()))
+  while (!ptr) {
+    if (!self->await_data(timeout.value()))
       return pybind11::none{};
     ptr = self->next_message();
   }
@@ -602,9 +602,9 @@ void caf_main(actor_system& system, const config& cfg) {
   Py_Initialize();
   // create Python module for CAF
   int py_res = 0;
-  if (! cfg.py_file.empty()) {
+  if (!cfg.py_file.empty()) {
     auto fp = fopen(cfg.py_file.c_str() , "r");
-    if (! fp) {
+    if (!fp) {
       cerr << "Unable to open file " << cfg.py_file << endl;
       Py_Finalize();
       return;
