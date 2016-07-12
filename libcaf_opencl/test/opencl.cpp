@@ -191,7 +191,7 @@ bool operator==(const square_matrix<Size>& lhs,
 template<size_t Size>
 bool operator!=(const square_matrix<Size>& lhs,
                 const square_matrix<Size>& rhs) {
-  return ! (lhs == rhs);
+  return !(lhs == rhs);
 }
 
 using matrix_type = square_matrix<matrix_size>;
@@ -202,7 +202,7 @@ void check_vector_results(const string& description,
                           const vector<T>& result) {
   auto cond = (expected == result);
   CAF_CHECK(cond);
-  if (! cond) {
+  if (!cond) {
     CAF_ERROR(description << " failed.");
     cout << "Expected: " << endl;
     for (size_t i = 0; i < expected.size(); ++i) {
@@ -220,7 +220,7 @@ void test_opencl(actor_system& sys) {
   static_cast<void>(sys);
   auto& mngr = sys.opencl_manager();
   auto opt = mngr.get_device_if([](const device&){ return true; });
-  if (! opt)
+  if (!opt)
     CAF_ERROR("No OpenCL device found.");
   auto dev = *opt;
   scoped_actor self{sys};
@@ -292,7 +292,7 @@ void test_opencl(actor_system& sys) {
     auto cond = (strcmp("clBuildProgram: CL_BUILD_PROGRAM_FAILURE",
                         exc.what()) == 0);
       CAF_CHECK(cond);
-      if (! cond) {
+      if (!cond) {
         CAF_ERROR("Wrong exception cought for program build failure.");
       }
   }

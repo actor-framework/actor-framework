@@ -84,7 +84,7 @@ actor_system::module* manager::make(actor_system& sys,
 program manager::create_program(const char* kernel_source, const char* options,
                                  uint32_t device_id) {
   auto dev = get_device(device_id);
-  if (! dev) {
+  if (!dev) {
     ostringstream oss;
     oss << "No device with id '" << device_id << "' found.";
     CAF_LOG_ERROR(CAF_ARG(oss.str()));

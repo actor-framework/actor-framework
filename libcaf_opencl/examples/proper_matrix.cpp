@@ -134,7 +134,7 @@ inline bool operator==(const square_matrix<Size>& lhs,
 template<size_t Size>
 inline bool operator!=(const square_matrix<Size>& lhs,
              const square_matrix<Size>& rhs) {
-  return ! (lhs == rhs);
+  return !(lhs == rhs);
 }
 
 using matrix_type = square_matrix<matrix_size>;
