@@ -274,11 +274,32 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #endif // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+#  define CAF_LOG_DEBUG(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_DEBUG, output)
+#endif
+
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
+#  define CAF_LOG_INFO(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_INFO, output)
+#endif
+
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_WARNING
+#  define CAF_LOG_WARNING(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_WARNING, output)
+#endif
+
 #endif // CAF_LOG_LEVEL
 
-#define CAF_LOG_DEBUG(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_DEBUG, output)
-#define CAF_LOG_INFO(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_INFO, output)
-#define CAF_LOG_WARNING(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_WARNING, output)
+#ifndef CAF_LOG_INFO
+#  define CAF_LOG_INFO(output) CAF_VOID_STMT
+#endif
+
+#ifndef CAF_LOG_DEBUG
+#  define CAF_LOG_DEBUG(output) CAF_VOID_STMT
+#endif
+
+#ifndef CAF_LOG_WARNING
+#  define CAF_LOG_WARNING(output) CAF_VOID_STMT
+#endif
+
 #define CAF_LOG_ERROR(output)                                                  \
   do {                                                                         \
     CAF_PRINT_ERROR_IMPL(CAF_GET_CLASS_NAME, __func__, output);                \
