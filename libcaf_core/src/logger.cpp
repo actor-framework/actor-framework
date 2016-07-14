@@ -294,22 +294,22 @@ void logger::run() {
 }
 
 void logger::start() {
-# ifdef CAF_LOG_LEVEL
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
   const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
   thread_ = std::thread{[this] { this->run(); }};
   std::string msg = "ENTRY log level = ";
   msg += log_level_table[global_log_level];
-  log(4, "caf", "caf::logger", "run", __FILE__, __LINE__, msg);
-# endif
+  log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__, msg);
+#endif
 }
 
 void logger::stop() {
-# ifdef CAF_LOG_LEVEL
-  log(4, "caf", "caf::logger", "run", __FILE__, __LINE__, "EXIT");
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
+  log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__, "EXIT");
   // an empty string means: shut down
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{""});
   thread_.join();
-# endif
+#endif
 }
 
 } // namespace caf
