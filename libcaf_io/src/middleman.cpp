@@ -239,8 +239,7 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
   strong_actor_ptr result;
   scoped_actor self{system(), true};
   try {
-    self->send(basp, forward_atom::value, actor_cast<strong_actor_ptr>(self),
-               nid, atom("ConfigServ"),
+    self->send(basp, forward_atom::value, nid, atom("ConfigServ"),
                make_message(get_atom::value, name));
     self->receive(
       [&](strong_actor_ptr& addr) {
