@@ -554,11 +554,11 @@ if(EXISTS "${MANUAL_DIR}"
   # retrieve current SHA1 hash
   execute_process(COMMAND git log --pretty=format:%h -n 1
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                  OUTPUT_VARIABLE GIT_HASH
+                  OUTPUT_VARIABLE CAF_SHA
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
   if(${GIT_BRANCH} STREQUAL "master")
     # retrieve current tag name
-    execute_process(COMMAND git describe --tags --contains ${GIT_HASH}
+    execute_process(COMMAND git describe --tags --contains ${CAF_SHA}
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                     RESULT_VARIABLE GIT_TAG_RES
                     OUTPUT_VARIABLE GIT_TAG
@@ -571,7 +571,7 @@ if(EXISTS "${MANUAL_DIR}"
       set(CAF_RELEASE "${CAF_VERSION}")
     endif()
   else()
-    set(CAF_RELEASE "${CAF_VERSION}+exp.sha.${GIT_HASH}")
+    set(CAF_RELEASE "${CAF_VERSION}+exp.sha.${CAF_SHA}")
   endif()
   MESSAGE(STATUS "Set manual version to ${CAF_RELEASE}")
   configure_file("${MANUAL_DIR}/variables.tex.in"
@@ -579,6 +579,12 @@ if(EXISTS "${MANUAL_DIR}"
                  IMMEDIATE @ONLY)
   configure_file("${MANUAL_DIR}/conf.py.in"
                  "${MANUAL_DIR}/conf.py"
+                 IMMEDIATE @ONLY)
+  configure_file("${MANUAL_DIR}/index_header.rst.in"
+                 "${MANUAL_DIR}/index_header.rst"
+                 IMMEDIATE @ONLY)
+  configure_file("${MANUAL_DIR}/index_footer.rst.in"
+                 "${MANUAL_DIR}/index_footer.rst"
                  IMMEDIATE @ONLY)
 endif()
 
