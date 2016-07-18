@@ -546,25 +546,30 @@ set(MANUAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/manual")
 if(EXISTS "${MANUAL_DIR}"
    AND EXISTS "${MANUAL_DIR}/variables.tex.in"
    AND EXISTS "${MANUAL_DIR}/conf.py.in")
-  # retrieve current branch name
+  # retrieve current branch name for CAF
   execute_process(COMMAND git rev-parse --abbrev-ref HEAD
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                   OUTPUT_VARIABLE GIT_BRANCH
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  # retrieve current SHA1 hash
+  # retrieve current SHA1 hash for CAF
   execute_process(COMMAND git log --pretty=format:%h -n 1
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                   OUTPUT_VARIABLE CAF_SHA
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
+  # retrieve current SHA1 hash for the Manual
+  execute_process(COMMAND git log --pretty=format:%h -n 1
+                  WORKING_DIRECTORY ${MANUAL_DIR}
+                  OUTPUT_VARIABLE CAF_MANUAL_SHA
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
   if(${GIT_BRANCH} STREQUAL "master")
-    # retrieve current tag name
+    # retrieve current tag name for CAF
     execute_process(COMMAND git describe --tags --contains ${CAF_SHA}
                     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                     RESULT_VARIABLE GIT_TAG_RES
                     OUTPUT_VARIABLE GIT_TAG
                     ERROR_QUIET
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
-    # prefer tag name over regular version
+    # prefer tag name over auto-generated version
     if("${GIT_TAG_RES}" STREQUAL "0")
       set(CAF_RELEASE "${GIT_TAG}")
     else()
