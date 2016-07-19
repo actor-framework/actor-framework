@@ -122,13 +122,18 @@ public:
   /// Allows `num_events` activities on `hdl`.
   template <class Handle>
   void trigger(Handle hdl, size_t num_events) {
-    if (num_events > 0) {
-      auto ref = by_id(hdl);
-      if (ref)
-        ref->trigger(num_events);
+    auto ref = by_id(hdl);
+    if (!ref)
       return;
+    if (num_events > 0) {
+      ref->trigger(num_events);
+    } else {
+      // if we have any number of activity tokens, ignore this call
+      // otherwise (currently in unconditional receive state) halt
+      auto x = ref->activity_tokens();
+      if (!x)
+        ref->halt();
     }
-    halt(hdl);
   }
 
   /// Modifies the receive policy for given connection.

@@ -65,6 +65,10 @@ public:
     this->add_to_loop();
   }
 
+  inline optional<size_t> activity_tokens() const {
+    return activity_tokens_;
+  }
+
 protected:
   void detach_from(abstract_broker* ptr) override {
     ptr->erase(hdl_);
