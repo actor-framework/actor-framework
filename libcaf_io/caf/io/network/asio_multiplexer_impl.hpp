@@ -168,6 +168,12 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
       launched_ = true;
       stream_.start(this);
     }
+    void add_to_loop() override {
+      stream_.activate(this);
+    }
+    void remove_from_loop() override {
+      stream_.passivate();
+    }
  private:
     bool launched_;
     asio_stream<Socket> stream_;
@@ -262,6 +268,12 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
     }
     uint16_t port() const override {
       return acceptor_.socket_handle().local_endpoint().port();
+    }
+    void add_to_loop() override {
+      acceptor_.activate(this);
+    }
+    void remove_from_loop() override {
+      acceptor_.passivate();
     }
   private:
     network::asio_acceptor<asio_tcp_socket_acceptor> acceptor_;
