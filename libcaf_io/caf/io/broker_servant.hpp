@@ -87,10 +87,14 @@ protected:
   }
 
   bool invoke_mailbox_element(execution_unit* ctx) {
+    // hold on to a strong reference while "messing" with the parent actor
+    strong_actor_ptr ptr_guard{this->parent()->ctrl()};
     auto prev = activity_tokens_;
     invoke_mailbox_element_impl(ctx, value_);
     // only consume an activity token if actor did not produce them now
     if (prev && activity_tokens_ && --(*activity_tokens_) == 0) {
+      if (this->parent()->is_terminated())
+        return false;
       // tell broker it entered passive mode, this can result in
       // producing, why we check the condition again afterwards
       using passiv_t =
