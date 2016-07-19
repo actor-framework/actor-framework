@@ -72,6 +72,26 @@ void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
     default_error_handler(ptr, x.reason);
 }
 
+# ifndef CAF_NO_EXCEPTIONS
+error scheduled_actor::default_exception_handler(pointer ptr,
+                                                 std::exception_ptr& x) {
+  CAF_ASSERT(x != nullptr);
+  try {
+    std::rethrow_exception(x);
+  } catch (const std::exception& e) {
+    aout(ptr) << "*** unhandled exception: [id: " << ptr->id()
+              << ", name: " << ptr->name() << ", exception typeid: "
+              << typeid(e).name() << "]: " << e.what()
+              << std::endl;
+  } catch (...) {
+    aout(ptr) << "*** unhandled exception: [id: " << ptr->id()
+              << ", name: " << ptr->name() << "]: unknown exception"
+              << std::endl;
+  }
+  return sec::runtime_error;
+}
+# endif // CAF_NO_EXCEPTIONS
+
 // -- constructors and destructors ---------------------------------------------
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
@@ -81,7 +101,11 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
       error_handler_(default_error_handler),
       down_handler_(default_down_handler),
       exit_handler_(default_exit_handler),
-      private_thread_(nullptr) {
+      private_thread_(nullptr)
+# ifndef CAF_NO_EXCEPTIONS
+      , exception_handler_(default_exception_handler)
+# endif // CAF_NO_EXCEPTIONS
+      {
   // nop
 }
 
@@ -513,7 +537,10 @@ auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
   CAF_LOG_TRACE(CAF_ARG(x));
   if (!activate(ctx))
     return activation_result::terminated;
-  return reactivate(x);
+  auto res = reactivate(x);
+  if (res == activation_result::success && !bhvr_stack_.empty())
+    request_timeout(bhvr_stack_.back().timeout());
+  return res;
 }
 
 auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {

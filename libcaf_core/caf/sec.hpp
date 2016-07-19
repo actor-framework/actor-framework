@@ -86,6 +86,8 @@ enum class sec : uint8_t {
   unknown_type,
   /// Serialization of actors failed because no proxy registry is available.
   no_proxy_registry,
+  /// An exception was thrown during message handling.
+  runtime_error,
   /// A function view was called without assigning an actor first.
   bad_function_call
 };

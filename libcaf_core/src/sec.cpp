@@ -52,6 +52,7 @@ const char* sec_strings[] = {
   "no_context",
   "unknown_type",
   "no_proxy_registry",
+  "runtime_error",
   "bad_function_call"
 };
 
