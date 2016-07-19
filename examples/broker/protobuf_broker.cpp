@@ -13,41 +13,64 @@ CAF_PUSH_WARNINGS
 #include "pingpong.pb.h"
 CAF_POP_WARNINGS
 
+namespace {
+
 using namespace std;
 using namespace caf;
 using namespace caf::io;
 
-void print_on_exit(const actor& hdl, const std::string& name) {
-  hdl->attach_functor([=](abstract_actor* ptr, exit_reason reason) {
-    aout(ptr) << name << " exited with reason " << reason << endl;
+using ping_atom = atom_constant<atom("ping")>;
+using pong_atom = atom_constant<atom("pong")>;
+using kickoff_atom = atom_constant<atom("kickoff")>;
+
+// utility function to print an exit message with custom name
+void print_on_exit(scheduled_actor* self, const std::string& name) {
+  self->attach_functor([=](const error& reason) {
+    aout(self) << name << " exited: " << self->home_system().render(reason)
+               << endl;
   });
 }
 
-behavior ping(event_based_actor* self, size_t num_pings) {
-  auto count = make_shared<size_t>(0);
+struct ping_state {
+  size_t count = 0;
+};
+
+behavior ping(stateful_actor<ping_state>* self, size_t num_pings) {
+  print_on_exit(self, "ping");
   return {
-    on(atom("kickoff"), arg_match) >> [=](const actor& pong) {
-      self->send(pong, atom("ping"), 1);
+    [=](kickoff_atom, const actor& pong) {
+      self->send(pong, ping_atom::value, 1);
       self->become (
-        on(atom("pong"), arg_match) >> [=](int value) -> message {
-          if (++*count >= num_pings) self->quit();
-          return make_message(atom("ping"), value + 1);
+        [=](pong_atom, int value) -> message {
+          if (++(self->state.count) >= num_pings)
+            self->quit();
+          return make_message(ping_atom::value, value + 1);
         }
       );
     }
   };
 }
 
-behavior pong() {
+behavior pong(event_based_actor* self) {
+  print_on_exit(self, "pong");
   return {
-    on(atom("ping"), arg_match) >> [](int value) {
-      return make_message(atom("pong"), value);
+    [=](ping_atom, int value) {
+      return make_message(pong_atom::value, value);
     }
   };
 }
 
 void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
+  print_on_exit(self, "protobuf_io");
+  aout(self) << "protobuf broker started" << endl;
   self->monitor(buddy);
+  self->set_down_handler(
+    [=](const down_msg& dm) {
+      if (dm.source == buddy) {
+        aout(self) << "our buddy is down" << endl;
+        self->quit(dm.reason);
+      }
+    });
   auto write = [=](const org::libcppa::PingOrPong& p) {
     string buf = p.SerializeAsString();
     int32_t s = htonl(static_cast<int32_t>(buf.size()));
@@ -61,26 +84,17 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
       self->send_exit(buddy, exit_reason::remote_link_unreachable);
       self->quit(exit_reason::remote_link_unreachable);
     },
-    on(atom("ping"), arg_match) >> [=](int i) {
+    [=](ping_atom, int i) {
       aout(self) << "'ping' " << i << endl;
       org::libcppa::PingOrPong p;
       p.mutable_ping()->set_id(i);
       write(p);
     },
-    on(atom("pong"), arg_match) >> [=](int i) {
+    [=](pong_atom, int i) {
       aout(self) << "'pong' " << i << endl;
       org::libcppa::PingOrPong p;
       p.mutable_pong()->set_id(i);
       write(p);
-    },
-    [=](const down_msg& dm) {
-      if (dm.source == buddy) {
-        aout(self) << "our buddy is down" << endl;
-        self->quit(dm.reason);
-      }
-    },
-    others >> [=] {
-      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
   auto await_protobuf_data = message_handler {
@@ -88,10 +102,10 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
       org::libcppa::PingOrPong p;
       p.ParseFromArray(msg.buf.data(), static_cast<int>(msg.buf.size()));
       if (p.has_ping()) {
-        self->send(buddy, atom("ping"), p.ping().id());
+        self->send(buddy, ping_atom::value, p.ping().id());
       }
       else if (p.has_pong()) {
-        self->send(buddy, atom("pong"), p.pong().id());
+        self->send(buddy, pong_atom::value, p.pong().id());
       }
       else {
         self->quit(exit_reason::user_shutdown);
@@ -124,54 +138,55 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
 }
 
 behavior server(broker* self, actor buddy) {
+  print_on_exit(self, "server");
   aout(self) << "server is running" << endl;
   return {
     [=](const new_connection_msg& msg) {
       aout(self) << "server accepted new connection" << endl;
       auto io_actor = self->fork(protobuf_io, msg.handle, buddy);
-      print_on_exit(io_actor, "protobuf_io");
       // only accept 1 connection in our example
       self->quit();
-    },
-    others >> [=] {
-      cout << "unexpected: " << to_string(self->current_message()) << endl;
     }
   };
 }
 
-maybe<uint16_t> as_u16(const std::string& str) {
-  return static_cast<uint16_t>(stoul(str));
+class config : public actor_system_config {
+public:
+  uint16_t port = 0;
+  std::string host = "localhost";
+  bool server_mode = false;
+
+  config() {
+    opt_group{custom_options_, "global"}
+    .add(port, "port,p", "set port")
+    .add(host, "host,H", "set host (ignored in server mode)")
+    .add(server_mode, "server-mode,s", "enable server mode");
+  }
+};
+
+void caf_main(actor_system& system, const config& cfg) {
+  if (cfg.server_mode) {
+    cout << "run in server mode" << endl;
+    auto pong_actor = system.spawn(pong);
+    auto server_actor = system.middleman().spawn_server(server, cfg.port,
+                                                        pong_actor);
+    if (!server_actor)
+      cout << "unable to spawn server: "
+           << system.render(server_actor.error()) << endl;
+    return;
+  }
+  cout << "run in client mode" << endl;
+  auto ping_actor = system.spawn(ping, 20u);
+  auto io_actor = system.middleman().spawn_client(protobuf_io, cfg.host,
+                                                  cfg.port, ping_actor);
+  if (!io_actor) {
+    cout << "cannot connect to " << cfg.host << " at port " << cfg.port
+         << ": " << system.render(io_actor.error()) << endl;
+    return;
+  }
+  send_as(*io_actor, ping_actor, kickoff_atom::value, *io_actor);
 }
 
-int main(int argc, char** argv) {
-  actor_system_config cfg;
-  cfg.load<io::middleman>();
-  actor_system system{cfg};
-  message_builder{argv + 1, argv + argc}.apply({
-    on("-s", as_u16) >> [&](uint16_t port) {
-      cout << "run in server mode" << endl;
-      auto pong_actor = system.spawn(pong);
-      auto server_actor = system.middleman().spawn_server(server, port,
-                                                          pong_actor);
-      if (server_actor) {
-        print_on_exit(*server_actor, "server");
-        print_on_exit(pong_actor, "pong");
-      }
-    },
-    on("-c", val<string>, as_u16) >> [&](const string& host, uint16_t port) {
-      auto ping_actor = system.spawn(ping, 20);
-      auto io_actor = system.middleman().spawn_client(protobuf_io, host,
-                                                      port, ping_actor);
-      if (io_actor) {
-        print_on_exit(ping_actor, "ping");
-        print_on_exit(*io_actor, "protobuf_io");
-        send_as(*io_actor, ping_actor, atom("kickoff"), *io_actor);
-      }
-    },
-    others >> [] {
-      cerr << "use with eihter '-s PORT' as server or "
-          "'-c HOST PORT' as client"
-           << endl;
-    }
-  });
-}
+} // namespace <anonymous>
+
+CAF_MAIN(io::middleman)
