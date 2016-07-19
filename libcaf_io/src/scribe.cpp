@@ -37,16 +37,15 @@ message scribe::detach_message() {
   return make_message(connection_closed_msg{hdl()});
 }
 
-void scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
+bool scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   CAF_ASSERT(ctx != nullptr);
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
-  if (detached()) {
+  if (detached())
     // we are already disconnected from the broker while the multiplexer
-    // did not yet remove the socket, this can happen if an IO event causes
+    // did not yet remove the socket, this can happen if an I/O event causes
     // the broker to call close_all() while the pollset contained
     // further activities for the broker
-    return;
-  }
+    return false;
   // keep a strong reference to our parent until we leave scope
   // to avoid UB when becoming detached during invocation
   auto guard = parent_;
@@ -56,10 +55,11 @@ void scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   buf.resize(num_bytes);
   auto& msg_buf = msg().buf;
   msg_buf.swap(buf);
-  invoke_mailbox_element(ctx);
+  auto result = invoke_mailbox_element(ctx);
   // swap buffer back to stream and implicitly flush wr_buf()
   msg_buf.swap(buf);
   flush();
+  return result;
 }
 
 void scribe::data_transferred(execution_unit* ctx, size_t written,
@@ -67,10 +67,16 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
   CAF_LOG_TRACE(CAF_ARG(written) << CAF_ARG(remaining));
   if (detached())
     return;
-  data_transferred_msg tmp{hdl(), written, remaining};
-  auto ptr = make_mailbox_element(nullptr, invalid_message_id, {}, tmp);
-  parent()->context(ctx);
-  parent()->consume(std::move(ptr));
+  using transferred_t = data_transferred_msg;
+  using tmp_t = mailbox_element_vals<data_transferred_msg>;
+  tmp_t tmp{strong_actor_ptr{}, message_id::make(),
+            mailbox_element::forwarding_stack{},
+            transferred_t{hdl(), written, remaining}};
+  invoke_mailbox_element_impl(ctx, tmp);
+  //data_transferred_msg tmp{hdl(), written, remaining};
+  //auto ptr = make_mailbox_element(nullptr, invalid_message_id, {}, tmp);
+  //parent()->context(ctx);
+  //parent()->consume(std::move(ptr));
 }
 
 void scribe::io_failure(execution_unit* ctx, network::operation op) {

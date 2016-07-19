@@ -222,7 +222,13 @@ public:
   /// Closes the read channel of the underlying socket.
   void close_read_channel();
 
+  /// Removes the file descriptor from the event loop of the parent.
+  void passivate();
+
 protected:
+  /// Adds the file descriptor to the event loop of the parent.
+  void activate();
+
   void set_fd_flags();
 
   int eventbf_;
@@ -385,7 +391,10 @@ public:
   stream(default_multiplexer& backend_ref, native_socket sockfd);
 
   /// Starts reading data from the socket, forwarding incoming data to `mgr`.
-  void start(const manager_ptr& mgr);
+  void start(stream_manager* mgr);
+
+  /// Activates the stream.
+  void activate(stream_manager* mgr);
 
   /// Configures how much data will be provided for the next `consume` callback.
   /// @warning Must not be called outside the IO multiplexers event loop
@@ -468,7 +477,10 @@ public:
   /// Starts this acceptor, forwarding all incoming connections to
   /// `manager`. The intrusive pointer will be released after the
   /// acceptor has been closed or an IO error occured.
-  void start(const manager_ptr& mgr);
+  void start(acceptor_manager* mgr);
+
+  /// Activates the acceptor.
+  void activate(acceptor_manager* mgr);
 
   /// Closes the network connection and removes this handler from its parent.
   void stop_reading();

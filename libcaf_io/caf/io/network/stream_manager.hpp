@@ -37,7 +37,8 @@ public:
   ~stream_manager();
 
   /// Called by the underlying I/O device whenever it received data.
-  virtual void consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
+  /// @returns `true` if the manager accepts further reads, otherwise `false`.
+  virtual bool consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
 
   /// Called by the underlying I/O device whenever it sent data.
   virtual void data_transferred(execution_unit* ctx, size_t num_bytes,

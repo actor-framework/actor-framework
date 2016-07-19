@@ -103,6 +103,34 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
+  /// Suspends activities on `hdl` unconditionally.
+  template <class Handle>
+  void halt(Handle hdl) {
+    auto ref = by_id(hdl);
+    if (ref)
+      ref->halt();
+  }
+
+  /// Allows activities on `hdl` unconditionally (default).
+  template <class Handle>
+  void trigger(Handle hdl) {
+    auto ref = by_id(hdl);
+    if (ref)
+      ref->trigger();
+  }
+
+  /// Allows `num_events` activities on `hdl`.
+  template <class Handle>
+  void trigger(Handle hdl, size_t num_events) {
+    if (num_events > 0) {
+      auto ref = by_id(hdl);
+      if (ref)
+        ref->trigger(num_events);
+      return;
+    }
+    halt(hdl);
+  }
+
   /// Modifies the receive policy for given connection.
   /// @param hdl Identifies the affected connection.
   /// @param config Contains the new receive policy.

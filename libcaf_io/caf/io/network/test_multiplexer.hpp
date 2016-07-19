@@ -90,6 +90,9 @@ public:
   /// for reading, `false` otherwise.
   bool& stopped_reading(connection_handle hdl);
 
+  /// Returns `true` if this handle is inactive, otherwise `false`.
+  bool& passive_mode(connection_handle hdl);
+
   intrusive_ptr<scribe>& impl_ptr(connection_handle hdl);
 
   uint16_t& port(accept_handle hdl);
@@ -97,6 +100,9 @@ public:
   /// Returns `true` if this handle has been closed
   /// for reading, `false` otherwise.
   bool& stopped_reading(accept_handle hdl);
+
+  /// Returns `true` if this handle is inactive, otherwise `false`.
+  bool& passive_mode(accept_handle hdl);
 
   intrusive_ptr<doorman>& impl_ptr(accept_handle hdl);
 
@@ -149,6 +155,7 @@ private:
     buffer_type wr_buf;
     receive_policy::config recv_conf;
     bool stopped_reading = false;
+    bool passive_mode = false;
     intrusive_ptr<scribe> ptr;
     bool ack_writes = false;
   };
@@ -156,6 +163,7 @@ private:
   struct doorman_data {
     uint16_t port;
     bool stopped_reading = false;
+    bool passive_mode = false;
     intrusive_ptr<doorman> ptr;
   };
 

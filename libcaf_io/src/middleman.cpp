@@ -347,7 +347,9 @@ void middleman::init(actor_system_config& cfg) {
      .add_message_type<connection_closed_msg>("@connection_closed_msg")
      .add_message_type<connection_handle>("@connection_handle")
      .add_message_type<new_connection_msg>("@new_connection_msg")
-     .add_message_type<new_data_msg>("@new_data_msg");
+     .add_message_type<new_data_msg>("@new_data_msg")
+     .add_message_type<connection_passivated_msg>("@connection_passivated_msg")
+     .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg");
   // compute and set ID for this network node
   node_id this_node{node_id::data::create_singleton()};
   system().node_.swap(this_node);

@@ -61,7 +61,7 @@ public:
 
   void io_failure(execution_unit* ctx, network::operation op) override;
 
-  void consume(execution_unit*, const void*, size_t) override;
+  bool consume(execution_unit*, const void*, size_t) override;
 
   void data_transferred(execution_unit*, size_t, size_t) override;
 

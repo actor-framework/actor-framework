@@ -47,18 +47,6 @@ typename Inspector::result_type inspect(Inspector& f, new_connection_msg& x) {
   return f(meta::type_name("new_connection_msg"), x.source, x.handle);
 }
 
-/// @relates new_connection_msg
-inline bool operator==(const new_connection_msg& lhs,
-                       const new_connection_msg& rhs) {
-  return lhs.source == rhs.source && lhs.handle == rhs.handle;
-}
-
-/// @relates new_connection_msg
-inline bool operator!=(const new_connection_msg& lhs,
-                       const new_connection_msg& rhs) {
-  return !(lhs == rhs);
-}
-
 /// Signalizes newly arrived data for a {@link broker}.
 struct new_data_msg {
   /// Handle to the related connection.
@@ -71,16 +59,6 @@ struct new_data_msg {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_data_msg& x) {
   return f(meta::type_name("new_data_msg"), x.handle, x.buf);
-}
-
-/// @relates new_data_msg
-inline bool operator==(const new_data_msg& lhs, const new_data_msg& rhs) {
-  return lhs.handle == rhs.handle && lhs.buf == rhs.buf;
-}
-
-/// @relates new_data_msg
-inline bool operator!=(const new_data_msg& lhs, const new_data_msg& rhs) {
-  return !(lhs == rhs);
 }
 
 /// Signalizes that a certain amount of bytes has been written.
@@ -100,21 +78,6 @@ typename Inspector::result_type inspect(Inspector& f, data_transferred_msg& x) {
            x.handle, x.written, x.remaining);
 }
 
-/// @relates data_transferred_msg
-inline bool operator==(const data_transferred_msg& x,
-                       const data_transferred_msg& y) {
-  return x.handle == y.handle
-      && x.written == y.written
-      && x.remaining == y.remaining;
-}
-
-/// @relates data_transferred_msg
-inline bool operator!=(const data_transferred_msg& x,
-                       const data_transferred_msg& y) {
-  return !(x == y);
-}
-
-
 /// Signalizes that a {@link broker} connection has been closed.
 struct connection_closed_msg {
   /// Handle to the closed connection.
@@ -125,18 +88,6 @@ struct connection_closed_msg {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, connection_closed_msg& x) {
   return f(meta::type_name("connection_closed_msg"), x.handle);
-}
-
-/// @relates connection_closed_msg
-inline bool operator==(const connection_closed_msg& lhs,
-                       const connection_closed_msg& rhs) {
-  return lhs.handle == rhs.handle;
-}
-
-/// @relates connection_closed_msg
-inline bool operator!=(const connection_closed_msg& lhs,
-                       const connection_closed_msg& rhs) {
-  return !(lhs == rhs);
 }
 
 /// Signalizes that a {@link broker} acceptor has been closed.
@@ -151,16 +102,28 @@ typename Inspector::result_type inspect(Inspector& f, acceptor_closed_msg& x) {
   return f(meta::type_name("acceptor_closed_msg"), x.handle);
 }
 
-/// @relates acceptor_closed_msg
-inline bool operator==(const acceptor_closed_msg& lhs,
-                       const acceptor_closed_msg& rhs) {
-  return lhs.handle == rhs.handle;
+/// Signalizes that a connection has entered passive mode.
+struct connection_passivated_msg {
+  connection_handle handle;
+};
+
+/// @relates connection_passivated_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, connection_passivated_msg& x) {
+  return f(meta::type_name("connection_passivated_msg"), x.handle);
 }
 
-/// @relates acceptor_closed_msg
-inline bool operator!=(const acceptor_closed_msg& lhs,
-                       const acceptor_closed_msg& rhs) {
-  return !(lhs == rhs);
+/// Signalizes that an acceptor has entered passive mode.
+struct acceptor_passivated_msg {
+  accept_handle handle;
+};
+
+/// @relates acceptor_passivated_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, acceptor_passivated_msg& x) {
+  return f(meta::type_name("acceptor_passivated_msg"), x.handle);
 }
 
 } // namespace io

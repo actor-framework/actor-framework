@@ -240,12 +240,12 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
           acceptor_(am, s.get_io_service()) {
       acceptor_.init(std::move(s));
     }
-    void new_connection() override {
+    bool new_connection() override {
       CAF_LOG_TRACE("");
       auto& am = acceptor_.backend();
-      msg().handle
-        = am.add_tcp_scribe(parent(), std::move(acceptor_.accepted_socket()));
-      invoke_mailbox_element(&am);
+      auto hdl = am.add_tcp_scribe(parent(),
+                                   std::move(acceptor_.accepted_socket()));
+      return doorman::new_connection(&am, hdl);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");

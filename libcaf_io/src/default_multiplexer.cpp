@@ -783,6 +783,12 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
       launched_ = true;
       stream_.start(this);
     }
+    void add_to_loop() override {
+      stream_.activate(this);
+    }
+    void remove_from_loop() override {
+      stream_.passivate();
+    }
  private:
     bool launched_;
     stream stream_;
@@ -803,12 +809,12 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
           acceptor_(mx, sockfd) {
       // nop
     }
-    void new_connection() override {
+    bool new_connection() override {
       CAF_LOG_TRACE("");
       auto& dm = acceptor_.backend();
-      msg().handle
-        = dm.add_tcp_scribe(parent(), std::move(acceptor_.accepted_socket()));
-      invoke_mailbox_element(&acceptor_.backend());
+      auto hdl = dm.add_tcp_scribe(parent(),
+                                   std::move(acceptor_.accepted_socket()));
+      return doorman::new_connection(&dm, hdl);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
@@ -830,6 +836,12 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
       if (!x)
         return 0;
       return *x;
+    }
+    void add_to_loop() override {
+      acceptor_.activate(this);
+    }
+    void remove_from_loop() override {
+      acceptor_.passivate();
     }
  private:
     network::acceptor acceptor_;
@@ -976,6 +988,14 @@ void event_handler::close_read_channel() {
   read_channel_closed_ = true;
 }
 
+void event_handler::passivate() {
+  backend().del(operation::read, fd(), this);
+}
+
+void event_handler::activate() {
+  backend().add(operation::read, fd(), this);
+}
+
 void event_handler::set_fd_flags() {
   if (fd_ == invalid_native_socket)
     return;
@@ -1047,11 +1067,17 @@ stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
   configure_read(receive_policy::at_most(1024));
 }
 
-void stream::start(const manager_ptr& mgr) {
+void stream::start(stream_manager* mgr) {
   CAF_ASSERT(mgr != nullptr);
-  reader_ = mgr;
-  backend().add(operation::read, fd(), this);
-  prepare_next_read();
+  activate(mgr);
+}
+
+void stream::activate(stream_manager* mgr) {
+  if (!reader_) {
+    reader_.reset(mgr);
+    event_handler::activate();
+    prepare_next_read();
+  }
 }
 
 void stream::configure_read(receive_policy::config config) {
@@ -1084,7 +1110,7 @@ void stream::flush(const manager_ptr& mgr) {
 void stream::stop_reading() {
   CAF_LOG_TRACE("");
   close_read_channel();
-  backend().del(operation::read, fd(), this);
+  passivate();
 }
 
 void stream::removed_from_loop(operation op) {
@@ -1108,15 +1134,19 @@ void stream::handle_event(operation op) {
                         rd_buf_.data() + collected_,
                         rd_buf_.size() - collected_)) {
           reader_->io_failure(&backend(), operation::read);
-          backend().del(operation::read, fd(), this);
+          passivate();
           return;
         }
         if (rb == 0)
           return;
         collected_ += rb;
         if (collected_ >= read_threshold_) {
-          reader_->consume(&backend(), rd_buf_.data(), collected_);
+          auto res = reader_->consume(&backend(), rd_buf_.data(), collected_);
           prepare_next_read();
+          if (!res) {
+            passivate();
+            return;
+          }
         }
       }
       break;
@@ -1194,17 +1224,23 @@ acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
   // nop
 }
 
-void acceptor::start(const manager_ptr& mgr) {
+void acceptor::start(acceptor_manager* mgr) {
   CAF_LOG_TRACE(CAF_ARG(fd()));
   CAF_ASSERT(mgr != nullptr);
-  mgr_ = mgr;
-  backend().add(operation::read, fd(), this);
+  activate(mgr);
+}
+
+void acceptor::activate(acceptor_manager* mgr) {
+  if (!mgr_) {
+    mgr_.reset(mgr);
+    event_handler::activate();
+  }
 }
 
 void acceptor::stop_reading() {
   CAF_LOG_TRACE(CAF_ARG(fd()));
   close_read_channel();
-  backend().del(operation::read, fd(), this);
+  passivate();
 }
 
 void acceptor::handle_event(operation op) {

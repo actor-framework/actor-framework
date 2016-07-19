@@ -46,5 +46,10 @@ void doorman::io_failure(execution_unit* ctx, network::operation op) {
   detach(ctx, true);
 }
 
+bool doorman::new_connection(execution_unit* ctx, connection_handle x) {
+  msg().handle = x;
+  return invoke_mailbox_element(ctx);
+}
+
 } // namespace io
 } // namespace caf

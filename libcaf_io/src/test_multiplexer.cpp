@@ -93,6 +93,14 @@ expected<void> test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
       return static_cast<uint16_t>(hdl().id());
     }
 
+    void add_to_loop() override {
+      mpx_->passive_mode(hdl()) = false;
+    }
+
+    void remove_from_loop() override {
+      mpx_->passive_mode(hdl()) = true;
+    }
+
   private:
     test_multiplexer* mpx_;
   };
@@ -141,14 +149,15 @@ expected<void> test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
       // nop
     }
 
-    void new_connection() override {
+    bool new_connection() override {
       auto& mm = mpx_->pending_connects();
       auto i = mm.find(hdl());
+      bool result = true;
       if (i != mm.end()) {
-        msg().handle = i->second;
-        invoke_mailbox_element(mpx_);
+        result = doorman::new_connection(mpx_, i->second);
         mm.erase(i);
       }
+      return result;
     }
 
     void stop_reading() override {
@@ -166,6 +175,14 @@ expected<void> test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
 
     uint16_t port() const override {
       return mpx_->port(hdl());
+    }
+
+    void add_to_loop() override {
+      mpx_->passive_mode(hdl()) = false;
+    }
+
+    void remove_from_loop() override {
+      mpx_->passive_mode(hdl()) = true;
     }
 
   private:
@@ -245,6 +262,10 @@ bool& test_multiplexer::stopped_reading(connection_handle hdl) {
   return scribe_data_[hdl].stopped_reading;
 }
 
+bool& test_multiplexer::passive_mode(connection_handle hdl) {
+  return scribe_data_[hdl].passive_mode;
+}
+
 intrusive_ptr<scribe>& test_multiplexer::impl_ptr(connection_handle hdl) {
   return scribe_data_[hdl].ptr;
 }
@@ -255,6 +276,10 @@ uint16_t& test_multiplexer::port(accept_handle hdl) {
 
 bool& test_multiplexer::stopped_reading(accept_handle hdl) {
   return doorman_data_[hdl].stopped_reading;
+}
+
+bool& test_multiplexer::passive_mode(accept_handle hdl) {
+  return doorman_data_[hdl].passive_mode;
 }
 
 intrusive_ptr<doorman>& test_multiplexer::impl_ptr(accept_handle hdl) {
@@ -276,14 +301,19 @@ bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
 }
 
 void test_multiplexer::accept_connection(accept_handle hdl) {
+  if (passive_mode(hdl))
+    return;
   auto& dd = doorman_data_[hdl];
   if (!dd.ptr)
     throw std::logic_error("accept_connection: this doorman was not "
                            "assigned to a broker yet");
-  dd.ptr->new_connection();
+  if (!dd.ptr->new_connection())
+    passive_mode(hdl) = true;
 }
 
 void test_multiplexer::read_data(connection_handle hdl) {
+  if (passive_mode(hdl))
+    return;
   flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
   while (!sd.ptr)
@@ -296,14 +326,16 @@ void test_multiplexer::read_data(connection_handle hdl) {
         auto last = first + static_cast<ptrdiff_t>(sd.recv_conf.second);
         sd.rd_buf.insert(sd.rd_buf.end(), first, last);
         sd.xbuf.erase(first, last);
-        sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size());
+        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+          passive_mode(hdl) = true;
       }
       break;
     case receive_policy_flag::at_least:
       if (sd.xbuf.size() >= sd.recv_conf.second) {
         sd.rd_buf.clear();
         sd.rd_buf.swap(sd.xbuf);
-        sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size());
+        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+          passive_mode(hdl) = true;
       }
       break;
     case receive_policy_flag::at_most:
@@ -315,7 +347,8 @@ void test_multiplexer::read_data(connection_handle hdl) {
         auto last = (max_bytes < xbuf_size) ? first + max_bytes : sd.xbuf.end();
         sd.rd_buf.insert(sd.rd_buf.end(), first, last);
         sd.xbuf.erase(first, last);
-        sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size());
+        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+          passive_mode(hdl) = true;
       }
   }
 }

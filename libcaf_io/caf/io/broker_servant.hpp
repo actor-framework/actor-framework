@@ -46,12 +46,31 @@ public:
     return hdl_;
   }
 
+  void halt() {
+    activity_tokens_ = none;
+    this->remove_from_loop();
+  }
+
+  void trigger() {
+    activity_tokens_ = none;
+    this->add_to_loop();
+  }
+
+  void trigger(size_t num) {
+    CAF_ASSERT(num > 0);
+    if (activity_tokens_)
+      *activity_tokens_ += num;
+    else
+      activity_tokens_ = num;
+    this->add_to_loop();
+  }
+
 protected:
   void detach_from(abstract_broker* ptr) override {
     ptr->erase(hdl_);
   }
 
-  void invoke_mailbox_element(execution_unit* ctx) {
+  void invoke_mailbox_element_impl(execution_unit* ctx, mailbox_element& x) {
     auto self = this->parent();
     auto pfac = self->proxy_registry_ptr();
     if (pfac)
@@ -60,7 +79,29 @@ protected:
       if (pfac)
         ctx->proxy_registry_ptr(nullptr);
     });
-    self->activate(ctx, value_);
+    self->activate(ctx, x);
+  }
+
+  bool invoke_mailbox_element(execution_unit* ctx) {
+    auto prev = activity_tokens_;
+    invoke_mailbox_element_impl(ctx, value_);
+    // only consume an activity token if actor did not produce them now
+    if (prev && activity_tokens_ && --(*activity_tokens_) == 0) {
+      // tell broker it entered passive mode, this can result in
+      // producing, why we check the condition again afterwards
+      using passiv_t =
+        typename std::conditional<
+          std::is_same<Handle, connection_handle>::value,
+          connection_passivated_msg,
+          acceptor_passivated_msg
+        >::type;
+        using tmp_t = mailbox_element_vals<passiv_t>;
+        tmp_t tmp{strong_actor_ptr{},                  message_id::make(),
+                  mailbox_element::forwarding_stack{}, passiv_t{hdl()}};
+        invoke_mailbox_element_impl(ctx, tmp);
+        return activity_tokens_ != size_t{0};
+    }
+    return true;
   }
 
   SysMsgType& msg() {
@@ -69,6 +110,7 @@ protected:
 
   Handle hdl_;
   mailbox_element_vals<SysMsgType> value_;
+  optional<size_t> activity_tokens_;
 };
 
 } // namespace io

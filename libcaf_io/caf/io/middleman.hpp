@@ -219,15 +219,26 @@ public:
                                        std::forward<Ts>(xs)...);
   }
 
-  /// Spawns a new broker as server running on given `port`
-  /// or an `error`.
+  /// Spawns a new broker as server running on given `port`.
   /// @warning Blocks the caller until the server socket is initialized.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
   expected<typename infer_handle_from_fun<F>::type>
-  spawn_server(F fun, uint16_t port, Ts&&... xs) {
+  spawn_server(F fun, uint16_t& port, Ts&&... xs) {
     using impl = typename infer_handle_from_fun<F>::impl;
     return spawn_server_impl<Os, impl>(std::move(fun), port,
+                                       std::forward<Ts>(xs)...);
+  }
+
+  /// Spawns a new broker as server running on given `port`.
+  /// @warning Blocks the caller until the server socket is initialized.
+  template <spawn_options Os = no_spawn_options,
+            class F = std::function<void(broker*)>, class... Ts>
+  expected<typename infer_handle_from_fun<F>::type>
+  spawn_server(F fun, const uint16_t& port, Ts&&... xs) {
+    uint16_t dummy = port;
+    using impl = typename infer_handle_from_fun<F>::impl;
+    return spawn_server_impl<Os, impl>(std::move(fun), dummy,
                                        std::forward<Ts>(xs)...);
   }
 
@@ -276,13 +287,14 @@ private:
 
   template <spawn_options Os, class Impl, class F, class... Ts>
   expected<typename infer_handle_from_class<Impl>::type>
-  spawn_server_impl(F fun, uint16_t port, Ts&&... xs) {
+  spawn_server_impl(F fun, uint16_t& port, Ts&&... xs) {
     detail::init_fun_factory<Impl, F> fac;
     auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
     auto ehdl = backend().new_tcp_doorman(port);
     if (!ehdl)
       return ehdl.error();
     auto hdl = ehdl->first;
+    port = ehdl->second;
     actor_config cfg{&backend()};
     cfg.init_fun = [hdl, init_fun](local_actor* ptr) -> behavior {
       static_cast<abstract_broker*>(ptr)->assign_tcp_doorman(hdl);

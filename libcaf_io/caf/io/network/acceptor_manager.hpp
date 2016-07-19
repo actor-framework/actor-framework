@@ -34,9 +34,11 @@ public:
 
   ~acceptor_manager();
 
-  /// Called by the underlying IO device to indicate that
+  /// Called by the underlying I/O device to indicate that
   /// a new connection is awaiting acceptance.
-  virtual void new_connection() = 0;
+  /// @returns `true` if the manager accepts further connections,
+  ///          otherwise `false`.
+  virtual bool new_connection() = 0;
 };
 
 } // namespace network

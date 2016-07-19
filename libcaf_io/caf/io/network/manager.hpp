@@ -31,8 +31,8 @@ namespace caf {
 namespace io {
 namespace network {
 
-/// A manager configures an IO device and provides callbacks
-/// for various IO operations.
+/// A manager configures an I/O device and provides callbacks
+/// for various I/O operations.
 class manager : public ref_counted {
 public:
   manager(abstract_broker* parent_ptr);
@@ -55,17 +55,23 @@ public:
   /// if `invoke_detach_message == true`.
   void detach(execution_unit* ctx, bool invoke_detach_message);
 
-  /// Causes the manager to stop read operations on its IO device.
+  /// Causes the manager to stop read operations on its I/O device.
   /// Unwritten bytes are still send before the socket will be closed.
   virtual void stop_reading() = 0;
 
-  /// Called by the underlying IO device to report failures.
+  /// Removes the I/O device to the event loop of the middleman.
+  virtual void remove_from_loop() = 0;
+
+  /// Adds the I/O device to the event loop of the middleman.
+  virtual void add_to_loop() = 0;
+
+  /// Called by the underlying I/O device to report failures.
   virtual void io_failure(execution_unit* ctx, operation op) = 0;
 
-  /// Get the address of the underlying IO device.
+  /// Get the address of the underlying I/O device.
   virtual std::string addr() const = 0;
 
-  /// Get the port of the underlying IO device.
+  /// Get the port of the underlying I/O device.
   virtual uint16_t port() const = 0;
 
 protected:
