@@ -325,7 +325,7 @@ std::string actor_system_config::render_sec(uint8_t x, atom_value,
 
 std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
                                                     const message& xs) {
-  auto tmp = static_cast<sec>(x);
+  auto tmp = static_cast<exit_reason>(x);
   return deep_to_string(meta::type_name("exit_reason"), tmp,
                         meta::omittable_if_empty(), xs);
 }

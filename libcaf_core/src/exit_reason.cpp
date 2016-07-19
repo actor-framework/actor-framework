@@ -28,7 +28,6 @@ namespace {
 const char* exit_reason_strings[] = {
   "normal",
   "unhandled_exception",
-  "unhandled_request_error",
   "unknown",
   "out_of_workers",
   "user_shutdown",
