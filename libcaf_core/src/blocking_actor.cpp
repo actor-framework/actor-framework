@@ -325,7 +325,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
       timed_out = false;
       auto& x = seq.value();
       // skip messages that don't match our message ID
-      if (x.mid != mid) {
+      if (mid.valid() && mid != x.mid) {
         skipped = true;
       } else {
         // blocking actors can use nested receives => restore current_element_
