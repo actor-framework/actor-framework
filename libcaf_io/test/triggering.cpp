@@ -19,7 +19,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE io_resuming
+#define CAF_SUITE io_triggering
 #include "caf/test/unit_test.hpp"
 
 #include <memory>
@@ -75,6 +75,7 @@ behavior server1_stage4(stateful_actor<server1_state, broker>* self) {
       CAF_REQUIRE_EQUAL(self->state.received, 15u);
       CAF_REQUIRE_NOT_EQUAL(self->state.peer, invalid_connection_handle);
       // delay new tokens to force MM to remove this broker from its loop
+      CAF_MESSAGE("server is done");
       self->quit();
     }
   };
@@ -149,7 +150,7 @@ behavior server2_stage4(stateful_actor<server2_state, broker>* self) {
     },
     [=](const acceptor_passivated_msg&) {
       CAF_REQUIRE_EQUAL(self->state.accepted, 16u);
-      // delay new tokens to force MM to remove this broker from its loop
+      CAF_MESSAGE("server is done");
       self->quit();
     }
   };
@@ -257,10 +258,6 @@ CAF_TEST(trigger_acceptor) {
                                                        "localhost", port);
       CAF_REQUIRE(cl);
     }
-    // but no longer after that point
-    auto cl = client_system.middleman().spawn_client(client,
-                                                     "localhost", port);
-    CAF_REQUIRE(!cl);
   }};
   child.join();
 }
