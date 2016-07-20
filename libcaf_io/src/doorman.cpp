@@ -47,6 +47,12 @@ void doorman::io_failure(execution_unit* ctx, network::operation op) {
 }
 
 bool doorman::new_connection(execution_unit* ctx, connection_handle x) {
+  if (detached())
+    // we are already disconnected from the broker while the multiplexer
+    // did not yet remove the socket, this can happen if an I/O event causes
+    // the broker to call close_all() while the pollset contained
+    // further activities for the broker
+    return false;
   msg().handle = x;
   return invoke_mailbox_element(ctx);
 }
