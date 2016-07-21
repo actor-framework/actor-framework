@@ -294,7 +294,7 @@ void logger::run() {
 }
 
 void logger::start() {
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
+#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
   const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
   thread_ = std::thread{[this] { this->run(); }};
   std::string msg = "ENTRY log level = ";
@@ -304,7 +304,7 @@ void logger::start() {
 }
 
 void logger::stop() {
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
+#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
   log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__, "EXIT");
   // an empty string means: shut down
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{""});

@@ -32,14 +32,14 @@ namespace caf {
 /// SI time units to specify timeouts.
 /// @relates duration
 enum class time_unit : uint32_t {
-  invalid = 0,
-  seconds = 1,
-  milliseconds = 1000,
-  microseconds = 1000000
+  invalid,
+  seconds,
+  milliseconds,
+  microseconds
 };
 
 /// Relates time_unit
-std::string to_string(const time_unit& x);
+std::string to_string(time_unit x);
 
 /// Converts the ratio Num/Denom to a `time_unit` if the ratio describes
 /// seconds, milliseconds, microseconds, or minutes. Minutes are mapped

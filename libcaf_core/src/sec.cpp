@@ -19,6 +19,8 @@
 
 #include "caf/sec.hpp"
 
+#include "caf/detail/enum_to_string.hpp"
+
 namespace caf {
 
 namespace {
@@ -59,10 +61,7 @@ const char* sec_strings[] = {
 } // namespace <anonymous>
 
 std::string to_string(sec x) {
-  auto index = static_cast<size_t>(x);
-  if (index > static_cast<size_t>(sec::bad_function_call))
-    return "<unknown>";
-  return sec_strings[index];
+  return detail::enum_to_string(x, sec_strings);
 }
 
 error make_error(sec x) {

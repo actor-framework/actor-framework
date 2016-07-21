@@ -104,9 +104,9 @@ class mailbox_element_vals
       public detail::tuple_vals_impl<type_erased_tuple, Ts...> {
 public:
   template <class... Us>
-  mailbox_element_vals(strong_actor_ptr&& sender, message_id id,
-                       forwarding_stack&& stages, Us&&... xs)
-      : mailbox_element(std::move(sender), id, std::move(stages)),
+  mailbox_element_vals(strong_actor_ptr&& x0, message_id x1,
+                       forwarding_stack&& x2, Us&&... xs)
+      : mailbox_element(std::move(x0), x1, std::move(x2)),
         detail::tuple_vals_impl<type_erased_tuple, Ts...>(std::forward<Us>(xs)...) {
     // nop
   }
@@ -131,9 +131,9 @@ template <class... Ts>
 class mailbox_element_view : public mailbox_element,
                              public detail::type_erased_tuple_view<Ts...> {
 public:
-  mailbox_element_view(strong_actor_ptr&& sender, message_id id,
-                       forwarding_stack&& stages, Ts&... xs)
-    : mailbox_element(std::move(sender), id, std::move(stages)),
+  mailbox_element_view(strong_actor_ptr&& x0, message_id x1,
+                       forwarding_stack&& x2, Ts&... xs)
+    : mailbox_element(std::move(x0), x1, std::move(x2)),
       detail::type_erased_tuple_view<Ts...>(xs...) {
     // nop
   }

@@ -19,27 +19,27 @@
 
 #include "caf/io/basp/message_type.hpp"
 
+#include "caf/detail/enum_to_string.hpp"
+
 namespace caf {
 namespace io {
 namespace basp {
 
+namespace {
+
+const char* message_type_strings[] = {
+  "server_handshake",
+  "client_handshake",
+  "dispatch_message",
+  "announce_proxy_instance",
+  "kill_proxy_instance",
+  "heartbeat"
+};
+
+} // namespace <anonymous>
+
 std::string to_string(message_type x) {
-  switch (x) {
-    case message_type::server_handshake:
-      return "server_handshake";
-    case message_type::client_handshake:
-      return "client_handshake";
-    case message_type::dispatch_message:
-      return "dispatch_message";
-    case message_type::announce_proxy:
-      return "announce_proxy_instance";
-    case message_type::kill_proxy:
-      return "kill_proxy_instance";
-    case message_type::heartbeat:
-      return "heartbeat";
-    default:
-      return "???";
-  }
+  return detail::enum_to_string(x, message_type_strings);
 }
 
 } // namespace basp

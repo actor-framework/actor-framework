@@ -21,6 +21,8 @@
 
 #include "caf/message.hpp"
 
+#include "caf/detail/enum_to_string.hpp"
+
 namespace caf {
 
 namespace {
@@ -40,10 +42,7 @@ const char* exit_reason_strings[] = {
 
 
 std::string to_string(exit_reason x) {
-  auto index = static_cast<size_t>(x);
-  if (index > static_cast<size_t>(exit_reason::unreachable))
-    return "<unknown>";
-  return exit_reason_strings[index];
+  return detail::enum_to_string(x, exit_reason_strings);
 }
 
 error make_error(exit_reason x) {

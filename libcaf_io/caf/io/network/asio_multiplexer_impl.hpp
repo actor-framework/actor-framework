@@ -123,10 +123,10 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
   CAF_LOG_TRACE("");
   class impl : public scribe {
   public:
-    impl(abstract_broker* ptr, asio_multiplexer& ref, Socket&& s)
+    impl(abstract_broker* ptr, asio_multiplexer& am, Socket&& s)
         : scribe(ptr, network::conn_hdl_from_socket(s)),
           launched_(false),
-          stream_(ref) {
+          stream_(am) {
       stream_.init(std::move(s));
     }
     void configure_read(receive_policy::config config) override {
@@ -249,9 +249,9 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
     bool new_connection() override {
       CAF_LOG_TRACE("");
       auto& am = acceptor_.backend();
-      auto hdl = am.add_tcp_scribe(parent(),
-                                   std::move(acceptor_.accepted_socket()));
-      return doorman::new_connection(&am, hdl);
+      auto x = am.add_tcp_scribe(parent(),
+                                 std::move(acceptor_.accepted_socket()));
+      return doorman::new_connection(&am, x);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");

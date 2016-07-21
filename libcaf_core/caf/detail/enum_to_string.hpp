@@ -17,46 +17,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <sstream>
+#ifndef CAF_DETAIL_ENUM_TO_STRING_HPP
+#define CAF_DETAIL_ENUM_TO_STRING_HPP
 
-#include "caf/duration.hpp"
-
-#include "caf/detail/enum_to_string.hpp"
+#include <type_traits>
 
 namespace caf {
+namespace detail {
 
-namespace {
-
-const char* time_unit_strings[] = {
-  "invalid",
-  "seconds",
-  "milliseconds",
-  "microseconds"
-};
-
-const char* time_unit_short_strings[] = {
-  "?",
-  "s",
-  "ms",
-  "us"
-};
-
-} // namespace <anonymous>
-
-std::string to_string(time_unit x) {
-  return detail::enum_to_string(x, time_unit_strings);
+/// Converts x to its underlying type and fetches the name from the
+/// lookup table. Assumes consecutive enum values.
+template <class E, size_t N>
+const char* enum_to_string(E x, const char* (&lookup_table)[N]) {
+  auto index = static_cast<typename std::underlying_type<E>::type>(x);
+  return index < N ? lookup_table[index] : "<unknown>";
 }
 
-std::string to_string(const duration& x) {
-  if (x.unit == time_unit::invalid)
-    return "infinite";
-  auto result = std::to_string(x.count);
-  result += detail::enum_to_string(x.unit, time_unit_short_strings);
-  return result;
-}
-
-bool operator==(const duration& lhs, const duration& rhs) {
-  return lhs.unit == rhs.unit && lhs.count == rhs.count;
-}
-
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_ENUM_TO_STRING_HPP

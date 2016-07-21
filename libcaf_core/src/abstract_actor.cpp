@@ -40,6 +40,7 @@
 #include "caf/actor_control_block.hpp"
 
 #include "caf/detail/disposer.hpp"
+#include "caf/detail/enum_to_string.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
@@ -100,17 +101,19 @@ void abstract_actor::is_registered(bool value) {
   set_flag(value, is_registered_flag);
 }
 
+namespace {
+
+const char* linking_operation_strings[] = {
+  "establish_link",
+  "establish_backlink",
+  "remove_link",
+  "remove_backlink"
+};
+
+} // namespace <anonymous>
+
 std::string to_string(abstract_actor::linking_operation op) {
-  switch (op) {
-    case abstract_actor::establish_link_op:
-      return "establish_link";
-    case abstract_actor::establish_backlink_op:
-      return "establish_backlink";
-    case abstract_actor::remove_link_op:
-      return "remove_link";
-    default:
-      return "remove_backlink";
-  }
+  return detail::enum_to_string(op, linking_operation_strings);
 }
 
 } // namespace caf

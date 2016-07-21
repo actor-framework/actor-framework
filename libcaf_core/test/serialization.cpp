@@ -65,6 +65,7 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/detail/enum_to_string.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
 using namespace std;
@@ -94,13 +95,10 @@ enum class test_enum : uint32_t {
   c
 };
 
+const char* test_enum_strings[] = { "a", "b", "c" };
+
 std::string to_string(test_enum x) {
-  switch (x) {
-    case test_enum::a: return "a";
-    case test_enum::b: return "b";
-    case test_enum::c: return "c";
-  }
-  return "???";
+  return detail::enum_to_string(x, test_enum_strings);
 }
 
 struct test_array {
