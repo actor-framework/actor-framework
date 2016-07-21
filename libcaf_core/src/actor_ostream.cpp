@@ -74,8 +74,8 @@ void actor_ostream::redirect_all(actor_system& sys, std::string fn, int flags) {
 }
 
 void actor_ostream::init(abstract_actor* self) {
-  if (!self->get_flag(abstract_actor::has_used_aout_flag))
-    self->set_flag(true, abstract_actor::has_used_aout_flag);
+  if (!self->getf(abstract_actor::has_used_aout_flag))
+    self->setf(abstract_actor::has_used_aout_flag);
 }
 
 actor_ostream aout(local_actor* self) {

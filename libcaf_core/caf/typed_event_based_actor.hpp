@@ -68,7 +68,7 @@ public:
   }
 
   void initialize() override {
-    this->is_initialized(true);
+    this->setf(abstract_actor::is_initialized_flag);
     auto bhvr = make_behavior();
     CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
                              << CAF_ARG(this->has_behavior()));

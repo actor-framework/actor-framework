@@ -96,7 +96,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
       auto bptr = static_cast<basp_broker*>(selfptr->get());
-      if (!bptr->is_terminated())
+      if (!bptr->getf(abstract_actor::is_terminated_flag))
         bptr->state.proxies().erase(nid, res->id(), rsn);
     });
   });
@@ -192,7 +192,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
         auto bptr = static_cast<basp_broker*>(tmp->get());
         // ... to make sure this is safe
         if (bptr == mm->named_broker<basp_broker>(atom("BASP"))
-            && !bptr->is_terminated())
+            && !bptr->getf(abstract_actor::is_terminated_flag))
           send_kill_proxy_instance(fail_state);
       });
     });

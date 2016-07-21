@@ -50,7 +50,8 @@ void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
   // add implicit reference count held by middleman/multiplexer
-  is_registered(!is_hidden);
+  if (!is_hidden)
+    register_at_system();
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE("init and launch broker:" << CAF_ARG(id()));
   if (is_lazy && mailbox().try_block())
@@ -141,7 +142,7 @@ abstract_broker::add_tcp_scribe(network::native_socket fd) {
 
 void abstract_broker::add_doorman(const intrusive_ptr<doorman>& ptr) {
   doormen_.emplace(ptr->hdl(), ptr);
-  if (is_initialized())
+  if (getf(is_initialized_flag))
     ptr->launch();
 }
 
@@ -218,7 +219,7 @@ const char* abstract_broker::name() const {
 
 void abstract_broker::init_broker() {
   CAF_LOG_TRACE("");
-  is_initialized(true);
+  setf(is_initialized_flag);
   // launch backends now, because user-defined initialization
   // might call functions like add_connection
   for (auto& kvp : doormen_)

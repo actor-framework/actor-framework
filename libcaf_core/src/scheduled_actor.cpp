@@ -58,7 +58,7 @@ result<message> drop(scheduled_actor*, message_view&) {
 
 void scheduled_actor::default_error_handler(scheduled_actor* ptr, error& x) {
   ptr->fail_state_ = std::move(x);
-  ptr->is_terminated(true);
+  ptr->setf(is_terminated_flag);
 }
 
 void scheduled_actor::default_down_handler(scheduled_actor* ptr, down_msg& x) {
@@ -123,14 +123,14 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr,
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE(CAF_ARG(*ptr));
   CAF_ASSERT(ptr != nullptr);
-  CAF_ASSERT(!is_blocking());
+  CAF_ASSERT(!getf(is_blocking_flag));
   auto mid = ptr->mid;
   auto sender = ptr->sender;
   switch (mailbox().enqueue(ptr.release())) {
     case detail::enqueue_result::unblocked_reader: {
       // add a reference count to this actor and re-schedule it
       intrusive_ptr_add_ref(ctrl());
-      if (is_detached()) {
+      if (getf(is_detached_flag)) {
         CAF_ASSERT(private_thread_ != nullptr);
         private_thread_->resume();
       } else {
@@ -162,9 +162,10 @@ const char* scheduled_actor::name() const {
 
 void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
-  CAF_ASSERT(!is_blocking());
-  is_registered(!hide);
-  if (is_detached()) {
+  CAF_ASSERT(!getf(is_blocking_flag));
+  if (!hide)
+    register_at_system();
+  if (getf(is_detached_flag)) {
     private_thread_ = new detail::private_thread(this);
     private_thread_->start();
     return;
@@ -181,7 +182,7 @@ void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
 }
 
 bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
-  if (is_detached()) {
+  if (getf(is_detached_flag)) {
     CAF_ASSERT(private_thread_ != nullptr);
     private_thread_->shutdown();
   }
@@ -264,17 +265,17 @@ proxy_registry* scheduled_actor::proxy_registry_ptr() {
 void scheduled_actor::quit(error x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   fail_state_ = std::move(x);
-  is_terminated(true);
+  setf(is_terminated_flag);
 }
 
 // -- timeout management -------------------------------------------------------
 
 uint32_t scheduled_actor::request_timeout(const duration& d) {
   if (!d.valid()) {
-    has_timeout(false);
+    unsetf(has_timeout_flag);
     return 0;
   }
-  has_timeout(true);
+  setf(has_timeout_flag);
   auto result = ++timeout_id_;
   auto msg = make_message(timeout_msg{++timeout_id_});
   CAF_LOG_TRACE("send new timeout_msg, " << CAF_ARG(timeout_id_));
@@ -288,13 +289,12 @@ uint32_t scheduled_actor::request_timeout(const duration& d) {
 }
 
 void scheduled_actor::reset_timeout(uint32_t timeout_id) {
-  if (is_active_timeout(timeout_id)) {
-    has_timeout(false);
-  }
+  if (is_active_timeout(timeout_id))
+    unsetf(has_timeout_flag);
 }
 
 bool scheduled_actor::is_active_timeout(uint32_t tid) const {
-  return has_timeout() && timeout_id_ == tid;
+  return getf(has_timeout_flag) && timeout_id_ == tid;
 }
 
 // -- message processing -------------------------------------------------------
@@ -351,7 +351,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       // exit_reason::kill is always fatal
       if (em.reason == exit_reason::kill) {
         fail_state_ = std::move(em.reason);
-        is_terminated(true);
+        setf(is_terminated_flag);
       } else {
         exit_handler_(this, em);
       }
@@ -423,13 +423,13 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     case message_category::ordinary: {
       detail::default_invoke_result_visitor visitor{this};
       bool skipped = false;
-      auto had_timeout = has_timeout();
+      auto had_timeout = getf(has_timeout_flag);
       if (had_timeout)
-        has_timeout(false);
+        unsetf(has_timeout_flag);
       // restore timeout at scope exit if message was skipped
       auto timeout_guard = detail::make_scope_guard([&] {
         if (skipped && had_timeout)
-          has_timeout(true);
+          setf(has_timeout_flag);
       });
       auto call_default_handler = [&] {
         auto sres = default_handler_(this, x);
@@ -498,19 +498,20 @@ bool scheduled_actor::consume_from_cache() {
 bool scheduled_actor::activate(execution_unit* ctx) {
   CAF_LOG_TRACE("");
   CAF_ASSERT(ctx != nullptr);
-  CAF_ASSERT(!is_blocking());
+  CAF_ASSERT(!getf(is_blocking_flag));
   context(ctx);
-  if (is_initialized() && (!has_behavior() || is_terminated())) {
+  if (getf(is_initialized_flag)
+      && (!has_behavior() || getf(is_terminated_flag))) {
     CAF_LOG_DEBUG_IF(!has_behavior(),
                      "resume called on an actor without behavior");
-    CAF_LOG_DEBUG_IF(is_terminated(),
+    CAF_LOG_DEBUG_IF(getf(is_terminated_flag),
                      "resume called on a terminated actor");
     return false;
   }
 # ifndef CAF_NO_EXCEPTIONS
   try {
 # endif // CAF_NO_EXCEPTIONS
-    if (!is_initialized()) {
+    if (!getf(is_initialized_flag)) {
       initialize();
       if (finalize()) {
         CAF_LOG_DEBUG("actor_done() returned true right after make_behavior()");
@@ -590,7 +591,7 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
 }
 
 bool scheduled_actor::finalize() {
-  if (has_behavior() && !is_terminated())
+  if (has_behavior() && !getf(is_terminated_flag))
     return false;
   CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
   on_exit();

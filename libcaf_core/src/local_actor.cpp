@@ -60,7 +60,7 @@ void local_actor::on_destroy() {
   // alternatively, we would have to use a reference-counted,
   // heap-allocated logger
   CAF_SET_LOGGER_SYS(nullptr);
-  if (!is_cleaned_up()) {
+  if (!getf(is_cleaned_up_flag)) {
     on_exit();
     cleanup(exit_reason::unreachable, nullptr);
     monitorable_actor::on_destroy();
@@ -101,7 +101,7 @@ message_id local_actor::new_request_id(message_priority mp) {
 }
 
 mailbox_element_ptr local_actor::next_message() {
-  if (!is_priority_aware())
+  if (!getf(is_priority_aware_flag))
     return mailbox_element_ptr{mailbox().try_pop()};
   // we partition the mailbox into four segments in this case:
   // <-------- ! was_skipped --------> | <--------  was_skipped  -------->
@@ -132,7 +132,7 @@ mailbox_element_ptr local_actor::next_message() {
 }
 
 bool local_actor::has_next_message() {
-  if (!is_priority_aware())
+  if (!getf(is_priority_aware_flag))
     return mailbox_.can_fetch_more();
   auto& mbox = mailbox();
   auto& cache = mbox.cache();
@@ -142,7 +142,7 @@ bool local_actor::has_next_message() {
 void local_actor::push_to_cache(mailbox_element_ptr ptr) {
   CAF_ASSERT(ptr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(*ptr));
-  if (!is_priority_aware() || !ptr->is_high_priority()) {
+  if (!getf(is_priority_aware_flag) || !ptr->is_high_priority()) {
     mailbox().cache().insert(mailbox().cache().end(), ptr.release());
     return;
   }
@@ -190,7 +190,7 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
     mailbox_.close(f);
   }
   // tell registry we're done
-  is_registered(false);
+  unregister_from_system();
   monitorable_actor::cleanup(std::move(fail_state), host);
   return true;
 }

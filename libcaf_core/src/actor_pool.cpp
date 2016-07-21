@@ -124,7 +124,7 @@ void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
 }
 
 actor_pool::actor_pool(actor_config& cfg) : monitorable_actor(cfg) {
-  is_registered(true);
+  register_at_system();
 }
 
 void actor_pool::on_cleanup() {
@@ -149,7 +149,7 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
       unique_guard.unlock();
       for (auto& w : workers)
         anon_send(w, tmp);
-      is_registered(false);
+      unregister_from_system();
     }
     return true;
   }
@@ -210,7 +210,7 @@ void actor_pool::quit(execution_unit* host) {
   // we can safely run our cleanup code here without holding
   // workers_mtx_ because abstract_actor has its own lock
   if (cleanup(planned_reason_, host))
-    is_registered(false);
+    unregister_from_system();
 }
 
 } // namespace caf

@@ -76,8 +76,9 @@ const char* blocking_actor::name() const {
 
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
   CAF_LOG_TRACE(CAF_ARG(hide));
-  CAF_ASSERT(is_blocking());
-  is_registered(!hide);
+  CAF_ASSERT(getf(is_blocking_flag));
+  if (!hide)
+    register_at_system();
   home_system().inc_detached_threads();
   std::thread([](strong_actor_ptr ptr) {
     // actor lives in its own thread
@@ -114,7 +115,8 @@ blocking_actor::receive_while(const bool& ref) {
 }
 
 void blocking_actor::await_all_other_actors_done() {
-  system().registry().await_running_count_equal(is_registered() ? 1 : 0);
+  system().registry().await_running_count_equal(getf(is_registered_flag) ? 1
+                                                                         : 0);
 }
 
 void blocking_actor::act() {

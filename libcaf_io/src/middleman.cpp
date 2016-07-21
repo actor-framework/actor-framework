@@ -288,9 +288,9 @@ void middleman::stop() {
     for (auto& kvp : named_brokers_) {
       auto& hdl = kvp.second;
       auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(hdl));
-      if (!ptr->is_terminated()) {
+      if (!ptr->getf(abstract_actor::is_terminated_flag)) {
         ptr->context(&backend());
-        ptr->is_terminated(true);
+        ptr->setf(abstract_actor::is_terminated_flag);
         ptr->finalize();
       }
     }

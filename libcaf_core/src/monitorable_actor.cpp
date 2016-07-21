@@ -42,7 +42,7 @@ void monitorable_actor::attach(attachable_ptr ptr) {
   CAF_ASSERT(ptr);
   error fail_state;
   auto attached = exclusive_critical_section([&] {
-    if (is_terminated()) {
+    if (getf(is_terminated_flag)) {
       fail_state = fail_state_;
       return false;
     }
@@ -64,7 +64,7 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   attachable_ptr head;
   bool set_fail_state = exclusive_critical_section([&]() -> bool {
-    if (!is_cleaned_up()) {
+    if (!getf(is_cleaned_up_flag)) {
       // local actors pass fail_state_ as first argument
       if (&fail_state_ != &reason)
         fail_state_ = std::move(reason);
@@ -83,7 +83,7 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(reason, host);
   // tell printer to purge its state for us if we ever used aout()
-  if (get_flag(abstract_actor::has_used_aout_flag)) {
+  if (getf(abstract_actor::has_used_aout_flag)) {
     auto pr = home_system().scheduler().printer();
     pr->enqueue(make_mailbox_element(nullptr, message_id::make(), {},
                                       delete_atom::value, id()),
@@ -138,7 +138,7 @@ bool monitorable_actor::establish_link_impl(abstract_actor* x) {
   bool send_exit_immediately = false;
   auto tmp = default_attachable::make_link(address(), x->address());
   auto success = exclusive_critical_section([&]() -> bool {
-    if (is_terminated()) {
+    if (getf(is_terminated_flag)) {
       fail_state = fail_state_;
       send_exit_immediately = true;
       return false;
@@ -165,7 +165,7 @@ bool monitorable_actor::establish_backlink_impl(abstract_actor* x) {
                                        default_attachable::link};
   auto tmp = default_attachable::make_link(address(), x->address());
   auto success = exclusive_critical_section([&]() -> bool {
-    if (is_terminated()) {
+    if (getf(is_terminated_flag)) {
       fail_state = fail_state_;
       send_exit_immediately = true;
       return false;

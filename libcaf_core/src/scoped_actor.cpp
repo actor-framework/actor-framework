@@ -31,7 +31,7 @@ namespace {
 class impl : public blocking_actor {
 public:
   impl(actor_config& cfg) : blocking_actor(cfg) {
-    is_detached(true);
+    setf(is_detached_flag);
   }
 
   void act() override {
@@ -52,7 +52,8 @@ scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
   if (!hide)
     prev_ = CAF_SET_AID(self_->id());
   CAF_LOG_TRACE(CAF_ARG(hide));
-  ptr()->is_registered(!hide);
+  if (!hide)
+    ptr()->register_at_system();
 }
 
 scoped_actor::~scoped_actor() {
@@ -60,9 +61,9 @@ scoped_actor::~scoped_actor() {
   if (!self_)
     return;
   auto x = ptr();
-  if (x->is_registered())
+  if (x->getf(abstract_actor::is_registered_flag))
     CAF_SET_AID(prev_);
-  if (!x->is_terminated())
+  if (!x->getf(abstract_actor::is_terminated_flag))
     x->cleanup(exit_reason::normal, &context_);
 }
 

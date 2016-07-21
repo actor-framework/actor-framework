@@ -45,7 +45,7 @@ public:
       : Base(cfg, std::forward<Ts>(xs)...),
         state(state_) {
     if (detail::is_serializable<State>::value)
-      this->is_serializable(true);
+      this->setf(Base::is_serializable_flag);
   }
 
   ~stateful_actor() {
@@ -55,7 +55,7 @@ public:
   /// Destroys the state of this actor (no further overriding allowed).
   void on_exit() final {
     CAF_LOG_TRACE("");
-    if (this->is_initialized())
+    if (this->getf(Base::is_initialized_flag))
       state_.~State();
   }
 

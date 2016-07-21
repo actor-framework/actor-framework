@@ -153,96 +153,25 @@ public:
   static constexpr int is_terminated_flag     = 0x0800; // local_actor
   static constexpr int is_cleaned_up_flag     = 0x1000; // monitorable_actor
 
-  inline void set_flag(bool enable_flag, int mask) {
+  inline void setf(int flag) {
     auto x = flags();
-    flags(enable_flag ? x | mask : x & ~mask);
+    flags(x | flag);
   }
 
-  inline bool get_flag(int mask) const {
-    return static_cast<bool>(flags() & mask);
+  inline void unsetf(int flag) {
+    auto x = flags();
+    flags(x & ~flag);
   }
 
-  inline bool has_timeout() const {
-    return get_flag(has_timeout_flag);
+  inline bool getf(int flag) const {
+    return (flags() & flag) != 0;
   }
 
-  inline void has_timeout(bool value) {
-    set_flag(value, has_timeout_flag);
-  }
+  /// Sets `is_registered_flag` and calls `system().registry().inc_running()`.
+  void register_at_system();
 
-  inline bool is_initialized() const {
-    return get_flag(is_initialized_flag);
-  }
-
-  inline void is_initialized(bool value) {
-    set_flag(value, is_initialized_flag);
-  }
-
-  inline bool is_blocking() const {
-    return get_flag(is_blocking_flag);
-  }
-
-  inline void is_blocking(bool value) {
-    set_flag(value, is_blocking_flag);
-  }
-
-  inline bool is_detached() const {
-    return get_flag(is_detached_flag);
-  }
-
-  inline void is_detached(bool value) {
-    set_flag(value, is_detached_flag);
-  }
-
-  inline bool is_priority_aware() const {
-    return get_flag(is_priority_aware_flag);
-  }
-
-  inline void is_priority_aware(bool value) {
-    set_flag(value, is_priority_aware_flag);
-  }
-
-  inline bool is_serializable() const {
-    return get_flag(is_serializable_flag);
-  }
-
-  inline void is_serializable(bool value) {
-    set_flag(value, is_serializable_flag);
-  }
-
-  inline bool is_migrated_from() const {
-    return get_flag(is_migrated_from_flag);
-  }
-
-  inline void is_migrated_from(bool value) {
-    set_flag(value, is_migrated_from_flag);
-  }
-
-  inline bool is_registered() const {
-    return get_flag(is_registered_flag);
-  }
-
-  void is_registered(bool value);
-
-  inline bool is_actor_decorator() const {
-    return static_cast<bool>(flags() & is_actor_decorator_mask);
-  }
-
-  inline bool is_terminated() const {
-    return get_flag(is_terminated_flag);
-  }
-
-  inline void is_terminated(bool value) {
-    set_flag(value, is_terminated_flag);
-  }
-
-  inline bool is_cleaned_up() const {
-    return get_flag(is_cleaned_up_flag);
-  }
-
-  inline void is_cleaned_up(bool value) {
-    set_flag(value, is_cleaned_up_flag);
-  }
+  /// Unsets `is_registered_flag` and calls `system().registry().dec_running()`.
+  void unregister_from_system();
 
   virtual bool link_impl(linking_operation op, abstract_actor* other) = 0;
 

@@ -45,7 +45,7 @@ struct fixture {
     auto ptr = actor_cast<abstract_actor*>(handle);
     auto dptr = dynamic_cast<monitorable_actor*>(ptr);
     CAF_REQUIRE(dptr != nullptr);
-    return dptr->is_terminated();
+    return dptr->getf(abstract_actor::is_terminated_flag);
   }
 
   fixture() : system(cfg) {

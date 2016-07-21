@@ -91,14 +91,18 @@ actor_system& abstract_actor::home_system() const noexcept {
   return *(actor_control_block::from(this)->home_system);
 }
 
-void abstract_actor::is_registered(bool value) {
-  if (is_registered() == value)
+void abstract_actor::register_at_system() {
+  if (getf(is_registered_flag))
     return;
-  if (value)
-    home_system().registry().inc_running();
-  else
-    home_system().registry().dec_running();
-  set_flag(value, is_registered_flag);
+  setf(is_registered_flag);
+  home_system().registry().inc_running();
+}
+
+void abstract_actor::unregister_from_system() {
+  if (!getf(is_registered_flag))
+    return;
+  unsetf(is_registered_flag);
+  home_system().registry().dec_running();
 }
 
 namespace {
