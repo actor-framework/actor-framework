@@ -402,6 +402,16 @@ private:
   caf::error error_;
 };
 
+/// @relates expected
+inline bool operator==(const expected<void>& x, const expected<void>& y) {
+  return (x && y) || (!x && !y && x.error() == y.error());
+}
+
+/// @relates expected
+inline bool operator!=(const expected<void>& x, const expected<void>& y) {
+  return !(x == y);
+}
+
 template <>
 class expected<unit_t> : public expected<void> {
 public:
