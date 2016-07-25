@@ -73,8 +73,8 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
     });
   auto write = [=](const org::libcppa::PingOrPong& p) {
     string buf = p.SerializeAsString();
-    int32_t s = htonl(static_cast<int32_t>(buf.size()));
-    self->write(hdl, sizeof(int32_t), &s);
+    auto s = htonl(static_cast<uint32_t>(buf.size()));
+    self->write(hdl, sizeof(uint32_t), &s);
     self->write(hdl, buf.size(), buf.data());
     self->flush(hdl);
   };
@@ -112,16 +112,16 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
         cerr << "neither Ping nor Pong!" << endl;
       }
       // receive next length prefix
-      self->configure_read(hdl, receive_policy::exactly(sizeof(int32_t)));
+      self->configure_read(hdl, receive_policy::exactly(sizeof(uint32_t)));
       self->unbecome();
     }
   }.or_else(default_bhvr);
   auto await_length_prefix = message_handler {
     [=](const new_data_msg& msg) {
-      int32_t num_bytes;
-      memcpy(&num_bytes, msg.buf.data(), sizeof(int32_t));
+      uint32_t num_bytes;
+      memcpy(&num_bytes, msg.buf.data(), sizeof(uint32_t));
       num_bytes = htonl(num_bytes);
-      if (num_bytes < 0 || num_bytes > (1024 * 1024)) {
+      if (num_bytes > (1024 * 1024)) {
         aout(self) << "someone is trying something nasty" << endl;
         self->quit(exit_reason::user_shutdown);
         return;
@@ -133,7 +133,7 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
     }
   }.or_else(default_bhvr);
   // initial setup
-  self->configure_read(hdl, receive_policy::exactly(sizeof(int32_t)));
+  self->configure_read(hdl, receive_policy::exactly(sizeof(uint32_t)));
   self->become(await_length_prefix);
 }
 
