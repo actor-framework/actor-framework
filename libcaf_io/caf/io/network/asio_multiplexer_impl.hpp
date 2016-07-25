@@ -248,6 +248,12 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
     }
     bool new_connection() override {
       CAF_LOG_TRACE("");
+      if (detached())
+        // we are already disconnected from the broker while the multiplexer
+        // did not yet remove the socket, this can happen if an I/O event causes
+        // the broker to call close_all() while the pollset contained
+        // further activities for the broker
+        return false;
       auto& am = acceptor_.backend();
       auto x = am.add_tcp_scribe(parent(),
                                  std::move(acceptor_.accepted_socket()));
