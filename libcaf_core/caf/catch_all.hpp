@@ -31,7 +31,9 @@ struct catch_all {
 
   F handler;
 
-  catch_all(catch_all&&) = default;
+  catch_all(catch_all&& x) : handler(std::move(x.handler)) {
+    // nop
+  }
 
   template <class T>
   catch_all(T&& x) : handler(std::forward<T>(x)) {
