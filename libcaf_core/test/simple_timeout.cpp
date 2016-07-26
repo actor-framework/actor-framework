@@ -31,18 +31,36 @@ using namespace caf;
 
 namespace {
 
+using ms = std::chrono::milliseconds;
+
 using reset_atom = atom_constant<atom("reset")>;
 using timer = typed_actor<reacts_to<reset_atom>>;
 
 timer::behavior_type timer_impl(timer::pointer self) {
   auto had_reset = std::make_shared<bool>(false);
-  self->delayed_send(self, std::chrono::milliseconds(100), reset_atom::value);
+  self->delayed_send(self, ms(100), reset_atom::value);
   return {
     [=](reset_atom) {
       CAF_MESSAGE("timer reset");
       *had_reset = true;
     },
-    after(std::chrono::milliseconds(600)) >> [=] {
+    after(ms(600)) >> [=] {
+      CAF_MESSAGE("timer expired");
+      CAF_REQUIRE(*had_reset);
+      self->quit();
+    }
+  };
+}
+
+timer::behavior_type timer_impl2(timer::pointer self) {
+  auto had_reset = std::make_shared<bool>(false);
+  self->delayed_anon_send(self, ms(100), reset_atom::value);
+  return {
+    [=](reset_atom) {
+      CAF_MESSAGE("timer reset");
+      *had_reset = true;
+    },
+    after(ms(600)) >> [=] {
       CAF_MESSAGE("timer expired");
       CAF_REQUIRE(*had_reset);
       self->quit();
@@ -65,6 +83,10 @@ CAF_TEST_FIXTURE_SCOPE(timeout_tests, fixture)
 
 CAF_TEST(single_timeout) {
   system.spawn(timer_impl);
+}
+
+CAF_TEST(single_anon_timeout) {
+  system.spawn(timer_impl2);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

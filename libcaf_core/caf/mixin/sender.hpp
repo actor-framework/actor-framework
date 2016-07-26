@@ -146,6 +146,25 @@ public:
       rtime, this->ctrl(), actor_cast<strong_actor_ptr>(dest),
       message_id::make(P), make_message(std::forward<Ts>(xs)...));
   }
+
+  template <message_priority P = message_priority::normal,
+            class Source = actor, class Dest = actor, class... Ts>
+  void delayed_anon_send(const Dest& dest, const duration& rtime, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    static_assert(actor_accepts_message<
+                    typename signatures_of<Dest>::type,
+                    token
+                  >::value,
+                  "receiver does not accept given message");
+    this->system().scheduler().delayed_send(
+      rtime, nullptr, actor_cast<strong_actor_ptr>(dest),
+      message_id::make(P), make_message(std::forward<Ts>(xs)...));
+  }
 };
 
 } // namespace mixin
