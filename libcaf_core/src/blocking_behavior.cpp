@@ -26,7 +26,7 @@ blocking_behavior::~blocking_behavior() {
   // nop
 }
 
-blocking_behavior::blocking_behavior(behavior x) : nested(std::move(x)) {
+blocking_behavior::blocking_behavior(behavior& x) : nested(x) {
   // nop
 }
 

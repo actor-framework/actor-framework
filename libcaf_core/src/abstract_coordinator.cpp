@@ -87,20 +87,21 @@ public:
     bool running = true;
     std::multimap<hrc::time_point, delayed_msg> messages;
     // our message handler
-    auto bhvr = detail::make_blocking_behavior(
-      behavior{
-        [&](const duration& d, strong_actor_ptr& from,
-                           strong_actor_ptr& to, message_id mid, message& msg) {
-          insert_dmsg(messages, d, std::move(from),
-                      std::move(to), mid, std::move(msg));
-        },
-        [&](const exit_msg& dm) {
-          if (dm.reason) {
-            fail_state(dm.reason);
-            running = false;
-          }
-        }
+    behavior nested{
+      [&](const duration& d, strong_actor_ptr& from,
+          strong_actor_ptr& to, message_id mid, message& msg) {
+        insert_dmsg(messages, d, std::move(from),
+                    std::move(to), mid, std::move(msg));
       },
+      [&](const exit_msg& dm) {
+        if (dm.reason) {
+          fail_state(dm.reason);
+          running = false;
+        }
+      }
+    };
+    auto bhvr = detail::make_blocking_behavior(
+      &nested,
       others >> [&](message_view& x) -> result<message> {
         std::cerr << "*** unexpected message in timer_actor: "
                   << to_string(x.content()) << std::endl;

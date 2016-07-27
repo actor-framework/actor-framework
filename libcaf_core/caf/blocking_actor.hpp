@@ -27,6 +27,7 @@
 #include "caf/fwd.hpp"
 #include "caf/send.hpp"
 #include "caf/none.hpp"
+#include "caf/after.hpp"
 #include "caf/extend.hpp"
 #include "caf/behavior.hpp"
 #include "caf/local_actor.hpp"
@@ -336,9 +337,13 @@ public:
                            tl_size<filtered>::value, sizeof...(Ts)
                          >::type;
     make_blocking_behavior_t factory;
-    auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, bhvr);
+    auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, &bhvr);
     receive_impl(rcc, mid, fun);
   }
+
+  /// Receives messages until either a pre- or postcheck of `rcc` fails.
+  void varargs_tup_receive(receive_cond& rcc, message_id mid,
+                           std::tuple<behavior&>& tup);
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
   template <class... Ts>

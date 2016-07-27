@@ -396,6 +396,22 @@ mailbox_element_ptr blocking_actor::dequeue() {
   return next_message();
 }
 
+void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
+                                         std::tuple<behavior&>& tup) {
+  using namespace detail;
+  auto& bhvr = std::get<0>(tup);
+  if (bhvr.timeout().valid()) {
+    auto tmp = after(bhvr.timeout()) >> [&] {
+      bhvr.handle_timeout();
+    };
+    auto fun = make_blocking_behavior(&bhvr, std::move(tmp));
+    receive_impl(rcc, mid, fun);
+  } else {
+    auto fun = make_blocking_behavior(&bhvr);
+    receive_impl(rcc, mid, fun);
+  }
+}
+
 size_t blocking_actor::attach_functor(const actor& x) {
   return attach_functor(actor_cast<strong_actor_ptr>(x));
 }

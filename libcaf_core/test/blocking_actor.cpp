@@ -60,4 +60,14 @@ CAF_TEST(catch_all) {
   );
 }
 
+CAF_TEST(behavior_ref) {
+  behavior bhvr{
+    [](int i) {
+      CAF_CHECK_EQUAL(i, 42);
+    }
+  };
+  self->send(self, 42);
+  self->receive(bhvr);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
