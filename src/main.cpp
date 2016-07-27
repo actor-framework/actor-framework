@@ -542,25 +542,15 @@ std::string to_string(const foo& x) {
 }
 
 void register_class(foo*, pybind11::module& m, const std::string& name) {
+  std::string (*str_fun)(const foo&) = &to_string;
   pybind11::class_<foo>(m, name.c_str())
   .def(pybind11::init<>())
   .def(pybind11::init<int, int>())
-  .def("__str__", (std::string (*)(const foo&)) &to_string)
-  .def("__repr__", (std::string (*)(const foo&)) &to_string)
+  .def("__str__", str_fun)
+  .def("__repr__", str_fun)
   .def_readwrite("x", &foo::x)
   .def_readwrite("y", &foo::y);
 }
-
-class config : public py_config {
-public:
-  std::string py_file;
-
-  config() {
-    add_message_type<foo>("foo");
-    opt_group{custom_options_, "python"}
-    .add(py_file, "file,f", "Run script instead of interactive shell.");
-  }
-};
 
 #if PY_MAJOR_VERSION == 3
 #define CAF_MODULE_INIT_RES PyObject*
@@ -569,7 +559,6 @@ public:
 #define CAF_MODULE_INIT_RES void
 #define CAF_MODULE_INIT_RET(unused)
 #endif
-
 
 CAF_MODULE_INIT_RES caf_module_init() {
   pybind11::module m("CAF", "Python binding for CAF");
@@ -591,6 +580,17 @@ namespace {
 
 using namespace caf;
 using namespace caf::python;
+
+class config : public py_config {
+public:
+  std::string py_file;
+
+  config() {
+    add_message_type<foo>("foo");
+    opt_group{custom_options_, "python"}
+    .add(py_file, "file,f", "Run script instead of interactive shell.");
+  }
+};
 
 void caf_main(actor_system& system, const config& cfg) {
   // register system and scoped actor in global variables
