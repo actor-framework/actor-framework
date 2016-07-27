@@ -95,6 +95,11 @@ public:
     return self_->response(std::forward<Ts>(xs)...);
   }
 
+  /// @private
+  scheduled_actor* selfptr() const {
+    return self_;
+  }
+
 private:
   scheduled_actor* self_;
 };

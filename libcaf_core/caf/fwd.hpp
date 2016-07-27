@@ -44,6 +44,7 @@ template <class, class, int> class actor_cast_access;
 template <class...> class result;
 template <class...> class delegated;
 template <class...> class typed_actor;
+template <class...> class typed_actor_pointer;
 template <class...> class typed_response_promise;
 template <class...> class typed_event_based_actor;
 

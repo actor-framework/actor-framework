@@ -29,6 +29,9 @@ namespace caf {
 template <class... Sigs>
 class typed_actor_pointer {
 public:
+  /// Stores the template parameter pack.
+  using signatures = detail::type_list<Sigs...>;
+
   template <class Supertype>
   typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
     using namespace caf::detail;
@@ -45,6 +48,11 @@ public:
 
   typed_actor_view<Sigs...>* operator->() {
     return &view_;
+  }
+
+  /// @private
+  actor_control_block* get() const {
+    return actor_control_block::from(view_.selfptr());
   }
 
 private:

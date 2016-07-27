@@ -142,7 +142,7 @@ public:
                         >::type
                       >::value,
                   "this actor does not accept the response message");
-    this->system().scheduler().delayed_send(
+    dptr()->system().scheduler().delayed_send(
       rtime, this->ctrl(), actor_cast<strong_actor_ptr>(dest),
       message_id::make(P), make_message(std::forward<Ts>(xs)...));
   }
@@ -161,9 +161,14 @@ public:
                     token
                   >::value,
                   "receiver does not accept given message");
-    this->system().scheduler().delayed_send(
+    dptr()->system().scheduler().delayed_send(
       rtime, nullptr, actor_cast<strong_actor_ptr>(dest),
       message_id::make(P), make_message(std::forward<Ts>(xs)...));
+  }
+
+private:
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
   }
 };
 
