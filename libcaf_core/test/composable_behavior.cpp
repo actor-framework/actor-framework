@@ -200,6 +200,30 @@ protected:
   std::unordered_map<counting_string, counting_string> values_;
 };
 
+using delayed_testee_actor = typed_actor<reacts_to<int>,
+                                         replies_to<bool>::with<int>,
+                                         reacts_to<std::string>>;
+
+class delayed_testee : public composable_behavior<delayed_testee_actor> {
+public:
+  result<void> operator()(int x) override {
+    CAF_CHECK_EQUAL(x, 42);
+    self->delayed_anon_send(self, std::chrono::milliseconds(10), true);
+    return unit;
+  }
+
+  result<int> operator()(bool x) override {
+    CAF_CHECK_EQUAL(x, true);
+    self->delayed_send(self, std::chrono::milliseconds(10), "hello");
+    return 0;
+  }
+
+  result<void> operator()(param<std::string> x) override {
+    CAF_CHECK_EQUAL(x.get(), "hello");
+    return unit;
+  }
+};
+
 struct fixture {
   fixture() : system(cfg) {
     // nop
@@ -318,6 +342,12 @@ CAF_TEST(param_detaching) {
   self->await_all_other_actors_done();
   // only `key` and `value` from this scope remain
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 11);
+}
+
+CAF_TEST(delayed_sends) {
+  scoped_actor self{system};
+  auto testee = self->spawn<delayed_testee>();
+  self->send(testee, 42);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -34,7 +34,10 @@ class typed_actor_view : public extend<typed_actor_view_base,
                                        typed_actor_view<Sigs...>>::template
                                 with<mixin::sender, mixin::requester> {
 public:
-  typed_actor_view(scheduled_actor* selfptr) : self_(selfptr) {
+  /// Stores the template parameter pack.
+  using signatures = detail::type_list<Sigs...>;
+
+  typed_actor_view(scheduled_actor* ptr) : self_(ptr) {
     // nop
   }
 
@@ -46,6 +49,11 @@ public:
   typename infer_handle_from_class<T>::type
   spawn(Ts&&... xs) {
     return self_->spawn<T, Os>(std::forward<Ts>(xs)...);
+  }
+
+  template <class T, spawn_options Os = no_spawn_options>
+  infer_handle_from_state_t<T> spawn() {
+    return self_->spawn<T, Os>();
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
@@ -96,8 +104,8 @@ public:
   }
 
   /// @private
-  scheduled_actor* selfptr() const {
-    return self_;
+  actor_control_block* ctrl() const {
+    return actor_control_block::from(self_);;
   }
 
 private:

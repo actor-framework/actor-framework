@@ -143,7 +143,7 @@ public:
                       >::value,
                   "this actor does not accept the response message");
     dptr()->system().scheduler().delayed_send(
-      rtime, this->ctrl(), actor_cast<strong_actor_ptr>(dest),
+      rtime, dptr()->ctrl(), actor_cast<strong_actor_ptr>(dest),
       message_id::make(P), make_message(std::forward<Ts>(xs)...));
   }
 

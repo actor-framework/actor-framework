@@ -52,7 +52,7 @@ public:
 
   /// @private
   actor_control_block* get() const {
-    return actor_control_block::from(view_.selfptr());
+    return view_.ctrl();
   }
 
 private:

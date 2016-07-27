@@ -117,15 +117,20 @@ public:
   // -- spawn functions --------------------------------------------------------
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename infer_handle_from_class<T>::type
-  spawn(Ts&&... xs) {
+  infer_handle_from_class_t<T> spawn(Ts&&... xs) {
     actor_config cfg{context()};
     return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(cfg, std::forward<Ts>(xs)...));
   }
 
+  template <class T, spawn_options Os = no_spawn_options>
+  infer_handle_from_state_t<T> spawn() {
+    using impl = composable_behavior_based_actor<T>;
+    actor_config cfg{context()};
+    return eval_opts(Os, system().spawn_class<impl, make_unbound(Os)>(cfg));
+  }
+
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
-  spawn(F fun, Ts&&... xs) {
+  infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
     actor_config cfg{context()};
     return eval_opts(Os, system().spawn_functor<make_unbound(Os)>(cfg, fun, std::forward<Ts>(xs)...));
   }
@@ -376,10 +381,6 @@ protected:
   /// Factory function for returning initial behavior in function-based actors.
   std::function<behavior (local_actor*)> initial_behavior_fac_;
 };
-
-/// A smart pointer to a {@link local_actor} instance.
-/// @relates local_actor
-using local_actor_ptr = intrusive_ptr<local_actor>;
 
 } // namespace caf
 
