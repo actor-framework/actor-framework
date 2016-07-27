@@ -41,6 +41,11 @@ public:
     // nop
   }
 
+  typed_actor_view& operator=(scheduled_actor* ptr) {
+    self_ = ptr;
+    return *this;
+  }
+
   /****************************************************************************
    *                           spawn actors                                   *
    ****************************************************************************/
@@ -105,6 +110,7 @@ public:
 
   /// @private
   actor_control_block* ctrl() const {
+    CAF_ASSERT(self_ != nullptr);
     return actor_control_block::from(self_);;
   }
 

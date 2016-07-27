@@ -54,6 +54,8 @@ public:
 
   template <class SelfPointer>
   unit_t init_selfptr(SelfPointer x) {
+    CAF_ASSERT(x != nullptr);
+    self = x;
     return unit(static_cast<Ts*>(this)->init_selfptr(x)...);
   }
 

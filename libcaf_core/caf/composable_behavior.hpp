@@ -84,8 +84,9 @@ public:
   }
 
   template <class SelfPointer>
-  unit_t init_selfptr(SelfPointer selfptr) {
-    self = selfptr;
+  unit_t init_selfptr(SelfPointer x) {
+    CAF_ASSERT(x != nullptr);
+    self = x;
     return unit;
   }
 

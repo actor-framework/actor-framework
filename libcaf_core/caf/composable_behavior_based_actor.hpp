@@ -21,6 +21,7 @@
 #define CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP
 
 #include "caf/stateful_actor.hpp"
+#include "caf/message_handler.hpp"
 
 namespace caf {
 

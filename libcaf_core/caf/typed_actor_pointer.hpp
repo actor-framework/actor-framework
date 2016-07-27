@@ -42,7 +42,7 @@ public:
                   "cannot create a pointer view to an unrelated actor type");
   }
 
-  typed_actor_pointer(const std::nullptr_t&) : view_(nullptr) {
+  typed_actor_pointer(std::nullptr_t) : view_(nullptr) {
     // nop
   }
 
@@ -53,6 +53,18 @@ public:
   /// @private
   actor_control_block* get() const {
     return view_.ctrl();
+  }
+
+  template <class Supertype>
+  typed_actor_pointer& operator=(Supertype* ptr) {
+    using namespace caf::detail;
+    static_assert(tl_subset_of<
+                    type_list<Sigs...>,
+                    typename Supertype::signatures
+                  >::value,
+                  "cannot assign pointer of unrelated actor type");
+    view_ = ptr;
+    return *this;
   }
 
 private:
