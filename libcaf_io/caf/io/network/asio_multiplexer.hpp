@@ -142,7 +142,8 @@ public:
         ack_writes_(false),
         fd_(ref.service()),
         backend_(ref),
-        rd_buf_ready_(false) {
+        rd_buf_ready_(false),
+        async_read_pending_(false) {
     configure_read(receive_policy::at_most(1024));
   }
 
@@ -230,6 +231,7 @@ public:
 
   /// Activates the stream.
   void activate(stream_manager* mgr) {
+    reading_ = true;
     read_loop(mgr);
   }
 
@@ -254,7 +256,8 @@ private:
   }
 
   void read_loop(manager_ptr mgr) {
-    reading_ = true;
+    if (async_read_pending_)
+      return;
     if (rd_buf_ready_) {
       rd_buf_ready_ = false;
       if (read_one(mgr.get(), rd_buf_.size()))
@@ -262,6 +265,7 @@ private:
       return;
     }
     auto cb = [=](const error_code& ec, size_t read_bytes) mutable {
+      async_read_pending_ = false;
       CAF_LOG_TRACE("");
       if (!ec) {
         // bail out early in case broker passivated stream in the meantime
@@ -273,15 +277,16 @@ private:
     };
     switch (rd_flag_) {
       case receive_policy_flag::exactly:
-        if (rd_buf_.size() < rd_size_) {
+        if (rd_buf_.size() < rd_size_)
           rd_buf_.resize(rd_size_);
-        }
+        async_read_pending_ = true;
         boost::asio::async_read(fd_, boost::asio::buffer(rd_buf_, rd_size_),
                                 cb);
         break;
       case receive_policy_flag::at_most:
         if (rd_buf_.size() < rd_size_)
           rd_buf_.resize(rd_size_);
+        async_read_pending_ = true;
         fd_.async_read_some(boost::asio::buffer(rd_buf_, rd_size_), cb);
         break;
       case receive_policy_flag::at_least: {
@@ -321,9 +326,11 @@ private:
   }
 
   void collect_data(manager_ptr mgr, size_t collected_bytes) {
+    async_read_pending_ = true;
     fd_.async_read_some(boost::asio::buffer(rd_buf_.data() + collected_bytes,
                                             rd_buf_.size() - collected_bytes),
                         [=](const error_code& ec, size_t nb) mutable {
+      async_read_pending_ = false;
       CAF_LOG_TRACE(CAF_ARG(nb));
       if (!ec) {
         auto sum = collected_bytes + nb;
@@ -339,17 +346,42 @@ private:
     });
   }
 
+  /// Set if read loop was started by user and unset if passivate is called.
   bool reading_;
+
+  /// Set on flush, also indicates that an async_write is pending.
   bool writing_;
+
+  /// Stores whether user requested ACK messages for async writes.
   bool ack_writes_;
+
+  /// TCP socket for this connection.
   Socket fd_;
+
+  /// Configures how chunk sizes are calculated.
   receive_policy_flag rd_flag_;
+
+  /// Minimum, maximum, or exact size of a chunk, depending on `rd_flag_`.
   size_t rd_size_;
+
+  /// Input buffer.
   buffer_type rd_buf_;
+
+  /// Output buffer for ASIO.
   buffer_type wr_buf_;
+
+  /// Swapped with `wr_buf_` before next write. Users write into this buffer
+  /// as long as `wr_buf_` is processed by ASIO.
   buffer_type wr_offline_buf_;
+
+  /// Reference to our I/O backend.
   asio_multiplexer& backend_;
+
+  /// Signalizes that a scribe was passivated while an async read was pending.
   bool rd_buf_ready_;
+
+  /// Makes sure no more than one async_read is pending at any given time
+  bool async_read_pending_;
 };
 
 /// An acceptor is responsible for accepting incoming connections.
@@ -370,7 +402,8 @@ public:
         backend_(am),
         accept_fd_(io),
         fd_valid_(false),
-        fd_(io) {
+        fd_(io),
+        async_accept_pending_(false) {
     // nop
   }
 
@@ -407,6 +440,7 @@ public:
 
   /// Starts the accept loop.
   void activate(manager_type* mgr) {
+    accepting_ = true;
     accept_loop(mgr);
   }
 
@@ -429,7 +463,8 @@ private:
   }
 
   void accept_loop(manager_ptr mgr) {
-    accepting_ = true;
+    if (async_accept_pending_)
+      return;
     // accept "cached" connection first
     if (fd_valid_) {
       fd_valid_ = false;
@@ -437,8 +472,10 @@ private:
         accept_loop(std::move(mgr));
       return;
     }
+    async_accept_pending_ = true;
     accept_fd_.async_accept(fd_, [=](const error_code& ec) mutable {
       CAF_LOG_TRACE("");
+      async_accept_pending_ = false;
       if (!ec) {
         // if broker has passivated this in the meantime, cache fd_ for later
         if (!accepting_) {
@@ -458,6 +495,8 @@ private:
   SocketAcceptor accept_fd_;
   bool fd_valid_;
   socket_type fd_;
+  /// Makes sure no more than one async_accept is pending at any given time
+  bool async_accept_pending_;
 };
 
 } // namesapce network
