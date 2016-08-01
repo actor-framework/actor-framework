@@ -130,16 +130,14 @@ A SNocs workspace is provided by GitHub user
 
 * GCC >= 4.8
 * Clang >= 3.2
+* MSVC >= 2015, update 3
 
 ## Supported Operating Systems
 
 * Linux
 * Mac OS X
 * FreeBSD 10
-* *Note for MS Windows*: CAF relies on C++11 features such as variadic templates
-  and unrestricted unions. We will support Visual Studio as soon as Microsoft's
-  compiler implements all required C++11 features. In the meantime, you can
-  use CAF via MinGW.
+* Windows >= 7 (currently static builds only)
 
 ## Scientific Use
 
