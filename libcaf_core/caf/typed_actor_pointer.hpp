@@ -55,6 +55,11 @@ public:
     return view_.ctrl();
   }
 
+  /// @private
+  scheduled_actor* internal_ptr() const {
+    return view_.internal_ptr();
+  }
+
   template <class Supertype>
   typed_actor_pointer& operator=(Supertype* ptr) {
     using namespace caf::detail;

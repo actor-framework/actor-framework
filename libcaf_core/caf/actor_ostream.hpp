@@ -22,6 +22,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/typed_actor_pointer.hpp"
 
 namespace caf {
 
@@ -45,6 +46,12 @@ public:
   explicit actor_ostream(local_actor* self);
 
   explicit actor_ostream(scoped_actor& self);
+
+  template <class... Sigs>
+  explicit actor_ostream(const typed_actor_pointer<Sigs...>& ptr)
+      : actor_ostream(ptr.internal_ptr()) {
+    // nop
+  }
 
   /// Writes `arg` to the buffer allocated for the calling actor.
   actor_ostream& write(std::string arg);
@@ -94,6 +101,12 @@ actor_ostream aout(local_actor* self);
 
 /// Convenience factory function for creating an actor output stream.
 actor_ostream aout(scoped_actor& self);
+
+/// Convenience factory function for creating an actor output stream.
+template <class... Sigs>
+actor_ostream aout(const typed_actor_pointer<Sigs...>& ptr) {
+  return actor_ostream{ptr};
+}
 
 } // namespace caf
 

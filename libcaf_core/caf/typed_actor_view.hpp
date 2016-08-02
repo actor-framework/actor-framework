@@ -114,6 +114,11 @@ public:
     return actor_control_block::from(self_);;
   }
 
+  /// @private
+  scheduled_actor* internal_ptr() const {
+    return self_;
+  }
+
 private:
   scheduled_actor* self_;
 };
