@@ -35,12 +35,12 @@
 template <class T>                                                             \
 struct has_##name##_member {                                                   \
   template <class U>                                                           \
-  static auto test(U* x) -> decltype(x->name(), std::true_type());             \
+  static auto sfinae(U* x) -> decltype(x->name(), std::true_type());           \
                                                                                \
   template <class U>                                                           \
-  static auto test(...) -> std::false_type;                                    \
+  static auto sfinae(...) -> std::false_type;                                  \
                                                                                \
-  using type = decltype(test<T>(nullptr));                                     \
+  using type = decltype(sfinae<T>(nullptr));                                   \
   static constexpr bool value = type::value;                                   \
 }
 
@@ -121,31 +121,6 @@ struct disjunction<> {
 template <bool X, bool... Xs>
 struct disjunction<X, Xs...> {
   static constexpr bool value = X || disjunction<Xs...>::value;
-};
-
-/// Checks whether `T` is an array of type `U`.
-template <class T, typename U>
-struct is_array_of {
-  using step1_type = typename std::remove_all_extents<T>::type;
-  using step2_type = typename std::remove_cv<step1_type>::type;
-  static constexpr bool value = std::is_array<T>::value
-                                && std::is_same<step2_type, U>::value;
-};
-
-/// Deduces the reference type of T0 and applies it to T1.
-template <class T0, typename T1>
-struct deduce_ref_type {
-  using type = decay_t<T1>;
-};
-
-template <class T0, typename T1>
-struct deduce_ref_type<T0&, T1> {
-  using type = decay_t<T1>&;
-};
-
-template <class T0, typename T1>
-struct deduce_ref_type<const T0&, T1> {
-  using type = const decay_t<T1>&;
 };
 
 /// Checks wheter `X` is in the template parameter pack Ts.
@@ -232,26 +207,6 @@ public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
-/// Checks wheter `T x` allows `x.insert(x.end(), first, last)` where
-/// both `first` and `last` have type `const char*`.
-template <class T>
-class has_char_insert {
-  template <class C>
-  static bool sfinae(C* cc,
-                     const char* first = nullptr,
-                     const char* last = nullptr,
-                     decltype(cc->insert(cc->end(), first, last))* = 0);
-
-  // SFNINAE default
-  static void sfinae(const void*);
-
-  using result_type = decltype(sfinae(static_cast<decay_t<T>>(nullptr)));
-
-public:
-  static constexpr bool value = is_primitive<T>::value == false &&
-                  std::is_same<bool, result_type>::value;
-};
-
 /// Checks whether `T` has `begin()` and `end()` member
 /// functions returning forward iterators.
 template <class T>
@@ -289,16 +244,6 @@ struct is_byte_sequence<std::vector<unsigned char>> : std::true_type { };
 
 template <>
 struct is_byte_sequence<std::string> : std::true_type { };
-
-/// Checks whether `T` is an `std::tuple` or `std::pair`.
-template <class T>
-struct is_tuple : std::false_type { };
-
-template <class... Ts>
-struct is_tuple<std::tuple<Ts...>> : std::true_type { };
-
-template <class F, class S>
-struct is_tuple<std::pair<F, S>> : std::true_type { };
 
 /// Checks whether `T` provides either a free function or a member function for
 /// serialization. The checks test whether both serialization and
@@ -441,37 +386,6 @@ struct is_mutable_ref<const T&> : std::false_type { };
 template <class T>
 struct is_mutable_ref<T&> : std::true_type { };
 
-/// Checks whether `T::static_type_name()` exists.
-template <class T>
-class has_static_type_name {
-private:
-  template <class U,
-            class = typename std::enable_if<
-                      !std::is_member_pointer<decltype(&U::static_type_name)>::value
-                    >::type>
-  static std::true_type sfinae(int);
-
-  template <class>
-  static std::false_type sfinae(...);
-
-public:
-  static constexpr bool value = decltype(sfinae<T>(0))::value;
-};
-
-/// Checks whether `T::memory_cache_flag` exists.
-template <class T>
-class is_memory_cached {
-private:
-  template <class U, bool = U::memory_cache_flag>
-  static std::true_type check(int);
-
-  template <class>
-  static std::false_type check(...);
-
-public:
-  static constexpr bool value = decltype(check<T>(0))::value;
-};
-
 /// Defines `result_type,` `arg_types,` and `fun_type`. Functor is
 ///    (a) a member function pointer, (b) a function,
 ///    (c) a function pointer, (d) an std::function.
@@ -587,50 +501,6 @@ struct is_manipulator {
     tl_exists<typename get_callable_trait<F>::arg_types, is_mutable_ref>::value;
 };
 
-template <bool IsCallable, typename C>
-struct map_to_result_type_impl {
-  using trait_type = typename get_callable_trait<C>::type;
-  using type = typename trait_type::result_type;
-};
-
-template <class C>
-struct map_to_result_type_impl<false, C> {
-  using type = unit_t;
-};
-
-/// Maps `T` to its result type if it's callable,
-///    {@link unit_t} otherwise.
-template <class T>
-struct map_to_result_type {
-  using type =
-    typename map_to_result_type_impl<
-      is_callable<T>::value,
-      T
-    >::type;
-};
-
-template <bool DoReplace, typename T1, typename T2>
-struct replace_type_impl {
-  using type = T1;
-};
-
-template <class T1, typename T2>
-struct replace_type_impl<true, T1, T2> {
-  using type = T2;
-};
-
-template <class T>
-constexpr bool value_of() {
-  return T::value;
-}
-
-/// Replaces `What` with `With` if any IfStmt::value evaluates to true.
-template <class What, typename With, class... IfStmt>
-struct replace_type {
-  static constexpr bool do_replace = disjunction<value_of<IfStmt>()...>::value;
-  using type = typename replace_type_impl<do_replace, What, With>::type;
-};
-
 /// Gets the Nth element of the template parameter pack `Ts`.
 template <size_t N, class... Ts>
 struct type_at;
@@ -700,18 +570,6 @@ struct value_type_of<T*> {
 
 template <class T>
 using value_type_of_t = typename value_type_of<T>::type;
-
-// drops the `const` qualifier in key-value pairs from the STL
-template <class T>
-struct deconst_kvp {
-  using type = T;
-};
-
-template <class K, class V>
-struct deconst_kvp<std::pair<K, V>> {
-  using type = std::pair<typename std::remove_const<K>::type,
-                         typename std::remove_const<V>::type>;
-};
 
 template <class T>
 using is_callable_t = typename std::enable_if<is_callable<T>::value>::type;
