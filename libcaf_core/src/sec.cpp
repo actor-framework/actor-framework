@@ -55,6 +55,7 @@ const char* sec_strings[] = {
   "unknown_type",
   "no_proxy_registry",
   "runtime_error",
+  "remote_linking_failed",
   "bad_function_call"
 };
 

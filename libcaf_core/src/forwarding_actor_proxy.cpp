@@ -80,7 +80,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
         // causes remote actor to link to (proxy of) other
         // receiving peer will call: this->local_link_to(other)
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(link_atom::value, other->address()));
+                    make_message(link_atom::value, other->ctrl()));
         return true;
       }
       break;
@@ -88,7 +88,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (remove_link_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(unlink_atom::value, other->address()));
+                    make_message(unlink_atom::value, other->ctrl()));
         return true;
       }
       break;
@@ -96,7 +96,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (establish_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(link_atom::value, other->address()));
+                    make_message(link_atom::value, other->ctrl()));
         return true;
       }
       break;
@@ -104,7 +104,7 @@ bool forwarding_actor_proxy::link_impl(linking_operation op,
       if (remove_backlink_impl(other)) {
         // causes remote actor to unlink from (proxy of) other
         forward_msg(ctrl(), invalid_message_id,
-                    make_message(unlink_atom::value, other->address()));
+                    make_message(unlink_atom::value, other->ctrl()));
         return true;
       }
       break;

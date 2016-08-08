@@ -19,7 +19,7 @@
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 32-91 (Error.tex)
+// Manual references: lines 32-93 (Error.tex)
 
 #ifndef CAF_SEC_HPP
 #define CAF_SEC_HPP
@@ -88,6 +88,8 @@ enum class sec : uint8_t {
   no_proxy_registry,
   /// An exception was thrown during message handling.
   runtime_error,
+  /// Linking to a remote actor failed because actor no longer exists.
+  remote_linking_failed,
   /// A function view was called without assigning an actor first.
   bad_function_call
 };

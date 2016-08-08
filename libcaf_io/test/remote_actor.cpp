@@ -30,30 +30,32 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+using namespace caf;
+
 namespace {
 
 constexpr char local_host[] = "127.0.0.1";
 
-class config : public caf::actor_system_config {
+class config : public actor_system_config {
 public:
   config() {
-    load<caf::io::middleman>();
+    load<io::middleman>();
     add_message_type<std::vector<int>>("std::vector<int>");
-    actor_system_config::parse(caf::test::engine::argc(),
-                               caf::test::engine::argv());
+    actor_system_config::parse(test::engine::argc(),
+                               test::engine::argv());
   }
 };
 
 struct fixture {
   config server_side_config;
-  caf::actor_system server_side{server_side_config};
+  actor_system server_side{server_side_config};
   config client_side_config;
-  caf::actor_system client_side{client_side_config};
-  caf::io::middleman& server_side_mm = server_side.middleman();
-  caf::io::middleman& client_side_mm = client_side.middleman();
+  actor_system client_side{client_side_config};
+  io::middleman& server_side_mm = server_side.middleman();
+  io::middleman& client_side_mm = client_side.middleman();
 };
 
-caf::behavior make_pong_behavior() {
+behavior make_pong_behavior() {
   return {
     [](int val) -> int {
       CAF_MESSAGE("pong with " << ++val);
@@ -62,8 +64,7 @@ caf::behavior make_pong_behavior() {
   };
 }
 
-caf::behavior make_ping_behavior(caf::event_based_actor* self,
-                                 caf::actor pong) {
+behavior make_ping_behavior(event_based_actor* self, actor pong) {
   CAF_MESSAGE("ping with " << 0);
   self->send(pong, 0);
   return {
@@ -71,7 +72,7 @@ caf::behavior make_ping_behavior(caf::event_based_actor* self,
       if (val == 3) {
         CAF_MESSAGE("ping with exit");
         self->send_exit(self->current_sender(),
-                        caf::exit_reason::user_shutdown);
+                        exit_reason::user_shutdown);
         CAF_MESSAGE("ping quits");
         self->quit();
       }
@@ -89,7 +90,7 @@ std::string to_string(const std::vector<int>& vec) {
   return os.str();
 }
 
-caf::behavior make_sort_behavior() {
+behavior make_sort_behavior() {
   return {
     [](std::vector<int>& vec) -> std::vector<int> {
       CAF_MESSAGE("sorter received: " << to_string(vec));
@@ -100,16 +101,35 @@ caf::behavior make_sort_behavior() {
   };
 }
 
-caf::behavior make_sort_requester_behavior(caf::event_based_actor* self,
-                                           caf::actor sorter) {
+behavior make_sort_requester_behavior(event_based_actor* self, actor sorter) {
   self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
   return {
     [=](const std::vector<int>& vec) {
       CAF_MESSAGE("sort requester received: " << to_string(vec));
       for (size_t i = 1; i < vec.size(); ++i)
         CAF_CHECK_EQUAL(static_cast<int>(i), vec[i - 1]);
-      self->send_exit(sorter, caf::exit_reason::user_shutdown);
+      self->send_exit(sorter, exit_reason::user_shutdown);
       self->quit();
+    }
+  };
+}
+
+behavior fragile_mirror(event_based_actor* self) {
+  return {
+    [=](int i) {
+      self->quit(exit_reason::user_shutdown);
+      return i;
+    }
+  };
+}
+
+behavior linking_actor(event_based_actor* self, actor buddy) {
+  CAF_MESSAGE("link to mirror and send dummy message");
+  self->link_to(buddy);
+  self->send(buddy, 42);
+  return {
+    [](int i) {
+      CAF_CHECK_EQUAL(i, 42);
     }
   };
 }
@@ -131,7 +151,7 @@ CAF_TEST(identity_semantics) {
   CAF_EXP_THROW(server2, client_side_mm.remote_actor(local_host, port2));
   CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(local_host, port1));
   CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(local_host, port2));
-  caf::anon_send_exit(server, caf::exit_reason::user_shutdown);
+  anon_send_exit(server, exit_reason::user_shutdown);
 }
 
 CAF_TEST(ping_pong) {
@@ -151,6 +171,20 @@ CAF_TEST(custom_message_type) {
   // client side
   CAF_EXP_THROW(sorter, client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_sort_requester_behavior, sorter);
+}
+
+CAF_TEST(remote_link) {
+  // server side
+  CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(fragile_mirror),
+                                             0, local_host));
+  // client side
+  CAF_EXP_THROW(mirror, client_side_mm.remote_actor(local_host, port));
+  auto linker = client_side.spawn(linking_actor, mirror);
+  scoped_actor self{client_side};
+  self->wait_for(linker);
+  CAF_MESSAGE("linker exited");
+  self->wait_for(mirror);
+  CAF_MESSAGE("mirror exited");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

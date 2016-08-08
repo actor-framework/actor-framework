@@ -233,6 +233,50 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
                 << CAF_ARG(msg) << CAF_ARG(mid));
   auto src = src_nid == this_node() ? system().registry().get(src_aid)
                                     : proxies().get_or_put(src_nid, src_aid);
+  // Intercept link messages. Forwarding actor proxies signalize linking
+  // by sending link_atom/unlink_atom message with src = dest.
+  if (msg.type_token() == make_type_token<atom_value, strong_actor_ptr>()) {
+    switch (static_cast<uint64_t>(msg.get_as<atom_value>(0))) {
+      default:
+        break;
+      case link_atom::value.uint_value(): {
+        if (src_nid != this_node()) {
+          CAF_LOG_WARNING("received link message for an other node");
+          return;
+        }
+        auto ptr = msg.get_as<strong_actor_ptr>(1);
+        if (!ptr) {
+          CAF_LOG_WARNING("received link message with invalid target");
+          return;
+        }
+        if (!src) {
+          CAF_LOG_DEBUG("received link for invalid actor, report error");
+          anon_send(actor_cast<actor>(ptr),
+                    make_error(sec::remote_linking_failed));
+          return;
+        }
+        static_cast<actor_proxy*>(ptr->get())->local_link_to(src->get());
+        return;
+      }
+      case unlink_atom::value.uint_value(): {
+        if (src_nid != this_node()) {
+          CAF_LOG_WARNING("received unlink message for an other node");
+          return;
+        }
+        auto ptr = msg.get_as<strong_actor_ptr>(1);
+        if (!ptr) {
+          CAF_LOG_DEBUG("received unlink message with invalid target");
+          return;
+        }
+        if (!src) {
+          CAF_LOG_DEBUG("received unlink for invalid actor, report error");
+          return;
+        }
+        static_cast<actor_proxy*>(ptr->get())->local_unlink_from(src->get());
+        return;
+      }
+    }
+  }
   if (!dest) {
     auto rsn = exit_reason::remote_link_unreachable;
     CAF_LOG_INFO("cannot deliver message, destination not found");
@@ -313,13 +357,6 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   // writing std::numeric_limits<actor_id>::max() is a hack to get
   // this send-to-named-actor feature working with older CAF releases
   instance.write(self->context(), path->wr_buf, hdr, &writer);
-  /*
-                 basp::message_type::dispatch_message,
-                 nullptr, static_cast<uint64_t>(atom("SpawnServ")),
-                 this_node(), nid,
-                 tmp.id(), std::numeric_limits<actor_id>::max(),
-                 &writer);
-  */
   instance.flush(*path);
 }
 
