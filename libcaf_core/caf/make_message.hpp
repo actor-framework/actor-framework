@@ -49,6 +49,11 @@ struct unbox_message_element<atom_constant<V>, 0> {
   using type = atom_value;
 };
 
+template <>
+struct unbox_message_element<actor_control_block*, 0> {
+  using type = strong_actor_ptr;
+};
+
 ///
 template <class T>
 struct is_serializable_or_whitelisted {
