@@ -87,7 +87,7 @@ public:
 
 // pointers are never inspectable
 template <class Inspector, class T>
-class is_inspectable<Inspector, T*> : std::false_type {};
+struct is_inspectable<Inspector, T*> : std::false_type {};
 
 template <bool X>
 using bool_token = std::integral_constant<bool, X>;
