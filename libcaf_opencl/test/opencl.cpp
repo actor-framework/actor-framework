@@ -237,6 +237,10 @@ void test_opencl(actor_system& sys) {
       check_vector_results("Simple matrix multiplication using vectors"
                            "(kernel wrapped in program)",
                            expected1, result);
+    },
+    others >> [&](message_view& x) -> result<message> {
+      CAF_ERROR("unexpected message" << x.content().stringify());
+      return sec::unexpected_message;
     }
   );
   opencl::spawn_config cfg2{dims{matrix_size, matrix_size}};
@@ -247,6 +251,10 @@ void test_opencl(actor_system& sys) {
     [&](const ivec& result) {
       check_vector_results("Simple matrix multiplication using vectors",
                            expected1, result);
+    },
+    others >> [&](message_view& x) -> result<message> {
+      CAF_ERROR("unexpected message" << x.content().stringify());
+      return sec::unexpected_message;
     }
   );
   const matrix_type expected2(move(expected1));
@@ -270,6 +278,10 @@ void test_opencl(actor_system& sys) {
       check_vector_results("Matrix multiplication with user defined type "
                            "(kernel wrapped in program)",
                            expected2.data(), result.data());
+    },
+    others >> [&](message_view& x) -> result<message> {
+      CAF_ERROR("unexpected message" << x.content().stringify());
+      return sec::unexpected_message;
     }
   );
   opencl::spawn_config cfg4{dims{matrix_size, matrix_size}};
@@ -281,6 +293,10 @@ void test_opencl(actor_system& sys) {
     [&](const matrix_type& result) {
       check_vector_results("Matrix multiplication with user defined type",
                            expected2.data(), result.data());
+    },
+    others >> [&](message_view& x) -> result<message> {
+      CAF_ERROR("unexpected message" << x.content().stringify());
+      return sec::unexpected_message;
     }
   );
   CAF_MESSAGE("Expecting exception (compiling invalid kernel, "
@@ -306,6 +322,10 @@ void test_opencl(actor_system& sys) {
   self->receive (
     [&](const ivec& result) {
       check_vector_results("Passing compiler flags", expected3, result);
+    },
+    others >> [&](message_view& x) -> result<message> {
+      CAF_ERROR("unexpected message" << x.content().stringify());
+      return sec::unexpected_message;
     }
   );
 
@@ -340,6 +360,10 @@ void test_opencl(actor_system& sys) {
     self->receive(
       [&](const ivec& result) {
         check_vector_results("Passing size for the output", expected4, result);
+      },
+      others >> [&](message_view& x) -> result<message> {
+        CAF_ERROR("unexpected message" << x.content().stringify());
+        return sec::unexpected_message;
       }
     );
   }
@@ -359,6 +383,10 @@ void test_opencl(actor_system& sys) {
   self->receive(
     [&](const ivec& result) {
       check_vector_results("Using const input argument", expected5, result);
+    },
+    others >> [&](message_view& x) -> result<message> {
+      CAF_ERROR("unexpected message" << x.content().stringify());
+      return sec::unexpected_message;
     }
   );
   // test in_out argument type
@@ -373,6 +401,10 @@ void test_opencl(actor_system& sys) {
   self->receive(
     [&](const ivec& result) {
       check_vector_results("Testing in_out arugment", expected9, result);
+    },
+    others >> [&](message_view& x) -> result<message> {
+      CAF_ERROR("unexpected message" << x.content().stringify());
+      return sec::unexpected_message;
     }
   );
 }
