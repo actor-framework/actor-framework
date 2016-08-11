@@ -56,8 +56,14 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
     if (invoke_disconnect_message) {
       auto mptr = make_mailbox_element(nullptr, invalid_message_id,
                                        {}, detach_message());
-      if (raw_ptr->consume(*mptr) == im_skipped)
-        raw_ptr->push_to_cache(std::move(mptr));
+      switch (raw_ptr->consume(*mptr)) {
+        case im_success:
+          raw_ptr->finalize();
+          break;
+        case im_skipped:
+          raw_ptr->push_to_cache(std::move(mptr));
+          break;
+      }
     }
   }
 }
