@@ -431,7 +431,7 @@ distclean:
 doc:
 	$(MAKE) -C $(firstword $(DIRS)) $@
 
-.PHONY: all test install uninstall clean distclean
+.PHONY: all test install uninstall clean distclean doc
 EOT
 `
 
