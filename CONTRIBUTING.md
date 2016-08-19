@@ -53,8 +53,8 @@ Coding Style
 ============
 
 When contributing source code, please adhere to the following coding style,
-whwich is loosely based on the [Google C++ Style
-Guide](http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml) and the
+which is loosely based on the [Google C++ Style
+Guide](https://google.github.io/styleguide/cppguide.html) and the
 coding conventions used by the C++ Standard Library.
 
 
