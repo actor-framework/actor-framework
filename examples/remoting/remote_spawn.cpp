@@ -8,7 +8,7 @@
 // - remote_spawn -n localhost -p 4242
 
 // Manual refs: 33-39, 99-101,106,110 (ConfiguringActorApplications)
-//              124-142 (RemoteSpawn)
+//              125-143 (RemoteSpawn)
 
 #include <array>
 #include <vector>
@@ -114,6 +114,7 @@ void server(actor_system& system, const config& cfg) {
   if (!res) {
     std::cerr << "*** cannot open port: "
               << system.render(res.error()) << std::endl;
+    return;
   }
   std::cout << "*** running on port: "
             << *res << std::endl
