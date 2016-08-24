@@ -469,6 +469,18 @@ group group_manager::anonymous() const {
   return *get_module("local")->get(id);
 }
 
+expected<group> group_manager::get(std::string group_uri) const {
+  CAF_LOG_TRACE(CAF_ARG(module_name) << CAF_ARG(group_identifier));
+  // URI parsing is pretty much a brute-force approach, no actual validation yet
+  auto p = group_uri.find(':');
+  if (p == std::string::npos)
+    return sec::invalid_argument;
+  auto group_id = group_uri.substr(p + 1);
+  // erase all but the scheme part from the URI and use that as module name
+  group_uri.erase(p);
+  return get(group_uri, group_id);
+}
+
 expected<group> group_manager::get(const std::string& module_name,
                                    const std::string& group_identifier) const {
   CAF_LOG_TRACE(CAF_ARG(module_name) << CAF_ARG(group_identifier));

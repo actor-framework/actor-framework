@@ -53,6 +53,11 @@ public:
 
   // -- observers --------------------------------------------------------------
 
+  /// Get a handle to the group associated with given URI scheme.
+  /// @threadsafe
+  /// @experimental
+  expected<group> get(std::string group_uri) const;
+
   /// Get a handle to the group associated with
   /// `identifier` from the module `mod_name`.
   /// @threadsafe
