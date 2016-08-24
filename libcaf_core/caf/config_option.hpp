@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -32,6 +33,8 @@
 #include "caf/config_value.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/static_visitor.hpp"
+
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
@@ -117,7 +120,8 @@ private:
   char short_name_;
 };
 
-template <class T>
+template <class T, bool IsInsertable = detail::can_insert_elements<T>()
+                                       && !std::is_same<T, std::string>::value>
 class config_option_impl : public config_option {
 public:
   config_option_impl(T& ref, const char* ctg, const char* nm, const char* xp)
@@ -165,6 +169,62 @@ public:
 private:
   T& ref_;
 };
+
+template <class T>
+class config_option_impl<T, true> : public config_option {
+public:
+  using value_type = typename T::value_type;
+
+  config_option_impl(T& ref, const char* ctg, const char* nm, const char* xp)
+      : config_option(ctg, nm, xp),
+        ref_(ref) {
+    // nop
+  }
+
+  std::string to_string() const override {
+    return deep_to_string(ref_);
+  }
+
+  message::cli_arg to_cli_arg(bool use_caf_prefix) override {
+    std::string argname;
+    if (use_caf_prefix)
+      argname = "caf#";
+    if (strcmp(category(), "global") != 0) {
+      argname += category();
+      argname += ".";
+    }
+    argname += name();
+    if (short_name() != '\0') {
+      argname += ',';
+      argname += short_name();
+    }
+    return {std::move(argname), explanation(), ref_};
+  }
+
+  config_reader_sink to_sink() override {
+    return [=](size_t ln, config_value& x) {
+      // the INI parser accepts all integers as int64_t
+      using cfg_type =
+        typename std::conditional<
+          std::is_integral<value_type>::value
+          && !std::is_same<bool, value_type>::value,
+          int64_t,
+          value_type
+        >::type;
+      value_type tmp;
+      if (get<cfg_type>(&x) && assign_config_value(tmp, get<cfg_type>(x))) {
+        ref_.insert(ref_.end(), std::move(tmp));
+        return;
+      }
+      type_name_visitor tnv;
+      report_type_error(ln, x, tnv(tmp));
+    };
+  }
+
+private:
+  T& ref_;
+};
+
 
 template <class T>
 std::unique_ptr<config_option>

@@ -588,6 +588,25 @@ struct strip_reference_wrapper<std::reference_wrapper<T>> {
   using type = T;
 };
 
+template <class T>
+constexpr bool can_insert_elements_impl(
+  T*,
+  decltype(std::declval<T&>()
+           .insert(std::declval<T&>().end(),
+                   std::declval<typename T::value_type>()))* = nullptr) {
+  return true;
+}
+
+template <class T>
+constexpr bool can_insert_elements_impl(void*) {
+  return false;
+}
+
+template <class T>
+constexpr bool can_insert_elements() {
+  return can_insert_elements_impl<T>(static_cast<T*>(nullptr));
+}
+
 } // namespace detail
 } // namespace caf
 
