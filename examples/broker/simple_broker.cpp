@@ -189,21 +189,21 @@ public:
   }
 };
 
-void caf_main(actor_system& system, const config& cfg) {
-  if (cfg.server_mode) {
-    cout << "run in server mode" << endl;
-    auto pong_actor = system.spawn(pong);
-    auto server_actor = system.middleman().spawn_server(server, cfg.port,
-                                                        pong_actor);
-    if (!server_actor) {
-      std::cerr << "failed to spawn server: "
-                 << system.render(server_actor.error()) << endl;
-      return;
-    }
-    print_on_exit(*server_actor, "server");
-    print_on_exit(pong_actor, "pong");
+void run_server(actor_system& system, const config& cfg) {
+  cout << "run in server mode" << endl;
+  auto pong_actor = system.spawn(pong);
+  auto server_actor = system.middleman().spawn_server(server, cfg.port,
+                                                      pong_actor);
+  if (!server_actor) {
+    std::cerr << "failed to spawn server: "
+               << system.render(server_actor.error()) << endl;
     return;
   }
+  print_on_exit(*server_actor, "server");
+  print_on_exit(pong_actor, "pong");
+}
+
+void run_client(actor_system& system, const config& cfg) {
   auto ping_actor = system.spawn(ping, size_t{20});
   auto io_actor = system.middleman().spawn_client(broker_impl, cfg.host,
                                                   cfg.port, ping_actor);
@@ -215,6 +215,11 @@ void caf_main(actor_system& system, const config& cfg) {
   print_on_exit(ping_actor, "ping");
   print_on_exit(*io_actor, "protobuf_io");
   send_as(*io_actor, ping_actor, kickoff_atom::value, *io_actor);
+}
+
+void caf_main(actor_system& system, const config& cfg) {
+  auto f = cfg.server_mode ? run_server : run_client;
+  f(system, cfg);
 }
 
 } // namespace <anonymous>

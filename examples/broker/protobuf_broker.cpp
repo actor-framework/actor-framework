@@ -164,17 +164,17 @@ public:
   }
 };
 
-void caf_main(actor_system& system, const config& cfg) {
-  if (cfg.server_mode) {
-    cout << "run in server mode" << endl;
-    auto pong_actor = system.spawn(pong);
-    auto server_actor = system.middleman().spawn_server(server, cfg.port,
-                                                        pong_actor);
-    if (!server_actor)
-      cout << "unable to spawn server: "
-           << system.render(server_actor.error()) << endl;
-    return;
-  }
+void run_server(actor_system& system, const config& cfg) {
+  cout << "run in server mode" << endl;
+  auto pong_actor = system.spawn(pong);
+  auto server_actor = system.middleman().spawn_server(server, cfg.port,
+                                                      pong_actor);
+  if (!server_actor)
+    cerr << "unable to spawn server: "
+         << system.render(server_actor.error()) << endl;
+}
+
+void run_client(actor_system& system, const config& cfg) {
   cout << "run in client mode" << endl;
   auto ping_actor = system.spawn(ping, 20u);
   auto io_actor = system.middleman().spawn_client(protobuf_io, cfg.host,
@@ -185,6 +185,11 @@ void caf_main(actor_system& system, const config& cfg) {
     return;
   }
   send_as(*io_actor, ping_actor, kickoff_atom::value, *io_actor);
+}
+
+void caf_main(actor_system& system, const config& cfg) {
+  auto f = cfg.server_mode ? run_server : run_client;
+  f(system, cfg);
 }
 
 } // namespace <anonymous>

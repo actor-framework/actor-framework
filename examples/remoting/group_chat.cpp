@@ -3,7 +3,7 @@
  * based on group communication.                                              *
  *                                                                            *
  * Setup for a minimal chat between "alice" and "bob":                        *
- * - ./build/bin/group_server -p 4242                                         *
+ * - ./build/bin/group_chat -s -p 4242                                        *
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
 \ ******************************************************************************/
@@ -34,8 +34,8 @@ istream& operator>>(istream& is, line& l) {
   return is;
 }
 
-void client(event_based_actor* self, const string& name) {
-  self->become (
+behavior client(event_based_actor* self, const string& name) {
+  return {
     [=](broadcast_atom, const string& message) {
       for(auto& dest : self->joined_groups()) {
         self->send(dest, name + ": " + message);
@@ -53,29 +53,46 @@ void client(event_based_actor* self, const string& name) {
     },
     [=](const string& txt) {
       // don't print own messages
-      if (self->current_sender() != self) {
+      if (self->current_sender() != self)
         cout << txt << endl;
-      }
     },
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
     }
-  );
+  };
 }
 
 class config : public actor_system_config {
 public:
   std::string name;
-  std::string group_id;
+  std::vector<std::string> group_uris;
+  uint16_t port = 0;
+  bool server_mode = false;
 
   config() {
     opt_group{custom_options_, "global"}
     .add(name, "name,n", "set name")
-    .add(group_id, "group,g", "join group");
+    .add(group_uris, "group,g", "join group")
+    .add(server_mode, "server,s", "run in server mode")
+    .add(port, "port,p", "set port (ignored in client mode)");
   }
 };
 
-void caf_main(actor_system& system, const config& cfg) {
+void run_server(actor_system& system, const config& cfg) {
+  auto res = system.middleman().publish_local_groups(cfg.port);
+  if (! res) {
+    std::cerr << "*** publishing local groups failed: "
+              << system.render(res.error()) << endl;
+    return;
+  }
+  cout << "*** listening at port " << *res << endl
+       << "*** press [enter] to quit" << endl;
+  string dummy;
+  std::getline(std::cin, dummy);
+  cout << "... cya" << endl;
+}
+
+void run_client(actor_system& system, const config& cfg) {
   auto name = cfg.name;
   while (name.empty()) {
     cout << "please enter your name: " << flush;
@@ -84,27 +101,16 @@ void caf_main(actor_system& system, const config& cfg) {
       return;
     }
   }
-  auto client_actor = system.spawn(client, name);
-  // evaluate group parameters
-  if (!cfg.group_id.empty()) {
-    auto p = cfg.group_id.find(':');
-    if (p == std::string::npos) {
-      cerr << "*** error parsing argument " << cfg.group_id
-         << ", expected format: <module_name>:<group_id>";
-    } else {
-      auto module = cfg.group_id.substr(0, p);
-      auto group_uri = cfg.group_id.substr(p + 1);
-      auto g = system.groups().get(module, group_uri);
-      if (!g) {
-        cerr << "*** unable to get group " << group_uri
-             << " from module " << module << ": "
-             << system.render(g.error()) << endl;
-        return;
-      }
-      anon_send(client_actor, join_atom::value, *g);
-    }
-  }
   cout << "*** starting client, type '/help' for a list of commands" << endl;
+  auto client_actor = system.spawn(client, name);
+  for (auto& uri : cfg.group_uris) {
+    auto tmp = system.groups().get(uri);
+    if (tmp)
+      anon_send(client_actor, join_atom::value, std::move(*tmp));
+    else
+      cerr << "*** failed to parse \"" << uri << "\" as group URI: "
+           << system.render(tmp.error()) << endl;
+  }
   istream_iterator<line> eof;
   vector<string> words;
   for (istream_iterator<line> i(cin); i != eof; ++i) {
@@ -145,6 +151,11 @@ void caf_main(actor_system& system, const config& cfg) {
   }
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);
+}
+
+void caf_main(actor_system& system, const config& cfg) {
+  auto f = cfg.server_mode ? run_server : run_client;
+  f(system, cfg);
 }
 
 } // namespace <anonymous>

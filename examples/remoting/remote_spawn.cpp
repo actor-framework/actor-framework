@@ -7,8 +7,8 @@
 // Run client at the same host:
 // - remote_spawn -n localhost -p 4242
 
-// Manual refs: 137-139, 144, 148 (ConfiguringActorApplications)
-//              101-119 (RemoteSpawn)
+// Manual refs: 33-39, 99-101,106,110 (ConfiguringActorApplications)
+//              124-142 (RemoteSpawn)
 
 #include <array>
 #include <vector>
@@ -35,7 +35,6 @@ using sub_atom = atom_constant<atom("sub")>;
 
 using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
                                replies_to<sub_atom, int, int>::with<int>>;
-
 
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
@@ -95,11 +94,35 @@ void client_repl(function_view<calculator> f) {
       usage();
     }
   }
-
 }
 
-void client(actor_system& system, const std::string& host, uint16_t port) {
-  auto node = system.middleman().connect(host, port);
+struct config : actor_system_config {
+  config() {
+    add_actor_type("calculator", calculator_fun);
+    opt_group{custom_options_, "global"}
+    .add(port, "port,p", "set port")
+    .add(host, "host,H", "set node (ignored in server mode)")
+    .add(server_mode, "server-mode,s", "enable server mode");
+  }
+  uint16_t port = 0;
+  std::string host = "localhost";
+  bool server_mode = false;
+};
+
+void server(actor_system& system, const config& cfg) {
+  auto res = system.middleman().open(cfg.port);
+  if (!res) {
+    std::cerr << "*** cannot open port: "
+              << system.render(res.error()) << std::endl;
+  }
+  std::cout << "*** running on port: "
+            << *res << std::endl
+            << "*** press <enter> to shutdown server" << std::endl;
+  getchar();
+}
+
+void client(actor_system& system, const config& cfg) {
+  auto node = system.middleman().connect(cfg.host, cfg.port);
   if (!node) {
     std::cerr << "*** connect failed: "
               << system.render(node.error()) << std::endl;
@@ -121,37 +144,9 @@ void client(actor_system& system, const std::string& host, uint16_t port) {
   anon_send_exit(*worker, exit_reason::kill);
 }
 
-
-void server(actor_system& system, uint16_t port) {
-  auto res = system.middleman().open(port);
-  if (!res) {
-    std::cerr << "*** cannot open port: "
-              << system.render(res.error()) << std::endl;
-  }
-  std::cout << "*** running on port: "
-            << *res << std::endl
-            << "*** press <enter> to shutdown server" << std::endl;
-  getchar();
-}
-
-struct config : actor_system_config {
-  config() {
-    add_actor_type("calculator", calculator_fun);
-    opt_group{custom_options_, "global"}
-    .add(port, "port,p", "set port")
-    .add(host, "host,H", "set node (ignored in server mode)")
-    .add(server_mode, "server-mode,s", "enable server mode");
-  }
-  uint16_t port = 0;
-  std::string host = "localhost";
-  bool server_mode = false;
-};
-
 void caf_main(actor_system& system, const config& cfg) {
-  if (cfg.server_mode)
-    server(system, cfg.port);
-  else
-    client(system, cfg.host, cfg.port);
+  auto f = cfg.server_mode ? server : client;
+  f(system, cfg);
 }
 
 } // namespace <anonymous>
