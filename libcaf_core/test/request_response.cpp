@@ -452,4 +452,30 @@ CAF_TEST(async_request) {
   anon_send(foo, 1);
 }
 
+CAF_TEST(skip_responses) {
+  auto mirror = system.spawn<sync_mirror>();
+  auto future = self->request(mirror, infinite, 42);
+  self->send(mirror, 42);
+  self->receive([](int x) {
+    CAF_CHECK_EQUAL(x, 42);
+  });
+  // second receive must time out
+  self->receive(
+    [](int) {
+      CAF_FAIL("received response message as ordinary message");
+    },
+    after(std::chrono::milliseconds(20)) >> [] {
+      CAF_MESSAGE("second receive timed out as expected");
+    }
+  );
+  future.receive(
+    [](int x) {
+      CAF_CHECK_EQUAL(x, 42);
+    },
+    [&](const error& err) {
+      CAF_FAIL(system.render(err));
+    }
+  );
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
