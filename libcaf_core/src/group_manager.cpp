@@ -470,7 +470,7 @@ group group_manager::anonymous() const {
 }
 
 expected<group> group_manager::get(std::string group_uri) const {
-  CAF_LOG_TRACE(CAF_ARG(module_name) << CAF_ARG(group_identifier));
+  CAF_LOG_TRACE(CAF_ARG(group_uri));
   // URI parsing is pretty much a brute-force approach, no actual validation yet
   auto p = group_uri.find(':');
   if (p == std::string::npos)
