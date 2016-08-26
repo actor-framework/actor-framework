@@ -9,7 +9,7 @@
 // Run client at the same host:
 // - ./build/bin/distributed_math_actor -c -p 4242
 
-// Manual refs: 250-262 (ConfiguringActorSystems)
+// Manual refs: 221-233 (ConfiguringActorSystems)
 
 #include <array>
 #include <vector>
@@ -31,133 +31,164 @@ using namespace caf;
 
 namespace {
 
+static constexpr auto task_timeout = std::chrono::seconds(10);
+
 using plus_atom = atom_constant<atom("plus")>;
 using minus_atom = atom_constant<atom("minus")>;
-using result_atom = atom_constant<atom("result")>;
-using rebind_atom = atom_constant<atom("rebind")>;
-using reconnect_atom = atom_constant<atom("reconnect")>;
 
 // our "service"
 behavior calculator_fun() {
   return {
-    [](plus_atom, int a, int b) -> message {
-      return make_message(result_atom::value, a + b);
+    [](plus_atom, int a, int b) {
+      return a + b;
     },
-    [](minus_atom, int a, int b) -> message {
-      return make_message(result_atom::value, a - b);
+    [](minus_atom, int a, int b) {
+      return a - b;
     }
   };
 }
 
-class client_impl : public event_based_actor {
-public:
-  client_impl(actor_config& cfg, string hostaddr, uint16_t port)
-      : event_based_actor(cfg),
-        server_(unsafe_actor_handle_init),
-        host_(std::move(hostaddr)),
-        port_(port) {
-    set_default_handler(skip);
-  }
+/* State transition of the client for connecting to the server:
+ *
+ *                    +-------------+
+ *                    |    init     |
+ *                    +-------------+
+ *                           |
+ *                           V
+ *                    +-------------+
+ *                    | unconnected |<------------------\
+ *                    +-------------+                   |
+ *                           |                          |
+ *                           | {connect Host Port}      |
+ *                           |                          |
+ *                           V                          |
+ *                    +-------------+  {error}          |
+ *    /-------------->| connecting  |------------------>|
+ *    |               +-------------+                   ^
+ *    |                      |                          |
+ *    |                      | {ok, Calculator}         |
+ *    |{connect Host Port}   |                          |
+ *    |                      V                          |
+ *    |               +-------------+   {DOWN server}   |
+ *    \---------------|   running   |-------------------/
+ *                    +-------------+
+ */
 
-  behavior make_behavior() override {
-    become(awaiting_task());
-    become(keep_behavior, reconnecting());
-    return {};
-  }
+namespace client {
 
-private:
-  void request_task(atom_value op, int lhs, int rhs) {
-    request(server_, infinite, op, lhs, rhs).then(
-      [=](result_atom, int result) {
-        aout(this) << lhs << (op == plus_atom::value ? " + " : " - ")
-                   << rhs << " = " << result << endl;
-      },
-      [=](const error& err) {
-        if (err == sec::request_receiver_down) {
-          aout(this) << "*** server down, try to reconnect ..." << endl;
-          // try requesting this again after successful reconnect
-          become(keep_behavior,
-                 reconnecting([=] { request_task(op, lhs, rhs); }));
-          return;
-        }
-        aout(this) << "*** request resulted in error: "
-                   << system().render(err) << endl;
-      }
-
-    );
-  }
-
-  behavior awaiting_task() {
-    return {
-      [=](atom_value op, int lhs, int rhs) {
-        if (op != plus_atom::value && op != minus_atom::value) {
-          return;
-        }
-        request_task(op, lhs, rhs);
-      },
-      [=](rebind_atom, string& nhost, uint16_t nport) {
-        aout(this) << "*** rebind to " << nhost << ":" << nport << endl;
-        using std::swap;
-        swap(host_, nhost);
-        swap(port_, nport);
-        become(keep_behavior, reconnecting());
-      }
-    };
-  }
-
-  behavior reconnecting(std::function<void()> continuation = nullptr) {
-    using std::chrono::seconds;
-    auto mm = system().middleman().actor_handle();
-    send(mm, connect_atom::value, host_, port_);
-    return {
-      [=](ok_atom, node_id&, strong_actor_ptr& new_server, std::set<std::string>&) {
-        if (!new_server) {
-          aout(this) << "*** received invalid remote actor" << endl;
-          return;
-        }
-        aout(this) << "*** connection succeeded, awaiting tasks" << endl;
-        server_ = actor_cast<actor>(new_server);
-        // return to previous behavior
-        if (continuation) {
-          continuation();
-        }
-        unbecome();
-      },
-      [=](const error& err) {
-        aout(this) << "*** could not connect to " << host_
-                   << " at port " << port_
-                   << ": " << system().render(err)
-                   << " [try again in 3s]"
-                   << endl;
-        delayed_send(mm, seconds(3), connect_atom::value, host_, port_);
-      },
-      [=](rebind_atom, string& nhost, uint16_t nport) {
-        aout(this) << "*** rebind to " << nhost << ":" << nport << endl;
-        using std::swap;
-        swap(host_, nhost);
-        swap(port_, nport);
-        auto send_mm = [=] {
-          unbecome();
-          send(mm, connect_atom::value, host_, port_);
-        };
-        // await pending ok/error message first, then send new request to MM
-        become(
-          keep_behavior,
-          [=](ok_atom&, actor_addr&) {
-            send_mm();
-          },
-          [=](const error&) {
-            send_mm();
-          }
-        );
-      }
-    };
-  }
-
-  actor server_;
-  string host_;
-  uint16_t port_;
+// a simple calculater task: operation + operands
+struct task {
+  atom_value op;
+  int lhs;
+  int rhs;
 };
+
+// the client queues pending tasks
+struct state {
+  strong_actor_ptr current_server;
+  std::vector<task> tasks;
+};
+
+// prototype definition for unconnected state
+behavior unconnected(stateful_actor<state>*);
+
+// prototype definition for transition to `connecting` with Host and Port
+void connecting(stateful_actor<state>*,
+                const std::string& host, uint16_t port);
+
+// prototype definition for transition to `running` with Calculator
+behavior running(stateful_actor<state>*, actor calculator);
+
+// starting point of our FSM
+behavior init(stateful_actor<state>* self) {
+  // transition to `unconnected` on server failure
+  self->set_down_handler([=](const down_msg& dm) {
+    if (dm.source == self->state.current_server) {
+      aout(self) << "*** lost connection to server" << endl;
+      self->state.current_server = nullptr;
+      self->become(unconnected(self));
+    }
+  });
+  return unconnected(self);
+}
+
+behavior unconnected(stateful_actor<state>* self) {
+  return {
+    [=](plus_atom op, int x, int y) {
+      self->state.tasks.emplace_back(task{op, x, y});
+    },
+    [=](minus_atom op, int x, int y) {
+      self->state.tasks.emplace_back(task{op, x, y});
+    },
+    [=](connect_atom, const std::string& host, uint16_t port) {
+      connecting(self, host, port);
+    }
+  };
+}
+
+void connecting(stateful_actor<state>* self,
+                const std::string& host, uint16_t port) {
+  // make sure we are not pointing to an old server
+  self->state.current_server = nullptr;
+  // use request().await() to suspend regular behavior until MM responded
+  auto mm = self->system().middleman().actor_handle();
+  self->request(mm, infinite, connect_atom::value, host, port).await(
+    [=](const node_id&, strong_actor_ptr serv, const std::set<std::string>& ifs) {
+      if (!serv) {
+        aout(self) << "*** no server found at \"" << host << "\":"
+                   << port << endl;
+        return;
+      }
+      if (!ifs.empty()) {
+        aout(self) << "*** typed actor found at \"" << host << "\":"
+                   << port << ", but expected an untyped actor "<< endl;
+        return;
+      }
+      aout(self) << "*** successfully connected to server" << endl;
+      self->state.current_server = serv;
+      auto hdl = actor_cast<actor>(serv);
+      self->monitor(hdl);
+      self->become(running(self, hdl));
+    },
+    [=](const error& err) {
+      aout(self) << "*** cannot connect to \"" << host << "\":"
+                 << port << " => " << self->system().render(err) << endl;
+      self->become(unconnected(self));
+    }
+  );
+}
+
+// prototype definition for transition to `running` with Calculator
+behavior running(stateful_actor<state>* self, actor calculator) {
+  auto send_task = [=](const task& x) {
+    self->request(calculator, task_timeout, x.op, x.lhs, x.rhs).then(
+      [=](int result) {
+        aout(self) << x.lhs << (x.op == plus_atom::value ? " + " : " - ")
+                   << x.rhs << " = " << result << endl;
+      },
+      [=](const error&) {
+        // simply try again by enqueueing the task to the mailbox again
+        self->send(self, x.op, x.lhs, x.rhs);
+      }
+    );
+  };
+  for (auto& x : self->state.tasks)
+    send_task(x);
+  self->state.tasks.clear();
+  return {
+    [=](plus_atom op, int x, int y) {
+      send_task(task{op, x, y});
+    },
+    [=](minus_atom op, int x, int y) {
+      send_task(task{op, x, y});
+    },
+    [=](connect_atom, const std::string& host, uint16_t port) {
+      connecting(self, host, port);
+    }
+  };
+}
+
+} // namespace client
 
 // removes leading and trailing whitespaces
 string trim(std::string s) {
@@ -173,9 +204,8 @@ string trim(std::string s) {
 optional<int> toint(const string& str) {
   char* end;
   auto result = static_cast<int>(strtol(str.c_str(), &end, 10));
-  if (end == str.c_str() + str.size()) {
+  if (end == str.c_str() + str.size())
     return result;
-  }
   return none;
 }
 
@@ -188,7 +218,21 @@ optional<atom_value> plus_or_minus(const string& str) {
   return none;
 }
 
-void client_repl(actor_system& system, string host, uint16_t port) {
+class config : public actor_system_config {
+public:
+  uint16_t port = 0;
+  std::string host = "localhost";
+  bool server_mode = false;
+
+  config() {
+    opt_group{custom_options_, "global"}
+    .add(port, "port,p", "set port")
+    .add(host, "host,H", "set host (ignored in server mode)")
+    .add(server_mode, "server-mode,s", "enable server mode");
+  }
+};
+
+void client_repl(actor_system& system, const config& cfg) {
   // keeps track of requests and tries to reconnect on server failures
   auto usage = [] {
   cout << "Usage:" << endl
@@ -200,7 +244,13 @@ void client_repl(actor_system& system, string host, uint16_t port) {
   };
   usage();
   bool done = false;
-  auto client = system.spawn<client_impl>(std::move(host), port);
+  auto client = system.spawn(client::init);
+  if (!cfg.host.empty() && cfg.port > 0)
+    anon_send(client, connect_atom::value, cfg.host, cfg.port);
+  else
+    cout << "*** no server received via config, "
+         << "please use \"connect <host> <port>\" before using the calculator"
+         << endl;
   // defining the handler outside the loop is more efficient as it avoids
   // re-creating the same object over and over again
   message_handler eval{
@@ -215,8 +265,8 @@ void client_repl(actor_system& system, string host, uint16_t port) {
         try {
           auto lport = std::stoul(arg2);
           if (lport < std::numeric_limits<uint16_t>::max()) {
-            anon_send(client, rebind_atom::value, move(arg1),
-              static_cast<uint16_t>(lport));
+            anon_send(client, connect_atom::value, move(arg1),
+                      static_cast<uint16_t>(lport));
           }
           else {
             cout << lport << " is not a valid port" << endl;
@@ -247,20 +297,6 @@ void client_repl(actor_system& system, string host, uint16_t port) {
   }
 }
 
-class config : public actor_system_config {
-public:
-  uint16_t port = 0;
-  std::string host = "localhost";
-  bool server_mode = false;
-
-  config() {
-    opt_group{custom_options_, "global"}
-    .add(port, "port,p", "set port")
-    .add(host, "host,H", "set host (ignored in server mode)")
-    .add(server_mode, "server-mode,s", "enable server mode");
-  }
-};
-
 void run_server(actor_system& system, const config& cfg) {
   auto calc = system.spawn(calculator_fun);
   // try to publish math actor at given port
@@ -279,16 +315,8 @@ void run_server(actor_system& system, const config& cfg) {
   anon_send_exit(calc, exit_reason::user_shutdown);
 }
 
-void run_client(actor_system& system, const config& cfg) {
-  if (cfg.port == 0) {
-    cerr << "*** no port to server specified" << endl;
-    return;
-  }
-  client_repl(system, cfg.host, cfg.port);
-}
-
 void caf_main(actor_system& system, const config& cfg) {
-  auto f = cfg.server_mode ? run_server : run_client;
+  auto f = cfg.server_mode ? run_server : client_repl;
   f(system, cfg);
 }
 
