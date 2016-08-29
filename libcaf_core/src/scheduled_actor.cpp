@@ -219,9 +219,10 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   while (handled_msgs < max_throughput) {
     do {
       ptr = next_message();
-      if (!ptr && mailbox().try_block()) {
+      if (!ptr) {
         reset_timeout_if_needed();
-        return resumable::awaiting_message;
+        if (mailbox.try_block())
+          return resumable::awaiting_message;
       }
     } while (!ptr);
     switch (reactivate(*ptr)) {
