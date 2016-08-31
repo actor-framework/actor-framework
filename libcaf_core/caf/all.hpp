@@ -97,7 +97,6 @@
 #include "caf/typed_event_based_actor.hpp"
 #include "caf/abstract_composable_behavior.hpp"
 
-#include "caf/decorator/adapter.hpp"
 #include "caf/decorator/sequencer.hpp"
 
 #include "caf/meta/type_name.hpp"

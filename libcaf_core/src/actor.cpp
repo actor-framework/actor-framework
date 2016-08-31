@@ -30,7 +30,6 @@
 #include "caf/scoped_actor.hpp"
 #include "caf/event_based_actor.hpp"
 
-#include "caf/decorator/adapter.hpp"
 #include "caf/decorator/splitter.hpp"
 #include "caf/decorator/sequencer.hpp"
 
@@ -75,12 +74,6 @@ void actor::swap(actor& other) noexcept {
 
 actor_addr actor::address() const noexcept {
   return actor_cast<actor_addr>(ptr_);
-}
-
-actor actor::bind_impl(message msg) const {
-  auto& sys = *(ptr_->home_system);
-  return make_actor<decorator::adapter, actor>(sys.next_actor_id(), sys.node(),
-                                               &sys, ptr_, std::move(msg));
 }
 
 actor operator*(actor f, actor g) {

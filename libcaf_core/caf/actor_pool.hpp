@@ -54,6 +54,7 @@ namespace caf {
 /// during the enqueue operation. Any user-defined policy thus has to dispatch
 /// messages with as little overhead as possible, because the dispatching
 /// runs in the context of the sender.
+/// @experimental
 class actor_pool : public monitorable_actor {
 public:
   using uplock = upgrade_lock<detail::shared_spinlock>;

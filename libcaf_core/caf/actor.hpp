@@ -135,12 +135,6 @@ public:
   /// Exchange content of `*this` and `other`.
   void swap(actor& other) noexcept;
 
-  /// Create a new actor decorator that presets or reorders inputs.
-  template <class... Ts>
-  actor bind(Ts&&... xs) const {
-    return bind_impl(make_message(std::forward<Ts>(xs)...));
-  }
-
   /// Queries whether this object was constructed using
   /// `unsafe_actor_handle_init` or is in moved-from state.
   bool unsafe() const {
@@ -179,8 +173,6 @@ public:
 
 private:
   actor() = default;
-
-  actor bind_impl(message msg) const;
 
   inline actor_control_block* get() const noexcept {
     return ptr_.get();

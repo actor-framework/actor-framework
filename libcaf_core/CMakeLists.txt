@@ -27,7 +27,6 @@ set (LIBCAF_CORE_SRCS
      src/actor_registry.cpp
      src/actor_system.cpp
      src/actor_system_config.cpp
-     src/adapter.cpp
      src/atom.cpp
      src/attachable.cpp
      src/behavior.cpp

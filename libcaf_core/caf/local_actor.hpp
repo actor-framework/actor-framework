@@ -46,6 +46,7 @@
 #include "caf/typed_actor.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/response_type.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
@@ -311,13 +312,9 @@ public:
 
   template <message_priority P = message_priority::normal,
             class Handle = actor, class... Ts>
-  typename detail::deduce_output_type<
-    Handle,
-    detail::type_list<
-      typename detail::implicit_conversions<
-        typename std::decay<Ts>::type
-      >::type...
-    >
+  typename response_type<
+    typename Handle::signatures,
+    detail::implicit_conversions_t<typename std::decay<Ts>::type>...
   >::delegated_type
   delegate(const Handle& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "nothing to delegate");
@@ -326,9 +323,7 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(actor_accepts_message<
-                    typename signatures_of<Handle>::type, token
-                  >::value,
+    static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
     auto mid = current_element_->mid;
     current_element_->mid = P == message_priority::high

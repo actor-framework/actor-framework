@@ -31,41 +31,82 @@ namespace detail {
 
 template <class T>
 struct implicit_conversions {
-  // convert C strings to std::string if possible
-  using step1 =
-    typename std::conditional<
-      std::is_convertible<T, std::string>::value,
-      std::string,
-      T
-    >::type;
-  // convert C strings to std::u16string if possible
-  using step2 =
-    typename std::conditional<
-      std::is_convertible<step1, std::u16string>::value,
-      std::u16string,
-      step1
-    >::type;
-  // convert C strings to std::u32string if possible
-  using step3 =
-    typename std::conditional<
-      std::is_convertible<step2, std::u32string>::value,
-      std::u32string,
-      step2
-    >::type;
-  using step4 =
-    typename std::conditional<
-      std::is_convertible<step3, abstract_actor*>::value
-      || std::is_same<scoped_actor, step3>::value,
-      actor,
-      step3
-    >::type;
   using type =
     typename std::conditional<
-      std::is_convertible<step4, error>::value,
+      std::is_convertible<T, error>::value,
       error,
-      step4
+      T
     >::type;
 };
+
+template <class T>
+struct implicit_conversions<T*> {
+  using type =
+    typename std::conditional<
+      std::is_base_of<abstract_actor, T>::value,
+      actor,
+      T*
+    >::type;
+};
+
+template <>
+struct implicit_conversions<char*> {
+  using type = std::string;
+};
+
+template <size_t N>
+struct implicit_conversions<char[N]>
+    : implicit_conversions<char*> {};
+
+template <>
+struct implicit_conversions<const char*>
+    : implicit_conversions<char*> {};
+
+template <size_t N>
+struct implicit_conversions<const char[N]>
+    : implicit_conversions<char*> {};
+
+template <>
+struct implicit_conversions<char16_t*> {
+  using type = std::u16string;
+};
+
+template <size_t N>
+struct implicit_conversions<char16_t[N]>
+    : implicit_conversions<char16_t*> {};
+
+template <>
+struct implicit_conversions<const char16_t*>
+    : implicit_conversions<char16_t*> {};
+
+template <size_t N>
+struct implicit_conversions<const char16_t[N]>
+  : implicit_conversions<char16_t*> {};
+
+template <>
+struct implicit_conversions<char32_t*> {
+  using type = std::u16string;
+};
+
+template <size_t N>
+struct implicit_conversions<char32_t[N]>
+    : implicit_conversions<char32_t*> {};
+
+template <>
+struct implicit_conversions<const char32_t*>
+    : implicit_conversions<char32_t*> {};
+
+template <size_t N>
+struct implicit_conversions<const char32_t[N]>
+    : implicit_conversions<char32_t*> {};
+
+template <>
+struct implicit_conversions<scoped_actor> {
+  using type = actor;
+};
+
+template <class T>
+using implicit_conversions_t = typename implicit_conversions<T>::type;
 
 template <class T>
 struct strip_and_convert {
@@ -78,6 +119,9 @@ struct strip_and_convert {
       >::type
     >::type;
 };
+
+template <class T>
+using strip_and_convert_t = typename strip_and_convert<T>::type;
 
 } // namespace detail
 } // namespace caf

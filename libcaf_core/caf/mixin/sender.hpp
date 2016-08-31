@@ -27,6 +27,7 @@
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
+#include "caf/response_type.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
@@ -58,35 +59,23 @@ public:
   template <message_priority P = message_priority::normal,
             class Dest = actor, class... Ts>
   void send(const Dest& dest, Ts&&... xs) {
+    using detail::type_list;
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
+    using res_t = response_type<
+                    signatures_of_t<Dest>,
+                    detail::implicit_conversions_t<
+                      typename std::decay<Ts>::type
+                    >...>;
     static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),
                   "statically typed actors can only send() to other "
                   "statically typed actors; use anon_send() or request() when "
                   "communicating with dynamically typed actors");
-    static_assert(actor_accepts_message<
-                    typename signatures_of<Dest>::type,
-                    token
-                  >::value,
-                  "receiver does not accept given message");
-    // TODO: this only checks one way, we should check for loops
-    static_assert(is_void_response<
-                    typename response_to<
-                      typename signatures_of<Dest>::type,
-                      token
-                    >::type
-                  >::value
-                  ||  actor_accepts_message<
-                        typename signatures_of<Subtype>::type,
-                        typename response_to<
-                          typename signatures_of<Dest>::type,
-                          token
-                        >::type
-                      >::value,
+    static_assert(res_t::valid, "receiver does not accept given message");
+    static_assert(std::is_same<typename res_t::type, type_list<>>::value
+                  || response_type_unbox<
+                       signatures_of_t<Subtype>,
+                       typename res_t::type
+                     >::valid,
                   "this actor does not accept the response message");
     dest->eq_impl(message_id::make(P), this->ctrl(),
                   this->context(), std::forward<Ts>(xs)...);
@@ -101,10 +90,10 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(actor_accepts_message<
-                    typename signatures_of<Dest>::type,
+    static_assert(response_type_unbox<
+                    signatures_of_t<Dest>,
                     token
-                  >::value,
+                  >::valid,
                   "receiver does not accept given message");
     dest->eq_impl(message_id::make(P), nullptr,
                   this->context(), std::forward<Ts>(xs)...);
@@ -122,25 +111,29 @@ public:
                   "statically typed actors are only allowed to send() to other "
                   "statically typed actors; use anon_send() or request() when "
                   "communicating with dynamically typed actors");
-    static_assert(actor_accepts_message<
-                    typename signatures_of<Dest>::type,
+    static_assert(response_type_unbox<
+                    signatures_of_t<Dest>,
                     token
-                  >::value,
+                  >::valid,
                   "receiver does not accept given message");
     // TODO: this only checks one way, we should check for loops
     static_assert(is_void_response<
-                    typename response_to<
-                      typename signatures_of<Dest>::type,
-                      token
+                    typename response_type<
+                      signatures_of_t<Dest>,
+                      detail::implicit_conversions_t<
+                        typename std::decay<Ts>::type
+                      >...
                     >::type
                   >::value
-                  ||  actor_accepts_message<
-                        typename signatures_of<Subtype>::type,
-                        typename response_to<
-                          typename signatures_of<Dest>::type,
-                          token
+                  ||  response_type_unbox<
+                        signatures_of_t<Subtype>,
+                        typename response_type<
+                          signatures_of_t<Dest>,
+                          detail::implicit_conversions_t<
+                            typename std::decay<Ts>::type
+                          >...
                         >::type
-                      >::value,
+                      >::valid,
                   "this actor does not accept the response message");
     dptr()->system().scheduler().delayed_send(
       rtime, dptr()->ctrl(), actor_cast<strong_actor_ptr>(dest),
@@ -156,10 +149,10 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(actor_accepts_message<
-                    typename signatures_of<Dest>::type,
+    static_assert(response_type_unbox<
+                    signatures_of_t<Dest>,
                     token
-                  >::value,
+                  >::valid,
                   "receiver does not accept given message");
     dptr()->system().scheduler().delayed_send(
       rtime, nullptr, actor_cast<strong_actor_ptr>(dest),

@@ -35,7 +35,6 @@
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
-#include "caf/detail/left_or_right.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
 
 namespace caf {

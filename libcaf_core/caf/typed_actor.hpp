@@ -26,19 +26,16 @@
 #include "caf/actor_cast.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/composed_type.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
 #include "caf/unsafe_actor_handle_init.hpp"
 
-#include "caf/decorator/adapter.hpp"
+#include "caf/detail/mpi_splice.hpp"
 #include "caf/decorator/splitter.hpp"
 #include "caf/decorator/sequencer.hpp"
-
-#include "caf/detail/mpi_bind.hpp"
-#include "caf/detail/mpi_splice.hpp"
-#include "caf/detail/mpi_sequencer.hpp"
 
 namespace caf {
 
@@ -196,19 +193,6 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     ptr_.swap(other.ptr_);
   }
 
-  template <class... Ts>
-  typename detail::mpi_bind<
-    caf::typed_actor,
-    detail::type_list<Sigs...>,
-    typename std::decay<Ts>::type...
-  >::type
-  bind(Ts&&... xs) const {
-    auto& sys = *(ptr_->home_system);
-    auto ptr = make_actor<decorator::adapter, strong_actor_ptr>(
-      sys.next_actor_id(), sys.node(), &sys, ptr_, make_message(xs...));
-    return {ptr.release(), false};
-  }
-
   /// Queries whether this object was constructed using
   /// `unsafe_actor_handle_init` or is in moved-from state.
   bool unsafe() const {
@@ -290,18 +274,10 @@ bool operator!=(const typed_actor<Xs...>& x,
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
 /// @relates typed_actor
 template <class... Xs, class... Ys>
-typename detail::mpi_sequencer<
-  typed_actor,
-  detail::type_list<Xs...>,
-  Ys...
->::type
+composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>
 operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
-  using result =
-    typename detail::mpi_sequencer<
-      typed_actor,
-      detail::type_list<Xs...>,
-      Ys...
-    >::type;
+  using result = composed_type_t<detail::type_list<Xs...>,
+                                 detail::type_list<Ys...>>;
   auto& sys = g->home_system();
   auto mts = sys.message_types(detail::type_list<result>{});
   return make_actor<decorator::sequencer, result>(

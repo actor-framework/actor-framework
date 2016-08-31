@@ -44,42 +44,15 @@ struct signatures_of {
 };
 
 template <class T>
+using signatures_of_t = typename signatures_of<T>::type;
+
+template <class T>
 constexpr bool statically_typed() {
   return !std::is_same<
            none_t,
            typename std::remove_pointer<T>::type::signatures
          >::value;
 }
-
-template <class Signatures, class Input>
-struct actor_accepts_message;
-
-template <class Input>
-struct actor_accepts_message<none_t, Input> : std::true_type {};
-
-template <class... Ts, class Input>
-struct actor_accepts_message<detail::type_list<Ts...>, Input> 
-    : detail::tl_exists<detail::type_list<Ts...>, 
-                        detail::input_is<Input>::template eval> {};
-
-template <class Signatures, class Input>
-struct response_to;
-
-template <class Input>
-struct response_to<none_t, Input> {
-  using type = none_t;
-};
-
-template <class... Ts, class Input>
-struct response_to<detail::type_list<Ts...>, Input> {
-  using type =
-    typename output_types_of<
-      typename detail::tl_find<
-        detail::type_list<Ts...>,
-        detail::input_is<Input>::template eval
-      >::type
-    >::type;
-};
 
 template <class T>
 struct is_void_response : std::false_type {};

@@ -21,11 +21,12 @@
 #define CAF_TYPED_BEHAVIOR_HPP
 
 #include "caf/behavior.hpp"
+#include "caf/deduce_mpi.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/interface_mismatch.hpp"
 #include "caf/typed_continue_helper.hpp"
 
-#include "caf/detail/ctm.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
@@ -150,25 +151,33 @@ class behavior_stack_based_impl;
 template <class... Sigs>
 class typed_behavior {
 public:
+  // -- friends ----------------------------------------------------------------
+
   template <class... OtherSigs>
   friend class typed_actor;
 
   template <class, class, class>
   friend class mixin::behavior_stack_based_impl;
 
+  // -- member types -----------------------------------------------------------
+
+  /// Stores the template parameter pack in a type list.
+  using signatures = detail::type_list<Sigs...>;
+
+  /// Empty struct tag for constructing from an untyped behavior.
+  struct unsafe_init { };
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   typed_behavior(typed_behavior&&) = default;
   typed_behavior(const typed_behavior&) = default;
   typed_behavior& operator=(typed_behavior&&) = default;
   typed_behavior& operator=(const typed_behavior&) = default;
 
-  using signatures = detail::type_list<Sigs...>;
-
   template <class T, class... Ts>
   typed_behavior(T x, Ts... xs) {
     set(detail::make_behavior(std::move(x), std::move(xs)...));
   }
-
-  struct unsafe_init { };
 
   typed_behavior(unsafe_init, behavior x) : bhvr_(std::move(x)) {
     // nop
@@ -178,17 +187,23 @@ public:
     // nop
   }
 
+  // -- modifiers --------------------------------------------------------------
+
+  /// Exchanges the contents of this and other.
   inline void swap(typed_behavior& other) {
     bhvr_.swap(other.bhvr_);
   }
 
-  explicit operator bool() const {
-    return static_cast<bool>(bhvr_);
-  }
-
-   /// Invokes the timeout callback.
+  /// Invokes the timeout callback.
   void handle_timeout() {
     bhvr_.handle_timeout();
+  }
+
+  // -- observers --------------------------------------------------------------
+
+  /// Returns whether this behavior contains any callbacks.
+  explicit operator bool() const {
+    return static_cast<bool>(bhvr_);
   }
 
   /// Returns the duration after which receives using
@@ -214,15 +229,12 @@ private:
 
   template <class... Ts>
   void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {
-    using impl = detail::default_behavior_impl<std::tuple<Ts...>>;
-    using mpi =
-      typename detail::tl_map<
-        typename impl::cases,
-        detail::deduce_mpi
-      >::type;
-    static_assert(detail::tl_is_distinct<mpi>::value,
-                  "multiple handler defintions found");
-    detail::static_asserter<signatures, mpi, detail::ctm>::verify_match();
+    using found_signatures = detail::type_list<deduce_mpi_t<Ts>...>;
+    using m = interface_mismatch_t<found_signatures, signatures>;
+    // trigger static assert on mismatch
+    detail::static_error_printer<sizeof...(Ts), m::value,
+                                 typename m::xs, typename m::ys> guard;
+    CAF_IGNORE_UNUSED(guard);
     // final (type-erasure) step
     intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);
     bhvr_.assign(std::move(ptr));

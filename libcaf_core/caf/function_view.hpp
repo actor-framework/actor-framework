@@ -26,6 +26,7 @@
 #include "caf/expected.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/response_type.hpp"
 
 namespace caf {
 
@@ -112,6 +113,10 @@ struct function_view_flattened_result<std::tuple<void>> {
 };
 
 template <class T>
+using function_view_flattened_result_t =
+  typename function_view_flattened_result<T>::type;
+
+template <class T>
 struct function_view_result {
   T value;
 };
@@ -171,15 +176,13 @@ public:
   /// Sends a request message to the assigned actor and returns the result.
   template <class... Ts,
             class R =
-              typename function_view_flattened_result<
-                typename detail::deduce_output_type<
-                  type,
-                  detail::type_list<
-                    typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...>
-                >::tuple_type
-              >::type>
+              function_view_flattened_result_t<
+                typename response_type<
+                  typename type::signatures,
+                  detail::implicit_conversions_t<
+                    typename std::decay<Ts>::type
+                  >...
+                >::tuple_type>>
   expected<R> operator()(Ts&&... xs) {
     if (impl_.unsafe())
       return sec::bad_function_call;

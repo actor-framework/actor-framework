@@ -211,7 +211,7 @@ using string_actor = typed_actor<replies_to<string>::with<string>>;
 
 string_actor::behavior_type string_reverter() {
   return {
-    [](string& str) {
+    [](string& str) -> string {
       std::reverse(str.begin(), str.end());
       return std::move(str);
     }

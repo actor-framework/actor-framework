@@ -27,6 +27,7 @@
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
+#include "caf/response_type.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
@@ -62,13 +63,11 @@ public:
   template <message_priority P = message_priority::normal,
             class Handle = actor, class... Ts>
   response_handle<Subtype,
-                  typename detail::deduce_output_type<
-                    Handle,
-                    detail::type_list<
-                      typename detail::implicit_conversions<
-                        typename std::decay<Ts>::type
-                      >::type...>
-                  >::type,
+                  response_type_t<
+                    typename Handle::signatures,
+                    typename detail::implicit_conversions<
+                      typename std::decay<Ts>::type
+                    >::type...>,
                   is_blocking_requester<Subtype>::value>
   request(const Handle& dest, const duration& timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -77,7 +76,7 @@ public:
         typename detail::implicit_conversions<
           typename std::decay<Ts>::type
         >::type...>;
-    static_assert(actor_accepts_message<typename signatures_of<Handle>::type, token>::value,
+    static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
     auto dptr = static_cast<Subtype*>(this);
     auto req_id = dptr->new_request_id(P);

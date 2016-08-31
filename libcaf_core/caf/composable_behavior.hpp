@@ -37,7 +37,7 @@ class composable_behavior_base;
 
 template <class... Xs, class... Ys>
 class composable_behavior_base<typed_mpi<detail::type_list<Xs...>,
-                                         detail::type_list<Ys...>>> {
+                                         output_tuple<Ys...>>> {
 public:
   virtual ~composable_behavior_base() noexcept {
     // nop

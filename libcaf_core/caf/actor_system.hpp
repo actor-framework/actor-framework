@@ -97,7 +97,7 @@ struct typed_mpi_access;
 
 template <class... Is, class... Ls>
 struct typed_mpi_access<typed_mpi<detail::type_list<Is...>,
-                                  detail::type_list<Ls...>>> {
+                                  output_tuple<Ls...>>> {
   std::string operator()(const uniform_type_info_map& types) const {
     static_assert(sizeof...(Is) > 0, "typed MPI without inputs");
     static_assert(sizeof...(Ls) > 0, "typed MPI without outputs");
