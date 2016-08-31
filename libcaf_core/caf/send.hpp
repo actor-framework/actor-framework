@@ -91,6 +91,13 @@ inline void anon_send_exit(const actor_addr& to, exit_reason reason) {
     anon_send_exit(ptr, reason);
 }
 
+/// Anonymously sends `to` an exit message.
+inline void anon_send_exit(const weak_actor_ptr& to, exit_reason reason) {
+  auto ptr = actor_cast<strong_actor_ptr>(to);
+  if (ptr)
+    anon_send_exit(ptr, reason);
+}
+
 } // namespace caf
 
 #endif // CAF_SEND_HPP
