@@ -63,6 +63,9 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
         case im_skipped:
           raw_ptr->push_to_cache(std::move(mptr));
           break;
+        case im_dropped:
+          CAF_LOG_INFO("broker dropped disconnect message");
+          break;
       }
     }
   }
