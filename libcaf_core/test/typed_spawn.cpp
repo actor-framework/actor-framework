@@ -260,6 +260,8 @@ maybe_string_delegator(maybe_string_actor::pointer self, maybe_string_actor x) {
 
 using int_actor = typed_actor<replies_to<int>::with<int>>;
 
+using float_actor = typed_actor<reacts_to<float>>;
+
 int_actor::behavior_type int_fun() {
   return {
     [](int i) { return i * i; }
@@ -293,6 +295,25 @@ behavior foo2(event_based_actor* self) {
     [=](int i, int_actor server) {
       self->delegate(server, i);
       self->quit();
+    }
+  };
+}
+
+float_actor::behavior_type float_fun(float_actor::pointer self) {
+  return {
+    [=](float a) {
+      CAF_CHECK_EQUAL(a, 1.0f);
+      self->quit(exit_reason::user_shutdown);
+    }
+  };
+}
+
+int_actor::behavior_type foo3(int_actor::pointer self) {
+  auto b = self->spawn<linked>(float_fun);
+  self->send(b, 1.0f);
+  return {
+    [=](int) {
+      return 0;
     }
   };
 }
@@ -452,6 +473,7 @@ CAF_TEST(sending_typed_actors) {
       CAF_CHECK_EQUAL(i, 100);
     }
   );
+  self->spawn(foo3);
 }
 
 CAF_TEST(sending_typed_actors_and_down_msg) {
