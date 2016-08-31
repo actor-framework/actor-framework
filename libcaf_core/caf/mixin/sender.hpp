@@ -71,7 +71,7 @@ public:
                   "statically typed actors; use anon_send() or request() when "
                   "communicating with dynamically typed actors");
     static_assert(res_t::valid, "receiver does not accept given message");
-    static_assert(std::is_same<typename res_t::type, type_list<>>::value
+    static_assert(is_void_response<typename res_t::type>::value
                   || response_type_unbox<
                        signatures_of_t<Subtype>,
                        typename res_t::type
