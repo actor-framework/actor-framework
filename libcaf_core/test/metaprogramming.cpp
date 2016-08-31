@@ -153,10 +153,14 @@ bi_pair tb_assign(Ts&&... xs) {
   return {x.valid, x.pos};
 }
 
-std::ostream& operator<<(std::ostream& out, bi_pair x) {
+namespace std {
+
+ostream& operator<<(ostream& out, const pair<bool, int>& x) {
   // do not modify stream with boolalpha
   return out << '(' << (x.first ? "true" : "false") << ", " << x.second << ')';
 }
+
+} // namespace std
 
 CAF_TEST(typed_behavior_assignment) {
   using bh1 = typed_beh<replies_to<int>::with<double>,
