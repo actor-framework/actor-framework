@@ -5,7 +5,7 @@
 // - remote_spawn -s -p 4242
 //
 // Run client at the same host:
-// - remote_spawn -n localhost -p 4242
+// - remote_spawn -H localhost -p 4242
 
 // Manual refs: 33-39, 99-101,106,110 (ConfiguringActorApplications)
 //              125-143 (RemoteSpawn)
