@@ -358,10 +358,9 @@ void actor_system::inc_detached_threads() {
 }
 
 void actor_system::dec_detached_threads() {
-  if (--detached == 0) {
-    std::unique_lock<std::mutex> guard{detached_mtx};
+  std::unique_lock<std::mutex> guard{detached_mtx};
+  if (--detached == 0)
     detached_cv.notify_all();
-  }
 }
 
 void actor_system::await_detached_threads() {
