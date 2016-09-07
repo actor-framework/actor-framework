@@ -108,6 +108,17 @@ public:
     return self_->response(std::forward<Ts>(xs)...);
   }
 
+  /// Returns a pointer to the sender of the current message.
+  /// @pre `current_mailbox_element() != nullptr`
+  inline strong_actor_ptr& current_sender() {
+    return self_->current_sender();
+  }
+
+  /// Returns a pointer to the currently processed mailbox element.
+  inline mailbox_element* current_mailbox_element() {
+    return self_->current_mailbox_element();
+  }
+
   /// @private
   actor_control_block* ctrl() const {
     CAF_ASSERT(self_ != nullptr);
