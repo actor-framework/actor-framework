@@ -157,12 +157,11 @@ public:
     nodes_[0].name = "Jupiter";
     nodes_[1].name = "Mars";
     CAF_REQUIRE_NOT_EQUAL(jupiter().connection, mars().connection);
-    CAF_REQUIRE(!(jupiter().id == mars().id));
-    CAF_REQUIRE(jupiter().id != mars().id);
-    CAF_REQUIRE(jupiter().id < mars().id);
     CAF_MESSAGE("Earth:   " << to_string(this_node_));
     CAF_MESSAGE("Jupiter: " << to_string(jupiter().id));
     CAF_MESSAGE("Mars:    " << to_string(mars().id));
+    CAF_REQUIRE_NOT_EQUAL(this_node_, jupiter().id);
+    CAF_REQUIRE_NOT_EQUAL(jupiter().id,  mars().id);
   }
 
   ~fixture() {
