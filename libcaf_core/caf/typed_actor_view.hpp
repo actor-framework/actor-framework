@@ -71,6 +71,10 @@ public:
    *                      miscellaneous actor operations                      *
    ****************************************************************************/
 
+  execution_unit* context() const {
+    return self_->context();
+  }
+
   actor_system& system() const {
     return self_->system();
   }

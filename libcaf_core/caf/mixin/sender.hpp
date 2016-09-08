@@ -77,8 +77,8 @@ public:
                        typename res_t::type
                      >::valid,
                   "this actor does not accept the response message");
-    dest->eq_impl(message_id::make(P), this->ctrl(),
-                  this->context(), std::forward<Ts>(xs)...);
+    dest->eq_impl(message_id::make(P), dptr()->ctrl(),
+                  dptr()->context(), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal,
@@ -96,7 +96,7 @@ public:
                   >::valid,
                   "receiver does not accept given message");
     dest->eq_impl(message_id::make(P), nullptr,
-                  this->context(), std::forward<Ts>(xs)...);
+                  dptr()->context(), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal,

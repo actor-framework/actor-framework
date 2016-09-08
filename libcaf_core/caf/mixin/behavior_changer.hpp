@@ -38,14 +38,14 @@ namespace mixin {
 
 /// A `behavior_changer` is an actor that supports
 /// `self->become(...)` and `self->unbecome()`.
-template <class Base, class Derived>
+template <class Base, class Subtype>
 class behavior_changer : public Base {
 public:
   // -- member types -----------------------------------------------------------
 
   using extended_base = behavior_changer;
 
-  using behavior_type = typename behavior_type_of<Derived>::type;
+  using behavior_type = typename behavior_type_of<Subtype>::type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -57,11 +57,11 @@ public:
   // -- behavior management ----------------------------------------------------
 
   void become(behavior_type bhvr) {
-    this->do_become(std::move(bhvr.unbox()), true);
+    dptr()->do_become(std::move(bhvr.unbox()), true);
   }
 
   void become(const keep_behavior_t&, behavior_type bhvr) {
-    this->do_become(std::move(bhvr.unbox()), false);
+    dptr()->do_become(std::move(bhvr.unbox()), false);
   }
 
   template <class T0, class T1, class... Ts>
@@ -72,7 +72,7 @@ public:
     behavior_type bhvr{std::forward<T0>(x0),
                        std::forward<T1>(x1),
                        std::forward<Ts>(xs)...};
-    this->do_become(std::move(bhvr.unbox()), true);
+    dptr()->do_become(std::move(bhvr.unbox()), true);
   }
 
   template <class T0, class T1, class... Ts>
@@ -80,11 +80,16 @@ public:
     behavior_type bhvr{std::forward<T0>(x0),
                        std::forward<T1>(x1),
                        std::forward<Ts>(xs)...};
-    this->do_become(std::move(bhvr.unbox()), false);
+    dptr()->do_become(std::move(bhvr.unbox()), false);
   }
 
   void unbecome() {
-    this->bhvr_stack_.pop_back();
+    dptr()->bhvr_stack_.pop_back();
+  }
+
+private:
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
   }
 };
 

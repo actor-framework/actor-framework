@@ -57,7 +57,7 @@ public:
   // -- overridden functions of monitorable_actor ------------------------------
 
   bool cleanup(error&& fail_state, execution_unit* ptr) override {
-    auto me = this->ctrl();
+    auto me = dptr()->ctrl();
     for (auto& subscription : subscriptions_)
       subscription->unsubscribe(me);
     subscriptions_.clear();
@@ -72,7 +72,7 @@ public:
     CAF_LOG_TRACE(CAF_ARG(what));
     if (what == invalid_group)
       return;
-    if (what->subscribe(this->ctrl()))
+    if (what->subscribe(dptr()->ctrl()))
       subscriptions_.emplace(what);
   }
 
@@ -80,7 +80,7 @@ public:
   void leave(const group& what) {
     CAF_LOG_TRACE(CAF_ARG(what));
     if (subscriptions_.erase(what) > 0)
-      what->unsubscribe(this->ctrl());
+      what->unsubscribe(dptr()->ctrl());
   }
 
   /// Returns all subscribed groups.
@@ -89,6 +89,10 @@ public:
   }
 
 private:
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
+  }
+
   // -- data members -----------------------------------------------------------
 
   /// Stores all subscribed groups.
