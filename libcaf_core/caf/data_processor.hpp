@@ -433,7 +433,7 @@ public:
   typename std::enable_if<
     detail::is_inspectable<Derived, T>::value
       && !detail::has_serialize<T>::value,
-    error
+    decltype(inspect(std::declval<Derived&>(), std::declval<T&>()))
   >::type
   apply(T& x) {
     return inspect(dref(), x);
