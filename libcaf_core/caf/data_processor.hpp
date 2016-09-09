@@ -430,7 +430,12 @@ public:
   virtual error apply_raw(size_t num_bytes, void* data) = 0;
 
   template <class T>
-  auto apply(T& x) -> decltype(inspect(std::declval<Derived&>(), x)) {
+  typename std::enable_if<
+    detail::is_inspectable<Derived, T>::value
+      && !detail::has_serialize<T>::value,
+    error
+  >::type
+  apply(T& x) {
     return inspect(dref(), x);
   }
 
