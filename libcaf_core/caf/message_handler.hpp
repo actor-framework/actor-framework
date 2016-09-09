@@ -98,6 +98,18 @@ public:
     return impl_ ? impl_->invoke(xs) : none;
   }
 
+  /// Runs this handler with callback.
+  inline match_case::result operator()(detail::invoke_result_visitor& f,
+                                       type_erased_tuple& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
+  }
+
+  /// Runs this handler with callback.
+  inline match_case::result operator()(detail::invoke_result_visitor& f,
+                                       message& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
+  }
+
   /// Returns a new handler that concatenates this handler
   /// with a new handler from `xs...`.
   template <class... Ts>
