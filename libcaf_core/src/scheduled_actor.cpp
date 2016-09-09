@@ -422,7 +422,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       return im_success;
     }
     case message_category::ordinary: {
-      detail::default_invoke_result_visitor visitor{this};
+      detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
       bool skipped = false;
       auto had_timeout = getf(has_timeout_flag);
       if (had_timeout)

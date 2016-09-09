@@ -27,13 +27,16 @@
 namespace caf {
 namespace detail {
 
+template <class Self>
 class default_invoke_result_visitor : public invoke_result_visitor {
 public:
-  inline default_invoke_result_visitor(local_actor* ptr) : self_(ptr) {
+  inline default_invoke_result_visitor(Self* ptr) : self_(ptr) {
     // nop
   }
 
-  ~default_invoke_result_visitor();
+  ~default_invoke_result_visitor() {
+    // nop
+  }
 
   void operator()() override {
     // nop
@@ -83,7 +86,7 @@ private:
     deliver(rp, x);
   }
 
-  local_actor* self_;
+  Self* self_;
 };
 
 } // namespace detail

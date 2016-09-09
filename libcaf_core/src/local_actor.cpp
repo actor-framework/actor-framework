@@ -36,7 +36,6 @@
 
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/detail/default_invoke_result_visitor.hpp"
 
 namespace caf {
 

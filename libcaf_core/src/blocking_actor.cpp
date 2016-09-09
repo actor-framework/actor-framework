@@ -301,7 +301,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
   cached_sequence seq1{mailbox().cache()};
   mailbox_sequence seq2{this, bhvr.timeout()};
   message_sequence_combinator seq{&seq1, &seq2};
-  detail::default_invoke_result_visitor visitor{this};
+  detail::default_invoke_result_visitor<blocking_actor> visitor{this};
   // read incoming messages until we have a match or a timeout
   for (;;) {
     // check loop pre-condition
