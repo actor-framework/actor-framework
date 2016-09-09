@@ -139,17 +139,21 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     signatures,
                     detail::type_list<Ts...>
                   >::value,
-                  "Cannot assign invalid handle");
+                  "Cannot assign incompatible handle");
   }
 
   // allow `handle_type{this}` for typed actors
-  template <class... Ts>
-  typed_actor(typed_actor<Ts...>* ptr) : ptr_(ptr->ctrl()) {
+  template <class T>
+  typed_actor(T* ptr,
+              typename std::enable_if<
+                std::is_base_of<statically_typed_actor_base, T>::value
+              >::type* = 0)
+      : ptr_(ptr->ctrl()) {
     static_assert(detail::tl_subset_of<
                     signatures,
-                    detail::type_list<Ts...>
+                    typename T::signatures
                   >::value,
-                  "Cannot assign invalid handle");
+                  "Cannot assign T* to incompatible handle type");
     CAF_ASSERT(ptr != nullptr);
   }
 
@@ -159,7 +163,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     signatures,
                     detail::type_list<Ts...>
                   >::value,
-                  "Cannot assign invalid handle");
+                  "Cannot assign incompatible handle");
     ptr_ = other.ptr_;
     return *this;
   }

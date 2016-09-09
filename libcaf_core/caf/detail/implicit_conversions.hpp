@@ -24,10 +24,39 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/actor_marker.hpp"
+
+#include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
+
+template <class T,
+          bool IsDyn = std::is_base_of<dynamically_typed_actor_base, T>::value,
+          bool IsStat = std::is_base_of<statically_typed_actor_base, T>::value>
+struct implicit_actor_conversions {
+  using type = T;
+};
+
+template <class T>
+struct implicit_actor_conversions<T, true, false> {
+  using type = actor;
+};
+
+template <class T>
+struct implicit_actor_conversions<T, false, true> {
+  using type =
+    typename detail::tl_apply<
+      typename T::signatures,
+      typed_actor
+    >::type;
+};
+
+template <>
+struct implicit_actor_conversions<actor_control_block, false, false> {
+  using type = strong_actor_ptr;
+};
 
 template <class T>
 struct implicit_conversions {
@@ -40,14 +69,7 @@ struct implicit_conversions {
 };
 
 template <class T>
-struct implicit_conversions<T*> {
-  using type =
-    typename std::conditional<
-      std::is_base_of<abstract_actor, T>::value,
-      actor,
-      T*
-    >::type;
-};
+struct implicit_conversions<T*> : implicit_actor_conversions<T> {};
 
 template <>
 struct implicit_conversions<char*> {
