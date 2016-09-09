@@ -36,7 +36,9 @@ class response_promise {
 public:
   /// Constructs an invalid response promise.
   response_promise();
-  response_promise(local_actor* self, mailbox_element& src);
+
+  response_promise(execution_unit* ctx, strong_actor_ptr self,
+                   mailbox_element& src);
 
   response_promise(response_promise&&) = default;
   response_promise(const response_promise&) = default;
@@ -65,20 +67,13 @@ public:
     return !stages_.empty() || source_;
   }
 
-  /// @cond PRIVATE
-
-  inline local_actor* self() {
-    return self_;
-  }
-
-  /// @endcond
-
 private:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
   response_promise deliver_impl(message response_message);
 
-  local_actor* self_;
+  execution_unit* ctx_;
+  strong_actor_ptr self_;
   strong_actor_ptr source_;
   forwarding_stack stages_;
   message_id id_;

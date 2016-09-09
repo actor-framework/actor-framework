@@ -256,7 +256,7 @@ public:
     auto& mid = ptr->mid;
     if (mid.is_answered())
       return {};
-    return {this, *ptr};
+    return {this->context(), this->ctrl(), *ptr};
   }
 
   /// Creates a `response_promise` to respond to a request later on.
