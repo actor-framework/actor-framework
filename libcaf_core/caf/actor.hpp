@@ -52,6 +52,9 @@ struct is_convertible_to_actor<scoped_actor> : std::true_type {
   // nop
 };
 
+template <class T>
+struct is_convertible_to_actor<T*> : is_convertible_to_actor<T> {};
+
 /// Identifies an untyped actor. Can be used with derived types
 /// of `event_based_actor`, `blocking_actor`, and `actor_proxy`.
 class actor : detail::comparable<actor>,
