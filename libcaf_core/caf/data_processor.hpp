@@ -204,7 +204,10 @@ public:
 
   /// Applies this processor to an empty type.
   template <class T>
-  typename std::enable_if<std::is_empty<T>::value, error>::type
+  typename std::enable_if<
+    std::is_empty<T>::value && !detail::is_inspectable<Derived, T>::value,
+    error
+  >::type
   apply(T&) {
     return none;
   }
