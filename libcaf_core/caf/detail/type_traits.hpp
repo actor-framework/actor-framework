@@ -56,6 +56,7 @@ using enable_if_t = typename std::enable_if<V, T>::type;
 template <class Trait, class T = void>
 using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
 
+/// Checks whether `T` is inspectable by `Inspector`.
 template <class Inspector, class T>
 class is_inspectable {
 private:
@@ -71,6 +72,7 @@ public:
   static constexpr bool value = !std::is_same<result_type, std::false_type>::value;
 };
 
+/// Checks whether `T` defines a free function `to_string`.
 template <class T>
 class has_to_string {
 private:
@@ -396,99 +398,88 @@ struct is_mutable_ref<T&> : std::true_type { };
 template <class Functor>
 struct callable_trait;
 
-// member const function pointer
-template <class C, typename Result, class... Ts>
-struct callable_trait<Result (C::*)(Ts...) const> {
-  using result_type = Result;
+// good ol' function
+template <class R, class... Ts>
+struct callable_trait<R (Ts...)> {
+  using result_type = R;
   using arg_types = type_list<Ts...>;
-  using fun_type = std::function<Result(Ts...)>;
+  using fun_sig = R (Ts...);
+  using fun_type = std::function<R (Ts...)>;
 };
+
+// member const function pointer
+template <class C, typename R, class... Ts>
+struct callable_trait<R (C::*)(Ts...) const> : callable_trait<R (Ts...)> {};
 
 // member function pointer
-template <class C, typename Result, class... Ts>
-struct callable_trait<Result (C::*)(Ts...)> {
-  using result_type = Result;
-  using arg_types = type_list<Ts...>;
-  using fun_type = std::function<Result(Ts...)>;
-};
-
-// good ol' function
-template <class Result, class... Ts>
-struct callable_trait<Result(Ts...)> {
-  using result_type = Result;
-  using arg_types = type_list<Ts...>;
-  using fun_type = std::function<Result(Ts...)>;
-};
+template <class C, typename R, class... Ts>
+struct callable_trait<R (C::*)(Ts...)> : callable_trait<R (Ts...)> {};
 
 // good ol' function pointer
-template <class Result, class... Ts>
-struct callable_trait<Result (*)(Ts...)> {
-  using result_type = Result;
-  using arg_types = type_list<Ts...>;
-  using fun_type = std::function<Result(Ts...)>;
+template <class R, class... Ts>
+struct callable_trait<R (*)(Ts...)> : callable_trait<R (Ts...)> {};
+
+template <class T>
+struct has_apply_operator {
+  template <class U>
+  static auto sfinae(U*) -> decltype(&U::operator(), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<T>(nullptr));
+  static constexpr bool value = type::value;
 };
 
 // matches (IsFun || IsMemberFun)
-template <bool IsFun, bool IsMemberFun, typename T>
+template <class T,
+          bool IsFun = std::is_function<T>::value
+                       || std::is_function<
+                            typename std::remove_pointer<T>::type
+                          >::value
+                       || std::is_member_function_pointer<T>::value,
+          bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
   using type = callable_trait<T>;
-};
-
-// assume functor providing operator()
-template <class C>
-struct get_callable_trait_helper<false, false, C> {
-  using type = callable_trait<decltype(&C::operator())>;
-};
-
-/// Gets a callable trait for `T,` where `T` is a functor type,
-///    i.e., a function, member function, or a class providing
-///    the call operator.
-template <class T>
-struct get_callable_trait {
-  // type without cv qualifiers
-  using bare_type = decay_t<T>;
-  // if T is a function pointer, this type identifies the function
-  using signature_type = typename std::remove_pointer<bare_type>::type;
-  using type =
-    typename get_callable_trait_helper<
-      std::is_function<bare_type>::value
-      || std::is_function<signature_type>::value,
-      std::is_member_function_pointer<bare_type>::value,
-      bare_type
-    >::type;
   using result_type = typename type::result_type;
   using arg_types = typename type::arg_types;
   using fun_type = typename type::fun_type;
+  using fun_sig = typename type::fun_sig;
   static constexpr size_t num_args = tl_size<arg_types>::value;
 };
+
+// assume functor providing operator()
+template <class T>
+struct get_callable_trait_helper<T, false, true> {
+  using type = callable_trait<decltype(&T::operator())>;
+  using result_type = typename type::result_type;
+  using arg_types = typename type::arg_types;
+  using fun_type = typename type::fun_type;
+  using fun_sig = typename type::fun_sig;
+  static constexpr size_t num_args = tl_size<arg_types>::value;
+};
+
+template <class T>
+struct get_callable_trait_helper<T, false, false> {};
+
+/// Gets a callable trait for `T,` where `T` is a function object type,
+/// i.e., a function, member function, or a class providing
+/// the call operator.
+template <class T>
+struct get_callable_trait : get_callable_trait_helper<decay_t<T>> {};
 
 /// Checks wheter `T` is a function or member function.
 template <class T>
 struct is_callable {
   template <class C>
-  static bool _fun(C*, typename callable_trait<C>::result_type* = nullptr) {
-    return true;
-  }
+  static bool _fun(C*, typename get_callable_trait<C>::type* = nullptr);
 
-  template <class C>
-  static bool
-  _fun(C*,
-     typename callable_trait<decltype(&C::operator())>::result_type* = 0) {
-    return true;
-  }
-
-  static void _fun(void*) { }
+  static void _fun(void*);
 
   using result_type = decltype(_fun(static_cast<decay_t<T>*>(nullptr)));
 
 public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
-};
-
-/// Checks wheter each `T` in `Ts` is a function or member function.
-template <class... Ts>
-struct all_callable {
-  static constexpr bool value = conjunction<is_callable<Ts>::value...>::value;
 };
 
 /// Checks wheter `F` takes mutable references.
