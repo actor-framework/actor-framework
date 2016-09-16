@@ -174,7 +174,7 @@ struct fixture {
 
   template <class T>
   bool value_is(const char* key, const T& what) {
-    if (!config_server.unsafe())
+    if (config_server)
       return config_server_has(key, what);
     auto& cv = values[key];
     using type =
@@ -192,7 +192,7 @@ struct fixture {
   }
 
   size_t num_values() {
-    if (!config_server.unsafe()) {
+    if (config_server) {
       size_t result = 0;
       scoped_actor self{system};
       self->request(config_server, infinite, get_atom::value, "*").receive(

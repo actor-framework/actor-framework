@@ -148,14 +148,14 @@ public:
   }
 
   ~function_view() {
-    if (!impl_.unsafe())
+    if (impl_)
       self_.~scoped_actor();
   }
 
   function_view(function_view&& x)
       : timeout(x.timeout),
         impl_(std::move(x.impl_)) {
-    if (!impl_.unsafe()) {
+    if (impl_) {
       new (&self_) scoped_actor(impl_.home_system()); //(std::move(x.self_));
       x.self_.~scoped_actor();
     }
@@ -179,7 +179,7 @@ public:
                   >...
                 >::tuple_type>>
   expected<R> operator()(Ts&&... xs) {
-    if (impl_.unsafe())
+    if (!impl_)
       return sec::bad_function_call;
     error err;
     function_view_result<R> result;
@@ -221,7 +221,7 @@ private:
   }
 
   void new_self(const Actor& x) {
-    if (!x.unsafe())
+    if (x)
       new (&self_) scoped_actor(x->home_system());
   }
 

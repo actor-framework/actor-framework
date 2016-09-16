@@ -174,6 +174,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return static_cast<bool>(ptr_);
   }
 
+  /// Queries whether this actor handle is invalid.
+  inline bool operator!() const {
+    return !ptr_;
+  }
+
   /// Queries the address of the stored actor.
   actor_addr address() const noexcept {
     return {ptr_.get(), true};

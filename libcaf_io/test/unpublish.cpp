@@ -85,9 +85,9 @@ struct fixture {
       }
     );
     if (expect_fail)
-      CAF_REQUIRE(result.unsafe());
+      CAF_REQUIRE(!result);
     else
-      CAF_REQUIRE(!result.unsafe());
+      CAF_REQUIRE(result);
     return result;
   }
 
@@ -121,7 +121,7 @@ CAF_TEST(unpublishing) {
             down_msg{testee.address(), exit_reason::normal});
   // must fail now
   auto x2 = remote_actor("127.0.0.1", port, true);
-  CAF_CHECK(x2.unsafe());
+  CAF_CHECK(!x2);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

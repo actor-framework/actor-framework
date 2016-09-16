@@ -115,6 +115,11 @@ public:
     return static_cast<bool>(ptr_);
   }
 
+  /// Queries whether this actor handle is invalid.
+  inline bool operator!() const {
+    return !ptr_;
+  }
+
   /// Returns the address of the stored actor.
   actor_addr address() const noexcept;
 
@@ -138,7 +143,7 @@ public:
 
   /// Queries whether this object was constructed using
   /// `unsafe_actor_handle_init` or is in moved-from state.
-  bool unsafe() const {
+  bool unsafe() const CAF_DEPRECATED {
     return !ptr_;
   }
 

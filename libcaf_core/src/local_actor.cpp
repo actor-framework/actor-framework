@@ -75,18 +75,17 @@ void local_actor::request_response_timeout(const duration& d, message_id mid) {
 }
 
 void local_actor::monitor(abstract_actor* ptr) {
-  if (!ptr)
-    return;
-  ptr->attach(default_attachable::make_monitor(ptr->address(), address()));
+  if (ptr)
+    ptr->attach(default_attachable::make_monitor(ptr->address(), address()));
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
   CAF_LOG_TRACE(CAF_ARG(whom));
   auto ptr = actor_cast<strong_actor_ptr>(whom);
-  if (!ptr)
-    return;
-  default_attachable::observe_token tk{address(), default_attachable::monitor};
-  ptr->get()->detach(tk);
+  if (ptr) {
+    default_attachable::observe_token tk{address(), default_attachable::monitor};
+    ptr->get()->detach(tk);
+  }
 }
 
 void local_actor::on_exit() {

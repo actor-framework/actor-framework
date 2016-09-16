@@ -47,7 +47,7 @@ second_stage::behavior_type typed_second_stage() {
       return x * y;
     },
     [](double x) {
-      return 23.0f * x;
+      return 23.0 * x;
     }
   };
 }
