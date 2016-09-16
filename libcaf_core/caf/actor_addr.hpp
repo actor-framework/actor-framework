@@ -43,17 +43,7 @@ class actor_addr : detail::comparable<actor_addr>,
 public:
   // -- friend types that need access to private ctors
 
-  template <class>
-  friend class detail::type_erased_value_impl;
-
-  template <class>
-  friend class data_processor;
-
-  // grant access to private ctor
-  friend class actor;
   friend class abstract_actor;
-  friend class down_msg;
-  friend class exit_msg;
 
   // allow conversion via actor_cast
   template <class, class, int>
@@ -62,9 +52,7 @@ public:
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = true;
 
-  // tell actor_cast this is a nullable handle type
-  static constexpr bool has_non_null_guarantee = true;
-
+  actor_addr() = default;
   actor_addr(actor_addr&&) = default;
   actor_addr(const actor_addr&) = default;
   actor_addr& operator=(actor_addr&&) = default;
@@ -125,8 +113,6 @@ public:
   /// @endcond
 
 private:
-  actor_addr() = default;
-
   inline actor_control_block* get() const noexcept {
     return ptr_.get();
   }
@@ -143,7 +129,6 @@ private:
 
   weak_actor_ptr ptr_;
 };
-
 
 } // namespace caf
 

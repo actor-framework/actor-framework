@@ -42,9 +42,6 @@ public:
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
 
-  // tell actor_cast this is a non-null handle type
-  static constexpr bool has_non_null_guarantee = true;
-
   scoped_actor(actor_system& sys, bool hide_actor = false);
 
   scoped_actor(const scoped_actor&) = delete;
@@ -54,6 +51,10 @@ public:
   scoped_actor& operator=(scoped_actor&&) = default;
 
   ~scoped_actor();
+
+  inline explicit operator bool() const {
+    return static_cast<bool>(self_);
+  }
 
   inline actor_system& home_system() const {
     return *self_->home_system;

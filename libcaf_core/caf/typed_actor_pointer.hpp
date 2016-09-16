@@ -50,6 +50,10 @@ public:
     return &view_;
   }
 
+  inline explicit operator bool() const {
+    return static_cast<bool>(view_.internal_ptr());
+  }
+
   /// @private
   actor_control_block* get() const {
     return view_.ctrl();

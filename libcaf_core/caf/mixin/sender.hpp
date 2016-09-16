@@ -77,8 +77,9 @@ public:
                        typename res_t::type
                      >::valid,
                   "this actor does not accept the response message");
-    dest->eq_impl(message_id::make(P), dptr()->ctrl(),
-                  dptr()->context(), std::forward<Ts>(xs)...);
+    if (dest)
+      dest->eq_impl(message_id::make(P), dptr()->ctrl(),
+                    dptr()->context(), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal,
@@ -95,8 +96,9 @@ public:
                     token
                   >::valid,
                   "receiver does not accept given message");
-    dest->eq_impl(message_id::make(P), nullptr,
-                  dptr()->context(), std::forward<Ts>(xs)...);
+    if (dest)
+      dest->eq_impl(message_id::make(P), nullptr,
+                    dptr()->context(), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal,
@@ -135,9 +137,10 @@ public:
                         >::type
                       >::valid,
                   "this actor does not accept the response message");
-    dptr()->system().scheduler().delayed_send(
-      rtime, dptr()->ctrl(), actor_cast<strong_actor_ptr>(dest),
-      message_id::make(P), make_message(std::forward<Ts>(xs)...));
+    if (dest)
+      dptr()->system().scheduler().delayed_send(
+        rtime, dptr()->ctrl(), actor_cast<strong_actor_ptr>(dest),
+        message_id::make(P), make_message(std::forward<Ts>(xs)...));
   }
 
   template <message_priority P = message_priority::normal,
@@ -154,9 +157,10 @@ public:
                     token
                   >::valid,
                   "receiver does not accept given message");
-    dptr()->system().scheduler().delayed_send(
-      rtime, nullptr, actor_cast<strong_actor_ptr>(dest),
-      message_id::make(P), make_message(std::forward<Ts>(xs)...));
+    if (dest)
+      dptr()->system().scheduler().delayed_send(
+        rtime, nullptr, actor_cast<strong_actor_ptr>(dest), message_id::make(P),
+        make_message(std::forward<Ts>(xs)...));
   }
 
 private:

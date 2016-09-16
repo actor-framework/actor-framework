@@ -32,10 +32,10 @@ namespace {
 
 // The function actor_cast<> computes the type of the cast for
 // actor_cast_access via the following formula:
-//     x = 0 if To is a raw poiner
+//     x = 0 if To is a raw pointer
 //       = 1 if To is a strong pointer
 //       = 2 if To is a weak pointer
-//     y = 0 if From is a raw poiner
+//     y = 0 if From is a raw pointer
 //       = 6 if From is a strong pointer
 //       = 2 if From is a weak pointer
 // the result of x * y + z then denotes which operation the cast is performing:
@@ -69,22 +69,6 @@ struct is_weak_ptr<T*> : std::false_type {};
 
 template <class... Ts>
 struct is_weak_ptr<typed_actor_pointer<Ts...>> : std::false_type {};
-
-template <class T>
-struct is_non_null_handle {
-  static constexpr bool value = T::has_non_null_guarantee;
-};
-
-template <class T>
-struct is_non_null_handle<T*> {
-  static constexpr bool value = false;
-};
-
-template <class T>
-struct is_strong_non_null_handle {
-  static constexpr bool value = !is_weak_ptr<T>::value
-                                && is_non_null_handle<T>::value;
-};
 
 } // namespace <anonymous>
 
@@ -187,10 +171,6 @@ T actor_cast(U&& what) {
   // query traits for U
   constexpr bool from_raw = std::is_pointer<from_type>::value;
   constexpr bool from_weak = is_weak_ptr<from_type>::value;
-  // check whether this cast is legal
-  static_assert(!from_weak || !is_strong_non_null_handle<T>::value,
-                "casts from actor_addr to actor or typed_actor are prohibited");
-
   // calculate x and y
   constexpr int x = to_raw ? 0 : (to_weak ? 2 : 1);
   constexpr int y = from_raw ? 0 : (from_weak ? 3 : 6);

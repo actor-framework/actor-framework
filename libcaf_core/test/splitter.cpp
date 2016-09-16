@@ -68,12 +68,7 @@ struct fixture {
   actor second;
   actor first_and_second;
 
-  fixture()
-      : system(cfg),
-        self(system, true),
-        first(unsafe_actor_handle_init),
-        second(unsafe_actor_handle_init),
-        first_and_second(unsafe_actor_handle_init) {
+  fixture() : system(cfg), self(system, true) {
     // nop
   }
 

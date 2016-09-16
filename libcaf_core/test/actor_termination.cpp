@@ -46,8 +46,7 @@ struct fixture {
   fixture()
       : system(cfg),
         scoped_self(system),
-        mirror(system.spawn(mirror_impl)),
-        testee(unsafe_actor_handle_init) {
+        mirror(system.spawn(mirror_impl)) {
     // nop
   }
 

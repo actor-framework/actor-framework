@@ -126,11 +126,6 @@ struct function_view_result<typed_actor<Ts...>> {
   typed_actor<Ts...> value{unsafe_actor_handle_init};
 };
 
-template <>
-struct function_view_result<actor> {
-  actor value{unsafe_actor_handle_init};
-};
-
 /// A function view for an actor hides any messaging from the caller.
 /// Internally, a function view uses a `scoped_actor` and uses
 /// blocking send and receive operations.

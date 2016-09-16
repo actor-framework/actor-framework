@@ -579,7 +579,7 @@ CAF_TEST(remote_actor_and_send) {
   mpx()->provide_scribe(lo, 4242, jupiter().connection);
   CAF_REQUIRE(mpx()->has_pending_scribe(lo, 4242));
   auto mm1 = system.middleman().actor_handle();
-  actor result{unsafe_actor_handle_init};
+  actor result;
   auto f = self()->request(mm1, infinite,
                            connect_atom::value, lo, uint16_t{4242});
   // wait until BASP broker has received and processed the connect message

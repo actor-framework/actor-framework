@@ -55,7 +55,7 @@ public:
 };
 
 struct fixture {
-  fixture() : testee(unsafe_actor_handle_init) {
+  fixture() {
     new (&system) actor_system(cfg.load<io::middleman>()
                                   .parse(test::engine::argc(),
                                          test::engine::argv()));
@@ -71,7 +71,7 @@ struct fixture {
 
   actor remote_actor(const char* hostname, uint16_t port,
                      bool expect_fail = false) {
-    actor result{unsafe_actor_handle_init};
+    actor result;
     scoped_actor self{system, true};
     self->request(system.middleman().actor_handle(), infinite,
                   connect_atom::value, hostname, port).receive(

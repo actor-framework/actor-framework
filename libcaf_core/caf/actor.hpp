@@ -26,6 +26,7 @@
 #include <utility>
 #include <type_traits>
 
+#include "caf/config.hpp"
 
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -64,12 +65,6 @@ public:
   // -- friend types that need access to private ctors
   friend class local_actor;
 
-  template <class>
-  friend class data_processor;
-
-  template <class>
-  friend class detail::type_erased_value_impl;
-
   using signatures = none_t;
 
   // allow conversion via actor_cast
@@ -79,9 +74,7 @@ public:
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
 
-  // tell actor_cast this is a non-null handle type
-  static constexpr bool has_non_null_guarantee = true;
-
+  actor() = default;
   actor(actor&&) = default;
   actor(const actor&) = default;
   actor& operator=(actor&&) = default;
@@ -89,7 +82,7 @@ public:
 
   actor(const scoped_actor&);
 
-  explicit actor(const unsafe_actor_handle_init_t&);
+  explicit actor(const unsafe_actor_handle_init_t&) CAF_DEPRECATED;
 
   template <class T,
             class = typename std::enable_if<
@@ -116,6 +109,11 @@ public:
   }
 
   actor& operator=(const scoped_actor& x);
+
+  /// Queries whether this actor handle is valid.
+  inline explicit operator bool() const {
+    return static_cast<bool>(ptr_);
+  }
 
   /// Returns the address of the stored actor.
   actor_addr address() const noexcept;
@@ -175,8 +173,6 @@ public:
   }
 
 private:
-  actor() = default;
-
   inline actor_control_block* get() const noexcept {
     return ptr_.get();
   }

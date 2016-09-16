@@ -62,8 +62,9 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
                         token>
                     >::valid,
                 "this actor does not accept the response message");
-  dest->eq_impl(message_id::make(P), actor_cast<strong_actor_ptr>(src),
-                nullptr, std::forward<Ts>(xs)...);
+  if (dest)
+    dest->eq_impl(message_id::make(P), actor_cast<strong_actor_ptr>(src),
+                  nullptr, std::forward<Ts>(xs)...);
 }
 
 /// Anonymously sends `dest` a message.
@@ -74,14 +75,17 @@ void anon_send(const Dest& dest, Ts&&... xs) {
   using token = detail::type_list<detail::strip_and_convert_t<Ts>...>;
   static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                 "receiver does not accept given message");
-  dest->eq_impl(message_id::make(P), nullptr, nullptr, std::forward<Ts>(xs)...);
+  if (dest)
+    dest->eq_impl(message_id::make(P), nullptr, nullptr,
+                  std::forward<Ts>(xs)...);
 }
 
 /// Anonymously sends `dest` an exit message.
 template <class Dest>
 void anon_send_exit(const Dest& dest, exit_reason reason) {
-  dest->enqueue(nullptr, message_id::make(),
-                make_message(exit_msg{dest->address(), reason}), nullptr);
+  if (dest)
+    dest->enqueue(nullptr, message_id::make(),
+                  make_message(exit_msg{dest->address(), reason}), nullptr);
 }
 
 /// Anonymously sends `to` an exit message.

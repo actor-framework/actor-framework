@@ -78,9 +78,6 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
 
-  // tell actor_cast this is a non-null handle type
-  static constexpr bool has_non_null_guarantee = true;
-
   /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
   using extend = typed_actor<Sigs..., Es...>;
@@ -170,6 +167,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   typed_actor(const unsafe_actor_handle_init_t&) {
     // nop
+  }
+
+  /// Queries whether this actor handle is valid.
+  inline explicit operator bool() const {
+    return static_cast<bool>(ptr_);
   }
 
   /// Queries the address of the stored actor.

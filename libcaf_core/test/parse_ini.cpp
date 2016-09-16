@@ -101,7 +101,7 @@ struct fixture {
   actor_system_config cfg;
   actor_system system;
 
-  fixture() : system(cfg), config_server(unsafe_actor_handle_init) {
+  fixture() : system(cfg) {
     // nop
   }
 

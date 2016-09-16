@@ -171,8 +171,7 @@ behavior server(broker* self) {
 
 class fixture {
 public:
-  fixture() : system(cfg.load<io::middleman, network::test_multiplexer>()),
-              aut_(unsafe_actor_handle_init) {
+  fixture() : system(cfg.load<io::middleman, network::test_multiplexer>()) {
     mpx_ = dynamic_cast<network::test_multiplexer*>(&system.middleman().backend());
     CAF_REQUIRE(mpx_ != nullptr);
     // spawn the actor-under-test

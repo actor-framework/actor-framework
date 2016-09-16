@@ -97,8 +97,8 @@ class forwarding_actor_proxy;
 // -- structs ------------------------------------------------------------------
 
 struct unit_t;
-class exit_msg;
-class down_msg;
+struct exit_msg;
+struct down_msg;
 struct timeout_msg;
 struct group_down_msg;
 struct invalid_actor_t;

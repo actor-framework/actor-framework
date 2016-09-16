@@ -27,6 +27,7 @@
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
+#include "caf/message_id.hpp"
 #include "caf/response_type.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/message_priority.hpp"
@@ -80,11 +81,16 @@ public:
                   "receiver does not accept given message");
     auto dptr = static_cast<Subtype*>(this);
     auto req_id = dptr->new_request_id(P);
-    dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
-                  std::forward<Ts>(xs)...);
-    dptr->request_response_timeout(timeout, req_id);
+    if (dest) {
+      dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
+                    std::forward<Ts>(xs)...);
+      dptr->request_response_timeout(timeout, req_id);
+    } else {
+      dptr->eq_impl(req_id.response_id(), dptr->ctrl(), dptr->context(),
+                    make_error(sec::invalid_argument));
+    }
     return {req_id.response_id(), dptr};
-  }
+   }
 };
 
 } // namespace mixin

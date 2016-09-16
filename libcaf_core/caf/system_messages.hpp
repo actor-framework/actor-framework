@@ -39,34 +39,12 @@ namespace caf {
 /// Sent to all links when an actor is terminated.
 /// @note Actors can override the default handler by calling
 ///       `self->set_exit_handler(...)`.
-class exit_msg {
-public:
-  // -- friend types that need access to private ctors -------------------------
-
-  template <class>
-  friend class data_processor;
-
-  template <class>
-  friend class detail::type_erased_value_impl;
-
-  // -- constructors -----------------------------------------------------------
-
-  inline exit_msg(actor_addr x, error y)
-      : source(std::move(x)),
-        reason(std::move(y)) {
-    // nop
-  }
-
-  // -- data members -----------------------------------------------------------
-
+struct exit_msg {
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
 
   /// The exit reason of the terminated actor.
   error reason;
-
-private:
-  exit_msg() = default;
 };
 
 /// @relates exit_msg
@@ -76,34 +54,12 @@ typename Inspector::result_type inspect(Inspector& f, exit_msg& x) {
 }
 
 /// Sent to all actors monitoring an actor when it is terminated.
-class down_msg {
-public:
-  // -- friend types that need access to private ctors -------------------------
-
-  template <class>
-  friend class data_processor;
-
-  template <class>
-  friend class detail::type_erased_value_impl;
-
-  // -- constructors -----------------------------------------------------------
-
-  inline down_msg(actor_addr x, error y)
-      : source(std::move(x)),
-        reason(std::move(y)) {
-    // nop
-  }
-
-  // -- data members -----------------------------------------------------------
-
+struct down_msg {
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;
 
   /// The exit reason of the terminated actor.
   error reason;
-
-private:
-  down_msg() = default;
 };
 
 /// @relates down_msg

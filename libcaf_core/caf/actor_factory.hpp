@@ -183,7 +183,7 @@ template <class T, class... Ts>
 actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
   CAF_ASSERT(cfg.host);
   using handle = typename infer_handle_from_class<T>::type;
-  handle hdl{unsafe_actor_handle_init};
+  handle hdl;
   dyn_spawn_class_helper<handle, T, Ts...> factory{hdl, cfg};
   msg.apply(factory);
   return {actor_cast<strong_actor_ptr>(std::move(hdl)),
