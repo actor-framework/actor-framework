@@ -135,9 +135,7 @@ class function_view {
 public:
   using type = Actor;
 
-  function_view(duration rel_timeout = infinite)
-      : timeout(rel_timeout),
-        impl_(unsafe_actor_handle_init) {
+  function_view(duration rel_timeout = infinite) : timeout(rel_timeout) {
     // nop
   }
 
@@ -164,7 +162,7 @@ public:
   function_view& operator=(function_view&& x) {
     timeout = x.timeout;
     assign(x.impl_);
-    x.assign(unsafe_actor_handle_init);
+    x.reset();
     return *this;
   }
 
@@ -195,16 +193,21 @@ public:
   }
 
   void assign(type x) {
-    if (impl_.unsafe() && !x.unsafe())
+    if (!impl_ && x)
       new_self(x);
-    if (!impl_.unsafe() && x.unsafe())
+    if (impl_ && !x)
       self_.~scoped_actor();
     impl_.swap(x);
   }
 
+  void reset() {
+    self_.~scoped_actor();
+    impl_ = type();
+  }
+
   /// Checks whether this function view has an actor assigned to it.
   explicit operator bool() const {
-    return !impl_.unsafe();
+    return static_cast<bool>(impl_);
   }
 
   duration timeout;

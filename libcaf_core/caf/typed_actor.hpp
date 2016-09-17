@@ -125,6 +125,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   using stateful_broker_pointer =
     stateful_actor<State, broker_base>*;
 
+  typed_actor() = default;
   typed_actor(typed_actor&&) = default;
   typed_actor(const typed_actor&) = default;
   typed_actor& operator=(typed_actor&&) = default;
@@ -165,7 +166,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return *this;
   }
 
-  typed_actor(const unsafe_actor_handle_init_t&) {
+  explicit typed_actor(const unsafe_actor_handle_init_t&) CAF_DEPRECATED {
     // nop
   }
 
@@ -206,7 +207,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   /// Queries whether this object was constructed using
   /// `unsafe_actor_handle_init` or is in moved-from state.
-  bool unsafe() const {
+  bool unsafe() const CAF_DEPRECATED {
     return !ptr_;
   }
 
@@ -250,8 +251,6 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   /// @endcond
 
 private:
-  typed_actor() = default;
-
   actor_control_block* get() const noexcept {
     return ptr_.get();
   }
