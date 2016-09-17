@@ -101,9 +101,7 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   return new impl(sys);
 }
 
-middleman::middleman(actor_system& sys)
-    : system_(sys),
-      manager_(unsafe_actor_handle_init) {
+middleman::middleman(actor_system& sys) : system_(sys) {
   // nop
 }
 

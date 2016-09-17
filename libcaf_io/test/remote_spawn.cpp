@@ -89,7 +89,7 @@ void run_client(int argc, char** argv, uint16_t port) {
   auto f1 = make_function_view(*calc);
   CAF_REQUIRE_EQUAL(f1(add_atom::value, 10, 20), 30);
   CAF_REQUIRE_EQUAL(f1(sub_atom::value, 10, 20), -10);
-  f1.assign(unsafe_actor_handle_init);
+  f1.reset();
   anon_send_exit(*calc, exit_reason::kill);
   mm.close(port);
 }
