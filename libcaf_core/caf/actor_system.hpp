@@ -360,21 +360,25 @@ public:
     return actor_cast<Handle>(std::move(*res));
   }
 
-  template <class T, spawn_options Os = no_spawn_options,
-            class Iter, class F, class... Ts>
+  /// Spawns a class-based actor `T` immediately joining the groups in
+  /// range `[first, last)`.
+  /// @private
+  template <class T, spawn_options Os, class Iter, class... Ts>
   infer_handle_from_class_t<T>
-  spawn_in_groups_impl(actor_config& cfg, Iter first, Iter second, Ts&&... xs) {
+  spawn_class_in_groups(actor_config& cfg, Iter first, Iter last, Ts&&... xs) {
     check_invariants<T>();
-    auto irange = make_input_range(first, second);
+    auto irange = make_input_range(first, last);
     cfg.groups = &irange;
     return spawn_class<T, Os>(cfg, std::forward<Ts>(xs)...);
   }
 
-  template <spawn_options Os = no_spawn_options,
-            class Iter, class F, class... Ts>
+  /// Spawns a class-based actor `T` immediately joining the groups in
+  /// range `[first, last)`.
+  /// @private
+  template <spawn_options Os, class Iter, class F, class... Ts>
   infer_handle_from_fun_t<F>
-  spawn_in_groups_impl(actor_config& cfg, Iter first, Iter second,
-                       F& fun, Ts&&... xs) {
+  spawn_fun_in_groups(actor_config& cfg, Iter first, Iter second,
+                      F& fun, Ts&&... xs) {
     check_invariants<infer_impl_from_fun_t<F>>();
     auto irange = make_input_range(first, second);
     cfg.groups = &irange;
@@ -386,8 +390,8 @@ public:
   infer_handle_from_fun_t<F>
   spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
     actor_config cfg;
-    return spawn_in_groups_impl(cfg, gs.begin(), gs.end(), fun,
-                                std::forward<Ts>(xs)...);
+    return spawn_fun_in_groups<Os>(cfg, gs.begin(), gs.end(), fun,
+                                   std::forward<Ts>(xs)...);
   }
 
   /// Returns a new functor-based actor subscribed to all groups in `gs`.
@@ -395,15 +399,16 @@ public:
   infer_handle_from_fun_t<F>
   spawn_in_groups(const Gs& gs, F fun, Ts&&... xs) {
     actor_config cfg;
-    return spawn_in_groups_impl(cfg, gs.begin(), gs.end(), fun,
-                                std::forward<Ts>(xs)...);
+    return spawn_fun_in_groups<Os>(cfg, gs.begin(), gs.end(), fun,
+                                   std::forward<Ts>(xs)...);
   }
 
   /// Returns a new functor-based actor subscribed to all groups in `gs`.
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F>
   spawn_in_group(const group& grp, F fun, Ts&&... xs) {
-    return spawn_in_groups({grp}, std::move(fun), std::forward<Ts>(xs)...);
+    return spawn_fun_in_groups<Os>({grp}, std::move(fun),
+                                   std::forward<Ts>(xs)...);
   }
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
@@ -411,8 +416,8 @@ public:
   infer_handle_from_class_t<T>
   spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
     actor_config cfg;
-    return spawn_in_groups_impl<T>(cfg, gs.begin(), gs.end(),
-                                   std::forward<Ts>(xs)...);
+    return spawn_class_in_groups<T, Os>(cfg, gs.begin(), gs.end(),
+                                        std::forward<Ts>(xs)...);
   }
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
@@ -420,15 +425,15 @@ public:
   infer_handle_from_class_t<T>
   spawn_in_groups(const Gs& gs, Ts&&... xs) {
     actor_config cfg;
-    return spawn_in_groups_impl<T>(cfg, gs.begin(), gs.end(),
-                                   std::forward<Ts>(xs)...);
+    return spawn_class_in_groups<T, Os>(cfg, gs.begin(), gs.end(),
+                                        std::forward<Ts>(xs)...);
   }
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   infer_handle_from_class_t<T>
   spawn_in_group(const group& grp, Ts&&... xs) {
-    return spawn_in_groups<T>({grp}, std::forward<Ts>(xs)...);
+    return spawn_in_groups<T, Os>({grp}, std::forward<Ts>(xs)...);
   }
 
   /// Returns whether this actor system calls `await_all_actors_done`

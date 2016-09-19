@@ -140,39 +140,39 @@ public:
             class... Ts>
   actor spawn_in_groups(const Groups& gs, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_in_groups_impl<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_in_groups_impl<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... xs) {
     actor_config cfg{context()};
     auto first = &grp;
-    return eval_opts(Os, system().spawn_in_groups_impl<T, make_unbound(Os)>(cfg, first, first + 1, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(cfg, first, first + 1, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class Groups, class F, class... Ts>
   actor spawn_in_groups(const Groups& gs, F fun, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_in_groups_impl<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_in_groups_impl<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   actor spawn_in_group(const group& grp, F fun, Ts&&... xs) {
     actor_config cfg{context()};
     auto first = &grp;
-    return eval_opts(Os, system().spawn_in_groups_impl<make_unbound(Os)>(cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
   }
 
   // -- sending asynchronous messages ------------------------------------------
