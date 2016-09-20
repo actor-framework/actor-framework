@@ -154,8 +154,8 @@ if(CAF_CXX_WARNINGS_AS_ERRORS)
 endif()
 # set compiler flags for GCOV if requested
 if(CAF_ENABLE_GCOV)
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fprofile-arcs -ftest-coverage -fno-inline "
-                  "-fno-inline-small-functions -fno-default-inline")
+  set(NO_INLINE "-fno-inline -fno-inline-small-functions -fno-default-inline")
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fprofile-arcs ${NO_INLINE}")
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
 if(CAF_MORE_WARNINGS)
