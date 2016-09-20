@@ -22,6 +22,8 @@
 #include "caf/error.hpp"
 #include "caf/config.hpp"
 
+#include "caf/detail/try_match.hpp"
+
 namespace caf {
 
 type_erased_tuple::~type_erased_tuple() {

@@ -132,4 +132,29 @@ CAF_TEST(atom_constants) {
   CAF_CHECK_EQUAL(invoke(expr, atom_value{ho_atom::value}), 1);
 }
 
+CAF_TEST(manual_matching) {
+  using foo_atom = atom_constant<atom("foo")>;
+  using bar_atom = atom_constant<atom("bar")>;
+  auto msg1 = make_message(foo_atom::value, 42);
+  auto msg2 = make_message(bar_atom::value, 42);
+  CAF_MESSAGE("check individual message elements");
+  CAF_CHECK((msg1.match_element<int>(1)));
+  CAF_CHECK((msg2.match_element<int>(1)));
+  CAF_CHECK((msg1.match_element<foo_atom>(0)));
+  CAF_CHECK((!msg2.match_element<foo_atom>(0)));
+  CAF_CHECK((!msg1.match_element<bar_atom>(0)));
+  CAF_CHECK((msg2.match_element<bar_atom>(0)));
+  CAF_MESSAGE("check matching whole tuple");
+  CAF_CHECK((msg1.match_elements<foo_atom, int>()));
+  CAF_CHECK(!(msg2.match_elements<foo_atom, int>()));
+  CAF_CHECK(!(msg1.match_elements<bar_atom, int>()));
+  CAF_CHECK((msg2.match_elements<bar_atom, int>()));
+  CAF_CHECK((msg1.match_elements<atom_value, int>()));
+  CAF_CHECK((msg2.match_elements<atom_value, int>()));
+  CAF_CHECK(!(msg1.match_elements<atom_value, double>()));
+  CAF_CHECK(!(msg2.match_elements<atom_value, double>()));
+  CAF_CHECK(!(msg1.match_elements<atom_value, int, int>()));
+  CAF_CHECK(!(msg2.match_elements<atom_value, int, int>()));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

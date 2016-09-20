@@ -60,8 +60,7 @@ struct meta_element_factory<T, 0> {
 template <atom_value V>
 struct meta_element_factory<atom_constant<V>, type_nr<atom_value>::value> {
   static meta_element create() {
-    return {V, type_nr<atom_value>::value,
-            nullptr, match_atom_constant};
+    return {V, type_nr<atom_value>::value, nullptr, match_atom_constant};
   }
 };
 

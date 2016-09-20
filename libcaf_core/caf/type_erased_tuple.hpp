@@ -144,19 +144,14 @@ public:
   bool match_element(size_t pos) const noexcept {
     CAF_ASSERT(pos < size());
     auto x = detail::meta_element_factory<T>::create();
-    return detail::match_element(x, *this, pos);
+    return x.fun(x, *this, pos);
   }
 
   /// Returns `true` if the pattern `Ts...` matches the content of this tuple.
   template <class... Ts>
   bool match_elements() const noexcept {
-    if (sizeof...(Ts) != size())
-      return false;
     detail::meta_elements<detail::type_list<Ts...>> xs;
-    for (size_t i = 0; i < xs.arr.size(); ++i)
-      if (!detail::match_element(xs.arr[i], *this, i))
-        return false;
-    return true;
+    return detail::try_match(*this, &xs.arr[0], sizeof...(Ts));
   }
 
   template <class F>

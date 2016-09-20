@@ -267,16 +267,14 @@ public:
   /// Queries whether the element at position `p` is of type `T`.
   template <class T>
   bool match_element(size_t p) const noexcept {
-    auto rtti = type_nr<T>::value == 0 ? &typeid(T) : nullptr;
-    return match_element(p, type_nr<T>::value, rtti);
+    return vals_ ? vals_->match_element<T>(p) : false;
   }
 
   /// Queries whether the types of this message are `Ts...`.
   template <class... Ts>
   bool match_elements() const noexcept {
-    std::integral_constant<size_t, 0> p0;
-    detail::type_list<Ts...> tlist;
-    return size() == sizeof...(Ts) && match_elements_impl(p0, tlist);
+    detail::type_list<Ts...> token;
+    return match_elements(token);
   }
 
   /// Queries the run-time type information for the element at position `pos`.
@@ -294,10 +292,13 @@ public:
     return vals_->matches(pos, n, p);
   }
 
+  inline bool match_elements(detail::type_list<>) const noexcept {
+    return !vals_ || vals_->empty();
+  }
+
   template <class T, class... Ts>
-  bool match_elements(detail::type_list<T, Ts...> list) const noexcept {
-    std::integral_constant<size_t, 0> p0;
-    return size() == (sizeof...(Ts) + 1) && match_elements_impl(p0, list);
+  bool match_elements(detail::type_list<T, Ts...>) const noexcept {
+    return vals_ ? vals_->match_elements<T, Ts...>() : false;
   }
 
   /// @cond PRIVATE
