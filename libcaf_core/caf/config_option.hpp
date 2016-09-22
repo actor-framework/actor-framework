@@ -28,6 +28,7 @@
 #include <functional>
 
 #include "caf/atom.hpp"
+#include "caf/error.hpp"
 #include "caf/message.hpp"
 #include "caf/variant.hpp"
 #include "caf/config_value.hpp"
@@ -38,10 +39,18 @@
 
 namespace caf {
 
+extern const char* type_name_visitor_tbl[];
+
 /// Helper class to generate config readers for different input types.
 class config_option {
 public:
-  using config_reader_sink = std::function<void (size_t, config_value&)>;
+  using config_reader_sink = std::function<void (size_t, config_value&,
+                                                 optional<std::ostream&>)>;
+
+  using legal_types = detail::type_list<bool, float, double, std::string, 
+                                        atom_value, int8_t, uint8_t, int16_t, 
+                                        uint16_t, int32_t, uint32_t, int64_t, 
+                                        uint64_t>;
 
   config_option(const char* category, const char* name, const char* explanation);
 
@@ -76,42 +85,64 @@ public:
   virtual message::cli_arg to_cli_arg(bool use_caf_prefix = false) = 0;
 
   /// Returns a human-readable type name for the visited type.
-  struct type_name_visitor : static_visitor<const char*> {
-    const char* operator()(const std::string&) const;
-    const char* operator()(double) const;
-    const char* operator()(int64_t) const;
-    const char* operator()(size_t) const;
-    const char* operator()(uint16_t) const;
-    const char* operator()(bool) const;
-    const char* operator()(atom_value) const;
+  class type_name_visitor : public static_visitor<const char*> {
+  public:
+    template <class T>
+    const char* operator()(const T&) const {
+      static constexpr bool is_int = std::is_integral<T>::value 
+                                     && !std::is_same<bool, T>::value;
+      static constexpr std::integral_constant<bool, is_int> tk{};
+      static constexpr int index = idx<T>(tk);
+      static_assert(index >= 0, "illegal type in name visitor");
+      return type_name_visitor_tbl[static_cast<size_t>(index)];
+    }
+
+  private:
+    template <class T>
+    static constexpr int idx(std::false_type /* is_integer */) {
+      return detail::tl_index_of<legal_types, T>::value;
+    }
+
+    template <class T>
+    static constexpr int idx(std::true_type /* is_integer */) {
+      using squashed = detail::squashed_int_t<T>;
+      return detail::tl_index_of<legal_types, squashed>::value;
+    }
   };
 
 protected:
-  // 32-bit platforms
-  template <class T>
-  static typename std::enable_if<sizeof(T) == sizeof(uint32_t), bool>::type
-  unsigned_assign_in_range(T&, int64_t& x) {
-    return x <= std::numeric_limits<T>::max();
-  }
-
-  // 64-bit platforms
-  template <class T>
-  static typename std::enable_if<sizeof(T) == sizeof(uint64_t), bool>::type
-  unsigned_assign_in_range(T&, int64_t&) {
-    return true;
-  }
-
   template <class T, class U>
   static bool assign_config_value(T& x, U& y) {
     x = std::move(y);
     return true;
   }
 
-  static bool assign_config_value(size_t& x, int64_t& y);
+  template <class T>
+  static bool assign_config_value(T& x, int64_t& y) {
+    if (y < static_cast<int64_t>(std::numeric_limits<T>::lowest()) 
+        || y > static_cast<int64_t>(std::numeric_limits<T>::max())) 
+      return false;
+    x = static_cast<T>(y);
+    return true;
+  }
 
-  static bool assign_config_value(uint16_t& x, int64_t& y);
+  static bool assign_config_value(uint64_t& x, int64_t& y) {
+    if (y < 0)
+      return false;
+    x = static_cast<uint64_t>(y);
+    return true;
+  }
 
-  void report_type_error(size_t line, config_value& x, const char* expected);
+  static bool assign_config_value(float& x, double& y) {
+    if (y < static_cast<double>(std::numeric_limits<float>::lowest()) 
+        || y > static_cast<double>(std::numeric_limits<float>::max()))
+      return false;
+    x = static_cast<float>(y);
+    return true;
+  }
+
+  void report_type_error(size_t line, config_value& x, const char* expected,
+                         optional<std::ostream&> errors);
 
 private:
   const char* category_;
@@ -151,18 +182,23 @@ public:
   }
 
   config_reader_sink to_sink() override {
-    return [=](size_t ln, config_value& x) {
+    return [=](size_t ln, config_value& x, optional<std::ostream&> errors) {
       // the INI parser accepts all integers as int64_t
+      // and all floating point numbers as doubles
       using cfg_type =
         typename std::conditional<
           std::is_integral<T>::value && !std::is_same<bool, T>::value,
           int64_t,
-          T
+          typename std::conditional<
+            std::is_floating_point<T>::value,
+            double,
+            T 
+            >::type
         >::type;
       if (get<cfg_type>(&x) && assign_config_value(ref_, get<cfg_type>(x)))
         return;
       type_name_visitor tnv;
-      report_type_error(ln, x, tnv(ref_));
+      report_type_error(ln, x, tnv(ref_), errors);
     };
   }
 
@@ -202,14 +238,19 @@ public:
   }
 
   config_reader_sink to_sink() override {
-    return [=](size_t ln, config_value& x) {
+    return [=](size_t ln, config_value& x, optional<std::ostream&> errors) {
       // the INI parser accepts all integers as int64_t
+      // and all floating point numbers as doubles
       using cfg_type =
         typename std::conditional<
-          std::is_integral<value_type>::value
-          && !std::is_same<bool, value_type>::value,
+          std::is_integral<value_type>::value && 
+                           !std::is_same<bool, value_type>::value,
           int64_t,
-          value_type
+          typename std::conditional<
+            std::is_floating_point<value_type>::value,
+            double,
+            value_type 
+            >::type
         >::type;
       value_type tmp;
       if (get<cfg_type>(&x) && assign_config_value(tmp, get<cfg_type>(x))) {
@@ -217,7 +258,7 @@ public:
         return;
       }
       type_name_visitor tnv;
-      report_type_error(ln, x, tnv(tmp));
+      report_type_error(ln, x, tnv(tmp), errors);
     };
   }
 

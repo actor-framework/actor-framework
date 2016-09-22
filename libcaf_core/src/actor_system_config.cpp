@@ -35,7 +35,8 @@ using option_vector = actor_system_config::option_vector;
 
 class actor_system_config_reader {
 public:
-  using sink = std::function<void (size_t, config_value&)>;
+  using sink = std::function<void (size_t, config_value&,
+                                   optional<std::ostream&>)>;
 
   actor_system_config_reader(option_vector& xs, option_vector& ys) {
     add_opts(xs);
@@ -50,7 +51,7 @@ public:
   void operator()(size_t ln, std::string name, config_value& cv) {
     auto i = sinks_.find(name);
     if (i != sinks_.end())
-      (i->second)(ln, cv);
+      (i->second)(ln, cv, none);
     else
       std::cerr << "error in line " << ln
                 << ": unrecognized parameter name \"" << name << "\"";
@@ -213,7 +214,8 @@ actor_system_config& actor_system_config::parse(message& args,
   // (2) content of the INI file overrides hard-coded defaults
   if (ini.good()) {
     actor_system_config_reader consumer{options_, custom_options_};
-    auto f = [&](size_t ln, std::string str, config_value& x) {
+    auto f = [&](size_t ln, std::string str,
+                 config_value& x, optional<std::ostream&>) {
       consumer(ln, std::move(str), x);
     };
     detail::parse_ini(ini, f, std::cerr);
@@ -310,7 +312,7 @@ actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
     full_name += x->name();
     if (full_name == cn) {
       auto f = x->to_sink();
-      f(0, cv);
+      f(0, cv, none);
     }
   }
   return *this;

@@ -89,6 +89,7 @@
     _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")                 \
     _Pragma("clang diagnostic ignored \"-Wnested-anon-types\"")                \
     _Pragma("clang diagnostic ignored \"-Wreserved-id-macro\"")                \
+    _Pragma("clang diagnostic ignored \"-Wconstant-conversion\"")              \
     _Pragma("clang diagnostic ignored \"-Wimplicit-fallthrough\"")             \
     _Pragma("clang diagnostic ignored \"-Wused-but-marked-unused\"")           \
     _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")

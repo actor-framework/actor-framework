@@ -28,10 +28,10 @@ namespace caf {
 namespace detail {
 
 void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
-                             optional<std::ostream&> errors) const {
+                             opt_err errors) const {
   // wraps a temporary into an (lvalue) config_value and calls `consumer_fun`
   auto consumer = [&](size_t ln, std::string name, config_value x) {
-    consumer_fun(ln, std::move(name), x);
+    consumer_fun(ln, std::move(name), x, errors);
   };
   std::string group;
   std::string line;
