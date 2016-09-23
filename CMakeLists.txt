@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 project(caf C CXX)
 
+# be nice to vim users
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
 # silence policy CMP0042 warning by enabling RPATH explicitly
 if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
