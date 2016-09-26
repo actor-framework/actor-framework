@@ -50,6 +50,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
     --no-exceptions             build CAF without C++ exceptions
+    --force-no-exceptions       build CAF with '-fno-exceptions'
     --warnings-as-errors        enables -Werror
 
   Installation Directories:
@@ -245,6 +246,10 @@ while [ $# -ne 0 ]; do
             ;;
         --no-exceptions)
             append_cache_entry CAF_NO_EXCEPTIONS BOOL yes
+            ;;
+        --force-no-exceptions)
+            append_cache_entry CAF_NO_EXCEPTIONS BOOL yes
+            append_cache_entry CAF_FORCE_NO_EXCEPTIONS BOOL yes
             ;;
         --warnings-as-errors)
             append_cache_entry CAF_CXX_WARNINGS_AS_ERRORS BOOL yes

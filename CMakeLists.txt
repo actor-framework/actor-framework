@@ -16,6 +16,14 @@ if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
 endif()
 
 ################################################################################
+#                        set included flags if needed                          #
+################################################################################
+
+if(CAF_FORCE_NO_EXCEPTIONS)
+  set(CAF_NO_EXCEPTIONS)
+endif()
+
+################################################################################
 #                        set prefix paths if available                         #
 ################################################################################
 
@@ -157,8 +165,16 @@ if(CAF_CXX_WARNINGS_AS_ERRORS)
 endif()
 # set compiler flags for GCOV if requested
 if(CAF_ENABLE_GCOV)
-  set(NO_INLINE "-fno-inline -fno-inline-small-functions -fno-default-inline")
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(NO_INLINE "-fno-inline")
+  else()
+    set(NO_INLINE "-fno-inline -fno-inline-small-functions -fno-default-inline")
+  endif()
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -fprofile-arcs -ftest-coverage ${NO_INLINE}")
+endif()
+# set -fno-exception if requested
+if(CAF_FORCE_NO_EXCEPTIONS)
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fno-exceptions")
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
 if(CAF_MORE_WARNINGS)
