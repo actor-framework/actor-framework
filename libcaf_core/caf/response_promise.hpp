@@ -34,6 +34,8 @@ namespace caf {
 /// to the client (i.e. the sender of the request).
 class response_promise {
 public:
+  using forwarding_stack = std::vector<strong_actor_ptr>;
+
   /// Constructs an invalid response promise.
   response_promise();
 
@@ -67,9 +69,22 @@ public:
     return !stages_.empty() || source_;
   }
 
-private:
-  using forwarding_stack = std::vector<strong_actor_ptr>;
+  /// Returns the source of the corresponding request.
+  inline const strong_actor_ptr& source() const {
+    return source_;
+  }
 
+  /// Returns the remaining stages for the corresponding request.
+  inline const forwarding_stack& stages() const {
+    return stages_;
+  }
+
+  /// Returns the message ID of the corresponding request.
+  inline message_id id() const {
+    return id_;
+  }
+
+private:
   response_promise deliver_impl(message response_message);
 
   execution_unit* ctx_;
