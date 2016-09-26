@@ -120,7 +120,7 @@ public:
   bool has_pending_scribe(std::string host, uint16_t port);
 
   /// Accepts a pending connect on `hdl`.
-  void accept_connection(accept_handle hdl);
+  bool accept_connection(accept_handle hdl);
 
   /// Reads data from the external input buffer until
   /// the configured read policy no longer allows receiving.

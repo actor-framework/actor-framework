@@ -117,7 +117,6 @@ void tester(scoped_actor& self, const Handle& hdl, int x, int y, Ts&&... xs) {
   auto handle_err = [&](const error& err) {
     aout(self) << "AUT (actor under test) failed: "
                << self->system().render(err) << endl;
-    throw std::runtime_error("AUT responded with an error");
   };
   // first test: x + y = z
   self->request(hdl, infinite, add_atom::value, x, y).receive(

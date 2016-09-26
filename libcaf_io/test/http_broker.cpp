@@ -182,7 +182,7 @@ public:
     // "open" a new connection to our server
     mpx_->add_pending_connect(acceptor_, connection_);
     mpx_->assign_tcp_scribe(aut_ptr_, connection_);
-    mpx_->accept_connection(acceptor_);
+    CAF_REQUIRE(mpx_->accept_connection(acceptor_));
   }
 
   ~fixture() {

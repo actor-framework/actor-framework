@@ -608,37 +608,33 @@ behavior basp_broker::make_behavior() {
         CAF_LOG_WARNING("invalid handle");
         return;
       }
-      try {
-        assign_tcp_doorman(hdl);
+      auto res = assign_tcp_doorman(hdl);
+      if (res) {
+        if (whom)
+          system().registry().put(whom->id(), whom);
+        state.instance.add_published_actor(port, whom, std::move(sigs));
+      } else {
+        CAF_LOG_DEBUG("failed to assign doorman from handle"
+                      << CAF_ARG(whom));
       }
-      catch (...) {
-        CAF_LOG_DEBUG("failed to assign doorman from handle");
-        return;
-      }
-      if (whom)
-        system().registry().put(whom->id(), whom);
-      state.instance.add_published_actor(port, whom, std::move(sigs));
     },
     // received from middleman actor (delegated)
     [=](connect_atom, connection_handle hdl, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
       auto rp = make_response_promise();
-      try {
-        assign_tcp_scribe(hdl);
+      auto res = assign_tcp_scribe(hdl);
+      if (res) {
+        auto& ctx = state.ctx[hdl];
+        ctx.hdl = hdl;
+        ctx.remote_port = port;
+        ctx.cstate = basp::await_header;
+        ctx.callback = rp;
+        // await server handshake
+        configure_read(hdl, receive_policy::exactly(basp::header_size));
+      } else {
+        CAF_LOG_DEBUG("failed to assign scribe from handle" << CAF_ARG(res));
+        rp.deliver(std::move(res.error()));
       }
-      catch (std::exception& e) {
-        CAF_LOG_DEBUG("failed to assign scribe from handle: " << e.what());
-        CAF_IGNORE_UNUSED(e);
-        rp.deliver(sec::failed_to_assign_scribe_from_handle);
-        return;
-      }
-      auto& ctx = state.ctx[hdl];
-      ctx.hdl = hdl;
-      ctx.remote_port = port;
-      ctx.cstate = basp::await_header;
-      ctx.callback = rp;
-      // await server handshake
-      configure_read(hdl, receive_policy::exactly(basp::header_size));
     },
     [=](delete_atom, const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));
@@ -660,13 +656,10 @@ behavior basp_broker::make_behavior() {
       // it is well-defined behavior to not have an actor published here,
       // hence the result can be ignored safely
       state.instance.remove_published_actor(port, nullptr);
-      try {
-        close(hdl_by_port(port));
-      }
-      catch (std::exception&) {
-        return sec::cannot_close_invalid_port;
-      }
-      return unit;
+      auto res = close(hdl_by_port(port));
+      if (res)
+        return unit;
+      return sec::cannot_close_invalid_port;
     },
     [=](get_atom, const node_id& x)
     -> std::tuple<node_id, std::string, uint16_t> {

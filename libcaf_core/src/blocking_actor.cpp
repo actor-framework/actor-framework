@@ -86,6 +86,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
     CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != 0);
     auto self = static_cast<blocking_actor*>(this_ptr);
     error rsn;
+#   ifndef CAF_NO_EXCEPTIONS
     try {
       self->act();
       rsn = self->fail_state_;
@@ -99,6 +100,11 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
     catch (...) {
       // simply ignore exception
     }
+#   else
+    self->act();
+    rsn = self->fail_state_;
+    self->on_exit();
+#   endif
     self->cleanup(std::move(rsn), self->context());
     ptr->home_system->dec_detached_threads();
   }, ctrl()).detach();

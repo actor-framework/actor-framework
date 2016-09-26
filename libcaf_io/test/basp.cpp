@@ -282,7 +282,7 @@ public:
     auto hdl = n.connection;
     mpx_->add_pending_connect(src, hdl);
     mpx_->assign_tcp_scribe(aut(), hdl);
-    mpx_->accept_connection(src);
+    CAF_REQUIRE(mpx_->accept_connection(src));
     // technically, the server handshake arrives
     // before we send the client handshake
     mock(hdl,

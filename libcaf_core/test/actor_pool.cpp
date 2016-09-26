@@ -79,7 +79,7 @@ struct fixture {
 };
 
 void handle_err(const error& err) {
-  throw std::runtime_error("AUT responded with an error: " + to_string(err));
+  CAF_FAIL("AUT responded with an error: " + to_string(err));
 }
 
 } // namespace <anonymous>

@@ -29,6 +29,12 @@
 #include <algorithm>
 #include <condition_variable>
 
+#include "caf/config.hpp"
+
+#ifndef CAF_WINDOWS
+#include <unistd.h>
+#endif
+
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/string_algorithms.hpp"
@@ -121,24 +127,27 @@ const std::string& test::name() const {
 
 namespace detail {
 
-require_error::require_error(const std::string& msg) : std::logic_error(msg) {
-  // nop
-}
-
-require_error::~require_error() noexcept {
-  // nop
+[[noreturn]] void requirement_failed(const std::string& msg) {
+  auto& log = logger::instance();
+  log.error() << engine::color(red) << "     REQUIRED: " << msg
+              << engine::color(reset) << '\n'
+              << "     " << engine::color(blue) << engine::last_check_file()
+              << engine::color(yellow) << ":" << engine::color(cyan)
+              << engine::last_check_line() << engine::color(reset)
+              << detail::fill(engine::last_check_line())
+              << "had last successful check" << '\n';
+  abort();
 }
 
 const char* fill(size_t line) {
-  if (line < 10) {
+  if (line < 10)
     return "    ";
-  } else if (line < 100) {
+  else if (line < 100)
     return "   ";
-  } else if (line < 1000) {
+  else if (line < 1000)
     return "  ";
-  } else {
+  else
     return " ";
-  }
 }
 
 void remove_trailing_spaces(std::string& x) {
@@ -325,10 +334,9 @@ bool engine::run(bool colorize,
   size_t total_bad = 0;
   size_t total_bad_expected = 0;
   auto bar = '+' + std::string(70, '-') + '+';
-  auto failed_require = false;
-# if (! defined(__clang__) && defined(__GNUC__)                                 \
-      && __GNUC__ == 4 && __GNUC_MINOR__ < 9)                                  \
-     || (defined(__clang__) && !defined(_LIBCPP_VERSION))
+#if (!defined(__clang__) && defined(__GNUC__) && __GNUC__ == 4                 \
+     && __GNUC_MINOR__ < 9)                                                    \
+  || (defined(__clang__) && !defined(_LIBCPP_VERSION))
   // regex implementation is broken prior to 4.9
   using strvec = std::vector<std::string>;
   auto from_psv = [](const std::string& psv) -> strvec {
@@ -358,12 +366,10 @@ bool engine::run(bool colorize,
   std::regex not_suites;
   std::regex not_tests;
   // a default constructored regex matches is not equal to an "empty" regex
-  if (!not_suites_str.empty()) {
+  if (!not_suites_str.empty())
     not_suites.assign(not_suites_str);
-  }
-  if (!not_tests_str.empty()) {
+  if (!not_tests_str.empty())
     not_tests.assign(not_tests_str);
-  }
   auto enabled = [](const std::regex& whitelist,
                     const std::regex& blacklist,
                     const std::string& x) {
@@ -394,11 +400,7 @@ bool engine::run(bool colorize,
                     << '\n';
       auto start = std::chrono::high_resolution_clock::now();
       watchdog::start(max_runtime());
-      try {
-        t->run();
-      } catch (const detail::require_error&) {
-        failed_require = true;
-      }
+      t->run();
       watchdog::stop();
       auto stop = std::chrono::high_resolution_clock::now();
       auto elapsed =
@@ -407,13 +409,6 @@ bool engine::run(bool colorize,
       ++total_tests;
       size_t good = t->good();
       size_t bad = t->bad();
-      if (failed_require) {
-        log.error() << color(red) << "     REQUIRED" << color(reset) << '\n'
-                    << "     " << color(blue) << last_check_file()
-                    << color(yellow) << ":" << color(cyan) << last_check_line()
-                    << color(reset) << detail::fill(last_check_line())
-                    << "had last successful check" << '\n';
-      }
       total_good += good;
       total_bad += bad;
       total_bad_expected += t->expected_failures();
@@ -431,20 +426,13 @@ bool engine::run(bool colorize,
       } else {
         log.verbose() << '\n';
       }
-      if (failed_require) {
-        break;
-      }
     }
     // only count suites which have executed one or more tests
     if (tests_ran > 0) {
       ++total_suites;
     }
-    if (displayed_header) {
+    if (displayed_header)
       log.verbose() << '\n';
-    }
-    if (failed_require) {
-      break;
-    }
   }
   unsigned percent_good = 100;
   if (total_bad > 0) {
@@ -602,10 +590,19 @@ int main(int argc, char** argv) {
               << res.helptext << std::endl;
     return 1;
   }
-# ifndef CAF_WINDOWS
-  auto colorize = res.opts.count("no-colors") == 0;
+# ifdef CAF_WINDOWS
+  constexpr bool colorize = false;
 # else
-  auto colorize = false;
+  auto color_support = []() -> bool {
+    if (!isatty(0))
+      return false;
+    char ttybuf[50];
+    if (ttyname_r(0, ttybuf, sizeof(ttybuf)) != 0)
+      return false;
+    char prefix[] = "/dev/tty";
+    return strncmp(prefix, ttybuf, sizeof(prefix) - 1) == 0;
+  };
+  auto colorize = color_support();
 # endif
   std::vector<char*> args;
   if (divider < argc) {
@@ -630,14 +627,8 @@ int main(int argc, char** argv) {
 
 #ifndef CAF_TEST_NO_MAIN
 int main(int argc, char** argv) {
-  try {
-    return caf::test::main(argc, argv);
-  } catch (std::exception& e) {
-    std::cerr << "exception " << typeid(e).name() << ": "
-              << e.what() << std::endl;
-  }
-  return 1;
+  return caf::test::main(argc, argv);
 }
-#endif
+#endif // CAF_TEST_UNIT_TEST_IMPL_HPP
 
 #endif // CAF_TEST_UNIT_TEST_IMPL_HPP

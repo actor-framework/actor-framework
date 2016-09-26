@@ -39,18 +39,18 @@ using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
     [=](add_atom, int a, int b) -> int {
-      aout(self) << "received task from a remote node" << std::endl;
+      aout(self) << "received task from a remote node" << endl;
       return a + b;
     },
     [=](sub_atom, int a, int b) -> int {
-      aout(self) << "received task from a remote node" << std::endl;
+      aout(self) << "received task from a remote node" << endl;
       return a - b;
     }
   };
 }
 
 // removes leading and trailing whitespaces
-string trim(std::string s) {
+string trim(string s) {
   auto not_space = [](char c) { return !isspace(c); };
   // trim left
   s.erase(s.begin(), find_if(s.begin(), s.end(), not_space));
@@ -65,15 +65,13 @@ void client_repl(function_view<calculator> f) {
   cout << "Usage:" << endl
        << "  quit                  : terminate program" << endl
        << "  <x> + <y>             : adds two integers" << endl
-       << "  <x> - <y>             : subtracts two integers" << endl
-       << endl;
+       << "  <x> - <y>             : subtracts two integers" << endl << endl;
   };
   usage();
   // read next line, split it, and evaluate user input
   string line;
   while (std::getline(std::cin, line)) {
-    line = trim(std::move(line)); // ignore leading and trailing whitespaces
-    if (line == "quit")
+    if ((line = trim(std::move(line))) == "quit")
       return;
     std::vector<string> words;
     split(words, line, is_any_of(" "), token_compress_on);
@@ -81,18 +79,20 @@ void client_repl(function_view<calculator> f) {
       usage();
       continue;
     }
-    try {
-      auto x = stoi(words[0]);
-      auto y = stoi(words[2]);
-      if (words[1] == "+")
-        std::cout << "= " << f(add_atom::value, x, y) << std::endl;
-      else if (words[1] == "-")
-        std::cout << "= " << f(sub_atom::value, x, y) << std::endl;
-      else
-        usage();
-    } catch(...) {
+    auto to_int = [](const string& str) -> optional<int> {
+      char* end = nullptr;
+      auto res = strtol(str.c_str(), &end, 10);
+      if (end == str.c_str() + str.size())
+        return static_cast<int>(res);
+      return none;
+    };
+    auto x = to_int(words[0]);
+    auto y = to_int(words[2]);
+    if (!x || !y || (words[1] != "+" && words[1] != "-"))
       usage();
-    }
+    else
+      cout << " = " << (words[1] == "+" ? f(add_atom::value, *x, *y)
+                                        : f(sub_atom::value, *x, *y)) << "\n";
   }
 }
 
@@ -105,28 +105,28 @@ struct config : actor_system_config {
     .add(server_mode, "server-mode,s", "enable server mode");
   }
   uint16_t port = 0;
-  std::string host = "localhost";
+  string host = "localhost";
   bool server_mode = false;
 };
 
 void server(actor_system& system, const config& cfg) {
   auto res = system.middleman().open(cfg.port);
   if (!res) {
-    std::cerr << "*** cannot open port: "
-              << system.render(res.error()) << std::endl;
+    cerr << "*** cannot open port: "
+         << system.render(res.error()) << endl;
     return;
   }
-  std::cout << "*** running on port: "
-            << *res << std::endl
-            << "*** press <enter> to shutdown server" << std::endl;
+  cout << "*** running on port: "
+       << *res << endl
+       << "*** press <enter> to shutdown server" << endl;
   getchar();
 }
 
 void client(actor_system& system, const config& cfg) {
   auto node = system.middleman().connect(cfg.host, cfg.port);
   if (!node) {
-    std::cerr << "*** connect failed: "
-              << system.render(node.error()) << std::endl;
+    cerr << "*** connect failed: "
+         << system.render(node.error()) << endl;
     return;
   }
   auto type = "calculator"; // type of the actor we wish to spawn
@@ -135,8 +135,8 @@ void client(actor_system& system, const config& cfg) {
   auto worker = system.middleman().remote_spawn<calculator>(*node, type,
                                                             args, tout);
   if (!worker) {
-    std::cerr << "*** remote spawn failed: "
-              << system.render(worker.error()) << std::endl;
+    cerr << "*** remote spawn failed: "
+         << system.render(worker.error()) << endl;
     return;
   }
   // start using worker in main loop

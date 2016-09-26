@@ -300,15 +300,15 @@ bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
   return scribes_.count(std::make_pair(std::move(x), y)) > 0;
 }
 
-void test_multiplexer::accept_connection(accept_handle hdl) {
+bool test_multiplexer::accept_connection(accept_handle hdl) {
   if (passive_mode(hdl))
-    return;
+    return false;
   auto& dd = doorman_data_[hdl];
   if (!dd.ptr)
-    throw std::logic_error("accept_connection: this doorman was not "
-                           "assigned to a broker yet");
+    return false;
   if (!dd.ptr->new_connection())
     passive_mode(hdl) = true;
+  return true;
 }
 
 void test_multiplexer::read_data(connection_handle hdl) {

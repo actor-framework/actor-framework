@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include "caf/all.hpp"
@@ -58,8 +59,7 @@ public:
   }
 
   behavior make_behavior() override {
-    if (size_ < 2)
-      throw std::runtime_error("size < 2 is not supported for fixed_stack");
+    assert(size_ < 2);
     return empty_;
   }
 

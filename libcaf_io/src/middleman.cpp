@@ -236,20 +236,16 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
   auto basp = named_broker<basp_broker>(atom("BASP"));
   strong_actor_ptr result;
   scoped_actor self{system(), true};
-  try {
-    self->send(basp, forward_atom::value, nid, atom("ConfigServ"),
-               make_message(get_atom::value, name));
-    self->receive(
-      [&](strong_actor_ptr& addr) {
-        result = std::move(addr);
-      },
-      after(std::chrono::minutes(5)) >> [] {
-        // nop
-      }
-    );
-  } catch (std::exception&) {
-    // nop
-  }
+  self->send(basp, forward_atom::value, nid, atom("ConfigServ"),
+             make_message(get_atom::value, name));
+  self->receive(
+    [&](strong_actor_ptr& addr) {
+      result = std::move(addr);
+    },
+    after(std::chrono::minutes(5)) >> [] {
+      // nop
+    }
+  );
   return result;
 }
 

@@ -262,20 +262,16 @@ void client_repl(actor_system& system, const config& cfg) {
     },
     [&](string& arg0, string& arg1, string& arg2) {
       if (arg0 == "connect") {
-        try {
-          auto lport = std::stoul(arg2);
-          if (lport < std::numeric_limits<uint16_t>::max()) {
-            anon_send(client, connect_atom::value, move(arg1),
-                      static_cast<uint16_t>(lport));
-          }
-          else {
-            cout << lport << " is not a valid port" << endl;
-          }
-        }
-        catch (std::exception&) {
-          cout << "\"" << arg2 << "\" is not an unsigned integer"
-            << endl;
-        }
+        char* end = nullptr;
+        auto lport = strtoul(arg2.c_str(), &end, 10);
+        if (end != arg2.c_str() + arg2.size())
+          cout << "\"" << arg2 << "\" is not an unsigned integer" << endl;
+        else if (lport > std::numeric_limits<uint16_t>::max())
+          cout << "\"" << arg2 << "\" > "
+               << std::numeric_limits<uint16_t>::max() << endl;
+        else
+          anon_send(client, connect_atom::value, move(arg1),
+                    static_cast<uint16_t>(lport));
       }
       else {
         auto x = toint(arg0);

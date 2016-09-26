@@ -419,8 +419,7 @@ CAF_TEST(event_testee_series) {
       result = str;
     },
     after(chrono::minutes(1)) >> [&] {
-      CAF_ERROR("event_testee does not reply");
-      throw runtime_error("event_testee does not reply");
+      CAF_FAIL("event_testee does not reply");
     }
   );
   CAF_CHECK_EQUAL(result, "wait4int");
@@ -448,7 +447,7 @@ CAF_TEST(maybe_string_delegator_chain) {
   CAF_MESSAGE("send empty string, expect error");
   self->request(aut, infinite, "").receive(
     [](ok_atom, const string&) {
-      throw std::logic_error("unexpected result!");
+      CAF_FAIL("unexpected string response");
     },
     [](const error& err) {
       CAF_CHECK_EQUAL(err.category(), atom("mock"));
