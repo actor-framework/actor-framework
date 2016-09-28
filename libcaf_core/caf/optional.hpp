@@ -59,7 +59,9 @@ class optional {
     }
   }
 
-  optional(optional&& other) : m_valid(false) {
+  optional(optional&& other)
+  noexcept(std::is_nothrow_move_constructible<T>::value)
+    : m_valid(false) {
     if (other.m_valid) {
       cr(std::move(other.m_value));
     }
@@ -80,7 +82,9 @@ class optional {
     return *this;
   }
 
-  optional& operator=(optional&& other) {
+  optional& operator=(optional&& other)
+  noexcept(std::is_nothrow_destructible<T>::value &&
+           std::is_nothrow_move_assignable<T>::value) {
     if (m_valid) {
       if (other.m_valid) m_value = std::move(other.m_value);
       else destroy();
