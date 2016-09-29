@@ -33,8 +33,11 @@ namespace caf {
 namespace detail {
 
 struct parse_ini_t {
+  /// Denotes an optional error output stream
+  using opt_err = optional<std::ostream&>;
   /// Denotes a callback for consuming configuration values.
-  using config_consumer = std::function<void (size_t, std::string, config_value&)>;
+  using config_consumer = std::function<void (size_t, std::string,
+                                              config_value&, opt_err)>;
 
   /// Parse the given input stream as INI formatted data and
   /// calls the consumer with every key-value pair.
@@ -43,7 +46,7 @@ struct parse_ini_t {
   /// @param consumer Callback consuming generated key-value pairs.
   void operator()(std::istream& raw_data,
                   config_consumer consumer,
-                  optional<std::ostream&> errors = none) const;
+                  opt_err errors = none) const;
 
 };
 

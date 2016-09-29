@@ -110,7 +110,7 @@ struct fixture {
     std::stringstream ss;
     std::stringstream err;
     ss << str;
-    detail::parse_ini(ss, consumer, err);
+    detail::parse_ini(ss, consumer, static_cast<std::ostream&>(err));
     split(errors, err.str(), is_any_of("\n"), token_compress_on);
   }
 
@@ -125,7 +125,8 @@ struct fixture {
       },
       ERROR_HANDLER
     );
-    auto consume = [&](size_t, std::string key, config_value& value) {
+    auto consume = [&](size_t, std::string key, config_value& value,
+                       optional<std::ostream&>) {
       message_visitor mv;
       anon_send(config_server, put_atom::value,
                 std::move(key), apply_visitor(mv, value));
@@ -134,7 +135,8 @@ struct fixture {
   }
 
   void load(const char* str) {
-    auto consume = [&](size_t, std::string key, config_value& value) {
+    auto consume = [&](size_t, std::string key, config_value& value,
+                       optional<std::ostream&>) {
       values.emplace(std::move(key), std::move(value));
     };
     load_impl(consume, str);

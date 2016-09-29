@@ -23,6 +23,22 @@
 
 namespace caf {
 
+const char* type_name_visitor_tbl[] {
+  "a boolean", 
+  "a float", 
+  "a double",
+  "a string",
+  "an atom_value",
+  "an 8-bit integer",
+  "an 8-bit unsigned integer",
+  "a 16-bit integer",
+  "a 16-bit unsigned integer",
+  "a 32-bit integer",
+  "a 32-bit unsigned integer",
+  "a 64-bit integer",
+  "a 64-bit unsigned integer"
+};
+
 config_option::config_option(const char* cat, const char* nm, const char* expl)
     : category_(cat),
       name_(nm),
@@ -55,48 +71,15 @@ std::string config_option::full_name() const {
   return res;
 }
 
-const char* config_option::type_name_visitor::operator()(const std::string&) const {
-  return "a string";
-}
-const char* config_option::type_name_visitor::operator()(double) const {
-  return "a double";
-}
-const char* config_option::type_name_visitor::operator()(int64_t) const {
-  return "an integer";
-}
-const char* config_option::type_name_visitor::operator()(size_t) const {
-  return "an unsigned integer";
-}
-const char* config_option::type_name_visitor::operator()(uint16_t) const {
-  return "an unsigned short integer";
-}
-const char* config_option::type_name_visitor::operator()(bool) const {
-  return "a boolean";
-}
-const char* config_option::type_name_visitor::operator()(atom_value) const {
-  return "an atom";
-}
-
-bool config_option::assign_config_value(size_t& x, int64_t& y) {
-  if (y < 0 || !unsigned_assign_in_range(x, y))
-    return false;
-  x = static_cast<size_t>(y);
-  return true;
-}
-
-bool config_option::assign_config_value(uint16_t& x, int64_t& y) {
-  if (y < 0 || y > std::numeric_limits<uint16_t>::max())
-    return false;
-  x = static_cast<uint16_t>(y);
-  return true;
-}
-
 void config_option::report_type_error(size_t ln, config_value& x,
-                                      const char* expected) {
+                                      const char* expected,
+                                      optional<std::ostream&> out) {
+  if (!out)
+    return;
   type_name_visitor tnv;
-  std::cerr << "error in line " << ln << ": expected "
-            << expected << " found "
-            << apply_visitor(tnv, x) << std::endl;
+  *out << "error in line " << ln << ": expected "
+       << expected << " found "
+       << apply_visitor(tnv, x) << '\n';
 }
 
 } // namespace caf
