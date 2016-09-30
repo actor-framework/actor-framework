@@ -157,11 +157,11 @@ echo "\
 set -e
 git commit -a -m \"Change version to $1\"
 git push
+git tag $tag_version
+git push origin --tags
 git checkout master
 git merge develop
 git push
-git tag $tag_version
-git push origin --tags
 git checkout develop
 curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-framework/releases?access_token=$token
 cp "$blog_msg" "$blog_target_file"
