@@ -108,7 +108,7 @@ with the developer blog checked out one level above, i.e.:
 
 # assumed files
 token_path="$HOME/.github-oauth-token"
-blog_msg="blog_release_note.md"
+blog_msg="github_release_note.md"
 github_msg="github_release_note.md"
 config_hpp_path="libcaf_core/caf/config.hpp"
 
@@ -117,12 +117,6 @@ blog_posts_path="../blog/_posts"
 
 # check whether all expected files and directories exist
 assert_exists "$token_path" "$config_hpp_path" "$blog_msg" "$github_msg" "$blog_posts_path"
-
-# check whether curl command is safe to execute
-# (GitHub script must not have any ' because it breaks the temporary script)
-if [ -n "$(grep "'" "$github_msg")" ] ; then
-  raise_error "$github_msg must not contain any '"
-fi
 
 # target files
 blog_target_file="$blog_posts_path/$(date +%F)-version-$1-released.md"
@@ -165,6 +159,7 @@ git commit -a -m \"Change version to $1\"
 git push
 git checkout master
 git merge develop
+git push
 git tag $tag_version
 git push origin --tags
 git checkout develop
