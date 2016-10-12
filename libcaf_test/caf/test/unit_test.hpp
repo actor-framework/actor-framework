@@ -397,7 +397,7 @@ bool check(test* parent, const char *file, size_t line,
        << engine::color(blue) << line << fill(line) << engine::color(reset)
        << expr << engine::color(magenta) << " ("
        << engine::color(red) << show(x) << engine::color(magenta)
-       << " !!" << engine::color(red) << show(y) << engine::color(magenta)
+       << " !! " << engine::color(red) << show(y) << engine::color(magenta)
        << ')' << engine::color(reset);
     parent->fail(ss.str(), should_fail);
   }
