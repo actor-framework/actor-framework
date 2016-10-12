@@ -22,6 +22,7 @@ set (LIBCAF_IO_SRCS
      src/test_multiplexer.cpp
      src/acceptor_manager.cpp
      src/multiplexer.cpp
+     src/uri.cpp
      # BASP files
      src/header.cpp
      src/message_type.cpp
