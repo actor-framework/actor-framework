@@ -233,6 +233,17 @@ public:
   ///
   const str_bounds& authority() const;
 
+
+  ///
+  /// @brief Get the user information subcomponent of authority.
+  ///
+  /// The userinfo subcomponent may consist of a user name and, optionally,
+  /// scheme-specific information about how to gain authorization to access
+  /// the resource.
+  /// @returns The user information subcomponent of {@link authority()}.
+  ///
+  const str_bounds& user_information() const;
+
   ///
   /// @brief Exchanges the contents of <code>this</code> and @p other.
   /// @param other {@link caf::io::uri uri} object that should exchange its

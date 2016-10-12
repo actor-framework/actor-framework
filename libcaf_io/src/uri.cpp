@@ -68,36 +68,41 @@ class uri_private : public ref_counted {
   // authority subcomponents
   str_bounds m_host_;
   str_bounds m_port_;
+  str_bounds m_user_information_;
 
   // convenience fields
   uint16_t m_int_port_;
 
   void clear() {
     m_uri_.clear();
-    m_path_ = make_tuple(m_uri_.end(),m_uri_.end());
-    m_query_ = make_tuple(m_uri_.end(),m_uri_.end());
-    m_scheme_ = make_tuple(m_uri_.end(),m_uri_.end());
-    m_fragment_ = make_tuple(m_uri_.end(),m_uri_.end());
-    m_authority_ = make_tuple(m_uri_.end(),m_uri_.end());
+    m_path_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_query_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_scheme_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_fragment_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_authority_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_host_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_port_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_user_information_ = make_pair(end(m_uri_), end(m_uri_));
   }
 
   // this parses the given uri to the form
   // {scheme} {authority} {path} {query} {fragment}
   bool parse_uri(const string& what) {
-    m_flag_ = default_flag;
     auto empty = [](const str_bounds& bounds) {
       return bounds.first >= bounds.second;
     };
+    m_flag_ = default_flag;
     m_uri_.clear();
     m_uri_ = what;
     m_host_ = make_pair(begin(m_uri_), begin(m_uri_));
-    m_port_ = make_pair(begin(m_uri_), begin(m_uri_));
     m_path_ = make_pair(begin(m_uri_), begin(m_uri_));
+    m_port_ = make_pair(begin(m_uri_), begin(m_uri_));
     m_query_ = make_pair(begin(m_uri_), begin(m_uri_));
     m_scheme_ = make_pair(begin(m_uri_), begin(m_uri_));
     m_fragment_ = make_pair(begin(m_uri_), begin(m_uri_));
     m_authority_ = make_pair(begin(m_uri_), begin(m_uri_));
-    // find ':' for scheme boundries
+    m_user_information_ = make_pair(begin(m_uri_), begin(m_uri_));
+    // find ':' for scheme boundaries
     auto from_itr = begin(m_uri_);
     auto to_itr = find(begin(m_uri_), end(m_uri_), ':');
     if (to_itr == m_uri_.end()) {
@@ -118,17 +123,29 @@ class uri_private : public ref_counted {
       if (empty(m_authority_)) {
         return false;
       }
+      // parse user info from authority
       auto at = find(m_authority_.first, m_authority_.second, '@');
       if (at != m_authority_.second) {
-        
+        m_user_information_ = make_pair(m_authority_.first, at);
+        // skip the '@' character
+        at += 1;
+      } else {
+        // reset if we found nothing
+        at = m_authority_.first;
       }
-      // For our purpose we assume not to have a user info
-      auto col = find(m_authority_.first, m_authority_.second, ':');
+      // parse host and port
+      // look for closing ']' in case host is an ipv6 address
+      auto col = find(at, m_authority_.second, ']');
+      if (col == m_authority_.second) {
+        // if no bracket is found, reset itr
+        col = at;
+      }
+      col = find(col, m_authority_.second, ':');
       if (col != m_authority_.second) {
-        m_host_ = make_pair(m_authority_.first, col);
+        m_host_ = make_pair(at, col);
         m_port_ = make_pair(col + 1, m_authority_.second);
       } else {
-        m_host_ = m_authority_;
+        m_host_ = make_pair(at, m_authority_.second);
         m_port_ = make_pair(m_authority_.second, m_authority_.second);
       }
       if (!empty(m_host_) && *m_host_.first == '[') {
@@ -189,6 +206,10 @@ public:
   inline const str_bounds& port() const { return m_port_; }
 
   inline uint16_t port_as_int() const { return m_int_port_; }
+  
+  inline const str_bounds& user_information() const {
+    return m_user_information_;
+  }
 
   inline bool host_is_ipv4addr() const {
     return m_flag_ == ipv4_flag;
@@ -286,6 +307,10 @@ const str_bounds& uri::fragment() const {
 
 const str_bounds& uri::authority() const {
   return d_->authority();
+}
+
+const str_bounds& uri::user_information() const {
+  return d_->user_information();
 }
 
 bool uri::host_is_ipv4addr() const {
