@@ -31,16 +31,17 @@
 #include "caf/io/all.hpp"
 
 using namespace caf;
+using namespace std;
 
 namespace {
 
-constexpr char local_host[] = "127.0.0.1";
+constexpr char host_uri[] = "tcp://127.0.0.1";
 
 class config : public actor_system_config {
 public:
   config() {
     load<io::middleman>();
-    add_message_type<std::vector<int>>("std::vector<int>");
+    add_message_type<vector<int>>("vector<int>");
     actor_system_config::parse(test::engine::argc(),
                                test::engine::argv());
   }
@@ -82,8 +83,8 @@ behavior make_ping_behavior(event_based_actor* self, actor pong) {
   };
 }
 
-std::string to_string(const std::vector<int>& vec) {
-  std::ostringstream os;
+string to_string(const vector<int>& vec) {
+  ostringstream os;
   for (size_t i = 0; i + 1 < vec.size(); ++i)
     os << vec[i] << ", ";
   os << vec.back();
@@ -92,19 +93,19 @@ std::string to_string(const std::vector<int>& vec) {
 
 behavior make_sort_behavior() {
   return {
-    [](std::vector<int>& vec) -> std::vector<int> {
+    [](vector<int>& vec) -> vector<int> {
       CAF_MESSAGE("sorter received: " << to_string(vec));
-      std::sort(vec.begin(), vec.end());
+      sort(vec.begin(), vec.end());
       CAF_MESSAGE("sorter sent: " << to_string(vec));
-      return std::move(vec);
+      return move(vec);
     }
   };
 }
 
 behavior make_sort_requester_behavior(event_based_actor* self, actor sorter) {
-  self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
+  self->send(sorter, vector<int>{5, 4, 3, 2, 1});
   return {
-    [=](const std::vector<int>& vec) {
+    [=](const vector<int>& vec) {
       CAF_MESSAGE("sort requester received: " << to_string(vec));
       for (size_t i = 1; i < vec.size(); ++i)
         CAF_CHECK_EQUAL(static_cast<int>(i), vec[i - 1]);
@@ -141,44 +142,62 @@ CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 CAF_TEST(identity_semantics) {
   // server side
   auto server = server_side.spawn(make_pong_behavior);
-  CAF_EXP_THROW(port1, server_side_mm.publish(server, 0, local_host));
-  CAF_EXP_THROW(port2, server_side_mm.publish(server, 0, local_host));
+  auto uri_no_port = io::uri::make(host_uri);
+  CAF_REQUIRE(uri_no_port);
+  CAF_EXP_THROW(port1, server_side_mm.publish(server, *uri_no_port));
+  CAF_EXP_THROW(port2, server_side_mm.publish(server, *uri_no_port));
   CAF_REQUIRE_NOT_EQUAL(port1, port2);
-  CAF_EXP_THROW(same_server, server_side_mm.remote_actor(local_host, port2));
+  auto uri_port1 = io::uri::make(string(host_uri) + ":" + to_string(port1));
+  CAF_REQUIRE(uri_port1);
+  auto uri_port2 = io::uri::make(string(host_uri) + ":" + to_string(port2));
+  CAF_REQUIRE(uri_port2);
+  CAF_EXP_THROW(same_server, server_side_mm.remote_actor(*uri_port2));
   CAF_REQUIRE_EQUAL(same_server, server);
   CAF_CHECK_EQUAL(same_server->node(), server_side.node());
-  CAF_EXP_THROW(server1, client_side_mm.remote_actor(local_host, port1));
-  CAF_EXP_THROW(server2, client_side_mm.remote_actor(local_host, port2));
-  CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(local_host, port1));
-  CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(local_host, port2));
+  CAF_EXP_THROW(server1, client_side_mm.remote_actor(*uri_port1));
+  CAF_EXP_THROW(server2, client_side_mm.remote_actor(*uri_port2));
+  CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(*uri_port1));
+  CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(*uri_port2));
   anon_send_exit(server, exit_reason::user_shutdown);
 }
 
 CAF_TEST(ping_pong) {
   // server side
+  auto server_uri = io::uri::make(host_uri);
+  CAF_REQUIRE(server_uri);
   CAF_EXP_THROW(port,
                 server_side_mm.publish(server_side.spawn(make_pong_behavior),
-                                       0, local_host));
+                                       *server_uri));
   // client side
-  CAF_EXP_THROW(pong, client_side_mm.remote_actor(local_host, port));
+  auto uri_with_port = io::uri::make(string(host_uri) + ":" + to_string(port));
+  CAF_REQUIRE(uri_with_port);
+  CAF_EXP_THROW(pong, client_side_mm.remote_actor(*uri_with_port));
   client_side.spawn(make_ping_behavior, pong);
 }
 
 CAF_TEST(custom_message_type) {
   // server side
+  auto server_uri = io::uri::make(host_uri);
+  CAF_REQUIRE(server_uri);
   CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(make_sort_behavior),
-                                             0, local_host));
+                                             *server_uri));
   // client side
-  CAF_EXP_THROW(sorter, client_side_mm.remote_actor(local_host, port));
+  auto uri_with_port = io::uri::make(string(host_uri) + ":" + to_string(port));
+  CAF_REQUIRE(uri_with_port);
+  CAF_EXP_THROW(sorter, client_side_mm.remote_actor(*uri_with_port));
   client_side.spawn(make_sort_requester_behavior, sorter);
 }
 
 CAF_TEST(remote_link) {
   // server side
+  auto server_uri = io::uri::make(host_uri);
+  CAF_REQUIRE(server_uri);
   CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(fragile_mirror),
-                                             0, local_host));
+                                             *server_uri));
   // client side
-  CAF_EXP_THROW(mirror, client_side_mm.remote_actor(local_host, port));
+  auto uri_with_port = io::uri::make(string(host_uri) + ":" + to_string(port));
+  CAF_REQUIRE(uri_with_port);
+  CAF_EXP_THROW(mirror, client_side_mm.remote_actor(*uri_with_port));
   auto linker = client_side.spawn(linking_actor, mirror);
   scoped_actor self{client_side};
   self->wait_for(linker);

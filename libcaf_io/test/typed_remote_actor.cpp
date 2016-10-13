@@ -84,13 +84,14 @@ void run_client(int argc, char** argv, uint16_t port) {
   // check whether invalid_argument is thrown
   // when trying to connect to get an untyped
   // handle to the server
-  auto res = system.middleman().remote_actor("127.0.0.1", port);
+  auto local_uri = io::uri::make("tcp://127.0.0.1:" + std::to_string(port));
+  CAF_REQUIRE(local_uri);
+  auto res = system.middleman().remote_actor(*local_uri);
   CAF_REQUIRE(!res);
   CAF_MESSAGE(system.render(res.error()));
   CAF_MESSAGE("connect to typed_remote_actor");
   CAF_EXP_THROW(serv,
-                system.middleman().remote_actor<server_type>("127.0.0.1",
-                                                             port));
+                system.middleman().remote_actor<server_type>(*local_uri));
   auto f = make_function_view(serv);
   CAF_CHECK_EQUAL(f(ping{42}), pong{42});
   anon_send_exit(serv, exit_reason::user_shutdown);
@@ -103,8 +104,10 @@ void run_server(int argc, char** argv) {
      .add_message_type<pong>("pong")
      .parse(argc, argv);
   actor_system system{cfg};
+  auto server_uri = io::uri::make("tcp://127.0.0.1");
+  CAF_REQUIRE(server_uri);
   CAF_EXP_THROW(port, system.middleman().publish(system.spawn(server),
-                                                 0, "127.0.0.1"));
+                                                 *server_uri));
   CAF_REQUIRE(port != 0);
   CAF_MESSAGE("running on port " << port << ", start client");
   std::thread child{[=] { run_client(argc, argv, port); }};

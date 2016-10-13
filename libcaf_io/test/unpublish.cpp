@@ -69,12 +69,13 @@ struct fixture {
     CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
   }
 
-  actor remote_actor(const char* hostname, uint16_t port,
-                     bool expect_fail = false) {
+  actor remote_actor(io::uri u, bool expect_fail = false) {
     actor result;
     scoped_actor self{system, true};
+    auto host = std::string(u.host().first, u.host().second);
+    auto port = u.port_as_int();
     self->request(system.middleman().actor_handle(), infinite,
-                  connect_atom::value, hostname, port).receive(
+                  connect_atom::value, host, port).receive(
       [&](node_id&, strong_actor_ptr& res, std::set<std::string>& xs) {
         CAF_REQUIRE(xs.empty());
         if (res)
@@ -101,26 +102,31 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(unpublish_tests, fixture)
 
 CAF_TEST(unpublishing) {
-  CAF_EXP_THROW(port, system.middleman().publish(testee, 0));
+  auto testee_uri = io::uri::make("tcp://0.0.0.0");
+  CAF_REQUIRE(testee_uri);
+  CAF_EXP_THROW(port, system.middleman().publish(testee, *testee_uri));
   CAF_REQUIRE(port != 0);
   CAF_MESSAGE("published actor on port " << port);
   CAF_MESSAGE("test invalid unpublish");
   auto testee2 = system.spawn<dummy>();
-  system.middleman().unpublish(testee2, port);
-  auto x0 = remote_actor("127.0.0.1", port);
+  auto testee_uri_with_port = io::uri::make(testee_uri->str() + ":" +
+                                            std::to_string(port));
+  CAF_REQUIRE(testee_uri_with_port);
+  system.middleman().unpublish(testee2, *testee_uri_with_port);
+  auto x0 = remote_actor(*testee_uri_with_port);
   CAF_CHECK_NOT_EQUAL(x0, testee2);
   CAF_CHECK_EQUAL(x0, testee);
   anon_send_exit(testee2, exit_reason::kill);
   CAF_MESSAGE("unpublish testee");
   system.middleman().unpublish(testee, port);
   CAF_MESSAGE("check whether testee is still available via cache");
-  auto x1 = remote_actor("127.0.0.1", port);
+  auto x1 = remote_actor(*testee_uri_with_port);
   CAF_CHECK_EQUAL(x1, testee);
   CAF_MESSAGE("fake dead of testee and check if testee becomes unavailable");
   anon_send(actor_cast<actor>(system.middleman().actor_handle()),
             down_msg{testee.address(), exit_reason::normal});
   // must fail now
-  auto x2 = remote_actor("127.0.0.1", port, true);
+  auto x2 = remote_actor(*testee_uri_with_port, true);
   CAF_CHECK(!x2);
 }
 
