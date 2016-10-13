@@ -32,6 +32,21 @@ if(DEFINED CAF_QT_PREFIX_PATH)
 endif()
 
 ################################################################################
+#                      enable ccache if required by user                       #
+################################################################################
+
+if(CAF_USE_CCACHE)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache command: ${CCACHE_PROGRAM}")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
+  else()
+    message(STATUS "Unable to find ccache")
+  endif()
+endif(CAF_USE_CCACHE)
+
+################################################################################
 #   make sure all variables are set to "no" if undefined for summary output    #
 ################################################################################
 

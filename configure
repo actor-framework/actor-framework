@@ -49,9 +49,10 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --more-warnings             enables most warnings
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
-    --no-exceptions             build CAF without C++ exceptions
+    --no-exceptions             do not catch exceptions in CAF
     --force-no-exceptions       build CAF with '-fno-exceptions'
-    --warnings-as-errors        enables -Werror
+    --warnings-as-errors        build with '-Werror'
+    --with-ccache               use ccache to improve build performance
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -254,6 +255,9 @@ while [ $# -ne 0 ]; do
             ;;
         --warnings-as-errors)
             append_cache_entry CAF_CXX_WARNINGS_AS_ERRORS BOOL yes
+            ;;
+        --with-ccache)
+            append_cache_entry CAF_USE_CCACHE BOOL yes
             ;;
         --sysroot=*)
             append_cache_entry CAF_OSX_SYSROOT PATH "$optarg"
