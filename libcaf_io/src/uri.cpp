@@ -44,7 +44,6 @@ using str_bounds = std::pair<std::string::iterator, std::string::iterator>;
 
 namespace caf {
 namespace io {
-namespace detail {
 
 class uri_private : public ref_counted {
   friend optional<uri> uri::make(const string& uri_str);
@@ -206,7 +205,7 @@ public:
   inline const str_bounds& port() const { return m_port_; }
 
   inline uint16_t port_as_int() const { return m_int_port_; }
-  
+
   inline const str_bounds& user_information() const {
     return m_user_information_;
   }
@@ -229,20 +228,19 @@ void intrusive_ptr_release(uri_private* p) {
 }
 
 namespace {
-  
+
 intrusive_ptr<uri_private> m_default_uri_private(new uri_private);
-  
+
 } // namespace <anonymous>
-  
-} // namespace detail
+
 } // namespace io
 } // namespace caf
 
 namespace caf {
 namespace io {
-  
+
 optional<uri> uri::make(const string& uri_str) {
-  detail::uri_private* result = new detail::uri_private;
+  uri_private* result = new uri_private;
   if (result->parse_uri(uri_str))
     return uri{result};
   else {
@@ -256,22 +254,14 @@ optional<uri> uri::make(const char* cstr) {
   return make(tmp);
 }
 
-uri::uri() : d_(detail::m_default_uri_private) {
-  // nop
-}
-  
-uri::uri(detail::uri_private* d) : d_(d) {
-  // nop
-}
-  
-uri::uri(const uri& other) : d_(other.d_) {
+uri::uri() : d_(m_default_uri_private) {
   // nop
 }
 
-uri& uri::operator=(const uri& other) {
-  d_ = other.d_;
-  return *this;
+uri::uri(uri_private* d) : d_(d) {
+  // nop
 }
+
 
 const string& uri::str() const {
   return d_->as_string();

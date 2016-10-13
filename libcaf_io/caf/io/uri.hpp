@@ -32,15 +32,11 @@
 namespace caf {
 namespace io {
 
-namespace detail {
-
 class uri_private;
 
 void intrusive_ptr_add_ref(uri_private* p);
 
 void intrusive_ptr_release(uri_private* p);
-
-} // namespace detail
 
 namespace {
 
@@ -72,8 +68,7 @@ public:
     // treat a NULL string like an empty string
     return (what) ? str().compare(what) : str().compare("");
   }
-  
-              
+
   ///
   /// @brief Create an empty URI.
   ///
@@ -85,8 +80,30 @@ public:
   /// @note {@link caf::io::uri uri} is implicit shared, thus copy
   ///       operations are very fast and lightweight.
   ///
-  uri(const uri& other);
-              
+  uri(const uri& other) = default;
+
+  ///
+  /// @brief Create this object from @p other.
+  /// @param other The original {@link caf::io::uri uri} object.
+  /// @note {@link caf::io::uri uri} is implicit shared, thus copy
+  ///       operations are very fast and lightweight.
+  ///
+  uri(uri&& other) = default;
+
+  ///
+  /// @brief Copy assigment from @p other.
+  /// @param other Original {@link caf::io::uri uri} object.
+  /// @returns <code>*this</code>.
+  ///
+  uri& operator=(const uri& other) = default;
+
+  ///
+  /// @brief Move assignment from @p other;
+  /// @param other Original {@link caf::io::uri uri} object.
+  /// @return <code>*this</code>.
+  ///
+  uri& operator=(uri&& other) = default;
+
   ///
   /// @brief Create an URI from @p uri_str.
   ///
@@ -101,7 +118,7 @@ public:
   ///          (e.g. "Hello World" is a string, but is an invalid URI).
   ///
   static optional<uri> make(const std::string& uri_str);
-  
+
   ///
   /// @brief Create an URI from @p uri_str_c_str.
   /// @param uri_c_str An URI encoded as a C-string.
@@ -251,13 +268,6 @@ public:
   ///
   void swap(uri& other);
 
-  ///
-  /// @brief Equivalent to <code>uri(other).swap(*this)</code>.
-  /// @param other Original {@link caf::io::uri uri} object.
-  /// @returns <code>*this</code>.
-  ///
-  uri& operator=(const uri& other);
-
   /// @cond private
 
   template <class Inspector>
@@ -268,9 +278,9 @@ public:
   /// @endcond
 
 private:
-  uri(detail::uri_private* d);
-              
-  intrusive_ptr<detail::uri_private> d_;
+  uri(uri_private* d);
+
+  intrusive_ptr<uri_private> d_;
 };
 
 } // namespace io
