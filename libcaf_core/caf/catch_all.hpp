@@ -23,6 +23,10 @@
 #include <functional>
 #include <type_traits>
 
+#include "caf/result.hpp"
+#include "caf/message.hpp"
+#include "caf/message_view.hpp"
+
 namespace caf {
 
 template <class F>
