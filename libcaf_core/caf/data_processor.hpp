@@ -310,7 +310,8 @@ public:
   apply_sequence(D& self, T& xs) {
     auto s = xs.size();
     return error::eval([&] { return self.begin_sequence(s); },
-                       [&] { return self.apply_raw(xs.size(), &xs[0]); },
+                       [&] { return s > 0 ? self.apply_raw(xs.size(), &xs[0])
+                                          : none; },
                        [&] { return self.end_sequence(); });
   }
 
@@ -323,7 +324,9 @@ public:
   apply_sequence(D& self, T& xs) {
     size_t s;
     return error::eval([&] { return self.begin_sequence(s); },
-                       [&] { xs.resize(s); return self.apply_raw(s, &xs[0]); },
+                       [&] { xs.resize(s);
+                             return s > 0 ? self.apply_raw(s, &xs[0])
+                                          : none; },
                        [&] { return self.end_sequence(); });
   }
 

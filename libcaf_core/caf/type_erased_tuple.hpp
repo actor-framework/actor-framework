@@ -151,7 +151,8 @@ public:
   template <class... Ts>
   bool match_elements() const noexcept {
     detail::meta_elements<detail::type_list<Ts...>> xs;
-    return detail::try_match(*this, &xs.arr[0], sizeof...(Ts));
+    return xs.arr.empty() ? empty()
+                          : detail::try_match(*this, &xs.arr[0], sizeof...(Ts));
   }
 
   template <class F>
