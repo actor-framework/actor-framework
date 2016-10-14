@@ -123,6 +123,12 @@ expected<uint16_t> middleman::open(uint16_t port, const char* cstr, bool ru) {
   return f(open_atom::value, port, std::move(str), ru);
 }
 
+expected<uint16_t> middleman::open(uri u, bool ru) {
+  std::string str(u.host().first, u.host().second);
+  auto f = make_function_view(actor_handle());
+  return f(open_atom::value, u.port_as_int(), std::move(str), ru);
+}
+
 expected<void> middleman::close(uint16_t port) {
   auto f = make_function_view(actor_handle());
   return f(close_atom::value, port);
@@ -136,17 +142,25 @@ expected<node_id> middleman::connect(std::string host, uint16_t port) {
   return std::get<0>(*res);
 }
 
+expected<node_id> middleman::connect(uri u) {
+  auto f = make_function_view(actor_handle());
+  auto res = f(connect_atom::value,
+               std::string(u.host().first, u.host().second),
+               u.port_as_int());
+  if (!res)
+    return std::move(res.error());
+  return std::get<0>(*res);}
+
 expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
-                                      std::set<std::string> sigs, uint16_t port,
-                                      const char* cstr, bool ru) {
+                                      std::set<std::string> sigs,
+                                      uri u, bool ru) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
   if (!whom)
     return sec::cannot_publish_invalid_actor;
-  std::string in;
-  if (cstr)
-    in = cstr;
+  std::string in(u.host().first, u.host().second);
   auto f = make_function_view(actor_handle());
-  return f(publish_atom::value, port, std::move(whom), std::move(sigs), in, ru);
+  return f(publish_atom::value, u.port_as_int(), std::move(whom),
+           std::move(sigs), in, ru);
 }
 
 expected<uint16_t> middleman::publish_local_groups(uint16_t port,
@@ -170,17 +184,18 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
   return result;
 }
 
-expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
+expected<void> middleman::unpublish(const actor_addr& whom, uri u) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
-  return f(unpublish_atom::value, whom, port);
+  return f(unpublish_atom::value, whom, u.port_as_int());
 }
 
 expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
-                                                   std::string host,
-                                                   uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
+                                                   uri u) {
+  CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(u));
   auto f = make_function_view(actor_handle());
+  auto host = std::string(u.host().first, u.host().second);
+  auto port = u.port_as_int();
   auto res = f(connect_atom::value, std::move(host), port);
   if (!res)
     return std::move(res.error());
