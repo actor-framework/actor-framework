@@ -44,8 +44,8 @@ template <class T, class U,
                                   || std::is_floating_point<U>::value,
                                   int>::type = 0>
 bool equal_to(const T& t, const U& u) {
-  auto x = static_cast<double>(t);
-  auto y = static_cast<double>(u);
+  auto x = static_cast<long double>(t);
+  auto y = static_cast<long double>(u);
   auto max = std::max(std::abs(x), std::abs(y));
   auto dif = std::abs(x - y);
   return dif <= max * 1e-5;
