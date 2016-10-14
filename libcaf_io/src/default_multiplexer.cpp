@@ -135,7 +135,7 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
   }
 
   expected<void> allow_sigpipe(native_socket fd, bool new_value) {
-#   ifndef CAF_LINUX
+#   if !defined(CAF_LINUX) && !defined(CAF_CYGWIN)
     int value = new_value ? 0 : 1;
     CALL_CFUN(res, cc_zero, "setsockopt",
               setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value,
