@@ -20,8 +20,12 @@
 #ifndef CAF_VARIANT_HPP
 #define CAF_VARIANT_HPP
 
+#include <type_traits>
+
 #include "caf/config.hpp"
 #include "caf/static_visitor.hpp"
+
+#include "caf/meta/omittable.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -31,6 +35,25 @@
   case x:                                                                      \
     return visitor(from.get(                                                   \
       std::integral_constant<int, (x < max_type_id ? x : max_type_id)>()))
+
+#define CAF_VARIANT_DISPATCH_CASE(n)                                           \
+  case n: {                                                                    \
+    using tmp_t = typename detail::tl_at<                                      \
+                    detail::type_list<Ts...>,                                  \
+                    (n < sizeof...(Ts) ? n : 0)                                \
+                  >::type;                                                     \
+    return f(get<tmp_t>(x.x));                                                 \
+  }
+
+#define CAF_VARIANT_ASSIGN_CASE(n)                                             \
+  case n: {                                                                    \
+    using tmp_t = typename detail::tl_at<                                      \
+                    detail::type_list<Ts...>,                                  \
+                    (n < sizeof...(Ts) ? n : 0)                                \
+                  >::type;                                                     \
+    x.x = tmp_t{};                                                             \
+    return f(get<tmp_t>(x.x));                                                 \
+  }
 
 namespace caf {
 
@@ -88,6 +111,8 @@ public:
   using types = detail::type_list<Ts...>;
 
   static constexpr int max_type_id = sizeof...(Ts) - 1;
+
+  static_assert(sizeof...(Ts) < 20, "Too many template arguments");
 
   static_assert(!detail::tl_exists<types, std::is_reference>::value,
                 "Cannot create a variant of references");
@@ -160,6 +185,10 @@ public:
   template <class Visitor>
   typename Visitor::result_type apply(Visitor& visitor) {
     return apply_impl(*this, visitor);
+  }
+
+  int8_t type_tag() {
+    return static_cast<int8_t>(type_);
   }
   /// @endcond
 
@@ -283,15 +312,121 @@ const T* get(const variant<Us...>* value) {
 /// @relates variant
 template <class Visitor, class... Ts>
 typename Visitor::result_type apply_visitor(Visitor& visitor,
-                      const variant<Ts...>& data) {
+                                            const variant<Ts...>& data) {
   return data.apply(visitor);
 }
 
 /// @relates variant
 template <class Visitor, class... Ts>
 typename Visitor::result_type apply_visitor(Visitor& visitor,
-                      variant<Ts...>& data) {
+                                            variant<Ts...>& data) {
   return data.apply(visitor);
+}
+
+template <class T>
+struct variant_compare_helper {
+  using result_type = bool;
+  const T& lhs;
+  variant_compare_helper(const T& lhs_ref) : lhs(lhs_ref) { }
+  template <class U>
+  bool operator()(const U& rhs) const {
+    auto ptr = get<U>(&lhs);
+    return ptr ? *ptr == rhs : false;
+  }
+};
+
+template <class... Ts>
+bool operator==(const variant<Ts...>& x, const variant<Ts...>& y) {
+  variant_compare_helper<variant<Ts...>> f{x};
+  return apply_visitor(f, y);
+}
+
+template <class T>
+struct variant_reader {
+  int8_t& type_tag;
+  T& x;
+};
+
+template <class Inspector, class... Ts>
+typename Inspector::result_type
+inspect(Inspector& f, variant_reader<variant<Ts...>>& x) {
+  switch (x.type_tag) {
+    default: CAF_RAISE_ERROR("invalid type found");
+    CAF_VARIANT_DISPATCH_CASE(0);
+    CAF_VARIANT_DISPATCH_CASE(1);
+    CAF_VARIANT_DISPATCH_CASE(2);
+    CAF_VARIANT_DISPATCH_CASE(3);
+    CAF_VARIANT_DISPATCH_CASE(4);
+    CAF_VARIANT_DISPATCH_CASE(5);
+    CAF_VARIANT_DISPATCH_CASE(6);
+    CAF_VARIANT_DISPATCH_CASE(7);
+    CAF_VARIANT_DISPATCH_CASE(8);
+    CAF_VARIANT_DISPATCH_CASE(9);
+    CAF_VARIANT_DISPATCH_CASE(10);
+    CAF_VARIANT_DISPATCH_CASE(11);
+    CAF_VARIANT_DISPATCH_CASE(12);
+    CAF_VARIANT_DISPATCH_CASE(13);
+    CAF_VARIANT_DISPATCH_CASE(14);
+    CAF_VARIANT_DISPATCH_CASE(15);
+    CAF_VARIANT_DISPATCH_CASE(16);
+    CAF_VARIANT_DISPATCH_CASE(17);
+    CAF_VARIANT_DISPATCH_CASE(18);
+    CAF_VARIANT_DISPATCH_CASE(19);
+    CAF_VARIANT_DISPATCH_CASE(20);
+  }
+}
+
+template <class Inspector, class... Ts>
+typename std::enable_if<Inspector::reads_state,
+                        typename Inspector::result_type>::type
+inspect(Inspector& f, variant<Ts...>& x) {
+  auto type_tag = x.type_tag();
+  variant_reader<variant<Ts...>> helper{type_tag, x};
+  return f(meta::omittable(), type_tag, helper);
+}
+
+template <class T>
+struct variant_writer {
+  int8_t& type_tag;
+  T& x;
+};
+
+template <class Inspector, class... Ts>
+typename Inspector::result_type
+inspect(Inspector& f, variant_writer<variant<Ts...>>& x) {
+  switch (x.type_tag) {
+    default: CAF_RAISE_ERROR("invalid type found");
+    CAF_VARIANT_ASSIGN_CASE(0);
+    CAF_VARIANT_ASSIGN_CASE(1);
+    CAF_VARIANT_ASSIGN_CASE(2);
+    CAF_VARIANT_ASSIGN_CASE(3);
+    CAF_VARIANT_ASSIGN_CASE(4);
+    CAF_VARIANT_ASSIGN_CASE(5);
+    CAF_VARIANT_ASSIGN_CASE(6);
+    CAF_VARIANT_ASSIGN_CASE(7);
+    CAF_VARIANT_ASSIGN_CASE(8);
+    CAF_VARIANT_ASSIGN_CASE(9);
+    CAF_VARIANT_ASSIGN_CASE(10);
+    CAF_VARIANT_ASSIGN_CASE(11);
+    CAF_VARIANT_ASSIGN_CASE(12);
+    CAF_VARIANT_ASSIGN_CASE(13);
+    CAF_VARIANT_ASSIGN_CASE(14);
+    CAF_VARIANT_ASSIGN_CASE(15);
+    CAF_VARIANT_ASSIGN_CASE(16);
+    CAF_VARIANT_ASSIGN_CASE(17);
+    CAF_VARIANT_ASSIGN_CASE(18);
+    CAF_VARIANT_ASSIGN_CASE(19);
+    CAF_VARIANT_ASSIGN_CASE(20);
+  }
+}
+
+template <class Inspector, class... Ts>
+typename std::enable_if<Inspector::writes_state,
+                        typename Inspector::result_type>::type
+inspect(Inspector& f, variant<Ts...>& x) {
+  int8_t type_tag;
+  variant_writer<variant<Ts...>> helper{type_tag, x};
+  return f(meta::omittable(), type_tag, helper);
 }
 
 } // namespace caf
