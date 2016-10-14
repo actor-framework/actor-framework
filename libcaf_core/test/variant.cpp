@@ -24,7 +24,13 @@
 
 #include <string>
 
+#include "caf/none.hpp"
 #include "caf/variant.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/deep_to_string.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/actor_system_config.hpp"
 
 using namespace std;
 using namespace caf;
@@ -36,13 +42,89 @@ struct tostring_visitor : static_visitor<string> {
   }
 };
 
-CAF_TEST(string_convertible) {
-  tostring_visitor tv;
-  // test never-empty guarantee, i.e., expect default-constucted first arg
-  variant<int, float> v1;
-  CAF_CHECK_EQUAL(apply_visitor(tv, v1), "0");
-  variant<int, float> v2 = 42;
-  CAF_CHECK_EQUAL(apply_visitor(tv, v2), "42");
-  v2 = 0.2f;
-  CAF_CHECK_EQUAL(apply_visitor(tv, v2), to_string(0.2f));
+// 20 integer wrappers for building a variant with 20 distint types
+#define i_n(n)                                                                 \
+  class i##n {                                                                 \
+  public:                                                                      \
+    i##n(int y = 0) : x(y) {                                                   \
+    }                                                                          \
+    i##n(i##n&& other) : x(other.x) {                                          \
+      other.x = 0;                                                             \
+    }                                                                          \
+    i##n& operator=(i##n&& other) {                                            \
+      x = other.x;                                                             \
+      other.x = 0;                                                             \
+      return *this;                                                            \
+    }                                                                          \
+    i##n(const i##n&) = default;                                               \
+    i##n& operator=(const i##n&) = default;                                    \
+    int x;                                                                     \
+  };                                                                           \
+  bool operator==(int x, i##n y) {                                             \
+    return x == y.x;                                                           \
+  }                                                                            \
+  bool operator==(i##n x, int y) {                                             \
+    return y == x;                                                             \
+  }                                                                            \
+  bool operator==(i##n x, i##n y) {                                            \
+    return x.x == y.x;                                                         \
+  }                                                                            \
+  template <class Inspector>                                                   \
+  typename Inspector::result_type inspect(Inspector& f, i##n& x) {             \
+    return f(meta::type_name(CAF_STR(i##n)), x.x);                             \
+  }
+
+#define macro_repeat20(macro)                                                  \
+  macro(01) macro(02) macro(03) macro(04) macro(05) macro(06) macro(07)        \
+    macro(08) macro(09) macro(10) macro(11) macro(12) macro(13) macro(14)      \
+      macro(15) macro(16) macro(17) macro(18) macro(19) macro(20)
+
+macro_repeat20(i_n)
+
+// a variant with 20 element types
+using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
+                    i11, i12, i13, i14, i15, i16, i17, i18, i19, i20>;
+
+#define announce_n(n) cfg.add_message_type<i##n>(CAF_STR(i##n));
+
+#define v20_test(n)                                                            \
+  x3 = i##n{0x##n};                                                            \
+  CAF_CHECK_EQUAL(deep_to_string(x3), CAF_STR(i##n) + std::string("(")         \
+                                        + std::to_string(0x##n) + ")");        \
+  CAF_CHECK_EQUAL(v20{x3}, i##n{0x##n});                                       \
+  x4 = x3;                                                                     \
+  CAF_CHECK_EQUAL(x4, i##n{0x##n});                                            \
+  CAF_CHECK_EQUAL(v20{std::move(x3)}, i##n{0x##n});                            \
+  CAF_CHECK_EQUAL(x3, i##n{0});                                                \
+  x3 = std::move(x4);                                                          \
+  CAF_CHECK_EQUAL(x4, i##n{0});                                                \
+  CAF_CHECK_EQUAL(x3, i##n{0x##n});                                            \
+  {                                                                            \
+    std::vector<char> buf;                                                     \
+    binary_serializer bs{sys.dummy_execution_unit(), buf};                     \
+    inspect(bs, x3);                                                           \
+    CAF_CHECK_EQUAL(x3, i##n{0x##n});                                          \
+    v20 tmp;                                                                   \
+    binary_deserializer bd{sys.dummy_execution_unit(), buf};                   \
+    inspect(bd, tmp);                                                          \
+    CAF_CHECK_EQUAL(tmp, i##n{0x##n});                                         \
+    CAF_CHECK_EQUAL(tmp, x3);                                                  \
+  }
+
+// copy construction, copy assign, move construction, move assign
+// and finally serialization round-trip
+CAF_TEST(copying_moving_roundtrips) {
+  actor_system_config cfg;
+  macro_repeat20(announce_n)
+  actor_system sys{cfg};
+  // default construction
+  variant<none_t> x1;
+  CAF_CHECK_EQUAL(x1, none);
+  variant<int, none_t> x2;
+  CAF_CHECK_EQUAL(x2, 0);
+  v20 x3;
+  CAF_CHECK_EQUAL(x3, i01{0});
+  v20 x4;
+  macro_repeat20(v20_test);
 }
+
