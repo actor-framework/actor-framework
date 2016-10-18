@@ -76,7 +76,7 @@ std::vector<iface_info> get_mac_addresses() {
 } // namespace detail
 } // namespace caf
 
-#elif defined(CAF_LINUX) || defined(CAF_ANDROID)
+#elif defined(CAF_LINUX) || defined(CAF_ANDROID) || defined(CAF_CYGWIN)
 
 #include <vector>
 #include <string>

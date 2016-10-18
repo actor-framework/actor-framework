@@ -170,12 +170,14 @@
 #  endif
 #elif defined(__FreeBSD__)
 #  define CAF_BSD
+#elif defined(__CYGWIN__)
+#  define CAF_CYGWIN
 #elif defined(WIN32) || defined(_WIN32)
 #  define CAF_WINDOWS
 #else
 #  error Platform and/or compiler not supportet
 #endif
-#if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_BSD)
+#if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_BSD) || defined(CAF_CYGWIN)
 #  define CAF_POSIX
 #endif
 

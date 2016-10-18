@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.4)
 project(caf C CXX)
 
 # be nice to vim users
@@ -266,7 +266,7 @@ endif(CAF_ENABLE_ADDRESS_SANITIZER)
 if(NOT APPLE AND NOT WIN32)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
 endif()
-# -fPIC generates warnings on MinGW plus extra setup steps needed on MinGW
+# -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
 if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
@@ -274,6 +274,8 @@ if(MINGW)
   set(LD_FLAGS "ws2_32 -liphlpapi")
   # build static to avoid runtime dependencies to GCC libraries
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -static")
+elseif(CYGWIN)
+  set(EXTRA_FLAGS "${EXTRA_FLAGS} -U__STRICT_ANSI__")
 else()
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -fPIC")
 endif()

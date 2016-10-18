@@ -106,7 +106,9 @@ if (NOT CAF_BUILD_STATIC_ONLY)
                         SOVERSION ${CAF_VERSION}
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_core)
-  if(NOT WIN32)
+  if (CYGWIN)
+    install(TARGETS libcaf_core_shared RUNTIME DESTINATION bin)
+  elseif (NOT WIN32)
     install(TARGETS libcaf_core_shared LIBRARY DESTINATION lib)
   endif()
   add_dependencies(libcaf_core_shared libcaf_core)

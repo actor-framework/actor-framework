@@ -110,6 +110,11 @@ public:
       m.mem = pmc.PeakWorkingSetSize / 1024;
       m.usr = to_usec(user_time);
       m.sys = to_usec(kernel_time);
+#     elif defined(CAF_CYGWIN)
+      // TODO - decide what to do here instead of zeros
+      m.usr = usec::zero();
+      m.sys = usec::zero();
+      m.mem = 0;
 #     else
       ::rusage ru;
       ::getrusage(RUSAGE_THREAD, &ru);
