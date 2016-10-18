@@ -29,13 +29,19 @@
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
+#include "caf/io/datagram_sink.hpp"
 #include "caf/io/receive_policy.hpp"
+#include "caf/io/datagram_source.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/datagram_sink_handle.hpp"
+#include "caf/io/datagram_source_handle.hpp"
 
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/datagram_sink_manager.hpp"
+#include "caf/io/network/datagram_source_manager.hpp"
 
 namespace caf {
 namespace io {
@@ -267,6 +273,12 @@ protected:
   using scribe_map = std::unordered_map<connection_handle,
                                         intrusive_ptr<scribe>>;
 
+  using datagram_sink_map = std::unordered_map<datagram_sink_handle,
+                                               intrusive_ptr<datagram_sink>>;
+
+  using datagram_source_map = std::unordered_map<datagram_source_handle,
+                                                 intrusive_ptr<datagram_source>>;
+
   /// @cond PRIVATE
 
   // meta programming utility
@@ -279,11 +291,24 @@ protected:
     return scribes_;
   }
 
+  inline datagram_sink_map& get_map(datagram_sink_handle) {
+    return datagram_sinks_;
+  }
+
+  inline datagram_source_map& get_map(datagram_source_handle) {
+    return datagram_sources_;
+  }
   // meta programming utility (not implemented)
   static intrusive_ptr<doorman> ptr_of(accept_handle);
 
   // meta programming utility (not implemented)
   static intrusive_ptr<scribe> ptr_of(connection_handle);
+
+  // meta programming utility (not implemented)
+  static intrusive_ptr<datagram_sink> ptr_of(datagram_sink_handle);
+
+  // meta programming utility (not implemented)
+  static intrusive_ptr<datagram_source> ptr_of(datagram_source_handle);
 
   /// @endcond
 
@@ -318,6 +343,8 @@ protected:
 private:
   scribe_map scribes_;
   doorman_map doormen_;
+  datagram_sink_map datagram_sinks_;
+  datagram_source_map datagram_sources_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
   std::vector<char> dummy_wr_buf_;
 };

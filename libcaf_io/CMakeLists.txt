@@ -23,6 +23,10 @@ set (LIBCAF_IO_SRCS
      src/acceptor_manager.cpp
      src/multiplexer.cpp
      src/uri.cpp
+     src/datagram_sink_manager.cpp
+     src/datagram_source_manager.cpp
+     src/datagram_sink.cpp
+     src/datagram_source.cpp
      # BASP files
      src/header.cpp
      src/message_type.cpp

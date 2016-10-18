@@ -29,7 +29,8 @@
 namespace caf {
 namespace io {
 
-/// Base class for `scribe` and `doorman`.
+/// Base class for `scribe` and `doorman` as well as `datagram_source`
+/// and `datagram_sink`.
 /// @ingroup Broker
 template <class Base, class Handle, class SysMsgType>
 class broker_servant : public Base {

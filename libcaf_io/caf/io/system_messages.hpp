@@ -30,6 +30,8 @@
 #include "caf/io/handle.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/datagram_sink_handle.hpp"
+#include "caf/io/datagram_source_handle.hpp"
 
 namespace caf {
 namespace io {
@@ -124,6 +126,58 @@ template <class Inspector>
 typename Inspector::result_type
 inspect(Inspector& f, acceptor_passivated_msg& x) {
   return f(meta::type_name("acceptor_passivated_msg"), x.handle);
+}
+
+/// Signalizes that a {@link broker} datagram sink was closed.
+struct datagram_sink_closed_msg {
+  datagram_sink_handle handle;
+};
+
+/// @relates datagram_sink_closed_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, datagram_sink_closed_msg& x) {
+  return f(meta::type_name("datagram_sink_closed_msg"), x.handle);
+}
+
+/// Signalizes that a {@link broker} datagram source was closed.
+struct datagram_source_closed_msg {
+  datagram_source_handle handle;
+};
+
+/// @relates datagram_source_closed_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, datagram_source_closed_msg& x) {
+  return f(meta::type_name("datagram_source_closed_msg"), x.handle);
+}
+
+/// Signalizes that a datagram with a certain size has been sent.
+struct datagram_sent_msg {
+  // Handle to the endpoint used.
+  datagram_sink_handle handle;
+  // number of bytes written.
+  uint64_t written;
+};
+
+/// @relates datagram_sent_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, datagram_sent_msg& x) {
+  return f(meta::type_name("datagram_sent_msg"), x.handle, x.written);
+}
+
+/// Signalizes newly arrived datagram for a {@link broker}.
+struct new_datagram_msg {
+  /// Handle to the related datagram endpoint.
+  datagram_source_handle handle;
+  /// Buffer containing the received data.
+  std::vector<char> buf;
+};
+
+/// @relates new_datagram_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, new_datagram_msg& x) {
+  return f(meta::type_name("new_datagram_msg"), x.handle, x.buf);
 }
 
 } // namespace io
