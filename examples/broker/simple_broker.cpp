@@ -192,14 +192,14 @@ public:
 void run_server(actor_system& system, const config& cfg) {
   cout << "run in server mode" << endl;
   auto pong_actor = system.spawn(pong);
-  auto server_actor = system.middleman().spawn_server(server, cfg.port,
-                                                      pong_actor);
-  if (!server_actor) {
+  auto server_details = system.middleman().spawn_server(server, cfg.port,
+                                                        pong_actor);
+  if (!server_details) {
     std::cerr << "failed to spawn server: "
-               << system.render(server_actor.error()) << endl;
+               << system.render(server_details.error()) << endl;
     return;
   }
-  print_on_exit(*server_actor, "server");
+  print_on_exit(server_details->first, "server");
   print_on_exit(pong_actor, "pong");
 }
 

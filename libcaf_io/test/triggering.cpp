@@ -232,9 +232,9 @@ CAF_TEST_FIXTURE_SCOPE(trigger_tests, fixture)
 
 CAF_TEST(trigger_connection) {
   CAF_MESSAGE("spawn server");
-  uint16_t port = 0;
-  auto serv = server_system.middleman().spawn_server(server1, port);
-  CAF_REQUIRE(serv);
+  auto server_details = server_system.middleman().spawn_server(server1, 0);
+  CAF_REQUIRE(server_details);
+  auto& port = server_details->second;
   CAF_REQUIRE_NOT_EQUAL(port, 0);
   CAF_MESSAGE("server spawned at port " << port);
   std::thread child{[&] {
@@ -246,9 +246,9 @@ CAF_TEST(trigger_connection) {
 
 CAF_TEST(trigger_acceptor) {
   CAF_MESSAGE("spawn server");
-  uint16_t port = 0;
-  auto serv = server_system.middleman().spawn_server(server2, port);
-  CAF_REQUIRE(serv);
+  auto server_details = server_system.middleman().spawn_server(server2, 0);
+  CAF_REQUIRE(server_details);
+  auto& port = server_details->second;
   CAF_REQUIRE_NOT_EQUAL(port, 0);
   CAF_MESSAGE("server spawned at port " << port);
   std::thread child{[&] {
