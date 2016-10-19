@@ -270,29 +270,57 @@ public:
     }
   };
 
-  expected<connection_handle> new_tcp_scribe(const std::string &,
-                                             uint16_t) override;
+  expected<connection_handle> new_tcp_scribe(const std::string& host,
+                                             uint16_t port) override;
 
-  expected<void> assign_tcp_scribe(abstract_broker *ptr,
+  expected<void> assign_tcp_scribe(abstract_broker* ptr,
                                    connection_handle hdl) override;
 
-  connection_handle add_tcp_scribe(abstract_broker *,
+  connection_handle add_tcp_scribe(abstract_broker* ptr,
                                    native_socket fd) override;
 
-  expected<connection_handle> add_tcp_scribe(abstract_broker *,
-                                             const std::string &h,
+  expected<connection_handle> add_tcp_scribe(abstract_broker* ptr,
+                                             const std::string& host,
                                              uint16_t port) override;
 
   expected<std::pair<accept_handle, uint16_t>>
-  new_tcp_doorman(uint16_t p, const char *in, bool rflag) override;
+  new_tcp_doorman(uint16_t port, const char* in, bool rflag) override;
 
-  expected<void> assign_tcp_doorman(abstract_broker *ptr,
+  expected<void> assign_tcp_doorman(abstract_broker* ptr,
                                     accept_handle hdl) override;
 
-  accept_handle add_tcp_doorman(abstract_broker*, native_socket fd) override;
+  accept_handle add_tcp_doorman(abstract_broker* ptr,
+                                native_socket fd) override;
 
   expected<std::pair<accept_handle, uint16_t>>
-  add_tcp_doorman(abstract_broker *, uint16_t, const char *, bool) override;
+  add_tcp_doorman(abstract_broker* ptr, uint16_t port, const char* in,
+                  bool rflag) override;
+
+  expected<datagram_sink_handle> new_datagram_sink(const std::string& host,
+                                                   uint16_t port) override;
+
+  expected<void> assign_datagram_sink(abstract_broker* ptr,
+                                      datagram_sink_handle hdl) override;
+
+  datagram_sink_handle add_datagram_sink(abstract_broker* ptr,
+                                         native_socket fd) override;
+
+  expected<datagram_sink_handle> add_datagram_sink(abstract_broker* ptr,
+                                                   const std::string& host,
+                                                   uint16_t port) override;
+
+  expected<std::pair<datagram_source_handle, uint16_t>>
+  new_datagram_source(uint16_t port, const char* in, bool rflag) override;
+
+  expected<void> assign_datagram_source(abstract_broker* ptr,
+                                        datagram_source_handle hdl) override;
+
+  datagram_source_handle add_datagram_source(abstract_broker* ptr,
+                                             native_socket fd) override;
+
+  expected<std::pair<datagram_source_handle, uint16_t>>
+  add_datagram_source(abstract_broker* ptr, uint16_t port , const char* in,
+                      bool rflag) override;
 
   void exec_later(resumable* ptr) override;
 

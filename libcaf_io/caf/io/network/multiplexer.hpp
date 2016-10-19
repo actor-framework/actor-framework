@@ -33,6 +33,8 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/datagram_sink_handle.hpp"
+#include "caf/io/datagram_source_handle.hpp"
 
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/native_socket.hpp"
@@ -63,7 +65,7 @@ public:
   virtual expected<void>
   assign_tcp_scribe(abstract_broker* ptr, connection_handle hdl) = 0;
 
-  /// Creates a new TCP doorman from a native socket handle.
+  /// Creates a new TCP scribe from a native socket handle.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual connection_handle add_tcp_scribe(abstract_broker* ptr,
                                            native_socket fd) = 0;
@@ -97,6 +99,53 @@ public:
   virtual expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(abstract_broker* ptr, uint16_t port, const char* in = nullptr,
                   bool reuse_addr = false) = 0;
+
+  /// Tries to create a datagram sink to sent messages to `host` on given
+  /// `port` and returns an unbound datagram sink handle on success.
+  /// @threadsafe
+  virtual expected<datagram_sink_handle>
+  new_datagram_sink(const std::string& host, uint16_t port) = 0;
+
+  /// Assigns an unbound datagram sink identified by `hdl` to `ptr`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<void> assign_datagram_sink(abstract_broker* ptr,
+                                              datagram_sink_handle hdl) = 0;
+
+  /// Creates a new datagram sink from a native socket handle.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual datagram_sink_handle add_datagram_sink(abstract_broker* ptr,
+                                                 native_socket fd) = 0;
+
+  /// Tries to create a datagram sink to sent messages to `host` on `port`
+  /// and returns a new datagram sink managing the endpoint on success.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<datagram_sink_handle>
+  add_datagram_sink(abstract_broker*, const std::string& host,
+                    uint16_t port) = 0;
+
+  /// Tries to create an unbound datagram source bound to `port`, optionally
+  /// accepting only messages from IP address `in`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<std::pair<datagram_source_handle, uint16_t>>
+  new_datagram_source(uint16_t port, const char* in = nullptr,
+                      bool reuse_addr = false) = 0;
+
+  /// Assigns an unbound datagram source identified by `hdl` to `ptr`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<void> assign_datagram_source(abstract_broker* ptr,
+                                                datagram_source_handle) = 0;
+
+  /// Creates a new datagram source from a native socket handle.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual datagram_source_handle add_datagram_source(abstract_broker* ptr,
+                                                     native_socket fd) = 0;
+
+  /// Tries to create a new datagram source on port `p`, optionally
+  /// accepting only messages from IP address `in`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<std::pair<datagram_source_handle, uint16_t>>
+  add_datagram_source(abstract_broker* ptr, uint16_t port,
+                      const char* in = nullptr, bool reuse_addr = false) = 0;
 
   /// Simple wrapper for runnables
   class runnable : public resumable, public ref_counted {
