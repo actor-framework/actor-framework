@@ -29,13 +29,13 @@ datagram_source::datagram_source(abstract_broker* parent,
     : datagram_source_base(parent, hdl) {
   // nop
 }
-/*
+
 datagram_source::~datagram_source() {
   CAF_LOG_TRACE("");
 }
 
 message datagram_source::detach_message() {
-  return make_message(endpoint_closed_msg{hdl()});
+  return make_message(datagram_source_closed_msg{hdl()});
 }
 
 bool datagram_source::consume(execution_unit* ctx, const void*,
@@ -70,6 +70,6 @@ void datagram_source::io_failure(execution_unit* ctx, network::operation op) {
   static_cast<void>(op);
   detach(ctx, true);
 }
-*/
+
 } // namespace io
 } // namespace caf

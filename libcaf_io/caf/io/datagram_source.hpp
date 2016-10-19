@@ -20,6 +20,10 @@
 #ifndef CAF_IO_DATAGRAM_SOURCE_HPP
 #define CAF_IO_DATAGRAM_SOURCE_HPP
 
+#include <vector>
+
+#include "caf/message.hpp"
+
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/datagram_source_handle.hpp"

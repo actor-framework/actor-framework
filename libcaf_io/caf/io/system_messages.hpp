@@ -180,6 +180,30 @@ typename Inspector::result_type inspect(Inspector& f, new_datagram_msg& x) {
   return f(meta::type_name("new_datagram_msg"), x.handle, x.buf);
 }
 
+/// Signalizes that a datagram sink has entered passive mode.
+struct datagram_sink_passivated_msg {
+  datagram_sink_handle handle;
+};
+
+/// @relates datagram_sink_passivated_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, datagram_sink_passivated_msg& x) {
+  return f(meta::type_name("datagram_sink_passivated_msg"), x.handle);
+}
+
+/// Signalizes that a datagram source has entered passive mode.
+struct datagram_source_passivated_msg {
+  datagram_source_handle handle;
+};
+
+/// @relates datagram_source_passivated_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, datagram_source_passivated_msg& x) {
+  return f(meta::type_name("datagram_source_passivated_msg"), x.handle);
+}
+
 } // namespace io
 } // namespace caf
 

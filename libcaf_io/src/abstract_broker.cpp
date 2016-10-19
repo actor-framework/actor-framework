@@ -123,8 +123,8 @@ void abstract_broker::add_scribe(const intrusive_ptr<scribe>& ptr) {
   scribes_.emplace(ptr->hdl(), ptr);
 }
 
-expected<connection_handle> abstract_broker::add_tcp_scribe(const std::string& hostname,
-                                                  uint16_t port) {
+expected<connection_handle> 
+abstract_broker::add_tcp_scribe(const std::string& hostname, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
   return backend().add_tcp_scribe(this, hostname, port);
 }

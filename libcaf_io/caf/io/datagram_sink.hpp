@@ -20,6 +20,10 @@
 #ifndef CAF_IO_DATAGRAM_SINK_HPP
 #define CAF_IO_DATAGRAM_SINK_HPP
 
+#include <vector>
+
+#include "caf/message.hpp"
+
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/datagram_sink_handle.hpp"
@@ -32,13 +36,16 @@ using datagram_sink_base = broker_servant<network::datagram_sink_manager,
                                           datagram_sink_handle,
                                           datagram_sent_msg>;
 
-/// Manages writing to a datagram sink
+/// Manages writing to a datagram sink.
 /// @ingroup Broker
 class datagram_sink : public datagram_sink_base {
 public:
   datagram_sink(abstract_broker* parent, datagram_sink_handle hdl);
 
   ~datagram_sink();
+
+  /// Enables or disables write notifications.
+  virtual void ack_writes(bool enable) = 0;
 
   /// Returns the current write buffer.
   virtual std::vector<char>& wr_buf() = 0;

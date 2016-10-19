@@ -29,9 +29,7 @@
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
-#include "caf/io/datagram_sink.hpp"
 #include "caf/io/receive_policy.hpp"
-#include "caf/io/datagram_source.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_sink_handle.hpp"
@@ -88,6 +86,8 @@ public:
   // even brokers need friends
   friend class scribe;
   friend class doorman;
+  friend class datagram_sink;
+  friend class datagram_source;
 
   // -- overridden modifiers of abstract_actor ---------------------------------
 
@@ -170,7 +170,8 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  expected<connection_handle> add_tcp_scribe(const std::string& host, uint16_t port);
+  expected<connection_handle> add_tcp_scribe(const std::string& host,
+                                             uint16_t port);
 
   /// Assigns a detached `scribe` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
@@ -291,10 +292,12 @@ protected:
     return scribes_;
   }
 
+  // meta programming utility
   inline datagram_sink_map& get_map(datagram_sink_handle) {
     return datagram_sinks_;
   }
 
+  // meta programming utility
   inline datagram_source_map& get_map(datagram_source_handle) {
     return datagram_sources_;
   }
@@ -315,7 +318,8 @@ protected:
   /// Returns the `multiplexer` running this broker.
   network::multiplexer& backend();
 
-  /// Returns a `scribe` or `doorman` identified by `hdl`.
+  /// Returns a `scribe`, `doorman`, `datagram_sink` or `datagram_source`
+  /// identified by `hdl`.
   template <class Handle>
   auto by_id(Handle hdl) -> optional<decltype(*ptr_of(hdl))> {
     auto& elements = get_map(hdl);
@@ -325,8 +329,8 @@ protected:
     return *(i->second);
   }
 
-  /// Returns an intrusive pointer to a `scribe` or `doorman`
-  /// identified by `hdl` and remove it from this broker.
+  /// Returns an intrusive pointer to a `scribe`, `doorman`, `datagram_sink`
+  /// or `datagram_source` identified by `hdl` and remove it from this broker.
   template <class Handle>
   auto take(Handle hdl) -> decltype(ptr_of(hdl)) {
     using std::swap;

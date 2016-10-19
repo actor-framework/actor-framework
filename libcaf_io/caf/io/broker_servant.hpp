@@ -102,13 +102,21 @@ protected:
         typename std::conditional<
           std::is_same<Handle, connection_handle>::value,
           connection_passivated_msg,
-          acceptor_passivated_msg
+          typename std::conditional<
+            std::is_same<Handle, accept_handle>::value,
+            acceptor_passivated_msg,
+            typename std::conditional<
+              std::is_same<Handle, datagram_sink_handle>::value,
+              datagram_sink_passivated_msg,
+              datagram_source_passivated_msg
+            >::type
+          >::type
         >::type;
-        using tmp_t = mailbox_element_vals<passiv_t>;
-        tmp_t tmp{strong_actor_ptr{},                  message_id::make(),
-                  mailbox_element::forwarding_stack{}, passiv_t{hdl()}};
-        invoke_mailbox_element_impl(ctx, tmp);
-        return activity_tokens_ != size_t{0};
+      using tmp_t = mailbox_element_vals<passiv_t>;
+      tmp_t tmp{strong_actor_ptr{},                  message_id::make(),
+                mailbox_element::forwarding_stack{}, passiv_t{hdl()}};
+      invoke_mailbox_element_impl(ctx, tmp);
+      return activity_tokens_ != size_t{0};
     }
     return true;
   }

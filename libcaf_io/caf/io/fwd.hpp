@@ -28,8 +28,10 @@ class broker;
 class doorman;
 class middleman;
 class basp_broker;
+class datagram_sink;
 class receive_policy;
 class abstract_broker;
+class datagram_source;
 
 template <class... Sigs>
 class typed_broker;

@@ -34,7 +34,7 @@ datagram_sink::~datagram_sink() {
 }
 
 message datagram_sink::detach_message() {
-  return make_message(endpoint_closed_msg{hdl()});
+  return make_message(datagram_sink_closed_msg{hdl()});
 }
 
 void datagram_sink::datagram_sent(execution_unit* ctx, size_t written) {
