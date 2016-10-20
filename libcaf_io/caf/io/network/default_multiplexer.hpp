@@ -38,6 +38,8 @@
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/datagram_sink_manager.hpp"
+#include "caf/io/network/datagram_source_manager.hpp"
 
 #include "caf/io/network/native_socket.hpp"
 
@@ -405,6 +407,14 @@ inline accept_handle accept_hdl_from_socket(native_socket fd) {
   return accept_handle::from_int(int64_from_native_socket(fd));
 }
 
+inline datagram_sink_handle dg_sink_hdl_from_socket(native_socket fd) {
+  return datagram_sink_handle::from_int(int64_from_native_socket(fd));
+}
+
+inline datagram_source_handle dg_source_hdl_from_socket(native_socket fd) {
+  return datagram_source_handle::from_int(int64_from_native_socket(fd));
+}
+
 /// A stream capable of both reading and writing. The stream's input
 /// data is forwarded to its {@link stream_manager manager}.
 class stream : public event_handler {
@@ -528,6 +538,109 @@ expected<native_socket> new_tcp_connection(const std::string& host,
 
 expected<std::pair<native_socket, uint16_t>>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
+
+/// A datagram_sender is responsible for sending datagrams to an endpoint.
+class datagram_sender: public event_handler {
+public:
+  /// A manger providing the TODO
+  using manager_type = datagram_sink_manager;
+
+  /// A smart pointer to a datagram sink manger
+  using manager_ptr = intrusive_ptr<datagram_sink_manager>;
+
+  /// A buffer class providing a compatible
+  /// interface to `std::vector`.
+  using buffer_type = std::vector<char>;
+
+  datagram_sender(default_multiplexer& backend_ref, native_socket sockfd);
+
+  void ack_writes(bool x);
+
+  /// Copies data to the write buffer.
+  /// @warning Not thread safe.
+  void write(const void* buf, size_t num_bytes);
+
+  /// Returns the write buffer of this datagram sender.
+  /// @warning Must not be modified outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  inline buffer_type& wr_buf() {
+    return wr_offline_buf_;
+  }
+
+  /// Sends the content of the write buffer, calling the `io_failure`
+  /// member function of `mgr` in case of an error.
+  /// @warning Must not be called outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  void flush(const manager_ptr& mgr);
+
+  /// Starts forwarding incoming data to `mgr`.
+  void start(manager_type* mgr);
+
+  /// Activates the datagram_sender.
+  void activate(manager_type* mgr); 
+
+  /// Closes the network connection and removes this handler from its parent.
+  void stop_reading();
+
+  void removed_from_loop(operation op) override;
+
+  void handle_event(operation op) override;
+
+private:
+  void prepare_next_write();
+
+  manager_ptr writer_;
+  bool ack_writes_;
+  bool writing_;
+  size_t written_;
+  buffer_type wr_buf_;
+  buffer_type wr_offline_buf_;
+};
+
+/// A datagram_receiver is responsible for receiving datagrams on an endpoint.
+class datagram_receiver: public event_handler {
+public:
+  /// A manger providing the TODO
+  using manager_type = datagram_source_manager;
+
+  /// A smart pointer to a datagram sink manger
+  using manager_ptr = intrusive_ptr<datagram_source_manager>;
+
+  /// A buffer class providing a compatible
+  /// interface to `std::vector`.
+  using buffer_type = std::vector<char>;
+
+  datagram_receiver(default_multiplexer& backend_ref, native_socket sockfd);
+
+  /// Returns the read buffer of this datagram receiver.
+  /// @warning Must not be modified outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  inline buffer_type& rd_buf() {
+    return rd_buf_;
+  }
+
+  /// Starts reading data from the socket.
+  void start(manager_type* mgr);
+
+  /// Activates the datagram_receiver.
+  void activate(manager_type* mgr); 
+
+  /// Closes the read channel of the underlying socket and removes
+  /// this handler from its parent.
+  void stop_reading();
+
+  void removed_from_loop(operation op) override;
+
+  void handle_event(operation op) override;
+
+private:
+
+  manager_ptr reader_;
+  size_t read_threshold_;
+  size_t collected_;
+  size_t max_;
+  buffer_type rd_buf_;
+};
 
 } // namespace network
 } // namespace io

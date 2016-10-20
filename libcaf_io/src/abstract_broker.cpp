@@ -158,7 +158,8 @@ expected<void> abstract_broker::assign_tcp_doorman(accept_handle hdl) {
   return backend().assign_tcp_doorman(this, hdl);
 }
 
-expected<accept_handle> abstract_broker::add_tcp_doorman(network::native_socket fd) {
+expected<accept_handle>
+abstract_broker::add_tcp_doorman(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   return backend().add_tcp_doorman(this, fd);
 }

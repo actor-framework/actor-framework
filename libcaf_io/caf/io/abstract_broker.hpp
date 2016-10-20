@@ -198,6 +198,41 @@ public:
   /// Creates and assigns a new `doorman` from given native socked `fd`.
   expected<accept_handle> add_tcp_doorman(network::native_socket fd);
 
+  /// Adds a `datagram_sink` instance to this broker.
+  void add_datagram_sink(const intrusive_ptr<datagram_sink>& ptr);
+
+  /// Tries to create a datgram sink for `host` on given `port` and creates
+  /// a new datagram sink describing the endpoint afterwards.
+  /// @returns The handle of the new `datagram_sink` on success.
+  expected<datagram_sink_handle> add_datagram_sink(const std::string& host,
+                                                   uint16_t port);
+
+  /// Assigns a detached `datagram_sink` instance identified by `hdl`
+  /// from the `multiplexer` to this broker.
+  expected<void> assign_datagram_sink(connection_handle hdl);
+
+  /// Creates and assigns a new `datagram_sink` from given native socked `fd`.
+  expected<datagram_sink_handle> add_datagram_sink(network::native_socket fd);
+
+  /// Adds a `datagram_source` instance to this broker.
+  void add_datagram_source(const intrusive_ptr<datagram_source>& ptr);
+
+  /// Tries to open a local port and creates a `datagram_source` managing
+  /// it on success. If `port == 0`, then the broker will ask
+  /// the operating system to pick a random port.
+  /// @returns The handle of the new `datagram_source` and the assigned port.
+  expected<std::pair<datagram_source_handle, uint16_t>>
+  add_datagram_source(uint16_t port = 0, const char* in = nullptr,
+                      bool reuse_addr = false);
+
+  /// Assigns a detached `datagram_source` instance identified by `hdl`
+  /// from the `multiplexer` to this broker.
+  expected<void> assign_datagram_source(accept_handle hdl);
+
+  /// Creates and assigns a new `datagram_source` from given native socked `fd`.
+  expected<datagram_source_handle>
+  add_datagram_source(network::native_socket fd);
+
   /// Returns the remote address associated to `hdl`
   /// or empty string if `hdl` is invalid.
   std::string remote_addr(connection_handle hdl);

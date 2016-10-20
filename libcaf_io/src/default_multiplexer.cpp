@@ -813,8 +813,8 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
       CAF_LOG_TRACE("");
       if (detached())
          // we are already disconnected from the broker while the multiplexer
-         // did not yet remove the socket, this can happen if an I/O event causes
-         // the broker to call close_all() while the pollset contained
+         // did not yet remove the socket, this can happen if an I/O event
+         // causes the broker to call close_all() while the pollset contained
          // further activities for the broker
          return false;
       auto& dm = acceptor_.backend();
@@ -849,11 +849,118 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
     void remove_from_loop() override {
       acceptor_.passivate();
     }
- private:
+  private:
     network::acceptor acceptor_;
   };
   auto ptr = make_counted<impl>(self, *this, fd);
   self->add_doorman(ptr);
+  return ptr->hdl();
+}
+
+datagram_sink_handle
+default_multiplexer::add_datagram_sink(abstract_broker* self,
+                                       native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  CAF_ASSERT(fd != network::invalid_native_socket);
+  class impl : public datagram_sink {
+  public:
+    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
+        : datagram_sink(ptr, network::dg_sink_hdl_from_socket(sockfd)),
+          sender_(mx, sockfd) {
+      // nop
+    }
+    void stop_reading() override {
+      CAF_LOG_TRACE("");
+      sender_.stop_reading();
+      detach(&sender_.backend(), false);
+    }
+    void ack_writes(bool enable) override {
+      sender_.ack_writes(enable);
+    }
+    std::vector<char>& wr_buf() override {
+      return sender_.wr_buf();
+    }
+    std::string addr() const override {
+      auto x = remote_addr_of_fd(sender_.fd());
+      if (!x)
+        return "";
+      return *x;
+    }
+    uint16_t port() const override {
+      auto x = remote_port_of_fd(sender_.fd());
+      if (!x)
+        return 0;
+      return *x;
+    }
+    void launch() {
+      CAF_LOG_TRACE("");
+      CAF_ASSERT(!launched_);
+      launched_ = true;
+      sender_.start(this);
+    }
+    void add_to_loop() override {
+      sender_.activate(this);
+    }
+    void remove_from_loop() override {
+      sender_.passivate();
+    }
+  private:
+    bool launched_;
+    network::datagram_sender sender_;
+  };
+  auto ptr = make_counted<impl>(self, *this, fd);
+  self->add_datagram_sink(ptr);
+  return ptr->hdl();
+}
+
+datagram_source_handle
+default_multiplexer::add_datagram_source(abstract_broker* self,
+                                         native_socket fd) {
+  class impl : public datagram_source {
+  public:
+    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
+        : datagram_source(ptr, network::dg_source_hdl_from_socket(sockfd)),
+          receiver_(mx, sockfd) {
+      // nop
+    }
+    void stop_reading() override {
+      CAF_LOG_TRACE("");
+      receiver_.stop_reading();
+      detach(&receiver_.backend(), false);
+    }
+    std::vector<char>& rd_buf() override {
+      return receiver_.rd_buf();
+    }
+    std::string addr() const override {
+      auto x = remote_addr_of_fd(receiver_.fd());
+      if (!x)
+        return "";
+      return *x;
+    }
+    uint16_t port() const override {
+      auto x = remote_port_of_fd(receiver_.fd());
+      if (!x)
+        return 0;
+      return *x;
+    }
+    void launch() {
+      CAF_LOG_TRACE("");
+      CAF_ASSERT(!launched_);
+      launched_ = true;
+      receiver_.start(this);
+    }
+    void add_to_loop() override {
+      receiver_.activate(this);
+    }
+    void remove_from_loop() override {
+      receiver_.passivate();
+    }
+  private:
+    bool launched_;
+    network::datagram_receiver receiver_;
+  };
+  auto ptr = make_counted<impl>(self, *this, fd);
+  self->add_datagram_source(ptr);
   return ptr->hdl();
 }
 
@@ -892,9 +999,9 @@ default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
                         res->second);
 }
 
-expected<void> default_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
+expected<void> default_multiplexer::assign_tcp_doorman(abstract_broker* self,
                                              accept_handle hdl) {
-  add_tcp_doorman(ptr, static_cast<native_socket>(hdl.id()));
+  add_tcp_doorman(self, static_cast<native_socket>(hdl.id()));
   return unit;
 }
 
@@ -906,6 +1013,21 @@ default_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port,
     return std::move(acceptor.error());
   auto bound_port = acceptor->second;
   return std::make_pair(add_tcp_doorman(self, acceptor->first), bound_port);
+}
+
+expected<datagram_sink_handle>
+default_multiplexer::new_datagram_sink(const std::string& host, uint16_t port) {
+  auto fd = new_datagram_sink_impl(host, port);
+  if (!fd)
+    return std::move(fd.error());
+  return datagram_sink_handle::from_int(int64_from_native_socket(*fd));
+
+}
+expected<void> default_multiplexer::assign_datagram_sink(abstract_broker* self,
+                                                   datagram_sink_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
+  add_datagram_sink(self, static_cast<native_socket>(hdl.id()));
+  return unit;
 }
 
 /******************************************************************************
@@ -970,6 +1092,19 @@ bool try_accept(native_socket& result, native_socket fd) {
       return false;
     }
   }
+  return true;
+}
+
+bool send_datagram(size_t& result, native_socket , void* , size_t ) {
+  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
+  // TODO: Send datgrams! (requires acceess to sockaddr)
+  // ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
+  //                const struct sockaddr *dest_addr, socklen_t addrlen);
+  auto sres = 0; //::sendto(fd, reinterpret_cast<socket_send_ptr>(buf),
+                 //         len, );
+  if (is_error(sres, true))
+    return false;
+  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   return true;
 }
 
@@ -1266,6 +1401,101 @@ void acceptor::removed_from_loop(operation op) {
   CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
   if (op == operation::read)
     mgr_.reset();
+}
+
+datagram_sender::datagram_sender(default_multiplexer& backend_ref,
+                                 native_socket sockfd)
+    : event_handler(backend_ref, sockfd),
+      ack_writes_(false),
+      writing_(false),
+      written_(0) {
+  // nop
+}
+
+void datagram_sender::ack_writes(bool x) {
+  ack_writes_ = x;
+}
+
+void datagram_sender::write(const void* buf, size_t num_bytes) {
+  CAF_LOG_TRACE(CAF_ARG(num_bytes));
+  auto first = reinterpret_cast<const char*>(buf);
+  auto last  = first + num_bytes;
+  wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
+}
+
+void datagram_sender::flush(const manager_ptr& mgr) {
+  CAF_ASSERT(mgr != nullptr);
+  CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
+  if (!wr_offline_buf_.empty() && !writing_) {
+    backend().add(operation::write, fd(), this);
+    writer_ = mgr;
+    writing_ = true;
+    prepare_next_write();
+  }
+}
+
+void datagram_sender::start(manager_type* mgr) {
+ CAF_ASSERT(mgr != nullptr);
+  activate(mgr);
+}
+
+void datagram_sender::activate(manager_type* mgr) {
+  if (!writer_) {
+    writer_.reset(mgr);
+    event_handler::activate();
+    // prepare_next_read();
+  }
+}
+
+void datagram_sender::stop_reading() {
+  CAF_LOG_TRACE("");
+  close_read_channel();
+  passivate();
+}
+
+void datagram_sender::removed_from_loop(operation op) {
+  CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
+  if (op == operation::read)
+    writer_.reset();
+}
+
+void datagram_sender::handle_event(operation op) {
+  CAF_LOG_TRACE(CAF_ARG(op));
+  switch (op) {
+    case operation::read: {
+      // This should not happen ...
+      break;
+    }
+    case operation::write: {
+      size_t wb; // written bytes
+      if (!send_datagram(wb, fd(),
+                         wr_buf_.data() + written_,
+                         wr_buf_.size() - written_)) {
+        writer_->io_failure(&backend(), operation::write);
+        backend().del(operation::write, fd(), this);
+      } else if (wb > 0) {
+        written_ += wb;
+        CAF_ASSERT(written_ <= wr_buf_.size());
+        auto remaining = wr_buf_.size() - written_;
+        if (ack_writes_)
+          writer_->datagram_sent(&backend(), wb);
+        // prepare next send (or stop sending)
+        if (remaining == 0)
+          prepare_next_write();
+      }
+      break;
+    }
+    case operation::propagate_error:
+      if (writer_)
+        writer_->io_failure(&backend(), operation::write);
+      // backend will delete this handler anyway,
+      // no need to call backend().del() here
+      break;
+  }
+}
+
+void datagram_sender::prepare_next_write() {
+
 }
 
 class socket_guard {
