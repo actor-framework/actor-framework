@@ -164,6 +164,52 @@ abstract_broker::add_tcp_doorman(network::native_socket fd) {
   return backend().add_tcp_doorman(this, fd);
 }
 
+void abstract_broker::add_datagram_sink(const intrusive_ptr<datagram_sink>& ptr) {
+  datagram_sinks_.emplace(ptr->hdl(), ptr);
+}
+
+expected<datagram_sink_handle>
+abstract_broker::add_datagram_sink(const std::string& hostname, uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
+  return backend().add_datagram_sink(this, hostname, port);
+}
+
+expected<void> abstract_broker::assign_datagram_sink(datagram_sink_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  return backend().assign_datagram_sink(this, hdl);
+}
+
+expected<datagram_sink_handle>
+abstract_broker::add_datagram_sink(network::native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  return backend().add_datagram_sink(this, fd);
+}
+
+void
+abstract_broker::add_datagram_source(const intrusive_ptr<datagram_source>& ptr) {
+  datagram_sources_.emplace(ptr->hdl(), ptr);
+  // TODO: some launching of things?
+}
+
+expected<std::pair<datagram_source_handle, uint16_t>>
+abstract_broker::add_datagram_source(uint16_t port, const char* in,
+                                     bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(reuse_addr));
+  return backend().add_datagram_source(this, port, in, reuse_addr);
+}
+
+expected<void>
+abstract_broker::assign_datagram_source(datagram_source_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  return backend().assign_datagram_source(this, hdl);
+}
+
+expected<datagram_source_handle>
+abstract_broker::add_datagram_source(network::native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  return backend().add_datagram_source(this, fd);
+}
+
 std::string abstract_broker::remote_addr(connection_handle hdl) {
   auto i = scribes_.find(hdl);
   return i != scribes_.end() ? i->second->addr() : std::string{};

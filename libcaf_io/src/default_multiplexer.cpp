@@ -923,6 +923,10 @@ default_multiplexer::add_datagram_source(abstract_broker* self,
           receiver_(mx, sockfd) {
       // nop
     }
+    void configure_datagram_size(size_t buf_size) override {
+      CAF_LOG_TRACE("");
+      receiver_.configure_datagram_size(buf_size);
+    }
     void stop_reading() override {
       CAF_LOG_TRACE("");
       receiver_.stop_reading();
@@ -973,7 +977,7 @@ default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
 }
 
 expected<void> default_multiplexer::assign_tcp_scribe(abstract_broker* self,
-                                            connection_handle hdl) {
+                                                      connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
   add_tcp_scribe(self, static_cast<native_socket>(hdl.id()));
   return unit;
@@ -1023,11 +1027,40 @@ default_multiplexer::new_datagram_sink(const std::string& host, uint16_t port) {
   return datagram_sink_handle::from_int(int64_from_native_socket(*fd));
 
 }
+
 expected<void> default_multiplexer::assign_datagram_sink(abstract_broker* self,
-                                                   datagram_sink_handle hdl) {
+                                                     datagram_sink_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
   add_datagram_sink(self, static_cast<native_socket>(hdl.id()));
   return unit;
+}
+
+expected<datagram_sink_handle>
+default_multiplexer::add_datagram_sink(abstract_broker* self,
+                                       const std::string& host, uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(host) << CAF_ARG(port));
+  auto fd = new_datagram_sink_impl(host, port);
+  if (!fd)
+    return std::move(fd.error());
+  return add_datagram_sink(self, *fd);
+}
+
+expected<std::pair<datagram_source_handle, uint16_t>>
+default_multiplexer::new_datagram_source(uint16_t port, const char* in,
+                                         bool reuse_addr) {
+  return sec::bad_function_call;
+}
+
+expected<void> default_multiplexer::assign_datagram_source(abstract_broker* self,
+                                                   datagram_source_handle hdl) {
+  return sec::bad_function_call;
+}
+
+
+expected<std::pair<datagram_source_handle, uint16_t>>
+default_multiplexer::add_datagram_source(abstract_broker* self, uint16_t port ,
+                                         const char* in, bool reuse_addr) {
+  return sec::bad_function_call;
 }
 
 /******************************************************************************
@@ -1095,15 +1128,30 @@ bool try_accept(native_socket& result, native_socket fd) {
   return true;
 }
 
-bool send_datagram(size_t& result, native_socket , void* , size_t ) {
+bool send_datagram(size_t& result, native_socket fd, void* buf, size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   // TODO: Send datgrams! (requires acceess to sockaddr)
   // ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
   //                const struct sockaddr *dest_addr, socklen_t addrlen);
-  auto sres = 0; //::sendto(fd, reinterpret_cast<socket_send_ptr>(buf),
-                 //         len, );
+  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), len,
+                     no_sigpipe_flag);
   if (is_error(sres, true))
     return false;
+  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+  return true;
+}
+
+bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
+                      sockaddr_storage& sender_addr, socklen_t& sender_len) {
+  sender_len = sizeof(sender_addr);
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  auto sres = ::recvfrom(fd, buf, len, no_sigpipe_flag,
+                         reinterpret_cast<struct sockaddr *>(&sender_addr),
+                         &sender_len);
+  if (is_error(sres, true) || sres == 0) {
+    // Nothing to receive
+    return false;
+  }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   return true;
 }
@@ -1406,9 +1454,7 @@ void acceptor::removed_from_loop(operation op) {
 datagram_sender::datagram_sender(default_multiplexer& backend_ref,
                                  native_socket sockfd)
     : event_handler(backend_ref, sockfd),
-      ack_writes_(false),
-      writing_(false),
-      written_(0) {
+      ack_writes_(false) {
   // nop
 }
 
@@ -1426,10 +1472,9 @@ void datagram_sender::write(const void* buf, size_t num_bytes) {
 void datagram_sender::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (!wr_offline_buf_.empty() && !writing_) {
+  if (wr_offline_buf_.empty()) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
-    writing_ = true;
     prepare_next_write();
   }
 }
@@ -1443,7 +1488,6 @@ void datagram_sender::activate(manager_type* mgr) {
   if (!writer_) {
     writer_.reset(mgr);
     event_handler::activate();
-    // prepare_next_read();
   }
 }
 
@@ -1455,7 +1499,7 @@ void datagram_sender::stop_reading() {
 
 void datagram_sender::removed_from_loop(operation op) {
   CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
-  if (op == operation::read)
+  if (op == operation::write)
     writer_.reset();
 }
 
@@ -1468,20 +1512,21 @@ void datagram_sender::handle_event(operation op) {
     }
     case operation::write: {
       size_t wb; // written bytes
-      if (!send_datagram(wb, fd(),
-                         wr_buf_.data() + written_,
-                         wr_buf_.size() - written_)) {
+      if (!send_datagram(wb, fd(), wr_buf_.data(), wr_buf_.size())) {
         writer_->io_failure(&backend(), operation::write);
         backend().del(operation::write, fd(), this);
       } else if (wb > 0) {
-        written_ += wb;
-        CAF_ASSERT(written_ <= wr_buf_.size());
-        auto remaining = wr_buf_.size() - written_;
+        CAF_ASSERT(wb == wr_buf_.size());
         if (ack_writes_)
           writer_->datagram_sent(&backend(), wb);
-        // prepare next send (or stop sending)
-        if (remaining == 0)
-          prepare_next_write();
+        prepare_next_write();
+      } else {
+        // TODO: remove this if sure that datagrams are either written
+        // as a whole or not at all
+        std::cerr << "Partial datagram wrtten: " << wb
+                  << " of " << wr_buf_.size() << std::endl;
+        if (writer_)
+          writer_->io_failure(&backend(), operation::write);
       }
       break;
     }
@@ -1495,7 +1540,89 @@ void datagram_sender::handle_event(operation op) {
 }
 
 void datagram_sender::prepare_next_write() {
+  CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
+  wr_buf_.clear();
+  if (wr_offline_buf_.empty()) {
+    backend().del(operation::write, fd(), this);
+  } else {
+    wr_buf_.swap(wr_offline_buf_);
+  }
+}
 
+datagram_receiver::datagram_receiver(default_multiplexer& backend_ref,
+                                     native_socket sockfd)
+    : event_handler(backend_ref, sockfd),
+      buf_size_(1500) {
+  // TODO: Set reasonable default for buffer size
+  // nop
+}
+
+void datagram_receiver::configure_datagram_size(size_t buf_size) {
+  buf_size_ = buf_size;
+}
+
+void datagram_receiver::start(manager_type* mgr) {
+  CAF_ASSERT(mgr != nullptr);
+  activate(mgr);
+}
+
+void datagram_receiver::activate(manager_type* mgr) {
+  if (!reader_) {
+    reader_.reset(mgr);
+    event_handler::activate();
+  }
+}
+
+void datagram_receiver::stop_reading() {
+  CAF_LOG_TRACE("");
+  close_read_channel();
+  passivate();
+}
+
+void datagram_receiver::removed_from_loop(operation op) {
+  if (op == operation::read)
+    reader_.reset();
+}
+
+void datagram_receiver::handle_event(operation op) {
+  CAF_LOG_TRACE(CAF_ARG(op));
+  switch (op) {
+    case operation::read: {
+      // loop until an error occurs or we have nothing more to read
+      // or until we have handled 50 reads
+      size_t rb;
+      if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
+                            last_sender, sender_len)) {
+        reader_->io_failure(&backend(), operation::read);
+        passivate();
+        return;
+      }
+      if (rb == 0)
+        return;
+      auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
+      packet_size_ = rb;
+      prepare_next_read();
+      if (!res) {
+        passivate();
+        return;
+      }
+      break;
+    }
+    case operation::write: {
+      // This should not happen ...
+      break;
+    }
+    case operation::propagate_error:
+      if (reader_)
+        reader_->io_failure(&backend(), operation::read);
+      // backend will delete this handler anyway,
+      // no need to call backend().del() here
+      break;
+  }
+}
+
+void datagram_receiver::prepare_next_read() {
+  rd_buf_.resize(buf_size_);
 }
 
 class socket_guard {
@@ -1697,6 +1824,41 @@ new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   return std::make_pair(sguard.release(), *p);
 }
 
+expected<native_socket> new_datagram_sink_impl(const std::string& host,
+                                               uint16_t port,
+                                               optional<protocol> preferred) {
+  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
+  CAF_LOG_INFO("try to establish datagram sink to:" << CAF_ARG(host)
+                                                    << CAF_ARG(port));
+  auto res = interfaces::native_address(host, preferred);
+  if (!res) {
+    CAF_LOG_INFO("no such host");
+    return make_error(sec::cannot_connect_to_node, "no such host", host, port);
+  }
+  auto proto = res->second;
+  CAF_ASSERT(proto == ipv4 || proto == ipv6);
+  CALL_CFUN(fd, cc_valid_socket, "socket",
+            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
+  socket_guard sguard(fd);
+  if (proto == ipv6) {
+    if (ip_connect<AF_INET6>(fd, res->first, port)) {
+      CAF_LOG_INFO("successfully connected to host via IPv6");
+      return sguard.release();
+    }
+    sguard.close();
+    // IPv4 fallback
+    return new_tcp_connection(host, port, ipv4);
+  }
+  if (!ip_connect<AF_INET>(fd, res->first, port)) {
+    CAF_LOG_INFO("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
+    return make_error(sec::cannot_connect_to_node,
+                      "ip_connect failed", host, port);
+  }
+  CAF_LOG_INFO("successfully connected to host via IPv4");
+  return sguard.release();
+}
+
+  
 expected<std::string> local_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);

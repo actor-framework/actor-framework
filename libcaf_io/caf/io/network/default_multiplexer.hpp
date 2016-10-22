@@ -532,13 +532,6 @@ private:
   native_socket sock_;
 };
 
-expected<native_socket> new_tcp_connection(const std::string& host,
-                                           uint16_t port,
-                                           optional<protocol> preferred = none);
-
-expected<std::pair<native_socket, uint16_t>>
-new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
-
 /// A datagram_sender is responsible for sending datagrams to an endpoint.
 class datagram_sender: public event_handler {
 public:
@@ -591,8 +584,6 @@ private:
 
   manager_ptr writer_;
   bool ack_writes_;
-  bool writing_;
-  size_t written_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;
 };
@@ -612,6 +603,11 @@ public:
 
   datagram_receiver(default_multiplexer& backend_ref, native_socket sockfd);
 
+  /// Configures how much buffer will be provided for the next datagram.
+  /// @warning Must not be called outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  void configure_datagram_size(size_t buf_size);
+
   /// Returns the read buffer of this datagram receiver.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
@@ -623,7 +619,7 @@ public:
   void start(manager_type* mgr);
 
   /// Activates the datagram_receiver.
-  void activate(manager_type* mgr); 
+  void activate(manager_type* mgr);
 
   /// Closes the read channel of the underlying socket and removes
   /// this handler from its parent.
@@ -634,13 +630,26 @@ public:
   void handle_event(operation op) override;
 
 private:
+  void prepare_next_read();
 
   manager_ptr reader_;
-  size_t read_threshold_;
-  size_t collected_;
-  size_t max_;
+  size_t buf_size_;
+  size_t packet_size_;
   buffer_type rd_buf_;
+  struct sockaddr_storage last_sender;
+  socklen_t sender_len;
 };
+
+expected<native_socket> new_tcp_connection(const std::string& host,
+                                           uint16_t port,
+                                           optional<protocol> preferred = none);
+
+expected<std::pair<native_socket, uint16_t>>
+new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
+
+expected<native_socket>
+new_datagram_sink_impl(const std::string& host, uint16_t port,
+                       optional<protocol> preferred = none);
 
 } // namespace network
 } // namespace io

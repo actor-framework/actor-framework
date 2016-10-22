@@ -209,7 +209,7 @@ public:
 
   /// Assigns a detached `datagram_sink` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
-  expected<void> assign_datagram_sink(connection_handle hdl);
+  expected<void> assign_datagram_sink(datagram_sink_handle hdl);
 
   /// Creates and assigns a new `datagram_sink` from given native socked `fd`.
   expected<datagram_sink_handle> add_datagram_sink(network::native_socket fd);
@@ -227,7 +227,7 @@ public:
 
   /// Assigns a detached `datagram_source` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
-  expected<void> assign_datagram_source(accept_handle hdl);
+  expected<void> assign_datagram_source(datagram_source_handle hdl);
 
   /// Creates and assigns a new `datagram_source` from given native socked `fd`.
   expected<datagram_source_handle>

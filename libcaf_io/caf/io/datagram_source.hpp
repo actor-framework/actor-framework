@@ -44,10 +44,8 @@ public:
 
   ~datagram_source();
 
-  /*
   /// Implicitly starts the read loop on first call.
-  virtual void configure_read(receive_policy::config config) = 0;
-  */
+  virtual void configure_datagram_size(size_t buf_size) = 0;
 
   /// Returns the current input buffer.
   virtual std::vector<char>& rd_buf() = 0;
