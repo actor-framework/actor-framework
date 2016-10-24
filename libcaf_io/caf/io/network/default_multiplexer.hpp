@@ -651,6 +651,9 @@ expected<native_socket>
 new_datagram_sink_impl(const std::string& host, uint16_t port,
                        optional<protocol> preferred = none);
 
+expected<std::pair<native_socket, uint16_t>>
+new_datagram_source_impl(uint16_t port, const char* addr, bool reuse_addr);
+
 } // namespace network
 } // namespace io
 } // namespace caf

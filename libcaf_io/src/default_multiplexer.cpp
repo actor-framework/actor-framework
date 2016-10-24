@@ -916,6 +916,8 @@ default_multiplexer::add_datagram_sink(abstract_broker* self,
 datagram_source_handle
 default_multiplexer::add_datagram_source(abstract_broker* self,
                                          native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  CAF_ASSERT(fd != network::invalid_native_socket);
   class impl : public datagram_source {
   public:
     impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
@@ -1012,11 +1014,11 @@ expected<void> default_multiplexer::assign_tcp_doorman(abstract_broker* self,
 expected<std::pair<accept_handle, uint16_t>>
 default_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port,
                                      const char* host, bool reuse_addr) {
-  auto acceptor = new_tcp_acceptor_impl(port, host, reuse_addr);
-  if (!acceptor)
-    return std::move(acceptor.error());
-  auto bound_port = acceptor->second;
-  return std::make_pair(add_tcp_doorman(self, acceptor->first), bound_port);
+  auto res = new_tcp_acceptor_impl(port, host, reuse_addr);
+  if (!res)
+    return std::move(res.error());
+  auto bound_port = res->second;
+  return std::make_pair(add_tcp_doorman(self, res->first), bound_port);
 }
 
 expected<datagram_sink_handle>
@@ -1048,19 +1050,30 @@ default_multiplexer::add_datagram_sink(abstract_broker* self,
 expected<std::pair<datagram_source_handle, uint16_t>>
 default_multiplexer::new_datagram_source(uint16_t port, const char* in,
                                          bool reuse_addr) {
-  return sec::bad_function_call;
+  auto res = new_datagram_source_impl(port, in, reuse_addr);
+  if (!res)
+    return std::move(res.error());
+  return std::make_pair(datagram_source_handle::from_int(
+                          int64_from_native_socket(res->first)),
+                        res->second);
 }
 
 expected<void> default_multiplexer::assign_datagram_source(abstract_broker* self,
                                                    datagram_source_handle hdl) {
-  return sec::bad_function_call;
+  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
+  add_datagram_source(self, static_cast<native_socket>(hdl.id()));
+  return unit;
 }
 
 
 expected<std::pair<datagram_source_handle, uint16_t>>
 default_multiplexer::add_datagram_source(abstract_broker* self, uint16_t port ,
-                                         const char* in, bool reuse_addr) {
-  return sec::bad_function_call;
+                                         const char* host, bool reuse_addr) {
+  auto res = new_datagram_source_impl(port, host, reuse_addr);
+  if (!res)
+    return std::move(res.error());
+  auto bound_port = res->second;
+  return std::make_pair(add_datagram_source(self, res->first), bound_port);
 }
 
 /******************************************************************************
@@ -1856,6 +1869,41 @@ expected<native_socket> new_datagram_sink_impl(const std::string& host,
   }
   CAF_LOG_INFO("successfully connected to host via IPv4");
   return sguard.release();
+}
+
+expected<std::pair<native_socket, uint16_t>>
+new_datagram_source_impl(uint16_t port, const char* addr, bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
+  protocol proto = ipv6;
+  if (addr) {
+    auto addrs = interfaces::native_address(addr);
+    if (!addrs)
+      return make_error(sec::cannot_open_port, "Invalid ADDR", addr);
+    proto = addrs->second;
+    CAF_ASSERT(proto == ipv4 || proto == ipv6);
+  }
+  CALL_CFUN(fd, cc_valid_socket, "socket",
+            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
+  // sguard closes the socket in case of exception
+  socket_guard sguard(fd);
+  if (reuse_addr) {
+    int on = 1;
+    CALL_CFUN(tmp1, cc_zero, "setsockopt",
+              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                         reinterpret_cast<setsockopt_ptr>(&on),
+                         static_cast<socklen_t>(sizeof(on))));
+  }
+  // TODO: Change this to something UDP specific?
+  auto p = proto == ipv4 ? new_ip_acceptor_impl<AF_INET>(fd, port, addr)
+                         : new_ip_acceptor_impl<AF_INET6>(fd, port, addr);
+  if (!p)
+    return std::move(p.error());
+  // Not needed: CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
+  // Should there be some handshake between nodes?
+  // TODO: Remove comments
+  // ok, no errors so far
+  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
+  return std::make_pair(sguard.release(), *p);
 }
 
   
