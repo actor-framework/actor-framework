@@ -250,6 +250,17 @@ public:
 
   /// Returns the handle associated to given local `port` or `none`.
   accept_handle hdl_by_port(uint16_t port);
+  
+  /// Returns the remote address associated to `hdl`
+  /// or empty string if `hdl` is invalid.
+  std::string remote_addr(datagram_sink_handle hdl);
+  
+  /// Returns the remote port associated to `hdl`
+  /// or `0` if `hdl` is invalid.
+  uint16_t remote_port(datagram_sink_handle hdl);
+  
+  /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
+  uint16_t local_port(datagram_source_handle hdl);
 
   /// Closes all connections and acceptors.
   void close_all();

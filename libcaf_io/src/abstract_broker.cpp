@@ -230,6 +230,21 @@ uint16_t abstract_broker::local_port(accept_handle hdl) {
   return i != doormen_.end() ? i->second->port() : 0;
 }
 
+std::string abstract_broker::remote_addr(datagram_sink_handle hdl) {
+  auto i = datagram_sinks_.find(hdl);
+  return i != datagram_sinks_.end() ? i->second->addr() : std::string{};
+}
+
+uint16_t abstract_broker::remote_port(datagram_sink_handle hdl) {
+  auto i = datagram_sinks_.find(hdl);
+  return i != datagram_sinks_.end() ? i->second->port() : 0;
+}
+
+uint16_t abstract_broker::local_port(datagram_source_handle hdl) {
+  auto i = datagram_sources_.find(hdl);
+  return i != datagram_sources_.end() ? i->second->port() : 0;
+}
+
 accept_handle abstract_broker::hdl_by_port(uint16_t port) {
   for (auto& kvp : doormen_)
     if (kvp.second->port() == port)
@@ -246,6 +261,14 @@ void abstract_broker::close_all() {
   while (!scribes_.empty()) {
     // stop_reading will remove the scribe from scribes_
     scribes_.begin()->second->stop_reading();
+  }
+  while (!datagram_sinks_.empty()) {
+    // stop_reading will remove the datagram_sink from datagram_sinks_
+    datagram_sinks_.begin()->second->stop_reading();
+  }
+  while (!datagram_sources_.empty()) {
+    // stop_reading will remove the datgram_source from datgram_sources_
+    datagram_sources_.begin()->second->stop_reading();
   }
 }
 
