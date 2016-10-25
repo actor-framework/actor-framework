@@ -45,12 +45,17 @@ public:
     // 1) make sure control block fits into a single cache line
     static_assert(sizeof(actor_control_block) < CAF_CACHE_LINE_SIZE,
                   "actor_control_block exceeds a single cache line");
+    // Clang in combination with libc++ on Linux complains about offsetof:
+    //     error: 'actor_storage' does not refer to a value
+    // Until we have found a reliable solution, we disable this safety check.
+    #if !(defined(CAF_CLANG) && defined(CAF_LINUX))
     // 2) make sure reinterpret cast of the control block to the storage works
     static_assert(offsetof(actor_storage, ctrl) == 0,
                   "control block is not at the start of the storage");
     // 3) make sure we can obtain a data pointer by jumping one cache line
     static_assert(offsetof(actor_storage, data) == CAF_CACHE_LINE_SIZE,
                   "data is not at cache line size boundary");
+    #endif
     // 4) make sure static_cast and reinterpret_cast
     //    between T* and abstract_actor* are identical
 /*
