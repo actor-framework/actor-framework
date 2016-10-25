@@ -55,16 +55,15 @@ public:
     // 3) make sure we can obtain a data pointer by jumping one cache line
     static_assert(offsetof(actor_storage, data) == CAF_CACHE_LINE_SIZE,
                   "data is not at cache line size boundary");
-    #endif
+    #else
     // 4) make sure static_cast and reinterpret_cast
     //    between T* and abstract_actor* are identical
-/*
     constexpr abstract_actor* dummy = nullptr;
     constexpr T* derived_dummy = static_cast<T*>(dummy);
     static_assert(derived_dummy == nullptr,
                   "actor subtype has illegal memory alignment "
                   "(probably due to virtual inheritance)");
-*/
+    #endif
     // construct data member
     new (&data) T(std::forward<Us>(zs)...);
   }
