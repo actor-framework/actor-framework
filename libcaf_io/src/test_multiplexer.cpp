@@ -309,7 +309,7 @@ expected<void> test_multiplexer::assign_datagram_source(abstract_broker* ptr,
       // nop
     }
     void configure_datagram_size(size_t buf_size) override {
-      
+      mpx_->buffer_size(hdl()) = buf_size;
     }
     void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
@@ -477,9 +477,13 @@ intrusive_ptr<datagram_source>&
 test_multiplexer::impl_ptr(datagram_source_handle hdl) {
   return datagram_source_data_[hdl].ptr;
 }
-  
+
 uint16_t& test_multiplexer::port(datagram_source_handle hdl) {
   return datagram_source_data_[hdl].port;
+}
+
+size_t& test_multiplexer::buffer_size(datagram_source_handle hdl) {
+  return datagram_source_data_[hdl].buffer_size;
 }
 
 bool& test_multiplexer::stopped_reading(accept_handle hdl) {

@@ -58,7 +58,7 @@ public:
   expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(abstract_broker* ptr, uint16_t prt,
                   const char* in, bool reuse_addr) override;
-  
+
   expected<datagram_sink_handle> new_datagram_sink(const std::string& host,
                                                    uint16_t port) override;
 
@@ -92,10 +92,10 @@ public:
   void provide_scribe(std::string host, uint16_t port, connection_handle hdl);
 
   void provide_acceptor(uint16_t port, accept_handle hdl);
-  
+
   void provide_datagram_sink(std::string host, uint16_t port,
                              datagram_sink_handle hdl);
-  
+
   void provide_datagram_source(uint16_t port, datagram_source_handle hdl);
 
   /// A buffer storing bytes.
@@ -107,7 +107,7 @@ public:
 
   /// Returns the output buffer of the scribe identified by `hdl`.
   buffer_type& output_buffer(connection_handle hdl);
-  
+
   /// Returns the output buffer of the datagram source identified by `hdl`.
   buffer_type& output_buffer(datagram_sink_handle hdl);
 
@@ -133,11 +133,11 @@ public:
   intrusive_ptr<scribe>& impl_ptr(connection_handle hdl);
 
   uint16_t& port(accept_handle hdl);
-  
+
   /// Returns `true` if this handle has been closed
   /// for reading, `false` otherwise.
   bool& stopped_reading(datagram_sink_handle hdl);
-  
+
   /// Returns whether the scribe identified by `hdl` receives write ACKs.
   bool& ack_writes(datagram_sink_handle hdl);
 
@@ -145,7 +145,7 @@ public:
   bool& passive_mode(datagram_sink_handle hdl);
 
   intrusive_ptr<datagram_sink>& impl_ptr(datagram_sink_handle hdl);
-  
+
   uint16_t& port(datagram_sink_handle hdl);
 
   /// Returns `true` if this handle has been closed
@@ -156,8 +156,10 @@ public:
   bool& passive_mode(datagram_source_handle hdl);
 
   intrusive_ptr<datagram_source>& impl_ptr(datagram_source_handle hdl);
-  
+
   uint16_t& port(datagram_source_handle hdl);
+
+  size_t& buffer_size(datagram_source_handle hdl);
 
   /// Returns `true` if this handle has been closed
   /// for reading, `false` otherwise.
@@ -184,9 +186,9 @@ public:
 
   using pending_datagram_sinks_map = std::map<std::pair<std::string, uint16_t>,
                                               datagram_sink_handle>;
-  
+
   bool has_pending_datagram_sink(std::string host, uint16_t port);
-  
+
   using pending_datagram_sources_map = std::map<uint16_t, datagram_source_handle>;
 
   bool has_pending_datagram_source(uint16_t port);
@@ -238,7 +240,7 @@ private:
     bool passive_mode = false;
     intrusive_ptr<doorman> ptr;
   };
-  
+
   struct datagram_sink_data {
     uint16_t port;
     buffer_type wr_buf;
@@ -248,10 +250,11 @@ private:
     bool ack_writes = false;
     intrusive_ptr<datagram_sink> ptr;
   };
-  
+
   struct datagram_source_data {
     uint16_t port;
     buffer_type rd_buf;
+    size_t buffer_size;
     bool stopped_reading = false;
     bool passive_mode = false;
     intrusive_ptr<datagram_source> ptr;
