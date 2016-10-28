@@ -116,17 +116,19 @@ expected<strong_actor_ptr> middleman::remote_spawn_impl(const node_id& nid,
 }
 
 expected<uint16_t> middleman::open(uint16_t port, const char* cstr, bool ru) {
-  std::string str;
-  if (cstr != nullptr)
-    str = cstr;
-  auto f = make_function_view(actor_handle());
-  return f(open_atom::value, port, std::move(str), ru);
+  std::stringstream u_stream;
+  u_stream << default_protocol;
+  u_stream << (cstr != nullptr ? cstr : "0.0.0.0");
+  u_stream << ":" << port;
+  auto res = uri::make(u_stream.str());
+  if (!res)
+    return sec::invalid_argument;
+  return open(std::move(*res), ru);
 }
 
 expected<uint16_t> middleman::open(uri u, bool ru) {
-  std::string str(u.host().first, u.host().second);
   auto f = make_function_view(actor_handle());
-  return f(open_atom::value, u.port_as_int(), std::move(str), ru);
+  return f(open_atom::value, std::move(u), ru);
 }
 
 expected<void> middleman::close(uint16_t port) {
@@ -135,18 +137,19 @@ expected<void> middleman::close(uint16_t port) {
 }
 
 expected<node_id> middleman::connect(std::string host, uint16_t port) {
-  auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom::value, std::move(host), port);
+  std::stringstream u_stream;
+  u_stream << default_protocol;
+  u_stream << host;
+  u_stream << ":" << port;
+  auto res = uri::make(u_stream.str());
   if (!res)
-    return std::move(res.error());
-  return std::get<0>(*res);
+    return sec::invalid_argument;
+  return connect(*res);
 }
 
 expected<node_id> middleman::connect(uri u) {
   auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom::value,
-               std::string(u.host().first, u.host().second),
-               u.port_as_int());
+  auto res = f(connect_atom::value, std::move(u));
   if (!res)
     return std::move(res.error());
   return std::get<0>(*res);}
@@ -157,10 +160,9 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
   if (!whom)
     return sec::cannot_publish_invalid_actor;
-  std::string in(u.host().first, u.host().second);
   auto f = make_function_view(actor_handle());
-  return f(publish_atom::value, u.port_as_int(), std::move(whom),
-           std::move(sigs), in, ru);
+  return f(publish_atom::value, std::move(whom),
+           std::move(sigs), std::move(u), ru);
 }
 
 expected<uint16_t> middleman::publish_local_groups(uint16_t port,
@@ -187,21 +189,19 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
 expected<void> middleman::unpublish(const actor_addr& whom, uri u) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
-  return f(unpublish_atom::value, whom, u.port_as_int());
+  return f(unpublish_atom::value, whom, u);
 }
 
 expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                                                    uri u) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(u));
   auto f = make_function_view(actor_handle());
-  auto host = std::string(u.host().first, u.host().second);
-  auto port = u.port_as_int();
-  auto res = f(connect_atom::value, std::move(host), port);
+  auto res = f(connect_atom::value, std::move(u));
   if (!res)
     return std::move(res.error());
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
   if (!ptr)
-    return make_error(sec::no_actor_published_at_port, port);
+    return make_error(sec::no_actor_published_at_port, u.port_as_int());
   if (!system().assignable(std::get<2>(*res), ifs))
     return make_error(sec::unexpected_actor_messaging_interface, std::move(ifs),
                       std::move(std::get<2>(*res)));

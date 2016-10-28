@@ -23,6 +23,8 @@
 #include "caf/fwd.hpp"
 #include "caf/typed_actor.hpp"
 
+#include "caf/io/uri.hpp"
+
 namespace caf {
 namespace io {
 
@@ -88,18 +90,18 @@ namespace io {
 /// ~~~
 using middleman_actor =
   typed_actor<
-    replies_to<publish_atom, uint16_t, strong_actor_ptr,
-               std::set<std::string>, std::string, bool>
+    replies_to<publish_atom, strong_actor_ptr, std::set<std::string>, uri, bool>
     ::with<uint16_t>,
 
-    replies_to<open_atom, uint16_t, std::string, bool>
+    replies_to<open_atom, uri, bool>
     ::with<uint16_t>,
 
-    replies_to<connect_atom, std::string, uint16_t>
+    replies_to<connect_atom, uri>
     ::with<node_id, strong_actor_ptr, std::set<std::string>>,
 
-    reacts_to<unpublish_atom, actor_addr, uint16_t>,
+    reacts_to<unpublish_atom, actor_addr, uri>,
 
+    // TODO: Do these require URIs as well?
     reacts_to<close_atom, uint16_t>,
 
     replies_to<spawn_atom, node_id, std::string, message, std::set<std::string>>

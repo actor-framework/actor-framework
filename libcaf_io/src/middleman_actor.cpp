@@ -86,20 +86,24 @@ public:
   behavior_type make_behavior() override {
     CAF_LOG_TRACE("");
     return {
-      [=](publish_atom, uint16_t port, strong_actor_ptr& whom,
-          mpi_set& sigs, std::string& addr, bool reuse) -> put_res {
+      [=](publish_atom, strong_actor_ptr& whom,
+          mpi_set& sigs, uri& u, bool reuse) -> put_res {
         CAF_LOG_TRACE("");
-        return put(port, whom, sigs, addr.c_str(), reuse);
+        std::string addr(u.host().first, u.host().second);
+        return put(u.port_as_int(), whom, sigs, addr.c_str(), reuse);
       },
-      [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
+      [=](open_atom, uri& u, bool reuse) -> put_res {
         CAF_LOG_TRACE("");
         strong_actor_ptr whom;
         mpi_set sigs;
-        return put(port, whom, sigs, addr.c_str(), reuse);
+        std::string addr(u.host().first, u.host().second);
+        return put(u.port_as_int(), whom, sigs, addr.c_str(), reuse);
       },
-      [=](connect_atom, std::string& hostname, uint16_t port) -> get_res {
-        CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
+      [=](connect_atom, uri& u) -> get_res {
+        CAF_LOG_TRACE(CAF_ARG(u));
         auto rp = make_response_promise();
+        std::string hostname(u.host().first, u.host().second);
+        auto port = u.port_as_int();
         endpoint key{std::move(hostname), port};
         // respond immediately if endpoint is cached
         auto x = cached(key);
@@ -150,9 +154,9 @@ public:
         );
         return {};
       },
-      [=](unpublish_atom atm, actor_addr addr, uint16_t p) -> del_res {
+      [=](unpublish_atom atm, actor_addr addr, uri& u) -> del_res {
         CAF_LOG_TRACE("");
-        delegate(broker_, atm, std::move(addr), p);
+        delegate(broker_, atm, std::move(addr), u.port_as_int());
         return {};
       },
       [=](close_atom atm, uint16_t p) -> del_res {
