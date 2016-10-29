@@ -93,8 +93,7 @@ struct state {
 behavior unconnected(stateful_actor<state>*);
 
 // prototype definition for transition to `connecting` with Host and Port
-void connecting(stateful_actor<state>*,
-                const std::string& host, uint16_t port);
+void connecting(stateful_actor<state>*, io::uri);
 
 // prototype definition for transition to `running` with Calculator
 behavior running(stateful_actor<state>*, actor calculator);
@@ -121,27 +120,28 @@ behavior unconnected(stateful_actor<state>* self) {
       self->state.tasks.emplace_back(task{op, x, y});
     },
     [=](connect_atom, const std::string& host, uint16_t port) {
-      connecting(self, host, port);
+      auto u = io::uri::make("tcp://" + host + std::to_string(port));
+      if (!u)
+        throw sec::invalid_argument;
+      connecting(self, std::move(*u));
     }
   };
 }
 
-void connecting(stateful_actor<state>* self,
-                const std::string& host, uint16_t port) {
+void connecting(stateful_actor<state>* self, io::uri u) {
   // make sure we are not pointing to an old server
   self->state.current_server = nullptr;
   // use request().await() to suspend regular behavior until MM responded
   auto mm = self->system().middleman().actor_handle();
-  self->request(mm, infinite, connect_atom::value, host, port).await(
+  self->request(mm, infinite, connect_atom::value, u).await(
     [=](const node_id&, strong_actor_ptr serv, const std::set<std::string>& ifs) {
       if (!serv) {
-        aout(self) << "*** no server found at \"" << host << "\":"
-                   << port << endl;
+        aout(self) << "*** no server found at \"" << u << endl;
         return;
       }
       if (!ifs.empty()) {
-        aout(self) << "*** typed actor found at \"" << host << "\":"
-                   << port << ", but expected an untyped actor "<< endl;
+        aout(self) << "*** typed actor found at \"" << u
+                   << ", but expected an untyped actor "<< endl;
         return;
       }
       aout(self) << "*** successfully connected to server" << endl;
@@ -151,8 +151,8 @@ void connecting(stateful_actor<state>* self,
       self->become(running(self, hdl));
     },
     [=](const error& err) {
-      aout(self) << "*** cannot connect to \"" << host << "\":"
-                 << port << " => " << self->system().render(err) << endl;
+      aout(self) << "*** cannot connect to \"" << u
+                 << " => " << self->system().render(err) << endl;
       self->become(unconnected(self));
     }
   );
@@ -183,7 +183,10 @@ behavior running(stateful_actor<state>* self, actor calculator) {
       send_task(task{op, x, y});
     },
     [=](connect_atom, const std::string& host, uint16_t port) {
-      connecting(self, host, port);
+      auto u = io::uri::make("tcp://" + host + std::to_string(port));
+      if (!u)
+        throw sec::invalid_argument;
+      connecting(self, std::move(*u));
     }
   };
 }

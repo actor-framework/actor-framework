@@ -73,9 +73,8 @@ struct fixture {
     actor result;
     scoped_actor self{system, true};
     auto host = std::string(u.host().first, u.host().second);
-    auto port = u.port_as_int();
     self->request(system.middleman().actor_handle(), infinite,
-                  connect_atom::value, host, port).receive(
+                  connect_atom::value, u).receive(
       [&](node_id&, strong_actor_ptr& res, std::set<std::string>& xs) {
         CAF_REQUIRE(xs.empty());
         if (res)

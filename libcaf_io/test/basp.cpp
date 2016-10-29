@@ -575,13 +575,15 @@ CAF_TEST(publish_and_connect) {
 
 CAF_TEST(remote_actor_and_send) {
   constexpr const char* lo = "localhost";
+  constexpr uint16_t port = 4242;
+  auto u = uri::make("tcp://" + std::string(lo) + ":" + std::to_string(port));
+  CAF_REQUIRE(u);
   CAF_MESSAGE("self: " << to_string(self()->address()));
   mpx()->provide_scribe(lo, 4242, jupiter().connection);
   CAF_REQUIRE(mpx()->has_pending_scribe(lo, 4242));
   auto mm1 = system.middleman().actor_handle();
   actor result;
-  auto f = self()->request(mm1, infinite,
-                           connect_atom::value, lo, uint16_t{4242});
+  auto f = self()->request(mm1, infinite, connect_atom::value, *u);
   // wait until BASP broker has received and processed the connect message
   while (!aut()->valid(jupiter().connection))
     mpx()->exec_runnable();
