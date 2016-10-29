@@ -272,7 +272,8 @@ public:
 
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f, uri& u) {
-    return f(meta::type_name("uri"), u.c_str());
+    auto tmp = u.str();
+    return f(meta::type_name("uri"), tmp);
   }
 
   /// @endcond
