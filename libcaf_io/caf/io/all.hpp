@@ -21,6 +21,7 @@
 #define CAF_IO_ALL_HPP
 
 #include "caf/io/basp/all.hpp"
+#include "caf/io/uri.hpp"
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
