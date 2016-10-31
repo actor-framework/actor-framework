@@ -91,7 +91,9 @@ enum class sec : uint8_t {
   /// Linking to a remote actor failed because actor no longer exists.
   remote_linking_failed,
   /// A function view was called without assigning an actor first.
-  bad_function_call
+  bad_function_call,
+  /// The scheme for network communication does not match a transport protocol
+  unsupported_protocol
 };
 
 /// @relates sec

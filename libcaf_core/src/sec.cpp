@@ -56,7 +56,8 @@ const char* sec_strings[] = {
   "no_proxy_registry",
   "runtime_error",
   "remote_linking_failed",
-  "bad_function_call"
+  "bad_function_call",
+  "unsupported_protocol"
 };
 
 } // namespace <anonymous>
