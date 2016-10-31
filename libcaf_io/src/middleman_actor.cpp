@@ -41,6 +41,15 @@ namespace io {
 
 namespace {
 
+// TODO: dispatching!
+constexpr auto all_zeroes = "0.0.0.0";
+const std::string tcp = "tcp";
+const std::string udp = "udp";
+
+} // namespace <anonymous>
+
+namespace {
+
 class middleman_actor_impl : public middleman_actor::base {
 public:
   middleman_actor_impl(actor_config& cfg, actor default_broker)
@@ -81,7 +90,8 @@ public:
 
   using endpoint_data = std::tuple<node_id, strong_actor_ptr, mpi_set>;
 
-  using endpoint = std::pair<std::string, uint16_t>;
+  // using endpoint = std::pair<std::string, uint16_t>;
+  using endpoint = io::uri;
 
   behavior_type make_behavior() override {
     CAF_LOG_TRACE("");
@@ -89,70 +99,105 @@ public:
       [=](publish_atom, strong_actor_ptr& whom,
           mpi_set& sigs, uri& u, bool reuse) -> put_res {
         CAF_LOG_TRACE("");
-        std::string addr(u.host().first, u.host().second);
-        return put(u.port_as_int(), whom, sigs, addr.c_str(), reuse);
+        return put(u, whom, sigs, reuse);
       },
       [=](open_atom, uri& u, bool reuse) -> put_res {
         CAF_LOG_TRACE("");
         strong_actor_ptr whom;
         mpi_set sigs;
-        std::string addr(u.host().first, u.host().second);
-        return put(u.port_as_int(), whom, sigs, addr.c_str(), reuse);
+        return put(u, whom, sigs, reuse);
       },
       [=](connect_atom, uri& u) -> get_res {
         CAF_LOG_TRACE(CAF_ARG(u));
         auto rp = make_response_promise();
-        std::string hostname(u.host().first, u.host().second);
+        std::string host(u.host().first, u.host().second);
         auto port = u.port_as_int();
-        endpoint key{std::move(hostname), port};
         // respond immediately if endpoint is cached
-        auto x = cached(key);
+        auto x = cached(u);
         if (x) {
           CAF_LOG_DEBUG("found cached entry" << CAF_ARG(*x));
           rp.deliver(get<0>(*x), get<1>(*x), get<2>(*x));
           return {};
         }
         // attach this promise to a pending request if possible
-        auto rps = pending(key);
+        auto rps = pending(u);
         if (rps) {
           CAF_LOG_DEBUG("attach to pending request");
           rps->emplace_back(std::move(rp));
           return {};
         }
-        // connect to endpoint and initiate handhsake etc.
-        auto y = system().middleman().backend().new_tcp_scribe(key.first, port);
-        if (!y) {
-          rp.deliver(std::move(y.error()));
-          return {};
-        }
-        auto hdl = *y;
-        std::vector<response_promise> tmp{std::move(rp)};
-        pending_.emplace(key, std::move(tmp));
-        request(broker_, infinite, connect_atom::value, hdl, port).then(
-          [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
-            auto i = pending_.find(key);
-            if (i == pending_.end())
-              return;
-            if (nid && addr) {
-              monitor(addr);
-              cached_.emplace(key, std::make_tuple(nid, addr, sigs));
-            }
-            auto res = make_message(std::move(nid), std::move(addr),
-                                    std::move(sigs));
-            for (auto& promise : i->second)
-              promise.deliver(res);
-            pending_.erase(i);
-          },
-          [=](error& err) {
-            auto i = pending_.find(key);
-            if (i == pending_.end())
-              return;
-            for (auto& promise : i->second)
-              promise.deliver(err);
-            pending_.erase(i);
+        if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
+            equal(std::begin(tcp), std::end(tcp), u.scheme().first)) {
+          // connect to endpoint and initiate handhsake etc.
+          auto y = system().middleman().backend().new_tcp_scribe(host, port);
+          if (!y) {
+            rp.deliver(std::move(y.error()));
+            return {};
           }
-        );
-        return {};
+          auto hdl = *y;
+          std::vector<response_promise> tmp{std::move(rp)};
+          pending_.emplace(u, std::move(tmp));
+          request(broker_, infinite, connect_atom::value, hdl, port).then(
+            [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
+              auto i = pending_.find(u);
+              if (i == pending_.end())
+                return;
+              if (nid && addr) {
+                monitor(addr);
+                cached_.emplace(u, std::make_tuple(nid, addr, sigs));
+              }
+              auto res = make_message(std::move(nid), std::move(addr),
+                                      std::move(sigs));
+              for (auto& promise : i->second)
+                promise.deliver(res);
+              pending_.erase(i);
+            },
+            [=](error& err) {
+              auto i = pending_.find(u);
+              if (i == pending_.end())
+                return;
+              for (auto& promise : i->second)
+                promise.deliver(err);
+              pending_.erase(i);
+            }
+          );
+        } else if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
+                   equal(std::begin(udp), std::end(udp), u.scheme().first)) {
+          // connect to endpoint and initiate handhsake etc.
+          auto y = system().middleman().backend().new_datagram_sink(host, port);
+          if (!y) {
+            rp.deliver(std::move(y.error()));
+            return {};
+          }
+          auto hdl = *y;
+          std::vector<response_promise> tmp{std::move(rp)};
+          pending_.emplace(u, std::move(tmp));
+          request(broker_, infinite, connect_atom::value, hdl, port).then(
+            [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
+              auto i = pending_.find(u);
+              if (i == pending_.end())
+                return;
+              if (nid && addr) {
+                monitor(addr);
+                cached_.emplace(u, std::make_tuple(nid, addr, sigs));
+              }
+              auto res = make_message(std::move(nid), std::move(addr),
+                                      std::move(sigs));
+              for (auto& promise : i->second)
+                promise.deliver(res);
+              pending_.erase(i);
+            },
+            [=](error& err) {
+              auto i = pending_.find(u);
+              if (i == pending_.end())
+                return;
+              for (auto& promise : i->second)
+                promise.deliver(err);
+              pending_.erase(i);
+            }
+          );
+        }
+        return {}; // sec::unsupported_protocol;
       },
       [=](unpublish_atom atm, actor_addr addr, uri& u) -> del_res {
         CAF_LOG_TRACE("");
@@ -183,24 +228,40 @@ public:
   }
 
 private:
-  put_res put(uint16_t port, strong_actor_ptr& whom,
-              mpi_set& sigs, const char* in = nullptr,
-              bool reuse_addr = false) {
+  put_res put(const uri& u, strong_actor_ptr& whom,
+              mpi_set& sigs, bool reuse_addr = false) {
     CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)
                   << CAF_ARG(in) << CAF_ARG(reuse_addr));
-    accept_handle hdl;
     uint16_t actual_port;
-    // treat empty strings like nullptr
-    if (in != nullptr && in[0] == '\0')
-      in = nullptr;
-    auto res = system().middleman().backend().new_tcp_doorman(port, in,
-                                                              reuse_addr);
-    if (!res)
-      return std::move(res.error());
-    hdl = res->first;
-    actual_port = res->second;
-    anon_send(broker_, publish_atom::value, hdl, actual_port,
-              std::move(whom), std::move(sigs));
+    // treat empty strings or 0.0.0.0 as nullptr
+    auto addr = std::string(u.host().first, u.host().second);
+    const char* in = nullptr;
+    if ((!addr.empty() && addr.front() != '\0') || addr == all_zeroes)
+      in = addr.c_str();
+    if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
+        equal(u.scheme().first, u.scheme().second, std::begin(tcp))) {
+      auto res = system().middleman().backend().new_tcp_doorman(u.port_as_int(),
+                                                                in, reuse_addr);
+      if (!res)
+        return std::move(res.error());
+      accept_handle hdl = res->first;
+      actual_port = res->second;
+      anon_send(broker_, publish_atom::value, hdl, actual_port,
+                std::move(whom), std::move(sigs));
+    } else if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
+               equal(u.scheme().first, u.scheme().second, std::begin(udp))) {
+      auto res
+        = system().middleman().backend().new_datagram_source(u.port_as_int(),
+                                                             in, reuse_addr);
+      if (!res)
+        return std::move(res.error());
+      datagram_source_handle hdl = res->first;
+      actual_port = res->second;
+      anon_send(broker_, publish_atom::value, hdl, actual_port,
+                std::move(whom), std::move(sigs));
+    } else {
+      return sec::unsupported_protocol;
+    }
     return actual_port;
   }
 

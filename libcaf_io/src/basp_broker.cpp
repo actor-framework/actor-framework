@@ -149,14 +149,14 @@ void basp_broker_state::purge_state(const node_id& nid) {
   auto hdl = instance.tbl().lookup_direct(nid);
   if (hdl == invalid_connection_handle)
     return;
-  auto i = ctx.find(hdl);
-  if (i != ctx.end()) {
+  auto i = tcp_ctx.find(hdl);
+  if (i != tcp_ctx.end()) {
     auto& ref = i->second;
     if (ref.callback) {
       CAF_LOG_DEBUG("connection closed during handshake");
       ref.callback->deliver(sec::disconnect_during_handshake);
     }
-    ctx.erase(i);
+    tcp_ctx.erase(i);
   }
   proxies().erase(nid);
 }
@@ -448,10 +448,10 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
 
 void basp_broker_state::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  auto i = ctx.find(hdl);
-  if (i == ctx.end()) {
+  auto i = tcp_ctx.find(hdl);
+  if (i == tcp_ctx.end()) {
     CAF_LOG_INFO("create new BASP context:" << CAF_ARG(hdl));
-    i = ctx.emplace(hdl,
+    i = tcp_ctx.emplace(hdl,
                     connection_context{
                       basp::await_header,
                       basp::header{basp::message_type::server_handshake, 0,
@@ -512,7 +512,7 @@ behavior basp_broker::make_behavior() {
           ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
         }
         close(msg.handle);
-        state.ctx.erase(msg.handle);
+        state.tcp_ctx.erase(msg.handle);
       } else if (next != ctx.cstate) {
         auto rd_size = next == basp::await_payload
                        ? ctx.hdr.payload_len
@@ -618,13 +618,30 @@ behavior basp_broker::make_behavior() {
                       << CAF_ARG(whom));
       }
     },
+    [=](publish_atom, datagram_source_handle hdl, uint16_t port,
+        const strong_actor_ptr& whom, std::set<std::string>& sigs) {
+      CAF_LOG_TRACE(CAF_ARG(hdl.id()) << CAF_ARG(whom) << CAF_ARG(port));
+      if (hdl.invalid()) {
+        CAF_LOG_WARNING("invalid handle");
+        return;
+      }
+      auto res = assign_datagram_source(hdl);
+      if (res) {
+        if (whom)
+          system().registry().put(whom->id(), whom);
+        state.instance.add_published_actor(port, whom, std::move(sigs));
+      } else {
+        CAF_LOG_DEBUG("failed to assign doorman from handle"
+                      << CAF_ARG(whom));
+      }
+    },
     // received from middleman actor (delegated)
     [=](connect_atom, connection_handle hdl, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
       auto rp = make_response_promise();
       auto res = assign_tcp_scribe(hdl);
       if (res) {
-        auto& ctx = state.ctx[hdl];
+        auto& ctx = state.tcp_ctx[hdl];
         ctx.hdl = hdl;
         ctx.remote_port = port;
         ctx.cstate = basp::await_header;
@@ -633,6 +650,25 @@ behavior basp_broker::make_behavior() {
         configure_read(hdl, receive_policy::exactly(basp::header_size));
       } else {
         CAF_LOG_DEBUG("failed to assign scribe from handle" << CAF_ARG(res));
+        rp.deliver(std::move(res.error()));
+      }
+    },
+    [=](connect_atom, datagram_sink_handle hdl, uint16_t port) {
+      CAF_LOG_TRACE(CAF_ARG(hdl.id()));
+      auto rp = make_response_promise();
+      auto res = assign_datagram_sink(hdl);
+      if (res) {
+        auto& ctx = state.udp_ctx[hdl];
+        ctx.sink = hdl;
+        ctx.remote_port = port;
+        ctx.cstate = basp::await_header;
+        ctx.callback = rp;
+        // await server handshake
+        // TODO: Is there special processing required?
+        // configure_read(hdl, receive_policy::exactly(basp::header_size));
+      } else {
+        CAF_LOG_DEBUG("failed to assign datagram sink from handle"
+                      << CAF_ARG(res));
         rp.deliver(std::move(res.error()));
       }
     },

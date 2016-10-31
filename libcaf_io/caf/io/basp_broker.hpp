@@ -106,8 +106,32 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     node_id id;
     // connected port
     uint16_t remote_port;
-    // pending operations to be performed after handhsake completed
+    // pending operations to be performed after handshake completed
     optional<response_promise> callback;
+  };
+
+  // stores meta information for dagram endpoints
+  struct endpoint_context {
+    // denotes what message we expect from the remote node next
+    basp::connection_state cstate;
+    // out current processed BSAP header
+    basp::header hdr;
+    // local sink
+    datagram_sink_handle sink;
+    // local source
+    datagram_source_handle source;
+    // network-agnositc node identifier
+    node_id id;
+    // ports
+    uint16_t local_port;
+    uint16_t remote_port;
+    // ordering information
+    uint32_t sequence_number_send = 0;
+    uint32_t sequence_number_receive = 0;
+    // TODO: local buffer for ordering
+    // pending operations to be performed after handshake completed
+    optional<response_promise> callback;
+    // TODO: reliability things
   };
 
   void set_context(connection_handle hdl);
@@ -119,7 +143,8 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   basp::instance instance;
 
   // keeps context information for all open connections
-  std::unordered_map<connection_handle, connection_context> ctx;
+  std::unordered_map<connection_handle, connection_context> tcp_ctx;
+  std::unordered_map<datagram_sink_handle, endpoint_context> udp_ctx;
 
   // points to the current context for callbacks such as `make_proxy`
   connection_context* this_context = nullptr;
