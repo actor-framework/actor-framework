@@ -17,52 +17,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_DATAGRAM_HEADER_HPP
-#define CAF_IO_NETWORK_DATAGRAM_HEADER_HPP
+#include "caf/io/network/datagram_header.hpp"
 
-#include <cstdint>
-
-#include "caf/meta/type_name.hpp"
+#include <sstream>
 
 namespace caf {
 namespace io {
 namespace network {
 
-/// This header adds a sequence number and response port to 
-/// datagram messages carrying BASP messages.
-struct datagram_header {
-  uint32_t sequence_number;
-  uint16_t response_port;
-
-  inline datagram_header(uint32_t seq, uint16_t port)
-      : sequence_number(seq),
-        response_port(port) {
-    // nop
-  }
-
-  datagram_header() = default;
-};
-
-/// @relates datagram_header
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, datagram_header& hdr) {
-  return f(meta::type_name("datagram_header"), hdr.sequence_number,
-           hdr.response_port);
+bool operator==(const datagram_header& lhs, const datagram_header& rhs) {
+  return lhs.sequence_number == rhs.sequence_number
+      && lhs.response_port == rhs.response_port;
 }
-
-/// @relates datagram_header
-bool operator==(const datagram_header& lhs, const datagram_header& rhs);
-
-/// @relates datagram_header
-inline bool operator!=(const datagram_header& lhs, const datagram_header& rhs) {
-  return !(lhs == rhs);
-}
-
-/// Size of the datagram header in serialized form
-constexpr size_t datagram_header_size = sizeof(uint32_t) + sizeof(uint16_t);
 
 } // namespace network
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_DATAGRAM_HEADER_HPP
