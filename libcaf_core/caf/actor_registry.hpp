@@ -33,7 +33,6 @@
 #include "caf/actor_control_block.hpp"
 
 #include "caf/detail/shared_spinlock.hpp"
-#include "caf/detail/singleton_mixin.hpp"
 
 namespace caf {
 

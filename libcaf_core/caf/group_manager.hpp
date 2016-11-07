@@ -32,8 +32,6 @@
 #include "caf/abstract_group.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
-#include "caf/detail/singleton_mixin.hpp"
-
 namespace caf {
 
 class group_manager {
