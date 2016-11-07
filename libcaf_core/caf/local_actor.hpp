@@ -290,6 +290,13 @@ public:
   /// The default implementation throws a `std::logic_error`.
   virtual error load_state(deserializer& source, const unsigned int version);
 
+  /// Returns the currently defined fail state. If this reason is not
+  /// `none` then the actor will terminate with this error after executing
+  /// the current message handler.
+  inline const error& fail_state() const {
+    return fail_state_;
+  }
+
   // -- here be dragons: end of public interface -------------------------------
 
   /// @cond PRIVATE

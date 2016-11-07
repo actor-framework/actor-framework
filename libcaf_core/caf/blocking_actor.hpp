@@ -296,13 +296,6 @@ public:
   /// is signalized to other actors after `act()` returns.
   void fail_state(error err);
 
-  // -- observers --------------------------------------------------------------
-
-  /// Returns the current exit reason.
-  inline const error& fail_state() {
-    return fail_state_;
-  }
-
   // -- customization points ---------------------------------------------------
 
   /// Blocks until at least one message is in the mailbox.
