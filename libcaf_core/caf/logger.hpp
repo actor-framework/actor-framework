@@ -64,8 +64,10 @@ public:
   struct event {
     event* next;
     event* prev;
+    int level;
+    std::string prefix;
     std::string msg;
-    explicit event(std::string log_message = "");
+    explicit event(int l = 0, std::string p = "", std::string m = "");
   };
 
   template <class T>
@@ -167,6 +169,7 @@ private:
   void stop();
 
   actor_system& system_;
+  int level_;
   detail::shared_spinlock aids_lock_;
   std::unordered_map<std::thread::id, actor_id> aids_;
   std::thread thread_;

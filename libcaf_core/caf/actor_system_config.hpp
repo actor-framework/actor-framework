@@ -252,6 +252,13 @@ public:
   size_t work_stealing_relaxed_steal_interval;
   size_t work_stealing_relaxed_sleep_duration_us;
 
+  // -- config parameters for the logger ---------------------------------------
+
+  std::string logger_filename;
+  std::string logger_verbosity;
+  bool logger_console;
+  bool logger_colorize;
+
   // -- config parameters of the middleman -------------------------------------
 
   atom_value middleman_network_backend;
