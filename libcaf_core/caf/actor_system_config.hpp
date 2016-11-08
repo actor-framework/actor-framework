@@ -255,9 +255,8 @@ public:
   // -- config parameters for the logger ---------------------------------------
 
   std::string logger_filename;
-  std::string logger_verbosity;
-  bool logger_console;
-  bool logger_colorize;
+  atom_value logger_verbosity;
+  atom_value logger_console;
 
   // -- config parameters of the middleman -------------------------------------
 

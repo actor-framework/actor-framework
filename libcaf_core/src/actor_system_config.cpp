@@ -19,7 +19,6 @@
 
 #include "caf/actor_system_config.hpp"
 
-#include <ctime>
 #include <limits>
 #include <thread>
 #include <fstream>
@@ -27,7 +26,6 @@
 
 #include "caf/message_builder.hpp"
 
-#include "caf/detail/get_process_id.hpp"
 #include "caf/detail/parse_ini.hpp"
 
 namespace caf {
@@ -98,14 +96,8 @@ actor_system_config::actor_system_config()
   work_stealing_moderate_sleep_duration_us = 50;
   work_stealing_relaxed_steal_interval = 1;
   work_stealing_relaxed_sleep_duration_us = 10000;
-  std::ostringstream default_filename;
-  default_filename << "actor_log_" << detail::get_process_id()
-                   << "_" << time(0)
-                   << "_[NODE]" // dynamic placeholder for the node ID
-                   << ".log";
-  logger_filename = default_filename.str();
-  logger_console = false;
-  logger_colorize = false;
+  logger_filename = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
+  logger_console = atom("NONE");
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
@@ -145,9 +137,7 @@ actor_system_config::actor_system_config()
   .add(logger_verbosity, "verbosity",
        "sets the verbosity (QUIET|ERROR|WARNING|INFO|DEBUG|TRACE)")
   .add(logger_console, "console",
-       "enables logging to the console via std::clog")
-  .add(logger_colorize, "colorize",
-       "colorizes console output (ignored on Windows)");
+       "enables logging to the console via std::clog");
   opt_group{options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")

@@ -19,6 +19,7 @@
 
 #include "caf/logger.hpp"
 
+#include <ctime>
 #include <thread>
 #include <cstring>
 #include <fstream>
@@ -35,11 +36,13 @@
 
 #include "caf/string_algorithms.hpp"
 
+#include "caf/color.hpp"
 #include "caf/locks.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 
+#include "caf/detail/get_process_id.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
@@ -53,31 +56,6 @@ constexpr const char* log_level_name[] = {
   "DEBUG",
   "TRACE"
 };
-
-#ifndef CAF_MSVC
-namespace color {
-
-// UNIX terminal color codes
-constexpr char reset[]        = "\033[0m";
-constexpr char black[]        = "\033[30m";
-constexpr char red[]          = "\033[31m";
-constexpr char green[]        = "\033[32m";
-constexpr char yellow[]       = "\033[33m";
-constexpr char blue[]         = "\033[34m";
-constexpr char magenta[]      = "\033[35m";
-constexpr char cyan[]         = "\033[36m";
-constexpr char white[]        = "\033[37m";
-constexpr char bold_black[]   = "\033[1m\033[30m";
-constexpr char bold_red[]     = "\033[1m\033[31m";
-constexpr char bold_green[]   = "\033[1m\033[32m";
-constexpr char bold_yellow[]  = "\033[1m\033[33m";
-constexpr char bold_blue[]    = "\033[1m\033[34m";
-constexpr char bold_magenta[] = "\033[1m\033[35m";
-constexpr char bold_cyan[]    = "\033[1m\033[36m";
-constexpr char bold_white[]   = "\033[1m\033[37m";
-
-} // namespace color
-#endif
 
 #ifdef CAF_LOG_LEVEL
 static_assert(CAF_LOG_LEVEL >= 0 && CAF_LOG_LEVEL <= 4,
@@ -247,7 +225,7 @@ void logger::log(int level, const char* component,
                  const std::string& class_name, const char* function_name,
                  const char* c_full_file_name, int line_num,
                  const std::string& msg) {
-  CAF_ASSERT(level <= 4);
+  CAF_ASSERT(level >= 0 && level <= 4);
   if (level > level_)
     return;
   std::string file_name;
@@ -300,15 +278,27 @@ logger::logger(actor_system& sys) : system_(sys) {
 }
 
 void logger::run() {
-  auto filename = system_.config().logger_filename;
-  // Replace node ID placeholder.
-  auto placeholder = std::string{"[NODE]"};
-  auto i = filename.find(placeholder);
-  if (i != std::string::npos) {
-    auto nid = to_string(system_.node());
-    filename.replace(i, placeholder.size(), nid);
+  auto f = system_.config().logger_filename;
+  // Replace placeholders.
+  const char pid[] = "[PID]";
+  auto i = std::search(f.begin(), f.end(), std::begin(pid), std::end(pid) - 1);
+  if (i != f.end()) {
+    auto id = std::to_string(detail::get_process_id());
+    f.replace(i, i + sizeof(pid) - 1, id);
   }
-  std::fstream out(filename, std::ios::out | std::ios::app);
+  const char ts[] = "[TIMESTAMP]";
+  i = std::search(f.begin(), f.end(), std::begin(ts), std::end(ts) - 1);
+  if (i != f.end()) {
+    auto now = std::to_string(time(0));
+    f.replace(i, i + sizeof(ts) - 1, now);
+  }
+  const char node[] = "[NODE]";
+  i = std::search(f.begin(), f.end(), std::begin(node), std::end(node) - 1);
+  if (i != f.end()) {
+    auto nid = to_string(system_.node());
+    f.replace(i, i + sizeof(node) - 1, nid);
+  }
+  std::fstream out(f, std::ios::out | std::ios::app);
   std::unique_ptr<event> ptr;
   for (;;) {
     // make sure we have data to read
@@ -321,57 +311,53 @@ void logger::run() {
       return;
     }
     out << ptr->prefix << ' ' << ptr->msg << std::endl;
-    if (system_.config().logger_console) {
-#ifndef CAF_MSVC
-      if (system_.config().logger_colorize) {
-        switch (ptr->level) {
-          default:
-            break;
-          case CAF_LOG_LEVEL_ERROR:
-            std::clog << color::red;
-            break;
-          case CAF_LOG_LEVEL_WARNING:
-            std::clog << color::yellow;
-            break;
-          case CAF_LOG_LEVEL_INFO:
-            std::clog << color::green;
-            break;
-          case CAF_LOG_LEVEL_DEBUG:
-            std::clog << color::cyan;
-            break;
-          case CAF_LOG_LEVEL_TRACE:
-            std::clog << color::blue;
-            break;
-        }
-        std::clog << ptr->msg << color::reset << std::endl;
-      } else {
-#endif
-        std::clog << ptr->msg << std::endl;
-#ifndef CAF_MSVC
+    if (system_.config().logger_console == atom("UNCOLORED")) {
+      std::clog << ptr->msg << std::endl;
+    } else if  (system_.config().logger_console == atom("COLORED")) {
+      switch (ptr->level) {
+        default:
+          break;
+        case CAF_LOG_LEVEL_ERROR:
+          std::clog << color(red);
+          break;
+        case CAF_LOG_LEVEL_WARNING:
+          std::clog << color(yellow);
+          break;
+        case CAF_LOG_LEVEL_INFO:
+          std::clog << color(green);
+          break;
+        case CAF_LOG_LEVEL_DEBUG:
+          std::clog << color(cyan);
+          break;
+        case CAF_LOG_LEVEL_TRACE:
+          std::clog << color(blue);
+          break;
       }
-#endif
+      std::clog << ptr->msg << color(reset) << std::endl;
     }
   }
 }
 
 void logger::start() {
 #if defined(CAF_LOG_LEVEL)
-  const char* levels[] = {"ERROR", "WARNING", "INFO", "DEBUG", "TRACE"};
   auto& lvl = system_.config().logger_verbosity;
-  if (lvl == "QUIET")
+  if (lvl == atom("QUIET"))
     return;
-  if (lvl.empty()) {
+  if (lvl == atom("ERROR"))
+    level_ = CAF_LOG_LEVEL_ERROR;
+  else if (lvl == atom("WARNING"))
+    level_ = CAF_LOG_LEVEL_WARNING;
+  else if (lvl == atom("INFO"))
+    level_ = CAF_LOG_LEVEL_INFO;
+  else if (lvl == atom("DEBUG"))
+    level_ = CAF_LOG_LEVEL_DEBUG;
+  else if (lvl == atom("TRACE"))
+    level_ = CAF_LOG_LEVEL_TRACE;
+  else
     level_ = CAF_LOG_LEVEL;
-  } else {
-    auto i = std::find(std::begin(levels), std::end(levels), lvl);
-    if (i == std::end(levels))
-      level_ = CAF_LOG_LEVEL; // ignore invalid log levels
-    else
-      level_ = static_cast<int>(std::distance(std::begin(levels), i));
-    CAF_ASSERT(level_ >= CAF_LOG_LEVEL_ERROR && level_ <= CAF_LOG_LEVEL_TRACE);
-  }
   thread_ = std::thread{[this] { this->run(); }};
   std::string msg = "ENTRY log level = ";
+  const char* levels[] = {"ERROR", "WARNING", "INFO", "DEBUG", "TRACE"};
   msg += levels[level_];
   log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__, msg);
 #endif
@@ -384,7 +370,7 @@ void logger::stop() {
   log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__,
       "EXIT");
   // an empty string means: shut down
-  queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{});
+  queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event);
   thread_.join();
 #endif
 }
