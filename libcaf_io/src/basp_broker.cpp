@@ -550,7 +550,7 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       CAF_LOG_DEBUG("Received new_datagram_msg: " << CAF_ARG(msg));
       auto& hdl = msg.handle;
-      state.instance.handle(context(), msg, 
+      // state.instance.handle(context(), msg, 
     },
     // received from proxy instances
     [=](forward_atom, strong_actor_ptr& src,
@@ -690,9 +690,11 @@ behavior basp_broker::make_behavior() {
       auto res = assign_datagram_sink(hdl);
       if (res) {
         auto& ctx = state.udp_ctx[hdl];
+        /*
         ctx.sink = hdl;
         ctx.remote_port = port;
         ctx.callback = rp;
+        */
         // TODO: Start handshake with server as there is no way for
         // the server to initiate this.
       } else {
