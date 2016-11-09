@@ -239,7 +239,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
     switch (static_cast<uint64_t>(msg.get_as<atom_value>(0))) {
       default:
         break;
-      case link_atom::value.uint_value(): {
+      case to_u64(link_atom::value): {
         if (src_nid != this_node()) {
           CAF_LOG_WARNING("received link message for an other node");
           return;
@@ -258,7 +258,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
         static_cast<actor_proxy*>(ptr->get())->local_link_to(src->get());
         return;
       }
-      case unlink_atom::value.uint_value(): {
+      case to_u64(unlink_atom::value): {
         if (src_nid != this_node()) {
           CAF_LOG_WARNING("received unlink message for an other node");
           return;

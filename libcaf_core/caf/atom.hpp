@@ -38,6 +38,11 @@ enum class atom_value : uint64_t {
 /// @relates atom_value
 std::string to_string(const atom_value& x);
 
+/// @relates atom_value
+constexpr uint64_t to_u64(atom_value x) {
+  return static_cast<uint64_t>(x);
+}
+
 atom_value atom_from_string(const std::string& x);
 
 /// Creates an atom from given string literal.
@@ -58,9 +63,6 @@ struct atom_constant {
   constexpr operator atom_value() const {
     return V;
   }
-  static constexpr uint64_t uint_value() {
-    return static_cast<uint64_t>(V);
-  }
   /// Returns an instance *of this constant* (*not* an `atom_value`).
   static const atom_constant value;
 };
@@ -76,8 +78,13 @@ struct is_atom_constant<atom_constant<X>> {
 };
 
 template <atom_value V>
-std::string to_string(const atom_constant<V>&) {
+std::string to_string(atom_constant<V>) {
   return to_string(V);
+}
+
+template <atom_value V>
+constexpr uint64_t to_u64(atom_constant<V>) {
+  return static_cast<uint64_t>(V);
 }
 
 template <atom_value V>
