@@ -242,12 +242,13 @@ actor_system::actor_system(actor_system_config& cfg)
     if (mod)
       mod->init(cfg);
   groups_.init(cfg);
+  // start logger before spawning actors (since that uses the logger)
+  logger_.start();
   // spawn config and spawn servers (lazily to not access the scheduler yet)
   static constexpr auto Flags = hidden + lazy_init;
   spawn_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl));
   config_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl));
   // fire up remaining modules
-  logger_.start();
   registry_.start();
   registry_.put(atom("SpawnServ"), spawn_serv_);
   registry_.put(atom("ConfigServ"), config_serv_);

@@ -36,9 +36,11 @@
 
 #include "caf/string_algorithms.hpp"
 
+#include "caf/color.hpp"
 #include "caf/locks.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/single_reader_queue.hpp"
@@ -58,8 +60,6 @@ constexpr const char* log_level_name[] = {
 #ifdef CAF_LOG_LEVEL
 static_assert(CAF_LOG_LEVEL >= 0 && CAF_LOG_LEVEL <= 4,
               "assertion: 0 <= CAF_LOG_LEVEL <= 4");
-
-constexpr int global_log_level = CAF_LOG_LEVEL;
 
 #ifdef CAF_MSVC
 thread_local
@@ -125,10 +125,13 @@ void prettify_type_name(std::string& class_name, const char* c_class_name) {
 
 } // namespace <anonymous>
 
-logger::event::event(std::string x)
+logger::event::event(int l, const char* c, std::string p, std::string m)
     : next(nullptr),
       prev(nullptr),
-      msg(std::move(x)) {
+      level(l),
+      component(c),
+      prefix(std::move(p)),
+      msg(std::move(m)) {
   // nop
 }
 
@@ -224,6 +227,8 @@ void logger::log(int level, const char* component,
                  const char* c_full_file_name, int line_num,
                  const std::string& msg) {
   CAF_ASSERT(level >= 0 && level <= 4);
+  if (level > level_)
+    return;
   std::string file_name;
   std::string full_file_name = c_full_file_name;
   auto ri = find(full_file_name.rbegin(), full_file_name.rend(), '/');
@@ -238,12 +243,13 @@ void logger::log(int level, const char* component,
   }
   auto t0 = std::chrono::high_resolution_clock::now().time_since_epoch();
   auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t0).count();
-  std::ostringstream line;
-  line << ms << " " << component << " " << log_level_name[level] << " "
-       << "actor" << thread_local_aid() << " " << std::this_thread::get_id()
-       << " " << class_name << " " << function_name << " " << file_name << ":"
-       << line_num << " " << msg << std::endl;
-  queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{line.str()});
+  std::ostringstream prefix;
+  prefix << ms << " " << component << " " << log_level_name[level] << " "
+         << "actor" << thread_local_aid() << " " << std::this_thread::get_id()
+         << " " << class_name << " " << function_name
+         << " " << file_name << ":" << line_num;
+  queue_.synchronized_enqueue(queue_mtx_, queue_cv_,
+                              new event{level, component, prefix.str(), msg});
 }
 
 void logger::set_current_actor_system(actor_system* x) {
@@ -273,11 +279,27 @@ logger::logger(actor_system& sys) : system_(sys) {
 }
 
 void logger::run() {
-  std::ostringstream fname;
-  fname << "actor_log_" << detail::get_process_id() << "_" << time(0)
-        << "_" << to_string(system_.node())
-        << ".log";
-  std::fstream out(fname.str().c_str(), std::ios::out | std::ios::app);
+  auto f = system_.config().logger_filename;
+  // Replace placeholders.
+  const char pid[] = "[PID]";
+  auto i = std::search(f.begin(), f.end(), std::begin(pid), std::end(pid) - 1);
+  if (i != f.end()) {
+    auto id = std::to_string(detail::get_process_id());
+    f.replace(i, i + sizeof(pid) - 1, id);
+  }
+  const char ts[] = "[TIMESTAMP]";
+  i = std::search(f.begin(), f.end(), std::begin(ts), std::end(ts) - 1);
+  if (i != f.end()) {
+    auto now = std::to_string(time(0));
+    f.replace(i, i + sizeof(ts) - 1, now);
+  }
+  const char node[] = "[NODE]";
+  i = std::search(f.begin(), f.end(), std::begin(node), std::end(node) - 1);
+  if (i != f.end()) {
+    auto nid = to_string(system_.node());
+    f.replace(i, i + sizeof(node) - 1, nid);
+  }
+  std::fstream file(f, std::ios::out | std::ios::app);
   std::unique_ptr<event> ptr;
   for (;;) {
     // make sure we have data to read
@@ -286,28 +308,74 @@ void logger::run() {
     ptr.reset(queue_.try_pop());
     CAF_ASSERT(ptr != nullptr);
     if (ptr->msg.empty()) {
-      out.close();
+      file.close();
       return;
     }
-    out << ptr->msg << std::flush;
+    file << ptr->prefix << ' ' << ptr->msg << std::endl;
+    // TODO: once we've phased out GCC 4.8, we can upgarde this to a regex.
+    if (!system_.config().logger_filter.empty()
+        && ptr->component != system_.config().logger_filter)
+      continue;
+    if (system_.config().logger_console == atom("UNCOLORED")) {
+      std::clog << ptr->msg << std::endl;
+    } else if  (system_.config().logger_console == atom("COLORED")) {
+      switch (ptr->level) {
+        default:
+          break;
+        case CAF_LOG_LEVEL_ERROR:
+          std::clog << color(red);
+          break;
+        case CAF_LOG_LEVEL_WARNING:
+          std::clog << color(yellow);
+          break;
+        case CAF_LOG_LEVEL_INFO:
+          std::clog << color(green);
+          break;
+        case CAF_LOG_LEVEL_DEBUG:
+          std::clog << color(cyan);
+          break;
+        case CAF_LOG_LEVEL_TRACE:
+          std::clog << color(blue);
+          break;
+      }
+      std::clog << ptr->msg << color(reset) << std::endl;
+    }
   }
 }
 
 void logger::start() {
-#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
-  const char* log_level_table[] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
+#if defined(CAF_LOG_LEVEL)
+  auto& lvl = system_.config().logger_verbosity;
+  if (lvl == atom("QUIET"))
+    return;
+  if (lvl == atom("ERROR"))
+    level_ = CAF_LOG_LEVEL_ERROR;
+  else if (lvl == atom("WARNING"))
+    level_ = CAF_LOG_LEVEL_WARNING;
+  else if (lvl == atom("INFO"))
+    level_ = CAF_LOG_LEVEL_INFO;
+  else if (lvl == atom("DEBUG"))
+    level_ = CAF_LOG_LEVEL_DEBUG;
+  else if (lvl == atom("TRACE"))
+    level_ = CAF_LOG_LEVEL_TRACE;
+  else
+    level_ = CAF_LOG_LEVEL;
   thread_ = std::thread{[this] { this->run(); }};
   std::string msg = "ENTRY log level = ";
-  msg += log_level_table[global_log_level];
+  const char* levels[] = {"ERROR", "WARNING", "INFO", "DEBUG", "TRACE"};
+  msg += levels[level_];
   log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__, msg);
 #endif
 }
 
 void logger::stop() {
-#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
-  log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__, "EXIT");
+#if defined(CAF_LOG_LEVEL)
+  if (!thread_.joinable())
+    return;
+  log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__,
+      "EXIT");
   // an empty string means: shut down
-  queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event{""});
+  queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event);
   thread_.join();
 #endif
 }

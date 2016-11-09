@@ -316,13 +316,7 @@ bool engine::run(bool colorize,
     // nothing to do
     return true;
   }
-  if (!colorize) {
-    for (size_t i = 0; i <= static_cast<size_t>(white); ++i) {
-      for (size_t j = 0; j <= static_cast<size_t>(bold); ++j) {
-        instance().colors_[i][j] = "";
-      }
-    }
-  }
+  instance().colorize_ = colorize;
   if (!logger::init(verbosity_console, verbosity_file, log_file)) {
     return false;
   }
@@ -475,7 +469,7 @@ bool engine::run(bool colorize,
 }
 
 const char* engine::color(color_value v, color_face t) {
-  return instance().colors_[static_cast<size_t>(v)][static_cast<size_t>(t)];
+  return instance().colorize_ ? caf::color(v, t) : "";
 }
 
 const char* engine::last_check_file() {

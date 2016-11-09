@@ -32,6 +32,7 @@
 #include <iostream>
 
 #include "caf/fwd.hpp"
+#include "caf/color.hpp"
 #include "caf/optional.hpp"
 
 #include "caf/deep_to_string.hpp"
@@ -213,23 +214,6 @@ private:
   std::mutex file_mtx_;
 };
 
-enum color_face {
-  normal,
-  bold
-};
-
-enum color_value {
-  reset,
-  black,
-  red,
-  green,
-  yellow,
-  blue,
-  magenta,
-  cyan,
-  white
-};
-
 /// Drives unit test execution.
 class engine {
 public:
@@ -310,17 +294,7 @@ private:
   int argc_ = 0;
   char** argv_ = nullptr;
   char*  path_ = nullptr;
-  const char* colors_[9][2] = {
-    {"\033[0m", "\033[0m"},          // reset
-    {"\033[30m", "\033[1m\033[30m"}, // black
-    {"\033[31m", "\033[1m\033[31m"}, // red
-    {"\033[32m", "\033[1m\033[32m"}, // green
-    {"\033[33m", "\033[1m\033[33m"}, // yellow
-    {"\033[34m", "\033[1m\033[34m"}, // blue
-    {"\033[35m", "\033[1m\033[35m"}, // magenta
-    {"\033[36m", "\033[1m\033[36m"}, // cyan
-    {"\033[37m", "\033[1m\033[37m"}  // white
-  };
+  bool colorize_ = false;
   const char* check_file_ = "<none>";
   size_t check_line_ = 0;
   test* current_test_ = nullptr;
@@ -413,8 +387,8 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_TEST_PRINT(level, msg, colorcode)                                  \
   (::caf::test::logger::instance(). level ()                                   \
-    << ::caf::test::engine::color(::caf::test:: colorcode )                    \
-    << "  -> " << ::caf::test::engine::color(::caf::test::reset) << msg        \
+    << ::caf::test::engine::color(::caf:: colorcode )                          \
+    << "  -> " << ::caf::test::engine::color(::caf::reset) << msg              \
     << " [line " << __LINE__ << "]\n")
 
 #define CAF_TEST_PRINT_ERROR(msg)   CAF_TEST_PRINT(info, msg, red)

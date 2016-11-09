@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_LOGGING_HPP
-#define CAF_DETAIL_LOGGING_HPP
+#ifndef CAF_LOGGER_HPP
+#define CAF_LOGGER_HPP
 
 #include <thread>
 #include <cstring>
@@ -64,8 +64,12 @@ public:
   struct event {
     event* next;
     event* prev;
+    int level;
+    const char* component;
+    std::string prefix;
     std::string msg;
-    explicit event(std::string log_message = "");
+    explicit event(int l = 0, char const* c = "", std::string p = "",
+                   std::string m = "");
   };
 
   template <class T>
@@ -167,6 +171,7 @@ private:
   void stop();
 
   actor_system& system_;
+  int level_;
   detail::shared_spinlock aids_lock_;
   std::unordered_map<std::thread::id, actor_id> aids_;
   std::thread thread_;
@@ -186,18 +191,6 @@ private:
 #define CAF_LOG_LEVEL_INFO 2
 #define CAF_LOG_LEVEL_DEBUG 3
 #define CAF_LOG_LEVEL_TRACE 4
-
-#define CAF_PRINT_ERROR_IMPL(nclass, nfun, message)                            \
-  do {                                                                         \
-    caf::logger::line_builder lb;                                              \
-    lb << message;                                                             \
-    if (nclass.empty())                                                        \
-      printf("[ERROR] in %s:%d %s::%s: %s\n", __FILE__, __LINE__,              \
-             nclass.c_str(), nfun, lb.get().c_str());                          \
-    else                                                                       \
-      printf("[ERROR] in %s:%d %s: %s\n", __FILE__, __LINE__,                  \
-             nfun, lb.get().c_str());                      \
-  } while (false)
 
 #define CAF_ARG(argument) caf::logger::make_arg_wrapper(#argument, argument)
 
@@ -286,6 +279,8 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #  define CAF_LOG_WARNING(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_WARNING, output)
 #endif
 
+#define CAF_LOG_ERROR(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_ERROR, output)
+
 #endif // CAF_LOG_LEVEL
 
 #ifndef CAF_LOG_INFO
@@ -300,11 +295,9 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #  define CAF_LOG_WARNING(output) CAF_VOID_STMT
 #endif
 
-#define CAF_LOG_ERROR(output)                                                  \
-  do {                                                                         \
-    CAF_PRINT_ERROR_IMPL(CAF_GET_CLASS_NAME, __func__, output);                \
-    CAF_LOG_IMPL(CAF_LOG_LEVEL_ERROR, output);                                 \
-  } while (false)
+#ifndef CAF_LOG_ERROR
+#  define CAF_LOG_ERROR(output) CAF_VOID_STMT
+#endif
 
 #ifdef CAF_LOG_LEVEL
 
@@ -329,4 +322,4 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #endif // CAF_LOG_LEVEL
 
-#endif // CAF_DETAIL_LOGGING_HPP
+#endif // CAF_LOGGER_HPP

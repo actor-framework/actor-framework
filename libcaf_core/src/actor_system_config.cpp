@@ -22,6 +22,7 @@
 #include <limits>
 #include <thread>
 #include <fstream>
+#include <sstream>
 
 #include "caf/message_builder.hpp"
 
@@ -95,6 +96,8 @@ actor_system_config::actor_system_config()
   work_stealing_moderate_sleep_duration_us = 50;
   work_stealing_relaxed_steal_interval = 1;
   work_stealing_relaxed_sleep_duration_us = 10000;
+  logger_filename = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
+  logger_console = atom("NONE");
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
@@ -128,6 +131,15 @@ actor_system_config::actor_system_config()
        "sets the frequency of steal attempts during relaxed polling")
   .add(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
        "sets the sleep interval between poll attempts during relaxed polling");
+  opt_group{options_, "logger"}
+  .add(logger_filename, "filename",
+       "sets the filesystem path of the log file")
+  .add(logger_verbosity, "verbosity",
+       "sets the verbosity (QUIET|ERROR|WARNING|INFO|DEBUG|TRACE)")
+  .add(logger_console, "console",
+       "enables logging to the console via std::clog")
+  .add(logger_filter, "filter",
+       "sets a component filter for console log messages");
   opt_group{options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
