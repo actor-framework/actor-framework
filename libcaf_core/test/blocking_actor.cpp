@@ -70,4 +70,15 @@ CAF_TEST(behavior_ref) {
   self->receive(bhvr);
 }
 
+CAF_TEST(timeout_in_scoped_actor) {
+  bool timeout_called = false;
+  scoped_actor self{system};
+  self->receive(
+    after(std::chrono::milliseconds(20)) >> [&] {
+      timeout_called = true;
+    }
+  );
+  CAF_CHECK(timeout_called);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

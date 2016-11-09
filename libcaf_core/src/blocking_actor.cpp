@@ -320,7 +320,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
     // reset the timeout each iteration
     if (!seq.await_value(true)) {
       // short-circuit "loop body"
-      bhvr.nested.handle_timeout();
+      bhvr.handle_timeout();
       if (!rcc.post())
         return;
       continue;
@@ -379,7 +379,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
       }
     } while (skipped && !timed_out);
     if (timed_out)
-      bhvr.nested.handle_timeout();
+      bhvr.handle_timeout();
     else
       seq.erase_and_advance();
     // check loop post condition
