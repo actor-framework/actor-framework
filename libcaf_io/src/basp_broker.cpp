@@ -465,6 +465,30 @@ void basp_broker_state::set_context(connection_handle hdl) {
   this_context = &i->second;
 }
 
+void basp_broker_state::set_context(datagram_source_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  /*
+  auto i = udp_ctx.find(hdl);
+  if (i == udp_ctx.end()) {
+    i = udp_ctx.emplace(
+      hdl,
+      endpoint_context{
+        basp::header{
+          basp::message_type::client_handshake, 0, 0, 0, none, none,
+          invalid_actor_id, invalid_actor_id
+        },
+        none, hdl,
+        none,
+        0, 0,
+        0, 0,
+        none
+      }
+    ).first;
+  }
+  // TODO: set some context?
+  */
+}
+
 /******************************************************************************
  *                                basp_broker                                 *
  ******************************************************************************/
@@ -520,6 +544,13 @@ behavior basp_broker::make_behavior() {
         configure_read(msg.handle, receive_policy::exactly(rd_size));
         ctx.cstate = next;
       }
+    },
+    // received from underlying broker implementation
+    [=](new_datagram_msg& msg) {
+      CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      CAF_LOG_DEBUG("Received new_datagram_msg: " << CAF_ARG(msg));
+      auto& hdl = msg.handle;
+      state.instance.handle(context(), msg, 
     },
     // received from proxy instances
     [=](forward_atom, strong_actor_ptr& src,
@@ -661,11 +692,9 @@ behavior basp_broker::make_behavior() {
         auto& ctx = state.udp_ctx[hdl];
         ctx.sink = hdl;
         ctx.remote_port = port;
-        ctx.cstate = basp::await_header;
         ctx.callback = rp;
-        // await server handshake
-        // TODO: Is there special processing required?
-        // configure_read(hdl, receive_policy::exactly(basp::header_size));
+        // TODO: Start handshake with server as there is no way for
+        // the server to initiate this.
       } else {
         CAF_LOG_DEBUG("failed to assign datagram sink from handle"
                       << CAF_ARG(res));
@@ -687,6 +716,7 @@ behavior basp_broker::make_behavior() {
       return unit;
     },
     [=](close_atom, uint16_t port) -> result<void> {
+      // TODO: Should this accept a uri to close only related ports?
       if (port == 0)
         return sec::cannot_close_invalid_port;
       // it is well-defined behavior to not have an actor published here,

@@ -157,7 +157,7 @@ expected<node_id> middleman::connect(uri u) {
 expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
                                       std::set<std::string> sigs,
                                       uri u, bool ru) {
-  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
+  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(u));
   if (!whom)
     return sec::cannot_publish_invalid_actor;
   auto f = make_function_view(actor_handle());
@@ -187,7 +187,7 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
 }
 
 expected<void> middleman::unpublish(const actor_addr& whom, uri u) {
-  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
+  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(u));
   auto f = make_function_view(actor_handle());
   return f(unpublish_atom::value, whom, u);
 }

@@ -152,6 +152,7 @@ public:
   ///          a remote actor or an `error`.
   template <class ActorHandle = actor>
   expected<ActorHandle> remote_actor(uri u) {
+    CAF_LOG_TRACE(CAF_ARG(u));
     detail::type_list<ActorHandle> tk;
     auto x = remote_actor(system().message_types(tk), u);
     if (!x)

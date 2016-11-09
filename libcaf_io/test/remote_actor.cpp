@@ -35,7 +35,8 @@ using namespace std;
 
 namespace {
 
-constexpr char host_uri[] = "tcp://127.0.0.1";
+constexpr char uri_tcp[] = "tcp://127.0.0.1";
+constexpr char uri_udp[] = "udp://127.0.0.1";
 
 class config : public actor_system_config {
 public:
@@ -142,14 +143,14 @@ CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 CAF_TEST(identity_semantics) {
   // server side
   auto server = server_side.spawn(make_pong_behavior);
-  auto uri_no_port = io::uri::make(host_uri);
+  auto uri_no_port = io::uri::make(uri_tcp);
   CAF_REQUIRE(uri_no_port);
   CAF_EXP_THROW(port1, server_side_mm.publish(server, *uri_no_port));
   CAF_EXP_THROW(port2, server_side_mm.publish(server, *uri_no_port));
   CAF_REQUIRE_NOT_EQUAL(port1, port2);
-  auto uri_port1 = io::uri::make(string(host_uri) + ":" + to_string(port1));
+  auto uri_port1 = io::uri::make(string(uri_tcp) + ":" + to_string(port1));
   CAF_REQUIRE(uri_port1);
-  auto uri_port2 = io::uri::make(string(host_uri) + ":" + to_string(port2));
+  auto uri_port2 = io::uri::make(string(uri_tcp) + ":" + to_string(port2));
   CAF_REQUIRE(uri_port2);
   CAF_EXP_THROW(same_server, server_side_mm.remote_actor(*uri_port2));
   CAF_REQUIRE_EQUAL(same_server, server);
@@ -163,13 +164,13 @@ CAF_TEST(identity_semantics) {
 
 CAF_TEST(ping_pong) {
   // server side
-  auto server_uri = io::uri::make(host_uri);
+  auto server_uri = io::uri::make(uri_tcp);
   CAF_REQUIRE(server_uri);
   CAF_EXP_THROW(port,
                 server_side_mm.publish(server_side.spawn(make_pong_behavior),
                                        *server_uri));
   // client side
-  auto uri_with_port = io::uri::make(string(host_uri) + ":" + to_string(port));
+  auto uri_with_port = io::uri::make(string(uri_tcp) + ":" + to_string(port));
   CAF_REQUIRE(uri_with_port);
   CAF_EXP_THROW(pong, client_side_mm.remote_actor(*uri_with_port));
   client_side.spawn(make_ping_behavior, pong);
@@ -177,12 +178,12 @@ CAF_TEST(ping_pong) {
 
 CAF_TEST(custom_message_type) {
   // server side
-  auto server_uri = io::uri::make(host_uri);
+  auto server_uri = io::uri::make(uri_tcp);
   CAF_REQUIRE(server_uri);
   CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(make_sort_behavior),
                                              *server_uri));
   // client side
-  auto uri_with_port = io::uri::make(string(host_uri) + ":" + to_string(port));
+  auto uri_with_port = io::uri::make(string(uri_tcp) + ":" + to_string(port));
   CAF_REQUIRE(uri_with_port);
   CAF_EXP_THROW(sorter, client_side_mm.remote_actor(*uri_with_port));
   client_side.spawn(make_sort_requester_behavior, sorter);
@@ -190,12 +191,89 @@ CAF_TEST(custom_message_type) {
 
 CAF_TEST(remote_link) {
   // server side
-  auto server_uri = io::uri::make(host_uri);
+  auto server_uri = io::uri::make(uri_tcp);
   CAF_REQUIRE(server_uri);
   CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(fragile_mirror),
                                              *server_uri));
   // client side
-  auto uri_with_port = io::uri::make(string(host_uri) + ":" + to_string(port));
+  auto uri_with_port = io::uri::make(string(uri_tcp) + ":" + to_string(port));
+  CAF_REQUIRE(uri_with_port);
+  CAF_EXP_THROW(mirror, client_side_mm.remote_actor(*uri_with_port));
+  auto linker = client_side.spawn(linking_actor, mirror);
+  scoped_actor self{client_side};
+  self->wait_for(linker);
+  CAF_MESSAGE("linker exited");
+  self->wait_for(mirror);
+  CAF_MESSAGE("mirror exited");
+}
+
+// same test using UDP instead of TCP
+
+CAF_TEST(identity_semantics_udp) {
+  // server side
+  auto server = server_side.spawn(make_pong_behavior);
+  auto uri_no_port = io::uri::make(uri_udp);
+  CAF_REQUIRE(uri_no_port);
+  CAF_EXP_THROW(port1, server_side_mm.publish(server, *uri_no_port));
+  CAF_EXP_THROW(port2, server_side_mm.publish(server, *uri_no_port));
+  CAF_REQUIRE_NOT_EQUAL(port1, port2);
+  auto uri_port1 = io::uri::make(string(uri_udp) + ":" + to_string(port1));
+  CAF_REQUIRE(uri_port1);
+  auto uri_port2 = io::uri::make(string(uri_udp) + ":" + to_string(port2));
+  CAF_MESSAGE("Created URIs to acquire proxies.");
+  CAF_REQUIRE(uri_port2);
+  CAF_EXP_THROW(same_server, server_side_mm.remote_actor(*uri_port2));
+  CAF_MESSAGE("Acquired local actor through remote_actor call.");
+  CAF_REQUIRE_EQUAL(same_server, server);
+  CAF_CHECK_EQUAL(same_server->node(), server_side.node());
+  CAF_MESSAGE("Acquiring proxies through separate actor systems.");
+  CAF_EXP_THROW(server1, client_side_mm.remote_actor(*uri_port1));
+  CAF_EXP_THROW(server2, client_side_mm.remote_actor(*uri_port2));
+  CAF_MESSAGE("Multiple proxies of the same actor should be the same.");
+  CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(*uri_port1));
+  CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(*uri_port2));
+  CAF_MESSAGE("Shutting down server.");
+  anon_send_exit(server, exit_reason::user_shutdown);
+}
+
+CAF_TEST(ping_pong_udp) {
+  // server side
+  auto server_uri = io::uri::make(uri_udp);
+  CAF_REQUIRE(server_uri);
+  CAF_EXP_THROW(port,
+                server_side_mm.publish(server_side.spawn(make_pong_behavior),
+                                       *server_uri));
+  CAF_MESSAGE("Created server.");
+  // client side
+  auto uri_with_port = io::uri::make(string(uri_udp) + ":" + to_string(port));
+  CAF_REQUIRE(uri_with_port);
+  CAF_EXP_THROW(pong, client_side_mm.remote_actor(*uri_with_port));
+  CAF_MESSAGE("Acquired actor proxy.");
+  client_side.spawn(make_ping_behavior, pong);
+  CAF_MESSAGE("Started ping-pong.");
+}
+
+CAF_TEST(custom_message_type_udp) {
+  // server side
+  auto server_uri = io::uri::make(uri_udp);
+  CAF_REQUIRE(server_uri);
+  CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(make_sort_behavior),
+                                             *server_uri));
+  // client side
+  auto uri_with_port = io::uri::make(string(uri_udp) + ":" + to_string(port));
+  CAF_REQUIRE(uri_with_port);
+  CAF_EXP_THROW(sorter, client_side_mm.remote_actor(*uri_with_port));
+  client_side.spawn(make_sort_requester_behavior, sorter);
+}
+
+CAF_TEST(remote_link_udp) {
+  // server side
+  auto server_uri = io::uri::make(uri_udp);
+  CAF_REQUIRE(server_uri);
+  CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(fragile_mirror),
+                                             *server_uri));
+  // client side
+  auto uri_with_port = io::uri::make(string(uri_udp) + ":" + to_string(port));
   CAF_REQUIRE(uri_with_port);
   CAF_EXP_THROW(mirror, client_side_mm.remote_actor(*uri_with_port));
   auto linker = client_side.spawn(linking_actor, mirror);

@@ -87,7 +87,7 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
 // calls a C functions and returns an error if `predicate(var)`  returns false
 #define CALL_CFUN(var, predicate, fun_name, expr)                              \
   auto var = expr;                                                             \
-  if (!predicate(var))                                                        \
+  if (!predicate(var))                                                         \
     return make_error(sec::network_syscall_failed,                             \
                       fun_name, last_socket_error_as_string())
 
@@ -95,7 +95,7 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
 #ifdef CAF_WINDOWS
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
   auto var = expr;                                                             \
-  if (!predicate(var)) {                                                      \
+  if (!predicate(var)) {                                                       \
     fprintf(stderr, "[FATAL] %s:%u: syscall failed: %s returned %s\n",         \
            __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
     abort();                                                                   \
@@ -949,7 +949,7 @@ default_multiplexer::add_datagram_source(abstract_broker* self,
         return 0;
       return *x;
     }
-    void launch() {
+    void launch() override {
       CAF_LOG_TRACE("");
       CAF_ASSERT(!launched_);
       launched_ = true;
@@ -1493,7 +1493,7 @@ void datagram_sender::flush(const manager_ptr& mgr) {
 }
 
 void datagram_sender::start(manager_type* mgr) {
- CAF_ASSERT(mgr != nullptr);
+  CAF_ASSERT(mgr != nullptr);
   activate(mgr);
 }
 
@@ -1601,8 +1601,7 @@ void datagram_receiver::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
   switch (op) {
     case operation::read: {
-      // loop until an error occurs or we have nothing more to read
-      // or until we have handled 50 reads
+      // Read next datagram
       size_t rb;
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             last_sender, sender_len)) {
@@ -1860,7 +1859,7 @@ expected<native_socket> new_datagram_sink_impl(const std::string& host,
     }
     sguard.close();
     // IPv4 fallback
-    return new_tcp_connection(host, port, ipv4);
+    return new_datagram_sink_impl(host, port, ipv4);
   }
   if (!ip_connect<AF_INET>(fd, res->first, port)) {
     CAF_LOG_INFO("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));

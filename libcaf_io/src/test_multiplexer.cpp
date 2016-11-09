@@ -324,7 +324,7 @@ expected<void> test_multiplexer::assign_datagram_source(abstract_broker* ptr,
     uint16_t port() const override {
       return mpx_->port(hdl());
     }
-    void launch() {
+    void launch() override {
       // nop
     }
     void add_to_loop() override {

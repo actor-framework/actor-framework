@@ -44,7 +44,7 @@ public:
 
   ~datagram_source();
 
-  /// Implicitly starts the read loop on first call.
+  /// Configure buffer size for next accepted datagram.
   virtual void configure_datagram_size(size_t buf_size) = 0;
 
   /// Returns the current input buffer.
@@ -53,6 +53,9 @@ public:
   bool consume(execution_unit* ctx, const void* buf, size_t besize) override;
 
   void io_failure(execution_unit* ctx, network::operation op) override;
+
+  // needs to be launched explicitly
+  virtual void launch() = 0;
 
 protected:
   message detach_message() override;

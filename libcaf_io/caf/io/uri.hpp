@@ -284,6 +284,10 @@ private:
   intrusive_ptr<uri_private> d_;
 };
 
+inline std::string to_string(const str_bounds& bounds) {
+  return std::string(bounds.first, bounds.second);
+}
+
 } // namespace io
 } // namespace caf
 
@@ -291,6 +295,10 @@ namespace std {
 
 inline ostream& operator<<(ostream& ostr, const caf::io::uri& what) {
   return (ostr << what.str());
+}
+
+inline ostream& operator<<(ostream& ostr, const caf::io::str_bounds& bounds) {
+  return (ostr << string(bounds.first, bounds.second));
 }
 
 } // namespace std

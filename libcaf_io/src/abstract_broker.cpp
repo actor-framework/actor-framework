@@ -220,6 +220,7 @@ abstract_broker::add_datagram_sink(network::native_socket fd) {
 void
 abstract_broker::add_datagram_source(const intrusive_ptr<datagram_source>& ptr) {
   datagram_sources_.emplace(ptr->hdl(), ptr);
+  ptr->launch();
   // TODO: some launching of things?
 }
 

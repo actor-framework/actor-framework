@@ -94,6 +94,7 @@ public:
   using endpoint = io::uri;
 
   behavior_type make_behavior() override {
+    CAF_SET_LOGGER_SYS(&this->system()); // TODO: remove this?
     CAF_LOG_TRACE("");
     return {
       [=](publish_atom, strong_actor_ptr& whom,
@@ -128,7 +129,7 @@ public:
         }
         if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
             equal(std::begin(tcp), std::end(tcp), u.scheme().first)) {
-          // connect to endpoint and initiate handhsake etc.
+          // connect to endpoint and initiate handshake etc. (TCP)
           auto y = system().middleman().backend().new_tcp_scribe(host, port);
           if (!y) {
             rp.deliver(std::move(y.error()));
@@ -163,7 +164,7 @@ public:
           );
         } else if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
                    equal(std::begin(udp), std::end(udp), u.scheme().first)) {
-          // connect to endpoint and initiate handhsake etc.
+          // connect to endpoint and initiate handhsake etc. (UDP)
           auto y = system().middleman().backend().new_datagram_sink(host, port);
           if (!y) {
             rp.deliver(std::move(y.error()));
@@ -196,8 +197,10 @@ public:
               pending_.erase(i);
             }
           );
+        } else {
+          // sec::unsupported_protocol;
         }
-        return {}; // sec::unsupported_protocol;
+        return {};
       },
       [=](unpublish_atom atm, actor_addr addr, uri& u) -> del_res {
         CAF_LOG_TRACE("");
@@ -230,8 +233,8 @@ public:
 private:
   put_res put(const uri& u, strong_actor_ptr& whom,
               mpi_set& sigs, bool reuse_addr = false) {
-    CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)
-                  << CAF_ARG(in) << CAF_ARG(reuse_addr));
+    CAF_LOG_TRACE(CAF_ARG(u) << CAF_ARG(whom) << CAF_ARG(sigs)
+                  << CAF_ARG(reuse_addr));
     uint16_t actual_port;
     // treat empty strings or 0.0.0.0 as nullptr
     auto addr = std::string(u.host().first, u.host().second);
@@ -240,6 +243,7 @@ private:
       in = addr.c_str();
     if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
         equal(u.scheme().first, u.scheme().second, std::begin(tcp))) {
+      // TCP
       auto res = system().middleman().backend().new_tcp_doorman(u.port_as_int(),
                                                                 in, reuse_addr);
       if (!res)
@@ -250,6 +254,7 @@ private:
                 std::move(whom), std::move(sigs));
     } else if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
                equal(u.scheme().first, u.scheme().second, std::begin(udp))) {
+      // UDP
       auto res
         = system().middleman().backend().new_datagram_source(u.port_as_int(),
                                                              in, reuse_addr);
