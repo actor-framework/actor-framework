@@ -110,6 +110,38 @@ void abstract_broker::flush(connection_handle hdl) {
     x->flush();
 }
 
+void abstract_broker::ack_writes(datagram_sink_handle hdl, bool enable) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(enable));
+  auto x = by_id(hdl);
+  if (x)
+    x->ack_writes(enable);
+}
+
+void abstract_broker::configure_datagram_size(datagram_source_handle hdl,
+                                              size_t buf_size) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(buf_size));
+  auto x = by_id(hdl);
+  if (x)
+    x->configure_datagram_size(buf_size);
+}
+
+std::vector<char>& abstract_broker::wr_buf(datagram_sink_handle hdl) {
+  auto x = by_id(hdl);
+  if (!x) {
+    CAF_LOG_ERROR("tried to access wr_buf() of an unknown connection_handle");
+    return dummy_wr_buf_;
+  }
+  return x->wr_buf();
+}
+
+void abstract_broker::write(datagram_sink_handle hdl, size_t bs,
+                            const void* buf) {
+  auto& out = wr_buf(hdl);
+  auto first = reinterpret_cast<const char*>(buf);
+  auto last = first + bs;
+  out.insert(out.end(), first, last);
+}
+
 std::vector<connection_handle> abstract_broker::connections() const {
   std::vector<connection_handle> result;
   result.reserve(scribes_.size());

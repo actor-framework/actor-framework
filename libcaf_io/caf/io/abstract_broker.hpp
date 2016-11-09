@@ -159,6 +159,20 @@ public:
   /// Sends the content of the buffer for given connection.
   void flush(connection_handle hdl);
 
+  /// Enables or disables write notifications for given datagram socket.
+  void ack_writes(datagram_sink_handle hdl, bool enable);
+
+  /// Modifies the buffer for received datagrams.
+  /// @param hdl Identifies the affected socket.
+  /// @param buf_size Size of the receiver buffer for the next datagram.
+  void configure_datagram_size(datagram_source_handle hdl, size_t buf_size);
+
+  /// Returns write buffer for given sink.
+  std::vector<char>& wr_buf(datagram_sink_handle hdl);
+
+  /// Writes `data` into the buffer of a given sink.
+  void write(datagram_sink_handle hdl, size_t data_size, const void* data);
+
   /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
     return system().middleman();
