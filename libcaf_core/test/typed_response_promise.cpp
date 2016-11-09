@@ -148,54 +148,21 @@ CAF_TEST(typed_response_promise) {
   typed_response_promise<int> resp;
   CAF_MESSAGE("trigger 'invalid response promise' error");
   resp.deliver(1); // delivers on an invalid promise has no effect
-  self->request(foo, infinite, get_atom::value, 42).receive(
-    [](int x) {
-      CAF_CHECK_EQUAL(x, 84);
-    },
-    ERROR_HANDLER
-  );
-  self->request(foo, infinite, get_atom::value, 42, 52).receive(
-    [](int x, int y) {
-      CAF_CHECK_EQUAL(x, 84);
-      CAF_CHECK_EQUAL(y, 104);
-    },
-    ERROR_HANDLER
-  );
-  self->request(foo, infinite, get_atom::value, 3.14, 3.14).receive(
-    [](double x, double y) {
-      CAF_CHECK_EQUAL(x, 3.14 * 2);
-      CAF_CHECK_EQUAL(y, 3.14 * 2);
-    },
-    [](const error& err) {
-      CAF_ERROR("unexpected error response message received: "
-                << to_string(err));
-    }
-  );
+  auto f = make_function_view(foo);
+  CAF_CHECK_EQUAL(f(get_atom::value, 42), 84);
+  CAF_CHECK_EQUAL(f(get_atom::value, 42, 52), std::make_tuple(84, 104));
+  CAF_CHECK_EQUAL(f(get_atom::value, 3.14, 3.14), std::make_tuple(6.28, 6.28));
 }
 
 CAF_TEST(typed_response_promise_chained) {
-  auto composed = foo * foo * foo;
-  self->request(composed, infinite, 1).receive(
-    [](int v) {
-      CAF_CHECK_EQUAL(v, 8);
-    },
-    [](const error& err) {
-      CAF_ERROR("unexpected error response message received: "
-                << to_string(err));
-    }
-  );
+  auto f = make_function_view(foo * foo * foo);
+  CAF_CHECK_EQUAL(f(1), 8);
 }
 
 // verify that only requests get an error response message
 CAF_TEST(error_response_message) {
-  self->request(foo, infinite, get_atom::value, 3.14).receive(
-    [](double) {
-      CAF_ERROR("unexpected ordinary response message received");
-    },
-    [](error& err) {
-      CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::unexpected_message));
-    }
-  );
+  auto f = make_function_view(foo);
+  CAF_CHECK_EQUAL(f(get_atom::value, 3.14), sec::unexpected_message);
   self->send(foo, get_atom::value, 42);
   self->receive(
     [](int x) {
@@ -208,7 +175,7 @@ CAF_TEST(error_response_message) {
   self->send(foo, get_atom::value, 3.14);
   self->receive(
     [&](error& err) {
-      CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::unexpected_message));
+      CAF_CHECK_EQUAL(err, sec::unexpected_message);
       self->send(self, message{});
     }
   );
@@ -228,6 +195,35 @@ CAF_TEST(satisfied_promise) {
       CAF_CHECK_EQUAL(y, 3.14 * 2);
     }
   );
+}
+
+CAF_TEST(delegating_promises) {
+  using task = std::pair<typed_response_promise<int>, int>;
+  struct state {
+    std::vector<task> tasks;
+  };
+  using bar_actor = typed_actor<replies_to<int>::with<int>, reacts_to<ok_atom>>;
+  auto bar_fun = [](bar_actor::stateful_pointer<state> self, foo_actor worker)
+                 -> bar_actor::behavior_type {
+    return {
+      [=](int x) -> typed_response_promise<int> {
+        auto& tasks = self->state.tasks;
+        tasks.emplace_back(self->make_response_promise<int>(), x);
+        self->send(self, ok_atom::value);
+        return tasks.back().first;
+      },
+      [=](ok_atom) {
+        auto& tasks = self->state.tasks;
+        if (!tasks.empty()) {
+          auto& task = tasks.back();
+          task.first.delegate(worker, task.second);
+          tasks.pop_back();
+        }
+      }
+    };
+  };
+  auto f = make_function_view(system.spawn(bar_fun, foo));
+  CAF_CHECK_EQUAL(f(42), 84);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

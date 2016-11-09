@@ -67,6 +67,13 @@ public:
     return *this;
   }
 
+  template <message_priority P = message_priority::normal,
+           class Handle = actor, class... Us>
+  typed_response_promise delegate(const Handle& dest, Us&&... xs) {
+    promise_.template delegate<P>(dest, std::forward<Us>(xs)...);
+    return *this;
+  }
+
   /// Satisfies the promise by sending an error response message.
   /// For non-requests, nothing is done.
   inline typed_response_promise deliver(error x) {

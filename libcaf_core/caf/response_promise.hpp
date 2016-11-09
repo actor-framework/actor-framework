@@ -26,6 +26,8 @@
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/message_id.hpp"
+#include "caf/response_type.hpp"
+#include "caf/check_typed_input.hpp"
 
 namespace caf {
 
@@ -54,7 +56,34 @@ public:
     response_promise
   >::type
   deliver(T&&x, Ts&&... xs) {
-    return deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
+    return deliver_impl(make_message(std::forward<T>(x),
+                                     std::forward<Ts>(xs)...));
+  }
+
+  /// Satisfies the promise by delegating to another actor.
+  template <message_priority P = message_priority::normal,
+           class Handle = actor, class... Ts>
+   typename response_type<
+    typename Handle::signatures,
+    detail::implicit_conversions_t<typename std::decay<Ts>::type>...
+  >::delegated_type
+  delegate(const Handle& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "nothing to delegate");
+    using token =
+      detail::type_list<
+        typename detail::implicit_conversions<
+          typename std::decay<Ts>::type
+        >::type...>;
+    static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
+                  "receiver does not accept given message");
+    if (dest) {
+      auto mid = P == message_priority::high ? id_.with_high_priority() : id_;
+      dest->enqueue(make_mailbox_element(std::move(source_), mid,
+                                         std::move(stages_),
+                                         std::forward<Ts>(xs)...),
+                    ctx_);
+    }
+    return {};
   }
 
   /// Satisfies the promise by sending an error response message.

@@ -20,8 +20,10 @@
 #include <utility>
 #include <algorithm>
 
-#include "caf/local_actor.hpp"
 #include "caf/response_promise.hpp"
+
+#include "caf/logger.hpp"
+#include "caf/local_actor.hpp"
 
 namespace caf {
 
@@ -68,9 +70,9 @@ response_promise response_promise::deliver_impl(message msg) {
     return *this;
   }
   if (self_)
-    CAF_LOG_ERROR("response promise already satisfied");
+    CAF_LOG_INFO("response promise already satisfied");
   else
-    CAF_LOG_ERROR("invalid response promise");
+    CAF_LOG_INFO("invalid response promise");
   return *this;
 }
 

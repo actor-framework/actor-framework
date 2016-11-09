@@ -21,7 +21,7 @@
 #define CAF_CHECK_TYPED_INPUT_HPP
 
 #include "caf/fwd.hpp"
-#include "caf/typed_actor.hpp"
+#include "caf/replies_to.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
