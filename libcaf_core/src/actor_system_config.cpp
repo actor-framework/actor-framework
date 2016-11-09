@@ -137,7 +137,9 @@ actor_system_config::actor_system_config()
   .add(logger_verbosity, "verbosity",
        "sets the verbosity (QUIET|ERROR|WARNING|INFO|DEBUG|TRACE)")
   .add(logger_console, "console",
-       "enables logging to the console via std::clog");
+       "enables logging to the console via std::clog")
+  .add(logger_filter, "filter",
+       "sets a component filter for console log messages");
   opt_group{options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")

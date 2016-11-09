@@ -257,6 +257,7 @@ public:
   std::string logger_filename;
   atom_value logger_verbosity;
   atom_value logger_console;
+  std::string logger_filter;
 
   // -- config parameters of the middleman -------------------------------------
 

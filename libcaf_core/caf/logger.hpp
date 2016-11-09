@@ -65,9 +65,11 @@ public:
     event* next;
     event* prev;
     int level;
+    const char* component;
     std::string prefix;
     std::string msg;
-    explicit event(int l = 0, std::string p = "", std::string m = "");
+    explicit event(int l = 0, char const* c = "", std::string p = "",
+                   std::string m = "");
   };
 
   template <class T>

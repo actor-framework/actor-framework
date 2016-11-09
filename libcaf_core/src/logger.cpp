@@ -125,10 +125,11 @@ void prettify_type_name(std::string& class_name, const char* c_class_name) {
 
 } // namespace <anonymous>
 
-logger::event::event(int l, std::string p, std::string m)
+logger::event::event(int l, const char* c, std::string p, std::string m)
     : next(nullptr),
       prev(nullptr),
       level(l),
+      component(c),
       prefix(std::move(p)),
       msg(std::move(m)) {
   // nop
@@ -248,7 +249,7 @@ void logger::log(int level, const char* component,
          << " " << class_name << " " << function_name
          << " " << file_name << ":" << line_num;
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_,
-                              new event{level, prefix.str(), msg});
+                              new event{level, component, prefix.str(), msg});
 }
 
 void logger::set_current_actor_system(actor_system* x) {
@@ -298,7 +299,7 @@ void logger::run() {
     auto nid = to_string(system_.node());
     f.replace(i, i + sizeof(node) - 1, nid);
   }
-  std::fstream out(f, std::ios::out | std::ios::app);
+  std::fstream file(f, std::ios::out | std::ios::app);
   std::unique_ptr<event> ptr;
   for (;;) {
     // make sure we have data to read
@@ -307,10 +308,14 @@ void logger::run() {
     ptr.reset(queue_.try_pop());
     CAF_ASSERT(ptr != nullptr);
     if (ptr->msg.empty()) {
-      out.close();
+      file.close();
       return;
     }
-    out << ptr->prefix << ' ' << ptr->msg << std::endl;
+    file << ptr->prefix << ' ' << ptr->msg << std::endl;
+    // TODO: once we've phased out GCC 4.8, we can upgarde this to a regex.
+    if (!system_.config().logger_filter.empty()
+        && ptr->component != system_.config().logger_filter)
+      continue;
     if (system_.config().logger_console == atom("UNCOLORED")) {
       std::clog << ptr->msg << std::endl;
     } else if  (system_.config().logger_console == atom("COLORED")) {
