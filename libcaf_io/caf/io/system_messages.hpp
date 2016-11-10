@@ -29,6 +29,7 @@
 
 #include "caf/io/handle.hpp"
 #include "caf/io/accept_handle.hpp"
+#include "caf/io/endpoint_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_sink_handle.hpp"
 #include "caf/io/datagram_source_handle.hpp"

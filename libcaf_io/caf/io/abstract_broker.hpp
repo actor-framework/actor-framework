@@ -30,6 +30,7 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"
+#include "caf/io/endpoint_handle.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_sink_handle.hpp"
@@ -38,6 +39,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/endpoint_manager.hpp"
 #include "caf/io/network/datagram_sink_manager.hpp"
 #include "caf/io/network/datagram_source_manager.hpp"
 
@@ -86,6 +88,7 @@ public:
   // even brokers need friends
   friend class scribe;
   friend class doorman;
+  friend class endpoint;
   friend class datagram_sink;
   friend class datagram_source;
 
@@ -339,6 +342,9 @@ protected:
 
   using datagram_source_map = std::unordered_map<datagram_source_handle,
                                                  intrusive_ptr<datagram_source>>;
+
+  using endpoint_map = std::unordered_map<endpoint_handle,
+                                          intrusive_ptr<endpoint>>;
 
   /// @cond PRIVATE
 
