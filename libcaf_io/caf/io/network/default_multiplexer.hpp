@@ -254,6 +254,8 @@ public:
   friend class io::middleman; // disambiguate reference
   friend class supervisor;
 
+  using endpoint = std::pair<std::string,uint16_t>;
+
   struct event {
     native_socket fd;
     int mask;
@@ -338,6 +340,13 @@ public:
 
   void del(operation op, native_socket fd, event_handler* ptr);
 
+  /// @cond PRIVATE
+
+  // Used by datagram senders and receivers to manage known endpoints
+  std::map<endpoint, datagram_sink_handle>& endpoints();
+
+  /// @endcond
+
 private:
   // platform-dependent additional initialization code
   void init();
@@ -397,6 +406,9 @@ private:
   multiplexer_poll_shadow_data shadow_;
   std::pair<native_socket, native_socket> pipe_;
   pipe_reader pipe_reader_;
+  // TODO: is this the right place?
+  // How to maintain endpoints if they close?
+  std::map<endpoint, datagram_sink_handle> remote_endpoints_;
 };
 
 inline connection_handle conn_hdl_from_socket(native_socket fd) {
@@ -628,6 +640,8 @@ public:
   void removed_from_loop(operation op) override;
 
   void handle_event(operation op) override;
+
+  std::pair<std::string,uint16_t> get_sender();
 
 private:
   void prepare_next_read();

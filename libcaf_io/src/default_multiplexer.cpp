@@ -622,6 +622,11 @@ void default_multiplexer::del(operation op, native_socket fd,
   new_event(del_flag, op, fd, ptr);
 }
 
+std::map<default_multiplexer::endpoint, datagram_sink_handle>&
+default_multiplexer::endpoints() {
+  return remote_endpoints_;
+}
+
 void default_multiplexer::wr_dispatch_request(resumable* ptr) {
   intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
   // on windows, we actually have sockets, otherwise we have file handles
@@ -1006,7 +1011,7 @@ default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
 }
 
 expected<void> default_multiplexer::assign_tcp_doorman(abstract_broker* self,
-                                             accept_handle hdl) {
+                                                       accept_handle hdl) {
   add_tcp_doorman(self, static_cast<native_socket>(hdl.id()));
   return unit;
 }
@@ -1611,6 +1616,21 @@ void datagram_receiver::handle_event(operation op) {
       }
       if (rb == 0)
         return;
+      auto& endpoints = backend().endpoints();
+      auto sender = get_sender();
+      auto endpoint = endpoints.find(sender);
+      if (endpoint == endpoints.end()) {
+        auto new_endpoint = backend().add_datagram_sink(reader_->parent(),
+                                                        sender.first,
+                                                        sender.second);
+        if (!new_endpoint) {
+          // TODO: error handling
+          CAF_LOG_DEBUG("Could not create endpoint for new sender.");
+          return;
+        }
+        endpoint = endpoints.emplace(sender, *new_endpoint).first;
+      }
+      auto hdl = endpoint->second;
       auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
       packet_size_ = rb;
       prepare_next_read();
@@ -1631,6 +1651,34 @@ void datagram_receiver::handle_event(operation op) {
       // no need to call backend().del() here
       break;
   }
+}
+
+std::pair<std::string,uint16_t> datagram_receiver::get_sender() {
+  char addr[INET6_ADDRSTRLEN];
+  std::string host;
+  uint16_t port = 0;
+  switch(last_sender.ss_family) {
+    case AF_INET:
+      port = ntohs(reinterpret_cast<sockaddr_in*>(&last_sender)->sin_port);
+      inet_ntop(AF_INET,
+                &reinterpret_cast<sockaddr_in*>(&last_sender)->sin_addr,
+                addr, INET_ADDRSTRLEN);
+      host.insert(std::begin(host), std::begin(addr),
+                  std::begin(addr) + INET_ADDRSTRLEN);
+      break;
+    case AF_INET6:
+      port = ntohs(reinterpret_cast<sockaddr_in6*>(&last_sender)->sin6_port);
+      inet_ntop(AF_INET6,
+                &reinterpret_cast<sockaddr_in*>(&last_sender)->sin_addr,
+                addr, INET6_ADDRSTRLEN);
+      host.insert(std::begin(host), std::begin(addr),
+                  std::begin(addr) + INET6_ADDRSTRLEN);
+      break;
+    default:
+      // nop
+      break;
+  }
+  return std::make_pair(std::move(host), port);
 }
 
 void datagram_receiver::prepare_next_read() {

@@ -204,6 +204,17 @@ inspect(Inspector& f, datagram_source_passivated_msg& x) {
   return f(meta::type_name("datagram_source_passivated_msg"), x.handle);
 }
 
+/// Signalizes that a {@link broker} datagram endpoint was closed.
+struct endpoint_closed_msg {
+  endpoint_handle handle;
+};
+
+/// @relates endpoint_closed_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, endpoint_closed_msg& x) {
+  return f(meta::type_name("endpoint_closed_msg"), x.handle);
+}
 } // namespace io
 } // namespace caf
 

@@ -70,7 +70,7 @@ private:
 } // namespace ios
 } // namespace caf
 
-namespace std{
+namespace std {
 
 template<>
 struct hash<caf::io::accept_handle> {

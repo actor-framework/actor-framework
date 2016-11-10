@@ -49,11 +49,11 @@ public:
 
   using super = handle<datagram_sink_handle, invalid_datagram_sink_handle_t>;
 
-  constexpr datagram_sink_handle() {
+  datagram_sink_handle() : port_{0} {
     // nop
   }
 
-  constexpr datagram_sink_handle(const invalid_datagram_sink_handle_t&) {
+  datagram_sink_handle(const invalid_datagram_sink_handle_t&) : port_{0} {
     // nop
   }
 
@@ -63,10 +63,28 @@ public:
     return f(meta::type_name("datagram_sink_handle"), x.id_);
   }
 
+  const std::string& host() const {
+    return host_;
+  }
+
+  void set_host(std::string host) {
+    host_ = move(host);
+  }
+
+  uint16_t port() const {
+    return port_;
+  }
+
+  void set_port(uint16_t port) {
+    port_ = port;
+  }
+
 private:
   inline datagram_sink_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
+  std::string host_;
+  uint16_t port_;
 };
 
 } // namespace io
