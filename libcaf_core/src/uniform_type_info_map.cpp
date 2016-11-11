@@ -36,6 +36,7 @@
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
+#include "caf/timestamp.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_factory.hpp"
@@ -60,6 +61,7 @@ const char* numbered_type_names[] = {
   "@charbuf",
   "@down",
   "@duration",
+  "@timestamp",
   "@error",
   "@exit",
   "@group",

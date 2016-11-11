@@ -28,6 +28,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
+#include "caf/timestamp.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/squashed_int.hpp"
@@ -46,6 +47,7 @@ using sorted_builtin_types =
     std::vector<char>,                  // @charbuf
     down_msg,                           // @down
     duration,                           // @duration
+    timestamp,                          // @timestamp
     error,                              // @error
     exit_msg,                           // @exit
     group,                              // @group

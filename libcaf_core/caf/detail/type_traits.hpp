@@ -21,6 +21,7 @@
 #define CAF_DETAIL_TYPE_TRAITS_HPP
 
 #include <tuple>
+#include <chrono>
 #include <string>
 #include <vector>
 #include <utility>
@@ -28,6 +29,7 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/timestamp.hpp"
 
 #include "caf/detail/type_list.hpp"
 
@@ -138,17 +140,24 @@ struct is_one_of<X, X, Ts...> : std::true_type {};
 template <class X, typename T0, class... Ts>
 struct is_one_of<X, T0, Ts...> : is_one_of<X, Ts...> {};
 
+/// Checks whether `T` is a `std::chrono::duration`.
+template <class T>
+struct is_duration : std::false_type {};
+
+template <class Period, class Rep>
+struct is_duration<std::chrono::duration<Period, Rep>> : std::true_type {};
+
 /// Checks wheter `T` is considered a builtin type.
 ///
-/// Builtin types are: (1) all arithmetic types, (2) string types from the STL,
-/// and (3) built-in types such as `actor_ptr`.
+/// Builtin types are: (1) all arithmetic types (including time types), (2)
+/// string types from the STL, and (3) built-in types such as `actor_ptr`.
 template <class T>
 struct is_builtin {
-  // all arithmetic types are considered builtin
   static constexpr bool value = std::is_arithmetic<T>::value
-                                || is_one_of<T, std::string, std::u16string,
-                                             std::u32string, atom_value,
-                                             message, actor, group,
+                                || is_duration<T>::value
+                                || is_one_of<T, timestamp, std::string,
+                                             std::u16string, std::u32string,
+                                             atom_value, message, actor, group,
                                              node_id>::value;
 };
 

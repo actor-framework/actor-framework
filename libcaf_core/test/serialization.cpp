@@ -141,6 +141,8 @@ struct fixture {
   int32_t i32 = -345;
   float f32 = 3.45f;
   double f64 = 54.3;
+  timestamp::duration dur = timestamp::duration{1478715821 * 1000000000ll};
+  timestamp ts = timestamp{dur};
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
@@ -195,7 +197,7 @@ struct fixture {
       : system(cfg),
         context(&system) {
     rs.str.assign(string(str.rbegin(), str.rend()));
-    msg = make_message(i32, te, str, rs);
+    msg = make_message(i32, dur, ts, te, str, rs);
   }
 };
 
@@ -259,6 +261,20 @@ CAF_TEST(double_values) {
   double x;
   deserialize(buf, x);
   CAF_CHECK_EQUAL(f64, x);
+}
+
+CAF_TEST(duration_values) {
+  auto buf = serialize(dur);
+  timestamp::duration x;
+  deserialize(buf, x);
+  CAF_CHECK_EQUAL(dur, x);
+}
+
+CAF_TEST(timestamp_values) {
+  auto buf = serialize(ts);
+  timestamp x;
+  deserialize(buf, x);
+  CAF_CHECK_EQUAL(ts, x);
 }
 
 CAF_TEST(enum_classes) {

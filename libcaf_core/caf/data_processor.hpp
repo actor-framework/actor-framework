@@ -29,6 +29,7 @@
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
 #include "caf/error.hpp"
+#include "caf/timestamp.hpp"
 #include "caf/allowed_unsafe_message_type.hpp"
 
 #include "caf/meta/annotation.hpp"
@@ -430,6 +431,20 @@ public:
     } assign;
     double tmp;
     return convert_apply(dref(), x, tmp, assign);
+  }
+
+  template <class Duration>
+  error apply(std::chrono::time_point<std::chrono::system_clock, Duration>& t) {
+    if (Derived::reads_state) {
+      auto dur = t.time_since_epoch();
+      return apply(dur);
+    }
+    if (Derived::writes_state) {
+      Duration dur;
+      auto e = apply(dur);
+      t = std::chrono::time_point<std::chrono::system_clock, Duration>{dur};
+      return e;
+    }
   }
 
   /// Applies this processor to a raw block of data of size `num_bytes`.
