@@ -26,6 +26,7 @@ namespace io {
 class scribe;
 class broker;
 class doorman;
+class endpoint;
 class middleman;
 class basp_broker;
 class datagram_sink;

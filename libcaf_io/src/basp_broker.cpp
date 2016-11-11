@@ -465,30 +465,6 @@ void basp_broker_state::set_context(connection_handle hdl) {
   this_context = &i->second;
 }
 
-void basp_broker_state::set_context(datagram_source_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  /*
-  auto i = udp_ctx.find(hdl);
-  if (i == udp_ctx.end()) {
-    i = udp_ctx.emplace(
-      hdl,
-      endpoint_context{
-        basp::header{
-          basp::message_type::client_handshake, 0, 0, 0, none, none,
-          invalid_actor_id, invalid_actor_id
-        },
-        none, hdl,
-        none,
-        0, 0,
-        0, 0,
-        none
-      }
-    ).first;
-  }
-  // TODO: set some context?
-  */
-}
-
 /******************************************************************************
  *                                basp_broker                                 *
  ******************************************************************************/
@@ -546,11 +522,13 @@ behavior basp_broker::make_behavior() {
       }
     },
     // received from underlying broker implementation
-    [=](new_datagram_msg& msg) {
+    [=](datagram_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       CAF_LOG_DEBUG("Received new_datagram_msg: " << CAF_ARG(msg));
-      auto& hdl = msg.handle;
-      // state.instance.handle(context(), msg, 
+      // TODO: implement this
+      // look for existing context or create a new one
+      // handle messge
+      static_cast<void>(msg);
     },
     // received from proxy instances
     [=](forward_atom, strong_actor_ptr& src,
@@ -684,17 +662,18 @@ behavior basp_broker::make_behavior() {
         rp.deliver(std::move(res.error()));
       }
     },
-    [=](connect_atom, datagram_sink_handle hdl, uint16_t port) {
+    [=](connect_atom, endpoint_handle hdl, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
+      static_cast<void>(hdl);
+      static_cast<void>(port);
+      /*
       auto rp = make_response_promise();
       auto res = assign_datagram_sink(hdl);
       if (res) {
         auto& ctx = state.udp_ctx[hdl];
-        /*
         ctx.sink = hdl;
         ctx.remote_port = port;
         ctx.callback = rp;
-        */
         // TODO: Start handshake with server as there is no way for
         // the server to initiate this.
       } else {
@@ -702,6 +681,7 @@ behavior basp_broker::make_behavior() {
                       << CAF_ARG(res));
         rp.deliver(std::move(res.error()));
       }
+      */
     },
     [=](delete_atom, const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));

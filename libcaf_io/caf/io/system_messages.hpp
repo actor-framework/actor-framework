@@ -153,20 +153,6 @@ inspect(Inspector& f, datagram_source_closed_msg& x) {
   return f(meta::type_name("datagram_source_closed_msg"), x.handle);
 }
 
-/// Signalizes that a datagram with a certain size has been sent.
-struct datagram_sent_msg {
-  // Handle to the endpoint used.
-  datagram_sink_handle handle;
-  // number of bytes written.
-  uint64_t written;
-};
-
-/// @relates datagram_sent_msg
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, datagram_sent_msg& x) {
-  return f(meta::type_name("datagram_sent_msg"), x.handle, x.written);
-}
-
 /// Signalizes newly arrived datagram for a {@link broker}.
 struct new_datagram_msg {
   /// Handle to the related datagram endpoint.
@@ -179,6 +165,20 @@ struct new_datagram_msg {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_datagram_msg& x) {
   return f(meta::type_name("new_datagram_msg"), x.handle, x.buf);
+}
+
+/// Signalizes that a datagram with a certain size has been sent.
+struct datagram_sink_msg {
+  // Handle to the endpoint used.
+  datagram_sink_handle handle;
+  // number of bytes written.
+  uint64_t written;
+};
+
+/// @relates datagram_sink_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, datagram_sink_msg& x) {
+  return f(meta::type_name("datagram_sink_msg"), x.handle, x.written);
 }
 
 /// Signalizes that a datagram sink has entered passive mode.
@@ -216,6 +216,47 @@ typename Inspector::result_type
 inspect(Inspector& f, endpoint_closed_msg& x) {
   return f(meta::type_name("endpoint_closed_msg"), x.handle);
 }
+
+// Signalizes newly arrived datagram for a {@link broker}.
+struct datagram_msg {
+  /// Handle to the related datagram endpoint.
+  endpoint_handle handle;
+  /// Buffer containing the received data.
+  std::vector<char> buf;
+};
+
+/// @relates datagram_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, datagram_msg& x) {
+  return f(meta::type_name("datagram_msg"), x.handle, x.buf);
+}
+
+/// Signalizes that a datagram with a certain size has been sent.
+struct datagram_sent_msg {
+  // Handle to the endpoint used.
+  endpoint_handle handle;
+  // number of bytes written.
+  uint64_t written;
+};
+
+/// @relates datagram_sent_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, datagram_sent_msg& x) {
+  return f(meta::type_name("datagram_sent_msg"), x.handle, x.written);
+}
+
+/// Signalizes that a endpoint has entered passive mode.
+struct endpoint_passivated_msg {
+  endpoint_handle handle;
+};
+
+/// @relates endpoint_passivated_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, endpoint_passivated_msg& x) {
+  return f(meta::type_name("endpoint_passivated_msg"), x.handle);
+}
+
 } // namespace io
 } // namespace caf
 

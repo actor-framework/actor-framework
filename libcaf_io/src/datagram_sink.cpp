@@ -37,8 +37,9 @@ message datagram_sink::detach_message() {
   return make_message(datagram_sink_closed_msg{hdl()});
 }
 
-void datagram_sink::datagram_sent(execution_unit* ctx, size_t written) {
+void datagram_sink::datagram_sent(execution_unit*, size_t) {
   CAF_LOG_TRACE(CAF_ARG(written));
+  /*
   if (detached())
     return;
   using sent_t = datagram_sent_msg;
@@ -47,6 +48,7 @@ void datagram_sink::datagram_sent(execution_unit* ctx, size_t written) {
             mailbox_element::forwarding_stack{},
             sent_t{hdl(), written}};
   invoke_mailbox_element_impl(ctx, tmp);
+  */
 }
 
 void datagram_sink::io_failure(execution_unit* ctx, network::operation op) {

@@ -106,9 +106,13 @@ protected:
             std::is_same<Handle, accept_handle>::value,
             acceptor_passivated_msg,
             typename std::conditional<
-              std::is_same<Handle, datagram_sink_handle>::value,
-              datagram_sink_passivated_msg,
-              datagram_source_passivated_msg
+              std::is_same<Handle, endpoint_handle>::value,
+              endpoint_passivated_msg,
+              typename std::conditional<
+                std::is_same<Handle, datagram_sink_handle>::value,
+                datagram_sink_passivated_msg,
+                datagram_source_passivated_msg
+              >::type
             >::type
           >::type
         >::type;

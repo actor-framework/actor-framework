@@ -34,7 +34,7 @@ namespace io {
 
 using datagram_sink_base = broker_servant<network::datagram_sink_manager,
                                           datagram_sink_handle,
-                                          datagram_sent_msg>;
+                                          datagram_sink_msg>;
 
 /// Manages writing to a datagram sink.
 /// @ingroup Broker

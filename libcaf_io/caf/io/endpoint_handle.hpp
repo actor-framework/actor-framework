@@ -66,7 +66,7 @@ private:
   }
 };
 
-} // namespace ios
+} // namespace io
 } // namespace caf
 
 namespace std {

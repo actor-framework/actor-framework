@@ -23,6 +23,7 @@
 
 #include "caf/io/scribe.hpp"
 #include "caf/io/doorman.hpp"
+#include "caf/io/endpoint.hpp"
 #include "caf/io/datagram_sink.hpp"
 #include "caf/io/datagram_source.hpp"
 
@@ -214,6 +215,120 @@ test_multiplexer::add_tcp_doorman(abstract_broker* ptr, uint16_t prt,
   return result;
 }
 
+expected<endpoint_handle>
+test_multiplexer::new_remote_endpoint(const std::string& host,
+                                      uint16_t port_hint) {
+  guard_type guard{mx_};
+  endpoint_handle result;
+  auto i = remote_endpoints_.find(std::make_pair(host, port_hint));
+  if (i != remote_endpoints_.end()) {
+    result = i->second;
+    remote_endpoints_.erase(i);
+  }
+  return result;
+}
+
+expected<std::pair<endpoint_handle, uint16_t>>
+test_multiplexer::new_local_endpoint(uint16_t desired_prt, const char*, bool) {
+  endpoint_handle result;
+  auto i = local_endpoints_.find(desired_prt);
+  if (i != local_endpoints_.end()) {
+    result = i->second;
+    local_endpoints_.erase(i);
+  }
+  return std::make_pair(result, desired_prt);
+}
+
+expected<void> test_multiplexer::assign_endpoint(abstract_broker* ptr,
+                                                 endpoint_handle hdl) {
+  class impl : public endpoint {
+  public:
+    impl(abstract_broker* self, endpoint_handle eh, test_multiplexer* mpx)
+        : endpoint(self, eh),
+          mpx_(mpx) {
+      // nop
+    }
+
+    void configure_datagram_size(size_t buf_size) override {
+      mpx_->buffer_size(hdl()) = buf_size;
+    }
+
+    void ack_writes(bool enable) override {
+      mpx_->ack_writes(hdl()) = enable;
+    }
+
+    std::vector<char>& wr_buf() override {
+      return mpx_->output_buffer(hdl());
+    }
+
+    std::vector<char>& rd_buf() override {
+      return mpx_->input_buffer(hdl());
+    }
+
+    void launch() override {
+      // nop
+    }
+
+    void stop_reading() override {
+      mpx_->stopped_reading(hdl()) = true;
+      detach(mpx_, false);
+    }
+
+    std::string addr() const override {
+      return "test";
+    }
+
+    uint16_t port() const override {
+      return static_cast<uint16_t>(hdl().id());
+    }
+
+    void add_to_loop() override {
+      mpx_->passive_mode(hdl()) = false;
+    }
+
+    void remove_from_loop() override {
+      mpx_->passive_mode(hdl()) = true;
+    }
+
+  private:
+    test_multiplexer* mpx_;
+  };
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  auto sptr = make_counted<impl>(ptr, hdl, this);
+  impl_ptr(hdl) = sptr;
+  ptr->add_endpoint(sptr);
+  return unit;
+}
+
+expected<endpoint_handle>
+test_multiplexer::add_remote_endpoint(abstract_broker* ptr,
+                                      const std::string& host, uint16_t port) {
+  auto hdl = new_remote_endpoint(host, port);
+  if (!hdl)
+    return std::move(hdl.error());
+  assign_endpoint(ptr, *hdl);
+  return hdl;
+}
+
+expected<std::pair<endpoint_handle, uint16_t>>
+test_multiplexer::add_local_endpoint(abstract_broker* ptr, uint16_t port,
+                                     const char* in, bool reuse_addr) {
+  auto result = new_local_endpoint(port, in, reuse_addr);
+  if (!result)
+    return std::move(result.error());
+  local_port(result->first) = port;
+  assign_endpoint(ptr, result->first);
+  return result;
+}
+
+endpoint_handle test_multiplexer::add_endpoint(abstract_broker*,
+                                               network::native_socket) {
+  std::cerr << "test_multiplexer::add_endpoint called with native socket"
+            << std::endl;
+  abort();
+}
+
+
 expected<datagram_sink_handle>
 test_multiplexer::new_datagram_sink(const std::string& host,
                                     uint16_t port_hint) {
@@ -386,7 +501,7 @@ void test_multiplexer::provide_datagram_sink(std::string host,
   datagram_sinks_.emplace(std::make_pair(std::move(host), desired_port), hdl);
   datagram_sink_data_[hdl].port = desired_port;
 }
-  
+
 void test_multiplexer::provide_datagram_source(uint16_t desired_port,
                                                datagram_source_handle hdl) {
   datagram_sources_.emplace(std::make_pair(desired_port, hdl));
@@ -486,6 +601,14 @@ size_t& test_multiplexer::buffer_size(datagram_source_handle hdl) {
   return datagram_source_data_[hdl].buffer_size;
 }
 
+uint16_t& test_multiplexer::local_port(endpoint_handle hdl) {
+  return endpoint_data_[hdl].local_port;
+}
+
+uint16_t& test_multiplexer::remote_port(endpoint_handle hdl) {
+  return endpoint_data_[hdl].remote_port;
+}
+
 bool& test_multiplexer::stopped_reading(accept_handle hdl) {
   return doorman_data_[hdl].stopped_reading;
 }
@@ -496,6 +619,36 @@ bool& test_multiplexer::passive_mode(accept_handle hdl) {
 
 intrusive_ptr<doorman>& test_multiplexer::impl_ptr(accept_handle hdl) {
   return doorman_data_[hdl].ptr;
+}
+
+test_multiplexer::buffer_type&
+test_multiplexer::output_buffer(endpoint_handle hdl) {
+  return endpoint_data_[hdl].wr_buf;
+}
+
+test_multiplexer::buffer_type&
+test_multiplexer::input_buffer(endpoint_handle hdl) {
+  return endpoint_data_[hdl].re_buf;
+}
+
+intrusive_ptr<endpoint>& test_multiplexer::impl_ptr(endpoint_handle hdl) {
+  return endpoint_data_[hdl].ptr;
+}
+
+bool& test_multiplexer::stopped_reading(endpoint_handle hdl) {
+  return endpoint_data_[hdl].stopped_reading;
+}
+
+bool& test_multiplexer::passive_mode(endpoint_handle hdl) {
+  return endpoint_data_[hdl].passive_mode;
+}
+
+bool& test_multiplexer::ack_writes(endpoint_handle hdl) {
+  return endpoint_data_[hdl].ack_writes;
+}
+
+size_t& test_multiplexer::buffer_size(endpoint_handle hdl) {
+  return endpoint_data_[hdl].re_buf_size;
 }
 
 void test_multiplexer::add_pending_connect(accept_handle src,

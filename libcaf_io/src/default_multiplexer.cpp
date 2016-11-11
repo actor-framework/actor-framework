@@ -622,7 +622,7 @@ void default_multiplexer::del(operation op, native_socket fd,
   new_event(del_flag, op, fd, ptr);
 }
 
-std::map<default_multiplexer::endpoint, datagram_sink_handle>&
+std::map<default_multiplexer::endpoint_addr, endpoint_handle>&
 default_multiplexer::endpoints() {
   return remote_endpoints_;
 }
@@ -862,6 +862,84 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
   return ptr->hdl();
 }
 
+endpoint_handle default_multiplexer::add_endpoint(abstract_broker* self,
+                                                  network::native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  CAF_ASSERT(fd != network::invalid_native_socket);
+  class impl : public endpoint {
+  public:
+    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
+        : endpoint(ptr, network::endpoint_hdl_from_socket(sockfd)),
+          handler_(mx, sockfd) {
+      // nop
+    }
+    void ack_writes(bool enable) override {
+      handler_.ack_writes(enable);
+    }
+    void configure_datagram_size(size_t buf_size) override {
+      CAF_LOG_TRACE("");
+      handler_.configure_datagram_size(buf_size);
+      if (!launched_)
+        launch();
+    }
+    void stop_reading() override {
+      CAF_LOG_TRACE("");
+      handler_.stop_reading();
+      detach(&handler_.backend(), false);
+    }
+    std::vector<char>& wr_buf() override {
+      return handler_.wr_buf();
+    }
+    std::vector<char>& rd_buf() override {
+      return handler_.rd_buf();
+    }
+    void launch() override {
+      CAF_LOG_TRACE("");
+      handler_.start(this);
+    }
+    std::string addr() const override {
+      auto x = remote_addr_of_fd(handler_.fd());
+      if (!x)
+        return "";
+      return std::move(*x);
+    }
+    std::string local_addr() const {
+      auto x = local_addr_of_fd(handler_.fd());
+      if (!x)
+        return "";
+      return std::move(*x);
+    }
+    uint16_t port() const override {
+      auto x = remote_port_of_fd(handler_.fd());
+      if (!x)
+        return 0;
+      return *x;
+    }
+    uint16_t local_port() const {
+      auto x = local_port_of_fd(handler_.fd());
+      if (!x)
+        return 0;
+      return *x;
+    }
+    void flush() {
+      CAF_LOG_TRACE("");
+      handler_.flush(this);
+    }
+    void add_to_loop() override {
+      handler_.activate(this);
+    }
+    void remove_from_loop() override {
+      handler_.passivate();
+    }
+  private:
+    bool launched_;
+    network::datagram_hdlr handler_;
+  };
+  auto ptr = make_counted<impl>(self, *this, fd);
+  self->add_endpoint(ptr);
+  return ptr->hdl();
+}
+
 datagram_sink_handle
 default_multiplexer::add_datagram_sink(abstract_broker* self,
                                        native_socket fd) {
@@ -1072,13 +1150,65 @@ expected<void> default_multiplexer::assign_datagram_source(abstract_broker* self
 
 
 expected<std::pair<datagram_source_handle, uint16_t>>
-default_multiplexer::add_datagram_source(abstract_broker* self, uint16_t port ,
-                                         const char* host, bool reuse_addr) {
-  auto res = new_datagram_source_impl(port, host, reuse_addr);
+default_multiplexer::add_datagram_source(abstract_broker* self, uint16_t port,
+                                         const char* in, bool reuse_addr) {
+  auto res = new_datagram_source_impl(port, in, reuse_addr);
   if (!res)
     return std::move(res.error());
   auto bound_port = res->second;
   return std::make_pair(add_datagram_source(self, res->first), bound_port);
+}
+
+expected<endpoint_handle>
+default_multiplexer::new_remote_endpoint(const std::string& host,
+                                         uint16_t port) {
+  auto fd = new_remote_endpoint_impl(host, port);
+  if (!fd)
+    return std::move(fd.error());
+  // TODO: add endpoint to endpoints vector of middleman!
+  // Maybe this should be done in the new_remote_enpoint_impl
+  return endpoint_handle::from_int(int64_from_native_socket(*fd));
+}
+
+expected<std::pair<endpoint_handle, uint16_t>>
+default_multiplexer::new_local_endpoint(uint16_t port, const char* in,
+                                        bool reuse_addr) {
+  auto res = new_local_endpoint_impl(port, in, reuse_addr);
+  if (!res)
+    return std::move(res.error());
+  return std::make_pair(endpoint_handle::from_int(
+                          int64_from_native_socket(res->first)),
+                        res->second);
+}
+
+expected<void> default_multiplexer::assign_endpoint(abstract_broker* self,
+                                                    endpoint_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
+  add_endpoint(self, static_cast<native_socket>(hdl.id()));
+  return unit;
+}
+
+expected<endpoint_handle>
+default_multiplexer::add_remote_endpoint(abstract_broker* self,
+                                         const std::string& host,
+                                         uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(host) << CAF_ARG(port));
+  auto fd = new_remote_endpoint_impl(host, port);
+  if (!fd)
+    return std::move(fd.error());
+  // TODO: add endpoint to endpoints vector of middleman!
+  // Maybe this should be done in the new_remote_enpoint_impl
+  return add_endpoint(self, *fd);
+}
+
+expected<std::pair<endpoint_handle, uint16_t>>
+default_multiplexer::add_local_endpoint(abstract_broker* self, uint16_t port,
+                                        const char* in, bool reuse_addr) {
+  auto res = new_local_endpoint_impl(port, in, reuse_addr);
+  if (!res)
+    return std::move(res.error());
+  auto bound_port = res->second;
+  return std::make_pair(add_endpoint(self, res->first), bound_port);
 }
 
 /******************************************************************************
@@ -1616,21 +1746,6 @@ void datagram_receiver::handle_event(operation op) {
       }
       if (rb == 0)
         return;
-      auto& endpoints = backend().endpoints();
-      auto sender = get_sender();
-      auto endpoint = endpoints.find(sender);
-      if (endpoint == endpoints.end()) {
-        auto new_endpoint = backend().add_datagram_sink(reader_->parent(),
-                                                        sender.first,
-                                                        sender.second);
-        if (!new_endpoint) {
-          // TODO: error handling
-          CAF_LOG_DEBUG("Could not create endpoint for new sender.");
-          return;
-        }
-        endpoint = endpoints.emplace(sender, *new_endpoint).first;
-      }
-      auto hdl = endpoint->second;
       auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
       packet_size_ = rb;
       prepare_next_read();
@@ -1682,6 +1797,185 @@ std::pair<std::string,uint16_t> datagram_receiver::get_sender() {
 }
 
 void datagram_receiver::prepare_next_read() {
+  rd_buf_.resize(buf_size_);
+}
+
+datagram_hdlr::datagram_hdlr(default_multiplexer& backend_ref,
+                             native_socket sockfd)
+    : event_handler(backend_ref, sockfd),
+      buf_size_(0),
+      ack_writes_(false),
+      writing_(false) {
+  // TODO: Set some reasonable default.
+  configure_datagram_size(1500);
+}
+
+void datagram_hdlr::ack_writes(bool x) {
+  ack_writes_ = x;
+}
+
+void datagram_hdlr::write(const void* buf, size_t num_bytes) {
+  CAF_LOG_TRACE(CAF_ARG(num_bytes));
+  auto first = reinterpret_cast<const char*>(buf);
+  auto last  = first + num_bytes;
+  wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
+}
+
+void datagram_hdlr::configure_datagram_size(size_t buf_size) {
+  buf_size_ = buf_size;
+}
+
+std::pair<std::string,uint16_t> datagram_hdlr::get_sender() {
+  char addr[INET6_ADDRSTRLEN];
+  std::string host;
+  uint16_t port = 0;
+  switch(last_sender.ss_family) {
+    case AF_INET:
+      port = ntohs(reinterpret_cast<sockaddr_in*>(&last_sender)->sin_port);
+      inet_ntop(AF_INET,
+                &reinterpret_cast<sockaddr_in*>(&last_sender)->sin_addr,
+                addr, INET_ADDRSTRLEN);
+      host.insert(std::begin(host), std::begin(addr),
+                  std::begin(addr) + INET_ADDRSTRLEN);
+      break;
+    case AF_INET6:
+      port = ntohs(reinterpret_cast<sockaddr_in6*>(&last_sender)->sin6_port);
+      inet_ntop(AF_INET6,
+                &reinterpret_cast<sockaddr_in*>(&last_sender)->sin_addr,
+                addr, INET6_ADDRSTRLEN);
+      host.insert(std::begin(host), std::begin(addr),
+                  std::begin(addr) + INET6_ADDRSTRLEN);
+      break;
+    default:
+      CAF_LOG_DEBUG("Received data with unknown protocol family.");
+      // nop
+      break;
+  }
+  return std::make_pair(std::move(host), port);
+}
+
+void datagram_hdlr::flush(const manager_ptr& mgr) {
+  CAF_ASSERT(mgr != nullptr);
+  CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
+  if (!wr_offline_buf_.empty() && !writing_) {
+    backend().add(operation::write, fd(), this);
+    writer_ = mgr;
+    writing_ = true;
+    prepare_next_write();
+  }
+}
+
+void datagram_hdlr::start(manager_type* mgr) {
+  CAF_ASSERT(mgr != nullptr);
+  activate(mgr);
+}
+
+void datagram_hdlr::activate(manager_type* mgr) {
+  if (!reader_) {
+    reader_.reset(mgr);
+    event_handler::activate();
+    prepare_next_read();
+  }
+}
+
+void datagram_hdlr::stop_reading() {
+  CAF_LOG_TRACE("");
+  close_read_channel();
+  passivate();
+}
+
+void datagram_hdlr::removed_from_loop(operation op) {
+  switch (op) {
+    case operation::read:  reader_.reset(); break;
+    case operation::write: writer_.reset(); break;
+    case operation::propagate_error: break;
+  }
+}
+
+void datagram_hdlr::handle_event(operation op) {
+  CAF_LOG_TRACE(CAF_ARG(op));
+  switch (op) {
+    case operation::read: {
+      // Read next datagram
+      size_t rb;
+      if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
+                            last_sender, sender_len)) {
+        reader_->io_failure(&backend(), operation::read);
+        passivate();
+        return;
+      }
+      if (rb == 0)
+        return;
+      // TODO: find responsible (remote) endpoint to deliver datagram
+      /*
+      auto& endpoints = backend().endpoints();
+      auto sender = get_sender();
+      auto endpoint = endpoints.find(sender);
+      if (endpoint == endpoints.end()) {
+        auto new_endpoint = backend().add_datagram_sink(reader_->parent(),
+                                                        sender.first,
+                                                        sender.second);
+        if (!new_endpoint) {
+          // TODO: error handling
+          CAF_LOG_DEBUG("Could not create endpoint for new sender.");
+          return;
+        }
+        endpoint = endpoints.emplace(sender, *new_endpoint).first;
+      }
+      auto hdl = endpoint->second;
+      */
+      auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
+      packet_size_ = rb;
+      prepare_next_read();
+      if (!res) {
+        passivate();
+        return;
+      }
+      break;
+    }
+    case operation::write: {
+      size_t wb; // written bytes
+      if (!send_datagram(wb, fd(), wr_buf_.data(), wr_buf_.size())) {
+        writer_->io_failure(&backend(), operation::write);
+        backend().del(operation::write, fd(), this);
+      } else if (wb > 0) {
+        CAF_ASSERT(wb == wr_buf_.size());
+        if (ack_writes_)
+          writer_->datagram_sent(&backend(), wb);
+        prepare_next_write();
+      } else {
+        // TODO: remove this if sure that datagrams are either written
+        // as a whole or not at all
+        std::cerr << "Partial datagram wrtten: " << wb
+                  << " of " << wr_buf_.size() << std::endl;
+        if (writer_)
+          writer_->io_failure(&backend(), operation::write);
+      }
+      break;
+      break;
+    }
+    case operation::propagate_error:
+      if (reader_)
+        reader_->io_failure(&backend(), operation::read);
+      if (writer_)
+        writer_->io_failure(&backend(), operation::write);
+      // backend will delete this handler anyway,
+      // no need to call backend().del() here
+      break;
+  }
+}
+
+void datagram_hdlr::prepare_next_read() {
+  CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
+  wr_buf_.clear();
+  if (wr_offline_buf_.empty()) {
+    backend().del(operation::write, fd(), this);
+  } else {
+    wr_buf_.swap(wr_offline_buf_);
+  }
+}
+
+void datagram_hdlr::prepare_next_write() {
   rd_buf_.resize(buf_size_);
 }
 
@@ -1918,6 +2212,40 @@ expected<native_socket> new_datagram_sink_impl(const std::string& host,
   return sguard.release();
 }
 
+expected<native_socket> new_remote_endpoint_impl(const std::string& host,
+                                                 uint16_t port,
+                                                 optional<protocol> preferred) {
+  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
+  CAF_LOG_INFO("trying to create endpoint for:" << CAF_ARG(host)
+                                                << CAF_ARG(port));
+  auto res = interfaces::native_address(host, preferred);
+  if (!res) {
+    CAF_LOG_INFO("no such host");
+    return make_error(sec::cannot_connect_to_node, "no such host", host, port);
+  }
+  auto proto = res->second;
+  CAF_ASSERT(proto == ipv4 || proto == ipv6);
+  CALL_CFUN(fd, cc_valid_socket, "socket",
+            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
+  socket_guard sguard(fd);
+  if (proto == ipv6) {
+    if (ip_connect<AF_INET6>(fd, res->first, port)) {
+      CAF_LOG_INFO("successfully connected to host via IPv6");
+      return sguard.release();
+    }
+    sguard.close();
+    // IPv4 fallback
+    return new_datagram_sink_impl(host, port, ipv4);
+  }
+  if (!ip_connect<AF_INET>(fd, res->first, port)) {
+    CAF_LOG_INFO("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
+    return make_error(sec::cannot_connect_to_node,
+                      "ip_connect failed", host, port);
+  }
+  CAF_LOG_INFO("successfully connected to host via IPv4");
+  return sguard.release();
+}
+
 expected<std::pair<native_socket, uint16_t>>
 new_datagram_source_impl(uint16_t port, const char* addr, bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
@@ -1953,7 +2281,41 @@ new_datagram_source_impl(uint16_t port, const char* addr, bool reuse_addr) {
   return std::make_pair(sguard.release(), *p);
 }
 
-  
+expected<std::pair<native_socket, uint16_t>>
+new_local_endpoint_impl(uint16_t port, const char* addr, bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
+  protocol proto = ipv6;
+  if (addr) {
+    auto addrs = interfaces::native_address(addr);
+    if (!addrs)
+      return make_error(sec::cannot_open_port, "Invalid ADDR", addr);
+    proto = addrs->second;
+    CAF_ASSERT(proto == ipv4 || proto == ipv6);
+  }
+  CALL_CFUN(fd, cc_valid_socket, "socket",
+            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
+  // sguard closes the socket in case of exception
+  socket_guard sguard(fd);
+  if (reuse_addr) {
+    int on = 1;
+    CALL_CFUN(tmp1, cc_zero, "setsockopt",
+              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                         reinterpret_cast<setsockopt_ptr>(&on),
+                         static_cast<socklen_t>(sizeof(on))));
+  }
+  // TODO: Change this to something UDP specific?
+  auto p = proto == ipv4 ? new_ip_acceptor_impl<AF_INET>(fd, port, addr)
+                         : new_ip_acceptor_impl<AF_INET6>(fd, port, addr);
+  if (!p)
+    return std::move(p.error());
+  // Not needed: CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
+  // Should there be some handshake between nodes?
+  // TODO: Remove comments
+  // ok, no errors so far
+  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
+  return std::make_pair(sguard.release(), *p);
+}
+
 expected<std::string> local_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);

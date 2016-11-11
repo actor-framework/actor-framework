@@ -85,6 +85,27 @@ public:
   add_datagram_source(abstract_broker* ptr, uint16_t port,
                       const char* in, bool reuse_addr) override;
 
+  expected<endpoint_handle>
+  new_remote_endpoint(const std::string& host, uint16_t port) override;
+
+  expected<std::pair<endpoint_handle, uint16_t>>
+  new_local_endpoint(uint16_t port, const char* in, bool reuse_addr) override;
+
+  expected<void> assign_endpoint(abstract_broker* ptr,
+                                 endpoint_handle hdl) override;
+
+  expected<endpoint_handle> add_remote_endpoint(abstract_broker* ptr,
+                                                const std::string& host,
+                                                uint16_t port) override;
+
+  expected<std::pair<endpoint_handle, uint16_t>>
+  add_local_endpoint(abstract_broker* ptr, uint16_t port, const char* in,
+                     bool reuse_addr) override;
+
+  endpoint_handle add_endpoint(abstract_broker* ptr,
+                               network::native_socket fd) override;
+
+
   supervisor_ptr make_supervisor() override;
 
   void run() override;
@@ -111,11 +132,17 @@ public:
   /// Returns the output buffer of the datagram source identified by `hdl`.
   buffer_type& output_buffer(datagram_sink_handle hdl);
 
+  /// Returns the output buffer of the datagram source identified by `hdl`.
+  buffer_type& output_buffer(endpoint_handle hdl);
+
   /// Returns the input buffer of the scribe identified by `hdl`.
   buffer_type& input_buffer(connection_handle hdl);
 
   /// Returns the input buffer of the datagram source identified by `hdl`.
   buffer_type& input_buffer(datagram_source_handle hdl);
+
+  /// Returns the input buffer of the datagram source identified by `hdl`.
+  buffer_type& input_buffer(endpoint_handle hdl);
 
   /// Returns the configured read policy of the scribe identified by `hdl`.
   receive_policy::config& read_config(connection_handle hdl);
@@ -161,6 +188,25 @@ public:
 
   size_t& buffer_size(datagram_source_handle hdl);
 
+  uint16_t& local_port(endpoint_handle hdl);
+
+  uint16_t& remote_port(endpoint_handle hdl);
+
+  intrusive_ptr<endpoint>& impl_ptr(endpoint_handle hdl);
+
+  /// Returns `true` if this handle has been closed
+  /// for reading, `false` otherwise.
+  bool& stopped_reading(endpoint_handle hdl);
+
+  /// Returns `true` if this handle is inactive, otherwise `false`.
+  bool& passive_mode(endpoint_handle hdl);
+
+  /// Returns whether the scribe identified by `hdl` receives write ACKs.
+  bool& ack_writes(endpoint_handle hdl);
+
+  /// Returns size of the receive buffer for the next datagram.
+  size_t& buffer_size(endpoint_handle hdl);
+
   /// Returns `true` if this handle has been closed
   /// for reading, `false` otherwise.
   bool& stopped_reading(accept_handle hdl);
@@ -189,9 +235,19 @@ public:
 
   bool has_pending_datagram_sink(std::string host, uint16_t port);
 
-  using pending_datagram_sources_map = std::map<uint16_t, datagram_source_handle>;
+  using pending_datagram_sources_map
+    = std::map<uint16_t, datagram_source_handle>;
 
   bool has_pending_datagram_source(uint16_t port);
+
+  using pending_local_endpoints_map = std::map<uint16_t, endpoint_handle>;
+
+  bool has_pending_local_endpoint(std::string host, uint16_t port);
+
+  using pending_remote_endpoints_map
+    = std::map<std::pair<std::string, uint16_t>, endpoint_handle>;
+
+  bool has_pending_remote_endpoint(std::string host, uint16_t port);
 
   /// Accepts a pending connect on `hdl`.
   bool accept_connection(accept_handle hdl);
@@ -260,16 +316,32 @@ private:
     intrusive_ptr<datagram_source> ptr;
   };
 
+  struct endpoint_data {
+    uint16_t local_port;
+    uint16_t remote_port;
+    buffer_type xbuf;
+    buffer_type re_buf;
+    buffer_type wr_buf;
+    size_t re_buf_size;
+    bool stopped_reading = false;
+    bool passive_mode = false;
+    intrusive_ptr<endpoint> ptr;
+    bool ack_writes = false;
+  };
+
   // guards resumables_ and scribes_
   std::mutex mx_;
   std::condition_variable cv_;
   std::list<resumable_ptr> resumables_;
   pending_scribes_map scribes_;
+  pending_local_endpoints_map local_endpoints_;
+  pending_remote_endpoints_map remote_endpoints_;
   pending_datagram_sinks_map datagram_sinks_;
   pending_datagram_sources_map datagram_sources_;
   std::unordered_map<uint16_t, accept_handle> doormen_;
   std::unordered_map<connection_handle, scribe_data> scribe_data_;
   std::unordered_map<accept_handle, doorman_data> doorman_data_;
+  std::unordered_map<endpoint_handle, endpoint_data> endpoint_data_;
   std::unordered_map<datagram_sink_handle, datagram_sink_data> datagram_sink_data_;
   std::unordered_map<datagram_source_handle, datagram_source_data> datagram_source_data_;
   pending_connects_map pending_connects_;

@@ -176,6 +176,20 @@ public:
   /// Writes `data` into the buffer of a given sink.
   void write(datagram_sink_handle hdl, size_t data_size, const void* data);
 
+  // Enables or disables write notifications for given datagram endpoint.
+  void ack_writes(endpoint_handle hdl, bool enable);
+
+  /// Modifies the buffer for received datagrams.
+  /// @param hdl Identifies the affected socket.
+  /// @param buf_size Size of the receiver buffer for the next datagram.
+  void configure_datagram_size(endpoint_handle hdl, size_t buf_size);
+
+  /// Returns write buffer for given sink.
+  std::vector<char>& wr_buf(endpoint_handle hdl);
+
+  /// Writes `data` into the buffer of a given datagram endpoint.
+  void write(endpoint_handle hdl, size_t data_size, const void* data);
+
   /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
     return system().middleman();
@@ -250,6 +264,24 @@ public:
   expected<datagram_source_handle>
   add_datagram_source(network::native_socket fd);
 
+  /// TODO
+  void add_endpoint(const intrusive_ptr<endpoint>& ptr);
+
+  /// TODO
+  expected<void> assign_endpoint(endpoint_handle hdl);
+
+  /// TODO
+  expected<endpoint_handle> add_remote_endpoint(const std::string& host,
+                                                uint16_t port);
+
+  /// TODO
+  expected<std::pair<endpoint_handle, uint16_t>>
+  add_local_endpoint(uint16_t port = 0, const char* in = nullptr,
+                     bool reuse_addr = false);
+
+  /// TODO
+  expected<endpoint_handle> add_endpoint(network::native_socket fd);
+
   /// Returns the remote address associated to `hdl`
   /// or empty string if `hdl` is invalid.
   std::string remote_addr(connection_handle hdl);
@@ -278,6 +310,23 @@ public:
 
   /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
   uint16_t local_port(datagram_source_handle hdl);
+
+/*        TODO: Do we need this?
+  /// Returns the address associated with `hdl`
+  /// or empy string if `hdl` is invalid.
+  std::string addr(endpoint_handle hdl);
+
+  /// Returns the remote port associated to `hdl`
+  /// or `0` if `hdl` is invalid or not "connected".
+  uint16_t remote_port(endpoint_handle hdl);
+
+  /// Return the local port associated to `hdl`
+  /// or `0` if `hdl` is invalid.
+  uint16_t local_port(endpoint_handle hdl);
+
+  /// Return the endpoint handle associated to fiven local `port` or `none`.
+  endpoint_handle endpoint_by_port(uint16_t port);
+*/
 
   /// Closes all connections and acceptors.
   void close_all();
@@ -367,6 +416,12 @@ protected:
   inline datagram_source_map& get_map(datagram_source_handle) {
     return datagram_sources_;
   }
+
+  // meta programming utility
+  inline endpoint_map& get_map(endpoint_handle) {
+    return endpoints_;
+  }
+
   // meta programming utility (not implemented)
   static intrusive_ptr<doorman> ptr_of(accept_handle);
 
@@ -378,6 +433,9 @@ protected:
 
   // meta programming utility (not implemented)
   static intrusive_ptr<datagram_source> ptr_of(datagram_source_handle);
+
+  // meta programming utility (not implemented)
+  static intrusive_ptr<endpoint> ptr_of(endpoint_handle);
 
   /// @endcond
 
@@ -413,6 +471,7 @@ protected:
 private:
   scribe_map scribes_;
   doorman_map doormen_;
+  endpoint_map endpoints_;
   datagram_sink_map datagram_sinks_;
   datagram_source_map datagram_sources_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;

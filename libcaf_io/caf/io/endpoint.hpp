@@ -20,6 +20,8 @@
 #ifndef CAF_IO_ENDPOINT_HPP
 #define CAF_IO_ENDPOINT_HPP
 
+#include <vector>
+
 #include "caf/message.hpp"
 
 #include "caf/io/broker_servant.hpp"
@@ -30,15 +32,14 @@
 namespace caf {
 namespace io {
 
-using endpoint_base = broker_servant<network::endpoint_manager,
-                                     endpoint_handle,
-                                     datagram_sent_msg>;
+using endpoint_base = broker_servant<network::endpoint_manager, endpoint_handle,
+                                     datagram_msg>;
 
 /// Manages writing and reading on a datagram endpoint.
 /// @ingroup Broker
 class endpoint : public endpoint_base {
 public:
-  endpoint(abstract_broker* parent, datagram_sink_handle hdl);
+  endpoint(abstract_broker* parent, endpoint_handle hdl);
 
   ~endpoint();
 
@@ -46,6 +47,7 @@ public:
   virtual void ack_writes(bool enable) = 0;
 
   /// Configure buffer size for next accepted datagram.
+  /// Implicitly starts the read loop on first call.
   virtual void configure_datagram_size(size_t buf_size) = 0;
 
   /// Returns the current write buffer.

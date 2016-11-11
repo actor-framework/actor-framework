@@ -23,6 +23,8 @@ set (LIBCAF_IO_SRCS
      src/acceptor_manager.cpp
      src/multiplexer.cpp
      src/uri.cpp
+     src/endpoint.cpp
+     src/endpoint_manager.cpp
      src/datagram_sink_manager.cpp
      src/datagram_source_manager.cpp
      src/datagram_sink.cpp

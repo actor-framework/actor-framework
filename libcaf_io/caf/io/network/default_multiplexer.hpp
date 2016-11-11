@@ -38,6 +38,7 @@
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/endpoint_manager.hpp"
 #include "caf/io/network/datagram_sink_manager.hpp"
 #include "caf/io/network/datagram_source_manager.hpp"
 
@@ -254,7 +255,7 @@ public:
   friend class io::middleman; // disambiguate reference
   friend class supervisor;
 
-  using endpoint = std::pair<std::string,uint16_t>;
+  using endpoint_addr = std::pair<std::string,uint16_t>;
 
   struct event {
     native_socket fd;
@@ -326,6 +327,26 @@ public:
   add_datagram_source(abstract_broker* ptr, uint16_t port , const char* in,
                       bool rflag) override;
 
+  expected<endpoint_handle>
+  new_remote_endpoint(const std::string& host, uint16_t port) override;
+
+  expected<std::pair<endpoint_handle, uint16_t>>
+  new_local_endpoint(uint16_t port, const char* in, bool reuse_addr) override;
+
+  expected<void> assign_endpoint(abstract_broker* ptr,
+                                 endpoint_handle hdl) override;
+
+  expected<endpoint_handle> add_remote_endpoint(abstract_broker* ptr,
+                                                const std::string& host,
+                                                uint16_t port) override;
+
+  expected<std::pair<endpoint_handle, uint16_t>>
+  add_local_endpoint(abstract_broker* ptr, uint16_t port, const char* in,
+                     bool reuse_addr) override;
+
+  endpoint_handle add_endpoint(abstract_broker* ptr,
+                               network::native_socket fd) override;
+
   void exec_later(resumable* ptr) override;
 
   explicit default_multiplexer(actor_system* sys);
@@ -343,7 +364,7 @@ public:
   /// @cond PRIVATE
 
   // Used by datagram senders and receivers to manage known endpoints
-  std::map<endpoint, datagram_sink_handle>& endpoints();
+  std::map<endpoint_addr, endpoint_handle>& endpoints();
 
   /// @endcond
 
@@ -408,7 +429,7 @@ private:
   pipe_reader pipe_reader_;
   // TODO: is this the right place?
   // How to maintain endpoints if they close?
-  std::map<endpoint, datagram_sink_handle> remote_endpoints_;
+  std::map<endpoint_addr, endpoint_handle> remote_endpoints_;
 };
 
 inline connection_handle conn_hdl_from_socket(native_socket fd) {
@@ -425,6 +446,10 @@ inline datagram_sink_handle dg_sink_hdl_from_socket(native_socket fd) {
 
 inline datagram_source_handle dg_source_hdl_from_socket(native_socket fd) {
   return datagram_source_handle::from_int(int64_from_native_socket(fd));
+}
+
+inline endpoint_handle endpoint_hdl_from_socket(native_socket fd) {
+  return endpoint_handle::from_int(int64_from_native_socket(fd));
 }
 
 /// A stream capable of both reading and writing. The stream's input
@@ -542,6 +567,87 @@ public:
 private:
   manager_ptr mgr_;
   native_socket sock_;
+};
+
+
+class datagram_hdlr : public event_handler {
+public:
+  /// A manager type providing the TODO
+  using manager_type = endpoint_manager;
+
+  /// A smart pointer to an endpoint_manager.
+  using manager_ptr = intrusive_ptr<endpoint_manager>;
+
+  /// A buffer class providing a compatible
+  /// interface to `std::vector`.
+  using buffer_type = std::vector<char>;
+
+  datagram_hdlr(default_multiplexer& backend_ref, native_socket sockfd);
+
+  void ack_writes(bool x);
+
+  /// Copies data to the write buffer.
+  /// @warning Not thread safe.
+  void write(const void* buf, size_t num_bytes);
+
+  /// Configures how much buffer will be provided for the next datagram.
+  /// @warning Must not be called outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  void configure_datagram_size(size_t buf_size);
+
+  /// Returns the write buffer of this datagram sender.
+  /// @warning Must not be modified outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  inline buffer_type& wr_buf() {
+    return wr_offline_buf_;
+  }
+
+  /// Returns the read buffer of this datagram receiver.
+  /// @warning Must not be modified outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  inline buffer_type& rd_buf() {
+    return rd_buf_;
+  }
+
+  std::pair<std::string,uint16_t> get_sender();
+
+  /// Sends the content of the write buffer, calling the `io_failure`
+  /// member function of `mgr` in case of an error.
+  /// @warning Must not be called outside the IO multiplexers event loop
+  ///          once the stream has been started.
+  void flush(const manager_ptr& mgr);
+
+  /// Starts forwarding incoming data to `mgr`.
+  void start(manager_type* mgr);
+
+  /// Activates the datagram_sender.
+  void activate(manager_type* mgr);
+
+  /// Closes the network connection and removes this handler from its parent.
+  void stop_reading();
+
+  void removed_from_loop(operation op) override;
+
+  void handle_event(operation op) override;
+
+private:
+  void prepare_next_read();
+  void prepare_next_write();
+
+  // state for receiving
+  manager_ptr reader_;
+  size_t buf_size_;
+  size_t packet_size_;
+  buffer_type rd_buf_;
+  struct sockaddr_storage last_sender;
+  socklen_t sender_len;
+
+  // state for sending
+  manager_ptr writer_;
+  bool ack_writes_;
+  bool writing_;
+  buffer_type wr_buf_;
+  buffer_type wr_offline_buf_;
 };
 
 /// A datagram_sender is responsible for sending datagrams to an endpoint.
@@ -667,6 +773,13 @@ new_datagram_sink_impl(const std::string& host, uint16_t port,
 
 expected<std::pair<native_socket, uint16_t>>
 new_datagram_source_impl(uint16_t port, const char* addr, bool reuse_addr);
+
+expected<native_socket>
+new_remote_endpoint_impl(const std::string& host, uint16_t port,
+                         optional<protocol> preferred = none);
+
+expected<std::pair<native_socket, uint16_t>>
+new_local_endpoint_impl(uint16_t port, const char* addr, bool reuse_addr);
 
 } // namespace network
 } // namespace io

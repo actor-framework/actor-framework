@@ -32,6 +32,7 @@
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
+#include "caf/io/endpoint_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_sink_handle.hpp"
 #include "caf/io/datagram_source_handle.hpp"
@@ -146,6 +147,34 @@ public:
   virtual expected<std::pair<datagram_source_handle, uint16_t>>
   add_datagram_source(abstract_broker* ptr, uint16_t port,
                       const char* in = nullptr, bool reuse_addr = false) = 0;
+
+  /// TODO
+  virtual expected<endpoint_handle>
+  new_remote_endpoint(const std::string& host, uint16_t port) = 0;
+
+  /// TODO
+  virtual expected<std::pair<endpoint_handle, uint16_t>>
+  new_local_endpoint(uint16_t port = 0, const char* in = nullptr,
+                     bool reuse_addr = false) = 0;
+
+  /// TODO
+  virtual expected<void> assign_endpoint(abstract_broker* ptr,
+                                         endpoint_handle hdl) = 0;
+
+  /// TODO
+  virtual expected<endpoint_handle> add_remote_endpoint(abstract_broker* ptr,
+                                                        const std::string& host,
+                                                        uint16_t port) = 0;
+
+  /// TODO
+  expected<std::pair<endpoint_handle, uint16_t>>
+  virtual add_local_endpoint(abstract_broker* ptr, uint16_t port = 0,
+                             const char* in = nullptr,
+                             bool reuse_addr = false) = 0;
+
+  /// TODO
+  virtual endpoint_handle add_endpoint(abstract_broker* ptr,
+                                       network::native_socket fd) = 0;
 
   /// Simple wrapper for runnables
   class runnable : public resumable, public ref_counted {
