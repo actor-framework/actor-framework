@@ -465,6 +465,21 @@ void basp_broker_state::set_context(connection_handle hdl) {
   this_context = &i->second;
 }
 
+void basp_broker_state::set_context(endpoint_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  auto i = udp_ctx.find(hdl);
+  if (i == udp_ctx.end()) {
+    CAF_LOG_INFO("create new BASP context:" << CAF_ARG(hdl));
+    i = udp_ctx.emplace(hdl,
+                        endpoint_context{
+                          basp::header{basp::message_type::client_handshake, 0,
+                                       0, 0, none, none,
+                                       invalid_actor_id, invalid_actor_id},
+                          hdl, none, 0, 0, none}).first;
+  }
+  udp_context = &i->second;
+}
+
 /******************************************************************************
  *                                basp_broker                                 *
  ******************************************************************************/
@@ -525,6 +540,9 @@ behavior basp_broker::make_behavior() {
     [=](datagram_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       CAF_LOG_DEBUG("Received new_datagram_msg: " << CAF_ARG(msg));
+      state.set_context(msg.handle);
+      // auto& ctx = *state.udp_context;
+      //auto next = state.instance.handle(context(), msg, ctx.hdr, ...);
       // TODO: implement this
       // look for existing context or create a new one
       // handle messge

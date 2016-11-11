@@ -73,33 +73,33 @@ behavior make_pong_behavior() {
 
 CAF_TEST_FIXTURE_SCOPE(datagrams, fixture)
 
-CAF_TEST(test_datagram_sinks) {
+CAF_TEST(test_remote_endpoint) {
   auto& mp = client_side_mm.backend();
   auto hdl = client_side_mm.named_broker<basp_broker>(atom("BASP"));
   auto basp = static_cast<basp_broker*>(actor_cast<abstract_actor*>(hdl));
-  CAF_MESSAGE("Calling new_datagram_sink");
-  auto res1 = mp.new_datagram_sink(host, port + 0);
+  CAF_MESSAGE("Calling new_remote_endpoint");
+  auto res1 = mp.new_remote_endpoint(host, port + 0);
   CAF_REQUIRE(res1);
-  CAF_MESSAGE("Calling assign_datagram_sink");
-  auto res2 = mp.assign_datagram_sink(basp, *res1);
+  CAF_MESSAGE("Calling assign_endpoint (on \"remote\" endpoint).");
+  auto res2 = mp.assign_endpoint(basp, *res1);
   CAF_REQUIRE(res2);
-  CAF_MESSAGE("Calling add_datagram_sink");
-  auto res3 = mp.add_datagram_sink(basp, host, port + 1);
+  CAF_MESSAGE("Calling add_remote_endpoint.");
+  auto res3 = mp.add_remote_endpoint(basp, host, port + 1);
   CAF_REQUIRE(res3);
 }
 
-CAF_TEST(test_datagram_sources) {
+CAF_TEST(test_local_endpoint) {
   auto& mp = client_side_mm.backend();
   auto hdl = client_side_mm.named_broker<basp_broker>(atom("BASP"));
   auto basp = static_cast<basp_broker*>(actor_cast<abstract_actor*>(hdl));
-  CAF_MESSAGE("Calling new_datagram_source");
-  auto res1 = mp.new_datagram_source(port + 0);
+  CAF_MESSAGE("Calling new_local_endpoint.");
+  auto res1 = mp.new_local_endpoint(port + 0);
   CAF_REQUIRE(res1);
-  CAF_MESSAGE("Calling assign_datagram_source");
-  auto res2 = mp.assign_datagram_source(basp, res1->first);
+  CAF_MESSAGE("Calling assign_endpoint (on \"local\" endpoint).");
+  auto res2 = mp.assign_endpoint(basp, res1->first);
   CAF_REQUIRE(res2);
-  CAF_MESSAGE("Calling add_datagram_source");
-  auto res3 = mp.add_datagram_source(basp, port + 1, nullptr);
+  CAF_MESSAGE("Calling add_local_endpoint.");
+  auto res3 = mp.add_local_endpoint(basp, port + 1, nullptr);
   CAF_REQUIRE(res3);
 }
 
