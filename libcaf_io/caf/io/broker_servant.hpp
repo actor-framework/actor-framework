@@ -29,8 +29,8 @@
 namespace caf {
 namespace io {
 
-/// Base class for `scribe` and `doorman` as well as `datagram_source`
-/// and `datagram_sink`.
+/// Base class for `scribe` and `doorman` as well as `dgram_doorman`
+/// and `dgram_scribe`.
 /// @ingroup Broker
 template <class Base, class Handle, class SysMsgType>
 class broker_servant : public Base {
@@ -106,13 +106,9 @@ protected:
             std::is_same<Handle, accept_handle>::value,
             acceptor_passivated_msg,
             typename std::conditional<
-              std::is_same<Handle, endpoint_handle>::value,
-              endpoint_passivated_msg,
-              typename std::conditional<
-                std::is_same<Handle, datagram_sink_handle>::value,
-                datagram_sink_passivated_msg,
-                datagram_source_passivated_msg
-              >::type
+              std::is_same<Handle, dgram_scribe_handle>::value,
+              dgram_scribe_passivated_msg,
+              dgram_doorman_passivated_msg
             >::type
           >::type
         >::type;

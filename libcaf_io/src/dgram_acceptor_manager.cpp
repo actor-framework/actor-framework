@@ -17,49 +17,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_DATAGRAM_SINK_HPP
-#define CAF_IO_DATAGRAM_SINK_HPP
-
-#include <vector>
-
-#include "caf/message.hpp"
-
-#include "caf/io/broker_servant.hpp"
-#include "caf/io/system_messages.hpp"
-#include "caf/io/datagram_sink_handle.hpp"
-#include "caf/io/network/datagram_sink_manager.hpp"
+#include "caf/io/network/dgram_acceptor_manager.hpp"
 
 namespace caf {
 namespace io {
+namespace network {
 
-using datagram_sink_base = broker_servant<network::datagram_sink_manager,
-                                          datagram_sink_handle,
-                                          datagram_sink_msg>;
+dgram_acceptor_manager::dgram_acceptor_manager(abstract_broker* ptr)
+    : manager(ptr) {
+  // nop
+}
 
-/// Manages writing to a datagram sink.
-/// @ingroup Broker
-class datagram_sink : public datagram_sink_base {
-public:
-  datagram_sink(abstract_broker* parent, datagram_sink_handle hdl);
+dgram_acceptor_manager::~dgram_acceptor_manager() {
+  // nop
+}
 
-  ~datagram_sink();
-
-  /// Enables or disables write notifications.
-  virtual void ack_writes(bool enable) = 0;
-
-  /// Returns the current write buffer.
-  virtual std::vector<char>& wr_buf() = 0;
-
-  void datagram_sent(execution_unit* ctx, size_t num_bytes) override;
-
-  void io_failure(execution_unit* ctx, network::operation op) override;
-
-protected:
-  message detach_message() override;
-};
-
+} // namespace network
 } // namespace io
 } // namespace caf
-
-#endif // CAF_IO_DATAGRAM_SINK_HPP
-

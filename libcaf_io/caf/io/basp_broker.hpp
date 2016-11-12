@@ -115,7 +115,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     // our current processed BSAP header
     basp::header hdr;
     // local source
-    endpoint_handle hdl; 
+    dgram_scribe_handle hdl; 
     // network-agnositc node identifier
     node_id id;
     // ports
@@ -127,7 +127,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   };
 
   void set_context(connection_handle hdl);
-  void set_context(endpoint_handle hdl);
 
   // pointer to ourselves
   broker* self;
@@ -137,11 +136,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // keeps context information for all open connections
   std::unordered_map<connection_handle, connection_context> tcp_ctx;
-  std::unordered_map<endpoint_handle, endpoint_context> udp_ctx;
 
   // points to the current context for callbacks such as `make_proxy`
   connection_context* this_context = nullptr;
-  endpoint_context* udp_context = nullptr;
 
   // stores handles to spawn servers for other nodes; these servers
   // are spawned whenever the broker learns a new node ID and try to

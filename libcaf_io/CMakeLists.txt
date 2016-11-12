@@ -23,12 +23,10 @@ set (LIBCAF_IO_SRCS
      src/acceptor_manager.cpp
      src/multiplexer.cpp
      src/uri.cpp
-     src/endpoint.cpp
-     src/endpoint_manager.cpp
-     src/datagram_sink_manager.cpp
-     src/datagram_source_manager.cpp
-     src/datagram_sink.cpp
-     src/datagram_source.cpp
+     src/dgram_scribe.cpp
+     src/dgram_doorman.cpp
+     src/dgram_acceptor_manager.cpp
+     src/dgram_communicator_manager.cpp
      # BASP files
      src/header.cpp
      src/message_type.cpp
@@ -72,4 +70,3 @@ include_directories(. ${INCLUDE_DIRS})
 if(NOT WIN32)
   install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
 endif()
-

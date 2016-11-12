@@ -30,18 +30,16 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"
-#include "caf/io/endpoint_handle.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
-#include "caf/io/datagram_sink_handle.hpp"
-#include "caf/io/datagram_source_handle.hpp"
+#include "caf/io/dgram_scribe_handle.hpp"
+#include "caf/io/dgram_doorman_handle.hpp"
 
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
-#include "caf/io/network/endpoint_manager.hpp"
-#include "caf/io/network/datagram_sink_manager.hpp"
-#include "caf/io/network/datagram_source_manager.hpp"
+#include "caf/io/network/dgram_communicator_manager.hpp"
+#include "caf/io/network/dgram_acceptor_manager.hpp"
 
 namespace caf {
 namespace io {
@@ -88,9 +86,8 @@ public:
   // even brokers need friends
   friend class scribe;
   friend class doorman;
-  friend class endpoint;
-  friend class datagram_sink;
-  friend class datagram_source;
+  friend class dgram_scribe;
+  friend class dgram_doorman;
 
   // -- overridden modifiers of abstract_actor ---------------------------------
 
@@ -163,32 +160,18 @@ public:
   void flush(connection_handle hdl);
 
   /// Enables or disables write notifications for given datagram socket.
-  void ack_writes(datagram_sink_handle hdl, bool enable);
+  void ack_writes(dgram_scribe_handle hdl, bool enable);
 
   /// Modifies the buffer for received datagrams.
   /// @param hdl Identifies the affected socket.
   /// @param buf_size Size of the receiver buffer for the next datagram.
-  void configure_datagram_size(datagram_source_handle hdl, size_t buf_size);
+  void configure_datagram_size(dgram_doorman_handle hdl, size_t buf_size);
 
   /// Returns write buffer for given sink.
-  std::vector<char>& wr_buf(datagram_sink_handle hdl);
+  std::vector<char>& wr_buf(dgram_scribe_handle hdl);
 
   /// Writes `data` into the buffer of a given sink.
-  void write(datagram_sink_handle hdl, size_t data_size, const void* data);
-
-  // Enables or disables write notifications for given datagram endpoint.
-  void ack_writes(endpoint_handle hdl, bool enable);
-
-  /// Modifies the buffer for received datagrams.
-  /// @param hdl Identifies the affected socket.
-  /// @param buf_size Size of the receiver buffer for the next datagram.
-  void configure_datagram_size(endpoint_handle hdl, size_t buf_size);
-
-  /// Returns write buffer for given sink.
-  std::vector<char>& wr_buf(endpoint_handle hdl);
-
-  /// Writes `data` into the buffer of a given datagram endpoint.
-  void write(endpoint_handle hdl, size_t data_size, const void* data);
+  void write(dgram_scribe_handle hdl, size_t data_size, const void* data);
 
   /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
@@ -229,58 +212,40 @@ public:
   /// Creates and assigns a new `doorman` from given native socked `fd`.
   expected<accept_handle> add_tcp_doorman(network::native_socket fd);
 
-  /// Adds a `datagram_sink` instance to this broker.
-  void add_datagram_sink(const intrusive_ptr<datagram_sink>& ptr);
+  /// Adds a `dgram_scribe` instance to this broker.
+  void add_dgram_scribe(const intrusive_ptr<dgram_scribe>& ptr);
 
   /// Tries to create a datgram sink for `host` on given `port` and creates
   /// a new datagram sink describing the endpoint afterwards.
-  /// @returns The handle of the new `datagram_sink` on success.
-  expected<datagram_sink_handle> add_datagram_sink(const std::string& host,
-                                                   uint16_t port);
+  /// @returns The handle of the new `dgram_scribe` on success.
+  expected<dgram_scribe_handle> add_dgram_scribe(const std::string& host,
+                                                             uint16_t port);
 
-  /// Assigns a detached `datagram_sink` instance identified by `hdl`
+  /// Assigns a detached `dgram_scribe` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
-  expected<void> assign_datagram_sink(datagram_sink_handle hdl);
+  expected<void> assign_dgram_scribe(dgram_scribe_handle hdl);
 
-  /// Creates and assigns a new `datagram_sink` from given native socked `fd`.
-  expected<datagram_sink_handle> add_datagram_sink(network::native_socket fd);
+  /// Creates and assigns a new `dgram_scribe` from given native socked `fd`.
+  expected<dgram_scribe_handle> add_dgram_scribe(network::native_socket fd);
 
-  /// Adds a `datagram_source` instance to this broker.
-  void add_datagram_source(const intrusive_ptr<datagram_source>& ptr);
+  /// Adds a `dgram_doorman` instance to this broker.
+  void add_dgram_doorman(const intrusive_ptr<dgram_doorman>& ptr);
 
-  /// Tries to open a local port and creates a `datagram_source` managing
+  /// Tries to open a local port and creates a `dgram_doorman` managing
   /// it on success. If `port == 0`, then the broker will ask
   /// the operating system to pick a random port.
-  /// @returns The handle of the new `datagram_source` and the assigned port.
-  expected<std::pair<datagram_source_handle, uint16_t>>
-  add_datagram_source(uint16_t port = 0, const char* in = nullptr,
-                      bool reuse_addr = false);
-
-  /// Assigns a detached `datagram_source` instance identified by `hdl`
-  /// from the `multiplexer` to this broker.
-  expected<void> assign_datagram_source(datagram_source_handle hdl);
-
-  /// Creates and assigns a new `datagram_source` from given native socked `fd`.
-  expected<datagram_source_handle>
-  add_datagram_source(network::native_socket fd);
-
-  /// TODO
-  void add_endpoint(const intrusive_ptr<endpoint>& ptr);
-
-  /// TODO
-  expected<void> assign_endpoint(endpoint_handle hdl);
-
-  /// TODO
-  expected<endpoint_handle> add_remote_endpoint(const std::string& host,
-                                                uint16_t port);
-
-  /// TODO
-  expected<std::pair<endpoint_handle, uint16_t>>
-  add_local_endpoint(uint16_t port = 0, const char* in = nullptr,
+  /// @returns The handle of the new `dgram_doorman` and the assigned port.
+  expected<std::pair<dgram_doorman_handle, uint16_t>>
+  add_dgram_doorman(uint16_t port = 0, const char* in = nullptr,
                      bool reuse_addr = false);
 
-  /// TODO
-  expected<endpoint_handle> add_endpoint(network::native_socket fd);
+  /// Assigns a detached `dgram_doorman` instance identified by `hdl`
+  /// from the `multiplexer` to this broker.
+  expected<void> assign_dgram_doorman(dgram_doorman_handle hdl);
+
+  /// Creates and assigns a new `dgram_doorman` from given native socked `fd`.
+  expected<dgram_doorman_handle>
+  add_dgram_doorman(network::native_socket fd);
 
   /// Returns the remote address associated to `hdl`
   /// or empty string if `hdl` is invalid.
@@ -302,31 +267,14 @@ public:
 
   /// Returns the remote address associated to `hdl`
   /// or empty string if `hdl` is invalid.
-  std::string remote_addr(datagram_sink_handle hdl);
+  std::string remote_addr(dgram_scribe_handle hdl);
 
   /// Returns the remote port associated to `hdl`
   /// or `0` if `hdl` is invalid.
-  uint16_t remote_port(datagram_sink_handle hdl);
+  uint16_t remote_port(dgram_scribe_handle hdl);
 
   /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
-  uint16_t local_port(datagram_source_handle hdl);
-
-/*        TODO: Do we need this?
-  /// Returns the address associated with `hdl`
-  /// or empy string if `hdl` is invalid.
-  std::string addr(endpoint_handle hdl);
-
-  /// Returns the remote port associated to `hdl`
-  /// or `0` if `hdl` is invalid or not "connected".
-  uint16_t remote_port(endpoint_handle hdl);
-
-  /// Return the local port associated to `hdl`
-  /// or `0` if `hdl` is invalid.
-  uint16_t local_port(endpoint_handle hdl);
-
-  /// Return the endpoint handle associated to fiven local `port` or `none`.
-  endpoint_handle endpoint_by_port(uint16_t port);
-*/
+  uint16_t local_port(dgram_doorman_handle hdl);
 
   /// Closes all connections and acceptors.
   void close_all();
@@ -386,14 +334,11 @@ protected:
   using scribe_map = std::unordered_map<connection_handle,
                                         intrusive_ptr<scribe>>;
 
-  using datagram_sink_map = std::unordered_map<datagram_sink_handle,
-                                               intrusive_ptr<datagram_sink>>;
+  using dgram_scribe_map = std::unordered_map<dgram_scribe_handle,
+                                               intrusive_ptr<dgram_scribe>>;
 
-  using datagram_source_map = std::unordered_map<datagram_source_handle,
-                                                 intrusive_ptr<datagram_source>>;
-
-  using endpoint_map = std::unordered_map<endpoint_handle,
-                                          intrusive_ptr<endpoint>>;
+  using dgram_doorman_map = std::unordered_map<dgram_doorman_handle,
+                                                 intrusive_ptr<dgram_doorman>>;
 
   /// @cond PRIVATE
 
@@ -408,18 +353,13 @@ protected:
   }
 
   // meta programming utility
-  inline datagram_sink_map& get_map(datagram_sink_handle) {
-    return datagram_sinks_;
+  inline dgram_scribe_map& get_map(dgram_scribe_handle) {
+    return dgram_scribes_;
   }
 
   // meta programming utility
-  inline datagram_source_map& get_map(datagram_source_handle) {
-    return datagram_sources_;
-  }
-
-  // meta programming utility
-  inline endpoint_map& get_map(endpoint_handle) {
-    return endpoints_;
+  inline dgram_doorman_map& get_map(dgram_doorman_handle) {
+    return dgram_doormans_;
   }
 
   // meta programming utility (not implemented)
@@ -429,20 +369,17 @@ protected:
   static intrusive_ptr<scribe> ptr_of(connection_handle);
 
   // meta programming utility (not implemented)
-  static intrusive_ptr<datagram_sink> ptr_of(datagram_sink_handle);
+  static intrusive_ptr<dgram_scribe> ptr_of(dgram_scribe_handle);
 
   // meta programming utility (not implemented)
-  static intrusive_ptr<datagram_source> ptr_of(datagram_source_handle);
-
-  // meta programming utility (not implemented)
-  static intrusive_ptr<endpoint> ptr_of(endpoint_handle);
+  static intrusive_ptr<dgram_doorman> ptr_of(dgram_doorman_handle);
 
   /// @endcond
 
   /// Returns the `multiplexer` running this broker.
   network::multiplexer& backend();
 
-  /// Returns a `scribe`, `doorman`, `datagram_sink` or `datagram_source`
+  /// Returns a `scribe`, `doorman`, `dgram_scribe` or `dgram_doorman`
   /// identified by `hdl`.
   template <class Handle>
   auto by_id(Handle hdl) -> optional<decltype(*ptr_of(hdl))> {
@@ -453,8 +390,8 @@ protected:
     return *(i->second);
   }
 
-  /// Returns an intrusive pointer to a `scribe`, `doorman`, `datagram_sink`
-  /// or `datagram_source` identified by `hdl` and remove it from this broker.
+  /// Returns an intrusive pointer to a `scribe`, `doorman`, `dgram_scribe`
+  /// or `dgram_doorman` identified by `hdl` and remove it from this broker.
   template <class Handle>
   auto take(Handle hdl) -> decltype(ptr_of(hdl)) {
     using std::swap;
@@ -471,9 +408,8 @@ protected:
 private:
   scribe_map scribes_;
   doorman_map doormen_;
-  endpoint_map endpoints_;
-  datagram_sink_map datagram_sinks_;
-  datagram_source_map datagram_sources_;
+  dgram_scribe_map dgram_scribes_;
+  dgram_doorman_map dgram_doormans_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
   std::vector<char> dummy_wr_buf_;
 };

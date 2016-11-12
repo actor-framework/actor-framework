@@ -30,10 +30,9 @@
 
 #include "caf/io/scribe.hpp"
 #include "caf/io/doorman.hpp"
-#include "caf/io/endpoint.hpp"
-#include "caf/io/datagram_sink.hpp"
+#include "caf/io/dgram_doorman.hpp"
 #include "caf/io/abstract_broker.hpp"
-#include "caf/io/datagram_source.hpp"
+#include "caf/io/dgram_scribe.hpp"
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"

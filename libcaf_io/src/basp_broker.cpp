@@ -465,21 +465,6 @@ void basp_broker_state::set_context(connection_handle hdl) {
   this_context = &i->second;
 }
 
-void basp_broker_state::set_context(endpoint_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  auto i = udp_ctx.find(hdl);
-  if (i == udp_ctx.end()) {
-    CAF_LOG_INFO("create new BASP context:" << CAF_ARG(hdl));
-    i = udp_ctx.emplace(hdl,
-                        endpoint_context{
-                          basp::header{basp::message_type::client_handshake, 0,
-                                       0, 0, none, none,
-                                       invalid_actor_id, invalid_actor_id},
-                          hdl, none, 0, 0, none}).first;
-  }
-  udp_context = &i->second;
-}
-
 /******************************************************************************
  *                                basp_broker                                 *
  ******************************************************************************/
@@ -537,10 +522,11 @@ behavior basp_broker::make_behavior() {
       }
     },
     // received from underlying broker implementation
-    [=](datagram_msg& msg) {
+    [=](new_datagram_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       CAF_LOG_DEBUG("Received new_datagram_msg: " << CAF_ARG(msg));
-      state.set_context(msg.handle);
+      static_cast<void>(msg);
+      // state.set_context(msg.handle);
       // auto& ctx = *state.udp_context;
       //auto next = state.instance.handle(context(), msg, ctx.hdr, ...);
       // TODO: implement this
@@ -645,14 +631,14 @@ behavior basp_broker::make_behavior() {
                       << CAF_ARG(whom));
       }
     },
-    [=](publish_atom, datagram_source_handle hdl, uint16_t port,
+    [=](publish_atom, dgram_doorman_handle hdl, uint16_t port,
         const strong_actor_ptr& whom, std::set<std::string>& sigs) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()) << CAF_ARG(whom) << CAF_ARG(port));
       if (hdl.invalid()) {
         CAF_LOG_WARNING("invalid handle");
         return;
       }
-      auto res = assign_datagram_source(hdl);
+      auto res = assign_dgram_doorman(hdl);
       if (res) {
         if (whom)
           system().registry().put(whom->id(), whom);
@@ -680,13 +666,13 @@ behavior basp_broker::make_behavior() {
         rp.deliver(std::move(res.error()));
       }
     },
-    [=](connect_atom, endpoint_handle hdl, uint16_t port) {
+    [=](connect_atom, dgram_scribe_handle hdl, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
       static_cast<void>(hdl);
       static_cast<void>(port);
       /*
       auto rp = make_response_promise();
-      auto res = assign_datagram_sink(hdl);
+      auto res = assign_dgram_scribe(hdl);
       if (res) {
         auto& ctx = state.udp_ctx[hdl];
         ctx.sink = hdl;

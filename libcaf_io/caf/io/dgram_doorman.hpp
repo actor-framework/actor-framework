@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_DATAGRAM_SOURCE_HPP
-#define CAF_IO_DATAGRAM_SOURCE_HPP
+#ifndef CAF_IO_DGRAM_DOORMAN_HPP
+#define CAF_IO_DGRAM_DOORMAN_HPP
 
 #include <vector>
 
@@ -26,23 +26,23 @@
 
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/system_messages.hpp"
-#include "caf/io/datagram_source_handle.hpp"
-#include "caf/io/network/datagram_source_manager.hpp"
+#include "caf/io/dgram_doorman_handle.hpp"
+#include "caf/io/network/dgram_communicator_manager.hpp"
 
 namespace caf {
 namespace io {
 
-using datagram_source_base = broker_servant<network::datagram_source_manager,
-                                            datagram_source_handle,
-                                            new_datagram_msg>;
+using dgram_doorman_base = broker_servant<network::dgram_acceptor_manager,
+                                          dgram_doorman_handle,
+                                          new_endpoint_msg>;
 
 /// Manages reading from a datagram source
 /// @ingroup Broker
-class datagram_source : public datagram_source_base {
+class dgram_doorman : public dgram_doorman_base {
 public:
-  datagram_source(abstract_broker* parent, datagram_source_handle hdl);
+  dgram_doorman(abstract_broker* parent, dgram_doorman_handle hdl);
 
-  ~datagram_source();
+  ~dgram_doorman();
 
   /// Configure buffer size for next accepted datagram.
   virtual void configure_datagram_size(size_t buf_size) = 0;
@@ -50,9 +50,11 @@ public:
   /// Returns the current input buffer.
   virtual std::vector<char>& rd_buf() = 0;
 
-  bool consume(execution_unit* ctx, const void* buf, size_t besize) override;
-
   void io_failure(execution_unit* ctx, network::operation op) override;
+
+  using dgram_doorman_base::new_endpoint;
+
+  bool new_endpoint(execution_unit* ctx, const void*, size_t num_bytes);
 
   // needs to be launched explicitly
   virtual void launch() = 0;
@@ -64,5 +66,4 @@ protected:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_DATAGRAM_SOURCE_HPP
-
+#endif // CAF_IO_DGRAM_DOORMAN_HPP

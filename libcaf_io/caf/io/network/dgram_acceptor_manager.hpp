@@ -17,21 +17,29 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/network/datagram_sink_manager.hpp"
+#ifndef CAF_IO_NETWORK_DGRAM_ACCEPTOR_MANGER_HPP
+#define CAF_IO_NETWORK_DGRAM_ACCEPTOR_MANGER_HPP
+
+#include "caf/io/network/manager.hpp"
 
 namespace caf {
 namespace io {
 namespace network {
 
-datagram_sink_manager::datagram_sink_manager(abstract_broker* ptr)
-    : manager(ptr) {
-  // nop
-}
+/// A datagram source manager provides callbacks for incoming
+/// datagrams as well as for error handling.
+class dgram_acceptor_manager : public manager {
+public:
+  dgram_acceptor_manager(abstract_broker* ptr);
 
-datagram_sink_manager::~datagram_sink_manager() {
-  // nop
-}
+  ~dgram_acceptor_manager();
+
+  virtual bool new_endpoint() = 0;
+
+};
 
 } // namespace network
 } // namespace io
 } // namespace caf
+
+#endif // CAF_IO_NETWORK_DGRAM_ACCEPTOR_MANGER_HPP

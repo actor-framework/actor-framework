@@ -17,21 +17,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/network/endpoint_manager.hpp"
+#include "caf/io/dgram_doorman.hpp"
+
+#include "caf/logger.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
 
-endpoint_manager::endpoint_manager(abstract_broker* ptr)
-    : manager(ptr) {
+dgram_doorman::dgram_doorman(abstract_broker* parent,
+                               dgram_doorman_handle hdl)
+    : dgram_doorman_base(parent, hdl) {
   // nop
 }
 
-endpoint_manager::~endpoint_manager() {
-  // nop
+dgram_doorman::~dgram_doorman() {
+  CAF_LOG_TRACE("");
 }
 
-} // namespace network
+message dgram_doorman::detach_message() {
+  return make_message(dgram_doorman_closed_msg{hdl()});
+}
+
+void dgram_doorman::io_failure(execution_unit* ctx, network::operation op) {
+  CAF_LOG_TRACE(CAF_ARG(hdl()) << CAF_ARG(op));
+  // keep compiler happy when compiling w/o logging
+  static_cast<void>(op);
+  detach(ctx, true);
+}
+
+bool dgram_doorman::new_endpoint(execution_unit* ctx, const void* buf,
+                                  size_t besize) {
+  // TODO: implement me!
+  return false;
+}
+
 } // namespace io
 } // namespace caf

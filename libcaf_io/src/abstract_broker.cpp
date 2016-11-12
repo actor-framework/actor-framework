@@ -110,14 +110,14 @@ void abstract_broker::flush(connection_handle hdl) {
     x->flush();
 }
 
-void abstract_broker::ack_writes(datagram_sink_handle hdl, bool enable) {
+void abstract_broker::ack_writes(dgram_scribe_handle hdl, bool enable) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(enable));
   auto x = by_id(hdl);
   if (x)
     x->ack_writes(enable);
 }
 
-void abstract_broker::configure_datagram_size(datagram_source_handle hdl,
+void abstract_broker::configure_datagram_size(dgram_doorman_handle hdl,
                                               size_t buf_size) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(buf_size));
   auto x = by_id(hdl);
@@ -125,49 +125,18 @@ void abstract_broker::configure_datagram_size(datagram_source_handle hdl,
     x->configure_datagram_size(buf_size);
 }
 
-std::vector<char>& abstract_broker::wr_buf(datagram_sink_handle hdl) {
+std::vector<char>& abstract_broker::wr_buf(dgram_scribe_handle hdl) {
   auto x = by_id(hdl);
   if (!x) {
     CAF_LOG_ERROR("tried to access wr_buf() of an unknown"
-                  "datagram_sink_handle");
+                  "dgram_scribe_handle");
     return dummy_wr_buf_;
   }
   return x->wr_buf();
 }
 
-void abstract_broker::write(datagram_sink_handle hdl, size_t bs,
+void abstract_broker::write(dgram_scribe_handle hdl, size_t bs,
                             const void* buf) {
-  auto& out = wr_buf(hdl);
-  auto first = reinterpret_cast<const char*>(buf);
-  auto last = first + bs;
-  out.insert(out.end(), first, last);
-}
-
-void abstract_broker::ack_writes(endpoint_handle hdl, bool enable) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(enable));
-  auto x = by_id(hdl);
-  if (x)
-    x->ack_writes(enable);
-}
-
-void abstract_broker::configure_datagram_size(endpoint_handle hdl,
-                                              size_t buf_size) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(buf_size));
-  auto x = by_id(hdl);
-  if (x)
-    x->configure_datagram_size(buf_size);
-}
-
-std::vector<char>& abstract_broker::wr_buf(endpoint_handle hdl) {
-  auto x = by_id(hdl);
-  if (!x) {
-    CAF_LOG_ERROR("tried to access wr_buf() of an unknown endpoint_handle");
-    return dummy_wr_buf_;
-  }
-  return x->wr_buf();
-}
-
-void abstract_broker::write(endpoint_handle hdl, size_t bs, const void* buf) {
   auto& out = wr_buf(hdl);
   auto first = reinterpret_cast<const char*>(buf);
   auto last = first + bs;
@@ -228,80 +197,51 @@ abstract_broker::add_tcp_doorman(network::native_socket fd) {
   return backend().add_tcp_doorman(this, fd);
 }
 
-void abstract_broker::add_datagram_sink(const intrusive_ptr<datagram_sink>& ptr) {
-  datagram_sinks_.emplace(ptr->hdl(), ptr);
+void abstract_broker::add_dgram_scribe(const intrusive_ptr<dgram_scribe>& ptr) {
+  dgram_scribes_.emplace(ptr->hdl(), ptr);
 }
 
-expected<datagram_sink_handle>
-abstract_broker::add_datagram_sink(const std::string& hostname, uint16_t port) {
+expected<dgram_scribe_handle>
+abstract_broker::add_dgram_scribe(const std::string& hostname, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
-  return backend().add_datagram_sink(this, hostname, port);
+  return backend().add_dgram_scribe(this, hostname, port);
 }
 
-expected<void> abstract_broker::assign_datagram_sink(datagram_sink_handle hdl) {
+expected<void> abstract_broker::assign_dgram_scribe(dgram_scribe_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  return backend().assign_datagram_sink(this, hdl);
+  return backend().assign_dgram_scribe(this, hdl);
 }
 
-expected<datagram_sink_handle>
-abstract_broker::add_datagram_sink(network::native_socket fd) {
+expected<dgram_scribe_handle>
+abstract_broker::add_dgram_scribe(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_datagram_sink(this, fd);
+  return backend().add_dgram_scribe(this, fd);
 }
 
 void
-abstract_broker::add_datagram_source(const intrusive_ptr<datagram_source>& ptr) {
-  datagram_sources_.emplace(ptr->hdl(), ptr);
+abstract_broker::add_dgram_doorman(const intrusive_ptr<dgram_doorman>& ptr) {
+  dgram_doormans_.emplace(ptr->hdl(), ptr);
   ptr->launch();
   // TODO: some launching of things?
 }
 
-expected<std::pair<datagram_source_handle, uint16_t>>
-abstract_broker::add_datagram_source(uint16_t port, const char* in,
+expected<std::pair<dgram_doorman_handle, uint16_t>>
+abstract_broker::add_dgram_doorman(uint16_t port, const char* in,
                                      bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(reuse_addr));
-  return backend().add_datagram_source(this, port, in, reuse_addr);
+  return backend().add_dgram_doorman(this, port, in, reuse_addr);
 }
 
 expected<void>
-abstract_broker::assign_datagram_source(datagram_source_handle hdl) {
+abstract_broker::assign_dgram_doorman(dgram_doorman_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  return backend().assign_datagram_source(this, hdl);
+  return backend().assign_dgram_doorman(this, hdl);
 }
 
-expected<datagram_source_handle>
-abstract_broker::add_datagram_source(network::native_socket fd) {
+expected<dgram_doorman_handle>
+abstract_broker::add_dgram_doorman(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_datagram_source(this, fd);
-}
-
-void abstract_broker::add_endpoint(const intrusive_ptr<endpoint>& ptr) {
-  endpoints_.emplace(ptr->hdl(), ptr);
-  ptr->launch(); // TODO: Is this required?
-}
-
-expected<void> abstract_broker::assign_endpoint(endpoint_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  return backend().assign_endpoint(this, hdl);
-}
-
-expected<endpoint_handle>
-abstract_broker::add_remote_endpoint(const std::string& host, uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
-  return backend().add_remote_endpoint(this, host, port);
-}
-
-expected<std::pair<endpoint_handle, uint16_t>>
-abstract_broker::add_local_endpoint(uint16_t port, const char* in,
-                                    bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(reuse_addr));
-  return backend().add_local_endpoint(this, port, in, reuse_addr);
-}
-
-expected<endpoint_handle>
-abstract_broker::add_endpoint(network::native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_endpoint(this, fd);
+  return backend().add_dgram_doorman(this, fd);
 }
 
 std::string abstract_broker::remote_addr(connection_handle hdl) {
@@ -324,19 +264,19 @@ uint16_t abstract_broker::local_port(accept_handle hdl) {
   return i != doormen_.end() ? i->second->port() : 0;
 }
 
-std::string abstract_broker::remote_addr(datagram_sink_handle hdl) {
-  auto i = datagram_sinks_.find(hdl);
-  return i != datagram_sinks_.end() ? i->second->addr() : std::string{};
+std::string abstract_broker::remote_addr(dgram_scribe_handle hdl) {
+  auto i = dgram_scribes_.find(hdl);
+  return i != dgram_scribes_.end() ? i->second->addr() : std::string{};
 }
 
-uint16_t abstract_broker::remote_port(datagram_sink_handle hdl) {
-  auto i = datagram_sinks_.find(hdl);
-  return i != datagram_sinks_.end() ? i->second->port() : 0;
+uint16_t abstract_broker::remote_port(dgram_scribe_handle hdl) {
+  auto i = dgram_scribes_.find(hdl);
+  return i != dgram_scribes_.end() ? i->second->port() : 0;
 }
 
-uint16_t abstract_broker::local_port(datagram_source_handle hdl) {
-  auto i = datagram_sources_.find(hdl);
-  return i != datagram_sources_.end() ? i->second->port() : 0;
+uint16_t abstract_broker::local_port(dgram_doorman_handle hdl) {
+  auto i = dgram_doormans_.find(hdl);
+  return i != dgram_doormans_.end() ? i->second->port() : 0;
 }
 
 accept_handle abstract_broker::hdl_by_port(uint16_t port) {
@@ -356,9 +296,13 @@ void abstract_broker::close_all() {
     // stop_reading will remove the scribe from scribes_
     scribes_.begin()->second->stop_reading();
   }
-  while (!endpoints_.empty()) {
-    // stop_reading will remove the enpoint from endpoints_
-    endpoints_.begin()->second->stop_reading();
+  while (!dgram_doormans_.empty()) {
+    // stop_reading will remove the scribe from dgram_doormans_
+    dgram_doormans_.begin()->second->stop_reading();
+  }
+  while (!dgram_scribes_.empty()) {
+    // stop_reading will remove the scribe from dgram_scribes_
+    dgram_scribes_.begin()->second->stop_reading();
   }
 }
 

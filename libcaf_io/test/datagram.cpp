@@ -72,7 +72,7 @@ behavior make_pong_behavior() {
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(datagrams, fixture)
-
+/*
 CAF_TEST(test_remote_endpoint) {
   auto& mp = client_side_mm.backend();
   auto hdl = client_side_mm.named_broker<basp_broker>(atom("BASP"));
@@ -134,5 +134,5 @@ CAF_TEST(test_datagram_remote_actor) {
 
   anon_send_exit(pong, exit_reason::user_shutdown);
 }
-
+*/
 CAF_TEST_FIXTURE_SCOPE_END()

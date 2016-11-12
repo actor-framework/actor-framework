@@ -26,13 +26,12 @@ namespace io {
 class scribe;
 class broker;
 class doorman;
-class endpoint;
 class middleman;
 class basp_broker;
-class datagram_sink;
+class dgram_doorman;
 class receive_policy;
 class abstract_broker;
-class datagram_source;
+class dgram_scribe;
 
 template <class... Sigs>
 class typed_broker;

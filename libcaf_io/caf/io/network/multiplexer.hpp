@@ -32,10 +32,9 @@
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
-#include "caf/io/endpoint_handle.hpp"
 #include "caf/io/connection_handle.hpp"
-#include "caf/io/datagram_sink_handle.hpp"
-#include "caf/io/datagram_source_handle.hpp"
+#include "caf/io/dgram_scribe_handle.hpp"
+#include "caf/io/dgram_doorman_handle.hpp"
 
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/native_socket.hpp"
@@ -104,77 +103,50 @@ public:
   /// Tries to create a datagram sink to sent messages to `host` on given
   /// `port` and returns an unbound datagram sink handle on success.
   /// @threadsafe
-  virtual expected<datagram_sink_handle>
-  new_datagram_sink(const std::string& host, uint16_t port) = 0;
+  virtual expected<dgram_scribe_handle>
+  new_dgram_scribe(const std::string& host, uint16_t port) = 0;
 
   /// Assigns an unbound datagram sink identified by `hdl` to `ptr`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<void> assign_datagram_sink(abstract_broker* ptr,
-                                              datagram_sink_handle hdl) = 0;
+  virtual expected<void>
+  assign_dgram_scribe(abstract_broker* ptr,
+                            dgram_scribe_handle hdl) = 0;
 
   /// Creates a new datagram sink from a native socket handle.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual datagram_sink_handle add_datagram_sink(abstract_broker* ptr,
-                                                 native_socket fd) = 0;
+  virtual dgram_scribe_handle
+  add_dgram_scribe(abstract_broker* ptr, native_socket fd) = 0;
 
   /// Tries to create a datagram sink to sent messages to `host` on `port`
   /// and returns a new datagram sink managing the endpoint on success.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<datagram_sink_handle>
-  add_datagram_sink(abstract_broker*, const std::string& host,
-                    uint16_t port) = 0;
+  virtual expected<dgram_scribe_handle>
+  add_dgram_scribe(abstract_broker*, const std::string& host,
+                         uint16_t port) = 0;
 
   /// Tries to create an unbound datagram source bound to `port`, optionally
   /// accepting only messages from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<std::pair<datagram_source_handle, uint16_t>>
-  new_datagram_source(uint16_t port, const char* in = nullptr,
-                      bool reuse_addr = false) = 0;
+  virtual expected<std::pair<dgram_doorman_handle, uint16_t>>
+  new_dgram_doorman(uint16_t port, const char* in = nullptr,
+                     bool reuse_addr = false) = 0;
 
   /// Assigns an unbound datagram source identified by `hdl` to `ptr`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<void> assign_datagram_source(abstract_broker* ptr,
-                                                datagram_source_handle) = 0;
+  virtual expected<void> assign_dgram_doorman(abstract_broker* ptr,
+                                               dgram_doorman_handle) = 0;
 
   /// Creates a new datagram source from a native socket handle.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual datagram_source_handle add_datagram_source(abstract_broker* ptr,
-                                                     native_socket fd) = 0;
+  virtual dgram_doorman_handle add_dgram_doorman(abstract_broker* ptr,
+                                                   native_socket fd) = 0;
 
   /// Tries to create a new datagram source on port `p`, optionally
   /// accepting only messages from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<std::pair<datagram_source_handle, uint16_t>>
-  add_datagram_source(abstract_broker* ptr, uint16_t port,
-                      const char* in = nullptr, bool reuse_addr = false) = 0;
-
-  /// TODO
-  virtual expected<endpoint_handle>
-  new_remote_endpoint(const std::string& host, uint16_t port) = 0;
-
-  /// TODO
-  virtual expected<std::pair<endpoint_handle, uint16_t>>
-  new_local_endpoint(uint16_t port = 0, const char* in = nullptr,
-                     bool reuse_addr = false) = 0;
-
-  /// TODO
-  virtual expected<void> assign_endpoint(abstract_broker* ptr,
-                                         endpoint_handle hdl) = 0;
-
-  /// TODO
-  virtual expected<endpoint_handle> add_remote_endpoint(abstract_broker* ptr,
-                                                        const std::string& host,
-                                                        uint16_t port) = 0;
-
-  /// TODO
-  expected<std::pair<endpoint_handle, uint16_t>>
-  virtual add_local_endpoint(abstract_broker* ptr, uint16_t port = 0,
-                             const char* in = nullptr,
-                             bool reuse_addr = false) = 0;
-
-  /// TODO
-  virtual endpoint_handle add_endpoint(abstract_broker* ptr,
-                                       network::native_socket fd) = 0;
+  virtual expected<std::pair<dgram_doorman_handle, uint16_t>>
+  add_dgram_doorman(abstract_broker* ptr, uint16_t port,
+                     const char* in = nullptr, bool reuse_addr = false) = 0;
 
   /// Simple wrapper for runnables
   class runnable : public resumable, public ref_counted {

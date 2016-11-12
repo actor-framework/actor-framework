@@ -17,33 +17,70 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_DATAGRAM_SINK_MANGER_HPP
-#define CAF_IO_NETWORK_DATAGRAM_SINK_MANGER_HPP
+#ifndef CAF_IO_DGRAM_DOORMAN_HANDLE_HPP
+#define CAF_IO_DGRAM_DOORMAN_HANDLE_HPP
 
-#include "caf/io/network/manager.hpp"
+#include <functional>
+
+#include "caf/error.hpp"
+
+#include "caf/io/handle.hpp"
+
+#include "caf/meta/type_name.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
 
-/// A datagram manager provides callbacks for outgoing
-/// datagrams as well as for error handling.
-class datagram_sink_manager : public manager {
-public:
-  datagram_sink_manager(abstract_broker* ptr);
-
-  ~datagram_sink_manager();
-
-  /// Called by the underlying I/O device whenever it received data.
-  /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(execution_unit* ctx, const void* buf, size_t besize) = 0;
-
-  /// Called by the underlying I/O device whenever it sent a datagram.
-  virtual void datagram_sent(execution_unit* ctx, size_t num_bytes) = 0;
+struct invalid_dgram_doorman_handle_t {
+  constexpr invalid_dgram_doorman_handle_t() {
+    // nop
+  }
 };
 
-} // namespace network
+constexpr invalid_dgram_doorman_handle_t invalid_dgram_doorman_handle
+  = invalid_dgram_doorman_handle_t{};
+
+
+/// Generic type for identifying a datagram source.
+class dgram_doorman_handle : public handle<dgram_doorman_handle,
+                                             invalid_dgram_doorman_handle_t> {
+public:
+  friend class handle<dgram_doorman_handle, invalid_dgram_doorman_handle_t>;
+
+  using super = handle<dgram_doorman_handle, invalid_dgram_doorman_handle_t>;
+
+  constexpr dgram_doorman_handle() {
+    // nop
+  }
+
+  constexpr dgram_doorman_handle(const invalid_dgram_doorman_handle_t&) {
+    // nop
+  }
+
+  template <class Inspector>
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 dgram_doorman_handle& x) {
+    return f(meta::type_name("dgram_doorman_handle"), x.id_);
+  }
+
+private:
+  inline dgram_doorman_handle(int64_t handle_id) : super(handle_id) {
+    // nop
+  }
+};
+
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_DATAGRAM_SINK_MANGER_HPP
+namespace std {
+
+template<>
+struct hash<caf::io::dgram_doorman_handle> {
+  size_t operator()(const caf::io::dgram_doorman_handle& hdl) const {
+    hash<int64_t> f;
+    return f(hdl.id());
+  }
+};
+
+} // namespace std
+#endif // CAF_IO_DGRAM_DOORMAN_HANDLE_HPP
