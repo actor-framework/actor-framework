@@ -57,7 +57,7 @@ public:
   virtual std::vector<char>& rd_buf() = 0;
 
   bool consume(execution_unit* ctx, const void* buf, size_t besize) override;
-
+  
   void datagram_sent(execution_unit* ctx, size_t num_bytes) override;
 
   void io_failure(execution_unit* ctx, network::operation op) override;

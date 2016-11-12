@@ -34,6 +34,10 @@ public:
 
   ~datagram_sink_manager();
 
+  /// Called by the underlying I/O device whenever it received data.
+  /// @returns `true` if the manager accepts further reads, otherwise `false`.
+  virtual bool consume(execution_unit* ctx, const void* buf, size_t besize) = 0;
+
   /// Called by the underlying I/O device whenever it sent a datagram.
   virtual void datagram_sent(execution_unit* ctx, size_t num_bytes) = 0;
 };

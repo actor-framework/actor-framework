@@ -40,7 +40,7 @@ public:
   virtual bool consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
 
   /// Called by the underlying I/O device whenever it sent a datagram.
-  virtual void datagram_sent(execution_unit* ctx, size_t num_bytes) = 0;
+  virtual void datagram_sent(execution_unit* ctx, size_t num_bytes) = 0; 
 };
 
 } // namespace network

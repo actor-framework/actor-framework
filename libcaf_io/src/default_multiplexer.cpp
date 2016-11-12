@@ -933,10 +933,10 @@ endpoint_handle default_multiplexer::add_endpoint(abstract_broker* self,
     }
   private:
     bool launched_;
-    network::datagram_hdlr handler_;
+    network::datagram_handler handler_;
   };
   auto ptr = make_counted<impl>(self, *this, fd);
-  self->add_endpoint(ptr);
+  self->add_endpoint(ptr); 
   return ptr->hdl();
 }
 
@@ -1165,9 +1165,9 @@ default_multiplexer::new_remote_endpoint(const std::string& host,
   auto fd = new_remote_endpoint_impl(host, port);
   if (!fd)
     return std::move(fd.error());
-  // TODO: add endpoint to endpoints vector of middleman!
-  // Maybe this should be done in the new_remote_enpoint_impl
-  return endpoint_handle::from_int(int64_from_native_socket(*fd));
+  auto hdl = endpoint_handle::from_int(int64_from_native_socket(*fd));
+  remote_endpoints_[std::make_pair(host, port)] = hdl;
+  return hdl;
 }
 
 expected<std::pair<endpoint_handle, uint16_t>>
@@ -1196,9 +1196,9 @@ default_multiplexer::add_remote_endpoint(abstract_broker* self,
   auto fd = new_remote_endpoint_impl(host, port);
   if (!fd)
     return std::move(fd.error());
-  // TODO: add endpoint to endpoints vector of middleman!
-  // Maybe this should be done in the new_remote_enpoint_impl
-  return add_endpoint(self, *fd);
+  auto hdl = add_endpoint(self, *fd);
+  remote_endpoints_[std::make_pair(host, port)] = hdl;
+  return hdl;
 }
 
 expected<std::pair<endpoint_handle, uint16_t>>
@@ -1800,8 +1800,8 @@ void datagram_receiver::prepare_next_read() {
   rd_buf_.resize(buf_size_);
 }
 
-datagram_hdlr::datagram_hdlr(default_multiplexer& backend_ref,
-                             native_socket sockfd)
+datagram_handler::datagram_handler(default_multiplexer& backend_ref,
+                                   native_socket sockfd)
     : event_handler(backend_ref, sockfd),
       buf_size_(0),
       ack_writes_(false),
@@ -1810,22 +1810,22 @@ datagram_hdlr::datagram_hdlr(default_multiplexer& backend_ref,
   configure_datagram_size(1500);
 }
 
-void datagram_hdlr::ack_writes(bool x) {
+void datagram_handler::ack_writes(bool x) {
   ack_writes_ = x;
 }
 
-void datagram_hdlr::write(const void* buf, size_t num_bytes) {
+void datagram_handler::write(const void* buf, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   auto first = reinterpret_cast<const char*>(buf);
   auto last  = first + num_bytes;
   wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
 }
 
-void datagram_hdlr::configure_datagram_size(size_t buf_size) {
+void datagram_handler::configure_datagram_size(size_t buf_size) {
   buf_size_ = buf_size;
 }
 
-std::pair<std::string,uint16_t> datagram_hdlr::get_sender() {
+std::pair<std::string,uint16_t> datagram_handler::get_sender() {
   char addr[INET6_ADDRSTRLEN];
   std::string host;
   uint16_t port = 0;
@@ -1854,7 +1854,7 @@ std::pair<std::string,uint16_t> datagram_hdlr::get_sender() {
   return std::make_pair(std::move(host), port);
 }
 
-void datagram_hdlr::flush(const manager_ptr& mgr) {
+void datagram_handler::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
   if (!wr_offline_buf_.empty() && !writing_) {
@@ -1865,12 +1865,12 @@ void datagram_hdlr::flush(const manager_ptr& mgr) {
   }
 }
 
-void datagram_hdlr::start(manager_type* mgr) {
+void datagram_handler::start(manager_type* mgr) {
   CAF_ASSERT(mgr != nullptr);
   activate(mgr);
 }
 
-void datagram_hdlr::activate(manager_type* mgr) {
+void datagram_handler::activate(manager_type* mgr) {
   if (!reader_) {
     reader_.reset(mgr);
     event_handler::activate();
@@ -1878,13 +1878,13 @@ void datagram_hdlr::activate(manager_type* mgr) {
   }
 }
 
-void datagram_hdlr::stop_reading() {
+void datagram_handler::stop_reading() {
   CAF_LOG_TRACE("");
   close_read_channel();
   passivate();
 }
 
-void datagram_hdlr::removed_from_loop(operation op) {
+void datagram_handler::removed_from_loop(operation op) {
   switch (op) {
     case operation::read:  reader_.reset(); break;
     case operation::write: writer_.reset(); break;
@@ -1892,7 +1892,7 @@ void datagram_hdlr::removed_from_loop(operation op) {
   }
 }
 
-void datagram_hdlr::handle_event(operation op) {
+void datagram_handler::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
   switch (op) {
     case operation::read: {
@@ -1906,28 +1906,35 @@ void datagram_hdlr::handle_event(operation op) {
       }
       if (rb == 0)
         return;
-      // TODO: find responsible (remote) endpoint to deliver datagram
-      /*
-      auto& endpoints = backend().endpoints();
+      // Find responsible (remote) endpoint to deliver datagram.
       auto sender = get_sender();
-      auto endpoint = endpoints.find(sender);
-      if (endpoint == endpoints.end()) {
-        auto new_endpoint = backend().add_datagram_sink(reader_->parent(),
-                                                        sender.first,
-                                                        sender.second);
-        if (!new_endpoint) {
-          // TODO: error handling
-          CAF_LOG_DEBUG("Could not create endpoint for new sender.");
-          return;
+      bool consumed = false;
+      if (reader_->addr() == sender.first && 
+          reader_->port() == sender.second) {
+        // Our assigned endpoint is respoinsible
+        consumed = reader_->consume(&backend(), rd_buf_.data(), rb);
+      } else {
+        // Search for the responsible endpoint or create a new one.
+        auto& endpoints = backend().endpoints();
+        auto endpoint = endpoints.find(sender);
+        if (endpoint == endpoints.end()) {
+          auto new_endpoint = backend().add_remote_endpoint(reader_->parent(),
+                                                            sender.first,
+                                                            sender.second);
+          if (!new_endpoint) {
+            // TODO: error handling
+            CAF_LOG_DEBUG("Could not create endpoint for new sender.");
+            return;
+          }
+          endpoint = endpoints.emplace(sender, *new_endpoint).first;
         }
-        endpoint = endpoints.emplace(sender, *new_endpoint).first;
+        auto hdl = endpoint->second;
+        // TODO: requires the multiplexer to be single threaded!
+        reader_->consume_as(hdl, &backend(), rd_buf_.data(), rb);
       }
-      auto hdl = endpoint->second;
-      */
-      auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
       packet_size_ = rb;
       prepare_next_read();
-      if (!res) {
+      if (!consumed) {
         passivate();
         return;
       }
@@ -1946,6 +1953,8 @@ void datagram_hdlr::handle_event(operation op) {
       } else {
         // TODO: remove this if sure that datagrams are either written
         // as a whole or not at all
+        // Could the handler propagte the knowledge if it know how
+        // much it can actually write?
         std::cerr << "Partial datagram wrtten: " << wb
                   << " of " << wr_buf_.size() << std::endl;
         if (writer_)
@@ -1965,7 +1974,7 @@ void datagram_hdlr::handle_event(operation op) {
   }
 }
 
-void datagram_hdlr::prepare_next_read() {
+void datagram_handler::prepare_next_read() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   wr_buf_.clear();
   if (wr_offline_buf_.empty()) {
@@ -1975,7 +1984,7 @@ void datagram_hdlr::prepare_next_read() {
   }
 }
 
-void datagram_hdlr::prepare_next_write() {
+void datagram_handler::prepare_next_write() {
   rd_buf_.resize(buf_size_);
 }
 

@@ -570,7 +570,7 @@ private:
 };
 
 
-class datagram_hdlr : public event_handler {
+class datagram_handler : public event_handler {
 public:
   /// A manager type providing the TODO
   using manager_type = endpoint_manager;
@@ -582,7 +582,7 @@ public:
   /// interface to `std::vector`.
   using buffer_type = std::vector<char>;
 
-  datagram_hdlr(default_multiplexer& backend_ref, native_socket sockfd);
+  datagram_handler(default_multiplexer& backend_ref, native_socket sockfd);
 
   void ack_writes(bool x);
 

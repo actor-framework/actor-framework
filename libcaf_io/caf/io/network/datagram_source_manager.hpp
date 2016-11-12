@@ -32,11 +32,9 @@ class datagram_source_manager : public manager {
 public:
   datagram_source_manager(abstract_broker* ptr);
 
-  ~datagram_source_manager();
+  ~datagram_source_manager(); 
 
-  /// Called by the underlying I/O device whenever it received data.
-  /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(execution_unit* ctx, const void* buf, size_t besize) = 0;
+  virtual bool new_endpoint() = 0;
 };
 
 } // namespace network
