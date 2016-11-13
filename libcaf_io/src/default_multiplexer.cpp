@@ -1196,13 +1196,16 @@ bool try_accept(native_socket& result, native_socket fd) {
   return true;
 }
 
-bool send_datagram(size_t& result, native_socket fd, void* buf, size_t len) {
+bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
+                   sockaddr_storage& sa, size_t sa_len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-  // TODO: Send datgrams! (requires acceess to sockaddr)
-  // ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
-  //                const struct sockaddr *dest_addr, socklen_t addrlen);
-  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), len,
+  auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
+                       no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
+                       sa_len);
+  /*
+  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                      no_sigpipe_flag);
+  */
   if (is_error(sres, true))
     return false;
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
@@ -1610,7 +1613,8 @@ void dgram_communicator::handle_event(operation op) {
     }
     case operation::write: {
       size_t wb; // written bytes
-      if (!send_datagram(wb, fd(), wr_buf_.data(), wr_buf_.size())) {
+      if (!send_datagram(wb, fd(), wr_buf_.data(), wr_buf_.size(),
+                         sockaddr_, sockaddr_len_)) {
         writer_->io_failure(&backend(), operation::write);
         backend().del(operation::write, fd(), this);
       } else if (wb > 0) {
