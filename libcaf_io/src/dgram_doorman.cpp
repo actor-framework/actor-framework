@@ -24,8 +24,7 @@
 namespace caf {
 namespace io {
 
-dgram_doorman::dgram_doorman(abstract_broker* parent,
-                               dgram_doorman_handle hdl)
+dgram_doorman::dgram_doorman(abstract_broker* parent, dgram_doorman_handle hdl)
     : dgram_doorman_base(parent, hdl) {
   // nop
 }
@@ -45,10 +44,12 @@ void dgram_doorman::io_failure(execution_unit* ctx, network::operation op) {
   detach(ctx, true);
 }
 
-bool dgram_doorman::new_endpoint(execution_unit* ctx, const void* buf,
-                                  size_t besize) {
-  // TODO: implement me!
-  return false;
+// bool dgram_doorman::new_endpoint(execution_unit* ctx, const void* buf,
+//                                  size_t besize) {
+bool dgram_doorman::new_endpoint(execution_unit* ctx,
+                                 dgram_scribe_handle endpoint) {
+  msg().endpoint = endpoint;
+  return invoke_mailbox_element(ctx);
 }
 
 } // namespace io

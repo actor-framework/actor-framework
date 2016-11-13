@@ -156,28 +156,30 @@ inspect(Inspector& f, dgram_doorman_closed_msg& x) {
 struct new_endpoint_msg {
   /// Handle to the related datagram endpoint.
   dgram_doorman_handle handle;
-  /// Buffer containing the received data.
-  std::vector<char> buf;
+  // Buffer containing the received data.
+  // std::vector<char> buf;
+  /// Handle to new dgram_scribe
+  dgram_scribe_handle endpoint;
 };
 
 /// @relates new_endpoint_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_endpoint_msg& x) {
-  return f(meta::type_name("new_endpoint_msg"), x.handle, x.buf);
+  return f(meta::type_name("new_endpoint_msg"), x.handle, x.endpoint);
 }
 
 /// Signalizes that a datagram with a certain size has been sent.
 struct new_datagram_msg {
   // Handle to the endpoint used.
   dgram_scribe_handle handle;
-  // number of bytes written.
-  uint64_t written;
+  // Buffer containing received data.
+  std::vector<char> buf;
 };
 
 /// @relates new_datagram_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_datagram_msg& x) {
-  return f(meta::type_name("new_datagram_msg"), x.handle, x.written);
+  return f(meta::type_name("new_datagram_msg"), x.handle, x.buf);
 }
 
 /// Signalizes that a datagram with a certain size has been sent.

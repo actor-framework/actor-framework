@@ -165,8 +165,7 @@ public:
         } else if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
                    equal(std::begin(udp), std::end(udp), u.scheme().first)) {
           // connect to endpoint and initiate handhsake etc. (UDP)
-          auto y
-            = system().middleman().backend().new_remote_endpoint(host, port);
+          auto y = system().middleman().backend().new_dgram_scribe(host, port);
           if (!y) {
             rp.deliver(std::move(y.error()));
             return {};
@@ -257,11 +256,11 @@ private:
                equal(u.scheme().first, u.scheme().second, std::begin(udp))) {
       // UDP
       auto res
-        = system().middleman().backend().new_local_endpoint(u.port_as_int(),
-                                                            in, reuse_addr);
+        = system().middleman().backend().new_dgram_doorman(u.port_as_int(),
+                                                           in, reuse_addr);
       if (!res)
         return std::move(res.error());
-      endpoint_handle hdl = res->first;
+      dgram_doorman_handle hdl = res->first;
       actual_port = res->second;
       anon_send(broker_, publish_atom::value, hdl, actual_port,
                 std::move(whom), std::move(sigs));

@@ -236,34 +236,52 @@ expected<void> test_multiplexer::assign_dgram_scribe(abstract_broker* ptr,
           mpx_(mpx) {
       // nop
     }
+
     void configure_datagram_size(size_t buf_size) override {
       mpx_->buffer_size(hdl()) = buf_size;
     }
+
     void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
       detach(mpx_, false);
     }
+
     void ack_writes(bool enable) override {
       mpx_->ack_writes(hdl()) = enable;
     }
+
+    std::vector<char>& rd_buf() override {
+      return mpx_->input_buffer(hdl());
+    }
+
     std::vector<char>& wr_buf() override {
       return mpx_->output_buffer(hdl());
     }
+
     std::string addr() const override {
       return "test";
     }
+
     uint16_t port() const override {
       return mpx_->port(hdl());
     }
+
     void launch() {
       // nop
     }
+
+    void flush() override {
+      // nop
+    }
+
     void add_to_loop() override {
       mpx_->passive_mode(hdl()) = false;
     }
+
     void remove_from_loop() override {
       mpx_->passive_mode(hdl()) = true;
     }
+
   private:
     test_multiplexer* mpx_;
   };
@@ -311,31 +329,55 @@ expected<void> test_multiplexer::assign_dgram_doorman(abstract_broker* ptr,
           mpx_(mpx) {
       // nop
     }
+
+    bool new_endpoint() override {
+      // TODO: Implement me
+      /*
+      auto& mm = mpx_->pending_connects();
+      auto i = mm.find(hdl());
+      bool result = true;
+      if (i != mm.end()) {
+        result = doorman::new_connection(mpx_, i->second);
+        mm.erase(i);
+      }
+      return result;
+      */
+      return false;
+    }
+
     void configure_datagram_size(size_t buf_size) override {
       mpx_->buffer_size(hdl()) = buf_size;
     }
+
     void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
       detach(mpx_, false);
     }
+
     std::vector<char>& rd_buf() override {
       return mpx_->input_buffer(hdl());
     }
+
     std::string addr() const override {
       return "test";
     }
+
     uint16_t port() const override {
       return mpx_->port(hdl());
     }
+
     void launch() override {
       // nop
     }
+
     void add_to_loop() override {
       mpx_->passive_mode(hdl()) = false;
     }
+
     void remove_from_loop() override {
       mpx_->passive_mode(hdl()) = true;
-    }
+    } 
+
   private:
     test_multiplexer* mpx_;
   };
@@ -435,6 +477,11 @@ intrusive_ptr<scribe>& test_multiplexer::impl_ptr(connection_handle hdl) {
 
 uint16_t& test_multiplexer::port(accept_handle hdl) {
   return doorman_data_[hdl].port;
+}
+
+test_multiplexer::buffer_type&
+test_multiplexer::input_buffer(dgram_scribe_handle hdl) {
+  return dgram_scribe_data_[hdl].rd_buf;
 }
 
 test_multiplexer::buffer_type&

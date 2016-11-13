@@ -112,6 +112,9 @@ public:
   buffer_type& output_buffer(dgram_scribe_handle hdl);
 
   /// Returns the input buffer of the scribe identified by `hdl`.
+  buffer_type& input_buffer(dgram_scribe_handle  hdl);
+
+  /// Returns the input buffer of the scribe identified by `hdl`.
   buffer_type& input_buffer(connection_handle hdl);
 
   /// Returns the input buffer of the datagram source identified by `hdl`.

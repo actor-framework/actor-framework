@@ -37,8 +37,7 @@ message dgram_scribe::detach_message() {
   return make_message(dgram_scribe_closed_msg{hdl()});
 }
 
-bool dgram_scribe::consume(execution_unit* ctx, const void*,
-                                 size_t num_bytes) {
+bool dgram_scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   CAF_ASSERT(ctx != nullptr);
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   if (detached())

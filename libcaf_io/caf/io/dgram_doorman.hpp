@@ -54,7 +54,7 @@ public:
 
   using dgram_doorman_base::new_endpoint;
 
-  bool new_endpoint(execution_unit* ctx, const void*, size_t num_bytes);
+  bool new_endpoint(execution_unit* ctx, dgram_scribe_handle endpoint);
 
   // needs to be launched explicitly
   virtual void launch() = 0;

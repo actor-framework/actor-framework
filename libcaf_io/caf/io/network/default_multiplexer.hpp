@@ -302,27 +302,27 @@ public:
                                                    uint16_t port) override;
 
   expected<void> assign_dgram_scribe(abstract_broker* ptr,
-                                      dgram_scribe_handle hdl) override;
+                                     dgram_scribe_handle hdl) override;
 
   dgram_scribe_handle add_dgram_scribe(abstract_broker* ptr,
-                                         native_socket fd) override;
+                                       native_socket fd) override; 
 
   expected<dgram_scribe_handle> add_dgram_scribe(abstract_broker* ptr,
-                                                   const std::string& host,
-                                                   uint16_t port) override;
+                                                 const std::string& host,
+                                                 uint16_t port) override;
 
   expected<std::pair<dgram_doorman_handle, uint16_t>>
   new_dgram_doorman(uint16_t port, const char* in, bool rflag) override;
 
   expected<void> assign_dgram_doorman(abstract_broker* ptr,
-                                        dgram_doorman_handle hdl) override;
+                                      dgram_doorman_handle hdl) override;
 
   dgram_doorman_handle add_dgram_doorman(abstract_broker* ptr,
-                                             native_socket fd) override;
+                                         native_socket fd) override;
 
   expected<std::pair<dgram_doorman_handle, uint16_t>>
   add_dgram_doorman(abstract_broker* ptr, uint16_t port , const char* in,
-                      bool rflag) override;
+                    bool rflag) override;
 
   void exec_later(resumable* ptr) override;
 
@@ -388,7 +388,10 @@ private:
   void close_pipe();
 
   void wr_dispatch_request(resumable* ptr);
-
+  
+  // allows initialization of scribes with an exisiting sockaddr
+  dgram_scribe_handle add_dgram_scribe(abstract_broker* ptr, native_socket fd, 
+                                       sockaddr_storage* addr, size_t len);
   //resumable* rd_dispatch_request();
 
   native_socket epollfd_; // unused in poll() implementation
@@ -607,6 +610,8 @@ public:
  
   void sender_from_sockaddr(sockaddr_storage& sa, size_t len);
 
+  void set_endpoint_addr(sockaddr_storage& sa, size_t len);
+
 private:
   void prepare_next_read();
 
@@ -616,6 +621,7 @@ private:
   manager_ptr reader_;
   size_t dgram_size_;
   buffer_type rd_buf_;
+  size_t bytes_read_;
 
   // state for writing
   manager_ptr writer_;
@@ -626,7 +632,7 @@ private:
   buffer_type wr_offline_buf_;
 
   // general state
-  struct sockaddr_storage remote_endpoint_;
+  struct sockaddr_storage sockaddr_;
   socklen_t sockaddr_len_;
   std::string host_;
   uint16_t port_;
@@ -683,11 +689,13 @@ public:
 
   void sender_from_sockaddr(sockaddr_storage& sa, size_t len);
 
+  std::pair<sockaddr_storage*,size_t> last_sender();
+
 private:
   void prepare_next_read();
 
   // reader state
-  manager_ptr reader_;
+  manager_ptr mgr_;
   size_t dgram_size_;
   buffer_type rd_buf_;
 
@@ -696,7 +704,7 @@ private:
   socklen_t sockaddr_len_;
   std::string host_;
   uint16_t port_;
-  native_socket sock_; // TODO: Do I need this?
+  // native_socket sock_; // TODO: Do I need this?
 };
 
 expected<native_socket> new_tcp_connection(const std::string& host,

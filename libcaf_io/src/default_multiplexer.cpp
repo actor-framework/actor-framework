@@ -859,7 +859,13 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
 
 dgram_scribe_handle
 default_multiplexer::add_dgram_scribe(abstract_broker* self,
-                                       native_socket fd) {
+                                      native_socket fd) {
+  return add_dgram_scribe(self, fd, nullptr, 0);
+}
+
+dgram_scribe_handle
+default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd, 
+                                      sockaddr_storage* addr, size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   CAF_ASSERT(fd != network::invalid_native_socket);
   class impl : public dgram_scribe {
@@ -915,11 +921,16 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self,
     void remove_from_loop() override {
       communicator_.passivate();
     }
+    void set_endpoint_addr(sockaddr_storage* addr, size_t len) {
+      communicator_.set_endpoint_addr(*addr, len);
+    }
   private:
     bool launched_;
     network::dgram_communicator communicator_;
   };
   auto ptr = make_counted<impl>(self, *this, fd);
+  if (addr)
+    ptr->set_endpoint_addr(addr, len);
   self->add_dgram_scribe(ptr);
   return ptr->hdl();
 }
@@ -942,6 +953,7 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
     }
     bool new_endpoint() override {
       CAF_LOG_TRACE("");
+      // TODO: this currently ignores the payload of the datagram
       if (detached())
          // we are already disconnected from the broker while the multiplexer
          // did not yet remove the socket, this can happen if an I/O event
@@ -949,14 +961,34 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
          // further activities for the broker
          return false;
       auto& dm = acceptor_.backend();
-      static_cast<void>(dm);
+      auto fd = new_dgram_scribe_impl(acceptor_.host(),
+                                      acceptor_.port());
+      if (!fd) {
+        CAF_LOG_ERROR(CAF_ARG(fd.error()));
+        return false;
+        // return std::move(fd.error());
+      }
+      auto endpoint_info = acceptor_.last_sender();
+      auto hdl = dm.add_dgram_scribe(parent(), *fd,
+                                     endpoint_info.first,
+                                     endpoint_info.second);
+      return dgram_doorman::new_endpoint(&dm, hdl);
+      /*
+      auto hdl = dm.add_dgram_scribe(parent(), acceptor_.host(),
+                                     acceptor_.port());
+      if (hdl)
+        return dgram_doorman::new_endpoint(&dm, *hdl);
+      */
       /*
       auto hdl = dm.add_tcp_scribe(parent(),
                                    std::move(acceptor_.accepted_socket()));
       return doorman::new_connection(&dm, hdl);
       */
-      // TODO: Implement me!
+      /*
+      CAF_LOG_DEBUG("Creating an new dgram scribe failed for:"
+                    << CAF_ARG(acceptor_.host()) << CAF_ARG(acceptor_.port()));
       return false;
+      */
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
@@ -1497,31 +1529,6 @@ dgram_communicator::dgram_communicator(default_multiplexer& backend_ref,
   configure_datagram_size(1500);
 }
 
-void dgram_communicator::ack_writes(bool x) {
-  ack_writes_ = x;
-}
-
-void dgram_communicator::write(const void* buf, size_t num_bytes) {
-  CAF_LOG_TRACE(CAF_ARG(num_bytes));
-  auto first = reinterpret_cast<const char*>(buf);
-  auto last  = first + num_bytes;
-  wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
-}
-
-void dgram_communicator::configure_datagram_size(size_t size) {
-  dgram_size_ = size;
-}
-
-void dgram_communicator::flush(const manager_ptr& mgr) {
-  CAF_ASSERT(mgr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (wr_offline_buf_.empty()) {
-    backend().add(operation::write, fd(), this);
-    writer_ = mgr;
-    prepare_next_write();
-  }
-}
-
 void dgram_communicator::start(manager_type* mgr) {
   CAF_ASSERT(mgr != nullptr);
   activate(mgr);
@@ -1534,6 +1541,31 @@ void dgram_communicator::activate(manager_type* mgr) {
   }
 }
 
+void dgram_communicator::configure_datagram_size(size_t size) {
+  dgram_size_ = size;
+}
+
+void dgram_communicator::ack_writes(bool x) {
+  ack_writes_ = x;
+}
+
+void dgram_communicator::write(const void* buf, size_t num_bytes) {
+  CAF_LOG_TRACE(CAF_ARG(num_bytes));
+  auto first = reinterpret_cast<const char*>(buf);
+  auto last  = first + num_bytes;
+  wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
+}
+
+void dgram_communicator::flush(const manager_ptr& mgr) {
+  CAF_ASSERT(mgr != nullptr);
+  CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
+  if (wr_offline_buf_.empty()) {
+    backend().add(operation::write, fd(), this);
+    writer_ = mgr;
+    prepare_next_write();
+  }
+}
+
 void dgram_communicator::stop_reading() {
   CAF_LOG_TRACE("");
   close_read_channel();
@@ -1541,16 +1573,39 @@ void dgram_communicator::stop_reading() {
 }
 
 void dgram_communicator::removed_from_loop(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
-  if (op == operation::write)
-    writer_.reset();
+  switch (op) {
+    case operation::read:  reader_.reset(); break;
+    case operation::write: writer_.reset(); break;
+    case operation::propagate_error: break;
+  };
 }
 
 void dgram_communicator::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
   switch (op) {
     case operation::read: {
-      // This should not happen ...
+      // incoming message should signify a new remote enpoint
+      // --> create a new dgram_scribe
+      size_t rb;
+      if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
+                            sockaddr_, sockaddr_len_)) {
+        reader_->io_failure(&backend(), operation::read);
+        passivate();
+        return;
+      }
+      if (host_.empty()) {
+        sender_from_sockaddr(sockaddr_, sockaddr_len_);
+        // TODO: connect to endpoint?
+      }
+      if (rb == 0)
+        return;
+      auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
+      bytes_read_ = rb;
+      prepare_next_read();
+      if (!res) {
+        passivate();
+        return;
+      }
       break;
     }
     case operation::write: {
@@ -1592,6 +1647,11 @@ void dgram_communicator::prepare_next_write() {
   }
 }
 
+void dgram_communicator::prepare_next_read() {
+  CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
+  rd_buf_.resize(dgram_size_);
+}
+
 void dgram_communicator::sender_from_sockaddr(sockaddr_storage& sa, size_t) {
   char addr[INET6_ADDRSTRLEN];
   switch(sa.ss_family) {
@@ -1617,6 +1677,11 @@ void dgram_communicator::sender_from_sockaddr(sockaddr_storage& sa, size_t) {
   }
 }
 
+void dgram_communicator::set_endpoint_addr(sockaddr_storage& sa, size_t len) {
+  sockaddr_ = sa;
+  sockaddr_len_ = len;
+}
+
 dgram_acceptor::dgram_acceptor(default_multiplexer& backend_ref,
                                native_socket sockfd)
     : event_handler(backend_ref, sockfd),
@@ -1637,8 +1702,8 @@ void dgram_acceptor::start(manager_type* mgr) {
 }
 
 void dgram_acceptor::activate(manager_type* mgr) {
-  if (!reader_) {
-    reader_.reset(mgr);
+  if (!mgr_) {
+    mgr_.reset(mgr);
     event_handler::activate();
   }
 }
@@ -1651,24 +1716,35 @@ void dgram_acceptor::stop_reading() {
 
 void dgram_acceptor::removed_from_loop(operation op) {
   if (op == operation::read)
-    reader_.reset();
+    mgr_.reset();
 }
 
 void dgram_acceptor::handle_event(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(op));
+  CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
   switch (op) {
     case operation::read: {
-      // Read next datagram
+      // incoming message should signify a new remote enpoint
+      // --> create a new dgram_scribe
       size_t rb;
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             sockaddr_, sockaddr_len_)) {
-        reader_->io_failure(&backend(), operation::read);
+        mgr_->io_failure(&backend(), operation::read);
         passivate();
         return;
       }
       sender_from_sockaddr(sockaddr_, sockaddr_len_);
       if (rb == 0)
         return;
+      mgr_->new_endpoint();
+      /*
+      native_socket sockfd = invalid_native_socket;
+      if (try_accept(sockfd, fd())) {
+        if (sockfd != invalid_native_socket) {
+          sock_ = sockfd;
+          mgr_->new_endpoint();
+        }
+      }
+      */
       /*
       auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
       packet_size_ = rb;
@@ -1685,8 +1761,8 @@ void dgram_acceptor::handle_event(operation op) {
       break;
     }
     case operation::propagate_error:
-      if (reader_)
-        reader_->io_failure(&backend(), operation::read);
+      if (mgr_)
+        mgr_->io_failure(&backend(), operation::read);
       // backend will delete this handler anyway,
       // no need to call backend().del() here
       break;
@@ -1718,8 +1794,12 @@ void dgram_acceptor::sender_from_sockaddr(sockaddr_storage& sa, size_t) {
   }
 }
 
+std::pair<sockaddr_storage*,size_t> dgram_acceptor::last_sender() {
+  return std::make_pair(&sockaddr_, sockaddr_len_);
+}
+
 void dgram_acceptor::prepare_next_read() {
-  rd_buf_.resize(buf_size_);
+  rd_buf_.resize(dgram_size_);
 }
 
 class socket_guard {
@@ -1922,11 +2002,11 @@ new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
 }
 
 expected<native_socket> new_dgram_scribe_impl(const std::string& host,
-                                               uint16_t port,
-                                               optional<protocol> preferred) {
+                                              uint16_t port,
+                                              optional<protocol> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
-  CAF_LOG_INFO("try to establish datagram sink to:" << CAF_ARG(host)
-                                                    << CAF_ARG(port));
+  CAF_LOG_INFO("try to create dgram scribe for:" << CAF_ARG(host)
+                                                 << CAF_ARG(port));
   auto res = interfaces::native_address(host, preferred);
   if (!res) {
     CAF_LOG_INFO("no such host");
@@ -1936,6 +2016,7 @@ expected<native_socket> new_dgram_scribe_impl(const std::string& host,
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
   CALL_CFUN(fd, cc_valid_socket, "socket",
             socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
+  /*
   socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
@@ -1953,6 +2034,8 @@ expected<native_socket> new_dgram_scribe_impl(const std::string& host,
   }
   CAF_LOG_INFO("successfully connected to host via IPv4");
   return sguard.release();
+  */
+  return fd;
 }
 
 expected<std::pair<native_socket, uint16_t>>
@@ -1982,9 +2065,6 @@ new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr) {
                          : new_ip_acceptor_impl<AF_INET6>(fd, port, addr);
   if (!p)
     return std::move(p.error());
-  // Not needed: CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
-  // Should there be some handshake between nodes?
-  // TODO: Remove comments
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
   return std::make_pair(sguard.release(), *p);
