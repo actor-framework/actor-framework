@@ -227,6 +227,13 @@ test_multiplexer::new_dgram_scribe(const std::string& host,
   return result;
 }
 
+expected<void> test_multiplexer::assign_dgram_scribe(abstract_broker* ptr, 
+                                                     dgram_scribe_handle hdl,
+                                                     const std::string&,
+                                                     uint16_t) {
+  return assign_dgram_scribe(ptr, hdl);
+}
+
 expected<void> test_multiplexer::assign_dgram_scribe(abstract_broker* ptr,
                                                      dgram_scribe_handle hdl) {
   class impl : public dgram_scribe {
@@ -298,8 +305,16 @@ dgram_scribe_handle test_multiplexer::add_dgram_scribe(abstract_broker*,
 }
 
 expected<dgram_scribe_handle>
+test_multiplexer::add_dgram_scribe(abstract_broker*, native_socket,
+                                   const std::string&, uint16_t) {
+  std::cerr << "test_multiplexer::add_dgram_scribe called with native socket"
+            << std::endl;
+  abort();
+}
+
+expected<dgram_scribe_handle>
 test_multiplexer::add_dgram_scribe(abstract_broker* ptr,
-                                    const std::string& host, uint16_t prt) {
+                                   const std::string& host, uint16_t prt) {
   auto result = new_dgram_scribe(host, prt);
   if (!result)
     return std::move(result.error());

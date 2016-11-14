@@ -212,6 +212,13 @@ expected<void> abstract_broker::assign_dgram_scribe(dgram_scribe_handle hdl) {
   return backend().assign_dgram_scribe(this, hdl);
 }
 
+expected<void> abstract_broker::assign_dgram_scribe(dgram_scribe_handle hdl,
+                                                    const std::string& host,
+                                                    uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  return backend().assign_dgram_scribe(this, hdl, host, port);
+}
+
 expected<dgram_scribe_handle>
 abstract_broker::add_dgram_scribe(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));

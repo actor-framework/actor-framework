@@ -218,15 +218,22 @@ std::vector<std::string> interfaces::list_addresses(protocol proc,
 
 optional<std::pair<std::string, protocol>>
 interfaces::native_address(const std::string& host,
-                           optional<protocol> preferred) {
+                           optional<protocol> preferred,
+                           optional<uint16_t> port) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
   if (preferred)
     hint.ai_family = *preferred == protocol::ipv4 ? AF_INET : AF_INET6;
   addrinfo* tmp = nullptr;
-  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp))
-    return none;
+  if (port) {
+    auto port_str = std::to_string(*port);
+    if (getaddrinfo(host.c_str(), port_str.c_str(), &hint, &tmp))
+      return none;
+  } else {
+    if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp))
+      return none;
+  }
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   char buffer[INET6_ADDRSTRLEN];
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {

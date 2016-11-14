@@ -666,16 +666,14 @@ behavior basp_broker::make_behavior() {
         rp.deliver(std::move(res.error()));
       }
     },
-    [=](connect_atom, dgram_scribe_handle hdl, uint16_t port) {
+    [=](connect_atom, dgram_scribe_handle hdl,
+        const std::string& host, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
-      static_cast<void>(hdl);
-      static_cast<void>(port);
-      /*
       auto rp = make_response_promise();
-      auto res = assign_dgram_scribe(hdl);
+      auto res = assign_dgram_scribe(hdl, host, port);
       if (res) {
         auto& ctx = state.udp_ctx[hdl];
-        ctx.sink = hdl;
+        ctx.hdl = hdl;
         ctx.remote_port = port;
         ctx.callback = rp;
         // TODO: Start handshake with server as there is no way for
@@ -685,7 +683,6 @@ behavior basp_broker::make_behavior() {
                       << CAF_ARG(res));
         rp.deliver(std::move(res.error()));
       }
-      */
     },
     [=](delete_atom, const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));

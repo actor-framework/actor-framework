@@ -860,12 +860,31 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
 dgram_scribe_handle
 default_multiplexer::add_dgram_scribe(abstract_broker* self,
                                       native_socket fd) {
-  return add_dgram_scribe(self, fd, nullptr, 0);
+  return add_dgram_scribe(self, fd, none, 0, false);
+}
+
+expected<dgram_scribe_handle>
+default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd, 
+                                      const std::string& host, uint16_t port) {
+  auto res = interfaces::native_address(host, none, port);
+  if (!res) {
+    CAF_LOG_INFO("no such host");
+    return make_error(sec::cannot_connect_to_node, "no such host", host, port);
+  }
+  sockaddr_storage tmp_addr;
+  auto* const_addr
+    = reinterpret_cast<const sockaddr_storage*>(
+        reinterpret_cast<const addrinfo*>(res->first.c_str())->ai_addr);
+  size_t sockaddr_len = (const_addr->ss_family == AF_INET) ? 
+                       sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+  tmp_addr = *const_addr;
+  return add_dgram_scribe(self, fd, tmp_addr, sockaddr_len, true);
 }
 
 dgram_scribe_handle
 default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd, 
-                                      sockaddr_storage* addr, size_t len) {
+                                      optional<const sockaddr_storage&> addr,
+                                      size_t len, bool is_tmp_endpoint) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   CAF_ASSERT(fd != network::invalid_native_socket);
   class impl : public dgram_scribe {
@@ -921,8 +940,9 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
     void remove_from_loop() override {
       communicator_.passivate();
     }
-    void set_endpoint_addr(sockaddr_storage* addr, size_t len) {
-      communicator_.set_endpoint_addr(*addr, len);
+    void set_endpoint_addr(const sockaddr_storage& addr, size_t len,
+                           bool is_tmp_endpoint) {
+      communicator_.set_endpoint_addr(addr, len, is_tmp_endpoint);
     }
   private:
     bool launched_;
@@ -930,7 +950,7 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
   };
   auto ptr = make_counted<impl>(self, *this, fd);
   if (addr)
-    ptr->set_endpoint_addr(addr, len);
+    ptr->set_endpoint_addr(*addr, len, is_tmp_endpoint);
   self->add_dgram_scribe(ptr);
   return ptr->hdl();
 }
@@ -970,8 +990,8 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
       }
       auto endpoint_info = acceptor_.last_sender();
       auto hdl = dm.add_dgram_scribe(parent(), *fd,
-                                     endpoint_info.first,
-                                     endpoint_info.second);
+                                     endpoint_info.first, endpoint_info.second,
+                                     false);
       return dgram_doorman::new_endpoint(&dm, hdl);
       /*
       auto hdl = dm.add_dgram_scribe(parent(), acceptor_.host(),
@@ -1092,9 +1112,23 @@ expected<void> default_multiplexer::assign_dgram_scribe(abstract_broker* self,
   return unit;
 }
 
+expected<void>
+default_multiplexer::assign_dgram_scribe(abstract_broker* self, 
+                                         dgram_scribe_handle hdl,
+                                         const std::string& host,
+                                         uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl) << CAF_ARG(host)
+                                    << CAF_ARG(port));
+  auto res = add_dgram_scribe(self, static_cast<native_socket>(hdl.id()),
+                              host, port);
+  if (!res)
+    return std::move(res.error());
+  return unit;
+}
+
 expected<dgram_scribe_handle>
 default_multiplexer::add_dgram_scribe(abstract_broker* self,
-                                       const std::string& host, uint16_t port) {
+                                      const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(host) << CAF_ARG(port));
   auto fd = new_dgram_scribe_impl(host, port);
   if (!fd)
@@ -1104,7 +1138,7 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self,
 
 expected<std::pair<dgram_doorman_handle, uint16_t>>
 default_multiplexer::new_dgram_doorman(uint16_t port, const char* in,
-                                         bool reuse_addr) {
+                                       bool reuse_addr) {
   auto res = new_dgram_doorman_impl(port, in, reuse_addr);
   if (!res)
     return std::move(res.error());
@@ -1527,7 +1561,8 @@ dgram_communicator::dgram_communicator(default_multiplexer& backend_ref,
     : event_handler(backend_ref, sockfd),
       dgram_size_(0),
       ack_writes_(false),
-      writing_(false) {
+      writing_(false),
+      waiting_for_remote_endpoint(true) {
   // TODO: Set some reasonable default.
   configure_datagram_size(1500);
 }
@@ -1596,9 +1631,11 @@ void dgram_communicator::handle_event(operation op) {
         passivate();
         return;
       }
-      if (host_.empty()) {
+      if (waiting_for_remote_endpoint) {
         sender_from_sockaddr(sockaddr_, sockaddr_len_);
-        // TODO: connect to endpoint?
+        remote_endpoint_addr_ = std::move(sockaddr_);
+        remote_endpoint_addr_len_ = sockaddr_len_;
+        sockaddr_len_ = 0; 
       }
       if (rb == 0)
         return;
@@ -1614,7 +1651,7 @@ void dgram_communicator::handle_event(operation op) {
     case operation::write: {
       size_t wb; // written bytes
       if (!send_datagram(wb, fd(), wr_buf_.data(), wr_buf_.size(),
-                         sockaddr_, sockaddr_len_)) {
+                         remote_endpoint_addr_, remote_endpoint_addr_len_)) {
         writer_->io_failure(&backend(), operation::write);
         backend().del(operation::write, fd(), this);
       } else if (wb > 0) {
@@ -1656,21 +1693,22 @@ void dgram_communicator::prepare_next_read() {
   rd_buf_.resize(dgram_size_);
 }
 
-void dgram_communicator::sender_from_sockaddr(sockaddr_storage& sa, size_t) {
+void dgram_communicator::sender_from_sockaddr(const sockaddr_storage& sa, 
+                                              size_t) {
   char addr[INET6_ADDRSTRLEN];
   switch(sa.ss_family) {
     case AF_INET:
-      port_ = ntohs(reinterpret_cast<sockaddr_in*>(&sa)->sin_port);
+      port_ = ntohs(reinterpret_cast<const sockaddr_in*>(&sa)->sin_port);
       inet_ntop(AF_INET,
-                &reinterpret_cast<sockaddr_in*>(&sa)->sin_addr,
+                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
                 addr, INET_ADDRSTRLEN);
       host_.insert(std::begin(host_), std::begin(addr),
                    std::begin(addr) + INET_ADDRSTRLEN);
       break;
     case AF_INET6:
-      port_ = ntohs(reinterpret_cast<sockaddr_in6*>(&sa)->sin6_port);
+      port_ = ntohs(reinterpret_cast<const sockaddr_in6*>(&sa)->sin6_port);
       inet_ntop(AF_INET6,
-                &reinterpret_cast<sockaddr_in*>(&sa)->sin_addr,
+                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
                 addr, INET6_ADDRSTRLEN);
       host_.insert(std::begin(host_), std::begin(addr),
                    std::begin(addr) + INET6_ADDRSTRLEN);
@@ -1681,9 +1719,12 @@ void dgram_communicator::sender_from_sockaddr(sockaddr_storage& sa, size_t) {
   }
 }
 
-void dgram_communicator::set_endpoint_addr(sockaddr_storage& sa, size_t len) {
-  sockaddr_ = sa;
-  sockaddr_len_ = len;
+void dgram_communicator::set_endpoint_addr(const sockaddr_storage& sa,
+                                           size_t len,
+                                           bool is_tmp_endpoint) {
+  waiting_for_remote_endpoint = !is_tmp_endpoint;
+  remote_endpoint_addr_ = sa;
+  remote_endpoint_addr_len_ = len;
 }
 
 dgram_acceptor::dgram_acceptor(default_multiplexer& backend_ref,
@@ -1773,21 +1814,21 @@ void dgram_acceptor::handle_event(operation op) {
   }
 }
 
-void dgram_acceptor::sender_from_sockaddr(sockaddr_storage& sa, size_t) {
+void dgram_acceptor::sender_from_sockaddr(const sockaddr_storage& sa, size_t) {
   char addr[INET6_ADDRSTRLEN];
   switch(sa.ss_family) {
     case AF_INET:
-      port_ = ntohs(reinterpret_cast<sockaddr_in*>(&sa)->sin_port);
+      port_ = ntohs(reinterpret_cast<const sockaddr_in*>(&sa)->sin_port);
       inet_ntop(AF_INET,
-                &reinterpret_cast<sockaddr_in*>(&sa)->sin_addr,
+                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
                 addr, INET_ADDRSTRLEN);
       host_.insert(std::begin(host_), std::begin(addr),
                    std::begin(addr) + INET_ADDRSTRLEN);
       break;
     case AF_INET6:
-      port_ = ntohs(reinterpret_cast<sockaddr_in6*>(&sa)->sin6_port);
+      port_ = ntohs(reinterpret_cast<const sockaddr_in6*>(&sa)->sin6_port);
       inet_ntop(AF_INET6,
-                &reinterpret_cast<sockaddr_in*>(&sa)->sin_addr,
+                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
                 addr, INET6_ADDRSTRLEN);
       host_.insert(std::begin(host_), std::begin(addr),
                    std::begin(addr) + INET6_ADDRSTRLEN);
@@ -1798,8 +1839,8 @@ void dgram_acceptor::sender_from_sockaddr(sockaddr_storage& sa, size_t) {
   }
 }
 
-std::pair<sockaddr_storage*,size_t> dgram_acceptor::last_sender() {
-  return std::make_pair(&sockaddr_, sockaddr_len_);
+std::pair<const sockaddr_storage&,size_t> dgram_acceptor::last_sender() {
+  return std::make_pair(std::ref(sockaddr_), sockaddr_len_);
 }
 
 void dgram_acceptor::prepare_next_read() {
@@ -2048,8 +2089,12 @@ new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr) {
   protocol proto = ipv6;
   if (addr) {
     auto addrs = interfaces::native_address(addr);
-    if (!addrs)
+    if (!addrs) {
+      //CAF_LOG_INFO("no such host");
+      //return make_error(sec::cannot_connect_to_node, "no such host",
+      //                  addr, port);
       return make_error(sec::cannot_open_port, "Invalid ADDR", addr);
+    }
     proto = addrs->second;
     CAF_ASSERT(proto == ipv4 || proto == ipv6);
   }

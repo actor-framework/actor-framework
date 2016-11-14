@@ -299,13 +299,21 @@ public:
                   bool rflag) override;
 
   expected<dgram_scribe_handle> new_dgram_scribe(const std::string& host,
-                                                   uint16_t port) override;
+                                                 uint16_t port) override;
 
   expected<void> assign_dgram_scribe(abstract_broker* ptr,
                                      dgram_scribe_handle hdl) override;
 
+  expected<void>
+  assign_dgram_scribe(abstract_broker* ptr, dgram_scribe_handle hdl,
+                      const std::string& host, uint16_t port) override;
+
   dgram_scribe_handle add_dgram_scribe(abstract_broker* ptr,
                                        native_socket fd) override; 
+
+  expected<dgram_scribe_handle>
+  add_dgram_scribe(abstract_broker* ptr, native_socket fd,
+                   const std::string& host, uint16_t port) override;
 
   expected<dgram_scribe_handle> add_dgram_scribe(abstract_broker* ptr,
                                                  const std::string& host,
@@ -391,7 +399,8 @@ private:
   
   // allows initialization of scribes with an exisiting sockaddr
   dgram_scribe_handle add_dgram_scribe(abstract_broker* ptr, native_socket fd, 
-                                       sockaddr_storage* addr, size_t len);
+                                       optional<const sockaddr_storage&> addr,
+                                       size_t len, bool is_tmp_endpoint);
   //resumable* rd_dispatch_request();
 
   native_socket epollfd_; // unused in poll() implementation
@@ -608,9 +617,10 @@ public:
 
   void handle_event(operation op) override;
  
-  void sender_from_sockaddr(sockaddr_storage& sa, size_t len);
+  void sender_from_sockaddr(const sockaddr_storage& sa, size_t len);
 
-  void set_endpoint_addr(sockaddr_storage& sa, size_t len);
+  void set_endpoint_addr(const sockaddr_storage& sa, size_t len,
+                         bool is_tmp_endpoint);
 
 private:
   void prepare_next_read();
@@ -632,6 +642,12 @@ private:
   buffer_type wr_offline_buf_;
 
   // general state
+  // signifies whether to adapt the sender of the next received messages
+  // as a new endpoint
+  bool waiting_for_remote_endpoint;
+  struct sockaddr_storage remote_endpoint_addr_;
+  socklen_t remote_endpoint_addr_len_;
+  // addr of last sender
   struct sockaddr_storage sockaddr_;
   socklen_t sockaddr_len_;
   std::string host_;
@@ -687,9 +703,9 @@ public:
 
   void handle_event(operation op) override;
 
-  void sender_from_sockaddr(sockaddr_storage& sa, size_t len);
+  void sender_from_sockaddr(const sockaddr_storage& sa, size_t len);
 
-  std::pair<sockaddr_storage*,size_t> last_sender();
+  std::pair<const sockaddr_storage&,size_t> last_sender();
 
 private:
   void prepare_next_read();

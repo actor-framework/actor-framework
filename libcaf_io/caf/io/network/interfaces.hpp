@@ -71,7 +71,8 @@ public:
 
   /// Returns a native IPv4 or IPv6 translation of `host`.
   static optional<std::pair<std::string, protocol>>
-  native_address(const std::string& host, optional<protocol> preferred = none);
+  native_address(const std::string& host, optional<protocol> preferred = none,
+                 optional<uint16_t> port = none);
 };
 
 } // namespace network

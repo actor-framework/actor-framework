@@ -173,7 +173,7 @@ public:
           auto hdl = *y;
           std::vector<response_promise> tmp{std::move(rp)};
           pending_.emplace(u, std::move(tmp));
-          request(broker_, infinite, connect_atom::value, hdl, port).then(
+          request(broker_, infinite, connect_atom::value, hdl, host, port).then(
             [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
               auto i = pending_.find(u);
               if (i == pending_.end())

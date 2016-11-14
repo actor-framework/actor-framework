@@ -65,8 +65,19 @@ public:
   expected<void> assign_dgram_scribe(abstract_broker* ptr,
                                       dgram_scribe_handle hdl) override;
 
+  expected<void> assign_dgram_scribe(abstract_broker* ptr, 
+                                     dgram_scribe_handle hdl,
+                                     const std::string& host,
+                                     uint16_t port) override;
+
+
+
   dgram_scribe_handle add_dgram_scribe(abstract_broker* ptr,
                                          native_socket fd) override;
+
+  expected<dgram_scribe_handle>
+  add_dgram_scribe(abstract_broker* ptr, native_socket fd,
+                   const std::string& host, uint16_t port) override;
 
   expected<dgram_scribe_handle> add_dgram_scribe(abstract_broker* ptr,
                                                    const std::string& host,

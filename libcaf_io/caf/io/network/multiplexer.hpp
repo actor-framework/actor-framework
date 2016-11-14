@@ -109,20 +109,34 @@ public:
   /// Assigns an unbound datagram sink identified by `hdl` to `ptr`.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<void>
-  assign_dgram_scribe(abstract_broker* ptr,
-                            dgram_scribe_handle hdl) = 0;
+  assign_dgram_scribe(abstract_broker* ptr, dgram_scribe_handle hdl) = 0;
+
+  /// Assigns an unbound datagram sink identified by `hdl` to `ptr`,
+  /// and assigns it to the remote endpoint `host` and `port`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<void>
+  assign_dgram_scribe(abstract_broker* ptr, dgram_scribe_handle hdl,
+                      const std::string& host, uint16_t port) = 0;
+
 
   /// Creates a new datagram sink from a native socket handle.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual dgram_scribe_handle
   add_dgram_scribe(abstract_broker* ptr, native_socket fd) = 0;
 
+  /// Creates a new datagram sink from a native socket handle.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<dgram_scribe_handle>
+  add_dgram_scribe(abstract_broker* ptr, native_socket fd,
+                   const std::string& host, uint16_t port) = 0;
+
+
   /// Tries to create a datagram sink to sent messages to `host` on `port`
   /// and returns a new datagram sink managing the endpoint on success.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<dgram_scribe_handle>
   add_dgram_scribe(abstract_broker*, const std::string& host,
-                         uint16_t port) = 0;
+                   uint16_t port) = 0;
 
   /// Tries to create an unbound datagram source bound to `port`, optionally
   /// accepting only messages from IP address `in`.
@@ -134,19 +148,19 @@ public:
   /// Assigns an unbound datagram source identified by `hdl` to `ptr`.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<void> assign_dgram_doorman(abstract_broker* ptr,
-                                               dgram_doorman_handle) = 0;
+                                              dgram_doorman_handle) = 0;
 
   /// Creates a new datagram source from a native socket handle.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual dgram_doorman_handle add_dgram_doorman(abstract_broker* ptr,
-                                                   native_socket fd) = 0;
+                                                 native_socket fd) = 0;
 
   /// Tries to create a new datagram source on port `p`, optionally
   /// accepting only messages from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<std::pair<dgram_doorman_handle, uint16_t>>
   add_dgram_doorman(abstract_broker* ptr, uint16_t port,
-                     const char* in = nullptr, bool reuse_addr = false) = 0;
+                    const char* in = nullptr, bool reuse_addr = false) = 0;
 
   /// Simple wrapper for runnables
   class runnable : public resumable, public ref_counted {

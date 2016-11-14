@@ -219,11 +219,17 @@ public:
   /// a new datagram sink describing the endpoint afterwards.
   /// @returns The handle of the new `dgram_scribe` on success.
   expected<dgram_scribe_handle> add_dgram_scribe(const std::string& host,
-                                                             uint16_t port);
+                                                 uint16_t port);
 
   /// Assigns a detached `dgram_scribe` instance identified by `hdl`
   /// from the `multiplexer` to this broker.
   expected<void> assign_dgram_scribe(dgram_scribe_handle hdl);
+
+  /// Assigns a detached `dgram_scribe` instance identified by `hdl`
+  /// from the `multiplexer` to this broker and assigns it to handle the
+  /// remote endpoint `host` and `port`.
+  expected<void> assign_dgram_scribe(dgram_scribe_handle hdl,
+                                     const std::string& host, uint16_t port);
 
   /// Creates and assigns a new `dgram_scribe` from given native socked `fd`.
   expected<dgram_scribe_handle> add_dgram_scribe(network::native_socket fd);
@@ -237,7 +243,7 @@ public:
   /// @returns The handle of the new `dgram_doorman` and the assigned port.
   expected<std::pair<dgram_doorman_handle, uint16_t>>
   add_dgram_doorman(uint16_t port = 0, const char* in = nullptr,
-                     bool reuse_addr = false);
+                    bool reuse_addr = false);
 
   /// Assigns a detached `dgram_doorman` instance identified by `hdl`
   /// from the `multiplexer` to this broker.

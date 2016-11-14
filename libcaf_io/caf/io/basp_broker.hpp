@@ -120,10 +120,10 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     node_id id;
     // ports
     uint16_t remote_port;
-    uint16_t local_port;
     // pending operations to be performed after handshake completed
     optional<response_promise> callback;
-    // TODO: ordering and reliability things
+    // TODO: ordering
+    // TODO: reliability
   };
 
   void set_context(connection_handle hdl);
@@ -136,9 +136,11 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // keeps context information for all open connections
   std::unordered_map<connection_handle, connection_context> tcp_ctx;
+  std::unordered_map<dgram_scribe_handle, endpoint_context> udp_ctx;
 
   // points to the current context for callbacks such as `make_proxy`
   connection_context* this_context = nullptr;
+  endpoint_context* current_context = nullptr;
 
   // stores handles to spawn servers for other nodes; these servers
   // are spawned whenever the broker learns a new node ID and try to
