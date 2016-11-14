@@ -111,4 +111,40 @@ error save_actor(strong_actor_ptr& storage, execution_unit* ctx,
   return none;
 }
 
+namespace {
+
+void append_to_string_impl(std::string& x, const actor_control_block* y) {
+  if (y) {
+    x += std::to_string(y->aid);
+    x += '@';
+    append_to_string(x, y->nid);
+  } else {
+    x += "0@invalid-node";
+  }
+}
+
+std::string to_string_impl(const actor_control_block* x) {
+  std::string result;
+  append_to_string_impl(result, x);
+  return result;
+}
+
+} // namespace <anonymous>
+
+std::string to_string(const strong_actor_ptr& x) {
+  return to_string_impl(x.get());
+}
+
+void append_to_string(std::string& x, const strong_actor_ptr& y) {
+  return append_to_string_impl(x, y.get());
+}
+
+std::string to_string(const weak_actor_ptr& x) {
+  return to_string_impl(x.get());
+}
+
+void append_to_string(std::string& x, const weak_actor_ptr& y) {
+  return append_to_string_impl(x, y.get());
+}
+
 } // namespace caf

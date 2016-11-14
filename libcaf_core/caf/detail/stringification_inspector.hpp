@@ -64,7 +64,6 @@ public:
     traverse(std::forward<Ts>(xs)...);
   }
 
-private:
   /// Prints a separator to the result string.
   void sep();
 
@@ -237,6 +236,7 @@ private:
     traverse(std::forward<Ts>(xs)...);
   }
 
+private:
   template <class T>
   T& deconst(const T& x) {
     return const_cast<T&>(x);

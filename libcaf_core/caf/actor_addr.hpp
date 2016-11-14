@@ -97,6 +97,14 @@ public:
     return compare(other.get());
   }
 
+  friend inline std::string to_string(const actor_addr& x) {
+    return to_string(x.ptr_);
+  }
+
+  friend inline void append_to_string(std::string& x, const actor_addr& y) {
+    return append_to_string(x, y.ptr_);
+  }
+
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f, actor_addr& x) {
     return inspect(f, x.ptr_);

@@ -180,12 +180,21 @@ void node_id::swap(node_id& x) {
 }
 
 std::string to_string(const node_id& x) {
-  if (!x)
-    return "none";
-  return deep_to_string(meta::type_name("node_id"),
-                        x.process_id(),
-                        meta::hex_formatted(),
-                        x.host_id());
+  std::string result;
+  append_to_string(result, x);
+  return result;
+}
+
+void append_to_string(std::string& x, const node_id& y) {
+  if (!y) {
+    x += "invalid-node";
+    return;
+  }
+  detail::stringification_inspector si{x};
+  si.consume_hex(reinterpret_cast<const uint8_t*>(y.host_id().data()),
+                 y.host_id().size());
+  x += '#';
+  x += std::to_string(y.process_id());
 }
 
 } // namespace caf

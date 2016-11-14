@@ -194,7 +194,13 @@ inline bool operator<(const node_id& lhs, const node_id& rhs) {
   return lhs.compare(rhs) < 0;
 }
 
+/// Converts `x` into a human-readable string representation.
+/// @relates node_id
 std::string to_string(const node_id& x);
+
+/// Appends `y` in human-readable string representation to `x`.
+/// @relates node_id
+void append_to_string(std::string& x, const node_id& y);
 
 } // namespace caf
 

@@ -200,6 +200,14 @@ inline execution_unit* context_of(void*) {
   return nullptr;
 }
 
+std::string to_string(const strong_actor_ptr& x);
+
+void append_to_string(std::string& x, const strong_actor_ptr& y);
+
+std::string to_string(const weak_actor_ptr& x);
+
+void append_to_string(std::string& x, const weak_actor_ptr& y);
+
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, strong_actor_ptr& x) {
   actor_id aid = 0;

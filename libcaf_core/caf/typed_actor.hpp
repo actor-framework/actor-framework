@@ -237,6 +237,14 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     // nop
   }
 
+  friend inline std::string to_string(const typed_actor& x) {
+    return to_string(x.ptr_);
+  }
+
+  friend inline void append_to_string(std::string& x, const typed_actor& y) {
+    return append_to_string(x, y.ptr_);
+  }
+
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f, typed_actor& x) {
     return f(x.ptr_);
