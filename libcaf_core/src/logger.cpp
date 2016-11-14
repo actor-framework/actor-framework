@@ -19,7 +19,6 @@
 
 #include "caf/logger.hpp"
 
-#include <ctime>
 #include <thread>
 #include <cstring>
 #include <fstream>
@@ -38,6 +37,7 @@
 
 #include "caf/color.hpp"
 #include "caf/locks.hpp"
+#include "caf/timestamp.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -241,13 +241,12 @@ void logger::log(int level, const char* component,
   } else {
     file_name = std::move(full_file_name);
   }
-  auto t0 = std::chrono::high_resolution_clock::now().time_since_epoch();
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t0).count();
   std::ostringstream prefix;
-  prefix << ms << " " << component << " " << log_level_name[level] << " "
+  prefix << timestamp_to_string(make_timestamp()) << " " << component << " "
+         << log_level_name[level] << " "
          << "actor" << thread_local_aid() << " " << std::this_thread::get_id()
-         << " " << class_name << " " << function_name
-         << " " << file_name << ":" << line_num;
+         << " " << class_name << " " << function_name << " " << file_name << ":"
+         << line_num;
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_,
                               new event{level, component, prefix.str(), msg});
 }
@@ -290,7 +289,7 @@ void logger::run() {
   const char ts[] = "[TIMESTAMP]";
   i = std::search(f.begin(), f.end(), std::begin(ts), std::end(ts) - 1);
   if (i != f.end()) {
-    auto now = std::to_string(time(0));
+    auto now = timestamp_to_string(make_timestamp());
     f.replace(i, i + sizeof(ts) - 1, now);
   }
   const char node[] = "[NODE]";
