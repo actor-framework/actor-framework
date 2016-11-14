@@ -17,31 +17,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TIMESTAMP_HPP
-#define CAF_TIMESTAMP_HPP
-
-#include <chrono>
-#include <string>
-#include <cstdint>
+#include "caf/timestamp.hpp"
 
 namespace caf {
 
-/// A portable timestamp with nanosecond resolution anchored at the UNIX epoch.
-using timestamp = std::chrono::time_point<
-  std::chrono::system_clock,
-  std::chrono::duration<int64_t, std::nano>
->;
+timestamp make_timestamp() {
+  return std::chrono::system_clock::now();
+}
 
-/// Convenience function for returning a `timestamp` representing
-/// the current system time.
-timestamp make_timestamp();
+std::string timestamp_to_string(const timestamp& x) {
+  return std::to_string(x.time_since_epoch().count());
+}
 
-/// Converts the time-since-epoch of `x` to a `string`.
-std::string timestamp_to_string(const timestamp& x);
-
-/// Appends the time-since-epoch of `y` to `x`.
-void append_timestamp_to_string(std::string& x, const timestamp& y);
+void append_timestamp_to_string(std::string& x, const timestamp& y) {
+  x += std::to_string(y.time_since_epoch().count());
+}
 
 } // namespace caf
-
-#endif // CAF_TIMESTAMP_HPP
