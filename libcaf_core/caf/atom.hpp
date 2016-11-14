@@ -155,6 +155,24 @@ using migrate_atom = atom_constant<atom("migrate")>;
 /// Used for triggering periodic operations.
 using tick_atom = atom_constant<atom("tick")>;
 
+/// Used as config parameter for the `logger`.
+using trace_log_lvl_atom = atom_constant<atom("TRACE")>;
+
+/// Used as config parameter for the `logger`.
+using debug_log_lvl_atom = atom_constant<atom("DEBUG")>;
+
+/// Used as config parameter for the `logger`.
+using info_log_lvl_atom = atom_constant<atom("INFO")>;
+
+/// Used as config parameter for the `logger`.
+using warning_log_lvl_atom = atom_constant<atom("WARNING")>;
+
+/// Used as config parameter for the `logger`.
+using error_log_lvl_atom = atom_constant<atom("ERROR")>;
+
+/// Used as config parameter for the `logger`.
+using quiet_log_lvl_atom = atom_constant<atom("QUIET")>;
+
 } // namespace caf
 
 namespace std {

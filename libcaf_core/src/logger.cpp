@@ -345,25 +345,39 @@ void logger::run() {
 
 void logger::start() {
 #if defined(CAF_LOG_LEVEL)
-  auto& lvl = system_.config().logger_verbosity;
-  if (lvl == atom("QUIET"))
-    return;
-  if (lvl == atom("ERROR"))
-    level_ = CAF_LOG_LEVEL_ERROR;
-  else if (lvl == atom("WARNING"))
-    level_ = CAF_LOG_LEVEL_WARNING;
-  else if (lvl == atom("INFO"))
-    level_ = CAF_LOG_LEVEL_INFO;
-  else if (lvl == atom("DEBUG"))
-    level_ = CAF_LOG_LEVEL_DEBUG;
-  else if (lvl == atom("TRACE"))
-    level_ = CAF_LOG_LEVEL_TRACE;
-  else
-    level_ = CAF_LOG_LEVEL;
+  auto lvl_atom = system_.config().logger_verbosity;
+  switch (static_cast<uint64_t>(lvl_atom)) {
+    case quiet_log_lvl_atom::uint_value():
+      return;
+    case error_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_ERROR;
+      break;
+    case warning_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_WARNING;
+      break;
+    case info_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_INFO;
+      break;
+    case debug_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_DEBUG;
+      break;
+    case trace_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_TRACE;
+      break;
+    default: {
+      constexpr atom_value level_names[] = {
+        error_log_lvl_atom::value, warning_log_lvl_atom::value,
+        info_log_lvl_atom::value, debug_log_lvl_atom::value,
+        trace_log_lvl_atom::value};
+      lvl_atom = level_names[CAF_LOG_LEVEL];
+      level_ = CAF_LOG_LEVEL;
+    }
+  }
   thread_ = std::thread{[this] { this->run(); }};
-  std::string msg = "ENTRY log level = ";
-  const char* levels[] = {"ERROR", "WARNING", "INFO", "DEBUG", "TRACE"};
-  msg += levels[level_];
+  std::string msg = "ENTRY level = ";
+  msg += to_string(lvl_atom);
+  msg += ", node = ";
+  msg += to_string(system_.node());
   log(CAF_LOG_LEVEL_INFO, "caf", "caf::logger", "run", __FILE__, __LINE__, msg);
 #endif
 }
