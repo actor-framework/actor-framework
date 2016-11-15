@@ -91,6 +91,25 @@ public:
     }
     return {req_id.response_id(), dptr};
    }
+
+  /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
+  /// @returns A handle identifying a future-like handle to the response.
+  /// @warning The returned handle is actor specific and the response to the
+  ///          sent message cannot be received by another actor.
+  template <message_priority P = message_priority::normal,
+            class Rep = int, class Period = std::ratio<1>,
+            class Handle = actor, class... Ts>
+  response_handle<Subtype,
+                  response_type_t<
+                    typename Handle::signatures,
+                    typename detail::implicit_conversions<
+                      typename std::decay<Ts>::type
+                    >::type...>,
+                  is_blocking_requester<Subtype>::value>
+  request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
+          Ts&&... xs) {
+    return request(dest, duration{timeout}, std::forward<Ts>(xs)...);
+  }
 };
 
 } // namespace mixin

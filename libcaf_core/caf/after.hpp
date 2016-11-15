@@ -47,6 +47,13 @@ constexpr timeout_definition_builder after(duration d) {
   return {d};
 }
 
+/// Returns a generator for timeouts.
+template <class Rep, class Period>
+constexpr timeout_definition_builder
+after(std::chrono::duration<Rep, Period> d) {
+  return after(duration{d});
+}
+
 } // namespace caf
 
 #endif // CAF_AFTER_HPP

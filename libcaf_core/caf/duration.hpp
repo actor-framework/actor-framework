@@ -33,41 +33,41 @@ namespace caf {
 /// @relates duration
 enum class time_unit : uint32_t {
   invalid,
+  minutes,
   seconds,
   milliseconds,
-  microseconds
+  microseconds,
+  nanoseconds
 };
 
 /// Relates time_unit
 std::string to_string(time_unit x);
+
+// Calculates the index of a time_unit from the denominator of a ratio.
+constexpr intmax_t denom_to_unit_index(intmax_t x, intmax_t offset = 2) {
+  return x < 1000 ? (x == 1 ? offset : 0)
+                  : denom_to_unit_index(x / 1000, offset + 1);
+}
+
+constexpr time_unit denom_to_time_unit(intmax_t x) {
+  return static_cast<time_unit>(denom_to_unit_index(x));
+}
 
 /// Converts the ratio Num/Denom to a `time_unit` if the ratio describes
 /// seconds, milliseconds, microseconds, or minutes. Minutes are mapped
 /// to `time_unit::seconds`, any unrecognized ratio to `time_unit::invalid`.
 /// @relates duration
 template <intmax_t Num, intmax_t Denom>
-struct ratio_to_time_unit_helper {
-  static constexpr time_unit value = time_unit::invalid;
-};
+struct ratio_to_time_unit_helper;
 
-template <>
-struct ratio_to_time_unit_helper<1, 1> {
-  static constexpr time_unit value = time_unit::seconds;
-};
-
-template <>
-struct ratio_to_time_unit_helper<1, 1000> {
-  static constexpr time_unit value = time_unit::milliseconds;
-};
-
-template <>
-struct ratio_to_time_unit_helper<1, 1000000> {
-  static constexpr time_unit value = time_unit::microseconds;
+template <intmax_t Denom>
+struct ratio_to_time_unit_helper<1, Denom> {
+  static constexpr time_unit value = denom_to_time_unit(Denom);
 };
 
 template <>
 struct ratio_to_time_unit_helper<60, 1> {
-  static constexpr time_unit value = time_unit::seconds;
+  static constexpr time_unit value = time_unit::minutes;
 };
 
 /// Converts an STL time period to a `time_unit`.
@@ -97,47 +97,37 @@ public:
     // nop
   }
 
-  constexpr duration(const infinite_t&) : unit(time_unit::invalid), count(0) {
+  constexpr duration(infinite_t) : unit(time_unit::invalid), count(0) {
     // nop
   }
 
   /// Creates a new instance from an STL duration.
   /// @throws std::invalid_argument Thrown if `d.count() is negative.
-  template <class Rep, class Period>
-  duration(std::chrono::duration<Rep, Period> d)
+  template <class Rep, class Period,
+            class E =
+              std::enable_if<
+                std::is_integral<Rep>::value
+                && get_time_unit_from_period<Period>() != time_unit::invalid
+              >::type>
+  explicit duration(const std::chrono::duration<Rep, Period>& d)
       : unit(get_time_unit_from_period<Period>()),
-        count(rd(d)) {
-    static_assert(get_time_unit_from_period<Period>() != time_unit::invalid,
-                  "only minutes, seconds, milliseconds and "
-                  "microseconds are supported");
-    static_assert(std::is_integral<Rep>::value,
-                  "only integral durations are supported");
+        count(d.count() < 0 ? 0u : static_cast<uint64_t>(d.count())) {
+    // nop
   }
 
   /// Returns `unit != time_unit::invalid`.
-  inline bool valid() const {
+  constexpr bool valid() const {
     return unit != time_unit::invalid;
   }
 
   /// Returns `count == 0`.
-  inline bool is_zero() const {
+  constexpr bool is_zero() const {
     return count == 0;
   }
 
   time_unit unit;
 
   uint64_t count;
-
-private:
-  // reads d.count and throws invalid_argument if d.count < 0
-  template <class Rep, intmax_t Num, intmax_t D>
-  static uint64_t rd(const std::chrono::duration<Rep, std::ratio<Num, D>>& d) {
-    // assertion (via ctors): Num == 1 || (Num == 60 && D == 1)
-      // negative durations are not supported, map to 0
-    if (d.count() < 0)
-      return 0;
-    return static_cast<uint64_t>(d.count()) * static_cast<uint64_t>(Num);
-  }
 };
 
 /// @relates duration
@@ -146,7 +136,7 @@ typename Inspector::result_type inspect(Inspector& f, duration& x) {
   return f(x.unit, x.count);
 }
 
-
+/// @relates duration
 std::string to_string(const duration& x);
 
 /// @relates duration
@@ -162,6 +152,11 @@ template <class Clock, class Duration>
 std::chrono::time_point<Clock, Duration>&
 operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {
   switch (rhs.unit) {
+    case time_unit::invalid:
+      break;
+    case time_unit::minutes:
+      lhs += std::chrono::minutes(rhs.count);
+      break;
     case time_unit::seconds:
       lhs += std::chrono::seconds(rhs.count);
       break;
@@ -171,7 +166,8 @@ operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {
     case time_unit::microseconds:
       lhs += std::chrono::microseconds(rhs.count);
       break;
-    case time_unit::invalid:
+    case time_unit::nanoseconds:
+      lhs += std::chrono::nanoseconds(rhs.count);
       break;
   }
   return lhs;

@@ -402,15 +402,15 @@ public:
     // always save/store durations as int64_t to work around possibly
     // different integer types on different plattforms for standard typedefs
     struct {
-      void operator()(duration_type& lhs, int64_t& rhs) const {
+      void operator()(duration_type& lhs, Rep& rhs) const {
         duration_type tmp{rhs};
         lhs = tmp;
       }
-      void operator()(int64_t& lhs, duration_type& rhs) const {
+      void operator()(Rep& lhs, duration_type& rhs) const {
         lhs = rhs.count();
       }
     } assign;
-    int64_t tmp;
+    Rep tmp;
     return convert_apply(dref(), x, tmp, assign);
   }
 

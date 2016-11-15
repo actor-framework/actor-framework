@@ -81,6 +81,14 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(timeout_tests, fixture)
 
+CAF_TEST(duration_conversion) {
+  duration d1{time_unit::milliseconds, 100};
+  std::chrono::milliseconds d2{100};
+  duration d3{d2};
+  CAF_CHECK_EQUAL(d1.count, d2.count());
+  CAF_CHECK_EQUAL(d1, d3);
+}
+
 CAF_TEST(single_timeout) {
   system.spawn(timer_impl);
 }

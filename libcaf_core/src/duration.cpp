@@ -29,16 +29,20 @@ namespace {
 
 const char* time_unit_strings[] = {
   "invalid",
+  "minutes",
   "seconds",
   "milliseconds",
-  "microseconds"
+  "microseconds",
+  "nanoseconds"
 };
 
 const char* time_unit_short_strings[] = {
   "?",
+  "min",
   "s",
   "ms",
-  "us"
+  "us",
+  "ns"
 };
 
 } // namespace <anonymous>

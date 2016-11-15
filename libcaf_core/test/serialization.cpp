@@ -141,8 +141,8 @@ struct fixture {
   int32_t i32 = -345;
   float f32 = 3.45f;
   double f64 = 54.3;
-  timestamp::duration dur = timestamp::duration{1478715821 * 1000000000ll};
-  timestamp ts = timestamp{dur};
+  duration dur = duration{time_unit::seconds, 123};
+  timestamp ts = timestamp{timestamp::duration{1478715821 * 1000000000ll}};
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
@@ -265,7 +265,7 @@ CAF_TEST(double_values) {
 
 CAF_TEST(duration_values) {
   auto buf = serialize(dur);
-  timestamp::duration x;
+  duration x;
   deserialize(buf, x);
   CAF_CHECK_EQUAL(dur, x);
 }
@@ -352,14 +352,14 @@ CAF_TEST(messages) {
   auto buf1 = serialize(msg);
   deserialize(buf1, x);
   CAF_CHECK_EQUAL(to_string(msg), to_string(x));
-  CAF_CHECK(is_message(x).equal(i32, te, str, rs));
+  CAF_CHECK(is_message(x).equal(i32, dur, ts, te, str, rs));
   // serialize fully dynamic message again (do another roundtrip)
   message y;
   auto buf2 = serialize(x);
   CAF_CHECK_EQUAL(buf1, buf2);
   deserialize(buf2, y);
   CAF_CHECK_EQUAL(to_string(msg), to_string(y));
-  CAF_CHECK(is_message(y).equal(i32, te, str, rs));
+  CAF_CHECK(is_message(y).equal(i32, dur, ts, te, str, rs));
 }
 
 CAF_TEST(multiple_messages) {
@@ -372,7 +372,7 @@ CAF_TEST(multiple_messages) {
   CAF_CHECK_EQUAL(std::make_tuple(t, to_string(m1), to_string(m2)),
                   std::make_tuple(te, to_string(m), to_string(msg)));
   CAF_CHECK(is_message(m1).equal(rs, te));
-  CAF_CHECK(is_message(m2).equal(i32, te, str, rs));
+  CAF_CHECK(is_message(m2).equal(i32, dur, ts, te, str, rs));
 }
 
 
