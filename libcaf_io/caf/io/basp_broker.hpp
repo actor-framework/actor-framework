@@ -42,6 +42,7 @@ namespace caf {
 namespace io {
 
 struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
+
   basp_broker_state(broker* self);
 
   ~basp_broker_state();
@@ -94,31 +95,17 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     // nop
   }
 
-  // stores meta information for open connections
-  struct connection_context {
+  // stores meta information for active endpoints
+  struct endpoint_context {
     // denotes what message we expect from the remote node next
     basp::connection_state cstate;
     // our currently processed BASP header
     basp::header hdr;
-    // the connection handle for I/O operations
-    connection_handle hdl;
+    // the handle for I/O operations
+    variant<connection_handle, dgram_scribe_handle> hdl;
     // network-agnostic node identifier
     node_id id;
-    // connected port
-    uint16_t remote_port;
-    // pending operations to be performed after handshake completed
-    optional<response_promise> callback;
-  };
-
-  // stores meta information for dgram endpoints
-  struct endpoint_context {
-    // our current processed BSAP header
-    basp::header hdr;
-    // local source
-    dgram_scribe_handle hdl; 
-    // network-agnositc node identifier
-    node_id id;
-    // ports
+    // port
     uint16_t remote_port;
     // pending operations to be performed after handshake completed
     optional<response_promise> callback;
@@ -127,6 +114,15 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   };
 
   void set_context(connection_handle hdl);
+  void set_context(dgram_scribe_handle hdl);
+
+  struct wr_buf_visitor {
+    wr_buf_visitor(broker* ptr) : ptr{ptr} { /* nop */ }
+    using result_type = std::vector<char>&;
+    result_type operator()(connection_handle hdl) { return ptr->wr_buf(hdl); }
+    result_type operator()(dgram_scribe_handle hdl) { return ptr->wr_buf(hdl); }
+    broker* ptr;
+  } wr_buf_of_hdl;
 
   // pointer to ourselves
   broker* self;
@@ -135,12 +131,11 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   basp::instance instance;
 
   // keeps context information for all open connections
-  std::unordered_map<connection_handle, connection_context> tcp_ctx;
+  std::unordered_map<connection_handle, endpoint_context> tcp_ctx;
   std::unordered_map<dgram_scribe_handle, endpoint_context> udp_ctx;
 
   // points to the current context for callbacks such as `make_proxy`
-  connection_context* this_context = nullptr;
-  endpoint_context* current_context = nullptr;
+  endpoint_context* this_context = nullptr;
 
   // stores handles to spawn servers for other nodes; these servers
   // are spawned whenever the broker learns a new node ID and try to

@@ -116,8 +116,11 @@ public:
 
   /// Handles received data and returns a config for receiving the
   /// next data or `none` if an error occured.
-  connection_state handle(execution_unit* ctx,
-                          new_data_msg& dm, header& hdr, bool is_payload);
+  connection_state handle(execution_unit* ctx, new_data_msg& dm, header& hdr,
+                          bool is_payload);
+
+  /// Handles a received datagram
+  bool handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr);
 
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);

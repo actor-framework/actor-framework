@@ -71,7 +71,7 @@ public:
 } // namespace io
 } // namespace caf
 
-namespace std{
+namespace std {
 
 template<>
 struct hash<caf::io::connection_handle> {

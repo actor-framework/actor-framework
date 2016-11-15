@@ -252,6 +252,13 @@ connection_state instance::handle(execution_unit* ctx,
   return await_header;
 }
 
+bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
+  static_cast<void>(ctx);
+  static_cast<void>(dm);
+  static_cast<void>(hdr);
+  return false;
+};
+
 void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");
   for (auto& kvp: tbl_.direct_by_hdl_) {

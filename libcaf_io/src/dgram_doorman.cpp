@@ -48,7 +48,7 @@ void dgram_doorman::io_failure(execution_unit* ctx, network::operation op) {
 //                                  size_t besize) {
 bool dgram_doorman::new_endpoint(execution_unit* ctx,
                                  dgram_scribe_handle endpoint) {
-  msg().endpoint = endpoint;
+  msg().handle = endpoint;
   return invoke_mailbox_element(ctx);
 }
 

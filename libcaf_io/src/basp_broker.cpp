@@ -50,6 +50,7 @@ const char* basp_broker_state::name = "basp_broker";
 basp_broker_state::basp_broker_state(broker* selfptr)
     : basp::instance::callee(selfptr->system(),
                              static_cast<proxy_registry::backend&>(*this)),
+      wr_buf_of_hdl(selfptr),
       self(selfptr),
       instance(selfptr, *this) {
   CAF_ASSERT(this_node() != none);
@@ -105,7 +106,9 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
                << CAF_ARG(nid) << CAF_ARG(aid));
   // tell remote side we are monitoring this actor now
   instance.write_announce_proxy(self->context(),
-                                self->wr_buf(this_context->hdl), nid, aid);
+                                apply_visitor(wr_buf_of_hdl,
+                                              this_context->hdl),
+                                nid, aid);
   instance.tbl().flush(*path);
   mm->notify<hook::new_remote_actor>(res);
   return res;
@@ -451,18 +454,39 @@ void basp_broker_state::set_context(connection_handle hdl) {
   auto i = tcp_ctx.find(hdl);
   if (i == tcp_ctx.end()) {
     CAF_LOG_INFO("create new BASP context:" << CAF_ARG(hdl));
-    i = tcp_ctx.emplace(hdl,
-                    connection_context{
-                      basp::await_header,
-                      basp::header{basp::message_type::server_handshake, 0,
-                                   0, 0, none, none,
-                                   invalid_actor_id, invalid_actor_id},
-                      hdl,
-                      none,
-                      0,
-                      none}).first;
+    i = tcp_ctx.emplace(
+     hdl,
+      endpoint_context{
+        basp::await_header,
+        basp::header{basp::message_type::server_handshake,
+                     0, 0, 0, none, none,
+                     invalid_actor_id, invalid_actor_id},
+        hdl, none, 0, none
+      }
+    ).first;
   }
   this_context = &i->second;
+}
+
+
+void basp_broker_state::set_context(dgram_scribe_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  auto i = udp_ctx.find(hdl);
+  if (i == udp_ctx.end()) {
+    CAF_LOG_INFO("create new BASP context:" << CAF_ARG(hdl));
+    i = udp_ctx.emplace(
+      hdl,
+      endpoint_context{
+        basp::await_header,
+        basp::header{basp::message_type::client_handshake,
+                     0, 0, 0, none, none,
+                     invalid_actor_id, invalid_actor_id},
+        hdl, none, 0, none
+      }
+    ).first;
+  }
+  this_context = &i->second;
+
 }
 
 /******************************************************************************
@@ -525,14 +549,21 @@ behavior basp_broker::make_behavior() {
     [=](new_datagram_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       CAF_LOG_DEBUG("Received new_datagram_msg: " << CAF_ARG(msg));
-      static_cast<void>(msg);
-      // state.set_context(msg.handle);
-      // auto& ctx = *state.udp_context;
-      //auto next = state.instance.handle(context(), msg, ctx.hdr, ...);
-      // TODO: implement this
-      // look for existing context or create a new one
-      // handle messge
-      static_cast<void>(msg);
+      state.set_context(msg.handle);
+      auto& ctx = *state.this_context;
+      // TODO: ordering
+      // TODO: reliability?
+      auto is_open = state.instance.handle(context(), msg, ctx.hdr);
+      if (!is_open) {
+        if (ctx.callback) {
+          CAF_LOG_WARNING("failed to handshake with remote node"
+                          << CAF_ARG(msg.handle));
+          ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
+        }
+      } else {
+        // TODO: Is there configuration necessary?
+        // configure_datagram_size(...);
+      }
     },
     // received from proxy instances
     [=](forward_atom, strong_actor_ptr& src,
@@ -612,6 +643,27 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE("");
       auto port = local_port(msg.handle);
       state.instance.remove_published_actor(port);
+    },
+    // received from underlying broker implementation
+    [=](const new_endpoint_msg& msg) {
+      CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      auto& bi = state.instance;
+      bi.write_server_handshake(context(), wr_buf(msg.handle),
+                                local_port(msg.source));
+      // flush(msg.handle);
+      // TODO: is this right?
+    },
+    // received from underlying broker implementation
+    [=](const dgram_scribe_closed_msg& msg) {
+      CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      // TODO: dgram_scribe_closed_msg
+      static_cast<void>(msg);
+    },
+    // received from underlying broker implementation
+    [=](const dgram_acceptor_closed_msg& msg) {
+      CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      // TODO: dgram_acceptor_closed_msg
+      static_cast<void>(msg);
     },
     // received from middleman actor
     [=](publish_atom, accept_handle hdl, uint16_t port,

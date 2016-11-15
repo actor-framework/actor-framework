@@ -140,6 +140,19 @@ inspect(Inspector& f, dgram_scribe_closed_msg& x) {
   return f(meta::type_name("dgram_scribe_closed_msg"), x.handle);
 }
 
+/// Signalizes that a {@link broker} dgram_acceptor has been closed.
+struct dgram_acceptor_closed_msg {
+  /// Handle to the closed connection.
+  dgram_doorman_handle handle;
+};
+
+/// @relates connection_closed_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f,
+                                        dgram_acceptor_closed_msg& x) {
+  return f(meta::type_name("dgram_acceptor_closed_msg"), x.handle);
+}
+
 /// Signalizes that a {@link broker} datagram source was closed.
 struct dgram_doorman_closed_msg {
   dgram_doorman_handle handle;
@@ -155,17 +168,17 @@ inspect(Inspector& f, dgram_doorman_closed_msg& x) {
 /// Signalizes newly arrived datagram for a {@link broker}.
 struct new_endpoint_msg {
   /// Handle to the related datagram endpoint.
-  dgram_doorman_handle handle;
+  dgram_doorman_handle source;
   // Buffer containing the received data.
   // std::vector<char> buf;
   /// Handle to new dgram_scribe
-  dgram_scribe_handle endpoint;
+  dgram_scribe_handle handle;
 };
 
 /// @relates new_endpoint_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_endpoint_msg& x) {
-  return f(meta::type_name("new_endpoint_msg"), x.handle, x.endpoint);
+  return f(meta::type_name("new_endpoint_msg"), x.source, x.handle);
 }
 
 /// Signalizes that a datagram with a certain size has been sent.
