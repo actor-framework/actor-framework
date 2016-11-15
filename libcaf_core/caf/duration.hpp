@@ -105,7 +105,7 @@ public:
   /// @throws std::invalid_argument Thrown if `d.count() is negative.
   template <class Rep, class Period,
             class E =
-              std::enable_if<
+              typename std::enable_if<
                 std::is_integral<Rep>::value
                 && get_time_unit_from_period<Period>() != time_unit::invalid
               >::type>

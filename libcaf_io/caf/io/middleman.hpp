@@ -170,9 +170,9 @@ public:
 
   /// @experimental
   template <class Handle>
-  expected<Handle> remote_spawn(const node_id& nid, std::string name,
-                                message args,
-                                duration timeout = std::chrono::seconds(60)) {
+  expected<Handle>
+  remote_spawn(const node_id& nid, std::string name, message args,
+               duration timeout = duration(time_unit::minutes, 1)) {
     if (!nid || name.empty())
       return sec::invalid_argument;
     auto res = remote_spawn_impl(nid, name, args,
@@ -180,6 +180,15 @@ public:
     if (!res)
       return std::move(res.error());
     return actor_cast<Handle>(std::move(*res));
+  }
+
+  /// @experimental
+  template <class Handle, class Rep, class Period>
+  expected<Handle> remote_spawn(const node_id& nid, std::string name,
+                                message args,
+                                std::chrono::duration<Rep, Period> timeout) {
+    return remote_spawn<Handle>(nid, std::move(name), std::move(args),
+                                duration{timeout});
   }
 
   /// Smart pointer for `network::multiplexer`.
