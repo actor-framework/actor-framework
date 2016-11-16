@@ -56,7 +56,7 @@ connection_state instance::handle(execution_unit* ctx,
       callee_.purge_state(nid);
       return none;
     });
-    tbl_.erase_direct(dm.handle, cb);
+    tbl_.erase(dm.handle, cb);
     return close_connection;
   };
   std::vector<char>* payload = nullptr;

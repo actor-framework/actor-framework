@@ -130,14 +130,14 @@ public:
   void handle_node_shutdown(const node_id& affected_node);
 
   /// Returns a route to `target` or `none` on error.
-  optional<routing_table::route> lookup(const node_id& target);
+  optional<routing_table::endpoint> lookup(const node_id& target);
 
   /// Flushes the underlying buffer of `path`.
-  void flush(const routing_table::route& path);
+  void flush(const routing_table::endpoint& path);
 
   /// Sends a BASP message and implicitly flushes the output buffer of `r`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(execution_unit* ctx, const routing_table::route& r,
+  void write(execution_unit* ctx, const routing_table::endpoint& r,
              header& hdr, payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.

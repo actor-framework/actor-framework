@@ -36,6 +36,7 @@
 
 #include "caf/io/basp/all.hpp"
 #include "caf/io/broker.hpp"
+#include "caf/io/visitors.hpp"
 #include "caf/io/typed_broker.hpp"
 
 namespace caf {
@@ -116,13 +117,8 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void set_context(connection_handle hdl);
   void set_context(dgram_scribe_handle hdl);
 
-  struct wr_buf_visitor {
-    wr_buf_visitor(broker* ptr) : ptr{ptr} { /* nop */ }
-    using result_type = std::vector<char>&;
-    result_type operator()(connection_handle hdl) { return ptr->wr_buf(hdl); }
-    result_type operator()(dgram_scribe_handle hdl) { return ptr->wr_buf(hdl); }
-    broker* ptr;
-  } wr_buf_of_hdl;
+  // visitors to handle variants
+  wr_buf_visitor wr_buf_of_hdl;
 
   // pointer to ourselves
   broker* self;
