@@ -28,10 +28,12 @@ class broker;
 class doorman;
 class middleman;
 class basp_broker;
+class dgram_scribe;
 class dgram_doorman;
 class receive_policy;
 class abstract_broker;
-class dgram_scribe;
+
+struct basp_broker_state;
 
 template <class... Sigs>
 class typed_broker;

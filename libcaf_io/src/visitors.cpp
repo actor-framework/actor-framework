@@ -17,58 +17,36 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_VISITORS_HPP
-#define CAF_IO_VISITORS_HPP
-
-#include "caf/io/fwd.hpp"
-
-#include "caf/io/abstract_broker.hpp"
+#include "caf/io/visitors.hpp"
 
 namespace caf {
 namespace io {
 
-struct wr_buf_visitor {
-  using result_type = std::vector<char>&;
-  wr_buf_visitor(abstract_broker* ptr) : ptr{ptr} { /* nop */ }
-  template <typename Handle>
-  result_type operator()(const Handle& hdl) { return ptr->wr_buf(hdl); }
-  abstract_broker* ptr;
-};
-  
-struct flush_visitor {
-  using result_type = std::vector<char>&;
-  flush_visitor(abstract_broker* ptr) : ptr{ptr} { /* nop */ }
-  template <typename Handle>
-  result_type operator()(const Handle& hdl) { return ptr->flush(hdl); }
-  abstract_broker* ptr;
-};
+purge_visitor::result_type purge_visitor::operator()(const connection_handle& h) {
+  auto i = state->tcp_ctx.find(h);
+  if (i != state->tcp_ctx.end()) {
+    auto& ref = i->second;
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    state->tcp_ctx.erase(i);
+  }
+}
 
-struct addr_visitor {
-  using result_type = std::string;
-  addr_visitor(abstract_broker* ptr) : ptr{ptr} { /* nop */ }
-  template <typename Handle>
-  result_type operator()(const Handle& hdl) { return ptr->remote_addr(hdl); }
-  abstract_broker* ptr;
-};
-
-struct port_visitor {
-  using result_type = uint16_t;
-  port_visitor(abstract_broker* ptr) : ptr{ptr} { /* nop */ }
-  template <typename Handle>
-  result_type operator()(const Handle& hdl) { return ptr->remote_port(hdl); }
-  abstract_broker* ptr;
-};
-
-struct purge_visitor {
-  using result_type = void;
-  purge_visitor(basp_broker_state* ptr) : state{ptr} { /* nop */ }
-  result_type operator()(const connection_handle& hdl);
-  result_type operator()(const dgram_scribe_handle& hdl);
-  basp_broker_state* state;
-};
+purge_visitor::result_type
+purge_visitor::operator()(const dgram_scribe_handle& h) {
+  auto i = state->udp_ctx.find(h);
+  if (i != state->udp_ctx.end()) {
+    auto& ref = i->second;
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    state->udp_ctx.erase(i);
+  }
+}
 
 } // namespace io
 } // namespace caf
-
-#endif // CAF_IO_VISITORS_HPP
 

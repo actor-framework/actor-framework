@@ -27,6 +27,7 @@ set (LIBCAF_IO_SRCS
      src/dgram_doorman.cpp
      src/dgram_acceptor_manager.cpp
      src/dgram_communicator_manager.cpp
+     src/visitors.cpp
      # BASP files
      src/header.cpp
      src/message_type.cpp

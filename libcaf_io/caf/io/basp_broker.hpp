@@ -86,11 +86,11 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void learned_new_node(const node_id& nid);
 
   // inherited from basp::instance::listener
-  void learned_new_node_directly(const node_id& nid,
-                                 bool was_known_indirectly_before) override;
+  void learned_new_node_directly(const node_id& nid) override;
+  //                               bool was_known_indirectly_before) override;
 
   // inherited from basp::instance::listener
-  void learned_new_node_indirectly(const node_id& nid) override;
+  // void learned_new_node_indirectly(const node_id& nid) override;
 
   void handle_heartbeat(const node_id&) override {
     // nop
@@ -112,13 +112,14 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     optional<response_promise> callback;
     // TODO: ordering
     // TODO: reliability
-  };
+  }; 
 
   void set_context(connection_handle hdl);
   void set_context(dgram_scribe_handle hdl);
 
   // visitors to handle variants
-  wr_buf_visitor wr_buf_of_hdl;
+  purge_visitor purge_state_vis;
+  wr_buf_visitor wr_buf_vis;
 
   // pointer to ourselves
   broker* self;
@@ -161,6 +162,11 @@ public:
   behavior make_behavior() override;
   proxy_registry* proxy_registry_ptr() override;
   resume_result resume(execution_unit*, size_t) override;
+
+private:
+  // visitors
+  addr_visitor addr_;
+  port_visitor port_;
 };
 
 } // namespace io

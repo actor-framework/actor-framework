@@ -42,7 +42,9 @@ instance::callee::~callee() {
 instance::instance(abstract_broker* parent, callee& lstnr)
     : tbl_(parent),
       this_node_(parent->system().node()),
-      callee_(lstnr) {
+      callee_(lstnr),
+      flush_(parent),
+      wr_buf_(parent) {
   CAF_ASSERT(this_node_ != none);
 }
 
@@ -142,7 +144,7 @@ connection_state instance::handle(execution_unit* ctx,
         return err();
       }
       // close this connection if we already have a direct connection
-      if (tbl_.lookup_direct(hdr.source_node) != invalid_connection_handle) {
+      if (tbl_.lookup_hdl(hdr.source_node)) {
         CAF_LOG_INFO("close connection since we already have a "
                      "direct connection: " << CAF_ARG(hdr.source_node));
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
@@ -150,8 +152,8 @@ connection_state instance::handle(execution_unit* ctx,
       }
       // add direct route to this node and remove any indirect entry
       CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
-      tbl_.add_direct(dm.handle, hdr.source_node);
-      auto was_indirect = tbl_.erase_indirect(hdr.source_node);
+      tbl_.add(dm.handle, hdr.source_node);
+      // auto was_indirect = tbl_.erase_indirect(hdr.source_node);
       // write handshake as client in response
       auto path = tbl_.lookup(hdr.source_node);
       if (!path) {
@@ -159,13 +161,13 @@ connection_state instance::handle(execution_unit* ctx,
         return err();
       }
       write_client_handshake(ctx, path->wr_buf, hdr.source_node);
-      callee_.learned_new_node_directly(hdr.source_node, was_indirect);
+      callee_.learned_new_node_directly(hdr.source_node);
       callee_.finalize_handshake(hdr.source_node, aid, sigs);
       flush(*path);
       break;
     }
     case message_type::client_handshake: {
-      if (tbl_.lookup_direct(hdr.source_node) != invalid_connection_handle) {
+      if (tbl_.lookup_hdl(hdr.source_node)) { 
         CAF_LOG_INFO("received second client handshake:"
                      << CAF_ARG(hdr.source_node));
         break;
@@ -186,9 +188,9 @@ connection_state instance::handle(execution_unit* ctx,
       }
       // add direct route to this node and remove any indirect entry
       CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
-      tbl_.add_direct(dm.handle, hdr.source_node);
-      auto was_indirect = tbl_.erase_indirect(hdr.source_node);
-      callee_.learned_new_node_directly(hdr.source_node, was_indirect);
+      tbl_.add(dm.handle, hdr.source_node);
+      // auto was_indirect = tbl_.erase_indirect(hdr.source_node);
+      callee_.learned_new_node_directly(hdr.source_node);
       break;
     }
     case message_type::dispatch_message: {
@@ -196,13 +198,16 @@ connection_state instance::handle(execution_unit* ctx,
         return err();
       // in case the sender of this message was received via a third node,
       // we assume that that node to offers a route to the original source
-      auto last_hop = tbl_.lookup_direct(dm.handle);
+      auto last_hop = tbl_.lookup_node(dm.handle);
+      /*
+       * TODO: if we don't need this anymore, what does the rest do here?
       if (hdr.source_node != none
           && hdr.source_node != this_node_
           && last_hop != hdr.source_node
-          && tbl_.lookup_direct(hdr.source_node) == invalid_connection_handle
-          && tbl_.add_indirect(last_hop, hdr.source_node))
+          && tbl_.lookup_hdl(hdr.source_node))
+           && tbl_.add_indirect(last_hop, hdr.source_node))
         callee_.learned_new_node_indirectly(hdr.source_node);
+      */
       binary_deserializer bd{ctx, *payload};
       auto receiver_name = static_cast<atom_value>(0);
       std::vector<strong_actor_ptr> forwarding_stack;
@@ -263,8 +268,8 @@ void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");
   for (auto& kvp: tbl_.direct_by_hdl_) {
     CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
-    write_heartbeat(ctx, tbl_.parent_->wr_buf(kvp.first), kvp.second);
-    tbl_.parent_->flush(kvp.first);
+    write_heartbeat(ctx, apply_visitor(wr_buf_, kvp.first), kvp.second);
+    apply_visitor(flush_, kvp.first);
   }
 }
 
@@ -280,15 +285,15 @@ void instance::handle_node_shutdown(const node_id& affected_node) {
   tbl_.erase(affected_node, cb);
 }
 
-optional<routing_table::route> instance::lookup(const node_id& target) {
+optional<routing_table::endpoint> instance::lookup(const node_id& target) {
   return tbl_.lookup(target);
 }
 
-void instance::flush(const routing_table::route& path) {
+void instance::flush(const routing_table::endpoint& path) {
   tbl_.flush(path);
 }
 
-void instance::write(execution_unit* ctx, const routing_table::route& r,
+void instance::write(execution_unit* ctx, const routing_table::endpoint& r,
                      header& hdr, payload_writer* writer) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);

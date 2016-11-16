@@ -50,7 +50,8 @@ const char* basp_broker_state::name = "basp_broker";
 basp_broker_state::basp_broker_state(broker* selfptr)
     : basp::instance::callee(selfptr->system(),
                              static_cast<proxy_registry::backend&>(*this)),
-      wr_buf_of_hdl(selfptr),
+      purge_state_vis(this),
+      wr_buf_vis(selfptr),
       self(selfptr),
       instance(selfptr, *this) {
   CAF_ASSERT(this_node() != none);
@@ -70,10 +71,13 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // this member function is being called whenever we deserialize a
   // payload received from a remote node; if a remote node A sends
   // us a handle to a third node B, then we assume that A offers a route to B
+  /*
+   * TODO: Some other notification?
   if (nid != this_context->id
-      && instance.tbl().lookup_direct(nid) == invalid_connection_handle
+      && instance.tbl().lookup_hdl(nid)
       && instance.tbl().add_indirect(this_context->id, nid))
     learned_new_node_indirectly(nid);
+  */
   // we need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node
   auto path = instance.tbl().lookup(nid);
@@ -106,8 +110,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
                << CAF_ARG(nid) << CAF_ARG(aid));
   // tell remote side we are monitoring this actor now
   instance.write_announce_proxy(self->context(),
-                                apply_visitor(wr_buf_of_hdl,
-                                              this_context->hdl),
+                                apply_visitor(wr_buf_vis, this_context->hdl),
                                 nid, aid);
   instance.tbl().flush(*path);
   mm->notify<hook::new_remote_actor>(res);
@@ -149,9 +152,10 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
 
 void basp_broker_state::purge_state(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
-  auto hdl = instance.tbl().lookup_direct(nid);
-  if (hdl == invalid_connection_handle)
+  auto hdl = instance.tbl().lookup_hdl(nid);
+  if (!hdl)
     return;
+  /*
   auto i = tcp_ctx.find(hdl);
   if (i != tcp_ctx.end()) {
     auto& ref = i->second;
@@ -161,6 +165,8 @@ void basp_broker_state::purge_state(const node_id& nid) {
     }
     tcp_ctx.erase(i);
   }
+  */
+  apply_visitor(purge_state_vis, *hdl);
   proxies().erase(nid);
 }
 
@@ -363,14 +369,16 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   instance.flush(*path);
 }
 
-void basp_broker_state::learned_new_node_directly(const node_id& nid,
-                                                  bool was_indirectly_before) {
+void basp_broker_state::learned_new_node_directly(const node_id& nid) {
+//                                                  bool was_indirectly_before) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
-  if (!was_indirectly_before)
-    learned_new_node(nid);
+  // if (!was_indirectly_before)
+  learned_new_node(nid);
 }
 
+/*
+ * TODO: Can I just remove this?
 void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
@@ -448,6 +456,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   instance.write(self->context(), path->wr_buf, hdr, &writer);
   instance.flush(*path);
 }
+*/
 
 void basp_broker_state::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
@@ -486,7 +495,6 @@ void basp_broker_state::set_context(dgram_scribe_handle hdl) {
     ).first;
   }
   this_context = &i->second;
-
 }
 
 /******************************************************************************
@@ -494,7 +502,9 @@ void basp_broker_state::set_context(dgram_scribe_handle hdl) {
  ******************************************************************************/
 
 basp_broker::basp_broker(actor_config& cfg)
-    : stateful_actor<basp_broker_state, broker>(cfg) {
+    : stateful_actor<basp_broker_state, broker>(cfg),
+      addr_(this),
+      port_(this) {
   // nop
 }
 
@@ -632,7 +642,7 @@ behavior basp_broker::make_behavior() {
       //       a connection, we also could try to reach this node via other
       //       hops to be resilient to (rare) network failures or if a
       //       node is reachable via several interfaces and only one fails
-      auto nid = state.instance.tbl().lookup_direct(msg.handle);
+      auto nid = state.instance.tbl().lookup_node(msg.handle);
       // tell BASP instance we've lost connection
       state.instance.handle_node_shutdown(nid);
       CAF_ASSERT(nid == none
@@ -766,10 +776,10 @@ behavior basp_broker::make_behavior() {
     -> std::tuple<node_id, std::string, uint16_t> {
       std::string addr;
       uint16_t port = 0;
-      auto hdl = state.instance.tbl().lookup_direct(x);
-      if (hdl != invalid_connection_handle) {
-        addr = remote_addr(hdl);
-        port = remote_port(hdl);
+      auto hdl = state.instance.tbl().lookup_hdl(x);
+      if (hdl) {
+        addr = apply_visitor(addr_, *hdl);
+        port = apply_visitor(port_, *hdl);
       }
       return std::make_tuple(x, std::move(addr), port);
     },

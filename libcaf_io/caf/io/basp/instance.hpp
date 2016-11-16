@@ -82,12 +82,12 @@ public:
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
-    virtual void learned_new_node_directly(const node_id& nid,
-                                           bool was_known_indirectly) = 0;
+    virtual void learned_new_node_directly(const node_id& nid) = 0;
+    //                                       bool was_known_indirectly) = 0;
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
-    virtual void learned_new_node_indirectly(const node_id& nid) = 0;
+    // virtual void learned_new_node_indirectly(const node_id& nid) = 0;
 
     /// Called if a heartbeat was received from `nid`
     virtual void handle_heartbeat(const node_id& nid) = 0;
@@ -230,6 +230,8 @@ private:
   published_actor_map published_actors_;
   node_id this_node_;
   callee& callee_;
+  flush_visitor flush_;
+  wr_buf_visitor wr_buf_;
 };
 
 /// @}
