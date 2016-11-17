@@ -638,8 +638,6 @@ private:
   // state for writing
   manager_ptr writer_;
   bool ack_writes_;
-  bool writing_;
-  size_t written_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;
 
@@ -716,6 +714,7 @@ private:
   manager_ptr mgr_;
   size_t dgram_size_;
   buffer_type rd_buf_;
+  size_t bytes_read_;
 
   // general state
   struct sockaddr_storage sockaddr_;

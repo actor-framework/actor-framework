@@ -419,6 +419,11 @@ void instance::write_server_handshake(execution_unit* ctx,
       pa = &i->second;
   }
   CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
+  if (!pa && port) {
+    std::cerr << "No actor published." << std::endl;
+  } else {
+    std::cerr << "Found locally published actor." << std::endl;
+  }
   auto writer = make_callback([&](serializer& sink) -> error {
     auto& ref = callee_.system().config().middleman_app_identifier;
     auto e = sink(const_cast<std::string&>(ref));
@@ -451,6 +456,13 @@ void instance::write_client_handshake(execution_unit* ctx,
   header hdr{message_type::client_handshake, 0, 0, 0,
              this_node_, remote_side, invalid_actor_id, invalid_actor_id};
   write(ctx, buf, hdr, &writer);
+}
+
+void instance::write_udp_client_handshake(execution_unit* ctx,
+                                          buffer_type& buf) {
+  header hdr{message_type::client_handshake, 0, 0, 0,
+             this_node_, none, invalid_actor_id, invalid_actor_id};
+  write(ctx, buf, hdr);
 }
 
 void instance::write_announce_proxy(execution_unit* ctx, buffer_type& buf,

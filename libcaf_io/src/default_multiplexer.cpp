@@ -599,6 +599,7 @@ int del_flag(operation op, int bf) {
       CAF_LOG_ERROR("unexpected operation");
       break;
   }
+  std::cerr << "WEIRD STUFF!" << std::endl;
   // weird stuff going on
   return 0;
 }
@@ -908,6 +909,7 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
   public:
     impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
         : dgram_scribe(ptr, network::dg_sink_hdl_from_socket(sockfd)),
+          launched_(false),
           communicator_(mx, sockfd) {
       // nop
     }
@@ -1249,30 +1251,34 @@ bool try_accept(native_socket& result, native_socket fd) {
 
 bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
                    sockaddr_storage& sa, size_t sa_len) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-  std::cerr << "Sending datagram" << std::endl;
+  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
+  std::cerr << "[SD] Sending datagram ... " << std::endl;
   auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                        no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
                        sa_len);
-  /*
-  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
-                     no_sigpipe_flag);
-  */
-  if (is_error(sres, true))
+  if (is_error(sres, true)) {
+    std::cerr << "[SD] Send error? (" << sres << ")" << std::endl;
     return false;
+  }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+  std::cerr << "[SD] Sent " << result << " bytes" << std::endl;
   return true;
 }
 
 bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
                       sockaddr_storage& sender_addr, socklen_t& sender_len) {
-  std::cerr << "Receiving datagram" << std::endl;
-  sender_len = sizeof(sender_addr);
   CAF_LOG_TRACE(CAF_ARG(fd));
+  //sender_len = sizeof(sender_addr);
+  sender_len = sizeof(sockaddr);
+  std::cerr << "[RD] Receiving datagram ..." << std::endl;
+  std::cerr << "[RD] Settings: buffsize " << len << ", "
+            << "addrsize " << sender_len << ", "
+            << "socket " << fd << std::endl;
   auto sres = ::recvfrom(fd, buf, len, no_sigpipe_flag,
                          reinterpret_cast<struct sockaddr *>(&sender_addr),
                          &sender_len);
   if (is_error(sres, true) || sres == 0) {
+    std::cerr << "[RD] Nothing to receive (res: " << sres << ")" << std::endl;
     // Nothing to receive
     return false;
   }
@@ -1580,7 +1586,6 @@ dgram_communicator::dgram_communicator(default_multiplexer& backend_ref,
     : event_handler(backend_ref, sockfd),
       dgram_size_(0),
       ack_writes_(false),
-      writing_(false),
       waiting_for_remote_endpoint(true) {
   // TODO: Set some reasonable default.
   configure_datagram_size(1500);
@@ -1595,6 +1600,7 @@ void dgram_communicator::activate(manager_type* mgr) {
   if (!writer_) {
     writer_.reset(mgr);
     event_handler::activate();
+    prepare_next_read();
   }
 }
 
@@ -1607,6 +1613,8 @@ void dgram_communicator::ack_writes(bool x) {
 }
 
 void dgram_communicator::write(const void* buf, size_t num_bytes) {
+  std::cerr << "[DC] write called with " << num_bytes
+            << " bytes" << std::endl;
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   auto first = reinterpret_cast<const char*>(buf);
   auto last  = first + num_bytes;
@@ -1616,7 +1624,7 @@ void dgram_communicator::write(const void* buf, size_t num_bytes) {
 void dgram_communicator::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (wr_offline_buf_.empty()) {
+  if (!wr_offline_buf_.empty()) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
     prepare_next_write();
@@ -1639,6 +1647,8 @@ void dgram_communicator::removed_from_loop(operation op) {
 
 void dgram_communicator::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
+  std::cerr << "[DC] handle_event: " << to_string(op)
+            << std::endl;
   switch (op) {
     case operation::read: {
       // incoming message should signify a new remote enpoint
@@ -1681,7 +1691,7 @@ void dgram_communicator::handle_event(operation op) {
       } else {
         // TODO: remove this if sure that datagrams are either written
         // as a whole or not at all
-        std::cerr << "Partial datagram wrtten: " << wb
+        std::cerr << "[DC] Partial datagram wrtten: " << wb
                   << " of " << wr_buf_.size() << std::endl;
         if (writer_)
           writer_->io_failure(&backend(), operation::write);
@@ -1769,6 +1779,7 @@ void dgram_acceptor::activate(manager_type* mgr) {
   if (!mgr_) {
     mgr_.reset(mgr);
     event_handler::activate();
+    prepare_next_read();
   }
 }
 
@@ -1799,11 +1810,16 @@ void dgram_acceptor::handle_event(operation op) {
       sender_from_sockaddr(sockaddr_, sockaddr_len_);
       if (rb == 0)
         return;
+      std::cerr << "[DA] received " << rb << " bytes data from "
+                << host_ << ":" << port_ << std::endl;
       auto res = mgr_->new_endpoint(rd_buf_.data(), rb);
-      if (res) {
+      if (!res) {
         // What is the right way to propagate this?
         CAF_LOG_DEBUG("Failure during creation of new udp endpoint");
+        std::cerr << "[DA] Failure during creation of new udp endpoint"
+                  << std::endl;;
       }
+      bytes_read_ = rb;
       break;
     }
     case operation::write: {
@@ -1827,16 +1843,14 @@ void dgram_acceptor::sender_from_sockaddr(const sockaddr_storage& sa, size_t) {
       inet_ntop(AF_INET,
                 &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
                 addr, INET_ADDRSTRLEN);
-      host_.insert(std::begin(host_), std::begin(addr),
-                   std::begin(addr) + INET_ADDRSTRLEN);
+      host_ = addr;
       break;
     case AF_INET6:
       port_ = ntohs(reinterpret_cast<const sockaddr_in6*>(&sa)->sin6_port);
       inet_ntop(AF_INET6,
                 &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
                 addr, INET6_ADDRSTRLEN);
-      host_.insert(std::begin(host_), std::begin(addr),
-                   std::begin(addr) + INET6_ADDRSTRLEN);
+      host_ = addr;
       break;
     default:
       // nop
@@ -2121,6 +2135,8 @@ new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr) {
     return std::move(p.error());
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
+  std::cerr << "Created new dgram doorman on socket " << fd << " using port "
+            << *p << std::endl;
   return std::make_pair(sguard.release(), *p);
 }
 

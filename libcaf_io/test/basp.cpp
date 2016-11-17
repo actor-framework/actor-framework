@@ -702,7 +702,13 @@ CAF_TEST(actor_serialize_and_deserialize) {
           std::vector<actor_id>{}, msg);
 }
 
+
+// TODO: Reimplement this once reactive 
+// addressing is available.
 CAF_TEST(indirect_connections) {
+  CAF_MESSAGE("Currently not implemented.");
+  CAF_CHECK_EQUAL(true, false);
+/*
   // this node receives a message from jupiter via mars and responds via mars
   // and any ad-hoc automatic connection requests are ignored
   CAF_MESSAGE("self: " << to_string(self()->address()));
@@ -750,13 +756,17 @@ CAF_TEST(indirect_connections) {
           self()->id(), jupiter().dummy_actor->id(),
           std::vector<actor_id>{},
           make_message("hello from earth!"));
+*/
 }
+
 
 CAF_TEST_FIXTURE_SCOPE_END()
 
 CAF_TEST_FIXTURE_SCOPE(basp_tests_with_autoconn, autoconn_enabled_fixture)
 
 CAF_TEST(automatic_connection) {
+  CAF_MESSAGE("Currently not implemented.");
+  CAF_CHECK_EQUAL(true, false);
   // this tells our BASP broker to enable the automatic connection feature
   //anon_send(aut(), ok_atom::value,
   //          "middleman.enable-automatic-connections", make_message(true));
@@ -764,6 +774,14 @@ CAF_TEST(automatic_connection) {
   // jupiter [remote hdl 0] -> mars [remote hdl 1] -> earth [this_node]
   // (this node receives a message from jupiter via mars and responds via mars,
   //  but then also establishes a connection to jupiter directly)
+  /*
+  auto check_node_in_tbl = [&](node& n) {
+    io::id_visitor id_vis;
+    auto opt_hdl = tbl().lookup_hdl(n.id);
+    CAF_REQUIRE(opt_hdl);
+    CAF_CHECK_EQUAL(apply_visitor(id_vis, *opt_hdl),
+                    n.connection.id());
+  };
   mpx()->provide_scribe("jupiter", 8080, jupiter().connection);
   CAF_CHECK(mpx()->has_pending_scribe("jupiter", 8080));
   CAF_MESSAGE("self: " << to_string(self()->address()));
@@ -772,8 +790,8 @@ CAF_TEST(automatic_connection) {
   system.middleman().publish(self(), 4242);
   mpx()->flush_runnables(); // process publish message in basp_broker
   CAF_MESSAGE("connect to mars");
-  connect_node(mars(), ax, self()->id());
-  CAF_CHECK_EQUAL(tbl().lookup_direct(mars().id).id(), mars().connection.id());
+  connect_node(mars(), ax, self()->id()); 
+  check_node_in_tbl(mars());
   CAF_MESSAGE("simulate that an actor from jupiter "
               "sends a message to us via mars");
   mock(mars().connection,
@@ -803,8 +821,9 @@ CAF_TEST(automatic_connection) {
           no_operation_data, this_node(), jupiter().id,
           invalid_actor_id, jupiter().dummy_actor->id());
   CAF_CHECK_EQUAL(mpx()->output_buffer(mars().connection).size(), 0u);
-  CAF_CHECK_EQUAL(tbl().lookup_indirect(jupiter().id), mars().id);
-  CAF_CHECK_EQUAL(tbl().lookup_indirect(mars().id), none);
+  // TODO: remove this? (Indirection removed ...)
+  //CAF_CHECK_EQUAL(tbl().lookup_indirect(jupiter().id), mars().id);
+  //CAF_CHECK_EQUAL(tbl().lookup_indirect(mars().id), none);
   auto connection_helper = system.latest_actor_id();
   CAF_CHECK_EQUAL(mpx()->output_buffer(mars().connection).size(), 0u);
   // create a dummy config server and respond to the name lookup
@@ -835,10 +854,11 @@ CAF_TEST(automatic_connection) {
           basp::message_type::client_handshake, no_flags, 1u,
           no_operation_data, this_node(), jupiter().id,
           invalid_actor_id, invalid_actor_id, std::string{});
-  CAF_CHECK_EQUAL(tbl().lookup_indirect(jupiter().id), none);
-  CAF_CHECK_EQUAL(tbl().lookup_indirect(mars().id), none);
-  CAF_CHECK_EQUAL(tbl().lookup_direct(jupiter().id).id(), jupiter().connection.id());
-  CAF_CHECK_EQUAL(tbl().lookup_direct(mars().id).id(), mars().connection.id());
+  // TODO: remove this? (Indirection removed ...)
+  //CAF_CHECK_EQUAL(tbl().lookup_indirect(jupiter().id), none);
+  //CAF_CHECK_EQUAL(tbl().lookup_indirect(mars().id), none);
+  check_node_in_tbl(mars());
+  check_node_in_tbl(jupiter());
   CAF_MESSAGE("receive message from jupiter");
   self()->receive(
     [](const std::string& str) -> std::string {
@@ -856,6 +876,7 @@ CAF_TEST(automatic_connection) {
           std::vector<actor_id>{},
           make_message("hello from earth!"));
   CAF_CHECK_EQUAL(mpx()->output_buffer(mars().connection).size(), 0u);
+  */
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -198,6 +198,9 @@ public:
   void write_client_handshake(execution_unit* ctx,
                               buffer_type& buf, const node_id& remote_side);
 
+  /// Start handshake ...
+  void write_udp_client_handshake(execution_unit* ctx, buffer_type& buf);
+
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
                             const node_id& dest_node, actor_id aid);
