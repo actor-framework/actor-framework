@@ -871,14 +871,31 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
     CAF_LOG_INFO("no such host");
     return make_error(sec::cannot_connect_to_node, "no such host", host, port);
   }
-  sockaddr_storage tmp_addr;
-  auto* const_addr
-    = reinterpret_cast<const sockaddr_storage*>(
-        reinterpret_cast<const addrinfo*>(res->first.c_str())->ai_addr);
-  size_t sockaddr_len = (const_addr->ss_family == AF_INET) ? 
-                       sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-  tmp_addr = *const_addr;
-  return add_dgram_scribe(self, fd, tmp_addr, sockaddr_len, true);
+  sockaddr_storage sa;
+  size_t sa_len = 0;
+  memset(&sa, 0, sizeof(sockaddr_storage));
+  switch (res->second) {
+    case ipv4: {
+      auto* sa_v4 = reinterpret_cast<sockaddr_in*>(&sa);
+      inet_pton(AF_INET, host.c_str(), &sa_v4->sin_addr);
+      sa_v4->sin_port = htons(port);
+      sa_v4->sin_family = AF_INET;
+      sa_len = sizeof(sockaddr_in);
+      break;
+    }
+    case ipv6: {
+      auto* sa_v6 = reinterpret_cast<sockaddr_in6*>(&sa);
+      inet_pton(AF_INET, host.c_str(), &sa_v6->sin6_addr);
+      sa_v6->sin6_port = htons(port);
+      sa_v6->sin6_family = AF_INET;
+      sa_len = sizeof(sockaddr_in6);
+      break;
+    }
+    default:
+      return make_error(sec::cannot_connect_to_node, "unknown family",
+                        host, port);
+  }
+  return add_dgram_scribe(self, fd, sa, sa_len, true);
 }
 
 dgram_scribe_handle
