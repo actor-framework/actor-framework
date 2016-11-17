@@ -56,6 +56,9 @@ public:
 
   bool new_endpoint(execution_unit* ctx, dgram_scribe_handle endpoint);
 
+  bool delegate_msg(execution_unit* ctx, dgram_scribe_handle endpoint,
+                    const void* buf, size_t num_bytes);
+
   // needs to be launched explicitly
   virtual void launch() = 0;
 

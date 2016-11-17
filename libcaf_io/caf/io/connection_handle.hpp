@@ -62,7 +62,7 @@ public:
     return f(meta::type_name("connection_handle"), x.id_);
   }
 
- private:
+private:
   inline connection_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }

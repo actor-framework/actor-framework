@@ -914,6 +914,9 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
     void configure_datagram_size(size_t buf_size) override {
       CAF_LOG_TRACE("");
       communicator_.configure_datagram_size(buf_size);
+      // TODO: Do we need this?
+      if (!launched_)
+        launch();
     }
     void ack_writes(bool enable) override {
       communicator_.ack_writes(enable);
@@ -937,6 +940,12 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
       auto x = remote_addr_of_fd(communicator_.fd());
       if (!x)
         return "";
+      return *x;
+    }
+    uint16_t local_port() const override {
+      auto x = local_port_of_fd(communicator_.fd());
+      if (!x)
+        return 0;
       return *x;
     }
     uint16_t port() const override {
@@ -988,7 +997,7 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
       CAF_LOG_TRACE("");
       acceptor_.configure_datagram_size(buf_size);
     }
-    bool new_endpoint() override {
+    bool new_endpoint(const void* buf, size_t num_bytes) override {
       CAF_LOG_TRACE("");
       // TODO: this currently ignores the payload of the datagram
       if (detached())
@@ -1009,23 +1018,14 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
       auto hdl = dm.add_dgram_scribe(parent(), *fd,
                                      endpoint_info.first, endpoint_info.second,
                                      false);
-      return dgram_doorman::new_endpoint(&dm, hdl);
-      /*
-      auto hdl = dm.add_dgram_scribe(parent(), acceptor_.host(),
-                                     acceptor_.port());
-      if (hdl)
-        return dgram_doorman::new_endpoint(&dm, *hdl);
-      */
-      /*
-      auto hdl = dm.add_tcp_scribe(parent(),
-                                   std::move(acceptor_.accepted_socket()));
-      return doorman::new_connection(&dm, hdl);
-      */
-      /*
-      CAF_LOG_DEBUG("Creating an new dgram scribe failed for:"
-                    << CAF_ARG(acceptor_.host()) << CAF_ARG(acceptor_.port()));
-      return false;
-      */
+      // TODO: needs a better design
+      // new_endpoint(...) registeres the new handle
+      // delegate_message assigns the new handle
+      // responsibility for the received msg.
+      auto res = dgram_doorman::new_endpoint(&dm, hdl);
+      if (!res)
+        return false;
+      return delegate_msg(&dm, hdl, buf, num_bytes);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
@@ -1250,6 +1250,7 @@ bool try_accept(native_socket& result, native_socket fd) {
 bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
                    sockaddr_storage& sa, size_t sa_len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
+  std::cerr << "Sending datagram" << std::endl;
   auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                        no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
                        sa_len);
@@ -1265,6 +1266,7 @@ bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
 
 bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
                       sockaddr_storage& sender_addr, socklen_t& sender_len) {
+  std::cerr << "Receiving datagram" << std::endl;
   sender_len = sizeof(sender_addr);
   CAF_LOG_TRACE(CAF_ARG(fd));
   auto sres = ::recvfrom(fd, buf, len, no_sigpipe_flag,
@@ -1797,25 +1799,11 @@ void dgram_acceptor::handle_event(operation op) {
       sender_from_sockaddr(sockaddr_, sockaddr_len_);
       if (rb == 0)
         return;
-      mgr_->new_endpoint();
-      /*
-      native_socket sockfd = invalid_native_socket;
-      if (try_accept(sockfd, fd())) {
-        if (sockfd != invalid_native_socket) {
-          sock_ = sockfd;
-          mgr_->new_endpoint();
-        }
+      auto res = mgr_->new_endpoint(rd_buf_.data(), rb);
+      if (res) {
+        // What is the right way to propagate this?
+        CAF_LOG_DEBUG("Failure during creation of new udp endpoint");
       }
-      */
-      /*
-      auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
-      packet_size_ = rb;
-      prepare_next_read();
-      if (!res) {
-        passivate();
-        return;
-      }
-      */
       break;
     }
     case operation::write: {

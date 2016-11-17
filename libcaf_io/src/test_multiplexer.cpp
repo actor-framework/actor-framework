@@ -269,6 +269,14 @@ expected<void> test_multiplexer::assign_dgram_scribe(abstract_broker* ptr,
       return "test";
     }
 
+    uint16_t local_port() const override {
+      std::cerr << "test_multiplexer::assign_dgram_scribe::impl::local_port "
+                << "not implementd." << std::endl;
+      abort();
+      return 0;
+    }
+
+
     uint16_t port() const override {
       return mpx_->port(hdl());
     }
@@ -345,7 +353,7 @@ expected<void> test_multiplexer::assign_dgram_doorman(abstract_broker* ptr,
       // nop
     }
 
-    bool new_endpoint() override {
+    bool new_endpoint(const void*, size_t) override {
       // TODO: Implement me
       /*
       auto& mm = mpx_->pending_connects();
@@ -376,7 +384,7 @@ expected<void> test_multiplexer::assign_dgram_doorman(abstract_broker* ptr,
     std::string addr() const override {
       return "test";
     }
-
+ 
     uint16_t port() const override {
       return mpx_->port(hdl());
     }

@@ -125,6 +125,14 @@ void abstract_broker::configure_datagram_size(dgram_doorman_handle hdl,
     x->configure_datagram_size(buf_size);
 }
 
+void  abstract_broker::configure_datagram_size(dgram_scribe_handle hdl,
+                                               size_t buf_size) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(buf_size));
+  auto x = by_id(hdl);
+  if (x)
+    x->configure_datagram_size(buf_size);
+}
+
 std::vector<char>& abstract_broker::wr_buf(dgram_scribe_handle hdl) {
   auto x = by_id(hdl);
   if (!x) {
@@ -141,6 +149,12 @@ void abstract_broker::write(dgram_scribe_handle hdl, size_t bs,
   auto first = reinterpret_cast<const char*>(buf);
   auto last = first + bs;
   out.insert(out.end(), first, last);
+}
+
+void abstract_broker::flush(dgram_scribe_handle hdl) {
+  auto x = by_id(hdl);
+  if (x)
+    x->flush();
 }
 
 std::vector<connection_handle> abstract_broker::connections() const {
@@ -279,6 +293,11 @@ std::string abstract_broker::remote_addr(dgram_scribe_handle hdl) {
 uint16_t abstract_broker::remote_port(dgram_scribe_handle hdl) {
   auto i = dgram_scribes_.find(hdl);
   return i != dgram_scribes_.end() ? i->second->port() : 0;
+}
+
+uint16_t abstract_broker::local_port(dgram_scribe_handle hdl) {
+  auto i = dgram_scribes_.find(hdl);
+  return i != dgram_scribes_.end() ? i->second->local_port() : 0;
 }
 
 uint16_t abstract_broker::local_port(dgram_doorman_handle hdl) {

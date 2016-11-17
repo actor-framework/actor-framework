@@ -233,6 +233,23 @@ inspect(Inspector& f, dgram_doorman_passivated_msg& x) {
   return f(meta::type_name("dgram_doorman_passivated_msg"), x.handle);
 }
 
+/// delegates a handshake to a dgram scribe 
+struct dgram_delegate_msg {
+  // Sender handle
+  dgram_doorman_handle source;
+  // Responsible scribe
+  dgram_scribe_handle handle;
+  // Buffer containing received data.
+  std::vector<char> buf;
+};
+
+/// @relates dgram_delegate_msg
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, dgram_delegate_msg& x) {
+  return f(meta::type_name("dgram_delegate_msg"), x.handle);
+}
+
 } // namespace io
 } // namespace caf
 

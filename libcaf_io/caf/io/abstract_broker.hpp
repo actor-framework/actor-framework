@@ -167,11 +167,19 @@ public:
   /// @param buf_size Size of the receiver buffer for the next datagram.
   void configure_datagram_size(dgram_doorman_handle hdl, size_t buf_size);
 
+  /// Modifies the buffer for received datagrams.
+  /// @param hdl Identifies the affected socket.
+  /// @param buf_size Size of the receiver buffer for the next datagram.
+  void configure_datagram_size(dgram_scribe_handle hdl, size_t buf_size);
+
   /// Returns write buffer for given sink.
   std::vector<char>& wr_buf(dgram_scribe_handle hdl);
 
   /// Writes `data` into the buffer of a given sink.
   void write(dgram_scribe_handle hdl, size_t data_size, const void* data);
+
+  /// Sends the content of the buffer for given connection.
+  void flush(dgram_scribe_handle hdl);
 
   /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
@@ -278,6 +286,10 @@ public:
   /// Returns the remote port associated to `hdl`
   /// or `0` if `hdl` is invalid.
   uint16_t remote_port(dgram_scribe_handle hdl);
+
+  /// Returns the remote port associated to `hdl`
+  /// or `0` if `hdl` is invalid.
+  uint16_t local_port(dgram_scribe_handle hdl);
 
   /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
   uint16_t local_port(dgram_doorman_handle hdl);

@@ -34,7 +34,7 @@ public:
 
   ~dgram_acceptor_manager();
 
-  virtual bool new_endpoint() = 0;
+  virtual bool new_endpoint(const void* buf, size_t num_bytes) = 0;
 
 };
 

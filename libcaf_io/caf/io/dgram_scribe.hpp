@@ -60,6 +60,8 @@ public:
   /// content of the buffer via the network.
   virtual void flush() = 0;
 
+  virtual uint16_t local_port() const = 0;
+
   void io_failure(execution_unit* ctx, network::operation op) override;
 
   bool consume(execution_unit*, const void*, size_t) override;

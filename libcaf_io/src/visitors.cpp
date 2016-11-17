@@ -22,30 +22,7 @@
 namespace caf {
 namespace io {
 
-purge_visitor::result_type purge_visitor::operator()(const connection_handle& h) {
-  auto i = state->tcp_ctx.find(h);
-  if (i != state->tcp_ctx.end()) {
-    auto& ref = i->second;
-    if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake");
-      ref.callback->deliver(sec::disconnect_during_handshake);
-    }
-    state->tcp_ctx.erase(i);
-  }
-}
 
-purge_visitor::result_type
-purge_visitor::operator()(const dgram_scribe_handle& h) {
-  auto i = state->udp_ctx.find(h);
-  if (i != state->udp_ctx.end()) {
-    auto& ref = i->second;
-    if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake");
-      ref.callback->deliver(sec::disconnect_during_handshake);
-    }
-    state->udp_ctx.erase(i);
-  }
-}
 
 } // namespace io
 } // namespace caf

@@ -62,12 +62,20 @@ void routing_table::flush(const endpoint& r) {
 }
 
 node_id routing_table::lookup_node(const endpoint_handle& hdl) const {
-  return get_opt(direct_by_hdl_, hdl, none);
+  // return get_opt(direct_by_hdl_, hdl, none);
+  auto i = direct_by_hdl_.find(hdl);
+  if (i != direct_by_hdl_.end())
+    return i->second;
+  return none;
 }
 
 optional<routing_table::endpoint_handle>
 routing_table::lookup_hdl(const node_id& nid) const {
-  return get_opt(direct_by_nid_, nid, none);
+  // return get_opt(direct_by_nid_, nid, none);
+  auto i = direct_by_nid_.find(nid);
+  if (i != direct_by_nid_.end())
+    return i->second;
+  return none;
 }
 
 /*
@@ -159,7 +167,7 @@ size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
   */
   auto hdl = lookup_hdl(dest);
   if (hdl) {
-    direct_by_hdl_.erase(hdl);
+    direct_by_hdl_.erase(*hdl);
     direct_by_nid_.erase(dest);
     parent_->parent().notify<hook::connection_lost>(dest);
     ++res;

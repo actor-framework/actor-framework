@@ -497,6 +497,33 @@ void basp_broker_state::set_context(dgram_scribe_handle hdl) {
   this_context = &i->second;
 }
 
+basp_broker_state::purge_visitor::result_type
+basp_broker_state::purge_visitor::operator()(const connection_handle& h) {
+  auto i = state->tcp_ctx.find(h);
+  if (i != state->tcp_ctx.end()) {
+    auto& ref = i->second;
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    state->tcp_ctx.erase(i);
+  }
+}
+
+basp_broker_state::purge_visitor::result_type
+basp_broker_state::purge_visitor::operator()(const dgram_scribe_handle& h) {
+  auto i = state->udp_ctx.find(h);
+  if (i != state->udp_ctx.end()) {
+    auto& ref = i->second;
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    state->udp_ctx.erase(i);
+  }
+}
+
+
 /******************************************************************************
  *                                basp_broker                                 *
  ******************************************************************************/
@@ -657,23 +684,35 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](const new_endpoint_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      auto& bi = state.instance;
-      bi.write_server_handshake(context(), wr_buf(msg.handle),
-                                local_port(msg.source));
+      std::cerr << "new endpoint msg received" << std::endl;
+      //auto& bi = state.instance;
+      //bi.write_server_handshake(context(), wr_buf(msg.handle),
+      //                          local_port(msg.source));
+      static_cast<void>(msg);
       // flush(msg.handle);
       // TODO: is this right?
+    },
+    [=](const dgram_delegate_msg&) {
+      std::cerr << "Received new delegate message" << std::endl; 
     },
     // received from underlying broker implementation
     [=](const dgram_scribe_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      // TODO: dgram_scribe_closed_msg
-      static_cast<void>(msg);
+      // TODO: currently we assume a node has gone offline once we lose
+      //       a connection, we also could try to reach this node via other
+      //       hops to be resilient to (rare) network failures or if a
+      //       node is reachable via several interfaces and only one fails
+      auto nid = state.instance.tbl().lookup_node(msg.handle);
+      // tell BASP instance we've lost connection
+      state.instance.handle_node_shutdown(nid);
+      CAF_ASSERT(nid == none
+                 || !state.instance.tbl().reachable(nid));
     },
     // received from underlying broker implementation
     [=](const dgram_acceptor_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      // TODO: dgram_acceptor_closed_msg
-      static_cast<void>(msg);
+      auto port = local_port(msg.handle);
+      state.instance.remove_published_actor(port);
     },
     // received from middleman actor
     [=](publish_atom, accept_handle hdl, uint16_t port,
@@ -731,6 +770,7 @@ behavior basp_broker::make_behavior() {
     [=](connect_atom, dgram_scribe_handle hdl,
         const std::string& host, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
+      std::cerr << "connect for dgram to " << host << ":" << port << std::endl;
       auto rp = make_response_promise();
       auto res = assign_dgram_scribe(hdl, host, port);
       if (res) {
@@ -738,8 +778,11 @@ behavior basp_broker::make_behavior() {
         ctx.hdl = hdl;
         ctx.remote_port = port;
         ctx.callback = rp;
-        // TODO: Start handshake with server as there is no way for
-        // the server to initiate this.
+        auto& bi = state.instance;
+        bi.write_server_handshake(context(), wr_buf(hdl), local_port(hdl));
+        //bi.write_client_handshake(context(), wr_buf(hdl), local_port(hdl));
+        flush(hdl);
+        configure_datagram_size(hdl, 1500);
       } else {
         CAF_LOG_DEBUG("failed to assign datagram sink from handle"
                       << CAF_ARG(res));

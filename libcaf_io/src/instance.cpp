@@ -261,6 +261,7 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
   static_cast<void>(ctx);
   static_cast<void>(dm);
   static_cast<void>(hdr);
+  std::cerr << "New datagram received!" << std::endl;
   return false;
 };
 
@@ -382,6 +383,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
 void instance::write(execution_unit* ctx, buffer_type& buf,
                      header& hdr, payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
+  std::cerr << "In instance::write" << std::endl;
   error err;
   if (pw) {
     auto pos = buf.size();
@@ -399,8 +401,10 @@ void instance::write(execution_unit* ctx, buffer_type& buf,
     binary_serializer bs{ctx, buf};
     err = bs(hdr);
   }
-  if (err)
+  if (err) {
     CAF_LOG_ERROR(CAF_ARG(err));
+    std::cerr << "With error: " << to_string(err) << std::endl;
+  }
 }
 
 void instance::write_server_handshake(execution_unit* ctx,

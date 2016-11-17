@@ -118,6 +118,13 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void set_context(dgram_scribe_handle hdl);
 
   // visitors to handle variants
+  struct purge_visitor {
+    using result_type = void;
+    purge_visitor(basp_broker_state* ptr) : state{ptr} { }
+    result_type operator()(const connection_handle& hdl);
+    result_type operator()(const dgram_scribe_handle& hdl);
+    basp_broker_state* state;
+  };
   purge_visitor purge_state_vis;
   wr_buf_visitor wr_buf_vis;
 

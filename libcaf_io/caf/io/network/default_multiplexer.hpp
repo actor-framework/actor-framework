@@ -570,10 +570,12 @@ public:
   /// Activates the stream.
   void activate(manager_type* mgr);
 
+  /*
   /// Configures how much data will be provided for the next `consume` callback.
   /// @warning Must not be called outside the IO multiplexers event loop
   ///          once the stream has been started.
   void configure_read(receive_policy::config config);
+  */
 
   void ack_writes(bool x);
 

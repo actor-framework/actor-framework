@@ -52,5 +52,26 @@ bool dgram_doorman::new_endpoint(execution_unit* ctx,
   return invoke_mailbox_element(ctx);
 }
 
+bool dgram_doorman::delegate_msg(execution_unit* ctx,
+                                 dgram_scribe_handle endpoint,
+                                 const void*, size_t num_bytes) {
+  CAF_LOG_TRACE(CAF_ARG(endpoint) << CAF_ARG(num_bytes));
+  if (detached())
+    return false;
+  using delegate_t = dgram_delegate_msg;
+  using tmp_t = mailbox_element_vals<delegate_t>; 
+  auto guard = parent_;
+  auto& buf = rd_buf();
+  CAF_ASSERT(buf.size() >= num_bytes);
+  buf.resize(num_bytes);
+  // std::vector<char> msg_buf;
+  // msg_buf.resize(num_bytes);
+  tmp_t tmp{strong_actor_ptr{}, message_id::make(),
+            mailbox_element::forwarding_stack{},
+            delegate_t{hdl(), endpoint, std::move(buf)}};
+  invoke_mailbox_element_impl(ctx,tmp);
+  return true;
+}
+
 } // namespace io
 } // namespace caf
