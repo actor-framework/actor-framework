@@ -463,8 +463,11 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
         presult = ::WSAPoll(pollset_.data(),
                             static_cast<ULONG>(pollset_.size()), -1);
 #     else
+        std::cerr << std::endl << "[R] Poll time!" << std::endl;
         presult = ::poll(pollset_.data(),
                          static_cast<nfds_t>(pollset_.size()), -1);
+        std::cerr << "[R] Structures with nonzero revents fields: "
+                  << presult << std::endl;
 #     endif
       if (presult < 0) {
         switch (last_socket_error()) {
@@ -495,6 +498,9 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
         if (pfd.revents != 0) {
           CAF_LOG_DEBUG("event on socket:" << CAF_ARG(pfd.fd)
                         << CAF_ARG(pfd.revents));
+          std::cerr << "[R] Event on socket " << pfd.fd
+                    << " --> " << std::ios::hex
+                    << pfd.revents << std::endl;
           poll_res.push_back({pfd.fd, pfd.revents, shadow_[i]});
           pfd.revents = 0;
           --presult; // stop as early as possible
@@ -508,6 +514,8 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
         handle_socket_event(e.fd, e.mask, e.ptr);
       }
       CAF_LOG_DEBUG(CAF_ARG(events_.size()));
+      std::cerr << "[R] After poll we have " << events_.size()
+                << " to handle" << std::endl;
       poll_res.clear();
       for (auto& me : events_) {
         handle(me);
@@ -666,17 +674,22 @@ void default_multiplexer::close_pipe() {
 void default_multiplexer::handle_socket_event(native_socket fd, int mask,
                                               event_handler* ptr) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(mask));
+  std::cerr << "[HSE] For " << fd << " with mask " << std::ios::hex << mask
+            << std::endl;
   CAF_ASSERT(ptr != nullptr);
   bool checkerror = true;
   if (mask & input_mask) {
     checkerror = false;
     // ignore read events if a previous event caused
     // this socket to be shut down for reading
-    if (!ptr->read_channel_closed())
+    if (!ptr->read_channel_closed()) {
+      std::cerr << "[HSE] Next up: read event" << std::endl;
       ptr->handle_event(operation::read);
+    }
   }
   if (mask & output_mask) {
     checkerror = false;
+    std::cerr << "[HSE] Next up: write event" << std::endl;
     ptr->handle_event(operation::write);
   }
   if (checkerror && (mask & error_mask)) {
@@ -1253,6 +1266,12 @@ bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
                    sockaddr_storage& sa, size_t sa_len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
   std::cerr << "[SD] Sending datagram ... " << std::endl;
+  {
+    std::string host;
+    uint16_t port;
+    std::tie(host,port) = sender_from_sockaddr(sa, sa_len);
+    std::cerr << "[SD] Addressing: " << host << ":" << port << std::endl;
+  }
   auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                        no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
                        sa_len);
@@ -1277,10 +1296,21 @@ bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
   auto sres = ::recvfrom(fd, buf, len, no_sigpipe_flag,
                          reinterpret_cast<struct sockaddr *>(&sender_addr),
                          &sender_len);
-  if (is_error(sres, true) || sres == 0) {
-    std::cerr << "[RD] Nothing to receive (res: " << sres << ")" << std::endl;
+  {
+    std::string host;
+    uint16_t port;
+    std::tie(host,port) = sender_from_sockaddr(sender_addr, sender_len);
+    std::cerr << "[RD] recvfrom returned '" << sres << "' with senderaddr '"
+              << host << ":" << port << "'" << std::endl;
+  }
+  // TODO: Check if sres > len and do some error handling ...
+  if (is_error(sres, true)) {
+    std::cerr << "[RD] error: " << sres << std::endl;
     // Nothing to receive
     return false;
+  }
+  if (sres == 0) {
+    std::cerr << "[RD] 0 length datagram is permitted" << std::endl;
   }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   return true;
@@ -1654,27 +1684,35 @@ void dgram_communicator::handle_event(operation op) {
       // incoming message should signify a new remote enpoint
       // --> create a new dgram_scribe
       size_t rb;
+      //rd_buf_.clear();
+      //rd_buf_.resize(dgram_size_);
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             sockaddr_, sockaddr_len_)) {
         reader_->io_failure(&backend(), operation::read);
         passivate();
         return;
       }
+      // currently handles the change from acceptor 
+      // to communicator, TODO: Find a better solution
+      // Either keep sending to the same endpoint,
+      // Which would require some logic to determin if
+      // the sender is a new endpoint ...
       if (waiting_for_remote_endpoint) {
-        sender_from_sockaddr(sockaddr_, sockaddr_len_);
+        std::tie(host_, port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
         remote_endpoint_addr_ = std::move(sockaddr_);
         remote_endpoint_addr_len_ = sockaddr_len_;
         sockaddr_len_ = 0; 
+        std::cerr << "[DC] new endpoint: " << host_ << ":" << port_ << std::endl;
       }
-      if (rb == 0)
-        return;
-      auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
-      bytes_read_ = rb;
+      if (rb > 0) {
+        auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
+        bytes_read_ = rb;
+        if (!res) {
+          passivate();
+          return;
+        }
+      }
       prepare_next_read();
-      if (!res) {
-        passivate();
-        return;
-      }
       break;
     }
     case operation::write: {
@@ -1720,32 +1758,6 @@ void dgram_communicator::prepare_next_write() {
 void dgram_communicator::prepare_next_read() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   rd_buf_.resize(dgram_size_);
-}
-
-void dgram_communicator::sender_from_sockaddr(const sockaddr_storage& sa, 
-                                              size_t) {
-  char addr[INET6_ADDRSTRLEN];
-  switch(sa.ss_family) {
-    case AF_INET:
-      port_ = ntohs(reinterpret_cast<const sockaddr_in*>(&sa)->sin_port);
-      inet_ntop(AF_INET,
-                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
-                addr, INET_ADDRSTRLEN);
-      host_.insert(std::begin(host_), std::begin(addr),
-                   std::begin(addr) + INET_ADDRSTRLEN);
-      break;
-    case AF_INET6:
-      port_ = ntohs(reinterpret_cast<const sockaddr_in6*>(&sa)->sin6_port);
-      inet_ntop(AF_INET6,
-                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
-                addr, INET6_ADDRSTRLEN);
-      host_.insert(std::begin(host_), std::begin(addr),
-                   std::begin(addr) + INET6_ADDRSTRLEN);
-      break;
-    default:
-      // nop
-      break;
-  }
 }
 
 void dgram_communicator::set_endpoint_addr(const sockaddr_storage& sa,
@@ -1800,26 +1812,32 @@ void dgram_acceptor::handle_event(operation op) {
     case operation::read: {
       // incoming message should signify a new remote enpoint
       // --> create a new dgram_scribe
+      // TODO: some idenfification to prevent arbitrary
+      // message from creating endpoints?
+      rd_buf_.clear();
+      rd_buf_.resize(dgram_size_);
       size_t rb;
+      memset(&sockaddr_,0, sockaddr_len_);
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             sockaddr_, sockaddr_len_)) {
         mgr_->io_failure(&backend(), operation::read);
         passivate();
         return;
       }
-      sender_from_sockaddr(sockaddr_, sockaddr_len_);
-      if (rb == 0)
-        return;
-      std::cerr << "[DA] received " << rb << " bytes data from "
-                << host_ << ":" << port_ << std::endl;
-      auto res = mgr_->new_endpoint(rd_buf_.data(), rb);
-      if (!res) {
-        // What is the right way to propagate this?
-        CAF_LOG_DEBUG("Failure during creation of new udp endpoint");
-        std::cerr << "[DA] Failure during creation of new udp endpoint"
-                  << std::endl;;
-      }
       bytes_read_ = rb;
+      if (rb > 0) {
+        std::tie(host_,port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
+        std::cerr << "[DA] received " << rb << " bytes data from "
+                  << host_ << ":" << port_ << std::endl;
+        auto res = mgr_->new_endpoint(rd_buf_.data(), rb);
+        if (!res) {
+          // What is the right way to propagate this?
+          CAF_LOG_DEBUG("Failure during creation of new udp endpoint");
+          std::cerr << "[DA] Failure during creation of new udp endpoint"
+                    << std::endl;;
+        }
+      }
+      prepare_next_read();
       break;
     }
     case operation::write: {
@@ -1831,29 +1849,6 @@ void dgram_acceptor::handle_event(operation op) {
         mgr_->io_failure(&backend(), operation::read);
       // backend will delete this handler anyway,
       // no need to call backend().del() here
-      break;
-  }
-}
-
-void dgram_acceptor::sender_from_sockaddr(const sockaddr_storage& sa, size_t) {
-  char addr[INET6_ADDRSTRLEN];
-  switch(sa.ss_family) {
-    case AF_INET:
-      port_ = ntohs(reinterpret_cast<const sockaddr_in*>(&sa)->sin_port);
-      inet_ntop(AF_INET,
-                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
-                addr, INET_ADDRSTRLEN);
-      host_ = addr;
-      break;
-    case AF_INET6:
-      port_ = ntohs(reinterpret_cast<const sockaddr_in6*>(&sa)->sin6_port);
-      inet_ntop(AF_INET6,
-                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
-                addr, INET6_ADDRSTRLEN);
-      host_ = addr;
-      break;
-    default:
-      // nop
       break;
   }
 }
@@ -1892,6 +1887,30 @@ public:
 private:
   native_socket fd_;
 };
+
+std::tuple<std::string,uint16_t>
+sender_from_sockaddr(const sockaddr_storage& sa, size_t) {
+  uint16_t port = 0;
+  char addr[INET6_ADDRSTRLEN];
+  switch(sa.ss_family) {
+    case AF_INET:
+      port = ntohs(reinterpret_cast<const sockaddr_in*>(&sa)->sin_port);
+      inet_ntop(AF_INET,
+                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
+                addr, INET_ADDRSTRLEN);
+      break;
+    case AF_INET6:
+      port = ntohs(reinterpret_cast<const sockaddr_in6*>(&sa)->sin6_port);
+      inet_ntop(AF_INET6,
+                &reinterpret_cast<const sockaddr_in*>(&sa)->sin_addr,
+                addr, INET6_ADDRSTRLEN);
+      break;
+    default:
+      addr[0] = '\0';
+      break;
+  }
+  return std::make_tuple(std::string(addr),port);
+}
 
 auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
   return what.sin_addr;

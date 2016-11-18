@@ -45,6 +45,8 @@
 
 #include "caf/logger.hpp"
 
+#include <iomanip> // TODO: Remove this
+
 #ifdef CAF_WINDOWS
 # ifndef WIN32_LEAN_AND_MEAN
 #   define WIN32_LEAN_AND_MEAN
@@ -177,6 +179,20 @@ bool write_some(size_t& result, native_socket fd, const void* buf, size_t len);
 /// the new connection is stored in `result`. Returns true
 /// as long as
 bool try_accept(native_socket& result, native_socket fd);
+
+/// Write a datagram containing `buf_len` bytes to `fd` addressed
+/// at the endpoint in `sa` with size `sa_len`. Returns true as long
+/// as no IO error occurs. The number of written bytes is stored in
+/// `result`.
+bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
+                   sockaddr_storage& sa, size_t sa_len);
+
+/// Reveice a datagram of up to `len` bytes. Larger datagrams are truncated.
+/// Up to `sender_len` bytes of the receiver address is written into
+/// `sender_addr`. Returns `true` if no IO error occurred. The number of
+/// received bytes is stored in `result` (can be 0).
+bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
+                      sockaddr_storage& sender_addr, socklen_t& sender_len);
 
 class default_multiplexer;
 
@@ -361,16 +377,20 @@ private:
     CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(fd) << CAF_ARG(old_bf));
     auto last = events_.end();
     auto i = std::lower_bound(events_.begin(), last, fd, event_less{});
+    // std::cerr << "Events: " << std::distance(events_.begin(), i) << std::endl;
     if (i != last && i->fd == fd) {
       CAF_ASSERT(ptr == i->ptr);
       // squash events together
       CAF_LOG_DEBUG("squash events:" << CAF_ARG(i->mask)
                     << CAF_ARG(fun(op, i->mask)));
+      //std::cerr << "[NE] Squash events:" << std::ios::hex << i->mask
+      //          << " --> " << std::ios::hex << fun(op, i->mask) << std::endl;
       auto bf = i->mask;
       i->mask = fun(op, bf);
       if (i->mask == bf) {
         // didn't do a thing
         CAF_LOG_DEBUG("squashing did not change the event");
+        //std::cerr << "[NE] Squashing did not change the event" << std::endl;
       } else if (i->mask == old_bf) {
         // just turned into a nop
         CAF_LOG_DEBUG("squashing events resulted in a NOP");
@@ -380,10 +400,16 @@ private:
       // insert new element
       auto bf = fun(op, old_bf);
       if (bf == old_bf) {
-        CAF_LOG_DEBUG("event has no effect (discarded): "
+        CAF_LOG_DEBUG("[NE] Event has no effect (discarded): "
                  << CAF_ARG(bf) << ", " << CAF_ARG(old_bf));
+        //std::cerr << "[NE] Event has no effect (discarded): "
+        //          << std::ios::hex << bf << ", "
+        //          << std::ios::hex << old_bf << std::endl;
       } else {
         CAF_LOG_DEBUG("added handler:" << CAF_ARG(fd) << CAF_ARG(op));
+        //std::cerr << "[NE] Added handler: "
+        //          << std::ios::hex << bf << ", " 
+        //          << std::ios::hex << to_string(op) << std::endl;
         events_.insert(i, event{fd, bf, ptr});
       }
     }
@@ -619,8 +645,6 @@ public:
 
   void handle_event(operation op) override;
  
-  void sender_from_sockaddr(const sockaddr_storage& sa, size_t len);
-
   void set_endpoint_addr(const sockaddr_storage& sa, size_t len,
                          bool is_tmp_endpoint);
 
@@ -703,8 +727,6 @@ public:
 
   void handle_event(operation op) override;
 
-  void sender_from_sockaddr(const sockaddr_storage& sa, size_t len);
-
   std::pair<const sockaddr_storage&,size_t> last_sender();
 
 private:
@@ -737,6 +759,8 @@ new_dgram_scribe_impl(const std::string& host, uint16_t port,
 
 expected<std::pair<native_socket, uint16_t>>
 new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr);
+
+std::tuple<std::string,uint16_t> sender_from_sockaddr(const sockaddr_storage& sa, size_t len);
 
 } // namespace network
 } // namespace io
