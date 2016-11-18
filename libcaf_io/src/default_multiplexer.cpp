@@ -463,11 +463,8 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
         presult = ::WSAPoll(pollset_.data(),
                             static_cast<ULONG>(pollset_.size()), -1);
 #     else
-        std::cerr << std::endl << "[R] Poll time!" << std::endl;
         presult = ::poll(pollset_.data(),
                          static_cast<nfds_t>(pollset_.size()), -1);
-        std::cerr << "[R] Structures with nonzero revents fields: "
-                  << presult << std::endl;
 #     endif
       if (presult < 0) {
         switch (last_socket_error()) {
@@ -498,9 +495,6 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
         if (pfd.revents != 0) {
           CAF_LOG_DEBUG("event on socket:" << CAF_ARG(pfd.fd)
                         << CAF_ARG(pfd.revents));
-          std::cerr << "[R] Event on socket " << pfd.fd
-                    << " --> " << std::ios::hex
-                    << pfd.revents << std::endl;
           poll_res.push_back({pfd.fd, pfd.revents, shadow_[i]});
           pfd.revents = 0;
           --presult; // stop as early as possible
@@ -514,8 +508,6 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
         handle_socket_event(e.fd, e.mask, e.ptr);
       }
       CAF_LOG_DEBUG(CAF_ARG(events_.size()));
-      std::cerr << "[R] After poll we have " << events_.size()
-                << " to handle" << std::endl;
       poll_res.clear();
       for (auto& me : events_) {
         handle(me);
@@ -607,7 +599,6 @@ int del_flag(operation op, int bf) {
       CAF_LOG_ERROR("unexpected operation");
       break;
   }
-  std::cerr << "WEIRD STUFF!" << std::endl;
   // weird stuff going on
   return 0;
 }
@@ -674,22 +665,17 @@ void default_multiplexer::close_pipe() {
 void default_multiplexer::handle_socket_event(native_socket fd, int mask,
                                               event_handler* ptr) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(mask));
-  std::cerr << "[HSE] For " << fd << " with mask " << std::ios::hex << mask
-            << std::endl;
   CAF_ASSERT(ptr != nullptr);
   bool checkerror = true;
   if (mask & input_mask) {
     checkerror = false;
     // ignore read events if a previous event caused
     // this socket to be shut down for reading
-    if (!ptr->read_channel_closed()) {
-      std::cerr << "[HSE] Next up: read event" << std::endl;
+    if (!ptr->read_channel_closed())
       ptr->handle_event(operation::read);
-    }
   }
   if (mask & output_mask) {
     checkerror = false;
-    std::cerr << "[HSE] Next up: write event" << std::endl;
     ptr->handle_event(operation::write);
   }
   if (checkerror && (mask & error_mask)) {
@@ -1265,52 +1251,31 @@ bool try_accept(native_socket& result, native_socket fd) {
 bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
                    sockaddr_storage& sa, size_t sa_len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
-  std::cerr << "[SD] Sending datagram ... " << std::endl;
-  {
-    std::string host;
-    uint16_t port;
-    std::tie(host,port) = sender_from_sockaddr(sa, sa_len);
-    std::cerr << "[SD] Addressing: " << host << ":" << port << std::endl;
-  }
   auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                        no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
                        sa_len);
   if (is_error(sres, true)) {
-    std::cerr << "[SD] Send error? (" << sres << ")" << std::endl;
+    CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
     return false;
   }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  std::cerr << "[SD] Sent " << result << " bytes" << std::endl;
   return true;
 }
 
 bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
                       sockaddr_storage& sender_addr, socklen_t& sender_len) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  //sender_len = sizeof(sender_addr);
   sender_len = sizeof(sockaddr);
-  std::cerr << "[RD] Receiving datagram ..." << std::endl;
-  std::cerr << "[RD] Settings: buffsize " << len << ", "
-            << "addrsize " << sender_len << ", "
-            << "socket " << fd << std::endl;
-  auto sres = ::recvfrom(fd, buf, len, no_sigpipe_flag,
+  auto sres = ::recvfrom(fd, buf, len, 0, 
                          reinterpret_cast<struct sockaddr *>(&sender_addr),
                          &sender_len);
-  {
-    std::string host;
-    uint16_t port;
-    std::tie(host,port) = sender_from_sockaddr(sender_addr, sender_len);
-    std::cerr << "[RD] recvfrom returned '" << sres << "' with senderaddr '"
-              << host << ":" << port << "'" << std::endl;
-  }
   // TODO: Check if sres > len and do some error handling ...
   if (is_error(sres, true)) {
-    std::cerr << "[RD] error: " << sres << std::endl;
-    // Nothing to receive
+    CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
     return false;
   }
   if (sres == 0) {
-    std::cerr << "[RD] 0 length datagram is permitted" << std::endl;
+    CAF_LOG_INFO("Received empty datagram");
   }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   return true;
@@ -1643,8 +1608,6 @@ void dgram_communicator::ack_writes(bool x) {
 }
 
 void dgram_communicator::write(const void* buf, size_t num_bytes) {
-  std::cerr << "[DC] write called with " << num_bytes
-            << " bytes" << std::endl;
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   auto first = reinterpret_cast<const char*>(buf);
   auto last  = first + num_bytes;
@@ -1677,15 +1640,11 @@ void dgram_communicator::removed_from_loop(operation op) {
 
 void dgram_communicator::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
-  std::cerr << "[DC] handle_event: " << to_string(op)
-            << std::endl;
   switch (op) {
     case operation::read: {
       // incoming message should signify a new remote enpoint
       // --> create a new dgram_scribe
       size_t rb;
-      //rd_buf_.clear();
-      //rd_buf_.resize(dgram_size_);
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             sockaddr_, sockaddr_len_)) {
         reader_->io_failure(&backend(), operation::read);
@@ -1702,7 +1661,6 @@ void dgram_communicator::handle_event(operation op) {
         remote_endpoint_addr_ = std::move(sockaddr_);
         remote_endpoint_addr_len_ = sockaddr_len_;
         sockaddr_len_ = 0; 
-        std::cerr << "[DC] new endpoint: " << host_ << ":" << port_ << std::endl;
       }
       if (rb > 0) {
         auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
@@ -1827,8 +1785,7 @@ void dgram_acceptor::handle_event(operation op) {
       bytes_read_ = rb;
       if (rb > 0) {
         std::tie(host_,port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
-        std::cerr << "[DA] received " << rb << " bytes data from "
-                  << host_ << ":" << port_ << std::endl;
+        // TODO: Add this once messages are only received once
         auto res = mgr_->new_endpoint(rd_buf_.data(), rb);
         if (!res) {
           // What is the right way to propagate this?
@@ -2154,8 +2111,6 @@ new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr) {
     return std::move(p.error());
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
-  std::cerr << "Created new dgram doorman on socket " << fd << " using port "
-            << *p << std::endl;
   return std::make_pair(sguard.release(), *p);
 }
 

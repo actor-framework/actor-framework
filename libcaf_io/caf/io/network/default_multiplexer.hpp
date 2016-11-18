@@ -422,7 +422,7 @@ private:
   void close_pipe();
 
   void wr_dispatch_request(resumable* ptr);
-  
+
   // allows initialization of scribes with an exisiting sockaddr
   dgram_scribe_handle add_dgram_scribe(abstract_broker* ptr, native_socket fd, 
                                        optional<const sockaddr_storage&> addr,
