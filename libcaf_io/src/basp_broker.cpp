@@ -597,7 +597,11 @@ behavior basp_broker::make_behavior() {
                           << CAF_ARG(msg.handle));
           ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
         }
+        // TODO: some error?
       } else {
+        if (ctx.callback) {
+          // TODO: if callback available, handle that
+        }
         // TODO: Is there configuration necessary?
         // configure_datagram_size(...);
       }
@@ -693,9 +697,11 @@ behavior basp_broker::make_behavior() {
       // flush(msg.handle);
       // TODO: is this right?
     },
+    /*
     [=](const dgram_delegate_msg&) {
-      std::cerr << "[BB] Received new delegate message" << std::endl; 
+      CAF_LOG_TRACE(CAF_ARG(msg.handle));
     },
+    */
     // received from underlying broker implementation
     [=](const dgram_scribe_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
@@ -708,12 +714,6 @@ behavior basp_broker::make_behavior() {
       state.instance.handle_node_shutdown(nid);
       CAF_ASSERT(nid == none
                  || !state.instance.tbl().reachable(nid));
-    },
-    // received from underlying broker implementation
-    [=](const dgram_acceptor_closed_msg& msg) {
-      CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      auto port = local_port(msg.handle);
-      state.instance.remove_published_actor(port);
     },
     [=](const dgram_doorman_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
@@ -777,7 +777,8 @@ behavior basp_broker::make_behavior() {
     [=](connect_atom, dgram_scribe_handle hdl,
         const std::string& host, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
-      std::cerr << "[BB] connect for dgram to " << host << ":" << port << std::endl;
+      std::cerr << "[BB] \"connect\" for dgram to "
+                << host << ":" << port << std::endl;
       auto rp = make_response_promise();
       auto res = assign_dgram_scribe(hdl, host, port);
       if (res) {
@@ -786,8 +787,8 @@ behavior basp_broker::make_behavior() {
         ctx.remote_port = port;
         ctx.callback = rp;
         auto& bi = state.instance;
-        //bi.write_server_handshake(context(), wr_buf(hdl), port);
-        //bi.write_client_handshake(context(), wr_buf(hdl), local_port(hdl));
+        // bi.write_server_handshake(context(), wr_buf(hdl), port);
+        // bi.write_client_handshake(context(), wr_buf(hdl), local_port(hdl));
         bi.write_udp_client_handshake(context(), wr_buf(hdl));
         flush(hdl);
         configure_datagram_size(hdl, 1500);

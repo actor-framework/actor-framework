@@ -69,6 +69,10 @@ enum class message_type : uint8_t {
   ///
   /// ![](heartbeat.png)
   heartbeat = 0x05,
+
+  // TODO: udp handshakes
+  udp_client_handshake = 0x06,
+  udp_server_handshake = 0x07
 };
 
 /// @relates message_type

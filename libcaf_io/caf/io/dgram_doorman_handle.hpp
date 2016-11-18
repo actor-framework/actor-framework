@@ -43,7 +43,7 @@ constexpr invalid_dgram_doorman_handle_t invalid_dgram_doorman_handle
 
 /// Generic type for identifying a datagram source.
 class dgram_doorman_handle : public handle<dgram_doorman_handle,
-                                             invalid_dgram_doorman_handle_t> {
+                                           invalid_dgram_doorman_handle_t> {
 public:
   friend class handle<dgram_doorman_handle, invalid_dgram_doorman_handle_t>;
 
