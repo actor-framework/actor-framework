@@ -377,20 +377,16 @@ private:
     CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(fd) << CAF_ARG(old_bf));
     auto last = events_.end();
     auto i = std::lower_bound(events_.begin(), last, fd, event_less{});
-    // std::cerr << "Events: " << std::distance(events_.begin(), i) << std::endl;
     if (i != last && i->fd == fd) {
       CAF_ASSERT(ptr == i->ptr);
       // squash events together
       CAF_LOG_DEBUG("squash events:" << CAF_ARG(i->mask)
                     << CAF_ARG(fun(op, i->mask)));
-      //std::cerr << "[NE] Squash events:" << std::ios::hex << i->mask
-      //          << " --> " << std::ios::hex << fun(op, i->mask) << std::endl;
       auto bf = i->mask;
       i->mask = fun(op, bf);
       if (i->mask == bf) {
         // didn't do a thing
         CAF_LOG_DEBUG("squashing did not change the event");
-        //std::cerr << "[NE] Squashing did not change the event" << std::endl;
       } else if (i->mask == old_bf) {
         // just turned into a nop
         CAF_LOG_DEBUG("squashing events resulted in a NOP");
@@ -402,14 +398,8 @@ private:
       if (bf == old_bf) {
         CAF_LOG_DEBUG("[NE] Event has no effect (discarded): "
                  << CAF_ARG(bf) << ", " << CAF_ARG(old_bf));
-        //std::cerr << "[NE] Event has no effect (discarded): "
-        //          << std::ios::hex << bf << ", "
-        //          << std::ios::hex << old_bf << std::endl;
       } else {
         CAF_LOG_DEBUG("added handler:" << CAF_ARG(fd) << CAF_ARG(op));
-        //std::cerr << "[NE] Added handler: "
-        //          << std::ios::hex << bf << ", " 
-        //          << std::ios::hex << to_string(op) << std::endl;
         events_.insert(i, event{fd, bf, ptr});
       }
     }

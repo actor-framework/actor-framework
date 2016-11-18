@@ -1266,7 +1266,7 @@ bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
                       sockaddr_storage& sender_addr, socklen_t& sender_len) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   sender_len = sizeof(sockaddr);
-  auto sres = ::recvfrom(fd, buf, len, 0, 
+  auto sres = ::recvfrom(fd, buf, len, 0,
                          reinterpret_cast<struct sockaddr *>(&sender_addr),
                          &sender_len);
   // TODO: Check if sres > len and do some error handling ...
