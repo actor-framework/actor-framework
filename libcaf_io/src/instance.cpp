@@ -281,13 +281,23 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
     std::cerr << "Received invalid header!" << std::endl;
     return err();
   }
-  if (hdr.payload_len > 0) {
-    // TODO: handle payload
-  }
   CAF_LOG_DEBUG(CAF_ARG(hdr));
-  /*
+  std::vector<char>* payload = nullptr;
+  if (hdr.payload_len > 0) {
+    payload = &pl_buf;
+    if (payload->size() != hdr.payload_len) {
+      CAF_LOG_WARNING("received invalid payload");
+      std::cerr << "Received invalid payload" << std::endl;
+      return err();
+    }
+    std::cerr << "Received " << payload->size() << " bytes payload." 
+              << std::endl;
+  } 
+  // TODO: handle payload
   // needs forwarding?
   if (!is_handshake(hdr) && !is_heartbeat(hdr) && hdr.dest_node != this_node_) {
+    std::cerr << "[I] Needs forwarding?" << std::endl;
+    /*
     CAF_LOG_DEBUG("forward message");
     auto path = lookup(hdr.dest_node);
     if (path) {
@@ -315,24 +325,23 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
       notify<hook::message_forwarding_failed>(hdr, payload);
     }
     return await_header;
+    */
   }
   // function object for checking payload validity
   auto payload_valid = [&]() -> bool {
     return payload != nullptr && payload->size() == hdr.payload_len;
   };
-  */
   // handle message to ourselves
   switch (hdr.operation) {
     case message_type::udp_server_handshake: {
-      std::cerr << "[I] message_type::udp_server_handshake" << std::endl;
+      std::cerr << "[I] Received UDP server handshake" << std::endl;
 
       break;
     }
     case message_type::udp_client_handshake: {
-      std::cerr << "[I] message_type::udp_client_handshake" << std::endl;
+      std::cerr << "[I] Received UDP client handshake" << std::endl;
       // udp scribes start with a client handshake when sending the first
       // message, should be answered by a server handshake!
-      /*
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
       if (payload_valid()) {
@@ -343,6 +352,7 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
           return err();
         if (remote_appid != callee_.system().config().middleman_app_identifier) {
           CAF_LOG_ERROR("app identifier mismatch");
+          std::cerr << "app identifier mismatch" << std::endl;
           return err();
         }
         e = bd(aid, sigs);
@@ -350,11 +360,13 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
           return err();
       } else {
         CAF_LOG_ERROR("fail to receive the app identifier");
+        std::cerr << "fail to receive the app identifier" << std::endl;
         return err();
       }
       // close self connection after handshake is done
       if (hdr.source_node == this_node_) {
         CAF_LOG_INFO("close connection to self immediately");
+        std::cerr << "close connection to self immediately" << std::endl;
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         return err();
       }
@@ -362,11 +374,16 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
       if (tbl_.lookup_hdl(hdr.source_node)) {
         CAF_LOG_INFO("close connection since we already have a "
                      "direct connection: " << CAF_ARG(hdr.source_node));
+        std::cerr << "close connection since we already have a "
+                     "direct connection: " << to_string(hdr.source_node)
+                  << std::endl;
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         return err();
       }
       // add direct route to this node and remove any indirect entry
       CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
+      std::cerr << "new direct connection: " << to_string(hdr.source_node)
+                << std::endl;
       tbl_.add(dm.handle, hdr.source_node);
       // auto was_indirect = tbl_.erase_indirect(hdr.source_node);
       // write handshake as client in response
@@ -375,11 +392,10 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
         CAF_LOG_ERROR("no route to host after server handshake");
         return err();
       }
-      write_client_handshake(ctx, path->wr_buf, hdr.source_node);
+      write_udp_server_handshake(ctx, path->wr_buf, hdr.source_node);
       callee_.learned_new_node_directly(hdr.source_node);
       callee_.finalize_handshake(hdr.source_node, aid, sigs);
       flush(*path);
-      */
       break;
     }
     case message_type::server_handshake: {
@@ -740,9 +756,53 @@ void instance::write_client_handshake(execution_unit* ctx,
 
 void instance::write_udp_client_handshake(execution_unit* ctx,
                                           buffer_type& buf) {
+  CAF_LOG_TRACE("");
+  /*
+  CAF_LOG_TRACE(CAF_ARG(port));
+  using namespace detail;
+  published_actor* pa = nullptr;
+  if (port) {
+    auto i = published_actors_.find(*port);
+    if (i != published_actors_.end())
+      pa = &i->second;
+  }
+  CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
+  if (!pa && port) {
+    std::cerr << "No actor published." << std::endl;
+  } else {
+    std::cerr << "Found locally published actor." << std::endl;
+  }
+  */
+  auto writer = make_callback([&](serializer& sink) -> error {
+    auto& ref = callee_.system().config().middleman_app_identifier;
+    auto e = sink(const_cast<std::string&>(ref));
+    if (e)
+      return e;
+    //if (pa) {
+    //  auto i = pa->first ? pa->first->id() : invalid_actor_id;
+    //  return sink(i, pa->second);
+    //} else {
+      auto aid = invalid_actor_id;
+      std::set<std::string> tmp;
+      return sink(aid, tmp);
+    //}
+  });
   header hdr{message_type::udp_client_handshake, 0, 0, version,
              this_node_, none, invalid_actor_id, invalid_actor_id};
-  write(ctx, buf, hdr);
+  write(ctx, buf, hdr, &writer);
+}
+
+void instance::write_udp_server_handshake(execution_unit* ctx,
+                                          buffer_type& buf,
+                                          const node_id& remote_side) {
+  CAF_LOG_TRACE(CAF_ARG(remote_side));
+  auto writer = make_callback([&](serializer& sink) -> error {
+    auto& str = callee_.system().config().middleman_app_identifier;
+    return sink(const_cast<std::string&>(str));
+  });
+  header hdr{message_type::udp_server_handshake, 0, 0, 0,
+             this_node_, remote_side, invalid_actor_id, invalid_actor_id};
+  write(ctx, buf, hdr, &writer);
 }
 
 void instance::write_announce_proxy(execution_unit* ctx, buffer_type& buf,

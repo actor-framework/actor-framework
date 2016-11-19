@@ -1254,6 +1254,13 @@ bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
   auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                        no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
                        sa_len);
+  {
+    std::string host;
+    uint16_t port;
+    std::tie(host,port) = sender_from_sockaddr(sa, sa_len);
+    std::cerr << "[SD] Sent " << sres << " bytes to "
+              << host << ":" << port << std::endl;
+  }
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
     return false;
@@ -1263,12 +1270,19 @@ bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
 }
 
 bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
-                      sockaddr_storage& sender_addr, socklen_t& sender_len) {
+                      sockaddr_storage& sa, socklen_t& sa_len) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  sender_len = sizeof(sockaddr);
+  sa_len = sizeof(sockaddr);
   auto sres = ::recvfrom(fd, buf, len, 0,
-                         reinterpret_cast<struct sockaddr *>(&sender_addr),
-                         &sender_len);
+                         reinterpret_cast<struct sockaddr *>(&sa),
+                         &sa_len);
+  {
+    std::string host;
+    uint16_t port;
+    std::tie(host,port) = sender_from_sockaddr(sa, sa_len);
+    std::cerr << "[SD] Received " << sres << " bytes from "
+              << host << ":" << port << std::endl;
+  }
   // TODO: Check if sres > len and do some error handling ...
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
