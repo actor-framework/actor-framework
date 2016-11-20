@@ -154,7 +154,7 @@ public:
   expected<ActorHandle> remote_actor(uri u) {
     CAF_LOG_TRACE(CAF_ARG(u));
     detail::type_list<ActorHandle> tk;
-    auto x = remote_actor(system().message_types(tk), u);
+    auto x = remote_actor(system().message_types(tk), std::move(u));
     if (!x)
       return x.error();
     CAF_ASSERT(x && *x);

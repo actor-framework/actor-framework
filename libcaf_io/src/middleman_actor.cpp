@@ -108,7 +108,7 @@ public:
         mpi_set sigs;
         return put(u, whom, sigs, reuse);
       },
-      [=](connect_atom, uri& u) -> get_res {
+      [=](connect_atom, uri u) -> get_res {
         CAF_LOG_TRACE(CAF_ARG(u));
         auto rp = make_response_promise();
         std::string host(u.host().first, u.host().second);

@@ -196,12 +196,15 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                                                    uri u) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(u));
   auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom::value, std::move(u));
+  auto res = f(connect_atom::value, u);
   if (!res)
     return std::move(res.error());
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
-  if (!ptr)
+  if (!ptr) {
+    std::cerr << "[remote_actor] no actor published on port " << u.port_as_int()
+              << std::endl;
     return make_error(sec::no_actor_published_at_port, u.port_as_int());
+  }
   if (!system().assignable(std::get<2>(*res), ifs))
     return make_error(sec::unexpected_actor_messaging_interface, std::move(ifs),
                       std::move(std::get<2>(*res)));

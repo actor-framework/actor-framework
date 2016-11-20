@@ -203,7 +203,8 @@ public:
 
   /// Answer client handshake ... TODO
   void write_udp_server_handshake(execution_unit* ctx, buffer_type& buf,
-                                  const node_id& remote_side);
+                                  const node_id& remote_side,
+                                  optional<uint16_t> port);
 
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,

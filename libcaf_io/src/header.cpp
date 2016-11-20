@@ -91,14 +91,15 @@ bool udp_server_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
        && valid(hdr.dest_node)
        && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
+       //&& zero(hdr.source_actor)
        && zero(hdr.dest_actor)
-       && zero(hdr.operation_data);
+       && !zero(hdr.operation_data);
 }
 
 bool udp_client_handshake_valid(const header& hdr) {
   return valid(hdr.source_node)
       && !valid(hdr.dest_node)
+      && zero(hdr.source_actor)
       && zero(hdr.dest_actor)
       && !zero(hdr.operation_data);
 }

@@ -585,7 +585,6 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](new_datagram_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      CAF_LOG_DEBUG("Received new_datagram_msg: " << CAF_ARG(msg));
       state.set_context(msg.handle);
       auto& ctx = *state.this_context;
       // TODO: ordering
@@ -603,7 +602,7 @@ behavior basp_broker::make_behavior() {
           // TODO: if callback available, handle that
         }
         // TODO: Is there configuration necessary?
-        // configure_datagram_size(...);
+        configure_datagram_size(msg.handle, 1500);
       }
     },
     // received from proxy instances
@@ -682,24 +681,19 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {
       CAF_LOG_TRACE("");
-      std::cerr << "[BB] Received acceptor closed msg" << std::endl;
       auto port = local_port(msg.handle);
       state.instance.remove_published_actor(port);
     },
     // received from underlying broker implementation
     [=](const new_endpoint_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      std::cerr << "[BB] new endpoint msg received" << std::endl;
-      //auto& bi = state.instance;
-      //bi.write_server_handshake(context(), wr_buf(msg.handle),
-      //                          local_port(msg.source));
       static_cast<void>(msg);
-      // flush(msg.handle);
-      // TODO: is this right?
+      // TODO: Do I need this or does the handshake procedure handle things?
     },
     /*
     [=](const dgram_delegate_msg&) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
+      // TODO: Remove msg type?
     },
     */
     // received from underlying broker implementation
@@ -717,7 +711,6 @@ behavior basp_broker::make_behavior() {
     },
     [=](const dgram_doorman_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      std::cerr << "[BB] Received dgram_doorman_closed_msg" << std::endl;
       auto port = local_port(msg.handle);
       state.instance.remove_published_actor(port);
     },
@@ -777,8 +770,6 @@ behavior basp_broker::make_behavior() {
     [=](connect_atom, dgram_scribe_handle hdl,
         const std::string& host, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));
-      std::cerr << "[BB] \"connect\" for dgram to "
-                << host << ":" << port << std::endl;
       auto rp = make_response_promise();
       auto res = assign_dgram_scribe(hdl, host, port);
       if (res) {
@@ -787,8 +778,6 @@ behavior basp_broker::make_behavior() {
         ctx.remote_port = port;
         ctx.callback = rp;
         auto& bi = state.instance;
-        // bi.write_server_handshake(context(), wr_buf(hdl), port);
-        // bi.write_client_handshake(context(), wr_buf(hdl), local_port(hdl));
         bi.write_udp_client_handshake(context(), wr_buf(hdl));
         flush(hdl);
         configure_datagram_size(hdl, 1500);

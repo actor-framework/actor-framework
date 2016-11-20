@@ -1254,6 +1254,7 @@ bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
   auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                        no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
                        sa_len);
+  /*
   {
     std::string host;
     uint16_t port;
@@ -1261,6 +1262,7 @@ bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
     std::cerr << "[SD] Sent " << sres << " bytes to "
               << host << ":" << port << std::endl;
   }
+  */
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
     return false;
@@ -1276,13 +1278,15 @@ bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
   auto sres = ::recvfrom(fd, buf, len, 0,
                          reinterpret_cast<struct sockaddr *>(&sa),
                          &sa_len);
+  /*
   {
     std::string host;
     uint16_t port;
     std::tie(host,port) = sender_from_sockaddr(sa, sa_len);
-    std::cerr << "[SD] Received " << sres << " bytes from "
+    std::cerr << "[RD] Received " << sres << " bytes from "
               << host << ":" << port << std::endl;
   }
+  */
   // TODO: Check if sres > len and do some error handling ...
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
@@ -1665,7 +1669,7 @@ void dgram_communicator::handle_event(operation op) {
         passivate();
         return;
       }
-      std::cerr << "[C] Received " << rb << " bytes" << std::endl;
+      //std::cerr << "[C] Received " << rb << " bytes" << std::endl;
       // currently handles the change from acceptor 
       // to communicator, TODO: Find a better solution
       // Either keep sending to the same endpoint,
@@ -1675,7 +1679,9 @@ void dgram_communicator::handle_event(operation op) {
         std::tie(host_, port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
         remote_endpoint_addr_ = std::move(sockaddr_);
         remote_endpoint_addr_len_ = sockaddr_len_;
-        sockaddr_len_ = 0; 
+        sockaddr_len_ = 0;
+        //std::cerr << "[C] Adapted new endpoint: " << host_ << ":" << port_
+        //          << std::endl;
       }
       if (rb > 0) {
         auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
@@ -1695,6 +1701,8 @@ void dgram_communicator::handle_event(operation op) {
         writer_->io_failure(&backend(), operation::write);
         backend().del(operation::write, fd(), this);
       } else if (wb > 0) {
+        //std::cerr << "[C] Sent " << wb << " bytes to " 
+        //          << host_ << ":" << port_ << std::endl;
         CAF_ASSERT(wb == wr_buf_.size());
         if (ack_writes_)
           writer_->datagram_sent(&backend(), wb);
@@ -1736,9 +1744,10 @@ void dgram_communicator::prepare_next_read() {
 void dgram_communicator::set_endpoint_addr(const sockaddr_storage& sa,
                                            size_t len,
                                            bool is_tmp_endpoint) {
-  waiting_for_remote_endpoint = !is_tmp_endpoint;
+  waiting_for_remote_endpoint = is_tmp_endpoint;
   remote_endpoint_addr_ = sa;
   remote_endpoint_addr_len_ = len;
+  std::tie(host_, port_) = sender_from_sockaddr(sa, len);
 }
 
 dgram_acceptor::dgram_acceptor(default_multiplexer& backend_ref,
@@ -1787,16 +1796,14 @@ void dgram_acceptor::handle_event(operation op) {
       // --> create a new dgram_scribe
       // TODO: some idenfification to prevent arbitrary
       // message from creating endpoints?
-      rd_buf_.clear();
-      rd_buf_.resize(dgram_size_);
       size_t rb;
-      memset(&sockaddr_,0, sockaddr_len_);
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             sockaddr_, sockaddr_len_)) {
         mgr_->io_failure(&backend(), operation::read);
         passivate();
         return;
       }
+      //std::cerr << "[A] Received message with " << rb << " bytes" << std::endl;
       bytes_read_ = rb;
       if (rb > 0) {
         std::tie(host_,port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
