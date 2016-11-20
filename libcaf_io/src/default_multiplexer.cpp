@@ -1131,7 +1131,7 @@ expected<void> default_multiplexer::assign_dgram_scribe(abstract_broker* self,
 }
 
 expected<void>
-default_multiplexer::assign_dgram_scribe(abstract_broker* self, 
+default_multiplexer::assign_dgram_scribe(abstract_broker* self,
                                          dgram_scribe_handle hdl,
                                          const std::string& host,
                                          uint16_t port) {
@@ -1606,8 +1606,8 @@ void dgram_communicator::start(manager_type* mgr) {
 }
 
 void dgram_communicator::activate(manager_type* mgr) {
-  if (!writer_) {
-    writer_.reset(mgr);
+  if (!reader_) {
+    reader_.reset(mgr);
     event_handler::activate();
     prepare_next_read();
   }
@@ -1665,6 +1665,7 @@ void dgram_communicator::handle_event(operation op) {
         passivate();
         return;
       }
+      std::cerr << "[C] Received " << rb << " bytes" << std::endl;
       // currently handles the change from acceptor 
       // to communicator, TODO: Find a better solution
       // Either keep sending to the same endpoint,
@@ -2070,26 +2071,13 @@ expected<native_socket> new_dgram_scribe_impl(const std::string& host,
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
   CALL_CFUN(fd, cc_valid_socket, "socket",
             socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
-  /*
   socket_guard sguard(fd);
-  if (proto == ipv6) {
-    if (ip_connect<AF_INET6>(fd, res->first, port)) {
-      CAF_LOG_INFO("successfully connected to host via IPv6");
-      return sguard.release();
-    }
-    sguard.close();
-    // IPv4 fallback
-    return new_dgram_scribe_impl(host, port, ipv4);
-  }
-  if (!ip_connect<AF_INET>(fd, res->first, port)) {
-    CAF_LOG_INFO("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
-    return make_error(sec::cannot_connect_to_node,
-                      "ip_connect failed", host, port);
-  }
-  CAF_LOG_INFO("successfully connected to host via IPv4");
+  auto p = proto == ipv4 ? new_ip_acceptor_impl<AF_INET>(fd, 0, nullptr)
+                         : new_ip_acceptor_impl<AF_INET6>(fd, 0, nullptr);
+  if (!p)
+    return std::move(p.error()); 
+  std::cerr << "[NDSI] Bound to " << *p << std::endl;
   return sguard.release();
-  */
-  return fd;
 }
 
 expected<std::pair<native_socket, uint16_t>>
