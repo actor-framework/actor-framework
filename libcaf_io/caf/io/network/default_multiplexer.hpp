@@ -612,7 +612,7 @@ public:
   inline buffer_type& rd_buf() {
     return rd_buf_;
   }
-  
+
   inline const std::string& host() const {
     return host_;
   }

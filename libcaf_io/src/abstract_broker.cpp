@@ -302,7 +302,7 @@ uint16_t abstract_broker::local_port(dgram_scribe_handle hdl) {
 
 uint16_t abstract_broker::local_port(dgram_doorman_handle hdl) {
   auto i = dgram_doormans_.find(hdl);
-  return i != dgram_doormans_.end() ? i->second->port() : 0;
+  return i != dgram_doormans_.end() ? i->second->local_port() : 0;
 }
 
 accept_handle abstract_broker::hdl_by_port(uint16_t port) {

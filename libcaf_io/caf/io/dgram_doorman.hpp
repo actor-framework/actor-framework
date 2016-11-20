@@ -50,6 +50,9 @@ public:
   /// Returns the current input buffer.
   virtual std::vector<char>& rd_buf() = 0;
 
+  /// Returns the local port
+  virtual uint16_t local_port() const = 0;
+
   void io_failure(execution_unit* ctx, network::operation op) override;
 
   using dgram_doorman_base::new_endpoint;

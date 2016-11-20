@@ -276,7 +276,6 @@ expected<void> test_multiplexer::assign_dgram_scribe(abstract_broker* ptr,
       return 0;
     }
 
-
     uint16_t port() const override {
       return mpx_->port(hdl());
     }
@@ -384,9 +383,16 @@ expected<void> test_multiplexer::assign_dgram_doorman(abstract_broker* ptr,
     std::string addr() const override {
       return "test";
     }
- 
+
     uint16_t port() const override {
       return mpx_->port(hdl());
+    }
+
+    uint16_t local_port() const override {
+      std::cerr << "test_multiplexer::assign_dgram_scribe::impl::local_port "
+                << "not implementd." << std::endl;
+      abort();
+      return 0;
     }
 
     void launch() override {

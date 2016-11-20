@@ -363,9 +363,7 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
         }
         write_client_handshake(ctx, path->wr_buf, hdr.source_node);
         callee_.learned_new_node_directly(hdr.source_node);
-        std::cerr << "[I] Before finalize handshake" << std::endl;
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
-        std::cerr << "[I] After finalize handshake" << std::endl;
         flush(*path);
         break;
       }
@@ -400,17 +398,23 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
           CAF_LOG_ERROR("no route to host after server handshake");
           return err();
         }
-        write_udp_server_handshake(ctx, path->wr_buf, hdr.source_node, none);
+        if (dm.port) {
+          write_udp_server_handshake(ctx, path->wr_buf, hdr.source_node,
+                                     *dm.port);
+        } else {
+          write_udp_server_handshake(ctx, path->wr_buf, hdr.source_node,
+                                     none);
+        }
         // auto was_indirect = tbl_.erase_indirect(hdr.source_node);
         callee_.learned_new_node_directly(hdr.source_node);
         break;
       }
       case message_type::server_handshake: {
-        std::cerr << "[I] message_type::server_handshake" << std::endl;
+        std::cerr << "[I] Received TCP server_handshake (ignored)" << std::endl;
         break;
       }
       case message_type::client_handshake: {
-        std::cerr << "[I] Received TCP client handshake" << std::endl;
+        std::cerr << "[I] Received TCP client handshake (ignored)" << std::endl;
         break;
       }
       case message_type::dispatch_message: {
@@ -688,39 +692,6 @@ void instance::write_udp_client_handshake(execution_unit* ctx,
   header hdr{message_type::udp_client_handshake, 0, 0, version,
              this_node_, none, invalid_actor_id, invalid_actor_id};
   write(ctx, buf, hdr, &writer);
-  /*
-  CAF_LOG_TRACE(CAF_ARG(port));
-  using namespace detail;
-  published_actor* pa = nullptr;
-  if (port) {
-    auto i = published_actors_.find(*port);
-    if (i != published_actors_.end())
-      pa = &i->second;
-  }
-  CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
-  if (!pa && port) {
-    std::cerr << "No actor published." << std::endl;
-  } else {
-    std::cerr << "Found locally published actor." << std::endl;
-  }
-  auto writer = make_callback([&](serializer& sink) -> error {
-    auto& ref = callee_.system().config().middleman_app_identifier;
-    auto e = sink(const_cast<std::string&>(ref));
-    if (e)
-      return e;
-    //if (pa) {
-    //  auto i = pa->first ? pa->first->id() : invalid_actor_id;
-    //  return sink(i, pa->second);
-    //} else {
-      auto aid = invalid_actor_id;
-      std::set<std::string> tmp;
-      return sink(aid, tmp);
-    //}
-  });
-  header hdr{message_type::udp_client_handshake, 0, 0, version,
-             this_node_, none, invalid_actor_id, invalid_actor_id};
-  write(ctx, buf, hdr, &writer);
-  */
 }
 
 void instance::write_udp_server_handshake(execution_unit* ctx,
@@ -731,6 +702,7 @@ void instance::write_udp_server_handshake(execution_unit* ctx,
   using namespace detail;
   published_actor* pa = nullptr;
   if (port) {
+    std::cerr << "LOOKING FOR ACTOR ON PORT " << *port << std::endl;
     auto i = published_actors_.find(*port);
     if (i != published_actors_.end())
       pa = &i->second;
@@ -760,16 +732,6 @@ void instance::write_udp_server_handshake(execution_unit* ctx,
              pa && pa->first ? pa->first->id() : invalid_actor_id,
              invalid_actor_id};
   write(ctx, buf, hdr, &writer);
-  /*
-  CAF_LOG_TRACE(CAF_ARG(remote_side));
-  auto writer = make_callback([&](serializer& sink) -> error {
-    auto& str = callee_.system().config().middleman_app_identifier;
-    return sink(const_cast<std::string&>(str));
-  });
-  header hdr{message_type::udp_server_handshake, 0, 0, 0,
-             this_node_, remote_side, invalid_actor_id, invalid_actor_id};
-  write(ctx, buf, hdr, &writer);
-  */
 }
 
 void instance::write_announce_proxy(execution_unit* ctx, buffer_type& buf,

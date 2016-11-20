@@ -1042,6 +1042,12 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
     uint16_t port() const override {
       return acceptor_.port();
     }
+    uint16_t local_port() const override {
+      auto x = local_port_of_fd(acceptor_.fd());
+      if (!x)
+        return 0;
+      return *x;
+    }
     void launch() override {
       CAF_LOG_TRACE("");
       CAF_ASSERT(!launched_);
@@ -2120,6 +2126,7 @@ new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr) {
     return std::move(p.error());
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
+  std::cerr << "[NDDI] Bound to " << *p << std::endl;
   return std::make_pair(sguard.release(), *p);
 }
 

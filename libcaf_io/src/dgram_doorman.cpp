@@ -59,16 +59,18 @@ bool dgram_doorman::delegate_msg(execution_unit* ctx,
   if (detached())
     return false;
   using delegate_t = new_datagram_msg; // dgram_delegate_msg;
-  using tmp_t = mailbox_element_vals<delegate_t>; 
+  using tmp_t = mailbox_element_vals<delegate_t>;
   auto guard = parent_;
   auto& buf = rd_buf();
   CAF_ASSERT(buf.size() >= num_bytes);
   buf.resize(num_bytes);
-  // std::vector<char> msg_buf;
-  // msg_buf.resize(num_bytes);
+  std::cerr << "Delegating message, doorman on " << parent()->local_port(hdl())
+            << " and scribe on " << parent()->local_port(endpoint)
+            << std::endl;
   tmp_t tmp{strong_actor_ptr{}, message_id::make(),
             mailbox_element::forwarding_stack{},
-            delegate_t{endpoint, std::move(buf)}};
+            delegate_t{endpoint, std::move(buf),
+                       parent()->local_port(hdl())}};
   invoke_mailbox_element_impl(ctx,tmp);
   return true;
 }

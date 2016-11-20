@@ -187,6 +187,9 @@ struct new_datagram_msg {
   dgram_scribe_handle handle;
   // Buffer containing received data.
   std::vector<char> buf;
+  // Port of the doorman that accepted the handshake
+  // TODO: get rid of this because it is only sometime used
+  optional<uint16_t> port;
 };
 
 /// @relates new_datagram_msg
