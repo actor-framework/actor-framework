@@ -71,37 +71,22 @@ bool zero(T val) {
   return val == 0;
 }
 
+// TODO: Remove comments
 bool server_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
-       && !valid(hdr.dest_node)
+       //&& !valid(hdr.dest_node)
        && zero(hdr.dest_actor)
        && !zero(hdr.operation_data);
 }
 
+// TODO: Remove comments
 bool client_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
+       //&& valid(hdr.dest_node)
        && hdr.source_node != hdr.dest_node
        && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.operation_data);
-}
-
-bool udp_server_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       //&& zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && !zero(hdr.operation_data);
-}
-
-bool udp_client_handshake_valid(const header& hdr) {
-  return valid(hdr.source_node)
-      && !valid(hdr.dest_node)
-      && zero(hdr.source_actor)
-      && zero(hdr.dest_actor)
-      && !zero(hdr.operation_data);
+       && zero(hdr.dest_actor);
+       //&& zero(hdr.operation_data);
 }
 
 bool dispatch_message_valid(const header& hdr) {
@@ -158,10 +143,6 @@ bool valid(const header& hdr) {
       return kill_proxy_instance_valid(hdr);
     case message_type::heartbeat:
       return heartbeat_valid(hdr);
-    case message_type::udp_server_handshake:
-      return udp_server_handshake_valid(hdr);
-    case message_type::udp_client_handshake:
-      return udp_client_handshake_valid(hdr);
   }
 }
 

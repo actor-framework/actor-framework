@@ -21,6 +21,8 @@
 #define CAF_IO_BASP_INSTANCE_HPP
 
 #include "caf/error.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/binary_deserializer.hpp" // ---
 
 #include "caf/io/hook.hpp"
 #include "caf/io/middleman.hpp"
@@ -199,12 +201,12 @@ public:
                               buffer_type& buf, const node_id& remote_side);
 
   /// Start handshake ... TODO
-  void write_udp_client_handshake(execution_unit* ctx, buffer_type& buf);
+  //void write_udp_client_handshake(execution_unit* ctx, buffer_type& buf);
 
   /// Answer client handshake ... TODO
-  void write_udp_server_handshake(execution_unit* ctx, buffer_type& buf,
-                                  const node_id& remote_side,
-                                  optional<uint16_t> port);
+  //void write_udp_server_handshake(execution_unit* ctx, buffer_type& buf,
+  //                                const node_id& remote_side,
+  //                                optional<uint16_t> port);
 
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
@@ -231,6 +233,167 @@ public:
 
   inline actor_system& system() {
     return callee_.system();
+  }
+
+  template <class Handle>
+  bool handle_msg(execution_unit* ctx, const Handle& hdl, header& hdr,
+                std::vector<char>* payload, bool tcp_based,
+                optional<uint16_t> port) {
+    std::cerr << "Handling " << to_string(hdr.operation) << " msg" << std::endl;
+    auto payload_valid = [&]() -> bool {
+      return payload != nullptr && payload->size() == hdr.payload_len;
+    };
+    // handle message to ourselves
+    switch (hdr.operation) {
+      case message_type::server_handshake: {
+        actor_id aid = invalid_actor_id;
+        std::set<std::string> sigs;
+        if (payload_valid()) {
+          binary_deserializer bd{ctx, *payload};
+          std::string remote_appid;
+          auto e = bd(remote_appid);
+          if (e)
+            return false;
+          if (remote_appid != callee_.system().config().middleman_app_identifier) {
+            CAF_LOG_ERROR("app identifier mismatch");
+            return false;
+          }
+          e = bd(aid, sigs);
+          if (e)
+            return false;
+        } else {
+          CAF_LOG_ERROR("fail to receive the app identifier");
+          return false;
+        }
+        // close self connection after handshake is done
+        if (hdr.source_node == this_node_) {
+          CAF_LOG_INFO("close connection to self immediately");
+          callee_.finalize_handshake(hdr.source_node, aid, sigs);
+          return false;
+        }
+        // close this connection if we already have a direct connection
+        if (tbl_.lookup_hdl(hdr.source_node)) {
+          CAF_LOG_INFO("close connection since we already have a "
+                       "direct connection: " << CAF_ARG(hdr.source_node));
+          callee_.finalize_handshake(hdr.source_node, aid, sigs);
+          return false;
+        }
+        // add direct route to this node and remove any indirect entry
+        CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
+        tbl_.add(hdl, hdr.source_node);
+        //auto was_indirect = tbl_.erase_indirect(hdr.source_node);
+        // write handshake as client in response
+        auto path = tbl_.lookup(hdr.source_node);
+        if (!path) {
+          CAF_LOG_ERROR("no route to host after server handshake");
+          return false;
+        }
+        if (tcp_based)
+          write_client_handshake(ctx, path->wr_buf, hdr.source_node);
+        callee_.learned_new_node_directly(hdr.source_node);
+        callee_.finalize_handshake(hdr.source_node, aid, sigs);
+        flush(*path);
+        break;
+      }
+      case message_type::client_handshake: {
+        auto is_known_node = tbl_.lookup_hdl(hdr.source_node);
+        if (is_known_node && tcp_based) {
+          CAF_LOG_INFO("received second client handshake:"
+                       << CAF_ARG(hdr.source_node));
+          break;
+        }
+        if (payload_valid()) {
+          binary_deserializer bd{ctx, *payload};
+          std::string remote_appid;
+          auto e = bd(remote_appid);
+          if (e)
+            return false;
+          if (remote_appid != callee_.system().config().middleman_app_identifier) {
+            CAF_LOG_ERROR("app identifier mismatch");
+            return false;
+          }
+        } else {
+          CAF_LOG_ERROR("fail to receive the app identifier");
+          return false;
+        }
+        if (!is_known_node) {
+          // add direct route to this node and remove any indirect entry
+          CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
+          tbl_.add(hdl, hdr.source_node);
+        }
+        auto path = tbl_.lookup(hdr.source_node);
+        if (!path) {
+          CAF_LOG_ERROR("no route to host after server handshake");
+          return false;
+        }
+        if (!tcp_based)
+          write_server_handshake(ctx, path->wr_buf, port);
+        if (!is_known_node) {
+          //auto was_indirect = tbl_.erase_indirect(hdr.source_node);
+          callee_.learned_new_node_directly(hdr.source_node);
+        }
+        flush(*path);
+        break;
+      }
+      case message_type::dispatch_message: {
+        if (!payload_valid())
+          return false;
+        // in case the sender of this message was received via a third node,
+        // we assume that that node to offers a route to the original source
+        //auto last_hop = tbl_.lookup_node(dm.handle);
+        //if (hdr.source_node != none
+        //    && hdr.source_node != this_node_
+        //    && last_hop != hdr.source_node
+        //    && tbl_.lookup_direct(hdr.source_node) == invalid_connection_handle
+        //    && tbl_.add_indirect(last_hop, hdr.source_node))
+        //  callee_.learned_new_node_indirectly(hdr.source_node);
+        binary_deserializer bd{ctx, *payload};
+        auto receiver_name = static_cast<atom_value>(0);
+        std::vector<strong_actor_ptr> forwarding_stack;
+        message msg;
+        if (hdr.has(header::named_receiver_flag)) {
+          auto e = bd(receiver_name);
+          if (e)
+            return false;
+        }
+        auto e = bd(forwarding_stack, msg);
+        if (e)
+          return false;
+        CAF_LOG_DEBUG(CAF_ARG(forwarding_stack) << CAF_ARG(msg));
+        if (hdr.has(header::named_receiver_flag))
+          callee_.deliver(hdr.source_node, hdr.source_actor, receiver_name,
+                          message_id::from_integer_value(hdr.operation_data),
+                          forwarding_stack, msg);
+        else
+          callee_.deliver(hdr.source_node, hdr.source_actor, hdr.dest_actor,
+                          message_id::from_integer_value(hdr.operation_data),
+                          forwarding_stack, msg);
+        break;
+      }
+      case message_type::announce_proxy:
+        callee_.proxy_announced(hdr.source_node, hdr.dest_actor);
+        break;
+      case message_type::kill_proxy: {
+        if (!payload_valid())
+          return false;
+        binary_deserializer bd{ctx, *payload};
+        error fail_state;
+        auto e = bd(fail_state);
+        if (e)
+          return false;
+        callee_.kill_proxy(hdr.source_node, hdr.source_actor, fail_state);
+        break;
+      }
+      case message_type::heartbeat: {
+        CAF_LOG_TRACE("received heartbeat: " << CAF_ARG(hdr.source_node));
+        callee_.handle_heartbeat(hdr.source_node);
+        break;
+      }
+      default:
+        CAF_LOG_ERROR("invalid operation");
+        return false;
+    }
+    return true;
   }
 
 private:

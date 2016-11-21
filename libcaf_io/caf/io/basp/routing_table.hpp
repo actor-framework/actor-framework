@@ -132,7 +132,7 @@ public:
   /// including the node that is assigned as direct path for `hdl`.
   // void erase_direct(const endpoint_handle& hdl, erase_callback& cb);
   void erase(const endpoint_handle& hdl, erase_callback& cb);
-  
+
   /*
   /// Removes any entry for indirect connection to `dest` and returns
   /// `true` if `dest` had an indirect route, otherwise `false`.

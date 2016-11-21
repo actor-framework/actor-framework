@@ -596,12 +596,8 @@ behavior basp_broker::make_behavior() {
                           << CAF_ARG(msg.handle));
           ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
         }
-        // TODO: some error?
       } else {
-        if (ctx.callback) {
-          // TODO: if callback available, handle that
-        }
-        // TODO: Is there configuration necessary?
+        // TODO: Do we need to handle available callbacks here?
         configure_datagram_size(msg.handle, 1500);
       }
     },
@@ -778,7 +774,7 @@ behavior basp_broker::make_behavior() {
         ctx.remote_port = port;
         ctx.callback = rp;
         auto& bi = state.instance;
-        bi.write_udp_client_handshake(context(), wr_buf(hdl));
+        bi.write_client_handshake(context(), wr_buf(hdl), none);
         flush(hdl);
         configure_datagram_size(hdl, 1500);
       } else {

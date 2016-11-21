@@ -122,12 +122,12 @@ CAF_TEST(test_datagram_remote_actor) {
   auto res3 = io::uri::make(string(uri_no_port) + ":" + to_string(*res2));
   CAF_CHECK(res3);
   CAF_MESSAGE("Published pong on: " + to_string(*res3) + ".");
-/*
+
   CAF_SET_LOGGER_SYS(&server_side);
   CAF_MESSAGE("Local call to remote actor should acquire the actor.");
   auto res4 = server_side_mm.remote_actor(*res3);
   CAF_CHECK(res4);
-*/
+
   CAF_MESSAGE("Checking from different actor system next.");
   auto res5 = client_side_mm.remote_actor(*res3);
   CAF_CHECK(res5);

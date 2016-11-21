@@ -2089,7 +2089,7 @@ expected<native_socket> new_dgram_scribe_impl(const std::string& host,
                          : new_ip_acceptor_impl<AF_INET6>(fd, 0, nullptr);
   if (!p)
     return std::move(p.error()); 
-  std::cerr << "[NDSI] Bound to " << *p << std::endl;
+  //std::cerr << "[NDSI] Bound to " << *p << std::endl;
   return sguard.release();
 }
 
@@ -2126,7 +2126,7 @@ new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr) {
     return std::move(p.error());
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
-  std::cerr << "[NDDI] Bound to " << *p << std::endl;
+  //std::cerr << "[NDDI] Bound to " << *p << std::endl;
   return std::make_pair(sguard.release(), *p);
 }
 

@@ -64,9 +64,6 @@ bool dgram_doorman::delegate_msg(execution_unit* ctx,
   auto& buf = rd_buf();
   CAF_ASSERT(buf.size() >= num_bytes);
   buf.resize(num_bytes);
-  std::cerr << "Delegating message, doorman on " << parent()->local_port(hdl())
-            << " and scribe on " << parent()->local_port(endpoint)
-            << std::endl;
   tmp_t tmp{strong_actor_ptr{}, message_id::make(),
             mailbox_element::forwarding_stack{},
             delegate_t{endpoint, std::move(buf),
