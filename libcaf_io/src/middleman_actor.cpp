@@ -199,6 +199,10 @@ public:
           );
         } else {
           // sec::unsupported_protocol;
+          CAF_LOG_ERROR("unsupported protocol" << CAF_ARG(u));
+          std::cerr << "[MMA] Unsupported protocol '" << to_string(u.scheme())
+                    << "'" << std::endl;
+          rp.deliver(sec::unsupported_protocol);
         }
         return {};
       },
