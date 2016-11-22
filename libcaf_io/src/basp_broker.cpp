@@ -127,8 +127,9 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   CAF_ASSERT(this_context != nullptr);
   this_context->id = nid;
   auto& cb = this_context->callback;
-  if (!cb)
+  if (!cb) {
     return;
+  }
   auto cleanup = detail::make_scope_guard([&] {
     cb = none;
   });
@@ -155,17 +156,6 @@ void basp_broker_state::purge_state(const node_id& nid) {
   auto hdl = instance.tbl().lookup_hdl(nid);
   if (!hdl)
     return;
-  /*
-  auto i = tcp_ctx.find(hdl);
-  if (i != tcp_ctx.end()) {
-    auto& ref = i->second;
-    if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake");
-      ref.callback->deliver(sec::disconnect_during_handshake);
-    }
-    tcp_ctx.erase(i);
-  }
-  */
   apply_visitor(purge_state_vis, *hdl);
   proxies().erase(nid);
 }
@@ -487,7 +477,7 @@ void basp_broker_state::set_context(dgram_scribe_handle hdl) {
       hdl,
       endpoint_context{
         basp::await_header,
-        basp::header{basp::message_type::client_handshake,
+        basp::header{basp::message_type::server_handshake,
                      0, 0, 0, none, none,
                      invalid_actor_id, invalid_actor_id},
         hdl, none, 0, none

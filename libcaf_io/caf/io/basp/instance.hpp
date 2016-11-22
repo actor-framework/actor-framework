@@ -22,7 +22,7 @@
 
 #include "caf/error.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/binary_deserializer.hpp" // ---
+#include "caf/binary_deserializer.hpp"
 
 #include "caf/io/hook.hpp"
 #include "caf/io/middleman.hpp"
@@ -200,14 +200,6 @@ public:
   void write_client_handshake(execution_unit* ctx,
                               buffer_type& buf, const node_id& remote_side);
 
-  /// Start handshake ... TODO
-  //void write_udp_client_handshake(execution_unit* ctx, buffer_type& buf);
-
-  /// Answer client handshake ... TODO
-  //void write_udp_server_handshake(execution_unit* ctx, buffer_type& buf,
-  //                                const node_id& remote_side,
-  //                                optional<uint16_t> port);
-
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
                             const node_id& dest_node, actor_id aid);
@@ -239,7 +231,8 @@ public:
   bool handle_msg(execution_unit* ctx, const Handle& hdl, header& hdr,
                 std::vector<char>* payload, bool tcp_based,
                 optional<uint16_t> port) {
-    std::cerr << "Handling " << to_string(hdr.operation) << " msg" << std::endl;
+//    std::cerr << "[MSG] From " << hdl.id() << " (" << to_string(hdr.operation)
+//              << ")" << std::endl;
     auto payload_valid = [&]() -> bool {
       return payload != nullptr && payload->size() == hdr.payload_len;
     };
@@ -321,18 +314,14 @@ public:
           CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
           tbl_.add(hdl, hdr.source_node);
         }
-        auto path = tbl_.lookup(hdr.source_node);
-        if (!path) {
-          CAF_LOG_ERROR("no route to host after server handshake");
-          return false;
+        if (!tcp_based) {
+          write_server_handshake(ctx, wr_buf_.ptr->wr_buf(hdl), port);
+          wr_buf_.ptr->flush(hdl);
         }
-        if (!tcp_based)
-          write_server_handshake(ctx, path->wr_buf, port);
         if (!is_known_node) {
           //auto was_indirect = tbl_.erase_indirect(hdr.source_node);
           callee_.learned_new_node_directly(hdr.source_node);
         }
-        flush(*path);
         break;
       }
       case message_type::dispatch_message: {

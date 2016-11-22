@@ -1008,14 +1008,24 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
          // further activities for the broker
          return false;
       auto& dm = acceptor_.backend();
+      auto endpoint_info = acceptor_.last_sender();
       auto fd = new_dgram_scribe_impl(acceptor_.host(),
                                       acceptor_.port());
+      {
+        std::string host;
+        uint16_t port;
+        std::tie(host,port) = sender_from_sockaddr(endpoint_info.first,
+                                                   endpoint_info.second);
+//        std::cerr << "[DDM] New scribe with " << fd << " for " << host << ":" << port
+//                  << "(or " << acceptor_.host() << ":" << acceptor_.port() << ")"
+//                  << std::endl;
+      }
       if (!fd) {
         CAF_LOG_ERROR(CAF_ARG(fd.error()));
         return false;
         // return std::move(fd.error());
       }
-      auto endpoint_info = acceptor_.last_sender();
+//      auto endpoint_info = acceptor_.last_sender();
       auto hdl = dm.add_dgram_scribe(parent(), *fd,
                                      endpoint_info.first, endpoint_info.second,
                                      false);
@@ -1605,6 +1615,7 @@ dgram_communicator::dgram_communicator(default_multiplexer& backend_ref,
     : event_handler(backend_ref, sockfd),
       dgram_size_(0),
       ack_writes_(false),
+      writing_(false),
       waiting_for_remote_endpoint(true) {
   // TODO: Set some reasonable default.
   configure_datagram_size(1500);
@@ -1641,9 +1652,10 @@ void dgram_communicator::write(const void* buf, size_t num_bytes) {
 void dgram_communicator::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (!wr_offline_buf_.empty()) {
+  if (!wr_offline_buf_.empty() && !writing_) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
+    writing_ = true;
     prepare_next_write();
   }
 }
@@ -1675,8 +1687,14 @@ void dgram_communicator::handle_event(operation op) {
         passivate();
         return;
       }
-      //std::cerr << "[C] Received " << rb << " bytes" << std::endl;
-      // currently handles the change from acceptor 
+//      {
+//        std::string host;
+//        uint16_t port;
+//        std::tie(host, port) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
+//        std::cerr << "[COM] " << fd() << " received " << rb << " bytes from "
+//                  << host << ":" << port << std::endl;
+//      }
+      // currently handles the change from acceptor
       // to communicator, TODO: Find a better solution
       // Either keep sending to the same endpoint,
       // Which would require some logic to determin if
@@ -1686,8 +1704,8 @@ void dgram_communicator::handle_event(operation op) {
         remote_endpoint_addr_ = std::move(sockaddr_);
         remote_endpoint_addr_len_ = sockaddr_len_;
         sockaddr_len_ = 0;
-        //std::cerr << "[C] Adapted new endpoint: " << host_ << ":" << port_
-        //          << std::endl;
+//        std::cerr << "[COM] Adapted new endpoint: " << host_ << ":" << port_
+//                  << std::endl;
       }
       if (rb > 0) {
         auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
@@ -1707,8 +1725,8 @@ void dgram_communicator::handle_event(operation op) {
         writer_->io_failure(&backend(), operation::write);
         backend().del(operation::write, fd(), this);
       } else if (wb > 0) {
-        //std::cerr << "[C] Sent " << wb << " bytes to " 
-        //          << host_ << ":" << port_ << std::endl;
+//        std::cerr << "[COM] " << fd() << " sent " << wb << " bytes to "
+//                  << host_ << ":" << port_ << std::endl;
         CAF_ASSERT(wb == wr_buf_.size());
         if (ack_writes_)
           writer_->datagram_sent(&backend(), wb);
@@ -1716,8 +1734,8 @@ void dgram_communicator::handle_event(operation op) {
       } else {
         // TODO: remove this if sure that datagrams are either written
         // as a whole or not at all
-        std::cerr << "[DC] Partial datagram wrtten: " << wb
-                  << " of " << wr_buf_.size() << std::endl;
+//        std::cerr << "[DC] Partial datagram wrtten: " << wb
+//                  << " of " << wr_buf_.size() << std::endl;
         if (writer_)
           writer_->io_failure(&backend(), operation::write);
       }
@@ -1736,6 +1754,7 @@ void dgram_communicator::prepare_next_write() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   wr_buf_.clear();
   if (wr_offline_buf_.empty()) {
+    writing_ = false;
     backend().del(operation::write, fd(), this);
   } else {
     wr_buf_.swap(wr_offline_buf_);
@@ -1809,7 +1828,14 @@ void dgram_acceptor::handle_event(operation op) {
         passivate();
         return;
       }
-      //std::cerr << "[A] Received message with " << rb << " bytes" << std::endl;
+      {
+        std::string host;
+        uint16_t port;
+        std::tie(host, port) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
+//        std::cerr << "[ACC] " << fd() << " received message with " << rb
+//                  << " bytes from " << host << ":" << port << std::endl;
+      }
+      
       bytes_read_ = rb;
       if (rb > 0) {
         std::tie(host_,port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
@@ -1818,8 +1844,8 @@ void dgram_acceptor::handle_event(operation op) {
         if (!res) {
           // What is the right way to propagate this?
           CAF_LOG_DEBUG("Failure during creation of new udp endpoint");
-          std::cerr << "[DA] Failure during creation of new udp endpoint"
-                    << std::endl;;
+//          std::cerr << "[DA] Failure during creation of new udp endpoint"
+//                    << std::endl;;
         }
       }
       prepare_next_read();

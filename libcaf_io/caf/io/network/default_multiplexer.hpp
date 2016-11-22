@@ -652,6 +652,7 @@ private:
   // state for writing
   manager_ptr writer_;
   bool ack_writes_;
+  bool writing_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;
 
