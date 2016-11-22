@@ -163,11 +163,51 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
       // TODO: anything to do here? (i.e., do we still need forwarding?)
       return err();
     }
-    if (!handle_msg(ctx, dm.handle, hdr, payload, false, dm.port))
+    if (!handle_msg(ctx, dm.handle, hdr, payload, false, none))
       return err();
   } while (dgram_itr != dm.buf.end());
   return true;
 };
+
+
+bool instance::handle(execution_unit* ctx, new_endpoint_msg& em, header& hdr) {
+  using itr_t = std::vector<char>::iterator;
+  // function object providing cleanup code on errors
+  auto err = [&]() -> bool {
+    auto cb = make_callback([&](const node_id& nid) -> error {
+      callee_.purge_state(nid);
+      return none;
+    });
+    tbl_.erase(em.handle, cb);
+    return false;
+  };
+  // extract payload
+  std::vector<char> pl_buf{std::move_iterator<itr_t>(std::begin(em.buf) +
+                                                     basp::header_size),
+                           std::move_iterator<itr_t>(std::end(em.buf))};
+  // resize header
+  em.buf.resize(basp::header_size);
+  // extract header
+  binary_deserializer bd{ctx, em.buf};
+  auto e = bd(hdr);
+  if (e || !valid(hdr)) {
+    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
+    std::cerr << "Received invalid header!" << std::endl;
+    return err();
+  }
+  CAF_LOG_DEBUG(CAF_ARG(hdr));
+  std::vector<char>* payload = nullptr;
+  if (hdr.payload_len > 0) {
+    payload = &pl_buf;
+    if (payload->size() != hdr.payload_len) {
+      CAF_LOG_WARNING("received invalid payload");
+      return err();
+    }
+  }
+  if (!handle_msg(ctx, em.handle, hdr, payload, false, em.port))
+    return err();
+  return true;
+}
 
 void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");

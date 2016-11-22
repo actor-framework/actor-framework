@@ -1008,35 +1008,30 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
          // further activities for the broker
          return false;
       auto& dm = acceptor_.backend();
-      auto endpoint_info = acceptor_.last_sender();
+      //auto endpoint_info = acceptor_.last_sender();
       auto fd = new_dgram_scribe_impl(acceptor_.host(),
                                       acceptor_.port());
+      /*
       {
         std::string host;
         uint16_t port;
         std::tie(host,port) = sender_from_sockaddr(endpoint_info.first,
                                                    endpoint_info.second);
-//        std::cerr << "[DDM] New scribe with " << fd << " for " << host << ":" << port
-//                  << "(or " << acceptor_.host() << ":" << acceptor_.port() << ")"
-//                  << std::endl;
+        std::cerr << "[DDM] New scribe with " << fd << " for " << host
+                  << ":" << port << "(or " << acceptor_.host() << ":"
+                  << acceptor_.port() << ")" << std::endl;
       }
+      */
       if (!fd) {
         CAF_LOG_ERROR(CAF_ARG(fd.error()));
         return false;
         // return std::move(fd.error());
       }
-//      auto endpoint_info = acceptor_.last_sender();
+      auto endpoint_info = acceptor_.last_sender();
       auto hdl = dm.add_dgram_scribe(parent(), *fd,
                                      endpoint_info.first, endpoint_info.second,
                                      false);
-      // TODO: needs a better design
-      // new_endpoint(...) registeres the new handle
-      // delegate_message assigns the new handle
-      // responsibility for the received msg.
-      auto res = dgram_doorman::new_endpoint(&dm, hdl);
-      if (!res)
-        return false;
-      return delegate_msg(&dm, hdl, buf, num_bytes);
+      return dgram_doorman::new_endpoint(&dm, hdl, buf, num_bytes);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");

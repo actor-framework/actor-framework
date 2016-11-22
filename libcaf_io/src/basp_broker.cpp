@@ -671,17 +671,21 @@ behavior basp_broker::make_behavior() {
       state.instance.remove_published_actor(port);
     },
     // received from underlying broker implementation
-    [=](const new_endpoint_msg& msg) {
+    [=](new_endpoint_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      static_cast<void>(msg);
-      // TODO: Do I need this or does the handshake procedure handle things?
+      state.set_context(msg.handle);
+      auto& ctx = *state.this_context;
+      auto is_open = state.instance.handle(context(), msg, ctx.hdr);
+      if (!is_open) {
+        if (ctx.callback) {
+          CAF_LOG_WARNING("failed to handshake with remote node"
+                          << CAF_ARG(msg.handle));
+          ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
+        }
+      } else {
+        configure_datagram_size(msg.handle, 1500);
+      }
     },
-    /*
-    [=](const dgram_delegate_msg&) {
-      CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      // TODO: Remove msg type?
-    },
-    */
     // received from underlying broker implementation
     [=](const dgram_scribe_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));

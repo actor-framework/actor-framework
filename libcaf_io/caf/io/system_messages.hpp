@@ -165,20 +165,24 @@ inspect(Inspector& f, dgram_doorman_closed_msg& x) {
   return f(meta::type_name("dgram_doorman_closed_msg"), x.handle);
 }
 
-/// Signalizes newly arrived datagram for a {@link broker}.
+/// Signalizes newly disvocerd remote endpoint
+/// and the responsible scribe to a {@link broker}.
 struct new_endpoint_msg {
-  /// Handle to the related datagram endpoint.
+  // Handle to the related datagram endpoint.
   dgram_doorman_handle source;
   // Buffer containing the received data.
-  // std::vector<char> buf;
-  /// Handle to new dgram_scribe
+  std::vector<char> buf;
+  // Handle to new dgram_scribe
   dgram_scribe_handle handle;
+  // Port of the addressed actor
+  uint16_t port;
 };
 
 /// @relates new_endpoint_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_endpoint_msg& x) {
-  return f(meta::type_name("new_endpoint_msg"), x.source, x.handle);
+  return f(meta::type_name("new_endpoint_msg"), x.source, x.buf,
+                                                x.handle, x.port);
 }
 
 /// Signalizes that a datagram with a certain size has been sent.
@@ -188,8 +192,6 @@ struct new_datagram_msg {
   // Buffer containing received data.
   std::vector<char> buf;
   // Port of the doorman that accepted the handshake
-  // TODO: get rid of this because it is only sometime used
-  optional<uint16_t> port;
 };
 
 /// @relates new_datagram_msg
@@ -236,21 +238,17 @@ inspect(Inspector& f, dgram_doorman_passivated_msg& x) {
   return f(meta::type_name("dgram_doorman_passivated_msg"), x.handle);
 }
 
-/// delegates a handshake to a dgram scribe 
-struct dgram_delegate_msg {
-  // Sender handle
-  dgram_doorman_handle source;
-  // Responsible scribe
-  dgram_scribe_handle handle;
-  // Buffer containing received data.
-  std::vector<char> buf;
+/// Dummy message for the dgram_doorman implementation
+struct dgram_dummy_msg {
+  dgram_doorman_handle handle;
+  std::vector<char> buffer;
 };
 
-/// @relates dgram_delegate_msg
+/// @relates dgram_dummy_msg
 template <class Inspector>
 typename Inspector::result_type
-inspect(Inspector& f, dgram_delegate_msg& x) {
-  return f(meta::type_name("dgram_delegate_msg"), x.handle);
+inspect(Inspector& f, dgram_dummy_msg& x) {
+  return f(meta::type_name("dgram_dummy_msg"), x.handle, x.buffer);
 }
 
 } // namespace io

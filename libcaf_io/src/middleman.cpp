@@ -200,11 +200,8 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
   if (!res)
     return std::move(res.error());
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
-  if (!ptr) {
-    std::cerr << "[remote_actor] no actor published on port " << u.port_as_int()
-              << std::endl;
+  if (!ptr)
     return make_error(sec::no_actor_published_at_port, u.port_as_int());
-  }
   if (!system().assignable(std::get<2>(*res), ifs))
     return make_error(sec::unexpected_actor_messaging_interface, std::move(ifs),
                       std::move(std::get<2>(*res)));

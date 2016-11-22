@@ -34,7 +34,7 @@ namespace io {
 
 using dgram_doorman_base = broker_servant<network::dgram_acceptor_manager,
                                           dgram_doorman_handle,
-                                          new_endpoint_msg>;
+                                          dgram_dummy_msg>;
 
 /// Manages reading from a datagram source
 /// @ingroup Broker
@@ -57,9 +57,7 @@ public:
 
   using dgram_doorman_base::new_endpoint;
 
-  bool new_endpoint(execution_unit* ctx, dgram_scribe_handle endpoint);
-
-  bool delegate_msg(execution_unit* ctx, dgram_scribe_handle endpoint,
+  bool new_endpoint(execution_unit* ctx, dgram_scribe_handle endpoint,
                     const void* buf, size_t num_bytes);
 
   // needs to be launched explicitly

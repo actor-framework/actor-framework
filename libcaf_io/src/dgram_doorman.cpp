@@ -44,29 +44,21 @@ void dgram_doorman::io_failure(execution_unit* ctx, network::operation op) {
   detach(ctx, true);
 }
 
-// bool dgram_doorman::new_endpoint(execution_unit* ctx, const void* buf,
-//                                  size_t besize) {
 bool dgram_doorman::new_endpoint(execution_unit* ctx,
-                                 dgram_scribe_handle endpoint) {
-  msg().handle = endpoint;
-  return invoke_mailbox_element(ctx);
-}
-
-bool dgram_doorman::delegate_msg(execution_unit* ctx,
                                  dgram_scribe_handle endpoint,
                                  const void*, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(endpoint) << CAF_ARG(num_bytes));
   if (detached())
     return false;
-  using delegate_t = new_datagram_msg; // dgram_delegate_msg;
-  using tmp_t = mailbox_element_vals<delegate_t>;
+  using endpoint_t = new_endpoint_msg;
+  using tmp_t = mailbox_element_vals<endpoint_t>;
   auto guard = parent_;
   auto& buf = rd_buf();
   CAF_ASSERT(buf.size() >= num_bytes);
   buf.resize(num_bytes);
   tmp_t tmp{strong_actor_ptr{}, message_id::make(),
             mailbox_element::forwarding_stack{},
-            delegate_t{endpoint, std::move(buf),
+            endpoint_t{hdl(), std::move(buf), endpoint,
                        parent()->local_port(hdl())}};
   invoke_mailbox_element_impl(ctx,tmp);
   return true;

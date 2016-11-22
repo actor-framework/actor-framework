@@ -124,6 +124,9 @@ public:
   /// Handles a received datagram
   bool handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr);
 
+  /// Handles a new UDP endpoint msg
+  bool handle(execution_unit* ctx, new_endpoint_msg& em, header& hdr);
+
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
 
