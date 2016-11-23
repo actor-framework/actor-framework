@@ -58,7 +58,7 @@ bool dgram_scribe::consume(execution_unit* ctx, const void*, size_t num_bytes) {
   auto result = invoke_mailbox_element(ctx);
   // swap buffer back to stream and implicitly flush wr_buf()
   msg_buf.swap(buf);
-  flush(); // <-- TODO: here from scribe, not sure why?
+  flush();
   return result;
 }
 

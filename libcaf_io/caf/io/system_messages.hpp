@@ -165,7 +165,7 @@ inspect(Inspector& f, dgram_doorman_closed_msg& x) {
   return f(meta::type_name("dgram_doorman_closed_msg"), x.handle);
 }
 
-/// Signalizes newly disvocerd remote endpoint
+/// Signalizes newly discovered remote endpoint
 /// and the responsible scribe to a {@link broker}.
 struct new_endpoint_msg {
   // Handle to the related datagram endpoint.
@@ -191,7 +191,6 @@ struct new_datagram_msg {
   dgram_scribe_handle handle;
   // Buffer containing received data.
   std::vector<char> buf;
-  // Port of the doorman that accepted the handshake
 };
 
 /// @relates new_datagram_msg

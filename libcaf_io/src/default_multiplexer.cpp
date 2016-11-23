@@ -1011,17 +1011,6 @@ default_multiplexer::add_dgram_doorman(abstract_broker* self,
       //auto endpoint_info = acceptor_.last_sender();
       auto fd = new_dgram_scribe_impl(acceptor_.host(),
                                       acceptor_.port());
-      /*
-      {
-        std::string host;
-        uint16_t port;
-        std::tie(host,port) = sender_from_sockaddr(endpoint_info.first,
-                                                   endpoint_info.second);
-        std::cerr << "[DDM] New scribe with " << fd << " for " << host
-                  << ":" << port << "(or " << acceptor_.host() << ":"
-                  << acceptor_.port() << ")" << std::endl;
-      }
-      */
       if (!fd) {
         CAF_LOG_ERROR(CAF_ARG(fd.error()));
         return false;
@@ -1265,15 +1254,6 @@ bool send_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
   auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
                        no_sigpipe_flag, reinterpret_cast<sockaddr*>(&sa),
                        sa_len);
-  /*
-  {
-    std::string host;
-    uint16_t port;
-    std::tie(host,port) = sender_from_sockaddr(sa, sa_len);
-    std::cerr << "[SD] Sent " << sres << " bytes to "
-              << host << ":" << port << std::endl;
-  }
-  */
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
     return false;
@@ -1289,15 +1269,6 @@ bool receive_datagram(size_t& result, native_socket fd, void* buf, size_t len,
   auto sres = ::recvfrom(fd, buf, len, 0,
                          reinterpret_cast<struct sockaddr *>(&sa),
                          &sa_len);
-  /*
-  {
-    std::string host;
-    uint16_t port;
-    std::tie(host,port) = sender_from_sockaddr(sa, sa_len);
-    std::cerr << "[RD] Received " << sres << " bytes from "
-              << host << ":" << port << std::endl;
-  }
-  */
   // TODO: Check if sres > len and do some error handling ...
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
@@ -1803,8 +1774,6 @@ void dgram_acceptor::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
   switch (op) {
     case operation::read: {
-      // incoming message should signify a new remote enpoint
-      // --> create a new dgram_scribe
       // TODO: some idenfification to prevent arbitrary
       // message from creating endpoints?
       size_t rb;
@@ -1814,14 +1783,6 @@ void dgram_acceptor::handle_event(operation op) {
         passivate();
         return;
       }
-      {
-        std::string host;
-        uint16_t port;
-        std::tie(host, port) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
-//        std::cerr << "[ACC] " << fd() << " received message with " << rb
-//                  << " bytes from " << host << ":" << port << std::endl;
-      }
-      
       bytes_read_ = rb;
       if (rb > 0) {
         std::tie(host_,port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
