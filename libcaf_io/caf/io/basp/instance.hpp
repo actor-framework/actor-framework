@@ -285,7 +285,7 @@ public:
           return false;
         }
         if (tcp_based)
-          write_client_handshake(ctx, path->wr_buf, hdr.source_node);
+          write_client_handshake(ctx, apply_visitor(wr_buf_, path->hdl), hdr.source_node);
         callee_.learned_new_node_directly(hdr.source_node);
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         flush(*path);

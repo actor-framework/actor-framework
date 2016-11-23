@@ -173,8 +173,9 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
                    << CAF_ARG(nid));
       return;
     }
-    instance.write_kill_proxy(self->context(), path->wr_buf,
-                                       nid, aid, rsn);
+    instance.write_kill_proxy(self->context(),
+                              apply_visitor(wr_buf_vis, path->hdl),
+                              nid, aid, rsn);
     instance.tbl().flush(*path);
   };
   auto ptr = actor_cast<strong_actor_ptr>(entry);
@@ -355,7 +356,8 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
                    0, 0, this_node(), nid, tmp.id(), invalid_actor_id};
   // writing std::numeric_limits<actor_id>::max() is a hack to get
   // this send-to-named-actor feature working with older CAF releases
-  instance.write(self->context(), path->wr_buf, hdr, &writer);
+  instance.write(self->context(), apply_visitor(wr_buf_vis, path->hdl), hdr,
+                 &writer);
   instance.flush(*path);
 }
 
@@ -521,7 +523,8 @@ basp_broker_state::purge_visitor::operator()(const dgram_scribe_handle& h) {
 basp_broker::basp_broker(actor_config& cfg)
     : stateful_actor<basp_broker_state, broker>(cfg),
       addr_(this),
-      port_(this) {
+      port_(this),
+      wr_buf_(this) {
   // nop
 }
 
@@ -638,7 +641,8 @@ behavior basp_broker::make_behavior() {
                        basp::header::named_receiver_flag,
                        0, cme->mid.integer_value(), state.this_node(),
                        dest_node, src->id(), invalid_actor_id};
-      state.instance.write(context(), path->wr_buf, hdr, &writer);
+      state.instance.write(context(), apply_visitor(wr_buf_, path->hdl), hdr,
+                           &writer);
       state.instance.flush(*path);
       return delegated<message>();
     },

@@ -81,7 +81,6 @@ public:
 
   /// Describes a routing path to a node.
   struct endpoint {
-    buffer_type& wr_buf;
     const node_id& next_hop;
     endpoint_handle hdl;
   };

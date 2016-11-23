@@ -603,7 +603,8 @@ public:
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
   inline buffer_type& wr_buf() {
-    return wr_offline_buf_;
+    wr_offline_buf_.emplace_back();
+    return wr_offline_buf_.back();
   }
 
   /// Returns the read buffer of this stream.
@@ -653,8 +654,8 @@ private:
   manager_ptr writer_;
   bool ack_writes_;
   bool writing_;
-  buffer_type wr_buf_;
-  buffer_type wr_offline_buf_;
+  std::vector<char> wr_buf_;
+  std::deque<std::vector<char>> wr_offline_buf_;
 
   // general state
   // signifies whether to adapt the sender of the next received messages

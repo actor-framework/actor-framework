@@ -39,7 +39,7 @@ routing_table::~routing_table() {
 optional<routing_table::endpoint> routing_table::lookup(const node_id& target) {
   auto hdl = lookup_hdl(target);
   if (hdl)
-    return endpoint{apply_visitor(wr_buf_, *hdl), target, *hdl};
+    return endpoint{/*apply_visitor(wr_buf_, *hdl),*/ target, *hdl};
   // pick first available indirect route
   /*
   auto i = indirect_.find(target);

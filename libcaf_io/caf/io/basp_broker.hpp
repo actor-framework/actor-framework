@@ -174,6 +174,7 @@ private:
   // visitors
   addr_visitor addr_;
   port_visitor port_;
+  wr_buf_visitor wr_buf_;
 };
 
 } // namespace io

@@ -88,7 +88,7 @@ connection_state instance::handle(execution_unit* ctx,
     CAF_LOG_DEBUG("forward message");
     auto path = lookup(hdr.dest_node);
     if (path) {
-      binary_serializer bs{ctx, path->wr_buf};
+      binary_serializer bs{ctx, apply_visitor(wr_buf_, path->hdl)};
       auto e = bs(hdr);
       if (e)
         return err();
@@ -242,7 +242,7 @@ void instance::write(execution_unit* ctx, const routing_table::endpoint& r,
                      header& hdr, payload_writer* writer) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
-  write(ctx, r.wr_buf, hdr, writer);
+  write(ctx, apply_visitor(wr_buf_, r.hdl), hdr, writer);
   tbl_.flush(r);
 }
 
@@ -317,7 +317,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
              sender ? sender->node() : this_node(), receiver->node(),
              sender ? sender->id() : invalid_actor_id, receiver->id()};
-  write(ctx, path->wr_buf, hdr, &writer);
+  write(ctx, apply_visitor(wr_buf_, path->hdl), hdr, &writer);
   flush(*path);
   notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
   return true;

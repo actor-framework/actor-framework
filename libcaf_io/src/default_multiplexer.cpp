@@ -1641,7 +1641,7 @@ void dgram_communicator::write(const void* buf, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   auto first = reinterpret_cast<const char*>(buf);
   auto last  = first + num_bytes;
-  wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
+  wr_offline_buf_.insert(wr_offline_buf_.end(), std::vector<char>{first, last});
 }
 
 void dgram_communicator::flush(const manager_ptr& mgr) {
@@ -1674,7 +1674,6 @@ void dgram_communicator::handle_event(operation op) {
   switch (op) {
     case operation::read: {
       // incoming message should signify a new remote enpoint
-      // --> create a new dgram_scribe
       size_t rb;
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             sockaddr_, sockaddr_len_)) {
@@ -1682,13 +1681,6 @@ void dgram_communicator::handle_event(operation op) {
         passivate();
         return;
       }
-//      {
-//        std::string host;
-//        uint16_t port;
-//        std::tie(host, port) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
-//        std::cerr << "[COM] " << fd() << " received " << rb << " bytes from "
-//                  << host << ":" << port << std::endl;
-//      }
       // currently handles the change from acceptor
       // to communicator, TODO: Find a better solution
       // Either keep sending to the same endpoint,
@@ -1699,8 +1691,6 @@ void dgram_communicator::handle_event(operation op) {
         remote_endpoint_addr_ = std::move(sockaddr_);
         remote_endpoint_addr_len_ = sockaddr_len_;
         sockaddr_len_ = 0;
-//        std::cerr << "[COM] Adapted new endpoint: " << host_ << ":" << port_
-//                  << std::endl;
       }
       if (rb > 0) {
         auto res = reader_->consume(&backend(), rd_buf_.data(), rb);
@@ -1720,17 +1710,11 @@ void dgram_communicator::handle_event(operation op) {
         writer_->io_failure(&backend(), operation::write);
         backend().del(operation::write, fd(), this);
       } else if (wb > 0) {
-//        std::cerr << "[COM] " << fd() << " sent " << wb << " bytes to "
-//                  << host_ << ":" << port_ << std::endl;
         CAF_ASSERT(wb == wr_buf_.size());
         if (ack_writes_)
           writer_->datagram_sent(&backend(), wb);
         prepare_next_write();
       } else {
-        // TODO: remove this if sure that datagrams are either written
-        // as a whole or not at all
-//        std::cerr << "[DC] Partial datagram wrtten: " << wb
-//                  << " of " << wr_buf_.size() << std::endl;
         if (writer_)
           writer_->io_failure(&backend(), operation::write);
       }
@@ -1748,11 +1732,18 @@ void dgram_communicator::handle_event(operation op) {
 void dgram_communicator::prepare_next_write() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   wr_buf_.clear();
+  /*
+  while (wr_offline_buf_.size() > 0 && wr_offline_buf_.front().size() == 0) {
+    std::cerr << "Removing empy element from buffer ... " << std::endl;
+    wr_offline_buf_.pop_front();
+  }
+  */
   if (wr_offline_buf_.empty()) {
     writing_ = false;
     backend().del(operation::write, fd(), this);
   } else {
-    wr_buf_.swap(wr_offline_buf_);
+    wr_buf_.swap(wr_offline_buf_.front());
+    wr_offline_buf_.pop_front();
   }
 }
 

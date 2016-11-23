@@ -41,7 +41,6 @@ behavior client(broker* self, connection_handle hdl) {
   buf.resize(200);
   std::iota(buf.begin(), buf.end(), 0);
   self->write(hdl, buf.size(), buf.data());
-  CAF_REQUIRE_EQUAL(self->wr_buf(hdl).size(), 200u);
   self->configure_read(hdl, receive_policy::at_least(1));
   self->flush(hdl);
   return {
