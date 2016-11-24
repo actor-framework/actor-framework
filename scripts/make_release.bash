@@ -97,7 +97,7 @@ with the developer blog checked out one level above, i.e.:
 
 .
 ├── libcaf_io
-├── blog_release_note.md
+├── blog_release_note.md [optional]
 ├── github_release_note.md
 
 ..
@@ -116,14 +116,18 @@ config_hpp_path="libcaf_core/caf/config.hpp"
 blog_posts_path="../blog/_posts"
 
 # check whether all expected files and directories exist
-assert_exists "$token_path" "$config_hpp_path" "$blog_msg" "$github_msg" "$blog_posts_path"
-
-# target files
-blog_target_file="$blog_posts_path/$(date +%F)-version-$1-released.md"
-assert_exists_not "$blog_target_file" .make-release-steps.bash
+assert_exists "$token_path" "$config_hpp_path" "$blog_msg" "$github_msg"
 
 assert_git_status_clean "."
-assert_git_status_clean "../blog/"
+
+if [ ! -f "$blog_posts_path"  ]; then
+  ask_permission "blog_release_note.md missing, continue without blog post [y] or abort [n]?"
+else
+  # target files
+  blog_target_file="$blog_posts_path/$(date +%F)-version-$1-released.md"
+  assert_exists_not "$blog_target_file" .make-release-steps.bash
+  assert_git_status_clean "../blog/"
+fi
 
 # convert major.minor.patch version given as first argument into JJIIPP with:
 #   JJ: two-digit (zero padded) major version
@@ -164,13 +168,18 @@ git merge develop
 git push
 git checkout develop
 curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-framework/releases?access_token=$token
-cp "$blog_msg" "$blog_target_file"
-cd ../blog
-git add _posts
-git commit -m \"$1 announcement\"
-git push
-cd "$anchor"
 " > .make-release-steps.bash
+
+if [ -f "$blog_posts_path"  ]; then
+  echo "\
+  cp "$blog_msg" "$blog_target_file"
+  cd ../blog
+  git add _posts
+  git commit -m \"$1 announcement\"
+  git push
+  cd "$anchor"
+  " >> .make-release-steps.bash
+fi
 
 echo ; echo
 echo ">>> please review the final steps for releasing $1"
