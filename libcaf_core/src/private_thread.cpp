@@ -35,6 +35,7 @@ private_thread::private_thread(scheduled_actor* self)
 
 void private_thread::run() {
   auto job = const_cast<scheduled_actor*>(self_);
+  CAF_SET_LOGGER_SYS(&job->system());
   CAF_PUSH_AID(job->id());
   CAF_LOG_TRACE("");
   scoped_execution_unit ctx{&job->system()};

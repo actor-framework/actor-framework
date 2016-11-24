@@ -52,7 +52,7 @@ struct kvstate {
   }
 };
 
-const char* kvstate::name = "caf.config_server";
+const char* kvstate::name = "config_server";
 
 behavior config_serv_impl(stateful_actor<kvstate>* self) {
   CAF_LOG_TRACE("");
@@ -144,7 +144,13 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
   };
 }
 
-behavior spawn_serv_impl(event_based_actor* self) {
+struct spawn_serv_state {
+  static const char* name;
+};
+
+const char* spawn_serv_state::name = "spawn_server";
+
+behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
   CAF_LOG_TRACE("");
   return {
     [=](spawn_atom, const std::string& name,
@@ -178,14 +184,15 @@ actor_system::module::~module() {
 actor_system::actor_system(actor_system_config& cfg)
     : ids_(0),
       types_(*this),
-      logger_(*this),
+      logger_(new caf::logger(*this), false),
       registry_(*this),
       groups_(*this),
       middleman_(nullptr),
       dummy_execution_unit_(this),
       await_actors_before_shutdown_(true),
       detached(0),
-      cfg_(cfg) {
+      cfg_(cfg),
+      logger_dtor_done_(false) {
   CAF_SET_LOGGER_SYS(this);
   for (auto& f : cfg.module_factories) {
     auto mod_ptr = f(*this);
@@ -242,8 +249,6 @@ actor_system::actor_system(actor_system_config& cfg)
     if (mod)
       mod->init(cfg);
   groups_.init(cfg);
-  // start logger before spawning actors (since that uses the logger)
-  logger_.start();
   // spawn config and spawn servers (lazily to not access the scheduler yet)
   static constexpr auto Flags = hidden + lazy_init;
   spawn_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl));
@@ -256,9 +261,11 @@ actor_system::actor_system(actor_system_config& cfg)
     if (mod)
       mod->start();
   groups_.start();
+  logger_->start();
 }
 
 actor_system::~actor_system() {
+  CAF_LOG_DEBUG("shutdown actor system");
   if (await_actors_before_shutdown_)
     await_all_actors_done();
   // shutdown system-level servers
@@ -277,8 +284,12 @@ actor_system::~actor_system() {
       (*i)->stop();
   await_detached_threads();
   registry_.stop();
-  logger_.stop();
+  // reset logger and wait until dtor was called
   CAF_SET_LOGGER_SYS(nullptr);
+  logger_.reset();
+  std::unique_lock<std::mutex> guard{logger_dtor_mtx_};
+  while (!logger_dtor_done_)
+    logger_dtor_cv_.wait(guard);
 }
 
 /// Returns the host-local identifier for this system.
@@ -293,7 +304,7 @@ scheduler::abstract_coordinator& actor_system::scheduler() {
 }
 
 caf::logger& actor_system::logger() {
-  return logger_;
+  return *logger_;
 }
 
 actor_registry& actor_system::registry() {

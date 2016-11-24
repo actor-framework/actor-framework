@@ -185,7 +185,7 @@ public:
   /// Sends an exit message to `dest`.
   template <class ActorHandle>
   void send_exit(const ActorHandle& dest, error reason) {
-    dest->eq_impl(message_id::make(), nullptr, context(),
+    dest->eq_impl(message_id::make(), ctrl(), context(),
                   exit_msg{address(), std::move(reason)});
   }
 

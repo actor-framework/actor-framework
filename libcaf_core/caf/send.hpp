@@ -83,6 +83,7 @@ void anon_send(const Dest& dest, Ts&&... xs) {
 /// Anonymously sends `dest` an exit message.
 template <class Dest>
 void anon_send_exit(const Dest& dest, exit_reason reason) {
+  CAF_LOG_TRACE(CAF_ARG(dest) << CAF_ARG(reason));
   if (dest)
     dest->enqueue(nullptr, message_id::make(),
                   make_message(exit_msg{dest->address(), reason}), nullptr);

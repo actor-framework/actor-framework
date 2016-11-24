@@ -20,6 +20,7 @@
 #ifndef CAF_ACTOR_CONFIG_HPP
 #define CAF_ACTOR_CONFIG_HPP
 
+#include <string>
 #include <functional>
 
 #include "caf/fwd.hpp"
@@ -28,6 +29,7 @@
 
 namespace caf {
 
+/// Stores spawn-time flags and groups.
 class actor_config {
 public:
   execution_unit* host;
@@ -35,18 +37,16 @@ public:
   input_range<const group>* groups;
   std::function<behavior (local_actor*)> init_fun;
 
-  explicit actor_config(execution_unit* ptr = nullptr)
-      : host(ptr),
-        flags(abstract_channel::is_abstract_actor_flag),
-        groups(nullptr) {
-    // nop
-  }
+  explicit actor_config(execution_unit* ptr = nullptr);
 
   inline actor_config& add_flag(int x) {
     flags |= x;
     return *this;
   }
 };
+
+/// @relates actor_config
+std::string to_string(const actor_config& x);
 
 } // namespace caf
 

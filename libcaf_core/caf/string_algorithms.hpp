@@ -131,7 +131,16 @@ void replace_all(std::string& str,
 
 template<size_t S>
 bool starts_with(const std::string& str, const char (&prefix)[S]) {
-  return str.compare(0, S, prefix) == 0;
+  return str.compare(0, S - 1, prefix) == 0;
+}
+
+template <size_t S>
+bool ends_with(const std::string& str, const char (&suffix)[S]) {
+  auto n = str.size();
+  auto m = S - 1;
+  if (n >= m)
+    return str.compare(n - m, m, suffix) == 0;
+  return false;
 }
 
 template <class T>

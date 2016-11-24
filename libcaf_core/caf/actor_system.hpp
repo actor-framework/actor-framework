@@ -122,8 +122,9 @@ std::string get_rtti_from_mpi(const uniform_type_info_map& types) {
 /// such as a middleman.
 class actor_system {
 public:
-  friend class abstract_actor;
+  friend class logger;
   friend class io::middleman;
+  friend class abstract_actor;
 
   actor_system() = delete;
   actor_system(const actor_system&) = delete;
@@ -407,8 +408,8 @@ public:
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F>
   spawn_in_group(const group& grp, F fun, Ts&&... xs) {
-    return spawn_fun_in_groups<Os>({grp}, std::move(fun),
-                                   std::forward<Ts>(xs)...);
+    return spawn_in_groups<Os>({grp}, std::move(fun),
+                               std::forward<Ts>(xs)...);
   }
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
@@ -492,10 +493,9 @@ private:
       cfg.flags |= abstract_actor::is_detached_flag;
     if (!cfg.host)
       cfg.host = dummy_execution_unit();
+    CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this,
                              cfg, std::forward<Ts>(xs)...);
-    CAF_SET_LOGGER_SYS(this);
-    CAF_LOG_DEBUG("spawned actor:" << CAF_ARG(res.id()));
     CAF_PUSH_AID(res->id());
     auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
     ptr->launch(cfg.host, has_lazy_init_flag(Os), has_hide_flag(Os));
@@ -505,7 +505,7 @@ private:
   std::atomic<size_t> ids_;
   uniform_type_info_map types_;
   node_id node_;
-  caf::logger logger_;
+  intrusive_ptr<caf::logger> logger_;
   actor_registry registry_;
   group_manager groups_;
   module_array modules_;
@@ -519,6 +519,9 @@ private:
   mutable std::mutex detached_mtx;
   mutable std::condition_variable detached_cv;
   actor_system_config& cfg_;
+  std::mutex logger_dtor_mtx_;
+  std::condition_variable logger_dtor_cv_;
+  volatile bool logger_dtor_done_;
 };
 
 } // namespace caf

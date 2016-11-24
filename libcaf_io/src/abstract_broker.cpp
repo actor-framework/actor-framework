@@ -47,6 +47,7 @@ void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
 }
 
 void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
+  CAF_LOG_INIT_EVENT(name(), is_lazy, is_hidden);
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
   // add implicit reference count held by middleman/multiplexer

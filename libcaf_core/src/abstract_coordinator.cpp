@@ -127,6 +127,10 @@ public:
       }
     }
   }
+
+  const char* name() const override {
+    return "timer_actor";
+  }
 };
 
 using string_sink = std::function<void (std::string&&)>;
@@ -222,77 +226,88 @@ sink_handle get_sink_handle(actor_system& sys, sink_cache& fc,
   return {};
 }
 
-void printer_loop(blocking_actor* self) {
-  struct actor_data {
-    std::string current_line;
-    sink_handle redirect;
-    actor_data() {
-      // nop
-    }
-  };
-  using data_map = std::unordered_map<actor_id, actor_data>;
-  sink_cache fcache;
-  sink_handle global_redirect;
-  data_map data;
-  auto get_data = [&](actor_id addr, bool insert_missing) -> actor_data* {
-    if (addr == invalid_actor_id)
+class printer_actor : public blocking_actor {
+public:
+  printer_actor(actor_config& cfg) : blocking_actor(cfg) {
+    // nop
+  }
+
+  void act() override {
+    struct actor_data {
+      std::string current_line;
+      sink_handle redirect;
+      actor_data() {
+        // nop
+      }
+    };
+    using data_map = std::unordered_map<actor_id, actor_data>;
+    sink_cache fcache;
+    sink_handle global_redirect;
+    data_map data;
+    auto get_data = [&](actor_id addr, bool insert_missing) -> actor_data* {
+      if (addr == invalid_actor_id)
+        return nullptr;
+      auto i = data.find(addr);
+      if (i == data.end() && insert_missing)
+        i = data.emplace(addr, actor_data{}).first;
+      if (i != data.end())
+        return &(i->second);
       return nullptr;
-    auto i = data.find(addr);
-    if (i == data.end() && insert_missing)
-      i = data.emplace(addr, actor_data{}).first;
-    if (i != data.end())
-      return &(i->second);
-    return nullptr;
-  };
-  auto flush = [&](actor_data* what, bool forced) {
-    if (!what)
-      return;
-    auto& line = what->current_line;
-    if (line.empty() || (line.back() != '\n' && !forced))
-      return;
-    if (what->redirect)
-      (*what->redirect)(std::move(line));
-    else if (global_redirect)
-      (*global_redirect)(std::move(line));
-    else
-      std::cout << line << std::flush;
-    line.clear();
-  };
-  bool done = false;
-  self->do_receive(
-    [&](add_atom, actor_id aid, std::string& str) {
-      if (str.empty() || aid == invalid_actor_id)
+    };
+    auto flush = [&](actor_data* what, bool forced) {
+      if (!what)
         return;
-      auto d = get_data(aid, true);
-      if (d) {
-        d->current_line += str;
-        flush(d, false);
+      auto& line = what->current_line;
+      if (line.empty() || (line.back() != '\n' && !forced))
+        return;
+      if (what->redirect)
+        (*what->redirect)(std::move(line));
+      else if (global_redirect)
+        (*global_redirect)(std::move(line));
+      else
+        std::cout << line << std::flush;
+      line.clear();
+    };
+    bool done = false;
+    do_receive(
+      [&](add_atom, actor_id aid, std::string& str) {
+        if (str.empty() || aid == invalid_actor_id)
+          return;
+        auto d = get_data(aid, true);
+        if (d) {
+          d->current_line += str;
+          flush(d, false);
+        }
+      },
+      [&](flush_atom, actor_id aid) {
+        flush(get_data(aid, false), true);
+      },
+      [&](delete_atom, actor_id aid) {
+        auto data_ptr = get_data(aid, false);
+        if (data_ptr) {
+          flush(data_ptr, true);
+          data.erase(aid);
+        }
+      },
+      [&](redirect_atom, const std::string& fn, int flag) {
+        global_redirect = get_sink_handle(system(), fcache, fn, flag);
+      },
+      [&](redirect_atom, actor_id aid, const std::string& fn, int flag) {
+        auto d = get_data(aid, true);
+        if (d)
+          d->redirect = get_sink_handle(system(), fcache, fn, flag);
+      },
+      [&](exit_msg& em) {
+        fail_state(std::move(em.reason));
+        done = true;
       }
-    },
-    [&](flush_atom, actor_id aid) {
-      flush(get_data(aid, false), true);
-    },
-    [&](delete_atom, actor_id aid) {
-      auto data_ptr = get_data(aid, false);
-      if (data_ptr) {
-        flush(data_ptr, true);
-        data.erase(aid);
-      }
-    },
-    [&](redirect_atom, const std::string& fn, int flag) {
-      global_redirect = get_sink_handle(self->system(), fcache, fn, flag);
-    },
-    [&](redirect_atom, actor_id aid, const std::string& fn, int flag) {
-      auto d = get_data(aid, true);
-      if (d)
-        d->redirect = get_sink_handle(self->system(), fcache, fn, flag);
-    },
-    [&](exit_msg& em) {
-      self->fail_state(std::move(em.reason));
-      done = true;
-    }
-  ).until([&] { return done; });
-}
+    ).until([&] { return done; });
+  }
+
+  const char* name() const override {
+    return "printer_actor";
+  }
+};
 
 } // namespace <anonymous>
 
@@ -308,7 +323,7 @@ void abstract_coordinator::start() {
   CAF_LOG_TRACE("");
   // launch utility actors
   timer_ = actor_cast<strong_actor_ptr>(system_.spawn<timer_actor, hidden + detached>());
-  printer_ = actor_cast<strong_actor_ptr>(system_.spawn<hidden + detached>(printer_loop));
+  printer_ = actor_cast<strong_actor_ptr>(system_.spawn<printer_actor, hidden + detached>());
 }
 
 void abstract_coordinator::init(actor_system_config& cfg) {

@@ -118,16 +118,16 @@ scheduled_actor::~scheduled_actor() {
 
 // -- overridden functions of abstract_actor -----------------------------------
 
-void scheduled_actor::enqueue(mailbox_element_ptr ptr,
-                                         execution_unit* eu) {
-  CAF_PUSH_AID(id());
-  CAF_LOG_TRACE(CAF_ARG(*ptr));
+void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
+  CAF_LOG_TRACE(CAF_ARG(*ptr));
+  CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
   switch (mailbox().enqueue(ptr.release())) {
     case detail::enqueue_result::unblocked_reader: {
+      CAF_LOG_ACCEPT_EVENT();
       // add a reference count to this actor and re-schedule it
       intrusive_ptr_add_ref(ctrl());
       if (getf(is_detached_flag)) {
@@ -142,6 +142,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr,
       break;
     }
     case detail::enqueue_result::queue_closed: {
+      CAF_LOG_REJECT_EVENT();
       if (mid.is_request()) {
         detail::sync_request_bouncer f{exit_reason()};
         f(sender, mid);
@@ -150,6 +151,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr,
     }
     case detail::enqueue_result::success:
       // enqueued to a running actors' mailbox; nothing to do
+      CAF_LOG_ACCEPT_EVENT();
       break;
   }
 }
@@ -161,6 +163,7 @@ const char* scheduled_actor::name() const {
 }
 
 void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
+  CAF_LOG_INIT_EVENT(name(), lazy, hide);
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)
@@ -376,6 +379,7 @@ scheduled_actor::categorize(mailbox_element& x) {
 invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
+  CAF_LOG_RECEIVE_EVENT(current_element_);
   // short-circuit awaited responses
   if (!awaited_responses_.empty()) {
     auto& pr = awaited_responses_.front();

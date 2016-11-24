@@ -978,7 +978,6 @@ event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
       fd_(sockfd),
       read_channel_closed_(false),
       backend_(dm) {
-  CAF_LOG_TRACE(CAF_ARG(sockfd));
   set_fd_flags();
 }
 

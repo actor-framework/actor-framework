@@ -27,3 +27,5 @@ if(WIN32)
 else()
   add(caf-run)
 endif()
+
+add(caf-vec)

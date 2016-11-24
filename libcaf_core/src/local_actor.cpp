@@ -54,11 +54,7 @@ local_actor::~local_actor() {
 }
 
 void local_actor::on_destroy() {
-  // disable logging from this point on, because on_destroy can
-  // be called after the logger is already destroyed;
-  // alternatively, we would have to use a reference-counted,
-  // heap-allocated logger
-  CAF_SET_LOGGER_SYS(nullptr);
+  CAF_PUSH_AID_FROM_PTR(this);
   if (!getf(is_cleaned_up_flag)) {
     on_exit();
     cleanup(exit_reason::unreachable, nullptr);
@@ -190,6 +186,7 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   // tell registry we're done
   unregister_from_system();
   monitorable_actor::cleanup(std::move(fail_state), host);
+  CAF_LOG_TERMINATE_EVENT(fail_state)
   return true;
 }
 

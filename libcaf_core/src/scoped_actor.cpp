@@ -49,22 +49,19 @@ scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
   actor_config cfg{&context_};
   self_ = make_actor<impl, strong_actor_ptr>(sys.next_actor_id(), sys.node(),
                                              &sys, cfg);
-  if (!hide)
-    prev_ = CAF_SET_AID(self_->id());
-  CAF_LOG_TRACE(CAF_ARG(hide));
+  prev_ = CAF_SET_AID(self_->id());
+  CAF_LOG_INIT_EVENT("scoped_actor", false, hide);
   if (!hide)
     ptr()->register_at_system();
 }
 
 scoped_actor::~scoped_actor() {
-  CAF_LOG_TRACE("");
   if (!self_)
     return;
   auto x = ptr();
-  if (x->getf(abstract_actor::is_registered_flag))
-    CAF_SET_AID(prev_);
   if (!x->getf(abstract_actor::is_terminated_flag))
     x->cleanup(exit_reason::normal, &context_);
+  CAF_SET_AID(prev_);
 }
 
 blocking_actor* scoped_actor::ptr() const {

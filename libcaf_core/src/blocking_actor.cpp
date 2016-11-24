@@ -59,14 +59,21 @@ blocking_actor::~blocking_actor() {
 }
 
 void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+  CAF_ASSERT(ptr != nullptr);
+  CAF_ASSERT(getf(is_blocking_flag));
+  CAF_LOG_TRACE(CAF_ARG(*ptr));
+  CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
   // returns false if mailbox has been closed
   if (!mailbox().synchronized_enqueue(mtx_, cv_, ptr.release())) {
+    CAF_LOG_REJECT_EVENT();
     if (mid.is_request()) {
       detail::sync_request_bouncer srb{exit_reason()};
       srb(src, mid);
     }
+  } else {
+    CAF_LOG_ACCEPT_EVENT();
   }
 }
 
@@ -75,6 +82,7 @@ const char* blocking_actor::name() const {
 }
 
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
+  CAF_LOG_INIT_EVENT(name(), false, hide);
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(getf(is_blocking_flag));
   if (!hide)
@@ -85,6 +93,8 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
     auto this_ptr = ptr->get();
     CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != 0);
     auto self = static_cast<blocking_actor*>(this_ptr);
+    CAF_SET_LOGGER_SYS(ptr->home_system);
+    CAF_PUSH_AID_FROM_PTR(self);
     error rsn;
 #   ifndef CAF_NO_EXCEPTIONS
     try {
@@ -332,18 +342,21 @@ void blocking_actor::receive_impl(receive_cond& rcc,
       skipped = false;
       timed_out = false;
       auto& x = seq.value();
+      CAF_LOG_RECEIVE_EVENT((&x));
       // skip messages that don't match our message ID
       if ((mid.valid() && mid != x.mid)
           || (!mid.valid() && x.mid.is_response())) {
         skipped = true;
+        CAF_LOG_SKIP_EVENT();
       } else {
         // blocking actors can use nested receives => restore current_element_
         auto prev_element = current_element_;
         current_element_ = &x;
         switch (bhvr.nested(visitor, x.content())) {
           case match_case::skip:
-             skipped = true;
-             break;
+            skipped = true;
+            CAF_LOG_SKIP_EVENT();
+            break;
           default:
             break;
           case match_case::no_match: {
@@ -353,6 +366,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
             // get a match on the second (error) handler
             if (sres.flag != rt_skip) {
               visitor.visit(sres);
+              CAF_LOG_FINALIZE_EVENT();
             } else if (mid.valid()) {
              // invoke again with an unexpected_response error
              auto& old = *current_element_;
@@ -362,8 +376,10 @@ void blocking_actor::receive_impl(receive_cond& rcc,
                                              std::move(old.stages), err};
              current_element_ = &tmp;
              bhvr.nested(tmp.content());
+              CAF_LOG_FINALIZE_EVENT();
             } else {
               skipped = true;
+              CAF_LOG_SKIP_EVENT();
             }
           }
         }
