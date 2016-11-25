@@ -25,8 +25,8 @@ set (LIBCAF_IO_SRCS
      src/uri.cpp
      src/dgram_scribe.cpp
      src/dgram_doorman.cpp
+     src/dgram_stream_manager.cpp
      src/dgram_acceptor_manager.cpp
-     src/dgram_communicator_manager.cpp
      src/visitors.cpp
      # BASP files
      src/header.cpp

@@ -909,48 +909,48 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
     impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
         : dgram_scribe(ptr, network::dg_sink_hdl_from_socket(sockfd)),
           launched_(false),
-          communicator_(mx, sockfd) {
+          stream_(mx, sockfd) {
       // nop
     }
     void configure_datagram_size(size_t buf_size) override {
       CAF_LOG_TRACE("");
-      communicator_.configure_datagram_size(buf_size);
+      stream_.configure_datagram_size(buf_size);
       // TODO: Do we need this?
       if (!launched_)
         launch();
     }
     void ack_writes(bool enable) override {
-      communicator_.ack_writes(enable);
+      stream_.ack_writes(enable);
     } 
     std::vector<char>& wr_buf() override {
-      return communicator_.wr_buf();
+      return stream_.wr_buf();
     }
     std::vector<char>& rd_buf() override {
-      return communicator_.rd_buf();
+      return stream_.rd_buf();
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
-      communicator_.stop_reading();
-      detach(&communicator_.backend(), false);
+      stream_.stop_reading();
+      detach(&stream_.backend(), false);
     }
     void flush() override {
       CAF_LOG_TRACE("");
-      communicator_.flush(this);
+      stream_.flush(this);
     }
     std::string addr() const override {
-      auto x = remote_addr_of_fd(communicator_.fd());
+      auto x = remote_addr_of_fd(stream_.fd());
       if (!x)
         return "";
       return *x;
     }
     uint16_t local_port() const override {
-      auto x = local_port_of_fd(communicator_.fd());
+      auto x = local_port_of_fd(stream_.fd());
       if (!x)
         return 0;
       return *x;
     }
     uint16_t port() const override {
-      auto x = remote_port_of_fd(communicator_.fd());
+      auto x = remote_port_of_fd(stream_.fd());
       if (!x)
         return 0;
       return *x;
@@ -959,21 +959,21 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
       CAF_LOG_TRACE("");
       CAF_ASSERT(!launched_);
       launched_ = true;
-      communicator_.start(this);
+      stream_.start(this);
     }
     void add_to_loop() override {
-      communicator_.activate(this);
+      stream_.activate(this);
     }
     void remove_from_loop() override {
-      communicator_.passivate();
+      stream_.passivate();
     }
     void set_endpoint_addr(const sockaddr_storage& addr, size_t len,
                            bool is_tmp_endpoint) {
-      communicator_.set_endpoint_addr(addr, len, is_tmp_endpoint);
+      stream_.set_endpoint_addr(addr, len, is_tmp_endpoint);
     }
   private:
     bool launched_;
-    network::dgram_communicator communicator_;
+    network::dgram_stream stream_;
   };
   auto ptr = make_counted<impl>(self, *this, fd);
   if (addr)
@@ -1576,7 +1576,7 @@ void acceptor::removed_from_loop(operation op) {
     mgr_.reset();
 }
 
-dgram_communicator::dgram_communicator(default_multiplexer& backend_ref,
+dgram_stream::dgram_stream(default_multiplexer& backend_ref,
                                        native_socket sockfd)
     : event_handler(backend_ref, sockfd),
       dgram_size_(0),
@@ -1587,12 +1587,12 @@ dgram_communicator::dgram_communicator(default_multiplexer& backend_ref,
   configure_datagram_size(1500);
 }
 
-void dgram_communicator::start(manager_type* mgr) {
+void dgram_stream::start(manager_type* mgr) {
   CAF_ASSERT(mgr != nullptr);
   activate(mgr);
 }
 
-void dgram_communicator::activate(manager_type* mgr) {
+void dgram_stream::activate(manager_type* mgr) {
   if (!reader_) {
     reader_.reset(mgr);
     event_handler::activate();
@@ -1600,22 +1600,22 @@ void dgram_communicator::activate(manager_type* mgr) {
   }
 }
 
-void dgram_communicator::configure_datagram_size(size_t size) {
+void dgram_stream::configure_datagram_size(size_t size) {
   dgram_size_ = size;
 }
 
-void dgram_communicator::ack_writes(bool x) {
+void dgram_stream::ack_writes(bool x) {
   ack_writes_ = x;
 }
 
-void dgram_communicator::write(const void* buf, size_t num_bytes) {
+void dgram_stream::write(const void* buf, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   auto first = reinterpret_cast<const char*>(buf);
   auto last  = first + num_bytes;
   wr_offline_buf_.insert(wr_offline_buf_.end(), std::vector<char>{first, last});
 }
 
-void dgram_communicator::flush(const manager_ptr& mgr) {
+void dgram_stream::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
   if (!wr_offline_buf_.empty() && !writing_) {
@@ -1626,13 +1626,13 @@ void dgram_communicator::flush(const manager_ptr& mgr) {
   }
 }
 
-void dgram_communicator::stop_reading() {
+void dgram_stream::stop_reading() {
   CAF_LOG_TRACE("");
   close_read_channel();
   passivate();
 }
 
-void dgram_communicator::removed_from_loop(operation op) {
+void dgram_stream::removed_from_loop(operation op) {
   switch (op) {
     case operation::read:  reader_.reset(); break;
     case operation::write: writer_.reset(); break;
@@ -1640,11 +1640,11 @@ void dgram_communicator::removed_from_loop(operation op) {
   };
 }
 
-void dgram_communicator::handle_event(operation op) {
+void dgram_stream::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
   switch (op) {
     case operation::read: {
-      // incoming message should signify a new remote enpoint
+      // incoming message should signify a new remote endpoint
       size_t rb;
       if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
                             sockaddr_, sockaddr_len_)) {
@@ -1653,9 +1653,9 @@ void dgram_communicator::handle_event(operation op) {
         return;
       }
       // currently handles the change from acceptor
-      // to communicator, TODO: Find a better solution
+      // to stream, TODO: Find a better solution
       // Either keep sending to the same endpoint,
-      // Which would require some logic to determin if
+      // Which would require some logic to determine if
       // the sender is a new endpoint ...
       if (waiting_for_remote_endpoint) {
         std::tie(host_, port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
@@ -1700,12 +1700,12 @@ void dgram_communicator::handle_event(operation op) {
   }
 }
 
-void dgram_communicator::prepare_next_write() {
+void dgram_stream::prepare_next_write() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   wr_buf_.clear();
   /*
   while (wr_offline_buf_.size() > 0 && wr_offline_buf_.front().size() == 0) {
-    std::cerr << "Removing empy element from buffer ... " << std::endl;
+    std::cerr << "Removing empty element from buffer ... " << std::endl;
     wr_offline_buf_.pop_front();
   }
   */
@@ -1718,12 +1718,12 @@ void dgram_communicator::prepare_next_write() {
   }
 }
 
-void dgram_communicator::prepare_next_read() {
+void dgram_stream::prepare_next_read() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   rd_buf_.resize(dgram_size_);
 }
 
-void dgram_communicator::set_endpoint_addr(const sockaddr_storage& sa,
+void dgram_stream::set_endpoint_addr(const sockaddr_storage& sa,
                                            size_t len,
                                            bool is_tmp_endpoint) {
   waiting_for_remote_endpoint = is_tmp_endpoint;

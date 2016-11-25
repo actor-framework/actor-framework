@@ -27,12 +27,12 @@
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/dgram_scribe_handle.hpp"
-#include "caf/io/network/dgram_acceptor_manager.hpp"
+#include "caf/io/network/dgram_stream_manager.hpp"
 
 namespace caf {
 namespace io {
 
-using dgram_scribe_base = broker_servant<network::dgram_communicator_manager,
+using dgram_scribe_base = broker_servant<network::dgram_stream_manager,
                                          dgram_scribe_handle,
                                          new_datagram_msg>;
 

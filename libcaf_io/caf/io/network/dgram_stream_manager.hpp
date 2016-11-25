@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_DGRAM_COMMUNICATOR_MANGER_HPP
-#define CAF_IO_NETWORK_DGRAM_COMMUNICATOR_MANGER_HPP
+#ifndef CAF_IO_NETWORK_DGRAM_STREAM_MANGER_HPP
+#define CAF_IO_NETWORK_DGRAM_STREAM_MANGER_HPP
 
 #include "caf/io/network/manager.hpp"
 
@@ -28,11 +28,11 @@ namespace network {
 
 /// A datagram manager provides callbacks for outgoing
 /// datagrams as well as for error handling.
-class dgram_communicator_manager : public manager {
+class dgram_stream_manager : public manager {
 public:
-  dgram_communicator_manager(abstract_broker* ptr);
+  dgram_stream_manager(abstract_broker* ptr);
 
-  ~dgram_communicator_manager();
+  ~dgram_stream_manager();
 
   /// Called by the underlying I/O device whenever it received data.
   /// @returns `true` if the manager accepts further reads, otherwise `false`.
@@ -46,4 +46,4 @@ public:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_DGRAM_COMMUNICATOR_MANGER_HPP
+#endif // CAF_IO_NETWORK_DGRAM_STREAM_MANGER_HPP

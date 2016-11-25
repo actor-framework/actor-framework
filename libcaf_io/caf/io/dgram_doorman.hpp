@@ -27,7 +27,7 @@
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/dgram_doorman_handle.hpp"
-#include "caf/io/network/dgram_communicator_manager.hpp"
+#include "caf/io/network/dgram_acceptor_manager.hpp"
 
 namespace caf {
 namespace io {

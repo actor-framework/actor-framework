@@ -38,7 +38,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
-#include "caf/io/network/dgram_communicator_manager.hpp"
+#include "caf/io/network/dgram_stream_manager.hpp"
 #include "caf/io/network/dgram_acceptor_manager.hpp"
 
 namespace caf {

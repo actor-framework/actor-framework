@@ -17,18 +17,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/network/dgram_communicator_manager.hpp"
+#include "caf/io/network/dgram_stream_manager.hpp"
 
 namespace caf {
 namespace io {
 namespace network {
 
-dgram_communicator_manager::dgram_communicator_manager(abstract_broker* ptr)
+dgram_stream_manager::dgram_stream_manager(abstract_broker* ptr)
     : manager(ptr) {
   // nop
 }
 
-dgram_communicator_manager::~dgram_communicator_manager() {
+dgram_stream_manager::~dgram_stream_manager() {
   // nop
 }
 

@@ -38,7 +38,7 @@
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
-#include "caf/io/network/dgram_communicator_manager.hpp"
+#include "caf/io/network/dgram_stream_manager.hpp"
 #include "caf/io/network/dgram_acceptor_manager.hpp"
 
 #include "caf/io/network/native_socket.hpp"
@@ -560,20 +560,20 @@ private:
   native_socket sock_;
 };
 
-/// A dgram_communicator is responsible for sending datagrams to an endpoint.
-class dgram_communicator: public event_handler {
+/// A dgram_stream is responsible for sending datagrams to an endpoint.
+class dgram_stream: public event_handler {
 public:
   /// A manger providing the TODO
-  using manager_type = dgram_communicator_manager;
+  using manager_type = dgram_stream_manager;
 
   /// A smart pointer to a datagram sink manger
-  using manager_ptr = intrusive_ptr<dgram_communicator_manager>;
+  using manager_ptr = intrusive_ptr<dgram_stream_manager>;
 
   /// A buffer class providing a compatible
   /// interface to `std::vector`.
   using buffer_type = std::vector<char>;
 
-  dgram_communicator(default_multiplexer& backend_ref, native_socket sockfd);
+  dgram_stream(default_multiplexer& backend_ref, native_socket sockfd);
 
   /// Configures how much buffer will be provided for the next datagram.
   /// @warning Must not be called outside the IO multiplexers event loop
