@@ -252,10 +252,10 @@ protected:
 struct node_cmp_t {
   bool operator()(const entity& x, const node_id& y) const {
     return x.nid < y;
-  };
+  }
   bool operator()(const node_id& x, const entity& y) const {
     return x < y.nid;
-  };
+  }
 };
 
 constexpr node_cmp_t node_cmp = node_cmp_t{};
@@ -264,10 +264,10 @@ constexpr node_cmp_t node_cmp = node_cmp_t{};
 struct actor_cmp_t {
   bool operator()(const entity& x, actor_id y) const {
     return x.aid < y;
-  };
+  }
   bool operator()(actor_id x, const entity& y) const {
     return x < y.aid;
-  };
+  }
 };
 
 constexpr actor_cmp_t actor_cmp = actor_cmp_t{};
@@ -336,10 +336,6 @@ const entity* get(const node_range& xs, const thread_id& y) {
 const entity* get(const node_range& xs, actor_id y) {
   if (y == 0)
     return nullptr;
-  // only compares actor ID
-  auto actor_cmp = [](const entity& lhs, actor_id rhs) {
-    return lhs.aid < rhs;
-  };
   // range [xs.first, xs.second) is sortd by actor ID
   using namespace std;
   auto i = lower_bound(xs.begin(), xs.end(), y, actor_cmp);
@@ -406,12 +402,14 @@ string to_string(se_type x) {
   return tbl[static_cast<int>(x)];
 }
 
+using string_map = std::map<string, string>;
+
 /// An SE-0001 event, see http://actor-framework.github.io/rfcs/
 struct se_event {
   const entity* source;
   vector_timestamp vstamp;
   se_type type;
-  std::map<string, string> fields;
+  string_map fields;
 };
 
 string to_string(const se_event& x) {
@@ -456,7 +454,7 @@ bool field_key_compare(const std::pair<const std::string, std::string>& x,
     return sec::invalid_argument;
 
 expected<se_event> parse_event(const enhanced_log_entry& x) {
-  se_event y{&x.id, x.vstamp, se_type::none, {}};
+  se_event y{&x.id, x.vstamp, se_type::none, string_map{}};
   std::istringstream in{x.data.message};
   string type;
   if (!(in >> type))
@@ -767,6 +765,8 @@ void second_pass(blocking_actor* self, const group& grp,
   }
 }
 
+namespace {
+
 struct config : public actor_system_config {
   string output_file;
   bool include_hidden_actors = false;
@@ -808,15 +808,16 @@ void caf_main(actor_system& sys, const config& cfg) {
   using file_path = string;
   static constexpr size_t irsize = sizeof(file_path) + sizeof(std::ifstream)
                                    + sizeof(first_pass_result);
+  using ifstream_ptr = std::unique_ptr<std::ifstream>;
   struct intermediate_res {
     file_path fname;
-    std::ifstream fstream;
+    ifstream_ptr fstream;
     first_pass_result res;
     char pad[irsize >= CAF_CACHE_LINE_SIZE ? 1 : CAF_CACHE_LINE_SIZE - irsize];
     intermediate_res() = default;
     intermediate_res(intermediate_res&&) = default;
     intermediate_res& operator=(intermediate_res&&) = default;
-    intermediate_res(file_path fp, std::ifstream&& fs, first_pass_result&& fr)
+    intermediate_res(file_path fp, ifstream_ptr fs, first_pass_result&& fr)
         : fname(std::move(fp)),
           fstream(std::move(fs)),
           res(std::move(fr)) {
@@ -830,13 +831,13 @@ void caf_main(actor_system& sys, const config& cfg) {
     auto& file = cfg.args_remainder.get_as<string>(i);
     auto ptr = &intermediate_results[i];
     ptr->fname = file;
-    ptr->fstream.open(file);
-    if (!ptr->fstream) {
+    ptr->fstream.reset(new std::ifstream(file));
+    if (!*ptr->fstream) {
       cerr << "could not open file: " << file << endl;
       continue;
     }
     sys.spawn([ptr, vl](blocking_actor* self) {
-      auto& f = ptr->fstream;
+      auto& f = *ptr->fstream;
       auto res = first_pass(self, f, vl);
       if (res) {
         // rewind stream and push intermediate results
@@ -869,10 +870,6 @@ void caf_main(actor_system& sys, const config& cfg) {
         //"actor" + std::to_string(kvp.first.aid);
       else
         pretty_name = "thread" + std::to_string(++thread_count);
-      /*
-      pretty_name += '@';
-      pretty_name += node_as_string;
-      */
       auto vid = entities.size(); // position in the vector timestamp
       entity_names.emplace_back(pretty_name);
       entities.emplace(entity{kvp.first.aid, kvp.first.tid, ir.res.this_node,
@@ -901,11 +898,13 @@ void caf_main(actor_system& sys, const config& cfg) {
   for (auto& fpr : intermediate_results) {
     sys.spawn_in_group(grp, [&](blocking_actor* self) {
       second_pass(self, grp, entities, fpr.res.this_node, entity_names,
-                  fpr.fstream, out, out_mtx, !cfg.include_hidden_actors, vl);
+                  *fpr.fstream, out, out_mtx, !cfg.include_hidden_actors, vl);
     });
   }
   sys.await_all_actors_done();
 }
+
+} // namespace <anonymous>
 
 CAF_MAIN()
 
