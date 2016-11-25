@@ -106,7 +106,7 @@ logger* get_current_logger() {
 
 #else // CAF_LOG_LEVEL
 
-inline void current_logger_system(actor_system*) {
+inline void set_current_logger(logger*) {
   // nop
 }
 
@@ -321,6 +321,7 @@ logger::logger(actor_system& sys) : system_(sys) {
 }
 
 void logger::run() {
+#if defined(CAF_LOG_LEVEL)
   auto f = system_.config().logger_filename;
   // Replace placeholders.
   const char pid[] = "[PID]";
@@ -422,6 +423,7 @@ void logger::run() {
              __FILE__, __LINE__);
   file << " EOF" << std::endl;
   file.close();
+#endif
 }
 
 void logger::start() {
