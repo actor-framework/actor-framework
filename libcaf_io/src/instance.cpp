@@ -120,7 +120,7 @@ connection_state instance::handle(execution_unit* ctx,
 
 bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
   using itr_t = std::vector<char>::iterator;
-  // Call in case of an error
+  // function object providing cleanup code on errors
   auto err = [&]() -> bool {
     auto cb = make_callback([&](const node_id& nid) -> error {
       callee_.purge_state(nid);
@@ -129,43 +129,31 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
     tbl_.erase(dm.handle, cb);
     return false;
   };
-  // Split message into hdr and payload
-  // Loop until all messages in the datagram have been processed.
-  auto dgram_itr = dm.buf.begin();
-  do {
-    // extract header
-    std::vector<char> hdr_buf{std::move_iterator<itr_t>(dgram_itr),
-                              std::move_iterator<itr_t>(dgram_itr +
-                                                        basp::header_size)};
-    dgram_itr += basp::header_size;
-    // deserialize header
-    binary_deserializer bd{ctx, hdr_buf};
-    auto e = bd(hdr);
-    if (e || !valid(hdr)) {
-      CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
-      std::cerr << "[I] Received invalid header of type: "
-                << to_string(hdr.operation) << std::endl;
+  // extract payload
+  std::vector<char> pl_buf{std::move_iterator<itr_t>(std::begin(dm.buf) +
+                                                     basp::header_size),
+                           std::move_iterator<itr_t>(std::end(dm.buf))};
+  // resize header
+  dm.buf.resize(basp::header_size);
+  // extract header
+  binary_deserializer bd{ctx, dm.buf};
+  auto e = bd(hdr);
+  if (e || !valid(hdr)) {
+    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
+    std::cerr << "Received invalid header!" << std::endl;
+    return err();
+  }
+  CAF_LOG_DEBUG(CAF_ARG(hdr));
+  std::vector<char>* payload = nullptr;
+  if (hdr.payload_len > 0) {
+    payload = &pl_buf;
+    if (payload->size() != hdr.payload_len) {
+      CAF_LOG_WARNING("received invalid payload");
       return err();
     }
-    CAF_LOG_DEBUG(CAF_ARG(hdr));
-    // extract payload
-    std::vector<char> pl_buf{std::move_iterator<itr_t>(dgram_itr),
-                             std::move_iterator<itr_t>(dgram_itr +
-                                                       hdr.payload_len)};
-    dgram_itr += hdr.payload_len;
-    std::vector<char>* payload = nullptr;
-    if (hdr.payload_len > 0) {
-      payload = &pl_buf;
-    }
-    // needs forwarding?
-    if (!is_handshake(hdr) && !is_heartbeat(hdr) && hdr.dest_node != this_node_) {
-      std::cerr << "[I] Needs forwarding?" << std::endl;
-      // TODO: anything to do here? (i.e., do we still need forwarding?)
-      return err();
-    }
-    if (!handle_msg(ctx, dm.handle, hdr, payload, false, none))
-      return err();
-  } while (dgram_itr != dm.buf.end());
+  }
+  if (!handle_msg(ctx, dm.handle, hdr, payload, false, none))
+    return err();
   return true;
 };
 

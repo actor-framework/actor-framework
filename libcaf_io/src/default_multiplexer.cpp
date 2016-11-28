@@ -864,7 +864,7 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self,
 }
 
 expected<dgram_scribe_handle>
-default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd, 
+default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
                                       const std::string& host, uint16_t port) {
   auto res = interfaces::native_address(host, none, port);
   if (!res) {
