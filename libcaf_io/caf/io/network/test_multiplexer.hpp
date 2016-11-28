@@ -105,7 +105,7 @@ public:
   void provide_acceptor(uint16_t port, accept_handle hdl);
 
   void provide_dgram_scribe(std::string host, uint16_t port,
-                             dgram_scribe_handle hdl);
+                            dgram_scribe_handle hdl);
 
   void provide_dgram_doorman(uint16_t port, dgram_doorman_handle hdl);
 
@@ -115,6 +115,14 @@ public:
   /// Models pending data on the network, i.e., the network
   /// input buffer usually managed by the operating system.
   buffer_type& virtual_network_buffer(connection_handle hdl);
+
+  /// Models pending data on the network, i.e., the network
+  /// input buffer usually managed by the operating system.
+  buffer_type& virtual_network_buffer(dgram_scribe_handle hdl);
+
+  /// Models pending data on the network, i.e., the network
+  /// input buffer usually managed by the operating system.
+  buffer_type& virtual_network_buffer(dgram_doorman_handle hdl);
 
   /// Returns the output buffer of the scribe identified by `hdl`.
   buffer_type& output_buffer(connection_handle hdl);
@@ -162,6 +170,8 @@ public:
 
   uint16_t& port(dgram_scribe_handle hdl);
 
+  uint16_t& local_port(dgram_scribe_handle hdl);
+
   /// Returns `true` if this handle has been closed
   /// for reading, `false` otherwise.
   bool& stopped_reading(dgram_doorman_handle hdl);
@@ -172,6 +182,8 @@ public:
   intrusive_ptr<dgram_doorman>& impl_ptr(dgram_doorman_handle hdl);
 
   uint16_t& port(dgram_doorman_handle hdl);
+
+  uint16_t& local_port(dgram_doorman_handle hdl);
 
   size_t& buffer_size(dgram_doorman_handle hdl);
 
@@ -199,6 +211,13 @@ public:
 
   bool has_pending_scribe(std::string host, uint16_t port);
 
+  /// Stores `hdl` as a pending endpoint for `src`.
+  void add_pending_endpoints(dgram_doorman_handle src, dgram_scribe_handle hdl);
+
+  using pending_endpoints_map = std::unordered_multimap<dgram_doorman_handle,
+                                                        dgram_scribe_handle>;
+
+  pending_endpoints_map& pending_endpoints();
 
   using pending_dgram_scribes_map = std::map<std::pair<std::string, uint16_t>,
                                               dgram_scribe_handle>;
@@ -210,17 +229,32 @@ public:
 
   bool has_pending_dgram_doorman(uint16_t port);
 
-
   /// Accepts a pending connect on `hdl`.
   bool accept_connection(accept_handle hdl);
+
+  bool accept_endpoint(dgram_doorman_handle hdl);
 
   /// Reads data from the external input buffer until
   /// the configured read policy no longer allows receiving.
   void read_data(connection_handle hdl);
 
+  /// Reads a datagram from the external input buffer.
+  void read_datagram(dgram_scribe_handle hdl);
+
+  /// Reads a datagram from the external input buffer.
+  void read_datagram(dgram_doorman_handle hdl);
+
   /// Appends `buf` to the virtual network buffer of `hdl`
   /// and calls `read_data(hdl)` afterwards.
   void virtual_send(connection_handle hdl, const buffer_type& buf);
+
+  /// Adds `buf` to the virtual network buffer of `hdl`
+  /// and calls `read_data(hdl)` afterwards.
+  void virtual_send(dgram_scribe_handle hdl, const buffer_type& buf);
+
+  /// Adds `buf` to the virtual network buffer of `hdl`
+  /// and calls `read_data(hdl)` afterwards.
+  void virtual_send(dgram_doorman_handle hdl, const buffer_type& buf);
 
   /// Waits until a `runnable` is available and executes it.
   void exec_runnable();
@@ -260,11 +294,12 @@ private:
   };
 
   struct dgram_scribe_data {
-    uint16_t port;
-    buffer_type xbuf;
+    uint16_t remote_port;
+    uint16_t local_port;
+    std::deque<buffer_type> xbuf;
+    std::deque<buffer_type> wr_buf;
     buffer_type rd_buf;
-    buffer_type wr_buf;
-    size_t buffer_size;
+    size_t rcv_buffer_size = 1500;
     bool stopped_reading = false;
     bool passive_mode = false;
     intrusive_ptr<dgram_scribe> ptr;
@@ -272,9 +307,11 @@ private:
   };
 
   struct dgram_doorman_data {
-    uint16_t port;
+    uint16_t remote_port;
+    uint16_t local_port;
+    std::deque<buffer_type> xbuf;
     buffer_type rd_buf;
-    size_t buffer_size;
+    size_t rcv_buffer_size = 1500;
     bool stopped_reading = false;
     bool passive_mode = false;
     intrusive_ptr<dgram_doorman> ptr;
@@ -286,13 +323,14 @@ private:
   std::list<resumable_ptr> resumables_;
   pending_scribes_map scribes_;
   pending_dgram_scribes_map dgram_scribes_;
-  pending_dgram_doormans_map dgram_doormans_;
+  pending_dgram_doormans_map dgram_doormen_;
   std::unordered_map<uint16_t, accept_handle> doormen_;
   std::unordered_map<connection_handle, scribe_data> scribe_data_;
   std::unordered_map<accept_handle, doorman_data> doorman_data_;
   std::unordered_map<dgram_scribe_handle, dgram_scribe_data> dgram_scribe_data_;
   std::unordered_map<dgram_doorman_handle, dgram_doorman_data> dgram_doorman_data_;
   pending_connects_map pending_connects_;
+  pending_endpoints_map pending_endpoints_;
 };
 
 } // namespace network
