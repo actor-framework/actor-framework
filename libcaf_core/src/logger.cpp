@@ -321,6 +321,7 @@ logger::logger(actor_system& sys) : system_(sys) {
 }
 
 void logger::init(actor_system_config& cfg) {
+#if defined(CAF_LOG_LEVEL)
   auto lvl_atom = cfg.logger_verbosity;
   switch (static_cast<uint64_t>(lvl_atom)) {
     case error_log_lvl_atom::uint_value():
@@ -342,6 +343,7 @@ void logger::init(actor_system_config& cfg) {
       level_ = CAF_LOG_LEVEL;
     }
   }
+#endif
 }
 
 void logger::run() {
