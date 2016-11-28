@@ -591,7 +591,7 @@ behavior basp_broker::make_behavior() {
         }
       } else {
         // TODO: Do we need to handle available callbacks here?
-        configure_datagram_size(msg.handle, 1500);
+        //configure_datagram_size(msg.handle, 1500);
       }
     },
     // received from proxy instances
