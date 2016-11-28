@@ -206,7 +206,7 @@ typename Inspector::result_type inspect(Inspector& f, entity& x) {
 
 mailbox_id to_mailbox_id(const entity& x) {
   if (x.aid == 0)
-    throw std::runtime_error("threads do not have a mailbox ID");
+    CAF_RAISE_ERROR("threads do not have a mailbox ID");
   return {x.aid, x.nid};
 }
 
@@ -579,7 +579,7 @@ const string& get(const std::map<string, string>& xs, const string& x) {
   auto i = xs.find(x);
   if (i != xs.end())
     return i->second;
-  throw std::runtime_error("key not found");
+  CAF_RAISE_ERROR("key not found");
 }
 
 void second_pass(blocking_actor* self, const group& grp,
@@ -608,7 +608,7 @@ void second_pass(blocking_actor* self, const group& grp,
     auto i = local_entities_state.find(x);
     if (i != local_entities_state.end())
       return i->second;
-    throw std::runtime_error("logger ID not found");
+    CAF_RAISE_ERROR("logger ID not found");
   };
   // additional state for second pass
   size_t line = 0;
