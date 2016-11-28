@@ -252,7 +252,7 @@ actor_id logger::thread_local_aid(actor_id aid) {
 void logger::log_prefix(std::ostream& out, int level, const char* component,
                         const std::string& class_name,
                         const char* function_name, const char* c_full_file_name,
-                        int line_num) {
+                        int line_num, const std::thread::id& tid) {
   std::string file_name;
   std::string full_file_name = c_full_file_name;
   auto ri = find(full_file_name.rbegin(), full_file_name.rend(), '/');
@@ -268,9 +268,9 @@ void logger::log_prefix(std::ostream& out, int level, const char* component,
   std::ostringstream prefix;
   out << timestamp_to_string(make_timestamp()) << " " << component << " "
       << log_level_name[level] << " "
-      << "actor" << thread_local_aid() << " " << std::this_thread::get_id()
-      << " " << class_name << " " << function_name << " " << file_name << ":"
-      << line_num;
+      << "actor" << thread_local_aid() << " " << tid << " "
+      << class_name << " " << function_name << " "
+      << file_name << ":" << line_num;
 }
 
 void logger::log(int level, const char* component,
@@ -320,6 +320,30 @@ logger::logger(actor_system& sys) : system_(sys) {
   // nop
 }
 
+void logger::init(actor_system_config& cfg) {
+  auto lvl_atom = cfg.logger_verbosity;
+  switch (static_cast<uint64_t>(lvl_atom)) {
+    case error_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_ERROR;
+      break;
+    case warning_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_WARNING;
+      break;
+    case info_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_INFO;
+      break;
+    case debug_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_DEBUG;
+      break;
+    case trace_log_lvl_atom::uint_value():
+      level_ = CAF_LOG_LEVEL_TRACE;
+      break;
+    default: {
+      level_ = CAF_LOG_LEVEL;
+    }
+  }
+}
+
 void logger::run() {
 #if defined(CAF_LOG_LEVEL)
   auto f = system_.config().logger_filename;
@@ -348,34 +372,13 @@ void logger::run() {
     return;
   }
   // log first entry
-  auto lvl_atom = system_.config().logger_verbosity;
-  switch (static_cast<uint64_t>(lvl_atom)) {
-    case error_log_lvl_atom::uint_value():
-      level_ = CAF_LOG_LEVEL_ERROR;
-      break;
-    case warning_log_lvl_atom::uint_value():
-      level_ = CAF_LOG_LEVEL_WARNING;
-      break;
-    case info_log_lvl_atom::uint_value():
-      level_ = CAF_LOG_LEVEL_INFO;
-      break;
-    case debug_log_lvl_atom::uint_value():
-      level_ = CAF_LOG_LEVEL_DEBUG;
-      break;
-    case trace_log_lvl_atom::uint_value():
-      level_ = CAF_LOG_LEVEL_TRACE;
-      break;
-    default: {
-      constexpr atom_value level_names[] = {
-        error_log_lvl_atom::value, warning_log_lvl_atom::value,
-        info_log_lvl_atom::value, debug_log_lvl_atom::value,
-        trace_log_lvl_atom::value};
-      lvl_atom = level_names[CAF_LOG_LEVEL];
-      level_ = CAF_LOG_LEVEL;
-    }
-  }
+  constexpr atom_value level_names[] = {
+    error_log_lvl_atom::value, warning_log_lvl_atom::value,
+    info_log_lvl_atom::value, debug_log_lvl_atom::value,
+    trace_log_lvl_atom::value};
+  auto lvl_atom = level_names[CAF_LOG_LEVEL];
   log_prefix(file, CAF_LOG_LEVEL_INFO, "caf", "caf.logger", "start",
-             __FILE__, __LINE__);
+             __FILE__, __LINE__, parent_thread_);
   file << " level = " << to_string(lvl_atom) << ", node = " << to_string(system_.node())
        << std::endl;
   // receive log entries from other threads and actors
@@ -420,7 +423,7 @@ void logger::run() {
     }
   }
   log_prefix(file, CAF_LOG_LEVEL_INFO, "caf", "caf.logger", "stop",
-             __FILE__, __LINE__);
+             __FILE__, __LINE__, parent_thread_);
   file << " EOF" << std::endl;
   file.close();
 #endif
@@ -428,6 +431,7 @@ void logger::run() {
 
 void logger::start() {
 #if defined(CAF_LOG_LEVEL)
+  parent_thread_ = std::this_thread::get_id();
   if (system_.config().logger_verbosity == quiet_log_lvl_atom::value)
     return;
   thread_ = std::thread{[this] { this->run(); }};

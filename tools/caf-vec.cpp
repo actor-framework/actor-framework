@@ -1,6 +1,6 @@
-#include <cctype>
 #include <string>
 #include <vector>
+#include <cctype>
 #include <utility>
 #include <cassert>
 #include <fstream>
@@ -15,7 +15,7 @@ using std::string;
 
 using namespace caf;
 
-using thread_id = std::string;
+using thread_id = string;
 using vector_timestamp = std::vector<size_t>;
 
 // -- convenience functions for strings
@@ -471,7 +471,7 @@ expected<se_event> parse_event(const enhanced_log_entry& x) {
       CHECK_FIELDS("ID", "ARGS");
       break;
     ATM_CASE("INIT", init);
-      CHECK_FIELDS("NAME", "LAZY", "HIDDEN");
+      CHECK_FIELDS("NAME", "HIDDEN");
       break;
     ATM_CASE("SEND", send);
       CHECK_FIELDS("TO", "FROM", "STAGES", "CONTENT");
@@ -498,25 +498,6 @@ expected<se_event> parse_event(const enhanced_log_entry& x) {
       break;
   }
   return {std::move(y)};
-}
-
-bool matches(const se_event& x, const se_event& y) {
-  switch (x.type) {
-    default:
-      return false;
-    case se_type::receive:
-      if (y.type == se_type::send) {
-        // TODO
-  //return x.receiver == y.receiver && x.sender == y.sender
-  //       && x.stages == y.stages && x.content == y.content;
-      }
-      return false;
-    case se_type::init:
-      if (y.type == se_type::spawn) {
-        // TODO: return x.id == y.id
-      }
-      return false;
-  }
 }
 
 std::ostream& operator<<(std::ostream& out, const enhanced_log_entry& x) {
@@ -726,7 +707,6 @@ void second_pass(blocking_actor* self, const group& grp,
           } else {
             std::cerr << "*** cannot match init event to a previous spawn"
                       << endl;
-            //merge(st.clock, fetch_message(se_type::spawn, pred).vstamp);
           }
           break;
         }
@@ -777,6 +757,8 @@ struct config : public actor_system_config {
     .add(include_hidden_actors, "include-hidden-actors,i",
          "Include hidden (system-level) actors")
     .add(verbosity, "verbosity,v", "Debug output (from 0 to 2)");
+    // shutdown logging per default
+    logger_verbosity = quiet_log_lvl_atom::value;
   }
 };
 

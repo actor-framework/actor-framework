@@ -496,7 +496,6 @@ private:
     CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this,
                              cfg, std::forward<Ts>(xs)...);
-    CAF_PUSH_AID(res->id());
     auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
     ptr->launch(cfg.host, has_lazy_init_flag(Os), has_hide_flag(Os));
     return res;

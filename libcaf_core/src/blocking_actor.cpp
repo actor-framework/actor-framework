@@ -82,7 +82,6 @@ const char* blocking_actor::name() const {
 }
 
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
-  CAF_LOG_INIT_EVENT(name(), false, hide);
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(getf(is_blocking_flag));
   if (!hide)
@@ -95,6 +94,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
     auto self = static_cast<blocking_actor*>(this_ptr);
     CAF_SET_LOGGER_SYS(ptr->home_system);
     CAF_PUSH_AID_FROM_PTR(self);
+    self->initialize();
     error rsn;
 #   ifndef CAF_NO_EXCEPTIONS
     try {

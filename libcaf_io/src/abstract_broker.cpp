@@ -46,16 +46,14 @@ void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   scheduled_actor::enqueue(std::move(ptr), &backend());
 }
 
-void abstract_broker::launch(execution_unit* eu, bool is_lazy, bool is_hidden) {
-  CAF_LOG_INIT_EVENT(name(), is_lazy, is_hidden);
+void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
+  CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
   // add implicit reference count held by middleman/multiplexer
-  if (!is_hidden)
+  if (!hide)
     register_at_system();
-  CAF_PUSH_AID(id());
-  CAF_LOG_TRACE("init and launch broker:" << CAF_ARG(id()));
-  if (is_lazy && mailbox().try_block())
+  if (lazy && mailbox().try_block())
     return;
   intrusive_ptr_add_ref(ctrl());
   eu->exec_later(this);

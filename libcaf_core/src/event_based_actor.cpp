@@ -41,6 +41,7 @@ void event_based_actor::initialize() {
     CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
     become(std::move(bhvr));
   }
+  extended_base::initialize();
 }
 
 behavior event_based_actor::make_behavior() {

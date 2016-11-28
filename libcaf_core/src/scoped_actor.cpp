@@ -46,13 +46,14 @@ public:
 } // namespace <anonymous>
 
 scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
+  CAF_SET_LOGGER_SYS(&sys);
   actor_config cfg{&context_};
   self_ = make_actor<impl, strong_actor_ptr>(sys.next_actor_id(), sys.node(),
                                              &sys, cfg);
-  prev_ = CAF_SET_AID(self_->id());
-  CAF_LOG_INIT_EVENT("scoped_actor", false, hide);
   if (!hide)
     ptr()->register_at_system();
+  prev_ = CAF_SET_AID(self_->id());
+  ptr()->initialize();
 }
 
 scoped_actor::~scoped_actor() {

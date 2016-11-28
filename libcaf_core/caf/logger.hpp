@@ -31,11 +31,11 @@
 #include "caf/fwd.hpp"
 #include "caf/config.hpp"
 #include "caf/unifyn.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/deep_to_string.hpp"
 
-#include "caf/type_nr.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/single_reader_queue.hpp"
@@ -163,6 +163,8 @@ public:
 private:
   logger(actor_system& sys);
 
+  void init(actor_system_config& cfg);
+
   void run();
 
   void start();
@@ -171,7 +173,8 @@ private:
 
   void log_prefix(std::ostream& out, int level, const char* component,
                   const std::string& class_name, const char* function_name,
-                  const char* file_name, int line_num);
+                  const char* file_name, int line_num,
+                  const std::thread::id& tid = std::this_thread::get_id());
 
   actor_system& system_;
   int level_;
@@ -181,6 +184,7 @@ private:
   std::mutex queue_mtx_;
   std::condition_variable queue_cv_;
   detail::single_reader_queue<event> queue_;
+  std::thread::id parent_thread_;
 };
 
 } // namespace caf
@@ -331,9 +335,8 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   CAF_LOG_DEBUG("SPAWN ; ID =" << aid                                          \
                 << "; ARGS =" << deep_to_string(aargs).c_str())
 
-#define CAF_LOG_INIT_EVENT(aName, aLazy, aHide)                                \
-  CAF_LOG_DEBUG("INIT ; NAME =" << aName << "; LAZY =" << aLazy                \
-                << "; HIDDEN =" << aHide)
+#define CAF_LOG_INIT_EVENT(aName, aHide)                                       \
+  CAF_LOG_DEBUG("INIT ; NAME =" << aName << "; HIDDEN =" << aHide)
 
 /// Logs
 #define CAF_LOG_SEND_EVENT(ptr)                                                \

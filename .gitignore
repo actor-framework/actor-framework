@@ -17,3 +17,4 @@ libcaf_core/caf/detail/build_config.hpp
 blog_release_note.md
 github_release_note.md
 .make-release-steps.bash
+*.swo
