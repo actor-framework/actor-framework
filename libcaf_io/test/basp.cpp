@@ -1117,7 +1117,7 @@ CAF_TEST(remote_actor_and_send_udp) {
        uint32_t{0})
   .expect(jupiter().connection,
           basp::message_type::client_handshake, no_flags, 1u,
-          no_operation_data, this_node(), jupiter().id,
+          no_operation_data, this_node(), node_id{none},
           invalid_actor_id, invalid_actor_id, std::string{})
   .expect(jupiter().connection,
           basp::message_type::dispatch_message,
