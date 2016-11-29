@@ -274,7 +274,8 @@ expected<void> test_multiplexer::assign_dgram_scribe(abstract_broker* ptr,
     }
 
     uint16_t port() const override {
-      return mpx_->port(hdl());
+      //return mpx_->port(hdl());
+      return static_cast<uint16_t>(hdl().id());
     }
 
     void flush() override {
@@ -293,6 +294,7 @@ expected<void> test_multiplexer::assign_dgram_scribe(abstract_broker* ptr,
     test_multiplexer* mpx_;
   };
   auto dsptr = make_counted<impl>(ptr, hdl, this);
+  impl_ptr(hdl) = dsptr;
   ptr->add_dgram_scribe(dsptr);
   return unit;
 }
@@ -335,7 +337,7 @@ test_multiplexer::new_dgram_doorman(uint16_t desired_port, const char*, bool) {
 }
 
 expected<void> test_multiplexer::assign_dgram_doorman(abstract_broker* ptr,
-                                                    dgram_doorman_handle hdl) {
+                                                     dgram_doorman_handle hdl) {
   class impl : public dgram_doorman {
   public:
     impl(abstract_broker* self, dgram_doorman_handle dsh, test_multiplexer* mpx)
@@ -396,8 +398,9 @@ expected<void> test_multiplexer::assign_dgram_doorman(abstract_broker* ptr,
   private:
     test_multiplexer* mpx_;
   };
-  auto dsptr = make_counted<impl>(ptr, hdl, this);
-  ptr->add_dgram_doorman(dsptr);
+  auto ddptr = make_counted<impl>(ptr, hdl, this);
+  impl_ptr(hdl) = ddptr;
+  ptr->add_dgram_doorman(ddptr);
   return unit;
 }
 
@@ -448,9 +451,10 @@ void test_multiplexer::provide_dgram_scribe(std::string host,
 }
 
 void test_multiplexer::provide_dgram_doorman(uint16_t desired_port,
-                                               dgram_doorman_handle hdl) {
-  dgram_doormen_.emplace(std::make_pair(desired_port, hdl));
+                                             dgram_doorman_handle hdl) {
+  dgram_doormen_.emplace(desired_port, hdl);
   dgram_doorman_data_[hdl].remote_port = desired_port;
+  dgram_doorman_data_[hdl].local_port = desired_port;
 }
 
 /// The external input buffer should be filled by
@@ -518,6 +522,11 @@ test_multiplexer::output_buffer(dgram_scribe_handle hdl) {
   auto& buf = dgram_scribe_data_[hdl].wr_buf;
   buf.emplace_back();
   return buf.back();
+}
+
+std::deque<test_multiplexer::buffer_type>&
+test_multiplexer::output_queue(dgram_scribe_handle hdl) {
+  return dgram_scribe_data_[hdl].wr_buf;
 }
 
 bool& test_multiplexer::stopped_reading(dgram_scribe_handle hdl) {
@@ -596,8 +605,8 @@ void test_multiplexer::add_pending_connect(accept_handle src,
   pending_connects_.emplace(src, hdl);
 }
 
-void test_multiplexer::add_pending_endpoints(dgram_doorman_handle src,
-                                             dgram_scribe_handle hdl) {
+void test_multiplexer::add_pending_connect(dgram_doorman_handle src,
+                                           dgram_scribe_handle hdl) {
   pending_endpoints_.emplace(src, hdl);
 }
 
@@ -630,13 +639,12 @@ bool test_multiplexer::accept_connection(accept_handle hdl) {
   return true;
 }
 
-bool test_multiplexer::accept_endpoint(dgram_doorman_handle hdl) {
+bool test_multiplexer::accept_connection(dgram_doorman_handle hdl) {
   if (passive_mode(hdl))
     return false;
   auto& dd = dgram_doorman_data_[hdl];
   if (!dd.ptr)
     return false;
-  // TODO: Is this the right new_enpoint call?
   if (!dd.ptr->new_endpoint(dd.rd_buf.data(), dd.rd_buf.size()))
     passive_mode(hdl) = true;
   return true;

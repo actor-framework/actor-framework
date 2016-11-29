@@ -130,8 +130,11 @@ public:
   /// Returns the output buffer of the datagram source identified by `hdl`.
   buffer_type& output_buffer(dgram_scribe_handle hdl);
 
+  /// Returns complete deque of messages
+  std::deque<buffer_type>& output_queue(dgram_scribe_handle hdl);
+
   /// Returns the input buffer of the scribe identified by `hdl`.
-  buffer_type& input_buffer(dgram_scribe_handle  hdl);
+  buffer_type& input_buffer(dgram_scribe_handle hdl);
 
   /// Returns the input buffer of the scribe identified by `hdl`.
   buffer_type& input_buffer(connection_handle hdl);
@@ -212,7 +215,8 @@ public:
   bool has_pending_scribe(std::string host, uint16_t port);
 
   /// Stores `hdl` as a pending endpoint for `src`.
-  void add_pending_endpoints(dgram_doorman_handle src, dgram_scribe_handle hdl);
+  /// Although no transport connection is buid, the nameing eases testing.
+  void add_pending_connect(dgram_doorman_handle src, dgram_scribe_handle hdl);
 
   using pending_endpoints_map = std::unordered_multimap<dgram_doorman_handle,
                                                         dgram_scribe_handle>;
@@ -232,7 +236,7 @@ public:
   /// Accepts a pending connect on `hdl`.
   bool accept_connection(accept_handle hdl);
 
-  bool accept_endpoint(dgram_doorman_handle hdl);
+  bool accept_connection(dgram_doorman_handle hdl);
 
   /// Reads data from the external input buffer until
   /// the configured read policy no longer allows receiving.
@@ -298,6 +302,8 @@ private:
     uint16_t local_port;
     std::deque<buffer_type> xbuf;
     std::deque<buffer_type> wr_buf;
+    //buffer_type xbuf;
+    //buffer_type wr_buf;
     buffer_type rd_buf;
     size_t rcv_buffer_size = 1500;
     bool stopped_reading = false;
@@ -310,6 +316,7 @@ private:
     uint16_t remote_port;
     uint16_t local_port;
     std::deque<buffer_type> xbuf;
+    //buffer_type xbuf;
     buffer_type rd_buf;
     size_t rcv_buffer_size = 1500;
     bool stopped_reading = false;
