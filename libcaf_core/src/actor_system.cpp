@@ -30,6 +30,7 @@
 #include "caf/policy/work_stealing.hpp"
 
 #include "caf/scheduler/coordinator.hpp"
+#include "caf/scheduler/test_coordinator.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/profiled_coordinator.hpp"
 
@@ -205,6 +206,7 @@ actor_system::actor_system(actor_system_config& cfg)
   if (clptr)
     opencl_manager_ = reinterpret_cast<opencl::manager*>(clptr->subtype_ptr());
   auto& sched = modules_[module::scheduler];
+  using test = scheduler::test_coordinator;
   using share = scheduler::coordinator<policy::work_sharing>;
   using steal = scheduler::coordinator<policy::work_stealing>;
   using profiled_share = scheduler::profiled_coordinator<policy::work_sharing>;
@@ -214,6 +216,7 @@ actor_system::actor_system(actor_system_config& cfg)
     enum sched_conf {
       stealing          = 0x0001,
       sharing           = 0x0002,
+      testing           = 0x0003,
       profiled          = 0x0100,
       profiled_stealing = 0x0101,
       profiled_sharing  = 0x0102
@@ -221,6 +224,8 @@ actor_system::actor_system(actor_system_config& cfg)
     sched_conf sc = stealing;
     if (cfg.scheduler_policy == atom("sharing"))
       sc = sharing;
+    else if (cfg.scheduler_policy == atom("testing"))
+      sc = testing;
     else if (cfg.scheduler_policy != atom("stealing"))
       std::cerr << "[WARNING] " << deep_to_string(cfg.scheduler_policy)
                 << " is an unrecognized scheduler pollicy, "
@@ -241,6 +246,8 @@ actor_system::actor_system(actor_system_config& cfg)
       case profiled_sharing:
         sched.reset(new profiled_share(*this));
         break;
+      case testing:
+        sched.reset(new test(*this));
     }
   }
   // initialize state for each module and give each module the opportunity

@@ -88,6 +88,7 @@ set (LIBCAF_CORE_SRCS
      src/splitter.cpp
      src/sync_request_bouncer.cpp
      src/stringification_inspector.cpp
+     src/test_coordinator.cpp
      src/timestamp.cpp
      src/try_match.cpp
      src/type_erased_value.cpp

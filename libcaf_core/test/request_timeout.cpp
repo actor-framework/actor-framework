@@ -29,6 +29,7 @@
 
 using namespace caf;
 
+using std::string;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 
@@ -36,142 +37,256 @@ namespace {
 
 using ping_atom = atom_constant<atom("ping")>;
 using pong_atom = atom_constant<atom("pong")>;
-using send_ping_atom = atom_constant<atom("send_ping")>;
+using timeout_atom = atom_constant<atom("timeout")>;
 
-behavior pong() {
+struct pong_state {
+  static const char* name;
+};
+
+const char* pong_state::name = "pong";
+
+behavior pong(stateful_actor<pong_state>*) {
   return {
     [=] (ping_atom) {
-      std::this_thread::sleep_for(seconds(1));
       return pong_atom::value;
     }
   };
 }
 
-behavior ping1(event_based_actor* self, const actor& pong_actor) {
-  self->link_to(pong_actor);
-  self->send(self, send_ping_atom::value);
+struct ping_state {
+  static const char* name;
+  bool had_first_timeout = false; // unused in ping_singleN functions
+};
+
+const char* ping_state::name = "ping";
+
+using ping_actor = stateful_actor<ping_state>;
+
+using fptr = behavior (*)(ping_actor*, bool*, const actor&);
+using test_vec = std::vector<std::pair<fptr, string>>;
+
+// assumes to receive a timeout (sent via delayed_send) before pong replies
+behavior ping_single1(ping_actor* self, bool* had_timeout, const actor& buddy) {
+  self->send(buddy, ping_atom::value);
+  self->delayed_send(self, std::chrono::seconds(1), timeout_atom::value);
   return {
-    [=](send_ping_atom) {
-      self->request(pong_actor, milliseconds(100), ping_atom::value).then(
-        [=](pong_atom) {
-          CAF_ERROR("received pong atom");
-          self->quit(exit_reason::user_shutdown);
-        },
-        [=](const error& err) {
-          CAF_REQUIRE(err == sec::request_timeout);
-          self->quit(exit_reason::user_shutdown);
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    [=](timeout_atom) {
+      *had_timeout = true;
+      self->quit();
+    }
+  };
+}
+
+// assumes to receive a timeout (via after()) before pong replies
+behavior ping_single2(ping_actor* self, bool* had_timeout, const actor& buddy) {
+  self->send(buddy, ping_atom::value);
+  return {
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    after(std::chrono::seconds(1)) >> [=] {
+      *had_timeout = true;
+      self->quit();
+    }
+  };
+}
+
+// assumes to receive a timeout (via request error handler) before pong replies
+behavior ping_single3(ping_actor* self, bool* had_timeout, const actor& buddy) {
+  self->request(buddy, milliseconds(100), ping_atom::value).then(
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    [=](const error& err) {
+      CAF_REQUIRE(err == sec::request_timeout);
+      *had_timeout = true;
+    }
+  );
+  return {}; // dummy value in order to give all 3 variants the same fun sig
+}
+
+// assumes to receive an inner timeout (sent via delayed_send) before pong
+// replies, then second timeout fires
+behavior ping_nested1(ping_actor* self, bool* had_timeout,
+                      const actor& buddy) {
+  self->send(buddy, ping_atom::value);
+  self->delayed_send(self, std::chrono::seconds(1), timeout_atom::value);
+  return {
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    [=](timeout_atom) {
+      self->state.had_first_timeout = true;
+      self->become(
+        after(milliseconds(100)) >> [=] {
+          CAF_CHECK(self->state.had_first_timeout);
+          *had_timeout = true;
+          self->quit();
         }
       );
     }
   };
 }
 
-behavior ping2(event_based_actor* self, const actor& pong_actor) {
-  self->link_to(pong_actor);
-  self->send(self, send_ping_atom::value);
-  auto received_inner = std::make_shared<bool>(false);
+// assumes to receive an inner timeout (via after()) before pong replies, then a
+// second timeout fires
+behavior ping_nested2(ping_actor* self, bool* had_timeout, const actor& buddy) {
+  self->send(buddy, ping_atom::value);
   return {
-    [=](send_ping_atom) {
-      self->request(pong_actor, milliseconds(100), ping_atom::value).then(
-        [=](pong_atom) {
-          CAF_ERROR("received pong atom");
-          self->quit(exit_reason::user_shutdown);
-        },
-        [=](const error& err) {
-          CAF_REQUIRE(err == sec::request_timeout);
-          CAF_MESSAGE("inner timeout: check");
-          *received_inner = true;
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    after(std::chrono::seconds(1)) >> [=] {
+      self->state.had_first_timeout = true;
+      self->become(
+        after(milliseconds(100)) >> [=] {
+          CAF_CHECK(self->state.had_first_timeout);
+          *had_timeout = true;
+          self->quit();
         }
       );
+    }
+  };
+}
+
+// assumes to receive an inner timeout (via request error handler) before pong
+// replies, then a second timeout fires
+behavior ping_nested3(ping_actor* self, bool* had_timeout, const actor& buddy) {
+  self->request(buddy, milliseconds(100), ping_atom::value).then(
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+      self->quit(sec::unexpected_message);
     },
+    [=](const error& err) {
+      CAF_REQUIRE_EQUAL(err, sec::request_timeout);
+      self->state.had_first_timeout = true;
+    }
+  );
+  return {
     after(milliseconds(100)) >> [=] {
-      CAF_CHECK_EQUAL(*received_inner, true);
-      self->quit(exit_reason::user_shutdown);
+      CAF_CHECK(self->state.had_first_timeout);
+      *had_timeout = true;
+      self->quit();
     }
   };
 }
 
-behavior ping3(event_based_actor* self, const actor& pong_actor) {
-  self->link_to(pong_actor);
-  self->send(self, send_ping_atom::value);
-  return {
-    [=](send_ping_atom) {
-      self->request(pong_actor, milliseconds(100),
-                    ping_atom::value).then(
-        [=](pong_atom) {
-          CAF_ERROR("received pong atom");
-          self->quit(exit_reason::user_shutdown);
-        },
-        [=](const error& err) {
-          CAF_REQUIRE(err == sec::request_timeout);
-          CAF_MESSAGE("async timeout: check");
-          self->quit(exit_reason::user_shutdown);
-        }
-      );
-    }
-  };
-}
-
-behavior ping4(event_based_actor* self, const actor& pong_actor) {
-  self->link_to(pong_actor);
-  self->send(self, send_ping_atom::value);
-  auto received_outer = std::make_shared<bool>(false);
-  return {
-    [=](send_ping_atom) {
-      self->request(pong_actor, milliseconds(100),
-                    ping_atom::value).then(
-        [=](pong_atom) {
-          CAF_ERROR("received pong atom");
-          self->quit(exit_reason::user_shutdown);
-        },
-        [=](const error& err) {
-          CAF_REQUIRE(err == sec::request_timeout);
-          CAF_CHECK_EQUAL(*received_outer, true);
-          self->quit(exit_reason::user_shutdown);
-        }
-      );
-    },
-    after(milliseconds(50)) >> [=] {
-      CAF_MESSAGE("outer timeout: check");
-      *received_outer = true;
-    }
-  };
-}
-
-void ping5(event_based_actor* self, const actor& pong_actor) {
-  self->link_to(pong_actor);
-  auto timeouts = std::make_shared<int>(0);
-  self->request(pong_actor, milliseconds(100),
-                ping_atom::value).then(
+// uses .then on both requests
+behavior ping_multiplexed1(ping_actor* self, bool* had_timeout,
+                           const actor& pong_actor) {
+  self->request(pong_actor, milliseconds(100), ping_atom::value).then(
     [=](pong_atom) {
       CAF_ERROR("received pong atom");
     },
     [=](const error& err) {
-      CAF_REQUIRE(err == sec::request_timeout);
-      if (++*timeouts == 2)
-        self->quit();
+      CAF_REQUIRE_EQUAL(err, sec::request_timeout);
+      if (!self->state.had_first_timeout)
+        self->state.had_first_timeout = true;
+      else
+        *had_timeout = true;
     }
   );
-  self->request(pong_actor, milliseconds(100),
-                ping_atom::value).await(
+  self->request(pong_actor, milliseconds(100), ping_atom::value).then(
     [=](pong_atom) {
       CAF_ERROR("received pong atom");
     },
     [=](const error& err) {
-      CAF_REQUIRE(err == sec::request_timeout);
-      if (++*timeouts == 2)
-        self->quit();
+      CAF_REQUIRE_EQUAL(err, sec::request_timeout);
+      if (!self->state.had_first_timeout)
+        self->state.had_first_timeout = true;
+      else
+        *had_timeout = true;
     }
   );
+  return {};
 }
+
+// uses .await on both requests
+behavior ping_multiplexed2(ping_actor* self, bool* had_timeout,
+                           const actor& pong_actor) {
+  self->request(pong_actor, milliseconds(100), ping_atom::value).await(
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    [=](const error& err) {
+      CAF_REQUIRE_EQUAL(err, sec::request_timeout);
+      if (!self->state.had_first_timeout)
+        self->state.had_first_timeout = true;
+      else
+        *had_timeout = true;
+    }
+  );
+  self->request(pong_actor, milliseconds(100), ping_atom::value).await(
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    [=](const error& err) {
+      CAF_REQUIRE_EQUAL(err, sec::request_timeout);
+      if (!self->state.had_first_timeout)
+        self->state.had_first_timeout = true;
+      else
+        *had_timeout = true;
+    }
+  );
+  return {};
+}
+
+// uses .await and .then
+behavior ping_multiplexed3(ping_actor* self, bool* had_timeout,
+                           const actor& pong_actor) {
+  self->request(pong_actor, milliseconds(100), ping_atom::value).then(
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    [=](const error& err) {
+      CAF_REQUIRE_EQUAL(err, sec::request_timeout);
+      if (!self->state.had_first_timeout)
+        self->state.had_first_timeout = true;
+      else
+        *had_timeout = true;
+    }
+  );
+  self->request(pong_actor, milliseconds(100), ping_atom::value).await(
+    [=](pong_atom) {
+      CAF_ERROR("received pong atom");
+    },
+    [=](const error& err) {
+      CAF_REQUIRE_EQUAL(err, sec::request_timeout);
+      if (!self->state.had_first_timeout)
+        self->state.had_first_timeout = true;
+      else
+        *had_timeout = true;
+    }
+  );
+  return {};
+}
+
+struct config : actor_system_config {
+  config() {
+    scheduler_policy = atom("testing");
+  }
+};
 
 struct fixture {
-  fixture() : system(cfg) {
-    // nop
+  config cfg;
+  actor_system system;
+  scoped_actor self;
+  scheduler::test_coordinator& sched;
+
+  fixture()
+      : system(cfg),
+        self(system),
+        sched(dynamic_cast<scheduler::test_coordinator&>(system.scheduler())) {
+    CAF_REQUIRE(sched.jobs.empty());
+    CAF_REQUIRE(sched.delayed_messages.empty());
   }
 
-  actor_system_config cfg;
-  actor_system system;
+  ~fixture() {
+    sched.run_dispatch_loop();
+  }
 };
 
 } // namespace <anonymous>
@@ -179,17 +294,79 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(request_timeout_tests, fixture)
 
 CAF_TEST(single_timeout) {
-  system.spawn(ping1, system.spawn(pong));
-  system.spawn(ping3, system.spawn(pong));
+  test_vec fs{{ping_single1, "ping_single1"},
+              {ping_single2, "ping_single2"},
+              {ping_single3, "ping_single3"}};
+  for (auto f : fs) {
+    bool had_timeout = false;
+    CAF_MESSAGE("test implemenation " << f.second);
+    auto testee = system.spawn(f.first, &had_timeout,
+                               system.spawn<lazy_init>(pong));
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    sched.run_once();
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
+    sched.dispatch();
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2);
+    // now, the timeout message is already dispatched, while pong did
+    // not respond to the message yet, i.e., timeout arrives before response
+    CAF_CHECK_EQUAL(sched.run(), 2);
+    CAF_CHECK(had_timeout);
+  }
 }
 
-CAF_TEST(scoped_timeout) {
-  system.spawn(ping2, system.spawn(pong));
-  system.spawn(ping4, system.spawn(pong));
+CAF_TEST(nested_timeout) {
+  test_vec fs{{ping_nested1, "ping_nested1"},
+              {ping_nested2, "ping_nested2"},
+              {ping_nested3, "ping_nested3"}};
+  for (auto f : fs) {
+    bool had_timeout = false;
+    CAF_MESSAGE("test implemenation " << f.second);
+    auto testee = system.spawn(f.first, &had_timeout,
+                               system.spawn<lazy_init>(pong));
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    sched.run_once();
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
+    sched.dispatch();
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2);
+    // now, the timeout message is already dispatched, while pong did
+    // not respond to the message yet, i.e., timeout arrives before response
+    sched.run();
+    // dispatch second timeout
+    CAF_REQUIRE(!sched.delayed_messages.empty());
+    sched.dispatch();
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    CAF_CHECK(!had_timeout);
+    CAF_CHECK(sched.next_job<ping_actor>().state.had_first_timeout);
+    sched.run();
+    CAF_CHECK(had_timeout);
+  }
 }
 
-CAF_TEST(awaited_multiplexed_timeout) {
-  system.spawn(ping5, system.spawn(pong));
+CAF_TEST(multiplexed_timeout) {
+  test_vec fs{{ping_multiplexed1, "ping_multiplexed1"},
+              {ping_multiplexed2, "ping_multiplexed2"},
+              {ping_multiplexed3, "ping_multiplexed3"}};
+  for (auto f : fs) {
+    bool had_timeout = false;
+    CAF_MESSAGE("test implemenation " << f.second);
+    auto testee = system.spawn(f.first, &had_timeout,
+                               system.spawn<lazy_init>(pong));
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    sched.run_once();
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
+    sched.dispatch();
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2);
+    // now, the timeout message is already dispatched, while pong did
+    // not respond to the message yet, i.e., timeout arrives before response
+    sched.run();
+    CAF_CHECK(had_timeout);
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

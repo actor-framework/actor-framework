@@ -92,7 +92,6 @@
 #include "caf/composable_behavior.hpp"
 #include "caf/typed_actor_pointer.hpp"
 #include "caf/scoped_execution_unit.hpp"
-#include "caf/typed_continue_helper.hpp"
 #include "caf/typed_response_promise.hpp"
 #include "caf/typed_event_based_actor.hpp"
 #include "caf/abstract_composable_behavior.hpp"
@@ -105,6 +104,7 @@
 #include "caf/meta/load_callback.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
 
+#include "caf/scheduler/test_coordinator.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 /// @author Dominik Charousset <dominik.charousset (at) haw-hamburg.de>

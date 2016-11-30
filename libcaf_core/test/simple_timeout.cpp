@@ -36,17 +36,20 @@ using ms = std::chrono::milliseconds;
 using reset_atom = atom_constant<atom("reset")>;
 using timer = typed_actor<reacts_to<reset_atom>>;
 
-timer::behavior_type timer_impl(timer::pointer self) {
-  auto had_reset = std::make_shared<bool>(false);
+struct timer_state {
+  bool had_reset = false;
+};
+
+timer::behavior_type timer_impl(timer::stateful_pointer<timer_state> self) {
   self->delayed_send(self, ms(100), reset_atom::value);
   return {
     [=](reset_atom) {
       CAF_MESSAGE("timer reset");
-      *had_reset = true;
+      self->state.had_reset = true;
     },
     after(ms(600)) >> [=] {
       CAF_MESSAGE("timer expired");
-      CAF_REQUIRE(*had_reset);
+      CAF_REQUIRE(self->state.had_reset);
       self->quit();
     }
   };
@@ -68,18 +71,34 @@ timer::behavior_type timer_impl2(timer::pointer self) {
   };
 }
 
+struct config : actor_system_config {
+  config() {
+    scheduler_policy = atom("testing");
+  }
+};
+
 struct fixture {
-  fixture() : system(cfg) {
-    // nop
+  config cfg;
+  actor_system system;
+  scoped_actor self;
+  scheduler::test_coordinator& sched;
+
+  fixture()
+      : system(cfg),
+        self(system),
+        sched(dynamic_cast<scheduler::test_coordinator&>(system.scheduler())) {
+    CAF_REQUIRE(sched.jobs.empty());
+    CAF_REQUIRE(sched.delayed_messages.empty());
   }
 
-  actor_system_config cfg;
-  actor_system system;
+  ~fixture() {
+    sched.run_dispatch_loop();
+  }
 };
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(timeout_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(simple_timeout_tests, fixture)
 
 CAF_TEST(duration_conversion) {
   duration d1{time_unit::milliseconds, 100};
