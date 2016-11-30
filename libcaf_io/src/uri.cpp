@@ -74,13 +74,13 @@ class uri_private : public ref_counted {
 
   void clear() {
     m_uri_.clear();
-    m_path_ = make_tuple(end(m_uri_), end(m_uri_));
-    m_query_ = make_tuple(end(m_uri_), end(m_uri_));
-    m_scheme_ = make_tuple(end(m_uri_), end(m_uri_));
-    m_fragment_ = make_tuple(end(m_uri_), end(m_uri_));
-    m_authority_ = make_tuple(end(m_uri_), end(m_uri_));
-    m_host_ = make_tuple(end(m_uri_), end(m_uri_));
-    m_port_ = make_tuple(end(m_uri_), end(m_uri_));
+    m_path_ = make_pair(end(m_uri_), end(m_uri_));
+    m_query_ = make_pair(end(m_uri_), end(m_uri_));
+    m_scheme_ = make_pair(end(m_uri_), end(m_uri_));
+    m_fragment_ = make_pair(end(m_uri_), end(m_uri_));
+    m_authority_ = make_pair(end(m_uri_), end(m_uri_));
+    m_host_ = make_pair(end(m_uri_), end(m_uri_));
+    m_port_ = make_pair(end(m_uri_), end(m_uri_));
     m_user_information_ = make_pair(end(m_uri_), end(m_uri_));
   }
 
