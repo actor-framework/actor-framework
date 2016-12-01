@@ -209,7 +209,7 @@ private:
 
 #ifndef CAF_LOG_LEVEL
 
-#define CAF_LOG_IMPL(unused1, unused2)
+#define CAF_LOG_IMPL(unused1, unused2, unused3)
 
 // placeholder macros when compiling without logging
 inline caf::actor_id caf_set_aid_dummy() { return 0; }
@@ -226,12 +226,14 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #else // CAF_LOG_LEVEL
 
+#define CAF_DEFAULT_LOG_COMPONENT "caf"
+
 #ifndef CAF_LOG_COMPONENT
-#define CAF_LOG_COMPONENT "caf"
+#define CAF_LOG_COMPONENT CAF_DEFAULT_LOG_COMPONENT
 #endif
 
-#define CAF_LOG_IMPL(loglvl, message)                                          \
-  caf::logger::log_static(loglvl, CAF_LOG_COMPONENT, CAF_GET_CLASS_NAME,       \
+#define CAF_LOG_IMPL(component, loglvl, message)                               \
+  caf::logger::log_static(loglvl, component, CAF_GET_CLASS_NAME,               \
                           __func__, __FILE__, __LINE__,                        \
                           (caf::logger::line_builder{} << message).get())
 
@@ -265,7 +267,8 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #define CAF_LOG_TRACE(entry_message)                                           \
   const char* CAF_UNIFYN(func_name_) = __func__;                               \
-  CAF_LOG_IMPL(CAF_LOG_LEVEL_TRACE, "ENTRY" << entry_message);                 \
+  CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_TRACE,                         \
+               "ENTRY" << entry_message);                                      \
   auto CAF_UNIFYN(caf_log_trace_guard_) = ::caf::detail::make_scope_guard([=] {\
     caf::logger::log_static(CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT,            \
                             CAF_GET_CLASS_NAME, CAF_UNIFYN(func_name_),        \
@@ -275,18 +278,22 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #endif // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
 
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-#  define CAF_LOG_DEBUG(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_DEBUG, output)
+#  define CAF_LOG_DEBUG(output)                                                \
+     CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output)
 #endif
 
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_INFO
-#  define CAF_LOG_INFO(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_INFO, output)
+#  define CAF_LOG_INFO(output)                                                 \
+     CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output)
 #endif
 
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_WARNING
-#  define CAF_LOG_WARNING(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_WARNING, output)
+#  define CAF_LOG_WARNING(output)                                              \
+     CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output)
 #endif
 
-#define CAF_LOG_ERROR(output) CAF_LOG_IMPL(CAF_LOG_LEVEL_ERROR, output)
+#define CAF_LOG_ERROR(output)                                                  \
+  CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output)
 
 #endif // CAF_LOG_LEVEL
 
@@ -309,16 +316,20 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #ifdef CAF_LOG_LEVEL
 
 #define CAF_LOG_DEBUG_IF(cond, output)                                         \
-  if (cond) { CAF_LOG_IMPL(CAF_LOG_LEVEL_DEBUG, output); } CAF_VOID_STMT
+  if (cond) { CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output); }  \
+    CAF_VOID_STMT
 
 #define CAF_LOG_INFO_IF(cond, output)                                          \
-  if (cond) { CAF_LOG_IMPL(CAF_LOG_LEVEL_INFO, output); } CAF_VOID_STMT
+  if (cond) { CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output); }   \
+    CAF_VOID_STMT
 
 #define CAF_LOG_WARNING_IF(cond, output)                                       \
-  if (cond) { CAF_LOG_IMPL(CAF_LOG_LEVEL_WARNING, output); } CAF_VOID_STMT
+  if (cond) { CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output); }\
+    CAF_VOID_STMT
 
 #define CAF_LOG_ERROR_IF(cond, output)                                         \
-  if (cond) { CAF_LOG_IMPL(CAF_LOG_LEVEL_ERROR, output); } CAF_VOID_STMT
+  if (cond) { CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output); }  \
+    CAF_VOID_STMT
 
 #else // CAF_LOG_LEVEL
 
@@ -332,37 +343,47 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 // -- Standardized CAF events according to SE-0001.
 
 #define CAF_LOG_SPAWN_EVENT(aid, aargs)                                        \
-  CAF_LOG_DEBUG("SPAWN ; ID =" << aid                                          \
-                << "; ARGS =" << deep_to_string(aargs).c_str())
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+               "SPAWN ; ID =" << aid                                           \
+               << "; ARGS =" << deep_to_string(aargs).c_str())
 
 #define CAF_LOG_INIT_EVENT(aName, aHide)                                       \
-  CAF_LOG_DEBUG("INIT ; NAME =" << aName << "; HIDDEN =" << aHide)
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+               "INIT ; NAME =" << aName << "; HIDDEN =" << aHide)
 
 /// Logs
 #define CAF_LOG_SEND_EVENT(ptr)                                                \
-  CAF_LOG_DEBUG("SEND ; TO ="                                                  \
-                << deep_to_string(strong_actor_ptr{this->ctrl()}).c_str()      \
-                << "; FROM =" << deep_to_string(ptr->sender).c_str()           \
-                << "; STAGES =" << deep_to_string(ptr->stages).c_str()         \
-                << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+               "SEND ; TO ="                                                   \
+               << deep_to_string(strong_actor_ptr{this->ctrl()}).c_str()       \
+               << "; FROM =" << deep_to_string(ptr->sender).c_str()            \
+               << "; STAGES =" << deep_to_string(ptr->stages).c_str()          \
+               << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
 
 #define CAF_LOG_RECEIVE_EVENT(ptr)                                             \
-  CAF_LOG_DEBUG("RECEIVE ; FROM ="                                             \
-                << deep_to_string(ptr->sender).c_str()                         \
-                << "; STAGES =" << deep_to_string(ptr->stages).c_str()         \
-                << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+               "RECEIVE ; FROM ="                                              \
+               << deep_to_string(ptr->sender).c_str()                          \
+               << "; STAGES =" << deep_to_string(ptr->stages).c_str()          \
+               << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
 
-#define CAF_LOG_REJECT_EVENT() CAF_LOG_DEBUG("REJECT")
+#define CAF_LOG_REJECT_EVENT()                                                 \
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "REJECT")
 
-#define CAF_LOG_ACCEPT_EVENT() CAF_LOG_DEBUG("ACCEPT")
+#define CAF_LOG_ACCEPT_EVENT()                                                 \
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "ACCEPT")
 
-#define CAF_LOG_DROP_EVENT() CAF_LOG_DEBUG("DROP")
+#define CAF_LOG_DROP_EVENT()                                                   \
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "DROP")
 
-#define CAF_LOG_SKIP_EVENT() CAF_LOG_DEBUG("SKIP")
+#define CAF_LOG_SKIP_EVENT()                                                   \
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "SKIP")
 
-#define CAF_LOG_FINALIZE_EVENT() CAF_LOG_DEBUG("FINALIZE")
+#define CAF_LOG_FINALIZE_EVENT()                                               \
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "FINALIZE")
 
 #define CAF_LOG_TERMINATE_EVENT(rsn)                                           \
-  CAF_LOG_DEBUG("TERMINATE ; REASON =" << deep_to_string(rsn).c_str());
+  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+               "TERMINATE ; REASON =" << deep_to_string(rsn).c_str())
 
 #endif // CAF_LOGGER_HPP
