@@ -42,4 +42,8 @@
 #define CAF_NO_EXCEPTIONS
 #endif
 
+#if @CAF_NO_HWLOC@ != -1
+#define CAF_NO_HWLOC
+#endif
+
 #endif //CAF_DETAIL_BUILD_CONFIG_HPP

@@ -81,6 +81,10 @@ if(NOT CAF_NO_OPENSSL)
   set(CAF_NO_OPENSSL no)
 endif()
 
+if(NOT CAF_NO_HWLOC)
+  set(CAF_NO_HWLOC no)
+endif()
+
 if(NOT CAF_NO_PYTHON)
   set(CAF_NO_PYTHON no)
 endif()
@@ -402,7 +406,7 @@ add_custom_target(uninstall
 
 
 ################################################################################
-#                       set inclue paths for subprojects                       #
+#                       set include paths for subprojects                       #
 ################################################################################
 
 # path to caf core & io headers
@@ -522,6 +526,16 @@ if(NOT CAF_NO_OPENCL)
   else()
     set(CAF_NO_OPENCL yes)
     message(STATUS "Could NOT find OpenCL, requires Cmake >= 3.1.")
+  endif()
+endif()
+
+# load hwloc library if not told otherwise
+if(NOT CAF_NO_HWLOC)
+  find_package(Hwloc)
+  if(Hwloc_FOUND)
+    add_optional_caf_lib(hwloc)
+  else()
+    set(CAF_NO_HWLOC yes)
   endif()
 endif()
 
@@ -705,6 +719,7 @@ invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 invertYesNo(CAF_NO_OPENSSL CAF_BUILD_OPENSSL)
+invertYesNo(CAF_NO_HWLOC CAF_BUILD_HWLOC)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
@@ -731,6 +746,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild OpenCL:      ${CAF_BUILD_OPENCL}"
         "\nBuild OpenSSL:     ${CAF_BUILD_OPENSSL}"
+        "\nBuild hwloc:       ${CAF_BUILD_HWLOC}"
         "\nBuild Python:      ${CAF_BUILD_PYTHON}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
