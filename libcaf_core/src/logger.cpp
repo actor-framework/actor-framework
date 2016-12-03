@@ -394,11 +394,16 @@ void logger::run() {
     // empty message means: shut down
     if (ptr->msg.empty())
       break;
+    // TODO: once we've phased out GCC 4.8, we can upgrade this to a regex.
+    // Until then, we just search for a substring in the filter.
+    auto& filter = system_.config().logger_filter;
+    if (!filter.empty()) {
+      auto it = std::search(filter.begin(), filter.end(), ptr->component,
+                            ptr->component + std::strlen(ptr->component));
+      if (it == filter.end())
+        continue;
+    }
     file << ptr->prefix << ' ' << ptr->msg << std::endl;
-    // TODO: once we've phased out GCC 4.8, we can upgarde this to a regex.
-    if (!system_.config().logger_filter.empty()
-        && ptr->component != system_.config().logger_filter)
-      continue;
     if (system_.config().logger_console == atom("UNCOLORED")) {
       std::clog << ptr->msg << std::endl;
     } else if  (system_.config().logger_console == atom("COLORED")) {
