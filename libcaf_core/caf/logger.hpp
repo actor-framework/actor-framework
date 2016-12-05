@@ -342,18 +342,20 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 // -- Standardized CAF events according to SE-0001.
 
+#define CAF_LOG_EVENT_COMPONENT "se-0001"
+
 #define CAF_LOG_SPAWN_EVENT(aid, aargs)                                        \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG,                   \
                "SPAWN ; ID =" << aid                                           \
                << "; ARGS =" << deep_to_string(aargs).c_str())
 
 #define CAF_LOG_INIT_EVENT(aName, aHide)                                       \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG,                   \
                "INIT ; NAME =" << aName << "; HIDDEN =" << aHide)
 
 /// Logs
 #define CAF_LOG_SEND_EVENT(ptr)                                                \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG,                   \
                "SEND ; TO ="                                                   \
                << deep_to_string(strong_actor_ptr{this->ctrl()}).c_str()       \
                << "; FROM =" << deep_to_string(ptr->sender).c_str()            \
@@ -361,29 +363,29 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
                << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
 
 #define CAF_LOG_RECEIVE_EVENT(ptr)                                             \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG,                   \
                "RECEIVE ; FROM ="                                              \
                << deep_to_string(ptr->sender).c_str()                          \
                << "; STAGES =" << deep_to_string(ptr->stages).c_str()          \
                << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
 
 #define CAF_LOG_REJECT_EVENT()                                                 \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "REJECT")
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG, "REJECT")
 
 #define CAF_LOG_ACCEPT_EVENT()                                                 \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "ACCEPT")
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG, "ACCEPT")
 
 #define CAF_LOG_DROP_EVENT()                                                   \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "DROP")
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG, "DROP")
 
 #define CAF_LOG_SKIP_EVENT()                                                   \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "SKIP")
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG, "SKIP")
 
 #define CAF_LOG_FINALIZE_EVENT()                                               \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "FINALIZE")
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG, "FINALIZE")
 
 #define CAF_LOG_TERMINATE_EVENT(rsn)                                           \
-  CAF_LOG_IMPL(CAF_DEFAULT_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG,                 \
+  CAF_LOG_IMPL(CAF_LOG_EVENT_COMPONENT, CAF_LOG_LEVEL_DEBUG,                   \
                "TERMINATE ; REASON =" << deep_to_string(rsn).c_str())
 
 #endif // CAF_LOGGER_HPP
