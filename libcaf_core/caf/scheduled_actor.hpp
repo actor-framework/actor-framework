@@ -197,7 +197,10 @@ public:
 
   /// Sets a custom handler for unexpected messages.
   inline void set_default_handler(default_handler fun) {
-    default_handler_ = std::move(fun);
+    if (fun)
+      default_handler_ = std::move(fun);
+    else
+      default_handler_ = print_and_drop;
   }
 
   /// Sets a custom handler for unexpected messages.
@@ -216,7 +219,10 @@ public:
 
   /// Sets a custom handler for error messages.
   inline void set_error_handler(error_handler fun) {
-    error_handler_ = std::move(fun);
+    if (fun)
+      error_handler_ = std::move(fun);
+    else
+      error_handler_ = default_error_handler;
   }
 
   /// Sets a custom handler for error messages.
@@ -227,7 +233,10 @@ public:
 
   /// Sets a custom handler for down messages.
   inline void set_down_handler(down_handler fun) {
-    down_handler_ = std::move(fun);
+    if (fun)
+      down_handler_ = std::move(fun);
+    else
+      down_handler_ = default_down_handler;
   }
 
   /// Sets a custom handler for down messages.
@@ -238,7 +247,10 @@ public:
 
   /// Sets a custom handler for error messages.
   inline void set_exit_handler(exit_handler fun) {
-    exit_handler_ = std::move(fun);
+    if (fun)
+      exit_handler_ = std::move(fun);
+    else
+      exit_handler_ = default_exit_handler;
   }
 
   /// Sets a custom handler for exit messages.
@@ -250,8 +262,11 @@ public:
 # ifndef CAF_NO_EXCEPTIONS
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
-  inline void set_exception_handler(exception_handler f) {
-    exception_handler_ = std::move(f);
+  inline void set_exception_handler(exception_handler fun) {
+    if (fun)
+      exception_handler_ = std::move(fun);
+    else
+      exception_handler_ = default_exception_handler;
   }
 
   /// Sets a custom exception handler for this actor. If multiple handlers are
