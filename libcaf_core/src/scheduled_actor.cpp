@@ -356,18 +356,18 @@ scheduled_actor::categorize(mailbox_element& x) {
         fail_state_ = std::move(em.reason);
         setf(is_terminated_flag);
       } else {
-        exit_handler_(this, em);
+        call_handler(exit_handler_, this, em);
       }
       return message_category::internal;
     }
     case make_type_token<down_msg>(): {
       auto dm = content.move_if_unshared<down_msg>(0);
-      down_handler_(this, dm);
+      call_handler(down_handler_, this, dm);
       return message_category::internal;
     }
     case make_type_token<error>(): {
       auto err = content.move_if_unshared<error>(0);
-      error_handler_(this, err);
+      call_handler(error_handler_, this, err);
       return message_category::internal;
     }
     default:
@@ -436,7 +436,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
           setf(has_timeout_flag);
       });
       auto call_default_handler = [&] {
-        auto sres = default_handler_(this, x);
+        auto sres = call_handler(default_handler_, this, x);
         switch (sres.flag) {
           default:
             break;
@@ -529,7 +529,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
   catch (...) {
     CAF_LOG_ERROR("actor died during initialization");
     auto eptr = std::current_exception();
-    quit(exception_handler_(this, eptr));
+    quit(call_handler(exception_handler_, this, eptr));
     finalize();
     return false;
   }
@@ -572,12 +572,12 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
     CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
     static_cast<void>(e); // keep compiler happy when not logging
     auto eptr = std::current_exception();
-    quit(exception_handler_(this, eptr));
+    quit(call_handler(exception_handler_, this, eptr));
   }
   catch (...) {
     CAF_LOG_INFO("actor died because of an unknown exception");
     auto eptr = std::current_exception();
-    quit(exception_handler_(this, eptr));
+    quit(call_handler(exception_handler_, this, eptr));
   }
   finalize();
   return activation_result::terminated;

@@ -343,6 +343,36 @@ public:
 protected:
   /// @cond PRIVATE
 
+  /// Utility function that swaps `f` into a temporary before calling it
+  /// and restoring `f` only if it has not been replaced by the user.
+  template <class F, class... Ts>
+  auto call_handler(F& f, Ts&&... xs)
+  -> typename std::enable_if<
+       !std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value,
+       decltype(f(std::forward<Ts>(xs)...))
+     >::type {
+    using std::swap;
+    F g;
+    swap(f, g);
+    auto res = g(std::forward<Ts>(xs)...);
+    if (!f)
+      swap(g, f);
+    return res;
+  }
+
+  template <class F, class... Ts>
+  auto call_handler(F& f, Ts&&... xs)
+  -> typename std::enable_if<
+       std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value
+     >::type {
+    using std::swap;
+    F g;
+    swap(f, g);
+    g(std::forward<Ts>(xs)...);
+    if (!f)
+      swap(g, f);
+  }
+
   // -- member variables -------------------------------------------------------
 
   /// Stores user-defined callbacks for message handling.
