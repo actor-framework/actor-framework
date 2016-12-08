@@ -241,7 +241,7 @@ struct binary_serialization_policy {
     T y;
     g(y);
     CAF_CHECK_EQUAL(x, y);
-    return x == y;
+    return detail::safe_equal(x, y);
   }
 };
 } // namespace <anonymous>

@@ -26,9 +26,6 @@
 
 #include "caf/all.hpp"
 
-#define ERROR_HANDLER                                                          \
-  [&](error& err) { CAF_FAIL(system.render(err)); }
-
 using namespace caf;
 
 namespace {

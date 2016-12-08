@@ -321,6 +321,7 @@ logger::logger(actor_system& sys) : system_(sys) {
 }
 
 void logger::init(actor_system_config& cfg) {
+  CAF_IGNORE_UNUSED(cfg);
 #if defined(CAF_LOG_LEVEL)
   auto lvl_atom = cfg.logger_verbosity;
   switch (static_cast<uint64_t>(lvl_atom)) {

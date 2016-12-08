@@ -193,7 +193,7 @@ CAF_TEST(type_float) {
   std::tie(result, error_str) = run_config_option(init_value, boundary_check); 
   float float_inf = std::numeric_limits<float>::infinity();
   // Unit test does not compare inf values correct until now
-  bool tmp = float_inf == result; 
+  bool tmp = float_inf == result;
   CAF_CHECK_NOT_EQUAL(tmp, true);
   CAF_CHECK_EQUAL(result, init_value);
   CAF_CHECK_EQUAL(error_str.empty(), false);

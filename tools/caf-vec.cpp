@@ -47,7 +47,7 @@ std::istream& skip_to_next_line(std::istream& in) {
 std::istream& skip_word(std::istream& in) {
   skip_whitespaces(in);
   auto nonspace = [](char x) { return isprint(x) && !isspace(x); };
-  while (nonspace(in.peek()))
+  while (nonspace(static_cast<char>(in.peek())))
     in.get();
   return in;
 }

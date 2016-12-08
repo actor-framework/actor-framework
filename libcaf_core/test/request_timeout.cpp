@@ -302,16 +302,16 @@ CAF_TEST(single_timeout) {
     CAF_MESSAGE("test implemenation " << f.second);
     auto testee = system.spawn(f.first, &had_timeout,
                                system.spawn<lazy_init>(pong));
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
     sched.run_once();
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
     sched.dispatch();
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2u);
     // now, the timeout message is already dispatched, while pong did
     // not respond to the message yet, i.e., timeout arrives before response
-    CAF_CHECK_EQUAL(sched.run(), 2);
+    CAF_CHECK_EQUAL(sched.run(), 2u);
     CAF_CHECK(had_timeout);
   }
 }
@@ -325,13 +325,13 @@ CAF_TEST(nested_timeout) {
     CAF_MESSAGE("test implemenation " << f.second);
     auto testee = system.spawn(f.first, &had_timeout,
                                system.spawn<lazy_init>(pong));
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
     sched.run_once();
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
     sched.dispatch();
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2u);
     // now, the timeout message is already dispatched, while pong did
     // not respond to the message yet, i.e., timeout arrives before response
     sched.run();
@@ -355,13 +355,13 @@ CAF_TEST(multiplexed_timeout) {
     CAF_MESSAGE("test implemenation " << f.second);
     auto testee = system.spawn(f.first, &had_timeout,
                                system.spawn<lazy_init>(pong));
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
     sched.run_once();
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
     sched.dispatch();
-    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2);
+    CAF_REQUIRE_EQUAL(sched.jobs.size(), 2u);
     // now, the timeout message is already dispatched, while pong did
     // not respond to the message yet, i.e., timeout arrives before response
     sched.run();

@@ -49,7 +49,7 @@ bool equal_to(const T& t, const U& u) {
   auto y = static_cast<long double>(u);
   auto max = std::max(std::abs(x), std::abs(y));
   auto dif = std::abs(x - y);
-  return dif <= max * 1e-5;
+  return dif <= max * 1e-5l;
 }
 
 template <class T, class U,
