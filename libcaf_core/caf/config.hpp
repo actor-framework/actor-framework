@@ -191,7 +191,7 @@
 # define CAF_ASSERT(stmt)                                                      \
   if (static_cast<bool>(stmt) == false) {                                      \
     printf("%s:%u: requirement failed '%s'\n", __FILE__, __LINE__, #stmt);     \
-    abort();                                                                   \
+    ::abort();                                                                 \
   } static_cast<void>(0)
 #else // defined(CAF_LINUX) || defined(CAF_MACOS)
 # include <execinfo.h>
@@ -201,18 +201,18 @@
     void* array[20];                                                           \
     auto caf_bt_size = ::backtrace(array, 20);                                 \
     ::backtrace_symbols_fd(array, caf_bt_size, 2);                             \
-    abort();                                                                   \
+    ::abort();                                                                 \
   } static_cast<void>(0)
 #endif
 
 // Convenience macros.
-#define CAF_IGNORE_UNUSED(x) static_cast<void>(x);
+#define CAF_IGNORE_UNUSED(x) static_cast<void>(x)
 
 #define CAF_CRITICAL(error)                                                    \
   do {                                                                         \
     fprintf(stderr, "[FATAL] %s:%u: critical error: '%s'\n",                   \
             __FILE__, __LINE__, error);                                        \
-    abort();                                                                   \
+    ::abort();                                                                 \
   } while (false)
 
 #ifdef CAF_NO_EXCEPTIONS
