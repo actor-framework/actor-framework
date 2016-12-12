@@ -462,7 +462,8 @@ void basp_broker_state::set_context(connection_handle hdl) {
         basp::header{basp::message_type::server_handshake,
                      0, 0, 0, none, none,
                      invalid_actor_id, invalid_actor_id},
-        hdl, none, 0, none
+        hdl, none, 0, none,
+        0, 0
       }
     ).first;
   }
@@ -482,7 +483,8 @@ void basp_broker_state::set_context(dgram_scribe_handle hdl) {
         basp::header{basp::message_type::server_handshake,
                      0, 0, 0, none, none,
                      invalid_actor_id, invalid_actor_id},
-        hdl, none, 0, none
+        hdl, none, 0, none,
+        0, 0
       }
     ).first;
   }
@@ -580,9 +582,7 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       state.set_context(msg.handle);
       auto& ctx = *state.this_context;
-      // TODO: ordering
-      // TODO: reliability?
-      auto is_open = state.instance.handle(context(), msg, ctx.hdr);
+      auto is_open = state.instance.handle(context(), msg, ctx);
       if (!is_open) {
         if (ctx.callback) {
           CAF_LOG_WARNING("failed to handshake with remote node"
@@ -679,7 +679,7 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       state.set_context(msg.handle);
       auto& ctx = *state.this_context;
-      auto is_open = state.instance.handle(context(), msg, ctx.hdr);
+      auto is_open = state.instance.handle(context(), msg, ctx);
       if (!is_open) {
         if (ctx.callback) {
           CAF_LOG_WARNING("failed to handshake with remote node"

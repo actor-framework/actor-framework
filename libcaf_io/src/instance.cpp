@@ -118,7 +118,8 @@ connection_state instance::handle(execution_unit* ctx,
   return await_header;
 }
 
-bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
+bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
+                      endpoint_context& ep) {
   using itr_t = std::vector<char>::iterator;
   // function object providing cleanup code on errors
   auto err = [&]() -> bool {
@@ -137,28 +138,32 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr) {
   dm.buf.resize(basp::header_size);
   // extract header
   binary_deserializer bd{ctx, dm.buf};
-  auto e = bd(hdr);
-  if (e || !valid(hdr)) {
-    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
+  auto e = bd(ep.hdr);
+  if (e || !valid(ep.hdr)) {
+    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(ep.hdr));
     std::cerr << "Received invalid header!" << std::endl;
     return err();
   }
-  CAF_LOG_DEBUG(CAF_ARG(hdr));
+  CAF_LOG_DEBUG(CAF_ARG(ep.hdr));
   std::vector<char>* payload = nullptr;
-  if (hdr.payload_len > 0) {
+  if (ep.hdr.payload_len > 0) {
     payload = &pl_buf;
-    if (payload->size() != hdr.payload_len) {
+    if (payload->size() != ep.hdr.payload_len) {
       CAF_LOG_WARNING("received invalid payload");
       return err();
     }
   }
-  if (!handle_msg(ctx, dm.handle, hdr, payload, false, none))
+  // TODO: Ordering
+
+  // TODO: Reliability
+  if (!handle_msg(ctx, dm.handle, ep.hdr, payload, false, none))
     return err();
   return true;
 };
 
 
-bool instance::handle(execution_unit* ctx, new_endpoint_msg& em, header& hdr) {
+bool instance::handle(execution_unit* ctx, new_endpoint_msg& em,
+                      endpoint_context& ep) {
   using itr_t = std::vector<char>::iterator;
   // function object providing cleanup code on errors
   auto err = [&]() -> bool {
@@ -177,22 +182,22 @@ bool instance::handle(execution_unit* ctx, new_endpoint_msg& em, header& hdr) {
   em.buf.resize(basp::header_size);
   // extract header
   binary_deserializer bd{ctx, em.buf};
-  auto e = bd(hdr);
-  if (e || !valid(hdr)) {
-    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
+  auto e = bd(ep.hdr);
+  if (e || !valid(ep.hdr)) {
+    CAF_LOG_WARNING("received invalid header:" << CAF_ARG(ep.hdr));
     std::cerr << "Received invalid header!" << std::endl;
     return err();
   }
-  CAF_LOG_DEBUG(CAF_ARG(hdr));
+  CAF_LOG_DEBUG(CAF_ARG(ep.hdr));
   std::vector<char>* payload = nullptr;
-  if (hdr.payload_len > 0) {
+  if (ep.hdr.payload_len > 0) {
     payload = &pl_buf;
-    if (payload->size() != hdr.payload_len) {
+    if (payload->size() != ep.hdr.payload_len) {
       CAF_LOG_WARNING("received invalid payload");
       return err();
     }
   }
-  if (!handle_msg(ctx, em.handle, hdr, payload, false, em.port))
+  if (!handle_msg(ctx, em.handle, ep.hdr, payload, false, em.port))
     return err();
   return true;
 }

@@ -52,6 +52,7 @@ struct header {
   node_id dest_node;
   actor_id source_actor;
   actor_id dest_actor;
+  uint16_t sequence_number;
 
   inline header(message_type m_operation, uint8_t m_flags,
                 uint32_t m_payload_len, uint64_t m_operation_data,
@@ -64,7 +65,25 @@ struct header {
         source_node(std::move(m_source_node)),
         dest_node(std::move(m_dest_node)),
         source_actor(m_source_actor),
-        dest_actor(m_dest_actor) {
+        dest_actor(m_dest_actor),
+        sequence_number(0) {
+    // nop
+  }
+
+  inline header(message_type m_operation, uint8_t m_flags,
+                uint32_t m_payload_len, uint64_t m_operation_data,
+                node_id m_source_node, node_id m_dest_node,
+                actor_id m_source_actor, actor_id m_dest_actor,
+                uint16_t m_sequence_number)
+      : operation(m_operation),
+        flags(m_flags),
+        payload_len(m_payload_len),
+        operation_data(m_operation_data),
+        source_node(std::move(m_source_node)),
+        dest_node(std::move(m_dest_node)),
+        source_actor(m_source_actor),
+        dest_actor(m_dest_actor),
+        sequence_number(m_sequence_number) {
     // nop
   }
 
@@ -88,7 +107,7 @@ typename Inspector::result_type inspect(Inspector& f, header& hdr) {
            meta::omittable(), pad,
            meta::omittable(), pad,
            hdr.flags, hdr.payload_len, hdr.operation_data, hdr.source_node,
-           hdr.dest_node, hdr.source_actor, hdr.dest_actor);
+           hdr.dest_node, hdr.source_actor, hdr.dest_actor, hdr.sequence_number);
 }
 
 /// @relates header
@@ -118,7 +137,8 @@ bool valid(const header& hdr);
 constexpr size_t header_size = node_id::serialized_size * 2
                                + sizeof(actor_id) * 2
                                + sizeof(uint32_t) * 2
-                               + sizeof(uint64_t);
+                               + sizeof(uint64_t)
+                               + sizeof(uint16_t);
 
 /// @}
 

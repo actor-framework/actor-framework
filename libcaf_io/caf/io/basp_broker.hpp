@@ -35,9 +35,11 @@
 #include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/io/basp/all.hpp"
+
 #include "caf/io/broker.hpp"
 #include "caf/io/visitors.hpp"
 #include "caf/io/typed_broker.hpp"
+#include "caf/io/endpoint_context.hpp"
 
 namespace caf {
 namespace io {
@@ -95,24 +97,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void handle_heartbeat(const node_id&) override {
     // nop
   }
-
-  // stores meta information for active endpoints
-  struct endpoint_context {
-    // denotes what message we expect from the remote node next
-    basp::connection_state cstate;
-    // our currently processed BASP header
-    basp::header hdr;
-    // the handle for I/O operations
-    variant<connection_handle, dgram_scribe_handle> hdl;
-    // network-agnostic node identifier
-    node_id id;
-    // port
-    uint16_t remote_port;
-    // pending operations to be performed after handshake completed
-    optional<response_promise> callback;
-    // TODO: ordering
-    // TODO: reliability
-  }; 
 
   void set_context(connection_handle hdl);
   void set_context(dgram_scribe_handle hdl);

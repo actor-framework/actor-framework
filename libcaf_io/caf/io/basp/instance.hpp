@@ -26,6 +26,7 @@
 
 #include "caf/io/hook.hpp"
 #include "caf/io/middleman.hpp"
+#include "caf/io/endpoint_context.hpp"
 
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp/buffer_type.hpp"
@@ -122,10 +123,10 @@ public:
                           bool is_payload);
 
   /// Handles a received datagram
-  bool handle(execution_unit* ctx, new_datagram_msg& dm, header& hdr);
+  bool handle(execution_unit* ctx, new_datagram_msg& dm, endpoint_context& ep);
 
   /// Handles a new UDP endpoint msg
-  bool handle(execution_unit* ctx, new_endpoint_msg& em, header& hdr);
+  bool handle(execution_unit* ctx, new_endpoint_msg& em, endpoint_context& ep);
 
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
