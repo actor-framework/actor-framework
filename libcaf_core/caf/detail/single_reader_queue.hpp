@@ -169,6 +169,12 @@ public:
     return res;
   }
 
+  pointer peek() {
+    if (head_ != nullptr || fetch_new_data())
+      return head_;
+    return nullptr;
+  }
+
   // note: the cache is intended to be used by the owner, the queue itself
   //       never accesses the cache other than for counting;
   //       the first partition of the cache is meant to be used to store and
