@@ -109,57 +109,156 @@ private:
 };
 
 template <class T>
-class expect_clause {
+struct match_helper {
+  T& ref;
+
+  template <class... Fs>
+  void operator()(Fs... fs) {
+    struct impl : Fs... {
+      using result_type = void;
+      impl(Fs... xs) : Fs(xs)... {
+        // nop
+      }
+    };
+    impl visitor{std::move(fs)...};
+    apply_visitor(ref, visitor);
+  }
+};
+
+template <class T>
+match_helper<T> match(T& x) {
+  return {x};
+}
+
+template <class Derived>
+class expect_clause_base {
 public:
-  expect_clause(caf::scheduler::test_coordinator& sched) : sched_(sched) {
+  expect_clause_base(caf::scheduler::test_coordinator& sched)
+      : sched_(sched),
+        mock_dest_(false) {
     // nop
   }
 
-  expect_clause(expect_clause&& other)
+  expect_clause_base(expect_clause_base&& other)
       : sched_(other.sched_),
         src_(std::move(other.src_)) {
     // nop
   }
 
-  template <class Handle>
-  expect_clause& from(const Handle& whom) {
-    src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
-    return *this;
+  Derived& from(const wildcard&) {
+    return dref();
   }
 
   template <class Handle>
-  expect_clause& to(const Handle& whom) {
+  Derived& from(const Handle& whom) {
+    src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
+    return dref();
+  }
+
+  template <class Handle>
+  Derived& to(const Handle& whom) {
     CAF_REQUIRE(sched_.prioritize(whom));
-    auto ptr = sched_.next_job<caf::scheduled_actor>().mailbox().peek();
+    dest_ = &sched_.next_job<caf::scheduled_actor>();
+    auto ptr = dest_->mailbox().peek();
     CAF_REQUIRE(ptr != nullptr);
-    CAF_REQUIRE_EQUAL(ptr->sender, src_);
-    return *this;
+    if (src_)
+      CAF_REQUIRE_EQUAL(ptr->sender, src_);
+    return dref();
+  }
+
+  Derived& to(const wildcard& whom) {
+    CAF_REQUIRE(sched_.prioritize(whom));
+    dest_ = &sched_.next_job<caf::scheduled_actor>();
+    return dref();
+  }
+
+  Derived& to(const caf::scoped_actor& whom) {
+    mock_dest_ = true;
+    dest_ = whom.ptr();
+    return dref();
   }
 
   template <class... Ts>
-  void with(Ts&&... xs) {
-    std::integral_constant<bool, has_outer_type<T>::value> token;
+  std::tuple<const Ts&...> peek() {
+    CAF_REQUIRE(dest_ != nullptr);
+    auto ptr = dest_->mailbox().peek();
+    CAF_REQUIRE(ptr->content().match_elements<Ts...>());
+    return ptr->content().get_as_tuple<Ts...>();
+  }
+
+protected:
+  void run_once() {
+    if (dynamic_cast<caf::blocking_actor*>(dest_) == nullptr)
+      sched_.run_once();
+    else // remove message from mailbox
+      delete dest_->mailbox().try_pop();
+  }
+
+  Derived& dref() {
+    return *static_cast<Derived*>(this);
+  }
+
+  // denotes whether destination is a mock actor, i.e., a scoped_actor without
+  // functionality other than checking outputs of other actors
+  caf::scheduler::test_coordinator& sched_;
+  bool mock_dest_;
+  caf::strong_actor_ptr src_;
+  caf::local_actor* dest_;
+};
+
+template <class... Ts>
+class expect_clause : public expect_clause_base<expect_clause<Ts...>> {
+public:
+  template <class... Us>
+  expect_clause(Us&&... xs)
+      : expect_clause_base<expect_clause<Ts...>>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  template <class... Us>
+  void with(Us&&... xs) {
     auto tmp = std::make_tuple(std::forward<Ts>(xs)...);
+    elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
+    auto ys = this->template peek<Ts...>();
+    CAF_CHECK(inspector(get<0>(ys)));
+    this->run_once();
+  }
+};
+
+/// The single-argument expect-clause allows to automagically unwrap T
+/// if it's a variant-like wrapper.
+template <class T>
+class expect_clause<T> : public expect_clause_base<expect_clause<T>> {
+public:
+  template <class... Us>
+  expect_clause(Us&&... xs)
+      : expect_clause_base<expect_clause<T>>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  template <class... Us>
+  void with(Us&&... xs) {
+    std::integral_constant<bool, has_outer_type<T>::value> token;
+    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     with_content(token, tmp);
-    sched_.run_once();
+    this->run_once();
   }
 
 private:
   template <class U>
   void with_content(std::integral_constant<bool, false>, const U& x) {
     elementwise_compare_inspector<U> inspector{x};
-    CAF_CHECK(inspector(const_cast<T&>(sched_.peek<T>())));
+    auto xs = this->template peek<T>();
+    CAF_CHECK(inspector(get<0>(xs)));
   }
 
   template <class U>
   void with_content(std::integral_constant<bool, true>, const U& x) {
     elementwise_compare_inspector<U> inspector{x};
-    auto& y = sched_.peek<typename T::outer_type>();
-    CAF_CHECK(inspector(const_cast<T&>(get<T>(y))));
+    auto xs = this->template peek<typename T::outer_type>();
+    CAF_CHECK(inspector(get<0>(xs)));
   }
 
-  caf::scheduler::test_coordinator& sched_;
-  caf::strong_actor_ptr src_;
 };
 
 template <class Config = caf::actor_system_config>
@@ -207,15 +306,18 @@ struct test_coordinator_fixture {
     return dynamic_cast<T&>(*ptr);
   }
 
-  template <class T>
-    expect_clause<T> expect() {
-      return {sched};
-    }
+  template <class... Ts>
+  expect_clause<Ts...> expect() {
+    return {sched};
+  }
 };
 
 } // namespace <anonymous>
 
-#define expect(type, fields)                                                   \
-  CAF_MESSAGE("expect(" << #type << ")." << #fields);                          \
-  expect<type>().fields
+#define CAF_EXPAND(x) x
+#define CAF_DSL_LIST(...) __VA_ARGS__
+
+#define expect(types, fields)                                                  \
+  CAF_MESSAGE("expect" << #types << "." << #fields);                           \
+  expect< CAF_EXPAND(CAF_DSL_LIST types) >().fields
 

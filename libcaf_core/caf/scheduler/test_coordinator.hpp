@@ -24,6 +24,7 @@
 
 #include <deque>
 #include <chrono>
+#include <limits>
 #include <cstddef>
 #include <algorithm>
 
@@ -105,7 +106,7 @@ public:
 
   /// Executes events until the job queue is empty and no pending timeouts are
   /// left. Returns the number of processed events.
-  size_t run();
+  size_t run(size_t max_count = std::numeric_limits<size_t>::max());
 
   /// Tries to dispatch a single delayed message.
   bool dispatch_once();
