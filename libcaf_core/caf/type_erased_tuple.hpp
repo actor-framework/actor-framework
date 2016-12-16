@@ -124,6 +124,32 @@ public:
     return *reinterpret_cast<const T*>(get(pos));
   }
 
+  template <class T, size_t Pos>
+  struct typed_index {};
+
+  template <class T, size_t Pos>
+  static constexpr typed_index<T, Pos> make_typed_index() {
+    return {};
+  }
+
+  template <class T, size_t Pos>
+  const T& get_as(typed_index<T, Pos>) const {
+    return *reinterpret_cast<const T*>(get(Pos));
+  }
+
+  template <class... Ts, long... Is>
+  std::tuple<const Ts&...> get_as_tuple(detail::type_list<Ts...>,
+                                        detail::int_list<Is...>) const {
+    return std::tuple<const Ts&...>{get_as<Ts>(Is)...};
+    //return get_as<Ts>(Is)...;//(make_typed_index<Ts, Is>())...;
+  }
+
+  template <class... Ts>
+  std::tuple<const Ts&...> get_as_tuple() const {
+    return get_as_tuple(detail::type_list<Ts...>{},
+                        typename detail::il_range<0, sizeof...(Ts)>::type{});
+  }
+
   /// Convenience function for `*reinterpret_cast<T*>(get_mutable())`.
   template <class T>
   T& get_mutable_as(size_t pos) {

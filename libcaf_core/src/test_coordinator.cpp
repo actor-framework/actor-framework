@@ -19,6 +19,8 @@
 
 #include "caf/scheduler/test_coordinator.hpp"
 
+#include <limits>
+
 #include "caf/resumable.hpp"
 #include "caf/monitorable_actor.hpp"
 
@@ -131,9 +133,9 @@ bool test_coordinator::run_once() {
   return true;
 }
 
-size_t test_coordinator::run() {
+size_t test_coordinator::run(size_t max_count) {
   size_t res = 0;
-  while (run_once())
+  while (res < max_count && run_once())
     ++res;
   return res;
 }

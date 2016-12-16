@@ -21,9 +21,7 @@
 
 // this suite tests whether actors terminate as expect in several use cases
 #define CAF_SUITE actor_termination
-#include "caf/test/unit_test.hpp"
-
-#include "caf/all.hpp"
+#include "caf/test/dsl.hpp"
 
 using namespace caf;
 
@@ -36,27 +34,23 @@ behavior mirror_impl(event_based_actor* self) {
   };
 }
 
-struct fixture {
-  actor_system_config cfg;
-  actor_system system;
-  scoped_actor scoped_self;
+struct fixture :  test_coordinator_fixture<> {
   actor mirror;
   actor testee;
 
-  fixture()
-      : system(cfg),
-        scoped_self(system),
-        mirror(system.spawn(mirror_impl)) {
-    // nop
+  fixture() {
+    mirror = sys.spawn(mirror_impl);
+    // run initialization code or mirror
+    sched.run_once();
   }
 
   template <class... Ts>
   void spawn(Ts&&... xs) {
-    testee = scoped_self->spawn(std::forward<Ts>(xs)...);
+    testee = self->spawn(std::forward<Ts>(xs)...);
   }
 
   ~fixture() {
-    scoped_self->wait_for(testee);
+    self->wait_for(testee);
   }
 };
 
@@ -73,6 +67,10 @@ CAF_TEST(single_multiplexed_request) {
     );
   };
   spawn(f, mirror);
+  // run initialization code of testee
+  sched.run_once();
+  expect((int), from(testee).to(mirror).with(42));
+  expect((int), from(mirror).to(testee).with(42));
 }
 
 CAF_TEST(multiple_multiplexed_requests) {
@@ -85,6 +83,14 @@ CAF_TEST(multiple_multiplexed_requests) {
       );
   };
   spawn(f, mirror);
+  // run initialization code of testee
+  sched.run_once();
+  expect((int), from(testee).to(mirror).with(42));
+  expect((int), from(testee).to(mirror).with(42));
+  expect((int), from(testee).to(mirror).with(42));
+  expect((int), from(mirror).to(testee).with(42));
+  expect((int), from(mirror).to(testee).with(42));
+  expect((int), from(mirror).to(testee).with(42));
 }
 
 CAF_TEST(single_awaited_request) {
@@ -96,19 +102,33 @@ CAF_TEST(single_awaited_request) {
     );
   };
   spawn(f, mirror);
+  // run initialization code of testee
+  sched.run_once();
+  expect((int), from(testee).to(mirror).with(42));
+  expect((int), from(mirror).to(testee).with(42));
 }
 
 CAF_TEST(multiple_awaited_requests) {
   auto f = [&](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
-      self->request(server, infinite, 42).await(
+      self->request(server, infinite, i).await(
         [=](int x) {
           CAF_MESSAGE("received response #" << (i + 1));
-          CAF_REQUIRE_EQUAL(x, 42);
+          CAF_REQUIRE_EQUAL(x, i);
         }
       );
   };
   spawn(f, mirror);
+  // run initialization code of testee
+  sched.run_once();
+  self->monitor(testee);
+  expect((int), from(testee).to(mirror).with(0));
+  expect((int), from(testee).to(mirror).with(1));
+  expect((int), from(testee).to(mirror).with(2));
+  // request().await() processes messages out-of-order,
+  // which means we cannot check using expect()
+  sched.run();
+  expect((down_msg), from(testee).to(self).with(_));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
