@@ -52,6 +52,24 @@ instance::instance(abstract_broker* parent, callee& lstnr)
   CAF_ASSERT(this_node_ != none);
 }
 
+bool instance::deliver_pending(execution_unit* ctx, endpoint_context& ep) {
+  if (!ep.requires_ordering)
+    return true;
+  std::vector<char>* payload = nullptr;
+  auto itr = ep.pending.find(ep.seq_incoming);
+  while (itr != ep.pending.end()) {
+    ep.hdr = std::move(itr->second.first);
+    payload = &itr->second.second;
+    if (!handle_msg(ctx, get<dgram_scribe_handle>(ep.hdl),
+                    ep.hdr, payload, false, ep, none))
+      return false;
+    ep.pending.erase(itr);
+    ep.seq_incoming += 1;
+    itr = ep.pending.find(ep.seq_incoming);
+  }
+  return true;
+}
+
 connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
                                   header& hdr, bool is_payload) {
   CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
@@ -172,18 +190,8 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
   // TODO: Reliability
   if (!handle_msg(ctx, dm.handle, ep.hdr, payload, false, ep, none))
     return err();
-  auto itr = ep.pending.find(ep.seq_incoming);
-  while (itr != ep.pending.end()) {
-    ep.hdr = std::move(itr->second.first);
-    pl_buf = std::move(itr->second.second);
-    payload = &pl_buf;
-    if (!handle_msg(ctx, get<dgram_scribe_handle>(ep.hdl),
-                    ep.hdr, payload, false, ep, none))
-      err();
-    ep.pending.erase(itr);
-    ep.seq_incoming += 1;
-    itr = ep.pending.find(ep.seq_incoming);
-  }
+  if (!deliver_pending(ctx, ep))
+    return err();
   return true;
 };
 
@@ -237,7 +245,8 @@ bool instance::handle(execution_unit* ctx, new_endpoint_msg& em,
   }
   if (!handle_msg(ctx, em.handle, ep.hdr, payload, false, ep, em.port))
     return err();
-  // TODO: Check for pending messages ...
+  if (!deliver_pending(ctx, ep))
+    return err();
   return true;
 }
 

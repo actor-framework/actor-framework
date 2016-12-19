@@ -134,6 +134,10 @@ public:
   /// Handles a new UDP endpoint msg
   bool handle(execution_unit* ctx, new_endpoint_msg& em, endpoint_context& ep);
 
+  /// Deliver pending incoming messages for an endpoint with
+  /// application layer ordering
+  bool deliver_pending(execution_unit* ctx, endpoint_context& ep);
+
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
 
