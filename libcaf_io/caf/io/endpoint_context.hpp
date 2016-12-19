@@ -48,6 +48,9 @@ struct endpoint_context {
   uint16_t remote_port;
   // pending operations to be performed after handshake completed
   optional<response_promise> callback;
+  // TODO: introduce some call to ask scribe for such info
+  // Should be configurable by policies in the future
+  bool requires_ordering;
   uint16_t seq_incoming;
   uint16_t seq_outgoing;
   std::unordered_map<uint16_t, std::pair<basp::header,std::vector<char>>> pending;

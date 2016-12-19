@@ -50,8 +50,9 @@ const char* basp_broker_state::name = "basp_broker";
 basp_broker_state::basp_broker_state(broker* selfptr)
     : basp::instance::callee(selfptr->system(),
                              static_cast<proxy_registry::backend&>(*this)),
-      purge_state_vis(this),
       wr_buf_vis(selfptr),
+      purge_state_vis(this),
+      seq_num_vis(this),
       self(selfptr),
       instance(selfptr, *this) {
   CAF_ASSERT(this_node() != none);
@@ -108,10 +109,12 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   CAF_LOG_INFO("successfully created proxy instance, "
                "write announce_proxy_instance:"
                << CAF_ARG(nid) << CAF_ARG(aid));
+  auto& ctx = *this_context;
   // tell remote side we are monitoring this actor now
   instance.write_announce_proxy(self->context(),
-                                apply_visitor(wr_buf_vis, this_context->hdl),
-                                nid, aid);
+                                apply_visitor(wr_buf_vis, ctx.hdl),
+                                nid, aid,
+                                ctx.requires_ordering ? ctx.seq_outgoing++ : 0);
   instance.tbl().flush(*path);
   mm->notify<hook::new_remote_actor>(res);
   return res;
@@ -175,7 +178,8 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
     }
     instance.write_kill_proxy(self->context(),
                               apply_visitor(wr_buf_vis, path->hdl),
-                              nid, aid, rsn);
+                              nid, aid, rsn,
+                              apply_visitor(seq_num_vis, path->hdl));
     instance.tbl().flush(*path);
   };
   auto ptr = actor_cast<strong_actor_ptr>(entry);
@@ -353,7 +357,8 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   // send message to SpawnServ of remote node
   basp::header hdr{basp::message_type::dispatch_message,
                    basp::header::named_receiver_flag,
-                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id};
+                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                   apply_visitor(seq_num_vis, path->hdl)};
   // writing std::numeric_limits<actor_id>::max() is a hack to get
   // this send-to-named-actor feature working with older CAF releases
   instance.write(self->context(), apply_visitor(wr_buf_vis, path->hdl), hdr,
@@ -444,11 +449,36 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   });
   basp::header hdr{basp::message_type::dispatch_message,
                    basp::header::named_receiver_flag,
-                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id};
+                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                   apply_visitor(state.seq_num_vis, path->hdl)};
   instance.write(self->context(), path->wr_buf, hdr, &writer);
   instance.flush(*path);
 }
 */
+
+void basp_broker_state::purge(connection_handle h) {
+  auto i = tcp_ctx.find(h);
+  if (i != tcp_ctx.end()) {
+    auto& ref = i->second;
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    tcp_ctx.erase(i);
+  }
+}
+
+void basp_broker_state::purge(dgram_scribe_handle h) {
+  auto i = udp_ctx.find(h);
+  if (i != udp_ctx.end()) {
+    auto& ref = i->second;
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    udp_ctx.erase(i);
+  }
+}
 
 void basp_broker_state::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
@@ -463,7 +493,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
                      0, 0, 0, none, none,
                      invalid_actor_id, invalid_actor_id},
         hdl, none, 0, none,
-        0, 0
+        false, 0, 0, {}
       }
     ).first;
   }
@@ -484,37 +514,22 @@ void basp_broker_state::set_context(dgram_scribe_handle hdl) {
                      0, 0, 0, none, none,
                      invalid_actor_id, invalid_actor_id},
         hdl, none, 0, none,
-        0, 0
+        true, 0, 0, {}
       }
     ).first;
   }
   this_context = &i->second;
 }
 
-basp_broker_state::purge_visitor::result_type
-basp_broker_state::purge_visitor::operator()(const connection_handle& h) {
-  auto i = state->tcp_ctx.find(h);
-  if (i != state->tcp_ctx.end()) {
-    auto& ref = i->second;
-    if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake");
-      ref.callback->deliver(sec::disconnect_during_handshake);
-    }
-    state->tcp_ctx.erase(i);
-  }
+uint16_t basp_broker_state::next_sequence_number(connection_handle) {
+  return 0;
 }
 
-basp_broker_state::purge_visitor::result_type
-basp_broker_state::purge_visitor::operator()(const dgram_scribe_handle& h) {
-  auto i = state->udp_ctx.find(h);
-  if (i != state->udp_ctx.end()) {
-    auto& ref = i->second;
-    if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake");
-      ref.callback->deliver(sec::disconnect_during_handshake);
-    }
-    state->udp_ctx.erase(i);
-  }
+uint16_t basp_broker_state::next_sequence_number(dgram_scribe_handle hdl) {
+  auto i = udp_ctx.find(hdl);
+  if (i != udp_ctx.end() && i->second.requires_ordering)
+    return i->second.seq_outgoing++;
+  return 0;
 }
 
 
@@ -607,8 +622,7 @@ behavior basp_broker::make_behavior() {
       }
       if (src && system().node() == src->node())
         system().registry().put(src->id(), src);
-      if (!state.instance.dispatch(context(), src, fwd_stack,
-                                    dest, mid, msg)
+      if (!state.instance.dispatch(context(), src, fwd_stack, dest, mid, msg)
           && mid.is_request()) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
         srb(src, mid);
@@ -640,7 +654,8 @@ behavior basp_broker::make_behavior() {
       basp::header hdr{basp::message_type::dispatch_message,
                        basp::header::named_receiver_flag,
                        0, cme->mid.integer_value(), state.this_node(),
-                       dest_node, src->id(), invalid_actor_id};
+                       dest_node, src->id(), invalid_actor_id,
+                       apply_visitor(state.seq_num_vis, path->hdl)};
       state.instance.write(context(), apply_visitor(wr_buf_, path->hdl), hdr,
                            &writer);
       state.instance.flush(*path);
@@ -771,10 +786,17 @@ behavior basp_broker::make_behavior() {
         ctx.hdl = hdl;
         ctx.remote_port = port;
         ctx.callback = rp;
+        // assuming all UDP based protocol need ordering ...
+        // TODO: get this information from the policy
+        ctx.requires_ordering = true;
+        ctx.seq_incoming = 0;
+        ctx.seq_outgoing = 0;
         auto& bi = state.instance;
-        bi.write_client_handshake(context(), wr_buf(hdl), none);
+        bi.write_client_handshake(context(), wr_buf(hdl), none,
+                                  ctx.seq_outgoing++);
         flush(hdl);
         configure_datagram_size(hdl, 1500);
+        // TODO: Set timeout for expected answer
       } else {
         CAF_LOG_DEBUG("failed to assign datagram sink from handle"
                       << CAF_ARG(res));

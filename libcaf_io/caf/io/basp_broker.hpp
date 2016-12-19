@@ -98,6 +98,13 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     // nop
   }
 
+  // inherited from basp::instance::listener
+  uint16_t next_sequence_number(connection_handle hdl) override;
+  uint16_t next_sequence_number(dgram_scribe_handle hdl) override;
+
+  void purge(connection_handle hdl);
+  void purge(dgram_scribe_handle hdl);
+
   void set_context(connection_handle hdl);
   void set_context(dgram_scribe_handle hdl);
 
@@ -105,12 +112,24 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   struct purge_visitor {
     using result_type = void;
     purge_visitor(basp_broker_state* ptr) : state{ptr} { }
-    result_type operator()(const connection_handle& hdl);
-    result_type operator()(const dgram_scribe_handle& hdl);
+    template <class T>
+    result_type operator()(const T& hdl) {
+      return state->purge(hdl);
+    }
     basp_broker_state* state;
   };
-  purge_visitor purge_state_vis;
+  struct sequence_number_visitor {
+    using result_type = uint16_t;
+    sequence_number_visitor(basp_broker_state* ptr) : state{ptr} { }
+    template <class T>
+    result_type operator()(const T& hdl) {
+      return state->next_sequence_number(hdl);
+    }
+    basp_broker_state* state;
+  };
   wr_buf_visitor wr_buf_vis;
+  purge_visitor purge_state_vis;
+  sequence_number_visitor seq_num_vis;
 
   // pointer to ourselves
   broker* self;

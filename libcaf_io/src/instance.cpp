@@ -21,6 +21,7 @@
 
 #include "caf/io/basp/instance.hpp"
 
+#include "caf/variant.hpp"
 #include "caf/streambuf.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
@@ -46,13 +47,13 @@ instance::instance(abstract_broker* parent, callee& lstnr)
       this_node_(parent->system().node()),
       callee_(lstnr),
       flush_(parent),
-      wr_buf_(parent) {
+      wr_buf_(parent),
+      seq_num_(lstnr) {
   CAF_ASSERT(this_node_ != none);
 }
 
-connection_state instance::handle(execution_unit* ctx,
-                                  new_data_msg& dm, header& hdr,
-                                  bool is_payload) {
+connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
+                                  header& hdr, bool is_payload) {
   CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
   // function object providing cleanup code on errors
   auto err = [&]() -> connection_state {
@@ -113,7 +114,7 @@ connection_state instance::handle(execution_unit* ctx,
     }
     return await_header;
   }
-  if (!handle_msg(ctx, dm.handle, hdr, payload, true, none))
+  if (!handle_msg(ctx, dm.handle, hdr, payload, true, none, none))
     return err();
   return await_header;
 }
@@ -141,7 +142,7 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
   auto e = bd(ep.hdr);
   if (e || !valid(ep.hdr)) {
     CAF_LOG_WARNING("received invalid header:" << CAF_ARG(ep.hdr));
-    std::cerr << "Received invalid header!" << std::endl;
+    std::cerr << "[!!] invalid header!" << std::endl;
     return err();
   }
   CAF_LOG_DEBUG(CAF_ARG(ep.hdr));
@@ -154,10 +155,35 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
     }
   }
   // TODO: Ordering
+  std::cerr << "[<<] '" << to_string(ep.hdr.operation)
+            << "' with seq '" << ep.hdr.sequence_number << "'" << std::endl;
+  if (ep.hdr.sequence_number != ep.seq_incoming) {
+    std::cerr << "[!!] '" << to_string(ep.hdr.operation) << "' with seq '"
+              << ep.hdr.sequence_number << "' (!= " << ep.seq_incoming
+              << ")" << std::endl;
+    auto s = ep.hdr.sequence_number;
+    auto h = std::move(ep.hdr);
+    auto b = std::move(pl_buf);
+    ep.pending.emplace(s, std::make_pair(std::move(h), std::move(b)));
+    return true;
+  }
+  ep.seq_incoming += 1;
 
   // TODO: Reliability
-  if (!handle_msg(ctx, dm.handle, ep.hdr, payload, false, none))
+  if (!handle_msg(ctx, dm.handle, ep.hdr, payload, false, ep, none))
     return err();
+  auto itr = ep.pending.find(ep.seq_incoming);
+  while (itr != ep.pending.end()) {
+    ep.hdr = std::move(itr->second.first);
+    pl_buf = std::move(itr->second.second);
+    payload = &pl_buf;
+    if (!handle_msg(ctx, get<dgram_scribe_handle>(ep.hdl),
+                    ep.hdr, payload, false, ep, none))
+      err();
+    ep.pending.erase(itr);
+    ep.seq_incoming += 1;
+    itr = ep.pending.find(ep.seq_incoming);
+  }
   return true;
 };
 
@@ -175,18 +201,30 @@ bool instance::handle(execution_unit* ctx, new_endpoint_msg& em,
     return false;
   };
   // extract payload
-  std::vector<char> pl_buf{std::move_iterator<itr_t>(std::begin(em.buf) +
-                                                     basp::header_size),
+  std::vector<char> pl_buf{std::move_iterator<itr_t>(std::begin(em.buf)
+                                                     + basp::header_size),
                            std::move_iterator<itr_t>(std::end(em.buf))};
   // resize header
   em.buf.resize(basp::header_size);
   // extract header
   binary_deserializer bd{ctx, em.buf};
   auto e = bd(ep.hdr);
+  // client handshake for UDP should be sequence number 0
   if (e || !valid(ep.hdr)) {
     CAF_LOG_WARNING("received invalid header:" << CAF_ARG(ep.hdr));
-    std::cerr << "Received invalid header!" << std::endl;
+    std::cerr << "[<<] invalid header!" << std::endl;
     return err();
+  }
+  if (ep.hdr.sequence_number != ep.seq_incoming) {
+    CAF_LOG_WARNING("Handshake with unexected sequence number: "
+                    << CAF_ARG(ep.hdr.sequence_number));
+    std::cerr << "[<<] Unexpected sequence number '" << ep.hdr.sequence_number
+              << "'in client handshake" << std::endl;
+    ep.seq_incoming = ep.hdr.sequence_number + 1;
+  } else {
+    std::cerr << "[<<] '" << to_string(ep.hdr.operation) << "' with seq '"
+              << ep.hdr.sequence_number << "'" << std::endl;
+    ep.seq_incoming += 1;
   }
   CAF_LOG_DEBUG(CAF_ARG(ep.hdr));
   std::vector<char>* payload = nullptr;
@@ -197,8 +235,9 @@ bool instance::handle(execution_unit* ctx, new_endpoint_msg& em,
       return err();
     }
   }
-  if (!handle_msg(ctx, em.handle, ep.hdr, payload, false, em.port))
+  if (!handle_msg(ctx, em.handle, ep.hdr, payload, false, ep, em.port))
     return err();
+  // TODO: Check for pending messages ...
   return true;
 }
 
@@ -206,7 +245,8 @@ void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");
   for (auto& kvp: tbl_.direct_by_hdl_) {
     CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
-    write_heartbeat(ctx, apply_visitor(wr_buf_, kvp.first), kvp.second);
+    auto seq = apply_visitor(seq_num_, kvp.first);
+    write_heartbeat(ctx, apply_visitor(wr_buf_, kvp.first), kvp.second, seq);
     apply_visitor(flush_, kvp.first);
   }
 }
@@ -309,7 +349,8 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   });
   header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
              sender ? sender->node() : this_node(), receiver->node(),
-             sender ? sender->id() : invalid_actor_id, receiver->id()};
+             sender ? sender->id() : invalid_actor_id, receiver->id(),
+             apply_visitor(seq_num_, path->hdl)};
   write(ctx, apply_visitor(wr_buf_, path->hdl), hdr, &writer);
   flush(*path);
   notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
@@ -319,8 +360,9 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
 void instance::write(execution_unit* ctx, buffer_type& buf,
                      header& hdr, payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
-  //std::cerr << "[W] Writing " << buf.size() << " bytes in "
-  //          << to_string(hdr.operation) << " message" << std::endl;
+  std::cerr << "[>>] '" << to_string(hdr.operation)
+            << "' with seq '" << hdr.sequence_number << "'"
+            << std::endl;
   error err;
   if (pw) {
     auto pos = buf.size();
@@ -334,8 +376,6 @@ void instance::write(execution_unit* ctx, buffer_type& buf,
     hdr.payload_len = static_cast<uint32_t>(plen);
     stream_serializer<charbuf> out{ctx, buf.data() + pos, basp::header_size};
     err = out(hdr);
-//    std::cerr << "Wrote " << to_string(hdr.operation) << " with " << basp::header_size
-//              << " + " << hdr.payload_len << " bytes" << std::endl;
   } else {
     binary_serializer bs{ctx, buf};
     err = bs(hdr);
@@ -347,7 +387,8 @@ void instance::write(execution_unit* ctx, buffer_type& buf,
 }
 
 void instance::write_server_handshake(execution_unit* ctx, buffer_type& buf,
-                                      optional<uint16_t> port) {
+                                      optional<uint16_t> port,
+                                      uint16_t sequence_number) {
   CAF_LOG_TRACE(CAF_ARG(port));
   using namespace detail;
   published_actor* pa = nullptr;
@@ -374,50 +415,54 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& buf,
   header hdr{message_type::server_handshake, 0, 0, version,
              this_node_, none,
              pa && pa->first ? pa->first->id() : invalid_actor_id,
-             invalid_actor_id};
-//  std::cerr << "Writing server handshake, published actor "
-//            << (pa ? "found" : "unknwon") << std::endl;
+             invalid_actor_id, sequence_number};
   write(ctx, buf, hdr, &writer);
 }
 
 void instance::write_client_handshake(execution_unit* ctx, buffer_type& buf,
-                                      const node_id& remote_side) {
+                                      const node_id& remote_side,
+                                      uint16_t sequence_number) {
   CAF_LOG_TRACE(CAF_ARG(remote_side));
   auto writer = make_callback([&](serializer& sink) -> error {
     auto& str = callee_.system().config().middleman_app_identifier;
     return sink(const_cast<std::string&>(str));
   });
   header hdr{message_type::client_handshake, 0, 0, 0,
-             this_node_, remote_side, invalid_actor_id, invalid_actor_id};
+             this_node_, remote_side, invalid_actor_id, invalid_actor_id,
+             sequence_number};
   write(ctx, buf, hdr, &writer);
 }
 
 void instance::write_announce_proxy(execution_unit* ctx, buffer_type& buf,
-                                    const node_id& dest_node, actor_id aid) {
+                                    const node_id& dest_node, actor_id aid,
+                                    uint16_t sequence_number) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid));
   header hdr{message_type::announce_proxy, 0, 0, 0,
-             this_node_, dest_node, invalid_actor_id, aid};
+             this_node_, dest_node, invalid_actor_id, aid,
+             sequence_number};
   write(ctx, buf, hdr);
 }
 
 void instance::write_kill_proxy(execution_unit* ctx, buffer_type& buf,
                                 const node_id& dest_node, actor_id aid,
-                                const error& rsn) {
+                                const error& rsn, uint16_t sequence_number) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
   auto writer = make_callback([&](serializer& sink) -> error {
     return sink(const_cast<error&>(rsn));
   });
   header hdr{message_type::kill_proxy, 0, 0, 0,
-             this_node_, dest_node, aid, invalid_actor_id};
+             this_node_, dest_node, aid, invalid_actor_id,
+             sequence_number};
   write(ctx, buf, hdr, &writer);
 }
 
-void instance::write_heartbeat(execution_unit* ctx,
-                               buffer_type& buf,
-                               const node_id& remote_side) {
+void instance::write_heartbeat(execution_unit* ctx, buffer_type& buf,
+                               const node_id& remote_side,
+                               uint16_t sequence_number) {
   CAF_LOG_TRACE(CAF_ARG(remote_side));
   header hdr{message_type::heartbeat, 0, 0, 0,
-             this_node_, remote_side, invalid_actor_id, invalid_actor_id};
+             this_node_, remote_side, invalid_actor_id, invalid_actor_id,
+             sequence_number};
   write(ctx, buf, hdr);
 }
 

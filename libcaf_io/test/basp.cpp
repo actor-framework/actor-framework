@@ -1047,7 +1047,8 @@ CAF_TEST(client_handshake_and_dispatch_udp) {
   // send a message via `dispatch` from node 0
   mock(jupiter().connection,
        {basp::message_type::dispatch_message, 0, 0, 0,
-        jupiter().id, this_node(), jupiter().dummy_actor->id(), self()->id()},
+        jupiter().id, this_node(), jupiter().dummy_actor->id(), self()->id(),
+        1},
        std::vector<actor_addr>{},
        make_message(1, 2, 3))
   .expect(jupiter().connection,
@@ -1167,7 +1168,7 @@ CAF_TEST(remote_actor_and_send_udp) {
   mock(jupiter().connection,
        {basp::message_type::dispatch_message, 0, 0, 0,
         jupiter().id, this_node(),
-        jupiter().dummy_actor->id(), self()->id()},
+        jupiter().dummy_actor->id(), self()->id(), 1},
        std::vector<actor_id>{},
        make_message("hi there!"));
   self()->receive(
@@ -1204,7 +1205,7 @@ CAF_TEST(actor_serialize_and_deserialize_udp) {
   mock(jupiter().connection,
        {basp::message_type::dispatch_message, 0, 0, 0,
         prx->node(), this_node(),
-        prx->id(), testee->id()},
+        prx->id(), testee->id(), 1},
        std::vector<actor_id>{},
        msg);
   // testee must've responded (process forwarded message in BASP broker)

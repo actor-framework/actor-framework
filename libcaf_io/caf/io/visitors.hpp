@@ -32,7 +32,7 @@ struct wr_buf_visitor {
   result_type operator()(const Handle& hdl) { return ptr->wr_buf(hdl); }
   abstract_broker* ptr;
 };
-  
+
 struct flush_visitor {
   using result_type = void;
   flush_visitor(abstract_broker* ptr) : ptr{ptr} { }

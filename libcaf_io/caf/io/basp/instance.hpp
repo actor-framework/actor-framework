@@ -104,6 +104,12 @@ public:
       return namespace_.system();
     }
 
+    // return the next outgoing sequence number for a connection
+    virtual uint16_t next_sequence_number(connection_handle hdl) = 0;
+
+    // return the next outgoing sequence number for an endpoint
+    virtual uint16_t next_sequence_number(dgram_scribe_handle hdl) = 0;
+
   protected:
     proxy_registry namespace_;
   };
@@ -197,25 +203,30 @@ public:
   /// actor published at `port` to `buf`. If `port == none` or
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
-  void write_server_handshake(execution_unit* ctx,
-                              buffer_type& buf, optional<uint16_t> port);
+  void write_server_handshake(execution_unit* ctx, buffer_type& buf,
+                              optional<uint16_t> port,
+                              uint16_t sequence_number = 0);
 
   /// Writes the client handshake to `buf`.
-  void write_client_handshake(execution_unit* ctx,
-                              buffer_type& buf, const node_id& remote_side);
+  void write_client_handshake(execution_unit* ctx, buffer_type& buf,
+                              const node_id& remote_side,
+                              uint16_t sequence_number = 0);
 
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
-                            const node_id& dest_node, actor_id aid);
+                            const node_id& dest_node, actor_id aid,
+                            uint16_t sequence_number = 0);
 
   /// Writes a `kill_proxy` to `buf`.
   void write_kill_proxy(execution_unit* ctx, buffer_type& buf,
                         const node_id& dest_node, actor_id aid,
-                        const error& fail_state);
+                        const error& fail_state,
+                        uint16_t sequence_number = 0);
 
   /// Writes a `heartbeat` to `buf`.
   void write_heartbeat(execution_unit* ctx,
-                       buffer_type& buf, const node_id& remote_side);
+                       buffer_type& buf, const node_id& remote_side,
+                       uint16_t sequence_number = 0);
 
   inline const node_id& this_node() const {
     return this_node_;
@@ -234,9 +245,7 @@ public:
   template <class Handle>
   bool handle_msg(execution_unit* ctx, const Handle& hdl, header& hdr,
                 std::vector<char>* payload, bool tcp_based,
-                optional<uint16_t> port) {
-//    std::cerr << "[MSG] From " << hdl.id() << " (" << to_string(hdr.operation)
-//              << ")" << std::endl;
+                optional<endpoint_context&> ep, optional<uint16_t> port) {
     auto payload_valid = [&]() -> bool {
       return payload != nullptr && payload->size() == hdr.payload_len;
     };
@@ -286,7 +295,8 @@ public:
           return false;
         }
         if (tcp_based)
-          write_client_handshake(ctx, apply_visitor(wr_buf_, path->hdl), hdr.source_node);
+          write_client_handshake(ctx, apply_visitor(wr_buf_, path->hdl),
+                                 hdr.source_node);
         callee_.learned_new_node_directly(hdr.source_node);
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         flush(*path);
@@ -319,7 +329,8 @@ public:
           tbl_.add(hdl, hdr.source_node);
         }
         if (!tcp_based) {
-          write_server_handshake(ctx, wr_buf_.ptr->wr_buf(hdl), port);
+          auto seq = (ep && ep->requires_ordering) ? ep->seq_outgoing++ : 0;
+          write_server_handshake(ctx, wr_buf_.ptr->wr_buf(hdl), port, seq);
           wr_buf_.ptr->flush(hdl);
         }
         if (!is_known_node) {
@@ -390,12 +401,22 @@ public:
   }
 
 private:
+  struct sequence_number_visitor {
+    using result_type = uint16_t;
+    sequence_number_visitor(instance::callee& c) : cal{c} { }
+    template <class T>
+    result_type operator()(const T& hdl) {
+      return cal.next_sequence_number(hdl);
+    }
+    instance::callee& cal;
+  };
   routing_table tbl_;
   published_actor_map published_actors_;
   node_id this_node_;
   callee& callee_;
   flush_visitor flush_;
   wr_buf_visitor wr_buf_;
+  sequence_number_visitor seq_num_;
 };
 
 /// @}
