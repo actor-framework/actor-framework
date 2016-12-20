@@ -110,6 +110,15 @@ public:
     // return the next outgoing sequence number for an endpoint
     virtual uint16_t next_sequence_number(dgram_scribe_handle hdl) = 0;
 
+    /// Add message with a future sequence number to the pending messages
+    /// of a given endpoint context
+    virtual void add_pending(uint16_t seq, endpoint_context& ep,
+                             basp::header hdr, std::vector<char> payload) = 0;
+
+    /// Deliver pending incoming messages for an endpoint with
+    /// application layer ordering
+    virtual bool deliver_pending(execution_unit* ctx, endpoint_context& ep) = 0;
+
   protected:
     proxy_registry namespace_;
   };
@@ -133,10 +142,6 @@ public:
 
   /// Handles a new UDP endpoint msg
   bool handle(execution_unit* ctx, new_endpoint_msg& em, endpoint_context& ep);
-
-  /// Deliver pending incoming messages for an endpoint with
-  /// application layer ordering
-  bool deliver_pending(execution_unit* ctx, endpoint_context& ep);
 
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);

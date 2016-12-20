@@ -100,7 +100,16 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // inherited from basp::instance::listener
   uint16_t next_sequence_number(connection_handle hdl) override;
+
+  // inherited from basp::instance::listener
   uint16_t next_sequence_number(dgram_scribe_handle hdl) override;
+
+  // inherited from basp::instance::listener
+  void add_pending(uint16_t seq, endpoint_context& ep, basp::header hdr,
+                   std::vector<char> payload) override;
+
+  // inherited from basp::instance::listener
+  bool deliver_pending(execution_unit* ctx, endpoint_context& ep) override;
 
   void purge(connection_handle hdl);
   void purge(dgram_scribe_handle hdl);

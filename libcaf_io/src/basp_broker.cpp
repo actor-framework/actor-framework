@@ -532,6 +532,36 @@ uint16_t basp_broker_state::next_sequence_number(dgram_scribe_handle hdl) {
   return 0;
 }
 
+void basp_broker_state::add_pending(uint16_t seq, endpoint_context& ep,
+                           basp::header hdr, std::vector<char> payload) {
+  ep.pending.emplace(seq, std::make_pair(std::move(hdr), std::move(payload)));
+  // TODO: choose reasonable default timeout, make configurable
+  self->delayed_send(self, std::chrono::milliseconds(500), pending_atom::value,
+                     get<dgram_scribe_handle>(ep.hdl), seq);
+}
+
+bool basp_broker_state::deliver_pending(execution_unit* ctx,
+                                        endpoint_context& ep) {
+  if (!ep.requires_ordering)
+    return true;
+  std::vector<char>* payload = nullptr;
+  auto itr = ep.pending.find(ep.seq_incoming);
+  while (itr != ep.pending.end()) {
+    //std::cerr << "[++] '" << to_string(itr->second.first.operation)
+    //          << "' with seq '" << itr->second.first.sequence_number
+    //          << "' (was pending)" << std::endl;
+    ep.hdr = std::move(itr->second.first);
+    payload = &itr->second.second;
+    if (!instance.handle_msg(ctx, get<dgram_scribe_handle>(ep.hdl),
+                             ep.hdr, payload, false, ep, none))
+      return false;
+    ep.pending.erase(itr);
+    ep.seq_incoming += 1;
+    itr = ep.pending.find(ep.seq_incoming);
+  }
+  return true;
+}
+
 
 /******************************************************************************
  *                                basp_broker                                 *
@@ -844,6 +874,14 @@ behavior basp_broker::make_behavior() {
       state.instance.handle_heartbeat(context());
       delayed_send(this, std::chrono::milliseconds{interval},
                    tick_atom::value, interval);
+    },
+    [=](pending_atom, dgram_scribe_handle hdl, uint16_t seq) {
+      auto& ep = state.udp_ctx[hdl];
+      auto itr = ep.pending.find(seq);
+      if (itr != ep.pending.end()) {
+        ep.seq_incoming = seq;
+        state.deliver_pending(context(), ep);
+      }
     }
   };
 }

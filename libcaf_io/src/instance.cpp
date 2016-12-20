@@ -52,27 +52,6 @@ instance::instance(abstract_broker* parent, callee& lstnr)
   CAF_ASSERT(this_node_ != none);
 }
 
-bool instance::deliver_pending(execution_unit* ctx, endpoint_context& ep) {
-  if (!ep.requires_ordering)
-    return true;
-  std::vector<char>* payload = nullptr;
-  auto itr = ep.pending.find(ep.seq_incoming);
-  while (itr != ep.pending.end()) {
-    //std::cerr << "[++] '" << to_string(itr->second.first.operation)
-    //          << "' with seq '" << itr->second.first.sequence_number
-    //          << "' (was pending)" << std::endl;
-    ep.hdr = std::move(itr->second.first);
-    payload = &itr->second.second;
-    if (!handle_msg(ctx, get<dgram_scribe_handle>(ep.hdl),
-                    ep.hdr, payload, false, ep, none))
-      return false;
-    ep.pending.erase(itr);
-    ep.seq_incoming += 1;
-    itr = ep.pending.find(ep.seq_incoming);
-  }
-  return true;
-}
-
 connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
                                   header& hdr, bool is_payload) {
   CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
@@ -175,25 +154,33 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
       return err();
     }
   }
-  // TODO: Ordering
-  //std::cerr << "[<<] '" << to_string(ep.hdr.operation)
-  //          << "' with seq '" << ep.hdr.sequence_number << "'" << std::endl;
-  if (ep.hdr.sequence_number != ep.seq_incoming) {
-    //std::cerr << "[!!] '" << to_string(ep.hdr.operation) << "' with seq '"
-    //          << ep.hdr.sequence_number << "' (!= " << ep.seq_incoming
-    //          << ")" << std::endl;
+  // Handle FIFO ordering of datagrams
+  /*
+  std::cerr << "[<<] '" << to_string(ep.hdr.operation)
+            << "' with seq '" << ep.hdr.sequence_number << "'" << std::endl;
+  if (ep.hdr.sequence_numer != ep.seq_incoming) {
+    std::cerr << "[!!] '" << to_string(ep.hdr.operation) << "' with seq '"
+              << ep.hdr.sequence_number << "' (!= " << ep.seq_incoming
+              << ")" << std::endl;
+  }
+  */
+  if (ep.hdr.sequence_number > ep.seq_incoming) {
+    // Message arrived "early", add to pending messages
     auto s = ep.hdr.sequence_number;
-    auto h = std::move(ep.hdr);
-    auto b = std::move(pl_buf);
-    ep.pending.emplace(s, std::make_pair(std::move(h), std::move(b)));
+    callee_.add_pending(s, ep, std::move(ep.hdr), std::move(pl_buf));
+    return true;
+  } else if (ep.hdr.sequence_number < ep.seq_incoming) {
+    // Message arrived late, drop it!
+    CAF_LOG_DEBUG("dropping msg " << CAF_ARG(dm));
     return true;
   }
+  // Message arrived as expected
   ep.seq_incoming += 1;
-
-  // TODO: Reliability
+  // TODO: Add optional reliability here (send acks, ...)
   if (!handle_msg(ctx, dm.handle, ep.hdr, payload, false, ep, none))
     return err();
-  if (!deliver_pending(ctx, ep))
+  // Look for pending messages
+  if (!callee_.deliver_pending(ctx, ep))
     return err();
   return true;
 };
@@ -248,7 +235,7 @@ bool instance::handle(execution_unit* ctx, new_endpoint_msg& em,
   }
   if (!handle_msg(ctx, em.handle, ep.hdr, payload, false, ep, em.port))
     return err();
-  if (!deliver_pending(ctx, ep))
+  if (!callee_.deliver_pending(ctx, ep))
     return err();
   return true;
 }
