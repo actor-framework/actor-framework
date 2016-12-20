@@ -627,16 +627,14 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       state.set_context(msg.handle);
       auto& ctx = *state.this_context;
-      auto is_open = state.instance.handle(context(), msg, ctx);
-      if (!is_open) {
+      if (!state.instance.handle(context(), msg, ctx)) {
         if (ctx.callback) {
           CAF_LOG_WARNING("failed to handshake with remote node"
                           << CAF_ARG(msg.handle));
           ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
         }
-      } else {
-        // TODO: Do we need to handle available callbacks here?
-        //configure_datagram_size(msg.handle, 1500);
+        close(msg.handle);
+        state.udp_ctx.erase(msg.handle);
       }
     },
     // received from proxy instances
