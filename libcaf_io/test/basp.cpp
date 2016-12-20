@@ -540,6 +540,36 @@ public:
       return *this;
     }
 
+    template <class... Ts>
+    mock_t& enqueue_back(dgram_scribe_handle hdl, basp::header hdr,
+                   const Ts&... xs) {
+      buffer buf;
+      this_->to_buf(buf, hdr, nullptr, xs...);
+      CAF_MESSAGE("adding msg " << to_string(hdr.operation)
+                  << " with " << (buf.size() - basp::header_size)
+                  << " bytes payload to back of queue");
+      this_->mpx()->virtual_network_buffer(hdl) = buf;
+      return *this;
+    }
+
+    template <class... Ts>
+    mock_t& enqueue_front(dgram_scribe_handle hdl, basp::header hdr,
+                          const Ts&... xs) {
+      buffer buf;
+      this_->to_buf(buf, hdr, nullptr, xs...);
+      CAF_MESSAGE("adding msg " << to_string(hdr.operation)
+                  << " with " << (buf.size() - basp::header_size)
+                  << " bytes payload to front of queue");
+      this_->mpx()->virtual_network_buffer_front(hdl) = buf;
+      return *this;
+    }
+
+    mock_t& deliver(dgram_scribe_handle hdl, size_t num_messages = 1) {
+      for (size_t i = 0; i < num_messages; ++i)
+        this_->mpx()->read_datagram(hdl);
+      return *this;
+    }
+
   private:
     fixture* this_;
     size_t num = 1;
@@ -1176,6 +1206,120 @@ CAF_TEST(remote_actor_and_send_udp) {
       CAF_CHECK_EQUAL(to_string(self()->current_sender()), to_string(result));
       CAF_CHECK_EQUAL(self()->current_sender(), result.address());
       CAF_CHECK_EQUAL(str, "hi there!");
+    }
+  );
+}
+
+CAF_TEST(out_of_order_delivery_udp) {
+  constexpr const char* prot = "udp";
+  constexpr const char* lo = "localhost";
+  constexpr uint16_t port = 4242;
+  auto u = uri::make(std::string(prot) + "://" + std::string(lo) + ":" +
+                     std::to_string(port));
+  CAF_REQUIRE(u);
+  CAF_MESSAGE("self: " << to_string(self()->address()));
+  mpx()->provide_dgram_scribe(lo, 4242, jupiter().connection);
+  CAF_REQUIRE(mpx()->has_pending_dgram_scribe(lo, 4242));
+  auto mm1 = system.middleman().actor_handle();
+  actor result;
+  auto f = self()->request(mm1, infinite, connect_atom::value, *u);
+  // wait until BASP broker has received and processed the connect message
+  while (!aut()->valid(jupiter().connection))
+    mpx()->exec_runnable();
+  CAF_REQUIRE(!mpx()->has_pending_dgram_scribe(lo, 4242));
+  // build a fake server handshake containing the id of our first pseudo actor
+  CAF_MESSAGE("server handshake => client handshake + proxy announcement");
+  auto na = registry()->named_actors();
+  mock(jupiter().connection,
+       {basp::message_type::server_handshake, 0, 0, basp::version,
+        jupiter().id, none,
+        jupiter().dummy_actor->id(), invalid_actor_id},
+       std::string{},
+       jupiter().dummy_actor->id(),
+       uint32_t{0})
+  .expect(jupiter().connection,
+          basp::message_type::client_handshake, no_flags, 1u,
+          no_operation_data, this_node(), node_id{none},
+          invalid_actor_id, invalid_actor_id, std::string{})
+  .expect(jupiter().connection,
+          basp::message_type::dispatch_message,
+          basp::header::named_receiver_flag, any_vals,
+          no_operation_data, this_node(), jupiter().id,
+          any_vals, invalid_actor_id,
+          spawn_serv_atom,
+          std::vector<actor_id>{},
+          make_message(sys_atom::value, get_atom::value, "info"))
+  .expect(jupiter().connection,
+          basp::message_type::announce_proxy, no_flags, no_payload,
+          no_operation_data, this_node(), jupiter().id,
+          invalid_actor_id, jupiter().dummy_actor->id());
+  CAF_MESSAGE("BASP broker should've send the proxy");
+  f.receive(
+    [&](node_id nid, strong_actor_ptr res, std::set<std::string> ifs) {
+      CAF_REQUIRE(res);
+      auto aptr = actor_cast<abstract_actor*>(res);
+      CAF_REQUIRE(dynamic_cast<forwarding_actor_proxy*>(aptr) != nullptr);
+      CAF_CHECK_EQUAL(proxies().count_proxies(jupiter().id), 1u);
+      CAF_CHECK_EQUAL(nid, jupiter().id);
+      CAF_CHECK_EQUAL(res->node(), jupiter().id);
+      CAF_CHECK_EQUAL(res->id(), jupiter().dummy_actor->id());
+      CAF_CHECK(ifs.empty());
+      auto proxy = proxies().get(jupiter().id, jupiter().dummy_actor->id());
+      CAF_REQUIRE(proxy != nullptr);
+      CAF_REQUIRE(proxy == res);
+      result = actor_cast<actor>(res);
+    },
+    [&](error& err) {
+      CAF_FAIL("error: " << system.render(err));
+    }
+  );
+  CAF_MESSAGE("send message to proxy");
+  anon_send(actor_cast<actor>(result), 42);
+  mpx()->flush_runnables();
+  mock()
+  .expect(jupiter().connection,
+          basp::message_type::dispatch_message, no_flags, any_vals,
+          no_operation_data, this_node(), jupiter().id,
+          invalid_actor_id, jupiter().dummy_actor->id(),
+          std::vector<actor_id>{},
+          make_message(42));
+  // auto msg = make_message("hi there!");
+  uint16_t seq_number = 1;
+  auto next_hdr = [&]() -> basp::header {
+    return {basp::message_type::dispatch_message, 0, 0, 0,
+            jupiter().id, this_node(),
+            jupiter().dummy_actor->id(), self()->id(),
+            seq_number++};
+  };
+  mock()
+  .enqueue_back(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(0))
+  .enqueue_back(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(1))
+  .enqueue_front(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(2))
+  .enqueue_back(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(3))
+  .enqueue_back(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(4))
+  .enqueue_back(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(5))
+  .enqueue_front(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(6))
+  .enqueue_back(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(7))
+  .enqueue_back(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(8))
+  .enqueue_front(jupiter().connection, next_hdr(), std::vector<actor_id>{},
+           make_message(9))
+  .deliver(jupiter().connection, 10);
+  int expected_next = 0;
+  self()->receive_while([&] { return expected_next < 9; }) (
+    [&](int val) {
+      CAF_CHECK_EQUAL(to_string(self()->current_sender()), to_string(result));
+      CAF_CHECK_EQUAL(self()->current_sender(), result.address());
+      CAF_CHECK_EQUAL(expected_next, val);
+      ++expected_next;
     }
   );
 }

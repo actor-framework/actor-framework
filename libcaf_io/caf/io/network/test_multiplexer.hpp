@@ -121,6 +121,12 @@ public:
   buffer_type& virtual_network_buffer(dgram_scribe_handle hdl);
 
   /// Models pending data on the network, i.e., the network
+  /// input buffer usually manged by the operating system.
+  /// Allows enqueueing messages to the front to allow
+  /// simulation of out of order delivery.
+  buffer_type& virtual_network_buffer_front(dgram_scribe_handle hdl);
+
+  /// Models pending data on the network, i.e., the network
   /// input buffer usually managed by the operating system.
   buffer_type& virtual_network_buffer(dgram_doorman_handle hdl);
 
@@ -302,8 +308,6 @@ private:
     uint16_t local_port;
     std::deque<buffer_type> xbuf;
     std::deque<buffer_type> wr_buf;
-    //buffer_type xbuf;
-    //buffer_type wr_buf;
     buffer_type rd_buf;
     size_t rcv_buffer_size = 1500;
     bool stopped_reading = false;

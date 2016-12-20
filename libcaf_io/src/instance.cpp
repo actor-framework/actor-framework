@@ -58,6 +58,9 @@ bool instance::deliver_pending(execution_unit* ctx, endpoint_context& ep) {
   std::vector<char>* payload = nullptr;
   auto itr = ep.pending.find(ep.seq_incoming);
   while (itr != ep.pending.end()) {
+    //std::cerr << "[++] '" << to_string(itr->second.first.operation)
+    //          << "' with seq '" << itr->second.first.sequence_number
+    //          << "' (was pending)" << std::endl;
     ep.hdr = std::move(itr->second.first);
     payload = &itr->second.second;
     if (!handle_msg(ctx, get<dgram_scribe_handle>(ep.hdl),
@@ -160,7 +163,7 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
   auto e = bd(ep.hdr);
   if (e || !valid(ep.hdr)) {
     CAF_LOG_WARNING("received invalid header:" << CAF_ARG(ep.hdr));
-    std::cerr << "[!!] invalid header!" << std::endl;
+    //std::cerr << "[!!] invalid header!" << std::endl;
     return err();
   }
   CAF_LOG_DEBUG(CAF_ARG(ep.hdr));
@@ -173,12 +176,12 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
     }
   }
   // TODO: Ordering
-  std::cerr << "[<<] '" << to_string(ep.hdr.operation)
-            << "' with seq '" << ep.hdr.sequence_number << "'" << std::endl;
+  //std::cerr << "[<<] '" << to_string(ep.hdr.operation)
+  //          << "' with seq '" << ep.hdr.sequence_number << "'" << std::endl;
   if (ep.hdr.sequence_number != ep.seq_incoming) {
-    std::cerr << "[!!] '" << to_string(ep.hdr.operation) << "' with seq '"
-              << ep.hdr.sequence_number << "' (!= " << ep.seq_incoming
-              << ")" << std::endl;
+    //std::cerr << "[!!] '" << to_string(ep.hdr.operation) << "' with seq '"
+    //          << ep.hdr.sequence_number << "' (!= " << ep.seq_incoming
+    //          << ")" << std::endl;
     auto s = ep.hdr.sequence_number;
     auto h = std::move(ep.hdr);
     auto b = std::move(pl_buf);
@@ -220,18 +223,18 @@ bool instance::handle(execution_unit* ctx, new_endpoint_msg& em,
   // client handshake for UDP should be sequence number 0
   if (e || !valid(ep.hdr)) {
     CAF_LOG_WARNING("received invalid header:" << CAF_ARG(ep.hdr));
-    std::cerr << "[<<] invalid header!" << std::endl;
+    //std::cerr << "[<<] invalid header!" << std::endl;
     return err();
   }
   if (ep.hdr.sequence_number != ep.seq_incoming) {
     CAF_LOG_WARNING("Handshake with unexected sequence number: "
                     << CAF_ARG(ep.hdr.sequence_number));
-    std::cerr << "[<<] Unexpected sequence number '" << ep.hdr.sequence_number
-              << "'in client handshake" << std::endl;
+    //std::cerr << "[<<] Unexpected sequence number '" << ep.hdr.sequence_number
+    //          << "'in client handshake" << std::endl;
     ep.seq_incoming = ep.hdr.sequence_number + 1;
   } else {
-    std::cerr << "[<<] '" << to_string(ep.hdr.operation) << "' with seq '"
-              << ep.hdr.sequence_number << "'" << std::endl;
+    //std::cerr << "[<<] '" << to_string(ep.hdr.operation) << "' with seq '"
+    //          << ep.hdr.sequence_number << "'" << std::endl;
     ep.seq_incoming += 1;
   }
   CAF_LOG_DEBUG(CAF_ARG(ep.hdr));
@@ -369,9 +372,9 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
 void instance::write(execution_unit* ctx, buffer_type& buf,
                      header& hdr, payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
-  std::cerr << "[>>] '" << to_string(hdr.operation)
-            << "' with seq '" << hdr.sequence_number << "'"
-            << std::endl;
+  //std::cerr << "[>>] '" << to_string(hdr.operation)
+  //          << "' with seq '" << hdr.sequence_number << "'"
+  //          << std::endl;
   error err;
   if (pw) {
     auto pos = buf.size();

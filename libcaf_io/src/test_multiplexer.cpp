@@ -444,8 +444,8 @@ void test_multiplexer::provide_acceptor(uint16_t desired_port,
 }
 
 void test_multiplexer::provide_dgram_scribe(std::string host,
-                                             uint16_t desired_port,
-                                             dgram_scribe_handle hdl) {
+                                            uint16_t desired_port,
+                                            dgram_scribe_handle hdl) {
   dgram_scribes_.emplace(std::make_pair(std::move(host), desired_port), hdl);
   dgram_scribe_data_[hdl].remote_port = desired_port;
 }
@@ -469,6 +469,13 @@ test_multiplexer::virtual_network_buffer(dgram_scribe_handle hdl) {
   auto& buf = dgram_scribe_data_[hdl].xbuf;
   buf.emplace_back();
   return buf.back();
+}
+
+test_multiplexer::buffer_type&
+test_multiplexer::virtual_network_buffer_front(dgram_scribe_handle hdl) {
+  auto& buf = dgram_scribe_data_[hdl].xbuf;
+  buf.emplace_front();
+  return buf.front();
 }
 
 test_multiplexer::buffer_type&
