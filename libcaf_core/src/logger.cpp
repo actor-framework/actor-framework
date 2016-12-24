@@ -349,41 +349,52 @@ void logger::init(actor_system_config& cfg) {
 
 void logger::run() {
 #if defined(CAF_LOG_LEVEL)
-  auto f = system_.config().logger_filename;
-  // Replace placeholders.
-  const char pid[] = "[PID]";
-  auto i = std::search(f.begin(), f.end(), std::begin(pid), std::end(pid) - 1);
-  if (i != f.end()) {
-    auto id = std::to_string(detail::get_process_id());
-    f.replace(i, i + sizeof(pid) - 1, id);
+  std::fstream file;
+  if (system_.config().logger_filename.empty()) {
+    // If the console is also disabled, no need to continue.
+    if (!(system_.config().logger_console == atom("UNCOLORED")
+          || system_.config().logger_console == atom("COLORED")))
+      return;
+  } else {
+    auto f = system_.config().logger_filename;
+    // Replace placeholders.
+    const char pid[] = "[PID]";
+    auto i = std::search(f.begin(), f.end(), std::begin(pid),
+                         std::end(pid) - 1);
+    if (i != f.end()) {
+      auto id = std::to_string(detail::get_process_id());
+      f.replace(i, i + sizeof(pid) - 1, id);
+    }
+    const char ts[] = "[TIMESTAMP]";
+    i = std::search(f.begin(), f.end(), std::begin(ts), std::end(ts) - 1);
+    if (i != f.end()) {
+      auto now = timestamp_to_string(make_timestamp());
+      f.replace(i, i + sizeof(ts) - 1, now);
+    }
+    const char node[] = "[NODE]";
+    i = std::search(f.begin(), f.end(), std::begin(node), std::end(node) - 1);
+    if (i != f.end()) {
+      auto nid = to_string(system_.node());
+      f.replace(i, i + sizeof(node) - 1, nid);
+    }
+    file.open(f, std::ios::out | std::ios::app);
+    if (!file) {
+      std::cerr << "unable to open log file " << f << std::endl;
+      return;
+    }
   }
-  const char ts[] = "[TIMESTAMP]";
-  i = std::search(f.begin(), f.end(), std::begin(ts), std::end(ts) - 1);
-  if (i != f.end()) {
-    auto now = timestamp_to_string(make_timestamp());
-    f.replace(i, i + sizeof(ts) - 1, now);
+  if (file) {
+    // log first entry
+    constexpr atom_value level_names[] = {
+      error_log_lvl_atom::value, warning_log_lvl_atom::value,
+      info_log_lvl_atom::value, debug_log_lvl_atom::value,
+      trace_log_lvl_atom::value};
+    auto lvl_atom = level_names[CAF_LOG_LEVEL];
+    log_prefix(file, CAF_LOG_LEVEL_INFO, "caf", "caf.logger", "start",
+               __FILE__, __LINE__, parent_thread_);
+    file << " level = " << to_string(lvl_atom) << ", node = "
+         << to_string(system_.node()) << std::endl;
   }
-  const char node[] = "[NODE]";
-  i = std::search(f.begin(), f.end(), std::begin(node), std::end(node) - 1);
-  if (i != f.end()) {
-    auto nid = to_string(system_.node());
-    f.replace(i, i + sizeof(node) - 1, nid);
-  }
-  std::fstream file(f, std::ios::out | std::ios::app);
-  if (!file) {
-    std::cerr << "unable to open log file " << f << std::endl;
-    return;
-  }
-  // log first entry
-  constexpr atom_value level_names[] = {
-    error_log_lvl_atom::value, warning_log_lvl_atom::value,
-    info_log_lvl_atom::value, debug_log_lvl_atom::value,
-    trace_log_lvl_atom::value};
-  auto lvl_atom = level_names[CAF_LOG_LEVEL];
-  log_prefix(file, CAF_LOG_LEVEL_INFO, "caf", "caf.logger", "start",
-             __FILE__, __LINE__, parent_thread_);
-  file << " level = " << to_string(lvl_atom) << ", node = " << to_string(system_.node())
-       << std::endl;
   // receive log entries from other threads and actors
   std::unique_ptr<event> ptr;
   for (;;) {
@@ -404,7 +415,8 @@ void logger::run() {
       if (it == filter.end())
         continue;
     }
-    file << ptr->prefix << ' ' << ptr->msg << std::endl;
+    if (file)
+      file << ptr->prefix << ' ' << ptr->msg << std::endl;
     if (system_.config().logger_console == atom("UNCOLORED")) {
       std::clog << ptr->msg << std::endl;
     } else if  (system_.config().logger_console == atom("COLORED")) {
@@ -430,10 +442,11 @@ void logger::run() {
       std::clog << ptr->msg << color(reset) << std::endl;
     }
   }
-  log_prefix(file, CAF_LOG_LEVEL_INFO, "caf", "caf.logger", "stop",
-             __FILE__, __LINE__, parent_thread_);
-  file << " EOF" << std::endl;
-  file.close();
+  if (file) {
+    log_prefix(file, CAF_LOG_LEVEL_INFO, "caf", "caf.logger", "stop",
+               __FILE__, __LINE__, parent_thread_);
+    file << " EOF" << std::endl;
+  }
 #endif
 }
 
