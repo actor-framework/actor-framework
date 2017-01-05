@@ -140,7 +140,7 @@ public:
     return data_[column + row * Size];
   }
 
-  typedef typename ivec::const_iterator const_iterator;
+  using const_iterator = typename ivec::const_iterator;
 
   const_iterator begin() const {
     return data_.begin();

@@ -49,17 +49,17 @@ public:
           std::vector<cl_event> events, std::vector<mem_ptr> input_buffers,
           std::vector<mem_ptr> output_buffers, std::vector<size_t> result_sizes,
           message msg)
-      : result_sizes_(result_sizes),
-        handle_(handle),
-        actor_facade_(actor_facade),
+      : result_sizes_(std::move(result_sizes)),
+        handle_(std::move(handle)),
+        actor_facade_(std::move(actor_facade)),
         mem_in_events_(std::move(events)),
         input_buffers_(std::move(input_buffers)),
         output_buffers_(std::move(output_buffers)),
-        msg_(msg) {
+        msg_(std::move(msg)) {
     // nop
   }
 
-  ~command() {
+  ~command() override {
     for (auto& e : mem_in_events_) {
       v1callcl(CAF_CLF(clReleaseEvent),e);
     }
@@ -95,7 +95,7 @@ public:
       clReleaseEvent(event_k);
       this->deref();
       return;
-    } else {
+    } 
       enqueue_read_buffers(event_k, detail::get_indices(result_buffers_));
       cl_event marker;
 #if defined(__APPLE__)
@@ -134,7 +134,7 @@ public:
       }
       mem_out_events_.push_back(std::move(event_k));
       mem_out_events_.push_back(std::move(marker));
-    }
+    
   }
 
 private:

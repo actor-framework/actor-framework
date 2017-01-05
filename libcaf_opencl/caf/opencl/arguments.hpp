@@ -53,7 +53,7 @@ struct in_out {
 
 template <class Arg>
 struct out {
-  out() { }
+  out() = default;
   template <class F>
   out(F fun) {
     fun_ = [fun](message& msg) -> optional<size_t> {

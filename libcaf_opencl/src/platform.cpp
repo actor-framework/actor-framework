@@ -17,6 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <utility>
 #include <vector>
 #include <iostream>
 
@@ -90,7 +91,7 @@ platform::platform(cl_platform_id platform_id, context_ptr context,
                    string name, string vendor, string version,
                    vector<device> devices)
   : platform_id_(platform_id),
-    context_(context),
+    context_(std::move(context)),
     name_(move(name)),
     vendor_(move(vendor)),
     version_(move(version)),

@@ -127,14 +127,13 @@ public:
                                              std::move(map_args),
                                              std::move(map_result),
                                              std::forward_as_tuple(xs...));
-    } else {
-      return make_actor<actor_facade, actor>(sys.next_actor_id(), sys.node(),
-                                             &sys, std::move(actor_cfg),
-                                             prog, itr->second, spawn_cfg,
-                                             std::move(map_args),
-                                             std::move(map_result),
-                                             std::forward_as_tuple(xs...));
     }
+    return make_actor<actor_facade, actor>(sys.next_actor_id(), sys.node(),
+                                           &sys, std::move(actor_cfg),
+                                           prog, itr->second, spawn_cfg,
+                                           std::move(map_args),
+                                           std::move(map_result),
+                                           std::forward_as_tuple(xs...));
   }
 
   void enqueue(strong_actor_ptr sender, message_id mid, message content,
@@ -176,18 +175,18 @@ public:
 
   actor_facade(actor_config actor_cfg,
                const program& prog, kernel_ptr kernel,
-               const spawn_config& spawn_cfg,
+               spawn_config  spawn_cfg,
                input_mapping map_args, output_mapping map_result,
                std::tuple<Ts...> xs)
       : monitorable_actor(actor_cfg),
-        kernel_(kernel),
+        kernel_(std::move(kernel)),
         program_(prog.program_),
         context_(prog.context_),
         queue_(prog.queue_),
-        spawn_cfg_(spawn_cfg),
+        spawn_cfg_(std::move(spawn_cfg)),
         map_args_(std::move(map_args)),
         map_results_(std::move(map_result)),
-        argument_types_(xs) {
+        argument_types_(std::move(xs)) {
     CAF_LOG_TRACE(CAF_ARG(this->id()));
     default_output_size_ = std::accumulate(spawn_cfg_.dimensions().begin(),
                                            spawn_cfg_.dimensions().end(),

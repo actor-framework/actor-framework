@@ -37,7 +37,8 @@ public:
   friend class manager;
 
   /// Intialize a new device in a context using a sepcific device_id
-  static device create(context_ptr context, device_ptr device_id, unsigned id);
+  static device create(const context_ptr& context, const device_ptr& device_id,
+                       unsigned id);
   /// Get the id assigned by caf
   inline unsigned get_id() const;
   /// Returns device info on CL_DEVICE_ADDRESS_BITS
@@ -94,9 +95,16 @@ public:
 private:
   device(device_ptr device_id, command_queue_ptr queue, context_ptr context,
          unsigned id);
+
   template <class T>
-  static T info(device_ptr device_id, unsigned info_flag);
-  static std::string info_string(device_ptr device_id, unsigned info_flag);
+  static T info(const device_ptr& device_id, unsigned info_flag) {
+    T value;
+    clGetDeviceInfo(device_id.get(), info_flag, sizeof(T), &value, nullptr);
+    return value;
+  }
+
+  static std::string info_string(const device_ptr& device_id,
+                                 unsigned info_flag);
   device_ptr device_id_;
   command_queue_ptr command_queue_;
   context_ptr context_;

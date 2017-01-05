@@ -49,7 +49,7 @@ public:
   manager(const manager&) = delete;
   manager& operator=(const manager&) = delete;
   /// Get the device with id, which is assigned sequientally.
-  const optional<const device&> get_device(size_t id = 0) const;
+  const optional<const device&> get_device(size_t dev_id = 0) const;
   /// Get the first device that satisfies the predicate.
   /// The predicate should accept a `const device&` and return a bool;
   template <class UnaryPredicate>
@@ -166,7 +166,7 @@ public:
 
 protected:
   manager(actor_system& sys);
-  ~manager();
+  ~manager() override;
 
 private:
   actor_system& system_;

@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 #include <iostream>
+#include <utility>
 
 #include "caf/logger.hpp"
 #include "caf/string_algorithms.hpp"
@@ -31,12 +32,13 @@ using namespace std;
 namespace caf {
 namespace opencl {
 
-device device::create(context_ptr context, device_ptr device_id, unsigned id) {
+device device::create(const context_ptr& context, const device_ptr& device_id,
+                      unsigned id) {
   CAF_LOG_DEBUG("creating device for opencl device with id:" << CAF_ARG(id));
   // look up properties we need to create the command queue
   auto supported = info<cl_ulong>(device_id, CL_DEVICE_QUEUE_PROPERTIES);
-  bool profiling = supported & CL_QUEUE_PROFILING_ENABLE;
-  bool out_of_order = supported & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+  bool profiling = (supported & CL_QUEUE_PROFILING_ENABLE) != 0u;
+  bool out_of_order = (supported & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) != 0u;
   unsigned properties = profiling ? CL_QUEUE_PROFILING_ENABLE : 0;
     properties |= out_of_order ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : 0;
   // create the command queue
@@ -94,14 +96,7 @@ device device::create(context_ptr context, device_ptr device_id, unsigned id) {
   return dev;
 }
 
-template <class T>
-T device::info(device_ptr device_id, unsigned info_flag) {
-  T value;
-  clGetDeviceInfo(device_id.get(), info_flag, sizeof(T), &value, nullptr);
-  return value;
-}
-
-string device::info_string(device_ptr device_id, unsigned info_flag) {
+string device::info_string(const device_ptr& device_id, unsigned info_flag) {
   size_t size;
   clGetDeviceInfo(device_id.get(), info_flag, 0, nullptr, &size);
   vector<char> buffer(size);
@@ -112,9 +107,9 @@ string device::info_string(device_ptr device_id, unsigned info_flag) {
 
 device::device(device_ptr device_id, command_queue_ptr queue,
                context_ptr context, unsigned id)
-  : device_id_(device_id),
-    command_queue_(queue),
-    context_(context),
+  : device_id_(std::move(device_id)),
+    command_queue_(std::move(queue)),
+    context_(std::move(context)),
     id_(id) { }
 
 } // namespace opencl

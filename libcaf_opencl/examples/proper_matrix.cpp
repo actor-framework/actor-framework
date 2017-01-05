@@ -98,7 +98,7 @@ public:
     iota(data_.begin(), data_.end(), 0);
   }
 
-  typedef typename fvec::const_iterator const_iterator;
+  using const_iterator = typename fvec::const_iterator;
 
   const_iterator begin() const { return data_.begin(); }
 
