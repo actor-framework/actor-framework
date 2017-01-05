@@ -70,7 +70,7 @@ public:
 
   /// Checks whether the type of the stored value matches
   /// the type nr and type info object.
-  bool matches(uint16_t tnr, const std::type_info* tinf) const;
+  bool matches(uint16_t nr, const std::type_info* ptr) const;
 
   // -- convenience functions --------------------------------------------------
 

@@ -90,16 +90,16 @@ public:
     return impl{std::move(init), std::move(sf), std::move(jf)};
   }
 
-  ~actor_pool();
+  ~actor_pool() override;
 
   /// Returns an actor pool without workers using the dispatch policy `pol`.
-  static actor make(execution_unit* ptr, policy pol);
+  static actor make(execution_unit* eu, policy pol);
 
   /// Returns an actor pool with `n` workers created by the factory
   /// function `fac` using the dispatch policy `pol`.
-  static actor make(execution_unit* ptr, size_t n, factory fac, policy pol);
+  static actor make(execution_unit* eu, size_t num_workers, const factory& fac, policy pol);
 
-  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
+  void enqueue(mailbox_element_ptr what, execution_unit* eu) override;
 
   actor_pool(actor_config& cfg);
 
@@ -109,7 +109,7 @@ protected:
 private:
   bool filter(upgrade_lock<detail::shared_spinlock>&,
               const strong_actor_ptr& sender, message_id mid,
-              message_view& content, execution_unit* host);
+              message_view& mv, execution_unit* eu);
 
   // call without workers_mtx_ held
   void quit(execution_unit* host);

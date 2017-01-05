@@ -22,6 +22,7 @@
 
 #include <new>
 #include <functional>
+#include <utility>
 
 #include "caf/expected.hpp"
 #include "caf/typed_actor.hpp"
@@ -139,9 +140,9 @@ public:
     // nop
   }
 
-  function_view(const type& impl, duration rel_timeout = infinite)
+  function_view(type  impl, duration rel_timeout = infinite)
       : timeout(rel_timeout),
-        impl_(impl) {
+        impl_(std::move(impl)) {
     new_self(impl_);
   }
 

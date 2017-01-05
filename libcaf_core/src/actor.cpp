@@ -19,6 +19,7 @@
 
 #include "caf/actor.hpp"
 
+#include <cassert>
 #include <utility>
 
 #include "caf/actor_addr.hpp"
@@ -85,11 +86,11 @@ actor operator*(actor f, actor g) {
 }
 
 actor actor::splice_impl(std::initializer_list<actor> xs) {
-  CAF_ASSERT(xs.size() >= 2);
+  assert(xs.size() >= 2);
   actor_system* sys = nullptr;
   std::vector<strong_actor_ptr> tmp;
   for (auto& x : xs) {
-    if (!sys)
+    if (sys == nullptr)
       sys = &(x->home_system());
     tmp.push_back(actor_cast<strong_actor_ptr>(x));
   }

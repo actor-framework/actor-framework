@@ -147,7 +147,7 @@ uniform_type_info_map::portable_name(uint16_t nr,
                                      const std::type_info* ti) const {
   if (nr != 0)
     return &builtin_names_[nr - 1];
-  if (!ti)
+  if (ti == nullptr)
     return nullptr;
   auto& custom_names = system().config().type_names_by_rtti;
   auto i = custom_names.find(std::type_index(*ti));

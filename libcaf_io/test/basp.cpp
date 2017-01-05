@@ -99,7 +99,7 @@ using namespace caf::io;
 
 namespace {
 
-static constexpr uint32_t num_remote_nodes = 2;
+constexpr uint32_t num_remote_nodes = 2;
 
 using buffer = std::vector<char>;
 
@@ -274,7 +274,7 @@ public:
   void connect_node(node& n,
                     optional<accept_handle> ax = none,
                     actor_id published_actor_id = invalid_actor_id,
-                    set<string> published_actor_ifs = std::set<std::string>{}) {
+                    const set<string>& published_actor_ifs = std::set<std::string>{}) {
     auto src = ax ? *ax : ahdl_;
     CAF_MESSAGE("connect remote node " << n.name
                 << ", connection ID = " << n.connection.id()
@@ -808,7 +808,7 @@ CAF_TEST(automatic_connection) {
   // create a dummy config server and respond to the name lookup
   CAF_MESSAGE("receive ConfigServ of jupiter");
   network::address_listing res;
-  res[network::protocol::ipv4].push_back("jupiter");
+  res[network::protocol::ipv4].emplace_back("jupiter");
   mock(mars().connection,
        {basp::message_type::dispatch_message, 0, 0, 0,
         this_node(), this_node(),
@@ -820,7 +820,7 @@ CAF_TEST(automatic_connection) {
   // send the scribe handle over to the BASP broker
   while (mpx()->has_pending_scribe("jupiter", 8080))
     mpx()->flush_runnables();
-  CAF_REQUIRE(mpx()->output_buffer(mars().connection).size() == 0);
+  CAF_REQUIRE(mpx()->output_buffer(mars().connection).empty());
   // send handshake from jupiter
   mock(jupiter().connection,
        {basp::message_type::server_handshake, 0, 0, basp::version,

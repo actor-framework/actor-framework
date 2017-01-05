@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <utility>
+
 #include "caf/detail/behavior_impl.hpp"
 
 #include "caf/message_handler.hpp"
@@ -45,9 +47,9 @@ public:
     return new combinator(first, second->copy(tdef));
   }
 
-  combinator(const pointer& p0, const pointer& p1)
+  combinator(pointer p0, const pointer& p1)
       : behavior_impl(p1->timeout()),
-        first(p0),
+        first(std::move(p0)),
         second(p1) {
     // nop
   }

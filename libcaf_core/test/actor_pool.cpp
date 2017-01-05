@@ -37,7 +37,7 @@ public:
     ++s_ctors;
   }
 
-  ~worker() {
+  ~worker() override {
     ++s_dtors;
   }
 

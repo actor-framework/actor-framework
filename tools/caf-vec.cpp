@@ -22,7 +22,7 @@ using vector_timestamp = std::vector<size_t>;
 
 // removes leading and trailing whitespaces
 void trim(string& s) {
-  auto not_space = [](char c) { return !isspace(c); };
+  auto not_space = [](char c) { return isspace(c) == 0; };
   // trim left
   s.erase(s.begin(), find_if(s.begin(), s.end(), not_space));
   // trim right
@@ -46,7 +46,7 @@ std::istream& skip_to_next_line(std::istream& in) {
 
 std::istream& skip_word(std::istream& in) {
   skip_whitespaces(in);
-  auto nonspace = [](char x) { return isprint(x) && !isspace(x); };
+  auto nonspace = [](char x) { return (isprint(x) != 0) && (isspace(x) == 0); };
   while (nonspace(static_cast<char>(in.peek())))
     in.get();
   return in;
@@ -450,7 +450,7 @@ bool field_key_compare(const std::pair<const std::string, std::string>& x,
   static_cast<void>(0)
 
 #define CHECK_NO_FIELDS()                                                      \
-  if (y.fields.size() > 0)                                                     \
+  if (!y.fields.empty())                                                       \
     return sec::invalid_argument;
 
 expected<se_event> parse_event(const enhanced_log_entry& x) {
@@ -622,7 +622,7 @@ void second_pass(blocking_actor* self, const group& grp,
     if (vl >= verbosity_level::noisy)
       aout(self) << "broadcast event from " << nid
                  << ": " << deep_to_string(x) << endl;
-    if (self)
+    if (self != nullptr)
       self->send(grp, x);
   };
   // fetch message from another node via the group
@@ -869,9 +869,9 @@ void caf_main(actor_system& sys, const config& cfg) {
   }
   // do a second pass for all log files
   // first line is the regex to parse the remainder of the file
-  out << "(?<clock>\\S+) (?<timestamp>\\d+) (?<component>\\S+) "
-      << "(?<level>\\S+) (?<host>\\S+) (?<class>\\S+) (?<function>\\S+) "
-      << "(?<file>\\S+):(?<line>\\d+) (?<event>.+)"
+  out << R"((?<clock>\S+) (?<timestamp>\d+) (?<component>\S+) )"
+      << R"((?<level>\S+) (?<host>\S+) (?<class>\S+) (?<function>\S+) )"
+      << R"((?<file>\S+):(?<line>\d+) (?<event>.+))"
       << endl;
   // second line is the separator for multiple runs
   out << endl;

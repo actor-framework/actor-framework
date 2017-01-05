@@ -59,7 +59,7 @@ public:
 
   template <class U>
   expected(U x,
-           typename std::enable_if<std::is_convertible<U, T>::value>::type* = 0)
+           typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
       : engaged_(true) {
     new (&value_) T(std::move(x));
   }
@@ -380,10 +380,7 @@ public:
     // nop
   }
 
-  expected& operator=(const expected& other) noexcept {
-    error_ = other.error_;
-    return *this;
-  }
+  expected& operator=(const expected& other) = default;
 
   expected& operator=(expected&& other) noexcept {
     error_ = std::move(other.error_);

@@ -42,7 +42,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  ~abstract_group();
+  ~abstract_group() override;
 
   // -- pure virtual member functions ------------------------------------------
 
@@ -78,7 +78,7 @@ public:
   }
 
 protected:
-  abstract_group(group_module& parent, std::string id, node_id origin);
+  abstract_group(group_module& mod, std::string id, node_id nid);
 
   actor_system& system_;
   group_module& parent_;

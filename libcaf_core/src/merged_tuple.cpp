@@ -48,9 +48,8 @@ merged_tuple::merged_tuple(data_type xs, mapping_type ys)
   CAF_ASSERT(!data_.empty());
   CAF_ASSERT(!mapping_.empty());
   // calculate type token
-  for (size_t i = 0; i < mapping_.size(); ++i) {
+  for (auto& p : mapping_) {
     type_token_ <<= 6;
-    auto& p = mapping_[i];
     type_token_ |= data_[p.first]->type_nr(p.second);
   }
 }

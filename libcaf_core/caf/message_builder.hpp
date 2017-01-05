@@ -89,7 +89,7 @@ public:
 
   /// @copydoc message::extract
   inline message extract(message_handler f) const {
-    return to_message().extract(f);
+    return to_message().extract(std::move(f));
   }
 
   /// @copydoc message::extract_opts

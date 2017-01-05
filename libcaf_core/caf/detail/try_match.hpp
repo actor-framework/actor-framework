@@ -75,8 +75,8 @@ struct meta_elements<type_list<Ts...>> {
   }
 };
 
-bool try_match(const type_erased_tuple& xs, const meta_element* pattern_begin,
-               size_t pattern_size);
+bool try_match(const type_erased_tuple& xs, const meta_element* iter,
+               size_t ps);
 
 } // namespace detail
 } // namespace caf

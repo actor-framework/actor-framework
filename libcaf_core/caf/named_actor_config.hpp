@@ -35,7 +35,7 @@ struct named_actor_config {
 };
 
 template <class Processor>
-void serialize(Processor& proc, named_actor_config& x, const unsigned int) {
+void serialize(Processor& proc, named_actor_config& x, unsigned int) {
   proc & x.strategy;
   proc & x.low_watermark;
   proc & x.max_pending;

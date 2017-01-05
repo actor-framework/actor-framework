@@ -39,9 +39,9 @@ using scribe_base = broker_servant<network::stream_manager, connection_handle,
 /// @ingroup Broker
 class scribe : public scribe_base {
 public:
-  scribe(abstract_broker* parent, connection_handle hdl);
+  scribe(abstract_broker* ptr, connection_handle conn_hdl);
 
-  ~scribe();
+  ~scribe() override;
 
   /// Implicitly starts the read loop on first call.
   virtual void configure_read(receive_policy::config config) = 0;

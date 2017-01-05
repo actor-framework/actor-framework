@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <utility>
+
 #include "caf/blocking_actor.hpp"
 
 #include "caf/logger.hpp"
@@ -122,7 +124,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
 
 blocking_actor::receive_while_helper
 blocking_actor::receive_while(std::function<bool()> stmt) {
-  return {this, stmt};
+  return {this, std::move(stmt)};
 }
 
 blocking_actor::receive_while_helper
@@ -277,7 +279,7 @@ public:
 
   bool at_end() override {
     if (ptr_->at_end()) {
-      if (!fallback_)
+      if (fallback_ == nullptr)
         return true;
       ptr_ = fallback_;
       fallback_ = nullptr;

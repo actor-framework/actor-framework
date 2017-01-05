@@ -86,7 +86,7 @@ public:
   }
 
   /// Equal to `*this = other`.
-  void assign(message_handler other);
+  void assign(message_handler what);
 
   /// Runs this handler and returns its (optional) result.
   inline optional<message> operator()(message& arg) {

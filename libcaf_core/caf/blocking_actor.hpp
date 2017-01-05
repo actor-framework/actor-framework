@@ -95,7 +95,7 @@ public:
   /// Pseudo receive condition modeling a single receive.
   class accept_one_cond : public receive_cond {
   public:
-    virtual ~accept_one_cond();
+    ~accept_one_cond() override;
     bool post() override;
   };
 
@@ -177,9 +177,9 @@ public:
 
   // -- constructors and destructors -------------------------------------------
 
-  blocking_actor(actor_config& sys);
+  blocking_actor(actor_config& cfg);
 
-  ~blocking_actor();
+  ~blocking_actor() override;
 
   // -- overridden functions of abstract_actor ---------------------------------
 

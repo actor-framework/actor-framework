@@ -33,7 +33,7 @@ namespace caf {
 /// @relates intrusive_ptr
 class ref_counted : public memory_managed {
 public:
-  ~ref_counted();
+  ~ref_counted() override;
 
   ref_counted();
   ref_counted(const ref_counted&);

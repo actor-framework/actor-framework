@@ -150,7 +150,7 @@ public:
   }
 
   sink_handle(sink_cache* fc, iterator iter) : cache_(fc), iter_(iter) {
-    if (cache_)
+    if (cache_ != nullptr)
       ++iter_->second.first;
   }
 
@@ -162,7 +162,7 @@ public:
     if (cache_ != other.cache_ || iter_ != other.iter_) {
       clear();
       cache_ = other.cache_;
-      if (cache_) {
+      if (cache_ != nullptr) {
         iter_ = other.iter_;
         ++iter_->second.first;
       }
@@ -185,7 +185,7 @@ public:
 
 private:
   void clear() {
-    if (cache_ && --iter_->second.first == 0) {
+    if (cache_ != nullptr && --iter_->second.first == 0) {
       cache_->erase(iter_);
       cache_ = nullptr;
     }
@@ -255,7 +255,7 @@ public:
       return nullptr;
     };
     auto flush = [&](actor_data* what, bool forced) {
-      if (!what)
+      if (what == nullptr)
         return;
       auto& line = what->current_line;
       if (line.empty() || (line.back() != '\n' && !forced))
@@ -274,7 +274,7 @@ public:
         if (str.empty() || aid == invalid_actor_id)
           return;
         auto d = get_data(aid, true);
-        if (d) {
+        if (d != nullptr) {
           d->current_line += str;
           flush(d, false);
         }
@@ -284,7 +284,7 @@ public:
       },
       [&](delete_atom, actor_id aid) {
         auto data_ptr = get_data(aid, false);
-        if (data_ptr) {
+        if (data_ptr != nullptr) {
           flush(data_ptr, true);
           data.erase(aid);
         }
@@ -294,7 +294,7 @@ public:
       },
       [&](redirect_atom, actor_id aid, const std::string& fn, int flag) {
         auto d = get_data(aid, true);
-        if (d)
+        if (d != nullptr)
           d->redirect = get_sink_handle(system(), fcache, fn, flag);
       },
       [&](exit_msg& em) {

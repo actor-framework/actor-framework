@@ -86,7 +86,7 @@ public:
     );
   }
 
-  ~event_testee() {
+  ~event_testee() override {
     dec_actor_instances();
   }
 
@@ -108,7 +108,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
           parent(std::move(parent_actor)) {
       inc_actor_instances();
     }
-    ~impl() {
+    ~impl() override {
       dec_actor_instances();
     }
     behavior wait4timeout(int remaining) {
@@ -136,7 +136,7 @@ public:
     inc_actor_instances();
   }
 
-  ~testee_actor() {
+  ~testee_actor() override {
     dec_actor_instances();
   }
 
@@ -194,7 +194,7 @@ public:
     inc_actor_instances();
   }
 
-  ~testee1() {
+  ~testee1() override {
     dec_actor_instances();
   }
 
@@ -213,7 +213,7 @@ public:
     inc_actor_instances();
   }
 
-  ~echo_actor() {
+  ~echo_actor() override {
     dec_actor_instances();
   }
 
@@ -233,7 +233,7 @@ public:
     inc_actor_instances();
   }
 
-  ~simple_mirror() {
+  ~simple_mirror() override {
     dec_actor_instances();
   }
 
@@ -277,7 +277,7 @@ behavior master(event_based_actor* self) {
   );
 }
 
-behavior slave(event_based_actor* self, actor master) {
+behavior slave(event_based_actor* self, const actor& master) {
   self->link_to(master);
   self->set_exit_handler([=](exit_msg& msg) {
     CAF_MESSAGE("slave: received exit message");
@@ -296,7 +296,7 @@ public:
     inc_actor_instances();
   }
 
-  ~counting_actor() {
+  ~counting_actor() override {
     dec_actor_instances();
   }
 
@@ -506,7 +506,7 @@ CAF_TEST(constructor_attach) {
       });
     }
 
-    behavior make_behavior() {
+    behavior make_behavior() override {
       return {
         [] {
           // nop
@@ -514,7 +514,7 @@ CAF_TEST(constructor_attach) {
       };
     }
 
-    void on_exit() {
+    void on_exit() override {
       destroy(buddy_);
     }
 
@@ -537,7 +537,7 @@ CAF_TEST(constructor_attach) {
       });
     }
 
-    behavior make_behavior() {
+    behavior make_behavior() override {
       return {
         [=](ok_atom, const error& reason) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
@@ -547,7 +547,7 @@ CAF_TEST(constructor_attach) {
       };
     }
 
-    void on_exit() {
+    void on_exit() override {
       CAF_MESSAGE("spawner::on_exit()");
       destroy(testee_);
     }

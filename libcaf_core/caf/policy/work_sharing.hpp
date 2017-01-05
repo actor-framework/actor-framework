@@ -38,7 +38,7 @@ public:
   // A thread-safe queue implementation.
   using queue_type = std::list<resumable*>;
 
-  ~work_sharing();
+  ~work_sharing() override;
 
   struct coordinator_data {
     inline explicit coordinator_data(scheduler::abstract_coordinator*) {

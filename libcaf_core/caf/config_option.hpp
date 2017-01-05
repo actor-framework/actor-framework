@@ -52,7 +52,7 @@ public:
                                         uint16_t, int32_t, uint32_t, int64_t, 
                                         uint64_t>;
 
-  config_option(const char* category, const char* name, const char* explanation);
+  config_option(const char* cat, const char* nm, const char* expl);
 
   virtual ~config_option();
 
@@ -141,8 +141,8 @@ protected:
     return true;
   }
 
-  void report_type_error(size_t line, config_value& x, const char* expected,
-                         optional<std::ostream&> errors);
+  void report_type_error(size_t ln, config_value& x, const char* expected,
+                         optional<std::ostream&> out);
 
 private:
   const char* category_;

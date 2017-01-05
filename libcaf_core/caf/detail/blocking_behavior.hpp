@@ -31,7 +31,7 @@ class blocking_behavior {
 public:
   behavior& nested;
 
-  blocking_behavior(behavior& nested);
+  blocking_behavior(behavior& x);
   blocking_behavior(blocking_behavior&&) = default;
 
   virtual ~blocking_behavior();

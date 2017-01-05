@@ -58,7 +58,7 @@ intptr_t group::compare(const group& other) const noexcept {
 error inspect(serializer& f, group& x) {
   std::string mod_name;
   auto ptr = x.get();
-  if (!ptr)
+  if (ptr == nullptr)
     return f(mod_name);
   mod_name = ptr->module().name();
   auto e = f(mod_name);
@@ -72,7 +72,7 @@ error inspect(deserializer& f, group& x) {
     x = invalid_group;
     return none;
   }
-  if (!f.context())
+  if (f.context() == nullptr)
     return sec::no_context;
   auto& sys = f.context()->system();
   auto mod = sys.groups().get_module(module_name);

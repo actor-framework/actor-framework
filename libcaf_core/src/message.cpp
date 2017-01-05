@@ -20,6 +20,8 @@
 #include "caf/message.hpp"
 
 #include <iostream>
+#include <utility>
+#include <utility>
 
 #include "caf/serializer.hpp"
 #include "caf/actor_system.hpp"
@@ -42,7 +44,7 @@ message::message(message&& other) noexcept : vals_(std::move(other.vals_)) {
   // nop
 }
 
-message::message(const data_ptr& ptr) noexcept : vals_(ptr) {
+message::message(data_ptr ptr) noexcept : vals_(std::move(ptr)) {
   // nop
 }
 
@@ -144,11 +146,11 @@ message message::extract_impl(size_t start, message_handler handler) const {
 }
 
 message message::extract(message_handler handler) const {
-  return extract_impl(0, handler);
+  return extract_impl(0, std::move(handler));
 }
 
 message::cli_res message::extract_opts(std::vector<cli_arg> xs,
-                                       help_factory f, bool no_help) const {
+                                       const help_factory& f, bool no_help) const {
   std::string helpstr;
   auto make_error = [&](std::string err) -> cli_res {
     return {*this, std::set<std::string>{}, std::move(helpstr), std::move(err)};
@@ -166,7 +168,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
            || std::find_if(s.begin() + 1, s.end(), has_short_help) != s.end();
   };
   if (!no_help && std::none_of(xs.begin(), xs.end(), pred)) {
-    xs.push_back(cli_arg{"help,h,?", "print this text"});
+    xs.emplace_back("help,h,?", "print this text");
   }
   std::map<std::string, cli_arg*> shorts;
   std::map<std::string, cli_arg*> longs;
@@ -254,9 +256,9 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           }
           // no value given, try two-argument form below
           return skip();
-        } else if (i->second->flag) {
-          *i->second->flag = true;
         }
+        if (i->second->flag != nullptr)
+          *i->second->flag = true;
         insert_opt_name(i->second);
         return none;
       }
@@ -274,9 +276,9 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
           }
           insert_opt_name(j->second);
           return none;
-        } else if (j->second->flag) {
-          *j->second->flag = true;
         }
+        if (j->second->flag != nullptr)
+          *j->second->flag = true;
         insert_opt_name(j->second);
         return none;
       }
@@ -383,7 +385,7 @@ message message::concat_impl(std::initializer_list<data_ptr> xs) {
 }
 
 error inspect(serializer& sink, message& msg) {
-  if (!sink.context())
+  if (sink.context() == nullptr)
     return sec::no_context;
   // build type name
   uint16_t zero = 0;
@@ -396,13 +398,13 @@ error inspect(serializer& sink, message& msg) {
   for (size_t i = 0; i < n; ++i) {
     auto rtti = msg.cvals()->type(i);
     auto ptr = types.portable_name(rtti);
-    if (!ptr) {
+    if (ptr == nullptr) {
       std::cerr << "[ERROR]: cannot serialize message because a type was "
                    "not added to the types list, typeid name: "
-                << (rtti.second ? rtti.second->name() : "-not-available-")
+                << (rtti.second != nullptr ? rtti.second->name() : "-not-available-")
                 << std::endl;
       return make_error(sec::unknown_type,
-                        rtti.second ? rtti.second->name() : "-not-available-");
+                        rtti.second != nullptr ? rtti.second->name() : "-not-available-");
     }
     tname += '+';
     tname += *ptr;
@@ -421,7 +423,7 @@ error inspect(serializer& sink, message& msg) {
 }
 
 error inspect(deserializer& source, message& msg) {
-  if (!source.context())
+  if (source.context() == nullptr)
     return sec::no_context;
   uint16_t zero;
   std::string tname;

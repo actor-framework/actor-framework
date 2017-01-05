@@ -49,7 +49,7 @@ T get(const U&);
 
 struct wildcard { };
 
-static constexpr wildcard _ = wildcard{};
+constexpr wildcard _ = wildcard{};
 
 template <class Tup>
 class elementwise_compare_inspector {

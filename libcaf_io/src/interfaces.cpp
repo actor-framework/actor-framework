@@ -46,6 +46,7 @@
 #endif
 
 #include <memory>
+#include <utility>
 
 #include "caf/detail/get_mac_addresses.hpp"
 
@@ -72,7 +73,7 @@ void* fetch_in_addr(int family, sockaddr* addr) {
 int fetch_addr_str(bool get_ipv4, bool get_ipv6,
                    char (&buf)[INET6_ADDRSTRLEN],
                    sockaddr* addr) {
-  if (!addr)
+  if (addr == nullptr)
     return AF_UNSPEC;
   auto family = addr->sa_family;
   auto in_addr = fetch_in_addr(family, addr);
@@ -172,11 +173,11 @@ void traverse_impl(std::initializer_list<protocol> ps, F f) {
 } // namespace <anonymous>
 
 void interfaces::traverse(std::initializer_list<protocol> ps, consumer f) {
-  traverse_impl(ps, f);
+  traverse_impl(ps, std::move(f));
 }
 
 void interfaces::traverse(consumer f) {
-  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6}, f);
+  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6}, std::move(f));
 }
 
 interfaces_map interfaces::list_all(bool include_localhost) {
@@ -184,7 +185,7 @@ interfaces_map interfaces::list_all(bool include_localhost) {
   traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
                 [&](const char* name, protocol p, bool lo, const char* addr) {
     if (include_localhost || !lo)
-      result[name][p].push_back(addr);
+      result[name][p].emplace_back(addr);
   });
   return result;
 }
@@ -195,7 +196,7 @@ interfaces::list_addresses(bool include_localhost) {
   traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
                 [&](const char*, protocol p, bool lo, const char* addr) {
     if (include_localhost || !lo)
-      result[p].push_back(addr);
+      result[p].emplace_back(addr);
   });
   return result;
 }
@@ -206,7 +207,7 @@ interfaces::list_addresses(std::initializer_list<protocol> procs,
   std::vector<std::string> result;
   traverse_impl(procs, [&](const char*, protocol, bool lo, const char* addr) {
     if (include_localhost || !lo)
-      result.push_back(addr);
+      result.emplace_back(addr);
   });
   return result;
 }
@@ -225,7 +226,7 @@ interfaces::native_address(const std::string& host,
   if (preferred)
     hint.ai_family = *preferred == protocol::ipv4 ? AF_INET : AF_INET6;
   addrinfo* tmp = nullptr;
-  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp))
+  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp) != 0)
     return none;
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   char buffer[INET6_ADDRSTRLEN];

@@ -62,7 +62,7 @@ public:
     /// Any value, used to identify attachable instances.
     const void* ptr;
 
-    token(size_t subtype, const void* ptr);
+    token(size_t typenr, const void* vptr);
   };
 
   virtual ~attachable();

@@ -47,7 +47,7 @@ template <class F, class T, class Bhvr, class R, class... Ts>
 class fun_decorator<F, T, Bhvr, spawn_mode::function,
                     R, detail::type_list<Ts...>> {
 public:
-  fun_decorator(const F& f, T*) : f_(f) {
+  fun_decorator(F  f, T*) : f_(std::move(f)) {
     // nop
   }
 
@@ -84,7 +84,7 @@ template <class F, class T, class Bhvr, class R, class... Ts>
 class fun_decorator<F, T, Bhvr, spawn_mode::function_with_selfptr,
                     R, detail::type_list<T*, Ts...>> {
 public:
-  fun_decorator(const F& f, T* ptr) : f_(f), ptr_(ptr) {
+  fun_decorator(F  f, T* ptr) : f_(std::move(f)), ptr_(ptr) {
     // nop
   }
 

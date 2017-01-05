@@ -42,7 +42,7 @@ std::string to_string(const rtti_pair& x) {
   std::string result = "(";
   result += std::to_string(x.first);
   result += ", ";
-  result += x.second ? x.second->name() : "<null>";
+  result += x.second != nullptr ? x.second->name() : "<null>";
   result += ")";
   return result;
 }

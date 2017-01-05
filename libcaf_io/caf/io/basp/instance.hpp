@@ -43,7 +43,7 @@ public:
   /// Provides a callback-based interface for certain BASP events.
   class callee {
   public:
-    explicit callee(actor_system& sys, proxy_registry::backend& mgm);
+    explicit callee(actor_system& sys, proxy_registry::backend& backend);
 
     virtual ~callee();
 
@@ -181,15 +181,15 @@ public:
   }
 
   /// Writes a header followed by its payload to `storage`.
-  void write(execution_unit* ctx, buffer_type& storage, header& hdr,
-             payload_writer* writer = nullptr);
+  void write(execution_unit* ctx, buffer_type& buf, header& hdr,
+             payload_writer* pw = nullptr);
 
   /// Writes the server handshake containing the information of the
   /// actor published at `port` to `buf`. If `port == none` or
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
   void write_server_handshake(execution_unit* ctx,
-                              buffer_type& buf, optional<uint16_t> port);
+                              buffer_type& out_buf, optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
   void write_client_handshake(execution_unit* ctx,
@@ -202,7 +202,7 @@ public:
   /// Writes a `kill_proxy` to `buf`.
   void write_kill_proxy(execution_unit* ctx, buffer_type& buf,
                         const node_id& dest_node, actor_id aid,
-                        const error& fail_state);
+                        const error& rsn);
 
   /// Writes a `heartbeat` to `buf`.
   void write_heartbeat(execution_unit* ctx,

@@ -40,7 +40,7 @@ namespace caf {
 /// Technology-independent deserialization interface.
 class deserializer : public data_processor<deserializer> {
 public:
-  ~deserializer();
+  ~deserializer() override;
 
   using super = data_processor<deserializer>;
 
@@ -51,9 +51,9 @@ public:
   using is_saving = std::false_type;
   using is_loading = std::true_type;
 
-  explicit deserializer(actor_system& sys);
+  explicit deserializer(actor_system& x);
 
-  explicit deserializer(execution_unit* ctx = nullptr);
+  explicit deserializer(execution_unit* x = nullptr);
 };
 
 #ifndef CAF_NO_EXCEPTIONS

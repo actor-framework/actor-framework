@@ -42,7 +42,7 @@ behavior client(event_based_actor* self, const string& name) {
       }
     },
     [=](join_atom, const group& what) {
-      for (auto g : self->joined_groups()) {
+      for (const auto& g : self->joined_groups()) {
         cout << "*** leave " << to_string(g) << endl;
         self->send(g, name + " has left the chatroom");
         self->leave(g);
@@ -108,7 +108,7 @@ void run_client(actor_system& system, const config& cfg) {
     if (tmp)
       anon_send(client_actor, join_atom::value, std::move(*tmp));
     else
-      cerr << "*** failed to parse \"" << uri << "\" as group URI: "
+      cerr << R"(*** failed to parse ")" << uri << R"(" as group URI: )"
            << system.render(tmp.error()) << endl;
   }
   istream_iterator<line> eof;

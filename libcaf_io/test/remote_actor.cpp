@@ -64,7 +64,7 @@ behavior make_pong_behavior() {
   };
 }
 
-behavior make_ping_behavior(event_based_actor* self, actor pong) {
+behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
   CAF_MESSAGE("ping with " << 0);
   self->send(pong, 0);
   return {
@@ -101,7 +101,7 @@ behavior make_sort_behavior() {
   };
 }
 
-behavior make_sort_requester_behavior(event_based_actor* self, actor sorter) {
+behavior make_sort_requester_behavior(event_based_actor* self, const actor& sorter) {
   self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
   return {
     [=](const std::vector<int>& vec) {
@@ -123,7 +123,7 @@ behavior fragile_mirror(event_based_actor* self) {
   };
 }
 
-behavior linking_actor(event_based_actor* self, actor buddy) {
+behavior linking_actor(event_based_actor* self, const actor& buddy) {
   CAF_MESSAGE("link to mirror and send dummy message");
   self->link_to(buddy);
   self->send(buddy, 42);

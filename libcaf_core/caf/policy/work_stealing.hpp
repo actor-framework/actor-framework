@@ -40,7 +40,7 @@ namespace policy {
 /// @extends scheduler_policy
 class work_stealing : public unprofiled {
 public:
-  ~work_stealing();
+  ~work_stealing() override;
 
   // A thread-safe queue implementation.
   using queue_type = detail::double_ended_queue<resumable>;

@@ -56,7 +56,7 @@ actor_ostream& actor_ostream::flush() {
 }
 
 void actor_ostream::redirect(abstract_actor* self, std::string fn, int flags) {
-  if (!self)
+  if (self == nullptr)
     return;
   auto pr = self->home_system().scheduler().printer();
   pr->enqueue(make_mailbox_element(nullptr, message_id::make(), {},

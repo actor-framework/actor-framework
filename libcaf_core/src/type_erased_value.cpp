@@ -30,7 +30,7 @@ bool type_erased_value::matches(uint16_t nr, const std::type_info* ptr) const {
   if (tp.first != nr)
     return false;
   if (nr == 0)
-    return ptr ? *tp.second == *ptr : false;
+    return ptr != nullptr ? *tp.second == *ptr : false;
   return true;
 }
 

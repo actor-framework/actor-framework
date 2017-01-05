@@ -12,7 +12,7 @@ using namespace caf;
 
 using calc = typed_actor<replies_to<add_atom, int, int>::with<int>>;
 
-void actor_a(event_based_actor* self, calc worker) {
+void actor_a(event_based_actor* self, const calc& worker) {
   self->request(worker, std::chrono::seconds(10), add_atom::value, 1, 2).then(
     [=](int result) {
       aout(self) << "1 + 2 = " << result << endl;
@@ -20,7 +20,7 @@ void actor_a(event_based_actor* self, calc worker) {
   );
 }
 
-calc::behavior_type actor_b(calc::pointer self, calc worker) {
+calc::behavior_type actor_b(calc::pointer self, const calc& worker) {
   return {
     [=](add_atom add, int x, int y) {
       return self->delegate(worker, add, x, y);

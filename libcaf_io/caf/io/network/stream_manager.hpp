@@ -34,7 +34,7 @@ class stream_manager : public manager {
 public:
   stream_manager(abstract_broker* ptr);
 
-  ~stream_manager();
+  ~stream_manager() override;
 
   /// Called by the underlying I/O device whenever it received data.
   /// @returns `true` if the manager accepts further reads, otherwise `false`.

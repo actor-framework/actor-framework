@@ -394,8 +394,8 @@ void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
   length = static_cast<dword>(data.size());
   // process message in 16-word chunks
   for (dword nbytes = length; nbytes > 63; nbytes -= 64) {
-    for (dword i = 0; i < 16; ++i) {
-      X[i] = BYTES_TO_DWORD(message);
+    for (auto& i : X) {
+      i = BYTES_TO_DWORD(message);
       message += 4;
     }
     compress(MDbuf, X);

@@ -31,7 +31,7 @@ concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
   for (auto& x : xs) {
     if (x) {
       auto dptr = dynamic_cast<const concatenated_tuple*>(x.get());
-      if (dptr) {
+      if (dptr != nullptr) {
         auto& vec = dptr->data_;
         data_.insert(data_.end(), vec.begin(), vec.end());
       } else {

@@ -134,18 +134,18 @@ bool run_ssh(actor_system& system, const string& wdir,
   auto packed = encode_base64(full_cmd);
   std::ostringstream oss;
   oss << "ssh -Y -o ServerAliveInterval=60 " << host
-      << " \"echo " << packed << " | base64 --decode | /bin/sh\"";
+      << R"( "echo )" << packed << R"( | base64 --decode | /bin/sh")";
   //return system(oss.str().c_str());
   string line;
   std::cout << "popen: " << oss.str() << std::endl;
   auto fp = popen(oss.str().c_str(), "r");
-  if (!fp)
+  if (fp == nullptr)
     return false;
   char buf[512];
   auto eob = buf + sizeof(buf); // end-of-buf
   auto pred = [](char c) { return c == 0 || c == '\n'; };
   scoped_actor self{system};
-  while (fgets(buf, sizeof(buf), fp)) {
+  while (fgets(buf, sizeof(buf), fp) != nullptr) {
     auto i = buf;
     auto e = std::find_if(i, eob, pred);
     line.insert(line.end(), i, e);

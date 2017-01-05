@@ -42,9 +42,9 @@ namespace caf {
 namespace io {
 
 struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
-  basp_broker_state(broker* self);
+  basp_broker_state(broker* selfptr);
 
-  ~basp_broker_state();
+  ~basp_broker_state() override;
 
   // inherited from proxy_registry::backend
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
@@ -57,7 +57,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
                           std::set<std::string>& sigs) override;
 
   // inherited from basp::instance::listener
-  void purge_state(const node_id& id) override;
+  void purge_state(const node_id& nid) override;
 
   // inherited from basp::instance::listener
   void proxy_announced(const node_id& nid, actor_id aid) override;
@@ -66,17 +66,17 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void kill_proxy(const node_id& nid, actor_id aid, const error& rsn) override;
 
   // inherited from basp::instance::listener
-  void deliver(const node_id& source_node, actor_id source_actor,
-               actor_id dest_actor, message_id mid,
+  void deliver(const node_id& src_nid, actor_id src_aid,
+               actor_id dest_aid, message_id mid,
                std::vector<strong_actor_ptr>& stages, message& msg) override;
 
   // inherited from basp::instance::listener
-  void deliver(const node_id& source_node, actor_id source_actor,
-               atom_value dest_actor, message_id mid,
+  void deliver(const node_id& src_nid, actor_id src_aid,
+               atom_value dest_name, message_id mid,
                std::vector<strong_actor_ptr>& stages, message& msg) override;
 
   // called from both overriden functions
-  void deliver(const node_id& source_node, actor_id source_actor,
+  void deliver(const node_id& src_nid, actor_id src_aid,
                strong_actor_ptr dest, message_id mid,
                std::vector<strong_actor_ptr>& stages, message& msg);
 
@@ -85,7 +85,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // inherited from basp::instance::listener
   void learned_new_node_directly(const node_id& nid,
-                                 bool was_known_indirectly_before) override;
+                                 bool was_indirectly_before) override;
 
   // inherited from basp::instance::listener
   void learned_new_node_indirectly(const node_id& nid) override;

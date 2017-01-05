@@ -141,10 +141,10 @@ public:
 
   /// Writes an entry to the log file.
   void log(int level, const char* component, const std::string& class_name,
-           const char* function_name, const char* file_name,
+           const char* function_name, const char* c_full_file_name,
            int line_num, const std::string& msg);
 
-  ~logger();
+  ~logger() override;
 
   /** @cond PRIVATE */
 
@@ -173,7 +173,7 @@ private:
 
   void log_prefix(std::ostream& out, int level, const char* component,
                   const std::string& class_name, const char* function_name,
-                  const char* file_name, int line_num,
+                  const char* c_full_file_name, int line_num,
                   const std::thread::id& tid = std::this_thread::get_id());
 
   actor_system& system_;

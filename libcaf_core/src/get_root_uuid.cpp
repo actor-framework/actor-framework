@@ -50,7 +50,7 @@ std::string get_root_uuid() {
   // fetch hd serial
   std::string uuid;
   FILE* get_uuid_cmd = popen(s_get_uuid, "r");
-  while (fgets(cbuf, 100, get_uuid_cmd) != 0) {
+  while (fgets(cbuf, 100, get_uuid_cmd) != nullptr) {
     uuid += cbuf;
   }
   pclose(get_uuid_cmd);

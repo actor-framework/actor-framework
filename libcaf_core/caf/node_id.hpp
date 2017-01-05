@@ -71,12 +71,12 @@ public:
   /// Creates a node ID from `process_id` and `hash`.
   /// @param process_id System-wide unique process identifier.
   /// @param hash Unique node id as hexadecimal string representation.
-  node_id(uint32_t process_id, const std::string& hash);
+  node_id(uint32_t procid, const std::string& hash);
 
   /// Creates a node ID from `process_id` and `hash`.
   /// @param process_id System-wide unique process identifier.
   /// @param node_id Unique node id.
-  node_id(uint32_t process_id, const host_id_type& node_id);
+  node_id(uint32_t procid, const host_id_type& hid);
 
   /// Identifies the running process.
   /// @returns A system-wide unique process identifier.
@@ -101,7 +101,7 @@ public:
 
     int compare(const node_id& other) const;
 
-    ~data();
+    ~data() override;
 
     data();
 

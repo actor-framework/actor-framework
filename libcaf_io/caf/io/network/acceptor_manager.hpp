@@ -32,7 +32,7 @@ class acceptor_manager : public manager {
 public:
   acceptor_manager(abstract_broker* ptr);
 
-  ~acceptor_manager();
+  ~acceptor_manager() override;
 
   /// Called by the underlying I/O device to indicate that
   /// a new connection is awaiting acceptance.

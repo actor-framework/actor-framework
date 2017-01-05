@@ -143,7 +143,7 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
   if (!whom)
     return sec::cannot_publish_invalid_actor;
   std::string in;
-  if (cstr)
+  if (cstr != nullptr)
     in = cstr;
   auto f = make_function_view(actor_handle());
   return f(publish_atom::value, port, std::move(whom), std::move(sigs), in, ru);
@@ -310,15 +310,15 @@ void middleman::init(actor_system_config& cfg) {
       // nop
     }
 
-    void stop() {
+    void stop() override {
       // nop
     }
 
-    expected<group> get(const std::string& group_name) {
+    expected<group> get(const std::string& group_name) override {
       return parent_.remote_group(group_name);
     }
 
-    error load(deserializer&, group&) {
+    error load(deserializer&, group&) override {
       // never called, because we hand out group instances of the local module
       return sec::no_such_group_module;
     }

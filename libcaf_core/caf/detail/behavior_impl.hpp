@@ -58,7 +58,7 @@ class behavior_impl : public ref_counted {
 public:
   using pointer = intrusive_ptr<behavior_impl>;
 
-  ~behavior_impl();
+  ~behavior_impl() override;
 
   behavior_impl(duration tout = duration{});
 

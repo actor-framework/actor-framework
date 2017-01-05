@@ -57,7 +57,7 @@ static constexpr unit_t unit = unit_t{};
 
 /// @relates unit_t
 template <class Processor>
-void serialize(Processor&, const unit_t&, const unsigned int) {
+void serialize(Processor&, const unit_t&, unsigned int) {
   // nop
 }
 

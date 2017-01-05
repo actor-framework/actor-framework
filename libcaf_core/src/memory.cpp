@@ -62,7 +62,7 @@ void make_cache_map() {
 cache_map& get_cache_map() {
   pthread_once(&s_key_once, make_cache_map);
   auto cache = reinterpret_cast<cache_map*>(pthread_getspecific(s_key));
-  if (!cache) {
+  if (cache == nullptr) {
     cache = new cache_map;
     pthread_setspecific(s_key, cache);
     // insert default types

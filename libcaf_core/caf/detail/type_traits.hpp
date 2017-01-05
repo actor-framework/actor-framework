@@ -202,13 +202,13 @@ class is_forward_iterator {
   template <class C>
   static bool sfinae(C& x, C& y,
                      // check for operator*
-                     decay_t<decltype(*x)>* = 0,
+                     decay_t<decltype(*x)>* = nullptr,
                      // check for operator++ returning an iterator
-                     decay_t<decltype(x = ++y)>* = 0,
+                     decay_t<decltype(x = ++y)>* = nullptr,
                      // check for operator==
-                     decay_t<decltype(x == y)>* = 0,
+                     decay_t<decltype(x == y)>* = nullptr,
                      // check for operator!=
-                     decay_t<decltype(x != y)>* = 0);
+                     decay_t<decltype(x != y)>* = nullptr);
 
   static void sfinae(...);
 
@@ -226,9 +226,9 @@ class is_iterable {
   template <class C>
   static bool sfinae(C* cc,
                      // check if 'C::begin()' returns a forward iterator
-                     enable_if_tt<is_forward_iterator<decltype(cc->begin())>>* = 0,
+                     enable_if_tt<is_forward_iterator<decltype(cc->begin())>>* = nullptr,
                      // check if begin() and end() both exist and are comparable
-                     decltype(cc->begin() != cc->end())* = 0);
+                     decltype(cc->begin() != cc->end())* = nullptr);
 
   // SFNINAE default
   static void sfinae(void*);
@@ -271,7 +271,7 @@ template <class T,
                         || std::is_function<T>::value>
 struct has_serialize {
   template <class U>
-  static auto test_serialize(caf::serializer* sink, U* x, const unsigned int y = 0)
+  static auto test_serialize(caf::serializer* sink, U* x, unsigned int y = 0)
   -> decltype(serialize(*sink, *x, y));
 
   template <class U>
@@ -282,7 +282,7 @@ struct has_serialize {
   static auto test_serialize(...) -> std::false_type;
 
   template <class U>
-  static auto test_deserialize(caf::deserializer* source, U* x, const unsigned int y = 0)
+  static auto test_deserialize(caf::deserializer* source, U* x, unsigned int y = 0)
   -> decltype(serialize(*source, *x, y));
 
   template <class U>

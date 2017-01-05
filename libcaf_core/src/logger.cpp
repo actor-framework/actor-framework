@@ -141,7 +141,7 @@ void prettify_type_name(std::string& class_name, const char* c_class_name) {
 # if defined(CAF_LINUX) || defined(CAF_MACOS)
   int stat = 0;
   std::unique_ptr<char, decltype(free)*> real_class_name{nullptr, free};
-  auto tmp = abi::__cxa_demangle(c_class_name, 0, 0, &stat);
+  auto tmp = abi::__cxa_demangle(c_class_name, nullptr, nullptr, &stat);
   real_class_name.reset(tmp);
   class_name = stat == 0 ? real_class_name.get() : c_class_name;
 # else
@@ -288,7 +288,7 @@ void logger::log(int level, const char* component,
 }
 
 void logger::set_current_actor_system(actor_system* x) {
-  if (x)
+  if (x != nullptr)
     set_current_logger(&x->logger());
   else
     set_current_logger(nullptr);
@@ -303,7 +303,7 @@ void logger::log_static(int level, const char* component,
                         const char* function_name, const char* file_name,
                         int line_num, const std::string& msg) {
   auto ptr = get_current_logger();
-  if (ptr)
+  if (ptr != nullptr)
     ptr->log(level, component, class_name, function_name, file_name, line_num,
              msg);
 }

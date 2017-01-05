@@ -49,7 +49,7 @@ public:
   behavior& operator=(const behavior&) = default;
 
   /// Creates a behavior from `fun` without timeout.
-  behavior(const message_handler& fun);
+  behavior(const message_handler& mh);
 
   /// The list of arguments can contain match expressions, message handlers,
   /// and up to one timeout (if set, the timeout has to be the last argument).

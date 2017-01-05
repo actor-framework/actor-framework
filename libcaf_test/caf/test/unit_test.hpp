@@ -75,15 +75,15 @@ int main(int argc, char** argv);
 /// A sequence of *checks*.
 class test {
 public:
-  test(std::string name);
+  test(std::string test_name);
 
   virtual ~test();
 
   size_t expected_failures() const;
 
-  void pass(std::string msg);
+  void pass(const std::string& msg);
 
-  void fail(std::string msg, bool expected);
+  void fail(const std::string& msg, bool expected);
 
   const std::string& name() const;
 
@@ -113,7 +113,7 @@ public:
     // nop
   }
 
-  virtual void run() override {
+  void run() override {
     T impl;
     impl.run();
   }
@@ -169,7 +169,7 @@ public:
 
     stream& operator<<(const char* cstr);
 
-    stream& operator<<(const std::string& str);
+    stream& operator<<(const std::string& x);
 
     std::string str() const;
 
@@ -248,7 +248,7 @@ public:
   /// Adds a test to the engine.
   /// @param name The name of the suite.
   /// @param ptr The test to register.
-  static void add(const char* name, std::unique_ptr<test> ptr);
+  static void add(const char* cstr_name, std::unique_ptr<test> ptr);
 
   /// Invokes tests in all suites.
   /// @param colorize Whether to colorize the output.
@@ -263,10 +263,10 @@ public:
                   const std::string& log_file,
                   int verbosity_console,
                   int verbosity_file,
-                  const std::string& suites,
-                  const std::string& not_suites,
-                  const std::string& tests,
-                  const std::string& not_tests);
+                  const std::string& suites_str,
+                  const std::string& not_suites_str,
+                  const std::string& tests_str,
+                  const std::string& not_tests_str);
 
   /// Retrieves a UNIX terminal color code or an empty string based on the
   /// color configuration of the engine.

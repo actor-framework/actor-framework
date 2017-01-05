@@ -50,7 +50,7 @@ public:
     virtual execution_unit* registry_context() = 0;
   };
 
-  proxy_registry(actor_system& sys, backend& mgm);
+  proxy_registry(actor_system& sys, backend& be);
 
   proxy_registry(const proxy_registry&) = delete;
   proxy_registry& operator=(const proxy_registry&) = delete;
@@ -80,16 +80,16 @@ public:
 
   /// Returns the proxy instance identified by `node` and `aid`
   /// or creates a new (default) proxy instance.
-  strong_actor_ptr get_or_put(const key_type& node, actor_id aid);
+  strong_actor_ptr get_or_put(const key_type& nid, actor_id aid);
 
   /// Returns all known proxies.
   std::vector<strong_actor_ptr> get_all(const key_type& node);
 
   /// Deletes all proxies for `node`.
-  void erase(const key_type& node);
+  void erase(const key_type& nid);
 
   /// Deletes the proxy with id `aid` for `node`.
-  void erase(const key_type& node, actor_id aid,
+  void erase(const key_type& inf, actor_id aid,
              error rsn = exit_reason::remote_link_unreachable);
 
   /// Queries whether there are any proxies left.

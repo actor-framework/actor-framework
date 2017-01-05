@@ -112,7 +112,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
 scheduled_actor::~scheduled_actor() {
   // signalize to the private thread object that it is
   // unrachable and can be destroyed as well
-  if (private_thread_)
+  if (private_thread_ != nullptr)
     private_thread_->notify_self_destroyed();
 }
 
@@ -134,7 +134,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
         CAF_ASSERT(private_thread_ != nullptr);
         private_thread_->resume();
       } else {
-        if (eu)
+        if (eu != nullptr)
           eu->exec_later(this);
         else
           home_system().scheduler().enqueue(this);
@@ -520,9 +520,8 @@ bool scheduled_actor::activate(execution_unit* ctx) {
       if (finalize()) {
         CAF_LOG_DEBUG("actor_done() returned true right after make_behavior()");
         return false;
-      } else {
-        CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
       }
+      CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
     }
 # ifndef CAF_NO_EXCEPTIONS
   }

@@ -1,4 +1,4 @@
-/******************************************************************************\
+/******************************************************************************
  * This example                                                               *
  * - emulates a client launching a request every 10-300ms                     *
  * - uses a CURL-backend consisting of a master and 10 workers                *
@@ -28,12 +28,12 @@
  *          |                                     |<--/                       *
  *          | <-------------(reply)-------------- |                           *
  *          X                                                                 *
-\ ******************************************************************************/
+ ******************************************************************************/
 
 // C includes
-#include <time.h>
-#include <signal.h>
-#include <stdlib.h>
+#include <ctime>
+#include <csignal>
+#include <cstdlib>
 
 // C++ includes
 #include <string>
@@ -129,7 +129,7 @@ struct base_state {
 };
 
 // encapsulates an HTTP request
-behavior client_job(stateful_actor<base_state>* self, actor parent) {
+behavior client_job(stateful_actor<base_state>* self, const actor& parent) {
   if (!self->state.init("client-job", color::blue))
     return {}; // returning an empty behavior terminates the actor
   self->send(parent, read_atom::value,
@@ -164,7 +164,7 @@ struct client_state : base_state {
 };
 
 // spawns HTTP requests
-behavior client(stateful_actor<client_state>* self, actor parent) {
+behavior client(stateful_actor<client_state>* self, const actor& parent) {
   using std::chrono::milliseconds;
   self->link_to(parent);
   if (!self->state.init("client", color::green))
@@ -190,8 +190,8 @@ struct curl_state : base_state {
     // nop
   }
 
-  ~curl_state() {
-    if (curl)
+  ~curl_state() override {
+    if (curl != nullptr)
       curl_easy_cleanup(curl);
   }
 
@@ -206,7 +206,7 @@ struct curl_state : base_state {
 
   bool init(std::string m_name, std::string m_color) override {
     curl = curl_easy_init();
-    if (!curl)
+    if (curl == nullptr)
       return false;
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curl_state::callback);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
@@ -218,7 +218,7 @@ struct curl_state : base_state {
 };
 
 // manages a CURL session
-behavior curl_worker(stateful_actor<curl_state>* self, actor parent) {
+behavior curl_worker(stateful_actor<curl_state>* self, const actor& parent) {
   if (!self->state.init("curl-worker", color::yellow))
     return {}; // returning an empty behavior terminates the actor
   return {
@@ -340,7 +340,7 @@ void caf_main(actor_system& system) {
   struct sigaction act;
   act.sa_handler = [](int) { shutdown_flag = true; };
   auto set_sighandler = [&] {
-    if (sigaction(SIGINT, &act, 0)) {
+    if (sigaction(SIGINT, &act, nullptr) != 0) {
       std::cerr << "fatal: cannot set signal handler" << std::endl;
       abort();
     }

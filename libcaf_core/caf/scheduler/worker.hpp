@@ -90,9 +90,9 @@ public:
   }
 
   actor_id id_of(resumable* ptr) {
-    abstract_actor* dptr = ptr ? dynamic_cast<abstract_actor*>(ptr)
+    abstract_actor* dptr = ptr != nullptr ? dynamic_cast<abstract_actor*>(ptr)
                                : nullptr;
-    return dptr ? dptr->id() : 0;
+    return dptr != nullptr ? dptr->id() : 0;
   }
 
   policy_data& data() {

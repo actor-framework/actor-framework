@@ -63,7 +63,7 @@
 # include <ws2ipdef.h>
 #else
 # include <unistd.h>
-# include <errno.h>
+# include <cerrno>
 # include <sys/socket.h>
 #endif
 
@@ -157,7 +157,7 @@ expected<void> nonblocking(native_socket fd, bool new_value);
 expected<void> tcp_nodelay(native_socket fd, bool new_value);
 
 /// Enables or disables `SIGPIPE` events from `fd`.
-expected<void> allow_sigpipe(native_socket fs, bool new_value);
+expected<void> allow_sigpipe(native_socket fd, bool new_value);
 
 /// Reads up to `len` bytes from `fd,` writing the received data
 /// to `buf`. Returns `true` as long as `fd` is readable and `false`
@@ -181,7 +181,7 @@ class default_multiplexer;
 /// A socket I/O event handler.
 class event_handler {
 public:
-  event_handler(default_multiplexer& dm, native_socket fd);
+  event_handler(default_multiplexer& dm, native_socket sockfd);
 
   virtual ~event_handler();
 
@@ -243,7 +243,7 @@ public:
   pipe_reader(default_multiplexer& dm);
   void removed_from_loop(operation op) override;
   void handle_event(operation op) override;
-  void init(native_socket fd);
+  void init(native_socket sock_fd);
   resumable* try_read_next();
 };
 
@@ -273,18 +273,18 @@ public:
   expected<connection_handle> new_tcp_scribe(const std::string &,
                                              uint16_t) override;
 
-  expected<void> assign_tcp_scribe(abstract_broker *ptr,
+  expected<void> assign_tcp_scribe(abstract_broker *self,
                                    connection_handle hdl) override;
 
   connection_handle add_tcp_scribe(abstract_broker *,
                                    native_socket fd) override;
 
   expected<connection_handle> add_tcp_scribe(abstract_broker *,
-                                             const std::string &h,
+                                             const std::string &host,
                                              uint16_t port) override;
 
   expected<std::pair<accept_handle, uint16_t>>
-  new_tcp_doorman(uint16_t p, const char *in, bool rflag) override;
+  new_tcp_doorman(uint16_t port, const char *in, bool reuse_addr) override;
 
   expected<void> assign_tcp_doorman(abstract_broker *ptr,
                                     accept_handle hdl) override;
@@ -298,7 +298,7 @@ public:
 
   explicit default_multiplexer(actor_system* sys);
 
-  ~default_multiplexer();
+  ~default_multiplexer() override;
 
   supervisor_ptr make_supervisor() override;
 
@@ -351,7 +351,7 @@ private:
     }
   }
 
-  void handle(const event& event);
+  void handle(const event& e);
 
   void handle_socket_event(native_socket fd, int mask, event_handler* ptr);
 

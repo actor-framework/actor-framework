@@ -47,7 +47,7 @@ public:
     skip
   };
 
-  match_case(uint32_t token);
+  match_case(uint32_t tt);
 
   match_case(match_case&&) = default;
   match_case(const match_case&) = default;

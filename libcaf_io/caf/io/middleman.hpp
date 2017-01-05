@@ -47,11 +47,11 @@ public:
 
   using hook_vector = std::vector<hook_uptr>;
 
-  ~middleman();
+  ~middleman() override;
 
   /// Tries to open a port for other CAF instances to connect to.
   /// @experimental
-  expected<uint16_t> open(uint16_t port, const char* in = nullptr,
+  expected<uint16_t> open(uint16_t port, const char* cstr = nullptr,
                           bool ru = false);
 
   /// Closes port `port` regardless of whether an actor is published to it.
@@ -82,7 +82,7 @@ public:
   /// @returns The actual port the OS uses after `bind()`. If `port == 0`
   ///          the OS chooses a random high-level port.
   expected<uint16_t> publish_local_groups(uint16_t port,
-                                          const char* addr = nullptr);
+                                          const char* in = nullptr);
 
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.
@@ -274,7 +274,7 @@ public:
   }
 
 protected:
-  middleman(actor_system& ref);
+  middleman(actor_system& sys);
 
 private:
   template <spawn_options Os, class Impl, class F, class... Ts>
@@ -314,12 +314,12 @@ private:
 
   expected<strong_actor_ptr> remote_spawn_impl(const node_id& nid,
                                                std::string& name, message& args,
-                                               std::set<std::string> ifs,
+                                               std::set<std::string> s,
                                                duration timeout);
 
   expected<uint16_t> publish(const strong_actor_ptr& whom,
                              std::set<std::string> sigs,
-                             uint16_t port, const char* in, bool ru);
+                             uint16_t port, const char* cstr, bool ru);
 
 
   expected<void> unpublish(const actor_addr& whom, uint16_t port);

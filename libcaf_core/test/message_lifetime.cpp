@@ -37,7 +37,7 @@ public:
     // nop
   }
 
-  ~testee() {
+  ~testee() override {
     // nop
   }
 

@@ -9,7 +9,7 @@
 // Run client at the same host:
 // - ./build/bin/distributed_math_actor -c -p 4242
 
-// Manual refs: 221-233 (ConfiguringActorSystems)
+// Manual refs: 222-234 (ConfiguringActorSystems)
 
 #include <array>
 #include <vector>
@@ -31,7 +31,7 @@ using namespace caf;
 
 namespace {
 
-static constexpr auto task_timeout = std::chrono::seconds(10);
+constexpr auto task_timeout = std::chrono::seconds(10);
 
 using plus_atom = atom_constant<atom("plus")>;
 using minus_atom = atom_constant<atom("minus")>;
@@ -97,7 +97,7 @@ void connecting(stateful_actor<state>*,
                 const std::string& host, uint16_t port);
 
 // prototype definition for transition to `running` with Calculator
-behavior running(stateful_actor<state>*, actor calculator);
+behavior running(stateful_actor<state>*, const actor& calculator);
 
 // starting point of our FSM
 behavior init(stateful_actor<state>* self) {
@@ -133,14 +133,15 @@ void connecting(stateful_actor<state>* self,
   // use request().await() to suspend regular behavior until MM responded
   auto mm = self->system().middleman().actor_handle();
   self->request(mm, infinite, connect_atom::value, host, port).await(
-    [=](const node_id&, strong_actor_ptr serv, const std::set<std::string>& ifs) {
+    [=](const node_id&, strong_actor_ptr serv,
+        const std::set<std::string>& ifs) {
       if (!serv) {
-        aout(self) << "*** no server found at \"" << host << "\":"
+        aout(self) << R"(*** no server found at ")" << host << R"(":)"
                    << port << endl;
         return;
       }
       if (!ifs.empty()) {
-        aout(self) << "*** typed actor found at \"" << host << "\":"
+        aout(self) << R"(*** typed actor found at ")" << host << R"(":)"
                    << port << ", but expected an untyped actor "<< endl;
         return;
       }
@@ -151,7 +152,7 @@ void connecting(stateful_actor<state>* self,
       self->become(running(self, hdl));
     },
     [=](const error& err) {
-      aout(self) << "*** cannot connect to \"" << host << "\":"
+      aout(self) << R"(*** cannot connect to ")" << host << R"(":)"
                  << port << " => " << self->system().render(err) << endl;
       self->become(unconnected(self));
     }
@@ -159,7 +160,7 @@ void connecting(stateful_actor<state>* self,
 }
 
 // prototype definition for transition to `running` with Calculator
-behavior running(stateful_actor<state>* self, actor calculator) {
+behavior running(stateful_actor<state>* self, const actor& calculator) {
   auto send_task = [=](const task& x) {
     self->request(calculator, task_timeout, x.op, x.lhs, x.rhs).then(
       [=](int result) {
@@ -192,7 +193,7 @@ behavior running(stateful_actor<state>* self, actor calculator) {
 
 // removes leading and trailing whitespaces
 string trim(std::string s) {
-  auto not_space = [](char c) { return !isspace(c); };
+  auto not_space = [](char c) { return isspace(c) == 0; };
   // trim left
   s.erase(s.begin(), find_if(s.begin(), s.end(), not_space));
   // trim right
@@ -249,7 +250,7 @@ void client_repl(actor_system& system, const config& cfg) {
     anon_send(client, connect_atom::value, cfg.host, cfg.port);
   else
     cout << "*** no server received via config, "
-         << "please use \"connect <host> <port>\" before using the calculator"
+         << R"(please use "connect <host> <port>" before using the calculator)"
          << endl;
   // defining the handler outside the loop is more efficient as it avoids
   // re-creating the same object over and over again
@@ -265,9 +266,9 @@ void client_repl(actor_system& system, const config& cfg) {
         char* end = nullptr;
         auto lport = strtoul(arg2.c_str(), &end, 10);
         if (end != arg2.c_str() + arg2.size())
-          cout << "\"" << arg2 << "\" is not an unsigned integer" << endl;
+          cout << R"(")" << arg2 << R"(" is not an unsigned integer)" << endl;
         else if (lport > std::numeric_limits<uint16_t>::max())
-          cout << "\"" << arg2 << "\" > "
+          cout << R"(")" << arg2 << R"(" > )"
                << std::numeric_limits<uint16_t>::max() << endl;
         else
           anon_send(client, connect_atom::value, move(arg1),
