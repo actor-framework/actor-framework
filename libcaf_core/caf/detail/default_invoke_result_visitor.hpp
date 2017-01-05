@@ -34,7 +34,7 @@ public:
     // nop
   }
 
-  ~default_invoke_result_visitor() {
+  ~default_invoke_result_visitor() override {
     // nop
   }
 

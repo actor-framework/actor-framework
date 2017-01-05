@@ -137,7 +137,7 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
   self->become(await_length_prefix);
 }
 
-behavior server(broker* self, actor buddy) {
+behavior server(broker* self, const actor& buddy) {
   print_on_exit(self, "server");
   aout(self) << "server is running" << endl;
   return {

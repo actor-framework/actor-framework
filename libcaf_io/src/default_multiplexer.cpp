@@ -38,7 +38,7 @@
 # include <windows.h>
 # include <io.h>
 #else
-# include <errno.h>
+# include <cerrno>
 # include <netdb.h>
 # include <fcntl.h>
 # include <sys/types.h>
@@ -46,6 +46,8 @@
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <netinet/tcp.h>
+
+#include <utility>
 #endif
 
 using std::string;
@@ -530,7 +532,7 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
     new_element.events = static_cast<short>(e.mask);
     new_element.revents = 0;
     int old_mask = 0;
-    if (e.ptr) {
+    if (e.ptr != nullptr) {
       old_mask = e.ptr->eventbf();
       e.ptr->eventbf(e.mask);
     }
@@ -558,9 +560,9 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
         CAF_ASSERT(*j == e.ptr);
         i->events = static_cast<short>(e.mask);
       }
-      if (e.ptr) {
+      if (e.ptr != nullptr) {
         auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
-          if ((old_mask & flag) && !(e.mask & flag)) {
+          if (((old_mask & flag) != 0) && ((e.mask & flag) == 0)) {
             e.ptr->removed_from_loop(flag_op);
           }
         };
@@ -647,7 +649,7 @@ multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
     explicit impl(default_multiplexer* thisptr) : this_(thisptr) {
       // nop
     }
-    ~impl() {
+    ~impl() override {
       auto ptr = this_;
       ptr->dispatch([=] { ptr->close_pipe(); });
     }
@@ -667,18 +669,18 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(mask));
   CAF_ASSERT(ptr != nullptr);
   bool checkerror = true;
-  if (mask & input_mask) {
+  if ((mask & input_mask) != 0) {
     checkerror = false;
     // ignore read events if a previous event caused
     // this socket to be shut down for reading
     if (!ptr->read_channel_closed())
       ptr->handle_event(operation::read);
   }
-  if (mask & output_mask) {
+  if ((mask & output_mask) != 0) {
     checkerror = false;
     ptr->handle_event(operation::write);
   }
-  if (checkerror && (mask & error_mask)) {
+  if (checkerror && ((mask & error_mask) != 0)) {
     CAF_LOG_DEBUG("error occured on socket:"
                   << CAF_ARG(fd) << CAF_ARG(last_socket_error())
                   << CAF_ARG(last_socket_error_as_string()));
@@ -705,7 +707,7 @@ default_multiplexer::~default_multiplexer() {
   // flush pipe before closing it
   nonblocking(pipe_.first, true);
   auto ptr = pipe_reader_.try_read_next();
-  while (ptr) {
+  while (ptr != nullptr) {
     scheduler::abstract_coordinator::cleanup_and_release(ptr);
     ptr = pipe_reader_.try_read_next();
   }
@@ -1354,7 +1356,7 @@ expected<native_socket> new_tcp_connection(const std::string& host,
                                            optional<protocol> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
   CAF_LOG_INFO("try to connect to:" << CAF_ARG(host) << CAF_ARG(port));
-  auto res = interfaces::native_address(host, preferred);
+  auto res = interfaces::native_address(host, std::move(preferred));
   if (!res) {
     CAF_LOG_INFO("no such host");
     return make_error(sec::cannot_connect_to_node, "no such host", host, port);
@@ -1438,7 +1440,7 @@ expected<std::pair<native_socket, uint16_t>>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   protocol proto = ipv6;
-  if (addr) {
+  if (addr != nullptr) {
     auto addrs = interfaces::native_address(addr);
     if (!addrs)
       return make_error(sec::cannot_open_port, "Invalid ADDR", addr);

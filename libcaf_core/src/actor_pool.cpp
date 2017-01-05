@@ -104,7 +104,7 @@ actor actor_pool::make(execution_unit* eu, policy pol) {
 }
 
 actor actor_pool::make(execution_unit* eu, size_t num_workers,
-                       factory fac, policy pol) {
+                       const factory& fac, policy pol) {
   auto res = make(eu, std::move(pol));
   auto ptr = static_cast<actor_pool*>(actor_cast<abstract_actor*>(res));
   auto res_addr = ptr->address();

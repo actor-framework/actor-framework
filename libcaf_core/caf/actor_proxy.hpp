@@ -36,7 +36,7 @@ class actor_proxy : public monitorable_actor {
 public:
   explicit actor_proxy(actor_config& cfg);
 
-  ~actor_proxy();
+  ~actor_proxy() override;
 
   /// Establishes a local link state that's
   /// not synchronized back to the remote instance.

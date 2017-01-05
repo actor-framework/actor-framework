@@ -71,7 +71,7 @@ void local_actor::request_response_timeout(const duration& d, message_id mid) {
 }
 
 void local_actor::monitor(abstract_actor* ptr) {
-  if (ptr)
+  if (ptr != nullptr)
     ptr->attach(default_attachable::make_monitor(ptr->address(), address()));
 }
 
@@ -110,7 +110,7 @@ mailbox_element_ptr local_actor::next_message() {
     auto hp_pos = i;
     // read whole mailbox at once
     auto tmp = mailbox().try_pop();
-    while (tmp) {
+    while (tmp != nullptr) {
       cache.insert(tmp->is_high_priority() ? hp_pos : e, tmp);
       // adjust high priority insert point on first low prio element insert
       if (hp_pos == e && !tmp->is_high_priority())

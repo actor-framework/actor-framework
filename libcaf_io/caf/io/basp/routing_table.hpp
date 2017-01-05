@@ -75,7 +75,7 @@ public:
 
   /// Adds a new direct route to the table.
   /// @pre `hdl != invalid_connection_handle && nid != none`
-  void add_direct(const connection_handle& hdl, const node_id& dest);
+  void add_direct(const connection_handle& hdl, const node_id& nid);
 
   /// Adds a new indirect route to the table.
   bool add_indirect(const node_id& hop, const node_id& dest);

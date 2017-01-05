@@ -396,7 +396,7 @@ CAF_TEST(type_erased_tuple) {
   auto tview = make_type_erased_tuple_view(str, i32);
   CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
   auto buf = serialize(tview);
-  CAF_REQUIRE(buf.size() > 0);
+  CAF_REQUIRE(!buf.empty());
   std::string tmp1;
   int32_t tmp2;
   deserialize(buf, tmp1, tmp2);

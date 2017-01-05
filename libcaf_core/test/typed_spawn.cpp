@@ -115,7 +115,7 @@ public:
   }
 };
 
-void client(event_based_actor* self, actor parent, server_type serv) {
+void client(event_based_actor* self, const actor& parent, const server_type& serv) {
   self->request(serv, infinite, my_request{0, 0}).then(
     [=](bool val1) {
       CAF_CHECK_EQUAL(val1, true);
@@ -245,7 +245,7 @@ maybe_string_actor::behavior_type maybe_string_reverter() {
 }
 
 maybe_string_actor::behavior_type
-maybe_string_delegator(maybe_string_actor::pointer self, maybe_string_actor x) {
+maybe_string_delegator(maybe_string_actor::pointer self, const maybe_string_actor& x) {
   self->link_to(x);
   return {
     [=](string& s) -> delegated<ok_atom, string> {

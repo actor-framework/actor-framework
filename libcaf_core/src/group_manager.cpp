@@ -100,9 +100,7 @@ public:
 
   bool subscribe(strong_actor_ptr who) override {
     CAF_LOG_TRACE(CAF_ARG(who));
-    if (add_subscriber(std::move(who)).first)
-      return true;
-    return false;
+    return add_subscriber(std::move(who)).first;
   }
 
   void unsubscribe(const actor_control_block* who) override {
@@ -122,9 +120,9 @@ public:
   }
 
   local_group(local_group_module& mod, std::string id, node_id nid,
-              optional<actor> local_broker);
+              optional<actor> lb);
 
-  ~local_group();
+  ~local_group() override;
 
 protected:
   detail::shared_spinlock mtx_;
@@ -224,9 +222,9 @@ public:
     CAF_LOG_TRACE("");
   }
 
-  behavior make_behavior();
+  behavior make_behavior() override;
 
-  void on_exit() {
+  void on_exit() override {
     group_.reset();
   }
 
@@ -487,9 +485,9 @@ expected<group> group_manager::get(const std::string& module_name,
   auto mod = get_module(module_name);
   if (mod)
     return mod->get(group_identifier);
-  std::string error_msg = "no module named \"";
+  std::string error_msg = R"(no module named ")";
   error_msg += module_name;
-  error_msg += "\" found";
+  error_msg += R"(" found)";
   return make_error(sec::no_such_group_module, std::move(error_msg));
 }
 

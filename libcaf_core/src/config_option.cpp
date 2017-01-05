@@ -64,7 +64,7 @@ std::string config_option::full_name() const {
   res += '.';
   auto name_begin = name();
   const char* name_end = strchr(name(), ',');
-  if (name_end)
+  if (name_end != nullptr)
     res.insert(res.end(), name_begin, name_end);
   else
     res += name();

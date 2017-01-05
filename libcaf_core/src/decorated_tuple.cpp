@@ -32,20 +32,19 @@ decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
               || *(std::max_element(mapping_.begin(), mapping_.end()))
                  < static_cast<const cow_ptr&>(decorated_)->size());
   // calculate type token
-  for (size_t i = 0; i < mapping_.size(); ++i) {
+  for (unsigned long i : mapping_) {
     type_token_ <<= 6;
-    type_token_ |= decorated_->type_nr(mapping_[i]);
+    type_token_ |= decorated_->type_nr(i);
   }
 }
 
 decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
   auto ptr = dynamic_cast<const decorated_tuple*>(d.get());
-  if (ptr) {
+  if (ptr != nullptr) {
     d = ptr->decorated();
     auto& pmap = ptr->mapping();
-    for (size_t i = 0; i < v.size(); ++i) {
-      v[i] = pmap[v[i]];
-    }
+    for (auto& i : v)
+      i = pmap[i];
   }
   return make_counted<decorated_tuple>(std::move(d), std::move(v));
 }

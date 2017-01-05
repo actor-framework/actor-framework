@@ -52,7 +52,7 @@ public:
 
   explicit serializer(execution_unit* ctx = nullptr);
 
-  virtual ~serializer();
+  ~serializer() override;
 };
 
 #ifndef CAF_NO_EXCEPTIONS

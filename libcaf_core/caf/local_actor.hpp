@@ -99,9 +99,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  local_actor(actor_config& sys);
+  local_actor(actor_config& cfg);
 
-  ~local_actor();
+  ~local_actor() override;
 
   void on_destroy() override;
 
@@ -113,7 +113,7 @@ public:
 
   /// Requests a new timeout for `mid`.
   /// @pre `mid.valid()`
-  void request_response_timeout(const duration& dr, message_id mid);
+  void request_response_timeout(const duration& d, message_id mid);
 
   // -- spawn functions --------------------------------------------------------
 
@@ -178,7 +178,7 @@ public:
   // -- sending asynchronous messages ------------------------------------------
 
   /// Sends an exit message to `dest`.
-  void send_exit(const actor_addr& dest, error reason);
+  void send_exit(const actor_addr& whom, error reason);
 
   void send_exit(const strong_actor_ptr& dest, error reason);
 
@@ -209,7 +209,7 @@ public:
 
   /// @cond PRIVATE
 
-  void monitor(abstract_actor* whom);
+  void monitor(abstract_actor* ptr);
 
   /// @endcond
 
@@ -283,12 +283,12 @@ public:
   /// Serializes the state of this actor to `sink`. This function is
   /// only called if this actor has set the `is_serializable` flag.
   /// The default implementation throws a `std::logic_error`.
-  virtual error save_state(serializer& sink, const unsigned int version);
+  virtual error save_state(serializer& sink, unsigned int version);
 
   /// Deserializes the state of this actor from `source`. This function is
   /// only called if this actor has set the `is_serializable` flag.
   /// The default implementation throws a `std::logic_error`.
-  virtual error load_state(deserializer& source, const unsigned int version);
+  virtual error load_state(deserializer& source, unsigned int version);
 
   /// Returns the currently defined fail state. If this reason is not
   /// `none` then the actor will terminate with this error after executing
@@ -349,7 +349,7 @@ public:
 
   virtual void initialize();
 
-  bool cleanup(error&& reason, execution_unit* host) override;
+  bool cleanup(error&& fail_state, execution_unit* host) override;
 
   message_id new_request_id(message_priority mp);
 
@@ -363,7 +363,7 @@ public:
   bool has_next_message();
 
   /// Appends `x` to the cache for later consumption.
-  void push_to_cache(mailbox_element_ptr x);
+  void push_to_cache(mailbox_element_ptr ptr);
 
 protected:
   // -- member variables -------------------------------------------------------

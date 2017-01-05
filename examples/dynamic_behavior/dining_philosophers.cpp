@@ -5,6 +5,7 @@
 
 #include <map>
 #include <thread>
+#include <utility>
 #include <vector>
 #include <chrono>
 #include <sstream>
@@ -34,7 +35,8 @@ using think_atom = atom_constant<atom("think")>;
 using chopstick = typed_actor<replies_to<take_atom>::with<taken_atom, bool>,
                               reacts_to<put_atom>>;
 
-chopstick::behavior_type taken_chopstick(chopstick::pointer, strong_actor_ptr);
+chopstick::behavior_type taken_chopstick(chopstick::pointer,
+                                         const strong_actor_ptr&);
 
 // either taken by a philosopher or available
 chopstick::behavior_type available_chopstick(chopstick::pointer self) {
@@ -50,7 +52,7 @@ chopstick::behavior_type available_chopstick(chopstick::pointer self) {
 }
 
 chopstick::behavior_type taken_chopstick(chopstick::pointer self,
-                                         strong_actor_ptr user) {
+                                         const strong_actor_ptr& user) {
   return {
     [](take_atom) -> std::tuple<taken_atom, bool> {
       return std::make_tuple(taken_atom::value, false);
@@ -94,13 +96,13 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
 class philosopher : public event_based_actor {
 public:
   philosopher(actor_config& cfg,
-              const std::string& n,
-              const chopstick& l,
-              const chopstick& r)
+              std::string  n,
+              chopstick  l,
+              chopstick  r)
       : event_based_actor(cfg),
-        name_(n),
-        left_(l),
-        right_(r) {
+        name_(std::move(n)),
+        left_(std::move(l)),
+        right_(std::move(r)) {
     // we only accept one message per state and skip others in the meantime
     set_default_handler(skip);
     // a philosopher that receives {eat} stops thinking and becomes hungry

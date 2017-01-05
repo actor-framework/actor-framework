@@ -114,7 +114,7 @@ public:
   }
 
 private:
-  response_promise deliver_impl(message response_message);
+  response_promise deliver_impl(message msg);
 
   execution_unit* ctx_;
   strong_actor_ptr self_;

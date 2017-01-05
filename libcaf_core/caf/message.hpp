@@ -73,7 +73,7 @@ public:
 
   message(message&&) noexcept;
   message& operator=(message&&) noexcept;
-  explicit message(const data_ptr& vals) noexcept;
+  explicit message(data_ptr  ptr) noexcept;
 
   ~message();
 
@@ -133,7 +133,7 @@ public:
   message drop_right(size_t n) const;
 
   /// Creates a new message of size `n` starting at the element at position `p`.
-  message slice(size_t p, size_t n) const;
+  message slice(size_t pos, size_t n) const;
 
   /// Filters this message by applying slices of it to `handler` and  returns
   /// the remaining elements of this operation. Slices are generated in the
@@ -206,8 +206,8 @@ public:
   ///          used arguments, and the generated help text.
   /// @throws std::invalid_argument if no name or more than one long name is set
   cli_res extract_opts(std::vector<cli_arg> xs,
-                       help_factory help_generator = nullptr,
-                       bool suppress_help = false) const;
+                       const help_factory& f = nullptr,
+                       bool no_help = false) const;
 
   // -- inline observers -------------------------------------------------------
 
@@ -328,7 +328,7 @@ private:
 
   message extract_impl(size_t start, message_handler handler) const;
 
-  static message concat_impl(std::initializer_list<data_ptr> ptrs);
+  static message concat_impl(std::initializer_list<data_ptr> xs);
 
   data_ptr vals_;
 };
@@ -337,7 +337,7 @@ private:
 error inspect(serializer& sink, message& msg);
 
 /// @relates message
-error inspect(deserializer& sink, message& msg);
+error inspect(deserializer& source, message& msg);
 
 /// @relates message
 std::string to_string(const message& msg);
@@ -364,23 +364,23 @@ struct message::cli_arg {
   bool* flag;
 
   /// Creates a CLI argument without data.
-  cli_arg(std::string name, std::string text);
+  cli_arg(std::string nstr, std::string tstr);
 
   /// Creates a CLI flag option. The `flag` is set to `true` if the option
   /// was set, otherwise it is `false`.
-  cli_arg(std::string name, std::string text, bool& flag);
+  cli_arg(std::string nstr, std::string tstr, bool& arg);
 
   /// Creates a CLI argument storing its matched argument in `dest`.
-  cli_arg(std::string name, std::string text, atom_value& dest);
+  cli_arg(std::string nstr, std::string tstr, atom_value& arg);
 
   /// Creates a CLI argument storing its matched argument in `dest`.
-  cli_arg(std::string name, std::string text, std::string& dest);
+  cli_arg(std::string nstr, std::string tstr, std::string& arg);
 
   /// Creates a CLI argument appending matched arguments to `dest`.
-  cli_arg(std::string name, std::string text, std::vector<std::string>& dest);
+  cli_arg(std::string nstr, std::string tstr, std::vector<std::string>& arg);
 
   /// Creates a CLI argument using the function object `f`.
-  cli_arg(std::string name, std::string text, consumer f);
+  cli_arg(std::string nstr, std::string tstr, consumer f);
 
   /// Creates a CLI argument for converting from strings,
   /// storing its matched argument in `dest`.

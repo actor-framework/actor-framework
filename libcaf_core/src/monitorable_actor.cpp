@@ -232,7 +232,8 @@ bool monitorable_actor::handle_system_message(mailbox_element& x,
     if (em.reason)
       cleanup(std::move(em.reason), ctx);
     return true;
-  } else if (msg.size() > 1 && msg.match_element<sys_atom>(0)) {
+  }
+  if (msg.size() > 1 && msg.match_element<sys_atom>(0)) {
     if (!x.sender)
       return true;
     error err;

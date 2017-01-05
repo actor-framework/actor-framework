@@ -73,14 +73,14 @@ public:
 
   actor_companion(actor_config& cfg);
 
-  ~actor_companion();
+  ~actor_companion() override;
 
   // -- overridden functions ---------------------------------------------------
 
-  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
+  void enqueue(mailbox_element_ptr ptr, execution_unit* host) override;
 
-  void enqueue(strong_actor_ptr sender, message_id mid, message content,
-               execution_unit* host) override;
+  void enqueue(strong_actor_ptr src, message_id mid, message content,
+               execution_unit* eu) override;
 
   void launch(execution_unit* eu, bool lazy, bool hide) override;
 

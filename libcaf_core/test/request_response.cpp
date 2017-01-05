@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <utility>
+
 #include "caf/config.hpp"
 
 #define CAF_SUITE request_response
@@ -81,9 +83,9 @@ struct float_or_int : event_based_actor {
 
 class popular_actor : public event_based_actor { // popular actors have a buddy
 public:
-  explicit popular_actor(actor_config& cfg, const actor& buddy_arg)
+  explicit popular_actor(actor_config& cfg, actor  buddy_arg)
       : event_based_actor(cfg),
-        buddy_(buddy_arg) {
+        buddy_(std::move(buddy_arg)) {
     // don't pollute unit test output with (provoked) warnings
     set_default_handler(drop);
   }

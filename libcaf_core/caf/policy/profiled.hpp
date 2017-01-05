@@ -43,7 +43,7 @@ struct profiled : Policy {
 
   static actor_id id_of(resumable* job) {
     auto ptr = dynamic_cast<abstract_actor*>(job);
-    return ptr ? ptr->id() : 0;
+    return ptr != nullptr ? ptr->id() : 0;
   }
 
   template <class Worker>

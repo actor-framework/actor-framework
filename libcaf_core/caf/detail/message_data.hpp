@@ -47,7 +47,7 @@ public:
   message_data() = default;
   message_data(const message_data&) = default;
 
-  ~message_data();
+  ~message_data() override;
 
   // -- pure virtual observers -------------------------------------------------
 
@@ -119,7 +119,7 @@ public:
   }
 
   inline const message_data& operator*() const noexcept {
-    return *ptr_.get();
+    return *ptr_;
   }
 
   inline explicit operator bool() const noexcept {

@@ -55,7 +55,7 @@ struct fixture {
   actor_system_config cfg;
   actor_system system;
 
-  void run_testee(actor testee) {
+  void run_testee(const actor& testee) {
     scoped_actor self{system};
     self->request(testee, infinite, a_atom::value).receive(
       [](int i) {

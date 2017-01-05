@@ -48,7 +48,7 @@ public:
       this->setf(Base::is_serializable_flag);
   }
 
-  ~stateful_actor() {
+  ~stateful_actor() override {
     // nop
   }
 
@@ -63,11 +63,11 @@ public:
     return get_name(state_);
   }
 
-  error save_state(serializer& sink, const unsigned int version) override {
+  error save_state(serializer& sink, unsigned int version) override {
     return serialize_state(&sink, state, version);
   }
 
-  error load_state(deserializer& source, const unsigned int version) override {
+  error load_state(deserializer& source, unsigned int version) override {
     return serialize_state(&source, state, version);
   }
 
@@ -85,13 +85,13 @@ public:
 
 private:
   template <class Inspector, class T>
-  auto serialize_state(Inspector* f, T& x, const unsigned int)
+  auto serialize_state(Inspector* f, T& x, unsigned int)
   -> decltype(inspect(*f, x)) {
     return inspect(*f, x);
   }
 
   template <class T>
-  error serialize_state(void*, T&, const unsigned int) {
+  error serialize_state(void*, T&, unsigned int) {
     return sec::invalid_argument;
   }
 

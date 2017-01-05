@@ -233,7 +233,7 @@ CAF_TEST(strings_to_string) {
                            svec{"five", "six", "seven"});
   CAF_CHECK(to_string(msg3) ==
           R"__((["one", "two"], "three", "four", ["five", "six", "seven"]))__");
-  auto msg4 = make_message("this is a \"test\"");
+  auto msg4 = make_message(R"(this is a "test")");
   CAF_CHECK_EQUAL(to_string(msg4), "(\"this is a \\\"test\\\"\")");
 }
 

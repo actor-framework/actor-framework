@@ -67,7 +67,7 @@ public:
 
   explicit event_based_actor(actor_config& cfg);
 
-  ~event_based_actor();
+  ~event_based_actor() override;
 
   // -- overridden functions of local_actor ------------------------------------
 

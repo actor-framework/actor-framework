@@ -140,7 +140,7 @@ public:
 
   explicit scheduled_actor(actor_config& cfg);
 
-  ~scheduled_actor();
+  ~scheduled_actor() override;
 
   // -- overridden functions of abstract_actor ---------------------------------
 
@@ -191,7 +191,7 @@ public:
   /// @warning This member function throws immediately in thread-based actors
   ///          that do not use the behavior stack, i.e., actors that use
   ///          blocking API calls such as {@link receive()}.
-  void quit(error reason = error{});
+  void quit(error x = error{});
 
   // -- event handlers ---------------------------------------------------------
 
@@ -296,7 +296,7 @@ public:
   void reset_timeout(uint32_t timeout_id);
 
   /// Returns whether `timeout_id` is currently active.
-  bool is_active_timeout(uint32_t timeout_id) const;
+  bool is_active_timeout(uint32_t tid) const;
 
   // -- message processing -----------------------------------------------------
 

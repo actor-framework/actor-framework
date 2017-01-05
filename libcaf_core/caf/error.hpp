@@ -111,8 +111,8 @@ public:
   error(const error&);
   error& operator=(const error&);
 
-  error(uint8_t code, atom_value category);
-  error(uint8_t code, atom_value category, message msg);
+  error(uint8_t x, atom_value y);
+  error(uint8_t x, atom_value y, message z);
 
   template <class E, class = enable_if_has_make_error_t<E>>
   error(E error_value) : error(make_error(error_value)) {
@@ -154,7 +154,7 @@ public:
 
   int compare(const error&) const noexcept;
 
-  int compare(uint8_t code, atom_value category) const noexcept;
+  int compare(uint8_t x, atom_value y) const noexcept;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -195,7 +195,7 @@ public:
 private:
   // -- inspection support -----------------------------------------------------
 
-  error apply(inspect_fun f);
+  error apply(const inspect_fun& f);
 
   // -- nested classes ---------------------------------------------------------
 

@@ -108,12 +108,12 @@ size_t test::expected_failures() const {
   return expected_failures_;
 }
 
-void test::pass(std::string msg) {
+void test::pass(const std::string& msg) {
   ++good_;
   ::caf::test::logger::instance().massive() << "  " << msg << '\n';
 }
 
-void test::fail(std::string msg, bool expected) {
+void test::fail(const std::string& msg, bool expected) {
   ++bad_;
   ::caf::test::logger::instance().massive() << "  " << msg << '\n';
   if (expected) {
@@ -142,12 +142,11 @@ namespace detail {
 const char* fill(size_t line) {
   if (line < 10)
     return "    ";
-  else if (line < 100)
+  if (line < 100)
     return "   ";
-  else if (line < 1000)
+  if (line < 1000)
     return "  ";
-  else
-    return " ";
+  return " ";
 }
 
 void remove_trailing_spaces(std::string& x) {
@@ -293,7 +292,7 @@ void engine::max_runtime(int value) {
 }
 
 void engine::add(const char* cstr_name, std::unique_ptr<test> ptr) {
-  std::string name = cstr_name ? cstr_name : "";
+  std::string name = cstr_name != nullptr ? cstr_name : "";
   auto& suite = instance().suites_[name];
   for (auto& x : suite) {
     if (x->name() == ptr->name()) {
@@ -588,7 +587,7 @@ int main(int argc, char** argv) {
   constexpr bool colorize = false;
 # else
   auto color_support = []() -> bool {
-    if (!isatty(0))
+    if (isatty(0) == 0)
       return false;
     char ttybuf[50];
     if (ttyname_r(0, ttybuf, sizeof(ttybuf)) != 0)

@@ -80,7 +80,7 @@ protected:
 
 private:
   // can only be called from abstract_actor and abstract_group
-  abstract_channel(int init_flags);
+  abstract_channel(int fs);
 
   // Accumulates several state and type flags. Subtypes may use only the
   // first 20 bits, i.e., the bitmask 0xFFF00000 is reserved for

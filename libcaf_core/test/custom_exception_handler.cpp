@@ -30,7 +30,7 @@ using namespace caf;
 
 class exception_testee : public event_based_actor {
 public:
-  ~exception_testee();
+  ~exception_testee() override;
   exception_testee(actor_config& cfg) : event_based_actor(cfg) {
     set_exception_handler([](std::exception_ptr&) -> error {
       return exit_reason::remote_link_unreachable;

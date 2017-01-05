@@ -35,7 +35,7 @@ public:
 
   type_erased_tuple& content() override {
     auto ptr = msg_.vals().raw_ptr();
-    if (ptr)
+    if (ptr != nullptr)
       return *ptr;
     return dummy_;
   }

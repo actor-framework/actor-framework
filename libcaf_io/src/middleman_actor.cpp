@@ -21,6 +21,7 @@
 
 #include <tuple>
 #include <stdexcept>
+#include <utility>
 
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -45,7 +46,7 @@ class middleman_actor_impl : public middleman_actor::base {
 public:
   middleman_actor_impl(actor_config& cfg, actor default_broker)
       : middleman_actor::base(cfg),
-        broker_(default_broker) {
+        broker_(std::move(default_broker)) {
     set_down_handler([=](down_msg& dm) {
       auto i = cached_.begin();
       auto e = cached_.end();

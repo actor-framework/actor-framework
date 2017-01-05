@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <utility>
+
 #include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/send.hpp"
@@ -28,7 +30,7 @@ namespace caf {
 
 forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor mgr)
     : actor_proxy(cfg),
-      manager_(mgr) {
+      manager_(std::move(mgr)) {
   // nop
 }
 
@@ -57,7 +59,7 @@ void forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
   if (manager_)
     manager_->enqueue(nullptr, invalid_message_id,
                       make_message(forward_atom::value, std::move(sender),
-                                   fwd ? *fwd : tmp,
+                                   fwd != nullptr ? *fwd : tmp,
                                    strong_actor_ptr{ctrl()},
                                    mid, std::move(msg)),
                       nullptr);

@@ -36,7 +36,7 @@
 namespace caf {
 
 struct invalid_group_t {
-  constexpr invalid_group_t() {}
+  constexpr invalid_group_t() = default;
 };
 
 /// Identifies an invalid {@link group}.
@@ -67,7 +67,7 @@ public:
 
   group(abstract_group*);
 
-  group(intrusive_ptr<abstract_group> ptr);
+  group(intrusive_ptr<abstract_group> gptr);
 
   inline explicit operator bool() const noexcept {
     return static_cast<bool>(ptr_);

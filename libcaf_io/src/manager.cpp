@@ -37,7 +37,7 @@ manager::~manager() {
 
 void manager::set_parent(abstract_broker* ptr) {
   if (!detached())
-    parent_ = ptr ? ptr->ctrl() : nullptr;
+    parent_ = ptr != nullptr ? ptr->ctrl() : nullptr;
 }
 
 abstract_broker* manager::parent() {

@@ -36,7 +36,7 @@ class group_module {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  group_module(actor_system& sys, std::string module_name);
+  group_module(actor_system& sys, std::string mname);
 
   virtual ~group_module();
 

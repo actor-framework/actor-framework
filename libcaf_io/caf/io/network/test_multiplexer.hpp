@@ -33,10 +33,10 @@ class test_multiplexer : public multiplexer {
 public:
   explicit test_multiplexer(actor_system* sys);
 
-  ~test_multiplexer();
+  ~test_multiplexer() override;
 
   expected<connection_handle> new_tcp_scribe(const std::string& host,
-                                   uint16_t port) override;
+                                   uint16_t port_hint) override;
 
   expected<void> assign_tcp_scribe(abstract_broker* ptr,
                                    connection_handle hdl) override;
@@ -45,10 +45,10 @@ public:
 
   expected<connection_handle> add_tcp_scribe(abstract_broker* ptr,
                                              const std::string& host,
-                                             uint16_t port) override;
+                                             uint16_t desired_port) override;
 
   expected<std::pair<accept_handle, uint16_t>>
-  new_tcp_doorman(uint16_t port, const char*, bool) override;
+  new_tcp_doorman(uint16_t desired_port, const char*, bool) override;
 
   expected<void> assign_tcp_doorman(abstract_broker* ptr,
                                     accept_handle hdl) override;
@@ -63,9 +63,9 @@ public:
 
   void run() override;
 
-  void provide_scribe(std::string host, uint16_t port, connection_handle hdl);
+  void provide_scribe(std::string host, uint16_t desired_port, connection_handle hdl);
 
-  void provide_acceptor(uint16_t port, accept_handle hdl);
+  void provide_acceptor(uint16_t desired_port, accept_handle hdl);
 
   /// A buffer storing bytes.
   using buffer_type = std::vector<char>;
@@ -117,7 +117,7 @@ public:
   using pending_scribes_map = std::map<std::pair<std::string, uint16_t>,
                                        connection_handle>;
 
-  bool has_pending_scribe(std::string host, uint16_t port);
+  bool has_pending_scribe(std::string x, uint16_t y);
 
   /// Accepts a pending connect on `hdl`.
   bool accept_connection(accept_handle hdl);

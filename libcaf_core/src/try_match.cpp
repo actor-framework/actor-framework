@@ -38,9 +38,7 @@ bool match_atom_constant(const meta_element& me, const type_erased_tuple& xs,
   if (!xs.matches(pos, type_nr<atom_value>::value, nullptr))
     return false;
   auto ptr = xs.get(pos);
-  if (me.v != *reinterpret_cast<const atom_value*>(ptr))
-    return false;
-  return true;
+  return me.v == *reinterpret_cast<const atom_value*>(ptr);
 }
 
 bool try_match(const type_erased_tuple& xs,

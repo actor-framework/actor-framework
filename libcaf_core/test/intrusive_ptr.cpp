@@ -53,7 +53,7 @@ public:
     }
   }
 
-  ~class0() {
+  ~class0() override {
     if (!subtype_) {
       --class0_instances;
     }
@@ -77,7 +77,7 @@ public:
     ++class1_instances;
   }
 
-  ~class1() {
+  ~class1() override {
     --class1_instances;
   }
 

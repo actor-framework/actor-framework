@@ -44,8 +44,8 @@ struct parse_ini_t {
   /// @param raw_data Input stream of INI formatted text.
   /// @param errors Output stream for parser errors.
   /// @param consumer Callback consuming generated key-value pairs.
-  void operator()(std::istream& raw_data,
-                  config_consumer consumer,
+  void operator()(std::istream& input,
+                  const config_consumer& consumer_fun,
                   opt_err errors = none) const;
 
 };

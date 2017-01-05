@@ -88,10 +88,9 @@ int node_id::compare(const node_id& other) const {
   auto ipair = std::mismatch(host_id().begin(), last, other.host_id().begin());
   if (ipair.first == last)
     return static_cast<int>(process_id())-static_cast<int>(other.process_id());
-  else if (*ipair.first < *ipair.second)
+  if (*ipair.first < *ipair.second)
     return -1;
-  else
-    return 1;
+  return 1;
 }
 
 node_id::data::data() : pid_(0) {
@@ -110,13 +109,13 @@ node_id::data::data(uint32_t procid, const std::string& hash) : pid_(procid) {
     return;
   }
   auto hex_value = [](char c) -> uint8_t {
-    if (isalpha(c)) {
+    if (isalpha(c) != 0) {
       if (c >= 'a' && c <= 'f')
         return static_cast<uint8_t>((c - 'a') + 10);
       if (c >= 'A' && c <= 'F')
         return static_cast<uint8_t>((c - 'A') + 10);
     }
-    return isdigit(c) ? static_cast<uint8_t>(c - '0') : 0;
+    return isdigit(c) != 0 ? static_cast<uint8_t>(c - '0') : 0;
   };
   auto j = hash.c_str();
   for (size_t i = 0; i < host_id_size; ++i) {

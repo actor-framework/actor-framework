@@ -115,15 +115,15 @@ protected:
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/
 
-  bool link_impl(linking_operation op, abstract_actor* x) override;
+  bool link_impl(linking_operation op, abstract_actor* other) override;
 
-  bool establish_link_impl(abstract_actor* other);
+  bool establish_link_impl(abstract_actor* x);
 
-  bool remove_link_impl(abstract_actor* other);
+  bool remove_link_impl(abstract_actor* x);
 
-  bool establish_backlink_impl(abstract_actor* other);
+  bool establish_backlink_impl(abstract_actor* x);
 
-  bool remove_backlink_impl(abstract_actor* other);
+  bool remove_backlink_impl(abstract_actor* x);
 
   // precondition: `mtx_` is acquired
   inline void attach_impl(attachable_ptr& ptr) {
@@ -134,12 +134,12 @@ protected:
   // precondition: `mtx_` is acquired
   static size_t detach_impl(const attachable::token& what,
                             attachable_ptr& ptr,
-                            bool stop_on_first_hit = false,
+                            bool stop_on_hit = false,
                             bool dry_run = false);
 
   // handles only `exit_msg` and `sys_atom` messages;
   // returns true if the message is handled
-  bool handle_system_message(mailbox_element& node, execution_unit* context,
+  bool handle_system_message(mailbox_element& x, execution_unit* ctx,
                              bool trap_exit);
 
   // handles `exit_msg`, `sys_atom` messages, and additionally `down_msg`

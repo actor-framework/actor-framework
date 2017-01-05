@@ -36,7 +36,7 @@ enum class atom_value : uint64_t {
 };
 
 /// @relates atom_value
-std::string to_string(const atom_value& x);
+std::string to_string(const atom_value& what);
 
 atom_value atom_from_string(const std::string& x);
 

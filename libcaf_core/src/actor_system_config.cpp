@@ -49,13 +49,13 @@ public:
       sinks_.emplace(x->full_name(), x->to_sink());
   }
 
-  void operator()(size_t ln, std::string name, config_value& cv) {
+  void operator()(size_t ln, const std::string& name, config_value& cv) {
     auto i = sinks_.find(name);
     if (i != sinks_.end())
       (i->second)(ln, cv, none);
     else
       std::cerr << "error in line " << ln
-                << ": unrecognized parameter name \"" << name << "\"";
+                << R"(: unrecognized parameter name ")" << name << R"(")";
   }
 
 private:
@@ -200,7 +200,7 @@ actor_system_config& actor_system_config::parse(int argc, char** argv,
   if (argc > 1)
     args = message_builder(argv + 1, argv + argc).move_to_message();
   // set default config file name if not set by user
-  if (!ini_file_cstr)
+  if (ini_file_cstr == nullptr)
     ini_file_cstr = "caf-application.ini";
   std::string config_file_name;
   // CLI file name has priority over default file name
@@ -258,12 +258,12 @@ actor_system_config& actor_system_config::parse(message& args,
     std::cerr << res.error << endl;
     return *this;
   }
-  if (res.opts.count("help")) {
+  if (res.opts.count("help") != 0u) {
     cli_helptext_printed = true;
     cout << res.helptext << endl;
     return *this;
   }
-  if (res.opts.count("caf#slave-mode")) {
+  if (res.opts.count("caf#slave-mode") != 0u) {
     slave_mode = true;
     if (slave_name.empty())
       std::cerr << "running in slave mode but no name was configured" << endl;
@@ -286,7 +286,7 @@ actor_system_config& actor_system_config::parse(message& args,
                   }, middleman_network_backend, "middleman.network-backend");
   verify_atom_opt({atom("stealing"), atom("sharing")},
                   scheduler_policy, "scheduler.policy ");
-  if (res.opts.count("caf#dump-config")) {
+  if (res.opts.count("caf#dump-config") != 0u) {
     cli_helptext_printed = true;
     std::string category;
     option_vector* all_options[] = { &options_, &custom_options_ };
@@ -316,16 +316,13 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
 }
 
 actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
-  std::string full_name;
-  for (auto& x : options_) {
-    // config_name has format "$category.$name"
-    full_name = x->category();
-    full_name += '.';
-    full_name += x->name();
-    if (full_name == cn) {
-      auto f = x->to_sink();
-      f(0, cv, none);
-    }
+  auto e = options_.end();
+  auto i = std::find_if(options_.begin(), e, [cn](const option_ptr& ptr) {
+    return ptr->full_name() == cn;
+  });
+  if (i != e) {
+    auto f = (*i)->to_sink();
+    f(0, cv, none);
   }
   return *this;
 }

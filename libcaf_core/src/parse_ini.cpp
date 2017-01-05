@@ -27,7 +27,7 @@
 namespace caf {
 namespace detail {
 
-void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
+void parse_ini_t::operator()(std::istream& input, const config_consumer& consumer_fun,
                              opt_err errors) const {
   // wraps a temporary into an (lvalue) config_value and calls `consumer_fun`
   auto consumer = [&](size_t ln, std::string name, config_value x) {
@@ -126,11 +126,11 @@ void parse_ini_t::operator()(std::istream& input, config_consumer consumer_fun,
       // end-of-string iterator
       auto eos = eol - 1;
       if (bov == eos) {
-        print_error("stray '\"'");
+        print_error(R"(stray '"')");
         continue;
       }
       if (*eos != '"') {
-        print_error("string not terminated by '\"'");
+        print_error(R"(string not terminated by '"')");
         continue;
       }
       // found a string, remove first and last char from string,

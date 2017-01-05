@@ -43,7 +43,7 @@ public:
 
   dynamic_message_data(const dynamic_message_data& other);
 
-  ~dynamic_message_data();
+  ~dynamic_message_data() override;
 
   // -- overridden observers of message_data -----------------------------------
 

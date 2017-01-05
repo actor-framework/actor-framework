@@ -104,7 +104,7 @@ public:
 
   /// Checks whether the type of the stored value at position `pos`
   /// matches type number `n` and run-time type information `p`.
-  bool matches(size_t pos, uint16_t n, const std::type_info* p) const  noexcept;
+  bool matches(size_t pos, uint16_t nr, const std::type_info* ptr) const  noexcept;
 
   // -- convenience functions --------------------------------------------------
 
@@ -236,7 +236,7 @@ class empty_type_erased_tuple : public type_erased_tuple {
 public:
   empty_type_erased_tuple() = default;
 
-  ~empty_type_erased_tuple();
+  ~empty_type_erased_tuple() override;
 
   void* get_mutable(size_t pos) override;
 

@@ -42,7 +42,7 @@ public:
     ++s_pending_on_exits;
   }
 
-  ~testee() {
+  ~testee() override {
     --s_testees;
   }
 

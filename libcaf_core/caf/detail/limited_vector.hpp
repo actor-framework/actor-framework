@@ -86,7 +86,7 @@ public:
   template <class InputIterator>
   void assign(InputIterator first, InputIterator last,
               // dummy SFINAE argument
-              typename std::iterator_traits<InputIterator>::pointer = 0) {
+              typename std::iterator_traits<InputIterator>::pointer = nullptr) {
     auto dist = std::distance(first, last);
     CAF_ASSERT(dist >= 0);
     resize(static_cast<size_t>(dist));

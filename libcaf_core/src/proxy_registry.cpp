@@ -98,7 +98,7 @@ void proxy_registry::erase(const key_type& inf, actor_id aid, error rsn) {
     auto j = submap.find(aid);
     if (j == submap.end())
       return;
-    kill_proxy(j->second, rsn);
+    kill_proxy(j->second, std::move(rsn));
     submap.erase(j);
     if (submap.empty())
       proxies_.erase(i);
@@ -116,7 +116,7 @@ void proxy_registry::kill_proxy(strong_actor_ptr& ptr, error rsn) {
   if (!ptr)
     return;
   auto pptr = static_cast<actor_proxy*>(actor_cast<abstract_actor*>(ptr));
-  pptr->kill_proxy(backend_.registry_context(), rsn);
+  pptr->kill_proxy(backend_.registry_context(), std::move(rsn));
 }
 
 } // namespace caf

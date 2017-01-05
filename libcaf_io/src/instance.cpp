@@ -88,7 +88,7 @@ connection_state instance::handle(execution_unit* ctx,
       auto e = bs(hdr);
       if (e)
         return err();
-      if (payload)
+      if (payload != nullptr)
         bs.apply_raw(payload->size(), payload->data());
       tbl_.flush(*path);
       notify<hook::message_forwarded>(hdr, payload);
@@ -307,7 +307,7 @@ size_t instance::remove_published_actor(uint16_t port,
   auto i = published_actors_.find(port);
   if (i == published_actors_.end())
     return 0;
-  if (cb)
+  if (cb != nullptr)
     (*cb)(i->second.first, i->first);
   published_actors_.erase(i);
   return 1;
@@ -321,7 +321,7 @@ size_t instance::remove_published_actor(const actor_addr& whom,
   if (port != 0) {
     auto i = published_actors_.find(port);
     if (i != published_actors_.end() && i->second.first == whom) {
-      if (cb)
+      if (cb != nullptr)
         (*cb)(i->second.first, port);
       published_actors_.erase(i);
       result = 1;
@@ -330,7 +330,7 @@ size_t instance::remove_published_actor(const actor_addr& whom,
     auto i = published_actors_.begin();
     while (i != published_actors_.end()) {
       if (i->second.first == whom) {
-        if (cb)
+        if (cb != nullptr)
           (*cb)(i->second.first, i->first);
         i = published_actors_.erase(i);
         ++result;
@@ -371,7 +371,7 @@ void instance::write(execution_unit* ctx, buffer_type& buf,
                      header& hdr, payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
   error err;
-  if (pw) {
+  if (pw != nullptr) {
     auto pos = buf.size();
     // write payload first (skip first 72 bytes and write header later)
     char placeholder[basp::header_size];
@@ -408,18 +408,17 @@ void instance::write_server_handshake(execution_unit* ctx,
     auto e = sink(const_cast<std::string&>(ref));
     if (e)
       return e;
-    if (pa) {
+    if (pa != nullptr) {
       auto i = pa->first ? pa->first->id() : invalid_actor_id;
       return sink(i, pa->second);
-    } else {
-      auto aid = invalid_actor_id;
-      std::set<std::string> tmp;
-      return sink(aid, tmp);
     }
+    auto aid = invalid_actor_id;
+    std::set<std::string> tmp;
+    return sink(aid, tmp);
   });
   header hdr{message_type::server_handshake, 0, 0, version,
              this_node_, none,
-             pa && pa->first ? pa->first->id() : invalid_actor_id,
+             (pa != nullptr) && pa->first ? pa->first->id() : invalid_actor_id,
              invalid_actor_id};
   write(ctx, out_buf, hdr, &writer);
 }

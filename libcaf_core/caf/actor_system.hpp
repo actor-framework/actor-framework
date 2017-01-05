@@ -65,7 +65,7 @@ struct mpi_field_access {
     if (nr != 0)
       return *types.portable_name(nr, nullptr);
     auto ptr = types.portable_name(0, &typeid(T));
-    if (ptr)
+    if (ptr != nullptr)
       return *ptr;
     std::string result = "<invalid-type[typeid ";
     result += typeid(T).name();

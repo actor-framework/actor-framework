@@ -77,7 +77,7 @@ class middleman;
 class abstract_broker : public scheduled_actor,
                         public prohibit_top_level_spawn_marker {
 public:
-  virtual ~abstract_broker();
+  ~abstract_broker() override;
 
   // even brokers need friends
   friend class scribe;
@@ -139,7 +139,7 @@ public:
   /// Modifies the receive policy for given connection.
   /// @param hdl Identifies the affected connection.
   /// @param config Contains the new receive policy.
-  void configure_read(connection_handle hdl, receive_policy::config config);
+  void configure_read(connection_handle hdl, receive_policy::config cfg);
 
   /// Enables or disables write notifications for given connection.
   void ack_writes(connection_handle hdl, bool enable);
@@ -148,7 +148,7 @@ public:
   std::vector<char>& wr_buf(connection_handle hdl);
 
   /// Writes `data` into the buffer for given connection.
-  void write(connection_handle hdl, size_t data_size, const void* data);
+  void write(connection_handle hdl, size_t bs, const void* buf);
 
   /// Sends the content of the buffer for given connection.
   void flush(connection_handle hdl);
@@ -164,7 +164,7 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  expected<connection_handle> add_tcp_scribe(const std::string& host, uint16_t port);
+  expected<connection_handle> add_tcp_scribe(const std::string& hostname, uint16_t port);
 
   /// Assigns a detached `scribe` instance identified by `hdl`
   /// from the `multiplexer` to this broker.

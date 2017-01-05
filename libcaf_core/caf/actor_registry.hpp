@@ -52,7 +52,7 @@ public:
   strong_actor_ptr get(actor_id key) const;
 
   /// Associates a local actor with its ID.
-  void put(actor_id key, strong_actor_ptr value);
+  void put(actor_id key, strong_actor_ptr val);
 
   /// Removes an actor from this registry,
   /// leaving `reason` for future reference.

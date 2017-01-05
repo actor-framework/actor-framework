@@ -41,7 +41,7 @@ public:
     // nop
   }
 
-  ~dummy() {
+  ~dummy() override {
     ++s_dtor_called;
   }
 

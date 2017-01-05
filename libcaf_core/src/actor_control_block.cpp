@@ -83,7 +83,7 @@ bool operator==(const abstract_actor* x, const strong_actor_ptr& y) {
 
 error load_actor(strong_actor_ptr& storage, execution_unit* ctx,
                  actor_id aid, const node_id& nid) {
-  if (!ctx)
+  if (ctx == nullptr)
     return sec::no_context;
   auto& sys = ctx->system();
   if (sys.node() == nid) {
@@ -93,7 +93,7 @@ error load_actor(strong_actor_ptr& storage, execution_unit* ctx,
     return none;
   }
   auto prp = ctx->proxy_registry_ptr();
-  if (!prp)
+  if (prp == nullptr)
     return sec::no_proxy_registry;
   // deal with (proxies for) remote actors
   storage = prp->get_or_put(nid, aid);
@@ -102,7 +102,7 @@ error load_actor(strong_actor_ptr& storage, execution_unit* ctx,
 
 error save_actor(strong_actor_ptr& storage, execution_unit* ctx,
                  actor_id aid, const node_id& nid) {
-  if (!ctx)
+  if (ctx == nullptr)
     return sec::no_context;
   auto& sys = ctx->system();
   // register locally running actors to be able to deserialize them later
@@ -114,7 +114,7 @@ error save_actor(strong_actor_ptr& storage, execution_unit* ctx,
 namespace {
 
 void append_to_string_impl(std::string& x, const actor_control_block* y) {
-  if (y) {
+  if (y != nullptr) {
     x += std::to_string(y->aid);
     x += '@';
     append_to_string(x, y->nid);

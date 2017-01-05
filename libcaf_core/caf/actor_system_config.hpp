@@ -107,18 +107,18 @@ public:
 
   /// Parses `args` as tuple of strings containing CLI options
   /// and `ini_stream` as INI formatted input stream.
-  actor_system_config& parse(message& args, std::istream& ini_stream);
+  actor_system_config& parse(message& args, std::istream& ini);
 
   /// Parses the CLI options `{argc, argv}` and
   /// `ini_stream` as INI formatted input stream.
-  actor_system_config& parse(int argc, char** argv, std::istream& ini_stream);
+  actor_system_config& parse(int argc, char** argv, std::istream& ini);
 
   /// Parses the CLI options `{argc, argv}` and
   /// tries to open `config_file_name` as INI formatted config file.
   /// The parsers tries to open `caf-application.ini` if `config_file_name`
   /// is `nullptr`.
   actor_system_config& parse(int argc, char** argv,
-                             const char* config_file_name = nullptr);
+                             const char* ini_file_cstr = nullptr);
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
@@ -166,8 +166,8 @@ public:
 
   /// Enables the actor system to convert errors of this error category
   /// to human-readable strings via `renderer`.
-  actor_system_config& add_error_category(atom_value category,
-                                          error_renderer renderer);
+  actor_system_config& add_error_category(atom_value x,
+                                          error_renderer y);
 
   /// Enables the actor system to convert errors of this error category
   /// to human-readable strings via `to_string(T)`.
@@ -232,7 +232,7 @@ public:
   message args_remainder;
 
   /// Sets a config by using its INI name `config_name` to `config_value`.
-  actor_system_config& set(const char* config_name, config_value config_value);
+  actor_system_config& set(const char* cn, config_value cv);
 
   // -- config parameters of the scheduler -------------------------------------
   atom_value scheduler_policy;

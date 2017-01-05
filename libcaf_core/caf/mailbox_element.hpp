@@ -66,10 +66,10 @@ public:
 
   mailbox_element();
 
-  mailbox_element(strong_actor_ptr&& sender, message_id id,
-                  forwarding_stack&& stages);
+  mailbox_element(strong_actor_ptr&& x, message_id y,
+                  forwarding_stack&& z);
 
-  virtual ~mailbox_element();
+  ~mailbox_element() override;
 
   type_erased_tuple& content() override;
 
@@ -111,11 +111,11 @@ public:
     // nop
   }
 
-  type_erased_tuple& content() {
+  type_erased_tuple& content() override {
     return *this;
   }
 
-  message move_content_to_message() {
+  message move_content_to_message() override {
     message_factory f;
     auto& xs = this->data();
     return detail::apply_moved_args(f, detail::get_indices(xs), xs);

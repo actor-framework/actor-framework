@@ -263,7 +263,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
           CAF_LOG_WARNING("received unlink message for an other node");
           return;
         }
-        auto ptr = msg.get_as<strong_actor_ptr>(1);
+        const auto& ptr = msg.get_as<strong_actor_ptr>(1);
         if (!ptr) {
           CAF_LOG_DEBUG("received unlink message with invalid target");
           return;
@@ -545,7 +545,7 @@ behavior basp_broker::make_behavior() {
     [=](forward_atom, const node_id& dest_node, atom_value dest_name,
         const message& msg) -> result<message> {
       auto cme = current_mailbox_element();
-      if (!cme)
+      if (cme == nullptr)
         return sec::invalid_argument;
       auto& src = cme->sender;
       CAF_LOG_TRACE(CAF_ARG(src)

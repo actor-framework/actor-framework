@@ -47,7 +47,7 @@ struct kvstate {
   std::unordered_map<strong_actor_ptr, topic_set> subscribers;
   static const char* name;
   template <class Processor>
-  friend void serialize(Processor& proc, kvstate& x, const unsigned int) {
+  friend void serialize(Processor& proc, kvstate& x, unsigned int) {
     proc & x.data;
     proc & x.subscribers;
   }
@@ -342,7 +342,7 @@ bool actor_system::has_middleman() const {
 }
 
 io::middleman& actor_system::middleman() {
-  if (!middleman_)
+  if (middleman_ == nullptr)
     CAF_RAISE_ERROR("cannot access middleman: module not loaded");
   return *middleman_;
 }
@@ -352,7 +352,7 @@ bool actor_system::has_opencl_manager() const {
 }
 
 opencl::manager& actor_system::opencl_manager() const {
-  if (!opencl_manager_)
+  if (opencl_manager_ == nullptr)
     CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
   return *opencl_manager_;
 }
@@ -401,7 +401,7 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   auto i = fs.find(name);
   if (i == fs.end())
     return sec::unknown_type;
-  actor_config cfg{ctx ? ctx : &dummy_execution_unit_};
+  actor_config cfg{ctx != nullptr ? ctx : &dummy_execution_unit_};
   auto res = i->second(cfg, args);
   if (!res.first)
     return sec::cannot_spawn_actor_from_arguments;

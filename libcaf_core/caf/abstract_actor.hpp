@@ -61,7 +61,7 @@ public:
 
   actor_control_block* ctrl() const;
 
-  virtual ~abstract_actor();
+  ~abstract_actor() override;
 
   /// Cleans up any remaining state before the destructor is called.
   /// This function makes sure it is safe to call virtual functions
@@ -71,7 +71,7 @@ public:
   virtual void on_destroy();
 
   void enqueue(strong_actor_ptr sender, message_id mid,
-               message content, execution_unit* host) override;
+               message msg, execution_unit* host) override;
 
   /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
   /// This `enqueue` variant allows to define forwarding chains.

@@ -71,9 +71,9 @@ public:
 
   type_erased_value_ptr make_value(uint16_t nr) const;
 
-  type_erased_value_ptr make_value(const std::string& uniform_name) const;
+  type_erased_value_ptr make_value(const std::string& x) const;
 
-  type_erased_value_ptr make_value(const std::type_info& ti) const;
+  type_erased_value_ptr make_value(const std::type_info& x) const;
 
   /// Returns the portable name for given type information or `nullptr`
   /// if no mapping was found.
