@@ -359,17 +359,17 @@ public:
     oss << "import IPython" << endl
         << "c = IPython.Config()" << endl
         << "c.InteractiveShellApp.exec_lines = [" << endl
-        << "\"\"\""
+        << R"(""")"
         << full_pre_run
-        << "\"\"\"" << endl
+        << R"(""")" << endl
         << "]" << endl
         << "c.PromptManager.in_template  = ' $: '" << endl
         << "c.PromptManager.in2_template = ' -> '" << endl
         << "c.PromptManager.out_template = ' >> '" << endl
         << "c.display_banner = True" << endl
-        << "c.TerminalInteractiveShell.banner1 = \"\"\"" << endl
+        << R"(c.TerminalInteractiveShell.banner1 = """)" << endl
         << banner << endl
-        << "\"\"\"" << endl
+        << R"(""")" << endl
         << "IPython.start_ipython(config=c)" << endl;
     return oss.str();
   }
@@ -396,7 +396,7 @@ private:
 
   template <class T>
   void add_cpp(std::string py_name, std::string cpp_name,
-               register_fun reg = &default_python_class_init<T>) {
+               const register_fun& reg = &default_python_class_init<T>) {
     if (reg)
       register_funs_.push_back([=](pybind11::module& m) { reg(m, py_name); });
     auto ptr = new default_cpp_binding<T>(py_name, reg != nullptr);
@@ -448,7 +448,7 @@ void set_py_exception(Ts&&... xs) {
   PyErr_SetString(PyExc_RuntimeError, oss.str().c_str());
 }
 
-void py_send(pybind11::args xs) {
+void py_send(const pybind11::args& xs) {
   if (xs.size() < 2) {
     set_py_exception("Too few arguments to call CAF.send");
     return;
@@ -462,8 +462,8 @@ void py_send(pybind11::args xs) {
     std::string type_name = PyEval_GetFuncName((*i).ptr());
     auto kvp = bindings.find(type_name);
     if (kvp == bindings.end()) {
-      set_py_exception("Unable to add element of type \"",
-                       type_name, "\" to message: type is unknown to CAF");
+      set_py_exception(R"(Unable to add element of type ")",
+                       type_name, R"(" to message: type is unknown to CAF)");
       return;
     }
     kvp->second->append(mb, *i);
@@ -478,15 +478,15 @@ pybind11::tuple tuple_from_message(const type_erased_tuple& msg) {
   for (size_t i = 0; i  < msg.size(); ++i) {
     auto rtti = msg.type(i);
     auto str_ptr = self->system().types().portable_name(rtti);
-    if (!str_ptr) {
+    if (str_ptr == nullptr) {
       set_py_exception("Unable to extract element #", i, " from message: ",
                        "could not get portable name of ", rtti.second->name());
       return {};
     }
     auto kvp = bindings.find(*str_ptr);
     if (kvp == bindings.end()) {
-      set_py_exception("Unable to add element of type \"",
-                       *str_ptr, "\" to message: type is unknown to CAF");
+      set_py_exception(R"(Unable to add element of type ")",
+                       *str_ptr, R"(" to message: type is unknown to CAF)");
       return {};
     }
     auto obj = kvp->second->to_object(msg, i);
@@ -604,7 +604,7 @@ void caf_main(actor_system& system, const config& cfg) {
   int py_res = 0;
   if (!cfg.py_file.empty()) {
     auto fp = fopen(cfg.py_file.c_str() , "r");
-    if (!fp) {
+    if (fp == nullptr) {
       cerr << "Unable to open file " << cfg.py_file << endl;
       Py_Finalize();
       return;
