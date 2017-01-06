@@ -32,7 +32,7 @@
 #include <iostream>
 
 #include "caf/fwd.hpp"
-#include "caf/color.hpp"
+#include "caf/term.hpp"
 #include "caf/optional.hpp"
 
 #include "caf/deep_to_string.hpp"
@@ -81,9 +81,9 @@ public:
 
   size_t expected_failures() const;
 
-  void pass(const std::string& msg);
+  void pass();
 
-  void fail(const std::string& msg, bool expected);
+  void fail(bool expected);
 
   const std::string& name() const;
 
@@ -141,20 +141,30 @@ public:
     massive = 4
   };
 
+  static bool init(int lvl_cons, int lvl_file, const std::string& logfile);
+
+  static logger& instance();
+
+  template <class T>
+  void log(level lvl, const T& x) {
+    if (lvl <= level_console_) {
+      *console_ << x;
+    }
+    if (lvl <= level_file_) {
+      file_ << x;
+    }
+  }
+
   /// Output stream for logging purposes.
   class stream {
   public:
-    stream(logger& l, level lvl);
+    stream(logger& parent, level lvl);
 
-    stream(stream&&);
+    stream(const stream&) = default;
 
     template <class T>
-    typename std::enable_if<
-      !std::is_same<T, char*>::value,
-      stream&
-    >::type
-    operator<<(const T& x) {
-      buf_ << x;
+    stream& operator<<(const T& x) {
+      parent_.log(lvl_, x);
       return *this;
     }
 
@@ -165,53 +175,26 @@ public:
       return *this << *x;
     }
 
-    stream& operator<<(const char& c);
-
-    stream& operator<<(const char* cstr);
-
-    stream& operator<<(const std::string& x);
-
-    std::string str() const;
-
   private:
-    void flush();
-
-    logger& logger_;
-    level level_;
-    std::ostringstream buf_;
-    std::string str_;
+    logger& parent_;
+    level lvl_;
   };
-
-  static bool init(int lvl_cons, int lvl_file, const std::string& logfile);
-
-  static logger& instance();
-
-  template <class T>
-  void log(level lvl, const T& x) {
-    if (lvl <= level_console_) {
-      std::lock_guard<std::mutex> io_guard{console_mtx_};
-      console_ << x;
-    }
-    if (lvl <= level_file_) {
-      std::lock_guard<std::mutex> io_guard{file_mtx_};
-      file_ << x;
-    }
-  }
 
   stream error();
   stream info();
   stream verbose();
   stream massive();
 
+  void disable_colors();
+
 private:
   logger();
 
   level level_console_;
   level level_file_;
-  std::ostream& console_;
+  std::ostream* console_;
   std::ofstream file_;
-  std::mutex console_mtx_;
-  std::mutex file_mtx_;
+  std::ostringstream dummy_;
 };
 
 /// Drives unit test execution.
@@ -270,10 +253,6 @@ public:
                   const std::string& tests_str,
                   const std::string& not_tests_str);
 
-  /// Retrieves a UNIX terminal color code or an empty string based on the
-  /// color configuration of the engine.
-  static const char* color(color_value v, color_face t = normal);
-
   static const char* last_check_file();
   static void last_check_file(const char* file);
 
@@ -327,7 +306,7 @@ template <class T>
 std::ostream& operator<<(std::ostream& out, const showable_base<T>& x) {
   auto str = caf::deep_to_string(x.value);
   if (str == "<unprintable>")
-    out << engine::color(blue) << "<unprintable>" << engine::color(reset);
+    out << term::blue << "<unprintable>" << term::reset;
   else
     out << str;
   return out;
@@ -360,22 +339,22 @@ template <class T, class U>
 bool check(test* parent, const char *file, size_t line,
            const char *expr, bool should_fail, bool result,
            const T& x, const U& y) {
-  std::stringstream ss;
+  auto out = logger::instance().massive();
   if (result) {
-    ss << engine::color(green) << "** "
-       << engine::color(blue) << file << engine::color(yellow) << ":"
-       << engine::color(blue) << line << fill(line) << engine::color(reset)
-       << expr;
-    parent->pass(ss.str());
+    out << term::green << "** "
+        << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::reset
+        << expr << '\n';
+    parent->pass();
   } else {
-    ss << engine::color(red) << "!!"
-       << engine::color(blue) << file << engine::color(yellow) << ":"
-       << engine::color(blue) << line << fill(line) << engine::color(reset)
-       << expr << engine::color(magenta) << " ("
-       << engine::color(red) << show(x) << engine::color(magenta)
-       << " !! " << engine::color(red) << show(y) << engine::color(magenta)
-       << ')' << engine::color(reset);
-    parent->fail(ss.str(), should_fail);
+    out << term::red << "!! "
+        << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::reset
+        << expr << term::magenta << " ("
+        << term::red << show(x) << term::magenta
+        << " !! " << term::red << show(y) << term::magenta
+        << ')' << term::reset_endl;
+    parent->fail(should_fail);
   }
   return result;
 }
@@ -388,10 +367,9 @@ bool check(test* parent, const char *file, size_t line,
 using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_TEST_PRINT(level, msg, colorcode)                                  \
-  (::caf::test::logger::instance(). level ()                                   \
-    << ::caf::test::engine::color(::caf:: colorcode )                          \
-    << "  -> " << ::caf::test::engine::color(::caf::reset) << msg              \
-    << " [line " << __LINE__ << "]\n")
+  (::caf::test::logger::instance().level()                                     \
+   << ::caf::term:: colorcode << "  -> " << ::caf::term::reset << msg          \
+   << " [line " << __LINE__ << "]\n")
 
 #define CAF_TEST_PRINT_ERROR(msg)   CAF_TEST_PRINT(info, msg, red)
 #define CAF_TEST_PRINT_INFO(msg)    CAF_TEST_PRINT(info, msg, yellow)
@@ -416,12 +394,11 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_ERROR(msg)                                                         \
   do {                                                                         \
-    auto CAF_UNIQUE(__str) = CAF_TEST_PRINT_ERROR(msg).str();                  \
-    ::caf::test::detail::remove_trailing_spaces(CAF_UNIQUE(__str));            \
-    ::caf::test::engine::current_test()->fail(CAF_UNIQUE(__str), false);       \
+    CAF_TEST_PRINT_ERROR(msg);                                                 \
+    ::caf::test::engine::current_test()->fail(false);                          \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while(false)
+  } while (false)
 
 #define CAF_CHECK(...)                                                         \
   do {                                                                         \
@@ -467,9 +444,8 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_FAIL(msg)                                                          \
   do {                                                                         \
-    auto CAF_UNIQUE(__str) = CAF_TEST_PRINT_ERROR(msg).str();                  \
-    ::caf::test::detail::remove_trailing_spaces(CAF_UNIQUE(__str));            \
-    ::caf::test::engine::current_test()->fail(CAF_UNIQUE(__str), false);       \
+    CAF_TEST_PRINT_ERROR(msg);                                                 \
+    ::caf::test::engine::current_test()->fail(false);                          \
     ::caf::test::detail::requirement_failed("test failure");                   \
   } while (false)
 

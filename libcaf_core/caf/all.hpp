@@ -27,6 +27,7 @@
 #include "caf/send.hpp"
 #include "caf/skip.hpp"
 #include "caf/unit.hpp"
+#include "caf/term.hpp"
 #include "caf/actor.hpp"
 #include "caf/after.hpp"
 #include "caf/error.hpp"

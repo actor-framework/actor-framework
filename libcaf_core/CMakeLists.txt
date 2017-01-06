@@ -34,7 +34,6 @@ set (LIBCAF_CORE_SRCS
      src/behavior_impl.cpp
      src/blocking_actor.cpp
      src/blocking_behavior.cpp
-     src/color.cpp
      src/concatenated_tuple.cpp
      src/config_option.cpp
      src/continue_helper.cpp
@@ -89,6 +88,7 @@ set (LIBCAF_CORE_SRCS
      src/sync_request_bouncer.cpp
      src/stringification_inspector.cpp
      src/test_coordinator.cpp
+     src/term.cpp
      src/timestamp.cpp
      src/try_match.cpp
      src/type_erased_value.cpp
