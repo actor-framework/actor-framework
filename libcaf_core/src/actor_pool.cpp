@@ -183,6 +183,9 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), last, what);
     if (i != last) {
+      default_attachable::observe_token tk{address(),
+                                           default_attachable::monitor};
+      what->detach(tk);
       workers_.erase(i);
     }
     return true;
