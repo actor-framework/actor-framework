@@ -17,29 +17,55 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/color.hpp"
+#ifndef CAF_TERM_HPP
+#define CAF_TERM_HPP
 
-#include "caf/config.hpp"
+#include <iosfwd>
 
 namespace caf {
 
-const char* color(color_value value, color_face face) {
-#ifdef CAF_MSVC
-  return "";
-#else
-  const char* colors[9][2] = {
-    {"\033[0m", "\033[0m"},          // reset
-    {"\033[30m", "\033[1m\033[30m"}, // black
-    {"\033[31m", "\033[1m\033[31m"}, // red
-    {"\033[32m", "\033[1m\033[32m"}, // green
-    {"\033[33m", "\033[1m\033[33m"}, // yellow
-    {"\033[34m", "\033[1m\033[34m"}, // blue
-    {"\033[35m", "\033[1m\033[35m"}, // magenta
-    {"\033[36m", "\033[1m\033[36m"}, // cyan
-    {"\033[37m", "\033[1m\033[37m"}  // white
-  };
-  return colors[static_cast<size_t>(value)][static_cast<size_t>(face)];
-#endif
-}
+/// Terminal color and font face options.
+enum class term {
+  /// Resets the color to the default color and the font weight to normal.
+  reset,
+  /// Like `reset` but also prints a newline.
+  reset_endl,
+  /// Sets the terminal color to black.
+  black,
+  /// Sets the terminal color to red.
+  red,
+  /// Sets the terminal color to green.
+  green,
+  /// Sets the terminal color to yellow.
+  yellow,
+  /// Sets the terminal color to blue.
+  blue,
+  /// Sets the terminal color to magenta.
+  magenta,
+  /// Sets the terminal color to cyan.
+  cyan,
+  /// Sets the terminal color to white.
+  white,
+  /// Sets the terminal color to black and the font weight to bold.
+  bold_black,
+  /// Sets the terminal color to red and the font weight to bold.
+  bold_red,
+  /// Sets the terminal color to green and the font weight to bold.
+  bold_green,
+  /// Sets the terminal color to yellow and the font weight to bold.
+  bold_yellow,
+  /// Sets the terminal color to blue and the font weight to bold.
+  bold_blue,
+  /// Sets the terminal color to magenta and the font weight to bold.
+  bold_magenta,
+  /// Sets the terminal color to cyan and the font weight to bold.
+  bold_cyan,
+  /// Sets the terminal color to white and the font weight to bold.
+  bold_white
+};
+
+std::ostream& operator<<(std::ostream& out, term x);
 
 } // namespace caf
+
+#endif // CAF_TERM_HPP

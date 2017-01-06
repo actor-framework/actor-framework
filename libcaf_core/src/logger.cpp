@@ -35,7 +35,7 @@
 
 #include "caf/string_algorithms.hpp"
 
-#include "caf/color.hpp"
+#include "caf/term.hpp"
 #include "caf/locks.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/actor_proxy.hpp"
@@ -424,22 +424,22 @@ void logger::run() {
         default:
           break;
         case CAF_LOG_LEVEL_ERROR:
-          std::clog << color(red);
+          std::clog << term::red;;
           break;
         case CAF_LOG_LEVEL_WARNING:
-          std::clog << color(yellow);
+          std::clog << term::yellow;
           break;
         case CAF_LOG_LEVEL_INFO:
-          std::clog << color(green);
+          std::clog << term::green;
           break;
         case CAF_LOG_LEVEL_DEBUG:
-          std::clog << color(cyan);
+          std::clog << term::cyan;
           break;
         case CAF_LOG_LEVEL_TRACE:
-          std::clog << color(blue);
+          std::clog << term::blue;
           break;
       }
-      std::clog << ptr->msg << color(reset) << std::endl;
+      std::clog << ptr->msg << term::reset << std::endl;
     }
   }
   if (file) {
