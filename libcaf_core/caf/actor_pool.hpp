@@ -40,8 +40,9 @@ namespace caf {
 ///
 /// After construction, new workers can be added via `{'SYS', 'PUT', actor}`
 /// messages, e.g., `send(my_pool, sys_atom::value, put_atom::value, worker)`.
-/// `{'SYS', 'DELETE', actor}` messages remove a worker from the set,
-/// whereas `{'SYS', 'GET'}` returns a `vector<actor>` containing all workers.
+/// `{'SYS', 'DELETE', actor}` messages remove a specific worker from the set,
+/// `{'SYS', 'DELETE'}` removes all workers, and `{'SYS', 'GET'}` returns a
+/// `vector<actor>` containing all workers.
 ///
 /// Note that the pool *always*  sends exit messages to all of its workers
 /// when forced to quit. The pool monitors all of its workers. Messages queued
@@ -49,7 +50,7 @@ namespace caf {
 /// and resend messages. Advanced caching or resend strategies can be
 /// implemented in a policy.
 ///
-/// It is wort mentioning that the pool is *not* an event-based actor.
+/// It is worth mentioning that the pool is *not* an event-based actor.
 /// Neither does it live in its own thread. Messages are dispatched immediately
 /// during the enqueue operation. Any user-defined policy thus has to dispatch
 /// messages with as little overhead as possible, because the dispatching

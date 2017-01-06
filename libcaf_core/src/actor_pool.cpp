@@ -190,6 +190,16 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     }
     return true;
   }
+  if (content.match_elements<sys_atom, delete_atom>()) {
+    upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
+    for (auto& worker : workers_) {
+      default_attachable::observe_token tk{address(),
+                                           default_attachable::monitor};
+      worker->detach(tk);
+    }
+    workers_.clear();
+    return true;
+  }
   if (content.match_elements<sys_atom, get_atom>()) {
     auto cpy = workers_;
     guard.unlock();
