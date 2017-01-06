@@ -138,7 +138,7 @@ public:
 
   /// Modifies the receive policy for given connection.
   /// @param hdl Identifies the affected connection.
-  /// @param config Contains the new receive policy.
+  /// @param cfg Contains the new receive policy.
   void configure_read(connection_handle hdl, receive_policy::config cfg);
 
   /// Enables or disables write notifications for given connection.

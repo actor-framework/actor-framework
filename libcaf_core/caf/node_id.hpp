@@ -69,13 +69,13 @@ public:
   using host_id_type = std::array<uint8_t, host_id_size>;
 
   /// Creates a node ID from `process_id` and `hash`.
-  /// @param process_id System-wide unique process identifier.
+  /// @param procid System-wide unique process identifier.
   /// @param hash Unique node id as hexadecimal string representation.
   node_id(uint32_t procid, const std::string& hash);
 
   /// Creates a node ID from `process_id` and `hash`.
-  /// @param process_id System-wide unique process identifier.
-  /// @param node_id Unique node id.
+  /// @param procid System-wide unique process identifier.
+  /// @param hid Unique node id.
   node_id(uint32_t procid, const host_id_type& hid);
 
   /// Identifies the running process.

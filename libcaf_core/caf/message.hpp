@@ -198,9 +198,9 @@ public:
   /// }
   /// ~~~
   /// @param xs List of argument descriptors.
-  /// @param help_generator Optional factory function to generate help text
-  ///                       (overrides the default generator).
-  /// @param suppress_help Suppress generation of default-generated help option.
+  /// @param f Optional factory function to generate help text
+  ///          (overrides the default generator).
+  /// @param no_help Suppress generation of default-generated help option.
   /// @returns A struct containing remainder
   ///          (i.e. unmatched elements), a set containing the names of all
   ///          used arguments, and the generated help text.
