@@ -119,7 +119,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
 #   endif
     self->cleanup(std::move(rsn), self->context());
     ptr->home_system->dec_detached_threads();
-  }, ctrl()).detach();
+  }, strong_actor_ptr{ctrl()}).detach();
 }
 
 blocking_actor::receive_while_helper
