@@ -157,13 +157,13 @@ bool check(test* parent, const char *file, size_t line,
     out << term::green << "** "
         << term::blue << file << term::yellow << ":"
         << term::blue << line << fill(line) << term::reset
-        << expr;
+        << expr << '\n';
     parent->pass();
   } else {
     out << term::red << "!! "
         << term::blue << file << term::yellow << ":"
         << term::blue << line << fill(line) << term::reset
-        << expr;
+        << expr << '\n';
     parent->fail(should_fail);
   }
   return result;
