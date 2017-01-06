@@ -246,7 +246,7 @@ public:
   static void max_runtime(int value);
 
   /// Adds a test to the engine.
-  /// @param name The name of the suite.
+  /// @param cstr_name The name of the suite.
   /// @param ptr The test to register.
   static void add(const char* cstr_name, std::unique_ptr<test> ptr);
 
@@ -254,10 +254,12 @@ public:
   /// @param colorize Whether to colorize the output.
   /// @param log_file The filename of the log output. The empty string means
   ///                 that no log file will be written.
-  /// @param verbosity_console The log verbosity on the console.
-  /// @param verbosity_file The log verbosity in the log file.
-  /// @param suites The regular expression of the tests to run.
-  /// @param not_suites Whether to colorize the output.
+  /// @param verbosity_console The log verbosity level on the console.
+  /// @param verbosity_file The log verbosity level in the log file.
+  /// @param suites_str Regular expression for including test suites.
+  /// @param not_suites_str Regular expression for excluding test suites.
+  /// @param tests_str Regular expression for individually selecting tests.
+  /// @param not_tests_str Regular expression for individually disabling tests.
   /// @returns `true` iff all tests succeeded.
   static bool run(bool colorize,
                   const std::string& log_file,

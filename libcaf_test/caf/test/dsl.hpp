@@ -31,6 +31,9 @@ bool operator==(const message& x, const T& y) {
 
 namespace {
 
+// dummy function to force ADL later on
+//int inspect(int, int);
+
 template <class T>
 struct has_outer_type {
   template <class U>
@@ -256,7 +259,7 @@ private:
   void with_content(std::integral_constant<bool, true>, const U& x) {
     elementwise_compare_inspector<U> inspector{x};
     auto xs = this->template peek<typename T::outer_type>();
-    CAF_CHECK(inspector(get<0>(xs)));
+    CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(get<0>(xs)))));
   }
 
 };
