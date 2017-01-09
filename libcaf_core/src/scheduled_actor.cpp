@@ -96,16 +96,17 @@ error scheduled_actor::default_exception_handler(pointer ptr,
 // -- constructors and destructors ---------------------------------------------
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
-    : local_actor(cfg),
-      timeout_id_(0),
-      default_handler_(print_and_drop),
-      error_handler_(default_error_handler),
-      down_handler_(default_down_handler),
-      exit_handler_(default_exit_handler),
-      private_thread_(nullptr)
+    : local_actor(cfg)
+    , timeout_id_(0)
+    , default_handler_(print_and_drop)
+    , error_handler_(default_error_handler)
+    , down_handler_(default_down_handler)
+    , exit_handler_(default_exit_handler)
+    , private_thread_(nullptr)
 # ifndef CAF_NO_EXCEPTIONS
-      , exception_handler_(default_exception_handler)
+    , exception_handler_(default_exception_handler)
 # endif // CAF_NO_EXCEPTIONS
+    , home_eu_(cfg.host)
       {
   // nop
 }
@@ -135,10 +136,18 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
         CAF_ASSERT(private_thread_ != nullptr);
         private_thread_->resume();
       } else {
-        if (eu != nullptr)
-          eu->exec_later(this);
-        else
-          home_system().scheduler().enqueue(this);
+        if (eu) {
+          // msg is received from an other scheduled actor
+          if (eu == home_eu_ || eu->is_neighbor(home_eu_)) {
+            eu->exec_later(this, true); // internal enqueue
+          } else {
+            // `eu` has a high memory distance to this actor
+            home_eu_->exec_later(this, false); // external enqueued
+          }
+        } else {
+          // msg is received from non-actor or context or from a detached actor
+          home_eu_->exec_later(this, false); // external enqueue
+        }
       }
       break;
     }
@@ -564,6 +573,10 @@ bool scheduled_actor::activate(execution_unit* ctx) {
       if (finalize()) {
         CAF_LOG_DEBUG("actor_done() returned true right after make_behavior()");
         return false;
+      } else {
+        CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()) << CAF_ARG(ctx));
+        if (home_eu_ != ctx)
+          home_eu_ = ctx;
       }
       CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
     }

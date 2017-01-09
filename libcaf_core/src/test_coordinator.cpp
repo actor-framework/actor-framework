@@ -37,8 +37,12 @@ public:
     // nop
   }
 
-  void exec_later(resumable* ptr) override {
+  void exec_later(resumable* ptr, bool) override {
     parent_->jobs.push_back(ptr);
+  }
+
+  bool is_neighbor(execution_unit*) const override {
+    return false; 
   }
 
 private:

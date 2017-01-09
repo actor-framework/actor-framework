@@ -116,8 +116,8 @@ public:
 
   /// Initalize worker thread.
   template <class Worker>
-  void init_worker_thread(Worker*) {
-    // nop 
+  void init_worker_thread(Worker* self) {
+    self->set_all_workers_are_neighbors(true);
   }
 
   // Goes on a raid in quest for a shiny new job.

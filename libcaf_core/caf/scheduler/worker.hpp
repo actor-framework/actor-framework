@@ -43,11 +43,12 @@ public:
   using policy_data = typename Policy::template worker_data<worker<Policy>>;
 
   worker(size_t worker_id, coordinator_ptr worker_parent, size_t throughput)
-      : execution_unit(&worker_parent->system()),
-        max_throughput_(throughput),
-        id_(worker_id),
-        parent_(worker_parent),
-        data_(worker_parent) {
+      : execution_unit(&worker_parent->system())
+      , max_throughput_(throughput)
+      , id_(worker_id)
+      , parent_(worker_parent)
+      , all_workers_are_neighbors_(true)
+      , data_(worker_parent) {
     // nop
   }
 
@@ -72,9 +73,13 @@ public:
   /// Enqueues a new job to the worker's queue from an internal
   /// source, i.e., a job that is currently executed by this worker.
   /// @warning Must not be called from other threads.
-  void exec_later(job_ptr job) override {
+  void exec_later(job_ptr job, bool high_prio = true) override {
     CAF_ASSERT(job != nullptr);
-    policy_.internal_enqueue(this, job);
+    CAF_LOG_TRACE(CAF_ARG(id()) << CAF_ARG(id_of(job)));
+    if (high_prio) 
+      policy_.internal_enqueue(this, job);
+    else
+      policy_.external_enqueue(this, job);
   }
 
   coordinator_ptr parent() {
@@ -101,6 +106,25 @@ public:
 
   size_t max_throughput() {
     return max_throughput_;
+  }
+
+  bool is_neighbor(execution_unit* ptr) const {
+    if (all_workers_are_neighbors_)
+      return true;
+    for (auto e: neighbors_) {
+      if (ptr == e) {
+        return true; 
+      } 
+    }
+    return false;
+  }
+
+  void set_neighbors(const std::vector<worker*>& n) {
+    neighbors_= n;
+  }
+
+  void set_all_workers_are_neighbors(bool x) {
+    all_workers_are_neighbors_ = x;     
   }
 
 private:
@@ -148,6 +172,9 @@ private:
   size_t id_;
   // pointer to central coordinator
   coordinator_ptr parent_;
+  // other workers with a high memory locality
+  std::vector<worker*> neighbors_;
+  bool all_workers_are_neighbors_;
   // policy-specific data
   policy_data data_;
   // instance of our policy object

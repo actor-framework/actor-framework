@@ -26,7 +26,9 @@ numa_aware_work_stealing::~numa_aware_work_stealing() {
   // nop
 }
 
-std::ostream& operator<<(std::ostream& s, const numa_aware_work_stealing::hwloc_bitmap_wrapper& w) {
+std::ostream&
+operator<<(std::ostream& s,
+           const numa_aware_work_stealing::hwloc_bitmap_wrapper& w) {
   char* tmp = nullptr;
   hwloc_bitmap_asprintf(&tmp, w.get());
   s << std::string(tmp);
