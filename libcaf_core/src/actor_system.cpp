@@ -192,9 +192,15 @@ public:
     // nop
   }
 
-  void exec_later(resumable*) override {
+  void exec_later(resumable*, bool) override {
     // should not happen in the first place
     CAF_LOG_ERROR("actor registry actor called exec_later during shutdown");
+  }
+
+  bool is_neighbor(execution_unit*) const override {
+    // should not happen in the first place
+    CAF_LOG_ERROR("actor registry actor called is_neighbor during shutdown");
+    return false;
   }
 };
 

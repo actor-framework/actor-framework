@@ -32,7 +32,10 @@ public:
   explicit scoped_execution_unit(actor_system* sys = nullptr);
 
   /// Delegates the resumable to the scheduler of `system()`.
-  void exec_later(resumable* ptr) override;
+  void exec_later(resumable* ptr, bool high_prio = true) override;
+
+  /// It is assumed that `this` is never in the neighborhood of `ptr`.
+  bool is_neighbor(execution_unit* ptr) const override;
 };
 
 } // namespace caf

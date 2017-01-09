@@ -362,8 +362,11 @@ void abstract_coordinator::cleanup_and_release(resumable* ptr) {
     dummy_unit(local_actor* job) : execution_unit(&job->home_system()) {
       // nop
     }
-    void exec_later(resumable* job) override {
+    void exec_later(resumable* job, bool) override {
       resumables.push_back(job);
+    }
+    bool is_neighbor(execution_unit*) const override {
+      return false;
     }
     std::vector<resumable*> resumables;
   };
