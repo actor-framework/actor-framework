@@ -102,11 +102,14 @@ public:
 
   template <class Worker>
   struct worker_data {
-    using worker_matrix_t = std::vector<std::vector<Worker*>>;
+    using neighbors_t = std::vector<Worker*>;
+    using worker_matrix_t = std::vector<neighbors_t>;
 
     explicit worker_data(scheduler::abstract_coordinator* p)
         : rengine(std::random_device{}())
-        , strategies(get_poll_strategies(p)) {
+        , strategies(get_poll_strategies(p))
+        , neighborhood_level(
+            p->system().config().numa_aware_work_stealing_neighborhood_level) {
       // nop
     }
 
@@ -145,7 +148,8 @@ public:
                        * static_cast<unsigned int>(current_node_id)];
         // iterate over all NUMA nodes and classify them in distance levels
         // regarding to the current NUMA node
-        for (node_id_t x = 0; static_cast<unsigned int>(x) < num_of_dist_objs; ++x) {
+        for (node_id_t x = 0; static_cast<unsigned int>(x) < num_of_dist_objs;
+             ++x) {
           node_set_t tmp_node_set = hwloc_bitmap_make_wrapper();
           hwloc_bitmap_set(tmp_node_set.get(), static_cast<unsigned int>(x));
           auto tmp_pu_set = hwloc_bitmap_make_wrapper();
@@ -190,12 +194,14 @@ public:
       for (auto current_lvl_it = result_matrix.begin();
            current_lvl_it != result_matrix.end(); ++current_lvl_it) {
         if (current_lvl_it != result_matrix.begin()) {
-          std::copy(last_lvl_it->begin(), last_lvl_it->end(), std::back_inserter(*current_lvl_it)) ;
+          std::copy(last_lvl_it->begin(), last_lvl_it->end(),
+                    std::back_inserter(*current_lvl_it));
           ++last_lvl_it;
         }
       } 
       return result_matrix;
     }
+  
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
     queue_type queue;
@@ -203,7 +209,7 @@ public:
     std::default_random_engine rengine;
     std::uniform_int_distribution<size_t> uniform;
     std::vector<poll_strategy> strategies;
-
+    size_t neighborhood_level;
   };
 
   /// Create x workers.
@@ -249,6 +255,17 @@ public:
                           HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
     CALL_CAF_CRITICAL(res == -1, "hwloc_set_cpubind() failed");
     wdata.worker_matrix = wdata.init_worker_matrix(self, pu_set);
+
+    auto wm_max_idx = wdata.worker_matrix.size() - 1;
+    if (wdata.neighborhood_level == 0) {
+      self->set_all_workers_are_neighbors(true); 
+    } else if (wdata.neighborhood_level <= wm_max_idx) {
+      self->set_neighbors(
+        wdata.worker_matrix[wm_max_idx - wdata.neighborhood_level]);
+        self->set_all_workers_are_neighbors(false);
+    } else { //neighborhood_level > wm_max_idx
+        self->set_all_workers_are_neighbors(false);
+    }
   }
 
   template <class Worker>
@@ -313,7 +330,8 @@ public:
   }
 private:
   // -- debug stuff --
-  friend std::ostream& operator <<(std::ostream& s, const hwloc_bitmap_wrapper& w);
+  friend std::ostream& operator<<(std::ostream& s,
+                                  const hwloc_bitmap_wrapper& w);
 };
 
 
