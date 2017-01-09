@@ -29,8 +29,12 @@ scoped_execution_unit::scoped_execution_unit(actor_system* sys)
   // nop
 }
 
-void scoped_execution_unit::exec_later(resumable* ptr) {
+void scoped_execution_unit::exec_later(resumable* ptr, bool) {
   system().scheduler().enqueue(ptr);
+}
+
+bool scoped_execution_unit::is_neighbor(execution_unit*) const {
+  return false;
 }
 
 } // namespace caf

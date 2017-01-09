@@ -264,6 +264,10 @@ public:
   size_t work_stealing_relaxed_steal_interval;
   size_t work_stealing_relaxed_sleep_duration_us;
 
+  // -- config parameters for numa aware work-stealing -------------------------
+
+  size_t numa_aware_work_stealing_neighborhood_level;
+ 
   // -- config parameters for the logger ---------------------------------------
 
   std::string logger_file_name;

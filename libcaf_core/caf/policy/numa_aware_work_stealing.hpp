@@ -102,34 +102,35 @@ public:
 
   template <class Worker>
   struct worker_data {
-    using worker_matrix_t = std::vector<std::vector<Worker*>>;
+    using neighbors_t = std::vector<Worker*>;
+    using worker_proximity_matrix_t = std::vector<neighbors_t>;
 
     explicit worker_data(scheduler::abstract_coordinator* p)
         : rengine(std::random_device{}())
-        , strategies(get_poll_strategies(p)) {
+        , strategies(get_poll_strategies(p))
+        , neighborhood_level(
+            p->system().config().numa_aware_work_stealing_neighborhood_level) {
       // nop
     }
 
-    worker_matrix_t init_worker_matrix(Worker* self,
-                                       const pu_set_t& current_pu_id_set) {
+    worker_proximity_matrix_t init_worker_proximity_matrix(Worker* self,
+                                       const pu_set_t& current_pu_set) {
       auto& cdata = d(self->parent());
       auto& topo = cdata.topo;
       auto current_node_set = hwloc_bitmap_make_wrapper();
-      hwloc_cpuset_to_nodeset(topo.get(), current_pu_id_set.get(),
+      hwloc_cpuset_to_nodeset(topo.get(), current_pu_set.get(),
                               current_node_set.get());
       CALL_CAF_CRITICAL(hwloc_bitmap_iszero(current_node_set.get()),
                         "Current NUMA node_set is unknown");
       auto current_node_id = hwloc_bitmap_first(current_node_set.get());
       std::map<float, pu_set_t> dist_map;
-      worker_matrix_t result_matrix;
-      // Distance matrix of NUMA nodes.
-      // It is possible to request the distance matrix on PU level,
-      // which would be a better match for our usecase
-      // but on all tested hardware it returned a nullptr, maybe future
-      // work?
+      worker_proximity_matrix_t result_matrix;
+      // Distance matrix for NUMA nodes. It is possible to request the distance
+      // matrix on PU level, which would be a better match for our usecase but
+      // on all tested hardware it returned a nullptr. Future work?
       auto distance_matrix =
         hwloc_get_whole_distance_matrix_by_type(topo.get(), HWLOC_OBJ_NUMANODE);
-      // if NUMA distance matrix is not available it is assumed that all PUs
+      // If NUMA distance matrix is not available it is assumed that all PUs
       // have the same distance
       if (!distance_matrix || !distance_matrix->latency) {
         auto allowed_const_pus = hwloc_topology_get_allowed_cpuset(topo.get());
@@ -145,7 +146,8 @@ public:
                        * static_cast<unsigned int>(current_node_id)];
         // iterate over all NUMA nodes and classify them in distance levels
         // regarding to the current NUMA node
-        for (node_id_t x = 0; static_cast<unsigned int>(x) < num_of_dist_objs; ++x) {
+        for (node_id_t x = 0; static_cast<unsigned int>(x) < num_of_dist_objs;
+             ++x) {
           node_set_t tmp_node_set = hwloc_bitmap_make_wrapper();
           hwloc_bitmap_set(tmp_node_set.get(), static_cast<unsigned int>(x));
           auto tmp_pu_set = hwloc_bitmap_make_wrapper();
@@ -154,7 +156,7 @@ public:
           // you cannot steal from yourself
           if (x == current_node_id) {
             hwloc_bitmap_andnot(tmp_pu_set.get(), tmp_pu_set.get(),
-                                current_pu_id_set.get());
+                                current_pu_set.get());
           }
           auto dist_it = dist_map.find(dist_pointer[x]);
           if (dist_it == dist_map.end())
@@ -175,14 +177,23 @@ public:
         for (pu_id_t pu_id = hwloc_bitmap_first(pu_set); pu_id != -1;
              pu_id = hwloc_bitmap_next(pu_set, pu_id)) {
           auto worker_id_it = cdata.worker_id_map.find(pu_id);
-          // if worker id is not found less worker than available PUs
+          // if worker id is not found less worker than available PUs.
           // have been started
           if (worker_id_it != cdata.worker_id_map.end())
             current_lvl.emplace_back(worker_id_it->second);
         }
         // current_lvl can be empty if all pus of NUMA node are deactivated
         if (!current_lvl.empty()) {
-          result_matrix.emplace_back(std::move(current_lvl));
+          // The number of workers in current_lvl must be larger then in the
+          // previous lvl (if exist).
+          // If it is smaller something is wrong (should not be possible).
+          // If they have the same size, its the same lvl (possible when lvls
+          // are created from different sources)
+          if (result_matrix.empty()
+              || current_lvl.size()
+                   > result_matrix[result_matrix.size() - 1].size()) {
+            result_matrix.emplace_back(std::move(current_lvl));
+          }
         }
       }
       //accumulate scheduler_lvls - each lvl contains all lower lvls
@@ -190,20 +201,22 @@ public:
       for (auto current_lvl_it = result_matrix.begin();
            current_lvl_it != result_matrix.end(); ++current_lvl_it) {
         if (current_lvl_it != result_matrix.begin()) {
-          std::copy(last_lvl_it->begin(), last_lvl_it->end(), std::back_inserter(*current_lvl_it)) ;
+          std::copy(last_lvl_it->begin(), last_lvl_it->end(),
+                    std::back_inserter(*current_lvl_it));
           ++last_lvl_it;
         }
       } 
       return result_matrix;
     }
+  
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
     queue_type queue;
-    worker_matrix_t worker_matrix;
+    worker_proximity_matrix_t wp_matrix;
     std::default_random_engine rengine;
     std::uniform_int_distribution<size_t> uniform;
     std::vector<poll_strategy> strategies;
-
+    size_t neighborhood_level;
   };
 
   /// Create x workers.
@@ -243,12 +256,24 @@ public:
   void init_worker_thread(Worker* self) {
     auto& wdata = d(self);
     auto& cdata = d(self->parent());
-    auto pu_set = hwloc_bitmap_make_wrapper();
-    hwloc_bitmap_set(pu_set.get(), static_cast<unsigned int>(self->id()));
-    auto res = hwloc_set_cpubind(cdata.topo.get(), pu_set.get(),
+    auto current_pu_set = hwloc_bitmap_make_wrapper();
+    hwloc_bitmap_set(current_pu_set.get(),
+                     static_cast<unsigned int>(self->id()));
+    auto res = hwloc_set_cpubind(cdata.topo.get(), current_pu_set.get(),
                           HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
     CALL_CAF_CRITICAL(res == -1, "hwloc_set_cpubind() failed");
-    wdata.worker_matrix = wdata.init_worker_matrix(self, pu_set);
+    wdata.wp_matrix = wdata.init_worker_proximity_matrix(self, current_pu_set);
+
+    auto wm_max_idx = wdata.wp_matrix.size() - 1;
+    if (wdata.neighborhood_level == 0) {
+      self->set_all_workers_are_neighbors(true); 
+    } else if (wdata.neighborhood_level <= wm_max_idx) {
+      self->set_neighbors(
+        wdata.wp_matrix[wm_max_idx - wdata.neighborhood_level]);
+        self->set_all_workers_are_neighbors(false);
+    } else { //neighborhood_level > wm_max_idx
+        self->set_all_workers_are_neighbors(false);
+    }
   }
 
   template <class Worker>
@@ -262,7 +287,7 @@ public:
       // you can't steal from yourself, can you?
       return nullptr;
     }
-    auto& wmatrix = wdata.worker_matrix;
+    auto& wmatrix = wdata.wp_matrix;
     auto& scheduler_lvl = wmatrix[scheduler_lvl_idx];
     auto res =
       scheduler_lvl[wdata.uniform(wdata.rengine) % scheduler_lvl.size()]
@@ -313,7 +338,8 @@ public:
   }
 private:
   // -- debug stuff --
-  friend std::ostream& operator <<(std::ostream& s, const hwloc_bitmap_wrapper& w);
+  friend std::ostream& operator<<(std::ostream& s,
+                                  const hwloc_bitmap_wrapper& w);
 };
 
 

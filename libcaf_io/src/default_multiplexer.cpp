@@ -817,7 +817,7 @@ default_multiplexer::~default_multiplexer() {
 # endif
 }
 
-void default_multiplexer::exec_later(resumable* ptr) {
+void default_multiplexer::exec_later(resumable* ptr, bool) {
   CAF_ASSERT(ptr);
   switch (ptr->subtype()) {
     case resumable::io_actor:
@@ -827,6 +827,10 @@ void default_multiplexer::exec_later(resumable* ptr) {
     default:
      system().scheduler().enqueue(ptr);
   }
+}
+
+bool default_multiplexer::is_neighbor(execution_unit*) const {
+  return false;
 }
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {

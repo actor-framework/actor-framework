@@ -125,6 +125,7 @@ actor_system_config::actor_system_config()
   work_stealing_moderate_sleep_duration_us = 50;
   work_stealing_relaxed_steal_interval = 1;
   work_stealing_relaxed_sleep_duration_us = 10000;
+  numa_aware_work_stealing_neighborhood_level = 1;
   logger_file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
   logger_file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
   logger_console = atom("none");
@@ -165,6 +166,9 @@ actor_system_config::actor_system_config()
        "sets the frequency of steal attempts during relaxed polling")
   .add(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
        "sets the sleep interval between poll attempts during relaxed polling");
+  opt_group{options_, "numa"}
+  .add(numa_aware_work_stealing_neighborhood_level, "neighborhood-level",
+       "defines the neighborhood radius (0=all, 1=next smaller group, 2=...)");
   opt_group{options_, "logger"}
   .add(logger_file_name, "file-name",
        "sets the filesystem path of the log file")

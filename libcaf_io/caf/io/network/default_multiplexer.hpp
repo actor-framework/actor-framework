@@ -321,7 +321,9 @@ public:
   expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
                                         bool reuse_addr) override;
 
-  void exec_later(resumable* ptr) override;
+  void exec_later(resumable* ptr, bool high_prio = true) override;
+
+  bool is_neighbor(execution_unit*) const override;
 
   explicit default_multiplexer(actor_system* sys);
 

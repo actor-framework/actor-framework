@@ -188,7 +188,8 @@ public:
   }
 
 protected:
-  void exec_later(resumable* ptr) override;
+  void exec_later(resumable* ptr, bool high_prio = true) override;
+  bool is_neighbor(execution_unit*) const override;
 
 private:
   using resumable_ptr = intrusive_ptr<resumable>;

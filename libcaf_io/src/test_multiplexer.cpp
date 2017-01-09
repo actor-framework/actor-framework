@@ -612,7 +612,7 @@ void test_multiplexer::flush_runnables() {
   } while (!runnables.empty());
 }
 
-void test_multiplexer::exec_later(resumable* ptr) {
+void test_multiplexer::exec_later(resumable* ptr, bool) {
   CAF_ASSERT(ptr != nullptr);
   CAF_LOG_TRACE("");
   switch (ptr->subtype()) {
@@ -640,6 +640,10 @@ void test_multiplexer::exec_later(resumable* ptr) {
     default:
       system().scheduler().enqueue(ptr);
   }
+}
+
+bool test_multiplexer::is_neighbor(execution_unit*) const {
+  return false;
 }
 
 void test_multiplexer::exec(resumable_ptr& ptr) {
