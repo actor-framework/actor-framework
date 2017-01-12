@@ -88,8 +88,9 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
     }
   }
 }
+
 auto stream_msg_visitor::operator()(stream_msg::close&) -> result_type {
-  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_LOG_TRACE("");
   if (i_ != e_) {
     i_->second->close_upstream(self_->current_sender());
     return {none, i_->second->done() ? i_ : e_};
