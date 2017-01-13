@@ -258,6 +258,7 @@ private:
                 std::move(whom), std::move(sigs));
     } else if (std::distance(u.scheme().first, u.scheme().second) >= 3 &&
                equal(u.scheme().first, u.scheme().second, std::begin(udp))) {
+      /*
       // UDP
       auto res
         = system().middleman().backend().new_dgram_doorman(u.port_as_int(),
@@ -268,6 +269,7 @@ private:
       actual_port = res->second;
       anon_send(broker_, publish_atom::value, hdl, actual_port,
                 std::move(whom), std::move(sigs));
+      */
     } else {
       return sec::unsupported_protocol;
     }

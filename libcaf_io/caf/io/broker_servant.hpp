@@ -29,8 +29,7 @@
 namespace caf {
 namespace io {
 
-/// Base class for `scribe` and `doorman` as well as `dgram_doorman`
-/// and `dgram_scribe`.
+/// Base class for `scribe`, `doorman` and `dgram_scribe`.
 /// @ingroup Broker
 template <class Base, class Handle, class SysMsgType>
 class broker_servant : public Base {
@@ -105,11 +104,7 @@ protected:
           typename std::conditional<
             std::is_same<Handle, accept_handle>::value,
             acceptor_passivated_msg,
-            typename std::conditional<
-              std::is_same<Handle, dgram_scribe_handle>::value,
-              dgram_scribe_passivated_msg,
-              dgram_doorman_passivated_msg
-            >::type
+            dgram_scribe_passivated_msg
           >::type
         >::type;
       using tmp_t = mailbox_element_vals<passiv_t>;

@@ -31,7 +31,6 @@
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/dgram_scribe_handle.hpp"
-#include "caf/io/dgram_doorman_handle.hpp"
 
 namespace caf {
 namespace io {
@@ -140,51 +139,6 @@ inspect(Inspector& f, dgram_scribe_closed_msg& x) {
   return f(meta::type_name("dgram_scribe_closed_msg"), x.handle);
 }
 
-/// Signalizes that a {@link broker} dgram_acceptor has been closed.
-struct dgram_acceptor_closed_msg {
-  /// Handle to the closed connection.
-  dgram_doorman_handle handle;
-};
-
-/// @relates connection_closed_msg
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        dgram_acceptor_closed_msg& x) {
-  return f(meta::type_name("dgram_acceptor_closed_msg"), x.handle);
-}
-
-/// Signalizes that a {@link broker} datagram source was closed.
-struct dgram_doorman_closed_msg {
-  dgram_doorman_handle handle;
-};
-
-/// @relates dgram_doorman_closed_msg
-template <class Inspector>
-typename Inspector::result_type
-inspect(Inspector& f, dgram_doorman_closed_msg& x) {
-  return f(meta::type_name("dgram_doorman_closed_msg"), x.handle);
-}
-
-/// Signalizes newly discovered remote endpoint
-/// and the responsible scribe to a {@link broker}.
-struct new_endpoint_msg {
-  // Handle to the related datagram endpoint.
-  dgram_doorman_handle source;
-  // Buffer containing the received data.
-  std::vector<char> buf;
-  // Handle to new dgram_scribe
-  dgram_scribe_handle handle;
-  // Port of the addressed actor
-  uint16_t port;
-};
-
-/// @relates new_endpoint_msg
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, new_endpoint_msg& x) {
-  return f(meta::type_name("new_endpoint_msg"), x.source, x.buf,
-                                                x.handle, x.port);
-}
-
 /// Signalizes that a datagram with a certain size has been sent.
 struct new_datagram_msg {
   // Handle to the endpoint used.
@@ -223,31 +177,6 @@ template <class Inspector>
 typename Inspector::result_type
 inspect(Inspector& f, dgram_scribe_passivated_msg& x) {
   return f(meta::type_name("dgram_scribe_passivated_msg"), x.handle);
-}
-
-/// Signalizes that a datagram source has entered passive mode.
-struct dgram_doorman_passivated_msg {
-  dgram_doorman_handle handle;
-};
-
-/// @relates dgram_doorman_passivated_msg
-template <class Inspector>
-typename Inspector::result_type
-inspect(Inspector& f, dgram_doorman_passivated_msg& x) {
-  return f(meta::type_name("dgram_doorman_passivated_msg"), x.handle);
-}
-
-/// Dummy message for the dgram_doorman implementation
-struct dgram_dummy_msg {
-  dgram_doorman_handle handle;
-  std::vector<char> buffer;
-};
-
-/// @relates dgram_dummy_msg
-template <class Inspector>
-typename Inspector::result_type
-inspect(Inspector& f, dgram_dummy_msg& x) {
-  return f(meta::type_name("dgram_dummy_msg"), x.handle, x.buffer);
 }
 
 } // namespace io

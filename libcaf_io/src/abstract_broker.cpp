@@ -117,14 +117,6 @@ void abstract_broker::ack_writes(dgram_scribe_handle hdl, bool enable) {
     x->ack_writes(enable);
 }
 
-void abstract_broker::configure_datagram_size(dgram_doorman_handle hdl,
-                                              size_t buf_size) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(buf_size));
-  auto x = by_id(hdl);
-  if (x)
-    x->configure_datagram_size(buf_size);
-}
-
 void  abstract_broker::configure_datagram_size(dgram_scribe_handle hdl,
                                                size_t buf_size) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(buf_size));
@@ -239,32 +231,6 @@ abstract_broker::add_dgram_scribe(network::native_socket fd) {
   return backend().add_dgram_scribe(this, fd);
 }
 
-void
-abstract_broker::add_dgram_doorman(const intrusive_ptr<dgram_doorman>& ptr) {
-  dgram_doormans_.emplace(ptr->hdl(), ptr);
-  ptr->launch();
-  // TODO: some launching of things?
-}
-
-expected<std::pair<dgram_doorman_handle, uint16_t>>
-abstract_broker::add_dgram_doorman(uint16_t port, const char* in,
-                                     bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(reuse_addr));
-  return backend().add_dgram_doorman(this, port, in, reuse_addr);
-}
-
-expected<void>
-abstract_broker::assign_dgram_doorman(dgram_doorman_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  return backend().assign_dgram_doorman(this, hdl);
-}
-
-expected<dgram_doorman_handle>
-abstract_broker::add_dgram_doorman(network::native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_dgram_doorman(this, fd);
-}
-
 std::string abstract_broker::remote_addr(connection_handle hdl) {
   auto i = scribes_.find(hdl);
   return i != scribes_.end() ? i->second->addr() : std::string{};
@@ -300,11 +266,6 @@ uint16_t abstract_broker::local_port(dgram_scribe_handle hdl) {
   return i != dgram_scribes_.end() ? i->second->local_port() : 0;
 }
 
-uint16_t abstract_broker::local_port(dgram_doorman_handle hdl) {
-  auto i = dgram_doormans_.find(hdl);
-  return i != dgram_doormans_.end() ? i->second->local_port() : 0;
-}
-
 accept_handle abstract_broker::hdl_by_port(uint16_t port) {
   for (auto& kvp : doormen_)
     if (kvp.second->port() == port)
@@ -321,10 +282,6 @@ void abstract_broker::close_all() {
   while (!scribes_.empty()) {
     // stop_reading will remove the scribe from scribes_
     scribes_.begin()->second->stop_reading();
-  }
-  while (!dgram_doormans_.empty()) {
-    // stop_reading will remove the scribe from dgram_doormans_
-    dgram_doormans_.begin()->second->stop_reading();
   }
   while (!dgram_scribes_.empty()) {
     // stop_reading will remove the scribe from dgram_scribes_

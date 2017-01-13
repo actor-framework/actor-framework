@@ -982,87 +982,6 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self, native_socket fd,
   return ptr->hdl();
 }
 
-dgram_doorman_handle
-default_multiplexer::add_dgram_doorman(abstract_broker* self,
-                                         native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  CAF_ASSERT(fd != network::invalid_native_socket);
-  class impl : public dgram_doorman {
-  public:
-    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
-        : dgram_doorman(ptr, network::dg_source_hdl_from_socket(sockfd)),
-          acceptor_(mx, sockfd) {
-      // nop
-    }
-    void configure_datagram_size(size_t buf_size) override {
-      CAF_LOG_TRACE("");
-      acceptor_.configure_datagram_size(buf_size);
-    }
-    bool new_endpoint(const void* buf, size_t num_bytes) override {
-      CAF_LOG_TRACE("");
-      // TODO: this currently ignores the payload of the datagram
-      if (detached())
-         // we are already disconnected from the broker while the multiplexer
-         // did not yet remove the socket, this can happen if an I/O event
-         // causes the broker to call close_all() while the pollset contained
-         // further activities for the broker
-         return false;
-      auto& dm = acceptor_.backend();
-      //auto endpoint_info = acceptor_.last_sender();
-      auto fd = new_dgram_scribe_impl(acceptor_.host(),
-                                      acceptor_.port());
-      if (!fd) {
-        CAF_LOG_ERROR(CAF_ARG(fd.error()));
-        return false;
-        // return std::move(fd.error());
-      }
-      auto endpoint_info = acceptor_.last_sender();
-      auto hdl = dm.add_dgram_scribe(parent(), *fd,
-                                     endpoint_info.first, endpoint_info.second,
-                                     false);
-      return dgram_doorman::new_endpoint(&dm, hdl, buf, num_bytes);
-    }
-    void stop_reading() override {
-      CAF_LOG_TRACE("");
-      acceptor_.stop_reading();
-      detach(&acceptor_.backend(), false);
-    }
-    std::vector<char>& rd_buf() override {
-      return acceptor_.rd_buf();
-    }
-    std::string addr() const override {
-      return acceptor_.host();
-    }
-    uint16_t port() const override {
-      return acceptor_.port();
-    }
-    uint16_t local_port() const override {
-      auto x = local_port_of_fd(acceptor_.fd());
-      if (!x)
-        return 0;
-      return *x;
-    }
-    void launch() override {
-      CAF_LOG_TRACE("");
-      CAF_ASSERT(!launched_);
-      launched_ = true;
-      acceptor_.start(this);
-    }
-    void add_to_loop() override {
-      acceptor_.activate(this);
-    }
-    void remove_from_loop() override {
-      acceptor_.passivate();
-    }
-  private:
-    bool launched_;
-    network::dgram_acceptor acceptor_;
-  };
-  auto ptr = make_counted<impl>(self, *this, fd);
-  self->add_dgram_doorman(ptr);
-  return ptr->hdl();
-}
-
 expected<connection_handle>
 default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
   auto fd = new_tcp_connection(host, port);
@@ -1152,35 +1071,6 @@ default_multiplexer::add_dgram_scribe(abstract_broker* self,
   if (!fd)
     return std::move(fd.error());
   return add_dgram_scribe(self, *fd);
-}
-
-expected<std::pair<dgram_doorman_handle, uint16_t>>
-default_multiplexer::new_dgram_doorman(uint16_t port, const char* in,
-                                       bool reuse_addr) {
-  auto res = new_dgram_doorman_impl(port, in, reuse_addr);
-  if (!res)
-    return std::move(res.error());
-  return std::make_pair(dgram_doorman_handle::from_int(
-                          int64_from_native_socket(res->first)),
-                        res->second);
-}
-
-expected<void> default_multiplexer::assign_dgram_doorman(abstract_broker* self,
-                                                   dgram_doorman_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
-  add_dgram_doorman(self, static_cast<native_socket>(hdl.id()));
-  return unit;
-}
-
-
-expected<std::pair<dgram_doorman_handle, uint16_t>>
-default_multiplexer::add_dgram_doorman(abstract_broker* self, uint16_t port,
-                                         const char* in, bool reuse_addr) {
-  auto res = new_dgram_doorman_impl(port, in, reuse_addr);
-  if (!res)
-    return std::move(res.error());
-  auto bound_port = res->second;
-  return std::make_pair(add_dgram_doorman(self, res->first), bound_port);
 }
 
 /******************************************************************************
@@ -1732,93 +1622,6 @@ void dgram_stream::set_endpoint_addr(const sockaddr_storage& sa,
   std::tie(host_, port_) = sender_from_sockaddr(sa, len);
 }
 
-dgram_acceptor::dgram_acceptor(default_multiplexer& backend_ref,
-                               native_socket sockfd)
-    : event_handler(backend_ref, sockfd),
-      dgram_size_(1500),
-      sockaddr_len_(0) {
-  // TODO: Set reasonable default for datagram_size
-  configure_datagram_size(1500);
-  // nop
-}
-
-void dgram_acceptor::configure_datagram_size(size_t size) {
-  dgram_size_ = size;
-}
-
-void dgram_acceptor::start(manager_type* mgr) {
-  CAF_ASSERT(mgr != nullptr);
-  activate(mgr);
-}
-
-void dgram_acceptor::activate(manager_type* mgr) {
-  if (!mgr_) {
-    mgr_.reset(mgr);
-    event_handler::activate();
-    prepare_next_read();
-  }
-}
-
-void dgram_acceptor::stop_reading() {
-  CAF_LOG_TRACE("");
-  close_read_channel();
-  passivate();
-}
-
-void dgram_acceptor::removed_from_loop(operation op) {
-  if (op == operation::read)
-    mgr_.reset();
-}
-
-void dgram_acceptor::handle_event(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
-  switch (op) {
-    case operation::read: {
-      // TODO: some idenfification to prevent arbitrary
-      // message from creating endpoints?
-      size_t rb;
-      if (!receive_datagram(rb, fd(), rd_buf_.data(), rd_buf_.size(),
-                            sockaddr_, sockaddr_len_)) {
-        mgr_->io_failure(&backend(), operation::read);
-        passivate();
-        return;
-      }
-      bytes_read_ = rb;
-      if (rb > 0) {
-        std::tie(host_,port_) = sender_from_sockaddr(sockaddr_, sockaddr_len_);
-        // TODO: Add this once messages are only received once
-        auto res = mgr_->new_endpoint(rd_buf_.data(), rb);
-        if (!res) {
-          // What is the right way to propagate this?
-          CAF_LOG_DEBUG("Failure during creation of new udp endpoint");
-//          std::cerr << "[DA] Failure during creation of new udp endpoint"
-//                    << std::endl;;
-        }
-      }
-      prepare_next_read();
-      break;
-    }
-    case operation::write: {
-      // This should not happen ...
-      break;
-    }
-    case operation::propagate_error:
-      if (mgr_)
-        mgr_->io_failure(&backend(), operation::read);
-      // backend will delete this handler anyway,
-      // no need to call backend().del() here
-      break;
-  }
-}
-
-std::pair<const sockaddr_storage&,size_t> dgram_acceptor::last_sender() {
-  return std::make_pair(std::ref(sockaddr_), sockaddr_len_);
-}
-
-void dgram_acceptor::prepare_next_read() {
-  rd_buf_.resize(dgram_size_);
-}
-
 class socket_guard {
 public:
   explicit socket_guard(native_socket fd) : fd_(fd) {
@@ -2064,43 +1867,6 @@ expected<native_socket> new_dgram_scribe_impl(const std::string& host,
     return std::move(p.error()); 
   //std::cerr << "[NDSI] Bound to " << *p << std::endl;
   return sguard.release();
-}
-
-expected<std::pair<native_socket, uint16_t>>
-new_dgram_doorman_impl(uint16_t port, const char* addr, bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  protocol proto = ipv6;
-  if (addr) {
-    auto addrs = interfaces::native_address(addr);
-    if (!addrs) {
-      //CAF_LOG_INFO("no such host");
-      //return make_error(sec::cannot_connect_to_node, "no such host",
-      //                  addr, port);
-      return make_error(sec::cannot_open_port, "Invalid ADDR", addr);
-    }
-    proto = addrs->second;
-    CAF_ASSERT(proto == ipv4 || proto == ipv6);
-  }
-  CALL_CFUN(fd, cc_valid_socket, "socket",
-            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
-  // sguard closes the socket in case of exception
-  socket_guard sguard(fd);
-  if (reuse_addr) {
-    int on = 1;
-    CALL_CFUN(tmp1, cc_zero, "setsockopt",
-              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-                         reinterpret_cast<setsockopt_ptr>(&on),
-                         static_cast<socklen_t>(sizeof(on))));
-  }
-  // TODO: Change this to something UDP specific?
-  auto p = proto == ipv4 ? new_ip_acceptor_impl<AF_INET>(fd, port, addr)
-                         : new_ip_acceptor_impl<AF_INET6>(fd, port, addr);
-  if (!p)
-    return std::move(p.error());
-  // ok, no errors so far
-  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
-  //std::cerr << "[NDDI] Bound to " << *p << std::endl;
-  return std::make_pair(sguard.release(), *p);
 }
 
 expected<std::string> local_addr_of_fd(native_socket fd) {

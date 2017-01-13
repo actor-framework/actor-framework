@@ -43,17 +43,17 @@ constexpr invalid_dgram_scribe_handle_t invalid_dgram_scribe_handle
 
 /// Generic type for identifying datagram sink.
 class dgram_scribe_handle : public handle<dgram_scribe_handle,
-                                           invalid_dgram_scribe_handle_t> {
+                                          invalid_dgram_scribe_handle_t> {
 public:
   friend class handle<dgram_scribe_handle, invalid_dgram_scribe_handle_t>;
 
   using super = handle<dgram_scribe_handle, invalid_dgram_scribe_handle_t>;
 
-  dgram_scribe_handle() : port_{0} {
+  dgram_scribe_handle() {
     // nop
   }
 
-  dgram_scribe_handle(const invalid_dgram_scribe_handle_t&) : port_{0} {
+  dgram_scribe_handle(const invalid_dgram_scribe_handle_t&) {
     // nop
   }
 
@@ -63,28 +63,10 @@ public:
     return f(meta::type_name("dgram_scribe_handle"), x.id_);
   }
 
-  const std::string& host() const {
-    return host_;
-  }
-
-  void set_host(std::string host) {
-    host_ = move(host);
-  }
-
-  uint16_t port() const {
-    return port_;
-  }
-
-  void set_port(uint16_t port) {
-    port_ = port;
-  }
-
 private:
   inline dgram_scribe_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
-  std::string host_;
-  uint16_t port_;
 };
 
 } // namespace io

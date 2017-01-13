@@ -17,20 +17,40 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/network/datagram_header.hpp"
+#ifndef CAF_IO_REMOTE_ENDPOINT_HPP
+#define CAF_IO_REMOTE_ENDPOINT_HPP
 
-#include <sstream>
+#include <deque>
+#include <vector>
 
 namespace caf {
 namespace io {
 namespace network {
 
-bool operator==(const datagram_header& lhs, const datagram_header& rhs) {
-  return lhs.sequence_number == rhs.sequence_number
-      && lhs.response_port == rhs.response_port;
-}
+class remote_endpoint {
+  /// A buffer class providing a compatible
+  /// interface to `std::vector`.
+  using buffer_type = std::vector<char>;
+
+private:
+  // state for receiving
+  size_t dgram_size_;
+  buffer_type rd_buf_;
+  size_t bytes_read_;
+
+  // state for sending
+  bool ack_writes_;
+  bool writing_;
+  buffer_type wr_buf_;
+  std::deque<buffer_type> wr_offline_buf_;
+
+  // endpoint info
+  struct sockaddr_storage remote_endpoint_addr_;
+  socklen_t remote_endpoint_addr_len_;
+};
 
 } // namespace network
 } // namespace io
 } // namespace caf
 
+#endif // CAF_IO_REMOTE_ENDPOINT_HPP

@@ -39,7 +39,6 @@
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/dgram_stream_manager.hpp"
-#include "caf/io/network/dgram_acceptor_manager.hpp"
 
 #include "caf/io/network/native_socket.hpp"
 
@@ -335,19 +334,6 @@ public:
                                                  const std::string& host,
                                                  uint16_t port) override;
 
-  expected<std::pair<dgram_doorman_handle, uint16_t>>
-  new_dgram_doorman(uint16_t port, const char* in, bool rflag) override;
-
-  expected<void> assign_dgram_doorman(abstract_broker* ptr,
-                                      dgram_doorman_handle hdl) override;
-
-  dgram_doorman_handle add_dgram_doorman(abstract_broker* ptr,
-                                         native_socket fd) override;
-
-  expected<std::pair<dgram_doorman_handle, uint16_t>>
-  add_dgram_doorman(abstract_broker* ptr, uint16_t port , const char* in,
-                    bool rflag) override;
-
   void exec_later(resumable* ptr) override;
 
   explicit default_multiplexer(actor_system* sys);
@@ -437,10 +423,6 @@ inline accept_handle accept_hdl_from_socket(native_socket fd) {
 
 inline dgram_scribe_handle dg_sink_hdl_from_socket(native_socket fd) {
   return dgram_scribe_handle::from_int(int64_from_native_socket(fd));
-}
-
-inline dgram_doorman_handle dg_source_hdl_from_socket(native_socket fd) {
-  return dgram_doorman_handle::from_int(int64_from_native_socket(fd));
 }
 
 /// A stream capable of both reading and writing. The stream's input
@@ -635,7 +617,7 @@ public:
   void removed_from_loop(operation op) override;
 
   void handle_event(operation op) override;
- 
+
   void set_endpoint_addr(const sockaddr_storage& sa, size_t len,
                          bool is_tmp_endpoint);
 
@@ -668,74 +650,6 @@ private:
   socklen_t sockaddr_len_;
   std::string host_;
   uint16_t port_;
-};
-
-/// A dgram_acceptor is responsible for receiving datagrams on an endpoint.
-class dgram_acceptor: public event_handler {
-public:
-  /// A manger providing the new_endpoint function
-  using manager_type = dgram_acceptor_manager;
-
-  /// A smart pointer to a datagram sink manger
-  using manager_ptr = intrusive_ptr<dgram_acceptor_manager>;
-
-  /// A buffer class providing a compatible
-  /// interface to `std::vector`.
-  using buffer_type = std::vector<char>;
-
-  dgram_acceptor(default_multiplexer& backend_ref, native_socket sockfd);
-
-  /// Configures how much buffer will be provided for the next datagram.
-  /// @warning Must not be called outside the IO multiplexers event loop
-  ///          once the stream has been started.
-  void configure_datagram_size(size_t buf_size);
-
-  /// Returns the read buffer of this datagram receiver.
-  /// @warning Must not be modified outside the IO multiplexers event loop
-  ///          once the stream has been started.
-  inline buffer_type& rd_buf() {
-    return rd_buf_;
-  }
-
-  inline const std::string& host() const {
-    return host_;
-  }
-
-  inline uint16_t port() const {
-    return port_;
-  }
-
-  /// Starts reading data from the socket.
-  void start(manager_type* mgr);
-
-  /// Activates the dgram_acceptor.
-  void activate(manager_type* mgr);
-
-  /// Closes the read channel of the underlying socket and removes
-  /// this handler from its parent.
-  void stop_reading();
-
-  void removed_from_loop(operation op) override;
-
-  void handle_event(operation op) override;
-
-  std::pair<const sockaddr_storage&,size_t> last_sender();
-
-private:
-  void prepare_next_read();
-
-  // reader state
-  manager_ptr mgr_;
-  size_t dgram_size_;
-  buffer_type rd_buf_;
-  size_t bytes_read_;
-
-  // general state
-  struct sockaddr_storage sockaddr_;
-  socklen_t sockaddr_len_;
-  std::string host_;
-  uint16_t port_;
-  // native_socket sock_; // TODO: Do I need this?
 };
 
 expected<native_socket> new_tcp_connection(const std::string& host,

@@ -717,6 +717,7 @@ behavior basp_broker::make_behavior() {
       auto port = local_port(msg.handle);
       state.instance.remove_published_actor(port);
     },
+    /*
     // received from underlying broker implementation
     [=](new_endpoint_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
@@ -733,6 +734,7 @@ behavior basp_broker::make_behavior() {
         configure_datagram_size(msg.handle, 1500);
       }
     },
+    */
     // received from underlying broker implementation
     [=](const dgram_scribe_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
@@ -745,11 +747,6 @@ behavior basp_broker::make_behavior() {
       state.instance.handle_node_shutdown(nid);
       CAF_ASSERT(nid == none
                  || !state.instance.tbl().reachable(nid));
-    },
-    [=](const dgram_doorman_closed_msg& msg) {
-      CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      auto port = local_port(msg.handle);
-      state.instance.remove_published_actor(port);
     },
     // received from middleman actor
     [=](publish_atom, accept_handle hdl, uint16_t port,
@@ -769,6 +766,7 @@ behavior basp_broker::make_behavior() {
                       << CAF_ARG(whom));
       }
     },
+    /*
     [=](publish_atom, dgram_doorman_handle hdl, uint16_t port,
         const strong_actor_ptr& whom, std::set<std::string>& sigs) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()) << CAF_ARG(whom) << CAF_ARG(port));
@@ -786,6 +784,7 @@ behavior basp_broker::make_behavior() {
                       << CAF_ARG(whom));
       }
     },
+    */
     // received from middleman actor (delegated)
     [=](connect_atom, connection_handle hdl, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(hdl.id()));

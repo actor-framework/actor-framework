@@ -33,13 +33,11 @@
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/dgram_scribe_handle.hpp"
-#include "caf/io/dgram_doorman_handle.hpp"
 
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/dgram_stream_manager.hpp"
-#include "caf/io/network/dgram_acceptor_manager.hpp"
 
 namespace caf {
 namespace io {
@@ -87,7 +85,6 @@ public:
   friend class scribe;
   friend class doorman;
   friend class dgram_scribe;
-  friend class dgram_doorman;
 
   // -- overridden modifiers of abstract_actor ---------------------------------
 
@@ -165,11 +162,6 @@ public:
   /// Modifies the buffer for received datagrams.
   /// @param hdl Identifies the affected socket.
   /// @param buf_size Size of the receiver buffer for the next datagram.
-  void configure_datagram_size(dgram_doorman_handle hdl, size_t buf_size);
-
-  /// Modifies the buffer for received datagrams.
-  /// @param hdl Identifies the affected socket.
-  /// @param buf_size Size of the receiver buffer for the next datagram.
   void configure_datagram_size(dgram_scribe_handle hdl, size_t buf_size);
 
   /// Returns write buffer for given sink.
@@ -233,33 +225,14 @@ public:
   /// from the `multiplexer` to this broker.
   expected<void> assign_dgram_scribe(dgram_scribe_handle hdl);
 
+  /// Creates and assigns a new `dgram_scribe` from given native socked `fd`.
+  expected<dgram_scribe_handle> add_dgram_scribe(network::native_socket fd);
+
   /// Assigns a detached `dgram_scribe` instance identified by `hdl`
   /// from the `multiplexer` to this broker and assigns it to handle the
   /// remote endpoint `host` and `port`.
   expected<void> assign_dgram_scribe(dgram_scribe_handle hdl,
                                      const std::string& host, uint16_t port);
-
-  /// Creates and assigns a new `dgram_scribe` from given native socked `fd`.
-  expected<dgram_scribe_handle> add_dgram_scribe(network::native_socket fd);
-
-  /// Adds a `dgram_doorman` instance to this broker.
-  void add_dgram_doorman(const intrusive_ptr<dgram_doorman>& ptr);
-
-  /// Tries to open a local port and creates a `dgram_doorman` managing
-  /// it on success. If `port == 0`, then the broker will ask
-  /// the operating system to pick a random port.
-  /// @returns The handle of the new `dgram_doorman` and the assigned port.
-  expected<std::pair<dgram_doorman_handle, uint16_t>>
-  add_dgram_doorman(uint16_t port = 0, const char* in = nullptr,
-                    bool reuse_addr = false);
-
-  /// Assigns a detached `dgram_doorman` instance identified by `hdl`
-  /// from the `multiplexer` to this broker.
-  expected<void> assign_dgram_doorman(dgram_doorman_handle hdl);
-
-  /// Creates and assigns a new `dgram_doorman` from given native socked `fd`.
-  expected<dgram_doorman_handle>
-  add_dgram_doorman(network::native_socket fd);
 
   /// Returns the remote address associated to `hdl`
   /// or empty string if `hdl` is invalid.
@@ -290,9 +263,6 @@ public:
   /// Returns the remote port associated to `hdl`
   /// or `0` if `hdl` is invalid.
   uint16_t local_port(dgram_scribe_handle hdl);
-
-  /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
-  uint16_t local_port(dgram_doorman_handle hdl);
 
   /// Closes all connections and acceptors.
   void close_all();
@@ -355,9 +325,6 @@ protected:
   using dgram_scribe_map = std::unordered_map<dgram_scribe_handle,
                                                intrusive_ptr<dgram_scribe>>;
 
-  using dgram_doorman_map = std::unordered_map<dgram_doorman_handle,
-                                                 intrusive_ptr<dgram_doorman>>;
-
   /// @cond PRIVATE
 
   // meta programming utility
@@ -375,11 +342,6 @@ protected:
     return dgram_scribes_;
   }
 
-  // meta programming utility
-  inline dgram_doorman_map& get_map(dgram_doorman_handle) {
-    return dgram_doormans_;
-  }
-
   // meta programming utility (not implemented)
   static intrusive_ptr<doorman> ptr_of(accept_handle);
 
@@ -389,15 +351,12 @@ protected:
   // meta programming utility (not implemented)
   static intrusive_ptr<dgram_scribe> ptr_of(dgram_scribe_handle);
 
-  // meta programming utility (not implemented)
-  static intrusive_ptr<dgram_doorman> ptr_of(dgram_doorman_handle);
-
   /// @endcond
 
   /// Returns the `multiplexer` running this broker.
   network::multiplexer& backend();
 
-  /// Returns a `scribe`, `doorman`, `dgram_scribe` or `dgram_doorman`
+  /// Returns a `scribe`, `doorman` or `dgram_scribe`
   /// identified by `hdl`.
   template <class Handle>
   auto by_id(Handle hdl) -> optional<decltype(*ptr_of(hdl))> {
@@ -408,8 +367,8 @@ protected:
     return *(i->second);
   }
 
-  /// Returns an intrusive pointer to a `scribe`, `doorman`, `dgram_scribe`
-  /// or `dgram_doorman` identified by `hdl` and remove it from this broker.
+  /// Returns an intrusive pointer to a `scribe`, `doorman` or `dgram_scribe`
+  /// identified by `hdl` and remove it from this broker.
   template <class Handle>
   auto take(Handle hdl) -> decltype(ptr_of(hdl)) {
     using std::swap;
@@ -427,7 +386,6 @@ private:
   scribe_map scribes_;
   doorman_map doormen_;
   dgram_scribe_map dgram_scribes_;
-  dgram_doorman_map dgram_doormans_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
   std::vector<char> dummy_wr_buf_;
 };
