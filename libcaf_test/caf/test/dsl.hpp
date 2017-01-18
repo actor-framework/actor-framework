@@ -267,6 +267,23 @@ private:
 
 };
 
+template <>
+class expect_clause<void> : public expect_clause_base<expect_clause<void>> {
+public:
+  template <class... Us>
+  expect_clause(Us&&... xs)
+      : expect_clause_base<expect_clause<void>>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  void with() {
+    CAF_REQUIRE(dest_ != nullptr);
+    auto ptr = dest_->mailbox().peek();
+    CAF_CHECK(ptr->content().empty());
+    this->run_once();
+  }
+};
+
 template <class Config = caf::actor_system_config>
 struct test_coordinator_fixture {
   using scheduler_type = caf::scheduler::test_coordinator;
