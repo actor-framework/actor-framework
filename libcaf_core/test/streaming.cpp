@@ -59,6 +59,33 @@ behavior file_reader(event_based_actor* self) {
   };
 }
 
+void streamer(event_based_actor* self, const actor& dest) {
+  using buf = std::deque<int>;
+  self->new_stream(
+    // destination of the stream
+    dest,
+    // initialize state
+    [&](buf& xs) {
+      xs = buf{1, 2, 3, 4, 5, 6, 7, 8, 9};
+    },
+    // get next element
+    [=](buf& xs, downstream<int>& out, size_t num) {
+      auto n = std::min(num, xs.size());
+      for (size_t i = 0; i < n; ++i)
+        out.push(xs[i]);
+      xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
+    },
+    // check whether we reached the end
+    [=](const buf& xs) {
+      return xs.empty();
+    },
+    // handle result of the stream
+    [=](expected<int>) {
+      // nop
+    }
+  );
+}
+
 behavior filter(event_based_actor* self) {
   return {
     [=](stream<int>& in) -> stream<int> {
@@ -112,6 +139,56 @@ behavior sum_up(event_based_actor* self) {
       );
     }
   };
+}
+
+behavior drop_all(event_based_actor* self) {
+  return {
+    [=](stream<int>& in) {
+      return self->add_sink(
+        // input stream
+        in,
+        // initialize state
+        [](unit_t&) {
+          // nop
+        },
+        // processing step
+        [](unit_t&, int) {
+          // nop
+        },
+        // cleanup and produce void "result"
+        [](unit_t&) -> unit_t {
+          return unit;
+        }
+      );
+    }
+  };
+}
+
+void streamer_without_result(event_based_actor* self, const actor& dest) {
+  using buf = std::deque<int>;
+  self->new_stream(
+    // destination of the stream
+    dest,
+    // initialize state
+    [&](buf& xs) {
+      xs = buf{1, 2, 3, 4, 5, 6, 7, 8, 9};
+    },
+    // get next element
+    [=](buf& xs, downstream<int>& out, size_t num) {
+      auto n = std::min(num, xs.size());
+      for (size_t i = 0; i < n; ++i)
+        out.push(xs[i]);
+      xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
+    },
+    // check whether we reached the end
+    [=](const buf& xs) {
+      return xs.empty();
+    },
+    // handle result of the stream
+    [=](expected<void>) {
+      // nop
+    }
+  );
 }
 
 using fixture = test_coordinator_fixture<>;
@@ -261,6 +338,54 @@ CAF_TEST(depth3_pipeline) {
   expect((int), from(sink).to(self).with(25));
   //auto res = fetch_result<int>();
   //CAF_CHECK_EQUAL(res, 25);
+}
+
+CAF_TEST(broken_pipeline_stramer) {
+  CAF_MESSAGE("streams must abort if a stage fails to initialize its state");
+  auto stage = sys.spawn(broken_filter);
+  // run initialization code
+  sched.run();
+  auto source = sys.spawn(streamer, stage);
+  // run initialization code
+  sched.run_once();
+  // source --(stream_msg::open)--> stage
+  expect((stream_msg::open), from(source).to(stage).with(_, source, _, _, false));
+  CAF_CHECK(!deref(source).streams().empty());
+  CAF_CHECK(deref(stage).streams().empty());
+  // stage --(stream_msg::abort)--> source
+  expect((stream_msg::abort),
+         from(stage).to(source).with(sec::stream_init_failed));
+  CAF_CHECK(deref(source).streams().empty());
+  CAF_CHECK(deref(stage).streams().empty());
+  // sink ----(error)---> source
+  expect((error), from(stage).to(source).with(_));
+}
+
+CAF_TEST(depth2_pipeline_streamer) {
+  auto sink = sys.spawn(sum_up);
+  // run initialization code
+  sched.run();
+  auto source = sys.spawn(streamer, sink);
+  // run initialization code
+  sched.run_once();
+  // source ----(stream_msgreturn ::open)----> sink
+  expect((stream_msg::open), from(source).to(sink).with(_, source, _, _, false));
+  // source <----(stream_msg::ack_open)------ sink
+  expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
+  // source ----(stream_msg::batch)---> sink
+  expect((stream_msg::batch),
+         from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
+  // source <--(stream_msg::ack_batch)---- sink
+  expect((stream_msg::ack_batch), from(sink).to(source).with(5, 0));
+  // source ----(stream_msg::batch)---> sink
+  expect((stream_msg::batch),
+         from(source).to(sink).with(4, std::vector<int>{6, 7, 8, 9}, 1));
+  // source <--(stream_msg::ack_batch)---- sink
+  expect((stream_msg::ack_batch), from(sink).to(source).with(4, 1));
+  // source ----(stream_msg::close)---> sink
+  expect((stream_msg::close), from(source).to(sink).with());
+  // sink ----(result: 25)---> source
+  expect((int), from(sink).to(source).with(45));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

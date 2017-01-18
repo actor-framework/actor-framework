@@ -49,7 +49,7 @@ public:
   }
 
   error consume(message& msg) final {
-    using vec_type = std::vector<output_type>;
+    using vec_type = std::vector<input_type>;
     if (msg.match_elements<vec_type>()) {
       auto& xs = msg.get_as<vec_type>(0);
       for (auto& x : xs)
