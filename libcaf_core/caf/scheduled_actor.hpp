@@ -38,6 +38,7 @@
 #include "caf/stream_sink_impl.hpp"
 #include "caf/stream_stage_impl.hpp"
 #include "caf/stream_source_impl.hpp"
+#include "caf/stream_result_trait.hpp"
 
 #include "caf/policy/greedy.hpp"
 #include "caf/policy/anycast.hpp"
@@ -293,6 +294,57 @@ public:
 # endif // CAF_NO_EXCEPTIONS
 
   // -- stream management ------------------------------------------------------
+
+  // Starts a new stream.
+  template <class Handle, class Init, class Getter, class ClosedPredicate,
+            class ResHandler>
+  stream<typename stream_source_trait_t<Getter>::output>
+  new_stream(const Handle& dest, Init init, Getter getter, ClosedPredicate pred,
+             ResHandler res_handler) {
+    using type = typename stream_source_trait_t<Getter>::output;
+    using state_type = typename stream_source_trait_t<Getter>::state;
+    using result_type = typename stream_result_trait_t<ResHandler>::type;
+    static_assert(std::is_same<
+                    void (state_type&),
+                    typename detail::get_callable_trait<Init>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&)` for init function");
+    static_assert(std::is_same<
+                    bool (const state_type&),
+                    typename detail::get_callable_trait<ClosedPredicate>::fun_sig
+                  >::value,
+                  "Expected signature `bool (const State&)` for "
+                  "closed_predicate function");
+    if (!dest) {
+      CAF_LOG_ERROR("cannot stream to an invalid actor handle");
+      return stream_id{nullptr, 0};
+    }
+    // generate new stream ID
+    stream_id sid{ctrl(),
+                  new_request_id(message_priority::normal).integer_value()};
+    stream<type> token{sid};
+    // generate new ID for the final response message and send handshake
+    auto res_id = new_request_id(message_priority::normal);
+    dest->enqueue(make_mailbox_element(
+                    ctrl(), res_id, {},
+                    make<stream_msg::open>(sid, make_message(std::move(token)),
+                                           ctrl(), stream_priority::normal,
+                                           std::vector<atom_value>{}, false)),
+                  context());
+    // install response handler
+    this->add_multiplexed_response_handler(
+      res_id.response_id(),
+      behavior{[=](result_type& res) { res_handler(std::move(res)); },
+               [=](error& err) { res_handler(std::move(err)); }});
+    // install stream handler
+    using impl = stream_source_impl<Getter, ClosedPredicate>;
+    std::unique_ptr<downstream_policy> p{new policy::anycast};
+    auto ptr = make_counted<impl>(this, sid, std::move(p), std::move(getter),
+                                  std::move(pred));
+    init(ptr->state());
+    streams_.emplace(std::move(sid), std::move(ptr));
+    return sid;
+  }
 
   /// Adds a stream source to this actor.
   template <class Init, class Getter, class ClosedPredicate>

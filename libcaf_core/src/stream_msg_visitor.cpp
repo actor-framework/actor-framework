@@ -41,9 +41,9 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
     return {sec::downstream_already_exists, e_};
   auto& predecessor = x.prev_stage;
   auto fail = [&](error reason) -> result_type {
+    unsafe_send_as(self_, predecessor, make<stream_msg::abort>(sid_, reason));
     auto rp = self_->make_response_promise();
     rp.deliver(reason);
-    unsafe_send_as(self_, predecessor, make<stream_msg::abort>(sid_, reason));
     return {std::move(reason), e_};
   };
   if (!predecessor) {
