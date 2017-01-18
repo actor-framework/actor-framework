@@ -20,6 +20,9 @@
 #ifndef CAF_STREAM_SINK_TRAIT_HPP
 #define CAF_STREAM_SINK_TRAIT_HPP
 
+#include "caf/message.hpp"
+#include "caf/make_message.hpp"
+
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -32,6 +35,22 @@ struct stream_sink_trait<void (State&, In), Out (State&)> {
   using state = State;
   using input = In;
   using output = Out;
+  template <class F>
+  static message make_result(state& st, F f) {
+    return make_message(f(st));
+  }
+};
+
+template <class State, class In>
+struct stream_sink_trait<void (State&, In), void (State&)> {
+  using state = State;
+  using input = In;
+  using output = void;
+  template <class F>
+  static message make_result(state& st, F& f) {
+    f(st);
+    return make_message();
+  }
 };
 
 template <class Fun, class Fin>

@@ -303,7 +303,6 @@ public:
              ResHandler res_handler) {
     using type = typename stream_source_trait_t<Getter>::output;
     using state_type = typename stream_source_trait_t<Getter>::state;
-    using result_type = typename stream_result_trait_t<ResHandler>::type;
     static_assert(std::is_same<
                     void (state_type&),
                     typename detail::get_callable_trait<Init>::fun_sig
@@ -334,8 +333,7 @@ public:
     // install response handler
     this->add_multiplexed_response_handler(
       res_id.response_id(),
-      behavior{[=](result_type& res) { res_handler(std::move(res)); },
-               [=](error& err) { res_handler(std::move(err)); }});
+      stream_result_trait_t<ResHandler>::make_result_handler(res_handler));
     // install stream handler
     using impl = stream_source_impl<Getter, ClosedPredicate>;
     std::unique_ptr<downstream_policy> p{new policy::anycast};

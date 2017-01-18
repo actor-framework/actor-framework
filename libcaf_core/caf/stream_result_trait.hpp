@@ -20,6 +20,9 @@
 #ifndef CAF_STREAM_RESULT_TRAIT_HPP
 #define CAF_STREAM_RESULT_TRAIT_HPP
 
+#include "caf/unit.hpp"
+#include "caf/behavior.hpp"
+
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -30,6 +33,33 @@ struct stream_result_trait;
 template <class T>
 struct stream_result_trait<void (expected<T>)> {
   using type = T;
+  template <class OnResult>
+  static behavior make_result_handler(OnResult f) {
+    return {
+      [=](T& res) {
+        f(std::move(res));
+      },
+      [=](error& err) {
+        f(std::move(err));
+      }
+    };
+  }
+};
+
+template <>
+struct stream_result_trait<void (expected<void>)> {
+  using type = void;
+  template <class OnResult>
+  static behavior make_result_handler(OnResult f) {
+    return {
+      [=]() {
+        f(unit);
+      },
+      [=](error& err) {
+        f(std::move(err));
+      }
+    };
+  }
 };
 
 template <class F>

@@ -60,7 +60,7 @@ public:
   }
 
   message finalize() final {
-    return make_message(fin_(state_));
+    return trait::make_result(state_, fin_);
   }
 
   state_type& state() {
