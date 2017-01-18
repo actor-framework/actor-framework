@@ -156,8 +156,8 @@ behavior drop_all(event_based_actor* self) {
           // nop
         },
         // cleanup and produce void "result"
-        [](unit_t&) -> unit_t {
-          return unit;
+        [](unit_t&) {
+          // nop
         }
       );
     }
@@ -386,6 +386,33 @@ CAF_TEST(depth2_pipeline_streamer) {
   expect((stream_msg::close), from(source).to(sink).with());
   // sink ----(result: 25)---> source
   expect((int), from(sink).to(source).with(45));
+}
+
+CAF_TEST(stream_without_result) {
+  auto sink = sys.spawn(drop_all);
+  // run initialization code
+  sched.run();
+  auto source = sys.spawn(streamer_without_result, sink);
+  // run initialization code
+  sched.run_once();
+  // source ----(stream_msgreturn ::open)----> sink
+  expect((stream_msg::open), from(source).to(sink).with(_, source, _, _, false));
+  // source <----(stream_msg::ack_open)------ sink
+  expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
+  // source ----(stream_msg::batch)---> sink
+  expect((stream_msg::batch),
+         from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
+  // source <--(stream_msg::ack_batch)---- sink
+  expect((stream_msg::ack_batch), from(sink).to(source).with(5, 0));
+  // source ----(stream_msg::batch)---> sink
+  expect((stream_msg::batch),
+         from(source).to(sink).with(4, std::vector<int>{6, 7, 8, 9}, 1));
+  // source <--(stream_msg::ack_batch)---- sink
+  expect((stream_msg::ack_batch), from(sink).to(source).with(4, 1));
+  // source ----(stream_msg::close)---> sink
+  expect((stream_msg::close), from(source).to(sink).with());
+  // sink ----(result: <empty>)---> source
+  expect((void), from(sink).to(source).with());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
