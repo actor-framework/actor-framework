@@ -24,8 +24,11 @@
 #include "caf/none.hpp"
 #include "caf/skip.hpp"
 #include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/message.hpp"
 #include "caf/delegated.hpp"
+
+#include "caf/detail/type_list.hpp"
 
 namespace caf {
 
@@ -48,19 +51,33 @@ public:
     init(std::move(x), std::move(xs)...);
   }
 
-  template <class E,
-            class = typename std::enable_if<
-                      std::is_same<
-                        decltype(make_error(std::declval<const E&>())),
-                        error
-                      >::value
-                    >::type>
+  template <class E, class = enable_if_has_make_error_t<E>>
   result(E x) : flag(rt_error), err(make_error(x)) {
     // nop
   }
 
   result(error x) : flag(rt_error), err(std::move(x)) {
     // nop
+  }
+
+  template <
+    class T,
+    class = typename std::enable_if<
+      sizeof...(Ts) == 1
+      && std::is_convertible<
+           T,
+           detail::tl_head_t<detail::type_list<Ts...>>
+         >::value
+    >::type
+  >
+  result(expected<T> x) {
+    if (x) {
+      flag = rt_value;
+      init(std::move(*x));
+    } else {
+      flag = rt_error;
+      err = std::move(x.error());
+    }
   }
 
   result(skip_t) : flag(rt_skip) {
@@ -100,19 +117,22 @@ public:
     // nop
   }
 
-  template <class E,
-            class = typename std::enable_if<
-                      std::is_same<
-                        decltype(make_error(std::declval<const E&>())),
-                        error
-                      >::value
-                    >::type>
+  template <class E, class = enable_if_has_make_error_t<E>>
   result(E x) : flag(rt_error), err(make_error(x)) {
     // nop
   }
 
   result(error x) : flag(rt_error), err(std::move(x)) {
     // nop
+  }
+
+  result(expected<void> x) {
+    if (x) {
+      flag = rt_value;
+    } else {
+      flag = rt_error;
+      err = std::move(x.error());
+    }
   }
 
   result(skip_t) : flag(rt_skip) {
