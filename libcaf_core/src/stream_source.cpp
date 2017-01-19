@@ -52,12 +52,12 @@ error stream_source::downstream_demand(strong_actor_ptr& hdl, size_t value) {
       if (current_size < size_hint)
         generate(size_hint - current_size);
       return trigger_send(hdl);
-    } else if(buf_size() > 0) {
-      // transmit cached elements before closing paths
-      return trigger_send(hdl);
-    } else if (out_ptr_->remove_path(hdl)) {
-      return none;
     }
+    // transmit cached elements before closing paths
+    if (buf_size() > 0)
+      return trigger_send(hdl);
+    if (out_ptr_->remove_path(hdl))
+      return none;
   }
   return sec::invalid_downstream;
 }

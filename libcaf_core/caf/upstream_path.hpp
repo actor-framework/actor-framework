@@ -51,7 +51,7 @@ public:
   /// Amount of credit we have signaled upstream.
   size_t assigned_credit;
 
-  upstream_path(strong_actor_ptr hdl, const stream_id& id, stream_priority p);
+  upstream_path(strong_actor_ptr ptr, stream_id  id, stream_priority p);
 };
 
 } // namespace caf

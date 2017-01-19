@@ -37,7 +37,7 @@ public:
   using result_type = std::pair<error, iterator>;
 
   stream_msg_visitor(scheduled_actor* self, stream_id& sid,
-                     iterator pos, iterator end);
+                     iterator i, iterator last);
 
   result_type operator()(stream_msg::open& x);
 

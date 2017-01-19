@@ -56,7 +56,7 @@ error stream_stage::downstream_demand(strong_actor_ptr& hdl, size_t value) {
     path->open_credit += value;
     if(out_ptr_->buf_size() > 0) {
       return trigger_send(hdl);
-    } else if (in_ptr_->closed()) {
+    } if (in_ptr_->closed()) {
       if (!out_ptr_->remove_path(hdl)) {
         return sec::invalid_downstream;
       }

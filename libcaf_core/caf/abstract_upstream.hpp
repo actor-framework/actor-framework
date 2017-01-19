@@ -51,7 +51,7 @@ public:
 
   /// @pre `self != nullptr`
   /// @pre `policy != nullptr`
-  abstract_upstream(local_actor* self, policy_ptr policy);
+  abstract_upstream(local_actor* selfptr, policy_ptr p);
 
   virtual ~abstract_upstream();
 

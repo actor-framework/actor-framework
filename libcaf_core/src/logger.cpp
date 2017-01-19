@@ -80,7 +80,7 @@ pthread_key_t s_key;
 pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 void logger_ptr_destructor(void* ptr) {
-  if (ptr) {
+  if (ptr != nullptr) {
     intrusive_ptr_release(reinterpret_cast<logger*>(ptr));
   }
 }
@@ -92,7 +92,7 @@ void make_logger_ptr() {
 void set_current_logger(logger* x) {
   pthread_once(&s_key_once, make_logger_ptr);
   logger_ptr_destructor(pthread_getspecific(s_key));
-  if (x)
+  if (x != nullptr)
     intrusive_ptr_add_ref(x);
   pthread_setspecific(s_key, x);
 }
