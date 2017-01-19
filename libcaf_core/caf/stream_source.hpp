@@ -35,7 +35,7 @@ class stream_source : public extend<stream_handler, stream_source>::
 public:
   stream_source(abstract_downstream* out_ptr);
 
-  ~stream_source();
+  ~stream_source() override;
 
   bool done() const final;
 

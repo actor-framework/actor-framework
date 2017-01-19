@@ -39,7 +39,7 @@ public:
   stream_sink(abstract_upstream* in_ptr, strong_actor_ptr&& orig_sender,
               std::vector<strong_actor_ptr>&& trailing_stages, message_id mid);
 
-  bool done() const;
+  bool done() const override;
 
   error upstream_batch(strong_actor_ptr& src, size_t xs_size,
                        message& xs) final;

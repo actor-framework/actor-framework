@@ -98,7 +98,7 @@ behavior filter(event_based_actor* self) {
         },
         // processing step
         [=](unit_t&, downstream<int>& out, int x) {
-          if (x & 0x01)
+          if ((x & 0x01) != 0)
             out.push(x);
         },
         // cleanup

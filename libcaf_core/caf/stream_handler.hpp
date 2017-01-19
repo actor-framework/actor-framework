@@ -32,7 +32,7 @@ namespace caf {
 /// Manages a single stream with any number of down- and upstream actors.
 class stream_handler : public ref_counted {
 public:
-  ~stream_handler();
+  ~stream_handler() override;
 
   // -- member types -----------------------------------------------------------
 

@@ -20,6 +20,7 @@
 #ifndef CAF_STREAM_MSG_HPP
 #define CAF_STREAM_MSG_HPP
 
+#include <utility>
 #include <vector>
 #include <cstdint>
 
@@ -145,8 +146,8 @@ struct stream_msg : tag::boxing_type {
   content_type content;
 
   template <class T>
-  stream_msg(const stream_id& id, T&& x)
-      : sid(id),
+  stream_msg(stream_id  id, T&& x)
+      : sid(std::move(id)),
         content(std::forward<T>(x)) {
     // nop
   }

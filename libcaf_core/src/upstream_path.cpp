@@ -17,14 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <utility>
+
 #include "caf/upstream_path.hpp"
 
 namespace caf {
 
-upstream_path::upstream_path(strong_actor_ptr ptr, const stream_id& id,
+upstream_path::upstream_path(strong_actor_ptr ptr, stream_id  id,
                              stream_priority p)
     : hdl(std::move(ptr)),
-      sid(id),
+      sid(std::move(id)),
       prio(p),
       last_acked_batch_id(0),
       last_batch_id(0),

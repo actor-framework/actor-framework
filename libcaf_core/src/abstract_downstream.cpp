@@ -17,6 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <utility>
+
 #include "caf/abstract_downstream.hpp"
 
 #include "caf/send.hpp"
@@ -28,7 +30,9 @@ namespace caf {
 abstract_downstream::abstract_downstream(local_actor* selfptr,
                                          const stream_id& sid,
                                          std::unique_ptr<downstream_policy> ptr)
-    : self_(selfptr), sid_(sid), policy_(std::move(ptr)) {
+    : self_(selfptr),
+      sid_(sid),
+      policy_(std::move(ptr)) {
   // nop
 }
 

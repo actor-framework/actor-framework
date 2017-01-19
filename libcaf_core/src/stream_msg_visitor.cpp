@@ -68,25 +68,23 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
                     "handler after receiving token:"
                     << CAF_ARG(x.token));
     return fail(sec::stream_init_failed);
-  } else {
-    auto& handler = i_->second;
-    // store upstream actor
-    auto initial_credit = handler->add_upstream(x.prev_stage, sid_, x.priority);
-    if (initial_credit) {
-      // check whether we are a stage in a longer pipeline and send more
-      // stream_open messages if required
-      auto ic = static_cast<int32_t>(*initial_credit);
-      std::vector<atom_value> filter;
-      unsafe_send_as(self_, predecessor,
-                     make_message(make<stream_msg::ack_open>(
-                       std::move(sid_), ic, std::move(filter), false)));
-      return {none, i_};
-    } else {
-      printf("error: %s\n", self_->system().render(initial_credit.error()).c_str());
-      self_->streams().erase(i_);
-      return fail(std::move(initial_credit.error()));
-    }
   }
+  auto& handler = i_->second;
+  // store upstream actor
+  auto initial_credit = handler->add_upstream(x.prev_stage, sid_, x.priority);
+  if (initial_credit) {
+    // check whether we are a stage in a longer pipeline and send more
+    // stream_open messages if required
+    auto ic = static_cast<int32_t>(*initial_credit);
+    std::vector<atom_value> filter;
+    unsafe_send_as(self_, predecessor,
+                   make_message(make<stream_msg::ack_open>(
+                     std::move(sid_), ic, std::move(filter), false)));
+    return {none, i_};
+  }
+  printf("error: %s\n", self_->system().render(initial_credit.error()).c_str());
+  self_->streams().erase(i_);
+  return fail(std::move(initial_credit.error()));
 }
 
 auto stream_msg_visitor::operator()(stream_msg::close&) -> result_type {

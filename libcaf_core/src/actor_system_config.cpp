@@ -71,7 +71,7 @@ public:
     }
     if (out)
         *out << "error in line " << ln
-             << ": unrecognized parameter name \"" << name << "\""
+             << R"(: unrecognized parameter name ")" << name << R"(")"
              << std::endl;
   }
 
@@ -268,7 +268,7 @@ actor_system_config& actor_system_config::parse(message& args,
         i->second(ln, cv, none);
       else
         std::cerr << "error in line " << ln
-                  << ": unrecognized parameter name \"" << nm << "\""
+                  << R"(: unrecognized parameter name ")" << nm << R"(")"
                   << std::endl;
     };
     actor_system_config_reader consumer{options_, custom_options_, nac_sink};
