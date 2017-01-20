@@ -82,7 +82,6 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
                      std::move(sid_), ic, std::move(filter), false)));
     return {none, i_};
   }
-  printf("error: %s\n", self_->system().render(initial_credit.error()).c_str());
   self_->streams().erase(i_);
   return fail(std::move(initial_credit.error()));
 }

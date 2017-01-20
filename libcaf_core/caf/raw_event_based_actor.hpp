@@ -17,33 +17,35 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_PRIORITY_HPP
-#define CAF_STREAM_PRIORITY_HPP
+#ifndef CAF_RAW_EVENT_BASED_ACTOR_HPP
+#define CAF_RAW_EVENT_BASED_ACTOR_HPP
 
-#include <string>
+#include "caf/event_based_actor.hpp"
 
 namespace caf {
 
-/// Categorizes individual streams.
-enum class stream_priority {
-  /// Denotes soft-realtime traffic.
-  very_high,
-  /// Denotes time-sensitive traffic.
-  high,
-  /// Denotes traffic with moderate timing requirements.
-  normal,
-  /// Denotes uncritical traffic without timing requirements.
-  low,
-  /// Denotes best-effort traffic.
-  very_low
+/// A cooperatively raw scheduled actor is a dynamically typed actor that does
+/// not handle any system messages. All handler for system messages as well as
+/// the default handler are ignored. This actor type is for testing and
+/// system-level actors.
+/// @extends event_based_actor
+class raw_event_based_actor : public event_based_actor {
+public:
+  // -- member types -----------------------------------------------------------
+
+  /// Required by `spawn` for type deduction.
+  using signatures = none_t;
+
+  /// Required by `spawn` for type deduction.
+  using behavior_type = behavior;
+
+  // -- constructors and destructors -------------------------------------------
+
+  explicit raw_event_based_actor(actor_config& cfg);
+
+  invoke_message_result consume(mailbox_element& x) override;
 };
-
-/// Stores the number of `stream_priority` classes.
-static constexpr size_t stream_priorities = 5;
-
-/// @relates stream_priority
-std::string to_string(stream_priority x);
 
 } // namespace caf
 
-#endif // CAF_STREAM_PRIORITY_HPP
+#endif // CAF_RAW_EVENT_BASED_ACTOR_HPP

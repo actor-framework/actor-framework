@@ -64,6 +64,7 @@ const char* sec_strings[] = {
   "invalid_downstream",
   "no_downstream_stages_defined",
   "stream_init_failed",
+  "invalid_stream_state",
   "bad_function_call"
 };
 

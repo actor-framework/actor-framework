@@ -40,8 +40,19 @@ namespace caf {
 /// Stream communication messages for handshaking, ACKing, data transmission,
 /// etc.
 struct stream_msg : tag::boxing_type {
+  /// A flow label characterizes nested types.
+  enum flow_label {
+    /// Identifies content types that only flow downstream.
+    flows_downstream,
+    /// Identifies content types that only flow upstream.
+    flows_upstream,
+    /// Identifies content types that propagate errors in both directions.
+    flows_both_ways
+  };
   /// Initiates a stream handshake.
   struct open {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// A type-erased stream<T> object for picking the correct message
@@ -61,6 +72,8 @@ struct stream_msg : tag::boxing_type {
   /// Acknowledges a previous `open` message and finalizes a stream handshake.
   /// Also signalizes initial demand.
   struct ack_open {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Grants credit to the source.
@@ -74,6 +87,8 @@ struct stream_msg : tag::boxing_type {
 
   /// Transmits stream data.
   struct batch {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Size of the type-erased vector<T> (used credit).
@@ -87,6 +102,8 @@ struct stream_msg : tag::boxing_type {
   /// Cumulatively acknowledges received batches and signalizes new demand from
   /// a sink to its source.
   struct ack_batch {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Newly available credit.
@@ -97,12 +114,16 @@ struct stream_msg : tag::boxing_type {
 
   /// Closes a stream after receiving an ACK for the last batch.
   struct close {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
   };
 
   /// Propagates fatal errors.
   struct abort {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_both_ways;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Reason for shutting down the stream.
@@ -113,6 +134,8 @@ struct stream_msg : tag::boxing_type {
   /// awaits a `resume` message afterwards if the downstream path was
   /// redeployable. Otherwise, this results in a fatal error.
   struct downstream_failed {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Exit reason of the failing downstream path.
@@ -123,6 +146,8 @@ struct stream_msg : tag::boxing_type {
   /// awaits a `resume` message afterwards if the upstream path was
   /// redeployable. Otherwise, this results in a fatal error.
   struct upstream_failed {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Exit reason of the failing upstream path.
@@ -165,6 +190,12 @@ const T& get(const stream_msg& x) {
   return get<T>(x.content);
 }
 
+/// Allows the testing DSL to check whether `stream_msg` holds a `T`.
+template <class T>
+bool is(const stream_msg& x) {
+  return holds_alternative<T>(x.content);
+}
+
 template <class T, class... Ts>
 typename std::enable_if<
   detail::tl_contains<
@@ -185,7 +216,8 @@ typename Inspector::result_type inspect(Inspector& f, stream_msg::open& x) {
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, stream_msg::ack_open& x) {
-  return f(meta::type_name("ok"), x.initial_demand, x.filter, x.redeployable);
+  return f(meta::type_name("ack_open"), x.initial_demand, x.filter,
+           x.redeployable);
 }
 
 template <class Inspector>
@@ -196,7 +228,7 @@ typename Inspector::result_type inspect(Inspector& f, stream_msg::batch& x) {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
                                         stream_msg::ack_batch& x) {
-  return f(meta::type_name("demand"), x.new_capacity, x.acknowledged_id);
+  return f(meta::type_name("ack_batch"), x.new_capacity, x.acknowledged_id);
 }
 
 template <class Inspector>

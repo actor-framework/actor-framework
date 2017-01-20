@@ -25,6 +25,7 @@
 #include "caf/to_string.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/raw_event_based_actor.hpp"
 
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"
@@ -145,6 +146,12 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
   };
 }
 
+// -- spawn server -------------------------------------------------------------
+
+// A spawn server allows users to spawn actors dynamically with a name and a
+// message containing the data for initialization. By accessing the spawn server
+// on another node, users can spwan actors remotely.
+
 struct spawn_serv_state {
   static const char* name;
 };
@@ -163,6 +170,20 @@ behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
     }
   };
 }
+
+// -- stream server ------------------------------------------------------------
+
+// The stream server acts as a man-in-the-middle for all streams that cross the
+// network. It manages any number of unrelated streams by placing itself and the
+// stream server on the next remote node into the pipeline.
+
+// Outgoing messages are buffered in FIFO order to ensure fairness. However, the
+// stream server uses five different FIFO queues: on for each priority level.
+// A high priority grants more network bandwidth.
+
+// Note that stream servers do not actively take part in the streams they
+// process. Batch messages and ACKs are treated equally. Open, close, and error
+// messages are evaluated to add and remove state as needed.
 
 class dropping_execution_unit : public execution_unit {
 public:
@@ -262,12 +283,12 @@ actor_system::actor_system(actor_system_config& cfg)
   groups_.init(cfg);
   // spawn config and spawn servers (lazily to not access the scheduler yet)
   static constexpr auto Flags = hidden + lazy_init;
-  spawn_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl));
-  config_serv_ = actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl));
+  spawn_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl)));
+  config_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl)));
   // fire up remaining modules
   registry_.start();
-  registry_.put(atom("SpawnServ"), spawn_serv_);
-  registry_.put(atom("ConfigServ"), config_serv_);
+  registry_.put(atom("SpawnServ"), spawn_serv());
+  registry_.put(atom("ConfigServ"), config_serv());
   for (auto& mod : modules_)
     if (mod)
       mod->start();
@@ -279,14 +300,14 @@ actor_system::~actor_system() {
   CAF_LOG_DEBUG("shutdown actor system");
   if (await_actors_before_shutdown_)
     await_all_actors_done();
-  // shutdown system-level servers
-  anon_send_exit(spawn_serv_, exit_reason::user_shutdown);
-  anon_send_exit(config_serv_, exit_reason::user_shutdown);
-  // release memory as soon as possible
-  spawn_serv_ = nullptr;
-  config_serv_ = nullptr;
+  // shutdown internal actors
+  for (auto& x : internal_actors_) {
+    anon_send_exit(x, exit_reason::user_shutdown);
+    x = nullptr;
+  }
   registry_.erase(atom("SpawnServ"));
   registry_.erase(atom("ConfigServ"));
+  registry_.erase(atom("StreamServ"));
   // group module is the first one, relies on MM
   groups_.stop();
   // stop modules in reverse order
@@ -421,6 +442,11 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   if (check_interface && !assignable(res.second, *expected_ifs))
     return sec::unexpected_actor_messaging_interface;
   return std::move(res.first);
+}
+
+void actor_system::stream_serv(strong_actor_ptr x) {
+  internal_actors_[internal_actor_id(atom("StreamServ"))] = std::move(x);
+  registry_.put(atom("StreamServ"), stream_serv());
 }
 
 } // namespace caf

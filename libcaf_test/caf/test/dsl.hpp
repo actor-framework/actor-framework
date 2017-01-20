@@ -50,6 +50,10 @@ struct has_outer_type {
 template <class T, class U>
 T get(const U&);
 
+// enables ADL in `with_content`
+template <class T, class U>
+bool is(const U&);
+
 struct wildcard { };
 
 constexpr wildcard _ = wildcard{};
@@ -223,7 +227,7 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
-    auto tmp = std::make_tuple(std::forward<Ts>(xs)...);
+    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
     auto ys = this->template peek<Ts...>();
     CAF_CHECK(inspector(get<0>(ys)));
@@ -262,7 +266,9 @@ private:
   void with_content(std::integral_constant<bool, true>, const U& x) {
     elementwise_compare_inspector<U> inspector{x};
     auto xs = this->template peek<typename T::outer_type>();
-    CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(get<0>(xs)))));
+    auto& x0 = get<0>(xs);
+    CAF_REQUIRE(is<T>(x0));
+    CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(x0))));
   }
 
 };
@@ -343,4 +349,8 @@ struct test_coordinator_fixture {
 #define expect(types, fields)                                                  \
   CAF_MESSAGE("expect" << #types << "." << #fields);                           \
   expect< CAF_EXPAND(CAF_DSL_LIST types) >().fields
+
+#define expect_on(where, types, fields)                                        \
+  CAF_MESSAGE(#where << ": expect" << #types << "." << #fields);               \
+  where . expect< CAF_EXPAND(CAF_DSL_LIST types) >().fields
 

@@ -17,33 +17,61 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_PRIORITY_HPP
-#define CAF_STREAM_PRIORITY_HPP
+#ifndef CAF_DETAIL_STREAM_SERV_DOWNSTREAM_HPP
+#define CAF_DETAIL_STREAM_SERV_DOWNSTREAM_HPP
 
-#include <string>
+#include <deque>
+#include <cstdint>
+#include <algorithm>
+#include <unordered_map>
+
+#include "caf/actor.hpp"
+#include "caf/error.hpp"
+#include "caf/stream_msg.hpp"
+#include "caf/local_actor.hpp"
+
+#include "caf/detail/stream_multiplexer.hpp"
 
 namespace caf {
+namespace detail {
 
-/// Categorizes individual streams.
-enum class stream_priority {
-  /// Denotes soft-realtime traffic.
-  very_high,
-  /// Denotes time-sensitive traffic.
-  high,
-  /// Denotes traffic with moderate timing requirements.
-  normal,
-  /// Denotes uncritical traffic without timing requirements.
-  low,
-  /// Denotes best-effort traffic.
-  very_low
+// Forwards messages from local actors to a remote stream_serv.
+class outgoing_stream_multiplexer : public stream_multiplexer {
+public:
+  /// Allow `variant` to recognize this type as a visitor.
+  using result_type = void;
+
+  outgoing_stream_multiplexer(local_actor* self, backend& service);
+
+  void operator()(stream_msg& x);
+
+  void operator()(stream_msg::open&);
+
+  void operator()(stream_msg::ack_open&);
+
+  void operator()(stream_msg::batch&);
+
+  void operator()(stream_msg::ack_batch&);
+
+  void operator()(stream_msg::close&);
+
+  void operator()(stream_msg::abort&);
+
+  void operator()(stream_msg::downstream_failed&);
+
+  void operator()(stream_msg::upstream_failed&);
+
+private:
+  // Forwards the current stream_msg upstream. 
+  // @pre `current_stream_msg != nullptr`
+  void forward_to_upstream();
+
+  // Forwards the current stream_msg downstream. 
+  // @pre `current_stream_msg != nullptr`
+  void forward_to_downstream();
 };
 
-/// Stores the number of `stream_priority` classes.
-static constexpr size_t stream_priorities = 5;
-
-/// @relates stream_priority
-std::string to_string(stream_priority x);
-
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_STREAM_PRIORITY_HPP
+#endif // CAF_DETAIL_STREAM_SERV_DOWNSTREAM_HPP

@@ -392,6 +392,8 @@ scheduled_actor::categorize(mailbox_element& x) {
       } else if (i != e) {
         if (i->second->done()) {
           streams_.erase(i);
+          if (streams_.empty() && !has_behavior())
+            quit(exit_reason::normal);
         }
       }
       return message_category::internal;

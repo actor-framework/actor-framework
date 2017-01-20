@@ -20,7 +20,7 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE io_typed_remote_actor
-#include "caf/test/unit_test.hpp"
+#include "caf/test/dsl.hpp"
 
 #include <thread>
 #include <string>
@@ -116,3 +116,4 @@ CAF_TEST(test_typed_remote_actor) {
   auto argv = test::engine::argv();
   run_server(argc, argv);
 }
+

@@ -36,7 +36,7 @@ public:
   ~test_multiplexer() override;
 
   expected<connection_handle> new_tcp_scribe(const std::string& host,
-                                   uint16_t port_hint) override;
+                                             uint16_t port_hint) override;
 
   expected<void> assign_tcp_scribe(abstract_broker* ptr,
                                    connection_handle hdl) override;
@@ -69,6 +69,8 @@ public:
 
   /// A buffer storing bytes.
   using buffer_type = std::vector<char>;
+
+  using shared_buffer_type = std::shared_ptr<buffer_type>;
 
   /// Models pending data on the network, i.e., the network
   /// input buffer usually managed by the operating system.
@@ -109,6 +111,13 @@ public:
   /// Stores `hdl` as a pending connection for `src`.
   void add_pending_connect(accept_handle src, connection_handle hdl);
 
+  /// Add `hdl` as a pending connect to `src` and provide a scribe on `peer`
+  /// that connects the buffers of `hdl` and `peer_hdl`. Calls
+  /// `add_pending_connect(...)` and `peer.provide_scribe(...)`.
+  void prepare_connection(accept_handle src, connection_handle hdl,
+                          test_multiplexer& peer, std::string host,
+                          uint16_t port, connection_handle peer_hdl);
+
   using pending_connects_map = std::unordered_multimap<accept_handle,
                                                        connection_handle>;
 
@@ -122,9 +131,12 @@ public:
   /// Accepts a pending connect on `hdl`.
   bool accept_connection(accept_handle hdl);
 
+  /// Poll data on all scribes.
+  bool read_data();
+
   /// Reads data from the external input buffer until
   /// the configured read policy no longer allows receiving.
-  void read_data(connection_handle hdl);
+  bool read_data(connection_handle hdl);
 
   /// Appends `buf` to the virtual network buffer of `hdl`
   /// and calls `read_data(hdl)` afterwards.
@@ -150,14 +162,25 @@ private:
   using guard_type = std::unique_lock<std::mutex>;
 
   struct scribe_data {
-    buffer_type xbuf;
+    shared_buffer_type vn_buf_ptr;
+    shared_buffer_type wr_buf_ptr;
+    buffer_type& vn_buf;
     buffer_type rd_buf;
-    buffer_type wr_buf;
+    buffer_type& wr_buf;
     receive_policy::config recv_conf;
-    bool stopped_reading = false;
-    bool passive_mode = false;
+    bool stopped_reading;
+    bool passive_mode;
     intrusive_ptr<scribe> ptr;
-    bool ack_writes = false;
+    bool ack_writes;
+
+    // Creates a mock-only scribe.
+    scribe_data();
+
+    // Creates an entangled scribe where the input of this scribe is
+    // output of another scribe and vice versa.
+    scribe_data(shared_buffer_type input, shared_buffer_type output);
+
+    scribe_data(const scribe_data&);
   };
 
   struct doorman_data {

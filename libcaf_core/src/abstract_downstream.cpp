@@ -42,7 +42,6 @@ abstract_downstream::~abstract_downstream() {
 
 size_t abstract_downstream::total_credit() const {
   auto f = [](size_t x, path_cref y) {
-    // printf("f(%d, %d)\n", (int) x, (int) y.open_credit);
     return x + y.open_credit;
   };
   return fold_paths(0, f);
