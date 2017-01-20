@@ -106,6 +106,8 @@ enum class sec : uint8_t {
   no_downstream_stages_defined,
   /// Actor failed to initialize state after receiving a stream handshake.
   stream_init_failed,
+  /// Unable to process a stream since due to missing state.
+  invalid_stream_state,
   /// A function view was called without assigning an actor first.
   bad_function_call
 };

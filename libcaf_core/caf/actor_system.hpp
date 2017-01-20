@@ -20,6 +20,7 @@
 #ifndef CAF_ACTOR_SYSTEM_HPP
 #define CAF_ACTOR_SYSTEM_HPP
 
+#include <array>
 #include <mutex>
 #include <atomic>
 #include <string>
@@ -126,6 +127,32 @@ public:
   friend class logger;
   friend class io::middleman;
   friend class abstract_actor;
+
+  /// The number of actors implictly spawned by the actor system on startup.
+  static constexpr size_t num_internal_actors = 3;
+
+  /// Returns the ID of an internal actor by its name.
+  /// @pre x in {'SpawnServ', 'ConfigServ', 'StreamServ'}
+  static constexpr size_t internal_actor_id(atom_value x) {
+    return x == atom("SpawnServ") ? 0 : (x == atom("ConfigServ") ? 1 : 2);
+  }
+
+  /// Returns the internal actor for dynamic spawn operations.
+  inline const strong_actor_ptr& spawn_serv() const {
+    return internal_actors_[internal_actor_id(atom("SpawnServ"))];
+  }
+
+  /// Returns the internal actor for storing the runtime configuration
+  /// for this actor system.
+  inline const strong_actor_ptr& config_serv() const {
+    return internal_actors_[internal_actor_id(atom("ConfigServ"))];
+  }
+
+  /// Returns the internal actor for managing streams that
+  /// cross network boundaries.
+  inline const strong_actor_ptr& stream_serv() const {
+    return internal_actors_[internal_actor_id(atom("StreamServ"))];
+  }
 
   actor_system() = delete;
   actor_system(const actor_system&) = delete;
@@ -510,6 +537,20 @@ private:
     return res;
   }
 
+  /// Sets the internal actor for dynamic spawn operations.
+  inline void spawn_serv(strong_actor_ptr x) {
+    internal_actors_[internal_actor_id(atom("SpawnServ"))] = std::move(x);
+  }
+
+  /// Sets the internal actor for storing the runtime configuration.
+  inline void config_serv(strong_actor_ptr x) {
+    internal_actors_[internal_actor_id(atom("ConfigServ"))] = std::move(x);
+  }
+
+  /// Sets the internal actor for managing streams that
+  /// cross network boundaries. Called in middleman::start.
+  void stream_serv(strong_actor_ptr x);
+
   std::atomic<size_t> ids_;
   uniform_type_info_map types_;
   node_id node_;
@@ -521,8 +562,8 @@ private:
   scoped_execution_unit dummy_execution_unit_;
   opencl::manager* opencl_manager_;
   bool await_actors_before_shutdown_;
-  strong_actor_ptr config_serv_;
-  strong_actor_ptr spawn_serv_;
+  // Stores SpawnServ, ConfigServ, and StreamServ
+  std::array<strong_actor_ptr, num_internal_actors> internal_actors_;
   std::atomic<size_t> detached;
   mutable std::mutex detached_mtx;
   mutable std::condition_variable detached_cv;

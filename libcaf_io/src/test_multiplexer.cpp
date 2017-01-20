@@ -28,6 +28,29 @@ namespace caf {
 namespace io {
 namespace network {
 
+test_multiplexer::scribe_data::scribe_data()
+    : scribe_data(std::make_shared<buffer_type>(),
+                  std::make_shared<buffer_type>()) {
+  // nop
+}
+
+test_multiplexer::scribe_data::scribe_data(shared_buffer_type input,
+                                           shared_buffer_type output)
+    : vn_buf_ptr(std::move(input)),
+      wr_buf_ptr(std::move(output)),
+      vn_buf(*vn_buf_ptr),
+      wr_buf(*wr_buf_ptr),
+      stopped_reading(false),
+      passive_mode(false),
+      ack_writes(false) {
+  // nop
+}
+
+test_multiplexer::scribe_data::scribe_data(const scribe_data& other)
+    : scribe_data(other.vn_buf_ptr, other.wr_buf_ptr) {
+  // nop
+}
+
 test_multiplexer::test_multiplexer(actor_system* sys) : multiplexer(sys) {
   CAF_ASSERT(sys != nullptr);
 }
@@ -40,6 +63,7 @@ test_multiplexer::~test_multiplexer() {
 
 expected<connection_handle>
 test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
+CAF_LOG_DEBUG("new tcp scribe " << CAF_ARG(host) << CAF_ARG(port_hint)); // DELME
   guard_type guard{mx_};
   connection_handle result;
   auto i = scribes_.find(std::make_pair(host, port_hint));
@@ -52,6 +76,8 @@ test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
 
 expected<void> test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
                                                    connection_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+CAF_LOG_DEBUG("assign tcp scribe " << CAF_ARG(hdl)); // DELME
   class impl : public scribe {
   public:
     impl(abstract_broker* self, connection_handle ch, test_multiplexer* mpx)
@@ -121,6 +147,7 @@ connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
 expected<connection_handle>
 test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
                                  uint16_t desired_port) {
+  CAF_LOG_DEBUG("add tcp scribe " << CAF_ARG(host) << CAF_ARG(desired_port)); // DELME
   auto hdl = new_tcp_scribe(host, desired_port);
   if (!hdl)
     return std::move(hdl.error());
@@ -223,6 +250,8 @@ void test_multiplexer::run() {
 
 void test_multiplexer::provide_scribe(std::string host, uint16_t desired_port,
                                       connection_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(desired_port) << CAF_ARG(hdl));
+CAF_LOG_DEBUG(CAF_ARG(host) << CAF_ARG(desired_port) << CAF_ARG(hdl)); // DELME
   guard_type guard{mx_};
   scribes_.emplace(std::make_pair(std::move(host), desired_port), hdl);
 }
@@ -237,7 +266,7 @@ void test_multiplexer::provide_acceptor(uint16_t desired_port,
 /// the test program.
 test_multiplexer::buffer_type&
 test_multiplexer::virtual_network_buffer(connection_handle hdl) {
-  return scribe_data_[hdl].xbuf;
+  return scribe_data_[hdl].vn_buf;
 }
 
 test_multiplexer::buffer_type&
@@ -291,6 +320,29 @@ void test_multiplexer::add_pending_connect(accept_handle src,
   pending_connects_.emplace(src, hdl);
 }
 
+void test_multiplexer::prepare_connection(accept_handle src,
+                                          connection_handle hdl,
+                                          test_multiplexer& peer,
+                                          std::string host, uint16_t port,
+                                          connection_handle peer_hdl) {
+  CAF_ASSERT(this != &peer);
+  CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(hdl) << CAF_ARG(host) << CAF_ARG(port)
+                << CAF_ARG(peer_hdl));
+  auto input = std::make_shared<buffer_type>();
+  auto output = std::make_shared<buffer_type>();
+  CAF_LOG_DEBUG("insert scribe data for" << CAF_ARG(hdl));
+  auto res1 = scribe_data_.emplace(hdl, scribe_data{input, output});
+  if (!res1.second)
+    throw std::runtime_error("prepare_connection: handle already in use");
+  CAF_LOG_DEBUG("insert scribe data on peer for" << CAF_ARG(peer_hdl));
+  auto res2 = peer.scribe_data_.emplace(peer_hdl, scribe_data{output, input});
+  if (!res2.second)
+    throw std::runtime_error("prepare_connection: peer handle already in use");
+  provide_acceptor(port, src);
+  add_pending_connect(src, hdl);
+  peer.provide_scribe(std::move(host), port, peer_hdl);
+}
+
 test_multiplexer::pending_connects_map& test_multiplexer::pending_connects() {
   return pending_connects_;
 }
@@ -301,55 +353,92 @@ bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
 }
 
 bool test_multiplexer::accept_connection(accept_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   if (passive_mode(hdl))
     return false;
   auto& dd = doorman_data_[hdl];
   if (!dd.ptr)
     return false;
+  // assign scribes to all pending connects if needed
+  auto rng = pending_connects_.equal_range(hdl);
+  for (auto i = rng.first; i != rng.second; ++i)
+    if (impl_ptr(i->second) == nullptr)
+      assign_tcp_scribe(dd.ptr->parent(), i->second);
   if (!dd.ptr->new_connection())
     passive_mode(hdl) = true;
   return true;
 }
 
-void test_multiplexer::read_data(connection_handle hdl) {
+bool test_multiplexer::read_data() {
+  CAF_LOG_TRACE("");
+  // scribe_data might change while we traverse it
+  std::vector<connection_handle> xs;
+  xs.reserve(scribe_data_.size());
+  for (auto& kvp : scribe_data_)
+    xs.emplace_back(kvp.first);
+  long hits = 0;
+  for (auto x : xs)
+    if (scribe_data_.count(x) > 0)
+      if (read_data(x))
+        ++hits;
+  return hits > 0;
+}
+
+bool test_multiplexer::read_data(connection_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   if (passive_mode(hdl))
-    return;
+    return false;
   flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
-  while (!sd.ptr)
-    exec_runnable();
-  switch (sd.recv_conf.first) {
-    case receive_policy_flag::exactly:
-      while (sd.xbuf.size() >= sd.recv_conf.second) {
-        sd.rd_buf.clear();
-        auto first = sd.xbuf.begin();
-        auto last = first + static_cast<ptrdiff_t>(sd.recv_conf.second);
-        sd.rd_buf.insert(sd.rd_buf.end(), first, last);
-        sd.xbuf.erase(first, last);
-        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
-          passive_mode(hdl) = true;
-      }
-      break;
-    case receive_policy_flag::at_least:
-      if (sd.xbuf.size() >= sd.recv_conf.second) {
-        sd.rd_buf.clear();
-        sd.rd_buf.swap(sd.xbuf);
-        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
-          passive_mode(hdl) = true;
-      }
-      break;
-    case receive_policy_flag::at_most:
-      auto max_bytes = static_cast<ptrdiff_t>(sd.recv_conf.second);
-      while (!sd.xbuf.empty()) {
-        sd.rd_buf.clear();
-        auto xbuf_size = static_cast<ptrdiff_t>(sd.xbuf.size());
-        auto first = sd.xbuf.begin();
-        auto last = (max_bytes < xbuf_size) ? first + max_bytes : sd.xbuf.end();
-        sd.rd_buf.insert(sd.rd_buf.end(), first, last);
-        sd.xbuf.erase(first, last);
-        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
-          passive_mode(hdl) = true;
-      }
+  if (!sd.ptr) {
+    CAF_LOG_DEBUG("No scribe available yet on" << CAF_ARG(hdl));
+    return false;
+  }
+  // count how many data packets we could dispatch
+  long hits = 0;
+  for (;;) {
+    switch (sd.recv_conf.first) {
+      case receive_policy_flag::exactly:
+        if (sd.vn_buf.size() >= sd.recv_conf.second) {
+          ++hits;
+          sd.rd_buf.clear();
+          auto first = sd.vn_buf.begin();
+          auto last = first + static_cast<ptrdiff_t>(sd.recv_conf.second);
+          sd.rd_buf.insert(sd.rd_buf.end(), first, last);
+          sd.vn_buf.erase(first, last);
+          if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+            passive_mode(hdl) = true;
+        } else {
+          return hits > 0;
+        }
+        break;
+      case receive_policy_flag::at_least:
+        if (sd.vn_buf.size() >= sd.recv_conf.second) {
+          ++hits;
+          sd.rd_buf.clear();
+          sd.rd_buf.swap(sd.vn_buf);
+          if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+            passive_mode(hdl) = true;
+        } else {
+          return hits > 0;
+        }
+        break;
+      case receive_policy_flag::at_most:
+        auto max_bytes = static_cast<ptrdiff_t>(sd.recv_conf.second);
+        if (!sd.vn_buf.empty()) {
+          ++hits;
+          sd.rd_buf.clear();
+          auto xbuf_size = static_cast<ptrdiff_t>(sd.vn_buf.size());
+          auto first = sd.vn_buf.begin();
+          auto last = (max_bytes < xbuf_size) ? first + max_bytes : sd.vn_buf.end();
+          sd.rd_buf.insert(sd.rd_buf.end(), first, last);
+          sd.vn_buf.erase(first, last);
+          if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+            passive_mode(hdl) = true;
+        } else {
+          return hits > 0;
+        }
+    }
   }
 }
 

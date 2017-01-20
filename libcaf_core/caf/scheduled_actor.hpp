@@ -29,6 +29,7 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/sec.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
@@ -39,6 +40,8 @@
 #include "caf/stream_stage_impl.hpp"
 #include "caf/stream_source_impl.hpp"
 #include "caf/stream_result_trait.hpp"
+
+#include "caf/to_string.hpp"
 
 #include "caf/policy/greedy.hpp"
 #include "caf/policy/anycast.hpp"
@@ -476,7 +479,7 @@ public:
   message_category categorize(mailbox_element& x);
 
   /// Tries to consume `x`.
-  invoke_message_result consume(mailbox_element& x);
+  virtual invoke_message_result consume(mailbox_element& x);
 
   /// Tries to consume `x`.
   void consume(mailbox_element_ptr x);
@@ -503,7 +506,8 @@ public:
   inline bool has_behavior() const {
     return !bhvr_stack_.empty()
            || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty();
+           || !multiplexed_responses_.empty()
+           || !streams_.empty();
   }
 
   inline behavior& current_behavior() {

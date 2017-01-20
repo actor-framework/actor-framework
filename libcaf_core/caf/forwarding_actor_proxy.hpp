@@ -32,11 +32,11 @@ class forwarding_actor_proxy : public actor_proxy {
 public:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
-  forwarding_actor_proxy(actor_config& cfg, actor mgr);
+  forwarding_actor_proxy(actor_config& cfg, actor dest, actor stream_serv1);
 
   ~forwarding_actor_proxy() override;
 
-  void enqueue(mailbox_element_ptr what, execution_unit* host) override;
+  void enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
   bool link_impl(linking_operation op, abstract_actor* other) override;
 
@@ -46,16 +46,13 @@ public:
 
   void kill_proxy(execution_unit* ctx, error rsn) override;
 
-  actor manager() const;
-
-  void manager(actor new_manager);
-
 private:
   void forward_msg(strong_actor_ptr sender, message_id mid, message msg,
                    const forwarding_stack* fwd = nullptr);
 
-  mutable detail::shared_spinlock manager_mtx_;
-  actor manager_;
+  mutable detail::shared_spinlock mtx_;
+  actor broker_;
+  actor stream_serv_;
 };
 
 } // namespace caf
