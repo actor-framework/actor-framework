@@ -31,8 +31,7 @@ std::vector<iface_info> get_mac_addresses() {
   mib[3] = AF_LINK;
   mib[4] = NET_RT_IFLIST;
   auto indices = if_nameindex();
-  std::unique_ptr<char> buf;
-  size_t buf_size = 0;
+  std::vector<char> buf;
   for (auto i = indices; !(i->if_index == 0 && i->if_name == nullptr); ++i) {
     mib[5] = static_cast<int>(i->if_index);
     size_t len;
@@ -40,15 +39,14 @@ std::vector<iface_info> get_mac_addresses() {
       perror("sysctl 1 error");
       exit(3);
     }
-    if (buf_size < len) {
-      buf.reset(new char[len]);
-      buf_size = len;
-    }
-    if (sysctl(mib, 6, buf.get(), &len, nullptr, 0) < 0) {
+    if (buf.size() < len)
+      buf.resize(len);
+    CAF_ASSERT(len > 0);
+    if (sysctl(mib, 6, buf.data(), &len, nullptr, 0) < 0) {
       perror("sysctl 2 error");
       exit(5);
     }
-    auto ifm = reinterpret_cast<if_msghdr*>(buf.get());
+    auto ifm = reinterpret_cast<if_msghdr*>(buf.data());
     auto sdl = reinterpret_cast<sockaddr_dl*>(ifm + 1);
     auto ptr = reinterpret_cast<unsigned char*>(LLADDR(sdl));
     auto uctoi = [](unsigned char c) -> unsigned {
