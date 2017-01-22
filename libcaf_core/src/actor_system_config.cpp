@@ -353,7 +353,7 @@ actor_system_config::add_actor_factory(std::string name, actor_factory fun) {
 
 actor_system_config&
 actor_system_config::add_error_category(atom_value x, error_renderer y) {
-  error_renderers.emplace(x, y);
+  error_renderers[x] = y;
   return *this;
 }
 
