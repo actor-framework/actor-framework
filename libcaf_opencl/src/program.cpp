@@ -32,12 +32,17 @@ using namespace std;
 namespace caf {
 namespace opencl {
 
-program::program(context_ptr context, command_queue_ptr queue, program_ptr prog,
-                 map<string, kernel_ptr> available_kernels)
+program::program(cl_context_ptr context, cl_command_queue_ptr queue,
+                 cl_program_ptr prog,
+                 map<string, cl_kernel_ptr> available_kernels)
     : context_(move(context)),
       program_(move(prog)),
       queue_(move(queue)),
       available_kernels_(move(available_kernels)) {
+  // nop
+}
+
+program::~program() {
   // nop
 }
 

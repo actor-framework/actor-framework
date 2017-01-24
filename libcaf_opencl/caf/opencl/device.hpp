@@ -22,23 +22,100 @@
 
 #include <vector>
 
+#include "caf/sec.hpp"
+
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/smart_ptr.hpp"
+#include "caf/opencl/opencl_err.hpp"
 
 namespace caf {
 namespace opencl {
 
 class program;
 class manager;
+template <class T> class mem_ref;
 
-class device {
+class device;
+using device_ptr = intrusive_ptr<device>;
+
+class device : public ref_counted {
 public:
   friend class program;
   friend class manager;
+  template <class T> friend class mem_ref;
+  template <class T, class... Ts>
+  friend intrusive_ptr<T> caf::make_counted(Ts&&...);
 
-  /// Intialize a new device in a context using a sepcific device_id
-  static device create(const context_ptr& context, const device_ptr& device_id,
-                       unsigned id);
+  ~device();
+
+  /// Create an argument for an OpenCL kernel with data placed in global memory.
+  template <class T>
+  mem_ref<T> global_argument(const std::vector<T>& data,
+                             cl_mem_flags flags = buffer_type::input_output,
+                             optional<size_t> size = none,
+                             cl_bool blocking = CL_FALSE) {
+    size_t num_elements = size ? *size : data.size();
+    size_t buffer_size = sizeof(T) * num_elements;
+    auto buffer = v2get(CAF_CLF(clCreateBuffer), context_.get(), flags,
+                        buffer_size, nullptr);
+    cl_event_ptr event{v1get<cl_event>(CAF_CLF(clEnqueueWriteBuffer),
+                                       queue_.get(), buffer, blocking,
+                                       cl_uint{0}, buffer_size, data.data()),
+                       false};
+    return mem_ref<T>{num_elements, queue_, std::move(buffer), flags,
+                      std::move(event)};
+  }
+
+  /// Create an argument for an OpenCL kernel in global memory without data.
+  template <class T>
+  mem_ref<T> scratch_argument(size_t size,
+                              cl_mem_flags flags = buffer_type::scratch_space) {
+    auto buffer = v2get(CAF_CLF(clCreateBuffer), context_.get(), flags,
+                        sizeof(T) * size, nullptr);
+    return mem_ref<T>{size, queue_, std::move(buffer), flags, nullptr};
+  }
+
+  template <class T>
+  expected<mem_ref<T>> copy(mem_ref<T>& mem) {
+    if (!mem.get())
+      return make_error(sec::runtime_error, "No memory assigned.");
+    auto buffer_size = sizeof(T) * mem.size();
+    cl_event event;
+    auto buffer = v2get(CAF_CLF(clCreateBuffer), context_.get(), mem.access(),
+                        buffer_size, nullptr);
+    std::vector<cl_event> prev_events;
+    cl_event e = mem.take_event();
+    if (e)
+      prev_events.push_back(e);
+    auto err = clEnqueueCopyBuffer(queue_.get(), mem.get().get(), buffer,
+                                   0, 0, // no offset for now
+                                   buffer_size, prev_events.size(),
+                                   prev_events.data(), &event);
+    if (err != CL_SUCCESS)
+      return make_error(sec::runtime_error, get_opencl_error(err));
+    // callback to release the previous event 
+    if (e) {
+      err = clSetEventCallback(event, CL_COMPLETE,
+                               [](cl_event, cl_int, void* data) {
+                                 auto tmp = reinterpret_cast<cl_event>(data);
+                                 if (tmp)
+                                   clReleaseEvent(tmp);
+                               },
+                               e);
+      if (err != CL_SUCCESS)
+        return make_error(sec::runtime_error, get_opencl_error(err));
+    }
+    // decrements the previous event we used for waiting above
+    return mem_ref<T>(mem.size(), queue_, std::move(buffer),
+                      mem.access(), {event, false});
+  }
+
+  /// Initialize a new device in a context using a specific device_id
+  static device_ptr create(const cl_context_ptr& context,
+                           const cl_device_ptr& device_id,
+                           unsigned id);
+  /// Synchronizes all commands in its queue, waiting for them to finish.
+  void synchronize();
   /// Get the id assigned by caf
   inline unsigned get_id() const;
   /// Returns device info on CL_DEVICE_ADDRESS_BITS
@@ -93,21 +170,21 @@ public:
   inline const std::string& get_name() const;
 
 private:
-  device(device_ptr device_id, command_queue_ptr queue, context_ptr context,
-         unsigned id);
+  device(cl_device_ptr device_id, cl_command_queue_ptr queue,
+         cl_context_ptr context, unsigned id);
 
   template <class T>
-  static T info(const device_ptr& device_id, unsigned info_flag) {
+  static T info(const cl_device_ptr& device_id, unsigned info_flag) {
     T value;
     clGetDeviceInfo(device_id.get(), info_flag, sizeof(T), &value, nullptr);
     return value;
   }
 
-  static std::string info_string(const device_ptr& device_id,
+  static std::string info_string(const cl_device_ptr& device_id,
                                  unsigned info_flag);
-  device_ptr device_id_;
-  command_queue_ptr command_queue_;
-  context_ptr context_;
+  cl_device_ptr device_id_;
+  cl_command_queue_ptr queue_;
+  cl_context_ptr context_;
   unsigned id_;
 
   bool profiling_enabled_;              // CL_DEVICE_QUEUE_PROPERTIES

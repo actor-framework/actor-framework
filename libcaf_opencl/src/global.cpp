@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 #include <string>
+#include <sstream>
 
 #include "caf/opencl/global.hpp"
 
@@ -169,6 +170,123 @@ std::string get_opencl_error(cl_int err) {
     default:
       return "UNKNOWN_ERROR: " + std::to_string(err);
   }
+}
+
+std::string event_status(cl_event e) {
+  std::stringstream ss;
+  cl_int s;
+  auto err = clGetEventInfo(e, CL_EVENT_COMMAND_EXECUTION_STATUS,
+                            sizeof(cl_int), &s, nullptr);
+  if (err != CL_SUCCESS) {
+    ss << std::string("ERROR ") + std::to_string(s);
+    return ss.str();
+  }
+  cl_command_type t;
+  err = clGetEventInfo(e, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type),
+                       &t, nullptr);
+  if (err != CL_SUCCESS) {
+    ss << std::string("ERROR ") + std::to_string(s);
+    return ss.str();
+  }
+  switch (s) {
+    case(CL_QUEUED): 
+      ss << std::string("CL_QUEUED"); 
+      break;
+    case(CL_SUBMITTED): 
+      ss << std::string("CL_SUBMITTED"); 
+      break;
+    case(CL_RUNNING): 
+      ss << std::string("CL_RUNNING"); 
+      break;
+    case(CL_COMPLETE): 
+      ss << std::string("CL_COMPLETE"); 
+      break;
+    default: 
+      ss << std::string("DEFAULT ") + std::to_string(s);
+      return ss.str();
+  }
+  ss << " / ";
+  switch (t) {
+    case(CL_COMMAND_NDRANGE_KERNEL):
+      ss << std::string("CL_COMMAND_NDRANGE_KERNEL"); 
+      break;
+    case(CL_COMMAND_TASK):
+      ss << std::string("CL_COMMAND_TASK"); 
+      break;
+    case(CL_COMMAND_NATIVE_KERNEL):
+      ss << std::string("CL_COMMAND_NATIVE_KERNEL"); 
+      break;
+    case(CL_COMMAND_READ_BUFFER):
+      ss << std::string("CL_COMMAND_READ_BUFFER"); 
+      break;
+    case(CL_COMMAND_WRITE_BUFFER):
+      ss << std::string("CL_COMMAND_WRITE_BUFFER"); 
+      break;
+    case(CL_COMMAND_COPY_BUFFER):
+      ss << std::string("CL_COMMAND_COPY_BUFFER"); 
+      break;
+    case(CL_COMMAND_READ_IMAGE):
+      ss << std::string("CL_COMMAND_READ_IMAGE"); 
+      break;
+    case(CL_COMMAND_WRITE_IMAGE):
+      ss << std::string("CL_COMMAND_WRITE_IMAGE"); 
+      break;
+    case(CL_COMMAND_COPY_IMAGE):
+      ss << std::string("CL_COMMAND_COPY_IMAGE"); 
+      break;
+    case(CL_COMMAND_COPY_BUFFER_TO_IMAGE):
+      ss << std::string("CL_COMMAND_COPY_BUFFER_TO_IMAGE");
+      break;
+    case(CL_COMMAND_COPY_IMAGE_TO_BUFFER):
+      ss << std::string("CL_COMMAND_COPY_IMAGE_TO_BUFFER");
+      break;
+    case(CL_COMMAND_MAP_BUFFER):
+      ss << std::string("CL_COMMAND_MAP_BUFFER"); 
+      break;
+    case(CL_COMMAND_MAP_IMAGE):
+      ss << std::string("CL_COMMAND_MAP_IMAGE"); 
+      break;
+    case(CL_COMMAND_UNMAP_MEM_OBJECT):
+      ss << std::string("CL_COMMAND_UNMAP_MEM_OBJECT"); 
+      break;
+    case(CL_COMMAND_MARKER):
+      ss << std::string("CL_COMMAND_MARKER"); 
+      break;
+    case(CL_COMMAND_ACQUIRE_GL_OBJECTS):
+      ss << std::string("CL_COMMAND_ACQUIRE_GL_OBJECTS"); 
+      break;
+    case(CL_COMMAND_RELEASE_GL_OBJECTS):
+      ss << std::string("CL_COMMAND_RELEASE_GL_OBJECTS"); 
+      break;
+    case(CL_COMMAND_READ_BUFFER_RECT):
+      ss << std::string("CL_COMMAND_READ_BUFFER_RECT"); 
+      break;
+    case(CL_COMMAND_WRITE_BUFFER_RECT):
+      ss << std::string("CL_COMMAND_WRITE_BUFFER_RECT"); 
+      break;
+    case(CL_COMMAND_COPY_BUFFER_RECT):
+      ss << std::string("CL_COMMAND_COPY_BUFFER_RECT"); 
+      break;
+    case(CL_COMMAND_USER):
+      ss << std::string("CL_COMMAND_USER"); 
+      break;
+    case(CL_COMMAND_BARRIER):
+      ss << std::string("CL_COMMAND_BARRIER"); 
+      break;
+    case(CL_COMMAND_MIGRATE_MEM_OBJECTS):
+      ss << std::string("CL_COMMAND_MIGRATE_MEM_OBJECTS");
+      break;
+    case(CL_COMMAND_FILL_BUFFER):
+      ss << std::string("CL_COMMAND_FILL_BUFFER"); 
+      break;
+    case(CL_COMMAND_FILL_IMAGE):
+      ss << std::string("CL_COMMAND_FILL_IMAGE"); 
+      break;
+    default:
+      ss << std::string("DEFAULT ") + std::to_string(s);
+      return ss.str();
+  }
+  return ss.str();
 }
 
 } // namespace opencl

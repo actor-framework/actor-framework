@@ -45,6 +45,12 @@ public:
     // nop
   }
 
+  spawn_config(const spawn_config&) = default;
+  spawn_config(spawn_config&&) = default;
+
+  spawn_config& operator=(const spawn_config&) = default;
+  spawn_config& operator=(spawn_config&&) = default;
+
   const opencl::dim_vec& dimensions() const {
     return dims_;
   }
@@ -58,10 +64,9 @@ public:
   }
 
 private:
-  const opencl::dim_vec dims_;
-  const opencl::dim_vec offset_;
-  const opencl::dim_vec local_dims_;
-
+  opencl::dim_vec dims_;
+  opencl::dim_vec offset_;
+  opencl::dim_vec local_dims_;
 };
 
 } // namespace opencl

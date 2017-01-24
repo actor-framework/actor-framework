@@ -44,17 +44,16 @@ constexpr const char* kernel_name = "matrix_mult";
 // opencl kernel, multiplies matrix1 and matrix2
 // last parameter is, by convention, the output parameter
 constexpr const char* kernel_source = R"__(
-  __kernel void matrix_mult(__global float* matrix1,
-                __global float* matrix2,
-                __global float* output) {
+  kernel void matrix_mult(global const float* matrix1,
+                          global const float* matrix2,
+                          global       float* output) {
     // we only use square matrices, hence: width == height
     size_t size = get_global_size(0); // == get_global_size_(1);
     size_t x = get_global_id(0);
     size_t y = get_global_id(1);
     float result = 0;
-    for (size_t idx = 0; idx < size; ++idx) {
+    for (size_t idx = 0; idx < size; ++idx)
       result += matrix1[idx + y * size] * matrix2[x + idx * size];
-    }
     output[x+y*size] = result;
   }
 )__";
@@ -83,7 +82,6 @@ public:
 
   explicit square_matrix(fvec d) : data_(move(d)) {
     assert(data_.size() == num_elements);
-
   }
 
   inline float& operator()(size_t column, size_t row) {
@@ -127,13 +125,13 @@ string to_string(const square_matrix<Size>& m) {
 // to annouce the square_matrix to libcaf, we have to define these operators
 template<size_t Size>
 inline bool operator==(const square_matrix<Size>& lhs,
-             const square_matrix<Size>& rhs) {
+                       const square_matrix<Size>& rhs) {
   return equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template<size_t Size>
 inline bool operator!=(const square_matrix<Size>& lhs,
-             const square_matrix<Size>& rhs) {
+                       const square_matrix<Size>& rhs) {
   return !(lhs == rhs);
 }
 
@@ -149,14 +147,12 @@ void multiplier(event_based_actor* self) {
 
   // print "source" matrix
   cout << "calculating square of matrix:" << endl
-     << to_string(m1) << endl;
+       << to_string(m1) << endl;
 
   auto unbox_args = [](message& msg) -> optional<message> {
-    return msg.apply(
-      [](matrix_type& lhs, matrix_type& rhs) {
-        return make_message(std::move(lhs.data()), std::move(rhs.data()));
-      }
-    );
+    return msg.apply([](matrix_type& lhs, matrix_type& rhs) {
+      return make_message(std::move(lhs.data()), std::move(rhs.data()));
+    });
   };
 
   auto box_res = [] (fvec& result) -> message {
@@ -176,11 +172,13 @@ void multiplier(event_based_actor* self) {
   // 5th arg: converts the ouptut vector back to a matrix that is then
   //          used as response message
   // from 6 : a description of the kernel signature using in/out/in_out classes
-  //          with the argument type packed in vectors
+  //          with the argument type. Since the actor always expects input
+  //          arguments for global memory to be contained in vectors,
+  //          the vector is omitted here.
   auto worker = mngr.spawn(kernel_source, kernel_name,
                            spawn_config{dim_vec{matrix_size, matrix_size}},
                            unbox_args, box_res,
-                           in<fvec>{}, in<fvec>{}, out<fvec>{});
+                           in<float>{}, in<float>{}, out<float>{});
 
   // send both matrices to the actor and
   // wait for results in form of a matrix_type

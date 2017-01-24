@@ -20,7 +20,7 @@
 #ifndef CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP
 #define CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP
 
-#include "caf/opencl/actor_facade.hpp"
+#include "caf/opencl/opencl_actor.hpp"
 
 namespace caf {
 namespace opencl {
@@ -28,13 +28,13 @@ namespace detail {
 
 struct tuple_construct { };
 
-template <class... Ts>
+template <bool PassConfig, class... Ts>
 struct cl_spawn_helper {
-  using impl = opencl::actor_facade<Ts...>;
-  using map_in_fun = std::function<optional<message> (message&)>;
+  using impl = opencl::opencl_actor<PassConfig, Ts...>;
+  using map_in_fun = typename impl::input_mapping;
   using map_out_fun = typename impl::output_mapping;
 
-  actor operator()(actor_config actor_cfg, const opencl::program& p,
+  actor operator()(actor_config actor_cfg, const opencl::program_ptr p,
                    const char* fn, const opencl::spawn_config& spawn_cfg,
                    Ts&&... xs) const {
     return actor_cast<actor>(impl::create(std::move(actor_cfg),
@@ -42,7 +42,16 @@ struct cl_spawn_helper {
                                           map_in_fun{}, map_out_fun{},
                                           std::move(xs)...));
   }
-  actor operator()(actor_config actor_cfg, const opencl::program& p,
+  actor operator()(actor_config actor_cfg, const opencl::program_ptr p,
+                   const char* fn, const opencl::spawn_config& spawn_cfg,
+                   map_in_fun map_input, Ts&&... xs) const {
+    return actor_cast<actor>(impl::create(std::move(actor_cfg),
+                                          p, fn, spawn_cfg,
+                                          std::move(map_input),
+                                          map_out_fun{},
+                                          std::move(xs)...));
+  }
+  actor operator()(actor_config actor_cfg, const opencl::program_ptr p,
                    const char* fn, const opencl::spawn_config& spawn_cfg,
                    map_in_fun map_input, map_out_fun map_output,
                    Ts&&... xs) const {
@@ -58,4 +67,4 @@ struct cl_spawn_helper {
 } // namespace opencl
 } // namespace caf
 
- #endif // CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP
+#endif // CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP

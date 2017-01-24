@@ -29,8 +29,8 @@ using namespace std;
 namespace caf {
 namespace opencl {
 
-platform platform::create(cl_platform_id platform_id,
-                          unsigned start_id) {
+platform_ptr platform::create(cl_platform_id platform_id,
+                              unsigned start_id) {
   vector<unsigned> device_types = {CL_DEVICE_TYPE_GPU,
                                    CL_DEVICE_TYPE_ACCELERATOR,
                                    CL_DEVICE_TYPE_CPU};
@@ -48,16 +48,16 @@ platform platform::create(cl_platform_id platform_id,
     v2callcl(CAF_CLF(clGetDeviceIDs), platform_id, device_type,
              discoverd, (ids.data() + known));
   }
-  vector<device_ptr> devices;
+  vector<cl_device_ptr> devices;
   devices.resize(ids.size());
-  auto lift = [](cl_device_id ptr) { return device_ptr{ptr, false}; };
+  auto lift = [](cl_device_id ptr) { return cl_device_ptr{ptr, false}; };
   transform(ids.begin(), ids.end(), devices.begin(), lift);
-  context_ptr context;
+  cl_context_ptr context;
   context.reset(v2get(CAF_CLF(clCreateContext), nullptr,
                       static_cast<unsigned>(ids.size()),
                       ids.data(), pfn_notify, nullptr),
                 false);
-  vector<device> device_information;
+  vector<device_ptr> device_information;
   for (auto& device_id : devices) {
     device_information.push_back(device::create(context, device_id,
                                                 start_id++));
@@ -70,9 +70,9 @@ platform platform::create(cl_platform_id platform_id,
   auto name = platform_info(platform_id, CL_PLATFORM_NAME);
   auto vendor = platform_info(platform_id, CL_PLATFORM_VENDOR);
   auto version = platform_info(platform_id, CL_PLATFORM_VERSION);
-  return platform{platform_id, move(context), move(name),
-                  move(vendor), move(version),
-                  move(device_information)};
+  return make_counted<platform>(platform_id, move(context), move(name),
+                                move(vendor), move(version),
+                                move(device_information));
 }
 
 string platform::platform_info(cl_platform_id platform_id,
@@ -87,15 +87,21 @@ string platform::platform_info(cl_platform_id platform_id,
   return string(buffer.data());
 }
 
-platform::platform(cl_platform_id platform_id, context_ptr context,
+platform::platform(cl_platform_id platform_id, cl_context_ptr context,
                    string name, string vendor, string version,
-                   vector<device> devices)
+                   vector<device_ptr> devices)
   : platform_id_(platform_id),
     context_(std::move(context)),
     name_(move(name)),
     vendor_(move(vendor)),
     version_(move(version)),
-    devices_(move(devices)) { }
+    devices_(move(devices)) {
+  // nop
+}
+
+platform::~platform() {
+  // nop
+}
 
 } // namespace opencl
 } // namespace caf

@@ -18,11 +18,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include <fstream>
+
 #include "caf/detail/type_list.hpp"
 
 #include "caf/opencl/device.hpp"
 #include "caf/opencl/manager.hpp"
 #include "caf/opencl/platform.hpp"
+#include "caf/opencl/smart_ptr.hpp"
 #include "caf/opencl/opencl_err.hpp"
 
 using namespace std;
@@ -30,15 +33,15 @@ using namespace std;
 namespace caf {
 namespace opencl {
 
-const optional<const device&> manager::get_device(size_t dev_id) const {
+optional<device_ptr> manager::get_device(size_t dev_id) const {
   if (platforms_.empty())
     return none;
   size_t to = 0;
   for (auto& pl : platforms_) {
     auto from = to;
-    to += pl.get_devices().size();
+    to += pl->get_devices().size();
     if (dev_id >= from && dev_id < to)
-      return pl.get_devices()[dev_id - from];
+      return pl->get_devices()[dev_id - from];
   }
   return none;
 }
@@ -56,7 +59,7 @@ void manager::init(actor_system_config&) {
   for (auto& pl_id : platform_ids) {
     platforms_.push_back(platform::create(pl_id, current_device_id));
     current_device_id +=
-      static_cast<unsigned>(platforms_.back().get_devices().size());
+      static_cast<unsigned>(platforms_.back()->get_devices().size());
   }
 }
 
@@ -81,8 +84,30 @@ actor_system::module* manager::make(actor_system& sys,
   return new manager{sys};
 }
 
-program manager::create_program(const char* kernel_source, const char* options,
-                                 uint32_t device_id) {
+program_ptr manager::create_program_from_file(const char* path,
+                                              const char* options,
+                                              uint32_t device_id) {
+  std::ifstream read_source{std::string(path), std::ios::in};
+  string kernel_source;
+  if (read_source) {
+    read_source.seekg(0, std::ios::end);
+    kernel_source.resize(static_cast<size_t>(read_source.tellg()));
+    read_source.seekg(0, std::ios::beg);
+    read_source.read(&kernel_source[0],
+                     static_cast<streamsize>(kernel_source.size()));
+    read_source.close();
+  } else {
+    ostringstream oss;
+    oss << "No file at '" << path << "' found.";
+    CAF_LOG_ERROR(CAF_ARG(oss.str()));
+    throw runtime_error(oss.str());
+  }
+  return create_program(kernel_source.c_str(), options, device_id);
+}
+
+program_ptr manager::create_program(const char* kernel_source,
+                                    const char* options,
+                                    uint32_t device_id) {
   auto dev = get_device(device_id);
   if (!dev) {
     ostringstream oss;
@@ -93,61 +118,83 @@ program manager::create_program(const char* kernel_source, const char* options,
   return create_program(kernel_source, options, *dev);
 }
 
-program manager::create_program(const char* kernel_source, const char* options,
-                                 const device& dev) {
+program_ptr manager::create_program_from_file(const char* path,
+                                              const char* options,
+                                              const device_ptr dev) {
+  std::ifstream read_source{std::string(path), std::ios::in};
+  string kernel_source;
+  if (read_source) {
+    read_source.seekg(0, std::ios::end);
+    kernel_source.resize(static_cast<size_t>(read_source.tellg()));
+    read_source.seekg(0, std::ios::beg);
+    read_source.read(&kernel_source[0],
+                     static_cast<streamsize>(kernel_source.size()));
+    read_source.close();
+  } else {
+    ostringstream oss;
+    oss << "No file at '" << path << "' found.";
+    CAF_LOG_ERROR(CAF_ARG(oss.str()));
+    throw runtime_error(oss.str());
+  }
+  return create_program(kernel_source.c_str(), options, dev);
+}
+
+program_ptr manager::create_program(const char* kernel_source,
+                                    const char* options,
+                                    const device_ptr dev) {
   // create program object from kernel source
   size_t kernel_source_length = strlen(kernel_source);
-  program_ptr pptr;
-  auto rawptr = v2get(CAF_CLF(clCreateProgramWithSource), dev.context_.get(),
-                      cl_uint{1}, &kernel_source, &kernel_source_length);
-  pptr.reset(rawptr, false);
+  cl_program_ptr pptr;
+  pptr.reset(v2get(CAF_CLF(clCreateProgramWithSource), dev->context_.get(),
+                           1u, &kernel_source, &kernel_source_length),
+             false);
   // build programm from program object
-  auto dev_tmp = dev.device_id_.get();
-  cl_int err = clBuildProgram(pptr.get(), 1, &dev_tmp,
-                              options, nullptr, nullptr);
+  auto dev_tmp = dev->device_id_.get();
+  auto err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
   if (err != CL_SUCCESS) {
     ostringstream oss;
     oss << "clBuildProgram: " << get_opencl_error(err);
-// the build log will be printed by the pfn_notify (see opencl/manger.cpp)
-#ifndef __APPLE__
-    // seems that just apple implemented the
-    // pfn_notify callback, but we can get
-    // the build log
     if (err == CL_BUILD_PROGRAM_FAILURE) {
       size_t buildlog_buffer_size = 0;
       // get the log length
       clGetProgramBuildInfo(pptr.get(), dev_tmp, CL_PROGRAM_BUILD_LOG,
-                            sizeof(buildlog_buffer_size), nullptr,
-                            &buildlog_buffer_size);
+                            0, nullptr, &buildlog_buffer_size);
       vector<char> buffer(buildlog_buffer_size);
       // fill the buffer with buildlog informations
       clGetProgramBuildInfo(pptr.get(), dev_tmp, CL_PROGRAM_BUILD_LOG,
-                            sizeof(buffer[0]) * buildlog_buffer_size,
+                            sizeof(char) * buildlog_buffer_size,
                             buffer.data(), nullptr);
       ostringstream ss;
-      ss << "Build log:\n" << string(buffer.data())
-         << "\n#######################################";
+      ss << "############## Build log ##############"
+         << endl << string(buffer.data()) << endl
+         << "#######################################";
+      // seems that just apple implemented the
+      // pfn_notify callback, but we can get
+      // the build log
+#ifndef __APPLE__
       CAF_LOG_ERROR(CAF_ARG(ss.str()));
-    }
 #endif
+      oss << endl << ss.str();
+    }
     throw runtime_error(oss.str());
   }
-  map<string, kernel_ptr> available_kernels;
   cl_uint number_of_kernels = 0;
-  clCreateKernelsInProgram(pptr.get(), 0, nullptr, &number_of_kernels);
-  vector<cl_kernel> kernels(number_of_kernels);
-  err = clCreateKernelsInProgram(pptr.get(), number_of_kernels, kernels.data(),
-                                 nullptr);
-  if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clCreateKernelsInProgram: " << get_opencl_error(err);
-    throw runtime_error(oss.str());
-  } else {
+  clCreateKernelsInProgram(pptr.get(), 0u, nullptr, &number_of_kernels);
+  map<string, cl_kernel_ptr> available_kernels;
+  if (number_of_kernels > 0) {
+    vector<cl_kernel> kernels(number_of_kernels);
+    err = clCreateKernelsInProgram(pptr.get(), number_of_kernels,
+                                   kernels.data(), nullptr);
+    if (err != CL_SUCCESS) {
+      ostringstream oss;
+      oss << "clCreateKernelsInProgram: " << get_opencl_error(err);
+      throw runtime_error(oss.str());
+    }
     for (cl_uint i = 0; i < number_of_kernels; ++i) {
-      size_t ret_size;
-      clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, 0, nullptr, &ret_size);
-      vector<char> name(ret_size);
-      err = clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, ret_size,
+      size_t len;
+      clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, 0, nullptr, &len);
+      vector<char> name(len);
+      err = clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, len,
                             reinterpret_cast<void*>(name.data()), nullptr);
       if (err != CL_SUCCESS) {
         ostringstream oss;
@@ -155,15 +202,20 @@ program manager::create_program(const char* kernel_source, const char* options,
             << get_opencl_error(err);
         throw runtime_error(oss.str());
       }
-      kernel_ptr kernel;
+      cl_kernel_ptr kernel;
       kernel.reset(move(kernels[i]));
       available_kernels.emplace(string(name.data()), move(kernel));
     }
+  } else {
+    CAF_LOG_WARNING("Could not built all kernels in program. Since this happens"
+                    " on some platforms, we'll ignore this and try to build"
+                    " each kernel individually by name.");
   }
-  return {dev.context_, dev.command_queue_, pptr, move(available_kernels)};
+  return make_counted<program>(dev->context_, dev->queue_, pptr,
+                               move(available_kernels));
 }
 
-manager::manager(actor_system& sys) : system_(sys){
+manager::manager(actor_system& sys) : system_(sys) {
   // nop
 }
 

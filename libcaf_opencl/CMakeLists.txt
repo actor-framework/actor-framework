@@ -3,8 +3,7 @@ project(caf_opencl C CXX)
 
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
-file(GLOB LIBCAF_OPENCL_HDRS "caf/opencl/*.hpp")
-file(GLOB LIBCAF_OPENCL_HDRS "caf/opencl/detail/*.hpp")
+file(GLOB_RECURSE LIBCAF_OPENCL_HDRS "caf/*.hpp")
 
 add_custom_target(libcaf_opencl)
 

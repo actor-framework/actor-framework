@@ -20,40 +20,50 @@
 #ifndef CAF_OPENCL_PLATFORM_HPP
 #define CAF_OPENCL_PLATFORM_HPP
 
-#include <caf/opencl/device.hpp>
+#include "caf/ref_counted.hpp"
+
+#include "caf/opencl/device.hpp"
 
 namespace caf {
 namespace opencl {
 
-class platform {
+class platform;
+using platform_ptr = intrusive_ptr<platform>;
+
+class platform : public ref_counted {
 public:
   friend class program;
+  template <class T, class... Ts>
+  friend intrusive_ptr<T> caf::make_counted(Ts&&...);
 
-  inline const std::vector<device>& get_devices() const;
+  inline const std::vector<device_ptr>& get_devices() const;
   inline const std::string& get_name() const;
   inline const std::string& get_vendor() const;
   inline const std::string& get_version() const;
-  static platform create(cl_platform_id platform_id, unsigned start_id);
+  static platform_ptr create(cl_platform_id platform_id, unsigned start_id);
 
 private:
-  platform(cl_platform_id platform_id, context_ptr context,
+  platform(cl_platform_id platform_id, cl_context_ptr context,
            std::string name, std::string vendor, std::string version,
-           std::vector<device> devices);
+           std::vector<device_ptr> devices);
+
+  ~platform();
+
   static std::string platform_info(cl_platform_id platform_id,
                                    unsigned info_flag);
   cl_platform_id platform_id_;
-  context_ptr context_;
+  cl_context_ptr context_;
   std::string name_;
   std::string vendor_;
   std::string version_;
-  std::vector<device> devices_;
+  std::vector<device_ptr> devices_;
 };
 
 /******************************************************************************\
  *                 implementation of inline member functions                  *
 \******************************************************************************/
 
-inline const std::vector<device>& platform::get_devices() const {
+inline const std::vector<device_ptr>& platform::get_devices() const {
   return devices_;
 }
 
@@ -73,4 +83,4 @@ inline const std::string& platform::get_version() const {
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_PLTFORM_HPP
+#endif // CAF_OPENCL_PLATFORM_HPP

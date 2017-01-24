@@ -50,6 +50,14 @@ enum device_type {
   all         = CL_DEVICE_TYPE_ALL
 };
 
+/// Default values to create OpenCL buffers
+enum buffer_type : cl_mem_flags {
+  input         = CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY,
+  input_output  = CL_MEM_READ_WRITE,
+  output        = CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY,
+  scratch_space = CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS
+};
+
 std::ostream& operator<<(std::ostream& os, device_type dev);
 device_type device_type_from_ulong(cl_ulong dev);
 
@@ -57,6 +65,9 @@ device_type device_type_from_ulong(cl_ulong dev);
 using dim_vec = detail::limited_vector<size_t, 3>;
 
 std::string get_opencl_error(cl_int err);
+
+std::string event_status(cl_event event);
+
 
 } // namespace opencl
 } // namespace caf

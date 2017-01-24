@@ -41,17 +41,16 @@ constexpr const char* kernel_name = "matrix_mult";
 // opencl kernel, multiplies matrix1 and matrix2
 // last parameter is, by convention, the output parameter
 constexpr const char* kernel_source = R"__(
-  __kernel void matrix_mult(__global float* matrix1,
-                __global float* matrix2,
-                __global float* output) {
+  kernel void matrix_mult(global const float* matrix1,
+                          global const float* matrix2,
+                          global       float* output) {
     // we only use square matrices, hence: width == height
     size_t size = get_global_size(0); // == get_global_size_(1);
     size_t x = get_global_id(0);
     size_t y = get_global_id(1);
     float result = 0;
-    for (size_t idx = 0; idx < size; ++idx) {
+    for (size_t idx = 0; idx < size; ++idx)
       result += matrix1[idx + y * size] * matrix2[x + idx * size];
-    }
     output[x+y*size] = result;
   }
 )__";
@@ -62,7 +61,7 @@ void print_as_matrix(const fvec& matrix) {
   for (size_t column = 0; column < matrix_size; ++column) {
     for (size_t row = 0; row < matrix_size; ++row) {
       cout << fixed << setprecision(2) << setw(9)
-         << matrix[row + column * matrix_size];
+           << matrix[row + column * matrix_size];
     }
     cout << endl;
   }
@@ -92,11 +91,13 @@ void multiplier(event_based_actor* self) {
   //          - offsets for global dimensions (optional)
   //          - local dimensions (optional)
   // 4th to Nth arg: the kernel signature described by in/out/in_out classes
-  //          that contain the argument type in their template, requires vectors
+  //          that contain the argument type in their template. Since the actor
+  //          expects its arguments for global memory to be passed in vectors,
+  //          the vector type is omitted for brevity.
   auto worker = self->system().opencl_manager().spawn(
     kernel_source, kernel_name,
     spawn_config{dim_vec{matrix_size, matrix_size}},
-    in<fvec>{}, in<fvec>{}, out<fvec>{}
+    in<float>{}, in<float>{}, out<float>{}
   );
   // send both matrices to the actor and wait for a result
   self->request(worker, chrono::seconds(5), move(m1), move(m2)).then(

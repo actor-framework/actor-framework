@@ -37,20 +37,20 @@
   } /* namespace opencl */                                                     \
   } // namespace caf
 
-CAF_OPENCL_PTR_ALIAS(mem_ptr, cl_mem, clRetainMemObject, clReleaseMemObject)
+CAF_OPENCL_PTR_ALIAS(cl_mem_ptr, cl_mem, clRetainMemObject, clReleaseMemObject)
 
-CAF_OPENCL_PTR_ALIAS(event_ptr, cl_event, clRetainEvent, clReleaseEvent)
+CAF_OPENCL_PTR_ALIAS(cl_event_ptr, cl_event, clRetainEvent, clReleaseEvent)
 
-CAF_OPENCL_PTR_ALIAS(kernel_ptr, cl_kernel, clRetainKernel, clReleaseKernel)
+CAF_OPENCL_PTR_ALIAS(cl_kernel_ptr, cl_kernel, clRetainKernel, clReleaseKernel)
 
-CAF_OPENCL_PTR_ALIAS(context_ptr, cl_context, clRetainContext, clReleaseContext)
+CAF_OPENCL_PTR_ALIAS(cl_context_ptr, cl_context, clRetainContext, clReleaseContext)
 
-CAF_OPENCL_PTR_ALIAS(program_ptr, cl_program, clRetainProgram, clReleaseProgram)
+CAF_OPENCL_PTR_ALIAS(cl_program_ptr, cl_program, clRetainProgram, clReleaseProgram)
 
-CAF_OPENCL_PTR_ALIAS(device_ptr, cl_device_id,
+CAF_OPENCL_PTR_ALIAS(cl_device_ptr, cl_device_id,
                      clRetainDeviceDummy, clReleaseDeviceDummy)
 
-CAF_OPENCL_PTR_ALIAS(command_queue_ptr, cl_command_queue,
+CAF_OPENCL_PTR_ALIAS(cl_command_queue_ptr, cl_command_queue,
                      clRetainCommandQueue, clReleaseCommandQueue)
 
 #endif // CAF_OPENCL_SMART_PTR_HPP
