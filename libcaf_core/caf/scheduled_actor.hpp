@@ -447,6 +447,10 @@ public:
     return streams_;
   }
 
+  /// Tries to send more data on all downstream paths. Use this function to
+  /// manually trigger batches in a source after receiving more data to send.
+  void trigger_downstreams();
+
   /// @cond PRIVATE
 
   // -- timeout management -----------------------------------------------------

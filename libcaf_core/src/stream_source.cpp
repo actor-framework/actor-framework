@@ -51,11 +51,11 @@ error stream_source::downstream_demand(strong_actor_ptr& hdl, size_t value) {
       auto size_hint = out_ptr_->policy().desired_buffer_size(*out_ptr_);
       if (current_size < size_hint)
         generate(size_hint - current_size);
-      return trigger_send(hdl);
+      return push();
     }
     // transmit cached elements before closing paths
     if (buf_size() > 0)
-      return trigger_send(hdl);
+      return push();
     if (out_ptr_->remove_path(hdl))
       return none;
   }

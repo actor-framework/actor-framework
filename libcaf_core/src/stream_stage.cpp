@@ -44,8 +44,7 @@ error stream_stage::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
   auto err = in_ptr_->pull(hdl, xs_size);
   if (!err) {
     process_batch(xs);
-    strong_actor_ptr dummy;
-    trigger_send(dummy);
+    push();
   }
   return err;
 }
@@ -55,8 +54,9 @@ error stream_stage::downstream_demand(strong_actor_ptr& hdl, size_t value) {
   if (path) {
     path->open_credit += value;
     if(out_ptr_->buf_size() > 0) {
-      return trigger_send(hdl);
-    } if (in_ptr_->closed()) {
+      return push();
+    }
+    if (in_ptr_->closed()) {
       if (!out_ptr_->remove_path(hdl)) {
         return sec::invalid_downstream;
       }

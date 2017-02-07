@@ -45,11 +45,10 @@ public:
     return sec::downstream_already_exists;
   }
 
-  error trigger_send(strong_actor_ptr&) {
-  if (out().buf_size() > 0)
-    out().policy().push(out());
-  return none;
-
+  error push() final {
+    if (out().buf_size() > 0)
+      out().policy().push(out());
+    return none;
   }
 
 private:
