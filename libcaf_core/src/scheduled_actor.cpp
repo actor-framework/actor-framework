@@ -258,7 +258,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   return resumable::resume_later;
 }
 
-// -- scheduler callbacks ----------------------------------------------------
+// -- scheduler callbacks ------------------------------------------------------
 
 proxy_registry* scheduled_actor::proxy_registry_ptr() {
   return nullptr;
@@ -270,6 +270,13 @@ void scheduled_actor::quit(error x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   fail_state_ = std::move(x);
   setf(is_terminated_flag);
+}
+
+// -- stream management --------------------------------------------------------
+
+void scheduled_actor::trigger_downstreams() {
+  for (auto& s : streams_)
+    s.second->push();
 }
 
 // -- timeout management -------------------------------------------------------
