@@ -20,6 +20,7 @@ flags = [
 '-I./libcaf_python/',
 '-I./libcaf_opencl/',
 '-I./libcaf_openssl/'
+'-I./benchmarks/include/',
 ]
 
 # Set this to the absolute path to the folder (NOT the file!) containing the
