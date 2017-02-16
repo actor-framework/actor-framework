@@ -78,9 +78,8 @@ void outgoing_stream_multiplexer::operator()(stream_msg::open& x) {
     cme->sender, message_id::make(), {}, forward_atom::value, cme->sender,
     std::move(cme->stages), path->hdl, cme->mid,
     make_message(make<stream_msg::open>(current_stream_msg_->sid,
-                                        std::move(x.token), self_->ctrl(),
-                                        x.priority, std::move(x.topics),
-                                        x.redeployable)));
+                                        std::move(x.msg), self_->ctrl(),
+                                        x.priority, x.redeployable)));
   basp()->enqueue(std::move(ptr), self_->context());
 }
 

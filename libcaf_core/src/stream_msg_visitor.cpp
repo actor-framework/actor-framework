@@ -56,17 +56,16 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
     return fail(sec::stream_init_failed);
   }
   auto bhvr = self_->bhvr_stack().back();
-  auto res = bhvr(x.token);
+  auto res = bhvr(x.msg);
   if (!res) {
-    CAF_LOG_WARNING("stream handshake failed: actor did not respond to token:"
-                    << CAF_ARG(x.token));
+    CAF_LOG_WARNING("actor did not respond to handshake:" << CAF_ARG(x.msg));
     return fail(sec::stream_init_failed);
   }
   i_ = self_->streams().find(sid_);
   if (i_ == e_) {
-    CAF_LOG_WARNING("stream handshake failed: actor did not provide a stream "
-                    "handler after receiving token:"
-                    << CAF_ARG(x.token));
+    CAF_LOG_WARNING("actor did not provide a stream "
+                    "handler after receiving handshake:"
+                    << CAF_ARG(x.msg));
     return fail(sec::stream_init_failed);
   }
   auto& handler = i_->second;
@@ -76,10 +75,9 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
     // check whether we are a stage in a longer pipeline and send more
     // stream_open messages if required
     auto ic = static_cast<int32_t>(*initial_credit);
-    std::vector<atom_value> filter;
     unsafe_send_as(self_, predecessor,
-                   make_message(make<stream_msg::ack_open>(
-                     std::move(sid_), ic, std::move(filter), false)));
+                   make_message(make<stream_msg::ack_open>(std::move(sid_), ic,
+                                                           false)));
     return {none, i_};
   }
   self_->streams().erase(i_);
@@ -107,7 +105,7 @@ auto stream_msg_visitor::operator()(stream_msg::abort& x) -> result_type {
 auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   if (i_ != e_)
-    return {i_->second->add_downstream(self_->current_sender(), x.filter,
+    return {i_->second->add_downstream(self_->current_sender(),
                                        static_cast<size_t>(x.initial_demand),
                                        false),
             i_};

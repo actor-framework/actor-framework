@@ -21,12 +21,10 @@
 
 namespace caf {
 
-downstream_path::downstream_path(strong_actor_ptr p, downstream_path::topics ts,
-                                 bool redeploy)
+downstream_path::downstream_path(strong_actor_ptr p, bool redeploy)
     : ptr(std::move(p)),
       next_batch_id(0),
       open_credit(0),
-      filter(std::move(ts)),
       redeployable(redeploy) {
   // nop
 }

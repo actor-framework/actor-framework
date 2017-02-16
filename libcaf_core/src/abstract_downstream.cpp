@@ -57,14 +57,10 @@ size_t abstract_downstream::min_credit() const {
   return fold_paths(std::numeric_limits<size_t>::max(), f);
 }
 
-bool abstract_downstream::add_path(strong_actor_ptr ptr,
-                                   std::vector<atom_value> filter,
-                                   bool redeployable) {
+bool abstract_downstream::add_path(strong_actor_ptr ptr, bool redeployable) {
   auto predicate = [&](const path_uptr& x) { return x->ptr == ptr; };
   if (std::none_of(paths_.begin(), paths_.end(), predicate)) {
-    paths_.emplace_back(
-      new path(std::move(ptr), std::move(filter), redeployable));
-    recalculate_active_filters();
+    paths_.emplace_back(new path(std::move(ptr), redeployable));
     return true;
   }
   return false;
@@ -110,12 +106,6 @@ auto abstract_downstream::find(const strong_actor_ptr& ptr) const
   if (i != e)
     return *(*i);
   return none;
-}
-
-void abstract_downstream::recalculate_active_filters() {
-  active_filters_.clear();
-  for (auto& x : paths_)
-    active_filters_.emplace(x->filter);
 }
 
 void abstract_downstream::send_batch(downstream_path& dest, size_t chunk_size,

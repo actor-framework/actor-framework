@@ -41,8 +41,11 @@ namespace {
 behavior file_reader(event_based_actor* self) {
   using buf = std::deque<int>;
   return {
-    [=](const std::string&) -> stream<int> {
+    [=](std::string& fname) -> stream<int> {
+      CAF_CHECK_EQUAL(fname, "test.txt");
       return self->add_source(
+        // forward file name in handshake to next stage
+        std::forward_as_tuple(std::move(fname)),
         // initialize state
         [&](buf& xs) {
           xs = buf{1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -68,6 +71,8 @@ void streamer(event_based_actor* self, const actor& dest) {
   self->new_stream(
     // destination of the stream
     dest,
+    // "file name" as seen by the next stage
+    std::make_tuple("test.txt"),
     // initialize state
     [&](buf& xs) {
       xs = buf{1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -92,10 +97,13 @@ void streamer(event_based_actor* self, const actor& dest) {
 
 behavior filter(event_based_actor* self) {
   return {
-    [=](stream<int>& in) -> stream<int> {
+    [=](stream<int>& in, std::string& fname) -> stream<int> {
+      CAF_CHECK_EQUAL(fname, "test.txt");
       return self->add_stage(
         // input stream
         in,
+        // forward file name in handshake to next stage
+        std::forward_as_tuple(std::move(fname)),
         // initialize state
         [=](unit_t&) {
           // nop
@@ -116,7 +124,8 @@ behavior filter(event_based_actor* self) {
 
 behavior broken_filter(event_based_actor*) {
   return {
-    [=](stream<int>& x) -> stream<int> {
+    [=](stream<int>& x, const std::string& fname) -> stream<int> {
+      CAF_CHECK_EQUAL(fname, "test.txt");
       return x;
     }
   };
@@ -124,7 +133,8 @@ behavior broken_filter(event_based_actor*) {
 
 behavior sum_up(event_based_actor* self) {
   return {
-    [=](stream<int>& in) {
+    [=](stream<int>& in, std::string& fname) {
+      CAF_CHECK_EQUAL(fname, "test.txt");
       return self->add_sink(
         // input stream
         in,
@@ -147,7 +157,8 @@ behavior sum_up(event_based_actor* self) {
 
 behavior drop_all(event_based_actor* self) {
   return {
-    [=](stream<int>& in) {
+    [=](stream<int>& in, std::string& fname) {
+      CAF_CHECK_EQUAL(fname, "test.txt");
       return self->add_sink(
         // input stream
         in,
@@ -174,6 +185,8 @@ void streamer_without_result(event_based_actor* self, const actor& dest) {
   self->new_stream(
     // destination of the stream
     dest,
+    // "file name" for the next stage
+    std::make_tuple("test.txt"),
     // initialize state
     [&](buf& xs) {
       xs = buf{1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -650,53 +663,6 @@ CAF_TEST(stream_crossing_the_wire) {
   // sink --(void)--> source
   anon_send_exit(sink, exit_reason::user_shutdown);
   mars.sched.run();
- anon_send_exit(source, exit_reason::user_shutdown);
+  anon_send_exit(source, exit_reason::user_shutdown);
   earth.sched.run();
-  /*
-
-
-  // earth.stream_serv --('sys', 'ok', 5)--> earth.stream_serv
-  network_traffic();
-  expect_on(earth, (atom_value, atom_value, int32_t),
-            from(_).to(earth.stream_serv)
-            .with(sys_atom::value, ok_atom::value, 5));
-  network_traffic();
-  // mars.stream_serv --(stream_msg::ack_open)--> earth.stream_serv
-  expect_on(earth, (stream_msg::ack_open),
-            from(_).to(earth.stream_serv)
-            .with(5, _, false));
-  // earth.stream_serv --(stream_msg::ack_open)--> source
-  expect_on(earth, (stream_msg::ack_open),
-            from(earth.stream_serv).to(source)
-            .with(5, _, false));
-  // source --(stream_msg::ack_open)--> earth.stream_serv
-  expect_on_path(
-    (stream_msg::batch), with(5, std::vector<int>{1, 2, 3, 4, 5}, 0),
-    {earth, earth.stream_serv},
-    {mars, mars.stream_serv}, {mars, sink});
-*/
-
-  /*
-  expect_on(earth, (stream_msg::batch),
-            from(source).to(earth.stream_serv)
-            .with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
-  */
-  /*
-  // source <----(stream_msg::ack_open)------ sink
-  expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
-  // source ----(stream_msg::batch)---> sink
-  expect((stream_msg::batch),
-         from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
-  // source <--(stream_msg::ack_batch)---- sink
-  expect((stream_msg::ack_batch), from(sink).to(source).with(5, 0));
-  // source ----(stream_msg::batch)---> sink
-  expect((stream_msg::batch),
-         from(source).to(sink).with(4, std::vector<int>{6, 7, 8, 9}, 1));
-  // source <--(stream_msg::ack_batch)---- sink
-  expect((stream_msg::ack_batch), from(sink).to(source).with(4, 1));
-  // source ----(stream_msg::close)---> sink
-  expect((stream_msg::close), from(source).to(sink).with());
-  // sink ----(result: <empty>)---> source
-  expect((void), from(sink).to(source).with());
-  */
 }

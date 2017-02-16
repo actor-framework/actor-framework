@@ -299,11 +299,11 @@ public:
   // -- stream management ------------------------------------------------------
 
   // Starts a new stream.
-  template <class Handle, class Init, class Getter, class ClosedPredicate,
-            class ResHandler>
+  template <class Handle, class... Ts, class Init, class Getter,
+            class ClosedPredicate, class ResHandler>
   stream<typename stream_source_trait_t<Getter>::output>
-  new_stream(const Handle& dest, Init init, Getter getter, ClosedPredicate pred,
-             ResHandler res_handler) {
+  new_stream(const Handle& dest, std::tuple<Ts...> xs, Init init, Getter getter,
+             ClosedPredicate pred, ResHandler res_handler) {
     using type = typename stream_source_trait_t<Getter>::output;
     using state_type = typename stream_source_trait_t<Getter>::state;
     static_assert(std::is_same<
@@ -325,14 +325,15 @@ public:
     stream_id sid{ctrl(),
                   new_request_id(message_priority::normal).integer_value()};
     stream<type> token{sid};
+    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
     // generate new ID for the final response message and send handshake
     auto res_id = new_request_id(message_priority::normal);
-    dest->enqueue(make_mailbox_element(
-                    ctrl(), res_id, {},
-                    make<stream_msg::open>(sid, make_message(std::move(token)),
-                                           ctrl(), stream_priority::normal,
-                                           std::vector<atom_value>{}, false)),
-                  context());
+    dest->enqueue(
+      make_mailbox_element(
+        ctrl(), res_id, {},
+        make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
+                               ctrl(), stream_priority::normal, false)),
+      context());
     // install response handler
     this->add_multiplexed_response_handler(
       res_id.response_id(),
@@ -347,10 +348,22 @@ public:
     return sid;
   }
 
-  /// Adds a stream source to this actor.
-  template <class Init, class Getter, class ClosedPredicate>
+  // Starts a new stream.
+  template <class Handle, class Init, class Getter,
+            class ClosedPredicate, class ResHandler>
   stream<typename stream_source_trait_t<Getter>::output>
-  add_source(Init init, Getter getter, ClosedPredicate pred) {
+  new_stream(const Handle& dest, Init init, Getter getter,
+             ClosedPredicate pred, ResHandler res_handler) {
+    return new_stream(dest, std::make_tuple(), std::move(init),
+                      std::move(getter), std::move(pred),
+                      std::move(res_handler));
+  }
+
+  /// Adds a stream source to this actor.
+  template <class Init, class... Ts, class Getter, class ClosedPredicate>
+  stream<typename stream_source_trait_t<Getter>::output>
+  add_source(std::tuple<Ts...> xs, Init init,
+             Getter getter, ClosedPredicate pred) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using type = typename stream_source_trait_t<Getter>::output;
     using state_type = typename stream_source_trait_t<Getter>::state;
@@ -373,7 +386,7 @@ public:
     }
     stream_id sid{ctrl(),
                   new_request_id(message_priority::normal).integer_value()};
-    fwd_stream_handshake<type>(sid);
+    fwd_stream_handshake<type>(sid, xs);
     using impl = stream_source_impl<Getter, ClosedPredicate>;
     std::unique_ptr<downstream_policy> p{new policy::anycast};
     auto ptr = make_counted<impl>(this, sid, std::move(p), std::move(getter),
@@ -383,10 +396,18 @@ public:
     return sid;
   }
 
+  template <class Init, class Getter, class ClosedPredicate>
+  stream<typename stream_source_trait_t<Getter>::output>
+  add_source(Init init, Getter getter, ClosedPredicate pred) {
+    return add_source(std::make_tuple(), std::move(init),
+                      std::move(getter), std::move(pred));
+  }
+
   /// Adds a stream stage to this actor.
-  template <class In, class Init, class Fun, class Cleanup>
+  template <class In, class... Ts, class Init, class Fun, class Cleanup>
   stream<typename stream_stage_trait_t<Fun>::output>
-  add_stage(stream<In>& in, Init init, Fun fun, Cleanup cleanup) {
+  add_stage(stream<In>& in, std::tuple<Ts...> xs,
+            Init init, Fun fun, Cleanup cleanup) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using output_type = typename stream_stage_trait_t<Fun>::output;
     using state_type = typename stream_stage_trait_t<Fun>::state;
@@ -400,7 +421,7 @@ public:
       return stream_id{nullptr, 0};
     }
     auto sid = in.id();
-    fwd_stream_handshake<output_type>(in.id());
+    fwd_stream_handshake<output_type>(sid, xs);
     using impl = stream_stage_impl<Fun, Cleanup>;
     std::unique_ptr<downstream_policy> dptr{new policy::anycast};
     std::unique_ptr<upstream_policy> uptr{new policy::greedy};
@@ -409,6 +430,27 @@ public:
     init(ptr->state());
     streams_.emplace(sid, std::move(ptr));
     return std::move(sid);
+  }
+
+  /// Adds a stream stage to this actor.
+  template <class In, class Init, class Fun, class Cleanup>
+  stream<typename stream_stage_trait_t<Fun>::output>
+  add_stage(stream<In>& in, Init init, Fun fun, Cleanup cleanup) {
+    return add_stage(in, std::make_tuple(), std::move(init),
+                     std::move(fun), std::move(cleanup));
+  }
+
+  /// Adds `hdl` to an already existing stream as a new downstream path. Note
+  /// that the new downstream path will *not* receive previous (historic) data.
+  template <class T, class Handle>
+  expected<void> add_downstream_path(stream<T>& in, Handle hdl) {
+    auto i = streams_.find(in.id());
+    if (i != streams_.end()) {
+      auto ptr = actor_cast<strong_actor_ptr>(std::move(hdl));
+      i->second->add_downstream(ptr, 5, false);
+      return unit;
+    }
+    return sec::cannot_add_downstream;
   }
 
   /// Adds a stream sink to this actor.
@@ -562,8 +604,8 @@ protected:
       swap(g, f);
   }
 
-  template <class T>
-  void fwd_stream_handshake(const stream_id& sid) {
+  template <class T, class... Ts>
+  void fwd_stream_handshake(const stream_id& sid, std::tuple<Ts...>& xs) {
     auto mptr = current_mailbox_element();
     auto& stages = mptr->stages;
     CAF_ASSERT(!stages.empty());
@@ -571,12 +613,13 @@ protected:
     auto next = std::move(stages.back());
     stages.pop_back();
     stream<T> token{sid};
-    next->enqueue(make_mailbox_element(
-                    mptr->sender, mptr->mid, std::move(stages),
-                    make<stream_msg::open>(sid, make_message(token), ctrl(),
-                                           stream_priority::normal,
-                                           std::vector<atom_value>{}, false)),
-                  context());
+    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
+    next->enqueue(
+      make_mailbox_element(
+        mptr->sender, mptr->mid, std::move(stages),
+        make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
+                               ctrl(), stream_priority::normal, false)),
+      context());
     mptr->mid.mark_as_answered();
   }
 

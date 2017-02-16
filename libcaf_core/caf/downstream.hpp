@@ -32,16 +32,8 @@ namespace caf {
 template <class T>
 class downstream final : public abstract_downstream {
 public:
-  /// Topic filters defined by a downstream actor.
-  using topics = abstract_downstream::topics;
-
-  using topics_set = abstract_downstream::topics_set;
-
   /// A chunk of data for sending batches downstream.
   using chunk = std::vector<T>;
-
-  /// Chunks split into multiple categories via filters.
-  using categorized_chunks = std::unordered_map<topics, chunk>;
 
   downstream(local_actor* ptr, const stream_id& sid,
              typename abstract_downstream::policy_ptr policy)
@@ -137,101 +129,6 @@ private:
       }
     }
     return xs;
-  }
-
-  /// @pre `n <= buf_.size()`
-  chunk get_chunk(size_t n, const topics& filter) {
-    if (filter.empty())
-      return get_chunk(n);
-    chunk xs;
-    if (n > 0) {
-      xs.reserve(n);
-      auto in_filter = [&](atom_value x) {
-        auto e = filter.end();
-        return std::find(filter.begin(), e, x) != e;
-      };
-      // temporarily stores a T with the result of in_filter()
-      scratch_space ys;
-      move_from_buf_until_nth_match(ys, n, in_filter);
-      auto is_marked = [](const scratch_space_value& x) {
-        return std::get<1>(x);
-      };
-      // helper for iterating over ys as if using a move iterator
-      // over vector<T>
-      // parition range into result messages and message to move back into buf_
-      scratch_space_move_iter first{ys.begin()};
-      scratch_space_move_iter last{ys.end()};
-      scratch_space_move_iter pp{std::stable_partition(first.i, last.i,
-                                                       is_marked)};
-      xs.insert(xs.end(), first, pp);
-      buf_.insert(buf_.begin(), pp, last);
-    }
-    return std::move(xs);
-  }
-
-  categorized_chunks get_chunks(size_t n, const topics_set& filters) {
-    categorized_chunks res;
-    if (filters.empty()) {
-      res.emplace(topics{}, get_chunk(n));
-    } else if (filters.size() == 1) {
-      res.emplace(*filters.begin(), get_chunk(n, *filters.begin()));
-    } else {
-      // reserve sufficient space for chunks
-      for (auto& filter : filters) {
-        chunk tmp;
-        tmp.reserve(n);
-        res.emplace(filter, std::move(tmp));
-      }
-      // get up to n elements from buffer
-      auto in_filter = [](const topics_set& filter, atom_value x) {
-        auto e = filter.end();
-        return filter.empty() || std::find(filter.begin(), e, x) != e;
-      };
-      auto in_any_filter = [&](atom_value x) {
-        for (auto& filter : filters)
-          if (in_filter(filter, x))
-            return true;
-        return false;
-      };
-      scratch_space ys;
-      move_from_buf_until_nth_match(ys, n, in_any_filter);
-      // parition range into result messages and message to move back into buf_
-      auto is_marked = [](const scratch_space_value& x) {
-        return std::get<1>(x);
-      };
-      auto first = ys.begin();
-      auto last = ys.end();
-      auto pp = std::stable_partition(first, last, is_marked);
-      // copy matched values into according chunks
-      for (auto& r : res)
-        for (auto& y : ys)
-          if (in_filter(r.first, std::get<2>(y)))
-            r.second.emplace_back(std::get<0>(y));
-      // move unused items back into place
-      buf_.insert(buf_.begin(), scratch_space_move_iter{pp},
-                  scratch_space_move_iter{last});
-    }
-    return res;
-  }
-
-  // moves elements from `buf_` to `tmp` until n elements matching the
-  // predicate were moved or the buffer was fully consumed. 
-  // @pre `n > 0`
-  template <class F>
-  void move_from_buf_until_nth_match(scratch_space& ys, size_t n, F pred) {
-    CAF_ASSERT(n > 0);
-    size_t included = 0; // nr. of included elements
-    for (auto i = buf_.begin(); i != buf_.end(); ++i) {
-      auto topic = this->policy().categorize(*i);
-      auto match = pred(topic);
-      ys.emplace_back(std::move(*i), match, topic);
-      if (match && ++included == n) {
-        buf_.erase(buf_.begin(), i + 1);
-        return;
-      }
-    }
-    // consumed whole buffer
-    buf_.clear();
   }
 
   std::deque<T> buf_;

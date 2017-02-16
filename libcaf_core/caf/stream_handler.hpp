@@ -34,21 +34,16 @@ class stream_handler : public ref_counted {
 public:
   ~stream_handler() override;
 
-  // -- member types -----------------------------------------------------------
-
-  using topics = std::vector<atom_value>;
-
   // -- handler for downstream events ------------------------------------------
 
   /// Add a new downstream actor to the stream.
   /// @param hdl Handle to the new downstream actor.
-  /// @param filter Subscribed topics (empty for all).
   /// @param initial_demand Credit received with `ack_open`.
   /// @param redeployable Denotes whether the runtime can redeploy
   ///                     the downstream actor on failure.
   /// @pre `hdl != nullptr`
-  virtual error add_downstream(strong_actor_ptr& hdl, const topics& filter,
-                               size_t initial_demand, bool redeployable);
+  virtual error add_downstream(strong_actor_ptr& hdl, size_t initial_demand,
+                               bool redeployable);
 
   /// Handles ACK message from a downstream actor.
   /// @pre `hdl != nullptr`

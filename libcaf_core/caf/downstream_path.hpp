@@ -34,8 +34,6 @@ namespace caf {
 /// the stream ID registered with the hosting downstream object.
 class downstream_path {
 public:
-  using topics = std::vector<atom_value>;
-
   /// Handle to the downstream actor.
   strong_actor_ptr ptr;
 
@@ -45,9 +43,6 @@ public:
   /// Currently available credit for this path.
   size_t open_credit;
 
-  /// Subscribed topics on this path (empty for all).
-  topics filter;
-
   /// Stores whether the downstream actor is failsafe, i.e., allows the runtime
   /// to redeploy it on failure. If this field is set to `false` then
   /// `unacknowledged_batches` is unused.
@@ -56,7 +51,7 @@ public:
   /// Caches batches until receiving an ACK.
   std::deque<std::pair<int64_t, stream_msg::batch>> unacknowledged_batches;
 
-  downstream_path(strong_actor_ptr p, topics ts, bool redeploy);
+  downstream_path(strong_actor_ptr p, bool redeploy);
 };
 
 } // namespace caf

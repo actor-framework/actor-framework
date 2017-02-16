@@ -32,13 +32,11 @@ namespace mixin {
 template <class Base, class Subtype>
 class has_downstreams : public Base {
 public:
-  using topics = typename Base::topics;
-
-  error add_downstream(strong_actor_ptr& ptr, const topics& filter,
-                       size_t init, bool is_redeployable) final {
+  error add_downstream(strong_actor_ptr& ptr, size_t init,
+                       bool is_redeployable) final {
     if (!ptr)
       return sec::invalid_argument;
-    if (out().add_path(ptr, filter, is_redeployable)) {
+    if (out().add_path(ptr, is_redeployable)) {
       dptr()->downstream_demand(ptr, init);
       return none;
     }

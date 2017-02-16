@@ -37,9 +37,6 @@ class abstract_downstream {
 public:
   using topics = std::vector<atom_value>;
 
-  /// A set of downstream-defined topic subscriptions.
-  using topics_set = std::set<topics>;
-
   using path = downstream_path;
 
   using path_cref = const path&;
@@ -86,8 +83,7 @@ public:
   /// Returns the size of the output buffer.
   virtual size_t buf_size() const = 0;
 
-  bool add_path(strong_actor_ptr ptr, std::vector<atom_value> filter,
-                bool redeployable);
+  bool add_path(strong_actor_ptr ptr, bool redeployable);
 
   bool remove_path(strong_actor_ptr& ptr);
 
@@ -116,8 +112,6 @@ public:
   }
 
 protected:
-  void recalculate_active_filters();
-
   void send_batch(downstream_path& dest, size_t chunk_size, message chunk);
 
   /// Sorts `paths_` in descending order by available credit.
@@ -137,7 +131,6 @@ protected:
   stream_id sid_;
   path_list paths_;
   std::unique_ptr<downstream_policy> policy_;
-  topics_set active_filters_;
 };
 
 } // namespace caf
