@@ -112,3 +112,9 @@ CAF_TEST(move_and_copy) {
   CHECK_NEQ(z, z_cpy);
   CHECK_EQ(z, sec::unsupported_sys_key);
 }
+
+CAF_TEST(construction_with_none) {
+  e_int x{none};
+  CHECK(!x);
+  CHECK(!x.error());
+}
