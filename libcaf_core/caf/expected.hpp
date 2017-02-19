@@ -375,6 +375,10 @@ public:
     // nop
   }
 
+  expected(no_error_t) noexcept {
+    // nop
+  }
+
   expected(caf::error e) noexcept : error_(std::move(e)) {
     // nop
   }
