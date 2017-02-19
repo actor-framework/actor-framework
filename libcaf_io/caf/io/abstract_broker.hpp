@@ -257,6 +257,9 @@ public:
   /// Returns all handles of all `scribe` instances attached to this broker.
   std::vector<connection_handle> connections() const;
 
+  /// Returns the `multiplexer` running this broker.
+  network::multiplexer& backend();
+
 protected:
   void init_broker();
 
@@ -286,9 +289,6 @@ protected:
   static intrusive_ptr<scribe> ptr_of(connection_handle);
 
   /// @endcond
-
-  /// Returns the `multiplexer` running this broker.
-  network::multiplexer& backend();
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.
   template <class Handle>
