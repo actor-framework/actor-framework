@@ -39,7 +39,7 @@ file(READ "libcaf_core/caf/config.hpp" CONFIG_HPP)
 # get line containing the version
 string(REGEX MATCH "#define CAF_VERSION [0-9]+" VERSION_LINE "${CONFIG_HPP}")
 # extract version number from line
-string(REGEX MATCH "[0-9]+" VERSION_INT "${VERSION_LINE}")
+string(REGEX MATCH " [0-9]+" VERSION_INT "${VERSION_LINE}")
 # calculate major, minor, and patch version
 math(EXPR CAF_VERSION_MAJOR "${VERSION_INT} / 10000")
 math(EXPR CAF_VERSION_MINOR "( ${VERSION_INT} / 100) % 100")
