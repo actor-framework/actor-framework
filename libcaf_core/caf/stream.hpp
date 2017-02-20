@@ -25,6 +25,8 @@
 
 namespace caf {
 
+struct invalid_stream_t {};
+
 /// Identifies an unbound sequence of messages.
 template <class T>
 class stream {
@@ -36,6 +38,10 @@ public:
   stream& operator=(const stream&) = default;
 
   stream(stream_id sid) : id_(std::move(sid)) {
+    // nop
+  }
+
+  stream(invalid_stream_t) {
     // nop
   }
 
@@ -51,6 +57,8 @@ public:
 private:
   stream_id id_;
 };
+
+constexpr invalid_stream_t invalid_stream = invalid_stream_t{};
 
 } // namespace caf
 
