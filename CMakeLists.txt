@@ -212,7 +212,7 @@ if(CAF_MORE_WARNINGS)
                "-Wignored-qualifiers -Winit-self "
                "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
                "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
-               "-Wmissing-braces -Wmissing-field-initializers -Wmultichar "
+               "-Wmissing-braces -Wmultichar "
                "-Wnarrowing -Wnoexcept -Wnon-template-friend "
                "-Wnon-virtual-dtor -Wnonnull -Woverflow "
                "-Woverlength-strings -Wparentheses "
