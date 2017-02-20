@@ -174,6 +174,10 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
    OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   set(EXTRA_FLAGS "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
 endif()
+# explicitly disable obnoxious GCC warnings
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  set(EXTRA_FLAGS "-Wno-missing-field-initializers")
+endif()
 # add "-Werror" flag if --pedantic-build is used
 if(CAF_CXX_WARNINGS_AS_ERRORS)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -Werror")
