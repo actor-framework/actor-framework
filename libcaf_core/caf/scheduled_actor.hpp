@@ -406,7 +406,7 @@ public:
   /// Adds a stream stage to this actor.
   template <class In, class... Ts, class Init, class Fun, class Cleanup>
   stream<typename stream_stage_trait_t<Fun>::output>
-  add_stage(stream<In>& in, std::tuple<Ts...> xs,
+  add_stage(const stream<In>& in, std::tuple<Ts...> xs,
             Init init, Fun fun, Cleanup cleanup) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using output_type = typename stream_stage_trait_t<Fun>::output;
@@ -435,7 +435,7 @@ public:
   /// Adds a stream stage to this actor.
   template <class In, class Init, class Fun, class Cleanup>
   stream<typename stream_stage_trait_t<Fun>::output>
-  add_stage(stream<In>& in, Init init, Fun fun, Cleanup cleanup) {
+  add_stage(const stream<In>& in, Init init, Fun fun, Cleanup cleanup) {
     return add_stage(in, std::make_tuple(), std::move(init),
                      std::move(fun), std::move(cleanup));
   }
@@ -456,7 +456,7 @@ public:
   /// Adds a stream sink to this actor.
   template <class In, class Init, class Fun, class Finalize>
   result<typename stream_sink_trait_t<Fun, Finalize>::output>
-  add_sink(stream<In>& in, Init init, Fun fun, Finalize finalize) {
+  add_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     delegated<typename stream_sink_trait_t<Fun, Finalize>::output> dummy_res;
     //using output_type = typename stream_sink_trait_t<Fun, Finalize>::output;
