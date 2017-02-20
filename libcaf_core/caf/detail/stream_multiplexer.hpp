@@ -138,8 +138,13 @@ public:
   stream_multiplexer(local_actor* self, backend& service);
 
   /// Queries whether stream `x` is managed by this multiplexer.
-  bool has_stream(const stream_id& x) const {
+  inline bool has_stream(const stream_id& x) const {
     return streams_.count(x) > 0;
+  }
+
+  /// Queries the number of open streams.
+  inline size_t num_streams() const {
+    return streams_.size();
   }
 
 protected:
