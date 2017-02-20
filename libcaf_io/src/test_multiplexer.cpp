@@ -333,11 +333,11 @@ void test_multiplexer::prepare_connection(accept_handle src,
   CAF_LOG_DEBUG("insert scribe data for" << CAF_ARG(hdl));
   auto res1 = scribe_data_.emplace(hdl, scribe_data{input, output});
   if (!res1.second)
-    throw std::runtime_error("prepare_connection: handle already in use");
+    CAF_RAISE_ERROR("prepare_connection: handle already in use");
   CAF_LOG_DEBUG("insert scribe data on peer for" << CAF_ARG(peer_hdl));
   auto res2 = peer.scribe_data_.emplace(peer_hdl, scribe_data{output, input});
   if (!res2.second)
-    throw std::runtime_error("prepare_connection: peer handle already in use");
+    CAF_RAISE_ERROR("prepare_connection: peer handle already in use");
   provide_acceptor(port, src);
   add_pending_connect(src, hdl);
   peer.provide_scribe(std::move(host), port, peer_hdl);
