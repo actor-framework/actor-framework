@@ -110,6 +110,11 @@ public:
 
   actor& operator=(const scoped_actor& x);
 
+  inline actor& operator=(std::nullptr_t) {
+    ptr_.reset();
+    return *this;
+  }
+
   /// Queries whether this actor handle is valid.
   inline explicit operator bool() const {
     return static_cast<bool>(ptr_);
