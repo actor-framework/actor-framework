@@ -255,14 +255,14 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
 
 void middleman::start() {
   CAF_LOG_TRACE("");
-  // create hooks
+  // Create hooks.
   for (auto& f : system().config().hook_factories)
     hooks_.emplace_back(f(system_));
-  // launch backend
+  // Launch backend.
   backend_supervisor_ = backend().make_supervisor();
   if (!backend_supervisor_) {
-    // the only backend that returns a `nullptr` is the `test_multiplexer`
-    // which does not have its own thread but uses the main thread instead
+    // The only backend that returns a `nullptr` is the `test_multiplexer`
+    // which does not have its own thread but uses the main thread instead.
     backend().thread_id(std::this_thread::get_id());
   } else {
     thread_ = std::thread{[this] {
@@ -272,9 +272,7 @@ void middleman::start() {
     }};
     backend().thread_id(thread_.get_id());
   }
-  auto basp = named_broker<basp_broker>(atom("BASP"));
-  manager_ = make_middleman_actor(system(), basp);
-  // Install stream serv into the actor system.
+  // Default implementation of the stream server.
   class stream_serv : public raw_event_based_actor,
                       public detail::stream_multiplexer::backend {
   public:
@@ -354,11 +352,20 @@ void middleman::start() {
       return result;
     }
 
+    void on_exit() override {
+      // Make sure to not keep references to remotes after shutdown.
+      remotes().clear();
+    }
+
   private:
     detail::incoming_stream_multiplexer incoming_;
     detail::outgoing_stream_multiplexer outgoing_;
   };
-  auto ssi = system().spawn<stream_serv, lazy_init + hidden>(actor_cast<actor>(basp));
+  // Spawn utility actors.
+  auto basp = named_broker<basp_broker>(atom("BASP"));
+  manager_ = make_middleman_actor(system(), basp);
+  auto hdl = actor_cast<actor>(basp);
+  auto ssi = system().spawn<stream_serv, lazy_init + hidden>(std::move(hdl));
   system().stream_serv(actor_cast<strong_actor_ptr>(std::move(ssi)));
 }
 

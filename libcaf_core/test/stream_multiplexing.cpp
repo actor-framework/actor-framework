@@ -54,22 +54,22 @@ void streamer_impl(event_based_actor* self, const actor& dest) {
     // destination of the stream
     dest,
     // initialize state
-    [&](buf& xs) {
+    [](buf& xs) {
       xs = buf{1, 2, 3, 4, 5, 6, 7, 8, 9};
     },
     // get next element
-    [=](buf& xs, downstream<int>& out, size_t num) {
+    [](buf& xs, downstream<int>& out, size_t num) {
       auto n = std::min(num, xs.size());
       for (size_t i = 0; i < n; ++i)
         out.push(xs[i]);
       xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
     },
     // check whether we reached the end
-    [=](const buf& xs) {
+    [](const buf& xs) {
       return xs.empty();
     },
     // handle result of the stream
-    [=](expected<int>) {
+    [](expected<int>) {
       // nop
     }
   );
@@ -146,6 +146,13 @@ public:
     };
   }
 
+  void on_exit() override {
+    CAF_CHECK_EQUAL(incoming_.num_streams(), 0u);
+    CAF_CHECK_EQUAL(outgoing_.num_streams(), 0u);
+    CAF_CHECK(streams().empty());
+    remotes().empty();
+  }
+
   strong_actor_ptr remote_stream_serv(const node_id& nid) override;
 
 private:
@@ -157,7 +164,7 @@ private:
 // Simulates a regular forwarding_actor_proxy by pushing a handle to the
 // original to the forwarding stack and redirecting each message to the
 // stream_serv.
-class pseudo_proxy : public raw_event_based_actor{
+class pseudo_proxy : public raw_event_based_actor {
 public:
   pseudo_proxy(actor_config& cfg, actor stream_serv, actor original)
       : raw_event_based_actor(cfg),
