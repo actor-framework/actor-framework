@@ -94,34 +94,30 @@ void incoming_stream_multiplexer::operator()(stream_msg::ack_batch&) {
 void incoming_stream_multiplexer::operator()(stream_msg::close&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
   CAF_ASSERT(current_stream_state_ != streams_.end());
-  auto i = streams_.find(current_stream_msg_->sid);
-  if (i != streams_.end()) {
-    forward_to_downstream();
-    streams_.erase(i);
-  }
+  forward_to_downstream();
+  streams_.erase(current_stream_state_);
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::abort& x) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
   CAF_ASSERT(current_stream_state_ != streams_.end());
-  auto i = streams_.find(current_stream_msg_->sid);
-  if (i != streams_.end()) {
-    if (i->second.prev_stage == self_->current_sender())
-      fail(x.reason, nullptr, i->second.next_stage);
-    else
-      fail(x.reason, i->second.prev_stage);
-    streams_.erase(i);
-  }
+  if (current_stream_state_->second.prev_stage == self_->current_sender())
+    fail(x.reason, nullptr, current_stream_state_->second.next_stage);
+  else
+    fail(x.reason, current_stream_state_->second.prev_stage);
+  streams_.erase(current_stream_state_);
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::downstream_failed&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
   CAF_ASSERT(current_stream_state_ != streams_.end());
+  // TODO: implement me
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::upstream_failed&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
   CAF_ASSERT(current_stream_state_ != streams_.end());
+  // TODO: implement me
 }
 
 void incoming_stream_multiplexer::forward_to_upstream() {
