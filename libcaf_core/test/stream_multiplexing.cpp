@@ -150,7 +150,7 @@ public:
     CAF_CHECK_EQUAL(incoming_.num_streams(), 0u);
     CAF_CHECK_EQUAL(outgoing_.num_streams(), 0u);
     CAF_CHECK(streams().empty());
-    remotes().empty();
+    remotes().clear();
   }
 
   strong_actor_ptr remote_stream_serv(const node_id& nid) override;
