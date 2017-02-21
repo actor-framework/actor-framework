@@ -66,11 +66,9 @@ public:
     event* next;
     event* prev;
     int level;
-    const char* component;
     std::string prefix;
     std::string msg;
-    explicit event(int l = 0, char const* c = "", std::string p = "",
-                   std::string m = "");
+    explicit event(int lvl = 0, std::string pfx = "", std::string msg = "");
   };
 
   template <class T>
@@ -158,6 +156,8 @@ public:
                          const char* file_name, int line_num,
                          const std::string& msg);
 
+  static bool accepts(int level, const char* component);
+
   /** @endcond */
 
 private:
@@ -233,9 +233,12 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #endif
 
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
-  caf::logger::log_static(loglvl, component, CAF_GET_CLASS_NAME,               \
-                          __func__, __FILE__, __LINE__,                        \
-                          (caf::logger::line_builder{} << message).get())
+  do {                                                                         \
+    if (caf::logger::accepts(loglvl, component))                               \
+      caf::logger::log_static(loglvl, component, CAF_GET_CLASS_NAME,           \
+                              __func__, __FILE__, __LINE__,                    \
+                              (caf::logger::line_builder{} << message).get()); \
+  } while (0)
 
 #define CAF_PUSH_AID(aarg)                                                     \
   auto CAF_UNIFYN(caf_tmp_ptr) = caf::logger::current_logger();                \
@@ -270,9 +273,10 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_TRACE,                         \
                "ENTRY" << entry_message);                                      \
   auto CAF_UNIFYN(caf_log_trace_guard_) = ::caf::detail::make_scope_guard([=] {\
-    caf::logger::log_static(CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT,            \
-                            CAF_GET_CLASS_NAME, CAF_UNIFYN(func_name_),        \
-                            __FILE__, __LINE__, "EXIT");                       \
+    if (caf::logger::accepts(CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT))          \
+      caf::logger::log_static(CAF_LOG_LEVEL_TRACE, CAF_LOG_COMPONENT,          \
+                              CAF_GET_CLASS_NAME, CAF_UNIFYN(func_name_),      \
+                              __FILE__, __LINE__, "EXIT");                     \
   })
 
 #endif // CAF_LOG_LEVEL < CAF_LOG_LEVEL_TRACE
