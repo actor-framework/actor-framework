@@ -28,12 +28,6 @@ namespace caf {
 namespace io {
 namespace network {
 
-test_multiplexer::scribe_data::scribe_data()
-    : scribe_data(std::make_shared<buffer_type>(),
-                  std::make_shared<buffer_type>()) {
-  // nop
-}
-
 test_multiplexer::scribe_data::scribe_data(shared_buffer_type input,
                                            shared_buffer_type output)
     : vn_buf_ptr(std::move(input)),
@@ -43,11 +37,6 @@ test_multiplexer::scribe_data::scribe_data(shared_buffer_type input,
       stopped_reading(false),
       passive_mode(false),
       ack_writes(false) {
-  // nop
-}
-
-test_multiplexer::scribe_data::scribe_data(const scribe_data& other)
-    : scribe_data(other.vn_buf_ptr, other.wr_buf_ptr) {
   // nop
 }
 

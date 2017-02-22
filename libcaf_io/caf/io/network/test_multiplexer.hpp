@@ -173,14 +173,10 @@ private:
     intrusive_ptr<scribe> ptr;
     bool ack_writes;
 
-    // Creates a mock-only scribe.
-    scribe_data();
-
-    // Creates an entangled scribe where the input of this scribe is
-    // output of another scribe and vice versa.
-    scribe_data(shared_buffer_type input, shared_buffer_type output);
-
-    scribe_data(const scribe_data&);
+    // Allows creating an entangled scribes where the input of this scribe is
+    // the output of another scribe and vice versa.
+    scribe_data(shared_buffer_type input = std::make_shared<buffer_type>(),
+                shared_buffer_type output = std::make_shared<buffer_type>());
   };
 
   struct doorman_data {
