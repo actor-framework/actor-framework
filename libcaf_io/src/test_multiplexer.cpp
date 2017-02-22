@@ -52,7 +52,7 @@ test_multiplexer::~test_multiplexer() {
 
 expected<connection_handle>
 test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
-CAF_LOG_DEBUG("new tcp scribe " << CAF_ARG(host) << CAF_ARG(port_hint)); // DELME
+  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port_hint));
   guard_type guard{mx_};
   connection_handle result;
   auto i = scribes_.find(std::make_pair(host, port_hint));
@@ -66,7 +66,6 @@ CAF_LOG_DEBUG("new tcp scribe " << CAF_ARG(host) << CAF_ARG(port_hint)); // DELM
 expected<void> test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
                                                    connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
-CAF_LOG_DEBUG("assign tcp scribe " << CAF_ARG(hdl)); // DELME
   class impl : public scribe {
   public:
     impl(abstract_broker* self, connection_handle ch, test_multiplexer* mpx)
@@ -136,7 +135,7 @@ connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
 expected<connection_handle>
 test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
                                  uint16_t desired_port) {
-  CAF_LOG_DEBUG("add tcp scribe " << CAF_ARG(host) << CAF_ARG(desired_port)); // DELME
+  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(desired_port));
   auto hdl = new_tcp_scribe(host, desired_port);
   if (!hdl)
     return std::move(hdl.error());
@@ -240,7 +239,6 @@ void test_multiplexer::run() {
 void test_multiplexer::provide_scribe(std::string host, uint16_t desired_port,
                                       connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(desired_port) << CAF_ARG(hdl));
-CAF_LOG_DEBUG(CAF_ARG(host) << CAF_ARG(desired_port) << CAF_ARG(hdl)); // DELME
   guard_type guard{mx_};
   scribes_.emplace(std::make_pair(std::move(host), desired_port), hdl);
 }
