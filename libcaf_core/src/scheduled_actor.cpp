@@ -379,7 +379,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case make_type_token<stream_msg>(): {
-      auto sm = content.move_if_unshared<stream_msg>(0);
+      auto& sm = content.get_mutable_as<stream_msg>(0);
       auto e = streams_.end();
       stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e};
       auto res = apply_visitor(f, sm.content);

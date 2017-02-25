@@ -34,6 +34,7 @@
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_marker.hpp"
+#include "caf/stream_result.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream_sink_impl.hpp"
@@ -82,6 +83,9 @@ class scheduled_actor : public local_actor, public resumable {
 public:
   // -- member types -----------------------------------------------------------
 
+  /// A reference-counting pointer to a `stream_handler`.
+  using stream_handler_ptr = intrusive_ptr<stream_handler>;
+
   /// The message ID of an outstanding response with its callback.
   using pending_response = std::pair<const message_id, behavior>;
 
@@ -89,7 +93,8 @@ public:
   using pointer = scheduled_actor*;
 
   /// Function object for handling unmatched messages.
-  using default_handler = std::function<result<message> (pointer, message_view&)>;
+  using default_handler =
+    std::function<result<message>(pointer, message_view&)>;
 
   /// Function object for handling error messages.
   using error_handler = std::function<void (pointer, error&)>;
@@ -298,12 +303,19 @@ public:
 
   // -- stream management ------------------------------------------------------
 
+  /// Owning poiner to a `downstream_policy`.
+  using downstream_policy_ptr = std::unique_ptr<downstream_policy>;
+
+  /// Owning poiner to an `upstream_policy`.
+  using upstream_policy_ptr = std::unique_ptr<upstream_policy>;
+
   // Starts a new stream.
   template <class Handle, class... Ts, class Init, class Getter,
             class ClosedPredicate, class ResHandler>
-  stream<typename stream_source_trait_t<Getter>::output>
+  annotated_stream<typename stream_source_trait_t<Getter>::output, Ts...>
   new_stream(const Handle& dest, std::tuple<Ts...> xs, Init init, Getter getter,
-             ClosedPredicate pred, ResHandler res_handler) {
+             ClosedPredicate pred, ResHandler res_handler,
+             downstream_policy_ptr dpolicy = nullptr) {
     using type = typename stream_source_trait_t<Getter>::output;
     using state_type = typename stream_source_trait_t<Getter>::state;
     static_assert(std::is_same<
@@ -313,13 +325,15 @@ public:
                   "Expected signature `void (State&)` for init function");
     static_assert(std::is_same<
                     bool (const state_type&),
-                    typename detail::get_callable_trait<ClosedPredicate>::fun_sig
+                    typename detail::get_callable_trait<
+                      ClosedPredicate
+                    >::fun_sig
                   >::value,
                   "Expected signature `bool (const State&)` for "
                   "closed_predicate function");
     if (!dest) {
       CAF_LOG_ERROR("cannot stream to an invalid actor handle");
-      return stream_id{nullptr, 0};
+      return {stream_id{nullptr, 0}, nullptr};
     }
     // generate new stream ID
     stream_id sid{ctrl(),
@@ -340,12 +354,13 @@ public:
       stream_result_trait_t<ResHandler>::make_result_handler(res_handler));
     // install stream handler
     using impl = stream_source_impl<Getter, ClosedPredicate>;
-    std::unique_ptr<downstream_policy> p{new policy::anycast};
-    auto ptr = make_counted<impl>(this, sid, std::move(p), std::move(getter),
-                                  std::move(pred));
+    if (dpolicy == nullptr)
+      dpolicy.reset(new policy::anycast);
+    auto ptr = make_counted<impl>(this, sid, std::move(dpolicy),
+                                  std::move(getter), std::move(pred));
     init(ptr->state());
-    streams_.emplace(std::move(sid), std::move(ptr));
-    return sid;
+    streams_.emplace(sid, ptr);
+    return {std::move(sid), std::move(ptr)};
   }
 
   // Starts a new stream.
@@ -361,9 +376,9 @@ public:
 
   /// Adds a stream source to this actor.
   template <class Init, class... Ts, class Getter, class ClosedPredicate>
-  stream<typename stream_source_trait_t<Getter>::output>
-  add_source(std::tuple<Ts...> xs, Init init,
-             Getter getter, ClosedPredicate pred) {
+  annotated_stream<typename stream_source_trait_t<Getter>::output, Ts...>
+  add_source(std::tuple<Ts...> xs, Init init, Getter getter,
+             ClosedPredicate pred, downstream_policy_ptr dpolicy = nullptr) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using type = typename stream_source_trait_t<Getter>::output;
     using state_type = typename stream_source_trait_t<Getter>::state;
@@ -374,7 +389,9 @@ public:
                   "Expected signature `void (State&)` for init function");
     static_assert(std::is_same<
                     bool (const state_type&),
-                    typename detail::get_callable_trait<ClosedPredicate>::fun_sig
+                    typename detail::get_callable_trait<
+                      ClosedPredicate
+                    >::fun_sig
                   >::value,
                   "Expected signature `bool (const State&)` for "
                   "closed_predicate function");
@@ -382,18 +399,19 @@ public:
       CAF_LOG_ERROR("cannot create a stream data source without downstream");
       auto rp = make_response_promise();
       rp.deliver(sec::no_downstream_stages_defined);
-      return stream_id{nullptr, 0};
+      return {stream_id{nullptr, 0}, nullptr};
     }
     stream_id sid{ctrl(),
                   new_request_id(message_priority::normal).integer_value()};
     fwd_stream_handshake<type>(sid, xs);
     using impl = stream_source_impl<Getter, ClosedPredicate>;
-    std::unique_ptr<downstream_policy> p{new policy::anycast};
-    auto ptr = make_counted<impl>(this, sid, std::move(p), std::move(getter),
-                                  std::move(pred));
+    if (dpolicy == nullptr)
+      dpolicy.reset(new policy::anycast);
+    auto ptr = make_counted<impl>(this, sid, std::move(dpolicy),
+                                  std::move(getter), std::move(pred));
     init(ptr->state());
-    streams_.emplace(std::move(sid), std::move(ptr));
-    return sid;
+    streams_.emplace(sid, ptr);
+    return {std::move(sid), std::move(ptr)};
   }
 
   template <class Init, class Getter, class ClosedPredicate>
@@ -405,9 +423,10 @@ public:
 
   /// Adds a stream stage to this actor.
   template <class In, class... Ts, class Init, class Fun, class Cleanup>
-  stream<typename stream_stage_trait_t<Fun>::output>
-  add_stage(const stream<In>& in, std::tuple<Ts...> xs,
-            Init init, Fun fun, Cleanup cleanup) {
+  annotated_stream<typename stream_stage_trait_t<Fun>::output, Ts...>
+  add_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
+            Cleanup cleanup, upstream_policy_ptr upolicy = nullptr,
+            downstream_policy_ptr dpolicy = nullptr) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using output_type = typename stream_stage_trait_t<Fun>::output;
     using state_type = typename stream_stage_trait_t<Fun>::state;
@@ -423,13 +442,16 @@ public:
     auto sid = in.id();
     fwd_stream_handshake<output_type>(sid, xs);
     using impl = stream_stage_impl<Fun, Cleanup>;
-    std::unique_ptr<downstream_policy> dptr{new policy::anycast};
-    std::unique_ptr<upstream_policy> uptr{new policy::greedy};
-    auto ptr = make_counted<impl>(this, sid, std::move(uptr), std::move(dptr),
-                                  std::move(fun), std::move(cleanup));
+    if (upolicy == nullptr)
+      upolicy.reset(new policy::greedy);
+    if (dpolicy == nullptr)
+      dpolicy.reset(new policy::anycast);
+    auto ptr = make_counted<impl>(this, sid, std::move(upolicy),
+                                  std::move(dpolicy), std::move(fun),
+                                  std::move(cleanup));
     init(ptr->state());
-    streams_.emplace(sid, std::move(ptr));
-    return std::move(sid);
+    streams_.emplace(sid, ptr);
+    return {std::move(sid), std::move(ptr)};
   }
 
   /// Adds a stream stage to this actor.
@@ -455,10 +477,10 @@ public:
 
   /// Adds a stream sink to this actor.
   template <class In, class Init, class Fun, class Finalize>
-  result<typename stream_sink_trait_t<Fun, Finalize>::output>
-  add_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize) {
+  stream_result<typename stream_sink_trait_t<Fun, Finalize>::output>
+  add_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize,
+           upstream_policy_ptr upolicy = nullptr) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
-    delegated<typename stream_sink_trait_t<Fun, Finalize>::output> dummy_res;
     //using output_type = typename stream_sink_trait_t<Fun, Finalize>::output;
     using state_type = typename stream_sink_trait_t<Fun, Finalize>::state;
     static_assert(std::is_same<
@@ -475,20 +497,21 @@ public:
     auto mptr = current_mailbox_element();
     if (!mptr) {
       CAF_LOG_ERROR("add_sink called outside of a message handler");
-      return dummy_res;
+      return {stream_id{nullptr, 0}, nullptr};
     }
     using impl = stream_sink_impl<Fun, Finalize>;
-    std::unique_ptr<upstream_policy> p{new policy::greedy};
-    auto ptr = make_counted<impl>(this, std::move(p), std::move(mptr->sender),
+    if (upolicy == nullptr)
+      upolicy.reset(new policy::greedy);
+    auto ptr = make_counted<impl>(this, std::move(upolicy),
+                                  std::move(mptr->sender),
                                   std::move(mptr->stages), mptr->mid,
                                   std::move(fun), std::move(finalize));
     init(ptr->state());
-    streams_.emplace(in.id(), std::move(ptr));
-    return dummy_res;
+    streams_.emplace(in.id(), ptr);
+    return {in.id(), std::move(ptr)};
   }
 
-  inline std::unordered_map<stream_id, intrusive_ptr<stream_handler>>&
-  streams() {
+  inline std::unordered_map<stream_id, stream_handler_ptr>& streams() {
     return streams_;
   }
 
@@ -654,7 +677,7 @@ protected:
 
   // TODO: this type is quite heavy in terms of memory, maybe use vector?
   /// Holds state for all streams running through this actor.
-  std::unordered_map<stream_id, intrusive_ptr<stream_handler>> streams_;
+  std::unordered_map<stream_id, stream_handler_ptr> streams_;
 
 # ifndef CAF_NO_EXCEPTIONS
   /// Customization point for setting a default exception callback.

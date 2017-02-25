@@ -53,6 +53,10 @@ template <class...> class typed_actor_pointer;
 template <class...> class typed_response_promise;
 template <class...> class typed_event_based_actor;
 
+// -- variadic templates with 1 fixed argument ---------------------------------
+
+template <class, class...> class annotated_stream;
+
 // -- classes ------------------------------------------------------------------
 
 class actor;
@@ -183,6 +187,7 @@ using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
 // -- intrusive pointer aliases ------------------------------------------------
 
+using stream_handler_ptr = intrusive_ptr<stream_handler>;
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
 // -- unique pointer aliases ---------------------------------------------------

@@ -49,6 +49,7 @@ struct stream_msg : tag::boxing_type {
     /// Identifies content types that propagate errors in both directions.
     flows_both_ways
   };
+
   /// Initiates a stream handshake.
   struct open {
     /// Allows visitors to dispatch on this tag.
