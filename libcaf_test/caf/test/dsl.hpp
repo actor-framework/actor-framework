@@ -267,7 +267,9 @@ private:
     elementwise_compare_inspector<U> inspector{x};
     auto xs = this->template peek<typename T::outer_type>();
     auto& x0 = get<0>(xs);
-    CAF_REQUIRE(is<T>(x0));
+    if (!is<T>(x0)) {
+      CAF_FAIL("is<T>(x0) !! " << caf::deep_to_string(x0));
+    }
     CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(x0))));
   }
 
