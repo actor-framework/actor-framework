@@ -54,9 +54,10 @@ public:
   /// @pre `new_demand > 0`
   virtual error downstream_demand(strong_actor_ptr& hdl, size_t new_demand);
 
-  /// Push new data to downstream by sending batches. The amount of pushed data
-  /// is limited by the available credit.
-  virtual error push();
+  /// Push new data to downstream actors by sending batches. The amount of
+  /// pushed data is limited by `hint` or the available credit if
+  /// `hint == nullptr`.
+  virtual error push(size_t* hint = nullptr);
 
   // -- handler for upstream events --------------------------------------------
 
@@ -83,18 +84,20 @@ public:
 
   virtual bool done() const = 0;
 
-  /// Queries whether this handler is a sink, i.e.,
-  /// does not accept downstream actors.
-  virtual bool is_sink() const;
+  /// Returns the downstream if this handler is a sink or stage.
+  virtual optional<abstract_downstream&> get_downstream();
 
-  /// Queries whether this handler is a hdl, i.e.,
-  /// does not accepts upstream actors.
-  virtual bool is_source() const;
+  /// Returns the upstream if this handler is a source or stage.
+  virtual optional<abstract_upstream&> get_upstream();
 
   /// Returns a type-erased `stream<T>` as handshake token for downstream
   /// actors. Returns an empty message for sinks.
   virtual message make_output_token(const stream_id&) const;
 };
+
+/// A reference counting pointer to a `stream_handler`.
+/// @relates stream_handler
+using stream_handler_ptr = intrusive_ptr<stream_handler>;
 
 } // namespace caf
 

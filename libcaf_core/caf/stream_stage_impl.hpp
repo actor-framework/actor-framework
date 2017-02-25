@@ -66,6 +66,14 @@ public:
     return make_message(stream<output_type>{x});
   }
 
+  optional<abstract_downstream&> get_downstream() final {
+    return out_;
+  }
+
+  optional<abstract_upstream&> get_upstream() final {
+    return in_;
+  }
+
   state_type& state() {
     return state_;
   }

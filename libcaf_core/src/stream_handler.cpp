@@ -48,7 +48,7 @@ error stream_handler::downstream_demand(strong_actor_ptr&, size_t) {
   return sec::invalid_downstream;
 }
 
-error stream_handler::push() {
+error stream_handler::push(size_t*) {
   CAF_LOG_ERROR("Cannot push to a stream marked as no-downstreams");
   return sec::invalid_downstream;
 }
@@ -77,12 +77,12 @@ error stream_handler::pull(size_t) {
   return sec::invalid_upstream;
 }
 
-bool stream_handler::is_sink() const {
-  return false;
+optional<abstract_downstream&> stream_handler::get_downstream() {
+  return none;
 }
 
-bool stream_handler::is_source() const {
-  return false;
+optional<abstract_upstream&> stream_handler::get_upstream() {
+  return none;
 }
 
 message stream_handler::make_output_token(const stream_id&) const {

@@ -72,13 +72,13 @@ public:
   /// Returns the minimal credit of all sinks in O(n).
   size_t min_credit() const;
 
-  /// Broadcasts the first `min_credit()` elements of the buffer on all paths
-  /// for all topics.
-  virtual void broadcast() = 0;
+  /// Broadcasts the first `*hint` elements of the buffer on all paths. If
+  /// `hint == nullptr` then `min_credit()` is used instead.
+  virtual void broadcast(size_t* hint = nullptr) = 0;
 
-  /// Sends `total_credit()` elements of the buffer to any available path
-  /// on any topic.
-  virtual void anycast() = 0;
+  /// Sends `*hint` elements of the buffer to available paths. If
+  /// `hint == nullptr` then `total_credit()` is used instead.
+  virtual void anycast(size_t* hint = nullptr) = 0;
 
   /// Returns the size of the output buffer.
   virtual size_t buf_size() const = 0;

@@ -38,8 +38,9 @@ public:
   /// Queries the optimal amount of data for the next `push` operation to `x`.
   virtual size_t desired_buffer_size(const abstract_downstream& x) = 0;
 
-  /// Pushes data to the downstream paths of `x`.
-  virtual void push(abstract_downstream& x) = 0;
+  /// Pushes data to the downstream paths of `x`, optionally passing the last
+  /// result of `desired_buffer_size` for `x` as second argument.
+  virtual void push(abstract_downstream& x, size_t* hint = nullptr) = 0;
 
   // TODO: callbacks für new and closed downstream pahts
 

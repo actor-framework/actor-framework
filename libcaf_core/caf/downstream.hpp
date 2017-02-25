@@ -54,9 +54,8 @@ public:
     return buf_;
   }
 
-  void broadcast() override {
-
-    auto chunk = get_chunk(min_credit());
+  void broadcast(size_t* hint) override {
+    auto chunk = get_chunk(hint ? *hint : min_credit());
     auto csize = chunk.size();
     if (csize == 0)
       return;
@@ -67,7 +66,7 @@ public:
     }
   }
 
-  void anycast() override {
+  void anycast(size_t*) override {
     sort_by_credit();
     for (auto& x : paths_) {
       auto chunk = get_chunk(x->open_credit);

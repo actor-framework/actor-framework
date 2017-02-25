@@ -63,6 +63,10 @@ public:
     return trait::make_result(state_, fin_);
   }
 
+  optional<abstract_upstream&> get_upstream() final {
+    return in_;
+  }
+
   state_type& state() {
     return state_;
   }

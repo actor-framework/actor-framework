@@ -43,9 +43,9 @@ public:
     return sec::downstream_already_exists;
   }
 
-  error push() final {
+  error push(size_t* hint = nullptr) final {
     if (out().buf_size() > 0)
-      out().policy().push(out());
+      out().policy().push(out(), hint);
     return none;
   }
 

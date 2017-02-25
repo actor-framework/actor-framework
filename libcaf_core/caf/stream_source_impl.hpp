@@ -58,6 +58,10 @@ public:
     return pred_(state_);
   }
 
+  optional<abstract_downstream&> get_downstream() final {
+    return out_;
+  }
+
   state_type& state() {
     return state_;
   }

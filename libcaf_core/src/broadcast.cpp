@@ -24,8 +24,8 @@
 namespace caf {
 namespace policy {
 
-void broadcast::push(abstract_downstream& out) {
-  out.broadcast();
+void broadcast::push(abstract_downstream& out, size_t* hint) {
+  out.broadcast(hint);
 }
 
 size_t broadcast::desired_buffer_size(const abstract_downstream& out) {
