@@ -278,7 +278,7 @@ CAF_TEST(depth2_pipeline) {
   expect((std::string), from(self).to(source).with("test.txt"));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(sink).streams().empty());
-  // source ----(stream_msgreturn ::open)----> sink
+  // source ----(stream_msg::open)----> sink
   expect((stream_msg::open), from(self).to(sink).with(_, source, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
   expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
@@ -386,8 +386,9 @@ CAF_TEST(depth2_pipeline_streamer) {
   auto source = sys.spawn(streamer, sink);
   // run initialization code
   sched.run_once();
-  // source ----(stream_msgreturn ::open)----> sink
-  expect((stream_msg::open), from(source).to(sink).with(_, source, _, _, false));
+  // source ----(stream_msg::open)----> sink
+  expect((stream_msg::open),
+         from(source).to(sink).with(_, source, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
   expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
   // source ----(stream_msg::batch)---> sink
@@ -413,8 +414,9 @@ CAF_TEST(stream_without_result) {
   auto source = sys.spawn(streamer_without_result, sink);
   // run initialization code
   sched.run_once();
-  // source ----(stream_msgreturn ::open)----> sink
-  expect((stream_msg::open), from(source).to(sink).with(_, source, _, _, false));
+  // source ----(stream_msg::open)----> sink
+  expect((stream_msg::open),
+         from(source).to(sink).with(_, source, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
   expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
   // source ----(stream_msg::batch)---> sink
