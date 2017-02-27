@@ -28,7 +28,6 @@
 #include "caf/typed_behavior.hpp"
 #include "caf/continue_helper.hpp"
 #include "caf/system_messages.hpp"
-#include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"

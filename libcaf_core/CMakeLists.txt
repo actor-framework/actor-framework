@@ -14,32 +14,38 @@ set (LIBCAF_CORE_SRCS
      src/abstract_actor.cpp
      src/abstract_channel.cpp
      src/abstract_composable_behavior.cpp
-     src/abstract_group.cpp
      src/abstract_coordinator.cpp
+     src/abstract_downstream.cpp
+     src/abstract_group.cpp
+     src/abstract_upstream.cpp
      src/actor.cpp
      src/actor_addr.cpp
+     src/actor_companion.cpp
      src/actor_config.cpp
      src/actor_control_block.cpp
-     src/actor_companion.cpp
      src/actor_ostream.cpp
      src/actor_pool.cpp
      src/actor_proxy.cpp
      src/actor_registry.cpp
      src/actor_system.cpp
      src/actor_system_config.cpp
+     src/anycast.cpp
      src/atom.cpp
      src/attachable.cpp
      src/behavior.cpp
-     src/behavior_stack.cpp
      src/behavior_impl.cpp
+     src/behavior_stack.cpp
      src/blocking_actor.cpp
      src/blocking_behavior.cpp
+     src/broadcast.cpp
      src/concatenated_tuple.cpp
      src/config_option.cpp
      src/continue_helper.cpp
      src/decorated_tuple.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
+     src/downstream_path.cpp
+     src/downstream_policy.cpp
      src/duration.cpp
      src/dynamic_message_data.cpp
      src/error.cpp
@@ -50,53 +56,67 @@ set (LIBCAF_CORE_SRCS
      src/get_mac_addresses.cpp
      src/get_process_id.cpp
      src/get_root_uuid.cpp
+     src/greedy.cpp
      src/group.cpp
      src/group_manager.cpp
      src/group_module.cpp
+     src/incoming_stream_multiplexer.cpp
      src/invoke_result_visitor.cpp
-     src/match_case.cpp
-     src/merged_tuple.cpp
-     src/monitorable_actor.cpp
      src/local_actor.cpp
      src/logger.cpp
      src/mailbox_element.cpp
+     src/match_case.cpp
      src/memory.cpp
      src/memory_managed.cpp
+     src/merged_tuple.cpp
      src/message.cpp
      src/message_builder.cpp
      src/message_data.cpp
      src/message_handler.cpp
      src/message_view.cpp
+     src/monitorable_actor.cpp
      src/node_id.cpp
+     src/outgoing_stream_multiplexer.cpp
      src/parse_ini.cpp
      src/private_thread.cpp
-     src/ref_counted.cpp
      src/proxy_registry.cpp
-     src/response_promise.cpp
+     src/raw_event_based_actor.cpp
+     src/ref_counted.cpp
      src/replies_to.cpp
+     src/response_promise.cpp
      src/resumable.cpp
      src/ripemd_160.cpp
      src/scheduled_actor.cpp
      src/scoped_actor.cpp
      src/scoped_execution_unit.cpp
      src/sec.cpp
-     src/serializer.cpp
      src/sequencer.cpp
+     src/serializer.cpp
      src/shared_spinlock.cpp
      src/skip.cpp
      src/splitter.cpp
-     src/sync_request_bouncer.cpp
+     src/stream.cpp
+     src/stream_handler.cpp
+     src/stream_msg_visitor.cpp
+     src/stream_multiplexer.cpp
+     src/stream_priority.cpp
+     src/stream_sink.cpp
+     src/stream_source.cpp
+     src/stream_stage.cpp
      src/stringification_inspector.cpp
-     src/test_coordinator.cpp
+     src/sync_request_bouncer.cpp
      src/term.cpp
+     src/test_coordinator.cpp
      src/timestamp.cpp
      src/try_match.cpp
-     src/type_erased_value.cpp
      src/type_erased_tuple.cpp
+     src/type_erased_value.cpp
      src/uniform_type_info_map.cpp
      src/unprofiled.cpp
-     src/work_stealing.cpp
-     src/work_sharing.cpp)
+     src/upstream_path.cpp
+     src/upstream_policy.cpp
+     src/work_sharing.cpp
+     src/work_stealing.cpp)
 
 add_custom_target(libcaf_core)
 

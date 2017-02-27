@@ -20,6 +20,8 @@
 #ifndef CAF_TYPED_ACTOR_HPP
 #define CAF_TYPED_ACTOR_HPP
 
+#include <cstddef>
+
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/make_actor.hpp"
@@ -163,6 +165,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                   >::value,
                   "Cannot assign incompatible handle");
     ptr_ = other.ptr_;
+    return *this;
+  }
+
+  inline typed_actor& operator=(std::nullptr_t) {
+    ptr_.reset();
     return *this;
   }
 

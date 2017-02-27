@@ -88,7 +88,8 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   auto mm = &system().middleman();
   actor_config cfg;
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
-        aid, nid, &(self->home_system()), cfg, self);
+    aid, nid, &(self->home_system()), cfg, self,
+    actor_cast<actor>(self->home_system().stream_serv()));
   strong_actor_ptr selfptr{self->ctrl()};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {

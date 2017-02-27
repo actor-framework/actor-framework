@@ -24,6 +24,7 @@
 #include <functional>
 
 #include "caf/fwd.hpp"
+#include "caf/behavior.hpp"
 #include "caf/input_range.hpp"
 #include "caf/abstract_channel.hpp"
 

@@ -50,6 +50,10 @@ struct has_outer_type {
 template <class T, class U>
 T get(const U&);
 
+// enables ADL in `with_content`
+template <class T, class U>
+bool is(const U&);
+
 struct wildcard { };
 
 constexpr wildcard _ = wildcard{};
@@ -185,7 +189,10 @@ public:
   std::tuple<const Ts&...> peek() {
     CAF_REQUIRE(dest_ != nullptr);
     auto ptr = dest_->mailbox().peek();
-    CAF_REQUIRE(ptr->content().match_elements<Ts...>());
+    if (!ptr->content().match_elements<Ts...>()) {
+      CAF_FAIL("Message does not match expected pattern: " << to_string(ptr->content()));
+    }
+    //CAF_REQUIRE(ptr->content().match_elements<Ts...>());
     return ptr->content().get_as_tuple<Ts...>();
   }
 
@@ -220,7 +227,7 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
-    auto tmp = std::make_tuple(std::forward<Ts>(xs)...);
+    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
     auto ys = this->template peek<Ts...>();
     CAF_CHECK(inspector(get<0>(ys)));
@@ -259,9 +266,30 @@ private:
   void with_content(std::integral_constant<bool, true>, const U& x) {
     elementwise_compare_inspector<U> inspector{x};
     auto xs = this->template peek<typename T::outer_type>();
-    CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(get<0>(xs)))));
+    auto& x0 = get<0>(xs);
+    if (!is<T>(x0)) {
+      CAF_FAIL("is<T>(x0) !! " << caf::deep_to_string(x0));
+    }
+    CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(x0))));
   }
 
+};
+
+template <>
+class expect_clause<void> : public expect_clause_base<expect_clause<void>> {
+public:
+  template <class... Us>
+  expect_clause(Us&&... xs)
+      : expect_clause_base<expect_clause<void>>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  void with() {
+    CAF_REQUIRE(dest_ != nullptr);
+    auto ptr = dest_->mailbox().peek();
+    CAF_CHECK(ptr->content().empty());
+    this->run_once();
+  }
 };
 
 template <class Config = caf::actor_system_config>
@@ -323,4 +351,8 @@ struct test_coordinator_fixture {
 #define expect(types, fields)                                                  \
   CAF_MESSAGE("expect" << #types << "." << #fields);                           \
   expect< CAF_EXPAND(CAF_DSL_LIST types) >().fields
+
+#define expect_on(where, types, fields)                                        \
+  CAF_MESSAGE(#where << ": expect" << #types << "." << #fields);               \
+  where . expect< CAF_EXPAND(CAF_DSL_LIST types) >().fields
 

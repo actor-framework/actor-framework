@@ -64,6 +64,11 @@ public:
     elements_.emplace_back(std::move(what));
   }
 
+  template <class... Ts>
+    inline void emplace_back(Ts&&... xs) {
+      elements_.emplace_back(std::forward<Ts>(xs)...);
+    }
+
   inline void cleanup() {
     erased_elements_.clear();
   }

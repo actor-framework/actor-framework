@@ -22,6 +22,7 @@
 #include "caf/config.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_ostream.hpp"
+#include "caf/stream_msg_visitor.hpp"
 
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -257,7 +258,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   return resumable::resume_later;
 }
 
-// -- scheduler callbacks ----------------------------------------------------
+// -- scheduler callbacks ------------------------------------------------------
 
 proxy_registry* scheduled_actor::proxy_registry_ptr() {
   return nullptr;
@@ -269,6 +270,13 @@ void scheduled_actor::quit(error x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   fail_state_ = std::move(x);
   setf(is_terminated_flag);
+}
+
+// -- stream management --------------------------------------------------------
+
+void scheduled_actor::trigger_downstreams() {
+  for (auto& s : streams_)
+    s.second->push();
 }
 
 // -- timeout management -------------------------------------------------------
@@ -368,6 +376,26 @@ scheduled_actor::categorize(mailbox_element& x) {
     case make_type_token<error>(): {
       auto err = content.move_if_unshared<error>(0);
       call_handler(error_handler_, this, err);
+      return message_category::internal;
+    }
+    case make_type_token<stream_msg>(): {
+      auto& sm = content.get_mutable_as<stream_msg>(0);
+      auto e = streams_.end();
+      stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e};
+      auto res = apply_visitor(f, sm.content);
+      auto i = res.second;
+      if (res.first) {
+        if (i != e) {
+          i->second->abort(current_sender(), std::move(res.first));
+          streams_.erase(i);
+        }
+      } else if (i != e) {
+        if (i->second->done()) {
+          streams_.erase(i);
+          if (streams_.empty() && !has_behavior())
+            quit(exit_reason::normal);
+        }
+      }
       return message_category::internal;
     }
     default:

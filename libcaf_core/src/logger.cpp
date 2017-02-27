@@ -80,7 +80,7 @@ pthread_key_t s_key;
 pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
 
 void logger_ptr_destructor(void* ptr) {
-  if (ptr) {
+  if (ptr != nullptr) {
     intrusive_ptr_release(reinterpret_cast<logger*>(ptr));
   }
 }
@@ -92,7 +92,7 @@ void make_logger_ptr() {
 void set_current_logger(logger* x) {
   pthread_once(&s_key_once, make_logger_ptr);
   logger_ptr_destructor(pthread_getspecific(s_key));
-  if (x)
+  if (x != nullptr)
     intrusive_ptr_add_ref(x);
   pthread_setspecific(s_key, x);
 }
@@ -152,13 +152,12 @@ void prettify_type_name(std::string& class_name, const char* c_class_name) {
 
 } // namespace <anonymous>
 
-logger::event::event(int l, const char* c, std::string p, std::string m)
+logger::event::event(int lvl, std::string pfx, std::string msg)
     : next(nullptr),
       prev(nullptr),
-      level(l),
-      component(c),
-      prefix(std::move(p)),
-      msg(std::move(m)) {
+      level(lvl),
+      prefix(std::move(pfx)),
+      msg(std::move(msg)) {
   // nop
 }
 
@@ -278,13 +277,11 @@ void logger::log(int level, const char* component,
                  const char* c_full_file_name, int line_num,
                  const std::string& msg) {
   CAF_ASSERT(level >= 0 && level <= 4);
-  if (level > level_)
-    return;
   std::ostringstream prefix;
   log_prefix(prefix, level, component, class_name, function_name,
              c_full_file_name, line_num);
   queue_.synchronized_enqueue(queue_mtx_, queue_cv_,
-                              new event{level, component, prefix.str(), msg});
+                              new event{level, prefix.str(), msg});
 }
 
 void logger::set_current_actor_system(actor_system* x) {
@@ -306,6 +303,24 @@ void logger::log_static(int level, const char* component,
   if (ptr != nullptr)
     ptr->log(level, component, class_name, function_name, file_name, line_num,
              msg);
+}
+
+bool logger::accepts(int level, const char* component) {
+  CAF_ASSERT(component != nullptr);
+  CAF_ASSERT(level >= 0 && level <= 4);
+  auto ptr = get_current_logger();
+  if (ptr == nullptr || level > ptr->level_)
+    return false;
+  // TODO: once we've phased out GCC 4.8, we can upgrade this to a regex.
+  // Until then, we just search for a substring in the filter.
+  auto& filter = ptr->system_.config().logger_filter;
+  if (!filter.empty()) {
+    auto it = std::search(filter.begin(), filter.end(),
+                          component, component + std::strlen(component));
+    if (it == filter.end())
+      return false;
+  }
+  return true;
 }
 
 logger::~logger() {
@@ -406,15 +421,6 @@ void logger::run() {
     // empty message means: shut down
     if (ptr->msg.empty())
       break;
-    // TODO: once we've phased out GCC 4.8, we can upgrade this to a regex.
-    // Until then, we just search for a substring in the filter.
-    auto& filter = system_.config().logger_filter;
-    if (!filter.empty()) {
-      auto it = std::search(filter.begin(), filter.end(), ptr->component,
-                            ptr->component + std::strlen(ptr->component));
-      if (it == filter.end())
-        continue;
-    }
     if (file)
       file << ptr->prefix << ' ' << ptr->msg << std::endl;
     if (system_.config().logger_console == atom("UNCOLORED")) {
@@ -424,7 +430,7 @@ void logger::run() {
         default:
           break;
         case CAF_LOG_LEVEL_ERROR:
-          std::clog << term::red;;
+          std::clog << term::red;
           break;
         case CAF_LOG_LEVEL_WARNING:
           std::clog << term::yellow;

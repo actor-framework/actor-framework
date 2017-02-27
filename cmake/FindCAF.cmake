@@ -76,7 +76,8 @@ foreach (comp ${CAF_FIND_COMPONENTS})
                      /sw/lib
                      ${CMAKE_INSTALL_PREFIX}/lib)
       mark_as_advanced(CAF_LIBRARY_${UPPERCOMP})
-      if ("${CAF_LIBRARY_${UPPERCOMP}}" STREQUAL "CAF_LIBRARY-NOTFOUND")
+      if ("${CAF_LIBRARY_${UPPERCOMP}}"
+          STREQUAL "CAF_LIBRARY_${UPPERCOMP}-NOTFOUND")
         set(CAF_${comp}_FOUND false)
       else ()
         set(CAF_LIBRARIES ${CAF_LIBRARIES} ${CAF_LIBRARY_${UPPERCOMP}})

@@ -112,6 +112,13 @@ struct message_factory {
   }
 };
 
+/// Converts the tuple `xs` to a message.
+template <class... Ts>
+message make_message_from_tuple(std::tuple<Ts...> xs) {
+  message_factory f;
+  return detail::apply_moved_args(f, detail::get_indices(xs), xs);
+}
+
 } // namespace caf
 
 #endif // CAF_MAKE_MESSAGE_HPP

@@ -34,6 +34,7 @@
 #include "caf/actor_factory.hpp"
 #include "caf/is_typed_actor.hpp"
 #include "caf/type_erased_value.hpp"
+#include "caf/named_actor_config.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -48,6 +49,9 @@ public:
   using hook_factory = std::function<io::hook* (actor_system&)>;
 
   using hook_factory_vector = std::vector<hook_factory>;
+
+  template <class K, class V>
+  using hash_map = std::unordered_map<K, V>;
 
   using module_factory = std::function<actor_system::module* (actor_system&)>;
 
@@ -76,6 +80,8 @@ public:
   using group_module_factory_vector = std::vector<group_module_factory>;
 
   // -- nested classes ---------------------------------------------------------
+
+  using named_actor_config_map = hash_map<std::string, named_actor_config>;
 
   class opt_group {
   public:
@@ -289,6 +295,9 @@ public:
   error_renderer_map error_renderers;
 
   // -- utility for caf-run ----------------------------------------------------
+
+  // Config parameter for individual actor types.
+  named_actor_config_map named_actor_configs;
 
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 

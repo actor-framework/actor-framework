@@ -25,6 +25,8 @@
 #include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
 
+#include "caf/meta/type_name.hpp"
+
 namespace caf {
 
 /// Stores a flow-control configuration.
@@ -34,16 +36,10 @@ struct named_actor_config {
   size_t max_pending;
 };
 
-template <class Processor>
-void serialize(Processor& proc, named_actor_config& x, unsigned int) {
-  proc & x.strategy;
-  proc & x.low_watermark;
-  proc & x.max_pending;
-}
-
-inline std::string to_string(const named_actor_config& x) {
-  return "named_actor_config"
-         + deep_to_string_as_tuple(x.strategy, x.low_watermark, x.max_pending);
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, named_actor_config& x) {
+  return f(meta::type_name("named_actor_config"), x.strategy, x.low_watermark,
+           x.max_pending);
 }
 
 } // namespace caf

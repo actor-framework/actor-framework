@@ -56,6 +56,15 @@ const char* sec_strings[] = {
   "no_proxy_registry",
   "runtime_error",
   "remote_linking_failed",
+  "cannot_add_upstream",
+  "upstream_already_exists",
+  "invalid_upstream",
+  "cannot_add_downstream",
+  "downstream_already_exists",
+  "invalid_downstream",
+  "no_downstream_stages_defined",
+  "stream_init_failed",
+  "invalid_stream_state",
   "bad_function_call"
 };
 

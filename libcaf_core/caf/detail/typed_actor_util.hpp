@@ -33,9 +33,6 @@ namespace caf { // forward declarations
 template <class... Ts>
 class typed_actor;
 
-template <class R>
-class typed_continue_helper;
-
 } // namespace caf
 
 namespace caf {

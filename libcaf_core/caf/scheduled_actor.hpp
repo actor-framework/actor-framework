@@ -29,12 +29,24 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/sec.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/actor_marker.hpp"
+#include "caf/stream_result.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/stream_sink_impl.hpp"
+#include "caf/stream_stage_impl.hpp"
+#include "caf/stream_source_impl.hpp"
+#include "caf/stream_result_trait.hpp"
+
+#include "caf/to_string.hpp"
+
+#include "caf/policy/greedy.hpp"
+#include "caf/policy/anycast.hpp"
+#include "caf/policy/broadcast.hpp"
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
@@ -71,6 +83,9 @@ class scheduled_actor : public local_actor, public resumable {
 public:
   // -- member types -----------------------------------------------------------
 
+  /// A reference-counting pointer to a `stream_handler`.
+  using stream_handler_ptr = intrusive_ptr<stream_handler>;
+
   /// The message ID of an outstanding response with its callback.
   using pending_response = std::pair<const message_id, behavior>;
 
@@ -78,7 +93,8 @@ public:
   using pointer = scheduled_actor*;
 
   /// Function object for handling unmatched messages.
-  using default_handler = std::function<result<message> (pointer, message_view&)>;
+  using default_handler =
+    std::function<result<message>(pointer, message_view&)>;
 
   /// Function object for handling error messages.
   using error_handler = std::function<void (pointer, error&)>;
@@ -285,6 +301,224 @@ public:
   }
 # endif // CAF_NO_EXCEPTIONS
 
+  // -- stream management ------------------------------------------------------
+
+  /// Owning poiner to a `downstream_policy`.
+  using downstream_policy_ptr = std::unique_ptr<downstream_policy>;
+
+  /// Owning poiner to an `upstream_policy`.
+  using upstream_policy_ptr = std::unique_ptr<upstream_policy>;
+
+  // Starts a new stream.
+  template <class Handle, class... Ts, class Init, class Getter,
+            class ClosedPredicate, class ResHandler>
+  annotated_stream<typename stream_source_trait_t<Getter>::output, Ts...>
+  new_stream(const Handle& dest, std::tuple<Ts...> xs, Init init, Getter getter,
+             ClosedPredicate pred, ResHandler res_handler,
+             downstream_policy_ptr dpolicy = nullptr) {
+    using type = typename stream_source_trait_t<Getter>::output;
+    using state_type = typename stream_source_trait_t<Getter>::state;
+    static_assert(std::is_same<
+                    void (state_type&),
+                    typename detail::get_callable_trait<Init>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&)` for init function");
+    static_assert(std::is_same<
+                    bool (const state_type&),
+                    typename detail::get_callable_trait<
+                      ClosedPredicate
+                    >::fun_sig
+                  >::value,
+                  "Expected signature `bool (const State&)` for "
+                  "closed_predicate function");
+    if (!dest) {
+      CAF_LOG_ERROR("cannot stream to an invalid actor handle");
+      return {stream_id{nullptr, 0}, nullptr};
+    }
+    // generate new stream ID
+    stream_id sid{ctrl(),
+                  new_request_id(message_priority::normal).integer_value()};
+    stream<type> token{sid};
+    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
+    // generate new ID for the final response message and send handshake
+    auto res_id = new_request_id(message_priority::normal);
+    dest->enqueue(
+      make_mailbox_element(
+        ctrl(), res_id, {},
+        make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
+                               ctrl(), stream_priority::normal, false)),
+      context());
+    // install response handler
+    this->add_multiplexed_response_handler(
+      res_id.response_id(),
+      stream_result_trait_t<ResHandler>::make_result_handler(res_handler));
+    // install stream handler
+    using impl = stream_source_impl<Getter, ClosedPredicate>;
+    if (dpolicy == nullptr)
+      dpolicy.reset(new policy::anycast);
+    auto ptr = make_counted<impl>(this, sid, std::move(dpolicy),
+                                  std::move(getter), std::move(pred));
+    init(ptr->state());
+    streams_.emplace(sid, ptr);
+    return {std::move(sid), std::move(ptr)};
+  }
+
+  // Starts a new stream.
+  template <class Handle, class Init, class Getter,
+            class ClosedPredicate, class ResHandler>
+  stream<typename stream_source_trait_t<Getter>::output>
+  new_stream(const Handle& dest, Init init, Getter getter,
+             ClosedPredicate pred, ResHandler res_handler) {
+    return new_stream(dest, std::make_tuple(), std::move(init),
+                      std::move(getter), std::move(pred),
+                      std::move(res_handler));
+  }
+
+  /// Adds a stream source to this actor.
+  template <class Init, class... Ts, class Getter, class ClosedPredicate>
+  annotated_stream<typename stream_source_trait_t<Getter>::output, Ts...>
+  add_source(std::tuple<Ts...> xs, Init init, Getter getter,
+             ClosedPredicate pred, downstream_policy_ptr dpolicy = nullptr) {
+    CAF_ASSERT(current_mailbox_element() != nullptr);
+    using type = typename stream_source_trait_t<Getter>::output;
+    using state_type = typename stream_source_trait_t<Getter>::state;
+    static_assert(std::is_same<
+                    void (state_type&),
+                    typename detail::get_callable_trait<Init>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&)` for init function");
+    static_assert(std::is_same<
+                    bool (const state_type&),
+                    typename detail::get_callable_trait<
+                      ClosedPredicate
+                    >::fun_sig
+                  >::value,
+                  "Expected signature `bool (const State&)` for "
+                  "closed_predicate function");
+    if (current_mailbox_element()->stages.empty()) {
+      CAF_LOG_ERROR("cannot create a stream data source without downstream");
+      auto rp = make_response_promise();
+      rp.deliver(sec::no_downstream_stages_defined);
+      return {stream_id{nullptr, 0}, nullptr};
+    }
+    stream_id sid{ctrl(),
+                  new_request_id(message_priority::normal).integer_value()};
+    fwd_stream_handshake<type>(sid, xs);
+    using impl = stream_source_impl<Getter, ClosedPredicate>;
+    if (dpolicy == nullptr)
+      dpolicy.reset(new policy::anycast);
+    auto ptr = make_counted<impl>(this, sid, std::move(dpolicy),
+                                  std::move(getter), std::move(pred));
+    init(ptr->state());
+    streams_.emplace(sid, ptr);
+    return {std::move(sid), std::move(ptr)};
+  }
+
+  template <class Init, class Getter, class ClosedPredicate>
+  stream<typename stream_source_trait_t<Getter>::output>
+  add_source(Init init, Getter getter, ClosedPredicate pred) {
+    return add_source(std::make_tuple(), std::move(init),
+                      std::move(getter), std::move(pred));
+  }
+
+  /// Adds a stream stage to this actor.
+  template <class In, class... Ts, class Init, class Fun, class Cleanup>
+  annotated_stream<typename stream_stage_trait_t<Fun>::output, Ts...>
+  add_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
+            Cleanup cleanup, upstream_policy_ptr upolicy = nullptr,
+            downstream_policy_ptr dpolicy = nullptr) {
+    CAF_ASSERT(current_mailbox_element() != nullptr);
+    using output_type = typename stream_stage_trait_t<Fun>::output;
+    using state_type = typename stream_stage_trait_t<Fun>::state;
+    static_assert(std::is_same<
+                    void (state_type&),
+                    typename detail::get_callable_trait<Init>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&)` for init function");
+    if (current_mailbox_element()->stages.empty()) {
+      CAF_LOG_ERROR("cannot create a stream data source without downstream");
+      return stream_id{nullptr, 0};
+    }
+    auto sid = in.id();
+    fwd_stream_handshake<output_type>(sid, xs);
+    using impl = stream_stage_impl<Fun, Cleanup>;
+    if (upolicy == nullptr)
+      upolicy.reset(new policy::greedy);
+    if (dpolicy == nullptr)
+      dpolicy.reset(new policy::anycast);
+    auto ptr = make_counted<impl>(this, sid, std::move(upolicy),
+                                  std::move(dpolicy), std::move(fun),
+                                  std::move(cleanup));
+    init(ptr->state());
+    streams_.emplace(sid, ptr);
+    return {std::move(sid), std::move(ptr)};
+  }
+
+  /// Adds a stream stage to this actor.
+  template <class In, class Init, class Fun, class Cleanup>
+  stream<typename stream_stage_trait_t<Fun>::output>
+  add_stage(const stream<In>& in, Init init, Fun fun, Cleanup cleanup) {
+    return add_stage(in, std::make_tuple(), std::move(init),
+                     std::move(fun), std::move(cleanup));
+  }
+
+  /// Adds `hdl` to an already existing stream as a new downstream path. Note
+  /// that the new downstream path will *not* receive previous (historic) data.
+  template <class T, class Handle>
+  expected<void> add_downstream_path(stream<T>& in, Handle hdl) {
+    auto i = streams_.find(in.id());
+    if (i != streams_.end()) {
+      auto ptr = actor_cast<strong_actor_ptr>(std::move(hdl));
+      i->second->add_downstream(ptr, 5, false);
+      return unit;
+    }
+    return sec::cannot_add_downstream;
+  }
+
+  /// Adds a stream sink to this actor.
+  template <class In, class Init, class Fun, class Finalize>
+  stream_result<typename stream_sink_trait_t<Fun, Finalize>::output>
+  add_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize,
+           upstream_policy_ptr upolicy = nullptr) {
+    CAF_ASSERT(current_mailbox_element() != nullptr);
+    //using output_type = typename stream_sink_trait_t<Fun, Finalize>::output;
+    using state_type = typename stream_sink_trait_t<Fun, Finalize>::state;
+    static_assert(std::is_same<
+                    void (state_type&),
+                    typename detail::get_callable_trait<Init>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&)` for init function");
+    static_assert(std::is_same<
+                    void (state_type&, In),
+                    typename detail::get_callable_trait<Fun>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&, Input)` "
+                  "for consume function");
+    auto mptr = current_mailbox_element();
+    if (!mptr) {
+      CAF_LOG_ERROR("add_sink called outside of a message handler");
+      return {stream_id{nullptr, 0}, nullptr};
+    }
+    using impl = stream_sink_impl<Fun, Finalize>;
+    if (upolicy == nullptr)
+      upolicy.reset(new policy::greedy);
+    auto ptr = make_counted<impl>(this, std::move(upolicy),
+                                  std::move(mptr->sender),
+                                  std::move(mptr->stages), mptr->mid,
+                                  std::move(fun), std::move(finalize));
+    init(ptr->state());
+    streams_.emplace(in.id(), ptr);
+    return {in.id(), std::move(ptr)};
+  }
+
+  inline std::unordered_map<stream_id, stream_handler_ptr>& streams() {
+    return streams_;
+  }
+
+  /// Tries to send more data on all downstream paths. Use this function to
+  /// manually trigger batches in a source after receiving more data to send.
+  void trigger_downstreams();
+
   /// @cond PRIVATE
 
   // -- timeout management -----------------------------------------------------
@@ -310,7 +544,7 @@ public:
   message_category categorize(mailbox_element& x);
 
   /// Tries to consume `x`.
-  invoke_message_result consume(mailbox_element& x);
+  virtual invoke_message_result consume(mailbox_element& x);
 
   /// Tries to consume `x`.
   void consume(mailbox_element_ptr x);
@@ -337,7 +571,8 @@ public:
   inline bool has_behavior() const {
     return !bhvr_stack_.empty()
            || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty();
+           || !multiplexed_responses_.empty()
+           || !streams_.empty();
   }
 
   inline behavior& current_behavior() {
@@ -352,6 +587,10 @@ public:
   /// behavior or was explicitly terminated.
   /// @returns `true` if cleanup code was called, `false` otherwise.
   bool finalize();
+
+  inline detail::behavior_stack& bhvr_stack() {
+    return bhvr_stack_;
+  }
 
   /// @endcond
 
@@ -388,6 +627,25 @@ protected:
       swap(g, f);
   }
 
+  template <class T, class... Ts>
+  void fwd_stream_handshake(const stream_id& sid, std::tuple<Ts...>& xs) {
+    auto mptr = current_mailbox_element();
+    auto& stages = mptr->stages;
+    CAF_ASSERT(!stages.empty());
+    CAF_ASSERT(stages.back() != nullptr);
+    auto next = std::move(stages.back());
+    stages.pop_back();
+    stream<T> token{sid};
+    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
+    next->enqueue(
+      make_mailbox_element(
+        mptr->sender, mptr->mid, std::move(stages),
+        make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
+                               ctrl(), stream_priority::normal, false)),
+      context());
+    mptr->mid.mark_as_answered();
+  }
+
   // -- member variables -------------------------------------------------------
 
   /// Stores user-defined callbacks for message handling.
@@ -416,6 +674,10 @@ protected:
 
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
+
+  // TODO: this type is quite heavy in terms of memory, maybe use vector?
+  /// Holds state for all streams running through this actor.
+  std::unordered_map<stream_id, stream_handler_ptr> streams_;
 
 # ifndef CAF_NO_EXCEPTIONS
   /// Customization point for setting a default exception callback.

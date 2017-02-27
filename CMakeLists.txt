@@ -174,6 +174,10 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
    OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   set(EXTRA_FLAGS "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
 endif()
+# explicitly disable obnoxious GCC warnings
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  set(EXTRA_FLAGS "-Wno-missing-field-initializers")
+endif()
 # add "-Werror" flag if --pedantic-build is used
 if(CAF_CXX_WARNINGS_AS_ERRORS)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -Werror")
@@ -212,7 +216,7 @@ if(CAF_MORE_WARNINGS)
                "-Wignored-qualifiers -Winit-self "
                "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
                "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
-               "-Wmissing-braces -Wmissing-field-initializers -Wmultichar "
+               "-Wmissing-braces -Wmultichar "
                "-Wnarrowing -Wnoexcept -Wnon-template-friend "
                "-Wnon-virtual-dtor -Wnonnull -Woverflow "
                "-Woverlength-strings -Wparentheses "
@@ -307,7 +311,7 @@ if(NOT CMAKE_CXX_FLAGS_RELEASE)
   set(CMAKE_CXX_FLAGS_RELEASE           "-O3 -DNDEBUG")
 endif()
 if(NOT CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO    "-O2 -g")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO    "-O2 -g -fno-omit-frame-pointer")
 endif()
 # set build default build type to RelWithDebInfo if not set
 if(NOT CMAKE_BUILD_TYPE)

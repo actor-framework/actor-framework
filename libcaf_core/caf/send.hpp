@@ -26,6 +26,7 @@
 #include "caf/actor_addr.hpp"
 #include "caf/message_id.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/local_actor.hpp"
 #include "caf/response_type.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/is_message_sink.hpp"
@@ -65,6 +66,33 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
   if (dest)
     dest->eq_impl(message_id::make(P), actor_cast<strong_actor_ptr>(src),
                   nullptr, std::forward<Ts>(xs)...);
+}
+
+template <class Source, class Dest, class... Ts>
+void unsafe_send_as(Source* src, const Dest& dest, Ts&&... xs) {
+  actor_cast<abstract_actor*>(dest)->eq_impl(message_id::make(), src->ctrl(),
+                                             src->context(),
+                                             std::forward<Ts>(xs)...);
+}
+
+template <class... Ts>
+void unsafe_response(local_actor* self, strong_actor_ptr src,
+                     std::vector<strong_actor_ptr> stages, message_id mid,
+                     Ts&&... xs) {
+  strong_actor_ptr next;
+  if (stages.empty()) {
+    next = src;
+    src = self->ctrl();
+    if (mid.is_request())
+      mid = mid.response_id();
+  } else {
+    next = std::move(stages.back());
+    stages.pop_back();
+  }
+  if (next)
+    next->enqueue(make_mailbox_element(std::move(src), mid, std::move(stages),
+                                       std::forward<Ts>(xs)...),
+                  self->context());
 }
 
 /// Anonymously sends `dest` a message.
