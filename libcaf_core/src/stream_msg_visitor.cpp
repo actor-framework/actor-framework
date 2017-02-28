@@ -72,12 +72,11 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
   // store upstream actor
   auto initial_credit = handler->add_upstream(x.prev_stage, sid_, x.priority);
   if (initial_credit) {
-    // check whether we are a stage in a longer pipeline and send more
-    // stream_open messages if required
+    // send ACK to predecessor
     auto ic = static_cast<int32_t>(*initial_credit);
     unsafe_send_as(self_, predecessor,
-                   make_message(make<stream_msg::ack_open>(std::move(sid_), ic,
-                                                           false)));
+                   make_message(make<stream_msg::ack_open>(
+                     std::move(sid_), std::move(x.original_stage), ic, false)));
     return {none, i_};
   }
   self_->streams().erase(i_);
@@ -104,11 +103,12 @@ auto stream_msg_visitor::operator()(stream_msg::abort& x) -> result_type {
 
 auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (i_ != e_)
-    return {i_->second->add_downstream(self_->current_sender(),
-                                       static_cast<size_t>(x.initial_demand),
-                                       false),
+  if (i_ != e_) {
+    auto d = static_cast<size_t>(x.initial_demand);
+    return {i_->second->confirm_downstream(x.rebind_from,
+                                           self_->current_sender(), d, false),
             i_};
+  }
   CAF_LOG_DEBUG("received stream_msg::ok for unknown stream");
   return {sec::unexpected_message, e_};
 }

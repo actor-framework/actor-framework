@@ -31,7 +31,13 @@ stream_handler::~stream_handler() {
   // nop
 }
 
-error stream_handler::add_downstream(strong_actor_ptr&, size_t, bool) {
+error stream_handler::add_downstream(strong_actor_ptr&) {
+  CAF_LOG_ERROR("Cannot add downstream to a stream marked as no-downstreams");
+  return sec::cannot_add_downstream;
+}
+
+error stream_handler::confirm_downstream(const strong_actor_ptr&,
+                                         strong_actor_ptr&, size_t, bool) {
   CAF_LOG_ERROR("Cannot add downstream to a stream marked as no-downstreams");
   return sec::cannot_add_downstream;
 }

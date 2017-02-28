@@ -346,7 +346,8 @@ public:
       make_mailbox_element(
         ctrl(), res_id, {},
         make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
-                               ctrl(), stream_priority::normal, false)),
+                               ctrl(), actor_cast<strong_actor_ptr>(dest),
+                               stream_priority::normal, false)),
       context());
     // install response handler
     this->add_multiplexed_response_handler(
@@ -359,6 +360,10 @@ public:
     auto ptr = make_counted<impl>(this, sid, std::move(dpolicy),
                                   std::move(getter), std::move(pred));
     init(ptr->state());
+    // Add downstream with 0 credit.
+    // TODO: add multiple downstreams when receiving a composed actor handle
+    auto next = actor_cast<strong_actor_ptr>(dest);
+    ptr->add_downstream(next);
     streams_.emplace(sid, ptr);
     return {std::move(sid), std::move(ptr)};
   }
@@ -395,7 +400,8 @@ public:
                   >::value,
                   "Expected signature `bool (const State&)` for "
                   "closed_predicate function");
-    if (current_mailbox_element()->stages.empty()) {
+    auto& stages = current_mailbox_element()->stages;
+    if (stages.empty()) {
       CAF_LOG_ERROR("cannot create a stream data source without downstream");
       auto rp = make_response_promise();
       rp.deliver(sec::no_downstream_stages_defined);
@@ -403,6 +409,8 @@ public:
     }
     stream_id sid{ctrl(),
                   new_request_id(message_priority::normal).integer_value()};
+    auto next = stages.back();
+    CAF_ASSERT(next != nullptr);
     fwd_stream_handshake<type>(sid, xs);
     using impl = stream_source_impl<Getter, ClosedPredicate>;
     if (dpolicy == nullptr)
@@ -411,6 +419,9 @@ public:
                                   std::move(getter), std::move(pred));
     init(ptr->state());
     streams_.emplace(sid, ptr);
+    // Add downstream with 0 credit.
+    // TODO: add multiple downstreams when receiving a composed actor handle
+    ptr->add_downstream(next);
     return {std::move(sid), std::move(ptr)};
   }
 
@@ -435,11 +446,14 @@ public:
                     typename detail::get_callable_trait<Init>::fun_sig
                   >::value,
                   "Expected signature `void (State&)` for init function");
-    if (current_mailbox_element()->stages.empty()) {
+    auto& stages = current_mailbox_element()->stages;
+    if (stages.empty()) {
       CAF_LOG_ERROR("cannot create a stream data source without downstream");
       return stream_id{nullptr, 0};
     }
     auto sid = in.id();
+    auto next = stages.back();
+    CAF_ASSERT(next != nullptr);
     fwd_stream_handshake<output_type>(sid, xs);
     using impl = stream_stage_impl<Fun, Cleanup>;
     if (upolicy == nullptr)
@@ -451,6 +465,9 @@ public:
                                   std::move(cleanup));
     init(ptr->state());
     streams_.emplace(sid, ptr);
+    // Add downstream with 0 credit.
+    // TODO: add multiple downstreams when receiving a composed actor handle
+    ptr->add_downstream(next);
     return {std::move(sid), std::move(ptr)};
   }
 
@@ -460,19 +477,6 @@ public:
   add_stage(const stream<In>& in, Init init, Fun fun, Cleanup cleanup) {
     return add_stage(in, std::make_tuple(), std::move(init),
                      std::move(fun), std::move(cleanup));
-  }
-
-  /// Adds `hdl` to an already existing stream as a new downstream path. Note
-  /// that the new downstream path will *not* receive previous (historic) data.
-  template <class T, class Handle>
-  expected<void> add_downstream_path(stream<T>& in, Handle hdl) {
-    auto i = streams_.find(in.id());
-    if (i != streams_.end()) {
-      auto ptr = actor_cast<strong_actor_ptr>(std::move(hdl));
-      i->second->add_downstream(ptr, 5, false);
-      return unit;
-    }
-    return sec::cannot_add_downstream;
   }
 
   /// Adds a stream sink to this actor.
@@ -641,7 +645,7 @@ protected:
       make_mailbox_element(
         mptr->sender, mptr->mid, std::move(stages),
         make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
-                               ctrl(), stream_priority::normal, false)),
+                               ctrl(), next, stream_priority::normal, false)),
       context());
     mptr->mid.mark_as_answered();
   }

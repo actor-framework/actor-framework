@@ -40,27 +40,32 @@ bool stream_stage::done() const {
 }
 
 error stream_stage::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
-                     message& xs) {
-  auto err = in_ptr_->pull(hdl, xs_size);
-  if (!err) {
-    process_batch(xs);
-    push();
+                                   message& xs) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(xs_size) << CAF_ARG(xs));
+  auto path = in().find(hdl);
+  if (path) {
+    if (xs_size > path->assigned_credit)
+      return sec::invalid_stream_state;
+    path->assigned_credit -= xs_size;
+    auto err = process_batch(xs);
+    if (err == none) {
+      push();
+      in().assign_credit(out().buf_size(), out().available_credit());
+    }
+    return err;
   }
-  return err;
+  return sec::invalid_upstream;
 }
 
 error stream_stage::downstream_demand(strong_actor_ptr& hdl, size_t value) {
   auto path = out_ptr_->find(hdl);
   if (path) {
     path->open_credit += value;
-    if(out_ptr_->buf_size() > 0) {
-      return push();
-    }
-    if (in_ptr_->closed()) {
-      if (!out_ptr_->remove_path(hdl)) {
-        return sec::invalid_downstream;
-      }
-    }
+    if(out().buf_size() > 0)
+      push();
+    else if (in().closed() && !out().remove_path(hdl))
+      return sec::invalid_downstream;
+    in().assign_credit(out().buf_size(), out().available_credit());
     return none;
   }
   return sec::invalid_downstream;

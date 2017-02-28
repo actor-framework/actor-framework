@@ -27,8 +27,4 @@ downstream_policy::~downstream_policy() {
   // nop
 }
 
-atom_value downstream_policy::categorize(type_erased_value&) const {
-  return atom("");
-}
-
 } // namespace caf

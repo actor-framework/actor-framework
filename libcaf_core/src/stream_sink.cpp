@@ -41,12 +41,20 @@ bool stream_sink::done() const {
 }
 
 
-error stream_sink::upstream_batch(strong_actor_ptr& src, size_t xs_size,
+error stream_sink::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
                                   message& xs) {
-  auto err = in_ptr_->pull(src, xs_size);
-  if (!err)
-    consume(xs);
-  return err;
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(xs_size) << CAF_ARG(xs));
+  auto path = in().find(hdl);
+  if (path) {
+    if (xs_size > path->assigned_credit)
+      return sec::invalid_stream_state;
+    path->assigned_credit -= xs_size;
+    auto err = consume(xs);
+    if (err == none)
+      in().assign_credit(0, 0);
+    return err;
+  }
+  return sec::invalid_upstream;
 }
 
 void stream_sink::abort(strong_actor_ptr& cause, const error& reason) {

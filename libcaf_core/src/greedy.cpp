@@ -19,15 +19,48 @@
 
 #include "caf/policy/greedy.hpp"
 
+#include <numeric>
+
+#include "caf/logger.hpp"
+#include "caf/upstream_path.hpp"
+
 namespace caf {
 namespace policy {
 
-size_t greedy::initial_credit(abstract_upstream&, upstream_path&) {
-  return 5;
+greedy::greedy() : low_watermark(0), high_watermark(5), min_buffer_size(5) {
+  // nop
 }
 
-void greedy::reclaim(abstract_upstream&, upstream_path&) {
-  // nop
+void greedy::assign_credit(assignment_vec& xs, size_t buf_size,
+                           size_t downstream_credit) {
+  CAF_LOG_TRACE(CAF_ARG(xs) << CAF_ARG(buf_size) << CAF_ARG(downstream_credit));
+  /// Calculate how much credit we can hand out and how much credit we have
+  /// already assigned. Buffered elements are counted as assigned credit,
+  /// because we "release" credit only after pushing elements downstram.
+  size_t max_available = downstream_credit + min_buffer_size;
+  size_t assigned =
+    buf_size + std::accumulate(xs.begin(), xs.end(), size_t{0},
+                               [](size_t x, const assignment_pair& y) {
+                                 return x + y.first->assigned_credit;
+                               });
+  if (assigned >= max_available) {
+    // zero out assignment vector
+    for (auto& x : xs)
+      x.second = 0;
+    return;
+  }
+  // Assign credit to upstream paths until no more credit is available. We must
+  // make sure to write to each element in the vector.
+  auto available = max_available - assigned;
+  for (auto& p : xs) {
+    auto& x = p.first->assigned_credit;
+    if (x < high_watermark) {
+      p.second = std::min(high_watermark - x, available);
+      available -= p.second;
+    } else {
+      p.second = 0;
+    }
+  }
 }
 
 } // namespace policy

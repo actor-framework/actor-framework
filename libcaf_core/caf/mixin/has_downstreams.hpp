@@ -23,6 +23,7 @@
 #include <cstddef>
 
 #include "caf/sec.hpp"
+#include "caf/logger.hpp"
 #include "caf/actor_control_block.hpp"
 
 namespace caf {
@@ -32,15 +33,25 @@ namespace mixin {
 template <class Base, class Subtype>
 class has_downstreams : public Base {
 public:
-  error add_downstream(strong_actor_ptr& ptr, size_t init,
-                       bool is_redeployable) final {
-    if (!ptr)
-      return sec::invalid_argument;
-    if (out().add_path(ptr, is_redeployable)) {
-      dptr()->downstream_demand(ptr, init);
+  error add_downstream(strong_actor_ptr& ptr) final {
+    CAF_LOG_TRACE(CAF_ARG(ptr));
+    CAF_ASSERT(ptr != nullptr);
+    if (out().add_path(ptr))
+      return none;
+    return sec::downstream_already_exists;
+  }
+
+  error confirm_downstream(const strong_actor_ptr& rebind_from,
+                           strong_actor_ptr& ptr, size_t initial_demand,
+                           bool redeployable) final {
+    CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(initial_demand)
+                  << CAF_ARG(redeployable));
+    CAF_ASSERT(ptr != nullptr);
+    if (out().confirm_path(rebind_from, ptr, redeployable)) {
+      dptr()->downstream_demand(ptr, initial_demand);
       return none;
     }
-    return sec::downstream_already_exists;
+    return sec::invalid_downstream;
   }
 
   error push(size_t* hint = nullptr) final {

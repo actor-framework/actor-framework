@@ -27,6 +27,8 @@
 #include "caf/stream_priority.hpp"
 #include "caf/actor_control_block.hpp"
 
+#include "caf/meta/type_name.hpp"
+
 namespace caf {
 
 /// Denotes an upstream actor in a stream topology. Each upstream actor can
@@ -53,6 +55,12 @@ public:
 
   upstream_path(strong_actor_ptr ptr, stream_id  id, stream_priority p);
 };
+
+template <class Inspector>
+typename Inspector::return_type inspect(Inspector& f, upstream_path& x) {
+  return f(meta::type_name("upstream_path"), x.hdl, x.sid, x.prio,
+           x.last_acked_batch_id, x.last_batch_id, x.assigned_credit);
+}
 
 } // namespace caf
 

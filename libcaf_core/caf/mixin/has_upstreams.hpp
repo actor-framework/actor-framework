@@ -33,13 +33,6 @@ namespace mixin {
 template <class Base, class Subtype>
 class has_upstreams : public Base {
 public:
-  expected<size_t> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
-                                stream_priority prio) final {
-    if (!ptr)
-      return sec::invalid_argument;
-    return in().add_path(ptr, sid, prio);
-  }
-
   error close_upstream(strong_actor_ptr& ptr) final {
     if (in().remove_path(ptr)) {
       if (in().closed())
@@ -47,10 +40,6 @@ public:
       return none;
     }
     return sec::invalid_upstream;
-  }
-
-  error pull(size_t amount) final {
-    return in().pull(amount);
   }
 
 private:

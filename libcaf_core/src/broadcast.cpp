@@ -28,7 +28,7 @@ void broadcast::push(abstract_downstream& out, size_t* hint) {
   out.broadcast(hint);
 }
 
-size_t broadcast::desired_buffer_size(const abstract_downstream& out) {
+size_t broadcast::available_credit(const abstract_downstream& out) {
   return out.min_credit();
 }
 

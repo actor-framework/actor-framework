@@ -59,8 +59,10 @@ struct stream_msg : tag::boxing_type {
     /// Contains a type-erased stream<T> object as first argument followed by
     /// any number of user-defined additional handshake data.
     message msg;
-    /// A pointer to the previous stage in the pipeline.
+    /// Identifies the previous stage in the pipeline.
     strong_actor_ptr prev_stage;
+    /// Identifies the original receiver of this message.
+    strong_actor_ptr original_stage;
     /// Configures the priority for stream elements.
     stream_priority priority;
     /// Tells the downstream whether rebindings can occur on this path.
@@ -74,6 +76,11 @@ struct stream_msg : tag::boxing_type {
     static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
+    /// Allows actors to participate in a stream instead of the actor
+    /// originally receiving the `open` message. No effect when set to
+    /// `nullptr`. This mechanism enables pipeline definitions consisting of
+    /// proxy actors that are replaced with actual actors on demand.
+    strong_actor_ptr rebind_from;
     /// Grants credit to the source.
     int32_t initial_demand;
     /// Tells the upstream whether rebindings can occur on this path.
@@ -205,13 +212,14 @@ make(const stream_id& sid, Ts&&... xs) {
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, stream_msg::open& x) {
-  return f(meta::type_name("open"), x.msg, x.prev_stage, x.priority,
-           x.redeployable);
+  return f(meta::type_name("open"), x.msg, x.prev_stage, x.original_stage,
+           x.priority, x.redeployable);
 }
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, stream_msg::ack_open& x) {
-  return f(meta::type_name("ack_open"), x.initial_demand, x.redeployable);
+  return f(meta::type_name("ack_open"), x.rebind_from, x.initial_demand,
+           x.redeployable);
 }
 
 template <class Inspector>

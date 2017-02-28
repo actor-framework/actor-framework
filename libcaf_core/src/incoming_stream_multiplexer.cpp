@@ -67,7 +67,8 @@ void incoming_stream_multiplexer::operator()(stream_msg::open& x) {
   auto ptr = make_mailbox_element(
     cme->sender, cme->mid, std::move(cme->stages),
     make<stream_msg::open>(current_stream_msg_->sid, std::move(x.msg),
-                           self_->ctrl(), x.priority, x.redeployable));
+                           self_->ctrl(), successor, x.priority,
+                           x.redeployable));
   successor->enqueue(std::move(ptr), self_->context());
   // Send out demand upstream.
   manage_credit();

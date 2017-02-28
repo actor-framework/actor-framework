@@ -51,6 +51,14 @@ public:
     // nop
   }
 
+  expected<size_t> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
+                                stream_priority prio) final {
+    if (ptr)
+      return in().add_path(ptr, sid, prio, out_.buf_size(),
+                           out_.available_credit());
+    return sec::invalid_argument;
+  }
+
   error process_batch(message& msg) final {
     using vec_type = std::vector<output_type>;
     if (msg.match_elements<vec_type>()) {

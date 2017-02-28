@@ -28,6 +28,8 @@
 #include "caf/fwd.hpp"
 #include "caf/stream_msg.hpp"
 
+#include "caf/meta/type_name.hpp"
+
 namespace caf {
 
 /// Denotes a downstream actor in a stream topology. All downstream actors use
@@ -35,7 +37,7 @@ namespace caf {
 class downstream_path {
 public:
   /// Handle to the downstream actor.
-  strong_actor_ptr ptr;
+  strong_actor_ptr hdl;
 
   /// Next expected batch ID.
   int64_t next_batch_id;
@@ -53,6 +55,12 @@ public:
 
   downstream_path(strong_actor_ptr p, bool redeploy);
 };
+
+template <class Inspector>
+typename Inspector::return_type inspect(Inspector& f, downstream_path& x) {
+  return f(meta::type_name("upstream_path"), x.next_batch_id, x.open_credit,
+           x.redeployable, x.unacknowledged_batches);
+}
 
 } // namespace caf
 

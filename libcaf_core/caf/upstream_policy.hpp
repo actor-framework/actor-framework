@@ -20,7 +20,9 @@
 #ifndef CAF_UPSTREAM_POLICY_HPP
 #define CAF_UPSTREAM_POLICY_HPP
 
+#include <vector>
 #include <cstdint>
+#include <utility>
 
 #include "caf/fwd.hpp"
 
@@ -30,11 +32,22 @@ class upstream_policy {
 public:
   virtual ~upstream_policy();
 
-  /// Queries the initial credit for the new path `y` in `x`.
-  virtual size_t initial_credit(abstract_upstream& x, upstream_path& y) = 0;
+  /// Describes an assignment of credit to an upstream actor.
+  using assignment_pair = std::pair<upstream_path*, size_t>;
 
-  /// Reclaim credit of closed upstream `y`.
-  virtual void reclaim(abstract_upstream& x, upstream_path& y) = 0;
+  /// Describes an assignment of credit to all upstream actors.
+  using assignment_vec = std::vector<assignment_pair>;
+
+  /// Assigns credit to upstream actors.
+  /// @param xs Stores assignment decisions. Note that the second element of
+  ///           each pair is uninitialized and must be set to 0 for all paths
+  ///           that do not receive credit.
+  /// @param buf_size Denotes how many stream elements are currently buffered.
+  /// @param downstream_credit Denotes how many items we could send downstream.
+  ///                          Usually 0, unless the downstream policy avoids
+  ///                          small batches.
+  virtual void assign_credit(assignment_vec& xs, size_t buf_size,
+                             size_t downstream_credit) = 0;
 };
 
 } // namespace caf

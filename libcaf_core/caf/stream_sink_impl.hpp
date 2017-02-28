@@ -48,6 +48,13 @@ public:
     // nop
   }
 
+  expected<size_t> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
+                                stream_priority prio) final {
+    if (ptr)
+      return in().add_path(ptr, sid, prio, 0, 0);
+    return sec::invalid_argument;
+  }
+
   error consume(message& msg) final {
     using vec_type = std::vector<input_type>;
     if (msg.match_elements<vec_type>()) {

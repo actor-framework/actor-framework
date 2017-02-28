@@ -57,12 +57,13 @@ public:
 
   void abort(strong_actor_ptr& cause, const error& reason);
 
-  error pull(strong_actor_ptr& hdl, size_t n);
+  /// Assigns credit to upstream actors according to the configured policy.
+  void assign_credit(size_t buf_size, size_t downstream_credit);
 
-  error pull(size_t n);
-
+  /// Adds a new upstream actor and returns the initial credit.
   expected<size_t> add_path(strong_actor_ptr hdl, const stream_id& sid,
-                            stream_priority prio);
+                            stream_priority prio, size_t buf_size,
+                            size_t downstream_credit);
 
   bool remove_path(const strong_actor_ptr& hdl);
 
@@ -75,10 +76,20 @@ public:
     return paths_.empty();
   }
 
+  optional<path&> find(const strong_actor_ptr& x) const;
+
 protected:
+  /// Pointer to the parent actor.
   local_actor* self_;
+
+  /// List of all known paths.
   path_list paths_;
+
+  /// Our policy for assigning credit.
   policy_ptr policy_;
+
+  /// An assignment vector that's re-used whenever calling the policy.
+  upstream_policy::assignment_vec policy_vec_;
 };
 
 } // namespace caf

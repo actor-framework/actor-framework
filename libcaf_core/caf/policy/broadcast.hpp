@@ -28,7 +28,7 @@ namespace policy {
 class broadcast final : public downstream_policy {
 public:
   void push(abstract_downstream& out, size_t* hint) override;
-  size_t desired_buffer_size(const abstract_downstream& out) override;
+  size_t available_credit(const abstract_downstream& out) override;
 };
 
 } // namespace policy

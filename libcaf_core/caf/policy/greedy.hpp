@@ -28,9 +28,16 @@ namespace policy {
 /// Sends ACKs as early and often as possible.
 class greedy final : public upstream_policy {
 public:
-  size_t initial_credit(abstract_upstream& x, upstream_path& y) override;
+  greedy();
 
-  void reclaim(abstract_upstream& x, upstream_path& y) override;
+  void assign_credit(assignment_vec& xs, size_t buf_size,
+                     size_t downstream_credit) override;
+
+  size_t low_watermark;
+
+  size_t high_watermark;
+
+  size_t min_buffer_size;
 };
 
 } // namespace policy

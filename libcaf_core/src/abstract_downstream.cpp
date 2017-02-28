@@ -57,26 +57,44 @@ size_t abstract_downstream::min_credit() const {
   return fold_paths(std::numeric_limits<size_t>::max(), f);
 }
 
-bool abstract_downstream::add_path(strong_actor_ptr ptr, bool redeployable) {
-  auto predicate = [&](const path_uptr& x) { return x->ptr == ptr; };
+bool abstract_downstream::add_path(strong_actor_ptr ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  auto predicate = [&](const path_uptr& x) { return x->hdl == ptr; };
   if (std::none_of(paths_.begin(), paths_.end(), predicate)) {
-    paths_.emplace_back(new path(std::move(ptr), redeployable));
+    CAF_LOG_DEBUG("added new downstream path" << CAF_ARG(ptr));
+    paths_.emplace_back(new path(std::move(ptr), false));
+    return true;
+  }
+  return false;
+}
+
+bool abstract_downstream::confirm_path(const strong_actor_ptr& rebind_from,
+                                       strong_actor_ptr& ptr,
+                                       bool redeployable) {
+  CAF_LOG_TRACE(CAF_ARG(rebind_from) << CAF_ARG(ptr) << CAF_ARG(redeployable));
+  auto predicate = [&](const path_uptr& x) { return x->hdl == rebind_from; };
+  auto e = paths_.end();
+  auto i = std::find_if(paths_.begin(), e, predicate);
+  if (i != e) {
+    (*i)->redeployable = redeployable;
+    if (rebind_from != ptr)
+      (*i)->hdl = ptr;
     return true;
   }
   return false;
 }
 
 bool abstract_downstream::remove_path(strong_actor_ptr& ptr) {
-  auto predicate = [&](const path_uptr& x) { return x->ptr == ptr; };
+  auto predicate = [&](const path_uptr& x) { return x->hdl == ptr; };
   auto e = paths_.end();
   auto i = std::find_if(paths_.begin(), e, predicate);
   if (i != e) {
-    CAF_ASSERT((*i)->ptr != nullptr);
+    CAF_ASSERT((*i)->hdl != nullptr);
     if (i != paths_.end() - 1)
       std::swap(*i, paths_.back());
     auto x = std::move(paths_.back());
     paths_.pop_back();
-    unsafe_send_as(self_, x->ptr, make<stream_msg::close>(sid_));
+    unsafe_send_as(self_, x->hdl, make<stream_msg::close>(sid_));
     //policy_->reclaim(this, x);
     return true;
   }
@@ -85,27 +103,31 @@ bool abstract_downstream::remove_path(strong_actor_ptr& ptr) {
 
 void abstract_downstream::close() {
   for (auto& x : paths_)
-    unsafe_send_as(self_, x->ptr, make<stream_msg::close>(sid_));
+    unsafe_send_as(self_, x->hdl, make<stream_msg::close>(sid_));
   paths_.clear();
 }
 
 void abstract_downstream::abort(strong_actor_ptr& cause, const error& reason) {
   for (auto& x : paths_)
-    if (x->ptr != cause)
-      unsafe_send_as(self_, x->ptr,
+    if (x->hdl != cause)
+      unsafe_send_as(self_, x->hdl,
                      make<stream_msg::abort>(this->sid_, reason));
 }
 
 auto abstract_downstream::find(const strong_actor_ptr& ptr) const
 -> optional<path&> {
   auto predicate = [&](const path_uptr& y) {
-    return y->ptr == ptr;
+    return y->hdl == ptr;
   };
   auto e = paths_.end();
   auto i = std::find_if(paths_.begin(), e, predicate);
   if (i != e)
     return *(*i);
   return none;
+}
+
+size_t abstract_downstream::available_credit() const {
+  return policy().available_credit(*this);
 }
 
 void abstract_downstream::send_batch(downstream_path& dest, size_t chunk_size,
@@ -115,7 +137,7 @@ void abstract_downstream::send_batch(downstream_path& dest, size_t chunk_size,
   stream_msg::batch batch{scs, std::move(chunk), batch_id};
   if (dest.redeployable)
     dest.unacknowledged_batches.emplace_back(batch_id, batch);
-  unsafe_send_as(self_, dest.ptr, stream_msg{sid_, std::move(batch)});
+  unsafe_send_as(self_, dest.hdl, stream_msg{sid_, std::move(batch)});
 }
 
 void abstract_downstream::sort_by_credit() {

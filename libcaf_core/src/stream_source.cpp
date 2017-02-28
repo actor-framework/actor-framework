@@ -48,7 +48,7 @@ error stream_source::downstream_demand(strong_actor_ptr& hdl, size_t value) {
     if (!at_end()) {
       // produce new elements
       auto current_size = buf_size();
-      auto size_hint = out_ptr_->policy().desired_buffer_size(*out_ptr_);
+      auto size_hint = out().available_credit();
       if (current_size < size_hint)
         generate(size_hint - current_size);
       return push(&size_hint);

@@ -77,9 +77,9 @@ void outgoing_stream_multiplexer::operator()(stream_msg::open& x) {
   auto ptr = make_mailbox_element(
     cme->sender, message_id::make(), {}, forward_atom::value, cme->sender,
     std::move(cme->stages), path->hdl, cme->mid,
-    make_message(make<stream_msg::open>(current_stream_msg_->sid,
-                                        std::move(x.msg), self_->ctrl(),
-                                        x.priority, x.redeployable)));
+    make_message(make<stream_msg::open>(
+      current_stream_msg_->sid, std::move(x.msg), self_->ctrl(),
+      x.original_stage, x.priority, x.redeployable)));
   basp()->enqueue(std::move(ptr), self_->context());
 }
 

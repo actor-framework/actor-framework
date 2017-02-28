@@ -83,8 +83,14 @@ public:
   /// Returns the size of the output buffer.
   virtual size_t buf_size() const = 0;
 
-  bool add_path(strong_actor_ptr ptr, bool redeployable);
+  /// Adds a path with in-flight `stream_msg::open` message.
+  bool add_path(strong_actor_ptr ptr);
 
+  /// Confirms a path and properly initialize its state.
+  bool confirm_path(const strong_actor_ptr& rebind_from, strong_actor_ptr& ptr,
+                    bool is_redeployable);
+
+  /// Removes a downstream path without aborting the stream.
   bool remove_path(strong_actor_ptr& ptr);
 
   /// Removes all paths.
@@ -94,6 +100,8 @@ public:
   void abort(strong_actor_ptr& cause, const error& reason);
 
   optional<path&> find(const strong_actor_ptr& ptr) const;
+
+  size_t available_credit() const;
 
   inline local_actor* self() const {
     return self_;

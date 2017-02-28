@@ -28,7 +28,7 @@ void anycast::push(abstract_downstream& out, size_t* hint) {
   out.anycast(hint);
 }
 
-size_t anycast::desired_buffer_size(const abstract_downstream& out) {
+size_t anycast::available_credit(const abstract_downstream& out) {
   return out.total_credit();
 }
 

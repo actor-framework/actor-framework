@@ -22,7 +22,7 @@
 namespace caf {
 
 downstream_path::downstream_path(strong_actor_ptr p, bool redeploy)
-    : ptr(std::move(p)),
+    : hdl(std::move(p)),
       next_batch_id(0),
       open_credit(0),
       redeployable(redeploy) {

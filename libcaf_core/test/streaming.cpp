@@ -234,7 +234,8 @@ CAF_TEST(broken_pipeline) {
   self->send(pipeline, "test.txt");
   expect((std::string), from(self).to(source).with("test.txt"));
   // source --(stream_msg::open)--> stage
-  expect((stream_msg::open), from(self).to(stage).with(_, source, _, _, false));
+  expect((stream_msg::open),
+         from(self).to(stage).with(_, source, _, _, _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
   // stage --(stream_msg::abort)--> source
@@ -256,7 +257,8 @@ CAF_TEST(incomplete_pipeline) {
   expect((std::string), from(self).to(source).with("test.txt"));
   // source --(stream_msg::open)--> stage
   CAF_REQUIRE(sched.prioritize(stage));
-  expect((stream_msg::open), from(self).to(stage).with(_, source, _, _, false));
+  expect((stream_msg::open),
+         from(self).to(stage).with(_, source, _, _,  _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
   // stage --(stream_msg::abort)--> source
@@ -279,9 +281,10 @@ CAF_TEST(depth2_pipeline) {
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(sink).streams().empty());
   // source ----(stream_msg::open)----> sink
-  expect((stream_msg::open), from(self).to(sink).with(_, source, _, _, false));
+  expect((stream_msg::open),
+         from(self).to(sink).with(_, source, _, _, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
-  expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(source).with(_, 5, _, false));
   // source ----(stream_msg::batch)---> sink
   expect((stream_msg::batch),
          from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -298,8 +301,11 @@ CAF_TEST(depth2_pipeline) {
   CAF_CHECK(deref(sink).streams().empty());
 }
 
-CAF_TEST(depth3_pipeline) {
-  CAF_MESSAGE("check fully initialized pipeline");
+CAF_TEST(depth3_pipeline_order1) {
+  // Order 1 is an idealized flow where batch messages travel from the source
+  // to the sink and then ack_batch messages travel backwards, starting the
+  // process over again.
+  CAF_MESSAGE("check fully initialized pipeline with event order 1");
   auto source = sys.spawn(file_reader);
   auto stage = sys.spawn(filter);
   auto sink = sys.spawn(sum_up);
@@ -315,19 +321,21 @@ CAF_TEST(depth3_pipeline) {
   CAF_CHECK(deref(stage).streams().empty());
   CAF_CHECK(deref(sink).streams().empty());
   // source --(stream_msg::open)--> stage
-  expect((stream_msg::open), from(self).to(stage).with(_, source, _, _, false));
+  expect((stream_msg::open),
+         from(self).to(stage).with(_, source, _, _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(!deref(stage).streams().empty());
   CAF_CHECK(deref(sink).streams().empty());
   // stage --(stream_msg::open)--> sink
-  expect((stream_msg::open), from(self).to(sink).with(_, stage, _, _, false));
+  expect((stream_msg::open),
+         from(self).to(sink).with(_, stage, _, _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(!deref(stage).streams().empty());
   CAF_CHECK(!deref(sink).streams().empty());
   // sink --(stream_msg::ack_open)--> stage
-  expect((stream_msg::ack_open), from(sink).to(stage).with(5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(stage).with(_, 5, _, false));
   // stage --(stream_msg::ack_open)--> source
-  expect((stream_msg::ack_open), from(stage).to(source).with(5, _, false));
+  expect((stream_msg::ack_open), from(stage).to(source).with(_, 5, _, false));
   // source --(stream_msg::batch)--> stage
   expect((stream_msg::batch),
          from(source).to(stage).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -354,8 +362,111 @@ CAF_TEST(depth3_pipeline) {
   expect((stream_msg::close), from(stage).to(sink).with());
   // sink ----(result: 25)---> self
   expect((int), from(sink).to(self).with(25));
-  //auto res = fetch_result<int>();
-  //CAF_CHECK_EQUAL(res, 25);
+}
+
+CAF_TEST(depth3_pipeline_order2) {
+  // Order 2 assumes that source and stage communicate faster then the sink.
+  // This means batches and acks go as fast as possible between source and
+  // stage, only slowing down if an ack from the sink is needed to drive
+  // computation forward.
+  CAF_MESSAGE("check fully initialized pipeline with event order 2");
+  auto source = sys.spawn(file_reader);
+  auto stage = sys.spawn(filter);
+  auto sink = sys.spawn(sum_up);
+  CAF_MESSAGE("source: " << to_string(source));
+  CAF_MESSAGE("stage: " << to_string(stage));
+  CAF_MESSAGE("sink: " << to_string(sink));
+  auto pipeline = self * sink * stage * source;
+  // run initialization code
+  sched.run();
+  // self --("test.txt")--> source
+  CAF_CHECK(self->mailbox().empty());
+  self->send(pipeline, "test.txt");
+  expect((std::string), from(self).to(source).with("test.txt"));
+  // source --(stream_msg::open)--> stage
+  expect((stream_msg::open),
+         from(self).to(stage).with(_, source, _, _, _, false));
+  // stage --(stream_msg::ack_open)--> source
+  expect((stream_msg::ack_open), from(stage).to(source).with(_, 5, _, false));
+  // source --(stream_msg::batch)--> stage
+  expect((stream_msg::batch),
+         from(source).to(stage).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
+  // stage --(stream_msg::ack_batch)--> source
+  // The stage has filtered {2, 4}, which means {1, 3, 5} are now buffered at
+  // the stage. New credit assigned to the source is 2, since there's no credit
+  // to send data downstream and the buffer is only allowed to keep 5 elements
+  // total.
+  expect((stream_msg::ack_batch), from(stage).to(source).with(2, 0));
+  // source --(stream_msg::batch)--> stage
+  expect((stream_msg::batch),
+         from(source).to(stage).with(2, std::vector<int>{6, 7}, 1));
+  // stage --(stream_msg::ack_batch)--> source
+  // The stage has filtered {6}, which means {1, 3, 5, 7} are now buffered at
+  // the stage. New credit assigned to the source is hence 1.
+  expect((stream_msg::ack_batch), from(stage).to(source).with(1, 1));
+  // source --(stream_msg::batch)--> stage
+  expect((stream_msg::batch),
+         from(source).to(stage).with(1, std::vector<int>{8}, 2));
+  // stage --(stream_msg::ack_batch)--> source
+  // The stage has dropped 8, still leaving 1 space in the buffer.
+  expect((stream_msg::ack_batch), from(stage).to(source).with(1, 2));
+  // source --(stream_msg::batch)--> stage
+  expect((stream_msg::batch),
+         from(source).to(stage).with(1, std::vector<int>{9}, 3));
+  // At this point, stage is not allowed to signal demand because it no longer
+  // has any capacity in its buffer nor did it receive downstream demand yet.
+  disallow((stream_msg::ack_batch), from(stage).to(source).with(_, _));
+  // stage --(stream_msg::open)--> sink
+  expect((stream_msg::open),
+         from(self).to(sink).with(_, stage, _, _, _, false));
+  // sink --(stream_msg::ack_open)--> stage (finally)
+  expect((stream_msg::ack_open), from(sink).to(stage).with(_, 5, _, false));
+  // stage --(stream_msg::ack_batch)--> source
+  // The stage has now emptied its buffer and is able to grant more credit.
+  expect((stream_msg::ack_batch), from(stage).to(source).with(5, 3));
+  // source ----(stream_msg::close)---> stage
+  // The source can now initiate shutting down the stream since it successfully
+  // produced all elements.
+  expect((stream_msg::close), from(source).to(stage).with());
+  // stage --(stream_msg::batch)--> sink
+  expect((stream_msg::batch),
+         from(stage).to(sink).with(5, std::vector<int>{1, 3, 5, 7, 9}, 0));
+  // sink --(stream_msg::ack_batch)--> stage
+  expect((stream_msg::ack_batch), from(sink).to(stage).with(5, 0));
+  // stage ----(stream_msg::close)---> sink
+  expect((stream_msg::close), from(stage).to(sink).with());
+  // sink ----(result: 25)---> self
+  expect((int), from(sink).to(self).with(25));
+  return;
+
+
+
+  // stage --(stream_msg::open)--> sink
+  expect((stream_msg::open),
+         from(self).to(sink).with(_, stage, _, _, _, false));
+
+
+  // source --(stream_msg::batch)--> stage
+  expect((stream_msg::batch),
+         from(source).to(stage).with(4, std::vector<int>{6, 7, 8, 9}, 1));
+  // stage --(stream_msg::batch)--> sink
+  expect((stream_msg::batch),
+         from(stage).to(sink).with(3, std::vector<int>{1, 3, 5}, 0));
+  // sink --(stream_msg::batch)--> stage
+  expect((stream_msg::ack_batch), from(sink).to(stage).with(3, 0));
+  // stage --(stream_msg::batch)--> sink
+  expect((stream_msg::batch),
+         from(stage).to(sink).with(2, std::vector<int>{7, 9}, 1));
+  // stage --(stream_msg::batch)--> source
+  expect((stream_msg::ack_batch), from(stage).to(source).with(4, 1));
+  // sink --(stream_msg::batch)--> stage
+  expect((stream_msg::ack_batch), from(sink).to(stage).with(2, 1));
+  // source ----(stream_msg::close)---> stage
+  expect((stream_msg::close), from(source).to(stage).with());
+  // stage ----(stream_msg::close)---> sink
+  expect((stream_msg::close), from(stage).to(sink).with());
+  // sink ----(result: 25)---> self
+  expect((int), from(sink).to(self).with(25));
 }
 
 CAF_TEST(broken_pipeline_stramer) {
@@ -367,7 +478,8 @@ CAF_TEST(broken_pipeline_stramer) {
   // run initialization code
   sched.run_once();
   // source --(stream_msg::open)--> stage
-  expect((stream_msg::open), from(source).to(stage).with(_, source, _, _, false));
+  expect((stream_msg::open),
+         from(source).to(stage).with(_, source, _, _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
   // stage --(stream_msg::abort)--> source
@@ -388,9 +500,9 @@ CAF_TEST(depth2_pipeline_streamer) {
   sched.run_once();
   // source ----(stream_msg::open)----> sink
   expect((stream_msg::open),
-         from(source).to(sink).with(_, source, _, _, false));
+         from(source).to(sink).with(_, source, _, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
-  expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(source).with(_, 5, _, false));
   // source ----(stream_msg::batch)---> sink
   expect((stream_msg::batch),
          from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -416,9 +528,9 @@ CAF_TEST(stream_without_result) {
   sched.run_once();
   // source ----(stream_msg::open)----> sink
   expect((stream_msg::open),
-         from(source).to(sink).with(_, source, _, _, false));
+         from(source).to(sink).with(_, source, _, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
-  expect((stream_msg::ack_open), from(sink).to(source).with(5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(source).with(_, 5, _, false));
   // source ----(stream_msg::batch)---> sink
   expect((stream_msg::batch),
          from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -614,7 +726,7 @@ CAF_TEST(stream_crossing_the_wire) {
   // --------------(stream_msg::open)-------------->
   //  earth.stream_serv -> mars.stream_serv -> sink
   expect_on_path(
-    (stream_msg::open), with(_, _, _, _, false),
+    (stream_msg::open), with(_, _, _, _, _, false),
     {mars, mars.stream_serv}, {mars, sink});
   // mars.stream_serv --('sys', 'ok', 5)--> earth.stream_serv
   network_traffic();
@@ -624,7 +736,7 @@ CAF_TEST(stream_crossing_the_wire) {
   // -----------------(stream_msg::ack_open)------------------>
   //  sink -> mars.stream_serv -> earth.stream_serv -> source
   expect_on_path(
-    (stream_msg::ack_open), with(5, _, false),
+    (stream_msg::ack_open), with(_, 5, _, false),
     {mars, mars.stream_serv}, {earth, earth.stream_serv}, {earth, source});
   // earth.stream_serv --('sys', 'ok', 5)--> mars.stream_serv
   network_traffic();

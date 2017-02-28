@@ -36,14 +36,21 @@ public:
 
   // -- handler for downstream events ------------------------------------------
 
-  /// Add a new downstream actor to the stream.
+  /// Add a new downstream actor to the stream with in-flight
+  /// `stream_msg::open` message.
+  /// @param hdl Handle to the new downstream actor.
+  /// @pre `hdl != nullptr`
+  virtual error add_downstream(strong_actor_ptr& hdl);
+
+  /// Confirms a downstream actor after receiving its `stream_msg::ack_open`.
   /// @param hdl Handle to the new downstream actor.
   /// @param initial_demand Credit received with `ack_open`.
   /// @param redeployable Denotes whether the runtime can redeploy
   ///                     the downstream actor on failure.
   /// @pre `hdl != nullptr`
-  virtual error add_downstream(strong_actor_ptr& hdl, size_t initial_demand,
-                               bool redeployable);
+  virtual error confirm_downstream(const strong_actor_ptr& rebind_from,
+                                   strong_actor_ptr& hdl, size_t initial_demand,
+                                   bool redeployable);
 
   /// Handles ACK message from a downstream actor.
   /// @pre `hdl != nullptr`

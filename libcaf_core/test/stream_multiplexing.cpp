@@ -253,7 +253,7 @@ CAF_TEST(stream_interception) {
   // streamer [via stream_serv1 / BASP] --(stream_msg::open)--> stream_serv2
   expect_network_traffic(streamer, stream_serv2);
   expect((stream_msg::open),
-         from(_).to(stream_serv2).with(_, stream_serv1, _, _, false));
+         from(_).to(stream_serv2).with(_, stream_serv1, _, _, _, false));
   // stream_serv2 [via BASP] --('sys', 'ok', 5)--> stream_serv1
   expect_network_traffic(stream_serv2, stream_serv1);
   expect((atom_value, atom_value, int32_t),
@@ -261,14 +261,14 @@ CAF_TEST(stream_interception) {
          .with(sys_atom::value, ok_atom::value, 5));
   // stream_serv2 --(stream_msg::open)--> sum_up
   expect((stream_msg::open),
-         from(_).to(sum_up).with(_, stream_serv2, _, _, false));
+         from(_).to(sum_up).with(_, stream_serv2, _, _, _, false));
   // sum_up --(stream_msg::ack_open)--> stream_serv2
   expect((stream_msg::ack_open),
-         from(sum_up).to(stream_serv2).with(5, _, false));
+         from(sum_up).to(stream_serv2).with(_, 5, _, false));
   // stream_serv2 [via BASP] --(stream_msg::ack_open)--> stream_serv1
   expect_network_traffic(stream_serv2, stream_serv1);
   expect((stream_msg::ack_open),
-         from(stream_serv2).to(stream_serv1).with(5, _, false));
+         from(stream_serv2).to(stream_serv1).with(_, 5, _, false));
   // stream_serv1 --('sys', 'ok', 5)--> stream_serv2
   expect_network_traffic(stream_serv1, stream_serv2);
   expect((atom_value, atom_value, int32_t),
@@ -276,7 +276,7 @@ CAF_TEST(stream_interception) {
          .with(sys_atom::value, ok_atom::value, 5));
   // stream_serv1 --(stream_msg::ack_open)--> streamer
   expect((stream_msg::ack_open),
-         from(stream_serv1).to(streamer).with(5, _, false));
+         from(stream_serv1).to(streamer).with(_, 5, _, false));
   // streamer --(stream_msg::batch)--> stream_serv1
   expect((stream_msg::batch), from(streamer).to(stream_serv1).with(5, _, 0));
   // stream_serv1 [via BASP] --(stream_msg::batch)--> stream_serv2
