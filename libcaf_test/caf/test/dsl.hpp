@@ -142,7 +142,8 @@ class expect_clause_base {
 public:
   expect_clause_base(caf::scheduler::test_coordinator& sched)
       : sched_(sched),
-        mock_dest_(false) {
+        mock_dest_(false),
+        dest_(nullptr) {
     // nop
   }
 
@@ -292,6 +293,156 @@ public:
   }
 };
 
+template <class Derived>
+class disallow_clause_base {
+public:
+  disallow_clause_base(caf::scheduler::test_coordinator& sched)
+      : sched_(sched),
+        mock_dest_(false),
+        dest_(nullptr) {
+    // nop
+  }
+
+  disallow_clause_base(disallow_clause_base&& other)
+      : sched_(other.sched_),
+        src_(std::move(other.src_)) {
+    // nop
+  }
+
+  Derived& from(const wildcard&) {
+    return dref();
+  }
+
+  template <class Handle>
+  Derived& from(const Handle& whom) {
+    src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
+    return dref();
+  }
+
+  template <class Handle>
+  Derived& to(const Handle& whom) {
+    // not setting dest_ causes the the content checking to succeed immediately
+    if (sched_.prioritize(whom)) {
+      dest_ = &sched_.next_job<caf::scheduled_actor>();
+    }
+    return dref();
+  }
+
+  Derived& to(const wildcard& whom) {
+    if (sched_.prioritize(whom))
+      dest_ = &sched_.next_job<caf::scheduled_actor>();
+  }
+
+  Derived& to(const caf::scoped_actor& whom) {
+    mock_dest_ = true;
+    dest_ = whom.ptr();
+    return dref();
+  }
+
+  template <class... Ts>
+  caf::optional<std::tuple<const Ts&...>> peek() {
+    CAF_REQUIRE(dest_ != nullptr);
+    auto ptr = dest_->mailbox().peek();
+    if (!ptr->content().match_elements<Ts...>())
+      return caf::none;
+    return ptr->content().get_as_tuple<Ts...>();
+  }
+
+protected:
+  Derived& dref() {
+    return *static_cast<Derived*>(this);
+  }
+
+  // denotes whether destination is a mock actor, i.e., a scoped_actor without
+  // functionality other than checking outputs of other actors
+  caf::scheduler::test_coordinator& sched_;
+  bool mock_dest_;
+  caf::strong_actor_ptr src_;
+  caf::local_actor* dest_;
+};
+
+template <class... Ts>
+class disallow_clause : public disallow_clause_base<disallow_clause<Ts...>> {
+public:
+  template <class... Us>
+  disallow_clause(Us&&... xs)
+      : disallow_clause_base<disallow_clause<Ts...>>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  template <class... Us>
+  void with(Us&&... xs) {
+    // succeed immediately if dest_ is empty
+    if (this->dest_ == nullptr)
+      return;
+    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
+    elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
+    auto ys = this->template peek<Ts...>();
+    if (ys && inspector(get<0>(*ys)))
+      CAF_FAIL("disallowed message found: " << caf::deep_to_string(ys));
+  }
+};
+
+/// The single-argument disallow-clause allows to automagically unwrap T
+/// if it's a variant-like wrapper.
+template <class T>
+class disallow_clause<T> : public disallow_clause_base<disallow_clause<T>> {
+public:
+  template <class... Us>
+  disallow_clause(Us&&... xs)
+      : disallow_clause_base<disallow_clause<T>>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  template <class... Us>
+  void with(Us&&... xs) {
+    if (this->dest_ == nullptr)
+      return;
+    std::integral_constant<bool, has_outer_type<T>::value> token;
+    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
+    with_content(token, tmp);
+  }
+
+private:
+  template <class U>
+  void with_content(std::integral_constant<bool, false>, const U& x) {
+    elementwise_compare_inspector<U> inspector{x};
+    auto xs = this->template peek<T>();
+    if (xs && inspector(get<0>(*xs)))
+      CAF_FAIL("disallowed message found: " << caf::deep_to_string(*xs));
+  }
+
+  template <class U>
+  void with_content(std::integral_constant<bool, true>, const U& x) {
+    elementwise_compare_inspector<U> inspector{x};
+    auto xs = this->template peek<typename T::outer_type>();
+    if (!xs)
+      return;
+    auto& x0 = get<0>(*xs);
+    if (is<T>(x0) && inspect(inspector, const_cast<T&>(get<T>(x0))))
+      CAF_FAIL("disallowed message found: " << caf::deep_to_string(x0));
+  }
+
+};
+
+template <>
+class disallow_clause<void>
+  : public disallow_clause_base<disallow_clause<void>> {
+public:
+  template <class... Us>
+  disallow_clause(Us&&... xs)
+      : disallow_clause_base<disallow_clause<void>>(std::forward<Us>(xs)...) {
+    // nop
+  }
+
+  void with() {
+    if (dest_ == nullptr)
+      return;
+    auto ptr = dest_->mailbox().peek();
+    CAF_REQUIRE(!ptr->content().empty());
+  }
+};
+
 template <class Config = caf::actor_system_config>
 struct test_coordinator_fixture {
   using scheduler_type = caf::scheduler::test_coordinator;
@@ -338,7 +489,12 @@ struct test_coordinator_fixture {
   }
 
   template <class... Ts>
-  expect_clause<Ts...> expect() {
+  expect_clause<Ts...> expect_impl() {
+    return {sched};
+  }
+
+  template <class... Ts>
+  disallow_clause<Ts...> disallow_impl() {
     return {sched};
   }
 };
@@ -350,9 +506,17 @@ struct test_coordinator_fixture {
 
 #define expect(types, fields)                                                  \
   CAF_MESSAGE("expect" << #types << "." << #fields);                           \
-  expect< CAF_EXPAND(CAF_DSL_LIST types) >().fields
+  expect_impl< CAF_EXPAND(CAF_DSL_LIST types) >().fields
 
 #define expect_on(where, types, fields)                                        \
   CAF_MESSAGE(#where << ": expect" << #types << "." << #fields);               \
-  where . expect< CAF_EXPAND(CAF_DSL_LIST types) >().fields
+  where . expect_impl< CAF_EXPAND(CAF_DSL_LIST types) >().fields
+
+#define disallow(types, fields)                                                \
+  CAF_MESSAGE("disallow" << #types << "." << #fields);                         \
+  disallow_impl< CAF_EXPAND(CAF_DSL_LIST types) >().fields
+
+#define disallow_on(where, types, fields)                                      \
+  CAF_MESSAGE(#where << ": disallow" << #types << "." << #fields);             \
+  where . disallow_impl< CAF_EXPAND(CAF_DSL_LIST types) >().fields
 
