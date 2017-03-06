@@ -81,6 +81,8 @@ bool abstract_downstream::confirm_path(const strong_actor_ptr& rebind_from,
       (*i)->hdl = ptr;
     return true;
   }
+  CAF_LOG_INFO("confirming path failed" << CAF_ARG(rebind_from)
+               << CAF_ARG(ptr));
   return false;
 }
 
