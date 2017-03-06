@@ -35,7 +35,13 @@ using namespace caf;
 
 namespace {
 
-behavior dummy_basp(event_based_actor*) {
+struct dummy_basp_state {
+  static const char* name;
+};
+
+const char* dummy_basp_state::name = "dummy_basp";
+
+behavior dummy_basp(stateful_actor<dummy_basp_state>*) {
   return {
     [=](forward_atom, strong_actor_ptr& src,
         std::vector<strong_actor_ptr>& fwd_stack, strong_actor_ptr& dest,
@@ -48,7 +54,13 @@ behavior dummy_basp(event_based_actor*) {
   };
 }
 
-void streamer_impl(event_based_actor* self, const actor& dest) {
+struct streamer_state {
+  static const char* name;
+};
+
+const char* streamer_state::name = "streamer";
+
+void streamer_impl(stateful_actor<streamer_state>* self, const actor& dest) {
   using buf = std::deque<int>;
   self->new_stream(
     // destination of the stream
@@ -75,7 +87,13 @@ void streamer_impl(event_based_actor* self, const actor& dest) {
   );
 }
 
-behavior sum_up_impl(event_based_actor* self) {
+struct sum_up_state {
+  static const char* name;
+};
+
+const char* sum_up_state::name = "sum_up";
+
+behavior sum_up_impl(stateful_actor<sum_up_state>* self) {
   return {
     [=](stream<int>& in) {
       return self->add_sink(
@@ -146,6 +164,10 @@ public:
     };
   }
 
+  const char* name() const override {
+    return "stream_serv";
+  }
+
   void on_exit() override {
     CAF_CHECK_EQUAL(incoming_.num_streams(), 0u);
     CAF_CHECK_EQUAL(outgoing_.num_streams(), 0u);
@@ -183,6 +205,10 @@ public:
                           context);
   }
 
+  const char* name() const override {
+    return "pseudo_proxy";
+  }
+
 private:
   actor stream_serv_;
   actor original_;
@@ -204,7 +230,9 @@ struct fixture : test_coordinator_fixture<> {
     sum_up_proxy = sys.spawn<pseudo_proxy>(stream_serv1, sum_up);
     CAF_MESSAGE("basp: " << to_string(basp));
     CAF_MESSAGE("sum_up: " << to_string(sum_up));
-    CAF_MESSAGE("stream_serv: " << to_string(stream_serv1));
+    CAF_MESSAGE("stream_serv1: " << to_string(stream_serv1));
+    CAF_MESSAGE("stream_serv2: " << to_string(stream_serv2));
+    CAF_MESSAGE("sum_up_proxy: " << to_string(sum_up_proxy));
     sched.run();
   }
 
@@ -246,6 +274,7 @@ CAF_TEST_FIXTURE_SCOPE(outgoing_stream_multiplexer_tests, fixture)
 // (which is missing in this simple setup).
 CAF_TEST(stream_interception) {
   streamer = sys.spawn(streamer_impl, sum_up_proxy);
+  CAF_MESSAGE("streamer: " << to_string(streamer));
   sched.run_once();
   // streamer --('sys' stream_msg::open)--> stream_serv1
   expect((atom_value, stream_msg),
@@ -253,7 +282,8 @@ CAF_TEST(stream_interception) {
   // streamer [via stream_serv1 / BASP] --(stream_msg::open)--> stream_serv2
   expect_network_traffic(streamer, stream_serv2);
   expect((stream_msg::open),
-         from(_).to(stream_serv2).with(_, stream_serv1, _, _, _, false));
+         from(_).to(stream_serv2)
+         .with(_, stream_serv1, sum_up_proxy, _, _, false));
   // stream_serv2 [via BASP] --('sys', 'ok', 5)--> stream_serv1
   expect_network_traffic(stream_serv2, stream_serv1);
   expect((atom_value, atom_value, int32_t),
@@ -261,10 +291,10 @@ CAF_TEST(stream_interception) {
          .with(sys_atom::value, ok_atom::value, 5));
   // stream_serv2 --(stream_msg::open)--> sum_up
   expect((stream_msg::open),
-         from(_).to(sum_up).with(_, stream_serv2, _, _, _, false));
+         from(_).to(sum_up).with(_, stream_serv2, sum_up_proxy, _, _, false));
   // sum_up --(stream_msg::ack_open)--> stream_serv2
   expect((stream_msg::ack_open),
-         from(sum_up).to(stream_serv2).with(_, 5, _, false));
+         from(sum_up).to(stream_serv2).with(sum_up_proxy, 5, _, false));
   // stream_serv2 [via BASP] --(stream_msg::ack_open)--> stream_serv1
   expect_network_traffic(stream_serv2, stream_serv1);
   expect((stream_msg::ack_open),
