@@ -21,12 +21,51 @@
 #include "caf/meta/annotation.hpp"
 #include "caf/test/unit_test.hpp"
 
-// allow comparing arbitrary `T`s to `message` objects
+namespace {
+
+struct wildcard { };
+
+constexpr wildcard _ = wildcard{};
+
+constexpr bool operator==(const wildcard&, const wildcard&) {
+  return true;
+}
+
+template <size_t I, class T>
+bool cmp_one(const caf::message& x, const T& y) {
+  if (std::is_same<T, wildcard>::value)
+    return true;
+  return x.match_element<T>(I) && x.get_as<T>(I) == y;
+}
+
+template <size_t I, class... Ts>
+typename std::enable_if<(I == sizeof...(Ts)), bool>::type
+msg_cmp_rec(const caf::message&, const std::tuple<Ts...>&) {
+  return true;
+}
+
+template <size_t I, class... Ts>
+typename std::enable_if<(I < sizeof...(Ts)), bool>::type
+msg_cmp_rec(const caf::message& x, const std::tuple<Ts...>& ys) {
+  return cmp_one<I>(x, std::get<I>(ys)) && msg_cmp_rec<I + 1>(x, ys);
+}
+
+} // namespace <anonymous>
+
+// allow comparing arbitrary `T`s to `message` objects for the purpose of the
+// testing DSL
 namespace caf {
+
+template <class... Ts>
+bool operator==(const message& x, const std::tuple<Ts...>& y) {
+  return msg_cmp_rec<0>(x, y);
+}
+
 template <class T>
 bool operator==(const message& x, const T& y) {
   return x.match_elements<T>() && x.get_as<T>(0) == y;
 }
+
 } // namespace caf
 
 namespace {
@@ -53,10 +92,6 @@ T get(const U&);
 // enables ADL in `with_content`
 template <class T, class U>
 bool is(const U&);
-
-struct wildcard { };
-
-constexpr wildcard _ = wildcard{};
 
 template <class Tup>
 class elementwise_compare_inspector {
