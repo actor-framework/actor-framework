@@ -85,6 +85,12 @@ private:
 };
 
 /// @relates stream
+template <class T>
+inline bool operator==(const stream<T>& x, const stream<T>& y) {
+  return x.id() == y.id();
+}
+
+/// @relates stream
 constexpr invalid_stream_t invalid_stream = invalid_stream_t{};
 
 /// Identifies an unbound sequence of messages annotated with the additional
