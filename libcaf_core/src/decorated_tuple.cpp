@@ -34,7 +34,7 @@ decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
   // calculate type token
   for (unsigned long i : mapping_) {
     type_token_ <<= 6;
-    type_token_ |= decorated_->type_nr(i);
+    type_token_ |= static_cast<const cow_ptr&>(decorated_)->type_nr(i);
   }
 }
 
