@@ -26,6 +26,7 @@
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 #include "caf/config.hpp"
+#include "caf/deep_to_string.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -302,8 +303,8 @@ inspect(Inspector& f, optional<T>& x) {
 
 /// @relates optional
 template <class T>
-auto to_string(const optional<T>& x) -> decltype(to_string(*x)) {
-  return x ? "*" + to_string(*x) : "<null>";
+std::string to_string(const optional<T>& x) {
+  return x ? "*" + deep_to_string(*x) : "none";
 }
 
 // -- [X.Y.8] comparison with optional ----------------------------------------
