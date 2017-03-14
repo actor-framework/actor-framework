@@ -38,7 +38,13 @@ using namespace caf;
 
 namespace {
 
-behavior file_reader(event_based_actor* self) {
+struct file_reader_state {
+  static const char* name;
+};
+
+const char* file_reader_state::name = "file_reader";
+
+behavior file_reader(stateful_actor<file_reader_state>* self) {
   using buf = std::deque<int>;
   return {
     [=](std::string& fname) -> stream<int> {
@@ -95,7 +101,13 @@ void streamer(event_based_actor* self, const actor& dest) {
   );
 }
 
-behavior filter(event_based_actor* self) {
+struct filter_state {
+  static const char* name;
+};
+
+const char* filter_state::name = "filter";
+
+behavior filter(stateful_actor<filter_state>* self) {
   return {
     [=](stream<int>& in, std::string& fname) -> stream<int> {
       CAF_CHECK_EQUAL(fname, "test.txt");
@@ -131,7 +143,13 @@ behavior broken_filter(event_based_actor*) {
   };
 }
 
-behavior sum_up(event_based_actor* self) {
+struct sum_up_state {
+  static const char* name;
+};
+
+const char* sum_up_state::name = "sum_up";
+
+behavior sum_up(stateful_actor<sum_up_state>* self) {
   return {
     [=](stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
