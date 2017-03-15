@@ -40,7 +40,9 @@ test_multiplexer::scribe_data::scribe_data(shared_buffer_type input,
   // nop
 }
 
-test_multiplexer::test_multiplexer(actor_system* sys) : multiplexer(sys) {
+test_multiplexer::test_multiplexer(actor_system* sys)
+    : multiplexer(sys),
+      tid_(std::this_thread::get_id()) {
   CAF_ASSERT(sys != nullptr);
 }
 
@@ -65,7 +67,9 @@ test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
 
 expected<void> test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
                                                    connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
+  guard_type guard{mx_};
   class impl : public scribe {
   public:
     impl(abstract_broker* self, connection_handle ch, test_multiplexer* mpx)
@@ -127,6 +131,7 @@ expected<void> test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
 
 connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
                                                    native_socket) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   std::cerr << "test_multiplexer::add_tcp_scribe called with native socket"
             << std::endl;
   abort();
@@ -135,6 +140,7 @@ connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
 expected<connection_handle>
 test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
                                  uint16_t desired_port) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(desired_port));
   auto hdl = new_tcp_scribe(host, desired_port);
   if (!hdl)
@@ -145,6 +151,7 @@ test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
 
 expected<std::pair<accept_handle, uint16_t>>
 test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
+  guard_type guard{mx_};
   accept_handle result;
   auto i = doormen_.find(desired_port);
   if (i != doormen_.end()) {
@@ -156,6 +163,8 @@ test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
 
 expected<void> test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
                                                     accept_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
+  guard_type guard{mx_};
   class impl : public doorman {
   public:
     impl(abstract_broker* self, accept_handle ah, test_multiplexer* mpx)
@@ -238,6 +247,7 @@ void test_multiplexer::run() {
 
 void test_multiplexer::provide_scribe(std::string host, uint16_t desired_port,
                                       connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(desired_port) << CAF_ARG(hdl));
   guard_type guard{mx_};
   scribes_.emplace(std::make_pair(std::move(host), desired_port), hdl);
@@ -245,6 +255,7 @@ void test_multiplexer::provide_scribe(std::string host, uint16_t desired_port,
 
 void test_multiplexer::provide_acceptor(uint16_t desired_port,
                                         accept_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   doormen_.emplace(desired_port, hdl);
   doorman_data_[hdl].port = desired_port;
 }
@@ -253,57 +264,70 @@ void test_multiplexer::provide_acceptor(uint16_t desired_port,
 /// the test program.
 test_multiplexer::buffer_type&
 test_multiplexer::virtual_network_buffer(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].vn_buf;
 }
 
 test_multiplexer::buffer_type&
 test_multiplexer::output_buffer(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].wr_buf;
 }
 
 test_multiplexer::buffer_type&
 test_multiplexer::input_buffer(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].rd_buf;
 }
 
 receive_policy::config& test_multiplexer::read_config(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].recv_conf;
 }
 
 bool& test_multiplexer::ack_writes(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].ack_writes;
 }
 
 bool& test_multiplexer::stopped_reading(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].stopped_reading;
 }
 
 bool& test_multiplexer::passive_mode(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].passive_mode;
 }
 
 intrusive_ptr<scribe>& test_multiplexer::impl_ptr(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].ptr;
 }
 
 uint16_t& test_multiplexer::port(accept_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return doorman_data_[hdl].port;
 }
 
 bool& test_multiplexer::stopped_reading(accept_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return doorman_data_[hdl].stopped_reading;
 }
 
 bool& test_multiplexer::passive_mode(accept_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return doorman_data_[hdl].passive_mode;
 }
 
 intrusive_ptr<doorman>& test_multiplexer::impl_ptr(accept_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return doorman_data_[hdl].ptr;
 }
 
 void test_multiplexer::add_pending_connect(accept_handle src,
                                            connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   pending_connects_.emplace(src, hdl);
 }
 
@@ -312,6 +336,7 @@ void test_multiplexer::prepare_connection(accept_handle src,
                                           test_multiplexer& peer,
                                           std::string host, uint16_t port,
                                           connection_handle peer_hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_ASSERT(this != &peer);
   CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(hdl) << CAF_ARG(host) << CAF_ARG(port)
                 << CAF_ARG(peer_hdl));
@@ -331,15 +356,18 @@ void test_multiplexer::prepare_connection(accept_handle src,
 }
 
 test_multiplexer::pending_connects_map& test_multiplexer::pending_connects() {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return pending_connects_;
 }
 
 bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   guard_type guard{mx_};
   return scribes_.count(std::make_pair(std::move(x), y)) > 0;
 }
 
 bool test_multiplexer::accept_connection(accept_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
   if (passive_mode(hdl))
     return false;
@@ -357,6 +385,7 @@ bool test_multiplexer::accept_connection(accept_handle hdl) {
 }
 
 bool test_multiplexer::read_data() {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
   // scribe_data might change while we traverse it
   std::vector<connection_handle> xs;
@@ -372,6 +401,7 @@ bool test_multiplexer::read_data() {
 }
 
 bool test_multiplexer::read_data(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
   if (passive_mode(hdl))
     return false;
@@ -431,6 +461,7 @@ bool test_multiplexer::read_data(connection_handle hdl) {
 
 void test_multiplexer::virtual_send(connection_handle hdl,
                                     const buffer_type& buf) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
   auto& vb = virtual_network_buffer(hdl);
   vb.insert(vb.end(), buf.begin(), buf.end());
@@ -438,6 +469,7 @@ void test_multiplexer::virtual_send(connection_handle hdl,
 }
 
 void test_multiplexer::exec_runnable() {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
   resumable_ptr ptr;
   { // critical section
@@ -451,6 +483,7 @@ void test_multiplexer::exec_runnable() {
 }
 
 bool test_multiplexer::try_exec_runnable() {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
   resumable_ptr ptr;
   { // critical section
@@ -465,6 +498,7 @@ bool test_multiplexer::try_exec_runnable() {
 }
 
 void test_multiplexer::flush_runnables() {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
   // execute runnables in bursts, pick a small size to
   // minimize time in the critical section
@@ -506,6 +540,7 @@ void test_multiplexer::exec_later(resumable* ptr) {
 }
 
 void test_multiplexer::exec(resumable_ptr& ptr) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_ASSERT(ptr != nullptr);
   CAF_LOG_TRACE("");
   switch (ptr->resume(this, 1)) {

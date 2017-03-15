@@ -20,6 +20,8 @@
 #ifndef CAF_IO_NETWORK_TEST_MULTIPLEXER_HPP
 #define CAF_IO_NETWORK_TEST_MULTIPLEXER_HPP
 
+#include <thread>
+
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/abstract_broker.hpp"
 
@@ -195,6 +197,10 @@ private:
   std::unordered_map<connection_handle, scribe_data> scribe_data_;
   std::unordered_map<accept_handle, doorman_data> doorman_data_;
   pending_connects_map pending_connects_;
+
+  // extra state for making sure the test multiplexer is not used in a
+  // multithreaded setup
+  std::thread::id tid_;
 };
 
 } // namespace network
