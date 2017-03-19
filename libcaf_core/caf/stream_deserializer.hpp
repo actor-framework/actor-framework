@@ -181,7 +181,6 @@ protected:
     }
   }
 
-private:
   error range_check(std::streamsize got, size_t need) {
     if (got >= 0 && static_cast<size_t>(got) == need)
       return none;
@@ -209,6 +208,7 @@ private:
     return none;
   }
 
+private:
   Streambuf streambuf_;
 };
 

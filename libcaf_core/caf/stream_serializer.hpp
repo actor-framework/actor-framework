@@ -177,13 +177,13 @@ protected:
     }
   }
 
-private:
   template <class T>
   error apply_int(T x) {
     auto y = detail::to_network_order(x);
     return apply_raw(sizeof(T), &y);
   }
 
+private:
   Streambuf streambuf_;
 };
 
