@@ -453,4 +453,17 @@ CAF_TEST(byte_sequence_optimization) {
                         [](uint8_t c) { return c == 0x2a; }));
 }
 
+CAF_TEST(long_sequences) {
+  std::vector<char> data;
+  binary_serializer sink{nullptr, data};
+  size_t n = 12345678900ul;
+  sink.begin_sequence(n);
+  sink.end_sequence();
+  binary_deserializer source{nullptr, data};
+  size_t m = 0;
+  source.begin_sequence(m);
+  source.end_sequence();
+  CAF_CHECK_EQUAL(n, m);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

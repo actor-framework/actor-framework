@@ -114,7 +114,7 @@ protected:
        if (traits::eq_int_type(c, traits::eof()))
          return sec::end_of_stream;
       low7 = static_cast<uint8_t>(traits::to_char_type(c));
-      x |= static_cast<T>((low7 & 0x7F) << (7 * n));
+      x |= static_cast<T>((low7 & 0x7F)) << (7 * n);
       ++n;
     } while (low7 & 0x80);
     return none;
