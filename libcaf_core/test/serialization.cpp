@@ -139,6 +139,7 @@ public:
 
 struct fixture {
   int32_t i32 = -345;
+  int64_t i64 = -1234567890123456789ll;
   float f32 = 3.45f;
   double f64 = 54.3;
   duration dur = duration{time_unit::seconds, 123};
@@ -197,7 +198,7 @@ struct fixture {
       : system(cfg),
         context(&system) {
     rs.str.assign(string(str.rbegin(), str.rend()));
-    msg = make_message(i32, dur, ts, te, str, rs);
+    msg = make_message(i32, i64, dur, ts, te, str, rs);
   }
 };
 
@@ -247,6 +248,13 @@ CAF_TEST(i32_values) {
   int32_t x;
   deserialize(buf, x);
   CAF_CHECK_EQUAL(i32, x);
+}
+
+CAF_TEST(i64_values) {
+  auto buf = serialize(i64);
+  int64_t x;
+  deserialize(buf, x);
+  CAF_CHECK_EQUAL(i64, x);
 }
 
 CAF_TEST(float_values) {
@@ -352,14 +360,14 @@ CAF_TEST(messages) {
   auto buf1 = serialize(msg);
   deserialize(buf1, x);
   CAF_CHECK_EQUAL(to_string(msg), to_string(x));
-  CAF_CHECK(is_message(x).equal(i32, dur, ts, te, str, rs));
+  CAF_CHECK(is_message(x).equal(i32, i64, dur, ts, te, str, rs));
   // serialize fully dynamic message again (do another roundtrip)
   message y;
   auto buf2 = serialize(x);
   CAF_CHECK_EQUAL(buf1, buf2);
   deserialize(buf2, y);
   CAF_CHECK_EQUAL(to_string(msg), to_string(y));
-  CAF_CHECK(is_message(y).equal(i32, dur, ts, te, str, rs));
+  CAF_CHECK(is_message(y).equal(i32, i64, dur, ts, te, str, rs));
 }
 
 CAF_TEST(multiple_messages) {
@@ -372,7 +380,7 @@ CAF_TEST(multiple_messages) {
   CAF_CHECK_EQUAL(std::make_tuple(t, to_string(m1), to_string(m2)),
                   std::make_tuple(te, to_string(m), to_string(msg)));
   CAF_CHECK(is_message(m1).equal(rs, te));
-  CAF_CHECK(is_message(m2).equal(i32, dur, ts, te, str, rs));
+  CAF_CHECK(is_message(m2).equal(i32, i64, dur, ts, te, str, rs));
 }
 
 
