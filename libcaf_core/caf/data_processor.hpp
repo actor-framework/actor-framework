@@ -137,7 +137,7 @@ public:
   typename std::enable_if<std::is_floating_point<T>::value, error>::type
   apply(T& x) {
     static constexpr auto tlindex = detail::tl_index_of<builtin_t, T>::value;
-    static_assert(tlindex >= 0, "T not recognized as builtiln type");
+    static_assert(tlindex >= 0, "T not recognized as builtin type");
     return apply_builtin(static_cast<builtin>(tlindex), &x);
   }
 
@@ -153,7 +153,7 @@ public:
         static_cast<int>(sizeof(T)) * (std::is_signed<T>::value ? -1 : 1)
       >::type;
     static constexpr auto tlindex = detail::tl_index_of<builtin_t, type>::value;
-    static_assert(tlindex >= 0, "T not recognized as builtiln type");
+    static_assert(tlindex >= 0, "T not recognized as builtin type");
     return apply_builtin(static_cast<builtin>(tlindex), &x);
   }
 

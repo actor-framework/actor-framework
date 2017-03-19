@@ -105,14 +105,14 @@ protected:
   template <class T>
   error varbyte_decode(T& x) {
     static_assert(std::is_unsigned<T>::value, "T must be an unsigned type");
-    T n = 0;
+    auto n = 0;
     x = 0;
     uint8_t low7;
     do {
-       auto c = streambuf_.sbumpc();
-       using traits = typename streambuf_type::traits_type;
-       if (traits::eq_int_type(c, traits::eof()))
-         return sec::end_of_stream;
+      auto c = streambuf_.sbumpc();
+      using traits = typename streambuf_type::traits_type;
+      if (traits::eq_int_type(c, traits::eof()))
+        return sec::end_of_stream;
       low7 = static_cast<uint8_t>(traits::to_char_type(c));
       x |= static_cast<T>((low7 & 0x7F)) << (7 * n);
       ++n;
