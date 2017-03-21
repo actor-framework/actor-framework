@@ -369,6 +369,16 @@ void basp_broker_state::learned_new_node_directly(const node_id& nid,
     learned_new_node(nid);
 }
 
+namespace {
+
+struct connection_helper_state {
+  static const char* name;
+};
+
+const char* connection_helper_state::name = "connection_helper";
+
+} // namespace <anonymous>
+
 void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
@@ -379,7 +389,8 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   // indirect connection to the routing table; hence, spawning
   // our helper here exactly once and there is no need to track
   // in-flight connection requests
-  auto connection_helper = [=](event_based_actor* helper, actor s) -> behavior {
+  auto connection_helper = [=](stateful_actor<connection_helper_state>* helper,
+                               actor s) -> behavior {
     CAF_LOG_TRACE(CAF_ARG(s));
     helper->monitor(s);
     helper->set_down_handler([=](down_msg& dm) {
@@ -432,7 +443,9 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
     return;
   }
   using namespace detail;
-  auto tmp = system().spawn<detached + hidden>(connection_helper, self);
+  auto tmp = system().config().middleman_detach_utility_actors
+             ? system().spawn<detached + hidden>(connection_helper, self)
+             : system().spawn<hidden>(connection_helper, self);
   system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) -> error {
     auto name_atm = atom("ConfigServ");

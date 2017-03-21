@@ -272,6 +272,7 @@ public:
   bool middleman_enable_automatic_connections;
   size_t middleman_max_consecutive_reads;
   size_t middleman_heartbeat_interval;
+  bool middleman_detach_utility_actors;
 
   // -- config parameters of the OpenCL module ---------------------------------
 

@@ -29,6 +29,7 @@
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #include "caf/io/basp_broker.hpp"
@@ -223,7 +224,9 @@ private:
 } // namespace <anonymous>
 
 middleman_actor make_middleman_actor(actor_system& sys, actor db) {
-  return sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db));
+  return sys.config().middleman_detach_utility_actors
+             ? sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db))
+             : sys.spawn<middleman_actor_impl, hidden>(std::move(db));
 }
 
 } // namespace io

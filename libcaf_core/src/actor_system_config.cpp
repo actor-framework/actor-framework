@@ -168,7 +168,9 @@ actor_system_config::actor_system_config()
   .add(middleman_max_consecutive_reads, "max-consecutive-reads",
        "sets the maximum number of consecutive I/O reads per broker")
   .add(middleman_heartbeat_interval, "heartbeat-interval",
-       "sets the interval (ms) of heartbeat, 0 (default) means disabling it");
+       "sets the interval (ms) of heartbeat, 0 (default) means disabling it")
+  .add(middleman_detach_utility_actors, "detach-utility-actors",
+       "enables or disables detaching of utility actors");
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
