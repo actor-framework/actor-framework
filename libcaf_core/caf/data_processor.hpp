@@ -226,6 +226,28 @@ public:
     return convert_apply(dref(), x, tmp, assign);
   }
 
+  // no better way around this abomination
+  error consume_range(std::vector<bool>& xs) {
+    auto i = xs.begin();
+    auto e = xs.end();
+    using proxy_iterator = decltype(i);
+    struct {
+      void operator()(proxy_iterator& lhs, bool& rhs) const {
+        *lhs = rhs;
+      }
+      void operator()(bool& lhs, proxy_iterator& rhs) const {
+        lhs = *rhs;
+      }
+    } assign;
+    bool tmp;
+    for (; i != e; ++i) {
+      auto err = convert_apply(dref(), i, tmp, assign);
+      if (err)
+        return err;
+    }
+    return none;
+  }
+
   template <class T>
   error consume_range(T& xs) {
     for (auto& x : xs) {

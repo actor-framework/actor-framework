@@ -137,7 +137,7 @@ public:
               && !has_to_string<T>::value>
   consume(T& xs) {
     result_ += '[';
-    for (auto& x : xs) {
+    for (auto&& x : xs) {
       sep();
       consume(deconst(x));
     }

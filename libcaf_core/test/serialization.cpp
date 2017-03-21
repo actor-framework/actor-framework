@@ -134,6 +134,7 @@ public:
     add_message_type<raw_struct>("raw_struct");
     add_message_type<test_array>("test_array");
     add_message_type<test_empty_non_pod>("test_empty_non_pod");
+    add_message_type<std::vector<bool>>("bool_vector");
   }
 };
 
@@ -472,6 +473,13 @@ CAF_TEST(long_sequences) {
   source.begin_sequence(m);
   source.end_sequence();
   CAF_CHECK_EQUAL(n, m);
+}
+
+CAF_TEST(bool_vector) {
+  std::vector<bool> xs{true, true, false, false, true};
+  CAF_CHECK_EQUAL(deep_to_string(xs), "[1, 1, 0, 0, 1]");
+  CAF_CHECK_EQUAL(xs, roundtrip(xs));
+  CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
