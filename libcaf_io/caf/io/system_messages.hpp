@@ -26,6 +26,7 @@
 #include <iomanip>
 
 #include "caf/meta/type_name.hpp"
+#include "caf/meta/hex_formatted.hpp"
 
 #include "caf/io/handle.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -58,7 +59,8 @@ struct new_data_msg {
 /// @relates new_data_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_data_msg& x) {
-  return f(meta::type_name("new_data_msg"), x.handle, x.buf);
+  return f(meta::type_name("new_data_msg"), x.handle,
+           meta::hex_formatted(), x.buf);
 }
 
 /// Signalizes that a certain amount of bytes has been written.
