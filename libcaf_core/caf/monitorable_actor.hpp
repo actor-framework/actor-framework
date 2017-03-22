@@ -59,7 +59,7 @@ public:
   void link_to(const actor_addr& x) {
     auto ptr = actor_cast<strong_actor_ptr>(x);
     if (ptr && ptr->get() != this)
-      link_impl(establish_link_op, ptr->get());
+      add_link(ptr->get());
   }
 
   /// Links this actor to `x`.
@@ -67,14 +67,14 @@ public:
   void link_to(const ActorHandle& x) {
     auto ptr = actor_cast<abstract_actor*>(x);
     if (ptr && ptr != this)
-      link_impl(establish_link_op, ptr);
+      add_link(ptr);
   }
 
   /// Unlinks this actor from `x`.
   void unlink_from(const actor_addr& x) {
     auto ptr = actor_cast<strong_actor_ptr>(x);
     if (ptr && ptr->get() != this)
-      link_impl(remove_link_op, ptr->get());
+      remove_link(ptr->get());
   }
 
   /// Links this actor to `x`.
@@ -82,7 +82,7 @@ public:
   void unlink_from(const ActorHandle& x) {
     auto ptr = actor_cast<abstract_actor*>(x);
     if (ptr && ptr != this)
-      link_impl(remove_link_op, ptr);
+      remove_link(ptr);
   }
 
   /// @cond PRIVATE
@@ -93,6 +93,14 @@ public:
   /// upon invocation, nothing is done. The return value of this member
   /// function is ignored by scheduled actors.
   virtual bool cleanup(error&& reason, execution_unit* host);
+
+  void add_link(abstract_actor* x) override;
+
+  void remove_link(abstract_actor* x) override;
+
+  bool add_backlink(abstract_actor* x) override;
+
+  bool remove_backlink(abstract_actor* x) override;
 
   /// @endcond
 
@@ -114,16 +122,6 @@ protected:
   /****************************************************************************
    *                 here be dragons: end of public interface                 *
    ****************************************************************************/
-
-  bool link_impl(linking_operation op, abstract_actor* other) override;
-
-  bool establish_link_impl(abstract_actor* x);
-
-  bool remove_link_impl(abstract_actor* x);
-
-  bool establish_backlink_impl(abstract_actor* x);
-
-  bool remove_backlink_impl(abstract_actor* x);
 
   // precondition: `mtx_` is acquired
   inline void attach_impl(attachable_ptr& ptr) {
@@ -160,26 +158,9 @@ protected:
     return handle_system_message(x, context, trap_exit);
   }
 
-  // Calls `fun` with exclusive access to an actor's state.
-  template <class F>
-  auto exclusive_critical_section(F fun) -> decltype(fun()) {
-    std::unique_lock<std::mutex> guard{mtx_};
-    return fun();
-  }
-
-  template <class F>
-  auto shared_critical_section(F fun) -> decltype(fun()) {
-    std::unique_lock<std::mutex> guard{mtx_};
-    return fun();
-  }
-
   // is protected by `mtx_` in actors that are not scheduled, but
   // can be accessed without lock for event-based and blocking actors
   error fail_state_;
-
-  // guards access to exit_state_, attachables_, links_,
-  // and enqueue operations if actor is thread-mapped
-  mutable std::mutex mtx_;
 
   // only used in blocking and thread-mapped actors
   mutable std::condition_variable cv_;
@@ -189,8 +170,6 @@ protected:
 
  /// @endcond
 };
-
-std::string to_string(abstract_actor::linking_operation op);
 
 } // namespace caf
 

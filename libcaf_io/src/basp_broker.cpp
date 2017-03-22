@@ -256,7 +256,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
                     make_error(sec::remote_linking_failed));
           return;
         }
-        static_cast<actor_proxy*>(ptr->get())->local_link_to(src->get());
+        static_cast<actor_proxy*>(ptr->get())->add_link(src->get());
         return;
       }
       case unlink_atom::value.uint_value(): {
@@ -273,7 +273,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
           CAF_LOG_DEBUG("received unlink for invalid actor, report error");
           return;
         }
-        static_cast<actor_proxy*>(ptr->get())->local_unlink_from(src->get());
+        static_cast<actor_proxy*>(ptr->get())->remove_link(src->get());
         return;
       }
     }

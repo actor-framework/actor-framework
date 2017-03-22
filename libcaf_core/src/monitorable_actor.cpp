@@ -116,47 +116,37 @@ monitorable_actor::monitorable_actor(actor_config& cfg) : abstract_actor(cfg) {
   // nop
 }
 
-bool monitorable_actor::link_impl(linking_operation op, abstract_actor* other) {
-  CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(other));
-  switch (op) {
-    case establish_link_op:
-      return establish_link_impl(other);
-    case establish_backlink_op:
-      return establish_backlink_impl(other);
-    case remove_link_op:
-      return remove_link_impl(other);
-    default:
-      CAF_ASSERT(op == remove_backlink_op);
-      return remove_backlink_impl(other);
-  }
-}
-
-bool monitorable_actor::establish_link_impl(abstract_actor* x) {
+void monitorable_actor::add_link(abstract_actor* x) {
+  // Add backlink on `x` first and add the local attachable only on success.
   CAF_LOG_TRACE(CAF_ARG(x));
-  CAF_ASSERT(x);
+  CAF_ASSERT(x != nullptr);
   error fail_state;
   bool send_exit_immediately = false;
   auto tmp = default_attachable::make_link(address(), x->address());
-  auto success = exclusive_critical_section([&]() -> bool {
+  joined_exclusive_critical_section(this, x, [&] {
     if (getf(is_terminated_flag)) {
       fail_state = fail_state_;
       send_exit_immediately = true;
-      return false;
-    }
-    // add link if not already linked to other (checked by establish_backlink)
-    if (x->establish_backlink(this)) {
+    } else if (x->add_backlink(this)) {
       attach_impl(tmp);
-      return true;
     }
-    return false;
   });
   if (send_exit_immediately)
     x->enqueue(nullptr, invalid_message_id,
                  make_message(exit_msg{address(), fail_state}), nullptr);
-  return success;
 }
 
-bool monitorable_actor::establish_backlink_impl(abstract_actor* x) {
+void monitorable_actor::remove_link(abstract_actor* x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  default_attachable::observe_token tk{x->address(), default_attachable::link};
+  joined_exclusive_critical_section(this, x, [&] {
+    if (x->remove_backlink(this))
+      detach_impl(tk, attachables_head_, true);
+  });
+}
+
+bool monitorable_actor::add_backlink(abstract_actor* x) {
+  // Called in an exclusive critical section.
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_ASSERT(x);
   error fail_state;
@@ -164,42 +154,25 @@ bool monitorable_actor::establish_backlink_impl(abstract_actor* x) {
   default_attachable::observe_token tk{x->address(),
                                        default_attachable::link};
   auto tmp = default_attachable::make_link(address(), x->address());
-  auto success = exclusive_critical_section([&]() -> bool {
-    if (getf(is_terminated_flag)) {
-      fail_state = fail_state_;
-      send_exit_immediately = true;
-      return false;
-    }
-    if (detach_impl(tk, attachables_head_, true, true) == 0) {
-      attach_impl(tmp);
-      return true;
-    }
-    return false;
-  });
+  auto success = false;
+  if (getf(is_terminated_flag)) {
+    fail_state = fail_state_;
+    send_exit_immediately = true;
+  } else if (detach_impl(tk, attachables_head_, true, true) == 0) {
+    attach_impl(tmp);
+    success = true;
+  }
   if (send_exit_immediately)
     x->enqueue(nullptr, invalid_message_id,
-                 make_message(exit_msg{address(), fail_state}), nullptr);
+               make_message(exit_msg{address(), fail_state}), nullptr);
   return success;
 }
 
-bool monitorable_actor::remove_link_impl(abstract_actor* x) {
+bool monitorable_actor::remove_backlink(abstract_actor* x) {
+  // Called in an exclusive critical section.
   CAF_LOG_TRACE(CAF_ARG(x));
   default_attachable::observe_token tk{x->address(), default_attachable::link};
-  auto success = exclusive_critical_section([&]() -> bool {
-    return detach_impl(tk, attachables_head_, true) > 0;
-  });
-  if (success)
-    x->remove_backlink(this);
-  return success;
-}
-
-bool monitorable_actor::remove_backlink_impl(abstract_actor* x) {
-  CAF_LOG_TRACE(CAF_ARG(x));
-  default_attachable::observe_token tk{x->address(), default_attachable::link};
-  auto success = exclusive_critical_section([&]() -> bool {
-    return detach_impl(tk, attachables_head_, true) > 0;
-  });
-  return success;
+  return detach_impl(tk, attachables_head_, true) > 0;
 }
 
 size_t monitorable_actor::detach_impl(const attachable::token& what,

@@ -167,8 +167,7 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
   auto result = publish(gn, port, in);
   // link gn to our manager
   if (result)
-    manager_->link_impl(abstract_actor::establish_link_op,
-                        actor_cast<abstract_actor*>(gn));
+    manager_->add_link(actor_cast<abstract_actor*>(gn));
   else
     anon_send_exit(gn, exit_reason::user_shutdown);
   return result;

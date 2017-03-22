@@ -38,13 +38,6 @@ public:
 
   ~actor_proxy() override;
 
-  /// Establishes a local link state that's
-  /// not synchronized back to the remote instance.
-  virtual void local_link_to(abstract_actor* other) = 0;
-
-  /// Removes a local link state.
-  virtual void local_unlink_from(abstract_actor* other) = 0;
-
   /// Invokes cleanup code.
   virtual void kill_proxy(execution_unit* ctx, error reason) = 0;
 };

@@ -38,11 +38,9 @@ public:
 
   void enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
-  bool link_impl(linking_operation op, abstract_actor* other) override;
+  bool add_backlink(abstract_actor* x) override;
 
-  void local_link_to(abstract_actor* other) override;
-
-  void local_unlink_from(abstract_actor* other) override;
+  bool remove_backlink(abstract_actor* x) override;
 
   void kill_proxy(execution_unit* ctx, error rsn) override;
 

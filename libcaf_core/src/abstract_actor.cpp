@@ -105,19 +105,4 @@ void abstract_actor::unregister_from_system() {
   home_system().registry().dec_running();
 }
 
-namespace {
-
-const char* linking_operation_strings[] = {
-  "establish_link",
-  "establish_backlink",
-  "remove_link",
-  "remove_backlink"
-};
-
-} // namespace <anonymous>
-
-std::string to_string(abstract_actor::linking_operation op) {
-  return detail::enum_to_string(op, linking_operation_strings);
-}
-
 } // namespace caf

@@ -85,52 +85,22 @@ void forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
   }
 }
 
-bool forwarding_actor_proxy::link_impl(linking_operation op,
-                                       abstract_actor* other) {
-  switch (op) {
-    case establish_link_op:
-      if (establish_link_impl(other)) {
-        // causes remote actor to link to (proxy of) other
-        // receiving peer will call: this->local_link_to(other)
-        forward_msg(ctrl(), invalid_message_id,
-                    make_message(link_atom::value, other->ctrl()));
-        return true;
-      }
-      break;
-    case remove_link_op:
-      if (remove_link_impl(other)) {
-        // causes remote actor to unlink from (proxy of) other
-        forward_msg(ctrl(), invalid_message_id,
-                    make_message(unlink_atom::value, other->ctrl()));
-        return true;
-      }
-      break;
-    case establish_backlink_op:
-      if (establish_backlink_impl(other)) {
-        // causes remote actor to unlink from (proxy of) other
-        forward_msg(ctrl(), invalid_message_id,
-                    make_message(link_atom::value, other->ctrl()));
-        return true;
-      }
-      break;
-    case remove_backlink_op:
-      if (remove_backlink_impl(other)) {
-        // causes remote actor to unlink from (proxy of) other
-        forward_msg(ctrl(), invalid_message_id,
-                    make_message(unlink_atom::value, other->ctrl()));
-        return true;
-      }
-      break;
+bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
+  if (monitorable_actor::add_backlink(x)) {
+    forward_msg(ctrl(), invalid_message_id,
+                make_message(link_atom::value, x->ctrl()));
+    return true;
   }
   return false;
 }
 
-void forwarding_actor_proxy::local_link_to(abstract_actor* other) {
-  establish_link_impl(other);
-}
-
-void forwarding_actor_proxy::local_unlink_from(abstract_actor* other) {
-  remove_link_impl(other);
+bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
+  if (monitorable_actor::remove_backlink(x)) {
+    forward_msg(ctrl(), invalid_message_id,
+                make_message(unlink_atom::value, x->ctrl()));
+    return true;
+  }
+  return false;
 }
 
 void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
