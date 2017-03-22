@@ -494,6 +494,12 @@ endmacro()
 add_caf_lib(core)
 add_optional_caf_lib(io)
 
+# build SSL module if OpenSSL library is available
+find_package(OpenSSL)
+if(OPENSSL_FOUND)
+  add_optional_caf_lib(openssl)
+endif(OPENSSL_FOUND)
+
 # build opencl library if not told otherwise and OpenCL package was found
 if(NOT CAF_NO_OPENCL)
   find_package(OpenCL)
