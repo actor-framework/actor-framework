@@ -577,6 +577,7 @@ public:
     load<middleman, network::test_multiplexer>();
     add_message_type<stream<int>>("stream<int>");
     add_message_type<std::vector<int>>("vector<int>");
+    middleman_detach_utility_actors = false;
   }
 };
 
@@ -607,15 +608,19 @@ public:
     auto ma = mm.actor_handle();
     scoped_actor self{sys};
     std::set<std::string> sigs;
-    // make sure no pending BASP broker messages are in the queu
+    // Make sure no pending BASP broker messages are in the queue.
     mpx.flush_runnables();
-    // trigger middleman actor
+    // Trigger middleman actor.
     self->send(ma, publish_atom::value, port,
                actor_cast<strong_actor_ptr>(std::move(whom)), std::move(sigs),
                "", false);
-    // wait for the message of the middleman actor
+    // Wait for the message of the middleman actor.
+    expect((atom_value, uint16_t, strong_actor_ptr, std::set<std::string>,
+            std::string, bool),
+           from(self).to(sys.middleman().actor_handle())
+           .with(publish_atom::value, port, _, _, _, false));
     mpx.exec_runnable();
-    // fetch response
+    // Fetch response.
     self->receive(
       [](uint16_t) {
         // nop
@@ -627,19 +632,26 @@ public:
   }
 
   actor remote_actor(std::string host, uint16_t port) {
+    CAF_MESSAGE("remote actor: " << host << ":" << port);
+    // both schedulers must be idle at this point
+    CAF_REQUIRE(!sched.has_job());
+    CAF_REQUIRE(!peer->sched.has_job());
+    // get necessary handles
     auto ma = mm.actor_handle();
     scoped_actor self{sys};
-    CAF_MESSAGE("remote actor: " << host << ":" << port);
     // make sure no pending BASP broker messages are in the queue
     mpx.flush_runnables();
     // trigger middleman actor
     self->send(ma, connect_atom::value, std::move(host), port);
-    // wait for the message of the middleman actor
+    expect((atom_value, std::string, uint16_t),
+           from(self).to(ma).with(connect_atom::value, _, port));
+    // wait for the message of the middleman actor in BASP
     mpx.exec_runnable();
     // tell peer to accept the connection
     peer->mpx.accept_connection(peer->acc);
     // run handshake between the two BASP broker instances
-    while (mpx.try_exec_runnable() || peer->mpx.try_exec_runnable()
+    while (sched.run_once() || peer->sched.run_once()
+           || mpx.try_exec_runnable() || peer->mpx.try_exec_runnable()
            || mpx.read_data() || peer->mpx.read_data()) {
       // re-run until handhsake is fully completed
     }
@@ -714,6 +726,8 @@ CAF_TEST(stream_crossing_the_wire) {
   earth.conn = connection_handle::from_int(1);
   mars.conn = connection_handle::from_int(2);
   mars.acc = accept_handle::from_int(3);
+  // Run any initialization code.
+  exec_all();
   // Prepare publish and remote_actor calls.
   CAF_MESSAGE("prepare connections on earth and mars");
   mars.mpx.prepare_connection(mars.acc, mars.conn, earth.mpx, "mars", 8080,
