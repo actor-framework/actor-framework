@@ -21,6 +21,7 @@
 #define CAF_ABSTRACT_ACTOR_HPP
 
 #include <set>
+#include <mutex>
 #include <atomic>
 #include <memory>
 #include <string>
