@@ -393,7 +393,8 @@ void middleman::stop() {
   named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
-  self->wait_for(manager_);
+  if (system().config().middleman_detach_utility_actors)
+    self->wait_for(manager_);
   destroy(manager_);
 }
 

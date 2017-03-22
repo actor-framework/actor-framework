@@ -129,7 +129,7 @@ public:
       : sys(cfg.load<io::middleman, network::test_multiplexer>()
                   .set("middleman.enable-automatic-connections", autoconn)
                   .set("scheduler.policy", autoconn ? caf::atom("testing")
-                                                    : caf::atom("default"))
+                                                    : caf::atom("stealing"))
                   .set("middleman.detach-utility-actors", !autoconn)) {
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
@@ -843,8 +843,10 @@ CAF_TEST(automatic_connection) {
                     make_message(uint16_t{8080}, std::move(res))));
   // our connection helper should now connect to jupiter and
   // send the scribe handle over to the BASP broker
-  while (mpx()->has_pending_scribe("jupiter", 8080))
+  while (mpx()->has_pending_scribe("jupiter", 8080)) {
+    sched.run();
     mpx()->flush_runnables();
+  }
   CAF_REQUIRE(mpx()->output_buffer(mars().connection).empty());
   // send handshake from jupiter
   mock(jupiter().connection,
