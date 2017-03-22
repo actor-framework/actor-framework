@@ -488,7 +488,7 @@ struct test_coordinator_fixture {
   scheduler_type& sched;
 
   test_coordinator_fixture()
-      : sys((cfg.scheduler_policy = caf::atom("testing"), cfg)),
+      : sys(cfg.set("scheduler.policy", caf::atom("testing"))),
         self(sys),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
     //sys.await_actors_before_shutdown(false);
