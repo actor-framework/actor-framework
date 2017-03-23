@@ -4,6 +4,3 @@
 [submodule "libcaf_opencl"]
 	path = libcaf_opencl
 	url = ../opencl.git
-[submodule "libcaf_python"]
-	path = libcaf_python
-	url = ../python.git
