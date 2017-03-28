@@ -71,9 +71,7 @@ public:
     cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
     auto res = this->system().spawn_class<impl, no_spawn_options>(cfg);
     auto forked = static_cast<impl*>(actor_cast<abstract_actor*>(res));
-    sptr->set_parent(forked);
-    CAF_ASSERT(sptr->parent() == forked);
-    forked->add_scribe(sptr);
+    forked->move_scribe(std::move(sptr));
     return res;
   }
 

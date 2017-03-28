@@ -23,10 +23,6 @@ namespace caf {
 namespace io {
 namespace network {
 
-stream_manager::stream_manager(abstract_broker* ptr) : manager(ptr) {
-  // nop
-}
-
 stream_manager::~stream_manager() {
   // nop
 }

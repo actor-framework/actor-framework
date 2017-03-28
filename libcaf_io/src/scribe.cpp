@@ -24,8 +24,7 @@
 namespace caf {
 namespace io {
 
-scribe::scribe(abstract_broker* ptr, connection_handle conn_hdl)
-    : scribe_base(ptr, conn_hdl) {
+scribe::scribe(connection_handle conn_hdl) : scribe_base(conn_hdl) {
   // nop
 }
 

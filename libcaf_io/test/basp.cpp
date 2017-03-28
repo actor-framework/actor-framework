@@ -140,7 +140,7 @@ public:
     this_node_ = sys.node();
     self_.reset(new scoped_actor{sys});
     ahdl_ = accept_handle::from_int(1);
-    mpx_->assign_tcp_doorman(aut_, ahdl_);
+    aut_->add_doorman(mpx_->new_doorman(ahdl_, 1u));
     registry_ = &sys.registry();
     registry_->put((*self_)->id(), actor_cast<strong_actor_ptr>(*self_));
     // first remote node is everything of this_node + 1, then +2, etc.
@@ -285,7 +285,6 @@ public:
                 << ", acceptor ID = " << src.id());
     auto hdl = n.connection;
     mpx_->add_pending_connect(src, hdl);
-    mpx_->assign_tcp_scribe(aut(), hdl);
     CAF_REQUIRE(mpx_->accept_connection(src));
     // technically, the server handshake arrives
     // before we send the client handshake

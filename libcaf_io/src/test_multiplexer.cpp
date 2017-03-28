@@ -40,6 +40,13 @@ test_multiplexer::scribe_data::scribe_data(shared_buffer_type input,
   // nop
 }
 
+test_multiplexer::doorman_data::doorman_data()
+    : port(0),
+      stopped_reading(false),
+      passive_mode(false) {
+  // nop
+}
+
 test_multiplexer::test_multiplexer(actor_system* sys)
     : multiplexer(sys),
       tid_(std::this_thread::get_id()) {
@@ -52,188 +59,189 @@ test_multiplexer::~test_multiplexer() {
     intrusive_ptr_release(ptr.get());
 }
 
-expected<connection_handle>
-test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port_hint) {
-  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port_hint));
-  guard_type guard{mx_};
-  connection_handle result;
-  auto i = scribes_.find(std::make_pair(host, port_hint));
-  if (i != scribes_.end()) {
-    result = i->second;
-    scribes_.erase(i);
-  }
-  return result;
-}
-
-expected<void> test_multiplexer::assign_tcp_scribe(abstract_broker* ptr,
-                                                   connection_handle hdl) {
-  CAF_ASSERT(std::this_thread::get_id() == tid_);
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  guard_type guard{mx_};
-  class impl : public scribe {
-  public:
-    impl(abstract_broker* self, connection_handle ch, test_multiplexer* mpx)
-        : scribe(self, ch),
-          mpx_(mpx) {
-      // nop
-    }
-
-    void configure_read(receive_policy::config config) override {
-      mpx_->read_config(hdl()) = config;
-    }
-
-    void ack_writes(bool enable) override {
-      mpx_->ack_writes(hdl()) = enable;
-    }
-
-    std::vector<char>& wr_buf() override {
-      return mpx_->output_buffer(hdl());
-    }
-
-    std::vector<char>& rd_buf() override {
-      return mpx_->input_buffer(hdl());
-    }
-
-    void stop_reading() override {
-      mpx_->stopped_reading(hdl()) = true;
-      detach(mpx_, false);
-    }
-
-    void flush() override {
-      // nop
-    }
-
-    std::string addr() const override {
-      return "test";
-    }
-
-    uint16_t port() const override {
-      return static_cast<uint16_t>(hdl().id());
-    }
-
-    void add_to_loop() override {
-      mpx_->passive_mode(hdl()) = false;
-    }
-
-    void remove_from_loop() override {
-      mpx_->passive_mode(hdl()) = true;
-    }
-
-  private:
-    test_multiplexer* mpx_;
-  };
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  auto sptr = make_counted<impl>(ptr, hdl, this);
-  impl_ptr(hdl) = sptr;
-  ptr->add_scribe(sptr);
-  return unit;
-}
-
-connection_handle test_multiplexer::add_tcp_scribe(abstract_broker*,
-                                                   native_socket) {
+scribe_ptr test_multiplexer::new_scribe(native_socket) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   std::cerr << "test_multiplexer::add_tcp_scribe called with native socket"
             << std::endl;
   abort();
+  return nullptr;
 }
 
-expected<connection_handle>
-test_multiplexer::add_tcp_scribe(abstract_broker* ptr, const std::string& host,
-                                 uint16_t desired_port) {
-  CAF_ASSERT(std::this_thread::get_id() == tid_);
-  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(desired_port));
-  auto hdl = new_tcp_scribe(host, desired_port);
-  if (!hdl)
-    return std::move(hdl.error());
-  assign_tcp_scribe(ptr, *hdl);
-  return hdl;
-}
-
-expected<std::pair<accept_handle, uint16_t>>
-test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
-  guard_type guard{mx_};
-  accept_handle result;
-  auto i = doormen_.find(desired_port);
-  if (i != doormen_.end()) {
-    result = i->second;
-    doormen_.erase(i);
-  }
-  return std::make_pair(result, desired_port);
-}
-
-expected<void> test_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
-                                                    accept_handle hdl) {
-  CAF_ASSERT(std::this_thread::get_id() == tid_);
-  guard_type guard{mx_};
-  class impl : public doorman {
+scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(port));
+  class impl : public scribe {
   public:
-    impl(abstract_broker* self, accept_handle ah, test_multiplexer* mpx)
-        : doorman(self, ah),
-          mpx_(mpx) {
+    impl(connection_handle ch, test_multiplexer* mpx) : scribe(ch), mpx_(mpx) {
       // nop
     }
-
-    bool new_connection() override {
-      auto& mm = mpx_->pending_connects();
-      auto i = mm.find(hdl());
-      bool result = true;
-      if (i != mm.end()) {
-        result = doorman::new_connection(mpx_, i->second);
-        mm.erase(i);
-      }
-      return result;
+    void configure_read(receive_policy::config config) override {
+      mpx_->read_config(hdl()) = config;
     }
-
+    void ack_writes(bool enable) override {
+      mpx_->ack_writes(hdl()) = enable;
+    }
+    std::vector<char>& wr_buf() override {
+      return mpx_->output_buffer(hdl());
+    }
+    std::vector<char>& rd_buf() override {
+      return mpx_->input_buffer(hdl());
+    }
     void stop_reading() override {
       mpx_->stopped_reading(hdl()) = true;
       detach(mpx_, false);
     }
-
-    void launch() override {
+    void flush() override {
       // nop
     }
-
     std::string addr() const override {
       return "test";
     }
-
     uint16_t port() const override {
-      return mpx_->port(hdl());
+      return static_cast<uint16_t>(hdl().id());
     }
-
     void add_to_loop() override {
       mpx_->passive_mode(hdl()) = false;
     }
-
     void remove_from_loop() override {
       mpx_->passive_mode(hdl()) = true;
     }
-
   private:
     test_multiplexer* mpx_;
   };
-  auto dptr = make_counted<impl>(ptr, hdl, this);
-  impl_ptr(hdl) = dptr;
-  ptr->add_doorman(dptr);
-  return unit;
+  CAF_LOG_DEBUG(CAF_ARG(hdl));
+  auto sptr = make_counted<impl>(hdl, this);
+  { // lifetime scope of guard
+    guard_type guard{mx_};
+    impl_ptr(hdl) = sptr;
+  }
+  return sptr;
 }
 
-accept_handle test_multiplexer::add_tcp_doorman(abstract_broker*,
-                                                native_socket) {
+expected<scribe_ptr> test_multiplexer::new_tcp_scribe(const std::string& host,
+                                                      uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
+  connection_handle hdl;
+  { // lifetime scope of guard
+    guard_type guard{mx_};
+    auto i = scribes_.find(std::make_pair(host, port));
+    if (i != scribes_.end()) {
+      hdl = i->second;
+      scribes_.erase(i);
+    } else {
+      return sec::cannot_connect_to_node;
+    }
+  }
+  return new_scribe(hdl);
+}
+
+doorman_ptr test_multiplexer::new_doorman(native_socket) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
   std::cerr << "test_multiplexer::add_tcp_doorman called with native socket"
             << std::endl;
   abort();
+  return nullptr;
 }
 
-expected<std::pair<accept_handle, uint16_t>>
-test_multiplexer::add_tcp_doorman(abstract_broker* ptr, uint16_t prt,
-                                  const char* in, bool reuse_addr) {
-  auto result = new_tcp_doorman(prt, in, reuse_addr);
-  if (!result)
-    return std::move(result.error());
-  port(result->first) = prt;
-  assign_tcp_doorman(ptr, result->first);
-  return result;
+doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  class impl : public doorman {
+  public:
+    impl(accept_handle ah, test_multiplexer* mpx) : doorman(ah), mpx_(mpx) {
+      // nop
+    }
+    bool new_connection() override {
+      connection_handle ch;
+      { // Try to get a connection handle of a pending connect.
+        guard_type guard{mpx_->mx_};
+        auto& pc = mpx_->pending_connects();
+        auto i = pc.find(hdl());
+        if (i == pc.end())
+          return false;
+        ch = i->second;
+        pc.erase(i);
+      }
+      parent()->add_scribe(mpx_->new_scribe(ch));
+      return doorman::new_connection(mpx_, ch);
+    }
+    void stop_reading() override {
+      mpx_->stopped_reading(hdl()) = true;
+      detach(mpx_, false);
+    }
+    void launch() override {
+      // nop
+    }
+    std::string addr() const override {
+      return "test";
+    }
+    uint16_t port() const override {
+      guard_type guard{mpx_->mx_};
+      return mpx_->port(hdl());
+    }
+    void add_to_loop() override {
+      mpx_->passive_mode(hdl()) = false;
+    }
+    void remove_from_loop() override {
+      mpx_->passive_mode(hdl()) = true;
+    }
+  private:
+    test_multiplexer* mpx_;
+  };
+  auto dptr = make_counted<impl>(hdl, this);
+  { // lifetime scope of guard
+    guard_type guard{mx_};
+    auto& ref = doorman_data_[hdl];
+    ref.ptr = dptr;
+    ref.port = port;
+  }
+  return dptr;
+}
+
+expected<doorman_ptr> test_multiplexer::new_tcp_doorman(uint16_t desired_port,
+                                                        const char*, bool) {
+  CAF_LOG_TRACE(CAF_ARG(desired_port));
+  accept_handle hdl;
+  uint16_t port = 0;
+  { // Lifetime scope of guard.
+    guard_type guard{mx_};
+    if (desired_port == 0) {
+      // Start with largest possible port and reverse iterate until we find a
+      // port that's not assigned to a known doorman.
+      port = std::numeric_limits<uint16_t>::max();
+      while (is_known_port(port))
+        --port;
+      // Do the same for finding an acceptor handle.
+      auto y = std::numeric_limits<uint64_t>::max();
+      while (is_known_handle(accept_handle::from_int(y)))
+        --y;
+      hdl = accept_handle::from_int(y);
+    } else {
+      auto i = doormen_.find(desired_port);
+      if (i != doormen_.end()) {
+        hdl = i->second;
+        doormen_.erase(i);
+        port = desired_port;
+      } else {
+        return sec::cannot_open_port;
+      }
+    }
+  }
+  return new_doorman(hdl, port);
+}
+
+bool test_multiplexer::is_known_port(uint16_t x) const {
+  auto pred = [&](const doorman_data_map::value_type& y) {
+    return x == y.second.port;
+  };
+  return doormen_.count(x) > 0
+         || std::any_of(doorman_data_.begin(), doorman_data_.end(), pred);
+}
+
+bool test_multiplexer::is_known_handle(accept_handle x) const {
+  auto pred = [&](const pending_doorman_map::value_type& y) {
+    return x == y.second;
+  };
+  return doorman_data_.count(x) > 0
+         || std::any_of(doormen_.begin(), doormen_.end(), pred);
 }
 
 auto test_multiplexer::make_supervisor() -> supervisor_ptr {
@@ -300,13 +308,11 @@ bool& test_multiplexer::passive_mode(connection_handle hdl) {
   return scribe_data_[hdl].passive_mode;
 }
 
-intrusive_ptr<scribe>& test_multiplexer::impl_ptr(connection_handle hdl) {
-  CAF_ASSERT(std::this_thread::get_id() == tid_);
+scribe_ptr& test_multiplexer::impl_ptr(connection_handle hdl) {
   return scribe_data_[hdl].ptr;
 }
 
 uint16_t& test_multiplexer::port(accept_handle hdl) {
-  CAF_ASSERT(std::this_thread::get_id() == tid_);
   return doorman_data_[hdl].port;
 }
 
@@ -320,8 +326,7 @@ bool& test_multiplexer::passive_mode(accept_handle hdl) {
   return doorman_data_[hdl].passive_mode;
 }
 
-intrusive_ptr<doorman>& test_multiplexer::impl_ptr(accept_handle hdl) {
-  CAF_ASSERT(std::this_thread::get_id() == tid_);
+doorman_ptr& test_multiplexer::impl_ptr(accept_handle hdl) {
   return doorman_data_[hdl].ptr;
 }
 
@@ -369,18 +374,15 @@ bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
 bool test_multiplexer::accept_connection(accept_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  if (passive_mode(hdl))
-    return false;
-  auto& dd = doorman_data_[hdl];
-  if (!dd.ptr)
-    return false;
-  // assign scribes to all pending connects if needed
-  auto rng = pending_connects_.equal_range(hdl);
-  for (auto i = rng.first; i != rng.second; ++i)
-    if (impl_ptr(i->second) == nullptr)
-      assign_tcp_scribe(dd.ptr->parent(), i->second);
-  if (!dd.ptr->new_connection())
-    passive_mode(hdl) = true;
+  // Filled / initialized in the critical section.
+  doorman_data* dd;
+  { // Access `doorman_data_` and `pending_connects_` while holding `mx_`.
+    guard_type guard{mx_};
+    dd = &doorman_data_[hdl];
+  }
+  CAF_ASSERT(dd->ptr != nullptr);
+  if (!dd->ptr->new_connection())
+    dd->passive_mode = true;
   return true;
 }
 

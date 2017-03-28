@@ -118,48 +118,50 @@ std::vector<connection_handle> abstract_broker::connections() const {
   return result;
 }
 
-void abstract_broker::add_scribe(const intrusive_ptr<scribe>& ptr) {
-  scribes_.emplace(ptr->hdl(), ptr);
+void abstract_broker::add_scribe(scribe_ptr ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  add_servant(std::move(ptr));
 }
 
-expected<connection_handle> abstract_broker::add_tcp_scribe(const std::string& hostname,
-                                                  uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
-  return backend().add_tcp_scribe(this, hostname, port);
-}
-
-expected<void> abstract_broker::assign_tcp_scribe(connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  return backend().assign_tcp_scribe(this, hdl);
+connection_handle abstract_broker::add_scribe(network::native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  return add_servant(backend().new_scribe(fd));
 }
 
 expected<connection_handle>
-abstract_broker::add_tcp_scribe(network::native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_tcp_scribe(this, fd);
+abstract_broker::add_tcp_scribe(const std::string& hostname, uint16_t port) {
+  CAF_LOG_TRACE(CAF_ARG(hostname) << ", " << CAF_ARG(port));
+  auto eptr = backend().new_tcp_scribe(hostname, port);
+  if (eptr)
+    return add_servant(std::move(*eptr));
+  return std::move(eptr.error());
+}
+void abstract_broker::move_scribe(scribe_ptr ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  move_servant(std::move(ptr));
 }
 
-void abstract_broker::add_doorman(const intrusive_ptr<doorman>& ptr) {
-  doormen_.emplace(ptr->hdl(), ptr);
-  if (getf(is_initialized_flag))
-    ptr->launch();
+void abstract_broker::add_doorman(doorman_ptr ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  add_servant(std::move(ptr));
+}
+
+accept_handle abstract_broker::add_doorman(network::native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  return add_servant(backend().new_doorman(fd));
 }
 
 expected<std::pair<accept_handle, uint16_t>>
 abstract_broker::add_tcp_doorman(uint16_t port, const char* in,
                                  bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(reuse_addr));
-  return backend().add_tcp_doorman(this, port, in, reuse_addr);
-}
-
-expected<void> abstract_broker::assign_tcp_doorman(accept_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
-  return backend().assign_tcp_doorman(this, hdl);
-}
-
-expected<accept_handle> abstract_broker::add_tcp_doorman(network::native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  return backend().add_tcp_doorman(this, fd);
+  auto eptr = backend().new_tcp_doorman(port, in, reuse_addr);
+  if (eptr) {
+    auto ptr = std::move(*eptr);
+    auto p = ptr->port();
+    return std::make_pair(add_servant(std::move(ptr)), p);
+  }
+  return std::move(eptr.error());
 }
 
 std::string abstract_broker::remote_addr(connection_handle hdl) {
@@ -232,6 +234,13 @@ abstract_broker::abstract_broker(actor_config& cfg) : scheduled_actor(cfg) {
 
 network::multiplexer& abstract_broker::backend() {
   return system().middleman().backend();
+}
+
+void abstract_broker::launch_servant(doorman_ptr& ptr) {
+  // A doorman needs to be launched in addition to being initialized. This
+  // allows CAF to assign doorman to uninitialized brokers.
+  if (getf(is_initialized_flag))
+    ptr->launch();
 }
 
 } // namespace io

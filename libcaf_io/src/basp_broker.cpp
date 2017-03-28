@@ -615,40 +615,30 @@ behavior basp_broker::make_behavior() {
       state.instance.remove_published_actor(port);
     },
     // received from middleman actor
-    [=](publish_atom, accept_handle hdl, uint16_t port,
+    [=](publish_atom, doorman_ptr& ptr, uint16_t port,
         const strong_actor_ptr& whom, std::set<std::string>& sigs) {
-      CAF_LOG_TRACE(CAF_ARG(hdl.id()) << CAF_ARG(whom) << CAF_ARG(port));
-      if (hdl.invalid()) {
-        CAF_LOG_WARNING("invalid handle");
-        return;
-      }
-      auto res = assign_tcp_doorman(hdl);
-      if (res) {
-        if (whom)
-          system().registry().put(whom->id(), whom);
-        state.instance.add_published_actor(port, whom, std::move(sigs));
-      } else {
-        CAF_LOG_DEBUG("failed to assign doorman from handle"
-                      << CAF_ARG(whom));
-      }
+      CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(port)
+                    << CAF_ARG(whom) << CAF_ARG(sigs));
+      CAF_ASSERT(ptr != nullptr);
+      add_doorman(std::move(ptr));
+      if (whom)
+        system().registry().put(whom->id(), whom);
+      state.instance.add_published_actor(port, whom, std::move(sigs));
     },
     // received from middleman actor (delegated)
-    [=](connect_atom, connection_handle hdl, uint16_t port) {
-      CAF_LOG_TRACE(CAF_ARG(hdl.id()));
+    [=](connect_atom, scribe_ptr& ptr, uint16_t port) {
+      CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(port));
+      CAF_ASSERT(ptr != nullptr);
       auto rp = make_response_promise();
-      auto res = assign_tcp_scribe(hdl);
-      if (res) {
-        auto& ctx = state.ctx[hdl];
-        ctx.hdl = hdl;
-        ctx.remote_port = port;
-        ctx.cstate = basp::await_header;
-        ctx.callback = rp;
-        // await server handshake
-        configure_read(hdl, receive_policy::exactly(basp::header_size));
-      } else {
-        CAF_LOG_DEBUG("failed to assign scribe from handle" << CAF_ARG(res));
-        rp.deliver(std::move(res.error()));
-      }
+      auto hdl = ptr->hdl();
+      add_scribe(std::move(ptr));
+      auto& ctx = state.ctx[hdl];
+      ctx.hdl = hdl;
+      ctx.remote_port = port;
+      ctx.cstate = basp::await_header;
+      ctx.callback = rp;
+      // await server handshake
+      configure_read(hdl, receive_policy::exactly(basp::header_size));
     },
     [=](delete_atom, const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));

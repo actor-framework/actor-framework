@@ -158,23 +158,30 @@ public:
     return system().middleman();
   }
 
-  /// Adds a `scribe` instance to this broker.
-  void add_scribe(const intrusive_ptr<scribe>& ptr);
+  /// Adds the unitialized `scribe` instance `ptr` to this broker.
+  void add_scribe(scribe_ptr ptr);
+
+  /// Creates and assigns a new `scribe` from given native socked `fd`.
+  connection_handle add_scribe(network::native_socket fd);
 
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  expected<connection_handle> add_tcp_scribe(const std::string& hostname, uint16_t port);
+  expected<connection_handle> add_tcp_scribe(const std::string& host,
+                                             uint16_t port);
 
-  /// Assigns a detached `scribe` instance identified by `hdl`
-  /// from the `multiplexer` to this broker.
-  expected<void> assign_tcp_scribe(connection_handle hdl);
-
-  /// Creates and assigns a new `scribe` from given native socked `fd`.
-  expected<connection_handle> add_tcp_scribe(network::native_socket fd);
+  /// Moves the initialized `scribe` instance `ptr` from another broker to this
+  /// broker.
+  void move_scribe(scribe_ptr ptr);
 
   /// Adds a `doorman` instance to this broker.
-  void add_doorman(const intrusive_ptr<doorman>& ptr);
+  void add_doorman(doorman_ptr ptr);
+
+  /// Creates and assigns a new `doorman` from given native socked `fd`.
+  accept_handle add_doorman(network::native_socket fd);
+
+  /// Adds a `doorman` instance to this broker.
+  void move_doorman(doorman_ptr ptr);
 
   /// Tries to open a local port and creates a `doorman` managing
   /// it on success. If `port == 0`, then the broker will ask
@@ -183,13 +190,6 @@ public:
   expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(uint16_t port = 0, const char* in = nullptr,
                   bool reuse_addr = false);
-
-  /// Assigns a detached `doorman` instance identified by `hdl`
-  /// from the `multiplexer` to this broker.
-  expected<void> assign_tcp_doorman(accept_handle hdl);
-
-  /// Creates and assigns a new `doorman` from given native socked `fd`.
-  expected<accept_handle> add_tcp_doorman(network::native_socket fd);
 
   /// Returns the remote address associated to `hdl`
   /// or empty string if `hdl` is invalid.
@@ -316,6 +316,33 @@ protected:
   }
 
 private:
+  inline void launch_servant(scribe_ptr&) {
+    // nop
+  }
+
+  void launch_servant(doorman_ptr& ptr);
+
+  template <class T>
+  typename T::handle_type add_servant(intrusive_ptr<T>&& ptr) {
+    CAF_ASSERT(ptr != nullptr);
+    CAF_ASSERT(ptr->parent() == nullptr);
+    ptr->set_parent(this);
+    auto hdl = ptr->hdl();
+    launch_servant(ptr);
+    get_map(hdl).emplace(hdl, std::move(ptr));
+    return hdl;
+  }
+
+  template <class T>
+  void move_servant(intrusive_ptr<T>&& ptr) {
+    CAF_ASSERT(ptr != nullptr);
+    CAF_ASSERT(ptr->parent() != nullptr && ptr->parent() != this);
+    ptr->set_parent(this);
+    CAF_ASSERT(ptr->parent() == this);
+    auto hdl = ptr->hdl();
+    get_map(hdl).emplace(hdl, std::move(ptr));
+  }
+
   scribe_map scribes_;
   doorman_map doormen_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;

@@ -270,29 +270,15 @@ public:
     }
   };
 
-  expected<connection_handle> new_tcp_scribe(const std::string &,
-                                             uint16_t) override;
+  scribe_ptr new_scribe(native_socket fd) override;
 
-  expected<void> assign_tcp_scribe(abstract_broker *self,
-                                   connection_handle hdl) override;
+  expected<scribe_ptr> new_tcp_scribe(const std::string& host,
+                                      uint16_t port) override;
 
-  connection_handle add_tcp_scribe(abstract_broker *,
-                                   native_socket fd) override;
+  doorman_ptr new_doorman(native_socket fd) override;
 
-  expected<connection_handle> add_tcp_scribe(abstract_broker *,
-                                             const std::string &host,
-                                             uint16_t port) override;
-
-  expected<std::pair<accept_handle, uint16_t>>
-  new_tcp_doorman(uint16_t port, const char *in, bool reuse_addr) override;
-
-  expected<void> assign_tcp_doorman(abstract_broker *ptr,
-                                    accept_handle hdl) override;
-
-  accept_handle add_tcp_doorman(abstract_broker*, native_socket fd) override;
-
-  expected<std::pair<accept_handle, uint16_t>>
-  add_tcp_doorman(abstract_broker *, uint16_t, const char *, bool) override;
+  expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
+                                        bool reuse_addr) override;
 
   void exec_later(resumable* ptr) override;
 
@@ -498,8 +484,8 @@ expected<native_socket> new_tcp_connection(const std::string& host,
                                            uint16_t port,
                                            optional<protocol> preferred = none);
 
-expected<std::pair<native_socket, uint16_t>>
-new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
+expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
+                                              bool reuse_addr);
 
 } // namespace network
 } // namespace io

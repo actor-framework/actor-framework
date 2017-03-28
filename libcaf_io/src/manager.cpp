@@ -27,7 +27,7 @@ namespace caf {
 namespace io {
 namespace network {
 
-manager::manager(abstract_broker* ptr) : parent_(ptr->ctrl()) {
+manager::manager() : parent_(nullptr) {
   // nop
 }
 
@@ -36,8 +36,7 @@ manager::~manager() {
 }
 
 void manager::set_parent(abstract_broker* ptr) {
-  if (!detached())
-    parent_ = ptr != nullptr ? ptr->ctrl() : nullptr;
+  parent_ = ptr != nullptr ? ptr->ctrl() : nullptr;
 }
 
 abstract_broker* manager::parent() {

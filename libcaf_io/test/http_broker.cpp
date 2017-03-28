@@ -159,10 +159,10 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
 }
 
 behavior server(broker* self) {
-  aout(self) << "server up and running" << endl;
+  CAF_MESSAGE("server up and running");
   return {
     [=](const new_connection_msg& ncm) {
-      aout(self) << "fork on new connection" << endl;
+      CAF_MESSAGE("fork on new connection");
       self->fork(http_worker, ncm.handle);
     }
   };
@@ -178,10 +178,9 @@ public:
     aut_ = system.middleman().spawn_broker(server);
     // assign the acceptor handle to the AUT
     aut_ptr_ = static_cast<abstract_broker*>(actor_cast<abstract_actor*>(aut_));
-    mpx_->assign_tcp_doorman(aut_ptr_, acceptor_);
+    aut_ptr_->add_doorman(mpx_->new_doorman(acceptor_, 1u));
     // "open" a new connection to our server
     mpx_->add_pending_connect(acceptor_, connection_);
-    mpx_->assign_tcp_scribe(aut_ptr_, connection_);
     CAF_REQUIRE(mpx_->accept_connection(acceptor_));
   }
 

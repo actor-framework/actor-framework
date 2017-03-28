@@ -26,8 +26,7 @@
 namespace caf {
 namespace io {
 
-doorman::doorman(abstract_broker* ptr, accept_handle acc_hdl)
-    : doorman_base(ptr, acc_hdl) {
+doorman::doorman(accept_handle acc_hdl) : doorman_base(acc_hdl) {
   // nop
 }
 

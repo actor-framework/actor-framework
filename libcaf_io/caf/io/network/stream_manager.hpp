@@ -32,8 +32,6 @@ namespace network {
 /// for incoming data as well as for error handling.
 class stream_manager : public manager {
 public:
-  stream_manager(abstract_broker* ptr);
-
   ~stream_manager() override;
 
   /// Called by the underlying I/O device whenever it received data.

@@ -35,7 +35,7 @@ namespace network {
 /// for various I/O operations.
 class manager : public ref_counted {
 public:
-  manager(abstract_broker* ptr);
+  manager();
 
   ~manager() override;
 

@@ -118,15 +118,16 @@ public:
           return {};
         }
         // connect to endpoint and initiate handhsake etc.
-        auto y = system().middleman().backend().new_tcp_scribe(key.first, port);
-        if (!y) {
-          rp.deliver(std::move(y.error()));
+        auto r = system().middleman().backend().new_tcp_scribe(key.first, port);
+        if (!r) {
+          rp.deliver(std::move(r.error()));
           return {};
         }
-        auto hdl = *y;
+        auto& ptr = *r;
         std::vector<response_promise> tmp{std::move(rp)};
         pending_.emplace(key, std::move(tmp));
-        request(broker_, infinite, connect_atom::value, hdl, port).then(
+        request(broker_, infinite, connect_atom::value, std::move(ptr), port)
+        .then(
           [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
             auto i = pending_.find(key);
             if (i == pending_.end())
@@ -186,7 +187,6 @@ private:
               bool reuse_addr = false) {
     CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)
                   << CAF_ARG(in) << CAF_ARG(reuse_addr));
-    accept_handle hdl;
     uint16_t actual_port;
     // treat empty strings like nullptr
     if (in != nullptr && in[0] == '\0')
@@ -195,9 +195,9 @@ private:
                                                               reuse_addr);
     if (!res)
       return std::move(res.error());
-    hdl = res->first;
-    actual_port = res->second;
-    anon_send(broker_, publish_atom::value, hdl, actual_port,
+    auto& ptr = *res;
+    actual_port = ptr->port();
+    anon_send(broker_, publish_atom::value, std::move(ptr), actual_port,
               std::move(whom), std::move(sigs));
     return actual_port;
   }

@@ -21,6 +21,7 @@
 #define CAF_IO_DOORMAN_HPP
 
 #include <cstddef>
+#include <cstdint>
 
 #include "caf/message.hpp"
 #include "caf/mailbox_element.hpp"
@@ -40,7 +41,7 @@ using doorman_base = broker_servant<network::acceptor_manager, accept_handle,
 /// @ingroup Broker
 class doorman : public doorman_base {
 public:
-  doorman(abstract_broker* ptr, accept_handle acc_hdl);
+  doorman(accept_handle acc_hdl);
 
   ~doorman() override;
 
@@ -50,14 +51,20 @@ public:
 
   bool new_connection(execution_unit* ctx, connection_handle x);
 
-  // needs to be launched explicitly
+  /// Starts listening on the selected port.
   virtual void launch() = 0;
 
 protected:
   message detach_message() override;
 };
 
+using doorman_ptr = intrusive_ptr<doorman>;
+
 } // namespace io
 } // namespace caf
+
+// Allows the `middleman_actor` to create a `doorman` and then send it to the
+// BASP broker.
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::doorman_ptr)
 
 #endif // CAF_IO_DOORMAN_HPP

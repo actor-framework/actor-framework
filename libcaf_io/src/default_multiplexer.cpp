@@ -731,13 +731,12 @@ void default_multiplexer::exec_later(resumable* ptr) {
   }
 }
 
-connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
-                                                      native_socket fd) {
+scribe_ptr default_multiplexer::new_scribe(native_socket fd) {
   CAF_LOG_TRACE("");
   class impl : public scribe {
   public:
-    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
-        : scribe(ptr, network::conn_hdl_from_socket(sockfd)),
+    impl(default_multiplexer& mx, native_socket sockfd)
+        : scribe(network::conn_hdl_from_socket(sockfd)),
           launched_(false),
           stream_(mx, sockfd) {
       // nop
@@ -791,23 +790,28 @@ connection_handle default_multiplexer::add_tcp_scribe(abstract_broker* self,
     void remove_from_loop() override {
       stream_.passivate();
     }
- private:
+  private:
     bool launched_;
     stream stream_;
   };
-  auto ptr = make_counted<impl>(self, *this, fd);
-  self->add_scribe(ptr);
-  return ptr->hdl();
+  return make_counted<impl>(*this, fd);
 }
 
-accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
-                                                   native_socket fd) {
+expected<scribe_ptr>
+default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
+  auto fd = new_tcp_connection(host, port);
+  if (!fd)
+    return std::move(fd.error());
+  return new_scribe(*fd);
+}
+
+doorman_ptr default_multiplexer::new_doorman(native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   CAF_ASSERT(fd != network::invalid_native_socket);
   class impl : public doorman {
   public:
-    impl(abstract_broker* ptr, default_multiplexer& mx, native_socket sockfd)
-        : doorman(ptr, network::accept_hdl_from_socket(sockfd)),
+    impl(default_multiplexer& mx, native_socket sockfd)
+        : doorman(network::accept_hdl_from_socket(sockfd)),
           acceptor_(mx, sockfd) {
       // nop
     }
@@ -820,8 +824,9 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
          // further activities for the broker
          return false;
       auto& dm = acceptor_.backend();
-      auto hdl = dm.add_tcp_scribe(parent(),
-                                   std::move(acceptor_.accepted_socket()));
+      auto sptr = dm.new_scribe(acceptor_.accepted_socket());
+      auto hdl = sptr->hdl();
+      parent()->add_scribe(std::move(sptr));
       return doorman::new_connection(&dm, hdl);
     }
     void stop_reading() override {
@@ -851,63 +856,19 @@ accept_handle default_multiplexer::add_tcp_doorman(abstract_broker* self,
     void remove_from_loop() override {
       acceptor_.passivate();
     }
- private:
+  private:
     network::acceptor acceptor_;
   };
-  auto ptr = make_counted<impl>(self, *this, fd);
-  self->add_doorman(ptr);
-  return ptr->hdl();
+  return make_counted<impl>(*this, fd);
 }
 
-expected<connection_handle>
-default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
-  auto fd = new_tcp_connection(host, port);
-  if (!fd)
-    return std::move(fd.error());
-  return connection_handle::from_int(int64_from_native_socket(*fd));
-}
-
-expected<void> default_multiplexer::assign_tcp_scribe(abstract_broker* self,
-                                            connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(hdl));
-  add_tcp_scribe(self, static_cast<native_socket>(hdl.id()));
-  return unit;
-}
-
-expected<connection_handle>
-default_multiplexer::add_tcp_scribe(abstract_broker* self,
-                                    const std::string& host, uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(self->id()) << CAF_ARG(host) << CAF_ARG(port));
-  auto fd = new_tcp_connection(host, port);
-  if (!fd)
-    return std::move(fd.error());
-  return add_tcp_scribe(self, *fd);
-}
-
-expected<std::pair<accept_handle, uint16_t>>
-default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
-                                     bool reuse_addr) {
-  auto res = new_tcp_acceptor_impl(port, in, reuse_addr);
-  if (!res)
-    return std::move(res.error());
-  return std::make_pair(accept_handle::from_int(int64_from_native_socket(res->first)),
-                        res->second);
-}
-
-expected<void> default_multiplexer::assign_tcp_doorman(abstract_broker* ptr,
-                                             accept_handle hdl) {
-  add_tcp_doorman(ptr, static_cast<native_socket>(hdl.id()));
-  return unit;
-}
-
-expected<std::pair<accept_handle, uint16_t>>
-default_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port,
-                                     const char* host, bool reuse_addr) {
-  auto acceptor = new_tcp_acceptor_impl(port, host, reuse_addr);
-  if (!acceptor)
-    return std::move(acceptor.error());
-  auto bound_port = acceptor->second;
-  return std::make_pair(add_tcp_doorman(self, acceptor->first), bound_port);
+expected<doorman_ptr> default_multiplexer::new_tcp_doorman(uint16_t port,
+                                                           const char* in,
+                                                           bool reuse_addr) {
+  auto fd = new_tcp_acceptor_impl(port, in, reuse_addr);
+  if (fd)
+    return new_doorman(*fd);
+  return std::move(fd.error());
 }
 
 /******************************************************************************
@@ -1409,7 +1370,7 @@ expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
 }
 
 template <int Family>
-expected<uint16_t> new_ip_acceptor_impl(native_socket fd, uint16_t port,
+expected<void> new_ip_acceptor_impl(native_socket fd, uint16_t port,
                                         const char* addr) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
@@ -1432,12 +1393,11 @@ expected<uint16_t> new_ip_acceptor_impl(native_socket fd, uint16_t port,
   CALL_CFUN(res, cc_zero, "bind",
             bind(fd, reinterpret_cast<sockaddr*>(&sa),
                  static_cast<socklen_t>(sizeof(sa))));
-  read_port(fd, sa);
-  return ntohs(port_of(sa));
+  return unit;
 }
 
-expected<std::pair<native_socket, uint16_t>>
-new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
+expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
+                                              bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   protocol proto = ipv6;
   if (addr != nullptr) {
@@ -1465,7 +1425,7 @@ new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
-  return std::make_pair(sguard.release(), *p);
+  return sguard.release();
 }
 
 expected<std::string> local_addr_of_fd(native_socket fd) {
