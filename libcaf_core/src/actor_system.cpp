@@ -209,7 +209,6 @@ actor_system::actor_system(actor_system_config& cfg)
       logger_(new caf::logger(*this), false),
       registry_(*this),
       groups_(*this),
-      middleman_(nullptr),
       dummy_execution_unit_(this),
       await_actors_before_shutdown_(true),
       detached(0),
@@ -220,12 +219,6 @@ actor_system::actor_system(actor_system_config& cfg)
     auto mod_ptr = f(*this);
     modules_[mod_ptr->id()].reset(mod_ptr);
   }
-  auto& mmptr = modules_[module::middleman];
-  if (mmptr)
-    middleman_ = reinterpret_cast<io::middleman*>(mmptr->subtype_ptr());
-  auto& clptr = modules_[module::opencl_manager];
-  if (clptr)
-    opencl_manager_ = reinterpret_cast<opencl::manager*>(clptr->subtype_ptr());
   auto& sched = modules_[module::scheduler];
   using test = scheduler::test_coordinator;
   using share = scheduler::coordinator<policy::work_sharing>;
@@ -359,23 +352,36 @@ group_manager& actor_system::groups() {
 }
 
 bool actor_system::has_middleman() const {
-  return middleman_ != nullptr;
+  return modules_[module::middleman] != nullptr;
 }
 
 io::middleman& actor_system::middleman() {
-  if (middleman_ == nullptr)
-    CAF_RAISE_ERROR("cannot access middleman: module not loaded");
-  return *middleman_;
+  auto& clptr = modules_[module::middleman];
+  if (!clptr)
+    CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
+  return *reinterpret_cast<io::middleman*>(clptr->subtype_ptr());
 }
 
 bool actor_system::has_opencl_manager() const {
-  return opencl_manager_ != nullptr;
+  return modules_[module::opencl_manager] != nullptr;
 }
 
 opencl::manager& actor_system::opencl_manager() const {
-  if (opencl_manager_ == nullptr)
+  auto& clptr = modules_[module::opencl_manager];
+  if (!clptr)
     CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
-  return *opencl_manager_;
+  return *reinterpret_cast<opencl::manager*>(clptr->subtype_ptr());
+}
+
+bool actor_system::has_openssl_manager() const {
+  return modules_[module::openssl_manager] != nullptr;
+}
+
+openssl::manager& actor_system::openssl_manager() const {
+  auto& clptr = modules_[module::openssl_manager];
+  if (!clptr)
+    CAF_RAISE_ERROR("cannot access openssl manager: module not loaded");
+  return *reinterpret_cast<openssl::manager*>(clptr->subtype_ptr());
 }
 
 scoped_execution_unit* actor_system::dummy_execution_unit() {

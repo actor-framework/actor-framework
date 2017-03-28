@@ -165,6 +165,7 @@ public:
       scheduler,
       middleman,
       opencl_manager,
+      openssl_manager,
       num_ids
     };
 
@@ -287,12 +288,19 @@ public:
   /// @throws `std::logic_error` if module is not loaded.
   io::middleman& middleman();
 
-  /// Returns the opencl manager instance from opencl module.
+  /// Returns `true` if the opencl module is available, `false` otherwise.
+  bool has_opencl_manager() const;
+
+  /// Returns the manager instance from the OpenCL module.
   /// @throws `std::logic_error` if module is not loaded.
   opencl::manager& opencl_manager() const;
 
-  /// Returns `true` if the opencl module is available, `false` otherwise.
-  bool has_opencl_manager() const;
+  /// Returns `true` if the openssl module is available, `false` otherwise.
+  bool has_openssl_manager() const;
+
+  /// Returns the manager instance from the OpenSSL module.
+  /// @throws `std::logic_error` if module is not loaded.
+  openssl::manager& openssl_manager() const;
 
   /// Returns a dummy execution unit that forwards
   /// everything to the scheduler.
@@ -558,9 +566,7 @@ private:
   actor_registry registry_;
   group_manager groups_;
   module_array modules_;
-  io::middleman* middleman_;
   scoped_execution_unit dummy_execution_unit_;
-  opencl::manager* opencl_manager_;
   bool await_actors_before_shutdown_;
   // Stores SpawnServ, ConfigServ, and StreamServ
   std::array<strong_actor_ptr, num_internal_actors> internal_actors_;

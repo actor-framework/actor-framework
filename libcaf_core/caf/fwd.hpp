@@ -167,6 +167,15 @@ class abstract_coordinator;
 
 } // namespace scheduler
 
+
+// -- OpenSSL classes ----------------------------------------------------------
+
+namespace openssl {
+
+class manager;
+
+} // namespace openssl
+
 // -- detail classes -----------------------------------------------------------
 
 namespace detail {
