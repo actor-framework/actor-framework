@@ -432,9 +432,9 @@ public:
 };
 
 template <class T>
-auto to_string(const expected<T>& x) -> decltype(to_string(*x)) {
+std::string to_string(const expected<T>& x) {
   if (x)
-    return to_string(*x);
+    return deep_to_string(*x);
   return "!" + to_string(x.error());
 }
 
