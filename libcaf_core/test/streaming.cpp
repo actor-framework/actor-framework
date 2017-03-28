@@ -451,36 +451,6 @@ CAF_TEST(depth3_pipeline_order2) {
   expect((stream_msg::close), from(stage).to(sink).with());
   // sink ----(result: 25)---> self
   expect((int), from(sink).to(self).with(25));
-  return;
-
-
-
-  // stage --(stream_msg::open)--> sink
-  expect((stream_msg::open),
-         from(self).to(sink).with(_, stage, _, _, _, false));
-
-
-  // source --(stream_msg::batch)--> stage
-  expect((stream_msg::batch),
-         from(source).to(stage).with(4, std::vector<int>{6, 7, 8, 9}, 1));
-  // stage --(stream_msg::batch)--> sink
-  expect((stream_msg::batch),
-         from(stage).to(sink).with(3, std::vector<int>{1, 3, 5}, 0));
-  // sink --(stream_msg::batch)--> stage
-  expect((stream_msg::ack_batch), from(sink).to(stage).with(3, 0));
-  // stage --(stream_msg::batch)--> sink
-  expect((stream_msg::batch),
-         from(stage).to(sink).with(2, std::vector<int>{7, 9}, 1));
-  // stage --(stream_msg::batch)--> source
-  expect((stream_msg::ack_batch), from(stage).to(source).with(4, 1));
-  // sink --(stream_msg::batch)--> stage
-  expect((stream_msg::ack_batch), from(sink).to(stage).with(2, 1));
-  // source ----(stream_msg::close)---> stage
-  expect((stream_msg::close), from(source).to(stage).with());
-  // stage ----(stream_msg::close)---> sink
-  expect((stream_msg::close), from(stage).to(sink).with());
-  // sink ----(result: 25)---> self
-  expect((int), from(sink).to(self).with(25));
 }
 
 CAF_TEST(broken_pipeline_stramer) {
