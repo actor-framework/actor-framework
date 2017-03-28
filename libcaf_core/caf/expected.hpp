@@ -438,6 +438,12 @@ std::string to_string(const expected<T>& x) {
   return "!" + to_string(x.error());
 }
 
+inline std::string to_string(const expected<void>& x) {
+  if (x)
+    return "unit";
+  return "!" + to_string(x.error());
+}
+
 /// @cond PRIVATE
 /// Assigns the value of `expr` (which must return an `expected`)
 /// to a new variable named `var` or throws a `std::runtime_error` on error.
