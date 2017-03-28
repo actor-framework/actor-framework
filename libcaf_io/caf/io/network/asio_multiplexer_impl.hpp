@@ -155,7 +155,7 @@ scribe_ptr asio_multiplexer::new_scribe(asio_tcp_socket&& sock) {
 }
 
 scribe_ptr asio_multiplexer::new_scribe(native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(fd));
+  CAF_LOG_TRACE(CAF_ARG(fd));
   boost::system::error_code ec;
   asio_tcp_socket sock{service()};
   sock.assign(boost::asio::ip::tcp::v6(), fd, ec);

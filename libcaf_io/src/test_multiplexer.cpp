@@ -68,7 +68,7 @@ scribe_ptr test_multiplexer::new_scribe(native_socket) {
 }
 
 scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(port));
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   class impl : public scribe {
   public:
     impl(connection_handle ch, test_multiplexer* mpx) : scribe(ch), mpx_(mpx) {
