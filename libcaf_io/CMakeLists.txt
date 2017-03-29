@@ -14,6 +14,7 @@ set (LIBCAF_IO_SRCS
      src/doorman.cpp
      src/middleman.cpp
      src/middleman_actor.cpp
+     src/middleman_actor_impl.cpp
      src/hook.cpp
      src/interfaces.cpp
      src/manager.cpp

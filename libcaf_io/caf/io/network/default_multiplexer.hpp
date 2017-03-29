@@ -176,6 +176,18 @@ bool write_some(size_t& result, native_socket fd, const void* buf, size_t len);
 /// as long as
 bool try_accept(native_socket& result, native_socket fd);
 
+/// Returns the locally assigned port of `fd`.
+expected<uint16_t> local_port_of_fd(native_socket fd);
+
+/// Returns the locally assigned address of `fd`.
+expected<std::string> local_addr_of_fd(native_socket fd);
+
+/// Returns the port used by the remote host of `fd`.
+expected<uint16_t> remote_port_of_fd(native_socket fd);
+
+/// Returns the remote host address of `fd`.
+expected<std::string> remote_addr_of_fd(native_socket fd);
+
 class default_multiplexer;
 
 /// A socket I/O event handler.
@@ -419,9 +431,69 @@ public:
 
   void removed_from_loop(operation op) override;
 
-  void handle_event(operation op) override;
+protected:
+  template <class Policy>
+  void handle_event_impl(io::network::operation op, Policy& policy) {
+    CAF_LOG_TRACE(CAF_ARG(op));
+    auto mcr = max_consecutive_reads();
+    switch (op) {
+      case io::network::operation::read: {
+        // Loop until an error occurs or we have nothing more to read
+        // or until we have handled `mcr` reads.
+        size_t rb;
+        for (size_t i = 0; i < mcr; ++i) {
+          if (!policy.read_some(rb, fd(), rd_buf_.data() + collected_,
+                                rd_buf_.size() - collected_)) {
+            reader_->io_failure(&backend(), operation::read);
+            passivate();
+            return;
+          }
+          if (rb == 0)
+            return;
+          collected_ += rb;
+          if (collected_ >= read_threshold_) {
+            auto res = reader_->consume(&backend(), rd_buf_.data(), collected_);
+            prepare_next_read();
+            if (!res) {
+              passivate();
+              return;
+            }
+          }
+        }
+        break;
+      }
+      case io::network::operation::write: {
+        size_t wb; // written bytes
+        if (!policy.write_some(wb, fd(), wr_buf_.data() + written_,
+                               wr_buf_.size() - written_)) {
+          writer_->io_failure(&backend(), operation::write);
+          backend().del(operation::write, fd(), this);
+        } else if (wb > 0) {
+          written_ += wb;
+          CAF_ASSERT(written_ <= wr_buf_.size());
+          auto remaining = wr_buf_.size() - written_;
+          if (ack_writes_)
+            writer_->data_transferred(&backend(), wb,
+                                      remaining + wr_offline_buf_.size());
+          // prepare next send (or stop sending)
+          if (remaining == 0)
+            prepare_next_write();
+        }
+        break;
+      }
+      case operation::propagate_error:
+        if (reader_)
+          reader_->io_failure(&backend(), operation::read);
+        if (writer_)
+          writer_->io_failure(&backend(), operation::write);
+        // backend will delete this handler anyway,
+        // no need to call backend().del() here
+    }
+  }
 
 private:
+  size_t max_consecutive_reads();
+
   void prepare_next_read();
 
   void prepare_next_write();
@@ -441,6 +513,26 @@ private:
   size_t written_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;
+};
+
+/// A concrete stream with a technology-dependent policy for sending and
+/// receiving data from a socket.
+template <class ProtocolPolicy>
+class stream_impl : public stream {
+public:
+  template <class... Ts>
+  stream_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
+    : stream(mpx, sockfd),
+      policy_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  void handle_event(io::network::operation op) override {
+    this->handle_event_impl(op, policy_);
+  }
+
+private:
+  ProtocolPolicy policy_;
 };
 
 /// An acceptor is responsible for accepting incoming connections.
@@ -471,13 +563,45 @@ public:
   /// Closes the network connection and removes this handler from its parent.
   void stop_reading();
 
-  void handle_event(operation op) override;
-
   void removed_from_loop(operation op) override;
+
+protected:
+  template <class Policy>
+  void handle_event_impl(io::network::operation op, Policy& policy) {
+    CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
+    if (mgr_ && op == operation::read) {
+      native_socket sockfd = invalid_native_socket;
+      if (policy.try_accept(sockfd, fd())) {
+        if (sockfd != invalid_native_socket) {
+          sock_ = sockfd;
+          mgr_->new_connection();
+        }
+      }
+    }
+  }
 
 private:
   manager_ptr mgr_;
   native_socket sock_;
+};
+
+/// A concrete acceptor with a technology-dependent policy.
+template <class ProtocolPolicy>
+class acceptor_impl : public acceptor {
+public:
+  template <class... Ts>
+  acceptor_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
+    : acceptor(mpx, sockfd),
+      policy_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  void handle_event(io::network::operation op) override {
+    this->handle_event_impl(op, policy_);
+  }
+
+private:
+  ProtocolPolicy policy_;
 };
 
 expected<native_socket> new_tcp_connection(const std::string& host,

@@ -21,6 +21,7 @@
 #define CAF_IO_MIDDLEMAN_ACTOR_HPP
 
 #include "caf/fwd.hpp"
+#include "caf/atom.hpp"
 #include "caf/typed_actor.hpp"
 
 namespace caf {
