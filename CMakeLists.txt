@@ -497,6 +497,7 @@ add_optional_caf_lib(io)
 # build SSL module if OpenSSL library is available
 find_package(OpenSSL)
 if(OPENSSL_FOUND)
+  include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
   add_optional_caf_lib(openssl)
 endif(OPENSSL_FOUND)
 

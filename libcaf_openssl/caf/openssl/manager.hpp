@@ -55,6 +55,10 @@ public:
     return system_;
   }
 
+  /// Returns true if configured to require certificate-based authentication
+  /// of peers.
+  bool authentication_enabled();
+
   /// Returns an OpenSSL manager using the default network backend.
   /// @warning Creating an OpenSSL manager will fail when using the ASIO
   ///          network backend or any other custom implementation.

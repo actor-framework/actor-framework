@@ -10,7 +10,8 @@ set (LIBCAF_OPENSSL_SRCS
      src/manager.cpp
      src/middleman_actor.cpp
      src/publish.cpp
-     src/remote_actor.cpp)
+     src/remote_actor.cpp
+     src/ssl_session.cpp)
 
 add_custom_target(libcaf_openssl)
 
@@ -19,7 +20,12 @@ if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_openssl_shared SHARED
               ${LIBCAF_OPENSSL_SRCS} ${LIBCAF_OPENSSL_HDRS})
   target_link_libraries(libcaf_openssl_shared ${LD_FLAGS}
-                        ${CAF_LIBRARY_CORE} ${CAF_LIBRARY_IO})
+                        ${CAF_LIBRARY_CORE} ${CAF_LIBRARY_IO} ${OPENSSL_LIBRARIES})
+
+  if(NOT APPLE AND NOT WIN32)
+    target_link_libraries(libcaf_openssl_shared "-pthread")
+  endif()
+
   set_target_properties(libcaf_openssl_shared
                         PROPERTIES
                         SOVERSION ${CAF_VERSION}
@@ -38,7 +44,7 @@ if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_openssl_static STATIC
               ${LIBCAF_OPENSSL_HDRS} ${LIBCAF_OPENSSL_SRCS})
   target_link_libraries(libcaf_openssl_static ${LD_FLAGS}
-                        ${CAF_LIBRARY_CORE_STATIC} ${CAF_LIBRARY_IO_STATIC})
+                        ${CAF_LIBRARY_CORE_STATIC} ${CAF_LIBRARY_IO_STATIC} ${OPENSSL_LIBRARIES})
   set_target_properties(libcaf_openssl_static PROPERTIES
                         OUTPUT_NAME caf_openssl_static)
   if(NOT WIN32)

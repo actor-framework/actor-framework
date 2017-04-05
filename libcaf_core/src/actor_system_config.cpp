@@ -200,6 +200,17 @@ actor_system_config::actor_system_config()
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
+  opt_group(options_, "openssl")
+  .add(openssl_certificate, "certificate",
+       "sets the path to the file containining the certificate for this node PEM format")
+  .add(openssl_key, "key",
+       "sets the path to the file containting the private key for this node")
+  .add(openssl_passphrase, "passphrase",
+       "sets the passphrase to decrypt the private key, if needed")
+  .add(openssl_capath, "capath",
+       "sets the path to an OpenSSL-style directory of trusted certificates")
+  .add(openssl_cafile, "cafile",
+       "sets the path to a file containing trusted certificates concatenated together in PEM format");
   // add renderers for default error categories
   error_renderers.emplace(atom("system"), render_sec);
   error_renderers.emplace(atom("exit"), render_exit_reason);

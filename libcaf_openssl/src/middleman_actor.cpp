@@ -39,6 +39,8 @@
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
+#include "caf/openssl/ssl_session.hpp"
+
 namespace caf {
 namespace openssl {
 
@@ -48,34 +50,53 @@ using native_socket = io::network::native_socket;
 using default_mpx = io::network::default_multiplexer;
 
 struct ssl_policy {
-  /// Reads up to `len` bytes from an OpenSSL socket.
-  static bool read_some(size_t& result, native_socket fd, void* buf,
+  ssl_policy(std::shared_ptr<ssl_session> ssl) : ssl_(ssl) {
+  }
+
+  bool read_some(size_t& result, native_socket fd, void* buf,
                         size_t len) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-    // TODO: implement me
-    CAF_RAISE_ERROR("unimplemented function: openssl::read_some");
+
+    return ssl_->read_some(result, fd, buf, len);
   }
 
-  static bool write_some(size_t& result, native_socket fd, const void* buf,
+  bool write_some(size_t& result, native_socket fd, const void* buf,
                          size_t len) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-    // TODO: implement me
-    CAF_RAISE_ERROR("unimplemented function: openssl::write_some");
+
+    return ssl_->write_some(result, fd, buf, len);
   }
 
-  static bool try_accept(native_socket& result, native_socket fd) {
+  bool try_accept(native_socket& result, native_socket fd) {
     CAF_LOG_TRACE(CAF_ARG(fd));
-    // TODO: implement me
-    CAF_RAISE_ERROR("unimplemented function: openssl::try_accept");
+
+    sockaddr_storage addr;
+    memset(&addr, 0, sizeof(addr));
+    socklen_t addrlen = sizeof(addr);
+    result = ::accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
+
+    CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
+
+    if (result == io::network::invalid_native_socket) {
+      auto err = io::network::last_socket_error();
+      if (!io::network::would_block_or_temporarily_unavailable(err))
+        return false;
+    }
+
+    return ssl_->try_accept(result);
   }
+
+private:
+  std::shared_ptr<ssl_session> ssl_;
 };
 
 class scribe_impl : public io::scribe {
   public:
-    scribe_impl(default_mpx& mpx, native_socket sockfd)
+    scribe_impl(default_mpx& mpx, native_socket sockfd,
+                std::shared_ptr<ssl_session> ssl)
         : scribe(io::network::conn_hdl_from_socket(sockfd)),
           launched_(false),
-          stream_(mpx, sockfd) {
+          stream_(mpx, sockfd, ssl) {
       // nop
     }
 
@@ -146,9 +167,11 @@ class scribe_impl : public io::scribe {
 
 class doorman_impl : public io::doorman {
 public:
-  doorman_impl(default_mpx& mx, native_socket sockfd)
+  doorman_impl(default_mpx& mx, native_socket sockfd,
+               std::shared_ptr<ssl_session> ssl)
       : doorman(io::network::accept_hdl_from_socket(sockfd)),
-        acceptor_(mx, sockfd) {
+        acceptor_(mx, sockfd, ssl),
+        ssl_(ssl) {
     // nop
   }
 
@@ -161,7 +184,8 @@ public:
        // further activities for the broker
        return false;
     auto& dm = acceptor_.backend();
-    auto sptr = dm.new_scribe(acceptor_.accepted_socket());
+    auto sptr =
+      make_counted<scribe_impl>(dm, acceptor_.accepted_socket(), ssl_);
     auto hdl = sptr->hdl();
     parent()->add_scribe(std::move(sptr));
     return doorman::new_connection(&dm, hdl);
@@ -202,6 +226,7 @@ public:
 
 private:
   io::network::acceptor_impl<ssl_policy> acceptor_;
+  std::shared_ptr<ssl_session> ssl_;
 };
 
 class middleman_actor_impl : public io::middleman_actor_impl {
@@ -214,16 +239,29 @@ public:
 protected:
   expected<io::scribe_ptr> connect(const std::string& host,
                                    uint16_t port) override {
-    native_socket fd;
-    // TODO: implement me
-    return make_counted<scribe_impl>(mpx(), fd);
+    auto fd = io::network::new_tcp_connection(host, port);
+
+    if (!fd)
+      return std::move(fd.error());
+
+    auto ssl = std::make_shared<ssl_session>(system());
+
+    if (ssl->connect(*fd))
+      return make_counted<scribe_impl>(mpx(), *fd, ssl);
+    else
+      return sec::cannot_connect_to_node;
   }
 
   expected<io::doorman_ptr> open(uint16_t port, const char* addr,
                                  bool reuse) override {
-    native_socket fd;
-    // TODO: implement me
-    return make_counted<doorman_impl>(mpx(), fd);
+    auto fd = io::network::new_tcp_acceptor_impl(port, addr, reuse);
+
+    if (!fd)
+      return std::move(fd.error());
+
+    auto ssl = std::make_shared<ssl_session>(system());
+
+    return make_counted<doorman_impl>(mpx(), *fd, ssl);
   }
 
 private:

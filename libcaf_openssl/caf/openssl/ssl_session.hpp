@@ -17,49 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/openssl/remote_actor.hpp"
+#ifndef CAF_OPENSSL_SSL_SESSION_HPP
+#define CAF_OPENSSL_SSL_SESSION_HPP
 
-#include "caf/sec.hpp"
-#include "caf/atom.hpp"
-#include "caf/expected.hpp"
-#include "caf/scoped_actor.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/io/network/native_socket.hpp"
 
-#include "caf/openssl/manager.hpp"
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 
 namespace caf {
 namespace openssl {
+using native_socket = io::network::native_socket;
 
-/// Establish a new connection to the actor at `host` on given `port`.
-/// @param host Valid hostname or IP address.
-/// @param port TCP port.
-/// @returns An `actor` to the proxy instance representing
-///          a remote actor or an `error`.
-expected<strong_actor_ptr> remote_actor(actor_system& sys,
-                                        const std::set<std::string>& mpi,
-                                        std::string host, uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(mpi) << CAF_ARG(host) << CAF_ARG(port));
-  expected<strong_actor_ptr> res{strong_actor_ptr{nullptr}};
-  scoped_actor self{sys};
-  self->request(sys.openssl_manager().actor_handle(), infinite,
-                connect_atom::value, std::move(host), port)
-  .receive(
-    [&](const node_id&, strong_actor_ptr& ptr, std::set<std::string>& found) {
-      if (ptr) {
-        if (sys.assignable(found, mpi))
-          res = std::move(ptr);
-        else
-          res = sec::unexpected_actor_messaging_interface;
-      } else {
-        res = sec::no_actor_published_at_port;
-      }
-    },
-    [&](error& err) {
-      res = std::move(err);
-    }
-  );
-  return res;
-}
+class ssl_session {
+public:
+  ssl_session(actor_system& sys);
+  ~ssl_session();
+
+  bool read_some(size_t& result, native_socket fd, void* buf, size_t len);
+  bool write_some(size_t& result, native_socket fd, const void* buf,
+                  size_t len);
+  bool connect(native_socket fd);
+  bool try_accept(native_socket fd);
+  const char* openssl_passphrase();
+
+private:
+  SSL_CTX* create_ssl_context(actor_system& sys);
+  std::string get_ssl_error();
+  void raise_ssl_error(std::string msg);
+  bool handle_ssl_result(int ret);
+
+  SSL_CTX* ctx;
+  SSL* ssl;
+  std::string openssl_passphrase_;
+};
 
 } // namespace openssl
 } // namespace caf
 
+#endif // CAF_OPENSSL_SSL_SESSION_HPP
