@@ -275,9 +275,9 @@ void middleman::start() {
   class stream_serv : public raw_event_based_actor,
                       public detail::stream_multiplexer::backend {
   public:
-    stream_serv(actor_config& cfg, actor basp)
+    stream_serv(actor_config& cfg, actor basp_ref)
         : raw_event_based_actor(cfg),
-          detail::stream_multiplexer::backend(std::move(basp)),
+          detail::stream_multiplexer::backend(std::move(basp_ref)),
           incoming_(this, *this),
           outgoing_(this, *this) {
       // nop

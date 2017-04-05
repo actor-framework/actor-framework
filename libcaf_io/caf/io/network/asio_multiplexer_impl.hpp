@@ -194,9 +194,9 @@ doorman_ptr asio_multiplexer::new_doorman(asio_tcp_socket_acceptor&& sock) {
         return false;
       auto& am = acceptor_.backend();
       auto sptr = am.new_scribe(std::move(acceptor_.accepted_socket()));
-      auto hdl = sptr->hdl();
+      auto shdl = sptr->hdl();
       parent()->add_scribe(std::move(sptr));
-      return doorman::new_connection(&am, hdl);
+      return doorman::new_connection(&am, shdl);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");

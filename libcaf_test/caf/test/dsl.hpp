@@ -150,28 +150,6 @@ private:
   const Tup& xs_;
 };
 
-template <class T>
-struct match_helper {
-  T& ref;
-
-  template <class... Fs>
-  void operator()(Fs... fs) {
-    struct impl : Fs... {
-      using result_type = void;
-      impl(Fs... xs) : Fs(xs)... {
-        // nop
-      }
-    };
-    impl visitor{std::move(fs)...};
-    apply_visitor(ref, visitor);
-  }
-};
-
-template <class T>
-match_helper<T> match(T& x) {
-  return {x};
-}
-
 template <class Derived>
 class expect_clause_base {
 public:

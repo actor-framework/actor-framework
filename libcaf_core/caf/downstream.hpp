@@ -36,8 +36,8 @@ public:
   using chunk = std::vector<T>;
 
   downstream(local_actor* ptr, const stream_id& sid,
-             typename abstract_downstream::policy_ptr policy)
-      : abstract_downstream(ptr, sid, std::move(policy)) {
+             typename abstract_downstream::policy_ptr pptr)
+      : abstract_downstream(ptr, sid, std::move(pptr)) {
     // nop
   }
 

@@ -27,10 +27,11 @@
 
 // turn off several flags for overflows / sign conversion
 #ifdef CAF_CLANG
-//#elif defined(CAF_CLANG)
 #pragma clang diagnostic ignored "-Wsign-conversion"
 #pragma clang diagnostic ignored "-Wfloat-equal"
 #pragma clang diagnostic ignored "-Wconstant-conversion"
+#elif defined(CAF_GCC)
+#pragma GCC diagnostic ignored "-Woverflow"
 #endif
 
 using namespace caf;

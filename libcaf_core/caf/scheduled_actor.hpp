@@ -436,7 +436,7 @@ public:
   template <class In, class... Ts, class Init, class Fun, class Cleanup>
   annotated_stream<typename stream_stage_trait_t<Fun>::output, Ts...>
   add_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
-            Cleanup cleanup, upstream_policy_ptr upolicy = nullptr,
+            Cleanup cleanup_fun, upstream_policy_ptr upolicy = nullptr,
             downstream_policy_ptr dpolicy = nullptr) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using output_type = typename stream_stage_trait_t<Fun>::output;
@@ -462,7 +462,7 @@ public:
       dpolicy.reset(new policy::anycast);
     auto ptr = make_counted<impl>(this, sid, std::move(upolicy),
                                   std::move(dpolicy), std::move(fun),
-                                  std::move(cleanup));
+                                  std::move(cleanup_fun));
     init(ptr->state());
     streams_.emplace(sid, ptr);
     // Add downstream with 0 credit.
@@ -474,15 +474,15 @@ public:
   /// Adds a stream stage to this actor.
   template <class In, class Init, class Fun, class Cleanup>
   stream<typename stream_stage_trait_t<Fun>::output>
-  add_stage(const stream<In>& in, Init init, Fun fun, Cleanup cleanup) {
+  add_stage(const stream<In>& in, Init init, Fun fun, Cleanup cleanup_fun) {
     return add_stage(in, std::make_tuple(), std::move(init),
-                     std::move(fun), std::move(cleanup));
+                     std::move(fun), std::move(cleanup_fun));
   }
 
   /// Adds a stream sink to this actor.
   template <class In, class Init, class Fun, class Finalize>
   stream_result<typename stream_sink_trait_t<Fun, Finalize>::output>
-  add_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize,
+  add_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize_fun,
            upstream_policy_ptr upolicy = nullptr) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     //using output_type = typename stream_sink_trait_t<Fun, Finalize>::output;
@@ -509,7 +509,7 @@ public:
     auto ptr = make_counted<impl>(this, std::move(upolicy),
                                   std::move(mptr->sender),
                                   std::move(mptr->stages), mptr->mid,
-                                  std::move(fun), std::move(finalize));
+                                  std::move(fun), std::move(finalize_fun));
     init(ptr->state());
     streams_.emplace(in.id(), ptr);
     return {in.id(), std::move(ptr)};

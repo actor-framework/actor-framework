@@ -27,8 +27,8 @@ namespace caf {
 template <class T>
 class upstream : public abstract_upstream {
 public:
-  upstream(local_actor* self, typename abstract_upstream::policy_ptr ptr)
-      : abstract_upstream(self, std::move(ptr)) {
+  upstream(local_actor* selfptr, typename abstract_upstream::policy_ptr ptr)
+      : abstract_upstream(selfptr, std::move(ptr)) {
     // nop
   }
 };
