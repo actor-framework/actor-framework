@@ -1,6 +1,3 @@
-[submodule "benchmarks"]
-	path = benchmarks
-	url = ../benchmarks.git
 [submodule "libcaf_opencl"]
 	path = libcaf_opencl
 	url = ../opencl.git
