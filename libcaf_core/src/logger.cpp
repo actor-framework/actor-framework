@@ -152,12 +152,12 @@ void prettify_type_name(std::string& class_name, const char* c_class_name) {
 
 } // namespace <anonymous>
 
-logger::event::event(int lvl, std::string pfx, std::string msg)
+logger::event::event(int lvl, std::string pfx, std::string content)
     : next(nullptr),
       prev(nullptr),
       level(lvl),
       prefix(std::move(pfx)),
-      msg(std::move(msg)) {
+      msg(std::move(content)) {
   // nop
 }
 

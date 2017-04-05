@@ -64,7 +64,6 @@ scribe_ptr test_multiplexer::new_scribe(native_socket) {
   std::cerr << "test_multiplexer::add_tcp_scribe called with native socket"
             << std::endl;
   abort();
-  return nullptr;
 }
 
 scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
@@ -139,7 +138,6 @@ doorman_ptr test_multiplexer::new_doorman(native_socket) {
   std::cerr << "test_multiplexer::add_tcp_doorman called with native socket"
             << std::endl;
   abort();
-  return nullptr;
 }
 
 doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
@@ -210,7 +208,7 @@ expected<doorman_ptr> test_multiplexer::new_tcp_doorman(uint16_t desired_port,
       while (is_known_port(port))
         --port;
       // Do the same for finding an acceptor handle.
-      auto y = std::numeric_limits<uint64_t>::max();
+      auto y = std::numeric_limits<int64_t>::max();
       while (is_known_handle(accept_handle::from_int(y)))
         --y;
       hdl = accept_handle::from_int(y);
