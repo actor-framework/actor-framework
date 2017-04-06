@@ -81,8 +81,8 @@ struct infer_handle_from_fun_impl<behavior, Impl*, true> {
 };
 
 // statically typed actor returning a behavior
-template <class... Sigs, class FirstArg>
-struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, FirstArg, false> {
+template <class... Sigs, class Impl>
+struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl, false> {
   using type = typed_actor<Sigs...>;
   using impl = typed_event_based_actor<Sigs...>;
   using behavior_type = typed_behavior<Sigs...>;
@@ -90,53 +90,13 @@ struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, FirstArg, false> {
 };
 
 // statically typed actor with self pointer
-template <class Result, class... Sigs>
-struct infer_handle_from_fun_impl<Result, typed_event_based_actor<Sigs...>*,
-                                  true> {
+template <class... Sigs, class Impl>
+struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl*, true> {
+  static_assert(std::is_base_of<typed_event_based_actor<Sigs...>, Impl>::value
+                || std::is_base_of<io::typed_broker<Sigs...>, Impl>::value,
+                "Self pointer does not match the returned behavior type.");
   using type = typed_actor<Sigs...>;
-  using impl = typed_event_based_actor<Sigs...>;
-  using behavior_type = typed_behavior<Sigs...>;
-  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
-};
-
-// statically typed stateful actor with self pointer
-template <class Result, class State, class... Sigs>
-struct infer_handle_from_fun_impl<Result,
-                                  stateful_actor<
-                                    State, typed_event_based_actor<Sigs...>
-                                  >*,
-                                  true> {
-  using type = typed_actor<Sigs...>;
-  using impl = stateful_actor<State, typed_event_based_actor<Sigs...>>;
-  using behavior_type = typed_behavior<Sigs...>;
-  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
-};
-
-// statically typed broker with self pointer
-template <class Result, class... Sigs>
-struct infer_handle_from_fun_impl<Result,
-                                  io::typed_broker<Sigs...>*,
-                                  true> {
-  using type = typed_actor<Sigs...>;
-  using impl = io::typed_broker<Sigs...>;
-  using behavior_type = typed_behavior<Sigs...>;
-  static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
-};
-
-// statically typed stateful broker with self pointer
-template <class Result, class State, class... Sigs>
-struct infer_handle_from_fun_impl<Result,
-                                  stateful_actor<
-                                    State,
-                                    io::typed_broker<Sigs...>
-                                  >*,
-                                  true> {
-  using type = typed_actor<Sigs...>;
-  using impl =
-    stateful_actor<
-      State,
-      io::typed_broker<Sigs...>
-    >;
+  using impl = Impl;
   using behavior_type = typed_behavior<Sigs...>;
   static constexpr spawn_mode mode = spawn_mode::function_with_selfptr;
 };

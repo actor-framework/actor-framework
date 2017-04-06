@@ -33,7 +33,7 @@ class composable_behavior_based_actor : public stateful_actor<State, Base> {
                 "State is abstract, please make sure to override all "
                 "virtual operator() member functions");
 
-  using super = stateful_actor<State, typename State::actor_base>;
+  using super = stateful_actor<State, Base>;
 
   composable_behavior_based_actor(actor_config& cfg) : super(cfg) {
     // nop
