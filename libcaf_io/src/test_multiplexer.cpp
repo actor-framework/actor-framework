@@ -522,6 +522,10 @@ void test_multiplexer::flush_runnables() {
   } while (!runnables.empty());
 }
 
+void test_multiplexer::close(connection_handle hdl) {
+  impl_ptr(hdl)->io_failure(this, operation::read);
+}
+
 void test_multiplexer::exec_later(resumable* ptr) {
   CAF_ASSERT(ptr != nullptr);
   CAF_LOG_TRACE("");

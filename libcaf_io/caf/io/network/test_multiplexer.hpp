@@ -169,6 +169,9 @@ public:
     inline_runnable_callback_ = std::move(f);
   }
 
+  /// Closes a connection.
+  void close(connection_handle hdl);
+
 protected:
   void exec_later(resumable* ptr) override;
 
