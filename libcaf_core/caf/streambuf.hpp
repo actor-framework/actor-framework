@@ -86,9 +86,7 @@ public:
     return *this;
   }
 
-  /// Replaces the internal character sequence with a new one.
-  /// @param s A pointer to the first character.
-  /// @param n The length of the character sequence.
+protected:
   std::basic_streambuf<CharT, Traits>*
   setbuf(CharT* s, std::streamsize n) override {
     this->setg(s, s, s + n);
@@ -96,7 +94,6 @@ public:
     return this;
   }
 
-protected:
   std::streamsize xsputn(const char_type* s, std::streamsize n) override {
     auto available = this->epptr() - this->pptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
