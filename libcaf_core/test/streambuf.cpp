@@ -48,7 +48,7 @@ CAF_TEST(signed_arraybuf) {
   auto c = ab.sgetc();
   CAF_CHECK_EQUAL(c, charbuf::traits_type::eof());
   // Reset the stream and write into it.
-  ab.setbuf(&data[0], static_cast<std::streamsize>(data.size()));
+  ab.pubsetbuf(&data[0], static_cast<std::streamsize>(data.size()));
   CAF_CHECK_EQUAL(static_cast<size_t>(ab.in_avail()), data.size());
   auto put = ab.sputn("One", 3);
   CAF_CHECK_EQUAL(put, 3);
