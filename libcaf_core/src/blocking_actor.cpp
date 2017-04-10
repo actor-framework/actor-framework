@@ -396,13 +396,16 @@ void blocking_actor::receive_impl(receive_cond& rcc,
         }
       }
     } while (skipped && !timed_out);
-    if (timed_out)
+    if (timed_out) {
       bhvr.handle_timeout();
-    else
-      seq.erase_and_advance();
-    // check loop post condition
-    if (!rcc.post())
-      return;
+      if (!rcc.post())
+        return;
+    } else {
+      if (rcc.post())
+        seq.erase_and_advance();
+      else
+        return;
+    }
   }
 }
 
