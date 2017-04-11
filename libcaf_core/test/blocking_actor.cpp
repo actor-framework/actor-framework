@@ -123,7 +123,7 @@ void check_order_event_based_actor(const check_order_t& corder) {
   auto seq_it = sequence.cbegin();
   {
     auto tmp = system.spawn(
-      [=](event_based_actor* self) mutable {
+      [&](event_based_actor* self) {
         self->set_default_handler(skip);
         for(auto i : send_order) {
           self->send(self, i);
