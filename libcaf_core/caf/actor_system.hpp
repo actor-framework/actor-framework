@@ -406,6 +406,8 @@ public:
   template <class T, spawn_options Os, class Iter, class... Ts>
   infer_handle_from_class_t<T>
   spawn_class_in_groups(actor_config& cfg, Iter first, Iter last, Ts&&... xs) {
+    static_assert(std::is_same<infer_handle_from_class_t<T>, actor>::value,
+                  "Only dynamically typed actors can be spawned in a group.");
     check_invariants<T>();
     auto irange = make_input_range(first, last);
     cfg.groups = &irange;
@@ -419,6 +421,8 @@ public:
   infer_handle_from_fun_t<F>
   spawn_fun_in_groups(actor_config& cfg, Iter first, Iter second,
                       F& fun, Ts&&... xs) {
+    static_assert(std::is_same<infer_handle_from_fun_t<F>, actor>::value,
+                  "Only dynamically actors can be spawned in a group.");
     check_invariants<infer_impl_from_fun_t<F>>();
     auto irange = make_input_range(first, second);
     cfg.groups = &irange;
