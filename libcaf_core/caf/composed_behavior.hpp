@@ -42,6 +42,8 @@ public:
 
   using actor_base = typename handle_type::base;
 
+  using broker_base = typename handle_type::broker_base;
+
   using self_pointer =
     typename detail::tl_apply<
       signatures,
