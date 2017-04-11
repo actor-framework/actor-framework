@@ -55,14 +55,15 @@ public:
       && detail::has_size_member<Container>::value
     >::type
   >
-  arraybuf(Container& c) : arraybuf(const_cast<CharT*>(c.data()), c.size()) {
+  arraybuf(Container& c)
+    : arraybuf(const_cast<char_type*>(c.data()), c.size()) {
     // nop
   }
 
   /// Constructs an array streambuffer from a raw character sequence.
   /// @param data A pointer to the first character.
   /// @param size The length of the character sequence.
-  arraybuf(CharT* data, size_t size) {
+  arraybuf(char_type* data, size_t size) {
     setbuf(data, static_cast<std::streamsize>(size));
   }
 
@@ -87,12 +88,74 @@ public:
   }
 
 protected:
-  std::basic_streambuf<CharT, Traits>*
-  setbuf(CharT* s, std::streamsize n) override {
+  // -- positioning ----------------------------------------------------------
+
+  std::basic_streambuf<char_type, Traits>*
+  setbuf(char_type* s, std::streamsize n) override {
     this->setg(s, s, s + n);
     this->setp(s, s + n);
     return this;
   }
+
+  pos_type seekpos(pos_type pos,
+                   std::ios_base::openmode which
+                     = std::ios_base::in | std::ios_base::out) override {
+    auto get = (which & std::ios_base::in) == std::ios_base::in;
+    auto put = (which & std::ios_base::out) == std::ios_base::out;
+    if (!(get || put))
+      return pos_type(off_type(-1)); // nothing to do
+    if (get)
+      this->setg(this->eback(), this->eback() + pos, this->egptr());
+    if (put) {
+      this->setp(this->pbase(), this->epptr());
+      this->pbump(pos);
+    }
+    return pos;
+  }
+
+  pos_type seekoff(off_type off,
+                   std::ios_base::seekdir dir,
+                   std::ios_base::openmode which) override {
+    auto new_off = pos_type(off_type(-1));
+    auto get = (which & std::ios_base::in) == std::ios_base::in;
+    auto put = (which & std::ios_base::out) == std::ios_base::out;
+    if (!(get || put))
+      return new_off; // nothing to do
+    if (get) {
+      switch (dir) {
+        case std::ios_base::beg:
+          new_off = 0;
+          break;
+        case std::ios_base::cur:
+          new_off = this->gptr() - this->eback();
+          break;
+        case std::ios_base::end:
+          new_off = this->egptr() - this->eback();
+          break;
+      }
+      new_off += off;
+      this->setg(this->eback(), this->eback() + new_off, this->egptr());
+    }
+    if (put) {
+      switch (dir) {
+        case std::ios_base::beg:
+          new_off = 0;
+          break;
+        case std::ios_base::cur:
+          new_off = this->pptr() - this->pbase();
+          break;
+        case std::ios_base::end:
+          new_off = this->egptr() - this->pbase();
+          break;
+      }
+      new_off += off;
+      this->setp(this->pbase(), this->epptr());
+      this->pbump(new_off);
+    }
+    return new_off;
+  }
+
+  // -- put area -------------------------------------------------------------
 
   std::streamsize xsputn(const char_type* s, std::streamsize n) override {
     auto available = this->epptr() - this->pptr();
@@ -102,6 +165,8 @@ protected:
     this->pbump(static_cast<int>(actual));
     return actual;
   }
+
+  // -- get area -------------------------------------------------------------
 
   std::streamsize xsgetn(char_type* s, std::streamsize n) override {
     auto available = this->egptr() - this->gptr();
