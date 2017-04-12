@@ -167,6 +167,8 @@ protected:
       return new_off; // nothing to do
     if (get) {
       switch (dir) {
+        default:
+          return pos_type(off_type(-1));
         case std::ios_base::beg:
           new_off = 0;
           break;
@@ -182,6 +184,8 @@ protected:
     }
     if (put) {
       switch (dir) {
+        default:
+          return pos_type(off_type(-1));
         case std::ios_base::beg:
           new_off = 0;
           break;
