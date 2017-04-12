@@ -23,7 +23,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <limits>
 #include <streambuf>
+#include <type_traits>
 #include <vector>
 
 #include "caf/config.hpp"
@@ -31,11 +33,53 @@
 
 namespace caf {
 
+/// The base class for all stream buffer implementations.
+template <class CharT = char, class Traits = std::char_traits<CharT>>
+class stream_buffer : public std::basic_streambuf<CharT, Traits> {
+protected:
+  /// The standard only defines pbump(int), which can overflow on 64-bit
+  /// architectures. All stream buffer implementations should therefore use
+  /// these function instead. For a detailed discussion, see:
+  /// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47921
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 4>::type
+  safe_pbump(std::streamsize n) {
+    while (n > std::numeric_limits<int>::max()) {
+      this->pbump(std::numeric_limits<int>::max());
+      n -= std::numeric_limits<int>::max();
+    }
+    this->pbump(static_cast<int>(n));
+  }
+
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 8>::type
+  safe_pbump(std::streamsize n) {
+    this->pbump(static_cast<int>(n));
+  }
+
+  // As above, but for the get area.
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 4>::type
+  safe_gbump(std::streamsize n) {
+    while (n > std::numeric_limits<int>::max()) {
+      this->gbump(std::numeric_limits<int>::max());
+      n -= std::numeric_limits<int>::max();
+    }
+    this->gbump(static_cast<int>(n));
+  }
+
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 8>::type
+  safe_gbump(std::streamsize n) {
+    this->gbump(static_cast<int>(n));
+  }
+};
+
 /// A streambuffer abstraction over a fixed array of bytes. This streambuffer
 /// cannot overflow/underflow. Once it has reached its end, attempts to read
 /// characters will return `trait_type::eof`.
 template <class CharT = char, class Traits = std::char_traits<CharT>>
-class arraybuf : public std::basic_streambuf<CharT, Traits> {
+class arraybuf : public stream_buffer<CharT, Traits> {
 public:
   using base = std::basic_streambuf<CharT, Traits>;
   using char_type = typename base::char_type;
@@ -108,9 +152,7 @@ protected:
       this->setg(this->eback(), this->eback() + pos, this->egptr());
     if (put) {
       this->setp(this->pbase(), this->epptr());
-      CAF_ASSERT(pos >= std::numeric_limits<int>::min());
-      CAF_ASSERT(pos <= std::numeric_limits<int>::max());
-      this->pbump(static_cast<int>(pos));
+      this->safe_pbump(pos);
     }
     return pos;
   }
@@ -152,9 +194,7 @@ protected:
       }
       new_off += off;
       this->setp(this->pbase(), this->epptr());
-      CAF_ASSERT(new_off >= std::numeric_limits<int>::min());
-      CAF_ASSERT(new_off <= std::numeric_limits<int>::max());
-      this->pbump(static_cast<int>(new_off));
+      this->safe_pbump(new_off);
     }
     return new_off;
   }
@@ -166,7 +206,7 @@ protected:
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(this->pptr(), s,
                 static_cast<size_t>(actual) * sizeof(char_type));
-    this->pbump(static_cast<int>(actual));
+    this->safe_pbump(actual);
     return actual;
   }
 
@@ -177,7 +217,7 @@ protected:
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
                 static_cast<size_t>(actual) * sizeof(char_type));
-    this->gbump(static_cast<int>(actual));
+    this->safe_gbump(actual);
     return actual;
   }
 };
@@ -186,7 +226,7 @@ protected:
 /// reading in the same style as `arraybuf`, but is unbounded for output.
 template <class Container>
 class containerbuf
-  : public std::basic_streambuf<
+  : public stream_buffer<
       typename Container::value_type,
       std::char_traits<typename Container::value_type>
     > {
@@ -251,7 +291,7 @@ protected:
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
                 static_cast<size_t>(actual) * sizeof(char_type));
-    this->gbump(static_cast<int>(actual));
+    this->safe_gbump(actual);
     return actual;
   }
 
