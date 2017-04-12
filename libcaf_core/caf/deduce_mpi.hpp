@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/param.hpp"
 #include "caf/expected.hpp"
 #include "caf/optional.hpp"
 #include "caf/replies_to.hpp"
@@ -41,42 +42,42 @@ struct dmi;
 // case #1: function returning a single value
 template <class Y, class... Xs>
 struct dmi<Y (Xs...)> {
-  using type = typed_mpi<type_list<typename std::decay<Xs>::type...>,
+  using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Y>>>;
 };
 
 // case #2a: function returning a result<...>
 template <class... Ys, class... Xs>
 struct dmi<result<Ys...> (Xs...)> {
-  using type = typed_mpi<type_list<typename std::decay<Xs>::type...>,
+  using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
 // case #2b: function returning a stream_result<...>
 template <class Y, class... Xs>
 struct dmi<stream_result<Y> (Xs...)> {
-  using type = typed_mpi<type_list<typename std::decay<Xs>::type...>,
+  using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Y>>>;
 };
 
 // case #2c: function returning a std::tuple<...>
 template <class... Ys, class... Xs>
 struct dmi<std::tuple<Ys...> (Xs...)> {
-  using type = typed_mpi<type_list<typename std::decay<Xs>::type...>,
+  using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
 // case #2d: function returning a std::tuple<...>
 template <class... Ys, class... Xs>
 struct dmi<delegated<Ys...> (Xs...)> {
-  using type = typed_mpi<type_list<typename std::decay<Xs>::type...>,
+  using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
 // case #2d: function returning a typed_response_promise<...>
 template <class... Ys, class... Xs>
 struct dmi<typed_response_promise<Ys...> (Xs...)> {
-  using type = typed_mpi<type_list<typename std::decay<Xs>::type...>,
+  using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
@@ -92,7 +93,7 @@ struct dmi<expected<Y> (Xs...)> : dmi<Y (Xs...)> {};
 template <class Y, class... Ys, class... Xs>
 struct dmi<annotated_stream<Y, Ys...> (Xs...)> : dmi<Y (Xs...)> {
   using type =
-    typed_mpi<type_list<typename std::decay<Xs>::type...>,
+    typed_mpi<type_list<typename param_decay<Xs>::type...>,
               output_tuple<stream<Y>, strip_and_convert_t<Ys>...>>;
 };
 
@@ -130,7 +131,7 @@ struct dmfou<trivial_match_case<T>, true> : dmfou<T> {};
 
 /// Deduces the message passing interface from a function object.
 template <class T>
-using deduce_mpi_t = typename detail::dmfou<typename std::decay<T>::type>::type;
+using deduce_mpi_t = typename detail::dmfou<typename param_decay<T>::type>::type;
 
 } // namespace caf
 
