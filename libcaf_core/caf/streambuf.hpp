@@ -108,7 +108,9 @@ protected:
       this->setg(this->eback(), this->eback() + pos, this->egptr());
     if (put) {
       this->setp(this->pbase(), this->epptr());
-      this->pbump(pos);
+      CAF_ASSERT(pos >= std::numeric_limits<int>::min());
+      CAF_ASSERT(pos <= std::numeric_limits<int>::max());
+      this->pbump(static_cast<int>(pos));
     }
     return pos;
   }
@@ -150,7 +152,9 @@ protected:
       }
       new_off += off;
       this->setp(this->pbase(), this->epptr());
-      this->pbump(new_off);
+      CAF_ASSERT(new_off >= std::numeric_limits<int>::min());
+      CAF_ASSERT(new_off <= std::numeric_limits<int>::max());
+      this->pbump(static_cast<int>(new_off));
     }
     return new_off;
   }
