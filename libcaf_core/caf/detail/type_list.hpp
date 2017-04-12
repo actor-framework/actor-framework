@@ -501,7 +501,7 @@ struct tl_binary_forall {
 
 // Uncomment after having switched to C++14
 //template <class ListA, class ListB, template <class, class> class Pred>
-//inline constexpr bool tl_binary_forall_v 
+//inline constexpr bool tl_binary_forall_v
 //  = tl_binary_forall<ListA, ListB, Pred>::value;
 
 /// Tests whether a predicate holds for some of the elements of a list.
@@ -509,6 +509,11 @@ template <class List, template <class> class Pred>
 struct tl_exists {
   static constexpr bool value =
     Pred<tl_head_t<List>>::value || tl_exists<tl_tail_t<List>, Pred>::value;
+};
+
+template <template <class> class Pred>
+struct tl_exists<empty_type_list, Pred> {
+  static constexpr bool value = false;
 };
 
 // Uncomment after having switched to C++14
@@ -733,7 +738,7 @@ struct tl_replace_back<type_list<T>, Back, type_list<Us...>> {
 };
 
 template <class List, class Back, class Intermediate = type_list<>>
-using tl_replace_back_t 
+using tl_replace_back_t
   = typename tl_replace_back<List, Back, Intermediate>::type;
 
 // type at(size_t)
