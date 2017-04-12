@@ -63,23 +63,22 @@ CAF_TEST(unsigned_arraybuf) {
             std::istreambuf_iterator<uint8_t>{},
             std::back_inserter(buf));
   CAF_CHECK_EQUAL(data, buf);
-  /* TODO: fix on MSVC
   // Relative positioning.
-  CAF_CHECK_EQUAL(ab.pubseekoff(2, std::ios::beg, std::ios::in), 2);
+  using pos = arraybuf<uint8_t>::pos_type;
+  CAF_CHECK_EQUAL(ab.pubseekoff(2, std::ios::beg, std::ios::in), pos{2});
   CAF_CHECK_EQUAL(ab.sbumpc(), 0x0c);
   CAF_CHECK_EQUAL(ab.sgetc(), 0x0d);
-  CAF_CHECK_EQUAL(ab.pubseekoff(0, std::ios::cur, std::ios::in), 3);
-  CAF_CHECK_EQUAL(ab.pubseekoff(-2, std::ios::cur, std::ios::in), 1);
+  CAF_CHECK_EQUAL(ab.pubseekoff(0, std::ios::cur, std::ios::in), pos{3});
+  CAF_CHECK_EQUAL(ab.pubseekoff(-2, std::ios::cur, std::ios::in), pos{1});
   CAF_CHECK_EQUAL(ab.sgetc(), 0x0b);
-  CAF_CHECK_EQUAL(ab.pubseekoff(-4, std::ios::end, std::ios::in), 0);
+  CAF_CHECK_EQUAL(ab.pubseekoff(-4, std::ios::end, std::ios::in), pos{0});
   CAF_CHECK_EQUAL(ab.sgetc(), 0x0a);
   // Absolute positioning.
-  CAF_CHECK_EQUAL(ab.pubseekpos(1, std::ios::in), 1);
+  CAF_CHECK_EQUAL(ab.pubseekpos(1, std::ios::in), pos{1});
   CAF_CHECK_EQUAL(ab.sgetc(), 0x0b);
-  CAF_CHECK_EQUAL(ab.pubseekpos(3, std::ios::in), 3);
+  CAF_CHECK_EQUAL(ab.pubseekpos(3, std::ios::in), pos{3});
   CAF_CHECK_EQUAL(ab.sbumpc(), 0x0d);
   CAF_CHECK_EQUAL(ab.in_avail(), 0);
-  */
 }
 
 CAF_TEST(containerbuf) {
