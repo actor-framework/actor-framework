@@ -423,13 +423,14 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     // skip all messages until we receive the currently awaited response
     if (x.mid != pr.first)
       return im_skipped;
-    if (!pr.second(x.content())) {
+    auto f = std::move(pr.second);
+    awaited_responses_.pop_front();
+    if (!f(x.content())) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
-      pr.second(msg);
+      f(msg);
     }
-    awaited_responses_.pop_front();
     return im_success;
   }
   // handle multiplexed responses
