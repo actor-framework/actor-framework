@@ -521,15 +521,6 @@ struct test_coordinator_fixture {
   CAF_MESSAGE("expect" << #types << "." << #fields);                           \
   expect_clause< CAF_EXPAND(CAF_DSL_LIST types) >{sched} . fields
 
-#define expect_on(where, types, fields)                                        \
-  CAF_MESSAGE(#where << ": expect" << #types << "." << #fields);               \
-  expect_clause< CAF_EXPAND(CAF_DSL_LIST types) >{where . sched} . fields
-
 #define disallow(types, fields)                                                \
   CAF_MESSAGE("disallow" << #types << "." << #fields);                         \
   disallow_clause< CAF_EXPAND(CAF_DSL_LIST types) >{sched} . fields
-
-#define disallow_on(where, types, fields)                                      \
-  CAF_MESSAGE(#where << ": disallow" << #types << "." << #fields);             \
-  disallow_clause< CAF_EXPAND(CAF_DSL_LIST types) >{where . sched} . fields
-
