@@ -46,12 +46,12 @@ proxy_registry::~proxy_registry() {
   clear();
 }
 
-size_t proxy_registry::count_proxies(const key_type& node) {
+size_t proxy_registry::count_proxies(const node_id& node) {
   auto i = proxies_.find(node);
   return (i != proxies_.end()) ? i->second.size() : 0;
 }
 
-strong_actor_ptr proxy_registry::get(const key_type& node, actor_id aid) {
+strong_actor_ptr proxy_registry::get(const node_id& node, actor_id aid) {
   auto& submap = proxies_[node];
   auto i = submap.find(aid);
   if (i != submap.end())
@@ -59,7 +59,7 @@ strong_actor_ptr proxy_registry::get(const key_type& node, actor_id aid) {
   return nullptr;
 }
 
-strong_actor_ptr proxy_registry::get_or_put(const key_type& nid, actor_id aid) {
+strong_actor_ptr proxy_registry::get_or_put(const node_id& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
   auto& result = proxies_[nid][aid];
   if (!result)
@@ -67,7 +67,7 @@ strong_actor_ptr proxy_registry::get_or_put(const key_type& nid, actor_id aid) {
   return result;
 }
 
-std::vector<strong_actor_ptr> proxy_registry::get_all(const key_type& node) {
+std::vector<strong_actor_ptr> proxy_registry::get_all(const node_id& node) {
   std::vector<strong_actor_ptr> result;
   auto i = proxies_.find(node);
   if (i != proxies_.end())
@@ -80,7 +80,7 @@ bool proxy_registry::empty() const {
   return proxies_.empty();
 }
 
-void proxy_registry::erase(const key_type& nid) {
+void proxy_registry::erase(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
   auto i = proxies_.find(nid);
   if (i == proxies_.end())
@@ -90,9 +90,9 @@ void proxy_registry::erase(const key_type& nid) {
   proxies_.erase(i);
 }
 
-void proxy_registry::erase(const key_type& inf, actor_id aid, error rsn) {
-  CAF_LOG_TRACE(CAF_ARG(inf) << CAF_ARG(aid));
-  auto i = proxies_.find(inf);
+void proxy_registry::erase(const node_id& nid, actor_id aid, error rsn) {
+  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  auto i = proxies_.find(nid);
   if (i != proxies_.end()) {
     auto& submap = i->second;
     auto j = submap.find(aid);

@@ -37,15 +37,13 @@ namespace caf {
 /// in the same namespace to exchange messages.
 class proxy_registry {
 public:
-  using key_type = node_id;
-
   /// Responsible for creating proxy actors.
   class backend {
   public:
     virtual ~backend();
 
     /// Creates a new proxy instance.
-    virtual strong_actor_ptr make_proxy(key_type, actor_id) = 0;
+    virtual strong_actor_ptr make_proxy(node_id, actor_id) = 0;
 
     virtual execution_unit* registry_context() = 0;
   };
@@ -73,23 +71,23 @@ public:
   using proxy_map = std::map<actor_id, strong_actor_ptr>;
 
   /// Returns the number of proxies for `node`.
-  size_t count_proxies(const key_type& node);
+  size_t count_proxies(const node_id& node);
 
   /// Returns the proxy instance identified by `node` and `aid`.
-  strong_actor_ptr get(const key_type& node, actor_id aid);
+  strong_actor_ptr get(const node_id& node, actor_id aid);
 
   /// Returns the proxy instance identified by `node` and `aid`
   /// or creates a new (default) proxy instance.
-  strong_actor_ptr get_or_put(const key_type& nid, actor_id aid);
+  strong_actor_ptr get_or_put(const node_id& nid, actor_id aid);
 
   /// Returns all known proxies.
-  std::vector<strong_actor_ptr> get_all(const key_type& node);
+  std::vector<strong_actor_ptr> get_all(const node_id& node);
 
   /// Deletes all proxies for `node`.
-  void erase(const key_type& nid);
+  void erase(const node_id& nid);
 
-  /// Deletes the proxy with id `aid` for `node`.
-  void erase(const key_type& inf, actor_id aid,
+  /// Deletes the proxy with id `aid` for `nid`.
+  void erase(const node_id& nid, actor_id aid,
              error rsn = exit_reason::remote_link_unreachable);
 
   /// Queries whether there are any proxies left.
