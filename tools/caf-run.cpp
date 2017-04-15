@@ -238,13 +238,19 @@ void bootstrap(actor_system& system,
   run_ssh(system, wdir, oss.str(), master.host);
 }
 
+#define RETURN_WITH_ERROR(output)                                              \
+  do {                                                                         \
+    ::std::cerr << output << ::std::endl;                                      \
+    return 1;                                                                  \
+  } while (true)
+
 int main(int argc, char** argv) {
   actor_system_config cfg;
   cfg.parse(argc, argv);
   if (cfg.cli_helptext_printed)
     return 0;
   if (cfg.slave_mode)
-    return cerr << "cannot use slave mode in caf-run tool" << endl, 1;
+    RETURN_WITH_ERROR("cannot use slave mode in caf-run tool");
   string hostfile;
   std::unique_ptr<char, void (*)(void*)> pwd{getcwd(nullptr, 0), ::free};
   string wdir;
@@ -253,16 +259,16 @@ int main(int argc, char** argv) {
     {"wdir", wdir}
   });
   if (hostfile.empty())
-    return cerr << "no hostfile specified or hostfile is empty" << endl, 1;
+    RETURN_WITH_ERROR("no hostfile specified or hostfile is empty");
   auto& remainder = res.remainder;
   if (remainder.empty())
-    return cerr << "empty command line" << endl, 1;
+    RETURN_WITH_ERROR("empty command line");
   auto cmd = std::move(remainder.get_mutable_as<std::string>(0));
   vector<string> xs;
   remainder.drop(1).extract([&](string& x) { xs.emplace_back(std::move(x)); });
   auto hosts = read_hostfile(hostfile);
   if (hosts.empty())
-    return cerr << "no valid entry in hostfile" << endl, 1;
+    RETURN_WITH_ERROR("no valid entry in hostfile");
   actor_system system{cfg};
   auto master = hosts.front();
   hosts.erase(hosts.begin());
