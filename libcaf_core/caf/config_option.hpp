@@ -47,9 +47,9 @@ public:
   using config_reader_sink = std::function<void (size_t, config_value&,
                                                  optional<std::ostream&>)>;
 
-  using legal_types = detail::type_list<bool, float, double, std::string, 
-                                        atom_value, int8_t, uint8_t, int16_t, 
-                                        uint16_t, int32_t, uint32_t, int64_t, 
+  using legal_types = detail::type_list<bool, float, double, std::string,
+                                        atom_value, int8_t, uint8_t, int16_t,
+                                        uint16_t, int32_t, uint32_t, int64_t,
                                         uint64_t>;
 
   config_option(const char* cat, const char* nm, const char* expl);
@@ -89,7 +89,7 @@ public:
   public:
     template <class T>
     const char* operator()(const T&) const {
-      static constexpr bool is_int = std::is_integral<T>::value 
+      static constexpr bool is_int = std::is_integral<T>::value
                                      && !std::is_same<bool, T>::value;
       static constexpr std::integral_constant<bool, is_int> tk{};
       static constexpr int index = idx<T>(tk);
@@ -98,13 +98,15 @@ public:
     }
 
   private:
+    // Catches non-integer types.
     template <class T>
-    static constexpr int idx(std::false_type /* is_integer */) {
+    static constexpr int idx(std::false_type) {
       return detail::tl_index_of<legal_types, T>::value;
     }
 
+    // Catches integer types.
     template <class T>
-    static constexpr int idx(std::true_type /* is_integer */) {
+    static constexpr int idx(std::true_type) {
       using squashed = detail::squashed_int_t<T>;
       return detail::tl_index_of<legal_types, squashed>::value;
     }
@@ -117,16 +119,22 @@ protected:
     return true;
   }
 
+  // Catches any integer type that is smaller than int64_t.
   template <class T>
-  static bool assign_config_value(T& x, int64_t& y) {
-    if (y < static_cast<int64_t>(std::numeric_limits<T>::lowest()) 
-        || y > static_cast<int64_t>(std::numeric_limits<T>::max())) 
+  static typename std::enable_if<sizeof(T) < sizeof(int64_t), bool>::type
+  assign_config_value(T& x, int64_t& y) {
+    if (y < static_cast<int64_t>(std::numeric_limits<T>::lowest())
+        || y > static_cast<int64_t>(std::numeric_limits<T>::max()))
       return false;
     x = static_cast<T>(y);
     return true;
   }
 
-  static bool assign_config_value(uint64_t& x, int64_t& y) {
+  // Catches size_t and uint64_t (yes, they differ on some compilers).
+  template <class T>
+  static typename std::enable_if<std::is_unsigned<T>::value
+                                 && sizeof(T) == sizeof(int64_t), bool>::type
+  assign_config_value(T& x, int64_t& y) {
     if (y < 0)
       return false;
     x = static_cast<uint64_t>(y);
@@ -134,7 +142,7 @@ protected:
   }
 
   static bool assign_config_value(float& x, double& y) {
-    if (y < static_cast<double>(std::numeric_limits<float>::lowest()) 
+    if (y < static_cast<double>(std::numeric_limits<float>::lowest())
         || y > static_cast<double>(std::numeric_limits<float>::max()))
       return false;
     x = static_cast<float>(y);
@@ -151,8 +159,9 @@ private:
   char short_name_;
 };
 
-template <class T, bool IsInsertable = detail::can_insert_elements<T>()
-                                       && !std::is_same<T, std::string>::value>
+template <class T,
+          bool IsInsertable = detail::can_insert_elements<T>()
+                              && !std::is_same<T, std::string>::value>
 class config_option_impl : public config_option {
 public:
   config_option_impl(T& ref, const char* ctg, const char* nm, const char* xp)
@@ -192,7 +201,7 @@ public:
           typename std::conditional<
             std::is_floating_point<T>::value,
             double,
-            T 
+            T
             >::type
         >::type;
       if (get<cfg_type>(&x) && assign_config_value(ref_, get<cfg_type>(x)))
