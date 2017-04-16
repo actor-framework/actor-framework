@@ -142,4 +142,9 @@ CAF_TEST(request_atom_constants) {
   );
 }
 
+CAF_TEST(runtime_conversion) {
+  CAF_CHECK_EQUAL(atom("foo"), atom_from_string("foo"));
+  CAF_CHECK_EQUAL(atom(""), atom_from_string("tooManyCharacters"));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
