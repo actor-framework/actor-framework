@@ -654,10 +654,10 @@ void second_pass(blocking_actor* self, const group& grp,
     ++line;
     // increment local time
     auto& st = state(plain_entry.id);
-    // do not produce log output for silent actors but still track messages
+    // do not produce log output for internal actors but still track messages
     // through those actors, because they might be forwarding messages
-    bool silent = drop_hidden_actors && st.eid.hidden;
-    if (!silent)
+    bool internal = drop_hidden_actors && st.eid.hidden;
+    if (!internal)
       st.clock[st.eid.vid] += 1;
     // generate enhanced entry (with incomplete JSON timestamp for now)
     enhanced_log_entry entry{plain_entry, st.eid, st.clock, string{}};
@@ -738,7 +738,7 @@ void second_pass(blocking_actor* self, const group& grp,
     oss << '}';
     entry.json_vstamp = oss.str();
     // print entry to output file
-    if (!silent) {
+    if (!internal) {
       std::lock_guard<std::mutex> guard{out_mtx};
       out << entry << '\n';
     }
@@ -773,7 +773,7 @@ void caf_main(actor_system& sys, const config& cfg) {
   verbosity_level vl;
   switch (cfg.verbosity) {
     case 0:
-      vl = verbosity_level::silent;
+      vl = silent;
       break;
     case 1:
       vl = verbosity_level::informative;
