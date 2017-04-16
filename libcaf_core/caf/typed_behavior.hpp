@@ -25,7 +25,6 @@
 #include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/interface_mismatch.hpp"
-#include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/typed_actor_util.hpp"
 

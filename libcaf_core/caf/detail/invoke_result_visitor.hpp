@@ -31,7 +31,6 @@
 #include "caf/expected.hpp"
 #include "caf/optional.hpp"
 #include "caf/make_message.hpp"
-#include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"

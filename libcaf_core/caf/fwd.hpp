@@ -93,7 +93,6 @@ class proxy_registry;
 class stream_handler;
 class upstream_policy;
 class actor_companion;
-class continue_helper;
 class downstream_path;
 class mailbox_element;
 class message_handler;

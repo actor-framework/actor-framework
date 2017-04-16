@@ -74,8 +74,6 @@
 #include "caf/typed_behavior.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/behavior_policy.hpp"
-#include "caf/continue_helper.hpp"
-#include "caf/mailbox_element.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/response_handle.hpp"

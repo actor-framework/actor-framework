@@ -26,7 +26,6 @@
 #include "caf/catch_all.hpp"
 #include "caf/message_id.hpp"
 #include "caf/typed_behavior.hpp"
-#include "caf/continue_helper.hpp"
 #include "caf/system_messages.hpp"
 
 #include "caf/detail/type_list.hpp"
