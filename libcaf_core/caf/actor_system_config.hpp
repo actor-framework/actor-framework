@@ -59,17 +59,18 @@ public:
 
   using value_factory = std::function<type_erased_value_ptr ()>;
 
-  using value_factory_string_map = std::unordered_map<std::string, value_factory>;
+  using value_factory_string_map = hash_map<std::string, value_factory>;
 
-  using value_factory_rtti_map = std::unordered_map<std::type_index, value_factory>;
+  using value_factory_rtti_map = hash_map<std::type_index, value_factory>;
 
-  using actor_factory_map = std::unordered_map<std::string, actor_factory>;
+  using actor_factory_map = hash_map<std::string, actor_factory>;
 
-  using portable_name_map = std::unordered_map<std::type_index, std::string>;
+  using portable_name_map = hash_map<std::type_index, std::string>;
 
-  using error_renderer = std::function<std::string (uint8_t, atom_value, const message&)>;
+  using error_renderer = std::function<std::string (uint8_t, atom_value,
+                                                    const message&)>;
 
-  using error_renderer_map = std::unordered_map<atom_value, error_renderer>;
+  using error_renderer_map = hash_map<atom_value, error_renderer>;
 
   using option_ptr = std::unique_ptr<config_option>;
 
