@@ -40,30 +40,77 @@
 namespace caf {
 namespace test {
 
-template <class T, class U,
-          typename std::enable_if<std::is_floating_point<T>::value
-                                  || std::is_floating_point<U>::value,
-                                  int>::type = 0>
-bool equal_to(const T& t, const U& u) {
-  auto x = static_cast<long double>(t);
-  auto y = static_cast<long double>(u);
-  auto max = std::max(std::abs(x), std::abs(y));
-  auto dif = std::abs(x - y);
-  return dif <= max * 1e-5l;
-}
+// -- Function objects for implementing CAF_CHECK_* macros ---------------------
 
-template <class T, class U,
-          typename std::enable_if<!std::is_floating_point<T>::value
-                                  && !std::is_floating_point<U>::value,
-                                  int>::type = 0>
-bool equal_to(const T& x, const U& y) {
-  return x == y;
-}
+template <class F>
+struct negated {
+  template <class T, class U>
+  bool operator()(const T& x, const U& y) {
+    F f;
+    return !f(x, y);
+  }
+};
 
-template <class T, class U>
-bool not_equal_to(const T& t, const U& u) {
-  return !equal_to(t, u);
-}
+struct equal_to {
+  template <class T, class U,
+            typename std::enable_if<std::is_floating_point<T>::value
+                                    || std::is_floating_point<U>::value,
+                                    int>::type = 0>
+  bool operator()(const T& t, const U& u) {
+    auto x = static_cast<long double>(t);
+    auto y = static_cast<long double>(u);
+    auto max = std::max(std::abs(x), std::abs(y));
+    auto dif = std::abs(x - y);
+    return dif <= max * 1e-5l;
+  }
+
+  template <class T, class U,
+            typename std::enable_if<!std::is_floating_point<T>::value
+                                    && !std::is_floating_point<U>::value,
+                                    int>::type = 0>
+  bool operator()(const T& x, const U& y) {
+    return x == y;
+  }
+};
+
+// note: we could use negated<equal_to>, but that would give us `!(x == y)`
+// instead of `x != y` and thus messes with coverage testing
+struct not_equal_to {
+  template <class T, class U>
+  bool operator()(const T& x, const U& y) {
+    return x != y;
+  }
+};
+
+struct less_than {
+  template <class T, class U>
+  bool operator()(const T& x, const U& y) {
+    return x < y;
+  }
+};
+
+struct less_than_or_equal {
+  template <class T, class U>
+  bool operator()(const T& x, const U& y) {
+    return x <= y;
+  }
+};
+
+struct greater_than {
+  template <class T, class U>
+  bool operator()(const T& x, const U& y) {
+    return x > y;
+  }
+};
+
+struct greater_than_or_equal {
+  template <class T, class U>
+  bool operator()(const T& x, const U& y) {
+    return x >= y;
+  }
+};
+
+// -- Core components of the unit testing abstraction --------------------------
 
 /// Default test-running function.
 /// This function will be called automatically unless you define
@@ -389,8 +436,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_XSTR(s) CAF_STR(s)
 
-#define CAF_PRED_EXPR(pred, x_expr, y_expr) "("#x_expr") "#pred" ("#y_expr")"
-#define CAF_FUNC_EXPR(func, x_expr, y_expr) #func"("#x_expr", "#y_expr")"
+#define CAF_FUNC_EXPR(func, x_expr, y_expr) #func "(" #x_expr ", " #y_expr ")"
 
 #define CAF_ERROR(msg)                                                         \
   do {                                                                         \
@@ -409,29 +455,18 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     ::caf::test::engine::last_check_line(__LINE__);                            \
   } while(false)
 
-#define CAF_CHECK_PRED(pred, x_expr, y_expr)                                   \
-  do {                                                                         \
-    const auto& x_val___ = x_expr;                                             \
-    const auto& y_val___ = y_expr;                                             \
-    static_cast<void>(::caf::test::detail::check(                              \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
-      CAF_PRED_EXPR(pred, x_expr, y_expr), false,                              \
-      x_val___ pred y_val___, x_val___, y_val___));                            \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while(false)
-
 #define CAF_CHECK_FUNC(func, x_expr, y_expr)                                   \
   do {                                                                         \
+    func comparator;                                                           \
     const auto& x_val___ = x_expr;                                             \
     const auto& y_val___ = y_expr;                                             \
     static_cast<void>(::caf::test::detail::check(                              \
       ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
       CAF_FUNC_EXPR(func, x_expr, y_expr), false,                              \
-      func(x_val___, y_val___), x_val___, y_val___));                          \
+      comparator(x_val___, y_val___), x_val___, y_val___));                    \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while(false)
+  } while (false)
 
 #define CAF_CHECK_FAIL(...)                                                    \
   do {                                                                         \
@@ -460,29 +495,15 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     ::caf::test::engine::last_check_line(__LINE__);                            \
   } while (false)
 
-#define CAF_REQUIRE_PRED(pred, x_expr, y_expr)                                 \
-  do {                                                                         \
-    const auto& x_val___ = x_expr;                                             \
-    const auto& y_val___ = y_expr;                                             \
-    auto CAF_UNIQUE(__result) = ::caf::test::detail::check(                    \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
-      CAF_PRED_EXPR(pred, x_expr, y_expr), false, x_val___ pred y_val___,      \
-      x_val___, y_val___);                                                     \
-    if (!CAF_UNIQUE(__result))                                                 \
-      ::caf::test::detail::requirement_failed(                                 \
-        CAF_PRED_EXPR(pred, x_expr, y_expr));                                  \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while (false)
-
 #define CAF_REQUIRE_FUNC(func, x_expr, y_expr)                                 \
   do {                                                                         \
+    func comparator;                                                           \
     const auto& x_val___ = x_expr;                                             \
     const auto& y_val___ = y_expr;                                             \
     auto CAF_UNIQUE(__result) = ::caf::test::detail::check(                    \
       ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
-      CAF_FUNC_EXPR(func, x_expr, y_expr), false, func(x_val___, y_val___),    \
-      x_val___, y_val___);                                                     \
+      CAF_FUNC_EXPR(func, x_expr, y_expr), false,                              \
+      comparator(x_val___, y_val___), x_val___, y_val___);                     \
     if (!CAF_UNIQUE(__result))                                                 \
       ::caf::test::detail::requirement_failed(                                 \
         CAF_FUNC_EXPR(func, x_expr, y_expr));                                  \
@@ -506,22 +527,73 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_TEST_FIXTURE_SCOPE_END()                                           \
   } // namespace <scope_name>
 
-// check predicate family
-#define CAF_CHECK_EQUAL(x, y)         CAF_CHECK_FUNC(::caf::test::equal_to, x, y)
-#define CAF_CHECK_NOT_EQUAL(x, y)     CAF_CHECK_FUNC(::caf::test::not_equal_to, x, y)
-#define CAF_CHECK_LESS(x, y)          CAF_CHECK_PRED(< , x, y)
-#define CAF_CHECK_LESS_EQUAL(x, y)    CAF_CHECK_PRED(<=, x, y)
-#define CAF_CHECK_GREATER(x, y)       CAF_CHECK_PRED(> , x, y)
-#define CAF_CHECK_GREATER_EQUAL(x, y) CAF_CHECK_PRED(>=, x, y)
-
-// require predicate family
-#define CAF_REQUIRE_EQUAL(x, y)         CAF_REQUIRE_FUNC(::caf::test::equal_to, x, y)
-#define CAF_REQUIRE_NOT_EQUAL(x, y)     CAF_REQUIRE_FUNC(::caf::test::not_equal_to, x, y)
-#define CAF_REQUIRE_LESS(x, y)          CAF_REQUIRE_PRED(< , x, y)
-#define CAF_REQUIRE_LESS_EQUAL(x, y)    CAF_REQUIRE_PRED(<=, x, y)
-#define CAF_REQUIRE_GREATER(x, y)       CAF_REQUIRE_PRED(> , x, y)
-#define CAF_REQUIRE_GREATER_EQUAL(x, y) CAF_REQUIRE_PRED(>=, x, y)
+// -- Convenience macros -------------------------------------------------------
 
 #define CAF_MESSAGE(msg) CAF_TEST_PRINT_VERBOSE(msg)
+
+// -- CAF_CHECK* predicate family ----------------------------------------------
+
+#define CAF_CHECK_EQUAL(x, y)                                                  \
+  CAF_CHECK_FUNC(::caf::test::equal_to, x, y)
+
+#define CAF_CHECK_NOT_EQUAL(x, y)                                              \
+  CAF_CHECK_FUNC(::caf::test::not_equal_to, x, y)
+
+#define CAF_CHECK_LESS(x, y)                                                   \
+  CAF_CHECK_FUNC(::caf::test::less_than, x, y)
+
+#define CAF_CHECK_NOT_LESS(x, y)                                               \
+  CAF_CHECK_FUNC(::caf::test::negated<::caf::test::less_than>, x, y)
+
+#define CAF_CHECK_LESS_OR_EQUAL(x, y)                                          \
+  CAF_CHECK_FUNC(::caf::test::less_than_or_equal, x, y)
+
+#define CAF_CHECK_NOT_LESS_OR_EQUAL(x, y)                                      \
+  CAF_CHECK_FUNC(::caf::test::negated<::caf::test::less_than_or_equal>, x, y)
+
+#define CAF_CHECK_GREATER(x, y)                                                \
+  CAF_CHECK_FUNC(::caf::test::greater_than, x, y)
+
+#define CAF_CHECK_NOT_GREATER(x, y)                                            \
+  CAF_CHECK_FUNC(::caf::test::negated<::caf::test::greater_than>, x, y)
+
+#define CAF_CHECK_GREATER_OR_EQUAL(x, y)                                       \
+  CAF_CHECK_FUNC(::caf::test::greater_than_or_equal, x, y)
+
+#define CAF_CHECK_NOT_GREATER_OR_EQUAL(x, y)                                   \
+  CAF_CHECK_FUNC(::caf::test::negated<::caf::test::greater_than_or_equal>, x, y)
+
+// -- CAF_CHECK* predicate family ----------------------------------------------
+
+#define CAF_REQUIRE_EQUAL(x, y)                                                \
+  CAF_REQUIRE_FUNC(::caf::test::equal_to, x, y)
+
+#define CAF_REQUIRE_NOT_EQUAL(x, y)                                            \
+  CAF_REQUIRE_FUNC(::caf::test::not_equal_to, x, y)
+
+#define CAF_REQUIRE_LESS(x, y)                                                 \
+  CAF_REQUIRE_FUNC(::caf::test::less_than, x, y)
+
+#define CAF_REQUIRE_NOT_LESS(x, y)                                             \
+  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::less_than>, x, y)
+
+#define CAF_REQUIRE_LESS_OR_EQUAL(x, y)                                        \
+  CAF_REQUIRE_FUNC(::caf::test::less_than_or_equal, x, y)
+
+#define CAF_REQUIRE_NOT_LESS_OR_EQUAL(x, y)                                    \
+  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::less_than_or_equal>, x, y)
+
+#define CAF_REQUIRE_GREATER(x, y)                                              \
+  CAF_REQUIRE_FUNC(::caf::test::greater_than, x, y)
+
+#define CAF_REQUIRE_NOT_GREATER(x, y)                                          \
+  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::greater_than>, x, y)
+
+#define CAF_REQUIRE_GREATER_OR_EQUAL(x, y)                                     \
+  CAF_REQUIRE_FUNC(::caf::test::greater_than_or_equal, x, y)
+
+#define CAF_REQUIRE_NOT_GREATER_OR_EQUAL(x, y)                                 \
+  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::greater_than_or_equal>,   \
+                   x, y)
 
 #endif // CAF_TEST_UNIT_TEST_HPP
