@@ -37,6 +37,7 @@
 #include "caf/actor_config.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/group_manager.hpp"
+#include "caf/is_typed_actor.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/string_algorithms.hpp"
@@ -204,15 +205,9 @@ public:
   /// A message passing interface (MPI) in run-time checkable representation.
   using mpi = std::set<std::string>;
 
-  inline mpi message_types(detail::type_list<scoped_actor>) const {
-    return mpi{};
-  }
-
-  inline mpi message_types(detail::type_list<actor>) const {
-    return mpi{};
-  }
-
-  inline mpi message_types(detail::type_list<strong_actor_ptr>) const {
+  template <class T,
+            class E = typename std::enable_if<!is_typed_actor<T>::value>::type>
+  mpi message_types(detail::type_list<T>) const {
     return mpi{};
   }
 
@@ -223,13 +218,11 @@ public:
     return result;
   }
 
-  inline mpi message_types(const actor&) const {
-    return mpi{};
-  }
-
-  template <class... Ts>
-  mpi message_types(const typed_actor<Ts...>&) const {
-    detail::type_list<typed_actor<Ts...>> token;
+  template <class T,
+            class E =
+              typename std::enable_if<!detail::is_type_list<T>::value>::type>
+  mpi message_types(const T&) const {
+    detail::type_list<T> token;
     return message_types(token);
   }
 
