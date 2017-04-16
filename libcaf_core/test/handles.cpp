@@ -31,13 +31,13 @@ using namespace caf;
 
 namespace {
 
-// Simple interface for testee actors.
-using testee_actor = typed_actor<replies_to<int>::with<int>>;
+// Simple int32_terface for testee actors.
+using testee_actor = typed_actor<replies_to<int32_t>::with<int32_t>>;
 
 // Dynamically typed testee.
 behavior dt_testee() {
   return {
-    [](int x) {
+    [](int32_t x) {
       return x * x;
     }
   };
@@ -46,7 +46,7 @@ behavior dt_testee() {
 // Statically typed testee.
 testee_actor::behavior_type st_testee() {
   return {
-    [](int x) {
+    [](int32_t x) {
       return x * x;
     }
   };
@@ -272,6 +272,21 @@ CAF_TEST(ordering) {
   CAF_CHECK_NOT_LESS(a2.st, a1.wh);
   CAF_CHECK_NOT_LESS(a2.st, a1.dt);
   CAF_CHECK_NOT_LESS(a2.st, a1.st);
+}
+
+CAF_TEST(string_representation) {
+  auto s1 = a0.wh;
+  auto s2 = a0.dt;
+  auto s3 = a0.st;
+  CAF_CHECK_EQUAL(s1, s2);
+  CAF_CHECK_EQUAL(s2, s3);
+}
+
+CAF_TEST(mpi_string_representation) {
+  CAF_CHECK(sys.message_types(a0.dt).empty());
+  std::set<std::string> st_expected{"caf::replies_to<@i32>::with<@i32>"};
+  CAF_CHECK_EQUAL(st_expected, sys.message_types(a0.st));
+  CAF_CHECK_EQUAL(st_expected, sys.message_types<testee_actor>());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
