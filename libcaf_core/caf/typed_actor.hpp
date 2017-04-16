@@ -22,12 +22,12 @@
 
 #include <cstddef>
 
-#include "caf/intrusive_ptr.hpp"
-
+#include "caf/actor.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/composed_type.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/stateful_actor.hpp"
@@ -56,6 +56,7 @@ class typed_broker;
 ///              parameter pack.
 template <class... Sigs>
 class typed_actor : detail::comparable<typed_actor<Sigs...>>,
+                    detail::comparable<typed_actor<Sigs...>, actor>,
                     detail::comparable<typed_actor<Sigs...>, actor_addr>,
                     detail::comparable<typed_actor<Sigs...>, strong_actor_ptr> {
  public:
@@ -230,6 +231,10 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   intptr_t compare(const typed_actor& x) const noexcept {
     return actor_addr::compare(get(), x.get());
+  }
+
+  intptr_t compare(const actor& x) const noexcept {
+    return actor_addr::compare(get(), actor_cast<actor_control_block*>(x));
   }
 
   intptr_t compare(const actor_addr& x) const noexcept {
