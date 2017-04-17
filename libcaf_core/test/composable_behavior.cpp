@@ -164,12 +164,16 @@ using ping_atom = atom_constant<atom("ping")>;
 using pong_atom = atom_constant<atom("pong")>;
 
 // "base" interface
-using named_actor = typed_actor<replies_to<get_name_atom>::with<counting_string>,
-                                replies_to<ping_atom>::with<pong_atom>>;
+using named_actor =
+  typed_actor<replies_to<get_name_atom>::with<counting_string>,
+              replies_to<ping_atom>::with<pong_atom>>;
 
 // a simple dictionary
-using dict = named_actor::extend<replies_to<get_atom, counting_string>::with<counting_string>,
-                                 replies_to<put_atom, counting_string, counting_string>::with<void>>;
+using dict =
+  named_actor::extend<replies_to<get_atom, counting_string>
+                      ::with<counting_string>,
+                      replies_to<put_atom, counting_string, counting_string>
+                      ::with<void>>;
 
 class dict_state : public composable_behavior<dict> {
 public:
@@ -181,7 +185,8 @@ public:
     return pong_atom::value;
   }
 
-  result<counting_string> operator()(get_atom, param<counting_string> key) override {
+  result<counting_string> operator()(get_atom,
+                                     param<counting_string> key) override {
     auto i = values_.find(key.get());
     if (i == values_.end())
       return "";
@@ -351,3 +356,15 @@ CAF_TEST(delayed_sends) {
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST(dynamic_spawning) {
+  using impl = composable_behavior_based_actor<foo_actor_state>;
+  actor_system_config cfg;
+  cfg.add_actor_type<impl>("foo_actor");
+  actor_system sys{cfg};
+  auto sr = sys.spawn<foo_actor>("foo_actor", make_message());
+  CAF_REQUIRE(sr);
+  auto f1 = make_function_view(std::move(*sr));
+  CAF_CHECK_EQUAL(f1(1, 2, 4), 7);
+  CAF_CHECK_EQUAL(f1(42.0), std::make_tuple(42.0, 42.0));
+}
