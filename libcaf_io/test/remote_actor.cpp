@@ -82,32 +82,25 @@ behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
   };
 }
 
-std::string to_string(const std::vector<int>& vec) {
-  std::ostringstream os;
-  for (size_t i = 0; i + 1 < vec.size(); ++i)
-    os << vec[i] << ", ";
-  os << vec.back();
-  return os.str();
-}
-
 behavior make_sort_behavior() {
   return {
     [](std::vector<int>& vec) -> std::vector<int> {
-      CAF_MESSAGE("sorter received: " << to_string(vec));
+      CAF_MESSAGE("sorter received: " << deep_to_string(vec));
       std::sort(vec.begin(), vec.end());
-      CAF_MESSAGE("sorter sent: " << to_string(vec));
+      CAF_MESSAGE("sorter sent: " << deep_to_string(vec));
       return std::move(vec);
     }
   };
 }
 
-behavior make_sort_requester_behavior(event_based_actor* self, const actor& sorter) {
+behavior make_sort_requester_behavior(event_based_actor* self,
+                                      const actor& sorter) {
   self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
   return {
     [=](const std::vector<int>& vec) {
-      CAF_MESSAGE("sort requester received: " << to_string(vec));
-      for (size_t i = 1; i < vec.size(); ++i)
-        CAF_CHECK_EQUAL(static_cast<int>(i), vec[i - 1]);
+      CAF_MESSAGE("sort requester received: " << deep_to_string(vec));
+      std::vector<int> expected_vec{1, 2, 3, 4, 5};
+      CAF_CHECK_EQUAL(vec, expected_vec);
       self->send_exit(sorter, exit_reason::user_shutdown);
       self->quit();
     }
