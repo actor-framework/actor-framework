@@ -389,23 +389,8 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case make_type_token<stream_msg>(): {
-      auto& sm = content.get_mutable_as<stream_msg>(0);
-      auto e = streams_.end();
-      stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e};
-      auto res = apply_visitor(f, sm.content);
-      auto i = res.second;
-      if (res.first) {
-        if (i != e) {
-          i->second->abort(current_sender(), std::move(res.first));
-          streams_.erase(i);
-        }
-      } else if (i != e) {
-        if (i->second->done()) {
-          streams_.erase(i);
-          if (streams_.empty() && !has_behavior())
-            quit(exit_reason::normal);
-        }
-      }
+      auto& bs = bhvr_stack();
+      handle_stream_msg(x, bs.empty() ? nullptr : &bs.back());
       return message_category::internal;
     }
     default:
@@ -417,15 +402,34 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
   CAF_LOG_RECEIVE_EVENT(current_element_);
-  // short-circuit awaited responses
+  // Helper function for dispatching a message to a response handler.
+  using ptr_t = scheduled_actor*;
+  using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
+  auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
+    return f(in.content()) != none;
+  };
+  auto stream_invoke = [](ptr_t p, behavior& f, mailbox_element& in) -> bool {
+    // The only legal stream message in a response is `stream_open`.
+    auto& var = in.content().get_as<stream_msg>(0).content;
+    if (holds_alternative<stream_msg::open>(var))
+      return p->handle_stream_msg(in, &f);
+    return false;
+  };
+  auto select_invoke_fun = [&]() -> fun_t {
+    if (x.content().type_token() != make_type_token<stream_msg>())
+      return ordinary_invoke;
+    return stream_invoke;
+  };
+  // Short-circuit awaited responses.
   if (!awaited_responses_.empty()) {
+    auto invoke = select_invoke_fun();
     auto& pr = awaited_responses_.front();
     // skip all messages until we receive the currently awaited response
     if (x.mid != pr.first)
       return im_skipped;
     auto f = std::move(pr.second);
     awaited_responses_.pop_front();
-    if (!f(x.content())) {
+    if (!invoke(this, f, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
@@ -433,13 +437,14 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     }
     return im_success;
   }
-  // handle multiplexed responses
+  // Handle multiplexed responses.
   if (x.mid.is_response()) {
+    auto invoke = select_invoke_fun();
     auto mrh = multiplexed_responses_.find(x.mid);
     // neither awaited nor multiplexed, probably an expired timeout
     if (mrh == multiplexed_responses_.end())
       return im_dropped;
-    if (!mrh->second(x.content())) {
+    if (!invoke(this, mrh->second, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
@@ -448,7 +453,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     multiplexed_responses_.erase(mrh);
     return im_success;
   }
-  // dispatch on the content of x
+  // Dispatch on the content of x.
   switch (categorize(x)) {
     case message_category::expired_timeout:
       CAF_LOG_DEBUG("dropped expired timeout message");
@@ -504,7 +509,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       return !skipped ? im_success : im_skipped;
     }
   }
-  // should be unreachable
+  // Unreachable.
   CAF_CRITICAL("invalid message type");
 }
 
@@ -641,6 +646,30 @@ bool scheduled_actor::finalize() {
   bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
   return true;
+}
+
+bool scheduled_actor::handle_stream_msg(mailbox_element& x,
+                                        behavior* active_behavior) {
+  CAF_ASSERT(x.content().match_elements<stream_msg>());
+  auto& sm = x.content().get_mutable_as<stream_msg>(0);
+  auto e = streams_.end();
+  stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e, active_behavior};
+  auto res = apply_visitor(f, sm.content);
+  auto success = (res.first == none);
+  auto i = res.second;
+  if (!success) {
+    if (i != e) {
+      i->second->abort(current_sender(), std::move(res.first));
+      streams_.erase(i);
+    }
+  } else if (i != e) {
+    if (i->second->done()) {
+      streams_.erase(i);
+      if (streams_.empty() && !has_behavior())
+        quit(exit_reason::normal);
+    }
+  }
+  return success;
 }
 
 } // namespace caf

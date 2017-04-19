@@ -26,37 +26,39 @@
 namespace caf {
 
 stream_msg_visitor::stream_msg_visitor(scheduled_actor* self, stream_id& sid,
-                                       iterator i, iterator last)
+                                       iterator i, iterator last,
+                                       behavior* bhvr)
     : self_(self),
       sid_(sid),
       i_(i),
-      e_(last) {
+      e_(last),
+      bhvr_(bhvr) {
   // nop
 }
 
 auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_ASSERT(self_->current_mailbox_element() != nullptr);
+  // Make sure to not add an actor twice.
   if (i_ != e_)
     return {sec::downstream_already_exists, e_};
   auto& predecessor = x.prev_stage;
+  // Convenience function for aborting the stream on error.
   auto fail = [&](error reason) -> result_type {
     unsafe_send_as(self_, predecessor, make<stream_msg::abort>(sid_, reason));
     auto rp = self_->make_response_promise();
     rp.deliver(reason);
     return {std::move(reason), e_};
   };
+  // Sanity checks.
+  if (bhvr_ == nullptr)
+    return fail(sec::stream_init_failed);
   if (!predecessor) {
     CAF_LOG_WARNING("received stream_msg::open with empty prev_stage");
     return fail(sec::invalid_upstream);
   }
-  auto& bs = self_->bhvr_stack();
-  if (bs.empty()) {
-    CAF_LOG_WARNING("cannot open stream in actor without behavior");
-    return fail(sec::stream_init_failed);
-  }
-  auto bhvr = self_->bhvr_stack().back();
-  auto res = bhvr(x.msg);
+  // Invoke behavior of parent to perform handshake.
+  auto res = (*bhvr_)(x.msg);
   if (!res) {
     CAF_LOG_WARNING("actor did not respond to handshake:" << CAF_ARG(x.msg));
     return fail(sec::stream_init_failed);
@@ -69,10 +71,10 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
     return fail(sec::stream_init_failed);
   }
   auto& handler = i_->second;
-  // store upstream actor
+  // Store upstream actor.
   auto initial_credit = handler->add_upstream(x.prev_stage, sid_, x.priority);
   if (initial_credit) {
-    // send ACK to predecessor
+    // Send ACK to predecessor.
     auto ic = static_cast<int32_t>(*initial_credit);
     unsafe_send_as(self_, predecessor,
                    make_message(make<stream_msg::ack_open>(

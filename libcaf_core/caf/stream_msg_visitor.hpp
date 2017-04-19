@@ -37,7 +37,7 @@ public:
   using result_type = std::pair<error, iterator>;
 
   stream_msg_visitor(scheduled_actor* self, stream_id& sid,
-                     iterator i, iterator last);
+                     iterator i, iterator last, behavior* bhvr);
 
   result_type operator()(stream_msg::open& x);
 
@@ -60,6 +60,7 @@ private:
   stream_id& sid_;
   iterator i_;
   iterator e_;
+  behavior* bhvr_;
 };
 
 } // namespace caf

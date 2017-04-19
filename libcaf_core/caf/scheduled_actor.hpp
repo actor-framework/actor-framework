@@ -650,7 +650,9 @@ protected:
     mptr->mid.mark_as_answered();
   }
 
-  // -- member variables -------------------------------------------------------
+  bool handle_stream_msg(mailbox_element& x, behavior* active_behavior);
+
+  // -- Member Variables -------------------------------------------------------
 
   /// Stores user-defined callbacks for message handling.
   detail::behavior_stack bhvr_stack_;
