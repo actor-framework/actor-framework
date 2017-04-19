@@ -41,6 +41,7 @@
 # include <cerrno>
 # include <netdb.h>
 # include <fcntl.h>
+# include <algorithm>
 # include <sys/types.h>
 # include <arpa/inet.h>
 # include <sys/socket.h>
@@ -279,19 +280,158 @@ namespace network {
 
 // -- Platform-dependent abstraction over epoll() or poll() --------------------
 
-#ifdef CAF_EPOLL_MULTIPLEXER
+#if defined(CAF_KQUEUE_MULTIPLEXER)
+
+  default_multiplexer::default_multiplexer(actor_system* sys)
+      : multiplexer(sys),
+        loopfd_(invalid_native_socket),
+        pipe_reader_(*this) {
+    init();
+    // initialize kqueue
+    loopfd_ = kqueue();
+    if (loopfd_ == -1) {
+      CAF_LOG_ERROR("kqueue: " << strerror(errno));
+      exit(errno);
+    }
+    // add pipe to poll set
+    pipe_ = create_pipe();
+    pipe_reader_.init(pipe_.first);
+    pollset_.emplace_back();
+    auto ke = &pollset_.back();
+    EV_SET(ke, pipe_reader_.fd(), EVFILT_READ, EV_ADD, 0, 0, &pipe_reader_);
+    if (kevent(loopfd_, ke, 1, nullptr, 0, nullptr) < 0) {
+      CAF_LOG_ERROR("kqueue: " << strerror(errno));
+      CAF_CRITICAL("kqueue() failed");
+    }
+    shadow_.fds.push_back(pipe_reader_.fd());
+  }
+
+  void default_multiplexer::run() {
+    CAF_LOG_TRACE("kqueue()-based multiplexer");
+    pollset_.resize(20);
+    while (!shadow_.fds.empty()) {
+      int nev = kevent(loopfd_, shadow_.changes.data(),
+                       static_cast<int>(shadow_.changes.size()),
+                       pollset_.data(), static_cast<int>(pollset_.size()),
+                       nullptr);
+      CAF_LOG_DEBUG("kevent() on " << CAF_ARG(pollset_.size())
+                    << " sockets reported " << CAF_ARG(nev)
+                    << " event(s)");
+      if (nev < 0)
+        switch (errno) {
+          case EINTR:
+            shadow_.changes.clear(); // all changes guaranteed to be applied
+            continue;
+          default:
+            CAF_LOG_ERROR("kevent: " << strerror(errno));
+        }
+      shadow_.changes.clear();
+      auto iter = pollset_.begin();
+      auto last = iter + nev;
+      for (; iter != last; ++iter) {
+        auto fd = static_cast<native_socket>(iter->ident);
+        auto ptr = reinterpret_cast<event_handler*>(iter->udata);
+        CAF_ASSERT(ptr != nullptr);
+        if (iter->flags & EV_ERROR || iter->flags & EV_EOF) {
+          CAF_LOG_DEBUG("error occured on socket:"
+                        << CAF_ARG(fd) << CAF_ARG(iter->data)
+                        << CAF_ARG(strerror(iter->data)));
+          auto i = std::lower_bound(shadow_.fds.begin(), shadow_.fds.end(), fd);
+          if (i != shadow_.fds.end() && *i == fd) {
+            ptr->handle_event(operation::propagate_error);
+            shadow_.fds.erase(i);
+          }
+          // Pending events for the failed handler are no longer relevant.
+          auto e = std::lower_bound(events_.begin(), events_.end(), fd,
+                                    event_less{});
+          while (e != events_.end() && e->fd == fd)
+            e = events_.erase(e);
+        } else if (iter->filter == EVFILT_READ && !ptr->read_channel_closed()) {
+          ptr->handle_event(operation::read);
+        } else if (iter->filter == EVFILT_WRITE) {
+          ptr->handle_event(operation::write);
+        } else {
+          CAF_CRITICAL("unexpected kevent filter");
+        }
+      }
+      // Handle accumulated events.
+      for (auto& me : events_)
+        handle(me);
+      events_.clear();
+    }
+  }
+
+  void default_multiplexer::handle(const default_multiplexer::event& e) {
+    CAF_LOG_TRACE(CAF_ARG(e.fd) << CAF_ARG(e.mask));
+    // ptr is only allowed to nullptr if fd is our pipe
+    // read handle which is only registered for input
+    CAF_ASSERT(e.ptr != nullptr || e.fd == pipe_.first);
+    if (e.ptr != nullptr && e.ptr->eventbf() == e.mask)
+      return;
+    auto old = e.ptr != nullptr ? e.ptr->eventbf() : input_mask;
+    if (e.ptr)
+      e.ptr->eventbf(e.mask);
+    auto kqueue_update = [&](unsigned short flag, short filter) {
+      CAF_ASSERT(flag == EV_ADD || flag == EV_DELETE);
+      CAF_ASSERT(filter == EVFILT_WRITE || filter == EVFILT_READ);
+      struct kevent ke;
+      EV_SET(&ke, e.fd, filter, flag, 0, 0, e.ptr);
+      shadow_.changes.emplace_back(std::move(ke));
+    };
+    if (e.mask == 0) {
+      CAF_LOG_DEBUG("attempt to remove socket" << CAF_ARG(e.fd)
+                    << "from kqueue");
+      if (old & output_mask)
+        kqueue_update(EV_DELETE, EVFILT_WRITE);
+      if (old & input_mask)
+        kqueue_update(EV_DELETE, EVFILT_READ);
+      auto i = std::lower_bound(shadow_.fds.begin(), shadow_.fds.end(), e.fd);
+      if (i != shadow_.fds.end() && *i == e.fd)
+        shadow_.fds.erase(i);
+    } else if (old == 0) {
+      CAF_LOG_DEBUG("attempt to add socket" << CAF_ARG(e.fd) << "to kqueue");
+      if (e.mask & output_mask)
+        kqueue_update(EV_ADD, EVFILT_WRITE);
+      if (e.mask & input_mask)
+        kqueue_update(EV_ADD, EVFILT_READ);
+      auto i = std::lower_bound(shadow_.fds.begin(), shadow_.fds.end(), e.fd);
+      if (i == shadow_.fds.end() || *i != e.fd)
+        shadow_.fds.insert(i, e.fd);
+    } else {
+      CAF_LOG_DEBUG("modify kqueue event mask for socket" << CAF_ARG(e.fd)
+                    << ": " << CAF_ARG(old) << " -> " << CAF_ARG(e.mask));
+      if (!(old & output_mask) && (e.mask & output_mask))
+        kqueue_update(EV_ADD, EVFILT_WRITE);
+      if ((old & output_mask) && !(e.mask & output_mask))
+        kqueue_update(EV_DELETE, EVFILT_WRITE);
+      if (!(old & input_mask) && (e.mask & input_mask))
+        kqueue_update(EV_ADD, EVFILT_READ);
+      if ((old & input_mask) && !(e.mask & input_mask))
+        kqueue_update(EV_DELETE, EVFILT_READ);
+    }
+    if (e.ptr) {
+      auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
+        if ((old & flag) && !(e.mask & flag))
+          e.ptr->removed_from_loop(flag_op);
+      };
+      remove_from_loop_if_needed(input_mask, operation::read);
+      remove_from_loop_if_needed(output_mask, operation::write);
+    }
+  }
+
+#elif defined(CAF_EPOLL_MULTIPLEXER)
 
   // In this implementation, shadow_ is the number of sockets we have
   // registered to epoll.
 
   default_multiplexer::default_multiplexer(actor_system* sys)
       : multiplexer(sys),
-        epollfd_(invalid_native_socket),
+        loopfd_(invalid_native_socket),
         shadow_(1),
         pipe_reader_(*this) {
     init();
-    epollfd_ = epoll_create1(EPOLL_CLOEXEC);
-    if (epollfd_ == -1) {
+    loopfd_ = epoll_create1(EPOLL_CLOEXEC);
+    if (loopfd_ == -1) {
       CAF_LOG_ERROR("epoll_create1: " << strerror(errno));
       exit(errno);
     }
@@ -302,7 +442,7 @@ namespace network {
     epoll_event ee;
     ee.events = input_mask;
     ee.data.ptr = &pipe_reader_;
-    if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, pipe_reader_.fd(), &ee) < 0) {
+    if (epoll_ctl(loopfd_, EPOLL_CTL_ADD, pipe_reader_.fd(), &ee) < 0) {
       CAF_LOG_ERROR("epoll_ctl: " << strerror(errno));
       exit(errno);
     }
@@ -311,7 +451,7 @@ namespace network {
   void default_multiplexer::run() {
     CAF_LOG_TRACE("epoll()-based multiplexer");
     while (shadow_ > 0) {
-      int presult = epoll_wait(epollfd_, pollset_.data(),
+      int presult = epoll_wait(loopfd_, pollset_.data(),
                                static_cast<int>(pollset_.size()), -1);
       CAF_LOG_DEBUG("epoll_wait() on "      << CAF_ARG(shadow_)
                     << " sockets reported " << CAF_ARG(presult)
@@ -375,7 +515,7 @@ namespace network {
                     << ": " << CAF_ARG(old) << " -> " << CAF_ARG(e.mask));
       op = EPOLL_CTL_MOD;
     }
-    if (epoll_ctl(epollfd_, op, e.fd, &ee) < 0) {
+    if (epoll_ctl(loopfd_, op, e.fd, &ee) < 0) {
       switch (last_socket_error()) {
         // supplied file descriptor is already registered
         case EEXIST:
@@ -409,7 +549,7 @@ namespace network {
     }
   }
 
-#else // CAF_EPOLL_MULTIPLEXER
+#else
 
   // Let's be honest: the API of poll() sucks. When dealing with 1000 sockets
   // and the very last socket in your pollset triggers, you have to traverse
@@ -425,7 +565,7 @@ namespace network {
 
   default_multiplexer::default_multiplexer(actor_system* sys)
       : multiplexer(sys),
-        epollfd_(-1),
+        loopfd_(-1),
         pipe_reader_(*this) {
     init();
     // initial setup
@@ -568,7 +708,7 @@ namespace network {
     }
   }
 
-#endif // CAF_EPOLL_MULTIPLEXER
+#endif
 
 // -- Helper functions for defining bitmasks of event handlers -----------------
 
@@ -780,8 +920,8 @@ void default_multiplexer::init() {
 }
 
 default_multiplexer::~default_multiplexer() {
-  if (epollfd_ != invalid_native_socket)
-    closesocket(epollfd_);
+  if (loopfd_ != invalid_native_socket)
+    closesocket(loopfd_);
   // close write handle first
   closesocket(pipe_.second);
   // flush pipe before closing it
