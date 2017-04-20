@@ -15,6 +15,9 @@ if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
   set(CAF_BUILD_STATIC_ONLY yes)
 endif()
 
+# add helper target that simplifies re-running configure
+add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
+
 ################################################################################
 #                        set included flags if needed                          #
 ################################################################################
