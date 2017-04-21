@@ -66,7 +66,7 @@ CAF_TEST(unsigned_arraybuf) {
   // Relative positioning.
   using pos = arraybuf<uint8_t>::pos_type;
   CAF_CHECK_EQUAL(ab.pubseekoff(2, std::ios::beg, std::ios::in), pos{2});
-  CAF_CHECK_EQUAL(ab.sbumpc(), 0x0c);
+  CAF_CHECK_EQUAL(ab.sbumpc(), static_cast<int>(0x0c));
   CAF_CHECK_EQUAL(ab.sgetc(), 0x0d);
   CAF_CHECK_EQUAL(ab.pubseekoff(0, std::ios::cur, std::ios::in), pos{3});
   CAF_CHECK_EQUAL(ab.pubseekoff(-2, std::ios::cur, std::ios::in), pos{1});

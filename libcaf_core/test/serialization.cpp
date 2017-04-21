@@ -465,7 +465,7 @@ CAF_TEST(byte_sequence_optimization) {
 CAF_TEST(long_sequences) {
   std::vector<char> data;
   binary_serializer sink{nullptr, data};
-  size_t n = 12345678900ul;
+  size_t n = 12345678900u;
   sink.begin_sequence(n);
   sink.end_sequence();
   binary_deserializer source{nullptr, data};
