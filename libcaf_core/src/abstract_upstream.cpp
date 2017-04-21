@@ -27,7 +27,8 @@ namespace caf {
 abstract_upstream::abstract_upstream(local_actor* selfptr,
                                      abstract_upstream::policy_ptr p)
     : self_(selfptr),
-      policy_(std::move(p)) {
+      policy_(std::move(p)),
+      continuous_(false) {
   // nop
 }
 

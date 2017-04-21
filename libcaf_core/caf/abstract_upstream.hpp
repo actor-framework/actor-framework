@@ -71,9 +71,22 @@ public:
     return self_;
   }
 
-  /// Queries whether all upstream paths were closed.
+  /// Returns `true` if all upstream paths are closed and this upstream is not
+  /// flagged as `continuous`, `false` otherwise.
   inline bool closed() const {
-    return paths_.empty();
+    return paths_.empty() && !continuous_;
+  }
+
+  /// Returns whether this upstream remains open even if no more upstream path
+  /// exists.
+  inline bool continuous() const {
+    return continuous_;
+  }
+
+  /// Sets whether this upstream remains open even if no more upstream path
+  /// exists.
+  inline void continuous(bool value) {
+    continuous_ = value;
   }
 
   optional<path&> find(const strong_actor_ptr& x) const;
@@ -90,6 +103,10 @@ protected:
 
   /// An assignment vector that's re-used whenever calling the policy.
   upstream_policy::assignment_vec policy_vec_;
+
+  /// Stores whether this stream remains open even if all paths have been
+  /// closed.
+  bool continuous_;
 };
 
 } // namespace caf

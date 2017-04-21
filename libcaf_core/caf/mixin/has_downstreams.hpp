@@ -33,7 +33,7 @@ namespace mixin {
 template <class Base, class Subtype>
 class has_downstreams : public Base {
 public:
-  error add_downstream(strong_actor_ptr& ptr) final {
+  error add_downstream(strong_actor_ptr& ptr) override {
     CAF_LOG_TRACE(CAF_ARG(ptr));
     CAF_ASSERT(ptr != nullptr);
     if (out().add_path(ptr))
@@ -54,7 +54,8 @@ public:
     return sec::invalid_downstream;
   }
 
-  error push(size_t* hint = nullptr) final {
+  error push(size_t* hint = nullptr) override {
+    CAF_LOG_TRACE("");
     if (out().buf_size() > 0)
       out().policy().push(out(), hint);
     return none;

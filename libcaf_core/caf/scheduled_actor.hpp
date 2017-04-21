@@ -86,6 +86,9 @@ public:
   /// A reference-counting pointer to a `stream_handler`.
   using stream_handler_ptr = intrusive_ptr<stream_handler>;
 
+  /// A container for associating stream IDs to handlers.
+  using streams_map = std::unordered_map<stream_id, stream_handler_ptr>;
+
   /// The message ID of an outstanding response with its callback.
   using pending_response = std::pair<const message_id, behavior>;
 
@@ -515,7 +518,7 @@ public:
     return {in.id(), std::move(ptr)};
   }
 
-  inline std::unordered_map<stream_id, stream_handler_ptr>& streams() {
+  inline streams_map& streams() {
     return streams_;
   }
 
@@ -596,6 +599,25 @@ public:
     return bhvr_stack_;
   }
 
+  template <class T, class... Ts>
+  void fwd_stream_handshake(const stream_id& sid, std::tuple<Ts...>& xs) {
+    auto mptr = current_mailbox_element();
+    auto& stages = mptr->stages;
+    CAF_ASSERT(!stages.empty());
+    CAF_ASSERT(stages.back() != nullptr);
+    auto next = std::move(stages.back());
+    stages.pop_back();
+    stream<T> token{sid};
+    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
+    next->enqueue(
+      make_mailbox_element(
+        mptr->sender, mptr->mid, std::move(stages),
+        make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
+                               ctrl(), next, stream_priority::normal, false)),
+      context());
+    mptr->mid.mark_as_answered();
+  }
+
   /// @endcond
 
 protected:
@@ -631,25 +653,6 @@ protected:
       swap(g, f);
   }
 
-  template <class T, class... Ts>
-  void fwd_stream_handshake(const stream_id& sid, std::tuple<Ts...>& xs) {
-    auto mptr = current_mailbox_element();
-    auto& stages = mptr->stages;
-    CAF_ASSERT(!stages.empty());
-    CAF_ASSERT(stages.back() != nullptr);
-    auto next = std::move(stages.back());
-    stages.pop_back();
-    stream<T> token{sid};
-    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
-    next->enqueue(
-      make_mailbox_element(
-        mptr->sender, mptr->mid, std::move(stages),
-        make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
-                               ctrl(), next, stream_priority::normal, false)),
-      context());
-    mptr->mid.mark_as_answered();
-  }
-
   bool handle_stream_msg(mailbox_element& x, behavior* active_behavior);
 
   // -- Member Variables -------------------------------------------------------
@@ -683,7 +686,7 @@ protected:
 
   // TODO: this type is quite heavy in terms of memory, maybe use vector?
   /// Holds state for all streams running through this actor.
-  std::unordered_map<stream_id, stream_handler_ptr> streams_;
+  streams_map streams_;
 
 # ifndef CAF_NO_EXCEPTIONS
   /// Customization point for setting a default exception callback.

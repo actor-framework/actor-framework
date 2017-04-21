@@ -58,6 +58,7 @@ error stream_stage::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
 }
 
 error stream_stage::downstream_demand(strong_actor_ptr& hdl, size_t value) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(value));
   auto path = out_ptr_->find(hdl);
   if (path) {
     path->open_credit += value;
