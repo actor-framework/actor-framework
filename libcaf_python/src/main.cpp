@@ -108,6 +108,7 @@ void register_class(atom_value*, pybind11::module& m,
 }
 
 namespace python {
+namespace {
 
 class binding {
 public:
@@ -490,7 +491,7 @@ pybind11::tuple tuple_from_message(const type_erased_tuple& msg) {
       return {};
     }
     auto obj = kvp->second->to_object(msg, i);
-    PyTuple_SET_ITEM(result.ptr(), static_cast<int>(i), obj.release().ptr());
+    PyTuple_SetItem(result.ptr(), static_cast<int>(i), obj.release().ptr());
   }
   return result;
 }
@@ -573,6 +574,8 @@ CAF_MODULE_INIT_RES caf_module_init() {
   CAF_MODULE_INIT_RET(m.ptr())
 }
 
+
+} // namespace <anonymous> 
 } // namespace python
 } // namespace caf
 
