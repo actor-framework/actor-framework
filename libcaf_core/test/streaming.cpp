@@ -68,7 +68,13 @@ behavior file_reader(stateful_actor<file_reader_state>* self) {
   };
 }
 
-void streamer(event_based_actor* self, const actor& dest) {
+struct streamer_state {
+  static const char* name;
+};
+
+const char* streamer_state::name = "streamer";
+
+void streamer(stateful_actor<streamer_state>* self, const actor& dest) {
   using buf = std::deque<int>;
   self->new_stream(
     // destination of the stream
@@ -130,7 +136,13 @@ behavior filter(stateful_actor<filter_state>* self) {
   };
 }
 
-behavior broken_filter(event_based_actor*) {
+struct broken_filter_state {
+  static const char* name;
+};
+
+const char* broken_filter_state::name = "broken_filter";
+
+behavior broken_filter(stateful_actor<broken_filter_state>*) {
   return {
     [=](stream<int>& x, const std::string& fname) -> stream<int> {
       CAF_CHECK_EQUAL(fname, "test.txt");
@@ -169,7 +181,13 @@ behavior sum_up(stateful_actor<sum_up_state>* self) {
   };
 }
 
-behavior drop_all(event_based_actor* self) {
+struct drop_all_state {
+  static const char* name;
+};
+
+const char* drop_all_state::name = "drop_all";
+
+behavior drop_all(stateful_actor<drop_all_state>* self) {
   return {
     [=](stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
@@ -193,8 +211,15 @@ behavior drop_all(event_based_actor* self) {
   };
 }
 
-void streamer_without_result(event_based_actor* self, const actor& dest) {
-  CAF_LOG_INFO("streamer_without_result initialized");
+struct nores_streamer_state {
+  static const char* name;
+};
+
+const char* nores_streamer_state::name = "nores_streamer";
+
+void nores_streamer(stateful_actor<nores_streamer_state>* self,
+                             const actor& dest) {
+  CAF_LOG_INFO("nores_streamer initialized");
   using buf = std::deque<int>;
   self->new_stream(
     // destination of the stream
@@ -221,6 +246,52 @@ void streamer_without_result(event_based_actor* self, const actor& dest) {
       // nop
     }
   );
+}
+
+struct stream_multiplexer_state {
+  intrusive_ptr<stream_stage> stage;
+  static const char* name;
+};
+
+const char* stream_multiplexer_state::name = "stream_multiplexer";
+
+behavior stream_multiplexer(stateful_actor<stream_multiplexer_state>* self) {
+  auto process = [](unit_t&, downstream<int>& out, int x) {
+    out.push(x);
+  };
+  auto cleanup = [](unit_t&) {
+    // nop
+  };
+  stream_id id{self->ctrl(),
+               self->new_request_id(message_priority::normal).integer_value()};
+  using impl = stream_stage_impl<decltype(process), decltype(cleanup)>;
+  std::unique_ptr<upstream_policy> upolicy{new policy::greedy};
+  std::unique_ptr<downstream_policy> dpolicy{new policy::broadcast};
+  self->state.stage = make_counted<impl>(self, id, std::move(upolicy),
+                                         std::move(dpolicy), process, cleanup);
+  self->state.stage->in().continuous(true);
+  self->streams().emplace(id, self->state.stage);
+  return {
+    [=](join_atom) -> stream<int> {
+      stream<int> invalid;
+      auto& ptr = self->current_sender();
+      if (!ptr)
+        return invalid;
+      auto err = self->state.stage->add_downstream(ptr);
+      if (err)
+        return invalid;
+      auto sid = self->streams().begin()->first;
+      std::tuple<std::string> tup{"test.txt"};
+      self->fwd_stream_handshake<int>(sid, tup);
+      return sid;
+    },
+    [=](const stream<int>& sid, const std::string& fname) {
+      CAF_CHECK_EQUAL(fname, "test.txt");
+      // We only need to add a new stream to the map, the runtime system will
+      // take care of adding a new upstream and sending the handshake.
+      self->streams().emplace(sid.id(), self->state.stage);
+    }
+  };
 }
 
 using fixture = test_coordinator_fixture<>;
@@ -507,7 +578,7 @@ CAF_TEST(stream_without_result) {
   auto sink = sys.spawn(drop_all);
   // run initialization code
   sched.run();
-  auto source = sys.spawn(streamer_without_result, sink);
+  auto source = sys.spawn(nores_streamer, sink);
   // run initialization code
   sched.run_once();
   // source ----(stream_msg::open)----> sink
@@ -529,6 +600,96 @@ CAF_TEST(stream_without_result) {
   expect((stream_msg::close), from(source).to(sink).with());
   // sink ----(result: <empty>)---> source
   expect((void), from(sink).to(source).with());
+}
+
+CAF_TEST(multiplexed_pipeline) {
+  auto multiplexer = sys.spawn(stream_multiplexer);
+  auto joining_drop_all = [=](stateful_actor<drop_all_state>* self) {
+    self->send(self * multiplexer, join_atom::value);
+    return drop_all(self);
+  };
+  sched.run();
+  CAF_MESSAGE("spawn first sink");
+  auto d1 = sys.spawn(joining_drop_all);
+  sched.run_once();
+  expect((atom_value), from(d1).to(multiplexer).with(join_atom::value));
+  expect((stream_msg::open),
+         from(_).to(d1).with(_, multiplexer, _, _, _, false));
+  expect((stream_msg::ack_open),
+         from(d1).to(multiplexer).with(_, 5, _, false));
+  CAF_MESSAGE("spawn second sink");
+  auto d2 = sys.spawn(joining_drop_all);
+  sched.run_once();
+  expect((atom_value), from(d2).to(multiplexer).with(join_atom::value));
+  expect((stream_msg::open),
+         from(_).to(d2).with(_, multiplexer, _, _, _, false));
+  expect((stream_msg::ack_open),
+         from(d2).to(multiplexer).with(_, 5, _, false));
+  CAF_MESSAGE("spawn source");
+  auto src = sys.spawn(nores_streamer, multiplexer);
+  sched.run_once();
+  // Handshake between src and multiplexer.
+  expect((stream_msg::open),
+         from(_).to(multiplexer).with(_, src, _, _, _, false));
+  expect((stream_msg::ack_open),
+         from(multiplexer).to(src).with(_, 5, _, false));
+  // First batch.
+  expect((stream_msg::batch),
+         from(src).to(multiplexer).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d1).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d2).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
+  expect((stream_msg::ack_batch), from(d1).to(multiplexer).with(5, 0));
+  expect((stream_msg::ack_batch), from(d2).to(multiplexer).with(5, 0));
+  expect((stream_msg::ack_batch), from(multiplexer).to(src).with(5, 0));
+  // Second batch.
+  expect((stream_msg::batch),
+         from(src).to(multiplexer).with(4, std::vector<int>{6, 7, 8, 9}, 1));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d1).with(4, std::vector<int>{6, 7, 8, 9}, 1));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d2).with(4, std::vector<int>{6, 7, 8, 9}, 1));
+  expect((stream_msg::ack_batch), from(d1).to(multiplexer).with(4, 1));
+  expect((stream_msg::ack_batch), from(d2).to(multiplexer).with(4, 1));
+  expect((stream_msg::ack_batch), from(multiplexer).to(src).with(4, 1));
+  // Source is done, multiplexer remains open.
+  expect((stream_msg::close), from(src).to(multiplexer).with());
+  CAF_REQUIRE(!sched.has_job());
+  CAF_MESSAGE("spawn a second source");
+  auto src2 = sys.spawn(nores_streamer, multiplexer);
+  sched.run_once();
+  // Handshake between src2 and multiplexer.
+  expect((stream_msg::open),
+         from(_).to(multiplexer).with(_, src2, _, _, _, false));
+  expect((stream_msg::ack_open),
+         from(multiplexer).to(src2).with(_, 5, _, false));
+  // First batch.
+  expect((stream_msg::batch),
+         from(src2).to(multiplexer).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d1).with(5, std::vector<int>{1, 2, 3, 4, 5}, 2));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d2).with(5, std::vector<int>{1, 2, 3, 4, 5}, 2));
+  expect((stream_msg::ack_batch), from(d1).to(multiplexer).with(5, 2));
+  expect((stream_msg::ack_batch), from(d2).to(multiplexer).with(5, 2));
+  expect((stream_msg::ack_batch), from(multiplexer).to(src2).with(5, 0));
+  // Second batch.
+  expect((stream_msg::batch),
+         from(src2).to(multiplexer).with(4, std::vector<int>{6, 7, 8, 9}, 1));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d1).with(4, std::vector<int>{6, 7, 8, 9}, 3));
+  expect((stream_msg::batch),
+         from(multiplexer).to(d2).with(4, std::vector<int>{6, 7, 8, 9}, 3));
+  expect((stream_msg::ack_batch), from(d1).to(multiplexer).with(4, 3));
+  expect((stream_msg::ack_batch), from(d2).to(multiplexer).with(4, 3));
+  expect((stream_msg::ack_batch), from(multiplexer).to(src2).with(4, 1));
+  // Source is done, multiplexer remains open.
+  expect((stream_msg::close), from(src2).to(multiplexer).with());
+  CAF_REQUIRE(!sched.has_job());
+  CAF_MESSAGE("shutdown");
+  anon_send_exit(multiplexer, exit_reason::kill);
+  sched.run();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
