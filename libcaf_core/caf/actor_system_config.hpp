@@ -279,7 +279,10 @@ public:
 
   // -- config parameters of the replication module ----------------------------
 
-  std::string replication_hosts;
+  size_t crdt_flush_buffer_interval_ms;
+  size_t crdt_notify_interval_ms;
+  size_t crdt_state_interval_ms;
+  size_t crdt_ids_interval_ms;
 
   // -- factories --------------------------------------------------------------
 

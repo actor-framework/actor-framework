@@ -120,6 +120,10 @@ actor_system_config::actor_system_config()
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
   middleman_heartbeat_interval = 0;
+  crdt_flush_buffer_interval_ms = 2000;
+  crdt_notify_interval_ms = 500;
+  crdt_state_interval_ms = 120000;
+  crdt_ids_interval_ms = 1000;
   // fill our options vector for creating INI and CLI parsers
   opt_group{options_, "scheduler"}
   .add(scheduler_policy, "policy",
@@ -172,9 +176,15 @@ actor_system_config::actor_system_config()
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
-  opt_group(options_, "replication")
-  .add(replication_hosts, "nodes",
-       "connects to other CAF nodes at init");
+  opt_group(options_, "crdt")
+  .add(crdt_flush_buffer_interval_ms, "flush",
+       "sets the flush interval in milliseconds")
+  .add(crdt_notify_interval_ms, "notify",
+       "sets the notify interval in milliseconds")
+  .add(crdt_state_interval_ms, "state",
+       "state reconciliation in milliseconds")
+  .add(crdt_ids_interval_ms, "ids",
+       "id synchronization in milliseconds");
   // add renderers for default error categories
   error_renderers.emplace(atom("system"), render_sec);
   error_renderers.emplace(atom("exit"), render_exit_reason);
