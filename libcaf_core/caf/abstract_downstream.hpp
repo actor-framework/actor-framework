@@ -63,13 +63,40 @@ public:
 
   virtual ~abstract_downstream();
 
-  /// Returns the total available credit for all sinks in O(n).
+  /// Returns the total available credit for all sinks in `xs` in O(n).
+  template <class PathContainer>
+  static size_t total_credit(const PathContainer& xs) {
+    return fold(xs, 0u,
+                [](size_t x, const typename PathContainer::value_type& y) {
+                  return x + y->open_credit;
+                });
+  }
+
+  /// Returns the total available credit for all sinks in `paths_` in O(n).
   size_t total_credit() const;
 
-  /// Returns the maximum credit of all sinks in O(n).
+  /// Returns the maximum credit of all sinks in `paths_` in O(n).
+  template <class PathContainer>
+  static size_t max_credit(const PathContainer& xs) {
+    return fold(xs, 0,
+                [](size_t x, const typename PathContainer::value_type& y) {
+                  return std::max(x, y->open_credit);
+                });
+  }
+
+  /// Returns the maximum credit of all sinks in `paths_` in O(n).
   size_t max_credit() const;
 
-  /// Returns the minimal credit of all sinks in O(n).
+  /// Returns the minimal credit of all sinks in `xs` in O(n).
+  template <class PathContainer>
+  static size_t min_credit(const PathContainer& xs) {
+    return fold(xs, std::numeric_limits<size_t>::max(),
+                [](size_t x, const typename PathContainer::value_type& y) {
+                  return std::min(x, y->open_credit);
+                });
+  }
+
+  /// Returns the minimal credit of all sinks in `paths_` in O(n).
   size_t min_credit() const;
 
   /// Broadcasts the first `*hint` elements of the buffer on all paths. If
@@ -99,7 +126,19 @@ public:
   /// Sends an abort message to all paths and closes the stream.
   void abort(strong_actor_ptr& cause, const error& reason);
 
-  optional<path&> find(const strong_actor_ptr& ptr) const;
+  template <class PathContainer>
+  static path* find(PathContainer& xs, const strong_actor_ptr& ptr) {
+    auto predicate = [&](const typename PathContainer::value_type& y) {
+      return y->hdl == ptr;
+    };
+    auto e = xs.end();
+    auto i = std::find_if(xs.begin(), e, predicate);
+    if (i != e)
+      return &(*(*i)); // Ugly, but works for both raw and smart pointers.
+    return nullptr;
+  }
+
+  path* find(const strong_actor_ptr& ptr) const;
 
   size_t available_credit() const;
 
@@ -122,15 +161,25 @@ public:
 protected:
   void send_batch(downstream_path& dest, size_t chunk_size, message chunk);
 
+  /// Sorts `xs` in descending order by available credit.
+  template <class PathContainer>
+  static void sort_by_credit(PathContainer& xs) {
+    using value_type = typename PathContainer::value_type;
+    auto cmp = [](const value_type& x, const value_type& y) {
+      return x->open_credit > y->open_credit;
+    };
+    std::sort(xs.begin(), xs.end(), cmp);
+  }
+
   /// Sorts `paths_` in descending order by available credit.
   void sort_by_credit();
 
-  template <class F>
-  size_t fold_paths(size_t init, F f) const {
-    auto b = paths_.begin();
-    auto e = paths_.end();
-    auto g = [&](size_t x, const path_uptr& y) {
-      return f(x, *y);
+  template <class PathContainer, class F>
+  static size_t fold(PathContainer& xs, size_t init, F f) {
+    auto b = xs.begin();
+    auto e = xs.end();
+    auto g = [&](size_t x, const typename PathContainer::value_type& y) {
+      return f(x, y);
     };
     return b != e ? std::accumulate(b, e, init, g) : 0;
   }

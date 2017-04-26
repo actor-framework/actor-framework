@@ -41,20 +41,15 @@ abstract_downstream::~abstract_downstream() {
 }
 
 size_t abstract_downstream::total_credit() const {
-  auto f = [](size_t x, path_cref y) {
-    return x + y.open_credit;
-  };
-  return fold_paths(0, f);
+  return total_credit(paths_);
 }
 
 size_t abstract_downstream::max_credit() const {
-  auto f = [](size_t x, path_cref y) { return std::max(x, y.open_credit); };
-  return fold_paths(0, f);
+  return max_credit(paths_);
 }
 
 size_t abstract_downstream::min_credit() const {
-  auto f = [](size_t x, path_cref y) { return std::min(x, y.open_credit); };
-  return fold_paths(std::numeric_limits<size_t>::max(), f);
+  return min_credit(paths_);
 }
 
 bool abstract_downstream::add_path(strong_actor_ptr ptr) {
@@ -116,16 +111,9 @@ void abstract_downstream::abort(strong_actor_ptr& cause, const error& reason) {
                      make<stream_msg::abort>(this->sid_, reason));
 }
 
-auto abstract_downstream::find(const strong_actor_ptr& ptr) const
--> optional<path&> {
-  auto predicate = [&](const path_uptr& y) {
-    return y->hdl == ptr;
-  };
-  auto e = paths_.end();
-  auto i = std::find_if(paths_.begin(), e, predicate);
-  if (i != e)
-    return *(*i);
-  return none;
+abstract_downstream::path*
+abstract_downstream::find(const strong_actor_ptr& ptr) const {
+  return find(paths_, ptr);
 }
 
 size_t abstract_downstream::available_credit() const {
@@ -143,10 +131,7 @@ void abstract_downstream::send_batch(downstream_path& dest, size_t chunk_size,
 }
 
 void abstract_downstream::sort_by_credit() {
-  auto cmp = [](const path_uptr& x, const path_uptr& y) {
-    return x->open_credit > y->open_credit;
-  };
-  std::sort(paths_.begin(), paths_.end(), cmp);
+  sort_by_credit(paths_);
 }
 
 } // namespace caf

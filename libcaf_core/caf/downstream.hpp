@@ -30,10 +30,13 @@
 namespace caf {
 
 template <class T>
-class downstream final : public abstract_downstream {
+class downstream : public abstract_downstream {
 public:
   /// A chunk of data for sending batches downstream.
-  using chunk = std::vector<T>;
+  using chunk_type = std::vector<T>;
+
+  /// A queue of items for temporary storage before moving them into chunks.
+  using queue_type = std::deque<T>;
 
   downstream(local_actor* ptr, const stream_id& sid,
              typename abstract_downstream::policy_ptr pptr)
@@ -46,11 +49,11 @@ public:
     buf_.emplace_back(std::forward<Ts>(xs)...);
   }
 
-  std::deque<T>& buf() {
+  queue_type& buf() {
     return buf_;
   }
 
-  const std::deque<T>& buf() const {
+  const queue_type& buf() const {
     return buf_;
   }
 
@@ -67,15 +70,14 @@ public:
   }
 
   void anycast(size_t*) override {
-    sort_by_credit();
+    this->sort_by_credit();
     for (auto& x : paths_) {
       auto chunk = get_chunk(x->open_credit);
       auto csize = chunk.size();
       if (csize == 0)
         return;
       x->open_credit -= csize;
-      auto wrapped_chunk = make_message(std::move(chunk));
-      send_batch(*x, csize, std::move(wrapped_chunk));
+      send_batch(*x, csize, std::move(make_message(std::move(chunk))));
     }
   }
 
@@ -83,54 +85,31 @@ public:
     return buf_.size();
   }
 
-private:
-  /// Returns the minimum of `desired` and `buf_.size()`.
-  size_t clamp_chunk_size(size_t desired) const {
-    return std::min(desired, buf_.size());
-  }
-
-  using scratch_space_value = std::tuple<T, bool, atom_value>;
-
-  using scratch_space = std::vector<scratch_space_value>;
-
-  /// Iterator over a `scratch_space` that behaves like a move
-  /// iterator over `vector<T>`.
-  struct scratch_space_move_iter {
-    typename scratch_space::iterator i;
-
-    scratch_space_move_iter& operator++() {
-      ++i;
-      return *this;
-    }
-
-    T&& operator*() {
-      return std::move(std::get<0>(*i));
-    }
-
-    bool operator!=(const scratch_space_move_iter& x) {
-      return i != x.i;
-    }
-  };
-
+protected:
   /// @pre `n <= buf_.size()`
-  chunk get_chunk(size_t n) {
-    chunk xs;
+  static chunk_type get_chunk(queue_type& buf, size_t n) {
+    chunk_type xs;
     if (n > 0) {
       xs.reserve(n);
-      if (n < buf_.size()) {
-        auto first = buf_.begin();
+      if (n < buf.size()) {
+        auto first = buf.begin();
         auto last = first + static_cast<ptrdiff_t>(n);
         std::move(first, last, std::back_inserter(xs));
-        buf_.erase(first, last);
+        buf.erase(first, last);
       } else {
-        std::move(buf_.begin(), buf_.end(), std::back_inserter(xs));
-        buf_.clear();
+        std::move(buf.begin(), buf.end(), std::back_inserter(xs));
+        buf.clear();
       }
     }
     return xs;
   }
 
-  std::deque<T> buf_;
+  /// @pre `n <= buf_.size()`
+  chunk_type get_chunk(size_t n) {
+    return get_chunk(buf_, n);
+  }
+
+  queue_type buf_;
 };
 
 } // namespace caf

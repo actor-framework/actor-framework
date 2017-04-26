@@ -27,7 +27,15 @@
 
 namespace caf {
 
-template <class Fun, class Cleanup>
+struct default_stream_stage_policy {
+  template <class InputType>
+  using upstream_type = upstream<InputType>;
+
+  template <class OutputType>
+  using downstream_type = downstream<OutputType>;
+};
+
+template <class Fun, class Cleanup, class Policy = default_stream_stage_policy>
 class stream_stage_impl : public stream_stage {
 public:
   using trait = stream_stage_trait_t<Fun>;
@@ -37,6 +45,10 @@ public:
   using input_type = typename trait::input;
 
   using output_type = typename trait::output;
+
+  using upstream_type = typename Policy::template upstream_type<output_type>;
+
+  using downstream_type = typename Policy::template downstream_type<output_type>;
 
   stream_stage_impl(local_actor* self,
                     const stream_id& sid,
@@ -86,12 +98,20 @@ public:
     return state_;
   }
 
+  upstream_type& in() {
+    return in_;
+  }
+
+  downstream_type& out() {
+    return out_;
+  }
+
 private:
   state_type state_;
   Fun fun_;
   Cleanup cleanup_;
-  upstream<output_type> in_;
-  downstream<input_type> out_;
+  upstream_type in_;
+  downstream_type out_;
 };
 
 } // namespace caf
