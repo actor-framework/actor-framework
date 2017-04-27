@@ -1316,10 +1316,20 @@ expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
 }
 
 template <int Family>
-expected<void> new_ip_acceptor_impl(native_socket fd, uint16_t port,
-                                        const char* addr) {
+expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
+                                             bool reuse_addr) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
+  CALL_CFUN(fd, cc_valid_socket, "socket", socket(Family, SOCK_STREAM, 0));
+  // sguard closes the socket in case of exception
+  socket_guard sguard{fd};
+  if (reuse_addr) {
+    int on = 1;
+    CALL_CFUN(tmp1, cc_zero, "setsockopt",
+              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                         reinterpret_cast<setsockopt_ptr>(&on),
+                         static_cast<socklen_t>(sizeof(on))));
+  }
   using sockaddr_type =
     typename std::conditional<
       Family == AF_INET,
@@ -1339,38 +1349,39 @@ expected<void> new_ip_acceptor_impl(native_socket fd, uint16_t port,
   CALL_CFUN(res, cc_zero, "bind",
             bind(fd, reinterpret_cast<sockaddr*>(&sa),
                  static_cast<socklen_t>(sizeof(sa))));
-  return unit;
+  return sguard.release();
 }
 
 expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
                                               bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  protocol proto = ipv6;
-  if (addr != nullptr) {
-    auto addrs = interfaces::native_address(addr);
-    if (!addrs)
-      return make_error(sec::cannot_open_port, "Invalid ADDR", addr);
-    proto = addrs->second;
-    CAF_ASSERT(proto == ipv4 || proto == ipv6);
+  auto addrs = interfaces::server_address(port, addr);
+  if (addrs.empty())
+    return make_error(sec::cannot_open_port, "No local interface available",
+                      addr);
+  int fd = invalid_native_socket;
+  for (auto& elem : addrs) {
+    auto addr = elem.first.c_str();
+    auto p = elem.second == ipv4
+           ? new_ip_acceptor_impl<AF_INET>(port, addr, reuse_addr)
+           : new_ip_acceptor_impl<AF_INET6>(port, addr, reuse_addr);
+    if (!p) {
+      CAF_LOG_DEBUG(p.error());
+      continue;
+    }
+    fd = *p;
+    break;
   }
-  CALL_CFUN(fd, cc_valid_socket, "socket",
-            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
-  // sguard closes the socket in case of exception
-  socket_guard sguard(fd);
-  if (reuse_addr) {
-    int on = 1;
-    CALL_CFUN(tmp1, cc_zero, "setsockopt",
-              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-                         reinterpret_cast<setsockopt_ptr>(&on),
-                         static_cast<socklen_t>(sizeof(on))));
+  if (fd == invalid_native_socket) {
+    CAF_LOG_WARNING("could not open tcp socket on:" << CAF_ARG(port)
+                    << CAF_ARG(addr));
+    return make_error(sec::cannot_open_port, "tcp socket creation failed",
+                      port, addr);
   }
-  auto p = proto == ipv4 ? new_ip_acceptor_impl<AF_INET>(fd, port, addr)
-                         : new_ip_acceptor_impl<AF_INET6>(fd, port, addr);
-  if (!p)
-    return std::move(p.error());
+  socket_guard sguard{fd};
   CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
   // ok, no errors so far
-  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(p));
+  CAF_LOG_DEBUG(CAF_ARG(fd));
   return sguard.release();
 }
 
