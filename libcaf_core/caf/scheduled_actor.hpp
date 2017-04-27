@@ -342,7 +342,7 @@ public:
     stream_id sid{ctrl(),
                   new_request_id(message_priority::normal).integer_value()};
     stream<type> token{sid};
-    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
+    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));
     // generate new ID for the final response message and send handshake
     auto res_id = new_request_id(message_priority::normal);
     dest->enqueue(
