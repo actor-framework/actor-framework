@@ -39,7 +39,7 @@
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
-#include "caf/openssl/ssl_session.hpp"
+#include "caf/openssl/session.hpp"
 
 namespace caf {
 namespace openssl {
@@ -50,53 +50,47 @@ using native_socket = io::network::native_socket;
 using default_mpx = io::network::default_multiplexer;
 
 struct ssl_policy {
-  ssl_policy(std::shared_ptr<ssl_session> ssl) : ssl_(ssl) {
+  ssl_policy(intrusive_ptr<session> session) : session_(std::move(session)) {
   }
 
   bool read_some(size_t& result, native_socket fd, void* buf,
                         size_t len) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-
-    return ssl_->read_some(result, fd, buf, len);
+    return session_->read_some(result, fd, buf, len);
   }
 
   bool write_some(size_t& result, native_socket fd, const void* buf,
                          size_t len) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-
-    return ssl_->write_some(result, fd, buf, len);
+    return session_->write_some(result, fd, buf, len);
   }
 
   bool try_accept(native_socket& result, native_socket fd) {
     CAF_LOG_TRACE(CAF_ARG(fd));
-
     sockaddr_storage addr;
     memset(&addr, 0, sizeof(addr));
     socklen_t addrlen = sizeof(addr);
-    result = ::accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
-
+    result = accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
     CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
-
     if (result == io::network::invalid_native_socket) {
       auto err = io::network::last_socket_error();
       if (!io::network::would_block_or_temporarily_unavailable(err))
         return false;
     }
-
-    return ssl_->try_accept(result);
+    return session_->try_accept(result);
   }
 
 private:
-  std::shared_ptr<ssl_session> ssl_;
+  intrusive_ptr<session> session_;
 };
 
 class scribe_impl : public io::scribe {
   public:
     scribe_impl(default_mpx& mpx, native_socket sockfd,
-                std::shared_ptr<ssl_session> ssl)
+                intrusive_ptr<session> session)
         : scribe(io::network::conn_hdl_from_socket(sockfd)),
           launched_(false),
-          stream_(mpx, sockfd, ssl) {
+          stream_(mpx, sockfd, session) {
       // nop
     }
 
@@ -168,10 +162,10 @@ class scribe_impl : public io::scribe {
 class doorman_impl : public io::doorman {
 public:
   doorman_impl(default_mpx& mx, native_socket sockfd,
-               std::shared_ptr<ssl_session> ssl)
+               intrusive_ptr<session> session)
       : doorman(io::network::accept_hdl_from_socket(sockfd)),
-        acceptor_(mx, sockfd, ssl),
-        ssl_(ssl) {
+        acceptor_(mx, sockfd, session),
+        session_(std::move(session)) {
     // nop
   }
 
@@ -185,7 +179,7 @@ public:
        return false;
     auto& dm = acceptor_.backend();
     auto sptr =
-      make_counted<scribe_impl>(dm, acceptor_.accepted_socket(), ssl_);
+      make_counted<scribe_impl>(dm, acceptor_.accepted_socket(), session_);
     auto hdl = sptr->hdl();
     parent()->add_scribe(std::move(sptr));
     return doorman::new_connection(&dm, hdl);
@@ -226,7 +220,7 @@ public:
 
 private:
   io::network::acceptor_impl<ssl_policy> acceptor_;
-  std::shared_ptr<ssl_session> ssl_;
+  intrusive_ptr<session> session_;
 };
 
 class middleman_actor_impl : public io::middleman_actor_impl {
@@ -240,14 +234,11 @@ protected:
   expected<io::scribe_ptr> connect(const std::string& host,
                                    uint16_t port) override {
     auto fd = io::network::new_tcp_connection(host, port);
-
-    if (!fd)
+    if (fd == io::network::invalid_native_socket)
       return std::move(fd.error());
-
-    auto ssl = std::make_shared<ssl_session>(system());
-
-    if (ssl->connect(*fd))
-      return make_counted<scribe_impl>(mpx(), *fd, ssl);
+    auto session = new class session(system());
+    if (session->connect(*fd))
+      return make_counted<scribe_impl>(mpx(), *fd, session);
     else
       return sec::cannot_connect_to_node;
   }
@@ -255,13 +246,10 @@ protected:
   expected<io::doorman_ptr> open(uint16_t port, const char* addr,
                                  bool reuse) override {
     auto fd = io::network::new_tcp_acceptor_impl(port, addr, reuse);
-
-    if (!fd)
+    if (fd == io::network::invalid_native_socket)
       return std::move(fd.error());
-
-    auto ssl = std::make_shared<ssl_session>(system());
-
-    return make_counted<doorman_impl>(mpx(), *fd, ssl);
+    auto session = new class session(system());
+    return make_counted<doorman_impl>(mpx(), *fd, session);
   }
 
 private:

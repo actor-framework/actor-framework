@@ -58,17 +58,14 @@ void manager::stop() {
 
 void manager::init(actor_system_config&) {
   CAF_LOG_TRACE("");
-
   ERR_load_crypto_strings();
   OPENSSL_add_all_algorithms_conf();
   SSL_library_init();
   SSL_load_error_strings();
-
   if (authentication_enabled()) {
-    if (!system().config().openssl_certificate.size())
+    if (system().config().openssl_certificate.size() == 0)
       CAF_RAISE_ERROR("No certificate configured for SSL endpoint");
-
-    if (!system().config().openssl_key.size())
+    if (system().config().openssl_key.size() == 0)
       CAF_RAISE_ERROR("No private key configured for SSL endpoint");
   }
 }
@@ -83,9 +80,9 @@ void* manager::subtype_ptr() {
 
 bool manager::authentication_enabled() {
   auto& cfg = system().config();
-  return cfg.openssl_certificate.size() || cfg.openssl_key.size()
-         || cfg.openssl_passphrase.size() || cfg.openssl_capath.size()
-         || cfg.openssl_cafile.size();
+  return cfg.openssl_certificate.size() > 0 || cfg.openssl_key.size() > 0
+         || cfg.openssl_passphrase.size() > 0 || cfg.openssl_capath.size() > 0
+         || cfg.openssl_cafile.size() > 0;
 }
 
 actor_system::module* manager::make(actor_system& sys, detail::type_list<>) {
