@@ -39,13 +39,13 @@ public:
 
   // -- overrides --------------------------------------------------------------
 
-  bool done() const final;
+  bool done() const override;
 
-  void abort(strong_actor_ptr&, const error&) final;
+  void abort(strong_actor_ptr&, const error&) override;
 
-  error downstream_demand(strong_actor_ptr&, size_t) final;
+  error downstream_demand(strong_actor_ptr&, size_t) override;
 
-  error upstream_batch(strong_actor_ptr&, size_t, message&) final;
+  error upstream_batch(strong_actor_ptr&, size_t, message&) override;
 
   void last_upstream_closed();
 

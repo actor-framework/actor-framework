@@ -37,11 +37,11 @@ public:
 
   ~stream_source() override;
 
-  bool done() const final;
+  bool done() const override;
 
-  error downstream_demand(strong_actor_ptr& hdl, size_t value) final;
+  error downstream_demand(strong_actor_ptr& hdl, size_t value) override;
 
-  void abort(strong_actor_ptr& cause, const error& reason) final;
+  void abort(strong_actor_ptr& cause, const error& reason) override;
 
   inline abstract_downstream& out() {
     return *out_ptr_;
