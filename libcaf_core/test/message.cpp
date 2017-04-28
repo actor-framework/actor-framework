@@ -107,9 +107,9 @@ CAF_TEST(extract2) {
 }
 
 CAF_TEST(extract_opts) {
-  auto f = [](std::vector<std::string> xs) {
+  auto f = [](std::vector<std::string> xs, std::vector<std::string> remainder) {
     std::string filename;
-    size_t log_level;
+    size_t log_level = 0;
     auto res = message_builder(xs.begin(), xs.end()).extract_opts({
       {"version,v", "print version"},
       {"log-level,l", "set the log level", log_level},
@@ -117,16 +117,26 @@ CAF_TEST(extract_opts) {
       {"whatever", "do whatever"}
     });
     CAF_CHECK_EQUAL(res.opts.count("file"), 1u);
-    CAF_CHECK(res.remainder.empty());
+    CAF_CHECK(res.remainder.size() == remainder.size());
+    for (size_t i = 0; i < res.remainder.size() && i < remainder.size(); ++i) {
+      CAF_CHECK(remainder[i] == res.remainder.get_as<string>(i));
+    }
     CAF_CHECK_EQUAL(filename, "hello.txt");
     CAF_CHECK_EQUAL(log_level, 5u);
   };
-  f({"--file=hello.txt", "-l", "5"});
-  f({"-f", "hello.txt", "--log-level=5"});
-  f({"-f", "hello.txt", "-l", "5"});
-  f({"-f", "hello.txt", "-l5"});
-  f({"-fhello.txt", "-l", "5"});
-  f({"-l5", "-fhello.txt"});
+  f({"--file=hello.txt", "-l", "5"}, {});
+  f({"-f", "hello.txt", "--log-level=5"}, {});
+  f({"-f", "hello.txt", "-l", "5"}, {});
+  f({"-f", "hello.txt", "-l5"}, {});
+  f({"-fhello.txt", "-l", "5"}, {});
+  f({"-l5", "-fhello.txt"}, {});
+  f({"--file=hello.txt", "-l", "5", "--", "a"}, {"a"});
+  f({"--file=hello.txt", "-l", "5", "--", "a", "b"}, {"a", "b"});
+  f({"--file=hello.txt", "-l", "5", "--", "aa", "bb"}, {"aa", "bb"});
+  f({"--file=hello.txt", "-l", "5", "--", "-a", "--bb"}, {"-a", "--bb"});
+  f({"--file=hello.txt", "-l", "5", "--", "-a1", "--bb=10"},
+    {"-a1", "--bb=10"});
+  f({"--file=hello.txt", "-l", "5", "--", "-a 1", "--b=10"}, {"-a 1", "--b=10"});
   CAF_MESSAGE("ensure that failed parsing doesn't consume input");
   auto msg = make_message("-f", "42", "-b", "1337");
   auto foo = 0;
