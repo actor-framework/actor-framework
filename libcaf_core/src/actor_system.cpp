@@ -29,6 +29,7 @@
 
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"
+#include "caf/policy/numa_aware_work_stealing.hpp"
 
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/test_coordinator.hpp"
@@ -223,6 +224,7 @@ actor_system::actor_system(actor_system_config& cfg)
   using test = scheduler::test_coordinator;
   using share = scheduler::coordinator<policy::work_sharing>;
   using steal = scheduler::coordinator<policy::work_stealing>;
+  using numa_steal = scheduler::coordinator<policy::numa_aware_work_stealing>;
   using profiled_share = scheduler::profiled_coordinator<policy::profiled<policy::work_sharing>>;
   using profiled_steal = scheduler::profiled_coordinator<policy::profiled<policy::work_stealing>>;
   // set scheduler only if not explicitly loaded by user
@@ -231,28 +233,36 @@ actor_system::actor_system(actor_system_config& cfg)
       stealing          = 0x0001,
       sharing           = 0x0002,
       testing           = 0x0003,
+      numa_stealing     = 0x0004,
       profiled          = 0x0100,
       profiled_stealing = 0x0101,
       profiled_sharing  = 0x0102
     };
-    sched_conf sc = stealing;
-    if (cfg.scheduler_policy == atom("sharing"))
+    sched_conf sc = numa_stealing;
+
+    if (cfg.scheduler_policy == atom("stealing"))
+      sc = stealing;
+    else if (cfg.scheduler_policy == atom("sharing"))
       sc = sharing;
     else if (cfg.scheduler_policy == atom("testing"))
       sc = testing;
-    else if (cfg.scheduler_policy != atom("stealing"))
-      std::cerr << "[WARNING] " << deep_to_string(cfg.scheduler_policy)
-                << " is an unrecognized scheduler pollicy, "
-                   "falling back to 'stealing' (i.e. work-stealing)"
-                << std::endl;
+    else if (cfg.scheduler_policy != atom("numa-steal"))
+      std::cerr
+        << "[WARNING] " << deep_to_string(cfg.scheduler_policy)
+        << " is an unrecognized scheduler pollicy, "
+           "falling back to 'numa-steal' (i.e. numa aware work-stealing)"
+        << std::endl;
     if (cfg.scheduler_enable_profiling)
       sc = static_cast<sched_conf>(sc | profiled);
     switch (sc) {
-      default: // any invalid configuration falls back to work stealing
-        sched.reset(new steal(*this));
+      default: // any invalid configuration falls back to numa work stealing
+        sched.reset(new numa_steal(*this));
         break;
       case sharing:
         sched.reset(new share(*this));
+        break;
+      case stealing:
+        sched.reset(new steal(*this));
         break;
       case profiled_stealing:
         sched.reset(new profiled_steal(*this));

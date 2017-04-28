@@ -25,6 +25,7 @@ endmacro()
 # introductionary applications
 add(. aout)
 add(. hello_world)
+add(. fibonacci)
 
 # basic message passing primitives
 add(message_passing cell)

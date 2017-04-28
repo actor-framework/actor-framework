@@ -277,6 +277,15 @@ endif(CAF_ENABLE_ADDRESS_SANITIZER)
 if(NOT APPLE AND NOT WIN32)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
 endif()
+# load hwloc library if not told otherwise
+if(NOT CAF_NO_HWLOC)
+  find_package(Hwloc)
+  if(Hwloc_FOUND)
+    set(LD_FLAGS ${LD_FLAGS} ${Hwloc_LIBRARIES})
+  else()
+    set(CAF_NO_HWLOC yes)
+  endif()
+endif()
 # -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
 if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
@@ -345,6 +354,7 @@ macro(to_int_value name)
   endif()
 endmacro()
 
+to_int_value(CAF_NO_HWLOC)
 to_int_value(CAF_LOG_LEVEL)
 to_int_value(CAF_NO_EXCEPTIONS)
 to_int_value(CAF_NO_MEM_MANAGEMENT)
@@ -496,6 +506,7 @@ endmacro()
 
 # build core and I/O library
 add_caf_lib(core)
+set(CAF_CORE_LIBRARY libcaf_core_shared)
 add_optional_caf_lib(io)
 
 # build opencl library if not told otherwise and OpenCL package was found
@@ -506,16 +517,6 @@ if(NOT CAF_NO_OPENCL)
     add_optional_caf_binaries(libcaf_opencl/examples)
   else()
     set(CAF_NO_OPENCL yes)
-  endif()
-endif()
-
-# load hwloc library if not told otherwise
-if(NOT CAF_NO_HWLOC)
-  find_package(Hwloc)
-  if(Hwloc_FOUND)
-    add_optional_caf_lib(hwloc)
-  else()
-    set(CAF_NO_HWLOC yes)
   endif()
 endif()
 
