@@ -75,6 +75,7 @@ set (LIBCAF_CORE_SRCS
      src/message_view.cpp
      src/monitorable_actor.cpp
      src/node_id.cpp
+     src/numa_aware_work_stealing.cpp
      src/outgoing_stream_multiplexer.cpp
      src/parse_ini.cpp
      src/private_thread.cpp

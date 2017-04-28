@@ -56,32 +56,42 @@ public:
   };
 
   // The coordinator has only a counter for round-robin enqueue to its workers.
+  template <class Worker>
   struct coordinator_data {
-    inline explicit coordinator_data(scheduler::abstract_coordinator*)
+    explicit coordinator_data(scheduler::abstract_coordinator*)
         : next_worker(0) {
       // nop
     }
 
     std::atomic<size_t> next_worker;
+    std::vector<std::unique_ptr<Worker>> workers;
   };
 
+  static std::vector<poll_strategy>
+  get_poll_strategies(scheduler::abstract_coordinator* p) {
+    auto& x = p->system().config();
+    std::vector<poll_strategy> res {
+      {x.work_stealing_aggressive_poll_attempts, 1,
+       x.work_stealing_aggressive_steal_interval, 
+       usec{0}},
+      {x.work_stealing_moderate_poll_attempts, 1,
+       x.work_stealing_moderate_steal_interval,
+       usec{x.work_stealing_moderate_sleep_duration_us}},
+      {1, 0, x.work_stealing_relaxed_steal_interval, 
+       usec {p->system().config().work_stealing_relaxed_sleep_duration_us}}
+    };
+    return res;
+  }
+
   // Holds job job queue of a worker and a random number generator.
+  template <class Worker>
   struct worker_data {
-    inline explicit worker_data(scheduler::abstract_coordinator* p)
-        : rengine(std::random_device{}()),
+    explicit worker_data(scheduler::abstract_coordinator* p)
+        : rengine(std::random_device{}())
           // no need to worry about wrap-around; if `p->num_workers() < 2`,
           // `uniform` will not be used anyway
-          uniform(0, p->num_workers() - 2),
-          strategies{
-            {p->system().config().work_stealing_aggressive_poll_attempts, 1,
-             p->system().config().work_stealing_aggressive_steal_interval,
-             usec{0}},
-            {p->system().config().work_stealing_moderate_poll_attempts, 1,
-             p->system().config().work_stealing_moderate_steal_interval,
-             usec{p->system().config().work_stealing_moderate_sleep_duration_us}},
-            {1, 0, p->system().config().work_stealing_relaxed_steal_interval,
-            usec{p->system().config().work_stealing_relaxed_sleep_duration_us}}
-          } {
+        , uniform(0, p->num_workers() - 2)
+        ,  strategies(get_poll_strategies(p)) {
       // nop
     }
 
@@ -91,8 +101,24 @@ public:
     // needed to generate pseudo random numbers
     std::default_random_engine rengine;
     std::uniform_int_distribution<size_t> uniform;
-    poll_strategy strategies[3];
+    std::vector<poll_strategy> strategies;
   };
+
+  // Create x workers.
+  template <class Coordinator, class Worker>
+  void create_workers(Coordinator* self, size_t num_workers,
+                                         size_t throughput) {
+    for (size_t i = 0; i < num_workers; ++i) {
+      std::unique_ptr<Worker> worker(new Worker(i, self, throughput));
+      d(self).workers.emplace_back(std::move(worker));
+    }    
+  }
+
+  /// Initalize worker thread.
+  template <class Worker>
+  void init_worker_thread(Worker*) {
+    // nop 
+  }
 
   // Goes on a raid in quest for a shiny new job.
   template <class Worker>
@@ -104,15 +130,16 @@ public:
     }
     // roll the dice to pick a victim other than ourselves
     auto victim = d(self).uniform(d(self).rengine);
+    // in this case the worker id is similar to the worker index
     if (victim == self->id())
       victim = p->num_workers() - 1;
     // steal oldest element from the victim's queue
-    return d(p->worker_by_id(victim)).queue.take_tail();
+    return d(p->worker_by_idx(victim)).queue.take_tail();
   }
 
   template <class Coordinator>
   void central_enqueue(Coordinator* self, resumable* job) {
-    auto w = self->worker_by_id(d(self).next_worker++ % self->num_workers());
+    auto w = self->worker_by_idx(d(self).next_worker++ % self->num_workers());
     w->external_enqueue(job);
   }
 
