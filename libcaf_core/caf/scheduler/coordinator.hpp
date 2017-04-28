@@ -39,16 +39,17 @@ class coordinator : public abstract_coordinator {
 public:
   using super = abstract_coordinator;
 
-  using policy_data = typename Policy::coordinator_data;
+  using worker_type = worker<Policy>;
+  using policy_data = typename Policy::template coordinator_data<worker_type>;
 
   coordinator(actor_system& sys) : super(sys), data_(this) {
     // nop
   }
 
-  using worker_type = worker<Policy>;
-
-  worker_type* worker_by_id(size_t x) {
-    return workers_[x].get();
+  /// return a worker by its vector index 
+  /// (this is not necessarily the id of the worker)
+  worker_type* worker_by_idx(size_t x) {
+    return data_.workers[x].get();
   }
 
   policy_data& data() {
@@ -62,12 +63,9 @@ public:
 protected:
   void start() override {
     // initialize workers vector
-    auto num = num_workers();
-    workers_.reserve(num);
-    for (size_t i = 0; i < num; ++i)
-      workers_.emplace_back(new worker_type(i, this, max_throughput_));
+    policy_.template create_workers<coordinator<Policy>, worker_type>(this, num_workers(), max_throughput_);
     // start all workers now that all workers have been initialized
-    for (auto& w : workers_)
+    for (auto& w : data_.workers)
       w->start();
     // run remaining startup code
     super::start();
@@ -103,7 +101,7 @@ protected:
     std::set<worker_type*> alive_workers;
     auto num = num_workers();
     for (size_t i = 0; i < num; ++i) {
-      alive_workers.insert(worker_by_id(i));
+      alive_workers.insert(worker_by_idx(i));
       sh.ref(); // make sure reference count is high enough
     }
     while (!alive_workers.empty()) {
@@ -120,12 +118,12 @@ protected:
     // shutdown utility actors
     stop_actors();
     // wait until all workers are done
-    for (auto& w : workers_) {
+    for (auto& w : data_.workers) {
       w->get_thread().join();
     }
     // run cleanup code for each resumable
     auto f = &abstract_coordinator::cleanup_and_release;
-    for (auto& w : workers_)
+    for (auto& w : data_.workers)
       policy_.foreach_resumable(w.get(), f);
     policy_.foreach_central_resumable(this, f);
   }
@@ -135,8 +133,6 @@ protected:
   }
 
 private:
-  // usually of size std::thread::hardware_concurrency()
-  std::vector<std::unique_ptr<worker_type>> workers_;
   // policy-specific data
   policy_data data_;
   // instance of our policy object

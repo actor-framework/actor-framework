@@ -33,13 +33,12 @@ void hello_world(event_based_actor* self, const actor& buddy) {
   );
 }
 
-int main() {
-  // our CAF environment
-  actor_system_config cfg;
-  actor_system system{cfg};
+void caf_main(actor_system& system) {
   // create a new actor that calls 'mirror()'
   auto mirror_actor = system.spawn(mirror);
   // create another actor that calls 'hello_world(mirror_actor)';
   system.spawn(hello_world, mirror_actor);
   // system will wait until both actors are destroyed before leaving main
 }
+
+CAF_MAIN()

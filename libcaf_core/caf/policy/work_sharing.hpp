@@ -40,21 +40,40 @@ public:
 
   ~work_sharing() override;
 
+  template <class Worker>
   struct coordinator_data {
-    inline explicit coordinator_data(scheduler::abstract_coordinator*) {
+    explicit coordinator_data(scheduler::abstract_coordinator*) {
       // nop
     }
 
     queue_type queue;
     std::mutex lock;
     std::condition_variable cv;
+    std::vector<std::unique_ptr<Worker>> workers;
   };
 
+  template <class Worker>
   struct worker_data {
-    inline explicit worker_data(scheduler::abstract_coordinator*) {
+    explicit worker_data(scheduler::abstract_coordinator*) {
       // nop
     }
   };
+
+  // Create x workers.
+  template <class Coordinator, class Worker>
+  void create_workers(Coordinator* self, size_t num_workers,
+                                         size_t throughput) {
+    for (size_t i = 0; i < num_workers; ++i) {
+      std::unique_ptr<Worker> worker(new Worker(i, self, throughput));
+      d(self).workers.emplace_back(std::move(worker));
+    }    
+  }
+
+  /// Initalize worker thread.
+  template <class Worker>
+  void init_worker_thread(Worker*) {
+    // nop 
+  }
 
   template <class Coordinator>
   void enqueue(Coordinator* self, resumable* job) {

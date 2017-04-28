@@ -31,14 +31,27 @@ namespace policy {
 class scheduler_policy {
 public:
   /// Policy-specific data fields for the coordinator.
+  template <class Worker>
   struct coordinator_data {
     explicit coordinator_data(scheduler::abstract_coordinator*);
+    /// Stores the pointer of all workes handeld by the scheduler
+    std::vector<std::unique_ptr<Worker>> workers;
   };
 
   /// Policy-specific data fields for the worker.
+  template <class Worker>
   struct worker_data {
     explicit worker_data(scheduler::abstract_coordinator*);
   };
+
+  /// Create x workers.
+  template <class Coordinator, class Worker>
+  void create_workers(Coordinator* self, size_t num_workers,
+                                         size_t throughput);
+
+  /// Initalize worker thread.
+  template <class Worker>
+  void init_worker_thread(Worker* self);
 
   /// Enqueues a new job to coordinator.
   template <class Coordinator>
