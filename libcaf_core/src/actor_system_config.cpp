@@ -112,7 +112,7 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   // (1) hard-coded defaults
-  scheduler_policy = atom("stealing");
+  scheduler_policy = atom("numa-steal");
   scheduler_max_threads = std::max(std::thread::hardware_concurrency(),
                                    unsigned{4});
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
@@ -432,7 +432,7 @@ actor_system_config& actor_system_config::parse(message& args,
                    atom("asio")
 #                  endif
                   }, middleman_network_backend, "middleman.network-backend");
-  verify_atom_opt({atom("stealing"), atom("sharing")},
+  verify_atom_opt({atom("stealing"), atom("sharing"), atom("numa-steal")},
                   scheduler_policy, "scheduler.policy ");
   if (res.opts.count("caf#dump-config") != 0u) {
     cli_helptext_printed = true;
