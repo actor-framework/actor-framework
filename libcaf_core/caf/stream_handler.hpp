@@ -52,10 +52,6 @@ public:
                                    strong_actor_ptr& hdl, size_t initial_demand,
                                    bool redeployable);
 
-  /// Handles ACK message from a downstream actor.
-  /// @pre `hdl != nullptr`
-  virtual error downstream_ack(strong_actor_ptr& hdl, int64_t batch_id);
-
   /// Handles new demand from a downstream actor.
   /// @pre `hdl != nullptr`
   /// @pre `new_demand > 0`
@@ -78,9 +74,6 @@ public:
 
   /// Closes an upstream.
   virtual error close_upstream(strong_actor_ptr& hdl);
-
-  /// Pull up to `n` new data items from upstream by sending a demand message.
-  virtual error pull(size_t n);
 
   // -- handler for stream-wide events -----------------------------------------
 

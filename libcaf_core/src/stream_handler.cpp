@@ -42,12 +42,6 @@ error stream_handler::confirm_downstream(const strong_actor_ptr&,
   return sec::cannot_add_downstream;
 }
 
-error stream_handler::downstream_ack(strong_actor_ptr&, int64_t) {
-  CAF_LOG_ERROR("Received downstream messages in "
-                "a stream marked as no-downstreams");
-  return sec::invalid_downstream;
-}
-
 error stream_handler::downstream_demand(strong_actor_ptr&, size_t) {
   CAF_LOG_ERROR("Received downstream messages in "
                 "a stream marked as no-downstreams");
@@ -75,11 +69,6 @@ error stream_handler::upstream_batch(strong_actor_ptr&, size_t, message&) {
 error stream_handler::close_upstream(strong_actor_ptr&) {
   CAF_LOG_ERROR("Received upstream messages in "
                 "a stream marked as no-upstreams");
-  return sec::invalid_upstream;
-}
-
-error stream_handler::pull(size_t) {
-  CAF_LOG_ERROR("Cannot pull from a stream marked as no-upstreams");
   return sec::invalid_upstream;
 }
 
