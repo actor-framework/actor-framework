@@ -204,7 +204,7 @@ public:
             T
             >::type
         >::type;
-      if (get<cfg_type>(&x) && assign_config_value(ref_, get<cfg_type>(x)))
+      if (get_if<cfg_type>(&x) && assign_config_value(ref_, get<cfg_type>(x)))
         return;
       type_name_visitor tnv;
       report_type_error(ln, x, tnv(ref_), errors);
@@ -262,7 +262,7 @@ public:
             >::type
         >::type;
       value_type tmp;
-      if (get<cfg_type>(&x) && assign_config_value(tmp, get<cfg_type>(x))) {
+      if (get_if<cfg_type>(&x) && assign_config_value(tmp, get<cfg_type>(x))) {
         ref_.insert(ref_.end(), std::move(tmp));
         return;
       }

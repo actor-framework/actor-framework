@@ -129,7 +129,7 @@ struct fixture {
                        optional<std::ostream&>) {
       message_visitor mv;
       anon_send(config_server, put_atom::value,
-                std::move(key), apply_visitor(mv, value));
+                std::move(key), visit(mv, value));
     };
     load_impl(consume, str);
   }
@@ -189,7 +189,7 @@ struct fixture {
           T
         >::type
       >::type;
-    auto ptr = get<type>(&cv);
+    auto ptr = get_if<type>(&cv);
     return ptr != nullptr && detail::safe_equal(*ptr, what);
   }
 

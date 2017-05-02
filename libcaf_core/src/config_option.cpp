@@ -79,7 +79,7 @@ void config_option::report_type_error(size_t ln, config_value& x,
   type_name_visitor tnv;
   *out << "error in line " << ln << ": expected "
        << expected << " found "
-       << apply_visitor(tnv, x) << '\n';
+       << visit(tnv, x) << '\n';
 }
 
 } // namespace caf

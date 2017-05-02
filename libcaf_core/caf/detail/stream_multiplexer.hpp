@@ -168,7 +168,7 @@ protected:
         }
       } else {
         if (derived.current_stream_state_ != derived.streams_.end()) {
-          apply_visitor(derived, x.content);
+          visit(derived, x.content);
         } else {
           CAF_LOG_ERROR("Unable to access required stream and/or path state.");
           derived.fail(sec::invalid_stream_state);

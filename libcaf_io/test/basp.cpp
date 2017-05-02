@@ -68,7 +68,7 @@ ostream& operator<<(ostream& out, const maybe<T>& x) {
   using std::to_string;
   using caf::to_string;
   using caf::io::basp::to_string;
-  if (get<anything>(&x) != nullptr)
+  if (caf::get_if<anything>(&x) != nullptr)
     return out << "*";
   return out << to_string(get<T>(x));
 }
@@ -79,7 +79,7 @@ namespace caf {
 
 template <class T, class U>
 bool operator==(const maybe<T>& x, const U& y) {
-  return get<anything>(&x) != nullptr || get<T>(x) == y;
+  return get_if<anything>(&x) != nullptr || get<T>(x) == y;
 }
 
 template <class T, class U>
@@ -89,7 +89,7 @@ bool operator==(const T& x, const maybe<U>& y) {
 
 template <class T>
 std::string to_string(const maybe<T>& x) {
-  return !get<anything>(&x) ? std::string{"*"} : deep_to_string(get<T>(x));
+  return !get_if<anything>(&x) ? std::string{"*"} : deep_to_string(get<T>(x));
 }
 
 } // namespace caf

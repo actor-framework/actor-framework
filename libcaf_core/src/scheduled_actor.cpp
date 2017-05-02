@@ -654,7 +654,7 @@ bool scheduled_actor::handle_stream_msg(mailbox_element& x,
   auto& sm = x.content().get_mutable_as<stream_msg>(0);
   auto e = streams_.end();
   stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e, active_behavior};
-  auto res = apply_visitor(f, sm.content);
+  auto res = visit(f, sm.content);
   auto success = (res.first == none);
   auto i = res.second;
   if (!success) {
