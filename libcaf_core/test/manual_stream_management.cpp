@@ -248,6 +248,7 @@ error stream_governor::confirm_downstream(const strong_actor_ptr& rebind_from,
                                           bool redeployable) {
   CAF_LOG_TRACE(CAF_ARG(rebind_from) << CAF_ARG(hdl)
                 << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
+  CAF_IGNORE_UNUSED(redeployable);
   auto path = local_subscribers_.find(rebind_from);
   if (path) {
     if (!local_subscribers_.confirm_path(rebind_from, hdl, initial_demand)) {
@@ -363,6 +364,7 @@ error stream_governor::close_upstream(strong_actor_ptr& hdl) {
 
 void stream_governor::abort(strong_actor_ptr& hdl, const error& reason) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(reason));
+  CAF_IGNORE_UNUSED(reason);
   if (local_subscribers_.remove_path(hdl))
     return;
   auto i = peers_.find(hdl);
@@ -507,7 +509,7 @@ behavior core(stateful_actor<core_state>* self, filter_type initial_filter) {
         CAF_LOG_ERROR("Cannot join a data stream without downstream.");
         auto rp = self->make_response_promise();
         rp.deliver(sec::no_downstream_stages_defined);
-        return {stream_id{nullptr, 0}, nullptr};
+        return stream_type{stream_id{nullptr, 0}, nullptr};
       }
       auto next = stages.back();
       CAF_ASSERT(next != nullptr);
