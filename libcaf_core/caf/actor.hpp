@@ -232,7 +232,7 @@ namespace std {
 template <>
 struct hash<caf::actor> {
   inline size_t operator()(const caf::actor& ref) const {
-    return static_cast<size_t>(ref->id());
+    return static_cast<size_t>(ref ? ref->id() : 0);
   }
 };
 } // namespace std
