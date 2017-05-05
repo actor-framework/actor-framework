@@ -55,6 +55,10 @@ public:
     return data_;
   }
 
+  static actor_system::module* make(actor_system& sys, detail::type_list<>) {
+    return new coordinator(sys);
+  }
+
 protected:
   void start() override {
     // initialize workers vector
