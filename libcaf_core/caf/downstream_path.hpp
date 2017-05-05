@@ -43,7 +43,7 @@ public:
   int64_t next_batch_id;
 
   /// Currently available credit for this path.
-  size_t open_credit;
+  long open_credit;
 
   /// Stores whether the downstream actor is failsafe, i.e., allows the runtime
   /// to redeploy it on failure. If this field is set to `false` then

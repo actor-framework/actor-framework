@@ -39,7 +39,7 @@ bool stream_stage::done() const {
   return in_ptr_->closed() && out_ptr_->closed();
 }
 
-error stream_stage::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
+error stream_stage::upstream_batch(strong_actor_ptr& hdl, long xs_size,
                                    message& xs) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(xs_size) << CAF_ARG(xs));
   auto path = in().find(hdl);
@@ -50,14 +50,14 @@ error stream_stage::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
     auto err = process_batch(xs);
     if (err == none) {
       push();
-      in().assign_credit(out().buf_size(), out().available_credit());
+      in().assign_credit(out().total_net_credit());
     }
     return err;
   }
   return sec::invalid_upstream;
 }
 
-error stream_stage::downstream_demand(strong_actor_ptr& hdl, size_t value) {
+error stream_stage::downstream_demand(strong_actor_ptr& hdl, long value) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(value));
   auto path = out_ptr_->find(hdl);
   if (path) {
@@ -66,7 +66,7 @@ error stream_stage::downstream_demand(strong_actor_ptr& hdl, size_t value) {
       push();
     else if (in().closed() && !out().remove_path(hdl))
       return sec::invalid_downstream;
-    in().assign_credit(out().buf_size(), out().available_credit());
+    in().assign_credit(out().total_net_credit());
     return none;
   }
   return sec::invalid_downstream;

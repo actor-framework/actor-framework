@@ -31,12 +31,13 @@ class downstream_policy {
 public:
   virtual ~downstream_policy();
 
-  /// Queries the optimal amount of data for the next `push` operation to `x`.
-  virtual size_t available_credit(const abstract_downstream& x) = 0;
+  /// Returns an accumulated value of all individual net credits. For example,
+  /// a broadcast policy would return the minimum value.
+  virtual long total_net_credit(const abstract_downstream& x) = 0;
 
   /// Pushes data to the downstream paths of `x`, optionally passing the last
   /// result of `available_credit` for `x` as second argument.
-  virtual void push(abstract_downstream& x, size_t* hint = nullptr) = 0;
+  virtual void push(abstract_downstream& x, long* hint = nullptr) = 0;
 
   // TODO: callbacks für new and closed downstream pahts
 

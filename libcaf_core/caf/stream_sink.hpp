@@ -41,15 +41,19 @@ public:
 
   bool done() const override;
 
-  error upstream_batch(strong_actor_ptr& src, size_t xs_size,
-                       message& xs) final;
+  error upstream_batch(strong_actor_ptr& src, long xs_size,
+                       message& xs) override;
 
-  void abort(strong_actor_ptr& cause, const error& reason) final;
+  void abort(strong_actor_ptr& cause, const error& reason) override;
 
   void last_upstream_closed();
 
   inline abstract_upstream& in() {
     return *in_ptr_;
+  }
+
+  long min_buffer_size() const {
+    return min_buffer_size_;
   }
 
 protected:
@@ -64,6 +68,7 @@ private:
   strong_actor_ptr original_sender_;
   std::vector<strong_actor_ptr> next_stages_;
   message_id original_msg_id_;
+  long min_buffer_size_;
 };
 
 } // namespace caf

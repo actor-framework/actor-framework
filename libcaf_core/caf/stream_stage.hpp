@@ -43,9 +43,9 @@ public:
 
   void abort(strong_actor_ptr&, const error&) override;
 
-  error downstream_demand(strong_actor_ptr&, size_t) override;
+  error downstream_demand(strong_actor_ptr&, long) override;
 
-  error upstream_batch(strong_actor_ptr&, size_t, message&) override;
+  error upstream_batch(strong_actor_ptr&, long, message&) override;
 
   void last_upstream_closed();
 

@@ -27,8 +27,8 @@ namespace policy {
 
 class anycast final : public downstream_policy {
 public:
-  void push(abstract_downstream& out, size_t* hint) override;
-  size_t available_credit(const abstract_downstream& out) override;
+  long total_net_credit(const abstract_downstream& out) override;
+  void push(abstract_downstream& out, long* hint) override;
 };
 
 } // namespace policy

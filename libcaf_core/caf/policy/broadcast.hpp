@@ -27,8 +27,12 @@ namespace policy {
 
 class broadcast final : public downstream_policy {
 public:
-  void push(abstract_downstream& out, size_t* hint) override;
-  size_t available_credit(const abstract_downstream& out) override;
+  void push(abstract_downstream& out, long* hint) override;
+  long total_net_credit(const abstract_downstream& x) override;
+
+  inline static std::unique_ptr<downstream_policy> make() {
+    return std::unique_ptr<downstream_policy>(new broadcast);
+  }
 };
 
 } // namespace policy

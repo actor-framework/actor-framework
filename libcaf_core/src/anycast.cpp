@@ -24,12 +24,17 @@
 namespace caf {
 namespace policy {
 
-void anycast::push(abstract_downstream& out, size_t* hint) {
-  out.anycast(hint);
+long anycast::total_net_credit(const abstract_downstream& out) {
+  // The total amount of available net credit is calculated as:
+  // `av + (n * mb) - bs`, where `av` is the sum of all available credit on all
+  // paths, `n` is the number of downstream paths, `mb` is the minimum buffer
+  // size, and `bs` is the current buffer size.
+  return (out.total_credit() + (out.num_paths() * out.min_buffer_size()))
+         - out.buf_size();
 }
 
-size_t anycast::available_credit(const abstract_downstream& out) {
-  return out.total_credit();
+void anycast::push(abstract_downstream& out, long* hint) {
+  out.anycast(hint);
 }
 
 } // namespace policy

@@ -58,12 +58,12 @@ public:
   void abort(strong_actor_ptr& cause, const error& reason);
 
   /// Assigns credit to upstream actors according to the configured policy.
-  void assign_credit(size_t buf_size, size_t downstream_credit);
+  void assign_credit(long total_downstream_net_credit);
 
   /// Adds a new upstream actor and returns the initial credit.
-  expected<size_t> add_path(strong_actor_ptr hdl, const stream_id& sid,
-                            stream_priority prio, size_t buf_size,
-                            size_t downstream_credit);
+  expected<long> add_path(strong_actor_ptr hdl, const stream_id& sid,
+                          stream_priority prio,
+                          long total_downstream_net_credit);
 
   bool remove_path(const strong_actor_ptr& hdl);
 

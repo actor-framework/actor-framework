@@ -30,14 +30,16 @@ class greedy final : public upstream_policy {
 public:
   greedy();
 
-  void assign_credit(assignment_vec& xs, size_t buf_size,
-                     size_t downstream_credit) override;
+  void assign_credit(assignment_vec& xs,
+                     long total_downstream_net_credit) override;
 
-  size_t low_watermark;
+  long low_watermark;
 
-  size_t high_watermark;
+  long high_watermark;
 
-  size_t min_buffer_size;
+  inline static std::unique_ptr<upstream_policy> make() {
+    return std::unique_ptr<upstream_policy>(new greedy);
+  }
 };
 
 } // namespace policy

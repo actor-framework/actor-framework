@@ -49,28 +49,28 @@ public:
   ///                     the downstream actor on failure.
   /// @pre `hdl != nullptr`
   virtual error confirm_downstream(const strong_actor_ptr& rebind_from,
-                                   strong_actor_ptr& hdl, size_t initial_demand,
+                                   strong_actor_ptr& hdl, long initial_demand,
                                    bool redeployable);
 
   /// Handles new demand from a downstream actor.
   /// @pre `hdl != nullptr`
   /// @pre `new_demand > 0`
-  virtual error downstream_demand(strong_actor_ptr& hdl, size_t new_demand);
+  virtual error downstream_demand(strong_actor_ptr& hdl, long new_demand);
 
   /// Push new data to downstream actors by sending batches. The amount of
   /// pushed data is limited by `hint` or the available credit if
   /// `hint == nullptr`.
-  virtual error push(size_t* hint = nullptr);
+  virtual error push(long* hint = nullptr);
 
   // -- handler for upstream events --------------------------------------------
 
   /// Add a new upstream actor to the stream and return an initial credit.
-  virtual expected<size_t> add_upstream(strong_actor_ptr& hdl,
+  virtual expected<long> add_upstream(strong_actor_ptr& hdl,
                                         const stream_id& sid,
                                         stream_priority prio);
 
   /// Handles data from an upstream actor.
-  virtual error upstream_batch(strong_actor_ptr& hdl, size_t, message& xs);
+  virtual error upstream_batch(strong_actor_ptr& hdl, long, message& xs);
 
   /// Closes an upstream.
   virtual error close_upstream(strong_actor_ptr& hdl);

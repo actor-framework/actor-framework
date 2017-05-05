@@ -24,12 +24,16 @@
 namespace caf {
 namespace policy {
 
-void broadcast::push(abstract_downstream& out, size_t* hint) {
-  out.broadcast(hint);
+long broadcast::total_net_credit(const abstract_downstream& out) {
+  // The buffer on `out` is shared on all paths. Our total available number of
+  // net credit is thus calculates as `av_min + mb - bs`, where `av_min` is the
+  // minimum of available credits on all paths, `mb` is the minimum buffer
+  // size, and `bs` is the current buffer size.
+  return out.min_credit() + out.min_buffer_size() - out.buf_size();
 }
 
-size_t broadcast::available_credit(const abstract_downstream& out) {
-  return out.min_credit();
+void broadcast::push(abstract_downstream& out, long* hint) {
+  out.broadcast(hint);
 }
 
 } // namespace policy

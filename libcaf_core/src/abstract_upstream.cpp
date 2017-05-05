@@ -42,9 +42,8 @@ void abstract_upstream::abort(strong_actor_ptr& cause, const error& reason) {
       unsafe_send_as(self_, x->hdl, make<stream_msg::abort>(x->sid, reason));
 }
 
-void abstract_upstream::assign_credit(size_t buf_size,
-                                      size_t downstream_credit) {
-  policy_->assign_credit(policy_vec_, buf_size, downstream_credit);
+void abstract_upstream::assign_credit(long total_downstream_net_credit) {
+  policy_->assign_credit(policy_vec_, total_downstream_net_credit);
   for (auto& x : policy_vec_) {
     auto n = x.second;
     if (n > 0) {
@@ -57,12 +56,12 @@ void abstract_upstream::assign_credit(size_t buf_size,
   }
 }
 
-expected<size_t> abstract_upstream::add_path(strong_actor_ptr hdl,
-                                             const stream_id& sid,
-                                             stream_priority prio,
-                                             size_t buf_size,
-                                             size_t downstream_credit) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(sid) << CAF_ARG(prio));
+expected<long> abstract_upstream::add_path(strong_actor_ptr hdl,
+                                           const stream_id& sid,
+                                           stream_priority prio,
+                                           long total_downstream_net_credit) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(sid) << CAF_ARG(prio)
+                << CAF_ARG(total_downstream_net_credit));
   CAF_ASSERT(hdl != nullptr);
   if (!find(hdl)) {
     CAF_LOG_DEBUG("add new upstraem path" << CAF_ARG(hdl));
@@ -71,7 +70,7 @@ expected<size_t> abstract_upstream::add_path(strong_actor_ptr hdl,
     // use a one-shot actor to calculate initial credit
     upstream_policy::assignment_vec tmp;
     tmp.emplace_back(paths_.back().get(), 0);
-    policy_->assign_credit(tmp, buf_size, downstream_credit);
+    policy_->assign_credit(tmp, total_downstream_net_credit);
     paths_.back()->assigned_credit += tmp.back().second;
     return tmp.back().second;
   }
@@ -79,6 +78,7 @@ expected<size_t> abstract_upstream::add_path(strong_actor_ptr hdl,
 }
 
 bool abstract_upstream::remove_path(const strong_actor_ptr& hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
   // Find element in our paths list.
   auto has_hdl = [&](const path_uptr& x) {
     CAF_ASSERT(x != nullptr);

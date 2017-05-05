@@ -106,7 +106,7 @@ auto stream_msg_visitor::operator()(stream_msg::abort& x) -> result_type {
 auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   if (i_ != e_) {
-    auto d = static_cast<size_t>(x.initial_demand);
+    auto d = static_cast<long>(x.initial_demand);
     return {i_->second->confirm_downstream(x.rebind_from,
                                            self_->current_sender(), d, false),
             i_};
@@ -119,7 +119,7 @@ auto stream_msg_visitor::operator()(stream_msg::batch& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   if (i_ != e_)
     return {i_->second->upstream_batch(self_->current_sender(),
-                                       static_cast<size_t>(x.xs_size), x.xs),
+                                       static_cast<long>(x.xs_size), x.xs),
             i_};
   CAF_LOG_DEBUG("received stream_msg::batch for unknown stream");
   return {sec::unexpected_message, e_};
@@ -129,7 +129,7 @@ auto stream_msg_visitor::operator()(stream_msg::ack_batch& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   if (i_ != e_)
     return {i_->second->downstream_demand(self_->current_sender(),
-                                          static_cast<size_t>(x.new_capacity)),
+                                          static_cast<long>(x.new_capacity)),
             i_};
   CAF_LOG_DEBUG("received stream_msg::batch for unknown stream");
   return {sec::unexpected_message, e_};

@@ -65,50 +65,50 @@ public:
 
   /// Returns the total available credit for all sinks in `xs` in O(n).
   template <class PathContainer>
-  static size_t total_credit(const PathContainer& xs) {
+  static long total_credit(const PathContainer& xs) {
     return fold(xs, 0u,
-                [](size_t x, const typename PathContainer::value_type& y) {
+                [=](long x, const typename PathContainer::value_type& y) {
                   return x + y->open_credit;
                 });
   }
 
   /// Returns the total available credit for all sinks in `paths_` in O(n).
-  size_t total_credit() const;
+  long total_credit() const;
 
   /// Returns the maximum credit of all sinks in `paths_` in O(n).
   template <class PathContainer>
-  static size_t max_credit(const PathContainer& xs) {
+  static long max_credit(const PathContainer& xs) {
     return fold(xs, 0,
-                [](size_t x, const typename PathContainer::value_type& y) {
+                [](long x, const typename PathContainer::value_type& y) {
                   return std::max(x, y->open_credit);
                 });
   }
 
   /// Returns the maximum credit of all sinks in `paths_` in O(n).
-  size_t max_credit() const;
+  long max_credit() const;
 
   /// Returns the minimal credit of all sinks in `xs` in O(n).
   template <class PathContainer>
-  static size_t min_credit(const PathContainer& xs) {
-    return fold(xs, std::numeric_limits<size_t>::max(),
-                [](size_t x, const typename PathContainer::value_type& y) {
+  static long min_credit(const PathContainer& xs) {
+    return fold(xs, std::numeric_limits<long>::max(),
+                [](long x, const typename PathContainer::value_type& y) {
                   return std::min(x, y->open_credit);
                 });
   }
 
-  /// Returns the minimal credit of all sinks in `paths_` in O(n).
-  size_t min_credit() const;
+  /// Returns the minimal net credit of all sinks in `paths_` in O(n).
+  long min_credit() const;
 
   /// Broadcasts the first `*hint` elements of the buffer on all paths. If
   /// `hint == nullptr` then `min_credit()` is used instead.
-  virtual void broadcast(size_t* hint = nullptr) = 0;
+  virtual void broadcast(long* hint = nullptr) = 0;
 
   /// Sends `*hint` elements of the buffer to available paths. If
   /// `hint == nullptr` then `total_credit()` is used instead.
-  virtual void anycast(size_t* hint = nullptr) = 0;
+  virtual void anycast(long* hint = nullptr) = 0;
 
   /// Returns the size of the output buffer.
-  virtual size_t buf_size() const = 0;
+  virtual long buf_size() const = 0;
 
   /// Adds a path with in-flight `stream_msg::open` message.
   bool add_path(strong_actor_ptr ptr);
@@ -140,7 +140,9 @@ public:
 
   path* find(const strong_actor_ptr& ptr) const;
 
-  size_t available_credit() const;
+  long total_net_credit() const;
+
+  virtual long num_paths() const;
 
   inline local_actor* self() const {
     return self_;
@@ -158,8 +160,14 @@ public:
     return paths_.empty();
   }
 
+  /// Returns how many items should be stored on individual paths in order to
+  /// minimize latency between received demand and sent batches.
+  long min_buffer_size() const {
+    return min_buffer_size_;
+  }
+
 protected:
-  void send_batch(downstream_path& dest, size_t chunk_size, message chunk);
+  void send_batch(downstream_path& dest, long chunk_size, message chunk);
 
   /// Sorts `xs` in descending order by available credit.
   template <class PathContainer>
@@ -174,19 +182,17 @@ protected:
   /// Sorts `paths_` in descending order by available credit.
   void sort_by_credit();
 
-  template <class PathContainer, class F>
-  static size_t fold(PathContainer& xs, size_t init, F f) {
+  template <class T, class PathContainer, class F>
+  static T fold(PathContainer& xs, T init, F f) {
     auto b = xs.begin();
     auto e = xs.end();
-    auto g = [&](size_t x, const typename PathContainer::value_type& y) {
-      return f(x, y);
-    };
-    return b != e ? std::accumulate(b, e, init, g) : 0;
+    return b != e ? std::accumulate(b, e, init, f) : 0;
   }
 
   local_actor* self_;
   stream_id sid_;
   path_list paths_;
+  long min_buffer_size_;
   std::unique_ptr<downstream_policy> policy_;
 };
 

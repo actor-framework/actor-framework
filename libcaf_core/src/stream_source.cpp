@@ -40,7 +40,7 @@ bool stream_source::done() const {
   return out_ptr_->closed();
 }
 
-error stream_source::downstream_demand(strong_actor_ptr& hdl, size_t value) {
+error stream_source::downstream_demand(strong_actor_ptr& hdl, long value) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(value));
   auto path = out_ptr_->find(hdl);
   if (path) {
@@ -48,7 +48,7 @@ error stream_source::downstream_demand(strong_actor_ptr& hdl, size_t value) {
     if (!at_end()) {
       // produce new elements
       auto current_size = buf_size();
-      auto size_hint = out().available_credit();
+      auto size_hint = out().total_net_credit();
       if (current_size < size_hint)
         generate(size_hint - current_size);
       return push(&size_hint);

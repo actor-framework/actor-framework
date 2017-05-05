@@ -33,7 +33,7 @@ public:
   virtual ~upstream_policy();
 
   /// Describes an assignment of credit to an upstream actor.
-  using assignment_pair = std::pair<upstream_path*, size_t>;
+  using assignment_pair = std::pair<upstream_path*, long>;
 
   /// Describes an assignment of credit to all upstream actors.
   using assignment_vec = std::vector<assignment_pair>;
@@ -42,12 +42,12 @@ public:
   /// @param xs Stores assignment decisions. Note that the second element of
   ///           each pair is uninitialized and must be set to 0 for all paths
   ///           that do not receive credit.
-  /// @param buf_size Denotes how many stream elements are currently buffered.
-  /// @param downstream_credit Denotes how many items we could send downstream.
-  ///                          Usually 0, unless the downstream policy avoids
-  ///                          small batches.
-  virtual void assign_credit(assignment_vec& xs, size_t buf_size,
-                             size_t downstream_credit) = 0;
+  /// @param total_downstream_net_credit Denotes how many items we could send
+  ///                                    downstream. A negative value indicates
+  ///                                    that we are already buffering more
+  ///                                    items than we can send.
+  virtual void assign_credit(assignment_vec& xs,
+                             long total_downstream_net_credit) = 0;
 };
 
 } // namespace caf

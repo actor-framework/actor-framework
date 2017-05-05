@@ -63,15 +63,15 @@ public:
     // nop
   }
 
-  expected<size_t> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
-                                stream_priority prio) final {
+  expected<long> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
+                              stream_priority prio) override {
+    CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(sid) << CAF_ARG(prio));
     if (ptr)
-      return in().add_path(ptr, sid, prio, out_.buf_size(),
-                           out_.available_credit());
+      return in().add_path(ptr, sid, prio, out_.total_net_credit());
     return sec::invalid_argument;
   }
 
-  error process_batch(message& msg) final {
+  error process_batch(message& msg) override {
     using vec_type = std::vector<output_type>;
     if (msg.match_elements<vec_type>()) {
       auto& xs = msg.get_as<vec_type>(0);
@@ -82,15 +82,15 @@ public:
     return sec::unexpected_message;
   }
 
-  message make_output_token(const stream_id& x) const final {
+  message make_output_token(const stream_id& x) const override {
     return make_message(stream<output_type>{x});
   }
 
-  optional<abstract_downstream&> get_downstream() final {
+  optional<abstract_downstream&> get_downstream() override {
     return out_;
   }
 
-  optional<abstract_upstream&> get_upstream() final {
+  optional<abstract_upstream&> get_upstream() override {
     return in_;
   }
 

@@ -57,9 +57,9 @@ public:
     return buf_;
   }
 
-  void broadcast(size_t* hint) override {
+  void broadcast(long* hint) override {
     auto chunk = get_chunk(hint ? *hint : min_credit());
-    auto csize = chunk.size();
+    auto csize = static_cast<long>(chunk.size());
     if (csize == 0)
       return;
     auto wrapped_chunk = make_message(std::move(chunk));
@@ -69,7 +69,7 @@ public:
     }
   }
 
-  void anycast(size_t*) override {
+  void anycast(long*) override {
     this->sort_by_credit();
     for (auto& x : paths_) {
       auto chunk = get_chunk(x->open_credit);
@@ -77,21 +77,23 @@ public:
       if (csize == 0)
         return;
       x->open_credit -= csize;
-      send_batch(*x, csize, std::move(make_message(std::move(chunk))));
+      send_batch(*x, static_cast<long>(csize),
+                 std::move(make_message(std::move(chunk))));
     }
   }
 
-  size_t buf_size() const override {
-    return buf_.size();
+  long buf_size() const override {
+    return static_cast<long>(buf_.size());
   }
 
 protected:
   /// @pre `n <= buf_.size()`
-  static chunk_type get_chunk(queue_type& buf, size_t n) {
+  static chunk_type get_chunk(queue_type& buf, long n) {
+    CAF_ASSERT(n >= 0);
     chunk_type xs;
     if (n > 0) {
-      xs.reserve(n);
-      if (n < buf.size()) {
+      xs.reserve(static_cast<size_t>(n));
+      if (static_cast<size_t>(n) < buf.size()) {
         auto first = buf.begin();
         auto last = first + static_cast<ptrdiff_t>(n);
         std::move(first, last, std::back_inserter(xs));
@@ -105,7 +107,7 @@ protected:
   }
 
   /// @pre `n <= buf_.size()`
-  chunk_type get_chunk(size_t n) {
+  chunk_type get_chunk(long n) {
     return get_chunk(buf_, n);
   }
 

@@ -48,14 +48,14 @@ public:
     // nop
   }
 
-  expected<size_t> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
-                                stream_priority prio) final {
+  expected<long> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
+                              stream_priority prio) override {
     if (ptr)
-      return in().add_path(ptr, sid, prio, 0, 0);
+      return in().add_path(ptr, sid, prio, min_buffer_size());
     return sec::invalid_argument;
   }
 
-  error consume(message& msg) final {
+  error consume(message& msg) override {
     using vec_type = std::vector<input_type>;
     if (msg.match_elements<vec_type>()) {
       auto& xs = msg.get_as<vec_type>(0);
@@ -66,11 +66,11 @@ public:
     return sec::unexpected_message;
   }
 
-  message finalize() final {
+  message finalize() override {
     return trait::make_result(state_, fin_);
   }
 
-  optional<abstract_upstream&> get_upstream() final {
+  optional<abstract_upstream&> get_upstream() override {
     return in_;
   }
 

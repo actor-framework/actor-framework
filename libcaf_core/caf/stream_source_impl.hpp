@@ -46,19 +46,19 @@ public:
     // nop
   }
 
-  void generate(size_t num) final {
+  void generate(size_t num) override {
     fun_(state_, out_, num);
   }
 
-  size_t buf_size() const final {
-    return out_.buf().size();
+  long buf_size() const override {
+    return static_cast<long>(out_.buf().size());
   }
 
-  bool at_end() const final {
+  bool at_end() const override {
     return pred_(state_);
   }
 
-  optional<abstract_downstream&> get_downstream() final {
+  optional<abstract_downstream&> get_downstream() override {
     return out_;
   }
 

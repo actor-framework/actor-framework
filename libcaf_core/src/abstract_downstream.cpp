@@ -32,6 +32,7 @@ abstract_downstream::abstract_downstream(local_actor* selfptr,
                                          std::unique_ptr<downstream_policy> ptr)
     : self_(selfptr),
       sid_(sid),
+      min_buffer_size_(5), // TODO: make configurable
       policy_(std::move(ptr)) {
   // nop
 }
@@ -40,15 +41,15 @@ abstract_downstream::~abstract_downstream() {
   // nop
 }
 
-size_t abstract_downstream::total_credit() const {
+long abstract_downstream::total_credit() const {
   return total_credit(paths_);
 }
 
-size_t abstract_downstream::max_credit() const {
+long abstract_downstream::max_credit() const {
   return max_credit(paths_);
 }
 
-size_t abstract_downstream::min_credit() const {
+long abstract_downstream::min_credit() const {
   return min_credit(paths_);
 }
 
@@ -116,11 +117,15 @@ abstract_downstream::find(const strong_actor_ptr& ptr) const {
   return find(paths_, ptr);
 }
 
-size_t abstract_downstream::available_credit() const {
-  return policy().available_credit(*this);
+long abstract_downstream::total_net_credit() const {
+  return policy().total_net_credit(*this);
 }
 
-void abstract_downstream::send_batch(downstream_path& dest, size_t chunk_size,
+long abstract_downstream::num_paths() const {
+  return static_cast<long>(paths_.size());
+}
+
+void abstract_downstream::send_batch(downstream_path& dest, long chunk_size,
                                      message chunk) {
   auto scs = static_cast<int32_t>(chunk_size);
   auto batch_id = dest.next_batch_id++;

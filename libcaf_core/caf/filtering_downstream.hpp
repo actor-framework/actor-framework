@@ -36,7 +36,7 @@ namespace caf {
 /// of workers in order to handle only a subset of the overall data on each
 /// lane.
 template <class T, class Key, class KeyCompare = std::equal_to<Key>,
-          size_t KeyIndex = 0>
+          long KeyIndex = 0>
 class filtering_downstream : public downstream<T> {
 public:
   /// Base type.
@@ -59,13 +59,13 @@ public:
     // nop
   }
 
-  void broadcast(size_t* hint) override {
+  void broadcast(long* hint) override {
     fan_out();
     for (auto& kvp : lanes_) {
       auto& l = kvp.second;
       auto chunk = super::get_chunk(l.queue,
                                     hint ? *hint : super::min_credit(l.paths));
-      auto csize = chunk.size();
+      auto csize = static_cast<long>(chunk.size());
       if (csize == 0)
         continue;
       auto wrapped_chunk = make_message(std::move(chunk));
@@ -76,14 +76,14 @@ public:
     }
   }
 
-  void anycast(size_t*) override {
+  void anycast(long*) override {
     fan_out();
     for (auto& kvp : lanes_) {
       auto& l = kvp.second;
       super::sort_by_credit(l.paths);
       for (auto& x : l.paths) {
         auto chunk = super::get_chunk(l.queue, x->open_credit);
-        auto csize = chunk.size();
+        auto csize = static_cast<long>(chunk.size());
         if (csize == 0)
           break;
         x->open_credit -= csize;

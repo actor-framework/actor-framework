@@ -39,7 +39,7 @@ public:
 
   bool done() const override;
 
-  error downstream_demand(strong_actor_ptr& hdl, size_t value) override;
+  error downstream_demand(strong_actor_ptr& hdl, long value) override;
 
   void abort(strong_actor_ptr& cause, const error& reason) override;
 
@@ -49,7 +49,7 @@ public:
 
 protected:
   /// Queries the current amount of elements in the output buffer.
-  virtual size_t buf_size() const = 0;
+  virtual long buf_size() const = 0;
 
   /// Generate new elements for the output buffer. The size hint `n` indicates
   /// how much elements can be shipped immediately.

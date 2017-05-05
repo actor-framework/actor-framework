@@ -31,7 +31,8 @@ stream_sink::stream_sink(abstract_upstream* in_ptr,
     : in_ptr_(in_ptr),
       original_sender_(std::move(orig_sender)),
       next_stages_(std::move(trailing_stages)),
-      original_msg_id_(mid) {
+      original_msg_id_(mid),
+      min_buffer_size_(5) { // TODO: make configurable
   // nop
 }
 
@@ -41,7 +42,7 @@ bool stream_sink::done() const {
 }
 
 
-error stream_sink::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
+error stream_sink::upstream_batch(strong_actor_ptr& hdl, long xs_size,
                                   message& xs) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(xs_size) << CAF_ARG(xs));
   auto path = in().find(hdl);
@@ -51,7 +52,7 @@ error stream_sink::upstream_batch(strong_actor_ptr& hdl, size_t xs_size,
     path->assigned_credit -= xs_size;
     auto err = consume(xs);
     if (err == none)
-      in().assign_credit(0, 0);
+      in().assign_credit(min_buffer_size());
     return err;
   }
   return sec::invalid_upstream;

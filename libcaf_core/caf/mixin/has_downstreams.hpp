@@ -42,8 +42,8 @@ public:
   }
 
   error confirm_downstream(const strong_actor_ptr& rebind_from,
-                           strong_actor_ptr& ptr, size_t initial_demand,
-                           bool redeployable) final {
+                           strong_actor_ptr& ptr, long initial_demand,
+                           bool redeployable) override {
     CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(initial_demand)
                   << CAF_ARG(redeployable));
     CAF_ASSERT(ptr != nullptr);
@@ -54,7 +54,7 @@ public:
     return sec::invalid_downstream;
   }
 
-  error push(size_t* hint = nullptr) override {
+  error push(long* hint = nullptr) override {
     CAF_LOG_TRACE("");
     if (out().buf_size() > 0)
       out().policy().push(out(), hint);
