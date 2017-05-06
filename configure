@@ -66,6 +66,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-unit-tests             build without unit tests
     --no-opencl                 build without OpenCL module
     --no-hwloc                  build without NUMA related optimizations
+    --no-tcmalloc               build without tcmalloc 
     --no-benchmarks             build without benchmarks
     --no-tools                  build without CAF tools such as caf-run
     --no-io                     build without I/O module
@@ -85,6 +86,9 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - TRACE
     --with-address-sanitizer    build with address sanitizer if available
     --with-gcov                 build with gcov coverage enabled
+    --with-gperf-cpuprofiler    build with cpu profiler (requires environment variable 
+                                CPUPROFILE=/path/to/output/file/prof.out
+                                on start up for)
 
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
@@ -342,6 +346,12 @@ while [ $# -ne 0 ]; do
             ;;
         --no-hwloc)
             append_cache_entry CAF_NO_HWLOC BOOL yes
+            ;;
+        --no-tcmalloc)
+            append_cache_entry CAF_NO_TCMALLOC BOOL yes
+            ;;
+        --with-gperf-cpuprofiler)
+            append_cache_entry CAF_GPERF_CPUPROFILER BOOL yes
             ;;
         --build-static)
             append_cache_entry CAF_BUILD_STATIC BOOL yes

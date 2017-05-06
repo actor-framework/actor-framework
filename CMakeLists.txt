@@ -81,6 +81,10 @@ if(NOT CAF_NO_HWLOC)
   set(CAF_NO_HWLOC no)
 endif()
 
+if(NOT CAF_NO_TCMALLOC)
+  set(CAF_NO_TCMALLOC no)
+endif()
+
 if(NOT CAF_NO_PYTHON)
   set(CAF_NO_PYTHON no)
 endif()
@@ -286,6 +290,19 @@ if(NOT CAF_NO_HWLOC)
     set(CAF_NO_HWLOC yes)
   endif()
 endif()
+# load tcmalloc library if not told otherwise
+if(NOT CAF_NO_TCMALLOC)
+  find_package(Tcmalloc)
+  if(Tcmalloc_FOUND)
+    set(LD_FLAGS ${LD_FLAGS} ${Tcmalloc_LIBRARIES})
+    # load gperf cpuprofiler if configured
+    if(CAF_GPERF_CPUPROFILER)
+      set(LD_FLAGS "${LD_FLAGS} -lprofiler")
+    endif()
+  else()
+    set(CAF_NO_TCMALLOC yes)
+  endif()
+endif()
 # -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
 if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
@@ -355,6 +372,7 @@ macro(to_int_value name)
 endmacro()
 
 to_int_value(CAF_NO_HWLOC)
+to_int_value(CAF_NO_TCMALLOC)
 to_int_value(CAF_LOG_LEVEL)
 to_int_value(CAF_NO_EXCEPTIONS)
 to_int_value(CAF_NO_MEM_MANAGEMENT)
@@ -700,6 +718,7 @@ invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 invertYesNo(CAF_NO_HWLOC CAF_BUILD_HWLOC)
+invertYesNo(CAF_NO_TCMALLOC CAF_BUILD_TCMALLOC)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
@@ -726,6 +745,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
         "\nBuild hwloc:       ${CAF_BUILD_HWLOC}"
+        "\nBuild tcmalloc:    ${CAF_BUILD_TCMALLOC}"
         "\nBuild Python:      ${CAF_BUILD_PYTHON}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
