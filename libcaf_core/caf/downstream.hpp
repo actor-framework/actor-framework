@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "caf/stream_msg.hpp"
+#include "caf/make_message.hpp"
 #include "caf/downstream_path.hpp"
 #include "caf/abstract_downstream.hpp"
 
