@@ -211,6 +211,11 @@ public:
     return static_cast<bool>(impl_);
   }
 
+  /// Returns the associated actor handle.
+  type handle() const {
+    return impl_;
+  }
+
   duration timeout;
 
 private:
