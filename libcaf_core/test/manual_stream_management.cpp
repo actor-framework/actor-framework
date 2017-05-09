@@ -196,10 +196,10 @@ struct core_state {
   void init(event_based_actor* s, filter_type initial_filter) {
     self = s;
     filter = std::move(initial_filter);
-    governor = make_counted<stream_governor>(this);
     sid =
       stream_id{self->ctrl(),
                 self->new_request_id(message_priority::normal).integer_value()};
+    governor = make_counted<stream_governor>(this);
     self->streams().emplace(sid, governor);
   }
 
@@ -558,7 +558,12 @@ void driver(event_based_actor* self, const actor& sink) {
   );
 }
 
-void consumer(event_based_actor* self, filter_type ts, const actor& src) {
+struct consumer_state {
+  std::vector<element_type> xs;
+};
+
+void consumer(stateful_actor<consumer_state>* self, filter_type ts,
+              const actor& src) {
   self->send(self * src, join_atom::value, std::move(ts));
   self->become(
     [=](const stream_type& in) {
@@ -570,14 +575,17 @@ void consumer(event_based_actor* self, filter_type ts, const actor& src) {
           // nop
         },
         // Process single element.
-        [](unit_t&, element_type) {
-          // nop
+        [=](unit_t&, element_type x) {
+          self->state.xs.emplace_back(std::move(x));
         },
         // Cleanup.
         [](unit_t&) {
           // nop
         }
       );
+    },
+    [=](get_atom) {
+      return self->state.xs;
     }
   );
 }
@@ -644,6 +652,16 @@ CAF_TEST(two_peers) {
          .with(2, buf{{"b", 0}, {"b", 1}}, 0));
   expect((stream_msg::ack_batch), from(core2).to(core1).with(5, 0));
   expect((stream_msg::ack_batch), from(core1).to(d1).with(5, 0));
+  // Check log of the consumer.
+  self->send(leaf, get_atom::value);
+  sched.prioritize(leaf);
+  sched.run_once();
+  self->receive(
+    [](const buf& xs) {
+      buf expected{{"b", 0}, {"b", 1}};
+      CAF_REQUIRE_EQUAL(xs, expected);
+    }
+  );
   // Shutdown.
   CAF_MESSAGE("Shutdown core actors.");
   anon_send_exit(core1, exit_reason::user_shutdown);
