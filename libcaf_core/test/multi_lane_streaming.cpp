@@ -259,6 +259,23 @@ CAF_TEST(fork_setup) {
   // Source is done, splitter remains open.
   expect((stream_msg::close), from(src).to(splitter).with());
   CAF_REQUIRE(!sched.has_job());
+  CAF_MESSAGE("check content of storages");
+  self->send(d1, get_atom::value);
+  sched.run_once();
+  self->receive(
+    [](const batch& xs) {
+      batch ys{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}, {"key1", "d"}};
+      CAF_REQUIRE_EQUAL(xs, ys);
+    }
+  );
+  self->send(d2, get_atom::value);
+  sched.run_once();
+  self->receive(
+    [](const batch& xs) {
+      batch ys{{"key2", "a"}, {"key2", "b"}, {"key2", "c"}, {"key2", "d"}};
+      CAF_REQUIRE_EQUAL(xs, ys);
+    }
+  );
   CAF_MESSAGE("spawn a second source");
   auto src2 = sys.spawn(nores_streamer, splitter);
   sched.run_once();
@@ -300,6 +317,27 @@ CAF_TEST(fork_setup) {
   // Source is done, splitter remains open.
   expect((stream_msg::close), from(src2).to(splitter).with());
   CAF_REQUIRE(!sched.has_job());
+  CAF_MESSAGE("check content of storages again");
+  self->send(d1, get_atom::value);
+  sched.run_once();
+  self->receive(
+    [](const batch& xs) {
+      batch ys0{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}, {"key1", "d"}};
+      auto ys = ys0;
+      ys.insert(ys.end(), ys0.begin(), ys0.end()); // all elements twice
+      CAF_REQUIRE_EQUAL(xs, ys);
+    }
+  );
+  self->send(d2, get_atom::value);
+  sched.run_once();
+  self->receive(
+    [](const batch& xs) {
+      batch ys0{{"key2", "a"}, {"key2", "b"}, {"key2", "c"}, {"key2", "d"}};
+      auto ys = ys0;
+      ys.insert(ys.end(), ys0.begin(), ys0.end()); // all elements twice
+      CAF_REQUIRE_EQUAL(xs, ys);
+    }
+  );
   CAF_MESSAGE("shutdown");
   anon_send_exit(splitter, exit_reason::kill);
   sched.run();
