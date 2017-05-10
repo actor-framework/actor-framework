@@ -297,7 +297,7 @@ if(NOT CAF_NO_TCMALLOC)
     set(LD_FLAGS ${LD_FLAGS} ${Tcmalloc_LIBRARIES})
     # load gperf cpuprofiler if configured
     if(CAF_GPERF_CPUPROFILER)
-      set(LD_FLAGS "${LD_FLAGS} -lprofiler")
+  		set(EXTRA_FLAGS "${EXTRA_FLAGS} -lprofiler")
     endif()
   else()
     set(CAF_NO_TCMALLOC yes)
