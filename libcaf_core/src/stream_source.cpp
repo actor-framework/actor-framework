@@ -50,7 +50,7 @@ error stream_source::downstream_demand(strong_actor_ptr& hdl, long value) {
       auto current_size = buf_size();
       auto size_hint = out().total_net_credit();
       if (current_size < size_hint)
-        generate(size_hint - current_size);
+        generate(static_cast<size_t>(size_hint - current_size));
       return push(&size_hint);
     }
     // transmit cached elements before closing paths
@@ -71,7 +71,7 @@ void stream_source::generate() {
     auto current_size = buf_size();
     auto size_hint = out().total_net_credit();
     if (current_size < size_hint)
-      generate(size_hint - current_size);
+      generate(static_cast<size_t>(size_hint - current_size));
   }
 }
 
