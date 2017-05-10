@@ -47,6 +47,9 @@ public:
     return *out_ptr_;
   }
 
+  /// Convenience function to trigger generation of new elements.
+  void generate();
+
 protected:
   /// Queries the current amount of elements in the output buffer.
   virtual long buf_size() const = 0;

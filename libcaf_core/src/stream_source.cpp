@@ -66,4 +66,13 @@ void stream_source::abort(strong_actor_ptr& cause, const error& reason) {
   out_ptr_->abort(cause, reason);
 }
 
+void stream_source::generate() {
+  if (!at_end()) {
+    auto current_size = buf_size();
+    auto size_hint = out().total_net_credit();
+    if (current_size < size_hint)
+      generate(size_hint - current_size);
+  }
+}
+
 } // namespace caf
