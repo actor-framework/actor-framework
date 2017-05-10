@@ -77,8 +77,9 @@ public:
 
   // -- handler for stream-wide events -----------------------------------------
 
-  /// Shutdown the stream due to a fatal error.
-  virtual void abort(strong_actor_ptr& cause, const error& reason) = 0;
+  /// Signals an error at the up- or downstream actor `hdl`. This function is
+  /// called with `hdl == nullptr` if the parent actor shuts down.
+  virtual void abort(strong_actor_ptr& hdl, const error& reason) = 0;
 
   // -- accessors --------------------------------------------------------------
 

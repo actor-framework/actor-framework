@@ -364,14 +364,20 @@ error stream_governor::close_upstream(strong_actor_ptr& hdl) {
 
 void stream_governor::abort(strong_actor_ptr& hdl, const error& reason) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(reason));
-  CAF_IGNORE_UNUSED(reason);
-  if (local_subscribers_.remove_path(hdl))
-    return;
-  auto i = peers_.find(hdl);
-  if (i != peers_.end()) {
-    auto& pd = *i->second;
-    state_->self->streams().erase(pd.incoming_sid);
-    peers_.erase(i);
+  if (hdl != nullptr) {
+    if (local_subscribers_.remove_path(hdl))
+      return;
+    auto i = peers_.find(hdl);
+    if (i != peers_.end()) {
+      auto& pd = *i->second;
+      state_->self->streams().erase(pd.incoming_sid);
+      peers_.erase(i);
+    }
+  } else {
+    local_subscribers_.abort(hdl, reason);
+    for (auto& kvp : peers_)
+      kvp.second->out.abort(hdl, reason);
+    peers_.clear();
   }
 }
 
@@ -666,27 +672,7 @@ CAF_TEST(two_peers) {
   CAF_MESSAGE("Shutdown core actors.");
   anon_send_exit(core1, exit_reason::user_shutdown);
   anon_send_exit(core2, exit_reason::user_shutdown);
-  anon_send_exit(leaf, exit_reason::user_shutdown);
   sched.run();
-
-
-  return;
-  // core1 <----(stream_msg::ack_open)------ core2
-  expect((stream_msg::ack_open), from(core2).to(core1).with(_, 5, _, false));
-  // core1 ----(stream_msg::batch)---> core2
-  expect((stream_msg::batch),
-         from(core1).to(core2).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
-  // core1 <--(stream_msg::ack_batch)---- core2
-  expect((stream_msg::ack_batch), from(core2).to(core1).with(5, 0));
-  // core1 ----(stream_msg::batch)---> core2
-  expect((stream_msg::batch),
-         from(core1).to(core2).with(4, std::vector<int>{6, 7, 8, 9}, 1));
-  // core1 <--(stream_msg::ack_batch)---- core2
-  expect((stream_msg::ack_batch), from(core2).to(core1).with(4, 1));
-  // core1 ----(stream_msg::close)---> core2
-  expect((stream_msg::close), from(core1).to(core2).with());
-  // core2 ----(result: 25)---> core1
-  expect((int), from(core2).to(core1).with(45));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
