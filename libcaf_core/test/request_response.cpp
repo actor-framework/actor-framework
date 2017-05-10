@@ -22,7 +22,7 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE request_response
-#include "caf/test/unit_test.hpp"
+#include "caf/test/dsl.hpp"
 
 #include "caf/all.hpp"
 
@@ -248,7 +248,7 @@ struct fixture {
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(request_response_tests1, fixture)
 
 CAF_TEST(test_void_res) {
   using testee_a = typed_actor<replies_to<int, int>::with<void>>;
@@ -476,6 +476,26 @@ CAF_TEST(skip_responses) {
     },
     [&](const error& err) {
       CAF_FAIL(system.render(err));
+    }
+  );
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(request_response_tests2, test_coordinator_fixture<>)
+
+CAF_TEST(request_response_in_test_coordinator) {
+  auto mirror = sys.spawn<sync_mirror>();
+  sched.run();
+  sched.inline_next_enqueue();
+  // this block would deadlock without inlining the next enqueue
+  self->request(mirror, infinite, 23).receive(
+    [](int x) {
+      CAF_CHECK_EQUAL(x, 23);
+
+    },
+    [&](const error& err) {
+      CAF_FAIL("unexpected error: " << sys.render(err));
     }
   );
 }

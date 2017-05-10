@@ -92,7 +92,9 @@ private:
 
 } // namespace <anonymous>
 
-test_coordinator::test_coordinator(actor_system& sys) : super(sys) {
+test_coordinator::test_coordinator(actor_system& sys)
+    : super(sys),
+      inline_enqueues_(0) {
   // nop
 }
 void test_coordinator::start() {
@@ -110,7 +112,23 @@ void test_coordinator::stop() {
 }
 
 void test_coordinator::enqueue(resumable* ptr) {
-  jobs.push_back(ptr);
+  if (inline_enqueues_ > 0) {
+    --inline_enqueues_;
+    dummy_worker worker{this};
+    switch (ptr->resume(&worker, 1)) {
+      case resumable::resume_later:
+        enqueue(ptr);
+        break;
+      case resumable::done:
+      case resumable::awaiting_message:
+        intrusive_ptr_release(ptr);
+        break;
+      case resumable::shutdown_execution_unit:
+        break;
+    }
+  } else {
+    jobs.push_back(ptr);
+  }
 }
 
 bool test_coordinator::run_once() {

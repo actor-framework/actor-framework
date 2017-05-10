@@ -119,12 +119,25 @@ public:
   /// events (first) and dispatched delayed messages (second).
   std::pair<size_t, size_t> run_dispatch_loop();
 
+  /// Executes the next `num` enqueued jobs immediately.
+  inline void inline_next_enqueues(size_t num) {
+    inline_enqueues_ += num;
+  }
+
+  /// Executes the next enqueued job immediately.
+  inline void inline_next_enqueue() {
+    inline_next_enqueues(1);
+  }
+
 protected:
   void start() override;
 
   void stop() override;
 
   void enqueue(resumable* ptr) override;
+
+private:
+  size_t inline_enqueues_;
 };
 
 } // namespace scheduler
