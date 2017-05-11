@@ -600,7 +600,8 @@ public:
   }
 
   template <class T, class... Ts>
-  void fwd_stream_handshake(const stream_id& sid, std::tuple<Ts...>& xs) {
+  void fwd_stream_handshake(const stream_id& sid, std::tuple<Ts...>& xs,
+                            bool ignore_mid = false) {
     auto mptr = current_mailbox_element();
     auto& stages = mptr->stages;
     CAF_ASSERT(!stages.empty());
@@ -611,11 +612,13 @@ public:
     auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
     next->enqueue(
       make_mailbox_element(
-        mptr->sender, mptr->mid, std::move(stages),
+        mptr->sender, ignore_mid ? message_id::make() : mptr->mid,
+        std::move(stages),
         make<stream_msg::open>(sid, make_message_from_tuple(std::move(ys)),
                                ctrl(), next, stream_priority::normal, false)),
       context());
-    mptr->mid.mark_as_answered();
+    if (!ignore_mid)
+      mptr->mid.mark_as_answered();
   }
 
   /// @endcond
