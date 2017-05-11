@@ -24,60 +24,59 @@
 
 namespace {
 
-using namespace caf;
-using namespace caf::io;
-
-template <class BaseFixture = test_coordinator_fixture<actor_system_config>>
+template <class BaseFixture =
+            test_coordinator_fixture<caf::actor_system_config>>
 class test_node_fixture : public BaseFixture {
 public:
   using super = BaseFixture;
 
-  middleman& mm;
-  network::test_multiplexer& mpx;
-  basp_broker* basp;
-  connection_handle conn;
-  accept_handle acc;
+  caf::io::middleman& mm;
+  caf::io::network::test_multiplexer& mpx;
+  caf::io::basp_broker* basp;
+  caf::io::connection_handle conn;
+  caf::io::accept_handle acc;
   test_node_fixture* peer = nullptr;
-  strong_actor_ptr stream_serv;
+  caf::strong_actor_ptr stream_serv;
 
   test_node_fixture()
       : mm(this->sys.middleman()),
-        mpx(dynamic_cast<network::test_multiplexer&>(mm.backend())),
+        mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())),
         basp(get_basp_broker()),
         stream_serv(this->sys.stream_serv()) {
     // nop
   }
 
-  void publish(actor whom, uint16_t port) {
+  void publish(caf::actor whom, uint16_t port) {
     auto ma = mm.actor_handle();
     auto& sys = this->sys;
     auto& sched = this->sched;
-    scoped_actor self{sys};
+    caf::scoped_actor self{sys};
     std::set<std::string> sigs;
     // Make sure no pending BASP broker messages are in the queue.
     mpx.flush_runnables();
     // Trigger middleman actor.
-    self->send(ma, publish_atom::value, port,
-               actor_cast<strong_actor_ptr>(std::move(whom)), std::move(sigs),
-               "", false);
+    self->send(ma, caf::publish_atom::value, port,
+               caf::actor_cast<caf::strong_actor_ptr>(std::move(whom)),
+               std::move(sigs), "", false);
     // Wait for the message of the middleman actor.
-    expect((atom_value, uint16_t, strong_actor_ptr, std::set<std::string>,
-            std::string, bool),
-           from(self).to(sys.middleman().actor_handle())
-           .with(publish_atom::value, port, _, _, _, false));
+    expect((caf::atom_value, uint16_t, caf::strong_actor_ptr,
+            std::set<std::string>, std::string, bool),
+           from(self)
+           .to(sys.middleman().actor_handle())
+           .with(caf::publish_atom::value, port, _, _, _, false));
     mpx.exec_runnable();
     // Fetch response.
     self->receive(
       [](uint16_t) {
         // nop
       },
-      [&](error& err) {
+      [&](caf::error& err) {
         CAF_FAIL(sys.render(err));
       }
     );
   }
 
-  actor remote_actor(std::string host, uint16_t port) {
+  caf::actor remote_actor(std::string host, uint16_t port) {
     CAF_MESSAGE("remote actor: " << host << ":" << port);
     auto& sys = this->sys;
     auto& sched = this->sched;
@@ -86,13 +85,13 @@ public:
     CAF_REQUIRE(!peer->sched.has_job());
     // get necessary handles
     auto ma = mm.actor_handle();
-    scoped_actor self{sys};
+    caf::scoped_actor self{sys};
     // make sure no pending BASP broker messages are in the queue
     mpx.flush_runnables();
     // trigger middleman actor
-    self->send(ma, connect_atom::value, std::move(host), port);
-    expect((atom_value, std::string, uint16_t),
-           from(self).to(ma).with(connect_atom::value, _, port));
+    self->send(ma, caf::connect_atom::value, std::move(host), port);
+    expect((caf::atom_value, std::string, uint16_t),
+           from(self).to(ma).with(caf::connect_atom::value, _, port));
     CAF_MESSAGE("wait for the message of the middleman actor in BASP");
     mpx.exec_runnable();
     CAF_MESSAGE("tell peer to accept the connection");
@@ -104,12 +103,12 @@ public:
       // re-run until handhsake is fully completed
     }
     CAF_MESSAGE("fetch remote actor proxy");
-    actor result;
+    caf::actor result;
     self->receive(
-      [&](node_id&, strong_actor_ptr& ptr, std::set<std::string>&) {
-        result = actor_cast<actor>(std::move(ptr));
+      [&](caf::node_id&, caf::strong_actor_ptr& ptr, std::set<std::string>&) {
+        result = caf::actor_cast<caf::actor>(std::move(ptr));
       },
-      [&](error& err) {
+      [&](caf::error& err) {
         CAF_FAIL(sys.render(err));
       }
     );
@@ -117,19 +116,21 @@ public:
   }
 
 private:
-  basp_broker* get_basp_broker() {
-    auto hdl = mm.named_broker<basp_broker>(atom("BASP"));
-    return dynamic_cast<basp_broker*>(actor_cast<abstract_actor*>(hdl));
+  caf::io::basp_broker* get_basp_broker() {
+    auto hdl = mm.named_broker<caf::io::basp_broker>(caf::atom("BASP"));
+    return dynamic_cast<caf::io::basp_broker*>(
+      caf::actor_cast<caf::abstract_actor*>(hdl));
   }
 };
 
 /// Binds `test_coordinator_fixture<Config>` to `test_node_fixture`.
-template <class Config = actor_system_config>
+template <class Config = caf::actor_system_config>
 using test_node_fixture_t = test_node_fixture<test_coordinator_fixture<Config>>;
 
 /// A simple fixture that includes two nodes (`earth` and `mars`) that are
 /// connected to each other.
-template <class BaseFixture = test_coordinator_fixture<actor_system_config>>
+template <class BaseFixture =
+            test_coordinator_fixture<caf::actor_system_config>>
 class point_to_point_fixture {
 public:
   using planet_type = test_node_fixture<BaseFixture>;
@@ -140,10 +141,10 @@ public:
   point_to_point_fixture() {
     mars.peer = &earth;
     earth.peer = &mars;
-    earth.acc = accept_handle::from_int(1);
-    earth.conn = connection_handle::from_int(2);
-    mars.acc = accept_handle::from_int(3);
-    mars.conn = connection_handle::from_int(4);
+    earth.acc = caf::io::accept_handle::from_int(1);
+    earth.conn = caf::io::connection_handle::from_int(2);
+    mars.acc = caf::io::accept_handle::from_int(3);
+    mars.conn = caf::io::connection_handle::from_int(4);
   }
 
   // Convenience function for transmitting all "network" traffic.
@@ -172,7 +173,7 @@ public:
 };
 
 /// Binds `test_coordinator_fixture<Config>` to `point_to_point_fixture`.
-template <class Config = actor_system_config>
+template <class Config = caf::actor_system_config>
 using point_to_point_fixture_t =
   point_to_point_fixture<test_coordinator_fixture<Config>>;
 
