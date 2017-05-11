@@ -88,6 +88,13 @@ public:
   /// A reference-counting pointer to a `stream_manager`.
   using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
+  std::string to_string_home_eu() const {
+    return home_eu_->to_string();
+  }
+  std::string to_string_current_eu() const {
+    return current_eu_->to_string();
+  }
+
   /// A container for associating stream IDs to handlers.
   using streams_map = std::unordered_map<stream_id, stream_manager_ptr>;
 
@@ -879,6 +886,7 @@ protected:
 
   /// Stores the home execution unit.
   execution_unit* home_eu_;
+  execution_unit* current_eu_;
 
   /// @endcond
 };
