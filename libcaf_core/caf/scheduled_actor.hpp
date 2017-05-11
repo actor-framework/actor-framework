@@ -83,6 +83,14 @@ class scheduled_actor : public local_actor, public resumable {
 public:
   // -- member types -----------------------------------------------------------
 
+
+  std::string to_string_home_eu() const {
+    return home_eu_->to_string();
+  }
+  std::string to_string_current_eu() const {
+    return current_eu_->to_string();
+  }
+
   /// A reference-counting pointer to a `stream_handler`.
   using stream_handler_ptr = intrusive_ptr<stream_handler>;
 
@@ -695,6 +703,7 @@ protected:
 
   /// Stores the home execution unit.
   execution_unit* home_eu_;
+  execution_unit* current_eu_;
 
   /// @endcond
 };

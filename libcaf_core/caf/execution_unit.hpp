@@ -62,6 +62,10 @@ public:
     proxies_ = ptr;
   }
 
+  virtual std::string to_string() const {
+    return "execution unit has no description yet";
+  }
+
 protected:
   actor_system* system_;
   proxy_registry* proxies_;

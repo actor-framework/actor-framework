@@ -107,6 +107,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     , exception_handler_(default_exception_handler)
 # endif // CAF_NO_EXCEPTIONS
     , home_eu_(cfg.host)
+    , current_eu_(cfg.host)
       {
   // nop
 }
@@ -229,6 +230,7 @@ void scheduled_actor::intrusive_ptr_release_impl() {
 
 resumable::resume_result
 scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
+  current_eu_ = ctx;
   CAF_PUSH_AID(id());
   if (!activate(ctx))
     return resume_result::done;

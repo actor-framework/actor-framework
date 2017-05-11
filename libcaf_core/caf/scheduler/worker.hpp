@@ -90,6 +90,10 @@ public:
     return id_;
   }
 
+  std::string to_string() const override {
+    return std::string("id: ") + std::to_string(static_cast<int>(id()));
+  }
+
   std::thread& get_thread() {
     return this_thread_;
   }

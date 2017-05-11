@@ -36,6 +36,11 @@ public:
 
   /// It is assumed that `this` is never in the neighborhood of `ptr`.
   bool is_neighbor(execution_unit* ptr) const override;
+
+  std::string to_string() const override {
+    return "scoped_execution_unit";
+  }
+
 };
 
 } // namespace caf
