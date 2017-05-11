@@ -27,10 +27,10 @@ namespace {
 using namespace caf;
 using namespace caf::io;
 
-template <class Config = caf::actor_system_config>
-class test_node_fixture : public test_coordinator_fixture<Config> {
+template <class BaseFixture = test_coordinator_fixture<actor_system_config>>
+class test_node_fixture : public BaseFixture {
 public:
-  using super = test_coordinator_fixture<Config>;
+  using super = BaseFixture;
 
   middleman& mm;
   network::test_multiplexer& mpx;
@@ -123,12 +123,16 @@ private:
   }
 };
 
+/// Binds `test_coordinator_fixture<Config>` to `test_node_fixture`.
+template <class Config = actor_system_config>
+using test_node_fixture_t = test_node_fixture<test_coordinator_fixture<Config>>;
+
 /// A simple fixture that includes two nodes (`earth` and `mars`) that are
 /// connected to each other.
-template <class Config = caf::actor_system_config>
+template <class BaseFixture = test_coordinator_fixture<actor_system_config>>
 class point_to_point_fixture {
 public:
-  using planet_type = test_node_fixture<Config>;
+  using planet_type = test_node_fixture<BaseFixture>;
 
   planet_type earth;
   planet_type mars;
@@ -166,6 +170,11 @@ public:
                                   std::move(host), port, client.conn);
   }
 };
+
+/// Binds `test_coordinator_fixture<Config>` to `point_to_point_fixture`.
+template <class Config = actor_system_config>
+using point_to_point_fixture_t =
+  point_to_point_fixture<test_coordinator_fixture<Config>>;
 
 }// namespace <anonymous>
 

@@ -103,7 +103,7 @@ public:
   }
 };
 
-using sub_fixture = test_node_fixture<remoting_config>;
+using sub_fixture = test_node_fixture_t<remoting_config>;
 
 } // namespace <anonymous>
 
@@ -131,7 +131,7 @@ struct dsl_path_info {
   }                                                                            \
   CAF_MESSAGE("<<< path done")
 
-CAF_TEST_FIXTURE_SCOPE(netstreams, point_to_point_fixture<remoting_config>)
+CAF_TEST_FIXTURE_SCOPE(netstreams, point_to_point_fixture_t<remoting_config>)
 
 CAF_TEST(stream_crossing_the_wire) {
   CAF_MESSAGE("earth stream serv: " << to_string(earth.stream_serv));
