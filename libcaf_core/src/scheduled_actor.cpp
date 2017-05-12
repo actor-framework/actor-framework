@@ -575,8 +575,13 @@ bool scheduled_actor::activate(execution_unit* ctx) {
         return false;
       } else {
         CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()) << CAF_ARG(ctx));
-        if (home_eu_ != ctx)
-          home_eu_ = ctx;
+        if (home_eu_ != ctx) {
+          if (home_eu_ == system().dummy_execution_unit()) {
+            home_eu_ = ctx;
+          } else if (home_eu_->is_neighbor(ctx)) {
+            home_eu_ = ctx; 
+          }
+        }
       }
       CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
     }
