@@ -140,6 +140,7 @@ public:
   template <class Coordinator>
   void central_enqueue(Coordinator* self, resumable* job) {
     auto w = self->worker_by_idx(d(self).next_worker++ % self->num_workers());
+    std::cout << "central enqueue: id:" << w->to_string() << std::endl;
     w->external_enqueue(job);
   }
 
