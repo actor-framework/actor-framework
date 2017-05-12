@@ -281,10 +281,11 @@ public:
     }
     auto& wmatrix = wdata.worker_matrix;
     auto& scheduler_lvl = wmatrix[scheduler_lvl_idx];
-    auto res =
-      scheduler_lvl[wdata.uniform(wdata.rengine) % scheduler_lvl.size()]
-        ->data()
-        .queue.take_tail();
+    auto& w = scheduler_lvl[wdata.uniform(wdata.rengine) % scheduler_lvl.size()];
+    auto res = w->data().queue.take_tail();
+    if (res) {
+      std::cout << "steal: me: " << self->to_string() << " from: " << w->to_string() << std::endl;
+    }
     ++steal_cnt;
     if (steal_cnt >= scheduler_lvl.size()) {
       steal_cnt = 0; 
