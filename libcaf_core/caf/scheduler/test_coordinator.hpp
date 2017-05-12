@@ -129,6 +129,11 @@ public:
     inline_next_enqueues(1);
   }
 
+  /// Executes the next `num` enqueued jobs immediately.
+  inline void set_inline_enqueues(size_t num) {
+    inline_enqueues_ = num;
+  }
+
 protected:
   void start() override;
 
