@@ -46,6 +46,15 @@ public:
     // nop
   }
 
+  // Convenience function for transmitting all "network" traffic and running
+  // all executables on this node.
+  void exec_all() {
+    while (mpx.try_exec_runnable() || mpx.read_data()
+           || this->sched.run_once()) {
+      // rince and repeat
+    }
+  }
+
   void publish(caf::actor whom, uint16_t port) {
     auto ma = mm.actor_handle();
     auto& sys = this->sys;
