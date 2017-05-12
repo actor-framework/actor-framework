@@ -29,6 +29,7 @@
 #include <unordered_map>
 
 #include "caf/fwd.hpp"
+#include "caf/stream.hpp"
 #include "caf/config_value.hpp"
 #include "caf/config_option.hpp"
 #include "caf/actor_factory.hpp"
@@ -163,11 +164,21 @@ public:
                   || (std::is_default_constructible<T>::value
                       && std::is_copy_constructible<T>::value),
                   "T must provide default and copy constructors");
+    using stream_type = stream<T>;
+    std::string stream_name = "stream<";
+    stream_name += name;
+    stream_name += ">";
     static_assert(detail::is_serializable<T>::value, "T must be serializable");
     type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
     value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
     value_factories_by_rtti.emplace(std::type_index(typeid(T)),
                                      &make_type_erased_value<T>);
+    type_names_by_rtti.emplace(std::type_index(typeid(stream_type)),
+                               stream_name);
+    value_factories_by_name.emplace(std::move(stream_name),
+                                    &make_type_erased_value<stream_type>);
+    value_factories_by_rtti.emplace(std::type_index(typeid(stream_type)),
+                                    &make_type_erased_value<stream_type>);
     return *this;
   }
 
