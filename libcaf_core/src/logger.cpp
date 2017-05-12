@@ -62,19 +62,7 @@ constexpr const char* log_level_name[] = {
 static_assert(CAF_LOG_LEVEL >= 0 && CAF_LOG_LEVEL <= 4,
               "assertion: 0 <= CAF_LOG_LEVEL <= 4");
 
-#ifdef CAF_MSVC
-
-thread_local intrusive_ptr<logger> current_logger;
-
-inline void set_current_logger(logger* x) {
-  current_logger.reset(x);
-}
-
-inline logger* get_current_logger() {
-  return current_logger.get();
-}
-
-#else // CAF_MSVC
+#if defined(CAF_NO_THREAD_LOCAL)
 
 pthread_key_t s_key;
 pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
@@ -102,7 +90,19 @@ logger* get_current_logger() {
   return reinterpret_cast<logger*>(pthread_getspecific(s_key));
 }
 
-#endif // CAF_MSVC
+#else // !CAF_NO_THREAD_LOCAL
+
+thread_local intrusive_ptr<logger> current_logger;
+
+inline void set_current_logger(logger* x) {
+  current_logger.reset(x);
+}
+
+inline logger* get_current_logger() {
+  return current_logger.get();
+}
+
+#endif // CAF_NO_THREAD_LOCAL
 
 #else // CAF_LOG_LEVEL
 

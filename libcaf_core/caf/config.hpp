@@ -101,6 +101,9 @@
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
 #  define CAF_COMPILER_VERSION                                                 \
     (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
+#  if !__has_feature(cxx_thread_local)
+#    define CAF_NO_THREAD_LOCAL
+#  endif
 #elif defined(__GNUC__)
 #  define CAF_GCC
 #  define CAF_DEPRECATED __attribute__((__deprecated__))

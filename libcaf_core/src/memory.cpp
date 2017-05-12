@@ -17,6 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/config.hpp"
 #include "caf/detail/memory.hpp"
 
 #include <vector>
@@ -43,7 +44,8 @@ using cache_map = std::map<const std::type_info*, std::unique_ptr<memory_cache>>
 
 } // namespace <anonymous>
 
-#if defined(CAF_CLANG) || defined(CAF_MACOS)
+#if defined(CAF_NO_THREAD_LOCAL)
+
 namespace {
 
 pthread_key_t s_key;
@@ -72,7 +74,7 @@ cache_map& get_cache_map() {
   return *cache;
 }
 
-#else // !CAF_CLANG && !CAF_MACOS
+#else // !CAF_NO_THREAD_LOCAL
 
 namespace {
 
@@ -90,7 +92,7 @@ cache_map& get_cache_map() {
   return *s_key;
 }
 
-#endif
+#endif // !CAF_NO_THREAD_LOCAL
 
 memory_cache::~memory_cache() {
   // nop
