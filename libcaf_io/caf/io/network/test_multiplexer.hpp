@@ -154,6 +154,21 @@ public:
   /// Executes all pending `runnable` objects.
   void flush_runnables();
 
+  /// Executes the next `num` enqueued runnables immediately.
+  inline void inline_next_runnables(size_t num) {
+    inline_runnables_ += num;
+  }
+
+  /// Executes the next enqueued runnable immediately.
+  inline void inline_next_runnable() {
+    inline_next_runnables(1);
+  }
+
+  /// Installs a callback that is triggered on the next inlined runnable.
+  inline void after_next_inlined_runnable(std::function<void()> f) {
+    inline_runnable_callback_ = std::move(f);
+  }
+
 protected:
   void exec_later(resumable* ptr) override;
 
@@ -207,6 +222,12 @@ private:
   // extra state for making sure the test multiplexer is not used in a
   // multithreaded setup
   std::thread::id tid_;
+
+  // Configures shortcuts for runnables.
+  size_t inline_runnables_;
+
+  // Configures a one-shot handler for the next inlined runnable.
+  std::function<void()> inline_runnable_callback_;
 };
 
 } // namespace network

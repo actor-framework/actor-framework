@@ -49,7 +49,8 @@ test_multiplexer::doorman_data::doorman_data()
 
 test_multiplexer::test_multiplexer(actor_system* sys)
     : multiplexer(sys),
-      tid_(std::this_thread::get_id()) {
+      tid_(std::this_thread::get_id()),
+      inline_runnables_(0) {
   CAF_ASSERT(sys != nullptr);
 }
 
@@ -527,11 +528,23 @@ void test_multiplexer::exec_later(resumable* ptr) {
   switch (ptr->subtype()) {
     case resumable::io_actor:
     case resumable::function_object: {
-      std::list<resumable_ptr> tmp;
-      tmp.emplace_back(ptr);
-      guard_type guard{mx_};
-      resumables_.splice(resumables_.end(), std::move(tmp));
-      cv_.notify_all();
+      if (inline_runnables_ > 0) {
+        --inline_runnables_;
+        resumable_ptr tmp{ptr};
+        exec(tmp);
+        if (inline_runnable_callback_) {
+          using std::swap;
+          std::function<void()> f;
+          swap(f, inline_runnable_callback_);
+          f();
+        }
+      } else {
+        std::list<resumable_ptr> tmp;
+        tmp.emplace_back(ptr);
+        guard_type guard{mx_};
+        resumables_.splice(resumables_.end(), std::move(tmp));
+        cv_.notify_all();
+      }
       break;
     }
     default:
