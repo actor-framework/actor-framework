@@ -17,51 +17,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_ID_HPP
-#define CAF_STREAM_ID_HPP
+#include "caf/stream_id.hpp"
 
-#include <cstdint>
-
-#include "caf/meta/type_name.hpp"
-#include "caf/actor_control_block.hpp"
-
-#include "caf/detail/comparable.hpp"
+#include <cstddef>
 
 namespace caf {
 
-class stream_id : detail::comparable<stream_id> {
-public:
-  stream_id() = default;
-  stream_id(stream_id&&) = default;
-  stream_id(const stream_id&) = default;
-  stream_id& operator=(stream_id&&) = default;
-  stream_id& operator=(const stream_id&) = default;
+stream_id::stream_id(strong_actor_ptr origin_actor, uint64_t origin_nr)
+    : origin(std::move(origin_actor)),
+      nr(origin_nr) {
+  // nop
+}
 
-  stream_id(strong_actor_ptr origin_actor, uint64_t origin_nr);
-
-  int64_t compare(const stream_id& other) const;
-
-  strong_actor_ptr origin;
-  uint64_t nr;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_id& x) {
-  return f(meta::type_name("stream_id"), x.origin, x.nr);
+int64_t stream_id::compare(const stream_id& other) const {
+  auto r0 = static_cast<ptrdiff_t>(origin.get() - other.origin.get());
+  if (r0 != 0)
+    return static_cast<int64_t>(r0);
+  return static_cast<int64_t>(nr) - static_cast<int64_t>(other.nr);
 }
 
 } // namespace caf
-
-namespace std {
-template <>
-struct hash<caf::stream_id> {
-  size_t operator()(const caf::stream_id& x) const {
-    auto tmp = reinterpret_cast<ptrdiff_t>(x.origin.get())
-               ^ static_cast<ptrdiff_t>(x.nr);
-    return static_cast<size_t>(tmp);
-  }
-};
-} // namespace std
-
-
-#endif // CAF_STREAM_ID_HPP
