@@ -312,6 +312,11 @@ public:
   /// Owning poiner to an `upstream_policy`.
   using upstream_policy_ptr = std::unique_ptr<upstream_policy>;
 
+  /// Returns a new stream ID.
+  stream_id make_stream_id() {
+    return {ctrl(), new_request_id(message_priority::normal).integer_value()};
+  }
+
   // Starts a new stream.
   template <class Handle, class... Ts, class Init, class Getter,
             class ClosedPredicate, class ResHandler>
@@ -339,8 +344,7 @@ public:
       return {stream_id{nullptr, 0}, nullptr};
     }
     // generate new stream ID
-    stream_id sid{ctrl(),
-                  new_request_id(message_priority::normal).integer_value()};
+    auto sid = make_stream_id();
     stream<type> token{sid};
     auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));
     // generate new ID for the final response message and send handshake
@@ -410,8 +414,7 @@ public:
       rp.deliver(sec::no_downstream_stages_defined);
       return {stream_id{nullptr, 0}, nullptr};
     }
-    stream_id sid{ctrl(),
-                  new_request_id(message_priority::normal).integer_value()};
+    auto sid = make_stream_id();
     auto next = stages.back();
     CAF_ASSERT(next != nullptr);
     fwd_stream_handshake<type>(sid, xs);
