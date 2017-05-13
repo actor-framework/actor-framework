@@ -162,8 +162,13 @@ public:
 
   /// Returns how many items should be stored on individual paths in order to
   /// minimize latency between received demand and sent batches.
-  long min_buffer_size() const {
+  inline long min_buffer_size() const {
     return min_buffer_size_;
+  }
+
+  /// Returns all currently available paths on this downstream.
+  const path_list& paths() const {
+    return paths_;
   }
 
 protected:
