@@ -290,6 +290,7 @@ void middleman::start() {
     behavior make_behavior() override {
       return {
         [=](stream_msg& x) -> delegated<message> {
+          CAF_LOG_TRACE(CAF_ARG(x));
           // Dispatching depends on the direction of the message.
           if (outgoing_.has_stream(x.sid)) {
             outgoing_(x);
@@ -299,13 +300,13 @@ void middleman::start() {
           return {};
         },
         [=](sys_atom, stream_msg& x) -> delegated<message> {
-          // Stream message received from a proxy, always results in a new
-          // stream from a local actor to a remote node.
-          CAF_ASSERT(holds_alternative<stream_msg::open>(x.content));
+          CAF_LOG_TRACE(CAF_ARG(x));
+          // Stream message received from a proxy
           outgoing_(x);
           return {};
         },
         [=](sys_atom, ok_atom, int32_t credit) {
+          CAF_LOG_TRACE(CAF_ARG(credit));
           CAF_ASSERT(current_mailbox_element() != nullptr);
           auto cme = current_mailbox_element();
           if (cme->sender != nullptr) {
@@ -316,16 +317,19 @@ void middleman::start() {
           }
         },
         [=](exit_msg& x) {
+          CAF_LOG_TRACE(CAF_ARG(x));
           if (x.reason)
             quit(x.reason);
         },
         // Connects both incoming_ and outgoing_ to nid.
         [=](connect_atom, const node_id& nid) {
+          CAF_LOG_TRACE(CAF_ARG(nid));
           send(basp_, forward_atom::value, nid, atom("ConfigServ"),
                make_message(get_atom::value, atom("StreamServ")));
         },
         // Assumes `ptr` is a remote spawn server.
         [=](strong_actor_ptr& ptr) {
+          CAF_LOG_TRACE(CAF_ARG(ptr));
           if (ptr) {
             add_remote_path(ptr->node(), ptr);
           }
@@ -334,6 +338,7 @@ void middleman::start() {
     }
 
     strong_actor_ptr remote_stream_serv(const node_id& nid) override {
+      CAF_LOG_TRACE(CAF_ARG(nid));
       strong_actor_ptr result;
       // Ask remote config server for a handle to the remote spawn server.
       scoped_actor self{system()};
