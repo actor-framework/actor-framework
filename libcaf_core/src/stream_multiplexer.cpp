@@ -103,7 +103,8 @@ void stream_multiplexer::fail(error reason, strong_actor_ptr predecessor,
     unsafe_send_as(self_, successor,
                    make<stream_msg::abort>(current_stream_msg_->sid, reason));
   auto rp = self_->make_response_promise();
-  rp.deliver(std::move(reason));
+  if (!rp.async())
+    rp.deliver(std::move(reason));
 }
 
 void stream_multiplexer::fail(error reason) {
