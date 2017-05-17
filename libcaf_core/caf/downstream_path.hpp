@@ -57,9 +57,9 @@ public:
 };
 
 template <class Inspector>
-typename Inspector::return_type inspect(Inspector& f, downstream_path& x) {
-  return f(meta::type_name("upstream_path"), x.next_batch_id, x.open_credit,
-           x.redeployable, x.unacknowledged_batches);
+typename Inspector::result_type inspect(Inspector& f, downstream_path& x) {
+  return f(meta::type_name("downstream_path"), x.hdl, x.next_batch_id,
+           x.open_credit, x.redeployable, x.unacknowledged_batches);
 }
 
 } // namespace caf
