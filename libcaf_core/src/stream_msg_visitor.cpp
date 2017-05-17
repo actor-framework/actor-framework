@@ -111,7 +111,7 @@ auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
                                            self_->current_sender(), d, false),
             i_};
   }
-  CAF_LOG_DEBUG("received stream_msg::ok for unknown stream");
+  CAF_LOG_WARNING("received stream_msg::ack_open for unknown stream");
   return {sec::unexpected_message, e_};
 }
 
