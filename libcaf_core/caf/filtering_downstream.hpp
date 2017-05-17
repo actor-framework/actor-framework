@@ -28,6 +28,8 @@
 
 #include "caf/downstream.hpp"
 
+#include "caf/meta/type_name.hpp"
+
 namespace caf {
 
 /// A filtering downstream allows stages to fork into multiple lanes, where
@@ -45,6 +47,10 @@ public:
   struct lane {
     typename super::queue_type queue;
     typename super::path_ptr_list paths;
+    template <class Inspector>
+    friend typename Inspector::result_type inspect(Inspector& f, lane& x) {
+      return f(meta::type_name("lane"), x.queue, x.paths);
+    }
   };
 
   /// Identifies a lane inside the downstream. Filters are kept in sorted order
@@ -108,6 +114,10 @@ public:
     std::sort(f.begin(), f.end());
     erase_from_lanes(x);
     lanes_[std::move(f)].paths.push_back(super::find(x));
+  }
+
+  const lanes_map& lanes() const {
+    return lanes_;
   }
 
 private:
