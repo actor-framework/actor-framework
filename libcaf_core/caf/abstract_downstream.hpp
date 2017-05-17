@@ -35,8 +35,6 @@ namespace caf {
 
 class abstract_downstream {
 public:
-  using topics = std::vector<atom_value>;
-
   using path = downstream_path;
 
   using path_cref = const path&;
@@ -52,9 +50,6 @@ public:
 
   /// List of views to paths.
   using path_ptr_list = std::vector<path_ptr>;
-
-  /// Stores all available paths sorted by topics.
-  using path_map = std::unordered_map<topics, path_ptr_list>;
 
   using policy_ptr = std::unique_ptr<downstream_policy>;
 
