@@ -164,21 +164,15 @@ public:
                   || (std::is_default_constructible<T>::value
                       && std::is_copy_constructible<T>::value),
                   "T must provide default and copy constructors");
-    using stream_type = stream<T>;
     std::string stream_name = "stream<";
     stream_name += name;
     stream_name += ">";
-    static_assert(detail::is_serializable<T>::value, "T must be serializable");
-    type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
-    value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
-    value_factories_by_rtti.emplace(std::type_index(typeid(T)),
-                                     &make_type_erased_value<T>);
-    type_names_by_rtti.emplace(std::type_index(typeid(stream_type)),
-                               stream_name);
-    value_factories_by_name.emplace(std::move(stream_name),
-                                    &make_type_erased_value<stream_type>);
-    value_factories_by_rtti.emplace(std::type_index(typeid(stream_type)),
-                                    &make_type_erased_value<stream_type>);
+    add_message_type_impl<stream<T>>(std::move(stream_name));
+    std::string vec_name = "std::vector<";
+    vec_name += name;
+    vec_name += ">";
+    add_message_type_impl<std::vector<T>>(std::move(vec_name));
+    add_message_type_impl<T>(std::move(name));
     return *this;
   }
 
@@ -320,6 +314,14 @@ protected:
   option_vector custom_options_;
 
 private:
+  template <class T>
+  void add_message_type_impl(std::string name) {
+    type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
+    value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
+    value_factories_by_rtti.emplace(std::type_index(typeid(T)),
+                                     &make_type_erased_value<T>);
+  }
+
   static std::string render_sec(uint8_t, atom_value, const message&);
 
   static std::string render_exit_reason(uint8_t, atom_value, const message&);

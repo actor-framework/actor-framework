@@ -100,6 +100,15 @@ actor_system_config::actor_system_config()
     : cli_helptext_printed(false),
       slave_mode(false),
       slave_mode_fun(nullptr) {
+  // add `vector<T>` and `stream<T>` for each statically known type
+  add_message_type_impl<stream<actor>>("stream<@actor>");
+  add_message_type_impl<stream<actor_addr>>("stream<@addr>");
+  add_message_type_impl<stream<atom_value>>("stream<@atom>");
+  add_message_type_impl<stream<message>>("stream<@message>");
+  add_message_type_impl<std::vector<actor>>("std::vector<@actor>");
+  add_message_type_impl<std::vector<actor_addr>>("std::vector<@addr>");
+  add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
+  add_message_type_impl<std::vector<message>>("std::vector<@message>");
   // (1) hard-coded defaults
   scheduler_policy = atom("stealing");
   scheduler_max_threads = std::max(std::thread::hardware_concurrency(),
