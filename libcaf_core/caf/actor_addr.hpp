@@ -78,6 +78,10 @@ public:
   /// Exchange content of `*this` and `other`.
   void swap(actor_addr& other) noexcept;
 
+  inline explicit operator bool() const {
+    return static_cast<bool>(ptr_);
+  }
+
   /// @cond PRIVATE
 
   static intptr_t compare(const actor_control_block* lhs,
