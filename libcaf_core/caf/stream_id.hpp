@@ -43,6 +43,10 @@ public:
 
   strong_actor_ptr origin;
   uint64_t nr;
+
+  inline bool valid() const {
+    return origin != nullptr;
+  }
 };
 
 template <class Inspector>
