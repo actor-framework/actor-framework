@@ -193,7 +193,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   }
 
   /// Exchange content of `*this` and `other`.
-  void swap(actor& other) noexcept {
+  void swap(typed_actor& other) noexcept {
     ptr_.swap(other.ptr_);
   }
 
