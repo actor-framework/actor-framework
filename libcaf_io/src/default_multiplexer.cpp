@@ -1317,7 +1317,7 @@ expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
 
 template <int Family>
 expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
-                                             bool reuse_addr) {
+                                             bool reuse_addr, bool any) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   CALL_CFUN(fd, cc_valid_socket, "socket", socket(Family, SOCK_STREAM, 0));
@@ -1339,12 +1339,10 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   family_of(sa) = Family;
-  if (!addr) {
+  if (any)
     set_inaddr_any(fd, sa);
-  } else {
-    CALL_CFUN(res, cc_one, "inet_pton",
-              inet_pton(Family, addr, &addr_of(sa)));
-  }
+  CALL_CFUN(tmp, cc_one, "inet_pton",
+            inet_pton(Family, addr, &addr_of(sa)));
   port_of(sa) = htons(port);
   CALL_CFUN(res, cc_zero, "bind",
             bind(fd, reinterpret_cast<sockaddr*>(&sa),
@@ -1359,12 +1357,14 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "No local interface available",
                       addr);
-  int fd = invalid_native_socket;
+  auto addr_str = std::string{addr == nullptr ? "" : addr};
+  bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
+  auto fd = invalid_native_socket;
   for (auto& elem : addrs) {
-    auto addr = elem.first.c_str();
+    auto hostname = elem.first.c_str();
     auto p = elem.second == ipv4
-           ? new_ip_acceptor_impl<AF_INET>(port, addr, reuse_addr)
-           : new_ip_acceptor_impl<AF_INET6>(port, addr, reuse_addr);
+           ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
+           : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr, any);
     if (!p) {
       CAF_LOG_DEBUG(p.error());
       continue;
