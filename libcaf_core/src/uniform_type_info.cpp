@@ -100,7 +100,7 @@ const uniform_type_info* uniform_type_info::from(const std::string& name) {
 uniform_value uniform_type_info::deserialize(deserializer* src) const {
   auto uval = create();
   deserialize(uval->val, src);
-  return std::move(uval);
+  return uval;
 }
 
 std::vector<const uniform_type_info*> uniform_type_info::instances() {

@@ -400,7 +400,7 @@ make_message(V&& x, Ts&&... xs) {
 /// Returns a copy of @p other.
 /// @relates message
 inline message make_message(message other) {
-  return std::move(other);
+  return other;
 }
 
 /// Returns an empty `message`.
