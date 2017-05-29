@@ -65,7 +65,6 @@ set (LIBCAF_CORE_SRCS
      src/logger.cpp
      src/mailbox_element.cpp
      src/match_case.cpp
-     src/memory.cpp
      src/memory_managed.cpp
      src/merged_tuple.cpp
      src/message.cpp
