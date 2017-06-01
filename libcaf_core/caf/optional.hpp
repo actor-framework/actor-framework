@@ -162,7 +162,7 @@ class optional {
   }
 
   bool m_valid;
-  struct { T m_value; };
+  union { T m_value; };
 };
 
 /// Template specialization to allow `optional` to hold a reference
