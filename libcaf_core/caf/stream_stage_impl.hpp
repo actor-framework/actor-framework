@@ -20,7 +20,6 @@
 #ifndef CAF_STREAM_STAGE_IMPL_HPP
 #define CAF_STREAM_STAGE_IMPL_HPP
 
-#include "caf/upstream.hpp"
 #include "caf/downstream.hpp"
 #include "caf/stream_stage.hpp"
 #include "caf/stream_stage_trait.hpp"

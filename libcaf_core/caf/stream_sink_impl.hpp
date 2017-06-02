@@ -20,7 +20,6 @@
 #ifndef CAF_STREAM_SINK_IMPL_HPP
 #define CAF_STREAM_SINK_IMPL_HPP
 
-#include "caf/upstream.hpp"
 #include "caf/stream_sink.hpp"
 #include "caf/stream_sink_trait.hpp"
 

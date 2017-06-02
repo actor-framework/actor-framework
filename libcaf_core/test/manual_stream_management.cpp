@@ -29,6 +29,7 @@
 #define CAF_SUITE manual_stream_management
 #include "caf/test/dsl.hpp"
 
+#include "caf/upstream_path.hpp"
 #include "caf/stream_source.hpp"
 #include "caf/filtering_downstream.hpp"
 
