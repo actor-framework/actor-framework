@@ -81,12 +81,13 @@ expected<long> upstream_policy::add_path(strong_actor_ptr hdl,
                 << CAF_ARG(downstream_credit));
   CAF_ASSERT(hdl != nullptr);
   if (!find(hdl)) {
-    CAF_LOG_DEBUG("add new upstraem path" << CAF_ARG(hdl));
     auto ptr = new upstream_path(std::move(hdl), sid, prio);
     paths_.emplace_back(ptr);
     assignment_vec_.emplace_back(ptr, 0);
     if (downstream_credit > 0)
       ptr->assigned_credit = std::min(max_credit_, downstream_credit);
+    CAF_LOG_DEBUG("add new upstraem path" << ptr->hdl 
+                  << "with initial credit" << ptr->assigned_credit);
     return ptr->assigned_credit;
   }
   return sec::upstream_already_exists;
