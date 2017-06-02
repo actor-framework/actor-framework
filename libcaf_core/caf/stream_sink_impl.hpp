@@ -26,7 +26,7 @@
 
 namespace caf {
 
-template <class Fun, class Finalize>
+template <class Fun, class Finalize, class UpstreamPolicy>
 class stream_sink_impl : public stream_sink {
 public:
   using trait = stream_sink_trait_t<Fun, Finalize>;
@@ -37,14 +37,14 @@ public:
 
   using output_type = typename trait::output;
 
-  stream_sink_impl(local_actor* self, std::unique_ptr<upstream_policy> policy,
+  stream_sink_impl(local_actor* self,
                    strong_actor_ptr&& orig_sender,
                    std::vector<strong_actor_ptr>&& svec, message_id mid,
                    Fun fun, Finalize fin)
       : stream_sink(&in_, std::move(orig_sender), std::move(svec), mid),
         fun_(std::move(fun)),
         fin_(std::move(fin)),
-        in_(self, std::move(policy)) {
+        in_(self) {
     // nop
   }
 
@@ -70,7 +70,7 @@ public:
     return trait::make_result(state_, fin_);
   }
 
-  optional<abstract_upstream&> get_upstream() override {
+  optional<upstream_policy&> up() override {
     return in_;
   }
 
@@ -82,7 +82,7 @@ private:
   state_type state_;
   Fun fun_;
   Finalize fin_;
-  upstream<output_type> in_;
+  UpstreamPolicy in_;
 };
 
 } // namespace caf

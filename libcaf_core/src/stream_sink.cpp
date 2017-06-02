@@ -20,11 +20,12 @@
 #include "caf/stream_sink.hpp"
 
 #include "caf/send.hpp"
-#include "caf/abstract_upstream.hpp"
+#include "caf/upstream_path.hpp"
+#include "caf/upstream_policy.hpp"
 
 namespace caf {
 
-stream_sink::stream_sink(abstract_upstream* in_ptr,
+stream_sink::stream_sink(upstream_policy* in_ptr,
                          strong_actor_ptr&& orig_sender,
                          std::vector<strong_actor_ptr>&& trailing_stages,
                          message_id mid)

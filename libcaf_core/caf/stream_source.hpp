@@ -33,7 +33,7 @@ namespace caf {
 class stream_source : public extend<stream_handler, stream_source>::
                              with<mixin::has_downstreams> {
 public:
-  stream_source(abstract_downstream* out_ptr);
+  stream_source(downstream_policy* out_ptr);
 
   ~stream_source() override;
 
@@ -43,7 +43,7 @@ public:
 
   void abort(strong_actor_ptr& cause, const error& reason) override;
 
-  inline abstract_downstream& out() {
+  inline downstream_policy& out() {
     return *out_ptr_;
   }
 
@@ -62,7 +62,7 @@ protected:
   virtual bool at_end() const = 0;
 
 private:
-  abstract_downstream* out_ptr_;
+  downstream_policy* out_ptr_;
 };
 
 } // namespace caf

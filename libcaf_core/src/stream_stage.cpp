@@ -21,20 +21,18 @@
 
 #include "caf/sec.hpp"
 #include "caf/logger.hpp"
+#include "caf/upstream_path.hpp"
 #include "caf/downstream_path.hpp"
-#include "caf/abstract_upstream.hpp"
+#include "caf/upstream_policy.hpp"
 #include "caf/downstream_policy.hpp"
-#include "caf/abstract_downstream.hpp"
 
 namespace caf {
 
-stream_stage::stream_stage(abstract_upstream* in_ptr,
-                           abstract_downstream* out_ptr)
-    : in_ptr_(in_ptr),
-      out_ptr_(out_ptr) {
+stream_stage::stream_stage(upstream_policy* in_ptr, downstream_policy* out_ptr)
+  : in_ptr_(in_ptr),
+    out_ptr_(out_ptr) {
   // nop
 }
-
 bool stream_stage::done() const {
   return in_ptr_->closed() && out_ptr_->closed();
 }
@@ -50,7 +48,10 @@ error stream_stage::upstream_batch(strong_actor_ptr& hdl, long xs_size,
     auto err = process_batch(xs);
     if (err == none) {
       push();
-      in().assign_credit(out().total_net_credit());
+      auto current_size = out().buf_size();
+      auto desired_size = out().credit();
+      if (current_size < desired_size)
+        in().assign_credit(desired_size - current_size);
     }
     return err;
   }
@@ -66,7 +67,10 @@ error stream_stage::downstream_demand(strong_actor_ptr& hdl, long value) {
       push();
     else if (in().closed() && !out().remove_path(hdl))
       return sec::invalid_downstream;
-    in().assign_credit(out().total_net_credit());
+    auto current_size = out().buf_size();
+    auto desired_size = out().credit();
+    if (current_size < desired_size)
+      in().assign_credit(desired_size - current_size);
     return none;
   }
   return sec::invalid_downstream;

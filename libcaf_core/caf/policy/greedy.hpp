@@ -26,20 +26,16 @@ namespace caf {
 namespace policy {
 
 /// Sends ACKs as early and often as possible.
-class greedy final : public upstream_policy {
+class greedy : public upstream_policy {
 public:
-  greedy();
-
-  void assign_credit(assignment_vec& xs,
-                     long total_downstream_net_credit) override;
-
-  long low_watermark;
-
-  long high_watermark;
-
-  inline static std::unique_ptr<upstream_policy> make() {
-    return std::unique_ptr<upstream_policy>(new greedy);
+  template <class... Ts>
+  greedy(Ts&&... xs) : upstream_policy(std::forward<Ts>(xs)...) {
+    // nop
   }
+
+  ~greedy() override;
+
+  void fill_assignment_vec(long downstream_credit) override;
 };
 
 } // namespace policy

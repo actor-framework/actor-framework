@@ -60,7 +60,7 @@ public:
   /// Push new data to downstream actors by sending batches. The amount of
   /// pushed data is limited by `hint` or the available credit if
   /// `hint == nullptr`.
-  virtual error push(long* hint = nullptr);
+  virtual error push();
 
   // -- handler for upstream events --------------------------------------------
 
@@ -85,15 +85,15 @@ public:
 
   virtual bool done() const = 0;
 
-  /// Returns the downstream if this handler is a sink or stage.
-  virtual optional<abstract_downstream&> get_downstream();
-
-  /// Returns the upstream if this handler is a source or stage.
-  virtual optional<abstract_upstream&> get_upstream();
-
   /// Returns a type-erased `stream<T>` as handshake token for downstream
   /// actors. Returns an empty message for sinks.
   virtual message make_output_token(const stream_id&) const;
+
+  /// Returns the downstream policy if this handler is a sink or stage.
+  virtual optional<downstream_policy&> dp();
+
+  /// Returns the upstream policy if this handler is a source or stage.
+  virtual optional<upstream_policy&> up();
 };
 
 /// A reference counting pointer to a `stream_handler`.

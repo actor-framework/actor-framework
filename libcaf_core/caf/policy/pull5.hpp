@@ -17,60 +17,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_HAS_DOWNSTREAMS_HPP
-#define CAF_MIXIN_HAS_DOWNSTREAMS_HPP
+#ifndef CAF_POLICY_PULL5_HPP
+#define CAF_POLICY_PULL5_HPP
 
-#include <cstddef>
-
-#include "caf/sec.hpp"
-#include "caf/logger.hpp"
-#include "caf/actor_control_block.hpp"
+#include "caf/upstream_policy.hpp"
 
 namespace caf {
-namespace mixin {
+namespace policy {
 
-/// Mixin for streams with any number of downstreams.
-template <class Base, class Subtype>
-class has_downstreams : public Base {
+/// Sends ACKs as early and often as possible.
+class pull5 : public upstream_policy {
 public:
-  error add_downstream(strong_actor_ptr& ptr) override {
-    CAF_LOG_TRACE(CAF_ARG(ptr));
-    CAF_ASSERT(ptr != nullptr);
-    if (out().add_path(ptr))
-      return none;
-    return sec::downstream_already_exists;
+  template <class... Ts>
+  pull5(Ts&&... xs) : upstream_policy(std::forward<Ts>(xs)...) {
+    // nop
   }
 
-  error confirm_downstream(const strong_actor_ptr& rebind_from,
-                           strong_actor_ptr& ptr, long initial_demand,
-                           bool redeployable) override {
-    CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(initial_demand)
-                  << CAF_ARG(redeployable));
-    CAF_ASSERT(ptr != nullptr);
-    if (out().confirm_path(rebind_from, ptr, redeployable)) {
-      dptr()->downstream_demand(ptr, initial_demand);
-      return none;
-    }
-    return sec::invalid_downstream;
-  }
+  ~pull5() override;
 
-  error push() override {
-    CAF_LOG_TRACE("");
-    out().emit_batches();
-    return none;
-  }
-
-private:
-  Subtype* dptr() {
-    return static_cast<Subtype*>(this);
-  }
-
-  downstream_policy& out() {
-    return *this->dp();
-  }
+  void fill_assignment_vec(long downstream_credit) override;
 };
 
-} // namespace mixin
+} // namespace policy
 } // namespace caf
 
-#endif // CAF_MIXIN_HAS_DOWNSTREAMS_HPP
+#endif // CAF_POLICY_PULL5_HPP

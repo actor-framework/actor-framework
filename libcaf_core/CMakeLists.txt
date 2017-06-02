@@ -15,9 +15,7 @@ set (LIBCAF_CORE_SRCS
      src/abstract_channel.cpp
      src/abstract_composable_behavior.cpp
      src/abstract_coordinator.cpp
-     src/abstract_downstream.cpp
      src/abstract_group.cpp
-     src/abstract_upstream.cpp
      src/actor.cpp
      src/actor_addr.cpp
      src/actor_companion.cpp
@@ -29,7 +27,6 @@ set (LIBCAF_CORE_SRCS
      src/actor_registry.cpp
      src/actor_system.cpp
      src/actor_system_config.cpp
-     src/anycast.cpp
      src/atom.cpp
      src/attachable.cpp
      src/behavior.cpp
@@ -37,7 +34,6 @@ set (LIBCAF_CORE_SRCS
      src/behavior_stack.cpp
      src/blocking_actor.cpp
      src/blocking_behavior.cpp
-     src/broadcast.cpp
      src/concatenated_tuple.cpp
      src/config_option.cpp
      src/decorated_tuple.cpp
@@ -78,6 +74,7 @@ set (LIBCAF_CORE_SRCS
      src/parse_ini.cpp
      src/private_thread.cpp
      src/proxy_registry.cpp
+     src/pull5.cpp
      src/raw_event_based_actor.cpp
      src/ref_counted.cpp
      src/replies_to.cpp

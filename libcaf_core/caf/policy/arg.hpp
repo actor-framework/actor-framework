@@ -17,25 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/policy/anycast.hpp"
+#ifndef CAF_POLICY_ARG_HPP
+#define CAF_POLICY_ARG_HPP
 
-#include "caf/abstract_downstream.hpp"
+#include "caf/downstream_policy.hpp"
+
+#include "caf/mixin/buffered_policy.hpp"
 
 namespace caf {
 namespace policy {
 
-long anycast::total_net_credit(const abstract_downstream& out) {
-  // The total amount of available net credit is calculated as:
-  // `av + (n * mb) - bs`, where `av` is the sum of all available credit on all
-  // paths, `n` is the number of downstream paths, `mb` is the minimum buffer
-  // size, and `bs` is the current buffer size.
-  return (out.total_credit() + (out.num_paths() * out.min_buffer_size()))
-         - out.buf_size();
-}
+/// Provides a wrapper to pass policy arguments to functions.
+template <class... Ts>
+struct arg {
+public:
+  static const arg value;
+};
 
-void anycast::push(abstract_downstream& out, long* hint) {
-  out.anycast(hint);
-}
+template <class... Ts>
+const arg<Ts...> arg<Ts...>::value = arg<Ts...>{};
 
 } // namespace policy
 } // namespace caf
+
+#endif // CAF_POLICY_ARG_HPP

@@ -35,7 +35,7 @@ class stream_stage : public extend<stream_handler, stream_stage>::
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_stage(abstract_upstream* in_ptr, abstract_downstream* out_ptr);
+  stream_stage(upstream_policy* in_ptr, downstream_policy* out_ptr);
 
   // -- overrides --------------------------------------------------------------
 
@@ -49,11 +49,11 @@ public:
 
   void last_upstream_closed();
 
-  inline abstract_upstream& in() {
+  inline upstream_policy& in() {
     return *in_ptr_;
   }
 
-  inline abstract_downstream& out() {
+  inline downstream_policy& out() {
     return *out_ptr_;
   }
 
@@ -61,8 +61,8 @@ protected:
   virtual error process_batch(message& msg) = 0;
 
 private:
-  abstract_upstream* in_ptr_;
-  abstract_downstream* out_ptr_;
+  upstream_policy* in_ptr_;
+  downstream_policy* out_ptr_;
 };
 
 } // namespace caf

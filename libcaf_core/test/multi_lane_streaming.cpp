@@ -31,6 +31,9 @@
 
 #include "caf/filtering_downstream.hpp"
 
+#include "caf/policy/greedy.hpp"
+#include "caf/policy/broadcast.hpp"
+
 using std::cout;
 using std::endl;
 using std::string;
@@ -46,14 +49,6 @@ using value_type = string;
 using filter_type = std::vector<key_type>;
 
 using element_type = std::pair<key_type, value_type>;
-
-struct stage_policy {
-  template <class InputType>
-  using upstream_type = upstream<InputType>;
-
-  template <class OutputType>
-  using downstream_type = filtering_downstream<OutputType, key_type>;
-};
 
 struct process_t {
   void operator()(unit_t&, downstream<element_type>& out, element_type x) {
@@ -72,7 +67,9 @@ struct cleanup_t {
 constexpr cleanup_t cleanup_fun = cleanup_t{};
 
 struct stream_splitter_state {
-  using stage_impl = stream_stage_impl<process_t, cleanup_t, stage_policy>;
+  using stage_impl = stream_stage_impl<process_t, cleanup_t, policy::greedy,
+                                       filtering_downstream<element_type,
+                                                            key_type>>;
   intrusive_ptr<stage_impl> stage;
   static const char* name;
 };
@@ -83,12 +80,11 @@ behavior stream_splitter(stateful_actor<stream_splitter_state>* self) {
   stream_id id{self->ctrl(),
                self->new_request_id(message_priority::normal).integer_value()};
   using impl = stream_splitter_state::stage_impl;
-  std::unique_ptr<upstream_policy> upolicy{new policy::greedy};
-  std::unique_ptr<downstream_policy> dpolicy{new policy::broadcast};
-  self->state.stage = make_counted<impl>(self, id, std::move(upolicy),
-                                         std::move(dpolicy), process_fun,
-                                         cleanup_fun);
+  self->state.stage = make_counted<impl>(self, id, process_fun, cleanup_fun);
   self->state.stage->in().continuous(true);
+  // force the splitter to collect credit until reaching 3 in order
+  // to receive only full batches from upstream (making tests a lot easier)
+  self->state.stage->in().min_credit_assignment(3);
   self->streams().emplace(id, self->state.stage);
   return {
     [=](join_atom, filter_type filter) -> stream<element_type> {
@@ -237,13 +233,13 @@ CAF_TEST(fork_setup) {
                      {"key1", "c"}},
                0));
   expect((stream_msg::batch),
-         from(splitter).to(d1)
-         .with(3, batch{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}}, 0));
-  expect((stream_msg::batch),
          from(splitter).to(d2)
          .with(2, batch{{"key2", "a"}, {"key2", "b"}}, 0));
-  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, 0));
+  expect((stream_msg::batch),
+         from(splitter).to(d1)
+         .with(3, batch{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}}, 0));
   expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, 0));
+  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, 0));
   expect((stream_msg::ack_batch), from(splitter).to(src).with(5, 0));
   // Second batch.
   expect((stream_msg::batch),
@@ -295,13 +291,13 @@ CAF_TEST(fork_setup) {
                      {"key1", "c"}},
                0));
   expect((stream_msg::batch),
-         from(splitter).to(d1)
-         .with(3, batch{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}}, 2));
-  expect((stream_msg::batch),
          from(splitter).to(d2)
          .with(2, batch{{"key2", "a"}, {"key2", "b"}}, 2));
-  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, 2));
+  expect((stream_msg::batch),
+         from(splitter).to(d1)
+         .with(3, batch{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}}, 2));
   expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, 2));
+  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, 2));
   expect((stream_msg::ack_batch), from(splitter).to(src2).with(5, 0));
   // Second batch.
   expect((stream_msg::batch),

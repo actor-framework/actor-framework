@@ -23,11 +23,11 @@
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/downstream_path.hpp"
-#include "caf/abstract_downstream.hpp"
+#include "caf/downstream_policy.hpp"
 
 namespace caf {
 
-stream_source::stream_source(abstract_downstream* out_ptr) : out_ptr_(out_ptr) {
+stream_source::stream_source(downstream_policy* out_ptr) : out_ptr_(out_ptr) {
   // nop
 }
 
@@ -48,10 +48,11 @@ error stream_source::downstream_demand(strong_actor_ptr& hdl, long value) {
     if (!at_end()) {
       // produce new elements
       auto current_size = buf_size();
-      auto size_hint = out().total_net_credit();
+      auto size_hint = std::min(out().credit(),
+                                out().max_batch_size());
       if (current_size < size_hint)
         generate(static_cast<size_t>(size_hint - current_size));
-      return push(&size_hint);
+      return push();
     }
     // transmit cached elements before closing paths
     if (buf_size() > 0)
@@ -67,9 +68,10 @@ void stream_source::abort(strong_actor_ptr& cause, const error& reason) {
 }
 
 void stream_source::generate() {
+  CAF_LOG_TRACE("");
   if (!at_end()) {
     auto current_size = buf_size();
-    auto size_hint = out().total_net_credit();
+    auto size_hint = out().credit();
     if (current_size < size_hint)
       generate(static_cast<size_t>(size_hint - current_size));
   }

@@ -26,7 +26,7 @@
 
 namespace caf {
 
-template <class Fun, class Predicate>
+template <class Fun, class Predicate, class DownstreamPolicy>
 class stream_source_impl : public stream_source {
 public:
   using trait = stream_source_trait_t<Fun>;
@@ -35,30 +35,30 @@ public:
 
   using output_type = typename trait::output;
 
-  stream_source_impl(local_actor* self,
-                     const stream_id& sid,
-                     std::unique_ptr<downstream_policy> policy, Fun fun,
-                     Predicate pred)
+  stream_source_impl(local_actor* self, const stream_id& sid,
+                     Fun fun, Predicate pred)
       : stream_source(&out_),
         fun_(std::move(fun)),
         pred_(std::move(pred)),
-        out_(self, sid, std::move(policy)) {
+        out_(self, sid) {
     // nop
   }
 
   void generate(size_t num) override {
-    fun_(state_, out_, num);
+    CAF_LOG_TRACE(CAF_ARG(num));
+    downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
+    fun_(state_, ds, num);
   }
 
   long buf_size() const override {
-    return static_cast<long>(out_.buf().size());
+    return out_.buf_size();
   }
 
   bool at_end() const override {
     return pred_(state_);
   }
 
-  optional<abstract_downstream&> get_downstream() override {
+  optional<downstream_policy&> dp() override {
     return out_;
   }
 
@@ -70,7 +70,7 @@ private:
   state_type state_;
   Fun fun_;
   Predicate pred_;
-  downstream<output_type> out_;
+  DownstreamPolicy out_;
 };
 
 } // namespace caf

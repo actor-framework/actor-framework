@@ -47,7 +47,7 @@ private:
     return static_cast<Subtype*>(this);
   }
 
-  abstract_upstream& in() {
+  upstream_policy& in() {
     return dptr()->in();
   }
 };

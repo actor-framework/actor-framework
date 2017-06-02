@@ -36,7 +36,7 @@ namespace caf {
 class stream_sink : public extend<stream_handler, stream_sink>::
                            with<mixin::has_upstreams> {
 public:
-  stream_sink(abstract_upstream* in_ptr, strong_actor_ptr&& orig_sender,
+  stream_sink(upstream_policy* in_ptr, strong_actor_ptr&& orig_sender,
               std::vector<strong_actor_ptr>&& trailing_stages, message_id mid);
 
   bool done() const override;
@@ -48,7 +48,7 @@ public:
 
   void last_upstream_closed();
 
-  inline abstract_upstream& in() {
+  inline upstream_policy& in() {
     return *in_ptr_;
   }
 
@@ -64,7 +64,7 @@ protected:
   virtual message finalize() = 0;
 
 private:
-  abstract_upstream* in_ptr_;
+  upstream_policy* in_ptr_;
   strong_actor_ptr original_sender_;
   std::vector<strong_actor_ptr> next_stages_;
   message_id original_msg_id_;

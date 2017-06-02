@@ -26,7 +26,11 @@
 #include <vector>
 #include <functional>
 
-#include "caf/downstream.hpp"
+#include "caf/downstream_policy.hpp"
+
+#include "caf/mixin/buffered_policy.hpp"
+
+#include "caf/policy/broadcast.hpp"
 
 #include "caf/meta/type_name.hpp"
 
@@ -38,18 +42,19 @@ namespace caf {
 /// of workers in order to handle only a subset of the overall data on each
 /// lane.
 template <class T, class Key, class KeyCompare = std::equal_to<Key>,
-          long KeyIndex = 0>
-class filtering_downstream : public downstream<T> {
+          long KeyIndex = 0,
+          class Base = policy::broadcast<T>>
+class filtering_downstream : public Base {
 public:
   /// Base type.
-  using super = downstream<T>;
+  using super = Base;
 
   struct lane {
-    typename super::queue_type queue;
+    typename super::buffer_type buf;
     typename super::path_ptr_list paths;
     template <class Inspector>
     friend typename Inspector::result_type inspect(Inspector& f, lane& x) {
-      return f(meta::type_name("lane"), x.queue, x.paths);
+      return f(meta::type_name("lane"), x.buf, x.paths);
     }
   };
 
@@ -59,48 +64,46 @@ public:
 
   using lanes_map = std::map<filter, lane>;
 
-  filtering_downstream(local_actor* ptr, const stream_id& sid,
-                       typename abstract_downstream::policy_ptr pptr)
-      : super(ptr, sid, std::move(pptr)) {
+  filtering_downstream(local_actor* selfptr, const stream_id& sid)
+      : super(selfptr, sid) {
     // nop
   }
 
-  void broadcast(long* hint) override {
+  void emit_broadcast() override {
     fan_out();
     for (auto& kvp : lanes_) {
       auto& l = kvp.second;
-      auto chunk = super::get_chunk(l.queue,
-                                    hint ? *hint : super::min_credit(l.paths));
+      auto chunk = super::get_chunk(l.buf, super::min_credit(l.paths));
       auto csize = static_cast<long>(chunk.size());
       if (csize == 0)
         continue;
       auto wrapped_chunk = make_message(std::move(chunk));
       for (auto& x : l.paths) {
         x->open_credit -= csize;
-        super::send_batch(*x, csize, wrapped_chunk);
+        this->emit_batch(*x, csize, wrapped_chunk);
       }
     }
   }
 
-  void anycast(long*) override {
+  void emit_anycast() override {
     fan_out();
     for (auto& kvp : lanes_) {
       auto& l = kvp.second;
       super::sort_by_credit(l.paths);
       for (auto& x : l.paths) {
-        auto chunk = super::get_chunk(l.queue, x->open_credit);
+        auto chunk = super::get_chunk(l.buf, x->open_credit);
         auto csize = static_cast<long>(chunk.size());
         if (csize == 0)
           break;
         x->open_credit -= csize;
-        super::send_batch(*x, csize, std::move(make_message(std::move(chunk))));
+        this->emit_batch(*x, csize, std::move(make_message(std::move(chunk))));
       }
     }
   }
 
   void add_lane(filter f) {
     std::sort(f);
-    lanes_.emplace(std::move(f), typename super::queue_type{});
+    lanes_.emplace(std::move(f), typename super::buffer_type{});
   }
 
   /// Sets the filter for `x` to `f` and inserts `x` into the appropriate lane.
@@ -147,7 +150,7 @@ private:
     for (auto& kvp : lanes_)
       for (auto& x : this->buf_)
         if (selected(kvp.first, x))
-          kvp.second.queue.push_back(x);
+          kvp.second.buf.push_back(x);
     this->buf_.clear();
   }
 

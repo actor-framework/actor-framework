@@ -26,6 +26,9 @@
 #define CAF_SUITE streaming
 #include "caf/test/dsl.hpp"
 
+#include "caf/policy/pull5.hpp"
+#include "caf/policy/push5.hpp"
+
 using std::cout;
 using std::endl;
 using std::string;
@@ -62,7 +65,8 @@ behavior file_reader(stateful_actor<file_reader_state>* self) {
         // check whether we reached the end
         [=](const buf& xs) {
           return xs.empty();
-        }
+        },
+        policy::arg<policy::push5<int>>::value
       );
     }
   };
@@ -99,7 +103,8 @@ void streamer(stateful_actor<streamer_state>* self, const actor& dest) {
     // handle result of the stream
     [=](expected<int>) {
       // nop
-    }
+    },
+    policy::arg<policy::push5<int>>::value
   );
 }
 
@@ -130,7 +135,8 @@ behavior filter(stateful_actor<filter_state>* self) {
         // cleanup
         [=](unit_t&) {
           // nop
-        }
+        },
+        policy::arg<policy::pull5, policy::push5<int>>::value
       );
     }
   };
@@ -175,7 +181,8 @@ behavior sum_up(stateful_actor<sum_up_state>* self) {
         // cleanup and produce result message
         [](int& x) -> int {
           return x;
-        }
+        },
+        policy::arg<policy::pull5>::value
       );
     }
   };
@@ -205,7 +212,8 @@ behavior drop_all(stateful_actor<drop_all_state>* self) {
         // cleanup and produce void "result"
         [](unit_t&) {
           CAF_LOG_INFO("drop_all done");
-        }
+        },
+        policy::arg<policy::pull5>::value
       );
     }
   };
@@ -244,7 +252,8 @@ void nores_streamer(stateful_actor<nores_streamer_state>* self,
     // handle result of the stream
     [=](expected<void>) {
       // nop
-    }
+    },
+    policy::arg<policy::push5<int>>::value
   );
 }
 
@@ -264,11 +273,9 @@ behavior stream_multiplexer(stateful_actor<stream_multiplexer_state>* self) {
   };
   stream_id id{self->ctrl(),
                self->new_request_id(message_priority::normal).integer_value()};
-  using impl = stream_stage_impl<decltype(process), decltype(cleanup)>;
-  std::unique_ptr<upstream_policy> upolicy{new policy::greedy};
-  std::unique_ptr<downstream_policy> dpolicy{new policy::broadcast};
-  self->state.stage = make_counted<impl>(self, id, std::move(upolicy),
-                                         std::move(dpolicy), process, cleanup);
+  using impl = stream_stage_impl<decltype(process), decltype(cleanup),
+                                 policy::pull5, policy::push5<int>>;
+  self->state.stage = make_counted<impl>(self, id, process, cleanup);
   self->state.stage->in().continuous(true);
   self->streams().emplace(id, self->state.stage);
   return {
@@ -290,7 +297,7 @@ behavior stream_multiplexer(stateful_actor<stream_multiplexer_state>* self) {
       // We only need to add a new stream to the map, the runtime system will
       // take care of adding a new upstream and sending the handshake.
       self->streams().emplace(sid.id(), self->state.stage);
-    }
+    },
   };
 }
 

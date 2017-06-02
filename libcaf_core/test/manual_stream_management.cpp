@@ -32,6 +32,9 @@
 #include "caf/stream_source.hpp"
 #include "caf/filtering_downstream.hpp"
 
+#include "caf/policy/pull5.hpp"
+#include "caf/policy/push5.hpp"
+
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
@@ -80,13 +83,12 @@ public:
 
   struct peer_data {
     filter_type filter;
-    downstream<element_type> out;
+    policy::push5<element_type> out;
     stream_id incoming_sid;
 
-    peer_data(filter_type y, local_actor* self, const stream_id& sid,
-              abstract_downstream::policy_ptr pp)
+    peer_data(filter_type y, local_actor* self, const stream_id& sid)
         : filter(std::move(y)),
-          out(self, sid, std::move(pp)) {
+          out(self, sid) {
       // nop
     }
 
@@ -143,7 +145,7 @@ public:
 
   error downstream_demand(strong_actor_ptr& hdl, long new_demand) override;
 
-  error push(long* hint) override;
+  error push() override;
 
   expected<long> add_upstream(strong_actor_ptr& hdl, const stream_id& sid,
                                 stream_priority prio) override;
@@ -158,14 +160,18 @@ public:
 
   message make_output_token(const stream_id&) const override;
 
-  long total_downstream_net_credit() const;
+  long downstream_credit() const;
+
+  long downstream_buffer_size() const;
+
+  void assign_credit();
 
 private:
   void new_stream(const strong_actor_ptr& hdl, const stream_type& token,
                   message msg);
 
   core_state* state_;
-  upstream<element_type> in_;
+  policy::pull5 in_;
   local_downstream local_subscribers_;
   peer_map peers_;
 };
@@ -222,16 +228,14 @@ const char* core_state::name = "core";
 
 stream_governor::stream_governor(core_state* state)
     : state_(state),
-      in_(state->self, policy::greedy::make()),
-      local_subscribers_(state->self, state->sid, policy::broadcast::make()) {
+      in_(state->self),
+      local_subscribers_(state->self, state->sid) {
   // nop
 }
 stream_governor::peer_data* stream_governor::add_peer(strong_actor_ptr hdl,
                                                       filter_type filter) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(filter));
-  abstract_downstream::policy_ptr pp{new policy::broadcast};
-  auto ptr = new peer_data{std::move(filter), state_->self,
-                          state_->sid, std::move(pp)};
+  auto ptr = new peer_data{std::move(filter), state_->self, state_->sid};
   ptr->out.add_path(hdl);
   auto res = peers_.emplace(std::move(hdl), peer_data_ptr{ptr});
   return res.second ? ptr : nullptr;
@@ -280,7 +284,9 @@ error stream_governor::downstream_demand(strong_actor_ptr& hdl, long value) {
   auto path = local_subscribers_.find(hdl);
   if (path) {
     path->open_credit += value;
-    return push(nullptr);
+    push();
+    assign_credit();
+    return none;
   }
   auto i = peers_.find(hdl);
   if (i != peers_.end()) {
@@ -289,19 +295,21 @@ error stream_governor::downstream_demand(strong_actor_ptr& hdl, long value) {
       return sec::invalid_stream_state;
     CAF_LOG_DEBUG("grant" << value << "new credit to" << hdl);
     pp->open_credit += value;
-    return push(nullptr);
+    push();
+    assign_credit();
+    return none;
   }
   return sec::invalid_downstream;
 }
 
-error stream_governor::push(long* hint) {
+error stream_governor::push() {
   CAF_LOG_TRACE("");
   if (local_subscribers_.buf_size() > 0)
-    local_subscribers_.policy().push(local_subscribers_, hint);
+    local_subscribers_.emit_batches();
   for (auto& kvp : peers_) {
     auto& out = kvp.second->out;
     if (out.buf_size() > 0)
-      out.policy().push(out, hint);
+      out.emit_batches();
   }
   return none;
 }
@@ -311,7 +319,7 @@ expected<long> stream_governor::add_upstream(strong_actor_ptr& hdl,
                                                stream_priority prio) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(sid) << CAF_ARG(prio));
   if (hdl)
-    return in_.add_path(hdl, sid, prio, total_downstream_net_credit());
+    return in_.add_path(hdl, sid, prio, downstream_credit());
   return sec::invalid_argument;
 }
 
@@ -341,17 +349,15 @@ error stream_governor::upstream_batch(strong_actor_ptr& hdl, long xs_size,
         if (selected(kvp.second->filter, x))
           out.push(x);
       if (out.buf_size() > 0) {
-        out.policy().push(out);
+        out.emit_batches();
       }
     }
   // Move elements from `xs` to the buffer for local subscribers.
   for (auto& x : vec)
     local_subscribers_.push(std::move(x));
-  local_subscribers_.policy().push(local_subscribers_);
+  local_subscribers_.emit_batches();
   // Grant new credit to upstream if possible.
-  auto available = total_downstream_net_credit();
-  if (available > 0)
-    in_.assign_credit(available);
+  assign_credit();
   return none;
 }
 
@@ -372,9 +378,12 @@ void stream_governor::abort(strong_actor_ptr& hdl, const error& reason) {
       auto& pd = *i->second;
       state_->self->streams().erase(pd.incoming_sid);
       peers_.erase(i);
+    } else {
+      in_.abort(hdl, reason);
     }
   } else {
     local_subscribers_.abort(hdl, reason);
+    in_.abort(hdl, reason);
     for (auto& kvp : peers_)
       kvp.second->out.abort(hdl, reason);
     peers_.clear();
@@ -389,11 +398,37 @@ message stream_governor::make_output_token(const stream_id& x) const {
   return make_message(stream<element_type>{x});
 }
 
-long stream_governor::total_downstream_net_credit() const {
-  auto net_credit = local_subscribers_.total_net_credit();
+long stream_governor::downstream_credit() const {
+  auto min_peer_credit = [&] {
+    return std::accumulate(peers_.begin(), peers_.end(),
+                           std::numeric_limits<long>::max(),
+                           [](long x, const peer_map::value_type& y) {
+                             return std::min(x, y.second->out.min_credit());
+                           });
+  };
+  constexpr long min_buffer_size = 5l;
+  if (local_subscribers_.num_paths() == 0)
+    return (peers_.empty() ? 0l : min_peer_credit()) + min_buffer_size;
+  return (peers_.empty()
+          ? local_subscribers_.min_credit()
+          : std::min(local_subscribers_.min_credit(), min_peer_credit()))
+         + min_buffer_size;
+}
+
+long stream_governor::downstream_buffer_size() const {
+  auto result = local_subscribers_.buf_size();
   for (auto& kvp : peers_)
-    net_credit = std::min(net_credit, kvp.second->out.total_net_credit());
-  return net_credit;
+    result += std::max(result, kvp.second->out.buf_size());
+  return result;
+}
+
+void stream_governor::assign_credit() {
+  CAF_LOG_TRACE("");
+  auto current_size = downstream_buffer_size();
+  auto desired_size = downstream_credit();
+  CAF_LOG_DEBUG(CAF_ARG(current_size) << CAF_ARG(desired_size));
+  if (current_size < desired_size)
+    in_.assign_credit(desired_size - current_size);
 }
 
 void stream_governor::new_stream(const strong_actor_ptr& hdl,
@@ -560,7 +595,8 @@ void driver(event_based_actor* self, const actor& sink) {
     // Handle result of the stream.
     [](expected<void>) {
       // nop
-    }
+    },
+    policy::arg<policy::push5<element_type>>::value
   );
 }
 
@@ -587,7 +623,8 @@ void consumer(stateful_actor<consumer_state>* self, filter_type ts,
         // Cleanup.
         [](unit_t&) {
           // nop
-        }
+        },
+        policy::arg<policy::pull5>::value
       );
     },
     [=](get_atom) {
@@ -642,6 +679,7 @@ CAF_TEST(two_peers) {
   CAF_REQUIRE(!sched.has_job());
   // Spin up driver on core1.
   auto d1 = sys.spawn(driver, core1);
+  CAF_MESSAGE("d1: " << to_string(d1));
   sched.run_once();
   expect((stream_msg::open), from(_).to(core1).with(_, d1, _, _, false));
   expect((stream_msg::ack_open), from(core1).to(d1).with(_, 5, _, false));

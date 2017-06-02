@@ -25,17 +25,13 @@
 #include "caf/stream_stage.hpp"
 #include "caf/stream_stage_trait.hpp"
 
+#include "caf/policy/greedy.hpp"
+#include "caf/policy/broadcast.hpp"
+
 namespace caf {
 
-struct default_stream_stage_policy {
-  template <class InputType>
-  using upstream_type = upstream<InputType>;
-
-  template <class OutputType>
-  using downstream_type = downstream<OutputType>;
-};
-
-template <class Fun, class Cleanup, class Policy = default_stream_stage_policy>
+template <class Fun, class Cleanup,
+         class UpstreamPolicy, class DownstreamPolicy>
 class stream_stage_impl : public stream_stage {
 public:
   using trait = stream_stage_trait_t<Fun>;
@@ -46,20 +42,14 @@ public:
 
   using output_type = typename trait::output;
 
-  using upstream_type = typename Policy::template upstream_type<output_type>;
-
-  using downstream_type = typename Policy::template downstream_type<output_type>;
-
   stream_stage_impl(local_actor* self,
                     const stream_id& sid,
-                    typename abstract_upstream::policy_ptr in_policy,
-                    typename abstract_downstream::policy_ptr out_policy,
                     Fun fun, Cleanup cleanup)
       : stream_stage(&in_, &out_),
         fun_(std::move(fun)),
         cleanup_(std::move(cleanup)),
-        in_(self, std::move(in_policy)),
-        out_(self, sid, std::move(out_policy)) {
+        in_(self),
+        out_(self, sid) {
     // nop
   }
 
@@ -67,7 +57,7 @@ public:
                               stream_priority prio) override {
     CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(sid) << CAF_ARG(prio));
     if (ptr)
-      return in().add_path(ptr, sid, prio, out_.total_net_credit());
+      return in().add_path(ptr, sid, prio, out_.credit());
     return sec::invalid_argument;
   }
 
@@ -75,8 +65,9 @@ public:
     using vec_type = std::vector<output_type>;
     if (msg.match_elements<vec_type>()) {
       auto& xs = msg.get_as<vec_type>(0);
+      downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
       for (auto& x : xs)
-        fun_(state_, out_, x);
+        fun_(state_, ds, x);
       return none;
     }
     return sec::unexpected_message;
@@ -86,11 +77,11 @@ public:
     return make_message(stream<output_type>{x});
   }
 
-  optional<abstract_downstream&> get_downstream() override {
+  optional<downstream_policy&> dp() override {
     return out_;
   }
 
-  optional<abstract_upstream&> get_upstream() override {
+  optional<upstream_policy&> up() override {
     return in_;
   }
 
@@ -98,11 +89,11 @@ public:
     return state_;
   }
 
-  upstream_type& in() {
+  UpstreamPolicy& in() {
     return in_;
   }
 
-  downstream_type& out() {
+  DownstreamPolicy& out() {
     return out_;
   }
 
@@ -110,8 +101,8 @@ private:
   state_type state_;
   Fun fun_;
   Cleanup cleanup_;
-  upstream_type in_;
-  downstream_type out_;
+  UpstreamPolicy in_;
+  DownstreamPolicy out_;
 };
 
 } // namespace caf

@@ -27,27 +27,28 @@
 namespace caf {
 namespace policy {
 
-greedy::greedy() : low_watermark(0), high_watermark(5) {
+greedy::~greedy() {
   // nop
 }
 
-void greedy::assign_credit(assignment_vec& xs,
-                           long total_downstream_net_credit) {
-  CAF_LOG_TRACE(CAF_ARG(xs) << CAF_ARG(total_downstream_net_credit));
+void greedy::fill_assignment_vec(long downstream_credit) {
+  CAF_LOG_TRACE(CAF_ARG(downstream_credit));
   // Zero-out assignment vector if no credit is available at downstream paths.
-  if (total_downstream_net_credit <= 0) {
-    for (auto& x : xs)
+  if (downstream_credit <= 0) {
+    for (auto& x : assignment_vec_)
       x.second = 0;
     return;
   }
   // Assign credit to upstream paths until no more credit is available. We must
   // make sure to write to each element in the vector.
-  auto available = total_downstream_net_credit;
-  for (auto& p : xs) {
-    auto& x = p.first->assigned_credit;
-    if (x < high_watermark) {
-      p.second = std::min(high_watermark - x, available);
-      available -= p.second;
+  auto available = downstream_credit;
+  for (auto& p : assignment_vec_) {
+    auto& x = p.first->assigned_credit; // current value
+    auto y = std::min(max_credit(), x + available);
+    auto delta = y - x;
+    if (delta >= min_credit_assignment()) {
+      p.second = delta;
+      available -= delta;
     } else {
       p.second = 0;
     }

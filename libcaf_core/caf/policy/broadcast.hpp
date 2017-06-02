@@ -22,16 +22,27 @@
 
 #include "caf/downstream_policy.hpp"
 
+#include "caf/mixin/buffered_policy.hpp"
+
 namespace caf {
 namespace policy {
 
-class broadcast final : public downstream_policy {
+template <class T, class Base = mixin::buffered_policy<T, downstream_policy>>
+class broadcast : public Base {
 public:
-  void push(abstract_downstream& out, long* hint) override;
-  long total_net_credit(const abstract_downstream& x) override;
+  template <class... Ts>
+  broadcast(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+    // nop
+  }
 
-  inline static std::unique_ptr<downstream_policy> make() {
-    return std::unique_ptr<downstream_policy>(new broadcast);
+  void emit_batches() override {
+    this->emit_broadcast();
+  }
+
+  long credit() const override {
+    // We receive messages until we have exhausted all downstream credit and
+    // have filled our buffer to its minimum size.
+    return this->min_credit() + this->min_buffer_size();
   }
 };
 

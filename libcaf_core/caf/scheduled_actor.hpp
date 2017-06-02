@@ -44,6 +44,7 @@
 
 #include "caf/to_string.hpp"
 
+#include "caf/policy/arg.hpp"
 #include "caf/policy/greedy.hpp"
 #include "caf/policy/anycast.hpp"
 #include "caf/policy/broadcast.hpp"
@@ -319,11 +320,13 @@ public:
 
   // Starts a new stream.
   template <class Handle, class... Ts, class Init, class Getter,
-            class ClosedPredicate, class ResHandler>
+            class ClosedPredicate, class ResHandler,
+            class DownstreamPolicy =
+              policy::broadcast<typename stream_source_trait_t<Getter>::output>>
   annotated_stream<typename stream_source_trait_t<Getter>::output, Ts...>
   new_stream(const Handle& dest, std::tuple<Ts...> xs, Init init, Getter getter,
              ClosedPredicate pred, ResHandler res_handler,
-             downstream_policy_ptr dpolicy = nullptr) {
+             policy::arg<DownstreamPolicy> = {}) {
     using type = typename stream_source_trait_t<Getter>::output;
     using state_type = typename stream_source_trait_t<Getter>::state;
     static_assert(std::is_same<
@@ -361,11 +364,9 @@ public:
       res_id.response_id(),
       stream_result_trait_t<ResHandler>::make_result_handler(res_handler));
     // install stream handler
-    using impl = stream_source_impl<Getter, ClosedPredicate>;
-    if (dpolicy == nullptr)
-      dpolicy.reset(new policy::anycast);
-    auto ptr = make_counted<impl>(this, sid, std::move(dpolicy),
-                                  std::move(getter), std::move(pred));
+    using impl = stream_source_impl<Getter, ClosedPredicate, DownstreamPolicy>;
+    auto ptr = make_counted<impl>(this, sid, std::move(getter),
+                                  std::move(pred));
     init(ptr->state());
     // Add downstream with 0 credit.
     // TODO: add multiple downstreams when receiving a composed actor handle
@@ -377,20 +378,25 @@ public:
 
   // Starts a new stream.
   template <class Handle, class Init, class Getter,
-            class ClosedPredicate, class ResHandler>
+            class ClosedPredicate, class ResHandler,
+            class DownstreamPolicy =
+              policy::broadcast<typename stream_source_trait_t<Getter>::output>>
   stream<typename stream_source_trait_t<Getter>::output>
   new_stream(const Handle& dest, Init init, Getter getter,
-             ClosedPredicate pred, ResHandler res_handler) {
+             ClosedPredicate pred, ResHandler res_handler,
+             policy::arg<DownstreamPolicy> parg = {}) {
     return new_stream(dest, std::make_tuple(), std::move(init),
                       std::move(getter), std::move(pred),
-                      std::move(res_handler));
+                      std::move(res_handler), parg);
   }
 
   /// Adds a stream source to this actor.
-  template <class Init, class... Ts, class Getter, class ClosedPredicate>
+  template <class Init, class... Ts, class Getter, class ClosedPredicate,
+            class DownstreamPolicy =
+              policy::broadcast<typename stream_source_trait_t<Getter>::output>>
   annotated_stream<typename stream_source_trait_t<Getter>::output, Ts...>
   add_source(std::tuple<Ts...> xs, Init init, Getter getter,
-             ClosedPredicate pred, downstream_policy_ptr dpolicy = nullptr) {
+             ClosedPredicate pred, policy::arg<DownstreamPolicy> = {}) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using type = typename stream_source_trait_t<Getter>::output;
     using state_type = typename stream_source_trait_t<Getter>::state;
@@ -418,10 +424,8 @@ public:
     auto next = stages.back();
     CAF_ASSERT(next != nullptr);
     fwd_stream_handshake<type>(sid, xs);
-    using impl = stream_source_impl<Getter, ClosedPredicate>;
-    if (dpolicy == nullptr)
-      dpolicy.reset(new policy::anycast);
-    auto ptr = make_counted<impl>(this, sid, std::move(dpolicy),
+    using impl = stream_source_impl<Getter, ClosedPredicate, DownstreamPolicy>;
+    auto ptr = make_counted<impl>(this, sid,
                                   std::move(getter), std::move(pred));
     init(ptr->state());
     streams_.emplace(sid, ptr);
@@ -431,19 +435,25 @@ public:
     return {std::move(sid), std::move(ptr)};
   }
 
-  template <class Init, class Getter, class ClosedPredicate>
+  template <class Init, class Getter, class ClosedPredicate,
+            class DownstreamPolicy =
+              policy::broadcast<typename stream_source_trait_t<Getter>::output>>
   stream<typename stream_source_trait_t<Getter>::output>
-  add_source(Init init, Getter getter, ClosedPredicate pred) {
+  add_source(Init init, Getter getter, ClosedPredicate pred,
+             policy::arg<DownstreamPolicy> parg = {}) {
     return add_source(std::make_tuple(), std::move(init),
-                      std::move(getter), std::move(pred));
+                      std::move(getter), std::move(pred), parg);
   }
 
   /// Adds a stream stage to this actor.
-  template <class In, class... Ts, class Init, class Fun, class Cleanup>
+  template <class In, class... Ts, class Init, class Fun, class Cleanup,
+            class UpstreamPolicy = policy::greedy,
+            class DownstreamPolicy =
+              policy::broadcast<typename stream_stage_trait_t<Fun>::output>>
   annotated_stream<typename stream_stage_trait_t<Fun>::output, Ts...>
   add_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
-            Cleanup cleanup_fun, upstream_policy_ptr upolicy = nullptr,
-            downstream_policy_ptr dpolicy = nullptr) {
+            Cleanup cleanup_fun,
+            policy::arg<UpstreamPolicy, DownstreamPolicy> = {}) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     using output_type = typename stream_stage_trait_t<Fun>::output;
     using state_type = typename stream_stage_trait_t<Fun>::state;
@@ -461,13 +471,9 @@ public:
     auto next = stages.back();
     CAF_ASSERT(next != nullptr);
     fwd_stream_handshake<output_type>(sid, xs);
-    using impl = stream_stage_impl<Fun, Cleanup>;
-    if (upolicy == nullptr)
-      upolicy.reset(new policy::greedy);
-    if (dpolicy == nullptr)
-      dpolicy.reset(new policy::anycast);
-    auto ptr = make_counted<impl>(this, sid, std::move(upolicy),
-                                  std::move(dpolicy), std::move(fun),
+    using impl = stream_stage_impl<Fun, Cleanup,
+                                   UpstreamPolicy, DownstreamPolicy>;
+    auto ptr = make_counted<impl>(this, sid, std::move(fun),
                                   std::move(cleanup_fun));
     init(ptr->state());
     streams_.emplace(sid, ptr);
@@ -486,10 +492,11 @@ public:
   }
 
   /// Adds a stream sink to this actor.
-  template <class In, class Init, class Fun, class Finalize>
+  template <class In, class Init, class Fun,
+            class Finalize, class UpstreamPolicy = policy::greedy>
   stream_result<typename stream_sink_trait_t<Fun, Finalize>::output>
   add_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize_fun,
-           upstream_policy_ptr upolicy = nullptr) {
+           policy::arg<UpstreamPolicy> = {}) {
     CAF_ASSERT(current_mailbox_element() != nullptr);
     //using output_type = typename stream_sink_trait_t<Fun, Finalize>::output;
     using state_type = typename stream_sink_trait_t<Fun, Finalize>::state;
@@ -509,11 +516,8 @@ public:
       CAF_LOG_ERROR("add_sink called outside of a message handler");
       return {stream_id{nullptr, 0}, nullptr};
     }
-    using impl = stream_sink_impl<Fun, Finalize>;
-    if (upolicy == nullptr)
-      upolicy.reset(new policy::greedy);
-    auto ptr = make_counted<impl>(this, std::move(upolicy),
-                                  std::move(mptr->sender),
+    using impl = stream_sink_impl<Fun, Finalize, UpstreamPolicy>;
+    auto ptr = make_counted<impl>(this, std::move(mptr->sender),
                                   std::move(mptr->stages), mptr->mid,
                                   std::move(fun), std::move(finalize_fun));
     init(ptr->state());
