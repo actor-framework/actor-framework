@@ -358,6 +358,21 @@ scheduled_actor::categorize(mailbox_element& x) {
         return message_category::internal;
       }
       return message_category::ordinary;
+    case make_type_token<atom_value, actor_addr>(): {
+      auto ptr =
+        actor_cast<strong_actor_ptr>(content.get_as<actor_addr>(1));
+      if (ptr && ptr->get() != this) {
+        auto val = content.get_as<atom_value>(0);
+        if (val == link_atom::value) {
+          establish_link_impl(ptr->get());
+          return message_category::internal;
+        } else if (val == unlink_atom::value) {
+          remove_link_impl(ptr->get());
+          return message_category::internal;
+        }
+      }
+      return message_category::ordinary;
+    }
     case make_type_token<timeout_msg>(): {
       auto& tm = content.get_as<timeout_msg>(0);
       auto tid = tm.timeout_id;
