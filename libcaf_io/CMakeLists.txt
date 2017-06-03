@@ -12,6 +12,8 @@ set (LIBCAF_IO_SRCS
      src/broker.cpp
      src/default_multiplexer.cpp
      src/doorman.cpp
+     src/flare.cpp
+     src/flare_actor.cpp
      src/middleman.cpp
      src/middleman_actor.cpp
      src/middleman_actor_impl.cpp
