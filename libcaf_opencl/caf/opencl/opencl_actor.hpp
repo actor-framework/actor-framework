@@ -40,7 +40,7 @@
 #include "caf/opencl/arguments.hpp"
 #include "caf/opencl/smart_ptr.hpp"
 #include "caf/opencl/opencl_err.hpp"
-#include "caf/opencl/spawn_config.hpp"
+#include "caf/opencl/nd_range.hpp"
 
 namespace caf {
 namespace opencl {
@@ -101,7 +101,7 @@ public:
   using input_types =
     typename detail::tl_map<input_wrapped_types, extract_input_type>::type;
   using input_mapping = typename std::conditional<PassConfig,
-          std::function<optional<message> (spawn_config&, message&)>,
+          std::function<optional<message> (nd_range&, message&)>,
           std::function<optional<message> (message&)>
         >::type;
 
@@ -127,16 +127,16 @@ public:
   }
 
   static actor create(actor_config actor_conf, const program_ptr prog,
-                      const char* kernel_name, const spawn_config& spawn_conf,
+                      const char* kernel_name, const nd_range& range,
                       input_mapping map_args, output_mapping map_result,
                       Ts&&... xs) {
-    if (spawn_conf.dimensions().empty()) {
+    if (range.dimensions().empty()) {
       auto str = "OpenCL kernel needs at least 1 global dimension.";
       CAF_LOG_ERROR(str);
       throw std::runtime_error(str);
     }
     auto check_vec = [&](const dim_vec& vec, const char* name) {
-      if (! vec.empty() && vec.size() != spawn_conf.dimensions().size()) {
+      if (! vec.empty() && vec.size() != range.dimensions().size()) {
         std::ostringstream oss;
         oss << name << " vector is not empty, but "
             << "its size differs from global dimensions vector's size";
@@ -144,8 +144,8 @@ public:
         throw std::runtime_error(oss.str());
       }
     };
-    check_vec(spawn_conf.offsets(), "offsets");
-    check_vec(spawn_conf.local_dimensions(), "local dimensions");
+    check_vec(range.offsets(), "offsets");
+    check_vec(range.local_dimensions(), "local dimensions");
     auto& sys = actor_conf.host->system();
     auto itr = prog->available_kernels_.find(kernel_name);
     if (itr == prog->available_kernels_.end()) {
@@ -155,14 +155,14 @@ public:
                    false);
       return make_actor<opencl_actor, actor>(sys.next_actor_id(), sys.node(),
                                              &sys, std::move(actor_conf),
-                                             prog, kernel, spawn_conf,
+                                             prog, kernel, range,
                                              std::move(map_args),
                                              std::move(map_result),
                                              std::forward_as_tuple(xs...));
     }
     return make_actor<opencl_actor, actor>(sys.next_actor_id(), sys.node(),
                                            &sys, std::move(actor_conf),
-                                           prog, itr->second, spawn_conf,
+                                           prog, itr->second, range,
                                            std::move(map_args),
                                            std::move(map_result),
                                            std::forward_as_tuple(xs...));
@@ -203,7 +203,7 @@ public:
       std::move(result_lengths),
       std::move(content),
       std::move(result),
-      config_
+      range_
     );
     cmd->enqueue();
   }
@@ -223,7 +223,7 @@ public:
   }
 
   opencl_actor(actor_config actor_conf, const program_ptr prog,
-               cl_kernel_ptr kernel, spawn_config spawn_conf,
+               cl_kernel_ptr kernel, nd_range range,
                input_mapping map_args, output_mapping map_result,
                std::tuple<Ts...> xs)
       : monitorable_actor(actor_conf),
@@ -231,13 +231,13 @@ public:
         program_(prog->program_),
         context_(prog->context_),
         queue_(prog->queue_),
-        config_(std::move(spawn_conf)),
+        range_(std::move(range)),
         map_args_(std::move(map_args)),
         map_results_(std::move(map_result)),
         kernel_signature_(std::move(xs)) {
     CAF_LOG_TRACE(CAF_ARG(this->id()));
-    default_length_ = std::accumulate(std::begin(config_.dimensions()),
-                                      std::end(config_.dimensions()),
+    default_length_ = std::accumulate(std::begin(range_.dimensions()),
+                                      std::end(range_.dimensions()),
                                       size_t{1},
                                       std::multiplies<size_t>{});
   }
@@ -489,7 +489,7 @@ public:
   template <bool Q = PassConfig>
   typename std::enable_if<Q, bool>::type map_arguments(message& content) {
     if (map_args_) {
-      auto mapped = map_args_(config_, content);
+      auto mapped = map_args_(range_, content);
       if (!mapped) {
         CAF_LOG_ERROR("Mapping argumentes failed.");
         return false;
@@ -503,7 +503,7 @@ public:
   cl_program_ptr program_;
   cl_context_ptr context_;
   cl_command_queue_ptr queue_;
-  spawn_config config_;
+  nd_range range_;
   input_mapping map_args_;
   output_mapping map_results_;
   std::tuple<Ts...> kernel_signature_;

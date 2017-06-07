@@ -54,7 +54,7 @@ struct dummy_size_calculator {
   }
 };
 
-/// Mark an a spawn_cl template argument as input only
+/// Mark an a spawn template argument as input only
 template <class Arg, class Tag = val>
 struct in {
   static_assert(std::is_same<Tag,val>::value || std::is_same<Tag,mref>::value,
@@ -63,7 +63,7 @@ struct in {
   using arg_type = typename std::decay<Arg>::type;
 };
 
-/// Mark an a spawn_cl template argument as input and output
+/// Mark an a spawn template argument as input and output
 template <class Arg, class TagIn = val, class TagOut = val>
 struct in_out {
   static_assert(

@@ -341,7 +341,7 @@ void test_opencl(actor_system& sys) {
                        248, 286, 324, 362,
                        344, 398, 452, 506};
   auto w1 = mngr.spawn(prog, kn_matrix,
-                       opencl::spawn_config{dims{matrix_size, matrix_size}},
+                       opencl::nd_range{dims{matrix_size, matrix_size}},
                        opencl::in<int>{}, opencl::out<int>{});
   self->send(w1, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive (
@@ -351,9 +351,9 @@ void test_opencl(actor_system& sys) {
                            expected1, result);
     }, others >> wrong_msg
   );
-  opencl::spawn_config cfg2{dims{matrix_size, matrix_size}};
+  opencl::nd_range range2{dims{matrix_size, matrix_size}};
   // Pass kernel directly to the actor
-  auto w2 = mngr.spawn(kernel_source, kn_matrix, cfg2,
+  auto w2 = mngr.spawn(kernel_source, kn_matrix, range2,
                        opencl::in<int>{}, opencl::out<int>{});
   self->send(w2, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive (
@@ -374,9 +374,9 @@ void test_opencl(actor_system& sys) {
   auto map_res = [](ivec result) -> message {
     return make_message(matrix_type{move(result)});
   };
-  opencl::spawn_config cfg3{dims{matrix_size, matrix_size}};
+  opencl::nd_range range3{dims{matrix_size, matrix_size}};
   // let the runtime choose the device
-  auto w3 = mngr.spawn(mngr.create_program(kernel_source), kn_matrix, cfg3,
+  auto w3 = mngr.spawn(mngr.create_program(kernel_source), kn_matrix, range3,
                        map_arg, map_res,
                        opencl::in<int>{}, opencl::out<int>{});
   self->send(w3, make_iota_matrix<matrix_size>());
@@ -387,8 +387,8 @@ void test_opencl(actor_system& sys) {
                            expected2.data(), result.data());
     }, others >> wrong_msg
   );
-  opencl::spawn_config cfg4{dims{matrix_size, matrix_size}};
-  auto w4 = mngr.spawn(prog, kn_matrix, cfg4,
+  opencl::nd_range range4{dims{matrix_size, matrix_size}};
+  auto w4 = mngr.spawn(prog, kn_matrix, range4,
                        map_arg, map_res,
                        opencl::in<int>{}, opencl::out<int>{});
   self->send(w4, make_iota_matrix<matrix_size>());
@@ -413,8 +413,8 @@ void test_opencl(actor_system& sys) {
 
   // create program with opencl compiler flags
   auto prog5 = mngr.create_program(kernel_source_compiler_flag, compiler_flag);
-  opencl::spawn_config cfg5{dims{array_size}};
-  auto w5 = mngr.spawn(prog5, kn_compiler_flag, cfg5,
+  opencl::nd_range range5{dims{array_size}};
+  auto w5 = mngr.spawn(prog5, kn_compiler_flag, range5,
                        opencl::in<int>{}, opencl::out<int>{});
   self->send(w5, make_iota_vector<int>(array_size));
   auto expected3 = make_iota_vector<int>(array_size);
@@ -434,13 +434,13 @@ void test_opencl(actor_system& sys) {
   ivec arr6(reduce_buffer_size);
   int n = static_cast<int>(arr6.capacity());
   generate(arr6.begin(), arr6.end(), [&]{ return --n; });
-  opencl::spawn_config cfg6{dims{reduce_global_size},
+  opencl::nd_range range6{dims{reduce_global_size},
                             dims{                  }, // no offset
                             dims{reduce_local_size}};
   auto result_size_6 = [reduce_result_size](const ivec&) {
     return reduce_result_size;
   };
-  auto w6 = mngr.spawn(prog, kn_reduce, cfg6,
+  auto w6 = mngr.spawn(prog, kn_reduce, range6,
                        opencl::in<int>{}, opencl::out<int>{result_size_6});
   self->send(w6, move(arr6));
   auto wg_size_as_int = static_cast<int>(max_wg_size);
@@ -460,7 +460,7 @@ void test_opencl(actor_system& sys) {
   // constant memory arguments
   const ivec arr7{problem_size};
   auto w7 = mngr.spawn(kernel_source, kn_const,
-                       opencl::spawn_config{dims{problem_size}},
+                       opencl::nd_range{dims{problem_size}},
                        opencl::in<int>{},
                        opencl::out<int>{result_size_7});
   self->send(w7, move(arr7));
@@ -486,7 +486,7 @@ void test_arguments(actor_system& sys) {
   const ivec expected1{ 56,  62,  68,  74,   152, 174, 196, 218,
                        248, 286, 324, 362,   344, 398, 452, 506};
   auto w1 = mngr.spawn(mngr.create_program(kernel_source, "", dev), kn_matrix,
-                       opencl::spawn_config{dims{matrix_size, matrix_size}},
+                       opencl::nd_range{dims{matrix_size, matrix_size}},
                        opencl::in<int>{}, opencl::out<int>{});
   self->send(w1, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive (
@@ -498,7 +498,7 @@ void test_arguments(actor_system& sys) {
   ivec expected9{input9};
   for_each(begin(expected9), end(expected9), [](int& val){ val *= 2; });
   auto w9 = mngr.spawn(kernel_source, kn_inout,
-                       spawn_config{dims{problem_size}},
+                       nd_range{dims{problem_size}},
                        opencl::in_out<int>{});
   self->send(w9, move(input9));
   self->receive(
@@ -511,7 +511,7 @@ void test_arguments(actor_system& sys) {
   for_each(begin(expected10), end(expected10), [](int& val){ val *= 2; });
   auto result_size_10 = [=](const ivec& input) { return input.size(); };
   auto w10 = mngr.spawn(kernel_source, kn_scratch,
-                        spawn_config{dims{problem_size}},
+                        nd_range{dims{problem_size}},
                         opencl::in_out<int>{},
                         opencl::scratch<int>{result_size_10});
   self->send(w10, move(input10));
@@ -533,7 +533,7 @@ void test_arguments(actor_system& sys) {
     last += tmp;
   }
   auto work_local = mngr.spawn(kernel_source, kn_local,
-                               spawn_config{dims{la_global}, {}, dims{la_local}},
+                               nd_range{dims{la_global}, {}, dims{la_local}},
                                opencl::in_out<int>{},
                                opencl::local<int>{la_local});
   self->send(work_local, std::move(input_local));
@@ -545,7 +545,7 @@ void test_arguments(actor_system& sys) {
   // Same test, different argument order
   input_local = make_iota_vector<int>(la_global);
   work_local = mngr.spawn(kernel_source, kn_order,
-                          spawn_config{dims{la_global}, {}, dims{la_local}},
+                          nd_range{dims{la_global}, {}, dims{la_local}},
                           opencl::local<int>{la_local},
                           opencl::in_out<int>{});
   self->send(work_local, std::move(input_local));
@@ -561,7 +561,7 @@ void test_arguments(actor_system& sys) {
   for_each(begin(expected_private), end(expected_private),
            [val_private](int& val){ val += val_private; });
   auto worker_private = mngr.spawn(kernel_source, kn_private,
-                                   spawn_config{dims{problem_size}},
+                                   nd_range{dims{problem_size}},
                                    opencl::in_out<int>{},
                                    opencl::priv<int>{val_private});
   self->send(worker_private, std::move(input_private));
@@ -688,7 +688,7 @@ void test_in_val_out_val(actor_system& sys) {
   };
   const ivec res1{ 56,  62,  68,  74, 152, 174, 196, 218,
                   248, 286, 324, 362, 344, 398, 452, 506};
-  auto conf = opencl::spawn_config{dims{matrix_size, matrix_size}};
+  auto conf = opencl::nd_range{dims{matrix_size, matrix_size}};
   auto w1 = mngr.spawn(prog, kn_matrix, conf, in<int>{}, out<int>{});
   self->send(w1, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive([&](const ivec& result) {
@@ -723,8 +723,8 @@ void test_in_val_out_val(actor_system& sys) {
   }, others >> wrong_msg);
   // create program with opencl compiler flags
   auto prog2 = mngr.create_program(kernel_source_compiler_flag, compiler_flag);
-  spawn_config conf2{dims{array_size}};
-  auto w4 = mngr.spawn(prog2, kn_compiler_flag, conf2,
+  nd_range range2{dims{array_size}};
+  auto w4 = mngr.spawn(prog2, kn_compiler_flag, range2,
                            in<int>{}, out<int>{});
   self->send(w4, make_iota_vector<int>(array_size));
   auto res3 = make_iota_vector<int>(array_size);
@@ -742,9 +742,9 @@ void test_in_val_out_val(actor_system& sys) {
   ivec input(reduce_buffer_size);
   int n = static_cast<int>(input.capacity());
   generate(input.begin(), input.end(), [&]{ return --n; });
-  spawn_config conf3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
+  nd_range range3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
   auto res_size = [&](const ivec&) { return reduce_result_size; };
-  auto w5 = mngr.spawn(prog, kn_reduce, conf3,
+  auto w5 = mngr.spawn(prog, kn_reduce, range3,
                            in<int>{}, out<int>{res_size});
   self->send(w5, move(input));
   auto wg_size_as_int = static_cast<int>(max_wg_size);
@@ -761,7 +761,7 @@ void test_in_val_out_val(actor_system& sys) {
   // constant memory arguments
   const ivec input2{problem_size};
   auto w6 = mngr.spawn(kernel_source, kn_const,
-                           spawn_config{dims{problem_size}},
+                           nd_range{dims{problem_size}},
                            in<int>{}, out<int>{res_size2});
   self->send(w6, move(input2));
   ivec res5(problem_size);
@@ -787,15 +787,15 @@ void test_in_val_out_mref(actor_system& sys) {
   // tests
   const ivec res1{ 56,  62,  68,  74, 152, 174, 196, 218,
                   248, 286, 324, 362, 344, 398, 452, 506};
-  auto conf = opencl::spawn_config{dims{matrix_size, matrix_size}};
-  auto w1 = mngr.spawn(prog, kn_matrix, conf, in<int>{}, out<int, mref>{});
+  auto range = opencl::nd_range{dims{matrix_size, matrix_size}};
+  auto w1 = mngr.spawn(prog, kn_matrix, range, in<int>{}, out<int, mref>{});
   self->send(w1, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive([&](iref& result) {
     check_mref_results("Simple matrix multiplication using vectors"
                        " (kernel wrapped in program)", res1, result);
   }, others >> wrong_msg);
   // Pass kernel directly to the actor
-  auto w2 = mngr.spawn(kernel_source, kn_matrix, conf,
+  auto w2 = mngr.spawn(kernel_source, kn_matrix, range,
                        in<int>{}, out<int, mref>{});
   self->send(w2, make_iota_vector<int>(matrix_size * matrix_size));
   self->receive([&](iref& result) {
@@ -812,9 +812,9 @@ void test_in_val_out_mref(actor_system& sys) {
   ivec input(reduce_buffer_size);
   int n = static_cast<int>(input.capacity());
   generate(input.begin(), input.end(), [&]{ return --n; });
-  spawn_config conf3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
+  nd_range range3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
   auto res_size = [&](const ivec&) { return reduce_result_size; };
-  auto w5 = mngr.spawn(prog, kn_reduce, conf3,
+  auto w5 = mngr.spawn(prog, kn_reduce, range3,
                        in<int>{}, out<int, mref>{res_size});
   self->send(w5, move(input));
   auto wg_size_as_int = static_cast<int>(max_wg_size);
@@ -842,8 +842,8 @@ void test_in_mref_out_val(actor_system& sys) {
   // tests
   const ivec res1{ 56,  62,  68,  74, 152, 174, 196, 218,
                   248, 286, 324, 362, 344, 398, 452, 506};
-  auto conf = opencl::spawn_config{dims{matrix_size, matrix_size}};
-  auto w1 = mngr.spawn(prog, kn_matrix, conf, in<int, mref>{}, out<int>{});
+  auto range = opencl::nd_range{dims{matrix_size, matrix_size}};
+  auto w1 = mngr.spawn(prog, kn_matrix, range, in<int, mref>{}, out<int>{});
   auto matrix1 = make_iota_vector<int>(matrix_size * matrix_size);
   auto input1 = dev->global_argument(matrix1);
   self->send(w1, input1);
@@ -852,7 +852,7 @@ void test_in_mref_out_val(actor_system& sys) {
                          " (kernel wrapped in program)", res1, result);
   }, others >> wrong_msg);
   // Pass kernel directly to the actor
-  auto w2 = mngr.spawn(kernel_source, kn_matrix, conf,
+  auto w2 = mngr.spawn(kernel_source, kn_matrix, range,
                        in<int, mref>{}, out<int, val>{});
   self->send(w2, input1);
   self->receive([&](const ivec& result) {
@@ -869,9 +869,9 @@ void test_in_mref_out_val(actor_system& sys) {
   ivec values(reduce_buffer_size);
   int n = static_cast<int>(values.capacity());
   generate(values.begin(), values.end(), [&]{ return --n; });
-  spawn_config conf3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
+  nd_range range3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
   auto res_size = [&](const iref&) { return reduce_result_size; };
-  auto w5 = mngr.spawn(prog, kn_reduce, conf3,
+  auto w5 = mngr.spawn(prog, kn_reduce, range3,
                        in<int, mref>{}, out<int>{res_size});
   auto input2 = dev->global_argument(values);
   self->send(w5, input2);
@@ -900,8 +900,8 @@ void test_in_mref_out_mref(actor_system& sys) {
   // tests
   const ivec res1{ 56,  62,  68,  74, 152, 174, 196, 218,
                   248, 286, 324, 362, 344, 398, 452, 506};
-  auto conf = opencl::spawn_config{dims{matrix_size, matrix_size}};
-  auto w1 = mngr.spawn(prog, kn_matrix, conf,
+  auto range = opencl::nd_range{dims{matrix_size, matrix_size}};
+  auto w1 = mngr.spawn(prog, kn_matrix, range,
                        in<int, mref>{}, out<int, mref>{});
   auto matrix1 = make_iota_vector<int>(matrix_size * matrix_size);
   auto input1 = dev->global_argument(matrix1);
@@ -911,7 +911,7 @@ void test_in_mref_out_mref(actor_system& sys) {
                        " (kernel wrapped in program)", res1, result);
   }, others >> wrong_msg);
   // Pass kernel directly to the actor
-  auto w2 = mngr.spawn(kernel_source, kn_matrix, conf,
+  auto w2 = mngr.spawn(kernel_source, kn_matrix, range,
                        in<int, mref>{}, out<int, mref>{});
   self->send(w2, input1);
   self->receive([&](iref& result) {
@@ -928,9 +928,9 @@ void test_in_mref_out_mref(actor_system& sys) {
   ivec values(reduce_buffer_size);
   int n = static_cast<int>(values.capacity());
   generate(values.begin(), values.end(), [&]{ return --n; });
-  spawn_config conf3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
+  nd_range range3{dims{reduce_global_size}, dims{}, dims{reduce_local_size}};
   auto res_size = [&](const iref&) { return reduce_result_size; };
-  auto w5 = mngr.spawn(prog, kn_reduce, conf3,
+  auto w5 = mngr.spawn(prog, kn_reduce, range3,
                        in<int, mref>{}, out<int, mref>{res_size});
   auto input2 = dev->global_argument(values);
   self->send(w5, input2);
@@ -959,17 +959,17 @@ void test_varying_arguments(actor_system& sys) {
   };
   // tests
   size_t size = 23;
-  spawn_config conf{dims{size}};
+  nd_range range{dims{size}};
   auto input1 = make_iota_vector<int>(size);
   auto input2 = dev->global_argument(input1);
-  auto w1 = mngr.spawn(prog, kn_varying, conf,
+  auto w1 = mngr.spawn(prog, kn_varying, range,
                        in<int>{}, out<int>{}, in<int>{}, out<int>{});
   self->send(w1, input1, input1);
   self->receive([&](const ivec& res1, const ivec& res2) {
     check_vector_results("Varying args (vec only), output 1", input1, res1);
     check_vector_results("Varying args (vec only), output 2", input1, res2);
   }, others >> wrong_msg);
-  auto w2 = mngr.spawn(prog, kn_varying, conf,
+  auto w2 = mngr.spawn(prog, kn_varying, range,
                        in<int,mref>{}, out<int>{},
                        in<int>{}, out<int,mref>{});
   self->send(w2, input2, input1);
@@ -998,26 +998,26 @@ void test_inout(actor_system& sys) {
   auto input3 = dev->global_argument(input);
   ivec res{input};
   for_each(begin(res), end(res), [](int& val){ val *= 2; });
-  auto conf = spawn_config{dims{problem_size}};
-  auto w1 = mngr.spawn(kernel_source, kn_inout, conf,
+  auto range = nd_range{dims{problem_size}};
+  auto w1 = mngr.spawn(kernel_source, kn_inout, range,
                        in_out<int,val,val>{});
   self->send(w1, input);
   self->receive([&](const ivec& result) {
     check_vector_results("Testing in_out (val -> val)", res, result);
   }, others >> wrong_msg);
-  auto w2 = mngr.spawn(kernel_source, kn_inout, conf,
+  auto w2 = mngr.spawn(kernel_source, kn_inout, range,
                        in_out<int,val,mref>{});
   self->send(w2, input);
   self->receive([&](iref& result) {
     check_mref_results("Testing in_out (val -> mref)", res, result);
   }, others >> wrong_msg);
-  auto w3 = mngr.spawn(kernel_source, kn_inout, conf,
+  auto w3 = mngr.spawn(kernel_source, kn_inout, range,
                        in_out<int,mref,val>{});
   self->send(w3, input2);
   self->receive([&](const ivec& result) {
     check_vector_results("Testing in_out (mref -> val)", res, result);
   }, others >> wrong_msg);
-  auto w4 = mngr.spawn(kernel_source, kn_inout, conf,
+  auto w4 = mngr.spawn(kernel_source, kn_inout, range,
                        in_out<int,mref,mref>{});
   self->send(w4, input3);
   self->receive([&](iref& result) {
@@ -1039,18 +1039,18 @@ void test_priv(actor_system& sys) {
     return sec::unexpected_message;
   };
   // tests
-  spawn_config conf{dims{problem_size}};
+  nd_range range{dims{problem_size}};
   ivec input = make_iota_vector<int>(problem_size);
   int value = 42;
   ivec res{input};
   for_each(begin(res), end(res), [&](int& val){ val += value; });
-  auto w1 = mngr.spawn(kernel_source, kn_private, conf,
+  auto w1 = mngr.spawn(kernel_source, kn_private, range,
                        in_out<int>{}, priv<int>{value});
   self->send(w1, input);
   self->receive([&](const ivec& result) {
     check_vector_results("Testing hidden private arugment", res, result);
   }, others >> wrong_msg);
-  auto w2 = mngr.spawn(kernel_source, kn_private, conf,
+  auto w2 = mngr.spawn(kernel_source, kn_private, range,
                        in_out<int>{}, priv<int,val>{});
   self->send(w2, input, value);
   self->receive([&](const ivec& result) {
@@ -1082,15 +1082,15 @@ void test_local(actor_system& sys) {
     res[i] = last;
     last += tmp;
   }
-  auto conf = spawn_config{dims{global_size}, {}, dims{local_size}};
-  auto w = mngr.spawn(kernel_source, kn_local, conf,
+  auto range = nd_range{dims{global_size}, {}, dims{local_size}};
+  auto w = mngr.spawn(kernel_source, kn_local, range,
                       in_out<int>{}, local<int>{local_size});
   self->send(w, make_iota_vector<int>(global_size));
   self->receive([&](const ivec& result) {
     check_vector_results("Testing local arugment", res, result);
   }, others >> wrong_msg);
   // Same test, different argument order
-  w = mngr.spawn(kernel_source, kn_order, conf,
+  w = mngr.spawn(kernel_source, kn_order, range,
                  local<int>{local_size}, in_out<int>{});
   self->send(w, make_iota_vector<int>(global_size));
   self->receive([&](const ivec& result) {

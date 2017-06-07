@@ -227,22 +227,22 @@ int main() {
       return round_up((n + 1) / 2, half_block);
     };
     auto nd_conf = [half_block, get_size](size_t dim) {
-      return spawn_config{dim_vec{get_size(dim)}, {}, dim_vec{half_block}};
+      return nd_range{dim_vec{get_size(dim)}, {}, dim_vec{half_block}};
     };
     auto reduced_ref = [&](const uref&, uval n) {
       // calculate number of groups from the group size from the values size
       return size_t{get_size(n) / half_block};
     };
     // default nd-range
-    auto ndr = spawn_config{dim_vec{half_block}, {}, dim_vec{half_block}};
+    auto ndr = nd_range{dim_vec{half_block}, {}, dim_vec{half_block}};
 
     // ---- scan actors ----
     auto phase1 = mngr.spawn(
       prog, kernel_name_1, ndr,
-      [nd_conf](spawn_config& conf, message& msg) -> optional<message> {
+      [nd_conf](nd_range& range, message& msg) -> optional<message> {
         return msg.apply([&](uvec& vec) {
           auto size = vec.size();
-          conf = nd_conf(size);
+          range = nd_conf(size);
           return make_message(std::move(vec), static_cast<uval>(size));
         });
       },
@@ -253,10 +253,10 @@ int main() {
     );
     auto phase2 = mngr.spawn(
       prog, kernel_name_2, ndr,
-      [nd_conf](spawn_config& conf, message& msg) -> optional<message> {
+      [nd_conf](nd_range& range, message& msg) -> optional<message> {
         return msg.apply([&](uref& data, uref& incs) {
           auto size = incs.size();
-          conf = nd_conf(size);
+          range = nd_conf(size);
           return make_message(move(data), move(incs), static_cast<uval>(size));
         });
       },
@@ -266,10 +266,10 @@ int main() {
     );
     auto phase3 = mngr.spawn(
       prog, kernel_name_3, ndr,
-      [nd_conf](spawn_config& conf, message& msg) -> optional<message> {
+      [nd_conf](nd_range& range, message& msg) -> optional<message> {
         return msg.apply([&](uref& data, uref& incs) {
           auto size = incs.size();
-          conf = nd_conf(size);
+          range = nd_conf(size);
           return make_message(move(data), move(incs), static_cast<uval>(size));
         });
       },

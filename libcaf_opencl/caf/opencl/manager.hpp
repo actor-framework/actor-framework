@@ -113,9 +113,9 @@ public:
     actor
   >::type
   spawn(const opencl::program_ptr prog, const char* fname,
-        const opencl::spawn_config& config, T x, Ts... xs) {
+        const opencl::nd_range& range, T x, Ts... xs) {
     detail::cl_spawn_helper<false, T, Ts...> f;
-    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, config,
+    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(x), std::move(xs)...);
   }
 
@@ -130,10 +130,10 @@ public:
     actor
   >::type
   spawn(const char* source, const char* fname,
-        const opencl::spawn_config& config, T x, Ts... xs) {
+        const opencl::nd_range& range, T x, Ts... xs) {
     detail::cl_spawn_helper<false, T, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
-             create_program(source), fname, config,
+             create_program(source), fname, range,
              std::move(x), std::move(xs)...);
   }
 
@@ -143,11 +143,11 @@ public:
   ///                            `dims.empty()`, or `clCreateKernel` failed.
   template <class Fun, class... Ts>
   actor spawn(const opencl::program_ptr prog, const char* fname,
-              const opencl::spawn_config& config,
+              const opencl::nd_range& range,
               std::function<optional<message> (message&)> map_args,
               Fun map_result, Ts... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
-    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, config,
+    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::move(map_result),
              std::forward<Ts>(xs)...);
   }
@@ -159,12 +159,12 @@ public:
   ///                            occured, or @p clCreateKernel failed.
   template <class Fun, class... Ts>
   actor spawn(const char* source, const char* fname,
-              const opencl::spawn_config& config,
+              const opencl::nd_range& range,
               std::function<optional<message> (message&)> map_args,
               Fun map_result, Ts... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
-             create_program(source), fname, config,
+             create_program(source), fname, range,
              std::move(map_args), std::move(map_result),
              std::forward<Ts>(xs)...);
   }
@@ -181,11 +181,11 @@ public:
     actor
   >::type
   spawn(const opencl::program_ptr prog, const char* fname,
-            const opencl::spawn_config& config,
+            const opencl::nd_range& range,
             std::function<optional<message> (message&)> map_args,
             T x, Ts... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
-    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, config,
+    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::forward<T>(x), std::forward<Ts>(xs)...);
   }
 
@@ -200,12 +200,12 @@ public:
     actor
   >::type
   spawn(const char* source, const char* fname,
-            const opencl::spawn_config& config,
+            const opencl::nd_range& range,
             std::function<optional<message> (message&)> map_args,
             T x, Ts... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
-             create_program(source), fname, config,
+             create_program(source), fname, range,
              std::move(map_args), std::forward<T>(x), std::forward<Ts>(xs)...);
   }
 
@@ -222,11 +222,11 @@ public:
     actor
   >::type
   spawn(const opencl::program_ptr prog, const char* fname,
-        const opencl::spawn_config& config,
-        std::function<optional<message> (spawn_config&, message&)> map_args,
+        const opencl::nd_range& range,
+        std::function<optional<message> (nd_range&, message&)> map_args,
         Fun map_result, Ts... xs) {
     detail::cl_spawn_helper<true, Ts...> f;
-    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, config,
+    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::move(map_result),
              std::forward<Ts>(xs)...);
   }
@@ -242,12 +242,12 @@ public:
     actor
   >::type
   spawn(const char* source, const char* fname,
-        const opencl::spawn_config& config,
-        std::function<optional<message> (spawn_config&, message&)> map_args,
+        const opencl::nd_range& range,
+        std::function<optional<message> (nd_range&, message&)> map_args,
         Fun map_result, Ts... xs) {
     detail::cl_spawn_helper<true, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
-             create_program(source), fname, config,
+             create_program(source), fname, range,
              std::move(map_args), std::move(map_result),
              std::forward<Ts>(xs)...);
   }
@@ -262,11 +262,11 @@ public:
     actor
   >::type
   spawn(const opencl::program_ptr prog, const char* fname,
-        const opencl::spawn_config& config,
-        std::function<optional<message> (spawn_config&, message&)> map_args,
+        const opencl::nd_range& range,
+        std::function<optional<message> (nd_range&, message&)> map_args,
         T x, Ts... xs) {
     detail::cl_spawn_helper<true, T, Ts...> f;
-    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, config,
+    return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::forward<T>(x), std::forward<Ts>(xs)...);
   }
 
@@ -281,12 +281,12 @@ public:
     actor
   >::type
   spawn(const char* source, const char* fname,
-        const opencl::spawn_config& config,
-        std::function<optional<message> (spawn_config&, message&)> map_args,
+        const opencl::nd_range& range,
+        std::function<optional<message> (nd_range&, message&)> map_args,
         T x, Ts... xs) {
     detail::cl_spawn_helper<true, T, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
-             create_program(source), fname, config,
+             create_program(source), fname, range,
              std::move(map_args), std::forward<T>(x), std::forward<Ts>(xs)...);
   }
 

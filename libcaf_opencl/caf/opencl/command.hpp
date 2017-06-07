@@ -37,7 +37,7 @@
 #include "caf/opencl/arguments.hpp"
 #include "caf/opencl/smart_ptr.hpp"
 #include "caf/opencl/opencl_err.hpp"
-#include "caf/opencl/spawn_config.hpp"
+#include "caf/opencl/nd_range.hpp"
 
 namespace caf {
 namespace opencl {
@@ -60,7 +60,7 @@ public:
           std::vector<size_t> lengths,
           message msg,
           std::tuple<Ts...> output_tuple,
-          spawn_config config)
+          nd_range range)
       : lengths_(std::move(lengths)),
         promise_(std::move(promise)),
         cl_actor_(std::move(parent)),
@@ -70,7 +70,7 @@ public:
         scratch_buffers_(std::move(scratches)),
         results_(output_tuple),
         msg_(std::move(msg)),
-        config_(std::move(config)) {
+        range_(std::move(range)) {
     // nop
   }
 
@@ -107,10 +107,10 @@ public:
     mem_out_events_.emplace_back();
     cl_int err = clEnqueueNDRangeKernel(
       parent->queue_.get(), parent->kernel_.get(),
-      static_cast<unsigned int>(config_.dimensions().size()),
-      data_or_nullptr(config_.offsets()),
-      data_or_nullptr(config_.dimensions()),
-      data_or_nullptr(config_.local_dimensions()),
+      static_cast<unsigned int>(range_.dimensions().size()),
+      data_or_nullptr(range_.offsets()),
+      data_or_nullptr(range_.dimensions()),
+      data_or_nullptr(range_.local_dimensions()),
       static_cast<unsigned int>(mem_in_events_.size()),
       (mem_in_events_.empty() ? nullptr : mem_in_events_.data()),
       &mem_out_events_.back()
@@ -183,10 +183,10 @@ public:
     cl_event execution_event;
     cl_int err = clEnqueueNDRangeKernel(
       parent->queue_.get(), parent->kernel_.get(),
-      static_cast<cl_uint>(config_.dimensions().size()),
-      data_or_nullptr(config_.offsets()),
-      data_or_nullptr(config_.dimensions()),
-      data_or_nullptr(config_.local_dimensions()),
+      static_cast<cl_uint>(range_.dimensions().size()),
+      data_or_nullptr(range_.offsets()),
+      data_or_nullptr(range_.dimensions()),
+      data_or_nullptr(range_.local_dimensions()),
       static_cast<unsigned int>(mem_in_events_.size()),
       (mem_in_events_.empty() ? nullptr : mem_in_events_.data()),
       &execution_event
@@ -274,7 +274,7 @@ private:
   std::vector<cl_mem_ptr> scratch_buffers_;
   std::tuple<Ts...> results_;
   message msg_; // keeps the argument buffers alive for async copy to device
-  spawn_config config_;
+  nd_range range_;
 };
 
 } // namespace opencl

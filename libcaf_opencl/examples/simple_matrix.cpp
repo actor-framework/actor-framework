@@ -96,7 +96,7 @@ void multiplier(event_based_actor* self) {
   //          the vector type is omitted for brevity.
   auto worker = self->system().opencl_manager().spawn(
     kernel_source, kernel_name,
-    spawn_config{dim_vec{matrix_size, matrix_size}},
+    nd_range{dim_vec{matrix_size, matrix_size}},
     in<float>{}, in<float>{}, out<float>{}
   );
   // send both matrices to the actor and wait for a result

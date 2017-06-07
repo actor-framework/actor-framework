@@ -176,7 +176,7 @@ void multiplier(event_based_actor* self) {
   //          arguments for global memory to be contained in vectors,
   //          the vector is omitted here.
   auto worker = mngr.spawn(kernel_source, kernel_name,
-                           spawn_config{dim_vec{matrix_size, matrix_size}},
+                           nd_range{dim_vec{matrix_size, matrix_size}},
                            unbox_args, box_res,
                            in<float>{}, in<float>{}, out<float>{});
 

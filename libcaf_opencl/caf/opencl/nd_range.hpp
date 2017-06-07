@@ -17,39 +17,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_SPAWN_CONFIG_HPP
-#define CAF_OPENCL_SPAWN_CONFIG_HPP
+#ifndef CAF_OPENCL_ND_RANGE_HPP
+#define CAF_OPENCL_ND_RANGE_HPP
 
 #include "caf/opencl/global.hpp"
 
 namespace caf {
 namespace opencl {
 
-class spawn_config {
+class nd_range {
 public:
-  spawn_config(const opencl::dim_vec& dims,
-               const opencl::dim_vec& offset = {},
-               const opencl::dim_vec& local_dims = {})
-    : dims_{dims},
-      offset_{offset},
-      local_dims_{local_dims} {
+  nd_range(const opencl::dim_vec& dimensions,
+           const opencl::dim_vec& offsets = {},
+           const opencl::dim_vec& local_dimensions = {})
+    : dims_{dimensions},
+      offset_{offsets},
+      local_dims_{local_dimensions} {
     // nop
   }
 
-  spawn_config(opencl::dim_vec&& dims,
-               opencl::dim_vec&& offset = {},
-               opencl::dim_vec&& local_dims = {})
-    : dims_{std::move(dims)},
-      offset_{std::move(offset)},
-      local_dims_{std::move(local_dims)} {
+  nd_range(opencl::dim_vec&& dimensions,
+           opencl::dim_vec&& offsets = {},
+           opencl::dim_vec&& local_dimensions = {})
+    : dims_{std::move(dimensions)},
+      offset_{std::move(offsets)},
+      local_dims_{std::move(local_dimensions)} {
     // nop
   }
 
-  spawn_config(const spawn_config&) = default;
-  spawn_config(spawn_config&&) = default;
+  nd_range(const nd_range&) = default;
+  nd_range(nd_range&&) = default;
 
-  spawn_config& operator=(const spawn_config&) = default;
-  spawn_config& operator=(spawn_config&&) = default;
+  nd_range& operator=(const nd_range&) = default;
+  nd_range& operator=(nd_range&&) = default;
 
   const opencl::dim_vec& dimensions() const {
     return dims_;
@@ -72,4 +72,4 @@ private:
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_SPAWN_CONFIG_HPP
+#endif // CAF_OPENCL_ND_RANGE_HPP
