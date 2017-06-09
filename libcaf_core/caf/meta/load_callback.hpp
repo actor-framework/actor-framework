@@ -33,6 +33,8 @@ struct load_callback_t : annotation {
 
   load_callback_t(load_callback_t&&) = default;
 
+  load_callback_t(const load_callback_t&) = default;
+
   F fun;
 };
 

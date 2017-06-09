@@ -33,6 +33,8 @@ struct save_callback_t : annotation {
 
   save_callback_t(save_callback_t&&) = default;
 
+  save_callback_t(const save_callback_t&) = default;
+
   F fun;
 };
 
