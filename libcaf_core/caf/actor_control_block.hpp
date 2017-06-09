@@ -216,8 +216,8 @@ typename Inspector::result_type inspect(Inspector& f, strong_actor_ptr& x) {
     aid = x->aid;
     nid = x->nid;
   }
-  auto load = [&] { return load_actor(x, context_of(&f), aid, nid); };
-  auto save = [&] { return save_actor(x, context_of(&f), aid, nid); };
+  auto load = [&f, &x, aid, nid] { return load_actor(x, context_of(&f), aid, nid); };
+  auto save = [&f, &x, aid, nid] { return save_actor(x, context_of(&f), aid, nid); };
   return f(meta::type_name("actor"), aid,
            meta::omittable_if_none(), nid,
            meta::load_callback(load), meta::save_callback(save));
