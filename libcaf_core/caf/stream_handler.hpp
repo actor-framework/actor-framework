@@ -66,11 +66,12 @@ public:
 
   /// Add a new upstream actor to the stream and return an initial credit.
   virtual expected<long> add_upstream(strong_actor_ptr& hdl,
-                                        const stream_id& sid,
-                                        stream_priority prio);
+                                      const stream_id& sid,
+                                      stream_priority prio);
 
   /// Handles data from an upstream actor.
-  virtual error upstream_batch(strong_actor_ptr& hdl, long, message& xs);
+  virtual error upstream_batch(strong_actor_ptr& hdl, int64_t xs_id,
+                               long xs_size, message& xs);
 
   /// Closes an upstream.
   virtual error close_upstream(strong_actor_ptr& hdl);

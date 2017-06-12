@@ -45,7 +45,7 @@ public:
 
   error downstream_demand(strong_actor_ptr&, long) override;
 
-  error upstream_batch(strong_actor_ptr&, long, message&) override;
+  error upstream_batch(strong_actor_ptr&, int64_t, long, message&) override;
 
   void last_upstream_closed();
 

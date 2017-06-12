@@ -55,20 +55,19 @@ void upstream_policy::assign_credit(long downstream_capacity) {
   for (auto& x : assignment_vec_)
     used_capacity += static_cast<long>(x.first->assigned_credit);
   CAF_LOG_DEBUG(CAF_ARG(used_capacity));
-  if (used_capacity >= downstream_capacity)
-    return;
   fill_assignment_vec(downstream_capacity - used_capacity);
   for (auto& x : assignment_vec_) {
     auto n = x.second;
     if (n > 0) {
       auto ptr = x.first;
       ptr->assigned_credit += n;
+      ptr->last_acked_batch_id = ptr->last_batch_id;
       CAF_LOG_DEBUG("ack batch" << ptr->last_batch_id
                     << "with" << n << "new capacity");
       unsafe_send_as(self_, ptr->hdl,
                      make<stream_msg::ack_batch>(ptr->sid,
                                                  static_cast<int32_t>(n),
-                                                 ptr->last_batch_id++));
+                                                 ptr->last_batch_id));
     }
   }
 }
@@ -85,7 +84,7 @@ expected<long> upstream_policy::add_path(strong_actor_ptr hdl,
     paths_.emplace_back(ptr);
     assignment_vec_.emplace_back(ptr, 0);
     if (downstream_credit > 0)
-      ptr->assigned_credit = std::min(max_credit_, downstream_credit);
+      ptr->assigned_credit = initial_credit(ptr, downstream_credit);
     CAF_LOG_DEBUG("add new upstraem path" << ptr->hdl 
                   << "with initial credit" << ptr->assigned_credit);
     return ptr->assigned_credit;
@@ -131,6 +130,11 @@ upstream_path* upstream_policy::find(const strong_actor_ptr& x) const {
   auto e = paths_.end();
   auto i = std::find_if(paths_.begin(), e, pred);
   return i != e ? i->get() : nullptr;
+}
+
+long upstream_policy::initial_credit(upstream_path* ptr,
+                                     long downstream_credit) {
+  return std::min(max_credit_, downstream_credit);
 }
 
 } // namespace caf

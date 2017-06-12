@@ -41,8 +41,8 @@ public:
 
   bool done() const override;
 
-  error upstream_batch(strong_actor_ptr& src, long xs_size,
-                       message& xs) override;
+  error upstream_batch(strong_actor_ptr& src, int64_t xs_id,
+                       long xs_size, message& xs) override;
 
   void abort(strong_actor_ptr& cause, const error& reason) override;
 

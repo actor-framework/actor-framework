@@ -137,6 +137,9 @@ protected:
   /// Assigns new credit to upstream actors by filling `assignment_vec_`.
   virtual void fill_assignment_vec(long downstream_credit) = 0;
 
+  /// Creates initial credit for `ptr`.
+  virtual long initial_credit(upstream_path* ptr, long downstream_credit);
+
   /// Pointer to the parent actor.
   local_actor* self_;
 

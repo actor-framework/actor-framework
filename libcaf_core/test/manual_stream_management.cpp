@@ -151,7 +151,8 @@ public:
   expected<long> add_upstream(strong_actor_ptr& hdl, const stream_id& sid,
                                 stream_priority prio) override;
 
-  error upstream_batch(strong_actor_ptr& hdl, long, message& xs) override;
+  error upstream_batch(strong_actor_ptr& hdl, int64_t, long,
+                       message& xs) override;
 
   error close_upstream(strong_actor_ptr& hdl) override;
 
@@ -324,8 +325,8 @@ expected<long> stream_governor::add_upstream(strong_actor_ptr& hdl,
   return sec::invalid_argument;
 }
 
-error stream_governor::upstream_batch(strong_actor_ptr& hdl, long xs_size,
-                                      message& xs) {
+error stream_governor::upstream_batch(strong_actor_ptr& hdl, int64_t xs_id,
+                                      long xs_size, message& xs) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(xs_size) << CAF_ARG(xs));
   using std::get;
   // Sanity checking.
@@ -341,6 +342,7 @@ error stream_governor::upstream_batch(strong_actor_ptr& hdl, long xs_size,
   // Decrease credit assigned to `hdl` and get currently available downstream
   // credit on all paths.
   CAF_LOG_DEBUG(CAF_ARG(path->assigned_credit));
+  path->last_batch_id = xs_id;
   path->assigned_credit -= xs_size;
   // Forward data to all other peers.
   for (auto& kvp : peers_)

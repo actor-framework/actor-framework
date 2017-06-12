@@ -47,12 +47,25 @@ error stream_source::downstream_demand(strong_actor_ptr& hdl, long value) {
     path->open_credit += value;
     if (!at_end()) {
       // produce new elements
-      auto current_size = buf_size();
-      auto size_hint = std::min(out().credit(),
-                                out().max_batch_size());
-      if (current_size < size_hint)
-        generate(static_cast<size_t>(size_hint - current_size));
-      return push();
+      auto capacity = out().credit();
+      // TODO: fix issue where a source does not emit the last pieces if
+      //       min_batch_size cannot be reached
+      while (capacity > out().min_batch_size()) {
+        auto current_size = buf_size();
+        auto size_hint = std::min(capacity, out().max_batch_size());
+        if (size_hint > current_size)
+          generate(static_cast<size_t>(size_hint - current_size));
+        auto err = push();
+        if (err)
+          return err;
+        // Check if `push` did actually use credit, otherwise break loop
+        auto new_capacity = out().credit();
+        if (new_capacity != capacity)
+          capacity = new_capacity;
+        else
+          break;
+      }
+      return none;
     }
     // transmit cached elements before closing paths
     if (buf_size() > 0)

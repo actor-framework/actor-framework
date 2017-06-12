@@ -59,7 +59,8 @@ expected<long> stream_handler::add_upstream(strong_actor_ptr&, const stream_id&,
   return sec::cannot_add_upstream;
 }
 
-error stream_handler::upstream_batch(strong_actor_ptr&, long, message&) {
+error stream_handler::upstream_batch(strong_actor_ptr&, int64_t, long,
+                                     message&) {
   CAF_LOG_ERROR("Received upstream messages in "
                 "a stream marked as no-upstreams");
   return sec::invalid_upstream;

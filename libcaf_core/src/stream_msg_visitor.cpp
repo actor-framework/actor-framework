@@ -118,7 +118,7 @@ auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
 auto stream_msg_visitor::operator()(stream_msg::batch& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   if (i_ != e_)
-    return {i_->second->upstream_batch(self_->current_sender(),
+    return {i_->second->upstream_batch(self_->current_sender(), x.id,
                                        static_cast<long>(x.xs_size), x.xs),
             i_};
   CAF_LOG_DEBUG("received stream_msg::batch for unknown stream");
