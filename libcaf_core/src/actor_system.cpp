@@ -209,8 +209,8 @@ actor_system::actor_system(actor_system_config& cfg)
   using test = scheduler::test_coordinator;
   using share = scheduler::coordinator<policy::work_sharing>;
   using steal = scheduler::coordinator<policy::work_stealing>;
-  using profiled_share = scheduler::profiled_coordinator<policy::work_sharing>;
-  using profiled_steal = scheduler::profiled_coordinator<policy::work_stealing>;
+  using profiled_share = scheduler::profiled_coordinator<policy::profiled<policy::work_sharing>>;
+  using profiled_steal = scheduler::profiled_coordinator<policy::profiled<policy::work_stealing>>;
   // set scheduler only if not explicitly loaded by user
   if (!sched) {
     enum sched_conf {
