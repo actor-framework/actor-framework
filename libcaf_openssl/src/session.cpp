@@ -29,9 +29,19 @@
 namespace caf {
 namespace openssl {
 
-static int pem_passwd_cb(char* buf, int size, int rwflag, void* session);
+namespace {
+
+int pem_passwd_cb(char* buf, int size, int, void* ptr) {
+  auto passphrase = reinterpret_cast<session*>(ptr)->openssl_passphrase();
+  strncpy(buf, passphrase, size);
+  buf[size - 1] = '\0';
+  return strlen(buf);
+}
+
+} // namespace <anonymous>
 
 session::session(actor_system& sys) : sys_(sys) {
+  // nop
 }
 
 void session::init() {
@@ -55,10 +65,9 @@ bool session::read_some(size_t& result, native_socket /* fd */, void* buf,
   if (ret > 0) {
     result = ret;
     return true;
-  } else {
-    result = 0;
-    return handle_ssl_result(ret);
   }
+  result = 0;
+  return handle_ssl_result(ret);
 }
 
 bool session::write_some(size_t& result, native_socket /* fd */,
@@ -68,12 +77,11 @@ bool session::write_some(size_t& result, native_socket /* fd */,
     return true;
   auto ret = SSL_write(ssl_, buf, len);
   if (ret > 0) {
-    result = ret;
+    result = static_cast<size_t>(ret);
     return true;
-  } else {
-    result = 0;
-    return handle_ssl_result(ret);
   }
+  result = 0;
+  return handle_ssl_result(ret);
 }
 
 bool session::connect(native_socket fd) {
@@ -89,10 +97,7 @@ bool session::try_accept(native_socket fd) {
   SSL_set_fd(ssl_, fd);
   SSL_set_accept_state(ssl_);
   auto ret = SSL_accept(ssl_);
-  if (ret > 0)
-    return true;
-  else
-    return handle_ssl_result(ret);
+  return ret > 0 || handle_ssl_result(ret);
 }
 
 const char* session::openssl_passphrase() {
@@ -129,12 +134,11 @@ SSL_CTX* session::create_ssl_context() {
       if (SSL_CTX_load_verify_locations(ctx, cafile, capath) != 1)
         raise_ssl_error("cannot load trusted CA certificates");
     }
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                       nullptr);
     if (SSL_CTX_set_cipher_list(ctx, "HIGH:!aNULL:!MD5") != 1)
       raise_ssl_error("cannot set cipher list");
-  }
-
-  else {
+  } else {
     // No authentication.
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
     auto ecdh = EC_KEY_new_by_curve_name(NID_secp384r1);
@@ -144,7 +148,6 @@ SSL_CTX* session::create_ssl_context() {
     if (SSL_CTX_set_cipher_list(ctx, "AECDH-AES256-SHA") != 1)
       raise_ssl_error("cannot set anonymous cipher");
   }
-
   return ctx;
 }
 
@@ -178,13 +181,6 @@ bool session::handle_ssl_result(int ret) {
       // auto msg = get_ssl_error();
       return false;
   }
-}
-
-static int pem_passwd_cb(char* buf, int size, int /* rwflag */, void* session) {
-  auto passphrase = static_cast<class session*>(session)->openssl_passphrase();
-  strncpy(buf, passphrase, size);
-  buf[size - 1] = '\0';
-  return strlen(buf);
 }
 
 } // namespace openssl

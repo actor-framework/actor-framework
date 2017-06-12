@@ -19,8 +19,10 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE openssl_authentication_failure
+#define CAF_SUITE openssl_authentication
 #include "caf/test/unit_test.hpp"
+
+#include <unistd.h>
 
 #include <vector>
 #include <sstream>
@@ -48,15 +50,20 @@ public:
     add_message_type<std::vector<int>>("std::vector<int>");
     actor_system_config::parse(test::engine::argc(),
                                test::engine::argv());
+    scheduler_max_threads = 1;
   }
 
   static std::string data_dir() {
-     auto path = std::string(::caf::test::engine::path());
-     auto found = path.find_last_of("/");
+     std::string path{::caf::test::engine::path()};
      path = path.substr(0, path.find_last_of("/"));
+     // TODO: https://github.com/actor-framework/actor-framework/issues/555
      path += "/../../libcaf_openssl/test";
      char rpath[PATH_MAX];
-     return realpath(path.c_str(), rpath);
+     auto rp = realpath(path.c_str(), rpath);
+     std::string result;
+     if (rp)
+       result = rp;
+     return result;
   }
 };
 
@@ -87,39 +94,83 @@ behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
   };
 }
 
-} // namespace <anonymous>
-
-struct fixture_certs_failure {
+struct fixture {
   config server_side_config;
-  actor_system server_side{server_side_config};
   config client_side_config;
-  actor_system client_side{client_side_config};
+  bool initialized;
+  union { actor_system server_side; };
+  union { actor_system client_side; };
 
-  fixture_certs_failure()
-	{
-	server_side_config.openssl_cafile = config::data_dir() + "/ca.pem";
-	server_side_config.openssl_certificate = config::data_dir() + "/cert.1.pem";
-	server_side_config.openssl_key = config::data_dir() + "/key.1.enc.pem";
-	server_side_config.openssl_passphrase = "12345";
+  fixture() : initialized(false) {
+    // nop
+  }
 
-	//  client_side_config.openssl_cafile = config::data_dir() + "/ca.pem";
-	client_side_config.openssl_certificate = config::data_dir() + "/cert.2.pem";
-	client_side_config.openssl_key = config::data_dir() + "/key.2.pem";
-	}
+  ~fixture() {
+    if (initialized) {
+      server_side.~actor_system();
+      client_side.~actor_system();
+    }
+  }
+
+  bool init(bool skip_client_side_ca) {
+    auto cd = config::data_dir();
+    cd += '/';
+    server_side_config.openssl_passphrase = "12345";
+    // check whether all files exist before setting config parameters
+    std::string dummy;
+    std::pair<const char*, std::string*> cfg[] {
+      {"ca.pem", &server_side_config.openssl_cafile},
+      {"cert.1.pem", &server_side_config.openssl_certificate},
+      {"key.1.enc.pem", &server_side_config.openssl_key},
+      {"ca.pem", skip_client_side_ca ? &dummy
+                                     : &client_side_config.openssl_cafile},
+      {"cert.2.pem", &client_side_config.openssl_certificate},
+      {"key.2.pem", &client_side_config.openssl_key}
+    };
+    // return if any file is unreadable or non-existend
+    for (auto& x : cfg) {
+      auto path = cd + x.first;
+      if (access(path.c_str(), F_OK) == -1) {
+        CAF_MESSAGE("pem files missing, skip test");
+        return false;
+      }
+      *x.second = std::move(path);
+    }
+    new (&server_side) actor_system(server_side_config);
+    new (&client_side) actor_system(client_side_config);
+    initialized = true;
+    return true;
+  }
 };
 
-CAF_TEST_FIXTURE_SCOPE(authentication_failure, fixture_certs_failure)
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(authentication, fixture)
 
 using openssl::remote_actor;
 using openssl::publish;
 
-CAF_TEST(authentication_failure_ping_pong) {
+CAF_TEST(authentication_succes) {
+  if (!init(false))
+    return;
   // server side
   CAF_EXP_THROW(port,
                 publish(server_side.spawn(make_pong_behavior), 0, local_host));
   // client side
   CAF_EXP_THROW(pong, remote_actor(client_side, local_host, port));
   client_side.spawn(make_ping_behavior, pong);
+}
+
+CAF_TEST(authentication_failure) {
+  if (!init(true))
+    return;
+  // server side
+  auto pong = server_side.spawn(make_pong_behavior);
+  CAF_EXP_THROW(port, publish(pong, 0, local_host));
+  // client side
+  auto remote_pong = remote_actor(client_side, local_host, port);
+  CAF_REQUIRE(!remote_pong);
+  anon_send_exit(pong, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -77,6 +77,10 @@ if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
 endif()
 
+if(NOT CAF_NO_OPENSSL)
+  set(CAF_NO_OPENSSL no)
+endif()
+
 if(NOT CAF_NO_PYTHON)
   set(CAF_NO_PYTHON no)
 endif()
@@ -495,11 +499,15 @@ add_caf_lib(core)
 add_optional_caf_lib(io)
 
 # build SSL module if OpenSSL library is available
-find_package(OpenSSL)
-if(OPENSSL_FOUND)
-  include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
-  add_optional_caf_lib(openssl)
-endif(OPENSSL_FOUND)
+if(NOT CAF_NO_OPENSSL)
+  find_package(OpenSSL)
+  if(OPENSSL_FOUND)
+    include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
+    add_optional_caf_lib(openssl)
+  else(OPENSSL_FOUND)
+    set(CAF_NO_OPENSSL yes)
+  endif(OPENSSL_FOUND)
+endif()
 
 # build opencl library if not told otherwise and OpenCL package was found
 if(NOT CAF_NO_OPENCL)
@@ -507,6 +515,8 @@ if(NOT CAF_NO_OPENCL)
   if(OpenCL_FOUND)
     add_optional_caf_lib(opencl)
     add_optional_caf_binaries(libcaf_opencl/examples)
+  else()
+    set(CAF_NO_OPENCL yes)
   endif()
 endif()
 
@@ -689,6 +699,7 @@ invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
+invertYesNo(CAF_NO_OPENSSL CAF_BUILD_OPENSSL)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
@@ -713,7 +724,8 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
-        "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
+        "\nBuild OpenCL:      ${CAF_BUILD_OPENCL}"
+        "\nBuild OpenSSL:     ${CAF_BUILD_OPENSSL}"
         "\nBuild Python:      ${CAF_BUILD_PYTHON}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
