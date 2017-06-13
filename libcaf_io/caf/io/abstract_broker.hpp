@@ -30,12 +30,15 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"
+#include "caf/io/datagram_handle.hpp"
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
 
+#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/datagram_manager.hpp"
 
 namespace caf {
 namespace io {
@@ -62,7 +65,7 @@ class middleman;
 /// sending its content via the network. Instead of actively receiving data,
 /// brokers configure a scribe to asynchronously receive data, e.g.,
 /// `self->configure_read(hdl, receive_policy::exactly(1024))` would
-/// configure the scribe associated to `hdl` to receive *exactly* 1024 bytes
+/// configure the scribe associated with `hdl` to receive *exactly* 1024 bytes
 /// and generate a `new_data_msg` message for the broker once the
 /// data is available. The buffer in this message will be re-used by the
 /// scribe to minimize memory usage and heap allocations.
@@ -82,6 +85,7 @@ public:
   // even brokers need friends
   friend class scribe;
   friend class doorman;
+  friend class datagram_servant;
 
   // -- overridden modifiers of abstract_actor ---------------------------------
 
@@ -136,22 +140,37 @@ public:
     }
   }
 
-  /// Modifies the receive policy for given connection.
+  /// Modifies the receive policy for a given connection.
   /// @param hdl Identifies the affected connection.
   /// @param cfg Contains the new receive policy.
   void configure_read(connection_handle hdl, receive_policy::config cfg);
 
-  /// Enables or disables write notifications for given connection.
+  /// Enables or disables write notifications for a given connection.
   void ack_writes(connection_handle hdl, bool enable);
 
-  /// Returns the write buffer for given connection.
+  /// Returns the write buffer for a given connection.
   std::vector<char>& wr_buf(connection_handle hdl);
 
-  /// Writes `data` into the buffer for given connection.
+  /// Writes `data` into the buffer for a given connection.
   void write(connection_handle hdl, size_t bs, const void* buf);
 
-  /// Sends the content of the buffer for given connection.
+  /// Sends the content of the buffer for a given connection.
   void flush(connection_handle hdl);
+
+  /// Enables or disables write notifications for a given datagram socket.
+  void ack_writes(datagram_handle hdl, bool enable);
+
+  /// Returns the write buffer for a given sink.
+  std::vector<char>& wr_buf(datagram_handle hdl);
+
+  /// Enqueue a buffer to be sent as a datagram via a given endpoint.
+  void enqueue_datagram(datagram_handle, std::vector<char>);
+
+  /// Writes `data` into the buffer of a given sink.
+  void write(datagram_handle hdl, size_t data_size, const void* data);
+
+  /// Sends the content of the buffer to a UDP endpoint.
+  void flush(datagram_handle hdl);
 
   /// Returns the middleman instance this broker belongs to.
   inline middleman& parent() {
@@ -191,23 +210,74 @@ public:
   add_tcp_doorman(uint16_t port = 0, const char* in = nullptr,
                   bool reuse_addr = false);
 
-  /// Returns the remote address associated to `hdl`
+  /// Adds a `datagram_servant` to this broker.
+  void add_datagram_servant(datagram_servant_ptr ptr);
+
+  /// Adds the `datagram_servant` under an additional `hdl`.
+  void add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
+                                    datagram_handle hdl);
+
+  /// Creates and assigns a new `datagram_servant` from a given socket `fd`.
+  datagram_handle add_datagram_servant(network::native_socket fd);
+
+  /// Creates and assigns a new `datagram_servant` from a given socket `fd`
+  /// for the remote endpoint `ep`.
+  datagram_handle
+  add_datagram_servant_for_endpoint(network::native_socket fd,
+                                    const network::ip_endpoint& ep);
+
+  /// Creates a new `datagram_servant` for the remote endpoint `host` and `port`.
+  /// @returns The handle to the new `datagram_servant`.
+  expected<datagram_handle>
+  add_udp_datagram_servant(const std::string& host, uint16_t port);
+
+  /// Tries to open a local port and creates a `datagram_servant` managing it on
+  /// success. If `port == 0`, then the broker will ask the operating system to
+  /// pick a random port.
+  /// @returns The handle of the new `datagram_servant` and the assigned port.
+  expected<std::pair<datagram_handle, uint16_t>>
+  add_udp_datagram_servant(uint16_t port = 0, const char* in = nullptr,
+                           bool reuse_addr = false);
+
+  /// Moves an initialized `datagram_servant` instance `ptr` from another broker
+  /// to this one.
+  void move_datagram_servant(datagram_servant_ptr ptr);
+
+  /// Returns the remote address associated with `hdl`
   /// or empty string if `hdl` is invalid.
   std::string remote_addr(connection_handle hdl);
 
-  /// Returns the remote port associated to `hdl`
+  /// Returns the remote port associated with `hdl`
   /// or `0` if `hdl` is invalid.
   uint16_t remote_port(connection_handle hdl);
 
-  /// Returns the local address associated to `hdl`
+  /// Returns the local address associated with `hdl`
   /// or empty string if `hdl` is invalid.
   std::string local_addr(accept_handle hdl);
 
-  /// Returns the local port associated to `hdl` or `0` if `hdl` is invalid.
+  /// Returns the local port associated with `hdl` or `0` if `hdl` is invalid.
   uint16_t local_port(accept_handle hdl);
 
-  /// Returns the handle associated to given local `port` or `none`.
+  /// Returns the handle associated with given local `port` or `none`.
   accept_handle hdl_by_port(uint16_t port);
+
+  /// Returns the dgram handle associated with given local `port` or `none`.
+  datagram_handle datagram_hdl_by_port(uint16_t port);
+
+  /// Returns the remote address associated with `hdl`
+  /// or an empty string if `hdl` is invalid.
+  std::string remote_addr(datagram_handle hdl);
+
+  /// Returns the remote port associated with `hdl`
+  /// or `0` if `hdl` is invalid.
+  uint16_t remote_port(datagram_handle hdl);
+
+  /// Returns the remote port associated with `hdl`
+  /// or `0` if `hdl` is invalid.
+  uint16_t local_port(datagram_handle hdl);
+
+  /// Remove the endpoint `hdl` from the broker.
+  bool remove_endpoint(datagram_handle hdl);
 
   /// Closes all connections and acceptors.
   void close_all();
@@ -236,6 +306,30 @@ public:
     auto i = elements.find(hdl);
     if (i != elements.end())
       elements.erase(i);
+  }
+
+  // meta programming utility (not implemented)
+  static intrusive_ptr<doorman> ptr_of(accept_handle);
+
+  // meta programming utility (not implemented)
+  static intrusive_ptr<scribe> ptr_of(connection_handle);
+
+  // meta programming utility (not implemented)
+  static intrusive_ptr<datagram_servant> ptr_of(datagram_handle);
+
+  /// Returns an intrusive pointer to a `scribe` or `doorman`
+  /// identified by `hdl` and remove it from this broker.
+  template <class Handle>
+  auto take(Handle hdl) -> decltype(ptr_of(hdl)) {
+    using std::swap;
+    auto& elements = get_map(hdl);
+    decltype(ptr_of(hdl)) result;
+    auto i = elements.find(hdl);
+    if (i == elements.end())
+      return nullptr;
+    swap(result, i->second);
+    elements.erase(i);
+    return result;
   }
   /// @endcond
 
@@ -270,6 +364,8 @@ protected:
   using scribe_map = std::unordered_map<connection_handle,
                                         intrusive_ptr<scribe>>;
 
+  using datagram_servant_map
+    = std::unordered_map<datagram_handle, intrusive_ptr<datagram_servant>>;
   /// @cond PRIVATE
 
   // meta programming utility
@@ -282,12 +378,9 @@ protected:
     return scribes_;
   }
 
-  // meta programming utility (not implemented)
-  static intrusive_ptr<doorman> ptr_of(accept_handle);
-
-  // meta programming utility (not implemented)
-  static intrusive_ptr<scribe> ptr_of(connection_handle);
-
+  inline datagram_servant_map& get_map(datagram_handle) {
+    return datagram_servants_;
+  }
   /// @endcond
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.
@@ -300,27 +393,14 @@ protected:
     return *(i->second);
   }
 
-  /// Returns an intrusive pointer to a `scribe` or `doorman`
-  /// identified by `hdl` and remove it from this broker.
-  template <class Handle>
-  auto take(Handle hdl) -> decltype(ptr_of(hdl)) {
-    using std::swap;
-    auto& elements = get_map(hdl);
-    decltype(ptr_of(hdl)) result;
-    auto i = elements.find(hdl);
-    if (i == elements.end())
-      return nullptr;
-    swap(result, i->second);
-    elements.erase(i);
-    return result;
-  }
-
 private:
   inline void launch_servant(scribe_ptr&) {
     // nop
   }
 
   void launch_servant(doorman_ptr& ptr);
+
+  void launch_servant(datagram_servant_ptr& ptr);
 
   template <class T>
   typename T::handle_type add_servant(intrusive_ptr<T>&& ptr) {
@@ -345,6 +425,7 @@ private:
 
   scribe_map scribes_;
   doorman_map doormen_;
+  datagram_servant_map datagram_servants_;
   detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
   std::vector<char> dummy_wr_buf_;
 };

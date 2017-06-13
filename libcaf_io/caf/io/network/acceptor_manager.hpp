@@ -37,6 +37,9 @@ public:
   /// @returns `true` if the manager accepts further connections,
   ///          otherwise `false`.
   virtual bool new_connection() = 0;
+
+  /// Get the port of the underlying I/O device.
+  virtual uint16_t port() const = 0;
 };
 
 } // namespace network

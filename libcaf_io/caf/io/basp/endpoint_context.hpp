@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2017                                                  *
+ * Copyright (C) 2011 - 2016                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,37 +17,52 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_STREAM_MANAGER_HPP
-#define CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#ifndef CAF_IO_BASP_ENDPOINT_CONTEXT_HPP
+#define CAF_IO_BASP_ENDPOINT_CONTEXT_HPP
 
-#include <cstddef>
+#include <unordered_map>
 
-#include "caf/io/network/manager.hpp"
+#include "caf/variant.hpp"
+#include "caf/response_promise.hpp"
+
+#include "caf/io/datagram_handle.hpp"
+#include "caf/io/connection_handle.hpp"
+
+#include "caf/io/basp/header.hpp"
+#include "caf/io/basp/connection_state.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
+namespace basp {
 
-/// A stream manager configures an IO stream and provides callbacks
-/// for incoming data as well as for error handling.
-class stream_manager : public manager {
-public:
-  ~stream_manager() override;
-
-  /// Called by the underlying I/O device whenever it received data.
-  /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
-
-  /// Called by the underlying I/O device whenever it sent data.
-  virtual void data_transferred(execution_unit* ctx, size_t num_bytes,
-                                size_t remaining_bytes) = 0;
-
-  /// Get the port of the underlying I/O device.
-  virtual uint16_t port() const = 0;
+// stores meta information for active endpoints
+struct endpoint_context {
+  using pending_map = std::unordered_map<uint16_t,
+                                         std::pair<basp::header,
+                                                   std::vector<char>>>;
+  // denotes what message we expect from the remote node next
+  basp::connection_state cstate;
+  // our currently processed BASP header
+  basp::header hdr;
+  // the handle for I/O operations
+  variant<connection_handle, datagram_handle> hdl;
+  // network-agnostic node identifier
+  node_id id;
+  // ports
+  uint16_t remote_port;
+  uint16_t local_port;
+  // pending operations to be performed after handshake completed
+  optional<response_promise> callback;
+  // protocols that do not implement ordering are ordered by CAF
+  bool requires_ordering;
+  // sequence numbers and a buffer to establish order
+  uint16_t seq_incoming;
+  uint16_t seq_outgoing;
+  pending_map pending;
 };
 
-} // namespace network
+} // namespace basp
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#endif // CAF_IO_BASP_ENDPOINT_CONTEXT_HPP

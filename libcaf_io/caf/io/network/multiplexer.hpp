@@ -35,6 +35,7 @@
 #include "caf/io/connection_handle.hpp"
 
 #include "caf/io/network/protocol.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 
 namespace boost {
@@ -72,6 +73,26 @@ public:
   virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
                                                 const char* in = nullptr,
                                                 bool reuse_addr = false) = 0;
+
+  /// Creates a new `datagram_servant` from a native socket handle.
+  /// @threadsafe
+  virtual datagram_servant_ptr new_datagram_servant(native_socket fd) = 0;
+
+  virtual datagram_servant_ptr
+  new_datagram_servant_for_endpoint(native_socket fd, const ip_endpoint& ep) = 0;
+
+  /// Create a new `datagram_servant` to contact a remote endpoint `host` and
+  /// `port`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<datagram_servant_ptr>
+  new_remote_udp_endpoint(const std::string& host, uint16_t port) = 0;
+
+  /// Create a new `datagram_servant` that receives datagrams on the local
+  /// `port`, optionally only accepting connections from IP address `in`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<datagram_servant_ptr>
+  new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
+                         bool reuse_addr = false) = 0;
 
   /// Simple wrapper for runnables
   class runnable : public resumable, public ref_counted {

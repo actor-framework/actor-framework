@@ -40,6 +40,7 @@ class config : public actor_system_config {
 public:
   config() {
     load<io::middleman>();
+    set("middleman.enable-udp", true);
     add_message_type<std::vector<int>>("std::vector<int>");
     actor_system_config::parse(test::engine::argc(),
                                test::engine::argv());
@@ -132,7 +133,7 @@ behavior linking_actor(event_based_actor* self, const actor& buddy) {
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 
-CAF_TEST(identity_semantics) {
+CAF_TEST(identity_semantics_tcp) {
   // server side
   auto server = server_side.spawn(make_pong_behavior);
   CAF_EXP_THROW(port1, server_side_mm.publish(server, 0, local_host));
@@ -148,7 +149,7 @@ CAF_TEST(identity_semantics) {
   anon_send_exit(server, exit_reason::user_shutdown);
 }
 
-CAF_TEST(ping_pong) {
+CAF_TEST(ping_pong_tcp) {
   // server side
   CAF_EXP_THROW(port,
                 server_side_mm.publish(server_side.spawn(make_pong_behavior),
@@ -158,7 +159,7 @@ CAF_TEST(ping_pong) {
   client_side.spawn(make_ping_behavior, pong);
 }
 
-CAF_TEST(custom_message_type) {
+CAF_TEST(custom_message_type_tcp) {
   // server side
   CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(make_sort_behavior),
                                              0, local_host));
@@ -167,7 +168,7 @@ CAF_TEST(custom_message_type) {
   client_side.spawn(make_sort_requester_behavior, sorter);
 }
 
-CAF_TEST(remote_link) {
+CAF_TEST(remote_link_tcp) {
   // server side
   CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(fragile_mirror),
                                              0, local_host));
@@ -179,6 +180,114 @@ CAF_TEST(remote_link) {
   CAF_MESSAGE("linker exited");
   self->wait_for(mirror);
   CAF_MESSAGE("mirror exited");
+}
+
+// same tests using UDP instead of TCP
+
+CAF_TEST(identity_semantics_udp) {
+  // server side
+  auto server = server_side.spawn(make_pong_behavior);
+  CAF_EXP_THROW(port1, server_side_mm.publish_udp(server, 0, local_host));
+  CAF_EXP_THROW(port2, server_side_mm.publish_udp(server, 0, local_host));
+  CAF_REQUIRE_NOT_EQUAL(port1, port2);
+  CAF_EXP_THROW(same_server, server_side_mm.remote_actor_udp(local_host, port2));
+  CAF_REQUIRE_EQUAL(same_server, server);
+  CAF_CHECK_EQUAL(same_server->node(), server_side.node());
+  CAF_EXP_THROW(server1, client_side_mm.remote_actor_udp(local_host, port1));
+  CAF_EXP_THROW(server2, client_side_mm.remote_actor_udp(local_host, port2));
+  CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor_udp(local_host, port1));
+  CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor_udp(local_host, port2));
+  anon_send_exit(server, exit_reason::user_shutdown);
+}
+
+CAF_TEST(ping_pong_udp) {
+  // server side
+  CAF_EXP_THROW(port,
+                server_side_mm.publish_udp(server_side.spawn(make_pong_behavior),
+                                           0, local_host));
+  // client side
+  CAF_EXP_THROW(pong, client_side_mm.remote_actor_udp(local_host, port));
+  client_side.spawn(make_ping_behavior, pong);
+}
+
+CAF_TEST(custom_message_type_udp) {
+  // server side
+  CAF_EXP_THROW(port,
+                server_side_mm.publish_udp(server_side.spawn(make_sort_behavior),
+                                           0, local_host));
+  // client side
+  CAF_EXP_THROW(sorter, client_side_mm.remote_actor_udp(local_host, port));
+  client_side.spawn(make_sort_requester_behavior, sorter);
+}
+
+CAF_TEST(remote_link_udp) {
+  // server side
+  CAF_EXP_THROW(port,
+                server_side_mm.publish_udp(server_side.spawn(fragile_mirror),
+                                           0, local_host));
+  // client side
+  CAF_EXP_THROW(mirror, client_side_mm.remote_actor_udp(local_host, port));
+  auto linker = client_side.spawn(linking_actor, mirror);
+  scoped_actor self{client_side};
+  self->wait_for(linker);
+  CAF_MESSAGE("linker exited");
+  self->wait_for(mirror);
+  CAF_MESSAGE("mirror exited");
+}
+
+CAF_TEST(multiple_endpoints_udp) {
+  config cfg;
+  // setup server
+  CAF_MESSAGE("creating server");
+  actor_system server_sys{cfg};
+  auto mirror = server_sys.spawn([]() -> behavior {
+    return {
+      [] (std::string str) {
+        std::reverse(begin(str), end(str));
+        return str;
+      }
+    };
+  });
+  server_sys.middleman().publish_udp(mirror, 12345);
+  auto client_fun = [](event_based_actor* self) -> behavior {
+    return {
+      [=](actor s) {
+        self->send(s, "hellow, world");
+      },
+      [=](const std::string& str) {
+        CAF_CHECK_EQUAL(str, "dlrow ,wolleh");
+        self->quit();
+        CAF_MESSAGE("done");
+      }
+    };
+  };
+  // setup client a
+  CAF_MESSAGE("creating first client");
+  config client_cfg;
+  actor_system client_sys{client_cfg};
+  auto client = client_sys.spawn(client_fun);
+  // acquire remote actor from the server
+  auto client_srv = client_sys.middleman().remote_actor_udp("localhost", 12345);
+  CAF_REQUIRE(client_srv);
+  // setup other clients
+  for (int i = 0; i < 5; ++i) {
+    config other_cfg;
+    actor_system other_sys{other_cfg};
+    CAF_MESSAGE("creating new client");
+    auto other = other_sys.spawn(client_fun);
+    // acquire remote actor from the server
+    auto other_srv = other_sys.middleman().remote_actor_udp("localhost", 12345);
+    CAF_REQUIRE(other_srv);
+    // establish communication and exit
+    CAF_MESSAGE("client contacts server and exits");
+    anon_send(other, *other_srv);
+    other_sys.await_all_actors_done();
+  }
+  // establish communication and exit
+  CAF_MESSAGE("first client contacts server and exits");
+  anon_send(client, *client_srv);
+  client_sys.await_all_actors_done();
+  anon_send_exit(mirror, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

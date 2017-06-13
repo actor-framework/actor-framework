@@ -30,6 +30,7 @@
 #include "caf/optional.hpp"
 
 #include "caf/io/network/protocol.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
 
 namespace caf {
 namespace io {
@@ -78,6 +79,11 @@ public:
   static std::vector<std::pair<std::string, protocol::network>>
   server_address(uint16_t port, const char* host,
                  optional<protocol::network> preferred = none);
+
+  /// Writes datagram endpoint info for `host`:`port` into ep
+  static bool
+  get_endpoint(const std::string& host, uint16_t port, ip_endpoint& ep,
+               optional<protocol::network> preferred = none);
 };
 
 } // namespace network

@@ -24,6 +24,13 @@ set (LIBCAF_IO_SRCS
      src/scribe.cpp
      src/stream_manager.cpp
      src/test_multiplexer.cpp
+     src/acceptor_manager.cpp
+     src/multiplexer.cpp
+     src/datagram_servant.cpp
+     src/datagram_manager.cpp
+     src/ip_endpoint.cpp
+     src/connection_helper.cpp
+     src/receive_buffer.cpp
      # BASP files
      src/header.cpp
      src/message_type.cpp

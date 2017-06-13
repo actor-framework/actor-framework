@@ -31,6 +31,7 @@
 #include "caf/io/scribe.hpp"
 #include "caf/io/doorman.hpp"
 #include "caf/io/abstract_broker.hpp"
+#include "caf/io/datagram_servant.hpp"
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"

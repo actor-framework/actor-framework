@@ -137,6 +137,9 @@ actor_system_config::actor_system_config()
   middleman_heartbeat_interval = 0;
   middleman_detach_utility_actors = true;
   middleman_detach_multiplexer = true;
+  middleman_enable_tcp = true;
+  middleman_enable_udp = false;
+  middleman_cached_udp_buffers = 10;
   // fill our options vector for creating INI and CLI parsers
   opt_group{options_, "scheduler"}
   .add(scheduler_policy, "policy",
@@ -199,7 +202,14 @@ actor_system_config::actor_system_config()
   .add(middleman_detach_utility_actors, "detach-utility-actors",
        "enables or disables detaching of utility actors")
   .add(middleman_detach_multiplexer, "detach-multiplexer",
-       "enables or disables background activity of the multiplexer");
+       "enables or disables background activity of the multiplexer")
+  .add(middleman_enable_tcp, "enable-tcp",
+       "enable communication via TCP (on by default)")
+  .add(middleman_enable_udp, "enable-udp",
+       "enable communication via UDP (off by default)")
+  .add(middleman_cached_udp_buffers, "cached-udp-buffers",
+       "sets the max number of UDP send buffers that will be cached for reuse "
+       "(default: 10)");
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
