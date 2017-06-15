@@ -27,7 +27,7 @@ void throwcl(const char* fname, cl_int err) {
   if (err != CL_SUCCESS) {
     std::string errstr = fname;
     errstr += ": ";
-    errstr += get_opencl_error(err);
+    errstr += opencl_error(err);
     throw std::runtime_error(std::move(errstr));
   }
 }

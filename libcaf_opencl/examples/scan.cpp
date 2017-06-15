@@ -48,7 +48,7 @@ constexpr const char* kernel_name_3 = "phase_3";
 // opencl kernel, exclusive scan
 // last parameter is, by convention, the output parameter
 constexpr const char* kernel_source = R"__(
-/// Global exclusive scan, phase 1. From: 
+/// Global exclusive scan, phase 1. From:
 /// - http://http.developer.nvidia.com/GPUGems3/gpugems3_ch39.html
 kernel void phase_1(global uint* restrict data,
                     global uint* restrict increments,
@@ -59,7 +59,6 @@ kernel void phase_1(global uint* restrict data,
   const uint elements_per_block = threads_per_block * 2;
   const uint global_offset = block * elements_per_block;
   const uint n = elements_per_block;
-
   uint offset = 1;
   // A (2 lines) --> load input into shared memory
   tmp[2 * thread] = (global_offset + (2 * thread) < len)
@@ -155,7 +154,6 @@ kernel void phase_3(global uint* restrict data,
   const uint threads_per_block = get_local_size(0);
   const uint elements_per_block = threads_per_block * 2;
   const uint global_offset = block * elements_per_block;
-
   // add the appropriate value to each block
   uint ai = 2 * thread;
   uint bi = 2 * thread + 1;
@@ -169,10 +167,7 @@ kernel void phase_3(global uint* restrict data,
 
 } // namespace <anonymous>
 
-// Allow sending of unserializable references
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(uref);
-
-template <class T, class E = typename enable_if<is_integral<T>::value>::type>
+template <class T, class E = caf::detail::enable_if_t<is_integral<T>::value>>
 T round_up(T numToRound, T multiple)  {
   return ((numToRound + multiple - 1) / multiple) * multiple;
 }
@@ -182,47 +177,40 @@ int main() {
   cfg.load<opencl::manager>()
      .add_message_type<uvec>("uint_vector");
   actor_system system{cfg};
-
   cout << "Calculating exclusive scan of '" << problem_size
        << "' values." << endl;
-
   // ---- create data ----
-  uvec values;
-  values.reserve(problem_size);
-  random_device rd;  //Will be used to obtain a seed for the random number engine
-  mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+  uvec values(problem_size);
+  random_device rd;
+  mt19937 gen(rd());
   uniform_int_distribution<uval> val_gen(0, 1023);
-  for (size_t i = 0; i < problem_size; ++i)
-    values.emplace_back(val_gen(gen));
-
+  std::generate(begin(values), end(values), [&]() { return val_gen(gen); });
   // ---- find device ----
   auto& mngr = system.opencl_manager();
-  // 
+  //
   string prefix = "GeForce";
-  auto opt = mngr.get_device_if([&](const device_ptr dev) {
-    auto& name = dev->get_name();
+  auto opt = mngr.find_device_if([&](const device_ptr dev) {
+    auto& name = dev->name();
     return equal(begin(prefix), end(prefix), begin(name));
   });
   if (!opt) {
     cout << "No device starting with '" << prefix << "' found. "
          << "Will try the first OpenCL device available." << endl;
-    opt = mngr.get_device();
+    opt = mngr.find_device();
   }
   if (!opt) {
     cerr << "Not OpenCL device available." << endl;
     return 0;
   } else {
-    cerr << "Found device '" << (*opt)->get_name() << "'." << endl;
+    cerr << "Found device '" << (*opt)->name() << "'." << endl;
   }
-
   {
     // ---- general ----
     auto dev = move(*opt);
     auto prog = mngr.create_program(kernel_source, "", dev);
     scoped_actor self{system};
-
     // ---- config parameters ----
-    auto half_block = dev->get_max_work_group_size() / 2;
+    auto half_block = dev->max_work_group_size() / 2;
     auto get_size = [half_block](size_t n) -> size_t {
       return round_up((n + 1) / 2, half_block);
     };
@@ -235,7 +223,6 @@ int main() {
     };
     // default nd-range
     auto ndr = nd_range{dim_vec{half_block}, {}, dim_vec{half_block}};
-
     // ---- scan actors ----
     auto phase1 = mngr.spawn(
       prog, kernel_name_1, ndr,
@@ -277,10 +264,8 @@ int main() {
       in<uval,mref>{},
       priv<uval, val>{}
     );
-
     // ---- composed scan actor ----
     auto scanner = phase3 * phase2 * phase1;
-
     // ---- scan the data ----
     self->send(scanner, values);
     self->receive(

@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_OPENCL_ACTOR_HPP
-#define CAF_OPENCL_OPENCL_ACTOR_HPP
+#ifndef CAF_OPENCL_ACTOR_FACADE_HPP
+#define CAF_OPENCL_ACTOR_FACADE_HPP
 
 #include <ostream>
 #include <iostream>
@@ -29,69 +29,27 @@
 
 #include "caf/intrusive_ptr.hpp"
 
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/type_list.hpp"
 #include "caf/detail/limited_vector.hpp"
 
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/command.hpp"
 #include "caf/opencl/mem_ref.hpp"
 #include "caf/opencl/program.hpp"
-#include "caf/opencl/arguments.hpp"
-#include "caf/opencl/smart_ptr.hpp"
-#include "caf/opencl/opencl_err.hpp"
 #include "caf/opencl/nd_range.hpp"
+#include "caf/opencl/arguments.hpp"
+#include "caf/opencl/opencl_err.hpp"
+
+#include "caf/opencl/detail/core.hpp"
+#include "caf/opencl/detail/raw_ptr.hpp"
+#include "caf/opencl/detail/command_helper.hpp"
 
 namespace caf {
 namespace opencl {
 
 class manager;
 
-// signature for the function that is applied to output arguments
-template <class List>
-struct output_function_sig;
-
-template <class... Ts>
-struct output_function_sig<detail::type_list<Ts...>> {
-  using type = std::function<message (Ts&...)>;
-};
-
-// convert to mem_ref
-template <class T>
-struct to_mem_ref {
-  using type = mem_ref<T>;
-};
-
-template <class T>
-struct to_mem_ref<std::vector<T>> {
-  using type = mem_ref<T>;
-};
-
-template <class T>
-struct to_mem_ref<T*> {
-  using type = mem_ref<T>;
-};
-
-// derive signature of the command that handles the kernel execution
-template <class T, class List>
-struct command_sig;
-
-template <class T, class... Ts>
-struct command_sig<T, detail::type_list<Ts...>> {
-  using type = command<T, Ts...>;
-};
-
-// derive type for a tuple matching the arguments as mem_refs
-template <class List>
-struct tuple_type_of;
-
-template <class... Ts>
-struct tuple_type_of<detail::type_list<Ts...>> {
-  using type = std::tuple<Ts...>;
-};
-
 template <bool PassConfig, class... Ts>
-class opencl_actor : public monitorable_actor {
+class actor_facade : public monitorable_actor {
 public:
   using arg_types = detail::type_list<Ts...>;
   using unpacked_types = typename detail::tl_map<arg_types, extract_type>::type;
@@ -109,18 +67,18 @@ public:
     typename detail::tl_filter<arg_types, is_output_arg>::type;
   using output_types =
     typename detail::tl_map<output_wrapped_types, extract_output_type>::type;
-  using output_mapping = typename output_function_sig<output_types>::type;
+  using output_mapping = typename detail::output_function_sig<output_types>::type;
 
   using processing_list = typename cl_arg_info_list<arg_types>::type;
 
-  using command_type = typename command_sig<opencl_actor, output_types>::type;
+  using command_type = typename detail::command_sig<actor_facade, output_types>::type;
 
   typename detail::il_indices<arg_types>::type indices;
 
   using evnt_vec = std::vector<cl_event>;
-  using mem_vec = std::vector<cl_mem_ptr>;
+  using mem_vec = std::vector<detail::raw_mem_ptr>;
   using len_vec = std::vector<size_t>;
-  using out_tup = typename tuple_type_of<output_types>::type;
+  using out_tup = typename detail::tuple_type_of<output_types>::type;
 
   const char* name() const override {
     return "OpenCL actor";
@@ -149,18 +107,18 @@ public:
     auto& sys = actor_conf.host->system();
     auto itr = prog->available_kernels_.find(kernel_name);
     if (itr == prog->available_kernels_.end()) {
-      cl_kernel_ptr kernel;
+      detail::raw_kernel_ptr kernel;
       kernel.reset(v2get(CAF_CLF(clCreateKernel), prog->program_.get(),
                                  kernel_name),
                    false);
-      return make_actor<opencl_actor, actor>(sys.next_actor_id(), sys.node(),
+      return make_actor<actor_facade, actor>(sys.next_actor_id(), sys.node(),
                                              &sys, std::move(actor_conf),
                                              prog, kernel, range,
                                              std::move(map_args),
                                              std::move(map_result),
                                              std::forward_as_tuple(xs...));
     }
-    return make_actor<opencl_actor, actor>(sys.next_actor_id(), sys.node(),
+    return make_actor<actor_facade, actor>(sys.next_actor_id(), sys.node(),
                                            &sys, std::move(actor_conf),
                                            prog, itr->second, range,
                                            std::move(map_args),
@@ -219,11 +177,12 @@ public:
   void enqueue(strong_actor_ptr sender, message_id mid,
                message content, execution_unit* host) override {
     CAF_LOG_TRACE("");
-    enqueue(make_mailbox_element(sender, mid, {}, std::move(content)), host);
+    enqueue(make_mailbox_element(std::move(sender), mid, {},
+                                 std::move(content)), host);
   }
 
-  opencl_actor(actor_config actor_conf, const program_ptr prog,
-               cl_kernel_ptr kernel, nd_range range,
+  actor_facade(actor_config actor_conf, const program_ptr prog,
+               detail::raw_kernel_ptr kernel, nd_range range,
                input_mapping map_args, output_mapping map_result,
                std::tuple<Ts...> xs)
       : monitorable_actor(actor_conf),
@@ -243,7 +202,8 @@ public:
   }
 
   void add_kernel_arguments(evnt_vec&, mem_vec&, mem_vec&, mem_vec&,
-                            out_tup&, len_vec&, message&, detail::int_list<>) {
+                            out_tup&, len_vec&, message&,
+                            detail::int_list<>) {
     // nop
   }
 
@@ -254,7 +214,7 @@ public:
   void add_kernel_arguments(evnt_vec& events, mem_vec& inputs, mem_vec& outputs,
                             mem_vec& scratch, out_tup& result, len_vec& lengths,
                             message& msg, detail::int_list<I, Is...>) {
-    using arg_type = typename caf::detail::tl_at<processing_list,I>::type;
+    using arg_type = typename detail::tl_at<processing_list,I>::type;
     create_buffer<I, arg_type::in_pos, arg_type::out_pos>(
       std::get<I>(kernel_signature_), events, lengths, inputs,
       outputs, scratch, result, msg
@@ -340,7 +300,7 @@ public:
              sizeof(cl_mem), static_cast<const void*>(&buffer));
     events.push_back(event);
     std::get<OutPos>(result) = mem_ref<value_type>{
-      len, queue_, cl_mem_ptr{buffer, false},
+      len, queue_, detail::raw_mem_ptr{buffer, false},
       size_t{CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY}, nullptr
     };
   }
@@ -435,7 +395,7 @@ public:
   void create_buffer(const local<T>& wrapper, evnt_vec&, len_vec&,
                      mem_vec&, mem_vec&, mem_vec&, out_tup&,
                      message& msg) {
-    using value_type  = typename detail::tl_at<unpacked_types, I>::type;
+    using value_type = typename detail::tl_at<unpacked_types, I>::type;
     auto len = wrapper(msg);
     auto num_bytes = sizeof(value_type) * len;
     v1callcl(CAF_CLF(clSetKernelArg), kernel_.get(), static_cast<unsigned>(I),
@@ -468,12 +428,12 @@ public:
   template <class Fun>
   size_t argument_length(Fun& f, message& m, size_t fallback) {
     auto length = f(m);
-    return  length && (*length > 0) ? *length : fallback;
+    return length && (*length > 0) ? *length : fallback;
   }
 
   // Map function requires only the message as argument
   template <bool Q = PassConfig>
-  typename std::enable_if<!Q, bool>::type map_arguments(message& content) {
+  detail::enable_if_t<!Q, bool> map_arguments(message& content) {
     if (map_args_) {
       auto mapped = map_args_(content);
       if (!mapped) {
@@ -487,7 +447,7 @@ public:
 
   // Map function requires reference to config as well as the message
   template <bool Q = PassConfig>
-  typename std::enable_if<Q, bool>::type map_arguments(message& content) {
+  detail::enable_if_t<Q, bool> map_arguments(message& content) {
     if (map_args_) {
       auto mapped = map_args_(range_, content);
       if (!mapped) {
@@ -499,10 +459,10 @@ public:
     return true;
   }
 
-  cl_kernel_ptr kernel_;
-  cl_program_ptr program_;
-  cl_context_ptr context_;
-  cl_command_queue_ptr queue_;
+  detail::raw_kernel_ptr kernel_;
+  detail::raw_program_ptr program_;
+  detail::raw_context_ptr context_;
+  detail::raw_command_queue_ptr queue_;
   nd_range range_;
   input_mapping map_args_;
   output_mapping map_results_;
@@ -512,5 +472,5 @@ public:
 
 } // namespace opencl
 } // namespace caf
-#endif // CAF_OPENCL_OPENCL_ACTOR_HPP
 
+#endif // CAF_OPENCL_ACTOR_FACADE_HPP

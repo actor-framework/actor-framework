@@ -33,9 +33,10 @@
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/program.hpp"
 #include "caf/opencl/platform.hpp"
-#include "caf/opencl/smart_ptr.hpp"
-#include "caf/opencl/opencl_actor.hpp"
+#include "caf/opencl/actor_facade.hpp"
 
+#include "caf/opencl/detail/core.hpp"
+#include "caf/opencl/detail/raw_ptr.hpp"
 #include "caf/opencl/detail/spawn_helper.hpp"
 
 namespace caf {
@@ -45,17 +46,17 @@ class manager : public actor_system::module {
 public:
   friend class program;
   friend class actor_system;
-  friend cl_command_queue_ptr get_command_queue(uint32_t id);
+  friend detail::raw_command_queue_ptr command_queue(uint32_t id);
   manager(const manager&) = delete;
   manager& operator=(const manager&) = delete;
   /// Get the device with id, which is assigned sequientally.
-  optional<device_ptr> get_device(size_t dev_id = 0) const;
+  optional<device_ptr> find_device(size_t dev_id = 0) const;
   /// Get the first device that satisfies the predicate.
   /// The predicate should accept a `const device&` and return a bool;
   template <class UnaryPredicate>
-  optional<device_ptr> get_device_if(UnaryPredicate p) const {
+  optional<device_ptr> find_device_if(UnaryPredicate p) const {
     for (auto& pl : platforms_) {
-      for (auto& dev : pl->get_devices()) {
+      for (auto& dev : pl->devices()) {
         if (p(dev))
           return dev;
       }
@@ -72,7 +73,7 @@ public:
   void* subtype_ptr() override;
 
   static actor_system::module* make(actor_system& sys,
-                                    caf::detail::type_list<>);
+                                    detail::type_list<>);
 
   // OpenCL functionality
 
@@ -108,15 +109,12 @@ public:
   /// @throws std::runtime_error if more than three dimensions are set,
   ///                            `dims.empty()`, or `clCreateKernel` failed.
   template <class T, class... Ts>
-  typename std::enable_if<
-    opencl::is_opencl_arg<T>::value,
-    actor
-  >::type
+  detail::enable_if_t<opencl::is_opencl_arg<T>::value, actor>
   spawn(const opencl::program_ptr prog, const char* fname,
-        const opencl::nd_range& range, T x, Ts... xs) {
+        const opencl::nd_range& range, T&& x, Ts&&... xs) {
     detail::cl_spawn_helper<false, T, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
-             std::move(x), std::move(xs)...);
+             std::forward<T>(x), std::forward<Ts>(xs)...);
   }
 
   /// Compiles `source` and creates a new actor facade for an OpenCL kernel
@@ -125,16 +123,13 @@ public:
   ///                            <tt>dims.empty()</tt>, a compilation error
   ///                            occured, or @p clCreateKernel failed.
   template <class T, class... Ts>
-  typename std::enable_if<
-    opencl::is_opencl_arg<T>::value,
-    actor
-  >::type
+  detail::enable_if_t<opencl::is_opencl_arg<T>::value, actor>
   spawn(const char* source, const char* fname,
-        const opencl::nd_range& range, T x, Ts... xs) {
+        const opencl::nd_range& range, T&& x, Ts&&... xs) {
     detail::cl_spawn_helper<false, T, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
              create_program(source), fname, range,
-             std::move(x), std::move(xs)...);
+             std::forward<T>(x), std::forward<Ts>(xs)...);
   }
 
   /// Creates a new actor facade for an OpenCL kernel that invokes
@@ -145,7 +140,7 @@ public:
   actor spawn(const opencl::program_ptr prog, const char* fname,
               const opencl::nd_range& range,
               std::function<optional<message> (message&)> map_args,
-              Fun map_result, Ts... xs) {
+              Fun map_result, Ts&&... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::move(map_result),
@@ -161,7 +156,7 @@ public:
   actor spawn(const char* source, const char* fname,
               const opencl::nd_range& range,
               std::function<optional<message> (message&)> map_args,
-              Fun map_result, Ts... xs) {
+              Fun map_result, Ts&&... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
              create_program(source), fname, range,
@@ -176,14 +171,11 @@ public:
   /// @throws std::runtime_error if more than three dimensions are set,
   ///                            `dims.empty()`, or `clCreateKernel` failed.
   template <class T, class... Ts>
-  typename std::enable_if<
-    opencl::is_opencl_arg<T>::value,
-    actor
-  >::type
+  detail::enable_if_t<opencl::is_opencl_arg<T>::value, actor>
   spawn(const opencl::program_ptr prog, const char* fname,
             const opencl::nd_range& range,
             std::function<optional<message> (message&)> map_args,
-            T x, Ts... xs) {
+            T&& x, Ts&&... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::forward<T>(x), std::forward<Ts>(xs)...);
@@ -195,14 +187,11 @@ public:
   ///                            <tt>dims.empty()</tt>, a compilation error
   ///                            occured, or @p clCreateKernel failed.
   template <class T, class... Ts>
-  typename std::enable_if<
-    opencl::is_opencl_arg<T>::value,
-    actor
-  >::type
+  detail::enable_if_t<opencl::is_opencl_arg<T>::value, actor>
   spawn(const char* source, const char* fname,
             const opencl::nd_range& range,
             std::function<optional<message> (message&)> map_args,
-            T x, Ts... xs) {
+            T&& x, Ts&&... xs) {
     detail::cl_spawn_helper<false, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
              create_program(source), fname, range,
@@ -217,14 +206,11 @@ public:
   /// @throws std::runtime_error if more than three dimensions are set,
   ///                            `dims.empty()`, or `clCreateKernel` failed.
   template <class Fun, class... Ts>
-  typename std::enable_if<
-    !opencl::is_opencl_arg<Fun>::value,
-    actor
-  >::type
+  detail::enable_if_t<!opencl::is_opencl_arg<Fun>::value, actor>
   spawn(const opencl::program_ptr prog, const char* fname,
         const opencl::nd_range& range,
         std::function<optional<message> (nd_range&, message&)> map_args,
-        Fun map_result, Ts... xs) {
+        Fun map_result, Ts&&... xs) {
     detail::cl_spawn_helper<true, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::move(map_result),
@@ -237,14 +223,11 @@ public:
   ///                            <tt>dims.empty()</tt>, a compilation error
   ///                            occured, or @p clCreateKernel failed.
   template <class Fun, class... Ts>
-  typename std::enable_if<
-    !opencl::is_opencl_arg<Fun>::value,
-    actor
-  >::type
+  detail::enable_if_t<!opencl::is_opencl_arg<Fun>::value, actor>
   spawn(const char* source, const char* fname,
         const opencl::nd_range& range,
         std::function<optional<message> (nd_range&, message&)> map_args,
-        Fun map_result, Ts... xs) {
+        Fun map_result, Ts&&... xs) {
     detail::cl_spawn_helper<true, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
              create_program(source), fname, range,
@@ -257,14 +240,11 @@ public:
   /// @throws std::runtime_error if more than three dimensions are set,
   ///                            `dims.empty()`, or `clCreateKernel` failed.
   template <class T, class... Ts>
-  typename std::enable_if<
-    opencl::is_opencl_arg<T>::value,
-    actor
-  >::type
+  detail::enable_if_t<opencl::is_opencl_arg<T>::value, actor>
   spawn(const opencl::program_ptr prog, const char* fname,
         const opencl::nd_range& range,
         std::function<optional<message> (nd_range&, message&)> map_args,
-        T x, Ts... xs) {
+        T&& x, Ts&&... xs) {
     detail::cl_spawn_helper<true, T, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()}, prog, fname, range,
              std::move(map_args), std::forward<T>(x), std::forward<Ts>(xs)...);
@@ -276,14 +256,11 @@ public:
   ///                            <tt>dims.empty()</tt>, a compilation error
   ///                            occured, or @p clCreateKernel failed.
   template <class T, class... Ts>
-  typename std::enable_if<
-    opencl::is_opencl_arg<T>::value,
-    actor
-  >::type
+  detail::enable_if_t<opencl::is_opencl_arg<T>::value, actor>
   spawn(const char* source, const char* fname,
         const opencl::nd_range& range,
         std::function<optional<message> (nd_range&, message&)> map_args,
-        T x, Ts... xs) {
+        T&& x, Ts&&... xs) {
     detail::cl_spawn_helper<true, T, Ts...> f;
     return f(actor_config{system_.dummy_execution_unit()},
              create_program(source), fname, range,

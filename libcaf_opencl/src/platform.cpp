@@ -48,11 +48,13 @@ platform_ptr platform::create(cl_platform_id platform_id,
     v2callcl(CAF_CLF(clGetDeviceIDs), platform_id, device_type,
              discoverd, (ids.data() + known));
   }
-  vector<cl_device_ptr> devices;
+  vector<detail::raw_device_ptr> devices;
   devices.resize(ids.size());
-  auto lift = [](cl_device_id ptr) { return cl_device_ptr{ptr, false}; };
+  auto lift = [](cl_device_id ptr) {
+    return detail::raw_device_ptr{ptr, false};
+  };
   transform(ids.begin(), ids.end(), devices.begin(), lift);
-  cl_context_ptr context;
+  detail::raw_context_ptr context;
   context.reset(v2get(CAF_CLF(clCreateContext), nullptr,
                       static_cast<unsigned>(ids.size()),
                       ids.data(), pfn_notify, nullptr),
@@ -87,7 +89,7 @@ string platform::platform_info(cl_platform_id platform_id,
   return string(buffer.data());
 }
 
-platform::platform(cl_platform_id platform_id, cl_context_ptr context,
+platform::platform(cl_platform_id platform_id, detail::raw_context_ptr context,
                    string name, string vendor, string version,
                    vector<device_ptr> devices)
   : platform_id_(platform_id),

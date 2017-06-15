@@ -16,10 +16,10 @@ using namespace std;
 using namespace caf;
 using namespace caf::opencl;
 
+using caf::detail::tl_at;
+using caf::detail::tl_head;
+using caf::detail::type_list;
 using caf::detail::limited_vector;
-
-// required to allow sending mem_ref<int> in messages
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(mem_ref<int>);
 
 namespace {
 
@@ -327,7 +327,7 @@ void check_mref_results(const string& description,
 
 void test_opencl(actor_system& sys) {
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device_if([](const device_ptr){ return true; });
+  auto opt = mngr.find_device_if([](const device_ptr){ return true; });
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -425,7 +425,7 @@ void test_opencl(actor_system& sys) {
   );
 
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->get_max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -475,7 +475,7 @@ void test_opencl(actor_system& sys) {
 
 void test_arguments(actor_system& sys) {
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device_if([](const device_ptr){ return true; });
+  auto opt = mngr.find_device_if([](const device_ptr){ return true; });
   CAF_REQUIRE(opt);
   auto dev = *opt;
   scoped_actor self{sys};
@@ -598,7 +598,7 @@ CAF_TEST(opencl_mem_refs) {
   cfg.load<opencl::manager>();
   actor_system system{cfg};
   auto& mngr = system.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   // global arguments
@@ -630,44 +630,44 @@ CAF_TEST(opencl_mem_refs) {
 
 CAF_TEST(opencl_argument_info) {
   using base_t = int;
-  using in_arg_t = caf::detail::type_list<opencl::in<base_t>>;
+  using in_arg_t = ::type_list<opencl::in<base_t>>;
   using in_arg_info_t = typename cl_arg_info_list<in_arg_t>::type;
-  using in_arg_wrap_t = typename caf::detail::tl_head<in_arg_info_t>::type;
+  using in_arg_wrap_t = typename ::tl_head<in_arg_info_t>::type;
   static_assert(in_arg_wrap_t::in_pos == 0, "In-index for `in` wrong.");
   static_assert(in_arg_wrap_t::out_pos == -1, "Out-index for `in` wrong.");
-  using out_arg_t = caf::detail::type_list<opencl::out<base_t>>;
+  using out_arg_t = ::type_list<opencl::out<base_t>>;
   using out_arg_info_t = typename cl_arg_info_list<out_arg_t>::type;
-  using out_arg_wrap_t = typename caf::detail::tl_head<out_arg_info_t>::type;
+  using out_arg_wrap_t = typename ::tl_head<out_arg_info_t>::type;
   static_assert(out_arg_wrap_t::in_pos == -1, "In-index for `out` wrong.");
   static_assert(out_arg_wrap_t::out_pos == 0, "Out-index for `out` wrong.");
-  using io_arg_t = caf::detail::type_list<opencl::in_out<base_t>>;
+  using io_arg_t = ::type_list<opencl::in_out<base_t>>;
   using io_arg_info_t = typename cl_arg_info_list<io_arg_t>::type;
-  using io_arg_wrap_t = typename caf::detail::tl_head<io_arg_info_t>::type;
+  using io_arg_wrap_t = typename ::tl_head<io_arg_info_t>::type;
   static_assert(io_arg_wrap_t::in_pos == 0, "In-index for `in_out` wrong.");
   static_assert(io_arg_wrap_t::out_pos == 0, "Out-index for `in_out` wrong.");
-  using arg_list_t = caf::detail::type_list<opencl::in<base_t>,
+  using arg_list_t = ::type_list<opencl::in<base_t>,
                                             opencl::out<base_t>,
                                             opencl::local<base_t>,
                                             opencl::in_out<base_t>,
                                             opencl::priv<base_t>,
                                             opencl::priv<base_t, val>>;
   using arg_info_list_t = typename cl_arg_info_list<arg_list_t>::type;
-  using arg_info_0_t = typename caf::detail::tl_at<arg_info_list_t,0>::type;
+  using arg_info_0_t = typename ::tl_at<arg_info_list_t,0>::type;
   static_assert(arg_info_0_t::in_pos == 0, "In-index for `in` wrong.");
   static_assert(arg_info_0_t::out_pos == -1, "Out-index for `in` wrong.");
-  using arg_info_1_t = typename caf::detail::tl_at<arg_info_list_t,1>::type;
+  using arg_info_1_t = typename ::tl_at<arg_info_list_t,1>::type;
   static_assert(arg_info_1_t::in_pos == -1, "In-index for `out` wrong.");
   static_assert(arg_info_1_t::out_pos == 0, "Out-index for `out` wrong.");
-  using arg_info_2_t = typename caf::detail::tl_at<arg_info_list_t,2>::type;
+  using arg_info_2_t = typename ::tl_at<arg_info_list_t,2>::type;
   static_assert(arg_info_2_t::in_pos == -1, "In-index for `local` wrong.");
   static_assert(arg_info_2_t::out_pos == -1, "Out-index for `local` wrong.");
-  using arg_info_3_t = typename caf::detail::tl_at<arg_info_list_t,3>::type;
+  using arg_info_3_t = typename ::tl_at<arg_info_list_t,3>::type;
   static_assert(arg_info_3_t::in_pos == 1, "In-index for `in_out` wrong.");
   static_assert(arg_info_3_t::out_pos == 1, "Out-index for `in_out` wrong.");
-  using arg_info_4_t = typename caf::detail::tl_at<arg_info_list_t,4>::type;
+  using arg_info_4_t = typename ::tl_at<arg_info_list_t,4>::type;
   static_assert(arg_info_4_t::in_pos == -1, "In-index for `priv` wrong.");
   static_assert(arg_info_4_t::out_pos == -1, "Out-index for `priv` wrong.");
-  using arg_info_5_t = typename caf::detail::tl_at<arg_info_list_t,5>::type;
+  using arg_info_5_t = typename ::tl_at<arg_info_list_t,5>::type;
   static_assert(arg_info_5_t::in_pos == 2, "In-index for `priv` wrong.");
   static_assert(arg_info_5_t::out_pos == -1, "Out-index for `priv` wrong.");
   // gives the test some output.
@@ -677,7 +677,7 @@ CAF_TEST(opencl_argument_info) {
 void test_in_val_out_val(actor_system& sys) {
   CAF_MESSAGE("Testing in: val  -> out: val ");
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -733,7 +733,7 @@ void test_in_val_out_val(actor_system& sys) {
   }, others >> wrong_msg);
 
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->get_max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -775,7 +775,7 @@ void test_in_val_out_mref(actor_system& sys) {
   CAF_MESSAGE("Testing in: val  -> out: mref");
   // setup
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -803,7 +803,7 @@ void test_in_val_out_mref(actor_system& sys) {
                        " (kernel passed directly)", res1, result);
   }, others >> wrong_msg);
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->get_max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -830,7 +830,7 @@ void test_in_mref_out_val(actor_system& sys) {
   CAF_MESSAGE("Testing in: mref -> out: val ");
   // setup
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -860,7 +860,7 @@ void test_in_mref_out_val(actor_system& sys) {
                          " (kernel passed directly)", res1, result);
   }, others >> wrong_msg);
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->get_max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -888,7 +888,7 @@ void test_in_mref_out_mref(actor_system& sys) {
   CAF_MESSAGE("Testing in: mref -> out: mref");
   // setup
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -919,7 +919,7 @@ void test_in_mref_out_mref(actor_system& sys) {
                        " (kernel passed directly)", res1, result);
   }, others >> wrong_msg);
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->get_max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -948,7 +948,7 @@ void test_varying_arguments(actor_system& sys) {
               "(Might fail on some integrated GPUs)");
   // setup
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -983,7 +983,7 @@ void test_inout(actor_system& sys) {
   CAF_MESSAGE("Testing in_out arguments");
   // setup
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -1029,7 +1029,7 @@ void test_priv(actor_system& sys) {
   CAF_MESSAGE("Testing priv argument");
   // setup
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -1062,7 +1062,7 @@ void test_local(actor_system& sys) {
   CAF_MESSAGE("Testing local argument");
   // setup
   auto& mngr = sys.opencl_manager();
-  auto opt = mngr.get_device(0);
+  auto opt = mngr.find_device(0);
   CAF_REQUIRE(opt);
   auto dev = *opt;
   auto prog = mngr.create_program(kernel_source, "", dev);
@@ -1098,7 +1098,7 @@ void test_local(actor_system& sys) {
   }, others >> wrong_msg);
 }
 
-CAF_TEST(opencl_opencl_actor) {
+CAF_TEST(actor_facade) {
   actor_system_config cfg;
   cfg.load<opencl::manager>()
     .add_message_type<ivec>("int_vector")

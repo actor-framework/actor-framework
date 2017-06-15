@@ -25,23 +25,24 @@
 #include "caf/opencl/device.hpp"
 #include "caf/opencl/manager.hpp"
 #include "caf/opencl/platform.hpp"
-#include "caf/opencl/smart_ptr.hpp"
 #include "caf/opencl/opencl_err.hpp"
+
+#include "caf/opencl/detail/raw_ptr.hpp"
 
 using namespace std;
 
 namespace caf {
 namespace opencl {
 
-optional<device_ptr> manager::get_device(size_t dev_id) const {
+optional<device_ptr> manager::find_device(size_t dev_id) const {
   if (platforms_.empty())
     return none;
   size_t to = 0;
   for (auto& pl : platforms_) {
     auto from = to;
-    to += pl->get_devices().size();
+    to += pl->devices().size();
     if (dev_id >= from && dev_id < to)
-      return pl->get_devices()[dev_id - from];
+      return pl->devices()[dev_id - from];
   }
   return none;
 }
@@ -59,7 +60,7 @@ void manager::init(actor_system_config&) {
   for (auto& pl_id : platform_ids) {
     platforms_.push_back(platform::create(pl_id, current_device_id));
     current_device_id +=
-      static_cast<unsigned>(platforms_.back()->get_devices().size());
+      static_cast<unsigned>(platforms_.back()->devices().size());
   }
 }
 
@@ -108,7 +109,7 @@ program_ptr manager::create_program_from_file(const char* path,
 program_ptr manager::create_program(const char* kernel_source,
                                     const char* options,
                                     uint32_t device_id) {
-  auto dev = get_device(device_id);
+  auto dev = find_device(device_id);
   if (!dev) {
     ostringstream oss;
     oss << "No device with id '" << device_id << "' found.";
@@ -144,7 +145,7 @@ program_ptr manager::create_program(const char* kernel_source,
                                     const device_ptr dev) {
   // create program object from kernel source
   size_t kernel_source_length = strlen(kernel_source);
-  cl_program_ptr pptr;
+  detail::raw_program_ptr pptr;
   pptr.reset(v2get(CAF_CLF(clCreateProgramWithSource), dev->context_.get(),
                            1u, &kernel_source, &kernel_source_length),
              false);
@@ -153,7 +154,7 @@ program_ptr manager::create_program(const char* kernel_source,
   auto err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
   if (err != CL_SUCCESS) {
     ostringstream oss;
-    oss << "clBuildProgram: " << get_opencl_error(err);
+    oss << "clBuildProgram: " << opencl_error(err);
     if (err == CL_BUILD_PROGRAM_FAILURE) {
       size_t buildlog_buffer_size = 0;
       // get the log length
@@ -180,14 +181,14 @@ program_ptr manager::create_program(const char* kernel_source,
   }
   cl_uint number_of_kernels = 0;
   clCreateKernelsInProgram(pptr.get(), 0u, nullptr, &number_of_kernels);
-  map<string, cl_kernel_ptr> available_kernels;
+  map<string, detail::raw_kernel_ptr> available_kernels;
   if (number_of_kernels > 0) {
     vector<cl_kernel> kernels(number_of_kernels);
     err = clCreateKernelsInProgram(pptr.get(), number_of_kernels,
                                    kernels.data(), nullptr);
     if (err != CL_SUCCESS) {
       ostringstream oss;
-      oss << "clCreateKernelsInProgram: " << get_opencl_error(err);
+      oss << "clCreateKernelsInProgram: " << opencl_error(err);
       throw runtime_error(oss.str());
     }
     for (cl_uint i = 0; i < number_of_kernels; ++i) {
@@ -199,10 +200,10 @@ program_ptr manager::create_program(const char* kernel_source,
       if (err != CL_SUCCESS) {
         ostringstream oss;
         oss << "clGetKernelInfo (CL_KERNEL_FUNCTION_NAME): "
-            << get_opencl_error(err);
+            << opencl_error(err);
         throw runtime_error(oss.str());
       }
-      cl_kernel_ptr kernel;
+      detail::raw_kernel_ptr kernel;
       kernel.reset(move(kernels[i]));
       available_kernels.emplace(string(name.data()), move(kernel));
     }

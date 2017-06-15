@@ -27,13 +27,15 @@
 #include "caf/optional.hpp"
 #include "caf/ref_counted.hpp"
 
-#include "caf/opencl/smart_ptr.hpp"
+#include "caf/opencl/detail/core.hpp"
+#include "caf/opencl/detail/raw_ptr.hpp"
 
 namespace caf {
 namespace opencl {
 
+/// Updates the reference types in a message with a given event.
 struct msg_adding_event {
-  msg_adding_event(cl_event_ptr event) : event_(event) {
+  msg_adding_event(detail::raw_event_ptr event) : event_(event) {
     // nop
   }
   template <class T, class... Ts>
@@ -49,21 +51,24 @@ struct msg_adding_event {
     ref.set_event(event_);
     return std::move(ref);
   }
-  cl_event_ptr event_;
+  detail::raw_event_ptr event_;
 };
+
+// Tag to separate mem_refs from other types in messages.
+struct ref_tag {};
 
 class device;
 
 /// A reference type for buffers on a OpenCL devive. Access is not thread safe.
 /// Hence, a mem_ref should only be passed to actors sequentially.
 template <class T>
-class mem_ref {
+class mem_ref : ref_tag {
 public:
   using value_type = T;
 
   friend struct msg_adding_event;
   template <bool PassConfig, class... Ts>
-  friend class opencl_actor;
+  friend class actor_facade;
   friend class device;
 
   expected<std::vector<T>> data(optional<size_t> result_size = none) {
@@ -85,7 +90,7 @@ public:
                                    static_cast<cl_uint>(prev_events.size()),
                                    prev_events.data(), &event);
     if (err != CL_SUCCESS)
-      return make_error(sec::runtime_error, get_opencl_error(err));
+      return make_error(sec::runtime_error, opencl_error(err));
     // decrements the previous event we used for waiting above
     event_.reset(event, false);
     return buffer;
@@ -99,11 +104,7 @@ public:
     event_.reset();
   }
 
-  inline const cl_mem_ptr& get() const {
-    return memory_;
-  }
-
-  inline cl_mem_ptr& get() {
+  inline const detail::raw_mem_ptr& get() const {
     return memory_;
   }
 
@@ -124,8 +125,9 @@ public:
     // nop
   }
 
-  mem_ref(size_t num_elements, cl_command_queue_ptr queue,
-          cl_mem_ptr memory, cl_mem_flags access, cl_event_ptr event)
+  mem_ref(size_t num_elements, detail::raw_command_queue_ptr queue,
+          detail::raw_mem_ptr memory, cl_mem_flags access,
+          detail::raw_event_ptr event)
     : num_elements_{num_elements},
       access_{access},
       queue_{queue},
@@ -134,8 +136,8 @@ public:
     // nop
   }
 
-  mem_ref(size_t num_elements, cl_command_queue_ptr queue,
-          cl_mem memory, cl_mem_flags access, cl_event_ptr event)
+  mem_ref(size_t num_elements, detail::raw_command_queue_ptr queue,
+          cl_mem memory, cl_mem_flags access, detail::raw_event_ptr event)
     : num_elements_{num_elements},
       access_{access},
       queue_{queue},
@@ -157,11 +159,11 @@ private:
     event_.reset(e, increment_reference);
   }
 
-  inline void set_event(cl_event_ptr e) {
+  inline void set_event(detail::raw_event_ptr e) {
     event_ = std::move(e);
   }
 
-  inline cl_event_ptr event() {
+  inline detail::raw_event_ptr event() {
     return event_;
   }
 
@@ -171,12 +173,16 @@ private:
 
   size_t num_elements_;
   cl_mem_flags access_;
-  cl_command_queue_ptr queue_;
-  cl_event_ptr event_;
-  cl_mem_ptr memory_;
+  detail::raw_command_queue_ptr queue_;
+  detail::raw_event_ptr event_;
+  detail::raw_mem_ptr memory_;
 };
 
 } // namespace opencl
+
+template <class T>
+struct allowed_unsafe_message_type<opencl::mem_ref<T>> : std::true_type {};
+  
 } // namespace caf
 
 #endif // CAF_OPENCL_MEM_REF_HPP
