@@ -236,8 +236,15 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
   // we can't `return make_error(...)` from inside `extract`, hence we
   // store any occurred error in a temporary variable returned at the end
   std::string error;
+  bool skip_remainder = false;
   auto res = extract({
     [&](const std::string& arg) -> optional<skip_t> {
+      if (arg == "--") {
+        skip_remainder = true;
+        return none;
+      }
+      if (skip_remainder)
+        return skip();
       if (arg.empty() || arg.front() != '-') {
         return skip();
       }
@@ -287,6 +294,12 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
     },
     [&](const std::string& arg1,
         const std::string& arg2) -> optional<skip_t> {
+      if (arg1 == "--") {
+        skip_remainder = true;
+        return skip();
+      }
+      if (skip_remainder)
+        return skip();
       if (arg1.size() < 2 || arg1[0] != '-' || arg1[1] == '-') {
         return skip();
       }
