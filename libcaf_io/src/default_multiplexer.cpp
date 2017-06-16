@@ -1354,10 +1354,10 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
                                               bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto addrs = interfaces::server_address(port, addr);
+  auto addr_str = std::string{addr == nullptr ? "" : addr};
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "No local interface available",
-                      addr);
-  auto addr_str = std::string{addr == nullptr ? "" : addr};
+                      addr_str);
   bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
   auto fd = invalid_native_socket;
   for (auto& elem : addrs) {
@@ -1374,9 +1374,9 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
   }
   if (fd == invalid_native_socket) {
     CAF_LOG_WARNING("could not open tcp socket on:" << CAF_ARG(port)
-                    << CAF_ARG(addr));
+                    << CAF_ARG(addr_str));
     return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                      port, addr);
+                      port, addr_str);
   }
   socket_guard sguard{fd};
   CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
