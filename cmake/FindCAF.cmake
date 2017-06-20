@@ -2,7 +2,7 @@
 #
 # Use this module as follows:
 #
-#     find_package(CAF)
+#     find_package(CAF [COMPONENTS <core|io|opencl|...>*] [REQUIRED])
 #
 # Variables used by this module (they can change the default behaviour and need
 # to be set before calling find_package):
@@ -17,6 +17,10 @@
 #  CAF_INCLUDE_DIRS       List of include paths for all components
 #  CAF_LIBRARY_$C         Library file for component $C
 #  CAF_INCLUDE_DIR_$C     Include path for component $C
+
+if(CAF_FIND_COMPONENTS STREQUAL "")
+  message(FATAL_ERROR "FindCAF requires at least one COMPONENT.")
+endif()
 
 # iterate over user-defined components
 foreach (comp ${CAF_FIND_COMPONENTS})
