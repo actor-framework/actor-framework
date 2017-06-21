@@ -130,13 +130,25 @@ CAF_TEST(extract_opts) {
   f({"-f", "hello.txt", "-l5"}, {});
   f({"-fhello.txt", "-l", "5"}, {});
   f({"-l5", "-fhello.txt"}, {});
+  // on remainder
   f({"--file=hello.txt", "-l", "5", "--", "a"}, {"a"});
   f({"--file=hello.txt", "-l", "5", "--", "a", "b"}, {"a", "b"});
   f({"--file=hello.txt", "-l", "5", "--", "aa", "bb"}, {"aa", "bb"});
   f({"--file=hello.txt", "-l", "5", "--", "-a", "--bb"}, {"-a", "--bb"});
   f({"--file=hello.txt", "-l", "5", "--", "-a1", "--bb=10"},
     {"-a1", "--bb=10"});
-  f({"--file=hello.txt", "-l", "5", "--", "-a 1", "--b=10"}, {"-a 1", "--b=10"});
+  f({"--file=hello.txt", "-l", "5", "--", "-a 1", "--b=10"},
+    {"-a 1", "--b=10"});
+  // multiple remainders
+  f({"--file=hello.txt", "-l", "5", "--", "a", "--"}, {"a", "--"});
+  f({"--file=hello.txt", "-l", "5", "--", "a", "--", "--"}, {"a", "--", "--"});
+  f({"--file=hello.txt", "-l", "5", "--", "a", "--", "b"}, {"a", "--", "b"});
+  f({"--file=hello.txt", "-l", "5", "--", "aa", "--", "bb"},
+    {"aa", "--", "bb"});
+  f({"--file=hello.txt", "-l", "5", "--", "aa", "--", "--", "bb"},
+    {"aa", "--", "--", "bb"});
+  f({"--file=hello.txt", "-l", "5", "--", "--", "--", "-a1", "--bb=10"},
+    {"--", "--", "-a1", "--bb=10"});
   CAF_MESSAGE("ensure that failed parsing doesn't consume input");
   auto msg = make_message("-f", "42", "-b", "1337");
   auto foo = 0;
