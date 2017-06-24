@@ -25,7 +25,8 @@ downstream_path::downstream_path(strong_actor_ptr p, bool redeploy)
     : hdl(std::move(p)),
       next_batch_id(0),
       open_credit(0),
-      redeployable(redeploy) {
+      redeployable(redeploy),
+      next_ack_id(0) {
   // nop
 }
 

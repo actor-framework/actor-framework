@@ -50,6 +50,10 @@ public:
   /// `unacknowledged_batches` is unused.
   bool redeployable;
 
+  /// Next expected batch ID to be acknowledged. Actors can receive a more
+  /// advanced batch ID in an ACK message, since CAF uses accumulative ACKs.
+  int64_t next_ack_id;
+
   /// Caches batches until receiving an ACK.
   std::deque<std::pair<int64_t, stream_msg::batch>> unacknowledged_batches;
 
