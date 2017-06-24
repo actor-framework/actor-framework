@@ -25,6 +25,8 @@
 #include <utility>
 
 #include "caf/fwd.hpp"
+#include "caf/none.hpp"
+#include "caf/error.hpp"
 
 namespace caf {
 
@@ -89,7 +91,10 @@ public:
                           stream_priority prio,
                           long downstream_credit);
 
-  bool remove_path(const strong_actor_ptr& hdl);
+  /// Removes `hdl` as upstream actor. The actor is removed without any further
+  /// signaling if `err == none`, otherwise the upstream actor receives an
+  /// abort message.
+  bool remove_path(const strong_actor_ptr& hdl, error err = none);
 
   upstream_path* find(const strong_actor_ptr& x) const;
 

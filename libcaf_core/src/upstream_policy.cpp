@@ -92,7 +92,7 @@ expected<long> upstream_policy::add_path(strong_actor_ptr hdl,
   return sec::upstream_already_exists;
 }
 
-bool upstream_policy::remove_path(const strong_actor_ptr& hdl) {
+bool upstream_policy::remove_path(const strong_actor_ptr& hdl, error err) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
   // Find element in our paths list.
   auto has_hdl = [&](const path_uptr& x) {
@@ -115,6 +115,9 @@ bool upstream_policy::remove_path(const strong_actor_ptr& hdl) {
     // Drop path from list.
     if (i != e - 1)
       std::swap(*i, paths_.back());
+    if (err != none)
+      unsafe_send_as(self_, hdl, make<stream_msg::abort>(paths_.back()->sid,
+                                                         std::move(err)));
     paths_.pop_back();
     return true;
   }
