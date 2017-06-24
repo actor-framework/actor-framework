@@ -140,11 +140,13 @@ public:
 
   error add_downstream(strong_actor_ptr& hdl) override;
 
+  void downstream_demand(downstream_path* path, long demand);
+
   error confirm_downstream(const strong_actor_ptr& rebind_from,
                            strong_actor_ptr& hdl, long initial_demand,
                            bool redeployable) override;
 
-  error downstream_demand(strong_actor_ptr& hdl, long new_demand) override;
+  error downstream_ack(strong_actor_ptr& hdl, int64_t, long demand) override;
 
   error push() override;
 
@@ -248,6 +250,12 @@ error stream_governor::add_downstream(strong_actor_ptr&) {
   return sec::invalid_stream_state;
 }
 
+void stream_governor::downstream_demand(downstream_path* path, long demand) {
+  path->open_credit += demand;
+  push();
+  assign_credit();
+}
+
 error stream_governor::confirm_downstream(const strong_actor_ptr& rebind_from,
                                           strong_actor_ptr& hdl,
                                           long initial_demand,
@@ -261,7 +269,8 @@ error stream_governor::confirm_downstream(const strong_actor_ptr& rebind_from,
       CAF_LOG_ERROR("Cannot rebind to registered downstream.");
       return sec::invalid_stream_state;
     }
-    return downstream_demand(hdl, initial_demand);
+    downstream_demand(path, initial_demand);
+    return none;
   }
   auto i = peers_.find(rebind_from);
   if (i != peers_.end()) {
@@ -275,19 +284,24 @@ error stream_governor::confirm_downstream(const strong_actor_ptr& rebind_from,
     CAF_LOG_DEBUG("Confirmed path to another core"
                  << CAF_ARG(rebind_from) << CAF_ARG(hdl));
     res.first->second->out.confirm_path(rebind_from, hdl, initial_demand);
-    return downstream_demand(hdl, initial_demand);
+    auto pp = res.first->second->out.find(hdl);
+    if (!pp) {
+      CAF_LOG_ERROR("Unable to find peer after confirming it");
+      return sec::invalid_downstream;
+    }
+    downstream_demand(pp, initial_demand);
+    return none;
   }
   CAF_LOG_ERROR("Cannot confirm path to unknown downstream.");
   return sec::invalid_downstream;
 }
 
-error stream_governor::downstream_demand(strong_actor_ptr& hdl, long value) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(value));
+error stream_governor::downstream_ack(strong_actor_ptr& hdl, int64_t,
+                                      long demand) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(demand));
   auto path = local_subscribers_.find(hdl);
   if (path) {
-    path->open_credit += value;
-    push();
-    assign_credit();
+    downstream_demand(path, demand);
     return none;
   }
   auto i = peers_.find(hdl);
@@ -295,10 +309,8 @@ error stream_governor::downstream_demand(strong_actor_ptr& hdl, long value) {
     auto pp = i->second->out.find(hdl);
     if (!pp)
       return sec::invalid_stream_state;
-    CAF_LOG_DEBUG("grant" << value << "new credit to" << hdl);
-    pp->open_credit += value;
-    push();
-    assign_credit();
+    CAF_LOG_DEBUG("grant" << demand << "new credit to" << hdl);
+    downstream_demand(pp, demand);
     return none;
   }
   return sec::invalid_downstream;

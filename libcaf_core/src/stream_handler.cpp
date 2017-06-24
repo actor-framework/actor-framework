@@ -42,7 +42,7 @@ error stream_handler::confirm_downstream(const strong_actor_ptr&,
   return sec::cannot_add_downstream;
 }
 
-error stream_handler::downstream_demand(strong_actor_ptr&, long) {
+error stream_handler::downstream_ack(strong_actor_ptr&, int64_t, long) {
   CAF_LOG_ERROR("Received downstream messages in "
                 "a stream marked as no-downstreams");
   return sec::invalid_downstream;

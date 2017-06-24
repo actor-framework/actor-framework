@@ -40,11 +40,12 @@ bool stream_source::done() const {
   return out_ptr_->closed();
 }
 
-error stream_source::downstream_demand(strong_actor_ptr& hdl, long value) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(value));
+error stream_source::downstream_ack(strong_actor_ptr& hdl, int64_t,
+                                    long demand) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(demand));
   auto path = out_ptr_->find(hdl);
   if (path) {
-    path->open_credit += value;
+    path->open_credit += demand;
     if (!at_end()) {
       // produce new elements
       auto capacity = out().credit();
@@ -88,6 +89,37 @@ void stream_source::generate() {
     if (current_size < size_hint)
       generate(static_cast<size_t>(size_hint - current_size));
   }
+}
+
+void stream_source::downstream_demand(downstream_path* path, long demand) {
+  CAF_ASSERT(path != nullptr);
+  CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(demand));
+  path->open_credit += demand;
+  if (!at_end()) {
+    // produce new elements
+    auto capacity = out().credit();
+    // TODO: fix issue where a source does not emit the last pieces if
+    //       min_batch_size cannot be reached
+    while (capacity > out().min_batch_size()) {
+      auto current_size = buf_size();
+      auto size_hint = std::min(capacity, out().max_batch_size());
+      if (size_hint > current_size)
+        generate(static_cast<size_t>(size_hint - current_size));
+      push();
+      // Check if `push` did actually use credit, otherwise break loop
+      auto new_capacity = out().credit();
+      if (new_capacity != capacity)
+        capacity = new_capacity;
+      else
+        break;
+    }
+    return;
+  }
+  // transmit cached elements before closing paths
+  if (buf_size() > 0)
+    push();
+  auto hdl = path->hdl;
+  out_ptr_->remove_path(hdl);
 }
 
 } // namespace caf

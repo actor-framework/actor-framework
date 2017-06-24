@@ -59,19 +59,12 @@ error stream_stage::upstream_batch(strong_actor_ptr& hdl, int64_t xs_id,
   return sec::invalid_upstream;
 }
 
-error stream_stage::downstream_demand(strong_actor_ptr& hdl, long value) {
-  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(value));
+error stream_stage::downstream_ack(strong_actor_ptr& hdl, int64_t,
+                                   long demand) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(demand));
   auto path = out_ptr_->find(hdl);
   if (path) {
-    path->open_credit += value;
-    if(out().buf_size() > 0)
-      push();
-    else if (in().closed() && !out().remove_path(hdl))
-      return sec::invalid_downstream;
-    auto current_size = out().buf_size();
-    auto desired_size = out().credit();
-    if (current_size < desired_size)
-      in().assign_credit(desired_size - current_size);
+    downstream_demand(path, demand);
     return none;
   }
   return sec::invalid_downstream;
@@ -85,6 +78,19 @@ void stream_stage::abort(strong_actor_ptr& cause, const error& reason) {
 void stream_stage::last_upstream_closed() {
   if (out().buf_size() == 0)
     out().close();
+}
+
+void stream_stage::downstream_demand(downstream_path* path, long demand) {
+  auto hdl = path->hdl;
+  path->open_credit += demand;
+  if(out().buf_size() > 0)
+    push();
+  else if (in().closed())
+    out().remove_path(hdl); // don't pass path->hdl: path can become invalid
+  auto current_size = out().buf_size();
+  auto desired_size = out().credit();
+  if (current_size < desired_size)
+    in().assign_credit(desired_size - current_size);
 }
 
 } // namespace caf

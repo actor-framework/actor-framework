@@ -39,7 +39,7 @@ public:
 
   bool done() const override;
 
-  error downstream_demand(strong_actor_ptr& hdl, long value) override;
+  error downstream_ack(strong_actor_ptr& hdl, int64_t bid, long value) override;
 
   void abort(strong_actor_ptr& cause, const error& reason) override;
 
@@ -51,6 +51,8 @@ public:
   void generate();
 
 protected:
+  void downstream_demand(downstream_path* path, long demand) override;
+
   /// Queries the current amount of elements in the output buffer.
   virtual long buf_size() const = 0;
 

@@ -43,7 +43,7 @@ public:
 
   void abort(strong_actor_ptr&, const error&) override;
 
-  error downstream_demand(strong_actor_ptr&, long) override;
+  error downstream_ack(strong_actor_ptr&, int64_t, long) override;
 
   error upstream_batch(strong_actor_ptr&, int64_t, long, message&) override;
 
@@ -58,6 +58,8 @@ public:
   }
 
 protected:
+  void downstream_demand(downstream_path*, long) override;
+
   virtual error process_batch(message& msg) = 0;
 
 private:

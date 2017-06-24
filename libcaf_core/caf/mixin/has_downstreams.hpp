@@ -48,7 +48,12 @@ public:
                   << CAF_ARG(redeployable));
     CAF_ASSERT(ptr != nullptr);
     if (out().confirm_path(rebind_from, ptr, redeployable)) {
-      dptr()->downstream_demand(ptr, initial_demand);
+      auto path = out().find(ptr);
+      if (!path) {
+        CAF_LOG_ERROR("Unable to find path after confirming it");
+        return sec::invalid_downstream;
+      }
+      downstream_demand(path, initial_demand);
       return none;
     }
     return sec::invalid_downstream;
@@ -59,6 +64,9 @@ public:
     out().emit_batches();
     return none;
   }
+
+protected:
+  virtual void downstream_demand(downstream_path* ptr, long demand) = 0;
 
 private:
   Subtype* dptr() {

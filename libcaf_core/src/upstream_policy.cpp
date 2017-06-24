@@ -132,7 +132,7 @@ upstream_path* upstream_policy::find(const strong_actor_ptr& x) const {
   return i != e ? i->get() : nullptr;
 }
 
-long upstream_policy::initial_credit(upstream_path* ptr,
+long upstream_policy::initial_credit(upstream_path*,
                                      long downstream_credit) {
   return std::min(max_credit_, downstream_credit);
 }

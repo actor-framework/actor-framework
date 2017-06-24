@@ -52,10 +52,11 @@ public:
                                    strong_actor_ptr& hdl, long initial_demand,
                                    bool redeployable);
 
-  /// Handles new demand from a downstream actor.
+  /// Handles cumulative ACKs with new demand from a downstream actor.
   /// @pre `hdl != nullptr`
   /// @pre `new_demand > 0`
-  virtual error downstream_demand(strong_actor_ptr& hdl, long new_demand);
+  virtual error downstream_ack(strong_actor_ptr& hdl, int64_t batch_id,
+                               long new_demand);
 
   /// Push new data to downstream actors by sending batches. The amount of
   /// pushed data is limited by `hint` or the available credit if
