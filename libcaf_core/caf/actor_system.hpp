@@ -532,6 +532,8 @@ private:
                 : 0;
     if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
       cfg.flags |= abstract_actor::is_detached_flag;
+    if (has_hide_flag(Os))
+      cfg.flags |= abstract_actor::is_hidden_flag;
     if (!cfg.host)
       cfg.host = dummy_execution_unit();
     CAF_SET_LOGGER_SYS(this);

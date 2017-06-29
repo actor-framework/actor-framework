@@ -51,6 +51,8 @@ public:
 
   static constexpr int is_actor_decorator_mask      = 0x0C000000;
 
+  static constexpr int is_hidden_flag               = 0x10000000;
+
   inline bool is_abstract_actor() const {
     return static_cast<bool>(flags() & is_abstract_actor_flag);
   }

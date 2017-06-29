@@ -39,6 +39,7 @@
 
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
+#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/single_reader_queue.hpp"
 
 /*
@@ -423,10 +424,13 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 /// crucial for understanding happens-before relations. See RFC SE-0001.
 #define CAF_LOG_FLOW_COMPONENT "caf.flow"
 
-#define CAF_LOG_SPAWN_EVENT(aid, aargs)                                        \
+#define CAF_LOG_SPAWN_EVENT(ref, ctor_data)                                    \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
-               "SPAWN ; ID =" << aid                                           \
-                              << "; ARGS =" << deep_to_string(aargs).c_str())
+               "SPAWN ; ID =" << ref.id() << "; NAME =" << ref.name()          \
+                              << "; TYPE ="                                    \
+                              << ::caf::detail::pretty_type_name(typeid(ref))  \
+                              << "; ARGS =" << ctor_data.c_str()               \
+                              << "; NODE =" << ref.node())
 
 #define CAF_LOG_INIT_EVENT(aName, aHide)                                       \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
@@ -462,8 +466,11 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOG_FINALIZE_EVENT()                                               \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "FINALIZE")
 
-#define CAF_LOG_TERMINATE_EVENT(rsn)                                           \
+#define CAF_LOG_TERMINATE_EVENT(thisptr, rsn)                                  \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
-               "TERMINATE ; REASON =" << deep_to_string(rsn).c_str())
+               "TERMINATE ; ID ="                                              \
+                 << thisptr->id() << "; NAME =" << thisptr->name()             \
+                 << "; REASON =" << deep_to_string(rsn).c_str()                \
+                 << "; NODE =" << thisptr->node())
 
 #endif // CAF_LOGGER_HPP
