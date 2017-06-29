@@ -650,6 +650,7 @@ bool scheduled_actor::finalize() {
 
 bool scheduled_actor::handle_stream_msg(mailbox_element& x,
                                         behavior* active_behavior) {
+  CAF_LOG_TRACE(CAF_ARG(x));
   CAF_ASSERT(x.content().match_elements<stream_msg>());
   auto& sm = x.content().get_mutable_as<stream_msg>(0);
   auto e = streams_.end();
@@ -665,6 +666,9 @@ bool scheduled_actor::handle_stream_msg(mailbox_element& x,
   } else if (i != e) {
     if (i->second->done()) {
       streams_.erase(i);
+      CAF_LOG_DEBUG("Stream is done and could be safely erased"
+                    << CAF_ARG(sm.sid) << ", remaining streams ="
+                    << deep_to_string(streams_).c_str());
       if (streams_.empty() && !has_behavior())
         quit(exit_reason::normal);
     }
