@@ -72,6 +72,7 @@ set (LIBCAF_CORE_SRCS
      src/node_id.cpp
      src/outgoing_stream_multiplexer.cpp
      src/parse_ini.cpp
+     src/pretty_type_name.cpp
      src/private_thread.cpp
      src/proxy_registry.cpp
      src/pull5.cpp

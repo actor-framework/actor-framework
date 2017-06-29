@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <type_traits>
 
+#include "caf/config.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {

@@ -17,43 +17,36 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/message_id.hpp"
-#include "caf/event_based_actor.hpp"
+// The rationale of this header is to provide a serialization API
+// that is compatbile to boost.serialization. In particular, the
+// design goals are:
+// - allow users to integrate existing boost.serialization-based code easily
+// - allow to switch out this header with the actual boost header in boost.actor
+//
+// Differences in semantics are:
+// - CAF does *not* respect class versions
+// - the `unsigned int` argument is always 0 and ignored by CAF
+//
+// Since CAF requires all runtime instances to have the same types
+// announced, different class versions in a single actor system would
+// cause inconsistencies that are not recoverable.
 
-#include "caf/detail/pretty_type_name.hpp"
+#ifndef CAF_DETAIL_PRETTY_TYPE_NAME_HPP
+#define CAF_DETAIL_PRETTY_TYPE_NAME_HPP
+
+#include <string>
+#include <typeinfo>
 
 namespace caf {
+namespace detail {
 
-event_based_actor::event_based_actor(actor_config& cfg) : extended_base(cfg) {
-  // nop
-}
+void prettify_type_name(std::string& class_name);
 
-event_based_actor::~event_based_actor() {
-  // nop
-}
+void prettify_type_name(std::string& class_name, const char* input_class_name);
 
-void event_based_actor::initialize() {
-  CAF_LOG_TRACE("subtype =" << detail::pretty_type_name(typeid(*this)).c_str());
-  setf(is_initialized_flag);
-  auto bhvr = make_behavior();
-  CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                           << CAF_ARG(has_behavior()));
-  if (bhvr) {
-    // make_behavior() did return a behavior instead of using become()
-    CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
-    become(std::move(bhvr));
-  }
-  extended_base::initialize();
-}
+std::string pretty_type_name(const std::type_info& x);
 
-behavior event_based_actor::make_behavior() {
-  CAF_LOG_TRACE("");
-  behavior res;
-  if (initial_behavior_fac_) {
-    res = initial_behavior_fac_(this);
-    initial_behavior_fac_ = nullptr;
-  }
-  return res;
-}
-
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_DETAIL_PRETTY_TYPE_NAME_HPP

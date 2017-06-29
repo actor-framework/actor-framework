@@ -652,7 +652,7 @@ struct config : actor_system_config {
 public:
   config() {
     add_message_type<element_type>("element");
-    logger_filename = "streamlog";
+    logger_file_name = "streamlog";
   }
 };
 

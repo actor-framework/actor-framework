@@ -48,6 +48,19 @@ constexpr atom_value atom(char const (&str)[Size]) {
   return static_cast<atom_value>(detail::atom_val(str));
 }
 
+/// Creates an atom from given string literal and return an integer
+/// representation of the atom..
+template <size_t Size>
+constexpr uint64_t atom_uint(char const (&str)[Size]) {
+  static_assert(Size <= 11, "only 10 characters are allowed");
+  return detail::atom_val(str);
+}
+
+/// Converts an atom to its integer representation.
+constexpr uint64_t atom_uint(atom_value x) {
+  return static_cast<uint64_t>(x);
+}
+
 /// Lifts an `atom_value` to a compile-time constant.
 template <atom_value V>
 struct atom_constant {
@@ -154,24 +167,6 @@ using migrate_atom = atom_constant<atom("migrate")>;
 
 /// Used for triggering periodic operations.
 using tick_atom = atom_constant<atom("tick")>;
-
-/// Used as config parameter for the `logger`.
-using trace_log_lvl_atom = atom_constant<atom("TRACE")>;
-
-/// Used as config parameter for the `logger`.
-using debug_log_lvl_atom = atom_constant<atom("DEBUG")>;
-
-/// Used as config parameter for the `logger`.
-using info_log_lvl_atom = atom_constant<atom("INFO")>;
-
-/// Used as config parameter for the `logger`.
-using warning_log_lvl_atom = atom_constant<atom("WARNING")>;
-
-/// Used as config parameter for the `logger`.
-using error_log_lvl_atom = atom_constant<atom("ERROR")>;
-
-/// Used as config parameter for the `logger`.
-using quiet_log_lvl_atom = atom_constant<atom("QUIET")>;
 
 } // namespace caf
 

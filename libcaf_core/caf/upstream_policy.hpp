@@ -41,10 +41,10 @@ public:
   using path_uptr = std::unique_ptr<upstream_path>;
 
   /// Stores all available paths.
-  using path_uptr_list = std::vector<path_uptr>;
+  using path_uptr_vec = std::vector<path_uptr>;
 
   /// List of views to paths.
-  using path_ptr_list = std::vector<path_ptr>;
+  using path_ptr_vec = std::vector<path_ptr>;
 
   /// Describes an assignment of credit to an upstream actor.
   using assignment_pair = std::pair<upstream_path*, long>;
@@ -98,6 +98,10 @@ public:
 
   upstream_path* find(const strong_actor_ptr& x) const;
 
+  inline const path_uptr_vec& paths() const {
+    return paths_;
+  }
+
   // -- required state ---------------------------------------------------------
 
   inline local_actor* self() const {
@@ -149,7 +153,7 @@ protected:
   local_actor* self_;
 
   /// List of all known paths.
-  path_uptr_list paths_;
+  path_uptr_vec paths_;
 
   /// An assignment vector that's re-used whenever calling the policy.
   assignment_vec assignment_vec_;

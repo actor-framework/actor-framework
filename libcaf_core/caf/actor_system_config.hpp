@@ -266,10 +266,17 @@ public:
 
   // -- config parameters for the logger ---------------------------------------
 
-  std::string logger_filename;
-  atom_value logger_verbosity;
+  std::string logger_file_name;
+  std::string logger_file_format;
   atom_value logger_console;
-  std::string logger_filter;
+  std::string logger_console_format;
+  std::string logger_component_filter;
+  atom_value logger_verbosity;
+
+  // -- backward compatibility -------------------------------------------------
+
+  std::string& logger_filename CAF_DEPRECATED = logger_file_name;
+  std::string& logger_filter CAF_DEPRECATED = logger_component_filter;
 
   // -- config parameters of the middleman -------------------------------------
 

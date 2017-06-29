@@ -123,8 +123,11 @@ actor_system_config::actor_system_config()
   work_stealing_moderate_sleep_duration_us = 50;
   work_stealing_relaxed_steal_interval = 1;
   work_stealing_relaxed_sleep_duration_us = 10000;
-  logger_filename = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
-  logger_console = atom("NONE");
+  logger_file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
+  logger_file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
+  logger_console = atom("none");
+  logger_console_format = "%m";
+  logger_verbosity = atom("trace");
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
@@ -159,14 +162,22 @@ actor_system_config::actor_system_config()
   .add(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
        "sets the sleep interval between poll attempts during relaxed polling");
   opt_group{options_, "logger"}
-  .add(logger_filename, "filename",
+  .add(logger_file_name, "file-name",
        "sets the filesystem path of the log file")
-  .add(logger_verbosity, "verbosity",
-       "sets the verbosity (QUIET|ERROR|WARNING|INFO|DEBUG|TRACE)")
+  .add(logger_file_format, "file-format",
+       "sets the line format for individual log file entires")
   .add(logger_console, "console",
-       "enables logging to the console via std::clog")
-  .add(logger_filter, "filter",
-       "sets a component filter for console log messages");
+       "sets the type of output to std::clog (none|colored|uncolored)")
+  .add(logger_console_format, "console-format",
+       "sets the line format for printing individual log entires")
+  .add(logger_component_filter, "component-filter",
+       "exclude all listed components from logging")
+  .add(logger_verbosity, "verbosity",
+       "sets the verbosity (quiet|error|warning|info|debug|trace)")
+  .add(logger_file_name, "filename",
+       "deprecated (use file-name instead)")
+  .add(logger_component_filter, "filter",
+       "deprecated (use console-component-filter instead)");
   opt_group{options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")

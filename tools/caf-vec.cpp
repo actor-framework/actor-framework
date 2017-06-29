@@ -758,7 +758,7 @@ struct config : public actor_system_config {
          "Include hidden (system-level) actors")
     .add(verbosity, "verbosity,v", "Debug output (from 0 to 2)");
     // shutdown logging per default
-    logger_verbosity = quiet_log_lvl_atom::value;
+    logger_verbosity = atom("quiet");
   }
 };
 
