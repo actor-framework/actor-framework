@@ -22,6 +22,7 @@
 #define CAF_SUITE logger 
 #include "caf/test/unit_test.hpp"
 
+#include <ctime>
 #include <string>
 
 #include "caf/all.hpp"
@@ -99,10 +100,11 @@ CAF_TEST(rendering) {
   timestamp t0;
   timestamp t1{timestamp::duration{5000000}}; // epoch + 5000000ns (5ms)
   CAF_CHECK_EQUAL(render(logger::render_time_diff, t0, t1), "5");
-  ostringstream t0_iso8601;
-  auto t0_t = system_clock::to_time_t(system_clock::time_point{});
-  t0_iso8601 << put_time(localtime(&t0_t), "%F %T");
-  CAF_CHECK_EQUAL(render(logger::render_date, t0), t0_iso8601.str());
+  time_t t0_t = 0;
+  char t0_buf[50];
+  CAF_REQUIRE(strftime(t0_buf, sizeof(t0_buf),
+                       "%Y-%m-%d %H:%M:%S", localtime(&t0_t)));
+  CAF_CHECK_EQUAL(render(logger::render_date, t0), t0_buf);
   // Rendering of events.
   logger::event e{
     nullptr,
