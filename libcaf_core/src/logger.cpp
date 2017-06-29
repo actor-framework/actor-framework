@@ -241,8 +241,9 @@ void logger::init(actor_system_config& cfg) {
 void logger::render_fun_prefix(std::ostream& out, const char* pretty_fun) {
   auto first = pretty_fun;
   // set end to beginning of arguments
-  auto last = std::find_if(first, static_cast<const char*>(nullptr),
-                           [](char x) { return x == '(' || x == '\0'; });
+  const char* last = strchr(pretty_fun, '(');
+  if (last == nullptr)
+    return;
   auto strsize = static_cast<size_t>(last - first);
   auto jump_to_next_whitespace = [&] {
     // leave `first` unchanged if no whitespaces is present,
@@ -274,16 +275,15 @@ void logger::render_fun_prefix(std::ostream& out, const char* pretty_fun) {
 void logger::render_fun_name(std::ostream& out, const char* pretty_fun) {
   // Find the end of the function name by looking for the opening parenthesis
   // trailing it.
-  const char* e = nullptr; // safe, because pretty_fun is null-terminated
-  auto i = std::find_if(pretty_fun, e,
-                        [](char x) { return x == '(' || x == '\0'; });
-  if (*i == '\0')
+  CAF_ASSERT(pretty_fun != nullptr);
+  const char* e = strchr(pretty_fun, '(');
+  if (e == nullptr)
     return;
   /// Now look for the beginning of the function name.
   using rev_iter = std::reverse_iterator<const char*>;
-  auto b = std::find_if(rev_iter(i), rev_iter(pretty_fun),
+  auto b = std::find_if(rev_iter(e), rev_iter(pretty_fun),
                         [](char x) { return x == ':' || x == ' '; });
-  out.write(b.base(), i - b.base());
+  out.write(b.base(), e - b.base());
 }
 
 void logger::render_time_diff(std::ostream& out, timestamp t0, timestamp tn) {
