@@ -109,14 +109,17 @@ public:
     plain_text_field
   };
 
+  /// Represents a single format string field.
   struct field {
     field_type kind;
     const char* first;
     const char* last;
   };
 
+  /// Stores a parsed format string as list of fields.
   using line_format = std::vector<field>;
 
+  /// Enables automagical string conversion for `CAF_ARG`.
   template <class T>
   struct arg_wrapper {
     const char* name;
@@ -126,13 +129,13 @@ public:
     }
   };
 
+  /// Used to implement `CAF_ARG`.
   template <class T>
   static arg_wrapper<T> make_arg_wrapper(const char* name, const T& value) {
     return {name, value};
   }
 
-  static std::string render_type_name(const std::type_info& ti);
-
+  /// Utility class for building user-defined log messages with `CAF_ARG`.
   class line_builder {
   public:
     line_builder();
@@ -196,10 +199,12 @@ public:
 
   /** @endcond */
 
+  /// Returns the output format used for the log file.
   inline const line_format& file_format() const {
     return file_format_;
   }
 
+  /// Returns the output format used for the console.
   inline const line_format& console_format() const {
     return console_format_;
   }
@@ -222,6 +227,29 @@ public:
   /// Parses `format_str` into a format description vector.
   /// @warning The returned vector can have pointers into `format_str`.
   static line_format parse_format(const char* format_str);
+
+  /// Returns a string representation of the joined groups of `x` if `x` is an
+  /// actor with the `subscriber` mixin.
+  template <class T>
+  static typename std::enable_if<
+    std::is_base_of<mixin::subscriber_base, T>::value,
+    std::string
+  >::type
+  joined_groups_of(const T& x) {
+    return deep_to_string(x.joined_groups());
+  }
+
+  /// Returns a string representation of an empty list if `x` is not an actor
+  /// with the `subscriber` mixin.
+  template <class T>
+  static typename std::enable_if<
+    !std::is_base_of<mixin::subscriber_base, T>::value,
+    const char*
+  >::type
+  joined_groups_of(const T& x) {
+    CAF_IGNORE_UNUSED(x);
+    return "[]";
+  }
 
 private:
   logger(actor_system& sys);
@@ -426,11 +454,12 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #define CAF_LOG_SPAWN_EVENT(ref, ctor_data)                                    \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
-               "SPAWN ; ID =" << ref.id() << "; NAME =" << ref.name()          \
-                              << "; TYPE ="                                    \
-                              << ::caf::detail::pretty_type_name(typeid(ref))  \
-                              << "; ARGS =" << ctor_data.c_str()               \
-                              << "; NODE =" << ref.node())
+               "SPAWN ; ID ="                                                  \
+                 << ref.id() << "; NAME =" << ref.name()                       \
+                 << "; TYPE =" << ::caf::detail::pretty_type_name(typeid(ref)) \
+                 << "; ARGS =" << ctor_data.c_str()                            \
+                 << "; NODE =" << ref.node()                                   \
+                 << "; GROUPS =" << logger::joined_groups_of(ref))
 
 #define CAF_LOG_INIT_EVENT(aName, aHide)                                       \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \

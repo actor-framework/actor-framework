@@ -131,6 +131,14 @@ enum class atom_value : uint64_t;
 
 using actor_id = uint64_t;
 
+// -- marker classes for mixins ------------------------------------------------
+
+namespace mixin {
+
+struct subscriber_base;
+
+} // namespace mixin
+
 // -- I/O classes --------------------------------------------------------------
 
 namespace io {
