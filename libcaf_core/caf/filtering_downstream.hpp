@@ -101,6 +101,11 @@ public:
     }
   }
 
+  bool remove_path(strong_actor_ptr& ptr) override {
+    erase_from_lanes(ptr);
+    return Base::remove_path(ptr);
+  }
+
   void add_lane(filter f) {
     std::sort(f);
     lanes_.emplace(std::move(f), typename super::buffer_type{});
@@ -127,13 +132,14 @@ private:
   void erase_from_lanes(const strong_actor_ptr& x) {
     for (auto i = lanes_.begin(); i != lanes_.end(); ++i)
       if (erase_from_lane(i->second, x)) {
-        if (i->second.empty())
+        if (i->second.paths.empty())
           lanes_.erase(i);
         return;
       }
   }
+
   bool erase_from_lane(lane& l, const strong_actor_ptr& x) {
-    auto predicate = [&](const typename super::path* y) {
+    auto predicate = [&](const downstream_path* y) {
       return x == y->hdl;
     };
     auto e = l.paths.end();

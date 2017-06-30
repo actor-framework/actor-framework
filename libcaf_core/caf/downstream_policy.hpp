@@ -149,7 +149,7 @@ public:
                     bool is_redeployable);
 
   /// Removes a downstream path without aborting the stream.
-  bool remove_path(strong_actor_ptr& ptr);
+  virtual bool remove_path(strong_actor_ptr& ptr);
 
   /// Returns the state for `ptr.
   downstream_path* find(const strong_actor_ptr& ptr) const;
