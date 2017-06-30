@@ -46,6 +46,7 @@ public:
         state(state_) {
     if (detail::is_serializable<State>::value)
       this->setf(Base::is_serializable_flag);
+    cr_state(this);
   }
 
   ~stateful_actor() override {
@@ -55,8 +56,7 @@ public:
   /// Destroys the state of this actor (no further overriding allowed).
   void on_exit() final {
     CAF_LOG_TRACE("");
-    if (this->getf(Base::is_initialized_flag))
-      state_.~State();
+    state_.~State();
   }
 
   const char* name() const final {
@@ -77,7 +77,6 @@ public:
   /// @cond PRIVATE
 
   void initialize() override {
-    cr_state(this);
     Base::initialize();
   }
 
