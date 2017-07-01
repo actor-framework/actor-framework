@@ -22,8 +22,9 @@
 
 #include <cstdint>
 
+#include "caf/actor_addr.hpp"
+
 #include "caf/meta/type_name.hpp"
-#include "caf/actor_control_block.hpp"
 
 #include "caf/detail/comparable.hpp"
 
@@ -31,17 +32,22 @@ namespace caf {
 
 class stream_id : detail::comparable<stream_id> {
 public:
-  stream_id() = default;
   stream_id(stream_id&&) = default;
   stream_id(const stream_id&) = default;
   stream_id& operator=(stream_id&&) = default;
   stream_id& operator=(const stream_id&) = default;
 
-  stream_id(strong_actor_ptr origin_actor, uint64_t origin_nr);
+  stream_id();
+
+  stream_id(actor_addr origin_actor, uint64_t origin_nr);
+
+  stream_id(actor_control_block* origin_actor, uint64_t origin_nr);
+
+  stream_id(const strong_actor_ptr& origin_actor, uint64_t origin_nr);
 
   int64_t compare(const stream_id& other) const;
 
-  strong_actor_ptr origin;
+  actor_addr origin;
   uint64_t nr;
 
   inline bool valid() const {

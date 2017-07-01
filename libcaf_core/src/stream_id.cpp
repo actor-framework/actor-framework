@@ -23,9 +23,24 @@
 
 namespace caf {
 
-stream_id::stream_id(strong_actor_ptr origin_actor, uint64_t origin_nr)
+stream_id::stream_id() : origin(nullptr), nr(0) {
+  // nop
+}
+
+stream_id::stream_id(actor_addr origin_actor, uint64_t origin_nr)
     : origin(std::move(origin_actor)),
       nr(origin_nr) {
+  // nop
+}
+
+stream_id::stream_id(actor_control_block* origin_actor, uint64_t origin_nr)
+    : stream_id(origin_actor->address(), origin_nr) {
+  // nop
+}
+
+
+stream_id::stream_id(const strong_actor_ptr& origin_actor, uint64_t origin_nr)
+    : stream_id(origin_actor->address(), origin_nr) {
   // nop
 }
 
