@@ -190,15 +190,9 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
     CAF_ASSERT(private_thread_ != nullptr);
     private_thread_->shutdown();
   }
-  // Discard any state for pending `request` messages.
+  // Clear all state.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
-  // Abort any open stream.
-  for (auto& kvp : streams_) {
-    strong_actor_ptr dummy;
-    auto err = fail_state;
-    kvp.second->abort(dummy, err);
-  }
   streams_.clear();
   // Dispatch to parent's `cleanup` function.
   return local_actor::cleanup(std::move(fail_state), host);

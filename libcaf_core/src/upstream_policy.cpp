@@ -22,6 +22,7 @@
 #include "caf/send.hpp"
 #include "caf/stream_msg.hpp"
 #include "caf/upstream_path.hpp"
+#include "caf/stream_aborter.hpp"
 
 namespace caf {
 
@@ -83,6 +84,7 @@ expected<long> upstream_policy::add_path(strong_actor_ptr hdl,
     auto ptr = new upstream_path(std::move(hdl), sid, prio);
     paths_.emplace_back(ptr);
     assignment_vec_.emplace_back(ptr, 0);
+    stream_aborter::add(ptr->hdl, self_->address(), ptr->sid);
     if (downstream_credit > 0)
       ptr->assigned_credit = initial_credit(ptr, downstream_credit);
     CAF_LOG_DEBUG("add new upstraem path" << ptr->hdl 
@@ -115,6 +117,7 @@ bool upstream_policy::remove_path(const strong_actor_ptr& hdl, error err) {
     // Drop path from list.
     if (i != e - 1)
       std::swap(*i, paths_.back());
+    stream_aborter::del(hdl, self_->address(), paths_.back()->sid);
     if (err != none)
       unsafe_send_as(self_, hdl, make<stream_msg::abort>(paths_.back()->sid,
                                                          std::move(err)));

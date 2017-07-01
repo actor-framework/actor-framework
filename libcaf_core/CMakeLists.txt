@@ -92,8 +92,9 @@ set (LIBCAF_CORE_SRCS
      src/skip.cpp
      src/splitter.cpp
      src/stream.cpp
-     src/stream_id.cpp
+     src/stream_aborter.cpp
      src/stream_handler.cpp
+     src/stream_id.cpp
      src/stream_msg_visitor.cpp
      src/stream_multiplexer.cpp
      src/stream_priority.cpp

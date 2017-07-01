@@ -23,6 +23,7 @@
 
 #include "caf/send.hpp"
 #include "caf/atom.hpp"
+#include "caf/stream_aborter.hpp"
 #include "caf/downstream_path.hpp"
 #include "caf/downstream_policy.hpp"
 
@@ -60,6 +61,7 @@ bool downstream_policy::add_path(strong_actor_ptr ptr) {
   auto predicate = [&](const path_uptr& x) { return x->hdl == ptr; };
   if (std::none_of(paths_.begin(), paths_.end(), predicate)) {
     CAF_LOG_DEBUG("added new downstream path" << CAF_ARG(ptr));
+    stream_aborter::add(ptr, self_->address(), sid_);
     paths_.emplace_back(new downstream_path(std::move(ptr), false));
     return true;
   }
@@ -95,7 +97,7 @@ bool downstream_policy::remove_path(strong_actor_ptr& ptr) {
     auto x = std::move(paths_.back());
     paths_.pop_back();
     unsafe_send_as(self_, x->hdl, make<stream_msg::close>(sid_));
-    //policy_->reclaim(this, x);
+    stream_aborter::del(x->hdl, self_->address(), sid_);
     return true;
   }
   return false;

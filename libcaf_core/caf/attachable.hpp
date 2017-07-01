@@ -51,6 +51,9 @@ public:
     /// Identifies `default_attachable::observe_token`.
     static constexpr size_t observer = 2;
 
+    /// Identifies `stream_aborter::token`.
+    static constexpr size_t stream_aborter = 3;
+
     template <class T>
     token(const T& tk) : subtype(T::token_type), ptr(&tk) {
       // nop
