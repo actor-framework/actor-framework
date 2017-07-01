@@ -96,11 +96,12 @@ auto stream_msg_visitor::operator()(stream_msg::close&) -> result_type {
 
 auto stream_msg_visitor::operator()(stream_msg::abort& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (i_ == e_) {
-    CAF_LOG_DEBUG("received stream_msg::abort for unknown stream");
-    return {sec::unexpected_message, e_};
+  if (i_ != e_ && self_->current_sender() != nullptr) {
+    i_->second->abort(self_->current_sender(), x.reason);
+    return {std::move(x.reason), i_};
   }
-  return {std::move(x.reason), i_};
+  CAF_LOG_DEBUG("received stream_msg::abort for unknown stream");
+  return {sec::unexpected_message, e_};
 }
 
 auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
