@@ -110,10 +110,12 @@ void downstream_policy::close() {
 }
 
 void downstream_policy::abort(strong_actor_ptr& cause, const error& reason) {
-  for (auto& x : paths_)
+  CAF_LOG_TRACE(CAF_ARG(cause) << CAF_ARG(reason));
+  for (auto& x : paths_) {
     if (x->hdl != cause)
-      unsafe_send_as(self_, x->hdl,
-                     make<stream_msg::abort>(this->sid_, reason));
+      unsafe_send_as(self_, x->hdl, make<stream_msg::abort>(sid_, reason));
+    stream_aborter::del(x->hdl, self_->address(), sid_);
+  }
 }
 
 downstream_path* downstream_policy::find(const strong_actor_ptr& ptr) const {
