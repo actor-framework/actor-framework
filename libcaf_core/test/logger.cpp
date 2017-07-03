@@ -58,6 +58,8 @@ struct fixture {
   logger::line_format lf;
 };
 
+constexpr const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(logger_tests, fixture)
@@ -66,7 +68,7 @@ CAF_TEST_FIXTURE_SCOPE(logger_tests, fixture)
 // and finally serialization round-trip
 CAF_TEST(parse_default_format_strings) {
   actor_system sys{cfg};
-  CAF_CHECK_EQUAL(cfg.logger_file_format, "%r %c %p %a %t %C %M %F:%L %m%n");
+  CAF_CHECK_EQUAL(cfg.logger_file_format, file_format);
   add(logger::runtime_field);
   add(logger::plain_text_field, " ");
   add(logger::category_field);
@@ -87,8 +89,11 @@ CAF_TEST(parse_default_format_strings) {
   add(logger::plain_text_field, " ");
   add(logger::message_field);
   add(logger::newline_field);
+  CAF_CHECK_EQUAL(logger::parse_format(file_format), lf);
+#ifdef CAF_LOG_LEVEL
+  // Not parsed when compiling without logging enabled.
   CAF_CHECK_EQUAL(sys.logger().file_format(), lf);
-  CAF_CHECK_EQUAL(logger::parse_format("%r %c %p %a %t %C %M %F:%L %m%n"), lf);
+#endif
 }
 
 CAF_TEST(rendering) {
