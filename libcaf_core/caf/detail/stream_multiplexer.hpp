@@ -95,13 +95,13 @@ public:
     }
 
     /// Queries whether `x` is a known remote node.
-    bool has_remote_path(const node_id& x) const {
+    inline bool has_remote_path(const node_id& x) const {
       return remotes().count(x) > 0;
     }
 
     /// Adds `ptr` as remote stream serv on `x`. This is a no-op if `x` already
     /// has a known path.
-    void add_remote_path(const node_id& x, strong_actor_ptr ptr) {
+    inline void add_remote_path(const node_id& x, strong_actor_ptr ptr) {
       remotes().emplace(x, std::move(ptr));
     }
 
@@ -137,6 +137,14 @@ public:
   /// @pre `self != nullptr && basp != nullptr`
   stream_multiplexer(local_actor* self, backend& service);
 
+  /// Adds stream state for `current_stream_msg_->sid`.
+  stream_states::iterator add_stream(strong_actor_ptr prev,
+                                     strong_actor_ptr next,
+                                     remote_path* current_path);
+
+  /// Removes `current_stream_state_`.
+  void remove_current_stream();
+
   /// Queries whether stream `x` is managed by this multiplexer.
   inline bool has_stream(const stream_id& x) const {
     return streams_.count(x) > 0;
@@ -148,6 +156,10 @@ public:
   }
 
 protected:
+  inline bool current_stream_state_valid() const {
+    return current_stream_state_ != streams_.end();
+  }
+
   // Dispatches `x` on the subtype `T`.
   template <class T>
   static void dispatch(T& derived, stream_msg& x) {
@@ -257,6 +269,7 @@ protected:
   // The remoting backend.
   backend& service_;
 
+private:
   // Open streams.
   stream_states streams_;
 };

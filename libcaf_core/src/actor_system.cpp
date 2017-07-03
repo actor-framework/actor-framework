@@ -358,7 +358,7 @@ bool actor_system::has_middleman() const {
 io::middleman& actor_system::middleman() {
   auto& clptr = modules_[module::middleman];
   if (!clptr)
-    CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
+    CAF_RAISE_ERROR("cannot access middleman: module not loaded");
   return *reinterpret_cast<io::middleman*>(clptr->subtype_ptr());
 }
 

@@ -49,7 +49,7 @@ void outgoing_stream_multiplexer::operator()(stream_msg::open& x) {
     return fail(sec::invalid_upstream, nullptr);
   }
   // Make sure we don't receive a handshake for an already open stream.
-  if (streams_.count(current_stream_msg_->sid) > 0) {
+  if (has_stream(current_stream_msg_->sid)) {
     CAF_LOG_WARNING("received stream_msg::open twice");
     return fail(sec::upstream_already_exists, std::move(predecessor));
   }
@@ -68,9 +68,7 @@ void outgoing_stream_multiplexer::operator()(stream_msg::open& x) {
   }
   // Update state and send handshake to remote stream_serv (via
   // middleman/basp_broker).
-  streams_.emplace(current_stream_msg_->sid,
-                   stream_state{std::move(predecessor), path->hdl,
-                   &(*path)});
+  add_stream(std::move(predecessor), path->hdl, &(*path));
   // Send handshake to remote stream_serv (via middleman/basp_broker). We need
   // to send this message as `current_sender`. We have do bypass the queue
   // since `send_remote` always sends the message from `self_`.
@@ -84,49 +82,55 @@ void outgoing_stream_multiplexer::operator()(stream_msg::open& x) {
 }
 
 void outgoing_stream_multiplexer::operator()(stream_msg::ack_open&) {
+  CAF_ASSERT(current_stream_msg_ != nullptr);
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_upstream();
 }
 
 void outgoing_stream_multiplexer::operator()(stream_msg::batch&) {
+  CAF_ASSERT(current_stream_msg_ != nullptr);
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_downstream();
 }
 
 void outgoing_stream_multiplexer::operator()(stream_msg::ack_batch&) {
+  CAF_ASSERT(current_stream_msg_ != nullptr);
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_upstream();
 }
 
 void outgoing_stream_multiplexer::operator()(stream_msg::close&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_downstream();
-  streams_.erase(current_stream_state_);
+  remove_current_stream();
 }
 
 void outgoing_stream_multiplexer::operator()(stream_msg::abort& x) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   if (current_stream_state_->second.prev_stage == self_->current_sender())
     fail(x.reason, nullptr, current_stream_state_->second.next_stage);
   else
     fail(x.reason, current_stream_state_->second.prev_stage);
-  streams_.erase(current_stream_state_);
+  remove_current_stream();
 }
 
 void outgoing_stream_multiplexer::operator()(stream_msg::downstream_failed&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   // TODO: implement me
 }
 
 void outgoing_stream_multiplexer::operator()(stream_msg::upstream_failed&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   // TODO: implement me
 }
 
 void outgoing_stream_multiplexer::forward_to_upstream() {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   manage_credit();
   send_local(current_stream_state_->second.prev_stage,
              std::move(*current_stream_msg_));
@@ -134,7 +138,7 @@ void outgoing_stream_multiplexer::forward_to_upstream() {
 
 void outgoing_stream_multiplexer::forward_to_downstream() {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   send_remote(*current_stream_state_->second.rpath,
               std::move(*current_stream_msg_));
 }

@@ -23,6 +23,7 @@
 #include "caf/variant.hpp"
 #include "caf/to_string.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/stream_aborter.hpp"
 
 namespace caf {
 namespace detail {
@@ -61,6 +62,27 @@ stream_multiplexer::stream_multiplexer(local_actor* self, backend& service)
     : self_(self),
       service_(service) {
   CAF_ASSERT(self_ != nullptr);
+}
+
+stream_multiplexer::stream_states::iterator
+stream_multiplexer::add_stream(strong_actor_ptr prev, strong_actor_ptr next,
+                               remote_path* path) {
+  CAF_LOG_TRACE(CAF_ARG(prev) << CAF_ARG(next) << CAF_ARG(path));
+  auto sid = current_stream_msg_->sid;
+  auto x = streams_.emplace(sid, stream_state{prev, next, path});
+  if (x.second) {
+    stream_aborter::add(prev, self_->address(), sid);
+    stream_aborter::add(next, self_->address(), sid);
+  }
+  return x.first;
+}
+
+void stream_multiplexer::remove_current_stream() {
+  auto& sid = current_stream_state_->first;
+  auto& st = current_stream_state_->second;
+  stream_aborter::del(st.prev_stage, self_->address(), sid);
+  stream_aborter::del(st.next_stage, self_->address(), sid);
+  streams_.erase(current_stream_state_);
 }
 
 optional<stream_multiplexer::remote_path&>

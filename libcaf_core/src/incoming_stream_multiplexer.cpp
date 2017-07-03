@@ -58,10 +58,8 @@ void incoming_stream_multiplexer::operator()(stream_msg::open& x) {
   cme->stages.pop_back();
   // Our prev always is the remote stream server proxy.
   auto current_remote_path = remotes().emplace(prev->node(), prev).first;
-  current_stream_state_ = streams_.emplace(current_stream_msg_->sid,
-                                           stream_state{std::move(prev),
-                                           successor,
-                                           &current_remote_path->second}).first;
+  current_stream_state_ = add_stream(std::move(prev), successor,
+                                     &current_remote_path->second);
   // Rewrite handshake and forward it to the next stage.
   x.prev_stage = self_->ctrl();
   auto ptr = make_mailbox_element(
@@ -76,54 +74,54 @@ void incoming_stream_multiplexer::operator()(stream_msg::open& x) {
 
 void incoming_stream_multiplexer::operator()(stream_msg::ack_open&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_upstream();
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::batch&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_downstream();
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::ack_batch&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_upstream();
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::close&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   forward_to_downstream();
-  streams_.erase(current_stream_state_);
+  remove_current_stream();
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::abort& x) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   if (current_stream_state_->second.prev_stage == self_->current_sender())
     fail(x.reason, nullptr, current_stream_state_->second.next_stage);
   else
     fail(x.reason, current_stream_state_->second.prev_stage);
-  streams_.erase(current_stream_state_);
+  remove_current_stream();
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::downstream_failed&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   // TODO: implement me
 }
 
 void incoming_stream_multiplexer::operator()(stream_msg::upstream_failed&) {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   // TODO: implement me
 }
 
 void incoming_stream_multiplexer::forward_to_upstream() {
   CAF_ASSERT(current_stream_msg_ != nullptr);
-  CAF_ASSERT(current_stream_state_ != streams_.end());
+  CAF_ASSERT(current_stream_state_valid());
   send_remote(*current_stream_state_->second.rpath,
               std::move(*current_stream_msg_));
 }

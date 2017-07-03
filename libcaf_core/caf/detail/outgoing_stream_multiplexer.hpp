@@ -45,20 +45,28 @@ public:
 
   void operator()(stream_msg& x);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::open&);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::ack_open&);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::batch&);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::ack_batch&);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::close&);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::abort&);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::downstream_failed&);
 
+  /// @pre `self_->current_sender() != nullptr && current_stream_state_valid()`
   void operator()(stream_msg::upstream_failed&);
 
 private:
