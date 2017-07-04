@@ -58,31 +58,11 @@ void forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
 }
 
 void forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
-                                     execution_unit* context) {
+                                     execution_unit*) {
   CAF_PUSH_AID(0);
   CAF_ASSERT(what);
-  if (what->content().type_token() != make_type_token<stream_msg>()) {
-    forward_msg(std::move(what->sender), what->mid,
-                what->move_content_to_message(), &what->stages);
-  } else {
-    shared_lock<detail::shared_spinlock> guard(mtx_);
-    if (stream_serv_) {
-      // Push this actor the the forwarding stack and move the message
-      // to the stream_serv, which will intercept stream handshakes.
-      // Since the stream_serv becomes part of the pipeline, the proxy
-      // will never receive a stream_msg unless it is the initial handshake.
-      what->stages.emplace_back(ctrl());
-      auto msg = what->move_content_to_message();
-      auto prefix = make_message(sys_atom::value);
-      stream_serv_->enqueue(make_mailbox_element(std::move(what->sender),
-                                                 what->mid,
-                                                 std::move(what->stages),
-                                                 prefix + msg),
-                            context);
-      //what->stages.emplace_back(ctrl());
-      //stream_serv_->enqueue(std::move(what), context);
-    }
-  }
+  forward_msg(std::move(what->sender), what->mid,
+              what->move_content_to_message(), &what->stages);
 }
 
 bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
