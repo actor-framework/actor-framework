@@ -158,26 +158,32 @@ public:
 
   // Convenience function for transmitting all "network" traffic.
   void network_traffic() {
-    while (earth.mpx.try_exec_runnable() || mars.mpx.try_exec_runnable()
-           || earth.mpx.read_data() || mars.mpx.read_data()) {
-      // rince and repeat
-    }
+    run_exhaustively([](planet_type* x) {
+      return x->mpx.try_exec_runnable() || x->mpx.read_data();
+    });
   }
 
   // Convenience function for transmitting all "network" traffic and running
   // all executables on earth and mars.
   void exec_all() {
-    while (earth.mpx.try_exec_runnable() || mars.mpx.try_exec_runnable()
-           || earth.mpx.read_data() || mars.mpx.read_data()
-           || earth.sched.run_once() || mars.sched.run_once()) {
-      // rince and repeat
-    }
+    run_exhaustively([](planet_type* x) {
+      return x->mpx.try_exec_runnable() || x->mpx.read_data()
+             || x->sched.run_once();
+    });
   }
 
   void prepare_connection(planet_type& server, planet_type& client,
                           std::string host, uint16_t port) {
     server.mpx.prepare_connection(server.acc, server.conn, client.mpx,
                                   std::move(host), port, client.conn);
+  }
+
+private:
+  template <class F>
+  void run_exhaustively(F f) {
+    planet_type* planets[] = {&earth, &mars};
+    while (std::any_of(std::begin(planets), std::end(planets), f))
+      ; // rince and repeat
   }
 };
 
