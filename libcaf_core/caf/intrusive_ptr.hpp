@@ -232,6 +232,17 @@ bool operator<(const intrusive_ptr<T>& x, const intrusive_ptr<T>& y) {
   return x.get() < y.get();
 }
 
+/// @relates intrusive_ptr
+template <class T>
+bool operator<(const intrusive_ptr<T>& x, const T* y) {
+  return x.get() < y;
+}
+/// @relates intrusive_ptr
+template <class T>
+bool operator<(const T* x, const intrusive_ptr<T>& y) {
+  return x < y.get();
+}
+
 template <class T>
 std::string to_string(const intrusive_ptr<T>& x) {
   auto v = reinterpret_cast<uintptr_t>(x.get());
