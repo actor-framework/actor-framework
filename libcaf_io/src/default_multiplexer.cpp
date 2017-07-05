@@ -314,8 +314,8 @@ namespace network {
                        static_cast<int>(shadow_.changes.size()),
                        pollset_.data(), static_cast<int>(pollset_.size()),
                        nullptr);
-      CAF_LOG_DEBUG("kevent() on " << CAF_ARG(pollset_.size())
-                    << " sockets reported " << CAF_ARG(nev)
+      CAF_LOG_DEBUG("kevent() on" << CAF_ARG(pollset_.size())
+                    << " sockets reported" << CAF_ARG(nev)
                     << " event(s)");
       if (nev < 0)
         switch (errno) {
@@ -379,8 +379,7 @@ namespace network {
       shadow_.changes.emplace_back(std::move(ke));
     };
     if (e.mask == 0) {
-      CAF_LOG_DEBUG("attempt to remove socket" << CAF_ARG(e.fd)
-                    << "from kqueue");
+      CAF_LOG_DEBUG("attempt to remove socket from kqueue:" << CAF_ARG(e.fd));
       if (old & output_mask)
         kqueue_update(EV_DELETE, EVFILT_WRITE);
       if (old & input_mask)
@@ -389,7 +388,7 @@ namespace network {
       if (i != shadow_.fds.end() && *i == e.fd)
         shadow_.fds.erase(i);
     } else if (old == 0) {
-      CAF_LOG_DEBUG("attempt to add socket" << CAF_ARG(e.fd) << "to kqueue");
+      CAF_LOG_DEBUG("attempt to add socket to kqueue:" << CAF_ARG(e.fd));
       if (e.mask & output_mask)
         kqueue_update(EV_ADD, EVFILT_WRITE);
       if (e.mask & input_mask)
@@ -399,7 +398,7 @@ namespace network {
         shadow_.fds.insert(i, e.fd);
     } else {
       CAF_LOG_DEBUG("modify kqueue event mask for socket" << CAF_ARG(e.fd)
-                    << ": " << CAF_ARG(old) << " -> " << CAF_ARG(e.mask));
+                    << ": " << CAF_ARG(old) << " ->" << CAF_ARG(e.mask));
       if (!(old & output_mask) && (e.mask & output_mask))
         kqueue_update(EV_ADD, EVFILT_WRITE);
       if ((old & output_mask) && !(e.mask & output_mask))
@@ -453,8 +452,8 @@ namespace network {
     while (shadow_ > 0) {
       int presult = epoll_wait(loopfd_, pollset_.data(),
                                static_cast<int>(pollset_.size()), -1);
-      CAF_LOG_DEBUG("epoll_wait() on "      << CAF_ARG(shadow_)
-                    << " sockets reported " << CAF_ARG(presult)
+      CAF_LOG_DEBUG("epoll_wait() on"      << CAF_ARG(shadow_)
+                    << " sockets reported" << CAF_ARG(presult)
                     << " event(s)");
       if (presult < 0) {
         switch (errno) {
@@ -484,8 +483,7 @@ namespace network {
   }
 
   void default_multiplexer::handle(const default_multiplexer::event& e) {
-    CAF_LOG_TRACE("e.fd = " << CAF_ARG(e.fd) << ", mask = "
-                  << CAF_ARG(e.mask));
+    CAF_LOG_TRACE(CAF_ARG(e.fd) << CAF_ARG(e.mask));
     // ptr is only allowed to nullptr if fd is our pipe
     // read handle which is only registered for input
     CAF_ASSERT(e.ptr != nullptr || e.fd == pipe_.first);
@@ -502,12 +500,11 @@ namespace network {
     ee.data.ptr = e.ptr;
     int op;
     if (e.mask == 0) {
-      CAF_LOG_DEBUG("attempt to remove socket " << CAF_ARG(e.fd)
-                    << " from epoll");
+      CAF_LOG_DEBUG("attempt to remove socket from epoll:" << CAF_ARG(e.fd));
       op = EPOLL_CTL_DEL;
       --shadow_;
     } else if (old == 0) {
-      CAF_LOG_DEBUG("attempt to add socket " << CAF_ARG(e.fd) << " to epoll");
+      CAF_LOG_DEBUG("attempt to add socket to epoll:" << CAF_ARG(e.fd));
       op = EPOLL_CTL_ADD;
       ++shadow_;
     } else {
