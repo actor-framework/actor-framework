@@ -272,6 +272,7 @@ public:
   std::string logger_console_format;
   std::string logger_component_filter;
   atom_value logger_verbosity;
+  bool logger_inline_output;
 
   // -- backward compatibility -------------------------------------------------
 

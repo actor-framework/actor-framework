@@ -21,6 +21,7 @@
 #define CAF_LOGGER_HPP
 
 #include <thread>
+#include <fstream>
 #include <cstring>
 #include <sstream>
 #include <iostream>
@@ -252,6 +253,12 @@ public:
   }
 
 private:
+  void handle_event(event& x);
+
+  void log_first_line();
+
+  void log_last_line();
+
   logger(actor_system& sys);
 
   void init(actor_system_config& cfg);
@@ -264,6 +271,7 @@ private:
 
   actor_system& system_;
   int level_;
+  bool inline_output_;
   detail::shared_spinlock aids_lock_;
   std::unordered_map<std::thread::id, actor_id> aids_;
   std::thread thread_;
@@ -274,6 +282,7 @@ private:
   timestamp t0_;
   line_format file_format_;
   line_format console_format_;
+  std::fstream file_;
 };
 
 std::string to_string(logger::field_type x);

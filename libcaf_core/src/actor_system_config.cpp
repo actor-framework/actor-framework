@@ -128,6 +128,7 @@ actor_system_config::actor_system_config()
   logger_console = atom("none");
   logger_console_format = "%m";
   logger_verbosity = atom("trace");
+  logger_inline_output = false;
   middleman_network_backend = atom("default");
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
@@ -174,6 +175,8 @@ actor_system_config::actor_system_config()
        "exclude all listed components from logging")
   .add(logger_verbosity, "verbosity",
        "sets the verbosity (quiet|error|warning|info|debug|trace)")
+  .add(logger_inline_output, "inline-output",
+       "sets whether a separate thread is used for I/O")
   .add(logger_file_name, "filename",
        "deprecated (use file-name instead)")
   .add(logger_component_filter, "filter",

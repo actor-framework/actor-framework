@@ -112,8 +112,10 @@ void test_coordinator::stop() {
 }
 
 void test_coordinator::enqueue(resumable* ptr) {
+  CAF_LOG_TRACE("");
   if (inline_enqueues_ > 0) {
     --inline_enqueues_;
+    CAF_LOG_DEBUG("inline actor execution, remaining:" << inline_enqueues_);
     dummy_worker worker{this};
     switch (ptr->resume(&worker, 1)) {
       case resumable::resume_later:

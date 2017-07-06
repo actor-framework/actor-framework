@@ -267,6 +267,7 @@ actor_system::actor_system(actor_system_config& cfg)
   // initialize state for each module and give each module the opportunity
   // to influence the system configuration, e.g., by adding more types
   logger_->init(cfg);
+  CAF_SET_LOGGER_SYS(this);
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);

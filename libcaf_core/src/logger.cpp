@@ -165,7 +165,12 @@ actor_id logger::thread_local_aid(actor_id aid) {
 
 void logger::log(event* x) {
   CAF_ASSERT(x->level >= 0 && x->level <= 4);
-  queue_.synchronized_enqueue(queue_mtx_, queue_cv_,x);
+  if (!inline_output_) {
+    queue_.synchronized_enqueue(queue_mtx_, queue_cv_,x);
+  } else {
+    std::unique_ptr<event> ptr{x};
+    handle_event(*ptr);
+  }
 }
 
 void logger::set_current_actor_system(actor_system* x) {
@@ -199,14 +204,15 @@ logger::~logger() {
   system_.logger_dtor_cv_.notify_one();
 }
 
-logger::logger(actor_system& sys) : system_(sys) {
+logger::logger(actor_system& sys) : system_(sys), inline_output_(false) {
   // nop
 }
 
 void logger::init(actor_system_config& cfg) {
   CAF_IGNORE_UNUSED(cfg);
 #if defined(CAF_LOG_LEVEL)
-  // Parse the configured log leve.
+  inline_output_ = cfg.logger_inline_output;
+  // Parse the configured log level.
   switch (static_cast<uint64_t>(cfg.logger_verbosity)) {
     case atom_uint("error"):
     case atom_uint("ERROR"):
@@ -368,8 +374,95 @@ logger::line_format logger::parse_format(const char* format_str) {
 
 void logger::run() {
 #if defined(CAF_LOG_LEVEL)
+  log_first_line();
+  // receive log entries from other threads and actors
+  std::unique_ptr<event> ptr;
+  for (;;) {
+    // make sure we have data to read
+    queue_.synchronized_await(queue_mtx_, queue_cv_);
+    // read & process event
+    ptr.reset(queue_.try_pop());
+    CAF_ASSERT(ptr != nullptr);
+    // empty message means: shut down
+    if (ptr->message.empty())
+      break;
+    handle_event(*ptr);
+  }
+  log_last_line();
+#endif
+}
+
+void logger::handle_event(event& x) {
+  if (file_)
+    render(file_, file_format_, x);
+  if (system_.config().logger_console == atom("UNCOLORED")) {
+    render(std::clog, console_format_, x);
+  } else if  (system_.config().logger_console == atom("COLORED")) {
+    switch (x.level) {
+      default:
+        break;
+      case CAF_LOG_LEVEL_ERROR:
+        std::clog << term::red;
+        break;
+      case CAF_LOG_LEVEL_WARNING:
+        std::clog << term::yellow;
+        break;
+      case CAF_LOG_LEVEL_INFO:
+        std::clog << term::green;
+        break;
+      case CAF_LOG_LEVEL_DEBUG:
+        std::clog << term::cyan;
+        break;
+      case CAF_LOG_LEVEL_TRACE:
+        std::clog << term::blue;
+        break;
+    }
+    render(std::clog, console_format_, x);
+    std::clog << term::reset_endl;
+  }
+}
+
+void logger::log_first_line() {
+  std::string msg = "level = ";
+  msg += to_string(system_.config().logger_verbosity);
+  msg += ", node = ";
+  msg += to_string(system_.node());
+  event tmp{nullptr,
+            nullptr,
+            CAF_LOG_LEVEL_INFO,
+            CAF_LOG_COMPONENT,
+            CAF_PRETTY_FUN,
+            __FILE__,
+            __LINE__,
+            std::move(msg),
+            std::this_thread::get_id(),
+            0,
+            make_timestamp()};
+  handle_event(tmp);
+}
+
+void logger::log_last_line() {
+  event tmp{nullptr,
+            nullptr,
+            CAF_LOG_LEVEL_INFO,
+            CAF_LOG_COMPONENT,
+            CAF_PRETTY_FUN,
+            __FILE__,
+            __LINE__,
+            "EOF",
+            std::this_thread::get_id(),
+            0,
+            make_timestamp()};
+  handle_event(tmp);
+}
+
+void logger::start() {
+#if defined(CAF_LOG_LEVEL)
+  parent_thread_ = std::this_thread::get_id();
+  auto verbosity = system_.config().logger_verbosity;
+  if (verbosity == atom("quiet") || verbosity == atom("QUIET"))
+    return;
   t0_ = make_timestamp();
-  std::fstream file;
   if (system_.config().logger_file_name.empty()) {
     // No need to continue if console and log file are disabled.
     if (!(system_.config().logger_console == atom("UNCOLORED")
@@ -397,100 +490,25 @@ void logger::run() {
       auto nid = to_string(system_.node());
       f.replace(i, i + sizeof(node) - 1, nid);
     }
-    file.open(f, std::ios::out | std::ios::app);
-    if (!file) {
+    file_.open(f, std::ios::out | std::ios::app);
+    if (!file_) {
       std::cerr << "unable to open log file " << f << std::endl;
       return;
     }
   }
-  if (file) {
-    // log first entry
-    std::string msg = "level = ";
-    msg += to_string(system_.config().logger_verbosity);
-    msg += ", node = ";
-    msg += to_string(system_.node());
-    event tmp{nullptr,
-              nullptr,
-              CAF_LOG_LEVEL_INFO,
-              CAF_LOG_COMPONENT,
-              CAF_PRETTY_FUN,
-              __FILE__,
-              __LINE__,
-              std::move(msg),
-              std::this_thread::get_id(),
-              0,
-              make_timestamp()};
-    render(file, file_format_, tmp);
-  }
-  // receive log entries from other threads and actors
-  std::unique_ptr<event> ptr;
-  for (;;) {
-    // make sure we have data to read
-    queue_.synchronized_await(queue_mtx_, queue_cv_);
-    // read & process event
-    ptr.reset(queue_.try_pop());
-    CAF_ASSERT(ptr != nullptr);
-    // empty message means: shut down
-    if (ptr->message.empty()) {
-      break;
-    }
-    if (file)
-      render(file, file_format_, *ptr);;
-    if (system_.config().logger_console == atom("UNCOLORED")) {
-      render(std::clog, console_format_, *ptr);
-    } else if  (system_.config().logger_console == atom("COLORED")) {
-      switch (ptr->level) {
-        default:
-          break;
-        case CAF_LOG_LEVEL_ERROR:
-          std::clog << term::red;
-          break;
-        case CAF_LOG_LEVEL_WARNING:
-          std::clog << term::yellow;
-          break;
-        case CAF_LOG_LEVEL_INFO:
-          std::clog << term::green;
-          break;
-        case CAF_LOG_LEVEL_DEBUG:
-          std::clog << term::cyan;
-          break;
-        case CAF_LOG_LEVEL_TRACE:
-          std::clog << term::blue;
-          break;
-      }
-      render(std::clog, console_format_, *ptr);
-      std::clog << term::reset_endl;
-    }
-  }
-  if (file) {
-    event tmp{nullptr,
-              nullptr,
-              CAF_LOG_LEVEL_INFO,
-              CAF_LOG_COMPONENT,
-              CAF_PRETTY_FUN,
-              __FILE__,
-              __LINE__,
-              "EOF",
-              std::this_thread::get_id(),
-              0,
-              make_timestamp()};
-    render(file, file_format_, tmp);
-  }
-#endif
-}
-
-void logger::start() {
-#if defined(CAF_LOG_LEVEL)
-  parent_thread_ = std::this_thread::get_id();
-  auto verbosity = system_.config().logger_verbosity;
-  if (verbosity == atom("quiet") || verbosity == atom("QUIET"))
-    return;
-  thread_ = std::thread{[this] { this->run(); }};
+  if (inline_output_)
+    log_first_line();
+  else
+    thread_ = std::thread{[this] { this->run(); }};
 #endif
 }
 
 void logger::stop() {
 #if defined(CAF_LOG_LEVEL)
+  if (inline_output_) {
+    log_last_line();
+    return;
+  }
   if (!thread_.joinable())
     return;
   // an empty string means: shut down
