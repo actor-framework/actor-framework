@@ -47,6 +47,7 @@
 #include "caf/io/system_messages.hpp"
 
 #include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -71,38 +72,36 @@
 namespace caf {
 namespace io {
 
+namespace {
+
+template <class T>
+class mm_impl : public middleman {
+public:
+  mm_impl(actor_system& ref) : middleman(ref), backend_(&ref) {
+    // nop
+  }
+
+  network::multiplexer& backend() override {
+    return backend_;
+  }
+
+private:
+  T backend_;
+};
+
+} // namespace <anonymous>
+
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
-  class impl : public middleman {
-  public:
-    impl(actor_system& ref) : middleman(ref), backend_(&ref) {
-      // nop
-    }
-
-    network::multiplexer& backend() override {
-      return backend_;
-    }
-
-  private:
-    network::default_multiplexer backend_;
-  };
+  switch (atom_uint(sys.config().middleman_network_backend)) {
 # ifdef CAF_USE_ASIO
-  class asio_impl : public middleman {
-  public:
-    asio_impl(actor_system& ref) : middleman(ref), backend_(&ref) {
-      // nop
-    }
-
-    network::multiplexer& backend() override {
-      return backend_;
-    }
-
-  private:
-    network::asio_multiplexer backend_;
-  };
-  if (sys.config().middleman_network_backend == atom("asio"))
-    return new asio_impl(sys);
+    case atom_uint(atom("asio")):
+      return new mm_impl<network::asio_multiplexer>(sys);
 # endif // CAF_USE_ASIO
-  return new impl(sys);
+    case atom_uint(atom("testing")):
+      return new mm_impl<network::test_multiplexer>(sys);
+    default:
+      return new mm_impl<network::default_multiplexer>(sys);
+  }
 }
 
 middleman::middleman(actor_system& sys) : system_(sys) {
@@ -403,6 +402,9 @@ void middleman::stop() {
 }
 
 void middleman::init(actor_system_config& cfg) {
+  // never detach actors when using the testing multiplexer
+  if (cfg.middleman_network_backend == atom("testing"))
+    cfg.middleman_detach_utility_actors = false;
   // add remote group module to config
   struct remote_groups : group_module {
   public:
