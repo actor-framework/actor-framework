@@ -104,10 +104,8 @@ public:
   /// Tries to execute a single event.
   bool try_run_once();
 
-  /// Deprecated. Use `try_run_once()` instead.
-  inline bool run_once() CAF_DEPRECATED {
-    return try_run_once();
-  }
+  /// Executes a single event or fails if no event is available.
+  void run_once();
 
   /// Executes events until the job queue is empty and no pending timeouts are
   /// left. Returns the number of processed events.

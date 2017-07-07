@@ -50,7 +50,7 @@ public:
   // all executables on this node.
   void exec_all() {
     while (mpx.try_exec_runnable() || mpx.read_data()
-           || this->sched.run_once()) {
+           || this->sched.try_run_once()) {
       // rince and repeat
     }
   }
@@ -106,7 +106,7 @@ public:
     CAF_MESSAGE("tell peer to accept the connection");
     peer->mpx.accept_connection(peer->acc);
     CAF_MESSAGE("run handshake between the two BASP broker instances");
-    while (sched.run_once() || peer->sched.run_once()
+    while (sched.try_run_once() || peer->sched.try_run_once()
            || mpx.try_exec_runnable() || peer->mpx.try_exec_runnable()
            || mpx.read_data() || peer->mpx.read_data()) {
       // re-run until handhsake is fully completed
@@ -168,7 +168,7 @@ public:
   void exec_all() {
     run_exhaustively([](planet_type* x) {
       return x->mpx.try_exec_runnable() || x->mpx.read_data()
-             || x->sched.run_once();
+             || x->sched.try_run_once();
     });
   }
 

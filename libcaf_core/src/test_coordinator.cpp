@@ -144,6 +144,12 @@ bool test_coordinator::try_run_once() {
   return true;
 }
 
+void test_coordinator::run_once() {
+  if (jobs.empty())
+    CAF_RAISE_ERROR("No job to run available.");
+  try_run_once();
+}
+
 size_t test_coordinator::run(size_t max_count) {
   size_t res = 0;
   while (res < max_count && try_run_once())
