@@ -102,7 +102,12 @@ public:
   }
 
   /// Tries to execute a single event.
-  bool run_once();
+  bool try_run_once();
+
+  /// Deprecated. Use `try_run_once()` instead.
+  inline bool run_once() CAF_DEPRECATED {
+    return try_run_once();
+  }
 
   /// Executes events until the job queue is empty and no pending timeouts are
   /// left. Returns the number of processed events.
@@ -134,6 +139,10 @@ public:
     inline_enqueues_ = num;
   }
 
+  /// The function used for inlining enqueue operations. The default predicate
+  /// calls `run()`.
+  std::function<void()> inlining_hook;
+
 protected:
   void start() override;
 
@@ -143,6 +152,7 @@ protected:
 
 private:
   size_t inline_enqueues_;
+  bool inside_inlined_enqueue;
 };
 
 } // namespace scheduler

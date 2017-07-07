@@ -95,7 +95,9 @@ private:
 test_coordinator::test_coordinator(actor_system& sys)
     : super(sys),
       inline_enqueues_(0) {
-  // nop
+  inlining_hook = [=] {
+    run();
+  };
 }
 void test_coordinator::start() {
   dummy_worker worker{this};
@@ -113,27 +115,16 @@ void test_coordinator::stop() {
 
 void test_coordinator::enqueue(resumable* ptr) {
   CAF_LOG_TRACE("");
-  if (inline_enqueues_ > 0) {
+  jobs.push_back(ptr);
+  if (!inside_inlined_enqueue && inline_enqueues_ > 0) {
     --inline_enqueues_;
-    CAF_LOG_DEBUG("inline actor execution, remaining:" << inline_enqueues_);
-    dummy_worker worker{this};
-    switch (ptr->resume(&worker, 1)) {
-      case resumable::resume_later:
-        enqueue(ptr);
-        break;
-      case resumable::done:
-      case resumable::awaiting_message:
-        intrusive_ptr_release(ptr);
-        break;
-      case resumable::shutdown_execution_unit:
-        break;
-    }
-  } else {
-    jobs.push_back(ptr);
+    inside_inlined_enqueue = true;
+    inlining_hook();
+    inside_inlined_enqueue = false;
   }
 }
 
-bool test_coordinator::run_once() {
+bool test_coordinator::try_run_once() {
   if (jobs.empty())
     return false;
   auto job = jobs.front();
@@ -155,7 +146,7 @@ bool test_coordinator::run_once() {
 
 size_t test_coordinator::run(size_t max_count) {
   size_t res = 0;
-  while (res < max_count && run_once())
+  while (res < max_count && try_run_once())
     ++res;
   return res;
 }
