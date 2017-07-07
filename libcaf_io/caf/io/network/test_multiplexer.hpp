@@ -137,6 +137,12 @@ public:
   /// Tries to accept a pending connection.
   bool try_accept_connection();
 
+  /// Tries to read data on any available scribe.
+  bool try_read_data();
+
+  /// Tries to read data from the external input buffer of `hdl`.
+  bool try_read_data(connection_handle hdl);
+
   /// Poll data on all scribes.
   bool read_data();
 

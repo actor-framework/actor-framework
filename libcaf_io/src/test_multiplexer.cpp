@@ -406,6 +406,67 @@ bool test_multiplexer::try_accept_connection() {
                      [](doorman_data* x) { return x->ptr->new_connection(); });
 }
 
+bool test_multiplexer::try_read_data() {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
+  CAF_LOG_TRACE("");
+  // scribe_data might change while we traverse it
+  std::vector<connection_handle> xs;
+  xs.reserve(scribe_data_.size());
+  for (auto& kvp : scribe_data_)
+    xs.emplace_back(kvp.first);
+  for (auto x : xs)
+    if (try_read_data(x))
+      return true;
+  return false;
+}
+
+bool test_multiplexer::try_read_data(connection_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  scribe_data& sd = scribe_data_[hdl];
+  if (sd.passive_mode || sd.ptr == nullptr || sd.ptr->parent() == nullptr
+      || !sd.ptr->parent()->getf(abstract_actor::is_initialized_flag)) {
+    return false;
+  }
+  switch (sd.recv_conf.first) {
+    case receive_policy_flag::exactly:
+      if (sd.vn_buf.size() >= sd.recv_conf.second) {
+        sd.rd_buf.clear();
+        auto first = sd.vn_buf.begin();
+        auto last = first + static_cast<ptrdiff_t>(sd.recv_conf.second);
+        sd.rd_buf.insert(sd.rd_buf.end(), first, last);
+        sd.vn_buf.erase(first, last);
+        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+          sd.passive_mode = true;
+        return true;
+      }
+      break;
+    case receive_policy_flag::at_least:
+      if (sd.vn_buf.size() >= sd.recv_conf.second) {
+        sd.rd_buf.clear();
+        sd.rd_buf.swap(sd.vn_buf);
+        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+          sd.passive_mode = true;
+        return true;
+      }
+      break;
+    case receive_policy_flag::at_most:
+      auto max_bytes = static_cast<ptrdiff_t>(sd.recv_conf.second);
+      if (!sd.vn_buf.empty()) {
+        sd.rd_buf.clear();
+        auto xbuf_size = static_cast<ptrdiff_t>(sd.vn_buf.size());
+        auto first = sd.vn_buf.begin();
+        auto last = (max_bytes < xbuf_size) ? first + max_bytes : sd.vn_buf.end();
+        sd.rd_buf.insert(sd.rd_buf.end(), first, last);
+        sd.vn_buf.erase(first, last);
+        if (!sd.ptr->consume(this, sd.rd_buf.data(), sd.rd_buf.size()))
+          sd.passive_mode = true;
+        return true;
+      }
+  }
+  return false;
+}
+
 bool test_multiplexer::read_data() {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
@@ -425,12 +486,12 @@ bool test_multiplexer::read_data() {
 bool test_multiplexer::read_data(connection_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
+  flush_runnables();
   if (passive_mode(hdl))
     return false;
-  flush_runnables();
   scribe_data& sd = scribe_data_[hdl];
-  if (!sd.ptr) {
-    CAF_LOG_DEBUG("No scribe available yet on" << CAF_ARG(hdl));
+  if (sd.ptr == nullptr || sd.ptr->parent() == nullptr
+      || !sd.ptr->parent()->getf(abstract_actor::is_initialized_flag)) {
     return false;
   }
   // count how many data packets we could dispatch
