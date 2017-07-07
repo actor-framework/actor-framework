@@ -285,7 +285,7 @@ public:
                 << ", acceptor ID = " << src.id());
     auto hdl = n.connection;
     mpx_->add_pending_connect(src, hdl);
-    CAF_REQUIRE(mpx_->accept_connection(src));
+    mpx_->accept_connection(src);
     // technically, the server handshake arrives
     // before we send the client handshake
     mock(hdl,

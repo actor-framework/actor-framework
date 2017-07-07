@@ -181,7 +181,7 @@ public:
     aut_ptr_->add_doorman(mpx_->new_doorman(acceptor_, 1u));
     // "open" a new connection to our server
     mpx_->add_pending_connect(acceptor_, connection_);
-    CAF_REQUIRE(mpx_->accept_connection(acceptor_));
+    mpx_->accept_connection(acceptor_);
   }
 
   ~fixture() {

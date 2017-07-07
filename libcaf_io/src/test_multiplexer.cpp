@@ -114,6 +114,7 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
     guard_type guard{mx_};
     impl_ptr(hdl) = sptr;
   }
+  CAF_LOG_INFO("opened connection" << sptr->hdl());
   return sptr;
 }
 
@@ -159,6 +160,7 @@ doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
         ch = i->second;
         pc.erase(i);
       }
+      CAF_LOG_INFO("accepted connection" << ch << "on acceptor" << hdl());
       parent()->add_scribe(mpx_->new_scribe(ch));
       return doorman::new_connection(mpx_, ch);
     }
@@ -192,6 +194,7 @@ doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
     ref.ptr = dptr;
     ref.port = port;
   }
+  CAF_LOG_INFO("opened port" << port << "on acceptor" << hdl);
   return dptr;
 }
 
@@ -354,7 +357,11 @@ void test_multiplexer::prepare_connection(accept_handle src,
   auto res2 = peer.scribe_data_.emplace(peer_hdl, scribe_data{output, input});
   if (!res2.second)
     CAF_RAISE_ERROR("prepare_connection: peer handle already in use");
-  provide_acceptor(port, src);
+  CAF_LOG_INFO("acceptor" << src << "has connection" << hdl
+               << "ready for incoming connect from" << host << ":"
+               << port << "from peer with connection handle" << peer_hdl);
+  if (doormen_.count(port) == 0)
+    provide_acceptor(port, src);
   add_pending_connect(src, hdl);
   peer.provide_scribe(std::move(host), port, peer_hdl);
 }
@@ -370,7 +377,7 @@ bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
   return scribes_.count(std::make_pair(std::move(x), y)) > 0;
 }
 
-bool test_multiplexer::accept_connection(accept_handle hdl) {
+void test_multiplexer::accept_connection(accept_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
   // Filled / initialized in the critical section.
@@ -382,7 +389,21 @@ bool test_multiplexer::accept_connection(accept_handle hdl) {
   CAF_ASSERT(dd->ptr != nullptr);
   if (!dd->ptr->new_connection())
     dd->passive_mode = true;
-  return true;
+}
+
+bool test_multiplexer::try_accept_connection() {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
+  // Filled / initialized in the critical section.
+  std::vector<doorman_data*> doormen;
+  { // Access `doorman_data_` and `pending_connects_` while holding `mx_`.
+    guard_type guard{mx_};
+    doormen.reserve(doorman_data_.size());
+    for (auto& kvp : doorman_data_)
+      doormen.emplace_back(&kvp.second);
+  }
+  // Try accepting a new connection on all existing doorman.
+  return std::any_of(doormen.begin(), doormen.end(),
+                     [](doorman_data* x) { return x->ptr->new_connection(); });
 }
 
 bool test_multiplexer::read_data() {

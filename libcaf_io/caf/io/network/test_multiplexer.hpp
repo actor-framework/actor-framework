@@ -132,7 +132,10 @@ public:
   bool has_pending_scribe(std::string x, uint16_t y);
 
   /// Accepts a pending connect on `hdl`.
-  bool accept_connection(accept_handle hdl);
+  void accept_connection(accept_handle hdl);
+
+  /// Tries to accept a pending connection.
+  bool try_accept_connection();
 
   /// Poll data on all scribes.
   bool read_data();
