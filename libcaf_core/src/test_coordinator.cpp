@@ -92,12 +92,8 @@ private:
 
 } // namespace <anonymous>
 
-test_coordinator::test_coordinator(actor_system& sys)
-    : super(sys),
-      inline_enqueues_(0) {
-  inlining_hook = [=] {
-    run();
-  };
+test_coordinator::test_coordinator(actor_system& sys) : super(sys) {
+  // nop
 }
 void test_coordinator::start() {
   dummy_worker worker{this};
@@ -116,11 +112,10 @@ void test_coordinator::stop() {
 void test_coordinator::enqueue(resumable* ptr) {
   CAF_LOG_TRACE("");
   jobs.push_back(ptr);
-  if (!inside_inlined_enqueue && inline_enqueues_ > 0) {
-    --inline_enqueues_;
-    inside_inlined_enqueue = true;
-    inlining_hook();
-    inside_inlined_enqueue = false;
+  if (after_next_enqueue_ != nullptr) {
+    std::function<void()> f;
+    f.swap(after_next_enqueue_);
+    f();
   }
 }
 
@@ -144,10 +139,24 @@ bool test_coordinator::try_run_once() {
   return true;
 }
 
+bool test_coordinator::try_run_once_lifo() {
+  if (jobs.empty())
+    return false;
+  if (jobs.size() >= 2)
+    std::rotate(jobs.rbegin(), jobs.rbegin() + 1, jobs.rend());
+  return try_run_once();
+}
+
 void test_coordinator::run_once() {
   if (jobs.empty())
     CAF_RAISE_ERROR("No job to run available.");
   try_run_once();
+}
+
+void test_coordinator::run_once_lifo() {
+  if (jobs.empty())
+    CAF_RAISE_ERROR("No job to run available.");
+  try_run_once_lifo();
 }
 
 size_t test_coordinator::run(size_t max_count) {
@@ -185,6 +194,19 @@ std::pair<size_t, size_t> test_coordinator::run_dispatch_loop() {
     i = x + y;
   } while (i > 0);
   return res;
+}
+
+void test_coordinator::inline_next_enqueue() {
+  after_next_enqueue([=] { run_once_lifo(); });
+}
+
+void test_coordinator::inline_all_enqueues() {
+  after_next_enqueue([=] { inline_all_enqueues_helper(); });
+}
+
+void test_coordinator::inline_all_enqueues_helper() {
+  after_next_enqueue([=] { inline_all_enqueues_helper(); });
+  run_once_lifo();
 }
 
 } // namespace caf

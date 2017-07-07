@@ -101,11 +101,17 @@ public:
 
   }
 
-  /// Tries to execute a single event.
+  /// Tries to execute a single event in FIFO order.
   bool try_run_once();
 
-  /// Executes a single event or fails if no event is available.
+  /// Tries to execute a single event in LIFO order.
+  bool try_run_once_lifo();
+
+  /// Executes a single event in FIFO order or fails if no event is available.
   void run_once();
+
+  /// Executes a single event in LIFO order or fails if no event is available.
+  void run_once_lifo();
 
   /// Executes events until the job queue is empty and no pending timeouts are
   /// left. Returns the number of processed events.
@@ -122,24 +128,18 @@ public:
   /// events (first) and dispatched delayed messages (second).
   std::pair<size_t, size_t> run_dispatch_loop();
 
-  /// Executes the next `num` enqueued jobs immediately.
-  inline void inline_next_enqueues(size_t num) {
-    inline_enqueues_ += num;
+  template <class F>
+  void after_next_enqueue(F f) {
+    after_next_enqueue_ = f;
   }
 
-  /// Executes the next enqueued job immediately.
-  inline void inline_next_enqueue() {
-    inline_next_enqueues(1);
-  }
+  /// Executes the next enqueued job immediately by using the
+  /// `after_next_enqueue` hook.
+  void inline_next_enqueue();
 
-  /// Executes the next `num` enqueued jobs immediately.
-  inline void set_inline_enqueues(size_t num) {
-    inline_enqueues_ = num;
-  }
-
-  /// The function used for inlining enqueue operations. The default predicate
-  /// calls `run()`.
-  std::function<void()> inlining_hook;
+  /// Executes all enqueued jobs immediately by using the `after_next_enqueue`
+  /// hook.
+  void inline_all_enqueues();
 
 protected:
   void start() override;
@@ -149,8 +149,10 @@ protected:
   void enqueue(resumable* ptr) override;
 
 private:
-  size_t inline_enqueues_;
-  bool inside_inlined_enqueue;
+  void inline_all_enqueues_helper();
+
+  /// User-provided callback for triggering custom code in `enqueue`.
+  std::function<void()> after_next_enqueue_;
 };
 
 } // namespace scheduler
