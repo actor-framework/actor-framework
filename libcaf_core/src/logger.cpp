@@ -188,6 +188,8 @@ bool logger::accepts(int level, const char* cname_begin,
                      const char* cname_end) {
   CAF_ASSERT(cname_begin != nullptr && cname_end != nullptr);
   CAF_ASSERT(level >= 0 && level <= 4);
+  if (level > level_)
+    return false;
   auto& filter = system_.config().logger_component_filter;
   if (!filter.empty()) {
     auto it = std::search(filter.begin(), filter.end(), cname_begin, cname_end);
@@ -214,6 +216,10 @@ void logger::init(actor_system_config& cfg) {
   inline_output_ = cfg.logger_inline_output;
   // Parse the configured log level.
   switch (static_cast<uint64_t>(cfg.logger_verbosity)) {
+    case atom_uint("quiet"):
+    case atom_uint("QUIET"):
+      level_ = CAF_LOG_LEVEL_QUIET;
+      break;
     case atom_uint("error"):
     case atom_uint("ERROR"):
       level_ = CAF_LOG_LEVEL_ERROR;

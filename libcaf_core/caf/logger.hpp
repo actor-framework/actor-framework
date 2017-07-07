@@ -297,6 +297,7 @@ bool operator==(const logger::field& x, const logger::field& y);
 
 #define CAF_CAT(a, b) a##b
 
+#define CAF_LOG_LEVEL_QUIET -1
 #define CAF_LOG_LEVEL_ERROR 0
 #define CAF_LOG_LEVEL_WARNING 1
 #define CAF_LOG_LEVEL_INFO 2
