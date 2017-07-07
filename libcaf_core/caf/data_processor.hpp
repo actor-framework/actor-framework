@@ -226,26 +226,38 @@ public:
     return convert_apply(dref(), x, tmp, assign);
   }
 
-  // no better way around this abomination
-  error consume_range(std::vector<bool>& xs) {
-    auto i = xs.begin();
-    auto e = xs.end();
-    using proxy_iterator = decltype(i);
+  // Special case to avoid using 1 byte per bool
+  error apply(std::vector<bool>& x) {
+    uint64_t len = x.size();
+    auto err = begin_sequence(len);
+    if (err || len == 0)
+      return err;
     struct {
-      void operator()(proxy_iterator& lhs, bool& rhs) const {
-        *lhs = rhs;
+      size_t len;
+      void operator()(std::vector<bool>& lhs, std::vector<uint8_t>& rhs) const {
+        lhs.resize(len, false);
+        size_t cpt = 0;
+        for (auto v: rhs) {
+          for (int k = 0; k < 8; ++k) {
+            lhs[cpt] = ((v & (1 << k)) != 0);
+            if (++cpt >= len)
+              return;
+          }
+        }
       }
-      void operator()(bool& lhs, proxy_iterator& rhs) const {
-        lhs = *rhs;
+      void operator()(std::vector<uint8_t>& lhs, std::vector<bool>& rhs) const {
+        size_t k = 0;
+        lhs.resize((rhs.size() - 1) / 8 + 1, 0);
+        for (bool b: rhs) {
+          if (b)
+            lhs[k / 8] |= (1 << (k % 8));
+          ++k;
+        }
       }
     } assign;
-    bool tmp;
-    for (; i != e; ++i) {
-      auto err = convert_apply(dref(), i, tmp, assign);
-      if (err)
-        return err;
-    }
-    return none;
+    assign.len = len;
+    std::vector<uint8_t> tmp;
+    return convert_apply(dref(), x, tmp, assign);
   }
 
   template <class T>
