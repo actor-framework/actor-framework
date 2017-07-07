@@ -56,9 +56,8 @@ session::~session() {
   SSL_CTX_free(ctx_);
 }
 
-bool session::read_some(size_t& result, native_socket /* fd */, void* buf,
-                        size_t len) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
+bool session::read_some(size_t& result, native_socket, void* buf, size_t len) {
+  CAF_LOG_TRACE(CAF_ARG(len));
   if (len == 0)
     return 0;
   auto ret = SSL_read(ssl_, buf, len);
@@ -70,9 +69,9 @@ bool session::read_some(size_t& result, native_socket /* fd */, void* buf,
   return handle_ssl_result(ret);
 }
 
-bool session::write_some(size_t& result, native_socket /* fd */,
-                         const void* buf, size_t len) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
+bool session::write_some(size_t& result, native_socket, const void* buf,
+                         size_t len) {
+  CAF_LOG_TRACE(CAF_ARG(len));
   if (len == 0)
     return true;
   auto ret = SSL_write(ssl_, buf, len);
