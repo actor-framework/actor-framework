@@ -39,60 +39,6 @@ using namespace caf::io;
 
 namespace {
 
-behavior drop_all(event_based_actor* self) {
-  return {
-    [=](stream<int>& in, std::string& fname) {
-      CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_sink(
-        // input stream
-        in,
-        // initialize state
-        [](unit_t&) {
-          // nop
-        },
-        // processing step
-        [](unit_t&, int) {
-          // nop
-        },
-        // cleanup and produce void "result"
-        [](unit_t&) {
-          CAF_LOG_INFO("drop_all done");
-        }
-      );
-    }
-  };
-}
-
-void streamer_without_result(event_based_actor* self, const actor& dest) {
-  CAF_LOG_INFO("streamer_without_result initialized");
-  using buf = std::deque<int>;
-  self->new_stream(
-    // destination of the stream
-    dest,
-    // "file name" for the next stage
-    std::make_tuple("test.txt"),
-    // initialize state
-    [&](buf& xs) {
-      xs = buf{1, 2, 3, 4, 5, 6, 7, 8, 9};
-    },
-    // get next element
-    [=](buf& xs, downstream<int>& out, size_t num) {
-      auto n = std::min(num, xs.size());
-      for (size_t i = 0; i < n; ++i)
-        out.push(xs[i]);
-      xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
-    },
-    // check whether we reached the end
-    [=](const buf& xs) {
-      return xs.empty();
-    },
-    // handle result of the stream
-    [=](expected<void>) {
-      // nop
-    }
-  );
-}
-
 class remoting_config : public actor_system_config {
 public:
   remoting_config() {
