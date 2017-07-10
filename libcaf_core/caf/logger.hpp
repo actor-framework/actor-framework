@@ -507,8 +507,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #define CAF_LOG_TERMINATE_EVENT(thisptr, rsn)                                  \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
-               "TERMINATE ; ID ="                                              \
-                 << thisptr->id() << "; NAME =" << thisptr->name()             \
+               "TERMINATE ; ID =" << thisptr->id()                             \
                  << "; REASON =" << deep_to_string(rsn).c_str()                \
                  << "; NODE =" << thisptr->node())
 
