@@ -114,6 +114,7 @@ typename Inspector::result_type inspect(Inspector& f, test_array& x) {
 struct test_empty_non_pod {
   test_empty_non_pod() = default;
   test_empty_non_pod(const test_empty_non_pod&) = default;
+  test_empty_non_pod& operator=(const test_empty_non_pod&) = default;
   virtual void foo() {
     // nop
   }
