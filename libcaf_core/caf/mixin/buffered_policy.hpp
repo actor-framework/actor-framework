@@ -89,7 +89,7 @@ public:
     for (auto& x : this->paths_) {
       CAF_ASSERT(x->open_credit >= csize);
       x->open_credit -= csize;
-      this->emit_batch(*x, csize, wrapped_chunk);
+      this->emit_batch(*x, static_cast<size_t>(csize), wrapped_chunk);
     }
   }
 

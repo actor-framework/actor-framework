@@ -80,7 +80,7 @@ public:
       auto wrapped_chunk = make_message(std::move(chunk));
       for (auto& x : l.paths) {
         x->open_credit -= csize;
-        this->emit_batch(*x, csize, wrapped_chunk);
+        this->emit_batch(*x, static_cast<size_t>(csize), wrapped_chunk);
       }
     }
   }
@@ -96,7 +96,8 @@ public:
         if (csize == 0)
           break;
         x->open_credit -= csize;
-        this->emit_batch(*x, csize, std::move(make_message(std::move(chunk))));
+        this->emit_batch(*x, static_cast<size_t>(csize),
+                         std::move(make_message(std::move(chunk))));
       }
     }
   }
