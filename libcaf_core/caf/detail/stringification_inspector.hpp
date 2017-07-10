@@ -137,9 +137,11 @@ public:
               && !has_to_string<T>::value>
   consume(T& xs) {
     result_ += '[';
-    for (auto&& x : xs) {
+    // use a hand-written for loop instead of for-each to avoid
+    // range-loop-analysis warnings when using this function with vector<bool>
+    for (auto i = xs.begin(); i != xs.end(); ++i) {
       sep();
-      consume(deconst(x));
+      consume(deconst(*i));
     }
     result_ += ']';
   }
