@@ -228,61 +228,36 @@ public:
 
   // Special case to avoid using 1 byte per bool
   error apply(std::vector<bool>& x) {
-    // Convert vector<bool> to a vector<uint64>,
-    // by packing each block of 64 booleans on a 64-bits integer.
-    // To not waste up to 63 bits, the last uint64_t
-    // (ie. the last 'remainder' booleans) is encoded as a var-int
-    auto remainder = static_cast<uint8_t>(x.size() % 64);
-    auto err = apply_builtin(u8_v, &remainder);
-    if (err)
+    auto len = x.size();
+    auto err = begin_sequence(len);
+    if (err || len == 0)
       return err;
     struct {
-      void operator()(std::vector<bool>& lhs, std::vector<uint64_t>& rhs) const {
-        lhs.resize(rhs.size() * 64, false);
+      size_t len;
+      void operator()(std::vector<bool>& lhs, std::vector<uint8_t>& rhs) const {
+        lhs.resize(len, false);
         size_t cpt = 0;
         for (auto v: rhs) {
-          for (int k = 0; k < 64; ++k) {
-            lhs[cpt++] = ((v & (1ul << k)) != 0);
+          for (int k = 0; k < 8; ++k) {
+            lhs[cpt] = ((v & (1 << k)) != 0);
+            if (++cpt >= len)
+              return;
           }
         }
       }
-      void operator()(std::vector<uint64_t>& lhs, std::vector<bool>& rhs) const {
-        if (rhs.empty())
-          return;
-        size_t len = rhs.size() - rhs.size() % 64;
-        lhs.resize(len / 64, 0);
-        for (size_t k = 0; k < len; ++k) {
-          auto b = rhs[k];
+      void operator()(std::vector<uint8_t>& lhs, std::vector<bool>& rhs) const {
+        size_t k = 0;
+        lhs.resize((rhs.size() - 1) / 8 + 1, 0);
+        for (bool b: rhs) {
           if (b)
-            lhs[k / 64] |= (1ul << (k % 64));
+            lhs[k / 8] |= (1 << (k % 8));
+          ++k;
         }
       }
     } assign;
-    std::vector<uint64_t> tmp;
-    err = convert_apply(dref(), x, tmp, assign);
-    if (err || !remainder)
-      return err;
-    // the last uint64_t for 'remainder' bits
-    if (Derived::reads_state) {
-      uint64_t encoded = 0;
-      auto len = x.size();
-      for (int k = 0; k < remainder; ++k) {
-        auto b = x[len - remainder + k];
-        if (b)
-          encoded |= (1ul << k);
-      }
-      return begin_sequence(encoded);
-    } else {
-      uint64_t encoded = 0;
-      err = begin_sequence(encoded);
-      if (err)
-        return err;
-      x.reserve(x.size() + remainder);
-      for (int k = 0; k < remainder; ++k) {
-        x.push_back((bool) (encoded & (1ul << k)));
-      }
-      return none;
-    }
+    assign.len = len;
+    std::vector<uint8_t> tmp;
+    return convert_apply(dref(), x, tmp, assign);
   }
 
   template <class T>
