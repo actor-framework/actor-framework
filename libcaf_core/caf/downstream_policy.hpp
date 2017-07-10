@@ -54,8 +54,6 @@ public:
   // -- communication to downstream actors -------------------------------------
 
   /// Tries sending batches to downstream actors.
-  /// @param hint Optionally passes the last result of `total_credit` to
-  ///             avoid recalculation.
   virtual void emit_batches() = 0;
 
   // -- feedback to upstream policy --------------------------------------------
