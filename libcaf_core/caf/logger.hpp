@@ -312,6 +312,10 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_PRETTY_FUN __PRETTY_FUNCTION__
 #endif // CAF_MSVC
 
+#ifndef CAF_LOG_COMPONENT
+#define CAF_LOG_COMPONENT "caf"
+#endif // CAF_LOG_COMPONENT
+
 #ifndef CAF_LOG_LEVEL
 
 #define CAF_LOG_IMPL(unused1, unused2, unused3)
@@ -330,10 +334,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOG_TRACE(unused)
 
 #else // CAF_LOG_LEVEL
-
-#ifndef CAF_LOG_COMPONENT
-#define CAF_LOG_COMPONENT "caf"
-#endif // CAF_LOG_COMPONENT
 
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
   do {                                                                         \
