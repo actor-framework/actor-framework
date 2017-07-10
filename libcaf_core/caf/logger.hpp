@@ -471,10 +471,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
                  << "; NODE =" << ref.node()                                   \
                  << "; GROUPS =" << logger::joined_groups_of(ref))
 
-#define CAF_LOG_INIT_EVENT(aName, aHide)                                       \
-  CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
-               "INIT ; NAME =" << aName << "; HIDDEN =" << aHide)
-
 #define CAF_LOG_SEND_EVENT(ptr)                                                \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
                "SEND ; TO ="                                                   \
