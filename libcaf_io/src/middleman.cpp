@@ -153,7 +153,7 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
 }
 
 expected<uint16_t> middleman::publish_local_groups(uint16_t port,
-                                                   const char* in) {
+                                                   const char* in, bool reuse) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
   auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
@@ -163,7 +163,7 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
     };
   };
   auto gn = system().spawn<hidden>(group_nameserver);
-  auto result = publish(gn, port, in);
+  auto result = publish(gn, port, in, reuse);
   // link gn to our manager
   if (result)
     manager_->add_link(actor_cast<abstract_actor*>(gn));

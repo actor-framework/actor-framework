@@ -82,7 +82,8 @@ public:
   /// @returns The actual port the OS uses after `bind()`. If `port == 0`
   ///          the OS chooses a random high-level port.
   expected<uint16_t> publish_local_groups(uint16_t port,
-                                          const char* in = nullptr);
+                                          const char* in = nullptr,
+                                          bool reuse = false);
 
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.
