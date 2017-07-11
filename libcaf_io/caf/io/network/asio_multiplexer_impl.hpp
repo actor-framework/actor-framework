@@ -285,6 +285,21 @@ multiplexer::supervisor_ptr asio_multiplexer::make_supervisor() {
   return std::unique_ptr<asio_supervisor>(new asio_supervisor(service()));
 }
 
+bool asio_multiplexer::try_run_once() {
+  boost::system::error_code ec;
+  auto num = service().poll(ec);
+  if (ec)
+    CAF_RAISE_ERROR(ec.message());
+  return num > 0;
+}
+
+void asio_multiplexer::run_once() {
+  boost::system::error_code ec;
+  service().run_one(ec);
+  if (ec)
+    CAF_RAISE_ERROR(ec.message());
+}
+
 void asio_multiplexer::run() {
   CAF_LOG_TRACE("asio-based multiplexer");
   boost::system::error_code ec;

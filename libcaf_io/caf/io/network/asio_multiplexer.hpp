@@ -80,6 +80,10 @@ public:
 
   supervisor_ptr make_supervisor() override;
 
+  bool try_run_once() override;
+
+  void run_once() override;
+
   void run() override;
 
   boost::asio::io_service* pimpl() override;

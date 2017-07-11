@@ -308,14 +308,15 @@ namespace network {
     }
   }
 
-  void default_multiplexer::run() {
+  bool default_multiplexer::poll_once(bool block) {
     CAF_LOG_TRACE("epoll()-based multiplexer");
-    while (shadow_ > 0) {
+    // Keep running in case of `EINTR`.
+    for (;;) {
       int presult = epoll_wait(epollfd_, pollset_.data(),
-                               static_cast<int>(pollset_.size()), -1);
-      CAF_LOG_DEBUG("epoll_wait() on "      << CAF_ARG(shadow_)
-                    << " sockets reported " << CAF_ARG(presult)
-                    << " event(s)");
+                               static_cast<int>(pollset_.size()),
+                               block ? -1 : 0);
+      CAF_LOG_DEBUG("epoll_wait() on"      << shadow_
+                    << "sockets reported" << presult << "event(s)");
       if (presult < 0) {
         switch (errno) {
           case EINTR: {
@@ -329,6 +330,8 @@ namespace network {
           }
         }
       }
+      if (presult == 0)
+        return false;
       auto iter = pollset_.begin();
       auto last = iter + presult;
       for (; iter != last; ++iter) {
@@ -340,7 +343,22 @@ namespace network {
         handle(me);
       }
       events_.clear();
+      return true;
     }
+  }
+
+  bool default_multiplexer::try_run_once() {
+    return poll_once(false);
+  }
+
+  bool default_multiplexer::run_once() {
+    return poll_once(true);
+  }
+
+  void default_multiplexer::run() {
+    CAF_LOG_TRACE("epoll()-based multiplexer");
+    while (shadow_ > 0)
+      poll_once(true);
   }
 
   void default_multiplexer::handle(const default_multiplexer::event& e) {
@@ -439,9 +457,7 @@ namespace network {
     shadow_.push_back(&pipe_reader_);
   }
 
-  void default_multiplexer::run() {
-    CAF_LOG_TRACE("poll()-based multiplexer; " << CAF_ARG(input_mask)
-                  << CAF_ARG(output_mask) << CAF_ARG(error_mask));
+  bool default_multiplexer::poll_once(bool block) {
     // we store the results of poll() in a separate vector , because
     // altering the pollset while traversing it is not exactly a
     // bright idea ...
@@ -451,15 +467,15 @@ namespace network {
       event_handler* ptr;     // nullptr in case of a pipe event
     };
     std::vector<fd_event> poll_res;
-    while (!pollset_.empty()) {
+    for(;;) {
       int presult;
-      CAF_LOG_DEBUG(CAF_ARG(pollset_.size()));
 #     ifdef CAF_WINDOWS
         presult = ::WSAPoll(pollset_.data(),
-                            static_cast<ULONG>(pollset_.size()), -1);
+                            static_cast<ULONG>(pollset_.size()),
+                            block ? -1 : 0);
 #     else
         presult = ::poll(pollset_.data(),
-                         static_cast<nfds_t>(pollset_.size()), -1);
+                         static_cast<nfds_t>(pollset_.size()), block ? -1 : 0);
 #     endif
       if (presult < 0) {
         switch (last_socket_error()) {
@@ -482,6 +498,8 @@ namespace network {
         }
         continue; // rince and repeat
       }
+      if (presult == 0)
+        return false;
       // scan pollset for events first, because we might alter pollset_
       // while running callbacks (not a good idea while traversing it)
       CAF_LOG_DEBUG("scan pollset for socket events");
@@ -508,7 +526,23 @@ namespace network {
         handle(me);
       }
       events_.clear();
+      return true;
     }
+  }
+
+  bool default_multiplexer::try_run_once() {
+    return poll_once(false);
+  }
+
+  void default_multiplexer::run_once() {
+    poll_once(true);
+  }
+
+  void default_multiplexer::run() {
+    CAF_LOG_TRACE("poll()-based multiplexer:" << CAF_ARG(input_mask)
+                  << CAF_ARG(output_mask) << CAF_ARG(error_mask));
+    while (!pollset_.empty())
+      poll_once(true);
   }
 
   void default_multiplexer::handle(const default_multiplexer::event& e) {

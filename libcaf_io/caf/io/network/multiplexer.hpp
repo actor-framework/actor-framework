@@ -96,7 +96,14 @@ public:
   /// Creates an instance using the networking backend compiled with CAF.
   static std::unique_ptr<multiplexer> make(actor_system& sys);
 
-  /// Runs the multiplexers event loop.
+  /// Exectutes all pending events without blocking.
+  /// @returns `true` if at least one event was called, `false` otherwise.
+  virtual bool try_run_once() = 0;
+
+  /// Runs at least one event and blocks if needed.
+  virtual void run_once() = 0;
+
+  /// Runs events until all connection are closed.
   virtual void run() = 0;
 
   /// Invokes @p fun in the multiplexer's event loop, calling `fun()`

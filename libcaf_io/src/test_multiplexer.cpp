@@ -251,6 +251,14 @@ auto test_multiplexer::make_supervisor() -> supervisor_ptr {
   return nullptr;
 }
 
+bool test_multiplexer::try_run_once() {
+  return try_exec_runnable() || try_read_data() || try_accept_connection();
+}
+
+void test_multiplexer::run_once() {
+  try_run_once();
+}
+
 void test_multiplexer::run() {
   // nop
 }

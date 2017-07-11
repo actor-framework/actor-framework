@@ -300,6 +300,12 @@ public:
 
   supervisor_ptr make_supervisor() override;
 
+  bool poll_once(bool block);
+
+  bool try_run_once() override;
+
+  void run_once() override;
+
   void run() override;
 
   void add(operation op, native_socket fd, event_handler* ptr);
