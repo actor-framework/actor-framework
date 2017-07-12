@@ -195,7 +195,7 @@ public:
 
   template <size_t N>
   bool accepts(int level, const char (&component)[N]) {
-    return accepts(level, component, component + N);
+    return accepts(level, component, component + N - 1);
   }
 
   /** @endcond */
