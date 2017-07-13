@@ -58,7 +58,8 @@ struct fixture {
 behavior make_pong_behavior() {
   return {
     [](int val) -> int {
-      CAF_MESSAGE("pong with " << ++val);
+      ++val;
+      CAF_MESSAGE("pong with " << val);
       return val;
     }
   };
