@@ -458,6 +458,7 @@ namespace network {
   }
 
   bool default_multiplexer::poll_once(bool block) {
+    CAF_LOG_TRACE("poll()-based multiplexer");
     // we store the results of poll() in a separate vector , because
     // altering the pollset while traversing it is not exactly a
     // bright idea ...
@@ -477,6 +478,8 @@ namespace network {
         presult = ::poll(pollset_.data(),
                          static_cast<nfds_t>(pollset_.size()), block ? -1 : 0);
 #     endif
+      CAF_LOG_DEBUG("poll() on" << pollset_.size() 
+                    << "sockets reported" << presult << "event(s)");
       if (presult < 0) {
         switch (last_socket_error()) {
           case EINTR: {
@@ -658,30 +661,31 @@ bool is_error(ssize_t res, bool is_nonblock) {
   return false;
 }
 
-bool read_some(size_t& result, native_socket fd, void* buf, size_t len) {
+rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   auto sres = ::recv(fd, reinterpret_cast<socket_recv_ptr>(buf), len, 0);
   CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
   if (is_error(sres, true) || sres == 0) {
     // recv returns 0  when the peer has performed an orderly shutdown
-    return false;
+    return rw_state::failure;
   }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  return true;
+  return rw_state::success;
 }
 
-bool write_some(size_t& result, native_socket fd, const void* buf, size_t len) {
+rw_state write_some(size_t& result, native_socket fd, const void* buf,
+                    size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf),
                      len, no_sigpipe_flag);
   CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
   if (is_error(sres, true))
-    return false;
+    return rw_state::failure;
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  return true;
+  return rw_state::success;
 }
 
-bool try_accept(native_socket& result, native_socket fd) {
+ bool try_accept(native_socket& result, native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   sockaddr_storage addr;
   memset(&addr, 0, sizeof(addr));
@@ -699,23 +703,11 @@ bool try_accept(native_socket& result, native_socket fd) {
 
 // -- Policy class for TCP wrapping above free functions -----------------------
 
-namespace {
-
-using read_some_fun = decltype(read_some)*;
-using write_some_fun = decltype(write_some)*;
-using try_accept_fun = decltype(try_accept)*;
-
-struct tcp_policy {
-  static read_some_fun read_some;
-  static write_some_fun write_some;
-  static try_accept_fun try_accept;
-};
-
 read_some_fun tcp_policy::read_some = network::read_some;
-write_some_fun tcp_policy::write_some = network::write_some;
-try_accept_fun tcp_policy::try_accept = network::try_accept;
 
-} // namespace <anonymous>
+write_some_fun tcp_policy::write_some = network::write_some;
+
+try_accept_fun tcp_policy::try_accept = network::try_accept;
 
 // -- Platform-independent parts of the default_multiplexer --------------------
 
@@ -847,68 +839,7 @@ void default_multiplexer::exec_later(resumable* ptr) {
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {
   CAF_LOG_TRACE("");
-  class impl : public scribe {
-  public:
-    impl(default_multiplexer& mx, native_socket sockfd)
-        : scribe(network::conn_hdl_from_socket(sockfd)),
-          launched_(false),
-          stream_(mx, sockfd) {
-      // nop
-    }
-    void configure_read(receive_policy::config config) override {
-      CAF_LOG_TRACE("");
-      stream_.configure_read(config);
-      if (!launched_)
-        launch();
-    }
-    void ack_writes(bool enable) override {
-      CAF_LOG_TRACE(CAF_ARG(enable));
-      stream_.ack_writes(enable);
-    }
-    std::vector<char>& wr_buf() override {
-      return stream_.wr_buf();
-    }
-    std::vector<char>& rd_buf() override {
-      return stream_.rd_buf();
-    }
-    void stop_reading() override {
-      CAF_LOG_TRACE("");
-      stream_.stop_reading();
-      detach(&stream_.backend(), false);
-    }
-    void flush() override {
-      CAF_LOG_TRACE("");
-      stream_.flush(this);
-    }
-    std::string addr() const override {
-      auto x = remote_addr_of_fd(stream_.fd());
-      if (!x)
-        return "";
-      return *x;
-    }
-    uint16_t port() const override {
-      auto x = remote_port_of_fd(stream_.fd());
-      if (!x)
-        return 0;
-      return *x;
-    }
-    void launch() {
-      CAF_LOG_TRACE("");
-      CAF_ASSERT(!launched_);
-      launched_ = true;
-      stream_.start(this);
-    }
-    void add_to_loop() override {
-      stream_.activate(this);
-    }
-    void remove_from_loop() override {
-      stream_.passivate();
-    }
-  private:
-    bool launched_;
-    stream_impl<tcp_policy> stream_;
-  };
-  return make_counted<impl>(*this, fd);
+  return make_counted<scribe_impl>(*this, fd);
 }
 
 expected<scribe_ptr>
@@ -922,58 +853,7 @@ default_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
 doorman_ptr default_multiplexer::new_doorman(native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   CAF_ASSERT(fd != network::invalid_native_socket);
-  class impl : public doorman {
-  public:
-    impl(default_multiplexer& mx, native_socket sockfd)
-        : doorman(network::accept_hdl_from_socket(sockfd)),
-          acceptor_(mx, sockfd) {
-      // nop
-    }
-    bool new_connection() override {
-      CAF_LOG_TRACE("");
-      if (detached())
-         // we are already disconnected from the broker while the multiplexer
-         // did not yet remove the socket, this can happen if an I/O event causes
-         // the broker to call close_all() while the pollset contained
-         // further activities for the broker
-         return false;
-      auto& dm = acceptor_.backend();
-      auto sptr = dm.new_scribe(acceptor_.accepted_socket());
-      auto hdl = sptr->hdl();
-      parent()->add_scribe(std::move(sptr));
-      return doorman::new_connection(&dm, hdl);
-    }
-    void stop_reading() override {
-      CAF_LOG_TRACE("");
-      acceptor_.stop_reading();
-      detach(&acceptor_.backend(), false);
-    }
-    void launch() override {
-      CAF_LOG_TRACE("");
-      acceptor_.start(this);
-    }
-    std::string addr() const override {
-      auto x = local_addr_of_fd(acceptor_.fd());
-      if (!x)
-        return "";
-      return std::move(*x);
-    }
-    uint16_t port() const override {
-      auto x = local_port_of_fd(acceptor_.fd());
-      if (!x)
-        return 0;
-      return *x;
-    }
-    void add_to_loop() override {
-      acceptor_.activate(this);
-    }
-    void remove_from_loop() override {
-      acceptor_.passivate();
-    }
-  private:
-    acceptor_impl<tcp_policy> acceptor_;
-  };
-  return make_counted<impl>(*this, fd);
+  return make_counted<doorman_impl>(*this, fd);
 }
 
 expected<doorman_ptr> default_multiplexer::new_tcp_doorman(uint16_t port,
@@ -1475,6 +1355,129 @@ expected<uint16_t> remote_port_of_fd(native_socket fd) {
   CALL_CFUN(tmp, cc_zero, "getpeername",
             getpeername(fd, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
+}
+
+// -- default doorman and scribe implementations -------------------------------
+  
+doorman_impl::doorman_impl(default_multiplexer& mx, native_socket sockfd)
+    : doorman(network::accept_hdl_from_socket(sockfd)),
+      acceptor_(mx, sockfd) {
+  // nop
+}
+
+bool doorman_impl::new_connection() {
+  CAF_LOG_TRACE("");
+  if (detached())
+     // we are already disconnected from the broker while the multiplexer
+     // did not yet remove the socket, this can happen if an I/O event causes
+     // the broker to call close_all() while the pollset contained
+     // further activities for the broker
+     return false;
+  auto& dm = acceptor_.backend();
+  auto sptr = dm.new_scribe(acceptor_.accepted_socket());
+  auto hdl = sptr->hdl();
+  parent()->add_scribe(std::move(sptr));
+  return doorman::new_connection(&dm, hdl);
+}
+
+void doorman_impl::stop_reading() {
+  CAF_LOG_TRACE("");
+  acceptor_.stop_reading();
+  detach(&acceptor_.backend(), false);
+}
+
+void doorman_impl::launch() {
+  CAF_LOG_TRACE("");
+  acceptor_.start(this);
+}
+
+std::string doorman_impl::addr() const {
+  auto x = local_addr_of_fd(acceptor_.fd());
+  if (!x)
+    return "";
+  return std::move(*x);
+}
+
+uint16_t doorman_impl::port() const {
+  auto x = local_port_of_fd(acceptor_.fd());
+  if (!x)
+    return 0;
+  return *x;
+}
+
+void doorman_impl::add_to_loop() {
+  acceptor_.activate(this);
+}
+
+void doorman_impl::remove_from_loop() {
+  acceptor_.passivate();
+}
+
+scribe_impl::scribe_impl(default_multiplexer& mx, native_socket sockfd)
+    : scribe(network::conn_hdl_from_socket(sockfd)),
+      launched_(false),
+      stream_(mx, sockfd) {
+  // nop
+}
+
+void scribe_impl::configure_read(receive_policy::config config) {
+  CAF_LOG_TRACE("");
+  stream_.configure_read(config);
+  if (!launched_)
+    launch();
+}
+
+void scribe_impl::ack_writes(bool enable) {
+  CAF_LOG_TRACE(CAF_ARG(enable));
+  stream_.ack_writes(enable);
+}
+
+std::vector<char>& scribe_impl::wr_buf() {
+  return stream_.wr_buf();
+}
+
+std::vector<char>& scribe_impl::rd_buf() {
+  return stream_.rd_buf();
+}
+
+void scribe_impl::stop_reading() {
+  CAF_LOG_TRACE("");
+  stream_.stop_reading();
+  detach(&stream_.backend(), false);
+}
+
+void scribe_impl::flush() {
+  CAF_LOG_TRACE("");
+  stream_.flush(this);
+}
+
+std::string scribe_impl::addr() const {
+  auto x = remote_addr_of_fd(stream_.fd());
+  if (!x)
+    return "";
+  return *x;
+}
+
+uint16_t scribe_impl::port() const {
+  auto x = remote_port_of_fd(stream_.fd());
+  if (!x)
+    return 0;
+  return *x;
+}
+
+void scribe_impl::launch() {
+  CAF_LOG_TRACE("");
+  CAF_ASSERT(!launched_);
+  launched_ = true;
+  stream_.start(this);
+}
+
+void scribe_impl::add_to_loop() {
+  stream_.activate(this);
+}
+
+void scribe_impl::remove_from_loop() {
+  stream_.passivate();
 }
 
 } // namespace network
