@@ -19,6 +19,7 @@ flags = [
 '-I./libcaf_test/',
 '-I./libcaf_python/',
 '-I./libcaf_opencl/',
+'-I./libcaf_openssl/'
 ]
 
 # Set this to the absolute path to the folder (NOT the file!) containing the
