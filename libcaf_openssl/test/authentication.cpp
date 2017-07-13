@@ -48,9 +48,10 @@ public:
     load<io::middleman>();
     load<openssl::manager>();
     add_message_type<std::vector<int>>("std::vector<int>");
-    actor_system_config::parse(test::engine::argc(),
-                               test::engine::argv());
-    scheduler_max_threads = 1;
+    actor_system_config::parse(test::engine::argc(), test::engine::argv());
+    middleman_detach_multiplexer = false;
+    middleman_detach_utility_actors = false;
+    scheduler_policy = atom("testing");
   }
 
   static std::string data_dir() {
@@ -70,36 +71,38 @@ public:
 behavior make_pong_behavior() {
   return {
     [](int val) -> int {
-      CAF_MESSAGE("pong with " << ++val);
+      ++val;
+      CAF_MESSAGE("pong " << val);
       return val;
     }
   };
 }
 
 behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
-  CAF_MESSAGE("ping with " << 0);
+  CAF_MESSAGE("ping " << 0);
   self->send(pong, 0);
   return {
     [=](int val) -> int {
-      if (val == 3) {
-        CAF_MESSAGE("ping with exit");
-        self->send_exit(self->current_sender(),
-                        exit_reason::user_shutdown);
-        CAF_MESSAGE("ping quits");
+      CAF_MESSAGE("ping " << val);
+      if (val >= 3) {
+        CAF_MESSAGE("terminate ping");
         self->quit();
       }
-      CAF_MESSAGE("ping with " << val);
       return val;
     }
   };
 }
 
 struct fixture {
+  using sched_t = scheduler::test_coordinator;
+
   config server_side_config;
   config client_side_config;
   bool initialized;
   union { actor_system server_side; };
   union { actor_system client_side; };
+  sched_t* ssched;
+  sched_t* csched;
 
   fixture() : initialized(false) {
     // nop
@@ -136,10 +139,40 @@ struct fixture {
       }
       *x.second = std::move(path);
     }
+    CAF_MESSAGE("initialize server side");
     new (&server_side) actor_system(server_side_config);
+    CAF_MESSAGE("initialize client side");
     new (&client_side) actor_system(client_side_config);
+    ssched = &dynamic_cast<sched_t&>(server_side.scheduler());
+    csched = &dynamic_cast<sched_t&>(client_side.scheduler());
     initialized = true;
     return true;
+  }
+
+  sched_t& sched_by_sys(actor_system& sys) {
+    return &sys == &server_side ? *ssched : *csched;
+  }
+  bool exec_one(actor_system& sys) {
+    CAF_ASSERT(initialized);
+    CAF_PUSH_AID(0);
+    CAF_SET_LOGGER_SYS(&sys);
+    return sched_by_sys(sys).try_run_once()
+           || sys.middleman().backend().try_run_once();
+  }
+
+  void exec_loop(actor_system& sys) {
+    while (exec_one(sys))
+      ; // nop
+  }
+
+  void exec_loop() {
+    while (exec_one(client_side) | exec_one(server_side))
+      ; // nop
+  }
+
+  void loop_after_next_enqueue(actor_system& sys) {
+    auto s = &sys == &server_side ? ssched : csched;
+    s->after_next_enqueue([=] { exec_loop(); });
   }
 };
 
@@ -154,23 +187,44 @@ CAF_TEST(authentication_succes) {
   if (!init(false))
     return;
   // server side
-  CAF_EXP_THROW(port,
-                publish(server_side.spawn(make_pong_behavior), 0, local_host));
+  CAF_MESSAGE("spawn pong on server");
+  auto spong = server_side.spawn(make_pong_behavior);
+  exec_loop();
+  loop_after_next_enqueue(server_side);
+  CAF_MESSAGE("publish pong");
+  CAF_EXP_THROW(port, publish(spong, 0, local_host));
+  exec_loop();
   // client side
+  CAF_MESSAGE("connect to pong via port " << port);
+  loop_after_next_enqueue(client_side);
   CAF_EXP_THROW(pong, remote_actor(client_side, local_host, port));
+  CAF_MESSAGE("spawn ping and exchange messages");
   client_side.spawn(make_ping_behavior, pong);
+  exec_loop();
+  CAF_MESSAGE("terminate pong");
+  anon_send_exit(spong, exit_reason::user_shutdown);
+  exec_loop();
 }
 
 CAF_TEST(authentication_failure) {
   if (!init(true))
     return;
   // server side
-  auto pong = server_side.spawn(make_pong_behavior);
-  CAF_EXP_THROW(port, publish(pong, 0, local_host));
+  CAF_MESSAGE("spawn pong on server");
+  auto spong = server_side.spawn(make_pong_behavior);
+  exec_loop();
+  loop_after_next_enqueue(server_side);
+  CAF_MESSAGE("publish pong");
+  CAF_EXP_THROW(port, publish(spong, 0, local_host));
+  exec_loop();
   // client side
+  CAF_MESSAGE("connect to pong via port " << port);
+  loop_after_next_enqueue(client_side);
   auto remote_pong = remote_actor(client_side, local_host, port);
-  CAF_REQUIRE(!remote_pong);
-  anon_send_exit(pong, exit_reason::user_shutdown);
+  CAF_CHECK(!remote_pong);
+  CAF_MESSAGE("terminate pong");
+  anon_send_exit(spong, exit_reason::user_shutdown);
+  exec_loop();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
