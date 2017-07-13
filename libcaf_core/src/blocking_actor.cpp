@@ -75,7 +75,7 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
       srb(src, mid);
     }
   } else {
-    CAF_LOG_ACCEPT_EVENT();
+    CAF_LOG_ACCEPT_EVENT(false);
   }
 }
 

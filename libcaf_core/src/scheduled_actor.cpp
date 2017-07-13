@@ -128,7 +128,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   auto sender = ptr->sender;
   switch (mailbox().enqueue(ptr.release())) {
     case detail::enqueue_result::unblocked_reader: {
-      CAF_LOG_ACCEPT_EVENT();
+      CAF_LOG_ACCEPT_EVENT(true);
       // add a reference count to this actor and re-schedule it
       intrusive_ptr_add_ref(ctrl());
       if (getf(is_detached_flag)) {
@@ -152,7 +152,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
     }
     case detail::enqueue_result::success:
       // enqueued to a running actors' mailbox; nothing to do
-      CAF_LOG_ACCEPT_EVENT();
+      CAF_LOG_ACCEPT_EVENT(false);
       break;
   }
 }

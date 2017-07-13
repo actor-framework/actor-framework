@@ -489,8 +489,9 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOG_REJECT_EVENT()                                                 \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "REJECT")
 
-#define CAF_LOG_ACCEPT_EVENT()                                                 \
-  CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "ACCEPT")
+#define CAF_LOG_ACCEPT_EVENT(unblocked)                                        \
+  CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
+               "ACCEPT ; UNBLOCKED =" << unblocked)
 
 #define CAF_LOG_DROP_EVENT()                                                   \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "DROP")
