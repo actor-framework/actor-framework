@@ -118,8 +118,10 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // protocol instance of BASP
   basp::instance instance;
 
+  using ctx_map = std::unordered_map<connection_handle, connection_context>;
+
   // keeps context information for all open connections
-  std::unordered_map<connection_handle, connection_context> ctx;
+  ctx_map ctx;
 
   // points to the current context for callbacks such as `make_proxy`
   connection_context* this_context = nullptr;

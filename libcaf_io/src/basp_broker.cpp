@@ -603,10 +603,25 @@ behavior basp_broker::make_behavior() {
       //       hops to be resilient to (rare) network failures or if a
       //       node is reachable via several interfaces and only one fails
       auto nid = state.instance.tbl().lookup_direct(msg.handle);
-      // tell BASP instance we've lost connection
-      state.instance.handle_node_shutdown(nid);
-      CAF_ASSERT(nid == none
-                 || !state.instance.tbl().reachable(nid));
+      if (nid != none) {
+        // tell BASP instance we've lost connection
+        state.instance.handle_node_shutdown(nid);
+      } else {
+        // check whether the connection failed during handshake
+        auto pred = [&](const basp_broker_state::ctx_map::value_type& x) {
+          return x.second.hdl == msg.handle;
+        };
+        auto e = state.ctx.end();
+        auto i = std::find_if(state.ctx.begin(), e, pred);
+        if (i != e) {
+          auto& ref = i->second;
+          if (ref.callback) {
+            CAF_LOG_DEBUG("connection closed during handshake");
+            ref.callback->deliver(sec::disconnect_during_handshake);
+          }
+          state.ctx.erase(i);
+        }
+      }
     },
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {
