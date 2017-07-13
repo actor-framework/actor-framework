@@ -26,6 +26,7 @@
 #include <string>
 #include <cstdint>
 
+#include "caf/unit.hpp"
 #include "caf/config.hpp"
 #include "caf/extend.hpp"
 #include "caf/ref_counted.hpp"
@@ -67,8 +68,11 @@
 # include <sys/socket.h>
 #endif
 
-// poll xs epoll backend
-#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+// kqueue vs poll vs epoll backend
+#if defined(CAF_MACOS) || defined(CAF_BSD) // kqueue() multiplexer
+# define CAF_KQUEUE_MULTIPLEXER
+# include <sys/event.h>
+#elif !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # define CAF_POLL_MULTIPLEXER
 # ifndef CAF_WINDOWS
 #   include <poll.h>
@@ -114,8 +118,19 @@ namespace network {
   constexpr int ec_interrupted_syscall = EINTR;
 #endif
 
-// poll vs epoll backend
-#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+// kqueue vs poll vs epoll backend
+#if defined(CAF_MACOS) || defined(CAF_BSD)
+  constexpr int input_mask  = 0x01;
+  constexpr int output_mask = 0x02;
+  constexpr int error_mask  = 0x04;
+  // we use the shadow data to store the changeset for kqueue
+  using multiplexer_data = struct kevent;
+  class event_handler;
+  struct multiplexer_poll_shadow_data {
+    std::vector<struct kevent> changes; // changelist passed to kevent()
+    std::vector<native_socket> fds;  // registered fds
+  };
+#elif !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # ifdef CAF_WINDOWS
     // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
     //                Winsock provider, the WSAPoll function will fail.
@@ -129,7 +144,6 @@ namespace network {
   using multiplexer_data = pollfd;
   using multiplexer_poll_shadow_data = std::vector<event_handler*>;
 #else
-# define CAF_EPOLL_MULTIPLEXER
   constexpr int input_mask  = EPOLLIN;
   constexpr int error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
   constexpr int output_mask = EPOLLOUT;
@@ -359,7 +373,7 @@ private:
 
   //resumable* rd_dispatch_request();
 
-  native_socket epollfd_; // unused in poll() implementation
+  native_socket loopfd_; // unused in poll() implementation
   std::vector<multiplexer_data> pollset_;
   std::vector<event> events_; // always sorted by .fd
   multiplexer_poll_shadow_data shadow_;
