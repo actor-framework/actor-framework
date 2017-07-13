@@ -301,6 +301,30 @@ bool operator!=(const typed_actor<Xs...>& x,
   return !(x == y);
 }
 
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator==(const typed_actor<Xs...>& x, std::nullptr_t) noexcept {
+  return actor_addr::compare(actor_cast<actor_control_block*>(x), nullptr) == 0;
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator==(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
+  return actor_addr::compare(actor_cast<actor_control_block*>(x), nullptr) == 0;
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator!=(const typed_actor<Xs...>& x, std::nullptr_t) noexcept {
+  return !(x == nullptr);
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator!=(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
+  return !(x == nullptr);
+}
+
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.
 /// @relates typed_actor
 template <class... Xs, class... Ys>
