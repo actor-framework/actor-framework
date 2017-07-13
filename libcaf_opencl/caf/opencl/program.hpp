@@ -27,13 +27,11 @@
 
 #include "caf/opencl/device.hpp"
 #include "caf/opencl/global.hpp"
-#include "caf/opencl/smart_ptr.hpp"
+
+#include "caf/opencl/detail/raw_ptr.hpp"
 
 namespace caf {
 namespace opencl {
-
-template <class... Ts>
-class actor_facade;
 
 class program;
 using program_ptr = intrusive_ptr<program>;
@@ -42,24 +40,22 @@ using program_ptr = intrusive_ptr<program>;
 class program : public ref_counted {
 public:
   friend class manager;
-  template <class... Ts>
-  friend class actor_facade;
   template <bool PassConfig, class... Ts>
-  friend class opencl_actor;
+  friend class actor_facade;
   template <class T, class... Ts>
   friend intrusive_ptr<T> caf::make_counted(Ts&&...);
 
 private:
-  program(cl_context_ptr context, cl_command_queue_ptr queue,
-          cl_program_ptr prog,
-          std::map<std::string,cl_kernel_ptr> available_kernels);
+  program(detail::raw_context_ptr context, detail::raw_command_queue_ptr queue,
+          detail::raw_program_ptr prog,
+          std::map<std::string, detail::raw_kernel_ptr> available_kernels);
 
   ~program();
 
-  cl_context_ptr context_;
-  cl_program_ptr program_;
-  cl_command_queue_ptr queue_;
-  std::map<std::string,cl_kernel_ptr> available_kernels_;
+  detail::raw_context_ptr context_;
+  detail::raw_program_ptr program_;
+  detail::raw_command_queue_ptr queue_;
+  std::map<std::string, detail::raw_kernel_ptr> available_kernels_;
 };
 
 } // namespace opencl

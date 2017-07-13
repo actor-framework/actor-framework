@@ -33,8 +33,8 @@ using namespace std;
 namespace caf {
 namespace opencl {
 
-device_ptr device::create(const cl_context_ptr& context,
-                          const cl_device_ptr& device_id,
+device_ptr device::create(const detail::raw_context_ptr& context,
+                          const detail::raw_device_ptr& device_id,
                           unsigned id) {
   CAF_LOG_DEBUG("creating device for opencl device with id:" << CAF_ARG(id));
   // look up properties we need to create the command queue
@@ -42,14 +42,18 @@ device_ptr device::create(const cl_context_ptr& context,
   bool profiling = false; // (supported & CL_QUEUE_PROFILING_ENABLE) != 0u;
   bool out_of_order = (supported & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) != 0u;
   unsigned properties = profiling ? CL_QUEUE_PROFILING_ENABLE : 0;
-  properties |= out_of_order ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : 0;
+  if (out_of_order)
+    properties |= CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
   // create the command queue
-  cl_command_queue_ptr command_queue{v2get(CAF_CLF(clCreateCommandQueue),
-                                           context.get(), device_id.get(),
-                                           properties),
-                                     false};
+  detail::raw_command_queue_ptr command_queue{
+    v2get(CAF_CLF(clCreateCommandQueue),
+          context.get(), device_id.get(),
+          properties),
+    false
+  };
   // create the device
-  auto dev = make_counted<device>(device_id, std::move(command_queue), context, id);
+  auto dev = make_counted<device>(device_id, std::move(command_queue),
+                                  context, id);
   //device dev{device_id, std::move(command_queue), context, id};
   // look up device properties
   dev->address_bits_ = info<cl_uint>(device_id, CL_DEVICE_ADDRESS_BITS);
@@ -103,7 +107,8 @@ void device::synchronize() {
   clFinish(queue_.get());
 }
 
-string device::info_string(const cl_device_ptr& device_id, unsigned info_flag) {
+string device::info_string(const detail::raw_device_ptr& device_id,
+                           unsigned info_flag) {
   size_t size;
   clGetDeviceInfo(device_id.get(), info_flag, 0, nullptr, &size);
   vector<char> buffer(size);
@@ -112,8 +117,10 @@ string device::info_string(const cl_device_ptr& device_id, unsigned info_flag) {
   return string(buffer.data());
 }
 
-device::device(cl_device_ptr device_id, cl_command_queue_ptr queue,
-               cl_context_ptr context, unsigned id)
+device::device(detail::raw_device_ptr device_id,
+               detail::raw_command_queue_ptr queue,
+               detail::raw_context_ptr context,
+               unsigned id)
   : device_id_(std::move(device_id)),
     queue_(std::move(queue)),
     context_(std::move(context)),

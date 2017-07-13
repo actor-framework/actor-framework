@@ -57,7 +57,7 @@ device_type device_type_from_ulong(cl_ulong dev) {
   }
 }
 
-std::string get_opencl_error(cl_int err) {
+std::string opencl_error(cl_int err) {
   switch (err) {
     case CL_SUCCESS:
       return "CL_SUCCESS";

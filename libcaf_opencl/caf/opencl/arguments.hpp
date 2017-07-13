@@ -28,22 +28,50 @@
 #include "caf/optional.hpp"
 
 #include "caf/opencl/mem_ref.hpp"
+#include "caf/opencl/detail/core.hpp"
 
 namespace caf {
 namespace opencl {
 
+namespace detail {
+
+template <class T, class F>
+std::function<optional<T> (message&)> res_or_none(F fun) {
+ return [fun](message& msg) -> optional<T> {
+    auto res = msg.apply(fun);
+    T result;
+    if (res) {
+      res->apply([&](size_t x) { result = x; });
+      return result;
+    }
+    return none;
+  };
+}
+
+template <class F, class T>
+T try_apply_fun(F& fun, message& msg, const T& fallback) {
+  if (fun) {
+    auto res = fun(msg);
+    if (res)
+      return *res;
+  }
+  return fallback;
+}
+
+} // namespace detail
+
 // Tag classes to mark arguments received in a messages as reference or value
 /// Arguments tagged as `val` are expected as a vector (or value in case
-/// of a private argument). 
-struct val { };
+/// of a private argument).
+struct val {};
 
 /// Arguments tagged as `mref` are expected as mem_ref, which is can be returned
 /// by other opencl actors.
-struct mref { };
+struct mref {};
 
 /// Arguments tagged as `hidden` are created by the actor, using the config
 /// passed in the argument wrapper. Only available for local and priv arguments.
-struct hidden { };
+struct hidden {};
 
 /// Use as a default way to calculate output size. 0 will be set to the number
 /// of work items at runtime.
@@ -54,146 +82,128 @@ struct dummy_size_calculator {
   }
 };
 
-/// Mark an a spawn template argument as input only
+/// Common parent for opencl argument tags for the spawn function.
+struct arg_tag {};
+
+/// Empty tag as an alternative for conditional inheritance.
+struct empty_tag {};
+
+/// Tags the argument as input which requires initialization through a message.
+struct input_tag {};
+
+/// Tags the argument as output which includes its buffer in the result message.
+struct output_tag {};
+
+/// Tags the argument to require specification of the size of its buffer.
+struct requires_size_tag {};
+
+/// Tags the argument as a reference and not a value.
+struct is_ref_tag;
+
+/// Mark a spawn argument as input only
 template <class Arg, class Tag = val>
-struct in {
-  static_assert(std::is_same<Tag,val>::value || std::is_same<Tag,mref>::value,
+struct in : arg_tag, input_tag {
+  static_assert(std::is_same<Tag, val>::value || std::is_same<Tag, mref>::value,
                 "Argument of type `in` must be passed as value or mem_ref.");
   using tag_type = Tag;
-  using arg_type = typename std::decay<Arg>::type;
+  using arg_type = detail::decay_t<Arg>;
 };
 
-/// Mark an a spawn template argument as input and output
+/// Mark a spawn argument as input and output
 template <class Arg, class TagIn = val, class TagOut = val>
-struct in_out {
+struct in_out : arg_tag, input_tag, output_tag {
   static_assert(
-    std::is_same<TagIn,val>::value || std::is_same<TagIn,mref>::value,
+    std::is_same<TagIn, val>::value || std::is_same<TagIn, mref>::value,
     "Argument of type `in_out` must be passed as value or mem_ref."
   );
   static_assert(
-    std::is_same<TagOut,val>::value || std::is_same<TagOut,mref>::value,
+    std::is_same<TagOut, val>::value || std::is_same<TagOut, mref>::value,
     "Argument of type `in_out` must be returned as value or mem_ref."
   );
   using tag_in_type = TagIn;
   using tag_out_type = TagOut;
-  using arg_type = typename std::decay<Arg>::type;
+  using arg_type = detail::decay_t<Arg>;
 };
 
+/// Mark a spawn argument as output only
 template <class Arg, class Tag = val>
-struct out {
-  static_assert(std::is_same<Tag,val>::value || std::is_same<Tag,mref>::value,
+struct out : arg_tag, output_tag, requires_size_tag {
+  static_assert(std::is_same<Tag, val>::value || std::is_same<Tag, mref>::value,
                "Argument of type `out` must be returned as value or mem_ref.");
   using tag_type = Tag;
-  using arg_type = typename std::decay<Arg>::type;
+  using arg_type = detail::decay_t<Arg>;
   out() = default;
   template <class F>
-  out(F fun) {
-    fun_ = [fun](message& msg) -> optional<size_t> {
-      auto res = msg.apply(fun);
-      size_t result;
-      if (res) {
-        res->apply([&](size_t x) { result = x; });
-        return result;
-      }
-      return none;
-    };
+  out(F fun) : fun_{detail::res_or_none<size_t>(fun)} {
+    // nop
   }
   optional<size_t> operator()(message& msg) const {
-    return fun_ ? fun_(msg) : 0UL;
+    return detail::try_apply_fun(fun_, msg, 0UL);
   }
   std::function<optional<size_t> (message&)> fun_;
 };
 
+/// Mark a spawn argument as on-device scratch space
 template <class Arg>
-struct scratch {
-  using arg_type = typename std::decay<Arg>::type;
+struct scratch : arg_tag, requires_size_tag {
+  using arg_type = detail::decay_t<Arg>;
   scratch() = default;
   template <class F>
-  scratch(F fun) {
-    fun_ = [fun](message& msg) -> optional<size_t> {
-      auto res = msg.apply(fun);
-      size_t result;
-      if (res) {
-        res->apply([&](size_t x) { result = x; });
-        return result;
-      }
-      return none;
-    };
+  scratch(F fun) : fun_{detail::res_or_none<size_t>(fun)} {
+    // nop
   }
   optional<size_t> operator()(message& msg) const {
-    return fun_ ? fun_(msg) : 0UL;
+    return detail::try_apply_fun(fun_, msg, 0UL);
   }
   std::function<optional<size_t> (message&)> fun_;
 };
 
-/// Argument placed in local memory. Cannot be initalized from the CPU, but
-/// requires a size that is calculated depending on the input.
+/// Mark a spawn argument as a local memory argument. This argument cannot be
+/// initalized from the CPU, but requires specification of its size. An
+/// optional function allows calculation of the size depeding on the input
+/// message.
 template <class Arg>
-struct local {
-  using arg_type = typename std::decay<Arg>::type;
+struct local : arg_tag, requires_size_tag {
+  using arg_type = detail::decay_t<Arg>;
   local() = default;
-  template <class F>
-  local(size_t size, F fun) : size_(size) {
-    fun_ = [fun](message& msg) -> optional<size_t> {
-      auto res = msg.apply(fun);
-      size_t result;
-      if (res) {
-        res->apply([&](size_t x) { result = x; });
-        return result;
-      }
-      return none;
-    };
-  }
   local(size_t size) : size_(size) { }
+  template <class F>
+  local(size_t size, F fun)
+    : size_(size), fun_{detail::res_or_none<size_t>(fun)} {
+    // nop
+  }
   size_t operator()(message& msg) const {
-    if (fun_) {
-      auto res = fun_(msg);
-      if (res)
-        return *res;
-    }
-    return size_;
+    return detail::try_apply_fun(fun_, msg, size_);
   }
   size_t size_;
   std::function<optional<size_t> (message&)> fun_;
 };
 
-/// Argument placed in private memory. Requires a default value but can
-/// alternatively be calculated depending on the input through a function
-/// passed to the constructor.
+/// Mark a spawn argument as a private argument. Requires a default value but
+/// can optionally be calculated depending on the input through a passed
+/// function.
 template <class Arg, class Tag = hidden>
-struct priv {
-  static_assert(std::is_same<Tag,val>::value || std::is_same<Tag,hidden>::value,
-               "Argument of type `priv` must be returned as value or hidden.");
+struct priv : arg_tag, std::conditional<std::is_same<Tag, val>::value,
+                                        input_tag, empty_tag>::type {
+  static_assert(std::is_same<Tag, val>::value ||
+                std::is_same<Tag, hidden>::value,
+               "Argument of type `priv` must be either a value or hidden.");
   using tag_type = Tag;
-  using arg_type = typename std::decay<Arg>::type;
+  using arg_type = detail::decay_t<Arg>;
   priv() = default;
-  template <class F>
-  priv(Arg val, F fun) : value_(val) {
-    static_assert(std::is_same<Tag,hidden>::value,
-               "Argument of type `priv` can only be initialized with a value"
-               "if it is manged by the actor, i.e., tagged as hidden.");
-    fun_ = [fun](message& msg) -> optional<Arg> {
-      auto res = msg.apply(fun);
-      Arg result;
-      if (res) {
-        res->apply([&](Arg x) { result = x; });
-        return result;
-      }
-      return none;
-    };
-  }
   priv(Arg val) : value_(val) {
-    static_assert(std::is_same<Tag,hidden>::value,
-               "Argument of type `priv` can only be initialized with a value"
-               "if it is manged by the actor, i.e., tagged as hidden.");
+    static_assert(std::is_same<Tag, hidden>::value,
+                  "Argument of type `priv` can only be initialized with a value"
+                  " if it is tagged as hidden.");
+  }
+  template <class F>
+  priv(Arg val, F fun) : value_(val), fun_{detail::res_or_none<Arg>(fun)} {
+    static_assert(std::is_same<Tag, hidden>::value,
+                  "Argument of type `priv` can only be initialized with a value"
+                  " if it is tagged as hidden.");
   }
   Arg operator()(message& msg) const {
-    if (fun_) {
-      auto res = fun_(msg);
-      if (res)
-        return *res;
-    }
-    return value_;
+    return detail::try_apply_fun(fun_, msg, value_);
   }
   Arg value_;
   std::function<optional<Arg> (message&)> fun_;
@@ -212,77 +222,27 @@ struct carr_to_vec<T*> {
 
 /// Filter types for any argument type.
 template <class T>
-struct is_opencl_arg : std::false_type {};
-
-template <class T, class Tag>
-struct is_opencl_arg<in<T, Tag>> : std::true_type {};
-
-template <class T, class TagIn, class TagOut>
-struct is_opencl_arg<in_out<T, TagIn, TagOut>> : std::true_type {};
-
-template <class T, class Tag>
-struct is_opencl_arg<out<T, Tag>> : std::true_type {};
-
-template <class T>
-struct is_opencl_arg<scratch<T>> : std::true_type {};
-
-template <class T>
-struct is_opencl_arg<local<T>> : std::true_type {};
-
-template <class T, class Tag>
-struct is_opencl_arg<priv<T, Tag>> : std::true_type {};
+struct is_opencl_arg : std::is_base_of<arg_tag, T> {};
 
 /// Filter type lists for input arguments
 template <class T>
-struct is_input_arg : std::false_type {};
-
-template <class T, class Tag>
-struct is_input_arg<in<T, Tag>> : std::true_type {};
-
-template <class T, class TagIn, class TagOut>
-struct is_input_arg<in_out<T, TagIn, TagOut>> : std::true_type {};
-
-template <class T>
-struct is_input_arg<priv<T,val>> : std::true_type {};
+struct is_input_arg : std::is_base_of<input_tag, T> {};
 
 /// Filter type lists for output arguments
 template <class T>
-struct is_output_arg : std::false_type {};
-
-template <class T, class Tag>
-struct is_output_arg<out<T, Tag>> : std::true_type {};
-
-template <class T, class TagIn, class TagOut>
-struct is_output_arg<in_out<T, TagIn, TagOut>> : std::true_type {};
+struct is_output_arg : std::is_base_of<output_tag, T> {};
 
 /// Filter for arguments that require size
 template <class T>
-struct requires_size_arg : std::false_type {};
-
-template <class T, class Tag>
-struct requires_size_arg<out<T, Tag>> : std::true_type {};
-
-template <class T>
-struct requires_size_arg<scratch<T>> : std::true_type {};
-
-template <class T>
-struct requires_size_arg<local<T>> : std::true_type {};
-
-//template <class T, class Tag>
-//struct requires_size_arg<priv<T, Tag>> : std::true_type {};
+struct requires_size_arg : std::is_base_of<requires_size_tag, T> {};
 
 /// Filter mem_refs
 template <class T>
-struct is_ref_type : std::false_type {};
+struct is_ref_type : std::is_base_of<is_ref_tag, T> {};
 
 template <class T>
-struct is_ref_type<mem_ref<T>> : std::true_type {};
-
-template <class T>
-struct is_val_type : std::true_type {};
-
-template <class T>
-struct is_val_type<mem_ref<T>> : std::false_type {};
+struct is_val_type
+  : std::integral_constant<bool, !std::is_base_of<is_ref_tag, T>::value> {};
 
 /// extract types
 template <class T>
@@ -290,32 +250,32 @@ struct extract_type { };
 
 template <class T, class Tag>
 struct extract_type<in<T, Tag>> {
-  using type = typename std::decay<typename carr_to_vec<T>::type>::type;
+  using type = detail::decay_t<typename carr_to_vec<T>::type>;
 };
 
 template <class T, class TagIn, class TagOut>
 struct extract_type<in_out<T, TagIn, TagOut>> {
-  using type = typename std::decay<typename carr_to_vec<T>::type>::type;
+  using type = detail::decay_t<typename carr_to_vec<T>::type>;
 };
 
 template <class T, class Tag>
 struct extract_type<out<T, Tag>> {
-  using type = typename std::decay<typename carr_to_vec<T>::type>::type;
+  using type = detail::decay_t<typename carr_to_vec<T>::type>;
 };
 
 template <class T>
 struct extract_type<scratch<T>> {
-  using type = typename std::decay<typename carr_to_vec<T>::type>::type;
+  using type = detail::decay_t<typename carr_to_vec<T>::type>;
 };
 
 template <class T>
 struct extract_type<local<T>> {
-  using type = typename std::decay<typename carr_to_vec<T>::type>::type;
+  using type = detail::decay_t<typename carr_to_vec<T>::type>;
 };
 
 template <class T, class Tag>
 struct extract_type<priv<T, Tag>> {
-  using type = typename std::decay<typename carr_to_vec<T>::type>::type;
+  using type = detail::decay_t<typename carr_to_vec<T>::type>;
 };
 
 /// extract type expected in an incoming message
@@ -504,7 +464,8 @@ struct cl_arg_info_list_impl<detail::type_list<Args...>,
 };
 
 template <class... Args, int InCounter, int OutCounter>
-struct cl_arg_info_list_impl<detail::type_list<Args...>, detail::type_list<>,
+struct cl_arg_info_list_impl<detail::type_list<Args...>,
+                             detail::type_list<>,
                              InCounter, OutCounter> {
   using type = detail::type_list<Args...>;
 };

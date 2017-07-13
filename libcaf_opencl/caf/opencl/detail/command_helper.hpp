@@ -16,60 +16,48 @@
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
+ 
+#ifndef CAF_OPENCL_DETAIL_COMMAND_HELPER_HPP
+#define CAF_OPENCL_DETAIL_COMMAND_HELPER_HPP
 
-#ifndef CAF_OPENCL_GLOBAL_HPP
-#define CAF_OPENCL_GLOBAL_HPP
+#include "caf/detail/type_list.hpp"
 
-#include <string>
-#include <iostream>
-
-#include "caf/config.hpp"
-#include "caf/detail/limited_vector.hpp"
-
-#if defined(CAF_MACOS) || defined(CAF_IOS)
-# include <OpenCL/opencl.h>
-#else
-# include <CL/opencl.h>
-#endif
-
-// needed for OpenCL 1.0 compatibility (works around missing clReleaseDevice)
-extern "C" {
-cl_int clReleaseDeviceDummy(cl_device_id);
-cl_int clRetainDeviceDummy(cl_device_id);
-} // extern "C"
+#include "caf/opencl/arguments.hpp"
 
 namespace caf {
 namespace opencl {
+namespace detail {
 
-enum device_type {
-  def         = CL_DEVICE_TYPE_DEFAULT,
-  cpu         = CL_DEVICE_TYPE_CPU,
-  gpu         = CL_DEVICE_TYPE_GPU,
-  accelerator = CL_DEVICE_TYPE_ACCELERATOR,
-  custom      = CL_DEVICE_TYPE_CUSTOM,
-  all         = CL_DEVICE_TYPE_ALL
+// signature for the function that is applied to output arguments
+template <class List>
+struct output_function_sig;
+
+template <class... Ts>
+struct output_function_sig<detail::type_list<Ts...>> {
+  using type = std::function<message (Ts&...)>;
 };
 
-/// Default values to create OpenCL buffers
-enum buffer_type : cl_mem_flags {
-  input         = CL_MEM_READ_WRITE | CL_MEM_HOST_WRITE_ONLY,
-  input_output  = CL_MEM_READ_WRITE,
-  output        = CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY,
-  scratch_space = CL_MEM_READ_WRITE | CL_MEM_HOST_NO_ACCESS
+// derive signature of the command that handles the kernel execution
+template <class T, class List>
+struct command_sig;
+
+template <class T, class... Ts>
+struct command_sig<T, detail::type_list<Ts...>> {
+  using type = command<T, Ts...>;
 };
 
-std::ostream& operator<<(std::ostream& os, device_type dev);
-device_type device_type_from_ulong(cl_ulong dev);
+// derive type for a tuple matching the arguments as mem_refs
+template <class List>
+struct tuple_type_of;
 
-/// A vector of up to three elements used for OpenCL dimensions.
-using dim_vec = detail::limited_vector<size_t, 3>;
+template <class... Ts>
+struct tuple_type_of<detail::type_list<Ts...>> {
+  using type = std::tuple<Ts...>;
+};
 
-std::string opencl_error(cl_int err);
-
-std::string event_status(cl_event event);
-
-
+} // namespace detail
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_GLOBAL_HPP
+#endif // CAF_OPENCL_DETAIL_COMMAND_HELPER_HPP
+

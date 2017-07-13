@@ -34,10 +34,12 @@
 #include "caf/detail/scope_guard.hpp"
 
 #include "caf/opencl/global.hpp"
-#include "caf/opencl/arguments.hpp"
-#include "caf/opencl/smart_ptr.hpp"
-#include "caf/opencl/opencl_err.hpp"
 #include "caf/opencl/nd_range.hpp"
+#include "caf/opencl/arguments.hpp"
+#include "caf/opencl/opencl_err.hpp"
+
+#include "caf/opencl/detail/core.hpp"
+#include "caf/opencl/detail/raw_ptr.hpp"
 
 namespace caf {
 namespace opencl {
@@ -54,9 +56,9 @@ public:
   command(response_promise promise,
           strong_actor_ptr parent,
           std::vector<cl_event> events,
-          std::vector<cl_mem_ptr> inputs,
-          std::vector<cl_mem_ptr> outputs,
-          std::vector<cl_mem_ptr> scratches,
+          std::vector<detail::raw_mem_ptr> inputs,
+          std::vector<detail::raw_mem_ptr> outputs,
+          std::vector<detail::raw_mem_ptr> scratches,
           std::vector<size_t> lengths,
           message msg,
           std::tuple<Ts...> output_tuple,
@@ -68,7 +70,7 @@ public:
         input_buffers_(std::move(inputs)),
         output_buffers_(std::move(outputs)),
         scratch_buffers_(std::move(scratches)),
-        results_(output_tuple),
+        results_(std::move(output_tuple)),
         msg_(std::move(msg)),
         range_(std::move(range)) {
     // nop
@@ -85,19 +87,16 @@ public:
     }
   }
 
-  /// Enqueue the kernel for execution, schedule reading of the results and 
+  /// Enqueue the kernel for execution, schedule reading of the results and
   /// set a callback to send the results to the actor identified by the handle.
   /// Only called if the results includes at least one type that is not a
   /// mem_ref.
   template <class Q = result_types>
-  typename std::enable_if<
-    !detail::tl_forall<Q, is_ref_type>::value,
-    void
-  >::type
+  detail::enable_if_t<!detail::tl_forall<Q, is_ref_type>::value>
   enqueue() {
     // Errors in this function can not be handled by opencl_err.hpp
     // because they require non-standard error handling
-    CAF_LOG_TRACE("command::enqueue() mixed");
+    CAF_LOG_TRACE("");
     this->ref(); // reference held by the OpenCL comand queue
     auto data_or_nullptr = [](const dim_vec& vec) {
       return vec.empty() ? nullptr : vec.data();
@@ -105,8 +104,8 @@ public:
     auto parent = static_cast<Actor*>(actor_cast<abstract_actor*>(cl_actor_));
     // OpenCL expects cl_uint (unsigned int), hence the cast
     mem_out_events_.emplace_back();
-    cl_int err = clEnqueueNDRangeKernel(
-      parent->queue_.get(), parent->kernel_.get(),
+    auto success = invoke_cl(
+      clEnqueueNDRangeKernel, parent->queue_.get(), parent->kernel_.get(),
       static_cast<unsigned int>(range_.dimensions().size()),
       data_or_nullptr(range_.offsets()),
       data_or_nullptr(range_.dimensions()),
@@ -115,51 +114,34 @@ public:
       (mem_in_events_.empty() ? nullptr : mem_in_events_.data()),
       &mem_out_events_.back()
     );
-    if (err != CL_SUCCESS) {
-      CAF_LOG_ERROR("clEnqueueNDRangeKernel: "
-                    << CAF_ARG(get_opencl_error(err)));
-      this->deref();
+    if (!success)
       return;
-    }
     size_t pos = 0;
     CAF_ASSERT(!mem_out_events_.empty());
-    enqueue_read_buffers(pos, mem_out_events_, detail::get_indices(results_));
+    enqueue_read_buffers(pos, mem_out_events_,
+                         detail::get_indices(results_));
     CAF_ASSERT(mem_out_events_.size() > 1);
     cl_event marker_event;
 #if defined(__APPLE__)
-    err = clEnqueueMarkerWithWaitList(
-      parent->queue_.get(),
-      static_cast<unsigned int>(mem_out_events_.size()),
-      mem_out_events_.data(),
-      &marker_event
-    );
-    std::string name = "clEnqueueMarkerWithWaitList";
+    success = invoke_cl(clEnqueueMarkerWithWaitList, parent->queue_.get(),
+                        static_cast<unsigned int>(mem_out_events_.size()),
+                        mem_out_events_.data(), &marker_event);
 #else
-    err = clEnqueueMarker(parent->queue_.get(), &marker_event);
-    std::string name = "clEnqueueMarker";
+    success = invoke_cl(clEnqueueMarker, parent->queue_.get(), &marker_event);
 #endif
     callback_.reset(marker_event, false);
-    if (err != CL_SUCCESS) {
-      CAF_LOG_ERROR(name << ": " << CAF_ARG(get_opencl_error(err)));
-      this->deref(); // callback is not set
+    if (!success)
       return;
-    }
-    err = clSetEventCallback(callback_.get(), CL_COMPLETE,
-                             [](cl_event, cl_int, void* data) {
-                               auto cmd = reinterpret_cast<command*>(data);
-                               cmd->handle_results();
-                               cmd->deref();
-                             },
-                             this);
-    if (err != CL_SUCCESS) {
-      CAF_LOG_ERROR("clSetEventCallback: " << CAF_ARG(get_opencl_error(err)));
-      this->deref(); // callback is not set
+    auto cb = [](cl_event, cl_int, void* data) {
+      auto cmd = reinterpret_cast<command*>(data);
+      cmd->handle_results();
+      cmd->deref();
+    };
+    if (!invoke_cl(clSetEventCallback, callback_.get(), CL_COMPLETE,
+                   std::move(cb), this))
       return;
-    }
-    err = clFlush(parent->queue_.get());
-    if (err != CL_SUCCESS) {
+    if (clFlush(parent->queue_.get()) != CL_SUCCESS)
       CAF_LOG_ERROR("clFlush: " << CAF_ARG(get_opencl_error(err)));
-    }
   }
 
   /// Enqueue the kernel for execution and send the mem_refs relating to the
@@ -167,22 +149,19 @@ public:
   /// once the execution is finished. Only called if the results only consist
   /// of mem_ref types.
   template <class Q = result_types>
-  typename std::enable_if<
-    detail::tl_forall<Q, is_ref_type>::value,
-    void
-  >::type
+  detail::enable_if_t<detail::tl_forall<Q, is_ref_type>::value>
   enqueue() {
     // Errors in this function can not be handled by opencl_err.hpp
     // because they require non-standard error handling
-    CAF_LOG_TRACE("command::enqueue() all references");
+    CAF_LOG_TRACE("");
     this->ref(); // reference held by the OpenCL command queue
     auto data_or_nullptr = [](const dim_vec& vec) {
       return vec.empty() ? nullptr : vec.data();
     };
     auto parent = static_cast<Actor*>(actor_cast<abstract_actor*>(cl_actor_));
     cl_event execution_event;
-    cl_int err = clEnqueueNDRangeKernel(
-      parent->queue_.get(), parent->kernel_.get(),
+    auto success = invoke_cl(
+      clEnqueueNDRangeKernel, parent->queue_.get(), parent->kernel_.get(),
       static_cast<cl_uint>(range_.dimensions().size()),
       data_or_nullptr(range_.offsets()),
       data_or_nullptr(range_.dimensions()),
@@ -192,25 +171,16 @@ public:
       &execution_event
     );
     callback_.reset(execution_event, false);
-    if (err != CL_SUCCESS) {
-      CAF_LOG_ERROR("clEnqueueNDRangeKernel: "
-                    << CAF_ARG(get_opencl_error(err)));
-      this->deref();
+    if (!success)
       return;
-    }
-    err = clSetEventCallback(callback_.get(), CL_COMPLETE,
-                             [](cl_event, cl_int, void* data) {
-                               auto c = reinterpret_cast<command*>(data);
-                               c->deref();
-                             },
-                             this);
-    if (err != CL_SUCCESS) {
-      CAF_LOG_ERROR("clSetEventCallback: " << CAF_ARG(get_opencl_error(err)));
-      this->deref(); // callback is not set
+    auto cb = [](cl_event, cl_int, void* data) {
+      auto c = reinterpret_cast<command*>(data);
+      c->deref();
+    };
+    if (!invoke_cl(clSetEventCallback, callback_.get(), CL_COMPLETE,
+                   std::move(cb), this))
       return;
-    }
-    err = clFlush(parent->queue_.get());
-    if (err != CL_SUCCESS)
+    if (clFlush(parent->queue_.get()) != CL_SUCCESS)
       CAF_LOG_ERROR("clFlush: " << CAF_ARG(get_opencl_error(err)));
     auto msg = msg_adding_event{callback_}(results_);
     promise_.deliver(std::move(msg));
@@ -231,7 +201,7 @@ private:
                                    events.data(), &events.back());
     if (err != CL_SUCCESS) {
       this->deref(); // failed to enqueue command
-      throw std::runtime_error("clEnqueueReadBuffer: " + get_opencl_error(err));
+      throw std::runtime_error("clEnqueueReadBuffer: " + opencl_error(err));
     }
     pos += 1;
   }
@@ -263,15 +233,26 @@ private:
     promise_.deliver(std::move(msg));
   }
 
+  // call function F and derefenrence the command on failure
+  template <class F, class... Us>
+  bool invoke_cl(F f, Us&&... xs) {
+    auto err = f(std::forward<Us>(xs)...);
+    if (err == CL_SUCCESS)
+      return true;
+    CAF_LOG_ERROR("error: " << opencl_error(err));
+    this->deref();
+    return false;
+  }
+
   std::vector<size_t> lengths_;
   response_promise promise_;
   strong_actor_ptr cl_actor_;
   std::vector<cl_event> mem_in_events_;
   std::vector<cl_event> mem_out_events_;
-  cl_event_ptr callback_;
-  std::vector<cl_mem_ptr> input_buffers_;
-  std::vector<cl_mem_ptr> output_buffers_;
-  std::vector<cl_mem_ptr> scratch_buffers_;
+  detail::raw_event_ptr callback_;
+  std::vector<detail::raw_mem_ptr> input_buffers_;
+  std::vector<detail::raw_mem_ptr> output_buffers_;
+  std::vector<detail::raw_mem_ptr> scratch_buffers_;
   std::tuple<Ts...> results_;
   message msg_; // keeps the argument buffers alive for async copy to device
   nd_range range_;
