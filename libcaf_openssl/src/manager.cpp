@@ -19,8 +19,10 @@
 
 #include "caf/openssl/manager.hpp"
 
+CAF_PUSH_WARNINGS
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+CAF_POP_WARNINGS
 
 #include "caf/expected.hpp"
 #include "caf/actor_system.hpp"

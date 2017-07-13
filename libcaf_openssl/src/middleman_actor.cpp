@@ -51,16 +51,16 @@ using default_mpx = io::network::default_multiplexer;
 
 struct ssl_policy {
   ssl_policy(intrusive_ptr<session> session) : session_(std::move(session)) {
+    // nop
   }
 
-  bool read_some(size_t& result, native_socket fd, void* buf,
-                        size_t len) {
+  rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
     return session_->read_some(result, fd, buf, len);
   }
 
-  bool write_some(size_t& result, native_socket fd, const void* buf,
-                         size_t len) {
+  rw_state write_some(size_t& result, native_socket fd, const void* buf,
+                      size_t len) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
     return session_->write_some(result, fd, buf, len);
   }
@@ -87,15 +87,19 @@ private:
 class scribe_impl : public io::scribe {
   public:
     scribe_impl(default_mpx& mpx, native_socket sockfd,
-                intrusive_ptr<session> session)
+                session_ptr sptr)
         : scribe(io::network::conn_hdl_from_socket(sockfd)),
           launched_(false),
-          stream_(mpx, sockfd, session) {
+          stream_(mpx, sockfd, std::move(sptr)) {
       // nop
     }
 
-    void configure_read(io::receive_policy::config config) override {
+    ~scribe_impl() {
       CAF_LOG_TRACE("");
+    }
+
+    void configure_read(io::receive_policy::config config) override {
+      CAF_LOG_TRACE(CAF_ARG(config));
       stream_.configure_read(config);
       if (!launched_)
         launch();
@@ -144,13 +148,19 @@ class scribe_impl : public io::scribe {
       CAF_ASSERT(!launched_);
       launched_ = true;
       stream_.start(this);
+      // This schedules the scribe in case SSL still needs to call SSL_connect
+      // or SSL_accept. Otherwise, the backend simply removes the socket for
+      // write operations after the first "nop write".
+      stream_.force_empty_write(this);
     }
 
     void add_to_loop() override {
+      CAF_LOG_TRACE("");
       stream_.activate(this);
     }
 
     void remove_from_loop() override {
+      CAF_LOG_TRACE("");
       stream_.passivate();
     }
 
@@ -159,13 +169,10 @@ class scribe_impl : public io::scribe {
     io::network::stream_impl<ssl_policy> stream_;
 };
 
-class doorman_impl : public io::doorman {
+class doorman_impl : public io::network::doorman_impl {
 public:
-  doorman_impl(default_mpx& mx, native_socket sockfd,
-               intrusive_ptr<session> session)
-      : doorman(io::network::accept_hdl_from_socket(sockfd)),
-        acceptor_(mx, sockfd, session),
-        session_(std::move(session)) {
+  doorman_impl(default_mpx& mx, native_socket sockfd)
+      : io::network::doorman_impl(mx, sockfd) {
     // nop
   }
 
@@ -178,49 +185,17 @@ public:
        // further activities for the broker
        return false;
     auto& dm = acceptor_.backend();
-    auto sptr =
-      make_counted<scribe_impl>(dm, acceptor_.accepted_socket(), session_);
-    auto hdl = sptr->hdl();
-    parent()->add_scribe(std::move(sptr));
+    auto fd = acceptor_.accepted_socket();
+    auto sssn = make_session(parent()->system(), fd, true);
+    if (sssn == nullptr) {
+      CAF_LOG_ERROR("Unable to create SSL session for accepted socket");
+      return false;
+    }
+    auto scrb = make_counted<scribe_impl>(dm, fd, std::move(sssn));
+    auto hdl = scrb->hdl();
+    parent()->add_scribe(std::move(scrb));
     return doorman::new_connection(&dm, hdl);
   }
-
-  void stop_reading() override {
-    CAF_LOG_TRACE("");
-    acceptor_.stop_reading();
-    detach(&acceptor_.backend(), false);
-  }
-
-  void launch() override {
-    CAF_LOG_TRACE("");
-    acceptor_.start(this);
-  }
-
-  std::string addr() const override {
-    auto x = io::network::local_addr_of_fd(acceptor_.fd());
-    if (!x)
-      return "";
-    return std::move(*x);
-  }
-
-  uint16_t port() const override {
-    auto x = io::network::local_port_of_fd(acceptor_.fd());
-    if (!x)
-      return 0;
-    return *x;
-  }
-
-  void add_to_loop() override {
-    acceptor_.activate(this);
-  }
-
-  void remove_from_loop() override {
-    acceptor_.passivate();
-  }
-
-private:
-  io::network::acceptor_impl<ssl_policy> acceptor_;
-  intrusive_ptr<session> session_;
 };
 
 class middleman_actor_impl : public io::middleman_actor_impl {
@@ -230,26 +205,35 @@ public:
     // nop
   }
 
+  const char* name() const override {
+    return "openssl::middleman_actor";
+  }
+
 protected:
   expected<io::scribe_ptr> connect(const std::string& host,
                                    uint16_t port) override {
+    CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
     auto fd = io::network::new_tcp_connection(host, port);
     if (fd == io::network::invalid_native_socket)
       return std::move(fd.error());
-    auto session = new class session(system());
-    if (session->connect(*fd))
-      return make_counted<scribe_impl>(mpx(), *fd, session);
-    else
+    io::network::nonblocking(*fd, true);
+    auto sssn = make_session(system(), *fd, false);
+    if (!sssn) {
+      CAF_LOG_ERROR("Unable to create SSL session for connection");
       return sec::cannot_connect_to_node;
+    }
+    CAF_LOG_DEBUG("successfully created an SSL session for:"
+                  << CAF_ARG(host) << CAF_ARG(port));
+    return make_counted<scribe_impl>(mpx(), *fd, std::move(sssn));
   }
 
   expected<io::doorman_ptr> open(uint16_t port, const char* addr,
                                  bool reuse) override {
+    CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(reuse));
     auto fd = io::network::new_tcp_acceptor_impl(port, addr, reuse);
     if (fd == io::network::invalid_native_socket)
       return std::move(fd.error());
-    auto session = new class session(system());
-    return make_counted<doorman_impl>(mpx(), *fd, session);
+    return make_counted<doorman_impl>(mpx(), *fd);
   }
 
 private:
@@ -262,8 +246,8 @@ private:
 
 io::middleman_actor make_middleman_actor(actor_system& sys, actor db) {
   return sys.config().middleman_detach_utility_actors
-             ? sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db))
-             : sys.spawn<middleman_actor_impl, hidden>(std::move(db));
+         ? sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db))
+         : sys.spawn<middleman_actor_impl, hidden>(std::move(db));
 }
 
 } // namespace openssl

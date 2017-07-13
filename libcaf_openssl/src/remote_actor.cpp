@@ -40,6 +40,8 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
   CAF_LOG_TRACE(CAF_ARG(mpi) << CAF_ARG(host) << CAF_ARG(port));
   expected<strong_actor_ptr> res{strong_actor_ptr{nullptr}};
   scoped_actor self{sys};
+  auto mm = sys.openssl_manager().actor_handle();
+  CAF_ASSERT(mm != nullptr);
   self->request(sys.openssl_manager().actor_handle(), infinite,
                 connect_atom::value, std::move(host), port)
   .receive(
