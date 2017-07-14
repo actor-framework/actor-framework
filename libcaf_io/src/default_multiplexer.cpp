@@ -347,14 +347,6 @@ namespace network {
     }
   }
 
-  bool default_multiplexer::try_run_once() {
-    return poll_once(false);
-  }
-
-  bool default_multiplexer::run_once() {
-    return poll_once(true);
-  }
-
   void default_multiplexer::run() {
     CAF_LOG_TRACE("epoll()-based multiplexer");
     while (shadow_ > 0)
@@ -533,14 +525,6 @@ namespace network {
     }
   }
 
-  bool default_multiplexer::try_run_once() {
-    return poll_once(false);
-  }
-
-  void default_multiplexer::run_once() {
-    poll_once(true);
-  }
-
   void default_multiplexer::run() {
     CAF_LOG_TRACE("poll()-based multiplexer:" << CAF_ARG(input_mask)
                   << CAF_ARG(output_mask) << CAF_ARG(error_mask));
@@ -710,6 +694,14 @@ write_some_fun tcp_policy::write_some = network::write_some;
 try_accept_fun tcp_policy::try_accept = network::try_accept;
 
 // -- Platform-independent parts of the default_multiplexer --------------------
+
+bool default_multiplexer::try_run_once() {
+  return poll_once(false);
+}
+
+void default_multiplexer::run_once() {
+  poll_once(true);
+}
 
 void default_multiplexer::add(operation op, native_socket fd,
                               event_handler* ptr) {
