@@ -205,8 +205,8 @@ void test_coordinator::inline_all_enqueues() {
 }
 
 void test_coordinator::inline_all_enqueues_helper() {
-  after_next_enqueue([=] { inline_all_enqueues_helper(); });
   run_once_lifo();
+  after_next_enqueue([=] { inline_all_enqueues_helper(); });
 }
 
 } // namespace caf
