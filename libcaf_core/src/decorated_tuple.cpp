@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -34,7 +34,7 @@ decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
   // calculate type token
   for (unsigned long i : mapping_) {
     type_token_ <<= 6;
-    type_token_ |= decorated_->type_nr(i);
+    type_token_ |= static_cast<const cow_ptr&>(decorated_)->type_nr(i);
   }
 }
 

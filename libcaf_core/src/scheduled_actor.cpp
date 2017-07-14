@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -22,6 +22,7 @@
 #include "caf/config.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_ostream.hpp"
+#include "caf/stream_msg_visitor.hpp"
 
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -127,7 +128,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   auto sender = ptr->sender;
   switch (mailbox().enqueue(ptr.release())) {
     case detail::enqueue_result::unblocked_reader: {
-      CAF_LOG_ACCEPT_EVENT();
+      CAF_LOG_ACCEPT_EVENT(true);
       // add a reference count to this actor and re-schedule it
       intrusive_ptr_add_ref(ctrl());
       if (getf(is_detached_flag)) {
@@ -151,7 +152,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
     }
     case detail::enqueue_result::success:
       // enqueued to a running actors' mailbox; nothing to do
-      CAF_LOG_ACCEPT_EVENT();
+      CAF_LOG_ACCEPT_EVENT(false);
       break;
   }
 }
@@ -184,12 +185,16 @@ void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
 }
 
 bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
+  // Shutdown hosting thread when running detached.
   if (getf(is_detached_flag)) {
     CAF_ASSERT(private_thread_ != nullptr);
     private_thread_->shutdown();
   }
+  // Clear all state.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
+  streams_.clear();
+  // Dispatch to parent's `cleanup` function.
   return local_actor::cleanup(std::move(fail_state), host);
 }
 
@@ -257,7 +262,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   return resumable::resume_later;
 }
 
-// -- scheduler callbacks ----------------------------------------------------
+// -- scheduler callbacks ------------------------------------------------------
 
 proxy_registry* scheduled_actor::proxy_registry_ptr() {
   return nullptr;
@@ -269,6 +274,13 @@ void scheduled_actor::quit(error x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   fail_state_ = std::move(x);
   setf(is_terminated_flag);
+}
+
+// -- stream management --------------------------------------------------------
+
+void scheduled_actor::trigger_downstreams() {
+  for (auto& s : streams_)
+    s.second->push();
 }
 
 // -- timeout management -------------------------------------------------------
@@ -370,6 +382,11 @@ scheduled_actor::categorize(mailbox_element& x) {
       call_handler(error_handler_, this, err);
       return message_category::internal;
     }
+    case make_type_token<stream_msg>(): {
+      auto& bs = bhvr_stack();
+      handle_stream_msg(x, bs.empty() ? nullptr : &bs.back());
+      return message_category::internal;
+    }
     default:
       return message_category::ordinary;
   }
@@ -379,28 +396,49 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
   CAF_LOG_RECEIVE_EVENT(current_element_);
-  // short-circuit awaited responses
+  // Helper function for dispatching a message to a response handler.
+  using ptr_t = scheduled_actor*;
+  using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
+  auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
+    return f(in.content()) != none;
+  };
+  auto stream_invoke = [](ptr_t p, behavior& f, mailbox_element& in) -> bool {
+    // The only legal stream message in a response is `stream_open`.
+    auto& var = in.content().get_as<stream_msg>(0).content;
+    if (holds_alternative<stream_msg::open>(var))
+      return p->handle_stream_msg(in, &f);
+    return false;
+  };
+  auto select_invoke_fun = [&]() -> fun_t {
+    if (x.content().type_token() != make_type_token<stream_msg>())
+      return ordinary_invoke;
+    return stream_invoke;
+  };
+  // Short-circuit awaited responses.
   if (!awaited_responses_.empty()) {
+    auto invoke = select_invoke_fun();
     auto& pr = awaited_responses_.front();
     // skip all messages until we receive the currently awaited response
     if (x.mid != pr.first)
       return im_skipped;
-    if (!pr.second(x.content())) {
+    auto f = std::move(pr.second);
+    awaited_responses_.pop_front();
+    if (!invoke(this, f, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
-      pr.second(msg);
+      f(msg);
     }
-    awaited_responses_.pop_front();
     return im_success;
   }
-  // handle multiplexed responses
+  // Handle multiplexed responses.
   if (x.mid.is_response()) {
+    auto invoke = select_invoke_fun();
     auto mrh = multiplexed_responses_.find(x.mid);
     // neither awaited nor multiplexed, probably an expired timeout
     if (mrh == multiplexed_responses_.end())
       return im_dropped;
-    if (!mrh->second(x.content())) {
+    if (!invoke(this, mrh->second, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
@@ -409,7 +447,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     multiplexed_responses_.erase(mrh);
     return im_success;
   }
-  // dispatch on the content of x
+  // Dispatch on the content of x.
   switch (categorize(x)) {
     case message_category::expired_timeout:
       CAF_LOG_DEBUG("dropped expired timeout message");
@@ -465,7 +503,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       return !skipped ? im_success : im_skipped;
     }
   }
-  // should be unreachable
+  // Unreachable.
   CAF_CRITICAL("invalid message type");
 }
 
@@ -602,6 +640,34 @@ bool scheduled_actor::finalize() {
   bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
   return true;
+}
+
+bool scheduled_actor::handle_stream_msg(mailbox_element& x,
+                                        behavior* active_behavior) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_ASSERT(x.content().match_elements<stream_msg>());
+  auto& sm = x.content().get_mutable_as<stream_msg>(0);
+  auto e = streams_.end();
+  stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e, active_behavior};
+  auto res = visit(f, sm.content);
+  auto success = (res.first == none);
+  auto i = res.second;
+  if (!success) {
+    if (i != e) {
+      i->second->abort(current_sender(), std::move(res.first));
+      streams_.erase(i);
+    }
+  } else if (i != e) {
+    if (i->second->done()) {
+      streams_.erase(i);
+      CAF_LOG_DEBUG("Stream is done and could be safely erased"
+                    << CAF_ARG(sm.sid) << ", remaining streams ="
+                    << deep_to_string(streams_).c_str());
+      if (streams_.empty() && !has_behavior())
+        quit(exit_reason::normal);
+    }
+  }
+  return success;
 }
 
 } // namespace caf

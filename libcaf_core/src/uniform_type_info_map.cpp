@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -34,10 +34,12 @@
 
 #include "caf/group.hpp"
 #include "caf/logger.hpp"
+#include "caf/type_nr.hpp"
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/stream_msg.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_factory.hpp"
 #include "caf/abstract_group.hpp"
@@ -45,7 +47,6 @@
 #include "caf/message_builder.hpp"
 #include "caf/actor_system_config.hpp"
 
-#include "caf/type_nr.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
@@ -75,6 +76,7 @@ const char* numbered_type_names[] = {
   "@message_id",
   "@node",
   "@str",
+  "@stream_msg",
   "@strmap",
   "@strong_actor_ptr",
   "@strset",

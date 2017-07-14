@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -25,7 +25,6 @@
 #include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/interface_mismatch.hpp"
-#include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/typed_actor_util.hpp"
 
@@ -156,6 +155,9 @@ public:
   template <class... OtherSigs>
   friend class typed_actor;
 
+  template <class... OtherSigs>
+  friend class typed_behavior;
+
   template <class, class, class>
   friend class mixin::behavior_stack_based_impl;
 
@@ -173,6 +175,16 @@ public:
   typed_behavior(const typed_behavior&) = default;
   typed_behavior& operator=(typed_behavior&&) = default;
   typed_behavior& operator=(const typed_behavior&) = default;
+
+  template <class... Ts>
+  typed_behavior(const typed_behavior<Ts...>& other) : bhvr_(other.bhvr_) {
+    using other_signatures = detail::type_list<Ts...>;
+    using m = interface_mismatch_t<other_signatures, signatures>;
+    // trigger static assert on mismatch
+    detail::static_error_printer<sizeof...(Ts), m::value,
+                                 typename m::xs, typename m::ys> guard;
+    CAF_IGNORE_UNUSED(guard);
+  }
 
   template <class T, class... Ts>
   typed_behavior(T x, Ts... xs) {

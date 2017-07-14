@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -28,8 +28,17 @@
 
 namespace caf {
 
+actor_addr::actor_addr(std::nullptr_t) {
+  // nop
+}
+
 actor_addr::actor_addr(const unsafe_actor_handle_init_t&) {
   // nop
+}
+
+actor_addr& actor_addr::operator=(std::nullptr_t) {
+  ptr_.reset();
+  return *this;
 }
 
 actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr) {

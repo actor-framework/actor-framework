@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -28,13 +28,15 @@ namespace caf {
 // -- 1 param templates --------------------------------------------------------
 
 template <class> class param;
+template <class> class stream;
 template <class> class optional;
 template <class> class expected;
+template <class> class upstream;
+template <class> class downstream;
 template <class> class intrusive_ptr;
 template <class> class behavior_type_of;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
-template <class> class typed_continue_helper;
 
 template <class> struct timeout_definition;
 
@@ -51,44 +53,57 @@ template <class...> class typed_actor_pointer;
 template <class...> class typed_response_promise;
 template <class...> class typed_event_based_actor;
 
+// -- variadic templates with 1 fixed argument ---------------------------------
+
+template <class, class...> class annotated_stream;
+
 // -- classes ------------------------------------------------------------------
 
 class actor;
-class group;
 class error;
+class group;
 class message;
 class node_id;
-class duration;
 class behavior;
+class duration;
 class resumable;
+class stream_id;
 class actor_addr;
 class actor_pool;
 class message_id;
 class serializer;
 class actor_proxy;
-class ref_counted;
 class local_actor;
+class ref_counted;
+class stream_sink;
 class actor_config;
 class actor_system;
 class deserializer;
 class group_module;
 class message_view;
 class scoped_actor;
+class stream_stage;
+class stream_source;
+class upstream_path;
 class abstract_actor;
 class abstract_group;
 class actor_registry;
 class blocking_actor;
 class execution_unit;
 class proxy_registry;
+class stream_handler;
+class upstream_policy;
 class actor_companion;
-class continue_helper;
+class downstream_path;
 class mailbox_element;
 class message_handler;
 class scheduled_actor;
 class response_promise;
+class downstream_policy;
 class event_based_actor;
 class type_erased_tuple;
 class type_erased_value;
+class stream_msg_visitor;
 class actor_control_block;
 class actor_system_config;
 class uniform_type_info_map;
@@ -99,6 +114,7 @@ class forwarding_actor_proxy;
 struct unit_t;
 struct exit_msg;
 struct down_msg;
+struct stream_msg;
 struct timeout_msg;
 struct group_down_msg;
 struct invalid_actor_t;
@@ -108,11 +124,20 @@ struct prohibit_top_level_spawn_marker;
 
 // -- enums --------------------------------------------------------------------
 
+enum class stream_priority;
 enum class atom_value : uint64_t;
 
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+
+// -- marker classes for mixins ------------------------------------------------
+
+namespace mixin {
+
+struct subscriber_base;
+
+} // namespace mixin
 
 // -- I/O classes --------------------------------------------------------------
 
@@ -147,6 +172,15 @@ class abstract_coordinator;
 
 } // namespace scheduler
 
+
+// -- OpenSSL classes ----------------------------------------------------------
+
+namespace openssl {
+
+class manager;
+
+} // namespace openssl
+
 // -- detail classes -----------------------------------------------------------
 
 namespace detail {
@@ -167,6 +201,7 @@ using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
 // -- intrusive pointer aliases ------------------------------------------------
 
+using stream_handler_ptr = intrusive_ptr<stream_handler>;
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
 // -- unique pointer aliases ---------------------------------------------------

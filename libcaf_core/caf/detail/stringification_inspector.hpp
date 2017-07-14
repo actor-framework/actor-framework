@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -137,9 +137,11 @@ public:
               && !has_to_string<T>::value>
   consume(T& xs) {
     result_ += '[';
-    for (auto& x : xs) {
+    // use a hand-written for loop instead of for-each to avoid
+    // range-loop-analysis warnings when using this function with vector<bool>
+    for (auto i = xs.begin(); i != xs.end(); ++i) {
       sep();
-      consume(deconst(x));
+      consume(deconst(*i));
     }
     result_ += ']';
   }

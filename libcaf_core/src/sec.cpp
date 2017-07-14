@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -56,6 +56,15 @@ const char* sec_strings[] = {
   "no_proxy_registry",
   "runtime_error",
   "remote_linking_failed",
+  "cannot_add_upstream",
+  "upstream_already_exists",
+  "invalid_upstream",
+  "cannot_add_downstream",
+  "downstream_already_exists",
+  "invalid_downstream",
+  "no_downstream_stages_defined",
+  "stream_init_failed",
+  "invalid_stream_state",
   "bad_function_call"
 };
 

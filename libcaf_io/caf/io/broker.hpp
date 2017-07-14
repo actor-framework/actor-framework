@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -71,9 +71,7 @@ public:
     cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
     auto res = this->system().spawn_class<impl, no_spawn_options>(cfg);
     auto forked = static_cast<impl*>(actor_cast<abstract_actor*>(res));
-    sptr->set_parent(forked);
-    CAF_ASSERT(sptr->parent() == forked);
-    forked->add_scribe(sptr);
+    forked->move_scribe(std::move(sptr));
     return res;
   }
 

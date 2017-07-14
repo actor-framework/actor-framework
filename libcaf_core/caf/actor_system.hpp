@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -20,6 +20,7 @@
 #ifndef CAF_ACTOR_SYSTEM_HPP
 #define CAF_ACTOR_SYSTEM_HPP
 
+#include <array>
 #include <mutex>
 #include <atomic>
 #include <string>
@@ -36,10 +37,10 @@
 #include "caf/actor_config.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/group_manager.hpp"
+#include "caf/is_typed_actor.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/named_actor_config.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/uniform_type_info_map.hpp"
 #include "caf/composable_behavior_based_actor.hpp"
@@ -127,6 +128,32 @@ public:
   friend class io::middleman;
   friend class abstract_actor;
 
+  /// The number of actors implictly spawned by the actor system on startup.
+  static constexpr size_t num_internal_actors = 3;
+
+  /// Returns the ID of an internal actor by its name.
+  /// @pre x in {'SpawnServ', 'ConfigServ', 'StreamServ'}
+  static constexpr size_t internal_actor_id(atom_value x) {
+    return x == atom("SpawnServ") ? 0 : (x == atom("ConfigServ") ? 1 : 2);
+  }
+
+  /// Returns the internal actor for dynamic spawn operations.
+  inline const strong_actor_ptr& spawn_serv() const {
+    return internal_actors_[internal_actor_id(atom("SpawnServ"))];
+  }
+
+  /// Returns the internal actor for storing the runtime configuration
+  /// for this actor system.
+  inline const strong_actor_ptr& config_serv() const {
+    return internal_actors_[internal_actor_id(atom("ConfigServ"))];
+  }
+
+  /// Returns the internal actor for managing streams that
+  /// cross network boundaries.
+  inline const strong_actor_ptr& stream_serv() const {
+    return internal_actors_[internal_actor_id(atom("StreamServ"))];
+  }
+
   actor_system() = delete;
   actor_system(const actor_system&) = delete;
   actor_system& operator=(const actor_system&) = delete;
@@ -138,6 +165,7 @@ public:
       scheduler,
       middleman,
       opencl_manager,
+      openssl_manager,
       num_ids
     };
 
@@ -164,9 +192,6 @@ public:
 
   using module_array = std::array<module_ptr, module::num_ids>;
 
-  using named_actor_config_map = std::unordered_map<std::string,
-                                                    named_actor_config>;
-
   /// @warning The system stores a reference to `cfg`, which means the
   ///          config object must outlive the actor system.
   explicit actor_system(actor_system_config& cfg);
@@ -176,15 +201,9 @@ public:
   /// A message passing interface (MPI) in run-time checkable representation.
   using mpi = std::set<std::string>;
 
-  inline mpi message_types(detail::type_list<scoped_actor>) const {
-    return mpi{};
-  }
-
-  inline mpi message_types(detail::type_list<actor>) const {
-    return mpi{};
-  }
-
-  inline mpi message_types(detail::type_list<strong_actor_ptr>) const {
+  template <class T,
+            class E = typename std::enable_if<!is_typed_actor<T>::value>::type>
+  mpi message_types(detail::type_list<T>) const {
     return mpi{};
   }
 
@@ -195,13 +214,11 @@ public:
     return result;
   }
 
-  inline mpi message_types(const actor&) const {
-    return mpi{};
-  }
-
-  template <class... Ts>
-  mpi message_types(const typed_actor<Ts...>&) const {
-    detail::type_list<typed_actor<Ts...>> token;
+  template <class T,
+            class E =
+              typename std::enable_if<!detail::is_type_list<T>::value>::type>
+  mpi message_types(const T&) const {
+    detail::type_list<T> token;
     return message_types(token);
   }
 
@@ -260,12 +277,19 @@ public:
   /// @throws `std::logic_error` if module is not loaded.
   io::middleman& middleman();
 
-  /// Returns the opencl manager instance from opencl module.
+  /// Returns `true` if the opencl module is available, `false` otherwise.
+  bool has_opencl_manager() const;
+
+  /// Returns the manager instance from the OpenCL module.
   /// @throws `std::logic_error` if module is not loaded.
   opencl::manager& opencl_manager() const;
 
-  /// Returns `true` if the opencl module is available, `false` otherwise.
-  bool has_opencl_manager() const;
+  /// Returns `true` if the openssl module is available, `false` otherwise.
+  bool has_openssl_manager() const;
+
+  /// Returns the manager instance from the OpenSSL module.
+  /// @throws `std::logic_error` if module is not loaded.
+  openssl::manager& openssl_manager() const;
 
   /// Returns a dummy execution unit that forwards
   /// everything to the scheduler.
@@ -371,6 +395,8 @@ public:
   template <class T, spawn_options Os, class Iter, class... Ts>
   infer_handle_from_class_t<T>
   spawn_class_in_groups(actor_config& cfg, Iter first, Iter last, Ts&&... xs) {
+    static_assert(std::is_same<infer_handle_from_class_t<T>, actor>::value,
+                  "Only dynamically typed actors can be spawned in a group.");
     check_invariants<T>();
     auto irange = make_input_range(first, last);
     cfg.groups = &irange;
@@ -384,6 +410,8 @@ public:
   infer_handle_from_fun_t<F>
   spawn_fun_in_groups(actor_config& cfg, Iter first, Iter second,
                       F& fun, Ts&&... xs) {
+    static_assert(std::is_same<infer_handle_from_fun_t<F>, actor>::value,
+                  "Only dynamically actors can be spawned in a group.");
     check_invariants<infer_impl_from_fun_t<F>>();
     auto irange = make_input_range(first, second);
     cfg.groups = &irange;
@@ -458,11 +486,6 @@ public:
     return cfg_;
   }
 
-    /// Returns configuration parameters for individual named actors types.
-  inline const named_actor_config_map& named_actor_configs() const {
-    return named_actor_configs_;
-  }
-
   /// @cond PRIVATE
 
   /// Increases running-detached-threads-count by one.
@@ -500,6 +523,8 @@ private:
                 : 0;
     if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
       cfg.flags |= abstract_actor::is_detached_flag;
+    if (has_hide_flag(Os))
+      cfg.flags |= abstract_actor::is_hidden_flag;
     if (!cfg.host)
       cfg.host = dummy_execution_unit();
     CAF_SET_LOGGER_SYS(this);
@@ -510,6 +535,20 @@ private:
     return res;
   }
 
+  /// Sets the internal actor for dynamic spawn operations.
+  inline void spawn_serv(strong_actor_ptr x) {
+    internal_actors_[internal_actor_id(atom("SpawnServ"))] = std::move(x);
+  }
+
+  /// Sets the internal actor for storing the runtime configuration.
+  inline void config_serv(strong_actor_ptr x) {
+    internal_actors_[internal_actor_id(atom("ConfigServ"))] = std::move(x);
+  }
+
+  /// Sets the internal actor for managing streams that
+  /// cross network boundaries. Called in middleman::start.
+  void stream_serv(strong_actor_ptr x);
+
   std::atomic<size_t> ids_;
   uniform_type_info_map types_;
   node_id node_;
@@ -517,12 +556,10 @@ private:
   actor_registry registry_;
   group_manager groups_;
   module_array modules_;
-  io::middleman* middleman_;
   scoped_execution_unit dummy_execution_unit_;
-  opencl::manager* opencl_manager_;
   bool await_actors_before_shutdown_;
-  strong_actor_ptr config_serv_;
-  strong_actor_ptr spawn_serv_;
+  // Stores SpawnServ, ConfigServ, and StreamServ
+  std::array<strong_actor_ptr, num_internal_actors> internal_actors_;
   std::atomic<size_t> detached;
   mutable std::mutex detached_mtx;
   mutable std::condition_variable detached_cv;
@@ -530,7 +567,6 @@ private:
   std::mutex logger_dtor_mtx_;
   std::condition_variable logger_dtor_cv_;
   volatile bool logger_dtor_done_;
-  named_actor_config_map named_actor_configs_;
 };
 
 } // namespace caf

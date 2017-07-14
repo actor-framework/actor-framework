@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -46,6 +46,7 @@ public:
         state(state_) {
     if (detail::is_serializable<State>::value)
       this->setf(Base::is_serializable_flag);
+    cr_state(this);
   }
 
   ~stateful_actor() override {
@@ -55,8 +56,7 @@ public:
   /// Destroys the state of this actor (no further overriding allowed).
   void on_exit() final {
     CAF_LOG_TRACE("");
-    if (this->getf(Base::is_initialized_flag))
-      state_.~State();
+    state_.~State();
   }
 
   const char* name() const final {
@@ -77,7 +77,6 @@ public:
   /// @cond PRIVATE
 
   void initialize() override {
-    cr_state(this);
     Base::initialize();
   }
 

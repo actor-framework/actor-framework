@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -103,21 +103,6 @@ void abstract_actor::unregister_from_system() {
     return;
   unsetf(is_registered_flag);
   home_system().registry().dec_running();
-}
-
-namespace {
-
-const char* linking_operation_strings[] = {
-  "establish_link",
-  "establish_backlink",
-  "remove_link",
-  "remove_backlink"
-};
-
-} // namespace <anonymous>
-
-std::string to_string(abstract_actor::linking_operation op) {
-  return detail::enum_to_string(op, linking_operation_strings);
 }
 
 } // namespace caf

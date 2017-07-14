@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -52,51 +52,26 @@ class multiplexer : public execution_unit {
 public:
   explicit multiplexer(actor_system* sys);
 
-  /// Tries to connect to `host` on given `port` and returns an unbound
-  /// connection handle on success.
+  /// Creates a new `scribe` from a native socket handle.
   /// @threadsafe
-  virtual expected<connection_handle>
-  new_tcp_scribe(const std::string& host, uint16_t port) = 0;
+  virtual scribe_ptr new_scribe(native_socket fd) = 0;
 
-  /// Assigns an unbound scribe identified by `hdl` to `ptr`.
-  /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<void>
-  assign_tcp_scribe(abstract_broker* ptr, connection_handle hdl) = 0;
+  /// Tries to connect to `host` on given `port` and returns a `scribe` instance
+  /// on success.
+  /// @threadsafe
+  virtual expected<scribe_ptr> new_tcp_scribe(const std::string& host,
+                                              uint16_t port) = 0;
 
-  /// Creates a new TCP doorman from a native socket handle.
-  /// @warning Do not call from outside the multiplexer's event loop.
-  virtual connection_handle add_tcp_scribe(abstract_broker* ptr,
-                                           native_socket fd) = 0;
-
-  /// Tries to connect to `host` on `port` and returns a
-  /// new scribe managing the connection on success.
-  /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<connection_handle>
-  add_tcp_scribe(abstract_broker*, const std::string& host, uint16_t port) = 0;
+  /// Creates a new doorman from a native socket handle.
+  /// @threadsafe
+  virtual doorman_ptr new_doorman(native_socket fd) = 0;
 
   /// Tries to create an unbound TCP doorman bound to `port`, optionally
   /// accepting only connections from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<std::pair<accept_handle, uint16_t>>
-  new_tcp_doorman(uint16_t port, const char* in = nullptr,
-                  bool reuse_addr = false) = 0;
-
-  /// Assigns an unbound doorman identified by `hdl` to `ptr`.
-  /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<void>
-  assign_tcp_doorman(abstract_broker* ptr, accept_handle hdl) = 0;
-
-  /// Creates a new TCP doorman from a native socket handle.
-  /// @warning Do not call from outside the multiplexer's event loop.
-  virtual accept_handle add_tcp_doorman(abstract_broker* ptr,
-                                        native_socket fd) = 0;
-
-  /// Tries to create a new TCP doorman running on port `p`, optionally
-  /// accepting only connections from IP address `in`.
-  /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<std::pair<accept_handle, uint16_t>>
-  add_tcp_doorman(abstract_broker* ptr, uint16_t port, const char* in = nullptr,
-                  bool reuse_addr = false) = 0;
+  virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
+                                                const char* in = nullptr,
+                                                bool reuse_addr = false) = 0;
 
   /// Simple wrapper for runnables
   class runnable : public resumable, public ref_counted {
@@ -121,7 +96,14 @@ public:
   /// Creates an instance using the networking backend compiled with CAF.
   static std::unique_ptr<multiplexer> make(actor_system& sys);
 
-  /// Runs the multiplexers event loop.
+  /// Exectutes all pending events without blocking.
+  /// @returns `true` if at least one event was called, `false` otherwise.
+  virtual bool try_run_once() = 0;
+
+  /// Runs at least one event and blocks if needed.
+  virtual void run_once() = 0;
+
+  /// Runs events until all connection are closed.
   virtual void run() = 0;
 
   /// Invokes @p fun in the multiplexer's event loop, calling `fun()`

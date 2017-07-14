@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -26,6 +26,7 @@
 #include <iomanip>
 
 #include "caf/meta/type_name.hpp"
+#include "caf/meta/hex_formatted.hpp"
 
 #include "caf/io/handle.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -58,7 +59,8 @@ struct new_data_msg {
 /// @relates new_data_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_data_msg& x) {
-  return f(meta::type_name("new_data_msg"), x.handle, x.buf);
+  return f(meta::type_name("new_data_msg"), x.handle,
+           meta::hex_formatted(), x.buf);
 }
 
 /// Signalizes that a certain amount of bytes has been written.

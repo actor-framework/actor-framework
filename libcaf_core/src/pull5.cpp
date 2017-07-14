@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,36 +17,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_CONTINUE_HELPER_HPP
-#define CAF_TYPED_CONTINUE_HELPER_HPP
+#include "caf/policy/pull5.hpp"
 
-#include "caf/continue_helper.hpp"
+#include <numeric>
+
+#include "caf/logger.hpp"
+#include "caf/upstream_path.hpp"
 
 namespace caf {
+namespace policy {
 
-template <class OutputList>
-class typed_continue_helper {
-public:
-  typed_continue_helper(message_id mid) : ch_(mid) {
-    // nop
+pull5::~pull5() {
+  // nop
+}
+
+void pull5::fill_assignment_vec(long downstream_credit) {
+  CAF_LOG_TRACE(CAF_ARG(downstream_credit));
+  // Zero-out assignment vector if no credit is available at downstream paths.
+  if (downstream_credit <= 0) {
+    for (auto& x : assignment_vec_)
+      x.second = 0;
+    return;
   }
-
-  typed_continue_helper(continue_helper ch) : ch_(std::move(ch)) {
-    // nop
+  // Assign credit to upstream paths until no more credit is available. We must
+  // make sure to write to each element in the vector.
+  auto available = downstream_credit;
+  for (auto& p : assignment_vec_) {
+    auto& x = p.first->assigned_credit; // current value
+    auto y = std::min(5l, x + available);
+    auto delta = y - x;
+    if (delta >= min_credit_assignment()) {
+      p.second = delta;
+      available -= delta;
+    } else {
+      p.second = 0;
+    }
   }
+}
 
-  message_id get_message_id() const {
-    return ch_.get_message_id();
-  }
-
-  continue_helper& unbox() {
-    return ch_;
-  }
-
-private:
-  continue_helper ch_;
-};
-
+} // namespace policy
 } // namespace caf
-
-#endif // CAF_TYPED_CONTINUE_HELPER_HPP

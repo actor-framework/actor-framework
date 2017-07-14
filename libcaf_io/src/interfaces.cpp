@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -237,6 +237,42 @@ interfaces::native_address(const std::string& host,
                                                       : protocol::ipv6);
   }
   return none;
+}
+
+std::vector<std::pair<std::string, protocol>>
+interfaces::server_address(uint16_t port, const char* host,
+                           optional<protocol> preferred) {
+  using addr_pair = std::pair<std::string, protocol>;
+  addrinfo hint;
+  memset(&hint, 0, sizeof(hint));
+  hint.ai_socktype = SOCK_STREAM;
+  if (preferred)
+    hint.ai_family = *preferred == protocol::ipv4 ? AF_INET : AF_INET6;
+  else
+    hint.ai_family = AF_UNSPEC;
+  if (host == nullptr)
+    hint.ai_flags = AI_PASSIVE;
+  auto port_str = std::to_string(port);
+  addrinfo* tmp = nullptr;
+  if (getaddrinfo(host, port_str.c_str(), &hint, &tmp) != 0)
+    return {};
+  std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
+  char buffer[INET6_ADDRSTRLEN];
+  // Take the first ipv6 address or the first available address otherwise
+  std::vector<addr_pair> results;
+  for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
+    auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
+    if (family != AF_UNSPEC) {
+      results.emplace_back(std::string{buffer},
+                           family == AF_INET ? protocol::ipv4
+                                             : protocol::ipv6);
+    }
+  }
+  std::stable_sort(std::begin(results), std::end(results),
+                   [](const addr_pair& lhs, const addr_pair& rhs) {
+                     return lhs.second > rhs.second;
+                   });
+  return results;
 }
 
 } // namespace network

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -29,11 +29,13 @@
 #include <unordered_map>
 
 #include "caf/fwd.hpp"
+#include "caf/stream.hpp"
 #include "caf/config_value.hpp"
 #include "caf/config_option.hpp"
 #include "caf/actor_factory.hpp"
 #include "caf/is_typed_actor.hpp"
 #include "caf/type_erased_value.hpp"
+#include "caf/named_actor_config.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -49,23 +51,27 @@ public:
 
   using hook_factory_vector = std::vector<hook_factory>;
 
+  template <class K, class V>
+  using hash_map = std::unordered_map<K, V>;
+
   using module_factory = std::function<actor_system::module* (actor_system&)>;
 
   using module_factory_vector = std::vector<module_factory>;
 
   using value_factory = std::function<type_erased_value_ptr ()>;
 
-  using value_factory_string_map = std::unordered_map<std::string, value_factory>;
+  using value_factory_string_map = hash_map<std::string, value_factory>;
 
-  using value_factory_rtti_map = std::unordered_map<std::type_index, value_factory>;
+  using value_factory_rtti_map = hash_map<std::type_index, value_factory>;
 
-  using actor_factory_map = std::unordered_map<std::string, actor_factory>;
+  using actor_factory_map = hash_map<std::string, actor_factory>;
 
-  using portable_name_map = std::unordered_map<std::type_index, std::string>;
+  using portable_name_map = hash_map<std::type_index, std::string>;
 
-  using error_renderer = std::function<std::string (uint8_t, atom_value, const message&)>;
+  using error_renderer = std::function<std::string (uint8_t, atom_value,
+                                                    const message&)>;
 
-  using error_renderer_map = std::unordered_map<atom_value, error_renderer>;
+  using error_renderer_map = hash_map<atom_value, error_renderer>;
 
   using option_ptr = std::unique_ptr<config_option>;
 
@@ -76,6 +82,8 @@ public:
   using group_module_factory_vector = std::vector<group_module_factory>;
 
   // -- nested classes ---------------------------------------------------------
+
+  using named_actor_config_map = hash_map<std::string, named_actor_config>;
 
   class opt_group {
   public:
@@ -156,11 +164,15 @@ public:
                   || (std::is_default_constructible<T>::value
                       && std::is_copy_constructible<T>::value),
                   "T must provide default and copy constructors");
-    static_assert(detail::is_serializable<T>::value, "T must be serializable");
-    type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
-    value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
-    value_factories_by_rtti.emplace(std::type_index(typeid(T)),
-                                     &make_type_erased_value<T>);
+    std::string stream_name = "stream<";
+    stream_name += name;
+    stream_name += ">";
+    add_message_type_impl<stream<T>>(std::move(stream_name));
+    std::string vec_name = "std::vector<";
+    vec_name += name;
+    vec_name += ">";
+    add_message_type_impl<std::vector<T>>(std::move(vec_name));
+    add_message_type_impl<T>(std::move(name));
     return *this;
   }
 
@@ -254,10 +266,18 @@ public:
 
   // -- config parameters for the logger ---------------------------------------
 
-  std::string logger_filename;
-  atom_value logger_verbosity;
+  std::string logger_file_name;
+  std::string logger_file_format;
   atom_value logger_console;
-  std::string logger_filter;
+  std::string logger_console_format;
+  std::string logger_component_filter;
+  atom_value logger_verbosity;
+  bool logger_inline_output;
+
+  // -- backward compatibility -------------------------------------------------
+
+  std::string& logger_filename CAF_DEPRECATED = logger_file_name;
+  std::string& logger_filter CAF_DEPRECATED = logger_component_filter;
 
   // -- config parameters of the middleman -------------------------------------
 
@@ -266,10 +286,20 @@ public:
   bool middleman_enable_automatic_connections;
   size_t middleman_max_consecutive_reads;
   size_t middleman_heartbeat_interval;
+  bool middleman_detach_utility_actors;
+  bool middleman_detach_multiplexer;
 
   // -- config parameters of the OpenCL module ---------------------------------
 
   std::string opencl_device_ids;
+
+  // -- config parameters of the OpenSSL module ---------------------------------
+
+  std::string openssl_certificate;
+  std::string openssl_key;
+  std::string openssl_passphrase;
+  std::string openssl_capath;
+  std::string openssl_cafile;
 
   // -- factories --------------------------------------------------------------
 
@@ -290,6 +320,9 @@ public:
 
   // -- utility for caf-run ----------------------------------------------------
 
+  // Config parameter for individual actor types.
+  named_actor_config_map named_actor_configs;
+
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 
 protected:
@@ -298,6 +331,14 @@ protected:
   option_vector custom_options_;
 
 private:
+  template <class T>
+  void add_message_type_impl(std::string name) {
+    type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
+    value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
+    value_factories_by_rtti.emplace(std::type_index(typeid(T)),
+                                     &make_type_erased_value<T>);
+  }
+
   static std::string render_sec(uint8_t, atom_value, const message&);
 
   static std::string render_exit_reason(uint8_t, atom_value, const message&);

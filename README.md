@@ -4,18 +4,12 @@ CAF is an open source C++11 actor model implementation featuring
 lightweight & fast actor implementations, pattern matching for messages,
 network transparent messaging, and more.
 
-[![Gitter][gitter-badge]]
-(https://gitter.im/actor-framework/chat)
-[![Jenkins][jenkins-badge]]
-(https://jenkins.inet.haw-hamburg.de/view/CAF%20Dashboard)
-[![Documentation Status][docs-badge]]
-(http://actor-framework.readthedocs.io/en/latest/?badge=latest)
-[![Coverity][coverity-badge]]
-(https://scan.coverity.com/projects/5555)
-[![In Progress][in-progress-badge]]
-(https://waffle.io/actor-framework/actor-framework)
-[![Fixed in Develop][fixed-in-develop-badge]]
-(https://waffle.io/actor-framework/actor-framework)
+[![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
+[![Jenkins][jenkins-badge]](https://jenkins.inet.haw-hamburg.de/view/CAF%20Dashboard)
+[![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
+[![Coverity][coverity-badge]](https://scan.coverity.com/projects/5555)
+[![In Progress][in-progress-badge]](https://waffle.io/actor-framework/actor-framework)
+[![Fixed in Develop][fixed-in-develop-badge]](https://waffle.io/actor-framework/actor-framework)
 
 ## Community
 
@@ -171,32 +165,22 @@ You can find the papers online at
 http://dx.doi.org/10.1145/2541329.2541336 and
 http://dx.doi.org/10.1016/j.cl.2016.01.002.
 
-[obs]:
-https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf
+[obs]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf
 
-[obs-nightly]:
-https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf
+[obs-nightly]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf
 
-[obs-dev]:
-https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf-devel
+[obs-dev]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf-devel
 
-[obs-dev-nightly]:
-https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf-devel
+[obs-dev-nightly]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf-devel
 
-[jenkins-badge]:
-https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/develop%20branch
+[jenkins-badge]: https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/develop%20branch
 
-[docs-badge]:
-https://readthedocs.org/projects/actor-framework/badge/?version=latest
+[docs-badge]: https://readthedocs.org/projects/actor-framework/badge/?version=latest
 
-[coverity-badge]:
-https://scan.coverity.com/projects/5555/badge.svg?flat=1
+[coverity-badge]: https://scan.coverity.com/projects/5555/badge.svg?flat=1
 
-[gitter-badge]:
-https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg
+[gitter-badge]: https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg
 
-[in-progress-badge]:
-https://badge.waffle.io/actor-framework/actor-framework.png?label=In%20Progress&title=Issues%20in%20progress
+[in-progress-badge]: https://badge.waffle.io/actor-framework/actor-framework.png?label=In%20Progress&title=Issues%20in%20progress
 
-[fixed-in-develop-badge]:
-https://badge.waffle.io/actor-framework/actor-framework.png?label=Fixed%20in%20develop&title=Issues%20fixed%20in%20develop
+[fixed-in-develop-badge]: https://badge.waffle.io/actor-framework/actor-framework.png?label=Fixed%20in%20develop&title=Issues%20fixed%20in%20develop

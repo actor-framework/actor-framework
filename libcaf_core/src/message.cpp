@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -236,8 +236,16 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
   // we can't `return make_error(...)` from inside `extract`, hence we
   // store any occurred error in a temporary variable returned at the end
   std::string error;
+  bool skip_remainder = false;
   auto res = extract({
     [&](const std::string& arg) -> optional<skip_t> {
+      if (skip_remainder)
+        return skip();
+      if (arg == "--") {
+        skip_remainder = true;
+        // drop frist remainder indicator
+        return none;
+      }
       if (arg.empty() || arg.front() != '-') {
         return skip();
       }
@@ -287,6 +295,11 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
     },
     [&](const std::string& arg1,
         const std::string& arg2) -> optional<skip_t> {
+      if (arg1 == "--") {
+        return skip();
+      }
+      if (skip_remainder)
+        return skip();
       if (arg1.size() < 2 || arg1[0] != '-' || arg1[1] == '-') {
         return skip();
       }
@@ -324,7 +337,7 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr, bool& arg)
   : name(std::move(nstr)),
     text(std::move(tstr)),
     flag(&arg) {
-  arg = false;
+  // nop
 }
 
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, consumer f)

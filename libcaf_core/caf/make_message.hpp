@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -111,6 +111,13 @@ struct message_factory {
     return make_message(std::forward<Ts>(xs)...);
   }
 };
+
+/// Converts the tuple `xs` to a message.
+template <class... Ts>
+message make_message_from_tuple(std::tuple<Ts...> xs) {
+  message_factory f;
+  return detail::apply_moved_args(f, detail::get_indices(xs), xs);
+}
 
 } // namespace caf
 

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -23,7 +23,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <limits>
 #include <streambuf>
+#include <type_traits>
 #include <vector>
 
 #include "caf/config.hpp"
@@ -31,11 +33,53 @@
 
 namespace caf {
 
+/// The base class for all stream buffer implementations.
+template <class CharT = char, class Traits = std::char_traits<CharT>>
+class stream_buffer : public std::basic_streambuf<CharT, Traits> {
+protected:
+  /// The standard only defines pbump(int), which can overflow on 64-bit
+  /// architectures. All stream buffer implementations should therefore use
+  /// these function instead. For a detailed discussion, see:
+  /// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47921
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 4>::type
+  safe_pbump(std::streamsize n) {
+    while (n > std::numeric_limits<int>::max()) {
+      this->pbump(std::numeric_limits<int>::max());
+      n -= std::numeric_limits<int>::max();
+    }
+    this->pbump(static_cast<int>(n));
+  }
+
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 8>::type
+  safe_pbump(std::streamsize n) {
+    this->pbump(static_cast<int>(n));
+  }
+
+  // As above, but for the get area.
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 4>::type
+  safe_gbump(std::streamsize n) {
+    while (n > std::numeric_limits<int>::max()) {
+      this->gbump(std::numeric_limits<int>::max());
+      n -= std::numeric_limits<int>::max();
+    }
+    this->gbump(static_cast<int>(n));
+  }
+
+  template <class T = int>
+  typename std::enable_if<sizeof(T) == 8>::type
+  safe_gbump(std::streamsize n) {
+    this->gbump(static_cast<int>(n));
+  }
+};
+
 /// A streambuffer abstraction over a fixed array of bytes. This streambuffer
 /// cannot overflow/underflow. Once it has reached its end, attempts to read
 /// characters will return `trait_type::eof`.
 template <class CharT = char, class Traits = std::char_traits<CharT>>
-class arraybuf : public std::basic_streambuf<CharT, Traits> {
+class arraybuf : public stream_buffer<CharT, Traits> {
 public:
   using base = std::basic_streambuf<CharT, Traits>;
   using char_type = typename base::char_type;
@@ -55,14 +99,15 @@ public:
       && detail::has_size_member<Container>::value
     >::type
   >
-  arraybuf(Container& c) : arraybuf(const_cast<CharT*>(c.data()), c.size()) {
+  arraybuf(Container& c)
+    : arraybuf(const_cast<char_type*>(c.data()), c.size()) {
     // nop
   }
 
   /// Constructs an array streambuffer from a raw character sequence.
   /// @param data A pointer to the first character.
   /// @param size The length of the character sequence.
-  arraybuf(CharT* data, size_t size) {
+  arraybuf(char_type* data, size_t size) {
     setbuf(data, static_cast<std::streamsize>(size));
   }
 
@@ -86,32 +131,97 @@ public:
     return *this;
   }
 
-  /// Replaces the internal character sequence with a new one.
-  /// @param s A pointer to the first character.
-  /// @param n The length of the character sequence.
-  std::basic_streambuf<CharT, Traits>*
-  setbuf(CharT* s, std::streamsize n) override {
+protected:
+  // -- positioning ----------------------------------------------------------
+
+  std::basic_streambuf<char_type, Traits>*
+  setbuf(char_type* s, std::streamsize n) override {
     this->setg(s, s, s + n);
     this->setp(s, s + n);
     return this;
   }
 
-protected:
+  pos_type seekpos(pos_type pos,
+                   std::ios_base::openmode which
+                     = std::ios_base::in | std::ios_base::out) override {
+    auto get = (which & std::ios_base::in) == std::ios_base::in;
+    auto put = (which & std::ios_base::out) == std::ios_base::out;
+    if (!(get || put))
+      return pos_type(off_type(-1)); // nothing to do
+    if (get)
+      this->setg(this->eback(), this->eback() + pos, this->egptr());
+    if (put) {
+      this->setp(this->pbase(), this->epptr());
+      this->safe_pbump(pos);
+    }
+    return pos;
+  }
+
+  pos_type seekoff(off_type off,
+                   std::ios_base::seekdir dir,
+                   std::ios_base::openmode which) override {
+    auto new_off = pos_type(off_type(-1));
+    auto get = (which & std::ios_base::in) == std::ios_base::in;
+    auto put = (which & std::ios_base::out) == std::ios_base::out;
+    if (!(get || put))
+      return new_off; // nothing to do
+    if (get) {
+      switch (dir) {
+        default:
+          return pos_type(off_type(-1));
+        case std::ios_base::beg:
+          new_off = 0;
+          break;
+        case std::ios_base::cur:
+          new_off = this->gptr() - this->eback();
+          break;
+        case std::ios_base::end:
+          new_off = this->egptr() - this->eback();
+          break;
+      }
+      new_off += off;
+      this->setg(this->eback(), this->eback() + new_off, this->egptr());
+    }
+    if (put) {
+      switch (dir) {
+        default:
+          return pos_type(off_type(-1));
+        case std::ios_base::beg:
+          new_off = 0;
+          break;
+        case std::ios_base::cur:
+          new_off = this->pptr() - this->pbase();
+          break;
+        case std::ios_base::end:
+          new_off = this->egptr() - this->pbase();
+          break;
+      }
+      new_off += off;
+      this->setp(this->pbase(), this->epptr());
+      this->safe_pbump(new_off);
+    }
+    return new_off;
+  }
+
+  // -- put area -------------------------------------------------------------
+
   std::streamsize xsputn(const char_type* s, std::streamsize n) override {
     auto available = this->epptr() - this->pptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(this->pptr(), s,
                 static_cast<size_t>(actual) * sizeof(char_type));
-    this->pbump(static_cast<int>(actual));
+    this->safe_pbump(actual);
     return actual;
   }
+
+  // -- get area -------------------------------------------------------------
 
   std::streamsize xsgetn(char_type* s, std::streamsize n) override {
     auto available = this->egptr() - this->gptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
                 static_cast<size_t>(actual) * sizeof(char_type));
-    this->gbump(static_cast<int>(actual));
+    this->safe_gbump(actual);
     return actual;
   }
 };
@@ -120,7 +230,7 @@ protected:
 /// reading in the same style as `arraybuf`, but is unbounded for output.
 template <class Container>
 class containerbuf
-  : public std::basic_streambuf<
+  : public stream_buffer<
       typename Container::value_type,
       std::char_traits<typename Container::value_type>
     > {
@@ -185,7 +295,7 @@ protected:
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
                 static_cast<size_t>(actual) * sizeof(char_type));
-    this->gbump(static_cast<int>(actual));
+    this->safe_gbump(actual);
     return actual;
   }
 

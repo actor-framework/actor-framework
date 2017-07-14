@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -140,6 +140,11 @@ CAF_TEST(request_atom_constants) {
       CAF_FAIL("err: " << system.render(err));
     }
   );
+}
+
+CAF_TEST(runtime_conversion) {
+  CAF_CHECK_EQUAL(atom("foo"), atom_from_string("foo"));
+  CAF_CHECK_EQUAL(atom(""), atom_from_string("tooManyCharacters"));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

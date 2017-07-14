@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -20,12 +20,14 @@
 #ifndef CAF_TYPED_ACTOR_HPP
 #define CAF_TYPED_ACTOR_HPP
 
-#include "caf/intrusive_ptr.hpp"
+#include <cstddef>
 
+#include "caf/actor.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/composed_type.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/stateful_actor.hpp"
@@ -54,6 +56,7 @@ class typed_broker;
 ///              parameter pack.
 template <class... Sigs>
 class typed_actor : detail::comparable<typed_actor<Sigs...>>,
+                    detail::comparable<typed_actor<Sigs...>, actor>,
                     detail::comparable<typed_actor<Sigs...>, actor_addr>,
                     detail::comparable<typed_actor<Sigs...>, strong_actor_ptr> {
  public:
@@ -166,6 +169,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
     return *this;
   }
 
+  inline typed_actor& operator=(std::nullptr_t) {
+    ptr_.reset();
+    return *this;
+  }
+
   explicit typed_actor(const unsafe_actor_handle_init_t&) CAF_DEPRECATED {
     // nop
   }
@@ -223,6 +231,10 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   intptr_t compare(const typed_actor& x) const noexcept {
     return actor_addr::compare(get(), x.get());
+  }
+
+  intptr_t compare(const actor& x) const noexcept {
+    return actor_addr::compare(get(), actor_cast<actor_control_block*>(x));
   }
 
   intptr_t compare(const actor_addr& x) const noexcept {
@@ -287,6 +299,30 @@ template <class... Xs, class... Ys>
 bool operator!=(const typed_actor<Xs...>& x,
                 const typed_actor<Ys...>& y) noexcept {
   return !(x == y);
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator==(const typed_actor<Xs...>& x, std::nullptr_t) noexcept {
+  return actor_addr::compare(actor_cast<actor_control_block*>(x), nullptr) == 0;
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator==(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
+  return actor_addr::compare(actor_cast<actor_control_block*>(x), nullptr) == 0;
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator!=(const typed_actor<Xs...>& x, std::nullptr_t) noexcept {
+  return !(x == nullptr);
+}
+
+/// @relates typed_actor
+template <class... Xs, class... Ys>
+bool operator!=(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
+  return !(x == nullptr);
 }
 
 /// Returns a new actor that implements the composition `f.g(x) = f(g(x))`.

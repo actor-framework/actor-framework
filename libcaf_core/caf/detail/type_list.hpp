@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -54,6 +54,10 @@ struct is_type_list<type_list<Ts...>> {
   static constexpr bool value = true;
 };
 
+// Uncomment after having switched to C++14
+//template <class T>
+//inline constexpr bool is_type_list_v = is_type_list<T>::value;
+
 // T head(type_list)
 
 /// Gets the first element of `List`.
@@ -69,6 +73,9 @@ template <typename T0, class... Ts>
 struct tl_head<type_list<T0, Ts...>> {
   using type = T0;
 };
+
+template <class List>
+using tl_head_t = typename tl_head<List>::type;
 
 // type_list tail(type_list)
 
@@ -86,6 +93,9 @@ struct tl_tail<type_list<T0, Ts...>> {
   using type = type_list<Ts...>;
 };
 
+template <class List>
+using tl_tail_t = typename tl_tail<List>::type;
+
 // size_t size(type_list)
 
 /// Gets the number of template parameters of `List`.
@@ -99,6 +109,10 @@ struct tl_size<type_list<Ts...>> {
 
 template <class... Ts>
 constexpr size_t tl_size<type_list<Ts...>>::value;
+
+// Uncomment after having switched to C++14
+//template <class List>
+//inline constexpr size_t tl_size_v = tl_size<List>::value;
 
 // T back(type_list)
 
@@ -123,6 +137,9 @@ struct tl_back<type_list<T0, T1, Ts...>> {
   using type = typename tl_back<type_list<T1, Ts...>>::type;
 };
 
+template <class List>
+using tl_back_t = typename tl_back<List>::type;
+
 // bool empty(type_list)
 
 /// Tests whether a list is empty.
@@ -130,6 +147,10 @@ template <class List>
 struct tl_empty {
   static constexpr bool value = std::is_same<empty_type_list, List>::value;
 };
+
+// Uncomment after having switched to C++14
+//template <class List>
+//inline constexpr bool tl_empty_v = tl_empty<List>::value;
 
 // list slice(size_t, size_t)
 
@@ -144,7 +165,7 @@ struct tl_slice_impl {
       LeftOffset - 1,
       Remaining,
       PadType,
-      typename tl_tail<List>::type,
+      tl_tail_t<List>,
       Ts...
     >::type;
 };
@@ -156,9 +177,9 @@ struct tl_slice_impl<0, Remaining, PadType, List, Ts...> {
       0,
       Remaining - 1,
       PadType,
-      typename tl_tail<List>::type,
+      tl_tail_t<List>,
       Ts...,
-      typename tl_head<List>::type
+      tl_head_t<List>
     >::type;
 };
 
@@ -214,11 +235,14 @@ struct tl_slice {
     >::type;
 };
 
+template <class List, size_t First, size_t Last>
+using tl_slice_t = typename tl_slice<List, First, Last>::type;
+
 /// Creates a new list containing the last `N` elements.
 template <class List, size_t NewSize, size_t OldSize = tl_size<List>::value>
 struct tl_right {
   static constexpr size_t first_idx = OldSize > NewSize ? OldSize - NewSize : 0;
-  using type = typename tl_slice<List, first_idx, OldSize>::type;
+  using type = tl_slice_t<List, first_idx, OldSize>;
 };
 
 template <class List, size_t N>
@@ -235,6 +259,9 @@ template <>
 struct tl_right<empty_type_list, 0, 0> {
   using type = empty_type_list;
 };
+
+template <class List, size_t NewSize, size_t OldSize = tl_size<List>::value>
+using tl_right_t = typename tl_right<List, NewSize, OldSize>::type;
 
 template <class ListA, class ListB,
           template <class, typename> class Fun = to_type_pair>
@@ -260,22 +287,28 @@ struct tl_zip {
   static constexpr size_t result_size = (sizea < sizeb) ? sizea : sizeb;
   using type =
     typename tl_zip_impl<
-      typename tl_slice<ListA, 0, result_size>::type,
-      typename tl_slice<ListB, 0, result_size>::type,
+      tl_slice_t<ListA, 0, result_size>,
+      tl_slice_t<ListB, 0, result_size>,
       Fun
     >::type;
 };
+
+template <class ListA, class ListB, template <class, class> class Fun>
+using tl_zip_t = typename tl_zip<ListA, ListB, Fun>::type;
 
 /// Equal to `zip(right(ListA, N), right(ListB, N), Fun)`.
 template <class ListA, class ListB, template <class, class> class Fun, size_t N>
 struct tl_zip_right {
   using type =
     typename tl_zip_impl<
-      typename tl_right<ListA, N>::type,
-      typename tl_right<ListB, N>::type,
+      tl_right_t<ListA, N>,
+      tl_right_t<ListB, N>,
       Fun
     >::type;
 };
+
+template <class ListA, class ListB, template <class, class> class Fun, size_t N>
+using tl_zip_right_t = typename tl_zip_right<ListA, ListB, Fun, N>::type;
 
 template <class ListA, class ListB,
           typename PadA = unit_t, typename PadB = unit_t,
@@ -291,6 +324,11 @@ struct tl_zip_all {
       Fun
     >::type;
 };
+
+template <class ListA, class ListB,
+          typename PadA = unit_t, typename PadB = unit_t,
+          template <class, typename> class Fun = to_type_pair>
+using tl_zip_all_t = typename tl_zip_all<ListA, ListB, PadA, PadB, Fun>::type;
 
 template <class ListA>
 struct tl_unzip;
@@ -331,6 +369,10 @@ struct tl_index_of<type_list<Ts...>, T> {
   static constexpr int value = tl_index_of_impl<0, T, Ts...>::value;
 };
 
+// Uncomment after having switched to C++14
+//template <class List, class T>
+//inline constexpr int tl_index_of_v = tl_index_of<List, T>::value;
+
 // int index_of(list, predicate)
 
 template <int Pos, template <class> class Pred, class... Ts>
@@ -356,6 +398,10 @@ struct tl_index_where<type_list<Ts...>, Pred> {
   static constexpr int value = tl_index_where_impl<0, Pred, Ts...>::value;
 };
 
+// Uncomment after having switched to C++14
+//template <class List, template <class> class Pred>
+//inline constexpr int tl_index_where_v = tl_index_where<List, Pred>::value;
+
 // list reverse()
 
 template <class From, class... Elements>
@@ -377,7 +423,10 @@ struct tl_reverse {
   using type = typename tl_reverse_impl<List>::type;
 };
 
-// bool find(list, type)
+template <class List>
+using tl_reverse_t = typename tl_reverse<List>::type;
+
+// type find(list, predicate)
 
 /// Finds the first element of type `What` beginning at index `Pos`.
 template <template <class> class Pred, class... Ts>
@@ -407,14 +456,17 @@ struct tl_find<type_list<Ts...>, Pred> {
   using type = typename tl_find_impl<Pred, Ts...>::type;
 };
 
+template <class List, template <class> class Pred>
+using tl_find_t = typename tl_find<List, Pred>::type;
+
 // bool forall(predicate)
 
 /// Tests whether a predicate holds for all elements of a list.
 template <class List, template <class> class Pred>
 struct tl_forall {
   static constexpr bool value =
-      Pred<typename tl_head<List>::type>::value
-      && tl_forall<typename tl_tail<List>::type, Pred>::value;
+      Pred<tl_head_t<List>>::value
+      && tl_forall<tl_tail_t<List>, Pred>::value;
 };
 
 template <template <class> class Pred>
@@ -422,13 +474,15 @@ struct tl_forall<empty_type_list, Pred> {
   static constexpr bool value = true;
 };
 
+// Uncomment after having switched to C++14
+//template <class List, template <class> class Pred>
+//inline constexpr bool tl_forall_v = tl_forall<List, Pred>::value;
+
 template <class ListA, class ListB, template <class, class> class Pred>
 struct tl_forall2_impl {
   static constexpr bool value =
-      Pred<typename tl_head<ListA>::type,
-           typename tl_head<ListB>::type>::value
-      && tl_forall2_impl<typename tl_tail<ListA>::type,
-                         typename tl_tail<ListB>::type, Pred>::value;
+      Pred<tl_head_t<ListA>, tl_head_t<ListB>>::value
+      && tl_forall2_impl<tl_tail_t<ListA>, tl_tail_t<ListB>, Pred>::value;
 };
 
 template <template <class, typename> class Pred>
@@ -445,19 +499,26 @@ struct tl_binary_forall {
     && tl_forall2_impl<ListA, ListB, Pred>::value;
 };
 
+// Uncomment after having switched to C++14
+//template <class ListA, class ListB, template <class, class> class Pred>
+//inline constexpr bool tl_binary_forall_v
+//  = tl_binary_forall<ListA, ListB, Pred>::value;
+
 /// Tests whether a predicate holds for some of the elements of a list.
 template <class List, template <class> class Pred>
 struct tl_exists {
   static constexpr bool value =
-    Pred<typename tl_head<List>::type>::value
-    || tl_exists<typename tl_tail<List>::type, Pred>::value;
+    Pred<tl_head_t<List>>::value || tl_exists<tl_tail_t<List>, Pred>::value;
 };
 
 template <template <class> class Pred>
 struct tl_exists<empty_type_list, Pred> {
   static constexpr bool value = false;
-
 };
+
+// Uncomment after having switched to C++14
+//template <class List, template <class> class Pred>
+//inline constexpr bool tl_exists_v = tl_exists<List, Pred>::value;
 
 // size_t count(predicate)
 
@@ -465,8 +526,8 @@ struct tl_exists<empty_type_list, Pred> {
 template <class List, template <class> class Pred>
 struct tl_count {
   static constexpr size_t value =
-    (Pred<typename tl_head<List>::type>::value ? 1 : 0)
-    + tl_count<typename tl_tail<List>::type, Pred>::value;
+    (Pred<tl_head_t<List>>::value ? 1 : 0)
+    + tl_count<tl_tail_t<List>, Pred>::value;
 };
 
 template <template <class> class Pred>
@@ -477,14 +538,18 @@ struct tl_count<empty_type_list, Pred> {
 template <class List, template <class> class Pred>
 constexpr size_t tl_count<List, Pred>::value;
 
+// Uncomment after having switched to C++14
+//template <class List, template <class> class Pred>
+//inline constexpr size_t tl_count_v = tl_count<List, Pred>::value;
+
 // size_t count(type)
 
 /// Counts the number of elements in the list which are equal to `T`.
 template <class List, class T>
 struct tl_count_type {
   static constexpr size_t value =
-    (std::is_same<typename tl_head<List>::type, T>::value ? 1 : 0)
-    + tl_count_type<typename tl_tail<List>::type, T>::value;
+    (std::is_same<tl_head_t<List>, T>::value ? 1 : 0)
+    + tl_count_type<tl_tail_t<List>, T>::value;
 };
 
 template <class T>
@@ -495,22 +560,29 @@ struct tl_count_type<empty_type_list, T> {
 template <class List, class T>
 constexpr size_t tl_count_type<List, T>::value;
 
+// Uncomment after having switched to C++14
+//template <class List, class T>
+//inline constexpr size_t tl_count_type_v = tl_count_type<List, T>::value;
+
 // size_t count_not(predicate)
 
 /// Counts the number of elements in the list which satisfy a predicate.
 template <class List, template <class> class Pred>
 struct tl_count_not {
   static constexpr size_t value =
-    (Pred<typename tl_head<List>::type>::value ? 0 : 1) +
-    tl_count_not<typename tl_tail<List>::type, Pred>::value;
+    (Pred<tl_head_t<List>>::value ? 0 : 1) +
+    tl_count_not<tl_tail_t<List>, Pred>::value;
 
 };
 
 template <template <class> class Pred>
 struct tl_count_not<empty_type_list, Pred> {
   static constexpr size_t value = 0;
-
 };
+
+// Uncomment after having switched to C++14
+//template <class List, template <class> class Pred>
+//inline constexpr size_t tl_count_not_v = tl_count_not<List, Pred>::value;
 
 template <class ListA, class ListB>
 struct tl_concat_impl;
@@ -541,6 +613,9 @@ struct tl_concat<List0, List1, Lists...> {
     >::type;
 };
 
+template <class... Lists>
+using tl_concat_t = typename tl_concat<Lists...>::type;
+
 // list push_back(list, type)
 
 template <class List, class What>
@@ -550,8 +625,10 @@ struct tl_push_back;
 template <class... ListTs, class What>
 struct tl_push_back<type_list<ListTs...>, What> {
   using type = type_list<ListTs..., What>;
-
 };
+
+template <class List, class What>
+using tl_push_back_t = typename tl_push_back<List, What>::type;
 
 template <class List, class What>
 struct tl_push_front;
@@ -562,11 +639,17 @@ struct tl_push_front<type_list<ListTs...>, What> {
   using type = type_list<What, ListTs...>;
 };
 
+template <class List, class What>
+using tl_push_front_t = typename tl_push_front<List, What>::type;
+
 /// Alias for `tl_push_front<List, What>`.
 template <class What, class List>
 struct tl_cons : tl_push_front<List, What> {
   // nop
 };
+
+template <class List, class What>
+using tl_cons_t = tl_push_front_t<List, What>;
 
 // list map(list, trait)
 
@@ -583,14 +666,20 @@ struct tl_apply_all<T, Fun0, Funs...> {
   using type = typename tl_apply_all<typename Fun0<T>::type, Funs...>::type;
 };
 
+template <class T, template <class> class... Funs>
+using tl_apply_all_t = typename tl_apply_all<T, Funs...>::type;
+
 /// Creates a new list by applying a "template function" to each element.
 template <class List, template <class> class... Funs>
 struct tl_map;
 
 template <class... Ts, template <class> class... Funs>
 struct tl_map<type_list<Ts...>, Funs...> {
-  using type = type_list<typename tl_apply_all<Ts, Funs...>::type...>;
+  using type = type_list<tl_apply_all_t<Ts, Funs...>...>;
 };
+
+template <class List, template <class> class... Funs>
+using tl_map_t = typename tl_map<List, Funs...>::type;
 
 /// Creates a new list by applying a `Fun` to each element which
 ///    returns `TraitResult` for `Trait`.
@@ -598,19 +687,16 @@ template <class List, template <class> class Trait, bool TRes,
           template <class> class... Funs>
 struct tl_map_conditional {
   using type =
-    typename tl_concat<
+    tl_concat_t<
       type_list<
         typename std::conditional<
-          Trait<typename tl_head<List>::type>::value == TRes,
-          typename tl_apply_all<typename tl_head<List>::type, Funs...>::type,
-          typename tl_head<List>::type
+          Trait<tl_head_t<List>>::value == TRes,
+          tl_apply_all_t<tl_head_t<List>, Funs...>,
+          tl_head_t<List>
         >::type
       >,
-      typename tl_map_conditional<
-        typename tl_tail<List>::type,
-        Trait, TRes, Funs...
-      >::type
-    >::type;
+      typename tl_map_conditional<tl_tail_t<List>, Trait, TRes, Funs...>::type
+    >;
 };
 
 template <template <class> class Trait, bool TraitResult,
@@ -632,6 +718,9 @@ struct tl_pop_back<empty_type_list> {
   using type = empty_type_list;
 };
 
+template <class List>
+using tl_pop_back_t = typename tl_pop_back<List>::type;
+
 // list replace_back()
 
 /// Creates a new list with all but the last element of `List`
@@ -647,6 +736,10 @@ template <class T, class Back, class... Us>
 struct tl_replace_back<type_list<T>, Back, type_list<Us...>> {
   using type = type_list<Us..., Back>;
 };
+
+template <class List, class Back, class Intermediate = type_list<>>
+using tl_replace_back_t
+  = typename tl_replace_back<List, Back, Intermediate>::type;
 
 // type at(size_t)
 
@@ -677,6 +770,9 @@ struct tl_at<type_list<E...>, N> {
   using type = typename tl_at_impl<N, E...>::type;
 };
 
+template <class List, size_t N>
+using tl_at_t = typename tl_at<List, N>::type;
+
 // list prepend(type)
 
 template <class List, class What>
@@ -687,6 +783,9 @@ template <class What, class... T>
 struct tl_prepend<type_list<T...>, What> {
   using type = type_list<What, T...>;
 };
+
+template <class List, class What>
+using tl_prepend_t = typename tl_prepend<List, What>::type;
 
 // list filter(predicate)
 // list filter_not(predicate)
@@ -707,13 +806,13 @@ struct tl_filter_impl<type_list<T0, T...>, false, S...> {
 template <class T0, class... T, bool... S>
 struct tl_filter_impl<type_list<T0, T...>, true, S...> {
   using type =
-    typename tl_prepend<
+    tl_prepend_t<
       typename tl_filter_impl<
         type_list<T...>,
         S...
       >::type,
       T0
-    >::type;
+    >;
 };
 
 template <class List, template <class> class Pred>
@@ -728,6 +827,9 @@ struct tl_filter<type_list<T...>, Pred> {
       Pred<T>::value...
     >::type;
 };
+
+template <class List, template <class> class Pred>
+using tl_filter_t = typename tl_filter<List, Pred>::type;
 
 /// Creates a new list containing all elements which
 ///    do not satisfy `Pred`.
@@ -748,6 +850,9 @@ struct tl_filter_not<type_list<T...>, Pred> {
     >::type;
 };
 
+template <class List, template <class> class Pred>
+using tl_filter_not_t = typename tl_filter_not<List, Pred>::type;
+
 /// Creates a new list containing all elements which
 ///    are equal to `Type`.
 template <class List, class Type>
@@ -761,6 +866,9 @@ struct tl_filter_type<type_list<T...>, Type> {
       !std::is_same<T, Type>::value...
     >::type;
 };
+
+template <class List, class T>
+using tl_filter_type_t = typename tl_filter_type<List, T>::type;
 
 /// Creates a new list containing all elements which
 ///    are not equal to `Type`.
@@ -776,6 +884,9 @@ struct tl_filter_not_type<type_list<T...>, Type> {
     >::type;
 };
 
+template <class List, class T>
+using tl_filter_not_type_t = typename tl_filter_not_type<List, T>::type;
+
 // list distinct(list)
 
 /// Creates a new list from `List` without any duplicate elements.
@@ -790,25 +901,32 @@ struct tl_distinct<empty_type_list> {
 template <class T0, class... Ts>
 struct tl_distinct<type_list<T0, Ts...>> {
   using type =
-    typename tl_concat<
+    tl_concat_t<
       type_list<T0>,
       typename tl_distinct<
-        typename tl_filter_type<
+        tl_filter_type_t<
           type_list<Ts...>,
           T0
-        >::type
+        >
       >::type
-    >::type;
+    >;
 };
+
+template <class List>
+using tl_distinct_t = typename tl_distinct<List>::type;
 
 // bool is_distinct
 
 /// Tests whether a list is distinct.
-template <class L>
+template <class List>
 struct tl_is_distinct {
   static constexpr bool value =
-    tl_size<L>::value == tl_size<typename tl_distinct<L>::type>::value;
+    tl_size<List>::value == tl_size<tl_distinct_t<List>>::value;
 };
+
+// Uncomment after having switched to C++14
+//template <class List>
+//inline constexpr bool tl_is_distinct_v = tl_is_distinct<List>::value;
 
 // list resize(list, size, fill_type)
 
@@ -818,7 +936,7 @@ struct tl_pad_right_impl;
 
 template <class List, size_t OldSize, size_t NewSize, class FillType>
 struct tl_pad_right_impl<List, false, OldSize, NewSize, FillType> {
-  using type = typename tl_slice<List, 0, NewSize>::type;
+  using type = tl_slice_t<List, 0, NewSize>;
 };
 
 template <class List, size_t Size, class FillType>
@@ -830,7 +948,7 @@ template <class List, size_t OldSize, size_t NewSize, class FillType>
 struct tl_pad_right_impl<List, true, OldSize, NewSize, FillType> {
   using type =
     typename tl_pad_right_impl<
-      typename tl_push_back<List, FillType>::type,
+      tl_push_back_t<List, FillType>,
       OldSize + 1 < NewSize,
       OldSize + 1,
       NewSize,
@@ -852,16 +970,16 @@ struct tl_pad_right {
     >::type;
 };
 
+template <class List, size_t NewSize, class FillType = unit_t>
+using tl_pad_right_t = typename tl_pad_right<List, NewSize, FillType>::type;
+
 // bool pad_left(list, N)
 
 template <class List, size_t OldSize, size_t NewSize, class FillType>
 struct tl_pad_left_impl {
   using type =
     typename tl_pad_left_impl<
-      typename tl_push_front<
-        List,
-        FillType
-      >::type,
+      tl_push_front_t<List, FillType>,
       OldSize + 1,
       NewSize,
       FillType
@@ -887,6 +1005,9 @@ struct tl_pad_left {
     >::type;
 };
 
+template <class List, size_t NewSize, class FillType = unit_t>
+using tl_pad_left_t = typename tl_pad_left<List, NewSize, FillType>::type;
+
 // bool is_zipped(list)
 
 template <class List>
@@ -894,13 +1015,17 @@ struct tl_is_zipped {
   static constexpr bool value = tl_forall<List, is_type_pair>::value;
 };
 
+// Uncomment after having switched to C++14
+//template <class List>
+//inline constexpr bool tl_is_zipped_v = tl_is_zipped<List>::value;
+
 /// Removes trailing `What` elements from the end.
 template <class List, class What = unit_t>
 struct tl_trim {
   using type =
     typename std::conditional<
       std::is_same<typename tl_back<List>::type, What>::value,
-      typename tl_trim<typename tl_pop_back<List>::type,What>::type,
+      typename tl_trim<tl_pop_back_t<List>, What>::type,
       List
     >::type;
 };
@@ -910,18 +1035,23 @@ struct tl_trim<empty_type_list, What> {
   using type = empty_type_list;
 };
 
+template <class List, class What = unit_t>
+using tl_trim_t = typename tl_trim<List, What>::type;
+
 // list union(list1, list2)
 
-template <class... Xs>
+template <class... Ts>
 struct tl_union {
-  using type = typename tl_distinct<typename tl_concat<Xs...>::type>::type;
+  using type = tl_distinct_t<tl_concat_t<Ts...>>;
 };
+
+template <class... Ts>
+using tl_union_t = typename tl_union<Ts...>::type;
 
 // list intersect(list1, list2)
 
 template <class List,
-          bool HeadIsUnique =
-            tl_count_type<List, typename tl_head<List>::type>::value == 1>
+          bool HeadIsUnique = tl_count_type<List, tl_head_t<List>>::value == 1>
 struct tl_intersect_impl;
 
 template <>
@@ -937,24 +1067,27 @@ struct tl_intersect_impl<type_list<T0, Ts...>, true> {
 template <class T0, class... Ts>
 struct tl_intersect_impl<type_list<T0, Ts...>, false> {
   using type =
-    typename tl_concat<
+    tl_concat_t<
       type_list<T0>,
       typename tl_intersect_impl<
-        typename tl_filter_type<
+        tl_filter_type_t<
           type_list<Ts...>,
           T0
-        >::type
+        >
       >::type
-    >::type;
+    >;
 };
 
 template <class... Ts>
 struct tl_intersect {
   using type =
     typename tl_intersect_impl<
-      typename tl_concat<Ts...>::type
+      tl_concat_t<Ts...>
     >::type;
 };
+
+template <class... Ts>
+using tl_intersect_t = typename tl_intersect<Ts...>::type;
 
 // list group_by(list, predicate)
 
@@ -973,21 +1106,21 @@ struct tl_group_by_impl_step<false, What, List> {
 
 template <class In, class Out, template <class, typename> class Pred>
 struct tl_group_by_impl {
-  using last_group = typename tl_back<Out>::type;
+  using last_group = tl_back_t<Out>;
   using suffix =
     typename tl_group_by_impl_step<
       Pred<
-        typename tl_head<In>::type,
-        typename tl_back<last_group>::type
+        tl_head<In>,
+        tl_back<last_group>
       >::value,
-      typename tl_head<In>::type,
+      tl_head_t<In>,
       last_group
     >::type;
-  using prefix = typename tl_pop_back<Out>::type;
-  using new_out = typename tl_concat<prefix, suffix>::type;
+  using prefix = tl_pop_back_t<Out>;
+  using new_out = tl_concat_t<prefix, suffix>;
   using type =
     typename tl_group_by_impl<
-      typename tl_tail<In>::type,
+      tl_tail_t<In>,
       new_out,
       Pred
     >::type;
@@ -1018,6 +1151,9 @@ struct tl_group_by {
     >::type;
 };
 
+template <class List, template <class, typename> class Pred>
+using tl_group_by_t = typename tl_group_by<List, Pred>::type;
+
 /// Applies the types of the list to `VarArgTemplate`.
 template <class List, template <class...> class VarArgTemplate>
 struct tl_apply;
@@ -1026,6 +1162,9 @@ template <class... Ts, template <class...> class VarArgTemplate>
 struct tl_apply<type_list<Ts...>, VarArgTemplate> {
   using type = VarArgTemplate<Ts...>;
 };
+
+template <class List, template <class...> class VarArgTemplate>
+using tl_apply_t = typename tl_apply<List, VarArgTemplate>::type;
 
 // contains(list, x)
 
@@ -1040,6 +1179,10 @@ struct tl_contains<type_list<X, Ts...>, X> : std::true_type {};
 
 template <class T, class... Ts, class X>
 struct tl_contains<type_list<T, Ts...>, X> : tl_contains<type_list<Ts...>, X> {};
+
+// Uncomment after having switched to C++14
+//template <class List, class X>
+//inline constexpr bool tl_contains_v = tl_contains<List, X>::value;
 
 // subset_of(list, list)
 
@@ -1056,6 +1199,10 @@ template <class T, class... Ts, class List>
 struct tl_subset_of<type_list<T, Ts...>, List>
     : tl_subset_of<type_list<Ts...>, List, tl_contains<List, T>::value> {};
 
+// Uncomment after having switched to C++14
+// template <class ListA, class ListB, bool Fwd = true>
+// inline constexpr bool tl_subset_of_v = tl_subset_of<ListA, ListB, Fwd>::value;
+
 /// Tests whether ListA contains the same elements as ListB
 /// and vice versa. This comparison ignores element positions.
 template <class ListA, class ListB>
@@ -1064,15 +1211,22 @@ struct tl_equal {
                                 && tl_subset_of<ListB, ListA>::value;
 };
 
+// Uncomment after having switched to C++14
+// template <class ListA, class ListB>
+// inline constexpr bool tl_equal_v = tl_equal<ListA, ListB>::value;
+
 template <size_t N, class T>
 struct tl_replicate {
-  using type = typename tl_cons<T, typename tl_replicate<N - 1, T>::type>::type;
+  using type = tl_cons_t<T, typename tl_replicate<N - 1, T>::type>;
 };
 
 template <class T>
 struct tl_replicate<0, T> {
   using type = type_list<>;
 };
+
+template <size_t N, class T>
+using tl_replicate_t = typename tl_replicate<N, T>::type;
 
 } // namespace detail
 } // namespace caf

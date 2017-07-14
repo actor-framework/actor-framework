@@ -1,9 +1,6 @@
-[submodule "benchmarks"]
-	path = benchmarks
-	url = ../benchmarks.git
 [submodule "libcaf_opencl"]
 	path = libcaf_opencl
 	url = ../opencl.git
-[submodule "libcaf_python"]
-	path = libcaf_python
-	url = ../python.git
+[submodule "libcaf_python/third_party/pybind"]
+	path = libcaf_python/third_party/pybind
+	url = https://github.com/pybind/pybind11.git

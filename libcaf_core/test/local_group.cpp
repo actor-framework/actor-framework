@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -22,7 +22,9 @@
 #define CAF_SUITE local_group
 #include "caf/test/unit_test.hpp"
 
+#include <array>
 #include <chrono>
+#include <algorithm>
 
 #include "caf/all.hpp"
 
@@ -33,45 +35,24 @@ namespace {
 using msg_atom = atom_constant<atom("msg")>;
 using timeout_atom = atom_constant<atom("timeout")>;
 
-class testee1 : public event_based_actor {
-public:
-  testee1(actor_config& cfg) : event_based_actor(cfg), x_(0) {
-    // nop
-  }
+using testee_if = typed_actor<replies_to<get_atom>::with<int>,
+                              reacts_to<put_atom, int>>;
 
-  behavior make_behavior() override {
-    return {
-      [=](put_atom, int x) { x_ = x; },
-      [=](get_atom) { return x_; }
-    };
-  }
-
-private:
-  int x_;
+struct testee_state {
+  int x = 0;
 };
 
-
-behavior testee2(event_based_actor* self) {
-  auto counter = std::make_shared<int>(0);
-  auto grp = self->system().groups().get_local("test");
-  self->join(grp);
-  CAF_MESSAGE("self joined group");
-  self->send(grp, msg_atom::value);
+behavior testee_impl(stateful_actor<testee_state>* self) {
+  auto subscriptions = self->joined_groups();
   return {
-    [=](msg_atom) {
-      CAF_MESSAGE("received `msg_atom`");
-      ++*counter;
-      self->leave(grp);
-      self->send(grp, msg_atom::value);
-      self->send(self, timeout_atom::value);
+    [=](put_atom, int x) {
+      self->state.x = x;
     },
-    [=](timeout_atom) {
-      // this actor should receive only 1 message
-      CAF_CHECK_EQUAL(*counter, 1);
-      self->quit();
+    [=](get_atom) {
+      return self->state.x;
     }
   };
-}
+};
 
 struct fixture {
   actor_system_config config;
@@ -83,24 +64,27 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(group_tests, fixture)
 
-CAF_TEST(function_based_self_joining) {
-  system.spawn(testee2);
-}
-
 CAF_TEST(class_based_joined_at_spawn) {
   auto grp = system.groups().get_local("test");
-  auto tst = system.spawn_in_group<testee1>(grp);
+  // initialize all testee actors, spawning them in the group
+  std::array<actor, 10> xs;
+  for (auto& x : xs)
+    x = system.spawn_in_group(grp, testee_impl);
+  // get a function view for all testees
+  std::array<function_view<testee_if>, 10> fs;
+  std::transform(xs.begin(), xs.end(), fs.begin(), [](const actor& x) {
+    return make_function_view(actor_cast<testee_if>(x));
+  });
+  // make sure all actors start at 0
+  for (auto& f : fs)
+    CAF_CHECK_EQUAL(f(get_atom::value), 0);
+  // send a put to all actors via the group and make sure they change state
   self->send(grp, put_atom::value, 42);
-  self->request(tst, infinite, get_atom::value).receive(
-    [&](int x) {
-      CAF_REQUIRE_EQUAL(x, 42);
-    },
-    [&](const error& e) {
-      CAF_FAIL("error: " << system.render(e));
-    }
-  );
-  // groups holds a reference to testee, stop manually
-  self->send_exit(tst, exit_reason::user_shutdown);
+  for (auto& f : fs)
+    CAF_CHECK_EQUAL(f(get_atom::value), 42);
+  // shutdown all actors
+  for (auto& x : xs)
+    self->send_exit(x, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

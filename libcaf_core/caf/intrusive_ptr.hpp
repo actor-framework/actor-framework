@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -20,7 +20,9 @@
 #ifndef CAF_INTRUSIVE_PTR_HPP
 #define CAF_INTRUSIVE_PTR_HPP
 
+#include <string>
 #include <cstddef>
+#include <cinttypes>
 #include <algorithm>
 #include <stdexcept>
 #include <type_traits>
@@ -228,6 +230,27 @@ bool operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
 template <class T>
 bool operator<(const intrusive_ptr<T>& x, const intrusive_ptr<T>& y) {
   return x.get() < y.get();
+}
+
+/// @relates intrusive_ptr
+template <class T>
+bool operator<(const intrusive_ptr<T>& x, const T* y) {
+  return x.get() < y;
+}
+/// @relates intrusive_ptr
+template <class T>
+bool operator<(const T* x, const intrusive_ptr<T>& y) {
+  return x < y.get();
+}
+
+template <class T>
+std::string to_string(const intrusive_ptr<T>& x) {
+  auto v = reinterpret_cast<uintptr_t>(x.get());
+  // we convert to hex representation, i.e.,
+  // one byte takes two characters + null terminator + "0x" prefix
+  char buf[sizeof(v) * 2 + 3];
+  sprintf(buf, "%" PRIxPTR, v);
+  return buf;
 }
 
 } // namespace caf

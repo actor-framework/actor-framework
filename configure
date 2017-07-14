@@ -65,6 +65,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-curl-examples          build without libcurl examples
     --no-unit-tests             build without unit tests
     --no-opencl                 build without OpenCL module
+    --no-openssl                build without OpenSSL module
     --no-benchmarks             build without benchmarks
     --no-tools                  build without CAF tools such as caf-run
     --no-io                     build without I/O module
@@ -338,6 +339,9 @@ while [ $# -ne 0 ]; do
             ;;
         --no-opencl)
             append_cache_entry CAF_NO_OPENCL BOOL yes
+            ;;
+        --no-openssl)
+            append_cache_entry CAF_NO_OPENSSL BOOL yes
             ;;
         --build-static)
             append_cache_entry CAF_BUILD_STATIC BOOL yes

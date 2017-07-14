@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -34,9 +34,23 @@ namespace caf {
 
 template <class T, class R = infer_handle_from_class_t<T>, class... Ts>
 R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
-  CAF_LOG_SPAWN_EVENT(aid, std::forward_as_tuple(xs...));
+#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+  actor_storage<T>* ptr = nullptr;
+  if (logger::current_logger()->accepts(CAF_LOG_LEVEL_DEBUG,
+                                        CAF_LOG_FLOW_COMPONENT)) {
+    std::string args;
+    args = deep_to_string(std::forward_as_tuple(xs...));
+    ptr = new actor_storage<T>(aid, std::move(nid), sys,
+                               std::forward<Ts>(xs)...);
+    CAF_LOG_SPAWN_EVENT(ptr->data, args);
+  } else {
+    ptr = new actor_storage<T>(aid, std::move(nid), sys,
+                               std::forward<Ts>(xs)...);
+  }
+#else
   auto ptr = new actor_storage<T>(aid, std::move(nid), sys,
                                   std::forward<Ts>(xs)...);
+#endif
   return {&(ptr->ctrl), false};
 }
 

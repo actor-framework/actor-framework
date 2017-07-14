@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -41,6 +41,8 @@ public:
   using behavior_type = typename handle_type::behavior_type;
 
   using actor_base = typename handle_type::base;
+
+  using broker_base = typename handle_type::broker_base;
 
   using self_pointer =
     typename detail::tl_apply<

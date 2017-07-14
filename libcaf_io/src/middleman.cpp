@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -16,6 +16,8 @@
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
+
+#include "caf/io/middleman.hpp"
 
 #include <tuple>
 #include <cerrno>
@@ -35,15 +37,17 @@
 #include "caf/make_counted.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/function_view.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/raw_event_based_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
-#include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
 
 #include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -51,8 +55,9 @@
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/get_root_uuid.hpp"
-#include "caf/actor_registry.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
+#include "caf/detail/incoming_stream_multiplexer.hpp"
+#include "caf/detail/outgoing_stream_multiplexer.hpp"
 
 #ifdef CAF_USE_ASIO
 #include "caf/io/network/asio_multiplexer.hpp"
@@ -67,38 +72,36 @@
 namespace caf {
 namespace io {
 
+namespace {
+
+template <class T>
+class mm_impl : public middleman {
+public:
+  mm_impl(actor_system& ref) : middleman(ref), backend_(&ref) {
+    // nop
+  }
+
+  network::multiplexer& backend() override {
+    return backend_;
+  }
+
+private:
+  T backend_;
+};
+
+} // namespace <anonymous>
+
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
-  class impl : public middleman {
-  public:
-    impl(actor_system& ref) : middleman(ref), backend_(&ref) {
-      // nop
-    }
-
-    network::multiplexer& backend() override {
-      return backend_;
-    }
-
-  private:
-    network::default_multiplexer backend_;
-  };
+  switch (atom_uint(sys.config().middleman_network_backend)) {
 # ifdef CAF_USE_ASIO
-  class asio_impl : public middleman {
-  public:
-    asio_impl(actor_system& ref) : middleman(ref), backend_(&ref) {
-      // nop
-    }
-
-    network::multiplexer& backend() override {
-      return backend_;
-    }
-
-  private:
-    network::asio_multiplexer backend_;
-  };
-  if (sys.config().middleman_network_backend == atom("asio"))
-    return new asio_impl(sys);
+    case atom_uint(atom("asio")):
+      return new mm_impl<network::asio_multiplexer>(sys);
 # endif // CAF_USE_ASIO
-  return new impl(sys);
+    case atom_uint(atom("testing")):
+      return new mm_impl<network::test_multiplexer>(sys);
+    default:
+      return new mm_impl<network::default_multiplexer>(sys);
+  }
 }
 
 middleman::middleman(actor_system& sys) : system_(sys) {
@@ -150,7 +153,7 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
 }
 
 expected<uint16_t> middleman::publish_local_groups(uint16_t port,
-                                                   const char* in) {
+                                                   const char* in, bool reuse) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
   auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
@@ -160,11 +163,10 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
     };
   };
   auto gn = system().spawn<hidden>(group_nameserver);
-  auto result = publish(gn, port, in);
+  auto result = publish(gn, port, in, reuse);
   // link gn to our manager
   if (result)
-    manager_->link_impl(abstract_actor::establish_link_op,
-                        actor_cast<abstract_actor*>(gn));
+    manager_->add_link(actor_cast<abstract_actor*>(gn));
   else
     anon_send_exit(gn, exit_reason::user_shutdown);
   return result;
@@ -251,14 +253,17 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
 
 void middleman::start() {
   CAF_LOG_TRACE("");
-  // create hooks
+  // Create hooks.
   for (auto& f : system().config().hook_factories)
     hooks_.emplace_back(f(system_));
-  // launch backend
-  backend_supervisor_ = backend().make_supervisor();
+  // Launch backend.
+  if (system_.config().middleman_detach_multiplexer)
+    backend_supervisor_ = backend().make_supervisor();
   if (!backend_supervisor_) {
-    // the only backend that returns a `nullptr` is the `test_multiplexer`
-    // which does not have its own thread but uses the main thread instead
+    // The only backend that returns a `nullptr` is the `test_multiplexer`
+    // which does not have its own thread but uses the main thread instead.
+    // Other backends can set `middleman_detach_multiplexer` to false to
+    // suppress creation of the supervisor.
     backend().thread_id(std::this_thread::get_id());
   } else {
     thread_ = std::thread{[this] {
@@ -268,8 +273,106 @@ void middleman::start() {
     }};
     backend().thread_id(thread_.get_id());
   }
+  // Default implementation of the stream server.
+  class stream_serv : public raw_event_based_actor,
+                      public detail::stream_multiplexer::backend {
+  public:
+    stream_serv(actor_config& cfg, actor basp_ref)
+        : raw_event_based_actor(cfg),
+          detail::stream_multiplexer::backend(std::move(basp_ref)),
+          incoming_(this, *this),
+          outgoing_(this, *this) {
+      // nop
+    }
+
+    const char* name() const override {
+      return "stream_serv";
+    }
+
+    behavior make_behavior() override {
+      return {
+        [=](stream_msg& x) -> delegated<message> {
+          CAF_LOG_TRACE(CAF_ARG(x));
+          // Dispatching depends on the direction of the message.
+          if (outgoing_.has_stream(x.sid)) {
+            outgoing_(x);
+          } else {
+            incoming_(x);
+          }
+          return {};
+        },
+        [=](sys_atom, stream_msg& x) -> delegated<message> {
+          CAF_LOG_TRACE(CAF_ARG(x));
+          // Stream message received from a proxy
+          outgoing_(x);
+          return {};
+        },
+        [=](sys_atom, ok_atom, int32_t credit) {
+          CAF_LOG_TRACE(CAF_ARG(credit));
+          CAF_ASSERT(current_mailbox_element() != nullptr);
+          auto cme = current_mailbox_element();
+          if (cme->sender != nullptr) {
+            auto& nid = cme->sender->node();
+            add_credit(nid, credit);
+          } else {
+            CAF_LOG_ERROR("Received credit from an anonmyous stream server.");
+          }
+        },
+        [=](exit_msg& x) {
+          CAF_LOG_TRACE(CAF_ARG(x));
+          if (x.reason)
+            quit(x.reason);
+        },
+        // Connects both incoming_ and outgoing_ to nid.
+        [=](connect_atom, const node_id& nid) {
+          CAF_LOG_TRACE(CAF_ARG(nid));
+          send(basp_, forward_atom::value, nid, atom("ConfigServ"),
+               make_message(get_atom::value, atom("StreamServ")));
+        },
+        // Assumes `ptr` is a remote spawn server.
+        [=](strong_actor_ptr& ptr) {
+          CAF_LOG_TRACE(CAF_ARG(ptr));
+          if (ptr) {
+            add_remote_path(ptr->node(), ptr);
+          }
+        }
+      };
+    }
+
+    strong_actor_ptr remote_stream_serv(const node_id& nid) override {
+      CAF_LOG_TRACE(CAF_ARG(nid));
+      strong_actor_ptr result;
+      // Ask remote config server for a handle to the remote spawn server.
+      scoped_actor self{system()};
+      self->send(basp_, forward_atom::value, nid, atom("ConfigServ"),
+                 make_message(get_atom::value, atom("StreamServ")));
+      // Time out after 5 minutes.
+      self->receive(
+        [&](strong_actor_ptr& addr) {
+          result = std::move(addr);
+        },
+        after(std::chrono::minutes(5)) >> [] {
+          CAF_LOG_INFO("Accessing a remote spawn server timed out.");
+        }
+      );
+      return result;
+    }
+
+    void on_exit() override {
+      // Make sure to not keep references to remotes after shutdown.
+      remotes().clear();
+    }
+
+  private:
+    detail::incoming_stream_multiplexer incoming_;
+    detail::outgoing_stream_multiplexer outgoing_;
+  };
+  // Spawn utility actors.
   auto basp = named_broker<basp_broker>(atom("BASP"));
   manager_ = make_middleman_actor(system(), basp);
+  auto hdl = actor_cast<actor>(basp);
+  auto ssi = system().spawn<stream_serv, lazy_init + hidden>(std::move(hdl));
+  system().stream_serv(actor_cast<strong_actor_ptr>(std::move(ssi)));
 }
 
 void middleman::stop() {
@@ -296,11 +399,15 @@ void middleman::stop() {
   named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
-  self->wait_for(manager_);
+  if (system().config().middleman_detach_utility_actors)
+    self->wait_for(manager_);
   destroy(manager_);
 }
 
 void middleman::init(actor_system_config& cfg) {
+  // never detach actors when using the testing multiplexer
+  if (cfg.middleman_network_backend == atom("testing"))
+    cfg.middleman_detach_utility_actors = false;
   // add remote group module to config
   struct remote_groups : group_module {
   public:
@@ -337,11 +444,7 @@ void middleman::init(actor_system_config& cfg) {
      .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")
      .add_message_type<connection_closed_msg>("@connection_closed_msg")
      .add_message_type<accept_handle>("@accept_handle")
-     .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")
-     .add_message_type<connection_closed_msg>("@connection_closed_msg")
      .add_message_type<connection_handle>("@connection_handle")
-     .add_message_type<new_connection_msg>("@new_connection_msg")
-     .add_message_type<new_data_msg>("@new_data_msg")
      .add_message_type<connection_passivated_msg>("@connection_passivated_msg")
      .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg");
   // compute and set ID for this network node

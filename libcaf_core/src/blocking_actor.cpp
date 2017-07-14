@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -75,7 +75,7 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
       srb(src, mid);
     }
   } else {
-    CAF_LOG_ACCEPT_EVENT();
+    CAF_LOG_ACCEPT_EVENT(false);
   }
 }
 
@@ -396,13 +396,16 @@ void blocking_actor::receive_impl(receive_cond& rcc,
         }
       }
     } while (skipped && !timed_out);
-    if (timed_out)
+    if (timed_out) {
       bhvr.handle_timeout();
-    else
-      seq.erase_and_advance();
-    // check loop post condition
-    if (!rcc.post())
-      return;
+      if (!rcc.post())
+        return;
+    } else {
+      if (rcc.post())
+        seq.erase_and_advance();
+      else
+        return;
+    }
   }
 }
 

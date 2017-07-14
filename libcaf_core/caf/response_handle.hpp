@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -26,9 +26,7 @@
 #include "caf/catch_all.hpp"
 #include "caf/message_id.hpp"
 #include "caf/typed_behavior.hpp"
-#include "caf/continue_helper.hpp"
 #include "caf/system_messages.hpp"
-#include "caf/typed_continue_helper.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"

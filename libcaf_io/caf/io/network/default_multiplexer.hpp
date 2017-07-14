@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -31,6 +31,8 @@
 #include "caf/ref_counted.hpp"
 
 #include "caf/io/fwd.hpp"
+#include "caf/io/scribe.hpp"
+#include "caf/io/doorman.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/connection_handle.hpp"
@@ -159,22 +161,61 @@ expected<void> tcp_nodelay(native_socket fd, bool new_value);
 /// Enables or disables `SIGPIPE` events from `fd`.
 expected<void> allow_sigpipe(native_socket fd, bool new_value);
 
+/// Denotes the returned state of read and write operations on sockets.
+enum class rw_state {
+  /// Reports that bytes could be read or written.
+  success,
+  /// Reports that the socket is closed or faulty.
+  failure,
+  /// Reports that an empty buffer is in use and no operation was performed.
+  indeterminate
+};
+
 /// Reads up to `len` bytes from `fd,` writing the received data
 /// to `buf`. Returns `true` as long as `fd` is readable and `false`
 /// if the socket has been closed or an IO error occured. The number
 /// of read bytes is stored in `result` (can be 0).
-bool read_some(size_t& result, native_socket fd, void* buf, size_t len);
+rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len);
 
 /// Writes up to `len` bytes from `buf` to `fd`.
 /// Returns `true` as long as `fd` is readable and `false`
 /// if the socket has been closed or an IO error occured. The number
 /// of written bytes is stored in `result` (can be 0).
-bool write_some(size_t& result, native_socket fd, const void* buf, size_t len);
+rw_state write_some(size_t& result, native_socket fd, const void* buf,
+                    size_t len);
 
 /// Tries to accept a new connection from `fd`. On success,
 /// the new connection is stored in `result`. Returns true
 /// as long as
 bool try_accept(native_socket& result, native_socket fd);
+
+/// Function signature of `read_some`.
+using read_some_fun = decltype(read_some)*;
+
+/// Function signature of `wite_some`.
+using write_some_fun = decltype(write_some)*;
+
+/// Function signature of `try_accept`.
+using try_accept_fun = decltype(try_accept)*;
+
+/// Policy object for wrapping default TCP operations.
+struct tcp_policy {
+  static read_some_fun read_some;
+  static write_some_fun write_some;
+  static try_accept_fun try_accept;
+};
+
+/// Returns the locally assigned port of `fd`.
+expected<uint16_t> local_port_of_fd(native_socket fd);
+
+/// Returns the locally assigned address of `fd`.
+expected<std::string> local_addr_of_fd(native_socket fd);
+
+/// Returns the port used by the remote host of `fd`.
+expected<uint16_t> remote_port_of_fd(native_socket fd);
+
+/// Returns the remote host address of `fd`.
+expected<std::string> remote_addr_of_fd(native_socket fd);
 
 class default_multiplexer;
 
@@ -270,29 +311,15 @@ public:
     }
   };
 
-  expected<connection_handle> new_tcp_scribe(const std::string &,
-                                             uint16_t) override;
+  scribe_ptr new_scribe(native_socket fd) override;
 
-  expected<void> assign_tcp_scribe(abstract_broker *self,
-                                   connection_handle hdl) override;
+  expected<scribe_ptr> new_tcp_scribe(const std::string& host,
+                                      uint16_t port) override;
 
-  connection_handle add_tcp_scribe(abstract_broker *,
-                                   native_socket fd) override;
+  doorman_ptr new_doorman(native_socket fd) override;
 
-  expected<connection_handle> add_tcp_scribe(abstract_broker *,
-                                             const std::string &host,
-                                             uint16_t port) override;
-
-  expected<std::pair<accept_handle, uint16_t>>
-  new_tcp_doorman(uint16_t port, const char *in, bool reuse_addr) override;
-
-  expected<void> assign_tcp_doorman(abstract_broker *ptr,
-                                    accept_handle hdl) override;
-
-  accept_handle add_tcp_doorman(abstract_broker*, native_socket fd) override;
-
-  expected<std::pair<accept_handle, uint16_t>>
-  add_tcp_doorman(abstract_broker *, uint16_t, const char *, bool) override;
+  expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
+                                        bool reuse_addr) override;
 
   void exec_later(resumable* ptr) override;
 
@@ -301,6 +328,12 @@ public:
   ~default_multiplexer() override;
 
   supervisor_ptr make_supervisor() override;
+
+  bool poll_once(bool block);
+
+  bool try_run_once() override;
+
+  void run_once() override;
 
   void run() override;
 
@@ -433,9 +466,88 @@ public:
 
   void removed_from_loop(operation op) override;
 
-  void handle_event(operation op) override;
+  /// Forces this stream to subscribe to write events if no data is in the
+  /// write buffer.
+  void force_empty_write(const manager_ptr& mgr) {
+    if (!writing_) {
+      backend().add(operation::write, fd(), this);
+      writer_ = mgr;
+      writing_ = true;
+    }
+  }
+
+protected:
+  template <class Policy>
+  void handle_event_impl(io::network::operation op, Policy& policy) {
+    CAF_LOG_TRACE(CAF_ARG(op));
+    auto mcr = max_consecutive_reads();
+    switch (op) {
+      case io::network::operation::read: {
+        // Loop until an error occurs or we have nothing more to read
+        // or until we have handled `mcr` reads.
+        size_t rb;
+        for (size_t i = 0; i < mcr; ++i) {
+          switch (policy.read_some(rb, fd(), rd_buf_.data() + collected_,
+                                   rd_buf_.size() - collected_)) {
+            case rw_state::failure:
+              reader_->io_failure(&backend(), operation::read);
+              passivate();
+              return;
+            case rw_state::indeterminate:
+              return;
+            case rw_state::success:
+              if (rb == 0)
+                return;
+              collected_ += rb;
+              if (collected_ >= read_threshold_) {
+                auto res = reader_->consume(&backend(), rd_buf_.data(), collected_);
+                prepare_next_read();
+                if (!res) {
+                  passivate();
+                  return;
+                }
+              }
+          }
+        }
+        break;
+      }
+      case io::network::operation::write: {
+        size_t wb; // written bytes
+        switch (policy.write_some(wb, fd(), wr_buf_.data() + written_,
+                               wr_buf_.size() - written_)) {
+          case rw_state::failure:
+            writer_->io_failure(&backend(), operation::write);
+            backend().del(operation::write, fd(), this);
+            break;
+          case rw_state::indeterminate:
+            prepare_next_write();
+            break;
+          case rw_state::success:
+            written_ += wb;
+            CAF_ASSERT(written_ <= wr_buf_.size());
+            auto remaining = wr_buf_.size() - written_;
+            if (ack_writes_)
+              writer_->data_transferred(&backend(), wb,
+                                        remaining + wr_offline_buf_.size());
+            // prepare next send (or stop sending)
+            if (remaining == 0)
+              prepare_next_write();
+        }
+        break;
+      }
+      case operation::propagate_error:
+        if (reader_)
+          reader_->io_failure(&backend(), operation::read);
+        if (writer_)
+          writer_->io_failure(&backend(), operation::write);
+        // backend will delete this handler anyway,
+        // no need to call backend().del() here
+    }
+  }
 
 private:
+  size_t max_consecutive_reads();
+
   void prepare_next_read();
 
   void prepare_next_write();
@@ -455,6 +567,26 @@ private:
   size_t written_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;
+};
+
+/// A concrete stream with a technology-dependent policy for sending and
+/// receiving data from a socket.
+template <class ProtocolPolicy>
+class stream_impl : public stream {
+public:
+  template <class... Ts>
+  stream_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
+    : stream(mpx, sockfd),
+      policy_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  void handle_event(io::network::operation op) override {
+    this->handle_event_impl(op, policy_);
+  }
+
+private:
+  ProtocolPolicy policy_;
 };
 
 /// An acceptor is responsible for accepting incoming connections.
@@ -485,21 +617,108 @@ public:
   /// Closes the network connection and removes this handler from its parent.
   void stop_reading();
 
-  void handle_event(operation op) override;
-
   void removed_from_loop(operation op) override;
+
+protected:
+  template <class Policy>
+  void handle_event_impl(io::network::operation op, Policy& policy) {
+    CAF_LOG_TRACE(CAF_ARG(fd()) << CAF_ARG(op));
+    if (mgr_ && op == operation::read) {
+      native_socket sockfd = invalid_native_socket;
+      if (policy.try_accept(sockfd, fd())) {
+        if (sockfd != invalid_native_socket) {
+          sock_ = sockfd;
+          mgr_->new_connection();
+        }
+      }
+    }
+  }
 
 private:
   manager_ptr mgr_;
   native_socket sock_;
 };
 
+/// A concrete acceptor with a technology-dependent policy.
+template <class ProtocolPolicy>
+class acceptor_impl : public acceptor {
+public:
+  template <class... Ts>
+  acceptor_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
+    : acceptor(mpx, sockfd),
+      policy_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  void handle_event(io::network::operation op) override {
+    this->handle_event_impl(op, policy_);
+  }
+
+private:
+  ProtocolPolicy policy_;
+};
+
 expected<native_socket> new_tcp_connection(const std::string& host,
                                            uint16_t port,
                                            optional<protocol> preferred = none);
 
-expected<std::pair<native_socket, uint16_t>>
-new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
+expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
+                                              bool reuse_addr);
+
+/// Default doorman implementation.
+class doorman_impl : public doorman {
+public:
+  doorman_impl(default_multiplexer& mx, native_socket sockfd);
+
+  bool new_connection() override;
+
+  void stop_reading() override;
+
+  void launch() override;
+
+  std::string addr() const override;
+
+  uint16_t port() const override;
+
+  void add_to_loop() override;
+
+  void remove_from_loop() override;
+
+protected:
+  acceptor_impl<tcp_policy> acceptor_;
+};
+
+/// Default scribe implementation.
+class scribe_impl : public scribe {
+public:
+  scribe_impl(default_multiplexer& mx, native_socket sockfd);
+
+  void configure_read(receive_policy::config config) override;
+
+  void ack_writes(bool enable) override;
+
+  std::vector<char>& wr_buf() override;
+
+  std::vector<char>& rd_buf() override;
+
+  void stop_reading() override;
+
+  void flush() override;
+
+  std::string addr() const override;
+
+  uint16_t port() const override;
+
+  void launch();
+
+  void add_to_loop() override;
+
+  void remove_from_loop() override;
+
+protected:
+  bool launched_;
+  stream_impl<tcp_policy> stream_;
+};
 
 } // namespace network
 } // namespace io

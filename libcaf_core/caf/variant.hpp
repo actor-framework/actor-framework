@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -46,6 +46,8 @@
   }
 
 namespace caf {
+
+constexpr size_t variant_npos = static_cast<size_t>(-1);
 
 template <class T>
 struct variant_assign_helper {
@@ -102,10 +104,14 @@ public:
 
   static constexpr int max_type_id = sizeof...(Ts) - 1;
 
-  static_assert(sizeof...(Ts) <= 20, "Too many template arguments");
+  static_assert(sizeof...(Ts) <= 20, "Too many template arguments given.");
+
+  static_assert(sizeof...(Ts) > 0, "No template argument given.");
 
   static_assert(!detail::tl_exists<types, std::is_reference>::value,
                 "Cannot create a variant of references");
+
+  using type0 = typename detail::tl_at<types, 0>::type;
 
   variant& operator=(const variant& other) {
     variant_assign_helper<variant> helper{*this};
@@ -119,13 +125,15 @@ public:
     return *this;
   }
 
-  variant() : type_(0) {
-    // never empty
+  variant() : type_(variant_npos) {
+    // Never empty ...
     set(typename detail::tl_head<types>::type());
+    // ... unless an exception was thrown above.
+    type_ = 0;
   }
 
   template <class U>
-  variant(U&& arg) : type_(-1) {
+  variant(U&& arg) : type_(variant_npos) {
     set(std::forward<U>(arg));
   }
 
@@ -135,12 +143,12 @@ public:
     return *this;
   }
 
-  variant(const variant& other) : type_(-1) {
+  variant(const variant& other) : type_(variant_npos) {
     variant_assign_helper<variant> helper{*this};
     other.apply(helper);
   }
 
-  variant(variant&& other) : type_(-1) {
+  variant(variant&& other) : type_(variant_npos) {
     variant_move_helper<variant> helper{*this};
     other.apply(helper);
   }
@@ -149,10 +157,27 @@ public:
     destroy_data();
   }
 
+  constexpr size_t index() const {
+    return static_cast<size_t>(type_);
+  }
+
+  bool valueless_by_exception() const {
+    return index() == variant_npos;
+  }
+
   /// @cond PRIVATE
   template <int Pos>
   bool is(std::integral_constant<int, Pos>) const {
     return type_ == Pos;
+  }
+
+  template <class T>
+  bool is() const {
+    using namespace detail;
+    int_token<tl_index_where<type_list<Ts...>,
+                             tbind<is_same_ish, T>::template type>::value>
+      token;
+    return is(token);
   }
 
   template <int Pos>
@@ -168,22 +193,20 @@ public:
   }
 
   template <class Visitor>
-  typename Visitor::result_type apply(Visitor& visitor) const {
-    return apply_impl(*this, visitor);
+  auto apply(Visitor&& visitor) const
+  -> decltype(visitor(std::declval<const type0&>())) {
+    return apply_impl(*this, std::forward<Visitor>(visitor));
   }
 
   template <class Visitor>
-  typename Visitor::result_type apply(Visitor& visitor) {
-    return apply_impl(*this, visitor);
-  }
-
-  int8_t type_tag() {
-    return static_cast<int8_t>(type_);
+  auto apply(Visitor&& visitor) -> decltype(visitor(std::declval<type0&>())) {
+    return apply_impl(*this, std::forward<Visitor>(visitor));
   }
 
   template <class Self, class Visitor>
-  static typename Visitor::result_type
-  apply_impl(Self& x, Visitor& f) {
+  static auto apply_impl(Self& x, Visitor&& f) -> decltype(
+    f(std::declval<typename std::conditional<std::is_const<Self>::value,
+                                             const type0, type0>::type&>())) {
     switch (x.type_) {
       default: CAF_RAISE_ERROR("invalid type found");
       CAF_VARIANT_CASE(0);
@@ -212,7 +235,7 @@ public:
 
 private:
   inline void destroy_data() {
-    if (type_ == -1) return; // nothing to do
+    if (type_ == variant_npos) return; // nothing to do
     detail::variant_data_destructor f;
     apply(f);
   }
@@ -264,9 +287,15 @@ private:
     other.apply(helper);
   }
 
-  int type_;
+  size_t type_;
   detail::variant_data<typename lift_void<Ts>::type...> data_;
 };
+
+template <class T>
+struct is_variant : std::false_type {};
+
+template <class... Ts>
+struct is_variant<variant<Ts...>> : std::true_type {};
 
 /// @relates variant
 template <class T, class... Us>
@@ -288,7 +317,7 @@ const T& get(const variant<Us...>& value) {
 
 /// @relates variant
 template <class T, class... Us>
-T* get(variant<Us...>* value) {
+T* get_if(variant<Us...>* value) {
   using namespace detail;
   int_token<tl_index_where<type_list<Us...>,
                            tbind<is_same_ish, T>::template type>::value> token;
@@ -299,23 +328,39 @@ T* get(variant<Us...>* value) {
 
 /// @relates variant
 template <class T, class... Us>
-const T* get(const variant<Us...>* value) {
+const T* get_if(const variant<Us...>* value) {
   // compiler implicitly restores const because of the return type
-  return get<T>(const_cast<variant<Us...>*>(value));
+  return get_if<T>(const_cast<variant<Us...>*>(value));
 }
 
 /// @relates variant
 template <class Visitor, class... Ts>
 typename Visitor::result_type
-apply_visitor(Visitor& visitor, const variant<Ts...>& data) {
+CAF_DEPRECATED apply_visitor(Visitor& visitor, const variant<Ts...>& data) {
+  return data.apply(visitor);
+}
+
+/// @relates variant
+template <class Visitor, class Variant,
+          class E =
+            typename std::enable_if<
+              is_variant<typename std::decay<Variant>::type>::value
+            >::type>
+auto visit(Visitor&& visitor, Variant&& data)
+  -> decltype(data.apply(std::forward<Visitor>(visitor))) {
   return data.apply(visitor);
 }
 
 /// @relates variant
 template <class Visitor, class... Ts>
 typename Visitor::result_type
-apply_visitor(Visitor& visitor, variant<Ts...>& data) {
+CAF_DEPRECATED apply_visitor(Visitor& visitor, variant<Ts...>& data) {
   return data.apply(visitor);
+}
+
+template <class T, class... Ts>
+bool holds_alternative(const variant<Ts...>& data) {
+  return data.template is<T>();
 }
 
 /// @relates variant
@@ -328,7 +373,7 @@ struct variant_compare_helper {
   }
   template <class U>
   bool operator()(const U& rhs) const {
-    auto ptr = get<U>(&lhs);
+    auto ptr = get_if<U>(&lhs);
     return ptr ? *ptr == rhs : false;
   }
 };
@@ -337,7 +382,7 @@ struct variant_compare_helper {
 template <class... Ts>
 bool operator==(const variant<Ts...>& x, const variant<Ts...>& y) {
   variant_compare_helper<variant<Ts...>> f{x};
-  return apply_visitor(f, y);
+  return visit(f, y);
 }
 
 /// @relates variant
@@ -356,7 +401,7 @@ bool operator==(const variant<Ts...>& x, const T& y) {
 /// @relates variant
 template <class T>
 struct variant_reader {
-  int8_t& type_tag;
+  size_t& type_tag;
   T& x;
 };
 
@@ -364,7 +409,8 @@ struct variant_reader {
 template <class Inspector, class... Ts>
 typename Inspector::result_type
 inspect(Inspector& f, variant_reader<variant<Ts...>>& x) {
-  return variant<Ts...>::apply_impl(x.x, f);
+  return x.x.apply(f);
+  //return variant<Ts...>::apply_impl(x.x, f);
 }
 
 /// @relates variant
@@ -372,7 +418,7 @@ template <class Inspector, class... Ts>
 typename std::enable_if<Inspector::reads_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, variant<Ts...>& x) {
-  auto type_tag = x.type_tag();
+  auto type_tag = x.index();
   variant_reader<variant<Ts...>> helper{type_tag, x};
   return f(meta::omittable(), type_tag, helper);
 }
@@ -380,7 +426,7 @@ inspect(Inspector& f, variant<Ts...>& x) {
 /// @relates variant
 template <class T>
 struct variant_writer {
-  int8_t& type_tag;
+  size_t& type_tag;
   T& x;
 };
 
@@ -418,7 +464,7 @@ template <class Inspector, class... Ts>
 typename std::enable_if<Inspector::writes_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, variant<Ts...>& x) {
-  int8_t type_tag;
+  size_t type_tag;
   variant_writer<variant<Ts...>> helper{type_tag, x};
   return f(meta::omittable(), type_tag, helper);
 }

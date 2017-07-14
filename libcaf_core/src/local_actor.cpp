@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -174,7 +174,7 @@ error local_actor::load_state(deserializer&, const unsigned int) {
 }
 
 void local_actor::initialize() {
-  CAF_LOG_INIT_EVENT(name(), !getf(is_registered_flag));
+  // nop
 }
 
 bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
@@ -186,7 +186,7 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   // tell registry we're done
   unregister_from_system();
   monitorable_actor::cleanup(std::move(fail_state), host);
-  CAF_LOG_TERMINATE_EVENT(fail_state);
+  CAF_LOG_TERMINATE_EVENT(this, fail_state);
   return true;
 }
 

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -17,13 +17,33 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/continue_helper.hpp"
-#include "caf/event_based_actor.hpp"
+#ifndef CAF_STREAM_PRIORITY_HPP
+#define CAF_STREAM_PRIORITY_HPP
+
+#include <string>
 
 namespace caf {
 
-continue_helper::continue_helper(message_id mid) : mid_(mid) {
-  // nop
-}
+/// Categorizes individual streams.
+enum class stream_priority {
+  /// Denotes soft-realtime traffic.
+  very_high,
+  /// Denotes time-sensitive traffic.
+  high,
+  /// Denotes traffic with moderate timing requirements.
+  normal,
+  /// Denotes uncritical traffic without timing requirements.
+  low,
+  /// Denotes best-effort traffic.
+  very_low
+};
+
+/// Stores the number of `stream_priority` classes.
+static constexpr size_t stream_priorities = 5;
+
+/// @relates stream_priority
+std::string to_string(stream_priority x);
 
 } // namespace caf
+
+#endif // CAF_STREAM_PRIORITY_HPP

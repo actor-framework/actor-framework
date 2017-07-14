@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -32,6 +32,14 @@
 #include "caf/unifyn.hpp"
 
 namespace caf {
+
+/// Helper class to construct an `expected<T>` that represents no error.
+/// @relates expected
+struct no_error_t {};
+
+/// The only instance of ::no_error_t.
+/// @relates expected
+constexpr no_error_t no_error = no_error_t{};
 
 /// Represents the result of a computation which can either complete
 /// successfully with an instance of type `T` or fail with an `error`.
@@ -74,6 +82,10 @@ public:
 
   expected(caf::error e) noexcept : engaged_(false) {
     new (&error_) caf::error{std::move(e)};
+  }
+
+  expected(no_error_t) noexcept : engaged_(false) {
+    new (&error_) caf::error{};
   }
 
   expected(const expected& other) noexcept(nothrow_copy) {
@@ -363,6 +375,10 @@ public:
     // nop
   }
 
+  expected(no_error_t) noexcept {
+    // nop
+  }
+
   expected(caf::error e) noexcept : error_(std::move(e)) {
     // nop
   }
@@ -416,9 +432,15 @@ public:
 };
 
 template <class T>
-auto to_string(const expected<T>& x) -> decltype(to_string(*x)) {
+std::string to_string(const expected<T>& x) {
   if (x)
-    return to_string(*x);
+    return deep_to_string(*x);
+  return "!" + to_string(x.error());
+}
+
+inline std::string to_string(const expected<void>& x) {
+  if (x)
+    return "unit";
   return "!" + to_string(x.error());
 }
 

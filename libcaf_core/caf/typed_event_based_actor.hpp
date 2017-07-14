@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -61,6 +61,8 @@ public:
   using signatures = detail::type_list<Sigs...>;
 
   using behavior_type = typed_behavior<Sigs...>;
+
+  using actor_hdl = typed_actor<Sigs...>;
 
   std::set<std::string> message_types() const override {
     detail::type_list<typed_actor<Sigs...>> token;

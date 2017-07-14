@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -34,15 +34,16 @@ namespace io {
 template <class Base, class Handle, class SysMsgType>
 class broker_servant : public Base {
 public:
-  broker_servant(abstract_broker* ptr, Handle x)
-      : Base(ptr),
-        hdl_(x),
+  using handle_type = Handle;
+
+  broker_servant(handle_type x)
+      : hdl_(x),
         value_(strong_actor_ptr{}, message_id::make(),
                mailbox_element::forwarding_stack{}, SysMsgType{x, {}}) {
     // nop
   }
 
-  Handle hdl() const {
+  handle_type hdl() const {
     return hdl_;
   }
 
@@ -99,7 +100,7 @@ protected:
       // producing, why we check the condition again afterwards
       using passiv_t =
         typename std::conditional<
-          std::is_same<Handle, connection_handle>::value,
+          std::is_same<handle_type, connection_handle>::value,
           connection_passivated_msg,
           acceptor_passivated_msg
         >::type;
@@ -116,7 +117,7 @@ protected:
     return value_.template get_mutable_as<SysMsgType>(0);
   }
 
-  Handle hdl_;
+  handle_type hdl_;
   mailbox_element_vals<SysMsgType> value_;
   optional<size_t> activity_tokens_;
 };

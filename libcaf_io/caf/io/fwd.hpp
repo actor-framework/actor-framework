@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -21,7 +21,19 @@
 #define CAF_IO_FWD_HPP
 
 namespace caf {
+
+// -- templates from the parent namespace necessary for defining aliases -------
+
+template <class> class intrusive_ptr;
+
 namespace io {
+
+// -- variadic templates -------------------------------------------------------
+
+template <class... Sigs>
+class typed_broker;
+
+// -- classes ------------------------------------------------------------------
 
 class scribe;
 class broker;
@@ -31,8 +43,12 @@ class basp_broker;
 class receive_policy;
 class abstract_broker;
 
-template <class... Sigs>
-class typed_broker;
+// -- aliases ------------------------------------------------------------------
+
+using scribe_ptr = intrusive_ptr<scribe>;
+using doorman_ptr = intrusive_ptr<doorman>;
+
+// -- nested namespaces --------------------------------------------------------
 
 namespace network {
 

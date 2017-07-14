@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -26,8 +26,7 @@
 namespace caf {
 namespace io {
 
-doorman::doorman(abstract_broker* ptr, accept_handle acc_hdl)
-    : doorman_base(ptr, acc_hdl) {
+doorman::doorman(accept_handle acc_hdl) : doorman_base(acc_hdl) {
   // nop
 }
 

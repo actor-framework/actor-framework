@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -32,8 +32,6 @@ namespace network {
 /// for incoming data as well as for error handling.
 class stream_manager : public manager {
 public:
-  stream_manager(abstract_broker* ptr);
-
   ~stream_manager() override;
 
   /// Called by the underlying I/O device whenever it received data.

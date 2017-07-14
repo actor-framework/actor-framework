@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  * Raphael Hiesgen <raphael.hiesgen (at) haw-hamburg.de>                      *
  *                                                                            *
@@ -93,38 +93,12 @@ error ip_bind(asio_tcp_socket_acceptor& fd, uint16_t port,
   }
 }
 
-expected<connection_handle>
-asio_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
-  auto sck = new_tcp_connection(service(), host, port);
-  if (!sck)
-    return std::move(sck.error());
-  asio_tcp_socket fd{std::move(*sck)};
-  auto id = int64_from_native_socket(fd.native_handle());
-  std::lock_guard<std::mutex> lock(mtx_sockets_);
-  unassigned_sockets_.insert(std::make_pair(id, std::move(fd)));
-  return connection_handle::from_int(id);
-}
-
-expected<void> asio_multiplexer::assign_tcp_scribe(abstract_broker* self,
-                                                   connection_handle hdl) {
-  std::lock_guard<std::mutex> lock(mtx_sockets_);
-  auto itr = unassigned_sockets_.find(hdl.id());
-  if (itr != unassigned_sockets_.end()) {
-    add_tcp_scribe(self, std::move(itr->second));
-    unassigned_sockets_.erase(itr);
-    return unit;
-  }
-  return sec::failed_to_assign_scribe_from_handle;
-}
-
-template <class Socket>
-connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
-                                                   Socket&& sock) {
+scribe_ptr asio_multiplexer::new_scribe(asio_tcp_socket&& sock) {
   CAF_LOG_TRACE("");
   class impl : public scribe {
   public:
-    impl(abstract_broker* ptr, asio_multiplexer& am, Socket&& s)
-        : scribe(ptr, network::conn_hdl_from_socket(s)),
+    impl(asio_multiplexer& am, asio_tcp_socket&& s)
+        : scribe(network::conn_hdl_from_socket(s)),
           launched_(false),
           stream_(am) {
       stream_.init(std::move(s));
@@ -156,8 +130,7 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
       stream_.flush(this);
     }
     std::string addr() const override {
-      return
-        stream_.socket_handle().remote_endpoint().address().to_string();
+      return stream_.socket_handle().remote_endpoint().address().to_string();
     }
     uint16_t port() const override {
       return stream_.socket_handle().remote_endpoint().port();
@@ -174,18 +147,15 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
     void remove_from_loop() override {
       stream_.passivate();
     }
- private:
+  private:
     bool launched_;
-    asio_stream<Socket> stream_;
+    asio_stream<asio_tcp_socket> stream_;
   };
-  auto ptr = make_counted<impl>(self, *this, std::move(sock));
-  self->add_scribe(ptr);
-  return ptr->hdl();
+  return make_counted<impl>(*this, std::move(sock));
 }
 
-connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
-                                                   native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(fd));
+scribe_ptr asio_multiplexer::new_scribe(native_socket fd) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
   boost::system::error_code ec;
   asio_tcp_socket sock{service()};
   sock.assign(boost::asio::ip::tcp::v6(), fd, ec);
@@ -193,56 +163,24 @@ connection_handle asio_multiplexer::add_tcp_scribe(abstract_broker* self,
     sock.assign(boost::asio::ip::tcp::v4(), fd, ec);
   if (ec)
     CAF_RAISE_ERROR(ec.message());
-  return add_tcp_scribe(self, std::move(sock));
+  return new_scribe(std::move(sock));
 }
 
-expected<connection_handle>
-asio_multiplexer::add_tcp_scribe(abstract_broker* self,
-                                 const std::string& host, uint16_t port) {
-  CAF_LOG_TRACE(CAF_ARG(self) << ", " << CAF_ARG(host) << ":" << CAF_ARG(port));
-  auto conn = new_tcp_connection(service(), host, port);
-  if (!conn)
-    return std::move(conn.error());
-  return add_tcp_scribe(self, std::move(*conn));
+expected<scribe_ptr> asio_multiplexer::new_tcp_scribe(const std::string& host,
+                                                      uint16_t port) {
+  auto sck = new_tcp_connection(service(), host, port);
+  if (!sck)
+    return std::move(sck.error());
+  return new_scribe(std::move(*sck));
 }
 
-expected<std::pair<accept_handle, uint16_t>>
-asio_multiplexer::new_tcp_doorman(uint16_t port, const char* in, bool rflag) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (in ? in : "nullptr"));
-  asio_tcp_socket_acceptor fd{service()};
-  auto err = ip_bind(fd, port, in, rflag);
-  if (err)
-    return err;
-  auto id = int64_from_native_socket(fd.native_handle());
-  auto assigned_port = fd.local_endpoint().port();
-  std::lock_guard<std::mutex> lock(mtx_acceptors_);
-  unassigned_acceptors_.insert(std::make_pair(id, std::move(fd)));
-  return std::make_pair(accept_handle::from_int(id), assigned_port);
-}
-
-expected<void> asio_multiplexer::assign_tcp_doorman(abstract_broker* self,
-                                          accept_handle hdl) {
-  CAF_LOG_TRACE("");
-  std::lock_guard<std::mutex> lock(mtx_acceptors_);
-  auto itr = unassigned_acceptors_.find(hdl.id());
-  if (itr != unassigned_acceptors_.end()) {
-    add_tcp_doorman(self, std::move(itr->second));
-    unassigned_acceptors_.erase(itr);
-    return unit;
-  }
-  return sec::failed_to_assign_doorman_from_handle;
-}
-
-accept_handle
-asio_multiplexer::add_tcp_doorman(abstract_broker* self,
-                                  asio_tcp_socket_acceptor&& sock) {
+doorman_ptr asio_multiplexer::new_doorman(asio_tcp_socket_acceptor&& sock) {
   CAF_LOG_TRACE(CAF_ARG(sock.native_handle()));
   CAF_ASSERT(sock.native_handle() != network::invalid_native_socket);
   class impl : public doorman {
   public:
-    impl(abstract_broker* ptr, asio_tcp_socket_acceptor&& s,
-         network::asio_multiplexer& am)
-        : doorman(ptr, network::accept_hdl_from_socket(s)),
+    impl(asio_tcp_socket_acceptor&& s, network::asio_multiplexer& am)
+        : doorman(network::accept_hdl_from_socket(s)),
           acceptor_(am, s.get_io_service()) {
       acceptor_.init(std::move(s));
     }
@@ -255,9 +193,10 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
         // further activities for the broker
         return false;
       auto& am = acceptor_.backend();
-      auto x = am.add_tcp_scribe(parent(),
-                                 std::move(acceptor_.accepted_socket()));
-      return doorman::new_connection(&am, x);
+      auto sptr = am.new_scribe(std::move(acceptor_.accepted_socket()));
+      auto shdl = sptr->hdl();
+      parent()->add_scribe(std::move(sptr));
+      return doorman::new_connection(&am, shdl);
     }
     void stop_reading() override {
       CAF_LOG_TRACE("");
@@ -284,13 +223,10 @@ asio_multiplexer::add_tcp_doorman(abstract_broker* self,
   private:
     network::asio_acceptor<asio_tcp_socket_acceptor> acceptor_;
   };
-  auto ptr = make_counted<impl>(self, std::move(sock), *this);
-  self->add_doorman(ptr);
-  return ptr->hdl();
+  return make_counted<impl>(std::move(sock), *this);
 }
 
-accept_handle asio_multiplexer::add_tcp_doorman(abstract_broker* self,
-                                                native_socket fd) {
+doorman_ptr asio_multiplexer::new_doorman(native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   asio_tcp_socket_acceptor sock{service()};
   boost::system::error_code ec;
@@ -299,19 +235,17 @@ accept_handle asio_multiplexer::add_tcp_doorman(abstract_broker* self,
     sock.assign(boost::asio::ip::tcp::v4(), fd, ec);
   if (ec)
     CAF_RAISE_ERROR(ec.message());
-  return add_tcp_doorman(self, std::move(sock));
+  return new_doorman(std::move(sock));
 }
 
-expected<std::pair<accept_handle, uint16_t>>
-asio_multiplexer::add_tcp_doorman(abstract_broker* self, uint16_t port,
-                                  const char* in, bool rflag) {
-  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in) << CAF_ARG(rflag));
+expected<doorman_ptr>
+asio_multiplexer::new_tcp_doorman(uint16_t port, const char* in, bool rflag) {
+  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (in ? in : "nullptr"));
   asio_tcp_socket_acceptor fd{service()};
   auto err = ip_bind(fd, port, in, rflag);
   if (err)
     return err;
-  auto p = fd.local_endpoint().port();
-  return std::make_pair(add_tcp_doorman(self, std::move(fd)), p);
+  return new_doorman(std::move(fd));
 }
 
 void asio_multiplexer::exec_later(resumable* rptr) {
@@ -349,6 +283,21 @@ asio_multiplexer::~asio_multiplexer() {
 
 multiplexer::supervisor_ptr asio_multiplexer::make_supervisor() {
   return std::unique_ptr<asio_supervisor>(new asio_supervisor(service()));
+}
+
+bool asio_multiplexer::try_run_once() {
+  boost::system::error_code ec;
+  auto num = service().poll(ec);
+  if (ec)
+    CAF_RAISE_ERROR(ec.message());
+  return num > 0;
+}
+
+void asio_multiplexer::run_once() {
+  boost::system::error_code ec;
+  service().run_one(ec);
+  if (ec)
+    CAF_RAISE_ERROR(ec.message());
 }
 
 void asio_multiplexer::run() {

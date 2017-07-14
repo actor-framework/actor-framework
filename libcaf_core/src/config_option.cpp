@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -79,7 +79,7 @@ void config_option::report_type_error(size_t ln, config_value& x,
   type_name_visitor tnv;
   *out << "error in line " << ln << ": expected "
        << expected << " found "
-       << apply_visitor(tnv, x) << '\n';
+       << visit(tnv, x) << '\n';
 }
 
 } // namespace caf

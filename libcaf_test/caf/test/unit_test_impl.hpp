@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -85,7 +85,8 @@ private:
 namespace { watchdog* s_watchdog; }
 
 void watchdog::start(int secs) {
-  s_watchdog = new watchdog(secs);
+  if (secs > 0)
+    s_watchdog = new watchdog(secs);
 }
 
 void watchdog::stop() {
@@ -488,7 +489,7 @@ int main(int argc, char** argv) {
   // default values.
   int verbosity_console = 3;
   int verbosity_file = 3;
-  int max_runtime = 0;
+  int max_runtime = engine::max_runtime();
   std::string log_file;
   std::string suites = ".*";
   std::string not_suites;
@@ -513,7 +514,8 @@ int main(int argc, char** argv) {
      verbosity_console},
     {"file-verbosity,V", "set verbosity level of file output (1-5)",
      verbosity_file},
-    {"max-runtime,r", "set maximum runtime in seconds", max_runtime},
+    {"max-runtime,r", "set maximum runtime in seconds (0 = infinite)",
+      max_runtime},
     {"suites,s",
      "define what suites to run, either * or a comma-separated list", suites},
     {"not-suites,S", "exclude suites", not_suites},
@@ -554,8 +556,7 @@ int main(int argc, char** argv) {
   } else {
     engine::args(1, argv);
   }
-  if (res.opts.count("max-runtime") > 0)
-    engine::max_runtime(max_runtime);
+  engine::max_runtime(max_runtime);
   auto result = engine::run(colorize, log_file, verbosity_console,
                             verbosity_file, suites,
                             not_suites, tests, not_tests);

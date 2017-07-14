@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -82,7 +82,8 @@ public:
   /// @returns The actual port the OS uses after `bind()`. If `port == 0`
   ///          the OS chooses a random high-level port.
   expected<uint16_t> publish_local_groups(uint16_t port,
-                                          const char* in = nullptr);
+                                          const char* in = nullptr,
+                                          bool reuse = false);
 
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.
@@ -280,16 +281,17 @@ private:
   template <spawn_options Os, class Impl, class F, class... Ts>
   expected<typename infer_handle_from_class<Impl>::type>
   spawn_client_impl(F fun, const std::string& host, uint16_t port, Ts&&... xs) {
-    auto ehdl = backend().new_tcp_scribe(host, port);
-    if (!ehdl)
-      return ehdl.error();
-    auto hdl = *ehdl;
+    auto eptr = backend().new_tcp_scribe(host, port);
+    if (!eptr)
+      return eptr.error();
+    auto ptr = std::move(*eptr);
+    CAF_ASSERT(ptr != nullptr);
     detail::init_fun_factory<Impl, F> fac;
     actor_config cfg{&backend()};
-    auto init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
-    cfg.init_fun = [hdl, init_fun](local_actor* ptr) -> behavior {
-      static_cast<abstract_broker*>(ptr)->assign_tcp_scribe(hdl);
-      return init_fun(ptr);
+    auto init_fun = fac(std::move(fun), ptr->hdl(), std::forward<Ts>(xs)...);
+    cfg.init_fun = [ptr, init_fun](local_actor* self) mutable -> behavior {
+      static_cast<abstract_broker*>(self)->add_scribe(std::move(ptr));
+      return init_fun(self);
     };
     return system().spawn_class<Impl, Os>(cfg);
   }
@@ -297,17 +299,17 @@ private:
   template <spawn_options Os, class Impl, class F, class... Ts>
   expected<typename infer_handle_from_class<Impl>::type>
   spawn_server_impl(F fun, uint16_t& port, Ts&&... xs) {
+    auto eptr = backend().new_tcp_doorman(port);
+    if (!eptr)
+      return eptr.error();
+    auto ptr = std::move(*eptr);
     detail::init_fun_factory<Impl, F> fac;
     auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
-    auto ehdl = backend().new_tcp_doorman(port);
-    if (!ehdl)
-      return ehdl.error();
-    auto hdl = ehdl->first;
-    port = ehdl->second;
+    port = ptr->port();
     actor_config cfg{&backend()};
-    cfg.init_fun = [hdl, init_fun](local_actor* ptr) -> behavior {
-      static_cast<abstract_broker*>(ptr)->assign_tcp_doorman(hdl);
-      return init_fun(ptr);
+    cfg.init_fun = [ptr, init_fun](local_actor* self) mutable -> behavior {
+      static_cast<abstract_broker*>(self)->add_doorman(std::move(ptr));
+      return init_fun(self);
     };
     return system().spawn_class<Impl, Os>(cfg);
   }

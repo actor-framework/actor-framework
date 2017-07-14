@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -137,7 +137,7 @@ public:
   typename std::enable_if<std::is_floating_point<T>::value, error>::type
   apply(T& x) {
     static constexpr auto tlindex = detail::tl_index_of<builtin_t, T>::value;
-    static_assert(tlindex >= 0, "T not recognized as builtiln type");
+    static_assert(tlindex >= 0, "T not recognized as builtin type");
     return apply_builtin(static_cast<builtin>(tlindex), &x);
   }
 
@@ -153,7 +153,7 @@ public:
         static_cast<int>(sizeof(T)) * (std::is_signed<T>::value ? -1 : 1)
       >::type;
     static constexpr auto tlindex = detail::tl_index_of<builtin_t, type>::value;
-    static_assert(tlindex >= 0, "T not recognized as builtiln type");
+    static_assert(tlindex >= 0, "T not recognized as builtin type");
     return apply_builtin(static_cast<builtin>(tlindex), &x);
   }
 
@@ -223,6 +223,40 @@ public:
       }
     } assign;
     uint8_t tmp;
+    return convert_apply(dref(), x, tmp, assign);
+  }
+
+  // Special case to avoid using 1 byte per bool
+  error apply(std::vector<bool>& x) {
+    auto len = x.size();
+    auto err = begin_sequence(len);
+    if (err || len == 0)
+      return err;
+    struct {
+      size_t len;
+      void operator()(std::vector<bool>& lhs, std::vector<uint8_t>& rhs) const {
+        lhs.resize(len, false);
+        size_t cpt = 0;
+        for (auto v: rhs) {
+          for (int k = 0; k < 8; ++k) {
+            lhs[cpt] = ((v & (1 << k)) != 0);
+            if (++cpt >= len)
+              return;
+          }
+        }
+      }
+      void operator()(std::vector<uint8_t>& lhs, std::vector<bool>& rhs) const {
+        size_t k = 0;
+        lhs.resize((rhs.size() - 1) / 8 + 1, 0);
+        for (bool b: rhs) {
+          if (b)
+            lhs[k / 8] |= (1 << (k % 8));
+          ++k;
+        }
+      }
+    } assign;
+    assign.len = len;
+    std::vector<uint8_t> tmp;
     return convert_apply(dref(), x, tmp, assign);
   }
 

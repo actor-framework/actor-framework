@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -101,8 +101,17 @@ public:
 
   }
 
-  /// Tries to execute a single event.
-  bool run_once();
+  /// Tries to execute a single event in FIFO order.
+  bool try_run_once();
+
+  /// Tries to execute a single event in LIFO order.
+  bool try_run_once_lifo();
+
+  /// Executes a single event in FIFO order or fails if no event is available.
+  void run_once();
+
+  /// Executes a single event in LIFO order or fails if no event is available.
+  void run_once_lifo();
 
   /// Executes events until the job queue is empty and no pending timeouts are
   /// left. Returns the number of processed events.
@@ -119,12 +128,31 @@ public:
   /// events (first) and dispatched delayed messages (second).
   std::pair<size_t, size_t> run_dispatch_loop();
 
+  template <class F>
+  void after_next_enqueue(F f) {
+    after_next_enqueue_ = f;
+  }
+
+  /// Executes the next enqueued job immediately by using the
+  /// `after_next_enqueue` hook.
+  void inline_next_enqueue();
+
+  /// Executes all enqueued jobs immediately by using the `after_next_enqueue`
+  /// hook.
+  void inline_all_enqueues();
+
 protected:
   void start() override;
 
   void stop() override;
 
   void enqueue(resumable* ptr) override;
+
+private:
+  void inline_all_enqueues_helper();
+
+  /// User-provided callback for triggering custom code in `enqueue`.
+  std::function<void()> after_next_enqueue_;
 };
 
 } // namespace scheduler

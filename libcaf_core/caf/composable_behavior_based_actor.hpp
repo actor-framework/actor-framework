@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -33,7 +33,7 @@ class composable_behavior_based_actor : public stateful_actor<State, Base> {
                 "State is abstract, please make sure to override all "
                 "virtual operator() member functions");
 
-  using super = stateful_actor<State, typename State::actor_base>;
+  using super = stateful_actor<State, Base>;
 
   composable_behavior_based_actor(actor_config& cfg) : super(cfg) {
     // nop

@@ -15,6 +15,9 @@ if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
   set(CAF_BUILD_STATIC_ONLY yes)
 endif()
 
+# add helper target that simplifies re-running configure
+add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
+
 ################################################################################
 #                        set included flags if needed                          #
 ################################################################################
@@ -72,6 +75,10 @@ endif()
 
 if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
+endif()
+
+if(NOT CAF_NO_OPENSSL)
+  set(CAF_NO_OPENSSL no)
 endif()
 
 if(NOT CAF_NO_PYTHON)
@@ -174,6 +181,10 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
    OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   set(EXTRA_FLAGS "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
 endif()
+# explicitly disable obnoxious GCC warnings
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  set(EXTRA_FLAGS "-Wno-missing-field-initializers")
+endif()
 # add "-Werror" flag if --pedantic-build is used
 if(CAF_CXX_WARNINGS_AS_ERRORS)
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -Werror")
@@ -212,7 +223,7 @@ if(CAF_MORE_WARNINGS)
                "-Wignored-qualifiers -Winit-self "
                "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
                "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
-               "-Wmissing-braces -Wmissing-field-initializers -Wmultichar "
+               "-Wmissing-braces -Wmultichar "
                "-Wnarrowing -Wnoexcept -Wnon-template-friend "
                "-Wnon-virtual-dtor -Wnonnull -Woverflow "
                "-Woverlength-strings -Wparentheses "
@@ -307,7 +318,7 @@ if(NOT CMAKE_CXX_FLAGS_RELEASE)
   set(CMAKE_CXX_FLAGS_RELEASE           "-O3 -DNDEBUG")
 endif()
 if(NOT CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO    "-O2 -g")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO    "-O2 -g -fno-omit-frame-pointer")
 endif()
 # set build default build type to RelWithDebInfo if not set
 if(NOT CMAKE_BUILD_TYPE)
@@ -487,12 +498,25 @@ endmacro()
 add_caf_lib(core)
 add_optional_caf_lib(io)
 
+# build SSL module if OpenSSL library is available
+if(NOT CAF_NO_OPENSSL)
+  find_package(OpenSSL)
+  if(OPENSSL_FOUND)
+    include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
+    add_optional_caf_lib(openssl)
+  else(OPENSSL_FOUND)
+    set(CAF_NO_OPENSSL yes)
+  endif(OPENSSL_FOUND)
+endif()
+
 # build opencl library if not told otherwise and OpenCL package was found
 if(NOT CAF_NO_OPENCL)
   find_package(OpenCL)
   if(OpenCL_FOUND)
     add_optional_caf_lib(opencl)
     add_optional_caf_binaries(libcaf_opencl/examples)
+  else()
+    set(CAF_NO_OPENCL yes)
   endif()
 endif()
 
@@ -675,6 +699,7 @@ invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
+invertYesNo(CAF_NO_OPENSSL CAF_BUILD_OPENSSL)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
@@ -699,7 +724,8 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
-        "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
+        "\nBuild OpenCL:      ${CAF_BUILD_OPENCL}"
+        "\nBuild OpenSSL:     ${CAF_BUILD_OPENSSL}"
         "\nBuild Python:      ${CAF_BUILD_PYTHON}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"

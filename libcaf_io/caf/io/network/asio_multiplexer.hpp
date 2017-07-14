@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  * Raphael Hiesgen <raphael.hiesgen (at) haw-hamburg.de>                      *
  *                                                                            *
@@ -58,33 +58,19 @@ public:
   friend class io::middleman;
   friend class supervisor;
 
-  expected<connection_handle>
-  new_tcp_scribe(const std::string&, uint16_t) override;
+  scribe_ptr new_scribe(asio_tcp_socket&& sock);
 
-  expected<void>
-  assign_tcp_scribe(abstract_broker*, connection_handle hdl) override;
+  scribe_ptr new_scribe(native_socket fd) override;
 
-  template <class Socket>
-  connection_handle add_tcp_scribe(abstract_broker*, Socket&& sock);
+  expected<scribe_ptr> new_tcp_scribe(const std::string& host,
+                                      uint16_t port) override;
 
-  connection_handle add_tcp_scribe(abstract_broker*, native_socket fd) override;
+  doorman_ptr new_doorman(asio_tcp_socket_acceptor&& sock);
 
-  expected<connection_handle>
-  add_tcp_scribe(abstract_broker*, const std::string&, uint16_t) override;
+  doorman_ptr new_doorman(native_socket fd) override;
 
-  expected<std::pair<accept_handle, uint16_t>>
-  new_tcp_doorman(uint16_t p, const char* in, bool rflag) override;
-
-  expected<void>
-  assign_tcp_doorman(abstract_broker*, accept_handle hdl) override;
-
-  accept_handle add_tcp_doorman(abstract_broker*,
-                                asio_tcp_socket_acceptor&& sock);
-
-  accept_handle add_tcp_doorman(abstract_broker*, native_socket fd) override;
-
-  expected<std::pair<accept_handle, uint16_t>>
-  add_tcp_doorman(abstract_broker*, uint16_t, const char*, bool) override;
+  expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
+                                        bool reuse_addr) override;
 
   void exec_later(resumable* ptr) override;
 
@@ -93,6 +79,10 @@ public:
   ~asio_multiplexer();
 
   supervisor_ptr make_supervisor() override;
+
+  bool try_run_once() override;
+
+  void run_once() override;
 
   void run() override;
 
@@ -104,10 +94,6 @@ public:
 
 private:
   io_service service_;
-  std::mutex mtx_sockets_;
-  std::mutex mtx_acceptors_;
-  std::map<int64_t, asio_tcp_socket> unassigned_sockets_;
-  std::map<int64_t, asio_tcp_socket_acceptor> unassigned_acceptors_;
 };
 
 template <class T>

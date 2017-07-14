@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -88,7 +88,8 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   auto mm = &system().middleman();
   actor_config cfg;
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
-        aid, nid, &(self->home_system()), cfg, self);
+    aid, nid, &(self->home_system()), cfg, self,
+    actor_cast<actor>(self->home_system().stream_serv()));
   strong_actor_ptr selfptr{self->ctrl()};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
@@ -255,7 +256,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
                     make_error(sec::remote_linking_failed));
           return;
         }
-        static_cast<actor_proxy*>(ptr->get())->local_link_to(src->get());
+        static_cast<actor_proxy*>(ptr->get())->add_link(src->get());
         return;
       }
       case unlink_atom::value.uint_value(): {
@@ -272,7 +273,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
           CAF_LOG_DEBUG("received unlink for invalid actor, report error");
           return;
         }
-        static_cast<actor_proxy*>(ptr->get())->local_unlink_from(src->get());
+        static_cast<actor_proxy*>(ptr->get())->remove_link(src->get());
         return;
       }
     }
@@ -368,6 +369,16 @@ void basp_broker_state::learned_new_node_directly(const node_id& nid,
     learned_new_node(nid);
 }
 
+namespace {
+
+struct connection_helper_state {
+  static const char* name;
+};
+
+const char* connection_helper_state::name = "connection_helper";
+
+} // namespace <anonymous>
+
 void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
@@ -378,7 +389,8 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   // indirect connection to the routing table; hence, spawning
   // our helper here exactly once and there is no need to track
   // in-flight connection requests
-  auto connection_helper = [=](event_based_actor* helper, actor s) -> behavior {
+  auto connection_helper = [=](stateful_actor<connection_helper_state>* helper,
+                               actor s) -> behavior {
     CAF_LOG_TRACE(CAF_ARG(s));
     helper->monitor(s);
     helper->set_down_handler([=](down_msg& dm) {
@@ -431,7 +443,9 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
     return;
   }
   using namespace detail;
-  auto tmp = system().spawn<detached + hidden>(connection_helper, self);
+  auto tmp = system().config().middleman_detach_utility_actors
+             ? system().spawn<detached + hidden>(connection_helper, self)
+             : system().spawn<hidden>(connection_helper, self);
   system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
   auto writer = make_callback([](serializer& sink) -> error {
     auto name_atm = atom("ConfigServ");
@@ -589,10 +603,25 @@ behavior basp_broker::make_behavior() {
       //       hops to be resilient to (rare) network failures or if a
       //       node is reachable via several interfaces and only one fails
       auto nid = state.instance.tbl().lookup_direct(msg.handle);
-      // tell BASP instance we've lost connection
-      state.instance.handle_node_shutdown(nid);
-      CAF_ASSERT(nid == none
-                 || !state.instance.tbl().reachable(nid));
+      if (nid != none) {
+        // tell BASP instance we've lost connection
+        state.instance.handle_node_shutdown(nid);
+      } else {
+        // check whether the connection failed during handshake
+        auto pred = [&](const basp_broker_state::ctx_map::value_type& x) {
+          return x.second.hdl == msg.handle;
+        };
+        auto e = state.ctx.end();
+        auto i = std::find_if(state.ctx.begin(), e, pred);
+        if (i != e) {
+          auto& ref = i->second;
+          if (ref.callback) {
+            CAF_LOG_DEBUG("connection closed during handshake");
+            ref.callback->deliver(sec::disconnect_during_handshake);
+          }
+          state.ctx.erase(i);
+        }
+      }
     },
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {
@@ -601,40 +630,30 @@ behavior basp_broker::make_behavior() {
       state.instance.remove_published_actor(port);
     },
     // received from middleman actor
-    [=](publish_atom, accept_handle hdl, uint16_t port,
+    [=](publish_atom, doorman_ptr& ptr, uint16_t port,
         const strong_actor_ptr& whom, std::set<std::string>& sigs) {
-      CAF_LOG_TRACE(CAF_ARG(hdl.id()) << CAF_ARG(whom) << CAF_ARG(port));
-      if (hdl.invalid()) {
-        CAF_LOG_WARNING("invalid handle");
-        return;
-      }
-      auto res = assign_tcp_doorman(hdl);
-      if (res) {
-        if (whom)
-          system().registry().put(whom->id(), whom);
-        state.instance.add_published_actor(port, whom, std::move(sigs));
-      } else {
-        CAF_LOG_DEBUG("failed to assign doorman from handle"
-                      << CAF_ARG(whom));
-      }
+      CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(port)
+                    << CAF_ARG(whom) << CAF_ARG(sigs));
+      CAF_ASSERT(ptr != nullptr);
+      add_doorman(std::move(ptr));
+      if (whom)
+        system().registry().put(whom->id(), whom);
+      state.instance.add_published_actor(port, whom, std::move(sigs));
     },
     // received from middleman actor (delegated)
-    [=](connect_atom, connection_handle hdl, uint16_t port) {
-      CAF_LOG_TRACE(CAF_ARG(hdl.id()));
+    [=](connect_atom, scribe_ptr& ptr, uint16_t port) {
+      CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(port));
+      CAF_ASSERT(ptr != nullptr);
       auto rp = make_response_promise();
-      auto res = assign_tcp_scribe(hdl);
-      if (res) {
-        auto& ctx = state.ctx[hdl];
-        ctx.hdl = hdl;
-        ctx.remote_port = port;
-        ctx.cstate = basp::await_header;
-        ctx.callback = rp;
-        // await server handshake
-        configure_read(hdl, receive_policy::exactly(basp::header_size));
-      } else {
-        CAF_LOG_DEBUG("failed to assign scribe from handle" << CAF_ARG(res));
-        rp.deliver(std::move(res.error()));
-      }
+      auto hdl = ptr->hdl();
+      add_scribe(std::move(ptr));
+      auto& ctx = state.ctx[hdl];
+      ctx.hdl = hdl;
+      ctx.remote_port = port;
+      ctx.cstate = basp::await_header;
+      ctx.callback = rp;
+      // await server handshake
+      configure_read(hdl, receive_policy::exactly(basp::header_size));
     },
     [=](delete_atom, const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));

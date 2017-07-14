@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -36,6 +36,7 @@
 #include "caf/logger.hpp"
 #include "caf/others.hpp"
 #include "caf/result.hpp"
+#include "caf/stream.hpp"
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"
 #include "caf/behavior.hpp"
@@ -73,8 +74,6 @@
 #include "caf/typed_behavior.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/behavior_policy.hpp"
-#include "caf/continue_helper.hpp"
-#include "caf/mailbox_element.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/response_handle.hpp"

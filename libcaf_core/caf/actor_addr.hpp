@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -58,7 +58,10 @@ public:
   actor_addr& operator=(actor_addr&&) = default;
   actor_addr& operator=(const actor_addr&) = default;
 
+  actor_addr(std::nullptr_t);
   actor_addr(const unsafe_actor_handle_init_t&);
+
+  actor_addr& operator=(std::nullptr_t);
 
   /// Returns the ID of this actor.
   inline actor_id id() const noexcept {
@@ -77,6 +80,10 @@ public:
 
   /// Exchange content of `*this` and `other`.
   void swap(actor_addr& other) noexcept;
+
+  inline explicit operator bool() const {
+    return static_cast<bool>(ptr_);
+  }
 
   /// @cond PRIVATE
 
@@ -118,13 +125,13 @@ public:
 
   actor_addr(actor_control_block*, bool);
 
-  /// @endcond
-
-private:
   inline actor_control_block* get() const noexcept {
     return ptr_.get();
   }
 
+  /// @endcond
+
+private:
   inline actor_control_block* release() noexcept {
     return ptr_.release();
   }
@@ -137,6 +144,22 @@ private:
 
   weak_actor_ptr ptr_;
 };
+
+inline bool operator==(const actor_addr& x, std::nullptr_t) {
+  return x.get() == nullptr;
+}
+
+inline bool operator==(std::nullptr_t, const actor_addr& x) {
+  return x.get() == nullptr;
+}
+
+inline bool operator!=(const actor_addr& x, std::nullptr_t) {
+  return x.get() != nullptr;
+}
+
+inline bool operator!=(std::nullptr_t, const actor_addr& x) {
+  return x.get() != nullptr;
+}
 
 } // namespace caf
 
