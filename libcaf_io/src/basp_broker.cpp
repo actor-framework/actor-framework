@@ -159,7 +159,7 @@ void basp_broker_state::purge_state(const node_id& nid) {
     }
     ctx.erase(i);
   }
-  proxies().erase(nid);
+  self->close(hdl);
 }
 
 void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
@@ -198,12 +198,6 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
       });
     });
   }
-}
-
-void basp_broker_state::kill_proxy(const node_id& nid, actor_id aid,
-                                   const error& rsn) {
-  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
-  proxies().erase(nid, aid, rsn);
 }
 
 void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
@@ -520,14 +514,13 @@ behavior basp_broker::make_behavior() {
       auto next = state.instance.handle(context(), msg, ctx.hdr,
                                         ctx.cstate == basp::await_payload);
       if (next == basp::close_connection) {
-        if (ctx.callback) {
-          CAF_LOG_WARNING("failed to handshake with remote node"
-                          << CAF_ARG(msg.handle));
-          ctx.callback->deliver(make_error(sec::disconnect_during_handshake));
-        }
+        // The function `instance::handle` calls purge_state. All state has
+        // been cleaned up at this stage. In particular, accessing this_context
+        // results in a heap-use-after-free error.
         close(msg.handle);
-        state.ctx.erase(msg.handle);
-      } else if (next != ctx.cstate) {
+        return;
+      }
+      if (next != ctx.cstate) {
         auto rd_size = next == basp::await_payload
                        ? ctx.hdr.payload_len
                        : basp::header_size;

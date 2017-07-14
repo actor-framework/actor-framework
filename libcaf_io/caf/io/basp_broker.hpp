@@ -63,9 +63,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void proxy_announced(const node_id& nid, actor_id aid) override;
 
   // inherited from basp::instance::listener
-  void kill_proxy(const node_id& nid, actor_id aid, const error& rsn) override;
-
-  // inherited from basp::instance::listener
   void deliver(const node_id& src_nid, actor_id src_aid,
                actor_id dest_aid, message_id mid,
                std::vector<strong_actor_ptr>& stages, message& msg) override;

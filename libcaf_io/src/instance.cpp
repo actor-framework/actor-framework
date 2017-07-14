@@ -237,7 +237,8 @@ connection_state instance::handle(execution_unit* ctx,
       auto e = bd(fail_state);
       if (e)
         return err();
-      callee_.kill_proxy(hdr.source_node, hdr.source_actor, fail_state);
+      callee_.proxies().erase(hdr.source_node, hdr.source_actor,
+                              std::move(fail_state));
       break;
     }
     case message_type::heartbeat: {

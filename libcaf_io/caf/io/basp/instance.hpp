@@ -63,11 +63,6 @@ public:
     /// for one of our local actors.
     virtual void proxy_announced(const node_id& nid, actor_id aid) = 0;
 
-    /// Called whenever a remote actor died to destroy
-    /// the proxy instance on our end.
-    virtual void kill_proxy(const node_id& nid, actor_id aid,
-                            const error& rsn) = 0;
-
     /// Called for each `dispatch_message` without `named_receiver_flag`.
     virtual void deliver(const node_id& source_node, actor_id source_actor,
                          actor_id dest_actor, message_id mid,
