@@ -351,8 +351,8 @@ namespace network {
     return poll_once(false);
   }
 
-  bool default_multiplexer::run_once() {
-    return poll_once(true);
+  void default_multiplexer::run_once() {
+    poll_once(true);
   }
 
   void default_multiplexer::run() {
