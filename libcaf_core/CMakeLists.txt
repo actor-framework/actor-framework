@@ -55,7 +55,6 @@ set (LIBCAF_CORE_SRCS
      src/group.cpp
      src/group_manager.cpp
      src/group_module.cpp
-     src/incoming_stream_multiplexer.cpp
      src/invoke_result_visitor.cpp
      src/local_actor.cpp
      src/logger.cpp
@@ -70,7 +69,6 @@ set (LIBCAF_CORE_SRCS
      src/message_view.cpp
      src/monitorable_actor.cpp
      src/node_id.cpp
-     src/outgoing_stream_multiplexer.cpp
      src/parse_ini.cpp
      src/pretty_type_name.cpp
      src/private_thread.cpp
@@ -96,7 +94,6 @@ set (LIBCAF_CORE_SRCS
      src/stream_handler.cpp
      src/stream_id.cpp
      src/stream_msg_visitor.cpp
-     src/stream_multiplexer.cpp
      src/stream_priority.cpp
      src/stream_sink.cpp
      src/stream_source.cpp

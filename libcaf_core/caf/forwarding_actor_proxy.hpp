@@ -32,7 +32,7 @@ class forwarding_actor_proxy : public actor_proxy {
 public:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
-  forwarding_actor_proxy(actor_config& cfg, actor dest, actor stream_serv1);
+  forwarding_actor_proxy(actor_config& cfg, actor dest);
 
   ~forwarding_actor_proxy() override;
 
@@ -50,7 +50,6 @@ private:
 
   mutable detail::shared_spinlock mtx_;
   actor broker_;
-  actor stream_serv_;
 };
 
 } // namespace caf

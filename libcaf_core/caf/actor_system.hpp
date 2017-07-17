@@ -129,7 +129,7 @@ public:
   friend class abstract_actor;
 
   /// The number of actors implictly spawned by the actor system on startup.
-  static constexpr size_t num_internal_actors = 3;
+  static constexpr size_t num_internal_actors = 2;
 
   /// Returns the ID of an internal actor by its name.
   /// @pre x in {'SpawnServ', 'ConfigServ', 'StreamServ'}
@@ -146,12 +146,6 @@ public:
   /// for this actor system.
   inline const strong_actor_ptr& config_serv() const {
     return internal_actors_[internal_actor_id(atom("ConfigServ"))];
-  }
-
-  /// Returns the internal actor for managing streams that
-  /// cross network boundaries.
-  inline const strong_actor_ptr& stream_serv() const {
-    return internal_actors_[internal_actor_id(atom("StreamServ"))];
   }
 
   actor_system() = delete;
@@ -544,10 +538,6 @@ private:
   inline void config_serv(strong_actor_ptr x) {
     internal_actors_[internal_actor_id(atom("ConfigServ"))] = std::move(x);
   }
-
-  /// Sets the internal actor for managing streams that
-  /// cross network boundaries. Called in middleman::start.
-  void stream_serv(strong_actor_ptr x);
 
   std::atomic<size_t> ids_;
   uniform_type_info_map types_;

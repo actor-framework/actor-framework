@@ -56,8 +56,6 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
-#include "caf/detail/incoming_stream_multiplexer.hpp"
-#include "caf/detail/outgoing_stream_multiplexer.hpp"
 
 #ifdef CAF_USE_ASIO
 #include "caf/io/network/asio_multiplexer.hpp"
@@ -273,106 +271,10 @@ void middleman::start() {
     }};
     backend().thread_id(thread_.get_id());
   }
-  // Default implementation of the stream server.
-  class stream_serv : public raw_event_based_actor,
-                      public detail::stream_multiplexer::backend {
-  public:
-    stream_serv(actor_config& cfg, actor basp_ref)
-        : raw_event_based_actor(cfg),
-          detail::stream_multiplexer::backend(std::move(basp_ref)),
-          incoming_(this, *this),
-          outgoing_(this, *this) {
-      // nop
-    }
-
-    const char* name() const override {
-      return "stream_serv";
-    }
-
-    behavior make_behavior() override {
-      return {
-        [=](stream_msg& x) -> delegated<message> {
-          CAF_LOG_TRACE(CAF_ARG(x));
-          // Dispatching depends on the direction of the message.
-          if (outgoing_.has_stream(x.sid)) {
-            outgoing_(x);
-          } else {
-            incoming_(x);
-          }
-          return {};
-        },
-        [=](sys_atom, stream_msg& x) -> delegated<message> {
-          CAF_LOG_TRACE(CAF_ARG(x));
-          // Stream message received from a proxy
-          outgoing_(x);
-          return {};
-        },
-        [=](sys_atom, ok_atom, int32_t credit) {
-          CAF_LOG_TRACE(CAF_ARG(credit));
-          CAF_ASSERT(current_mailbox_element() != nullptr);
-          auto cme = current_mailbox_element();
-          if (cme->sender != nullptr) {
-            auto& nid = cme->sender->node();
-            add_credit(nid, credit);
-          } else {
-            CAF_LOG_ERROR("Received credit from an anonmyous stream server.");
-          }
-        },
-        [=](exit_msg& x) {
-          CAF_LOG_TRACE(CAF_ARG(x));
-          if (x.reason)
-            quit(x.reason);
-        },
-        // Connects both incoming_ and outgoing_ to nid.
-        [=](connect_atom, const node_id& nid) {
-          CAF_LOG_TRACE(CAF_ARG(nid));
-          send(basp_, forward_atom::value, nid, atom("ConfigServ"),
-               make_message(get_atom::value, atom("StreamServ")));
-        },
-        // Assumes `ptr` is a remote spawn server.
-        [=](strong_actor_ptr& ptr) {
-          CAF_LOG_TRACE(CAF_ARG(ptr));
-          if (ptr) {
-            add_remote_path(ptr->node(), ptr);
-          }
-        }
-      };
-    }
-
-    strong_actor_ptr remote_stream_serv(const node_id& nid) override {
-      CAF_LOG_TRACE(CAF_ARG(nid));
-      strong_actor_ptr result;
-      // Ask remote config server for a handle to the remote spawn server.
-      scoped_actor self{system()};
-      self->send(basp_, forward_atom::value, nid, atom("ConfigServ"),
-                 make_message(get_atom::value, atom("StreamServ")));
-      // Time out after 5 minutes.
-      self->receive(
-        [&](strong_actor_ptr& addr) {
-          result = std::move(addr);
-        },
-        after(std::chrono::minutes(5)) >> [] {
-          CAF_LOG_INFO("Accessing a remote spawn server timed out.");
-        }
-      );
-      return result;
-    }
-
-    void on_exit() override {
-      // Make sure to not keep references to remotes after shutdown.
-      remotes().clear();
-    }
-
-  private:
-    detail::incoming_stream_multiplexer incoming_;
-    detail::outgoing_stream_multiplexer outgoing_;
-  };
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>(atom("BASP"));
   manager_ = make_middleman_actor(system(), basp);
   auto hdl = actor_cast<actor>(basp);
-  auto ssi = system().spawn<stream_serv, lazy_init + hidden>(std::move(hdl));
-  system().stream_serv(actor_cast<strong_actor_ptr>(std::move(ssi)));
 }
 
 void middleman::stop() {

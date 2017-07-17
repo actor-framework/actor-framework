@@ -438,9 +438,4 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   return std::move(res.first);
 }
 
-void actor_system::stream_serv(strong_actor_ptr x) {
-  internal_actors_[internal_actor_id(atom("StreamServ"))] = std::move(x);
-  registry_.put(atom("StreamServ"), stream_serv());
-}
-
 } // namespace caf

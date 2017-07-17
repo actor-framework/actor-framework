@@ -36,13 +36,11 @@ public:
   caf::io::connection_handle conn;
   caf::io::accept_handle acc;
   test_node_fixture* peer = nullptr;
-  caf::strong_actor_ptr stream_serv;
 
   test_node_fixture()
       : mm(this->sys.middleman()),
         mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())),
-        basp(get_basp_broker()),
-        stream_serv(this->sys.stream_serv()) {
+        basp(get_basp_broker()) {
     // nop
   }
 
