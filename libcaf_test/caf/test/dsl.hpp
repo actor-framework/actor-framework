@@ -334,7 +334,7 @@ public:
 
   template <class Handle>
   Derived& to(const Handle& whom) {
-    // not setting dest_ causes the the content checking to succeed immediately
+    // not setting dest_ causes the content checking to succeed immediately
     if (sched_.prioritize(whom)) {
       dest_ = &sched_.next_job<caf::scheduled_actor>();
     }

@@ -48,7 +48,7 @@ public:
 
   ~actor_registry();
 
-  /// Returns the the local actor associated to `key`.
+  /// Returns the local actor associated to `key`.
   strong_actor_ptr get(actor_id key) const;
 
   /// Associates a local actor with its ID.
