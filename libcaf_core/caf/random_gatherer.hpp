@@ -17,56 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_STAGE_HPP
-#define CAF_STREAM_STAGE_HPP
+#ifndef CAF_RANDOM_GATHERER_HPP
+#define CAF_RANDOM_GATHERER_HPP
 
-#include "caf/fwd.hpp"
-#include "caf/extend.hpp"
-#include "caf/stream_handler.hpp"
-
-#include "caf/mixin/has_upstreams.hpp"
-#include "caf/mixin/has_downstreams.hpp"
+#include "caf/stream_gatherer_impl.hpp"
 
 namespace caf {
 
-/// Models a stream stage with up- and downstreams.
-class stream_stage : public extend<stream_handler, stream_stage>::
-                            with<mixin::has_upstreams, mixin::has_downstreams> {
+/// Pulls data from sources in arbitrary order.
+class random_gatherer : public stream_gatherer_impl {
 public:
-  // -- constructors, destructors, and assignment operators --------------------
+  using super = stream_gatherer_impl;
 
-  stream_stage(upstream_policy* in_ptr, downstream_policy* out_ptr);
+  random_gatherer(local_actor* selfptr);
 
-  // -- overrides --------------------------------------------------------------
+  ~random_gatherer() override;
 
-  bool done() const override;
+  void assign_credit(long downstream_capacity) override;
 
-  void abort(strong_actor_ptr&, const error&) override;
-
-  error downstream_ack(strong_actor_ptr&, int64_t, long) override;
-
-  error upstream_batch(strong_actor_ptr&, int64_t, long, message&) override;
-
-  void last_upstream_closed();
-
-  inline upstream_policy& in() {
-    return *in_ptr_;
-  }
-
-  inline downstream_policy& out() {
-    return *out_ptr_;
-  }
-
-protected:
-  void downstream_demand(downstream_path*, long) override;
-
-  virtual error process_batch(message& msg) = 0;
-
-private:
-  upstream_policy* in_ptr_;
-  downstream_policy* out_ptr_;
+  long initial_credit(long downstream_capacity, path_type* x) override;
 };
 
 } // namespace caf
 
-#endif // CAF_STREAM_STAGE_HPP
+#endif // CAF_RANDOM_GATHERER_HPP

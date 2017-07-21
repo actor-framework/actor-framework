@@ -29,10 +29,10 @@
 #define CAF_SUITE multi_lane_streaming
 #include "caf/test/dsl.hpp"
 
-#include "caf/filtering_downstream.hpp"
+#include "caf/random_topic_scatterer.hpp"
 
-#include "caf/policy/greedy.hpp"
-#include "caf/policy/broadcast.hpp"
+#include "caf/detail/pull5_gatherer.hpp"
+#include "caf/detail/push5_scatterer.hpp"
 
 using std::cout;
 using std::endl;
@@ -67,9 +67,9 @@ struct cleanup_t {
 constexpr cleanup_t cleanup_fun = cleanup_t{};
 
 struct stream_splitter_state {
-  using stage_impl = stream_stage_impl<process_t, cleanup_t, policy::greedy,
-                                       filtering_downstream<element_type,
-                                                            key_type>>;
+  using stage_impl = stream_stage_impl<
+    process_t, cleanup_t, random_gatherer,
+    random_topic_scatterer<element_type, std::vector<key_type>>>;
   intrusive_ptr<stage_impl> stage;
   static const char* name;
 };
@@ -82,29 +82,30 @@ behavior stream_splitter(stateful_actor<stream_splitter_state>* self) {
   using impl = stream_splitter_state::stage_impl;
   self->state.stage = make_counted<impl>(self, id, process_fun, cleanup_fun);
   self->state.stage->in().continuous(true);
-  // force the splitter to collect credit until reaching 3 in order
-  // to receive only full batches from upstream (making tests a lot easier)
+  // Force the splitter to collect credit until reaching 3 in order
+  // to receive only full batches from upstream (simplifies testing).
+  // Restrict maximum credit per path to 5 (simplifies testing).
   self->state.stage->in().min_credit_assignment(3);
+  self->state.stage->in().max_credit(5);
   self->streams().emplace(id, self->state.stage);
   return {
     [=](join_atom, filter_type filter) -> stream<element_type> {
-      stream<element_type> invalid;
-      auto& ptr = self->current_sender();
-      if (!ptr)
-        return invalid;
-      auto err = self->state.stage->add_downstream(ptr);
-      if (err)
-        return invalid;
-      self->state.stage->out().set_filter(ptr, std::move(filter));
       auto sid = self->streams().begin()->first;
-      std::tuple<> tup;
-      self->fwd_stream_handshake<element_type>(sid, tup);
+      auto hdl = self->current_sender();
+      if (!self->add_sink<element_type>(
+            self->state.stage, sid, nullptr, hdl, no_stages, message_id::make(),
+            stream_priority::normal, std::make_tuple()))
+        return none;
+      self->drop_current_message_id();
+      self->state.stage->out().set_filter(sid, hdl, std::move(filter));
       return sid;
     },
-    [=](const stream<element_type>& sid) {
-      // We only need to add a new stream to the map, the runtime system will
-      // take care of adding a new upstream and sending the handshake.
-      self->streams().emplace(sid.id(), self->state.stage);
+    [=](const stream<element_type>& in) {
+      auto& mgr = self->state.stage;
+      if (!self->add_source(mgr, in.id(), none)) {
+        CAF_FAIL("serve_as_stage failed");
+      }
+      self->streams().emplace(in.id(), mgr);
     }
   };
 }
@@ -121,7 +122,7 @@ behavior storage(stateful_actor<storage_state>* self,
   self->send(self * source, join_atom::value, std::move(filter));
   return {
     [=](stream<element_type>& in) {
-      return self->add_sink(
+      return self->make_sink(
         // input stream
         in,
         // initialize state
@@ -135,7 +136,8 @@ behavior storage(stateful_actor<storage_state>* self,
         // cleanup and produce void "result"
         [](unit_t&) {
           CAF_LOG_INFO("storage done");
-        }
+        },
+        policy::arg<detail::pull5_gatherer>::value
       );
     },
     [=](get_atom) {
@@ -154,7 +156,7 @@ void nores_streamer(stateful_actor<nores_streamer_state>* self,
                              const actor& dest) {
   CAF_LOG_INFO("nores_streamer initialized");
   using buf = std::deque<element_type>;
-  self->new_stream(
+  self->make_source(
     // destination of the stream
     dest,
     // initialize state

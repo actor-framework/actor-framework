@@ -35,11 +35,19 @@ stream_aborter::~stream_aborter() {
 void stream_aborter::actor_exited(const error& rsn, execution_unit* host) {
   CAF_ASSERT(observed_ != observer_);
   auto observer = actor_cast<strong_actor_ptr>(observer_);
-  auto observed = actor_cast<strong_actor_ptr>(observed_);
   if (observer != nullptr)
-    observer->enqueue(std::move(observed), message_id::make(),
-                      make_message(caf::make<stream_msg::abort>(sid_, rsn)),
-                      host);
+  {
+    if (mode_ == source_aborter)
+      observer->enqueue(
+        nullptr, message_id::make(),
+        make_message(caf::make<stream_msg::forced_close>(sid_, observed_, rsn)),
+        host);
+    else
+      observer->enqueue(
+        nullptr, message_id::make(),
+        make_message(caf::make<stream_msg::forced_drop>(sid_, observed_, rsn)),
+        host);
+  }
 }
 
 bool stream_aborter::matches(const attachable::token& what) {
@@ -50,23 +58,25 @@ bool stream_aborter::matches(const attachable::token& what) {
 }
 
 stream_aborter::stream_aborter(actor_addr&& observed, actor_addr&& observer,
-                               const stream_id& sid)
+                               const stream_id& sid, mode m)
     : observed_(std::move(observed)),
       observer_(std::move(observer)),
-      sid_(sid) {
+      sid_(sid),
+      mode_(m) {
   // nop
 }
 
 void stream_aborter::add(strong_actor_ptr observed, actor_addr observer,
-                         const stream_id& sid) {
+                         const stream_id& sid, mode m) {
   CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(sid));
-  observed->get()->attach(make(observed->address(), std::move(observer), sid));
+  observed->get()->attach(make(observed->address(), std::move(observer),
+                               sid, m));
 }
 
 void stream_aborter::del(strong_actor_ptr observed, const actor_addr& observer,
-                         const stream_id& sid) {
+                         const stream_id& sid, mode m) {
   CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(sid));
-  token tk{observer, sid};
+  token tk{observer, sid, m};
   observed->get()->detach(tk);
 }
 

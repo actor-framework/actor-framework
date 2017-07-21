@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FILTERING_DOWNSTREAM_HPP
-#define CAF_FILTERING_DOWNSTREAM_HPP
+#ifndef CAF_TOPIC_SCATTERER_HPP
+#define CAF_TOPIC_SCATTERER_HPP
 
 #include <map>
 #include <tuple>
@@ -26,111 +26,79 @@
 #include <vector>
 #include <functional>
 
-#include "caf/downstream_policy.hpp"
-
-#include "caf/mixin/buffered_policy.hpp"
-
-#include "caf/policy/broadcast.hpp"
+#include "caf/buffered_scatterer.hpp"
 
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
-/// A filtering downstream allows stages to fork into multiple lanes, where
+/// A topic scatterer allows stream nodes to fork into multiple lanes, where
 /// each lane carries only a subset of the data. For example, the lane
 /// mechanism allows you filter key/value pairs before forwarding them to a set
-/// of workers in order to handle only a subset of the overall data on each
-/// lane.
-template <class T, class Key, class KeyCompare = std::equal_to<Key>,
-          long KeyIndex = 0,
-          class Base = policy::broadcast<T>>
-class filtering_downstream : public Base {
+/// of workers.
+template <class T, class Filter, class KeyCompare, long KeyIndex>
+class topic_scatterer : public buffered_scatterer<T> {
 public:
   /// Base type.
-  using super = Base;
+  using super = buffered_scatterer<T>;
 
   struct lane {
     typename super::buffer_type buf;
-    typename super::path_ptr_list paths;
+    typename super::path_ptr_vec paths;
     template <class Inspector>
     friend typename Inspector::result_type inspect(Inspector& f, lane& x) {
       return f(meta::type_name("lane"), x.buf, x.paths);
     }
   };
 
-  /// Identifies a lane inside the downstream. Filters are kept in sorted order
-  /// and require `Key` to provide `operator<`.
-  using filter = std::vector<Key>;
+  /// Identifies a lane inside the downstream.
+  using filter_type = Filter;
 
-  using lanes_map = std::map<filter, lane>;
+  using lanes_map = std::map<filter_type, lane>;
 
-  filtering_downstream(local_actor* selfptr, const stream_id& sid)
-      : super(selfptr, sid) {
+  topic_scatterer(local_actor* selfptr) : super(selfptr) {
     // nop
   }
 
-  void emit_broadcast() override {
-    fan_out();
-    for (auto& kvp : lanes_) {
-      auto& l = kvp.second;
-      auto chunk = super::get_chunk(l.buf, super::min_credit(l.paths));
-      auto csize = static_cast<long>(chunk.size());
-      if (csize == 0)
-        continue;
-      auto wrapped_chunk = make_message(std::move(chunk));
-      for (auto& x : l.paths) {
-        x->open_credit -= csize;
-        this->emit_batch(*x, static_cast<size_t>(csize), wrapped_chunk);
-      }
+  using super::remove_path;
+
+  bool remove_path(const stream_id& sid, const actor_addr& x,
+                   error reason, bool silent) override {
+    auto i = this->iter_find(this->paths_, sid, x);
+    if (i != this->paths_.end()) {
+      erase_from_lanes(x);
+      return super::remove_path(i, std::move(reason), silent);
     }
+    return false;
   }
 
-  void emit_anycast() override {
-    fan_out();
-    for (auto& kvp : lanes_) {
-      auto& l = kvp.second;
-      super::sort_by_credit(l.paths);
-      for (auto& x : l.paths) {
-        auto chunk = super::get_chunk(l.buf, x->open_credit);
-        auto csize = static_cast<long>(chunk.size());
-        if (csize == 0)
-          break;
-        x->open_credit -= csize;
-        this->emit_batch(*x, static_cast<size_t>(csize),
-                         std::move(make_message(std::move(chunk))));
-      }
-    }
-  }
-
-  bool remove_path(strong_actor_ptr& ptr) override {
-    erase_from_lanes(ptr);
-    return Base::remove_path(ptr);
-  }
-
-  void add_lane(filter f) {
+  void add_lane(filter_type f) {
     std::sort(f);
     lanes_.emplace(std::move(f), typename super::buffer_type{});
   }
 
   /// Sets the filter for `x` to `f` and inserts `x` into the appropriate lane.
   /// @pre `x` is not registered on *any* lane
-  void set_filter(const strong_actor_ptr& x, filter f) {
+  template <class Handle>
+  void set_filter(const stream_id& sid, const Handle& x, filter_type f) {
     std::sort(f.begin(), f.end());
-    lanes_[std::move(f)].paths.push_back(super::find(x));
+    lanes_[std::move(f)].paths.push_back(super::find(sid, x));
   }
 
-  void update_filter(const strong_actor_ptr& x, filter f) {
+  template <class Handle>
+  void update_filter(const stream_id& sid, const Handle& x, filter_type f) {
     std::sort(f.begin(), f.end());
     erase_from_lanes(x);
-    lanes_[std::move(f)].paths.push_back(super::find(x));
+    lanes_[std::move(f)].paths.push_back(super::find(sid, x));
   }
 
   const lanes_map& lanes() const {
     return lanes_;
   }
 
-private:
-  void erase_from_lanes(const strong_actor_ptr& x) {
+protected:
+  template <class Handle>
+  void erase_from_lanes(const Handle& x) {
     for (auto i = lanes_.begin(); i != lanes_.end(); ++i)
       if (erase_from_lane(i->second, x)) {
         if (i->second.paths.empty())
@@ -139,8 +107,9 @@ private:
       }
   }
 
-  bool erase_from_lane(lane& l, const strong_actor_ptr& x) {
-    auto predicate = [&](const downstream_path* y) {
+  template <class Handle>
+  bool erase_from_lane(lane& l, const Handle& x) {
+    auto predicate = [&](const outbound_path* y) {
       return x == y->hdl;
     };
     auto e = l.paths.end();
@@ -162,7 +131,7 @@ private:
   }
 
   /// Returns `true` if `x` is selected by `f`, `false` otherwise.
-  bool selected(const filter& f, const T& x) {
+  bool selected(const filter_type& f, const T& x) {
     using std::get;
     for (auto& key : f)
       if (cmp_(key, get<KeyIndex>(x)))
@@ -176,4 +145,4 @@ private:
 
 } // namespace caf
 
-#endif // CAF_FILTERING_DOWNSTREAM_HPP
+#endif // CAF_TOPIC_SCATTERER_HPP

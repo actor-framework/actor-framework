@@ -306,6 +306,8 @@ bool operator==(const logger::field& x, const logger::field& y);
 
 #define CAF_ARG(argument) caf::logger::make_arg_wrapper(#argument, argument)
 
+#define CAF_ARG2(argname, argval) caf::logger::make_arg_wrapper(argname, argval)
+
 #ifdef CAF_MSVC
 #define CAF_PRETTY_FUN __FUNCSIG__
 #else // CAF_MSVC

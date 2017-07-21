@@ -17,13 +17,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UPSTREAM_PATH_HPP
-#define CAF_UPSTREAM_PATH_HPP
+#ifndef CAF_INBOUND_PATH_HPP
+#define CAF_INBOUND_PATH_HPP
 
 #include <cstddef>
 #include <cstdint>
 
 #include "caf/stream_id.hpp"
+#include "caf/stream_msg.hpp"
+#include "caf/stream_aborter.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/actor_control_block.hpp"
 
@@ -31,20 +33,31 @@
 
 namespace caf {
 
-/// Denotes an upstream actor in a stream topology. Each upstream actor can
-/// refer to the stream using a different stream ID.
-class upstream_path {
+/// State for a path to an upstream actor (source).
+class inbound_path {
 public:
-  /// Handle to the upstream actor.
-  strong_actor_ptr hdl;
+  /// Stream aborter flag to monitor a path.
+  static constexpr const auto aborter_type = stream_aborter::source_aborter;
 
-  /// Stream ID used on this upstream path.
+  /// Message type for propagating graceful shutdowns.
+  using regular_shutdown = stream_msg::drop;
+
+  /// Message type for propagating errors.
+  using irregular_shutdown = stream_msg::forced_drop;
+
+  /// Pointer to the parent actor.
+  local_actor* self;
+
+  /// Stream ID used on this source.
   stream_id sid;
 
-  /// Priority of this input channel.
+  /// Handle to the source.
+  strong_actor_ptr hdl;
+
+  /// Priority of incoming batches from this source.
   stream_priority prio;
 
-  /// ID of the last received batch we have acknowledged.
+  /// ID of the last acknowledged batch ID.
   int64_t last_acked_batch_id;
 
   /// ID of the last received batch.
@@ -53,15 +66,40 @@ public:
   /// Amount of credit we have signaled upstream.
   long assigned_credit;
 
-  upstream_path(strong_actor_ptr ptr, stream_id  id, stream_priority p);
+  /// Stores whether the source actor is failsafe, i.e., allows the runtime to
+  /// redeploy it on failure.
+  bool redeployable;
+
+  /// Stores whether an error occurred during stream processing. Configures
+  /// whether the destructor sends `close` or `forced_close` messages.
+  error shutdown_reason;
+
+  /// Constructs a path for given handle and stream ID.
+  inbound_path(local_actor* selfptr, const stream_id& id, strong_actor_ptr ptr);
+
+  ~inbound_path();
+
+  /// Updates `last_batch_id` and `assigned_credit`.
+  void handle_batch(long batch_size, int64_t batch_id);
+
+  /// Emits a `stream_msg::ack_batch` on this path and sets `assigned_credit`
+  /// to `initial_demand`.
+  void emit_ack_open(actor_addr rebind_from, long initial_demand,
+                     bool redeployable);
+
+  void emit_ack_batch(long new_demand);
+
+  static void emit_irregular_shutdown(local_actor* self, const stream_id& sid,
+                                      const strong_actor_ptr& hdl,
+                                      error reason);
 };
 
 template <class Inspector>
-typename Inspector::return_type inspect(Inspector& f, upstream_path& x) {
-  return f(meta::type_name("upstream_path"), x.hdl, x.sid, x.prio,
+typename Inspector::return_type inspect(Inspector& f, inbound_path& x) {
+  return f(meta::type_name("inbound_path"), x.hdl, x.sid, x.prio,
            x.last_acked_batch_id, x.last_batch_id, x.assigned_credit);
 }
 
 } // namespace caf
 
-#endif // CAF_UPSTREAM_PATH_HPP
+#endif // CAF_INBOUND_PATH_HPP

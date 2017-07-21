@@ -17,28 +17,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_GREEDY_HPP
-#define CAF_POLICY_GREEDY_HPP
+#ifndef CAF_NO_STAGES_HPP
+#define CAF_NO_STAGES_HPP
 
-#include "caf/upstream_policy.hpp"
+#include "caf/mailbox_element.hpp"
 
 namespace caf {
-namespace policy {
 
-/// Sends ACKs as early and often as possible.
-class greedy : public upstream_policy {
-public:
-  template <class... Ts>
-  greedy(Ts&&... xs) : upstream_policy(std::forward<Ts>(xs)...) {
+/// Convenience tag type for producing empty forwarding stacks.
+struct no_stages_t {
+  constexpr no_stages_t() {
     // nop
   }
 
-  ~greedy() override;
-
-  void fill_assignment_vec(long downstream_credit) override;
+  inline operator mailbox_element::forwarding_stack() const {
+    return {};
+  }
 };
 
-} // namespace policy
+/// Convenience tag for producing empty forwarding stacks.
+constexpr no_stages_t no_stages = no_stages_t{};
+
 } // namespace caf
 
-#endif // CAF_POLICY_GREEDY_HPP
+#endif // CAF_NO_STAGES_HPP

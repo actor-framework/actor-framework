@@ -26,40 +26,60 @@
 #include "caf/fwd.hpp"
 #include "caf/stream_msg.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/stream_handler.hpp"
+#include "caf/stream_manager.hpp"
+#include "caf/scheduled_actor.hpp"
 
 namespace caf {
 
 class stream_msg_visitor {
 public:
-  using map_type = std::unordered_map<stream_id, intrusive_ptr<stream_handler>>;
+  using map_type = std::unordered_map<stream_id, intrusive_ptr<stream_manager>>;
   using iterator = typename map_type::iterator;
-  using result_type = std::pair<error, iterator>;
+  using result_type = bool;
 
-  stream_msg_visitor(scheduled_actor* self, stream_id& sid,
-                     iterator i, iterator last, behavior* bhvr);
+  stream_msg_visitor(scheduled_actor* self, const stream_msg& msg,
+                     behavior* bhvr);
 
   result_type operator()(stream_msg::open& x);
 
-  result_type operator()(stream_msg::ack_open&);
+  result_type operator()(stream_msg::ack_open& x);
 
-  result_type operator()(stream_msg::batch&);
+  result_type operator()(stream_msg::batch& x);
 
-  result_type operator()(stream_msg::ack_batch&);
+  result_type operator()(stream_msg::ack_batch& x);
 
-  result_type operator()(stream_msg::close&);
+  result_type operator()(stream_msg::close& x);
 
-  result_type operator()(stream_msg::abort&);
+  result_type operator()(stream_msg::drop& x);
 
-  result_type operator()(stream_msg::downstream_failed&);
+  result_type operator()(stream_msg::forced_close& x);
 
-  result_type operator()(stream_msg::upstream_failed&);
+  result_type operator()(stream_msg::forced_drop& x);
 
 private:
+  // Invokes `f` on the stream manager. On error calls `abort` on the manager
+  // and removes it from the streams map.
+  template <class F>
+  bool invoke(F f) {
+    auto e = self_->streams().end();
+    auto i = self_->streams().find(sid_);
+    if (i == e)
+      return false;
+    auto err = f(i->second);
+    if (err != none) {
+      i->second->abort(std::move(err));
+      self_->streams().erase(i);
+    } else if (i->second->done()) {
+      CAF_LOG_DEBUG("manager reported done, remove from streams");
+      i->second->close();
+      self_->streams().erase(i);
+    }
+    return true;
+  }
+
   scheduled_actor* self_;
-  stream_id& sid_;
-  iterator i_;
-  iterator e_;
+  const stream_id& sid_;
+  const actor_addr& sender_;
   behavior* bhvr_;
 };
 

@@ -20,14 +20,10 @@
 #ifndef CAF_POLICY_ARG_HPP
 #define CAF_POLICY_ARG_HPP
 
-#include "caf/downstream_policy.hpp"
-
-#include "caf/mixin/buffered_policy.hpp"
-
 namespace caf {
 namespace policy {
 
-/// Provides a wrapper to pass policy arguments to functions.
+/// Provides a wrapper to pass policy types as values to functions.
 template <class... Ts>
 struct arg {
 public:

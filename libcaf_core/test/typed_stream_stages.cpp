@@ -32,6 +32,8 @@ using std::string;
 
 using namespace caf;
 
+namespace {
+
 using file_reader_actor = typed_actor<replies_to<string>
                                       ::with<stream<int>, string>>;
 
@@ -45,7 +47,7 @@ file_reader_actor::behavior_type file_reader(file_reader_actor::pointer self) {
   return {
     [=](std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_source(
+      return self->make_source(
         // forward file name in handshake to next stage
         std::forward_as_tuple(std::move(fname)),
         // initialize state
@@ -72,7 +74,7 @@ filter_actor::behavior_type filter(filter_actor::pointer self) {
   return {
     [=](stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_stage(
+      return self->make_stage(
         // input stream
         in,
         // forward file name in handshake to next stage
@@ -99,7 +101,7 @@ sum_up_actor::behavior_type sum_up(sum_up_actor::pointer self) {
   return {
     [=](stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_sink(
+      return self->make_sink(
         // input stream
         in,
         // initialize state
@@ -119,18 +121,28 @@ sum_up_actor::behavior_type sum_up(sum_up_actor::pointer self) {
   };
 }
 
+using fixture = test_coordinator_fixture<>;
+
 using pipeline_actor = typed_actor<replies_to<string>::with<int>>;
 
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(typed_streaming_tests, fixture)
+
 CAF_TEST(depth3_pipeline) {
-  actor_system_config cfg;
-  actor_system sys{cfg};
   scoped_actor self{sys};
   auto source = sys.spawn(file_reader);
   auto stage = sys.spawn(filter);
   auto sink = sys.spawn(sum_up);
-  auto pipeline = sink * stage * source;
+  auto pipeline = (sink * stage) * source;
+  CAF_MESSAGE("source: " << to_string(source));
+  CAF_MESSAGE("stage: " << to_string(stage));
+  CAF_MESSAGE("sink: " << to_string(sink));
+  CAF_MESSAGE("pipeline: " << to_string(pipeline));
   static_assert(std::is_same<decltype(pipeline), pipeline_actor>::value,
                 "pipeline composition returned wrong type");
+  sched.run();
+  sched.after_next_enqueue([&] { sched.run(); });
   self->request(pipeline, infinite, "test.txt").receive(
     [&](int x) {
       CAF_CHECK_EQUAL(x, 25);
@@ -140,3 +152,5 @@ CAF_TEST(depth3_pipeline) {
     }
   );
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

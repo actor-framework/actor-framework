@@ -20,18 +20,18 @@
 #ifndef CAF_STREAM_STAGE_IMPL_HPP
 #define CAF_STREAM_STAGE_IMPL_HPP
 
+#include "caf/sec.hpp"
+#include "caf/logger.hpp"
 #include "caf/downstream.hpp"
-#include "caf/stream_stage.hpp"
+#include "caf/outbound_path.hpp"
+#include "caf/stream_manager.hpp"
 #include "caf/stream_stage_trait.hpp"
-
-#include "caf/policy/greedy.hpp"
-#include "caf/policy/broadcast.hpp"
 
 namespace caf {
 
 template <class Fun, class Cleanup,
-         class UpstreamPolicy, class DownstreamPolicy>
-class stream_stage_impl : public stream_stage {
+          class UpstreamPolicy, class DownstreamPolicy>
+class stream_stage_impl : public stream_manager {
 public:
   using trait = stream_stage_trait_t<Fun>;
 
@@ -41,26 +41,43 @@ public:
 
   using output_type = typename trait::output;
 
-  stream_stage_impl(local_actor* self,
-                    const stream_id& sid,
+  stream_stage_impl(local_actor* self, const stream_id&,
                     Fun fun, Cleanup cleanup)
-      : stream_stage(&in_, &out_),
-        fun_(std::move(fun)),
+      : fun_(std::move(fun)),
         cleanup_(std::move(cleanup)),
         in_(self),
-        out_(self, sid) {
+        out_(self) {
     // nop
   }
 
-  expected<long> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
-                              stream_priority prio) override {
-    CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(sid) << CAF_ARG(prio));
-    if (ptr)
-      return in().add_path(ptr, sid, prio, out_.credit());
-    return sec::invalid_argument;
+  state_type& state() {
+    return state_;
+  }
+
+  UpstreamPolicy& in() override {
+    return in_;
+  }
+
+  DownstreamPolicy& out() override {
+    return out_;
+  }
+
+  bool done() const override {
+    return in_.closed() && out_.closed();
+  }
+
+protected:
+  void input_closed(error reason) override {
+    if (reason == none) {
+      if (out_.buffered() == 0)
+        out_.close();
+    } else {
+      out_.abort(std::move(reason));
+    }
   }
 
   error process_batch(message& msg) override {
+    CAF_LOG_TRACE(CAF_ARG(msg));
     using vec_type = std::vector<output_type>;
     if (msg.match_elements<vec_type>()) {
       auto& xs = msg.get_as<vec_type>(0);
@@ -69,6 +86,7 @@ public:
         fun_(state_, ds, x);
       return none;
     }
+    CAF_LOG_ERROR("received unexpected batch type");
     return sec::unexpected_message;
   }
 
@@ -76,24 +94,20 @@ public:
     return make_message(stream<output_type>{x});
   }
 
-  optional<downstream_policy&> dp() override {
-    return out_;
-  }
-
-  optional<upstream_policy&> up() override {
-    return in_;
-  }
-
-  state_type& state() {
-    return state_;
-  }
-
-  UpstreamPolicy& in() {
-    return in_;
-  }
-
-  DownstreamPolicy& out() {
-    return out_;
+  void downstream_demand(outbound_path* path, long) override {
+    CAF_LOG_TRACE(CAF_ARG(path));
+    auto hdl = path->hdl;
+    if(out_.buffered() > 0)
+      push();
+    else if (in_.closed()) {
+      // don't pass path->hdl: path can become invalid
+      auto sid = path->sid;
+      out_.remove_path(sid, hdl, none, false);
+    }
+    auto current_size = out_.buffered();
+    auto desired_size = out_.credit();
+    if (current_size < desired_size)
+      in_.assign_credit(desired_size - current_size);
   }
 
 private:

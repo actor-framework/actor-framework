@@ -23,9 +23,7 @@
 #include <deque>
 #include <vector>
 
-#include "caf/stream_msg.hpp"
 #include "caf/make_message.hpp"
-#include "caf/downstream_path.hpp"
 
 namespace caf {
 

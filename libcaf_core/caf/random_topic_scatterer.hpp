@@ -17,21 +17,30 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_ANYCAST_HPP
-#define CAF_POLICY_ANYCAST_HPP
+#ifndef CAF_RANDOM_TOPIC_SCATTERER_HPP
+#define CAF_RANDOM_TOPIC_SCATTERER_HPP
 
-#include "caf/downstream_policy.hpp"
+#include <map>
+#include <tuple>
+#include <deque>
+#include <vector>
+#include <functional>
 
-#include "caf/mixin/buffered_policy.hpp"
+#include "caf/topic_scatterer.hpp"
 
 namespace caf {
-namespace policy {
 
-template <class T, class Base = mixin::buffered_policy<T, downstream_policy>>
-class anycast : public Base {
+/// A topic scatterer that delivers data to sinks in random order.
+template <class T, class Filter,
+          class KeyCompare = std::equal_to<typename Filter::value_type>,
+          long KeyIndex = 0>
+class random_topic_scatterer
+    : public topic_scatterer<T, Filter, KeyCompare, KeyIndex> {
 public:
-  void emit_batches() override {
-    this->emit_anycast();
+  using super = topic_scatterer<T, Filter, KeyCompare, KeyIndex>;
+
+  random_topic_scatterer(local_actor* selfptr) : super(selfptr) {
+    // nop
   }
 
   long credit() const override {
@@ -39,9 +48,23 @@ public:
     // have filled our buffer to its minimum size.
     return this->total_credit() + this->min_buffer_size();
   }
+
+  void emit_batches() override {
+    this->fan_out();
+    for (auto& kvp : this->lanes_) {
+      auto& l = kvp.second;
+      super::sort_by_credit(l.paths);
+      for (auto& x : l.paths) {
+        auto chunk = super::get_chunk(l.buf, x->open_credit);
+        auto csize = static_cast<long>(chunk.size());
+        if (csize == 0)
+          break;
+        x->emit_batch(csize, make_message(std::move(chunk)));
+      }
+    }
+  }
 };
 
-} // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_ANYCAST_HPP
+#endif // CAF_RANDOM_TOPIC_SCATTERER_HPP

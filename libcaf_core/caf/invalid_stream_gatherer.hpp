@@ -17,21 +17,61 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
+#ifndef CAF_INVALID_STREAM_GATHERER_HPP
+#define CAF_INVALID_STREAM_GATHERER_HPP
 
-#include "caf/upstream_path.hpp"
+#include "caf/stream_gatherer.hpp"
 
 namespace caf {
 
-upstream_path::upstream_path(strong_actor_ptr ptr, stream_id  id,
-                             stream_priority p)
-    : hdl(std::move(ptr)),
-      sid(std::move(id)),
-      prio(p),
-      last_acked_batch_id(0),
-      last_batch_id(0),
-      assigned_credit(0) {
-  // nop
-}
+/// Type-erased policy for receiving data from sources.
+class invalid_stream_gatherer : public stream_gatherer {
+public:
+  invalid_stream_gatherer() = default;
+
+  ~invalid_stream_gatherer() override;
+
+  path_ptr add_path(const stream_id& sid, strong_actor_ptr x,
+                    strong_actor_ptr original_stage, stream_priority prio,
+                    long available_credit, bool redeployable,
+                    response_promise result_cb) override;
+
+  bool remove_path(const stream_id& sid, const actor_addr& x, error reason,
+                   bool silent) override;
+
+  void close(message reason) override;
+
+  void abort(error reason) override;
+
+  long num_paths() const override;
+
+  bool closed() const override;
+
+  bool continuous() const override;
+
+  void continuous(bool value) override;
+
+  path_ptr path_at(size_t index) override;
+
+  path_ptr find(const stream_id& sid, const actor_addr& x) override;
+
+  long high_watermark() const override;
+
+  long min_credit_assignment() const override;
+
+  long max_credit() const override;
+
+  void high_watermark(long x) override;
+
+  void min_credit_assignment(long x) override;
+
+  void max_credit(long x) override;
+
+  void assign_credit(long downstream_capacity) override;
+
+  long initial_credit(long downstream_capacity, path_type* x) override;
+};
 
 } // namespace caf
+
+#endif // CAF_INVALID_STREAM_GATHERER_HPP

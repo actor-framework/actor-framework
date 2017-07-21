@@ -39,6 +39,8 @@ public:
 
   stream_id();
 
+  stream_id(none_t);
+
   stream_id(actor_addr origin_actor, uint64_t origin_nr);
 
   stream_id(actor_control_block* origin_actor, uint64_t origin_nr);

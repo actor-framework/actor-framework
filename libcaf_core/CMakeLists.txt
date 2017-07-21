@@ -39,8 +39,6 @@ set (LIBCAF_CORE_SRCS
      src/decorated_tuple.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
-     src/downstream_path.cpp
-     src/downstream_policy.cpp
      src/duration.cpp
      src/dynamic_message_data.cpp
      src/error.cpp
@@ -51,10 +49,12 @@ set (LIBCAF_CORE_SRCS
      src/get_mac_addresses.cpp
      src/get_process_id.cpp
      src/get_root_uuid.cpp
-     src/greedy.cpp
      src/group.cpp
      src/group_manager.cpp
      src/group_module.cpp
+     src/inbound_path.cpp
+     src/invalid_stream_gatherer.cpp
+     src/invalid_stream_scatterer.cpp
      src/invoke_result_visitor.cpp
      src/local_actor.cpp
      src/logger.cpp
@@ -69,11 +69,13 @@ set (LIBCAF_CORE_SRCS
      src/message_view.cpp
      src/monitorable_actor.cpp
      src/node_id.cpp
+     src/outbound_path.cpp
      src/parse_ini.cpp
      src/pretty_type_name.cpp
      src/private_thread.cpp
      src/proxy_registry.cpp
-     src/pull5.cpp
+     src/pull5_gatherer.cpp
+     src/random_gatherer.cpp
      src/raw_event_based_actor.cpp
      src/ref_counted.cpp
      src/replies_to.cpp
@@ -91,16 +93,19 @@ set (LIBCAF_CORE_SRCS
      src/splitter.cpp
      src/stream.cpp
      src/stream_aborter.cpp
-     src/stream_handler.cpp
+     src/stream_gatherer.cpp
+     src/stream_gatherer.cpp
+     src/stream_gatherer_impl.cpp
      src/stream_id.cpp
+     src/stream_manager.cpp
      src/stream_msg_visitor.cpp
      src/stream_priority.cpp
-     src/stream_sink.cpp
-     src/stream_source.cpp
-     src/stream_stage.cpp
+     src/stream_scatterer.cpp
+     src/stream_scatterer_impl.cpp
      src/stringification_inspector.cpp
      src/sync_request_bouncer.cpp
      src/term.cpp
+     src/terminal_stream_scatterer.cpp
      src/test_coordinator.cpp
      src/timestamp.cpp
      src/try_match.cpp
@@ -108,8 +113,6 @@ set (LIBCAF_CORE_SRCS
      src/type_erased_value.cpp
      src/uniform_type_info_map.cpp
      src/unprofiled.cpp
-     src/upstream_path.cpp
-     src/upstream_policy.cpp
      src/work_sharing.cpp
      src/work_stealing.cpp)
 

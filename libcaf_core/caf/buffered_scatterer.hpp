@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_BUFFERED_POLICYS_HPP
-#define CAF_MIXIN_BUFFERED_POLICYS_HPP
+#ifndef CAF_MIXIN_BUFFERED_SCATTERER_HPP
+#define CAF_MIXIN_BUFFERED_SCATTERER_HPP
 
 #include <deque>
 #include <vector>
@@ -26,25 +26,26 @@
 #include <iterator>
 
 #include "caf/sec.hpp"
-#include "caf/logger.hpp"
+#include "caf/stream_edge_impl.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/stream_scatterer_impl.hpp"
 
 namespace caf {
-namespace mixin {
 
 /// Mixin for streams with any number of downstreams. `Subtype` must provide a
 /// member function `buf()` returning a queue with `std::deque`-like interface.
-template <class T, class Base, class Subtype = Base>
-class buffered_policy : public Base {
+template <class T>
+class buffered_scatterer : public stream_scatterer_impl {
 public:
+  using super = stream_scatterer_impl;
+
   using value_type = T;
 
   using buffer_type = std::deque<value_type>;
 
   using chunk_type = std::vector<value_type>;
 
-  template <class... Ts>
-  buffered_policy(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
+  buffered_scatterer(local_actor* selfptr) : super(selfptr) {
     // nop
   }
 
@@ -55,6 +56,7 @@ public:
 
   /// @pre `n <= buf_.size()`
   static chunk_type get_chunk(buffer_type& buf, long n) {
+    CAF_LOG_TRACE(CAF_ARG(buf) << CAF_ARG(n));
     chunk_type xs;
     if (n > 0) {
       xs.reserve(static_cast<size_t>(n));
@@ -75,34 +77,8 @@ public:
     return get_chunk(buf_, n);
   }
 
-  long buf_size() const override {
+  long buffered() const override {
     return static_cast<long>(buf_.size());
-  }
-
-  void emit_broadcast() override {
-    auto chunk = get_chunk(this->min_credit());
-    auto csize = static_cast<long>(chunk.size());
-    CAF_LOG_TRACE(CAF_ARG(chunk));
-    if (csize == 0)
-      return;
-    auto wrapped_chunk = make_message(std::move(chunk));
-    for (auto& x : this->paths_) {
-      CAF_ASSERT(x->open_credit >= csize);
-      x->open_credit -= csize;
-      this->emit_batch(*x, static_cast<size_t>(csize), wrapped_chunk);
-    }
-  }
-
-  void emit_anycast() override {
-    this->sort_paths_by_credit();
-    for (auto& x : this->paths_) {
-      auto chunk = get_chunk(x->open_credit);
-      auto csize = chunk.size();
-      if (csize == 0)
-        return;
-      x->open_credit -= csize;
-      this->emit_batch(*x, csize, std::move(make_message(std::move(chunk))));
-    }
   }
 
   buffer_type& buf() {
@@ -117,7 +93,6 @@ protected:
   buffer_type buf_;
 };
 
-} // namespace mixin
 } // namespace caf
 
-#endif // CAF_MIXIN_BUFFERED_POLICYS_HPP
+#endif // CAF_MIXIN_BUFFERED_SCATTERER_HPP

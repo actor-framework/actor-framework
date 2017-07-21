@@ -193,6 +193,12 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   // Clear all state.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
+  if (fail_state != none)
+    for (auto& kvp : streams_)
+      kvp.second->abort(fail_state);
+  else
+    for (auto& kvp : streams_)
+      kvp.second->close();
   streams_.clear();
   // Dispatch to parent's `cleanup` function.
   return local_actor::cleanup(std::move(fail_state), host);
@@ -647,27 +653,46 @@ bool scheduled_actor::handle_stream_msg(mailbox_element& x,
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_ASSERT(x.content().match_elements<stream_msg>());
   auto& sm = x.content().get_mutable_as<stream_msg>(0);
-  auto e = streams_.end();
-  stream_msg_visitor f{this, sm.sid, streams_.find(sm.sid), e, active_behavior};
-  auto res = visit(f, sm.content);
-  auto success = (res.first == none);
-  auto i = res.second;
-  if (!success) {
-    if (i != e) {
-      i->second->abort(current_sender(), std::move(res.first));
-      streams_.erase(i);
-    }
-  } else if (i != e) {
-    if (i->second->done()) {
-      streams_.erase(i);
-      CAF_LOG_DEBUG("Stream is done and could be safely erased"
-                    << CAF_ARG(sm.sid) << ", remaining streams ="
-                    << deep_to_string(streams_).c_str());
-      if (streams_.empty() && !has_behavior())
-        quit(exit_reason::normal);
-    }
-  }
-  return success;
+  stream_msg_visitor f{this, sm, active_behavior};
+  auto result = visit(f, sm.content);
+  if (streams_.empty() && !has_behavior())
+    quit(exit_reason::normal);
+  return result;
+}
+
+bool scheduled_actor::add_source(const stream_manager_ptr& mgr, const stream_id& sid,
+                strong_actor_ptr source_ptr, strong_actor_ptr original_stage,
+                stream_priority prio, bool redeployable,
+                response_promise result_cb) {
+  CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid) << CAF_ARG(source_ptr)
+                << CAF_ARG(original_stage) << CAF_ARG(prio)
+                << CAF_ARG(redeployable) << CAF_ARG(result_cb));
+  CAF_ASSERT(mgr != nullptr);
+  if (!source_ptr || !sid.valid())
+    return false;
+  return mgr->add_source(sid, std::move(source_ptr),
+                         std::move(original_stage), prio, redeployable,
+                         std::move(result_cb));
+}
+
+bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
+                                 const stream_id& sid,
+                                 response_promise result_cb) {
+  CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid));
+  CAF_ASSERT(mgr != nullptr);
+  CAF_ASSERT(current_mailbox_element() != nullptr);
+  if (!current_mailbox_element()->content().match_elements<stream_msg>())
+    return false;
+  auto& sm = current_mailbox_element()->content().get_mutable_as<stream_msg>(0);
+  if (!holds_alternative<stream_msg::open>(sm.content))
+    return false;
+  auto& opn = get<stream_msg::open>(sm.content);
+  auto source_ptr = std::move(opn.prev_stage);
+  if (!source_ptr || !sid.valid())
+    return false;
+  return mgr->add_source(sid, std::move(source_ptr),
+                         std::move(opn.original_stage), opn.priority, opn.redeployable,
+                         std::move(result_cb));
 }
 
 } // namespace caf

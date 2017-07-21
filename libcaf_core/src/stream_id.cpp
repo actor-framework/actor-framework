@@ -27,6 +27,10 @@ stream_id::stream_id() : origin(nullptr), nr(0) {
   // nop
 }
 
+stream_id::stream_id(none_t) : stream_id() {
+  // nop
+}
+
 stream_id::stream_id(actor_addr origin_actor, uint64_t origin_nr)
     : origin(std::move(origin_actor)),
       nr(origin_nr) {

@@ -17,36 +17,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_BROADCAST_HPP
-#define CAF_POLICY_BROADCAST_HPP
+#include "caf/stream_gatherer.hpp"
 
-#include "caf/downstream_policy.hpp"
-
-#include "caf/mixin/buffered_policy.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/inbound_path.hpp"
+#include "caf/actor_control_block.hpp"
 
 namespace caf {
-namespace policy {
 
-template <class T, class Base = mixin::buffered_policy<T, downstream_policy>>
-class broadcast : public Base {
-public:
-  template <class... Ts>
-  broadcast(Ts&&... xs) : Base(std::forward<Ts>(xs)...) {
-    // nop
-  }
+stream_gatherer::~stream_gatherer() {
+  // nop
+}
 
-  void emit_batches() override {
-    this->emit_broadcast();
-  }
+bool stream_gatherer::remove_path(const stream_id& sid,
+                                  const strong_actor_ptr& x, error reason,
+                                  bool silent) {
+  return remove_path(sid, actor_cast<actor_addr>(x), std::move(reason), silent);
+}
 
-  long credit() const override {
-    // We receive messages until we have exhausted all downstream credit and
-    // have filled our buffer to its minimum size.
-    return this->min_credit() + this->min_buffer_size();
-  }
-};
+stream_gatherer::path_type* stream_gatherer::find(const stream_id& sid,
+                                                  const strong_actor_ptr& x) {
+  return find(sid, actor_cast<actor_addr>(x));
+}
 
-} // namespace policy
 } // namespace caf
-
-#endif // CAF_POLICY_BROADCAST_HPP

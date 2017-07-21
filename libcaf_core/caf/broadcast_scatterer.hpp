@@ -17,28 +17,42 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_PULL5_HPP
-#define CAF_POLICY_PULL5_HPP
+#ifndef CAF_BROADCAST_SCATTERER_HPP
+#define CAF_BROADCAST_SCATTERER_HPP
 
-#include "caf/upstream_policy.hpp"
+#include "caf/buffered_scatterer.hpp"
 
 namespace caf {
-namespace policy {
 
-/// Sends ACKs as early and often as possible.
-class pull5 : public upstream_policy {
+template <class T>
+class broadcast_scatterer : public buffered_scatterer<T> {
 public:
-  template <class... Ts>
-  pull5(Ts&&... xs) : upstream_policy(std::forward<Ts>(xs)...) {
+  using super = buffered_scatterer<T>;
+
+  broadcast_scatterer(local_actor* selfptr) : super(selfptr) {
     // nop
   }
 
-  ~pull5() override;
+  long credit() const override {
+    // We receive messages until we have exhausted all downstream credit and
+    // have filled our buffer to its minimum size.
+    return this->min_credit() + this->min_buffer_size();
+  }
 
-  void fill_assignment_vec(long downstream_credit) override;
+  void emit_batches() override {
+    auto chunk = this->get_chunk(this->min_credit());
+    auto csize = static_cast<long>(chunk.size());
+    CAF_LOG_TRACE(CAF_ARG(chunk));
+    if (csize == 0)
+      return;
+    auto wrapped_chunk = make_message(std::move(chunk));
+    for (auto& x : this->paths_) {
+      CAF_ASSERT(x->open_credit >= csize);
+      x->emit_batch(csize, wrapped_chunk);
+    }
+  }
 };
 
-} // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_PULL5_HPP
+#endif // CAF_BROADCAST_SCATTERER_HPP

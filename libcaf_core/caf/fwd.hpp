@@ -31,7 +31,6 @@ template <class> class param;
 template <class> class stream;
 template <class> class optional;
 template <class> class expected;
-template <class> class upstream;
 template <class> class downstream;
 template <class> class intrusive_ptr;
 template <class> class behavior_type_of;
@@ -82,24 +81,23 @@ class deserializer;
 class group_module;
 class message_view;
 class scoped_actor;
-class stream_stage;
+class inbound_path;
+class outbound_path;
 class stream_source;
-class upstream_path;
 class abstract_actor;
 class abstract_group;
 class actor_registry;
 class blocking_actor;
 class execution_unit;
 class proxy_registry;
-class stream_handler;
-class upstream_policy;
+class stream_manager;
+class stream_gatherer;
 class actor_companion;
-class downstream_path;
 class mailbox_element;
 class message_handler;
 class scheduled_actor;
+class stream_scatterer;
 class response_promise;
-class downstream_policy;
 class event_based_actor;
 class type_erased_tuple;
 class type_erased_value;
@@ -201,8 +199,8 @@ using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
 // -- intrusive pointer aliases ------------------------------------------------
 
-using stream_handler_ptr = intrusive_ptr<stream_handler>;
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
+using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 // -- unique pointer aliases ---------------------------------------------------
 

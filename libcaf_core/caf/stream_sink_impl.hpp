@@ -20,14 +20,20 @@
 #ifndef CAF_STREAM_SINK_IMPL_HPP
 #define CAF_STREAM_SINK_IMPL_HPP
 
-#include "caf/stream_sink.hpp"
+#include "caf/sec.hpp"
+#include "caf/logger.hpp"
+#include "caf/message_id.hpp"
+#include "caf/stream_manager.hpp"
 #include "caf/stream_sink_trait.hpp"
+#include "caf/terminal_stream_scatterer.hpp"
 
 namespace caf {
 
 template <class Fun, class Finalize, class UpstreamPolicy>
-class stream_sink_impl : public stream_sink {
+class stream_sink_impl : public stream_manager {
 public:
+  using super = stream_manager;
+
   using trait = stream_sink_trait_t<Fun, Finalize>;
 
   using state_type = typename trait::state;
@@ -36,25 +42,32 @@ public:
 
   using output_type = typename trait::output;
 
-  stream_sink_impl(local_actor* self,
-                   strong_actor_ptr&& orig_sender,
-                   std::vector<strong_actor_ptr>&& svec, message_id mid,
-                   Fun fun, Finalize fin)
-      : stream_sink(&in_, std::move(orig_sender), std::move(svec), mid),
-        fun_(std::move(fun)),
+  stream_sink_impl(local_actor* self, Fun fun, Finalize fin)
+      : fun_(std::move(fun)),
         fin_(std::move(fin)),
         in_(self) {
     // nop
   }
 
-  expected<long> add_upstream(strong_actor_ptr& ptr, const stream_id& sid,
-                              stream_priority prio) override {
-    if (ptr)
-      return in().add_path(ptr, sid, prio, min_buffer_size());
-    return sec::invalid_argument;
+  state_type& state() {
+    return state_;
   }
 
-  error consume(message& msg) override {
+  UpstreamPolicy& in() override {
+    return in_;
+  }
+
+  terminal_stream_scatterer& out() override {
+    return out_;
+  }
+
+  bool done() const override {
+    return in_.closed();
+  }
+
+protected:
+  error process_batch(message& msg) override {
+    CAF_LOG_TRACE(CAF_ARG(msg));
     using vec_type = std::vector<input_type>;
     if (msg.match_elements<vec_type>()) {
       auto& xs = msg.get_as<vec_type>(0);
@@ -62,19 +75,12 @@ public:
         fun_(state_, x);
       return none;
     }
+    CAF_LOG_ERROR("received unexpected batch type");
     return sec::unexpected_message;
   }
 
-  message finalize() override {
+  message make_final_result() override {
     return trait::make_result(state_, fin_);
-  }
-
-  optional<upstream_policy&> up() override {
-    return in_;
-  }
-
-  state_type& state() {
-    return state_;
   }
 
 private:
@@ -82,6 +88,7 @@ private:
   Fun fun_;
   Finalize fin_;
   UpstreamPolicy in_;
+  terminal_stream_scatterer out_;
 };
 
 } // namespace caf

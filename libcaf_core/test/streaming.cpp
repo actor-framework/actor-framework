@@ -26,8 +26,8 @@
 #define CAF_SUITE streaming
 #include "caf/test/dsl.hpp"
 
-#include "caf/policy/pull5.hpp"
-#include "caf/policy/push5.hpp"
+#include "caf/detail/pull5_gatherer.hpp"
+#include "caf/detail/push5_scatterer.hpp"
 
 using std::cout;
 using std::endl;
@@ -48,7 +48,7 @@ behavior file_reader(stateful_actor<file_reader_state>* self) {
   return {
     [=](std::string& fname) -> stream<int> {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_source(
+      return self->make_source(
         // forward file name in handshake to next stage
         std::forward_as_tuple(std::move(fname)),
         // initialize state
@@ -57,6 +57,7 @@ behavior file_reader(stateful_actor<file_reader_state>* self) {
         },
         // get next element
         [=](buf& xs, downstream<int>& out, size_t num) {
+          CAF_MESSAGE("push " << num << " more messages downstream");
           auto n = std::min(num, xs.size());
           for (size_t i = 0; i < n; ++i)
             out.push(xs[i]);
@@ -66,7 +67,7 @@ behavior file_reader(stateful_actor<file_reader_state>* self) {
         [=](const buf& xs) {
           return xs.empty();
         },
-        policy::arg<policy::push5<int>>::value
+        policy::arg<detail::push5_scatterer<int>>::value
       );
     }
   };
@@ -80,7 +81,7 @@ const char* streamer_state::name = "streamer";
 
 void streamer(stateful_actor<streamer_state>* self, const actor& dest) {
   using buf = std::deque<int>;
-  self->new_stream(
+  self->make_source(
     // destination of the stream
     dest,
     // "file name" as seen by the next stage
@@ -104,7 +105,7 @@ void streamer(stateful_actor<streamer_state>* self, const actor& dest) {
     [=](expected<int>) {
       // nop
     },
-    policy::arg<policy::push5<int>>::value
+    policy::arg<detail::push5_scatterer<int>>::value
   );
 }
 
@@ -118,7 +119,7 @@ behavior filter(stateful_actor<filter_state>* self) {
   return {
     [=](stream<int>& in, std::string& fname) -> stream<int> {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_stage(
+      return self->make_stage(
         // input stream
         in,
         // forward file name in handshake to next stage
@@ -136,7 +137,7 @@ behavior filter(stateful_actor<filter_state>* self) {
         [=](unit_t&) {
           // nop
         },
-        policy::arg<policy::pull5, policy::push5<int>>::value
+        policy::arg<detail::pull5_gatherer, detail::push5_scatterer<int>>::value
       );
     }
   };
@@ -167,7 +168,7 @@ behavior sum_up(stateful_actor<sum_up_state>* self) {
   return {
     [=](stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_sink(
+      return self->make_sink(
         // input stream
         in,
         // initialize state
@@ -182,7 +183,7 @@ behavior sum_up(stateful_actor<sum_up_state>* self) {
         [](int& x) -> int {
           return x;
         },
-        policy::arg<policy::pull5>::value
+        policy::arg<detail::pull5_gatherer>::value
       );
     }
   };
@@ -198,7 +199,7 @@ behavior drop_all(stateful_actor<drop_all_state>* self) {
   return {
     [=](stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      return self->add_sink(
+      return self->make_sink(
         // input stream
         in,
         // initialize state
@@ -213,7 +214,7 @@ behavior drop_all(stateful_actor<drop_all_state>* self) {
         [](unit_t&) {
           CAF_LOG_INFO("drop_all done");
         },
-        policy::arg<policy::pull5>::value
+        policy::arg<detail::pull5_gatherer>::value
       );
     }
   };
@@ -229,7 +230,7 @@ void nores_streamer(stateful_actor<nores_streamer_state>* self,
                              const actor& dest) {
   CAF_LOG_INFO("nores_streamer initialized");
   using buf = std::deque<int>;
-  self->new_stream(
+  self->make_source(
     // destination of the stream
     dest,
     // "file name" for the next stage
@@ -253,12 +254,12 @@ void nores_streamer(stateful_actor<nores_streamer_state>* self,
     [=](expected<void>) {
       // nop
     },
-    policy::arg<policy::push5<int>>::value
+    policy::arg<detail::push5_scatterer<int>>::value
   );
 }
 
 struct stream_multiplexer_state {
-  intrusive_ptr<stream_stage> stage;
+  stream_manager_ptr stage;
   static const char* name;
 };
 
@@ -271,32 +272,35 @@ behavior stream_multiplexer(stateful_actor<stream_multiplexer_state>* self) {
   auto cleanup = [](unit_t&) {
     // nop
   };
-  stream_id id{self->ctrl(),
-               self->new_request_id(message_priority::normal).integer_value()};
+  auto sid = self->make_stream_id();
   using impl = stream_stage_impl<decltype(process), decltype(cleanup),
-                                 policy::pull5, policy::push5<int>>;
-  self->state.stage = make_counted<impl>(self, id, process, cleanup);
+                                 detail::pull5_gatherer,
+                                 detail::push5_scatterer<int>>;
+  self->state.stage = make_counted<impl>(self, sid, process, cleanup);
   self->state.stage->in().continuous(true);
-  self->streams().emplace(id, self->state.stage);
+  self->streams().emplace(sid, self->state.stage);
   return {
     [=](join_atom) -> stream<int> {
-      stream<int> invalid;
-      auto& ptr = self->current_sender();
-      if (!ptr)
-        return invalid;
-      auto err = self->state.stage->add_downstream(ptr);
-      if (err)
-        return invalid;
+      CAF_MESSAGE("received 'join' request");
       auto sid = self->streams().begin()->first;
-      std::tuple<std::string> tup{"test.txt"};
-      self->fwd_stream_handshake<int>(sid, tup);
+      if (!self->add_sink<int>(
+            self->state.stage, sid, nullptr, self->current_sender(), no_stages,
+            self->current_message_id(), stream_priority::normal,
+            std::make_tuple<std::string>("test.txt"))) {
+        auto rp = self->make_response_promise();
+        rp.deliver(sec::invalid_stream_state);
+        return none;
+      }
+      self->drop_current_message_id();
       return sid;
     },
-    [=](const stream<int>& sid, const std::string& fname) {
+    [=](const stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "test.txt");
-      // We only need to add a new stream to the map, the runtime system will
-      // take care of adding a new upstream and sending the handshake.
-      self->streams().emplace(sid.id(), self->state.stage);
+      auto& mgr = self->state.stage;
+      if (!self->add_source(mgr, in.id(), none)) {
+        CAF_FAIL("serve_as_stage failed");
+      }
+      self->streams().emplace(in.id(), mgr);
     },
   };
 }
@@ -330,8 +334,8 @@ CAF_TEST(broken_pipeline) {
          from(self).to(stage).with(_, source, _, _, _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
-  // stage --(stream_msg::abort)--> source
-  expect((stream_msg::abort),
+  // stage --(stream_msg::forced_drop)--> source
+  expect((stream_msg::forced_drop),
          from(stage).to(source).with(sec::stream_init_failed));
   CAF_CHECK(deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
@@ -353,12 +357,12 @@ CAF_TEST(incomplete_pipeline) {
          from(self).to(stage).with(_, source, _, _,  _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
-  // stage --(stream_msg::abort)--> source
-  expect((stream_msg::abort),
+  // stage --(stream_msg::forced_drop)--> source
+  expect((stream_msg::forced_drop),
          from(stage).to(source).with(sec::stream_init_failed));
   CAF_CHECK(deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
-  CAF_CHECK_EQUAL(fetch_result(), sec::stream_init_failed);
+  CAF_CHECK_EQUAL(fetch_result(), sec::no_downstream_stages_defined);
 }
 
 CAF_TEST(depth2_pipeline) {
@@ -544,13 +548,15 @@ CAF_TEST(broken_pipeline_stramer) {
          from(source).to(stage).with(_, source, _, _, _, false));
   CAF_CHECK(!deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
-  // stage --(stream_msg::abort)--> source
-  expect((stream_msg::abort),
+  // stage --(stream_msg::forced_drop)--> source
+  expect((stream_msg::forced_drop),
          from(stage).to(source).with(sec::stream_init_failed));
   CAF_CHECK(deref(source).streams().empty());
   CAF_CHECK(deref(stage).streams().empty());
-  // sink ----(error)---> source
-  expect((error), from(stage).to(source).with(_));
+  // The stage failed during handshake. Thus, the source is still responsible
+  // for sending an error message (to itself in this case).
+  // source ----(error)---> source
+  expect((error), from(source).to(source).with(_));
 }
 
 CAF_TEST(depth2_pipeline_streamer) {

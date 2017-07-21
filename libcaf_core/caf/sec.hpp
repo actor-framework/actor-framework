@@ -108,8 +108,10 @@ enum class sec : uint8_t {
   stream_init_failed,
   /// Unable to process a stream since due to missing state.
   invalid_stream_state,
+  /// Stream aborted due to unexpected error.
+  unhandled_stream_error,
   /// A function view was called without assigning an actor first.
-  bad_function_call
+  bad_function_call = 40
 };
 
 /// @relates sec

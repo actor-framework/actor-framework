@@ -17,57 +17,67 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SINK_HPP
-#define CAF_STREAM_SINK_HPP
+#ifndef CAF_STREAM_GATHERER_IMPL_HPP
+#define CAF_STREAM_GATHERER_IMPL_HPP
 
 #include <vector>
+#include <cstdint>
+#include <utility>
 
-#include "caf/extend.hpp"
-#include "caf/message_id.hpp"
-#include "caf/stream_manager.hpp"
-#include "caf/upstream_policy.hpp"
-#include "caf/actor_control_block.hpp"
+#include "caf/fwd.hpp"
+#include "caf/stream_gatherer.hpp"
+#include "caf/stream_edge_impl.hpp"
+#include "caf/response_promise.hpp"
 
 namespace caf {
 
-/// Represents a terminal stream stage.
-class stream_sink : public stream_manager {
+/// Type-erased policy for receiving data from sources.
+class stream_gatherer_impl : public stream_edge_impl<stream_gatherer> {
 public:
-  stream_sink(upstream_policy* in_ptr, strong_actor_ptr&& orig_sender,
-              std::vector<strong_actor_ptr>&& trailing_stages, message_id mid);
+  using super = stream_edge_impl<stream_gatherer>;
 
-  bool done() const override;
+  using assignment_pair = std::pair<path_type*, long>;
 
-  error batch(const actor_addr& hdl, long xs_size, message& xs,
-              int64_t xs_id) override;
+  stream_gatherer_impl(local_actor* selfptr);
+
+  ~stream_gatherer_impl();
+
+  path_ptr add_path(const stream_id& sid, strong_actor_ptr x,
+                    strong_actor_ptr original_stage, stream_priority prio,
+                    long available_credit, bool redeployable,
+                    response_promise result_cb) override;
+
+  bool remove_path(const stream_id& sid, const actor_addr& x, error reason,
+                   bool silent) override;
+
+  void close(message result) override;
 
   void abort(error reason) override;
 
-  void last_upstream_closed();
+  long high_watermark() const override;
 
-  inline upstream_policy& in() {
-    return *in_ptr_;
-  }
+  long min_credit_assignment() const override;
 
-  long min_buffer_size() const {
-    return min_buffer_size_;
-  }
+  long max_credit() const override;
+
+  void high_watermark(long x) override;
+
+  void min_credit_assignment(long x) override;
+
+  void max_credit(long x) override;
 
 protected:
-  /// Consumes a batch.
-  virtual error consume(message& xs) = 0;
+  void emit_credits();
 
-  /// Computes the final result after consuming all batches of the stream.
-  virtual message finalize() = 0;
+  long high_watermark_;
+  long min_credit_assignment_;
+  long max_credit_;
+  std::vector<assignment_pair> assignment_vec_;
 
-private:
-  upstream_policy* in_ptr_;
-  strong_actor_ptr original_sender_;
-  std::vector<strong_actor_ptr> next_stages_;
-  message_id original_msg_id_;
-  long min_buffer_size_;
+  /// Listeners for the final result.
+  std::vector<response_promise> listeners_;
 };
 
 } // namespace caf
 
-#endif // CAF_STREAM_SINK_HPP
+#endif // CAF_STREAM_GATHERER_IMPL_HPP

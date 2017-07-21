@@ -17,56 +17,56 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SOURCE_HPP
-#define CAF_STREAM_SOURCE_HPP
+#ifndef CAF_TOPIC_SCATTERER_HPP
+#define CAF_TOPIC_SCATTERER_HPP
 
-#include <memory>
+#include <map>
+#include <tuple>
+#include <deque>
+#include <vector>
+#include <functional>
 
-#include "caf/extend.hpp"
-#include "caf/stream_handler.hpp"
-#include "caf/downstream_policy.hpp"
-
-#include "caf/mixin/has_downstreams.hpp"
+#include "caf/buffered_scatterer.hpp"
 
 namespace caf {
 
-class stream_source : public extend<stream_handler, stream_source>::
-                             with<mixin::has_downstreams> {
+/// A topic scatterer that delivers data in broadcast fashion to all sinks.
+template <class T, class Filter,
+          class KeyCompare = std::equal_to<typename Filter::value_type>,
+          long KeyIndex = 0>
+class broadcast_topic_scatterer
+    : public topic_scatterer<T, Filter, KeyCompare, KeyIndex> {
 public:
-  stream_source(downstream_policy* out_ptr);
+  /// Base type.
+  using super = buffered_scatterer<T>;
 
-  ~stream_source() override;
-
-  bool done() const override;
-
-  error downstream_ack(strong_actor_ptr& hdl, int64_t bid, long value) override;
-
-  void abort(strong_actor_ptr& cause, const error& reason) override;
-
-  inline downstream_policy& out() {
-    return *out_ptr_;
+  broadcast_topic_scatterer(local_actor* selfptr) : super(selfptr) {
+    // nop
   }
 
-  /// Convenience function to trigger generation of new elements.
-  void generate();
+  long credit() const override {
+    // We receive messages until we have exhausted all downstream credit and
+    // have filled our buffer to its minimum size.
+    return this->min_credit() + this->min_buffer_size();
+  }
 
-protected:
-  void downstream_demand(downstream_path* path, long demand) override;
-
-  /// Queries the current amount of elements in the output buffer.
-  virtual long buf_size() const = 0;
-
-  /// Generate new elements for the output buffer. The size hint `n` indicates
-  /// how much elements can be shipped immediately.
-  virtual void generate(size_t n) = 0;
-
-  /// Queries whether the source is exhausted.
-  virtual bool at_end() const = 0;
-
-private:
-  downstream_policy* out_ptr_;
+  void emit_batches() override {
+    this->fan_out();
+    for (auto& kvp : this->lanes_) {
+      auto& l = kvp.second;
+      auto chunk = super::get_chunk(l.buf, super::min_credit(l.paths));
+      auto csize = static_cast<long>(chunk.size());
+      if (csize == 0)
+        continue;
+      auto wrapped_chunk = make_message(std::move(chunk));
+      for (auto& x : l.paths) {
+        x->open_credit -= csize;
+        this->emit_batch(*x, static_cast<size_t>(csize), wrapped_chunk);
+      }
+    }
+  }
 };
 
 } // namespace caf
 
-#endif // CAF_STREAM_SOURCE_HPP
+#endif // CAF_TOPIC_SCATTERER_HPP

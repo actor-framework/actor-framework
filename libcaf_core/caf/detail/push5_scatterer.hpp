@@ -17,43 +17,38 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/policy/pull5.hpp"
+#ifndef CAF_PUSH5_SCATTERER_HPP
+#define CAF_PUSH5_SCATTERER_HPP
 
-#include <numeric>
-
-#include "caf/logger.hpp"
-#include "caf/upstream_path.hpp"
+#include "caf/broadcast_scatterer.hpp"
 
 namespace caf {
-namespace policy {
+namespace detail {
 
-pull5::~pull5() {
-  // nop
-}
+/// Always pushs exactly 5 elements to sinks. Used in unit tests only.
+template <class T>
+class push5_scatterer : public broadcast_scatterer<T> {
+public:
+  using super = broadcast_scatterer<T>;
 
-void pull5::fill_assignment_vec(long downstream_credit) {
-  CAF_LOG_TRACE(CAF_ARG(downstream_credit));
-  // Zero-out assignment vector if no credit is available at downstream paths.
-  if (downstream_credit <= 0) {
-    for (auto& x : assignment_vec_)
-      x.second = 0;
-    return;
+  push5_scatterer(local_actor* self) : super(self) {
+    // nop
   }
-  // Assign credit to upstream paths until no more credit is available. We must
-  // make sure to write to each element in the vector.
-  auto available = downstream_credit;
-  for (auto& p : assignment_vec_) {
-    auto& x = p.first->assigned_credit; // current value
-    auto y = std::min(5l, x + available);
-    auto delta = y - x;
-    if (delta >= min_credit_assignment()) {
-      p.second = delta;
-      available -= delta;
-    } else {
-      p.second = 0;
-    }
-  }
-}
 
-} // namespace policy
+  long min_batch_size() const override {
+    return 1;
+  }
+
+  long max_batch_size() const override {
+    return 5;
+  }
+
+  long min_buffer_size() const override {
+    return 5;
+  }
+};
+
+} // namespace detail
 } // namespace caf
+
+#endif // CAF_PUSH5_SCATTERER_HPP

@@ -27,8 +27,11 @@
 
 namespace caf {
 
-response_promise::response_promise()
-    : self_(nullptr) {
+response_promise::response_promise() : self_(nullptr) {
+  // nop
+}
+
+response_promise::response_promise(none_t) : response_promise() {
   // nop
 }
 

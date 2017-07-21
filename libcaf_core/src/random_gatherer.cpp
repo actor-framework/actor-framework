@@ -17,42 +17,56 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_HAS_UPSTREAMS_HPP
-#define CAF_MIXIN_HAS_UPSTREAMS_HPP
-
-#include "caf/sec.hpp"
-#include "caf/expected.hpp"
-#include "caf/stream_id.hpp"
-#include "caf/stream_priority.hpp"
-#include "caf/actor_control_block.hpp"
+#include "caf/random_gatherer.hpp"
 
 namespace caf {
-namespace mixin {
 
-/// Mixin for streams with has number of upstream actors.
-template <class Base, class Subtype>
-class has_upstreams : public Base {
-public:
-  error close_upstream(strong_actor_ptr& ptr) final {
-    if (in().remove_path(ptr)) {
-      if (in().closed())
-        dptr()->last_upstream_closed();
-      return none;
+random_gatherer::random_gatherer(local_actor* selfptr) : super(selfptr) {
+  // nop
+}
+
+random_gatherer::~random_gatherer() {
+  // nop
+}
+
+void random_gatherer::assign_credit(long available) {
+    CAF_LOG_TRACE(CAF_ARG(available));
+    for (auto& kvp : assignment_vec_) {
+      auto x = std::min(available, max_credit() - kvp.first->assigned_credit);
+      available -= x;
+      kvp.second = x;
     }
-    return sec::invalid_upstream;
-  }
+    emit_credits();
+}
 
-private:
-  Subtype* dptr() {
-    return static_cast<Subtype*>(this);
-  }
+long random_gatherer::initial_credit(long available, path_type*) {
+  return std::min(available, max_credit());
+}
 
-  upstream_policy& in() {
-    return dptr()->in();
+/*
+void random_gatherer::fill_assignment_vec(long downstream_credit) {
+  CAF_LOG_TRACE(CAF_ARG(downstream_credit));
+  // Zero-out assignment vector if no credit is available at downstream paths.
+  if (downstream_credit <= 0) {
+    for (auto& x : assignment_vec_)
+      x.second = 0;
+    return;
   }
-};
+  // Assign credit to upstream paths until no more credit is available. We must
+  // make sure to write to each element in the vector.
+  auto available = downstream_credit;
+  for (auto& p : assignment_vec_) {
+    auto& x = p.first->assigned_credit; // current value
+    auto y = std::min(max_credit(), x + available);
+    auto delta = y - x;
+    if (delta >= min_credit_assignment()) {
+      p.second = delta;
+      available -= delta;
+    } else {
+      p.second = 0;
+    }
+  }
+}
+*/
 
-} // namespace mixin
 } // namespace caf
-
-#endif // CAF_MIXIN_HAS_UPSTREAMS_HPP

@@ -21,8 +21,10 @@
 #define CAF_STREAM_RESULT_HPP
 
 #include "caf/fwd.hpp"
+#include "caf/none.hpp"
 #include "caf/stream_id.hpp"
-#include "caf/stream_handler.hpp"
+#include "caf/stream_manager.hpp"
+
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
@@ -37,13 +39,17 @@ public:
   stream_result& operator=(stream_result&&) = default;
   stream_result& operator=(const stream_result&) = default;
 
+  stream_result(none_t) : stream_result() {
+    // nop
+  }
+
   stream_result(stream_id sid) : id_(std::move(sid)) {
     // nop
   }
 
   /// Convenience constructor for returning the result of `self->new_stream_result`
   /// and similar functions.
-  stream_result(stream_id sid, stream_handler_ptr sptr)
+  stream_result(stream_id sid, stream_manager_ptr sptr)
       : id_(std::move(sid)),
         ptr_(std::move(sptr)) {
     // nop
@@ -51,7 +57,7 @@ public:
 
   /// Convenience constructor for returning the result of `self->new_stream_result`
   /// and similar functions.
-  stream_result(stream_result other,  stream_handler_ptr sptr)
+  stream_result(stream_result other,  stream_manager_ptr sptr)
       : id_(std::move(other.id_)),
         ptr_(std::move(sptr)) {
     // nop
@@ -63,7 +69,7 @@ public:
   }
 
   /// Returns the handler assigned to this stream_result on this actor.
-  inline const stream_handler_ptr& ptr() const {
+  inline const stream_manager_ptr& ptr() const {
     return ptr_;
   }
 
@@ -74,7 +80,7 @@ public:
 
 private:
   stream_id id_;
-  stream_handler_ptr ptr_;
+  stream_manager_ptr ptr_;
 };
 
 } // namespace caf

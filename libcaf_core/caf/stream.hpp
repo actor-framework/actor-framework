@@ -22,7 +22,8 @@
 
 #include "caf/fwd.hpp"
 #include "caf/stream_id.hpp"
-#include "caf/stream_handler.hpp"
+#include "caf/stream_manager.hpp"
+
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
@@ -46,13 +47,17 @@ public:
   stream& operator=(stream&&) = default;
   stream& operator=(const stream&) = default;
 
+  stream(none_t) : stream() {
+    // nop
+  }
+
   stream(stream_id sid) : id_(std::move(sid)) {
     // nop
   }
 
   /// Convenience constructor for returning the result of `self->new_stream`
   /// and similar functions.
-  stream(stream_id sid, stream_handler_ptr sptr)
+  stream(stream_id sid, stream_manager_ptr sptr)
       : id_(std::move(sid)),
         ptr_(std::move(sptr)) {
     // nop
@@ -60,7 +65,7 @@ public:
 
   /// Convenience constructor for returning the result of `self->new_stream`
   /// and similar functions.
-  stream(stream other,  stream_handler_ptr sptr)
+  stream(stream other,  stream_manager_ptr sptr)
       : id_(std::move(other.id_)),
         ptr_(std::move(sptr)) {
     // nop
@@ -78,7 +83,7 @@ public:
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline const stream_handler_ptr& ptr() const {
+  inline const stream_manager_ptr& ptr() const {
     return ptr_;
   }
 
@@ -93,7 +98,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   stream_id id_;
-  stream_handler_ptr ptr_;
+  stream_manager_ptr ptr_;
 };
 
 /// @relates stream

@@ -220,6 +220,63 @@ public:
     return current_element_->sender;
   }
 
+  /// Returns the ID of the current message.
+  inline message_id current_message_id() {
+    CAF_ASSERT(current_element_);
+    return current_element_->mid;
+  }
+
+  /// Returns the ID of the current message and marks the ID stored in the
+  /// current mailbox element as answered.
+  inline message_id take_current_message_id() {
+    CAF_ASSERT(current_element_);
+    auto result = current_element_->mid;
+    current_element_->mid.mark_as_answered();
+    return result;
+  }
+
+  /// Marks the current message ID as answered.
+  inline void drop_current_message_id() {
+    CAF_ASSERT(current_element_);
+    current_element_->mid.mark_as_answered();
+  }
+
+  /// Returns a pointer to the next stage from the forwarding path of the
+  /// current message or `nullptr` if the path is empty.
+  inline strong_actor_ptr current_next_stage() {
+    CAF_ASSERT(current_element_);
+    auto& stages = current_element_->stages;
+    if (!stages.empty())
+      stages.back();
+    return nullptr;
+  }
+
+  /// Returns a pointer to the next stage from the forwarding path of the
+  /// current message and removes it from the path. Returns `nullptr` if the
+  /// path is empty.
+  inline strong_actor_ptr take_current_next_stage() {
+    CAF_ASSERT(current_element_);
+    auto& stages = current_element_->stages;
+    if (!stages.empty()) {
+      auto result = stages.back();
+      stages.pop_back();
+      return result;
+    }
+    return nullptr;
+  }
+
+  /// Returns the forwarding stack from the current mailbox element.
+  const mailbox_element::forwarding_stack& current_forwarding_stack() {
+    CAF_ASSERT(current_element_);
+    return current_element_->stages;
+  }
+
+  /// Moves the forwarding stack from the current mailbox element.
+  mailbox_element::forwarding_stack take_current_forwarding_stack() {
+    CAF_ASSERT(current_element_);
+    return std::move(current_element_->stages);
+  }
+
   /// Returns a pointer to the currently processed mailbox element.
   inline mailbox_element* current_mailbox_element() {
     return current_element_;

@@ -45,9 +45,7 @@ struct stream_msg : tag::boxing_type {
     /// Identifies content types that only flow downstream.
     flows_downstream,
     /// Identifies content types that only flow upstream.
-    flows_upstream,
-    /// Identifies content types that propagate errors in both directions.
-    flows_both_ways
+    flows_upstream
   };
 
   /// Initiates a stream handshake.
@@ -80,7 +78,9 @@ struct stream_msg : tag::boxing_type {
     /// originally receiving the `open` message. No effect when set to
     /// `nullptr`. This mechanism enables pipeline definitions consisting of
     /// proxy actors that are replaced with actual actors on demand.
-    strong_actor_ptr rebind_from;
+    actor_addr rebind_from;
+    /// Points to sender_, but with a strong reference.
+    strong_actor_ptr rebind_to;
     /// Grants credit to the source.
     int32_t initial_demand;
     /// Tells the upstream whether rebindings can occur on this path.
@@ -114,7 +114,7 @@ struct stream_msg : tag::boxing_type {
     int64_t acknowledged_id;
   };
 
-  /// Closes a stream after receiving an ACK for the last batch.
+  /// Orderly shuts down a stream after receiving an ACK for the last batch.
   struct close {
     /// Allows visitors to dispatch on this tag.
     static constexpr flow_label label = flows_downstream;
@@ -122,59 +122,60 @@ struct stream_msg : tag::boxing_type {
     using outer_type = stream_msg;
   };
 
-  /// Propagates fatal errors.
-  struct abort {
+  /// Informs a source that a sink orderly drops out of a stream.
+  struct drop {
     /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_both_ways;
+    static constexpr flow_label label = flows_upstream;
+    /// Allows the testing DSL to unbox this type automagically.
+    using outer_type = stream_msg;
+  };
+
+  /// Propagates a fatal error from sources to sinks.
+  struct forced_close {
+    /// Allows visitors to dispatch on this tag.
+    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Reason for shutting down the stream.
     error reason;
   };
 
-  /// Send by the runtime if a downstream path failed. The receiving actor
-  /// awaits a `resume` message afterwards if the downstream path was
-  /// redeployable. Otherwise, this results in a fatal error.
-  struct downstream_failed {
+  /// Propagates a fatal error from sinks to sources.
+  struct forced_drop {
     /// Allows visitors to dispatch on this tag.
     static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
-    /// Exit reason of the failing downstream path.
-    error reason;
-  };
-
-  /// Send by the runtime if an upstream path failed. The receiving actor
-  /// awaits a `resume` message afterwards if the upstream path was
-  /// redeployable. Otherwise, this results in a fatal error.
-  struct upstream_failed {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_downstream;
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
-    /// Exit reason of the failing upstream path.
+    /// Reason for shutting down the stream.
     error reason;
   };
 
   /// Lists all possible options for the payload.
-  using content_alternatives = detail::type_list<open, ack_open, batch,
-                                                 ack_batch, close, abort,
-                                                 downstream_failed,
-                                                 upstream_failed>;
+  using content_alternatives =
+    detail::type_list<open, ack_open, batch, ack_batch, close, drop,
+                      forced_close, forced_drop>;
 
   /// Stores one of `content_alternatives`.
-  using content_type = variant<open, ack_open, batch, ack_batch, close,
-                               abort, downstream_failed, upstream_failed>;
+  using content_type = variant<open, ack_open, batch, ack_batch, close, drop,
+                               forced_close, forced_drop>;
 
   /// ID of the affected stream.
   stream_id sid;
+
+  /// Address of the sender. Identifies the up- or downstream actor sending
+  /// this message. Note that abort messages can get send after `sender`
+  /// already terminated. Hence, `current_sender()` can be `nullptr`, because
+  /// no strong pointers can be formed any more and receiver would receive an
+  /// anonymous message.
+  actor_addr sender;
 
   /// Palyoad of the message.
   content_type content;
 
   template <class T>
-  stream_msg(stream_id  id, T&& x)
+  stream_msg(const stream_id& id, actor_addr addr, T&& x)
       : sid(std::move(id)),
+        sender(std::move(addr)),
         content(std::forward<T>(x)) {
     // nop
   }
@@ -206,8 +207,8 @@ typename std::enable_if<
   >::value,
   stream_msg
 >::type
-make(const stream_id& sid, Ts&&... xs) {
-  return {sid, T{std::forward<Ts>(xs)...}};
+make(const stream_id& sid, actor_addr addr, Ts&&... xs) {
+  return {sid, std::move(addr), T{std::forward<Ts>(xs)...}};
 }
 
 template <class Inspector>
@@ -234,25 +235,27 @@ typename Inspector::result_type inspect(Inspector& f,
 }
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_msg::close&) {
+typename Inspector::result_type inspect(Inspector& f,
+                                        stream_msg::close&) {
   return f(meta::type_name("close"));
 }
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_msg::abort& x) {
-  return f(meta::type_name("abort"), x.reason);
+typename Inspector::result_type inspect(Inspector& f,
+                                        stream_msg::drop&) {
+  return f(meta::type_name("drop"));
 }
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
-                                        stream_msg::downstream_failed& x) {
-  return f(meta::type_name("downstream_failed"), x.reason);
+                                        stream_msg::forced_close& x) {
+  return f(meta::type_name("forced_close"), x.reason);
 }
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
-                                        stream_msg::upstream_failed& x) {
-  return f(meta::type_name("upstream_failed"), x.reason);
+                                        stream_msg::forced_drop& x) {
+  return f(meta::type_name("forced_drop"), x.reason);
 }
 
 template <class Inspector>

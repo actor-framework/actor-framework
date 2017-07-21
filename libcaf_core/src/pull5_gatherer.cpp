@@ -17,17 +17,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/downstream_path.hpp"
+#include "caf/detail/pull5_gatherer.hpp"
 
 namespace caf {
+namespace detail {
 
-downstream_path::downstream_path(strong_actor_ptr p, bool redeploy)
-    : hdl(std::move(p)),
-      next_batch_id(0),
-      open_credit(0),
-      redeployable(redeploy),
-      next_ack_id(0) {
+pull5_gatherer::pull5_gatherer(local_actor* selfptr) : super(selfptr) {
   // nop
 }
 
+void pull5_gatherer::assign_credit(long available) {
+  CAF_LOG_TRACE(CAF_ARG(available));
+  for (auto& kvp : assignment_vec_) {
+    auto x = std::min(available, 5l - kvp.first->assigned_credit);
+    available -= x;
+    kvp.second = x;
+  }
+  emit_credits();
+}
+
+long pull5_gatherer::initial_credit(long, inbound_path*) {
+  return 5;
+}
+
+} // namespace detail
 } // namespace caf

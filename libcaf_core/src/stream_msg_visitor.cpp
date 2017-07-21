@@ -21,130 +21,109 @@
 
 #include "caf/send.hpp"
 #include "caf/logger.hpp"
+#include "caf/inbound_path.hpp"
+#include "caf/outbound_path.hpp"
 #include "caf/scheduled_actor.hpp"
 
 namespace caf {
 
-stream_msg_visitor::stream_msg_visitor(scheduled_actor* self, stream_id& sid,
-                                       iterator i, iterator last,
-                                       behavior* bhvr)
+stream_msg_visitor::stream_msg_visitor(scheduled_actor* self,
+                                       const stream_msg& msg, behavior* bhvr)
     : self_(self),
-      sid_(sid),
-      i_(i),
-      e_(last),
+      sid_(msg.sid),
+      sender_(msg.sender),
       bhvr_(bhvr) {
-  // nop
+  CAF_ASSERT(sender_ != nullptr);
 }
 
 auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
-  CAF_ASSERT(self_->current_mailbox_element() != nullptr);
-  // Make sure to not add an actor twice.
-  if (i_ != e_)
-    return {sec::downstream_already_exists, e_};
+  CAF_ASSERT(x.prev_stage != nullptr);
+  CAF_ASSERT(x.original_stage != nullptr);
   auto& predecessor = x.prev_stage;
   // Convenience function for aborting the stream on error.
-  auto fail = [&](error reason) -> result_type {
-    unsafe_send_as(self_, predecessor, make<stream_msg::abort>(sid_, reason));
-    auto rp = self_->make_response_promise();
-    rp.deliver(reason);
-    return {std::move(reason), e_};
+  auto fail = [&](error err) -> result_type {
+    inbound_path::emit_irregular_shutdown(self_, sid_, predecessor,
+                                          std::move(err));
+    return false;
   };
   // Sanity checks.
-  if (bhvr_ == nullptr)
-    return fail(sec::stream_init_failed);
   if (!predecessor) {
     CAF_LOG_WARNING("received stream_msg::open with empty prev_stage");
     return fail(sec::invalid_upstream);
   }
+  if (bhvr_ == nullptr) {
+    CAF_LOG_WARNING("received stream_msg::open with empty behavior");
+    return fail(sec::stream_init_failed);
+  }
+  if (self_->streams().count(sid_) != 0) {
+    CAF_LOG_WARNING("received duplicate stream_msg::open");
+    return fail(sec::stream_init_failed);
+}
   // Invoke behavior of parent to perform handshake.
   auto res = (*bhvr_)(x.msg);
   if (!res) {
     CAF_LOG_WARNING("actor did not respond to handshake:" << CAF_ARG(x.msg));
     return fail(sec::stream_init_failed);
   }
-  i_ = self_->streams().find(sid_);
-  if (i_ == e_) {
+  if (self_->streams().count(sid_) == 0) {
     CAF_LOG_WARNING("actor did not provide a stream "
                     "handler after receiving handshake:"
                     << CAF_ARG(x.msg));
     return fail(sec::stream_init_failed);
   }
-  auto& handler = i_->second;
-  // Store upstream actor.
-  auto initial_credit = handler->add_upstream(x.prev_stage, sid_, x.priority);
-  if (initial_credit) {
-    // Send ACK to predecessor.
-    auto ic = static_cast<int32_t>(*initial_credit);
-    unsafe_send_as(self_, predecessor,
-                   make_message(make<stream_msg::ack_open>(
-                     std::move(sid_), std::move(x.original_stage), ic, false)));
-    return {none, i_};
-  }
-  self_->streams().erase(i_);
-  return fail(std::move(initial_credit.error()));
+  return true;
 }
 
 auto stream_msg_visitor::operator()(stream_msg::close&) -> result_type {
   CAF_LOG_TRACE("");
-  if (i_ != e_) {
-    i_->second->close_upstream(self_->current_sender());
-    return {none, i_->second->done() ? i_ : e_};
-  }
-  return {sec::invalid_upstream, e_};
+  return invoke([&](stream_manager_ptr& mgr) {
+    return mgr->close(sid_, sender_);
+  });
 }
 
-auto stream_msg_visitor::operator()(stream_msg::abort& x) -> result_type {
+auto stream_msg_visitor::operator()(stream_msg::drop&) -> result_type {
+  CAF_LOG_TRACE("");
+  return invoke([&](stream_manager_ptr& mgr) {
+    return mgr->drop(sid_, sender_);
+  });
+}
+
+auto stream_msg_visitor::operator()(stream_msg::forced_close& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (i_ != e_ && self_->current_sender() != nullptr) {
-    i_->second->abort(self_->current_sender(), x.reason);
-    return {std::move(x.reason), i_};
-  }
-  CAF_LOG_DEBUG("received stream_msg::abort for unknown stream");
-  return {sec::unexpected_message, e_};
+  return invoke([&](stream_manager_ptr& mgr) {
+    return mgr->forced_close(sid_, sender_, std::move(x.reason));
+  });
+}
+
+auto stream_msg_visitor::operator()(stream_msg::forced_drop& x) -> result_type {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  return invoke([&](stream_manager_ptr& mgr) {
+    return mgr->forced_drop(sid_, sender_, std::move(x.reason));
+  });
 }
 
 auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (i_ != e_) {
-    auto d = static_cast<long>(x.initial_demand);
-    return {i_->second->confirm_downstream(x.rebind_from,
-                                           self_->current_sender(), d, false),
-            i_};
-  }
-  CAF_LOG_WARNING("received stream_msg::ack_open for unknown stream");
-  return {sec::unexpected_message, e_};
+  return invoke([&](stream_manager_ptr& mgr) {
+    return mgr->ack_open(sid_, x.rebind_from, std::move(x.rebind_to),
+                         x.initial_demand, x.redeployable);
+  });
 }
 
 auto stream_msg_visitor::operator()(stream_msg::batch& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (i_ != e_)
-    return {i_->second->upstream_batch(self_->current_sender(), x.id,
-                                       static_cast<long>(x.xs_size), x.xs),
-            i_};
-  CAF_LOG_DEBUG("received stream_msg::batch for unknown stream");
-  return {sec::unexpected_message, e_};
+  return invoke([&](stream_manager_ptr& mgr) {
+    return mgr->batch(sid_, sender_, static_cast<long>(x.xs_size), x.xs, x.id);
+  });
 }
 
 auto stream_msg_visitor::operator()(stream_msg::ack_batch& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (i_ != e_)
-    return {i_->second->downstream_ack(self_->current_sender(),
-                                       x.acknowledged_id,
-                                       static_cast<long>(x.new_capacity)),
-            i_};
-  CAF_LOG_DEBUG("received stream_msg::batch for unknown stream");
-  return {sec::unexpected_message, e_};
-}
-
-auto stream_msg_visitor::operator()(stream_msg::downstream_failed&) -> result_type {
-  // TODO
-  return {none, e_};
-}
-
-auto stream_msg_visitor::operator()(stream_msg::upstream_failed&) -> result_type {
-  // TODO
-  return {none, e_};
+  return invoke([&](stream_manager_ptr& mgr) {
+    return mgr->ack_batch(sid_, sender_, static_cast<long>(x.new_capacity),
+                          x.acknowledged_id);
+  });
 }
 
 } // namespace caf
