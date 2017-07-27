@@ -35,9 +35,8 @@ public:
   /// Constructs an invalid response promise.
   typed_response_promise() = default;
 
-  inline typed_response_promise(execution_unit* ctx, strong_actor_ptr self,
-                                mailbox_element& src)
-      : promise_(ctx, std::move(self), src) {
+  inline typed_response_promise(strong_actor_ptr self, mailbox_element& src)
+      : promise_(std::move(self), src) {
     // nop
   }
 

@@ -41,8 +41,9 @@ public:
   /// Constructs an invalid response promise.
   response_promise();
 
-  response_promise(execution_unit* ctx, strong_actor_ptr self,
-                   mailbox_element& src);
+  response_promise(none_t);
+
+  response_promise(strong_actor_ptr self, mailbox_element& src);
 
   response_promise(response_promise&&) = default;
   response_promise(const response_promise&) = default;
@@ -81,7 +82,7 @@ public:
       dest->enqueue(make_mailbox_element(std::move(source_), mid,
                                          std::move(stages_),
                                          std::forward<Ts>(xs)...),
-                    ctx_);
+                    context());
     }
     return {};
   }
@@ -114,9 +115,10 @@ public:
   }
 
 private:
+  execution_unit* context();
+
   response_promise deliver_impl(message msg);
 
-  execution_unit* ctx_;
   strong_actor_ptr self_;
   strong_actor_ptr source_;
   forwarding_stack stages_;
