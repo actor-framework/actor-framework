@@ -36,7 +36,7 @@ namespace caf {
 /// each lane carries only a subset of the data. For example, the lane
 /// mechanism allows you filter key/value pairs before forwarding them to a set
 /// of workers.
-template <class T, class Filter, class KeyCompare, long KeyIndex>
+template <class T, class Filter, class Select>
 class topic_scatterer : public buffered_scatterer<T> {
 public:
   /// Base type.
@@ -64,9 +64,11 @@ public:
 
   bool remove_path(const stream_id& sid, const actor_addr& x,
                    error reason, bool silent) override {
+    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(x)
+                  << CAF_ARG(reason) << CAF_ARG(silent));
     auto i = this->iter_find(this->paths_, sid, x);
     if (i != this->paths_.end()) {
-      erase_from_lanes(x);
+      erase_from_lanes(i->get());
       return super::remove_path(i, std::move(reason), silent);
     }
     return false;
@@ -81,39 +83,41 @@ public:
   /// @pre `x` is not registered on *any* lane
   template <class Handle>
   void set_filter(const stream_id& sid, const Handle& x, filter_type f) {
-    std::sort(f.begin(), f.end());
-    lanes_[std::move(f)].paths.push_back(super::find(sid, x));
-  }
-
-  template <class Handle>
-  void update_filter(const stream_id& sid, const Handle& x, filter_type f) {
-    std::sort(f.begin(), f.end());
-    erase_from_lanes(x);
-    lanes_[std::move(f)].paths.push_back(super::find(sid, x));
+    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(x) << CAF_ARG(f));
+    auto ptr = super::find(sid, x);
+    if (!ptr) {
+      CAF_LOG_WARNING("unable to set filter for unknown path");
+      return;
+    }
+    erase_from_lanes(ptr);
+    lanes_[std::move(f)].paths.push_back(ptr);
   }
 
   const lanes_map& lanes() const {
     return lanes_;
   }
 
+  Select& selector() {
+    return select_;
+  }
+
+  const Select& selector() const {
+    return select_;
+  }
+
 protected:
-  template <class Handle>
-  void erase_from_lanes(const Handle& x) {
+  void erase_from_lanes(typename super::path_ptr ptr) {
     for (auto i = lanes_.begin(); i != lanes_.end(); ++i)
-      if (erase_from_lane(i->second, x)) {
+      if (erase_from_lane(i->second, ptr)) {
         if (i->second.paths.empty())
           lanes_.erase(i);
         return;
       }
   }
 
-  template <class Handle>
-  bool erase_from_lane(lane& l, const Handle& x) {
-    auto predicate = [&](const outbound_path* y) {
-      return x == y->hdl;
-    };
+  bool erase_from_lane(lane& l, typename super::path_ptr ptr) {
     auto e = l.paths.end();
-    auto i = std::find_if(l.paths.begin(), e, predicate);
+    auto i = std::find(l.paths.begin(), e, ptr);
     if (i != e) {
       l.paths.erase(i);
       return true;
@@ -132,15 +136,13 @@ protected:
 
   /// Returns `true` if `x` is selected by `f`, `false` otherwise.
   bool selected(const filter_type& f, const T& x) {
-    using std::get;
-    for (auto& key : f)
-      if (cmp_(key, get<KeyIndex>(x)))
-        return true;
+    if (select_(f, x))
+      return true;
     return false;
   }
 
   lanes_map lanes_;
-  KeyCompare cmp_;
+  Select select_;
 };
 
 } // namespace caf

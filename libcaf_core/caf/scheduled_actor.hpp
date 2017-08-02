@@ -44,6 +44,7 @@
 #include "caf/stream_source_impl.hpp"
 #include "caf/stream_result_trait.hpp"
 #include "caf/broadcast_scatterer.hpp"
+#include "caf/terminal_stream_scatterer.hpp"
 
 #include "caf/to_string.hpp"
 
@@ -481,8 +482,6 @@ public:
     CAF_IGNORE_UNUSED(policies);
     CAF_ASSERT(current_mailbox_element() != nullptr);
     CAF_ASSERT(current_mailbox_element()->content().match_elements<stream_msg>());
-    auto& sm = current_mailbox_element()->content().get_as<stream_msg>(0);
-    CAF_ASSERT(holds_alternative<stream_msg::open>(sm.content));
     using output_type = typename stream_stage_trait_t<Fun>::output;
     using state_type = typename stream_stage_trait_t<Fun>::state;
     static_assert(std::is_same<
@@ -526,6 +525,36 @@ public:
                      std::move(cleanup), policies);
   }
 
+  /// Creates a new stream sink of type T.
+  /// @pre `current_mailbox_element()` is a `stream_msg::open` handshake
+  /// @param in The input of the sink.
+  /// @param f Callback for initializing the object after successful creation.
+  /// @param xs Parameter pack for creating the instance of T.
+  /// @returns A stream object with a pointer to the generated `stream_manager`.
+  template <class T, class In, class SuccessCallback, class... Ts>
+  stream_result<typename T::output_type>
+  make_sink_impl(const stream<In>& in, SuccessCallback f, Ts&&... xs) {
+    CAF_ASSERT(current_mailbox_element() != nullptr);
+    CAF_ASSERT(current_mailbox_element()->content().match_elements<stream_msg>());
+    auto& sm = current_mailbox_element()->content().get_as<stream_msg>(0);
+    CAF_ASSERT(holds_alternative<stream_msg::open>(sm.content));
+    auto& opn = get<stream_msg::open>(sm.content);
+    auto sid = in.id();
+    auto next = take_current_next_stage();
+    auto ptr = make_counted<T>(this, std::forward<Ts>(xs)...);
+    auto rp = make_response_promise();
+    if (!add_source(ptr, sid, std::move(opn.prev_stage),
+                    std::move(opn.original_stage), opn.priority,
+                    opn.redeployable, rp)) {
+      CAF_LOG_ERROR("cannot create stream stage without source");
+      rp.deliver(sec::cannot_add_upstream);
+      return none;
+    }
+    f(*ptr);
+    streams_.emplace(in.id(), ptr);
+    return {in.id(), std::move(ptr)};
+  }
+
   /// Creates a new stream sink.
   /// @pre `current_mailbox_element()` is a `stream_msg::open` handshake
   /// @param in The input of the sink.
@@ -535,16 +564,12 @@ public:
   /// @param gatherer_type Sets the policy for upstream communication.
   /// @returns A stream object with a pointer to the generated `stream_manager`.
   template <class In, class Init, class Fun, class Finalize,
-            class Gatherer = random_gatherer>
+            class Gatherer = random_gatherer,
+            class Scatterer = terminal_stream_scatterer>
   stream_result<typename stream_sink_trait_t<Fun, Finalize>::output>
   make_sink(const stream<In>& in, Init init, Fun fun, Finalize finalize,
-            policy::arg<Gatherer> gatherer_type = {}) {
-    CAF_IGNORE_UNUSED(gatherer_type);
-    CAF_ASSERT(current_mailbox_element() != nullptr);
-    CAF_ASSERT(current_mailbox_element()->content().match_elements<stream_msg>());
-    auto& sm = current_mailbox_element()->content().get_as<stream_msg>(0);
-    CAF_ASSERT(holds_alternative<stream_msg::open>(sm.content));
-    auto& opn = get<stream_msg::open>(sm.content);
+            policy::arg<Gatherer, Scatterer> policies = {}) {
+    CAF_IGNORE_UNUSED(policies);
     using state_type = typename stream_sink_trait_t<Fun, Finalize>::state;
     static_assert(std::is_same<
                     void (state_type&),
@@ -557,21 +582,12 @@ public:
                   >::value,
                   "Expected signature `void (State&, Input)` "
                   "for consume function");
-    auto sid = in.id();
-    auto next = take_current_next_stage();
-    using impl = stream_sink_impl<Fun, Finalize, Gatherer>;
-    auto ptr = make_counted<impl>(this, std::move(fun), std::move(finalize));
-    auto rp = make_response_promise();
-    if (!add_source(ptr, sid, std::move(opn.prev_stage),
-                    std::move(opn.original_stage), opn.priority,
-                    opn.redeployable, rp)) {
-      CAF_LOG_ERROR("cannot create stream stage without source");
-      rp.deliver(sec::cannot_add_upstream);
-      return none;
-    }
-    init(ptr->state());
-    streams_.emplace(in.id(), ptr);
-    return {in.id(), std::move(ptr)};
+    using impl = stream_sink_impl<Fun, Finalize, Gatherer, Scatterer>;
+    auto initializer = [&](impl& x) {
+      init(x.state());
+    };
+    return make_sink_impl<impl>(in, initializer, std::move(fun),
+                                std::move(finalize));
   }
 
   inline streams_map& streams() {

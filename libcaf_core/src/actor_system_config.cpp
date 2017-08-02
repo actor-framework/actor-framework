@@ -99,6 +99,8 @@ actor_system_config::~actor_system_config() {
 actor_system_config::actor_system_config()
     : cli_helptext_printed(false),
       slave_mode(false),
+      logger_filename(logger_file_name),
+      logger_filter(logger_component_filter),
       slave_mode_fun(nullptr) {
   // add `vector<T>` and `stream<T>` for each statically known type
   add_message_type_impl<stream<actor>>("stream<@actor>");
@@ -214,6 +216,71 @@ actor_system_config::actor_system_config()
   // add renderers for default error categories
   error_renderers.emplace(atom("system"), render_sec);
   error_renderers.emplace(atom("exit"), render_exit_reason);
+}
+
+actor_system_config::actor_system_config(actor_system_config&& other)
+    : cli_helptext_printed(other.cli_helptext_printed),
+      slave_mode(other.slave_mode),
+      slave_name(std::move(other.slave_name)),
+      bootstrap_node(std::move(other.bootstrap_node)),
+      args_remainder(std::move(other.args_remainder)),
+      scheduler_policy(other.scheduler_policy),
+      scheduler_max_threads(other.scheduler_max_threads),
+      scheduler_max_throughput(other.scheduler_max_throughput),
+      scheduler_enable_profiling(std::move(other.scheduler_enable_profiling)),
+      scheduler_profiling_ms_resolution(
+        other.scheduler_profiling_ms_resolution),
+      scheduler_profiling_output_file(other.scheduler_profiling_output_file),
+      work_stealing_aggressive_poll_attempts(
+        other.work_stealing_aggressive_poll_attempts),
+      work_stealing_aggressive_steal_interval(
+        other.work_stealing_aggressive_steal_interval),
+      work_stealing_moderate_poll_attempts(
+        other.work_stealing_moderate_poll_attempts),
+      work_stealing_moderate_steal_interval(
+        other.work_stealing_moderate_steal_interval),
+      work_stealing_moderate_sleep_duration_us(
+        other.work_stealing_moderate_sleep_duration_us),
+      work_stealing_relaxed_steal_interval(
+        other.work_stealing_relaxed_steal_interval),
+      work_stealing_relaxed_sleep_duration_us(
+        other.work_stealing_relaxed_sleep_duration_us),
+      logger_file_name(std::move(other.logger_file_name)),
+      logger_file_format(std::move(other.logger_file_format)),
+      logger_console(other.logger_console),
+      logger_console_format(std::move(other.logger_console_format)),
+      logger_component_filter(std::move(other.logger_component_filter)),
+      logger_verbosity(other.logger_verbosity),
+      logger_inline_output(other.logger_inline_output),
+      logger_filename(logger_file_name),
+      logger_filter(logger_component_filter),
+      middleman_network_backend(other.middleman_network_backend),
+      middleman_app_identifier(std::move(other.middleman_app_identifier)),
+      middleman_enable_automatic_connections(
+        other.middleman_enable_automatic_connections),
+      middleman_max_consecutive_reads(other.middleman_max_consecutive_reads),
+      middleman_heartbeat_interval(other.middleman_heartbeat_interval),
+      middleman_detach_utility_actors(other.middleman_detach_utility_actors),
+      middleman_detach_multiplexer(other.middleman_detach_multiplexer),
+      opencl_device_ids(std::move(other.opencl_device_ids)),
+      openssl_certificate(std::move(other.openssl_certificate)),
+      openssl_key(std::move(other.openssl_key)),
+      openssl_passphrase(std::move(other.openssl_passphrase)),
+      openssl_capath(std::move(other.openssl_capath)),
+      openssl_cafile(std::move(other.openssl_cafile)),
+      value_factories_by_name(std::move(other.value_factories_by_name)),
+      value_factories_by_rtti(std::move(other.value_factories_by_rtti)),
+      actor_factories(std::move(other.actor_factories)),
+      module_factories(std::move(other.module_factories)),
+      hook_factories(std::move(other.hook_factories)),
+      group_module_factories(std::move(other.group_module_factories)),
+      type_names_by_rtti(std::move(other.type_names_by_rtti)),
+      error_renderers(std::move(other.error_renderers)),
+      named_actor_configs(std::move(other.named_actor_configs)),
+      slave_mode_fun(other.slave_mode_fun),
+      custom_options_(std::move(other.custom_options_)),
+      options_(std::move(other.options_)) {
+  // nop
 }
 
 std::string

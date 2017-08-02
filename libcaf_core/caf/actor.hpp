@@ -80,6 +80,8 @@ public:
   actor& operator=(actor&&) = default;
   actor& operator=(const actor&) = default;
 
+  actor(std::nullptr_t);
+
   actor(const scoped_actor&);
 
   explicit actor(const unsafe_actor_handle_init_t&) CAF_DEPRECATED;
@@ -108,12 +110,9 @@ public:
     return *this;
   }
 
-  actor& operator=(const scoped_actor& x);
+  actor& operator=(std::nullptr_t);
 
-  inline actor& operator=(std::nullptr_t) {
-    ptr_.reset();
-    return *this;
-  }
+  actor& operator=(const scoped_actor& x);
 
   /// Queries whether this actor handle is valid.
   inline explicit operator bool() const {

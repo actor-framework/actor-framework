@@ -58,7 +58,7 @@ namespace caf {
 
 template <class... Ts>
 bool operator==(const message& x, const std::tuple<Ts...>& y) {
-  return msg_cmp_rec<0>(x, y);
+  return x.size() == sizeof...(Ts) && msg_cmp_rec<0>(x, y);
 }
 
 template <class T>

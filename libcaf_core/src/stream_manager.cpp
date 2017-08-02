@@ -189,6 +189,10 @@ void stream_manager::push() {
   out().emit_batches();
 }
 
+bool stream_manager::generate_messages() {
+  return false;
+}
+
 message stream_manager::make_final_result() {
   return none;
 }

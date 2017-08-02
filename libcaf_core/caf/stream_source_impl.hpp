@@ -45,12 +45,6 @@ public:
     // nop
   }
 
-  void generate(size_t num) {
-    CAF_LOG_TRACE(CAF_ARG(num));
-    downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
-    fun_(state_, ds, num);
-  }
-
   bool done() const override {
     return at_end() && out_.paths_clean();
   }
@@ -61,6 +55,16 @@ public:
 
   DownstreamPolicy& out() override {
     return out_;
+  }
+
+  bool generate_messages() override {
+    // produce new elements
+    auto capacity = out_.credit() - out_.buffered();
+    if (capacity <= 0)
+      return false;
+    downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
+    fun_(state_, ds, capacity);
+    return true;
   }
 
   state_type& state() {
@@ -75,21 +79,8 @@ protected:
   void downstream_demand(outbound_path* path, long) override {
     CAF_LOG_TRACE(CAF_ARG(path));
     if (!at_end()) {
-      // produce new elements
-      auto capacity = out_.credit();
-      // TODO: fix issue where a source does not emit the last pieces if
-      //       min_batch_size cannot be reached
-      while (capacity >= out_.min_batch_size()) {
-        auto current_size = out_.buffered();
-        auto size_hint = std::min(capacity, out_.max_batch_size());
-        if (size_hint > current_size)
-          generate(static_cast<size_t>(size_hint - current_size));
-        push();
-        // Set available credit for next iteration.
-        auto new_capacity = at_end() ? 0l : out_.credit();
-        if (new_capacity != capacity)
-          capacity = new_capacity;
-      }
+      generate_messages();
+      push();
     } else if (out_.buffered() > 0) {
       push();
     } else {

@@ -183,7 +183,7 @@ behavior sum_up(stateful_actor<sum_up_state>* self) {
         [](int& x) -> int {
           return x;
         },
-        policy::arg<detail::pull5_gatherer>::value
+        policy::arg<detail::pull5_gatherer, terminal_stream_scatterer>::value
       );
     }
   };
@@ -214,7 +214,7 @@ behavior drop_all(stateful_actor<drop_all_state>* self) {
         [](unit_t&) {
           CAF_LOG_INFO("drop_all done");
         },
-        policy::arg<detail::pull5_gatherer>::value
+        policy::arg<detail::pull5_gatherer, terminal_stream_scatterer>::value
       );
     }
   };
@@ -380,7 +380,7 @@ CAF_TEST(depth2_pipeline) {
   expect((stream_msg::open),
          from(self).to(sink).with(_, source, _, _, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
-  expect((stream_msg::ack_open), from(sink).to(source).with(_, 5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(source).with(_, _, 5, _, false));
   // source ----(stream_msg::batch)---> sink
   expect((stream_msg::batch),
          from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -429,9 +429,10 @@ CAF_TEST(depth3_pipeline_order1) {
   CAF_CHECK(!deref(stage).streams().empty());
   CAF_CHECK(!deref(sink).streams().empty());
   // sink --(stream_msg::ack_open)--> stage
-  expect((stream_msg::ack_open), from(sink).to(stage).with(_, 5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(stage).with(_, _, 5, _, false));
   // stage --(stream_msg::ack_open)--> source
-  expect((stream_msg::ack_open), from(stage).to(source).with(_, 5, _, false));
+  expect((stream_msg::ack_open),
+         from(stage).to(source).with(_, _, 5, _, false));
   // source --(stream_msg::batch)--> stage
   expect((stream_msg::batch),
          from(source).to(stage).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -483,7 +484,8 @@ CAF_TEST(depth3_pipeline_order2) {
   expect((stream_msg::open),
          from(self).to(stage).with(_, source, _, _, _, false));
   // stage --(stream_msg::ack_open)--> source
-  expect((stream_msg::ack_open), from(stage).to(source).with(_, 5, _, false));
+  expect((stream_msg::ack_open),
+         from(stage).to(source).with(_, _, 5, _, false));
   // source --(stream_msg::batch)--> stage
   expect((stream_msg::batch),
          from(source).to(stage).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -516,7 +518,7 @@ CAF_TEST(depth3_pipeline_order2) {
   expect((stream_msg::open),
          from(self).to(sink).with(_, stage, _, _, _, false));
   // sink --(stream_msg::ack_open)--> stage (finally)
-  expect((stream_msg::ack_open), from(sink).to(stage).with(_, 5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(stage).with(_, _, 5, _, false));
   // stage --(stream_msg::ack_batch)--> source
   // The stage has now emptied its buffer and is able to grant more credit.
   expect((stream_msg::ack_batch), from(stage).to(source).with(5, 3));
@@ -570,7 +572,7 @@ CAF_TEST(depth2_pipeline_streamer) {
   expect((stream_msg::open),
          from(source).to(sink).with(_, source, _, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
-  expect((stream_msg::ack_open), from(sink).to(source).with(_, 5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(source).with(_, _, 5, _, false));
   // source ----(stream_msg::batch)---> sink
   expect((stream_msg::batch),
          from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -598,7 +600,7 @@ CAF_TEST(stream_without_result) {
   expect((stream_msg::open),
          from(source).to(sink).with(_, source, _, _, _, false));
   // source <----(stream_msg::ack_open)------ sink
-  expect((stream_msg::ack_open), from(sink).to(source).with(_, 5, _, false));
+  expect((stream_msg::ack_open), from(sink).to(source).with(_, _, 5, _, false));
   // source ----(stream_msg::batch)---> sink
   expect((stream_msg::batch),
          from(source).to(sink).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -629,7 +631,7 @@ CAF_TEST(multiplexed_pipeline) {
   expect((stream_msg::open),
          from(_).to(d1).with(_, multiplexer, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(d1).to(multiplexer).with(_, 5, _, false));
+         from(d1).to(multiplexer).with(_, _, 5, _, false));
   CAF_MESSAGE("spawn second sink");
   auto d2 = sys.spawn(joining_drop_all);
   sched.run_once();
@@ -637,7 +639,7 @@ CAF_TEST(multiplexed_pipeline) {
   expect((stream_msg::open),
          from(_).to(d2).with(_, multiplexer, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(d2).to(multiplexer).with(_, 5, _, false));
+         from(d2).to(multiplexer).with(_, _, 5, _, false));
   CAF_MESSAGE("spawn source");
   auto src = sys.spawn(nores_streamer, multiplexer);
   sched.run_once();
@@ -645,7 +647,7 @@ CAF_TEST(multiplexed_pipeline) {
   expect((stream_msg::open),
          from(_).to(multiplexer).with(_, src, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(multiplexer).to(src).with(_, 5, _, false));
+         from(multiplexer).to(src).with(_, _, 5, _, false));
   // First batch.
   expect((stream_msg::batch),
          from(src).to(multiplexer).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));
@@ -676,7 +678,7 @@ CAF_TEST(multiplexed_pipeline) {
   expect((stream_msg::open),
          from(_).to(multiplexer).with(_, src2, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(multiplexer).to(src2).with(_, 5, _, false));
+       from(multiplexer).to(src2).with(_, _, 5, _, false));
   // First batch.
   expect((stream_msg::batch),
          from(src2).to(multiplexer).with(5, std::vector<int>{1, 2, 3, 4, 5}, 0));

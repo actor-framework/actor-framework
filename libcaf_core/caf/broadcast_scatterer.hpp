@@ -40,6 +40,7 @@ public:
   }
 
   void emit_batches() override {
+    CAF_LOG_TRACE("");
     auto chunk = this->get_chunk(this->min_credit());
     auto csize = static_cast<long>(chunk.size());
     CAF_LOG_TRACE(CAF_ARG(chunk));

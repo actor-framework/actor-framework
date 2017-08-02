@@ -147,6 +147,13 @@ public:
   /// safely.
   virtual bool done() const = 0;
 
+  // -- implementation hooks for sources ---------------------------------------
+
+  /// Tries to generate new messages for the stream. This member function does
+  /// nothing on stages and sinks, but can trigger a source to produce more
+  /// messages.
+  virtual bool generate_messages();
+
 protected:
   // -- implementation hooks for sinks -----------------------------------------
 

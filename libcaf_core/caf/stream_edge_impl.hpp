@@ -152,6 +152,7 @@ public:
   using super::remove_path;
 
   bool remove_path(path_uptr_iter i, error reason, bool silent) {
+    CAF_LOG_TRACE(CAF_ARG(reason) << CAF_ARG(silent));
     auto e = paths_.end();
     if (i == e) {
       CAF_LOG_DEBUG("unable to remove path");

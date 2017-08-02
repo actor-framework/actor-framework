@@ -653,6 +653,10 @@ bool scheduled_actor::handle_stream_msg(mailbox_element& x,
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_ASSERT(x.content().match_elements<stream_msg>());
   auto& sm = x.content().get_mutable_as<stream_msg>(0);
+  if (sm.sender == nullptr) {
+    CAF_LOG_ERROR("received a stream_msg with invalid sender field");
+    return false;
+  }
   stream_msg_visitor f{this, sm, active_behavior};
   auto result = visit(f, sm.content);
   if (streams_.empty() && !has_behavior())
@@ -660,16 +664,24 @@ bool scheduled_actor::handle_stream_msg(mailbox_element& x,
   return result;
 }
 
-bool scheduled_actor::add_source(const stream_manager_ptr& mgr, const stream_id& sid,
-                strong_actor_ptr source_ptr, strong_actor_ptr original_stage,
-                stream_priority prio, bool redeployable,
-                response_promise result_cb) {
+bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
+                                 const stream_id& sid,
+                                 strong_actor_ptr source_ptr,
+                                 strong_actor_ptr original_stage,
+                                 stream_priority prio, bool redeployable,
+                                 response_promise result_cb) {
   CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid) << CAF_ARG(source_ptr)
                 << CAF_ARG(original_stage) << CAF_ARG(prio)
                 << CAF_ARG(redeployable) << CAF_ARG(result_cb));
   CAF_ASSERT(mgr != nullptr);
-  if (!source_ptr || !sid.valid())
+  if (!source_ptr) {
+    CAF_LOG_ERROR("cannot add invalid source");
     return false;
+  }
+  if (!sid.valid()) {
+    CAF_LOG_ERROR("cannot add source with invalid stream ID");
+    return false;
+  }
   return mgr->add_source(sid, std::move(source_ptr),
                          std::move(original_stage), prio, redeployable,
                          std::move(result_cb));
@@ -681,18 +693,22 @@ bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
   CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid));
   CAF_ASSERT(mgr != nullptr);
   CAF_ASSERT(current_mailbox_element() != nullptr);
-  if (!current_mailbox_element()->content().match_elements<stream_msg>())
+  if (!current_mailbox_element()->content().match_elements<stream_msg>()) {
+    CAF_LOG_ERROR("scheduled_actor::add_source called outside "
+                  "a stream_msg handler");
     return false;
+  }
   auto& sm = current_mailbox_element()->content().get_mutable_as<stream_msg>(0);
-  if (!holds_alternative<stream_msg::open>(sm.content))
+  if (!holds_alternative<stream_msg::open>(sm.content)) {
+    CAF_LOG_ERROR("scheduled_actor::add_source called outside "
+                  "a stream_msg::open handler");
     return false;
+  }
   auto& opn = get<stream_msg::open>(sm.content);
   auto source_ptr = std::move(opn.prev_stage);
-  if (!source_ptr || !sid.valid())
-    return false;
   return mgr->add_source(sid, std::move(source_ptr),
-                         std::move(opn.original_stage), opn.priority, opn.redeployable,
-                         std::move(result_cb));
+                         std::move(opn.original_stage), opn.priority,
+                         opn.redeployable, std::move(result_cb));
 }
 
 } // namespace caf

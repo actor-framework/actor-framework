@@ -106,7 +106,7 @@ public:
 
   actor_system_config();
 
-  actor_system_config(actor_system_config&&) = default;
+  actor_system_config(actor_system_config&&);
 
   actor_system_config(const actor_system_config&) = delete;
   actor_system_config& operator=(const actor_system_config&) = delete;
@@ -276,8 +276,8 @@ public:
 
   // -- backward compatibility -------------------------------------------------
 
-  std::string& logger_filename CAF_DEPRECATED = logger_file_name;
-  std::string& logger_filter CAF_DEPRECATED = logger_component_filter;
+  std::string& logger_filename CAF_DEPRECATED;
+  std::string& logger_filter CAF_DEPRECATED;
 
   // -- config parameters of the middleman -------------------------------------
 

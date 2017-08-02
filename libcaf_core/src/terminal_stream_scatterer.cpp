@@ -29,22 +29,23 @@ terminal_stream_scatterer::~terminal_stream_scatterer() {
 
 stream_scatterer::path_ptr
 terminal_stream_scatterer::add_path(const stream_id&, strong_actor_ptr,
-                                   strong_actor_ptr,
-                                   mailbox_element::forwarding_stack,
-                                   message_id, message, stream_priority, bool) {
+                                    strong_actor_ptr,
+                                    mailbox_element::forwarding_stack,
+                                    message_id, message, stream_priority,
+                                    bool) {
   CAF_LOG_ERROR("terminal_stream_scatterer::add_path called");
   return nullptr;
 }
 
 stream_scatterer::path_ptr
 terminal_stream_scatterer::confirm_path(const stream_id&, const actor_addr&,
-                                       strong_actor_ptr, long, bool) {
+                                        strong_actor_ptr, long, bool) {
   CAF_LOG_ERROR("terminal_stream_scatterer::confirm_path called");
   return nullptr;
 }
 
 bool terminal_stream_scatterer::remove_path(const stream_id&, const actor_addr&,
-                                           error, bool) {
+                                            error, bool) {
   CAF_LOG_ERROR("terminal_stream_scatterer::remove_path called");
   return false;
 }
@@ -85,8 +86,8 @@ void terminal_stream_scatterer::emit_batches() {
   // nop
 }
 
-stream_scatterer::path_type* terminal_stream_scatterer::find(const stream_id&,
-                                                            const actor_addr&) {
+stream_scatterer::path_type*
+terminal_stream_scatterer::find(const stream_id&, const actor_addr&) {
   return nullptr;
 }
 

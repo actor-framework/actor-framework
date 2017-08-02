@@ -31,13 +31,11 @@
 namespace caf {
 
 /// A topic scatterer that delivers data to sinks in random order.
-template <class T, class Filter,
-          class KeyCompare = std::equal_to<typename Filter::value_type>,
-          long KeyIndex = 0>
+template <class T, class Filter, class Select>
 class random_topic_scatterer
-    : public topic_scatterer<T, Filter, KeyCompare, KeyIndex> {
+    : public topic_scatterer<T, Filter, Select> {
 public:
-  using super = topic_scatterer<T, Filter, KeyCompare, KeyIndex>;
+  using super = topic_scatterer<T, Filter, Select>;
 
   random_topic_scatterer(local_actor* selfptr) : super(selfptr) {
     // nop
@@ -50,6 +48,7 @@ public:
   }
 
   void emit_batches() override {
+    CAF_LOG_TRACE("");
     this->fan_out();
     for (auto& kvp : this->lanes_) {
       auto& l = kvp.second;

@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TOPIC_SCATTERER_HPP
-#define CAF_TOPIC_SCATTERER_HPP
+#ifndef CAF_BROADCAST_TOPIC_SCATTERER_HPP
+#define CAF_BROADCAST_TOPIC_SCATTERER_HPP
 
 #include <map>
 #include <tuple>
@@ -26,19 +26,17 @@
 #include <vector>
 #include <functional>
 
-#include "caf/buffered_scatterer.hpp"
+#include "caf/topic_scatterer.hpp"
 
 namespace caf {
 
 /// A topic scatterer that delivers data in broadcast fashion to all sinks.
-template <class T, class Filter,
-          class KeyCompare = std::equal_to<typename Filter::value_type>,
-          long KeyIndex = 0>
+template <class T, class Filter, class Select>
 class broadcast_topic_scatterer
-    : public topic_scatterer<T, Filter, KeyCompare, KeyIndex> {
+    : public topic_scatterer<T, Filter, Select> {
 public:
   /// Base type.
-  using super = buffered_scatterer<T>;
+  using super = topic_scatterer<T, Filter, Select>;
 
   broadcast_topic_scatterer(local_actor* selfptr) : super(selfptr) {
     // nop
@@ -51,6 +49,7 @@ public:
   }
 
   void emit_batches() override {
+    CAF_LOG_TRACE("");
     this->fan_out();
     for (auto& kvp : this->lanes_) {
       auto& l = kvp.second;
@@ -60,8 +59,8 @@ public:
         continue;
       auto wrapped_chunk = make_message(std::move(chunk));
       for (auto& x : l.paths) {
-        x->open_credit -= csize;
-        this->emit_batch(*x, static_cast<size_t>(csize), wrapped_chunk);
+        CAF_ASSERT(x->open_credit >= csize);
+        x->emit_batch(csize, wrapped_chunk);
       }
     }
   }
@@ -69,4 +68,4 @@ public:
 
 } // namespace caf
 
-#endif // CAF_TOPIC_SCATTERER_HPP
+#endif // CAF_BROADCAST_TOPIC_SCATTERER_HPP

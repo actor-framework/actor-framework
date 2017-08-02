@@ -122,6 +122,11 @@ public:
     (*this)();
   }
 
+  template <class T>
+  void operator()(stream<T>&) {
+    (*this)();
+  }
+
   // visit API - returns true if T was visited, false if T was skipped
 
   template <class T>
@@ -136,6 +141,11 @@ public:
 
   inline bool visit(const skip_t&) {
     return false;
+  }
+
+  template <class T>
+  bool visit(stream<T>&) {
+    return true;
   }
 
   inline bool visit(optional<skip_t>& x) {

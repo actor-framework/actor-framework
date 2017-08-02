@@ -36,6 +36,7 @@
 
 using std::cout;
 using std::endl;
+using std::vector;
 using std::string;
 
 using namespace caf;
@@ -66,10 +67,20 @@ struct cleanup_t {
 
 constexpr cleanup_t cleanup_fun = cleanup_t{};
 
+struct selected_t {
+  template <class T>
+  bool operator()(const std::vector<string>& filter, const T& x) {
+    for (auto& prefix : filter)
+      if (get<0>(x).compare(0, prefix.size(), prefix.c_str()) == 0)
+        return true;
+    return false;
+  }
+};
+
 struct stream_splitter_state {
   using stage_impl = stream_stage_impl<
     process_t, cleanup_t, random_gatherer,
-    random_topic_scatterer<element_type, std::vector<key_type>>>;
+    random_topic_scatterer<element_type, std::vector<key_type>, selected_t>>;
   intrusive_ptr<stage_impl> stage;
   static const char* name;
 };
@@ -137,7 +148,7 @@ behavior storage(stateful_actor<storage_state>* self,
         [](unit_t&) {
           CAF_LOG_INFO("storage done");
         },
-        policy::arg<detail::pull5_gatherer>::value
+        policy::arg<detail::pull5_gatherer, terminal_stream_scatterer>::value
       );
     },
     [=](get_atom) {
@@ -206,7 +217,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(d1).with(_, splitter, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(d1).to(splitter).with(_, 5, _, false));
+         from(d1).to(splitter).with(_, _, 5, _, false));
   CAF_MESSAGE("spawn second sink");
   auto d2 = sys.spawn(storage, splitter, filter_type{"key2"});
   sched.run_once();
@@ -215,7 +226,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(d2).with(_, splitter, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(d2).to(splitter).with(_, 5, _, false));
+         from(d2).to(splitter).with(_, _, 5, _, false));
   CAF_MESSAGE("spawn source");
   auto src = sys.spawn(nores_streamer, splitter);
   sched.run_once();
@@ -223,7 +234,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(splitter).with(_, src, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(splitter).to(src).with(_, 5, _, false));
+         from(splitter).to(src).with(_, _, 5, _, false));
   // First batch.
   expect((stream_msg::batch),
          from(src).to(splitter)
@@ -281,7 +292,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(splitter).with(_, src2, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(splitter).to(src2).with(_, 5, _, false));
+         from(splitter).to(src2).with(_, _, 5, _, false));
   // First batch.
   expect((stream_msg::batch),
          from(src2).to(splitter)

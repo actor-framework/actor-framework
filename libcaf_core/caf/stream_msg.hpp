@@ -219,8 +219,8 @@ typename Inspector::result_type inspect(Inspector& f, stream_msg::open& x) {
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, stream_msg::ack_open& x) {
-  return f(meta::type_name("ack_open"), x.rebind_from, x.initial_demand,
-           x.redeployable);
+  return f(meta::type_name("ack_open"), x.rebind_from, x.rebind_to,
+           x.initial_demand, x.redeployable);
 }
 
 template <class Inspector>
@@ -260,7 +260,7 @@ typename Inspector::result_type inspect(Inspector& f,
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, stream_msg& x) {
-  return f(meta::type_name("stream_msg"), x.sid, x.content);
+  return f(meta::type_name("stream_msg"), x.sid, x.sender, x.content);
 }
 
 } // namespace caf

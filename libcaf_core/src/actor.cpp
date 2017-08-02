@@ -36,6 +36,10 @@
 
 namespace caf {
 
+actor::actor(std::nullptr_t) : ptr_(nullptr) {
+  // nop
+}
+
 actor::actor(const scoped_actor& x) : ptr_(actor_cast<strong_actor_ptr>(x)) {
   // nop
 }
@@ -50,6 +54,11 @@ actor::actor(actor_control_block* ptr) : ptr_(ptr) {
 
 actor::actor(actor_control_block* ptr, bool add_ref) : ptr_(ptr, add_ref) {
   // nop
+}
+
+actor& actor::operator=(std::nullptr_t) {
+  ptr_.reset();
+  return *this;
 }
 
 actor& actor::operator=(const scoped_actor& x) {

@@ -98,23 +98,15 @@ void stream_scatterer_impl::abort(error reason) {
 }
 
 long stream_scatterer_impl::total_credit() const {
-  return fold_credit(0l, [](long x, long y) { return x + y; });
+  return total_credit(paths_);
 }
 
 long stream_scatterer_impl::min_credit() const {
-  return !paths_.empty()
-         ? fold_credit(std::numeric_limits<long>::max(),
-                       [](long x, long y) { return std::min(x, y); })
-         : 0;
+  return min_credit(paths_);
 }
 
 long stream_scatterer_impl::max_credit() const {
-  return fold_credit(0l, [](long x, long y) { return std::max(x, y); });
-}
-
-long stream_scatterer_impl::fold_credit(long x0, long (*f)(long, long)) const {
-  return fold(paths_, x0,
-              [f](long x, const path_uptr& y) { return f(x, y->open_credit); });
+  return max_credit(paths_);
 }
 
 long stream_scatterer_impl::min_batch_size() const {

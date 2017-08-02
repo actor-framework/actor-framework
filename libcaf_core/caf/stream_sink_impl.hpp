@@ -25,11 +25,10 @@
 #include "caf/message_id.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_sink_trait.hpp"
-#include "caf/terminal_stream_scatterer.hpp"
 
 namespace caf {
 
-template <class Fun, class Finalize, class UpstreamPolicy>
+template <class Fun, class Finalize, class Gatherer, class Scatterer>
 class stream_sink_impl : public stream_manager {
 public:
   using super = stream_manager;
@@ -53,11 +52,11 @@ public:
     return state_;
   }
 
-  UpstreamPolicy& in() override {
+  Gatherer& in() override {
     return in_;
   }
 
-  terminal_stream_scatterer& out() override {
+  Scatterer& out() override {
     return out_;
   }
 
@@ -87,8 +86,8 @@ private:
   state_type state_;
   Fun fun_;
   Finalize fin_;
-  UpstreamPolicy in_;
-  terminal_stream_scatterer out_;
+  Gatherer in_;
+  Scatterer out_;
 };
 
 } // namespace caf

@@ -42,27 +42,54 @@ public:
 
   ~stream_scatterer_impl() override;
 
-  // -- convenience functions for children classes -----------------------------
-
-  /// Removes all paths gracefully.
-  void close() override;
+  // -- static utility functions for operating on paths ------------------------
 
   /// Removes all paths with an error message.
   void abort(error reason) override;
 
-  /// Returns the total number (sum) of all credit on all paths.
+  /// Folds `paths()` by extracting the `open_credit` from each path.
+  template <class PathContainer, class F>
+  static long fold_credit(const PathContainer& xs, long x0, F f) {
+    auto g = [f](long x, const typename PathContainer::value_type& y) {
+      return f(x, y->open_credit);
+    };
+    return super::fold(xs, x0, std::move(g));
+  }
+
+  /// Returns the total number (sum) of all credit in `xs`.
+  template <class PathContainer>
+  static long total_credit(const PathContainer& xs) {
+    return fold_credit(xs, 0l, [](long x, long y) { return x + y; });
+  }
+
+  /// Returns the minimum number of credit in `xs`.
+  template <class PathContainer>
+  static long min_credit(const PathContainer& xs) {
+    return !xs.empty()
+           ? fold_credit(xs, std::numeric_limits<long>::max(),
+                         [](long x, long y) { return std::min(x, y); })
+           : 0;
+  }
+
+  template <class PathContainer>
+  static long max_credit(const PathContainer& xs) {
+    return fold_credit(xs, 0l, [](long x, long y) { return std::max(x, y); });
+}
+
+  // -- convenience functions for children classes -----------------------------
+
+  /// Returns the total number (sum) of all credit in `paths()`.
   long total_credit() const;
 
-  /// Returns the minimum number of credit on all paths.
+  /// Returns the minimum number of credit in `paths()`.
   long min_credit() const;
 
-  /// Returns the maximum number of credit on all paths.
+  /// Returns the maximum number of credit in `paths()`.
   long max_credit() const;
 
-  /// Folds `paths()` by extracting the `open_credit` from each path.
-  long fold_credit(long x0, long (*f)(long, long)) const;
-
   // -- overridden functions ---------------------------------------------------
+
+  void close() override;
 
   path_ptr add_path(const stream_id& sid, strong_actor_ptr origin,
                     strong_actor_ptr sink_ptr,

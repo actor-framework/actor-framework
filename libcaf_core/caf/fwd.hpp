@@ -43,6 +43,9 @@ template <class> struct timeout_definition;
 
 template <class, class, int> class actor_cast_access;
 
+template <class, class, class> class broadcast_topic_scatterer;
+template <class, class, class> class random_topic_scatterer;
+
 // -- variadic templates -------------------------------------------------------
 
 template <class...> class result;
@@ -54,6 +57,7 @@ template <class...> class typed_event_based_actor;
 
 // -- variadic templates with 1 fixed argument ---------------------------------
 
+template <class, class...> class fused_scatterer;
 template <class, class...> class annotated_stream;
 
 // -- classes ------------------------------------------------------------------
@@ -74,7 +78,6 @@ class serializer;
 class actor_proxy;
 class local_actor;
 class ref_counted;
-class stream_sink;
 class actor_config;
 class actor_system;
 class deserializer;
@@ -83,7 +86,6 @@ class message_view;
 class scoped_actor;
 class inbound_path;
 class outbound_path;
-class stream_source;
 class abstract_actor;
 class abstract_group;
 class actor_registry;
@@ -91,6 +93,7 @@ class blocking_actor;
 class execution_unit;
 class proxy_registry;
 class stream_manager;
+class random_gatherer;
 class stream_gatherer;
 class actor_companion;
 class mailbox_element;
@@ -184,6 +187,7 @@ class manager;
 namespace detail {
 
 template <class> class type_erased_value_impl;
+template <class> class stream_distribution_tree;
 
 class disposer;
 class message_data;
