@@ -46,6 +46,14 @@ void v2callcl(const char* fname, F f, Ts&&... vs) {
   throwcl(fname, f(std::forward<Ts>(vs)..., nullptr));
 }
 
+// call convention for simply calling a function, and logging errors
+template <class F, class... Ts>
+void v3callcl(F f, Ts&&... vs) {
+  auto err = f(std::forward<Ts>(vs)...);
+  if (err != CL_SUCCESS)
+    CAF_LOG_ERROR("error: " << opencl_error(err));
+}
+
 // call convention with `result` argument at the end returning `err`, not
 // using the second last argument (set to nullptr) nor the one before (set to 0)
 template <class R, class F, class... Ts>

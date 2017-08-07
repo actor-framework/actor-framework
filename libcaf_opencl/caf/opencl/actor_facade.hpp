@@ -166,10 +166,10 @@ public:
     cmd->enqueue();
   }
 
-  void enqueue(mailbox_element_ptr ptr, execution_unit* eu) override {
+  void enqueue(mailbox_element_ptr ptr, execution_unit*) override {
     CAF_ASSERT(ptr != nullptr);
     CAF_LOG_TRACE(CAF_ARG(*ptr));
-    response_promise promise{eu, ctrl(), *ptr};
+    response_promise promise{ctrl(), *ptr};
     enqueue(ptr->sender, ptr->mid, ptr->move_content_to_message(),
             std::move(promise));
   }

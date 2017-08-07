@@ -140,8 +140,7 @@ public:
     if (!invoke_cl(clSetEventCallback, callback_.get(), CL_COMPLETE,
                    std::move(cb), this))
       return;
-    if (clFlush(parent->queue_.get()) != CL_SUCCESS)
-      CAF_LOG_ERROR("clFlush: " << CAF_ARG(get_opencl_error(err)));
+    v3callcl(clFlush, parent->queue_.get());
   }
 
   /// Enqueue the kernel for execution and send the mem_refs relating to the
@@ -180,8 +179,7 @@ public:
     if (!invoke_cl(clSetEventCallback, callback_.get(), CL_COMPLETE,
                    std::move(cb), this))
       return;
-    if (clFlush(parent->queue_.get()) != CL_SUCCESS)
-      CAF_LOG_ERROR("clFlush: " << CAF_ARG(get_opencl_error(err)));
+    v3callcl(clFlush, parent->queue_.get());
     auto msg = msg_adding_event{callback_}(results_);
     promise_.deliver(std::move(msg));
   }
