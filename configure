@@ -229,7 +229,7 @@ while [ $# -ne 0 ]; do
             CMakeGenerator="$optarg"
             ;;
         --prefix=*)
-            append_cache_entry CMAKE_INSTALL_PREFIX PATH $optarg
+            append_cache_entry CMAKE_INSTALL_PREFIX PATH "$optarg"
             ;;
         --with-runtime-checks)
             append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
@@ -300,19 +300,19 @@ while [ $# -ne 0 ]; do
             esac
             ;;
         --with-clang=*)
-            clang=$optarg
+            clang="$optarg"
             ;;
         --with-gcc=*)
-            gcc=$optarg
+            gcc="$optarg"
             ;;
         --with-qt-prefix=*)
             append_cache_entry CAF_QT_PREFIX_PATH STRING "$optarg"
             ;;
         --with-openssl=*)
-            append_cache_entry OPENSSL_ROOT_DIR PATH $optarg
+            append_cache_entry OPENSSL_ROOT_DIR PATH "$optarg"
             ;;
         --build-type=*)
-            append_cache_entry CMAKE_BUILD_TYPE STRING $optarg
+            append_cache_entry CMAKE_BUILD_TYPE STRING "$optarg"
             ;;
         --build-dir=*)
             builddir="$optarg"
