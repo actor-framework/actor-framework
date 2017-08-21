@@ -76,6 +76,10 @@ public:
       return res;
     }
 
+    const value_type& operator*() const {
+      return *ptr;
+    }
+
     value_type& operator*() {
       return *ptr;
     }

@@ -201,6 +201,7 @@ public:
     in_.assign_credit(out_.credit());
   }
 
+/*
   error close(const stream_id& sid, const actor_addr& hdl) override {
     CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl));
     if (in_.remove_path(sid, hdl, none, true))
@@ -229,6 +230,7 @@ public:
       return policy_.path_force_dropped(sid, hdl, std::move(reason));
     return none;
   }
+  */
 
   scheduled_actor* self() {
     return self_;
