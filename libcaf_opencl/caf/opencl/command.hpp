@@ -120,7 +120,6 @@ public:
     CAF_ASSERT(!mem_out_events_.empty());
     enqueue_read_buffers(pos, mem_out_events_,
                          detail::get_indices(results_));
-    CAF_ASSERT(mem_out_events_.size() > 1);
     cl_event marker_event;
 #if defined(__APPLE__)
     success = invoke_cl(clEnqueueMarkerWithWaitList, parent->queue_.get(),
