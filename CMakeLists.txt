@@ -15,6 +15,35 @@ if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
   set(CAF_BUILD_STATIC_ONLY yes)
 endif()
 
+if(CAF_BUILD_STATIC_RUNTIME)
+    set(flags_configs
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        CMAKE_CXX_FLAGS_MINSIZEREL
+        CMAKE_C_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        CMAKE_C_FLAGS_RELWITHDEBINFO
+        CMAKE_C_FLAGS_MINSIZEREL
+        )
+  foreach(flags ${flags_configs})
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      if(NOT ${flags} MATCHES "-static-libstdc\\+\\+")
+        set(${flags} "${${flags}} -static-libstdc++")
+      endif()
+      if(NOT ${flags} MATCHES "-static-libgcc")
+        set(${flags} "${${flags}} -static-libgcc")
+      endif()
+    elseif(MSVC)
+      if(${flags} MATCHES "/MD")
+        string(REGEX REPLACE "/MD" "/MT" ${flags} "${${flags}}")
+      endif()
+    endif()
+  endforeach()
+endif()
+
 # add helper target that simplifies re-running configure
 add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
 
@@ -714,35 +743,36 @@ if(NOT CAF_NO_SUMMARY)
   message(STATUS
         "\n====================|  Build Summary  |===================="
         "\n"
-        "\nLibcaf version:    ${CAF_VERSION}"
+        "\nLibcaf version:        ${CAF_VERSION}"
         "\n"
-        "\nBuild type:        ${CMAKE_BUILD_TYPE}"
-        "\nBuild static:      ${CAF_BUILD_STATIC}"
-        "\nBuild static only: ${CAF_BUILD_STATIC_ONLY}"
-        "\nRuntime checks:    ${CAF_ENABLE_RUNTIME_CHECKS}"
-        "\nLog level:         ${LOG_LEVEL_STR}"
-        "\nWith mem. mgmt.:   ${CAF_BUILD_MEM_MANAGEMENT}"
-        "\nWith exceptions:   ${CAF_BUILD_WITH_EXCEPTIONS}"
+        "\nBuild type:            ${CMAKE_BUILD_TYPE}"
+        "\nBuild static:          ${CAF_BUILD_STATIC}"
+        "\nBuild static only:     ${CAF_BUILD_STATIC_ONLY}"
+        "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
+        "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
+        "\nLog level:             ${LOG_LEVEL_STR}"
+        "\nWith mem. mgmt.:       ${CAF_BUILD_MEM_MANAGEMENT}"
+        "\nWith exceptions:       ${CAF_BUILD_WITH_EXCEPTIONS}"
         "\n"
-        "\nBuild I/O module:  ${CAF_BUILD_IO}"
-        "\nBuild tools:       ${CAF_BUILD_TOOLS}"
-        "\nBuild examples:    ${CAF_BUILD_EXAMPLES}"
-        "\nBuild unit tests:  ${CAF_BUILD_UNIT_TESTS}"
-        "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
-        "\nBuild OpenCL:      ${CAF_BUILD_OPENCL}"
-        "\nBuild OpenSSL:     ${CAF_BUILD_OPENSSL}"
-        "\nBuild Python:      ${CAF_BUILD_PYTHON}"
+        "\nBuild I/O module:      ${CAF_BUILD_IO}"
+        "\nBuild tools:           ${CAF_BUILD_TOOLS}"
+        "\nBuild examples:        ${CAF_BUILD_EXAMPLES}"
+        "\nBuild unit tests:      ${CAF_BUILD_UNIT_TESTS}"
+        "\nBuild benchmarks:      ${CAF_BUILD_BENCHMARKS}"
+        "\nBuild OpenCL:          ${CAF_BUILD_OPENCL}"
+        "\nBuild OpenSSL:         ${CAF_BUILD_OPENSSL}"
+        "\nBuild Python:          ${CAF_BUILD_PYTHON}"
         "\n"
-        "\nCXX:               ${CMAKE_CXX_COMPILER}"
-        "\nCXXFLAGS:          ${ALL_CXX_FLAGS}"
-        "\nLIBRARIES:         ${LD_FLAGS}"
+        "\nCXX:                   ${CMAKE_CXX_COMPILER}"
+        "\nCXXFLAGS:              ${ALL_CXX_FLAGS}"
+        "\nLIBRARIES:             ${LD_FLAGS}"
         "\n"
-        "\nSource directory:  ${CMAKE_CURRENT_SOURCE_DIR}"
-        "\nBuild directory:   ${CMAKE_CURRENT_BINARY_DIR}"
-        "\nExecutable path:   ${EXECUTABLE_OUTPUT_PATH}"
-        "\nLibrary path:      ${LIBRARY_OUTPUT_PATH}"
-        "\nInstall prefix:    ${CMAKE_INSTALL_PREFIX}"
-        "\nGenerator:         ${CMAKE_GENERATOR}"
+        "\nSource directory:      ${CMAKE_CURRENT_SOURCE_DIR}"
+        "\nBuild directory:       ${CMAKE_CURRENT_BINARY_DIR}"
+        "\nExecutable path:       ${EXECUTABLE_OUTPUT_PATH}"
+        "\nLibrary path:          ${LIBRARY_OUTPUT_PATH}"
+        "\nInstall prefix:        ${CMAKE_INSTALL_PREFIX}"
+        "\nGenerator:             ${CMAKE_GENERATOR}"
         "\n"
         "\n===========================================================\n")
 endif()
