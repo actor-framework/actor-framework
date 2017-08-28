@@ -266,19 +266,21 @@ struct stream_multiplexer_state {
 const char* stream_multiplexer_state::name = "stream_multiplexer";
 
 behavior stream_multiplexer(stateful_actor<stream_multiplexer_state>* self) {
-  auto process = [](unit_t&, downstream<int>& out, int x) {
-    out.push(x);
-  };
-  auto cleanup = [](unit_t&) {
-    // nop
-  };
-  auto sid = self->make_stream_id();
-  using impl = stream_stage_impl<decltype(process), decltype(cleanup),
-                                 detail::pull5_gatherer,
-                                 detail::push5_scatterer<int>>;
-  self->state.stage = make_counted<impl>(self, sid, process, cleanup);
-  self->state.stage->in().continuous(true);
-  self->streams().emplace(sid, self->state.stage);
+  { // extra scope for hiding state for initialization from the lambdas below
+    auto process = [](unit_t&, downstream<int>& out, int x) {
+      out.push(x);
+    };
+    auto cleanup = [](unit_t&) {
+      // nop
+    };
+    auto sid = self->make_stream_id();
+    using impl = stream_stage_impl<decltype(process), decltype(cleanup),
+          detail::pull5_gatherer,
+          detail::push5_scatterer<int>>;
+    self->state.stage = make_counted<impl>(self, sid, process, cleanup);
+    self->state.stage->in().continuous(true);
+    self->streams().emplace(sid, self->state.stage);
+  }
   return {
     [=](join_atom) -> stream<int> {
       CAF_MESSAGE("received 'join' request");
