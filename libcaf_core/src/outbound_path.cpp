@@ -61,16 +61,17 @@ void outbound_path::handle_ack_open(long initial_credit) {
 void outbound_path::emit_open(strong_actor_ptr origin,
                               mailbox_element::forwarding_stack stages,
                               message_id handshake_mid, message handshake_data,
-                              stream_priority prio, bool redeployable) {
+                              stream_priority prio, bool is_redeployable) {
   CAF_LOG_TRACE(CAF_ARG(origin) << CAF_ARG(stages) << CAF_ARG(handshake_mid)
                 << CAF_ARG(handshake_data) << CAF_ARG(prio)
-                << CAF_ARG(redeployable));
+                << CAF_ARG(is_redeployable));
   cd = client_data{origin, handshake_mid};
+  redeployable = is_redeployable;
   hdl->enqueue(
     make_mailbox_element(std::move(origin), handshake_mid, std::move(stages),
                          make_message(make<stream_msg::open>(
                            sid, self->address(), std::move(handshake_data),
-                           self->ctrl(), hdl, prio, redeployable))),
+                           self->ctrl(), hdl, prio, is_redeployable))),
     self->context());
 }
 

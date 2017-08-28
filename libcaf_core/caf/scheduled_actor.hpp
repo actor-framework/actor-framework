@@ -561,7 +561,7 @@ public:
   /// @param init Function object for initializing the state of the stage.
   /// @param fun Function object for processing stream elements.
   /// @param finalize Function object for producing the final result.
-  /// @param gatherer_type Sets the policy for upstream communication.
+  /// @param policies Sets the policies for up- and downstream communication.
   /// @returns A stream object with a pointer to the generated `stream_manager`.
   template <class In, class Init, class Fun, class Finalize,
             class Gatherer = random_gatherer,
@@ -681,10 +681,13 @@ public:
   /// Tries to add a new sink to the stream manager `mgr`.
   /// @param mgr Pointer to the responsible stream manager.
   /// @param sid The ID used for communicating to the sink.
+  /// @param origin Handle to the actor that initiated the stream and that will
+  ///               receive the stream result (if any).
   /// @param sink_ptr Handle to the new sink.
+  /// @param fwd_stack Forwarding stack for the remaining stream participants.
   /// @param prio Priority of the traffic to the sink.
-  /// @param delegate_handshake Configures whether the current message ID is
-  ///                           forwarded to the sink.
+  /// @param handshake_mid Message ID for the stream handshake. If valid, this
+  ///                      ID will be used to send the result to the `origin`.
   /// @param data Additional payload for the stream handshake.
   /// @returns `true` if the sink could be added to the manager, `false`
   ///          otherwise.

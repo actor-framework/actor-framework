@@ -101,7 +101,7 @@ public:
   void emit_open(strong_actor_ptr origin,
                  mailbox_element::forwarding_stack stages, message_id mid,
                  message handshake_data, stream_priority prio,
-                 bool redeployable);
+                 bool is_redeployable);
 
   /// Emits a `stream_msg::batch` on this path, decrements `open_credit` by
   /// `xs_size` and increments `next_batch_id` by 1.

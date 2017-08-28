@@ -52,11 +52,14 @@ public:
                      strong_actor_ptr original_stage, stream_priority priority,
                      bool redeployable, response_promise result_cb);
 
-  /// Handles `stream_msg::ack_open` messages.
-  /// @param hdl Handle to the sender.
-  /// @param initial_demand Credit received with `ack_open`.
+  /// Handles `stream_msg::ack_open` messages, i.e., finalizes the stream
+  /// handshake.
+  /// @param sid ID of the outgoing stream.
+  /// @param rebind_from Receiver of the original `open` message.
+  /// @param rebind_to Sender of this confirmation.
+  /// @param initial_demand Credit received with this `ack_open`.
   /// @param redeployable Denotes whether the runtime can redeploy
-  ///                     the downstream actor on failure.
+  ///                     `rebind_to` on failure.
   /// @pre `hdl != nullptr`
   virtual error ack_open(const stream_id& sid, const actor_addr& rebind_from,
                          strong_actor_ptr rebind_to, long initial_demand,
@@ -159,7 +162,6 @@ protected:
 
   /// Called when the gatherer closes to produce the final stream result for
   /// all listeners. The default implementation returns an empty message.
-  /// @param reason `none` on orderly shutdowns, otherwise the abort reason.
   virtual message make_final_result();
 
   /// Called to handle incoming data. The default implementation logs an error

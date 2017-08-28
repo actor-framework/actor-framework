@@ -85,7 +85,7 @@ public:
   /// Emits a `stream_msg::ack_batch` on this path and sets `assigned_credit`
   /// to `initial_demand`.
   void emit_ack_open(actor_addr rebind_from, long initial_demand,
-                     bool redeployable);
+                     bool is_redeployable);
 
   void emit_ack_batch(long new_demand);
 

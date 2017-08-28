@@ -56,14 +56,15 @@ void inbound_path::handle_batch(long batch_size, int64_t batch_id) {
 }
 
 void inbound_path::emit_ack_open(actor_addr rebind_from,
-                                 long initial_demand, bool redeployable) {
+                                 long initial_demand, bool is_redeployable) {
   CAF_LOG_TRACE(CAF_ARG(rebind_from) << CAF_ARG(initial_demand)
-                << CAF_ARG(redeployable));
+                << CAF_ARG(is_redeployable));
   assigned_credit = initial_demand;
+  redeployable = is_redeployable;
   unsafe_send_as(self, hdl,
                  make<stream_msg::ack_open>(
                    sid, self->address(), std::move(rebind_from), self->ctrl(),
-                   static_cast<int32_t>(initial_demand), redeployable));
+                   static_cast<int32_t>(initial_demand), is_redeployable));
 }
 
 void inbound_path::emit_ack_batch(long new_demand) {

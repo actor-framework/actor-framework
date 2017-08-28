@@ -63,7 +63,7 @@ public:
     if (capacity <= 0)
       return false;
     downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
-    fun_(state_, ds, capacity);
+    fun_(state_, ds, static_cast<size_t>(capacity));
     return true;
   }
 
