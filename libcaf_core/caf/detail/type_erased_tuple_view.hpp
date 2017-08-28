@@ -60,6 +60,9 @@ public:
     init();
   }
 
+  type_erased_tuple_view& operator=(type_erased_tuple_view&&) = delete;
+  type_erased_tuple_view& operator=(const type_erased_tuple_view&) = delete;
+
   // -- overridden modifiers ---------------------------------------------------
 
   void* get_mutable(size_t pos) override {

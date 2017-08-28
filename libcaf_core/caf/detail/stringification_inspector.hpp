@@ -172,7 +172,7 @@ public:
       result_ += '*';
       consume(*ptr);
     } else {
-      result_ + "<null>";
+      result_ += "<null>";
     }
   }
 

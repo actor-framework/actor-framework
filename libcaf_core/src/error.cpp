@@ -51,7 +51,8 @@ error::error(error&& x) noexcept : data_(x.data_) {
 }
 
 error& error::operator=(error&& x) noexcept {
-  std::swap(data_, x.data_);
+  if (this != &x)
+    std::swap(data_, x.data_);
   return *this;
 }
 
@@ -60,6 +61,8 @@ error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
 }
 
 error& error::operator=(const error& x) {
+  if (this == &x)
+    return *this;
   if (x) {
     if (data_ == nullptr)
       data_ = new data(*x.data_);
