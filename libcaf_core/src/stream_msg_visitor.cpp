@@ -59,13 +59,9 @@ auto stream_msg_visitor::operator()(stream_msg::open& x) -> result_type {
   if (self_->streams().count(sid_) != 0) {
     CAF_LOG_WARNING("received duplicate stream_msg::open");
     return fail(sec::stream_init_failed);
-}
-  // Invoke behavior of parent to perform handshake.
-  auto res = (*bhvr_)(x.msg);
-  if (!res) {
-    CAF_LOG_WARNING("actor did not respond to handshake:" << CAF_ARG(x.msg));
-    return fail(sec::stream_init_failed);
   }
+  // Invoke behavior of parent to perform handshake.
+  (*bhvr_)(x.msg);
   if (self_->streams().count(sid_) == 0) {
     CAF_LOG_WARNING("actor did not provide a stream "
                     "handler after receiving handshake:"
