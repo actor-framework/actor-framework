@@ -22,7 +22,7 @@
 #include "caf/sec.hpp"
 #include "caf/atom.hpp"
 #include "caf/expected.hpp"
-#include "caf/scoped_actor.hpp"
+#include "caf/function_view.hpp"
 
 #include "caf/openssl/manager.hpp"
 
@@ -39,27 +39,18 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
                                         std::string host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(mpi) << CAF_ARG(host) << CAF_ARG(port));
   expected<strong_actor_ptr> res{strong_actor_ptr{nullptr}};
-  scoped_actor self{sys};
-  auto mm = sys.openssl_manager().actor_handle();
-  CAF_ASSERT(mm != nullptr);
-  self->request(sys.openssl_manager().actor_handle(), infinite,
-                connect_atom::value, std::move(host), port)
-  .receive(
-    [&](const node_id&, strong_actor_ptr& ptr, std::set<std::string>& found) {
-      if (ptr) {
-        if (sys.assignable(found, mpi))
-          res = std::move(ptr);
-        else
-          res = sec::unexpected_actor_messaging_interface;
-      } else {
-        res = sec::no_actor_published_at_port;
-      }
-    },
-    [&](error& err) {
-      res = std::move(err);
-    }
-  );
-  return res;
+  auto f = make_function_view(sys.openssl_manager().actor_handle());
+  auto x = f(connect_atom::value, std::move(host), port);
+  if (!x)
+    return std::move(x.error());
+  auto& tup = *x;
+  auto& ptr = get<1>(tup);
+  if (!ptr)
+    return sec::no_actor_published_at_port;
+  auto& found_mpi = get<2>(tup);
+  if (sys.assignable(found_mpi, mpi))
+    return std::move(ptr);
+  return sec::unexpected_actor_messaging_interface;
 }
 
 } // namespace openssl
