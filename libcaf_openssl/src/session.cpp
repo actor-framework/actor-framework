@@ -39,7 +39,7 @@ int pem_passwd_cb(char* buf, int size, int, void* ptr) {
   auto passphrase = reinterpret_cast<session*>(ptr)->openssl_passphrase();
   strncpy(buf, passphrase, static_cast<size_t>(size));
   buf[size - 1] = '\0';
-  return strlen(buf);
+  return static_cast<int>(strlen(buf));
 }
 
 } // namespace <anonymous>
