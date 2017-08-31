@@ -174,6 +174,10 @@ struct fixture {
     auto s = &sys == &server_side ? ssched : csched;
     s->after_next_enqueue([=] { exec_loop(); });
   }
+
+  bool terminated(const actor& x) {
+    return x ? x->getf(abstract_actor::is_terminated_flag) : false;
+  }
 };
 
 } // namespace <anonymous>
@@ -183,15 +187,15 @@ CAF_TEST_FIXTURE_SCOPE(authentication, fixture)
 using openssl::remote_actor;
 using openssl::publish;
 
-CAF_TEST(authentication_succes) {
+CAF_TEST(authentication_success) {
   if (!init(false))
     return;
   // server side
   CAF_MESSAGE("spawn pong on server");
   auto spong = server_side.spawn(make_pong_behavior);
   exec_loop();
-  loop_after_next_enqueue(server_side);
   CAF_MESSAGE("publish pong");
+  loop_after_next_enqueue(server_side);
   CAF_EXP_THROW(port, publish(spong, 0, local_host));
   exec_loop();
   // client side
@@ -199,8 +203,9 @@ CAF_TEST(authentication_succes) {
   loop_after_next_enqueue(client_side);
   CAF_EXP_THROW(pong, remote_actor(client_side, local_host, port));
   CAF_MESSAGE("spawn ping and exchange messages");
-  client_side.spawn(make_ping_behavior, pong);
-  exec_loop();
+  auto sping = client_side.spawn(make_ping_behavior, pong);
+  while (!terminated(sping))
+    exec_loop();
   CAF_MESSAGE("terminate pong");
   anon_send_exit(spong, exit_reason::user_shutdown);
   exec_loop();
