@@ -17,25 +17,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#ifndef CAF_IO_OPEN_HPP
+#define CAF_IO_OPEN_HPP
 
-#include "caf/io/publish.hpp"
-#include "caf/io/broker.hpp"
+#include <cstdint>
+
+#include "caf/actor_system.hpp"
+
 #include "caf/io/middleman.hpp"
-#include "caf/io/unpublish.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/remote_actor.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/system_messages.hpp"
 
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
+namespace caf {
+namespace io {
 
-#include "caf/io/basp/all.hpp"
+/// Tries to open a port for other CAF instances to connect to.
+/// @experimental
+inline expected<uint16_t> open(actor_system& sys, uint16_t port,
+                               const char* in = nullptr, bool reuse = false) {
+  return sys.middleman().open(port, in, reuse);
+}
 
-#endif // CAF_IO_ALL_HPP
+} // namespace io
+} // namespace caf
+
+#endif // CAF_IO_OPEN_HPP

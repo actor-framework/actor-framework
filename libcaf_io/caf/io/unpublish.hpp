@@ -17,25 +17,29 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#ifndef CAF_IO_UNPUBLISH_HPP
+#define CAF_IO_UNPUBLISH_HPP
 
-#include "caf/io/publish.hpp"
-#include "caf/io/broker.hpp"
+#include <cstdint>
+
+#include "caf/actor_system.hpp"
+
 #include "caf/io/middleman.hpp"
-#include "caf/io/unpublish.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/remote_actor.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/system_messages.hpp"
 
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
+namespace caf {
+namespace io {
 
-#include "caf/io/basp/all.hpp"
+/// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
+/// @param whom Actor that should be unpublished at `port`.
+/// @param port TCP port.
+template <class Handle>
+expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
+  if (!whom)
+    return sec::invalid_argument;
+  return whom.home_system().middleman().unpublish(whom, port);
+}
 
-#endif // CAF_IO_ALL_HPP
+} // namespace io
+} // namespace caf
+
+#endif // CAF_IO_UNPUBLISH_HPP

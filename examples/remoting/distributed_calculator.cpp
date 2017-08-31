@@ -298,7 +298,7 @@ void run_server(actor_system& system, const config& cfg) {
   auto calc = system.spawn(calculator_fun);
   // try to publish math actor at given port
   cout << "*** try publish at port " << cfg.port << endl;
-  auto expected_port = system.middleman().publish(calc, cfg.port);
+  auto expected_port = io::publish(calc, cfg.port);
   if (!expected_port) {
     std::cerr << "*** publish failed: "
               << system.render(expected_port.error()) << endl;

@@ -51,8 +51,8 @@ public:
 
   /// Tries to open a port for other CAF instances to connect to.
   /// @experimental
-  expected<uint16_t> open(uint16_t port, const char* cstr = nullptr,
-                          bool ru = false);
+  expected<uint16_t> open(uint16_t port, const char* in = nullptr,
+                          bool reuse = false);
 
   /// Closes port `port` regardless of whether an actor is published to it.
   expected<void> close(uint16_t port);

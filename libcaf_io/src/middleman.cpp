@@ -116,12 +116,12 @@ expected<strong_actor_ptr> middleman::remote_spawn_impl(const node_id& nid,
            std::move(args), std::move(s));
 }
 
-expected<uint16_t> middleman::open(uint16_t port, const char* cstr, bool ru) {
+expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
   std::string str;
-  if (cstr != nullptr)
-    str = cstr;
+  if (in != nullptr)
+    str = in;
   auto f = make_function_view(actor_handle());
-  return f(open_atom::value, port, std::move(str), ru);
+  return f(open_atom::value, port, std::move(str), reuse);
 }
 
 expected<void> middleman::close(uint16_t port) {

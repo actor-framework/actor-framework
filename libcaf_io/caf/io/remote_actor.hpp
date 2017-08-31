@@ -17,25 +17,34 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#ifndef CAF_IO_REMOTE_ACTOR_HPP
+#define CAF_IO_REMOTE_ACTOR_HPP
 
-#include "caf/io/publish.hpp"
-#include "caf/io/broker.hpp"
+#include <set>
+#include <string>
+#include <cstdint>
+
+#include "caf/actor_system.hpp"
+
 #include "caf/io/middleman.hpp"
-#include "caf/io/unpublish.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/remote_actor.hpp"
-#include "caf/io/typed_broker.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/system_messages.hpp"
 
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
+namespace caf {
+namespace io {
 
-#include "caf/io/basp/all.hpp"
+/// Establish a new connection to the actor at `host` on given `port`.
+/// @param host Valid hostname or IP address.
+/// @param port TCP port.
+/// @returns An `actor` to the proxy instance representing
+///          a remote actor or an `error`.
+template <class ActorHandle = actor>
+expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
+                                   uint16_t port) {
+  detail::type_list<ActorHandle> tk;
+  return sys.middleman().remote_actor(sys, sys.message_types(tk),
+                                      std::move(host), port);
+}
 
-#endif // CAF_IO_ALL_HPP
+} // namespace io
+} // namespace caf
+
+#endif // CAF_IO_REMOTE_ACTOR_HPP
