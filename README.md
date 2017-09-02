@@ -4,18 +4,12 @@ CAF is an open source C++11 actor model implementation featuring
 lightweight & fast actor implementations, pattern matching for messages,
 network transparent messaging, and more.
 
-[![Gitter][gitter-badge]]
-(https://gitter.im/actor-framework/chat)
-[![Jenkins][jenkins-badge]]
-(https://jenkins.inet.haw-hamburg.de/view/CAF%20Dashboard)
-[![Documentation Status][docs-badge]]
-(http://actor-framework.readthedocs.io/en/latest/?badge=latest)
-[![Coverity][coverity-badge]]
-(https://scan.coverity.com/projects/5555)
-[![In Progress][in-progress-badge]]
-(https://waffle.io/actor-framework/actor-framework)
-[![Fixed in Develop][fixed-in-develop-badge]]
-(https://waffle.io/actor-framework/actor-framework)
+[![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
+[![Jenkins][jenkins-badge]](https://jenkins.inet.haw-hamburg.de/view/CAF%20Dashboard)
+[![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
+[![Coverity][coverity-badge]](https://scan.coverity.com/projects/5555)
+[![In Progress][in-progress-badge]](https://waffle.io/actor-framework/actor-framework)
+[![Fixed in Develop][fixed-in-develop-badge]](https://waffle.io/actor-framework/actor-framework)
 
 ## Community
 
