@@ -8,9 +8,6 @@
 
 #include "caf/all.hpp"
 
-using std::cout;
-using std::cerr;
-using std::endl;
 using std::string;
 
 using namespace caf;
@@ -550,12 +547,12 @@ expected<first_pass_result> first_pass(blocking_actor* self, std::istream& in,
            >> consume("start") >> skip_word
            >> consume("level =") >> skip_word >> consume("node = ")
            >> res.this_node >> skip_to_next_line)) {
-    cerr << "*** malformed log file, expect the first line to contain "
-         << "an INFO entry of the logger" << endl;
+    std::cerr << "*** malformed log file, expect the first line to contain "
+              << "an INFO entry of the logger" << std::endl;
     return sec::invalid_argument;
   }
   if (vl >= verbosity_level::informative)
-    aout(self) << "found node " << res.this_node << endl;
+    aout(self) << "found node " << res.this_node << std::endl;
   logger_id id;
   string message;
   while (in >> skip_word >> skip_word >> skip_word >> id
@@ -571,7 +568,7 @@ expected<first_pass_result> first_pass(blocking_actor* self, std::istream& in,
   }
   if (vl >= verbosity_level::informative)
     aout(self) << "found " << res.entities.size() << " entities for node "
-               << res.this_node << endl;
+               << res.this_node << std::endl;
   return res;
 }
 
@@ -621,7 +618,7 @@ void second_pass(blocking_actor* self, const group& grp,
   auto bcast = [&](const se_event& x) {
     if (vl >= verbosity_level::noisy)
       aout(self) << "broadcast event from " << nid
-                 << ": " << deep_to_string(x) << endl;
+                 << ": " << deep_to_string(x) << std::endl;
     if (self != nullptr)
       self->send(grp, x);
   };
@@ -632,7 +629,7 @@ void second_pass(blocking_actor* self, const group& grp,
     //       i.e., is a potential deadlock
     if (vl >= verbosity_level::noisy)
       aout(self) << "wait for send from another node matching fields "
-                 << deep_to_string(fields) << endl;
+                 << deep_to_string(fields) << std::endl;
     se_event* res = nullptr;
     self->receive_while([&] { return res == nullptr; })(
       [&](const se_event& x) {
@@ -706,7 +703,7 @@ void second_pass(blocking_actor* self, const group& grp,
             in_flight_spawns.erase(i);
           } else {
             std::cerr << "*** cannot match init event to a previous spawn"
-                      << endl;
+                      << std::endl;
           }
           break;
         }
@@ -767,7 +764,7 @@ struct config : public actor_system_config {
 void caf_main(actor_system& sys, const config& cfg) {
   using namespace std;
   if (cfg.output_file.empty()) {
-    cerr << "*** no output file specified" << endl;
+    cerr << "*** no output file specified" << std::endl;
     return;
   }
   verbosity_level vl;
