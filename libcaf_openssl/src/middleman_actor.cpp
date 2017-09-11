@@ -186,6 +186,7 @@ public:
        return false;
     auto& dm = acceptor_.backend();
     auto fd = acceptor_.accepted_socket();
+    io::network::nonblocking(fd, true);
     auto sssn = make_session(parent()->system(), fd, true);
     if (sssn == nullptr) {
       CAF_LOG_ERROR("Unable to create SSL session for accepted socket");
