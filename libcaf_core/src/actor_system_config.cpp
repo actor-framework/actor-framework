@@ -432,7 +432,7 @@ actor_system_config& actor_system_config::parse(message& args,
                    atom("asio")
 #                  endif
                   }, middleman_network_backend, "middleman.network-backend");
-  verify_atom_opt({atom("stealing"), atom("sharing")},
+  verify_atom_opt({atom("stealing"), atom("sharing"), atom("testing")},
                   scheduler_policy, "scheduler.policy ");
   if (res.opts.count("caf#dump-config") != 0u) {
     cli_helptext_printed = true;
