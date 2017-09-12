@@ -112,7 +112,7 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   // (1) hard-coded defaults
-  scheduler_policy = atom("numa-steal");
+  scheduler_policy = atom("w-stealing");
   scheduler_max_threads = std::max(std::thread::hardware_concurrency(),
                                    unsigned{4});
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
@@ -125,7 +125,8 @@ actor_system_config::actor_system_config()
   work_stealing_moderate_sleep_duration_us = 50;
   work_stealing_relaxed_steal_interval = 1;
   work_stealing_relaxed_sleep_duration_us = 10000;
-  numa_aware_work_stealing_neighborhood_level = 1;
+  lgs_actor_pinning_entity = atom("node");
+  lgs_weighted_work_stealing_start_entity = atom("cache");
   logger_file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
   logger_file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
   logger_console = atom("none");
@@ -139,18 +140,20 @@ actor_system_config::actor_system_config()
   middleman_detach_multiplexer = true;
   // fill our options vector for creating INI and CLI parsers
   opt_group{options_, "scheduler"}
-  .add(scheduler_policy, "policy",
-       "sets the scheduling policy to either 'stealing' (default) or 'sharing'")
-  .add(scheduler_max_threads, "max-threads",
-       "sets a fixed number of worker threads for the scheduler")
-  .add(scheduler_max_throughput, "max-throughput",
-       "sets the maximum number of messages an actor consumes before yielding")
-  .add(scheduler_enable_profiling, "enable-profiling",
-       "enables or disables profiler output")
-  .add(scheduler_profiling_ms_resolution, "profiling-ms-resolution",
-       "sets the rate in ms in which the profiler collects data")
-  .add(scheduler_profiling_output_file, "profiling-output-file",
-       "sets the output file for the profiler");
+    .add(scheduler_policy, "policy",
+         "sets the scheduling policy to either 'w-stealing' (default), "
+         "'stealing' or 'sharing'")
+    .add(scheduler_max_threads, "max-threads",
+         "sets a fixed number of worker threads for the scheduler")
+    .add(
+      scheduler_max_throughput, "max-throughput",
+      "sets the maximum number of messages an actor consumes before yielding")
+    .add(scheduler_enable_profiling, "enable-profiling",
+         "enables or disables profiler output")
+    .add(scheduler_profiling_ms_resolution, "profiling-ms-resolution",
+         "sets the rate in ms in which the profiler collects data")
+    .add(scheduler_profiling_output_file, "profiling-output-file",
+         "sets the output file for the profiler");
   opt_group(options_, "work-stealing")
   .add(work_stealing_aggressive_poll_attempts, "aggressive-poll-attempts",
        "sets the number of zero-sleep-interval polling attempts")
@@ -166,9 +169,12 @@ actor_system_config::actor_system_config()
        "sets the frequency of steal attempts during relaxed polling")
   .add(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
        "sets the sleep interval between poll attempts during relaxed polling");
-  opt_group{options_, "numa"}
-  .add(numa_aware_work_stealing_neighborhood_level, "neighborhood-level",
-       "defines the neighborhood radius (0=all, 1=next smaller group, 2=...)");
+  opt_group{options_, "lgs"}
+    .add(lgs_actor_pinning_entity, "actor-pinning-entity",
+         "defines the actor pinning entity (pu, cache, node, system)")
+    .add(
+      lgs_weighted_work_stealing_start_entity, "w-stealing-entity",
+      "defines the weighted work stealing start entity (cache, node, system)");
   opt_group{options_, "logger"}
   .add(logger_file_name, "file-name",
        "sets the filesystem path of the log file")
@@ -436,7 +442,7 @@ actor_system_config& actor_system_config::parse(message& args,
                    atom("asio")
 #                  endif
                   }, middleman_network_backend, "middleman.network-backend");
-  verify_atom_opt({atom("stealing"), atom("sharing"), atom("numa-steal")},
+  verify_atom_opt({atom("stealing"), atom("sharing"), atom("w-stealing")},
                   scheduler_policy, "scheduler.policy ");
   if (res.opts.count("caf#dump-config") != 0u) {
     cli_helptext_printed = true;

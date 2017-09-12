@@ -17,18 +17,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/policy/numa_aware_work_stealing.hpp"
+#include "caf/policy/locality_guided_scheduling.hpp"
 
 namespace caf {
 namespace policy {
 
-numa_aware_work_stealing::~numa_aware_work_stealing() {
+locality_guided_scheduling::~locality_guided_scheduling() {
   // nop
 }
 
 std::ostream&
 operator<<(std::ostream& s,
-           const numa_aware_work_stealing::hwloc_bitmap_wrapper& w) {
+           const locality_guided_scheduling::bitmap_wrapper_t& w) {
   char* tmp = nullptr;
   hwloc_bitmap_asprintf(&tmp, w.get());
   s << std::string(tmp);
