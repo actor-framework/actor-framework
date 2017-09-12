@@ -181,7 +181,26 @@ public:
     for (auto& range : ranges)
       for (auto i = range.first; i != range.second; ++i)
         fun(*i);
-    fetch_new_data();
+    // Fetch new data if needed
+    if (head_ == nullptr) {
+      fetch_new_data();
+    } else if (!is_dummy(stack_.load())) {
+      // Calling fetch_new_data() iterates the stack and prepends messages via
+      // head_. This would cause reordering of messages when traversing via
+      // peek_all. We hence store the current state of the singly-linked list
+      // pointed to by head_ and then reset the list before calling
+      // fetch_new_data. Finally, we prepend the old list in order to get a
+      // consistent view.
+      auto old_head = head_;
+      head_ = nullptr;
+      auto tail = old_head;
+      while (tail->next != nullptr)
+        tail = tail->next;
+      // This gets new data from the stack and rewrite head_.
+      fetch_new_data();
+      tail->next = head_;
+      head_ = old_head;
+    }
     auto ptr = head_;
     while (ptr) {
       fun(*ptr);
