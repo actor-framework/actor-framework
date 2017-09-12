@@ -471,22 +471,24 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
                  << "; TYPE =" << ::caf::detail::pretty_type_name(typeid(ref)) \
                  << "; ARGS =" << ctor_data.c_str()                            \
                  << "; NODE =" << ref.node()                                   \
-                 << "; GROUPS =" << logger::joined_groups_of(ref))
+                 << "; GROUPS =" << ::caf::logger::joined_groups_of(ref))
 
 #define CAF_LOG_SEND_EVENT(ptr)                                                \
-  CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
-               "SEND ; TO ="                                                   \
-                 << deep_to_string(strong_actor_ptr{this->ctrl()}).c_str()     \
-                 << "; FROM =" << deep_to_string(ptr->sender).c_str()          \
-                 << "; STAGES =" << deep_to_string(ptr->stages).c_str()        \
-                 << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
+  CAF_LOG_IMPL(                                                                \
+    CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                               \
+    "SEND ; TO ="                                                              \
+      << ::caf::deep_to_string(::caf::strong_actor_ptr{this->ctrl()}).c_str()  \
+      << "; FROM =" << ::caf::deep_to_string(ptr->sender).c_str()              \
+      << "; STAGES =" << ::caf::deep_to_string(ptr->stages).c_str()            \
+      << "; CONTENT =" << ::caf::deep_to_string(ptr->content()).c_str())
 
 #define CAF_LOG_RECEIVE_EVENT(ptr)                                             \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
                "RECEIVE ; FROM ="                                              \
-                 << deep_to_string(ptr->sender).c_str()                        \
-                 << "; STAGES =" << deep_to_string(ptr->stages).c_str()        \
-                 << "; CONTENT =" << deep_to_string(ptr->content()).c_str())
+                 << ::caf::deep_to_string(ptr->sender).c_str()                 \
+                 << "; STAGES =" << ::caf::deep_to_string(ptr->stages).c_str() \
+                 << "; CONTENT ="                                              \
+                 << ::caf::deep_to_string(ptr->content()).c_str())
 
 #define CAF_LOG_REJECT_EVENT()                                                 \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "REJECT")
