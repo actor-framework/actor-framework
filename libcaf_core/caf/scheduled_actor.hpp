@@ -521,8 +521,8 @@ public:
   stream<typename stream_stage_trait_t<Fun>::output>
   make_stage(const stream<In>& in, Init init, Fun fun, Cleanup cleanup,
              policy::arg<Gatherer, Scatterer> policies = {}) {
-    return add_stage(in, std::make_tuple(), std::move(init), std::move(fun),
-                     std::move(cleanup), policies);
+    return make_stage(in, std::make_tuple(), std::move(init), std::move(fun),
+                      std::move(cleanup), policies);
   }
 
   /// Creates a new stream sink of type T.
