@@ -175,6 +175,20 @@ public:
     return nullptr;
   }
 
+  template <class F>
+  void peek_all(F fun) {
+    auto ranges = cache_.ranges();
+    for (auto& range : ranges)
+      for (auto i = range.first; i != range.second; ++i)
+        fun(*i);
+    fetch_new_data();
+    auto ptr = head_;
+    while (ptr) {
+      fun(*ptr);
+      ptr = ptr->next;
+    }
+  }
+
   // note: the cache is intended to be used by the owner, the queue itself
   //       never accesses the cache other than for counting;
   //       the first partition of the cache is meant to be used to store and
