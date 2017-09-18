@@ -54,9 +54,11 @@ public:
 
   template <class Worker>
   struct worker_data {
-    explicit worker_data(scheduler::abstract_coordinator*) {
+    explicit worker_data(scheduler::abstract_coordinator*)
+      : number_of_steals(0) {
       // nop
     }
+    uint64_t number_of_steals;
   };
 
   // Create x workers.

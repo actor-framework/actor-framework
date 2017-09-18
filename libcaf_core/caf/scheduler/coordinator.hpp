@@ -68,6 +68,7 @@ protected:
   }
 
   void stop() override {
+    uint64_t accumulated_number_of_steals = 0;
     // shutdown workers
     class shutdown_helper : public resumable, public ref_counted {
     public:
@@ -116,7 +117,9 @@ protected:
     // wait until all workers are done
     for (auto& w : data_.workers) {
       w->get_thread().join();
+      accumulated_number_of_steals = w->data().number_of_steals;
     }
+    std::cout << "accumulated_number_of_steals: " << accumulated_number_of_steals << std::endl;
     // run cleanup code for each resumable
     auto f = &abstract_coordinator::cleanup_and_release;
     for (auto& w : data_.workers)
