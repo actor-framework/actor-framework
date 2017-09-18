@@ -91,7 +91,8 @@ public:
           // no need to worry about wrap-around; if `p->num_workers() < 2`,
           // `uniform` will not be used anyway
         , uniform(0, p->num_workers() - 2)
-        ,  strategies(get_poll_strategies(p)) {
+        , strategies(get_poll_strategies(p)) 
+        , number_of_steals(0) {
       // nop
     }
 
@@ -102,6 +103,7 @@ public:
     std::default_random_engine rengine;
     std::uniform_int_distribution<size_t> uniform;
     std::vector<poll_strategy> strategies;
+    uint64_t number_of_steals;
   };
 
   // Create x workers.
@@ -179,8 +181,10 @@ public:
         // try to steal every X poll attempts
         if ((i % strat.steal_interval) == 0) {
           job = try_steal(self);
-          if (job)
+          if (job) {
+            ++d(self).number_of_steals;
             return job;
+          }
         }
         if (strat.sleep_duration.count() > 0)
           std::this_thread::sleep_for(strat.sleep_duration);
@@ -202,6 +206,11 @@ public:
   template <class Coordinator, class UnaryFunction>
   void foreach_central_resumable(Coordinator*, UnaryFunction) {
     // nop
+  }
+
+  template <class Worker>
+  uint64_t get_number_of_steals(Worker* self) {
+    return d(self).number_of_steals; 
   }
 };
 

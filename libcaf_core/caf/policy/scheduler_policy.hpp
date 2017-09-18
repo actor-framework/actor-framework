@@ -101,6 +101,9 @@ public:
   /// Applies given functor to all resumables attached to the coordinator.
   template <class Coordinator, typename UnaryFunction>
   void foreach_central_resumable(Coordinator* self, UnaryFunction f);
+
+  template <class Worker>
+  uint64_t get_number_of_steals(Worker* self);
 };
 
 } // namespace policy

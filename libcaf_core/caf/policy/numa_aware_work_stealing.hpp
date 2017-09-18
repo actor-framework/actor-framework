@@ -109,7 +109,8 @@ public:
         : rengine(std::random_device{}())
         , strategies(get_poll_strategies(p))
         , neighborhood_level(
-            p->system().config().numa_aware_work_stealing_neighborhood_level) {
+            p->system().config().numa_aware_work_stealing_neighborhood_level) 
+        , number_of_steals(0) {
       // nop
     }
 
@@ -210,6 +211,7 @@ public:
     std::uniform_int_distribution<size_t> uniform;
     std::vector<poll_strategy> strategies;
     size_t neighborhood_level;
+    uint64_t number_of_steals;
   };
 
   /// Create x workers.
@@ -317,8 +319,10 @@ public:
         // try to steal every X poll attempts
         if ((i % strat.steal_interval) == 0) {
           job = try_steal(self, scheduler_lvl_idx, steal_cnt);
-          if (job)
+          if (job) {
+            ++d(self).number_of_steals;
             return job;
+          }
         }
         if (strat.sleep_duration.count() > 0)
           std::this_thread::sleep_for(strat.sleep_duration);
