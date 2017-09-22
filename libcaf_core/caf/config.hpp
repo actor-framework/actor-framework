@@ -69,7 +69,6 @@
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wall\"")                              \
     _Pragma("clang diagnostic ignored \"-Wextra\"")                            \
-    _Pragma("clang diagnostic ignored \"-Werror\"")                            \
     _Pragma("clang diagnostic ignored \"-Wundef\"")                            \
     _Pragma("clang diagnostic ignored \"-Wshadow\"")                           \
     _Pragma("clang diagnostic ignored \"-Wdeprecated\"")                       \
