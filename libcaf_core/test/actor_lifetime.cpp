@@ -22,15 +22,24 @@
 #define CAF_SUITE actor_lifetime
 #include "caf/test/unit_test.hpp"
 
+#include <mutex>
 #include <atomic>
+#include <condition_variable>
 
 #include "caf/all.hpp"
 
-using namespace caf;
+#include "caf/test/dsl.hpp"
 
 using check_atom = caf::atom_constant<caf::atom("check")>;
 
+using namespace caf;
+
 namespace {
+
+std::mutex s_mtx;
+std::condition_variable s_cv;
+std::atomic<bool> s_tester_init_done;
+std::atomic<bool> s_testee_cleanup_done;
 
 std::atomic<long> s_testees;
 std::atomic<long> s_pending_on_exits;
@@ -38,11 +47,13 @@ std::atomic<long> s_pending_on_exits;
 class testee : public event_based_actor {
 public:
   testee(actor_config& cfg) : event_based_actor(cfg) {
+printf("%s %d\n", __FILE__, __LINE__);
     ++s_testees;
     ++s_pending_on_exits;
   }
 
   ~testee() override {
+printf("%s %d\n", __FILE__, __LINE__);
     --s_testees;
   }
 
@@ -51,6 +62,7 @@ public:
   }
 
   void on_exit() override {
+printf("%s %d\n", __FILE__, __LINE__);
     --s_pending_on_exits;
   }
 
@@ -70,12 +82,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // must be still alive at this point
       CAF_CHECK_EQUAL(s_testees.load(), 1);
       CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-      // testee might be still running its cleanup code in
-      // another worker thread; by waiting some milliseconds, we make sure
-      // testee had enough time to return control to the scheduler
-      // which in turn destroys it by dropping the last remaining reference
-      self->delayed_send(self, std::chrono::milliseconds(30),
-                         check_atom::value);
+      self->send(self, check_atom::value);
     });
     self->link_to(aut);
   } else {
@@ -87,15 +94,23 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
       // which in turn destroys it by dropping the last remaining reference
-      self->delayed_send(self, std::chrono::milliseconds(30),
-                         check_atom::value);
+      self->send(self, check_atom::value);
     });
     self->monitor(aut);
   }
   anon_send_exit(aut, exit_reason::user_shutdown);
+  {
+    std::unique_lock<std::mutex> guard{s_mtx};
+    s_tester_init_done = true;
+    s_cv.notify_one();
+  }
   return {
     [self](check_atom) {
-      // make sure aut's dtor and on_exit() have been called
+      { // make sure aut's dtor and on_exit() have been called
+        std::unique_lock<std::mutex> guard{s_mtx};
+        while (!s_testee_cleanup_done.load())
+          s_cv.wait(guard);
+      }
       CAF_CHECK_EQUAL(s_testees.load(), 0);
       CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
       self->quit();
@@ -103,11 +118,22 @@ behavior tester(event_based_actor* self, const actor& aut) {
   };
 }
 
-struct fixture {
-  actor_system_config cfg;
-  actor_system system;
 
-  fixture() : system(cfg) {
+
+struct config : actor_system_config {
+  config() {
+    scheduler_policy = atom("testing");
+  }
+};
+
+struct fixture {
+  using sched_t = scheduler::test_coordinator;
+
+  config cfg;
+  actor_system system;
+  sched_t& sched;
+
+  fixture() : system(cfg), sched(dynamic_cast<sched_t&>(system.scheduler())) {
     // nop
   }
 
@@ -119,6 +145,43 @@ struct fixture {
   template <class T, spawn_options Os, class... Ts>
   actor spawn(Ts&&... xs) {
     return system.spawn<T, Os>(xs...);
+  }
+
+  template <class ExitMsgType, spawn_options TesterOptions,
+            spawn_options TesteeOptions>
+  void tst() {
+    // We re-use these static variables with each run.
+    s_tester_init_done = false;
+    s_testee_cleanup_done = false;
+    // Spawn test subject and tester.
+    auto tst_subject = spawn<testee, TesteeOptions>();
+    sched.run();
+    auto tst_driver = spawn<TesterOptions>(tester<ExitMsgType>, tst_subject);
+    tst_subject = nullptr;
+    if (has_detach_flag(TesterOptions)) {
+      // When dealing with a detached tester we need to insert two
+      // synchronization points: 1) exit_msg sent and 2) cleanup code of tester
+      // done.
+      { // Wait for the exit_msg from the driver.
+        std::unique_lock<std::mutex> guard{s_mtx};
+        while (!s_tester_init_done)
+          s_cv.wait(guard);
+      }
+      // Run the exit_msg.
+      sched.run_once();
+      //expect((exit_msg), from(tst_driver).to(tst_subject));
+      { // Resume driver.
+        std::unique_lock<std::mutex> guard{s_mtx};
+        s_testee_cleanup_done = true;
+        s_cv.notify_one();
+      }
+    } else {
+      // When both actors are running in the scheduler we don't need any extra
+      // synchronization.
+      s_tester_init_done = true;
+      s_testee_cleanup_done = true;
+      sched.run();
+    }
   }
 };
 
@@ -137,35 +200,19 @@ CAF_TEST(destructor_call) {
 CAF_TEST_FIXTURE_SCOPE(actor_lifetime_tests, fixture)
 
 CAF_TEST(no_spawn_options_and_exit_msg) {
-  spawn<no_spawn_options>(tester<exit_msg>, spawn<testee, no_spawn_options>());
+  tst<exit_msg, no_spawn_options, no_spawn_options>();
 }
 
 CAF_TEST(no_spawn_options_and_down_msg) {
-  spawn<no_spawn_options>(tester<down_msg>, spawn<testee, no_spawn_options>());
+  tst<down_msg, no_spawn_options, no_spawn_options>();
 }
 
 CAF_TEST(mixed_spawn_options_and_exit_msg) {
-  spawn<detached>(tester<exit_msg>, spawn<testee, no_spawn_options>());
+  tst<exit_msg, detached, no_spawn_options>();
 }
 
 CAF_TEST(mixed_spawn_options_and_down_msg) {
-  spawn<detached>(tester<down_msg>, spawn<testee, no_spawn_options>());
-}
-
-CAF_TEST(mixed_spawn_options2_and_exit_msg) {
-  spawn<no_spawn_options>(tester<exit_msg>, spawn<testee, detached>());
-}
-
-CAF_TEST(mixed_spawn_options2_and_down_msg) {
-  spawn<no_spawn_options>(tester<down_msg>, spawn<testee, detached>());
-}
-
-CAF_TEST(detached_and_exit_msg) {
-  spawn<detached>(tester<exit_msg>, spawn<testee, detached>());
-}
-
-CAF_TEST(detached_and_down_msg) {
-  spawn<detached>(tester<down_msg>, spawn<testee, detached>());
+  tst<down_msg, detached, no_spawn_options>();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
