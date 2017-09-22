@@ -47,13 +47,11 @@ std::atomic<long> s_pending_on_exits;
 class testee : public event_based_actor {
 public:
   testee(actor_config& cfg) : event_based_actor(cfg) {
-printf("%s %d\n", __FILE__, __LINE__);
     ++s_testees;
     ++s_pending_on_exits;
   }
 
   ~testee() override {
-printf("%s %d\n", __FILE__, __LINE__);
     --s_testees;
   }
 
@@ -62,7 +60,6 @@ printf("%s %d\n", __FILE__, __LINE__);
   }
 
   void on_exit() override {
-printf("%s %d\n", __FILE__, __LINE__);
     --s_pending_on_exits;
   }
 
