@@ -294,9 +294,14 @@ void middleman::stop() {
       }
     }
   });
-  backend_supervisor_.reset();
-  if (thread_.joinable())
-    thread_.join();
+  if (system_.config().middleman_detach_multiplexer) {
+    backend_supervisor_.reset();
+    if (thread_.joinable())
+      thread_.join();
+  } else {
+    while (backend().try_run_once())
+      ; // nop
+  }
   hooks_.clear();
   named_brokers_.clear();
   scoped_actor self{system(), true};
