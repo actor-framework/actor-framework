@@ -50,7 +50,7 @@ using native_socket = io::network::native_socket;
 using default_mpx = io::network::default_multiplexer;
 
 struct ssl_policy {
-  ssl_policy(intrusive_ptr<session> session) : session_(std::move(session)) {
+  ssl_policy(session_ptr session) : session_(std::move(session)) {
     // nop
   }
 
@@ -81,7 +81,7 @@ struct ssl_policy {
   }
 
 private:
-  intrusive_ptr<session> session_;
+  session_ptr session_;
 };
 
 class scribe_impl : public io::scribe {

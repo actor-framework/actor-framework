@@ -20,6 +20,8 @@
 #ifndef CAF_OPENSSL_SESSION_HPP
 #define CAF_OPENSSL_SESSION_HPP
 
+#include <memory>
+
 #include "caf/config.hpp"
 
 CAF_PUSH_WARNINGS
@@ -38,7 +40,7 @@ using native_socket = io::network::native_socket;
 
 using rw_state = io::network::rw_state;
 
-class session : public ref_counted {
+class session {
 public:
   session(actor_system& sys);
   ~session();
@@ -68,7 +70,7 @@ private:
 };
 
 /// @relates session
-using session_ptr = intrusive_ptr<session>;
+using session_ptr = std::unique_ptr<session>;
 
 /// @relates session
 session_ptr make_session(actor_system& sys, native_socket fd,

@@ -253,7 +253,7 @@ bool session::handle_ssl_result(int ret) {
 
 session_ptr make_session(actor_system& sys, native_socket fd,
                          bool from_accepted_socket) {
-  auto ptr = make_counted<session>(sys);
+  session_ptr ptr{new session(sys)};
   if (!ptr->init())
     return nullptr;
   if (from_accepted_socket) {
