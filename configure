@@ -47,6 +47,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --dual-build                build using both gcc and clang
     --build-static              build as static and shared library
     --build-static-only         build as static library only
+    --static-runtime            build with static C++ runtime
     --more-warnings             enables most warnings
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
@@ -352,6 +353,9 @@ while [ $# -ne 0 ]; do
             ;;
         --build-static-only)
             append_cache_entry CAF_BUILD_STATIC_ONLY BOOL yes
+            ;;
+        --static-runtime)
+            append_cache_entry CAF_BUILD_STATIC_RUNTIME BOOL yes
             ;;
         --with-javac=*)
             append_cache_entry CAF_JAVA_COMPILER FILEPATH "$optarg"
