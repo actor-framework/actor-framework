@@ -12,3 +12,7 @@ elseif ("${LABEL_EXPR}" MATCHES "clang")
   set(CMAKE_C_COMPILER "clang" CACHE STRING "C compiler option")
   set(CMAKE_CXX_COMPILER "clang++" CACHE STRING "C++ compiler option")
 endif()
+# disable SSL when doing leak checking due to a known issue with the module
+if (${LABEL_EXPR} MATCHES "LeakSanitizer")
+  set(CAF_NO_OPENSSL yes CACHE BOOL "Configure OpenSSL module")
+endif()
