@@ -49,6 +49,11 @@ public:
     buf_.emplace_back(std::forward<Ts>(xs)...);
   }
 
+  // @private
+  queue_type& buf() {
+    return buf_;
+  }
+
 protected:
   queue_type& buf_;
 };
