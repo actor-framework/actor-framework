@@ -19,9 +19,12 @@
 
 #include "caf/openssl/session.hpp"
 
+#include <cassert>
+
 CAF_PUSH_WARNINGS
 #include <sys/socket.h>
 #include <openssl/err.h>
+#include <openssl/bio.h>
 CAF_POP_WARNINGS
 
 #include "caf/actor_system_config.hpp"
@@ -41,6 +44,71 @@ int pem_passwd_cb(char* buf, int size, int, void* ptr) {
   buf[size - 1] = '\0';
   return static_cast<int>(strlen(buf));
 }
+
+#ifdef CAF_LINUX
+
+// -- custom BIO for avoiding SIGPIPE events via CAF's read_some/write_some ---
+
+int caf_bio_write(BIO* self, const char* buf, int len) {
+  using namespace caf::io::network;
+  assert(len > 0);
+  BIO_clear_retry_flags(self);
+  int fd = 0;
+  BIO_get_fd(self, &fd);
+  auto res = ::send(fd, buf, len, no_sigpipe_io_flag);
+  if (res <= 0 && !is_error(res, true))
+    BIO_set_retry_write(self);
+  return res;
+}
+
+int caf_bio_read(BIO* self, char* buf, int len) {
+  using namespace caf::io::network;
+  assert(len > 0);
+  BIO_clear_retry_flags(self);
+  int fd = 0;
+  BIO_get_fd(self, &fd);
+  auto res = ::recv(fd, buf, len, no_sigpipe_io_flag);
+  if (res <= 0 && !is_error(res, true))
+    BIO_set_retry_read(self);
+  return res;
+}
+
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+
+int BIO_meth_set_write(BIO_METHOD* self, int (*wfn)(BIO*, const char*, int)) {
+  self->bwrite = wfn;
+  return 0;
+}
+
+int BIO_meth_set_read(BIO_METHOD* self, int (*rfn)(BIO*, char*, int)) {
+  self->bread = rfn;
+  return 0;
+}
+
+#endif
+
+BIO_METHOD caf_bio_method;
+
+pthread_once_t caf_bio_method_initialized = PTHREAD_ONCE_INIT;
+
+void caf_bio_init() {
+  memcpy(&caf_bio_method, BIO_s_socket(), sizeof(BIO_METHOD));
+  BIO_meth_set_write(&caf_bio_method, caf_bio_write);
+  BIO_meth_set_read(&caf_bio_method, caf_bio_read);
+}
+
+BIO_METHOD* caf_bio() {
+  pthread_once(&caf_bio_method_initialized, caf_bio_init);
+  return &caf_bio_method;
+}
+
+#else
+
+inline BIO_METHOD* caf_bio() {
+  return BIO_s_socket();
+}
+
+#endif
 
 } // namespace <anonymous>
 
@@ -144,7 +212,12 @@ rw_state session::write_some(size_t& result, native_socket, const void* buf,
 
 bool session::try_connect(native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  SSL_set_fd(ssl_, fd);
+  //auto bio = BIO_new(BIO_s_socket());
+  auto bio = BIO_new(caf_bio());
+  if (!bio)
+    return false;
+  BIO_set_fd(bio, fd, BIO_NOCLOSE);
+  SSL_set_bio(ssl_, bio, bio);
   SSL_set_connect_state(ssl_);
   auto ret = SSL_connect(ssl_);
   if (ret == 1)
@@ -155,7 +228,12 @@ bool session::try_connect(native_socket fd) {
 
 bool session::try_accept(native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  SSL_set_fd(ssl_, fd);
+  //auto bio = BIO_new(BIO_s_socket());
+  auto bio = BIO_new(caf_bio());
+  if (!bio)
+    return false;
+  BIO_set_fd(bio, fd, BIO_NOCLOSE);
+  SSL_set_bio(ssl_, bio, bio);
   SSL_set_accept_state(ssl_);
   auto ret = SSL_accept(ssl_);
   if (ret == 1)
