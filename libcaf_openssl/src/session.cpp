@@ -19,12 +19,8 @@
 
 #include "caf/openssl/session.hpp"
 
-#include <cassert>
-
 CAF_PUSH_WARNINGS
-#include <sys/socket.h>
 #include <openssl/err.h>
-#include <openssl/bio.h>
 CAF_POP_WARNINGS
 
 #include "caf/actor_system_config.hpp"
@@ -32,6 +28,37 @@ CAF_POP_WARNINGS
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/openssl/manager.hpp"
+
+// On Linux we need to block SIGPIPE whenever we access OpenSSL functions.
+// Unfortunately there's no sane way to configure OpenSSL properly.
+#ifdef CAF_LINUX
+
+#include "caf/detail/scope_guard.hpp"
+#include <signal.h>
+
+#define CAF_BLOCK_SIGPIPE() \
+  sigset_t sigpipe_mask; \
+  sigemptyset(&sigpipe_mask); \
+  sigaddset(&sigpipe_mask, SIGPIPE); \
+  sigset_t saved_mask; \
+  if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) == -1) { \
+    perror("pthread_sigmask"); \
+    exit(1); \
+  } \
+  auto sigpipe_restore_guard = ::caf::detail::make_scope_guard([&] { \
+    struct timespec zerotime = {0}; \
+    sigtimedwait(&sigpipe_mask, 0, &zerotime); \
+    if (pthread_sigmask(SIG_SETMASK, &saved_mask, 0) == -1) { \
+      perror("pthread_sigmask"); \
+      exit(1); \
+    } \
+  })
+
+#else
+
+#define CAF_BLOCK_SIGPIPE() static_cast<void>(0)
+
+#endif // CAF_LINUX
 
 namespace caf {
 namespace openssl {
@@ -45,165 +72,11 @@ int pem_passwd_cb(char* buf, int size, int, void* ptr) {
   return static_cast<int>(strlen(buf));
 }
 
-#if 1
-//#ifdef CAF_LINUX
-
-// -- custom BIO for avoiding SIGPIPE events
-
-int caf_bio_write(BIO* self, const char* buf, int len) {
-  using namespace caf::io::network;
-  assert(len > 0);
-  BIO_clear_retry_flags(self);
-  int fd = 0;
-  BIO_get_fd(self, &fd);
-  auto res = ::send(fd, buf, len, no_sigpipe_io_flag);
-  if (res <= 0 && !is_error(res, true))
-    BIO_set_retry_write(self);
-  return res;
-}
-
-int caf_bio_write_ex(BIO* self, const char* buf, size_t len, size_t* out) {
-  len = std::min(len, static_cast<size_t>(std::numeric_limits<int>::max()));
-  auto res = caf_bio_write(self, buf, static_cast<int>(len));
-  if (res <= 0) {
-    *out = 0;
-    return res;
-  }
-  *out = static_cast<size_t>(res);
-  return 1;
-}
-
-int caf_bio_read(BIO* self, char* buf, int len) {
-  using namespace caf::io::network;
-  assert(len > 0);
-  BIO_clear_retry_flags(self);
-  int fd = 0;
-  BIO_get_fd(self, &fd);
-  auto res = ::recv(fd, buf, len, no_sigpipe_io_flag);
-  if (res <= 0 && !is_error(res, true))
-    BIO_set_retry_read(self);
-  return res;
-}
-
-int caf_bio_read_ex(BIO* self, char* buf, size_t len, size_t* out) {
-  len = std::min(len, static_cast<size_t>(std::numeric_limits<int>::max()));
-  auto res = caf_bio_read(self, buf, static_cast<int>(len));
-  if (res <= 0) {
-    *out= 0;
-    return res;
-  }
-  *out = static_cast<size_t>(res);
-  return 1;
-}
-
-int caf_bio_puts(BIO* self, const char* cstr) {
-  return caf_bio_write(self, cstr, static_cast<int>(strlen(cstr)));
-}
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L // OpenSSL < 1.1
-
-long caf_bio_ctrl(BIO* self, int cmd, long num, void* ptr) {
-  switch (cmd) {
-    case BIO_C_SET_FD: {
-      auto fd = *reinterpret_cast<int*>(ptr);
-      self->num = fd;
-      self->shutdown = fd;
-      self->init = 1;
-      return 1;
-    }
-    case BIO_C_GET_FD:
-      if (self->init != 0) {
-        if (ptr != nullptr)
-          *reinterpret_cast<int*>(ptr) = self->num;
-        return self->num;
-      }
-      return -1;
-    case BIO_CTRL_GET_CLOSE:
-      return self->shutdown;
-    case BIO_CTRL_SET_CLOSE:
-      self->shutdown = static_cast<int>(num);
-      return 1;
-      break;
-    case BIO_CTRL_DUP:
-    case BIO_CTRL_FLUSH:
-      return 1;
-    default:
-      return 0;
-  }
-}
-
-int caf_bio_create(BIO* self) {
-  self->init = 0;
-  self->num = 0;
-  self->ptr = nullptr;
-  BIO_clear_flags(self, 0);
-  return 1;
-}
-
-int caf_bio_destroy(BIO* self) {
-  return self == nullptr ? 0 : 1;
-}
-
-BIO_METHOD caf_bio_method = {
-  BIO_TYPE_SOCKET,
-  "CAFsocket",
-  caf_bio_write,
-  caf_bio_read,
-  caf_bio_puts,
-  nullptr, // gets
-  caf_bio_ctrl,
-  caf_bio_create,
-  caf_bio_destroy,
-  nullptr
-};
-
-BIO_METHOD* new_caf_bio() {
-  return &caf_bio_method;
-}
-
-inline void delete_caf_bio(BIO_METHOD*) {
-  // nop
-}
-
-#else // OpenSSL >= 1.1
-
-BIO_METHOD* new_caf_bio() {
-  auto cs = const_cast<BIO_METHOD*>(BIO_s_socket());
-  auto ptr = BIO_meth_new(BIO_TYPE_SOCKET, "CAFsocket");
-  BIO_meth_set_write(ptr, caf_bio_write);
-  BIO_meth_set_write_ex(ptr, caf_bio_write_ex);
-  BIO_meth_set_read(ptr, caf_bio_read);
-  BIO_meth_set_read_ex(ptr, caf_bio_read_ex);
-  BIO_meth_set_puts(ptr, caf_bio_puts);
-  BIO_meth_set_ctrl(ptr, BIO_meth_get_ctrl(cs));
-  BIO_meth_set_create(ptr, BIO_meth_get_create(cs));
-  BIO_meth_set_destroy(ptr, BIO_meth_get_destroy(cs));
-  return ptr;
-}
-
-inline void delete_caf_bio(BIO_METHOD* self) {
-  BIO_meth_free(self);
-}
-
-#endif // OpenSSL 1.1
-
-#else
-
-inline BIO_METHOD* new_caf_bio() {
-  return BIO_s_socket();
-}
-
-inline void delete_caf_bio(BIO_METHOD*) {
-  // nop
-}
-
-#endif
 
 } // namespace <anonymous>
 
 session::session(actor_system& sys)
     : sys_(sys),
-      biom_(new_caf_bio()),
       ctx_(nullptr),
       ssl_(nullptr),
       connecting_(false),
@@ -225,11 +98,11 @@ bool session::init() {
 session::~session() {
   SSL_free(ssl_);
   SSL_CTX_free(ctx_);
-  delete_caf_bio(biom_);
 }
 
 rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
                           size_t len, const char* debug_name) {
+  CAF_BLOCK_SIGPIPE();
   auto check_ssl_res = [&](int res) -> rw_state {
     result = 0;
     switch (SSL_get_error(ssl_, res)) {
@@ -303,12 +176,8 @@ rw_state session::write_some(size_t& result, native_socket, const void* buf,
 
 bool session::try_connect(native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  auto bio = BIO_new(biom_);
-  if (!bio)
-    return false;
-  BIO_set_fd(bio, fd, BIO_NOCLOSE);
-  SSL_set_bio(ssl_, bio, bio);
-  //SSL_set_fd(ssl_, fd);
+  CAF_BLOCK_SIGPIPE();
+  SSL_set_fd(ssl_, fd);
   SSL_set_connect_state(ssl_);
   auto ret = SSL_connect(ssl_);
   if (ret == 1)
@@ -319,12 +188,8 @@ bool session::try_connect(native_socket fd) {
 
 bool session::try_accept(native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  auto bio = BIO_new(biom_);
-  if (!bio)
-    return false;
-  BIO_set_fd(bio, fd, BIO_NOCLOSE);
-  SSL_set_bio(ssl_, bio, bio);
-  //SSL_set_fd(ssl_, fd);
+  CAF_BLOCK_SIGPIPE();
+  SSL_set_fd(ssl_, fd);
   SSL_set_accept_state(ssl_);
   auto ret = SSL_accept(ssl_);
   if (ret == 1)
@@ -338,6 +203,7 @@ const char* session::openssl_passphrase() {
 }
 
 SSL_CTX* session::create_ssl_context() {
+  CAF_BLOCK_SIGPIPE();
   auto ctx = SSL_CTX_new(TLSv1_2_method());
   if (!ctx)
     raise_ssl_error("cannot create OpenSSL context");

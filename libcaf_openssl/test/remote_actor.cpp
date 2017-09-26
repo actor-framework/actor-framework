@@ -19,6 +19,8 @@
 
 #include "caf/config.hpp"
 
+#include <signal.h>
+
 #define CAF_SUITE openssl_dynamic_remote_actor
 #include "caf/test/unit_test.hpp"
 
@@ -53,6 +55,9 @@ struct fixture {
   actor_system server_side{server_side_config};
   config client_side_config;
   actor_system client_side{client_side_config};
+  fixture() {
+    signal(SIGPIPE, SIG_IGN);
+  }
 };
 
 behavior make_pong_behavior() {
