@@ -48,7 +48,8 @@ public:
       , id_(worker_id)
       , parent_(worker_parent)
       , all_workers_are_neighbors_(true)
-      , data_(worker_parent) {
+      , data_(worker_parent) 
+      , num_of_scheduling_events_(0) {
     // nop
   }
 
@@ -131,6 +132,14 @@ public:
     all_workers_are_neighbors_ = x;     
   }
 
+  size_t num_of_scheduling_events() const override {
+    return num_of_scheduling_events_;
+  }
+
+  void add_scheduling_event() override {
+    ++num_of_scheduling_events_;
+  }
+
 private:
   void run() {
     CAF_SET_LOGGER_SYS(&system());
@@ -183,6 +192,8 @@ private:
   policy_data data_;
   // instance of our policy object
   Policy policy_;
+
+  size_t num_of_scheduling_events_;
 };
 
 } // namespace scheduler

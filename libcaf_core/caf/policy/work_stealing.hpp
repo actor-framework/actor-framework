@@ -102,6 +102,8 @@ public:
     std::default_random_engine rengine;
     std::uniform_int_distribution<size_t> uniform;
     std::vector<poll_strategy> strategies;
+    size_t num_of_steal_attempts = 0;
+    size_t num_of_successfully_steals = 0;
   };
 
   // Create x workers.
@@ -179,8 +181,11 @@ public:
         // try to steal every X poll attempts
         if ((i % strat.steal_interval) == 0) {
           job = try_steal(self);
-          if (job)
+          ++d(self).num_of_steal_attempts;
+          if (job) {
+            ++d(self).num_of_successfully_steals;
             return job;
+          }
         }
         if (strat.sleep_duration.count() > 0)
           std::this_thread::sleep_for(strat.sleep_duration);

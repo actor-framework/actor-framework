@@ -57,6 +57,8 @@ public:
     explicit worker_data(scheduler::abstract_coordinator*) {
       // nop
     }
+    size_t num_of_steal_attempts = 0;
+    size_t num_of_successfully_steals = 0;
   };
 
   // Create x workers.

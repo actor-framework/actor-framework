@@ -66,6 +66,14 @@ public:
     return "execution unit has no description yet";
   }
 
+  virtual size_t num_of_scheduling_events() const {
+    return 0;
+  }
+
+  virtual void add_scheduling_event() {
+    // nop
+  }
+
 protected:
   actor_system* system_;
   proxy_registry* proxies_;

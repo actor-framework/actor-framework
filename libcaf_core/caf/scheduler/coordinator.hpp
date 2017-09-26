@@ -121,6 +121,19 @@ protected:
     for (auto& w : data_.workers) {
       w->get_thread().join();
     }
+
+    // accumululate statistics
+    size_t sum_num_of_steal_attempts = 0;
+    size_t sum_num_of_successfully_steals = 0;
+    size_t sum_num_of_scheduling_events = 0;
+    for (auto& w : data_.workers) {
+      sum_num_of_steal_attempts += w->data().num_of_steal_attempts;
+      sum_num_of_successfully_steals += w->data().num_of_successfully_steals;
+      sum_num_of_scheduling_events += w->num_of_scheduling_events();
+    }
+
+    std::cerr<< sum_num_of_scheduling_events << ", " << sum_num_of_steal_attempts << ", " << sum_num_of_successfully_steals << std::endl;
+
     // run cleanup code for each resumable
     auto f = &abstract_coordinator::cleanup_and_release;
     for (auto& w : data_.workers)

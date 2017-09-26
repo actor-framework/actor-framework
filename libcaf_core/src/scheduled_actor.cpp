@@ -249,6 +249,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
           return resumable::awaiting_message;
       }
     } while (!ptr);
+    ctx->add_scheduling_event();
     switch (reactivate(*ptr)) {
       case activation_result::terminated:
         return resume_result::done;
