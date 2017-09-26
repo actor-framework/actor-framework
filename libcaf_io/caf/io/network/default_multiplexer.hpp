@@ -116,6 +116,21 @@ namespace network {
   constexpr int ec_interrupted_syscall = EINTR;
 #endif
 
+// platform-dependent SIGPIPE setup
+#if defined(CAF_MACOS) || defined(CAF_IOS) || defined(CAF_BSD)
+  // Use the socket option but no flags to recv/send on macOS/iOS/BSD.
+  constexpr int no_sigpipe_socket_flag = SO_NOSIGPIPE;
+  constexpr int no_sigpipe_io_flag = 0;
+#elif defined(CAF_WINDOWS)
+  // Do nothing on Windows (SIGPIPE does not exist).
+  constexpr int no_sigpipe_socket_flag = 0;
+  constexpr int no_sigpipe_io_flag = 0;
+#else
+  // Use flags to recv/send on Linux/Android but no socket option.
+  constexpr int no_sigpipe_socket_flag = 0;
+  constexpr int no_sigpipe_io_flag = MSG_NOSIGNAL;
+#endif
+
 // poll vs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
 # ifdef CAF_WINDOWS
@@ -170,6 +185,9 @@ enum class rw_state {
   /// Reports that an empty buffer is in use and no operation was performed.
   indeterminate
 };
+
+/// Convenience functions for checking the result of `recv` or `send`.
+bool is_error(ssize_t res, bool is_nonblock);
 
 /// Reads up to `len` bytes from `fd,` writing the received data
 /// to `buf`. Returns `true` as long as `fd` is readable and `false`

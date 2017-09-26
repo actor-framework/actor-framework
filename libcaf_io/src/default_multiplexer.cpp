@@ -56,14 +56,6 @@ using std::string;
 
 namespace {
 
-#if defined(CAF_MACOS) || defined(CAF_IOS)
-  constexpr int no_sigpipe_flag = SO_NOSIGPIPE;
-#elif defined(CAF_WINDOWS)
-  constexpr int no_sigpipe_flag = 0; // does not exist on Windows
-#else // BSD, Linux or Android
-  constexpr int no_sigpipe_flag = MSG_NOSIGNAL;
-#endif
-
 // safe ourselves some typing
 constexpr auto ipv4 = caf::io::network::protocol::ipv4;
 constexpr auto ipv6 = caf::io::network::protocol::ipv6;
@@ -131,16 +123,12 @@ namespace network {
   }
 
   expected<void> allow_sigpipe(native_socket fd, bool new_value) {
-#   if !defined(CAF_LINUX) && !defined(CAF_CYGWIN)
-    int value = new_value ? 0 : 1;
-    CALL_CFUN(res, cc_zero, "setsockopt",
-              setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value,
-                         static_cast<unsigned>(sizeof(value))));
-#   else
-    // SO_NOSIGPIPE does not exist on Linux, suppress unused warnings
-    static_cast<void>(fd);
-    static_cast<void>(new_value);
-#   endif
+    if (no_sigpipe_socket_flag != 0) {
+      int value = new_value ? 0 : 1;
+      CALL_CFUN(res, cc_zero, "setsockopt",
+                setsockopt(fd, SOL_SOCKET, no_sigpipe_socket_flag, &value,
+                           static_cast<unsigned>(sizeof(value))));
+    }
     return unit;
   }
 
@@ -647,7 +635,8 @@ bool is_error(ssize_t res, bool is_nonblock) {
 
 rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-  auto sres = ::recv(fd, reinterpret_cast<socket_recv_ptr>(buf), len, 0);
+  auto sres = ::recv(fd, reinterpret_cast<socket_recv_ptr>(buf),
+                     len, no_sigpipe_io_flag);
   CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
   if (is_error(sres, true) || sres == 0) {
     // recv returns 0  when the peer has performed an orderly shutdown
@@ -661,7 +650,7 @@ rw_state write_some(size_t& result, native_socket fd, const void* buf,
                     size_t len) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf),
-                     len, no_sigpipe_flag);
+                     len, no_sigpipe_io_flag);
   CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
   if (is_error(sres, true))
     return rw_state::failure;
@@ -727,7 +716,7 @@ void default_multiplexer::wr_dispatch_request(resumable* ptr) {
   // on windows, we actually have sockets, otherwise we have file handles
 # ifdef CAF_WINDOWS
   auto res = ::send(pipe_.second, reinterpret_cast<socket_send_ptr>(&ptrval),
-                    sizeof(ptrval), no_sigpipe_flag);
+                    sizeof(ptrval), no_sigpipe_io_flag);
 # else
   auto res = ::write(pipe_.second, &ptrval, sizeof(ptrval));
 # endif
