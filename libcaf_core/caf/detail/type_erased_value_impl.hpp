@@ -120,6 +120,10 @@ public:
     return x_;
   }
 
+  operator const value_type&() const {
+    return x_;
+  }
+
 private:
   // -- address-of-member utility ----------------------------------------------
 

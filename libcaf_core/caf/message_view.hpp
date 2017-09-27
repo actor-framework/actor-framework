@@ -33,6 +33,8 @@ public:
   virtual type_erased_tuple& content() = 0;
 
   virtual message move_content_to_message() = 0;
+
+  virtual message copy_content_to_message() const = 0;
 };
 
 } // namespace caf

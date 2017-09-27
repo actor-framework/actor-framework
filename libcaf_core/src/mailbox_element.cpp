@@ -44,6 +44,10 @@ public:
     return std::move(msg_);
   }
 
+  message copy_content_to_message() const override {
+    return msg_;
+  }
+
 private:
   /// Stores the content of this mailbox element.
   message msg_;
@@ -78,6 +82,10 @@ type_erased_tuple& mailbox_element::content() {
 }
 
 message mailbox_element::move_content_to_message() {
+  return {};
+}
+
+message mailbox_element::copy_content_to_message() const {
   return {};
 }
 

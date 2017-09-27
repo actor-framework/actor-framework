@@ -75,6 +75,8 @@ public:
 
   message move_content_to_message() override;
 
+  message copy_content_to_message() const override;
+
   const type_erased_tuple& content() const;
 
   mailbox_element(mailbox_element&&) = delete;
@@ -121,6 +123,12 @@ public:
     return detail::apply_moved_args(f, detail::get_indices(xs), xs);
   }
 
+  message copy_content_to_message() const override {
+    message_factory f;
+    auto& xs = this->data();
+    return detail::apply_args(f, detail::get_indices(xs), xs);
+  }
+
   void dispose() noexcept {
     this->deref();
   }
@@ -146,6 +154,12 @@ public:
     message_factory f;
     auto& xs = this->data();
     return detail::apply_moved_args(f, detail::get_indices(xs), xs);
+  }
+
+  message copy_content_to_message() const override {
+    message_factory f;
+    auto& xs = this->data();
+    return detail::apply_args(f, detail::get_indices(xs), xs);
   }
 };
 
