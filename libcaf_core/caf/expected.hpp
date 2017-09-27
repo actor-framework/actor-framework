@@ -164,7 +164,7 @@ public:
     else {
       destroy();
       engaged_ = false;
-      new (&value_) caf::error(std::move(e));
+      new (&error_) caf::error(std::move(e));
     }
     return *this;
   }
