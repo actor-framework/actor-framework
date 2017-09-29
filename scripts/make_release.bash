@@ -108,7 +108,7 @@ with the developer blog checked out one level above, i.e.:
 
 # assumed files
 token_path="$HOME/.github-oauth-token"
-blog_msg="github_release_note.md"
+blog_msg="blog_release_note.md"
 github_msg="github_release_note.md"
 config_hpp_path="libcaf_core/caf/config.hpp"
 
@@ -116,16 +116,19 @@ config_hpp_path="libcaf_core/caf/config.hpp"
 blog_posts_path="../blog/_posts"
 
 # check whether all expected files and directories exist
-assert_exists "$token_path" "$config_hpp_path" "$blog_msg" "$github_msg"
+assert_exists "$token_path" "$config_hpp_path" "$github_msg"
 
+# check for a clean state
+assert_exists_not .make-release-steps.bash
 assert_git_status_clean "."
 
-if [ ! -f "$blog_posts_path"  ]; then
-  ask_permission "blog_release_note.md missing, continue without blog post [y] or abort [n]?"
+if [ ! -f "$blog_msg"  ]; then
+  ask_permission "$blog_msg missing, continue without blog post [y] or abort [n]?"
 else
   # target files
+  assert_exists "$blog_posts_path"
   blog_target_file="$blog_posts_path/$(date +%F)-version-$1-released.md"
-  assert_exists_not "$blog_target_file" .make-release-steps.bash
+  assert_exists_not "$blog_target_file"
   assert_git_status_clean "../blog/"
 fi
 
@@ -134,7 +137,7 @@ fi
 #   II: two-digit (zero padded) minor version
 #   PP: two-digit (zero padded) patch version
 # but omit leading zeros
-version_str=$(echo "$1" | awk -F. '{ if ($1 > 0) printf("%d%02d%02d\n", $1, $2, $3); else printf("%02d%02d\n", $2, $3)  }')
+version_str=$(echo "$1" | awk -F. '"{ if ($1 > 0) printf("%d%02d%02d\n", $1, $2, $3); else printf("%02d%02d\n", $2, $3)  }')
 
 echo ">>> patching config.hpp"
 sed "s/#define CAF_VERSION [0-9]*/#define CAF_VERSION ${version_str}/g" < "$config_hpp_path" > .tmp_conf_hpp
@@ -170,7 +173,7 @@ git checkout develop
 curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-framework/releases?access_token=$token
 " > .make-release-steps.bash
 
-if [ -f "$blog_posts_path"  ]; then
+if [ -f "$blog_msg"  ]; then
   echo "\
   cp "$blog_msg" "$blog_target_file"
   cd ../blog
@@ -192,7 +195,10 @@ chmod +x .make-release-steps.bash
 
 echo ; echo
 echo ">>> cleaning up"
-rm "$blog_msg" "$github_msg" .make-release-steps.bash
+rm "$github_msg" .make-release-steps.bash
+if [ -f "$blog_msg" ]; then
+  rm "$blog_msg"
+fi
 
 echo ; echo
 echo ">>> done"
