@@ -36,7 +36,7 @@ namespace io {
 namespace network {
 
 // {protocol => address}
-using address_listing = std::map<protocol, std::vector<std::string>>;
+using address_listing = std::map<protocol::network, std::vector<std::string>>;
 
 // {interface_name => {protocol => address}}
 using interfaces_map = std::map<std::string, address_listing>;
@@ -45,11 +45,11 @@ using interfaces_map = std::map<std::string, address_listing>;
 class interfaces {
 public:
   /// Consumes `{interface_name, protocol_type, is_localhost, address}` entries.
-  using consumer = std::function<void (const char*, protocol,
+  using consumer = std::function<void (const char*, protocol::network,
                                        bool, const char*)>;
 
   /// Traverses all network interfaces for given protocols using `f`.
-  static void traverse(std::initializer_list<protocol> ps, consumer f);
+  static void traverse(std::initializer_list<protocol::network> ps, consumer f);
 
   /// Traverses all network interfaces using `f`.
   static void traverse(consumer f);
@@ -62,21 +62,22 @@ public:
 
   /// Returns all addresses for all devices for given protocols.
   static std::vector<std::string>
-  list_addresses(std::initializer_list<protocol> procs,
+  list_addresses(std::initializer_list<protocol::network> procs,
                  bool include_localhost = true);
 
   /// Returns all addresses for all devices for given protocol.
-  static std::vector<std::string> list_addresses(protocol proc,
+  static std::vector<std::string> list_addresses(protocol::network proc,
                                                  bool include_localhost = true);
 
   /// Returns a native IPv4 or IPv6 translation of `host`.
-  static optional<std::pair<std::string, protocol>>
-  native_address(const std::string& host, optional<protocol> preferred = none);
+  static optional<std::pair<std::string, protocol::network>>
+  native_address(const std::string& host,
+                 optional<protocol::network> preferred = none);
 
   /// Returns the host and protocol available for a local server socket
-  static std::vector<std::pair<std::string, protocol>>
+  static std::vector<std::pair<std::string, protocol::network>>
   server_address(uint16_t port, const char* host,
-                 optional<protocol> preferred = none);
+                 optional<protocol::network> preferred = none);
 };
 
 } // namespace network

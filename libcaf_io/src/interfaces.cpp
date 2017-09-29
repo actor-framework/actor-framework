@@ -56,7 +56,7 @@ namespace network {
 
 // {interface_name => {protocol => address}}
 using interfaces_map = std::map<std::string,
-                                std::map<protocol,
+                                std::map<protocol::network,
                                          std::vector<std::string>>>;
 
 template <class T>
@@ -161,10 +161,7 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
 namespace {
 
 template <class F>
-void traverse_impl(std::initializer_list<protocol> ps, F f) {
-  if (std::find(ps.begin(), ps.end(), protocol::ethernet) != ps.end())
-    for (auto& pair : detail::get_mac_addresses())
-      f(pair.first.c_str(), protocol::ethernet, false, pair.second.c_str());
+void traverse_impl(std::initializer_list<protocol::network> ps, F f) {
   auto get_ipv4 = std::find(ps.begin(), ps.end(), protocol::ipv4) != ps.end();
   auto get_ipv6 = std::find(ps.begin(), ps.end(), protocol::ipv6) != ps.end();
   for_each_address(get_ipv4, get_ipv6, f);
@@ -172,54 +169,58 @@ void traverse_impl(std::initializer_list<protocol> ps, F f) {
 
 } // namespace <anonymous>
 
-void interfaces::traverse(std::initializer_list<protocol> ps, consumer f) {
+void interfaces::traverse(std::initializer_list<protocol::network> ps,
+                          consumer f) {
   traverse_impl(ps, std::move(f));
 }
 
 void interfaces::traverse(consumer f) {
-  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6}, std::move(f));
+  traverse_impl({protocol::ipv4, protocol::ipv6}, std::move(f));
 }
 
 interfaces_map interfaces::list_all(bool include_localhost) {
   interfaces_map result;
-  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
-                [&](const char* name, protocol p, bool lo, const char* addr) {
-    if (include_localhost || !lo)
-      result[name][p].emplace_back(addr);
-  });
+  traverse_impl(
+    {protocol::ipv4, protocol::ipv6},
+    [&](const char* name, protocol::network p, bool lo, const char* addr) {
+      if (include_localhost || !lo)
+        result[name][p].emplace_back(addr);
+    });
   return result;
 }
 
-std::map<protocol, std::vector<std::string>>
+std::map<protocol::network, std::vector<std::string>>
 interfaces::list_addresses(bool include_localhost) {
-  std::map<protocol, std::vector<std::string>> result;
-  traverse_impl({protocol::ethernet, protocol::ipv4, protocol::ipv6},
-                [&](const char*, protocol p, bool lo, const char* addr) {
-    if (include_localhost || !lo)
-      result[p].emplace_back(addr);
-  });
+  std::map<protocol::network, std::vector<std::string>> result;
+  traverse_impl(
+    {protocol::ipv4, protocol::ipv6},
+    [&](const char*, protocol::network p, bool lo, const char* addr) {
+      if (include_localhost || !lo)
+        result[p].emplace_back(addr);
+    });
   return result;
 }
 
 std::vector<std::string>
-interfaces::list_addresses(std::initializer_list<protocol> procs,
+interfaces::list_addresses(std::initializer_list<protocol::network> procs,
                            bool include_localhost) {
   std::vector<std::string> result;
-  traverse_impl(procs, [&](const char*, protocol, bool lo, const char* addr) {
-    if (include_localhost || !lo)
-      result.emplace_back(addr);
-  });
+  traverse_impl(procs,
+                [&](const char*, protocol::network, bool lo, const char* addr) {
+                  if (include_localhost || !lo)
+                    result.emplace_back(addr);
+                });
   return result;
 }
 
-std::vector<std::string> interfaces::list_addresses(protocol proc,
+std::vector<std::string> interfaces::list_addresses(protocol::network proc,
                                                     bool include_localhost) {
   return list_addresses({proc}, include_localhost);
 }
 
-optional<std::pair<std::string, protocol>>
+optional<std::pair<std::string, protocol::network>>
 interfaces::native_address(const std::string& host,
-                           optional<protocol> preferred) {
+                           optional<protocol::network> preferred) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
@@ -239,10 +240,10 @@ interfaces::native_address(const std::string& host,
   return none;
 }
 
-std::vector<std::pair<std::string, protocol>>
+std::vector<std::pair<std::string, protocol::network>>
 interfaces::server_address(uint16_t port, const char* host,
-                           optional<protocol> preferred) {
-  using addr_pair = std::pair<std::string, protocol>;
+                           optional<protocol::network> preferred) {
+  using addr_pair = std::pair<std::string, protocol::network>;
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;

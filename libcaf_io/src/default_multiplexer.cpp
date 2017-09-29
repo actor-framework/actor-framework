@@ -1153,9 +1153,9 @@ bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
   return connect(fd, reinterpret_cast<const sockaddr*>(&sa), sizeof(sa)) == 0;
 }
 
-expected<native_socket> new_tcp_connection(const std::string& host,
-                                           uint16_t port,
-                                           optional<protocol> preferred) {
+expected<native_socket>
+new_tcp_connection(const std::string& host, uint16_t port,
+                   optional<protocol::network> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
   CAF_LOG_INFO("try to connect to:" << CAF_ARG(host) << CAF_ARG(port));
   auto res = interfaces::native_address(host, std::move(preferred));

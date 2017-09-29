@@ -676,9 +676,9 @@ private:
   ProtocolPolicy policy_;
 };
 
-expected<native_socket> new_tcp_connection(const std::string& host,
-                                           uint16_t port,
-                                           optional<protocol> preferred = none);
+expected<native_socket>
+new_tcp_connection(const std::string& host, uint16_t port,
+                   optional<protocol::network> preferred = none);
 
 expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
                                               bool reuse_addr);

@@ -201,16 +201,17 @@ void bootstrap(actor_system& system,
           << " --caf#slave-name=" << slave.host
           << " --caf#bootstrap-node=";
       bool is_first = true;
-      interfaces::traverse({protocol::ipv4, protocol::ipv6},
-                           [&](const char*, protocol, bool lo, const char* x) {
-        if (lo)
-          return;
-        if (!is_first)
-          oss << ",";
-        else
-          is_first = false;
-        oss << x << "/" << port;
-      });
+      interfaces::traverse(
+        {protocol::ipv4, protocol::ipv6},
+        [&](const char*, protocol::network, bool lo, const char* x) {
+          if (lo)
+            return;
+          if (!is_first)
+            oss << ",";
+          else
+            is_first = false;
+          oss << x << "/" << port;
+        });
       for (auto& arg : args)
         oss << " " << arg;
       if (!run_ssh(system, wdir, oss.str(), slave.host))

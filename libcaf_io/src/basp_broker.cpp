@@ -401,8 +401,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
           [&](uint16_t port, network::address_listing& addresses) {
             auto& mx = system().middleman().backend();
             for (auto& kvp : addresses)
-              if (kvp.first != network::protocol::ethernet)
-                for (auto& addr : kvp.second) {
+              for (auto& addr : kvp.second) {
                 auto hdl = mx.new_tcp_scribe(addr, port);
                 if (hdl) {
                   // gotcha! send scribe to our BASP broker
@@ -411,7 +410,6 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
                   helper->send(s, connect_atom::value, *hdl, port);
                   return;
                 }
-                // else: simply try next address
               }
             CAF_LOG_INFO("could not connect to node directly:" << CAF_ARG(nid));
           }
