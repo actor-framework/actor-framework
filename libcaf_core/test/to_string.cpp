@@ -28,7 +28,8 @@ using namespace std;
 using namespace caf;
 
 CAF_TEST(buffer) {
-  std::vector<char> buf;
+  // Use `signed char` explicitly to make sure all compilers agree.
+  std::vector<signed char> buf;
   CAF_CHECK_EQUAL(deep_to_string(buf), "[]");
   CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "00");
   buf.push_back(-1);
