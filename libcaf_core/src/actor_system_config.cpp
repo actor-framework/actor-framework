@@ -135,6 +135,7 @@ actor_system_config::actor_system_config()
   middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
   middleman_heartbeat_interval = 0;
+  middleman_detach_utility_actors = true;
   middleman_detach_multiplexer = true;
   // fill our options vector for creating INI and CLI parsers
   opt_group{options_, "scheduler"}
