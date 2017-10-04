@@ -40,18 +40,8 @@ namespace caf {
 /// Stream communication messages for handshaking, ACKing, data transmission,
 /// etc.
 struct stream_msg : tag::boxing_type {
-  /// A flow label characterizes nested types.
-  enum flow_label {
-    /// Identifies content types that only flow downstream.
-    flows_downstream,
-    /// Identifies content types that only flow upstream.
-    flows_upstream
-  };
-
   /// Initiates a stream handshake.
   struct open {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Contains a type-erased stream<T> object as first argument followed by
@@ -70,8 +60,6 @@ struct stream_msg : tag::boxing_type {
   /// Acknowledges a previous `open` message and finalizes a stream handshake.
   /// Also signalizes initial demand.
   struct ack_open {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Allows actors to participate in a stream instead of the actor
@@ -89,8 +77,6 @@ struct stream_msg : tag::boxing_type {
 
   /// Transmits stream data.
   struct batch {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Size of the type-erased vector<T> (used credit).
@@ -104,8 +90,6 @@ struct stream_msg : tag::boxing_type {
   /// Cumulatively acknowledges received batches and signalizes new demand from
   /// a sink to its source.
   struct ack_batch {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Newly available credit.
@@ -116,24 +100,18 @@ struct stream_msg : tag::boxing_type {
 
   /// Orderly shuts down a stream after receiving an ACK for the last batch.
   struct close {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
   };
 
   /// Informs a source that a sink orderly drops out of a stream.
   struct drop {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
   };
 
   /// Propagates a fatal error from sources to sinks.
   struct forced_close {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_downstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Reason for shutting down the stream.
@@ -142,8 +120,6 @@ struct stream_msg : tag::boxing_type {
 
   /// Propagates a fatal error from sinks to sources.
   struct forced_drop {
-    /// Allows visitors to dispatch on this tag.
-    static constexpr flow_label label = flows_upstream;
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = stream_msg;
     /// Reason for shutting down the stream.
