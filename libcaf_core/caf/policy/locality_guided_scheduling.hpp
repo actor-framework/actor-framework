@@ -174,11 +174,11 @@ public:
       while (current_cache_obj
              && current_cache_obj->type == hwloc_obj_type_t::HWLOC_OBJ_CACHE) {
         auto result_pus = hwloc_bitmap_make_wrapper();
-        traverse_hwloc_obj(result_pus.get(), topo, current_cache_obj, current_pu_id,
-                           last_cache_obj);
+        traverse_hwloc_obj(result_pus.get(), topo, current_cache_obj,
+                           current_pu_id, last_cache_obj);
         if (!hwloc_bitmap_iszero(result_pus.get())) {
           result_map.insert(make_pair(current_cache_lvl / distance_divider,
-                                      move(result_pus)));
+                                      std::move(result_pus)));
         }
         ++current_cache_lvl;
         last_cache_obj = current_cache_obj;
@@ -217,7 +217,7 @@ public:
         auto result_map_it = result_map.find(dist_ptr[x]);
         if (result_map_it == result_map.end()) {
           // create a new distane group
-          result_map.insert(make_pair(dist_ptr[x], move(tmp_pus)));
+          result_map.insert(make_pair(dist_ptr[x], std::move(tmp_pus)));
         } else {
           // add PUs to an available distance group
           hwloc_bitmap_or(result_map_it->second.get(),
@@ -249,14 +249,14 @@ public:
         }
         cache_dists.insert(make_move_iterator(begin(node_dists)),
                              make_move_iterator(end(node_dists)));
-        return move(cache_dists);
+        return std::move(cache_dists);
       } else if (!cache_dists.empty() && node_dists.empty()) {
         // caf cannot it collected all pus because because it CPU could have two
         // L3-caches and only of them is represented by cahces_dists.
         CAF_CRITICAL("caf could not reliable collect all PUs");
       } else if (cache_dists.empty() && !node_dists.empty()) {
         wp_matrix_first_node_idx = 0;
-        return move(node_dists);
+        return std::move(node_dists);
       } else { 
         // both maps are empty, which happens on a single core machine
         wp_matrix_first_node_idx = -1;
@@ -293,15 +293,17 @@ public:
         }
         pu_distance_map_t tmp_node_dists;
         tmp_node_dists.insert(
-          make_pair(normalized_numa_node_dist, move(all_pus)));
-        pu_dists = merge_dist_maps(move(cache_dists), move(tmp_node_dists),
-                                   wp_matrix_first_node_idx);
+          make_pair(normalized_numa_node_dist, std::move(all_pus)));
+        pu_dists =
+          merge_dist_maps(std::move(cache_dists), std::move(tmp_node_dists),
+                          wp_matrix_first_node_idx);
       } else {
         auto cache_dists = traverse_caches(topo, current_pu);
         auto node_dists = traverse_nodes(topo, node_dist_matrix, current_pu,
                                          current_node.get());
-        pu_dists = merge_dist_maps(move(cache_dists), move(node_dists),
-                                   wp_matrix_first_node_idx);
+        pu_dists =
+          merge_dist_maps(std::move(cache_dists), std::move(node_dists),
+                          wp_matrix_first_node_idx);
       }
       xxx(current_pu, pu_dists);
       // map PU ids to worker* sorted by its distance
@@ -319,7 +321,7 @@ public:
         }
         // current_worker_group can be empty if pus of this level are deactivated
         if (!current_worker_group.empty()) {
-          result_wp_matrix.emplace_back(move(current_worker_group));
+          result_wp_matrix.emplace_back(std::move(current_worker_group));
         }
       }
       //accumulate steal_groups - each group contains all lower level groups 
