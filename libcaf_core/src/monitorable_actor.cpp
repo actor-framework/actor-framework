@@ -57,7 +57,7 @@ void monitorable_actor::attach(attachable_ptr ptr) {
 size_t monitorable_actor::detach(const attachable::token& what) {
   CAF_LOG_TRACE("");
   std::unique_lock<std::mutex> guard{mtx_};
-  return detach_impl(what, attachables_head_);
+  return detach_impl(what);
 }
 
 bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
@@ -141,7 +141,7 @@ void monitorable_actor::remove_link(abstract_actor* x) {
   default_attachable::observe_token tk{x->address(), default_attachable::link};
   joined_exclusive_critical_section(this, x, [&] {
     if (x->remove_backlink(this))
-      detach_impl(tk, attachables_head_, true);
+      detach_impl(tk, true);
   });
 }
 
@@ -158,7 +158,7 @@ bool monitorable_actor::add_backlink(abstract_actor* x) {
   if (getf(is_terminated_flag)) {
     fail_state = fail_state_;
     send_exit_immediately = true;
-  } else if (detach_impl(tk, attachables_head_, true, true) == 0) {
+  } else if (detach_impl(tk, true, true) == 0) {
     attach_impl(tmp);
     success = true;
   }
@@ -172,27 +172,32 @@ bool monitorable_actor::remove_backlink(abstract_actor* x) {
   // Called in an exclusive critical section.
   CAF_LOG_TRACE(CAF_ARG(x));
   default_attachable::observe_token tk{x->address(), default_attachable::link};
-  return detach_impl(tk, attachables_head_, true) > 0;
+  return detach_impl(tk, true) > 0;
 }
 
 size_t monitorable_actor::detach_impl(const attachable::token& what,
-                                      attachable_ptr& ptr, bool stop_on_hit,
-                                      bool dry_run) {
-  CAF_LOG_TRACE("");
-  if (!ptr) {
-    CAF_LOG_DEBUG("invalid ptr");
-    return 0;
-  }
-  if (ptr->matches(what)) {
-    if (!dry_run) {
-      CAF_LOG_DEBUG("removed element");
-      attachable_ptr next;
-      next.swap(ptr->next);
-      ptr.swap(next);
+                                      bool stop_on_hit, bool dry_run) {
+  CAF_LOG_TRACE(CAF_ARG(stop_on_hit) << CAF_ARG(dry_run));
+  size_t count = 0;
+  auto i = &attachables_head_;
+  while (*i != nullptr) {
+    if ((*i)->matches(what)) {
+      ++count;
+      if (!dry_run) {
+        CAF_LOG_DEBUG("removed element");
+        attachable_ptr next;
+        next.swap((*i)->next);
+        (*i).swap(next);
+      } else {
+        i = &((*i)->next);
+      }
+      if (stop_on_hit)
+        return count;
+    } else {
+      i = &((*i)->next);
     }
-    return stop_on_hit ? 1 : 1 + detach_impl(what, ptr, stop_on_hit, dry_run);
   }
-  return detach_impl(what, ptr->next, stop_on_hit, dry_run);
+  return count;
 }
 
 bool monitorable_actor::handle_system_message(mailbox_element& x,

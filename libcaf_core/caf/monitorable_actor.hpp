@@ -130,10 +130,8 @@ protected:
   }
 
   // precondition: `mtx_` is acquired
-  static size_t detach_impl(const attachable::token& what,
-                            attachable_ptr& ptr,
-                            bool stop_on_hit = false,
-                            bool dry_run = false);
+  size_t detach_impl(const attachable::token& what, bool stop_on_hit = false,
+                     bool dry_run = false);
 
   // handles only `exit_msg` and `sys_atom` messages;
   // returns true if the message is handled
