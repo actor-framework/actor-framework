@@ -146,9 +146,11 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
 
 void basp_broker_state::purge_state(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
+  // We can only be sure a node is down when we had a direct connection.
   auto hdl = instance.tbl().lookup_direct(nid);
   if (hdl == invalid_connection_handle)
     return;
+  // Cleanup state in case we lost connection during handshake.
   auto i = ctx.find(hdl);
   if (i != ctx.end()) {
     auto& ref = i->second;
@@ -158,6 +160,9 @@ void basp_broker_state::purge_state(const node_id& nid) {
     }
     ctx.erase(i);
   }
+  // Destroy all proxies of the lost node.
+  namespace_.erase(nid);
+  // Close network connection.
   self->close(hdl);
 }
 
@@ -179,7 +184,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
     instance.tbl().flush(*path);
   };
   auto ptr = actor_cast<strong_actor_ptr>(entry);
-  if (!ptr) {
+  if (ptr == nullptr) {
     CAF_LOG_DEBUG("kill proxy immediately");
     // kill immediately if actor has already terminated
     send_kill_proxy_instance(exit_reason::unknown);
