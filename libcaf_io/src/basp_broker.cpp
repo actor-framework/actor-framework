@@ -162,46 +162,57 @@ void basp_broker_state::purge_state(const node_id& nid) {
   }
   // Destroy all proxies of the lost node.
   namespace_.erase(nid);
+  // Cleanup all possible remaining references to the lost node.
+  for (auto& kvp : monitored_actors)
+    kvp.second.erase(nid);
   // Close network connection.
   self->close(hdl);
+}
+
+void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
+                                                 actor_id aid, error rsn) {
+  CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
+  if (rsn == none)
+    rsn = exit_reason::unknown;
+  auto path = instance.tbl().lookup(nid);
+  if (!path) {
+    CAF_LOG_INFO("cannot send exit message for proxy, no route to host:"
+                 << CAF_ARG(nid));
+    return;
+  }
+  instance.write_kill_proxy(self->context(), path->wr_buf,
+                                     nid, aid, rsn);
+  instance.tbl().flush(*path);
 }
 
 void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
   // source node has created a proxy for one of our actors
-  auto entry = system().registry().get(aid);
-  auto send_kill_proxy_instance = [=](error rsn) {
-    if (!rsn)
-      rsn = exit_reason::unknown;
-    auto path = instance.tbl().lookup(nid);
-    if (!path) {
-      CAF_LOG_INFO("cannot send exit message for proxy, no route to host:"
-                   << CAF_ARG(nid));
-      return;
-    }
-    instance.write_kill_proxy(self->context(), path->wr_buf,
-                                       nid, aid, rsn);
-    instance.tbl().flush(*path);
-  };
-  auto ptr = actor_cast<strong_actor_ptr>(entry);
+  auto ptr = system().registry().get(aid);
   if (ptr == nullptr) {
     CAF_LOG_DEBUG("kill proxy immediately");
     // kill immediately if actor has already terminated
-    send_kill_proxy_instance(exit_reason::unknown);
+    send_kill_proxy_instance(nid, aid, exit_reason::unknown);
   } else {
-    strong_actor_ptr tmp{self->ctrl()};
-    auto mm = &system().middleman();
-    ptr->get()->attach_functor([=](const error& fail_state) {
-      mm->backend().dispatch([=] {
-        CAF_LOG_TRACE(CAF_ARG(fail_state));
-        auto bptr = static_cast<basp_broker*>(tmp->get());
-        // ... to make sure this is safe
-        if (bptr == mm->named_broker<basp_broker>(atom("BASP"))
-            && !bptr->getf(abstract_actor::is_terminated_flag))
-          send_kill_proxy_instance(fail_state);
-      });
-    });
+    auto entry = ptr->address();
+    auto i = monitored_actors.find(entry);
+    if (i == monitored_actors.end()) {
+      self->monitor(ptr);
+      std::unordered_set<node_id> tmp{nid};
+      monitored_actors.emplace(entry, std::move(tmp));
+    } else {
+      i->second.emplace(nid);
+    }
   }
+}
+
+void basp_broker_state::handle_down_msg(down_msg& dm) {
+  auto i = monitored_actors.find(dm.source);
+  if (i == monitored_actors.end())
+    return;
+  for (auto& nid : i->second)
+    send_kill_proxy_instance(nid, dm.source.id(), dm.reason);
+  monitored_actors.erase(i);
 }
 
 void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
@@ -481,7 +492,9 @@ void basp_broker_state::set_context(connection_handle hdl) {
 
 basp_broker::basp_broker(actor_config& cfg)
     : stateful_actor<basp_broker_state, broker>(cfg) {
-  // nop
+  set_down_handler([](local_actor* ptr, down_msg& x) {
+    static_cast<basp_broker*>(ptr)->state.handle_down_msg(x);
+  });
 }
 
 behavior basp_broker::make_behavior() {
