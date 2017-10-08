@@ -22,7 +22,14 @@
 namespace caf {
 
 attachable::~attachable() {
-  // nop
+  // Avoid recursive cleanup of next pointers because this can cause a stack
+  // overflow for long linked lists.
+  using std::swap;
+  while (next != nullptr) {
+    attachable_ptr tmp;
+    swap(next->next, tmp);
+    swap(next, tmp);
+  }
 }
 
 attachable::token::token(size_t typenr, const void* vptr)
