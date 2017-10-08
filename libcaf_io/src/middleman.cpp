@@ -264,12 +264,23 @@ void middleman::start() {
     // suppress creation of the supervisor.
     backend().thread_id(std::this_thread::get_id());
   } else {
-    thread_ = std::thread{[this] {
+    std::atomic<bool> init_done{false};
+    std::mutex mtx;
+    std::condition_variable cv;
+    thread_ = std::thread{[&,this] {
       CAF_SET_LOGGER_SYS(&system());
       CAF_LOG_TRACE("");
+      {
+        std::unique_lock<std::mutex> guard{mtx};
+        backend().thread_id(std::this_thread::get_id());
+        init_done = true;
+        cv.notify_one();
+      }
       backend().run();
     }};
-    backend().thread_id(thread_.get_id());
+    std::unique_lock<std::mutex> guard{mtx};
+    while (init_done == false)
+      cv.wait(guard);
   }
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>(atom("BASP"));
