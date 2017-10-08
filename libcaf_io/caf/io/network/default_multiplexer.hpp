@@ -347,6 +347,8 @@ public:
 
   supervisor_ptr make_supervisor() override;
 
+  /// Tries to run one or more events.
+  /// @returns `true` if at least one event occurred, otherwise `false`.
   bool poll_once(bool block);
 
   bool try_run_once() override;
@@ -359,7 +361,13 @@ public:
 
   void del(operation op, native_socket fd, event_handler* ptr);
 
+  /// Calls `ptr->resume`.
+  void resume(intrusive_ptr<resumable> ptr);
+
 private:
+  /// Calls `epoll`, `kqueue`, or `poll` with or without blocking.
+  bool poll_once_impl(bool block);
+
   // platform-dependent additional initialization code
   void init();
 
@@ -410,14 +418,31 @@ private:
 
   void wr_dispatch_request(resumable* ptr);
 
-  //resumable* rd_dispatch_request();
-
+  /// Socket handle to an OS-level event loop such as `epoll`. Unused in the
+  /// `poll` implementation.
   native_socket epollfd_; // unused in poll() implementation
+
+  /// Platform-dependent bookkeeping data, e.g., `pollfd` or `epoll_event`.
   std::vector<multiplexer_data> pollset_;
-  std::vector<event> events_; // always sorted by .fd
+
+  /// Insertion and deletion events. This vector is always sorted by `.fd`.
+  std::vector<event> events_;
+
+  /// Platform-dependent meta data for `pollset_`. This allows O(1) lookup of
+  /// event handlers from `pollfd`.
   multiplexer_poll_shadow_data shadow_;
+
+  /// Pipe for pushing events and callbacks into the multiplexer's thread.
   std::pair<native_socket, native_socket> pipe_;
+
+  /// Special-purpose event handler for the pipe.
   pipe_reader pipe_reader_;
+
+  /// Events posted from the multiplexer's own thread are cached in this vector
+  /// in order to prevent the multiplexer from writing into its own pipe. This
+  /// avoids a possible deadlock where the multiplexer is blocked in
+  /// `wr_dispatch_request` when the pipe's buffer is full.
+  std::vector<intrusive_ptr<resumable>> internally_posted_;
 };
 
 inline connection_handle conn_hdl_from_socket(native_socket fd) {

@@ -296,8 +296,9 @@ namespace network {
     }
   }
 
-  bool default_multiplexer::poll_once(bool block) {
+  bool default_multiplexer::poll_once_impl(bool block) {
     CAF_LOG_TRACE("epoll()-based multiplexer");
+    CAF_ASSERT(block == false || internally_posted_.empty());
     // Keep running in case of `EINTR`.
     for (;;) {
       int presult = epoll_wait(epollfd_, pollset_.data(),
@@ -437,8 +438,9 @@ namespace network {
     shadow_.push_back(&pipe_reader_);
   }
 
-  bool default_multiplexer::poll_once(bool block) {
+  bool default_multiplexer::poll_once_impl(bool block) {
     CAF_LOG_TRACE("poll()-based multiplexer");
+    CAF_ASSERT(block == false || internally_posted_.empty());
     // we store the results of poll() in a separate vector , because
     // altering the pollset while traversing it is not exactly a
     // bright idea ...
@@ -786,6 +788,46 @@ void default_multiplexer::init() {
 # endif
 }
 
+bool default_multiplexer::poll_once(bool block) {
+  CAF_LOG_TRACE(CAF_ARG(block));
+  if (!internally_posted_.empty()) {
+    // Don't iterate internally_posted_ directly, because resumables can
+    // enqueue new elements into it.
+    std::vector<intrusive_ptr<resumable>> xs;
+    internally_posted_.swap(xs);
+    for (auto& ptr : xs)
+      resume(std::move(ptr));
+    for (auto& me : events_)
+      handle(me);
+    events_.clear();
+    // Try to swap back to internall_posted_ to re-use allocated memory.
+    if (internally_posted_.empty()) {
+      xs.swap(internally_posted_);
+      internally_posted_.clear();
+    }
+    poll_once_impl(false);
+    return true;
+  }
+  return poll_once_impl(block);
+}
+
+void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
+  CAF_LOG_TRACE("");
+  auto mt = system().config().scheduler_max_throughput;
+  switch (ptr->resume(this, mt)) {
+    case resumable::resume_later:
+      // Delay resumable until next cycle.
+      internally_posted_.emplace_back(ptr.release(), false);
+      break;
+    case resumable::shutdown_execution_unit:
+      // Don't touch reference count of shutdown helpers.
+      ptr.release();
+      break;
+    default:
+      ; // Done. Release reference to resumable.
+  }
+}
+
 default_multiplexer::~default_multiplexer() {
   if (epollfd_ != invalid_native_socket)
     closesocket(epollfd_);
@@ -807,14 +849,18 @@ default_multiplexer::~default_multiplexer() {
 }
 
 void default_multiplexer::exec_later(resumable* ptr) {
-  CAF_ASSERT(ptr);
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  CAF_ASSERT(ptr != nullptr);
   switch (ptr->subtype()) {
     case resumable::io_actor:
     case resumable::function_object:
-      wr_dispatch_request(ptr);
+      if (std::this_thread::get_id() != thread_id())
+        wr_dispatch_request(ptr);
+      else
+        internally_posted_.emplace_back(ptr, false);
       break;
     default:
-     system().scheduler().enqueue(ptr);
+      system().scheduler().enqueue(ptr);
   }
 }
 
@@ -909,27 +955,12 @@ resumable* pipe_reader::try_read_next() {
 
 void pipe_reader::handle_event(operation op) {
   CAF_LOG_TRACE(CAF_ARG(op));
-  auto mt = backend().system().config().scheduler_max_throughput;
-  switch (op) {
-    case operation::read: {
-    auto cb = try_read_next();
-      switch (cb->resume(&backend(), mt)) {
-        case resumable::resume_later:
-          backend().exec_later(cb);
-          break;
-        case resumable::done:
-        case resumable::awaiting_message:
-          intrusive_ptr_release(cb);
-          break;
-        default:
-          break; // ignored
-      }
-      break;
-    }
-    default:
-      // nop (simply ignore errors)
-      break;
+  if (op == operation::read) {
+    auto ptr = try_read_next();
+    if (ptr != nullptr)
+      backend().resume({ptr, false});
   }
+  // else: ignore errors
 }
 
 void pipe_reader::init(native_socket sock_fd) {
