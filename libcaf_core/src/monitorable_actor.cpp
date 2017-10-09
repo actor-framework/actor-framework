@@ -39,7 +39,7 @@ const char* monitorable_actor::name() const {
 
 void monitorable_actor::attach(attachable_ptr ptr) {
   CAF_LOG_TRACE("");
-  CAF_ASSERT(ptr);
+  CAF_ASSERT(ptr != nullptr);
   error fail_state;
   auto attached = exclusive_critical_section([&] {
     if (getf(is_terminated_flag)) {
@@ -58,6 +58,19 @@ size_t monitorable_actor::detach(const attachable::token& what) {
   CAF_LOG_TRACE("");
   std::unique_lock<std::mutex> guard{mtx_};
   return detach_impl(what);
+}
+
+void monitorable_actor::unlink_from(const actor_addr& x) {
+  auto ptr = actor_cast<strong_actor_ptr>(x);
+  if (ptr != nullptr) {
+    if (ptr->get() != this)
+      remove_link(ptr->get());
+  } else {
+    default_attachable::observe_token tk{x, default_attachable::link};
+    exclusive_critical_section([&] {
+      detach_impl(tk, true);
+    });
+  }
 }
 
 bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
@@ -140,8 +153,8 @@ void monitorable_actor::remove_link(abstract_actor* x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   default_attachable::observe_token tk{x->address(), default_attachable::link};
   joined_exclusive_critical_section(this, x, [&] {
-    if (x->remove_backlink(this))
-      detach_impl(tk, true);
+    x->remove_backlink(this);
+    detach_impl(tk, true);
   });
 }
 

@@ -44,6 +44,8 @@ void forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
                                          const forwarding_stack* fwd) {
   CAF_LOG_TRACE(CAF_ARG(id()) << CAF_ARG(sender)
                 << CAF_ARG(mid) << CAF_ARG(msg));
+  if (msg.match_elements<exit_msg>())
+    unlink_from(msg.get_as<exit_msg>(0).source);
   forwarding_stack tmp;
   shared_lock<detail::shared_spinlock> guard(mtx_);
   if (broker_)

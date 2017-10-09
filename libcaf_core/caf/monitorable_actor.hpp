@@ -71,11 +71,7 @@ public:
   }
 
   /// Unlinks this actor from `x`.
-  void unlink_from(const actor_addr& x) {
-    auto ptr = actor_cast<strong_actor_ptr>(x);
-    if (ptr && ptr->get() != this)
-      remove_link(ptr->get());
-  }
+  void unlink_from(const actor_addr& x);
 
   /// Links this actor to `x`.
   template <class ActorHandle>
