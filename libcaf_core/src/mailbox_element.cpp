@@ -21,39 +21,28 @@
 
 namespace caf {
 
-namespace {
+mailbox_element_wrapper::mailbox_element_wrapper(strong_actor_ptr&& x0,
+                                                 message_id x1,
+                                                 forwarding_stack&& x2,
+                                                 message&& x3)
+    : mailbox_element(std::move(x0), x1, std::move(x2)), msg(std::move(x3)) {
+  // nop
+}
 
-/// Wraps a `message` into a mailbox element.
-class mailbox_element_wrapper : public mailbox_element {
-public:
-  mailbox_element_wrapper(strong_actor_ptr&& x0, message_id x1,
-                          forwarding_stack&& x2, message&& x3)
-      : mailbox_element(std::move(x0), x1, std::move(x2)),
-        msg_(std::move(x3)) {
-    // nop
-  }
+type_erased_tuple& mailbox_element_wrapper::content() {
+  auto ptr = msg.vals().raw_ptr();
+  if (ptr != nullptr)
+    return *ptr;
+  return dummy_;
+}
 
-  type_erased_tuple& content() override {
-    auto ptr = msg_.vals().raw_ptr();
-    if (ptr != nullptr)
-      return *ptr;
-    return dummy_;
-  }
+message mailbox_element_wrapper::move_content_to_message() {
+  return std::move(msg);
+}
 
-  message move_content_to_message() override {
-    return std::move(msg_);
-  }
-
-  message copy_content_to_message() const override {
-    return msg_;
-  }
-
-private:
-  /// Stores the content of this mailbox element.
-  message msg_;
-};
-
-} // namespace <anonymous>
+message mailbox_element_wrapper::copy_content_to_message() const {
+  return msg;
+}
 
 mailbox_element::mailbox_element()
     : next(nullptr),

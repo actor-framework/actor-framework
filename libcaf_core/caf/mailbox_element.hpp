@@ -99,7 +99,23 @@ typename Inspector::result_type inspect(Inspector& f, mailbox_element& x) {
            meta::omittable_if_empty(), x.stages, x.content());
 }
 
-/// Encapsulates arbitrary data in a message element.
+/// Stores the content in a `message`.
+class mailbox_element_wrapper : public mailbox_element {
+public:
+  mailbox_element_wrapper(strong_actor_ptr&& x0, message_id x1,
+                          forwarding_stack&& x2, message&& x3);
+
+  type_erased_tuple& content() override;
+
+  message move_content_to_message() override;
+
+  message copy_content_to_message() const override;
+
+  /// Stores the content of this mailbox element.
+  message msg;
+};
+
+/// Stores the content in a tuple.
 template <class... Ts>
 class mailbox_element_vals
     : public mailbox_element,
@@ -134,7 +150,7 @@ public:
   }
 };
 
-/// Provides a view for treating arbitrary data as message element.
+/// Stores references to the content in a tuple.
 template <class... Ts>
 class mailbox_element_view : public mailbox_element,
                              public detail::type_erased_tuple_view<Ts...> {
