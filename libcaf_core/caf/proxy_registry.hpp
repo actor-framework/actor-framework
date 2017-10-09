@@ -100,6 +100,10 @@ public:
     return system_;
   }
 
+  inline size_t size() const {
+    return proxies_.size();
+  }
+
 private:
   void kill_proxy(strong_actor_ptr&, error);
 
