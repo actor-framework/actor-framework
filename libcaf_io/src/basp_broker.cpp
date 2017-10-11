@@ -121,52 +121,31 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
   CAF_ASSERT(this_context != nullptr);
   this_context->id = nid;
   auto& cb = this_context->callback;
-  if (!cb)
+  if (cb == none)
     return;
-  auto cleanup = detail::make_scope_guard([&] {
-    cb = none;
-  });
   strong_actor_ptr ptr;
-  if (aid == invalid_actor_id) {
-    // can occur when connecting to the default port of a node
-    cb->deliver(nid, ptr, std::move(sigs));
-    return;
+  // aid can be invalid when connecting to the default port of a node
+  if (aid != invalid_actor_id) {
+    if (nid == this_node()) {
+      // connected to self
+      ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid));
+      CAF_LOG_INFO_IF(!ptr, "actor not found:" << CAF_ARG(aid));
+    } else {
+      ptr = namespace_.get_or_put(nid, aid);
+      CAF_LOG_ERROR_IF(!ptr, "creating actor in finalize_handshake failed");
+    }
   }
-  if (nid == this_node()) {
-    // connected to self
-    ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid));
-    CAF_LOG_INFO_IF(!ptr, "actor not found:" << CAF_ARG(aid));
-  } else {
-    ptr = namespace_.get_or_put(nid, aid);
-    CAF_LOG_ERROR_IF(!ptr, "creating actor in finalize_handshake failed");
-  }
-  cb->deliver(make_message(nid, ptr, std::move(sigs)));
-  this_context->callback = none;
+  cb->deliver(nid, std::move(ptr), std::move(sigs));
+  cb = none;
 }
 
 void basp_broker_state::purge_state(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
-  // We can only be sure a node is down when we had a direct connection.
-  auto hdl = instance.tbl().lookup_direct(nid);
-  if (hdl == invalid_connection_handle)
-    return;
-  // Cleanup state in case we lost connection during handshake.
-  auto i = ctx.find(hdl);
-  if (i != ctx.end()) {
-    auto& ref = i->second;
-    if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake");
-      ref.callback->deliver(sec::disconnect_during_handshake);
-    }
-    ctx.erase(i);
-  }
   // Destroy all proxies of the lost node.
   namespace_.erase(nid);
-  // Cleanup all possible remaining references to the lost node.
+  // Cleanup all remaining references to the lost node.
   for (auto& kvp : monitored_actors)
     kvp.second.erase(nid);
-  // Close network connection.
-  self->close(hdl);
 }
 
 void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
@@ -486,6 +465,29 @@ void basp_broker_state::set_context(connection_handle hdl) {
   this_context = &i->second;
 }
 
+void basp_broker_state::cleanup(connection_handle hdl) {
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  // Remove handle from the routing table and clean up any node-specific state
+  // we might still have.
+  auto cb = make_callback([&](const node_id& nid) -> error {
+    purge_state(nid);
+    return none;
+  });
+  instance.tbl().erase_direct(hdl, cb);
+  // Remove the context for `hdl`, making sure clients receive an error in case
+  // this connection was closed during handshake.
+  auto i = ctx.find(hdl);
+  if (i != ctx.end()) {
+    auto& ref = i->second;
+    CAF_ASSERT(i->first == ref.hdl);
+    if (ref.callback) {
+      CAF_LOG_DEBUG("connection closed during handshake");
+      ref.callback->deliver(sec::disconnect_during_handshake);
+    }
+    ctx.erase(i);
+  }
+}
+
 /******************************************************************************
  *                                basp_broker                                 *
  ******************************************************************************/
@@ -529,9 +531,7 @@ behavior basp_broker::make_behavior() {
       auto next = state.instance.handle(context(), msg, ctx.hdr,
                                         ctx.cstate == basp::await_payload);
       if (next == basp::close_connection) {
-        // The function `instance::handle` calls purge_state. All state has
-        // been cleaned up at this stage. In particular, accessing this_context
-        // results in a heap-use-after-free error.
+        state.cleanup(msg.handle);
         close(msg.handle);
         return;
       }
@@ -606,30 +606,7 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      // TODO: currently we assume a node has gone offline once we lose
-      //       a connection, we also could try to reach this node via other
-      //       hops to be resilient to (rare) network failures or if a
-      //       node is reachable via several interfaces and only one fails
-      auto nid = state.instance.tbl().lookup_direct(msg.handle);
-      if (nid != none) {
-        // tell BASP instance we've lost connection
-        state.instance.handle_node_shutdown(nid);
-      } else {
-        // check whether the connection failed during handshake
-        auto pred = [&](const basp_broker_state::ctx_map::value_type& x) {
-          return x.second.hdl == msg.handle;
-        };
-        auto e = state.ctx.end();
-        auto i = std::find_if(state.ctx.begin(), e, pred);
-        if (i != e) {
-          auto& ref = i->second;
-          if (ref.callback) {
-            CAF_LOG_DEBUG("connection closed during handshake");
-            ref.callback->deliver(sec::disconnect_during_handshake);
-          }
-          state.ctx.erase(i);
-        }
-      }
+      state.cleanup(msg.handle);
     },
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {

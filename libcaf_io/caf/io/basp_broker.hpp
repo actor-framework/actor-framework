@@ -107,7 +107,11 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
     optional<response_promise> callback;
   };
 
+  /// Sets `this_context` by either creating or accessing state for `hdl`.
   void set_context(connection_handle hdl);
+
+  /// Cleans up any state for `hdl`.
+  void cleanup(connection_handle hdl);
 
   // pointer to ourselves
   broker* self;

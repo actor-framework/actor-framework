@@ -63,7 +63,8 @@ connection_state instance::handle(execution_unit* ctx,
   if (is_payload) {
     payload = &dm.buf;
     if (payload->size() != hdr.payload_len) {
-      CAF_LOG_WARNING("received invalid payload");
+      CAF_LOG_WARNING("received invalid payload, expected"
+                      << hdr.payload_len << "bytes, got" << payload->size());
       return err();
     }
   } else {
@@ -139,14 +140,14 @@ connection_state instance::handle(execution_unit* ctx,
       if (hdr.source_node == this_node_) {
         CAF_LOG_INFO("close connection to self immediately");
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
-        return err();
+        return close_connection;
       }
       // close this connection if we already have a direct connection
       if (tbl_.lookup_direct(hdr.source_node) != invalid_connection_handle) {
         CAF_LOG_INFO("close connection since we already have a "
                      "direct connection: " << CAF_ARG(hdr.source_node));
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
-        return err();
+        return close_connection;
       }
       // add direct route to this node and remove any indirect entry
       CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
@@ -260,18 +261,6 @@ void instance::handle_heartbeat(execution_unit* ctx) {
     write_heartbeat(ctx, tbl_.parent_->wr_buf(kvp.first), kvp.second);
     tbl_.parent_->flush(kvp.first);
   }
-}
-
-void instance::handle_node_shutdown(const node_id& affected_node) {
-  CAF_LOG_TRACE(CAF_ARG(affected_node));
-  if (affected_node == none)
-    return;
-  CAF_LOG_INFO("lost direct connection:" << CAF_ARG(affected_node));
-  auto cb = make_callback([&](const node_id& nid) -> error {
-    callee_.purge_state(nid);
-    return none;
-  });
-  tbl_.erase(affected_node, cb);
 }
 
 optional<routing_table::route> instance::lookup(const node_id& target) {

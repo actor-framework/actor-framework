@@ -902,8 +902,10 @@ event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
 }
 
 event_handler::~event_handler() {
-  if (fd_ != invalid_native_socket)
+  if (fd_ != invalid_native_socket) {
+    CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
     closesocket(fd_);
+  }
 }
 
 void event_handler::close_read_channel() {
@@ -1024,6 +1026,7 @@ void stream::stop_reading() {
 }
 
 void stream::removed_from_loop(operation op) {
+  CAF_LOG_TRACE(CAF_ARG(op));
   switch (op) {
     case operation::read:  reader_.reset(); break;
     case operation::write: writer_.reset(); break;
@@ -1120,6 +1123,7 @@ public:
 
   void close() {
     if (fd_ != invalid_native_socket) {
+      CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
       closesocket(fd_);
       fd_ = invalid_native_socket;
     }

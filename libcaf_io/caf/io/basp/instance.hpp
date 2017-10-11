@@ -117,10 +117,6 @@ public:
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
 
-  /// Handles failure or shutdown of a single node. This function purges
-  /// all routes to `affected_node` from the routing table.
-  void handle_node_shutdown(const node_id& affected_node);
-
   /// Returns a route to `target` or `none` on error.
   optional<routing_table::route> lookup(const node_id& target);
 
