@@ -137,7 +137,7 @@ fi
 #   II: two-digit (zero padded) minor version
 #   PP: two-digit (zero padded) patch version
 # but omit leading zeros
-version_str=$(echo "$1" | awk -F. '"{ if ($1 > 0) printf("%d%02d%02d\n", $1, $2, $3); else printf("%02d%02d\n", $2, $3)  }')
+version_str=$(echo "$1" | awk -F. '{ if ($1 > 0) printf("%d%02d%02d\n", $1, $2, $3); else printf("%02d%02d\n", $2, $3)  }')
 
 echo ">>> patching config.hpp"
 sed "s/#define CAF_VERSION [0-9]*/#define CAF_VERSION ${version_str}/g" < "$config_hpp_path" > .tmp_conf_hpp
@@ -147,7 +147,7 @@ echo ; echo
 echo ">>> please review the diff reported by Git for patching config.hpp:"
 git diff
 echo ; echo
-ask_permission "type [n] to abort or [y] for commiting and pushing it"
+ask_permission "type [n] to abort or [y] to proceed"
 
 # piping through AWK/printf makes sure 0.15 is expanded to 0.15.0
 tag_version=$(echo "$1" | awk -F. '{ printf("%d.%d.%d", $1, $2, $3)  }')
@@ -172,6 +172,12 @@ git push
 git checkout develop
 curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-framework/releases?access_token=$token
 " > .make-release-steps.bash
+
+if which brew &>/dev/null ; then
+  echo "\
+  brew bump-formula-pr --message=\"Update CAF to version $tag_version\" --url=\"https://github.com/actor-framework/actor-framework/archive/$tag_version.tar.gz\" --sha256=\"\$(git rev-parse HEAD)\" caf
+  " >> .make-release-steps.bash
+fi
 
 if [ -f "$blog_msg"  ]; then
   echo "\
