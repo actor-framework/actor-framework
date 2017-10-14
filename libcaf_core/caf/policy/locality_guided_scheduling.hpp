@@ -308,6 +308,7 @@ public:
       xxx(current_pu, pu_dists);
       // map PU ids to worker* sorted by its distance
       result_wp_matrix.reserve(pu_dists.size());
+      size_t current_idx = 0;
       for (auto& pu_set_it : pu_dists) {
         std::vector<Worker*> current_worker_group;
         auto pu_set = pu_set_it.second.get();
@@ -322,7 +323,14 @@ public:
         // current_worker_group can be empty if pus of this level are deactivated
         if (!current_worker_group.empty()) {
           result_wp_matrix.emplace_back(std::move(current_worker_group));
+        } else {
+          //update wp_matrix_first_node_idx
+          if (current_idx <= wp_matrix_first_node_idx
+              && wp_matrix_first_node_idx != 0) {
+            --wp_matrix_first_node_idx;
+          }
         }
+        ++current_idx;
       }
       //accumulate steal_groups - each group contains all lower level groups 
       auto last_group_it = result_wp_matrix.begin();
