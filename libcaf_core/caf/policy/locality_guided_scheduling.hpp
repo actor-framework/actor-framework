@@ -210,8 +210,7 @@ public:
         if (x == current_node_id) {
           hwloc_bitmap_andnot(tmp_pus.get(), tmp_pus.get(),
                               current_pu);
-        }
-        if (hwloc_bitmap_iszero(tmp_pus.get())) {
+        } if (hwloc_bitmap_iszero(tmp_pus.get())) {
           continue; 
         }
         auto result_map_it = result_map.find(dist_ptr[x]);
@@ -377,9 +376,44 @@ public:
   template <class Coordinator, class Worker>
   void create_workers(Coordinator* self, size_t num_workers,
                                          size_t throughput) {
+    std::map<size_t, const char*> fake_deactivation_map = 
+      {{4, "0x00010001,0x00010001"},
+      {8, "0x00030003,0x00030003"},
+      {12, "0x00070007,0x00070007"},
+      {16, "0x000f000f,0x000f000f"},
+      {20, "0x001f001f,0x001f001f"},
+      {24, "0x003f003f,0x003f003f"},
+      {28, "0x007f007f,0x007f007f"},
+      {32, "0x00ff00ff,0x00ff00ff"},
+      {36, "0x01ff01ff,0x01ff01ff"},
+      {40, "0x03ff03ff,0x03ff03ff"},
+      {44, "0x07ff07ff,0x07ff07ff"},
+      {48, "0x0fff0fff,0x0fff0fff"},
+      {52, "0x1fff1fff,0x1fff1fff"},
+      {56, "0x3fff3fff,0x3fff3fff"},
+      {60, "0x7fff7fff,0x7fff7fff"},
+      {64, "0xffffffff,0xffffffff"}};
+
+
     auto& cdata = d(self);
     auto& topo = cdata.topo;
-    auto allowed_pus = hwloc_topology_get_allowed_cpuset(topo.get());
+
+    //auto allowed_pus = hwloc_topology_get_allowed_cpuset(topo.get());
+
+    auto allowed_pus_tmp = hwloc_bitmap_make_wrapper();
+    auto allowed_pus = allowed_pus_tmp.get();
+    hwloc_bitmap_sscanf(allowed_pus_tmp.get(), fake_deactivation_map[num_workers]);
+    
+    //char* tmp_str = nullptr; 
+    //hwloc_bitmap_asprintf(&tmp_str, allowed_pus);
+    //std::cout << "allowed_cpu_set: " << tmp_str << std::endl;
+    
+    //auto tmp_bitmap = hwloc_bitmap_make_wrapper();
+    //hwloc_bitmap_sscanf(tmp_bitmap.get(), tmp_str);
+    //std::cout << "parsed again: " << tmp_bitmap << std::endl;
+    //free(tmp_str);
+    //exit(1);
+
     size_t num_allowed_pus =
       static_cast<size_t>(hwloc_bitmap_weight(allowed_pus));
     // less PUs than worker
@@ -411,56 +445,60 @@ public:
     auto& wdata = d(self);
     auto& cdata = d(self->parent());
     auto current_pu = hwloc_bitmap_make_wrapper();
-    hwloc_bitmap_set(current_pu.get(),
-                     static_cast<unsigned int>(self->id()));
-    auto res = hwloc_set_cpubind(cdata.topo.get(), current_pu.get(),
-                          HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
+    hwloc_bitmap_set(current_pu.get(), static_cast<unsigned int>(self->id()));
+    auto res =
+      hwloc_set_cpubind(cdata.topo.get(), current_pu.get(),
+                        HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
     // hwloc_set_cpubind() failed
     CAF_IGNORE_UNUSED(res);
     CAF_ASSERT(res == -1);
-    wdata.wp_matrix = wdata.init_worker_proximity_matrix(self, current_pu.get());
+    wdata.wp_matrix =
+      wdata.init_worker_proximity_matrix(self, current_pu.get());
     auto& node_idx = wdata.wp_matrix_first_node_idx;
     auto& wp_matrix = wdata.wp_matrix;
     if (wp_matrix.empty()) {
       // no neighbors could be found, use the fallback behavior
-      self->set_all_workers_are_neighbors(true); 
-      wdata.xxx(current_pu.get(), "pinnning: wp_matrix.empty(); all are neigbhors");
+      self->set_all_workers_are_neighbors(true);
+      wdata.xxx(current_pu.get(),
+                "pinnning: wp_matrix.empty(); all are neigbhors");
     } else if (wdata.actor_pinning_entity == atom("pu")) {
-        wdata.xxx(current_pu.get(), "pinning: pu; no workers are neigbors");
-        self->set_all_workers_are_neighbors(false); 
+      wdata.xxx(current_pu.get(), "pinning: pu; no workers are neigbors");
+      self->set_all_workers_are_neighbors(false);
     } else if (wdata.actor_pinning_entity == atom("cache")) {
       if (wp_matrix.size() == 1) {
         wdata.xxx(current_pu.get(), "pinning: cache; all are neigbhors");
-        self->set_all_workers_are_neighbors(true); 
+        self->set_all_workers_are_neighbors(true);
       } else {
         wdata.xxx(current_pu.get(), "pinning: cache; wp_matrix[0]");
         self->set_neighbors(wp_matrix[0]);
-        self->set_all_workers_are_neighbors(false); 
+        self->set_all_workers_are_neighbors(false);
       }
     } else if (wdata.actor_pinning_entity == atom("node")) {
       if (node_idx == static_cast<int>(wp_matrix.size()) - 1) {
         wdata.xxx(current_pu.get(), "pinning: node; all are neighbors");
-        self->set_all_workers_are_neighbors(true); 
+        self->set_all_workers_are_neighbors(true);
       } else {
         wdata.xxx(current_pu.get(), "pinning: node; wp_matrix[node_idx]");
         self->set_neighbors(wp_matrix[node_idx]);
-        self->set_all_workers_are_neighbors(false); 
+        self->set_all_workers_are_neighbors(false);
       }
     } else if (wdata.actor_pinning_entity == atom("system")) {
       wdata.xxx(current_pu.get(), "pinning: system; all are neigbors");
-      self->set_all_workers_are_neighbors(true); 
+      self->set_all_workers_are_neighbors(true);
     } else {
       CAF_CRITICAL("config variable actor_pnning_entity with unsopprted value");
     }
     if (wdata.wws_start_entity == atom("cache")) {
       wdata.xxx(current_pu.get(), "wws: cache; start_steal_group_idx  = 0");
-      wdata.start_steal_group_idx  = 0;
+      wdata.start_steal_group_idx = 0;
     } else if (wdata.wws_start_entity == atom("node")) {
-      wdata.xxx(current_pu.get(), "wws: node; start_steal_group_idx  = node_idx");
-      wdata.start_steal_group_idx  = node_idx;
+      wdata.xxx(current_pu.get(),
+                "wws: node; start_steal_group_idx  = node_idx");
+      wdata.start_steal_group_idx = node_idx;
     } else if (wdata.wws_start_entity == atom("system")) {
-      wdata.xxx(current_pu.get(), "wws: system; start_steal_group_idx  = wp_matrix.size() - 1");
-      wdata.start_steal_group_idx  = wp_matrix.size() - 1;
+      wdata.xxx(current_pu.get(),
+                "wws: system; start_steal_group_idx  = wp_matrix.size() - 1");
+      wdata.start_steal_group_idx = wp_matrix.size() - 1;
     } else {
       CAF_CRITICAL("config variable wws_start_entity with unsopprted value");
     }
