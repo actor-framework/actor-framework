@@ -266,8 +266,10 @@ void middleman::start() {
   } else {
     thread_ = std::thread{[this] {
       CAF_SET_LOGGER_SYS(&system());
+      system().thread_started();
       CAF_LOG_TRACE("");
       backend().run();
+      system().thread_terminates();
     }};
     backend().thread_id(thread_.get_id());
   }

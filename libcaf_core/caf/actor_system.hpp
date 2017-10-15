@@ -491,6 +491,14 @@ public:
   /// Blocks the caller until all detached threads are done.
   void await_detached_threads();
 
+  /// Calls all thread started hooks
+  /// @warning must be called by thread which is about to start
+  void thread_started();
+
+  /// Calls all thread terminates hooks
+  /// @warning must be called by thread which is about to terminate
+  void thread_terminates();
+
   /// @endcond
 
 private:
