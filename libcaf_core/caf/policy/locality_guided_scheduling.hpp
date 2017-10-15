@@ -92,6 +92,7 @@ public:
     // used by central enqueue to balance new jobs between workers with round
     // robin strategy
     std::atomic<size_t> next_worker; 
+    bitmap_wrapper_t allowed_pus;
   };
 
   template <class Worker>
@@ -400,9 +401,9 @@ public:
 
     //auto allowed_pus = hwloc_topology_get_allowed_cpuset(topo.get());
 
-    auto allowed_pus_tmp = hwloc_bitmap_make_wrapper();
-    auto allowed_pus = allowed_pus_tmp.get();
-    hwloc_bitmap_sscanf(allowed_pus_tmp.get(), fake_deactivation_map[num_workers]);
+    cdata.allowed_pus = hwloc_bitmap_make_wrapper();
+    auto allowed_pus = cdata.allowed_pus.get();
+    hwloc_bitmap_sscanf(allowed_pus, fake_deactivation_map[num_workers]);
     
     //char* tmp_str = nullptr; 
     //hwloc_bitmap_asprintf(&tmp_str, allowed_pus);
@@ -445,10 +446,17 @@ public:
     auto& wdata = d(self);
     auto& cdata = d(self->parent());
     auto current_pu = hwloc_bitmap_make_wrapper();
-    hwloc_bitmap_set(current_pu.get(), static_cast<unsigned int>(self->id()));
-    auto res =
-      hwloc_set_cpubind(cdata.topo.get(), current_pu.get(),
-                        HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
+    int res = 0;
+    if (wdata.actor_pinning_entity == atom("nop")) {
+      wdata.xxx(current_pu.get(), "no cpu pinnning");
+      res = hwloc_set_cpubind(cdata.topo.get(), cdata.allowed_pus.get(),
+                              HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
+    } else {
+      wdata.xxx(current_pu.get(), "with cpu pinnning");
+      hwloc_bitmap_set(current_pu.get(), static_cast<unsigned int>(self->id()));
+      res = hwloc_set_cpubind(cdata.topo.get(), current_pu.get(),
+                              HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
+    }
     // hwloc_set_cpubind() failed
     CAF_IGNORE_UNUSED(res);
     CAF_ASSERT(res == -1);
@@ -485,6 +493,9 @@ public:
     } else if (wdata.actor_pinning_entity == atom("system")) {
       wdata.xxx(current_pu.get(), "pinning: system; all are neigbors");
       self->set_all_workers_are_neighbors(true);
+    } else if (wdata.actor_pinning_entity == atom("nop")) {
+      wdata.xxx(current_pu.get(), "pinning: nop; all are neigbors");
+      self->set_all_workers_are_neighbors(true);
     } else {
       CAF_CRITICAL("config variable actor_pnning_entity with unsopprted value");
     }
@@ -498,6 +509,10 @@ public:
     } else if (wdata.wws_start_entity == atom("system")) {
       wdata.xxx(current_pu.get(),
                 "wws: system; start_steal_group_idx  = wp_matrix.size() - 1");
+      wdata.start_steal_group_idx = wp_matrix.size() - 1;
+    } else if (wdata.wws_start_entity == atom("nop")) {
+      wdata.xxx(current_pu.get(),
+                "wws: nop; start_steal_group_idx  = wp_matrix.size() - 1");
       wdata.start_steal_group_idx = wp_matrix.size() - 1;
     } else {
       CAF_CRITICAL("config variable wws_start_entity with unsopprted value");
