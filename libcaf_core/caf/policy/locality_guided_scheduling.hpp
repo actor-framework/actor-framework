@@ -446,6 +446,7 @@ public:
     auto& wdata = d(self);
     auto& cdata = d(self->parent());
     auto current_pu = hwloc_bitmap_make_wrapper();
+    hwloc_bitmap_set(current_pu.get(), static_cast<unsigned int>(self->id()));
     int res = 0;
     if (wdata.actor_pinning_entity == atom("nop")) {
       wdata.xxx(current_pu.get(), "no cpu pinnning");
@@ -453,7 +454,6 @@ public:
                               HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
     } else {
       wdata.xxx(current_pu.get(), "with cpu pinnning");
-      hwloc_bitmap_set(current_pu.get(), static_cast<unsigned int>(self->id()));
       res = hwloc_set_cpubind(cdata.topo.get(), current_pu.get(),
                               HWLOC_CPUBIND_THREAD | HWLOC_CPUBIND_NOMEMBIND);
     }
