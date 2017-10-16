@@ -215,6 +215,8 @@ actor_system::actor_system(actor_system_config& cfg)
       cfg_(cfg),
       logger_dtor_done_(false) {
   CAF_SET_LOGGER_SYS(this);
+  for (auto& hook : cfg.thread_hooks_)
+    hook->init(*this);
   for (auto& f : cfg.module_factories) {
     auto mod_ptr = f(*this);
     modules_[mod_ptr->id()].reset(mod_ptr);
@@ -415,6 +417,16 @@ void actor_system::await_detached_threads() {
   std::unique_lock<std::mutex> guard{detached_mtx};
   while (detached != 0)
     detached_cv.wait(guard);
+}
+
+void actor_system::thread_started() {
+  for (auto& hook : cfg_.thread_hooks_)
+    hook->thread_started();
+}
+
+void actor_system::thread_terminates() {
+  for (auto& hook : cfg_.thread_hooks_)
+    hook->thread_terminates();
 }
 
 expected<strong_actor_ptr>

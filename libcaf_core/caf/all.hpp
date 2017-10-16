@@ -56,6 +56,7 @@
 #include "caf/exit_reason.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/thread_hook.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"

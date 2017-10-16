@@ -505,7 +505,11 @@ void logger::start() {
   if (inline_output_)
     log_first_line();
   else
-    thread_ = std::thread{[this] { this->run(); }};
+    thread_ = std::thread{[this] {
+      this->system_.thread_started();
+      this->run();
+      this->system_.thread_terminates();
+    }};
 #endif
 }
 
