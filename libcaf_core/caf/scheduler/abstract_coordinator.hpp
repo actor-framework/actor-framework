@@ -30,6 +30,7 @@
 #include "caf/message.hpp"
 #include "caf/duration.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
 
 namespace caf {
@@ -41,10 +42,28 @@ namespace scheduler {
 /// chosen workers.
 class abstract_coordinator : public actor_system::module {
 public:
+  enum utility_actor_id : size_t {
+    printer_id,
+    timer_id,
+    max_id
+  };
+
   explicit abstract_coordinator(actor_system& sys);
 
   /// Returns a handle to the central printing actor.
-  actor printer() const;
+  inline actor printer() const {
+    return actor_cast<actor>(utility_actors_[printer_id]);
+  }
+
+  /// Returns a handle to the central timer actor.
+  inline actor timer() const {
+    return actor_cast<actor>(utility_actors_[timer_id]);
+  }
+
+  /// Returns the number of utility actors.
+  inline size_t num_utility_actors() const {
+    return utility_actors_.size();
+  }
 
   /// Puts `what` into the queue of a randomly chosen worker.
   virtual void enqueue(resumable* what) = 0;
@@ -52,10 +71,11 @@ public:
   template <class Duration, class... Data>
   void delayed_send(Duration rel_time, strong_actor_ptr from,
                     strong_actor_ptr to, message_id mid, message data) {
-    timer_->enqueue(nullptr, invalid_message_id,
-                    make_message(duration{rel_time}, std::move(from),
-                                 std::move(to), mid, std::move(data)),
-                    nullptr);
+    auto& dest = utility_actors_[timer_id];
+    dest->enqueue(nullptr, invalid_message_id,
+                  make_message(duration{rel_time}, std::move(from),
+                               std::move(to), mid, std::move(data)),
+                  nullptr);
   }
 
   inline actor_system& system() {
@@ -69,6 +89,9 @@ public:
   inline size_t num_workers() const {
     return num_workers_;
   }
+
+  /// Returns `true` if this scheduler detaches its utility actors.
+  virtual bool detaches_utility_actors() const;
 
   void start() override;
 
@@ -92,8 +115,7 @@ protected:
   // configured number of workers
   size_t num_workers_;
 
-  strong_actor_ptr timer_;
-  strong_actor_ptr printer_;
+  std::array<actor, max_id> utility_actors_;
 
   actor_system& system_;
 };

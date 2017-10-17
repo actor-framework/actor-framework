@@ -315,16 +315,16 @@ public:
  *                       implementation of coordinator                        *
  ******************************************************************************/
 
-actor abstract_coordinator::printer() const {
-  CAF_ASSERT(printer_ != nullptr);
-  return actor_cast<actor>(printer_);
+bool abstract_coordinator::detaches_utility_actors() const {
+  return true;
 }
 
 void abstract_coordinator::start() {
   CAF_LOG_TRACE("");
   // launch utility actors
-  timer_ = actor_cast<strong_actor_ptr>(system_.spawn<timer_actor, hidden + detached>());
-  printer_ = actor_cast<strong_actor_ptr>(system_.spawn<printer_actor, hidden + detached>());
+  static constexpr auto fs = hidden + detached;
+  utility_actors_[timer_id] = system_.spawn<timer_actor, fs>();
+  utility_actors_[printer_id] = system_.spawn<printer_actor, fs>();
 }
 
 void abstract_coordinator::init(actor_system_config& cfg) {
@@ -343,9 +343,9 @@ void* abstract_coordinator::subtype_ptr() {
 void abstract_coordinator::stop_actors() {
   CAF_LOG_TRACE("");
   scoped_actor self{system_, true};
-  anon_send_exit(timer_, exit_reason::user_shutdown);
-  anon_send_exit(printer_, exit_reason::user_shutdown);
-  self->wait_for(timer_, printer_);
+  for (auto& x : utility_actors_)
+    anon_send_exit(x, exit_reason::user_shutdown);
+  self->wait_for(utility_actors_);
 }
 
 abstract_coordinator::abstract_coordinator(actor_system& sys)

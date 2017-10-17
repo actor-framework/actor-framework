@@ -29,65 +29,110 @@ using namespace caf;
 
 namespace {
 
-class test_thread_hooks : public thread_hook {
-  using atomic_cnt = std::atomic<size_t>;
-public:
-  test_thread_hooks(size_t assumed_init, size_t assumed_thread_started,
-                    size_t assumed_thread_termintes_cb)
-    : count_init_{0},
-      count_thread_started_{0},
-      count_thread_terminates_{0},
-      assumed_init_{assumed_init},
-      assumed_thread_started_{assumed_thread_started},
-      assumed_thread_termintes_cb_{assumed_thread_termintes_cb} {
+using atomic_count = std::atomic<size_t>;
+
+size_t assumed_thread_count;
+size_t assumed_init_calls;
+
+struct dummy_thread_hook : thread_hook {
+  void init(actor_system&) override {
     // nop
   }
-  virtual ~test_thread_hooks() {
-    CAF_CHECK_EQUAL(count_init_, assumed_init_);
-    CAF_CHECK_EQUAL(count_thread_started_, assumed_thread_started_);
-    CAF_CHECK_EQUAL(count_thread_terminates_, assumed_thread_termintes_cb_);
+
+  void thread_started() override {
+    // nop
   }
-  virtual void init(actor_system&) {
-    count_init_.fetch_add(1, std::memory_order_relaxed);
+
+  void thread_terminates() override {
+    // nop
   }
-  virtual void thread_started() {
-    count_thread_started_.fetch_add(1, std::memory_order_relaxed);
+};
+
+class counting_thread_hook : public thread_hook {
+public:
+  counting_thread_hook()
+      : count_init_{0},
+        count_thread_started_{0},
+        count_thread_terminates_{0} {
+    // nop
   }
-  virtual void thread_terminates() {
-    count_thread_terminates_.fetch_add(1, std::memory_order_relaxed);
+
+  ~counting_thread_hook() override {
+    CAF_CHECK_EQUAL(count_init_, assumed_init_calls);
+    CAF_CHECK_EQUAL(count_thread_started_, assumed_thread_count);
+    CAF_CHECK_EQUAL(count_thread_terminates_, assumed_thread_count);
   }
+
+  void init(actor_system&) override {
+    ++count_init_;
+  }
+
+  void thread_started() override {
+    ++count_thread_started_;
+  }
+
+  void thread_terminates() override {
+    ++count_thread_terminates_;
+  }
+
 private:
-  atomic_cnt count_init_;
-  atomic_cnt count_thread_started_;
-  atomic_cnt count_thread_terminates_;
-  atomic_cnt assumed_init_;
-  atomic_cnt assumed_thread_started_;
-  atomic_cnt assumed_thread_termintes_cb_;
+  atomic_count count_init_;
+  atomic_count count_thread_started_;
+  atomic_count count_thread_terminates_;
+};
+
+template <class Hook>
+struct config : actor_system_config {
+  config() {
+    add_thread_hook<Hook>();
+    logger_verbosity = atom("quiet");
+  }
+};
+
+template <class Hook>
+struct fixture {
+  config<Hook> cfg;
+  actor_system sys;
+  fixture() : sys(cfg) {
+    // nop
+  }
 };
 
 } // namespace <anonymous>
 
-CAF_TEST(test_no_args) {
-  actor_system_config cfg{};
-  struct a : public thread_hook {
-    virtual void init(actor_system&) {}
-    virtual void thread_started() {}
-    virtual void thread_terminates() {}
-  };
-  cfg.add_thread_hook<a>();
+CAF_TEST(counting_no_system) {
+  assumed_init_calls = 0;
+  actor_system_config cfg;
+  cfg.add_thread_hook<counting_thread_hook>();
 }
 
-CAF_TEST(test_no_system) {
-  actor_system_config cfg{};
-  cfg.add_thread_hook<test_thread_hooks>(0,0,0);
+CAF_TEST_FIXTURE_SCOPE(dummy_hook, fixture<dummy_thread_hook>)
+
+CAF_TEST(counting_no_args) {
+  // nop
 }
 
-CAF_TEST(test_system_no_actor) {
-  actor_system_config cfg{};
-  size_t assumed_threads = 2 + cfg.scheduler_max_threads;
-#ifdef CAF_LOG_LEVEL
-  assumed_threads += 1; // If logging is enabled, we have a additional thread.
-#endif
-  cfg.add_thread_hook<test_thread_hooks>(1, assumed_threads, assumed_threads);
-  actor_system system{cfg};
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(counting_hook, fixture<counting_thread_hook>)
+
+CAF_TEST(counting_system_without_actor) {
+  assumed_init_calls = 1;
+  assumed_thread_count = cfg.scheduler_max_threads;
+  auto& sched = sys.scheduler();
+  if (sched.detaches_utility_actors())
+    assumed_thread_count += sched.num_utility_actors();
 }
+
+CAF_TEST(counting_system_with_actor) {
+  assumed_init_calls = 1;
+  assumed_thread_count = cfg.scheduler_max_threads + 1;
+  auto& sched = sys.scheduler();
+  if (sched.detaches_utility_actors())
+    assumed_thread_count += sched.num_utility_actors();
+  sys.spawn<detached>([] {});
+  sys.spawn([] {});
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
+

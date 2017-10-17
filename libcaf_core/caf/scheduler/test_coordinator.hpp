@@ -141,6 +141,8 @@ public:
   /// hook.
   void inline_all_enqueues();
 
+  bool detaches_utility_actors() const override;
+
 protected:
   void start() override;
 

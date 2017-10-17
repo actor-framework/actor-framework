@@ -95,13 +95,18 @@ private:
 test_coordinator::test_coordinator(actor_system& sys) : super(sys) {
   // nop
 }
+
+bool test_coordinator::detaches_utility_actors() const {
+  return false;
+}
+
 void test_coordinator::start() {
   dummy_worker worker{this};
   actor_config cfg{&worker};
   auto& sys = system();
-  timer_ = make_actor<dummy_timer, strong_actor_ptr>(
+  utility_actors_[timer_id] = make_actor<dummy_timer, actor>(
     sys.next_actor_id(), sys.node(), &sys, cfg, this);
-  printer_ = make_actor<dummy_printer, strong_actor_ptr>(
+  utility_actors_[printer_id] = make_actor<dummy_printer, actor>(
     sys.next_actor_id(), sys.node(), &sys, cfg);
 }
 
