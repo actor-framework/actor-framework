@@ -147,7 +147,7 @@ struct is_duration : std::false_type {};
 template <class Period, class Rep>
 struct is_duration<std::chrono::duration<Period, Rep>> : std::true_type {};
 
-/// Checks wheter `T` is considered a builtin type.
+/// Checks whether `T` is considered a builtin type.
 ///
 /// Builtin types are: (1) all arithmetic types (including time types), (2)
 /// string types from the STL, and (3) built-in types such as `actor_ptr`.
@@ -161,8 +161,8 @@ struct is_builtin {
                                              node_id>::value;
 };
 
-/// Chekcs wheter `T` is primitive, i.e., either an arithmetic
-///    type or convertible to one of STL's string types.
+/// Checks whether `T` is primitive, i.e., either an arithmetic type or
+/// convertible to one of STL's string types.
 template <class T>
 struct is_primitive {
   static constexpr bool value = std::is_arithmetic<T>::value
@@ -172,7 +172,7 @@ struct is_primitive {
                                 || std::is_convertible<T, atom_value>::value;
 };
 
-/// Chekcs wheter `T1` is comparable with `T2`.
+/// Checks whether `T1` is comparable with `T2`.
 template <class T1, typename T2>
 class is_comparable {
   // SFINAE: If you pass a "bool*" as third argument, then
@@ -606,6 +606,13 @@ template <class T>
 constexpr bool can_insert_elements() {
   return can_insert_elements_impl<T>(static_cast<T*>(nullptr));
 }
+
+/// Checks whether `Tpl` is a specialization of `T` or not.
+template <template <class...> class Tpl, class T>
+struct is_specialization : std::false_type { };
+
+template <template <class...> class T, class... Ts>
+struct is_specialization<T, T<Ts...>> : std::true_type { };
 
 } // namespace detail
 } // namespace caf
