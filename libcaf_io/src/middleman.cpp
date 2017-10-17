@@ -269,6 +269,7 @@ void middleman::start() {
     std::condition_variable cv;
     thread_ = std::thread{[&,this] {
       CAF_SET_LOGGER_SYS(&system());
+      system().thread_started();
       CAF_LOG_TRACE("");
       {
         std::unique_lock<std::mutex> guard{mtx};
@@ -277,6 +278,7 @@ void middleman::start() {
         cv.notify_one();
       }
       backend().run();
+      system().thread_terminates();
     }};
     std::unique_lock<std::mutex> guard{mtx};
     while (init_done == false)

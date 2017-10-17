@@ -30,6 +30,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/stream.hpp"
+#include "caf/thread_hook.hpp"
 #include "caf/config_value.hpp"
 #include "caf/config_option.hpp"
 #include "caf/actor_factory.hpp"
@@ -50,6 +51,8 @@ public:
   using hook_factory = std::function<io::hook* (actor_system&)>;
 
   using hook_factory_vector = std::vector<hook_factory>;
+
+  using thread_hooks = std::vector<std::unique_ptr<thread_hook>>;
 
   template <class K, class V>
   using hash_map = std::unordered_map<K, V>;
@@ -224,6 +227,13 @@ public:
     });
   }
 
+  /// Adds a hook type to the scheduler.
+  template <class Hook, class... Ts>
+  actor_system_config& add_thread_hook(Ts&&... ts) {
+    thread_hooks_.emplace_back(new Hook(std::forward<Ts>(ts)...));
+    return *this;
+  }
+
   /// Stores whether the help text for this config object was
   /// printed. If set to `true`, the application should not use
   /// this config object to initialize an `actor_system` and
@@ -309,6 +319,10 @@ public:
   module_factory_vector module_factories;
   hook_factory_vector hook_factories;
   group_module_factory_vector group_module_factories;
+
+  // -- hooks ------------------------------------------------------------------
+
+  thread_hooks thread_hooks_;
 
   // -- run-time type information ----------------------------------------------
 

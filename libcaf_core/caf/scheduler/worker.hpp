@@ -55,7 +55,9 @@ public:
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
     auto this_worker = this;
     this_thread_ = std::thread{[this_worker] {
+      this_worker->system().thread_started();
       this_worker->run();
+      this_worker->system().thread_terminates();
     }};
   }
 
