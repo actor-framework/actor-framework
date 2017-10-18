@@ -89,10 +89,23 @@ public:
   using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
   std::string to_string_home_eu() const {
-    return home_eu_->to_string();
+    if (home_eu_) {
+      return home_eu_->to_string();
+    } else {
+      return "nullptr";
+    }
   }
+
   std::string to_string_current_eu() const {
-    return current_eu_->to_string();
+    if (home_eu_) {
+      return current_eu_->to_string();
+    } else {
+      return "nullptr";
+    }
+  }
+
+  void reset_home_eu() {
+    home_eu_ = nullptr; 
   }
 
   /// A container for associating stream IDs to handlers.
