@@ -119,8 +119,8 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
     self->on_exit();
 #   endif
     self->cleanup(std::move(rsn), self->context());
-    ptr->home_system->dec_detached_threads();
     ptr->home_system->thread_terminates();
+    ptr->home_system->dec_detached_threads();
   }, strong_actor_ptr{ctrl()}).detach();
 }
 
