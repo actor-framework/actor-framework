@@ -91,8 +91,8 @@ void private_thread::exec(private_thread* this_ptr) {
   // detached actor is destroyed and this object is unreachable
   this_ptr->await_self_destroyed();
   // signalize destruction of detached thread to registry
-  this_ptr->system_.dec_detached_threads();
   this_ptr->system_.thread_terminates();
+  this_ptr->system_.dec_detached_threads();
   // done
   delete this_ptr;
 }
