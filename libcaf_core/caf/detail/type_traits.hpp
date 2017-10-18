@@ -607,6 +607,12 @@ constexpr bool can_insert_elements() {
   return can_insert_elements_impl<T>(static_cast<T*>(nullptr));
 }
 
+template <class Test, template <class...> class Ref>
+struct is_specialization : std::false_type { };
+
+template <template <class...> class Ref, class... Args>
+struct is_specialization<Ref<Args...>, Ref> : std::true_type { };
+
 } // namespace detail
 } // namespace caf
 
