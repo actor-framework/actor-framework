@@ -353,6 +353,9 @@ void blocking_actor::receive_impl(receive_cond& rcc,
         skipped = true;
         CAF_LOG_SKIP_EVENT();
       } else {
+        // automatically unlink from actors when receiving exit messages
+        if (x.content().match_elements<exit_msg>())
+          unlink_from(x.content().get_as<exit_msg>(0).source);
         // blocking actors can use nested receives => restore current_element_
         auto prev_element = current_element_;
         current_element_ = &x;
