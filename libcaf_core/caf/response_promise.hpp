@@ -57,6 +57,11 @@ public:
     response_promise
   >::type
   deliver(T&&x, Ts&&... xs) {
+    static_assert(!detail::is_specialization<result, T>::value
+                  && !detail::disjunction<
+                       detail::is_specialization<result, Ts>::value...
+                     >::value,
+                  "it is not possible to deliver objects of type result<...>");
     return deliver_impl(make_message(std::forward<T>(x),
                                      std::forward<Ts>(xs)...));
   }
