@@ -174,13 +174,9 @@ curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-fr
 " > .make-release-steps.bash
 
 if which brew &>/dev/null ; then
-  file_name="$tag_version.tar.gz"
-  file_url="https://github.com/actor-framework/actor-framework/archive/$file_name"
+  file_url="https://github.com/actor-framework/actor-framework/archive/$tag_version.tar.gz"
   echo "\
-curl -O -L $file_url
-sha=\$(shasum -a 256 $file_name | awk '{ print \$1  }')
-rm $file_name
-brew bump-formula-pr --message=\"Update CAF to version $tag_version\" --url=\"$file_url\" --sha256=\"\$sha\" caf
+brew bump-formula-pr --message=\"Update CAF to version $tag_version\" --url=\"$file_url\" caf
 " >> .make-release-steps.bash
 fi
 
