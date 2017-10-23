@@ -22,7 +22,14 @@
 #define CAF_SUITE openssl_authentication
 #include "caf/test/unit_test.hpp"
 
-#include <unistd.h>
+#ifndef CAF_WINDOWS
+# include <unistd.h>
+#else
+# include <io.h>
+# include <windows.h>
+# define F_OK 0
+# define PATH_MAX MAX_PATH
+#endif
 
 #include <vector>
 #include <sstream>
@@ -60,10 +67,14 @@ public:
      // TODO: https://github.com/actor-framework/actor-framework/issues/555
      path += "/../../libcaf_openssl/test";
      char rpath[PATH_MAX];
+#ifndef CAF_WINDOWS
      auto rp = realpath(path.c_str(), rpath);
+#else
+     auto rp = GetFullPathName(path.c_str(), PATH_MAX, rpath, nullptr);
+#endif
      std::string result;
      if (rp)
-       result = rp;
+       result = rpath;
      return result;
   }
 };

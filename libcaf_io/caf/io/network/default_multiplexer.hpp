@@ -59,8 +59,8 @@
 #   define WINVER WindowsVista
 #   include <w32api.h>
 # endif
-# include <windows.h>
 # include <winsock2.h>
+# include <windows.h>
 # include <ws2tcpip.h>
 # include <ws2ipdef.h>
 #else
