@@ -56,7 +56,9 @@ struct fixture {
   config client_side_config;
   actor_system client_side{client_side_config};
   fixture() {
+#ifdef CAF_LINUX
     signal(SIGPIPE, SIG_IGN);
+#endif
   }
 };
 
