@@ -93,11 +93,11 @@ struct has_outer_type {
 
 // enables ADL in `with_content`
 template <class T, class U>
-T get(const U&);
+T get(const has_outer_type<U>&);
 
 // enables ADL in `with_content`
 template <class T, class U>
-bool is(const U&);
+bool is(const has_outer_type<U>&);
 
 template <class Tup>
 class elementwise_compare_inspector {
