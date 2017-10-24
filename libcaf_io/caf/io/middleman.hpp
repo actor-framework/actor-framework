@@ -43,7 +43,7 @@ namespace io {
 /// Manages brokers and network backends.
 class middleman : public actor_system::module {
 public:
-  friend class actor_system;
+  friend class ::caf::actor_system;
 
   using hook_vector = std::vector<hook_uptr>;
 

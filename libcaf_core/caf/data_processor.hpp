@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <cstddef> // size_t
 #include <type_traits>
+#include <iterator>
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
