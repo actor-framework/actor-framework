@@ -87,7 +87,7 @@ echo "\
                         \____/_/   \_|_|
 
 This script expects to run at the root directory of a Git clone of CAF.
-The current repository must be develop, there must be no untracked file,
+The current repository must be master. There must be no untracked file
 and the working tree status must be equal to the current HEAD commit.
 Further, the script expects a relase_note.md file in the current directory
 with the developer blog checked out one level above, i.e.:
@@ -105,6 +105,10 @@ with the developer blog checked out one level above, i.e.:
 │   ├── _posts
 
 "
+
+if [ $(git rev-parse --abbrev-ref HEAD) != "master" ]; then
+  raise_error "not in master branch"
+fi
 
 # assumed files
 token_path="$HOME/.github-oauth-token"
@@ -166,10 +170,6 @@ git commit -a -m \"Change version to $1\"
 git push
 git tag $tag_version
 git push origin --tags
-git checkout master
-git merge develop
-git push
-git checkout develop
 curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-framework/releases?access_token=$token
 " > .make-release-steps.bash
 

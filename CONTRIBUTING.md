@@ -1,62 +1,69 @@
 This document specifies how to contribute code to CAF.
 
-
 Git Workflow
 ============
 
-Our git workflow encompasses the following key aspects. (For general git
-style guidelines, see <https://github.com/agis-/git-style-guide>.)
+Please adhere to the following Git naming and commit message conventions.
+Having a consistent work flow and style reduces friction and makes organizing
+contributions a lot easier for all sides.
 
-- The `master` branch always reflects a *production-ready* state, i.e.,
-  the latest release version.
+Branches
+--------
 
-- The `develop` branch is the main development branch. A maintainer merges into
-  `master` for a new release when it reaches a stable point. The `develop`
-  branch reflects the latest state of development and should always compile.
+- Our main branch is `master`. It reflects the latest development changes for
+  the next release and should always compile. Nightly versions use the
+  `master`. Users looking for a production-ready state are encouraged to use
+  the latest release version instead.
 
-- Simple bugfixes consisting of a single commit can be pushed to `develop`.
+- Push trivial bugfixes (e.g. typos, missing includes, etc.) consisting of a
+  single commit directly to `master`. Otherwise, implement your changes in a
+  topic or bugfix branch and file a pull request on GitHub.
 
-- Fixes for critical issues can be pushed to `master` (and `develop`)
-  after talking to a maintainer (and then cause a new release immediately).
+- Implement new features and non-trivial changes in a *topic branch* with
+  naming convention `topic/short-description`.
 
-- For new features and non-trivial fixes, CAF uses *topic branches* which
-  branch off `develop` with a naming convention of `topic/short-description`.
-  After completing work in a topic branch, check the following steps to prepare
-  for a merge back into `develop`:
+- Implement fixes for existing issues in a *bugfix branch* with naming
+  convention `issue/$num`, where `$num` is the issue ID on GitHub.
 
-  + Squash your commits into a single one if necessary
-  + Create a pull request to `develop` on github
-  + Wait for the results of Jenkins and fix any reported issues
-  + Ask a maintainer to review your work after Jenkins greelights your changes
-  + Address the feedback articulated during the review
-  + A maintainer will merge the topic branch into `develop` after it passes the
-    code review
+- Simply use a fork of CAF if you are an external contributor.
 
+Pull Requests
+-------------
+
+Check the following steps to prepare for a merge into `master` after completing
+work in a topic or bugfix branch (or fork).
+
+- Squash your commits into a single one if necessary. Each commit should
+  represent a coherent set of changes.
+
+- Wait for a code review and the test results of our CI.
+
+- Address any review feedback and fix all issues reported by the CI.
+
+- A maintainer will merge the pull request when all issues are resolved.
 
 Commit Message Style
 --------------------
 
-- The first line succintly summarizes the changes in no more than 50
-  characters. It is capitalized and written in and imperative present tense:
-  e.g., "Fix bug" as opposed to "Fixes bug" or "Fixed bug".
+- Summarize the changes in no more than 50 characters in the first line.
+  Capitalize and write in an imperative present tense, e.g., "Fix bug" as
+  opposed to "Fixes bug" or "Fixed bug".
 
-- The first line does not contain a dot at the end. (Think of it as the header
-  of the following description).
+- Suppress the dot at the end of the first line. Think of it as the header of
+  the following description.
 
-- The second line is empty.
+- Leave the second line empty.
 
-- Optional long descriptions as full sentences begin on the third line,
-  indented at 72 characters per line.
-
+- Optionally add a long description written in full sentences beginning on the
+  third line. Indent at 72 characters per line.
 
 Coding Style
 ============
 
 When contributing source code, please adhere to the following coding style,
 which is loosely based on the [Google C++ Style
-Guide](https://google.github.io/styleguide/cppguide.html) and the
-coding conventions used by the C++ Standard Library.
-
+Guide](https://google.github.io/styleguide/cppguide.html) and the coding
+conventions used by the C++ Standard Library.
 
 Example for the Impatient
 -------------------------
@@ -174,31 +181,30 @@ void my_class::do_something_else() noexcept {
 
 ```
 
-
 General
 -------
 
 - Use 2 spaces per indentation level.
 
-- The maximum number of characters per line is 80.
+- Use at most 80 characters per line.
 
-- No tabs, ever.
+- Never use tabs.
 
 - Never use C-style casts.
 
-- Vertical whitespaces separate functions and are not used inside functions:
-  use comments to document logical blocks.
-
-- Header filenames end in `.hpp`, implementation files end in `.cpp`.
-
 - Never declare more than one variable per line.
 
-- `*` and `&` bind to the *type*, e.g., `const std::string& arg`.
+- Only separate functions with vertical whitespaces and use comments to
+  document logcial blocks inside functions.
 
-- Namespaces and access modifiers (e.g., `public`) do not increase the
-  indentation level.
+- Use `.hpp` as suffix for header files and `.cpp` as suffix for implementation
+  files.
 
-- In a class, use the order `public`, `protected`, and then `private`.
+- Bind `*` and `&` to the *type*, e.g., `const std::string& arg`.
+
+- Never increase the indentation level for namespaces and access modifiers.
+
+- Use the order `public`, `protected`, and then `private` in classes.
 
 - Always use `auto` to declare a variable unless you cannot initialize it
   immediately or if you actually want a type conversion. In the latter case,
@@ -206,12 +212,12 @@ General
 
 - Never use unwrapped, manual resource management such as `new` and `delete`.
 
-- Never use `typedef`; always write `using T = X` in favor of `typedef X T`.
+- Prefer `using T = X` over `typedef X T`.
 
-- Keywords are always followed by a whitespace: `if (...)`, `template <...>`,
+- Insert a whitespaces after keywords: `if (...)`, `template <...>`,
   `while (...)`, etc.
 
-- Opening braces belong to the same line:
+- Put opening braces on the same line:
 
   ```cpp
   void foo() {
@@ -220,52 +226,54 @@ General
   ```
 
 - Use standard order for readability: C standard libraries, C++ standard
-  libraries, other libraries, (your) CAF headers:
+  libraries, OS-specific headers (usually guarded by `ifdef`), other libraries,
+  and finally (your) CAF headers. Include `caf/config.hpp` before the standard
+  headers if you need to include platform-dependent headers. Use angle brackets
+  for system includes and doublequotes otherwise.
 
   ```cpp
-  // some .hpp file
+  // example.hpp
   
-  #include <sys/types.h>
-
   #include <vector>
+
+  #include <sys/types.h>
 
   #include "3rd/party.h"
 
   #include "caf/fwd.hpp"
   ```
 
-  CAF includes should always be in doublequotes, whereas system-wide includes
-  in angle brackets. In a `.cpp` file, the implemented header always comes first
-  and the header `caf/config.hpp` can be included second if you need
-  platform-dependent headers:
+  Put the implemented header always first in a `.cpp` file.
 
   ```cpp
   // example.cpp
   
-  #include "caf/example.hpp" // header related to this .cpp file
+  #include "caf/example.hpp" // header for this .cpp file
   
-  #include "caf/config.hpp"
+  #include "caf/config.hpp" // needed for #ifdef guards
   
+  #include <algorithm>
+
   #ifdef CAF_WINDOWS
   #include <windows.h>
   #else
   #include <sys/socket.h>
   #endif
 
-  #include <algorithm>
-
   #include "some/other/library.h"
 
   #include "caf/actor.hpp"
   ```
 
-- When declaring a function, the order of parameters is: outputs, then inputs.
+- Put output parameters in functions before input parameters if unavoidable.
   This follows the parameter order from the STL.
 
-- Protect single-argument constructors with `explicit` to avoid implicit conversions.
+- Protect single-argument constructors with `explicit` to avoid implicit
+  conversions.
 
-- Use noexcept whenever it makes sense, in particular for move construction and assignment,
-  as long as it does not limit future design space.
+- Use `noexcept` whenever it makes sense and as long as it does not limit future
+  design space. Move construction and assignment are natural candidates for
+  `noexcept`.
 
 Naming
 ------
@@ -279,8 +287,8 @@ Naming
   should be "command" verbs. Classes used to implement metaprogramming
   functions also should use verbs, e.g., `remove_const`.
 
-- Private and protected member variables use the suffix `_` while getter *and* setter
-  functions use the name without suffix:
+- Private and protected member variables use the suffix `_` while getter *and*
+  setter functions use the name without suffix:
 
   ```cpp
   class person {
@@ -309,7 +317,6 @@ Naming
   }
   ```
 
-
 Headers
 -------
 
@@ -334,7 +341,6 @@ Headers
   main page for the documentation and includes all headers for the user API.
 
 - Use `inline` for small functions (rule of thumb: 10 lines or less).
-
 
 Breaking Statements
 -------------------
@@ -372,7 +378,6 @@ Breaking Statements
     // ...
   }
   ```
-
 
 Template Metaprogramming
 ------------------------
@@ -419,7 +424,6 @@ extra rules for formatting metaprogramming code.
                                                ResponseHandleTag>;
   ```
 
-
 Preprocessor Macros
 -------------------
 
@@ -428,16 +432,14 @@ Preprocessor Macros
 
 - Macro names use the form `CAF_<COMPONENT>_<NAME>`.
 
-
 Comments
 --------
 
-- Doxygen comments start with `///`.
+- Start Doxygen comments with `///`.
 
 - Use Markdown instead of Doxygen formatters.
 
 - Use `@cmd` rather than `\cmd`.
 
-- Use `//` to define basic comments that should not be
-  swallowed by Doxygen.
+- Use `//` to define basic comments that should not be processed by Doxygen.
 
