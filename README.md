@@ -9,13 +9,6 @@ network transparent messaging, and more.
 [![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
 [![Coverity][coverity-badge]](https://scan.coverity.com/projects/5555)
 [![In Progress][in-progress-badge]](https://waffle.io/actor-framework/actor-framework)
-[![Fixed in Develop][fixed-in-develop-badge]](https://waffle.io/actor-framework/actor-framework)
-
-## Community
-
-* __Chat__: https://gitter.im/actor-framework/chat
-* __Mailing List__: https://groups.google.com/d/forum/actor-framework
-* __Twitter__: https://twitter.com/actor_framework
 
 ## Online Resources
 
@@ -24,13 +17,19 @@ network transparent messaging, and more.
 * __Doxygen__: http://www.actor-framework.org/doc
 * __HTML Manual__: https://actor-framework.readthedocs.io
 * __PDF Manual__: http://www.actor-framework.org/pdf/manual.pdf
-* __HTML Manual (develop version)__: https://actor-framework.readthedocs.io/en/develop/
-* __PDF Manual (develop version)__: http://www.actor-framework.org/develop/pdf/manual.pdf
 
 ## Report Bugs / Get Help
 
 * __Open Issues on GitHub__: https://github.com/actor-framework/actor-framework/issues/new
 * __Ask Questions on StackOverflow__: https://stackoverflow.com/questions/ask?tags=c%2b%2b-actor-framework
+
+## Community
+
+* __Chat__: https://gitter.im/actor-framework/chat
+* __Twitter__: https://twitter.com/actor_framework
+* __User Mailing List__: https://groups.google.com/d/forum/actor-framework
+* __Developer Mailing List__: https://groups.google.com/d/forum/caf-devel
+* __Feature Proposals__: https://github.com/actor-framework/evolution
 
 ## Get CAF
 
@@ -71,7 +70,7 @@ You can install the latest stable release with:
 brew install caf
 ```
 
-Alternatively, you can use the development branch by using:
+Alternatively, you can use the current development version by using:
 
 ```sh
 brew install caf --HEAD
@@ -173,7 +172,7 @@ http://dx.doi.org/10.1016/j.cl.2016.01.002.
 
 [obs-dev-nightly]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf%3Anightly&package=caf-devel
 
-[jenkins-badge]: https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/develop%20branch
+[jenkins-badge]: https://jenkins.inet.haw-hamburg.de/buildStatus/icon?job=CAF/all
 
 [docs-badge]: https://readthedocs.org/projects/actor-framework/badge/?version=latest
 
@@ -182,5 +181,3 @@ http://dx.doi.org/10.1016/j.cl.2016.01.002.
 [gitter-badge]: https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg
 
 [in-progress-badge]: https://badge.waffle.io/actor-framework/actor-framework.png?label=In%20Progress&title=Issues%20in%20progress
-
-[fixed-in-develop-badge]: https://badge.waffle.io/actor-framework/actor-framework.png?label=Fixed%20in%20develop&title=Issues%20fixed%20in%20develop
