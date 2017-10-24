@@ -35,7 +35,8 @@ const char* type_name_visitor_tbl[] {
   "a 32-bit integer",
   "a 32-bit unsigned integer",
   "a 64-bit integer",
-  "a 64-bit unsigned integer"
+  "a 64-bit unsigned integer",
+  "a duration"
 };
 
 config_option::config_option(const char* cat, const char* nm, const char* expl)

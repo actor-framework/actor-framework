@@ -37,6 +37,7 @@ set(LIBCAF_CORE_SRCS
   src/blocking_behavior.cpp
   src/concatenated_tuple.cpp
   src/config_option.cpp
+  src/config_value.cpp
   src/decorated_tuple.cpp
   src/default_attachable.cpp
   src/deserializer.cpp

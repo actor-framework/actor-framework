@@ -48,7 +48,7 @@ public:
   using legal_types = detail::type_list<bool, float, double, std::string,
                                         atom_value, int8_t, uint8_t, int16_t,
                                         uint16_t, int32_t, uint32_t, int64_t,
-                                        uint64_t>;
+                                        uint64_t, duration>;
 
   config_option(const char* cat, const char* nm, const char* expl);
 
@@ -93,6 +93,18 @@ public:
       static constexpr int index = idx<T>(tk);
       static_assert(index >= 0, "illegal type in name visitor");
       return type_name_visitor_tbl[static_cast<size_t>(index)];
+    }
+
+    const char* operator()(const std::vector<config_value>&) {
+      return "a list";
+    }
+
+    const char* operator()(const std::map<std::string, config_value>&) {
+      return "a map";
+    }
+
+    const char* operator()(const timespan&) {
+      return "a timespan";
     }
 
   private:
@@ -145,6 +157,12 @@ protected:
       return false;
     x = static_cast<float>(y);
     return true;
+  }
+
+  template <class T>
+  static bool assign_config_value(std::vector<T>&,
+                                  std::vector<config_value>&) {
+    // TODO: implement me
   }
 
   void report_type_error(size_t ln, config_value& x, const char* expected,
@@ -250,13 +268,13 @@ public:
       // and all floating point numbers as doubles
       using cfg_type =
         typename std::conditional<
-          std::is_integral<value_type>::value && 
+          std::is_integral<value_type>::value &&
                            !std::is_same<bool, value_type>::value,
           int64_t,
           typename std::conditional<
             std::is_floating_point<value_type>::value,
             double,
-            value_type 
+            value_type
             >::type
         >::type;
       value_type tmp;

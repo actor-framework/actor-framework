@@ -238,7 +238,10 @@ public:
   }
 
   /// Sets a config by using its INI name `config_name` to `config_value`.
-  actor_system_config& set(const char* cn, config_value cv);
+  template <class T>
+  actor_system_config& set(const char* cn, T&& x) {
+    return set_impl(cn, config_value{std::forward<T>(x)});
+  }
 
   // -- parser and CLI state ---------------------------------------------------
 
@@ -412,6 +415,8 @@ private:
     value_factories_by_rtti.emplace(std::type_index(typeid(T)),
                                      &make_type_erased_value<T>);
   }
+
+  actor_system_config& set_impl(const char* cn, config_value cv);
 
   static std::string render_sec(uint8_t, atom_value, const message&);
 

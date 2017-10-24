@@ -419,7 +419,8 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
   return *this;
 }
 
-actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
+actor_system_config& actor_system_config::set_impl(const char* cn,
+                                                   config_value cv) {
   auto e = options_.end();
   auto i = std::find_if(options_.begin(), e, [cn](const option_ptr& ptr) {
     return ptr->full_name() == cn;

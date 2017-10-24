@@ -26,12 +26,27 @@
 namespace caf {
 namespace detail {
 
-void parse_ini_t::operator()(std::istream& input, const config_consumer& consumer_fun,
+namespace {
+
+// TODO: replace with generic lambda when switching to C++14
+// Wraps a temporary into an (lvalue) config_value and calls `consumer_fun`.
+struct consumer_t {
+  const parse_ini_t::config_consumer& consumer_fun;
+  parse_ini_t::opt_err& errors;
+
+  template <class T>
+  void operator()(size_t ln, std::string name, T&& x) {
+    config_value tmp{std::forward<T>(x)};
+    consumer_fun(ln, std::move(name), tmp, errors);
+  }
+};
+
+} // namespace <anonymous>
+
+void parse_ini_t::operator()(std::istream& input,
+                             const config_consumer& consumer_fun,
                              opt_err errors) const {
-  // wraps a temporary into an (lvalue) config_value and calls `consumer_fun`
-  auto consumer = [&](size_t ln, std::string name, config_value x) {
-    consumer_fun(ln, std::move(name), x, errors);
-  };
+  consumer_t consumer{consumer_fun, errors};
   std::string group;
   std::string line;
   size_t ln = 0; // line number
@@ -90,14 +105,12 @@ void parse_ini_t::operator()(std::istream& input, const config_consumer& consume
     // begin-of-value, ignoring whitespaces after '='
     auto bov = find_if_not(eqs + 1, eol, ::isspace);
     // auto-detect what we are dealing with
-    constexpr const char* true_str = "true";
-    constexpr const char* false_str = "false";
     auto icase_eq = [](char x, char y) {
       return tolower(x) == tolower(y);
     };
-    if (std::equal(bov, eol, true_str, icase_eq)) {
+    if (std::equal(bov, eol, "true", icase_eq)) {
       consumer(ln, std::move(key), true);
-    } else if (std::equal(bov, eol, false_str, icase_eq)) {
+    } else if (std::equal(bov, eol, "false", icase_eq)) {
       consumer(ln, std::move(key), false);
     } else if (*bov == '\'') {
       // end-of-atom iterator
@@ -189,6 +202,7 @@ void parse_ini_t::operator()(std::istream& input, const config_consumer& consume
         else
           consumer(ln, std::move(key), is_neg ? -res : res);
       };
+      // check for number prefixes (0 for octal, 0x for hex, 0b for binary)
       if (*bov == '0' && std::distance(bov, eol) > 1)
         switch (*(bov + 1)) {
           case 'x':
@@ -205,10 +219,13 @@ void parse_ini_t::operator()(std::istream& input, const config_consumer& consume
             else
               set_dval();
         }
-      else if (all_of(bov, eol, ::isdigit))
-        set_ival(10, 0, "invalid decimal value");
-      else
-        set_dval();
+      else {
+        // no suffix, try parsing the line as integer or double
+        if (all_of(bov, eol, ::isdigit))
+          set_ival(10, 0, "invalid decimal value");
+        else
+          set_dval();
+      }
     }
   }
 }
