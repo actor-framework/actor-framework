@@ -143,7 +143,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
             eu->exec_later(this, true); // internal enqueue
           } else {
             // `eu` has a high memory distance to this actor
-            home_eu_->exec_later(this, false); // external enqueued
+            home_eu_->exec_later(this, true); // external enqueued
           }
         } else {
           // msg is received from non-actor or context or from a detached actor
