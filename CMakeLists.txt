@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.8.4)
 project(caf C CXX)
 
+include(CheckCSourceCompiles)
+include(CheckCSourceRuns)
+
 # be nice to vim users
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -531,8 +534,32 @@ add_optional_caf_lib(io)
 if(NOT CAF_NO_OPENSSL)
   find_package(OpenSSL)
   if(OPENSSL_FOUND)
-    include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
-    add_optional_caf_lib(openssl)
+    # Check OpenSSL version >= 1.0.1
+    if (OPENSSL_VERSION VERSION_LESS 1.0.1)
+      message(STATUS
+              "Disable OpenSSL. Required >= 1.0.1 due to TLSv2 support.")
+      set(CAF_NO_OPENSSL yes)
+    else()
+      # Check if openssl headers and library versions match
+      set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
+      set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+      check_c_source_runs("
+        #include <openssl/opensslv.h>
+        #include <openssl/crypto.h>
+        int main() {
+          if (SSLeay() == OPENSSL_VERSION_NUMBER) {
+            return 0;
+          }
+          return -1;
+        }
+      " OPENSSL_CORRECT_VERSION_NUMBER )
+      if (NOT OPENSSL_CORRECT_VERSION_NUMBER)
+        message(FATAL_ERROR
+          "OpenSSL library version does not match headers")
+      endif()
+      include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
+      add_optional_caf_lib(openssl)
+    endif()
   else(OPENSSL_FOUND)
     set(CAF_NO_OPENSSL yes)
   endif(OPENSSL_FOUND)
