@@ -332,6 +332,16 @@ public:
 
   error_renderer_map error_renderers;
 
+  // -- convenience functions --------------------------------------------------
+
+  template <class F>
+  void for_each_option(F f) const {
+    const option_vector* all_options[] = { &options_, &custom_options_ };
+    for (auto& opt_vec : all_options)
+      for (auto& opt : *opt_vec)
+        f(*opt);
+  }
+
   // -- utility for caf-run ----------------------------------------------------
 
   // Config parameter for individual actor types.

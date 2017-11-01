@@ -438,16 +438,13 @@ actor_system_config& actor_system_config::parse(message& args,
   if (res.opts.count("caf#dump-config") != 0u) {
     cli_helptext_printed = true;
     std::string category;
-    option_vector* all_options[] = { &options_, &custom_options_ };
-    for (auto& opt_vec : all_options) {
-      for (auto& opt : *opt_vec) {
-        if (category != opt->category()) {
-          category = opt->category();
-          cout << "[" << category << "]" << endl;
-        }
-        cout << opt->name() << "=" << opt->to_string() << endl;
+    for_each_option([&](const config_option& x) {
+      if (category != x.category()) {
+        category = x.category();
+        cout << "[" << category << "]" << endl;
       }
-    }
+      cout << x.name() << "=" << x.to_string() << endl;
+    });
   }
   return *this;
 }
