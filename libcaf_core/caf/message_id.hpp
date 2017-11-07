@@ -30,6 +30,7 @@
 #include "caf/meta/type_name.hpp"
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
@@ -116,18 +117,17 @@ public:
     return value_;
   }
 
-  static inline message_id from_integer_value(uint64_t value) {
-    message_id result;
-    result.value_ = value;
-    return result;
-  }
-
   static constexpr message_id make() {
     return message_id{};
   }
 
   static constexpr message_id make(message_priority prio) {
     return prio == message_priority::high ? high_prioity_flag_mask : 0;
+  }
+
+  template <class Int, class E = detail::enable_if_tt<std::is_integral<Int>>>
+  static constexpr message_id make(Int value) {
+    return {static_cast<uint64_t>(value)};
   }
 
   long compare(const message_id& other) const {
