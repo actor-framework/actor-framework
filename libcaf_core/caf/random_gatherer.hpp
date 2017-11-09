@@ -19,6 +19,7 @@
 #ifndef CAF_RANDOM_GATHERER_HPP
 #define CAF_RANDOM_GATHERER_HPP
 
+#include "caf/fwd.hpp"
 #include "caf/stream_gatherer_impl.hpp"
 
 namespace caf {
@@ -28,7 +29,7 @@ class random_gatherer : public stream_gatherer_impl {
 public:
   using super = stream_gatherer_impl;
 
-  random_gatherer(local_actor* selfptr);
+  random_gatherer(local_actor* selfptr, stream_scatterer&);
 
   ~random_gatherer() override;
 

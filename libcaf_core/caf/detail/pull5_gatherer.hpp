@@ -29,7 +29,7 @@ class pull5_gatherer : public random_gatherer {
 public:
   using super = random_gatherer;
 
-  pull5_gatherer(local_actor* selfptr);
+  pull5_gatherer(local_actor* selfptr, stream_scatterer&);
 
   void assign_credit(long available) override;
 

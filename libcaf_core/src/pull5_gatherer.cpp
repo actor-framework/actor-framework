@@ -21,7 +21,8 @@
 namespace caf {
 namespace detail {
 
-pull5_gatherer::pull5_gatherer(local_actor* selfptr) : super(selfptr) {
+pull5_gatherer::pull5_gatherer(local_actor* selfptr, stream_scatterer& out)
+    : super(selfptr, out) {
   // nop
 }
 

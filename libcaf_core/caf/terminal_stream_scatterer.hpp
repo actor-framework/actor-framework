@@ -27,7 +27,7 @@ namespace caf {
 /// stream scatterer generates credit without downstream actors.
 class terminal_stream_scatterer : public stream_scatterer {
 public:
-  terminal_stream_scatterer() = default;
+  terminal_stream_scatterer(local_actor* = nullptr);
 
   ~terminal_stream_scatterer() override;
 

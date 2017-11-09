@@ -44,8 +44,8 @@ public:
                     Fun fun, Cleanup cleanup)
       : fun_(std::move(fun)),
         cleanup_(std::move(cleanup)),
-        in_(self),
-        out_(self) {
+        out_(self),
+        in_(self, out_) {
     // nop
   }
 
@@ -113,8 +113,8 @@ private:
   state_type state_;
   Fun fun_;
   Cleanup cleanup_;
-  UpstreamPolicy in_;
   DownstreamPolicy out_;
+  UpstreamPolicy in_;
 };
 
 } // namespace caf

@@ -43,7 +43,8 @@ public:
   stream_sink_impl(local_actor* self, Fun fun, Finalize fin)
       : fun_(std::move(fun)),
         fin_(std::move(fin)),
-        in_(self) {
+        out_(self),
+        in_(self, out_) {
     // nop
   }
 
@@ -85,8 +86,8 @@ private:
   state_type state_;
   Fun fun_;
   Finalize fin_;
-  Gatherer in_;
   Scatterer out_;
+  Gatherer in_;
 };
 
 } // namespace caf
