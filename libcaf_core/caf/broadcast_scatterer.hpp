@@ -40,15 +40,19 @@ public:
 
   void emit_batches() override {
     CAF_LOG_TRACE("");
-    auto chunk = this->get_chunk(this->min_credit());
-    auto csize = static_cast<long>(chunk.size());
-    CAF_LOG_TRACE(CAF_ARG(chunk));
-    if (csize == 0)
-      return;
-    auto wrapped_chunk = make_message(std::move(chunk));
-    for (auto& x : this->paths_) {
-      CAF_ASSERT(x->open_credit >= csize);
-      x->emit_batch(csize, wrapped_chunk);
+    auto hint = this->min_desired_batch_size();
+    auto next_chunk = [&] {
+      // TODO: this iterates paths_ every time again even though we could
+      //       easily keep track of remaining credit
+      return this->get_chunk(std::min(this->min_credit(), hint));
+    };
+    for (auto chunk = next_chunk(); !chunk.empty(); chunk = next_chunk()) {
+      auto csize = static_cast<long>(chunk.size());
+      auto wrapped_chunk = make_message(std::move(chunk));
+      for (auto& x : this->paths_) {
+        CAF_ASSERT(x->open_credit >= csize);
+        x->emit_batch(csize, wrapped_chunk);
+      }
     }
   }
 };

@@ -70,6 +70,8 @@ struct stream_msg : tag::boxing_type {
     strong_actor_ptr rebind_to;
     /// Grants credit to the source.
     int32_t initial_demand;
+    /// Desired size of individual batches.
+    int32_t desired_batch_size;
     /// Tells the upstream whether rebindings can occur on this path.
     bool redeployable;
   };
@@ -93,6 +95,8 @@ struct stream_msg : tag::boxing_type {
     using outer_type = stream_msg;
     /// Newly available credit.
     int32_t new_capacity;
+    /// Desired size of individual batches for the next cycle.
+    int32_t desired_batch_size;
     /// Cumulative ack ID.
     int64_t acknowledged_id;
   };
@@ -195,7 +199,7 @@ typename Inspector::result_type inspect(Inspector& f, stream_msg::open& x) {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, stream_msg::ack_open& x) {
   return f(meta::type_name("ack_open"), x.rebind_from, x.rebind_to,
-           x.initial_demand, x.redeployable);
+           x.initial_demand, x.desired_batch_size, x.redeployable);
 }
 
 template <class Inspector>
@@ -206,7 +210,8 @@ typename Inspector::result_type inspect(Inspector& f, stream_msg::batch& x) {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
                                         stream_msg::ack_batch& x) {
-  return f(meta::type_name("ack_batch"), x.new_capacity, x.acknowledged_id);
+  return f(meta::type_name("ack_batch"), x.new_capacity, x.desired_batch_size,
+           x.acknowledged_id);
 }
 
 template <class Inspector>

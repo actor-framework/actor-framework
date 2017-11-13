@@ -34,6 +34,7 @@ inbound_path::inbound_path(local_actor* selfptr, const stream_id& id,
       last_acked_batch_id(0),
       last_batch_id(0),
       assigned_credit(0),
+      desired_batch_size(50), // TODO: at least put default in some header
       redeployable(false) {
   // nop
 }
@@ -60,20 +61,23 @@ void inbound_path::emit_ack_open(actor_addr rebind_from,
                 << CAF_ARG(is_redeployable));
   assigned_credit = initial_demand;
   redeployable = is_redeployable;
+  auto batch_size = static_cast<int32_t>(desired_batch_size);
   unsafe_send_as(self, hdl,
                  make<stream_msg::ack_open>(
                    sid, self->address(), std::move(rebind_from), self->ctrl(),
-                   static_cast<int32_t>(initial_demand), is_redeployable));
+                   static_cast<int32_t>(initial_demand), batch_size,
+                   is_redeployable));
 }
 
 void inbound_path::emit_ack_batch(long new_demand) {
   CAF_LOG_TRACE(CAF_ARG(new_demand));
   last_acked_batch_id = last_batch_id;
   assigned_credit += new_demand;
+  auto batch_size = static_cast<int32_t>(desired_batch_size);
   unsafe_send_as(self, hdl,
                  make<stream_msg::ack_batch>(sid, self->address(),
                                              static_cast<int32_t>(new_demand),
-                                             last_batch_id));
+                                             batch_size, last_batch_id));
 }
 
 void inbound_path::emit_irregular_shutdown(local_actor* self,

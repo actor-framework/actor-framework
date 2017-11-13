@@ -55,7 +55,7 @@ error stream_manager::open(const stream_id& sid, strong_actor_ptr hdl,
 error stream_manager::ack_open(const stream_id& sid,
                                const actor_addr& rebind_from,
                                strong_actor_ptr rebind_to, long initial_demand,
-                               bool redeployable) {
+                               long desired_batch_size, bool redeployable) {
   CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(rebind_from) << CAF_ARG(rebind_to)
                 << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
   if (rebind_from == nullptr)
@@ -67,7 +67,8 @@ error stream_manager::ack_open(const stream_id& sid,
     return sec::invalid_downstream;
   }
   auto ptr = out().confirm_path(sid, rebind_from, std::move(rebind_to),
-                                initial_demand, redeployable);
+                                initial_demand, desired_batch_size,
+                                redeployable);
   if (ptr == nullptr)
     return sec::invalid_downstream;
   downstream_demand(ptr, initial_demand);
@@ -102,12 +103,14 @@ error stream_manager::batch(const stream_id& sid, const actor_addr& hdl,
 }
 
 error stream_manager::ack_batch(const stream_id& sid, const actor_addr& hdl,
-                                long demand, int64_t) {
+                                long demand, long batch_size, int64_t) {
   CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl) << CAF_ARG(demand));
   auto ptr = out().find(sid, hdl);
   if (ptr == nullptr)
     return sec::invalid_downstream;
   ptr->open_credit += demand;
+  if (ptr->desired_batch_size != batch_size)
+    ptr->desired_batch_size = batch_size;
   downstream_demand(ptr, demand);
   return none;
 }

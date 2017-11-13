@@ -102,7 +102,8 @@ auto stream_msg_visitor::operator()(stream_msg::ack_open& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   return invoke([&](stream_manager_ptr& mgr) {
     return mgr->ack_open(sid_, x.rebind_from, std::move(x.rebind_to),
-                         x.initial_demand, x.redeployable);
+                         x.initial_demand, x.desired_batch_size,
+                         x.redeployable);
   });
 }
 
@@ -116,7 +117,7 @@ auto stream_msg_visitor::operator()(stream_msg::batch& x) -> result_type {
 auto stream_msg_visitor::operator()(stream_msg::ack_batch& x) -> result_type {
   CAF_LOG_TRACE(CAF_ARG(x));
   return invoke([&](stream_manager_ptr& mgr) {
-    return mgr->ack_batch(sid_, sender_, static_cast<long>(x.new_capacity),
+    return mgr->ack_batch(sid_, sender_, x.new_capacity, x.desired_batch_size,
                           x.acknowledged_id);
   });
 }

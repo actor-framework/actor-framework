@@ -216,7 +216,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(d1).with(_, splitter, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(d1).to(splitter).with(_, _, 5, _, false));
+         from(d1).to(splitter).with(_, _, 5, _, _, false));
   CAF_MESSAGE("spawn second sink");
   auto d2 = sys.spawn(storage, splitter, filter_type{"key2"});
   sched.run_once();
@@ -225,7 +225,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(d2).with(_, splitter, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(d2).to(splitter).with(_, _, 5, _, false));
+         from(d2).to(splitter).with(_, _, 5, _, _, false));
   CAF_MESSAGE("spawn source");
   auto src = sys.spawn(nores_streamer, splitter);
   sched.run_once();
@@ -233,7 +233,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(splitter).with(_, src, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(splitter).to(src).with(_, _, 5, _, false));
+         from(splitter).to(src).with(_, _, 5, _, _, false));
   // First batch.
   expect((stream_msg::batch),
          from(src).to(splitter)
@@ -250,9 +250,9 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::batch),
          from(splitter).to(d1)
          .with(3, batch{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}}, 0));
-  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, 0));
-  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, 0));
-  expect((stream_msg::ack_batch), from(splitter).to(src).with(5, 0));
+  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, _, 0));
+  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, _, 0));
+  expect((stream_msg::ack_batch), from(splitter).to(src).with(5, _, 0));
   // Second batch.
   expect((stream_msg::batch),
          from(src).to(splitter)
@@ -261,9 +261,9 @@ CAF_TEST(fork_setup) {
          from(splitter).to(d1).with(1, batch{{"key1", "d"}}, 1));
   expect((stream_msg::batch),
          from(splitter).to(d2).with(2, batch{{"key2", "c"}, {"key2", "d"}}, 1));
-  expect((stream_msg::ack_batch), from(d1).to(splitter).with(1, 1));
-  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, 1));
-  expect((stream_msg::ack_batch), from(splitter).to(src).with(3, 1));
+  expect((stream_msg::ack_batch), from(d1).to(splitter).with(1, _, 1));
+  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, _, 1));
+  expect((stream_msg::ack_batch), from(splitter).to(src).with(3, _, 1));
   // Source is done, splitter remains open.
   expect((stream_msg::close), from(src).to(splitter).with());
   CAF_REQUIRE(!sched.has_job());
@@ -291,7 +291,7 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::open),
          from(_).to(splitter).with(_, src2, _, _, _, false));
   expect((stream_msg::ack_open),
-         from(splitter).to(src2).with(_, _, 5, _, false));
+         from(splitter).to(src2).with(_, _, 5, _, _, false));
   // First batch.
   expect((stream_msg::batch),
          from(src2).to(splitter)
@@ -308,9 +308,9 @@ CAF_TEST(fork_setup) {
   expect((stream_msg::batch),
          from(splitter).to(d1)
          .with(3, batch{{"key1", "a"}, {"key1", "b"}, {"key1", "c"}}, 2));
-  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, 2));
-  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, 2));
-  expect((stream_msg::ack_batch), from(splitter).to(src2).with(5, 0));
+  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, _, 2));
+  expect((stream_msg::ack_batch), from(d1).to(splitter).with(3, _, 2));
+  expect((stream_msg::ack_batch), from(splitter).to(src2).with(5, _, 0));
   // Second batch.
   expect((stream_msg::batch),
          from(src2).to(splitter)
@@ -319,9 +319,9 @@ CAF_TEST(fork_setup) {
          from(splitter).to(d1).with(1, batch{{"key1", "d"}}, 3));
   expect((stream_msg::batch),
          from(splitter).to(d2).with(2, batch{{"key2", "c"}, {"key2", "d"}}, 3));
-  expect((stream_msg::ack_batch), from(d1).to(splitter).with(1, 3));
-  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, 3));
-  expect((stream_msg::ack_batch), from(splitter).to(src2).with(3, 1));
+  expect((stream_msg::ack_batch), from(d1).to(splitter).with(1, _, 3));
+  expect((stream_msg::ack_batch), from(d2).to(splitter).with(2, _, 3));
+  expect((stream_msg::ack_batch), from(splitter).to(src2).with(3, _, 1));
   // Source is done, splitter remains open.
   expect((stream_msg::close), from(src2).to(splitter).with());
   CAF_REQUIRE(!sched.has_job());

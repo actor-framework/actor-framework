@@ -32,6 +32,7 @@ outbound_path::outbound_path(local_actor* selfptr, const stream_id& id,
       hdl(std::move(ptr)),
       next_batch_id(0),
       open_credit(0),
+      desired_batch_size(0),
       redeployable(false),
       next_ack_id(0) {
   // nop

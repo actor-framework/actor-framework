@@ -65,6 +65,9 @@ public:
   /// Amount of credit we have signaled upstream.
   long assigned_credit;
 
+  /// Ideal size for individual batches.
+  long desired_batch_size;
+
   /// Stores whether the source actor is failsafe, i.e., allows the runtime to
   /// redeploy it on failure.
   bool redeployable;

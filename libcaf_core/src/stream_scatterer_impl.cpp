@@ -26,8 +26,6 @@ namespace caf {
 stream_scatterer_impl::stream_scatterer_impl(local_actor* selfptr)
     : super(selfptr),
       min_batch_size_(1),
-      max_batch_size_(150),
-      min_buffer_size_(50),
       max_batch_delay_(infinite) {
   // nop
 }
@@ -54,12 +52,12 @@ stream_scatterer_impl::add_path(const stream_id& sid, strong_actor_ptr origin,
   return ptr;
 }
 
-stream_scatterer::path_ptr
-stream_scatterer_impl::confirm_path(const stream_id& sid,
-                                    const actor_addr& from, strong_actor_ptr to,
-                                    long initial_demand, bool redeployable) {
+stream_scatterer::path_ptr stream_scatterer_impl::confirm_path(
+    const stream_id& sid, const actor_addr& from, strong_actor_ptr to,
+    long initial_demand, long desired_batch_size, bool redeployable) {
   CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(from) << CAF_ARG(to)
-                << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
+                << CAF_ARG(initial_demand) << CAF_ARG(desired_batch_size)
+                << CAF_ARG(redeployable));
   auto ptr = find(sid, from);
   if (ptr == nullptr) {
     CAF_LOG_WARNING("cannot confirm unknown path");
@@ -71,6 +69,8 @@ stream_scatterer_impl::confirm_path(const stream_id& sid,
     ptr->hdl = std::move(to);
   ptr->redeployable = redeployable;
   ptr->open_credit += initial_demand;
+  if (ptr->desired_batch_size != desired_batch_size)
+    ptr->desired_batch_size = desired_batch_size;
   return ptr;
 }
 
@@ -108,16 +108,24 @@ long stream_scatterer_impl::max_credit() const {
   return max_credit(paths_);
 }
 
+long stream_scatterer_impl::total_desired_batch_size() const {
+  return total_desired_batch_size(paths_);
+}
+
+long stream_scatterer_impl::min_desired_batch_size() const {
+  return min_desired_batch_size(paths_);
+}
+
+long stream_scatterer_impl::max_desired_batch_size() const {
+  return max_desired_batch_size(paths_);
+}
+
 long stream_scatterer_impl::min_batch_size() const {
   return min_batch_size_;
 }
 
-long stream_scatterer_impl::max_batch_size() const {
-  return max_batch_size_;
-}
-
 long stream_scatterer_impl::min_buffer_size() const {
-  return min_buffer_size_;
+  return 50; // TODO: at least place the default in a header
 }
 
 duration stream_scatterer_impl::max_batch_delay() const {
@@ -126,14 +134,6 @@ duration stream_scatterer_impl::max_batch_delay() const {
 
 void stream_scatterer_impl::min_batch_size(long x) {
   min_batch_size_ = x;
-}
-
-void stream_scatterer_impl::max_batch_size(long x) {
-  max_batch_size_ = x;
-}
-
-void stream_scatterer_impl::min_buffer_size(long x) {
-  min_buffer_size_ = x;
 }
 
 void stream_scatterer_impl::max_batch_delay(duration x) {

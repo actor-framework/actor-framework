@@ -67,13 +67,45 @@ public:
     return !xs.empty()
            ? fold_credit(xs, std::numeric_limits<long>::max(),
                          [](long x, long y) { return std::min(x, y); })
-           : 0;
+           : 0l;
   }
 
+  /// Returns the maximum number of credit in `xs`.
   template <class PathContainer>
   static long max_credit(const PathContainer& xs) {
     return fold_credit(xs, 0l, [](long x, long y) { return std::max(x, y); });
-}
+  }
+
+  /// Folds `paths()` by extracting the `desired_batch_size` from each path.
+  template <class PathContainer, class F>
+  static long fold_desired_batch_size(const PathContainer& xs, long x0, F f) {
+    auto g = [f](long x, const typename PathContainer::value_type& y) {
+      return f(x, y->desired_batch_size);
+    };
+    return super::fold(xs, x0, std::move(g));
+  }
+
+  /// Returns the total number (sum) of all desired batch sizes in `xs`.
+  template <class PathContainer>
+  static long total_desired_batch_size(const PathContainer& xs) {
+    return fold_desired_batch_size(xs, 0l,
+                                    [](long x, long y) { return x + y; });
+  }
+
+  /// Returns the minimum number of desired batch sizes in `xs`.
+  template <class PathContainer>
+  static long min_desired_batch_size(const PathContainer& xs) {
+    return !xs.empty() ? fold_desired_batch_size(
+                           xs, std::numeric_limits<long>::max(),
+                           [](long x, long y) { return std::min(x, y); }) 
+                       : 0l;
+  }
+
+  /// Returns the maximum number of desired batch sizes in `xs`.
+  template <class PathContainer>
+  static long max_desired_batch_size(const PathContainer& xs) {
+    return fold_credit(xs, 0l, [](long x, long y) { return std::max(x, y); });
+  }
 
   // -- convenience functions for children classes -----------------------------
 
@@ -85,6 +117,15 @@ public:
 
   /// Returns the maximum number of credit in `paths()`.
   long max_credit() const;
+
+  /// Returns the total number (sum) of all desired batch sizes in `paths()`.
+  long total_desired_batch_size() const;
+
+  /// Returns the minimum number of desired batch sizes in `paths()`.
+  long min_desired_batch_size() const;
+
+  /// Returns the maximum number of desired batch sizes in `paths()`.
+  long max_desired_batch_size() const;
 
   // -- overridden functions ---------------------------------------------------
 
@@ -98,13 +139,11 @@ public:
 
   path_ptr confirm_path(const stream_id& sid, const actor_addr& from,
                         strong_actor_ptr to, long initial_demand,
-                        bool redeployable) override;
+                        long desired_batch_size, bool redeployable) override;
 
   bool paths_clean() const override;
 
   long min_batch_size() const override;
-
-  long max_batch_size() const override;
 
   long min_buffer_size() const override;
 
@@ -112,16 +151,10 @@ public:
 
   void min_batch_size(long x) override;
 
-  void max_batch_size(long x) override;
-
-  void min_buffer_size(long x) override;
-
   void max_batch_delay(duration x) override;
 
 protected:
   long min_batch_size_;
-  long max_batch_size_;
-  long min_buffer_size_;
   duration max_batch_delay_;
 };
 

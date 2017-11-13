@@ -67,6 +67,9 @@ public:
   /// Currently available credit for this path.
   long open_credit;
 
+  /// Batch size configured by the downstream actor.
+  long desired_batch_size;
+
   /// Stores whether the downstream actor is failsafe, i.e., allows the runtime
   /// to redeploy it on failure. If this field is set to `false` then
   /// `unacknowledged_batches` is unused.

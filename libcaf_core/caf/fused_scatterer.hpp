@@ -111,7 +111,7 @@ public:
 
   path_ptr confirm_path(const stream_id& sid, const actor_addr& from,
                         strong_actor_ptr to, long initial_demand,
-                        bool redeployable) override {
+                        long desired_batch_size, bool redeployable) override {
     CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(from) << CAF_ARG(to)
                   << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
     return first_hit([&](pointer ptr) -> outbound_path* {
@@ -119,7 +119,8 @@ public:
       // this will trigger forced_close messages.
       if (ptr->find(sid, from) == nullptr)
         return nullptr;
-      return ptr->confirm_path(sid, from, to, initial_demand, redeployable);
+      return ptr->confirm_path(sid, from, to, initial_demand,
+                               desired_batch_size, redeployable);
     });
   }
 
@@ -208,10 +209,6 @@ public:
     return main_stream().min_batch_size();
   }
 
-  long max_batch_size() const override {
-    return main_stream().max_batch_size();
-  }
-
   long min_buffer_size() const override {
     return main_stream().min_buffer_size();
   }
@@ -222,14 +219,6 @@ public:
 
   void min_batch_size(long x) override {
     main_stream().min_batch_size(x);
-  }
-
-  void max_batch_size(long x) override {
-    main_stream().max_batch_size(x);
-  }
-
-  void min_buffer_size(long x) override {
-    main_stream().min_buffer_size(x);
   }
 
   void max_batch_delay(duration x) override {

@@ -53,11 +53,14 @@ public:
       auto& l = kvp.second;
       super::sort_by_credit(l.paths);
       for (auto& x : l.paths) {
-        auto chunk = super::get_chunk(l.buf, x->open_credit);
-        auto csize = static_cast<long>(chunk.size());
-        if (csize == 0)
-          break;
-        x->emit_batch(csize, make_message(std::move(chunk)));
+        auto hint = x->desired_batch_size;
+        auto next_chunk = [&] {
+          return super::get_chunk(l.buf, std::min(x->open_credit, hint));
+        };
+        for (auto chunk = next_chunk(); !chunk.empty(); chunk = next_chunk()) {
+          auto csize = static_cast<long>(chunk.size());
+          x->emit_batch(csize, make_message(std::move(chunk)));
+        }
       }
     }
   }

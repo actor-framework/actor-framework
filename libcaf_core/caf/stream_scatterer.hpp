@@ -56,7 +56,7 @@ public:
   /// Adds a path to a sink and initiates the handshake.
   virtual path_ptr confirm_path(const stream_id& sid, const actor_addr& from,
                                 strong_actor_ptr to, long initial_demand,
-                                bool redeployable) = 0;
+                                long desired_batch_size, bool redeployable) = 0;
 
   /// Removes a path from the scatterer.
   virtual bool remove_path(const stream_id& sid, const actor_addr& x,
@@ -104,15 +104,12 @@ public:
   virtual long buffered() const = 0;
 
   /// Minimum amount of messages required to emit a batch. A value of 0
-  /// disables batch delays.
+  /// disables batch accumulation.
   virtual long min_batch_size() const = 0;
 
-  /// Maximum amount of messages to put into a single batch. Causes the actor
-  /// to split a buffer into more batches if necessary.
-  virtual long max_batch_size() const = 0;
-
   /// Minimum amount of messages we wish to store at the actor in order to emit
-  /// new batches immediately when receiving new downstream demand.
+  /// new batches immediately when receiving new downstream demand. Usually
+  /// dynamically adjusted based on the output rate.
   virtual long min_buffer_size() const = 0;
 
   /// Forces to actor to emit a batch even if the minimum batch size was not
@@ -122,14 +119,6 @@ public:
   /// Minimum amount of messages required to emit a batch. A value of 0
   /// disables batch delays.
   virtual void min_batch_size(long x) = 0;
-
-  /// Maximum amount of messages to put into a single batch. Causes the actor
-  /// to split a buffer into more batches if necessary.
-  virtual void max_batch_size(long x) = 0;
-
-  /// Minimum amount of messages we wish to store at the actor in order to emit
-  /// new batches immediately when receiving new downstream demand.
-  virtual void min_buffer_size(long x) = 0;
 
   /// Forces to actor to emit a batch even if the minimum batch size was not
   /// reached.

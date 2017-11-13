@@ -62,7 +62,7 @@ public:
   /// @pre `hdl != nullptr`
   virtual error ack_open(const stream_id& sid, const actor_addr& rebind_from,
                          strong_actor_ptr rebind_to, long initial_demand,
-                         bool redeployable);
+                         long desired_batch_size, bool redeployable);
 
   /// Handles `stream_msg::batch` messages.
   /// @param hdl Handle to the sender.
@@ -80,7 +80,8 @@ public:
   /// @param cumulative_batch_id Id of last handled batch.
   /// @pre `hdl != nullptr`
   virtual error ack_batch(const stream_id& sid, const actor_addr& hdl,
-                          long new_demand, int64_t cumulative_batch_id);
+                          long new_demand, long desired_batch_size,
+                          int64_t cumulative_batch_id);
 
   /// Handles `stream_msg::close` messages.
   /// @param hdl Handle to the sender.

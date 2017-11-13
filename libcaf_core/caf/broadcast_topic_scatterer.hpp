@@ -52,14 +52,20 @@ public:
     this->fan_out();
     for (auto& kvp : this->lanes_) {
       auto& l = kvp.second;
-      auto chunk = super::get_chunk(l.buf, super::min_credit(l.paths));
-      auto csize = static_cast<long>(chunk.size());
-      if (csize == 0)
-        continue;
-      auto wrapped_chunk = make_message(std::move(chunk));
-      for (auto& x : l.paths) {
-        CAF_ASSERT(x->open_credit >= csize);
-        x->emit_batch(csize, wrapped_chunk);
+      auto hint = super::min_desired_batch_size(l.paths);
+      auto next_chunk = [&] {
+        // TODO: this iterates paths_ every time again even though we could
+        //       easily keep track of remaining credit
+        return super::get_chunk(l.buf,
+                                std::min(super::min_credit(l.paths), hint));
+      };
+      for (auto chunk = next_chunk(); !chunk.empty(); chunk = next_chunk()) {
+        auto csize = static_cast<long>(chunk.size());
+        auto wrapped_chunk = make_message(std::move(chunk));
+        for (auto& x : l.paths) {
+          CAF_ASSERT(x->open_credit >= csize);
+          x->emit_batch(csize, wrapped_chunk);
+        }
       }
     }
   }
