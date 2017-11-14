@@ -202,7 +202,7 @@ public:
   // does not lock
   bool empty() const {
     // atomically compares first and last pointer without locks
-    return head_ == tail_;
+    return head_.load() == tail_.load();
   }
 
 private:
