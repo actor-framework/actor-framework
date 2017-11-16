@@ -21,10 +21,7 @@
 namespace caf {
 
 stream_gatherer_impl::stream_gatherer_impl(local_actor* selfptr)
-    : super(selfptr),
-      high_watermark_(40),
-      min_credit_assignment_(1),
-      max_credit_(50) {
+    : super(selfptr) {
   // nop
 }
 
@@ -94,30 +91,6 @@ void stream_gatherer_impl::abort(error reason) {
   for (auto& listener : listeners_)
     listener.deliver(reason);
   listeners_.clear();
-}
-
-long stream_gatherer_impl::high_watermark() const {
-  return high_watermark_;
-}
-
-long stream_gatherer_impl::min_credit_assignment() const {
-  return min_credit_assignment_;
-}
-
-long stream_gatherer_impl::max_credit() const {
-  return max_credit_;
-}
-
-void stream_gatherer_impl::high_watermark(long x) {
-  high_watermark_ = x;
-}
-
-void stream_gatherer_impl::min_credit_assignment(long x) {
-  min_credit_assignment_ = x;
-}
-
-void stream_gatherer_impl::max_credit(long x) {
-  max_credit_ = x;
 }
 
 void stream_gatherer_impl::emit_credits() {

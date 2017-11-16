@@ -22,6 +22,10 @@
 
 namespace caf {
 
+invalid_stream_scatterer::invalid_stream_scatterer(local_actor*) {
+  // nop
+}
+
 invalid_stream_scatterer::~invalid_stream_scatterer() {
   // nop
 }
@@ -46,6 +50,10 @@ bool invalid_stream_scatterer::remove_path(const stream_id&, const actor_addr&,
                                            error, bool) {
   CAF_LOG_ERROR("invalid_stream_scatterer::remove_path called");
   return false;
+}
+
+bool invalid_stream_scatterer::paths_clean() const {
+  return true;
 }
 
 void invalid_stream_scatterer::close() {
@@ -93,7 +101,7 @@ long invalid_stream_scatterer::buffered() const {
   return 0;
 }
 
-long invalid_stream_scatterer::min_batch_size() const {
+long invalid_stream_scatterer::desired_batch_size() const {
   return 0;
 }
 
@@ -103,10 +111,6 @@ long invalid_stream_scatterer::min_buffer_size() const {
 
 duration invalid_stream_scatterer::max_batch_delay() const {
   return infinite;
-}
-
-void invalid_stream_scatterer::min_batch_size(long) {
-  // nop
 }
 
 void invalid_stream_scatterer::max_batch_delay(duration) {

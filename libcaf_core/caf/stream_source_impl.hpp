@@ -57,13 +57,26 @@ public:
   }
 
   bool generate_messages() override {
-    // produce new elements
-    auto capacity = out_.credit() - out_.buffered();
-    if (capacity <= 0)
-      return false;
+    // Produce new elements. If we have less elements buffered (bsize) than fit
+    // into a single batch (dbs = desired batch size) then we fill up the
+    // buffer up to that point. Otherwise, we fill up the buffer up to its
+    // capacity since we are currently waiting for downstream demand and can
+    // use the delay to store batches upfront.
+    size_t size_hint;
+    auto bsize = out_.buffered();
+    auto dbs  = out_.desired_batch_size();
+    if (bsize < dbs) {
+      size_hint= static_cast<size_t>(dbs - bsize);
+    } else {
+      auto bmax = out_.min_buffer_size();
+      if (bsize < bmax)
+        size_hint = static_cast<size_t>(bmax - bsize);
+      else
+        return false;
+    }
     downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
-    fun_(state_, ds, static_cast<size_t>(capacity));
-    return true;
+    fun_(state_, ds, size_hint);
+    return out_.buffered() != bsize;
   }
 
   state_type& state() {
@@ -78,8 +91,12 @@ protected:
   void downstream_demand(outbound_path* path, long) override {
     CAF_LOG_TRACE(CAF_ARG(path));
     if (!at_end()) {
+      auto dbs = out_.desired_batch_size();
       generate_messages();
-      push();
+      while (out_.buffered() >= dbs && out_.credit() >= dbs) {
+        push();
+        generate_messages();
+      }
     } else if (out_.buffered() > 0) {
       push();
     } else {

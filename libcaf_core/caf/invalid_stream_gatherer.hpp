@@ -54,18 +54,6 @@ public:
 
   path_ptr find(const stream_id& sid, const actor_addr& x) override;
 
-  long high_watermark() const override;
-
-  long min_credit_assignment() const override;
-
-  long max_credit() const override;
-
-  void high_watermark(long x) override;
-
-  void min_credit_assignment(long x) override;
-
-  void max_credit(long x) override;
-
   void assign_credit(long downstream_capacity) override;
 
   long initial_credit(long downstream_capacity, path_type* x) override;

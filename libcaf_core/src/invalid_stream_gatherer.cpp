@@ -73,30 +73,6 @@ stream_gatherer::path_type* invalid_stream_gatherer::find(const stream_id&,
   return nullptr;
 }
 
-long invalid_stream_gatherer::high_watermark() const {
-  return 0;
-}
-
-long invalid_stream_gatherer::min_credit_assignment() const {
-  return 0;
-}
-
-long invalid_stream_gatherer::max_credit() const {
-  return 0;
-}
-
-void invalid_stream_gatherer::high_watermark(long) {
-  // nop
-}
-
-void invalid_stream_gatherer::min_credit_assignment(long) {
-  // nop
-}
-
-void invalid_stream_gatherer::max_credit(long) {
-  // nop
-}
-
 void invalid_stream_gatherer::assign_credit(long) {
   // nop
 }

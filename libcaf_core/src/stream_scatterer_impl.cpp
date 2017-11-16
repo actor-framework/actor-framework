@@ -25,7 +25,6 @@ namespace caf {
 
 stream_scatterer_impl::stream_scatterer_impl(local_actor* selfptr)
     : super(selfptr),
-      min_batch_size_(1),
       max_batch_delay_(infinite) {
   // nop
 }
@@ -120,20 +119,12 @@ long stream_scatterer_impl::max_desired_batch_size() const {
   return max_desired_batch_size(paths_);
 }
 
-long stream_scatterer_impl::min_batch_size() const {
-  return min_batch_size_;
-}
-
 long stream_scatterer_impl::min_buffer_size() const {
   return 50; // TODO: at least place the default in a header
 }
 
 duration stream_scatterer_impl::max_batch_delay() const {
   return max_batch_delay_;
-}
-
-void stream_scatterer_impl::min_batch_size(long x) {
-  min_batch_size_ = x;
 }
 
 void stream_scatterer_impl::max_batch_delay(duration x) {

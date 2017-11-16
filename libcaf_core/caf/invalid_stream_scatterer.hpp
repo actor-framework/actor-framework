@@ -26,7 +26,7 @@ namespace caf {
 /// Type-erased policy for dispatching data to sinks.
 class invalid_stream_scatterer : public stream_scatterer {
 public:
-  invalid_stream_scatterer() = default;
+  invalid_stream_scatterer(local_actor* self = nullptr);
 
   ~invalid_stream_scatterer() override;
 
@@ -42,6 +42,8 @@ public:
 
   bool remove_path(const stream_id& sid, const actor_addr& x,
                            error reason, bool silent) override;
+
+  bool paths_clean() const override;
 
   void close() override;
 
@@ -65,13 +67,11 @@ public:
 
   long buffered() const override;
 
-  long min_batch_size() const override;
+  long desired_batch_size() const override;
 
   long min_buffer_size() const override;
 
   duration max_batch_delay() const override;
-
-  void min_batch_size(long x) override;
 
   void max_batch_delay(duration x) override;
 };

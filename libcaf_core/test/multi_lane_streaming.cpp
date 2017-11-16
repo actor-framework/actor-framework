@@ -95,8 +95,6 @@ behavior stream_splitter(stateful_actor<stream_splitter_state>* self) {
   // Force the splitter to collect credit until reaching 3 in order
   // to receive only full batches from upstream (simplifies testing).
   // Restrict maximum credit per path to 5 (simplifies testing).
-  self->state.stage->in().min_credit_assignment(3);
-  self->state.stage->in().max_credit(5);
   self->streams().emplace(id, self->state.stage);
   return {
     [=](join_atom, filter_type filter) -> stream<element_type> {

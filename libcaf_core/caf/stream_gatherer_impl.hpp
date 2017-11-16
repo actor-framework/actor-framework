@@ -53,24 +53,9 @@ public:
 
   void abort(error reason) override;
 
-  long high_watermark() const override;
-
-  long min_credit_assignment() const override;
-
-  long max_credit() const override;
-
-  void high_watermark(long x) override;
-
-  void min_credit_assignment(long x) override;
-
-  void max_credit(long x) override;
-
 protected:
   void emit_credits();
 
-  long high_watermark_;
-  long min_credit_assignment_;
-  long max_credit_;
   std::vector<assignment_pair> assignment_vec_;
 
   /// Listeners for the final result.

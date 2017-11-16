@@ -194,19 +194,17 @@ public:
   }
 
   long credit() const override {
+    // TODO: only return credit of the main stream?
     return std::accumulate(
       begin(), end(), std::numeric_limits<long>::max(),
       [](long x, pointer y) { return std::min(x, y->credit()); });
   }
 
   long buffered() const override {
+    // TODO: only return how many items are buffered at the main stream?
     return std::accumulate(begin(), end(), 0l, [](long x, const_pointer y) {
       return x + y->buffered();
     });
-  }
-
-  long min_batch_size() const override {
-    return main_stream().min_batch_size();
   }
 
   long min_buffer_size() const override {
@@ -215,10 +213,6 @@ public:
 
   duration max_batch_delay() const override {
     return main_stream().max_batch_delay();
-  }
-
-  void min_batch_size(long x) override {
-    main_stream().min_batch_size(x);
   }
 
   void max_batch_delay(duration x) override {

@@ -103,9 +103,8 @@ public:
   /// Returns the size of the output buffer.
   virtual long buffered() const = 0;
 
-  /// Minimum amount of messages required to emit a batch. A value of 0
-  /// disables batch accumulation.
-  virtual long min_batch_size() const = 0;
+  /// Returns the downstream-requested size for a single batch.
+  virtual long desired_batch_size() const = 0;
 
   /// Minimum amount of messages we wish to store at the actor in order to emit
   /// new batches immediately when receiving new downstream demand. Usually
@@ -115,10 +114,6 @@ public:
   /// Forces to actor to emit a batch even if the minimum batch size was not
   /// reached.
   virtual duration max_batch_delay() const = 0;
-
-  /// Minimum amount of messages required to emit a batch. A value of 0
-  /// disables batch delays.
-  virtual void min_batch_size(long x) = 0;
 
   /// Forces to actor to emit a batch even if the minimum batch size was not
   /// reached.

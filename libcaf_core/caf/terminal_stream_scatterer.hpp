@@ -19,64 +19,23 @@
 #ifndef CAF_TERMINAL_STREAM_SCATTERER_HPP
 #define CAF_TERMINAL_STREAM_SCATTERER_HPP
 
-#include "caf/stream_scatterer.hpp"
+#include "caf/invalid_stream_scatterer.hpp"
 
 namespace caf {
 
 /// Special-purpose scatterer for sinks that terminate a stream. A terminal
 /// stream scatterer generates credit without downstream actors.
-class terminal_stream_scatterer : public stream_scatterer {
+class terminal_stream_scatterer : public invalid_stream_scatterer {
 public:
+  using super = invalid_stream_scatterer;
+
   terminal_stream_scatterer(local_actor* = nullptr);
 
   ~terminal_stream_scatterer() override;
 
-  path_ptr add_path(const stream_id& sid, strong_actor_ptr origin,
-                    strong_actor_ptr sink_ptr,
-                    mailbox_element::forwarding_stack stages,
-                    message_id handshake_mid, message handshake_data,
-                    stream_priority prio, bool redeployable) override;
-
-  path_ptr confirm_path(const stream_id& sid, const actor_addr& from,
-                        strong_actor_ptr to, long initial_demand,
-                        long desired_batch_size, bool redeployable) override;
-
-  bool remove_path(const stream_id& sid, const actor_addr& x,
-                           error reason, bool silent) override;
-
-  bool paths_clean() const override;
-
-  void close() override;
-
-  void abort(error reason) override;
-
-  long num_paths() const override;
-
-  bool closed() const override;
-
-  bool continuous() const override;
-
-  void continuous(bool value) override;
-
-  path_type* path_at(size_t index) override;
-
-  void emit_batches() override;
-
-  path_type* find(const stream_id& sid, const actor_addr& x) override;
-
   long credit() const override;
 
-  long buffered() const override;
-
-  long min_batch_size() const override;
-
-  long min_buffer_size() const override;
-
-  duration max_batch_delay() const override;
-
-  void min_batch_size(long x) override;
-
-  void max_batch_delay(duration x) override;
+  long desired_batch_size() const override;
 };
 
 } // namespace caf

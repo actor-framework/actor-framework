@@ -143,18 +143,13 @@ public:
 
   bool paths_clean() const override;
 
-  long min_batch_size() const override;
-
   long min_buffer_size() const override;
 
   duration max_batch_delay() const override;
 
-  void min_batch_size(long x) override;
-
   void max_batch_delay(duration x) override;
 
 protected:
-  long min_batch_size_;
   duration max_batch_delay_;
 };
 

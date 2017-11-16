@@ -94,26 +94,6 @@ public:
   /// `sid`, otherwise `nullptr`.
   virtual path_ptr path_at(size_t index) = 0;
 
-  /// Returns the point at which an actor stops sending out demand immediately
-  /// (waiting for the available credit to first drop below the watermark).
-  virtual long high_watermark() const = 0;
-
-  /// Returns the minimum amount of credit required to send a `demand` message.
-  virtual long min_credit_assignment() const = 0;
-
-  /// Returns the maximum credit assigned to a single upstream actors.
-  virtual long max_credit() const = 0;
-
-  /// Sets the point at which an actor stops sending out demand immediately
-  /// (waiting for the available credit to first drop below the watermark).
-  virtual void high_watermark(long x) = 0;
-
-  /// Sets the minimum amount of credit required to send a `demand` message.
-  virtual void min_credit_assignment(long x) = 0;
-
-  /// Sets the maximum credit assigned to a single upstream actors.
-  virtual void max_credit(long x) = 0;
-
   /// Assigns new credit to all sources.
   virtual void assign_credit(long downstream_capacity) = 0;
 

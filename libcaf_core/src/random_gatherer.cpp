@@ -31,8 +31,13 @@ random_gatherer::~random_gatherer() {
 
 void random_gatherer::assign_credit(long available) {
     CAF_LOG_TRACE(CAF_ARG(available));
+    if (available <= 0 || assignment_vec_.empty())
+      return;
+    auto max_credit = available / static_cast<long>(assignment_vec_.size());
+    if (max_credit == 0)
+      return;
     for (auto& kvp : assignment_vec_) {
-      auto x = std::min(available, max_credit() - kvp.first->assigned_credit);
+      auto x = std::min(available, max_credit - kvp.first->assigned_credit);
       available -= x;
       kvp.second = x;
     }
@@ -40,7 +45,7 @@ void random_gatherer::assign_credit(long available) {
 }
 
 long random_gatherer::initial_credit(long available, path_type*) {
-  return std::min(available, max_credit());
+  return available;
 }
 
 /*

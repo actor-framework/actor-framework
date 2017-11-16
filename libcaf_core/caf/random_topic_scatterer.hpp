@@ -43,7 +43,7 @@ public:
   long credit() const override {
     // We receive messages until we have exhausted all downstream credit and
     // have filled our buffer to its minimum size.
-    return this->total_credit() + this->min_buffer_size();
+    return this->total_credit();
   }
 
   void emit_batches() override {
@@ -63,6 +63,12 @@ public:
         }
       }
     }
+  }
+
+  long desired_batch_size() const override {
+    // TODO: this is an O(n) computation, consider storing the result in a
+    //       member variable for
+    return super::total_desired_batch_size();
   }
 };
 
