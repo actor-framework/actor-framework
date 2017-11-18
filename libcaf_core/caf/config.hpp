@@ -236,5 +236,4 @@
   throw std::runtime_error(msg)
 #endif // CAF_NO_EXCEPTIONS
 
-
 #endif // CAF_CONFIG_HPP
