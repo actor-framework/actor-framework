@@ -21,18 +21,13 @@
 #define CAF_ACTOR_REGISTRY_HPP
 
 #include <mutex>
-#include <thread>
 #include <atomic>
 #include <cstdint>
-#include <unordered_map>
 #include <condition_variable>
 
 #include "caf/fwd.hpp"
-#include "caf/actor.hpp"
+#include "caf/gp_cache.hpp"
 #include "caf/abstract_actor.hpp"
-#include "caf/actor_control_block.hpp"
-
-#include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
 
@@ -42,7 +37,10 @@ namespace caf {
 /// identify important actors independent from their ID at runtime.
 /// Note that the registry does *not* contain all actors of an actor system.
 /// The middleman registers actors as needed.
-class actor_registry {
+class actor_registry : public gp_cache<actor_id, strong_actor_ptr>,
+                       public gp_cache<atom_value, strong_actor_ptr> {
+  using actor_id_cache = gp_cache<actor_id, strong_actor_ptr>;
+  using atom_value_cache = gp_cache<atom_value, strong_actor_ptr>;
 public:
   friend class actor_system;
 
@@ -58,6 +56,15 @@ public:
   /// leaving `reason` for future reference.
   void erase(actor_id key);
 
+  /// Returns the actor associated with `key` or `invalid_actor`.
+  strong_actor_ptr get(atom_value id) const;
+
+  /// Associates given actor to `key`.
+  void put(atom_value key, strong_actor_ptr val);
+
+  /// Removes a name mapping.
+  void erase(atom_value key);
+
   /// Increases running-actors-count by one.
   void inc_running();
 
@@ -71,39 +78,23 @@ public:
   /// (must be either 0 or 1).
   void await_running_count_equal(size_t expected) const;
 
-  /// Returns the actor associated with `key` or `invalid_actor`.
-  strong_actor_ptr get(atom_value key) const;
-
-  /// Associates given actor to `key`.
-  void put(atom_value key, strong_actor_ptr value);
-
-  /// Removes a name mapping.
-  void erase(atom_value key);
-
-  using name_map = std::unordered_map<atom_value, strong_actor_ptr>;
-
-  name_map named_actors() const;
+  /// @private
+  auto get_cache() -> decltype(gp_cache<atom_value, strong_actor_ptr>::get_cache()) {
+    return atom_value_cache::get_cache();
+  }
 
 private:
-  // Starts this component.
+  /// Starts this component.
   void start();
 
-  // Stops this component.
+  /// Stops this component.
   void stop();
-
-  using entries = std::unordered_map<actor_id, strong_actor_ptr>;
 
   actor_registry(actor_system& sys);
 
   std::atomic<size_t> running_;
   mutable std::mutex running_mtx_;
   mutable std::condition_variable running_cv_;
-
-  mutable detail::shared_spinlock instances_mtx_;
-  entries entries_;
-
-  name_map named_entries_;
-  mutable detail::shared_spinlock named_entries_mtx_;
 
   actor_system& system_;
 };

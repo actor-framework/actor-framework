@@ -19,34 +19,11 @@
 
 #include "caf/actor_registry.hpp"
 
-#include <mutex>
-#include <limits>
-#include <stdexcept>
-#include <unordered_map>
-#include <unordered_set>
-
-#include "caf/sec.hpp"
-#include "caf/locks.hpp"
 #include "caf/logger.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
-#include "caf/exit_reason.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/scoped_actor.hpp"
-#include "caf/stateful_actor.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/uniform_type_info_map.hpp"
-
-#include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
-
-namespace {
-
-using exclusive_guard = unique_lock<detail::shared_spinlock>;
-using shared_guard = shared_lock<detail::shared_spinlock>;
-
-} // namespace <anonymous>
 
 actor_registry::~actor_registry() {
   // nop
@@ -57,24 +34,19 @@ actor_registry::actor_registry(actor_system& sys) : running_(0), system_(sys) {
 }
 
 strong_actor_ptr actor_registry::get(actor_id key) const {
-  shared_guard guard(instances_mtx_);
-  auto i = entries_.find(key);
-  if (i != entries_.end())
-    return i->second;
-  CAF_LOG_DEBUG("key invalid, assume actor no longer exists:" << CAF_ARG(key));
-  return nullptr;
+  auto ptr = actor_id_cache::get(key);
+  if (!ptr)
+    CAF_LOG_DEBUG("key invalid, assume actor no longer exists:"
+                  << CAF_ARG(key));
+  return ptr;
 }
 
 void actor_registry::put(actor_id key, strong_actor_ptr val) {
   CAF_LOG_TRACE(CAF_ARG(key));
   if (!val)
     return;
-  { // lifetime scope of guard
-    exclusive_guard guard(instances_mtx_);
-    if (!entries_.emplace(key, val).second)
-      return;
-  }
-  // attach functor without lock
+  if (!actor_id_cache::put(key, val))
+    return;
   CAF_LOG_INFO("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
   val->get()->attach_functor([key, reg]() {
@@ -83,8 +55,23 @@ void actor_registry::put(actor_id key, strong_actor_ptr val) {
 }
 
 void actor_registry::erase(actor_id key) {
-  exclusive_guard guard{instances_mtx_};
-  entries_.erase(key);
+  actor_id_cache::erase(key);
+}
+
+strong_actor_ptr actor_registry::get(atom_value id) const {
+  return atom_value_cache::get(id);
+}
+
+void actor_registry::put(atom_value key, strong_actor_ptr val) {
+  if (val)
+    val->get()->attach_functor([=] {
+      system_.registry().put(key, nullptr);
+    });
+  atom_value_cache::put(key, std::move(val));
+}
+
+void actor_registry::erase(atom_value key) {
+  atom_value_cache::erase(key);
 }
 
 void actor_registry::inc_running() {
@@ -117,33 +104,6 @@ void actor_registry::await_running_count_equal(size_t expected) const {
     CAF_LOG_DEBUG(CAF_ARG(running_.load()));
     running_cv_.wait(guard);
   }
-}
-
-strong_actor_ptr actor_registry::get(atom_value key) const {
-  shared_guard guard{named_entries_mtx_};
-  auto i = named_entries_.find(key);
-  if (i == named_entries_.end())
-    return nullptr;
-  return i->second;
-}
-
-void actor_registry::put(atom_value key, strong_actor_ptr value) {
-  if (value)
-    value->get()->attach_functor([=] {
-      system_.registry().put(key, nullptr);
-    });
-  exclusive_guard guard{named_entries_mtx_};
-  named_entries_.emplace(key, std::move(value));
-}
-
-void actor_registry::erase(atom_value key) {
-  exclusive_guard guard{named_entries_mtx_};
-  named_entries_.erase(key);
-}
-
-auto actor_registry::named_actors() const -> name_map {
-  shared_guard guard{named_entries_mtx_};
-  return named_entries_;
 }
 
 void actor_registry::start() {

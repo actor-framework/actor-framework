@@ -25,10 +25,13 @@
 #include <cstdint>
 #include <functional>
 
+#include <iostream>
+
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/error.hpp"
 #include "caf/config.hpp"
+#include "caf/gp_cache.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -128,6 +131,9 @@ public:
 
   explicit node_id(intrusive_ptr<data> dataptr);
 
+  // TODO: Remove this...
+  gp_cache<node_id, intrusive_ptr<node_id::data>>& access_system(actor_system&);
+
   template <class Inspector>
   friend detail::enable_if_t<Inspector::reads_state,
                              typename Inspector::result_type>
@@ -145,12 +151,22 @@ public:
     data tmp;
     // write changes to tmp back to x at scope exit
     auto sg = detail::make_scope_guard([&] {
-      if (!tmp.valid())
+      if (!tmp.valid()) {
         x.data_.reset();
-      else if (!x || !x.data_->unique())
+        return;
+      }
+      auto& nid_cache = x.access_system(f.context()->system());
+      if (!x || !x.data_->unique()) {
         x.data_ = make_counted<data>(tmp);
-      else
-        *x.data_ = tmp;
+        nid_cache.put(x, x.data_);
+      } else {
+        auto cached = nid_cache.get(x);
+        if (!cached) {
+          *x.data_ = tmp;
+          nid_cache.put(x, x.data_);
+        } else
+          x.data_ = cached;
+      }
     });
     return f(meta::type_name("node_id"), tmp.pid_,
              meta::hex_formatted(), tmp.host_);

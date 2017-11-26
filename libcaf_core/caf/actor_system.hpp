@@ -31,6 +31,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
+#include "caf/gp_cache.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/infer_handle.hpp"
@@ -499,6 +500,9 @@ public:
   /// @warning must be called by thread which is about to terminate
   void thread_terminates();
 
+  ///
+  gp_cache<node_id, intrusive_ptr<node_id::data>>& nid_cache() { return nid_cache_; }
+
   /// @endcond
 
 private:
@@ -554,6 +558,7 @@ private:
   actor_registry registry_;
   group_manager groups_;
   module_array modules_;
+  gp_cache<node_id, intrusive_ptr<node_id::data>> nid_cache_;
   scoped_execution_unit dummy_execution_unit_;
   bool await_actors_before_shutdown_;
   // Stores SpawnServ, ConfigServ, and StreamServ

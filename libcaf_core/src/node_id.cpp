@@ -25,6 +25,7 @@
 #include "caf/config.hpp"
 #include "caf/node_id.hpp"
 #include "caf/serializer.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/string_algorithms.hpp"
@@ -176,6 +177,10 @@ node_id::operator bool() const {
 
 void node_id::swap(node_id& x) {
   data_.swap(x.data_);
+}
+
+gp_cache<node_id, intrusive_ptr<node_id::data>>& node_id::access_system(actor_system& system) {
+  return system.nid_cache();
 }
 
 std::string to_string(const node_id& x) {

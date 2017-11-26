@@ -30,6 +30,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/stream.hpp"
+#include "caf/gp_cache.hpp"
 #include "caf/thread_hook.hpp"
 #include "caf/config_value.hpp"
 #include "caf/config_option.hpp"
@@ -233,6 +234,19 @@ public:
     thread_hooks_.emplace_back(new Hook(std::forward<Ts>(ts)...));
     return *this;
   }
+
+  ///
+  template <class... Keys, class... Values>
+  actor_system_config& set_caches(detail::type_list<Keys...>,
+                                  detail::type_list<Values...>) {
+    // TODO: Implement me...
+    static_assert(detail::tl_size<
+                    detail::type_list<Keys...>>::value
+                      == detail::tl_size<
+                           detail::type_list<Values...>
+                      >::value, "count of keys and values does not match.");
+    return *this;
+  };
 
   /// Stores whether the help text for this config object was
   /// printed. If set to `true`, the application should not use

@@ -612,7 +612,7 @@ CAF_TEST(remote_actor_and_send) {
   CAF_REQUIRE(!mpx()->has_pending_scribe(lo, 4242));
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_MESSAGE("server handshake => client handshake + proxy announcement");
-  auto na = registry()->named_actors();
+  auto na = registry()->get_cache();
   mock(jupiter().connection,
        {basp::message_type::server_handshake, 0, 0, basp::version,
         jupiter().id, none,
