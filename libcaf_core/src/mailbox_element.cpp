@@ -54,18 +54,13 @@ private:
 
 } // namespace <anonymous>
 
-mailbox_element::mailbox_element()
-    : next(nullptr),
-      prev(nullptr),
-      marked(false) {
+mailbox_element::mailbox_element() : marked(false) {
   // nop
 }
 
 mailbox_element::mailbox_element(strong_actor_ptr&& x, message_id y,
                                  forwarding_stack&& z)
-    : next(nullptr),
-      prev(nullptr),
-      marked(false),
+    : marked(false),
       sender(std::move(x)),
       mid(y),
       stages(std::move(z)) {

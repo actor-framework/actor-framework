@@ -111,8 +111,6 @@ CAF_TEST(rendering) {
   CAF_CHECK_EQUAL(render(logger::render_date, t0), t0_buf);
   // Rendering of events.
   logger::event e{
-    nullptr,
-    nullptr,
     CAF_LOG_LEVEL_WARNING,
     "unit.test",
     "void ns::foo::bar()",

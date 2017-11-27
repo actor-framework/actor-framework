@@ -44,7 +44,7 @@ constexpr invalid_message_id_t invalid_message_id = invalid_message_id_t{};
 
 struct make_message_id_t;
 
-/// Denotes whether a message is asynchronous or synchronous
+/// Denotes whether a message is asynchronous or synchronous.
 /// @note Asynchronous messages always have an invalid message id.
 class message_id : detail::comparable<message_id> {
 public:
@@ -54,80 +54,157 @@ public:
 
   // -- constants -------------------------------------------------------------
 
+  /// The first bit flags response messages.
   static constexpr uint64_t response_flag_mask = 0x8000000000000000;
-  static constexpr uint64_t answered_flag_mask = 0x4000000000000000;
-  static constexpr uint64_t high_prioity_flag_mask = 0x2000000000000000;
-  static constexpr uint64_t request_id_mask = 0x1FFFFFFFFFFFFFFF;
 
+  /// The second bit flags whether the actor already responded.
+  static constexpr uint64_t answered_flag_mask = 0x4000000000000000;
+
+  // The third and fourth bit are used to categorize messages.
+  static constexpr uint64_t category_flag_mask = 0x3000000000000000;
+
+  /// The trailing 60 bits are used for the actual ID.
+  static constexpr uint64_t request_id_mask = 0x0FFFFFFFFFFFFFFF;
+
+  /// Identifies one-to-one messages with normal priority.
+  static constexpr uint64_t default_message_category = 0; // 0b00
+
+  /// Identifies stream messages received from upstream actors, e.g.,
+  /// `stream_msg::batch`.
+  static constexpr uint64_t upstream_message_category = 1; // 0b01
+
+  /// Identifies stream messages received from downstream actors, e.g.,
+  /// `stream_msg::ack_batch`.
+  static constexpr uint64_t downstream_message_category = 2; // 0b10
+
+  /// Identifies one-to-one messages with high priority.
+  static constexpr uint64_t urgent_message_category = 3; // 0b11
+
+  /// Number of bits trailing the category.
+  static constexpr uint64_t category_offset = 60;
+
+  // -- constructors, destructors, and assignment operators -------------------
+
+  /// Constructs a message ID for asynchronous messages with normal priority.
   constexpr message_id() : value_(0) {
     // nop
   }
 
-  constexpr message_id(invalid_message_id_t) : value_(0) {
+  /// Constructs a message ID for asynchronous messages with normal priority.
+  constexpr message_id(invalid_message_id_t) : message_id() {
     // nop
   }
 
-  message_id(message_id&&) = default;
   message_id(const message_id&) = default;
-  message_id& operator=(message_id&&) = default;
+
   message_id& operator=(const message_id&) = default;
+
+  // -- observers -------------------------------------------------------------
+
+  /// Returns whether a message is asynchronous, i.e., neither a request nor a
+  /// stream message.
+  inline bool is_async() const {
+    return value_ == 0
+           || value_ == (urgent_message_category << category_offset);
+  }
+
+  /// Returns whether a message is a response to a previously send request.
+  inline bool is_response() const {
+    return (value_ & response_flag_mask) != 0;
+  }
+
+  /// Returns whether a message is a request.
+  inline bool is_request() const {
+    return valid() && !is_response();
+  }
+
+  /// Returns whether a message is tagged as answered by the receiving actor.
+  inline bool is_answered() const {
+    return (value_ & answered_flag_mask) != 0;
+  }
+
+  /// Returns the message category, i.e., one of `default_message_category`,
+  /// `upstream_message_category`, `downstream_message_category`, or
+  /// `urgent_message_category`.
+  inline uint64_t category() const {
+    return (value_ & category_flag_mask) >> category_offset;
+  }
+
+  /// Returns whether `category() == default_message_category`.
+  inline bool is_default_message() const {
+    return (value_ & category_flag_mask) == 0;
+  }
+
+  /// Returns whether `category() == urgent_message_category`.
+  inline bool is_urgent_message() const {
+    return (value_ & category_flag_mask)
+           == (urgent_message_category << category_offset);
+  }
+
+  /// Returns whether `category() == upstream_message_category`.
+  inline bool is_upstream_message() const {
+    return (value_ & category_flag_mask)
+           == (urgent_message_category << category_offset);
+  }
+
+  /// Returns whether `category() == downstream_message_category`.
+  inline bool is_downstream_message() const {
+    return (value_ & category_flag_mask)
+           == (urgent_message_category << category_offset);
+  }
+
+  /// Returns whether a message is a request or a response.
+  inline bool valid() const {
+    return (value_ & request_id_mask) != 0;
+  }
+
+  /// Returns a response ID for the current request or an asynchronous ID with
+  /// the same priority as this ID.
+  inline message_id response_id() const {
+    if (is_request())
+      return message_id{value_ | response_flag_mask};
+    return message_id{is_urgent_message()
+                      ? urgent_message_category << category_offset
+                      : 0u};
+  }
+
+  /// Extracts the request number part of this ID.
+  inline message_id request_id() const {
+    return message_id{value_ & request_id_mask};
+  }
+
+  /// Returns the same ID but with high instead of default message priority.
+  /// @pre `!is_upstream_message() && !is_downstream_message()`
+  inline message_id with_high_priority() const {
+    return message_id{value_ | category_flag_mask}; // works because urgent == 0b11
+  }
+
+  /// Returns the same ID but with high instead of default message priority.
+  inline message_id with_normal_priority() const {
+    return message_id{value_ & ~category_flag_mask}; // works because normal == 0b00
+  }
+
+  /// Returns the "raw bytes" for this ID.
+  inline uint64_t integer_value() const {
+    return value_;
+  }
+
+  /// Returns a negative value if `*this < other`, zero if `*this == other`,
+  /// and a positive value otherwise.
+  inline int64_t compare(const message_id& other) const {
+    return static_cast<int64_t>(value_) - static_cast<int64_t>(other.value_);
+  }
+
+  // -- mutators --------------------------------------------------------------
 
   inline message_id& operator++() {
     ++value_;
     return *this;
   }
 
-  inline bool is_async() const {
-    return value_ == 0 || value_ == high_prioity_flag_mask;
-  }
-
-  inline bool is_response() const {
-    return (value_ & response_flag_mask) != 0;
-  }
-
-  inline bool is_answered() const {
-    return (value_ & answered_flag_mask) != 0;
-  }
-
-  inline bool is_high_priority() const {
-    return (value_ & high_prioity_flag_mask) != 0;
-  }
-
-  inline bool valid() const {
-    return (value_ & request_id_mask) != 0;
-  }
-
-  inline bool is_request() const {
-    return valid() && !is_response();
-  }
-
-  inline message_id response_id() const {
-    return message_id{is_request() ? value_ | response_flag_mask : 0};
-  }
-
-  inline message_id request_id() const {
-    return message_id(value_ & request_id_mask);
-  }
-
-  inline message_id with_high_priority() const {
-    return message_id(value_ | high_prioity_flag_mask);
-  }
-
-  inline message_id with_normal_priority() const {
-    return message_id(value_ & ~high_prioity_flag_mask);
-  }
-
+  /// Sets the flag for marking an incoming message as answered.
   inline void mark_as_answered() {
     value_ |= answered_flag_mask;
-  }
-
-  inline uint64_t integer_value() const {
-    return value_;
-  }
-
-  long compare(const message_id& other) const {
-    return (value_ == other.value_) ? 0
-                                      : (value_ < other.value_ ? -1 : 1);
   }
 
   template <class Inspector>
@@ -142,7 +219,7 @@ public:
   CAF_DEPRECATED_MSG("use make_message_id instead");
 
 private:
-  constexpr message_id(uint64_t value) : value_(value) {
+  constexpr explicit message_id(uint64_t value) : value_(value) {
     // nop
   }
 
@@ -159,12 +236,11 @@ struct make_message_id_t {
   }
 
   constexpr message_id operator()(uint64_t value = 0) const {
-    return value;
+    return message_id{value};
   }
 
   constexpr message_id operator()(message_priority p) const {
-    return p == message_priority::high ? message_id::high_prioity_flag_mask
-                                       : 0u;
+    return message_id{static_cast<uint64_t>(p) << message_id::category_offset};
   }
 };
 

@@ -112,6 +112,21 @@ inline logger* get_current_logger() {
 
 } // namespace <anonymous>
 
+logger::event::event(int lvl, const char* cat, const char* fun, const char* fn,
+                     int line, std::string msg, std::thread::id t, actor_id a,
+                     timestamp ts)
+    : level(lvl),
+      category_name(cat),
+      pretty_fun(fun),
+      file_name(fn),
+      line_number(line),
+      message(std::move(msg)),
+      tid(std::move(t)),
+      aid(a),
+      tstamp(ts) {
+  // nop
+}
+
 logger::line_builder::line_builder() : behind_arg_(false) {
   // nop
 }
@@ -432,9 +447,7 @@ void logger::log_first_line() {
   msg += to_string(system_.config().logger_verbosity);
   msg += ", node = ";
   msg += to_string(system_.node());
-  event tmp{nullptr,
-            nullptr,
-            CAF_LOG_LEVEL_INFO,
+  event tmp{CAF_LOG_LEVEL_INFO,
             CAF_LOG_COMPONENT,
             CAF_PRETTY_FUN,
             __FILE__,
@@ -447,9 +460,7 @@ void logger::log_first_line() {
 }
 
 void logger::log_last_line() {
-  event tmp{nullptr,
-            nullptr,
-            CAF_LOG_LEVEL_INFO,
+  event tmp{CAF_LOG_LEVEL_INFO,
             CAF_LOG_COMPONENT,
             CAF_PRETTY_FUN,
             __FILE__,

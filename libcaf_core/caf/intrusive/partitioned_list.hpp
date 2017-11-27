@@ -16,8 +16,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP
-#define CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP
+#ifndef CAF_INTRUSIVE_PARTITIONED_LIST_HPP
+#define CAF_INTRUSIVE_PARTITIONED_LIST_HPP
 
 #include "caf/config.hpp"
 
@@ -28,8 +28,11 @@
 #include "caf/behavior.hpp"
 #include "caf/invoke_message_result.hpp"
 
+#include "caf/intrusive/doubly_linked.hpp"
+#include "caf/intrusive/bidirectional_iterator.hpp"
+
 namespace caf {
-namespace detail {
+namespace intrusive {
 
 /// Describes a partitioned list of elements. The first part
 /// of the list is described by the iterator pair `[begin, separator)`.
@@ -37,82 +40,39 @@ namespace detail {
 /// of the list to store previously skipped elements. Priority-aware actors
 /// also use the first half of the list to sort messages by priority.
 template <class T, class Delete = std::default_delete<T>>
-class intrusive_partitioned_list {
+class partitioned_list {
 public:
+  // -- member types -----------------------------------------------------------
+
   using value_type = T;
+
   using pointer = value_type*;
+
+  using node_type = typename value_type::node_type;
+
   using deleter_type = Delete;
 
-  struct iterator : std::iterator<std::bidirectional_iterator_tag, value_type> {
-    pointer ptr;
+  using iterator = bidirectional_iterator<T>;
 
-    iterator(pointer init = nullptr) : ptr(init) {
-      // nop
-    }
+  using range = std::pair<iterator, iterator>;
 
-    iterator(const iterator&) = default;
-    iterator& operator=(const iterator&) = default;
+  // -- constructors, destructors, and assignment operators --------------------
 
-    iterator& operator++() {
-      ptr = ptr->next;
-      return *this;
-    }
-
-    iterator operator++(int) {
-      iterator res = *this;
-      ptr = ptr->next;
-      return res;
-    }
-
-    iterator& operator--() {
-      ptr = ptr->prev;
-      return *this;
-    }
-
-    iterator operator--(int) {
-      iterator res = *this;
-      ptr = ptr->prev;
-      return res;
-    }
-
-    const value_type& operator*() const {
-      return *ptr;
-    }
-
-    value_type& operator*() {
-      return *ptr;
-    }
-
-    pointer operator->() {
-      return ptr;
-    }
-
-    bool operator==(const iterator& other) const {
-      return ptr == other.ptr;
-    }
-
-    bool operator!=(const iterator& other) const {
-      return ptr != other.ptr;
-    }
-
-    iterator next() const {
-      return ptr->next;
-    }
-  };
-
-  intrusive_partitioned_list() {
+  partitioned_list() {
     head_.next = &separator_;
     separator_.prev = &head_;
     separator_.next = &tail_;
     tail_.prev = &separator_;
   }
 
-  ~intrusive_partitioned_list() {
+  ~partitioned_list() {
     clear();
   }
 
+  // -- iterators --------------------------------------------------------------
+
   iterator begin() {
-    return head_.next;
+    return promote(head_.next);
   }
 
   iterator separator() {
@@ -120,14 +80,12 @@ public:
   }
 
   iterator continuation() {
-    return separator_.next;
+    return promote(separator_.next);
   }
 
   iterator end() {
     return &tail_;
   }
-
-  using range = std::pair<iterator, iterator>;
 
   /// Returns the two iterator pairs describing the first and second part
   /// of the partitioned list.
@@ -143,8 +101,8 @@ public:
       while (i != e) {
         auto ptr = i.ptr;
         ++i;
-        f(*ptr);
-        delete_(ptr);
+        f(*promote(ptr));
+        delete_(promote(ptr));
       }
     }
     if (head_.next != &separator_) {
@@ -181,13 +139,13 @@ public:
     auto prev = res->prev;
     prev->next = next;
     next->prev = prev;
-    return res;
+    return promote(res);
   }
 
   iterator erase(iterator pos) {
     auto next = pos->next;
     delete_(take(pos));
-    return next;
+    return promote(next);
   }
 
   size_t count(size_t max_count = std::numeric_limits<size_t>::max()) {
@@ -200,13 +158,13 @@ public:
   }
 
 private:
-  value_type head_;
-  value_type separator_;
-  value_type tail_;
+  node_type head_;
+  node_type separator_;
+  node_type tail_;
   deleter_type delete_;
 };
 
-} // namespace detail
+} // namespace intrusive
 } // namespace caf
 
-#endif // CAF_DETAIL_INTRUSIVE_PARTITIONED_LIST_HPP
+#endif // CAF_INTRUSIVE_PARTITIONED_LIST_HPP

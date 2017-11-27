@@ -37,6 +37,8 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/deep_to_string.hpp"
 
+#include "caf/intrusive/doubly_linked.hpp"
+
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/pretty_type_name.hpp"
@@ -65,27 +67,36 @@ public:
   friend class actor_system;
 
   /// Encapsulates a single logging event.
-  struct event {
-    /// Intrusive pointer to the next logging event.
-    event* next;
-    /// Intrusive pointer to the previous logging event.
-    event* prev;
+  struct event : intrusive::doubly_linked<event> {
+    event() = default;
+
+    event(int lvl, const char* cat, const char* fun, const char* fn, int line,
+          std::string msg, std::thread::id t, actor_id a, timestamp ts);
+
     /// Level/priority of the event.
     int level;
+
     /// Name of the category (component) logging the event.
     const char* category_name;
+
     /// Name of the current context as reported by `__PRETTY_FUNCTION__`.
     const char* pretty_fun;
+
     /// Name of the current file.
     const char* file_name;
+
     /// Current line in the file.
     int line_number;
+
     /// User-provided message.
     std::string message;
+
     /// Thread ID of the caller.
     std::thread::id tid;
+
     /// Actor ID of the caller.
     actor_id aid;
+
     /// Timestamp of the event.
     timestamp tstamp;
   };
@@ -343,8 +354,8 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
         && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
       CAF_UNIFYN(caf_logger)                                                   \
         ->log(new ::caf::logger::event{                                        \
-          nullptr, nullptr, loglvl, component, CAF_PRETTY_FUN, __FILE__,       \
-          __LINE__, (::caf::logger::line_builder{} << message).get(),          \
+          loglvl, component, CAF_PRETTY_FUN, __FILE__, __LINE__,               \
+          (::caf::logger::line_builder{} << message).get(),                    \
           ::std::this_thread::get_id(),                                        \
           CAF_UNIFYN(caf_logger)->thread_local_aid(),                          \
           ::caf::make_timestamp()});                                           \

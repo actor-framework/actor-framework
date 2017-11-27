@@ -29,7 +29,7 @@
 #include <limits>
 #include <condition_variable> // std::cv_status
 
-#include "caf/detail/intrusive_partitioned_list.hpp"
+#include "caf/intrusive/partitioned_list.hpp"
 
 namespace caf {
 namespace detail {
@@ -54,10 +54,14 @@ template <class T, class Delete = std::default_delete<T>>
 class single_reader_queue {
 public:
   using value_type = T;
+
   using pointer = value_type*;
+
   using deleter_type = Delete;
+
   using unique_pointer = std::unique_ptr<value_type, deleter_type>;
-  using cache_type = intrusive_partitioned_list<value_type, deleter_type>;
+
+  using cache_type = intrusive::partitioned_list<value_type, deleter_type>;
 
   /// Tries to dequeue a new element from the mailbox.
   /// @warning Call only from the reader (owner).
@@ -162,10 +166,15 @@ public:
     fetch_new_data();
     auto ptr = head_;
     while (ptr && res < max_count) {
-      ptr = ptr->next;
+      ptr = promote(ptr->next);
       ++res;
     }
     return res;
+  }
+
+  void prepend(pointer ptr) {
+    ptr->next = head_;
+    head_ = ptr;
   }
 
   pointer peek() {
@@ -195,7 +204,7 @@ public:
       auto tail = old_head;
       while (tail->next != nullptr)
         tail = tail->next;
-      // This gets new data from the stack and rewrite head_.
+      // This gets new data from the stack and rewrites head_.
       fetch_new_data();
       tail->next = head_;
       head_ = old_head;
@@ -265,6 +274,23 @@ public:
     return true;
   }
 
+  /// Take the stack pointer without re-ordering it to the cache.
+  pointer take_stack() {
+    auto end_ptr = stack_empty_dummy();
+    pointer e = stack_.load();
+    // must not be called on a closed queue
+    CAF_ASSERT(e != nullptr);
+    // fetching data while blocked is an error
+    CAF_ASSERT(e != reader_blocked_dummy());
+    // it's enough to check this once, since only the owner is allowed
+    // to close the queue and only the owner is allowed to call this
+    // member function
+    while (e != end_ptr)
+      if (stack_.compare_exchange_weak(e, end_ptr))
+        return e;
+    return nullptr;
+  }
+
 private:
   // exposed to "outside" access
   std::atomic<pointer> stack_;
@@ -272,7 +298,7 @@ private:
   // accessed only by the owner
   pointer head_;
   deleter_type delete_;
-  intrusive_partitioned_list<value_type, deleter_type> cache_;
+  intrusive::partitioned_list<value_type, deleter_type> cache_;
 
   // atomically sets stack_ back and enqueues all elements to the cache
   bool fetch_new_data(pointer end_ptr) {
@@ -299,7 +325,7 @@ private:
           auto next = e->next;
           e->next = head_;
           head_ = e;
-          e = next;
+          e = promote(next);
         }
         return true;
       }
@@ -315,7 +341,7 @@ private:
   pointer take_head() {
     if (head_ != nullptr || fetch_new_data()) {
       auto result = head_;
-      head_ = head_->next;
+      head_ = promote(head_->next);
       return result;
     }
     return nullptr;
@@ -324,7 +350,7 @@ private:
   template <class F>
   void clear_cached_elements(const F& f) {
     while (head_) {
-      auto next = head_->next;
+      auto next = promote(head_->next);
       f(*head_);
       delete_(head_);
       head_ = next;

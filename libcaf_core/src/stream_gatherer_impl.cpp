@@ -77,6 +77,7 @@ void stream_gatherer_impl::close(message result) {
   for (auto& path : paths_)
     stream_aborter::del(path->hdl, self_->address(), path->sid, aborter_type);
   paths_.clear();
+  assignment_vec_.clear();
   for (auto& listener : listeners_)
     listener.deliver(result);
   listeners_.clear();
@@ -88,6 +89,7 @@ void stream_gatherer_impl::abort(error reason) {
     path->shutdown_reason = reason;
   }
   paths_.clear();
+  assignment_vec_.clear();
   for (auto& listener : listeners_)
     listener.deliver(reason);
   listeners_.clear();
