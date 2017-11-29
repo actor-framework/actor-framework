@@ -43,7 +43,6 @@ std::string to_string(const actor_config& x) {
   add(abstract_channel::is_actor_dot_decorator_flag, "dot_decorator_flag");
   add(abstract_actor::is_detached_flag, "detached_flag");
   add(abstract_actor::is_blocking_flag, "blocking_flag");
-  add(abstract_actor::is_priority_aware_flag, "priority_aware_flag");
   add(abstract_actor::is_hidden_flag, "hidden_flag");
   result += ")";
   return result;

@@ -523,9 +523,6 @@ private:
   spawn_impl(actor_config& cfg, Ts&&... xs) {
     static_assert(is_unbound(Os),
                   "top-level spawns cannot have monitor or link flag");
-    cfg.flags = has_priority_aware_flag(Os)
-                ? abstract_actor::is_priority_aware_flag
-                : 0;
     if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
       cfg.flags |= abstract_actor::is_detached_flag;
     if (has_hide_flag(Os))

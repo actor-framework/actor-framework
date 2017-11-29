@@ -82,19 +82,8 @@ private:
 };
 
 struct fixture {
-  fixture() : system(cfg) {
-    // nop
-  }
-
-  template <spawn_options Os>
-  void test_message_lifetime() {
-    // put some preassure on the scheduler (check for thread safety)
-    for (size_t i = 0; i < 100; ++i)
-      system.spawn<tester>(system.spawn<testee, Os>());
-  }
-
   actor_system_config cfg;
-  actor_system system;
+  actor_system system{cfg};
 };
 
 } // namespace <anonymous>
@@ -126,12 +115,9 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
   CAF_CHECK_EQUAL(msg.get_as<int>(0), 42);
 }
 
-CAF_TEST(message_lifetime_no_spawn_options) {
-  test_message_lifetime<no_spawn_options>();
-}
-
-CAF_TEST(message_lifetime_priority_aware) {
-  test_message_lifetime<priority_aware>();
+CAF_TEST(message_lifetime_in_spawned_actor) {
+  for (size_t i = 0; i < 100; ++i)
+    system.spawn<tester>(system.spawn<testee>());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
