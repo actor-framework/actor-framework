@@ -49,7 +49,7 @@ namespace opencl {
 class manager;
 
 template <bool PassConfig, class... Ts>
-class actor_facade : public monitorable_actor {
+class actor_facade : public local_actor {
 public:
   using arg_types = detail::type_list<Ts...>;
   using unpacked_types = typename detail::tl_map<arg_types, extract_type>::type;
@@ -185,7 +185,7 @@ public:
                detail::raw_kernel_ptr kernel, nd_range range,
                input_mapping map_args, output_mapping map_result,
                std::tuple<Ts...> xs)
-      : monitorable_actor(actor_conf),
+      : local_actor(actor_conf),
         kernel_(std::move(kernel)),
         program_(prog->program_),
         context_(prog->context_),
@@ -457,6 +457,10 @@ public:
       content = std::move(*mapped);
     }
     return true;
+  }
+
+  void launch(execution_unit*, bool, bool) override {
+    CAF_RAISE_ERROR("launch of the actor facade should not be called");
   }
 
   detail::raw_kernel_ptr kernel_;
