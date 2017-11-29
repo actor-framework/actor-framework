@@ -28,13 +28,13 @@ namespace detail {
 
 class disposer {
 public:
-  inline void operator()(memory_managed* ptr) const {
+  inline void operator()(memory_managed* ptr) const noexcept {
     ptr->request_deletion(false);
   }
 
   template <class T>
   typename std::enable_if<!std::is_base_of<memory_managed, T>::value>::type
-  operator()(T* ptr) const {
+  operator()(T* ptr) const noexcept {
     delete ptr;
   }
 };
