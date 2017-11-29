@@ -100,5 +100,5 @@ CAF_TEST(test_serial_reply) {
       CAF_ERROR("Error: " << self->system().render(err));
     }
   );
-  CAF_REQUIRE(self->mailbox().count() == 0);
+  CAF_REQUIRE(self->mailbox().size() == 0);
 }

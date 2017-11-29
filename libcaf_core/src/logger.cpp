@@ -38,7 +38,6 @@
 
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
 
@@ -180,7 +179,7 @@ actor_id logger::thread_local_aid(actor_id aid) {
 void logger::log(event* x) {
   CAF_ASSERT(x->level >= 0 && x->level <= 4);
   if (!inline_output_) {
-    queue_.synchronized_enqueue(queue_mtx_, queue_cv_,x);
+    queue_.synchronized_push_back(queue_mtx_, queue_cv_,x);
   } else {
     std::unique_ptr<event> ptr{x};
     handle_event(*ptr);
@@ -220,7 +219,10 @@ logger::~logger() {
   system_.logger_dtor_cv_.notify_one();
 }
 
-logger::logger(actor_system& sys) : system_(sys), inline_output_(false) {
+logger::logger(actor_system& sys)
+    : system_(sys),
+      inline_output_(false),
+      queue_(policy{}) {
   // nop
 }
 

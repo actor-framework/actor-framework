@@ -125,8 +125,8 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  switch (mailbox().enqueue(ptr.release())) {
-    case detail::enqueue_result::unblocked_reader: {
+  switch (mailbox().push_back(std::move(ptr))) {
+    case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
       // add a reference count to this actor and re-schedule it
       intrusive_ptr_add_ref(ctrl());
@@ -141,7 +141,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       }
       break;
     }
-    case detail::enqueue_result::queue_closed: {
+    case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
       if (mid.is_request()) {
         detail::sync_request_bouncer f{exit_reason()};
@@ -149,7 +149,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       }
       break;
     }
-    case detail::enqueue_result::success:
+    case intrusive::inbox_result::success:
       // enqueued to a running actors' mailbox; nothing to do
       CAF_LOG_ACCEPT_EVENT(false);
       break;
@@ -227,41 +227,34 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
     if (handled_msgs > 0 && !bhvr_stack_.empty())
       request_timeout(bhvr_stack_.back().timeout());
   };
+  auto result = resume_result::awaiting_message;
+  auto f = [&](mailbox_element& x) -> intrusive::task_result {
+    switch (reactivate(x)) {
+      case activation_result::terminated:
+        result = resume_result::done;
+        return intrusive::task_result::stop;
+      case activation_result::success:
+        return ++handled_msgs < max_throughput
+               ? intrusive::task_result::resume
+               : intrusive::task_result::stop;
+      case activation_result::skipped:
+        return intrusive::task_result::skip;
+      default:
+        return intrusive::task_result::resume;
+    }
+  };
   mailbox_element_ptr ptr;
   while (handled_msgs < max_throughput) {
-    do {
-      ptr = next_message();
-      if (!ptr) {
-        reset_timeout_if_needed();
-        if (mailbox().try_block())
-          return resumable::awaiting_message;
-      }
-    } while (!ptr);
-    switch (reactivate(*ptr)) {
-      case activation_result::terminated:
-        return resume_result::done;
-      case activation_result::success:
-        ++handled_msgs;
-        // iterate cache to see if we are now able
-        // to process previously skipped messages
-        while (consume_from_cache()) {
-          ++handled_msgs;
-          bhvr_stack_.cleanup();
-          if (finalize()) {
-            CAF_LOG_DEBUG("actor finalized while processing cache");
-            return resume_result::done;
-          }
-        }
-        break;
-      case activation_result::skipped:
-        push_to_cache(std::move(ptr));
-        break;
-      default:
-        break;
+    if (!mailbox_.new_round(3, f)) {
+      reset_timeout_if_needed();
+      if (mailbox().try_block())
+        return resumable::awaiting_message;
     }
+    if (result != awaiting_message)
+      return result;
   }
   reset_timeout_if_needed();
-  if (!has_next_message() && mailbox().try_block())
+  if (mailbox().try_block())
     return resumable::awaiting_message;
   // time's up
   return resumable::resume_later;
@@ -522,26 +515,6 @@ void scheduled_actor::consume(mailbox_element_ptr x) {
     case im_skipped:
       push_to_cache(std::move(x));
   }
-}
-
-bool scheduled_actor::consume_from_cache() {
-  CAF_LOG_TRACE("");
-  auto& cache = mailbox().cache();
-  auto i = cache.continuation();
-  auto e = cache.end();
-  while (i != e)
-    switch (consume(*i)) {
-      case im_success:
-        cache.erase(i);
-        return true;
-      case im_skipped:
-        ++i;
-        break;
-      case im_dropped:
-        i = cache.erase(i);
-        break;
-    }
-  return false;
 }
 
 bool scheduled_actor::activate(execution_unit* ctx) {

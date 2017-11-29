@@ -82,7 +82,7 @@ CAF_TEST(timeout_in_scoped_actor) {
 
 // -- scoped_actors using skip -------------------------------------------------
 
-using msg_t = int; 
+using msg_t = int;
 // send_order_t contains messages which are send to an actor in the same order
 // as in vector
 using send_order_t = std::vector<msg_t>;
@@ -99,16 +99,16 @@ behavior check_order_behavior_factory(local_actor* self,
       CAF_CHECK_EQUAL(i, seq_it->first);
       if (seq_it->second) {
         CAF_MESSAGE("current: " << i << "; awaiting: " << seq_it->first
-                                << "; inbox size: " << self->mailbox().count()
+                                << "; inbox size: " << self->mailbox().size()
                                 << " SKIPPED");
         ++seq_it;
-        return skip(); 
+        return skip();
       } else {
         CAF_MESSAGE("current: " << i << "; awaiting: " << seq_it->first
-                                << "; inbox size: " << self->mailbox().count()
+                                << "; inbox size: " << self->mailbox().size()
                                 << " OK");
         ++seq_it;
-        return unit; 
+        return unit;
       }
     }
   };
@@ -163,13 +163,13 @@ CAF_TEST(skip_message) {
     {{3, true}, {2, true}, {1, true}, {0, false},
     {3, true}, {2, true}, {1, false},
     {3, true}, {2, false},
-    {3, false}}    
+    {3, false}}
   };
   check_order_t c = {
     {1, 0, 2}, //recv_order = 0,1,2
-    {{1, true}, {0, false}, 
-    {1, false}, 
-    {2, false}}    
+    {{1, true}, {0, false},
+    {1, false},
+    {2, false}}
   };
   check_order_t d = {
     {3, 1, 2, 0}, //recv_order = 0,1,2,3

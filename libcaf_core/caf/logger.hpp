@@ -37,12 +37,13 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/deep_to_string.hpp"
 
-#include "caf/intrusive/doubly_linked.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/singly_linked.hpp"
+#include "caf/intrusive/task_queue.hpp"
 
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/single_reader_queue.hpp"
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -67,7 +68,7 @@ public:
   friend class actor_system;
 
   /// Encapsulates a single logging event.
-  struct event : intrusive::doubly_linked<event> {
+  struct event : intrusive::singly_linked<event> {
     event() = default;
 
     event(int lvl, const char* cat, const char* fun, const char* fn, int line,
@@ -99,6 +100,37 @@ public:
 
     /// Timestamp of the event.
     timestamp tstamp;
+  };
+
+  struct policy {
+    // -- member types ---------------------------------------------------------
+
+    using mapped_type = event;
+
+    using task_size_type = long;
+
+    using deleter_type = std::default_delete<event>;
+
+    using unique_pointer = std::unique_ptr<event, deleter_type>;
+
+    using queue_type = intrusive::task_queue<policy>;
+
+    using deficit_type = long;
+
+    // -- static member functions ----------------------------------------------
+
+    static inline void release(mapped_type* ptr) noexcept {
+      detail::disposer d;
+      d(ptr);
+    }
+
+    static inline task_size_type task_size(const mapped_type&) noexcept {
+      return 1;
+    }
+
+    static inline deficit_type quantum(const queue_type&, deficit_type x) {
+      return x;
+    }
   };
 
   /// Internal representation of format string entites.
@@ -287,7 +319,7 @@ private:
   std::thread thread_;
   std::mutex queue_mtx_;
   std::condition_variable queue_cv_;
-  detail::single_reader_queue<event> queue_;
+  intrusive::fifo_inbox<policy> queue_;
   std::thread::id parent_thread_;
   timestamp t0_;
   line_format file_format_;

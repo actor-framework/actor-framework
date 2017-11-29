@@ -54,14 +54,13 @@ private:
 
 } // namespace <anonymous>
 
-mailbox_element::mailbox_element() : marked(false) {
+mailbox_element::mailbox_element() {
   // nop
 }
 
 mailbox_element::mailbox_element(strong_actor_ptr&& x, message_id y,
                                  forwarding_stack&& z)
-    : marked(false),
-      sender(std::move(x)),
+    :sender(std::move(x)),
       mid(y),
       stages(std::move(z)) {
   // nop
@@ -87,9 +86,9 @@ const type_erased_tuple& mailbox_element::content() const {
   return const_cast<mailbox_element*>(this)->content();
 }
 
-mailbox_element_ptr make_mailbox_element(strong_actor_ptr sender, message_id id,
-                                         mailbox_element::forwarding_stack stages,
-                                         message msg) {
+mailbox_element_ptr
+make_mailbox_element(strong_actor_ptr sender, message_id id,
+                     mailbox_element::forwarding_stack stages, message msg) {
   auto ptr = new mailbox_element_wrapper(std::move(sender), id,
                                          std::move(stages), std::move(msg));
   return mailbox_element_ptr{ptr};

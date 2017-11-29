@@ -38,11 +38,15 @@
 
 namespace caf {
 
-// local actors are created with a reference count of one that is adjusted
-// later on in spawn(); this prevents subtle bugs that lead to segfaults,
-// e.g., when calling address() in the ctor of a derived class
+namespace {
+
+constexpr auto mpol = mailbox_policy{};
+
+} // namespace <anonymous>
+
 local_actor::local_actor(actor_config& cfg)
     : monitorable_actor(cfg),
+      mailbox_(mpol, mpol, mpol, mpol, mpol),
       context_(cfg.host),
       initial_behavior_fac_(std::move(cfg.init_fun)) {
   // nop
@@ -88,66 +92,9 @@ void local_actor::on_exit() {
   // nop
 }
 
-
 message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++last_request_id_;
   return mp == message_priority::normal ? result : result.with_high_priority();
-}
-
-mailbox_element_ptr local_actor::next_message() {
-  if (!getf(is_priority_aware_flag))
-    return mailbox_element_ptr{mailbox().try_pop()};
-  // we partition the mailbox into four segments in this case:
-  // <-------- ! was_skipped --------> | <--------  was_skipped  -------->
-  // <-- high prio --><-- low prio --> | <-- high prio --><-- low prio -->
-  auto& cache = mailbox().cache();
-  auto i = cache.begin();
-  auto e = cache.separator();
-  // read elements from mailbox if we don't have a high
-  // priority message or if cache is empty
-  if (i == e || !i->is_high_priority()) {
-    // insert points for high priority
-    auto hp_pos = i;
-    // read whole mailbox at once
-    auto tmp = mailbox().try_pop();
-    while (tmp != nullptr) {
-      cache.insert(tmp->is_high_priority() ? hp_pos : e, tmp);
-      // adjust high priority insert point on first low prio element insert
-      if (hp_pos == e && !tmp->is_high_priority())
-        --hp_pos;
-      tmp = mailbox().try_pop();
-    }
-  }
-  mailbox_element_ptr result;
-  i = cache.begin();
-  if (i != e)
-    result.reset(cache.take(i));
-  return result;
-}
-
-bool local_actor::has_next_message() {
-  if (!getf(is_priority_aware_flag))
-    return mailbox_.can_fetch_more();
-  auto& mbox = mailbox();
-  auto& cache = mbox.cache();
-  return cache.begin() != cache.separator() || mbox.can_fetch_more();
-}
-
-void local_actor::push_to_cache(mailbox_element_ptr ptr) {
-  CAF_ASSERT(ptr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(*ptr));
-  if (!getf(is_priority_aware_flag) || !ptr->is_high_priority()) {
-    mailbox().cache().insert(mailbox().cache().end(), ptr.release());
-    return;
-  }
-  auto high_prio = [](const mailbox_element& val) {
-    return val.is_high_priority();
-  };
-  auto& cache = mailbox().cache();
-  auto e = cache.end();
-  cache.insert(std::partition_point(cache.continuation(),
-                                    e, high_prio),
-               ptr.release());
 }
 
 void local_actor::send_exit(const actor_addr& whom, error reason) {
@@ -180,8 +127,15 @@ void local_actor::initialize() {
 bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(fail_state));
   if (!mailbox_.closed()) {
-    detail::sync_request_bouncer f{fail_state};
-    mailbox_.close(f);
+    mailbox_.close();
+    // TODO: messages that are stuck in the cache can get lost
+    detail::sync_request_bouncer bounce{fail_state};
+    auto f = [&](mailbox_element& x) {
+      bounce(x);
+      return intrusive::task_result::resume;
+    };
+    while (mailbox_.queue().new_round(1000, f))
+      ; // nop
   }
   // tell registry we're done
   unregister_from_system();
@@ -189,6 +143,20 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   clock().cancel_timeouts(this);
   CAF_LOG_TERMINATE_EVENT(this, fail_state);
   return true;
+}
+
+void local_actor::push_to_cache(mailbox_element_ptr ptr) {
+  using namespace intrusive;
+  auto& p = mailbox_.queue().policy();
+  auto ts = p.task_size(*ptr);
+  auto& qs = mailbox_.queue().queues();
+  drr_cached_queue<mailbox_policy>* q;
+  if (p.id_of(*ptr) == mailbox_policy::default_queue_index)
+    q = &std::get<mailbox_policy::default_queue_index>(qs);
+  else
+    q = &std::get<mailbox_policy::high_priority_queue_index>(qs);
+  q->inc_total_task_size(ts);
+  q->cache().push_back(ptr.release());
 }
 
 } // namespace caf

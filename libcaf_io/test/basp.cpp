@@ -521,7 +521,7 @@ CAF_TEST(remote_address_and_port) {
   self()->send(mm, get_atom::value, mars().id);
   do {
     mpx()->exec_runnable();
-  } while (!self()->has_next_message());
+  } while (self()->mailbox().empty());
   CAF_MESSAGE("receive result of MM");
   self()->receive(
     [&](const node_id& nid, const std::string& addr, uint16_t port) {

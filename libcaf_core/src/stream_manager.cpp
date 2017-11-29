@@ -18,18 +18,19 @@
 
 #include "caf/stream_manager.hpp"
 
-#include "caf/sec.hpp"
-#include "caf/error.hpp"
-#include "caf/logger.hpp"
-#include "caf/message.hpp"
-#include "caf/expected.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/inbound_path.hpp"
+#include "caf/logger.hpp"
+#include "caf/message.hpp"
 #include "caf/outbound_path.hpp"
+#include "caf/response_promise.hpp"
+#include "caf/sec.hpp"
 #include "caf/stream_gatherer.hpp"
 #include "caf/stream_scatterer.hpp"
-#include "caf/actor_control_block.hpp"
 
 namespace caf {
 

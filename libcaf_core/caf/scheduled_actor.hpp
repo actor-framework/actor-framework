@@ -627,9 +627,6 @@ public:
   /// Tries to consume `x`.
   void consume(mailbox_element_ptr x);
 
-  /// Tries to consume one element form the cache using the current behavior.
-  bool consume_from_cache();
-
   /// Activates an actor and runs initialization code if necessary.
   /// @returns `true` if the actor is alive and ready for `reactivate`,
   ///          `false` otherwise.

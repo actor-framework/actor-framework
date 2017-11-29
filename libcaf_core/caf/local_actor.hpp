@@ -28,42 +28,43 @@
 #include <forward_list>
 #include <unordered_map>
 
-#include "caf/fwd.hpp"
-
-#include "caf/actor.hpp"
-#include "caf/error.hpp"
-#include "caf/extend.hpp"
-#include "caf/logger.hpp"
-#include "caf/message.hpp"
-#include "caf/duration.hpp"
-#include "caf/behavior.hpp"
-#include "caf/delegated.hpp"
-#include "caf/resumable.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/message_id.hpp"
-#include "caf/exit_reason.hpp"
-#include "caf/typed_actor.hpp"
-#include "caf/actor_config.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/response_type.hpp"
-#include "caf/spawn_options.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
-#include "caf/execution_unit.hpp"
-#include "caf/message_handler.hpp"
-#include "caf/response_promise.hpp"
-#include "caf/message_priority.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_config.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/behavior.hpp"
 #include "caf/check_typed_input.hpp"
-#include "caf/monitorable_actor.hpp"
+#include "caf/delegated.hpp"
+#include "caf/duration.hpp"
+#include "caf/error.hpp"
+#include "caf/execution_unit.hpp"
+#include "caf/exit_reason.hpp"
+#include "caf/extend.hpp"
+#include "caf/fwd.hpp"
 #include "caf/invoke_message_result.hpp"
+#include "caf/logger.hpp"
+#include "caf/mailbox_policy.hpp"
+#include "caf/message.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/message_id.hpp"
+#include "caf/message_priority.hpp"
+#include "caf/monitorable_actor.hpp"
+#include "caf/response_promise.hpp"
+#include "caf/response_type.hpp"
+#include "caf/resumable.hpp"
+#include "caf/spawn_options.hpp"
+#include "caf/typed_actor.hpp"
 #include "caf/typed_response_promise.hpp"
+
+#include "caf/intrusive/fifo_inbox.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
-#include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
 
@@ -93,8 +94,7 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// A queue optimized for single-reader-many-writers.
-  using mailbox_type = detail::single_reader_queue<mailbox_element,
-                                                   detail::disposer>;
+  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -415,13 +415,6 @@ public:
   message_id new_request_id(message_priority mp);
 
   // -- message processing -----------------------------------------------------
-
-  /// Returns the next message from the mailbox or `nullptr`
-  /// if the mailbox is drained.
-  mailbox_element_ptr next_message();
-
-  /// Returns whether the mailbox contains at least one element.
-  bool has_next_message();
 
   /// Appends `x` to the cache for later consumption.
   void push_to_cache(mailbox_element_ptr ptr);

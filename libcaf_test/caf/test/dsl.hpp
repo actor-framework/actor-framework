@@ -211,10 +211,11 @@ public:
 
 protected:
   void run_once() {
-    if (dynamic_cast<caf::blocking_actor*>(dest_) == nullptr)
+    auto dptr = dynamic_cast<caf::blocking_actor*>(dest_);
+    if (dptr == nullptr)
       sched_.run_once();
-    else // remove message from mailbox
-      delete dest_->mailbox().try_pop();
+    else
+      dptr->dequeue(); // Drop message.
   }
 
   Derived& dref() {
