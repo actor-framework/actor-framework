@@ -45,6 +45,8 @@ if(CAF_BUILD_STATIC_RUNTIME)
       endif()
     endif()
   endforeach()
+else()
+  set(CAF_BUILD_STATIC_RUNTIME no)
 endif()
 
 # add helper target that simplifies re-running configure
@@ -537,7 +539,7 @@ if(NOT CAF_NO_OPENSSL)
     # Check OpenSSL version >= 1.0.1
     if (OPENSSL_VERSION VERSION_LESS 1.0.1)
       message(STATUS
-              "Disable OpenSSL. Required >= 1.0.1 due to TLSv2 support.")
+              "Disable OpenSSL. Required >= 1.0.1 due to TLSv1.2 support.")
       set(CAF_NO_OPENSSL yes)
     else()
       # Check if openssl headers and library versions match
@@ -552,7 +554,7 @@ if(NOT CAF_NO_OPENSSL)
           }
           return -1;
         }
-      " OPENSSL_CORRECT_VERSION_NUMBER )
+      " OPENSSL_CORRECT_VERSION_NUMBER)
       if (NOT OPENSSL_CORRECT_VERSION_NUMBER)
         message(FATAL_ERROR
           "OpenSSL library version does not match headers")
