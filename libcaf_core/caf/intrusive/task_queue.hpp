@@ -61,7 +61,7 @@ public:
 
   // -- constructors, destructors, and assignment operators -------------------
 
-  task_queue(const policy_type& p) : old_last_(nullptr), policy_(p) {
+  task_queue(policy_type p) : old_last_(nullptr), policy_(std::move(p)) {
     init();
   }
 

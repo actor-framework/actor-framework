@@ -45,7 +45,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  drr_queue(const policy_type& p) : super(p), deficit_(0) {
+  drr_queue(policy_type p) : super(std::move(p)), deficit_(0) {
     // nop
   }
 

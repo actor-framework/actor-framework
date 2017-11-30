@@ -132,6 +132,14 @@ enum class atom_value : uint64_t;
 
 using actor_id = uint64_t;
 
+// -- intrusive containers -----------------------------------------------------
+
+namespace intrusive {
+
+enum class task_result;
+
+} // namespace intrusive
+
 // -- marker classes for mixins ------------------------------------------------
 
 namespace mixin {

@@ -174,6 +174,29 @@ public:
     }
   };
 
+  struct mailbox_visitor {
+    blocking_actor* self;
+    bool& done;
+    receive_cond& rcc;
+    message_id mid;
+    detail::blocking_behavior& bhvr;
+
+    /// Skips all streaming-related messages.
+    inline intrusive::task_result
+    operator()(size_t, mailbox_policy::stream_queue&, mailbox_element&) {
+      return intrusive::task_result::skip;
+    }
+
+    // Dispatches messages with high and normal priority to the same handler.
+    template <class Queue>
+    intrusive::task_result operator()(size_t, Queue&, mailbox_element& x) {
+      return (*this)(x);
+    }
+
+    // Consumes `x`.
+    intrusive::task_result operator()(mailbox_element& x);
+  };
+
   // -- constructors and destructors -------------------------------------------
 
   blocking_actor(actor_config& cfg);

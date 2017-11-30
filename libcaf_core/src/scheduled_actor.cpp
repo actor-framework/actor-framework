@@ -218,6 +218,29 @@ void scheduled_actor::intrusive_ptr_release_impl() {
   intrusive_ptr_release(ctrl());
 }
 
+intrusive::task_result scheduled_actor::mailbox_visitor::
+operator()(size_t, mailbox_policy::stream_queue&, mailbox_element&) {
+  // TODO: implement me
+  return intrusive::task_result::resume;
+}
+
+intrusive::task_result
+scheduled_actor::mailbox_visitor::operator()(mailbox_element& x) {
+  switch (self->reactivate(x)) {
+    case activation_result::terminated:
+      result = resume_result::done;
+      return intrusive::task_result::stop;
+    case activation_result::success:
+      return ++handled_msgs < max_throughput
+             ? intrusive::task_result::resume
+             : intrusive::task_result::stop;
+    case activation_result::skipped:
+      return intrusive::task_result::skip;
+    default:
+      return intrusive::task_result::resume;
+  }
+}
+
 resumable::resume_result
 scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   CAF_PUSH_AID(id());
@@ -229,21 +252,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
       request_timeout(bhvr_stack_.back().timeout());
   };
   auto result = resume_result::awaiting_message;
-  auto f = [&](mailbox_element& x) -> intrusive::task_result {
-    switch (reactivate(x)) {
-      case activation_result::terminated:
-        result = resume_result::done;
-        return intrusive::task_result::stop;
-      case activation_result::success:
-        return ++handled_msgs < max_throughput
-               ? intrusive::task_result::resume
-               : intrusive::task_result::stop;
-      case activation_result::skipped:
-        return intrusive::task_result::skip;
-      default:
-        return intrusive::task_result::resume;
-    }
-  };
+  mailbox_visitor f{this, result, handled_msgs, max_throughput};
   mailbox_element_ptr ptr;
   while (handled_msgs < max_throughput) {
     if (!mailbox_.new_round(3, f)) {
@@ -407,15 +416,15 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
     return f(in.content()) != none;
   };
+  /*
   auto stream_invoke = [](ptr_t, behavior&, mailbox_element&) -> bool {
-    /*
     // The only legal stream message in a response is `stream_open`.
     auto& var = in.content().get_as<stream_msg>(0).content;
     if (holds_alternative<stream_msg::open>(var))
       return p->handle_stream_msg(in, &f);
-    */
     return false;
   };
+  */
   auto select_invoke_fun = [&]() -> fun_t {
     return ordinary_invoke;
     /*

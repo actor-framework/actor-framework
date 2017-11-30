@@ -21,17 +21,10 @@
 
 #include <cstdint>
 
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/exit_reason.hpp"
 
-namespace caf {
-
-class actor_addr;
-class message_id;
-class local_actor;
-class mailbox_element;
-
-} // namespace caf
+#include "caf/intrusive/task_result.hpp"
 
 namespace caf {
 namespace detail {
@@ -41,6 +34,13 @@ struct sync_request_bouncer {
   explicit sync_request_bouncer(error r);
   void operator()(const strong_actor_ptr& sender, const message_id& mid) const;
   void operator()(const mailbox_element& e) const;
+
+  template <class Key, class Queue>
+  intrusive::task_result operator()(const Key&, const Queue&,
+                                    const mailbox_element& x) const {
+    (*this)(x);
+    return intrusive::task_result::resume;
+  }
 };
 
 } // namespace detail

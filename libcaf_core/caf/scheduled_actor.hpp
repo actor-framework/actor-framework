@@ -144,6 +144,28 @@ public:
 
   /// @endcond
 
+  // -- nested classes ---------------------------------------------------------
+
+  struct mailbox_visitor {
+    scheduled_actor* self;
+    resume_result& result;
+    size_t& handled_msgs;
+    size_t max_throughput;
+
+    /// Skips all streaming-related messages.
+    intrusive::task_result operator()(size_t, mailbox_policy::stream_queue&,
+                                      mailbox_element&);
+
+    // Dispatches messages with high and normal priority to the same handler.
+    template <class Queue>
+    intrusive::task_result operator()(size_t, Queue&, mailbox_element& x) {
+      return (*this)(x);
+    }
+
+    // Consumes `x`.
+    intrusive::task_result operator()(mailbox_element& x);
+  };
+
   // -- static helper functions ------------------------------------------------
 
   static void default_error_handler(pointer ptr, error& x);

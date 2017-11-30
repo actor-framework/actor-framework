@@ -21,6 +21,7 @@
 #define CAF_INTRUSIVE_WDRR_FIXED_MULTIPLEXED_QUEUE_HPP
 
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "caf/detail/type_traits.hpp"
@@ -45,6 +46,9 @@ public:
   using unique_pointer = typename policy_type::unique_pointer;
 
   using task_size_type = typename policy_type::task_size_type;
+
+  template <size_t I>
+  using index = std::integral_constant<size_t, I>;
 
   static constexpr size_t num_queues = sizeof...(Qs) + 1;
 
@@ -80,8 +84,7 @@ public:
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
-  bool new_round(long quantum,
-                 F& f) noexcept(noexcept(f(std::declval<mapped_type&>()))) {
+  bool new_round(long quantum, F& f) {
     return new_round_recursion<0>(quantum, f) != 0;
   }
 
@@ -148,10 +151,13 @@ private:
 
   template <size_t I, class F>
   detail::enable_if_t<I != num_queues, int>
-  new_round_recursion(deficit_type quantum,
-                  F& f) noexcept(noexcept(f(std::declval<mapped_type&>()))) {
+  new_round_recursion(deficit_type quantum, F& f) {
     auto& q = std::get<I>(qs_);
-    if (q.new_round(policy_.quantum(q, quantum), f))
+    auto g = [&](mapped_type& x) {
+      index<I> id;
+      return f(id, q, x);
+    };
+    if (q.new_round(policy_.quantum(q, quantum), g))
       return 1 + new_round_recursion<I + 1>(quantum, f);
     return 0 + new_round_recursion<I + 1>(quantum, f);
   }

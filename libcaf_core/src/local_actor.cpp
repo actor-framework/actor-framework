@@ -130,11 +130,7 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
     mailbox_.close();
     // TODO: messages that are stuck in the cache can get lost
     detail::sync_request_bouncer bounce{fail_state};
-    auto f = [&](mailbox_element& x) {
-      bounce(x);
-      return intrusive::task_result::resume;
-    };
-    while (mailbox_.queue().new_round(1000, f))
+    while (mailbox_.queue().new_round(1000, bounce))
       ; // nop
   }
   // tell registry we're done
