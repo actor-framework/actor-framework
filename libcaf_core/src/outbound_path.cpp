@@ -25,10 +25,10 @@
 
 namespace caf {
 
-outbound_path::outbound_path(local_actor* selfptr, const stream_id& id,
+outbound_path::outbound_path(local_actor* selfptr, stream_slot id,
                              strong_actor_ptr ptr)
-    : self(selfptr),
-      sid(id),
+    : slot(id),
+      self(selfptr),
       hdl(std::move(ptr)),
       next_batch_id(0),
       open_credit(0),
@@ -42,11 +42,12 @@ outbound_path::~outbound_path() {
   CAF_LOG_TRACE(CAF_ARG(shutdown_reason));
   if (hdl) {
     if (shutdown_reason == none)
-      unsafe_send_as(self, hdl, make<stream_msg::close>(sid, self->address()));
+      unsafe_send_as(self, hdl,
+                     make<downstream_msg::close>(slot, self->address()));
     else
-      unsafe_send_as(
-        self, hdl,
-        make<stream_msg::forced_close>(sid, self->address(), shutdown_reason));
+      unsafe_send_as(self, hdl,
+                     make<downstream_msg::forced_close>(slot, self->address(),
+                                                        shutdown_reason));
   }
   if (shutdown_reason != none)
     unsafe_response(self, std::move(cd.hdl), no_stages, cd.mid,
@@ -69,9 +70,9 @@ void outbound_path::emit_open(strong_actor_ptr origin,
   redeployable = is_redeployable;
   hdl->enqueue(
     make_mailbox_element(std::move(origin), handshake_mid, std::move(stages),
-                         make_message(make<stream_msg::open>(
-                           sid, self->address(), std::move(handshake_data),
-                           self->ctrl(), hdl, prio, is_redeployable))),
+                         make_message(stream_handshake_msg{
+                           slot, std::move(handshake_data), self->ctrl(), hdl,
+                           prio, is_redeployable})),
     self->context());
 }
 
@@ -79,19 +80,22 @@ void outbound_path::emit_batch(long xs_size, message xs) {
   CAF_LOG_TRACE(CAF_ARG(xs_size) << CAF_ARG(xs));
   open_credit -= xs_size;
   auto bid = next_batch_id++;
-  stream_msg::batch batch{static_cast<int32_t>(xs_size), std::move(xs), bid};
+  downstream_msg::batch batch{static_cast<int32_t>(xs_size), std::move(xs),
+                              bid};
   if (redeployable)
     unacknowledged_batches.emplace_back(bid, batch);
-  unsafe_send_as(self, hdl, stream_msg{sid, self->address(), std::move(batch)});
+  unsafe_send_as(self, hdl,
+                 downstream_msg{slot, self->address(), std::move(batch)});
 }
 
 void outbound_path::emit_irregular_shutdown(local_actor* self,
-                                            const stream_id& sid,
+                                            stream_slot slot,
                                             const strong_actor_ptr& hdl,
                                             error reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  unsafe_send_as(self, hdl, make<stream_msg::forced_close>(sid, self->address(),
-                                                           std::move(reason)));
+  unsafe_send_as(self, hdl,
+                 make<downstream_msg::forced_close>(slot, self->address(),
+                                                    std::move(reason)));
 }
 
 } // namespace caf

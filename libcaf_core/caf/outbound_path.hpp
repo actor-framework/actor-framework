@@ -24,11 +24,11 @@
 #include <cstdint>
 #include <cstddef>
 
-#include "caf/fwd.hpp"
-#include "caf/stream_id.hpp"
-#include "caf/stream_msg.hpp"
-#include "caf/stream_aborter.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/downstream_msg.hpp"
+#include "caf/fwd.hpp"
+#include "caf/stream_aborter.hpp"
+#include "caf/stream_slot.hpp"
 
 #include "caf/meta/type_name.hpp"
 
@@ -41,10 +41,10 @@ public:
   static constexpr const auto aborter_type = stream_aborter::sink_aborter;
 
   /// Message type for propagating graceful shutdowns.
-  using regular_shutdown = stream_msg::close;
+  using regular_shutdown = downstream_msg::close;
 
   /// Message type for propagating errors.
-  using irregular_shutdown = stream_msg::forced_close;
+  using irregular_shutdown = downstream_msg::forced_close;
 
   /// Stores information about the initiator of the steam.
   struct client_data {
@@ -52,11 +52,11 @@ public:
     message_id mid;
   };
 
+  /// Slot ID for the sink.
+  stream_slot slot;
+
   /// Pointer to the parent actor.
   local_actor* self;
-
-  /// Stream ID used by the sink.
-  stream_id sid;
 
   /// Handle to the sink.
   strong_actor_ptr hdl;
@@ -80,7 +80,7 @@ public:
   int64_t next_ack_id;
 
   /// Caches batches until receiving an ACK.
-  std::deque<std::pair<int64_t, stream_msg::batch>> unacknowledged_batches;
+  std::deque<std::pair<int64_t, downstream_msg::batch>> unacknowledged_batches;
 
   /// Caches the initiator of the stream (client) with the original request ID
   /// until the stream handshake is either confirmed or aborted. Once
@@ -92,7 +92,7 @@ public:
   error shutdown_reason;
 
   /// Constructs a path for given handle and stream ID.
-  outbound_path(local_actor* selfptr, const stream_id& id,
+  outbound_path(local_actor* selfptr, stream_slot id,
                 strong_actor_ptr ptr);
 
   ~outbound_path();
@@ -109,14 +109,15 @@ public:
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(long xs_size, message xs);
 
-  static void emit_irregular_shutdown(local_actor* self, const stream_id& sid,
+  static void emit_irregular_shutdown(local_actor* self, stream_slot slot,
                                       const strong_actor_ptr& hdl,
                                       error reason);
 };
 
+/// @relates outbound_path
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
-  return f(meta::type_name("outbound_path"), x.hdl, x.sid, x.next_batch_id,
+  return f(meta::type_name("outbound_path"), x.hdl, x.slot, x.next_batch_id,
            x.open_credit, x.redeployable, x.unacknowledged_batches);
 }
 

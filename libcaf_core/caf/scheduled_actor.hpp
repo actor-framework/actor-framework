@@ -307,11 +307,7 @@ public:
 
   // -- stream management ------------------------------------------------------
 
-  /// Returns a new stream ID.
-  stream_id make_stream_id() {
-    return {ctrl(), new_request_id(message_priority::normal).integer_value()};
-  }
-
+/*
   /// Creates a new stream source and starts streaming to `dest`.
   /// @param dest Actor handle to the stream destination.
   /// @param xs User-defined handshake payload.
@@ -597,6 +593,7 @@ public:
   /// manually trigger batches in a source after receiving more data to send.
   void trigger_downstreams();
 
+*/
   /// @cond PRIVATE
 
   // -- timeout management -----------------------------------------------------
@@ -646,8 +643,7 @@ public:
   inline bool has_behavior() const {
     return !bhvr_stack_.empty()
            || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty()
-           || !streams_.empty();
+           || !multiplexed_responses_.empty();
   }
 
   inline behavior& current_behavior() {
@@ -674,6 +670,7 @@ public:
     return make_message_from_tuple(std::move(ys));
   }
 
+/*
   /// Tries to add a new sink to the stream manager `mgr`.
   /// @param mgr Pointer to the responsible stream manager.
   /// @param sid The ID used for communicating to the sink.
@@ -775,7 +772,6 @@ public:
     return true;
   }
 
-
   template <class T, class... Ts>
   void fwd_stream_handshake(const stream_id& sid, std::tuple<Ts...>& xs,
                             bool ignore_mid = false) {
@@ -797,6 +793,7 @@ public:
     if (!ignore_mid)
       mptr->mid.mark_as_answered();
   }
+*/
 
   /// @endcond
 
@@ -863,10 +860,6 @@ protected:
 
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
-
-  // TODO: this type is quite heavy in terms of memory, maybe use vector?
-  /// Holds state for all streams running through this actor.
-  streams_map streams_;
 
 # ifndef CAF_NO_EXCEPTIONS
   /// Customization point for setting a default exception callback.

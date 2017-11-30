@@ -28,14 +28,14 @@ invalid_stream_gatherer::~invalid_stream_gatherer() {
 }
 
 stream_gatherer::path_ptr
-invalid_stream_gatherer::add_path(const stream_id&, strong_actor_ptr,
+invalid_stream_gatherer::add_path(stream_slot, strong_actor_ptr,
                                   strong_actor_ptr, stream_priority, long, bool,
                                   response_promise) {
   CAF_LOG_ERROR("invalid_stream_gatherer::add_path called");
   return nullptr;
 }
 
-bool invalid_stream_gatherer::remove_path(const stream_id&, const actor_addr&,
+bool invalid_stream_gatherer::remove_path(stream_slot, const actor_addr&,
                                           error, bool) {
   CAF_LOG_ERROR("invalid_stream_gatherer::remove_path called");
   return false;
@@ -69,7 +69,7 @@ stream_gatherer::path_type* invalid_stream_gatherer::path_at(size_t) {
   return nullptr;
 }
 
-stream_gatherer::path_type* invalid_stream_gatherer::find(const stream_id&,
+stream_gatherer::path_type* invalid_stream_gatherer::find(stream_slot,
                                                           const actor_addr&) {
   return nullptr;
 }

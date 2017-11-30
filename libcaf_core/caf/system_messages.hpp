@@ -23,15 +23,13 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "caf/fwd.hpp"
-#include "caf/group.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/fwd.hpp"
+#include "caf/group.hpp"
+#include "caf/stream_slot.hpp"
 
 #include "caf/meta/type_name.hpp"
-
-#include "caf/detail/tbind.hpp"
-#include "caf/detail/type_list.hpp"
 
 namespace caf {
 
@@ -90,6 +88,35 @@ struct timeout_msg {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, timeout_msg& x) {
   return f(meta::type_name("timeout_msg"), x.timeout_id);
+}
+
+/// Initiates a stream handhsake.
+struct stream_handshake_msg {
+  /// Reserved slot on the source.
+  stream_slot slot;
+
+  /// Contains a type-erased stream<T> object as first argument followed by
+  /// any number of user-defined additional handshake data.
+  message msg;
+
+  /// Identifies the previous stage in the pipeline.
+  strong_actor_ptr prev_stage;
+
+  /// Identifies the original receiver of this message.
+  strong_actor_ptr original_stage;
+
+  /// Configures the priority for stream elements.
+  stream_priority priority;
+
+  /// Tells the downstream whether rebindings can occur on this path.
+  bool redeployable;
+};
+
+/// @relates stream_handshake_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, stream_handshake_msg& x) {
+  return f(meta::type_name("stream_handshake_msg"), x.slot, x.msg, x.prev_stage,
+           x.original_stage, x.priority, x.redeployable);
 }
 
 } // namespace caf

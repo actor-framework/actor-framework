@@ -100,7 +100,7 @@ protected:
     } else if (out_.buffered() > 0) {
       push();
     } else {
-      auto sid = path->sid;
+      auto sid = path->slot;
       auto hdl = path->hdl;
       out().remove_path(sid, hdl, none, false);
     }

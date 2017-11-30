@@ -92,44 +92,44 @@ public:
     detail::apply_args(f, indices, substreams_);
   }
 
-  path_ptr add_path(const stream_id& sid, strong_actor_ptr origin,
+  path_ptr add_path(stream_slot slot, strong_actor_ptr origin,
                     strong_actor_ptr sink_ptr,
                     mailbox_element::forwarding_stack stages,
                     message_id handshake_mid, message handshake_data,
                     stream_priority prio, bool redeployable) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(origin) << CAF_ARG(sink_ptr)
+    CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(origin) << CAF_ARG(sink_ptr)
                   << CAF_ARG(stages) << CAF_ARG(handshake_mid)
                   << CAF_ARG(handshake_data) << CAF_ARG(prio)
                   << CAF_ARG(redeployable));
     auto ptr = substream_by_handshake_type(handshake_data);
     if (!ptr)
       return nullptr;
-    return ptr->add_path(sid, std::move(origin), std::move(sink_ptr),
+    return ptr->add_path(slot, std::move(origin), std::move(sink_ptr),
                          std::move(stages), handshake_mid,
                          std::move(handshake_data), prio, redeployable);
   }
 
-  path_ptr confirm_path(const stream_id& sid, const actor_addr& from,
+  path_ptr confirm_path(stream_slot slot, const actor_addr& from,
                         strong_actor_ptr to, long initial_demand,
                         long desired_batch_size, bool redeployable) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(from) << CAF_ARG(to)
+    CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(from) << CAF_ARG(to)
                   << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
     return first_hit([&](pointer ptr) -> outbound_path* {
       // Note: we cannot blindly try `confirm_path` on each scatterer, because
       // this will trigger forced_close messages.
-      if (ptr->find(sid, from) == nullptr)
+      if (ptr->find(slot, from) == nullptr)
         return nullptr;
-      return ptr->confirm_path(sid, from, to, initial_demand,
+      return ptr->confirm_path(slot, from, to, initial_demand,
                                desired_batch_size, redeployable);
     });
   }
 
-  bool remove_path(const stream_id& sid, const actor_addr& addr, error reason,
+  bool remove_path(stream_slot slot, const actor_addr& addr, error reason,
                    bool silent) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(addr) << CAF_ARG(reason)
+    CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(addr) << CAF_ARG(reason)
                   << CAF_ARG(silent));
     return std::any_of(begin(), end(), [&](pointer x) {
-      return x->remove_path(sid, addr, reason, silent);
+      return x->remove_path(slot, addr, reason, silent);
     });
   }
 
@@ -177,8 +177,8 @@ public:
       ptr->emit_batches();
   }
 
-  path_ptr find(const stream_id& sid, const actor_addr& x) override{
-    return first_hit([&](const_pointer ptr) { return ptr->find(sid, x); });
+  path_ptr find(stream_slot slot, const actor_addr& x) override{
+    return first_hit([&](const_pointer ptr) { return ptr->find(slot, x); });
   }
 
   path_ptr path_at(size_t idx) override {

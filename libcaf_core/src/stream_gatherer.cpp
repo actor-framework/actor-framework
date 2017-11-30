@@ -29,15 +29,15 @@ stream_gatherer::~stream_gatherer() {
   // nop
 }
 
-bool stream_gatherer::remove_path(const stream_id& sid,
-                                  const strong_actor_ptr& x, error reason,
-                                  bool silent) {
-  return remove_path(sid, actor_cast<actor_addr>(x), std::move(reason), silent);
+bool stream_gatherer::remove_path(stream_slot slot, const strong_actor_ptr& x,
+                                  error reason, bool silent) {
+  return remove_path(slot, actor_cast<actor_addr>(x), std::move(reason),
+                     silent);
 }
 
-stream_gatherer::path_type* stream_gatherer::find(const stream_id& sid,
+stream_gatherer::path_type* stream_gatherer::find(stream_slot slot,
                                                   const strong_actor_ptr& x) {
-  return find(sid, actor_cast<actor_addr>(x));
+  return find(slot, actor_cast<actor_addr>(x));
 }
 
 } // namespace caf

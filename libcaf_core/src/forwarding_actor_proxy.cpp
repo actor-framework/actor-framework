@@ -23,7 +23,6 @@
 #include "caf/send.hpp"
 #include "caf/locks.hpp"
 #include "caf/logger.hpp"
-#include "caf/stream_msg.hpp"
 #include "caf/mailbox_element.hpp"
 
 namespace caf {

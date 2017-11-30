@@ -21,7 +21,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
-#include "caf/stream_id.hpp"
+#include "caf/stream_slot.hpp"
 #include "caf/stream_manager.hpp"
 
 #include "caf/meta/type_name.hpp"
@@ -32,24 +32,23 @@ namespace caf {
 template <class T>
 class stream_result {
 public:
-  stream_result() = default;
   stream_result(stream_result&&) = default;
   stream_result(const stream_result&) = default;
   stream_result& operator=(stream_result&&) = default;
   stream_result& operator=(const stream_result&) = default;
 
-  stream_result(none_t) : stream_result() {
+  stream_result(none_t = none) : slot_(0) {
     // nop
   }
 
-  stream_result(stream_id sid) : id_(std::move(sid)) {
+  stream_result(stream_slot id) : slot_(id) {
     // nop
   }
 
   /// Convenience constructor for returning the result of `self->new_stream_result`
   /// and similar functions.
-  stream_result(stream_id sid, stream_manager_ptr sptr)
-      : id_(std::move(sid)),
+  stream_result(stream_slot id, stream_manager_ptr sptr)
+      : slot_(id),
         ptr_(std::move(sptr)) {
     // nop
   }
@@ -57,14 +56,14 @@ public:
   /// Convenience constructor for returning the result of `self->new_stream_result`
   /// and similar functions.
   stream_result(stream_result other,  stream_manager_ptr sptr)
-      : id_(std::move(other.id_)),
+      : slot_(other.slot_),
         ptr_(std::move(sptr)) {
     // nop
   }
 
   /// Returns the unique identifier for this stream_result.
-  inline const stream_id& id() const {
-    return id_;
+  inline stream_slot slot() const {
+    return slot_;
   }
 
   /// Returns the handler assigned to this stream_result on this actor.
@@ -73,12 +72,13 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, stream_result& x) {
-    return f(meta::type_name("stream_result"), x.id_);
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 stream_result& x) {
+    return f(meta::type_name("stream_result"), x.slot_);
   }
 
 private:
-  stream_id id_;
+  stream_slot slot_;
   stream_manager_ptr ptr_;
 };
 

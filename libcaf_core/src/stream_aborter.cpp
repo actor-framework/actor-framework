@@ -19,11 +19,12 @@
 #include "caf/stream_aborter.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/downstream_msg.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/stream_msg.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/upstream_msg.hpp"
 
 namespace caf {
 
@@ -37,15 +38,15 @@ void stream_aborter::actor_exited(const error& rsn, execution_unit* host) {
   if (observer != nullptr)
   {
     if (mode_ == source_aborter)
-      observer->enqueue(
-        nullptr, make_message_id(),
-        make_message(caf::make<stream_msg::forced_close>(sid_, observed_, rsn)),
-        host);
+      observer->enqueue(nullptr, make_message_id(),
+                        make_message(caf::make<downstream_msg::forced_close>(
+                          slot_, observed_, rsn)),
+                        host);
     else
-      observer->enqueue(
-        nullptr, make_message_id(),
-        make_message(caf::make<stream_msg::forced_drop>(sid_, observed_, rsn)),
-        host);
+      observer->enqueue(nullptr, make_message_id(),
+                        make_message(caf::make<upstream_msg::forced_drop>(
+                          slot_, observed_, rsn)),
+                        host);
   }
 }
 
@@ -53,30 +54,37 @@ bool stream_aborter::matches(const attachable::token& what) {
   if (what.subtype != attachable::token::stream_aborter)
     return false;
   auto& ot = *reinterpret_cast<const token*>(what.ptr);
-  return ot.observer == observer_ && ot.sid == sid_;
+  return ot.observer == observer_ && ot.slot == slot_;
 }
 
 stream_aborter::stream_aborter(actor_addr&& observed, actor_addr&& observer,
-                               const stream_id& sid, mode m)
+                               stream_slot slot, mode m)
     : observed_(std::move(observed)),
       observer_(std::move(observer)),
-      sid_(sid),
+      slot_(slot),
       mode_(m) {
   // nop
 }
 
 void stream_aborter::add(strong_actor_ptr observed, actor_addr observer,
-                         const stream_id& sid, mode m) {
-  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(sid));
-  observed->get()->attach(make(observed->address(), std::move(observer),
-                               sid, m));
+                         stream_slot slot, mode m) {
+  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(slot));
+  auto ptr = make_stream_aborter(observed->address(), std::move(observer),
+                                 slot, m);
+  observed->get()->attach(std::move(ptr));
 }
 
 void stream_aborter::del(strong_actor_ptr observed, const actor_addr& observer,
-                         const stream_id& sid, mode m) {
-  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(sid));
-  token tk{observer, sid, m};
+                         stream_slot slot, mode m) {
+  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(slot));
+  token tk{observer, slot, m};
   observed->get()->detach(tk);
+}
+
+attachable_ptr make_stream_aborter(actor_addr observed, actor_addr observer,
+                                   stream_slot slot, stream_aborter::mode m) {
+  return attachable_ptr{
+    new stream_aborter(std::move(observed), std::move(observer), slot, m)};
 }
 
 } // namespace caf

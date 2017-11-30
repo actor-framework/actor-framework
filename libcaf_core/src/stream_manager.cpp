@@ -38,50 +38,55 @@ stream_manager::~stream_manager() {
   // nop
 }
 
-error stream_manager::open(const stream_id& sid, strong_actor_ptr hdl,
+error stream_manager::open(stream_slot slot, strong_actor_ptr hdl,
                            strong_actor_ptr original_stage,
                            stream_priority prio, bool redeployable,
                            response_promise result_cb) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl) << CAF_ARG(original_stage)
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(hdl) << CAF_ARG(original_stage)
                 << CAF_ARG(prio) << CAF_ARG(redeployable));
+/*
   if (hdl == nullptr)
     return sec::invalid_argument;
-  if (in().add_path(sid, hdl, std::move(original_stage), prio,
+  if (in().add_path(slot, hdl, std::move(original_stage), prio,
                     out().credit(), redeployable, std::move(result_cb))
       != nullptr)
     return none;
+*/
   return sec::cannot_add_upstream;
 }
 
-error stream_manager::ack_open(const stream_id& sid,
+error stream_manager::ack_open(stream_slot slot,
                                const actor_addr& rebind_from,
                                strong_actor_ptr rebind_to, long initial_demand,
                                long desired_batch_size, bool redeployable) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(rebind_from) << CAF_ARG(rebind_to)
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(rebind_from) << CAF_ARG(rebind_to)
                 << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
+/*
   if (rebind_from == nullptr)
     return sec::invalid_argument;
   if (rebind_to == nullptr) {
     auto from_ptr = actor_cast<strong_actor_ptr>(rebind_from);
     if (from_ptr)
-      out().remove_path(sid, from_ptr, sec::invalid_downstream, false);
+      out().remove_path(slot, from_ptr, sec::invalid_downstream, false);
     return sec::invalid_downstream;
   }
-  auto ptr = out().confirm_path(sid, rebind_from, std::move(rebind_to),
+  auto ptr = out().confirm_path(slot, rebind_from, std::move(rebind_to),
                                 initial_demand, desired_batch_size,
                                 redeployable);
   if (ptr == nullptr)
     return sec::invalid_downstream;
   downstream_demand(ptr, initial_demand);
+*/
   return none;
 }
 
-error stream_manager::batch(const stream_id& sid, const actor_addr& hdl,
+error stream_manager::batch(stream_slot slot, const actor_addr& hdl,
                             long xs_size, message& xs, int64_t xs_id) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl) << CAF_ARG(xs_size)
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(hdl) << CAF_ARG(xs_size)
                 << CAF_ARG(xs) << CAF_ARG(xs_id));
   CAF_ASSERT(hdl != nullptr);
-  auto ptr = in().find(sid, hdl);
+/*
+  auto ptr = in().find(slot, hdl);
   if (ptr == nullptr) {
     CAF_LOG_WARNING("received batch for unknown stream");
     return sec::invalid_downstream;
@@ -101,95 +106,119 @@ error stream_manager::batch(const stream_id& sid, const actor_addr& hdl,
       in().assign_credit(desired_size - current_size);
   }
   return err;
+*/
+  return none;
 }
 
-error stream_manager::ack_batch(const stream_id& sid, const actor_addr& hdl,
+error stream_manager::ack_batch(stream_slot slot, const actor_addr& hdl,
                                 long demand, long batch_size, int64_t) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl) << CAF_ARG(demand));
-  auto ptr = out().find(sid, hdl);
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(hdl) << CAF_ARG(demand));
+/*
+  auto ptr = out().find(slot, hdl);
   if (ptr == nullptr)
     return sec::invalid_downstream;
   ptr->open_credit += demand;
   if (ptr->desired_batch_size != batch_size)
     ptr->desired_batch_size = batch_size;
   downstream_demand(ptr, demand);
+*/
   return none;
 }
 
-error stream_manager::close(const stream_id& sid, const actor_addr& hdl) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl));
-  if (in().remove_path(sid, hdl, none, true) && in().closed())
+error stream_manager::close(stream_slot slot, const actor_addr& hdl) {
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(hdl));
+/*
+  if (in().remove_path(slot, hdl, none, true) && in().closed())
     input_closed(none);
+*/
   return none;
 }
 
-error stream_manager::drop(const stream_id& sid, const actor_addr& hdl) {
+error stream_manager::drop(stream_slot slot, const actor_addr& hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  if (out().remove_path(sid, hdl, none, true) && out().closed())
+/*
+  if (out().remove_path(slot, hdl, none, true) && out().closed())
     output_closed(none);
+*/
   return none;
 }
 
-error stream_manager::forced_close(const stream_id& sid, const actor_addr& hdl,
+error stream_manager::forced_close(stream_slot slot, const actor_addr& hdl,
                                    error reason) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(reason));
   CAF_IGNORE_UNUSED(hdl);
-  in().remove_path(sid, hdl, reason, true);
+/*
+  in().remove_path(slot, hdl, reason, true);
   abort(std::move(reason));
   return sec::unhandled_stream_error;
+*/
+return none;
 }
 
-error stream_manager::forced_drop(const stream_id& sid, const actor_addr& hdl,
+error stream_manager::forced_drop(stream_slot slot, const actor_addr& hdl,
                                   error reason) {
+/*
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(reason));
   CAF_IGNORE_UNUSED(hdl);
-  out().remove_path(sid, hdl, reason, true);
+  out().remove_path(slot, hdl, reason, true);
   abort(std::move(reason));
   return sec::unhandled_stream_error;
+*/
+return none;
 }
 
 void stream_manager::abort(caf::error reason) {
+/*
   CAF_LOG_TRACE(CAF_ARG(reason));
   in().abort(reason);
   input_closed(reason);
   out().abort(reason);
   output_closed(std::move(reason));
+*/
 }
 
 void stream_manager::close() {
+/*
   CAF_LOG_TRACE("");
   in().close(make_final_result());
   input_closed(none);
   out().close();
   output_closed(none);
+*/
 }
 
-bool stream_manager::add_sink(const stream_id& sid, strong_actor_ptr origin,
+bool stream_manager::add_sink(stream_slot slot, strong_actor_ptr origin,
                         strong_actor_ptr sink_ptr,
                         mailbox_element::forwarding_stack stages,
                         message_id handshake_mid, message handshake_data,
                         stream_priority prio, bool redeployable) {
-  return out().add_path(sid, std::move(origin), std::move(sink_ptr),
+/*
+  return out().add_path(slot, std::move(origin), std::move(sink_ptr),
                         std::move(stages), handshake_mid,
                         std::move(handshake_data), prio, redeployable)
          != nullptr;
+*/
 }
 
-bool stream_manager::add_source(const stream_id& sid,
+bool stream_manager::add_source(stream_slot slot,
                                 strong_actor_ptr source_ptr,
                                 strong_actor_ptr original_stage,
                                 stream_priority prio, bool redeployable,
                                 response_promise result_cb) {
+/*
   // TODO: out().credit() gives the same amount of credit to any number of new
   //       sources -> feedback needed
-  return in().add_path(sid, std::move(source_ptr), std::move(original_stage),
+  return in().add_path(slot, std::move(source_ptr), std::move(original_stage),
                        prio, out().credit(), redeployable, std::move(result_cb))
          != nullptr;
+*/
 }
 
 void stream_manager::push() {
+/*
   CAF_LOG_TRACE("");
   out().emit_batches();
+*/
 }
 
 bool stream_manager::generate_messages() {

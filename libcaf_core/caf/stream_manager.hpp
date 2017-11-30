@@ -24,8 +24,9 @@
 #include <cstddef>
 
 #include "caf/fwd.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/stream_slot.hpp"
 
 namespace caf {
 
@@ -35,8 +36,10 @@ class stream_manager : public ref_counted {
 public:
   ~stream_manager() override;
 
-  /// Handles `stream_msg::open` messages.
-  /// @returns Initial credit to the source.
+  /// Handles `stream_msg::open` messages by creating a new slot for incoming
+  /// traffic.
+  /// @param slot Slot ID used by the sender, i.e., the slot ID for upstream
+  ///             messages back to the sender.
   /// @param hdl Handle to the sender.
   /// @param original_stage Handle to the initial receiver of the handshake.
   /// @param priority Affects credit assignment and maximum bandwidth.
@@ -46,21 +49,22 @@ public:
   ///                  Ignored when returning `nullptr`, because the previous
   ///                  stage is responsible for it until this manager
   ///                  acknowledges the handshake.
+  /// @returns An error if the stream manager rejects the handshake.
   /// @pre `hdl != nullptr`
-  virtual error open(const stream_id& sid, strong_actor_ptr hdl,
+  virtual error open(stream_slot slot, strong_actor_ptr hdl,
                      strong_actor_ptr original_stage, stream_priority priority,
                      bool redeployable, response_promise result_cb);
 
   /// Handles `stream_msg::ack_open` messages, i.e., finalizes the stream
   /// handshake.
-  /// @param sid ID of the outgoing stream.
+  /// @param slot Slot ID used by the sender.
   /// @param rebind_from Receiver of the original `open` message.
   /// @param rebind_to Sender of this confirmation.
   /// @param initial_demand Credit received with this `ack_open`.
   /// @param redeployable Denotes whether the runtime can redeploy
   ///                     `rebind_to` on failure.
   /// @pre `hdl != nullptr`
-  virtual error ack_open(const stream_id& sid, const actor_addr& rebind_from,
+  virtual error ack_open(stream_slot slot, const actor_addr& rebind_from,
                          strong_actor_ptr rebind_to, long initial_demand,
                          long desired_batch_size, bool redeployable);
 
@@ -71,7 +75,7 @@ public:
   /// @param xs_id ID of this batch (must be ACKed).
   /// @pre `hdl != nullptr`
   /// @pre `xs_size > 0`
-  virtual error batch(const stream_id& sid, const actor_addr& hdl, long xs_size,
+  virtual error batch(stream_slot slot, const actor_addr& hdl, long xs_size,
                       message& xs, int64_t xs_id);
 
   /// Handles `stream_msg::ack_batch` messages.
@@ -79,19 +83,19 @@ public:
   /// @param new_demand New credit for sending data.
   /// @param cumulative_batch_id Id of last handled batch.
   /// @pre `hdl != nullptr`
-  virtual error ack_batch(const stream_id& sid, const actor_addr& hdl,
+  virtual error ack_batch(stream_slot slot, const actor_addr& hdl,
                           long new_demand, long desired_batch_size,
                           int64_t cumulative_batch_id);
 
   /// Handles `stream_msg::close` messages.
   /// @param hdl Handle to the sender.
   /// @pre `hdl != nullptr`
-  virtual error close(const stream_id& sid, const actor_addr& hdl);
+  virtual error close(stream_slot slot, const actor_addr& hdl);
 
   /// Handles `stream_msg::drop` messages.
   /// @param hdl Handle to the sender.
   /// @pre `hdl != nullptr`
-  virtual error drop(const stream_id& sid, const actor_addr& hdl);
+  virtual error drop(stream_slot slot, const actor_addr& hdl);
 
   /// Handles `stream_msg::drop` messages. The default implementation calls
   /// `abort(reason)` and returns `sec::unhandled_stream_error`.
@@ -99,7 +103,7 @@ public:
   /// @param reason Reported error from the source.
   /// @pre `hdl != nullptr`
   /// @pre `err != none`
-  virtual error forced_close(const stream_id& sid, const actor_addr& hdl,
+  virtual error forced_close(stream_slot slot, const actor_addr& hdl,
                              error reason);
 
   /// Handles `stream_msg::drop` messages. The default implementation calls
@@ -108,11 +112,11 @@ public:
   /// @param reason Reported error from the sink.
   /// @pre `hdl != nullptr`
   /// @pre `err != none`
-  virtual error forced_drop(const stream_id& sid, const actor_addr& hdl,
+  virtual error forced_drop(stream_slot slot, const actor_addr& hdl,
                             error reason);
 
   /// Adds a new sink to the stream.
-  virtual bool add_sink(const stream_id& sid, strong_actor_ptr origin,
+  virtual bool add_sink(stream_slot slot, strong_actor_ptr origin,
                         strong_actor_ptr sink_ptr,
                         mailbox_element::forwarding_stack stages,
                         message_id handshake_mid, message handshake_data,
@@ -120,7 +124,7 @@ public:
 
   /// Adds the source `hdl` to a stream. Convenience function for calling
   /// `in().add_path(sid, hdl).second`.
-  virtual bool add_source(const stream_id& sid, strong_actor_ptr source_ptr,
+  virtual bool add_source(stream_slot slot, strong_actor_ptr source_ptr,
                           strong_actor_ptr original_stage, stream_priority prio,
                           bool redeployable, response_promise result_cb);
 
@@ -190,7 +194,7 @@ protected:
   local_actor* self_;
 
   /// Keeps track of pending handshakes.
-  
+
 };
 
 /// A reference counting pointer to a `stream_manager`.

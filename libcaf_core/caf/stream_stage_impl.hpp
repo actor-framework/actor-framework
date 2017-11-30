@@ -100,7 +100,7 @@ protected:
       push();
     else if (in_.closed()) {
       // don't pass path->hdl: path can become invalid
-      auto sid = path->sid;
+      auto sid = path->slot;
       out_.remove_path(sid, hdl, none, false);
     }
     auto current_size = out_.buffered();

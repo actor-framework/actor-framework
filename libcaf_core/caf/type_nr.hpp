@@ -45,8 +45,8 @@ using sorted_builtin_types =
     atom_value,                         // @atom
     std::vector<char>,                  // @charbuf
     down_msg,                           // @down
+    downstream_msg,                     // @downstream_msg
     duration,                           // @duration
-    timestamp,                          // @timestamp
     error,                              // @error
     exit_msg,                           // @exit
     group,                              // @group
@@ -60,12 +60,12 @@ using sorted_builtin_types =
     message_id,                         // @message_id
     node_id,                            // @node
     std::string,                        // @str
-    stream_msg,                         // @stream_msg
     std::map<std::string, std::string>, // @strmap
     strong_actor_ptr,                   // @strong_actor_ptr
     std::set<std::string>,              // @strset
     std::vector<std::string>,           // @strvec
     timeout_msg,                        // @timeout
+    timestamp,                          // @timestamp
     uint16_t,                           // @u16
     std::u16string,                     // @u16_str
     uint32_t,                           // @u32
@@ -73,6 +73,7 @@ using sorted_builtin_types =
     uint64_t,                           // @u64
     uint8_t,                            // @u8
     unit_t,                             // @unit
+    upstream_msg,                       // @upstream_msg
     weak_actor_ptr,                     // @weak_actor_ptr
     bool,                               // bool
     double,                             // double

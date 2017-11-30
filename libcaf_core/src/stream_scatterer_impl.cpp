@@ -34,17 +34,17 @@ stream_scatterer_impl::~stream_scatterer_impl() {
 }
 
 stream_scatterer::path_ptr
-stream_scatterer_impl::add_path(const stream_id& sid, strong_actor_ptr origin,
+stream_scatterer_impl::add_path(stream_slot slot, strong_actor_ptr origin,
                                 strong_actor_ptr sink_ptr,
                                 mailbox_element::forwarding_stack stages,
                                 message_id handshake_mid,
                                 message handshake_data, stream_priority prio,
                                 bool redeployable) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(origin) << CAF_ARG(sink_ptr)
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(origin) << CAF_ARG(sink_ptr)
                 << CAF_ARG(stages) << CAF_ARG(handshake_mid)
                 << CAF_ARG(handshake_data) << CAF_ARG(prio)
                 << CAF_ARG(redeployable));
-  auto ptr = add_path_impl(sid, std::move(sink_ptr));
+  auto ptr = add_path_impl(slot, std::move(sink_ptr));
   if (ptr != nullptr)
     ptr->emit_open(std::move(origin), std::move(stages), handshake_mid,
                    std::move(handshake_data), prio, redeployable);
@@ -52,15 +52,15 @@ stream_scatterer_impl::add_path(const stream_id& sid, strong_actor_ptr origin,
 }
 
 stream_scatterer::path_ptr stream_scatterer_impl::confirm_path(
-    const stream_id& sid, const actor_addr& from, strong_actor_ptr to,
+    stream_slot slot, const actor_addr& from, strong_actor_ptr to,
     long initial_demand, long desired_batch_size, bool redeployable) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(from) << CAF_ARG(to)
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(from) << CAF_ARG(to)
                 << CAF_ARG(initial_demand) << CAF_ARG(desired_batch_size)
                 << CAF_ARG(redeployable));
-  auto ptr = find(sid, from);
+  auto ptr = find(slot, from);
   if (ptr == nullptr) {
     CAF_LOG_WARNING("cannot confirm unknown path");
-    outbound_path::emit_irregular_shutdown(self_, sid, std::move(to),
+    outbound_path::emit_irregular_shutdown(self_, slot, std::move(to),
                                            sec::invalid_downstream);
     return nullptr;
   }
@@ -83,13 +83,13 @@ bool stream_scatterer_impl::paths_clean() const {
 void stream_scatterer_impl::close() {
   CAF_LOG_TRACE("");
   for (auto& path : paths_)
-    stream_aborter::del(path->hdl, self_->address(), path->sid, aborter_type);
+    stream_aborter::del(path->hdl, self_->address(), path->slot, aborter_type);
   paths_.clear();
 }
 
 void stream_scatterer_impl::abort(error reason) {
   for (auto& path : paths_) {
-    stream_aborter::del(path->hdl, self_->address(), path->sid, aborter_type);
+    stream_aborter::del(path->hdl, self_->address(), path->slot, aborter_type);
     path->shutdown_reason = reason;
   }
   paths_.clear();

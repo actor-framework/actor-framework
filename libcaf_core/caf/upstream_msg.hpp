@@ -16,19 +16,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_MSG_HPP
-#define CAF_STREAM_MSG_HPP
+#ifndef CAF_UPSTREAM_MSG_HPP
+#define CAF_UPSTREAM_MSG_HPP
 
 #include <utility>
 #include <vector>
 #include <cstdint>
 
+#include "caf/actor_addr.hpp"
+#include "caf/actor_control_block.hpp"
 #include "caf/atom.hpp"
 #include "caf/message.hpp"
-#include "caf/variant.hpp"
-#include "caf/stream_id.hpp"
 #include "caf/stream_priority.hpp"
-#include "caf/actor_control_block.hpp"
+#include "caf/stream_slot.hpp"
+#include "caf/variant.hpp"
 
 #include "caf/tag/boxing_type.hpp"
 
@@ -36,110 +37,95 @@
 
 namespace caf {
 
-/// Stream communication messages for handshaking, ACKing, data transmission,
-/// etc.
-struct stream_msg : tag::boxing_type {
-  /// Initiates a stream handshake.
-  struct open {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
-    /// Contains a type-erased stream<T> object as first argument followed by
-    /// any number of user-defined additional handshake data.
-    message msg;
-    /// Identifies the previous stage in the pipeline.
-    strong_actor_ptr prev_stage;
-    /// Identifies the original receiver of this message.
-    strong_actor_ptr original_stage;
-    /// Configures the priority for stream elements.
-    stream_priority priority;
-    /// Tells the downstream whether rebindings can occur on this path.
-    bool redeployable;
-  };
+/// Stream messages that travel upstream, i.e., acks and drop messages.
+struct upstream_msg : tag::boxing_type {
+  // -- nested types -----------------------------------------------------------
 
   /// Acknowledges a previous `open` message and finalizes a stream handshake.
   /// Also signalizes initial demand.
   struct ack_open {
     /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
+    using outer_type = upstream_msg;
+
     /// Allows actors to participate in a stream instead of the actor
     /// originally receiving the `open` message. No effect when set to
     /// `nullptr`. This mechanism enables pipeline definitions consisting of
     /// proxy actors that are replaced with actual actors on demand.
     actor_addr rebind_from;
+
     /// Points to sender_, but with a strong reference.
     strong_actor_ptr rebind_to;
+
     /// Grants credit to the source.
     int32_t initial_demand;
+
     /// Desired size of individual batches.
     int32_t desired_batch_size;
+
     /// Tells the upstream whether rebindings can occur on this path.
     bool redeployable;
-  };
-
-  /// Transmits stream data.
-  struct batch {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
-    /// Size of the type-erased vector<T> (used credit).
-    int32_t xs_size;
-    /// A type-erased vector<T> containing the elements of the batch.
-    message xs;
-    /// ID of this batch (ascending numbering).
-    int64_t id;
   };
 
   /// Cumulatively acknowledges received batches and signalizes new demand from
   /// a sink to its source.
   struct ack_batch {
     /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
+    using outer_type = upstream_msg;
+
     /// Newly available credit.
     int32_t new_capacity;
+
     /// Desired size of individual batches for the next cycle.
     int32_t desired_batch_size;
+
     /// Cumulative ack ID.
     int64_t acknowledged_id;
-  };
-
-  /// Orderly shuts down a stream after receiving an ACK for the last batch.
-  struct close {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
   };
 
   /// Informs a source that a sink orderly drops out of a stream.
   struct drop {
     /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
-  };
-
-  /// Propagates a fatal error from sources to sinks.
-  struct forced_close {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
-    /// Reason for shutting down the stream.
-    error reason;
+    using outer_type = upstream_msg;
   };
 
   /// Propagates a fatal error from sinks to sources.
   struct forced_drop {
     /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = stream_msg;
+    using outer_type = upstream_msg;
+
     /// Reason for shutting down the stream.
     error reason;
   };
 
-  /// Lists all possible options for the payload.
-  using content_alternatives =
-    detail::type_list<open, ack_open, batch, ack_batch, close, drop,
-                      forced_close, forced_drop>;
+  // -- member types -----------------------------------------------------------
 
-  /// Stores one of `content_alternatives`.
-  using content_type = variant<open, ack_open, batch, ack_batch, close, drop,
-                               forced_close, forced_drop>;
+  /// Lists all possible options for the payload.
+  using alternatives =
+    detail::type_list<ack_open, ack_batch, drop, forced_drop>;
+
+  /// Stores one of `alternatives`.
+  using content_type = variant<ack_open, ack_batch, drop, forced_drop>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  template <class T>
+  upstream_msg(stream_slot id, actor_addr addr, T&& x)
+      : slot(id),
+        sender(std::move(addr)),
+        content(std::forward<T>(x)) {
+    // nop
+  }
+
+  upstream_msg() = default;
+  upstream_msg(upstream_msg&&) = default;
+  upstream_msg(const upstream_msg&) = default;
+  upstream_msg& operator=(upstream_msg&&) = default;
+  upstream_msg& operator=(const upstream_msg&) = default;
+
+  // -- member variables -------------------------------------------------------
 
   /// ID of the affected stream.
-  stream_id sid;
+  stream_slot slot;
 
   /// Address of the sender. Identifies the up- or downstream actor sending
   /// this message. Note that abort messages can get send after `sender`
@@ -150,99 +136,63 @@ struct stream_msg : tag::boxing_type {
 
   /// Palyoad of the message.
   content_type content;
-
-  template <class T>
-  stream_msg(const stream_id& id, actor_addr addr, T&& x)
-      : sid(std::move(id)),
-        sender(std::move(addr)),
-        content(std::forward<T>(x)) {
-    // nop
-  }
-
-  stream_msg() = default;
-  stream_msg(stream_msg&&) = default;
-  stream_msg(const stream_msg&) = default;
-  stream_msg& operator=(stream_msg&&) = default;
-  stream_msg& operator=(const stream_msg&) = default;
 };
 
 /// Allows the testing DSL to unbox `stream_msg` automagically.
 template <class T>
-const T& get(const stream_msg& x) {
+const T& get(const upstream_msg& x) {
   return get<T>(x.content);
 }
 
 /// Allows the testing DSL to check whether `stream_msg` holds a `T`.
 template <class T>
-bool is(const stream_msg& x) {
+bool is(const upstream_msg& x) {
   return holds_alternative<T>(x.content);
 }
 
+/// @relates upstream_msg
 template <class T, class... Ts>
-typename std::enable_if<
-  detail::tl_contains<
-    stream_msg::content_alternatives,
-    T
-  >::value,
-  stream_msg
->::type
-make(const stream_id& sid, actor_addr addr, Ts&&... xs) {
-  return {sid, std::move(addr), T{std::forward<Ts>(xs)...}};
+detail::enable_if_tt<detail::tl_contains<upstream_msg::alternatives, T>,
+                     upstream_msg>
+make(stream_slot slot, actor_addr addr, Ts&&... xs) {
+  return {slot, std::move(addr), T{std::forward<Ts>(xs)...}};
 }
 
+/// @relates upstream_msg::ack_open
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_msg::open& x) {
-  return f(meta::type_name("open"), x.msg, x.prev_stage, x.original_stage,
-           x.priority, x.redeployable);
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_msg::ack_open& x) {
+typename Inspector::result_type inspect(Inspector& f,
+                                        upstream_msg::ack_open& x) {
   return f(meta::type_name("ack_open"), x.rebind_from, x.rebind_to,
            x.initial_demand, x.desired_batch_size, x.redeployable);
 }
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_msg::batch& x) {
-  return f(meta::type_name("batch"), meta::omittable(), x.xs_size, x.xs, x.id);
-}
-
+/// @relates upstream_msg::ack_batch
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
-                                        stream_msg::ack_batch& x) {
+                                        upstream_msg::ack_batch& x) {
   return f(meta::type_name("ack_batch"), x.new_capacity, x.desired_batch_size,
            x.acknowledged_id);
 }
 
+/// @relates upstream_msg::drop
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        stream_msg::close&) {
-  return f(meta::type_name("close"));
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        stream_msg::drop&) {
+typename Inspector::result_type inspect(Inspector& f, upstream_msg::drop&) {
   return f(meta::type_name("drop"));
 }
 
+/// @relates upstream_msg::forced_drop
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
-                                        stream_msg::forced_close& x) {
-  return f(meta::type_name("forced_close"), x.reason);
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        stream_msg::forced_drop& x) {
+                                        upstream_msg::forced_drop& x) {
   return f(meta::type_name("forced_drop"), x.reason);
 }
 
+/// @relates upstream_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_msg& x) {
-  return f(meta::type_name("stream_msg"), x.sid, x.sender, x.content);
+typename Inspector::result_type inspect(Inspector& f, upstream_msg& x) {
+  return f(meta::type_name("stream_msg"), x.slot, x.sender, x.content);
 }
 
 } // namespace caf
 
-#endif // CAF_STREAM_MSG_HPP
+#endif // CAF_UPSTREAM_MSG_HPP

@@ -41,12 +41,12 @@ public:
 
   ~stream_gatherer_impl();
 
-  path_ptr add_path(const stream_id& sid, strong_actor_ptr x,
+  path_ptr add_path(stream_slot slot, strong_actor_ptr x,
                     strong_actor_ptr original_stage, stream_priority prio,
                     long available_credit, bool redeployable,
                     response_promise result_cb) override;
 
-  bool remove_path(const stream_id& sid, const actor_addr& x, error reason,
+  bool remove_path(stream_slot slot, const actor_addr& x, error reason,
                    bool silent) override;
 
   void close(message result) override;

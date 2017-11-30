@@ -22,11 +22,11 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "caf/stream_id.hpp"
-#include "caf/stream_msg.hpp"
+#include "caf/actor_control_block.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_priority.hpp"
-#include "caf/actor_control_block.hpp"
+#include "caf/stream_slot.hpp"
+#include "caf/upstream_msg.hpp"
 
 #include "caf/meta/type_name.hpp"
 
@@ -39,16 +39,16 @@ public:
   static constexpr const auto aborter_type = stream_aborter::source_aborter;
 
   /// Message type for propagating graceful shutdowns.
-  using regular_shutdown = stream_msg::drop;
+  using regular_shutdown = upstream_msg::drop;
 
   /// Message type for propagating errors.
-  using irregular_shutdown = stream_msg::forced_drop;
+  using irregular_shutdown = upstream_msg::forced_drop;
 
   /// Pointer to the parent actor.
   local_actor* self;
 
-  /// Stream ID used on this source.
-  stream_id sid;
+  /// Slot ID for the source.
+  stream_slot slot;
 
   /// Handle to the source.
   strong_actor_ptr hdl;
@@ -77,7 +77,7 @@ public:
   error shutdown_reason;
 
   /// Constructs a path for given handle and stream ID.
-  inbound_path(local_actor* selfptr, const stream_id& id, strong_actor_ptr ptr);
+  inbound_path(local_actor* selfptr, stream_slot id, strong_actor_ptr ptr);
 
   ~inbound_path();
 
@@ -91,14 +91,15 @@ public:
 
   void emit_ack_batch(long new_demand);
 
-  static void emit_irregular_shutdown(local_actor* self, const stream_id& sid,
+  static void emit_irregular_shutdown(local_actor* self, stream_slot sid,
                                       const strong_actor_ptr& hdl,
                                       error reason);
 };
 
+/// @relates inbound_path
 template <class Inspector>
 typename Inspector::return_type inspect(Inspector& f, inbound_path& x) {
-  return f(meta::type_name("inbound_path"), x.hdl, x.sid, x.prio,
+  return f(meta::type_name("inbound_path"), x.hdl, x.slot, x.prio,
            x.last_acked_batch_id, x.last_batch_id, x.assigned_credit);
 }
 

@@ -98,9 +98,7 @@ set (LIBCAF_CORE_SRCS
      src/stream_gatherer.cpp
      src/stream_gatherer.cpp
      src/stream_gatherer_impl.cpp
-     src/stream_id.cpp
      src/stream_manager.cpp
-     src/stream_msg_visitor.cpp
      src/stream_priority.cpp
      src/stream_scatterer.cpp
      src/stream_scatterer_impl.cpp

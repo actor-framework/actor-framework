@@ -30,17 +30,17 @@ public:
 
   ~invalid_stream_scatterer() override;
 
-  path_ptr add_path(const stream_id& sid, strong_actor_ptr origin,
+  path_ptr add_path(stream_slot slot, strong_actor_ptr origin,
                     strong_actor_ptr sink_ptr,
                     mailbox_element::forwarding_stack stages,
                     message_id handshake_mid, message handshake_data,
                     stream_priority prio, bool redeployable) override;
 
-  path_ptr confirm_path(const stream_id& sid, const actor_addr& from,
+  path_ptr confirm_path(stream_slot slot, const actor_addr& from,
                         strong_actor_ptr to, long initial_demand,
                         long desired_batch_size, bool redeployable) override;
 
-  bool remove_path(const stream_id& sid, const actor_addr& x,
+  bool remove_path(stream_slot slot, const actor_addr& x,
                            error reason, bool silent) override;
 
   bool paths_clean() const override;
@@ -61,7 +61,7 @@ public:
 
   void emit_batches() override;
 
-  path_type* find(const stream_id& sid, const actor_addr& x) override;
+  path_type* find(stream_slot slot, const actor_addr& x) override;
 
   long credit() const override;
 

@@ -21,7 +21,6 @@
 #include "caf/config.hpp"
 #include "caf/to_string.hpp"
 #include "caf/actor_ostream.hpp"
-#include "caf/stream_msg_visitor.hpp"
 
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -192,6 +191,7 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   // Clear all state.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
+  /*
   if (fail_state != none)
     for (auto& kvp : streams_)
       kvp.second->abort(fail_state);
@@ -199,6 +199,7 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
     for (auto& kvp : streams_)
       kvp.second->close();
   streams_.clear();
+  */
   // Dispatch to parent's `cleanup` function.
   return local_actor::cleanup(std::move(fail_state), host);
 }
@@ -276,10 +277,12 @@ void scheduled_actor::quit(error x) {
 
 // -- stream management --------------------------------------------------------
 
+/*
 void scheduled_actor::trigger_downstreams() {
   for (auto& s : streams_)
     s.second->push();
 }
+*/
 
 // -- timeout management -------------------------------------------------------
 
@@ -382,11 +385,13 @@ scheduled_actor::categorize(mailbox_element& x) {
       call_handler(error_handler_, this, err);
       return message_category::internal;
     }
+    /*
     case make_type_token<stream_msg>(): {
       auto& bs = bhvr_stack();
       handle_stream_msg(x, bs.empty() ? nullptr : &bs.back());
       return message_category::internal;
     }
+    */
     default:
       return message_category::ordinary;
   }
@@ -402,17 +407,22 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
     return f(in.content()) != none;
   };
-  auto stream_invoke = [](ptr_t p, behavior& f, mailbox_element& in) -> bool {
+  auto stream_invoke = [](ptr_t, behavior&, mailbox_element&) -> bool {
+    /*
     // The only legal stream message in a response is `stream_open`.
     auto& var = in.content().get_as<stream_msg>(0).content;
     if (holds_alternative<stream_msg::open>(var))
       return p->handle_stream_msg(in, &f);
+    */
     return false;
   };
   auto select_invoke_fun = [&]() -> fun_t {
+    return ordinary_invoke;
+    /*
     if (x.content().type_token() != make_type_token<stream_msg>())
       return ordinary_invoke;
     return stream_invoke;
+    */
   };
   // Short-circuit awaited responses.
   if (!awaited_responses_.empty()) {
@@ -622,6 +632,7 @@ bool scheduled_actor::finalize() {
   return true;
 }
 
+/*
 bool scheduled_actor::handle_stream_msg(mailbox_element& x,
                                         behavior* active_behavior) {
   CAF_LOG_TRACE(CAF_ARG(x));
@@ -684,5 +695,6 @@ bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
                          std::move(opn.original_stage), opn.priority,
                          opn.redeployable, std::move(result_cb));
 }
+*/
 
 } // namespace caf

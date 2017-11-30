@@ -21,10 +21,11 @@
 
 #include <cstddef>
 
-#include "caf/fwd.hpp"
 #include "caf/duration.hpp"
-#include "caf/optional.hpp"
+#include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/optional.hpp"
+#include "caf/stream_slot.hpp"
 
 namespace caf {
 
@@ -47,19 +48,19 @@ public:
 
   /// Adds a path to the edge.
   /// @returns The added path on success, `nullptr` otherwise.
-  virtual path_ptr add_path(const stream_id& sid, strong_actor_ptr origin,
+  virtual path_ptr add_path(stream_slot slot, strong_actor_ptr origin,
                             strong_actor_ptr sink_ptr,
                             mailbox_element::forwarding_stack stages,
                             message_id handshake_mid, message handshake_data,
                             stream_priority prio, bool redeployable) = 0;
 
   /// Adds a path to a sink and initiates the handshake.
-  virtual path_ptr confirm_path(const stream_id& sid, const actor_addr& from,
+  virtual path_ptr confirm_path(stream_slot slot, const actor_addr& from,
                                 strong_actor_ptr to, long initial_demand,
                                 long desired_batch_size, bool redeployable) = 0;
 
   /// Removes a path from the scatterer.
-  virtual bool remove_path(const stream_id& sid, const actor_addr& x,
+  virtual bool remove_path(stream_slot slot, const actor_addr& x,
                            error reason, bool silent) = 0;
 
   /// Returns `true` if there is no data pending and no unacknowledged batch on
@@ -89,7 +90,7 @@ public:
 
   /// Returns the stored state for `x` if `x` is a known path and associated to
   /// `sid`, otherwise `nullptr`.
-  virtual path_ptr find(const stream_id& sid, const actor_addr& x) = 0;
+  virtual path_ptr find(stream_slot slot, const actor_addr& x) = 0;
 
   /// Returns the stored state for `x` if `x` is a known path and associated to
   /// `sid`, otherwise `nullptr`.
@@ -122,11 +123,11 @@ public:
   // -- convenience functions --------------------------------------------------
 
   /// Removes a path from the scatterer.
-  bool remove_path(const stream_id& sid, const strong_actor_ptr& x,
+  bool remove_path(stream_slot slot, const strong_actor_ptr& x,
                    error reason, bool silent);
 
   /// Convenience function for calling `find(x, actor_cast<actor_addr>(x))`.
-  path_ptr find(const stream_id& sid, const strong_actor_ptr& x);
+  path_ptr find(stream_slot slot, const strong_actor_ptr& x);
 };
 
 } // namespace caf

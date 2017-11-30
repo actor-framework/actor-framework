@@ -30,20 +30,20 @@ stream_gatherer_impl::~stream_gatherer_impl() {
 }
 
 stream_gatherer::path_ptr
-stream_gatherer_impl::add_path(const stream_id& sid, strong_actor_ptr hdl,
+stream_gatherer_impl::add_path(stream_slot slot, strong_actor_ptr hdl,
                                strong_actor_ptr original_stage,
                                stream_priority prio, long available_credit,
                                bool redeployable, response_promise result_cb) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl) << CAF_ARG(original_stage)
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(hdl) << CAF_ARG(original_stage)
                 << CAF_ARG(prio) << CAF_ARG(available_credit));
   CAF_ASSERT(hdl != nullptr);
-  if (find(sid, hdl) != nullptr) {
-    inbound_path::emit_irregular_shutdown(self_, sid, hdl,
+  if (find(slot, hdl) != nullptr) {
+    inbound_path::emit_irregular_shutdown(self_, slot, hdl,
                                           sec::cannot_add_upstream);
 
     return nullptr;
   }
-  auto ptr = add_path_impl(sid, std::move(hdl));
+  auto ptr = add_path_impl(slot, std::move(hdl));
   CAF_ASSERT(ptr != nullptr);
   assignment_vec_.emplace_back(ptr, 0l);
   if (result_cb.pending())
@@ -54,19 +54,19 @@ stream_gatherer_impl::add_path(const stream_id& sid, strong_actor_ptr hdl,
   return ptr;
 }
 
-bool stream_gatherer_impl::remove_path(const stream_id& sid,
+bool stream_gatherer_impl::remove_path(stream_slot slot,
                                        const actor_addr& x, error reason,
                                        bool silent) {
-  CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(x)
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(x)
                 << CAF_ARG(reason) << CAF_ARG(silent));
   auto pred = [&](const assignment_pair& y) {
-    return y.first->sid == sid && y.first->hdl == x;
+    return y.first->slot == slot && y.first->hdl == x;
   };
   auto e = assignment_vec_.end();
   auto i = std::find_if(assignment_vec_.begin(), e, pred);
   if (i != e) {
     assignment_vec_.erase(i);
-    return super::remove_path(sid, x, std::move(reason), silent);
+    return super::remove_path(slot, x, std::move(reason), silent);
   }
   return false;
 }
@@ -75,7 +75,7 @@ void stream_gatherer_impl::close(message result) {
   CAF_LOG_TRACE(CAF_ARG(result) << CAF_ARG2("remaining paths", paths_.size())
                 << CAF_ARG2("listener", listeners_.size()));
   for (auto& path : paths_)
-    stream_aborter::del(path->hdl, self_->address(), path->sid, aborter_type);
+    stream_aborter::del(path->hdl, self_->address(), path->slot, aborter_type);
   paths_.clear();
   assignment_vec_.clear();
   for (auto& listener : listeners_)
@@ -85,7 +85,7 @@ void stream_gatherer_impl::close(message result) {
 
 void stream_gatherer_impl::abort(error reason) {
   for (auto& path : paths_) {
-    stream_aborter::del(path->hdl, self_->address(), path->sid, aborter_type);
+    stream_aborter::del(path->hdl, self_->address(), path->slot, aborter_type);
     path->shutdown_reason = reason;
   }
   paths_.clear();

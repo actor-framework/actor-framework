@@ -28,7 +28,6 @@
 #include "caf/fwd.hpp"
 #include "caf/send.hpp"
 #include "caf/config.hpp"
-#include "caf/stream_msg.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/inbound_path.hpp"
@@ -92,7 +91,7 @@ public:
   }
 
   // -- static utility functions for path vectors ------------------------------
-  
+
   /// Sorts `xs` in descending order by available credit.
   template <class PathContainer>
   static void sort_by_credit(PathContainer& xs) {
@@ -112,10 +111,10 @@ public:
 
   /// Finds the path for `ptr` and returns a pointer to it.
   template <class PathContainer, class Handle>
-  static path_ptr find(PathContainer& xs, const stream_id& sid,
+  static path_ptr find(PathContainer& xs, stream_slot slot,
                        const Handle& x) {
     auto predicate = [&](const typename PathContainer::value_type& y) {
-      return y->hdl == x && y->sid == sid;
+      return y->hdl == x && y->slot == slot;
     };
     auto e = xs.end();
     auto i = std::find_if(xs.begin(), e, predicate);
@@ -127,9 +126,9 @@ public:
   /// Finds the path for `ptr` and returns an iterator to it.
   template <class PathContainer, class Handle>
   static typename PathContainer::iterator
-  iter_find(PathContainer& xs, const stream_id& sid, const Handle& x) {
+  iter_find(PathContainer& xs, stream_slot slot, const Handle& x) {
     auto predicate = [&](const typename PathContainer::value_type& y) {
-      return y->hdl == x && y->sid == sid;
+      return y->hdl == x && y->slot == slot;
     };
     return std::find_if(xs.begin(), xs.end(), predicate);
   }
@@ -158,7 +157,7 @@ public:
       return false;
     }
     auto& p = *(*i);
-    stream_aborter::del(p.hdl, self_->address(), p.sid, aborter_type);
+    stream_aborter::del(p.hdl, self_->address(), p.slot, aborter_type);
     if (silent)
       p.hdl = nullptr;
     if (reason != none)
@@ -171,11 +170,11 @@ public:
 
   // -- implementation of common methods ---------------------------------------
 
-  bool remove_path(const stream_id& sid, const actor_addr& x,
+  bool remove_path(stream_slot slot, const actor_addr& x,
                    error reason, bool silent) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(x)
+    CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(x)
                   << CAF_ARG(reason) << CAF_ARG(silent));
-    return remove_path(iter_find(paths_, sid, x), std::move(reason), silent);
+    return remove_path(iter_find(paths_, slot, x), std::move(reason), silent);
   }
 
   void abort(error reason) override {
@@ -215,23 +214,23 @@ public:
 
   using super::find;
 
-  path_ptr find(const stream_id& sid, const actor_addr& x) override {
-    return find(paths_, sid, x);
+  path_ptr find(stream_slot slot, const actor_addr& x) override {
+    return find(paths_, slot, x);
   }
 
 protected:
   /// Adds a path to the edge without emitting messages.
-  path_ptr add_path_impl(const stream_id& sid, strong_actor_ptr x) {
-    CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(sid));
-    stream_aborter::add(x, self_->address(), sid, aborter_type);
-    paths_.emplace_back(new path_type(self_, sid, std::move(x)));
+  path_ptr add_path_impl(stream_slot slot, strong_actor_ptr x) {
+    CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(slot));
+    stream_aborter::add(x, self_->address(), slot, aborter_type);
+    paths_.emplace_back(new path_type(self_, slot, std::move(x)));
     return paths_.back().get();
   }
 
   template <class F>
   void close_impl(F f) {
     for (auto& x : paths_) {
-      stream_aborter::del(x->hdl, self_->address(), x->sid, aborter_type);
+      stream_aborter::del(x->hdl, self_->address(), x->slot, aborter_type);
       f(*x);
     }
     paths_.clear();
