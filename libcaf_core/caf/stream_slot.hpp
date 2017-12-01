@@ -20,11 +20,50 @@
 #define CAF_STREAM_SLOT_HPP
 
 #include <cstdint>
+#include <tuple>
+
+#include "caf/detail/comparable.hpp"
 
 namespace caf {
 
-/// Actor-specific identifier for stream traffic.
-using stream_slot = uint64_t;
+/// Identifies a single stream path in the same way a TCP port identifies a
+/// connection over IP.
+using stream_slot = uint16_t;
+
+/// Maps two `stream_slot` values into a pair for storing sender and receiver
+/// slot information.
+struct stream_slots : detail::comparable<stream_slots>{
+  stream_slot sender;
+  stream_slot receiver;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  constexpr stream_slots(stream_slot sender_slot, stream_slot receiver_slot)
+      : sender(sender_slot),
+        receiver(receiver_slot) {
+    // nop
+  }
+
+  // -- observers --------------------------------------------------------------
+
+  /// Returns an inverted pair, i.e., swaps sender and receiver slot.
+  constexpr stream_slots invert() const {
+    return {receiver, sender};
+  }
+
+  inline int_fast32_t compare(stream_slots other) const noexcept {
+    static_assert(sizeof(stream_slots) == sizeof(int32_t),
+                  "sizeof(stream_slots) != sizeof(int32_t)");
+    return reinterpret_cast<const int32_t&>(*this)
+           - reinterpret_cast<int32_t&>(other);
+  }
+};
+
+/// @relates stream_slots
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, stream_slots& x) {
+  return f(std::tie(x.sender, x.receiver));
+}
 
 } // namespace caf
 
