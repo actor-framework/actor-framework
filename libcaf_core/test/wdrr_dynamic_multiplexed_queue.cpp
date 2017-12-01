@@ -85,10 +85,6 @@ struct inode_policy {
 
   using queue_map_type = std::map<key_type, queue_type>;
 
-  static inline task_size_type task_size(const mapped_type&) {
-    return 1;
-  }
-
   static inline key_type id_of(const inode& x) {
     return x.value % 3;
   }
@@ -108,14 +104,13 @@ struct fixture {
   inode_policy policy;
   queue_type queue{policy};
 
-  void fill(queue_type&) {
-    // nop
+  int fill(queue_type&) {
+    return 0;
   }
 
   template <class T, class... Ts>
-  void fill(queue_type& q, T x, Ts... xs) {
-    q.emplace_back(x);
-    fill(q, xs...);
+  int fill(queue_type& q, T x, Ts... xs) {
+    return (q.emplace_back(x) ? 1 : 0) + fill(q, xs...);
   }
 
   std::string fetch(int quantum) {
@@ -148,7 +143,7 @@ CAF_TEST(default_constructed) {
 
 CAF_TEST(dropping) {
   CAF_REQUIRE_EQUAL(queue.empty(), true);
-  fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12);
+  CAF_REQUIRE_EQUAL(fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12), 0);
   CAF_REQUIRE_EQUAL(queue.empty(), true);
 }
 

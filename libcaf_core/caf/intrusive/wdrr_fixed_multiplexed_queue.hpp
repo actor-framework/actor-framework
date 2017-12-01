@@ -68,17 +68,17 @@ public:
     return policy_;
   }
 
-  void push_back(mapped_type* ptr) noexcept {
-    push_back_recursion<0>(policy_.id_of(*ptr), ptr);
+  bool push_back(mapped_type* ptr) noexcept {
+    return push_back_recursion<0>(policy_.id_of(*ptr), ptr);
   }
 
-  void push_back(unique_pointer ptr) noexcept {
-    push_back(ptr.release());
+  bool push_back(unique_pointer ptr) noexcept {
+    return push_back(ptr.release());
   }
 
   template <class... Ts>
-  void emplace_back(Ts&&... xs) {
-    push_back(new mapped_type(std::forward<Ts>(xs)...));
+  bool emplace_back(Ts&&... xs) {
+    return push_back(new mapped_type(std::forward<Ts>(xs)...));
   }
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
@@ -127,21 +127,34 @@ private:
   // -- recursive helper functions ---------------------------------------------
 
   template <size_t I>
-  detail::enable_if_t<I == num_queues>
+  detail::enable_if_t<I == num_queues, bool>
   push_back_recursion(size_t, mapped_type*) noexcept {
-    // nop
+    return false;
   }
 
   template <size_t I>
-  detail::enable_if_t<I != num_queues>
+  detail::enable_if_t<I != num_queues, bool>
   push_back_recursion(size_t pos, mapped_type* ptr) noexcept {
     if (pos == I) {
       auto& q = std::get<I>(qs_);
-      q.push_back(ptr);
-    } else {
-      push_back_recursion<I + 1>(pos, ptr);
+      return q.push_back(ptr);
     }
+    return push_back_recursion<I + 1>(pos, ptr);
   }
+
+  template <size_t I, class Queue, class F>
+  struct new_round_recursion_helper {
+    Queue& q;
+    F& f;
+    template <class... Ts>
+    auto operator()(Ts&&... xs)
+      -> decltype((std::declval<F&>())(std::declval<index<I>>(),
+                                       std::declval<Queue&>(),
+                                       std::forward<Ts>(xs)...)) {
+      index<I> id;
+      return f(id, q, std::forward<Ts>(xs)...);
+    }
+  };
 
   template <size_t I, class F>
   detail::enable_if_t<I == num_queues, int>
@@ -153,10 +166,8 @@ private:
   detail::enable_if_t<I != num_queues, int>
   new_round_recursion(deficit_type quantum, F& f) {
     auto& q = std::get<I>(qs_);
-    auto g = [&](mapped_type& x) {
-      index<I> id;
-      return f(id, q, x);
-    };
+    using q_type = typename std::decay<decltype(q)>::type;
+    new_round_recursion_helper<I, q_type, F> g{q, f};
     if (q.new_round(policy_.quantum(q, quantum), g))
       return 1 + new_round_recursion<I + 1>(quantum, f);
     return 0 + new_round_recursion<I + 1>(quantum, f);

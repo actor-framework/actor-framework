@@ -129,25 +129,25 @@ public:
 
   /// Appends `ptr` to the queue.
   /// @pre `ptr != nullptr`
-  void push_back(pointer ptr) noexcept {
+  bool push_back(pointer ptr) noexcept {
     CAF_ASSERT(ptr != nullptr);
     tail_.next->next = ptr;
     tail_.next = ptr;
     ptr->next = &tail_;
     inc_total_task_size(*ptr);
+    return true;
   }
 
   /// Appends `ptr` to the queue.
   /// @pre `ptr != nullptr`
-  void push_back(unique_pointer ptr) noexcept {
-    CAF_ASSERT(ptr != nullptr);
-    push_back(ptr.release());
+  bool push_back(unique_pointer ptr) noexcept {
+    return push_back(ptr.release());
   }
 
   /// Creates a new element from `xs...` and appends it.
   template <class... Ts>
-  void emplace_back(Ts&&... xs) {
-    push_back(new value_type(std::forward<Ts>(xs)...));
+  bool emplace_back(Ts&&... xs) {
+    return push_back(new value_type(std::forward<Ts>(xs)...));
   }
 
   /// @private

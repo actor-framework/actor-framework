@@ -64,40 +64,61 @@ public:
     return policy_;
   }
 
-  void push_back(mapped_type* ptr) noexcept {
+  bool push_back(mapped_type* ptr) noexcept {
     auto i = qs_.find(policy_.id_of(*ptr));
     if (i != qs_.end()) {
       i->second.push_back(ptr);
+      return true;
     } else {
       deleter_type d;
       d(ptr);
+      return false;
     }
   }
 
-  void push_back(unique_pointer ptr) noexcept {
-    push_back(ptr.release());
+  bool push_back(unique_pointer ptr) noexcept {
+    return push_back(ptr.release());
   }
 
   template <class... Ts>
-  void emplace_back(Ts&&... xs) {
-    push_back(new mapped_type(std::forward<Ts>(xs)...));
+  bool emplace_back(Ts&&... xs) {
+    return push_back(new mapped_type(std::forward<Ts>(xs)...));
   }
+
+  /// @private
+  template <class F>
+  struct new_round_helper {
+    const key_type& k;
+    queue_type& q;
+    F& f;
+    template <class... Ts>
+    auto operator()(Ts&&... xs)
+      -> decltype((std::declval<F&>())(std::declval<const key_type&>(),
+                                       std::declval<queue_type&>(),
+                                       std::forward<Ts>(xs)...)) {
+      return f(k, q, std::forward<Ts>(xs)...);
+    }
+  };
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
-  bool new_round(long quantum,
-                 F& f) noexcept(noexcept(f(std::declval<const key_type&>(),
-                                           std::declval<queue_type&>(),
-                                           std::declval<mapped_type&>()))) {
+  bool new_round(long quantum, F& f) {
     bool result = false;
     for (auto& kvp : qs_) {
-      auto g = [&](mapped_type& x) {
-        f(kvp.first, kvp.second, x);
-      };
-      result |= kvp.second.new_round(policy_.quantum(kvp.second, quantum), g);
+      new_round_helper<F> g{kvp.first, kvp.second, f};
+      result |= g.q.new_round(policy_.quantum(g.q, quantum), g);
+    }
+    if (!erase_list_.empty()) {
+      for (auto& k : erase_list_)
+        qs_.erase(k);
+      erase_list_.clear();
     }
     return result;
+  }
+
+  void erase_later(key_type k) {
+    erase_list_.emplace_back(std::move(k));
   }
 
   pointer peek() noexcept {
@@ -159,6 +180,9 @@ private:
 
   /// Policy object for adjusting a quantum based on queue weight etc.
   Policy policy_;
+
+  /// List of keys that are marked erased.
+  std::vector<key_type> erase_list_;
 };
 
 } // namespace intrusive
