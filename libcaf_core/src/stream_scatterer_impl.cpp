@@ -51,9 +51,11 @@ stream_scatterer_impl::add_path(stream_slot slot, strong_actor_ptr origin,
   return ptr;
 }
 
-stream_scatterer::path_ptr stream_scatterer_impl::confirm_path(
-    stream_slot slot, const actor_addr& from, strong_actor_ptr to,
-    long initial_demand, long desired_batch_size, bool redeployable) {
+stream_scatterer::path_ptr
+stream_scatterer_impl::confirm_path(stream_slot, const actor_addr&,
+                                    strong_actor_ptr, long, long, bool) {
+  return nullptr; // TODO: implement me
+  /*
   CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(from) << CAF_ARG(to)
                 << CAF_ARG(initial_demand) << CAF_ARG(desired_batch_size)
                 << CAF_ARG(redeployable));
@@ -71,6 +73,7 @@ stream_scatterer::path_ptr stream_scatterer_impl::confirm_path(
   if (ptr->desired_batch_size != desired_batch_size)
     ptr->desired_batch_size = desired_batch_size;
   return ptr;
+  */
 }
 
 bool stream_scatterer_impl::paths_clean() const {
@@ -82,17 +85,24 @@ bool stream_scatterer_impl::paths_clean() const {
 
 void stream_scatterer_impl::close() {
   CAF_LOG_TRACE("");
+  // TODO: implement me
+  /*
   for (auto& path : paths_)
     stream_aborter::del(path->hdl, self_->address(), path->slot, aborter_type);
   paths_.clear();
+  */
 }
 
 void stream_scatterer_impl::abort(error reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
+  // TODO: implement me
+  /*
   for (auto& path : paths_) {
     stream_aborter::del(path->hdl, self_->address(), path->slot, aborter_type);
     path->shutdown_reason = reason;
   }
   paths_.clear();
+  */
 }
 
 long stream_scatterer_impl::total_credit() const {

@@ -83,8 +83,8 @@ struct downstream_msg : tag::boxing_type {
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class T>
-  downstream_msg(stream_slot id, actor_addr addr, T&& x)
-      : slot(id),
+  downstream_msg(stream_slots s, actor_addr addr, T&& x)
+      : slots(s),
         sender(std::move(addr)),
         content(std::forward<T>(x)) {
     // nop
@@ -99,7 +99,7 @@ struct downstream_msg : tag::boxing_type {
   // -- member variables -------------------------------------------------------
 
   /// ID of the affected stream.
-  stream_slot slot;
+  stream_slots slots;
 
   /// Address of the sender. Identifies the up- or downstream actor sending
   /// this message. Note that abort messages can get send after `sender`
@@ -128,8 +128,8 @@ bool is(const downstream_msg& x) {
 template <class T, class... Ts>
 detail::enable_if_tt<detail::tl_contains<downstream_msg::alternatives, T>,
                      downstream_msg>
-make(stream_slot slot, actor_addr addr, Ts&&... xs) {
-  return {slot, std::move(addr), T{std::forward<Ts>(xs)...}};
+make(stream_slots slots, actor_addr addr, Ts&&... xs) {
+  return {slots, std::move(addr), T{std::forward<Ts>(xs)...}};
 }
 
 /// @relates downstream_msg::batch
@@ -155,7 +155,7 @@ typename Inspector::result_type inspect(Inspector& f,
 /// @relates downstream_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, downstream_msg& x) {
-  return f(meta::type_name("stream_msg"), x.slot, x.sender, x.content);
+  return f(meta::type_name("stream_msg"), x.slots, x.sender, x.content);
 }
 
 } // namespace caf

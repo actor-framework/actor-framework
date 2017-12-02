@@ -24,7 +24,6 @@
 #include "caf/outbound_path.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_source_trait.hpp"
-#include "caf/invalid_stream_gatherer.hpp"
 
 namespace caf {
 
@@ -48,9 +47,6 @@ public:
     return at_end() && out_.paths_clean();
   }
 
-  invalid_stream_gatherer& in() override {
-    return in_;
-  }
 
   DownstreamPolicy& out() override {
     return out_;
@@ -88,22 +84,8 @@ protected:
     return pred_(state_);
   }
 
-  void downstream_demand(outbound_path* path, long) override {
-    CAF_LOG_TRACE(CAF_ARG(path));
-    if (!at_end()) {
-      auto dbs = out_.desired_batch_size();
-      generate_messages();
-      while (out_.buffered() >= dbs && out_.credit() >= dbs) {
-        push();
-        generate_messages();
-      }
-    } else if (out_.buffered() > 0) {
-      push();
-    } else {
-      auto sid = path->slot;
-      auto hdl = path->hdl;
-      out().remove_path(sid, hdl, none, false);
-    }
+  void downstream_demand(outbound_path*, long) override {
+    // TODO: implment me
   }
 
 private:
@@ -111,7 +93,6 @@ private:
   Fun fun_;
   Predicate pred_;
   DownstreamPolicy out_;
-  invalid_stream_gatherer in_;
 };
 
 } // namespace caf

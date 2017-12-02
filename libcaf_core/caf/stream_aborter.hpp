@@ -35,13 +35,13 @@ public:
 
   struct token {
     const actor_addr& observer;
-    stream_slot slot;
+    stream_slots slots;
     mode m;
     static constexpr size_t token_type = attachable::token::stream_aborter;
   };
 
   stream_aborter(actor_addr&& observed, actor_addr&& observer,
-                 stream_slot slot, mode m);
+                 stream_slots slots, mode m);
 
   ~stream_aborter() override;
 
@@ -51,21 +51,21 @@ public:
 
   /// Adds a stream aborter to `observed`.
   static void add(strong_actor_ptr observed, actor_addr observer,
-                  stream_slot slot, mode m);
+                  stream_slots slots, mode m);
 
   /// Removes a stream aborter from `observed`.
   static void del(strong_actor_ptr observed, const actor_addr& observer,
-                  stream_slot slot, mode m);
+                  stream_slots slots, mode m);
 
 private:
   actor_addr observed_;
   actor_addr observer_;
-  stream_slot slot_;
+  stream_slots slots_;
   mode mode_;
 };
 
 attachable_ptr make_stream_aborter(actor_addr observed, actor_addr observer,
-                                   stream_slot slot, stream_aborter::mode m);
+                                   stream_slots slot, stream_aborter::mode m);
 
 } // namespace caf
 

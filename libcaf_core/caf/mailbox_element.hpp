@@ -134,6 +134,10 @@ public:
     return *this;
   }
 
+  const type_erased_tuple& content() const override {
+    return *this;
+  }
+
   message move_content_to_message() override {
     message_factory f;
     auto& xs = this->data();
@@ -167,6 +171,10 @@ public:
   }
 
   type_erased_tuple& content() override {
+    return *this;
+  }
+
+  const type_erased_tuple& content() const override {
     return *this;
   }
 

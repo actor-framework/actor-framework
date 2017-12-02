@@ -25,9 +25,9 @@
 
 namespace caf {
 
-outbound_path::outbound_path(local_actor* selfptr, stream_slot id,
+outbound_path::outbound_path(local_actor* selfptr, stream_slots id,
                              strong_actor_ptr ptr)
-    : slot(id),
+    : slots(id),
       self(selfptr),
       hdl(std::move(ptr)),
       next_batch_id(0),
@@ -43,10 +43,10 @@ outbound_path::~outbound_path() {
   if (hdl) {
     if (shutdown_reason == none)
       unsafe_send_as(self, hdl,
-                     make<downstream_msg::close>(slot, self->address()));
+                     make<downstream_msg::close>(slots, self->address()));
     else
       unsafe_send_as(self, hdl,
-                     make<downstream_msg::forced_close>(slot, self->address(),
+                     make<downstream_msg::forced_close>(slots, self->address(),
                                                         shutdown_reason));
   }
   if (shutdown_reason != none)
@@ -69,10 +69,10 @@ void outbound_path::emit_open(strong_actor_ptr origin,
   cd = client_data{origin, handshake_mid};
   redeployable = is_redeployable;
   hdl->enqueue(
-    make_mailbox_element(std::move(origin), handshake_mid, std::move(stages),
-                         make_message(stream_handshake_msg{
-                           slot, std::move(handshake_data), self->ctrl(), hdl,
-                           prio, is_redeployable})),
+    make_mailbox_element(
+      std::move(origin), handshake_mid, std::move(stages),
+      make_message(open_stream_msg{slots.sender, std::move(handshake_data),
+                                   self->ctrl(), hdl, prio, is_redeployable})),
     self->context());
 }
 
@@ -85,16 +85,16 @@ void outbound_path::emit_batch(long xs_size, message xs) {
   if (redeployable)
     unacknowledged_batches.emplace_back(bid, batch);
   unsafe_send_as(self, hdl,
-                 downstream_msg{slot, self->address(), std::move(batch)});
+                 downstream_msg{slots, self->address(), std::move(batch)});
 }
 
 void outbound_path::emit_irregular_shutdown(local_actor* self,
-                                            stream_slot slot,
+                                            stream_slots slots,
                                             const strong_actor_ptr& hdl,
                                             error reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
   unsafe_send_as(self, hdl,
-                 make<downstream_msg::forced_close>(slot, self->address(),
+                 make<downstream_msg::forced_close>(slots, self->address(),
                                                     std::move(reason)));
 }
 

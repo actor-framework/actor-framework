@@ -37,7 +37,6 @@
 #include "caf/stream_result.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
-#include "caf/random_gatherer.hpp"
 #include "caf/stream_sink_impl.hpp"
 #include "caf/stream_stage_impl.hpp"
 #include "caf/stream_source_impl.hpp"

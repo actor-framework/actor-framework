@@ -25,10 +25,10 @@
 
 namespace caf {
 
-inbound_path::inbound_path(local_actor* selfptr, stream_slot id,
+inbound_path::inbound_path(local_actor* selfptr, stream_slots id,
                            strong_actor_ptr ptr)
-    : self(selfptr),
-      slot(id),
+    : slots(id),
+      self(selfptr),
       hdl(std::move(ptr)),
       prio(stream_priority::normal),
       last_acked_batch_id(0),
@@ -43,11 +43,11 @@ inbound_path::~inbound_path() {
   if (hdl) {
     if (shutdown_reason == none)
       unsafe_send_as(self, hdl,
-                     make<upstream_msg::drop>(slot, self->address()));
+                     make<upstream_msg::drop>(slots.invert(), self->address()));
     else
       unsafe_send_as(self, hdl,
-                     make<upstream_msg::forced_drop>(slot, self->address(),
-                                                     shutdown_reason));
+                     make<upstream_msg::forced_drop>(
+                       slots.invert(), self->address(), shutdown_reason));
   }
 }
 
@@ -65,7 +65,7 @@ void inbound_path::emit_ack_open(actor_addr rebind_from,
   auto batch_size = static_cast<int32_t>(desired_batch_size);
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_open>(
-                   slot, self->address(), std::move(rebind_from), self->ctrl(),
+                   slots, self->address(), std::move(rebind_from), self->ctrl(),
                    static_cast<int32_t>(initial_demand), batch_size,
                    is_redeployable));
 }
@@ -76,19 +76,19 @@ void inbound_path::emit_ack_batch(long new_demand) {
   assigned_credit += new_demand;
   auto batch_size = static_cast<int32_t>(desired_batch_size);
   unsafe_send_as(self, hdl,
-                 make<upstream_msg::ack_batch>(slot, self->address(),
+                 make<upstream_msg::ack_batch>(slots, self->address(),
                                                static_cast<int32_t>(new_demand),
                                                batch_size, last_batch_id));
 }
 
 void inbound_path::emit_irregular_shutdown(local_actor* self,
-                                           stream_slot slot,
+                                           stream_slots slots,
                                            const strong_actor_ptr& hdl,
                                            error reason) {
   CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(hdl) << CAF_ARG(reason));
   unsafe_send_as(
     self, hdl,
-    make<upstream_msg::forced_drop>(slot, self->address(), std::move(reason)));
+    make<upstream_msg::forced_drop>(slots, self->address(), std::move(reason)));
 }
 
 } // namespace caf

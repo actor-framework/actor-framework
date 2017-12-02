@@ -54,7 +54,6 @@ set (LIBCAF_CORE_SRCS
      src/group_manager.cpp
      src/group_module.cpp
      src/inbound_path.cpp
-     src/invalid_stream_gatherer.cpp
      src/invalid_stream_scatterer.cpp
      src/invoke_result_visitor.cpp
      src/local_actor.cpp
@@ -75,8 +74,6 @@ set (LIBCAF_CORE_SRCS
      src/pretty_type_name.cpp
      src/private_thread.cpp
      src/proxy_registry.cpp
-     src/pull5_gatherer.cpp
-     src/random_gatherer.cpp
      src/raw_event_based_actor.cpp
      src/ref_counted.cpp
      src/replies_to.cpp
@@ -95,9 +92,6 @@ set (LIBCAF_CORE_SRCS
      src/splitter.cpp
      src/stream.cpp
      src/stream_aborter.cpp
-     src/stream_gatherer.cpp
-     src/stream_gatherer.cpp
-     src/stream_gatherer_impl.cpp
      src/stream_manager.cpp
      src/stream_priority.cpp
      src/stream_scatterer.cpp

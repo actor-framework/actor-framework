@@ -52,8 +52,8 @@ public:
     message_id mid;
   };
 
-  /// Slot ID for the sink.
-  stream_slot slot;
+  /// Slot IDs for sender (self) and receiver (hdl).
+  stream_slots slots;
 
   /// Pointer to the parent actor.
   local_actor* self;
@@ -92,7 +92,7 @@ public:
   error shutdown_reason;
 
   /// Constructs a path for given handle and stream ID.
-  outbound_path(local_actor* selfptr, stream_slot id,
+  outbound_path(local_actor* selfptr, stream_slots id,
                 strong_actor_ptr ptr);
 
   ~outbound_path();
@@ -109,7 +109,7 @@ public:
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(long xs_size, message xs);
 
-  static void emit_irregular_shutdown(local_actor* self, stream_slot slot,
+  static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
                                       const strong_actor_ptr& hdl,
                                       error reason);
 };
@@ -117,7 +117,7 @@ public:
 /// @relates outbound_path
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
-  return f(meta::type_name("outbound_path"), x.hdl, x.slot, x.next_batch_id,
+  return f(meta::type_name("outbound_path"), x.hdl, x.slots, x.next_batch_id,
            x.open_credit, x.redeployable, x.unacknowledged_batches);
 }
 

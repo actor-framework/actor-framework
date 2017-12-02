@@ -44,11 +44,11 @@ public:
   /// Message type for propagating errors.
   using irregular_shutdown = upstream_msg::forced_drop;
 
+  /// Slot IDs for sender (hdl) and receiver (self).
+  stream_slots slots;
+
   /// Pointer to the parent actor.
   local_actor* self;
-
-  /// Slot ID for the source.
-  stream_slot slot;
 
   /// Handle to the source.
   strong_actor_ptr hdl;
@@ -77,7 +77,7 @@ public:
   error shutdown_reason;
 
   /// Constructs a path for given handle and stream ID.
-  inbound_path(local_actor* selfptr, stream_slot id, strong_actor_ptr ptr);
+  inbound_path(local_actor* selfptr, stream_slots id, strong_actor_ptr ptr);
 
   ~inbound_path();
 
@@ -91,7 +91,7 @@ public:
 
   void emit_ack_batch(long new_demand);
 
-  static void emit_irregular_shutdown(local_actor* self, stream_slot sid,
+  static void emit_irregular_shutdown(local_actor* self, stream_slots sid,
                                       const strong_actor_ptr& hdl,
                                       error reason);
 };
@@ -99,7 +99,7 @@ public:
 /// @relates inbound_path
 template <class Inspector>
 typename Inspector::return_type inspect(Inspector& f, inbound_path& x) {
-  return f(meta::type_name("inbound_path"), x.hdl, x.slot, x.prio,
+  return f(meta::type_name("inbound_path"), x.hdl, x.slots, x.prio,
            x.last_acked_batch_id, x.last_batch_id, x.assigned_credit);
 }
 

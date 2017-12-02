@@ -111,26 +111,23 @@ public:
 
   /// Finds the path for `ptr` and returns a pointer to it.
   template <class PathContainer, class Handle>
-  static path_ptr find(PathContainer& xs, stream_slot slot,
-                       const Handle& x) {
-    auto predicate = [&](const typename PathContainer::value_type& y) {
-      return y->hdl == x && y->slot == slot;
-    };
-    auto e = xs.end();
-    auto i = std::find_if(xs.begin(), e, predicate);
-    if (i != e)
-      return &(*(*i)); // Ugly, but works for both raw and smart pointers.
+  static path_ptr find(PathContainer&, stream_slot, const Handle&) {
+    // TODO: implement me
     return nullptr;
   }
 
   /// Finds the path for `ptr` and returns an iterator to it.
   template <class PathContainer, class Handle>
   static typename PathContainer::iterator
-  iter_find(PathContainer& xs, stream_slot slot, const Handle& x) {
+  iter_find(PathContainer& xs, stream_slot, const Handle&) {
+    // TODO: implement me
+    return xs.end();
+    /*
     auto predicate = [&](const typename PathContainer::value_type& y) {
       return y->hdl == x && y->slot == slot;
     };
     return std::find_if(xs.begin(), xs.end(), predicate);
+    */
   }
 
   // -- accessors --------------------------------------------------------------
@@ -149,7 +146,10 @@ public:
 
   using super::remove_path;
 
-  bool remove_path(path_uptr_iter i, error reason, bool silent) {
+  bool remove_path(path_uptr_iter, error, bool) {
+    // TODO: implement me
+    return true;
+    /*
     CAF_LOG_TRACE(CAF_ARG(reason) << CAF_ARG(silent));
     auto e = paths_.end();
     if (i == e) {
@@ -166,6 +166,7 @@ public:
       std::swap(*i, paths_.back());
     paths_.pop_back();
     return true;
+    */
   }
 
   // -- implementation of common methods ---------------------------------------
@@ -220,11 +221,15 @@ public:
 
 protected:
   /// Adds a path to the edge without emitting messages.
-  path_ptr add_path_impl(stream_slot slot, strong_actor_ptr x) {
+  path_ptr add_path_impl(stream_slot, strong_actor_ptr) {
+    // TODO: implement me
+    return nullptr;
+    /*
     CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(slot));
     stream_aborter::add(x, self_->address(), slot, aborter_type);
     paths_.emplace_back(new path_type(self_, slot, std::move(x)));
     return paths_.back().get();
+    */
   }
 
   template <class F>

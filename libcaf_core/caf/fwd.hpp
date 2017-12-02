@@ -93,8 +93,6 @@ class blocking_actor;
 class execution_unit;
 class proxy_registry;
 class stream_manager;
-class random_gatherer;
-class stream_gatherer;
 class actor_companion;
 class mailbox_element;
 class message_handler;

@@ -79,7 +79,6 @@
 #include "caf/message_handler.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/fused_scatterer.hpp"
-#include "caf/random_gatherer.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/abstract_channel.hpp"
 #include "caf/may_have_timeout.hpp"

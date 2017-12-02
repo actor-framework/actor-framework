@@ -303,7 +303,12 @@ public:
   /// @cond PRIVATE
 
   /// @pre `!empty()`
-  type_erased_tuple& content() {
+  inline type_erased_tuple& content() {
+    CAF_ASSERT(vals_);
+    return *vals_;
+  }
+
+  inline const type_erased_tuple& content() const {
     CAF_ASSERT(vals_);
     return *vals_;
   }

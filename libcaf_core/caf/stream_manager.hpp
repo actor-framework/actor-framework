@@ -144,9 +144,6 @@ public:
 
   // -- implementation hooks for all children classes --------------------------
 
-  /// Returns the stream edge for incoming data.
-  virtual stream_gatherer& in() = 0;
-
   /// Returns the stream edge for outgoing data.
   virtual stream_scatterer& out() = 0;
 

@@ -50,7 +50,11 @@ public:
   }
 
   type_erased_tuple& content() override {
-    return *msg_.vals().raw_ptr();
+    return msg_.content();
+  }
+
+  const type_erased_tuple& content() const override {
+    return msg_.content();
   }
 
   message move_content_to_message() override {

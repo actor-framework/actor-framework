@@ -93,20 +93,8 @@ protected:
     return make_message(stream<output_type>{x});
   }
 
-  void downstream_demand(outbound_path* path, long) override {
-    CAF_LOG_TRACE(CAF_ARG(path));
-    auto hdl = path->hdl;
-    if(out_.buffered() > 0)
-      push();
-    else if (in_.closed()) {
-      // don't pass path->hdl: path can become invalid
-      auto sid = path->slot;
-      out_.remove_path(sid, hdl, none, false);
-    }
-    auto current_size = out_.buffered();
-    auto desired_size = out_.credit();
-    if (current_size < desired_size)
-      in_.assign_credit(desired_size - current_size);
+  void downstream_demand(outbound_path*, long) override {
+    // TODO: implement me
   }
 
 private:

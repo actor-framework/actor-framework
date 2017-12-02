@@ -20,7 +20,6 @@
 #define CAF_STREAM_SLOT_HPP
 
 #include <cstdint>
-#include <tuple>
 
 #include "caf/detail/comparable.hpp"
 
@@ -37,6 +36,10 @@ struct stream_slots : detail::comparable<stream_slots>{
   stream_slot receiver;
 
   // -- constructors, destructors, and assignment operators --------------------
+
+  constexpr stream_slots() : sender(0), receiver(0) {
+    // nop
+  }
 
   constexpr stream_slots(stream_slot sender_slot, stream_slot receiver_slot)
       : sender(sender_slot),
@@ -62,7 +65,7 @@ struct stream_slots : detail::comparable<stream_slots>{
 /// @relates stream_slots
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, stream_slots& x) {
-  return f(std::tie(x.sender, x.receiver));
+  return f(x.sender, x.receiver);
 }
 
 } // namespace caf

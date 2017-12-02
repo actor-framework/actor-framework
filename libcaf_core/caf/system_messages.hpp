@@ -90,8 +90,8 @@ typename Inspector::result_type inspect(Inspector& f, timeout_msg& x) {
   return f(meta::type_name("timeout_msg"), x.timeout_id);
 }
 
-/// Initiates a stream handhsake.
-struct stream_handshake_msg {
+/// Demands the receiver to open a new stream from the sender to the receiver.
+struct open_stream_msg {
   /// Reserved slot on the source.
   stream_slot slot;
 
@@ -114,7 +114,7 @@ struct stream_handshake_msg {
 
 /// @relates stream_handshake_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_handshake_msg& x) {
+typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
   return f(meta::type_name("stream_handshake_msg"), x.slot, x.msg, x.prev_stage,
            x.original_stage, x.priority, x.redeployable);
 }
