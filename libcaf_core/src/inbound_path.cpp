@@ -85,7 +85,7 @@ void inbound_path::emit_irregular_shutdown(local_actor* self,
                                            stream_slots slots,
                                            const strong_actor_ptr& hdl,
                                            error reason) {
-  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(hdl) << CAF_ARG(reason));
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(hdl) << CAF_ARG(reason));
   unsafe_send_as(
     self, hdl,
     make<upstream_msg::forced_drop>(slots, self->address(), std::move(reason)));

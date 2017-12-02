@@ -22,15 +22,19 @@
 #include <tuple>
 #include <chrono>
 
-#include "caf/fwd.hpp"
 #include "caf/actor.hpp"
-#include "caf/message.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/check_typed_input.hpp"
 #include "caf/duration.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/response_type.hpp"
 #include "caf/response_handle.hpp"
+#include "caf/fwd.hpp"
+#include "caf/message.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/check_typed_input.hpp"
+#include "caf/response_handle.hpp"
+#include "caf/response_type.hpp"
 
 namespace caf {
 namespace mixin {
@@ -52,10 +56,7 @@ public:
 
   // -- send function family ---------------------------------------------------
 
-  /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
-  /// @warning The returned handle is actor specific and the response to the
-  ///          sent message cannot be received by another actor.
-  /// @throws std::invalid_argument if `dest == invalid_actor`
+  /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
   template <message_priority P = message_priority::normal,
             class Dest = actor, class... Ts>
   void send(const Dest& dest, Ts&&... xs) {
@@ -77,9 +78,23 @@ public:
                        typename res_t::type
                      >::valid,
                   "this actor does not accept the response message");
-    if (dest)
+    if (dest != nullptr)
       dest->eq_impl(make_message_id(P), dptr()->ctrl(),
                     dptr()->context(), std::forward<Ts>(xs)...);
+  }
+
+  /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
+  template <message_priority P = message_priority::normal, class... Ts>
+  void send(const strong_actor_ptr& dest, Ts&&... xs) {
+    using detail::type_list;
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    static_assert(!statically_typed<Subtype>(),
+                  "statically typed actors can only send() to other "
+                  "statically typed actors; use anon_send() or request() when "
+                  "communicating with dynamically typed actors");
+    if (dest != nullptr)
+      dest->get()->eq_impl(make_message_id(P), dptr()->ctrl(),
+                           dptr()->context(), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal,
