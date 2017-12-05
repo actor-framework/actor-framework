@@ -153,6 +153,11 @@ public:
     return xs_.clear();
   }
 
+  /// Proves raw access to the underlying container.
+  vector_type& container() {
+    return xs_;
+  }
+
   std::pair<iterator, bool> insert(value_type x) {
     return insert(end(), std::move(x));
   }
