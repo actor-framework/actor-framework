@@ -16,27 +16,29 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_BUFFERED_SCATTERER_HPP
-#define CAF_MIXIN_BUFFERED_SCATTERER_HPP
+#ifndef CAF_BUFFERED_SCATTERER_HPP
+#define CAF_BUFFERED_SCATTERER_HPP
 
 #include <deque>
 #include <vector>
 #include <cstddef>
 #include <iterator>
 
-#include "caf/sec.hpp"
-#include "caf/stream_edge_impl.hpp"
 #include "caf/actor_control_block.hpp"
-#include "caf/stream_scatterer_impl.hpp"
+#include "caf/logger.hpp"
+#include "caf/sec.hpp"
+#include "caf/stream_scatterer.hpp"
 
 namespace caf {
 
 /// Mixin for streams with any number of downstreams. `Subtype` must provide a
 /// member function `buf()` returning a queue with `std::deque`-like interface.
 template <class T>
-class buffered_scatterer : public stream_scatterer_impl {
+class buffered_scatterer : public stream_scatterer {
 public:
-  using super = stream_scatterer_impl;
+  // -- member types -----------------------------------------------------------
+
+  using super = stream_scatterer;
 
   using value_type = T;
 
@@ -44,7 +46,9 @@ public:
 
   using chunk_type = std::vector<value_type>;
 
-  buffered_scatterer(local_actor* selfptr) : super(selfptr) {
+  // -- constructors, destructors, and assignment operators --------------------
+
+  buffered_scatterer(local_actor* self) : super(self) {
     // nop
   }
 
@@ -76,8 +80,14 @@ public:
     return get_chunk(buf_, n);
   }
 
-  long buffered() const override {
-    return static_cast<long>(buf_.size());
+  size_t capacity() const noexcept override {
+    // TODO: get rid of magic number
+    static constexpr size_t max_buf_size = 100;
+    return buf_.size() < max_buf_size ? buf_.size() - max_buf_size : 0u;
+  }
+
+  size_t buffered() const noexcept override {
+    return buf_.size();
   }
 
   buffer_type& buf() {
@@ -94,4 +104,4 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_MIXIN_BUFFERED_SCATTERER_HPP
+#endif // CAF_BUFFERED_SCATTERER_HPP

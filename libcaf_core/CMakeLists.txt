@@ -95,7 +95,6 @@ set (LIBCAF_CORE_SRCS
      src/stream_manager.cpp
      src/stream_priority.cpp
      src/stream_scatterer.cpp
-     src/stream_scatterer_impl.cpp
      src/stringification_inspector.cpp
      src/sync_request_bouncer.cpp
      src/term.cpp

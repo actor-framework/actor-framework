@@ -25,10 +25,8 @@
 
 namespace caf {
 
-outbound_path::outbound_path(local_actor* selfptr, stream_slots id,
-                             strong_actor_ptr ptr)
+outbound_path::outbound_path(stream_slots id, strong_actor_ptr ptr)
     : slots(id),
-      self(selfptr),
       hdl(std::move(ptr)),
       next_batch_id(0),
       open_credit(0),
@@ -39,45 +37,11 @@ outbound_path::outbound_path(local_actor* selfptr, stream_slots id,
 }
 
 outbound_path::~outbound_path() {
-  CAF_LOG_TRACE(CAF_ARG(shutdown_reason));
-  if (hdl) {
-    if (shutdown_reason == none)
-      unsafe_send_as(self, hdl,
-                     make<downstream_msg::close>(slots, self->address()));
-    else
-      unsafe_send_as(self, hdl,
-                     make<downstream_msg::forced_close>(slots, self->address(),
-                                                        shutdown_reason));
-  }
-  if (shutdown_reason != none)
-    unsafe_response(self, std::move(cd.hdl), no_stages, cd.mid,
-                    std::move(shutdown_reason));
+  // nop
 }
 
-void outbound_path::handle_ack_open(long initial_credit) {
-  open_credit = initial_credit;
-  cd.hdl = nullptr;
-}
-
-void outbound_path::emit_open(strong_actor_ptr origin,
-                              mailbox_element::forwarding_stack stages,
-                              message_id handshake_mid, message handshake_data,
-                              stream_priority prio, bool is_redeployable) {
-  CAF_LOG_TRACE(CAF_ARG(origin) << CAF_ARG(stages) << CAF_ARG(handshake_mid)
-                << CAF_ARG(handshake_data) << CAF_ARG(prio)
-                << CAF_ARG(is_redeployable));
-  cd = client_data{origin, handshake_mid};
-  redeployable = is_redeployable;
-  hdl->enqueue(
-    make_mailbox_element(
-      std::move(origin), handshake_mid, std::move(stages),
-      make_message(open_stream_msg{slots.sender, std::move(handshake_data),
-                                   self->ctrl(), hdl, prio, is_redeployable})),
-    self->context());
-}
-
-void outbound_path::emit_batch(long xs_size, message xs) {
-  CAF_LOG_TRACE(CAF_ARG(xs_size) << CAF_ARG(xs));
+void outbound_path::emit_batch(local_actor* self, long xs_size, message xs) {
+  CAF_ASSERT(open_credit >= xs_size);
   open_credit -= xs_size;
   auto bid = next_batch_id++;
   downstream_msg::batch batch{static_cast<int32_t>(xs_size), std::move(xs),
@@ -88,11 +52,21 @@ void outbound_path::emit_batch(long xs_size, message xs) {
                  downstream_msg{slots, self->address(), std::move(batch)});
 }
 
+void outbound_path::emit_regular_shutdown(local_actor* self) {
+  unsafe_send_as(self, hdl,
+                 make<downstream_msg::close>(slots, self->address()));
+}
+
+void outbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
+  unsafe_send_as(self, hdl,
+                 make<downstream_msg::forced_close>(slots, self->address(),
+                                                    std::move(reason)));
+}
+
 void outbound_path::emit_irregular_shutdown(local_actor* self,
                                             stream_slots slots,
                                             const strong_actor_ptr& hdl,
                                             error reason) {
-  CAF_LOG_TRACE(CAF_ARG(reason));
   unsafe_send_as(self, hdl,
                  make<downstream_msg::forced_close>(slots, self->address(),
                                                     std::move(reason)));

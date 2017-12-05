@@ -25,10 +25,10 @@
 
 namespace caf {
 
-inbound_path::inbound_path(local_actor* selfptr, stream_slots id,
+inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
                            strong_actor_ptr ptr)
-    : slots(id),
-      self(selfptr),
+    : mgr(std::move(mgr_ptr)),
+      slots(id),
       hdl(std::move(ptr)),
       prio(stream_priority::normal),
       last_acked_batch_id(0),
@@ -36,19 +36,11 @@ inbound_path::inbound_path(local_actor* selfptr, stream_slots id,
       assigned_credit(0),
       desired_batch_size(50), // TODO: at least put default in some header
       redeployable(false) {
-  // nop
+  mgr->register_input_path(this);
 }
 
 inbound_path::~inbound_path() {
-  if (hdl) {
-    if (shutdown_reason == none)
-      unsafe_send_as(self, hdl,
-                     make<upstream_msg::drop>(slots.invert(), self->address()));
-    else
-      unsafe_send_as(self, hdl,
-                     make<upstream_msg::forced_drop>(
-                       slots.invert(), self->address(), shutdown_reason));
-  }
+  mgr->deregister_input_path(this);
 }
 
 void inbound_path::handle_batch(long batch_size, int64_t batch_id) {
@@ -56,10 +48,8 @@ void inbound_path::handle_batch(long batch_size, int64_t batch_id) {
   last_batch_id = batch_id;
 }
 
-void inbound_path::emit_ack_open(actor_addr rebind_from,
+void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from,
                                  long initial_demand, bool is_redeployable) {
-  CAF_LOG_TRACE(CAF_ARG(rebind_from) << CAF_ARG(initial_demand)
-                << CAF_ARG(is_redeployable));
   assigned_credit = initial_demand;
   redeployable = is_redeployable;
   auto batch_size = static_cast<int32_t>(desired_batch_size);
@@ -70,8 +60,7 @@ void inbound_path::emit_ack_open(actor_addr rebind_from,
                    is_redeployable));
 }
 
-void inbound_path::emit_ack_batch(long new_demand) {
-  CAF_LOG_TRACE(CAF_ARG(new_demand));
+void inbound_path::emit_ack_batch(local_actor* self, long new_demand) {
   last_acked_batch_id = last_batch_id;
   assigned_credit += new_demand;
   auto batch_size = static_cast<int32_t>(desired_batch_size);
@@ -81,11 +70,20 @@ void inbound_path::emit_ack_batch(long new_demand) {
                                                batch_size, last_batch_id));
 }
 
+void inbound_path::emit_regular_shutdown(local_actor* self) {
+  unsafe_send_as(self, hdl, make<upstream_msg::drop>(slots, self->address()));
+}
+
+void inbound_path::emit_regular_shutdown(local_actor* self, error reason) {
+  unsafe_send_as(
+    self, hdl,
+    make<upstream_msg::forced_drop>(slots, self->address(), std::move(reason)));
+}
+
 void inbound_path::emit_irregular_shutdown(local_actor* self,
                                            stream_slots slots,
                                            const strong_actor_ptr& hdl,
                                            error reason) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(hdl) << CAF_ARG(reason));
   unsafe_send_as(
     self, hdl,
     make<upstream_msg::forced_drop>(slots, self->address(), std::move(reason)));

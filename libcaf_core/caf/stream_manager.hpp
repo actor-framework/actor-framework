@@ -23,10 +23,12 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/upstream_msg.hpp"
 
 namespace caf {
 
@@ -34,6 +36,8 @@ namespace caf {
 /// @relates stream_msg
 class stream_manager : public ref_counted {
 public:
+  stream_manager(local_actor* selfptr);
+
   ~stream_manager() override;
 
   /// Handles `stream_msg::open` messages by creating a new slot for incoming
@@ -51,70 +55,27 @@ public:
   ///                  acknowledges the handshake.
   /// @returns An error if the stream manager rejects the handshake.
   /// @pre `hdl != nullptr`
+  /*
   virtual error open(stream_slot slot, strong_actor_ptr hdl,
                      strong_actor_ptr original_stage, stream_priority priority,
                      bool redeployable, response_promise result_cb);
+  */
 
-  /// Handles `stream_msg::ack_open` messages, i.e., finalizes the stream
-  /// handshake.
-  /// @param slot Slot ID used by the sender.
-  /// @param rebind_from Receiver of the original `open` message.
-  /// @param rebind_to Sender of this confirmation.
-  /// @param initial_demand Credit received with this `ack_open`.
-  /// @param redeployable Denotes whether the runtime can redeploy
-  ///                     `rebind_to` on failure.
-  /// @pre `hdl != nullptr`
-  virtual error ack_open(stream_slot slot, const actor_addr& rebind_from,
-                         strong_actor_ptr rebind_to, long initial_demand,
-                         long desired_batch_size, bool redeployable);
+  virtual error handle(inbound_path* from, downstream_msg::batch& x);
 
-  /// Handles `stream_msg::batch` messages.
-  /// @param hdl Handle to the sender.
-  /// @param xs_size Size of the vector stored in `xs`.
-  /// @param xs A type-erased vector of size `xs_size`.
-  /// @param xs_id ID of this batch (must be ACKed).
-  /// @pre `hdl != nullptr`
-  /// @pre `xs_size > 0`
-  virtual error batch(stream_slot slot, const actor_addr& hdl, long xs_size,
-                      message& xs, int64_t xs_id);
+  virtual error handle(inbound_path* from, downstream_msg::close& x);
 
-  /// Handles `stream_msg::ack_batch` messages.
-  /// @param hdl Handle to the sender.
-  /// @param new_demand New credit for sending data.
-  /// @param cumulative_batch_id Id of last handled batch.
-  /// @pre `hdl != nullptr`
-  virtual error ack_batch(stream_slot slot, const actor_addr& hdl,
-                          long new_demand, long desired_batch_size,
-                          int64_t cumulative_batch_id);
+  virtual error handle(inbound_path* from, downstream_msg::forced_close& x);
 
-  /// Handles `stream_msg::close` messages.
-  /// @param hdl Handle to the sender.
-  /// @pre `hdl != nullptr`
-  virtual error close(stream_slot slot, const actor_addr& hdl);
+  virtual error handle(outbound_path* from, upstream_msg::ack_open& x);
 
-  /// Handles `stream_msg::drop` messages.
-  /// @param hdl Handle to the sender.
-  /// @pre `hdl != nullptr`
-  virtual error drop(stream_slot slot, const actor_addr& hdl);
+  virtual error handle(outbound_path* from, upstream_msg::ack_batch& x);
 
-  /// Handles `stream_msg::drop` messages. The default implementation calls
-  /// `abort(reason)` and returns `sec::unhandled_stream_error`.
-  /// @param hdl Handle to the sender.
-  /// @param reason Reported error from the source.
-  /// @pre `hdl != nullptr`
-  /// @pre `err != none`
-  virtual error forced_close(stream_slot slot, const actor_addr& hdl,
-                             error reason);
+  virtual error handle(outbound_path* from, upstream_msg::drop& x);
 
-  /// Handles `stream_msg::drop` messages. The default implementation calls
-  /// `abort(reason)` and returns `sec::unhandled_stream_error`.
-  /// @param hdl Handle to the sender.
-  /// @param reason Reported error from the sink.
-  /// @pre `hdl != nullptr`
-  /// @pre `err != none`
-  virtual error forced_drop(stream_slot slot, const actor_addr& hdl,
-                            error reason);
+  virtual error handle(outbound_path* from, upstream_msg::forced_drop& x);
 
+  /*
   /// Adds a new sink to the stream.
   virtual bool add_sink(stream_slot slot, strong_actor_ptr origin,
                         strong_actor_ptr sink_ptr,
@@ -127,10 +88,11 @@ public:
   virtual bool add_source(stream_slot slot, strong_actor_ptr source_ptr,
                           strong_actor_ptr original_stage, stream_priority prio,
                           bool redeployable, response_promise result_cb);
+  */
 
-  /// Pushes new data to downstream actors by sending batches. The amount of
-  /// pushed data is limited by the available credit.
-  virtual void push();
+  /// Closes the stream when the parent terminates with default exit reason or
+  /// the stream reached its end.
+  virtual void close();
 
   /// Aborts a stream after any stream message handler returned a non-default
   /// constructed error `reason` or the parent actor terminates with a
@@ -138,11 +100,18 @@ public:
   /// @param reason Previous error or non-default exit reason of the parent.
   virtual void abort(error reason);
 
-  /// Closes the stream when the parent terminates with default exit reason or
-  /// the stream reached its end.
-  virtual void close();
+  /// Pushes new data to downstream actors by sending batches. The amount of
+  /// pushed data is limited by the available credit.
+  virtual void push();
 
-  // -- implementation hooks for all children classes --------------------------
+  // -- implementation hooks for sources ---------------------------------------
+
+  /// Tries to generate new messages for the stream. This member function does
+  /// nothing on stages and sinks, but can trigger a source to produce more
+  /// messages.
+  virtual bool generate_messages();
+
+  // -- pure virtual member functions ------------------------------------------
 
   /// Returns the stream edge for outgoing data.
   virtual stream_scatterer& out() = 0;
@@ -151,12 +120,19 @@ public:
   /// safely.
   virtual bool done() const = 0;
 
-  // -- implementation hooks for sources ---------------------------------------
+  // -- input path management --------------------------------------------------
 
-  /// Tries to generate new messages for the stream. This member function does
-  /// nothing on stages and sinks, but can trigger a source to produce more
-  /// messages.
-  virtual bool generate_messages();
+  /// Informs the manager that a new input path opens.
+  virtual void register_input_path(inbound_path* x);
+
+  /// Informs the manager that an input path closes.
+  virtual void deregister_input_path(inbound_path* x) noexcept;
+
+  // -- inline functions -------------------------------------------------------
+
+  inline local_actor* self() {
+    return self_;
+  }
 
 protected:
   // -- implementation hooks for sinks -----------------------------------------

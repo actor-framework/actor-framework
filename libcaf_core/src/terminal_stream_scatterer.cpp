@@ -18,12 +18,12 @@
 
 #include "caf/terminal_stream_scatterer.hpp"
 
-#include "caf/logger.hpp"
+#include <limits>
 
 namespace caf {
 
-terminal_stream_scatterer::terminal_stream_scatterer(local_actor* ptr)
-    : super(ptr) {
+terminal_stream_scatterer::terminal_stream_scatterer(local_actor* self)
+    : super(self) {
   // nop
 }
 
@@ -31,14 +31,8 @@ terminal_stream_scatterer::~terminal_stream_scatterer() {
   // nop
 }
 
-long terminal_stream_scatterer::credit() const {
-  // TODO: do something more advanced, yes?
-  return 50;
-}
-
-long terminal_stream_scatterer::desired_batch_size() const {
-  // TODO: do something more advanced, yes?
-  return 50;
+size_t terminal_stream_scatterer::capacity() const noexcept {
+  return std::numeric_limits<size_t>::max();
 }
 
 } // namespace caf

@@ -20,12 +20,16 @@
 #define CAF_STREAM_SCATTERER_HPP
 
 #include <cstddef>
+#include <memory>
 
+#include "caf/actor_control_block.hpp"
 #include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/optional.hpp"
 #include "caf/stream_slot.hpp"
+
+#include "caf/detail/unordered_flat_map.hpp"
 
 namespace caf {
 
@@ -38,96 +42,127 @@ public:
 
   using path_ptr = path_type*;
 
+  using path_unique_ptr = std::unique_ptr<path_type>;
+
+  using map_type = detail::unordered_flat_map<stream_slots, path_unique_ptr>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_scatterer() = default;
+  explicit stream_scatterer(local_actor* self);
 
   virtual ~stream_scatterer();
 
-  // -- pure virtual memeber functions -----------------------------------------
+  // -- path management --------------------------------------------------------
 
-  /// Adds a path to the edge.
+  /// Returns the container that stores all paths.
+  inline const map_type& paths() const noexcept {
+    return paths_;
+  }
+
+  /// Adds a path to `target` to the scatterer.
   /// @returns The added path on success, `nullptr` otherwise.
-  virtual path_ptr add_path(stream_slot slot, strong_actor_ptr origin,
-                            strong_actor_ptr sink_ptr,
-                            mailbox_element::forwarding_stack stages,
-                            message_id handshake_mid, message handshake_data,
-                            stream_priority prio, bool redeployable) = 0;
+  virtual path_ptr add_path(stream_slots slots, strong_actor_ptr target);
 
-  /// Adds a path to a sink and initiates the handshake.
-  virtual path_ptr confirm_path(stream_slot slot, const actor_addr& from,
-                                strong_actor_ptr to, long initial_demand,
-                                long desired_batch_size, bool redeployable) = 0;
+  /// Removes a path from the scatterer and returns it.
+  path_unique_ptr take_path(stream_slots slots) noexcept;
 
-  /// Removes a path from the scatterer.
-  virtual bool remove_path(stream_slot slot, const actor_addr& x,
-                           error reason, bool silent) = 0;
+  /// Returns the path associated to `slots` or `nullptr`.
+  path_ptr path(stream_slots slots) noexcept;
+
+  /// Returns the stored state for `x` if `x` is a known path and associated to
+  /// `sid`, otherwise `nullptr`.
+  path_ptr path_at(size_t index) noexcept;
+
+  /// Removes a path from the scatterer and returns it.
+  path_unique_ptr take_path_at(size_t index) noexcept;
 
   /// Returns `true` if there is no data pending and no unacknowledged batch on
   /// any path.
-  virtual bool paths_clean() const = 0;
+  bool clean() const noexcept;
 
   /// Removes all paths gracefully.
-  virtual void close() = 0;
+  void close();
 
   /// Removes all paths with an error message.
-  virtual void abort(error reason) = 0;
+  void abort(error reason);
 
-  /// Returns the number of paths managed on this edge.
-  virtual long num_paths() const = 0;
+  /// Returns `true` if no downstream exists and `!continuous()`,
+  /// `false` otherwise.
+  inline bool empty() const noexcept {
+    return paths_.empty();
+  }
 
-  /// Returns `true` if no downstream exists, `false` otherwise.
-  virtual bool closed() const = 0;
+  /// Returns the minimum amount of credit on all output paths.
+  size_t min_credit() const noexcept;
 
-  /// Returns whether this edge remains open after the last path is removed.
-  virtual bool continuous() const = 0;
+  /// Returns the maximum amount of credit on all output paths.
+  size_t max_credit() const noexcept;
 
-  /// Sets whether this edge remains open after the last path is removed.
-  virtual void continuous(bool value) = 0;
+  /// Returns the total amount of credit on all output paths, i.e., the sum of
+  /// all individual credits.
+  size_t total_credit() const noexcept;
+
+  // -- configuration parameters -----------------------------------------------
+
+  /// Forces to actor to emit a batch even if the minimum batch size was not
+  /// reached.
+  inline duration max_batch_delay() const noexcept {
+    return max_batch_delay_;
+  }
+
+  /// Forces to actor to emit a batch even if the minimum batch size was not
+  /// reached.
+  inline void max_batch_delay(duration x) noexcept {
+    max_batch_delay_ = x;
+  }
+
+  // -- state access -----------------------------------------------------------
+
+  local_actor* self() const {
+    return self_;
+  }
+
+  // -- pure virtual memeber functions -----------------------------------------
 
   /// Sends batches to sinks.
   virtual void emit_batches() = 0;
 
-  /// Returns the stored state for `x` if `x` is a known path and associated to
-  /// `sid`, otherwise `nullptr`.
-  virtual path_ptr find(stream_slot slot, const actor_addr& x) = 0;
+  /// Sends batches to sinks regardless of whether or not the batches reach the
+  /// desired batch size.
+  virtual void force_emit_batches() = 0;
 
-  /// Returns the stored state for `x` if `x` is a known path and associated to
-  /// `sid`, otherwise `nullptr`.
-  virtual path_ptr path_at(size_t index) = 0;
-
-  /// Returns the currently available credit, depending on the policy in use.
-  /// For example, a broadcast policy would return the minimum of all available
-  /// downstream credits.
-  virtual long credit() const = 0;
+  /// Returns the currently available capacity for the output buffer.
+  virtual size_t capacity() const noexcept = 0;
 
   /// Returns the size of the output buffer.
-  virtual long buffered() const = 0;
-
-  /// Returns the downstream-requested size for a single batch.
-  virtual long desired_batch_size() const = 0;
-
-  /// Minimum amount of messages we wish to store at the actor in order to emit
-  /// new batches immediately when receiving new downstream demand. Usually
-  /// dynamically adjusted based on the output rate.
-  virtual long min_buffer_size() const = 0;
-
-  /// Forces to actor to emit a batch even if the minimum batch size was not
-  /// reached.
-  virtual duration max_batch_delay() const = 0;
-
-  /// Forces to actor to emit a batch even if the minimum batch size was not
-  /// reached.
-  virtual void max_batch_delay(duration x) = 0;
+  virtual size_t buffered() const noexcept = 0;
 
   // -- convenience functions --------------------------------------------------
 
   /// Removes a path from the scatterer.
-  bool remove_path(stream_slot slot, const strong_actor_ptr& x,
+  bool remove_path(stream_slots slot, const strong_actor_ptr& x,
                    error reason, bool silent);
 
   /// Convenience function for calling `find(x, actor_cast<actor_addr>(x))`.
   path_ptr find(stream_slot slot, const strong_actor_ptr& x);
+
+  inline bool delay_partial_batches() const {
+    return max_batch_delay().count != 0;
+  }
+
+protected:
+  // -- customization points ---------------------------------------------------
+
+  /// Emits a regular (`reason == nullptr`) or irregular (`reason != nullptr`)
+  /// shutdown if `silent == false`.
+  /// @warning moves `*reason` if `reason == nullptr`
+  virtual void about_to_erase(map_type::iterator i, bool silent, error* reason);
+
+  // -- member variables -------------------------------------------------------
+
+  map_type paths_;
+  local_actor* self_;
+  duration max_batch_delay_;
 };
 
 } // namespace caf

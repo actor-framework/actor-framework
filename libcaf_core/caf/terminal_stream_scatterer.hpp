@@ -24,18 +24,16 @@
 namespace caf {
 
 /// Special-purpose scatterer for sinks that terminate a stream. A terminal
-/// stream scatterer generates credit without downstream actors.
+/// stream scatterer generates infinite credit.
 class terminal_stream_scatterer : public invalid_stream_scatterer {
 public:
   using super = invalid_stream_scatterer;
 
-  terminal_stream_scatterer(local_actor* = nullptr);
+  terminal_stream_scatterer(local_actor* self);
 
   ~terminal_stream_scatterer() override;
 
-  long credit() const override;
-
-  long desired_batch_size() const override;
+  size_t capacity() const noexcept override;
 };
 
 } // namespace caf

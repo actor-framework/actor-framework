@@ -24,6 +24,7 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/stream_aborter.hpp"
+#include "caf/stream_manager.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/upstream_msg.hpp"
@@ -44,11 +45,11 @@ public:
   /// Message type for propagating errors.
   using irregular_shutdown = upstream_msg::forced_drop;
 
-  /// Slot IDs for sender (hdl) and receiver (self).
-  stream_slots slots;
+  /// Points to the manager responsible for incoming traffic.
+  stream_manager_ptr mgr;
 
-  /// Pointer to the parent actor.
-  local_actor* self;
+  /// Stores slot IDs for sender (hdl) and receiver (self).
+  stream_slots slots;
 
   /// Handle to the source.
   strong_actor_ptr hdl;
@@ -77,7 +78,8 @@ public:
   error shutdown_reason;
 
   /// Constructs a path for given handle and stream ID.
-  inbound_path(local_actor* selfptr, stream_slots id, strong_actor_ptr ptr);
+  inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
+               strong_actor_ptr ptr);
 
   ~inbound_path();
 
@@ -86,12 +88,20 @@ public:
 
   /// Emits a `stream_msg::ack_batch` on this path and sets `assigned_credit`
   /// to `initial_demand`.
-  void emit_ack_open(actor_addr rebind_from, long initial_demand,
+  void emit_ack_open(local_actor* self, actor_addr rebind_from, long initial_demand,
                      bool is_redeployable);
 
-  void emit_ack_batch(long new_demand);
+  /// Sends a `stream_msg::ack_batch`.
+  void emit_ack_batch(local_actor* self, long new_demand);
 
-  static void emit_irregular_shutdown(local_actor* self, stream_slots sid,
+  /// Sends a `stream_msg::close` on this path.
+  void emit_regular_shutdown(local_actor* self);
+
+  /// Sends a `stream_msg::forced_close` on this path.
+  void emit_regular_shutdown(local_actor* self, error reason);
+
+  /// Sends a `stream_msg::forced_close` on this path.
+  static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
                                       const strong_actor_ptr& hdl,
                                       error reason);
 };
