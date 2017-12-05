@@ -98,6 +98,11 @@ public:
   // -- observers -------------------------------------------------------------
 
   /// Returns the policy object.
+  policy_type& policy() noexcept {
+    return policy_;
+  }
+
+  /// Returns the policy object.
   const policy_type& policy() const noexcept {
     return policy_;
   }
