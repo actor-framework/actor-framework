@@ -106,8 +106,10 @@ public:
   bool new_round(long quantum, F& f) {
     bool result = false;
     for (auto& kvp : qs_) {
-      new_round_helper<F> g{kvp.first, kvp.second, f};
-      result |= g.q.new_round(policy_.quantum(g.q, quantum), g);
+      if (policy_.enabled(kvp.second)) {
+        new_round_helper<F> g{kvp.first, kvp.second, f};
+        result |= g.q.new_round(policy_.quantum(g.q, quantum), g);
+      }
     }
     if (!erase_list_.empty()) {
       for (auto& k : erase_list_)

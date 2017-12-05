@@ -89,6 +89,10 @@ struct inode_policy {
     return x.value % 3;
   }
 
+  static inline bool enabled(const queue_type&) {
+    return true;
+  }
+
   deficit_type quantum(const queue_type& q, deficit_type x) {
     return enable_priorities && *q.policy().queue_id == 0 ? 2 * x : x;
   }

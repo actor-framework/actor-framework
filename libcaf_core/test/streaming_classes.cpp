@@ -32,10 +32,16 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/broadcast_scatterer.hpp"
+#include "caf/buffered_scatterer.hpp"
 #include "caf/downstream_msg.hpp"
+#include "caf/inbound_path.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/no_stages.hpp"
+#include "caf/outbound_path.hpp"
 #include "caf/send.hpp"
+#include "caf/stream_manager.hpp"
+#include "caf/stream_scatterer.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/upstream_msg.hpp"
@@ -94,59 +100,51 @@ std::string collapse_args(const T& x, const Ts&... xs) {
   CAF_MESSAGE(name << " received a " << #type << ": "                          \
                    << collapse_args(__VA_ARGS__));
 
-// -- forward declarations -----------------------------------------------------
+const char* name_of(const strong_actor_ptr& x) {
+  CAF_ASSERT(x != nullptr);
+  auto ptr = actor_cast<abstract_actor*>(x);
+  return static_cast<local_actor*>(ptr)->name();
+}
 
-// Mimics an actor.
-class entity;
-
-// Mimics a stream_manager.
-struct manager;
-
-// Mimics an inbound_path.
-struct in;
-
-// Mimics an outbound_path.
-struct out;
+const char* name_of(const actor_addr& x) {
+  return name_of(actor_cast<strong_actor_ptr>(x));
+}
 
 // -- manager and path handlers ------------------------------------------------
 
-struct manager {
-  entity* self;
-  int x;
-  int num_messages;
-
-  int input_paths = 0;
-  int output_paths = 0;
-
-  manager(entity* parent, int num = 0) : self(parent), x(0), num_messages(num) {
-    // nop
+class dummy_manager : public stream_manager {
+public:
+  dummy_manager(local_actor* selfptr, int num_messages)
+      : stream_manager(selfptr),
+        open_inputs(0),
+        out_(selfptr) {
+    for (int i = 0; i < num_messages; ++i)
+      out_.push(i);
   }
 
-  bool done() const {
-    return (input_paths | output_paths) == 0;
+  bool done() const override {
+    return open_inputs == 0 && out_.clean();
   }
 
-  void push(stream_slots slots, strong_actor_ptr& to, int num);
-
-  void operator()(stream_slots slots, in* path, downstream_msg::batch& x);
-};
-
-using manager_ptr = std::shared_ptr<manager>;
-
-struct in {
-  manager_ptr mgr;
-  strong_actor_ptr hdl;
-  in(manager_ptr ptr, strong_actor_ptr src)
-      : mgr(std::move(ptr)),
-        hdl(std::move(src)) {
-    // nop
+  void register_input_path(inbound_path* x) override {
+    CAF_MESSAGE(out_.self()->name() << " receives stream input from "
+                << name_of(x->hdl));
+    ++open_inputs;
   }
 
-  void operator()(mailbox_element& x);
-};
+  void deregister_input_path(inbound_path* x) noexcept override {
+    CAF_MESSAGE(out_.self()->name() << " no longer receives stream input from "
+                << name_of(x->hdl));
+    --open_inputs;
+  }
 
-struct out {
+  stream_scatterer& out() override {
+    return out_;
+  }
 
+private:
+  int open_inputs;
+  broadcast_scatterer<int> out_;
 };
 
 // -- policies and queues ------------------------------------------------------
@@ -172,8 +170,8 @@ struct default_queue_policy : policy_base {
 using default_queue = drr_queue<default_queue_policy>;
 
 struct umsg_queue_policy : policy_base {
-  manager* mgr;
-  umsg_queue_policy(manager* ptr) : mgr(ptr) {
+  dummy_manager* mgr;
+  umsg_queue_policy(dummy_manager* ptr) : mgr(ptr) {
     // nop
   }
   static inline task_size_type task_size(const mailbox_element&) {
@@ -200,11 +198,12 @@ struct inner_dmsg_queue_policy : policy_base {
     return 1;
   }
 
-  inner_dmsg_queue_policy(std::unique_ptr<in> ptr) : handler(std::move(ptr)) {
+  inner_dmsg_queue_policy(std::unique_ptr<inbound_path> ptr)
+      : handler(std::move(ptr)) {
     // nop
   }
 
-  std::unique_ptr<in> handler;
+  std::unique_ptr<inbound_path> handler;
 };
 
 using inner_dmsg_queue = drr_queue<inner_dmsg_queue_policy>;
@@ -219,6 +218,11 @@ struct dmsg_queue_policy : policy_base {
   }
 
   template <class Queue>
+  static inline bool enabled(const Queue&) {
+    return true;
+  }
+
+  template <class Queue>
   deficit_type quantum(const Queue&, deficit_type x) {
     return x;
   }
@@ -226,7 +230,7 @@ struct dmsg_queue_policy : policy_base {
 
 using dmsg_queue = wdrr_dynamic_multiplexed_queue<dmsg_queue_policy>;
 
-struct mbox_policy : policy_base {
+struct mboxpolicy : policy_base {
   template <class Queue>
   deficit_type quantum(const Queue&, deficit_type x) {
     return x;
@@ -237,29 +241,17 @@ struct mbox_policy : policy_base {
   }
 };
 
-using mbox_queue = wdrr_fixed_multiplexed_queue<mbox_policy, default_queue,
+using mboxqueue = wdrr_fixed_multiplexed_queue<mboxpolicy, default_queue,
                                                 umsg_queue, dmsg_queue,
                                                 default_queue>;
 
-// -- manager and entity -------------------------------------------------------
+// -- entity -------------------------------------------------------------------
 
-template <class Target>
-struct dispatcher {
-  Target& f;
-  entity* sender;
-  stream_slots slots;
-
-  template <class T>
-  void operator()(T&& x) {
-    f(sender, slots, std::forward<T>(x));
-  }
-};
-
-class entity : public extend<abstract_actor, entity>::with<mixin::sender> {
+class entity : public extend<local_actor, entity>::with<mixin::sender> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = extend<abstract_actor, entity>::with<mixin::sender>;
+  using super = extend<local_actor, entity>::with<mixin::sender>;
 
   using signatures = none_t;
 
@@ -267,26 +259,17 @@ public:
 
   entity(actor_config& cfg, const char* cstr_name)
       : super(cfg),
-        mbox_(mbox_policy{}, default_queue_policy{}, nullptr,
+        mbox(mboxpolicy{}, default_queue_policy{}, nullptr,
               dmsg_queue_policy{}, default_queue_policy{}),
-        name_(cstr_name) {
+        name_(cstr_name),
+        next_slot_(static_cast<stream_slot>(id())) {
     // nop
   }
 
-  static const char* name_of(const strong_actor_ptr& x) {
-    CAF_ASSERT(x != nullptr);
-    auto buddy = dynamic_cast<entity*>(x->get());
-    CAF_ASSERT(buddy != nullptr);
-    return buddy->name();
-  }
-
-  static const char* name_of(const actor_addr& x) {
-    return name_of(actor_cast<strong_actor_ptr>(x));
-  }
-
   void enqueue(mailbox_element_ptr what, execution_unit*) override {
-    auto push_back_result = mbox_.push_back(std::move(what));
+    auto push_back_result = mbox.push_back(std::move(what));
     CAF_CHECK_EQUAL(push_back_result, true);
+    CAF_ASSERT(push_back_result);
   }
 
   void attach(attachable_ptr) override {
@@ -313,24 +296,27 @@ public:
     return false;
   }
 
-  const char* name() const {
+  const char* name() const override {
     return name_;
+  }
+
+  void launch(execution_unit*, bool, bool) override {
+    // nop
   }
 
   execution_unit* context() {
     return nullptr;
   }
 
-  void start_streaming(strong_actor_ptr to, int num_messages) {
-    CAF_REQUIRE_NOT_EQUAL(to, nullptr);
+  void start_streaming(entity& ref, int num_messages) {
     CAF_REQUIRE_NOT_EQUAL(num_messages, 0);
     auto slot = next_slot_++;
-    CAF_MESSAGE(name_ << " starts streaming to " << name_of(to)
+    CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
                 << " on slot " << slot);
+    strong_actor_ptr to = ref.ctrl();
     send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
                              stream_priority::normal, false});
-    auto ptr = std::make_shared<manager>(this, num_messages);
-    ptr->output_paths += 1;
+    auto ptr = make_counted<dummy_manager>(this, num_messages);
     pending_managers_.emplace(slot, std::move(ptr));
   }
 
@@ -341,13 +327,14 @@ public:
     //stream_slots id{slot, hs.sender_slot};
     stream_slots id{hs.slot, slot};
     // Create required state.
-    auto mgr = std::make_shared<manager>(this, 0);
+    auto mgr = make_counted<dummy_manager>(this, 0);
+    // mgr->out().add_path(id, hs.prev_stage);
     managers_.emplace(id, mgr);
-    mgr->input_paths += 1;
     // Create a new queue in the mailbox for incoming traffic.
-    get<2>(mbox_.queues())
+    get<2>(mbox.queues())
       .queues()
-      .emplace(slot, std::unique_ptr<in>{new in(mgr, hs.prev_stage)});
+      .emplace(slot, std::unique_ptr<inbound_path>{
+                       new inbound_path(mgr, id, hs.prev_stage)});
     // Acknowledge stream.
     send(hs.prev_stage,
          make<upstream_msg::ack_open>(id.invert(), address(), address(),
@@ -357,7 +344,7 @@ public:
   void operator()(stream_slots slots, actor_addr& sender,
                   upstream_msg::ack_open& x) {
     TRACE(name_, ack_handshake, CAF_ARG(slots),
-          CAF_ARG2("sender", name_of(x.rebind_to)));
+          CAF_ARG2("sender", name_of(x.rebind_to)), CAF_ARG(x));
     // Get the manager for that stream.
     auto i = pending_managers_.find(slots.receiver);
     CAF_REQUIRE_NOT_EQUAL(i, pending_managers_.end());
@@ -366,7 +353,10 @@ public:
     managers_.emplace(slots, i->second);
     auto to = actor_cast<strong_actor_ptr>(sender);
     CAF_REQUIRE_NOT_EQUAL(to, nullptr);
-    i->second->push(slots.invert(), to, x.initial_demand);
+    auto out = i->second->out().add_path(slots.invert(), to);
+    out->open_credit = x.initial_demand;
+    out->desired_batch_size = x.desired_batch_size;
+    i->second->push();
     pending_managers_.erase(i);
   }
 
@@ -375,76 +365,31 @@ public:
     TRACE(name_, ack_batch, CAF_ARG(input_slots),
           CAF_ARG2("sender", name_of(sender)));
     // Get the manager for that stream.
-    auto slots = input_slots.invert();
     auto i = managers_.find(input_slots);
     CAF_REQUIRE_NOT_EQUAL(i, managers_.end());
     auto to = actor_cast<strong_actor_ptr>(sender);
     CAF_REQUIRE_NOT_EQUAL(to, nullptr);
-    i->second->push(slots, to, x.new_capacity);
-    if (i->second->done())
-      managers_.erase(i);
-  }
-
-  void operator()(stream_slots slots, in*, downstream_msg::close&) {
-    //TRACE(name, close, CAF_ARG(slots), CAF_ARG2("sender", buddy->name));
-    TRACE(name_, close, CAF_ARG(slots));
-    auto i = managers_.find(slots);
-    CAF_REQUIRE_NOT_EQUAL(i, managers_.end());
-    i->second->input_paths -= 1;
-    get<2>(mbox_.queues()).erase_later(slots.receiver);
+    auto out = i->second->out().path(input_slots.invert());
+    CAF_REQUIRE_NOT_EQUAL(out, nullptr);
+    out->open_credit += x.new_capacity;
+    out->desired_batch_size = x.desired_batch_size;
+    out->next_ack_id = x.acknowledged_id + 1;
+    i->second->push();
     if (i->second->done()) {
-      CAF_MESSAGE(name_ << " cleans up path " << deep_to_string(slots));
+      CAF_MESSAGE(name_ << " is done sending batches");
+      i->second->close();
       managers_.erase(i);
     }
   }
 
-  void next_slot(stream_slot x) {
-    next_slot_ = x;
-  }
-
-  mbox_queue& mbox() {
-    return mbox_;
-  }
-
   // -- member variables -------------------------------------------------------
 
-  mbox_queue mbox_;
+  mboxqueue mbox;
   const char* name_;
   stream_slot next_slot_ = 1;
-  std::map<stream_slot, manager_ptr> pending_managers_;
-  std::map<stream_slots, manager_ptr> managers_;
+  std::map<stream_slots, stream_manager_ptr> managers_;
+  std::map<stream_slot, stream_manager_ptr> pending_managers_;
 };
-
-void manager::push(stream_slots slots, strong_actor_ptr& to, int num) {
-  CAF_REQUIRE_NOT_EQUAL(num, 0);
-  CAF_REQUIRE_NOT_EQUAL(to, nullptr);
-  std::vector<int> xs;
-  if (x + num > num_messages)
-    num = num_messages - x;
-  if (num == 0) {
-    CAF_MESSAGE(self->name() << " is done sending batches");
-    anon_send(to, make<downstream_msg::close>(slots, nullptr));
-    output_paths -= 1;
-    return;
-  }
-  CAF_MESSAGE(self->name() << " pushes "
-              << num << " new items to " << entity::name_of(to)
-              << " slots = " << deep_to_string(slots));
-  for (int i = 0; i < num; ++i)
-    xs.emplace_back(x++);
-  CAF_REQUIRE_NOT_EQUAL(xs.size(), 0u);
-  auto xss = static_cast<int32_t>(xs.size());
-  anon_send(to, make<downstream_msg::batch>(slots, nullptr, xss,
-                                            make_message(std::move(xs)), 0));
-}
-
-void manager::operator()(stream_slots slots, in* i,
-                         downstream_msg::batch& batch) {
-  TRACE(self->name(), batch, CAF_ARG(slots),
-        CAF_ARG2("sender", entity::name_of(i->hdl)), CAF_ARG(batch.xs));
-  anon_send(i->hdl, make<upstream_msg::ack_batch>(slots.invert(),
-                                                  self->address(), 10, 10, 0));
-}
 
 struct msg_visitor {
   // -- member types -----------------------------------------------------------
@@ -494,25 +439,48 @@ struct msg_visitor {
     visit(f, um.content);
     return intrusive::task_result::resume;
   }
-  result_type operator()(is_dmsg, dmsg_queue&, stream_slot,
+
+  result_type operator()(is_dmsg, dmsg_queue& qs, stream_slot,
                          inner_dmsg_queue& q, mailbox_element& x) {
     CAF_REQUIRE(x.content().type_token() == make_type_token<downstream_msg>());
     auto inptr = q.policy().handler.get();
+    if (inptr == nullptr)
+      return intrusive::task_result::stop;
     auto& dm = x.content().get_mutable_as<downstream_msg>(0);
     auto f = detail::make_overload(
       [&](downstream_msg::batch& y) {
-        (*inptr->mgr)(dm.slots, inptr, y);
+        TRACE(self->name(), batch, CAF_ARG(y.xs));
+        inptr->mgr->handle(inptr, y);
+        if (!inptr->mgr->done()) {
+          auto to = inptr->hdl->get();
+          to->eq_impl(make_message_id(), self->ctrl(), nullptr,
+                      make<upstream_msg::ack_batch>(
+                        dm.slots.invert(), self->address(), 10, 10, y.id));
+        } else {
+          CAF_MESSAGE(self->name()
+                      << " is done receiving and closes its manager");
+          inptr->mgr->close();
+        }
+        return intrusive::task_result::resume;
       },
       [&](downstream_msg::close& y) {
-        auto self = inptr->mgr->self;
-        (*self)(dm.slots, inptr, y);
+        TRACE(self->name(), close, CAF_ARG(dm.slots));
+        auto slots = dm.slots;
+        TRACE(self->name(), close, CAF_ARG(slots));
+        auto i = self->managers_.find(slots);
+        CAF_REQUIRE_NOT_EQUAL(i, self->managers_.end());
+        i->second->handle(inptr, y);
+        q.policy().handler.reset();
+        qs.erase_later(slots.receiver);
+        self->managers_.erase(i);
+        return intrusive::task_result::resume;
       },
       [](downstream_msg::forced_close&) {
         CAF_FAIL("did not expect downstream_msg::forced_close");
+        return intrusive::task_result::stop;
       }
     );
-    visit(f, dm.content);
-    return intrusive::task_result::resume;
+    return visit(f, dm.content);
   }
 
   // -- member variables -------------------------------------------------------
@@ -527,21 +495,31 @@ struct fixture {
   actor_system sys{cfg};
   actor alice_hdl;
   actor bob_hdl;
+  actor carl_hdl;
 
-  entity* alice;
-  entity* bob;
+  entity& alice;
+  entity& bob;
+  entity& carl;
 
-  fixture() {
-    actor_config ac1;
-    alice_hdl = make_actor<entity>(0, node_id{}, &sys, ac1, "alice");
-    actor_config ac2;
-    bob_hdl = make_actor<entity>(1, node_id{}, &sys, ac2, "bob");
-    /// Make sure to test whether the slot IDs are properly handled.
-    alice = static_cast<entity*>(actor_cast<abstract_actor*>(alice_hdl));
-    bob = static_cast<entity*>(actor_cast<abstract_actor*>(bob_hdl));
-    alice->next_slot(123);
-    bob->next_slot(321);
+  static actor spawn(actor_system& sys, actor_id id, const char* name) {
+    actor_config conf;
+    return make_actor<entity>(id, node_id{}, &sys, conf, name);
   }
+
+  static entity& fetch(const actor& hdl) {
+    return *static_cast<entity*>(actor_cast<abstract_actor*>(hdl));
+  }
+
+  fixture()
+      : alice_hdl(spawn(sys, 0, "alice")),
+        bob_hdl(spawn(sys, 1, "bob")),
+        carl_hdl(spawn(sys, 2, "carl")),
+        alice(fetch(alice_hdl)),
+        bob(fetch(bob_hdl)),
+        carl(fetch(carl_hdl)) {
+    // nop
+  }
+
 };
 
 } // namespace <anonymous>
@@ -550,21 +528,25 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(queue_multiplexing_tests, fixture)
 
-CAF_TEST(simple_handshake) {
-  bob->start_streaming(actor_cast<strong_actor_ptr>(alice_hdl), 30);
-  msg_visitor f{alice};
-  msg_visitor g{bob};
-  while (!alice->mbox_.empty() || !bob->mbox_.empty()) {
-    alice->mbox_.new_round(1, f);
-    bob->mbox_.new_round(1, g);
+CAF_TEST(depth_2_pipeline) {
+  alice.start_streaming(bob, 30);
+  msg_visitor f{&bob};
+  msg_visitor g{&alice};
+  while (!bob.mbox.empty() || !alice.mbox.empty()) {
+    bob.mbox.new_round(1, f);
+    alice.mbox.new_round(1, g);
   }
-  // Check whether alice and bob cleaned up their state properly.
-  CAF_CHECK(get<2>(alice->mbox_.queues()).queues().empty());
-  CAF_CHECK(get<2>(bob->mbox_.queues()).queues().empty());
-  CAF_CHECK(alice->pending_managers_.empty());
-  CAF_CHECK(bob->pending_managers_.empty());
-  CAF_CHECK(alice->managers_.empty());
-  CAF_CHECK(bob->managers_.empty());
+  // Check whether bob and alice cleaned up their state properly.
+  CAF_CHECK(get<2>(bob.mbox.queues()).queues().empty());
+  CAF_CHECK(get<2>(alice.mbox.queues()).queues().empty());
+  CAF_CHECK(bob.pending_managers_.empty());
+  CAF_CHECK(alice.pending_managers_.empty());
+  CAF_CHECK(bob.managers_.empty());
+  CAF_CHECK(alice.managers_.empty());
 }
+
+CAF_TEST(depth_3_pipeline) {
+}
+
 
 CAF_TEST_FIXTURE_SCOPE_END()

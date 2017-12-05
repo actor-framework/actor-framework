@@ -259,6 +259,11 @@ struct dmsg_queue_policy : policy_base {
   }
 
   template <class Queue>
+  static inline bool enabled(const Queue&) {
+    return true;
+  }
+
+  template <class Queue>
   deficit_type quantum(const Queue&, deficit_type x) {
     return x;
   }
@@ -483,21 +488,21 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(mock_streaming_classes_tests, fixture)
 
-CAF_TEST(simple_handshake) {
-  bob.start_streaming(alice, 30);
-  msg_visitor f{&alice};
-  msg_visitor g{&bob};
-  while (!alice.mbox.empty() || !bob.mbox.empty()) {
-    alice.mbox.new_round(1, f);
-    bob.mbox.new_round(1, g);
+CAF_TEST(depth_2_pipeline) {
+  alice.start_streaming(bob, 30);
+  msg_visitor f{&bob};
+  msg_visitor g{&alice};
+  while (!bob.mbox.empty() || !alice.mbox.empty()) {
+    bob.mbox.new_round(1, f);
+    alice.mbox.new_round(1, g);
   }
-  // Check whether alice and bob cleaned up their state properly.
-  CAF_CHECK(get<2>(alice.mbox.queues()).queues().empty());
+  // Check whether bob and alice cleaned up their state properly.
   CAF_CHECK(get<2>(bob.mbox.queues()).queues().empty());
-  CAF_CHECK(alice.pending_managers_.empty());
+  CAF_CHECK(get<2>(alice.mbox.queues()).queues().empty());
   CAF_CHECK(bob.pending_managers_.empty());
-  CAF_CHECK(alice.managers_.empty());
+  CAF_CHECK(alice.pending_managers_.empty());
   CAF_CHECK(bob.managers_.empty());
+  CAF_CHECK(alice.managers_.empty());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
