@@ -81,61 +81,55 @@ public:
     // nop
   }
 
-  // -- non-const begin iterators ---------------------------------------------
+  // -- iterator access --------------------------------------------------------
 
-  iterator begin() {
+  iterator begin() noexcept {
     return xs_.begin();
   }
 
-  reverse_iterator rbegin() {
-    return xs_.rbegin();
-  }
-
-  // -- const begin iterators -------------------------------------------------
-
-  const_iterator begin() const {
+  const_iterator begin() const noexcept {
     return xs_.begin();
   }
 
-  const_iterator cbegin() const {
+  const_iterator cbegin() const noexcept {
     return xs_.cbegin();
   }
 
-  const_reverse_iterator rbegin() const {
+  reverse_iterator rbegin() noexcept {
     return xs_.rbegin();
   }
 
-  // -- non-const end iterators -----------------------------------------------
+  const_reverse_iterator rbegin() const noexcept {
+    return xs_.rbegin();
+  }
 
-  iterator end() {
+  iterator end() noexcept {
     return xs_.end();
   }
 
-  reverse_iterator rend() {
+  const_iterator end() const noexcept {
+    return xs_.end();
+  }
+
+  const_iterator cend() const noexcept {
+    return xs_.end();
+  }
+
+  reverse_iterator rend() noexcept {
     return xs_.rend();
   }
 
-  // -- const end iterators ---------------------------------------------------
-
-  const_iterator end() const {
-    return xs_.end();
-  }
-
-  const_iterator cend() const {
-    return xs_.end();
-  }
-
-  const_reverse_iterator rend() const {
+  const_reverse_iterator rend() const noexcept {
     return xs_.rend();
   }
 
-  // -- capacity --------------------------------------------------------------
+  // -- size and capacity ------------------------------------------------------
 
-  bool empty() const {
+  bool empty() const noexcept {
     return xs_.empty();
   }
 
-  size_type size() const {
+  size_type size() const noexcept {
     return xs_.size();
   }
 
@@ -147,16 +141,29 @@ public:
     xs_.shrink_to_fit();
   }
 
+  // -- access to members ------------------------------------------------------
+
+  /// Gives raw access to the underlying container.
+  vector_type& container() noexcept {
+    return xs_;
+  }
+
+  /// Gives raw access to the underlying container.
+  const vector_type& container() const noexcept {
+    return xs_;
+  }
+
   // -- modifiers -------------------------------------------------------------
 
-  void clear() {
+  void clear() noexcept {
     return xs_.clear();
   }
 
-  /// Proves raw access to the underlying container.
-  vector_type& container() {
-    return xs_;
+  void swap(unordered_flat_map& other) {
+    xs_.swap(other);
   }
+
+  // -- insertion -------------------------------------------------------------
 
   std::pair<iterator, bool> insert(value_type x) {
     return insert(end(), std::move(x));
@@ -189,6 +196,8 @@ public:
     return insert(hint, value_type(std::forward<Ts>(xs)...));
   }
 
+  // -- removal ----------------------------------------------------------------
+
   iterator erase(const_iterator i) {
     return xs_.erase(i);
   }
@@ -206,10 +215,6 @@ public:
       return 0;
     erase(i);
     return 1;
-  }
-
-  void swap(unordered_flat_map& other) {
-    xs_.swap(other);
   }
 
   // -- lookup ----------------------------------------------------------------
@@ -262,18 +267,21 @@ private:
   vector_type xs_;
 };
 
+/// @relates unordered_flat_map
 template <class K, class T, class A>
 bool operator==(const unordered_flat_map<K, T, A>& xs,
                 const unordered_flat_map<K, T, A>& ys) {
   return xs.size() == ys.size() && std::equal(xs.begin(), xs.end(), ys.begin());
 }
 
+/// @relates unordered_flat_map
 template <class K, class T, class A>
 bool operator!=(const unordered_flat_map<K, T, A>& xs,
                 const unordered_flat_map<K, T, A>& ys) {
   return !(xs == ys);
 }
 
+/// @relates unordered_flat_map
 template <class K, class T, class A>
 bool operator<(const unordered_flat_map<K, T, A>& xs,
                const unordered_flat_map<K, T, A>& ys) {
@@ -281,6 +289,7 @@ bool operator<(const unordered_flat_map<K, T, A>& xs,
                                       ys.begin(), ys.end());
 }
 
+/// @relates unordered_flat_map
 template <class K, class T, class A>
 bool operator>=(const unordered_flat_map<K, T, A>& xs,
                 const unordered_flat_map<K, T, A>& ys) {
