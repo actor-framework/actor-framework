@@ -152,7 +152,8 @@ public:
   task_size_type total_task_size() const noexcept {
     task_size_type result = 0;
     for (auto& kvp : qs_)
-      result += kvp.second.total_task_size();
+      if (policy_.enabled(kvp.second))
+        result += kvp.second.total_task_size();
     return result;
   }
 

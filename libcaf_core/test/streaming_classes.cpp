@@ -59,6 +59,8 @@
 
 #include "caf/detail/overload.hpp"
 
+using std::vector;
+
 using namespace caf;
 using namespace caf::intrusive;
 
@@ -112,14 +114,13 @@ const char* name_of(const actor_addr& x) {
 
 // -- manager and path handlers ------------------------------------------------
 
-class dummy_manager : public stream_manager {
+class mock_manager : public stream_manager {
 public:
-  dummy_manager(local_actor* selfptr, int num_messages)
+  mock_manager(local_actor* selfptr)
       : stream_manager(selfptr),
         open_inputs(0),
         out_(selfptr) {
-    for (int i = 0; i < num_messages; ++i)
-      out_.push(i);
+    // nop
   }
 
   bool done() const override {
@@ -142,9 +143,60 @@ public:
     return out_;
   }
 
-private:
+protected:
   int open_inputs;
   broadcast_scatterer<int> out_;
+};
+
+class sending_manager : public mock_manager {
+public:
+  sending_manager(local_actor* selfptr, int num_messages)
+      : mock_manager(selfptr) {
+    for (int i = 0; i < num_messages; ++i)
+      out_.push(i);
+  }
+};
+
+class receiving_manager : public mock_manager {
+public:
+  receiving_manager(local_actor* selfptr, vector<int>& log)
+      : mock_manager(selfptr),
+        log_(log) {
+    // nop
+  }
+
+  error handle(inbound_path*, downstream_msg::batch& x) override {
+    CAF_REQUIRE(x.xs.match_elements<vector<int>>());
+    auto& xs = x.xs.get_as<vector<int>>(0);
+    for (auto x : xs)
+      log_.push_back(x);
+    return none;
+  }
+
+private:
+  vector<int>& log_;
+};
+
+class forwarding_manager : public mock_manager {
+public:
+  forwarding_manager(local_actor* selfptr, vector<int>& log)
+      : mock_manager(selfptr),
+        log_(log) {
+    // nop
+  }
+
+  error handle(inbound_path*, downstream_msg::batch& x) override {
+    CAF_REQUIRE(x.xs.match_elements<vector<int>>());
+    auto& xs = x.xs.get_as<vector<int>>(0);
+    for (auto x : xs) {
+      log_.push_back(x);
+      out_.push(x);
+    }
+    return none;
+  }
+
+private:
+  vector<int>& log_;
 };
 
 // -- policies and queues ------------------------------------------------------
@@ -170,8 +222,8 @@ struct default_queue_policy : policy_base {
 using default_queue = drr_queue<default_queue_policy>;
 
 struct umsg_queue_policy : policy_base {
-  dummy_manager* mgr;
-  umsg_queue_policy(dummy_manager* ptr) : mgr(ptr) {
+  sending_manager* mgr;
+  umsg_queue_policy(sending_manager* ptr) : mgr(ptr) {
     // nop
   }
   static inline task_size_type task_size(const mailbox_element&) {
@@ -316,8 +368,19 @@ public:
     strong_actor_ptr to = ref.ctrl();
     send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
                              stream_priority::normal, false});
-    auto ptr = make_counted<dummy_manager>(this, num_messages);
+    auto ptr = make_counted<sending_manager>(this, num_messages);
     pending_managers_.emplace(slot, std::move(ptr));
+  }
+
+  void forward_to(entity& ref) {
+    auto slot = next_slot_++;
+    CAF_MESSAGE(name_ << " starts forwarding to " << ref.name()
+                << " on slot " << slot);
+    strong_actor_ptr to = ref.ctrl();
+    send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
+                             stream_priority::normal, false});
+    forwarder = make_counted<forwarding_manager>(this, data);
+    pending_managers_.emplace(slot, forwarder);
   }
 
   void operator()(open_stream_msg& hs) {
@@ -326,8 +389,11 @@ public:
     auto slot = next_slot_++;
     //stream_slots id{slot, hs.sender_slot};
     stream_slots id{hs.slot, slot};
-    // Create required state.
-    auto mgr = make_counted<dummy_manager>(this, 0);
+    // Create required state if no forwarder exists yet, otherwise `forward_to`
+    // was called and we run as a stage.
+    auto mgr = forwarder;
+    if (mgr == nullptr)
+      mgr = make_counted<receiving_manager>(this, data);
     // mgr->out().add_path(id, hs.prev_stage);
     managers_.emplace(id, mgr);
     // Create a new queue in the mailbox for incoming traffic.
@@ -387,6 +453,8 @@ public:
   mboxqueue mbox;
   const char* name_;
   stream_slot next_slot_ = 1;
+  vector<int> data; // Keeps track of all received data from all batches.
+  stream_manager_ptr forwarder;
   std::map<stream_slots, stream_manager_ptr> managers_;
   std::map<stream_slot, stream_manager_ptr> pending_managers_;
 };
@@ -520,7 +588,31 @@ struct fixture {
     // nop
   }
 
+  ~fixture() {
+    // Check whether all actors cleaned up their state properly.
+    entity* xs[] = {&alice, &bob, &carl};
+    for (auto x : xs) {
+      CAF_CHECK(get<2>(x->mbox.queues()).queues().empty());
+      CAF_CHECK(x->pending_managers_.empty());
+      CAF_CHECK(x->managers_.empty());
+    }
+  }
+
+  template <class... Ts>
+  void loop(Ts&... xs) {
+    msg_visitor fs[] = {{&xs}...};
+    auto mailbox_empty = [](msg_visitor& x) { return x.self->mbox.empty(); };
+    while (!std::all_of(std::begin(fs), std::end(fs), mailbox_empty))
+      for (auto& f : fs)
+        f.self->mbox.new_round(1, f);
+  }
 };
+
+vector<int> make_iota(int first, int last) {
+  vector<int> result(last - first);
+  std::iota(result.begin(), result.end(), first);
+  return result;
+}
 
 } // namespace <anonymous>
 
@@ -530,23 +622,15 @@ CAF_TEST_FIXTURE_SCOPE(queue_multiplexing_tests, fixture)
 
 CAF_TEST(depth_2_pipeline) {
   alice.start_streaming(bob, 30);
-  msg_visitor f{&bob};
-  msg_visitor g{&alice};
-  while (!bob.mbox.empty() || !alice.mbox.empty()) {
-    bob.mbox.new_round(1, f);
-    alice.mbox.new_round(1, g);
-  }
-  // Check whether bob and alice cleaned up their state properly.
-  CAF_CHECK(get<2>(bob.mbox.queues()).queues().empty());
-  CAF_CHECK(get<2>(alice.mbox.queues()).queues().empty());
-  CAF_CHECK(bob.pending_managers_.empty());
-  CAF_CHECK(alice.pending_managers_.empty());
-  CAF_CHECK(bob.managers_.empty());
-  CAF_CHECK(alice.managers_.empty());
+  loop(alice, bob);
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
 }
 
 CAF_TEST(depth_3_pipeline) {
+  bob.forward_to(carl);
+  alice.start_streaming(bob, 100);
+  loop(alice, bob);
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, 100));
 }
-
 
 CAF_TEST_FIXTURE_SCOPE_END()
