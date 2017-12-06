@@ -95,8 +95,10 @@ bool stream_scatterer::clean() const noexcept {
 }
 
 void stream_scatterer::close() {
-  for (auto i = paths_.begin(); i != paths_.end(); ++i)
+  for (auto i = paths_.begin(); i != paths_.end(); ++i) {
     about_to_erase(i, false, nullptr);
+    i->second->emit_regular_shutdown(self_);
+  }
   paths_.clear();
 }
 
