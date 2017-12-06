@@ -143,6 +143,28 @@ CAF_TEST(peek) {
   CAF_CHECK_EQUAL(queue.peek()->value, 1);
 }
 
+CAF_TEST(peek_all) {
+  auto queue_to_string = [&] {
+    std::string str;
+    auto peek_fun = [&](const inode& x) {
+      if (!str.empty())
+        str += ", ";
+      str += std::to_string(x.value);
+    };
+    queue.peek_all(peek_fun);
+    return str;
+  };
+  CAF_CHECK_EQUAL(queue_to_string(), "");
+  queue.emplace_back(1);
+  CAF_CHECK_EQUAL(queue_to_string(), "1");
+  queue.emplace_back(2);
+  CAF_CHECK_EQUAL(queue_to_string(), "1, 2");
+  queue.emplace_back(3);
+  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3");
+  queue.emplace_back(4);
+  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3, 4");
+}
+
 CAF_TEST(task_size) {
   fill(queue, 1, 2, 3);
   CAF_CHECK_EQUAL(queue.total_task_size(), 6);

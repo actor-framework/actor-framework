@@ -59,6 +59,8 @@ public:
 
   using iterator = forward_iterator<value_type>;
 
+  using const_iterator = forward_iterator<const value_type>;
+
   // -- constructors, destructors, and assignment operators -------------------
 
   task_queue(policy_type p) : old_last_(nullptr), policy_(std::move(p)) {
@@ -124,6 +126,13 @@ public:
     return ptr != &tail_ ? promote(ptr) : nullptr;
   }
 
+  /// Applies `f` to each element in the queue.
+  template <class F>
+  void peek_all(F f) const {
+    for (auto i = begin(); i != end(); ++i)
+      f(*promote(i.ptr));
+  }
+
   // -- modifiers -------------------------------------------------------------
 
   /// Removes all elements from the queue.
@@ -165,8 +174,15 @@ public:
     inc_total_task_size(policy_.task_size(x));
   }
 
+  // -- iterator access --------------------------------------------------------
+
   /// Returns an iterator to the dummy before the first element.
   iterator before_begin() noexcept {
+    return &head_;
+  }
+
+  /// Returns an iterator to the dummy before the first element.
+  const_iterator before_begin() const noexcept {
     return &head_;
   }
 
@@ -175,8 +191,28 @@ public:
     return head_.next;
   }
 
+  /// Returns an iterator to the dummy before the first element.
+  const_iterator begin() const noexcept {
+    return head_.next;
+  }
+
+  /// Returns an iterator to the dummy before the first element.
+  const_iterator cbegin() const noexcept {
+    return head_.next;
+  }
+
   /// Returns a pointer to the dummy past the last element.
   iterator end() noexcept {
+    return &tail_;
+  }
+
+  /// Returns a pointer to the dummy past the last element.
+  const_iterator end() const noexcept {
+    return &tail_;
+  }
+
+  /// Returns a pointer to the dummy past the last element.
+  const_iterator cend() const noexcept {
     return &tail_;
   }
 
@@ -291,7 +327,6 @@ protected:
   /// Manipulates instances of T.
   policy_type policy_;
 };
-
 
 } // namespace intrusive
 } // namespace caf
