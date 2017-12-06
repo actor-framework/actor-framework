@@ -117,6 +117,34 @@ CAF_TEST(new_round) {
   CAF_CHECK_EQUAL(queue.deficit(), 0);
 }
 
+CAF_TEST(skipping) {
+  // Define a function object for consuming even numbers.
+  std::string seq;
+  auto f = [&](inode& x) -> task_result {
+    if ((x.value & 0x01) == 1)
+      return task_result::skip;
+    seq += to_string(x);
+    return task_result::resume;
+  };
+  CAF_MESSAGE("make a round on an empty queue");
+  CAF_CHECK_EQUAL(queue.new_round(10, f), false);
+  CAF_MESSAGE("make a round on a queue with only odd numbers (skip all)");
+  fill(queue, 1, 3, 5);
+  CAF_CHECK_EQUAL(queue.new_round(10, f), false);
+  CAF_MESSAGE("make a round on a queue with an even number at the front");
+  fill(queue, 2);
+  CAF_CHECK_EQUAL(queue.new_round(10, f), true);
+  CAF_CHECK_EQUAL(seq, "2");
+  CAF_MESSAGE("make a round on a queue with an even number in between");
+  fill(queue, 7, 9, 4, 11, 13);
+  CAF_CHECK_EQUAL(queue.new_round(10, f), true);
+  CAF_CHECK_EQUAL(seq, "24");
+  CAF_MESSAGE("make a round on a queue with an even number at the back");
+  fill(queue, 15, 17, 6);
+  CAF_CHECK_EQUAL(queue.new_round(10, f), true);
+  CAF_CHECK_EQUAL(seq, "246");
+}
+
 CAF_TEST(alternating_consumer) {
   using fun_type = std::function<task_result (inode&)>;
   fun_type f;

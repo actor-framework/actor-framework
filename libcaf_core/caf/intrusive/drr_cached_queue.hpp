@@ -184,52 +184,58 @@ public:
   /// @returns `true` if `f` consumed at least one item.
   template <class F>
   bool consume(F& f) noexcept(noexcept(f(std::declval<value_type&>()))) {
-    long consumed = 0;
     if (!cache_.empty())
       list_.prepend(cache_);
-    if (!list_.empty()) {
-      auto ptr = list_.front();
-      auto ts = policy().task_size(*ptr);
-      while (ts <= deficit_) {
-        CAF_ASSERT(ts > 0);
-        auto next = ptr->next;
-        dec_total_task_size(ts);
-        // Make sure the queue is in a consistent state before calling `f` in
-        // case `f` recursively calls consume.
-        list_.before_begin()->next = next;
-        if (total_task_size() == 0) {
-          CAF_ASSERT(list_.begin() == list_.end());
-          list_.end()->next = list_.begin().ptr;
-        }
-        // Always decrease the deficit_ counter, again because `f` is allowed
-        // to call consume again.
-        deficit_ -= ts;
-        auto res = f(*ptr);
-        if (res == task_result::skip) {
-          // Fix deficit and push the unconsumed item to the cache.
-          deficit_ += ts;
-          cache_.push_back(ptr);
-          if (list_.empty()) {
-            deficit_ = 0;
-            return consumed != 0;
-          }
-        } else {
-          deleter_type d;
-          d(ptr);
-          ++consumed;
-          if (!cache_.empty())
-            list_.prepend(cache_);
-          if (list_.empty()) {
-            deficit_ = 0;
-            return consumed != 0;
-          }
-          if (res == task_result::stop)
-            return consumed != 0;
-        }
-        // Next iteration.
-        ptr = list_.front();
-        ts = policy().task_size(*ptr);
+    if (list_.empty())
+      return false;
+    long consumed = 0;
+    auto ptr = list_.front();
+    auto ts = policy().task_size(*ptr);
+    while (ts <= deficit_) {
+      CAF_ASSERT(ts > 0);
+      dec_total_task_size(ts);
+      auto next = ptr->next;
+      // Make sure the queue is in a consistent state before calling `f` in
+      // case `f` recursively calls consume.
+      list_.before_begin()->next = next;
+      if (next == list_.end().ptr)
+        list_.end()->next = list_.before_begin().ptr;
+      CAF_ASSERT(total_task_size() != 0 || list_.begin() == list_.end());
+      /*
+      if (total_task_size() == 0) {
+        CAF_ASSERT(list_.begin() == list_.end());
+        list_.end()->next = list_.begin().ptr;
       }
+      */
+      // Always decrease the deficit_ counter, again because `f` is allowed
+      // to call consume again.
+      deficit_ -= ts;
+      auto res = f(*ptr);
+      if (res == task_result::skip) {
+        // Push the unconsumed item to the cache.
+        cache_.push_back(ptr);
+        if (list_.empty()) {
+          deficit_ = 0;
+          return consumed != 0;
+        }
+        // Fix deficit counter since we didn't actually use it.
+        deficit_ += ts;
+      } else {
+        deleter_type d;
+        d(ptr);
+        ++consumed;
+        if (!cache_.empty())
+          list_.prepend(cache_);
+        if (list_.empty()) {
+          deficit_ = 0;
+          return consumed != 0;
+        }
+        if (res == task_result::stop)
+          return consumed != 0;
+      }
+      // Next iteration.
+      ptr = list_.front();
+      ts = policy().task_size(*ptr);
     }
     return consumed != 0;
   }
