@@ -545,6 +545,19 @@ public:
   static constexpr bool value = false;
 };
 
+template <class T>
+class has_peek_all {
+private:
+  template <class U>
+  static int fun(const U*,
+                 decltype(std::declval<U&>().peek_all(unit))* = nullptr);
+
+  static char fun(const void*);
+
+public:
+  static constexpr bool value = sizeof(fun(static_cast<T*>(nullptr))) > 1;
+};
+
 CAF_HAS_MEMBER_TRAIT(size);
 CAF_HAS_MEMBER_TRAIT(data);
 

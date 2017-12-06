@@ -22,6 +22,8 @@
 
 #include <utility>
 
+#include "caf/config.hpp"
+
 #include "caf/intrusive/task_queue.hpp"
 #include "caf/intrusive/task_result.hpp"
 
@@ -31,77 +33,145 @@ namespace intrusive {
 /// A Deficit Round Robin queue with an internal cache for allowing skipping
 /// consumers.
 template <class Policy>
-class drr_cached_queue : public task_queue<Policy> {
+class drr_cached_queue { // Note that we do *not* inherit from
+                         // task_queue<Policy>, because the cached queue can no
+                         // longer offer iterator access.
 public:
   // -- member types ----------------------------------------------------------
+  using policy_type = Policy;
 
-  using super = task_queue<Policy>;
+  using deleter_type = typename policy_type::deleter_type;
 
-  using typename super::policy_type;
+  using value_type = typename policy_type::mapped_type;
 
-  using typename super::deleter_type;
+  using node_type = typename value_type::node_type;
 
-  using typename super::unique_pointer;
+  using node_pointer = node_type*;
 
-  using typename super::value_type;
+  using pointer = value_type*;
 
-  using cache_type = task_queue<Policy>;
+  using unique_pointer = typename policy_type::unique_pointer;
 
   using deficit_type = typename policy_type::deficit_type;
 
   using task_size_type = typename policy_type::task_size_type;
 
+  using list_type = task_queue<policy_type>;
+
+  using cache_type = task_queue<policy_type>;
+
   // -- constructors, destructors, and assignment operators -------------------
 
-  drr_cached_queue(const policy_type& p) : super(p), deficit_(0), cache_(p) {
+  drr_cached_queue(policy_type p)
+      : list_(p),
+        deficit_(0),
+        cache_(std::move(p)) {
     // nop
   }
 
   drr_cached_queue(drr_cached_queue&& other)
-      : super(std::move(other)),
-        deficit_(0) {
+      : list_(std::move(other.list_)),
+        deficit_(other.deficit_),
+        cache_(std::move(other.cache_)) {
     // nop
   }
 
   drr_cached_queue& operator=(drr_cached_queue&& other) {
-    super::operator=(std::move(other));
+    list_ = std::move(other.list_);
+    deficit_ = other.deficit_;
+    cache_ = std::move(other.cache_);
     return *this;
   }
 
   // -- observers -------------------------------------------------------------
 
+  /// Returns the policy object.
+  policy_type& policy() noexcept {
+    return list_.policy();
+  }
+
+  /// Returns the policy object.
+  const policy_type& policy() const noexcept {
+    return list_.policy();
+  }
+
   deficit_type deficit() const {
     return deficit_;
   }
 
+  /// Returns the accumulated size of all stored tasks in the list, i.e., tasks
+  /// that are not in the cache.
+  task_size_type total_task_size() const {
+    return list_.total_task_size();
+  }
+
+  /// Returns whether the queue has no uncached tasks.
+  bool empty() const noexcept {
+    return total_task_size() == 0;
+  }
+
+  /// Peeks at the first element of the cache or of the list in case the former
+  /// is empty.
+  pointer peek() noexcept {
+    auto ptr = cache_.peek();
+    return ptr == nullptr ? list_.peek() : ptr;
+  }
+
+  /// Applies `f` to each element in the queue, including cached elements.
+  template <class F>
+  void peek_all(F f) const {
+    for (auto i = cache_.begin(); i != cache_.end(); ++i)
+      f(*promote(i.ptr));
+    for (auto i = list_.begin(); i != list_.end(); ++i)
+      f(*promote(i.ptr));
+  }
+
   // -- modifiers -------------------------------------------------------------
 
+  /// Removes all elements from the queue.
+  void clear() {
+    list_.clear();
+    cache_.clear();
+  }
+
   void inc_deficit(deficit_type x) noexcept {
-    if (!super::empty())
+    if (!list_.empty())
       deficit_ += x;
   }
 
   void flush_cache() noexcept {
-    super::prepend(cache_);
+    list_.prepend(cache_);
+  }
+
+  /// @private
+  template <class T>
+  void inc_total_task_size(T&& x) noexcept {
+    list_.inc_total_task_size(std::forward<T>(x));
+  }
+
+  /// @private
+  template <class T>
+  void dec_total_task_size(T&& x) noexcept {
+    list_.dec_total_task_size(std::forward<T>(x));
   }
 
   /// Takes the first element out of the queue if the deficit allows it and
   /// returns the element.
   unique_pointer take_front() noexcept {
-    super::prepend(cache_);
+    list_.prepend(cache_);
     unique_pointer result;
-    if (!super::empty()) {
-      auto ptr = promote(super::head_.next);
-      auto ts = super::policy_.task_size(*ptr);
+    if (!list_.empty()) {
+      auto ptr = list_.front();
+      auto ts = policy().task_size(*ptr);
       CAF_ASSERT(ts > 0);
       if (ts <= deficit_) {
         deficit_ -= ts;
-        super::total_task_size_ -= ts;
-        super::head_.next = ptr->next;
-        if (super::total_task_size_ == 0) {
-          CAF_ASSERT(super::head_.next == &(super::tail_));
+        dec_total_task_size(ts);
+        list_.before_begin()->next = ptr->next;
+        if (total_task_size() == 0) {
+          CAF_ASSERT(list_.begin() == list_.end());
           deficit_ = 0;
-          super::tail_.next = &(super::head_);
+          list_.end()->next = list_.before_begin().ptr;
         }
         result.reset(ptr);
       }
@@ -116,19 +186,20 @@ public:
   bool consume(F& f) noexcept(noexcept(f(std::declval<value_type&>()))) {
     long consumed = 0;
     if (!cache_.empty())
-      super::prepend(cache_);
-    if (!super::empty()) {
-      auto ptr = promote(super::head_.next);
-      auto ts = super::policy_.task_size(*ptr);
+      list_.prepend(cache_);
+    if (!list_.empty()) {
+      auto ptr = list_.front();
+      auto ts = policy().task_size(*ptr);
       while (ts <= deficit_) {
+        CAF_ASSERT(ts > 0);
         auto next = ptr->next;
-        super::total_task_size_ -= ts;
+        dec_total_task_size(ts);
         // Make sure the queue is in a consistent state before calling `f` in
         // case `f` recursively calls consume.
-        super::head_.next = next;
-        if (super::total_task_size_ == 0) {
-          CAF_ASSERT(super::head_.next == &(super::tail_));
-          super::tail_.next = &(super::head_);
+        list_.before_begin()->next = next;
+        if (total_task_size() == 0) {
+          CAF_ASSERT(list_.begin() == list_.end());
+          list_.end()->next = list_.begin().ptr;
         }
         // Always decrease the deficit_ counter, again because `f` is allowed
         // to call consume again.
@@ -138,7 +209,7 @@ public:
           // Fix deficit and push the unconsumed item to the cache.
           deficit_ += ts;
           cache_.push_back(ptr);
-          if (super::empty()) {
+          if (list_.empty()) {
             deficit_ = 0;
             return consumed != 0;
           }
@@ -147,8 +218,8 @@ public:
           d(ptr);
           ++consumed;
           if (!cache_.empty())
-            super::prepend(cache_);
-          if (super::empty()) {
+            list_.prepend(cache_);
+          if (list_.empty()) {
             deficit_ = 0;
             return consumed != 0;
           }
@@ -156,8 +227,8 @@ public:
             return consumed != 0;
         }
         // Next iteration.
-        ptr = promote(super::head_.next);
-        ts = super::policy_.task_size(*ptr);
+        ptr = list_.front();
+        ts = policy().task_size(*ptr);
       }
     }
     return consumed != 0;
@@ -167,7 +238,7 @@ public:
   template <class F>
   bool new_round(deficit_type quantum, F& consumer)
   noexcept(noexcept(consumer(std::declval<value_type&>()))) {
-    if (!super::empty()) {
+    if (!list_.empty()) {
       deficit_ += quantum;
       return consume(consumer);
     }
@@ -178,8 +249,40 @@ public:
     return cache_;
   }
 
+  // -- insertion --------------------------------------------------------------
+
+  /// Appends `ptr` to the queue.
+  /// @pre `ptr != nullptr`
+  bool push_back(pointer ptr) noexcept {
+    return list_.push_back(ptr);
+  }
+
+  /// Appends `ptr` to the queue.
+  /// @pre `ptr != nullptr`
+  bool push_back(unique_pointer ptr) noexcept {
+    return push_back(ptr.release());
+  }
+
+  /// Creates a new element from `xs...` and appends it.
+  template <class... Ts>
+  bool emplace_back(Ts&&... xs) {
+    return push_back(new value_type(std::forward<Ts>(xs)...));
+  }
+
+  /// @private
+  void lifo_append(node_pointer ptr) {
+    list_.lifo_append(ptr);
+  }
+
+  /// @private
+  void stop_lifo_append() {
+    list_.stop_lifo_append();
+  }
+
 private:
   // -- member variables ------------------------------------------------------
+  /// Stores current (unskipped) items.
+  list_type list_;
 
   /// Stores the deficit on this queue.
   deficit_type deficit_ = 0;

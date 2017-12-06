@@ -146,6 +146,17 @@ public:
   }
 
   template <class T>
+  enable_if_t<has_peek_all<T>::value
+              && !is_iterable<T>::value // pick begin()/end() over peek_all
+              && !is_inspectable<stringification_inspector, T>::value
+              && !has_to_string<T>::value>
+  consume(T& xs) {
+    result_ += '[';
+    xs.peek_all(*this);
+    result_ += ']';
+  }
+
+  template <class T>
   void consume(T* xs, size_t n) {
     result_ += '(';
     for (size_t i = 0; i < n; ++i) {
@@ -179,6 +190,7 @@ public:
   template <class T>
   enable_if_t<
     !is_iterable<T>::value
+    && !has_peek_all<T>::value
     && !std::is_pointer<T>::value
     && !is_inspectable<stringification_inspector, T>::value
     && !std::is_arithmetic<T>::value

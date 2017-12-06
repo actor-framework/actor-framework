@@ -132,6 +132,13 @@ public:
     return nullptr;
   }
 
+  /// Applies `f` to each element in the queue.
+  template <class F>
+  void peek_all(F f) const {
+    for (auto& kvp : qs_)
+      kvp.second.peek_all(f);
+  }
+
   /// Returns `true` if all queues are empty, `false` otherwise.
   bool empty() const noexcept {
     return total_task_size() == 0;

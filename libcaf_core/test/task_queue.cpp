@@ -143,28 +143,6 @@ CAF_TEST(peek) {
   CAF_CHECK_EQUAL(queue.peek()->value, 1);
 }
 
-CAF_TEST(peek_all) {
-  auto queue_to_string = [&] {
-    std::string str;
-    auto peek_fun = [&](const inode& x) {
-      if (!str.empty())
-        str += ", ";
-      str += std::to_string(x.value);
-    };
-    queue.peek_all(peek_fun);
-    return str;
-  };
-  CAF_CHECK_EQUAL(queue_to_string(), "");
-  queue.emplace_back(1);
-  CAF_CHECK_EQUAL(queue_to_string(), "1");
-  queue.emplace_back(2);
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2");
-  queue.emplace_back(3);
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3");
-  queue.emplace_back(4);
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3, 4");
-}
-
 CAF_TEST(task_size) {
   fill(queue, 1, 2, 3);
   CAF_CHECK_EQUAL(queue.total_task_size(), 6);
@@ -172,6 +150,12 @@ CAF_TEST(task_size) {
   CAF_CHECK_EQUAL(queue.total_task_size(), 15);
   queue.clear();
   CAF_CHECK_EQUAL(queue.total_task_size(), 0);
+}
+
+CAF_TEST(to_string) {
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[]");
+  fill(queue, 1, 2, 3, 4);
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[1, 2, 3, 4]");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

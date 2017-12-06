@@ -176,4 +176,37 @@ CAF_TEST(priorities) {
   CAF_REQUIRE_EQUAL(queue.empty(), true);
 }
 
+CAF_TEST(peek_all) {
+  auto queue_to_string = [&] {
+    std::string str;
+    auto peek_fun = [&](const inode& x) {
+      if (!str.empty())
+        str += ", ";
+      str += std::to_string(x.value);
+    };
+    queue.peek_all(peek_fun);
+    return str;
+  };
+  make_queues();
+  CAF_CHECK_EQUAL(queue_to_string(), "");
+  queue.emplace_back(1);
+  CAF_CHECK_EQUAL(queue_to_string(), "1");
+  queue.emplace_back(2);
+  CAF_CHECK_EQUAL(queue_to_string(), "1, 2");
+  queue.emplace_back(3);
+  // Lists are iterated in order and 3 is stored in the first queue for
+  // `x mod 3 == 0` values.
+  CAF_CHECK_EQUAL(queue_to_string(), "3, 1, 2");
+  queue.emplace_back(4);
+  CAF_CHECK_EQUAL(queue_to_string(), "3, 1, 4, 2");
+}
+
+CAF_TEST(to_string) {
+  make_queues();
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[]");
+  fill(queue, 1, 2, 3, 4);
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 1, 4, 2]");
+}
+
+
 CAF_TEST_FIXTURE_SCOPE_END()

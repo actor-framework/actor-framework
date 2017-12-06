@@ -92,6 +92,12 @@ public:
     return peek_recursion<0>();
   }
 
+  /// Applies `f` to each element in the queue.
+  template <class F>
+  void peek_all(F f) const {
+    return peek_all_recursion<0>(f);
+  }
+
   /// Returns `true` if all queues are empty, `false` otherwise.
   bool empty() const noexcept {
     return total_task_size() == 0;
@@ -125,6 +131,10 @@ public:
 
 private:
   // -- recursive helper functions ---------------------------------------------
+
+  // TODO: a lot of this code could be vastly simplified by using C++14 generic
+  //       lambdas and simple utility to dispatch on the tuple index. Consider
+  //       to revisite this code once we switch to C++14.
 
   template <size_t I>
   detail::enable_if_t<I == num_queues, bool>
@@ -184,6 +194,17 @@ private:
     if (ptr != nullptr)
       return ptr;
     return peek_recursion<I + 1>();
+  }
+
+  template <size_t I, class F>
+  detail::enable_if_t<I == num_queues> peek_all_recursion(F&) const {
+    // nop
+  }
+
+  template <size_t I, class F>
+  detail::enable_if_t<I != num_queues> peek_all_recursion(F& f) const {
+    std::get<I>(qs_).peek_all(f);
+    peek_all_recursion<I + 1>(f);
   }
 
   template <size_t I>

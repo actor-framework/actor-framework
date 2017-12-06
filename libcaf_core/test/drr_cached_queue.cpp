@@ -64,12 +64,13 @@ struct fixture {
   inode_policy policy;
   queue_type queue{policy};
 
-  void fill(queue_type&) {
+  template <class Queue>
+  void fill(Queue&) {
     // nop
   }
 
-  template <class T, class... Ts>
-  void fill(queue_type& q, T x, Ts... xs) {
+  template <class Queue, class T, class... Ts>
+  void fill(Queue& q, T x, Ts... xs) {
     q.emplace_back(x);
     fill(q, xs...);
   }
@@ -84,8 +85,6 @@ CAF_TEST(default_constructed) {
   CAF_REQUIRE_EQUAL(queue.deficit(), 0);
   CAF_REQUIRE_EQUAL(queue.total_task_size(), 0);
   CAF_REQUIRE_EQUAL(queue.peek(), nullptr);
-  CAF_REQUIRE_EQUAL(queue.begin(), queue.end());
-  CAF_REQUIRE_EQUAL(queue.before_begin()->next, queue.end().ptr);
 }
 
 CAF_TEST(new_round) {
@@ -153,5 +152,34 @@ CAF_TEST(alternating_consumer) {
   CAF_CHECK_EQUAL(queue.deficit(), 0);
   CAF_CHECK_EQUAL(deep_to_string(queue.cache()), "[9]");
 }
+
+CAF_TEST(peek_all) {
+  auto queue_to_string = [&] {
+    std::string str;
+    auto peek_fun = [&](const inode& x) {
+      if (!str.empty())
+        str += ", ";
+      str += std::to_string(x.value);
+    };
+    queue.peek_all(peek_fun);
+    return str;
+  };
+  CAF_CHECK_EQUAL(queue_to_string(), "");
+  queue.emplace_back(2);
+  CAF_CHECK_EQUAL(queue_to_string(), "2");
+  queue.cache().emplace_back(1);
+  CAF_CHECK_EQUAL(queue_to_string(), "1, 2");
+  queue.emplace_back(3);
+  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3");
+}
+
+CAF_TEST(to_string) {
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[]");
+  fill(queue, 3, 4);
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 4]");
+  fill(queue.cache(), 1, 2);
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[1, 2, 3, 4]");
+}
+
 
 CAF_TEST_FIXTURE_SCOPE_END()

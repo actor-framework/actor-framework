@@ -22,6 +22,8 @@
 
 #include <utility>
 
+#include "caf/config.hpp"
+
 #include "caf/intrusive/forward_iterator.hpp"
 
 namespace caf {
@@ -126,13 +128,6 @@ public:
     return ptr != &tail_ ? promote(ptr) : nullptr;
   }
 
-  /// Applies `f` to each element in the queue.
-  template <class F>
-  void peek_all(F f) const {
-    for (auto i = begin(); i != end(); ++i)
-      f(*promote(i.ptr));
-  }
-
   // -- modifiers -------------------------------------------------------------
 
   /// Removes all elements from the queue.
@@ -141,37 +136,26 @@ public:
     init();
   }
 
-  /// Appends `ptr` to the queue.
-  /// @pre `ptr != nullptr`
-  bool push_back(pointer ptr) noexcept {
-    CAF_ASSERT(ptr != nullptr);
-    tail_.next->next = ptr;
-    tail_.next = ptr;
-    ptr->next = &tail_;
-    inc_total_task_size(*ptr);
-    return true;
-  }
-
-  /// Appends `ptr` to the queue.
-  /// @pre `ptr != nullptr`
-  bool push_back(unique_pointer ptr) noexcept {
-    return push_back(ptr.release());
-  }
-
-  /// Creates a new element from `xs...` and appends it.
-  template <class... Ts>
-  bool emplace_back(Ts&&... xs) {
-    return push_back(new value_type(std::forward<Ts>(xs)...));
-  }
-
   /// @private
   void inc_total_task_size(task_size_type x) noexcept {
+    CAF_ASSERT(x > 0);
     total_task_size_ += x;
   }
 
   /// @private
   void inc_total_task_size(const value_type& x) noexcept {
     inc_total_task_size(policy_.task_size(x));
+  }
+
+  /// @private
+  void dec_total_task_size(task_size_type x) noexcept {
+    CAF_ASSERT(x > 0);
+    total_task_size_ -= x;
+  }
+
+  /// @private
+  void dec_total_task_size(const value_type& x) noexcept {
+    dec_total_task_size(policy_.task_size(x));
   }
 
   // -- iterator access --------------------------------------------------------
@@ -216,6 +200,8 @@ public:
     return &tail_;
   }
 
+  // -- element access ---------------------------------------------------------
+
   /// Returns a pointer to the first element.
   pointer front() noexcept {
     return promote(head_.next);
@@ -224,6 +210,31 @@ public:
   /// Returns a pointer to the last element.
   pointer back() noexcept {
     return promote(tail_.next);
+  }
+
+  // -- insertion --------------------------------------------------------------
+
+  /// Appends `ptr` to the queue.
+  /// @pre `ptr != nullptr`
+  bool push_back(pointer ptr) noexcept {
+    CAF_ASSERT(ptr != nullptr);
+    tail_.next->next = ptr;
+    tail_.next = ptr;
+    ptr->next = &tail_;
+    inc_total_task_size(*ptr);
+    return true;
+  }
+
+  /// Appends `ptr` to the queue.
+  /// @pre `ptr != nullptr`
+  bool push_back(unique_pointer ptr) noexcept {
+    return push_back(ptr.release());
+  }
+
+  /// Creates a new element from `xs...` and appends it.
+  template <class... Ts>
+  bool emplace_back(Ts&&... xs) {
+    return push_back(new value_type(std::forward<Ts>(xs)...));
   }
 
   /// Transfers all element from `other` to the front of this queue.
@@ -237,7 +248,7 @@ public:
     }
     other.back()->next = head_.next;
     head_.next = other.front();
-    total_task_size_ += other.total_task_size();
+    inc_total_task_size(other.total_task_size());
     other.init();
   }
 
@@ -253,7 +264,7 @@ public:
     back()->next = other.front();
     other.back()->next = &tail_;
     tail_.next = other.back();
-    total_task_size_ += other.total_task_size();
+    inc_total_task_size(other.total_task_size());
     other.init();
   }
 
@@ -316,7 +327,7 @@ protected:
   node_type tail_;
 
   /// Stores the total size of all items in the queue.
-  task_size_type total_task_size_ = 0;
+  task_size_type total_task_size_;
 
   /// Used for LIFO -> FIFO insertion.
   node_pointer old_last_;
