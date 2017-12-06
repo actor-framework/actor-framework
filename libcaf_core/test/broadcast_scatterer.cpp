@@ -142,8 +142,10 @@ public:
   stream_slot next_slot;
 };
 
-// Needed by `SOME_BATCHES` macro.
+// Needed by `some` macro.
 struct not_empty_t {};
+
+constexpr auto some = not_empty_t{};
 
 // Provides the setup with alice, bob, and carl.
 struct fixture {
@@ -315,8 +317,6 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
                                 CONCAT(amount, __LINE__)}                      \
     <<
 
-//CAF_CHECK_EQUAL(CONCAT(who, __LINE__).credit_for(x),
-
 #define TOTAL                                                                  \
   CAF_CHECK_EQUAL(CONCAT(who, __LINE__).bs.total_credit(),                     \
                   CONCAT(amount, __LINE__))
@@ -324,10 +324,6 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
 #define BATCH(first, last) make_batch(first, last)
 
 #define AND <<
-
-#define NOTHING none
-
-#define SOME_BATCHES not_empty_t{}
 
 // -- unit tests ---------------------------------------------------------------
 
@@ -357,7 +353,7 @@ CAF_TEST(one_path_force) {
   }
   // Drain all elements except the last 5.
   AFTER ENTITY alice TRIED FORCE_SENDING 71 ELEMENTS {
-    ENTITY bob RECEIVED SOME_BATCHES;
+    ENTITY bob RECEIVED some;
     ENTITY alice HAS 0u CREDIT FOR bob;
   }
   // Give more credit than there are elements left.
@@ -367,7 +363,7 @@ CAF_TEST(one_path_force) {
   }
   // Give more credit than there are elements left.
   AFTER ENTITY alice TRIED FORCE_SENDING 5 ELEMENTS {
-    ENTITY bob RECEIVED NOTHING;
+    ENTITY bob RECEIVED none;
     ENTITY alice HAS 100u CREDIT FOR bob;
   }
 }
@@ -380,7 +376,7 @@ CAF_TEST(one_path_without_force) {
     alice.bs.push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED SENDING 3 ELEMENTS {
-    ENTITY bob RECEIVED NOTHING;
+    ENTITY bob RECEIVED none;
     ENTITY alice HAS 3u CREDIT FOR bob;
     ENTITY alice HAS 3u CREDIT TOTAL;
   }
@@ -396,7 +392,7 @@ CAF_TEST(one_path_without_force) {
   }
   // Drain all elements except the last 5.
   AFTER ENTITY alice TRIED SENDING 71 ELEMENTS {
-    ENTITY bob RECEIVED SOME_BATCHES;
+    ENTITY bob RECEIVED some;
     ENTITY alice HAS 5u CREDIT FOR bob;
   }
   // Give more credit than there are elements left.
@@ -406,7 +402,7 @@ CAF_TEST(one_path_without_force) {
   }
   // Give more credit than there are elements left.
   AFTER ENTITY alice TRIED SENDING 5 ELEMENTS {
-    ENTITY bob RECEIVED NOTHING;
+    ENTITY bob RECEIVED none;
     ENTITY alice HAS 100u CREDIT FOR bob;
   }
 }
@@ -442,8 +438,8 @@ CAF_TEST(two_paths_different_sizes_force) {
   }
   // Drain all elements except the last 5.
   AFTER ENTITY alice TRIED FORCE_SENDING 71 ELEMENTS {
-    ENTITY bob RECEIVED SOME_BATCHES;
-    ENTITY carl RECEIVED SOME_BATCHES;
+    ENTITY bob RECEIVED some;
+    ENTITY carl RECEIVED some;
     ENTITY alice HAS 0u CREDIT TOTAL;
   }
   // Give more credit than there are elements left.
@@ -456,8 +452,8 @@ CAF_TEST(two_paths_different_sizes_force) {
   }
   // Give more credit than there are elements left.
   AFTER ENTITY alice TRIED FORCE_SENDING 5 ELEMENTS {
-    ENTITY bob RECEIVED NOTHING;
-    ENTITY carl RECEIVED NOTHING;
+    ENTITY bob RECEIVED none;
+    ENTITY carl RECEIVED none;
     ENTITY alice HAS 200u CREDIT TOTAL;
   }
 }
@@ -471,15 +467,15 @@ CAF_TEST(two_paths_different_sizes_without_force) {
     alice.bs.push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED SENDING 3 ELEMENTS {
-    ENTITY bob RECEIVED NOTHING;
-    ENTITY carl RECEIVED NOTHING;
+    ENTITY bob RECEIVED none;
+    ENTITY carl RECEIVED none;
     ENTITY alice HAS 3u CREDIT FOR bob;
     ENTITY alice HAS 3u CREDIT FOR carl;
     ENTITY alice HAS 6u CREDIT TOTAL;
   }
   // Give 4 more credit.
   AFTER ENTITY alice TRIED SENDING 4 ELEMENTS {
-    ENTITY bob RECEIVED NOTHING;
+    ENTITY bob RECEIVED none;
     ENTITY carl RECEIVED BATCH(1, 7);
     ENTITY alice HAS 7u CREDIT FOR bob;
     ENTITY alice HAS 0u CREDIT FOR carl;
@@ -488,7 +484,7 @@ CAF_TEST(two_paths_different_sizes_without_force) {
   // Give 3 more credit (reaching 10 for bob).
   AFTER ENTITY alice TRIED SENDING 3 ELEMENTS {
     ENTITY bob RECEIVED BATCH(1, 10);
-    ENTITY carl RECEIVED NOTHING;
+    ENTITY carl RECEIVED none;
     ENTITY alice HAS 0u CREDIT FOR bob;
     ENTITY alice HAS 3u CREDIT FOR carl;
     ENTITY alice HAS 3u CREDIT TOTAL;
