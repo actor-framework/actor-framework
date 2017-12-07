@@ -16,28 +16,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SINK_IMPL_HPP
-#define CAF_STREAM_SINK_IMPL_HPP
+#ifndef CAF_DETAIL_STREAM_STAGE_IMPL_HPP
+#define CAF_DETAIL_STREAM_STAGE_IMPL_HPP
 
-#include "caf/config.hpp"
+#include "caf/downstream.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/message_id.hpp"
+#include "caf/outbound_path.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
-#include "caf/stream_sink_trait.hpp"
-#include "caf/terminal_stream_scatterer.hpp"
+#include "caf/stream_stage_trait.hpp"
 
 #include "caf/policy/arg.hpp"
 
 namespace caf {
+namespace detail {
 
-template <class Fun, class Finalize>
-class stream_sink_impl : public stream_manager {
+template <class Fun, class Cleanup, class DownstreamPolicy>
+class stream_stage_impl : public stream_manager {
 public:
-  using super = stream_manager;
-
-  using trait = stream_sink_trait_t<Fun, Finalize>;
+  using trait = stream_stage_trait_t<Fun>;
 
   using state_type = typename trait::state;
 
@@ -45,10 +43,10 @@ public:
 
   using output_type = typename trait::output;
 
-  stream_sink_impl(local_actor* self, Fun fun, Finalize fin)
+  stream_stage_impl(local_actor* self, Fun fun, Cleanup cleanup)
       : stream_manager(self),
         fun_(std::move(fun)),
-        fin_(std::move(fin)),
+        cleanup_(std::move(cleanup)),
         out_(self),
         open_inputs_(0) {
     // nop
@@ -58,25 +56,12 @@ public:
     return state_;
   }
 
-  terminal_stream_scatterer& out() override {
+  DownstreamPolicy& out() override {
     return out_;
   }
 
   bool done() const override {
-    return open_inputs_ == 0;
-  }
-
-  error handle(inbound_path*, downstream_msg::batch& x) override {
-    CAF_LOG_TRACE(CAF_ARG(msg));
-    using vec_type = std::vector<input_type>;
-    if (x.xs.match_elements<vec_type>()) {
-      auto& xs = x.xs.get_as<vec_type>(0);
-      for (auto& x : xs)
-        fun_(state_, std::move(x));
-      return none;
-    }
-    CAF_LOG_ERROR("received unexpected batch type");
-    return sec::unexpected_message;
+    return open_inputs_ == 0 && out_.clean();
   }
 
   void register_input_path(inbound_path* x) override {
@@ -91,28 +76,47 @@ public:
     --open_inputs_;
   }
 
-protected:
-  message make_final_result() override {
-    return trait::make_result(state_, fin_);
+  error handle(inbound_path*, downstream_msg::batch& x) override {
+    CAF_LOG_TRACE(CAF_ARG(msg));
+    using vec_type = std::vector<output_type>;
+    if (x.xs.match_elements<vec_type>()) {
+      auto& xs = x.xs.get_as<vec_type>(0);
+      downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
+      for (auto& x : xs)
+        fun_(state_, ds, std::move(x));
+      return none;
+    }
+    CAF_LOG_ERROR("received unexpected batch type");
+    return sec::unexpected_message;
+  }
+
+  message make_output_token(const stream_id&) const override {
+    // TODO: return make_message(stream<output_type>{x});
+    return make_message();
+  }
+
+  bool congested() const override {
+    return out_.buffered() >= 30;
   }
 
 private:
   state_type state_;
   Fun fun_;
-  Finalize fin_;
-  terminal_stream_scatterer out_;
+  Cleanup cleanup_;
+  DownstreamPolicy out_;
   long open_inputs_;
 };
 
-template <class Init, class Fun, class Finalize>
-stream_manager_ptr make_receiving_manager(local_actor* self, Init init, Fun f,
-                                          Finalize fin) {
-  using impl = stream_sink_impl<Fun, Finalize>;
-  auto ptr = make_counted<impl>(self, std::move(f), std::move(fin));
+template <class Init, class Fun, class Cleanup, class Scatterer>
+stream_manager_ptr make_stream_stage(local_actor* self, Init init, Fun f,
+                                     Cleanup cleanup, policy::arg<Scatterer>) {
+  using impl = stream_stage_impl<Fun, Cleanup, Scatterer>;
+  auto ptr = make_counted<impl>(self, std::move(f), std::move(cleanup));
   init(ptr->state());
   return ptr;
 }
 
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_STREAM_SINK_IMPL_HPP
+#endif // CAF_DETAIL_STREAM_STAGE_IMPL_HPP

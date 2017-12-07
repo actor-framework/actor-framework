@@ -45,10 +45,7 @@
 #include "caf/send.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_scatterer.hpp"
-#include "caf/stream_sink_impl.hpp"
 #include "caf/stream_slot.hpp"
-#include "caf/stream_source_impl.hpp"
-#include "caf/stream_stage_impl.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/upstream_msg.hpp"
 #include "caf/variant.hpp"
@@ -66,6 +63,9 @@
 #include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 
 #include "caf/detail/overload.hpp"
+#include "caf/detail/stream_sink_impl.hpp"
+#include "caf/detail/stream_source_impl.hpp"
+#include "caf/detail/stream_stage_impl.hpp"
 
 using std::vector;
 
@@ -300,8 +300,8 @@ public:
     auto fin = [=](const int& x) {
       return x == num_messages;
     };
-    auto ptr = make_stream_source(this, init, f, fin,
-                                  policy::arg<broadcast_scatterer<int>>::value);
+    policy::arg<broadcast_scatterer<int>> token;
+    auto ptr = detail::make_stream_source(this, init, f, fin, token);
     ptr->generate_messages();
     pending_managers_.emplace(slot, std::move(ptr));
   }
@@ -324,8 +324,8 @@ public:
     auto cleanup = [](log_ptr&) {
       // nop
     };
-    forwarder = make_stream_stage(this, init, f, cleanup,
-                                  policy::arg<broadcast_scatterer<int>>::value);
+    policy::arg<broadcast_scatterer<int>> token;
+    forwarder = detail::make_stream_stage(this, init, f, cleanup, token);
     pending_managers_.emplace(slot, forwarder);
   }
 
@@ -349,8 +349,8 @@ public:
       auto fin = [](log_ptr&) {
         // nop
       };
-      mgr = make_receiving_manager(this, std::move(init), std::move(f),
-                                   std::move(fin));
+      mgr = detail::make_stream_sink(this, std::move(init), std::move(f),
+                                     std::move(fin));
     }
     // mgr->out().add_path(id, hs.prev_stage);
     managers_.emplace(id, mgr);
