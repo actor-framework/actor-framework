@@ -19,17 +19,19 @@
 #ifndef CAF_STREAM_STAGE_IMPL_HPP
 #define CAF_STREAM_STAGE_IMPL_HPP
 
-#include "caf/sec.hpp"
-#include "caf/logger.hpp"
 #include "caf/downstream.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/outbound_path.hpp"
+#include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_stage_trait.hpp"
 
+#include "caf/policy/arg.hpp"
+
 namespace caf {
 
-template <class Fun, class Cleanup,
-          class UpstreamPolicy, class DownstreamPolicy>
+template <class Fun, class Cleanup, class DownstreamPolicy>
 class stream_stage_impl : public stream_manager {
 public:
   using trait = stream_stage_trait_t<Fun>;
@@ -40,12 +42,12 @@ public:
 
   using output_type = typename trait::output;
 
-  stream_stage_impl(local_actor* self, const stream_id&,
-                    Fun fun, Cleanup cleanup)
-      : fun_(std::move(fun)),
+  stream_stage_impl(local_actor* self, Fun fun, Cleanup cleanup)
+      : stream_manager(self),
+        fun_(std::move(fun)),
         cleanup_(std::move(cleanup)),
         out_(self),
-        in_(self, out_) {
+        open_inputs_(0) {
     // nop
   }
 
@@ -53,36 +55,34 @@ public:
     return state_;
   }
 
-  UpstreamPolicy& in() override {
-    return in_;
-  }
-
   DownstreamPolicy& out() override {
     return out_;
   }
 
   bool done() const override {
-    return in_.closed() && out_.closed();
+    return open_inputs_ == 0 && out_.clean();
   }
 
-protected:
-  void input_closed(error reason) override {
-    if (reason == none) {
-      if (out_.buffered() == 0)
-        out_.close();
-    } else {
-      out_.abort(std::move(reason));
-    }
+  void register_input_path(inbound_path* x) override {
+    CAF_LOG_TRACE(CAF_ARG(*x));
+    CAF_IGNORE_UNUSED(x);
+    ++open_inputs_;
   }
 
-  error process_batch(message& msg) override {
+  void deregister_input_path(inbound_path* x) noexcept override {
+    CAF_LOG_TRACE(CAF_ARG(*x));
+    CAF_IGNORE_UNUSED(x);
+    --open_inputs_;
+  }
+
+  error handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(msg));
     using vec_type = std::vector<output_type>;
-    if (msg.match_elements<vec_type>()) {
-      auto& xs = msg.get_as<vec_type>(0);
+    if (x.xs.match_elements<vec_type>()) {
+      auto& xs = x.xs.get_as<vec_type>(0);
       downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
       for (auto& x : xs)
-        fun_(state_, ds, x);
+        fun_(state_, ds, std::move(x));
       return none;
     }
     CAF_LOG_ERROR("received unexpected batch type");
@@ -90,11 +90,12 @@ protected:
   }
 
   message make_output_token(const stream_id& x) const override {
-    return make_message(stream<output_type>{x});
+    // TODO: return make_message(stream<output_type>{x});
+    return make_message();
   }
 
-  void downstream_demand(outbound_path*, long) override {
-    // TODO: implement me
+  bool congested() const override {
+    return out_.buffered() >= 30;
   }
 
 private:
@@ -102,8 +103,17 @@ private:
   Fun fun_;
   Cleanup cleanup_;
   DownstreamPolicy out_;
-  UpstreamPolicy in_;
+  long open_inputs_;
 };
+
+template <class Init, class Fun, class Cleanup, class Scatterer>
+stream_manager_ptr make_stream_stage(local_actor* self, Init init, Fun f,
+                                     Cleanup cleanup, policy::arg<Scatterer>) {
+  using impl = stream_stage_impl<Fun, Cleanup, Scatterer>;
+  auto ptr = make_counted<impl>(self, std::move(f), std::move(cleanup));
+  init(ptr->state());
+  return ptr;
+}
 
 } // namespace caf
 

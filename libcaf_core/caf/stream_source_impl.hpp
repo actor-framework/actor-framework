@@ -19,11 +19,14 @@
 #ifndef CAF_STREAM_SOURCE_IMPL_HPP
 #define CAF_STREAM_SOURCE_IMPL_HPP
 
-#include "caf/logger.hpp"
 #include "caf/downstream.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/outbound_path.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_source_trait.hpp"
+
+#include "caf/policy/arg.hpp"
 
 namespace caf {
 
@@ -37,14 +40,16 @@ public:
   using output_type = typename trait::output;
 
   stream_source_impl(local_actor* self, Fun fun, Predicate pred)
-      : fun_(std::move(fun)),
+      : stream_manager(self),
+        at_end_(false),
+        fun_(std::move(fun)),
         pred_(std::move(pred)),
         out_(self) {
     // nop
   }
 
   bool done() const override {
-    return at_end() && out_.paths_clean();
+    return at_end_ && out_.clean();
   }
 
 
@@ -52,48 +57,44 @@ public:
     return out_;
   }
 
+
   bool generate_messages() override {
-    // Produce new elements. If we have less elements buffered (bsize) than fit
-    // into a single batch (dbs = desired batch size) then we fill up the
-    // buffer up to that point. Otherwise, we fill up the buffer up to its
-    // capacity since we are currently waiting for downstream demand and can
-    // use the delay to store batches upfront.
-    size_t size_hint;
-    auto bsize = out_.buffered();
-    auto dbs  = out_.desired_batch_size();
-    if (bsize < dbs) {
-      size_hint= static_cast<size_t>(dbs - bsize);
-    } else {
-      auto bmax = out_.min_buffer_size();
-      if (bsize < bmax)
-        size_hint = static_cast<size_t>(bmax - bsize);
-      else
-        return false;
-    }
+    if (at_end_)
+      return false;
+    auto hint = out_.capacity();
+    if (hint == 0)
+      return false;
     downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
-    fun_(state_, ds, size_hint);
-    return out_.buffered() != bsize;
+    fun_(state_, ds, hint);
+    if (pred_(state_))
+      at_end_ = true;
+    return hint != out_.capacity();
   }
 
   state_type& state() {
     return state_;
   }
 
-protected:
-  bool at_end() const {
-    return pred_(state_);
-  }
-
-  void downstream_demand(outbound_path*, long) override {
-    // TODO: implment me
+  bool at_end() const noexcept {
+    return at_end_;;
   }
 
 private:
+  bool at_end_;
   state_type state_;
   Fun fun_;
   Predicate pred_;
   DownstreamPolicy out_;
 };
+
+template <class Init, class Fun, class Predicate, class Scatterer>
+stream_manager_ptr make_stream_source(local_actor* self, Init init, Fun f,
+                                      Predicate p, policy::arg<Scatterer>) {
+  using impl = stream_source_impl < Fun, Predicate, Scatterer>;
+  auto ptr = make_counted<impl>(self, std::move(f), std::move(p));
+  init(ptr->state());
+  return ptr;
+}
 
 } // namespace caf
 

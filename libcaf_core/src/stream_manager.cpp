@@ -87,6 +87,10 @@ void stream_manager::push() {
   out().emit_batches();
 }
 
+bool stream_manager::congested() const {
+  return false;
+}
+
 bool stream_manager::generate_messages() {
   return false;
 }

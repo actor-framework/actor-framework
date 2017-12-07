@@ -104,6 +104,10 @@ public:
   /// pushed data is limited by the available credit.
   virtual void push();
 
+  /// Returns true if the handler is not able to process any further batches
+  /// since it is unable to make progress sending on its own.
+  virtual bool congested() const;
+
   // -- implementation hooks for sources ---------------------------------------
 
   /// Tries to generate new messages for the stream. This member function does

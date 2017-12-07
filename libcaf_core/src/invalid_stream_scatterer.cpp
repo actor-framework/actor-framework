@@ -35,6 +35,10 @@ void invalid_stream_scatterer::emit_batches() {
   // nop
 }
 
+void invalid_stream_scatterer::force_emit_batches() {
+  // nop
+}
+
 size_t invalid_stream_scatterer::capacity() const noexcept {
   return 0u;
 }

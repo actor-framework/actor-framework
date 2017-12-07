@@ -19,15 +19,20 @@
 #ifndef CAF_STREAM_SINK_IMPL_HPP
 #define CAF_STREAM_SINK_IMPL_HPP
 
-#include "caf/sec.hpp"
+#include "caf/config.hpp"
 #include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/message_id.hpp"
+#include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_sink_trait.hpp"
+#include "caf/terminal_stream_scatterer.hpp"
+
+#include "caf/policy/arg.hpp"
 
 namespace caf {
 
-template <class Fun, class Finalize, class Gatherer, class Scatterer>
+template <class Fun, class Finalize>
 class stream_sink_impl : public stream_manager {
 public:
   using super = stream_manager;
@@ -41,10 +46,11 @@ public:
   using output_type = typename trait::output;
 
   stream_sink_impl(local_actor* self, Fun fun, Finalize fin)
-      : fun_(std::move(fun)),
+      : stream_manager(self),
+        fun_(std::move(fun)),
         fin_(std::move(fin)),
         out_(self),
-        in_(self, out_) {
+        open_inputs_(0) {
     // nop
   }
 
@@ -52,32 +58,40 @@ public:
     return state_;
   }
 
-  Gatherer& in() override {
-    return in_;
-  }
-
-  Scatterer& out() override {
+  terminal_stream_scatterer& out() override {
     return out_;
   }
 
   bool done() const override {
-    return in_.closed();
+    return open_inputs_ == 0;
   }
 
-protected:
-  error process_batch(message& msg) override {
+  error handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(msg));
     using vec_type = std::vector<input_type>;
-    if (msg.match_elements<vec_type>()) {
-      auto& xs = msg.get_as<vec_type>(0);
+    if (x.xs.match_elements<vec_type>()) {
+      auto& xs = x.xs.get_as<vec_type>(0);
       for (auto& x : xs)
-        fun_(state_, x);
+        fun_(state_, std::move(x));
       return none;
     }
     CAF_LOG_ERROR("received unexpected batch type");
     return sec::unexpected_message;
   }
 
+  void register_input_path(inbound_path* x) override {
+    CAF_LOG_TRACE(CAF_ARG(*x));
+    CAF_IGNORE_UNUSED(x);
+    ++open_inputs_;
+  }
+
+  void deregister_input_path(inbound_path* x) noexcept override {
+    CAF_LOG_TRACE(CAF_ARG(*x));
+    CAF_IGNORE_UNUSED(x);
+    --open_inputs_;
+  }
+
+protected:
   message make_final_result() override {
     return trait::make_result(state_, fin_);
   }
@@ -86,9 +100,18 @@ private:
   state_type state_;
   Fun fun_;
   Finalize fin_;
-  Scatterer out_;
-  Gatherer in_;
+  terminal_stream_scatterer out_;
+  long open_inputs_;
 };
+
+template <class Init, class Fun, class Finalize>
+stream_manager_ptr make_receiving_manager(local_actor* self, Init init, Fun f,
+                                          Finalize fin) {
+  using impl = stream_sink_impl<Fun, Finalize>;
+  auto ptr = make_counted<impl>(self, std::move(f), std::move(fin));
+  init(ptr->state());
+  return ptr;
+}
 
 } // namespace caf
 

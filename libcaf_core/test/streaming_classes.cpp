@@ -25,6 +25,9 @@
 // The setup is a fixed WDRR queue with three nestes queues. The first nested
 // queue stores asynchronous messages, the second one upstream messages, and
 // the last queue is a dynamic WDRR queue storing downstream messages.
+//
+// We mock just enough of an actor to use the streaming classes and put them to
+// work in a pipeline with 2 or 3 stages.
 
 #define CAF_SUITE streaming_classes
 
@@ -42,10 +45,15 @@
 #include "caf/send.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_scatterer.hpp"
+#include "caf/stream_sink_impl.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/stream_source_impl.hpp"
+#include "caf/stream_stage_impl.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/upstream_msg.hpp"
 #include "caf/variant.hpp"
+
+#include "caf/policy/arg.hpp"
 
 #include "caf/mixin/sender.hpp"
 
@@ -112,93 +120,6 @@ const char* name_of(const actor_addr& x) {
   return name_of(actor_cast<strong_actor_ptr>(x));
 }
 
-// -- manager and path handlers ------------------------------------------------
-
-class mock_manager : public stream_manager {
-public:
-  mock_manager(local_actor* selfptr)
-      : stream_manager(selfptr),
-        open_inputs(0),
-        out_(selfptr) {
-    // nop
-  }
-
-  bool done() const override {
-    return open_inputs == 0 && out_.clean();
-  }
-
-  void register_input_path(inbound_path* x) override {
-    CAF_MESSAGE(out_.self()->name() << " receives stream input from "
-                << name_of(x->hdl));
-    ++open_inputs;
-  }
-
-  void deregister_input_path(inbound_path* x) noexcept override {
-    CAF_MESSAGE(out_.self()->name() << " no longer receives stream input from "
-                << name_of(x->hdl));
-    --open_inputs;
-  }
-
-  stream_scatterer& out() override {
-    return out_;
-  }
-
-protected:
-  int open_inputs;
-  broadcast_scatterer<int> out_;
-};
-
-class sending_manager : public mock_manager {
-public:
-  sending_manager(local_actor* selfptr, int num_messages)
-      : mock_manager(selfptr) {
-    for (int i = 0; i < num_messages; ++i)
-      out_.push(i);
-  }
-};
-
-class receiving_manager : public mock_manager {
-public:
-  receiving_manager(local_actor* selfptr, vector<int>& log)
-      : mock_manager(selfptr),
-        log_(log) {
-    // nop
-  }
-
-  error handle(inbound_path*, downstream_msg::batch& x) override {
-    CAF_REQUIRE(x.xs.match_elements<vector<int>>());
-    auto& xs = x.xs.get_as<vector<int>>(0);
-    for (auto x : xs)
-      log_.push_back(x);
-    return none;
-  }
-
-private:
-  vector<int>& log_;
-};
-
-class forwarding_manager : public mock_manager {
-public:
-  forwarding_manager(local_actor* selfptr, vector<int>& log)
-      : mock_manager(selfptr),
-        log_(log) {
-    // nop
-  }
-
-  error handle(inbound_path*, downstream_msg::batch& x) override {
-    CAF_REQUIRE(x.xs.match_elements<vector<int>>());
-    auto& xs = x.xs.get_as<vector<int>>(0);
-    for (auto x : xs) {
-      log_.push_back(x);
-      out_.push(x);
-    }
-    return none;
-  }
-
-private:
-  vector<int>& log_;
-};
-
 // -- policies and queues ------------------------------------------------------
 
 struct policy_base {
@@ -222,8 +143,8 @@ struct default_queue_policy : policy_base {
 using default_queue = drr_queue<default_queue_policy>;
 
 struct umsg_queue_policy : policy_base {
-  sending_manager* mgr;
-  umsg_queue_policy(sending_manager* ptr) : mgr(ptr) {
+  stream_manager* mgr;
+  umsg_queue_policy(stream_manager* ptr) : mgr(ptr) {
     // nop
   }
   static inline task_size_type task_size(const mailbox_element&) {
@@ -270,8 +191,8 @@ struct dmsg_queue_policy : policy_base {
   }
 
   template <class Queue>
-  static inline bool enabled(const Queue&) {
-    return true;
+  static inline bool enabled(const Queue& q) {
+    return !q.policy().handler->mgr->congested();
   }
 
   template <class Queue>
@@ -368,7 +289,20 @@ public:
     strong_actor_ptr to = ref.ctrl();
     send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
                              stream_priority::normal, false});
-    auto ptr = make_counted<sending_manager>(this, num_messages);
+    auto init = [](int& x) {
+      x = 0;
+    };
+    auto f = [=](int& x, downstream<int>& out, size_t hint) {
+      auto y = std::min(num_messages, x + static_cast<int>(hint));
+      while (x < y)
+        out.push(x++);
+    };
+    auto fin = [=](const int& x) {
+      return x == num_messages;
+    };
+    auto ptr = make_stream_source(this, init, f, fin,
+                                  policy::arg<broadcast_scatterer<int>>::value);
+    ptr->generate_messages();
     pending_managers_.emplace(slot, std::move(ptr));
   }
 
@@ -379,7 +313,19 @@ public:
     strong_actor_ptr to = ref.ctrl();
     send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
                              stream_priority::normal, false});
-    forwarder = make_counted<forwarding_manager>(this, data);
+    using log_ptr = vector<int>*;
+    auto init = [&](log_ptr& ptr) {
+      ptr = &data;
+    };
+    auto f = [](log_ptr& ptr, downstream<int>& out, int x) {
+      ptr->push_back(x);
+      out.push(x);
+    };
+    auto cleanup = [](log_ptr&) {
+      // nop
+    };
+    forwarder = make_stream_stage(this, init, f, cleanup,
+                                  policy::arg<broadcast_scatterer<int>>::value);
     pending_managers_.emplace(slot, forwarder);
   }
 
@@ -392,8 +338,20 @@ public:
     // Create required state if no forwarder exists yet, otherwise `forward_to`
     // was called and we run as a stage.
     auto mgr = forwarder;
-    if (mgr == nullptr)
-      mgr = make_counted<receiving_manager>(this, data);
+    if (mgr == nullptr) {
+      using log_ptr = vector<int>*;
+      auto init = [&](log_ptr& ptr) {
+        ptr = &data;
+      };
+      auto f = [](log_ptr& ptr, int x) {
+        ptr->push_back(x);
+      };
+      auto fin = [](log_ptr&) {
+        // nop
+      };
+      mgr = make_receiving_manager(this, std::move(init), std::move(f),
+                                   std::move(fin));
+    }
     // mgr->out().add_path(id, hs.prev_stage);
     managers_.emplace(id, mgr);
     // Create a new queue in the mailbox for incoming traffic.
@@ -422,6 +380,7 @@ public:
     auto out = i->second->out().add_path(slots.invert(), to);
     out->open_credit = x.initial_demand;
     out->desired_batch_size = x.desired_batch_size;
+    i->second->generate_messages();
     i->second->push();
     pending_managers_.erase(i);
   }
@@ -440,6 +399,7 @@ public:
     out->open_credit += x.new_capacity;
     out->desired_batch_size = x.desired_batch_size;
     out->next_ack_id = x.acknowledged_id + 1;
+    i->second->generate_messages();
     i->second->push();
     if (i->second->done()) {
       CAF_MESSAGE(name_ << " is done sending batches");
@@ -519,6 +479,8 @@ struct msg_visitor {
       [&](downstream_msg::batch& y) {
         TRACE(self->name(), batch, CAF_ARG(y.xs));
         inptr->mgr->handle(inptr, y);
+        inptr->mgr->generate_messages();
+        inptr->mgr->push();
         if (!inptr->mgr->done()) {
           auto to = inptr->hdl->get();
           to->eq_impl(make_message_id(), self->ctrl(), nullptr,
@@ -534,7 +496,6 @@ struct msg_visitor {
       [&](downstream_msg::close& y) {
         TRACE(self->name(), close, CAF_ARG(dm.slots));
         auto slots = dm.slots;
-        TRACE(self->name(), close, CAF_ARG(slots));
         auto i = self->managers_.find(slots);
         CAF_REQUIRE_NOT_EQUAL(i, self->managers_.end());
         i->second->handle(inptr, y);
@@ -628,9 +589,20 @@ CAF_TEST(depth_2_pipeline) {
 
 CAF_TEST(depth_3_pipeline) {
   bob.forward_to(carl);
-  alice.start_streaming(bob, 100);
+  alice.start_streaming(bob, 110);
+  CAF_MESSAGE("loop over alice and bob until bob is congested");
   loop(alice, bob);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, 100));
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
+  CAF_MESSAGE("loop over bob and carl until bob finsihed sending");
+  // bob has one batch from alice in its mailbox that bob will read when
+  // becoming uncongested again
+  loop(bob, carl);
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, 40));
+  CAF_CHECK_EQUAL(carl.data, make_iota(0, 40));
+  CAF_MESSAGE("loop over all until done");
+  loop(alice ,bob, carl);
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, 110));
+  CAF_CHECK_EQUAL(carl.data, make_iota(0, 110));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
