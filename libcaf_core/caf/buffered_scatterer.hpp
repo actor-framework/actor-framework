@@ -83,7 +83,7 @@ public:
   size_t capacity() const noexcept override {
     // TODO: get rid of magic number
     static constexpr size_t max_buf_size = 100;
-    return buf_.size() < max_buf_size ? buf_.size() - max_buf_size : 0u;
+    return buf_.size() < max_buf_size ? max_buf_size - buf_.size() : 0u;
   }
 
   size_t buffered() const noexcept override {
