@@ -113,7 +113,9 @@ private:
           p.emit_batch(this->self_, dbs, make_message(std::move(tmp)));
           i += dbs;
         }
-        if (std::distance(i, e) > 0) {
+        if (i == e) {
+          c.clear();
+        } else {
           c.erase(c.begin(), i);
           f(p, c);
         }
