@@ -23,6 +23,7 @@
 #include <cstdint>
 
 #include "caf/actor_control_block.hpp"
+#include "caf/downstream_msg.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_priority.hpp"
@@ -48,11 +49,14 @@ public:
   /// Points to the manager responsible for incoming traffic.
   stream_manager_ptr mgr;
 
+  /// Handle to the source.
+  strong_actor_ptr hdl;
+
   /// Stores slot IDs for sender (hdl) and receiver (self).
   stream_slots slots;
 
-  /// Handle to the source.
-  strong_actor_ptr hdl;
+  /// Amount of credit we have signaled upstream.
+  int32_t assigned_credit;
 
   /// Priority of incoming batches from this source.
   stream_priority prio;
@@ -63,12 +67,6 @@ public:
   /// ID of the last received batch.
   int64_t last_batch_id;
 
-  /// Amount of credit we have signaled upstream.
-  long assigned_credit;
-
-  /// Ideal size for individual batches.
-  long desired_batch_size;
-
   /// Stores whether the source actor is failsafe, i.e., allows the runtime to
   /// redeploy it on failure.
   bool redeployable;
@@ -77,6 +75,40 @@ public:
   /// whether the destructor sends `close` or `forced_close` messages.
   error shutdown_reason;
 
+  /// Keep track of measurements for the last 10 batches.
+  static constexpr size_t stats_sampling_size = 16;
+
+  /// Stores statistics for measuring complexity of incoming batches.
+  struct stats_t {
+    struct measurement {
+      long batch_size;
+      std::chrono::nanoseconds calculation_time;
+    };
+
+    struct calculation_result {
+      long max_throughput;
+      long items_per_batch;
+    };
+
+    stats_t();
+
+    /// Stores `stats_sampling_size` measurements in a ring.
+    std::vector<measurement> measurements;
+
+    /// Current position in `measurements`
+    size_t ring_iter;
+
+    /// Returns the maximum number of items this actor could handle for given
+    /// cycle length.
+    calculation_result calculate(std::chrono::nanoseconds cycle,
+                                 std::chrono::nanoseconds desired_complexity);
+
+    /// Stores a new measurement in the ring buffer.
+    void store(measurement x);
+  };
+
+  stats_t stats;
+
   /// Constructs a path for given handle and stream ID.
   inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
                strong_actor_ptr ptr);
@@ -84,15 +116,24 @@ public:
   ~inbound_path();
 
   /// Updates `last_batch_id` and `assigned_credit`.
-  void handle_batch(long batch_size, int64_t batch_id);
+  //void handle_batch(long batch_size, int64_t batch_id);
+
+  void handle(downstream_msg::batch& x);
 
   /// Emits a `stream_msg::ack_batch` on this path and sets `assigned_credit`
   /// to `initial_demand`.
-  void emit_ack_open(local_actor* self, actor_addr rebind_from, long initial_demand,
+  void emit_ack_open(local_actor* self, actor_addr rebind_from,
                      bool is_redeployable);
 
-  /// Sends a `stream_msg::ack_batch`.
-  void emit_ack_batch(local_actor* self, long new_demand);
+  /// Sends a `stream_msg::ack_batch` with credit for the next round. Credit is
+  /// calculated as `max_queue_size - (assigned_credit - queued_items)`, whereas
+  /// `max_queue_size` is `2 * ...`.
+  /// @param self Points to the parent actor.
+  /// @param queued_items Counts the accumulated size of all batches that are
+  ///                     currently waiting in the mailbox.
+  void emit_ack_batch(local_actor* self, long queued_items,
+                      std::chrono::nanoseconds cycle,
+                      std::chrono::nanoseconds desired_batch_complexity);
 
   /// Sends a `stream_msg::close` on this path.
   void emit_regular_shutdown(local_actor* self);
