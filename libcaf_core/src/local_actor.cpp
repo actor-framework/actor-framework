@@ -16,6 +16,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/local_actor.hpp"
+
 #include <string>
 #include <condition_variable>
 
@@ -26,27 +28,16 @@
 #include "caf/resumable.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/exit_reason.hpp"
-#include "caf/local_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/detail/private_thread.hpp"
-#include "caf/detail/sync_request_bouncer.hpp"
-
 namespace caf {
-
-namespace {
-
-constexpr auto mpol = mailbox_policy{};
-
-} // namespace <anonymous>
 
 local_actor::local_actor(actor_config& cfg)
     : monitorable_actor(cfg),
-      mailbox_(mpol, mpol, mpol, mpol, mpol),
       context_(cfg.host),
       initial_behavior_fac_(std::move(cfg.init_fun)) {
   // nop
@@ -126,33 +117,12 @@ void local_actor::initialize() {
 
 bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(fail_state));
-  if (!mailbox_.closed()) {
-    mailbox_.close();
-    // TODO: messages that are stuck in the cache can get lost
-    detail::sync_request_bouncer bounce{fail_state};
-    while (mailbox_.queue().new_round(1000, bounce))
-      ; // nop
-  }
   // tell registry we're done
   unregister_from_system();
   monitorable_actor::cleanup(std::move(fail_state), host);
   clock().cancel_timeouts(this);
   CAF_LOG_TERMINATE_EVENT(this, fail_state);
   return true;
-}
-
-void local_actor::push_to_cache(mailbox_element_ptr ptr) {
-  using namespace intrusive;
-  auto& p = mailbox_.queue().policy();
-  auto ts = p.task_size(*ptr);
-  auto& qs = mailbox_.queue().queues();
-  drr_cached_queue<mailbox_policy>* q;
-  if (p.id_of(*ptr) == mailbox_policy::default_queue_index)
-    q = &std::get<mailbox_policy::default_queue_index>(qs);
-  else
-    q = &std::get<mailbox_policy::high_priority_queue_index>(qs);
-  q->inc_total_task_size(ts);
-  q->cache().push_back(ptr.release());
 }
 
 } // namespace caf

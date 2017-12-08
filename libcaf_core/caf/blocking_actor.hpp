@@ -23,26 +23,27 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "caf/fwd.hpp"
-#include "caf/send.hpp"
-#include "caf/none.hpp"
-#include "caf/after.hpp"
-#include "caf/extend.hpp"
-#include "caf/behavior.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/typed_actor.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_marker.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/after.hpp"
+#include "caf/behavior.hpp"
+#include "caf/extend.hpp"
+#include "caf/fwd.hpp"
 #include "caf/is_timeout_or_catch_all.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/mailbox_policy.hpp"
+#include "caf/none.hpp"
+#include "caf/send.hpp"
+#include "caf/typed_actor.hpp"
 
-#include "caf/detail/type_list.hpp"
 #include "caf/detail/apply_args.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/blocking_behavior.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
 
-#include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
 #include "caf/mixin/subscriber.hpp"
 
 namespace caf {
@@ -67,6 +68,12 @@ class blocking_actor
       public dynamically_typed_actor_base {
 public:
   // -- member types -----------------------------------------------------------
+
+  /// Base type.
+  using super = extended_base;
+
+  /// A queue optimized for single-reader-many-writers.
+  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
   /// Absolute timeout type.
   using timeout_type = std::chrono::high_resolution_clock::time_point;
@@ -331,6 +338,10 @@ public:
   /// The default implementation simply returns `next_message()`.
   virtual mailbox_element_ptr dequeue();
 
+  /// Returns the queue for storing incoming messages.
+  inline mailbox_type& mailbox() {
+    return mailbox_;
+  }
   /// @cond PRIVATE
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
@@ -371,6 +382,8 @@ public:
   void receive_impl(receive_cond& rcc, message_id mid,
                     detail::blocking_behavior& bhvr);
 
+  bool cleanup(error&& fail_state, execution_unit* host) override;
+
   /// @endcond
 
 private:
@@ -392,6 +405,11 @@ private:
       res += attach_functor(x);
     return res;
   }
+
+  // -- member variables -------------------------------------------------------
+
+  // used by both event-based and blocking actors
+  mailbox_type mailbox_;
 };
 
 } // namespace caf

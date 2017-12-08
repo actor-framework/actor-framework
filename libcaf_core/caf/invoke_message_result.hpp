@@ -19,6 +19,8 @@
 #ifndef CAF_INVOKE_MESSAGE_RESULT_HPP
 #define CAF_INVOKE_MESSAGE_RESULT_HPP
 
+#include <string>
+
 namespace caf {
 
 enum invoke_message_result {

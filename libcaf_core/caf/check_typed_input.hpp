@@ -23,7 +23,6 @@
 #include "caf/replies_to.hpp"
 
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
 

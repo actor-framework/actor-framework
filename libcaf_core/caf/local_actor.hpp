@@ -21,12 +21,10 @@
 
 #include <atomic>
 #include <cstdint>
-#include <utility>
 #include <exception>
 #include <functional>
 #include <type_traits>
-#include <forward_list>
-#include <unordered_map>
+#include <utility>
 
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_group.hpp"
@@ -39,13 +37,7 @@
 #include "caf/delegated.hpp"
 #include "caf/duration.hpp"
 #include "caf/error.hpp"
-#include "caf/execution_unit.hpp"
-#include "caf/exit_reason.hpp"
-#include "caf/extend.hpp"
 #include "caf/fwd.hpp"
-#include "caf/invoke_message_result.hpp"
-#include "caf/logger.hpp"
-#include "caf/mailbox_policy.hpp"
 #include "caf/message.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/message_id.hpp"
@@ -58,44 +50,14 @@
 #include "caf/typed_actor.hpp"
 #include "caf/typed_response_promise.hpp"
 
-#include "caf/intrusive/fifo_inbox.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
-
-#include "caf/detail/disposer.hpp"
-#include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
-
-namespace detail {
-
-template <class... Ts>
-struct make_response_promise_helper {
-  using type = typed_response_promise<Ts...>;
-};
-
-template <class... Ts>
-struct make_response_promise_helper<typed_response_promise<Ts...>>
-    : make_response_promise_helper<Ts...> {};
-
-template <>
-struct make_response_promise_helper<response_promise> {
-  using type = response_promise;
-};
-
-} // namespace detail
 
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
 class local_actor : public monitorable_actor {
 public:
-
-  // -- member types -----------------------------------------------------------
-
-  /// A queue optimized for single-reader-many-writers.
-  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   local_actor(actor_config& cfg);
@@ -119,7 +81,8 @@ public:
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   infer_handle_from_class_t<T> spawn(Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(cfg, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(
+                           cfg, std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options>
@@ -132,46 +95,57 @@ public:
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_functor<make_unbound(Os)>(cfg, fun, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_functor<make_unbound(Os)>(
+                           cfg, fun, std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class Groups,
             class... Ts>
   actor spawn_in_groups(const Groups& gs, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
+                           cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
+                           cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... xs) {
     actor_config cfg{context()};
     auto first = &grp;
-    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(cfg, first, first + 1, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
+                           cfg, first, first + 1, std::forward<Ts>(xs)...));
   }
 
-  template <spawn_options Os = no_spawn_options, class Groups, class F, class... Ts>
+  template <spawn_options Os = no_spawn_options, class Groups, class F,
+            class... Ts>
   actor spawn_in_groups(const Groups& gs, F fun, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
+    return eval_opts(
+      Os, system().spawn_fun_in_groups<make_unbound(Os)>(
+            cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
+    return eval_opts(
+      Os, system().spawn_fun_in_groups<make_unbound(Os)>(
+            cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   actor spawn_in_group(const group& grp, F fun, Ts&&... xs) {
     actor_config cfg{context()};
     auto first = &grp;
-    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
+    return eval_opts(Os,
+                     system().spawn_fun_in_groups<make_unbound(Os)>(
+                       cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
   }
 
   // -- sending asynchronous messages ------------------------------------------
@@ -404,26 +378,14 @@ public:
     return {};
   }
 
-  inline mailbox_type& mailbox() {
-    return mailbox_;
-  }
-
   virtual void initialize();
 
   bool cleanup(error&& fail_state, execution_unit* host) override;
 
   message_id new_request_id(message_priority mp);
 
-  // -- message processing -----------------------------------------------------
-
-  /// Appends `x` to the cache for later consumption.
-  void push_to_cache(mailbox_element_ptr ptr);
-
 protected:
   // -- member variables -------------------------------------------------------
-
-  // used by both event-based and blocking actors
-  mailbox_type mailbox_;
 
   // identifies the execution unit this actor is currently executed by
   execution_unit* context_;

@@ -25,29 +25,35 @@
 #include <exception>
 #endif // CAF_NO_EXCEPTIONS
 
+#include <forward_list>
 #include <type_traits>
+#include <unordered_map>
 
-#include "caf/fwd.hpp"
-#include "caf/sec.hpp"
+#include "caf/actor_marker.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
-#include "caf/no_stages.hpp"
+#include "caf/fwd.hpp"
+#include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/actor_marker.hpp"
-#include "caf/stream_result.hpp"
+#include "caf/logger.hpp"
+#include "caf/mailbox_policy.hpp"
+#include "caf/no_stages.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/sec.hpp"
+#include "caf/stream_result.hpp"
 #include "caf/stream_result_trait.hpp"
-
 #include "caf/to_string.hpp"
 
 #include "caf/policy/arg.hpp"
 
-#include "caf/mixin/sender.hpp"
-#include "caf/mixin/requester.hpp"
-#include "caf/mixin/behavior_changer.hpp"
+#include "caf/detail/behavior_stack.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+
+#include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
 
 namespace caf {
 
@@ -77,6 +83,12 @@ result<message> drop(scheduled_actor*, message_view&);
 class scheduled_actor : public local_actor, public resumable {
 public:
   // -- member types -----------------------------------------------------------
+
+  // Base type.
+  using super = local_actor;
+
+  /// A queue optimized for single-reader-many-writers.
+  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
   /// A reference-counting pointer to a `stream_manager`.
   using stream_manager_ptr = intrusive_ptr<stream_manager>;
@@ -813,6 +825,11 @@ public:
 
   /// @endcond
 
+  /// Returns the queue for storing incoming messages.
+  inline mailbox_type& mailbox() {
+    return mailbox_;
+  }
+
 protected:
   /// @cond PRIVATE
 
@@ -848,7 +865,12 @@ protected:
 
   bool handle_stream_msg(mailbox_element& x, behavior* active_behavior);
 
+  void push_to_cache(mailbox_element_ptr ptr);
+
   // -- Member Variables -------------------------------------------------------
+
+  // used by both event-based and blocking actors
+  mailbox_type mailbox_;
 
   /// Stores user-defined callbacks for message handling.
   detail::behavior_stack bhvr_stack_;

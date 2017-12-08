@@ -30,6 +30,12 @@
 
 namespace caf {
 
+namespace {
+
+constexpr auto mpol = mailbox_policy{};
+
+} // namespace <anonymous>
+
 blocking_actor::receive_cond::~receive_cond() {
   // nop
 }
@@ -51,7 +57,8 @@ bool blocking_actor::accept_one_cond::post() {
 }
 
 blocking_actor::blocking_actor(actor_config& cfg)
-    : extended_base(cfg.add_flag(local_actor::is_blocking_flag)) {
+    : super(cfg.add_flag(local_actor::is_blocking_flag)),
+      mailbox_(mpol, mpol, mpol, mpol, mpol) {
   // nop
 }
 
@@ -301,6 +308,18 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
     anon_send(self, wait_for_atom::value);
   });
   return 1;
+}
+
+bool blocking_actor::cleanup(error&& fail_state, execution_unit* host) {
+  if (!mailbox_.closed()) {
+    mailbox_.close();
+    // TODO: messages that are stuck in the cache can get lost
+    detail::sync_request_bouncer bounce{fail_state};
+    while (mailbox_.queue().new_round(1000, bounce))
+      ; // nop
+  }
+  // Dispatch to parent's `cleanup` function.
+  return super::cleanup(std::move(fail_state), host);
 }
 
 } // namespace caf

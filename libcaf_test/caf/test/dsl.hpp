@@ -149,6 +149,15 @@ private:
   const Tup& xs_;
 };
 
+caf::mailbox_element* peek_mailbox(caf::local_actor* ptr) {
+  auto sptr = dynamic_cast<caf::scheduled_actor*>(ptr);
+  if (sptr != nullptr)
+    return sptr->mailbox().peek();
+  auto bptr = dynamic_cast<caf::blocking_actor*>(ptr);
+  CAF_REQUIRE(bptr != nullptr);
+  return bptr->mailbox().peek();
+}
+
 template <class Derived>
 class expect_clause_base {
 public:
@@ -179,7 +188,7 @@ public:
   Derived& to(const Handle& whom) {
     CAF_REQUIRE(sched_.prioritize(whom));
     dest_ = &sched_.next_job<caf::scheduled_actor>();
-    auto ptr = dest_->mailbox().peek();
+    auto ptr = peek_mailbox(dest_);
     CAF_REQUIRE(ptr != nullptr);
     if (src_)
       CAF_REQUIRE_EQUAL(ptr->sender, src_);
@@ -201,12 +210,12 @@ public:
   template <class... Ts>
   std::tuple<const Ts&...> peek() {
     CAF_REQUIRE(dest_ != nullptr);
-    auto ptr = dest_->mailbox().peek();
-    if (!ptr->content().match_elements<Ts...>()) {
-      CAF_FAIL("Message does not match expected pattern: " << to_string(ptr->content()));
+    auto ptr = peek_mailbox(dest_);
+    if (!ptr->content().template match_elements<Ts...>()) {
+      CAF_FAIL("Message does not match expected pattern: "
+               << to_string(ptr->content()));
     }
-    //CAF_REQUIRE(ptr->content().match_elements<Ts...>());
-    return ptr->content().get_as_tuple<Ts...>();
+    return ptr->content().template get_as_tuple<Ts...>();
   }
 
 protected:
@@ -300,7 +309,7 @@ public:
 
   void with() {
     CAF_REQUIRE(dest_ != nullptr);
-    auto ptr = dest_->mailbox().peek();
+    auto ptr = peek_mailbox(dest_);
     CAF_CHECK(ptr->content().empty());
     this->run_once();
   }
@@ -355,10 +364,10 @@ public:
   template <class... Ts>
   caf::optional<std::tuple<const Ts&...>> peek() {
     CAF_REQUIRE(dest_ != nullptr);
-    auto ptr = dest_->mailbox().peek();
-    if (!ptr->content().match_elements<Ts...>())
+    auto ptr = peek(dest_);
+    if (!ptr->content().template match_elements<Ts...>())
       return caf::none;
-    return ptr->content().get_as_tuple<Ts...>();
+    return ptr->content().template get_as_tuple<Ts...>();
   }
 
 protected:
@@ -451,7 +460,7 @@ public:
   void with() {
     if (dest_ == nullptr)
       return;
-    auto ptr = dest_->mailbox().peek();
+    auto ptr = peek_mailbox(dest_);
     CAF_REQUIRE(!ptr->content().empty());
   }
 };

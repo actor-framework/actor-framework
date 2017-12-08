@@ -91,7 +91,7 @@ using send_order_t = std::vector<msg_t>;
 using sequence_t = std::vector<std::pair<msg_t, bool>>;
 using check_order_t = std::pair<send_order_t, sequence_t>;
 
-behavior check_order_behavior_factory(local_actor* self,
+behavior check_order_behavior_factory(local_actor*,
                                       sequence_t::const_iterator* seq_it_ptr) {
   return {
     [=](int i) -> result<void> {
@@ -99,13 +99,11 @@ behavior check_order_behavior_factory(local_actor* self,
       CAF_CHECK_EQUAL(i, seq_it->first);
       if (seq_it->second) {
         CAF_MESSAGE("current: " << i << "; awaiting: " << seq_it->first
-                                << "; inbox size: " << self->mailbox().size()
                                 << " SKIPPED");
         ++seq_it;
         return skip();
       } else {
         CAF_MESSAGE("current: " << i << "; awaiting: " << seq_it->first
-                                << "; inbox size: " << self->mailbox().size()
                                 << " OK");
         ++seq_it;
         return unit;

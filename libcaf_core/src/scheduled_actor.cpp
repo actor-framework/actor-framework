@@ -18,15 +18,23 @@
 
 #include "caf/scheduled_actor.hpp"
 
+#include "caf/actor_ostream.hpp"
 #include "caf/config.hpp"
 #include "caf/to_string.hpp"
-#include "caf/actor_ostream.hpp"
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
+#include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/detail/default_invoke_result_visitor.hpp"
 
 namespace caf {
+
+namespace {
+
+constexpr auto mpol = mailbox_policy{};
+
+} // namespace <anonymous>
 
 // -- related free functions ---------------------------------------------------
 
@@ -94,7 +102,8 @@ error scheduled_actor::default_exception_handler(pointer ptr,
 // -- constructors and destructors ---------------------------------------------
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
-    : local_actor(cfg),
+    : super(cfg),
+      mailbox_(mpol, mpol, mpol, mpol, mpol),
       timeout_id_(0),
       default_handler_(print_and_drop),
       error_handler_(default_error_handler),
@@ -200,8 +209,15 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
       kvp.second->close();
   streams_.clear();
   */
+  if (!mailbox_.closed()) {
+    mailbox_.close();
+    // TODO: messages that are stuck in the cache can get lost
+    detail::sync_request_bouncer bounce{fail_state};
+    while (mailbox_.queue().new_round(1000, bounce))
+      ; // nop
+  }
   // Dispatch to parent's `cleanup` function.
-  return local_actor::cleanup(std::move(fail_state), host);
+  return super::cleanup(std::move(fail_state), host);
 }
 
 // -- overridden functions of resumable ----------------------------------------
@@ -639,6 +655,20 @@ bool scheduled_actor::finalize() {
   bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
   return true;
+}
+
+void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
+  using namespace intrusive;
+  auto& p = mailbox_.queue().policy();
+  auto ts = p.task_size(*ptr);
+  auto& qs = mailbox_.queue().queues();
+  drr_cached_queue<mailbox_policy>* q;
+  if (p.id_of(*ptr) == mailbox_policy::default_queue_index)
+    q = &std::get<mailbox_policy::default_queue_index>(qs);
+  else
+    q = &std::get<mailbox_policy::high_priority_queue_index>(qs);
+  q->inc_total_task_size(ts);
+  q->cache().push_back(ptr.release());
 }
 
 /*
