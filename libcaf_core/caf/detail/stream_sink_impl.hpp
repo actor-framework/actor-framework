@@ -50,8 +50,7 @@ public:
       : stream_manager(self),
         fun_(std::move(fun)),
         fin_(std::move(fin)),
-        out_(self),
-        open_inputs_(0) {
+        out_(self) {
     // nop
   }
 
@@ -64,7 +63,7 @@ public:
   }
 
   bool done() const override {
-    return open_inputs_ == 0;
+    return this->inbound_paths_.empty();
   }
 
   error handle(inbound_path*, downstream_msg::batch& x) override {
@@ -80,18 +79,6 @@ public:
     return sec::unexpected_message;
   }
 
-  void register_input_path(inbound_path* x) override {
-    CAF_LOG_TRACE(CAF_ARG(*x));
-    CAF_IGNORE_UNUSED(x);
-    ++open_inputs_;
-  }
-
-  void deregister_input_path(inbound_path* x) noexcept override {
-    CAF_LOG_TRACE(CAF_ARG(*x));
-    CAF_IGNORE_UNUSED(x);
-    --open_inputs_;
-  }
-
 protected:
   message make_final_result() override {
     return trait::make_result(state_, fin_);
@@ -102,7 +89,6 @@ private:
   Fun fun_;
   Finalize fin_;
   terminal_stream_scatterer out_;
-  long open_inputs_;
 };
 
 template <class Init, class Fun, class Finalize>

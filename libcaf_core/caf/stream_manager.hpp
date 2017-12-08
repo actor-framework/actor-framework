@@ -75,21 +75,6 @@ public:
 
   virtual error handle(outbound_path* from, upstream_msg::forced_drop& x);
 
-  /*
-  /// Adds a new sink to the stream.
-  virtual bool add_sink(stream_slot slot, strong_actor_ptr origin,
-                        strong_actor_ptr sink_ptr,
-                        mailbox_element::forwarding_stack stages,
-                        message_id handshake_mid, message handshake_data,
-                        stream_priority prio, bool redeployable);
-
-  /// Adds the source `hdl` to a stream. Convenience function for calling
-  /// `in().add_path(sid, hdl).second`.
-  virtual bool add_source(stream_slot slot, strong_actor_ptr source_ptr,
-                          strong_actor_ptr original_stage, stream_priority prio,
-                          bool redeployable, response_promise result_cb);
-  */
-
   /// Closes the stream when the parent terminates with default exit reason or
   /// the stream reached its end.
   virtual void close();
@@ -167,11 +152,13 @@ protected:
   /// implementation does nothing.
   virtual void output_closed(error reason);
 
-  /// Pointer to the parent actor.
+  /// Points to the parent actor.
   local_actor* self_;
 
-  /// Keeps track of pending handshakes.
+  /// Stores non-owning pointers to all input paths.
+  std::vector<inbound_path*> inbound_paths_;
 
+  /// Keeps track of pending handshakes.
 };
 
 /// A reference counting pointer to a `stream_manager`.

@@ -84,7 +84,9 @@ void stream_manager::abort(error reason) {
 
 void stream_manager::push() {
   CAF_LOG_TRACE("");
-  out().emit_batches();
+  do {
+    out().emit_batches();
+  } while (generate_messages());
 }
 
 bool stream_manager::congested() const {
@@ -95,12 +97,18 @@ bool stream_manager::generate_messages() {
   return false;
 }
 
-void stream_manager::register_input_path(inbound_path*) {
-  // nop
+void stream_manager::register_input_path(inbound_path* ptr) {
+  inbound_paths_.emplace_back(ptr);
 }
 
-void stream_manager::deregister_input_path(inbound_path*) noexcept {
-  // nop
+void stream_manager::deregister_input_path(inbound_path* ptr) noexcept {
+  using std::swap;
+  if (ptr != inbound_paths_.back()) {
+    auto i = std::find(inbound_paths_.begin(), inbound_paths_.end(), ptr);
+    CAF_ASSERT(i != inbound_paths_.end());
+    swap(*i, inbound_paths_.back());
+  }
+  inbound_paths_.pop_back();
 }
 
 message stream_manager::make_final_result() {
