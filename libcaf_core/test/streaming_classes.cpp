@@ -32,6 +32,7 @@
 #define CAF_SUITE streaming_classes
 
 #include <memory>
+#include <numeric>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -62,10 +63,12 @@
 #include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
 #include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 
+#include "caf/detail/gcd.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/detail/stream_sink_impl.hpp"
 #include "caf/detail/stream_source_impl.hpp"
 #include "caf/detail/stream_stage_impl.hpp"
+#include "caf/detail/tick_emitter.hpp"
 
 using std::vector;
 
@@ -162,7 +165,7 @@ struct inner_dmsg_queue_policy : policy_base {
   }
 
   task_size_type operator()(const downstream_msg::batch& x) const {
-    CAF_REQUIRE_NOT_EQUAL(x.xs_size, 0);
+    CAF_ASSERT(x.xs_size > 0);
     return static_cast<task_size_type>(x.xs_size);
   }
 
@@ -220,23 +223,84 @@ using mboxqueue = wdrr_fixed_multiplexed_queue<mboxpolicy, default_queue,
 
 // -- entity -------------------------------------------------------------------
 
+class abstract_clock {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using time_point = std::chrono::steady_clock::time_point;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  virtual ~abstract_clock() {
+    // nop
+  }
+
+  virtual time_point now() const noexcept = 0;
+};
+
+class fake_clock : public abstract_clock {
+public:
+  fake_clock(time_point* global_time) : global_time_(global_time) {
+    // nop
+  }
+
+  time_point now() const noexcept override {
+    return *global_time_;
+  }
+
+private:
+  time_point* global_time_;
+};
+
+class steady_clock : public abstract_clock {
+public:
+  time_point now() const noexcept override {
+    return std::chrono::steady_clock::now();
+  }
+};
+
 class entity : public extend<local_actor, entity>::with<mixin::sender> {
 public:
   // -- member types -----------------------------------------------------------
 
+  /// Base type.
   using super = extend<local_actor, entity>::with<mixin::sender>;
 
+  /// Defines the messaging interface.
   using signatures = none_t;
 
+  /// Defines the container for storing message handlers.
   using behavior_type = behavior;
 
-  entity(actor_config& cfg, const char* cstr_name)
+  /// The type of a single tick.
+  using clock_type = detail::tick_emitter::clock_type;
+
+  /// The type of a single tick.
+  using time_point = clock_type::time_point;
+
+  /// Difference between two points in time.
+  using duration_type = time_point::duration;
+
+  /// The type of a single tick.
+  using tick_type = long;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  entity(actor_config& cfg, const char* cstr_name, time_point* global_time,
+         duration_type credit_interval, duration_type force_batches_interval)
       : super(cfg),
-        mbox(mboxpolicy{}, default_queue_policy{}, nullptr,
-              dmsg_queue_policy{}, default_queue_policy{}),
+        mbox(mboxpolicy{}, default_queue_policy{}, nullptr, dmsg_queue_policy{},
+             default_queue_policy{}),
         name_(cstr_name),
-        next_slot_(static_cast<stream_slot>(id())) {
-    // nop
+        next_slot_(static_cast<stream_slot>(id())),
+        global_time_(global_time),
+        tick_emitter_(global_time == nullptr ? clock_type::now()
+                                             : *global_time) {
+    auto cycle = detail::gcd(credit_interval.count(),
+                             force_batches_interval.count());
+    ticks_per_force_batches_interval = force_batches_interval.count() / cycle;
+    ticks_per_credit_interval = credit_interval.count() / cycle;
+    tick_emitter_.interval(duration_type{cycle});
   }
 
   void enqueue(mailbox_element_ptr what, execution_unit*) override {
@@ -355,19 +419,16 @@ public:
     // mgr->out().add_path(id, hs.prev_stage);
     managers_.emplace(id, mgr);
     // Create a new queue in the mailbox for incoming traffic.
+    auto ip = new inbound_path(mgr, id, hs.prev_stage);
     get<2>(mbox.queues())
       .queues()
-      .emplace(slot, std::unique_ptr<inbound_path>{
-                       new inbound_path(mgr, id, hs.prev_stage)});
-    // Acknowledge stream.
-    send(hs.prev_stage,
-         make<upstream_msg::ack_open>(id.invert(), address(), address(),
-                                      ctrl(), 10, 10, false));
+      .emplace(slot, std::unique_ptr<inbound_path>{ip});
+    ip->emit_ack_open(this, actor_cast<actor_addr>(hs.original_stage), false);
   }
 
   void operator()(stream_slots slots, actor_addr& sender,
                   upstream_msg::ack_open& x) {
-    TRACE(name_, ack_handshake, CAF_ARG(slots),
+    TRACE(name_, ack_open, CAF_ARG(slots),
           CAF_ARG2("sender", name_of(x.rebind_to)), CAF_ARG(x));
     // Get the manager for that stream.
     auto i = pending_managers_.find(slots.receiver);
@@ -388,7 +449,7 @@ public:
   void operator()(stream_slots input_slots, actor_addr& sender,
                   upstream_msg::ack_batch& x) {
     TRACE(name_, ack_batch, CAF_ARG(input_slots),
-          CAF_ARG2("sender", name_of(sender)));
+          CAF_ARG2("sender", name_of(sender)), CAF_ARG(x));
     // Get the manager for that stream.
     auto i = managers_.find(input_slots);
     CAF_REQUIRE_NOT_EQUAL(i, managers_.end());
@@ -408,6 +469,32 @@ public:
     }
   }
 
+  void advance_time() {
+    auto cycle = std::chrono::milliseconds(100);
+    auto desired_batch_complexity = std::chrono::microseconds(50);
+    auto f = [&](tick_type x) {
+      if (x % ticks_per_force_batches_interval == 0) {
+        // Force batches on all output paths.
+        for (auto& kvp : managers_)
+          kvp.second->out().force_emit_batches();
+      }
+      if (x % ticks_per_credit_interval == 0) {
+        // Fill credit on each input path up to 30.
+        auto& qs = get<2>(mbox.queues()).queues();
+        for (auto& kvp : qs) {
+          auto inptr = kvp.second.policy().handler.get();
+          inptr->emit_ack_batch(this, kvp.second.total_task_size(), cycle,
+                                desired_batch_complexity);
+        }
+      }
+    };
+    tick_emitter_.update(now(), f);
+  }
+
+  time_point now() {
+    return global_time_ == nullptr ? clock_type::now() : *global_time_;
+  }
+
   // -- member variables -------------------------------------------------------
 
   mboxqueue mbox;
@@ -417,6 +504,11 @@ public:
   stream_manager_ptr forwarder;
   std::map<stream_slots, stream_manager_ptr> managers_;
   std::map<stream_slot, stream_manager_ptr> pending_managers_;
+
+  tick_type ticks_per_force_batches_interval;
+  tick_type ticks_per_credit_interval;
+  time_point* global_time_;
+  detail::tick_emitter tick_emitter_;
 };
 
 struct msg_visitor {
@@ -477,16 +569,10 @@ struct msg_visitor {
     auto& dm = x.content().get_mutable_as<downstream_msg>(0);
     auto f = detail::make_overload(
       [&](downstream_msg::batch& y) {
-        TRACE(self->name(), batch, CAF_ARG(y.xs));
-        inptr->mgr->handle(inptr, y);
-        inptr->mgr->generate_messages();
-        inptr->mgr->push();
-        if (!inptr->mgr->done()) {
-          auto to = inptr->hdl->get();
-          to->eq_impl(make_message_id(), self->ctrl(), nullptr,
-                      make<upstream_msg::ack_batch>(
-                        dm.slots.invert(), self->address(), 10, 10, y.id));
-        } else {
+        TRACE(self->name(), batch, CAF_ARG2("size", y.xs_size),
+              CAF_ARG2("remaining_credit", inptr->assigned_credit - y.xs_size));
+        inptr->handle(y);
+        if (inptr->mgr->done()) {
           CAF_MESSAGE(self->name()
                       << " is done receiving and closes its manager");
           inptr->mgr->close();
@@ -501,14 +587,26 @@ struct msg_visitor {
         i->second->handle(inptr, y);
         q.policy().handler.reset();
         qs.erase_later(slots.receiver);
-        self->managers_.erase(i);
+        if (!i->second->done()) {
+          self->managers_.erase(i);
+        } else {
+          // Close the manager and remove it on all registered slots.
+          auto mgr = i->second;
+          mgr->close();
+          auto j = self->managers_.begin();
+          while (j != self->managers_.end()) {
+            if (j->second == mgr)
+              j = self->managers_.erase(j);
+            else
+              ++j;
+          }
+        }
         return intrusive::task_result::resume;
       },
       [](downstream_msg::forced_close&) {
         CAF_FAIL("did not expect downstream_msg::forced_close");
         return intrusive::task_result::stop;
-      }
-    );
+      });
     return visit(f, dm.content);
   }
 
@@ -520,6 +618,20 @@ struct msg_visitor {
 // -- fixture ------------------------------------------------------------------
 
 struct fixture {
+  struct timing_config {
+    using clock_type = std::chrono::steady_clock;
+
+    clock_type::time_point global_time;
+
+    clock_type::duration credit_interval = std::chrono::milliseconds(100);
+
+    clock_type::duration force_batches_interval = std::chrono::milliseconds(50);
+
+    clock_type::duration step = force_batches_interval;
+  };
+
+  timing_config tc;
+
   actor_system_config cfg;
   actor_system sys{cfg};
   actor alice_hdl;
@@ -530,9 +642,11 @@ struct fixture {
   entity& bob;
   entity& carl;
 
-  static actor spawn(actor_system& sys, actor_id id, const char* name) {
+  static actor spawn(actor_system& sys, actor_id id, const char* name,
+                     timing_config& tc) {
     actor_config conf;
-    return make_actor<entity>(id, node_id{}, &sys, conf, name);
+    return make_actor<entity>(id, node_id{}, &sys, conf, name, &tc.global_time,
+                              tc.credit_interval, tc.force_batches_interval);
   }
 
   static entity& fetch(const actor& hdl) {
@@ -540,9 +654,9 @@ struct fixture {
   }
 
   fixture()
-      : alice_hdl(spawn(sys, 0, "alice")),
-        bob_hdl(spawn(sys, 1, "bob")),
-        carl_hdl(spawn(sys, 2, "carl")),
+      : alice_hdl(spawn(sys, 0, "alice", tc)),
+        bob_hdl(spawn(sys, 1, "bob", tc)),
+        carl_hdl(spawn(sys, 2, "carl", tc)),
         alice(fetch(alice_hdl)),
         bob(fetch(bob_hdl)),
         carl(fetch(carl_hdl)) {
@@ -567,6 +681,38 @@ struct fixture {
       for (auto& f : fs)
         f.self->mbox.new_round(1, f);
   }
+
+  template <class... Ts>
+  void next_cycle(Ts&... xs) {
+    entity* es[] = {&xs...};
+    CAF_MESSAGE("advance clock by " << tc.credit_interval.count() << "ns");
+    tc.global_time += tc.credit_interval;
+    for (auto e : es)
+      e->advance_time();
+  }
+
+  template <class F, class... Ts>
+  void loop_until(F pred, Ts&... xs) {
+    entity* es[] = {&xs...};
+    msg_visitor fs[] = {{&xs}...};
+    auto mailbox_empty = [](msg_visitor& x) { return x.self->mbox.empty(); };
+    do {
+      while (!std::all_of(std::begin(fs), std::end(fs), mailbox_empty))
+        for (auto& f : fs)
+          f.self->mbox.new_round(1, f);
+      CAF_MESSAGE("advance clock by " << tc.step.count() << "ns");
+      tc.global_time += tc.step;
+      for (auto e : es)
+        e->advance_time();
+    }
+    while (!pred());
+  }
+
+  bool done_streaming() {
+    entity* es[] = {&alice, &bob, &carl};
+    return std::all_of(std::begin(es), std::end(es),
+                       [](entity* e) { return e->managers_.empty(); });
+  }
 };
 
 vector<int> make_iota(int first, int last) {
@@ -581,28 +727,48 @@ vector<int> make_iota(int first, int last) {
 
 CAF_TEST_FIXTURE_SCOPE(queue_multiplexing_tests, fixture)
 
-CAF_TEST(depth_2_pipeline) {
+CAF_TEST(depth_2_pipeline_single_round) {
   alice.start_streaming(bob, 30);
+  loop(alice, bob);
+  next_cycle(alice, bob); // a single credit round is enough
   loop(alice, bob);
   CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
 }
 
-CAF_TEST(depth_3_pipeline) {
+CAF_TEST(depth_2_pipeline_multiple_rounds) {
+  constexpr size_t num_messages = 200000;
+  alice.start_streaming(bob, num_messages);
+  loop_until([&] { return done_streaming(); }, alice, bob);
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, num_messages));
+}
+
+CAF_TEST(depth_3_pipeline_single_round) {
   bob.forward_to(carl);
-  alice.start_streaming(bob, 110);
+  alice.start_streaming(bob, 30);
+  loop(alice, bob, carl);
+  next_cycle(alice, bob, carl); // a single credit round is enough
+  loop(alice, bob, carl);
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
+  CAF_CHECK_EQUAL(carl.data, make_iota(0, 30));
+}
+
+CAF_TEST(depth_3_pipeline_multiple_rounds) {
+  constexpr size_t num_messages = 200000;
+  bob.forward_to(carl);
+  alice.start_streaming(bob, num_messages);
   CAF_MESSAGE("loop over alice and bob until bob is congested");
   loop(alice, bob);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
+  CAF_CHECK_NOT_EQUAL(bob.data.size(), 0u);
+  CAF_CHECK_EQUAL(carl.data.size(), 0u);
   CAF_MESSAGE("loop over bob and carl until bob finsihed sending");
   // bob has one batch from alice in its mailbox that bob will read when
   // becoming uncongested again
   loop(bob, carl);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, 40));
-  CAF_CHECK_EQUAL(carl.data, make_iota(0, 40));
+  CAF_CHECK_EQUAL(bob.data.size(), carl.data.size());
   CAF_MESSAGE("loop over all until done");
-  loop(alice ,bob, carl);
-  CAF_CHECK_EQUAL(bob.data, make_iota(0, 110));
-  CAF_CHECK_EQUAL(carl.data, make_iota(0, 110));
+  loop_until([&] { return done_streaming(); }, alice, bob, carl);
+  CAF_CHECK_EQUAL(bob.data, make_iota(0, num_messages));
+  CAF_CHECK_EQUAL(carl.data, make_iota(0, num_messages));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
