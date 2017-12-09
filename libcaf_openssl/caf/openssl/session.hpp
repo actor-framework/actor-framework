@@ -38,6 +38,10 @@ CAF_POP_WARNINGS
 # define CAF_SSL_HAS_NON_VERSIONED_TLS_FUN
 #endif
 
+#if defined(SSL_CTX_set_ecdh_auto)
+# define CAF_SSL_HAS_ECDH_AUTO
+#endif
+
 namespace caf {
 namespace openssl {
 

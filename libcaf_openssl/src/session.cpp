@@ -244,7 +244,17 @@ SSL_CTX* session::create_ssl_context() {
   } else {
     // No authentication.
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+#ifdef CAF_SSL_HAS_ECDH_AUTO
     SSL_CTX_set_ecdh_auto(ctx, 1);
+#else
+    auto ecdh = EC_KEY_new_by_curve_name(NID_secp384r1);
+    if (!ecdh)
+      raise_ssl_error("cannot get ECDH curve");
+    CAF_PUSH_WARNINGS
+    SSL_CTX_set_tmp_ecdh(ctx, ecdh);
+    EC_KEY_free(ecdh);
+    CAF_POP_WARNINGS
+#endif
 #ifdef CAF_SSL_HAS_SECURITY_LEVEL
     const char* cipher = "AECDH-AES256-SHA@SECLEVEL=0";
 #else
