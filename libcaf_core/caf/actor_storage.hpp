@@ -42,6 +42,11 @@ public:
   template <class... Us>
   actor_storage(actor_id x, node_id y, actor_system* sys, Us&&... zs)
       : ctrl(x, y, sys, data_dtor, block_dtor) {
+    // construct data member
+    new (&data) T(std::forward<Us>(zs)...);
+  }
+
+  ~actor_storage() {
     // 1) make sure control block fits into a single cache line
     static_assert(sizeof(actor_control_block) < CAF_CACHE_LINE_SIZE,
                   "actor_control_block exceeds a single cache line");
@@ -64,12 +69,6 @@ public:
                   "actor subtype has illegal memory alignment "
                   "(probably due to virtual inheritance)");
     #endif
-    // construct data member
-    new (&data) T(std::forward<Us>(zs)...);
-  }
-
-  ~actor_storage() {
-    // nop
   }
 
   actor_storage(const actor_storage&) = delete;
