@@ -25,6 +25,7 @@
 #include "caf/fwd.hpp"
 
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {

@@ -33,9 +33,13 @@ std::string to_string(const actor_config& x) {
   // Note: x.groups is an input range. Traversing it is emptying it, hence we
   // cannot look inside the range here.
   std::string result = "actor_config(";
+  bool first = false;
   auto add = [&](int flag, const char* name) {
     if ((x.flags & flag) != 0) {
-      result += ", ";
+      if (first)
+        first = false;
+      else
+        result += ", ";
       result += name;
     }
   };

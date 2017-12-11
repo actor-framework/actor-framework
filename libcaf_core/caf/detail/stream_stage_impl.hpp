@@ -64,7 +64,7 @@ public:
   }
 
   error handle(inbound_path*, downstream_msg::batch& x) override {
-    CAF_LOG_TRACE(CAF_ARG(msg));
+    CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<output_type>;
     if (x.xs.match_elements<vec_type>()) {
       auto& xs = x.xs.get_as<vec_type>(0);

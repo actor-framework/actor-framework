@@ -408,7 +408,6 @@ actor_clock& actor_system::clock() noexcept {
   return scheduler().clock();
 }
 
-
 void actor_system::inc_detached_threads() {
   ++detached;
 }

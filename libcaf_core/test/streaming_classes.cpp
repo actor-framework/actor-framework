@@ -221,43 +221,7 @@ using mboxqueue = wdrr_fixed_multiplexed_queue<mboxpolicy, default_queue,
                                                 umsg_queue, dmsg_queue,
                                                 default_queue>;
 
-// -- entity -------------------------------------------------------------------
-
-class abstract_clock {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using time_point = std::chrono::steady_clock::time_point;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  virtual ~abstract_clock() {
-    // nop
-  }
-
-  virtual time_point now() const noexcept = 0;
-};
-
-class fake_clock : public abstract_clock {
-public:
-  fake_clock(time_point* global_time) : global_time_(global_time) {
-    // nop
-  }
-
-  time_point now() const noexcept override {
-    return *global_time_;
-  }
-
-private:
-  time_point* global_time_;
-};
-
-class steady_clock : public abstract_clock {
-public:
-  time_point now() const noexcept override {
-    return std::chrono::steady_clock::now();
-  }
-};
+// -- entity and mailbox visitor -----------------------------------------------
 
 class entity : public extend<local_actor, entity>::with<mixin::sender> {
 public:

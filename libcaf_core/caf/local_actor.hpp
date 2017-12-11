@@ -58,6 +58,11 @@ namespace caf {
 /// living in an own thread or cooperatively scheduled.
 class local_actor : public monitorable_actor {
 public:
+  // -- member types -----------------------------------------------------------
+
+  /// Defines a monotonic clock suitable for measuring intervals.
+  using clock_type = std::chrono::steady_clock;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   local_actor(actor_config& cfg);
@@ -69,6 +74,17 @@ public:
   // -- pure virtual modifiers -------------------------------------------------
 
   virtual void launch(execution_unit* eu, bool lazy, bool hide) = 0;
+
+  // -- time -------------------------------------------------------------------
+
+  /// Returns the current time.
+  clock_type::time_point now() const noexcept;
+
+  /// Returns the difference between `t0` and `t1`, allowing the clock to
+  /// return any arbitrary value depending on the measurement that took place.
+  clock_type::duration difference(atom_value measurement,
+                                  clock_type::time_point t0,
+                                  clock_type::time_point t1);
 
   // -- timeout management -----------------------------------------------------
 
