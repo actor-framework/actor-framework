@@ -29,7 +29,7 @@
 // We mock just enough of an actor to use the streaming classes and put them to
 // work in a pipeline with 2 or 3 stages.
 
-#define CAF_SUITE streaming_classes
+#define CAF_SUITE native_streaming_classes
 
 #include <memory>
 #include <numeric>
@@ -689,7 +689,7 @@ vector<int> make_iota(int first, int last) {
 
 // -- unit tests ---------------------------------------------------------------
 
-CAF_TEST_FIXTURE_SCOPE(queue_multiplexing_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(native_streaming_classes_tests, fixture)
 
 CAF_TEST(depth_2_pipeline_single_round) {
   alice.start_streaming(bob, 30);
