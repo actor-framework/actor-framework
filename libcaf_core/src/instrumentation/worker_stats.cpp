@@ -17,65 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_EXECUTION_UNIT_HPP
-#define CAF_EXECUTION_UNIT_HPP
-
-#include "caf/fwd.hpp"
-
-#include "caf/config.hpp"
-
 #include "caf/instrumentation/worker_stats.hpp"
 
 namespace caf {
+namespace instrumentation {
 
-/// Identifies an execution unit, e.g., a worker thread of the scheduler. By
-/// querying its execution unit, an actor can access other context information.
-class execution_unit {
-public:
-  explicit execution_unit(actor_system* sys);
+void callsite_stats::record_pre_behavior(int64_t mb_wait_time, size_t mb_size)
+{
+  mailbox_wait_times_.record(mb_wait_time);
+  mailbox_sizes_.record(mb_size);
+}
 
-  execution_unit(execution_unit&&) = delete;
-  execution_unit(const execution_unit&) = delete;
+std::string callsite_stats::to_string() const
+{
+  return std::string("at ") + std::to_string(at)
+         + " cs " + std::to_string(cs)
+         + " | WAIT " + mailbox_wait_times_.to_string()
+         + " | " + " SIZE " + mailbox_sizes_.to_string();
+}
 
-  virtual ~execution_unit();
+void worker_stats::record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size)
+{
+  callsite_stats_[at][cs].record_pre_behavior(mb_wait_time, mb_size);
+}
 
-  /// Enqueues `ptr` to the job list of the execution unit.
-  /// @warning Must only be called from a {@link resumable} currently
-  ///          executed by this execution unit.
-  virtual void exec_later(resumable* ptr) = 0;
+std::string worker_stats::to_string() const
+{
+//  return "TEST";
+    std::string res;
+    for (const auto& by_actor : callsite_stats_) {
+      for (const auto& by_callsite : by_actor.second) {
+        res += "ACTOR " + by_actor.first;
+        res += " CALLSITE " + registry_.get_human_readable_callsite(by_callsite.first);
+        res += " => " + by_callsite.second.to_string();
+        res += "\n";
+      }
+    }
+    return res;
+}
 
-  /// Returns the enclosing actor system.
-  /// @warning Must be set before the execution unit calls `resume` on an actor.
-  actor_system& system() const {
-    CAF_ASSERT(system_ != nullptr);
-    return *system_;
-  }
-
-  /// Returns a pointer to the proxy factory currently associated to this unit.
-  proxy_registry* proxy_registry_ptr() {
-    return proxies_;
-  }
-
-  /// Associated a new proxy factory to this unit.
-  void proxy_registry_ptr(proxy_registry* ptr) {
-    proxies_ = ptr;
-  }
-
-#ifndef CAF_NO_INSTRUMENTATION
-  /// Stat collector for this uit.
-  instrumentation::worker_stats& stats() {
-    return stats_;
-  }
-#endif
-
-protected:
-  actor_system* system_;
-  proxy_registry* proxies_;
-#ifndef CAF_NO_INSTRUMENTATION
-  instrumentation::worker_stats stats_;
-#endif
-};
-
+} // namespace instrumentation
 } // namespace caf
-
-#endif // CAF_EXECUTION_UNIT_HPP
