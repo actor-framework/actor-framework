@@ -730,6 +730,7 @@ invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
+invertYesNo(CAF_NO_INSTRUMENTATION CAF_BUILD_WITH_INSTRUMENTATION)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
@@ -753,6 +754,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nLog level:             ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:       ${CAF_BUILD_MEM_MANAGEMENT}"
         "\nWith exceptions:       ${CAF_BUILD_WITH_EXCEPTIONS}"
+        "\nWith instrumentation:  ${CAF_BUILD_WITH_INSTRUMENTATION}"
         "\n"
         "\nBuild I/O module:      ${CAF_BUILD_IO}"
         "\nBuild tools:           ${CAF_BUILD_TOOLS}"
