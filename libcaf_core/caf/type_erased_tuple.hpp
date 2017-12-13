@@ -60,7 +60,7 @@ public:
   // -- modifiers --------------------------------------------------------------
 
   /// Load the content for the tuple from `source`.
-  error load(deserializer& source);
+  virtual error load(deserializer& source);
 
   // -- pure virtual observers -------------------------------------------------
 
@@ -99,11 +99,12 @@ public:
   std::string stringify() const;
 
   /// Saves the content of the tuple to `sink`.
-  error save(serializer& sink) const;
+  virtual error save(serializer& sink) const;
 
   /// Checks whether the type of the stored value at position `pos`
   /// matches type number `n` and run-time type information `p`.
-  bool matches(size_t pos, uint16_t nr, const std::type_info* ptr) const  noexcept;
+  bool matches(size_t pos, uint16_t nr,
+               const std::type_info* ptr) const  noexcept;
 
   // -- convenience functions --------------------------------------------------
 
@@ -175,9 +176,8 @@ public:
   /// Returns `true` if the pattern `Ts...` matches the content of this tuple.
   template <class... Ts>
   bool match_elements() const noexcept {
-    detail::meta_elements<detail::type_list<Ts...>> xs;
-    return xs.arr.empty() ? empty()
-                          : detail::try_match(*this, &xs.arr[0], sizeof...(Ts));
+    detail::type_list<Ts...> tk;
+    return match_elements(tk);
   }
 
   template <class F>
@@ -190,6 +190,16 @@ public:
   }
 
 private:
+  template <class T, class... Ts>
+  bool match_elements(detail::type_list<T, Ts...>) const noexcept {
+    detail::meta_elements<detail::type_list<T, Ts...>> xs;
+    return detail::try_match(*this, &xs.arr[0], 1 + sizeof...(Ts));
+  }
+
+  inline bool match_elements(detail::type_list<>) const noexcept {
+    return empty();
+  }
+
   template <class F, class R, class... Ts>
   optional<R> apply(F& fun, detail::type_list<R>,
                     detail::type_list<Ts...> tk) {

@@ -138,14 +138,8 @@ protected:
   template <class F>
   bool handle_system_message(mailbox_element& x, execution_unit* context,
                              bool trap_exit, F& down_msg_handler) {
-    auto& content = x.content();
-    if (content.type_token() == make_type_token<down_msg>()) {
-      if (content.shared()) {
-        auto vptr = content.copy(0);
-        down_msg_handler(vptr->get_mutable_as<down_msg>());
-      } else {
-        down_msg_handler(content.get_mutable_as<down_msg>(0));
-      }
+    if (x.content().type_token() == make_type_token<down_msg>()) {
+      down_msg_handler(x.content().get_mutable_as<down_msg>(0));
       return true;
     }
     return handle_system_message(x, context, trap_exit);

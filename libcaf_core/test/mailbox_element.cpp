@@ -37,19 +37,19 @@ using namespace caf;
 namespace {
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(type_erased_tuple& x) {
+optional<tuple<Ts...>> fetch(const type_erased_tuple& x) {
   if (!x.match_elements<Ts...>())
     return none;
   return x.get_as_tuple<Ts...>();
 }
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(message& x) {
+optional<tuple<Ts...>> fetch(const message& x) {
   return fetch<Ts...>(x.content());
 }
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(mailbox_element& x) {
+optional<tuple<Ts...>> fetch(const mailbox_element& x) {
   return fetch<Ts...>(x.content());
 }
 

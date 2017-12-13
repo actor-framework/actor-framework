@@ -156,7 +156,8 @@ actor_factory make_actor_factory(F fun) {
                                typename ctrait::arg_types>;
       fd f{fun, static_cast<impl*>(x)};
       empty_type_erased_tuple dummy_;
-      auto& ct = msg.empty() ? dummy_ : const_cast<message&>(msg).content();
+      auto& ct = msg.empty() ? dummy_
+                             : const_cast<message&>(msg).content();
       auto opt = ct.apply(f);
       if (!opt)
         return {};

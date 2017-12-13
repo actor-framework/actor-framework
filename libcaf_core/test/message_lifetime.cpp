@@ -86,9 +86,47 @@ struct fixture {
   actor_system system{cfg};
 };
 
+struct fail_on_copy {
+  int value;
+
+  fail_on_copy(int x = 0) : value(x) {
+    // nop
+  }
+
+  fail_on_copy(fail_on_copy&&) = default;
+
+  fail_on_copy& operator=(fail_on_copy&&) = default;
+
+  fail_on_copy(const fail_on_copy&) {
+    CAF_FAIL("fail_on_copy: copy constructor called");
+  }
+
+  fail_on_copy& operator=(const fail_on_copy&) {
+    CAF_FAIL("fail_on_copy: copy assign operator called");
+  }
+};
+
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, fail_on_copy& x) {
+  return f(x.value);
+}
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, fixture)
+
+CAF_TEST(nocopy_in_scoped_actor) {
+  auto msg = make_message(fail_on_copy{1});
+  scoped_actor self{system};
+  self->send(self, msg);
+  self->receive(
+    [&](const fail_on_copy& x) {
+      CAF_CHECK_EQUAL(x.value, 1);
+      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+    }
+  );
+  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
+}
 
 CAF_TEST(message_lifetime_in_scoped_actor) {
   auto msg = make_message(1, 2, 3);
