@@ -26,9 +26,15 @@
 
 namespace caf {
 
+#ifdef CAF_NO_INSTRUMENTATION
+  using clock_source = std::chrono::system_clock;
+#else
+  using clock_source = std::chrono::high_resolution_clock;
+#endif
+
 /// A portable timestamp with nanosecond resolution anchored at the UNIX epoch.
 using timestamp = std::chrono::time_point<
-  std::chrono::system_clock,
+  clock_source,
   std::chrono::duration<int64_t, std::nano>
 >;
 
@@ -41,6 +47,9 @@ std::string timestamp_to_string(const timestamp& x);
 
 /// Appends the time-since-epoch of `y` to `x`.
 void append_timestamp_to_string(std::string& x, const timestamp& y);
+
+/// How long ago (in nanoseconds) was the given timestamp?
+int64_t timestamp_ago_ns(const timestamp& ts);
 
 } // namespace caf
 

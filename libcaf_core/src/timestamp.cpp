@@ -22,7 +22,7 @@
 namespace caf {
 
 timestamp make_timestamp() {
-  return std::chrono::system_clock::now();
+  return clock_source::now();
 }
 
 std::string timestamp_to_string(const timestamp& x) {
@@ -31,6 +31,10 @@ std::string timestamp_to_string(const timestamp& x) {
 
 void append_timestamp_to_string(std::string& x, const timestamp& y) {
   x += std::to_string(y.time_since_epoch().count());
+}
+
+int64_t timestamp_ago_ns(const timestamp& ts) {
+  return (make_timestamp() - ts).count();
 }
 
 } // namespace caf
