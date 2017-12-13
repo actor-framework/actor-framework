@@ -47,7 +47,7 @@ std::string worker_stats::to_string() const
     std::string res;
     for (const auto& by_actor : callsite_stats_) {
       for (const auto& by_callsite : by_actor.second) {
-        res += "ACTOR " + by_actor.first;
+        res += "ACTOR " + std::to_string(by_actor.first);
         res += " CALLSITE " + registry_.get_human_readable_callsite(by_callsite.first);
         res += " => " + by_callsite.second.to_string();
         res += "\n";

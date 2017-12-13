@@ -497,6 +497,15 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         return !skipped ? im_success : im_skipped;
       }
       auto& bhvr = bhvr_stack_.back();
+#ifndef CAF_NO_INSTRUMENTATION
+      if (context_ != nullptr) { // TODO examine the case of detached scheduled_actors
+        auto actortype = typeid(this).hash_code();
+        auto callsite = context_->stats().registry().identify(current_element_->content());
+        auto mb_wait_time = timestamp_ago_ns(current_element_->ts);
+        auto mb_size = mailbox_.count(instrumentation::max_instrumented_mailbox_size);
+        context_->stats().record_pre_behavior(actortype, callsite, mb_wait_time, mb_size);
+      }
+#endif
       switch (bhvr(visitor, x.content())) {
         default:
           break;

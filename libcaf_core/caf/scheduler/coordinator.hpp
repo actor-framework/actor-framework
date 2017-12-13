@@ -59,6 +59,18 @@ public:
     return new coordinator(sys);
   }
 
+#ifndef CAF_NO_INSTRUMENTATION
+  std::vector<instrumentation::worker_stats> collect_stats() override {
+    auto num = num_workers();
+    std::vector<instrumentation::worker_stats> worker_stats;
+    worker_stats.reserve(num);
+    for (auto& w : workers_) {
+      worker_stats.push_back(instrumentation::worker_stats(w->stats())); // TODO atomic swap
+    }
+    return worker_stats;
+  }
+#endif
+
 protected:
   void start() override {
     // initialize workers vector

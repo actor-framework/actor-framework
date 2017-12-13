@@ -80,6 +80,10 @@ public:
 
   static void cleanup_and_release(resumable*);
 
+  virtual std::vector<instrumentation::worker_stats> collect_stats() {
+    return {};
+  }
+
 protected:
   void stop_actors();
 
