@@ -45,8 +45,8 @@ std::vector<metric> worker_stats::collect_metrics() const {
       auto callsite = registry_.identify_simple_signature(by_callsite.first);
       auto& callsite_stats = by_callsite.second;
       metrics.emplace_back(actortype, callsite, "mb_processed", callsite_stats.mb_waittimes().count());
-      metrics.emplace_back(actortype, callsite, "mb_waittime_avg", callsite_stats.mb_waittimes().average());
-      metrics.emplace_back(actortype, callsite, "mb_waittime_stddev", callsite_stats.mb_waittimes().stddev());
+      metrics.emplace_back(actortype, callsite, "mb_waittime_avg", callsite_stats.mb_waittimes().average() / 1'000'000'000);
+      metrics.emplace_back(actortype, callsite, "mb_waittime_stddev", callsite_stats.mb_waittimes().stddev() / 1'000'000'000);
       metrics.emplace_back(actortype, callsite, "mb_size_avg", callsite_stats.mb_sizes().average());
       metrics.emplace_back(actortype, callsite, "mb_size_stddev", callsite_stats.mb_sizes().stddev());
     }
