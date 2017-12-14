@@ -44,12 +44,11 @@ std::vector<metric> worker_stats::collect_metrics() const {
     for (const auto& by_callsite : by_actor.second) {
       auto callsite = registry_.identify_signature(by_callsite.first);
       auto& callsite_stats = by_callsite.second;
-      // TODO perf string concat
-      metrics.emplace_back(actortype + ":" + callsite, "mb_processed", (uint64_t) callsite_stats.mb_waittimes().count());
-      metrics.emplace_back(actortype + ":" + callsite, "mb_waittime_avg", (uint64_t) callsite_stats.mb_waittimes().average());
-      metrics.emplace_back(actortype + ":" + callsite, "mb_waittime_stddev", (uint64_t) callsite_stats.mb_waittimes().stddev());
-      metrics.emplace_back(actortype + ":" + callsite, "mb_size_avg", (uint64_t) callsite_stats.mb_sizes().average());
-      metrics.emplace_back(actortype + ":" + callsite, "mb_size_stddev", (uint64_t) callsite_stats.mb_sizes().stddev());
+      metrics.emplace_back(actortype, callsite, "mb_processed", callsite_stats.mb_waittimes().count());
+      metrics.emplace_back(actortype, callsite, "mb_waittime_avg", callsite_stats.mb_waittimes().average());
+      metrics.emplace_back(actortype, callsite, "mb_waittime_stddev", callsite_stats.mb_waittimes().stddev());
+      metrics.emplace_back(actortype, callsite, "mb_size_avg", callsite_stats.mb_sizes().average());
+      metrics.emplace_back(actortype, callsite, "mb_size_stddev", callsite_stats.mb_sizes().stddev());
     }
   }
   return metrics;

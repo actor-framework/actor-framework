@@ -30,15 +30,17 @@ namespace caf {
 namespace instrumentation {
 
 struct metric {
-  metric(std::string location, std::string name, uint64_t value)
-    : location(std::move(location)),
+  metric(std::string actor, std::string callsite, std::string name, uint64_t value)
+    : actortype(std::move(actor)),
+      callsite(std::move(callsite)),
       name(std::move(name)),
       value(value)
   {}
 
-  std::string location;
+  std::string actortype;
+  std::string callsite;
   std::string name;
-  uint64_t value;
+  double value;
 };
 
 } // namespace instrumentation
