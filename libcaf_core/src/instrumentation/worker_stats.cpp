@@ -22,26 +22,40 @@
 namespace caf {
 namespace instrumentation {
 
-void callsite_stats::record_pre_behavior(int64_t mb_wait_time, size_t mb_size)
-{
-  mailbox_wait_times_.record(mb_wait_time);
-  mailbox_sizes_.record(mb_size);
+void callsite_stats::record_pre_behavior(int64_t mb_wait_time, size_t mb_size) {
+  mb_waittimes_.record(mb_wait_time);
+  mb_sizes_.record(mb_size);
 }
 
-std::string callsite_stats::to_string() const
-{
-  return std::string("WAIT ") + mailbox_wait_times_.to_string()
-         + " | " + " SIZE " + mailbox_sizes_.to_string();
+std::string callsite_stats::to_string() const {
+  return std::string("WAIT ") + mb_waittimes_.to_string()
+         + " | " + " SIZE " + mb_sizes_.to_string();
 }
 
-void worker_stats::record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size)
-{
+void worker_stats::record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size) {
+  clear_if_requested();
   callsite_stats_[at][cs].record_pre_behavior(mb_wait_time, mb_size);
 }
 
-std::string worker_stats::to_string() const
-{
-//  return "TEST";
+std::vector<metric> worker_stats::collect_metrics() const {
+  std::vector<metric> metrics;
+  for (const auto& by_actor : callsite_stats_) {
+    auto actortype = registry_.identify_actortype(by_actor.first);
+    for (const auto& by_callsite : by_actor.second) {
+      auto callsite = registry_.identify_signature(by_callsite.first);
+      auto& callsite_stats = by_callsite.second;
+      // TODO perf string concat
+      metrics.emplace_back(actortype + ":" + callsite, "mb_processed", (uint64_t) callsite_stats.mb_waittimes().count());
+      metrics.emplace_back(actortype + ":" + callsite, "mb_waittime_avg", (uint64_t) callsite_stats.mb_waittimes().average());
+      metrics.emplace_back(actortype + ":" + callsite, "mb_waittime_stddev", (uint64_t) callsite_stats.mb_waittimes().stddev());
+      metrics.emplace_back(actortype + ":" + callsite, "mb_size_avg", (uint64_t) callsite_stats.mb_sizes().average());
+      metrics.emplace_back(actortype + ":" + callsite, "mb_size_stddev", (uint64_t) callsite_stats.mb_sizes().stddev());
+    }
+  }
+  return metrics;
+}
+
+std::string worker_stats::to_string() const {
     std::string res;
     for (const auto& by_actor : callsite_stats_) {
       for (const auto& by_callsite : by_actor.second) {
@@ -52,6 +66,13 @@ std::string worker_stats::to_string() const
       }
     }
     return res;
+}
+
+void worker_stats::clear_if_requested() {
+  if (clear_request_) {
+    callsite_stats_.clear();
+    clear_request_ = false;
+  }
 }
 
 } // namespace instrumentation

@@ -80,7 +80,7 @@ public:
 
   static void cleanup_and_release(resumable*);
 
-  virtual std::vector<instrumentation::worker_stats> collect_stats() {
+  virtual std::vector<instrumentation::metric> collect_metrics() {
     return {};
   }
 

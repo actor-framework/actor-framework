@@ -60,14 +60,15 @@ public:
   }
 
 #ifndef CAF_NO_INSTRUMENTATION
-  std::vector<instrumentation::worker_stats> collect_stats() override {
-    auto num = num_workers();
-    std::vector<instrumentation::worker_stats> worker_stats;
-    worker_stats.reserve(num);
+  std::vector<instrumentation::metric> collect_metrics() override {
+    std::vector<instrumentation::metric> metrics;
     for (auto& w : workers_) {
-      worker_stats.push_back(instrumentation::worker_stats(w->stats())); // TODO atomic swap
+      auto worker_metrics = w->stats().collect_metrics();
+      w->stats().request_clear();
+      metrics.reserve(metrics.size() + worker_metrics.size());
+      std::move(worker_metrics.begin(), worker_metrics.end(), std::back_inserter(metrics));
     }
-    return worker_stats;
+    return metrics;
   }
 #endif
 

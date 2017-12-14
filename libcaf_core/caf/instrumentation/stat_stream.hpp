@@ -40,8 +40,7 @@ class stat_stream {
   static const int slice_count = 8;
 
 public:
-  void record(T value)
-  {
+  void record(T value) {
     // Counts
     _count++;
     if (value >= Slice7)
@@ -64,13 +63,10 @@ public:
     // Statistical properties
     // Computed with numerical stability thanks to https://www.johndcook.com/blog/standard_deviation/
     double v = value;
-    if (_count == 1)
-    {
+    if (_count == 1) {
       _oldM = _newM = v;
       _oldS = 0.0;
-    }
-    else
-    {
+    } else {
       _newM = _oldM + (v - _oldM)/_count;
       _newS = _oldS + (v - _oldM)*(v - _newM);
       _oldM = _newM;
@@ -78,31 +74,29 @@ public:
     }
   }
 
-  double average() const
-  {
+  int32_t count() const {
+    return _count;
+  }
+
+  double average() const {
     return (_count > 0) ? _newM : 0.0;
   }
 
-  double variance() const
-  {
+  double variance() const {
     return (_count > 1) ? _newS/(_count - 1) : 0.0;
   }
 
-  double stddev() const
-  {
+  double stddev() const {
     return sqrt(variance());
   }
 
-  std::string to_string() const
-  {
+  std::string to_string() const {
     std::string res;
     res += "Cnt:" + std::to_string(_count);
     res += " Slices:";
-    for (int i = 0; i < slice_count; ++i)
-    {
+    for (int i = 0; i < slice_count; ++i) {
       res += std::to_string(_slices[i]);
-      if (i < slice_count - 1)
-      {
+      if (i < slice_count - 1) {
         res += "|";
       }
     }

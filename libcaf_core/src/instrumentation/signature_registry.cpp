@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "caf/detail/pretty_type_name.hpp"
 #include "caf/instrumentation/signature_registry.hpp"
 
 // stolen from boost::hash_combine
@@ -37,7 +38,7 @@ actortype_id signature_registry::get_actortype(const std::type_info& ti) {
 
   auto it = actortypes_.find(hash);
   if (it == actortypes_.end()) {
-    actortypes_[hash] = ti.name();
+    actortypes_[hash] = detail::pretty_type_name(ti);
   }
 
   return hash;
@@ -71,7 +72,7 @@ uint64_t signature_registry::get_signature(const type_erased_tuple &m) {
       else if (type.first != 0)
         sig += numbered_type_names[type.first];
       else
-        sig += type.second->name();
+        sig += detail::pretty_type_name(*type.second);
 
       if (idx < m.size() - 1) {
         sig += ", ";
