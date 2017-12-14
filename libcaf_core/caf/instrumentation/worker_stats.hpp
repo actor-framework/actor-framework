@@ -31,7 +31,7 @@
 
 #include "metric.hpp"
 #include "stat_stream.hpp"
-#include "signature_registry.hpp"
+#include "name_registry.hpp"
 #include "instrumentation_ids.hpp"
 
 namespace caf {
@@ -85,7 +85,7 @@ public:
   std::vector<metric> collect_metrics() const;
   std::string to_string() const;
 
-  signature_registry& registry() {
+  name_registry& registry() {
     return registry_;
   }
 
@@ -98,7 +98,7 @@ private:
 
   std::atomic<bool> clear_request_;
   std::unordered_map<actortype_id, std::unordered_map<callsite_id, callsite_stats>> callsite_stats_; // indexed by actortype_id and then callsite_id
-  signature_registry registry_;
+  name_registry registry_;
 };
 
 } // namespace instrumentation

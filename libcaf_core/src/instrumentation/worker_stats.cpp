@@ -42,7 +42,7 @@ std::vector<metric> worker_stats::collect_metrics() const {
   for (const auto& by_actor : callsite_stats_) {
     auto actortype = registry_.identify_actortype(by_actor.first);
     for (const auto& by_callsite : by_actor.second) {
-      auto callsite = registry_.identify_signature(by_callsite.first);
+      auto callsite = registry_.identify_simple_signature(by_callsite.first);
       auto& callsite_stats = by_callsite.second;
       metrics.emplace_back(actortype, callsite, "mb_processed", callsite_stats.mb_waittimes().count());
       metrics.emplace_back(actortype, callsite, "mb_waittime_avg", callsite_stats.mb_waittimes().average());
@@ -58,8 +58,8 @@ std::string worker_stats::to_string() const {
     std::string res;
     for (const auto& by_actor : callsite_stats_) {
       for (const auto& by_callsite : by_actor.second) {
-        res += "ACTOR " + registry_.identify_actortype(by_actor.first);
-        res += " CALLSITE " + registry_.identify_signature(by_callsite.first);
+        res += "ACTORTYPE " + registry_.identify_actortype(by_actor.first);
+        res += " CALLSITE " + registry_.identify_simple_signature(by_callsite.first);
         res += " => " + by_callsite.second.to_string();
         res += "\n";
       }

@@ -31,12 +31,14 @@
 namespace caf {
 namespace instrumentation {
 
-class signature_registry {
+class name_registry {
 public:
   actortype_id get_actortype(const std::type_info& ti);
   std::string identify_actortype(actortype_id cs) const;
-  callsite_id get_signature(const type_erased_tuple &m);
-  std::string identify_signature(callsite_id cs) const;
+  callsite_id get_simple_signature(const type_erased_tuple &m);
+  std::string identify_simple_signature(callsite_id cs) const;
+  callsite_id get_complete_signature(const type_erased_tuple &m);
+  std::string identify_complete_signature(callsite_id cs) const;
 
 private:
   std::unordered_map<actortype_id, std::string> actortypes_;

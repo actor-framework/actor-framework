@@ -22,7 +22,7 @@
 #include <unordered_map>
 
 #include "caf/detail/pretty_type_name.hpp"
-#include "caf/instrumentation/signature_registry.hpp"
+#include "caf/instrumentation/name_registry.hpp"
 
 // stolen from boost::hash_combine
 template <class T>
@@ -33,7 +33,7 @@ inline void hash_combine(std::size_t& seed, T const& v) {
 namespace caf {
 namespace instrumentation {
 
-actortype_id signature_registry::get_actortype(const std::type_info& ti) {
+actortype_id name_registry::get_actortype(const std::type_info& ti) {
   auto hash = ti.hash_code();
 
   auto it = actortypes_.find(hash);
@@ -44,12 +44,38 @@ actortype_id signature_registry::get_actortype(const std::type_info& ti) {
   return hash;
 }
 
-std::string signature_registry::identify_actortype(actortype_id cs) const {
+std::string name_registry::identify_actortype(actortype_id cs) const {
   auto it = actortypes_.find(cs);
   return (it != actortypes_.end()) ? it->second : "?";
 }
 
-uint64_t signature_registry::get_signature(const type_erased_tuple &m) {
+uint64_t name_registry::get_simple_signature(const type_erased_tuple &m) {
+  if (m.size() == 0) // NOTE: m.empty() doesn't work here for some reason... (ex: when using dynamically-generated messages)
+    return 0;
+
+  auto type = m.type(0);
+  size_t hash = (type.first != 0) ? type.first : type.second->hash_code();
+
+  auto it = signatures_.find(hash);
+  if (it == signatures_.end()) {
+    auto type = m.type(0);
+    if (type.first == type_nr<atom_value>::value)
+      signatures_[hash] = "'" + to_string(m.get_as<atom_value>(0)) + "'";
+    else if (type.first != 0)
+      signatures_[hash] = numbered_type_names[type.first];
+    else
+      signatures_[hash] = detail::pretty_type_name(*type.second);
+  }
+
+  return hash;
+}
+
+std::string name_registry::identify_simple_signature(uint64_t cs) const {
+  auto it = signatures_.find(cs);
+  return (it != signatures_.end()) ? it->second : "?";
+}
+
+uint64_t name_registry::get_complete_signature(const type_erased_tuple &m) {
   if (m.size() == 0) // NOTE: m.empty() doesn't work here for some reason... (ex: when using dynamically-generated messages)
     return 0;
 
@@ -59,7 +85,7 @@ uint64_t signature_registry::get_signature(const type_erased_tuple &m) {
     if (type.first != 0)
       hash_combine(hash, type.first);
     else
-      hash_combine(hash, type.second);
+      hash_combine(hash, type.second->hash_code());
   }
 
   auto it = signatures_.find(hash);
@@ -84,7 +110,7 @@ uint64_t signature_registry::get_signature(const type_erased_tuple &m) {
   return hash;
 }
 
-std::string signature_registry::identify_signature(uint64_t cs) const {
+std::string name_registry::identify_complete_signature(uint64_t cs) const {
   auto it = signatures_.find(cs);
   return (it != signatures_.end()) ? it->second : "?";
 }
