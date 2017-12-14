@@ -37,8 +37,6 @@
 namespace caf {
 namespace instrumentation {
 
-static const int max_instrumented_mailbox_size = 64;
-
 /// Instrumentation stats aggregated per-worker-per-callsite.
 class callsite_stats {
   using mb_waittime_stream = stat_stream<int64_t,
@@ -50,7 +48,15 @@ class callsite_stats {
     1000000000ull, // 1s
     10000000000ull // 10s
   >;
-  using mb_size_stream = stat_stream<size_t, 1, 2, 4, 8, 16, 32, max_instrumented_mailbox_size>;
+  using mb_size_stream = stat_stream<size_t,
+    1,
+    8,
+    64,
+    512,
+    4096,
+    32768,
+    262144
+  >;
 
 public:
   void record_pre_behavior(int64_t mb_wait_time, size_t mb_size);

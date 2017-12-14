@@ -503,7 +503,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         auto actortype = registry.get_actortype(typeid(*this));
         auto callsite = registry.get_signature(current_element_->content());
         auto mb_wait_time = timestamp_ago_ns(current_element_->ts);
-        auto mb_size = mailbox_.count(instrumentation::max_instrumented_mailbox_size);
+        auto mb_size = mailbox_.cached_count(); // IMPORTANT: using count() here can lock the actor when receiving network messages
         context_->stats().record_pre_behavior(actortype, callsite, mb_wait_time, mb_size);
       }
 #endif
