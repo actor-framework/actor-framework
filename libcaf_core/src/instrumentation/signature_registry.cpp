@@ -32,7 +32,23 @@ inline void hash_combine(std::size_t& seed, T const& v) {
 namespace caf {
 namespace instrumentation {
 
-uint64_t signature_registry::identify(type_erased_tuple& m) {
+actortype_id signature_registry::get_actortype(const std::type_info& ti) {
+  auto hash = ti.hash_code();
+
+  auto it = actortypes_.find(hash);
+  if (it == actortypes_.end()) {
+    actortypes_[hash] = ti.name();
+  }
+
+  return hash;
+}
+
+std::string signature_registry::identify_actortype(actortype_id cs) const {
+  auto it = actortypes_.find(cs);
+  return (it != actortypes_.end()) ? it->second : "?";
+}
+
+uint64_t signature_registry::get_signature(const type_erased_tuple &m) {
   if (m.size() == 0) // NOTE: m.empty() doesn't work here for some reason... (ex: when using dynamically-generated messages)
     return 0;
 
@@ -67,7 +83,7 @@ uint64_t signature_registry::identify(type_erased_tuple& m) {
   return hash;
 }
 
-std::string signature_registry::get_human_readable_callsite(uint64_t cs) const {
+std::string signature_registry::identify_signature(uint64_t cs) const {
   auto it = signatures_.find(cs);
   return (it != signatures_.end()) ? it->second : "?";
 }

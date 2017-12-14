@@ -17,33 +17,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SIGNATURE_REGISTRY_HPP
-#define CAF_SIGNATURE_REGISTRY_HPP
-
-#include <string>
-#include <cstdint>
-#include <typeinfo>
-#include <unordered_map>
-
-#include "caf/type_erased_tuple.hpp"
-#include "instrumentation_ids.hpp"
+#ifndef CAF_INSTRUMENTATION_IDS_HPP
+#define CAF_INSTRUMENTATION_IDS_HPP
 
 namespace caf {
 namespace instrumentation {
 
-class signature_registry {
-public:
-  actortype_id get_actortype(const std::type_info& ti);
-  std::string identify_actortype(actortype_id cs) const;
-  callsite_id get_signature(const type_erased_tuple &m);
-  std::string identify_signature(callsite_id cs) const;
-
-private:
-  std::unordered_map<actortype_id, std::string> actortypes_;
-  std::unordered_map<callsite_id, std::string> signatures_;
-};
+using actortype_id = uint64_t;
+using callsite_id = uint64_t;
 
 } // namespace instrumentation
 } // namespace caf
 
-#endif // CAF_SIGNATURE_REGISTRY_HPP
+#endif // CAF_INSTRUMENTATION_IDS_HPP

@@ -30,9 +30,7 @@ void callsite_stats::record_pre_behavior(int64_t mb_wait_time, size_t mb_size)
 
 std::string callsite_stats::to_string() const
 {
-  return std::string("at ") + std::to_string(at)
-         + " cs " + std::to_string(cs)
-         + " | WAIT " + mailbox_wait_times_.to_string()
+  return std::string("WAIT ") + mailbox_wait_times_.to_string()
          + " | " + " SIZE " + mailbox_sizes_.to_string();
 }
 
@@ -47,8 +45,8 @@ std::string worker_stats::to_string() const
     std::string res;
     for (const auto& by_actor : callsite_stats_) {
       for (const auto& by_callsite : by_actor.second) {
-        res += "ACTOR " + std::to_string(by_actor.first);
-        res += " CALLSITE " + registry_.get_human_readable_callsite(by_callsite.first);
+        res += "ACTOR " + registry_.identify_actortype(by_actor.first);
+        res += " CALLSITE " + registry_.identify_signature(by_callsite.first);
         res += " => " + by_callsite.second.to_string();
         res += "\n";
       }

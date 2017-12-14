@@ -28,15 +28,13 @@
 
 #include "stat_stream.hpp"
 #include "caf/timestamp.hpp"
+#include "instrumentation_ids.hpp"
 #include "signature_registry.hpp"
 
 namespace caf {
 namespace instrumentation {
 
 static const int max_instrumented_mailbox_size = 64;
-
-using actortype_id = uint64_t;
-using callsite_id = uint64_t;
 
 /// Instrumentation stats aggregated per-worker-per-callsite.
 class callsite_stats {
@@ -45,8 +43,6 @@ public:
   std::string to_string() const;
 
 private:
-  actortype_id at;
-  callsite_id cs;
   stat_stream<int64_t,
     10000ull,      // 10 us
     100000ull,     // 100 us
