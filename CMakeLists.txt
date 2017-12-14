@@ -95,7 +95,7 @@ if(NOT CAF_NO_EXCEPTIONS)
 endif()
 
 if(NOT CAF_NO_INSTRUMENTATION)
-  set(CAF_NO_INSTRUMENTATION yes)
+  set(CAF_NO_INSTRUMENTATION no)
 endif()
 
 if(NOT CAF_BUILD_STATIC_ONLY)
@@ -380,6 +380,7 @@ endmacro()
 
 to_int_value(CAF_LOG_LEVEL)
 to_int_value(CAF_NO_EXCEPTIONS)
+to_int_value(CAF_NO_INSTRUMENTATION)
 to_int_value(CAF_NO_MEM_MANAGEMENT)
 to_int_value(CAF_ENABLE_RUNTIME_CHECKS)
 
