@@ -404,8 +404,8 @@ void actor_system::await_all_actors_done() const {
   registry_.await_running_count_equal(0);
 }
 
-#ifndef CAF_NO_INSTRUMENTATION
 std::vector<instrumentation::metric> actor_system::collect_metrics() {
+#ifndef CAF_NO_INSTRUMENTATION
   auto metrics = scheduler().collect_metrics();
   if (has_middleman()) {
     auto network_metrics = middleman().collect_metrics();
@@ -413,8 +413,10 @@ std::vector<instrumentation::metric> actor_system::collect_metrics() {
     std::move(network_metrics.begin(), network_metrics.end(), std::back_inserter(metrics));
   }
   return metrics;
-}
+#else
+  return {};
 #endif
+}
 
 void actor_system::inc_detached_threads() {
   ++detached;
