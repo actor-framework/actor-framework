@@ -29,40 +29,26 @@ namespace instrumentation {
 
 /// Instrumentation stats aggregated per-worker-per-callsite.
 class callsite_stats {
-  using mb_waittime_stream = stat_stream<int64_t,
-    10000ull,      // 10 us
-    100000ull,     // 100 us
-    1000000ull,    // 1 ms
-    10000000ull,   // 10 ms
-    100000000ull,  // 100 ms
-    1000000000ull, // 1s
-    10000000000ull // 10s
-  >;
-  using mb_size_stream = stat_stream<size_t,
-    1,
-    8,
-    64,
-    512,
-    4096,
-    32768,
-    262144
-  >;
-
 public:
   void record_pre_behavior(int64_t mb_wait_time, size_t mb_size);
   std::string to_string() const;
 
-  mb_waittime_stream mb_waittimes() const {
+  stat_stream mb_waittimes() const {
     return mb_waittimes_;
   }
 
-  mb_size_stream mb_sizes() const {
+  stat_stream mb_sizes() const {
     return mb_sizes_;
   }
 
+  void combine(const callsite_stats& rhs) {
+    mb_waittimes_.combine(rhs.mb_waittimes_);
+    mb_sizes_.combine(rhs.mb_sizes_);
+  }
+
 private:
-  mb_waittime_stream mb_waittimes_;
-  mb_size_stream mb_sizes_;
+  stat_stream mb_waittimes_;
+  stat_stream mb_sizes_;
 };
 
 } // namespace instrumentation

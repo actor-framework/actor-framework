@@ -29,89 +29,109 @@ namespace caf {
 namespace instrumentation {
 
 /// Compute statistical properties on a stream of measures.
-///  _slices will store the count of measures in each of the following buckets:
-///    _slices[0] for measures in [0;Slice1)
-///    _slices[1] for measures in [Slice1;Slice2)
-///    ...
-///    _slices[6] for measures in [Slice6;Slice7)
-///    _slices[7] for measures in [Slice7;+infinity)
-template<typename T, T Slice1, T Slice2, T Slice3, T Slice4, T Slice5, T Slice6, T Slice7>
 class stat_stream {
   static const int slice_count = 8;
 
 public:
-  void record(T value) {
-    // Counts
-    _count++;
-    if (value >= Slice7)
-      _slices[7]++;
-    else if (value >= Slice6)
-      _slices[6]++;
-    else if (value >= Slice5)
-      _slices[5]++;
-    else if (value >= Slice4)
-      _slices[4]++;
-    else if (value >= Slice3)
-      _slices[3]++;
-    else if (value >= Slice2)
-      _slices[2]++;
-    else if (value >= Slice1)
-      _slices[1]++;
-    else
-      _slices[0]++;
+  void record(double value) {
+    auto n1 = _n;
+    _n++;
+    if (value < _min)
+      _min = value;
+    if (value > _max)
+      _max = value;
 
     // Statistical properties
-    // Computed with numerical stability thanks to https://www.johndcook.com/blog/standard_deviation/
-    double v = value;
-    if (_count == 1) {
-      _oldM = _newM = v;
-      _oldS = 0.0;
-    } else {
-      _newM = _oldM + (v - _oldM)/_count;
-      _newS = _oldS + (v - _oldM)*(v - _newM);
-      _oldM = _newM;
-      _oldS = _newS;
-    }
+    // See https://www.johndcook.com/blog/skewness_kurtosis/
+    double delta = value - _m1;
+    double delta_n = delta / _n;
+    double delta_n2 = delta_n * delta_n;
+    double term1 = delta * delta_n * n1;
+    _m1 += delta_n;
+    _m4 += term1 * delta_n2 * (_n*_n - 3*_n + 3) + 6 * delta_n2 * _m2 - 4 * delta_n * _m3;
+    _m3 += term1 * delta_n * (_n - 2) - 3 * delta_n * _m2;
+    _m2 += term1;
   }
 
   int32_t count() const {
-    return _count;
+    return _n;
+  }
+
+  double min() const {
+    return _min;
+  }
+
+  double max() const {
+    return _max;
   }
 
   double average() const {
-    return (_count > 0) ? _newM : 0.0;
+    return (_n > 0) ? _m1 : 0.0;
   }
 
   double variance() const {
-    return (_count > 1) ? _newS/(_count - 1) : 0.0;
+    return (_n > 1) ? _m2/(_n - 1) : 0.0;
   }
 
   double stddev() const {
     return sqrt(variance());
   }
 
+  void combine(const stat_stream& rhs) {
+    stat_stream combined;
+
+    combined._n = _n + rhs._n;
+    if (combined._n == 0)
+      return;
+
+    double delta = rhs._m1 - _m1;
+    double delta2 = delta*delta;
+    double delta3 = delta*delta2;
+    double delta4 = delta2*delta2;
+
+    combined._m1 = (_n*_m1 + rhs._n*rhs._m1) / combined._n;
+
+    combined._m2 = _m2 + rhs._m2 +
+                   delta2 * _n * rhs._n / combined._n;
+
+    combined._m3 = _m3 + rhs._m3 +
+                   delta3 * _n * rhs._n * (_n - rhs._n)/(combined._n*combined._n);
+    combined._m3 += 3.0*delta * (_n*rhs._m2 - rhs._n*_m2) / combined._n;
+
+    combined._m4 = _m4 + rhs._m4 + delta4*_n*rhs._n * (_n*_n - _n*rhs._n + rhs._n*rhs._n) /
+                                   (combined._n*combined._n*combined._n);
+    combined._m4 += 6.0*delta2 * (_n*_n*rhs._m2 + rhs._n*rhs._n*_m2)/(combined._n*combined._n) +
+                    4.0*delta*(_n*rhs._m3 - rhs._n*_m3) / combined._n;
+
+    _n = combined._n;
+    if (rhs._min < _min)
+      _min = rhs._min;
+    if (rhs._max > _max)
+      _max = rhs._max;
+    _m1 = combined._m1;
+    _m2 = combined._m2;
+    _m3 = combined._m3;
+    _m4 = combined._m4;
+  }
+
   std::string to_string() const {
     std::string res;
-    res += "Cnt:" + std::to_string(_count);
-    res += " Slices:";
-    for (int i = 0; i < slice_count; ++i) {
-      res += std::to_string(_slices[i]);
-      if (i < slice_count - 1) {
-        res += "|";
-      }
-    }
+    res += "Cnt:" + std::to_string(_n);
+    res += " Min:" + std::to_string(_min);
+    res += " Max:" + std::to_string(_max);
     res += " Avg:" + std::to_string(average());
     res += " Stddev:" + std::to_string(stddev());
     return res;
   }
 
 private:
-  uint32_t _count = 0;
-  std::array<uint32_t, slice_count> _slices = {0, 0, 0, 0, 0, 0, 0, 0};
-  double _oldM = 0.0;
-  double _newM = 0.0;
-  double _oldS = 0.0;
-  double _newS = 0.0;
+  uint32_t _n = 0;
+  double _min = 1e10;
+  double _max = -1e10;
+  double _m1 = 0.0; // M1
+  double _m2 = 0.0; // M2
+  double _m3 = 0.0; // M3
+  double _m4 = 0.0; // M4
 };
 
 } // namespace instrumentation

@@ -401,7 +401,7 @@ std::vector<instrumentation::metric> middleman::collect_metrics() {
     if (basp != nullptr) {
       auto metrics = basp->state.stats.collect_metrics();
       for (auto& m : metrics) {
-        m.type = instrumentation::metric::type::broker_forward; // TODO something less disgusting
+        m.key.type = instrumentation::metric_type::broker_forward; // TODO something less disgusting
       }
       return metrics;
     }

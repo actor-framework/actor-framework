@@ -31,26 +31,60 @@
 namespace caf {
 namespace instrumentation {
 
-struct metric {
-  enum class type {
-    pre_behavior,
-    broker_forward
-  };
+enum class metric_type {
+  pre_behavior,
+  broker_forward
+};
 
-  metric(type type, std::string actor, std::string callsite, const callsite_stats& value)
-    : type(type),
-      actortype(std::move(actor)),
-      callsite(std::move(callsite)),
+struct metric_key {
+  metric_type type;
+  std::string actortype;
+  std::string callsite;
+
+  bool operator==(const metric_key& other) const {
+    return type == other.type
+           && actortype == other.actortype
+           && callsite == other.callsite;
+  }
+};
+
+struct metric {
+  metric(metric_type type, const std::string& actortype, const std::string& callsite, const callsite_stats& value)
+    : key{type, actortype, callsite},
       value(value)
   {}
 
-  type type;
-  std::string actortype;
-  std::string callsite;
+  void combine(const metric& rhs) {
+    value.combine(rhs.value);
+  }
+
+  metric_key key;
   callsite_stats value;
 };
 
 } // namespace instrumentation
 } // namespace caf
+
+namespace std {
+
+// stolen from boost::hash_combine
+template <class T>
+inline void hash_combine(std::size_t& seed, T const& v)
+{
+  seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+}
+
+template <>
+struct hash<caf::instrumentation::metric_key>
+{
+  size_t operator()(const caf::instrumentation::metric_key& k) const {
+    auto hash = static_cast<size_t>(k.type);
+    hash_combine(hash, k.actortype);
+    hash_combine(hash, k.callsite);
+    return hash;
+  }
+};
+
+} // namespace std
 
 #endif // CAF_METRIC_HPP
