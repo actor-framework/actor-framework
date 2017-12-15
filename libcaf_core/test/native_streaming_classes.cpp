@@ -46,7 +46,10 @@
 #include "caf/send.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_scatterer.hpp"
+#include "caf/stream_sink_driver.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/stream_source_driver.hpp"
+#include "caf/stream_stage_driver.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/upstream_msg.hpp"
 #include "caf/variant.hpp"
@@ -314,22 +317,32 @@ public:
     auto slot = next_slot_++;
     CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
                 << " on slot " << slot);
-    strong_actor_ptr to = ref.ctrl();
-    send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
-                             stream_priority::normal, false});
-    auto init = [](int& x) {
-      x = 0;
+    outbound_path::emit_open(this, slot, ref.ctrl(), make_message(),
+                             stream_priority::normal, false);
+    struct driver final : public stream_source_driver<int> {
+    public:
+      driver(int sentinel) : x_(0), sentinel_(sentinel) {
+        // nop
+      }
+
+      handshake_tuple_type make_handshake() const override {
+        return std::make_tuple(none);
+      }
+
+      void pull(downstream<int>& out, size_t hint) override {
+        auto y = std::min(sentinel_, x_ + static_cast<int>(hint));
+        while (x_ < y)
+          out.push(x_++);
+      }
+
+      bool done() const noexcept override {
+        return x_ == sentinel_;
+      }
+    private:
+      int x_;
+      int sentinel_;
     };
-    auto f = [=](int& x, downstream<int>& out, size_t hint) {
-      auto y = std::min(num_messages, x + static_cast<int>(hint));
-      while (x < y)
-        out.push(x++);
-    };
-    auto fin = [=](const int& x) {
-      return x == num_messages;
-    };
-    policy::arg<broadcast_scatterer<int>> token;
-    auto ptr = detail::make_stream_source(this, init, f, fin, token);
+    auto ptr = detail::make_stream_source<driver>(this, num_messages);
     ptr->generate_messages();
     pending_managers_.emplace(slot, std::move(ptr));
   }
@@ -341,19 +354,24 @@ public:
     strong_actor_ptr to = ref.ctrl();
     send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
                              stream_priority::normal, false});
-    using log_ptr = vector<int>*;
-    auto init = [&](log_ptr& ptr) {
-      ptr = &data;
+    struct driver final : public stream_stage_driver<int, int> {
+    public:
+      driver(vector<int>* log) : log_(log) {
+        // nop
+      }
+
+      handshake_tuple_type make_handshake() const override {
+        return std::make_tuple(none);
+      }
+
+      void process(vector<int>&& batch, downstream<int>& out) override {
+        log_->insert(log_->end(), batch.begin(), batch.end());
+        out.append(batch.begin(), batch.end());
+      }
+    private:
+      vector<int>* log_;
     };
-    auto f = [](log_ptr& ptr, downstream<int>& out, int x) {
-      ptr->push_back(x);
-      out.push(x);
-    };
-    auto cleanup = [](log_ptr&) {
-      // nop
-    };
-    policy::arg<broadcast_scatterer<int>> token;
-    forwarder = detail::make_stream_stage(this, init, f, cleanup, token);
+    forwarder = detail::make_stream_stage<driver>(this, &data);
     pending_managers_.emplace(slot, forwarder);
   }
 
@@ -367,20 +385,20 @@ public:
     // was called and we run as a stage.
     auto mgr = forwarder;
     if (mgr == nullptr) {
-      using log_ptr = vector<int>*;
-      auto init = [&](log_ptr& ptr) {
-        ptr = &data;
+      struct driver final : public stream_sink_driver<int> {
+      public:
+        driver(std::vector<int>* log) : log_(log) {
+          // nop
+        }
+
+        void process(std::vector<int>&& xs) override {
+          log_->insert(log_->end(), xs.begin(), xs.end());
+        }
+      private:
+        vector<int>* log_;
       };
-      auto f = [](log_ptr& ptr, int x) {
-        ptr->push_back(x);
-      };
-      auto fin = [](log_ptr&) {
-        // nop
-      };
-      mgr = detail::make_stream_sink(this, std::move(init), std::move(f),
-                                     std::move(fin));
+      mgr = detail::make_stream_sink<driver>(this, &data);
     }
-    // mgr->out().add_path(id, hs.prev_stage);
     managers_.emplace(id, mgr);
     // Create a new queue in the mailbox for incoming traffic.
     auto ip = new inbound_path(mgr, id, hs.prev_stage);

@@ -18,10 +18,10 @@
 
 #include "caf/outbound_path.hpp"
 
-#include "caf/send.hpp"
+#include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/no_stages.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/send.hpp"
 
 namespace caf {
 
@@ -38,6 +38,17 @@ outbound_path::outbound_path(stream_slots id, strong_actor_ptr ptr)
 
 outbound_path::~outbound_path() {
   // nop
+}
+
+void outbound_path::emit_open(local_actor* self, stream_slot slot,
+                              strong_actor_ptr to, message handshake_data,
+                              stream_priority prio, bool is_redeployable) {
+  CAF_ASSERT(self != nullptr);
+  CAF_ASSERT(to != nullptr);
+  // TODO: attach an aborter to `to`
+  unsafe_send_as(self, to,
+                 open_stream_msg{slot, std::move(handshake_data), self->ctrl(),
+                                 nullptr, prio, is_redeployable});
 }
 
 void outbound_path::emit_batch(local_actor* self, long xs_size, message xs) {

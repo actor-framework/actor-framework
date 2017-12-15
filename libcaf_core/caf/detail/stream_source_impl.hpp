@@ -20,6 +20,7 @@
 #define CAF_DETAIL_STREAM_SOURCE_IMPL_HPP
 
 #include "caf/downstream.hpp"
+#include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/outbound_path.hpp"
@@ -31,33 +32,43 @@
 namespace caf {
 namespace detail {
 
-template <class Fun, class Predicate, class DownstreamPolicy>
+template <class Driver, class Scatterer>
 class stream_source_impl : public stream_manager {
 public:
-  using trait = stream_source_trait_t<Fun>;
+  // -- static asserts ---------------------------------------------------------
 
-  using state_type = typename trait::state;
+  static_assert(std::is_same<typename Driver::output_type,
+                             typename Scatterer::value_type>::value,
+                "Driver and Scatterer have incompatible types.");
 
-  using output_type = typename trait::output;
+  // -- member types -----------------------------------------------------------
 
-  stream_source_impl(local_actor* self, Fun fun, Predicate pred)
+  using driver_type = Driver;
+
+  using scatterer_type = Scatterer;
+
+  using output_type = typename driver_type::output_type;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  template <class... Ts>
+  stream_source_impl(local_actor* self, Ts&&... xs)
       : stream_manager(self),
         at_end_(false),
-        fun_(std::move(fun)),
-        pred_(std::move(pred)),
+        driver_(std::forward<Ts>(xs)...),
         out_(self) {
     // nop
   }
+
+  // -- implementation of virtual functions ------------------------------------
 
   bool done() const override {
     return at_end_ && out_.clean();
   }
 
-
-  DownstreamPolicy& out() override {
+  Scatterer& out() override {
     return out_;
   }
-
 
   bool generate_messages() override {
     if (at_end_)
@@ -65,36 +76,25 @@ public:
     auto hint = out_.capacity();
     if (hint == 0)
       return false;
-    downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
-    fun_(state_, ds, hint);
-    if (pred_(state_))
+    downstream<output_type> ds{out_.buf()};
+    driver_.pull(ds, hint);
+    if (driver_.done())
       at_end_ = true;
     return hint != out_.capacity();
   }
 
-  state_type& state() {
-    return state_;
-  }
-
-  bool at_end() const noexcept {
-    return at_end_;;
-  }
-
 private:
   bool at_end_;
-  state_type state_;
-  Fun fun_;
-  Predicate pred_;
-  DownstreamPolicy out_;
+  Driver driver_;
+  Scatterer out_;
 };
 
-template <class Init, class Fun, class Predicate, class Scatterer>
-stream_manager_ptr make_stream_source(local_actor* self, Init init, Fun f,
-                                      Predicate p, policy::arg<Scatterer>) {
-  using impl = stream_source_impl < Fun, Predicate, Scatterer>;
-  auto ptr = make_counted<impl>(self, std::move(f), std::move(p));
-  init(ptr->state());
-  return ptr;
+template <class Driver,
+          class Scatterer = broadcast_scatterer<typename Driver::output_type>,
+          class... Ts>
+stream_manager_ptr make_stream_source(local_actor* self, Ts&&... xs) {
+  using impl = stream_source_impl<Driver, Scatterer>;
+  return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 
 } // namespace detail

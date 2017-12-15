@@ -32,30 +32,36 @@
 namespace caf {
 namespace detail {
 
-template <class Fun, class Cleanup, class DownstreamPolicy>
+template <class Driver, class Scatterer>
 class stream_stage_impl : public stream_manager {
 public:
-  using trait = stream_stage_trait_t<Fun>;
+  // -- static asserts ---------------------------------------------------------
 
-  using state_type = typename trait::state;
+  static_assert(std::is_same<typename Driver::output_type,
+                             typename Scatterer::value_type>::value,
+                "Driver and Scatterer have incompatible types.");
 
-  using input_type = typename trait::input;
+  // -- member types -----------------------------------------------------------
 
-  using output_type = typename trait::output;
+  using driver_type = Driver;
 
-  stream_stage_impl(local_actor* self, Fun fun, Cleanup cleanup)
+  using scatterer_type = Scatterer;
+
+  using output_type = typename driver_type::output_type;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  template <class... Ts>
+  stream_stage_impl(local_actor* self, Ts&&... xs)
       : stream_manager(self),
-        fun_(std::move(fun)),
-        cleanup_(std::move(cleanup)),
+        driver_(std::forward<Ts>(xs)...),
         out_(self) {
     // nop
   }
 
-  state_type& state() {
-    return state_;
-  }
+  // -- implementation of virtual functions ------------------------------------
 
-  DownstreamPolicy& out() override {
+  scatterer_type& out() override {
     return out_;
   }
 
@@ -67,10 +73,9 @@ public:
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<output_type>;
     if (x.xs.match_elements<vec_type>()) {
-      auto& xs = x.xs.get_as<vec_type>(0);
-      downstream<typename DownstreamPolicy::value_type> ds{out_.buf()};
-      for (auto& x : xs)
-        fun_(state_, ds, std::move(x));
+      auto& xs = x.xs.get_mutable_as<vec_type>(0);
+      downstream<output_type> ds{out_.buf()};
+      driver_.process(std::move(xs), ds);
       return none;
     }
     CAF_LOG_ERROR("received unexpected batch type");
@@ -78,8 +83,7 @@ public:
   }
 
   message make_output_token(const stream_id&) const override {
-    // TODO: return make_message(stream<output_type>{x});
-    return make_message();
+    return make_message_from_tuple(driver_.make_handshake());
   }
 
   bool congested() const override {
@@ -87,19 +91,16 @@ public:
   }
 
 private:
-  state_type state_;
-  Fun fun_;
-  Cleanup cleanup_;
-  DownstreamPolicy out_;
+  driver_type driver_;
+  scatterer_type out_;
 };
 
-template <class Init, class Fun, class Cleanup, class Scatterer>
-stream_manager_ptr make_stream_stage(local_actor* self, Init init, Fun f,
-                                     Cleanup cleanup, policy::arg<Scatterer>) {
-  using impl = stream_stage_impl<Fun, Cleanup, Scatterer>;
-  auto ptr = make_counted<impl>(self, std::move(f), std::move(cleanup));
-  init(ptr->state());
-  return ptr;
+template <class Driver,
+          class Scatterer = broadcast_scatterer<typename Driver::output_type>,
+          class... Ts>
+stream_manager_ptr make_stream_stage(local_actor* self, Ts&&... xs) {
+  using impl = stream_stage_impl<Driver, Scatterer>;
+  return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 
 } // namespace detail

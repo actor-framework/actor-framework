@@ -5,7 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright (C) 2011 - 2017                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,52 +17,54 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DOWNSTREAM_HPP
-#define CAF_DOWNSTREAM_HPP
+#ifndef CAF_STREAM_SINK_DRIVER_IMPL_HPP
+#define CAF_STREAM_SINK_DRIVER_IMPL_HPP
 
-#include <deque>
-#include <vector>
-
-#include "caf/make_message.hpp"
+#include "caf/none.hpp"
+#include "caf/stream_sink_driver.hpp"
+#include "caf/stream_sink_trait.hpp"
 
 namespace caf {
+namespace detail {
 
-/// Grants access to an output stream buffer.
-template <class T>
-class downstream {
+/// Identifies an unbound sequence of messages.
+template <class Input, class Process, class Finalize>
+class stream_sink_driver_impl final : public stream_sink_driver<Input> {
 public:
   // -- member types -----------------------------------------------------------
 
-  /// A queue of items for temporary storage before moving them into chunks.
-  using queue_type = std::deque<T>;
+  using super = stream_sink_driver<Input>;
 
-  // -- constructors, destructors, and assignment operators --------------------
+  using input_type = typename super::input_type;
 
-  downstream(queue_type& q) : buf_(q) {
-    // nop
+  using trait = stream_sink_trait_t<Process, Finalize>;
+
+  using output_type = typename trait::output;
+
+  using state_type = typename trait::state;
+
+  template <class Init>
+  stream_sink_driver_impl(Init init, Process f, Finalize fin)
+      : process_(std::move(f)),
+        finalize_(std::move(fin)) {
+    init(state_);
   }
 
-  // -- queue access -----------------------------------------------------------
-
-  template <class... Ts>
-  void push(Ts&&... xs) {
-    buf_.emplace_back(std::forward<Ts>(xs)...);
+  void process(std::vector<input_type>&& xs) override {
+    return trait::process::invoke(process_, state_, std::move(xs));
   }
 
-  template <class Iterator, class Sentinel>
-  void append(Iterator first, Sentinel last) {
-    buf_.insert(buf_.end(), first, last);
+  message finalize() override {
+    return trait::finalize::invoke(finalize_, state_);
   }
 
-  // @private
-  queue_type& buf() {
-    return buf_;
-  }
-
-protected:
-  queue_type& buf_;
+private:
+  Process process_;
+  Finalize finalize_;
+  state_type state_;
 };
 
+} // namespace detail
 } // namespace caf
 
-#endif // CAF_DOWNSTREAM_HPP
+#endif // CAF_STREAM_SINK_DRIVER_IMPL_HPP

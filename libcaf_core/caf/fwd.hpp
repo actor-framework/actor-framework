@@ -35,6 +35,7 @@ template <class> class intrusive_ptr;
 template <class> class behavior_type_of;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
+template <class> class broadcast_scatterer;
 
 template <class> struct timeout_definition;
 

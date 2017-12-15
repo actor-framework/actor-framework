@@ -5,7 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright (C) 2011 - 2017                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,52 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DOWNSTREAM_HPP
-#define CAF_DOWNSTREAM_HPP
+#ifndef CAF_STREAM_SINK_DRIVER_HPP
+#define CAF_STREAM_SINK_DRIVER_HPP
 
-#include <deque>
+#include <tuple>
 #include <vector>
 
+#include "caf/fwd.hpp"
+#include "caf/message.hpp"
 #include "caf/make_message.hpp"
 
 namespace caf {
 
-/// Grants access to an output stream buffer.
-template <class T>
-class downstream {
+/// Identifies an unbound sequence of messages.
+template <class Input>
+class stream_sink_driver {
 public:
   // -- member types -----------------------------------------------------------
 
-  /// A queue of items for temporary storage before moving them into chunks.
-  using queue_type = std::deque<T>;
+  using input_type = Input;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  downstream(queue_type& q) : buf_(q) {
+  virtual ~stream_sink_driver() {
     // nop
   }
 
-  // -- queue access -----------------------------------------------------------
+  // -- virtual functions ------------------------------------------------------
 
-  template <class... Ts>
-  void push(Ts&&... xs) {
-    buf_.emplace_back(std::forward<Ts>(xs)...);
+  /// Cleans up any state and produces a result message.
+  virtual message finalize() {
+    return make_message();
   }
 
-  template <class Iterator, class Sentinel>
-  void append(Iterator first, Sentinel last) {
-    buf_.insert(buf_.end(), first, last);
-  }
+  // -- pure virtual functions -------------------------------------------------
 
-  // @private
-  queue_type& buf() {
-    return buf_;
-  }
-
-protected:
-  queue_type& buf_;
+  /// Processes a single batch.
+  virtual void process(std::vector<input_type>&& batch) = 0;
 };
 
 } // namespace caf
 
-#endif // CAF_DOWNSTREAM_HPP
+#endif // CAF_STREAM_SINK_DRIVER_HPP

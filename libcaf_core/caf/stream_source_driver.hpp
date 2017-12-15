@@ -5,7 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright (C) 2011 - 2017                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,52 +17,54 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DOWNSTREAM_HPP
-#define CAF_DOWNSTREAM_HPP
+#ifndef CAF_STREAM_SOURCE_DRIVER_HPP
+#define CAF_STREAM_SOURCE_DRIVER_HPP
 
-#include <deque>
-#include <vector>
+#include <tuple>
 
-#include "caf/make_message.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
-/// Grants access to an output stream buffer.
-template <class T>
-class downstream {
+/// Identifies an unbound sequence of messages.
+template <class Output, class... HandshakeData>
+class stream_source_driver {
 public:
   // -- member types -----------------------------------------------------------
 
-  /// A queue of items for temporary storage before moving them into chunks.
-  using queue_type = std::deque<T>;
+  using output_type = Output;
+
+  using stream_type = stream<output_type>;
+
+  using annotated_stream_type = annotated_stream<output_type, HandshakeData...>;
+
+  using handshake_tuple_type = std::tuple<stream_type, HandshakeData...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  downstream(queue_type& q) : buf_(q) {
+  virtual ~stream_source_driver() {
     // nop
   }
 
-  // -- queue access -----------------------------------------------------------
+  // -- virtual functions ------------------------------------------------------
 
-  template <class... Ts>
-  void push(Ts&&... xs) {
-    buf_.emplace_back(std::forward<Ts>(xs)...);
+  /// Cleans up any state.
+  virtual void finalize() {
+    // nop
   }
 
-  template <class Iterator, class Sentinel>
-  void append(Iterator first, Sentinel last) {
-    buf_.insert(buf_.end(), first, last);
-  }
+  // -- pure virtual functions -------------------------------------------------
 
-  // @private
-  queue_type& buf() {
-    return buf_;
-  }
+  /// Generates handshake data for the next actor in the pipeline.
+  virtual handshake_tuple_type make_handshake() const = 0;
 
-protected:
-  queue_type& buf_;
+  /// Generates more stream elements.
+  virtual void pull(downstream<output_type>& out, size_t num) = 0;
+
+  /// Returns `true` if the source is done sending, otherwise `false`.
+  virtual bool done() const noexcept = 0;
 };
 
 } // namespace caf
 
-#endif // CAF_DOWNSTREAM_HPP
+#endif // CAF_STREAM_SOURCE_DRIVER_HPP

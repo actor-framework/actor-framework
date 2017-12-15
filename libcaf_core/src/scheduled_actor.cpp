@@ -671,6 +671,18 @@ void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
   q->cache().push_back(ptr.release());
 }
 
+stream_slot scheduled_actor::next_slot() {
+  stream_slot result = 0;
+  auto nslot = [](stream_slot x) -> stream_slot {
+    return x + 1;
+  };
+  if (!stream_managers_.empty())
+    result = std::max(nslot(stream_managers_.rbegin()->first.receiver), result);
+  if (!pending_stream_managers_.empty())
+    result = std::max(nslot(pending_stream_managers_.rbegin()->first), result);
+  return result;
+}
+
 /*
 bool scheduled_actor::handle_stream_msg(mailbox_element& x,
                                         behavior* active_behavior) {

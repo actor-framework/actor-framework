@@ -33,29 +33,21 @@
 namespace caf {
 namespace detail {
 
-template <class Fun, class Finalize>
+template <class Driver>
 class stream_sink_impl : public stream_manager {
 public:
   using super = stream_manager;
 
-  using trait = stream_sink_trait_t<Fun, Finalize>;
+  using driver_type = Driver;
 
-  using state_type = typename trait::state;
+  using input_type = typename driver_type::input_type;
 
-  using input_type = typename trait::input;
-
-  using output_type = typename trait::output;
-
-  stream_sink_impl(local_actor* self, Fun fun, Finalize fin)
+  template <class... Ts>
+  stream_sink_impl(local_actor* self, Ts&&... xs)
       : stream_manager(self),
-        fun_(std::move(fun)),
-        fin_(std::move(fin)),
+        driver_(std::forward<Ts>(xs)...),
         out_(self) {
     // nop
-  }
-
-  state_type& state() {
-    return state_;
   }
 
   terminal_stream_scatterer& out() override {
@@ -70,9 +62,8 @@ public:
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<input_type>;
     if (x.xs.match_elements<vec_type>()) {
-      auto& xs = x.xs.get_as<vec_type>(0);
-      for (auto& x : xs)
-        fun_(state_, std::move(x));
+      auto& xs = x.xs.get_mutable_as<vec_type>(0);
+      driver_.process(std::move(xs));
       return none;
     }
     CAF_LOG_ERROR("received unexpected batch type");
@@ -81,23 +72,18 @@ public:
 
 protected:
   message make_final_result() override {
-    return trait::make_result(state_, fin_);
+    return driver_.finalize();
   }
 
 private:
-  state_type state_;
-  Fun fun_;
-  Finalize fin_;
+  driver_type driver_;
   terminal_stream_scatterer out_;
 };
 
-template <class Init, class Fun, class Finalize>
-stream_manager_ptr make_stream_sink(local_actor* self, Init init, Fun f,
-                                    Finalize fin) {
-  using impl = stream_sink_impl<Fun, Finalize>;
-  auto ptr = make_counted<impl>(self, std::move(f), std::move(fin));
-  init(ptr->state());
-  return ptr;
+template <class Driver, class... Ts>
+stream_manager_ptr make_stream_sink(local_actor* self, Ts&&... xs) {
+  using impl = stream_sink_impl<Driver>;
+  return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 
 } // namespace detail

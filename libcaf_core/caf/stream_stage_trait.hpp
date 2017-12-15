@@ -19,10 +19,38 @@
 #ifndef CAF_STREAM_STAGE_TRAIT_HPP
 #define CAF_STREAM_STAGE_TRAIT_HPP
 
+#include <vector>
+
 #include "caf/fwd.hpp"
+
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
+
+namespace detail {
+
+// -- invoke helper to support element-wise and batch-wise processing ----------
+
+struct stream_stage_trait_invoke_one {
+  template <class F, class State, class In, class Out>
+  static void invoke(F& f, State& st, std::vector<In>&& xs,
+                     downstream<Out>& out) {
+    for (auto& x : xs)
+      f(st, out, std::move(x));
+  }
+};
+
+struct stream_stage_trait_invoke_all {
+  template <class F, class State, class In, class Out>
+  static void invoke(F& f, State& st, std::vector<In>&& xs,
+                     downstream<Out>& out) {
+    f(st, std::move(xs), out);
+  }
+};
+
+} // namespace detail
+
+// -- trait implementation -----------------------------------------------------
 
 template <class F>
 struct stream_stage_trait;
@@ -32,7 +60,18 @@ struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
   using state = State;
   using input = In;
   using output = Out;
+  using invoke = detail::stream_stage_trait_invoke_one;
 };
+
+template <class State, class In, class Out>
+struct stream_stage_trait<void (State&, std::vector<In>&&, downstream<Out>&)> {
+  using state = State;
+  using input = In;
+  using output = Out;
+  using invoke = detail::stream_stage_trait_invoke_all;
+};
+
+// -- convenience alias --------------------------------------------------------
 
 template <class F>
 using stream_stage_trait_t =

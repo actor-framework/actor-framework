@@ -71,16 +71,15 @@ public:
 
   // -- downstream communication -----------------------------------------------
 
+  /// Sends a stream handshake.
+  static void emit_open(local_actor* self, stream_slot slot,
+                        strong_actor_ptr to, message handshake_data,
+                        stream_priority prio, bool is_redeployable);
+
+  /// Sends a `stream_msg::batch` on this path, decrements `open_credit` by
   /// Sets `open_credit` to `initial_credit` and clears `cached_handshake`.
   void handle_ack_open(long initial_credit);
 
-  /// Sends a stream handshake.
-  void emit_open(local_actor* self, strong_actor_ptr origin,
-                 mailbox_element::forwarding_stack stages, message_id mid,
-                 message handshake_data, stream_priority prio,
-                 bool is_redeployable);
-
-  /// Sends a `stream_msg::batch` on this path, decrements `open_credit` by
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(local_actor* self, long xs_size, message xs);
 
