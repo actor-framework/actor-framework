@@ -366,9 +366,23 @@ public:
     return {slot, std::move(ptr)};
   }
 
+  template <class... Ts, class Init, class Pull, class Done,
+            class Scatterer =
+              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
+            class Trait = stream_source_trait_t<Pull>>
+  annotated_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
+              policy::arg<Scatterer> = {}) {
+    using tuple_type = std::tuple<detail::decay_t<Ts>...>;
+    using driver = detail::stream_source_driver_impl<typename Trait::output,
+                                                     Pull, Done, tuple_type>;
+    return make_source<driver, Scatterer>(std::move(init), std::move(pull),
+                                          std::move(done), std::move(xs));
+  }
+
   template <class Driver, class Input, class... Ts>
-  stream_result<typename Driver::output_type>
-  make_sink(const stream<Input>& in, Ts&&... xs) {
+  stream_result<typename Driver::output_type> make_sink(const stream<Input>& in,
+                                                        Ts&&... xs) {
     auto slot = next_slot();
     stream_slots id{in.slot(), slot};
     auto ptr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
@@ -606,8 +620,7 @@ public:
       auto ptr = make_counted<T>(this, std::forward<Ts>(xs)...);
       auto rp = make_response_promise();
       if (!add_source(ptr, sid, std::move(opn.prev_stage),
-                      std::move(opn.original_stage), opn.priority,
-                      opn.redeployable, rp)) {
+                      std::move(opn.original_stage), opn.priority, rp)) {
         CAF_LOG_ERROR("cannot create stream stage without source");
         rp.deliver(sec::cannot_add_upstream);
         return none;
@@ -770,7 +783,6 @@ public:
   /// @param sid The ID used for communicating to the sink.
   /// @param source_ptr Handle to the new source.
   /// @param prio Priority of the traffic from the source.
-  /// @param redeployable Configures whether source can re-appear after aborts.
   /// @param result_cb Callback for the listener of the final stream result.
   ///                  Ignored when returning `nullptr`, because the previous
   ///                  stage is responsible for it until this manager
@@ -779,8 +791,7 @@ public:
   ///          otherwise.
   bool add_source(const stream_manager_ptr& mgr, const stream_id& sid,
                   strong_actor_ptr source_ptr, strong_actor_ptr original_stage,
-                  stream_priority prio, bool redeployable,
-                  response_promise result_cb);
+                  stream_priority prio, response_promise result_cb);
 
   /// Adds a new source to the stream manager `mgr` if `current_message()` is a
   /// `stream_msg::open` handshake.
@@ -829,7 +840,7 @@ public:
     // from the next stage.
     if (!add_source(mgr, sid, std::move(opn.prev_stage),
                     std::move(opn.original_stage), opn.priority,
-                    opn.redeployable, none)) {
+                    none)) {
       CAF_LOG_ERROR("cannot create stream stage without source");
       auto rp = make_response_promise();
       rp.deliver(sec::cannot_add_upstream);

@@ -31,7 +31,6 @@ outbound_path::outbound_path(stream_slots id, strong_actor_ptr ptr)
       next_batch_id(0),
       open_credit(0),
       desired_batch_size(0),
-      redeployable(false),
       next_ack_id(0) {
   // nop
 }
@@ -42,13 +41,13 @@ outbound_path::~outbound_path() {
 
 void outbound_path::emit_open(local_actor* self, stream_slot slot,
                               strong_actor_ptr to, message handshake_data,
-                              stream_priority prio, bool is_redeployable) {
+                              stream_priority prio) {
   CAF_ASSERT(self != nullptr);
   CAF_ASSERT(to != nullptr);
   // TODO: attach an aborter to `to`
   unsafe_send_as(self, to,
                  open_stream_msg{slot, std::move(handshake_data), self->ctrl(),
-                                 nullptr, prio, is_redeployable});
+                                 nullptr, prio});
 }
 
 void outbound_path::emit_batch(local_actor* self, long xs_size, message xs) {
@@ -57,8 +56,6 @@ void outbound_path::emit_batch(local_actor* self, long xs_size, message xs) {
   auto bid = next_batch_id++;
   downstream_msg::batch batch{static_cast<int32_t>(xs_size), std::move(xs),
                               bid};
-  if (redeployable)
-    unacknowledged_batches.emplace_back(bid, batch);
   unsafe_send_as(self, hdl,
                  downstream_msg{slots, self->address(), std::move(batch)});
 }

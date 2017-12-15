@@ -704,11 +704,11 @@ bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
                                  const stream_id& sid,
                                  strong_actor_ptr source_ptr,
                                  strong_actor_ptr original_stage,
-                                 stream_priority prio, bool redeployable,
+                                 stream_priority prio,
                                  response_promise result_cb) {
   CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid) << CAF_ARG(source_ptr)
                 << CAF_ARG(original_stage) << CAF_ARG(prio)
-                << CAF_ARG(redeployable) << CAF_ARG(result_cb));
+                << CAF_ARG(result_cb));
   CAF_ASSERT(mgr != nullptr);
   if (!source_ptr) {
     CAF_LOG_ERROR("cannot add invalid source");
@@ -719,7 +719,7 @@ bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
     return false;
   }
   return mgr->add_source(sid, std::move(source_ptr),
-                         std::move(original_stage), prio, redeployable,
+                         std::move(original_stage), prio,
                          std::move(result_cb));
 }
 
@@ -744,7 +744,7 @@ bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
   auto source_ptr = std::move(opn.prev_stage);
   return mgr->add_source(sid, std::move(source_ptr),
                          std::move(opn.original_stage), opn.priority,
-                         opn.redeployable, std::move(result_cb));
+                         std::move(result_cb));
 }
 */
 

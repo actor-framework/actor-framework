@@ -107,16 +107,13 @@ struct open_stream_msg {
 
   /// Configures the priority for stream elements.
   stream_priority priority;
-
-  /// Tells the downstream whether rebindings can occur on this path.
-  bool redeployable;
 };
 
 /// @relates stream_handshake_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
   return f(meta::type_name("stream_handshake_msg"), x.slot, x.msg, x.prev_stage,
-           x.original_stage, x.priority, x.redeployable);
+           x.original_stage, x.priority);
 }
 
 } // namespace caf

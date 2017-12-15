@@ -63,7 +63,7 @@ public:
   // -- implementation of virtual functions ------------------------------------
 
   bool done() const override {
-    return at_end_ && out_.clean();
+    return this->pending_handshakes_ == 0 && at_end_ && out_.clean();
   }
 
   Scatterer& out() override {

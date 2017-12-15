@@ -67,10 +67,6 @@ public:
   /// ID of the last received batch.
   int64_t last_batch_id;
 
-  /// Stores whether the source actor is failsafe, i.e., allows the runtime to
-  /// redeploy it on failure.
-  bool redeployable;
-
   /// Stores whether an error occurred during stream processing. Configures
   /// whether the destructor sends `close` or `forced_close` messages.
   error shutdown_reason;
@@ -122,8 +118,7 @@ public:
 
   /// Emits a `stream_msg::ack_batch` on this path and sets `assigned_credit`
   /// to `initial_demand`.
-  void emit_ack_open(local_actor* self, actor_addr rebind_from,
-                     bool is_redeployable);
+  void emit_ack_open(local_actor* self, actor_addr rebind_from);
 
   /// Sends a `stream_msg::ack_batch` with credit for the next round. Credit is
   /// calculated as `max_queue_size - (assigned_credit - queued_items)`, whereas

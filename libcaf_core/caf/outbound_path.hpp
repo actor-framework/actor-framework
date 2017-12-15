@@ -74,7 +74,7 @@ public:
   /// Sends a stream handshake.
   static void emit_open(local_actor* self, stream_slot slot,
                         strong_actor_ptr to, message handshake_data,
-                        stream_priority prio, bool is_redeployable);
+                        stream_priority prio);
 
   /// Sends a `stream_msg::batch` on this path, decrements `open_credit` by
   /// Sets `open_credit` to `initial_credit` and clears `cached_handshake`.
@@ -111,17 +111,9 @@ public:
   /// Batch size configured by the downstream actor.
   uint64_t desired_batch_size;
 
-  /// Stores whether the downstream actor is failsafe, i.e., allows the runtime
-  /// to redeploy it on failure. If this field is set to `false` then
-  /// `unacknowledged_batches` is unused.
-  bool redeployable;
-
   /// Next expected batch ID to be acknowledged. Actors can receive a more
   /// advanced batch ID in an ACK message, since CAF uses accumulative ACKs.
   int64_t next_ack_id;
-
-  /// Caches batches until receiving an ACK.
-  cache_type unacknowledged_batches;
 
   /// Caches the initiator of the stream (client) with the original request ID
   /// until the stream handshake is either confirmed or aborted. Once
@@ -144,8 +136,8 @@ typename Inspector::result_type inspect(Inspector& f,
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
   return f(meta::type_name("outbound_path"), x.slots, x.hdl, x.next_batch_id,
-           x.open_credit, x.desired_batch_size, x.redeployable, x.next_ack_id,
-           x.unacknowledged_batches, x.cd, x.shutdown_reason);
+           x.open_credit, x.desired_batch_size, x.next_ack_id, x.cd,
+           x.shutdown_reason);
 }
 
 } // namespace caf

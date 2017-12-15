@@ -318,7 +318,7 @@ public:
     CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
                 << " on slot " << slot);
     outbound_path::emit_open(this, slot, ref.ctrl(), make_message(),
-                             stream_priority::normal, false);
+                             stream_priority::normal);
     struct driver final : public stream_source_driver<int> {
     public:
       driver(int sentinel) : x_(0), sentinel_(sentinel) {
@@ -353,7 +353,7 @@ public:
                 << " on slot " << slot);
     strong_actor_ptr to = ref.ctrl();
     send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
-                             stream_priority::normal, false});
+                             stream_priority::normal});
     struct driver final : public stream_stage_driver<int, int> {
     public:
       driver(vector<int>* log) : log_(log) {
@@ -405,7 +405,7 @@ public:
     get<2>(mbox.queues())
       .queues()
       .emplace(slot, std::unique_ptr<inbound_path>{ip});
-    ip->emit_ack_open(this, actor_cast<actor_addr>(hs.original_stage), false);
+    ip->emit_ack_open(this, actor_cast<actor_addr>(hs.original_stage));
   }
 
   void operator()(stream_slots slots, actor_addr& sender,

@@ -146,12 +146,10 @@ public:
   // -- overridden member functions of `stream_manager` ------------------------
 
   error ack_open(const stream_id& sid, const actor_addr& rebind_from,
-                 strong_actor_ptr rebind_to, long initial_demand,
-                 bool redeployable) override {
+                 strong_actor_ptr rebind_to, long initial_demand) override {
     CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(rebind_from) << CAF_ARG(rebind_to)
-                  << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
-    auto res = super::ack_open(sid, rebind_from, rebind_to, initial_demand,
-                               redeployable);
+                  << CAF_ARG(initial_demand));
+    auto res = super::ack_open(sid, rebind_from, rebind_to, initial_demand);
     if (res == none)
       policy_.ack_open_success(sid, rebind_from, rebind_to);
     else

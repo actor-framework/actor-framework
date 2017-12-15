@@ -88,8 +88,7 @@ unique_pointer stream_scatterer::take_path_at(size_t index) noexcept {
 bool stream_scatterer::clean() const noexcept {
   auto pred = [](const map_type::value_type& kvp) {
     auto& p = *kvp.second;
-    return p.next_batch_id == p.next_ack_id
-           && p.unacknowledged_batches.empty();
+    return p.next_batch_id == p.next_ack_id;
   };
   return buffered() == 0 && std::all_of(paths_.begin(), paths_.end(), pred);
 }

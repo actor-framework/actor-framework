@@ -61,7 +61,7 @@ public:
     init(state_);
   }
 
-  handshake_tuple_type make_handshake() override {
+  handshake_tuple_type make_handshake() const override {
     return std::tuple_cat(std::make_tuple(none), hs_);
   }
 

@@ -61,9 +61,6 @@ struct upstream_msg : tag::boxing_type {
 
     /// Desired size of individual batches.
     int32_t desired_batch_size;
-
-    /// Tells the upstream whether rebindings can occur on this path.
-    bool redeployable;
   };
 
   /// Cumulatively acknowledges received batches and signalizes new demand from
@@ -163,7 +160,7 @@ template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
                                         upstream_msg::ack_open& x) {
   return f(meta::type_name("ack_open"), x.rebind_from, x.rebind_to,
-           x.initial_demand, x.desired_batch_size, x.redeployable);
+           x.initial_demand, x.desired_batch_size);
 }
 
 /// @relates upstream_msg::ack_batch

@@ -47,8 +47,6 @@ public:
   /// @param hdl Handle to the sender.
   /// @param original_stage Handle to the initial receiver of the handshake.
   /// @param priority Affects credit assignment and maximum bandwidth.
-  /// @param redeployable Configures whether `hdl` could get redeployed, i.e.,
-  ///                     can resume after an abort.
   /// @param result_cb Callback for the listener of the final stream result.
   ///                  Ignored when returning `nullptr`, because the previous
   ///                  stage is responsible for it until this manager
@@ -58,7 +56,7 @@ public:
   /*
   virtual error open(stream_slot slot, strong_actor_ptr hdl,
                      strong_actor_ptr original_stage, stream_priority priority,
-                     bool redeployable, response_promise result_cb);
+                     response_promise result_cb);
   */
 
   virtual error handle(inbound_path* from, downstream_msg::batch& x);
@@ -93,6 +91,13 @@ public:
   /// since it is unable to make progress sending on its own.
   virtual bool congested() const;
 
+  /// Sends a handshake to `dest`.
+  /// @pre `dest != nullptr`
+  virtual void send_handshake(strong_actor_ptr dest, stream_slot slot,
+                              strong_actor_ptr stream_origin,
+                              mailbox_element::forwarding_stack fwd_stack,
+                              message_id handshake_mid, stream_priority prio);
+
   // -- implementation hooks for sources ---------------------------------------
 
   /// Tries to generate new messages for the stream. This member function does
@@ -102,7 +107,7 @@ public:
 
   // -- pure virtual member functions ------------------------------------------
 
-  /// Returns the stream edge for outgoing data.
+  /// Returns the scatterer for outgoing data.
   virtual stream_scatterer& out() = 0;
 
   /// Returns whether the stream has reached the end and can be discarded
@@ -142,7 +147,7 @@ protected:
 
   /// Returns a type-erased `stream<T>` as handshake token for downstream
   /// actors. Returns an empty message for sinks.
-  virtual message make_output_token(const stream_id&) const;
+  virtual message make_handshake() const;
 
   /// Called whenever new credit becomes available. The default implementation
   /// logs an error (sources are expected to override this hook).
@@ -159,6 +164,7 @@ protected:
   std::vector<inbound_path*> inbound_paths_;
 
   /// Keeps track of pending handshakes.
+  long pending_handshakes_;
 };
 
 /// A reference counting pointer to a `stream_manager`.

@@ -65,8 +65,7 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
       assigned_credit(0),
       prio(stream_priority::normal),
       last_acked_batch_id(0),
-      last_batch_id(0),
-      redeployable(false) {
+      last_batch_id(0) {
   mgr->register_input_path(this);
 }
 
@@ -83,16 +82,14 @@ void inbound_path::handle(downstream_msg::batch& x) {
   mgr->push();
 }
 
-void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from,
-                                 bool is_redeployable) {
+void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   assigned_credit = 50; // TODO: put constant in some header
-  redeployable = is_redeployable;
   int32_t desired_batch_size = 50; // TODO: put constant in some header
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_open>(
                    slots.invert(), self->address(), std::move(rebind_from),
                    self->ctrl(), static_cast<int32_t>(assigned_credit),
-                   desired_batch_size, is_redeployable));
+                   desired_batch_size));
 }
 
 void inbound_path::emit_ack_batch(local_actor* self, long queued_items,

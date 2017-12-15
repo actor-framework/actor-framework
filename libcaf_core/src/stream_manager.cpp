@@ -24,6 +24,7 @@
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/inbound_path.hpp"
+#include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/outbound_path.hpp"
@@ -33,7 +34,9 @@
 
 namespace caf {
 
-stream_manager::stream_manager(local_actor* selfptr) : self_(selfptr) {
+stream_manager::stream_manager(local_actor* selfptr)
+    : self_(selfptr),
+      pending_handshakes_(0) {
   // nop
 }
 
@@ -41,34 +44,32 @@ stream_manager::~stream_manager() {
   // nop
 }
 
-error stream_manager::handle(inbound_path* from, downstream_msg::batch& x) {
+error stream_manager::handle(inbound_path*, downstream_msg::batch&) {
   return none;
 }
 
-error stream_manager::handle(inbound_path* from, downstream_msg::close& x) {
+error stream_manager::handle(inbound_path* from, downstream_msg::close&) {
   out().take_path(from->slots);
   return none;
 }
 
-error stream_manager::handle(inbound_path* from,
-                             downstream_msg::forced_close& x) {
+error stream_manager::handle(inbound_path*, downstream_msg::forced_close&) {
   return none;
 }
 
-error stream_manager::handle(outbound_path* from, upstream_msg::ack_open& x) {
+error stream_manager::handle(outbound_path*, upstream_msg::ack_open&) {
   return none;
 }
 
-error stream_manager::handle(outbound_path* from, upstream_msg::ack_batch& x) {
+error stream_manager::handle(outbound_path*, upstream_msg::ack_batch&) {
   return none;
 }
 
-error stream_manager::handle(outbound_path* from, upstream_msg::drop& x) {
+error stream_manager::handle(outbound_path*, upstream_msg::drop&) {
   return none;
 }
 
-error stream_manager::handle(outbound_path* from,
-                             upstream_msg::forced_drop& x) {
+error stream_manager::handle(outbound_path*, upstream_msg::forced_drop&) {
   return none;
 }
 
@@ -91,6 +92,19 @@ void stream_manager::push() {
 
 bool stream_manager::congested() const {
   return false;
+}
+
+void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
+                                    strong_actor_ptr client,
+                                    mailbox_element::forwarding_stack fwd_stack,
+                                    message_id mid, stream_priority prio) {
+  CAF_ASSERT(dest != nullptr);
+  ++pending_handshakes_;
+  dest->enqueue(
+    make_mailbox_element(
+      std::move(client), mid, std::move(fwd_stack),
+      open_stream_msg{slot, make_handshake(), self_->ctrl(), dest, prio}),
+    self_->context());
 }
 
 bool stream_manager::generate_messages() {
@@ -124,7 +138,7 @@ void stream_manager::output_closed(error) {
   // nop
 }
 
-message stream_manager::make_output_token(const stream_id&) const {
+message stream_manager::make_handshake() const {
   CAF_LOG_ERROR("stream_manager::make_output_token called");
   return none;
 }
