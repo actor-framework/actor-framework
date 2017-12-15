@@ -317,8 +317,6 @@ public:
     auto slot = next_slot_++;
     CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
                 << " on slot " << slot);
-    outbound_path::emit_open(this, slot, ref.ctrl(), make_message(),
-                             stream_priority::normal);
     struct driver final : public stream_source_driver<int> {
     public:
       driver(int sentinel) : x_(0), sentinel_(sentinel) {
@@ -343,6 +341,7 @@ public:
       int sentinel_;
     };
     auto ptr = detail::make_stream_source<driver>(this, num_messages);
+    ptr->send_handshake(ref.ctrl(), slot, stream_priority::normal);
     ptr->generate_messages();
     pending_managers_.emplace(slot, std::move(ptr));
   }
@@ -351,9 +350,6 @@ public:
     auto slot = next_slot_++;
     CAF_MESSAGE(name_ << " starts forwarding to " << ref.name()
                 << " on slot " << slot);
-    strong_actor_ptr to = ref.ctrl();
-    send(to, open_stream_msg{slot, make_message(), ctrl(), nullptr,
-                             stream_priority::normal});
     struct driver final : public stream_stage_driver<int, int> {
     public:
       driver(vector<int>* log) : log_(log) {
@@ -372,6 +368,7 @@ public:
       vector<int>* log_;
     };
     forwarder = detail::make_stream_stage<driver>(this, &data);
+    forwarder->send_handshake(ref.ctrl(), slot, stream_priority::normal);
     pending_managers_.emplace(slot, forwarder);
   }
 
@@ -412,20 +409,23 @@ public:
                   upstream_msg::ack_open& x) {
     TRACE(name_, ack_open, CAF_ARG(slots),
           CAF_ARG2("sender", name_of(x.rebind_to)), CAF_ARG(x));
-    // Get the manager for that stream.
+    CAF_REQUIRE_EQUAL(sender, x.rebind_to);
+    // Get the manager for that stream, move it from `pending_managers_` to
+    // `managers_`, and handle `x`.
     auto i = pending_managers_.find(slots.receiver);
     CAF_REQUIRE_NOT_EQUAL(i, pending_managers_.end());
-    // Create a new queue in the mailbox for incoming traffic.
-    // Swap the buddy/receiver perspective to generate the ID we are using.
-    managers_.emplace(slots, i->second);
+    auto res = managers_.emplace(slots, std::move(i->second));
+    pending_managers_.erase(i);
+    CAF_REQUIRE(res.second);
+    res.first->second->handle(slots, x);
+    /*
     auto to = actor_cast<strong_actor_ptr>(sender);
     CAF_REQUIRE_NOT_EQUAL(to, nullptr);
     auto out = i->second->out().add_path(slots.invert(), to);
-    out->open_credit = x.initial_demand;
-    out->desired_batch_size = x.desired_batch_size;
+    i->second->handle(out, x);
     i->second->generate_messages();
     i->second->push();
-    pending_managers_.erase(i);
+    */
   }
 
   void operator()(stream_slots input_slots, actor_addr& sender,

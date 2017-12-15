@@ -57,7 +57,13 @@ error stream_manager::handle(inbound_path*, downstream_msg::forced_close&) {
   return none;
 }
 
-error stream_manager::handle(outbound_path*, upstream_msg::ack_open&) {
+error stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
+  auto path = out().add_path(slots.invert(), x.rebind_to);
+  path->open_credit = x.initial_demand;
+  path->desired_batch_size = x.desired_batch_size;
+  --pending_handshakes_;
+  generate_messages();
+  push();
   return none;
 }
 
@@ -105,6 +111,13 @@ void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
       std::move(client), mid, std::move(fwd_stack),
       open_stream_msg{slot, make_handshake(), self_->ctrl(), dest, prio}),
     self_->context());
+}
+
+void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
+                                    stream_priority prio) {
+  mailbox_element::forwarding_stack fwd_stack;
+  send_handshake(std::move(dest), slot, nullptr, std::move(fwd_stack),
+                 make_message_id(), prio);
 }
 
 bool stream_manager::generate_messages() {

@@ -65,7 +65,7 @@ public:
 
   virtual error handle(inbound_path* from, downstream_msg::forced_close& x);
 
-  virtual error handle(outbound_path* from, upstream_msg::ack_open& x);
+  virtual error handle(stream_slots, upstream_msg::ack_open& x);
 
   virtual error handle(outbound_path* from, upstream_msg::ack_batch& x);
 
@@ -97,6 +97,11 @@ public:
                               strong_actor_ptr stream_origin,
                               mailbox_element::forwarding_stack fwd_stack,
                               message_id handshake_mid, stream_priority prio);
+
+  /// Sends a handshake to `dest`.
+  /// @pre `dest != nullptr`
+  void send_handshake(strong_actor_ptr dest, stream_slot slot,
+                      stream_priority prio);
 
   // -- implementation hooks for sources ---------------------------------------
 
