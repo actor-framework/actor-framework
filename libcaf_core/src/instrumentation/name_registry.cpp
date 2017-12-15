@@ -20,6 +20,7 @@
 #include "caf/instrumentation/name_registry.hpp"
 
 #include "caf/detail/pretty_type_name.hpp"
+#include "caf/string_algorithms.hpp"
 
 namespace caf {
 namespace instrumentation {
@@ -29,7 +30,9 @@ actortype_id name_registry::get_actortype(const std::type_info& ti) {
 
   auto it = actortypes_.find(hash);
   if (it == actortypes_.end()) {
-    actortypes_[hash] = detail::pretty_type_name(ti);
+    auto type_name = detail::pretty_type_name(ti);
+    replace_all(type_name, "%20", "_");
+    actortypes_[hash] = type_name;
   }
 
   return hash;
@@ -56,12 +59,17 @@ uint64_t name_registry::get_simple_signature(const type_erased_tuple& m) {
 
   auto it = signatures_.find(hash);
   if (it == signatures_.end()) {
-    if (type.first == type_nr<atom_value>::value)
-      signatures_[hash] = to_string(m.get_as<atom_value>(0));
-    else if (type.first != 0)
+    if (type.first == type_nr<atom_value>::value) {
+      auto atom_str = to_string(m.get_as<atom_value>(0));
+      replace_all(atom_str, " ", "_");
+      signatures_[hash] = atom_str;
+    } else if (type.first != 0) {
       signatures_[hash] = numbered_type_names[type.first];
-    else
-      signatures_[hash] = "?"; // TODO repr without spaces from detail::pretty_type_name(*type.second);
+    } else {
+      auto type_name = detail::pretty_type_name(*type.second);
+      replace_all(type_name, "%20", "_");
+      signatures_[hash] = type_name;
+    }
   }
 
   return hash;
@@ -84,12 +92,17 @@ uint64_t name_registry::get_simple_signature(const message& m) {
 
   auto it = signatures_.find(hash);
   if (it == signatures_.end()) {
-    if (type.first == type_nr<atom_value>::value)
-      signatures_[hash] = to_string(m.get_as<atom_value>(0));
-    else if (type.first != 0)
+    if (type.first == type_nr<atom_value>::value) {
+      auto atom_str = to_string(m.get_as<atom_value>(0));
+      replace_all(atom_str, " ", "_");
+      signatures_[hash] = atom_str;
+    } else if (type.first != 0) {
       signatures_[hash] = numbered_type_names[type.first];
-    else
-      signatures_[hash] = "?"; // TODO repr without spaces from detail::pretty_type_name(*type.second);
+    } else {
+      auto type_name = detail::pretty_type_name(*type.second);
+      replace_all(type_name, "%20", "_");
+      signatures_[hash] = type_name;
+    }
   }
 
   return hash;
