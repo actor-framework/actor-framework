@@ -20,7 +20,7 @@
 #ifndef CAF_METRIC_HPP
 #define CAF_METRIC_HPP
 
-#include "caf/instrumentation/worker_stats.hpp"
+#include "caf/instrumentation/callsite_stats.hpp"
 
 #include <cmath>
 #include <array>
@@ -32,12 +32,19 @@ namespace caf {
 namespace instrumentation {
 
 struct metric {
-  metric(std::string actor, std::string callsite, const callsite_stats& value)
-    : actortype(std::move(actor)),
+  enum class type {
+    pre_behavior,
+    broker_forward
+  };
+
+  metric(type type, std::string actor, std::string callsite, const callsite_stats& value)
+    : type(type),
+      actortype(std::move(actor)),
       callsite(std::move(callsite)),
       value(value)
   {}
 
+  type type;
   std::string actortype;
   std::string callsite;
   callsite_stats value;

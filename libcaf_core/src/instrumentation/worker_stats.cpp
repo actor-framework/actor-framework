@@ -34,7 +34,7 @@ std::vector<metric> worker_stats::collect_metrics() {
     auto actortype = registry_.identify_actortype(by_actor.first);
     for (const auto& by_callsite : by_actor.second) {
       auto callsite = registry_.identify_simple_signature(by_callsite.first);
-      metrics.emplace_back(actortype, callsite, by_callsite.second);
+      metrics.emplace_back(metric::type::pre_behavior, actortype, callsite, by_callsite.second); // TODO better type
     }
   }
   callsite_stats_.clear();

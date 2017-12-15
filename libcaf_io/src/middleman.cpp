@@ -399,7 +399,11 @@ std::vector<instrumentation::metric> middleman::collect_metrics() {
   if (hdl != named_brokers_.end()) {
     auto basp = dynamic_cast<caf::io::basp_broker *>(caf::actor_cast<caf::abstract_actor *>(hdl->second));
     if (basp != nullptr) {
-      return basp->state.stats.collect_metrics();
+      auto metrics = basp->state.stats.collect_metrics();
+      for (auto& m : metrics) {
+        m.type = instrumentation::metric::type::broker_forward; // TODO something less disgusting
+      }
+      return metrics;
     }
   }
   return {};

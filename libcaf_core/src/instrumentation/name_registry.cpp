@@ -85,11 +85,11 @@ uint64_t name_registry::get_simple_signature(const message& m) {
   auto it = signatures_.find(hash);
   if (it == signatures_.end()) {
     if (type.first == type_nr<atom_value>::value)
-      signatures_[hash] = "'" + to_string(m.get_as<atom_value>(0)) + "'";
+      signatures_[hash] = to_string(m.get_as<atom_value>(0));
     else if (type.first != 0)
       signatures_[hash] = numbered_type_names[type.first];
     else
-      signatures_[hash] = detail::pretty_type_name(*type.second);
+      signatures_[hash] = "?"; // TODO repr without spaces from detail::pretty_type_name(*type.second);
   }
 
   return hash;
