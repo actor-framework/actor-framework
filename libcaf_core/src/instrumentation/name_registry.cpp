@@ -32,6 +32,7 @@ actortype_id name_registry::get_actortype(const std::type_info& ti) {
   if (it == actortypes_.end()) {
     auto type_name = detail::pretty_type_name(ti);
     replace_all(type_name, "%20", "_");
+    replace_all(type_name, ",", "_");
     actortypes_[hash] = type_name;
   }
 
@@ -68,6 +69,7 @@ uint64_t name_registry::get_simple_signature(const type_erased_tuple& m) {
     } else {
       auto type_name = detail::pretty_type_name(*type.second);
       replace_all(type_name, "%20", "_");
+      replace_all(type_name, ",", "_");
       signatures_[hash] = type_name;
     }
   }
@@ -101,6 +103,7 @@ uint64_t name_registry::get_simple_signature(const message& m) {
     } else {
       auto type_name = detail::pretty_type_name(*type.second);
       replace_all(type_name, "%20", "_");
+      replace_all(type_name, ",", "_");
       signatures_[hash] = type_name;
     }
   }
