@@ -20,6 +20,8 @@
 #ifndef CAF_INSTRUMENTATION_IDS_HPP
 #define CAF_INSTRUMENTATION_IDS_HPP
 
+#include <cstdint>
+
 namespace caf {
 namespace instrumentation {
 

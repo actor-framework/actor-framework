@@ -274,6 +274,10 @@ public:
     return new impl(sys);
   }
 
+#ifndef CAF_NO_INSTRUMENTATION
+  std::vector<instrumentation::metric> collect_metrics();
+#endif
+
 protected:
   middleman(actor_system& sys);
 

@@ -20,13 +20,14 @@
 #ifndef CAF_SIGNATURE_REGISTRY_HPP
 #define CAF_SIGNATURE_REGISTRY_HPP
 
+#include "caf/instrumentation/instrumentation_ids.hpp"
+#include "caf/type_erased_tuple.hpp"
+#include "caf/message.hpp"
+
 #include <string>
 #include <cstdint>
 #include <typeinfo>
 #include <unordered_map>
-
-#include "caf/type_erased_tuple.hpp"
-#include "instrumentation_ids.hpp"
 
 namespace caf {
 namespace instrumentation {
@@ -35,10 +36,9 @@ class name_registry {
 public:
   actortype_id get_actortype(const std::type_info& ti);
   std::string identify_actortype(actortype_id cs) const;
-  callsite_id get_simple_signature(const type_erased_tuple &m);
+  callsite_id get_simple_signature(const type_erased_tuple& m);
+  callsite_id get_simple_signature(const message& m);
   std::string identify_simple_signature(callsite_id cs) const;
-  callsite_id get_complete_signature(const type_erased_tuple &m);
-  std::string identify_complete_signature(callsite_id cs) const;
 
 private:
   std::unordered_map<actortype_id, std::string> actortypes_;

@@ -156,6 +156,10 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void handle_down_msg(down_msg&);
 
   static const char* name;
+
+#ifndef CAF_NO_INSTRUMENTATION
+  instrumentation::worker_stats stats;
+#endif
 };
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).

@@ -64,7 +64,6 @@ public:
     std::vector<instrumentation::metric> metrics;
     for (auto& w : workers_) {
       auto worker_metrics = w->stats().collect_metrics();
-      w->stats().request_clear();
       metrics.reserve(metrics.size() + worker_metrics.size());
       std::move(worker_metrics.begin(), worker_metrics.end(), std::back_inserter(metrics));
     }

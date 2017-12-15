@@ -193,6 +193,16 @@ public:
   /// and managed by this actor or `nullptr`.
   virtual proxy_registry* proxy_registry_ptr();
 
+#ifndef CAF_NO_INSTRUMENTATION
+  timestamp& current_message_ts() const {
+    return current_element_->ts;
+  }
+
+  size_t mailbox_cached_count() const {
+    return mailbox_.cached_count();
+  }
+#endif
+
   // -- state modifiers --------------------------------------------------------
 
   /// Finishes execution of this actor after any currently running

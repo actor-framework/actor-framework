@@ -20,6 +20,8 @@
 #ifndef CAF_METRIC_HPP
 #define CAF_METRIC_HPP
 
+#include "caf/instrumentation/worker_stats.hpp"
+
 #include <cmath>
 #include <array>
 #include <string>
@@ -30,17 +32,15 @@ namespace caf {
 namespace instrumentation {
 
 struct metric {
-  metric(std::string actor, std::string callsite, std::string name, uint64_t value)
+  metric(std::string actor, std::string callsite, const callsite_stats& value)
     : actortype(std::move(actor)),
       callsite(std::move(callsite)),
-      name(std::move(name)),
       value(value)
   {}
 
   std::string actortype;
   std::string callsite;
-  std::string name;
-  double value;
+  callsite_stats value;
 };
 
 } // namespace instrumentation

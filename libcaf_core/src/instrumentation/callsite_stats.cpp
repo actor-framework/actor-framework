@@ -17,40 +17,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_WORKER_STATS_HPP
-#define CAF_WORKER_STATS_HPP
-
-#include "caf/instrumentation/instrumentation_ids.hpp"
 #include "caf/instrumentation/callsite_stats.hpp"
-#include "caf/instrumentation/name_registry.hpp"
-#include "caf/instrumentation/metric.hpp"
-
-#include <unordered_map>
-#include <cstdint>
-#include <string>
-#include <mutex>
 
 namespace caf {
 namespace instrumentation {
 
-/// Instrumentation stats aggregated per-worker for all callsites.
-class worker_stats {
-public:
-  void record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size);
-  std::vector<metric> collect_metrics();
-  std::string to_string() const;
+void callsite_stats::record_pre_behavior(int64_t mb_wait_time, size_t mb_size) {
+  mb_waittimes_.record(mb_wait_time);
+  mb_sizes_.record(mb_size);
+}
 
-  name_registry& registry() {
-    return registry_;
-  }
-
-private:
-  std::mutex access_mutex_;
-  std::unordered_map<actortype_id, std::unordered_map<callsite_id, callsite_stats>> callsite_stats_; // indexed by actortype_id and then callsite_id
-  name_registry registry_;
-};
+std::string callsite_stats::to_string() const {
+  return std::string("WAIT ") + mb_waittimes_.to_string()
+         + " | " + " SIZE " + mb_sizes_.to_string();
+}
 
 } // namespace instrumentation
 } // namespace caf
-
-#endif // CAF_WORKER_STATS_HPP

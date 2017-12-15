@@ -17,37 +17,52 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_WORKER_STATS_HPP
-#define CAF_WORKER_STATS_HPP
+#ifndef CAF_CALLSITE_STATS_HPP
+#define CAF_CALLSITE_STATS_HPP
 
-#include "caf/instrumentation/instrumentation_ids.hpp"
-#include "caf/instrumentation/callsite_stats.hpp"
-#include "caf/instrumentation/name_registry.hpp"
-#include "caf/instrumentation/metric.hpp"
+#include "caf/instrumentation/stat_stream.hpp"
 
-#include <unordered_map>
 #include <cstdint>
-#include <string>
-#include <mutex>
 
 namespace caf {
 namespace instrumentation {
 
-/// Instrumentation stats aggregated per-worker for all callsites.
-class worker_stats {
+/// Instrumentation stats aggregated per-worker-per-callsite.
+class callsite_stats {
+  using mb_waittime_stream = stat_stream<int64_t,
+    10000ull,      // 10 us
+    100000ull,     // 100 us
+    1000000ull,    // 1 ms
+    10000000ull,   // 10 ms
+    100000000ull,  // 100 ms
+    1000000000ull, // 1s
+    10000000000ull // 10s
+  >;
+  using mb_size_stream = stat_stream<size_t,
+    1,
+    8,
+    64,
+    512,
+    4096,
+    32768,
+    262144
+  >;
+
 public:
-  void record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size);
-  std::vector<metric> collect_metrics();
+  void record_pre_behavior(int64_t mb_wait_time, size_t mb_size);
   std::string to_string() const;
 
-  name_registry& registry() {
-    return registry_;
+  mb_waittime_stream mb_waittimes() const {
+    return mb_waittimes_;
+  }
+
+  mb_size_stream mb_sizes() const {
+    return mb_sizes_;
   }
 
 private:
-  std::mutex access_mutex_;
-  std::unordered_map<actortype_id, std::unordered_map<callsite_id, callsite_stats>> callsite_stats_; // indexed by actortype_id and then callsite_id
-  name_registry registry_;
+  mb_waittime_stream mb_waittimes_;
+  mb_size_stream mb_sizes_;
 };
 
 } // namespace instrumentation

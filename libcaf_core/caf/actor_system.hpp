@@ -480,6 +480,12 @@ public:
     return cfg_;
   }
 
+#ifndef CAF_NO_INSTRUMENTATION
+  /// Collects all instrumentation metrics from the current system.
+  /// This will lock every worker/broker in turns, so don't call too often!
+  std::vector<instrumentation::metric> collect_metrics();
+#endif
+
   /// @cond PRIVATE
 
   /// Increases running-detached-threads-count by one.

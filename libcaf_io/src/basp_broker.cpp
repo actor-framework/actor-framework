@@ -279,6 +279,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
     return;
   }
   self->parent().notify<hook::message_received>(src_nid, src, dest, mid, msg);
+  // TODO TEMP std::cout << "BASP_BROKER enqueue " << to_string(msg) << " into mb of " << to_string(dest) << std::endl;
   dest->enqueue(make_mailbox_element(std::move(src), mid, std::move(stages),
                                       std::move(msg)),
                 nullptr);
@@ -525,6 +526,7 @@ behavior basp_broker::make_behavior() {
   return {
     // received from underlying broker implementation
     [=](new_data_msg& msg) {
+      // TODO TEMP std::cout << "new data " << std::to_string(msg.buf.size()) << std::endl;
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       state.set_context(msg.handle);
       auto& ctx = *state.this_context;
@@ -549,6 +551,14 @@ behavior basp_broker::make_behavior() {
         strong_actor_ptr& dest, message_id mid, const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(dest)
                     << CAF_ARG(mid) << CAF_ARG(msg));
+
+#ifndef CAF_NO_INSTRUMENTATION
+      auto msgtype = state.stats.registry().get_simple_signature(msg);
+      auto mb_wait_time = timestamp_ago_ns(this->current_message_ts());
+      auto mb_size = this->mailbox_cached_count();
+      state.stats.record_pre_behavior(0, msgtype, mb_wait_time, mb_size);
+#endif
+
       if (!dest || system().node() == dest->node()) {
         CAF_LOG_WARNING("cannot forward to invalid or local actor:"
                         << CAF_ARG(dest));

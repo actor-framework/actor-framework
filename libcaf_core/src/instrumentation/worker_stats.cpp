@@ -22,35 +22,22 @@
 namespace caf {
 namespace instrumentation {
 
-void callsite_stats::record_pre_behavior(int64_t mb_wait_time, size_t mb_size) {
-  mb_waittimes_.record(mb_wait_time);
-  mb_sizes_.record(mb_size);
-}
-
-std::string callsite_stats::to_string() const {
-  return std::string("WAIT ") + mb_waittimes_.to_string()
-         + " | " + " SIZE " + mb_sizes_.to_string();
-}
-
 void worker_stats::record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size) {
-  clear_if_requested();
+  std::lock_guard<std::mutex> g(access_mutex_);
   callsite_stats_[at][cs].record_pre_behavior(mb_wait_time, mb_size);
 }
 
-std::vector<metric> worker_stats::collect_metrics() const {
+std::vector<metric> worker_stats::collect_metrics() {
+  std::lock_guard<std::mutex> g(access_mutex_);
   std::vector<metric> metrics;
   for (const auto& by_actor : callsite_stats_) {
     auto actortype = registry_.identify_actortype(by_actor.first);
     for (const auto& by_callsite : by_actor.second) {
       auto callsite = registry_.identify_simple_signature(by_callsite.first);
-      auto& callsite_stats = by_callsite.second;
-      metrics.emplace_back(actortype, callsite, "mb_processed", callsite_stats.mb_waittimes().count());
-      metrics.emplace_back(actortype, callsite, "mb_waittime_avg", callsite_stats.mb_waittimes().average() / 1'000'000'000);
-      metrics.emplace_back(actortype, callsite, "mb_waittime_stddev", callsite_stats.mb_waittimes().stddev() / 1'000'000'000);
-      metrics.emplace_back(actortype, callsite, "mb_size_avg", callsite_stats.mb_sizes().average());
-      metrics.emplace_back(actortype, callsite, "mb_size_stddev", callsite_stats.mb_sizes().stddev());
+      metrics.emplace_back(actortype, callsite, by_callsite.second);
     }
   }
+  callsite_stats_.clear();
   return metrics;
 }
 
@@ -65,13 +52,6 @@ std::string worker_stats::to_string() const {
       }
     }
     return res;
-}
-
-void worker_stats::clear_if_requested() {
-  if (clear_request_) {
-    callsite_stats_.clear();
-    clear_request_ = false;
-  }
 }
 
 } // namespace instrumentation

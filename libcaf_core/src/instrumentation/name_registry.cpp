@@ -17,18 +17,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <string>
-#include <cstdint>
-#include <unordered_map>
-
-#include "caf/detail/pretty_type_name.hpp"
 #include "caf/instrumentation/name_registry.hpp"
 
-// stolen from boost::hash_combine
-template <class T>
-inline void hash_combine(std::size_t& seed, T const& v) {
-  seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-}
+#include "caf/detail/pretty_type_name.hpp"
 
 namespace caf {
 namespace instrumentation {
@@ -49,16 +40,50 @@ std::string name_registry::identify_actortype(actortype_id cs) const {
   return (it != actortypes_.end()) ? it->second : "?";
 }
 
-uint64_t name_registry::get_simple_signature(const type_erased_tuple &m) {
+uint64_t name_registry::get_simple_signature(const type_erased_tuple& m) {
   if (m.size() == 0) // NOTE: m.empty() doesn't work here for some reason... (ex: when using dynamically-generated messages)
     return 0;
 
   auto type = m.type(0);
-  size_t hash = (type.first != 0) ? type.first : type.second->hash_code();
+  size_t hash;
+  if (type.first == type_nr<atom_value>::value) {
+    hash = static_cast<size_t>(m.get_as<atom_value>(0));
+  } else if (type.first != 0) {
+    hash = type.first;
+  } else {
+    hash = type.second->hash_code();
+  }
 
   auto it = signatures_.find(hash);
   if (it == signatures_.end()) {
-    auto type = m.type(0);
+    if (type.first == type_nr<atom_value>::value)
+      signatures_[hash] = "'" + to_string(m.get_as<atom_value>(0)) + "'";
+    else if (type.first != 0)
+      signatures_[hash] = numbered_type_names[type.first];
+    else
+      signatures_[hash] = detail::pretty_type_name(*type.second);
+  }
+
+  return hash;
+}
+
+// TODO remove code duplication, maybe now it would work with a template thanks to the #include "message.hpp"?
+uint64_t name_registry::get_simple_signature(const message& m) {
+  if (m.size() == 0) // NOTE: m.empty() doesn't work here for some reason... (ex: when using dynamically-generated messages)
+    return 0;
+
+  auto type = m.type(0);
+  size_t hash;
+  if (type.first == type_nr<atom_value>::value) {
+    hash = static_cast<size_t>(m.get_as<atom_value>(0));
+  } else if (type.first != 0) {
+    hash = type.first;
+  } else {
+    hash = type.second->hash_code();
+  }
+
+  auto it = signatures_.find(hash);
+  if (it == signatures_.end()) {
     if (type.first == type_nr<atom_value>::value)
       signatures_[hash] = "'" + to_string(m.get_as<atom_value>(0)) + "'";
     else if (type.first != 0)
@@ -71,46 +96,6 @@ uint64_t name_registry::get_simple_signature(const type_erased_tuple &m) {
 }
 
 std::string name_registry::identify_simple_signature(uint64_t cs) const {
-  auto it = signatures_.find(cs);
-  return (it != signatures_.end()) ? it->second : "?";
-}
-
-uint64_t name_registry::get_complete_signature(const type_erased_tuple &m) {
-  if (m.size() == 0) // NOTE: m.empty() doesn't work here for some reason... (ex: when using dynamically-generated messages)
-    return 0;
-
-  size_t hash = 0;
-  for (size_t idx = 0; idx < m.size(); ++idx) {
-    auto type = m.type(idx);
-    if (type.first != 0)
-      hash_combine(hash, type.first);
-    else
-      hash_combine(hash, type.second->hash_code());
-  }
-
-  auto it = signatures_.find(hash);
-  if (it == signatures_.end()) {
-    std::string sig;
-    for (size_t idx = 0; idx < m.size(); ++idx) {
-      auto type = m.type(idx);
-      if (type.first == type_nr<atom_value>::value)
-        sig += "'" + to_string(m.get_as<atom_value>(idx)) + "'";
-      else if (type.first != 0)
-        sig += numbered_type_names[type.first];
-      else
-        sig += detail::pretty_type_name(*type.second);
-
-      if (idx < m.size() - 1) {
-        sig += ", ";
-      }
-    }
-    signatures_[hash] = sig;
-  }
-
-  return hash;
-}
-
-std::string name_registry::identify_complete_signature(uint64_t cs) const {
   auto it = signatures_.find(cs);
   return (it != signatures_.end()) ? it->second : "?";
 }
