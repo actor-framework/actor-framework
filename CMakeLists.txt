@@ -86,16 +86,16 @@ if(NOT CAF_ENABLE_RUNTIME_CHECKS)
   set(CAF_ENABLE_RUNTIME_CHECKS no)
 endif()
 
+if(NOT CAF_ENABLE_INSTRUMENTATION)
+    set(CAF_ENABLE_INSTRUMENTATION no)
+endif()
+
 if(NOT CAF_NO_MEM_MANAGEMENT)
   set(CAF_NO_MEM_MANAGEMENT no)
 endif()
 
 if(NOT CAF_NO_EXCEPTIONS)
   set(CAF_NO_EXCEPTIONS no)
-endif()
-
-if(NOT CAF_NO_INSTRUMENTATION)
-  set(CAF_NO_INSTRUMENTATION no)
 endif()
 
 if(NOT CAF_BUILD_STATIC_ONLY)
@@ -380,9 +380,9 @@ endmacro()
 
 to_int_value(CAF_LOG_LEVEL)
 to_int_value(CAF_NO_EXCEPTIONS)
-to_int_value(CAF_NO_INSTRUMENTATION)
 to_int_value(CAF_NO_MEM_MANAGEMENT)
 to_int_value(CAF_ENABLE_RUNTIME_CHECKS)
+to_int_value(CAF_ENABLE_INSTRUMENTATION)
 
 # find boost asio if the asio multiplexer should be used for testing
 if(CAF_USE_ASIO)
@@ -735,7 +735,6 @@ invertYesNo(CAF_NO_EXAMPLES CAF_BUILD_EXAMPLES)
 invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
-invertYesNo(CAF_NO_INSTRUMENTATION CAF_BUILD_WITH_INSTRUMENTATION)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
@@ -756,10 +755,10 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild static only:     ${CAF_BUILD_STATIC_ONLY}"
         "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
         "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
+        "\nInstrumentation:       ${CAF_ENABLE_INSTRUMENTATION}"
         "\nLog level:             ${LOG_LEVEL_STR}"
         "\nWith mem. mgmt.:       ${CAF_BUILD_MEM_MANAGEMENT}"
         "\nWith exceptions:       ${CAF_BUILD_WITH_EXCEPTIONS}"
-        "\nWith instrumentation:  ${CAF_BUILD_WITH_INSTRUMENTATION}"
         "\n"
         "\nBuild I/O module:      ${CAF_BUILD_IO}"
         "\nBuild tools:           ${CAF_BUILD_TOOLS}"

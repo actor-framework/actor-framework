@@ -552,7 +552,7 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(dest)
                     << CAF_ARG(mid) << CAF_ARG(msg));
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
       auto msgtype = state.stats.registry().get_simple_signature(msg);
       auto mb_wait_time = timestamp_ago_ns(this->current_message_ts());
       auto mb_size = this->mailbox_cached_count();

@@ -274,7 +274,7 @@ public:
     return new impl(sys);
   }
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   std::vector<instrumentation::metric> collect_metrics();
 #endif
 

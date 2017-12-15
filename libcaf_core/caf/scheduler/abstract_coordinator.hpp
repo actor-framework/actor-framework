@@ -80,7 +80,7 @@ public:
 
   static void cleanup_and_release(resumable*);
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   virtual std::vector<instrumentation::metric> collect_metrics() {
     return {};
   }

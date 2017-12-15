@@ -71,7 +71,7 @@ public:
   enqueue_result enqueue(pointer new_element) {
     CAF_ASSERT(new_element != nullptr);
     pointer e = stack_.load();
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
     cached_count_++;
 #endif
     for (;;) {
@@ -151,7 +151,7 @@ public:
   }
 
   single_reader_queue() : head_(nullptr)
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
     , cached_count_(0)
 #endif
   {
@@ -176,7 +176,7 @@ public:
     return res;
   }
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   size_t cached_count() const {
     return cached_count_;
   }
@@ -288,7 +288,7 @@ private:
   deleter_type delete_;
   intrusive_partitioned_list<value_type, deleter_type> cache_;
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   // exposed to both the outside (for incrementing) and the owner (for decrementing + inspection)
   std::atomic<size_t> cached_count_;
 #endif
@@ -335,7 +335,7 @@ private:
     if (head_ != nullptr || fetch_new_data()) {
       auto result = head_;
       head_ = head_->next;
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
       cached_count_--;
 #endif
       return result;

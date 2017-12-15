@@ -157,7 +157,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   static const char* name;
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   instrumentation::worker_stats stats;
 #endif
 };

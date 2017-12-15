@@ -497,7 +497,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         return !skipped ? im_success : im_skipped;
       }
       auto& bhvr = bhvr_stack_.back();
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
       if (context_ != nullptr) { // TODO examine the case of detached scheduled_actors
         auto& registry = context_->stats().registry();
         auto actortype = registry.get_actortype(typeid(*this));

@@ -26,10 +26,10 @@
 
 namespace caf {
 
-#ifdef CAF_NO_INSTRUMENTATION
-  using clock_source = std::chrono::system_clock;
+#ifdef CAF_ENABLE_INSTRUMENTATION
+using clock_source = std::chrono::high_resolution_clock;
 #else
-  using clock_source = std::chrono::high_resolution_clock;
+using clock_source = std::chrono::system_clock;
 #endif
 
 /// A portable timestamp with nanosecond resolution anchored at the UNIX epoch.

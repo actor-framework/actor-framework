@@ -59,7 +59,7 @@ public:
     return new coordinator(sys);
   }
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   std::vector<instrumentation::metric> collect_metrics() override {
     std::vector<instrumentation::metric> metrics;
     for (auto& w : workers_) {

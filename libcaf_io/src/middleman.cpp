@@ -393,7 +393,7 @@ int middleman::exec_slave_mode(actor_system&, const actor_system_config&) {
   return 0;
 }
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
 std::vector<instrumentation::metric> middleman::collect_metrics() {
   auto hdl = named_brokers_.find(caf::atom("BASP"));
   if (hdl != named_brokers_.end()) {

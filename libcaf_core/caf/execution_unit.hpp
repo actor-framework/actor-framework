@@ -61,7 +61,7 @@ public:
     proxies_ = ptr;
   }
 
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   /// Stat collector for this uit.
   instrumentation::worker_stats& stats() {
     return stats_;
@@ -71,7 +71,7 @@ public:
 protected:
   actor_system* system_;
   proxy_registry* proxies_;
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   instrumentation::worker_stats stats_;
 #endif
 };

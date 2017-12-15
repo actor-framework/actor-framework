@@ -405,7 +405,7 @@ void actor_system::await_all_actors_done() const {
 }
 
 std::vector<instrumentation::metric> actor_system::collect_metrics() {
-#ifndef CAF_NO_INSTRUMENTATION
+#ifdef CAF_ENABLE_INSTRUMENTATION
   auto metrics = scheduler().collect_metrics();
   if (has_middleman()) {
     auto network_metrics = middleman().collect_metrics();
