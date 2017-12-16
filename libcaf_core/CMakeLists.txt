@@ -115,8 +115,9 @@ set (LIBCAF_CORE_SRCS
      src/unprofiled.cpp
      src/work_sharing.cpp
      src/work_stealing.cpp
-     src/instrumentation/callsite_stats.cpp
-     src/instrumentation/name_registry.cpp
+     src/instrumentation/broker_stats.cpp
+     src/instrumentation/instrumentation_ids.cpp
+     src/instrumentation/stat_stream.cpp
      src/instrumentation/worker_stats.cpp)
 
 add_custom_target(libcaf_core)

@@ -17,41 +17,42 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CALLSITE_STATS_HPP
-#define CAF_CALLSITE_STATS_HPP
+#ifndef CAF_BROKER_STATS_HPP
+#define CAF_BROKER_STATS_HPP
 
+#include "caf/instrumentation/instrumentation_ids.hpp"
 #include "caf/instrumentation/stat_stream.hpp"
 
+#include <unordered_map>
 #include <cstdint>
+#include <string>
+#include <mutex>
 
 namespace caf {
 namespace instrumentation {
 
-/// Instrumentation stats aggregated per-worker-per-callsite.
-class callsite_stats {
+/// Instrumentation stats aggregated per-worker for all callsites.
+class broker_stats {
+  friend class lockable_broker_stats;
+
 public:
-  void record_pre_behavior(int64_t mb_wait_time, size_t mb_size);
   std::string to_string() const;
 
-  stat_stream mb_waittimes() const {
-    return mb_waittimes_;
-  }
+protected:
+  std::unordered_map<msgtype_id, stat_stream> msg_waittimes_;
+  stat_stream mb_size_;
+};
 
-  stat_stream mb_sizes() const {
-    return mb_sizes_;
-  }
-
-  void combine(const callsite_stats& rhs) {
-    mb_waittimes_.combine(rhs.mb_waittimes_);
-    mb_sizes_.combine(rhs.mb_sizes_);
-  }
+class lockable_broker_stats : public broker_stats {
+public:
+  void record_broker_forward(msgtype_id mt, int64_t mb_waittime, size_t mb_size);
+  broker_stats collect();
 
 private:
-  stat_stream mb_waittimes_;
-  stat_stream mb_sizes_;
+  std::mutex access_mutex_;
 };
 
 } // namespace instrumentation
 } // namespace caf
 
-#endif // CAF_WORKER_STATS_HPP
+#endif // CAF_BROKER_STATS_HPP

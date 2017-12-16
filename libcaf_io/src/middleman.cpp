@@ -394,16 +394,12 @@ int middleman::exec_slave_mode(actor_system&, const actor_system_config&) {
 }
 
 #ifdef CAF_ENABLE_INSTRUMENTATION
-std::vector<instrumentation::metric> middleman::collect_metrics() {
+instrumentation::broker_stats middleman::collect_metrics() {
   auto hdl = named_brokers_.find(caf::atom("BASP"));
   if (hdl != named_brokers_.end()) {
     auto basp = dynamic_cast<caf::io::basp_broker *>(caf::actor_cast<caf::abstract_actor *>(hdl->second));
     if (basp != nullptr) {
-      auto metrics = basp->state.stats.collect_metrics();
-      for (auto& m : metrics) {
-        m.key.type = instrumentation::metric_type::broker_forward; // TODO something less disgusting
-      }
-      return metrics;
+      return basp->state.stats.collect();
     }
   }
   return {};

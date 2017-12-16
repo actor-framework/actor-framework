@@ -60,25 +60,12 @@ public:
   }
 
 #ifdef CAF_ENABLE_INSTRUMENTATION
-  std::vector<instrumentation::metric> collect_metrics() override {
-    std::unordered_map<instrumentation::metric_key, instrumentation::metric> metric_map;
+  instrumentation::worker_stats collect_metrics() override {
+    instrumentation::worker_stats combined_stats;
     for (auto& w : workers_) {
-      auto worker_metrics = w->stats().collect_metrics();
-      for (auto& m : worker_metrics) {
-        auto it = metric_map.find(m.key);
-        if (it != metric_map.end()) {
-          it->second.combine(m);
-        } else {
-          metric_map.insert({m.key, m});
-        }
-      }
+      combined_stats.combine(w->stats().collect());
     }
-
-    std::vector<instrumentation::metric> metrics;
-    metrics.reserve(metric_map.size());
-    for (const auto& m : metric_map)
-      metrics.push_back(m.second);
-    return metrics;
+    return combined_stats;
   }
 #endif
 

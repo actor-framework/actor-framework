@@ -33,6 +33,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
+#include "caf/instrumentation/broker_stats.hpp"
 
 #include "caf/io/basp/all.hpp"
 #include "caf/io/broker.hpp"
@@ -158,7 +159,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   static const char* name;
 
 #ifdef CAF_ENABLE_INSTRUMENTATION
-  instrumentation::worker_stats stats;
+  instrumentation::lockable_broker_stats stats;
 #endif
 };
 

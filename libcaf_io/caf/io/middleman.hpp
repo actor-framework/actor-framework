@@ -32,6 +32,8 @@
 #include "caf/actor_system.hpp"
 #include "caf/proxy_registry.hpp"
 
+#include "caf/instrumentation/broker_stats.hpp"
+
 #include "caf/io/hook.hpp"
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman_actor.hpp"
@@ -275,7 +277,7 @@ public:
   }
 
 #ifdef CAF_ENABLE_INSTRUMENTATION
-  std::vector<instrumentation::metric> collect_metrics();
+  instrumentation::broker_stats collect_metrics();
 #endif
 
 protected:

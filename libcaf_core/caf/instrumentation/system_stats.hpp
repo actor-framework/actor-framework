@@ -17,20 +17,22 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/instrumentation/callsite_stats.hpp"
+#ifndef CAF_SYSTEM_STATS_HPP
+#define CAF_SYSTEM_STATS_HPP
+
+#include "caf/instrumentation/broker_stats.hpp"
+#include "caf/instrumentation/worker_stats.hpp"
 
 namespace caf {
 namespace instrumentation {
 
-void callsite_stats::record_pre_behavior(int64_t mb_wait_time, size_t mb_size) {
-  mb_waittimes_.record(mb_wait_time);
-  mb_sizes_.record(mb_size);
-}
-
-std::string callsite_stats::to_string() const {
-  return std::string("WAIT ") + mb_waittimes_.to_string()
-         + " | " + " SIZE " + mb_sizes_.to_string();
-}
+/// Instrumentation stats aggregated for the whole actor_system.
+struct system_stats {
+  worker_stats worker;
+  broker_stats broker;
+};
 
 } // namespace instrumentation
 } // namespace caf
+
+#endif // CAF_SYSTEM_STATS_HPP

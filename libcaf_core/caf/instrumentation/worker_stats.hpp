@@ -21,11 +21,10 @@
 #define CAF_WORKER_STATS_HPP
 
 #include "caf/instrumentation/instrumentation_ids.hpp"
-#include "caf/instrumentation/callsite_stats.hpp"
-#include "caf/instrumentation/name_registry.hpp"
-#include "caf/instrumentation/metric.hpp"
+#include "caf/instrumentation/stat_stream.hpp"
 
 #include <unordered_map>
+#include <utility>
 #include <cstdint>
 #include <string>
 #include <mutex>
@@ -35,19 +34,24 @@ namespace instrumentation {
 
 /// Instrumentation stats aggregated per-worker for all callsites.
 class worker_stats {
+  friend class lockable_worker_stats;
+
 public:
-  void record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size);
-  std::vector<metric> collect_metrics();
+  void combine(const worker_stats& rhs);
   std::string to_string() const;
 
-  name_registry& registry() {
-    return registry_;
-  }
+protected:
+  std::unordered_map<std::pair<actortype_id, msgtype_id>, stat_stream> msg_waittimes_;
+  std::unordered_map<actortype_id, stat_stream> mb_sizes_;
+};
+
+class lockable_worker_stats : public worker_stats {
+public:
+  void record_pre_behavior(actortype_id at, msgtype_id mt, int64_t mb_waittime, size_t mb_size);
+  worker_stats collect();
 
 private:
   std::mutex access_mutex_;
-  std::unordered_map<actortype_id, std::unordered_map<callsite_id, callsite_stats>> callsite_stats_; // indexed by actortype_id and then callsite_id
-  name_registry registry_;
 };
 
 } // namespace instrumentation

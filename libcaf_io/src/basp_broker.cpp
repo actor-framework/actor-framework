@@ -553,10 +553,10 @@ behavior basp_broker::make_behavior() {
                     << CAF_ARG(mid) << CAF_ARG(msg));
 
 #ifdef CAF_ENABLE_INSTRUMENTATION
-      auto msgtype = state.stats.registry().get_simple_signature(msg);
+      auto msgtype = instrumentation::get_msgtype(msg);
       auto mb_wait_time = timestamp_ago_ns(this->current_message_ts());
       auto mb_size = this->mailbox_cached_count();
-      state.stats.record_pre_behavior(0, msgtype, mb_wait_time, mb_size);
+      state.stats.record_broker_forward(msgtype, mb_wait_time, mb_size);
 #endif
 
       if (!dest || system().node() == dest->node()) {

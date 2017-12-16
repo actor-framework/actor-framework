@@ -63,7 +63,7 @@ public:
 
 #ifdef CAF_ENABLE_INSTRUMENTATION
   /// Stat collector for this uit.
-  instrumentation::worker_stats& stats() {
+  instrumentation::lockable_worker_stats& stats() {
     return stats_;
   }
 #endif
@@ -72,7 +72,7 @@ protected:
   actor_system* system_;
   proxy_registry* proxies_;
 #ifdef CAF_ENABLE_INSTRUMENTATION
-  instrumentation::worker_stats stats_;
+  instrumentation::lockable_worker_stats stats_;
 #endif
 };
 

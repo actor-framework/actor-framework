@@ -17,74 +17,40 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_METRIC_HPP
-#define CAF_METRIC_HPP
-
-#include "caf/instrumentation/callsite_stats.hpp"
-
-#include <cmath>
-#include <array>
-#include <string>
-#include <cstdint>
-#include <utility>
+#include "caf/instrumentation/broker_stats.hpp"
 
 namespace caf {
 namespace instrumentation {
 
-enum class metric_type {
-  pre_behavior,
-  broker_forward
-};
-
-struct metric_key {
-  metric_type type;
-  std::string actortype;
-  std::string callsite;
-
-  bool operator==(const metric_key& other) const {
-    return type == other.type
-           && actortype == other.actortype
-           && callsite == other.callsite;
+std::string broker_stats::to_string() const {
+  std::string res;
+  res.reserve(4096);
+  for (const auto& wt : msg_waittimes_) {
+    res += "BROKER WAIT TIME | ";
+    res += caf::instrumentation::to_string(wt.first);
+    res += " => ";
+    res += wt.second.to_string();
+    res += "\n";
   }
-};
+  res += "BROKER MAILBOX SIZE | ";
+  res += mb_size_.to_string();
+  res += "\n";
+  return res;
+}
 
-struct metric {
-  metric(metric_type type, const std::string& actortype, const std::string& callsite, const callsite_stats& value)
-    : key{type, actortype, callsite},
-      value(value)
-  {}
+void lockable_broker_stats::record_broker_forward(msgtype_id mt, int64_t mb_waittime, size_t mb_size) {
+  std::lock_guard<std::mutex> g(access_mutex_);
+  msg_waittimes_[mt].record(mb_waittime);
+  mb_size_.record(mb_size);
+}
 
-  void combine(const metric& rhs) {
-    value.combine(rhs.value);
-  }
-
-  metric_key key;
-  callsite_stats value;
-};
+broker_stats lockable_broker_stats::collect() {
+  broker_stats zero;
+  std::lock_guard<std::mutex> g(access_mutex_);
+  std::swap(msg_waittimes_, zero.msg_waittimes_);
+  std::swap(mb_size_, zero.mb_size_);
+  return zero;
+}
 
 } // namespace instrumentation
 } // namespace caf
-
-namespace std {
-
-// stolen from boost::hash_combine
-template <class T>
-inline void hash_combine(std::size_t& seed, T const& v)
-{
-  seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-}
-
-template <>
-struct hash<caf::instrumentation::metric_key>
-{
-  size_t operator()(const caf::instrumentation::metric_key& k) const {
-    auto hash = static_cast<size_t>(k.type);
-    hash_combine(hash, k.actortype);
-    hash_combine(hash, k.callsite);
-    return hash;
-  }
-};
-
-} // namespace std
-
-#endif // CAF_METRIC_HPP

@@ -35,9 +35,6 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/profiled_coordinator.hpp"
 
-#include "caf/io/middleman.hpp"
-// TODO find how we can resolve this reverse dependency on caf_io
-
 namespace caf {
 
 namespace {
@@ -402,20 +399,6 @@ actor_id actor_system::latest_actor_id() const {
 
 void actor_system::await_all_actors_done() const {
   registry_.await_running_count_equal(0);
-}
-
-std::vector<instrumentation::metric> actor_system::collect_metrics() {
-#ifdef CAF_ENABLE_INSTRUMENTATION
-  auto metrics = scheduler().collect_metrics();
-  if (has_middleman()) {
-    auto network_metrics = middleman().collect_metrics();
-    metrics.reserve(metrics.size() + network_metrics.size());
-    std::move(network_metrics.begin(), network_metrics.end(), std::back_inserter(metrics));
-  }
-  return metrics;
-#else
-  return {};
-#endif
 }
 
 void actor_system::inc_detached_threads() {

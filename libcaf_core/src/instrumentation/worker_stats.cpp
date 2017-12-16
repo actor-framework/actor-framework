@@ -22,36 +22,49 @@
 namespace caf {
 namespace instrumentation {
 
-void worker_stats::record_pre_behavior(actortype_id at, callsite_id cs, int64_t mb_wait_time, size_t mb_size) {
-  std::lock_guard<std::mutex> g(access_mutex_);
-  callsite_stats_[at][cs].record_pre_behavior(mb_wait_time, mb_size);
-}
-
-std::vector<metric> worker_stats::collect_metrics() {
-  std::lock_guard<std::mutex> g(access_mutex_);
-  std::vector<metric> metrics;
-  for (const auto& by_actor : callsite_stats_) {
-    auto actortype = registry_.identify_actortype(by_actor.first);
-    for (const auto& by_callsite : by_actor.second) {
-      auto callsite = registry_.identify_simple_signature(by_callsite.first);
-      metrics.emplace_back(metric_type::pre_behavior, actortype, callsite, by_callsite.second); // TODO better type
-    }
+void worker_stats::combine(const worker_stats& rhs) {
+  for (const auto& wt : rhs.msg_waittimes_) {
+    msg_waittimes_[wt.first].combine(wt.second);
   }
-  callsite_stats_.clear();
-  return metrics;
+  for (const auto& mb : rhs.mb_sizes_) {
+    mb_sizes_[mb.first].combine(mb.second);
+  }
 }
 
 std::string worker_stats::to_string() const {
-    std::string res;
-    for (const auto& by_actor : callsite_stats_) {
-      for (const auto& by_callsite : by_actor.second) {
-        res += "ACTORTYPE " + registry_.identify_actortype(by_actor.first);
-        res += " CALLSITE " + registry_.identify_simple_signature(by_callsite.first);
-        res += " => " + by_callsite.second.to_string();
-        res += "\n";
-      }
-    }
-    return res;
+  std::string res;
+  res.reserve(4096);
+  for (const auto& wt : msg_waittimes_) {
+    res += "WORKERS WAIT TIME | ";
+    res += caf::instrumentation::to_string(wt.first.first);
+    res += " | ";
+    res += caf::instrumentation::to_string(wt.first.second);
+    res += " => ";
+    res += wt.second.to_string();
+    res += "\n";
+  }
+  for (const auto& mb : mb_sizes_) {
+    res += "WORKERS MAILBOX SIZE | ";
+    res += caf::instrumentation::to_string(mb.first);
+    res += " => ";
+    res += mb.second.to_string();
+    res += "\n";
+  }
+  return res;
+}
+
+void lockable_worker_stats::record_pre_behavior(actortype_id at, msgtype_id mt, int64_t mb_waittime, size_t mb_size) {
+  std::lock_guard<std::mutex> g(access_mutex_);
+  msg_waittimes_[std::make_pair(at, mt)].record(mb_waittime);
+  mb_sizes_[at].record(mb_size);
+}
+
+worker_stats lockable_worker_stats::collect() {
+  worker_stats zero;
+  std::lock_guard<std::mutex> g(access_mutex_);
+  std::swap(msg_waittimes_, zero.msg_waittimes_);
+  std::swap(mb_sizes_, zero.mb_sizes_);
+  return zero;
 }
 
 } // namespace instrumentation
