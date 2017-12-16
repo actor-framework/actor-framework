@@ -53,8 +53,6 @@ public:
 
   using const_reference = const value_type&;
 
-  using deleter_type = typename policy_type::deleter_type;
-
   using unique_pointer = typename policy_type::unique_pointer;
 
   using task_size_type = typename policy_type::task_size_type;
@@ -312,7 +310,7 @@ public:
     for (auto i = head_.next; i != &tail_;) {
       auto ptr = i;
       i = i->next;
-      deleter_type d;
+      typename unique_pointer::deleter_type d;
       d(promote(ptr));
     }
   }

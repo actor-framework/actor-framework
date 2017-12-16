@@ -59,19 +59,19 @@ public:
                      response_promise result_cb);
   */
 
-  virtual error handle(inbound_path* from, downstream_msg::batch& x);
+  virtual void handle(inbound_path* from, downstream_msg::batch& x);
 
-  virtual error handle(inbound_path* from, downstream_msg::close& x);
+  virtual void handle(inbound_path* from, downstream_msg::close& x);
 
-  virtual error handle(inbound_path* from, downstream_msg::forced_close& x);
+  virtual void handle(inbound_path* from, downstream_msg::forced_close& x);
 
-  virtual error handle(stream_slots, upstream_msg::ack_open& x);
+  virtual void handle(stream_slots, upstream_msg::ack_open& x);
 
-  virtual error handle(outbound_path* from, upstream_msg::ack_batch& x);
+  virtual void handle(stream_slots slots, upstream_msg::ack_batch& x);
 
-  virtual error handle(outbound_path* from, upstream_msg::drop& x);
+  virtual void handle(stream_slots slots, upstream_msg::drop& x);
 
-  virtual error handle(outbound_path* from, upstream_msg::forced_drop& x);
+  virtual void handle(stream_slots slots, upstream_msg::forced_drop& x);
 
   /// Closes the stream when the parent terminates with default exit reason or
   /// the stream reached its end.

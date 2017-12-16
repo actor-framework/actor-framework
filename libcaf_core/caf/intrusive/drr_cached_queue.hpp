@@ -40,8 +40,6 @@ public:
   // -- member types ----------------------------------------------------------
   using policy_type = Policy;
 
-  using deleter_type = typename policy_type::deleter_type;
-
   using value_type = typename policy_type::mapped_type;
 
   using node_type = typename value_type::node_type;
@@ -221,7 +219,7 @@ public:
         // Fix deficit counter since we didn't actually use it.
         deficit_ += ts;
       } else {
-        deleter_type d;
+        typename unique_pointer::deleter_type d;
         d(ptr);
         ++consumed;
         if (!cache_.empty())

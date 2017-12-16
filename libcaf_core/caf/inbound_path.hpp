@@ -134,7 +134,7 @@ public:
   void emit_regular_shutdown(local_actor* self);
 
   /// Sends a `stream_msg::forced_close` on this path.
-  void emit_regular_shutdown(local_actor* self, error reason);
+  void emit_irregular_shutdown(local_actor* self, error reason);
 
   /// Sends a `stream_msg::forced_close` on this path.
   static void emit_irregular_shutdown(local_actor* self, stream_slots slots,

@@ -46,9 +46,9 @@ public:
 
   using node_pointer = node_type*;
 
-  using deleter_type = typename policy_type::deleter_type;
-
   using unique_pointer = typename policy_type::unique_pointer;
+
+  using deleter_type = typename unique_pointer::deleter_type;
 
   /// Tries to enqueue a new element to the inbox.
   /// @threadsafe

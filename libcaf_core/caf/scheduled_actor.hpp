@@ -38,7 +38,6 @@
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
-#include "caf/mailbox_policy.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
@@ -50,6 +49,11 @@
 #include "caf/to_string.hpp"
 
 #include "caf/policy/arg.hpp"
+#include "caf/policy/categorized.hpp"
+#include "caf/policy/downstream_messages.hpp"
+#include "caf/policy/normal_messages.hpp"
+#include "caf/policy/upstream_messages.hpp"
+#include "caf/policy/urgent_messages.hpp"
 
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/stream_sink_driver_impl.hpp"
@@ -59,7 +63,11 @@
 #include "caf/detail/stream_stage_driver_impl.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 
+#include "caf/intrusive/drr_cached_queue.hpp"
+#include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
@@ -92,10 +100,74 @@ result<message> drop(scheduled_actor*, message_view&);
 /// @extends local_actor
 class scheduled_actor : public local_actor, public resumable {
 public:
-  // -- member types -----------------------------------------------------------
+  // -- nested enums -----------------------------------------------------------
 
-  // Base type.
+  /// Categorizes incoming messages.
+  enum class message_category {
+    /// Denotes an expired and thus obsolete timeout.
+    expired_timeout,
+    /// Triggers the currently active timeout.
+    timeout,
+    /// Triggers the current behavior.
+    ordinary,
+    /// Triggers handlers for system messages such as `exit_msg` or `down_msg`.
+    internal
+  };
+
+  /// Result of one-shot activations.
+  enum class activation_result {
+    /// Actor is still alive and handled the activation message.
+    success,
+    /// Actor handled the activation message and terminated.
+    terminated,
+    /// Actor skipped the activation message.
+    skipped,
+    /// Actor dropped the activation message.
+    dropped
+  };
+
+  // -- nested and member types ------------------------------------------------
+
+  /// Base type.
   using super = local_actor;
+
+  /// Stores asynchronous messages with default priority.
+  using default_queue = intrusive::drr_cached_queue<policy::normal_messages>;
+
+  /// Stores asynchronous messages with hifh priority.
+  using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
+
+  /// Stores upstream messages.
+  using upstream_queue = intrusive::drr_queue<policy::upstream_messages>;
+
+  /// Stores downstream messages.
+  using downstream_queue = intrusive::drr_queue<policy::downstream_messages>;
+
+  /// Configures the FIFO inbox with four nested queues:
+  ///
+  ///   1. Default asynchronous messages
+  ///   2. High-priority asynchronous messages
+  ///   3. Upstream messages
+  ///   4. Downstream messages
+  ///
+  /// The queue for downstream messages is in turn composed of a nested queues,
+  /// one for each active input slot.
+  struct mailbox_policy {
+    using deficit_type = size_t;
+
+    using mapped_type = mailbox_element;
+
+    using unique_pointer = mailbox_element_ptr;
+
+    using queue_type =
+      intrusive::wdrr_fixed_multiplexed_queue<policy::categorized,
+                                              default_queue, upstream_queue,
+                                              downstream_queue, urgent_queue>;
+
+    static constexpr size_t default_queue_index = 0;
+
+    static constexpr size_t urgent_queue_index = 3;
+  };
 
   /// A queue optimized for single-reader-many-writers.
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
@@ -130,55 +202,29 @@ public:
   using exception_handler = std::function<error (pointer, std::exception_ptr&)>;
 # endif // CAF_NO_EXCEPTIONS
 
-  // -- nested enums -----------------------------------------------------------
-
-  /// @cond PRIVATE
-
-  /// Categorizes incoming messages.
-  enum class message_category {
-    /// Denotes an expired and thus obsolete timeout.
-    expired_timeout,
-    /// Triggers the currently active timeout.
-    timeout,
-    /// Triggers the current behavior.
-    ordinary,
-    /// Triggers handlers for system messages such as `exit_msg` or `down_msg`.
-    internal
-  };
-
-  /// Result of one-shot activations.
-  enum class activation_result {
-    /// Actor is still alive and handled the activation message.
-    success,
-    /// Actor handled the activation message and terminated.
-    terminated,
-    /// Actor skipped the activation message.
-    skipped,
-    /// Actor dropped the activation message.
-    dropped
-  };
-
-  /// @endcond
-
-  // -- nested classes ---------------------------------------------------------
-
+  /// Consumes messages from the mailbox.
   struct mailbox_visitor {
     scheduled_actor* self;
     resume_result& result;
     size_t& handled_msgs;
     size_t max_throughput;
 
-    /// Skips all streaming-related messages.
-    intrusive::task_result operator()(size_t, mailbox_policy::stream_queue&,
+    /// Consumes upstream messages.
+    intrusive::task_result operator()(size_t, upstream_queue&,
                                       mailbox_element&);
 
-    // Dispatches messages with high and normal priority to the same handler.
+    /// Consumes downstream messages.
+    intrusive::task_result operator()(size_t, downstream_queue&,
+                                      mailbox_element&);
+
+    // Dispatches asynchronous messages with high and normal priority to the
+    // same handler.
     template <class Queue>
     intrusive::task_result operator()(size_t, Queue&, mailbox_element& x) {
       return (*this)(x);
     }
 
-    // Consumes `x`.
+    // Consumes asynchronous messages.
     intrusive::task_result operator()(mailbox_element& x);
   };
 
@@ -881,6 +927,20 @@ public:
   inline mailbox_type& mailbox() {
     return mailbox_;
   }
+
+  // -- inbound_path management ------------------------------------------------
+
+  inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
+                                  strong_actor_ptr sender) override;
+
+  void erase_inbound_path_later(stream_slot slot) override;
+
+  void erase_inbound_path_later(stream_slot slot, error reason) override;
+
+  void erase_inbound_paths_later(const stream_manager* mgr) override;
+
+  void erase_inbound_paths_later(const stream_manager* mgr,
+                                 error reason) override;
 
 protected:
   /// @cond PRIVATE

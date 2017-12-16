@@ -49,15 +49,15 @@ public:
 
   using queue_type = typename policy_type::queue_type;
 
-  using value_type = typename policy_type::mapped_type;
+  using deficit_type = typename policy_type::deficit_type;
 
-  using deleter_type = typename policy_type::deleter_type;
+  using value_type = typename policy_type::mapped_type;
 
   using lifo_inbox_type = lifo_inbox<policy_type>;
 
   using pointer = value_type*;
 
-  using unique_pointer = typename policy_type::unique_pointer;
+  using unique_pointer = typename queue_type::unique_pointer;
 
   using node_pointer = typename value_type::node_pointer;
 
@@ -152,7 +152,7 @@ public:
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   template <class F>
-  bool new_round(typename policy_type::deficit_type quantum, F& consumer) {
+  bool new_round(deficit_type quantum, F& consumer) {
     fetch_more();
     return queue_.new_round(quantum, consumer);
   }

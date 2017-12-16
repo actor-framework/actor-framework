@@ -32,15 +32,27 @@
 #include "caf/is_timeout_or_catch_all.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/mailbox_policy.hpp"
 #include "caf/none.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_actor.hpp"
+
+#include "caf/policy/arg.hpp"
+#include "caf/policy/priority_aware.hpp"
+#include "caf/policy/downstream_messages.hpp"
+#include "caf/policy/normal_messages.hpp"
+#include "caf/policy/upstream_messages.hpp"
+#include "caf/policy/urgent_messages.hpp"
 
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
+
+#include "caf/intrusive/drr_cached_queue.hpp"
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
@@ -67,10 +79,36 @@ class blocking_actor
                   mixin::subscriber>,
       public dynamically_typed_actor_base {
 public:
-  // -- member types -----------------------------------------------------------
+  // -- nested and member types ------------------------------------------------
 
   /// Base type.
   using super = extended_base;
+
+  /// Stores asynchronous messages with default priority.
+  using default_queue = intrusive::drr_cached_queue<policy::normal_messages>;
+
+  /// Stores asynchronous messages with hifh priority.
+  using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
+
+  /// Configures the FIFO inbox with two nested queues:
+  ///
+  ///   1. Default asynchronous messages
+  ///   2. High-priority asynchronous messages
+  struct mailbox_policy {
+    using deficit_type = size_t;
+
+    using mapped_type = mailbox_element;
+
+    using unique_pointer = mailbox_element_ptr;
+
+    using queue_type =
+      intrusive::wdrr_fixed_multiplexed_queue<policy::priority_aware,
+                                              default_queue, urgent_queue>;
+
+    static constexpr size_t default_queue_index = 0;
+
+    static constexpr size_t urgent_queue_index = 1;
+  };
 
   /// A queue optimized for single-reader-many-writers.
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
@@ -187,12 +225,6 @@ public:
     receive_cond& rcc;
     message_id mid;
     detail::blocking_behavior& bhvr;
-
-    /// Skips all streaming-related messages.
-    inline intrusive::task_result
-    operator()(size_t, mailbox_policy::stream_queue&, mailbox_element&) {
-      return intrusive::task_result::skip;
-    }
 
     // Dispatches messages with high and normal priority to the same handler.
     template <class Queue>

@@ -40,6 +40,7 @@ set (LIBCAF_CORE_SRCS
      src/decorated_tuple.cpp
      src/default_attachable.cpp
      src/deserializer.cpp
+     src/downstream_messages.cpp
      src/duration.cpp
      src/dynamic_message_data.cpp
      src/error.cpp

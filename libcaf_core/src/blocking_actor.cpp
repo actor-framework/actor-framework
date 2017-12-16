@@ -30,12 +30,6 @@
 
 namespace caf {
 
-namespace {
-
-constexpr auto mpol = mailbox_policy{};
-
-} // namespace <anonymous>
-
 blocking_actor::receive_cond::~receive_cond() {
   // nop
 }
@@ -58,7 +52,7 @@ bool blocking_actor::accept_one_cond::post() {
 
 blocking_actor::blocking_actor(actor_config& cfg)
     : super(cfg.add_flag(local_actor::is_blocking_flag)),
-      mailbox_(mpol, mpol, mpol, mpol, mpol) {
+      mailbox_(unit, unit, unit) {
   // nop
 }
 
@@ -269,7 +263,7 @@ mailbox_element_ptr blocking_actor::dequeue() {
   auto& q1 = get<mailbox_policy::default_queue_index>(qs);
   auto ptr = q1.take_front();
   if (ptr == nullptr) {
-    auto& q2 = get<mailbox_policy::high_priority_queue_index>(qs);
+    auto& q2 = get<mailbox_policy::urgent_queue_index>(qs);
     ptr = q2.take_front();
   }
   return ptr;

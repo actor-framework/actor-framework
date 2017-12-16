@@ -20,6 +20,7 @@
 
 #include "caf/actor_ostream.hpp"
 #include "caf/config.hpp"
+#include "caf/inbound_path.hpp"
 #include "caf/to_string.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -29,12 +30,6 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 
 namespace caf {
-
-namespace {
-
-constexpr auto mpol = mailbox_policy{};
-
-} // namespace <anonymous>
 
 // -- related free functions ---------------------------------------------------
 
@@ -103,7 +98,7 @@ error scheduled_actor::default_exception_handler(pointer ptr,
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
     : super(cfg),
-      mailbox_(mpol, mpol, mpol, mpol, mpol),
+      mailbox_(unit, unit, unit, unit, unit),
       timeout_id_(0),
       default_handler_(print_and_drop),
       error_handler_(default_error_handler),
@@ -234,10 +229,18 @@ void scheduled_actor::intrusive_ptr_release_impl() {
   intrusive_ptr_release(ctrl());
 }
 
-intrusive::task_result scheduled_actor::mailbox_visitor::
-operator()(size_t, mailbox_policy::stream_queue&, mailbox_element&) {
+intrusive::task_result
+scheduled_actor::mailbox_visitor:: operator()(size_t, upstream_queue&,
+                                              mailbox_element&) {
   // TODO: implement me
-  return intrusive::task_result::resume;
+  return intrusive::task_result::stop;
+}
+
+intrusive::task_result
+scheduled_actor::mailbox_visitor:: operator()(size_t, downstream_queue&,
+                                              mailbox_element&) {
+  // TODO: implement me
+  return intrusive::task_result::stop;
 }
 
 intrusive::task_result
@@ -660,15 +663,85 @@ bool scheduled_actor::finalize() {
 void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
   using namespace intrusive;
   auto& p = mailbox_.queue().policy();
-  auto ts = p.task_size(*ptr);
   auto& qs = mailbox_.queue().queues();
-  drr_cached_queue<mailbox_policy>* q;
-  if (p.id_of(*ptr) == mailbox_policy::default_queue_index)
-    q = &std::get<mailbox_policy::default_queue_index>(qs);
-  else
-    q = &std::get<mailbox_policy::high_priority_queue_index>(qs);
-  q->inc_total_task_size(ts);
-  q->cache().push_back(ptr.release());
+  // TODO: use generic lambda to avoid code duplication when switching to C++14
+  if (p.id_of(*ptr) == mailbox_policy::default_queue_index) {
+    auto& q = std::get<mailbox_policy::default_queue_index>(qs);
+    q.inc_total_task_size(q.policy().task_size(*ptr));
+    q.cache().push_back(ptr.release());
+  } else {
+    auto& q = std::get<mailbox_policy::default_queue_index>(qs);
+    q.inc_total_task_size(q.policy().task_size(*ptr));
+    q.cache().push_back(ptr.release());
+  }
+}
+
+inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
+                                                 stream_slots slots,
+                                                 strong_actor_ptr sender) {
+  /*
+  auto res = get<2>(mailbox_.queues()).queues().emplace(slots.receiver, nullptr);
+  if (!res.second)
+    return nullptr;
+  auto path = new inbound_path(std::move(mgr), slots, std::move(sender));
+  res.first->second.policy().handler.reset(path);
+  return path;
+  */
+}
+
+void scheduled_actor::erase_inbound_path_later(stream_slot slot) {
+  /*
+  get<2>(mailbox_.queues()).erase_later(slot);
+  */
+}
+
+void scheduled_actor::erase_inbound_path_later(stream_slot slot, error reason) {
+  /*
+  using fn = void (*)(local_actor*, inbound_path&, error&);
+  fn regular = [](local_actor* self, inbound_path& in, error&) {
+    in.emit_regular_shutdown(self);
+  };
+  fn irregular = [](local_actor* self, inbound_path& in, error& rsn) {
+    in.emit_irregular_shutdown(self, rsn);
+  };
+  auto f = reason == none ? regular : irregular;
+  for (auto& kvp : get<2>(mbox.queues()).queues()) {
+    auto& path = kvp.second.policy().handler;
+    if (path != nullptr && path->mgr == mgr) {
+      f(this, *path, reason);
+      erase_inbound_path_later(kvp.first);
+    }
+  }
+  */
+}
+
+void scheduled_actor::erase_inbound_paths_later(const stream_manager* mgr) {
+  /*
+  for (auto& kvp : get<2>(mailbox_.queues()).queues())
+    if (kvp.second.policy().handler->mgr == mgr)
+      erase_inbound_path_later(kvp.first);
+  */
+}
+
+void scheduled_actor::erase_inbound_paths_later(const stream_manager* mgr,
+                                                error reason) {
+  /*
+  using fn = void (*)(local_actor*, inbound_path&, error&);
+  fn regular = [](local_actor* self, inbound_path& in, error&) {
+    in.emit_regular_shutdown(self);
+  };
+  fn irregular = [](local_actor* self, inbound_path& in, error& rsn) {
+    in.emit_irregular_shutdown(self, rsn);
+  };
+  auto f = reason == none ? regular : irregular;
+  for (auto& kvp : get<2>(mbox.queues()).queues()) {
+    auto& path = kvp.second.policy().handler;
+    if (path != nullptr && path->mgr == mgr) {
+      f(this, *path, reason);
+      erase_inbound_path_later(kvp.first);
+    }
+  }
+  */
 }
 
 stream_slot scheduled_actor::next_slot() {
@@ -682,70 +755,5 @@ stream_slot scheduled_actor::next_slot() {
     result = std::max(nslot(pending_stream_managers_.rbegin()->first), result);
   return result;
 }
-
-/*
-bool scheduled_actor::handle_stream_msg(mailbox_element& x,
-                                        behavior* active_behavior) {
-  CAF_LOG_TRACE(CAF_ARG(x));
-  CAF_ASSERT(x.content().match_elements<stream_msg>());
-  auto& sm = x.content().get_mutable_as<stream_msg>(0);
-  if (sm.sender == nullptr) {
-    CAF_LOG_ERROR("received a stream_msg with invalid sender field");
-    return false;
-  }
-  stream_msg_visitor f{this, sm, active_behavior};
-  auto result = visit(f, sm.content);
-  if (streams_.empty() && !has_behavior())
-    quit(exit_reason::normal);
-  return result;
-}
-
-bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
-                                 const stream_id& sid,
-                                 strong_actor_ptr source_ptr,
-                                 strong_actor_ptr original_stage,
-                                 stream_priority prio,
-                                 response_promise result_cb) {
-  CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid) << CAF_ARG(source_ptr)
-                << CAF_ARG(original_stage) << CAF_ARG(prio)
-                << CAF_ARG(result_cb));
-  CAF_ASSERT(mgr != nullptr);
-  if (!source_ptr) {
-    CAF_LOG_ERROR("cannot add invalid source");
-    return false;
-  }
-  if (!sid.valid()) {
-    CAF_LOG_ERROR("cannot add source with invalid stream ID");
-    return false;
-  }
-  return mgr->add_source(sid, std::move(source_ptr),
-                         std::move(original_stage), prio,
-                         std::move(result_cb));
-}
-
-bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
-                                 const stream_id& sid,
-                                 response_promise result_cb) {
-  CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid));
-  CAF_ASSERT(mgr != nullptr);
-  CAF_ASSERT(current_mailbox_element() != nullptr);
-  if (!current_mailbox_element()->content().match_elements<stream_msg>()) {
-    CAF_LOG_ERROR("scheduled_actor::add_source called outside "
-                  "a stream_msg handler");
-    return false;
-  }
-  auto& sm = current_mailbox_element()->content().get_mutable_as<stream_msg>(0);
-  if (!holds_alternative<stream_msg::open>(sm.content)) {
-    CAF_LOG_ERROR("scheduled_actor::add_source called outside "
-                  "a stream_msg::open handler");
-    return false;
-  }
-  auto& opn = get<stream_msg::open>(sm.content);
-  auto source_ptr = std::move(opn.prev_stage);
-  return mgr->add_source(sid, std::move(source_ptr),
-                         std::move(opn.original_stage), opn.priority,
-                         std::move(result_cb));
-}
-*/
 
 } // namespace caf

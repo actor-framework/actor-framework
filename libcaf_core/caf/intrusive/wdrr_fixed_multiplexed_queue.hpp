@@ -39,9 +39,9 @@ public:
 
   using deficit_type = typename policy_type::deficit_type;
 
-  using mapped_type = typename policy_type::mapped_type;
+  using value_type = typename policy_type::mapped_type;
 
-  using pointer = mapped_type*;
+  using pointer = value_type*;
 
   using unique_pointer = typename policy_type::unique_pointer;
 
@@ -68,7 +68,7 @@ public:
     return policy_;
   }
 
-  bool push_back(mapped_type* ptr) noexcept {
+  bool push_back(value_type* ptr) noexcept {
     return push_back_recursion<0>(policy_.id_of(*ptr), ptr);
   }
 
@@ -78,7 +78,7 @@ public:
 
   template <class... Ts>
   bool emplace_back(Ts&&... xs) {
-    return push_back(new mapped_type(std::forward<Ts>(xs)...));
+    return push_back(new value_type(std::forward<Ts>(xs)...));
   }
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
@@ -138,13 +138,13 @@ private:
 
   template <size_t I>
   detail::enable_if_t<I == num_queues, bool>
-  push_back_recursion(size_t, mapped_type*) noexcept {
+  push_back_recursion(size_t, value_type*) noexcept {
     return false;
   }
 
   template <size_t I>
   detail::enable_if_t<I != num_queues, bool>
-  push_back_recursion(size_t pos, mapped_type* ptr) noexcept {
+  push_back_recursion(size_t pos, value_type* ptr) noexcept {
     if (pos == I) {
       auto& q = std::get<I>(qs_);
       return q.push_back(ptr);

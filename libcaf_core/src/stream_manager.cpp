@@ -44,49 +44,53 @@ stream_manager::~stream_manager() {
   // nop
 }
 
-error stream_manager::handle(inbound_path*, downstream_msg::batch&) {
-  return none;
+void stream_manager::handle(inbound_path*, downstream_msg::batch&) {
+  CAF_LOG_WARNING("unimplemented base handler for batches called");
 }
 
-error stream_manager::handle(inbound_path* from, downstream_msg::close&) {
-  out().take_path(from->slots);
-  return none;
+void stream_manager::handle(inbound_path*, downstream_msg::close&) {
+  // nop
 }
 
-error stream_manager::handle(inbound_path*, downstream_msg::forced_close&) {
-  return none;
+void stream_manager::handle(inbound_path*, downstream_msg::forced_close& x) {
+  abort(std::move(x.reason));
 }
 
-error stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
+void stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   auto path = out().add_path(slots.invert(), x.rebind_to);
   path->open_credit = x.initial_demand;
   path->desired_batch_size = x.desired_batch_size;
   --pending_handshakes_;
-  generate_messages();
   push();
-  return none;
 }
 
-error stream_manager::handle(outbound_path*, upstream_msg::ack_batch&) {
-  return none;
+void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
+  auto path = out().path(slots.invert());
+  if (path != nullptr) {
+    path->open_credit += x.new_capacity;
+    path->desired_batch_size = x.desired_batch_size;
+    path->next_ack_id = x.acknowledged_id + 1;
+    push();
+  }
 }
 
-error stream_manager::handle(outbound_path*, upstream_msg::drop&) {
-  return none;
+void stream_manager::handle(stream_slots slots, upstream_msg::drop&) {
+  out().take_path(slots.invert());
 }
 
-error stream_manager::handle(outbound_path*, upstream_msg::forced_drop&) {
-  return none;
+void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
+  if (out().path(slots.invert()) != nullptr)
+    abort(std::move(x.reason));
 }
 
 void stream_manager::close() {
   out().close();
-  // TODO: abort all input pahts as well
+  self_->erase_inbound_paths_later(this);
 }
 
 void stream_manager::abort(error reason) {
   out().abort(std::move(reason));
-  // TODO: abort all input pahts as well
+  self_->erase_inbound_paths_later(this, std::move(reason));
 }
 
 void stream_manager::push() {

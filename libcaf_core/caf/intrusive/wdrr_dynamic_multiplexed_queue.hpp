@@ -33,8 +33,6 @@ class wdrr_dynamic_multiplexed_queue {
 public:
   using policy_type = Policy;
 
-  using deleter_type = typename policy_type::deleter_type;
-
   using deficit_type = typename policy_type::deficit_type;
 
   using mapped_type = typename policy_type::mapped_type;
@@ -70,7 +68,7 @@ public:
       i->second.push_back(ptr);
       return true;
     } else {
-      deleter_type d;
+      typename unique_pointer::deleter_type d;
       d(ptr);
       return false;
     }
@@ -172,7 +170,7 @@ public:
     if (i != qs_.end()) {
       i->second.lifo_append(ptr);
     } else {
-      deleter_type d;
+      typename unique_pointer::deleter_type d;
       d(ptr);
     }
   }

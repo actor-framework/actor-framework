@@ -125,4 +125,25 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   return true;
 }
 
+inbound_path* local_actor::make_inbound_path(stream_manager_ptr, stream_slots,
+                                             strong_actor_ptr) {
+  return nullptr;
+}
+
+void local_actor::erase_inbound_path_later(stream_slot) {
+  // nop
+}
+
+void local_actor::erase_inbound_path_later(stream_slot, error) {
+  // nop
+}
+
+void local_actor::erase_inbound_paths_later(const stream_manager*) {
+  // nop
+}
+
+void local_actor::erase_inbound_paths_later(const stream_manager*, error) {
+  // nop
+}
+
 } // namespace caf

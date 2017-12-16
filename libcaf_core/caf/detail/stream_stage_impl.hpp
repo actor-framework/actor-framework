@@ -70,17 +70,15 @@ public:
            && out_.clean();
   }
 
-  error handle(inbound_path*, downstream_msg::batch& x) override {
+  void handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<output_type>;
     if (x.xs.match_elements<vec_type>()) {
       auto& xs = x.xs.get_mutable_as<vec_type>(0);
       downstream<output_type> ds{out_.buf()};
       driver_.process(std::move(xs), ds);
-      return none;
     }
-    CAF_LOG_ERROR("received unexpected batch type");
-    return sec::unexpected_message;
+    CAF_LOG_ERROR("received unexpected batch type (dropped)");
   }
 
   message make_handshake() const override {

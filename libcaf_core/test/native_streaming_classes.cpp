@@ -55,6 +55,11 @@
 #include "caf/variant.hpp"
 
 #include "caf/policy/arg.hpp"
+#include "caf/policy/categorized.hpp"
+#include "caf/policy/downstream_messages.hpp"
+#include "caf/policy/normal_messages.hpp"
+#include "caf/policy/upstream_messages.hpp"
+#include "caf/policy/urgent_messages.hpp"
 
 #include "caf/mixin/sender.hpp"
 
@@ -126,103 +131,19 @@ const char* name_of(const actor_addr& x) {
   return name_of(actor_cast<strong_actor_ptr>(x));
 }
 
-// -- policies and queues ------------------------------------------------------
+// -- queues -------------------------------------------------------------------
 
-struct policy_base {
-  using mapped_type = mailbox_element;
+using default_queue = drr_queue<policy::normal_messages>;
 
-  using task_size_type = size_t;
+using dmsg_queue = wdrr_dynamic_multiplexed_queue<policy::downstream_messages>;
 
-  using deficit_type = size_t;
+using umsg_queue = drr_queue<policy::upstream_messages>;
 
-  using deleter_type = detail::disposer;
+using urgent_queue = drr_queue<policy::urgent_messages>;
 
-  using unique_pointer = mailbox_element_ptr;
-};
-
-struct default_queue_policy : policy_base {
-  static inline task_size_type task_size(const mailbox_element&) {
-    return 1;
-  }
-};
-
-using default_queue = drr_queue<default_queue_policy>;
-
-struct umsg_queue_policy : policy_base {
-  stream_manager* mgr;
-  umsg_queue_policy(stream_manager* ptr) : mgr(ptr) {
-    // nop
-  }
-  static inline task_size_type task_size(const mailbox_element&) {
-    return 1;
-  }
-};
-
-using umsg_queue = drr_queue<umsg_queue_policy>;
-
-struct inner_dmsg_queue_policy : policy_base {
-  using key_type = stream_slot;
-
-  task_size_type task_size(const mailbox_element& x) {
-    return visit(*this, x.content().get_as<downstream_msg>(0).content);
-  }
-
-  task_size_type operator()(const downstream_msg::batch& x) const {
-    CAF_ASSERT(x.xs_size > 0);
-    return static_cast<task_size_type>(x.xs_size);
-  }
-
-  template <class T>
-  task_size_type operator()(const T&) const {
-    return 1;
-  }
-
-  inner_dmsg_queue_policy(std::unique_ptr<inbound_path> ptr)
-      : handler(std::move(ptr)) {
-    // nop
-  }
-
-  std::unique_ptr<inbound_path> handler;
-};
-
-using inner_dmsg_queue = drr_queue<inner_dmsg_queue_policy>;
-
-struct dmsg_queue_policy : policy_base {
-  using key_type = stream_slot;
-
-  using queue_map_type = std::map<stream_slot, inner_dmsg_queue>;
-
-  key_type id_of(mailbox_element& x) {
-    return x.content().get_as<downstream_msg>(0).slots.receiver;
-  }
-
-  template <class Queue>
-  static inline bool enabled(const Queue& q) {
-    return !q.policy().handler->mgr->congested();
-  }
-
-  template <class Queue>
-  deficit_type quantum(const Queue&, deficit_type x) {
-    return x;
-  }
-};
-
-using dmsg_queue = wdrr_dynamic_multiplexed_queue<dmsg_queue_policy>;
-
-struct mboxpolicy : policy_base {
-  template <class Queue>
-  deficit_type quantum(const Queue&, deficit_type x) {
-    return x;
-  }
-
-  size_t id_of(const mailbox_element& x) {
-    return x.mid.category();
-  }
-};
-
-using mboxqueue = wdrr_fixed_multiplexed_queue<mboxpolicy, default_queue,
-                                                umsg_queue, dmsg_queue,
-                                                default_queue>;
+using mboxqueue =
+  wdrr_fixed_multiplexed_queue<policy::categorized, default_queue, umsg_queue,
+                               dmsg_queue, urgent_queue>;
 
 // -- entity and mailbox visitor -----------------------------------------------
 
@@ -256,8 +177,7 @@ public:
   entity(actor_config& cfg, const char* cstr_name, time_point* global_time,
          duration_type credit_interval, duration_type force_batches_interval)
       : super(cfg),
-        mbox(mboxpolicy{}, default_queue_policy{}, nullptr, dmsg_queue_policy{},
-             default_queue_policy{}),
+        mbox(unit, unit, unit, unit, unit),
         name_(cstr_name),
         next_slot_(static_cast<stream_slot>(id())),
         global_time_(global_time),
@@ -398,11 +318,9 @@ public:
     }
     managers_.emplace(id, mgr);
     // Create a new queue in the mailbox for incoming traffic.
-    auto ip = new inbound_path(mgr, id, hs.prev_stage);
-    get<2>(mbox.queues())
-      .queues()
-      .emplace(slot, std::unique_ptr<inbound_path>{ip});
-    ip->emit_ack_open(this, actor_cast<actor_addr>(hs.original_stage));
+    auto path = make_inbound_path(mgr, id, std::move(hs.prev_stage));
+    CAF_REQUIRE_NOT_EQUAL(path, nullptr);
+    path->emit_ack_open(this, actor_cast<actor_addr>(hs.original_stage));
   }
 
   void operator()(stream_slots slots, actor_addr& sender,
@@ -418,32 +336,16 @@ public:
     pending_managers_.erase(i);
     CAF_REQUIRE(res.second);
     res.first->second->handle(slots, x);
-    /*
-    auto to = actor_cast<strong_actor_ptr>(sender);
-    CAF_REQUIRE_NOT_EQUAL(to, nullptr);
-    auto out = i->second->out().add_path(slots.invert(), to);
-    i->second->handle(out, x);
-    i->second->generate_messages();
-    i->second->push();
-    */
   }
 
-  void operator()(stream_slots input_slots, actor_addr& sender,
+  void operator()(stream_slots slots, actor_addr& sender,
                   upstream_msg::ack_batch& x) {
-    TRACE(name_, ack_batch, CAF_ARG(input_slots),
+    TRACE(name_, ack_batch, CAF_ARG(slots),
           CAF_ARG2("sender", name_of(sender)), CAF_ARG(x));
     // Get the manager for that stream.
-    auto i = managers_.find(input_slots);
+    auto i = managers_.find(slots);
     CAF_REQUIRE_NOT_EQUAL(i, managers_.end());
-    auto to = actor_cast<strong_actor_ptr>(sender);
-    CAF_REQUIRE_NOT_EQUAL(to, nullptr);
-    auto out = i->second->out().path(input_slots.invert());
-    CAF_REQUIRE_NOT_EQUAL(out, nullptr);
-    out->open_credit += x.new_capacity;
-    out->desired_batch_size = x.desired_batch_size;
-    out->next_ack_id = x.acknowledged_id + 1;
-    i->second->generate_messages();
-    i->second->push();
+    i->second->handle(slots, x);
     if (i->second->done()) {
       CAF_MESSAGE(name_ << " is done sending batches");
       i->second->close();
@@ -471,6 +373,36 @@ public:
       }
     };
     tick_emitter_.update(now(), f);
+  }
+
+  inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
+                                  strong_actor_ptr sender) override {
+    auto res = get<2>(mbox.queues()).queues().emplace(slots.receiver, nullptr);
+    if (!res.second)
+      return nullptr;
+    auto path = new inbound_path(std::move(mgr), slots, std::move(sender));
+    res.first->second.policy().handler.reset(path);
+    return path;
+  }
+
+  void erase_inbound_path_later(stream_slot slot) override {
+    get<2>(mbox.queues()).erase_later(slot);
+  }
+
+  void erase_inbound_path_later(stream_slot, error) override {
+    CAF_FAIL("unexpected function call");
+  }
+
+  void erase_inbound_paths_later(const stream_manager* mgr) override {
+    for (auto& kvp : get<2>(mbox.queues()).queues()) {
+      auto& path = kvp.second.policy().handler;
+      if (path != nullptr && path->mgr == mgr)
+        erase_inbound_path_later(kvp.first);
+    }
+  }
+
+  void erase_inbound_paths_later(const stream_manager*, error) override {
+    CAF_FAIL("unexpected function call");
   }
 
   time_point now() {
@@ -515,10 +447,9 @@ struct msg_visitor {
     return intrusive::task_result::resume;
   }
 
-  result_type operator()(is_urgent_async, default_queue& q,
-                         mailbox_element& x) {
-    is_default_async token;
-    return (*this)(token, q, x);
+  result_type operator()(is_urgent_async, urgent_queue&, mailbox_element&) {
+    CAF_FAIL("unexpected function call");
+    return intrusive::task_result::stop;
   }
 
   result_type operator()(is_umsg, umsg_queue&, mailbox_element& x) {
@@ -543,7 +474,8 @@ struct msg_visitor {
   }
 
   result_type operator()(is_dmsg, dmsg_queue& qs, stream_slot,
-                         inner_dmsg_queue& q, mailbox_element& x) {
+                         policy::downstream_messages::nested_queue_type& q,
+                         mailbox_element& x) {
     CAF_REQUIRE(x.content().type_token() == make_type_token<downstream_msg>());
     auto inptr = q.policy().handler.get();
     if (inptr == nullptr)

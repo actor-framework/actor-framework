@@ -111,7 +111,7 @@ void inbound_path::emit_regular_shutdown(local_actor* self) {
   unsafe_send_as(self, hdl, make<upstream_msg::drop>(slots, self->address()));
 }
 
-void inbound_path::emit_regular_shutdown(local_actor* self, error reason) {
+void inbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
   unsafe_send_as(self, hdl,
                  make<upstream_msg::forced_drop>(
                    slots.invert(), self->address(), std::move(reason)));
