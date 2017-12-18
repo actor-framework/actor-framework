@@ -36,11 +36,8 @@ void stat_stream::record(double value) {
   // See https://www.johndcook.com/blog/skewness_kurtosis/
   double delta = value - _m1;
   double delta_n = delta / _n;
-  double delta_n2 = delta_n * delta_n;
   double term1 = delta * delta_n * n1;
   _m1 += delta_n;
-  _m4 += term1 * delta_n2 * (_n*_n - 3*_n + 3) + 6 * delta_n2 * _m2 - 4 * delta_n * _m3;
-  _m3 += term1 * delta_n * (_n - 2) - 3 * delta_n * _m2;
   _m2 += term1;
 }
 
@@ -65,22 +62,11 @@ void stat_stream::combine(const stat_stream& rhs) {
 
   double delta = rhs._m1 - _m1;
   double delta2 = delta*delta;
-  double delta3 = delta*delta2;
-  double delta4 = delta2*delta2;
 
   combined._m1 = (_n*_m1 + rhs._n*rhs._m1) / combined._n;
 
   combined._m2 = _m2 + rhs._m2 +
                  delta2 * _n * rhs._n / combined._n;
-
-  combined._m3 = _m3 + rhs._m3 +
-                 delta3 * _n * rhs._n * (_n - rhs._n)/(combined._n*combined._n);
-  combined._m3 += 3.0*delta * (_n*rhs._m2 - rhs._n*_m2) / combined._n;
-
-  combined._m4 = _m4 + rhs._m4 + delta4*_n*rhs._n * (_n*_n - _n*rhs._n + rhs._n*rhs._n) /
-                                 (combined._n*combined._n*combined._n);
-  combined._m4 += 6.0*delta2 * (_n*_n*rhs._m2 + rhs._n*rhs._n*_m2)/(combined._n*combined._n) +
-                  4.0*delta*(_n*rhs._m3 - rhs._n*_m3) / combined._n;
 
   _n = combined._n;
   if (rhs._min < _min)
@@ -89,8 +75,6 @@ void stat_stream::combine(const stat_stream& rhs) {
     _max = rhs._max;
   _m1 = combined._m1;
   _m2 = combined._m2;
-  _m3 = combined._m3;
-  _m4 = combined._m4;
 }
 
 std::string stat_stream::to_string() const {

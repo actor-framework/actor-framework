@@ -43,11 +43,13 @@ public:
 protected:
   std::unordered_map<std::pair<actortype_id, msgtype_id>, stat_stream> msg_waittimes_;
   std::unordered_map<actortype_id, stat_stream> mb_sizes_;
+  std::unordered_map<std::pair<actortype_id, msgtype_id>, stat_stream> request_times_;
 };
 
 class lockable_worker_stats : public worker_stats {
 public:
   void record_pre_behavior(actortype_id at, msgtype_id mt, int64_t mb_waittime, size_t mb_size);
+  void record_request(actortype_id at, msgtype_id mt, int64_t waittime);
   worker_stats collect();
 
 private:

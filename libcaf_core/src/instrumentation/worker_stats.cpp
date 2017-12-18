@@ -29,6 +29,9 @@ void worker_stats::combine(const worker_stats& rhs) {
   for (const auto& mb : rhs.mb_sizes_) {
     mb_sizes_[mb.first].combine(mb.second);
   }
+  for (const auto& rt : rhs.request_times_) {
+    request_times_[rt.first].combine(rt.second);
+  }
 }
 
 std::string worker_stats::to_string() const {
@@ -50,6 +53,15 @@ std::string worker_stats::to_string() const {
     res += mb.second.to_string();
     res += "\n";
   }
+  for (const auto& rt : request_times_) {
+    res += "REQUEST DURATION | ";
+    res += caf::instrumentation::to_string(rt.first.first);
+    res += " | ";
+    res += caf::instrumentation::to_string(rt.first.second);
+    res += " => ";
+    res += rt.second.to_string();
+    res += "\n";
+  }
   return res;
 }
 
@@ -58,12 +70,16 @@ void lockable_worker_stats::record_pre_behavior(actortype_id at, msgtype_id mt, 
   msg_waittimes_[std::make_pair(at, mt)].record(mb_waittime);
   mb_sizes_[at].record(mb_size);
 }
-
+void lockable_worker_stats::record_request(actortype_id at, msgtype_id mt, int64_t waittime) {
+  std::lock_guard<std::mutex> g(access_mutex_);
+  request_times_[std::make_pair(at, mt)].record(waittime);
+}
 worker_stats lockable_worker_stats::collect() {
   worker_stats zero;
   std::lock_guard<std::mutex> g(access_mutex_);
   std::swap(msg_waittimes_, zero.msg_waittimes_);
   std::swap(mb_sizes_, zero.mb_sizes_);
+  std::swap(request_times_, zero.request_times_);
   return zero;
 }
 

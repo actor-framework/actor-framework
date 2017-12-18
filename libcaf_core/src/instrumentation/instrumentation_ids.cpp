@@ -29,44 +29,31 @@
 
 namespace caf {
 namespace instrumentation {
-
-msgtype_id get_msgtype(const type_erased_tuple& tuple) {
-  if (tuple.size() == 0) {
-    return type_nr<atom_value>::value;
-  }
-  auto type = tuple.type(0);
-  if (type.first == type_nr<atom_value>::value) {
-    return static_cast<uint64_t>(tuple.get_as<atom_value>(0));
-  } else if (type.first != 0) {
-    return type.first;
-  } else {
-    return reinterpret_cast<uint64_t>(type.second);
-  }
+namespace detail {
+ msgtype_id get_from_pair(const rtti_pair& pair) {
+ if (pair.first != 0) {
+   return pair.first;
+ } else {
+   return reinterpret_cast<uint64_t>(pair.second);
+ }
 }
+ template <> msgtype_id get(const atom_value& param) {
+   return static_cast<uint64_t>(param);
+ }
+}  // namespace detail
 
-msgtype_id get_msgtype(const message& tuple) {
-  if (tuple.size() == 0) {
-    return type_nr<atom_value>::value;
-  }
-  auto type = tuple.type(0);
-  if (type.first == type_nr<atom_value>::value) {
-    return static_cast<uint64_t>(tuple.get_as<atom_value>(0));
-  } else if (type.first != 0) {
-    return type.first;
-  } else {
-    return reinterpret_cast<uint64_t>(type.second);
-  }
+msgtype_id get_msgtype() {
+  return 0;
 }
-
 std::string to_string(instrumentation::actortype_id actortype) {
-  auto type_name = detail::pretty_type_name(actortype);
+  auto type_name = caf::detail::pretty_type_name(actortype);
   replace_all(type_name, "%20", "_");
   replace_all(type_name, ",", "_");
   return type_name;
 }
 
 std::string to_string(instrumentation::msgtype_id msg) {
-  if (msg == type_nr<atom_value>::value) {
+  if (msg == 0) {
     return "{}";
   }
   if (msg < type_nrs) {
@@ -78,7 +65,7 @@ std::string to_string(instrumentation::msgtype_id msg) {
     return atom_str;
   }
   auto ti = reinterpret_cast<const std::type_info*>(msg);
-  auto type_name = detail::pretty_type_name(*ti);
+  auto type_name = caf::detail::pretty_type_name(*ti);
   replace_all(type_name, "%20", "_");
   replace_all(type_name, ",", "_");
   return type_name;

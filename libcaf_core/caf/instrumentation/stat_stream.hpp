@@ -58,8 +58,6 @@ private:
   double _max = std::numeric_limits<double>::min();
   double _m1 = 0.0;
   double _m2 = 0.0;
-  double _m3 = 0.0;
-  double _m4 = 0.0;
 };
 
 inline void swap(stat_stream& a, stat_stream& b)

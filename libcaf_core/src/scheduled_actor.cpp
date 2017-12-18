@@ -429,6 +429,9 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       return im_skipped;
     auto f = std::move(pr.second);
     awaited_responses_.pop_front();
+# ifdef CAF_ENABLE_INSTRUMENTATION
+    record_response(x.mid);
+# endif
     if (!invoke(this, f, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
@@ -444,6 +447,9 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     // neither awaited nor multiplexed, probably an expired timeout
     if (mrh == multiplexed_responses_.end())
       return im_dropped;
+# ifdef CAF_ENABLE_INSTRUMENTATION
+    record_response(x.mid);
+# endif
     if (!invoke(this, mrh->second, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
@@ -720,4 +726,18 @@ bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
                          opn.redeployable, std::move(result_cb));
 }
 
+# ifdef CAF_ENABLE_INSTRUMENTATION
+  void scheduled_actor::record_response(message_id mid) {
+    if (context() != nullptr) {
+      auto rp_time = responses_times_.find(mid);
+      if (rp_time != responses_times_.end())
+      {
+        auto actor_type = std::type_index(typeid(*this));
+        auto req_wait_time = timestamp_ago_ns(rp_time->second.first);
+        context()->stats().record_request(actor_type, rp_time->second.second, req_wait_time);
+      }
+
+    }
+  }
+# endif
 } // namespace caf

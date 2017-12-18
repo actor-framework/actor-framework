@@ -393,6 +393,9 @@ while [ $# -ne 0 ]; do
         --no-summary)
             append_cache_entry CAF_NO_SUMMARY BOOL yes
             ;;
+        --with-instrumentation)
+            append_cache_entry CAF_ENABLE_INSTRUMENTATION BOOL yes
+            ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
             exit 1

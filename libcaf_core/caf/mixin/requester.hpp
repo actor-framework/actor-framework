@@ -39,6 +39,24 @@ namespace mixin {
 template <class T>
 struct is_blocking_requester : std::false_type { };
 
+#ifdef CAF_ENABLE_INSTRUMENTATION
+template <bool isBlocking>
+struct instrument_helper {
+    template <class Type, class... Ts>
+    static void register_request(Type*, message_id, const Ts&...) {
+      // nop
+    }
+};
+
+template <>
+struct instrument_helper<false> {
+ template <class Type, class... Ts>
+ static void register_request(Type* actor, message_id id, const Ts&... xs) {
+   actor->register_request(id, xs...);
+ }
+};
+#endif // CAF_ENABLE_INSTRUMENTATION
+
 /// A `requester` is an actor that supports
 /// `self->request(...).{then|await|receive}`.
 template <class Base, class Subtype>
@@ -82,6 +100,10 @@ public:
     auto dptr = static_cast<Subtype*>(this);
     auto req_id = dptr->new_request_id(P);
     if (dest) {
+# ifdef CAF_ENABLE_INSTRUMENTATION
+      instrument_helper<is_blocking_requester<Subtype>::value>
+                       ::register_request(dptr, req_id.response_id(), xs...);
+# endif
       dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
                     std::forward<Ts>(xs)...);
       dptr->request_response_timeout(timeout, req_id);
@@ -110,6 +132,7 @@ public:
           Ts&&... xs) {
     return request(dest, duration{timeout}, std::forward<Ts>(xs)...);
   }
+
 };
 
 } // namespace mixin
