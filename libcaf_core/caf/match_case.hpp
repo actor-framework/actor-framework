@@ -139,7 +139,9 @@ public:
       detail::pseudo_tuple
     >::type;
 
+  trivial_match_case(trivial_match_case&&) = default;
   trivial_match_case(const trivial_match_case&) = default;
+  trivial_match_case& operator=(trivial_match_case&&) = default;
   trivial_match_case& operator=(const trivial_match_case&) = default;
 
   trivial_match_case(F f)
