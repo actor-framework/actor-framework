@@ -43,10 +43,6 @@ public:
     return second->handle_timeout();
   }
 
-  pointer copy(const generic_timeout_definition& tdef) const override {
-    return new combinator(first, second->copy(tdef));
-  }
-
   combinator(pointer p0, const pointer& p1)
       : behavior_impl(p1->timeout()),
         first(std::move(p0)),
