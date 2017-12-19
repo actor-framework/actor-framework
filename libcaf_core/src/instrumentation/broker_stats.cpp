@@ -25,30 +25,43 @@ namespace instrumentation {
 std::string broker_stats::to_string() const {
   std::string res;
   res.reserve(4096);
-  for (const auto& wt : msg_waittimes_) {
-    res += "BROKER WAIT TIME | ";
-    res += caf::instrumentation::to_string(wt.first);
+  for (const auto& fwt : forward_waittimes_) {
+    res += "BROKER FORWARD WAIT TIME | ";
+    res += caf::instrumentation::to_string(fwt.first);
     res += " => ";
-    res += wt.second.to_string();
+    res += fwt.second.to_string();
     res += "\n";
   }
-  res += "BROKER MAILBOX SIZE | ";
-  res += mb_size_.to_string();
+  res += "BROKER FORWARD MAILBOX SIZE | ";
+  res += forward_mb_size_.to_string();
   res += "\n";
+  for (const auto& rmc : receive_msg_count_) {
+    res += "BROKER RECEIVE | ";
+    res += caf::instrumentation::to_string(rmc.first);
+    res += " => ";
+    res += std::to_string(rmc.second);
+    res += "\n";
+  }
   return res;
+}
+
+void lockable_broker_stats::record_broker_receive(msgtype_id mt) {
+  std::lock_guard<std::mutex> g(access_mutex_);
+  ++receive_msg_count_[mt];
 }
 
 void lockable_broker_stats::record_broker_forward(msgtype_id mt, int64_t mb_waittime, size_t mb_size) {
   std::lock_guard<std::mutex> g(access_mutex_);
-  msg_waittimes_[mt].record(mb_waittime);
-  mb_size_.record(mb_size);
+  forward_waittimes_[mt].record(mb_waittime);
+  forward_mb_size_.record(mb_size);
 }
 
 broker_stats lockable_broker_stats::collect() {
   broker_stats zero;
   std::lock_guard<std::mutex> g(access_mutex_);
-  std::swap(msg_waittimes_, zero.msg_waittimes_);
-  std::swap(mb_size_, zero.mb_size_);
+  std::swap(forward_waittimes_, zero.forward_waittimes_);
+  std::swap(forward_mb_size_, zero.forward_mb_size_);
+  std::swap(receive_msg_count_, zero.receive_msg_count_);
   return zero;
 }
 

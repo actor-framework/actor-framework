@@ -39,12 +39,14 @@ public:
   std::string to_string() const;
 
 protected:
-  std::unordered_map<msgtype_id, stat_stream> msg_waittimes_;
-  stat_stream mb_size_;
+  std::unordered_map<msgtype_id, stat_stream> forward_waittimes_;
+  stat_stream forward_mb_size_;
+  std::unordered_map<msgtype_id, size_t> receive_msg_count_;
 };
 
 class lockable_broker_stats : public broker_stats {
 public:
+  void record_broker_receive(msgtype_id mt);
   void record_broker_forward(msgtype_id mt, int64_t mb_waittime, size_t mb_size);
   broker_stats collect();
 

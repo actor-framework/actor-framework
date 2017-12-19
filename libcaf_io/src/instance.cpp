@@ -39,12 +39,22 @@ instance::callee::~callee() {
   // nop
 }
 
+#ifdef CAF_ENABLE_INSTRUMENTATION
+instance::instance(abstract_broker* parent, callee& lstnr, instrumentation::lockable_broker_stats& stats)
+    : tbl_(parent),
+      this_node_(parent->system().node()),
+      callee_(lstnr),
+      stats_(stats) {
+  CAF_ASSERT(this_node_ != none);
+}
+#else
 instance::instance(abstract_broker* parent, callee& lstnr)
     : tbl_(parent),
       this_node_(parent->system().node()),
       callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
 }
+#endif
 
 connection_state instance::handle(execution_unit* ctx,
                                   new_data_msg& dm, header& hdr,
@@ -83,6 +93,7 @@ connection_state instance::handle(execution_unit* ctx,
   // needs forwarding?
   if (!is_handshake(hdr) && !is_heartbeat(hdr) && hdr.dest_node != this_node_) {
     CAF_LOG_DEBUG("forward message");
+    // TODO instrument this?
     auto path = lookup(hdr.dest_node);
     if (path) {
       binary_serializer bs{ctx, path->wr_buf};
@@ -217,6 +228,10 @@ connection_state instance::handle(execution_unit* ctx,
       if (e)
         return err();
       CAF_LOG_DEBUG(CAF_ARG(forwarding_stack) << CAF_ARG(msg));
+#ifdef CAF_ENABLE_INSTRUMENTATION
+      auto msgtype = instrumentation::get_msgtype(msg);
+      stats_.record_broker_receive(msgtype);
+#endif
       if (hdr.has(header::named_receiver_flag))
         callee_.deliver(hdr.source_node, hdr.source_actor, receiver_name,
                         message_id::from_integer_value(hdr.operation_data),
