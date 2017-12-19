@@ -26,18 +26,21 @@ std::string broker_stats::to_string() const {
   std::string res;
   res.reserve(4096);
   for (const auto& fwt : forward_waittimes_) {
-    res += "BROKER FORWARD WAIT TIME | ";
-    res += caf::instrumentation::to_string(fwt.first);
+    res += "BROKER | FORWARD WAIT TIME | ";
+    res += "MSGTYPE: " + caf::instrumentation::to_string(fwt.first);
     res += " => ";
     res += fwt.second.to_string();
     res += "\n";
   }
-  res += "BROKER FORWARD MAILBOX SIZE | ";
-  res += forward_mb_size_.to_string();
-  res += "\n";
+  if (!forward_mb_size_.empty())
+  {
+    res += "BROKER | FORWARD MAILBOX SIZE | ";
+    res += forward_mb_size_.to_string();
+    res += "\n";
+  }
   for (const auto& rmc : receive_msg_count_) {
-    res += "BROKER RECEIVE | ";
-    res += caf::instrumentation::to_string(rmc.first);
+    res += "BROKER | RECEIVE COUNT | ";
+    res += "MSGTYPE: " + caf::instrumentation::to_string(rmc.first);
     res += " => ";
     res += std::to_string(rmc.second);
     res += "\n";

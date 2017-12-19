@@ -17,61 +17,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STAT_STREAM_HPP
-#define CAF_STAT_STREAM_HPP
+#ifndef CAF_PAIR_HASH_HPP
+#define CAF_PAIR_HASH_HPP
 
-#include <algorithm>
-#include <cstdint>
-#include <string>
-#include <limits>
+#include <utility>
 
-namespace caf {
-namespace instrumentation {
+namespace std {
 
-/// Compute statistical properties on a stream of measures.
-class stat_stream {
-public:
-  void record(double value);
-  double average() const;
-  double variance() const;
-  double stddev() const;
-  void combine(const stat_stream& rhs);
-  std::string to_string() const;
-
-  friend void swap(stat_stream&, stat_stream&);
-
-  bool empty() const {
-    return _n == 0;
-  }
-
-  int32_t count() const {
-    return _n;
-  }
-
-  double min() const {
-    return _min;
-  }
-
-  double max() const {
-    return _max;
-  }
-
-private:
-  uint32_t _n = 0;
-  double _min = std::numeric_limits<double>::max();
-  double _max = std::numeric_limits<double>::min();
-  double _m1 = 0.0;
-  double _m2 = 0.0;
-};
-
-inline void swap(stat_stream& a, stat_stream& b)
-{
-  stat_stream tmp = a;
-  a = b;
-  b = tmp;
+// stolen from boost::hash_combine
+template<class T>
+inline void hash_combine(std::size_t &seed, T const &v) {
+  seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-} // namespace instrumentation
-} // namespace caf
+template<typename A, typename B>
+struct hash<std::pair<A, B>> {
+  size_t operator()(const std::pair<A, B> &p) const {
+    uint64_t hash = std::hash<A>()(p.first);
+    hash_combine(hash, p.second);
+    return hash;
+  }
+};
 
-#endif // CAF_STAT_STREAM_HPP
+} // namespace std
+
+#endif // CAF_PAIR_HASH_HPP

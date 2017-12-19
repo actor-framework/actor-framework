@@ -23,6 +23,7 @@
 #include "caf/type_erased_tuple.hpp"
 #include "caf/message.hpp"
 
+#include <unordered_map>
 #include <typeindex>
 #include <utility>
 
@@ -31,6 +32,8 @@ namespace instrumentation {
 
 using actortype_id = std::type_index;
 using msgtype_id = uint64_t; // can be {}, a builtin, an atom or a const typeinfo*
+using instrumented_actor_id = std::pair<actortype_id, actor_id>;
+
 namespace detail {
   using rtti_pair = std::pair<uint16_t, const std::type_info *>;
 
@@ -64,32 +67,20 @@ template <class T, class...Ts> msgtype_id get_msgtype(const T& first, const Ts&.
   return detail::get(first);
 }
 
+instrumented_actor_id get_instrumented_actor_id(const abstract_actor& actor);
 
+std::string to_string(actortype_id actortype);
+std::string to_string(msgtype_id msg);
+std::string to_string(instrumented_actor_id iaid);
 
-
-std::string to_string(instrumentation::actortype_id actortype);
-std::string to_string(instrumentation::msgtype_id msg);
-
-} // namespace instrumentation
-} // namespace caf
-
-namespace std {
-
-// stolen from boost::hash_combine
-template<class T>
-inline void hash_combine(std::size_t &seed, T const &v) {
-  seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-template<>
-struct hash<std::pair<caf::instrumentation::actortype_id, caf::instrumentation::msgtype_id>> {
-  size_t operator()(const std::pair<caf::instrumentation::actortype_id, caf::instrumentation::msgtype_id> &p) const {
-    auto hash = p.first.hash_code();
-    hash_combine(hash, p.second);
-    return hash;
+template<typename K, typename V>
+static void combine_map(std::unordered_map<K, V>& dst, const std::unordered_map<K, V>& src) {
+  for (const auto& it : src) {
+    dst[it.first].combine(it.second);
   }
 };
 
-} // namespace std
+} // namespace instrumentation
+} // namespace caf
 
 #endif // CAF_INSTRUMENTATION_IDS_HPP

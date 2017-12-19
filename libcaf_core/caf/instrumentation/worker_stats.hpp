@@ -22,6 +22,7 @@
 
 #include "caf/instrumentation/instrumentation_ids.hpp"
 #include "caf/instrumentation/stat_stream.hpp"
+#include "caf/instrumentation/pair_hash.hpp"
 
 #include <unordered_map>
 #include <utility>
@@ -41,15 +42,20 @@ public:
   std::string to_string() const;
 
 protected:
-  std::unordered_map<std::pair<actortype_id, msgtype_id>, stat_stream> msg_waittimes_;
-  std::unordered_map<actortype_id, stat_stream> mb_sizes_;
-  std::unordered_map<std::pair<actortype_id, msgtype_id>, stat_stream> request_times_;
+  std::unordered_map<std::pair<instrumented_actor_id, msgtype_id>, stat_stream> behavior_individual_waittime_;
+  std::unordered_map<std::pair<actortype_id, msgtype_id>,          stat_stream> behavior_aggregate_waittime_;
+  std::unordered_map<instrumented_actor_id,                        stat_stream> behavior_individual_mbsize_;
+  std::unordered_map<actortype_id,                                 stat_stream> behavior_aggregate_mbsize_;
+  std::unordered_map<std::pair<instrumented_actor_id, msgtype_id>, stat_stream> request_individual_times_;
+  std::unordered_map<std::pair<actortype_id, msgtype_id>,          stat_stream> request_aggregate_times_;
 };
 
 class lockable_worker_stats : public worker_stats {
 public:
-  void record_pre_behavior(actortype_id at, msgtype_id mt, int64_t mb_waittime, size_t mb_size);
-  void record_request(actortype_id at, msgtype_id mt, int64_t waittime);
+  void record_behavior_individual(instrumented_actor_id aid, msgtype_id mt, int64_t mb_waittime, size_t mb_size);
+  void record_behavior_aggregate(actortype_id at, msgtype_id mt, int64_t mb_waittime, size_t mb_size);
+  void record_request_individual(instrumented_actor_id aid, msgtype_id mt, int64_t waittime);
+  void record_request_aggregate(actortype_id at, msgtype_id mt, int64_t waittime);
   worker_stats collect();
 
 private:

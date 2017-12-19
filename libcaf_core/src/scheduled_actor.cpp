@@ -505,11 +505,14 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       auto& bhvr = bhvr_stack_.back();
 #ifdef CAF_ENABLE_INSTRUMENTATION
       if (context_ != nullptr) { // TODO examine the case of detached scheduled_actors
-        auto actortype = std::type_index(typeid(*this));
         auto msgtype = instrumentation::get_msgtype(current_element_->content());
         auto mb_wait_time = timestamp_ago_ns(current_element_->ts);
-        auto mb_size = mailbox_.cached_count(); // IMPORTANT: using count() here can lock the actor when receiving network messages
-        context_->stats().record_pre_behavior(actortype, msgtype, mb_wait_time, mb_size);
+        auto mb_size = mailbox_.cached_count(); // WARNING: using count() here can lock the actor when receiving network messages
+        if (allow_individual_instrumentation()) {
+          context_->stats().record_behavior_individual(instrumentation::get_instrumented_actor_id(*this), msgtype, mb_wait_time, mb_size);
+        } else {
+          context_->stats().record_behavior_aggregate(typeid(*this), msgtype, mb_wait_time, mb_size);
+        }
       }
 #endif
       switch (bhvr(visitor, x.content())) {
@@ -730,13 +733,14 @@ bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
   void scheduled_actor::record_response(message_id mid) {
     if (context() != nullptr) {
       auto rp_time = responses_times_.find(mid);
-      if (rp_time != responses_times_.end())
-      {
-        auto actor_type = std::type_index(typeid(*this));
+      if (rp_time != responses_times_.end()) {
         auto req_wait_time = timestamp_ago_ns(rp_time->second.first);
-        context()->stats().record_request(actor_type, rp_time->second.second, req_wait_time);
+        if (allow_individual_instrumentation()) {
+          context()->stats().record_request_individual(instrumentation::get_instrumented_actor_id(*this), rp_time->second.second, req_wait_time);
+        } else {
+          context()->stats().record_request_aggregate(typeid(*this), rp_time->second.second, req_wait_time);
+        }
       }
-
     }
   }
 # endif

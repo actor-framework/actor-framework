@@ -21,6 +21,7 @@
 
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/string_algorithms.hpp"
+#include "caf/abstract_actor.hpp"
 #include "caf/type_nr.hpp"
 
 #include <typeindex>
@@ -45,6 +46,13 @@ namespace detail {
 msgtype_id get_msgtype() {
   return 0;
 }
+
+instrumented_actor_id get_instrumented_actor_id(const abstract_actor& actor) {
+  actortype_id actortype = typeid(actor);
+  actor_id actorid = actor.id();
+  return std::make_pair(actortype, actorid);
+}
+
 std::string to_string(instrumentation::actortype_id actortype) {
   auto type_name = caf::detail::pretty_type_name(actortype);
   replace_all(type_name, "%20", "_");
@@ -56,8 +64,8 @@ std::string to_string(instrumentation::msgtype_id msg) {
   if (msg == 0) {
     return "{}";
   }
-  if (msg < type_nrs) {
-    return numbered_type_names[msg];
+  if (msg <= type_nrs) {
+    return numbered_type_names[msg - 1];
   }
   auto atom_str = to_string(static_cast<atom_value >(msg));
   if (!atom_str.empty()) {
