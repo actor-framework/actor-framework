@@ -32,14 +32,20 @@ namespace instrumentation {
 using actortype_id = std::type_index;
 using msgtype_id = uint64_t; // can be {}, a builtin, an atom or a const typeinfo*
 namespace detail {
-  using rtti_pair = std::pair<uint16_t, const std::type_info *>;
+  using rtti_pair = std::pair<uint16_t, const std::type_info*>;
 
   msgtype_id get_from_pair(const rtti_pair&);
 
+  msgtype_id get(const atom_value& atom);
+
   template <class T> msgtype_id get(const T&) {
-    std::integral_constant<uint16_t, caf::type_nr<T>::value> token;
+    uint16_t token = caf::type_nr<T>::value;
     const std::type_info* type = (token == 0) ? &typeid(T) : nullptr;
     return get_from_pair(std::make_pair(token, type));
+  }
+
+  template <atom_value V> msgtype_id get(const atom_constant<V>&) {
+      return get(V);
   }
 }
 
@@ -51,7 +57,7 @@ template <class tuple_type, typename std::enable_if<
             int>::type = 0>
 msgtype_id get_msgtype(const tuple_type& t) {
   if (t.size() == 0)
-  return get_msgtype();
+    return get_msgtype();
 
   auto type = t.type(0);
   if (type.first == type_nr<atom_value>::value)
@@ -63,9 +69,6 @@ msgtype_id get_msgtype(const tuple_type& t) {
 template <class T, class...Ts> msgtype_id get_msgtype(const T& first, const Ts&...) {
   return detail::get(first);
 }
-
-
-
 
 std::string to_string(instrumentation::actortype_id actortype);
 std::string to_string(instrumentation::msgtype_id msg);

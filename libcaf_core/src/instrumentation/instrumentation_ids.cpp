@@ -37,9 +37,9 @@ namespace detail {
    return reinterpret_cast<uint64_t>(pair.second);
  }
 }
- template <> msgtype_id get(const atom_value& param) {
-   return static_cast<uint64_t>(param);
- }
+  msgtype_id get(const atom_value& atom) {
+    return static_cast<uint64_t>(atom);
+  }
 }  // namespace detail
 
 msgtype_id get_msgtype() {
@@ -57,7 +57,7 @@ std::string to_string(instrumentation::msgtype_id msg) {
     return "{}";
   }
   if (msg < type_nrs) {
-    return numbered_type_names[msg];
+    return numbered_type_names[msg - 1];
   }
   auto atom_str = to_string(static_cast<atom_value >(msg));
   if (!atom_str.empty()) {
