@@ -38,9 +38,9 @@ namespace detail {
    return reinterpret_cast<uint64_t>(pair.second);
  }
 }
- template <> msgtype_id get(const atom_value& param) {
-   return static_cast<uint64_t>(param);
- }
+  msgtype_id get(const atom_value& atom) {
+    return static_cast<uint64_t>(atom);
+  }
 }  // namespace detail
 
 msgtype_id get_msgtype() {
