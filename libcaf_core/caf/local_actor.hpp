@@ -422,6 +422,24 @@ public:
   /// Appends `x` to the cache for later consumption.
   void push_to_cache(mailbox_element_ptr ptr);
 
+# ifdef CAF_ENABLE_INSTRUMENTATION
+  virtual bool allow_individual_instrumentation() const {
+    return false;
+  }
+
+  template <class... Ts>
+  void record_send(const Ts&... xs) {
+    if (context())
+    {
+      if (allow_individual_instrumentation()) {
+        context()->stats().record_send_individual(instrumentation::get_instrumented_actor_id(*this),
+                                                  instrumentation::get_msgtype(xs...));
+      } else {
+        context()->stats().record_send_aggregate(typeid(*this), instrumentation::get_msgtype(xs...));
+      }
+    }
+  }
+#endif // CAF_ENABLE_INSTRUMENTATION
 protected:
   // -- member variables -------------------------------------------------------
 

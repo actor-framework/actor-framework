@@ -17,28 +17,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PAIR_HASH_HPP
-#define CAF_PAIR_HASH_HPP
+#ifndef CAF_DETAIL_HASH_HPP
+#define CAF_DETAIL_HASH_HPP
 
 #include <utility>
 
-namespace std {
+namespace caf {
+namespace detail {
 
-// stolen from boost::hash_combine
+// from boost::hash_combine
 template<class T>
 inline void hash_combine(std::size_t &seed, T const &v) {
   seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-template<typename A, typename B>
-struct hash<std::pair<A, B>> {
-  size_t operator()(const std::pair<A, B> &p) const {
-    uint64_t hash = std::hash<A>()(p.first);
-    hash_combine(hash, p.second);
-    return hash;
-  }
-};
+} // namespace detail
+} // namespace caf
 
-} // namespace std
-
-#endif // CAF_PAIR_HASH_HPP
+#endif // CAF_DETAIL_HASH_HPP

@@ -38,6 +38,10 @@ class broker_stats {
 public:
   std::string to_string() const;
 
+  const std::unordered_map<msgtype_id, stat_stream>& get_forward_wait_durations() const;
+  const stat_stream& get_forward_size() const;
+  const std::unordered_map<msgtype_id, size_t>& get_message_counts() const;
+
 protected:
   std::unordered_map<msgtype_id, stat_stream> forward_waittimes_;
   stat_stream forward_mb_size_;

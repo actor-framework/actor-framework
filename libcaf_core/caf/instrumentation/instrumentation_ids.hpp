@@ -32,7 +32,22 @@ namespace instrumentation {
 
 using actortype_id = std::type_index;
 using msgtype_id = uint64_t; // can be {}, a builtin, an atom or a const typeinfo*
-using instrumented_actor_id = std::pair<actortype_id, actor_id>;
+
+struct instrumented_actor_id {
+  actortype_id type;
+  actor_id id;
+  bool operator==(const instrumented_actor_id&) const noexcept;
+};
+struct sender {
+  instrumented_actor_id actor;
+  msgtype_id message;
+  bool operator==(const sender&) const noexcept;
+};
+struct aggregate_sender {
+  actortype_id actor_type;
+  msgtype_id message;
+  bool operator==(const aggregate_sender&) const noexcept;
+};
 
 namespace detail {
   using rtti_pair = std::pair<uint16_t, const std::type_info*>;
@@ -77,16 +92,37 @@ instrumented_actor_id get_instrumented_actor_id(const abstract_actor& actor);
 
 std::string to_string(actortype_id actortype);
 std::string to_string(msgtype_id msg);
-std::string to_string(instrumented_actor_id iaid);
 
 template<typename K, typename V>
 static void combine_map(std::unordered_map<K, V>& dst, const std::unordered_map<K, V>& src) {
   for (const auto& it : src) {
     dst[it.first].combine(it.second);
   }
-};
+}
+template<typename K, typename V>
+static void sum_map(std::unordered_map<K, V>& dst, const std::unordered_map<K, V>& src) {
+    for (const auto& it : src) {
+        dst[it.first] += it.second;
+    }
+}
 
 } // namespace instrumentation
 } // namespace caf
+
+namespace std {
+template<>
+struct hash<caf::instrumentation::instrumented_actor_id> {
+  std::size_t operator()(const caf::instrumentation::instrumented_actor_id&) const noexcept;
+};
+template <>
+struct hash<caf::instrumentation::sender> {
+  std::size_t operator()(const caf::instrumentation::sender&) const noexcept;
+};
+
+template <>
+struct hash<caf::instrumentation::aggregate_sender> {
+    std::size_t operator()(const caf::instrumentation::aggregate_sender&) const noexcept;
+};
+} // namespace std
 
 #endif // CAF_INSTRUMENTATION_IDS_HPP

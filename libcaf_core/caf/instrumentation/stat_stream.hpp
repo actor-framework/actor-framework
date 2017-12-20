@@ -59,7 +59,7 @@ public:
 private:
   uint32_t _n = 0;
   double _min = std::numeric_limits<double>::max();
-  double _max = std::numeric_limits<double>::min();
+  double _max = std::numeric_limits<double>::lowest();
   double _m1 = 0.0;
   double _m2 = 0.0;
 };

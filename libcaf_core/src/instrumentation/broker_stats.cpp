@@ -22,23 +22,33 @@
 namespace caf {
 namespace instrumentation {
 
+const std::unordered_map<msgtype_id, stat_stream>& broker_stats::get_forward_wait_durations() const {
+  return forward_waittimes_;
+}
+const stat_stream& broker_stats::get_forward_size() const {
+  return forward_mb_size_;
+}
+const std::unordered_map<msgtype_id, size_t>& broker_stats::get_message_counts() const {
+  return receive_msg_count_;
+}
+
 std::string broker_stats::to_string() const {
   std::string res;
   res.reserve(4096);
-  for (const auto& fwt : forward_waittimes_) {
+  for (const auto& fwt : get_forward_wait_durations()) {
     res += "BROKER | FORWARD WAIT TIME | ";
     res += "MSGTYPE: " + caf::instrumentation::to_string(fwt.first);
     res += " => ";
     res += fwt.second.to_string();
     res += "\n";
   }
-  if (!forward_mb_size_.empty())
+  if (!get_forward_size().empty())
   {
     res += "BROKER | FORWARD MAILBOX SIZE | ";
-    res += forward_mb_size_.to_string();
+    res += get_forward_size().to_string();
     res += "\n";
   }
-  for (const auto& rmc : receive_msg_count_) {
+  for (const auto& rmc : get_message_counts()) {
     res += "BROKER | RECEIVE COUNT | ";
     res += "MSGTYPE: " + caf::instrumentation::to_string(rmc.first);
     res += " => ";

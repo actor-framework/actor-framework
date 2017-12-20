@@ -22,6 +22,7 @@
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/detail/hash.hpp"
 #include "caf/type_nr.hpp"
 
 #include <typeindex>
@@ -43,6 +44,16 @@ namespace detail {
   }
 }  // namespace detail
 
+bool instrumented_actor_id::operator==(const instrumented_actor_id& other) const noexcept {
+  return type == other.type && id == other.id;
+}
+bool sender::operator==(const sender& other) const noexcept {
+  return actor == other.actor && message == other.message;
+}
+bool aggregate_sender::operator==(const aggregate_sender& other) const noexcept {
+  return actor_type == other.actor_type && message == other.message;
+}
+
 msgtype_id get_msgtype() {
   return 0;
 }
@@ -50,7 +61,7 @@ msgtype_id get_msgtype() {
 instrumented_actor_id get_instrumented_actor_id(const abstract_actor& actor) {
   actortype_id actortype = typeid(actor);
   actor_id actorid = actor.id();
-  return std::make_pair(actortype, actorid);
+  return {actortype, actorid};
 }
 
 std::string to_string(instrumentation::actortype_id actortype) {
@@ -67,7 +78,7 @@ std::string to_string(instrumentation::msgtype_id msg) {
   if (msg <= type_nrs) {
     return numbered_type_names[msg - 1];
   }
-  auto atom_str = to_string(static_cast<atom_value >(msg));
+  auto atom_str = to_string(static_cast<atom_value>(msg));
   if (!atom_str.empty()) {
     replace_all(atom_str, " ", "_");
     return atom_str;
@@ -81,3 +92,36 @@ std::string to_string(instrumentation::msgtype_id msg) {
 
 } // namespace instrumentation
 } // namespace caf
+
+namespace std
+{
+std::size_t
+hash<caf::instrumentation::instrumented_actor_id>::
+operator()(const caf::instrumentation::instrumented_actor_id& v)
+const noexcept {
+  std::size_t seed = 0;
+  caf::detail::hash_combine(seed, v.type);
+  caf::detail::hash_combine(seed, v.id);
+  return seed;
+}
+
+std::size_t
+hash<caf::instrumentation::sender>::
+operator()(const caf::instrumentation::sender& v)
+const noexcept {
+  std::size_t seed = 0;
+  caf::detail::hash_combine(seed, v.actor);
+  caf::detail::hash_combine(seed, v.message);
+  return seed;
+}
+
+std::size_t
+hash<caf::instrumentation::aggregate_sender>::
+operator()(const caf::instrumentation::aggregate_sender& v)
+const noexcept {
+  std::size_t seed = 0;
+  caf::detail::hash_combine(seed, v.actor_type);
+  caf::detail::hash_combine(seed, v.message);
+  return seed;
+}
+} // namespace std

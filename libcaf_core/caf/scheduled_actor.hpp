@@ -858,11 +858,6 @@ protected:
 
   bool handle_stream_msg(mailbox_element& x, behavior* active_behavior);
 
-# ifdef CAF_ENABLE_INSTRUMENTATION
-  virtual bool allow_individual_instrumentation() const {
-    return false;
-  }
-# endif
   // -- Member Variables -------------------------------------------------------
 
   /// Stores user-defined callbacks for message handling.

@@ -77,6 +77,10 @@ public:
                        typename res_t::type
                      >::valid,
                   "this actor does not accept the response message");
+# ifdef CAF_ENABLE_INSTRUMENTATION
+    if (dest)
+      static_cast<Subtype*>(this)->record_send(xs...);
+# endif // CAF_ENABLE_INSTRUMENTATION
     if (dest)
       dest->eq_impl(message_id::make(P), dptr()->ctrl(),
                     dptr()->context(), std::forward<Ts>(xs)...);
@@ -137,6 +141,10 @@ public:
                         >::type
                       >::valid,
                   "this actor does not accept the response message");
+# ifdef CAF_ENABLE_INSTRUMENTATION
+    if (dest)
+      static_cast<Subtype*>(this)->record_send(xs...);
+# endif // CAF_ENABLE_INSTRUMENTATION
     if (dest)
       dptr()->system().scheduler().delayed_send(
         rtime, dptr()->ctrl(), actor_cast<strong_actor_ptr>(dest),
