@@ -28,16 +28,12 @@ multiplexer::multiplexer(actor_system* sys) : execution_unit(sys) {
   // nop
 }
 
-boost::asio::io_service* pimpl() {
-  return nullptr;
-}
-
 multiplexer_ptr multiplexer::make(actor_system& sys) {
   CAF_LOG_TRACE("");
   return multiplexer_ptr{new default_multiplexer(&sys)};
 }
 
-boost::asio::io_service* multiplexer::pimpl() {
+multiplexer_backend* multiplexer::pimpl() {
   return nullptr;
 }
 
