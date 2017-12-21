@@ -52,6 +52,10 @@ using asio_tcp_socket = boost::asio::ip::tcp::socket;
 /// Low-level socket type used as default.
 using asio_tcp_socket_acceptor = boost::asio::ip::tcp::acceptor;
 
+class multiplexer_backend : public io_service {
+  // nop
+};
+
 /// A wrapper for the boost::asio multiplexer
 class asio_multiplexer : public multiplexer {
 public:
@@ -86,14 +90,14 @@ public:
 
   void run() override;
 
-  boost::asio::io_service* pimpl() override;
+  multiplexer_backend* pimpl() override;
 
   inline boost::asio::io_service& service() {
     return service_;
   }
 
 private:
-  io_service service_;
+  multiplexer_backend service_;
 };
 
 template <class T>

@@ -37,15 +37,11 @@
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-namespace boost {
-namespace asio {
-class io_service;
-} // namespace asio
-} // namespace boost
-
 namespace caf {
 namespace io {
 namespace network {
+
+class multiplexer_backend;
 
 /// Low-level backend for IO multiplexing.
 class multiplexer : public execution_unit {
@@ -136,7 +132,7 @@ public:
 
   /// Retrieves a pointer to the implementation or `nullptr` if CAF was
   /// compiled using the default backend.
-  virtual boost::asio::io_service* pimpl();
+  virtual multiplexer_backend* pimpl();
 
   inline const std::thread::id& thread_id() const {
     return tid_;

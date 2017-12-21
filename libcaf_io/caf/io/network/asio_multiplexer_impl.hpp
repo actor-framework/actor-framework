@@ -308,7 +308,7 @@ void asio_multiplexer::run() {
     CAF_RAISE_ERROR(ec.message());
 }
 
-boost::asio::io_service* asio_multiplexer::pimpl() {
+multiplexer_backend* asio_multiplexer::pimpl() {
   return &service_;
 }
 
