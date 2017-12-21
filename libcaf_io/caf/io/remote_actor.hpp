@@ -39,9 +39,7 @@ namespace io {
 template <class ActorHandle = actor>
 expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
                                    uint16_t port) {
-  detail::type_list<ActorHandle> tk;
-  return sys.middleman().remote_actor(sys, sys.message_types(tk),
-                                      std::move(host), port);
+  return sys.middleman().remote_actor<ActorHandle>(std::move(host), port);
 }
 
 } // namespace io
