@@ -28,7 +28,6 @@
 #include "caf/sec.hpp"
 #include "caf/locks.hpp"
 #include "caf/logger.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/attachable.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/actor_system.hpp"
@@ -56,7 +55,7 @@ actor_registry::actor_registry(actor_system& sys) : running_(0), system_(sys) {
   // nop
 }
 
-strong_actor_ptr actor_registry::get(actor_id key) const {
+strong_actor_ptr actor_registry::get_impl(actor_id key) const {
   shared_guard guard(instances_mtx_);
   auto i = entries_.find(key);
   if (i != entries_.end())
@@ -65,7 +64,7 @@ strong_actor_ptr actor_registry::get(actor_id key) const {
   return nullptr;
 }
 
-void actor_registry::put(actor_id key, strong_actor_ptr val) {
+void actor_registry::put_impl(actor_id key, strong_actor_ptr val) {
   CAF_LOG_TRACE(CAF_ARG(key));
   if (!val)
     return;
@@ -119,7 +118,7 @@ void actor_registry::await_running_count_equal(size_t expected) const {
   }
 }
 
-strong_actor_ptr actor_registry::get(atom_value key) const {
+strong_actor_ptr actor_registry::get_impl(atom_value key) const {
   shared_guard guard{named_entries_mtx_};
   auto i = named_entries_.find(key);
   if (i == named_entries_.end())
@@ -127,10 +126,10 @@ strong_actor_ptr actor_registry::get(atom_value key) const {
   return i->second;
 }
 
-void actor_registry::put(atom_value key, strong_actor_ptr value) {
+void actor_registry::put_impl(atom_value key, strong_actor_ptr value) {
   if (value)
     value->get()->attach_functor([=] {
-      system_.registry().put(key, nullptr);
+      system_.registry().put_impl(key, nullptr);
     });
   exclusive_guard guard{named_entries_mtx_};
   named_entries_.emplace(key, std::move(value));
