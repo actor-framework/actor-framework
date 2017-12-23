@@ -17,37 +17,69 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_STREAM_MANAGER_HPP
-#define CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#ifndef CAF_IO_DATAGRAM_HANDLE_HPP
+#define CAF_IO_DATAGRAM_HANDLE_HPP
 
-#include <cstddef>
+#include <functional>
 
-#include "caf/io/network/manager.hpp"
+#include "caf/error.hpp"
+
+#include "caf/io/handle.hpp"
+
+#include "caf/meta/type_name.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
 
-/// A stream manager configures an IO stream and provides callbacks
-/// for incoming data as well as for error handling.
-class stream_manager : public manager {
-public:
-  ~stream_manager() override;
-
-  /// Called by the underlying I/O device whenever it received data.
-  /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
-
-  /// Called by the underlying I/O device whenever it sent data.
-  virtual void data_transferred(execution_unit* ctx, size_t num_bytes,
-                                size_t remaining_bytes) = 0;
-
-  /// Get the port of the underlying I/O device.
-  virtual uint16_t port() const = 0;
+struct invalid_datagram_handle_t {
+  constexpr invalid_datagram_handle_t() {
+    // nop
+  }
 };
 
-} // namespace network
+constexpr invalid_datagram_handle_t invalid_datagram_handle
+  = invalid_datagram_handle_t{};
+
+/// Generic handle type for identifying datagram endpoints
+class datagram_handle : public handle<datagram_handle,
+                                      invalid_datagram_handle_t> {
+public:
+  friend class handle<datagram_handle, invalid_datagram_handle_t>;
+
+  using super = handle<datagram_handle, invalid_datagram_handle_t>;
+
+  constexpr datagram_handle() {
+    // nop
+  }
+
+  constexpr datagram_handle(const invalid_datagram_handle_t&) {
+    // nop
+  }
+
+  template <class Inspector>
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 datagram_handle& x) {
+    return f(meta::type_name("datagram_handle"), x.id_);
+  }
+
+private:
+  inline datagram_handle(int64_t handle_id) : super{handle_id} {
+    // nop
+  }
+};
+
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_STREAM_MANAGER_HPP
+namespace std {
+
+template<>
+struct hash<caf::io::datagram_handle> {
+  size_t operator()(const caf::io::datagram_handle& hdl) const {
+    return std::hash<int64_t>{}(hdl.id());
+  }
+};
+
+} // namespace std
+
+#endif // CAF_IO_DATAGRAM_HANDLE_HPP

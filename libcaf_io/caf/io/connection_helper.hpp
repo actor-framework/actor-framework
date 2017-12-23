@@ -17,37 +17,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_STREAM_MANAGER_HPP
-#define CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#ifndef CAF_IO_CONNECTION_HELPER_HPP
+#define CAF_IO_CONNECTION_HELPER_HPP
 
-#include <cstddef>
+#include <chrono>
 
-#include "caf/io/network/manager.hpp"
+#include "caf/stateful_actor.hpp"
+
+#include "caf/io/network/interfaces.hpp"
+
+#include "caf/after.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/actor_system_config.hpp"
+
+#include "caf/io/broker.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/io/datagram_handle.hpp"
+
+#include "caf/io/basp/all.hpp"
+
+#include "caf/io/network/datagram_manager.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
 
-/// A stream manager configures an IO stream and provides callbacks
-/// for incoming data as well as for error handling.
-class stream_manager : public manager {
-public:
-  ~stream_manager() override;
-
-  /// Called by the underlying I/O device whenever it received data.
-  /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
-
-  /// Called by the underlying I/O device whenever it sent data.
-  virtual void data_transferred(execution_unit* ctx, size_t num_bytes,
-                                size_t remaining_bytes) = 0;
-
-  /// Get the port of the underlying I/O device.
-  virtual uint16_t port() const = 0;
+struct connection_helper_state {
+  static const char* name;
 };
 
-} // namespace network
+behavior datagram_connection_broker(broker* self,
+                                    uint16_t port,
+                                    network::address_listing addresses,
+                                    actor system_broker);
+
+behavior connection_helper(stateful_actor<connection_helper_state>* self,
+                           actor b);
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#endif // CAF_IO_CONNECTION_HELPER_HPP

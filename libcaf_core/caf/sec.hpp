@@ -111,7 +111,9 @@ enum class sec : uint8_t {
   /// Stream aborted due to unexpected error.
   unhandled_stream_error,
   /// A function view was called without assigning an actor first.
-  bad_function_call = 40
+  bad_function_call = 40,
+  /// Feature is disabled in the actor system config.
+  feature_disabled,
 };
 
 /// @relates sec

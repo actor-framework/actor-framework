@@ -141,8 +141,14 @@ using unlink_atom = atom_constant<atom("unlink")>;
 /// Used for publishing actors at a given port.
 using publish_atom = atom_constant<atom("publish")>;
 
+/// Used for publishing actors at a given port.
+using publish_udp_atom = atom_constant<atom("pub_udp")>;
+
 /// Used for removing an actor/port mapping.
 using unpublish_atom = atom_constant<atom("unpublish")>;
+
+/// Used for removing an actor/port mapping.
+using unpublish_udp_atom = atom_constant<atom("unpub_udp")>;
 
 /// Used for signalizing group membership.
 using subscribe_atom = atom_constant<atom("subscribe")>;
@@ -152,6 +158,9 @@ using unsubscribe_atom = atom_constant<atom("unsubscrib")>;
 
 /// Used for establishing network connections.
 using connect_atom = atom_constant<atom("connect")>;
+
+/// Used for contacting a remote UDP endpoint
+using contact_atom = atom_constant<atom("contact")>;
 
 /// Used for opening ports or files.
 using open_atom = atom_constant<atom("open")>;
@@ -167,6 +176,9 @@ using migrate_atom = atom_constant<atom("migrate")>;
 
 /// Used for triggering periodic operations.
 using tick_atom = atom_constant<atom("tick")>;
+
+/// Used for pending out of order messages.
+using pending_atom = atom_constant<atom("pending")>;
 
 } // namespace caf
 

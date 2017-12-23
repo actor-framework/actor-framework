@@ -102,7 +102,11 @@ protected:
         typename std::conditional<
           std::is_same<handle_type, connection_handle>::value,
           connection_passivated_msg,
-          acceptor_passivated_msg
+          typename std::conditional<
+            std::is_same<handle_type, accept_handle>::value,
+            acceptor_passivated_msg,
+            datagram_servant_passivated_msg
+          >::type
         >::type;
         using tmp_t = mailbox_element_vals<passiv_t>;
         tmp_t tmp{strong_actor_ptr{},                  message_id::make(),

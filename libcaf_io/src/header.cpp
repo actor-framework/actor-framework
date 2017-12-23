@@ -44,7 +44,8 @@ std::string to_string(const header &hdr) {
       << to_string(hdr.source_node) << ", "
       << to_string(hdr.dest_node) << ", "
       << hdr.source_actor << ", "
-      << hdr.dest_actor
+      << hdr.dest_actor << ", "
+      << hdr.sequence_number
       << "}";
   return oss.str();
 }
@@ -57,7 +58,8 @@ bool operator==(const header& lhs, const header& rhs) {
       && lhs.source_node == rhs.source_node
       && lhs.dest_node == rhs.dest_node
       && lhs.source_actor == rhs.source_actor
-      && lhs.dest_actor == rhs.dest_actor;
+      && lhs.dest_actor == rhs.dest_actor
+      && lhs.sequence_number == rhs.sequence_number;
 }
 
 namespace {
@@ -73,18 +75,15 @@ bool zero(T val) {
 
 bool server_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
-       && !valid(hdr.dest_node)
        && zero(hdr.dest_actor)
        && !zero(hdr.operation_data);
 }
 
 bool client_handshake_valid(const header& hdr) {
   return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
        && hdr.source_node != hdr.dest_node
        && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.operation_data);
+       && zero(hdr.dest_actor);
 }
 
 bool dispatch_message_valid(const header& hdr) {

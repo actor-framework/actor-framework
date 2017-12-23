@@ -20,6 +20,8 @@
 #ifndef CAF_IO_NETWORK_OPERATION_HPP
 #define CAF_IO_NETWORK_OPERATION_HPP
 
+#include <string>
+
 namespace caf {
 namespace io {
 namespace network {

@@ -42,11 +42,13 @@ class middleman;
 class basp_broker;
 class receive_policy;
 class abstract_broker;
+class datagram_servant;
 
 // -- aliases ------------------------------------------------------------------
 
 using scribe_ptr = intrusive_ptr<scribe>;
 using doorman_ptr = intrusive_ptr<doorman>;
+using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
 
 // -- nested namespaces --------------------------------------------------------
 

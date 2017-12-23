@@ -31,7 +31,6 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/typed_event_based_actor.hpp"
-#include "caf/typed_event_based_actor.hpp"
 
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
@@ -47,11 +46,19 @@ middleman_actor_impl::middleman_actor_impl(actor_config& cfg,
     : middleman_actor::base(cfg),
       broker_(std::move(default_broker)) {
   set_down_handler([=](down_msg& dm) {
-    auto i = cached_.begin();
-    auto e = cached_.end();
+    auto i = cached_tcp_.begin();
+    auto e = cached_tcp_.end();
     while (i != e) {
       if (get<1>(i->second) == dm.source)
-        i = cached_.erase(i);
+        i = cached_tcp_.erase(i);
+      else
+        ++i;
+    }
+    i = cached_udp_.begin();
+    e = cached_udp_.end();
+    while (i != e) {
+      if (get<1>(i->second) == dm.source)
+        i = cached_udp_.erase(i);
       else
         ++i;
     }
@@ -77,37 +84,43 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     [=](publish_atom, uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
         std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
+      if (!system().config().middleman_enable_tcp)
+        return make_error(sec::feature_disabled);
       return put(port, whom, sigs, addr.c_str(), reuse);
     },
     [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
+      if (!system().config().middleman_enable_tcp)
+        return make_error(sec::feature_disabled);
       strong_actor_ptr whom;
       mpi_set sigs;
       return put(port, whom, sigs, addr.c_str(), reuse);
     },
     [=](connect_atom, std::string& hostname, uint16_t port) -> get_res {
       CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
+      if (!system().config().middleman_enable_tcp)
+        return make_error(sec::feature_disabled);
       auto rp = make_response_promise();
       endpoint key{std::move(hostname), port};
       // respond immediately if endpoint is cached
-      auto x = cached(key);
+      auto x = cached_tcp(key);
       if (x) {
         CAF_LOG_DEBUG("found cached entry" << CAF_ARG(*x));
         rp.deliver(get<0>(*x), get<1>(*x), get<2>(*x));
-        return {};
+        return get_delegated{};
       }
       // attach this promise to a pending request if possible
       auto rps = pending(key);
       if (rps) {
         CAF_LOG_DEBUG("attach to pending request");
         rps->emplace_back(std::move(rp));
-        return {};
+        return get_delegated{};
       }
       // connect to endpoint and initiate handhsake etc.
       auto r = connect(key.first, port);
       if (!r) {
         rp.deliver(std::move(r.error()));
-        return {};
+        return get_delegated{};
       }
       auto& ptr = *r;
       std::vector<response_promise> tmp{std::move(rp)};
@@ -120,7 +133,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
               return;
             if (nid && addr) {
               monitor(addr);
-              cached_.emplace(key, std::make_tuple(nid, addr, sigs));
+              cached_tcp_.emplace(key, std::make_tuple(nid, addr, sigs));
             }
             auto res = make_message(std::move(nid), std::move(addr),
                                     std::move(sigs));
@@ -136,9 +149,76 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
               promise.deliver(err);
             pending_.erase(i);
           });
-      return {};
+      return get_delegated{};
+    },
+    [=](publish_udp_atom, uint16_t port, strong_actor_ptr& whom,
+        mpi_set& sigs, std::string& addr, bool reuse) -> put_res {
+      CAF_LOG_TRACE("");
+      if (!system().config().middleman_enable_udp)
+        return make_error(sec::feature_disabled);
+      return put_udp(port, whom, sigs, addr.c_str(), reuse);
+    },
+    [=](contact_atom, std::string& hostname, uint16_t port) -> get_res {
+      CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
+      if (!system().config().middleman_enable_udp)
+        return make_error(sec::feature_disabled);
+      auto rp = make_response_promise();
+      endpoint key{std::move(hostname), port};
+      // respond immediately if endpoint is cached
+      auto x = cached_udp(key);
+      if (x) {
+        CAF_LOG_DEBUG("found cached entry" << CAF_ARG(*x));
+        rp.deliver(get<0>(*x), get<1>(*x), get<2>(*x));
+        return get_delegated{};
+      }
+      // attach this promise to a pending request if possible
+      auto rps = pending(key);
+      if (rps) {
+        CAF_LOG_DEBUG("attach to pending request");
+        rps->emplace_back(std::move(rp));
+        return get_delegated{};
+      }
+      // connect to endpoint and initiate handshake etc.
+      auto r = contact(key.first, port);
+      if (!r) {
+        rp.deliver(std::move(r.error()));
+        return get_delegated{};
+      }
+      auto& ptr = *r;
+      std::vector<response_promise> tmp{std::move(rp)};
+      pending_.emplace(key, std::move(tmp));
+      request(broker_, infinite, contact_atom::value, std::move(ptr), port)
+        .then(
+          [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
+            auto i = pending_.find(key);
+            if (i == pending_.end())
+              return;
+            if (nid && addr) {
+              monitor(addr);
+              cached_udp_.emplace(key, std::make_tuple(nid, addr, sigs));
+            }
+            auto res = make_message(std::move(nid), std::move(addr),
+                                    std::move(sigs));
+            for (auto& promise : i->second)
+              promise.deliver(res);
+            pending_.erase(i);
+          },
+          [=](error& err) {
+            auto i = pending_.find(key);
+            if (i == pending_.end())
+              return;
+            for (auto& promise : i->second)
+              promise.deliver(err);
+            pending_.erase(i);
+          });
+      return get_delegated{};
     },
     [=](unpublish_atom atm, actor_addr addr, uint16_t p) -> del_res {
+      CAF_LOG_TRACE("");
+      delegate(broker_, atm, std::move(addr), p);
+      return {};
+    },
+    [=](unpublish_udp_atom atm, actor_addr addr, uint16_t p) -> del_res {
       CAF_LOG_TRACE("");
       delegate(broker_, atm, std::move(addr), p);
       return {};
@@ -184,10 +264,37 @@ middleman_actor_impl::put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
   return actual_port;
 }
 
+middleman_actor_impl::put_res
+middleman_actor_impl::put_udp(uint16_t port, strong_actor_ptr& whom,
+                              mpi_set& sigs, const char* in, bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)
+                << CAF_ARG(in) << CAF_ARG(reuse_addr));
+  uint16_t actual_port;
+  // treat empty strings like nullptr
+  if (in != nullptr && in[0] == '\0')
+    in = nullptr;
+  auto res = open_udp(port, in, reuse_addr);
+  if (!res)
+    return std::move(res.error());
+  auto& ptr = *res;
+  actual_port = ptr->local_port();
+  anon_send(broker_, publish_udp_atom::value, std::move(ptr), actual_port,
+            std::move(whom), std::move(sigs));
+  return actual_port;
+}
+
 optional<middleman_actor_impl::endpoint_data&>
-middleman_actor_impl::cached(const endpoint& ep) {
-  auto i = cached_.find(ep);
-  if (i != cached_.end())
+middleman_actor_impl::cached_tcp(const endpoint& ep) {
+  auto i = cached_tcp_.find(ep);
+  if (i != cached_tcp_.end())
+    return i->second;
+  return none;
+}
+
+optional<middleman_actor_impl::endpoint_data&>
+middleman_actor_impl::cached_udp(const endpoint& ep) {
+  auto i = cached_udp_.find(ep);
+  if (i != cached_udp_.end())
     return i->second;
   return none;
 }
@@ -205,9 +312,20 @@ expected<scribe_ptr> middleman_actor_impl::connect(const std::string& host,
   return system().middleman().backend().new_tcp_scribe(host, port);
 }
 
+expected<datagram_servant_ptr>
+middleman_actor_impl::contact(const std::string& host, uint16_t port) {
+  return system().middleman().backend().new_remote_udp_endpoint(host, port);
+}
+
 expected<doorman_ptr>
 middleman_actor_impl::open(uint16_t port, const char* addr, bool reuse) {
   return system().middleman().backend().new_tcp_doorman(port, addr, reuse);
+}
+
+expected<datagram_servant_ptr>
+middleman_actor_impl::open_udp(uint16_t port, const char* addr, bool reuse) {
+  return system().middleman().backend().new_local_udp_endpoint(port, addr,
+                                                               reuse);
 }
 
 } // namespace io

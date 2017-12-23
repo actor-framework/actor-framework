@@ -17,37 +17,44 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_STREAM_MANAGER_HPP
-#define CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#ifndef CAF_IO_NETWORK_DATAGRAM_MANAGER_HPP
+#define CAF_IO_NETWORK_DATAGRAM_MANAGER_HPP
 
-#include <cstddef>
-
+#include "caf/io/datagram_handle.hpp"
 #include "caf/io/network/manager.hpp"
+#include "caf/io/network/receive_buffer.hpp"
 
 namespace caf {
 namespace io {
 namespace network {
 
-/// A stream manager configures an IO stream and provides callbacks
-/// for incoming data as well as for error handling.
-class stream_manager : public manager {
+/// A datagram manager provides callbacks for outgoing
+/// datagrams as well as for error handling.
+class datagram_manager : public manager {
 public:
-  ~stream_manager() override;
+  ~datagram_manager() override;
 
   /// Called by the underlying I/O device whenever it received data.
   /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(execution_unit* ctx, const void* buf, size_t bsize) = 0;
+  virtual bool consume(execution_unit*, datagram_handle hdl,
+                       receive_buffer& buf) = 0;
 
   /// Called by the underlying I/O device whenever it sent data.
-  virtual void data_transferred(execution_unit* ctx, size_t num_bytes,
-                                size_t remaining_bytes) = 0;
+  virtual void datagram_sent(execution_unit*, datagram_handle hdl, size_t,
+                             std::vector<char> buffer) = 0;
+
+  /// Called by the underlying I/O device to indicate that a new remote
+  /// endpoint has been detected, passing in the received datagram.
+  /// @returns `true` if the manager accepts further enpoints,
+  ///          otherwise `false`.
+  virtual bool new_endpoint(receive_buffer& buf) = 0;
 
   /// Get the port of the underlying I/O device.
-  virtual uint16_t port() const = 0;
+  virtual uint16_t port(datagram_handle) const = 0;
 };
 
 } // namespace network
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#endif // CAF_IO_NETWORK_DATAGRAM_MANAGER_HPP

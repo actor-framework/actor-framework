@@ -116,7 +116,7 @@ CAF_TEST(unpublishing) {
   CAF_MESSAGE("check whether testee is still available via cache");
   auto x1 = remote_actor("127.0.0.1", port);
   CAF_CHECK_EQUAL(x1, testee);
-  CAF_MESSAGE("fake dead of testee and check if testee becomes unavailable");
+  CAF_MESSAGE("fake death of testee and check if testee becomes unavailable");
   anon_send(actor_cast<actor>(system.middleman().actor_handle()),
             down_msg{testee.address(), exit_reason::normal});
   // must fail now
