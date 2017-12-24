@@ -61,8 +61,7 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
     after(autoconnect_timeout) >> [=]() {
       CAF_LOG_TRACE(CAF_ARG(""));
       // nothing heard in about 10 minutes... just a call it a day, then
-      CAF_LOG_INFO("aborted direct connection attempt after 10min:"
-                    << CAF_ARG(nid));
+      CAF_LOG_INFO("aborted direct connection attempt after 10min");
       self->quit(exit_reason::user_shutdown);
     }
   };
@@ -70,7 +69,7 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
 
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
                            actor b) {
-  CAF_LOG_TRACE(CAF_ARG(s));
+  CAF_LOG_TRACE(CAF_ARG(b));
   self->monitor(b);
   self->set_down_handler([=](down_msg& dm) {
     CAF_LOG_TRACE(CAF_ARG(dm));
@@ -99,7 +98,7 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
                 }
               }
             }
-            CAF_LOG_INFO("could not connect to node directly:" << CAF_ARG(nid));
+            CAF_LOG_INFO("could not connect to node directly");
           } else if (item == "basp.default-connectivity-udp") {
             // create new broker to try addresses for communication via UDP
             if (self->system().config().middleman_detach_utility_actors) {
@@ -121,8 +120,7 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
     after(autoconnect_timeout) >> [=] {
       CAF_LOG_TRACE(CAF_ARG(""));
       // nothing heard in about 10 minutes... just a call it a day, then
-      CAF_LOG_INFO("aborted direct connection attempt after 10min:"
-                    << CAF_ARG(nid));
+      CAF_LOG_INFO("aborted direct connection attempt after 10min");
       self->quit(exit_reason::user_shutdown);
     }
   };
