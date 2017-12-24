@@ -683,7 +683,7 @@ bool read_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
   CAF_LOG_TRACE(CAF_ARG(fd));
   memset(ep.address(), 0, sizeof(sockaddr_storage));
   socklen_t len = sizeof(sockaddr_storage);
-  auto sres = ::recvfrom(fd, buf, buf_len, 0, ep.address(), &len);
+  auto sres = ::recvfrom(fd, static_cast<socket_recv_ptr>(buf), buf_len, 0, ep.address(), &len);
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
     return false;
