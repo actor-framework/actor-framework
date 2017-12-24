@@ -932,7 +932,7 @@ void test_multiplexer::virtual_send(connection_handle hdl,
 void test_multiplexer::virtual_send(datagram_handle dst, datagram_handle ep,
                                     const buffer_type& buf) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  CAF_LOG_TRACE(CAF_ARG(hdl));
+  CAF_LOG_TRACE(CAF_ARG(dst) << CAF_ARG(ep));
   auto& vb = virtual_network_buffer(dst);
   vb.emplace_back(ep, buf);
   read_data(dst);
