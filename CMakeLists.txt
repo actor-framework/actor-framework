@@ -632,7 +632,7 @@ if(NOT CAF_NO_UNIT_TESTS)
     set(caf_test ${EXECUTABLE_OUTPUT_PATH}/caf-test)
     add_test(${test_name} ${caf_test} -n -v 5 -s "${suite}" ${ARGN})
     # add some extra unit testing options when testing ASIO as well
-    if(CAF_USE_ASIO AND "${suite}" MATCHES "^io_.+$")
+    if(CAF_USE_ASIO AND "${suite}" MATCHES "^io_.+$" AND NOT "${suite}" MATCHES ".+_udp$")
       add_test(${test_name}_asio ${caf_test} -n -v 5 -s
                "${suite}" ${ARGN} -- "--caf#middleman.network-backend=asio")
     endif()

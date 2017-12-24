@@ -248,6 +248,30 @@ asio_multiplexer::new_tcp_doorman(uint16_t port, const char* in, bool rflag) {
   return new_doorman(std::move(fd));
 }
 
+datagram_servant_ptr asio_multiplexer::new_datagram_servant(native_socket) {
+  CAF_RAISE_ERROR("UDP is not implemented for asio");
+  return nullptr;
+}
+
+datagram_servant_ptr
+asio_multiplexer::new_datagram_servant_for_endpoint(native_socket,
+                                                    const ip_endpoint&) {
+  CAF_RAISE_ERROR("UDP is not implemented for asio");
+  return nullptr;
+}
+
+expected<datagram_servant_ptr>
+asio_multiplexer::new_remote_udp_endpoint(const std::string&, uint16_t) {
+  CAF_RAISE_ERROR("UDP is not implemented for asio");
+  return sec::bad_function_call;
+}
+
+expected<datagram_servant_ptr>
+asio_multiplexer::new_local_udp_endpoint(uint16_t, const char*, bool) {
+  CAF_RAISE_ERROR("UDP is not implemented for asio");
+  return sec::bad_function_call;
+}
+
 void asio_multiplexer::exec_later(resumable* rptr) {
   auto mt = system().config().scheduler_max_throughput;
   switch (rptr->subtype()) {

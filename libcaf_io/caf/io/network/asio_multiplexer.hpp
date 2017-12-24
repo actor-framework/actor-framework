@@ -76,6 +76,19 @@ public:
   expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
                                         bool reuse_addr) override;
 
+  datagram_servant_ptr new_datagram_servant(native_socket fd) override;
+
+  datagram_servant_ptr
+  new_datagram_servant_for_endpoint(native_socket fd,
+                                    const ip_endpoint& ep) override;
+
+  expected<datagram_servant_ptr>
+  new_remote_udp_endpoint(const std::string& host, uint16_t port) override;
+
+  expected<datagram_servant_ptr>
+  new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
+                         bool reuse_addr = false) override;
+
   void exec_later(resumable* ptr) override;
 
   asio_multiplexer(actor_system* sys);
