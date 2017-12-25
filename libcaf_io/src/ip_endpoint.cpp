@@ -23,10 +23,10 @@
 #include "caf/logger.hpp"
 
 #ifdef CAF_WINDOWS
-# include <windows.h>
 # include <winsock2.h>
 # include <ws2tcpip.h>
 # include <ws2ipdef.h>
+# include <windows.h>
 #else
 # include <unistd.h>
 # include <cerrno>
@@ -34,6 +34,10 @@
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <netinet/ip.h>
+#endif
+
+#ifdef CAF_WINDOWS
+using sa_family_t = short;
 #endif
 
 namespace {
