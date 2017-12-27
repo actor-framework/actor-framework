@@ -13,7 +13,7 @@
 
 #ifdef WIN32
 # define _WIN32_WINNT 0x0600
-# include <Winsock2.h>
+# include <winsock2.h>
 #else
 # include <arpa/inet.h> // htonl
 #endif

@@ -24,9 +24,9 @@
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
+# include <windows.h>
 # include <ws2tcpip.h>
 # include <ws2ipdef.h>
-# include <windows.h>
 #else
 # include <unistd.h>
 # include <cerrno>
@@ -209,12 +209,12 @@ std::string host(const ip_endpoint& ep) {
   switch(ep.caddress()->sa_family) {
     case AF_INET:
       inet_ntop(AF_INET,
-                &reinterpret_cast<const sockaddr_in*>(ep.caddress())->sin_addr,
+                &const_cast<sockaddr_in*>(reinterpret_cast<const sockaddr_in*>(ep.caddress()))->sin_addr,
                 addr, static_cast<socklen_t>(*ep.clength()));
       break;
     case AF_INET6:
       inet_ntop(AF_INET6,
-                &reinterpret_cast<const sockaddr_in6*>(ep.caddress())->sin6_addr,
+                &const_cast<sockaddr_in6*>(reinterpret_cast<const sockaddr_in6*>(ep.caddress()))->sin6_addr,
                 addr, static_cast<socklen_t>(*ep.clength()));
       break;
     default:

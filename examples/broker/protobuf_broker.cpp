@@ -4,10 +4,14 @@
 #include <memory>
 #include <iostream>
 
-#include <arpa/inet.h>
-
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
+
+#ifdef CAF_WINDOWS
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
 
 CAF_PUSH_WARNINGS
 #include "pingpong.pb.h"
