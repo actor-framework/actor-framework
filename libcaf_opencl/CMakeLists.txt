@@ -33,7 +33,9 @@ if(NOT CAF_BUILD_STATIC_ONLY)
 endif()
 # build static library only if --build-static or --build-static-only was set
 if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_library(libcaf_opencl_static STATIC ${LIBCAF_OPENCL_HDRS} ${LIBCAF_OPENCL_SRCS})
+  add_library(libcaf_opencl_static STATIC ${LIBCAF_OPENCL_SRCS}
+                                          ${LIBCAF_OPENCL_HDRS}
+                                          ${OpenCL_INCLUDE_DIRS})
   target_link_libraries(libcaf_opencl_static ${LD_FLAGS}
                                              ${CAF_LIBRARY_CORE_STATIC}
                                              ${OpenCL_LIBRARIES})
