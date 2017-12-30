@@ -122,7 +122,7 @@ constexpr const char* kernel_source = R"__(
     }
   }
 
-  kernel void use_local(global int* restrict values, 
+  kernel void use_local(global int* restrict values,
                         local  int* restrict buf) {
     size_t lid = get_local_id(0);
     size_t gid = get_group_id(0);
@@ -134,7 +134,7 @@ constexpr const char* kernel_source = R"__(
     values[gid * gs + lid] = buf[lid];
   }
 
-  kernel void test_order(local  int* buf, 
+  kernel void test_order(local  int* buf,
                          global int* restrict values) {
     size_t lid = get_local_id(0);
     size_t gid = get_group_id(0);
@@ -146,7 +146,7 @@ constexpr const char* kernel_source = R"__(
     values[gid * gs + lid] = buf[lid];
   }
 
-  kernel void use_private(global  int* restrict buf, 
+  kernel void use_private(global  int* restrict buf,
                           private int  val) {
     buf[get_global_id(0)] += val;
   }
@@ -458,7 +458,7 @@ void test_opencl(actor_system& sys) {
     return problem_size;
   };
   // constant memory arguments
-  const ivec arr7{problem_size};
+  const ivec arr7{static_cast<int>(problem_size)};
   auto w7 = mngr.spawn(kernel_source, kn_const,
                        opencl::nd_range{dims{problem_size}},
                        opencl::in<int>{},
@@ -759,7 +759,7 @@ void test_in_val_out_val(actor_system& sys) {
   // calculator function for getting the size of the output
   auto res_size2 = [](const ivec&) { return problem_size; };
   // constant memory arguments
-  const ivec input2{problem_size};
+  const ivec input2{static_cast<int>(problem_size)};
   auto w6 = mngr.spawn(kernel_source, kn_const,
                            nd_range{dims{problem_size}},
                            in<int>{}, out<int>{res_size2});
