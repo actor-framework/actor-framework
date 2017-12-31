@@ -15,6 +15,9 @@ set (LIBCAF_OPENSSL_SRCS
 
 add_custom_target(libcaf_openssl)
 
+if (MINGW)
+  set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARIES} -lz)
+endif()
 # build shared library if not compiling static only
 if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_openssl_shared SHARED

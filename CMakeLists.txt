@@ -316,7 +316,7 @@ if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
   include(GenerateExportHeader)
-  set(LD_FLAGS "ws2_32 -liphlpapi")
+  set(LD_FLAGS "ws2_32 -liphlpapi -lpsapi")
   # build static to avoid runtime dependencies to GCC libraries
   set(EXTRA_FLAGS "${EXTRA_FLAGS} -static")
 elseif(CYGWIN)

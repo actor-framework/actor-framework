@@ -22,7 +22,7 @@
 #include "caf/config.hpp"
 
  #ifdef CAF_WINDOWS
-#  include <Windows.h>
+#  include <windows.h>
 #else
 #  include <sys/types.h>
 #  include <unistd.h>

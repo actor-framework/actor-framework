@@ -25,8 +25,8 @@
 #if defined(CAF_MACOS) || defined(CAF_IOS)
 #include <mach/mach.h>
 #elif defined(CAF_WINDOWS)
-#include <Windows.h>
-#include <Psapi.h>
+#include <windows.h>
+#include <psapi.h>
 #else
 #include <sys/resource.h>
 #endif
