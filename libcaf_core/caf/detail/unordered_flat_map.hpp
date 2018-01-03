@@ -25,6 +25,8 @@
 #include <stdexcept>
 #include <functional>
 
+#include "caf/config.hpp"
+
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
@@ -223,16 +225,19 @@ public:
   mapped_type& at(const K& key) {
     auto i = find(key);
     if (i == end())
+#ifdef CAF_NO_EXCEPTIONS
+      CAF_CRITICAL("caf::detail::unordered_flat_map::at out of range");
+#else
       throw std::out_of_range{"caf::detail::unordered_flat_map::at"};
+#endif
     return i->second;
   }
 
   template <class K>
   const mapped_type& at(const K& key) const {
-    auto i = find(key);
-    if (i == end())
-      throw std::out_of_range{"caf::detail::unordered_flat_map::at"};
-    return i->second;
+    /// We call the non-const version in order to avoid code duplication but
+    /// restore the const-ness when returning from the function.
+    return const_cast<unordered_flat_map&>(*this).at(key);
   }
 
   mapped_type& operator[](const key_type& key) {
@@ -243,24 +248,23 @@ public:
   }
 
   template <class K>
-  iterator find(const K& x) {
+  iterator find(const K& key) {
     auto pred = [&](const value_type& y) {
-      return x == y.first;
+      return key == y.first;
     };
     return std::find_if(xs_.begin(), xs_.end(), pred);
   }
 
   template <class K>
-  const_iterator find(const K& x) const {
-    auto pred = [&](const value_type& y) {
-      return x == y.first;
-    };
-    return std::find_if(xs_.begin(), xs_.end(), pred);
+  const_iterator find(const K& key) const {
+    /// We call the non-const version in order to avoid code duplication but
+    /// restore the const-ness when returning from the function.
+    return const_cast<unordered_flat_map&>(*this).find(key);
   }
 
   template <class K>
-  size_type count(const K& x) const {
-    return find(x) == end() ? 0 : 1;
+  size_type count(const K& key) const {
+    return find(key) == end() ? 0 : 1;
   }
 
 private:
