@@ -174,6 +174,12 @@ public:
     // nop
   }
 
+  virtual ~expect_clause_base() {
+    CAF_ASSERT(peek_ != nullptr);
+    peek_();
+    run_once();
+  }
+
   Derived& from(const wildcard&) {
     return dref();
   }
@@ -191,7 +197,7 @@ public:
     auto ptr = peek_mailbox(dest_);
     CAF_REQUIRE(ptr != nullptr);
     if (src_)
-      CAF_REQUIRE_EQUAL(ptr->sender, src_);
+      CAF_CHECK_EQUAL(ptr->sender, src_);
     return dref();
   }
 
@@ -237,6 +243,7 @@ protected:
   bool mock_dest_;
   caf::strong_actor_ptr src_;
   caf::local_actor* dest_;
+  std::function<void ()> peek_;
 };
 
 template <class... Ts>
@@ -245,16 +252,20 @@ public:
   template <class... Us>
   expect_clause(Us&&... xs)
       : expect_clause_base<expect_clause<Ts...>>(std::forward<Us>(xs)...) {
-    // nop
+    this->peek_ = [=] {
+      this->template peek<Ts...>();
+    };
   }
 
   template <class... Us>
   void with(Us&&... xs) {
+    // TODO: move tmp into lambda when switching to C++14
     auto tmp = std::make_tuple(std::forward<Us>(xs)...);
-    elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
-    auto ys = this->template peek<Ts...>();
-    CAF_CHECK(inspector(get<0>(ys)));
-    this->run_once();
+    this->peek_ = [=] {
+      elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
+      auto ys = this->template peek<Ts...>();
+      CAF_CHECK(inspector(get<0>(ys)));
+    };
   }
 };
 
@@ -266,15 +277,21 @@ public:
   template <class... Us>
   expect_clause(Us&&... xs)
       : expect_clause_base<expect_clause<T>>(std::forward<Us>(xs)...) {
-    // nop
+    this->peek_ = [=] {
+      std::integral_constant<bool, has_outer_type<T>::value> token;
+      type_check<T>(token);
+    };
   }
+
 
   template <class... Us>
   void with(Us&&... xs) {
-    std::integral_constant<bool, has_outer_type<T>::value> token;
+    // TODO: move tmp into lambda when switching to C++14
     auto tmp = std::make_tuple(std::forward<Us>(xs)...);
-    with_content(token, tmp);
-    this->run_once();
+    this->peek_ = [=] {
+      std::integral_constant<bool, has_outer_type<T>::value> token;
+      with_content(token, tmp);
+    };
   }
 
 private:
@@ -296,6 +313,19 @@ private:
     CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(x0))));
   }
 
+  template <class U>
+  void type_check(std::integral_constant<bool, false>) {
+    this->template peek<U>();
+  }
+
+  template <class U>
+  void type_check(std::integral_constant<bool, true>) {
+    auto xs = this->template peek<typename U::outer_type>();
+    auto& x0 = get<0>(xs);
+    if (!is<U>(x0)) {
+      CAF_FAIL("is<T>(x0) !! " << caf::deep_to_string(x0));
+    }
+  }
 };
 
 template <>
