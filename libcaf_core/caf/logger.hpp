@@ -41,9 +41,10 @@
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/intrusive/task_queue.hpp"
 
+#include "caf/detail/arg_wrapper.hpp"
+#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
-#include "caf/detail/pretty_type_name.hpp"
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -162,22 +163,6 @@ public:
   /// Stores a parsed format string as list of fields.
   using line_format = std::vector<field>;
 
-  /// Enables automagical string conversion for `CAF_ARG`.
-  template <class T>
-  struct arg_wrapper {
-    const char* name;
-    const T& value;
-    arg_wrapper(const char* x, const T& y) : name(x), value(y) {
-      // nop
-    }
-  };
-
-  /// Used to implement `CAF_ARG`.
-  template <class T>
-  static arg_wrapper<T> make_arg_wrapper(const char* name, const T& value) {
-    return {name, value};
-  }
-
   /// Utility class for building user-defined log messages with `CAF_ARG`.
   class line_builder {
   public:
@@ -193,7 +178,7 @@ public:
     }
 
     template <class T>
-    line_builder& operator<<(const arg_wrapper<T>& x) {
+    line_builder& operator<<(const detail::arg_wrapper<T>& x) {
       if (behind_arg_)
         str_ += ", ";
       else if (!str_.empty())
@@ -346,9 +331,9 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_LOG_LEVEL_DEBUG 3
 #define CAF_LOG_LEVEL_TRACE 4
 
-#define CAF_ARG(argument) caf::logger::make_arg_wrapper(#argument, argument)
+#define CAF_ARG(argument) caf::detail::make_arg_wrapper(#argument, argument)
 
-#define CAF_ARG2(argname, argval) caf::logger::make_arg_wrapper(argname, argval)
+#define CAF_ARG2(argname, argval) caf::detail::make_arg_wrapper(argname, argval)
 
 #ifdef CAF_MSVC
 #define CAF_PRETTY_FUN __FUNCSIG__
