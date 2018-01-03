@@ -476,13 +476,14 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     // neither awaited nor multiplexed, probably an expired timeout
     if (mrh == multiplexed_responses_.end())
       return im_dropped;
-    if (!invoke(this, mrh->second, x)) {
+    auto bhvr = std::move(mrh->second);
+    multiplexed_responses_.erase(mrh);
+    if (!invoke(this, bhvr, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
-      mrh->second(msg);
+      bhvr(msg);
     }
-    multiplexed_responses_.erase(mrh);
     return im_success;
   }
   // Dispatch on the content of x.
