@@ -429,8 +429,7 @@ public:
 
   template <class... Ts>
   void record_send(const Ts&... xs) {
-    if (context())
-    {
+    if (context()) {
       if (allow_individual_instrumentation()) {
         context()->stats().record_send_individual(instrumentation::get_instrumented_actor_id(*this),
                                                   instrumentation::get_msgtype(xs...));
