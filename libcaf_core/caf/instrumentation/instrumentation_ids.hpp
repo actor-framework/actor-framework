@@ -38,7 +38,6 @@ struct msgtype_id {
     BUILTIN  = 1,
     ATOM     = 2,
     TYPEINFO = 3,
-    CUSTOM   = 4 // all >=4 values can have custom printers
   };
   using value_t = union {
     uint16_t builtin;

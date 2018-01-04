@@ -28,7 +28,6 @@
 #include <typeindex>
 #include <cstdint>
 #include <utility>
-#include <caf/instrumentation/instrumentation_ids.hpp>
 
 namespace caf {
 namespace instrumentation {
