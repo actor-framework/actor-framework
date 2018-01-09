@@ -504,19 +504,24 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       }
       auto& bhvr = bhvr_stack_.back();
 #ifdef CAF_ENABLE_INSTRUMENTATION
-      if (context_ != nullptr) { // TODO examine the case of detached scheduled_actors
-        auto msgtype = instrumentation::get_msgtype(current_element_->content());
-        auto mb_wait_time = timestamp_ago_ns(current_element_->ts);
-        auto mb_size = mailbox_.cached_count(); // WARNING: using count() here can lock the actor when receiving network messages
-        if (allow_individual_instrumentation()) {
-          context_->stats().record_behavior_individual(instrumentation::get_instrumented_actor_id(*this), msgtype, mb_wait_time, mb_size);
-        } else {
-          context_->stats().record_behavior_aggregate(typeid(*this), msgtype, mb_wait_time, mb_size);
-        }
-      }
+      //auto start = caf::make_timestamp();
+      auto msgtype = instrumentation::get_msgtype(current_element_->content());
+      auto mb_wait_time = caf::timestamp_ago_ns(current_element_->ts);
+      auto mb_size = mailbox_.cached_count(); // WARNING: using count() here can lock the actor when receiving network messages
 #endif
       switch (bhvr(visitor, x.content())) {
         default:
+#ifdef CAF_ENABLE_INSTRUMENTATION
+          // TODO examine the case of detached scheduled_actors
+          if (context_ != nullptr) {
+            //auto process_time = caf::timestamp_ago_ns(start);
+            if (allow_individual_instrumentation()) {
+              context_->stats().record_behavior_individual(instrumentation::get_instrumented_actor_id(*this), msgtype, mb_wait_time, mb_size);
+            } else {
+              context_->stats().record_behavior_aggregate(typeid(*this), msgtype, mb_wait_time, mb_size);
+            }
+          }
+#endif
           break;
         case match_case::skip:
           skipped = true;
