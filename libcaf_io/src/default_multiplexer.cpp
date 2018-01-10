@@ -87,8 +87,8 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
     return make_error(sec::network_syscall_failed,                             \
                       fun_name, last_socket_error_as_string())
 
-// calls a C functions and calls exit() if `predicate(var)`  returns false
 #ifdef CAF_WINDOWS
+// calls a C functions and calls exit() if `predicate(var)`  returns false
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
   auto var = expr;                                                             \
   if (!predicate(var)) {                                                       \
@@ -96,6 +96,10 @@ bool cc_valid_socket(caf::io::network::native_socket fd) {
            __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
     abort();                                                                   \
   } static_cast<void>(0)
+
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+#endif
 #endif // CAF_WINDOWS
 
 } // namespace <anonymous>
@@ -129,6 +133,11 @@ namespace network {
                 setsockopt(fd, SOL_SOCKET, no_sigpipe_socket_flag, &value,
                            static_cast<unsigned>(sizeof(value))));
     }
+    return unit;
+  }
+
+  expected<void> allow_udp_connreset(native_socket, bool) {
+    // nop; SIO_UDP_CONNRESET only exists on Windows
     return unit;
   }
 
@@ -175,6 +184,14 @@ namespace network {
 
   expected<void> allow_sigpipe(native_socket, bool) {
     // nop; SIGPIPE does not exist on Windows
+    return unit;
+  }
+
+  expected<void> allow_udp_connreset(native_socket fd, bool new_value) {
+    DWORD bytes_returned = 0;
+    CALL_CFUN(res, cc_zero, "WSAIoctl",
+              WSAIoctl(fd, SIO_UDP_CONNRESET, &new_value, sizeof(new_value),
+                       NULL, 0, &bytes_returned, NULL, NULL));
     return unit;
   }
 
@@ -1192,6 +1209,7 @@ datagram_handler::datagram_handler(default_multiplexer& backend_ref,
     send_buffer_size_(0),
     ack_writes_(false),
     writing_(false) {
+  allow_udp_connreset(sockfd, false);
   auto es = send_buffer_size(sockfd);
   if (!es)
     CAF_LOG_ERROR("cannot determine socket buffer size");
