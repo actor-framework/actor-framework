@@ -37,9 +37,9 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/deep_to_string.hpp"
 
+#include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/intrusive/singly_linked.hpp"
-#include "caf/intrusive/task_queue.hpp"
 
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/pretty_type_name.hpp"
@@ -114,7 +114,7 @@ public:
 
     using unique_pointer = std::unique_ptr<event, deleter_type>;
 
-    using queue_type = intrusive::task_queue<policy>;
+    using queue_type = intrusive::drr_queue<policy>;
 
     using deficit_type = long;
 

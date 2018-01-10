@@ -36,6 +36,8 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/actor_system_config.hpp"
 
+#include "caf/intrusive/task_result.hpp"
+
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 
@@ -398,18 +400,21 @@ void logger::run() {
 #if defined(CAF_LOG_LEVEL)
   log_first_line();
   // receive log entries from other threads and actors
-  std::unique_ptr<event> ptr;
-  for (;;) {
-    // make sure we have data to read
-    queue_.synchronized_await(queue_mtx_, queue_cv_);
-    // read & process event
-    ptr.reset(queue_.try_pop());
-    CAF_ASSERT(ptr != nullptr);
+  bool stop = false;
+  auto f = [&](event& x) {
     // empty message means: shut down
-    if (ptr->message.empty())
-      break;
-    handle_event(*ptr);
-  }
+    if (x.message.empty()) {
+      stop = true;
+      return intrusive::task_result::stop;
+    }
+    handle_event(x);
+    return intrusive::task_result::resume;
+  };
+  do {
+    // make sure we have data to read and consume events
+    queue_.synchronized_await(queue_mtx_, queue_cv_);
+    queue_.new_round(1000, f);
+  } while (!stop);
   log_last_line();
 #endif
 }
@@ -534,7 +539,7 @@ void logger::stop() {
   if (!thread_.joinable())
     return;
   // an empty string means: shut down
-  queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event);
+  queue_.synchronized_push_back(queue_mtx_, queue_cv_, new event);
   thread_.join();
 #endif
 }
