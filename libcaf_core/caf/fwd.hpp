@@ -116,6 +116,7 @@ struct timeout_msg;
 struct upstream_msg;
 struct group_down_msg;
 struct downstream_msg;
+struct open_stream_msg;
 struct invalid_actor_t;
 struct invalid_actor_addr_t;
 struct illegal_message_element;
