@@ -25,18 +25,25 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
 
+#include "caf/io/middleman.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 
 using namespace caf;
 using namespace caf::io;
 
-
 namespace {
+
+class config : public actor_system_config {
+public:
+  config() {
+    // this will call WSAStartup for network initialization on Windows
+    load<io::middleman>();
+  }
+};
 
 struct fixture {
 
@@ -54,11 +61,11 @@ void deserialize(const std::vector<char>& buf, T& x, Ts&... xs) {
   bd(x, xs...);
 }
 
-fixture() : system(cfg), context(&system) {
+fixture() : cfg(), system(cfg), context(&system) {
 
 }
 
-actor_system_config cfg;
+config cfg;
 actor_system system;
 scoped_execution_unit context;
 

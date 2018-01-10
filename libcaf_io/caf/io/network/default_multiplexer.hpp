@@ -184,6 +184,9 @@ expected<void> tcp_nodelay(native_socket fd, bool new_value);
 /// Enables or disables `SIGPIPE` events from `fd`.
 expected<void> allow_sigpipe(native_socket fd, bool new_value);
 
+/// Enables or disables `SIO_UDP_CONNRESET`error on `fd`.
+expected<void> allow_udp_connreset(native_socket fd, bool new_value);
+
 /// Get the socket buffer size for `fd`.
 expected<int> send_buffer_size(native_socket fd);
 
