@@ -91,7 +91,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
     CXXFLAGS                    C++ compiler flags
-    DEFAULT_CMAKE_GENERATOR     Selects a custom generator
+    LDFLAGS                     Additional linker flags
+    CMAKE_GENERATOR     Selects a custom generator
 
   Python Build Options:
     --with-python-config=FILE   Use python-conf binary to determine includes and libs
@@ -199,6 +200,9 @@ configure ()
     if [ -n "$CXXFLAGS" ]; then
       printf "CXXFLAGS=\"%s\"\n" "$CXXFLAGS" >> config.status
     fi
+    if [ -n "$LDFLAGS" ]; then
+      printf "LDFLAGS=\"%s\"\n" "$LDFLAGS" >> config.status
+    fi
     echo $command >> config.status
     chmod u+x config.status
 }
@@ -210,8 +214,8 @@ append_cache_entry CMAKE_INSTALL_PREFIX        PATH   /usr/local
 append_cache_entry CAF_ENABLE_RUNTIME_CHECKS   BOOL   false
 
 # parse custom environment variable to initialize CMakeGenerator
-if [ -n "$DEFAULT_CMAKE_GENERATOR" ]; then
-  CMakeGenerator="$DEFAULT_CMAKE_GENERATOR"
+if [ -n "$CMAKE_GENERATOR" ]; then
+  CMakeGenerator="$CMAKE_GENERATOR"
 fi
 
 # Parse arguments.
