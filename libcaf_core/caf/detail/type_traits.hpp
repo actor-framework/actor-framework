@@ -548,7 +548,7 @@ public:
 CAF_HAS_MEMBER_TRAIT(size);
 CAF_HAS_MEMBER_TRAIT(data);
 
-/// Checks whether T is convertible to either `std::function<void (T&)>`
+/// Checks whether F is convertible to either `std::function<void (T&)>`
 /// or `std::function<void (const T&)>`.
 template <class F, class T>
 struct is_handler_for {
