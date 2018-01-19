@@ -155,6 +155,14 @@ public:
   error err;
 };
 
+template <>
+struct result<unit_t> : result<void> {
+
+  using super = result<void>;
+
+  using super::super;
+};
+
 template <class T>
 struct is_result : std::false_type {};
 
