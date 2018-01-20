@@ -4,15 +4,15 @@ project(caf C CXX)
 include(CheckCSourceCompiles)
 include(CheckCSourceRuns)
 
-# be nice to vim users
+# Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-# silence policy CMP0042 warning by enabling RPATH explicitly
+# Silence policy CMP0042 warning by enabling RPATH explicitly.
 if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
 endif()
 
-# shared libs currently not supported on Windows
+# Shared libs are currently not supported on Windows.
 if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
   message(STATUS "CAF currently only supports static-only builds on Windows")
   set(CAF_BUILD_STATIC_ONLY yes)
@@ -53,20 +53,41 @@ endif()
 add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
 
 ################################################################################
-#                        set included flags if needed                          #
+#                              utility functions                               #
 ################################################################################
 
-if(CAF_FORCE_NO_EXCEPTIONS)
-  set(CAF_NO_EXCEPTIONS yes)
-endif()
+# Appends `str` to the variable named `var` with a whitespace as separator.
+# Suppresses a leading whitespace if the variable is empty and does nothing if
+# `str` is empty.
+function(build_string var str)
+  if(NOT str STREQUAL "")
+    if("${${var}}" STREQUAL "")
+      set("${var}" "${str}" PARENT_SCOPE)
+    else()
+      set("${var}" "${${var}} ${str}" PARENT_SCOPE)
+    endif()
+  endif()
+endfunction(build_string)
+
+# Forces `var` to 'no' if the content of the variables evaluates to false.
+function(pretty_no var)
+  if(NOT "${${var}}")
+    set("${var}" no PARENT_SCOPE)
+  endif()
+endfunction(pretty_no)
+
+# Forces `var` to 'yes' if the content of the variables evaluates to false.
+function(pretty_yes var)
+  if("${${var}}")
+    set("${var}" yes PARENT_SCOPE)
+  endif()
+endfunction(pretty_yes)
 
 ################################################################################
 #                        set prefix paths if available                         #
 ################################################################################
 
-if(DEFINED CAF_QT_PREFIX_PATH)
-  set(CMAKE_PREFIX_PATH "${CAF_QT_PREFIX_PATH}")
-endif()
+build_string("CMAKE_PREFIX_PATH" "${CAF_QT_PREFIX_PATH}")
 
 ################################################################################
 #                      enable ccache if required by user                       #
@@ -84,48 +105,21 @@ if(CAF_USE_CCACHE)
 endif(CAF_USE_CCACHE)
 
 ################################################################################
-#   make sure all variables are set to "no" if undefined for summary output    #
+#      make sure config parameters are printed with yes or no in summary       #
 ################################################################################
 
-if(NOT CAF_ENABLE_RUNTIME_CHECKS)
-  set(CAF_ENABLE_RUNTIME_CHECKS no)
-endif()
+pretty_yes("CAF_FORCE_NO_EXCEPTIONS")
 
-if(NOT CAF_NO_MEM_MANAGEMENT)
-  set(CAF_NO_MEM_MANAGEMENT no)
-endif()
-
-if(NOT CAF_NO_EXCEPTIONS)
-  set(CAF_NO_EXCEPTIONS no)
-endif()
-
-if(NOT CAF_BUILD_STATIC_ONLY)
-  set(CAF_BUILD_STATIC_ONLY no)
-endif()
-
-if(NOT CAF_BUILD_STATIC)
-  set(CAF_BUILD_STATIC no)
-endif()
-
-if(NOT CAF_NO_OPENCL)
-  set(CAF_NO_OPENCL no)
-endif()
-
-if(NOT CAF_NO_OPENSSL)
-  set(CAF_NO_OPENSSL no)
-endif()
-
-if(NOT CAF_NO_PYTHON)
-  set(CAF_NO_PYTHON no)
-endif()
-
-if(NOT CAF_NO_TOOLS)
-  set(CAF_NO_TOOLS no)
-endif()
-
-if(NOT CAF_NO_SUMMARY)
-  set(CAF_NO_SUMMARY no)
-endif()
+pretty_no("CAF_ENABLE_RUNTIME_CHECKS")
+pretty_no("CAF_NO_MEM_MANAGEMENT")
+pretty_no("CAF_NO_EXCEPTIONS")
+pretty_no("CAF_BUILD_STATIC_ONLY")
+pretty_no("CAF_BUILD_STATIC")
+pretty_no("CAF_NO_OPENCL")
+pretty_no("CAF_NO_OPENSSL")
+pretty_no("CAF_NO_PYTHON")
+pretty_no("CAF_NO_TOOLS")
+pretty_no("CAF_NO_SUMMARY")
 
 if(NOT CAF_NO_IO)
   set(CAF_NO_IO no)
@@ -138,7 +132,7 @@ endif()
 #                        respect environment variables                         #
 ################################################################################
 
-set(LDFLAGS "$ENV{LDFLAGS}")
+build_string("LDFLAGS" "$ENV{LDFLAGS}")
 
 ################################################################################
 #                              get version of CAF                              #
@@ -215,19 +209,18 @@ if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
   endif()
 endif()
 # set optional build flags
-set(EXTRA_FLAGS "")
 # increase max. template depth on GCC and Clang
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
    OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  set(EXTRA_FLAGS "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
+  build_string("EXTRA_FLAGS" "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
 endif()
 # explicitly disable obnoxious GCC warnings
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  set(EXTRA_FLAGS "-Wno-missing-field-initializers")
+  build_string("EXTRA_FLAGS" "-Wno-missing-field-initializers")
 endif()
 # add "-Werror" flag if --pedantic-build is used
 if(CAF_CXX_WARNINGS_AS_ERRORS)
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -Werror")
+  build_string("EXTRA_FLAGS" "-Werror")
 endif()
 # set compiler flags for GCOV if requested
 if(CAF_ENABLE_GCOV)
@@ -236,11 +229,11 @@ if(CAF_ENABLE_GCOV)
   else()
     set(NO_INLINE "-fno-inline -fno-inline-small-functions -fno-default-inline")
   endif()
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fprofile-arcs -ftest-coverage ${NO_INLINE}")
+  build_string("EXTRA_FLAGS" "-fprofile-arcs -ftest-coverage ${NO_INLINE}")
 endif()
 # set -fno-exception if requested
 if(CAF_FORCE_NO_EXCEPTIONS)
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fno-exceptions")
+  build_string("EXTRA_FLAGS" "-fno-exceptions")
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
 if(CAF_MORE_WARNINGS)
@@ -274,8 +267,9 @@ if(CAF_MORE_WARNINGS)
   endif()
   # convert CMake list to a single string, erasing the ";" separators
   string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} ${WFLAGS_STR}")
+  build_string("EXTRA_FLAGS" "${WFLAGS_STR}")
 endif()
+
 # add -stdlib=libc++ when using Clang if possible
 if(NOT CAF_NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
@@ -290,7 +284,7 @@ if(NOT CAF_NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   else()
     message(STATUS "Automatically added '-stdlib=libc++' flag "
                    "(CAF_NO_AUTO_LIBCPP not defined)")
-    set(EXTRA_FLAGS "${EXTRA_FLAGS} -stdlib=libc++")
+  build_string("EXTRA_FLAGS" "-stdlib=libc++")
   endif()
   # restore CXX flags
   set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
@@ -308,30 +302,30 @@ if(CAF_ENABLE_ADDRESS_SANITIZER)
     message(WARNING "Address Sanitizer is not available on selected compiler")
   else()
     message(STATUS "Enable Address Sanitizer")
-    set(EXTRA_FLAGS "${EXTRA_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    build_string("EXTRA_FLAGS" "-fsanitize=address -fno-omit-frame-pointer")
   endif()
   # restore CXX flags
   set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
 endif(CAF_ENABLE_ADDRESS_SANITIZER)
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -pthread")
+    build_string("EXTRA_FLAGS" "-pthread")
 endif()
 # -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
 if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
   include(GenerateExportHeader)
-  set(LDFLAGS "${LDFLAGS} ws2_32 -liphlpapi -lpsapi")
+  build_string("LDFLAGS" "ws2_32 -liphlpapi -lpsapi")
   # build static to avoid runtime dependencies to GCC libraries
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -static")
+  build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -U__STRICT_ANSI__")
+  build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
 else()
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fPIC")
+  build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
-  set(LDFLAGS "${LDFLAGS} ws2_32 iphlpapi")
+  build_string("LDFLAGS" "ws2_32 iphlpapi")
 endif()
 # iOS support
 if(CAF_OSX_SYSROOT)
@@ -339,9 +333,11 @@ if(CAF_OSX_SYSROOT)
 endif()
 if(CAF_IOS_DEPLOYMENT_TARGET)
   if("${CAF_OSX_SYSROOT}" STREQUAL "iphonesimulator")
-    set(EXTRA_FLAGS "${EXTRA_FLAGS} -mios-simulator-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
+    build_string("EXTRA_FLAGS"
+                 "-mios-simulator-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
   else()
-    set(EXTRA_FLAGS "${EXTRA_FLAGS} -miphoneos-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
+    build_string("EXTRA_FLAGS"
+                 "-miphoneos-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
   endif()
 endif()
 # check if the user provided CXXFLAGS, set defaults otherwise
@@ -365,7 +361,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 # needed by subprojects
-set(LDFLAGS ${LDFLAGS} ${CMAKE_LD_LIBS})
+build_string("LDFLAGS" "${CMAKE_LD_LIBS}")
 
 ################################################################################
 #                       configure build_config.hpp header                      #
@@ -397,7 +393,7 @@ if(CAF_USE_ASIO)
   if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
-    set(LDFLAGS ${LDFLAGS} ${Boost_SYSTEM_LIBRARY})
+    build_string("LDFLAGS" "${Boost_SYSTEM_LIBRARY}")
     set(CAF_USE_ASIO_INT 1)
   else()
     set(CAF_USE_ASIO no)
@@ -779,7 +775,7 @@ if(NOT CAF_NO_SUMMARY)
   message(STATUS
         "\n====================|  Build Summary  |===================="
         "\n"
-        "\nLibcaf version:        ${CAF_VERSION}"
+        "\nCAF version:           ${CAF_VERSION}"
         "\n"
         "\nBuild type:            ${CMAKE_BUILD_TYPE}"
         "\nBuild static:          ${CAF_BUILD_STATIC}"
