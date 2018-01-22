@@ -197,7 +197,7 @@ private:
                                    events.data(), &events.back());
     if (err != CL_SUCCESS) {
       this->deref(); // failed to enqueue command
-      throw std::runtime_error("clEnqueueReadBuffer: " + opencl_error(err));
+      CAF_RAISE_ERROR("clEnqueueReadBuffer: " + opencl_error(err));
     }
     pos += 1;
   }

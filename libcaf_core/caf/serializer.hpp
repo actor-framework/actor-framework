@@ -67,7 +67,7 @@ operator&(serializer& sink, const T& x) {
   // implementations are required to never modify `x` while saving
   auto e = sink.apply(const_cast<T&>(x));
   if (e)
-    throw std::runtime_error(to_string(e));
+    CAF_RAISE_ERROR(to_string(e));
 }
 
 template <class T>
