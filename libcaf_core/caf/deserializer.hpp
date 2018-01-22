@@ -67,7 +67,7 @@ typename std::enable_if<
 operator&(deserializer& source, T& x) {
   auto e = source.apply(x);
   if (e)
-    throw std::runtime_error(to_string(e));
+    CAF_RAISE_ERROR(to_string(e));
 }
 
 template <class T>

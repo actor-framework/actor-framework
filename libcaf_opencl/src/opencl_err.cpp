@@ -27,7 +27,7 @@ void throwcl(const char* fname, cl_int err) {
     std::string errstr = fname;
     errstr += ": ";
     errstr += opencl_error(err);
-    throw std::runtime_error(std::move(errstr));
+    CAF_RAISE_ERROR(std::move(errstr));
   }
 }
 

@@ -53,7 +53,7 @@ void manager::init(actor_system_config&) {
   std::vector<cl_platform_id> platform_ids(num_platforms);
   v2callcl(CAF_CLF(clGetPlatformIDs), num_platforms, platform_ids.data());
   if (platform_ids.empty())
-    throw std::runtime_error("no OpenCL platform found");
+    CAF_RAISE_ERROR("no OpenCL platform found");
   // initialize platforms (device discovery)
   unsigned current_device_id = 0;
   for (auto& pl_id : platform_ids) {
@@ -100,7 +100,7 @@ program_ptr manager::create_program_from_file(const char* path,
     ostringstream oss;
     oss << "No file at '" << path << "' found.";
     CAF_LOG_ERROR(CAF_ARG(oss.str()));
-    throw runtime_error(oss.str());
+    CAF_RAISE_ERROR(oss.str());
   }
   return create_program(kernel_source.c_str(), options, device_id);
 }
@@ -113,7 +113,7 @@ program_ptr manager::create_program(const char* kernel_source,
     ostringstream oss;
     oss << "No device with id '" << device_id << "' found.";
     CAF_LOG_ERROR(CAF_ARG(oss.str()));
-    throw runtime_error(oss.str());
+    CAF_RAISE_ERROR(oss.str());
   }
   return create_program(kernel_source, options, *dev);
 }
@@ -134,7 +134,7 @@ program_ptr manager::create_program_from_file(const char* path,
     ostringstream oss;
     oss << "No file at '" << path << "' found.";
     CAF_LOG_ERROR(CAF_ARG(oss.str()));
-    throw runtime_error(oss.str());
+    CAF_RAISE_ERROR(oss.str());
   }
   return create_program(kernel_source.c_str(), options, dev);
 }
@@ -176,7 +176,7 @@ program_ptr manager::create_program(const char* kernel_source,
 #endif
       oss << endl << ss.str();
     }
-    throw runtime_error(oss.str());
+    CAF_RAISE_ERROR(oss.str());
   }
   cl_uint number_of_kernels = 0;
   clCreateKernelsInProgram(pptr.get(), 0u, nullptr, &number_of_kernels);
@@ -188,7 +188,7 @@ program_ptr manager::create_program(const char* kernel_source,
     if (err != CL_SUCCESS) {
       ostringstream oss;
       oss << "clCreateKernelsInProgram: " << opencl_error(err);
-      throw runtime_error(oss.str());
+      CAF_RAISE_ERROR(oss.str());
     }
     for (cl_uint i = 0; i < number_of_kernels; ++i) {
       size_t len;
@@ -200,7 +200,7 @@ program_ptr manager::create_program(const char* kernel_source,
         ostringstream oss;
         oss << "clGetKernelInfo (CL_KERNEL_FUNCTION_NAME): "
             << opencl_error(err);
-        throw runtime_error(oss.str());
+        CAF_RAISE_ERROR(oss.str());
       }
       detail::raw_kernel_ptr kernel;
       kernel.reset(move(kernels[i]));

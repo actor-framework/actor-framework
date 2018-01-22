@@ -89,16 +89,14 @@ public:
                       Ts&&... xs) {
     if (range.dimensions().empty()) {
       auto str = "OpenCL kernel needs at least 1 global dimension.";
-      CAF_LOG_ERROR(str);
-      throw std::runtime_error(str);
+      CAF_RAISE_ERROR(str);
     }
     auto check_vec = [&](const dim_vec& vec, const char* name) {
       if (! vec.empty() && vec.size() != range.dimensions().size()) {
         std::ostringstream oss;
         oss << name << " vector is not empty, but "
             << "its size differs from global dimensions vector's size";
-        CAF_LOG_ERROR(CAF_ARG(oss.str()));
-        throw std::runtime_error(oss.str());
+        CAF_RAISE_ERROR(oss.str());
       }
     };
     check_vec(range.offsets(), "offsets");
