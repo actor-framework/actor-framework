@@ -132,7 +132,7 @@ endif()
 #                        respect environment variables                         #
 ################################################################################
 
-build_string("LDFLAGS" "$ENV{LDFLAGS}")
+set(LDFLAGS $ENV{LDFLAGS})
 
 ################################################################################
 #                              get version of CAF                              #
@@ -158,7 +158,7 @@ set(CAF_VERSION
 ################################################################################
 
 # prohibit in-source builds
-if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
     message(FATAL_ERROR "In-source builds are not allowed. Please use "
                         "./configure to choose a build directory and "
                         "initialize the build configuration.")
@@ -166,14 +166,14 @@ endif()
 # set module path appropriately
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set binary output path if not defined by user
-if("${EXECUTABLE_OUTPUT_PATH}" STREQUAL "")
+if(EXECUTABLE_OUTPUT_PATH STREQUAL "")
   set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 endif()
 # set library output path if not defined by user, but always set
 # library output path to binary output path for Xcode projects
-if("${CMAKE_GENERATOR}" STREQUAL "Xcode")
+if(CMAKE_GENERATOR STREQUAL "Xcode")
   set(LIBRARY_OUTPUT_PATH "${EXECUTABLE_OUTPUT_PATH}")
-elseif("${LIBRARY_OUTPUT_PATH}" STREQUAL "")
+elseif(LIBRARY_OUTPUT_PATH STREQUAL "")
   set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib")
 endif()
 
@@ -191,13 +191,13 @@ if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
           RUN_OUTPUT_VARIABLE CompilerVersion)
   if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
     message(FATAL_ERROR "Cannot determine compiler version")
-  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     if(CompilerVersion VERSION_GREATER 4.7)
       message(STATUS "Found g++ version ${CompilerVersion}")
     else()
       message(FATAL_ERROR "g++ >= 4.8 required (found: ${CompilerVersion})")
     endif()
-  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if(CompilerVersion VERSION_GREATER 3.1)
       message(STATUS "Found clang++ version ${CompilerVersion}")
     else()
@@ -210,12 +210,12 @@ if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
 endif()
 # set optional build flags
 # increase max. template depth on GCC and Clang
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"
-   OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+   OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   build_string("EXTRA_FLAGS" "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
 endif()
 # explicitly disable obnoxious GCC warnings
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   build_string("EXTRA_FLAGS" "-Wno-missing-field-initializers")
 endif()
 # add "-Werror" flag if --pedantic-build is used
@@ -224,7 +224,7 @@ if(CAF_CXX_WARNINGS_AS_ERRORS)
 endif()
 # set compiler flags for GCOV if requested
 if(CAF_ENABLE_GCOV)
-  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(NO_INLINE "-fno-inline")
   else()
     set(NO_INLINE "-fno-inline -fno-inline-small-functions -fno-default-inline")
@@ -237,14 +237,14 @@ if(CAF_FORCE_NO_EXCEPTIONS)
 endif()
 # enable a ton of warnings if --more-clang-warnings is used
 if(CAF_MORE_WARNINGS)
-  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded "
                "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
                "-Wno-global-constructors -Wno-missing-prototypes "
                "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
                "-Wno-unused-const-variable -Wno-switch-enum "
                "-Wno-missing-noreturn -Wno-covered-switch-default")
-  elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(WFLAGS "-Waddress -Wall -Warray-bounds "
                "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
                "-Wcast-qual -Wchar-subscripts -Wclobbered -Wcomment "
@@ -271,7 +271,7 @@ if(CAF_MORE_WARNINGS)
 endif()
 
 # add -stdlib=libc++ when using Clang if possible
-if(NOT CAF_NO_AUTO_LIBCPP AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+if(NOT CAF_NO_AUTO_LIBCPP AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
   try_run(ProgramResult
@@ -316,7 +316,7 @@ if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
   include(GenerateExportHeader)
-  build_string("LDFLAGS" "ws2_32 -liphlpapi -lpsapi")
+  list(APPEND LDFLAGS -lws2_32 -liphlpapi -lpsapi)
   # build static to avoid runtime dependencies to GCC libraries
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
@@ -325,14 +325,14 @@ else()
   build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
-  build_string("LDFLAGS" "ws2_32 iphlpapi")
+  list(APPEND LDFLAGS ws2_32 iphlpapi)
 endif()
 # iOS support
 if(CAF_OSX_SYSROOT)
   set(CMAKE_OSX_SYSROOT "${CAF_OSX_SYSROOT}")
 endif()
 if(CAF_IOS_DEPLOYMENT_TARGET)
-  if("${CAF_OSX_SYSROOT}" STREQUAL "iphonesimulator")
+  if(CAF_OSX_SYSROOT STREQUAL "iphonesimulator")
     build_string("EXTRA_FLAGS"
                  "-mios-simulator-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
   else()
@@ -361,7 +361,9 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 # needed by subprojects
-build_string("LDFLAGS" "${CMAKE_LD_LIBS}")
+if (DEFINED CMAKE_LD_LIBS)
+  list(APPEND ${CMAKE_LD_LIBS})
+endif()
 
 ################################################################################
 #                       configure build_config.hpp header                      #
@@ -393,7 +395,7 @@ if(CAF_USE_ASIO)
   if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
-    build_string("LDFLAGS" "${Boost_SYSTEM_LIBRARY}")
+    list(APPEND LDFLAGS ${Boost_SYSTEM_LIBRARY})
     set(CAF_USE_ASIO_INT 1)
   else()
     set(CAF_USE_ASIO no)
@@ -697,7 +699,7 @@ if(EXISTS "${MANUAL_DIR}"
                     ERROR_QUIET
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
     # prefer tag name over auto-generated version
-    if("${GIT_TAG_RES}" STREQUAL "0")
+    if(GIT_TAG_RES STREQUAL "0")
       set(CAF_RELEASE "${GIT_TAG}")
     else()
       set(CAF_RELEASE "${CAF_VERSION}")
