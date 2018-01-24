@@ -132,7 +132,7 @@ endif()
 #                        respect environment variables                         #
 ################################################################################
 
-build_string("LDFLAGS" "$ENV{LDFLAGS}")
+set(LDFLAGS $ENV{LDFLAGS})
 
 ################################################################################
 #                              get version of CAF                              #
@@ -316,7 +316,7 @@ if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
   include(GenerateExportHeader)
-  build_string("LDFLAGS" "ws2_32 -liphlpapi -lpsapi")
+  list(APPEND LDFLAGS -lws2_32 -liphlpapi -lpsapi)
   # build static to avoid runtime dependencies to GCC libraries
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
@@ -325,7 +325,7 @@ else()
   build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
-  build_string("LDFLAGS" "ws2_32 iphlpapi")
+  list(APPEND LDFLAGS ws2_32 iphlpapi)
 endif()
 # iOS support
 if(CAF_OSX_SYSROOT)
@@ -361,7 +361,9 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 # needed by subprojects
-build_string("LDFLAGS" "${CMAKE_LD_LIBS}")
+if (DEFINED CMAKE_LD_LIBS)
+  list(APPEND ${CMAKE_LD_LIBS})
+endif()
 
 ################################################################################
 #                       configure build_config.hpp header                      #
@@ -393,7 +395,7 @@ if(CAF_USE_ASIO)
   if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
-    build_string("LDFLAGS" "${Boost_SYSTEM_LIBRARY}")
+    list(APPEND LDFLAGS ${Boost_SYSTEM_LIBRARY})
     set(CAF_USE_ASIO_INT 1)
   else()
     set(CAF_USE_ASIO no)
