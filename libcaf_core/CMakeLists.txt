@@ -18,6 +18,7 @@ set (LIBCAF_CORE_SRCS
      src/abstract_group.cpp
      src/actor.cpp
      src/actor_addr.cpp
+     src/actor_clock.cpp
      src/actor_companion.cpp
      src/actor_config.cpp
      src/actor_control_block.cpp
@@ -89,6 +90,7 @@ set (LIBCAF_CORE_SRCS
      src/sequencer.cpp
      src/serializer.cpp
      src/shared_spinlock.cpp
+     src/simple_actor_clock.cpp
      src/skip.cpp
      src/splitter.cpp
      src/stream.cpp
@@ -106,6 +108,7 @@ set (LIBCAF_CORE_SRCS
      src/sync_request_bouncer.cpp
      src/term.cpp
      src/terminal_stream_scatterer.cpp
+     src/test_actor_clock.cpp
      src/test_coordinator.cpp
      src/timestamp.cpp
      src/try_match.cpp

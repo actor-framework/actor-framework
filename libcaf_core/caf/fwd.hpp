@@ -74,6 +74,7 @@ class actor_addr;
 class actor_pool;
 class message_id;
 class serializer;
+class actor_clock;
 class actor_proxy;
 class local_actor;
 class ref_counted;
