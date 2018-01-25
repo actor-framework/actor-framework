@@ -30,6 +30,15 @@ public:
 
   time_point now() const noexcept override;
 
+  /// Tries to dispatch the next timeout or delayed message regardless of its
+  /// timestamp. Returns `false` if `schedule().empty()`, otherwise `true`.
+  bool dispatch_once();
+
+  /// Dispatches all timeouts and delayed messages regardless of their
+  /// timestamp. Returns the number of dispatched events.
+  size_t dispatch();
+
+  /// Advances the time by `x` and dispatches timeouts and delayed messages.
   void advance_time(duration_type x);
 };
 

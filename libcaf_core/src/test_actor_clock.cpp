@@ -25,6 +25,27 @@ test_actor_clock::time_point test_actor_clock::now() const noexcept {
   return current_time;
 }
 
+bool test_actor_clock::dispatch_once() {
+  if (schedule_.empty())
+    return false;
+  visitor f{this};
+  auto i = schedule_.begin();
+  visit(f, i->second);
+  schedule_.erase(i);
+  return true;
+}
+
+size_t test_actor_clock::dispatch() {
+  if (schedule_.empty())
+    return 0u;
+  visitor f{this};
+  auto result = schedule_.size();
+  for (auto& kvp : schedule_)
+    visit(f, kvp.second);
+  schedule_.clear();
+  return result;
+}
+
 void test_actor_clock::advance_time(duration_type x) {
   visitor f{this};
   current_time += x;

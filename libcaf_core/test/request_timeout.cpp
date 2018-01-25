@@ -280,7 +280,6 @@ struct fixture {
         self(system),
         sched(dynamic_cast<scheduler::test_coordinator&>(system.scheduler())) {
     CAF_REQUIRE(sched.jobs.empty());
-    CAF_REQUIRE(sched.delayed_messages.empty());
   }
 
   ~fixture() {
@@ -335,8 +334,7 @@ CAF_TEST(nested_timeout) {
     // not respond to the message yet, i.e., timeout arrives before response
     sched.run();
     // dispatch second timeout
-    CAF_REQUIRE(!sched.delayed_messages.empty());
-    sched.dispatch();
+    CAF_REQUIRE_EQUAL(sched.dispatch(), true);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
     CAF_CHECK(!had_timeout);
     CAF_CHECK(sched.next_job<ping_actor>().state.had_first_timeout);

@@ -45,19 +45,8 @@ public:
   /// A double-ended queue representing our current job queue.
   std::deque<resumable*> jobs;
 
-  /// A scheduled message or timeout.
-  struct delayed_msg {
-    strong_actor_ptr from;
-    strong_actor_ptr to;
-    message_id mid;
-    message msg;
-  };
-
   /// A clock type using the highest available precision.
   using hrc = std::chrono::high_resolution_clock;
-
-  /// A map type for storing scheduled messages and timeouts.
-  std::multimap<hrc::time_point, delayed_msg> delayed_messages;
 
   /// Returns whether at least one job is in the queue.
   inline bool has_job() const {
