@@ -77,7 +77,8 @@ basp_broker_state::basp_broker_state(broker* selfptr)
                              static_cast<proxy_registry::backend&>(*this)),
       self(selfptr),
       instance(selfptr, *this),
-      max_buffers(self->system().config().middleman_cached_udp_buffers) {
+      max_buffers(self->system().config().middleman_cached_udp_buffers),
+      max_pending_messages(self->system().config().middleman_max_pending_msgs) {
   CAF_ASSERT(this_node() != none);
 }
 
@@ -447,8 +448,8 @@ void basp_broker_state::set_context(connection_handle hdl) {
         basp::header{basp::message_type::server_handshake, 0,
                      0, 0, none, none,
                      invalid_actor_id, invalid_actor_id},
-        hdl, none, 0, 0, none,
-        false, 0, 0, basp::endpoint_context::pending_map()
+        hdl, none, 0, 0, none, false, 0, 0,
+        basp::endpoint_context::pending_map(), false
       }
     ).first;
   }
@@ -467,8 +468,8 @@ void basp_broker_state::set_context(datagram_handle hdl) {
         basp::header{basp::message_type::server_handshake,
                      0, 0, 0, none, none,
                      invalid_actor_id, invalid_actor_id},
-        hdl, none, 0, 0, none,
-        true, 0, 0, basp::endpoint_context::pending_map()
+        hdl, none, 0, 0, none, true, 0, 0,
+        basp::endpoint_context::pending_map(), false
       }
     ).first;
   }
@@ -533,37 +534,49 @@ basp_broker_state::next_sequence_number(datagram_handle hdl) {
   return 0;
 }
 
-void basp_broker_state::add_pending(basp::sequence_type seq,
-                                    basp::endpoint_context& ep, 
+void basp_broker_state::add_pending(execution_unit* ctx,
+                                    basp::endpoint_context& ep,
+                                    basp::sequence_type seq,
                                     basp::header hdr,
                                     std::vector<char> payload) {
+  if (!ep.requires_ordering)
+    return;
   ep.pending.emplace(seq, std::make_pair(std::move(hdr), std::move(payload)));
-  // TODO: choose reasonable default timeout, make configurable
-  self->delayed_send(self, std::chrono::milliseconds(20), pending_atom::value,
-                     get<datagram_handle>(ep.hdl), seq);
+  if (ep.pending.size() >= max_pending_messages)
+    deliver_pending(ctx, ep, true);
+  else if (!ep.did_set_timeout)
+    self->delayed_send(self, pending_to, pending_atom::value,
+                       get<datagram_handle>(ep.hdl));
 }
 
 bool basp_broker_state::deliver_pending(execution_unit* ctx,
-                                        basp::endpoint_context& ep) {
-  if (!ep.requires_ordering)
+                                        basp::endpoint_context& ep,
+                                        bool force) {
+  if (!ep.requires_ordering || ep.pending.empty())
     return true;
   std::vector<char>* payload = nullptr;
-  auto itr = ep.pending.find(ep.seq_incoming);
-  while (itr != ep.pending.end()) {
-    ep.hdr = std::move(itr->second.first);
-    payload = &itr->second.second;
+  auto i = ep.pending.begin();
+  // Force delivery of at least the first messages, if desired.
+  if (force)
+    ep.seq_incoming = i->first;
+  while (i != ep.pending.end() && i->first == ep.seq_incoming) {
+    ep.hdr = std::move(i->second.first);
+    payload = &i->second.second;
     if (!instance.handle(ctx, get<datagram_handle>(ep.hdl),
                          ep.hdr, payload, false, ep, none))
       return false;
-    ep.pending.erase(itr);
+    i = ep.pending.erase(i);
     ep.seq_incoming += 1;
-    itr = ep.pending.find(ep.seq_incoming);
   }
+  // Set a timeout if there are still pending messages.
+  if (!ep.pending.empty() && !ep.did_set_timeout)
+    self->delayed_send(self, pending_to, pending_atom::value,
+                       get<datagram_handle>(ep.hdl));
   return true;
 }
 
-void basp_broker_state::drop_pending(basp::sequence_type seq,
-                                     basp::endpoint_context& ep) {
+void basp_broker_state::drop_pending(basp::endpoint_context& ep,
+                                     basp::sequence_type seq) {
   if (!ep.requires_ordering)
     return;
   ep.pending.erase(seq);
@@ -913,18 +926,19 @@ behavior basp_broker::make_behavior() {
       delayed_send(this, std::chrono::milliseconds{interval},
                    tick_atom::value, interval);
     },
-    [=](pending_atom, datagram_handle hdl, basp::sequence_type seq) {
+    [=](pending_atom, datagram_handle hdl) {
       auto& ep = state.ctx_udp[hdl];
-      auto itr = ep.pending.find(seq);
-      if (itr != ep.pending.end()) {
-        if (seq == ep.seq_incoming ||
-            basp::instance::is_greater(seq, ep.seq_incoming)) {
-          // skip missing messages
-          ep.seq_incoming = seq;
-          state.deliver_pending(context(), ep);
-        } else {
-          state.drop_pending(seq, ep);
-        }
+      ep.did_set_timeout = false;
+      if (ep.pending.empty())
+        return;
+      auto i = ep.pending.begin();
+      auto seq = i->first;
+      if (seq == ep.seq_incoming ||
+          basp::instance::is_greater(seq, ep.seq_incoming)) {
+        // Skip missing messages and force delivery.
+        state.deliver_pending(context(), ep, true);
+      } else {
+        state.drop_pending(ep, seq);
       }
     }
   };
