@@ -54,7 +54,9 @@ void await_all_locals_down(actor_system& sys, std::initializer_list<actor> xs) {
       self->send_exit(x, exit_reason::kill);
       ys.push_back(x);
     }
-  self->wait_for(ys);
+  // Don't block when using the test coordinator.
+  if (sys.config().scheduler_policy != atom("testing"))
+    self->wait_for(ys);
 }
 
 class local_group : public abstract_group {
