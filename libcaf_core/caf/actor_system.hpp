@@ -32,6 +32,7 @@
 #include "caf/logger.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/make_actor.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/spawn_options.hpp"
@@ -475,9 +476,12 @@ public:
   }
 
   /// Returns the configuration of this actor system.
-  const actor_system_config& config() const {
+  inline const actor_system_config& config() const {
     return cfg_;
   }
+
+  /// Returns the system-wide clock.
+  actor_clock& clock() noexcept;
 
   /// @cond PRIVATE
 

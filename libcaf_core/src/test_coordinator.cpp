@@ -99,12 +99,14 @@ bool test_coordinator::detaches_utility_actors() const {
   return false;
 }
 
+detail::test_actor_clock& test_coordinator::clock() noexcept {
+  return clock_;
+}
+
 void test_coordinator::start() {
   dummy_worker worker{this};
   actor_config cfg{&worker};
   auto& sys = system();
-  utility_actors_[timer_id] = make_actor<dummy_timer, actor>(
-    sys.next_actor_id(), sys.node(), &sys, cfg, this);
   utility_actors_[printer_id] = make_actor<dummy_printer, actor>(
     sys.next_actor_id(), sys.node(), &sys, cfg);
 }

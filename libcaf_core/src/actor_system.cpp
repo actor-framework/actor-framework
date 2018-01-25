@@ -221,11 +221,13 @@ actor_system::actor_system(actor_system_config& cfg)
     modules_[mod_ptr->id()].reset(mod_ptr);
   }
   auto& sched = modules_[module::scheduler];
-  using test = scheduler::test_coordinator;
-  using share = scheduler::coordinator<policy::work_sharing>;
-  using steal = scheduler::coordinator<policy::work_stealing>;
-  using profiled_share = scheduler::profiled_coordinator<policy::profiled<policy::work_sharing>>;
-  using profiled_steal = scheduler::profiled_coordinator<policy::profiled<policy::work_stealing>>;
+  using namespace scheduler;
+  using policy::work_sharing;
+  using policy::work_stealing;
+  using share = coordinator<work_sharing>;
+  using steal = coordinator<work_stealing>;
+  using profiled_share = profiled_coordinator<policy::profiled<work_sharing>>;
+  using profiled_steal = profiled_coordinator<policy::profiled<work_stealing>>;
   // set scheduler only if not explicitly loaded by user
   if (!sched) {
     enum sched_conf {
@@ -262,7 +264,7 @@ actor_system::actor_system(actor_system_config& cfg)
         sched.reset(new profiled_share(*this));
         break;
       case testing:
-        sched.reset(new test(*this));
+        sched.reset(new test_coordinator(*this));
     }
   }
   // initialize state for each module and give each module the opportunity
@@ -401,6 +403,11 @@ actor_id actor_system::latest_actor_id() const {
 void actor_system::await_all_actors_done() const {
   registry_.await_running_count_equal(0);
 }
+
+actor_clock& actor_system::clock() noexcept {
+  return scheduler().clock();
+}
+
 
 void actor_system::inc_detached_threads() {
   ++detached;

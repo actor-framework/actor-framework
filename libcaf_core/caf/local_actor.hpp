@@ -206,6 +206,11 @@ public:
     return context_->system();
   }
 
+  /// Returns the clock of the actor system.
+  inline actor_clock& clock() const {
+    return home_system().clock();
+  }
+
   /// @cond PRIVATE
 
   void monitor(abstract_actor* ptr);

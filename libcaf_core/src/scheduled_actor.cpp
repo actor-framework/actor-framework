@@ -297,14 +297,16 @@ uint32_t scheduled_actor::request_timeout(const duration& d) {
   }
   setf(has_timeout_flag);
   auto result = ++timeout_id_;
-  auto msg = make_message(timeout_msg{++timeout_id_});
+  auto msg = make_message(timeout_msg{result});
   CAF_LOG_TRACE("send new timeout_msg, " << CAF_ARG(timeout_id_));
-  if (d.is_zero())
+  if (d.is_zero()) {
     // immediately enqueue timeout message if duration == 0s
     enqueue(ctrl(), invalid_message_id, std::move(msg), context());
-  else
-    system().scheduler().delayed_send(d, ctrl(), strong_actor_ptr(ctrl()),
-                                      message_id::make(), std::move(msg));
+  } else {
+    auto t = clock().now();
+    t += d;
+    clock().set_receive_timeout(t, this, result);
+  }
   return result;
 }
 
