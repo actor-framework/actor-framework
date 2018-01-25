@@ -51,6 +51,7 @@
 #include "caf/message_id.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/serializer.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/local_actor.hpp"

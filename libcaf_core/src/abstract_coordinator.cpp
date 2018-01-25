@@ -53,85 +53,6 @@ namespace scheduler {
 
 namespace {
 
-using hrc = std::chrono::high_resolution_clock;
-
-class timer_actor : public blocking_actor {
-public:
-  explicit timer_actor(actor_config& cfg) : blocking_actor(cfg) {
-    // nop
-  }
-
-  struct delayed_msg {
-    strong_actor_ptr from;
-    strong_actor_ptr to;
-    message_id mid;
-    message msg;
-  };
-
-  void deliver(delayed_msg& dm) {
-    dm.to->enqueue(dm.from, dm.mid, std::move(dm.msg), nullptr);
-  }
-
-  template <class Map, class... Ts>
-  void insert_dmsg(Map& storage, const duration& d, Ts&&... xs) {
-    auto tout = hrc::now();
-    tout += d;
-    delayed_msg dmsg{std::forward<Ts>(xs)...};
-    storage.emplace(std::move(tout), std::move(dmsg));
-  }
-
-  void act() override {
-    // local state
-    accept_one_cond rc;
-    bool running = true;
-    std::multimap<hrc::time_point, delayed_msg> messages;
-    // our message handler
-    behavior nested{
-      [&](const duration& d, strong_actor_ptr& from,
-          strong_actor_ptr& to, message_id mid, message& msg) {
-        insert_dmsg(messages, d, std::move(from),
-                    std::move(to), mid, std::move(msg));
-      },
-      [&](const exit_msg& dm) {
-        if (dm.reason) {
-          fail_state(dm.reason);
-          running = false;
-        }
-      }
-    };
-    auto bhvr = detail::make_blocking_behavior(
-      &nested,
-      others >> [&](message_view& x) -> result<message> {
-        std::cerr << "*** unexpected message in timer_actor: "
-                  << to_string(x.content()) << std::endl;
-        return sec::unexpected_message;
-      }
-    );
-    // loop until receiving an exit message
-    while (running) {
-      if (messages.empty()) {
-        // use regular receive as long as we don't have a pending timeout
-        receive_impl(rc, message_id::make(), bhvr);
-      } else {
-        auto tout = messages.begin()->first;
-        if (await_data(tout)) {
-          receive_impl(rc, message_id::make(), bhvr);
-        } else {
-          auto it = messages.begin();
-          while (it != messages.end() && (it->first) <= tout) {
-            deliver(it->second);
-            it = messages.erase(it);
-          }
-        }
-      }
-    }
-  }
-
-  const char* name() const override {
-    return "timer_actor";
-  }
-};
-
 using string_sink = std::function<void (std::string&&)>;
 
 // the first value is the use count, the last ostream_handle that
@@ -322,7 +243,6 @@ void abstract_coordinator::start() {
   CAF_LOG_TRACE("");
   // launch utility actors
   static constexpr auto fs = hidden + detached;
-  utility_actors_[timer_id] = system_.spawn<timer_actor, fs>();
   utility_actors_[printer_id] = system_.spawn<printer_actor, fs>();
 }
 

@@ -65,8 +65,9 @@ void local_actor::request_response_timeout(const duration& d, message_id mid) {
   CAF_LOG_TRACE(CAF_ARG(d) << CAF_ARG(mid));
   if (!d.valid())
     return;
-  system().scheduler().delayed_send(d, ctrl(), ctrl(), mid.response_id(),
-                                    make_message(sec::request_timeout));
+  auto t = clock().now();
+  t += d;
+  clock().set_request_timeout(t, this, mid.response_id());
 }
 
 void local_actor::monitor(abstract_actor* ptr) {
@@ -185,6 +186,7 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   // tell registry we're done
   unregister_from_system();
   monitorable_actor::cleanup(std::move(fail_state), host);
+  clock().cancel_timeouts(this);
   CAF_LOG_TERMINATE_EVENT(this, fail_state);
   return true;
 }

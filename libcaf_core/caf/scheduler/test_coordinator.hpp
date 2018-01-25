@@ -30,6 +30,8 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+#include "caf/detail/test_actor_clock.hpp"
+
 namespace caf {
 namespace scheduler {
 
@@ -43,19 +45,8 @@ public:
   /// A double-ended queue representing our current job queue.
   std::deque<resumable*> jobs;
 
-  /// A scheduled message or timeout.
-  struct delayed_msg {
-    strong_actor_ptr from;
-    strong_actor_ptr to;
-    message_id mid;
-    message msg;
-  };
-
   /// A clock type using the highest available precision.
   using hrc = std::chrono::high_resolution_clock;
-
-  /// A map type for storing scheduled messages and timeouts.
-  std::multimap<hrc::time_point, delayed_msg> delayed_messages;
 
   /// Returns whether at least one job is in the queue.
   inline bool has_job() const {
@@ -142,6 +133,8 @@ public:
 
   bool detaches_utility_actors() const override;
 
+  detail::test_actor_clock& clock() noexcept override;
+
 protected:
   void start() override;
 
@@ -151,6 +144,9 @@ protected:
 
 private:
   void inline_all_enqueues_helper();
+
+  /// Allows users to fake time at will.
+  detail::test_actor_clock clock_;
 
   /// User-provided callback for triggering custom code in `enqueue`.
   std::function<void()> after_next_enqueue_;

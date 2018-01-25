@@ -87,7 +87,6 @@ struct fixture {
         self(system),
         sched(dynamic_cast<scheduler::test_coordinator&>(system.scheduler())) {
     CAF_REQUIRE(sched.jobs.empty());
-    CAF_REQUIRE(sched.delayed_messages.empty());
   }
 
   ~fixture() {

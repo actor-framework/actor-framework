@@ -30,6 +30,7 @@
 #include "caf/duration.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/actor_system.hpp"
 
 namespace caf {
@@ -43,7 +44,6 @@ class abstract_coordinator : public actor_system::module {
 public:
   enum utility_actor_id : size_t {
     printer_id,
-    timer_id,
     max_id
   };
 
@@ -54,11 +54,6 @@ public:
     return actor_cast<actor>(utility_actors_[printer_id]);
   }
 
-  /// Returns a handle to the central timer actor.
-  inline actor timer() const {
-    return actor_cast<actor>(utility_actors_[timer_id]);
-  }
-
   /// Returns the number of utility actors.
   inline size_t num_utility_actors() const {
     return utility_actors_.size();
@@ -66,16 +61,6 @@ public:
 
   /// Puts `what` into the queue of a randomly chosen worker.
   virtual void enqueue(resumable* what) = 0;
-
-  template <class Duration, class... Data>
-  void delayed_send(Duration rel_time, strong_actor_ptr from,
-                    strong_actor_ptr to, message_id mid, message data) {
-    auto& dest = utility_actors_[timer_id];
-    dest->enqueue(nullptr, invalid_message_id,
-                  make_message(duration{rel_time}, std::move(from),
-                               std::move(to), mid, std::move(data)),
-                  nullptr);
-  }
 
   inline actor_system& system() {
     return system_;
@@ -102,21 +87,26 @@ public:
 
   static void cleanup_and_release(resumable*);
 
+  virtual actor_clock& clock() noexcept = 0;
+
 protected:
   void stop_actors();
 
-  // ID of the worker receiving the next enqueue
+  /// ID of the worker receiving the next enqueue (round-robin dispatch).
   std::atomic<size_t> next_worker_;
 
-  // number of messages each actor is allowed to consume per resume
+  /// Number of messages each actor is allowed to consume per resume.
   size_t max_throughput_;
 
-  // configured number of workers
+  /// Configured number of workers.
   size_t num_workers_;
 
+  /// Background workers, e.g., printer.
   std::array<actor, max_id> utility_actors_;
 
+  /// Reference to the host system.
   actor_system& system_;
+
 };
 
 } // namespace scheduler

@@ -62,33 +62,6 @@ private:
   message_handler mh_;
 };
 
-class dummy_timer : public monitorable_actor {
-public:
-  dummy_timer(actor_config& cfg, test_coordinator* parent)
-      : monitorable_actor(cfg),
-        parent_(parent) {
-    mh_.assign(
-      [&](const duration& d, strong_actor_ptr& from,
-          strong_actor_ptr& to, message_id mid, message& msg) {
-        auto tout = test_coordinator::hrc::now();
-        tout += d;
-        using delayed_msg = test_coordinator::delayed_msg;
-        parent_->delayed_messages.emplace(tout, delayed_msg{std::move(from),
-                                                            std::move(to), mid,
-                                                            std::move(msg)});
-      }
-    );
-  }
-
-  void enqueue(mailbox_element_ptr what, execution_unit*) override {
-    mh_(what->content());
-  }
-
-private:
-  test_coordinator* parent_;
-  message_handler mh_;
-};
-
 } // namespace <anonymous>
 
 test_coordinator::test_coordinator(actor_system& sys) : super(sys) {
@@ -99,12 +72,14 @@ bool test_coordinator::detaches_utility_actors() const {
   return false;
 }
 
+detail::test_actor_clock& test_coordinator::clock() noexcept {
+  return clock_;
+}
+
 void test_coordinator::start() {
   dummy_worker worker{this};
   actor_config cfg{&worker};
   auto& sys = system();
-  utility_actors_[timer_id] = make_actor<dummy_timer, actor>(
-    sys.next_actor_id(), sys.node(), &sys, cfg, this);
   utility_actors_[printer_id] = make_actor<dummy_printer, actor>(
     sys.next_actor_id(), sys.node(), &sys, cfg);
 }
@@ -171,20 +146,11 @@ size_t test_coordinator::run(size_t max_count) {
 }
 
 bool test_coordinator::dispatch_once() {
-  auto i = delayed_messages.begin();
-  if (i == delayed_messages.end())
-    return false;
-  auto& dm = i->second;
-  dm.to->enqueue(dm.from, dm.mid, std::move(dm.msg), nullptr);
-  delayed_messages.erase(i);
-  return true;
+  return clock().dispatch_once();
 }
 
 size_t test_coordinator::dispatch() {
-  size_t res = 0;
-  while (dispatch_once())
-    ++res;
-  return res;
+  return clock().dispatch();
 }
 
 std::pair<size_t, size_t> test_coordinator::run_dispatch_loop() {
