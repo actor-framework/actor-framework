@@ -128,38 +128,33 @@
 /// an own thread if one needs to make use of blocking APIs.
 ///
 /// Writing applications in `libcaf` requires a minimum of gluecode and
-/// each context <i>is</i> an actor. Even main is implicitly
-/// converted to an actor if needed.
+/// each context <i>is</i> an actor. Scoped actors allow actor interaction
+/// from the context of threads such as main.
 ///
 /// @section GettingStarted Getting Started
 ///
-/// To build `libcaf,` you need `GCC >= 4.8 or <tt>Clang >=
-///3.2</tt>,
+/// To build `libcaf,` you need `GCC >= 4.8 or <tt>Clang >= 3.2</tt>,
 /// and `CMake`.
 ///
-/// The usual build steps on Linux and Mac OS X are:
+/// The usual build steps on Linux and macOS are:
 ///
-///- `mkdir build
-///- `cd build
-///- `cmake ..
+///- `./configure
 ///- `make
 ///- `make install (as root, optionally)
 ///
 /// Please run the unit tests as well to verify that `libcaf`
 /// works properly.
 ///
-///- `./bin/unit_tests
+///- `make test
 ///
 /// Please submit a bug report that includes (a) your compiler version,
-/// (b) your OS, and (c) the output of the unit tests if an error occurs.
-///
-/// Windows is not supported yet, because MVSC++ doesn't implement the
-/// C++11 features needed to compile `libcaf`.
+/// (b) your OS, and (c) the output of the unit tests if an error occurs:
+/// https://github.com/actor-framework/actor-framework/issues
 ///
 /// Please read the <b>Manual</b> for an introduction to `libcaf`.
-/// It is available online as HTML at
-/// http://neverlord.github.com/libcaf/manual/index.html or as PDF at
-/// http://neverlord.github.com/libcaf/manual/manual.pdf
+/// It is available online on Read The Docs at
+/// https://actor-framework.readthedocs.io or as PDF at
+/// http://www.actor-framework.org/pdf/manual.pdf
 ///
 /// @section IntroHelloWorld Hello World Example
 ///
@@ -218,37 +213,56 @@
 ///
 /// ~~
 /// // spawn some actors
-/// auto a1 = spawn(...);
-/// auto a2 = spawn(...);
-/// auto a3 = spawn(...);
+/// actor_system_config cfg;
+/// actor_system system{cfg};
+/// auto a1 = system.spawn(...);
+/// auto a2 = system.spawn(...);
+/// auto a3 = system.spawn(...);
+///
+/// // an actor executed in the current thread
+/// scoped_actor self{system};
+///
+/// // define an atom for message annotation
+/// using hello_atom = atom_constant<atom("hello")>;
+/// using compute_atom = atom_constant<atom("compute")>;
+/// using result_atom = atom_constant<atom("result")>;
 ///
 /// // send a message to a1
-/// send(a1, atom("hello"), "hello a1!");
+/// self->send(a1, hello_atom::value, "hello a1!");
 ///
 /// // send a message to a1, a2, and a3
-/// auto msg = make_message(atom("compute"), 1, 2, 3);
-/// send(a1, msg);
-/// send(a2, msg);
-/// send(a3, msg);
+/// auto msg = make_message(compute_atom::value, 1, 2, 3);
+/// self->send(a1, msg);
+/// self->send(a2, msg);
+/// self->send(a3, msg);
 /// ~~
 ///
 /// @section Receive Receive messages
 ///
 /// The function `receive` takes a `behavior` as argument. The behavior
-/// is a list of { pattern >> callback } rules.
+/// is a list of { callback } rules where the callback argument types
+/// define a pattern for matching messages.
 ///
 /// ~~
-/// receive
-/// (
-///   on(atom("hello"), arg_match) >> [](const std::string& msg)
-///   {
+/// {
+///   [](hello_atom, const std::string& msg) {
 ///     cout << "received hello message: " << msg << endl;
 ///   },
-///   on(atom("compute"), arg_match) >> [](int i0, int i1, int i2)
-///   {
+///   [](compute_atom, int i0, int i1, int i2) {
 ///     // send our result back to the sender of this messages
-///     return make_message(atom("result"), i0 + i1 + i2);
+///     return make_message(result_atom::value, i0 + i1 + i2);
 ///   }
+/// }
+/// ~~
+///
+/// Blocking actors such as the scoped actor can call their receive member
+/// to handle incoming messages.
+///
+/// ~~
+/// self->receive(
+///  [](result_atom, int i) {
+///    cout << "result is: " << i << endl;
+///  }
 /// );
 /// ~~
 ///
@@ -264,42 +278,40 @@
 ///
 /// Example actor:
 /// ~~
-/// void math_actor() {
-///   receive_loop (
-///     on(atom("plus"), arg_match) >> [](int a, int b) {
+/// using plus_atom = atom_constant<atom("plus")>;
+/// using minus_atom = atom_constant<atom("minus")>;
+/// behavior math_actor() {
+///   return {
+///     [](plus_atom, int a, int b) {
 ///       return make_message(atom("result"), a + b);
 ///     },
-///     on(atom("minus"), arg_match) >> [](int a, int b) {
+///     [](minus_atom, int a, int b) {
 ///       return make_message(atom("result"), a - b);
 ///     }
-///   );
+///   };
 /// }
 /// ~~
 ///
 /// @section ReceiveLoops Receive Loops
 ///
-/// Previous examples using `receive` create behaviors on-the-fly.
+/// The previous examples used `receive` to create a behavior on-the-fly.
 /// This is inefficient in a loop since the argument passed to receive
 /// is created in each iteration again. It's possible to store the behavior
 /// in a variable and pass that variable to receive. This fixes the issue
 /// of re-creation each iteration but rips apart definition and usage.
 ///
-/// There are four convenience functions implementing receive loops to
+/// There are three convenience functions implementing receive loops to
 /// declare behavior where it belongs without unnecessary
-/// copies: `receive_loop,` `receive_while,` `receive_for` and `do_receive`.
-///
-/// `receive_loop` is analogous to `receive` and loops "forever" (until the
-/// actor finishes execution).
+/// copies: `receive_while,` `receive_for` and `do_receive`.
 ///
 /// `receive_while` creates a functor evaluating a lambda expression.
 /// The loop continues until the given lambda returns `false`. A simple example:
 ///
 /// ~~
-/// // receive two integers
-/// vector<int> received_values;
-/// receive_while([&]() { return received_values.size() < 2; }) (
-///   on<int>() >> [](int value) {
-///     received_values.push_back(value);
+/// size_t received = 0;
+/// receive_while([&] { return received < 10; }) (
+///   [&](int) {
+///     ++received;
 ///   }
 /// );
 /// // ...
@@ -308,10 +320,12 @@
 /// `receive_for` is a simple ranged-based loop:
 ///
 /// ~~
-/// std::vector<int> vec {1, 2, 3, 4};
-/// auto i = vec.begin();
-/// receive_for(i, vec.end()) (
-///   on(atom("get")) >> [&]() -> message { return {atom("result"), *i}; }
+/// std::vector<int> results;
+/// size_t i = 0;
+/// receive_for(i, 10) (
+///   [&](int value) {
+///     results.push_back(value);
+///   }
 /// );
 /// ~~
 ///
@@ -320,14 +334,12 @@
 /// returns true. Example:
 ///
 /// ~~
-/// // receive ints until zero was received
-/// vector<int> received_values;
+/// size_t received = 0;
 /// do_receive (
-///   on<int>() >> [](int value) {
-///     received_values.push_back(value);
+///   [&](int) {
+///     ++received;
 ///   }
-/// )
-/// .until([&]() { return received_values.back() == 0 });
+/// ).until([&] { return received >= 10; });
 /// // ...
 /// ~~
 ///
@@ -338,13 +350,16 @@
 /// Usage example:
 ///
 /// ~~
-/// delayed_send(self, std::chrono::seconds(1), poll_atom::value);
-/// receive_loop (
+/// scoped_actor self{...};
+///
+/// self->delayed_send(self, std::chrono::seconds(1), poll_atom::value);
+/// bool running = true;
+/// self->receive_while([&](){ return running; }) (
 ///   // ...
-///   [](poll_atom) {
+///   [&](poll_atom) {
 ///     // ... poll something ...
 ///     // and do it again after 1sec
-///     delayed_send(self, std::chrono::seconds(1), poll_atom::value);
+///     self->delayed_send(self, std::chrono::seconds(1), poll_atom::value);
 ///   }
 /// );
 /// ~~
@@ -374,11 +389,6 @@
 ///
 /// // x has the type caf::tuple<std::string, std::string>
 /// auto x = make_message("hello", "tuple");
-///
-/// receive (
-///   // equal to: on(std::string("hello actor!"))
-///   on("hello actor!") >> [] { }
-/// );
 /// ~~
 ///
 /// @defgroup ActorCreation Creating Actors
