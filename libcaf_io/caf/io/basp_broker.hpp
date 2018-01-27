@@ -97,15 +97,16 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   uint16_t next_sequence_number(datagram_handle hdl) override;
 
   // inherited from basp::instance::callee
-  void add_pending(uint16_t seq, basp::endpoint_context& ep, basp::header hdr,
+  void add_pending(execution_unit* ctx, basp::endpoint_context& ep,
+                   uint16_t seq, basp::header hdr,
                    std::vector<char> payload) override;
 
   // inherited from basp::instance::callee
-  bool deliver_pending(execution_unit* ctx,
-                       basp::endpoint_context& ep) override;
+  bool deliver_pending(execution_unit* ctx, basp::endpoint_context& ep,
+                       bool force) override;
 
   // inherited from basp::instance::callee
-  void drop_pending(uint16_t seq, basp::endpoint_context& ep) override;
+  void drop_pending(basp::endpoint_context& ep, uint16_t seq) override;
 
   // inherited from basp::instance::callee
   buffer_type& get_buffer(endpoint_handle hdl) override;
@@ -173,6 +174,12 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // reusable send buffers for UDP communication
   const size_t max_buffers;
   std::stack<buffer_type> cached_buffers;
+
+  // maximum queue size for pending messages of endpoints with ordering
+  const size_t max_pending_messages;
+
+  // timeout for delivery of pending messages of endpoints with ordering
+  const std::chrono::milliseconds pending_to = std::chrono::milliseconds(100);
 
   // returns the node identifier of the underlying BASP instance
   const node_id& this_node() const {

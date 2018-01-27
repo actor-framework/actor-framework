@@ -36,9 +36,8 @@ namespace basp {
 
 // stores meta information for active endpoints
 struct endpoint_context {
-  using pending_map = std::unordered_map<uint16_t,
-                                         std::pair<basp::header,
-                                                   std::vector<char>>>;
+  using pending_map = std::map<sequence_type, std::pair<basp::header,
+                                                        std::vector<char>>>;
   // denotes what message we expect from the remote node next
   basp::connection_state cstate;
   // our currently processed BASP header
@@ -55,9 +54,12 @@ struct endpoint_context {
   // protocols that do not implement ordering are ordered by CAF
   bool requires_ordering;
   // sequence numbers and a buffer to establish order
-  uint16_t seq_incoming;
-  uint16_t seq_outgoing;
+  sequence_type seq_incoming;
+  sequence_type seq_outgoing;
+  // pending messages due to ordering
   pending_map pending;
+  // track if a timeout to deliver pending messages is set
+  bool did_set_timeout;
 };
 
 } // namespace basp

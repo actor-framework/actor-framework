@@ -139,6 +139,7 @@ actor_system_config::actor_system_config()
   middleman_enable_tcp = true;
   middleman_enable_udp = false;
   middleman_cached_udp_buffers = 10;
+  middleman_max_pending_msgs = 10;
   // fill our options vector for creating INI and CLI parsers
   opt_group{options_, "scheduler"}
   .add(scheduler_policy, "policy",
@@ -208,6 +209,9 @@ actor_system_config::actor_system_config()
        "enable communication via UDP (off by default)")
   .add(middleman_cached_udp_buffers, "cached-udp-buffers",
        "sets the max number of UDP send buffers that will be cached for reuse "
+       "(default: 10)")
+  .add(middleman_max_pending_msgs, "max-pending-messages",
+       "sets the max number of UDP pending messages due to ordering "
        "(default: 10)");
   opt_group(options_, "opencl")
   .add(opencl_device_ids, "device-ids",

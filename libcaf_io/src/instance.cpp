@@ -162,20 +162,20 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
       return err();
     }
   }
-  // Handle FIFO ordering of datagrams
+  // Handle ordering of datagrams.
   if (is_greater(ep.hdr.sequence_number, ep.seq_incoming)) {
-    // Message arrived "early", add to pending messages
+    // Add early messages to the pending message buffer.
     auto s = ep.hdr.sequence_number;
-    callee_.add_pending(s, ep, std::move(ep.hdr), std::move(pl_buf));
+    callee_.add_pending(ctx, ep, s, std::move(ep.hdr), std::move(pl_buf));
     return true;
   } else if (ep.hdr.sequence_number != ep.seq_incoming) {
-    // Message arrived late, drop it!
+    // Drop messages that arrive late.
     CAF_LOG_DEBUG("dropping message " << CAF_ARG(dm));
     return true;
   }
-  // Message arrived as expected
+  // This is the expected message.
   ep.seq_incoming += 1;
-  // TODO: Add optional reliability here (send acks, ...)
+  // TODO: add optional reliability here
   if (!is_handshake(ep.hdr) && !is_heartbeat(ep.hdr)
       && ep.hdr.dest_node != this_node_) {
     CAF_LOG_DEBUG("forward message");
@@ -208,8 +208,8 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
   }
   if (!handle(ctx, dm.handle, ep.hdr, payload, false, ep, ep.local_port))
     return err();
-  // Look for pending messages
-  if (!callee_.deliver_pending(ctx, ep))
+  // See if the next message was delivered early and is already bufferd.
+  if (!callee_.deliver_pending(ctx, ep, false))
     return err();
   return true;
 };

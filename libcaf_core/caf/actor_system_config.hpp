@@ -301,6 +301,7 @@ public:
   bool middleman_enable_tcp;
   bool middleman_enable_udp;
   size_t middleman_cached_udp_buffers;
+  size_t middleman_max_pending_msgs;
 
   // -- config parameters of the OpenCL module ---------------------------------
 

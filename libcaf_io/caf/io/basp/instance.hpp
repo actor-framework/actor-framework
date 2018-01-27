@@ -112,16 +112,18 @@ public:
 
     /// Adds a message with a future sequence number to the pending messages
     /// of a given endpoint context.
-    virtual void add_pending(sequence_type seq, endpoint_context& ep,
-                             header hdr, std::vector<char> payload) = 0;
+    virtual void add_pending(execution_unit* ctx, endpoint_context& ep,
+                             sequence_type seq, header hdr,
+                             std::vector<char> payload) = 0;
 
-    /// Delivers a pending incoming messages for an endpoint with
-    /// application layer ordering.
-    virtual bool deliver_pending(execution_unit* ctx,
-                                 endpoint_context& ep) = 0;
+    /// Delivers a pending incoming messages for an endpoint `ep` with
+    /// application layer ordering. Delivery of the next available packet can
+    /// be forced to simply skip undeliverd messages via the `force` flag.
+    virtual bool deliver_pending(execution_unit* ctx, endpoint_context& ep,
+                                 bool force) = 0;
 
     /// Drop pending messages with sequence number `seq`.
-    virtual void drop_pending(sequence_type seq, endpoint_context& ep) = 0;
+    virtual void drop_pending(endpoint_context& ep, sequence_type seq) = 0;
 
     /// Returns a reference to the current sent buffer, dispatching the call
     /// based on the type contained in `hdl`.
