@@ -174,22 +174,22 @@ operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {
 
 namespace literals {
 
-constexpr duration operator""_min(unsigned long long x) {
+constexpr duration operator"" _min(unsigned long long x) {
   return {time_unit::minutes, static_cast<uint32_t>(x)};
 }
 
-constexpr duration operator""_s(unsigned long long x) {
+constexpr duration operator"" _s(unsigned long long x) {
   return {time_unit::seconds, static_cast<uint32_t>(x)};
 }
-constexpr duration operator""_ms(unsigned long long x) {
+constexpr duration operator"" _ms(unsigned long long x) {
   return {time_unit::milliseconds, static_cast<uint32_t>(x)};
 }
 
-constexpr duration operator""_us(unsigned long long x) {
+constexpr duration operator"" _us(unsigned long long x) {
   return {time_unit::microseconds, static_cast<uint32_t>(x)};
 }
 
-constexpr duration operator""_ns(unsigned long long x) {
+constexpr duration operator"" _ns(unsigned long long x) {
   return {time_unit::nanoseconds, static_cast<uint32_t>(x)};
 }
 
