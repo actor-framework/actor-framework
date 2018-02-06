@@ -63,13 +63,13 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
                     >::valid,
                 "this actor does not accept the response message");
   if (dest)
-    dest->eq_impl(message_id::make(P), actor_cast<strong_actor_ptr>(src),
+    dest->eq_impl(make_message_id(P), actor_cast<strong_actor_ptr>(src),
                   nullptr, std::forward<Ts>(xs)...);
 }
 
 template <class Source, class Dest, class... Ts>
 void unsafe_send_as(Source* src, const Dest& dest, Ts&&... xs) {
-  actor_cast<abstract_actor*>(dest)->eq_impl(message_id::make(), src->ctrl(),
+  actor_cast<abstract_actor*>(dest)->eq_impl(make_message_id(), src->ctrl(),
                                              src->context(),
                                              std::forward<Ts>(xs)...);
 }
@@ -103,7 +103,7 @@ void anon_send(const Dest& dest, Ts&&... xs) {
   static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                 "receiver does not accept given message");
   if (dest)
-    dest->eq_impl(message_id::make(P), nullptr, nullptr,
+    dest->eq_impl(make_message_id(P), nullptr, nullptr,
                   std::forward<Ts>(xs)...);
 }
 
@@ -112,7 +112,7 @@ template <class Dest>
 void anon_send_exit(const Dest& dest, exit_reason reason) {
   CAF_LOG_TRACE(CAF_ARG(dest) << CAF_ARG(reason));
   if (dest)
-    dest->enqueue(nullptr, message_id::make(),
+    dest->enqueue(nullptr, make_message_id(),
                   make_message(exit_msg{dest->address(), reason}), nullptr);
 }
 

@@ -791,7 +791,7 @@ public:
     stream<T> token{sid};
     auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));;
     next->enqueue(make_mailbox_element(
-                    mptr->sender, ignore_mid ? message_id::make() : mptr->mid,
+                    mptr->sender, ignore_mid ? make_message_id() : mptr->mid,
                     std::move(stages),
                     make<stream_msg::open>(
                       sid, address(), make_message_from_tuple(std::move(ys)),

@@ -426,11 +426,11 @@ public:
         CAF_LOG_DEBUG(CAF_ARG(forwarding_stack) << CAF_ARG(msg));
         if (hdr.has(header::named_receiver_flag))
           callee_.deliver(hdr.source_node, hdr.source_actor, receiver_name,
-                          message_id::make(hdr.operation_data),
+                          make_message_id(hdr.operation_data),
                           forwarding_stack, msg);
         else
           callee_.deliver(hdr.source_node, hdr.source_actor, hdr.dest_actor,
-                          message_id::make(hdr.operation_data),
+                          make_message_id(hdr.operation_data),
                           forwarding_stack, msg);
         break;
       }

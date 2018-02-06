@@ -78,7 +78,7 @@ public:
                      >::valid,
                   "this actor does not accept the response message");
     if (dest)
-      dest->eq_impl(message_id::make(P), dptr()->ctrl(),
+      dest->eq_impl(make_message_id(P), dptr()->ctrl(),
                     dptr()->context(), std::forward<Ts>(xs)...);
   }
 
@@ -97,7 +97,7 @@ public:
                   >::valid,
                   "receiver does not accept given message");
     if (dest)
-      dest->eq_impl(message_id::make(P), nullptr,
+      dest->eq_impl(make_message_id(P), nullptr,
                     dptr()->context(), std::forward<Ts>(xs)...);
   }
 
@@ -141,7 +141,7 @@ public:
     if (dest) {
       auto& clock = dptr()->system().clock();
       auto t = clock.now() + rtime;
-      auto me = make_mailbox_element(dptr()->ctrl(), message_id::make(P),
+      auto me = make_mailbox_element(dptr()->ctrl(), make_message_id(P),
                                      no_stages, std::forward<Ts>(xs)...);
       clock.schedule_message(t, actor_cast<strong_actor_ptr>(dest),
                              std::move(me));
@@ -167,7 +167,7 @@ public:
     if (dest) {
       auto& clock = dptr()->system().clock();
       auto t = clock.now() + rtime;
-      auto me = make_mailbox_element(nullptr, message_id::make(P), no_stages,
+      auto me = make_mailbox_element(nullptr, make_message_id(P), no_stages,
                                      std::forward<Ts>(xs)...);
       clock.schedule_message(t, actor_cast<strong_actor_ptr>(dest),
                              std::move(me));

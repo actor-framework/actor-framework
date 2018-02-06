@@ -62,8 +62,8 @@
 // CAF_PUSH_WARNINGS and CAF_POP_WARNINGS
 #if defined(__clang__)
 #  define CAF_CLANG
-#  define CAF_DEPRECATED __attribute__((__deprecated__))
-#  define CAF_DEPRECATED_MSG(msg) __attribute__((__deprecated__(msg)))
+#  define CAF_DEPRECATED __attribute__((deprecated))
+#  define CAF_DEPRECATED_MSG(msg) __attribute__((deprecated(msg)))
 #  define CAF_PUSH_WARNINGS                                                    \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wall\"")                              \
@@ -104,8 +104,8 @@
 #  endif
 #elif defined(__GNUC__)
 #  define CAF_GCC
-#  define CAF_DEPRECATED __attribute__((__deprecated__))
-#  define CAF_DEPRECATED_MSG(msg) __attribute__((__deprecated__(msg)))
+#  define CAF_DEPRECATED __attribute__((deprecated))
+#  define CAF_DEPRECATED_MSG(msg) __attribute__((deprecated(msg)))
 #  define CAF_PUSH_WARNINGS
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wshadow\"")                             \

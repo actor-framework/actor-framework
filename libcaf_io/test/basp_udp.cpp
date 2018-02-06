@@ -337,7 +337,7 @@ public:
     auto src = actor_cast<strong_actor_ptr>(registry_->get(hdr.source_actor));
     auto dest = registry_->get(hdr.dest_actor);
     CAF_REQUIRE(dest);
-    dest->enqueue(make_mailbox_element(src, message_id::make(),
+    dest->enqueue(make_mailbox_element(src, make_message_id(),
                                        std::move(stages), std::move(msg)),
                   nullptr);
   }

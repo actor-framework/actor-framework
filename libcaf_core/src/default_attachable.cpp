@@ -40,7 +40,7 @@ void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
   auto observer = actor_cast<strong_actor_ptr>(observer_);
   auto observed = actor_cast<strong_actor_ptr>(observed_);
   if (observer)
-    observer->enqueue(std::move(observed), message_id::make(),
+    observer->enqueue(std::move(observed), make_message_id(),
                       factory(actor_cast<abstract_actor*>(observed_), rsn),
                       host);
 }

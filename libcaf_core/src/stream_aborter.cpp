@@ -38,12 +38,12 @@ void stream_aborter::actor_exited(const error& rsn, execution_unit* host) {
   {
     if (mode_ == source_aborter)
       observer->enqueue(
-        nullptr, message_id::make(),
+        nullptr, make_message_id(),
         make_message(caf::make<stream_msg::forced_close>(sid_, observed_, rsn)),
         host);
     else
       observer->enqueue(
-        nullptr, message_id::make(),
+        nullptr, make_message_id(),
         make_message(caf::make<stream_msg::forced_drop>(sid_, observed_, rsn)),
         host);
   }

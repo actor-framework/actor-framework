@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <functional>
 
+#include "caf/config.hpp"
 #include "caf/error.hpp"
 #include "caf/message_priority.hpp"
 
@@ -41,10 +42,18 @@ struct invalid_message_id_t {
 
 constexpr invalid_message_id_t invalid_message_id = invalid_message_id_t{};
 
+struct make_message_id_t;
+
 /// Denotes whether a message is asynchronous or synchronous
 /// @note Asynchronous messages always have an invalid message id.
 class message_id : detail::comparable<message_id> {
 public:
+  // -- friends ---------------------------------------------------------------
+
+  friend struct make_message_id_t;
+
+  // -- constants -------------------------------------------------------------
+
   static constexpr uint64_t response_flag_mask = 0x8000000000000000;
   static constexpr uint64_t answered_flag_mask = 0x4000000000000000;
   static constexpr uint64_t high_prioity_flag_mask = 0x2000000000000000;
@@ -116,19 +125,6 @@ public:
     return value_;
   }
 
-  static constexpr message_id make() {
-    return message_id{};
-  }
-
-  static constexpr message_id make(message_priority prio) {
-    return prio == message_priority::high ? high_prioity_flag_mask : 0;
-  }
-
-  template <class Int, class E = detail::enable_if_tt<std::is_integral<Int>>>
-  static constexpr message_id make(Int value) {
-    return {static_cast<uint64_t>(value)};
-  }
-
   long compare(const message_id& other) const {
     return (value_ == other.value_) ? 0
                                       : (value_ < other.value_ ? -1 : 1);
@@ -139,6 +135,12 @@ public:
     return f(meta::type_name("message_id"), x.value_);
   }
 
+  // -- deprecated functions ---------------------------------------------------
+
+  template <class... Ts>
+  static message_id make(Ts&&... xs)
+  CAF_DEPRECATED_MSG("use make_message_id instead");
+
 private:
   constexpr message_id(uint64_t value) : value_(value) {
     // nop
@@ -146,6 +148,35 @@ private:
 
   uint64_t value_;
 };
+
+// -- make_message_id ----------------------------------------------------------
+
+/// Utility class for generating a `message_id` from integer values or
+/// priorities.
+struct make_message_id_t {
+  constexpr make_message_id_t() {
+    // nop
+  }
+
+  constexpr message_id operator()(uint64_t value = 0) const {
+    return value;
+  }
+
+  constexpr message_id operator()(message_priority p) const {
+    return p == message_priority::high ? message_id::high_prioity_flag_mask
+                                       : 0u;
+  }
+};
+
+/// Generates a `message_id` from integer values or priorities.
+constexpr make_message_id_t make_message_id = make_message_id_t{};
+
+// -- deprecated functions -----------------------------------------------------
+
+template <class... Ts>
+message_id message_id::make(Ts&&... xs) {
+  return make_message_id(std::forward<Ts>(xs)...);
+}
 
 } // namespace caf
 

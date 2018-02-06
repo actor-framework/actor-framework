@@ -49,7 +49,7 @@ behavior testee(stateful_actor<testee_state, raw_event_based_actor>* self,
     [=](add_atom) {
       auto n = t->now() + seconds(10);
       self->state.timeout_id += 1;
-      auto mid = message_id::make(self->state.timeout_id).response_id();
+      auto mid = make_message_id(self->state.timeout_id).response_id();
       t->set_request_timeout(n, self, mid);
     },
     [](const timeout_msg&) {
@@ -170,7 +170,7 @@ CAF_TEST(delay_actor_message) {
   auto n = t.now() + seconds(10);
   auto autptr = actor_cast<strong_actor_ptr>(aut);
   t.schedule_message(n, autptr,
-                     make_mailbox_element(autptr, message_id::make(),
+                     make_mailbox_element(autptr, make_message_id(),
                                           no_stages, "foo"));
   CAF_CHECK_EQUAL(t.schedule().size(), 1u);
   CAF_CHECK_EQUAL(t.actor_lookup().size(), 0u);

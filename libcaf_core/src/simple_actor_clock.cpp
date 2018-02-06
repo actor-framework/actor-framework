@@ -41,7 +41,7 @@ operator()(const secondary_map::value_type& x) const noexcept {
 
 void simple_actor_clock::visitor::operator()(receive_timeout& x) {
   CAF_ASSERT(x.self != nullptr);
-  x.self->get()->eq_impl(message_id::make(), x.self, nullptr,
+  x.self->get()->eq_impl(make_message_id(), x.self, nullptr,
                          timeout_msg{x.id});
   receive_predicate pred;
   thisptr->drop_lookup(x.self->get(), pred);
@@ -59,7 +59,7 @@ void simple_actor_clock::visitor::operator()(actor_msg& x) {
 }
 
 void simple_actor_clock::visitor::operator()(group_msg& x) {
-  x.target->eq_impl(message_id::make(), std::move(x.sender), nullptr,
+  x.target->eq_impl(make_message_id(), std::move(x.sender), nullptr,
                     std::move(x.content));
 }
 

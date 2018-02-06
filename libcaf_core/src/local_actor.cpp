@@ -157,7 +157,7 @@ void local_actor::send_exit(const actor_addr& whom, error reason) {
 void local_actor::send_exit(const strong_actor_ptr& dest, error reason) {
   if (!dest)
     return;
-  dest->get()->eq_impl(message_id::make(), nullptr, context(),
+  dest->get()->eq_impl(make_message_id(), nullptr, context(),
                        exit_msg{address(), std::move(reason)});
 }
 

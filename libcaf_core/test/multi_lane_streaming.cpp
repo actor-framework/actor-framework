@@ -103,7 +103,7 @@ behavior stream_splitter(stateful_actor<stream_splitter_state>* self) {
       auto sid = self->streams().begin()->first;
       auto hdl = self->current_sender();
       if (!self->add_sink<element_type>(
-            self->state.stage, sid, nullptr, hdl, no_stages, message_id::make(),
+            self->state.stage, sid, nullptr, hdl, no_stages, make_message_id(),
             stream_priority::normal, std::make_tuple()))
         return none;
       self->drop_current_message_id();

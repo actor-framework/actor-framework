@@ -37,7 +37,7 @@ public:
 
   broker_servant(handle_type x)
       : hdl_(x),
-        value_(strong_actor_ptr{}, message_id::make(),
+        value_(strong_actor_ptr{}, make_message_id(),
                mailbox_element::forwarding_stack{}, SysMsgType{x, {}}) {
     // nop
   }
@@ -108,7 +108,7 @@ protected:
           >::type
         >::type;
         using tmp_t = mailbox_element_vals<passiv_t>;
-        tmp_t tmp{strong_actor_ptr{},                  message_id::make(),
+        tmp_t tmp{strong_actor_ptr{},                  make_message_id(),
                   mailbox_element::forwarding_stack{}, passiv_t{hdl()}};
         invoke_mailbox_element_impl(ctx, tmp);
         return activity_tokens_ != size_t{0};
