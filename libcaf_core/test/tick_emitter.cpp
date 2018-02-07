@@ -29,9 +29,11 @@
 // We mock just enough of an actor to use the streaming classes and put them to
 // work in a pipeline with 2 or 3 stages.
 
-#define CAF_SUITE time_emitter
+#define CAF_SUITE tick_emitter
 
 #include <vector>
+
+#include "caf/timestamp.hpp"
 
 #include "caf/detail/gcd.hpp"
 #include "caf/detail/tick_emitter.hpp"
@@ -42,16 +44,36 @@ using std::vector;
 
 using namespace caf;
 
+using time_point = caf::detail::tick_emitter::time_point;
+
+namespace {
+
+timespan credit_interval{200};
+timespan force_batch_interval{50};
+
+} // namespace <anonymous>
+
+CAF_TEST(start_and_stop) {
+  detail::tick_emitter x;
+  detail::tick_emitter y{time_point{timespan{100}}};
+  detail::tick_emitter z;
+  z.start(time_point{timespan{100}});
+  CAF_CHECK_EQUAL(x.started(), false);
+  CAF_CHECK_EQUAL(y.started(), true);
+  CAF_CHECK_EQUAL(z.started(), true);
+  for (auto t : {&x, &y, &z})
+    t->stop();
+  CAF_CHECK_EQUAL(x.started(), false);
+  CAF_CHECK_EQUAL(y.started(), false);
+  CAF_CHECK_EQUAL(z.started(), false);
+}
+
 CAF_TEST(ticks) {
-  using timespan = std::chrono::microseconds;
-  timespan credit_interval{200};
-  timespan force_batch_interval{50};
   auto cycle = detail::gcd(credit_interval.count(),
                            force_batch_interval.count());
   CAF_CHECK_EQUAL(cycle, 50);
   auto force_batch_frequency = force_batch_interval.count() / cycle;
   auto credit_frequency = credit_interval.count() / cycle;
-  using time_point = std::chrono::steady_clock::time_point;
   detail::tick_emitter tctrl{time_point{timespan{100}}};
   tctrl.interval(timespan{cycle});
   vector<long> ticks;
@@ -74,5 +96,56 @@ CAF_TEST(ticks) {
   CAF_CHECK_EQUAL(deep_to_string(ticks), "[1, 2, 3, 4, 5, 6, 7]");
   CAF_CHECK_EQUAL(force_batch_triggers, 7);
   CAF_CHECK_EQUAL(credit_triggers, 1);
+}
+
+CAF_TEST(timeouts) {
+  timespan interval{50};
+  time_point start{timespan{100}};
+  auto now = start;
+  detail::tick_emitter tctrl{now};
+  tctrl.interval(interval);
+  CAF_MESSAGE("advance until the first 5-tick-period ends");
+  now += interval * 5;
+  auto bitmask = tctrl.timeouts(now, {5, 7});
+  CAF_CHECK_EQUAL(bitmask, 0x01);
+  CAF_MESSAGE("advance until the first 7-tick-period ends");
+  now += interval * 2;
+  bitmask = tctrl.timeouts(now, {5, 7});
+  CAF_CHECK_EQUAL(bitmask, 0x02);
+  CAF_MESSAGE("advance until both tick period ends");
+  now += interval * 7;
+  bitmask = tctrl.timeouts(now, {5, 7});
+  CAF_CHECK_EQUAL(bitmask, 0x03);
+  CAF_MESSAGE("advance until both tick period end multiple times");
+  now += interval * 21;
+  bitmask = tctrl.timeouts(now, {5, 7});
+  CAF_CHECK_EQUAL(bitmask, 0x03);
+  CAF_MESSAGE("advance without any timeout");
+  now += interval * 1;
+  bitmask = tctrl.timeouts(now, {5, 7});
+  CAF_CHECK_EQUAL(bitmask, 0x00);
+}
+
+CAF_TEST(next_timeout) {
+  timespan interval{50};
+  time_point start{timespan{100}};
+  auto now = start;
+  detail::tick_emitter tctrl{now};
+  tctrl.interval(interval);
+  CAF_MESSAGE("advance until the first 5-tick-period ends");
+  auto next = tctrl.next_timeout(now, {5, 7});
+  CAF_CHECK_EQUAL(next, start + timespan(5 * interval));
+  CAF_MESSAGE("advance until the first 7-tick-period ends");
+  now = start + timespan(5 * interval);
+  next = tctrl.next_timeout(now, {5, 7});
+  CAF_CHECK_EQUAL(next, start + timespan(7 * interval));
+  CAF_MESSAGE("advance until the second 5-tick-period ends");
+  now = start + timespan(7 * interval);
+  next = tctrl.next_timeout(now, {5, 7});
+  CAF_CHECK_EQUAL(next, start + timespan((2 * 5) * interval));
+  CAF_MESSAGE("advance until the second 7-tick-period ends");
+  now = start + timespan(11 * interval);
+  next = tctrl.next_timeout(now, {5, 7});
+  CAF_CHECK_EQUAL(next, start + timespan((2 * 7) * interval));
 }
 

@@ -21,6 +21,7 @@
 #define CAF_DETAIL_TICK_EMITTER_HPP
 
 #include <chrono>
+#include <initializer_list>
 
 #include "caf/config.hpp"
 
@@ -45,17 +46,23 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  tick_emitter(time_point now)
-      : start_(std::move(now)),
-        interval_(0),
-        last_tick_id_(0) {
-    // nop
-  }
+  tick_emitter();
 
-  void interval(duration_type x) {
-    interval_ = x;
-  }
+  tick_emitter(time_point now);
 
+  /// Queries whether the start time is non-default constructed.
+  bool started() const;
+
+  /// Configures the start time.
+  void start(time_point now);
+
+  /// Resets the start time to 0.
+  void stop();
+
+  /// Configures the time interval per tick.
+  void interval(duration_type x);
+
+  /// Advances time and calls `consumer` for each emitted tick.
   template <class F>
   void update(time_point now, F& consumer) {
     CAF_ASSERT(interval_.count() != 0);
@@ -64,6 +71,14 @@ public:
     while (last_tick_id_ < current_tick_id)
       consumer(++last_tick_id_);
   }
+
+  /// Advances time by `t` and returns all triggered periods as bitmask.
+  long timeouts(time_point t, std::initializer_list<long> periods);
+
+  /// Returns the next time point after `t` that would trigger any of the tick
+  /// periods, i.e., returns the next time where any of the tick periods
+  /// triggers `tick id % period == 0`.
+  time_point next_timeout(time_point t, std::initializer_list<long> periods);
 
 private:
   time_point start_;
