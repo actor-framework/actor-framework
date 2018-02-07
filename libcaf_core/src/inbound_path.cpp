@@ -25,10 +25,8 @@
 
 namespace caf {
 
-inbound_path::stats_t::stats_t() {
-  // we initially assume one item = 1us
-  // TODO: put constant in some header
-  measurement x{50, std::chrono::microseconds(50)};
+inbound_path::stats_t::stats_t() : ring_iter(0) {
+  measurement x{0, std::chrono::nanoseconds(0)};
   measurements.resize(stats_sampling_size, x);
 }
 
@@ -44,6 +42,8 @@ auto inbound_path::stats_t::calculate(std::chrono::nanoseconds c,
     total_ns += static_cast<long>(x.calculation_time.count());
     total_items += x.batch_size;
   }
+  if (total_ns == 0)
+    return {1, 1};
   // Instead of C * (N / t) we calculate N * (C / t) to avoid imprecisions due
   // to double rounding for very small numbers.
   auto ct = static_cast<double>(c.count()) / total_ns;
@@ -74,6 +74,7 @@ inbound_path::~inbound_path() {
 }
 
 void inbound_path::handle(downstream_msg::batch& x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
   assigned_credit -= x.xs_size;
   last_batch_id = x.id;
   // TODO: add time-measurement functions to local actor and store taken

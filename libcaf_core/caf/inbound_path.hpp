@@ -71,7 +71,10 @@ public:
   /// whether the destructor sends `close` or `forced_close` messages.
   error shutdown_reason;
 
-  /// Keep track of measurements for the last 10 batches.
+  /// Amount of credit we assign sources after receiving `open`.
+  static constexpr int initial_credit = 50;
+
+  /// Keep track of measurements for the last X batches.
   static constexpr size_t stats_sampling_size = 16;
 
   /// Stores statistics for measuring complexity of incoming batches.
@@ -95,7 +98,7 @@ public:
     size_t ring_iter;
 
     /// Returns the maximum number of items this actor could handle for given
-    /// cycle length.
+    /// cycle length with a minimum of 1.
     calculation_result calculate(std::chrono::nanoseconds cycle,
                                  std::chrono::nanoseconds desired_complexity);
 
