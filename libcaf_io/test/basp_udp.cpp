@@ -110,14 +110,16 @@ struct node {
 
 class fixture {
 public:
-  fixture(bool autoconn = false)
+  fixture(bool autoconn = false, bool use_test_coordinator = false)
       : sys(cfg.load<io::middleman, network::test_multiplexer>()
           .set("middleman.enable-automatic-connections", autoconn)
           .set("middleman.enable-udp", true)
           .set("middleman.enable-tcp", false)
-          .set("scheduler.policy", autoconn ? caf::atom("testing")
-                                            : caf::atom("stealing"))
-          .set("middleman.detach-utility-actors", !autoconn)) {
+          .set("scheduler.policy", autoconn || use_test_coordinator
+                                    ? caf::atom("testing")
+                                    : caf::atom("stealing"))
+          .set("middleman.detach-utility-actors",
+               !(autoconn || use_test_coordinator))) {
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);
@@ -501,6 +503,20 @@ private:
   actor_registry* registry_;
 };
 
+
+class manual_timer_fixture : public fixture {
+public:
+  using scheduler_type = caf::scheduler::test_coordinator;
+
+  scheduler_type& sched;
+
+  manual_timer_fixture()
+    : fixture(false, true),
+      sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
+    // nop
+  }
+};
+
 class autoconn_enabled_fixture : public fixture {
 public:
   using scheduler_type = caf::scheduler::test_coordinator;
@@ -863,8 +879,16 @@ CAF_TEST(indirect_connections_udp) {
            make_message("hello from earth!"));
 }
 
+
+CAF_TEST_FIXTURE_SCOPE_END()
+
+
+CAF_TEST_FIXTURE_SCOPE(basp_udp_tests_with_manual_timer, manual_timer_fixture)
+
 CAF_TEST(out_of_order_delivery_udp) {
-   constexpr const char* lo = "localhost";
+  // This test uses the test_coordinator to get control over the
+  // timeouts that deliver pending message.
+  constexpr const char* lo = "localhost";
   CAF_MESSAGE("self: " << to_string(self()->address()));
   mpx()->provide_datagram_servant(lo, 4242, jupiter().endpoint);
   CAF_REQUIRE(mpx()->has_pending_remote_endpoint(lo, 4242));
@@ -873,8 +897,10 @@ CAF_TEST(out_of_order_delivery_udp) {
   auto f = self()->request(mm1, infinite, contact_atom::value,
                            lo, uint16_t{4242});
   // wait until BASP broker has received and processed the connect message
-  while (!aut()->valid(jupiter().endpoint))
+  while (!aut()->valid(jupiter().endpoint)) {
+    sched.run();
     mpx()->exec_runnable();
+  }
   CAF_REQUIRE(!mpx()->has_pending_scribe(lo, 4242));
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_MESSAGE("client handshake => server handshake => proxy announcement");
@@ -904,6 +930,7 @@ CAF_TEST(out_of_order_delivery_udp) {
            basp::message_type::announce_proxy, no_flags, no_payload,
            no_operation_data, this_node(), jupiter().id,
            invalid_actor_id, jupiter().dummy_actor->id());
+  sched.run();
   CAF_MESSAGE("BASP broker should've send the proxy");
   f.receive(
     [&](node_id nid, strong_actor_ptr res, std::set<std::string> ifs) {
@@ -940,6 +967,7 @@ CAF_TEST(out_of_order_delivery_udp) {
             jupiter().dummy_actor->id(), self()->id(),
             seq};
   };
+  CAF_MESSAGE("send 10 messages out of order");
   mock()
   .enqueue_back(jupiter().endpoint, header_with_seq(1),
                 std::vector<actor_id>{}, make_message(0))
@@ -971,6 +999,23 @@ CAF_TEST(out_of_order_delivery_udp) {
       ++expected_next;
     }
   );
+  sched.dispatch();
+  mpx()->flush_runnables();
+  CAF_MESSAGE("force delivery via timeout that skips messages");
+  const basp::sequence_type seq_and_payload = 23;
+  mock()
+  .enqueue_back(jupiter().endpoint, header_with_seq(seq_and_payload),
+                std::vector<actor_id>{}, make_message(seq_and_payload))
+  .deliver(jupiter().endpoint, 1);
+  sched.dispatch();
+  mpx()->exec_runnable();
+  self()->receive(
+    [&](basp::sequence_type val) {
+      CAF_CHECK_EQUAL(to_string(self()->current_sender()), to_string(result));
+      CAF_CHECK_EQUAL(self()->current_sender(), result.address());
+      CAF_CHECK_EQUAL(seq_and_payload, val);
+    }
+  );
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
@@ -997,9 +1042,7 @@ CAF_TEST(automatic_connection_udp) {
   CAF_MESSAGE("self: " << to_string(self()->address()));
   auto dx = datagram_handle::from_int(4242);
   mpx()->provide_datagram_servant(4242, dx);
-  CAF_MESSAGE("A");
   publish(self(), 4242, true);
-  CAF_MESSAGE("B");
   mpx()->flush_runnables(); // process publish message in basp_broker
   CAF_MESSAGE("connect to mars");
   establish_communication(mars(), dx, self()->id());
