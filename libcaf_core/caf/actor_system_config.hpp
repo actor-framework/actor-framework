@@ -233,29 +233,43 @@ public:
     return *this;
   }
 
-  /// Stores whether the help text for this config object was
-  /// printed. If set to `true`, the application should not use
-  /// this config object to initialize an `actor_system` and
-  /// return from `main` immediately.
+  /// Sets a config by using its INI name `config_name` to `config_value`.
+  actor_system_config& set(const char* cn, config_value cv);
+
+  // -- parser and CLI state ---------------------------------------------------
+
+  /// Stores whether the help text was printed. If set to `true`, the
+  /// application should not use this config to initialize an `actor_system`
+  /// and instead return from `main` immediately.
   bool cli_helptext_printed;
-
-  /// Stores whether this node was started in slave mode.
-  bool slave_mode;
-
-  /// Stores the name of this node when started in slave mode.
-  std::string slave_name;
-
-  /// Stores credentials for connecting to the bootstrap node
-  /// when using the caf-run launcher.
-  std::string bootstrap_node;
 
   /// Stores CLI arguments that were not consumed by CAF.
   message args_remainder;
 
-  /// Sets a config by using its INI name `config_name` to `config_value`.
-  actor_system_config& set(const char* cn, config_value cv);
+  // -- caf-run parameters -----------------------------------------------------
 
-  // -- config parameters of the scheduler -------------------------------------
+  /// Stores whether this node was started in slave mode.
+  bool slave_mode;
+
+  /// Name of this node when started in slave mode.
+  std::string slave_name;
+
+  /// Credentials for connecting to the bootstrap node.
+  std::string bootstrap_node;
+
+  // -- streaming parameters ---------------------------------------------------
+
+  /// Maximum delay for sending underfull batches.
+  size_t streaming_max_batch_delay_us;
+
+  /// Timespan between two credit rounds.
+  size_t streaming_credit_round_interval_us;
+
+  /// Greatest common divisor of `streaming_max_batch_delay_us` and
+  /// `streaming_credit_round_interval_us`.
+  size_t streaming_tick_duration_us;
+
+  // -- scheduling parameters --------------------------------------------------
 
   atom_value scheduler_policy;
   size_t scheduler_max_threads;
@@ -264,7 +278,7 @@ public:
   size_t scheduler_profiling_ms_resolution;
   std::string scheduler_profiling_output_file;
 
-  // -- config parameters for work-stealing ------------------------------------
+  // -- work-stealing parameters -----------------------------------------------
 
   size_t work_stealing_aggressive_poll_attempts;
   size_t work_stealing_aggressive_steal_interval;
@@ -274,7 +288,7 @@ public:
   size_t work_stealing_relaxed_steal_interval;
   size_t work_stealing_relaxed_sleep_duration_us;
 
-  // -- config parameters for the logger ---------------------------------------
+  // -- logger parameters ------------------------------------------------------
 
   std::string logger_file_name;
   std::string logger_file_format;
@@ -289,7 +303,7 @@ public:
   std::string& logger_filename CAF_DEPRECATED;
   std::string& logger_filter CAF_DEPRECATED;
 
-  // -- config parameters of the middleman -------------------------------------
+  // -- middleman parameters ---------------------------------------------------
 
   atom_value middleman_network_backend;
   std::string middleman_app_identifier;
@@ -303,11 +317,11 @@ public:
   size_t middleman_cached_udp_buffers;
   size_t middleman_max_pending_msgs;
 
-  // -- config parameters of the OpenCL module ---------------------------------
+  // -- OpenCL parameters ------------------------------------------------------
 
   std::string opencl_device_ids;
 
-  // -- config parameters of the OpenSSL module ---------------------------------
+  // -- OpenSSL parameters -----------------------------------------------------
 
   std::string openssl_certificate;
   std::string openssl_key;

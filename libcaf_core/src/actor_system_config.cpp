@@ -25,6 +25,7 @@
 
 #include "caf/message_builder.hpp"
 
+#include "caf/detail/gcd.hpp"
 #include "caf/detail/parse_ini.hpp"
 
 namespace caf {
@@ -111,9 +112,11 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   // (1) hard-coded defaults
+  streaming_max_batch_delay_us = 50000;
+  streaming_credit_round_interval_us = 100000;
+  streaming_tick_duration_us = 50000;
   scheduler_policy = atom("stealing");
-  scheduler_max_threads = std::max(std::thread::hardware_concurrency(),
-                                   unsigned{4});
+  scheduler_max_threads = std::max(std::thread::hardware_concurrency(), 4u);
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
   scheduler_enable_profiling = false;
   scheduler_profiling_ms_resolution = 100;
@@ -141,6 +144,11 @@ actor_system_config::actor_system_config()
   middleman_cached_udp_buffers = 10;
   middleman_max_pending_msgs = 10;
   // fill our options vector for creating INI and CLI parsers
+  opt_group{options_, "streaming"}
+  .add(streaming_max_batch_delay_us, "max-batch-delay-us",
+       "sets the maximum delay for sending underfull batches in microseconds")
+  .add(streaming_credit_round_interval_us, "credit-cycle-interval-us",
+       "sets the length of credit intervals in microseconds");
   opt_group{options_, "scheduler"}
   .add(scheduler_policy, "policy",
        "sets the scheduling policy to either 'stealing' (default) or 'sharing'")
@@ -234,10 +242,13 @@ actor_system_config::actor_system_config()
 
 actor_system_config::actor_system_config(actor_system_config&& other)
     : cli_helptext_printed(other.cli_helptext_printed),
+      args_remainder(std::move(other.args_remainder)),
       slave_mode(other.slave_mode),
       slave_name(std::move(other.slave_name)),
       bootstrap_node(std::move(other.bootstrap_node)),
-      args_remainder(std::move(other.args_remainder)),
+      streaming_max_batch_delay_us(other.streaming_max_batch_delay_us),
+      streaming_credit_round_interval_us(
+        other.streaming_credit_round_interval_us),
       scheduler_policy(other.scheduler_policy),
       scheduler_max_threads(other.scheduler_max_threads),
       scheduler_max_throughput(other.scheduler_max_throughput),
@@ -432,6 +443,7 @@ actor_system_config& actor_system_config::parse(message& args,
     if (bootstrap_node.empty())
       std::cerr << "running in slave mode without bootstrap node" << endl;
   }
+  // Verify settings.
   auto verify_atom_opt = [](std::initializer_list<atom_value> xs, atom_value& x,
                             const char* xname) {
     if (std::find(xs.begin(), xs.end(), x) == xs.end()) {
@@ -459,6 +471,9 @@ actor_system_config& actor_system_config::parse(message& args,
       cout << x.name() << "=" << x.to_string() << endl;
     });
   }
+  // Set dependent parameters.
+  streaming_tick_duration_us = detail::gcd(streaming_max_batch_delay_us,
+                                           streaming_credit_round_interval_us);
   return *this;
 }
 
