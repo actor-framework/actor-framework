@@ -62,7 +62,7 @@ struct print_with_comma_t {
   }
 
   template <class T>
-  std::ostream& operator()(std::ostream& out, const logger::arg_wrapper<T>& x) {
+  std::ostream& operator()(std::ostream& out, const detail::arg_wrapper<T>& x) {
     if (!first)
       out << ", ";
     else

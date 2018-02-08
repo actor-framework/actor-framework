@@ -46,7 +46,7 @@ stream_scatterer::~stream_scatterer() {
 
 pointer stream_scatterer::add_path(stream_slots slots,
                                    strong_actor_ptr target) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target) << CAF_ARG(handshake_data));
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target));
   auto res = paths_.emplace(slots, nullptr);
   if (res.second) {
     auto ptr = new outbound_path(slots, std::move(target));
