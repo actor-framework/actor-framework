@@ -63,13 +63,13 @@ connection_state instance::handle(execution_unit* ctx,
                                   new_data_msg& dm, header& hdr,
                                   bool is_payload) {
   CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
-  // function object providing cleanup code on errors
+  // Function object providing cleanup code on errors.
   auto err = [&]() -> connection_state {
     auto cb = make_callback([&](const node_id& nid) -> error {
       callee_.purge_state(nid);
       return none;
     });
-    tbl_.erase_direct(dm.handle, cb);
+    tbl_.erase(dm.handle, cb);
     return close_connection;
   };
   std::vector<char>* payload = nullptr;
@@ -93,23 +93,23 @@ connection_state instance::handle(execution_unit* ctx,
     }
   }
   CAF_LOG_DEBUG(CAF_ARG(hdr));
-  // needs forwarding?
+  // Needs forwarding?
   if (!is_handshake(hdr) && !is_heartbeat(hdr) && hdr.dest_node != this_node_) {
     CAF_LOG_DEBUG("forward message");
-    auto path = lookup(hdr.dest_node);
-    if (path) {
-      binary_serializer bs{ctx, callee_.get_buffer(path->hdl)};
+    auto ehdl = lookup(hdr.dest_node);
+    if (ehdl) {
+      binary_serializer bs{ctx, callee_.get_buffer(*ehdl)};
       auto e = bs(hdr);
       if (e)
         return err();
       if (payload != nullptr)
         bs.apply_raw(payload->size(), payload->data());
-      flush(*path);
+      flush(*ehdl);
       notify<hook::message_forwarded>(hdr, payload);
     } else {
       CAF_LOG_INFO("cannot forward message, no route to destination");
       if (hdr.source_node != this_node_) {
-        // TODO: signalize error back to sending node
+        // TODO: Signalize error back to sending node.
         auto reverse_path = lookup(hdr.source_node);
         if (!reverse_path) {
           CAF_LOG_WARNING("cannot send error message: no route to source");
@@ -131,22 +131,22 @@ connection_state instance::handle(execution_unit* ctx,
 bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
                       endpoint_context& ep) {
   using itr_t = network::receive_buffer::iterator;
-  // function object providing cleanup code on errors
+  // Function object providing cleanup code on errors.
   auto err = [&]() -> bool {
     auto cb = make_callback([&](const node_id& nid) -> error {
       callee_.purge_state(nid);
       return none;
     });
-    tbl_.erase_direct(dm.handle, cb);
+    tbl_.erase(dm.handle, cb);
     return false;
   };
-  // extract payload
+  // Extract payload.
   std::vector<char> pl_buf{std::move_iterator<itr_t>(std::begin(dm.buf) +
                                                      basp::header_size),
                            std::move_iterator<itr_t>(std::end(dm.buf))};
-  // resize header
+  // Resize header.
   dm.buf.resize(basp::header_size);
-  // extract header
+  // Extract header.
   binary_deserializer bd{ctx, dm.buf};
   auto e = bd(ep.hdr);
   if (e || !valid(ep.hdr)) {
@@ -175,24 +175,24 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
   }
   // This is the expected message.
   ep.seq_incoming += 1;
-  // TODO: add optional reliability here
+  // TODO: Add optional reliability here.
   if (!is_handshake(ep.hdr) && !is_heartbeat(ep.hdr)
       && ep.hdr.dest_node != this_node_) {
     CAF_LOG_DEBUG("forward message");
-    auto path = lookup(ep.hdr.dest_node);
-    if (path) {
-      binary_serializer bs{ctx, callee_.get_buffer(path->hdl)};
+    auto ehdl = lookup(ep.hdr.dest_node);
+    if (ehdl) {
+      binary_serializer bs{ctx, callee_.get_buffer(*ehdl)};
       auto ex = bs(ep.hdr);
       if (ex)
         return err();
       if (payload != nullptr)
         bs.apply_raw(payload->size(), payload->data());
-      flush(*path);
+      flush(*ehdl);
       notify<hook::message_forwarded>(ep.hdr, payload);
     } else {
       CAF_LOG_INFO("cannot forward message, no route to destination");
       if (ep.hdr.source_node != this_node_) {
-        // TODO: signalize error back to sending node
+        // TODO: Signalize error back to sending node.
         auto reverse_path = lookup(ep.hdr.source_node);
         if (!reverse_path) {
           CAF_LOG_WARNING("cannot send error message: no route to source");
@@ -224,20 +224,20 @@ void instance::handle_heartbeat(execution_unit* ctx) {
   }
 }
 
-optional<routing_table::route> instance::lookup(const node_id& target) {
+optional<instance::endpoint_handle> instance::lookup(const node_id& target) {
   return tbl_.lookup(target);
 }
 
-void instance::flush(const routing_table::route& path) {
-  callee_.flush(path.hdl);
+void instance::flush(endpoint_handle hdl) {
+  callee_.flush(hdl);
 }
 
-void instance::write(execution_unit* ctx, const routing_table::route& r,
+void instance::write(execution_unit* ctx, instance::endpoint_handle hdl,
                      header& hdr, payload_writer* writer) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
-  write(ctx, callee_.get_buffer(r.hdl), hdr, writer);
-  flush(r);
+  write(ctx, callee_.get_buffer(hdl), hdr, writer);
+  flush(hdl);
 }
 
 void instance::add_published_actor(uint16_t port,
@@ -295,7 +295,7 @@ size_t instance::remove_published_actor(const actor_addr& whom,
 
 bool instance::is_greater(sequence_type lhs, sequence_type rhs,
                           sequence_type max_distance) {
-  // distance between lhs and rhs is smaller than max_distance.
+  // Distance between lhs and rhs is smaller than max_distance.
   return ((lhs > rhs) && (lhs - rhs <= max_distance)) ||
          ((lhs < rhs) && (rhs - lhs > max_distance));
 }
@@ -307,8 +307,8 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
                 << CAF_ARG(mid) << CAF_ARG(msg));
   CAF_ASSERT(receiver && system().node() != receiver->node());
-  auto path = lookup(receiver->node());
-  if (!path) {
+  auto ehdl = lookup(receiver->node());
+  if (!ehdl) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
   }
@@ -319,10 +319,10 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
              sender ? sender->node() : this_node(), receiver->node(),
              sender ? sender->id() : invalid_actor_id, receiver->id(),
-             visit(seq_num_visitor{callee_}, path->hdl)};
-  write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
-  flush(*path);
-  notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
+             visit(seq_num_visitor{callee_}, *ehdl)};
+  write(ctx, callee_.get_buffer(*ehdl), hdr, &writer);
+  flush(*ehdl);
+  notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
   return true;
 }
 
@@ -332,7 +332,7 @@ void instance::write(execution_unit* ctx, buffer_type& buf,
   error err;
   if (pw != nullptr) {
     auto pos = buf.size();
-    // write payload first (skip first 72 bytes and write header later)
+    // Write payload first (skip first 72 bytes and write header later).
     char placeholder[basp::header_size];
     buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
     binary_serializer bs{ctx, buf};
