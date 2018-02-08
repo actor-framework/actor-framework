@@ -126,6 +126,7 @@ struct fixture {
       result += to_string(id);
       result += ':';
       result += to_string(x);
+      return task_result::resume;
     };
     queue.new_round(quantum, f);
     return result;

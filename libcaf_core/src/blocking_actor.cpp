@@ -309,7 +309,7 @@ bool blocking_actor::cleanup(error&& fail_state, execution_unit* host) {
     mailbox_.close();
     // TODO: messages that are stuck in the cache can get lost
     detail::sync_request_bouncer bounce{fail_state};
-    while (mailbox_.queue().new_round(1000, bounce))
+    while (mailbox_.queue().new_round(1000, bounce).consumed_items)
       ; // nop
   }
   // Dispatch to parent's `cleanup` function.

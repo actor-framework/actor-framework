@@ -24,6 +24,9 @@
 #include <type_traits>
 #include <utility>
 
+#include "caf/intrusive/new_round_result.hpp"
+#include "caf/intrusive/task_result.hpp"
+
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -81,11 +84,15 @@ public:
     return push_back(new value_type(std::forward<Ts>(xs)...));
   }
 
+  void inc_deficit(deficit_type x) noexcept {
+    inc_deficit_recursion<0>(x);
+  }
+
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
-  bool new_round(long quantum, F& f) {
-    return new_round_recursion<0>(quantum, f) != 0;
+  new_round_result new_round(deficit_type quantum, F& f) {
+    return new_round_recursion<0>(quantum, f);
   }
 
   pointer peek() noexcept {
@@ -166,21 +173,40 @@ private:
     }
   };
 
-  template <size_t I, class F>
-  detail::enable_if_t<I == num_queues, int>
-  new_round_recursion(deficit_type, F&) noexcept {
-    return 0;
+  template <size_t I>
+  detail::enable_if_t<I == num_queues>
+  inc_deficit_recursion(deficit_type) noexcept {
+    // end of recursion
+  }
+
+  template <size_t I>
+  detail::enable_if_t<I != num_queues>
+  inc_deficit_recursion(deficit_type quantum) noexcept {
+    auto& q = std::get<I>(qs_);
+    q.inc_deficit(policy_.quantum(q, quantum));
+    inc_deficit_recursion<I + 1>(quantum);
   }
 
   template <size_t I, class F>
-  detail::enable_if_t<I != num_queues, int>
+  detail::enable_if_t<I == num_queues, new_round_result>
+  new_round_recursion(deficit_type, F&) noexcept {
+    return {false, false};
+  }
+
+  template <size_t I, class F>
+  detail::enable_if_t<I != num_queues, new_round_result>
   new_round_recursion(deficit_type quantum, F& f) {
     auto& q = std::get<I>(qs_);
     using q_type = typename std::decay<decltype(q)>::type;
     new_round_recursion_helper<I, q_type, F> g{q, f};
-    if (q.new_round(policy_.quantum(q, quantum), g))
-      return 1 + new_round_recursion<I + 1>(quantum, f);
-    return 0 + new_round_recursion<I + 1>(quantum, f);
+    auto res = q.new_round(policy_.quantum(q, quantum), g);
+    if (res.stop_all) {
+      // Always increase deficit, even if a previous queue stopped the
+      // consumer preemptively.
+      inc_deficit_recursion<I + 1>(quantum);
+      return res;
+    }
+    return res | new_round_recursion<I + 1>(quantum, f);
   }
 
   template <size_t I>

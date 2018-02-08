@@ -94,12 +94,14 @@ struct fetch_helper {
   std::string result;
 
   template <size_t I, class Queue>
-  void operator()(std::integral_constant<size_t, I>, const Queue&, inode& x) {
+  task_result operator()(std::integral_constant<size_t, I>, const Queue&,
+                         inode& x) {
     if (!result.empty())
       result += ',';
     result += to_string(I);
     result += ':';
     result += to_string(x);
+    return task_result::resume;
   };
 };
 
@@ -125,6 +127,7 @@ struct fixture {
       result += to_string(id);
       result += ':';
       result += to_string(x);
+      return task_result::resume;
     };
     queue.new_round(quantum, f);
     return result;
@@ -144,19 +147,19 @@ CAF_TEST(new_round) {
   // Allow f to consume 2 items per nested queue.
   fetch_helper f;
   auto round_result = queue.new_round(2, f);
-  CAF_CHECK_EQUAL(round_result, true);
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
   CAF_CHECK_EQUAL(f.result, "0:3,0:6,1:1,1:4,2:2,2:5");
   CAF_REQUIRE_EQUAL(queue.empty(), false);
   // Allow f to consume one more item from each queue.
   f.result.clear();
   round_result = queue.new_round(1, f);
-  CAF_CHECK_EQUAL(round_result, true);
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
   CAF_CHECK_EQUAL(f.result, "0:9,1:7,2:8");
   CAF_REQUIRE_EQUAL(queue.empty(), false);
   // Allow f to consume the remainder, i.e., 12.
   f.result.clear();
   round_result = queue.new_round(1000, f);
-  CAF_CHECK_EQUAL(round_result, true);
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
   CAF_CHECK_EQUAL(f.result, "0:12");
   CAF_REQUIRE_EQUAL(queue.empty(), true);
 }

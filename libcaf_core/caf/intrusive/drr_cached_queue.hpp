@@ -182,10 +182,18 @@ public:
   /// @returns `true` if `f` consumed at least one item.
   template <class F>
   bool consume(F& f) noexcept(noexcept(f(std::declval<value_type&>()))) {
+    return new_round(0, f).consumed_items;
+  }
+
+  /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
+  template <class F>
+  new_round_result new_round(deficit_type quantum, F& consumer)
+  noexcept(noexcept(consumer(std::declval<value_type&>()))) {
     if (!cache_.empty())
       list_.prepend(cache_);
     if (list_.empty())
-      return false;
+      return {false, false};
+    deficit_ += quantum;
     long consumed = 0;
     auto ptr = list_.front();
     auto ts = policy().task_size(*ptr);
@@ -199,22 +207,16 @@ public:
       if (next == list_.end().ptr)
         list_.end()->next = list_.before_begin().ptr;
       CAF_ASSERT(total_task_size() != 0 || list_.begin() == list_.end());
-      /*
-      if (total_task_size() == 0) {
-        CAF_ASSERT(list_.begin() == list_.end());
-        list_.end()->next = list_.begin().ptr;
-      }
-      */
       // Always decrease the deficit_ counter, again because `f` is allowed
       // to call consume again.
       deficit_ -= ts;
-      auto res = f(*ptr);
+      auto res = consumer(*ptr);
       if (res == task_result::skip) {
         // Push the unconsumed item to the cache.
         cache_.push_back(ptr);
         if (list_.empty()) {
           deficit_ = 0;
-          return consumed != 0;
+          return {consumed != 0, false};
         }
         // Fix deficit counter since we didn't actually use it.
         deficit_ += ts;
@@ -226,27 +228,16 @@ public:
           list_.prepend(cache_);
         if (list_.empty()) {
           deficit_ = 0;
-          return consumed != 0;
+          return {consumed != 0, res == task_result::stop_all};
         }
-        if (res == task_result::stop)
-          return consumed != 0;
+        if (res != task_result::resume)
+          return {consumed != 0, res == task_result::stop_all};
       }
       // Next iteration.
       ptr = list_.front();
       ts = policy().task_size(*ptr);
     }
-    return consumed != 0;
-  }
-
-  /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
-  template <class F>
-  bool new_round(deficit_type quantum, F& consumer)
-  noexcept(noexcept(consumer(std::declval<value_type&>()))) {
-    if (!list_.empty()) {
-      deficit_ += quantum;
-      return consume(consumer);
-    }
-    return false;
+    return {consumed != 0, false};
   }
 
   cache_type& cache() noexcept {

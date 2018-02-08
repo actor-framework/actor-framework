@@ -22,7 +22,9 @@
 
 #include <utility>
 
+#include "caf/intrusive/new_round_result.hpp"
 #include "caf/intrusive/task_queue.hpp"
+#include "caf/intrusive/task_result.hpp"
 
 namespace caf {
 namespace intrusive {
@@ -110,25 +112,33 @@ public:
   /// @returns `true` if `f` consumed at least one item.
   template <class F>
   bool consume(F& f) noexcept(noexcept(f(std::declval<value_type&>()))) {
-    auto ptr = take_front();
-    if (ptr == nullptr)
-      return false;
-    do {
-      f(*ptr);
-      ptr = take_front();
-    } while (ptr != nullptr);
-    return true;
+    auto res = new_round(0, f);
+    return res.consumed_items;
   }
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
-  bool new_round(deficit_type quantum, F& consumer) {
+  new_round_result new_round(deficit_type quantum, F& consumer) {
     if (!super::empty()) {
       deficit_ += quantum;
-      return consume(consumer);
+      auto ptr = take_front();
+      if (ptr == nullptr)
+        return {false, false};
+      do {
+        switch (consumer(*ptr)) {
+          default:
+            break;
+          case task_result::stop:
+            return {true, false};
+          case task_result::stop_all:
+            return {true, true};
+        }
+        ptr = take_front();
+      } while (ptr != nullptr);
+      return {true, false};
     }
-    return false;
+    return {false, false};
   }
 
 private:

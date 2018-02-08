@@ -22,6 +22,9 @@
 
 #include <utility>
 
+#include "caf/intrusive/new_round_result.hpp"
+#include "caf/intrusive/task_result.hpp"
+
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -98,15 +101,33 @@ public:
     }
   };
 
+  void inc_deficit(deficit_type x) noexcept {
+    for (auto& kvp : qs_) {
+      auto& q = kvp.second;
+      q.inc_deficit(policy_.quantum(q, x));
+    }
+  }
+
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
-  bool new_round(long quantum, F& f) {
+  new_round_result new_round(deficit_type quantum, F& f) {
     bool result = false;
+    bool stopped = false;
     for (auto& kvp : qs_) {
       if (policy_.enabled(kvp.second)) {
-        new_round_helper<F> g{kvp.first, kvp.second, f};
-        result |= g.q.new_round(policy_.quantum(g.q, quantum), g);
+        auto& q = kvp.second;
+        if (!stopped) {
+          new_round_helper<F> g{kvp.first, q, f};
+          auto res = q.new_round(policy_.quantum(q, quantum), g);
+          result = res.consumed_items;
+          if (res.stop_all)
+            stopped = true;
+        } else {
+          // Always increase deficit, even if a previous queue stopped the
+          // consumer preemptively.
+          q.inc_deficit(policy_.quantum(q, quantum));
+        }
       }
     }
     if (!erase_list_.empty()) {
@@ -114,7 +135,7 @@ public:
         qs_.erase(k);
       erase_list_.clear();
     }
-    return result;
+    return {result, stopped};
   }
 
   void erase_later(key_type k) {

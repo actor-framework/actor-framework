@@ -107,25 +107,26 @@ CAF_TEST(new_round) {
   fill(queue, 1, 2, 3, 4, 5, 6);
   auto f = [&](inode& x) {
     seq += to_string(x);
+    return task_result::resume;
   };
   // Allow f to consume 1, 2, and 3 with a leftover deficit of 1.
   auto round_result = queue.new_round(7, f);
-  CAF_CHECK_EQUAL(round_result, true);
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
   CAF_CHECK_EQUAL(seq, "123");
   CAF_CHECK_EQUAL(queue.deficit(), 1);
   // Allow f to consume 4 and 5 with a leftover deficit of 0.
   round_result = queue.new_round(8, f);
-  CAF_CHECK_EQUAL(round_result, true);
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
   CAF_CHECK_EQUAL(seq, "12345");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
   // Allow f to consume 6 with a leftover deficit of 0 (queue is empty).
   round_result = queue.new_round(1000, f);
-  CAF_CHECK_EQUAL(round_result, true);
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
   CAF_CHECK_EQUAL(seq, "123456");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
   // new_round on an empty queue does nothing.
   round_result = queue.new_round(1000, f);
-  CAF_CHECK_EQUAL(round_result, false);
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(false));
   CAF_CHECK_EQUAL(seq, "123456");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
 }

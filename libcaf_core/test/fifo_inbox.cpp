@@ -81,6 +81,7 @@ struct fixture {
     std::string result;
     auto f = [&](inode& x) {
       result += to_string(x);
+      return task_result::resume;
     };
     inbox.new_round(1000, f);
     return result;
@@ -90,6 +91,7 @@ struct fixture {
     std::string result;
     auto f = [&](inode& x) {
       result += to_string(x);
+      return task_result::resume;
     };
     inbox.close();
     inbox.queue().new_round(1000, f);

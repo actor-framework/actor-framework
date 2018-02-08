@@ -208,7 +208,7 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
     mailbox_.close();
     // TODO: messages that are stuck in the cache can get lost
     detail::sync_request_bouncer bounce{fail_state};
-    while (mailbox_.queue().new_round(1000, bounce))
+    while (mailbox_.queue().new_round(1000, bounce).consumed_items)
       ; // nop
   }
   // Dispatch to parent's `cleanup` function.
@@ -252,7 +252,7 @@ scheduled_actor::mailbox_visitor::operator()(mailbox_element& x) {
     case activation_result::success:
       return ++handled_msgs < max_throughput
              ? intrusive::task_result::resume
-             : intrusive::task_result::stop;
+             : intrusive::task_result::stop_all;
     case activation_result::skipped:
       return intrusive::task_result::skip;
     default:
@@ -274,7 +274,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   mailbox_visitor f{this, result, handled_msgs, max_throughput};
   mailbox_element_ptr ptr;
   while (handled_msgs < max_throughput) {
-    if (!mailbox_.new_round(3, f)) {
+    if (!mailbox_.new_round(3, f).consumed_items) {
       reset_timeout_if_needed();
       if (mailbox().try_block())
         return resumable::awaiting_message;

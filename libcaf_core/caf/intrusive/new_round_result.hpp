@@ -17,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_TASK_RESULT_HPP
-#define CAF_INTRUSIVE_TASK_RESULT_HPP
+#ifndef CAF_INTRUSIVE_NEW_ROUND_RESULT_HPP
+#define CAF_INTRUSIVE_NEW_ROUND_RESULT_HPP
 
 #include <type_traits>
 
@@ -27,22 +27,32 @@
 namespace caf {
 namespace intrusive {
 
-/// Communicates the state of a consumer to a task queue.
-enum class task_result {
-  /// The consumer processed the task and is ready to receive the next one.
-  resume,
-  /// The consumer skipped the task and is ready to receive the next one.
-  /// Illegal for consumers of non-cached queues (non-cached queues treat
-  /// `skip` and `resume` in the same way).
-  skip,
-  /// The consumer processed the task but does not accept further tasks.
-  stop,
-  /// The consumer processed the task but does not accept further tasks and no
-  /// subsequent queue shall start a new round.
-  stop_all,
+/// Returns the state of a consumer from `new_round`.
+struct new_round_result {
+  /// Denotes whether the consumer accepted at least one element.
+  bool consumed_items : 1;
+  /// Denotes whether the consumer returned `task_result::stop_all`.
+  bool stop_all : 1;
 };
+
+constexpr bool operator==(new_round_result x, new_round_result y) {
+  return x.consumed_items == y.consumed_items && x.stop_all == y.stop_all;
+}
+
+constexpr bool operator!=(new_round_result x, new_round_result y) {
+  return !(x == y);
+}
+
+constexpr new_round_result make_new_round_result(bool consumed_items,
+                                                 bool stop_all = false) {
+  return {consumed_items, stop_all};
+}
+
+constexpr new_round_result operator|(new_round_result x, new_round_result y) {
+  return {x.consumed_items || y.consumed_items, x.stop_all || y.stop_all};
+}
 
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_TASK_RESULT_HPP
+#endif // CAF_INTRUSIVE_NEW_ROUND_RESULT_HPP

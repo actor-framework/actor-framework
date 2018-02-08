@@ -34,6 +34,7 @@
 
 #include "caf/intrusive/inbox_result.hpp"
 #include "caf/intrusive/lifo_inbox.hpp"
+#include "caf/intrusive/new_round_result.hpp"
 
 namespace caf {
 namespace intrusive {
@@ -152,7 +153,7 @@ public:
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   template <class F>
-  bool new_round(deficit_type quantum, F& consumer) {
+  new_round_result new_round(deficit_type quantum, F& consumer) {
     fetch_more();
     return queue_.new_round(quantum, consumer);
   }
