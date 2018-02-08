@@ -44,11 +44,12 @@ namespace basp {
 /// Describes a protocol instance managing multiple connections.
 class instance {
 public:
+  using endpoint_handle = routing_table::endpoint_handle;
   /// Provides a callback-based interface for certain BASP events.
   class callee {
   protected:
     using buffer_type = std::vector<char>;
-    using endpoint_handle = variant<connection_handle, datagram_handle>;
+    using endpoint_handle = instance::endpoint_handle;
   public:
     explicit callee(actor_system& sys, proxy_registry::backend& backend);
 
@@ -82,14 +83,8 @@ public:
                          std::vector<strong_actor_ptr>& forwarding_stack,
                          message& msg) = 0;
 
-    /// Called whenever BASP learns the ID of a remote node
-    /// to which it does not have a direct connection.
-    virtual void learned_new_node_directly(const node_id& nid,
-                                           bool was_known_indirectly) = 0;
-
-    /// Called whenever BASP learns the ID of a remote node
-    /// to which it does not have a direct connection.
-    virtual void learned_new_node_indirectly(const node_id& nid) = 0;
+    /// Called whenever BASP learns the ID of a remote node.
+    virtual void learned_new_node(const node_id& nid) = 0;
 
     /// Called if a heartbeat was received from `nid`
     virtual void handle_heartbeat(const node_id& nid) = 0;
@@ -175,15 +170,15 @@ public:
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
 
-  /// Returns a route to `target` or `none` on error.
-  optional<routing_table::route> lookup(const node_id& target);
+  /// Returns the handle for communication with `target` or `none` on error.
+  optional<endpoint_handle> lookup(const node_id& target);
 
-  /// Flushes the underlying buffer of `path`.
-  void flush(const routing_table::route& path);
+  /// Flushes the underlying buffer of `hdl`.
+  void flush(endpoint_handle hdl);
 
-  /// Sends a BASP message and implicitly flushes the output buffer of `r`.
+  /// Sends a BASP message and implicitly flushes the output buffer of `hdl`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(execution_unit* ctx, const routing_table::route& r,
+  void write(execution_unit* ctx, endpoint_handle hdl,
              header& hdr, payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.
@@ -293,11 +288,11 @@ public:
   bool handle(execution_unit* ctx, const Handle& hdl, header& hdr,
               std::vector<char>* payload, bool tcp_based,
               optional<endpoint_context&> ep, optional<uint16_t> port) {
-    // function object for checking payload validity
+    // Function object for checking payload validity.
     auto payload_valid = [&]() -> bool {
       return payload != nullptr && payload->size() == hdr.payload_len;
     };
-    // handle message to ourselves
+    // Handle message to ourselves.
     switch (hdr.operation) {
       case message_type::server_handshake: {
         actor_id aid = invalid_actor_id;
@@ -319,37 +314,31 @@ public:
           if (e)
             return false;
         }
-        // close self connection after handshake is done
+        // Close self connection after handshake is done.
         if (hdr.source_node == this_node_) {
           CAF_LOG_INFO("close connection to self immediately");
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
           return false;
         }
-        // close this connection if we already have a direct connection
-        if (tbl_.lookup_direct(hdr.source_node)) {
+        // Close this connection if we already established communication.
+        // TODO: Should we allow multiple "connections" over different
+        // transport protocols?
+        if (tbl_.lookup(hdr.source_node)) {
           CAF_LOG_INFO("close connection since we already have a "
-                       "direct connection: " << CAF_ARG(hdr.source_node));
+                       "connection: " << CAF_ARG(hdr.source_node));
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
           return false;
         }
-        // add direct route to this node and remove any indirect entry
-        CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
-        tbl_.add_direct(hdl, hdr.source_node);
-        auto was_indirect = tbl_.erase_indirect(hdr.source_node);
-        // write handshake as client in response
-        auto path = tbl_.lookup(hdr.source_node);
-        if (!path) {
-          CAF_LOG_ERROR("no route to host after server handshake");
-          return false;
-        }
-        if (tcp_based) {
-          auto ch = get<connection_handle>(path->hdl);
-          write_client_handshake(ctx, callee_.get_buffer(ch),
-                                 hdr.source_node);
-        }
-        callee_.learned_new_node_directly(hdr.source_node, was_indirect);
+        // Add this node to our contacts.
+        CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
+        tbl_.add(hdl, hdr.source_node);
+        // TODO: Add status, addresses, ... ?
+        // Write handshake as client in response.
+        if (tcp_based)
+          write_client_handshake(ctx, callee_.get_buffer(hdl), hdr.source_node);
+        callee_.learned_new_node(hdr.source_node);
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
-        flush(*path);
+        flush(hdl);
         break;
       }
       case message_type::client_handshake: {
@@ -367,49 +356,35 @@ public:
             return false;
           }
         }
-        if (tcp_based) {
-          if (tbl_.lookup_direct(hdr.source_node)) {
+        auto new_node = (this_node() != hdr.source_node
+                         && !tbl_.lookup(hdr.source_node));
+        if (!new_node) {
+          if (tcp_based) {
             CAF_LOG_INFO("received second client handshake:"
                          << CAF_ARG(hdr.source_node));
             break;
           }
-          // add direct route to this node and remove any indirect entry
-          CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
-          tbl_.add_direct(hdl, hdr.source_node);
-          auto was_indirect = tbl_.erase_indirect(hdr.source_node);
-          callee_.learned_new_node_directly(hdr.source_node, was_indirect);
         } else {
-          auto new_node = (this_node() != hdr.source_node
-                          && !tbl_.lookup_direct(hdr.source_node));
-          if (new_node) {
-            // add direct route to this node and remove any indirect entry
-            CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
-            tbl_.add_direct(hdl, hdr.source_node);
-          }
-          uint16_t seq = (ep && ep->requires_ordering) ? ep->seq_outgoing++ : 0;
-          write_server_handshake(ctx,
-                                 callee_.get_buffer(hdl),
-                                 port, seq);
-          callee_.flush(hdl);
-          if (new_node) {
-            auto was_indirect = tbl_.erase_indirect(hdr.source_node);
-            callee_.learned_new_node_directly(hdr.source_node, was_indirect);
-          }
+          // Add this node to our contacts.
+          CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
+          tbl_.add(hdl, hdr.source_node);
+          // TODO: Add status, addresses, ... ?
         }
+        // Since udp is unreliable we answer, maybe our message was lost.
+        if (!tcp_based) {
+          uint16_t seq = (ep && ep->requires_ordering) ? ep->seq_outgoing++ : 0;
+          write_server_handshake(ctx, callee_.get_buffer(hdl), port, seq);
+          callee_.flush(hdl);
+        }
+        // We have to call this after `write_server_handshake` because
+        // `learned_new_node` expects there to be an entry in the routing table.
+        if (new_node)
+          callee_.learned_new_node(hdr.source_node);
         break;
       }
       case message_type::dispatch_message: {
         if (!payload_valid())
           return false;
-        // in case the sender of this message was received via a third node,
-        // we assume that that node to offers a route to the original source
-        auto last_hop = tbl_.lookup_direct(hdl);
-        if (hdr.source_node != none
-            && hdr.source_node != this_node_
-            && last_hop != hdr.source_node
-            && !tbl_.lookup_direct(hdr.source_node)
-            && tbl_.add_indirect(last_hop, hdr.source_node))
-          callee_.learned_new_node_indirectly(hdr.source_node);
         binary_deserializer bd{ctx, *payload};
         auto receiver_name = static_cast<atom_value>(0);
         std::vector<strong_actor_ptr> forwarding_stack;

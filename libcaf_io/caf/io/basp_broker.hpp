@@ -80,14 +80,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
                std::vector<strong_actor_ptr>& stages, message& msg);
 
   // performs bookkeeping such as managing `spawn_servers`
-  void learned_new_node(const node_id& nid);
-
-  // inherited from basp::instance::callee
-  void learned_new_node_directly(const node_id& nid,
-                                 bool was_indirectly_before) override;
-
-  // inherited from basp::instance::callee
-  void learned_new_node_indirectly(const node_id& nid) override;
+  void learned_new_node(const node_id& nid) override;
 
   // inherited from basp::instance::callee
   uint16_t next_sequence_number(connection_handle hdl) override;
