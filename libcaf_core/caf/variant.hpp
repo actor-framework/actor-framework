@@ -48,6 +48,10 @@ namespace caf {
 
 constexpr size_t variant_npos = static_cast<size_t>(-1);
 
+struct variant_marker_t {};
+
+constexpr variant_marker_t variant_marker = variant_marker_t{};
+
 template <class T>
 struct variant_assign_helper {
   using result_type = void;
@@ -69,6 +73,17 @@ struct variant_move_helper {
     lhs = std::move(rhs);
   }
 };
+
+template <class F, class... Ts>
+struct variant_visit_result {
+  using type =
+    decltype((std::declval<F&>())(std::declval<typename Ts::type0&>()...));
+};
+
+template <class F, class... Ts>
+using variant_visit_result_t =
+  typename variant_visit_result<detail::decay_t<F>,
+                                detail::decay_t<Ts>...>::type;
 
 template <class T, class U,
           bool Enable = std::is_integral<T>::value
@@ -114,13 +129,13 @@ public:
 
   variant& operator=(const variant& other) {
     variant_assign_helper<variant> helper{*this};
-    other.apply(helper);
+    other.template apply<void>(helper);
     return *this;
   }
 
   variant& operator=(variant&& other) {
     variant_move_helper<variant> helper{*this};
-    other.apply(helper);
+    other.template apply<void>(helper);
     return *this;
   }
 
@@ -144,12 +159,12 @@ public:
 
   variant(const variant& other) : type_(variant_npos) {
     variant_assign_helper<variant> helper{*this};
-    other.apply(helper);
+    other.template apply<void>(helper);
   }
 
   variant(variant&& other) : type_(variant_npos) {
     variant_move_helper<variant> helper{*this};
-    other.apply(helper);
+    other.template apply<void>(helper);
   }
 
   ~variant() {
@@ -191,21 +206,20 @@ public:
     return data_.get(token);
   }
 
-  template <class Visitor>
-  auto apply(Visitor&& visitor) const
-  -> decltype(visitor(std::declval<const type0&>())) {
-    return apply_impl(*this, std::forward<Visitor>(visitor));
+  template <class Result, class Visitor>
+  Result apply(Visitor&& visitor) const {
+    return apply_impl<Result>(*this, std::forward<Visitor>(visitor),
+                              variant_marker);
   }
 
-  template <class Visitor>
-  auto apply(Visitor&& visitor) -> decltype(visitor(std::declval<type0&>())) {
-    return apply_impl(*this, std::forward<Visitor>(visitor));
+  template <class Result, class Visitor>
+  Result apply(Visitor&& visitor) {
+    return apply_impl<Result>(*this, std::forward<Visitor>(visitor),
+                              variant_marker);
   }
 
-  template <class Self, class Visitor>
-  static auto apply_impl(Self& x, Visitor&& f) -> decltype(
-    f(std::declval<typename std::conditional<std::is_const<Self>::value,
-                                             const type0, type0>::type&>())) {
+  template <class Result, class Self, class Visitor>
+  static Result apply_impl(Self& x, Visitor&& f, variant_marker_t) {
     switch (x.type_) {
       default: CAF_RAISE_ERROR("invalid type found");
       CAF_VARIANT_CASE(0);
@@ -236,7 +250,7 @@ private:
   inline void destroy_data() {
     if (type_ == variant_npos) return; // nothing to do
     detail::variant_data_destructor f;
-    apply(f);
+    apply<void>(f);
   }
 
   template <class U>
@@ -267,7 +281,7 @@ private:
                   "unless the element types of A are a strict subset of "
                   "the element types of B");
     variant_assign_helper<variant> helper{*this};
-    other.apply(helper);
+    other.template apply<void>(helper);
   }
 
   template <class... Us>
@@ -283,7 +297,7 @@ private:
                   "unless the element types of A are a strict subset of "
                   "the element types of B");
     variant_move_helper<variant> helper{*this};
-    other.apply(helper);
+    other.template apply<void>(helper);
   }
 
   size_t type_;
@@ -295,6 +309,15 @@ struct is_variant : std::false_type {};
 
 template <class... Ts>
 struct is_variant<variant<Ts...>> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<variant<Ts...>&> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<const variant<Ts...>&> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<const variant<Ts...>&&> : std::true_type {};
 
 /// @relates variant
 template <class T, class... Us>
@@ -333,28 +356,11 @@ const T* get_if(const variant<Us...>* value) {
 }
 
 /// @relates variant
-template <class Visitor, class... Ts>
-typename Visitor::result_type
-CAF_DEPRECATED apply_visitor(Visitor& visitor, const variant<Ts...>& data) {
-  return data.apply(visitor);
-}
-
-/// @relates variant
-template <class Visitor, class Variant,
-          class E =
-            typename std::enable_if<
-              is_variant<typename std::decay<Variant>::type>::value
-            >::type>
-auto visit(Visitor&& visitor, Variant&& data)
-  -> decltype(data.apply(std::forward<Visitor>(visitor))) {
-  return data.apply(visitor);
-}
-
-/// @relates variant
-template <class Visitor, class... Ts>
-typename Visitor::result_type
-CAF_DEPRECATED apply_visitor(Visitor& visitor, variant<Ts...>& data) {
-  return data.apply(visitor);
+template <class Visitor, class Variant, class... Variants,
+          class Result = variant_visit_result_t<Visitor, Variant, Variants...>>
+Result visit(Visitor&& f, Variant&& x, Variants&&... xs) {
+  return x.template apply<Result>(std::forward<Visitor>(f),
+                                  std::forward<Variants>(xs)...);
 }
 
 template <class T, class... Ts>
@@ -408,8 +414,7 @@ struct variant_reader {
 template <class Inspector, class... Ts>
 typename Inspector::result_type
 inspect(Inspector& f, variant_reader<variant<Ts...>>& x) {
-  return x.x.apply(f);
-  //return variant<Ts...>::apply_impl(x.x, f);
+  return x.x.template apply<typename Inspector::result_type>(f);
 }
 
 /// @relates variant
