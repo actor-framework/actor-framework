@@ -613,6 +613,20 @@ struct is_specialization : std::false_type { };
 template <template <class...> class T, class... Ts>
 struct is_specialization<T, T<Ts...>> : std::true_type { };
 
+/// Transfers const from `T` to `U`. `U` remains unchanged if `T` is not const.
+template <class T, class U>
+struct transfer_const {
+  using type = U;
+};
+
+template <class T, class U>
+struct transfer_const<const T, U> {
+  using type = const U;
+};
+
+template <class T, class U>
+using transfer_const_t = typename transfer_const<T, U>::type;
+
 } // namespace detail
 } // namespace caf
 
