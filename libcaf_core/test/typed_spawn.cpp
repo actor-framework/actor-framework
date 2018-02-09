@@ -322,8 +322,13 @@ struct fixture {
   actor_system system;
   scoped_actor self;
 
-  fixture() : system(cfg.add_message_type<get_state_msg>("get_state_msg")),
-              self(system) {
+  static actor_system_config& init(actor_system_config& cfg) {
+    cfg.add_message_type<get_state_msg>("get_state_msg");
+    cfg.parse(test::engine::argc(), test::engine::argv());
+    return cfg;
+  }
+
+  fixture() : system(init(cfg)), self(system) {
     // nop
   }
 
@@ -376,10 +381,11 @@ CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
  ******************************************************************************/
 
 CAF_TEST(typed_spawns) {
-  // run test series with typed_server(1|2)
+  CAF_MESSAGE("run test series with typed_server1");
   test_typed_spawn(system.spawn(typed_server1));
   self->await_all_other_actors_done();
   CAF_MESSAGE("finished test series with `typed_server1`");
+  CAF_MESSAGE("run test series with typed_server2");
   test_typed_spawn(system.spawn(typed_server2));
   self->await_all_other_actors_done();
   CAF_MESSAGE("finished test series with `typed_server2`");

@@ -34,9 +34,10 @@
 
 namespace caf {
 
-stream_manager::stream_manager(local_actor* selfptr)
+stream_manager::stream_manager(local_actor* selfptr, stream_priority prio)
     : self_(selfptr),
-      pending_handshakes_(0) {
+      pending_handshakes_(0),
+      priority_(prio) {
   // nop
 }
 
@@ -86,6 +87,11 @@ void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
 void stream_manager::close() {
   out().close();
   self_->erase_inbound_paths_later(this);
+  if (!promises_.empty()) {
+    auto msg = make_final_result();
+    for (auto& x : promises_)
+      x.deliver(msg);
+  }
 }
 
 void stream_manager::abort(error reason) {
@@ -107,25 +113,28 @@ bool stream_manager::congested() const {
 void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
                                     strong_actor_ptr client,
                                     mailbox_element::forwarding_stack fwd_stack,
-                                    message_id mid, stream_priority prio) {
+                                    message_id mid) {
   CAF_ASSERT(dest != nullptr);
   ++pending_handshakes_;
   dest->enqueue(
     make_mailbox_element(
       std::move(client), mid, std::move(fwd_stack),
-      open_stream_msg{slot, make_handshake(), self_->ctrl(), dest, prio}),
+      open_stream_msg{slot, make_handshake(), self_->ctrl(), dest, priority_}),
     self_->context());
 }
 
-void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
-                                    stream_priority prio) {
+void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot) {
   mailbox_element::forwarding_stack fwd_stack;
   send_handshake(std::move(dest), slot, nullptr, std::move(fwd_stack),
-                 make_message_id(), prio);
+                 make_message_id());
 }
 
 bool stream_manager::generate_messages() {
   return false;
+}
+
+void stream_manager::cycle_timeout(size_t) {
+  // TODO: make pure virtual
 }
 
 void stream_manager::register_input_path(inbound_path* ptr) {
@@ -142,6 +151,12 @@ void stream_manager::deregister_input_path(inbound_path* ptr) noexcept {
   inbound_paths_.pop_back();
 }
 
+void stream_manager::add_promise(response_promise x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_ASSERT(out().terminal());
+  promises_.emplace_back(std::move(x));
+}
+
 message stream_manager::make_final_result() {
   return none;
 }
@@ -156,7 +171,7 @@ void stream_manager::output_closed(error) {
 }
 
 message stream_manager::make_handshake() const {
-  CAF_LOG_ERROR("stream_manager::make_output_token called");
+  CAF_LOG_ERROR("stream_manager::make_handshake called");
   return none;
 }
 

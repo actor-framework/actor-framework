@@ -56,6 +56,7 @@
 #include "caf/policy/urgent_messages.hpp"
 
 #include "caf/detail/behavior_stack.hpp"
+#include "caf/detail/tick_emitter.hpp"
 #include "caf/detail/stream_sink_driver_impl.hpp"
 #include "caf/detail/stream_sink_impl.hpp"
 #include "caf/detail/stream_source_driver_impl.hpp"
@@ -104,10 +105,6 @@ public:
 
   /// Categorizes incoming messages.
   enum class message_category {
-    /// Denotes an expired and thus obsolete timeout.
-    expired_timeout,
-    /// Triggers the currently active timeout.
-    timeout,
     /// Triggers the current behavior.
     ordinary,
     /// Triggers handlers for system messages such as `exit_msg` or `down_msg`.
@@ -141,7 +138,8 @@ public:
   using upstream_queue = intrusive::drr_queue<policy::upstream_messages>;
 
   /// Stores downstream messages.
-  using downstream_queue = intrusive::drr_queue<policy::downstream_messages>;
+  using downstream_queue =
+    intrusive::wdrr_dynamic_multiplexed_queue<policy::downstream_messages>;
 
   /// Configures the FIFO inbox with four nested queues:
   ///
@@ -165,6 +163,10 @@ public:
                                               downstream_queue, urgent_queue>;
 
     static constexpr size_t default_queue_index = 0;
+
+    static constexpr size_t upstream_queue_index = 1;
+
+    static constexpr size_t downstream_queue_index = 2;
 
     static constexpr size_t urgent_queue_index = 3;
   };
@@ -214,8 +216,10 @@ public:
                                       mailbox_element&);
 
     /// Consumes downstream messages.
-    intrusive::task_result operator()(size_t, downstream_queue&,
-                                      mailbox_element&);
+    intrusive::task_result
+    operator()(size_t, downstream_queue&, stream_slot slot,
+               policy::downstream_messages::nested_queue_type&,
+               mailbox_element&);
 
     // Dispatches asynchronous messages with high and normal priority to the
     // same handler.
@@ -403,20 +407,17 @@ public:
   template <class Driver,
             class Scatterer = broadcast_scatterer<typename Driver::output_type>,
             class... Ts>
-  typename Driver::annotated_stream_type make_source(Ts&&... xs) {
-    auto slot = next_slot();
+  typename Driver::output_stream_type make_source(Ts&&... xs) {
     auto ptr = detail::make_stream_source<Driver, Scatterer>(
       this, std::forward<Ts>(xs)...);
-    ptr->generate_messages();
-    pending_stream_managers_.emplace(slot, ptr);
-    return {slot, std::move(ptr)};
+    return {0, std::move(ptr)};
   }
 
   template <class... Ts, class Init, class Pull, class Done,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
-  annotated_stream<typename Trait::output, detail::decay_t<Ts>...>
+  output_stream<typename Trait::output, detail::decay_t<Ts>...>
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
               policy::arg<Scatterer> = {}) {
     using tuple_type = std::tuple<detail::decay_t<Ts>...>;
@@ -432,7 +433,10 @@ public:
     auto slot = next_slot();
     stream_slots id{in.slot(), slot};
     auto ptr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
-    stream_managers_.emplace(id, ptr);
+    if (!add_stream_manager(id, ptr)) {
+      CAF_LOG_WARNING("unable to add a stream manager for a sink");
+      return {0, nullptr};
+    }
     return {slot, std::move(ptr)};
   }
 
@@ -460,7 +464,7 @@ public:
     `stream_manager`. template <class Handle, class... Ts, class Init, class
     Getter, class ClosedPredicate, class ResHandler, class Scatterer =
     broadcast_scatterer< typename stream_source_trait_t<Getter>::output>>
-    annotated_stream<typename stream_source_trait_t<Getter>::output, Ts...>
+    output_stream<typename stream_source_trait_t<Getter>::output, Ts...>
     make_source(const Handle& dest, std::tuple<Ts...> xs, Init init,
                 Getter getter, ClosedPredicate pred, ResHandler res_handler,
                 policy::arg<Scatterer> scatterer_type = {}) {
@@ -531,7 +535,7 @@ public:
     /// @returns A stream object with a pointer to the generated
     `stream_manager`. template <class Init, class... Ts, class Getter, class
     ClosedPredicate, class Scatterer = broadcast_scatterer< typename
-    stream_source_trait_t<Getter>::output>> annotated_stream<typename
+    stream_source_trait_t<Getter>::output>> output_stream<typename
     stream_source_trait_t<Getter>::output, Ts...> make_source(std::tuple<Ts...>
     xs, Init init, Getter getter, ClosedPredicate pred, policy::arg<Scatterer>
     scatterer_type = {}) { CAF_IGNORE_UNUSED(scatterer_type); using type =
@@ -598,7 +602,7 @@ public:
     `stream_manager`. template <class In, class... Ts, class Init, class Fun,
     class Cleanup, class Gatherer = random_gatherer, class Scatterer =
                 broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>>
-    annotated_stream<typename stream_stage_trait_t<Fun>::output, Ts...>
+    output_stream<typename stream_stage_trait_t<Fun>::output, Ts...>
     make_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
                Cleanup cleanup, policy::arg<Gatherer, Scatterer> policies = {})
     { CAF_IGNORE_UNUSED(policies); CAF_ASSERT(current_mailbox_element() !=
@@ -722,16 +726,29 @@ public:
   */
   /// @cond PRIVATE
 
+  /// Builds the pipeline after receiving an `open_stream_msg`. Sends a stream
+  /// handshake to the next actor if `mgr->out().terminal() == false`,
+  /// otherwise
+  /// @private
+  sec build_pipeline(stream_manager_ptr mgr);
+
+
   // -- timeout management -----------------------------------------------------
 
   /// Requests a new timeout and returns its ID.
-  uint32_t request_timeout(const duration& d);
+  uint64_t set_receive_timeout(actor_clock::time_point x);
+
+  /// Requests a new timeout for the current behavior and returns its ID.
+  uint64_t set_receive_timeout();
 
   /// Resets the timeout if `timeout_id` is the active timeout.
-  void reset_timeout(uint32_t timeout_id);
+  void reset_receive_timeout(uint64_t timeout_id);
 
   /// Returns whether `timeout_id` is currently active.
-  bool is_active_timeout(uint32_t tid) const;
+  bool is_active_receive_timeout(uint64_t tid) const;
+
+  /// Requests a new timeout and returns its ID.
+  uint64_t set_stream_timeout(actor_clock::time_point x);
 
   // -- message processing -----------------------------------------------------
 
@@ -942,11 +959,15 @@ public:
   void erase_inbound_paths_later(const stream_manager* mgr,
                                  error reason) override;
 
+  // -- handling of upstream message -------------------------------------------
+
+  void handle(stream_slots slots, actor_addr& sender,
+              upstream_msg::ack_open& x);
+
 protected:
   /// @cond PRIVATE
 
-  /// Returns a currently unused slot.
-  stream_slot next_slot();
+  // -- utility functions for invoking default handler -------------------------
 
   /// Utility function that swaps `f` into a temporary before calling it
   /// and restoring `f` only if it has not been replaced by the user.
@@ -978,7 +999,29 @@ protected:
       swap(g, f);
   }
 
-  //bool handle_stream_msg(mailbox_element& x, behavior* active_behavior);
+  // -- timeout management -----------------------------------------------------
+
+  /// Requests a new timeout and returns its ID.
+  uint64_t set_timeout(atom_value type, actor_clock::time_point x);
+
+  // -- stream processing ------------------------------------------------------
+
+  /// Returns a currently unused slot.
+  stream_slot next_slot();
+
+  /// Adds a new stream manager to the actor and starts cycle management if
+  /// needed.
+  bool add_stream_manager(stream_slots id, stream_manager_ptr ptr);
+
+  /// Removes a new stream manager.
+  bool remove_stream_manager(stream_slots id);
+
+  /// @pre `x.content().match_elements<open_stream_msg>()`
+  invoke_message_result handle_open_stream_msg(mailbox_element& x);
+
+  /// Advances credit and batch timeouts and returns the timestamp when to call
+  /// this function again.
+  actor_clock::time_point advance_streams(actor_clock::time_point now);
 
   // -- member variables -------------------------------------------------------
 
@@ -989,7 +1032,7 @@ protected:
   detail::behavior_stack bhvr_stack_;
 
   /// Identifies the timeout messages we are currently waiting for.
-  uint32_t timeout_id_;
+  uint64_t timeout_id_;
 
   /// Stores callbacks for awaited responses.
   std::forward_list<pending_response> awaited_responses_;
@@ -1015,6 +1058,15 @@ protected:
   /// Stores stream managers for pending streams, i.e., streams that have not
   /// yet received an ACK.
   std::map<stream_slot, stream_manager_ptr> pending_stream_managers_;
+
+  /// Controls batch and credit timeouts.
+  detail::tick_emitter stream_ticks_;
+
+  /// Number of ticks per batch delay.
+  long max_batch_delay_ticks_;
+
+  /// Number of ticks of each credit round.
+  long credit_round_ticks_;
 
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;

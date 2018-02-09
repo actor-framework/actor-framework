@@ -26,12 +26,11 @@
 namespace caf {
 
 inbound_path::stats_t::stats_t() : ring_iter(0) {
-  measurement x{0, std::chrono::nanoseconds(0)};
+  measurement x{0, timespan{0}};
   measurements.resize(stats_sampling_size, x);
 }
 
-auto inbound_path::stats_t::calculate(std::chrono::nanoseconds c,
-                                      std::chrono::nanoseconds d)
+auto inbound_path::stats_t::calculate(timespan c, timespan d)
   -> calculation_result {
   // Max throughput = C * (N / t), where C = cycle length, N = measured items,
   // and t = measured time. Desired batch size is the same formula with D
@@ -94,8 +93,7 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
 }
 
 void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
-                                  std::chrono::nanoseconds cycle,
-                                  std::chrono::nanoseconds complexity){
+                                  timespan cycle, timespan complexity) {
   auto x = stats.calculate(cycle, complexity);
   auto credit = std::max(x.max_throughput - (assigned_credit - queued_items),
                          0l);

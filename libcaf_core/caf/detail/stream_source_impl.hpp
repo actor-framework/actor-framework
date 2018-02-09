@@ -83,6 +83,10 @@ public:
     return hint != out_.capacity();
   }
 
+  message make_handshake() const override {
+    return make_message_from_tuple(driver_.make_handshake());
+  }
+
 private:
   bool at_end_;
   Driver driver_;

@@ -47,7 +47,7 @@ public:
 
   using stream_type = stream<output_type>;
 
-  using annotated_stream_type = typename super::annotated_stream_type;
+  using output_stream_type = typename super::output_stream_type;
 
   using tuple_type = std::tuple<Ts...>;
 

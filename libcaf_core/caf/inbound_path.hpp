@@ -28,6 +28,7 @@
 #include "caf/stream_manager.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/timestamp.hpp"
 #include "caf/upstream_msg.hpp"
 
 #include "caf/meta/type_name.hpp"
@@ -81,7 +82,7 @@ public:
   struct stats_t {
     struct measurement {
       long batch_size;
-      std::chrono::nanoseconds calculation_time;
+      timespan calculation_time;
     };
 
     struct calculation_result {
@@ -99,8 +100,7 @@ public:
 
     /// Returns the maximum number of items this actor could handle for given
     /// cycle length with a minimum of 1.
-    calculation_result calculate(std::chrono::nanoseconds cycle,
-                                 std::chrono::nanoseconds desired_complexity);
+    calculation_result calculate(timespan cycle, timespan desired_complexity);
 
     /// Stores a new measurement in the ring buffer.
     void store(measurement x);
@@ -129,9 +129,8 @@ public:
   /// @param self Points to the parent actor.
   /// @param queued_items Counts the accumulated size of all batches that are
   ///                     currently waiting in the mailbox.
-  void emit_ack_batch(local_actor* self, long queued_items,
-                      std::chrono::nanoseconds cycle,
-                      std::chrono::nanoseconds desired_batch_complexity);
+  void emit_ack_batch(local_actor* self, long queued_items, timespan cycle,
+                      timespan desired_batch_complexity);
 
   /// Sends a `stream_msg::close` on this path.
   void emit_regular_shutdown(local_actor* self);

@@ -39,7 +39,7 @@ public:
 
   using stream_type = stream<output_type>;
 
-  using annotated_stream_type = annotated_stream<output_type, HandshakeData...>;
+  using output_stream_type = output_stream<output_type, HandshakeData...>;
 
   using handshake_tuple_type = std::tuple<stream_type, HandshakeData...>;
 

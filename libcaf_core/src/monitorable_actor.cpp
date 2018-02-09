@@ -187,6 +187,11 @@ bool monitorable_actor::remove_backlink(abstract_actor* x) {
   return detach_impl(tk, true) > 0;
 }
 
+error monitorable_actor::fail_state() const {
+  std::unique_lock<std::mutex> guard{mtx_};
+  return fail_state_;
+}
+
 size_t monitorable_actor::detach_impl(const attachable::token& what,
                                       bool stop_on_hit, bool dry_run) {
   CAF_LOG_TRACE(CAF_ARG(stop_on_hit) << CAF_ARG(dry_run));

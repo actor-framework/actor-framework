@@ -62,12 +62,17 @@ public:
   }
 
   /// Returns the unique identifier for this stream_result.
-  inline stream_slot slot() const {
+  inline stream_slot slot() const noexcept {
     return slot_;
   }
 
-  /// Returns the handler assigned to this stream_result on this actor.
-  inline const stream_manager_ptr& ptr() const {
+  /// Returns the handler assigned to this stream on this actor.
+  inline stream_manager_ptr& ptr() noexcept {
+    return ptr_;
+  }
+
+  /// Returns the handler assigned to this stream on this actor.
+  inline const stream_manager_ptr& ptr() const noexcept {
     return ptr_;
   }
 

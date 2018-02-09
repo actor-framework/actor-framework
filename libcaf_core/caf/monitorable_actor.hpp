@@ -97,6 +97,8 @@ public:
 
   bool remove_backlink(abstract_actor* x) override;
 
+  error fail_state() const;
+
   /// @endcond
 
 protected:

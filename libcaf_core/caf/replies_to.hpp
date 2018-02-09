@@ -22,6 +22,7 @@
 #include <string>
 
 #include "caf/illegal_message_element.hpp"
+#include "caf/stream.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_pair.hpp"
@@ -35,9 +36,6 @@ std::string replies_to_type_name(size_t input_size,
                                  size_t output_opt1_size,
                                  const std::string* output_opt1);
 /// @endcond
-
-template <class...>
-struct output_stream {};
 
 template <class...>
 struct output_tuple {};
@@ -70,8 +68,9 @@ struct replies_to {
   using with = typed_mpi<detail::type_list<Is...>, output_tuple<Os...>>;
 
   /// @private
-  template <class... Os>
-  using with_stream = typed_mpi<detail::type_list<Is...>, output_stream<Os...>>;
+  template <class O, class... Os>
+  using with_stream = typed_mpi<detail::type_list<Is...>,
+                                output_stream<O, Os...>>;
 };
 
 template <class... Is>

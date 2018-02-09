@@ -62,6 +62,11 @@ public:
   /// Configures the time interval per tick.
   void interval(duration_type x);
 
+  /// Returns the time interval per tick.
+  inline duration_type interval() const {
+    return interval_;
+  }
+
   /// Advances time and calls `consumer` for each emitted tick.
   template <class F>
   void update(time_point now, F& consumer) {

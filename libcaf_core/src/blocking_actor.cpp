@@ -259,14 +259,19 @@ bool blocking_actor::await_data(timeout_type timeout) {
 }
 
 mailbox_element_ptr blocking_actor::dequeue() {
+  mailbox().fetch_more();
   auto& qs = mailbox_.queue().queues();
-  auto& q1 = get<mailbox_policy::default_queue_index>(qs);
-  auto ptr = q1.take_front();
-  if (ptr == nullptr) {
-    auto& q2 = get<mailbox_policy::urgent_queue_index>(qs);
-    ptr = q2.take_front();
+  auto& q1 = get<mailbox_policy::urgent_queue_index>(qs);
+  if (!q1.empty()) {
+    q1.inc_deficit(1);
+    return q1.take_front();
   }
-  return ptr;
+  auto& q2 = get<mailbox_policy::default_queue_index>(qs);
+  if (!q2.empty()) {
+    q2.inc_deficit(1);
+    return q2.take_front();
+  }
+  return nullptr;
 }
 
 void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
@@ -283,6 +288,11 @@ void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
     auto fun = make_blocking_behavior(&bhvr);
     receive_impl(rcc, mid, fun);
   }
+}
+
+sec blocking_actor::build_pipeline(stream_manager_ptr) {
+  CAF_LOG_ERROR("blocking_actor::connect_pipeline called");
+  return sec::bad_function_call;
 }
 
 size_t blocking_actor::attach_functor(const actor& x) {

@@ -28,9 +28,6 @@
 using namespace std;
 using namespace caf;
 
-// TODO: use std::literals::chrono_literals when switching to C++14
-using ns = std::chrono::nanoseconds;
-
 template <class... Ts>
 void print(const char* format, Ts... xs) {
   char buf[200];
@@ -60,13 +57,14 @@ struct fixture {
           c, n, t, m);
     print("- items/batch B = max(D * N / t, 1) = max(%ld * %ld / %ld, 1) = %ld",
           d, n, t, b);
-    auto cr = x.calculate(ns(1000), ns(100));
+    auto cr = x.calculate(timespan(1000), timespan(100));
     CAF_CHECK_EQUAL(cr.items_per_batch, b);
     CAF_CHECK_EQUAL(cr.max_throughput, m);
   }
 
   void store(long batch_size, long calculation_time_ns) {
-    inbound_path::stats_t::measurement m{batch_size, ns{calculation_time_ns}};
+    inbound_path::stats_t::measurement m{batch_size,
+                                         timespan{calculation_time_ns}};
     x.store(m);
   }
 };

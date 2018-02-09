@@ -73,6 +73,10 @@ public:
   void operator()(const none_t&) override {
     (*this)();
   }
+
+  void operator()(stream_slot, stream_manager_ptr&) override {
+    (*this)();
+  }
 };
 
 } // namespace <anonymous>

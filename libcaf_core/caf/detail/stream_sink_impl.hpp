@@ -64,6 +64,7 @@ public:
     if (x.xs.match_elements<vec_type>()) {
       auto& xs = x.xs.get_mutable_as<vec_type>(0);
       driver_.process(std::move(xs));
+      return;
     }
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
   }

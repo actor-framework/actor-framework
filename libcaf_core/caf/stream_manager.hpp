@@ -36,7 +36,8 @@ namespace caf {
 /// @relates stream_msg
 class stream_manager : public ref_counted {
 public:
-  stream_manager(local_actor* selfptr);
+  stream_manager(local_actor* selfptr,
+                 stream_priority prio = stream_priority::normal);
 
   ~stream_manager() override;
 
@@ -96,12 +97,11 @@ public:
   virtual void send_handshake(strong_actor_ptr dest, stream_slot slot,
                               strong_actor_ptr stream_origin,
                               mailbox_element::forwarding_stack fwd_stack,
-                              message_id handshake_mid, stream_priority prio);
+                              message_id handshake_mid);
 
   /// Sends a handshake to `dest`.
   /// @pre `dest != nullptr`
-  void send_handshake(strong_actor_ptr dest, stream_slot slot,
-                      stream_priority prio);
+  void send_handshake(strong_actor_ptr dest, stream_slot slot);
 
   // -- implementation hooks for sources ---------------------------------------
 
@@ -119,6 +119,9 @@ public:
   /// safely.
   virtual bool done() const = 0;
 
+  /// Advances time.
+  virtual void cycle_timeout(size_t cycle_nr);
+
   // -- input path management --------------------------------------------------
 
   /// Informs the manager that a new input path opens.
@@ -126,6 +129,12 @@ public:
 
   /// Informs the manager that an input path closes.
   virtual void deregister_input_path(inbound_path* x) noexcept;
+
+  // -- mutators ---------------------------------------------------------------
+
+  /// Adds a response promise to a sink for delivering the final result.
+  /// @pre `out().terminal() == true`
+  void add_promise(response_promise x);
 
   // -- inline functions -------------------------------------------------------
 
@@ -170,6 +179,12 @@ protected:
 
   /// Keeps track of pending handshakes.
   long pending_handshakes_;
+
+  /// Configures the importance of outgoing traffic.
+  stream_priority priority_;
+
+  /// Stores response promises for dellivering the final result.
+  std::vector<response_promise> promises_;
 };
 
 /// A reference counting pointer to a `stream_manager`.

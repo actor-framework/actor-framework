@@ -77,7 +77,12 @@ public:
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline const stream_manager_ptr& ptr() const {
+  inline stream_manager_ptr& ptr() noexcept {
+    return ptr_;
+  }
+
+  /// Returns the handler assigned to this stream on this actor.
+  inline const stream_manager_ptr& ptr() const noexcept {
     return ptr_;
   }
 
@@ -101,7 +106,7 @@ constexpr invalid_stream_t invalid_stream = invalid_stream_t{};
 /// Identifies an unbound sequence of messages annotated with the additional
 /// handshake arguments emitted to the next stage.
 template <class T, class... Ts>
-class annotated_stream final : public stream<T> {
+class output_stream final : public stream<T> {
 public:
   /// Dennotes the supertype.
   using super = stream<T>;

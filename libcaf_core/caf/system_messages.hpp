@@ -80,14 +80,16 @@ typename Inspector::result_type inspect(Inspector& f, group_down_msg& x) {
 /// Signalizes a timeout event.
 /// @note This message is handled implicitly by the runtime system.
 struct timeout_msg {
+  /// Type of the timeout (either `receive_atom` or `cycle_atom`).
+  atom_value type;
   /// Actor-specific timeout ID.
-  uint32_t timeout_id;
+  uint64_t timeout_id;
 };
 
 /// @relates timeout_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, timeout_msg& x) {
-  return f(meta::type_name("timeout_msg"), x.timeout_id);
+  return f(meta::type_name("timeout_msg"), x.type, x.timeout_id);
 }
 
 /// Demands the receiver to open a new stream from the sender to the receiver.
@@ -112,7 +114,7 @@ struct open_stream_msg {
 /// @relates stream_handshake_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
-  return f(meta::type_name("stream_handshake_msg"), x.slot, x.msg, x.prev_stage,
+  return f(meta::type_name("open_stream_msg"), x.slot, x.msg, x.prev_stage,
            x.original_stage, x.priority);
 }
 
