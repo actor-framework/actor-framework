@@ -122,6 +122,12 @@ public:
     return self_;
   }
 
+  // -- meta information -------------------------------------------------------
+
+  /// Returns `true` if thie scatterer belongs to a sink, i.e., terminates the
+  /// stream and never has outbound paths.
+  virtual bool terminal() const noexcept;
+
   // -- pure virtual memeber functions -----------------------------------------
 
   /// Sends batches to sinks.

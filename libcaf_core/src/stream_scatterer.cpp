@@ -160,6 +160,10 @@ size_t stream_scatterer::total_credit() const noexcept {
   return fold(std::plus<size_t>{}, size_t{0u}, paths_);
 }
 
+bool stream_scatterer::terminal() const noexcept {
+  return false;
+}
+
 void stream_scatterer::about_to_erase(map_type::iterator i, bool silent,
                                       error* reason) {
   if (!silent) {

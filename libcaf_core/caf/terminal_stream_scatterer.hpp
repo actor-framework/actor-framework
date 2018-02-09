@@ -34,6 +34,8 @@ public:
   ~terminal_stream_scatterer() override;
 
   size_t capacity() const noexcept override;
+
+  bool terminal() const noexcept override;
 };
 
 } // namespace caf

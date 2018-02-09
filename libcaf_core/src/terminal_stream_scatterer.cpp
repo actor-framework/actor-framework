@@ -35,4 +35,8 @@ size_t terminal_stream_scatterer::capacity() const noexcept {
   return std::numeric_limits<size_t>::max();
 }
 
+bool terminal_stream_scatterer::terminal() const noexcept {
+  return true;
+}
+
 } // namespace caf
