@@ -35,7 +35,7 @@ namespace {
 using std::chrono::seconds;
 
 struct testee_state {
-  uint32_t timeout_id = 41;
+  uint64_t timeout_id = 41;
 };
 
 behavior testee(stateful_actor<testee_state, raw_event_based_actor>* self,
@@ -44,7 +44,7 @@ behavior testee(stateful_actor<testee_state, raw_event_based_actor>* self,
     [=](ok_atom) {
       auto n = t->now() + seconds(10);
       self->state.timeout_id += 1;
-      t->set_receive_timeout(n, self, self->state.timeout_id);
+      t->set_ordinary_timeout(n, self, atom(""), self->state.timeout_id);
     },
     [=](add_atom) {
       auto n = t->now() + seconds(10);
