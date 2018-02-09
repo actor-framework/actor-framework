@@ -260,6 +260,9 @@ public:
   // -- streaming parameters ---------------------------------------------------
 
   /// Maximum delay for sending underfull batches.
+  size_t streaming_desired_batch_commplexity_us;
+
+  /// Maximum delay for sending underfull batches.
   size_t streaming_max_batch_delay_us;
 
   /// Timespan between two credit rounds.

@@ -112,6 +112,7 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   // (1) hard-coded defaults
+  streaming_desired_batch_commplexity_us = 50;
   streaming_max_batch_delay_us = 50000;
   streaming_credit_round_interval_us = 100000;
   streaming_tick_duration_us = 50000;
@@ -145,6 +146,8 @@ actor_system_config::actor_system_config()
   middleman_max_pending_msgs = 10;
   // fill our options vector for creating INI and CLI parsers
   opt_group{options_, "streaming"}
+  .add(streaming_desired_batch_commplexity_us, "desired-batch-commplexity-us",
+       "sets the desired timespan for a single batch")
   .add(streaming_max_batch_delay_us, "max-batch-delay-us",
        "sets the maximum delay for sending underfull batches in microseconds")
   .add(streaming_credit_round_interval_us, "credit-cycle-interval-us",
