@@ -163,7 +163,6 @@ class expect_clause_base {
 public:
   expect_clause_base(caf::scheduler::test_coordinator& sched)
       : sched_(sched),
-        mock_dest_(false),
         dest_(nullptr) {
     // nop
   }
@@ -201,14 +200,7 @@ public:
     return dref();
   }
 
-  Derived& to(const wildcard& whom) {
-    CAF_REQUIRE(sched_.prioritize(whom));
-    dest_ = &sched_.next_job<caf::scheduled_actor>();
-    return dref();
-  }
-
   Derived& to(const caf::scoped_actor& whom) {
-    mock_dest_ = true;
     dest_ = whom.ptr();
     return dref();
   }
@@ -217,6 +209,7 @@ public:
   std::tuple<const Ts&...> peek() {
     CAF_REQUIRE(dest_ != nullptr);
     auto ptr = peek_mailbox(dest_);
+    CAF_REQUIRE(ptr != nullptr);
     if (!ptr->content().template match_elements<Ts...>()) {
       CAF_FAIL("Message does not match expected pattern: "
                << to_string(ptr->content()));
@@ -237,10 +230,7 @@ protected:
     return *static_cast<Derived*>(this);
   }
 
-  // denotes whether destination is a mock actor, i.e., a scoped_actor without
-  // functionality other than checking outputs of other actors
   caf::scheduler::test_coordinator& sched_;
-  bool mock_dest_;
   caf::strong_actor_ptr src_;
   caf::local_actor* dest_;
   std::function<void ()> peek_;
@@ -350,7 +340,6 @@ class disallow_clause_base {
 public:
   disallow_clause_base(caf::scheduler::test_coordinator& sched)
       : sched_(sched),
-        mock_dest_(false),
         dest_(nullptr) {
     // nop
   }
@@ -386,7 +375,6 @@ public:
   }
 
   Derived& to(const caf::scoped_actor& whom) {
-    mock_dest_ = true;
     dest_ = whom.ptr();
     return dref();
   }
@@ -405,10 +393,7 @@ protected:
     return *static_cast<Derived*>(this);
   }
 
-  // denotes whether destination is a mock actor, i.e., a scoped_actor without
-  // functionality other than checking outputs of other actors
   caf::scheduler::test_coordinator& sched_;
-  bool mock_dest_;
   caf::strong_actor_ptr src_;
   caf::local_actor* dest_;
 };
@@ -510,6 +495,10 @@ struct test_coordinator_fixture {
         self(sys),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
     // nop
+  }
+
+  ~test_coordinator_fixture() {
+    sched.clock().cancel_all();
   }
 
   template <class T = int>
