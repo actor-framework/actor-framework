@@ -127,3 +127,25 @@ CAF_TEST(copying_moving_roundtrips) {
   macro_repeat20(v20_test);
 }
 
+namespace {
+
+struct test_visitor {
+  template <class... Ts>
+  string operator()(const Ts&... xs) {
+    return deep_to_string(std::forward_as_tuple(xs...));
+  }
+};
+
+} // namespace <anonymous>
+
+CAF_TEST(n_ary_visit) {
+  variant<int, string> a{42};
+  variant<string, atom_value> b{atom("foo")};
+  variant<float, int, string> c{string{"bar"}};
+  variant<int, string, double> d{123};
+  test_visitor f;
+  CAF_CHECK_EQUAL(visit(f, a, b), "(42, 'foo')");
+  CAF_CHECK_EQUAL(visit(f, a, b, c), "(42, 'foo', \"bar\")");
+  CAF_CHECK_EQUAL(visit(f, a, b, c, d), "(42, 'foo', \"bar\", 123)");
+}
+

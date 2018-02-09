@@ -22,6 +22,7 @@
 #include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/fwd.hpp"
 #include "caf/static_visitor.hpp"
 
 #include "caf/meta/omittable.hpp"
@@ -32,7 +33,15 @@
 
 #define CAF_VARIANT_CASE(n)                                                    \
   case n:                                                                      \
-    return f(x.get(std::integral_constant<int, (n <= max_type_id ? n : 0)>()))
+    return f(std::forward<Us>(xs)...,                                          \
+             x.get(std::integral_constant<int, (n <= max_type_id ? n : 0)>()))
+
+#define CAF_VARIANT_DISPATCH_CASE(n)                                           \
+  case n:                                                                      \
+    return next.template apply_impl<Result>(                                   \
+      std::forward<Variant>(next), std::forward<Visitor>(f),                   \
+      std::forward<Us>(xs)...,                                                 \
+      x.get(std::integral_constant<int, (n <= max_type_id ? n : 0)>()))
 
 #define CAF_VARIANT_ASSIGN_CASE(n)                                             \
   case n: {                                                                    \
@@ -109,6 +118,21 @@ struct is_same_ish
         std::true_type,
         is_equal_int_type<T, U>
       >::type { };
+
+template <class T>
+struct is_variant : std::false_type {};
+
+template <class... Ts>
+struct is_variant<variant<Ts...>> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<variant<Ts...>&> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<const variant<Ts...>&> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<const variant<Ts...>&&> : std::true_type {};
 
 /// A variant represents always a valid value of one of the types `Ts...`.
 template <class... Ts>
@@ -206,20 +230,20 @@ public:
     return data_.get(token);
   }
 
-  template <class Result, class Visitor>
-  Result apply(Visitor&& visitor) const {
+  template <class Result, class Visitor, class... Variants>
+  Result apply(Visitor&& visitor, Variants&&... xs) const {
     return apply_impl<Result>(*this, std::forward<Visitor>(visitor),
-                              variant_marker);
+                              std::forward<Variants>(xs)..., variant_marker);
   }
 
-  template <class Result, class Visitor>
-  Result apply(Visitor&& visitor) {
+  template <class Result, class Visitor, class... Variants>
+  Result apply(Visitor&& visitor, Variants&&... xs) {
     return apply_impl<Result>(*this, std::forward<Visitor>(visitor),
-                              variant_marker);
+                              std::forward<Variants>(xs)..., variant_marker);
   }
 
-  template <class Result, class Self, class Visitor>
-  static Result apply_impl(Self& x, Visitor&& f, variant_marker_t) {
+  template <class Result, class Self, class Visitor, class... Us>
+  static Result apply_impl(Self& x, Visitor&& f, variant_marker_t, Us&&... xs) {
     switch (x.type_) {
       default: CAF_RAISE_ERROR("invalid type found");
       CAF_VARIANT_CASE(0);
@@ -242,6 +266,34 @@ public:
       CAF_VARIANT_CASE(17);
       CAF_VARIANT_CASE(18);
       CAF_VARIANT_CASE(19);
+    }
+  }
+
+  template <class Result, class Self, class Visitor, class Variant, class... Us>
+  static detail::enable_if_t<is_variant<Variant>::value, Result>
+  apply_impl(Self& x, Visitor&& f, Variant&& next, Us&&... xs) {
+    switch (x.type_) {
+      default: CAF_RAISE_ERROR("invalid type found");
+      CAF_VARIANT_DISPATCH_CASE(0);
+      CAF_VARIANT_DISPATCH_CASE(1);
+      CAF_VARIANT_DISPATCH_CASE(2);
+      CAF_VARIANT_DISPATCH_CASE(3);
+      CAF_VARIANT_DISPATCH_CASE(4);
+      CAF_VARIANT_DISPATCH_CASE(5);
+      CAF_VARIANT_DISPATCH_CASE(6);
+      CAF_VARIANT_DISPATCH_CASE(7);
+      CAF_VARIANT_DISPATCH_CASE(8);
+      CAF_VARIANT_DISPATCH_CASE(9);
+      CAF_VARIANT_DISPATCH_CASE(10);
+      CAF_VARIANT_DISPATCH_CASE(11);
+      CAF_VARIANT_DISPATCH_CASE(12);
+      CAF_VARIANT_DISPATCH_CASE(13);
+      CAF_VARIANT_DISPATCH_CASE(14);
+      CAF_VARIANT_DISPATCH_CASE(15);
+      CAF_VARIANT_DISPATCH_CASE(16);
+      CAF_VARIANT_DISPATCH_CASE(17);
+      CAF_VARIANT_DISPATCH_CASE(18);
+      CAF_VARIANT_DISPATCH_CASE(19);
     }
   }
   /// @endcond
@@ -303,21 +355,6 @@ private:
   size_t type_;
   detail::variant_data<typename lift_void<Ts>::type...> data_;
 };
-
-template <class T>
-struct is_variant : std::false_type {};
-
-template <class... Ts>
-struct is_variant<variant<Ts...>> : std::true_type {};
-
-template <class... Ts>
-struct is_variant<variant<Ts...>&> : std::true_type {};
-
-template <class... Ts>
-struct is_variant<const variant<Ts...>&> : std::true_type {};
-
-template <class... Ts>
-struct is_variant<const variant<Ts...>&&> : std::true_type {};
 
 /// @relates variant
 template <class T, class... Us>
