@@ -37,9 +37,10 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// Request for a `timeout_msg`.
-  struct receive_timeout {
+  struct ordinary_timeout {
     strong_actor_ptr self;
-    uint32_t id;
+    atom_value type;
+    uint64_t id;
   };
 
   /// Request for a `sec::request_timeout` error.
@@ -61,14 +62,15 @@ public:
     message content;
   };
 
-  using value_type = variant<receive_timeout, request_timeout,
+  using value_type = variant<ordinary_timeout, request_timeout,
                              actor_msg, group_msg>;
 
   using map_type = std::multimap<time_point, value_type>;
 
   using secondary_map = std::multimap<abstract_actor*, map_type::iterator>;
 
-  struct receive_predicate {
+  struct ordinary_predicate {
+    atom_value type;
     bool operator()(const secondary_map::value_type& x) const noexcept;
   };
 
@@ -80,7 +82,7 @@ public:
   struct visitor {
     simple_actor_clock* thisptr;
 
-    void operator()(receive_timeout& x);
+    void operator()(ordinary_timeout& x);
 
     void operator()(request_timeout& x);
 
@@ -89,13 +91,13 @@ public:
     void operator()(group_msg& x);
   };
 
-  void set_receive_timeout(time_point t, abstract_actor* self,
-                           uint32_t id) override;
+  void set_ordinary_timeout(time_point t, abstract_actor* self,
+                           atom_value type, uint64_t id) override;
 
   void set_request_timeout(time_point t, abstract_actor* self,
                            message_id id) override;
 
-  void cancel_receive_timeout(abstract_actor* self) override;
+  void cancel_ordinary_timeout(abstract_actor* self, atom_value type) override;
 
   void cancel_request_timeout(abstract_actor* self, message_id id) override;
 
@@ -107,6 +109,8 @@ public:
   void schedule_message(time_point t, group target, strong_actor_ptr sender,
                         message content) override;
 
+  void cancel_all() override;
+
   inline const map_type& schedule() const {
     return schedule_;
   }
@@ -117,7 +121,8 @@ public:
 
 protected:
   template <class Predicate>
-  secondary_map::iterator lookup(abstract_actor* self, Predicate pred) {
+  secondary_map::iterator lookup(abstract_actor* self,
+                                 Predicate pred) {
     auto e = actor_lookup_.end();
     auto range = actor_lookup_.equal_range(self);
     if (range.first == range.second)
@@ -142,8 +147,10 @@ protected:
       actor_lookup_.erase(i);
   }
 
+  /// Timeout schedule.
   map_type schedule_;
 
+  /// Secondary index for accessing timeouts by actor.
   secondary_map actor_lookup_;
 };
 
