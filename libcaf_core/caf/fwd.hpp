@@ -48,6 +48,7 @@ template <class, class, class> class random_topic_scatterer;
 // -- variadic templates -------------------------------------------------------
 
 template <class...> class result;
+template <class...> class variant;
 template <class...> class delegated;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
