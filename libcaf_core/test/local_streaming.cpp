@@ -57,7 +57,7 @@ behavior file_reader(stateful_actor<file_reader_state>* self, size_t buf_size) {
         },
         // get next element
         [=](buf& xs, downstream<int>& out, size_t num) {
-          CAF_MESSAGE("push " << num << " more messages downstream");
+          CAF_MESSAGE("push " << num << " messages downstream");
           auto n = std::min(num, xs.size());
           for (size_t i = 0; i < n; ++i)
             out.push(xs[i]);
@@ -117,31 +117,27 @@ error fail_state(const actor& x) {
 
 CAF_TEST_FIXTURE_SCOPE(local_streaming_tests, fixture)
 
-CAF_TEST(depth_2_pipeline) {
+CAF_TEST(depth_2_pipeline_10_items) {
   std::chrono::microseconds cycle{cfg.streaming_credit_round_interval_us};
   sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 10);
   auto snk = sys.spawn(sum_up);
   auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
-  // self --("numbers.txt")-----------> source                             sink
+  CAF_MESSAGE("initiate stream handshake");
   self->send(pipeline, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  // self                               source --(open_stream_msg)-------> sink
   expect((open_stream_msg), from(self).to(snk));
-  // self                               source <--------------(ack_open)-- sink
   expect((upstream_msg::ack_open), from(snk).to(src));
-  // self                               source --(batch)-----------------> sink
+  CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
-  // self                               source <-------------(ack_batch)-- sink
   sched.clock().current_time += cycle;
   sched.dispatch();
   expect((timeout_msg), from(snk).to(snk));
   expect((timeout_msg), from(src).to(src));
   expect((upstream_msg::ack_batch), from(snk).to(src));
-  // self                               source --(close)-----------------> sink
+  CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  // self <-----------------------------------------------------(result)-- sink
   expect((int), from(snk).to(self).with(45));
   CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);

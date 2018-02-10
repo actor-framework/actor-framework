@@ -470,7 +470,7 @@ public:
     tmp->send(mma, publish_atom::value, port,
               actor_cast<strong_actor_ptr>(whom), std::move(sigs), "", false);
     expect((atom_value, uint16_t, strong_actor_ptr, sig_t, std::string, bool),
-           from(tmp).to(mma).with(_));
+           from(tmp).to(mma));
     expect((uint16_t), from(mma).to(tmp).with(port));
   }
 };

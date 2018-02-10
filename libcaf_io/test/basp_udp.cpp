@@ -529,7 +529,7 @@ public:
                 actor_cast<strong_actor_ptr>(whom), std::move(sigs), "", false);
     CAF_MESSAGE("publish from tmp to mma with port _");
     expect((atom_value, uint16_t, strong_actor_ptr, sig_t, std::string, bool),
-           from(tmp).to(mma).with(_));
+           from(tmp).to(mma));
     CAF_MESSAGE("publish: from mma to tmp with port " << port);
     expect((uint16_t), from(mma).to(tmp).with(port));
   }

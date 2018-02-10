@@ -149,72 +149,180 @@ private:
   const Tup& xs_;
 };
 
-caf::mailbox_element* peek_mailbox(caf::local_actor* ptr) {
-  auto sptr = dynamic_cast<caf::scheduled_actor*>(ptr);
+// -- unified access to all actor handles in CAF -------------------------------
+
+/// Reduces any of CAF's handle types to an `abstract_actor` pointer.
+class caf_handle {
+public:
+  using pointer = caf::abstract_actor*;
+
+  template <class T>
+  caf_handle(const T& x) {
+    *this = x;
+  }
+
+  caf_handle& operator=(caf::abstract_actor* x)  {
+    ptr_ = x;
+    return *this;
+  }
+
+  template <class T,
+            class E = caf::detail::enable_if_t<!std::is_pointer<T>::value>>
+  caf_handle& operator=(const T& x) {
+    ptr_ = caf::actor_cast<pointer>(x);
+    return *this;
+  }
+
+  caf_handle& operator=(const caf_handle&) = default;
+
+  pointer get() const {
+    return ptr_;
+  }
+
+private:
+  caf_handle() : ptr_(nullptr) {
+    // nop
+  }
+
+  caf::abstract_actor* ptr_;
+};
+
+// -- access to an actor's mailbox ---------------------------------------------
+
+/// Returns a pointer to the next element in an actor's mailbox without taking
+/// it out of the mailbox.
+/// @pre `ptr` is alive and either a `scheduled_actor` or `blocking_actor`
+caf::mailbox_element* next_mailbox_element(caf_handle x) {
+  CAF_ASSERT(x.get() != nullptr);
+  auto sptr = dynamic_cast<caf::scheduled_actor*>(x.get());
   if (sptr != nullptr)
     return sptr->mailbox().peek();
-  auto bptr = dynamic_cast<caf::blocking_actor*>(ptr);
-  CAF_REQUIRE(bptr != nullptr);
+  auto bptr = dynamic_cast<caf::blocking_actor*>(x.get());
+  CAF_ASSERT(bptr != nullptr);
   return bptr->mailbox().peek();
 }
 
-template <class Derived>
-class expect_clause_base {
+// -- introspection of the next mailbox element --------------------------------
+
+/// @private
+template <class... Ts>
+caf::optional<std::tuple<Ts...>> default_extract(caf_handle x) {
+  auto ptr = next_mailbox_element(x);
+  if (ptr == nullptr || !ptr->content().template match_elements<Ts...>())
+    return caf::none;
+  return ptr->content().template get_as_tuple<Ts...>();
+}
+
+/// @private
+template <class T>
+caf::optional<std::tuple<T>> unboxing_extract(caf_handle x) {
+  auto tup = default_extract<typename T::outer_type>(x);
+  if (tup == caf::none)
+    return caf::none;
+  return std::make_tuple(get<T>(get<0>(*tup)));
+}
+
+/// Dispatches to `unboxing_extract` if
+/// `sizeof...(Ts) == 0 && has_outer_type<T>::value`, otherwise dispatches to
+/// `default_extract`.
+/// @private
+template <class T, bool HasOuterType, class... Ts>
+struct extract_impl {
+  caf::optional<std::tuple<T, Ts...>> operator()(caf_handle x) {
+    return default_extract<T, Ts...>(x);
+  }
+};
+
+template <class T>
+struct extract_impl<T, true> {
+  caf::optional<std::tuple<T>> operator()(caf_handle x) {
+    return unboxing_extract<T>(x);
+  }
+};
+
+/// Returns the content of the next mailbox element without taking it out of
+/// the mailbox. Fails on an empty mailbox or if the content of the next
+/// element does not match `<T, Ts...>`.
+template <class T, class... Ts>
+std::tuple<T, Ts...> extract(caf_handle x) {
+  extract_impl<T, has_outer_type<T>::value, Ts...> f;
+  auto result = f(x);
+  if (result == caf::none) {
+    auto ptr = next_mailbox_element(x);
+    if (ptr == nullptr)
+      CAF_FAIL("Mailbox is empty");
+    CAF_FAIL("Message does not match expected pattern: "
+             << to_string(ptr->content()));
+  }
+  return std::move(*result);
+}
+
+template <class T, class... Ts>
+bool received(caf_handle x) {
+  extract_impl<T, has_outer_type<T>::value, Ts...> f;
+  return f(x) != caf::none;
+}
+
+
+template <class... Ts>
+class expect_clause {
 public:
-  expect_clause_base(caf::scheduler::test_coordinator& sched)
+  expect_clause(caf::scheduler::test_coordinator& sched)
       : sched_(sched),
         dest_(nullptr) {
-    // nop
+    peek_ = [=] {
+      /// The extractor will call CAF_FAIL on a type mismatch, essentially
+      /// performing a type check when ignoring the result.
+      extract<Ts...>(dest_);
+    };
   }
 
-  expect_clause_base(expect_clause_base&& other)
-      : sched_(other.sched_),
-        src_(std::move(other.src_)) {
-    // nop
+  expect_clause(expect_clause&& other) = default;
+
+  ~expect_clause() {
+    if (peek_ != nullptr) {
+      peek_();
+      run_once();
+    }
   }
 
-  virtual ~expect_clause_base() {
-    CAF_ASSERT(peek_ != nullptr);
-    peek_();
-    run_once();
-  }
-
-  Derived& from(const wildcard&) {
-    return dref();
+  expect_clause& from(const wildcard&) {
+    return *this;
   }
 
   template <class Handle>
-  Derived& from(const Handle& whom) {
+  expect_clause& from(const Handle& whom) {
     src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
-    return dref();
+    return *this;
   }
 
   template <class Handle>
-  Derived& to(const Handle& whom) {
+  expect_clause& to(const Handle& whom) {
     CAF_REQUIRE(sched_.prioritize(whom));
     dest_ = &sched_.next_job<caf::scheduled_actor>();
-    auto ptr = peek_mailbox(dest_);
+    auto ptr = next_mailbox_element(dest_);
     CAF_REQUIRE(ptr != nullptr);
     if (src_)
       CAF_CHECK_EQUAL(ptr->sender, src_);
-    return dref();
+    return *this;
   }
 
-  Derived& to(const caf::scoped_actor& whom) {
+  expect_clause& to(const caf::scoped_actor& whom) {
     dest_ = whom.ptr();
-    return dref();
+    return *this;
   }
 
-  template <class... Ts>
-  std::tuple<const Ts&...> peek() {
-    CAF_REQUIRE(dest_ != nullptr);
-    auto ptr = peek_mailbox(dest_);
-    CAF_REQUIRE(ptr != nullptr);
-    if (!ptr->content().template match_elements<Ts...>()) {
-      CAF_FAIL("Message does not match expected pattern: "
-               << to_string(ptr->content()));
-    }
-    return ptr->content().template get_as_tuple<Ts...>();
+  template <class... Us>
+  void with(Us&&... xs) {
+    // TODO: move tmp into lambda when switching to C++14
+    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
+    peek_ = [=] {
+      using namespace caf::detail;
+      elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
+      auto ys = extract<Ts...>(dest_);
+      auto ys_indices = get_indices(ys);
+      CAF_CHECK(apply_args(inspector, ys_indices, ys));
+    };
   }
 
 protected:
@@ -226,113 +334,10 @@ protected:
       dptr->dequeue(); // Drop message.
   }
 
-  Derived& dref() {
-    return *static_cast<Derived*>(this);
-  }
-
   caf::scheduler::test_coordinator& sched_;
   caf::strong_actor_ptr src_;
   caf::local_actor* dest_;
   std::function<void ()> peek_;
-};
-
-template <class... Ts>
-class expect_clause : public expect_clause_base<expect_clause<Ts...>> {
-public:
-  template <class... Us>
-  expect_clause(Us&&... xs)
-      : expect_clause_base<expect_clause<Ts...>>(std::forward<Us>(xs)...) {
-    this->peek_ = [=] {
-      this->template peek<Ts...>();
-    };
-  }
-
-  template <class... Us>
-  void with(Us&&... xs) {
-    // TODO: move tmp into lambda when switching to C++14
-    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
-    this->peek_ = [=] {
-      elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
-      auto ys = this->template peek<Ts...>();
-      CAF_CHECK(inspector(get<0>(ys)));
-    };
-  }
-};
-
-/// The single-argument expect-clause allows to automagically unwrap T
-/// if it's a variant-like wrapper.
-template <class T>
-class expect_clause<T> : public expect_clause_base<expect_clause<T>> {
-public:
-  template <class... Us>
-  expect_clause(Us&&... xs)
-      : expect_clause_base<expect_clause<T>>(std::forward<Us>(xs)...) {
-    this->peek_ = [=] {
-      std::integral_constant<bool, has_outer_type<T>::value> token;
-      type_check<T>(token);
-    };
-  }
-
-
-  template <class... Us>
-  void with(Us&&... xs) {
-    // TODO: move tmp into lambda when switching to C++14
-    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
-    this->peek_ = [=] {
-      std::integral_constant<bool, has_outer_type<T>::value> token;
-      with_content(token, tmp);
-    };
-  }
-
-private:
-  template <class U>
-  void with_content(std::integral_constant<bool, false>, const U& x) {
-    elementwise_compare_inspector<U> inspector{x};
-    auto xs = this->template peek<T>();
-    CAF_CHECK(inspector(get<0>(xs)));
-  }
-
-  template <class U>
-  void with_content(std::integral_constant<bool, true>, const U& x) {
-    elementwise_compare_inspector<U> inspector{x};
-    auto xs = this->template peek<typename T::outer_type>();
-    auto& x0 = get<0>(xs);
-    if (!is<T>(x0)) {
-      CAF_FAIL("is<T>(x0) !! " << caf::deep_to_string(x0));
-    }
-    CAF_CHECK(inspect(inspector, const_cast<T&>(get<T>(x0))));
-  }
-
-  template <class U>
-  void type_check(std::integral_constant<bool, false>) {
-    this->template peek<U>();
-  }
-
-  template <class U>
-  void type_check(std::integral_constant<bool, true>) {
-    auto xs = this->template peek<typename U::outer_type>();
-    auto& x0 = get<0>(xs);
-    if (!is<U>(x0)) {
-      CAF_FAIL("is<T>(x0) !! " << caf::deep_to_string(x0));
-    }
-  }
-};
-
-template <>
-class expect_clause<void> : public expect_clause_base<expect_clause<void>> {
-public:
-  template <class... Us>
-  expect_clause(Us&&... xs)
-      : expect_clause_base<expect_clause<void>>(std::forward<Us>(xs)...) {
-    // nop
-  }
-
-  void with() {
-    CAF_REQUIRE(dest_ != nullptr);
-    auto ptr = peek_mailbox(dest_);
-    CAF_CHECK(ptr->content().empty());
-    this->run_once();
-  }
 };
 
 template <class Derived>
@@ -475,7 +480,7 @@ public:
   void with() {
     if (dest_ == nullptr)
       return;
-    auto ptr = peek_mailbox(dest_);
+    auto ptr = next_mailbox_element(dest_);
     CAF_REQUIRE(!ptr->content().empty());
   }
 };
@@ -528,16 +533,6 @@ struct test_coordinator_fixture {
     auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
     CAF_REQUIRE(ptr != nullptr);
     return dynamic_cast<T&>(*ptr);
-  }
-
-  template <class... Ts>
-  expect_clause<Ts...> expect_impl() {
-    return {sched};
-  }
-
-  template <class... Ts>
-  disallow_clause<Ts...> disallow_impl() {
-    return {sched};
   }
 };
 
