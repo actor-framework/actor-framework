@@ -143,4 +143,33 @@ CAF_TEST(depth_2_pipeline_10_items) {
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
 
+CAF_TEST(depth_2_pipeline_500_items) {
+  std::chrono::microseconds cycle{cfg.streaming_credit_round_interval_us};
+  sched.clock().current_time += cycle;
+  auto src = sys.spawn(file_reader, 500);
+  auto snk = sys.spawn(sum_up);
+  auto pipeline = snk * src;
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(pipeline, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(src));
+  CAF_MESSAGE("start data transmission (loop until src sends 'close')");
+  do {
+    CAF_MESSAGE("expect batch -> ack_batch pair");
+    expect((downstream_msg::batch), from(src).to(snk));
+    sched.clock().current_time += cycle;
+    sched.dispatch();
+    expect((timeout_msg), from(snk).to(snk));
+    expect((timeout_msg), from(src).to(src));
+    expect((upstream_msg::ack_batch), from(snk).to(src));
+  } while (!received<downstream_msg::close>(snk));
+  CAF_MESSAGE("expect close message from src and then result from snk");
+  expect((downstream_msg::close), from(src).to(snk));
+  expect((int), from(snk).to(self).with(124750));
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
