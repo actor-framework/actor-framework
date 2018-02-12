@@ -33,15 +33,23 @@ using std::vector;
 
 using namespace caf;
 
+#define TESTEE_SCAFFOLD(tname)                                                 \
+  struct tname##_state {                                                       \
+    static const char* name;                                                   \
+  };                                                                           \
+  const char* tname##_state::name = #tname
+
+#define TESTEE(tname)                                                          \
+  TESTEE_SCAFFOLD(tname);                                                      \
+  behavior tname(stateful_actor<tname##_state>* self)
+
+#define VARARGS_TESTEE(tname, ...)                                             \
+  TESTEE_SCAFFOLD(tname);                                                      \
+  behavior tname(stateful_actor<tname##_state>* self, __VA_ARGS__)
+
 namespace {
 
-struct file_reader_state {
-  static const char* name;
-};
-
-const char* file_reader_state::name = "file_reader";
-
-behavior file_reader(stateful_actor<file_reader_state>* self, size_t buf_size) {
+VARARGS_TESTEE(file_reader, size_t buf_size) {
   using buf = std::deque<int>;
   return {
     [=](string& fname) -> output_stream<int, string> {
@@ -72,13 +80,7 @@ behavior file_reader(stateful_actor<file_reader_state>* self, size_t buf_size) {
   };
 }
 
-struct sum_up_state {
-  static const char* name;
-};
-
-const char* sum_up_state::name = "sum_up";
-
-behavior sum_up(stateful_actor<sum_up_state>* self) {
+TESTEE(sum_up) {
   return {
     [=](stream<int>& in, const string& fname) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
@@ -102,16 +104,41 @@ behavior sum_up(stateful_actor<sum_up_state>* self) {
   };
 }
 
-struct broken_sink_state {
-  static const char* name;
-};
-
-const char* broken_sink_state::name = "broken_sink";
-
-behavior broken_sink(stateful_actor<broken_sink_state>*) {
+TESTEE(delayed_sum_up) {
+  self->set_default_handler(skip);
   return {
-    [=](stream<int>&, const std::string&) {
-      // nop
+    [=](ok_atom) {
+      self->become(
+        [=](stream<int>& in, const std::string& fname) {
+          CAF_CHECK_EQUAL(fname, "numbers.txt");
+          return self->make_sink(
+            // input stream
+            in,
+            // initialize state
+            [](int& x) {
+              x = 0;
+            },
+            // processing step
+            [](int& x, std::vector<int>&& ys) {
+              for (auto y : ys)
+                x += y;
+            },
+            // cleanup and produce result message
+            [](int& x) -> int {
+              return x;
+            }
+          );
+        }
+      );
+    }
+  };
+}
+
+TESTEE(broken_sink) {
+  CAF_IGNORE_UNUSED(self);
+  return {
+    [=](stream<int>&, const std::string& fname) {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
     }
   };
 }
@@ -141,6 +168,38 @@ CAF_TEST(depth_2_pipeline_10_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(pipeline, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(src));
+  CAF_MESSAGE("start data transmission (a single batch)");
+  expect((downstream_msg::batch), from(src).to(snk));
+  sched.clock().current_time += cycle;
+  sched.dispatch();
+  expect((timeout_msg), from(snk).to(snk));
+  expect((timeout_msg), from(src).to(src));
+  expect((upstream_msg::ack_batch), from(snk).to(src));
+  CAF_MESSAGE("expect close message from src and then result from snk");
+  expect((downstream_msg::close), from(src).to(snk));
+  expect((int), from(snk).to(self).with(45));
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+}
+
+CAF_TEST(delayed_depth_2_pipeline_10_items) {
+  std::chrono::microseconds cycle{cfg.streaming_credit_round_interval_us};
+  sched.clock().current_time += cycle;
+  auto src = sys.spawn(file_reader, 10);
+  auto snk = sys.spawn(delayed_sum_up);
+  auto pipeline = snk * src;
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(pipeline, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(snk));
+  disallow((upstream_msg::ack_open), from(snk).to(src));
+  disallow((upstream_msg::forced_drop), from(snk).to(src));
+  CAF_MESSAGE("send 'ok' to trigger sink to handle open_stream_msg");
+  self->send(snk, ok_atom::value);
+  expect((ok_atom), from(self).to(snk));
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
@@ -199,5 +258,20 @@ CAF_TEST(broken_pipeline) {
   expect((upstream_msg::forced_drop), from(snk).to(src));
   expect((error), from(snk).to(self).with(sec::stream_init_failed));
 }
+
+CAF_TEST(delayed_pipeline) {
+  CAF_MESSAGE("streams must abort if a stage fails to initialize its state");
+  auto src = sys.spawn(file_reader, 50);
+  auto snk = sys.spawn(broken_sink);
+  auto pipeline = snk * src;
+  sched.run();
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(pipeline, "test.txt");
+  expect((std::string), from(self).to(src).with("test.txt"));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::forced_drop), from(snk).to(src));
+  expect((error), from(snk).to(self).with(sec::stream_init_failed));
+}
+
 
 CAF_TEST_FIXTURE_SCOPE_END()

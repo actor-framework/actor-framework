@@ -107,7 +107,7 @@ struct stream_sink_trait<void(State&, In), void(State&)>
 
 /// Specializes the trait for batch-wise processing with result.
 template <class State, class In, class Out>
-struct stream_sink_trait<void(State&, std::vector<In>&), Out(State&)>
+struct stream_sink_trait<void(State&, std::vector<In>&&), Out(State&)>
     : stream_sink_trait_base<State, In, Out> {
   /// Defines a helper for dispatching to the finalizing function object.
   using finalize = detail::stream_sink_trait_default_finalize;
@@ -118,7 +118,7 @@ struct stream_sink_trait<void(State&, std::vector<In>&), Out(State&)>
 
 /// Specializes the trait for batch-wise processing without result.
 template <class State, class In>
-struct stream_sink_trait<void(State&, std::vector<In>&), void(State&)>
+struct stream_sink_trait<void(State&, std::vector<In>&&), void(State&)>
     : stream_sink_trait_base<State, In, void> {
   /// Defines a helper for dispatching to the finalizing function object.
   using finalize = detail::stream_sink_trait_void_finalize;
