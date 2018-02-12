@@ -80,7 +80,7 @@ const char* sum_up_state::name = "sum_up";
 
 behavior sum_up(stateful_actor<sum_up_state>* self) {
   return {
-    [=](stream<int>& in, string& fname) {
+    [=](stream<int>& in, const string& fname) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       return self->make_sink(
         // input stream
@@ -98,6 +98,20 @@ behavior sum_up(stateful_actor<sum_up_state>* self) {
           return x;
         }
       );
+    }
+  };
+}
+
+struct broken_sink_state {
+  static const char* name;
+};
+
+const char* broken_sink_state::name = "broken_sink";
+
+behavior broken_sink(stateful_actor<broken_sink_state>*) {
+  return {
+    [=](stream<int>&, const std::string&) {
+      // nop
     }
   };
 }
@@ -170,6 +184,20 @@ CAF_TEST(depth_2_pipeline_500_items) {
   expect((int), from(snk).to(self).with(124750));
   CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+}
+
+CAF_TEST(broken_pipeline) {
+  CAF_MESSAGE("streams must abort if a stage fails to initialize its state");
+  auto src = sys.spawn(file_reader, 50);
+  auto snk = sys.spawn(broken_sink);
+  auto pipeline = snk * src;
+  sched.run();
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(pipeline, "test.txt");
+  expect((std::string), from(self).to(src).with("test.txt"));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::forced_drop), from(snk).to(src));
+  expect((error), from(snk).to(self).with(sec::stream_init_failed));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
