@@ -62,6 +62,21 @@ struct variant_marker_t {};
 constexpr variant_marker_t variant_marker = variant_marker_t{};
 
 template <class T>
+struct is_variant : std::false_type {};
+
+template <class... Ts>
+struct is_variant<variant<Ts...>> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<variant<Ts...>&> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<const variant<Ts...>&> : std::true_type {};
+
+template <class... Ts>
+struct is_variant<const variant<Ts...>&&> : std::true_type {};
+
+template <class T>
 struct variant_assign_helper {
   using result_type = void;
   T& lhs;
@@ -83,11 +98,19 @@ struct variant_move_helper {
   }
 };
 
-template <class F, class... Ts>
-struct variant_visit_result {
+template <bool Valid, class F, class... Ts>
+struct variant_visit_result_impl {
   using type =
     decltype((std::declval<F&>())(std::declval<typename Ts::type0&>()...));
 };
+
+template <class F, class... Ts>
+struct variant_visit_result_impl<false, F, Ts...> {};
+
+template <class F, class... Ts>
+struct variant_visit_result
+    : variant_visit_result_impl<
+        detail::conjunction<is_variant<Ts>::value...>::value, F, Ts...> {};
 
 template <class F, class... Ts>
 using variant_visit_result_t =
@@ -118,21 +141,6 @@ struct is_same_ish
         std::true_type,
         is_equal_int_type<T, U>
       >::type { };
-
-template <class T>
-struct is_variant : std::false_type {};
-
-template <class... Ts>
-struct is_variant<variant<Ts...>> : std::true_type {};
-
-template <class... Ts>
-struct is_variant<variant<Ts...>&> : std::true_type {};
-
-template <class... Ts>
-struct is_variant<const variant<Ts...>&> : std::true_type {};
-
-template <class... Ts>
-struct is_variant<const variant<Ts...>&&> : std::true_type {};
 
 /// A variant represents always a valid value of one of the types `Ts...`.
 template <class... Ts>
@@ -395,7 +403,8 @@ const T* get_if(const variant<Us...>* value) {
 /// @relates variant
 template <class Visitor, class Variant, class... Variants,
           class Result = variant_visit_result_t<Visitor, Variant, Variants...>>
-Result visit(Visitor&& f, Variant&& x, Variants&&... xs) {
+detail::enable_if_t<is_variant<Variant>::value, Result>
+visit(Visitor&& f, Variant&& x, Variants&&... xs) {
   return x.template apply<Result>(std::forward<Visitor>(f),
                                   std::forward<Variants>(xs)...);
 }
