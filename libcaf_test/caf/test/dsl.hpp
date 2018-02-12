@@ -217,7 +217,7 @@ caf::optional<std::tuple<Ts...>> default_extract(caf_handle x) {
 template <class T>
 caf::optional<std::tuple<T>> unboxing_extract(caf_handle x) {
   auto tup = default_extract<typename T::outer_type>(x);
-  if (tup == caf::none)
+  if (tup == caf::none || !is<T>(get<0>(*tup)))
     return caf::none;
   return std::make_tuple(get<T>(get<0>(*tup)));
 }
