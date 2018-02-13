@@ -123,9 +123,13 @@ public:
     // empty.
     CAF_ASSERT(new_head == stack_closed_tag()
                || new_head == stack_empty_tag());
-    // Must not be called on a closed queue.
     pointer e = stack_.load();
+    // Must not be called on a closed queue.
     CAF_ASSERT(e != stack_closed_tag());
+    // Must not be called on a blocked queue unless for setting it to closed,
+    // because that would mean an actor accesses its mailbox after blocking its
+    // mailbox but before receiving anything.
+    CAF_ASSERT(e != reader_blocked_tag() || new_head == stack_closed_tag());
     // We don't assert these conditions again since only the owner is allowed
     // to call this member function, i.e., there's never a race on `take_head`.
     while (e != new_head) {
