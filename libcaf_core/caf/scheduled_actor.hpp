@@ -108,7 +108,9 @@ public:
     /// Triggers the current behavior.
     ordinary,
     /// Triggers handlers for system messages such as `exit_msg` or `down_msg`.
-    internal
+    internal,
+    /// Delays processing.
+    skipped,
   };
 
   /// Result of one-shot activations.

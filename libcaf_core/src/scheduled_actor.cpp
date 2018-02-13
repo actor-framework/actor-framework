@@ -569,8 +569,9 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case make_type_token<open_stream_msg>(): {
-      handle_open_stream_msg(x);
-      return message_category::internal;
+      return handle_open_stream_msg(x) != im_skipped
+             ? message_category::internal
+             : message_category::skipped;
     }
     default:
       return message_category::ordinary;
@@ -640,6 +641,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   }
   // Dispatch on the content of x.
   switch (categorize(x)) {
+    case message_category::skipped:
+      return im_skipped;
     case message_category::internal:
       CAF_LOG_DEBUG("handled system message");
       return im_success;
@@ -974,38 +977,56 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
       // nop
     }
   };
-  auto& bs = bhvr_stack();
-  if (bs.empty()) {
-    // TODO: send forced_drop
-    return im_dropped;
-  }
   // Extract the handshake part of the message.
   CAF_ASSERT(x.content().match_elements<open_stream_msg>());
   auto& osm = x.content().get_mutable_as<open_stream_msg>(0);
   visitor f;
   f.id.sender = osm.slot;
+  // Utility lambda for aborting the stream on error.
+  auto fail = [&](sec x, const char* reason) {
+    inbound_path::emit_irregular_shutdown(this, f.id, osm.prev_stage,
+                                          make_error(x, reason));
+  };
+  // Utility for invoking the default handler.
+  auto fallback = [&] {
+    auto sres = call_handler(default_handler_, this, x);
+    switch (sres.flag) {
+      default:
+        CAF_LOG_DEBUG("default handler was called for open_stream_msg:"
+                      << osm.msg);
+        fail(sec::stream_init_failed, "dropped open_stream_msg (no match)");
+        return im_dropped;
+      case rt_skip:
+        CAF_LOG_DEBUG("default handler skipped open_stream_msg:"
+                      << osm.msg);
+        return im_skipped;
+    }
+  };
+  // Invoke behavior and dispatch on the result.
+  auto& bs = bhvr_stack();
+  if (bs.empty())
+    return fallback();
   auto res = (bs.back())(f, osm.msg);
   switch (res) {
     case match_case::result::no_match:
-      // TODO: send forced_drop
-      CAF_LOG_DEBUG("unmatched open_stream_msg content:" << osm.msg);
-      return im_dropped;
+      CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
+      return fallback();
     case match_case::result::match: {
       if (f.ptr == nullptr) {
         CAF_LOG_WARNING("actor did not return a stream manager after "
-                        "receiving open_stream_msg");
-        // TODO: send forced_drop
+                        "handling open_stream_msg");
+        fail(sec::stream_init_failed, "behavior did not create a manager");
         return im_dropped;
       }
       auto path = make_inbound_path(f.ptr, f.id, std::move(osm.prev_stage));
       CAF_ASSERT(path != nullptr);
       path->emit_ack_open(this, actor_cast<actor_addr>(osm.original_stage));
       // Propagate handshake down the pipeline.
-      // TODO: error handling
       build_pipeline(std::move(f.ptr));
       return im_success;
     }
     default:
+      CAF_LOG_DEBUG("behavior skipped open_stream_msg:" << osm.msg);
       return im_skipped; // nop
   }
 }
