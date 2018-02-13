@@ -196,8 +196,10 @@ CAF_TEST(peek_all) {
   queue.emplace_back(2);
   CAF_CHECK_EQUAL(queue_to_string(), "2");
   queue.cache().emplace_back(1);
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2");
+  CAF_CHECK_EQUAL(queue_to_string(), "2");
   queue.emplace_back(3);
+  CAF_CHECK_EQUAL(queue_to_string(), "2, 3");
+  queue.flush_cache();
   CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3");
 }
 
@@ -206,6 +208,8 @@ CAF_TEST(to_string) {
   fill(queue, 3, 4);
   CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 4]");
   fill(queue.cache(), 1, 2);
+  CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 4]");
+  queue.flush_cache();
   CAF_CHECK_EQUAL(deep_to_string(queue), "[1, 2, 3, 4]");
 }
 

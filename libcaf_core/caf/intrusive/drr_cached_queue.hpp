@@ -108,18 +108,14 @@ public:
     return total_task_size() == 0;
   }
 
-  /// Peeks at the first element of the cache or of the list in case the former
-  /// is empty.
+  /// Peeks at the first element of the list.
   pointer peek() noexcept {
-    auto ptr = cache_.peek();
-    return ptr == nullptr ? list_.peek() : ptr;
+    return list_.peek();
   }
 
-  /// Applies `f` to each element in the queue, including cached elements.
+  /// Applies `f` to each element in the queue, excluding cached elements.
   template <class F>
   void peek_all(F f) const {
-    for (auto i = cache_.begin(); i != cache_.end(); ++i)
-      f(*promote(i.ptr));
     for (auto i = list_.begin(); i != list_.end(); ++i)
       f(*promote(i.ptr));
   }
@@ -153,10 +149,10 @@ public:
     list_.dec_total_task_size(std::forward<T>(x));
   }
 
-  /// Takes the first element out of the queue if the deficit allows it and
-  /// returns the element.
+  /// Takes the first element out of the queue (after flushing the cache) if
+  /// the deficit allows it and returns the element.
   unique_pointer take_front() noexcept {
-    list_.prepend(cache_);
+    flush_cache();
     unique_pointer result;
     if (!list_.empty()) {
       auto ptr = list_.front();
@@ -189,8 +185,6 @@ public:
   template <class F>
   new_round_result new_round(deficit_type quantum, F& consumer)
   noexcept(noexcept(consumer(std::declval<value_type&>()))) {
-    if (!cache_.empty())
-      list_.prepend(cache_);
     if (list_.empty())
       return {false, false};
     deficit_ += quantum;
@@ -225,7 +219,7 @@ public:
         d(ptr);
         ++consumed;
         if (!cache_.empty())
-          list_.prepend(cache_);
+          flush_cache();
         if (list_.empty()) {
           deficit_ = 0;
           return {consumed != 0, res == task_result::stop_all};
