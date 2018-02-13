@@ -63,6 +63,7 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   path->desired_batch_size = x.desired_batch_size;
   --pending_handshakes_;
   push();
+  in_flight_promises_.erase(slots.sender);
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
@@ -87,15 +88,19 @@ void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
 void stream_manager::close() {
   out().close();
   self_->erase_inbound_paths_later(this);
-  if (!promises_.empty()) {
-    auto msg = make_final_result();
-    for (auto& x : promises_)
-      x.deliver(msg);
-  }
+  if (!promises_.empty())
+    deliver_promises(make_final_result());
 }
 
 void stream_manager::abort(error reason) {
-  out().abort(std::move(reason));
+  if (!promises_.empty() || !in_flight_promises_.empty()) {
+    auto msg = make_message(reason);
+    deliver_promises(msg);
+    for (auto& kvp : in_flight_promises_)
+      kvp.second.deliver(msg);
+    in_flight_promises_.clear();
+  }
+  out().abort(reason);
   self_->erase_inbound_paths_later(this, std::move(reason));
 }
 
@@ -116,6 +121,8 @@ void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
                                     message_id mid) {
   CAF_ASSERT(dest != nullptr);
   ++pending_handshakes_;
+  in_flight_promises_.emplace(
+    slot, response_promise{self()->ctrl(), client, fwd_stack, mid});
   dest->enqueue(
     make_mailbox_element(
       std::move(client), mid, std::move(fwd_stack),
@@ -155,6 +162,13 @@ void stream_manager::add_promise(response_promise x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_ASSERT(out().terminal());
   promises_.emplace_back(std::move(x));
+}
+
+void stream_manager::deliver_promises(message x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  for (auto& p : promises_)
+    p.deliver(x);
+  promises_.clear();
 }
 
 message stream_manager::make_final_result() {

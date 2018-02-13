@@ -35,6 +35,7 @@
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
+#include "caf/inbound_path.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
@@ -954,8 +955,6 @@ public:
 
   void erase_inbound_path_later(stream_slot slot) override;
 
-  void erase_inbound_path_later(stream_slot slot, error reason) override;
-
   void erase_inbound_paths_later(const stream_manager* mgr) override;
 
   void erase_inbound_paths_later(const stream_manager* mgr,
@@ -963,8 +962,36 @@ public:
 
   // -- handling of upstream message -------------------------------------------
 
-  void handle(stream_slots slots, actor_addr& sender,
-              upstream_msg::ack_open& x);
+  void handle_upstream_msg(stream_slots slots, actor_addr& sender,
+                           upstream_msg::ack_open& x);
+
+  template <class T>
+  void handle_upstream_msg(stream_slots slots, actor_addr&, T& x) {
+    auto i = stream_managers_.find(slots);
+    if (i == stream_managers_.end()) {
+      auto j = pending_stream_managers_.find(slots.receiver);
+      if (j != pending_stream_managers_.end()) {
+        j->second->abort(sec::stream_init_failed);
+        pending_stream_managers_.erase(j);
+        return;
+      }
+      CAF_LOG_INFO("no manager found:" << CAF_ARG(slots));
+      // TODO: replace with `if constexpr` when switching to C++17
+      if (std::is_same<T, upstream_msg::ack_batch>::value) {
+        // Make sure the other actor does not falsely believe us a source.
+        inbound_path::emit_irregular_shutdown(this, slots, current_sender(),
+                                              sec::invalid_upstream);
+      }
+      return;
+    }
+    CAF_ASSERT(i->second != nullptr);
+    i->second->handle(slots, x);
+    if (i->second->done()) {
+      CAF_LOG_INFO("done sending:" << CAF_ARG(slots));
+      i->second->close();
+      stream_managers_.erase(i);
+    }
+  }
 
 protected:
   /// @cond PRIVATE

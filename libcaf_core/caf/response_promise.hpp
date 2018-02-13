@@ -42,6 +42,9 @@ public:
 
   response_promise(none_t);
 
+  response_promise(strong_actor_ptr self, strong_actor_ptr source,
+                   forwarding_stack stages, message_id id);
+
   response_promise(strong_actor_ptr self, mailbox_element& src);
 
   response_promise(response_promise&&) = default;

@@ -34,15 +34,25 @@ response_promise::response_promise(none_t) : response_promise() {
   // nop
 }
 
-response_promise::response_promise(strong_actor_ptr self, mailbox_element& src)
+response_promise::response_promise(strong_actor_ptr self,
+                                   strong_actor_ptr source,
+                                   forwarding_stack stages, message_id mid)
     : self_(std::move(self)),
-      id_(src.mid) {
+      source_(std::move(source)),
+      stages_(std::move(stages)),
+      id_(mid) {
   // form an invalid request promise when initialized from a
   // response ID, since CAF always drops messages in this case
-  if (!src.mid.is_response()) {
-    source_ = std::move(src.sender);
-    stages_ = std::move(src.stages);
+  if (mid.is_response()) {
+    source_ = nullptr;
+    stages_.clear();
   }
+}
+
+response_promise::response_promise(strong_actor_ptr self, mailbox_element& src)
+    : response_promise(std::move(self), std::move(src.sender),
+                       std::move(src.stages), src.mid) {
+  // nop
 }
 
 response_promise response_promise::deliver(error x) {

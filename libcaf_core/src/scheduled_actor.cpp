@@ -237,40 +237,26 @@ void scheduled_actor::intrusive_ptr_release_impl() {
   intrusive_ptr_release(ctrl());
 }
 
+namespace {
+
+// TODO: replace with generic lambda when switching to C++14
+struct upstream_msg_visitor {
+  scheduled_actor* selfptr;
+  upstream_msg& um;
+
+  template <class T>
+  void operator()(T& x) {
+    selfptr->handle_upstream_msg(um.slots, um.sender, x);
+  }
+};
+
+} // namespace <anonymous>
+
 intrusive::task_result scheduled_actor::mailbox_visitor::
 operator()(size_t, upstream_queue&, mailbox_element& x) {
   CAF_ASSERT(x.content().type_token() == make_type_token<upstream_msg>());
-  struct visitor {
-    scheduled_actor* selfptr;
-    upstream_msg& um;
-    void operator()(upstream_msg::ack_open& y) {
-      selfptr->handle(um.slots, um.sender, y);
-    }
-    void operator()(upstream_msg::ack_batch& x) {
-      // Dispatch to the responsible manager.
-      auto slots = um.slots;
-      auto& managers = selfptr->stream_managers_;
-      auto i = managers.find(slots);
-      if (i == managers.end()) {
-        CAF_LOG_INFO("no manager available for ack_batch:" << CAF_ARG(slots));
-        return;
-      }
-      i->second->handle(um.slots, x);
-      if (i->second->done()) {
-        CAF_LOG_INFO("done sending:" << CAF_ARG(slots));
-        i->second->close();
-        managers.erase(i);
-      }
-    }
-    void operator()(upstream_msg::drop&) {
-      CAF_LOG_ERROR("implement me");
-    }
-    void operator()(upstream_msg::forced_drop&) {
-      CAF_LOG_ERROR("implement me");
-    }
-  };
   auto& um = x.content().get_mutable_as<upstream_msg>(0);
-  visitor f{self, um};
+  upstream_msg_visitor f{self, um};
   visit(f, um.content);
   return intrusive::task_result::resume;
 }
@@ -835,44 +821,21 @@ inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
 }
 
 void scheduled_actor::erase_inbound_path_later(stream_slot slot) {
-  constexpr size_t id = mailbox_policy::downstream_queue_index;
-  get<id>(mailbox_.queue().queues()).erase_later(slot);
-}
-
-void scheduled_actor::erase_inbound_path_later(stream_slot, error) {
-  CAF_LOG_ERROR("implement me");
-  /*
-  using fn = void (*)(local_actor*, inbound_path&, error&);
-  fn regular = [](local_actor* self, inbound_path& in, error&) {
-    in.emit_regular_shutdown(self);
-  };
-  fn irregular = [](local_actor* self, inbound_path& in, error& rsn) {
-    in.emit_irregular_shutdown(self, rsn);
-  };
-  auto f = reason == none ? regular : irregular;
-  for (auto& kvp : get<2>(mbox.queues()).queues()) {
-    auto& path = kvp.second.policy().handler;
-    if (path != nullptr && path->mgr == mgr) {
-      f(this, *path, reason);
-      erase_inbound_path_later(kvp.first);
-    }
-  }
-  */
+  constexpr size_t queue_id = mailbox_policy::downstream_queue_index;
+  get<queue_id>(mailbox_.queue().queues()).erase_later(slot);
 }
 
 void scheduled_actor::erase_inbound_paths_later(const stream_manager* ptr) {
-  constexpr size_t id = mailbox_policy::downstream_queue_index;
-  for (auto& kvp : get<id>(mailbox_.queue().queues()).queues()) {
+  constexpr size_t queue_id = mailbox_policy::downstream_queue_index;
+  for (auto& kvp : get<queue_id>(mailbox_.queue().queues()).queues()) {
     auto& path = kvp.second.policy().handler;
     if (path != nullptr && path->mgr == ptr)
       erase_inbound_path_later(kvp.first);
   }
 }
 
-void scheduled_actor::erase_inbound_paths_later(const stream_manager*,
-                                                error) {
-  CAF_LOG_ERROR("implement me");
-  /*
+void scheduled_actor::erase_inbound_paths_later(const stream_manager* ptr,
+                                                error reason) {
   using fn = void (*)(local_actor*, inbound_path&, error&);
   fn regular = [](local_actor* self, inbound_path& in, error&) {
     in.emit_regular_shutdown(self);
@@ -881,18 +844,19 @@ void scheduled_actor::erase_inbound_paths_later(const stream_manager*,
     in.emit_irregular_shutdown(self, rsn);
   };
   auto f = reason == none ? regular : irregular;
-  for (auto& kvp : get<2>(mbox.queues()).queues()) {
+  static constexpr size_t queue_id = mailbox_policy::downstream_queue_index;
+  for (auto& kvp : get<queue_id>(mailbox_.queue().queues()).queues()) {
     auto& path = kvp.second.policy().handler;
-    if (path != nullptr && path->mgr == mgr) {
+    if (path != nullptr && path->mgr == ptr) {
       f(this, *path, reason);
       erase_inbound_path_later(kvp.first);
     }
   }
-  */
 }
 
-void scheduled_actor::handle(stream_slots slots, actor_addr& sender,
-                             upstream_msg::ack_open& x) {
+void scheduled_actor::handle_upstream_msg(stream_slots slots,
+                                          actor_addr& sender,
+                                          upstream_msg::ack_open& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(sender) << CAF_ARG(x));
   CAF_ASSERT(sender == x.rebind_to);
   // Get the manager for that stream, move it from `pending_managers_` to

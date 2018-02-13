@@ -134,10 +134,6 @@ void local_actor::erase_inbound_path_later(stream_slot) {
   // nop
 }
 
-void local_actor::erase_inbound_path_later(stream_slot, error) {
-  // nop
-}
-
 void local_actor::erase_inbound_paths_later(const stream_manager*) {
   // nop
 }

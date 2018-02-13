@@ -119,9 +119,8 @@ TESTEE(delayed_sum_up) {
               x = 0;
             },
             // processing step
-            [](int& x, std::vector<int>&& ys) {
-              for (auto y : ys)
-                x += y;
+            [](int& x, int y) {
+              x += y;
             },
             // cleanup and produce result message
             [](int& x) -> int {
@@ -250,28 +249,12 @@ CAF_TEST(broken_pipeline) {
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(broken_sink);
   auto pipeline = snk * src;
-  sched.run();
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "test.txt");
-  expect((std::string), from(self).to(src).with("test.txt"));
+  self->send(pipeline, "numbers.txt");
+  expect((std::string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::forced_drop), from(snk).to(src));
   expect((error), from(snk).to(self).with(sec::stream_init_failed));
 }
-
-CAF_TEST(delayed_pipeline) {
-  CAF_MESSAGE("streams must abort if a stage fails to initialize its state");
-  auto src = sys.spawn(file_reader, 50);
-  auto snk = sys.spawn(broken_sink);
-  auto pipeline = snk * src;
-  sched.run();
-  CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "test.txt");
-  expect((std::string), from(self).to(src).with("test.txt"));
-  expect((open_stream_msg), from(self).to(snk));
-  expect((upstream_msg::forced_drop), from(snk).to(src));
-  expect((error), from(snk).to(self).with(sec::stream_init_failed));
-}
-
 
 CAF_TEST_FIXTURE_SCOPE_END()

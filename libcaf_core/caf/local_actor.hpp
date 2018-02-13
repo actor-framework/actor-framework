@@ -408,10 +408,6 @@ public:
   /// Silently closes incoming stream traffic on `slot`.
   virtual void erase_inbound_path_later(stream_slot slot);
 
-  /// Closes incoming stream traffic on `slot`. Emits a drop message if `reason
-  /// == none` and a `forced_drop` message otherwise.
-  virtual void erase_inbound_path_later(stream_slot slot, error reason);
-
   /// Silently closes all inbound paths for `mgr`.
   virtual void erase_inbound_paths_later(const stream_manager* mgr);
 

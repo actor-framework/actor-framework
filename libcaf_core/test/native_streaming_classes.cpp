@@ -389,10 +389,6 @@ public:
     get<2>(mbox.queues()).erase_later(slot);
   }
 
-  void erase_inbound_path_later(stream_slot, error) override {
-    CAF_FAIL("unexpected function call");
-  }
-
   void erase_inbound_paths_later(const stream_manager* mgr) override {
     for (auto& kvp : get<2>(mbox.queues()).queues()) {
       auto& path = kvp.second.policy().handler;

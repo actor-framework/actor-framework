@@ -136,6 +136,9 @@ public:
   /// @pre `out().terminal() == true`
   void add_promise(response_promise x);
 
+  /// Calls `x.deliver()`
+  void deliver_promises(message x);
+
   // -- inline functions -------------------------------------------------------
 
   inline local_actor* self() {
@@ -185,6 +188,10 @@ protected:
 
   /// Stores response promises for dellivering the final result.
   std::vector<response_promise> promises_;
+
+  /// Stores promises while a handshake is active. The sink at the associated
+  /// key becomes responsible for the promise after receiving `ack_open`.
+  std::map<stream_slot, response_promise> in_flight_promises_;
 };
 
 /// A reference counting pointer to a `stream_manager`.
