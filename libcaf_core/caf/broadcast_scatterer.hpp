@@ -69,9 +69,10 @@ public:
   }
 
 protected:
-  void about_to_erase(typename super::map_type::iterator i, bool,
-                      error*) override {
+  void about_to_erase(typename super::map_type::iterator i, bool silent,
+                      error* reason) override {
     caches_.erase(i->second->slots);
+    super::about_to_erase(i, silent, reason);
   }
 
 private:

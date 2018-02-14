@@ -130,14 +130,20 @@ public:
         }
       }
     }
+    cleanup();
+    return {result, stopped};
+  }
+
+  /// Erases all keys previously marked via `erase_later`.
+  void cleanup() {
     if (!erase_list_.empty()) {
       for (auto& k : erase_list_)
         qs_.erase(k);
       erase_list_.clear();
     }
-    return {result, stopped};
   }
 
+  /// Marks the key `k` for erasing from the map later.
   void erase_later(key_type k) {
     erase_list_.emplace_back(std::move(k));
   }

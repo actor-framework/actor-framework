@@ -348,7 +348,7 @@ public:
     i->second->handle(slots, x);
     if (i->second->done()) {
       CAF_MESSAGE(name_ << " is done sending batches");
-      i->second->close();
+      i->second->stop();
       managers_.erase(i);
     }
   }
@@ -483,7 +483,7 @@ struct msg_visitor {
         if (inptr->mgr->done()) {
           CAF_MESSAGE(self->name()
                       << " is done receiving and closes its manager");
-          inptr->mgr->close();
+          inptr->mgr->stop();
         }
         return intrusive::task_result::resume;
       },
@@ -500,7 +500,7 @@ struct msg_visitor {
         } else {
           // Close the manager and remove it on all registered slots.
           auto mgr = i->second;
-          mgr->close();
+          mgr->stop();
           auto j = self->managers_.begin();
           while (j != self->managers_.end()) {
             if (j->second == mgr)

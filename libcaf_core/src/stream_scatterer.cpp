@@ -94,16 +94,17 @@ bool stream_scatterer::clean() const noexcept {
 }
 
 void stream_scatterer::close() {
-  for (auto i = paths_.begin(); i != paths_.end(); ++i) {
+  CAF_LOG_TRACE(CAF_ARG(paths_));
+  if (paths_.empty())
+    return;
+  for (auto i = paths_.begin(); i != paths_.end(); ++i)
     about_to_erase(i, false, nullptr);
-    i->second->emit_regular_shutdown(self_);
-  }
   paths_.clear();
 }
 
 void stream_scatterer::abort(error reason) {
-  auto& vec = paths_.container();
-  if (vec.empty())
+  CAF_LOG_TRACE(CAF_ARG(reason) << CAF_ARG(paths_));
+  if (paths_.empty())
     return;
   auto i = paths_.begin();
   auto s = paths_.end() - 1;
@@ -112,7 +113,7 @@ void stream_scatterer::abort(error reason) {
     about_to_erase(i, false, &tmp);
   }
   about_to_erase(i, false, &reason);
-  vec.clear();
+  paths_.clear();
 }
 
 namespace {

@@ -114,10 +114,19 @@ public:
 
   ~inbound_path();
 
-  /// Updates `last_batch_id` and `assigned_credit`.
-  //void handle_batch(long batch_size, int64_t batch_id);
-
+  /// Updates `last_batch_id` and `assigned_credit` before calling
+  /// `mgr->handle(this, x)`.
   void handle(downstream_msg::batch& x);
+
+  /// Calls `mgr->handle(this, x)`.
+  inline void handle(downstream_msg::close& x) {
+    mgr->handle(this, x);
+  }
+
+  /// Calls `mgr->handle(this, x)`.
+  inline void handle(downstream_msg::forced_close& x) {
+    mgr->handle(this, x);
+  }
 
   /// Emits a `stream_msg::ack_batch` on this path and sets `assigned_credit`
   /// to `initial_demand`.

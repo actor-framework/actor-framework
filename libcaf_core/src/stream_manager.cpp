@@ -85,7 +85,8 @@ void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
     abort(std::move(x.reason));
 }
 
-void stream_manager::close() {
+void stream_manager::stop() {
+  CAF_LOG_TRACE("");
   out().close();
   self_->erase_inbound_paths_later(this);
   if (!promises_.empty())
@@ -93,6 +94,7 @@ void stream_manager::close() {
 }
 
 void stream_manager::abort(error reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
   if (!promises_.empty() || !in_flight_promises_.empty()) {
     auto msg = make_message(reason);
     deliver_promises(msg);
@@ -145,10 +147,15 @@ void stream_manager::cycle_timeout(size_t) {
 }
 
 void stream_manager::register_input_path(inbound_path* ptr) {
+  CAF_ASSERT(ptr != nullptr);
+  CAF_LOG_TRACE(CAF_ARG2("path", *ptr));
   inbound_paths_.emplace_back(ptr);
 }
 
 void stream_manager::deregister_input_path(inbound_path* ptr) noexcept {
+  CAF_ASSERT(ptr != nullptr);
+  CAF_LOG_TRACE(CAF_ARG2("path", *ptr));
+  CAF_ASSERT(inbound_paths_.size() > 0);
   using std::swap;
   if (ptr != inbound_paths_.back()) {
     auto i = std::find(inbound_paths_.begin(), inbound_paths_.end(), ptr);

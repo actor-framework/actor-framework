@@ -74,9 +74,9 @@ public:
 
   virtual void handle(stream_slots slots, upstream_msg::forced_drop& x);
 
-  /// Closes the stream when the parent terminates with default exit reason or
-  /// the stream reached its end.
-  virtual void close();
+  /// Closes all output and input paths and sends the final result to the
+  /// client.
+  virtual void stop();
 
   /// Aborts a stream after any stream message handler returned a non-default
   /// constructed error `reason` or the parent actor terminates with a
@@ -125,9 +125,13 @@ public:
   // -- input path management --------------------------------------------------
 
   /// Informs the manager that a new input path opens.
+  /// @note The lifetime of inbound paths is managed by the downstream queue.
+  ///       This function is called from the constructor of `inbound_path`.
   virtual void register_input_path(inbound_path* x);
 
   /// Informs the manager that an input path closes.
+  /// @note The lifetime of inbound paths is managed by the downstream queue.
+  ///       This function is called from the destructor of `inbound_path`.
   virtual void deregister_input_path(inbound_path* x) noexcept;
 
   // -- mutators ---------------------------------------------------------------

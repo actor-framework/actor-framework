@@ -948,6 +948,18 @@ public:
     return mailbox_;
   }
 
+  /// @private
+  default_queue& get_default_queue();
+
+  /// @private
+  upstream_queue& get_upstream_queue();
+
+  /// @private
+  downstream_queue& get_downstream_queue();
+
+  /// @private
+  urgent_queue& get_urgent_queue();
+
   // -- inbound_path management ------------------------------------------------
 
   inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
@@ -960,7 +972,7 @@ public:
   void erase_inbound_paths_later(const stream_manager* mgr,
                                  error reason) override;
 
-  // -- handling of upstream message -------------------------------------------
+  // -- handling of stream message ---------------------------------------------
 
   void handle_upstream_msg(stream_slots slots, actor_addr& sender,
                            upstream_msg::ack_open& x);
@@ -988,12 +1000,11 @@ public:
     i->second->handle(slots, x);
     if (i->second->done()) {
       CAF_LOG_INFO("done sending:" << CAF_ARG(slots));
-      i->second->close();
+      i->second->stop();
       stream_managers_.erase(i);
     }
   }
 
-protected:
   /// @cond PRIVATE
 
   // -- utility functions for invoking default handler -------------------------
@@ -1052,6 +1063,7 @@ protected:
   /// this function again.
   actor_clock::time_point advance_streams(actor_clock::time_point now);
 
+protected:
   // -- member variables -------------------------------------------------------
 
   /// Stores incoming messages.

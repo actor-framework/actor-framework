@@ -244,8 +244,8 @@ CAF_TEST(depth_2_pipeline_500_items) {
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
 
-CAF_TEST(broken_pipeline) {
-  CAF_MESSAGE("streams must abort if a stage fails to initialize its state");
+CAF_TEST(depth_2_pipelin_error_during_handshake) {
+  CAF_MESSAGE("streams must abort if a sink fails to initialize its state");
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(broken_sink);
   auto pipeline = snk * src;
@@ -255,6 +255,28 @@ CAF_TEST(broken_pipeline) {
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::forced_drop), from(snk).to(src));
   expect((error), from(snk).to(self).with(sec::stream_init_failed));
+}
+
+CAF_TEST(depth_2_pipelin_error_at_source) {
+  CAF_MESSAGE("streams must abort if a source fails at runtime");
+  auto src = sys.spawn(file_reader, 500);
+  auto snk = sys.spawn(sum_up);
+  auto pipeline = snk * src;
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(pipeline, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(src));
+  CAF_MESSAGE("start data transmission (and abort source)");
+  self->send_exit(src, exit_reason::kill);
+  expect((downstream_msg::batch), from(src).to(snk));
+  expect((exit_msg), from(self).to(src));
+  CAF_MESSAGE("expect close message from src and then result from snk");
+  expect((downstream_msg::forced_close), from(src).to(snk));
+  expect((error), from(snk).to(self));
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::kill);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
