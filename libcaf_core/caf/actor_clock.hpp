@@ -49,9 +49,10 @@ public:
   virtual time_point now() const noexcept;
 
   /// Returns the difference between `t0` and `t1`, allowing the clock to
-  /// return any arbitrary value depending on the measurement that took place.
-  virtual duration_type difference(atom_value measurement, time_point t0,
-                                   time_point t1) const noexcept;
+  /// return an arbitrary value depending on the measurement that took place
+  /// and the units measured.
+  virtual duration_type difference(atom_value measurement, long units,
+                                   time_point t0, time_point t1) const noexcept;
 
   /// Schedules a `timeout_msg` for `self` at time point `t`, overriding any
   /// previous receive timeout.

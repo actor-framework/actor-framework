@@ -33,7 +33,7 @@ actor_clock::time_point actor_clock::now() const noexcept {
 }
 
 actor_clock::duration_type
-actor_clock::difference(atom_value, time_point t0,
+actor_clock::difference(atom_value, long, time_point t0,
                         time_point t1) const noexcept {
   return t1 - t0;
 }

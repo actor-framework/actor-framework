@@ -143,7 +143,10 @@ TESTEE(broken_sink) {
 }
 
 struct fixture : test_coordinator_fixture<> {
-
+  fixture() {
+    // Configure the clock to measure each batch item with 1us.
+    sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
+  }
 };
 
 error fail_state(const actor& x) {

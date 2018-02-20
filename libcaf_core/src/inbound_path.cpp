@@ -74,11 +74,15 @@ inbound_path::~inbound_path() {
 
 void inbound_path::handle(downstream_msg::batch& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
-  assigned_credit -= x.xs_size;
+  auto batch_size = x.xs_size;
+  assigned_credit -= batch_size;
   last_batch_id = x.id;
-  // TODO: add time-measurement functions to local actor and store taken
-  //       measurement in stats
+  auto& clock = mgr->self()->clock();
+  auto t0 = clock.now();
   mgr->handle(this, x);
+  auto t1 = clock.now();
+  auto dt = clock.difference(atom("batch"), batch_size, t0, t1);
+  stats.store({batch_size, dt});
   mgr->push();
 }
 
