@@ -19,10 +19,11 @@
 #ifndef CAF_DETAIL_STRINGIFICATION_INSPECTOR_HPP
 #define CAF_DETAIL_STRINGIFICATION_INSPECTOR_HPP
 
-#include <string>
-#include <vector>
+#include <chrono>
 #include <functional>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 #include "caf/atom.hpp"
 #include "caf/none.hpp"
@@ -184,6 +185,48 @@ public:
     } else {
       result_ += "<null>";
     }
+  }
+
+  /// Print duration types with nanosecond resolution.
+  template <class Rep>
+  void consume(std::chrono::duration<Rep, std::nano>& x) {
+    result_ += std::to_string(x.count());
+    result_ += "ns";
+  }
+
+  /// Print duration types with microsecond resolution.
+  template <class Rep>
+  void consume(std::chrono::duration<Rep, std::micro>& x) {
+    result_ += std::to_string(x.count());
+    result_ += "us";
+  }
+
+  /// Print duration types with millisecond resolution.
+  template <class Rep>
+  void consume(std::chrono::duration<Rep, std::milli>& x) {
+    result_ += std::to_string(x.count());
+    result_ += "ms";
+  }
+
+  /// Print duration types with second resolution.
+  template <class Rep>
+  void consume(std::chrono::duration<Rep, std::ratio<1>>& x) {
+    result_ += std::to_string(x.count());
+    result_ += "s";
+  }
+
+  /// Print duration types with minute resolution.
+  template <class Rep>
+  void consume(std::chrono::duration<Rep, std::ratio<60>>& x) {
+    result_ += std::to_string(x.count());
+    result_ += "min";
+  }
+
+  /// Print duration types with hour resolution.
+  template <class Rep>
+  void consume(std::chrono::duration<Rep, std::ratio<3600>>& x) {
+    result_ += std::to_string(x.count());
+    result_ += "h";
   }
 
   /// Fallback printing `<unprintable>`.
