@@ -430,6 +430,16 @@ public:
                                           std::move(done), std::move(xs));
   }
 
+  template <class... Ts, class Init, class Pull, class Done,
+            class Scatterer =
+              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
+            class Trait = stream_source_trait_t<Pull>>
+  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_source(Init init, Pull pull, Done done,
+              policy::arg<Scatterer> scatterer_type = {}) {
+    return make_source(std::make_tuple(), init, pull, done, scatterer_type);
+  }
+
   template <class Driver, class Input, class... Ts>
   stream_result<typename Driver::output_type> make_sink(const stream<Input>& in,
                                                         Ts&&... xs) {
