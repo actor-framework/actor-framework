@@ -98,12 +98,16 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
 
 void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
                                   timespan cycle, timespan complexity) {
+  CAF_LOG_TRACE(CAF_ARG(queued_items) << CAF_ARG(cycle) << CAF_ARG(complexity));
   auto x = stats.calculate(cycle, complexity);
-  auto credit = std::max(x.max_throughput - (assigned_credit - queued_items),
+  // Hand out enough credit to fill our queue for 2 cycles.
+  auto credit = std::max((x.max_throughput * 2)
+                         - (assigned_credit - queued_items),
                          0l);
   auto batch_size = static_cast<int32_t>(x.items_per_batch);
   if (credit != 0)
     assigned_credit += credit;
+  CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(batch_size));
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_batch>(slots.invert(), self->address(),
                                                static_cast<int32_t>(credit),
