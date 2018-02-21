@@ -58,6 +58,7 @@ void stream_manager::handle(inbound_path*, downstream_msg::forced_close& x) {
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
   auto path = out().add_path(slots.invert(), x.rebind_to);
   path->open_credit = x.initial_demand;
   path->desired_batch_size = x.desired_batch_size;
@@ -67,6 +68,7 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
   auto path = out().path(slots.invert());
   if (path != nullptr) {
     path->open_credit += x.new_capacity;

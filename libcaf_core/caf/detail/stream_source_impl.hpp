@@ -71,9 +71,11 @@ public:
   }
 
   bool generate_messages() override {
+    CAF_LOG_TRACE("");
     if (at_end_)
       return false;
     auto hint = out_.capacity();
+    CAF_LOG_DEBUG(CAF_ARG(hint));
     if (hint == 0)
       return false;
     downstream<output_type> ds{out_.buf()};

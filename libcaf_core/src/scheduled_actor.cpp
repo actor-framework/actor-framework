@@ -354,6 +354,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   mailbox_element_ptr ptr;
   // Timeout for calling `advance_streams`.
   while (handled_msgs < max_throughput) {
+    CAF_LOG_DEBUG("start new DRR round");
     // TODO: maybe replace '3' with configurable / adaptive value?
     // Dispatch on the different message categories in our mailbox.
     if (!mailbox_.new_round(3, f).consumed_items) {
@@ -368,6 +369,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
     if (now >= tout)
       tout = advance_streams(now);
   }
+  CAF_LOG_DEBUG("max throughput reached");
   reset_timeouts_if_needed();
   if (mailbox().try_block())
     return resumable::awaiting_message;
@@ -426,6 +428,7 @@ sec scheduled_actor::build_pipeline(stream_manager_ptr mgr) {
 // -- timeout management -------------------------------------------------------
 
 uint64_t scheduled_actor::set_receive_timeout(actor_clock::time_point x) {
+  CAF_LOG_TRACE(x);
   setf(has_timeout_flag);
   return set_timeout(receive_atom::value, x);
 }
@@ -461,6 +464,7 @@ bool scheduled_actor::is_active_receive_timeout(uint64_t tid) const {
 }
 
 uint64_t scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
+  CAF_LOG_TRACE(x);
   if (x == actor_clock::time_point::max())
     return 0;
   return set_timeout(stream_atom::value, x);
@@ -484,6 +488,7 @@ void scheduled_actor::add_multiplexed_response_handler(message_id response_id,
 
 scheduled_actor::message_category
 scheduled_actor::categorize(mailbox_element& x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
   auto& content = x.content();
   switch (content.type_token()) {
     case make_type_token<atom_value, atom_value, std::string>():
@@ -511,11 +516,12 @@ scheduled_actor::categorize(mailbox_element& x) {
       auto& tm = content.get_as<timeout_msg>(0);
       auto tid = tm.timeout_id;
       if (tm.type == receive_atom::value) {
-        CAF_LOG_DEBUG("handle timeout message");
+        CAF_LOG_DEBUG("handle ordinary timeout message");
         if (is_active_receive_timeout(tid) && !bhvr_stack_.empty())
           bhvr_stack_.back().handle_timeout();
       } else {
         CAF_ASSERT(tm.type == atom("stream"));
+        CAF_LOG_DEBUG("handle stream timeout message");
         set_stream_timeout(advance_streams(clock().now()));
       }
       return message_category::internal;
