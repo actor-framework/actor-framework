@@ -286,4 +286,25 @@ CAF_TEST(depth_2_pipelin_error_at_source) {
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::kill);
 }
 
+CAF_TEST(depth_2_pipelin_error_at_sink) {
+  CAF_MESSAGE("streams must abort if a sink fails at runtime");
+  auto src = sys.spawn(file_reader, 500);
+  auto snk = sys.spawn(sum_up);
+  auto pipeline = snk * src;
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(pipeline, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(snk));
+  CAF_MESSAGE("start data transmission (and abort sink)");
+  self->send_exit(snk, exit_reason::kill);
+  expect((upstream_msg::ack_open), from(snk).to(src));
+  expect((exit_msg), from(self).to(snk));
+  CAF_MESSAGE("expect close and result messages from snk");
+  expect((upstream_msg::forced_drop), from(snk).to(src));
+  expect((error), from(snk).to(self));
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::kill);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
