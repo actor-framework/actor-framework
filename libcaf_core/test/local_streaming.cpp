@@ -232,12 +232,16 @@ CAF_TEST(depth_2_pipeline_500_items) {
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (loop until src sends 'close')");
   do {
-    CAF_MESSAGE("expect batch -> ack_batch pair");
-    expect((downstream_msg::batch), from(src).to(snk));
+    CAF_MESSAGE("process all batches at the sink");
+    while (received<downstream_msg::batch>(snk)) {
+      expect((downstream_msg::batch), from(src).to(snk));
+    }
+    CAF_MESSAGE("trigger timeouts");
     sched.clock().current_time += cycle;
     sched.dispatch();
     expect((timeout_msg), from(snk).to(snk));
     expect((timeout_msg), from(src).to(src));
+    CAF_MESSAGE("process ack_batch in source");
     expect((upstream_msg::ack_batch), from(snk).to(src));
   } while (!received<downstream_msg::close>(snk));
   CAF_MESSAGE("expect close message from src and then result from snk");
