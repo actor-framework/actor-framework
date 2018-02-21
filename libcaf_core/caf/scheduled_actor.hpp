@@ -57,12 +57,14 @@
 #include "caf/policy/urgent_messages.hpp"
 
 #include "caf/detail/behavior_stack.hpp"
-#include "caf/detail/tick_emitter.hpp"
 #include "caf/detail/stream_sink_driver_impl.hpp"
 #include "caf/detail/stream_sink_impl.hpp"
 #include "caf/detail/stream_source_driver_impl.hpp"
 #include "caf/detail/stream_source_impl.hpp"
 #include "caf/detail/stream_stage_driver_impl.hpp"
+#include "caf/detail/stream_stage_driver_impl.hpp"
+#include "caf/detail/stream_stage_impl.hpp"
+#include "caf/detail/tick_emitter.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 
 #include "caf/intrusive/drr_cached_queue.hpp"
@@ -461,6 +463,54 @@ public:
                                                    Fun, Finalize>;
     return make_sink<driver>(in, std::move(init), std::move(fun),
                              std::move(fin));
+  }
+
+  template <class Driver,
+            class Scatterer = broadcast_scatterer<typename Driver::output_type>,
+            class Input = int, class... Ts>
+  typename Driver::output_stream_type make_stage(const stream<Input>& in,
+                                                 Ts&&... xs) {
+    auto slot = next_slot();
+    stream_slots id{in.slot(), slot};
+    auto ptr = detail::make_stream_stage<Driver, Scatterer>(
+      this, std::forward<Ts>(xs)...);
+    if (!add_stream_manager(id, ptr)) {
+      CAF_LOG_WARNING("unable to add a stream manager for a stage");
+      return {0, nullptr};
+    }
+    return {slot, std::move(ptr)};
+  }
+
+  template <class In, class... Ts, class Init, class Fun, class Cleanup,
+            class Scatterer =
+              broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
+            class Trait = stream_stage_trait_t<Fun>>
+  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
+             Cleanup cleanup, policy::arg<Scatterer> scatterer_type = {}) {
+    CAF_IGNORE_UNUSED(scatterer_type);
+    CAF_ASSERT(current_mailbox_element() != nullptr);
+    CAF_ASSERT(
+      current_mailbox_element()->content().match_elements<open_stream_msg>());
+    using output_type = typename stream_stage_trait_t<Fun>::output;
+    using state_type = typename stream_stage_trait_t<Fun>::state;
+    static_assert(std::is_same<
+                    void (state_type&),
+                    typename detail::get_callable_trait<Init>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&)` for init function");
+    static_assert(std::is_same<
+                    void (state_type&, downstream<output_type>&, In),
+                    typename detail::get_callable_trait<Fun>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&, downstream<Out>&, In)` "
+                  "for consume function");
+    using driver =
+      detail::stream_stage_driver_impl<typename Trait::input, output_type, Fun,
+                                       Cleanup,
+                                       std::tuple<detail::decay_t<Ts>...>>;
+    return make_stage<driver, Scatterer>(in, std::move(init), std::move(fun),
+                                         std::move(cleanup), std::move(xs));
   }
 
   /*

@@ -44,7 +44,7 @@ struct stream_stage_trait_invoke_all {
   template <class F, class State, class In, class Out>
   static void invoke(F& f, State& st, std::vector<In>&& xs,
                      downstream<Out>& out) {
-    f(st, std::move(xs), out);
+    f(st, out, std::move(xs));
   }
 };
 
@@ -60,15 +60,15 @@ struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
   using state = State;
   using input = In;
   using output = Out;
-  using invoke = detail::stream_stage_trait_invoke_one;
+  using process = detail::stream_stage_trait_invoke_one;
 };
 
 template <class State, class In, class Out>
-struct stream_stage_trait<void (State&, std::vector<In>&&, downstream<Out>&)> {
+struct stream_stage_trait<void (State&, downstream<Out>&, std::vector<In>&&)> {
   using state = State;
   using input = In;
   using output = Out;
-  using invoke = detail::stream_stage_trait_invoke_all;
+  using process = detail::stream_stage_trait_invoke_all;
 };
 
 // -- convenience alias --------------------------------------------------------

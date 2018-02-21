@@ -61,7 +61,7 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
         // initialize state
         [&](buf& xs) {
           xs.resize(buf_size);
-          std::iota(xs.begin(), xs.end(), 0);
+          std::iota(xs.begin(), xs.end(), 1);
         },
         // get next element
         [=](buf& xs, downstream<int>& out, size_t num) {
@@ -142,8 +142,37 @@ TESTEE(broken_sink) {
   };
 }
 
+TESTEE(filter) {
+  CAF_IGNORE_UNUSED(self);
+  return {
+    [=](stream<int>& in, std::string& fname) -> stream<int> {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      return self->make_stage(
+        // input stream
+        in,
+        // forward file name in handshake to next stage
+        std::forward_as_tuple(std::move(fname)),
+        // initialize state
+        [=](unit_t&) {
+          // nop
+        },
+        // processing step
+        [=](unit_t&, downstream<int>& out, int x) {
+          if ((x & 0x01) != 0)
+            out.push(x);
+        },
+        // cleanup
+        [=](unit_t&) {
+          // nop
+        }
+      );
+    }
+  };
+}
+
 struct fixture : test_coordinator_fixture<> {
-  fixture() {
+  std::chrono::microseconds cycle;
+  fixture() : cycle(cfg.streaming_credit_round_interval_us) {
     // Configure the clock to measure each batch item with 1us.
     sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
   }
@@ -160,10 +189,9 @@ error fail_state(const actor& x) {
 
 CAF_TEST_FIXTURE_SCOPE(local_streaming_tests, fixture)
 
-CAF_TEST(depth_2_pipeline_10_items) {
-  std::chrono::microseconds cycle{cfg.streaming_credit_round_interval_us};
+CAF_TEST(depth_2_pipeline_50_items) {
   sched.clock().current_time += cycle;
-  auto src = sys.spawn(file_reader, 10);
+  auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(sum_up);
   auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
@@ -181,15 +209,14 @@ CAF_TEST(depth_2_pipeline_10_items) {
   expect((upstream_msg::ack_batch), from(snk).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  expect((int), from(snk).to(self).with(45));
+  expect((int), from(snk).to(self).with(1275));
   CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
 
-CAF_TEST(delayed_depth_2_pipeline_10_items) {
-  std::chrono::microseconds cycle{cfg.streaming_credit_round_interval_us};
+CAF_TEST(delayed_depth_2_pipeline_50_items) {
   sched.clock().current_time += cycle;
-  auto src = sys.spawn(file_reader, 10);
+  auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(delayed_sum_up);
   auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
@@ -213,13 +240,12 @@ CAF_TEST(delayed_depth_2_pipeline_10_items) {
   expect((upstream_msg::ack_batch), from(snk).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  expect((int), from(snk).to(self).with(45));
+  expect((int), from(snk).to(self).with(1275));
   CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
 
 CAF_TEST(depth_2_pipeline_500_items) {
-  std::chrono::microseconds cycle{cfg.streaming_credit_round_interval_us};
   sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 500);
   auto snk = sys.spawn(sum_up);
@@ -246,7 +272,7 @@ CAF_TEST(depth_2_pipeline_500_items) {
   } while (!received<downstream_msg::close>(snk));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  expect((int), from(snk).to(self).with(124750));
+  expect((int), from(snk).to(self).with(125250));
   CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
@@ -305,6 +331,46 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
   expect((error), from(snk).to(self));
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
   CAF_CHECK_EQUAL(fail_state(snk), exit_reason::kill);
+}
+
+CAF_TEST(depth_3_pipeline_50_items) {
+  sched.clock().current_time += cycle;
+  auto src = sys.spawn(file_reader, 50);
+  auto stg = sys.spawn(filter);
+  auto snk = sys.spawn(sum_up);
+  auto next_cycle = [&] {
+    sched.clock().current_time += cycle;
+    sched.dispatch();
+    expect((timeout_msg), from(snk).to(snk));
+    expect((timeout_msg), from(stg).to(stg));
+    expect((timeout_msg), from(src).to(src));
+  };
+  auto pipeline = snk * stg * src;
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(stg) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(pipeline, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(stg));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(stg));
+  expect((upstream_msg::ack_open), from(stg).to(src));
+  CAF_MESSAGE("start data transmission (a single batch)");
+  expect((downstream_msg::batch), from(src).to(stg));
+  CAF_MESSAGE("the stage should delay its first batch since its underfull");
+  disallow((downstream_msg::batch), from(stg).to(snk));
+  next_cycle();
+  CAF_MESSAGE("expect close message from src and batch from stage to sink");
+  expect((upstream_msg::ack_batch), from(stg).to(src));
+  expect((downstream_msg::close), from(src).to(stg));
+  expect((downstream_msg::batch), from(stg).to(snk));
+  next_cycle();
+  CAF_MESSAGE("expect close message from stage to sink");
+  expect((upstream_msg::ack_batch), from(snk).to(stg));
+  expect((downstream_msg::close), from(stg).to(snk));
+  expect((int), from(snk).to(self).with(625));
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(stg), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

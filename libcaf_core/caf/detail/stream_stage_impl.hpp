@@ -47,6 +47,8 @@ public:
 
   using scatterer_type = Scatterer;
 
+  using input_type = typename driver_type::input_type;
+
   using output_type = typename driver_type::output_type;
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -72,11 +74,12 @@ public:
 
   void handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
-    using vec_type = std::vector<output_type>;
+    using vec_type = std::vector<input_type>;
     if (x.xs.match_elements<vec_type>()) {
       auto& xs = x.xs.get_mutable_as<vec_type>(0);
       downstream<output_type> ds{out_.buf()};
       driver_.process(std::move(xs), ds);
+      return;
     }
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
   }

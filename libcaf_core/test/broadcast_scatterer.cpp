@@ -50,9 +50,7 @@ public:
         cstr_name(cstr),
         bs(this),
         next_slot(0) {
-    // Make sure emit_batches() does not send partially filled batches.
-    bs.max_batch_delay(duration{std::chrono::milliseconds(100)});
-    CAF_CHECK_EQUAL(bs.delay_partial_batches(), true);
+    // nop
   }
 
   void enqueue(mailbox_element_ptr what, execution_unit*) override {

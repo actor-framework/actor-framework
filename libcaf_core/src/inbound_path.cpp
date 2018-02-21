@@ -99,6 +99,8 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
 void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
                                   timespan cycle, timespan complexity) {
   CAF_LOG_TRACE(CAF_ARG(queued_items) << CAF_ARG(cycle) << CAF_ARG(complexity));
+  if (last_acked_batch_id == last_batch_id)
+    return;
   auto x = stats.calculate(cycle, complexity);
   // Hand out enough credit to fill our queue for 2 cycles.
   auto credit = std::max((x.max_throughput * 2)
@@ -112,6 +114,7 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
                  make<upstream_msg::ack_batch>(slots.invert(), self->address(),
                                                static_cast<int32_t>(credit),
                                                batch_size, last_batch_id));
+  last_acked_batch_id = last_batch_id;
 }
 
 void inbound_path::emit_regular_shutdown(local_actor* self) {

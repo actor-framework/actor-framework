@@ -102,20 +102,6 @@ public:
   /// all individual credits.
   size_t total_credit() const noexcept;
 
-  // -- configuration parameters -----------------------------------------------
-
-  /// Forces to actor to emit a batch even if the minimum batch size was not
-  /// reached.
-  inline duration max_batch_delay() const noexcept {
-    return max_batch_delay_;
-  }
-
-  /// Forces to actor to emit a batch even if the minimum batch size was not
-  /// reached.
-  inline void max_batch_delay(duration x) noexcept {
-    max_batch_delay_ = x;
-  }
-
   // -- state access -----------------------------------------------------------
 
   local_actor* self() const {
@@ -152,10 +138,6 @@ public:
   /// Convenience function for calling `find(x, actor_cast<actor_addr>(x))`.
   path_ptr find(stream_slot slot, const strong_actor_ptr& x);
 
-  inline bool delay_partial_batches() const {
-    return max_batch_delay().count != 0;
-  }
-
 protected:
   // -- customization points ---------------------------------------------------
 
@@ -168,7 +150,6 @@ protected:
 
   map_type paths_;
   local_actor* self_;
-  duration max_batch_delay_;
 };
 
 } // namespace caf

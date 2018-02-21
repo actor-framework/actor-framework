@@ -35,7 +35,7 @@ class stream_stage_driver_impl;
 template <class Input, class Output, class Process, class Finalize, class... Ts>
 class stream_stage_driver_impl<Input, Output, Process, Finalize,
                                std::tuple<Ts...>> final
-  : public stream_stage_driver<Output, Ts...> {
+  : public stream_stage_driver<Input, Output, Ts...> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -65,7 +65,7 @@ public:
     init(state_);
   }
 
-  handshake_tuple_type make_handshake() override {
+  handshake_tuple_type make_handshake() const override {
     return std::tuple_cat(std::make_tuple(none), hs_);
   }
 
@@ -75,7 +75,7 @@ public:
   }
 
   void finalize() override {
-    return fin_();
+    return fin_(state_);
   }
 
 private:

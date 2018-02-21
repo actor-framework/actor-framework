@@ -50,18 +50,17 @@ public:
 
   void emit_batches() override {
     CAF_LOG_TRACE("");
-    if (!this->delay_partial_batches()) {
-      force_emit_batches();
-    } else {
-      auto f = [&](outbound_path&, cache_type&) {
-        // Do nothing, i.e., leave the cache untouched.
-      };
-      emit_batches_impl(f);
-    }
+    // Handler for the last (underful) batch that does nothing, i.e., leaves
+    // the cache untouched.
+    auto f = [&](outbound_path&, cache_type&) {
+      // nop
+    };
+    emit_batches_impl(f);
   }
 
   void force_emit_batches() override {
     CAF_LOG_TRACE("");
+    // Handler for the last (underful) batch that sends it anyway.
     auto f = [&](outbound_path& p, cache_type& c) {
       p.emit_batch(this->self_, c.size(), make_message(std::move(c)));
     };

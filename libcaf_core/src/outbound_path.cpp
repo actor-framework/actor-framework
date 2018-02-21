@@ -28,10 +28,10 @@ namespace caf {
 outbound_path::outbound_path(stream_slots id, strong_actor_ptr ptr)
     : slots(id),
       hdl(std::move(ptr)),
-      next_batch_id(0),
+      next_batch_id(1),
       open_credit(0),
       desired_batch_size(0),
-      next_ack_id(0) {
+      next_ack_id(1) {
   // nop
 }
 
