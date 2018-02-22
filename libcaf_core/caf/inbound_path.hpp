@@ -80,13 +80,19 @@ public:
 
   /// Stores statistics for measuring complexity of incoming batches.
   struct stats_t {
+    /// Wraps a time measurement for a single processed batch.
     struct measurement {
+      /// Number of items in the batch.
       long batch_size;
+      /// Elapsed time for processing all elements of the batch.
       timespan calculation_time;
     };
 
+    /// Wraps the resulf of `stats_t::calculate()`.
     struct calculation_result {
+      /// Number of items per credit cycle.
       long max_throughput;
+      /// Number of items per batch to reach the desired batch commplexity.
       long items_per_batch;
     };
 
