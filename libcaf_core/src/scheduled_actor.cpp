@@ -291,8 +291,12 @@ struct downstream_msg_visitor {
         || std::is_same<T, downstream_msg::forced_close>::value) {
       inptr.reset();
       qs_ref.erase_later(dm.slots.receiver);
+      selfptr->remove_stream_manager(dm.slots);
+      if (mgr->done())
+        mgr->stop();
+      return intrusive::task_result::stop;
     }
-    if (mgr->done()) {
+    else if (mgr->done()) {
       CAF_LOG_DEBUG("path is done receiving and closes its manager");
       mgr->stop();
       selfptr->remove_stream_manager(dm.slots);
