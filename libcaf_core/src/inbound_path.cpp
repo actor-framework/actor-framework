@@ -73,7 +73,7 @@ inbound_path::~inbound_path() {
 }
 
 void inbound_path::handle(downstream_msg::batch& x) {
-  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
   auto batch_size = x.xs_size;
   assigned_credit -= batch_size;
   last_batch_id = x.id;
@@ -87,6 +87,7 @@ void inbound_path::handle(downstream_msg::batch& x) {
 }
 
 void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(rebind_from));
   assigned_credit = 50; // TODO: put constant in some header
   int32_t desired_batch_size = 50; // TODO: put constant in some header
   unsafe_send_as(self, hdl,
@@ -98,7 +99,8 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
 
 void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
                                   timespan cycle, timespan complexity) {
-  CAF_LOG_TRACE(CAF_ARG(queued_items) << CAF_ARG(cycle) << CAF_ARG(complexity));
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items) << CAF_ARG(cycle)
+                << CAF_ARG(complexity));
   if (last_acked_batch_id == last_batch_id)
     return;
   auto x = stats.calculate(cycle, complexity);
@@ -118,10 +120,12 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
 }
 
 void inbound_path::emit_regular_shutdown(local_actor* self) {
+  CAF_LOG_TRACE(CAF_ARG(slots));
   unsafe_send_as(self, hdl, make<upstream_msg::drop>(slots, self->address()));
 }
 
 void inbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(reason));
   unsafe_send_as(self, hdl,
                  make<upstream_msg::forced_drop>(
                    slots.invert(), self->address(), std::move(reason)));

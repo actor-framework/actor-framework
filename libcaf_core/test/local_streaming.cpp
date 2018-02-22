@@ -73,9 +73,12 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
         },
         // check whether we reached the end
         [=](const buf& xs) {
-          return xs.empty();
-        }
-      );
+          if (xs.empty()) {
+            CAF_MESSAGE("sum_up is done");
+            return true;
+          }
+          return false;
+        });
     }
   };
 }
@@ -97,6 +100,7 @@ TESTEE(sum_up) {
         },
         // cleanup and produce result message
         [](int& x) -> int {
+          CAF_MESSAGE("sum_up is done");
           return x;
         }
       );
@@ -124,6 +128,7 @@ TESTEE(delayed_sum_up) {
             },
             // cleanup and produce result message
             [](int& x) -> int {
+              CAF_MESSAGE("delayed_sum_up is done");
               return x;
             }
           );
@@ -163,7 +168,7 @@ TESTEE(filter) {
         },
         // cleanup
         [=](unit_t&) {
-          // nop
+          CAF_MESSAGE("filter is done");
         }
       );
     }
@@ -359,18 +364,15 @@ CAF_TEST(depth_3_pipeline_50_items) {
   CAF_MESSAGE("the stage should delay its first batch since its underfull");
   disallow((downstream_msg::batch), from(stg).to(snk));
   next_cycle();
-  CAF_MESSAGE("expect close message from src and batch from stage to sink");
+  CAF_MESSAGE("the source shuts down and the stage sends the final batch");
   expect((upstream_msg::ack_batch), from(stg).to(src));
   expect((downstream_msg::close), from(src).to(stg));
   expect((downstream_msg::batch), from(stg).to(snk));
   next_cycle();
-  CAF_MESSAGE("expect close message from stage to sink");
+  CAF_MESSAGE("the stage shuts down and the sink produces its final result");
   expect((upstream_msg::ack_batch), from(snk).to(stg));
   expect((downstream_msg::close), from(stg).to(snk));
   expect((int), from(snk).to(self).with(625));
-  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(stg), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

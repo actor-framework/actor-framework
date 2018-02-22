@@ -42,6 +42,8 @@ outbound_path::~outbound_path() {
 void outbound_path::emit_open(local_actor* self, stream_slot slot,
                               strong_actor_ptr to, message handshake_data,
                               stream_priority prio) {
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(to) << CAF_ARG(handshake_data)
+                << CAF_ARG(prio));
   CAF_ASSERT(self != nullptr);
   CAF_ASSERT(to != nullptr);
   // TODO: attach an aborter to `to`
@@ -51,6 +53,7 @@ void outbound_path::emit_open(local_actor* self, stream_slot slot,
 }
 
 void outbound_path::emit_batch(local_actor* self, long xs_size, message xs) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(xs_size) << CAF_ARG(xs));
   CAF_ASSERT(open_credit >= xs_size);
   open_credit -= xs_size;
   auto bid = next_batch_id++;
@@ -61,11 +64,13 @@ void outbound_path::emit_batch(local_actor* self, long xs_size, message xs) {
 }
 
 void outbound_path::emit_regular_shutdown(local_actor* self) {
+  CAF_LOG_TRACE(CAF_ARG(slots));
   unsafe_send_as(self, hdl,
                  make<downstream_msg::close>(slots, self->address()));
 }
 
 void outbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(reason));
   unsafe_send_as(self, hdl,
                  make<downstream_msg::forced_close>(slots, self->address(),
                                                     std::move(reason)));
@@ -75,6 +80,7 @@ void outbound_path::emit_irregular_shutdown(local_actor* self,
                                             stream_slots slots,
                                             const strong_actor_ptr& hdl,
                                             error reason) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(hdl) << CAF_ARG(reason));
   unsafe_send_as(self, hdl,
                  make<downstream_msg::forced_close>(slots, self->address(),
                                                     std::move(reason)));

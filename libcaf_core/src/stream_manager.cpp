@@ -165,6 +165,7 @@ void stream_manager::deregister_input_path(inbound_path* ptr) noexcept {
     swap(*i, inbound_paths_.back());
   }
   inbound_paths_.pop_back();
+  CAF_LOG_DEBUG(inbound_paths_.size() << "paths remaining");
 }
 
 void stream_manager::add_promise(response_promise x) {
