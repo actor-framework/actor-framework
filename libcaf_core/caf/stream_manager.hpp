@@ -143,6 +143,21 @@ public:
   /// Calls `x.deliver()`
   void deliver_promises(message x);
 
+  // -- properties -------------------------------------------------------------
+
+  /// Returns whether this stream remains open even if no in- or outbound paths
+  /// exist. The default is `false`. Does not keep a source alive past the
+  /// point where its driver returns `done() == true`.
+  inline bool continuous() const noexcept {
+    return continuous_;
+  }
+
+  /// Sets whether this stream remains open even if no in- or outbound paths
+  /// exist.
+  inline void continuous(bool x) noexcept {
+    continuous_ = x;
+  }
+
   // -- inline functions -------------------------------------------------------
 
   inline local_actor* self() {
@@ -196,6 +211,10 @@ protected:
   /// Stores promises while a handshake is active. The sink at the associated
   /// key becomes responsible for the promise after receiving `ack_open`.
   std::map<stream_slot, response_promise> in_flight_promises_;
+
+  /// Stores whether this stream shall remain open even if no in- or outbound
+  /// paths exist.
+  bool continuous_;
 };
 
 /// A reference counting pointer to a `stream_manager`.

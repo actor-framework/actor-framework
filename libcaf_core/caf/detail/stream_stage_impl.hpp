@@ -68,8 +68,8 @@ public:
   }
 
   bool done() const override {
-    return this->pending_handshakes_ == 0 && this->inbound_paths_.empty()
-           && out_.clean();
+    return !this->continuous() && this->pending_handshakes_ == 0
+           && this->inbound_paths_.empty() && out_.clean();
   }
 
   void handle(inbound_path*, downstream_msg::batch& x) override {

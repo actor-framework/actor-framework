@@ -37,7 +37,8 @@ namespace caf {
 stream_manager::stream_manager(local_actor* selfptr, stream_priority prio)
     : self_(selfptr),
       pending_handshakes_(0),
-      priority_(prio) {
+      priority_(prio),
+      continuous_(false) {
   // nop
 }
 

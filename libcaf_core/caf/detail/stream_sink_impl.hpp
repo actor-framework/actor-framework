@@ -55,7 +55,7 @@ public:
   }
 
   bool done() const override {
-    return this->inbound_paths_.empty();
+    return !this->continuous() && this->inbound_paths_.empty();
   }
 
   void handle(inbound_path*, downstream_msg::batch& x) override {
