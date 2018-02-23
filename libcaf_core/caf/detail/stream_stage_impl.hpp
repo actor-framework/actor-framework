@@ -25,15 +25,14 @@
 #include "caf/outbound_path.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
+#include "caf/stream_stage.hpp"
 #include "caf/stream_stage_trait.hpp"
-
-#include "caf/policy/arg.hpp"
 
 namespace caf {
 namespace detail {
 
 template <class Driver, class Scatterer>
-class stream_stage_impl : public stream_manager {
+class stream_stage_impl : public Driver::stage_type {
 public:
   // -- static asserts ---------------------------------------------------------
 
@@ -42,6 +41,8 @@ public:
                 "Driver and Scatterer have incompatible types.");
 
   // -- member types -----------------------------------------------------------
+
+  using super = typename Driver::stage_type;
 
   using driver_type = Driver;
 
@@ -55,7 +56,7 @@ public:
 
   template <class... Ts>
   stream_stage_impl(local_actor* self, Ts&&... xs)
-      : stream_manager(self),
+      : super(self),
         driver_(std::forward<Ts>(xs)...),
         out_(self) {
     // nop
@@ -101,7 +102,8 @@ private:
 template <class Driver,
           class Scatterer = broadcast_scatterer<typename Driver::output_type>,
           class... Ts>
-stream_manager_ptr make_stream_stage(local_actor* self, Ts&&... xs) {
+typename Driver::stage_ptr_type make_stream_stage(local_actor* self,
+                                                  Ts&&... xs) {
   using impl = stream_stage_impl<Driver, Scatterer>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }

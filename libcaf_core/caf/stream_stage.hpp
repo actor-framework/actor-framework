@@ -5,8 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2017                                                  *
- * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -17,58 +16,35 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SOURCE_DRIVER_HPP
-#define CAF_STREAM_SOURCE_DRIVER_HPP
+#ifndef CAF_DETAIL_STREAM_STAGE_HPP
+#define CAF_DETAIL_STREAM_STAGE_HPP
 
 #include <tuple>
 
-#include "caf/fwd.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/stream_source.hpp"
 
 namespace caf {
 
-/// Identifies an unbound sequence of messages.
-template <class Output, class... HandshakeData>
-class stream_source_driver {
+template <class In, class Out, class... HandshakeData>
+class stream_stage : public stream_source<Out, HandshakeData...> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using output_type = Output;
+  using super = stream_source<Out, HandshakeData...>;
 
-  using stream_type = stream<output_type>;
-
-  using output_stream_type = output_stream<output_type, HandshakeData...>;
-
-  using handshake_tuple_type = std::tuple<stream_type, HandshakeData...>;
-
-  using source_type = stream_source<output_type, HandshakeData...>;
-
-  using source_ptr_type = intrusive_ptr<source_type>;
+  using input_type = In;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  virtual ~stream_source_driver() {
+  stream_stage(local_actor* self) : super(self) {
     // nop
   }
-
-  // -- virtual functions ------------------------------------------------------
-
-  /// Cleans up any state.
-  virtual void finalize() {
-    // nop
-  }
-
-  // -- pure virtual functions -------------------------------------------------
-
-  /// Generates handshake data for the next actor in the pipeline.
-  virtual handshake_tuple_type make_handshake() const = 0;
-
-  /// Generates more stream elements.
-  virtual void pull(downstream<output_type>& out, size_t num) = 0;
-
-  /// Returns `true` if the source is done sending, otherwise `false`.
-  virtual bool done() const noexcept = 0;
 };
+
+template <class In, class Out, class... HandshakeData>
+using stream_stage_ptr = intrusive_ptr<stream_stage<In, Out, HandshakeData...>>;
 
 } // namespace caf
 
-#endif // CAF_STREAM_SOURCE_DRIVER_HPP
+#endif // CAF_DETAIL_STREAM_STAGE_HPP

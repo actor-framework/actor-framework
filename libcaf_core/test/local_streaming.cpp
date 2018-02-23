@@ -150,7 +150,7 @@ TESTEE(broken_sink) {
 TESTEE(filter) {
   CAF_IGNORE_UNUSED(self);
   return {
-    [=](stream<int>& in, std::string& fname) -> stream<int> {
+    [=](stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       return self->make_stage(
         // input stream

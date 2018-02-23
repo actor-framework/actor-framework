@@ -16,49 +16,37 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_HPP
-#define CAF_STREAM_HPP
+#ifndef CAF_OUTPUT_STREAM_HPP
+#define CAF_OUTPUT_STREAM_HPP
 
 #include "caf/fwd.hpp"
-#include "caf/stream_manager.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/stream_source.hpp"
 
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
-/// Identifies an unbound sequence of elements.
-template <class T>
-class stream {
+/// Identifies an unbound sequence of elements annotated with the additional
+/// handshake arguments emitted to the next stage.
+template <class T, class... Ts>
+class output_stream {
 public:
   // -- member types -----------------------------------------------------------
+
+  /// Dennotes the supertype.
+  using super = stream<T>;
 
   /// Type of a single element.
   using value_type = T;
 
-  // -- constructors and destructors -------------------------------------------
+  /// Smart pointer to a source.
+  using source_pointer = stream_source_ptr<T, Ts...>;
 
-  stream(stream&&) = default;
-  stream(const stream&) = default;
-  stream& operator=(stream&&) = default;
-  stream& operator=(const stream&) = default;
+  // -- constructors, destructors, and assignment operators --------------------
 
-  stream(none_t = none) : slot_(0) {
-    // nop
-  }
-
-  /// Convenience constructor for returning the result of `self->new_stream`
-  /// and similar functions.
-  stream(stream_slot id, stream_manager_ptr sptr = nullptr)
+  output_stream(stream_slot id, source_pointer sptr)
       : slot_(id),
-        ptr_(std::move(sptr)) {
-    // nop
-  }
-
-  /// Convenience constructor for returning the result of `self->new_stream`
-  /// and similar functions.
-  stream(stream other,  stream_manager_ptr sptr)
-      : slot_(std::move(other.slot_)),
         ptr_(std::move(sptr)) {
     // nop
   }
@@ -71,29 +59,30 @@ public:
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline stream_manager_ptr& ptr() noexcept {
+  inline source_pointer& ptr() noexcept {
     return ptr_;
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline const stream_manager_ptr& ptr() const noexcept {
+  inline const source_pointer& ptr() const noexcept {
     return ptr_;
   }
 
   // -- serialization support --------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, stream& x) {
-    return f(meta::type_name("stream"), x.slot_);
+  friend typename Inspector::result_type inspect(Inspector& f,
+                                                 output_stream& x) {
+    return f(meta::type_name("output_stream"), x.slot_);
   }
 
 private:
   // -- member variables -------------------------------------------------------
 
   stream_slot slot_;
-  stream_manager_ptr ptr_;
+  source_pointer ptr_;
 };
 
 } // namespace caf
 
-#endif // CAF_STREAM_HPP
+#endif // CAF_OUTPUT_STREAM_HPP

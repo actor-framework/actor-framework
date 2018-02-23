@@ -24,16 +24,14 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/outbound_path.hpp"
-#include "caf/stream_manager.hpp"
+#include "caf/stream_source.hpp"
 #include "caf/stream_source_trait.hpp"
-
-#include "caf/policy/arg.hpp"
 
 namespace caf {
 namespace detail {
 
 template <class Driver, class Scatterer>
-class stream_source_impl : public stream_manager {
+class stream_source_impl : public Driver::source_type {
 public:
   // -- static asserts ---------------------------------------------------------
 
@@ -42,6 +40,8 @@ public:
                 "Driver and Scatterer have incompatible types.");
 
   // -- member types -----------------------------------------------------------
+
+  using super = typename Driver::source_type;
 
   using driver_type = Driver;
 
@@ -53,7 +53,7 @@ public:
 
   template <class... Ts>
   stream_source_impl(local_actor* self, Ts&&... xs)
-      : stream_manager(self),
+      : super(self),
         at_end_(false),
         driver_(std::forward<Ts>(xs)...),
         out_(self) {
@@ -98,7 +98,8 @@ private:
 template <class Driver,
           class Scatterer = broadcast_scatterer<typename Driver::output_type>,
           class... Ts>
-stream_manager_ptr make_stream_source(local_actor* self, Ts&&... xs) {
+typename Driver::source_ptr_type make_stream_source(local_actor* self,
+                                                    Ts&&... xs) {
   using impl = stream_source_impl<Driver, Scatterer>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }

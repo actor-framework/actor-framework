@@ -58,6 +58,11 @@ template <class...> class typed_event_based_actor;
 // -- variadic templates with 1 fixed argument ---------------------------------
 
 template <class, class...> class output_stream;
+template <class, class...> class stream_source;
+
+// -- variadic templates with 2 fixed argument ---------------------------------
+
+template <class, class, class...> class stream_stage;
 
 // -- classes ------------------------------------------------------------------
 

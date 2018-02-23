@@ -148,7 +148,8 @@ public:
   /// Calls `(*this)(x.ptr)`.
   template <class T, class... Us>
   void operator()(output_stream<T, Us...>& x) {
-    (*this)(x.slot(), x.ptr());
+    stream_manager_ptr ptr{std::move(x.ptr())};
+    (*this)(x.slot(), ptr);
   }
 
   /// Calls `(*this)(x.ptr)`.

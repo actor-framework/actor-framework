@@ -43,6 +43,10 @@ public:
 
   using handshake_tuple_type = std::tuple<stream_type, HandshakeData...>;
 
+  using stage_type = stream_stage<input_type, output_type, HandshakeData...>;
+
+  using stage_ptr_type = intrusive_ptr<stage_type>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   virtual ~stream_stage_driver() {
