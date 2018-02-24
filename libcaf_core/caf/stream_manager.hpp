@@ -94,7 +94,7 @@ public:
 
   /// Returns true if the handler is not able to process any further batches
   /// since it is unable to make progress sending on its own.
-  virtual bool congested() const;
+  virtual bool congested() const noexcept;
 
   /// Sends a handshake to `dest`.
   /// @pre `dest != nullptr`

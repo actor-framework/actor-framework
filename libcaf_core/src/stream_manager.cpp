@@ -116,7 +116,7 @@ void stream_manager::push() {
   } while (generate_messages());
 }
 
-bool stream_manager::congested() const {
+bool stream_manager::congested() const noexcept {
   return false;
 }
 

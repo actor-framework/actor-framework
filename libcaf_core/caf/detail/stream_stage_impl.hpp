@@ -89,9 +89,8 @@ public:
     return make_message_from_tuple(driver_.make_handshake(slot));
   }
 
-  bool congested() const override {
-    // TODO: implement me
-    return out_.buffered() >= 30;
+  bool congested() const noexcept override {
+    return out_.capacity() == 0;
   }
 
 private:
