@@ -318,7 +318,7 @@ public:
       };
       mgr = detail::make_stream_sink<driver>(this, &data);
     }
-    managers_.emplace(id, mgr);
+    managers_.emplace(slot, mgr);
     // Create a new queue in the mailbox for incoming traffic.
     auto path = make_inbound_path(mgr, id, std::move(hs.prev_stage));
     CAF_REQUIRE_NOT_EQUAL(path, nullptr);
@@ -334,7 +334,7 @@ public:
     // `managers_`, and handle `x`.
     auto i = pending_managers_.find(slots.receiver);
     CAF_REQUIRE_NOT_EQUAL(i, pending_managers_.end());
-    auto res = managers_.emplace(slots, std::move(i->second));
+    auto res = managers_.emplace(slots.receiver, std::move(i->second));
     pending_managers_.erase(i);
     CAF_REQUIRE(res.second);
     res.first->second->handle(slots, x);
@@ -346,14 +346,16 @@ public:
     TRACE(name_, ack_batch, CAF_ARG(slots),
           CAF_ARG2("sender", name_of(sender)), CAF_ARG(x));
     // Get the manager for that stream.
-    auto i = managers_.find(slots);
+    auto i = managers_.find(slots.receiver);
     CAF_REQUIRE_NOT_EQUAL(i, managers_.end());
     i->second->handle(slots, x);
     i->second->out().force_emit_batches();
     if (i->second->done()) {
       CAF_MESSAGE(name_ << " is done sending batches");
-      i->second->stop();
-      managers_.erase(i);
+      // Purge the manager from the map.
+      auto mgr = i->second;
+      erase_stream_manager(mgr);
+      mgr->stop();
     }
   }
 
@@ -405,6 +407,20 @@ public:
     CAF_FAIL("unexpected function call");
   }
 
+  void erase_stream_manager(stream_slot id) {
+    managers_.erase(id);
+  }
+
+  void erase_stream_manager(const stream_manager_ptr& mgr) {
+    auto i = managers_.begin();
+    auto e = managers_.end();
+    while (i != e)
+      if (i->second == mgr)
+        i = managers_.erase(i);
+      else
+        ++i;
+  }
+
   time_point now() {
     return global_time_ == nullptr ? clock_type::now() : *global_time_;
   }
@@ -416,7 +432,7 @@ public:
   stream_slot next_slot_ = 1;
   vector<int> data; // Keeps track of all received data from all batches.
   stream_manager_ptr forwarder;
-  std::map<stream_slots, stream_manager_ptr> managers_;
+  std::map<stream_slot, stream_manager_ptr> managers_;
   std::map<stream_slot, stream_manager_ptr> pending_managers_;
 
   tick_type ticks_per_force_batches_interval;
@@ -494,7 +510,7 @@ struct msg_visitor {
       [&](downstream_msg::close& y) {
         TRACE(self->name(), close, CAF_ARG(dm.slots));
         auto slots = dm.slots;
-        auto i = self->managers_.find(slots);
+        auto i = self->managers_.find(slots.receiver);
         CAF_REQUIRE_NOT_EQUAL(i, self->managers_.end());
         i->second->handle(inptr, y);
         q.policy().handler.reset();
@@ -504,14 +520,8 @@ struct msg_visitor {
         } else {
           // Close the manager and remove it on all registered slots.
           auto mgr = i->second;
+          self->erase_stream_manager(mgr);
           mgr->stop();
-          auto j = self->managers_.begin();
-          while (j != self->managers_.end()) {
-            if (j->second == mgr)
-              j = self->managers_.erase(j);
-            else
-              ++j;
-          }
         }
         return intrusive::task_result::resume;
       },
@@ -644,7 +654,7 @@ vector<int> make_iota(int first, int last) {
 
 CAF_TEST_FIXTURE_SCOPE(native_streaming_classes_tests, fixture)
 
-CAF_TEST(depth_2_pipeline_single_round) {
+CAF_TEST(depth_2_pipeline_30_items) {
   alice.start_streaming(bob, 30);
   loop(alice, bob);
   next_cycle(alice, bob); // a single credit round is enough
@@ -652,24 +662,26 @@ CAF_TEST(depth_2_pipeline_single_round) {
   CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
 }
 
-CAF_TEST(depth_2_pipeline_multiple_rounds) {
+CAF_TEST(depth_2_pipeline_2000_items) {
   constexpr size_t num_messages = 2000;
   alice.start_streaming(bob, num_messages);
   loop_until([&] { return done_streaming(); }, alice, bob);
   CAF_CHECK_EQUAL(bob.data, make_iota(0, num_messages));
 }
 
-CAF_TEST(depth_3_pipeline_single_round) {
+CAF_TEST(depth_3_pipeline_30_items) {
   bob.forward_to(carl);
   alice.start_streaming(bob, 30);
   loop(alice, bob, carl);
-  next_cycle(alice, bob, carl); // a single credit round is enough
+  next_cycle(alice, bob, carl);
+  loop(alice, bob, carl);
+  next_cycle(alice, bob, carl);
   loop(alice, bob, carl);
   CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
   CAF_CHECK_EQUAL(carl.data, make_iota(0, 30));
 }
 
-CAF_TEST(depth_3_pipeline_multiple_rounds) {
+CAF_TEST(depth_3_pipeline_2000_items) {
   constexpr size_t num_messages = 2000;
   bob.forward_to(carl);
   alice.start_streaming(bob, num_messages);
