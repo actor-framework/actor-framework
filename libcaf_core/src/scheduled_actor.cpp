@@ -287,12 +287,13 @@ struct downstream_msg_visitor {
     // Do *not* store a reference here since we potentially reset `inptr`.
     auto mgr = inptr->mgr;
     inptr->handle(x);
+    CAF_ASSERT(inptr->slots == dm.slots);
     // TODO: replace with `if constexpr` when switching to C++17
     if (std::is_same<T, downstream_msg::close>::value
         || std::is_same<T, downstream_msg::forced_close>::value) {
       inptr.reset();
       qs_ref.erase_later(dm.slots.receiver);
-      selfptr->erase_stream_manager(dm.slots);
+      selfptr->erase_stream_manager(dm.slots.receiver);
       if (mgr->done())
         mgr->stop();
       return intrusive::task_result::stop;
@@ -300,7 +301,7 @@ struct downstream_msg_visitor {
     else if (mgr->done()) {
       CAF_LOG_DEBUG("path is done receiving and closes its manager");
       mgr->stop();
-      selfptr->erase_stream_manager(dm.slots);
+      selfptr->erase_stream_manager(dm.slots.receiver);
       return intrusive::task_result::stop;
     }
     return intrusive::task_result::resume;
@@ -889,7 +890,7 @@ void scheduled_actor::handle_upstream_msg(stream_slots slots,
   }
   auto ptr = std::move(i->second);
   pending_stream_managers_.erase(i);
-  if (!add_stream_manager(slots, ptr)) {
+  if (!add_stream_manager(slots.receiver, ptr)) {
     CAF_LOG_WARNING("unable to add stream manager after receiving ack_open");
     return;
   }
@@ -907,17 +908,17 @@ uint64_t scheduled_actor::set_timeout(atom_value type,
 
 stream_slot scheduled_actor::next_slot() {
   stream_slot result = 0;
-  auto nslot = [](stream_slot x) -> stream_slot {
-    return x + 1;
+  auto nslot = [](const stream_manager_map& x) -> stream_slot {
+    return x.rbegin()->first + 1;
   };
   if (!stream_managers_.empty())
-    result = std::max(nslot(stream_managers_.rbegin()->first.receiver), result);
+    result = std::max(nslot(stream_managers_), result);
   if (!pending_stream_managers_.empty())
-    result = std::max(nslot(pending_stream_managers_.rbegin()->first), result);
+    result = std::max(nslot(pending_stream_managers_), result);
   return result;
 }
 
-bool scheduled_actor::add_stream_manager(stream_slots id,
+bool scheduled_actor::add_stream_manager(stream_slot id,
                                          stream_manager_ptr ptr) {
   CAF_LOG_TRACE(CAF_ARG(id));
   if (stream_managers_.empty())
@@ -926,7 +927,7 @@ bool scheduled_actor::add_stream_manager(stream_slots id,
   return result;
 }
 
-void scheduled_actor::erase_stream_manager(stream_slots id) {
+void scheduled_actor::erase_stream_manager(stream_slot id) {
   CAF_LOG_TRACE(CAF_ARG(id));
   if (stream_managers_.erase(id) != 0 && stream_managers_.empty())
     stream_ticks_.stop();

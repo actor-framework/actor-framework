@@ -135,6 +135,9 @@ public:
   /// Base type.
   using super = local_actor;
 
+  /// Maps slot IDs to stream managers.
+  using stream_manager_map = std::map<stream_slot, stream_manager_ptr>;
+
   /// Stores asynchronous messages with default priority.
   using default_queue = intrusive::drr_cached_queue<policy::normal_messages>;
 
@@ -445,12 +448,11 @@ public:
   }
 
   template <class Driver, class Input, class... Ts>
-  stream_result<typename Driver::output_type> make_sink(const stream<Input>& in,
+  stream_result<typename Driver::output_type> make_sink(const stream<Input>&,
                                                         Ts&&... xs) {
     auto slot = next_slot();
-    stream_slots id{in.slot(), slot};
     auto ptr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
-    if (!add_stream_manager(id, ptr)) {
+    if (!add_stream_manager(slot, ptr)) {
       CAF_LOG_WARNING("unable to add a stream manager for a sink");
       return {0, nullptr};
     }
@@ -470,13 +472,12 @@ public:
   template <class Driver,
             class Scatterer = broadcast_scatterer<typename Driver::output_type>,
             class Input = int, class... Ts>
-  typename Driver::output_stream_type make_stage(const stream<Input>& in,
+  typename Driver::output_stream_type make_stage(const stream<Input>&,
                                                  Ts&&... xs) {
     auto slot = next_slot();
-    stream_slots id{in.slot(), slot};
     auto ptr = detail::make_stream_stage<Driver, Scatterer>(
       this, std::forward<Ts>(xs)...);
-    if (!add_stream_manager(id, ptr)) {
+    if (!add_stream_manager(slot, ptr)) {
       CAF_LOG_WARNING("unable to add a stream manager for a stage");
       return {0, nullptr};
     }
@@ -1034,7 +1035,7 @@ public:
 
   template <class T>
   void handle_upstream_msg(stream_slots slots, actor_addr&, T& x) {
-    auto i = stream_managers_.find(slots);
+    auto i = stream_managers_.find(slots.receiver);
     if (i == stream_managers_.end()) {
       auto j = pending_stream_managers_.find(slots.receiver);
       if (j != pending_stream_managers_.end()) {
@@ -1108,10 +1109,10 @@ public:
 
   /// Adds a new stream manager to the actor and starts cycle management if
   /// needed.
-  bool add_stream_manager(stream_slots id, stream_manager_ptr ptr);
+  bool add_stream_manager(stream_slot id, stream_manager_ptr ptr);
 
-  /// Removes a new stream manager.
-  void erase_stream_manager(stream_slots id);
+  /// Removes a stream manager.
+  void erase_stream_manager(stream_slot id);
 
   /// @pre `x.content().match_elements<open_stream_msg>()`
   invoke_message_result handle_open_stream_msg(mailbox_element& x);
@@ -1151,11 +1152,11 @@ protected:
   exit_handler exit_handler_;
 
   /// Stores stream managers for established streams.
-  std::map<stream_slots, stream_manager_ptr> stream_managers_;
+  stream_manager_map stream_managers_;
 
   /// Stores stream managers for pending streams, i.e., streams that have not
   /// yet received an ACK.
-  std::map<stream_slot, stream_manager_ptr> pending_stream_managers_;
+  stream_manager_map pending_stream_managers_;
 
   /// Controls batch and credit timeouts.
   detail::tick_emitter stream_ticks_;
