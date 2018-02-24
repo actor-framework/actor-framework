@@ -44,7 +44,7 @@ public:
 
   using path_unique_ptr = std::unique_ptr<path_type>;
 
-  using map_type = detail::unordered_flat_map<stream_slots, path_unique_ptr>;
+  using map_type = detail::unordered_flat_map<stream_slot, path_unique_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -64,10 +64,10 @@ public:
   virtual path_ptr add_path(stream_slots slots, strong_actor_ptr target);
 
   /// Removes a path from the scatterer and returns it.
-  path_unique_ptr take_path(stream_slots slots) noexcept;
+  path_unique_ptr take_path(stream_slot slots) noexcept;
 
   /// Returns the path associated to `slots` or `nullptr`.
-  path_ptr path(stream_slots slots) noexcept;
+  path_ptr path(stream_slot slots) noexcept;
 
   /// Returns the stored state for `x` if `x` is a known path and associated to
   /// `sid`, otherwise `nullptr`.

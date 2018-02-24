@@ -47,7 +47,7 @@ stream_scatterer::~stream_scatterer() {
 pointer stream_scatterer::add_path(stream_slots slots,
                                    strong_actor_ptr target) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target));
-  auto res = paths_.emplace(slots, nullptr);
+  auto res = paths_.emplace(slots.sender, nullptr);
   if (res.second) {
     auto ptr = new outbound_path(slots, std::move(target));
     res.first->second.reset(ptr);
@@ -56,9 +56,9 @@ pointer stream_scatterer::add_path(stream_slots slots,
   return nullptr;
 }
 
-unique_pointer stream_scatterer::take_path(stream_slots slots) noexcept {
+unique_pointer stream_scatterer::take_path(stream_slot slot) noexcept {
   unique_pointer result;
-  auto i = paths_.find(slots);
+  auto i = paths_.find(slot);
   if (i != paths_.end()) {
     result.swap(i->second);
     paths_.erase(i);
@@ -66,8 +66,8 @@ unique_pointer stream_scatterer::take_path(stream_slots slots) noexcept {
   return result;
 }
 
-pointer stream_scatterer::path(stream_slots slots) noexcept {
-  auto i = paths_.find(slots);
+pointer stream_scatterer::path(stream_slot slot) noexcept {
+  auto i = paths_.find(slot);
   return i != paths_.end() ? i->second.get() : nullptr;
 }
 

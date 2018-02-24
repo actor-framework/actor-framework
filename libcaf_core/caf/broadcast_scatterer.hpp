@@ -36,11 +36,11 @@ public:
   using cache_type = std::vector<T>;
 
   /// Maps slot IDs to caches.
-  using cache_map_type = detail::unordered_flat_map<stream_slots, cache_type>;
+  using cache_map_type = detail::unordered_flat_map<stream_slot, cache_type>;
 
   typename super::path_ptr add_path(stream_slots slots,
                                     strong_actor_ptr target) override {
-    auto res = caches_.emplace(slots, cache_type{});
+    auto res = caches_.emplace(slots.sender, cache_type{});
     return res.second ? super::add_path(slots, target) : nullptr;
   }
 
@@ -59,7 +59,8 @@ public:
   }
 
   void force_emit_batches() override {
-    CAF_LOG_TRACE("");
+    CAF_LOG_TRACE(CAF_ARG2("buffered", this->buffered())
+                  << CAF_ARG2("paths", this->paths_.size()));
     // Handler for the last (underful) batch that sends it anyway.
     auto f = [&](outbound_path& p, cache_type& c) {
       p.emit_batch(this->self_, c.size(), make_message(std::move(c)));
@@ -70,7 +71,8 @@ public:
 protected:
   void about_to_erase(typename super::map_type::iterator i, bool silent,
                       error* reason) override {
-    caches_.erase(i->second->slots);
+    CAF_LOG_DEBUG("remove cache:" << CAF_ARG2("slot", i->second->slots.sender));
+    caches_.erase(i->second->slots.sender);
     super::about_to_erase(i, silent, reason);
   }
 
@@ -98,6 +100,8 @@ private:
     if (this->paths_.empty())
       return;
     auto emit_impl = [&](outbound_path& p, cache_type& c) {
+      CAF_LOG_DEBUG("emit up to" << c.size()
+                    << "items on slot" << p.slots.sender);
       if (c.empty())
         return;
       auto dbs = p.desired_batch_size;
