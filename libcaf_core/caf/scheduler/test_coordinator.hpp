@@ -114,6 +114,13 @@ public:
   /// messages.
   size_t dispatch();
 
+  /// Loops until no job or delayed message remains or `predicate` returns
+  /// `true`. Returns the total number of events (first) and dispatched delayed
+  /// messages (second). Advances time by `cycle` between to calls to
+  /// `dispatch()`.
+  std::pair<size_t, size_t> run_dispatch_loop(std::function<bool()> predicate,
+                                              timespan cycle = timespan{0});
+
   /// Loops until no job or delayed message remains. Returns the total number
   /// of events (first) and dispatched delayed messages (second). Advances time
   /// by `cycle` between to calls to `dispatch()`.
