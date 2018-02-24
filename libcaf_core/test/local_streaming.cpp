@@ -68,12 +68,12 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
         // forward file name in handshake to next stage
         std::forward_as_tuple(std::move(fname)),
         // initialize state
-        [&](buf& xs) {
+        [=](buf& xs) {
           xs.resize(buf_size);
           std::iota(xs.begin(), xs.end(), 1);
         },
         // get next element
-        [=](buf& xs, downstream<int>& out, size_t num) {
+        [](buf& xs, downstream<int>& out, size_t num) {
           CAF_MESSAGE("push " << num << " messages downstream");
           auto n = std::min(num, xs.size());
           for (size_t i = 0; i < n; ++i)
@@ -83,7 +83,7 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
         // check whether we reached the end
         [=](const buf& xs) {
           if (xs.empty()) {
-            CAF_MESSAGE("sum_up is done");
+            CAF_MESSAGE(self->name() << " is done");
             return true;
           }
           return false;
@@ -113,7 +113,7 @@ TESTEE(sum_up) {
         },
         // cleanup and produce result message
         [=](unit_t&) -> int {
-          CAF_MESSAGE("sum_up is done");
+          CAF_MESSAGE(self->name() << " is done");
           return self->state.x;
         }
       );
@@ -144,8 +144,8 @@ TESTEE(delayed_sum_up) {
               x += y;
             },
             // cleanup and produce result message
-            [](int& x) -> int {
-              CAF_MESSAGE("delayed_sum_up is done");
+            [=](int& x) -> int {
+              CAF_MESSAGE(self->name() << " is done");
               return x;
             }
           );
@@ -175,17 +175,44 @@ TESTEE(filter) {
         // forward file name in handshake to next stage
         std::forward_as_tuple(std::move(fname)),
         // initialize state
-        [=](unit_t&) {
+        [](unit_t&) {
           // nop
         },
         // processing step
-        [=](unit_t&, downstream<int>& out, int x) {
+        [](unit_t&, downstream<int>& out, int x) {
           if ((x & 0x01) != 0)
             out.push(x);
         },
         // cleanup
         [=](unit_t&) {
-          CAF_MESSAGE("filter is done");
+          CAF_MESSAGE(self->name() << " is done");
+        }
+      );
+    }
+  };
+}
+
+TESTEE(doubler) {
+  CAF_IGNORE_UNUSED(self);
+  return {
+    [=](stream<int>& in, std::string& fname) {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      return self->make_stage(
+        // input stream
+        in,
+        // forward file name in handshake to next stage
+        std::forward_as_tuple(std::move(fname)),
+        // initialize state
+        [](unit_t&) {
+          // nop
+        },
+        // processing step
+        [](unit_t&, downstream<int>& out, int x) {
+          out.push(x * 2);
+        },
+        // cleanup
+        [=](unit_t&) {
+          CAF_MESSAGE(self->name() << " is done");
         }
       );
     }
@@ -201,16 +228,16 @@ TESTEE(stream_multiplexer) {
     // handshake data
     std::make_tuple(std::string{"numbers.txt"}),
     // initialize state
-    [=](unit_t&) {
+    [](unit_t&) {
       // nop
     },
     // processing step
-    [=](unit_t&, downstream<int>& out, int x) {
+    [](unit_t&, downstream<int>& out, int x) {
       out.push(x);
     },
     // cleanup
     [=](unit_t&) {
-      CAF_MESSAGE("stream_multiplexer is done");
+      CAF_MESSAGE(self->name() << " is done");
     }
   );
   return {
@@ -230,6 +257,8 @@ struct fixture : test_coordinator_fixture<> {
   fixture() : cycle(cfg.streaming_credit_round_interval_us) {
     // Configure the clock to measure each batch item with 1us.
     sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
+    // Make sure the current time isn't invalid.
+    sched.clock().current_time += cycle;
   }
 
   ~fixture() {
@@ -249,7 +278,6 @@ error fail_state(const actor& x) {
 CAF_TEST_FIXTURE_SCOPE(local_streaming_tests, fixture)
 
 CAF_TEST(depth_2_pipeline_50_items) {
-  sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
@@ -273,7 +301,6 @@ CAF_TEST(depth_2_pipeline_50_items) {
 }
 
 CAF_TEST(delayed_depth_2_pipeline_50_items) {
-  sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(delayed_sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
@@ -303,7 +330,6 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
 }
 
 CAF_TEST(depth_2_pipeline_500_items) {
-  sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 500);
   auto snk = sys.spawn(sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
@@ -333,7 +359,7 @@ CAF_TEST(depth_2_pipeline_500_items) {
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }
 
-CAF_TEST(depth_2_pipelin_error_during_handshake) {
+CAF_TEST(depth_2_pipeline_error_during_handshake) {
   CAF_MESSAGE("streams must abort if a sink fails to initialize its state");
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(broken_sink);
@@ -345,7 +371,7 @@ CAF_TEST(depth_2_pipelin_error_during_handshake) {
   expect((error), from(snk).to(self).with(sec::stream_init_failed));
 }
 
-CAF_TEST(depth_2_pipelin_error_at_source) {
+CAF_TEST(depth_2_pipeline_error_at_source) {
   CAF_MESSAGE("streams must abort if a source fails at runtime");
   auto src = sys.spawn(file_reader, 500);
   auto snk = sys.spawn(sum_up);
@@ -387,7 +413,6 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
 }
 
 CAF_TEST(depth_3_pipeline_50_items) {
-  sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 50);
   auto stg = sys.spawn(filter);
   auto snk = sys.spawn(sum_up);
@@ -424,7 +449,6 @@ CAF_TEST(depth_3_pipeline_50_items) {
 }
 
 CAF_TEST(depth_3_pipeline_with_fork) {
-  sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 50);
   auto stg = sys.spawn(stream_multiplexer);
   auto snk1 = sys.spawn(sum_up);
@@ -452,7 +476,6 @@ CAF_TEST(depth_3_pipeline_with_fork) {
 }
 
 CAF_TEST(depth_3_pipeline_with_join) {
-  sched.clock().current_time += cycle;
   auto src1 = sys.spawn(file_reader, 50);
   auto src2 = sys.spawn(file_reader, 50);
   auto stg = sys.spawn(stream_multiplexer);
@@ -478,5 +501,27 @@ CAF_TEST(depth_3_pipeline_with_join) {
   self->send_exit(stg, exit_reason::kill);
 }
 
+CAF_TEST(depth_4_pipeline_500_items) {
+  auto src = sys.spawn(file_reader, 500);
+  auto stg1 = sys.spawn(filter);
+  auto stg2 = sys.spawn(doubler);
+  auto snk = sys.spawn(sum_up);
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(stg1)
+              << CAF_ARG(stg2) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(snk * stg2 * stg1 * src, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(stg1));
+  expect((open_stream_msg), from(self).to(stg2));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(stg2));
+  expect((upstream_msg::ack_open), from(stg2).to(stg1));
+  expect((upstream_msg::ack_open), from(stg1).to(src));
+  CAF_MESSAGE("start data transmission");
+  sched.run_dispatch_loop(cycle);
+  CAF_MESSAGE("check sink result");
+  expect((int), from(snk).to(self).with(125000));
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 125000);
+}
 
 CAF_TEST_FIXTURE_SCOPE_END()
