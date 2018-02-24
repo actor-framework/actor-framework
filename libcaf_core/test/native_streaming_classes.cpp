@@ -54,6 +54,8 @@
 #include "caf/upstream_msg.hpp"
 #include "caf/variant.hpp"
 
+#include "caf/scheduler/test_coordinator.hpp"
+
 #include "caf/policy/arg.hpp"
 #include "caf/policy/categorized.hpp"
 #include "caf/policy/downstream_messages.hpp"
@@ -336,6 +338,7 @@ public:
     pending_managers_.erase(i);
     CAF_REQUIRE(res.second);
     res.first->second->handle(slots, x);
+    res.first->second->out().force_emit_batches();
   }
 
   void operator()(stream_slots slots, actor_addr& sender,
@@ -346,6 +349,7 @@ public:
     auto i = managers_.find(slots);
     CAF_REQUIRE_NOT_EQUAL(i, managers_.end());
     i->second->handle(slots, x);
+    i->second->out().force_emit_batches();
     if (i->second->done()) {
       CAF_MESSAGE(name_ << " is done sending batches");
       i->second->stop();
@@ -526,22 +530,21 @@ struct msg_visitor {
 // -- fixture ------------------------------------------------------------------
 
 struct fixture {
+  using scheduler_type = scheduler::test_coordinator;
+
   struct timing_config {
-    using clock_type = std::chrono::steady_clock;
+    timespan credit_interval = std::chrono::milliseconds(100);
 
-    clock_type::time_point global_time;
+    timespan force_batches_interval = std::chrono::milliseconds(50);
 
-    clock_type::duration credit_interval = std::chrono::milliseconds(100);
-
-    clock_type::duration force_batches_interval = std::chrono::milliseconds(50);
-
-    clock_type::duration step = force_batches_interval;
+    timespan step = force_batches_interval;
   };
 
   timing_config tc;
 
   actor_system_config cfg;
-  actor_system sys{cfg};
+  actor_system sys;
+  scheduler_type& sched;
   actor alice_hdl;
   actor bob_hdl;
   actor carl_hdl;
@@ -553,7 +556,9 @@ struct fixture {
   static actor spawn(actor_system& sys, actor_id id, const char* name,
                      timing_config& tc) {
     actor_config conf;
-    return make_actor<entity>(id, node_id{}, &sys, conf, name, &tc.global_time,
+    auto& clock = dynamic_cast<scheduler_type&>(sys.scheduler()).clock();
+    auto global_time = &clock.current_time;
+    return make_actor<entity>(id, node_id{}, &sys, conf, name, global_time,
                               tc.credit_interval, tc.force_batches_interval);
   }
 
@@ -562,13 +567,17 @@ struct fixture {
   }
 
   fixture()
-      : alice_hdl(spawn(sys, 0, "alice", tc)),
+      : sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
+               .set("scheduler.policy", caf::atom("testing"))),
+        sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
+        alice_hdl(spawn(sys, 0, "alice", tc)),
         bob_hdl(spawn(sys, 1, "bob", tc)),
         carl_hdl(spawn(sys, 2, "carl", tc)),
         alice(fetch(alice_hdl)),
         bob(fetch(bob_hdl)),
         carl(fetch(carl_hdl)) {
-    // nop
+    // Configure the clock to measure each batch item with 1us.
+    sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
   }
 
   ~fixture() {
@@ -594,7 +603,7 @@ struct fixture {
   void next_cycle(Ts&... xs) {
     entity* es[] = {&xs...};
     //CAF_MESSAGE("advance clock by " << tc.credit_interval.count() << "ns");
-    tc.global_time += tc.credit_interval;
+    sched.clock().current_time += tc.credit_interval;
     for (auto e : es)
       e->advance_time();
   }
@@ -609,7 +618,7 @@ struct fixture {
         for (auto& f : fs)
           f.self->mbox.new_round(1, f);
       CAF_MESSAGE("advance clock by " << tc.step.count() << "ns");
-      tc.global_time += tc.step;
+      sched.clock().current_time += tc.step;
       for (auto e : es)
         e->advance_time();
     }
