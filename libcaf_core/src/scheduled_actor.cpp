@@ -294,14 +294,16 @@ struct downstream_msg_visitor {
       inptr.reset();
       qs_ref.erase_later(dm.slots.receiver);
       selfptr->erase_stream_manager(dm.slots.receiver);
-      if (mgr->done())
+      if (mgr->done()) {
+        selfptr->erase_stream_manager(mgr);
         mgr->stop();
+      }
       return intrusive::task_result::stop;
     }
     else if (mgr->done()) {
       CAF_LOG_DEBUG("path is done receiving and closes its manager");
+      selfptr->erase_stream_manager(mgr);
       mgr->stop();
-      selfptr->erase_stream_manager(dm.slots.receiver);
       return intrusive::task_result::stop;
     }
     return intrusive::task_result::resume;
@@ -930,6 +932,18 @@ bool scheduled_actor::add_stream_manager(stream_slot id,
 void scheduled_actor::erase_stream_manager(stream_slot id) {
   CAF_LOG_TRACE(CAF_ARG(id));
   if (stream_managers_.erase(id) != 0 && stream_managers_.empty())
+    stream_ticks_.stop();
+}
+
+void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
+  auto i = stream_managers_.begin();
+  auto e = stream_managers_.end();
+  while (i != e)
+    if (i->second == mgr)
+      i = stream_managers_.erase(i);
+    else
+      ++i;
+  if (stream_managers_.empty())
     stream_ticks_.stop();
 }
 

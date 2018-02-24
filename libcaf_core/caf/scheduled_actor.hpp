@@ -1111,8 +1111,11 @@ public:
   /// needed.
   bool add_stream_manager(stream_slot id, stream_manager_ptr ptr);
 
-  /// Removes a stream manager.
+  /// Removes the stream manager mapped to `id` in `O(log n)`.
   void erase_stream_manager(stream_slot id);
+
+  /// Removes all entries for `mgr` in `O(n)`.
+  void erase_stream_manager(const stream_manager_ptr& mgr);
 
   /// @pre `x.content().match_elements<open_stream_msg>()`
   invoke_message_result handle_open_stream_msg(mailbox_element& x);
