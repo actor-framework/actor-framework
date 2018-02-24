@@ -245,8 +245,8 @@ public:
         // nop
       }
 
-      handshake_tuple_type make_handshake() const override {
-        return std::make_tuple(none);
+      handshake_tuple_type make_handshake(stream_slot slot) const override {
+        return std::make_tuple(stream_type{slot});
       }
 
       void pull(downstream<int>& out, size_t hint) override {
@@ -278,8 +278,8 @@ public:
         // nop
       }
 
-      handshake_tuple_type make_handshake() const override {
-        return std::make_tuple(none);
+      handshake_tuple_type make_handshake(stream_slot slot) const override {
+        return std::make_tuple(stream_type{slot});
       }
 
       void process(vector<int>&& batch, downstream<int>& out) override {

@@ -129,9 +129,9 @@ void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
   in_flight_promises_.emplace(
     slot, response_promise{self()->ctrl(), client, fwd_stack, mid});
   dest->enqueue(
-    make_mailbox_element(
-      std::move(client), mid, std::move(fwd_stack),
-      open_stream_msg{slot, make_handshake(), self_->ctrl(), dest, priority_}),
+    make_mailbox_element(std::move(client), mid, std::move(fwd_stack),
+                         open_stream_msg{slot, make_handshake(slot),
+                                         self_->ctrl(), dest, priority_}),
     self_->context());
 }
 
@@ -195,7 +195,7 @@ void stream_manager::output_closed(error) {
   // nop
 }
 
-message stream_manager::make_handshake() const {
+message stream_manager::make_handshake(stream_slot) const {
   CAF_LOG_ERROR("stream_manager::make_handshake called");
   return none;
 }

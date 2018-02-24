@@ -43,13 +43,9 @@ public:
   stream& operator=(stream&&) = default;
   stream& operator=(const stream&) = default;
 
-  stream(none_t = none) : slot_(0) {
-    // nop
-  }
-
   /// Convenience constructor for returning the result of `self->new_stream`
   /// and similar functions.
-  stream(stream_slot id, stream_manager_ptr sptr = nullptr)
+  explicit stream(stream_slot id = 0, stream_manager_ptr sptr = nullptr)
       : slot_(id),
         ptr_(std::move(sptr)) {
     // nop

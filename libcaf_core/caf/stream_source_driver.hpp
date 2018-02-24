@@ -60,7 +60,7 @@ public:
   // -- pure virtual functions -------------------------------------------------
 
   /// Generates handshake data for the next actor in the pipeline.
-  virtual handshake_tuple_type make_handshake() const = 0;
+  virtual handshake_tuple_type make_handshake(stream_slot slot) const = 0;
 
   /// Generates more stream elements.
   virtual void pull(downstream<output_type>& out, size_t num) = 0;

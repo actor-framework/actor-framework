@@ -85,8 +85,8 @@ public:
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
   }
 
-  message make_handshake() const override {
-    return make_message_from_tuple(driver_.make_handshake());
+  message make_handshake(stream_slot slot) const override {
+    return make_message_from_tuple(driver_.make_handshake(slot));
   }
 
   bool congested() const override {

@@ -871,13 +871,6 @@ public:
     return bhvr_stack_;
   }
 
-  template <class T, class... Ts>
-  static message make_handshake(std::tuple<Ts...>&& xs) {
-    stream<T> token;
-    auto ys = std::tuple_cat(std::forward_as_tuple(token), std::move(xs));
-    return make_message_from_tuple(std::move(ys));
-  }
-
 /*
   /// Tries to add a new sink to the stream manager `mgr`.
   /// @param mgr Pointer to the responsible stream manager.

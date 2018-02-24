@@ -65,8 +65,8 @@ public:
     init(state_);
   }
 
-  handshake_tuple_type make_handshake() const override {
-    return std::tuple_cat(std::make_tuple(none), hs_);
+  handshake_tuple_type make_handshake(stream_slot slot) const override {
+    return std::tuple_cat(std::make_tuple(stream_type{slot}), hs_);
   }
 
   void process(std::vector<input_type>&& batch,

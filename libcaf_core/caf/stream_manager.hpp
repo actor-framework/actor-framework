@@ -183,7 +183,7 @@ protected:
 
   /// Returns a type-erased `stream<T>` as handshake token for downstream
   /// actors. Returns an empty message for sinks.
-  virtual message make_handshake() const;
+  virtual message make_handshake(stream_slot slot) const;
 
   /// Called whenever new credit becomes available. The default implementation
   /// logs an error (sources are expected to override this hook).

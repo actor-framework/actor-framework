@@ -63,7 +63,7 @@ public:
   // -- pure virtual functions -------------------------------------------------
 
   /// Generates handshake data for the next actor in the pipeline.
-  virtual handshake_tuple_type make_handshake() const = 0;
+  virtual handshake_tuple_type make_handshake(stream_slot slot) const = 0;
 
   /// Processes a single batch.
   virtual void process(std::vector<input_type>&& batch,
