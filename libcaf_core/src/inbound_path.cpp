@@ -88,8 +88,8 @@ void inbound_path::handle(downstream_msg::batch& x) {
 
 void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(rebind_from));
-  assigned_credit = 50; // TODO: put constant in some header
-  int32_t desired_batch_size = 50; // TODO: put constant in some header
+  assigned_credit = initial_credit;
+  int32_t desired_batch_size = initial_credit;
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_open>(
                    slots.invert(), self->address(), std::move(rebind_from),
