@@ -405,6 +405,36 @@ public:
 
   // -- stream management ------------------------------------------------------
 
+  /// Creates an output path for given source.
+  template <class Out, class... Ts>
+  output_stream<Out, Ts...>
+  add_output_path(stream_source_ptr<Out, Ts...> ptr) {
+    // The actual plumbing is done when returning the `output_stream<>` from a
+    // message handler.
+    return {0, std::move(ptr)};
+  }
+
+  /// Creates an output path for given stage.
+  template <class In, class Out, class... Ts>
+  output_stream<Out, Ts...>
+  add_output_path(stream_stage_ptr<In, Out, Ts...> ptr) {
+    // The actual plumbing is done when returning the `output_stream<>` from a
+    // message handler.
+    return {0, std::move(ptr)};
+  }
+
+  /// Creates an input path for given stage.
+  template <class In, class Out, class... Ts>
+  output_stream<Out, Ts...>
+  add_input_path(const stream<In>&, stream_stage_ptr<In, Out, Ts...> mgr) {
+    auto slot = next_slot();
+    if (!add_stream_manager(slot, mgr)) {
+      CAF_LOG_WARNING("unable to assign a manager to its slot");
+      return {0, nullptr};
+    }
+    return {slot, std::move(mgr)};
+  }
+
   /// Creates a new stream source and starts streaming to `dest`.
   /// @param dest Actor handle to the stream destination.
   /// @param xs User-defined handshake payload.
@@ -514,6 +544,64 @@ public:
                                        std::tuple<detail::decay_t<Ts>...>>;
     return make_stage<driver, Scatterer>(in, std::move(init), std::move(fun),
                                          std::move(cleanup), std::move(xs));
+  }
+
+  /// Returns a stream manager (implementing a continuous stage) without in- or
+  /// outbound path. The returned manager is not connected to any slot and thus
+  /// not stored by the actor automatically.
+  template <class Driver,
+            class Scatterer = broadcast_scatterer<typename Driver::output_type>,
+            class Input = int, class... Ts>
+  typename Driver::stage_ptr_type make_continuous_stage(Ts&&... xs) {
+    auto ptr = detail::make_stream_stage<Driver, Scatterer>(
+      this, std::forward<Ts>(xs)...);
+    ptr->continuous(true);
+    return std::move(ptr);
+  }
+
+  template <class... Ts, class Init, class Fun, class Cleanup,
+            class Scatterer =
+              broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
+            class Trait = stream_stage_trait_t<Fun>>
+  stream_stage_ptr<typename Trait::input, typename Trait::output,
+                   detail::decay_t<Ts>...>
+  make_continuous_stage(std::tuple<Ts...> xs, Init init, Fun fun,
+                        Cleanup cleanup,
+                        policy::arg<Scatterer> scatterer_type = {}) {
+    CAF_IGNORE_UNUSED(scatterer_type);
+    using input_type = typename Trait::input;
+    using output_type = typename Trait::output;
+    using state_type = typename Trait::state;
+    static_assert(std::is_same<
+                    void (state_type&),
+                    typename detail::get_callable_trait<Init>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&)` for init function");
+    static_assert(std::is_same<
+                    void (state_type&, downstream<output_type>&, input_type),
+                    typename detail::get_callable_trait<Fun>::fun_sig
+                  >::value,
+                  "Expected signature `void (State&, downstream<Out>&, In)` "
+                  "for consume function");
+    using driver =
+      detail::stream_stage_driver_impl<typename Trait::input, output_type, Fun,
+                                       Cleanup,
+                                       std::tuple<detail::decay_t<Ts>...>>;
+    return make_continuous_stage<driver, Scatterer>(
+      std::move(init), std::move(fun), std::move(cleanup), std::move(xs));
+  }
+
+  template <class Init, class Fun, class Cleanup,
+            class Scatterer =
+              broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
+            class Trait = stream_stage_trait_t<Fun>>
+  stream_stage_ptr<typename stream_stage_trait_t<Fun>::input,
+                   typename stream_stage_trait_t<Fun>::output>
+  make_continuous_stage(Init init, Fun fun, Cleanup cleanup,
+                        policy::arg<Scatterer> scatterer_type = {}) {
+    return make_continuous_stage(std::make_tuple(), std::move(init),
+                                std::move(fun), std::move(cleanup),
+                                scatterer_type);
   }
 
   /*
