@@ -131,15 +131,15 @@ inbound_path* local_actor::make_inbound_path(stream_manager_ptr, stream_slots,
 }
 
 void local_actor::erase_inbound_path_later(stream_slot) {
-  // nop
+  CAF_LOG_ERROR("local_actor::erase_inbound_path_later called");
 }
 
 void local_actor::erase_inbound_paths_later(const stream_manager*) {
-  // nop
+  CAF_LOG_ERROR("local_actor::erase_inbound_paths_later called");
 }
 
 void local_actor::erase_inbound_paths_later(const stream_manager*, error) {
-  // nop
+  CAF_LOG_ERROR("local_actor::erase_inbound_paths_later called");
 }
 
 } // namespace caf
