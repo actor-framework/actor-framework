@@ -1064,6 +1064,8 @@ public:
       CAF_LOG_INFO("done sending:" << CAF_ARG(slots));
       i->second->stop();
       stream_managers_.erase(i);
+      if (stream_managers_.empty())
+        stream_ticks_.stop();
     }
   }
 
