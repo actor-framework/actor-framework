@@ -925,6 +925,7 @@ bool scheduled_actor::add_stream_manager(stream_slots id,
 }
 
 bool scheduled_actor::remove_stream_manager(stream_slots id) {
+  CAF_LOG_TRACE(CAF_ARG(id));
   if (stream_managers_.erase(id) == 0)
     return false;
   if (stream_managers_.empty())
