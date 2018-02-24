@@ -61,8 +61,8 @@ public:
   static chunk_type get_chunk(buffer_type& buf, long n) {
     CAF_LOG_TRACE(CAF_ARG(buf) << CAF_ARG(n));
     chunk_type xs;
-    if (n > 0) {
-      xs.reserve(static_cast<size_t>(n));
+    if (!buf.empty() && n > 0) {
+      xs.reserve(std::min(static_cast<size_t>(n), buf.size()));
       if (static_cast<size_t>(n) < buf.size()) {
         auto first = buf.begin();
         auto last = first + static_cast<ptrdiff_t>(n);
