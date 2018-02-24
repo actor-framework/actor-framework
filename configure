@@ -73,6 +73,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-io                     build without I/O module
     --no-python                 build without python binding
     --no-summary                do not print configuration before building
+    --core-only                 sets no-examples, no-opencl, no-openssl,
+                                no-tools, no-python, and no-io
 
   Testing:
     --with-asio                 use ASIO multiplexer in unit tests
@@ -86,6 +88,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - DEBUG
                                   - TRACE
     --with-address-sanitizer    build with address sanitizer if available
+    --with-asan                 alias for --with-address-sanitier
     --with-gcov                 build with gcov coverage enabled
 
   Influential Environment Variables (only on first invocation):
@@ -242,6 +245,9 @@ while [ $# -ne 0 ]; do
         --with-address-sanitizer)
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
+        --with-asan)
+            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
+            ;;
         --with-gcov)
             append_cache_entry CAF_ENABLE_GCOV BOOL yes
             ;;
@@ -396,6 +402,14 @@ while [ $# -ne 0 ]; do
             ;;
         --no-summary)
             append_cache_entry CAF_NO_SUMMARY BOOL yes
+            ;;
+        --core-only)
+            append_cache_entry CAF_NO_TOOLS BOOL yes
+            append_cache_entry CAF_NO_IO BOOL yes
+            append_cache_entry CAF_NO_PYTHON BOOL yes
+            append_cache_entry CAF_NO_EXAMPLES BOOL yes
+            append_cache_entry CAF_NO_OPENCL BOOL yes
+            append_cache_entry CAF_NO_OPENSSL BOOL yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
