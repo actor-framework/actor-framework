@@ -33,21 +33,30 @@ using std::vector;
 
 using namespace caf;
 
+#define TESTEE_STATE(tname)                                                    \
+  struct tname##_state;                                                        \
+  template <>                                                                  \
+  struct state_base<tname##_state>
+
 #define TESTEE_SCAFFOLD(tname)                                                 \
-  struct tname##_state {                                                       \
+  struct tname##_state : state_base<tname##_state> {                           \
     static const char* name;                                                   \
   };                                                                           \
-  const char* tname##_state::name = #tname
+  const char* tname##_state::name = #tname;                                    \
+  using tname##_actor = stateful_actor<tname##_state>
 
 #define TESTEE(tname)                                                          \
   TESTEE_SCAFFOLD(tname);                                                      \
-  behavior tname(stateful_actor<tname##_state>* self)
+  behavior tname(tname##_actor* self)
 
 #define VARARGS_TESTEE(tname, ...)                                             \
   TESTEE_SCAFFOLD(tname);                                                      \
-  behavior tname(stateful_actor<tname##_state>* self, __VA_ARGS__)
+  behavior tname(tname##_actor* self, __VA_ARGS__)
 
 namespace {
+
+template <class T>
+struct state_base {};
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
   using buf = std::deque<int>;
@@ -83,6 +92,10 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
   };
 }
 
+TESTEE_STATE(sum_up) {
+  int x = 0;
+};
+
 TESTEE(sum_up) {
   return {
     [=](stream<int>& in, const string& fname) {
@@ -91,17 +104,17 @@ TESTEE(sum_up) {
         // input stream
         in,
         // initialize state
-        [](int& x) {
-          x = 0;
+        [](unit_t&) {
+          // nop
         },
         // processing step
-        [](int& x, int y) {
-          x += y;
+        [=](unit_t&, int y) {
+          self->state.x += y;
         },
         // cleanup and produce result message
-        [](int& x) -> int {
+        [=](unit_t&) -> int {
           CAF_MESSAGE("sum_up is done");
-          return x;
+          return self->state.x;
         }
       );
     },
@@ -179,14 +192,11 @@ TESTEE(filter) {
   };
 }
 
-struct stream_multiplexer_state {
+TESTEE_STATE(stream_multiplexer) {
   stream_stage_ptr<int, int, std::string> stage;
-  static const char* name;
 };
 
-const char* stream_multiplexer_state::name = "stream_multiplexer";
-
-behavior stream_multiplexer(stateful_actor<stream_multiplexer_state>* self) {
+TESTEE(stream_multiplexer) {
   self->state.stage = self->make_continuous_stage(
     // handshake data
     std::make_tuple(std::string{"numbers.txt"}),
@@ -242,10 +252,9 @@ CAF_TEST(depth_2_pipeline_50_items) {
   sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(sum_up);
-  auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "numbers.txt");
+  self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
@@ -267,10 +276,9 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
   sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(delayed_sum_up);
-  auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "numbers.txt");
+  self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   disallow((upstream_msg::ack_open), from(snk).to(src));
@@ -298,10 +306,9 @@ CAF_TEST(depth_2_pipeline_500_items) {
   sched.clock().current_time += cycle;
   auto src = sys.spawn(file_reader, 500);
   auto snk = sys.spawn(sum_up);
-  auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "numbers.txt");
+  self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
@@ -330,9 +337,8 @@ CAF_TEST(depth_2_pipelin_error_during_handshake) {
   CAF_MESSAGE("streams must abort if a sink fails to initialize its state");
   auto src = sys.spawn(file_reader, 50);
   auto snk = sys.spawn(broken_sink);
-  auto pipeline = snk * src;
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "numbers.txt");
+  self->send(snk * src, "numbers.txt");
   expect((std::string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::forced_drop), from(snk).to(src));
@@ -343,10 +349,9 @@ CAF_TEST(depth_2_pipelin_error_at_source) {
   CAF_MESSAGE("streams must abort if a source fails at runtime");
   auto src = sys.spawn(file_reader, 500);
   auto snk = sys.spawn(sum_up);
-  auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "numbers.txt");
+  self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
@@ -365,10 +370,9 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
   CAF_MESSAGE("streams must abort if a sink fails at runtime");
   auto src = sys.spawn(file_reader, 500);
   auto snk = sys.spawn(sum_up);
-  auto pipeline = snk * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "numbers.txt");
+  self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   CAF_MESSAGE("start data transmission (and abort sink)");
@@ -394,10 +398,9 @@ CAF_TEST(depth_3_pipeline_50_items) {
     expect((timeout_msg), from(stg).to(stg));
     expect((timeout_msg), from(src).to(src));
   };
-  auto pipeline = snk * stg * src;
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(stg) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
-  self->send(pipeline, "numbers.txt");
+  self->send(snk * stg * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(stg));
   expect((open_stream_msg), from(self).to(snk));
@@ -417,8 +420,8 @@ CAF_TEST(depth_3_pipeline_50_items) {
   expect((upstream_msg::ack_batch), from(snk).to(stg));
   expect((downstream_msg::close), from(stg).to(snk));
   expect((int), from(snk).to(self).with(625));
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 625);
 }
-
 
 CAF_TEST(depth_3_pipeline_with_fork) {
   sched.clock().current_time += cycle;
@@ -426,25 +429,54 @@ CAF_TEST(depth_3_pipeline_with_fork) {
   auto stg = sys.spawn(stream_multiplexer);
   auto snk1 = sys.spawn(sum_up);
   auto snk2 = sys.spawn(sum_up);
-  auto pipeline = stg * src;
-  auto& st = deref<stateful_actor<stream_multiplexer_state>>(stg).state;
+  auto& st = deref<stream_multiplexer_actor>(stg).state;
   CAF_MESSAGE("connect sinks to the stage (fork)");
   self->send(snk1, join_atom::value, stg);
   self->send(snk2, join_atom::value, stg);
   sched.run();
   CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
   CAF_MESSAGE("connect source to the stage (fork)");
-  self->send(pipeline, "numbers.txt");
+  self->send(stg * src, "numbers.txt");
   sched.run();
   CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
   auto predicate = [&] {
-    return st.stage->inbound_paths().empty();
+    return st.stage->inbound_paths().empty() && st.stage->out().clean();
   };
   sched.run_dispatch_loop(predicate, cycle);
-  self->send_exit(stg, exit_reason::kill);
   CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk1).state.x, 1275);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk2).state.x, 1275);
+  self->send_exit(stg, exit_reason::kill);
 }
+
+CAF_TEST(depth_3_pipeline_with_join) {
+  sched.clock().current_time += cycle;
+  auto src1 = sys.spawn(file_reader, 50);
+  auto src2 = sys.spawn(file_reader, 50);
+  auto stg = sys.spawn(stream_multiplexer);
+  auto snk = sys.spawn(sum_up);
+  auto& st = deref<stream_multiplexer_actor>(stg).state;
+  CAF_MESSAGE("connect sink to the stage");
+  self->send(snk, join_atom::value, stg);
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 1u);
+  CAF_MESSAGE("connect sources to the stage (join)");
+  self->send(stg * src1, "numbers.txt");
+  self->send(stg * src2, "numbers.txt");
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 1u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 2u);
+  auto predicate = [&] {
+    return st.stage->inbound_paths().empty() && st.stage->out().clean();
+  };
+  sched.run_dispatch_loop(predicate, cycle);
+  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 1u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 2550);
+  self->send_exit(stg, exit_reason::kill);
+}
+
 
 CAF_TEST_FIXTURE_SCOPE_END()
