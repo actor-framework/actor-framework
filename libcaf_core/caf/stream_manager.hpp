@@ -36,6 +36,10 @@ namespace caf {
 /// @relates stream_msg
 class stream_manager : public ref_counted {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using inbound_paths_list = std::vector<inbound_path*>;
+
   stream_manager(local_actor* selfptr,
                  stream_priority prio = stream_priority::normal);
 
@@ -158,8 +162,12 @@ public:
     continuous_ = x;
   }
 
-  // -- inline functions -------------------------------------------------------
+  /// Returns the list of inbound paths.
+  inline const inbound_paths_list& inbound_paths() const {
+    return inbound_paths_;
+  }
 
+  /// Returns the parent actor.
   inline local_actor* self() {
     return self_;
   }
@@ -197,7 +205,7 @@ protected:
   local_actor* self_;
 
   /// Stores non-owning pointers to all input paths.
-  std::vector<inbound_path*> inbound_paths_;
+  inbound_paths_list inbound_paths_;
 
   /// Keeps track of pending handshakes.
   long pending_handshakes_;
