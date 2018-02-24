@@ -114,9 +114,10 @@ public:
   /// messages.
   size_t dispatch();
 
-  /// Loops until no job or delayed message remains. Returns the total number of
-  /// events (first) and dispatched delayed messages (second).
-  std::pair<size_t, size_t> run_dispatch_loop();
+  /// Loops until no job or delayed message remains. Returns the total number
+  /// of events (first) and dispatched delayed messages (second). Advances time
+  /// by `cycle` between to calls to `dispatch()`.
+  std::pair<size_t, size_t> run_dispatch_loop(timespan cycle = timespan{0});
 
   template <class F>
   void after_next_enqueue(F f) {

@@ -153,17 +153,17 @@ size_t test_coordinator::dispatch() {
   return clock().dispatch();
 }
 
-std::pair<size_t, size_t> test_coordinator::run_dispatch_loop() {
-  std::pair<size_t, size_t> res;
-  size_t i = 0;
-  do {
+std::pair<size_t, size_t> test_coordinator::run_dispatch_loop(timespan cycle) {
+  std::pair<size_t, size_t> res{0, 0};
+  for (;;) {
     auto x = run();
+    clock().current_time += cycle;
     auto y = dispatch();
+    if (x + y == 0)
+      return res;
     res.first += x;
     res.second += y;
-    i = x + y;
-  } while (i > 0);
-  return res;
+  }
 }
 
 void test_coordinator::inline_next_enqueue() {
