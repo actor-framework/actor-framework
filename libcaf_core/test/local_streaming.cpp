@@ -33,30 +33,9 @@ using std::vector;
 
 using namespace caf;
 
-#define TESTEE_STATE(tname)                                                    \
-  struct tname##_state;                                                        \
-  template <>                                                                  \
-  struct state_base<tname##_state>
-
-#define TESTEE_SCAFFOLD(tname)                                                 \
-  struct tname##_state : state_base<tname##_state> {                           \
-    static const char* name;                                                   \
-  };                                                                           \
-  const char* tname##_state::name = #tname;                                    \
-  using tname##_actor = stateful_actor<tname##_state>
-
-#define TESTEE(tname)                                                          \
-  TESTEE_SCAFFOLD(tname);                                                      \
-  behavior tname(tname##_actor* self)
-
-#define VARARGS_TESTEE(tname, ...)                                             \
-  TESTEE_SCAFFOLD(tname);                                                      \
-  behavior tname(tname##_actor* self, __VA_ARGS__)
-
 namespace {
 
-template <class T>
-struct state_base {};
+TESTEE_SETUP();
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
   using buf = std::deque<int>;

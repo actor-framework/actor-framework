@@ -474,13 +474,53 @@ struct test_coordinator_fixture {
 
 } // namespace <anonymous>
 
+/// Expands to its argument.
 #define CAF_EXPAND(x) x
+
+/// Expands to its arguments.
 #define CAF_DSL_LIST(...) __VA_ARGS__
 
+/// Convenience macro for defining expect clauses.
 #define expect(types, fields)                                                  \
-  CAF_MESSAGE("expect" << #types << "." << #fields);                           \
-  expect_clause< CAF_EXPAND(CAF_DSL_LIST types) >{sched} . fields
+  do {                                                                         \
+    CAF_MESSAGE("expect" << #types << "." << #fields);                         \
+    expect_clause<CAF_EXPAND(CAF_DSL_LIST types)>{sched}.fields;               \
+  } while (false)
 
+/// Convenience macro for defining disallow clauses.
 #define disallow(types, fields)                                                \
-  CAF_MESSAGE("disallow" << #types << "." << #fields);                         \
-  disallow_clause< CAF_EXPAND(CAF_DSL_LIST types) >{} . fields
+  do {                                                                         \
+    CAF_MESSAGE("disallow" << #types << "." << #fields);                       \
+    disallow_clause<CAF_EXPAND(CAF_DSL_LIST types)>{}.fields;                  \
+  } while (false)
+
+/// Defines the required base type for testee states in the current namespace.
+#define TESTEE_SETUP()                                                         \
+  template <class T>                                                           \
+  struct testee_state_base {}
+
+/// Convenience macro for adding additional state to a testee.
+#define TESTEE_STATE(tname)                                                    \
+  struct tname##_state;                                                        \
+  template <>                                                                  \
+  struct testee_state_base<tname##_state>
+
+/// Implementation detail for `TESTEE` and `VARARGS_TESTEE`.
+#define TESTEE_SCAFFOLD(tname)                                                 \
+  struct tname##_state : testee_state_base<tname##_state> {                    \
+    static const char* name;                                                   \
+  };                                                                           \
+  const char* tname##_state::name = #tname;                                    \
+  using tname##_actor = stateful_actor<tname##_state>
+
+/// Convenience macro for defining an actor named `tname`.
+#define TESTEE(tname)                                                          \
+  TESTEE_SCAFFOLD(tname);                                                      \
+  behavior tname(tname##_actor* self)
+
+/// Convenience macro for defining an actor named `tname` with any number of
+/// initialization arguments.
+#define VARARGS_TESTEE(tname, ...)                                             \
+  TESTEE_SCAFFOLD(tname);                                                      \
+  behavior tname(tname##_actor* self, __VA_ARGS__)
+
