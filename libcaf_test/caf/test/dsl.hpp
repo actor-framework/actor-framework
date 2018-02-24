@@ -440,6 +440,7 @@ struct test_coordinator_fixture {
 
   ~test_coordinator_fixture() {
     sched.clock().cancel_all();
+    sched.run();
   }
 
   template <class T = int>
