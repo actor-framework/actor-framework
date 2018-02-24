@@ -1111,7 +1111,7 @@ public:
   bool add_stream_manager(stream_slots id, stream_manager_ptr ptr);
 
   /// Removes a new stream manager.
-  bool remove_stream_manager(stream_slots id);
+  void erase_stream_manager(stream_slots id);
 
   /// @pre `x.content().match_elements<open_stream_msg>()`
   invoke_message_result handle_open_stream_msg(mailbox_element& x);

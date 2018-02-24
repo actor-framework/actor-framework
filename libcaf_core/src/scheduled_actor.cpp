@@ -284,6 +284,7 @@ struct downstream_msg_visitor {
     auto& inptr = q_ref.policy().handler;
     if (inptr == nullptr)
       return intrusive::task_result::stop;
+    // Do *not* store a reference here since we potentially reset `inptr`.
     auto mgr = inptr->mgr;
     inptr->handle(x);
     // TODO: replace with `if constexpr` when switching to C++17
@@ -291,7 +292,7 @@ struct downstream_msg_visitor {
         || std::is_same<T, downstream_msg::forced_close>::value) {
       inptr.reset();
       qs_ref.erase_later(dm.slots.receiver);
-      selfptr->remove_stream_manager(dm.slots);
+      selfptr->erase_stream_manager(dm.slots);
       if (mgr->done())
         mgr->stop();
       return intrusive::task_result::stop;
@@ -299,7 +300,7 @@ struct downstream_msg_visitor {
     else if (mgr->done()) {
       CAF_LOG_DEBUG("path is done receiving and closes its manager");
       mgr->stop();
-      selfptr->remove_stream_manager(dm.slots);
+      selfptr->erase_stream_manager(dm.slots);
       return intrusive::task_result::stop;
     }
     return intrusive::task_result::resume;
@@ -312,6 +313,7 @@ intrusive::task_result scheduled_actor::mailbox_visitor::
 operator()(size_t, downstream_queue& qs, stream_slot,
            policy::downstream_messages::nested_queue_type& q,
            mailbox_element& x) {
+  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
   CAF_ASSERT(x.content().type_token() == make_type_token<downstream_msg>());
   auto& dm = x.content().get_mutable_as<downstream_msg>(0);
   downstream_msg_visitor f{self, qs, q, dm};
@@ -924,13 +926,10 @@ bool scheduled_actor::add_stream_manager(stream_slots id,
   return result;
 }
 
-bool scheduled_actor::remove_stream_manager(stream_slots id) {
+void scheduled_actor::erase_stream_manager(stream_slots id) {
   CAF_LOG_TRACE(CAF_ARG(id));
-  if (stream_managers_.erase(id) == 0)
-    return false;
-  if (stream_managers_.empty())
+  if (stream_managers_.erase(id) != 0 && stream_managers_.empty())
     stream_ticks_.stop();
-  return true;
 }
 
 invoke_message_result
