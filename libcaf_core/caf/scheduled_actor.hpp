@@ -427,11 +427,7 @@ public:
   template <class In, class Out, class... Ts>
   output_stream<Out, Ts...>
   add_input_path(const stream<In>&, stream_stage_ptr<In, Out, Ts...> mgr) {
-    auto slot = next_slot();
-    if (!add_stream_manager(slot, mgr)) {
-      CAF_LOG_WARNING("unable to assign a manager to its slot");
-      return {0, nullptr};
-    }
+    auto slot = assign_new_slot(mgr);
     return {slot, std::move(mgr)};
   }
 
@@ -480,13 +476,9 @@ public:
   template <class Driver, class Input, class... Ts>
   stream_result<typename Driver::output_type> make_sink(const stream<Input>&,
                                                         Ts&&... xs) {
-    auto slot = next_slot();
-    auto ptr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
-    if (!add_stream_manager(slot, ptr)) {
-      CAF_LOG_WARNING("unable to add a stream manager for a sink");
-      return {0, nullptr};
-    }
-    return {slot, std::move(ptr)};
+    auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
+    auto slot = assign_new_slot(mgr);
+    return {slot, std::move(mgr)};
   }
 
   template <class Input, class Init, class Fun, class Finalize,
@@ -504,14 +496,11 @@ public:
             class Input = int, class... Ts>
   typename Driver::output_stream_type make_stage(const stream<Input>&,
                                                  Ts&&... xs) {
-    auto slot = next_slot();
-    auto ptr = detail::make_stream_stage<Driver, Scatterer>(
-      this, std::forward<Ts>(xs)...);
-    if (!add_stream_manager(slot, ptr)) {
-      CAF_LOG_WARNING("unable to add a stream manager for a stage");
-      return {0, nullptr};
-    }
-    return {slot, std::move(ptr)};
+    using detail::make_stream_stage;
+    auto mgr = make_stream_stage<Driver, Scatterer>(this,
+                                                    std::forward<Ts>(xs)...);
+    auto slot = assign_new_slot(mgr);
+    return {slot, std::move(mgr)};
   }
 
   template <class In, class... Ts, class Init, class Fun, class Cleanup,
@@ -1194,6 +1183,10 @@ public:
 
   /// Returns a currently unused slot.
   stream_slot next_slot();
+
+  /// Assigns a new slot to `ptr`, adds a new entry to `stream_managers_`, and
+  /// returns the slot ID.
+  stream_slot assign_new_slot(stream_manager_ptr ptr);
 
   /// Adds a new stream manager to the actor and starts cycle management if
   /// needed.

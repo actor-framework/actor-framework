@@ -920,6 +920,16 @@ stream_slot scheduled_actor::next_slot() {
   return result;
 }
 
+stream_slot scheduled_actor::assign_new_slot(stream_manager_ptr ptr) {
+  CAF_LOG_TRACE("");
+  if (stream_managers_.empty())
+    stream_ticks_.start(clock().now());
+  auto slot = next_slot();
+  CAF_ASSERT(stream_managers_.count(slot) == 0);
+  stream_managers_.emplace(slot, std::move(ptr));
+  return slot;
+}
+
 bool scheduled_actor::add_stream_manager(stream_slot id,
                                          stream_manager_ptr ptr) {
   CAF_LOG_TRACE(CAF_ARG(id));
