@@ -104,6 +104,10 @@ TESTEE(sum_up) {
           return x;
         }
       );
+    },
+    [=](join_atom atm, actor src) {
+      CAF_MESSAGE(self->name() << " joins a stream");
+      self->send(self * src, atm);
     }
   };
 }
@@ -175,11 +179,51 @@ TESTEE(filter) {
   };
 }
 
+struct stream_multiplexer_state {
+  stream_stage_ptr<int, int, std::string> stage;
+  static const char* name;
+};
+
+const char* stream_multiplexer_state::name = "stream_multiplexer";
+
+behavior stream_multiplexer(stateful_actor<stream_multiplexer_state>* self) {
+  self->state.stage = self->make_continuous_stage(
+    // handshake data
+    std::make_tuple(std::string{"numbers.txt"}),
+    // initialize state
+    [=](unit_t&) {
+      // nop
+    },
+    // processing step
+    [=](unit_t&, downstream<int>& out, int x) {
+      out.push(x);
+    },
+    // cleanup
+    [=](unit_t&) {
+      CAF_MESSAGE("stream_multiplexer is done");
+    }
+  );
+  return {
+    [=](join_atom) {
+      CAF_MESSAGE("received 'join' request");
+      return self->add_output_path(self->state.stage);
+    },
+    [=](const stream<int>& in, std::string& fname) {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      return self->add_input_path(in, self->state.stage);
+    },
+  };
+}
+
 struct fixture : test_coordinator_fixture<> {
   std::chrono::microseconds cycle;
   fixture() : cycle(cfg.streaming_credit_round_interval_us) {
     // Configure the clock to measure each batch item with 1us.
     sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
+  }
+
+  ~fixture() {
+    sched.run();
   }
 };
 
@@ -373,6 +417,34 @@ CAF_TEST(depth_3_pipeline_50_items) {
   expect((upstream_msg::ack_batch), from(snk).to(stg));
   expect((downstream_msg::close), from(stg).to(snk));
   expect((int), from(snk).to(self).with(625));
+}
+
+
+CAF_TEST(depth_3_pipeline_with_fork) {
+  sched.clock().current_time += cycle;
+  auto src = sys.spawn(file_reader, 50);
+  auto stg = sys.spawn(stream_multiplexer);
+  auto snk1 = sys.spawn(sum_up);
+  auto snk2 = sys.spawn(sum_up);
+  auto pipeline = stg * src;
+  auto& st = deref<stateful_actor<stream_multiplexer_state>>(stg).state;
+  CAF_MESSAGE("connect sinks to the stage (fork)");
+  self->send(snk1, join_atom::value, stg);
+  self->send(snk2, join_atom::value, stg);
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
+  CAF_MESSAGE("connect source to the stage (fork)");
+  self->send(pipeline, "numbers.txt");
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
+  auto predicate = [&] {
+    return st.stage->inbound_paths().empty();
+  };
+  sched.run_dispatch_loop(predicate, cycle);
+  self->send_exit(stg, exit_reason::kill);
+  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
