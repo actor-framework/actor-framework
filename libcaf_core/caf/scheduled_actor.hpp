@@ -456,18 +456,20 @@ public:
     return {0, std::move(ptr)};
   }
 
-  template <class... Ts, class Init, class Pull, class Done,
+  template <class... Ts, class Init, class Pull, class Done, class Finalize,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
   output_stream<typename Trait::output, detail::decay_t<Ts>...>
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
-              policy::arg<Scatterer> = {}) {
+              Finalize finalize, policy::arg<Scatterer> = {}) {
     using tuple_type = std::tuple<detail::decay_t<Ts>...>;
-    using driver = detail::stream_source_driver_impl<typename Trait::output,
-                                                     Pull, Done, tuple_type>;
+    using driver =
+      detail::stream_source_driver_impl<typename Trait::output, Pull, Done,
+                                        Finalize, tuple_type>;
     return make_source<driver, Scatterer>(std::move(init), std::move(pull),
-                                          std::move(done), std::move(xs));
+                                          std::move(done), std::move(finalize),
+                                          std::move(xs));
   }
 
   template <class... Ts, class Init, class Pull, class Done,
@@ -477,7 +479,32 @@ public:
   output_stream<typename Trait::output, detail::decay_t<Ts>...>
   make_source(Init init, Pull pull, Done done,
               policy::arg<Scatterer> scatterer_type = {}) {
-    return make_source(std::make_tuple(), init, pull, done, scatterer_type);
+    auto finalize = [](typename Trait::state, const error&) {};
+    return make_source(std::make_tuple(), init, pull, done, finalize,
+                       scatterer_type);
+  }
+
+  template <class... Ts, class Init, class Pull, class Done, class Finalize,
+            class Scatterer =
+              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
+            class Trait = stream_source_trait_t<Pull>>
+  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_source(Init init, Pull pull, Done done, Finalize finalize,
+              policy::arg<Scatterer> scatterer_type = {}) {
+    return make_source(std::make_tuple(), init, pull, done, finalize,
+                       scatterer_type);
+  }
+
+  template <class... Ts, class Init, class Pull, class Done,
+            class Scatterer =
+              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
+            class Trait = stream_source_trait_t<Pull>>
+  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
+              policy::arg<Scatterer> scatterer_type = {}) {
+    auto finalize = [](typename Trait::state, const error&) {};
+    return make_source(std::move(xs), init, pull, done, finalize,
+                       scatterer_type);
   }
 
   template <class Driver, class Input, class... Ts>
