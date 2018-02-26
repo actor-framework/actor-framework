@@ -93,6 +93,11 @@ public:
     return out_.capacity() == 0;
   }
 
+protected:
+  void finalize(const error& reason) override {
+    driver_.finalize(reason);
+  }
+
 private:
   driver_type driver_;
   scatterer_type out_;

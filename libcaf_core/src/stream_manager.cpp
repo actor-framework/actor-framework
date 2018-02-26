@@ -91,6 +91,8 @@ void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
 void stream_manager::stop() {
   CAF_LOG_TRACE("");
   out().close();
+  error tmp;
+  finalize(tmp);
   self_->erase_inbound_paths_later(this);
   if (!promises_.empty())
     deliver_promises(make_final_result());
@@ -106,6 +108,7 @@ void stream_manager::abort(error reason) {
     in_flight_promises_.clear();
   }
   out().abort(reason);
+  finalize(reason);
   self_->erase_inbound_paths_later(this, std::move(reason));
 }
 
@@ -180,6 +183,10 @@ void stream_manager::deliver_promises(message x) {
   for (auto& p : promises_)
     p.deliver(x);
   promises_.clear();
+}
+
+void stream_manager::finalize(const error&) {
+  // nop
 }
 
 message stream_manager::make_final_result() {

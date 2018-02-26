@@ -53,7 +53,7 @@ public:
   // -- virtual functions ------------------------------------------------------
 
   /// Cleans up any state.
-  virtual void finalize() {
+  virtual void finalize(const error&) {
     // nop
   }
 

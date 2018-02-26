@@ -173,6 +173,10 @@ public:
   }
 
 protected:
+  // -- implementation hooks ---------------------------------------------------
+
+  virtual void finalize(const error& reason);
+
   // -- implementation hooks for sinks -----------------------------------------
 
   /// Called when the gatherer closes to produce the final stream result for

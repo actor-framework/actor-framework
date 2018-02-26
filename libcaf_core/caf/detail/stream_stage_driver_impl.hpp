@@ -74,7 +74,7 @@ public:
     trait::process::invoke(process_, state_, std::move(batch), out);
   }
 
-  void finalize() override {
+  void finalize(const error&) override {
     return fin_(state_);
   }
 

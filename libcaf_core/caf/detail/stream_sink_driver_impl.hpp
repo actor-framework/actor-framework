@@ -54,7 +54,7 @@ public:
     return trait::process::invoke(process_, state_, std::move(xs));
   }
 
-  message finalize() override {
+  message make_final_result() override {
     return trait::finalize::invoke(finalize_, state_);
   }
 

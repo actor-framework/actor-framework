@@ -46,8 +46,12 @@ public:
   // -- virtual functions ------------------------------------------------------
 
   /// Cleans up any state and produces a result message.
-  virtual message finalize() {
+  virtual message make_final_result() {
     return make_message();
+  }
+
+  virtual void finalize(const error&) {
+    // nop
   }
 
   // -- pure virtual functions -------------------------------------------------

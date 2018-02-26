@@ -89,6 +89,11 @@ public:
     return make_message_from_tuple(driver_.make_handshake(slot));
   }
 
+protected:
+  void finalize(const error& reason) override {
+    driver_.finalize(reason);
+  }
+
 private:
   bool at_end_;
   Driver driver_;

@@ -71,7 +71,11 @@ public:
 
 protected:
   message make_final_result() override {
-    return driver_.finalize();
+    return driver_.make_final_result();
+  }
+
+  void finalize(const error& reason) override {
+    driver_.finalize(reason);
   }
 
 private:
