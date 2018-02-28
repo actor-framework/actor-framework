@@ -38,12 +38,16 @@ class stream_scatterer {
 public:
   // -- member types -----------------------------------------------------------
 
+  /// Outbound path.
   using path_type = outbound_path;
 
+  /// Pointer to an outbound path.
   using path_ptr = path_type*;
 
+  /// Unique pointer to an outbound path.
   using path_unique_ptr = std::unique_ptr<path_type>;
 
+  /// Maps slots to paths.
   using map_type = detail::unordered_flat_map<stream_slot, path_unique_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
