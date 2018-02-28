@@ -416,7 +416,7 @@ public:
 
   bool cleanup(error&& fail_state, execution_unit* host) override;
 
-  sec build_pipeline(stream_manager_ptr);
+  sec build_pipeline(stream_slot in, stream_slot out, stream_manager_ptr mgr);
 
   /// @endcond
 

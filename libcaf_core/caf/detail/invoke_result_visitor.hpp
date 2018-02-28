@@ -60,9 +60,10 @@ public:
   /// Called if the message handler returned any "ordinary" value.
   virtual void operator()(message&) = 0;
 
-  /// Called if the message handler returned a "stream<T>",
-  /// `output_stream<T, ...>`, or `stream_result<T>`.
-  virtual void operator()(stream_slot, stream_manager_ptr&) = 0;
+  /// Called if the message handler returned a `stream<...>`,
+  /// `output_stream<...>`, or `stream_result<...>`.
+  virtual void operator()(stream_slot in, stream_slot out,
+                          stream_manager_ptr& mgr) = 0;
 
   /// Called if the message handler returns "nothing", for example a
   /// default-constructed `optional<T>`.
@@ -149,13 +150,13 @@ public:
   template <class T, class... Us>
   void operator()(output_stream<T, Us...>& x) {
     stream_manager_ptr ptr{std::move(x.ptr())};
-    (*this)(x.slot(), ptr);
+    (*this)(x.origin_slot(), x.slot(), ptr);
   }
 
   /// Calls `(*this)(x.ptr)`.
   template <class T>
   void operator()(stream_result<T>& x) {
-    (*this)(x.slot(), x.ptr());
+    (*this)(x.slot(), 0, x.ptr());
   }
 
   // -- visit API: return true if T was visited, false if T was skipped --------

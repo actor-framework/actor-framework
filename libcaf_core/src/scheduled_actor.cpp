@@ -409,28 +409,42 @@ void scheduled_actor::trigger_downstreams() {
 }
 */
 
-sec scheduled_actor::build_pipeline(stream_manager_ptr mgr) {
-  auto next = take_current_next_stage();
-  if (next == nullptr) {
+sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
+                                    stream_manager_ptr mgr) {
+  CAF_LOG_TRACE(CAF_ARG(in) << CAF_ARG(out) << CAF_ARG(mgr));
+  auto fail = [&](sec code) {
     auto rp = make_response_promise();
-    if (mgr->out().terminal()) {
-      // Response will be delivered by the sink after stream completion.
-      mgr->add_promise(std::move(rp));
-      return sec::none;
-    }
-    // Manager requires a next stage.
-    CAF_LOG_INFO("broken stream pipeline");
-    rp.deliver(sec::no_downstream_stages_defined);
-    return sec::no_downstream_stages_defined;
-  } else if (mgr->out().terminal()) {
-    // Cannot connect a sink to a next stage.
-    return sec::cannot_add_downstream;
+    rp.deliver(code);
+    return code;
+  };
+  // Check arguments.
+  if (mgr == nullptr || (in | out) == 0) {
+    CAF_LOG_ERROR("build_pipeline called with invalid arguments");
+    return sec::invalid_stream_state;
   }
-  auto slot = next_slot();
-  mgr->send_handshake(std::move(next), slot, current_sender(),
-                      take_current_forwarding_stack(), current_message_id());
-  mgr->generate_messages();
-  pending_stream_managers_.emplace(slot, std::move(mgr));
+  // Get handle to the next stage in the pipeline.
+  auto next = take_current_next_stage();
+  if (in != 0) {
+    CAF_ASSERT(stream_managers_[in] == mgr);
+    // Sinks must always terminate the stream and store a response promise to
+    // ship the final result.
+    if (mgr->out().terminal()) {
+      CAF_ASSERT(out == 0);
+      if (next != nullptr)
+        return fail(sec::cannot_add_downstream);
+      mgr->add_promise(make_response_promise());
+    }
+  }
+  if (out != 0) {
+    CAF_ASSERT(mgr->out().terminal() == false);
+    CAF_ASSERT(pending_stream_managers_[out] == mgr);
+    if (next == nullptr)
+      return fail(sec::no_downstream_stages_defined);
+    // Build pipeline by forwarding handshake along the path.
+    mgr->send_handshake(std::move(next), out, current_sender(),
+                        take_current_forwarding_stack(), current_message_id());
+    mgr->generate_messages();
+  }
   return sec::none;
 }
 
@@ -909,7 +923,7 @@ uint64_t scheduled_actor::set_timeout(atom_value type,
 }
 
 stream_slot scheduled_actor::next_slot() {
-  stream_slot result = 0;
+  stream_slot result = 1;
   auto nslot = [](const stream_manager_map& x) -> stream_slot {
     return x.rbegin()->first + 1;
   };
@@ -920,23 +934,41 @@ stream_slot scheduled_actor::next_slot() {
   return result;
 }
 
-stream_slot scheduled_actor::assign_new_slot(stream_manager_ptr ptr) {
+void scheduled_actor::assign_slot(stream_slot x, stream_manager_ptr mgr) {
   CAF_LOG_TRACE("");
   if (stream_managers_.empty())
     stream_ticks_.start(clock().now());
-  auto slot = next_slot();
-  CAF_ASSERT(stream_managers_.count(slot) == 0);
-  stream_managers_.emplace(slot, std::move(ptr));
-  return slot;
+  CAF_ASSERT(stream_managers_.count(x) == 0);
+  stream_managers_.emplace(x, std::move(mgr));
+}
+
+stream_slot scheduled_actor::assign_next_slot(stream_manager_ptr mgr) {
+  CAF_LOG_TRACE("");
+  auto x = next_slot();
+  assign_slot(x, std::move(mgr));
+  return x;
+}
+
+void scheduled_actor::assign_pending_slot(stream_slot x,
+                                          stream_manager_ptr mgr) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_ASSERT(pending_stream_managers_.count(x) == 0);
+  pending_stream_managers_.emplace(x, std::move(mgr));
+}
+
+stream_slot scheduled_actor::assign_next_pending_slot(stream_manager_ptr mgr) {
+  CAF_LOG_TRACE("");
+  auto x = next_slot();
+  assign_pending_slot(x, std::move(mgr));
+  return x;
 }
 
 bool scheduled_actor::add_stream_manager(stream_slot id,
-                                         stream_manager_ptr ptr) {
+                                         stream_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG(id));
   if (stream_managers_.empty())
     stream_ticks_.start(clock().now());
-  auto result = stream_managers_.emplace(id, std::move(ptr)).second;
-  return result;
+  return stream_managers_.emplace(id, std::move(mgr)).second;
 }
 
 void scheduled_actor::erase_stream_manager(stream_slot id) {
@@ -963,7 +995,8 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   // Fetches a stream manger from a behavior.
   struct visitor : detail::invoke_result_visitor {
     stream_manager_ptr ptr;
-    stream_slots id;
+    stream_slot in_slot;
+    stream_slot out_slot;
     void operator()() override {
       // nop
     }
@@ -976,9 +1009,11 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
       // nop
     }
 
-    void operator()(stream_slot slot, stream_manager_ptr& x) override {
-      id.receiver = slot;
+    void operator()(stream_slot in, stream_slot out,
+                    stream_manager_ptr& x) override {
       ptr = std::move(x);
+      in_slot = in;
+      out_slot = out;
     }
 
     void operator()(const none_t&) override {
@@ -989,10 +1024,10 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   CAF_ASSERT(x.content().match_elements<open_stream_msg>());
   auto& osm = x.content().get_mutable_as<open_stream_msg>(0);
   visitor f;
-  f.id.sender = osm.slot;
   // Utility lambda for aborting the stream on error.
   auto fail = [&](sec x, const char* reason) {
-    inbound_path::emit_irregular_shutdown(this, f.id, osm.prev_stage,
+    stream_slots path_id{osm.slot, 0};
+    inbound_path::emit_irregular_shutdown(this, path_id, osm.prev_stage,
                                           make_error(x, reason));
   };
   // Utility for invoking the default handler.
@@ -1026,11 +1061,12 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
         fail(sec::stream_init_failed, "behavior did not create a manager");
         return im_dropped;
       }
-      auto path = make_inbound_path(f.ptr, f.id, std::move(osm.prev_stage));
+      stream_slots path_id{osm.slot, f.in_slot};
+      auto path = make_inbound_path(f.ptr, path_id, std::move(osm.prev_stage));
       CAF_ASSERT(path != nullptr);
       path->emit_ack_open(this, actor_cast<actor_addr>(osm.original_stage));
       // Propagate handshake down the pipeline.
-      build_pipeline(std::move(f.ptr));
+      build_pipeline(f.in_slot, f.out_slot, std::move(f.ptr));
       return im_success;
     }
     default:

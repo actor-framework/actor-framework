@@ -74,7 +74,7 @@ public:
     (*this)();
   }
 
-  void operator()(stream_slot, stream_manager_ptr&) override {
+  void operator()(stream_slot, stream_slot, stream_manager_ptr&) override {
     (*this)();
   }
 };

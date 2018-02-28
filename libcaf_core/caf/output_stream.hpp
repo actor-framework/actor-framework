@@ -22,6 +22,7 @@
 #include "caf/fwd.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/stream_source.hpp"
+#include "caf/stream_stage.hpp"
 
 #include "caf/meta/type_name.hpp"
 
@@ -45,15 +46,33 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  output_stream(output_stream&&) = default;
+
+  output_stream(const output_stream&) = default;
+
   output_stream(stream_slot id, source_pointer sptr)
-      : slot_(id),
+      : origin_(0),
+        slot_(id),
         ptr_(std::move(sptr)) {
+    // nop
+  }
+
+  template <class In>
+  output_stream(stream_slot origin, stream_slot id,
+                stream_stage_ptr<In, T, Ts...> sptr)
+      : origin_(origin), slot_(id), ptr_(std::move(sptr)) {
     // nop
   }
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the actor-specific stream slot ID.
+  /// Returns the slot of the origin stream if `ptr()` is a stage or 0 if
+  /// `ptr()` is a source.
+  inline stream_slot origin_slot() const {
+    return origin_;
+  }
+
+  /// Returns the output slot.
   inline stream_slot slot() const {
     return slot_;
   }
@@ -73,12 +92,13 @@ public:
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f,
                                                  output_stream& x) {
-    return f(meta::type_name("output_stream"), x.slot_);
+    return f(meta::type_name("output_stream"), x.origin_, x.slot_);
   }
 
 private:
   // -- member variables -------------------------------------------------------
 
+  stream_slot origin_;
   stream_slot slot_;
   source_pointer ptr_;
 };

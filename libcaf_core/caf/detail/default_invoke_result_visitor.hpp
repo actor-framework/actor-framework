@@ -56,9 +56,10 @@ public:
     delegate(x);
   }
 
-  void operator()(stream_slot, stream_manager_ptr& ptr) override {
+  void operator()(stream_slot in, stream_slot out,
+                  stream_manager_ptr& mgr) override {
     // TODO: error handling
-    self_->build_pipeline(std::move(ptr));
+    self_->build_pipeline(in, out, std::move(mgr));
   }
 
 private:

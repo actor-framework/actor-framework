@@ -290,8 +290,9 @@ void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
   }
 }
 
-sec blocking_actor::build_pipeline(stream_manager_ptr) {
-  CAF_LOG_ERROR("blocking_actor::connect_pipeline called");
+sec blocking_actor::build_pipeline(stream_slot, stream_slot,
+                                   stream_manager_ptr) {
+  CAF_LOG_ERROR("blocking_actor::build_pipeline called");
   return sec::bad_function_call;
 }
 

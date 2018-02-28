@@ -415,27 +415,25 @@ public:
   /// Creates an output path for given source.
   template <class Out, class... Ts>
   output_stream<Out, Ts...>
-  add_output_path(stream_source_ptr<Out, Ts...> ptr) {
-    // The actual plumbing is done when returning the `output_stream<>` from a
-    // message handler.
-    return {0, std::move(ptr)};
+  add_output_path(stream_source_ptr<Out, Ts...> mgr) {
+    auto slot = assign_next_pending_slot(mgr);
+    return {slot, std::move(mgr)};
   }
 
   /// Creates an output path for given stage.
   template <class In, class Out, class... Ts>
   output_stream<Out, Ts...>
-  add_output_path(stream_stage_ptr<In, Out, Ts...> ptr) {
-    // The actual plumbing is done when returning the `output_stream<>` from a
-    // message handler.
-    return {0, std::move(ptr)};
+  add_output_path(stream_stage_ptr<In, Out, Ts...> mgr) {
+    auto slot = assign_next_pending_slot(mgr);
+    return {slot, std::move(mgr)};
   }
 
   /// Creates an input path for given stage.
   template <class In, class Out, class... Ts>
   output_stream<Out, Ts...>
   add_input_path(const stream<In>&, stream_stage_ptr<In, Out, Ts...> mgr) {
-    auto slot = assign_new_slot(mgr);
-    return {slot, std::move(mgr)};
+    auto slot = assign_next_slot(mgr);
+    return {slot, 0, std::move(mgr)};
   }
 
   /// Creates a new stream source and starts streaming to `dest`.
@@ -451,9 +449,10 @@ public:
             class Scatterer = broadcast_scatterer<typename Driver::output_type>,
             class... Ts>
   typename Driver::output_stream_type make_source(Ts&&... xs) {
-    auto ptr = detail::make_stream_source<Driver, Scatterer>(
+    auto mgr = detail::make_stream_source<Driver, Scatterer>(
       this, std::forward<Ts>(xs)...);
-    return {0, std::move(ptr)};
+    auto slot = assign_next_pending_slot(mgr);
+    return {slot, std::move(mgr)};
   }
 
   template <class... Ts, class Init, class Pull, class Done, class Finalize,
@@ -511,7 +510,7 @@ public:
   stream_result<typename Driver::output_type> make_sink(const stream<Input>&,
                                                         Ts&&... xs) {
     auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
-    auto slot = assign_new_slot(mgr);
+    auto slot = assign_next_slot(mgr);
     return {slot, std::move(mgr)};
   }
 
@@ -528,13 +527,14 @@ public:
   template <class Driver,
             class Scatterer = broadcast_scatterer<typename Driver::output_type>,
             class Input = int, class... Ts>
-  typename Driver::output_stream_type make_stage(const stream<Input>&,
+  typename Driver::output_stream_type make_stage(const stream<Input>& in,
                                                  Ts&&... xs) {
     using detail::make_stream_stage;
     auto mgr = make_stream_stage<Driver, Scatterer>(this,
                                                     std::forward<Ts>(xs)...);
-    auto slot = assign_new_slot(mgr);
-    return {slot, std::move(mgr)};
+    assign_slot(in.slot(), mgr);
+    auto slot = assign_next_pending_slot(mgr);
+    return {in.slot(), slot, std::move(mgr)};
   }
 
   template <class In, class... Ts, class Init, class Fun, class Cleanup,
@@ -630,10 +630,8 @@ public:
   /// @cond PRIVATE
 
   /// Builds the pipeline after receiving an `open_stream_msg`. Sends a stream
-  /// handshake to the next actor if `mgr->out().terminal() == false`,
-  /// otherwise
-  sec build_pipeline(stream_manager_ptr mgr);
-
+  /// handshake to the next actor if `mgr->out().terminal() == false`.
+  sec build_pipeline(stream_slot in, stream_slot out, stream_manager_ptr mgr);
 
   // -- timeout management -----------------------------------------------------
 
@@ -815,9 +813,18 @@ public:
   /// Returns a currently unused slot.
   stream_slot next_slot();
 
-  /// Assigns a new slot to `ptr`, adds a new entry to `stream_managers_`, and
-  /// returns the slot ID.
-  stream_slot assign_new_slot(stream_manager_ptr ptr);
+  /// Assigns slot `x` to `mgr`, i.e., adds a new entry to `stream_managers_`.
+  void assign_slot(stream_slot x, stream_manager_ptr mgr);
+
+  /// Convenience function for calling `assign_slot(next_slot(), mgr)`.
+  stream_slot assign_next_slot(stream_manager_ptr mgr);
+
+  /// Assigns slot `x` to the pending manager `mgr`, i.e., adds a new entry to
+  /// `pending_stream_managers_`.
+  void assign_pending_slot(stream_slot x, stream_manager_ptr mgr);
+
+  /// Convenience function for calling `assign_slot(next_slot(), mgr)`.
+  stream_slot assign_next_pending_slot(stream_manager_ptr mgr);
 
   /// Adds a new stream manager to the actor and starts cycle management if
   /// needed.
