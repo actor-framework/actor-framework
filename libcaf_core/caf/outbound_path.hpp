@@ -83,6 +83,32 @@ public:
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(local_actor* self, long xs_size, message xs);
 
+  /// Calls `emit_batch` for each
+  template <class T>
+  void emit_batches(local_actor* self, std::vector<T>& cache,
+                    bool force_underfull) {
+    CAF_ASSERT(desired_batch_size > 0);
+    if (cache.size() == desired_batch_size) {
+      emit_batch(self, desired_batch_size, make_message(std::move(cache)));
+      return;
+    }
+    auto i = cache.begin();
+    auto e = cache.end();
+    while (std::distance(i, e) >= static_cast<ptrdiff_t>(desired_batch_size)) {
+      std::vector<T> tmp{std::make_move_iterator(i),
+                         std::make_move_iterator(i + desired_batch_size)};
+      emit_batch(self, desired_batch_size, make_message(std::move(tmp)));
+      i += desired_batch_size;
+    }
+    if (i == e) {
+      cache.clear();
+      return;
+    }
+    cache.erase(cache.begin(), i);
+    if (force_underfull)
+      emit_batch(self, cache.size(), make_message(std::move(cache)));
+  }
+
   /// Sends a `stream_msg::drop` on this path.
   void emit_regular_shutdown(local_actor* self);
 
