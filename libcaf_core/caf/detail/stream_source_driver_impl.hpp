@@ -27,13 +27,14 @@
 namespace caf {
 namespace detail {
 
-template <class Output, class Pull, class Done, class HandshakeData>
+template <class Output, class Pull, class Done, class Finalize,
+          class HandshakeData>
 class stream_source_driver_impl;
 
 /// Identifies an unbound sequence of messages.
-template <class Output, class Pull, class Done, class... Ts>
-class stream_source_driver_impl<Output, Pull, Done, std::tuple<Ts...>> final
-    : public stream_source_driver<Output, Ts...> {
+template <class Output, class Pull, class Done, class Finalize, class... Ts>
+class stream_source_driver_impl<Output, Pull, Done, Finalize, std::tuple<Ts...>>
+  final : public stream_source_driver<Output, Ts...> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -54,9 +55,11 @@ public:
   using state_type = typename trait::state;
 
   template <class Init, class Tuple>
-  stream_source_driver_impl(Init init, Pull f, Done pred, Tuple&& hs)
+  stream_source_driver_impl(Init init, Pull f, Done pred, Finalize fin,
+                            Tuple&& hs)
       : pull_(std::move(f)),
         done_(std::move(pred)),
+        finalize_(std::move(fin)),
         hs_(std::forward<Tuple>(hs)) {
     init(state_);
   }
@@ -73,10 +76,15 @@ public:
     return done_(state_);
   }
 
+  void finalize(const error& err) override {
+    finalize_(state_, err);
+  }
+
 private:
   state_type state_;
   Pull pull_;
   Done done_;
+  Finalize finalize_;
   tuple_type hs_;
 };
 
