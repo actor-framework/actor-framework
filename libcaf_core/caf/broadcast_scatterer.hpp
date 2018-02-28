@@ -22,6 +22,8 @@
 #include "caf/buffered_scatterer.hpp"
 #include "caf/outbound_path.hpp"
 
+#include "caf/detail/algorithms.hpp"
+
 namespace caf {
 
 template <class T>
@@ -31,6 +33,9 @@ public:
 
   /// Base type.
   using super = buffered_scatterer<T>;
+
+  /// Type of `paths_`.
+  using map_type = typename super::map_type;
 
   /// Container for caching `T`s per path.
   using cache_type = std::vector<T>;
@@ -49,23 +54,15 @@ public:
   }
 
   void emit_batches() override {
-    CAF_LOG_TRACE("");
-    // Handler for the last (underful) batch that does nothing, i.e., leaves
-    // the cache untouched.
-    auto f = [&](outbound_path&, cache_type&) {
-      // nop
-    };
-    emit_batches_impl(f);
+    CAF_LOG_TRACE(CAF_ARG2("buffered", this->buffered())
+                  << CAF_ARG2("paths", this->paths_.size()));
+    emit_batches_impl(false);
   }
 
   void force_emit_batches() override {
     CAF_LOG_TRACE(CAF_ARG2("buffered", this->buffered())
                   << CAF_ARG2("paths", this->paths_.size()));
-    // Handler for the last (underful) batch that sends it anyway.
-    auto f = [&](outbound_path& p, cache_type& c) {
-      p.emit_batch(this->self_, c.size(), make_message(std::move(c)));
-    };
-    emit_batches_impl(f);
+    emit_batches_impl(true);
   }
 
 protected:
@@ -77,85 +74,45 @@ protected:
   }
 
 private:
-  /// Iterates `paths_`, applying `f` to all but the last element and `g` to
-  /// the last element.
-  template <class F, class G>
-  void iterate_paths(F& f, G& g) {
-    // The vector storing all paths has the same order as the vector storing
-    // all caches. This allows us to iterate both vectors using a single index.
-    auto& pvec = this->paths_.container();
-    auto& cvec = caches_.container();
-    CAF_ASSERT(pvec.size() == cvec.size());
-    size_t l = pvec.size() - 1;
-    for (size_t i = 0u; i != l; ++i) {
-      CAF_ASSERT(pvec[i].first == cvec[i].first);
-      f(*pvec[i].second, cvec[i].second);
-    }
-    CAF_ASSERT(pvec[l].first == cvec[l].first);
-    g(*pvec[l].second, cvec[l].second);
-  }
-
-  template <class OnPartialBatch>
-  void emit_batches_impl(OnPartialBatch& f) {
+  void emit_batches_impl(bool force_underfull) {
+    CAF_ASSERT(this->paths_.size() == caches_.size());
     if (this->paths_.empty())
       return;
-    auto emit_impl = [&](outbound_path& p, cache_type& c) {
-      CAF_LOG_DEBUG("emit up to" << c.size()
-                    << "items on slot" << p.slots.sender);
-      if (c.empty())
-        return;
-      auto dbs = p.desired_batch_size;
-      CAF_ASSERT(dbs > 0);
-      if (c.size() == dbs) {
-        p.emit_batch(this->self_, c.size(), make_message(std::move(c)));
-      } else {
-        auto i = c.begin();
-        auto e = c.end();
-        while (std::distance(i, e) >= static_cast<ptrdiff_t>(dbs)) {
-          std::vector<T> tmp{std::make_move_iterator(i),
-                             std::make_move_iterator(i + dbs)};
-          p.emit_batch(this->self_, dbs, make_message(std::move(tmp)));
-          i += dbs;
-        }
-        if (i == e) {
-          c.clear();
-        } else {
-          c.erase(c.begin(), i);
-          f(p, c);
-        }
+    // Calculate the chunk size, i.e., how many more items we can put to our
+    // caches at the most.
+    struct get_credit {
+      inline size_t operator()(typename map_type::value_type& x) {
+        return static_cast<size_t>(x.second->open_credit);
       }
     };
-    // Calculate how many more items we can put to our caches at the most.
-    auto chunk_size = std::numeric_limits<size_t>::max();
-    {
-      auto& pvec = this->paths_.container();
-      auto& cvec = caches_.container();
-      CAF_ASSERT(pvec.size() == cvec.size());
-      for (size_t i = 0u; i != pvec.size(); ++i) {
-        chunk_size = std::min(chunk_size, pvec[i].second->open_credit
-                                           - cvec[i].second.size());
+    struct get_cache_size {
+      inline size_t operator()(typename cache_map_type::value_type& x) {
+        return x.second.size();
       }
-    }
+    };
+    auto f = [](size_t x, size_t credit, size_t cache_size) {
+      auto y = credit > cache_size ? credit - cache_size : 0u;
+      return x < y ? x : y;
+    };
+    auto chunk_size = detail::zip_fold(
+      f, std::numeric_limits<size_t>::max(),
+      detail::make_container_view<get_credit>(this->paths_.container()),
+      detail::make_container_view<get_cache_size>(caches_.container()));
     auto chunk = this->get_chunk(chunk_size);
     if (chunk.empty()) {
-      auto g = [&](outbound_path& p, cache_type& c) {
-        emit_impl(p, c);
+      auto g = [&](typename map_type::value_type& x,
+                   typename cache_map_type::value_type& y) {
+        x.second->emit_batches(this->self_, y.second, force_underfull);
       };
-      iterate_paths(g, g);
+      detail::zip_foreach(g, this->paths_.container(), caches_.container());
     } else {
-      auto copy_emit = [&](outbound_path& p, cache_type& c) {
+      auto g = [&](typename map_type::value_type& x,
+                   typename cache_map_type::value_type& y) {
+        auto& c = y.second;
         c.insert(c.end(), chunk.begin(), chunk.end());
-        emit_impl(p, c);
+        x.second->emit_batches(this->self_, c, force_underfull);
       };
-      auto move_emit = [&](outbound_path& p, cache_type& c) {
-        if (c.empty())
-          c = std::move(chunk);
-        else
-          c.insert(c.end(), std::make_move_iterator(chunk.begin()),
-                   std::make_move_iterator(chunk.end()));
-        emit_impl(p, c);
-      };
-      iterate_paths(copy_emit, move_emit);
+      detail::zip_foreach(g, this->paths_.container(), caches_.container());
     }
   }
 
