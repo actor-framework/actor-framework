@@ -36,7 +36,7 @@ namespace {
 
 TESTEE_SETUP();
 
-VARARGS_TESTEE(file_reader, size_t buf_size) {
+VARARGS_TESTEE(file_reader, size_t buf_size, bool call_quit) {
   using buf = std::deque<int>;
   return {
     [=](string& fname) -> output_stream<int, string> {
@@ -65,7 +65,13 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
             return true;
           }
           return false;
-        });
+        },
+        // cleanup
+        [=](buf&, const error&) {
+          if (call_quit)
+            self->quit();
+        }
+      );
     }
   };
 }
@@ -212,7 +218,7 @@ error fail_state(const actor& x) {
 CAF_TEST_FIXTURE_SCOPE(local_streaming_tests, fixture)
 
 CAF_TEST(depth_2_pipeline_50_items) {
-  auto src = sys.spawn(file_reader, 50);
+  auto src = sys.spawn(file_reader, 50, false);
   auto snk = sys.spawn(sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
@@ -235,7 +241,7 @@ CAF_TEST(depth_2_pipeline_50_items) {
 }
 
 CAF_TEST(delayed_depth_2_pipeline_50_items) {
-  auto src = sys.spawn(file_reader, 50);
+  auto src = sys.spawn(file_reader, 50, false);
   auto snk = sys.spawn(delayed_sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
@@ -264,7 +270,7 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
 }
 
 CAF_TEST(depth_2_pipeline_500_items) {
-  auto src = sys.spawn(file_reader, 500);
+  auto src = sys.spawn(file_reader, 500, false);
   auto snk = sys.spawn(sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
@@ -295,7 +301,7 @@ CAF_TEST(depth_2_pipeline_500_items) {
 
 CAF_TEST(depth_2_pipeline_error_during_handshake) {
   CAF_MESSAGE("streams must abort if a sink fails to initialize its state");
-  auto src = sys.spawn(file_reader, 50);
+  auto src = sys.spawn(file_reader, 50, false);
   auto snk = sys.spawn(broken_sink);
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
@@ -307,7 +313,7 @@ CAF_TEST(depth_2_pipeline_error_during_handshake) {
 
 CAF_TEST(depth_2_pipeline_error_at_source) {
   CAF_MESSAGE("streams must abort if a source fails at runtime");
-  auto src = sys.spawn(file_reader, 500);
+  auto src = sys.spawn(file_reader, 500, false);
   auto snk = sys.spawn(sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
@@ -328,7 +334,7 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
 
 CAF_TEST(depth_2_pipelin_error_at_sink) {
   CAF_MESSAGE("streams must abort if a sink fails at runtime");
-  auto src = sys.spawn(file_reader, 500);
+  auto src = sys.spawn(file_reader, 500, false);
   auto snk = sys.spawn(sum_up);
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
@@ -347,7 +353,7 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
 }
 
 CAF_TEST(depth_3_pipeline_50_items) {
-  auto src = sys.spawn(file_reader, 50);
+  auto src = sys.spawn(file_reader, 50, false);
   auto stg = sys.spawn(filter);
   auto snk = sys.spawn(sum_up);
   auto next_cycle = [&] {
@@ -382,7 +388,7 @@ CAF_TEST(depth_3_pipeline_50_items) {
 }
 
 CAF_TEST(depth_4_pipeline_500_items) {
-  auto src = sys.spawn(file_reader, 500);
+  auto src = sys.spawn(file_reader, 500, false);
   auto stg1 = sys.spawn(filter);
   auto stg2 = sys.spawn(doubler);
   auto snk = sys.spawn(sum_up);
@@ -398,9 +404,53 @@ CAF_TEST(depth_4_pipeline_500_items) {
   expect((upstream_msg::ack_open), from(stg2).to(stg1));
   expect((upstream_msg::ack_open), from(stg1).to(src));
   CAF_MESSAGE("start data transmission");
-  sched.run_dispatch_loop(cycle);
+  sched.run();
   CAF_MESSAGE("check sink result");
   expect((int), from(snk).to(self).with(125000));
+}
+
+CAF_TEST(setup_check) {
+  int n = 50;
+  auto src = sys.spawn(file_reader, n, false);
+  auto snk = sys.spawn(sum_up);
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  self->send(snk * src, "numbers.txt");
+  sched.run(3 + 1); // handshake + batch msg
+  sched.clock().current_time += cycle;
+  sched.dispatch();
+  sched.run(3); // timeout and ack msg
+  CAF_MESSAGE("expect close message from src and then result from snk");
+  expect((downstream_msg::close), from(src).to(snk));
+  expect((int), from(snk).to(self).with(n * (n + 1) / 2));
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+}
+
+
+CAF_TEST(call_quit_in_source_cleanup) {
+  int n = 50;
+  auto src = sys.spawn(file_reader, n, true);
+  auto snk = sys.spawn(sum_up);
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  self->send(snk * src, "numbers.txt");
+  CAF_MESSAGE("jump to the end");
+  sched.run(3 + 1); // handshake + batch msg
+  sched.clock().current_time += cycle;
+  sched.dispatch();
+  sched.run(3); // timeout and ack msg
+  CAF_MESSAGE("expect close message from src and then result from snk");
+  expect((downstream_msg::close), from(src).to(snk));
+  expect((int), from(snk).to(self).with(n * (n + 1) / 2));
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+}
+
+CAF_TEST(source_monitoring) {
+
+}
+
+CAF_TEST(empty_source) {
+
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
