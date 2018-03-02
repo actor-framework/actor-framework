@@ -332,7 +332,9 @@ CAF_TEST(self_receive_with_zero_timeout) {
     [&] {
       CAF_ERROR("Unexpected message");
     },
-    after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
+    after(chrono::seconds(0)) >> [] {
+      // mailbox empty
+    }
   );
 }
 
@@ -551,16 +553,6 @@ CAF_TEST(move_only_argument) {
   };
   auto f = make_function_view(system.spawn(impl, std::move(uptr)));
   CAF_CHECK_EQUAL(to_string(f(1.f)), "(42)");
-  /*
-  auto testee = system.spawn(f, std::move(uptr));
-  scoped_actor self{system};
-  self->request(testee, infinite, 1.f).receive(
-    [](int i) {
-      CAF_CHECK_EQUAL(i, 42);
-    },
-    ERROR_HANDLER
-  );
-  */
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

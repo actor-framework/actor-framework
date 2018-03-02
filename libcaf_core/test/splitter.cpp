@@ -114,27 +114,4 @@ CAF_TEST(untyped_splicing) {
   );
 }
 
-/*
-CAF_TEST(typed_splicing) {
-  using namespace std::placeholders;
-  auto stage0 = system.spawn(typed_first_stage);
-  auto stage2 = system.spawn(typed_second_stage);
-  auto stages = splice(stage0, stage2);
-  using expected_type = typed_actor<replies_to<double>
-                                    ::with<double, double, double>>;
-  static_assert(std::is_same<decltype(stages), expected_type>::value,
-                "splice() did not compute the correct result");
-  self->request(stages, infinite, 42.0).receive(
-    [](double x, double y, double z) {
-      CAF_CHECK_EQUAL(x, (42.0 * 2.0));
-      CAF_CHECK_EQUAL(y, (42.0 * 4.0));
-      CAF_CHECK_EQUAL(z, (23.0 * 42.0));
-    },
-    ERROR_HANDLER
-  );
-  // stage0 and stage2 go out of scope, leaving only the references
-  // in stages, which will also go out of scope
-}
-*/
-
 CAF_TEST_FIXTURE_SCOPE_END()

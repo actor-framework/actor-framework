@@ -64,34 +64,33 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
   };
 }
 
-/* Based on: http://www.dalnefre.com/wp/2010/08/dining-philosophers-in-humus/
- *
- *
- *                +-------------+     {busy|taken}
- *      /-------->|  thinking   |<------------------\
- *      |         +-------------+                   |
- *      |                |                          |
- *      |                | {eat}                    |
- *      |                |                          |
- *      |                V                          |
- *      |         +-------------+  {busy}    +-------------+
- *      |         |   hungry    |----------->|   denied    |
- *      |         +-------------+            +-------------+
- *      |                |
- *      |                | {taken}
- *      |                |
- *      |                V
- *      |         +-------------+
- *      |         |   granted   |
- *      |         +-------------+
- *      |           |    |
- *      |  {busy}   |    | {taken}
- *      \-----------/    |
- *      |                V
- *      | {think} +-------------+
- *      \---------|   eating    |
- *                +-------------+
- */
+// Based on: http://www.dalnefre.com/wp/2010/08/dining-philosophers-in-humus/
+//
+//
+//                +-------------+     {busy|taken}
+//      /-------->|  thinking   |<------------------\
+//      |         +-------------+                   |
+//      |                |                          |
+//      |                | {eat}                    |
+//      |                |                          |
+//      |                V                          |
+//      |         +-------------+  {busy}    +-------------+
+//      |         |   hungry    |----------->|   denied    |
+//      |         +-------------+            +-------------+
+//      |                |
+//      |                | {taken}
+//      |                |
+//      |                V
+//      |         +-------------+
+//      |         |   granted   |
+//      |         +-------------+
+//      |           |    |
+//      |  {busy}   |    | {taken}
+//      \-----------/    |
+//      |                V
+//      | {think} +-------------+
+//      \---------|   eating    |
+//                +-------------+
 
 class philosopher : public event_based_actor {
 public:

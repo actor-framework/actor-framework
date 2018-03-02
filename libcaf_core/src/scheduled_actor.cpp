@@ -402,13 +402,6 @@ void scheduled_actor::quit(error x) {
 
 // -- stream management --------------------------------------------------------
 
-/*
-void scheduled_actor::trigger_downstreams() {
-  for (auto& s : streams_)
-    s.second->push();
-}
-*/
-
 sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
                                     stream_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG(in) << CAF_ARG(out) << CAF_ARG(mgr));
@@ -592,22 +585,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
     return f(in.content()) != none;
   };
-  /*
-  auto stream_invoke = [](ptr_t, behavior&, mailbox_element&) -> bool {
-    // The only legal stream message in a response is `stream_open`.
-    auto& var = in.content().get_as<stream_msg>(0).content;
-    if (holds_alternative<stream_msg::open>(var))
-      return p->handle_stream_msg(in, &f);
-    return false;
-  };
-  */
   auto select_invoke_fun = [&]() -> fun_t {
     return ordinary_invoke;
-    /*
-    if (x.content().type_token() != make_type_token<stream_msg>())
-      return ordinary_invoke;
-    return stream_invoke;
-    */
   };
   // Short-circuit awaited responses.
   if (!awaited_responses_.empty()) {

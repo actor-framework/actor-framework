@@ -43,25 +43,6 @@ struct output_tuple {};
 template <class Input, class Output>
 struct typed_mpi {};
 
-/*
-<detail::type_list<Is...>,
-                 detail::type_list<Ls...>> {
-  static_assert(sizeof...(Is) > 0, "template parameter pack Is empty");
-  static_assert(sizeof...(Ls) > 0, "template parameter pack Ls empty");
-  using input = detail::type_list<Is...>;
-  using output = detail::type_list<Ls...>;
-  static_assert(!detail::tl_exists<
-                  input_types,
-                  is_illegal_message_element
-                >::value
-                && !detail::tl_exists<
-                  output_types,
-                  is_illegal_message_element
-                >::value,
-                "interface definition contains an illegal message type");
-};
-*/
-
 template <class... Is>
 struct replies_to {
   template <class... Os>

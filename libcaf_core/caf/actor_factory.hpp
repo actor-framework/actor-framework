@@ -192,11 +192,6 @@ actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
 
 template <class T, class... Ts>
 actor_factory make_actor_factory() {
-  /*
-  static_assert(std::is_same<T*, decltype(new T(std::declval<actor_config&>(),
-                                                std::declval<Ts>()...))>::value,
-                "no constructor for T(Ts...) exists");
-  */
   static_assert(detail::conjunction<
                   std::is_lvalue_reference<Ts>::value...
                 >::value,
