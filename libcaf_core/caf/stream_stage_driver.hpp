@@ -24,28 +24,49 @@
 #include <vector>
 
 #include "caf/fwd.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 
-/// Identifies an unbound sequence of messages.
-template <class Input, class Output, class... HandshakeData>
+/// Encapsulates user-provided functionality for generating a stream stage.
+template <class Input, class Result, class Scatterer, class... Ts>
 class stream_stage_driver {
 public:
   // -- member types -----------------------------------------------------------
 
+  /// Element type of the input stream.
   using input_type = Input;
 
-  using output_type = Output;
+  /// Result type shipped to the client after processing all elements of the
+  /// stream.
+  using result_type = Result;
 
+  /// Policy for distributing data to outbound paths.
+  using scatterer_type = Scatterer;
+
+  /// Element type of the output stream.
+  using output_type = typename scatterer_type::value_type;
+
+  /// Type of the output stream.
   using stream_type = stream<output_type>;
 
-  using output_stream_type = output_stream<output_type, HandshakeData...>;
+  /// Type of the output stream including handshake argument types.
+  using output_stream_type = output_stream<output_type, Ts...>;
 
-  using handshake_tuple_type = std::tuple<stream_type, HandshakeData...>;
+  /// Tuple for creating the `open_stream_msg` handshake.
+  using handshake_tuple_type = std::tuple<stream_type, Ts...>;
 
-  using stage_type = stream_stage<input_type, output_type, HandshakeData...>;
+  /// Implemented `stream_stage` interface.
+  using stage_type = stream_stage<input_type, result_type,
+                                  output_type, Scatterer, Ts...>;
 
+  /// Smart pointer to the interface type.
   using stage_ptr_type = intrusive_ptr<stage_type>;
+
+  /// Wrapper type holding a pointer to `stage_type`.
+  using make_stage_result_type =
+    make_stage_result<input_type, result_type, output_type, scatterer_type,
+                      Ts...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -55,19 +76,22 @@ public:
 
   // -- virtual functions ------------------------------------------------------
 
-  /// Cleans up any state.
-  virtual void finalize(const error&) {
-    // nop
-  }
-
-  // -- pure virtual functions -------------------------------------------------
-
   /// Generates handshake data for the next actor in the pipeline.
   virtual handshake_tuple_type make_handshake(stream_slot slot) const = 0;
 
   /// Processes a single batch.
   virtual void process(std::vector<input_type>&& batch,
                        downstream<output_type>& out) = 0;
+
+  /// Handles the result of an outbound path.
+  virtual void add_result(message&) = 0;
+
+  /// Produces a result message after receiving the result messages of all
+  /// outbound paths and closing all paths.
+  virtual message make_final_result() = 0;
+
+  /// Cleans up any state.
+  virtual void finalize(const error&) = 0;
 };
 
 } // namespace caf

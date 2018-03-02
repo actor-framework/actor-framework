@@ -22,28 +22,36 @@
 #include <tuple>
 
 #include "caf/intrusive_ptr.hpp"
+#include "caf/stream_sink.hpp"
 #include "caf/stream_source.hpp"
 
 namespace caf {
 
-template <class In, class Out, class... HandshakeData>
-class stream_stage : public stream_source<Out, HandshakeData...> {
+template <class In, class Result, class Out, class Scatterer,
+          class... HandshakeData>
+class stream_stage : public stream_source<Out, Scatterer, HandshakeData...>,
+                     public stream_sink<In, Result> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_source<Out, HandshakeData...>;
+  using left_super = stream_source<Out, Scatterer, HandshakeData...>;
 
-  using input_type = In;
+  using right_super = stream_sink<In, Result>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_stage(local_actor* self) : super(self) {
+  stream_stage(local_actor* self)
+      : stream_manager(self),
+        left_super(self),
+        right_super(self) {
     // nop
   }
 };
 
-template <class In, class Out, class... HandshakeData>
-using stream_stage_ptr = intrusive_ptr<stream_stage<In, Out, HandshakeData...>>;
+template <class In, class Result, class Out, class Scatterer,
+          class... HandshakeData>
+using stream_stage_ptr =
+  intrusive_ptr<stream_stage<In, Result, Out, Scatterer, HandshakeData...>>;
 
 } // namespace caf
 

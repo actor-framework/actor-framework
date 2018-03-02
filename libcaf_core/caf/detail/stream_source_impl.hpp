@@ -23,6 +23,7 @@
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/make_source_result.hpp"
 #include "caf/outbound_path.hpp"
 #include "caf/stream_source.hpp"
 #include "caf/stream_source_trait.hpp"
@@ -30,59 +31,45 @@
 namespace caf {
 namespace detail {
 
-template <class Driver, class Scatterer>
+template <class Driver>
 class stream_source_impl : public Driver::source_type {
 public:
-  // -- static asserts ---------------------------------------------------------
-
-  static_assert(std::is_same<typename Driver::output_type,
-                             typename Scatterer::value_type>::value,
-                "Driver and Scatterer have incompatible types.");
-
   // -- member types -----------------------------------------------------------
 
   using super = typename Driver::source_type;
 
   using driver_type = Driver;
 
-  using scatterer_type = Scatterer;
-
-  using output_type = typename driver_type::output_type;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
   stream_source_impl(local_actor* self, Ts&&... xs)
-      : super(self),
+      : stream_manager(self),
+        super(self),
         at_end_(false),
-        driver_(std::forward<Ts>(xs)...),
-        out_(self) {
+        driver_(std::forward<Ts>(xs)...) {
     // nop
   }
 
   // -- implementation of virtual functions ------------------------------------
 
   bool done() const override {
-    return this->pending_handshakes_ == 0 && at_end_ && out_.clean();
-  }
-
-  Scatterer& out() override {
-    return out_;
+    return this->pending_handshakes_ == 0 && at_end_ && this->out_.clean();
   }
 
   bool generate_messages() override {
     CAF_LOG_TRACE("");
     if (at_end_)
       return false;
-    auto hint = out_.capacity();
+    auto hint = this->out_.capacity();
     CAF_LOG_DEBUG(CAF_ARG(hint));
     if (hint == 0)
       return false;
-    downstream<output_type> ds{out_.buf()};
+    downstream<typename Driver::output_type> ds{this->out_.buf()};
     driver_.pull(ds, hint);
     if (driver_.done())
       at_end_ = true;
-    return hint != out_.capacity();
+    return hint != this->out_.capacity();
   }
 
   message make_handshake(stream_slot slot) const override {
@@ -97,15 +84,12 @@ protected:
 private:
   bool at_end_;
   Driver driver_;
-  Scatterer out_;
 };
 
-template <class Driver,
-          class Scatterer = broadcast_scatterer<typename Driver::output_type>,
-          class... Ts>
+template <class Driver, class... Ts>
 typename Driver::source_ptr_type make_stream_source(local_actor* self,
                                                     Ts&&... xs) {
-  using impl = stream_source_impl<Driver, Scatterer>;
+  using impl = stream_source_impl<Driver>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 

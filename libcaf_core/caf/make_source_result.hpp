@@ -16,57 +16,47 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OUTPUT_STREAM_HPP
-#define CAF_OUTPUT_STREAM_HPP
+#ifndef CAF_MAKE_SOURCE_RESULT_HPP
+#define CAF_MAKE_SOURCE_RESULT_HPP
 
 #include "caf/fwd.hpp"
-#include "caf/make_source_result.hpp"
-#include "caf/make_stage_result.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/stream_source.hpp"
+
+#include "caf/detail/type_traits.hpp"
 
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
-/// Identifies an unbound sequence of elements annotated with the additional
-/// handshake arguments emitted to the next stage.
-template <class T, class... Ts>
-class output_stream {
+/// Wraps the result of a `make_source` or `add_output_path` function call.
+template <class T, class Scatterer, class... Ts>
+class make_source_result {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Type of a single element.
   using value_type = T;
 
+  /// Fully typed stream manager as returned by `make_source`.
+  using type = stream_source<T, Scatterer, Ts...>;
+
+  /// Pointer to a fully typed stream manager.
+  using ptr_type = intrusive_ptr<type>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
-  output_stream(output_stream&&) = default;
+  make_source_result(make_source_result&&) = default;
 
-  output_stream(const output_stream&) = default;
+  make_source_result(const make_source_result&) = default;
 
-  template <class S>
-  output_stream(make_source_result<T, S, Ts...> x)
-      : in_(0),
-        out_(x.out()),
-        ptr_(std::move(x.ptr())) {
-    // nop
-  }
-
-  template <class I, class R, class S>
-  output_stream(make_stage_result<I, R, T, S, Ts...> x)
-      : in_(x.in()),
-        out_(x.out()),
-        ptr_(std::move(x.ptr())) {
+  make_source_result(stream_slot out_slot, ptr_type ptr)
+      : out_(out_slot),
+        ptr_(std::move(ptr)) {
     // nop
   }
 
   // -- properties -------------------------------------------------------------
-
-  /// Returns the slot of the origin stream if `ptr()` is a stage or 0 if
-  /// `ptr()` is a source.
-  inline stream_slot in() const {
-    return in_;
-  }
 
   /// Returns the output slot.
   inline stream_slot out() const {
@@ -74,12 +64,12 @@ public:
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline stream_manager_ptr& ptr() noexcept {
+  inline ptr_type& ptr() noexcept {
     return ptr_;
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline const stream_manager_ptr& ptr() const noexcept {
+  inline const ptr_type& ptr() const noexcept {
     return ptr_;
   }
 
@@ -87,18 +77,24 @@ public:
 
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f,
-                                                 output_stream& x) {
-    return f(meta::type_name("output_stream"), x.in_, x.out_);
+                                                 make_source_result& x) {
+    return f(meta::type_name("make_source_result"), x.out_);
   }
 
 private:
   // -- member variables -------------------------------------------------------
 
-  stream_slot in_;
   stream_slot out_;
-  stream_manager_ptr ptr_;
+  ptr_type ptr_;
 };
+
+/// Helper type for defining a `make_source_result` from a `Scatterer` plus
+/// additional handshake types.
+template <class Scatterer, class... Ts>
+using make_source_result_t =
+  make_source_result<typename Scatterer::value_type, Scatterer,
+                     detail::decay_t<Ts>...>;
 
 } // namespace caf
 
-#endif // CAF_OUTPUT_STREAM_HPP
+#endif // CAF_MAKE_SOURCE_RESULT_HPP

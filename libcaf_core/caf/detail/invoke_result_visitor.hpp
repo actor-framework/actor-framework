@@ -61,7 +61,8 @@ public:
   virtual void operator()(message&) = 0;
 
   /// Called if the message handler returned a `stream<...>`,
-  /// `output_stream<...>`, or `stream_result<...>`.
+  /// `output_stream<...>`, or `stream_result<...>`, `make_source_result<...>`,
+  /// `make_sink_result<...>`, or `make_stage_result<...>`.
   virtual void operator()(stream_slot in, stream_slot out,
                           stream_manager_ptr& mgr) = 0;
 
@@ -146,11 +147,32 @@ public:
     (*this)(x.slot(), x.ptr());
   }
 
-  /// Calls `(*this)(x.ptr)`.
-  template <class T, class... Us>
-  void operator()(output_stream<T, Us...>& x) {
+  /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
+  template <class Out, class... Ts>
+  void operator()(output_stream<Out, Ts...>& x) {
     stream_manager_ptr ptr{std::move(x.ptr())};
-    (*this)(x.origin_slot(), x.slot(), ptr);
+    (*this)(x.in(), x.out(), ptr);
+  }
+
+  /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
+  template <class In, class Result>
+  void operator()(make_sink_result<In, Result>& x) {
+    stream_manager_ptr ptr{std::move(x.ptr())};
+    (*this)(x.in(), 0, ptr);
+  }
+
+  /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
+  template <class T, class S, class... Ts>
+  void operator()(make_source_result<T, S, Ts...>& x) {
+    stream_manager_ptr ptr{std::move(x.ptr())};
+    (*this)(0, x.out(), ptr);
+  }
+
+  /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
+  template <class In, class Result, class Out, class S, class... Ts>
+  void operator()(make_stage_result<In, Result, Out, S, Ts...>& x) {
+    stream_manager_ptr ptr{std::move(x.ptr())};
+    (*this)(x.in(), x.out(), ptr);
   }
 
   /// Calls `(*this)(x.ptr)`.

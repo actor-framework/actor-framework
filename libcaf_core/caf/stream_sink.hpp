@@ -12,12 +12,12 @@
  * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
- * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://opensink.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STREAM_SOURCE_HPP
-#define CAF_DETAIL_STREAM_SOURCE_HPP
+#ifndef CAF_DETAIL_STREAM_SINK_HPP
+#define CAF_DETAIL_STREAM_SINK_HPP
 
 #include <tuple>
 
@@ -28,36 +28,23 @@
 
 namespace caf {
 
-template <class Out, class Scatterer, class... Ts>
-class stream_source : public virtual stream_manager {
+template <class In, class Result>
+class stream_sink : public virtual stream_manager {
 public:
   // -- member types -----------------------------------------------------------
 
-  using output_type = Out;
+  using input_type = In;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_source(local_actor* self) : stream_manager(self), out_(self) {
+  stream_sink(local_actor* self) : stream_manager(self) {
     // nop
   }
-
-  Scatterer& out() override {
-    return out_;
-  }
-
-protected:
-  Scatterer out_;
 };
 
-template <class Out, class Scatterer, class... HandshakeData>
-using stream_source_ptr =
-  intrusive_ptr<stream_source<Out, Scatterer, HandshakeData...>>;
-
-template <class Scatterer, class... Ts>
-using stream_source_ptr_t =
-  stream_source_ptr<typename Scatterer::value_type, Scatterer,
-                    detail::decay_t<Ts>...>;
+template <class In, class Result>
+using stream_sink_ptr = intrusive_ptr<stream_sink<In, Result>>;
 
 } // namespace caf
 
-#endif // CAF_DETAIL_STREAM_SOURCE_HPP
+#endif // CAF_DETAIL_STREAM_SINK_HPP

@@ -27,22 +27,35 @@
 namespace caf {
 
 /// Identifies an unbound sequence of messages.
-template <class Output, class... HandshakeData>
+template <class Scatterer, class... Ts>
 class stream_source_driver {
 public:
   // -- member types -----------------------------------------------------------
 
-  using output_type = Output;
+  /// Policy for distributing data to outbound paths.
+  using scatterer_type = Scatterer;
 
+  /// Element type of the output stream.
+  using output_type = typename scatterer_type::value_type;
+
+  /// Type of the output stream.
   using stream_type = stream<output_type>;
 
-  using output_stream_type = output_stream<output_type, HandshakeData...>;
+  /// Type of the output stream including handshake argument types.
+  using output_stream_type = output_stream<output_type, Ts...>;
 
-  using handshake_tuple_type = std::tuple<stream_type, HandshakeData...>;
+  /// Tuple for creating the `open_stream_msg` handshake.
+  using handshake_tuple_type = std::tuple<stream_type, Ts...>;
 
-  using source_type = stream_source<output_type, HandshakeData...>;
+  /// Implemented `stream_source` interface.
+  using source_type = stream_source<output_type, scatterer_type, Ts...>;
 
+  /// Smart pointer to the interface type.
   using source_ptr_type = intrusive_ptr<source_type>;
+
+  /// Wrapper type holding a pointer to `source_type`.
+  using make_source_result_type = make_source_result<output_type,
+                                                     scatterer_type, Ts...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

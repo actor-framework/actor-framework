@@ -26,18 +26,23 @@ namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
 
+template <class> class behavior_type_of;
+template <class> class broadcast_scatterer;
+template <class> class downstream;
+template <class> class expected;
+template <class> class intrusive_ptr;
+template <class> class optional;
 template <class> class param;
 template <class> class stream;
-template <class> class optional;
-template <class> class expected;
-template <class> class downstream;
-template <class> class intrusive_ptr;
-template <class> class behavior_type_of;
+template <class> class stream_result;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
-template <class> class broadcast_scatterer;
 
 template <class> struct timeout_definition;
+
+// -- 2 param templates --------------------------------------------------------
+
+template <class, class> class make_sink_result;
 
 // -- 3 param templates --------------------------------------------------------
 
@@ -55,14 +60,13 @@ template <class...> class typed_actor_pointer;
 template <class...> class typed_response_promise;
 template <class...> class typed_event_based_actor;
 
-// -- variadic templates with 1 fixed argument ---------------------------------
+// -- variadic templates with fixed arguments ----------------------------------
 
+template <class, class, class, class, class...> class make_stage_result;
+template <class, class, class, class, class...> class stream_stage;
+template <class, class, class...> class make_source_result;
+template <class, class, class...> class stream_source;
 template <class, class...> class output_stream;
-template <class, class...> class stream_source;
-
-// -- variadic templates with 2 fixed argument ---------------------------------
-
-template <class, class, class...> class stream_stage;
 
 // -- classes ------------------------------------------------------------------
 
@@ -135,6 +139,7 @@ enum class atom_value : uint64_t;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using stream_slot = uint16_t;
 
 // -- intrusive containers -----------------------------------------------------
 

@@ -31,22 +31,16 @@
 namespace caf {
 namespace detail {
 
-template <class Driver, class Scatterer>
+template <class Driver>
 class stream_stage_impl : public Driver::stage_type {
 public:
-  // -- static asserts ---------------------------------------------------------
-
-  static_assert(std::is_same<typename Driver::output_type,
-                             typename Scatterer::value_type>::value,
-                "Driver and Scatterer have incompatible types.");
-
   // -- member types -----------------------------------------------------------
 
   using super = typename Driver::stage_type;
 
   using driver_type = Driver;
 
-  using scatterer_type = Scatterer;
+  using scatterer_type = typename Driver::scatterer_type;
 
   using input_type = typename driver_type::input_type;
 
@@ -56,21 +50,17 @@ public:
 
   template <class... Ts>
   stream_stage_impl(local_actor* self, Ts&&... xs)
-      : super(self),
-        driver_(std::forward<Ts>(xs)...),
-        out_(self) {
+      : stream_manager(self),
+        super(self),
+        driver_(std::forward<Ts>(xs)...) {
     // nop
   }
 
   // -- implementation of virtual functions ------------------------------------
 
-  scatterer_type& out() override {
-    return out_;
-  }
-
   bool done() const override {
     return !this->continuous() && this->pending_handshakes_ == 0
-           && this->inbound_paths_.empty() && out_.clean();
+           && this->inbound_paths_.empty() && this->out_.clean();
   }
 
   void handle(inbound_path*, downstream_msg::batch& x) override {
@@ -78,7 +68,7 @@ public:
     using vec_type = std::vector<input_type>;
     if (x.xs.match_elements<vec_type>()) {
       auto& xs = x.xs.get_mutable_as<vec_type>(0);
-      downstream<output_type> ds{out_.buf()};
+      downstream<output_type> ds{this->out_.buf()};
       driver_.process(std::move(xs), ds);
       return;
     }
@@ -90,7 +80,7 @@ public:
   }
 
   bool congested() const noexcept override {
-    return out_.capacity() == 0;
+    return this->out_.capacity() == 0;
   }
 
 protected:
@@ -100,15 +90,12 @@ protected:
 
 private:
   driver_type driver_;
-  scatterer_type out_;
 };
 
-template <class Driver,
-          class Scatterer = broadcast_scatterer<typename Driver::output_type>,
-          class... Ts>
+template <class Driver, class... Ts>
 typename Driver::stage_ptr_type make_stream_stage(local_actor* self,
                                                   Ts&&... xs) {
-  using impl = stream_stage_impl<Driver, Scatterer>;
+  using impl = stream_stage_impl<Driver>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 

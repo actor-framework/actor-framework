@@ -20,38 +20,37 @@
 #ifndef CAF_STREAM_STAGE_DRIVER_IMPL_HPP
 #define CAF_STREAM_STAGE_DRIVER_IMPL_HPP
 
-#include "caf/none.hpp"
+#include "caf/stream_slot.hpp"
 #include "caf/stream_stage_driver.hpp"
 #include "caf/stream_stage_trait.hpp"
 
 namespace caf {
 namespace detail {
 
-template <class Input, class Output, class Process, class Finalize,
+template <class Input, class Scatterer, class Process, class Finalize,
           class HandshakeData>
 class stream_stage_driver_impl;
 
-/// Identifies an unbound sequence of messages.
-template <class Input, class Output, class Process, class Finalize, class... Ts>
-class stream_stage_driver_impl<Input, Output, Process, Finalize,
-                               std::tuple<Ts...>> final
-  : public stream_stage_driver<Input, Output, Ts...> {
+/// Default implementation for a `stream_stage_driver` that hardwires `message`
+/// as result type and implements `process` and `finalize` using user-provided
+/// function objects (usually lambdas).
+template <class Input, class Scatterer, class Process, class Finalize,
+          class... Ts>
+class stream_stage_driver_impl<Input, Scatterer, Process, Finalize,
+                               std::tuple<Ts...>>
+  final : public stream_stage_driver<Input, message, Scatterer, Ts...> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_stage_driver<Input, Output, Ts...>;
+  using super = stream_stage_driver<Input, message, Scatterer, Ts...>;
 
-  using input_type = typename super::output_type;
+  using typename super::input_type;
 
-  using output_type = typename super::output_type;
+  using typename super::output_type;
 
-  using stream_type = stream<output_type>;
+  using typename super::stream_type;
 
-  using output_stream_type = typename super::output_stream_type;
-
-  using tuple_type = std::tuple<Ts...>;
-
-  using handshake_tuple_type = typename super::handshake_tuple_type;
+  using typename super::handshake_tuple_type;
 
   using trait = stream_stage_trait_t<Process>;
 
@@ -74,6 +73,15 @@ public:
     trait::process::invoke(process_, state_, std::move(batch), out);
   }
 
+  void add_result(message& x) override {
+    // The default driver assumes to receive only a single result.
+    result_ = std::move(x);
+  }
+
+  message make_final_result() override {
+    return std::move(result_);
+  }
+
   void finalize(const error&) override {
     return fin_(state_);
   }
@@ -82,7 +90,8 @@ private:
   state_type state_;
   Process process_;
   Finalize fin_;
-  tuple_type hs_;
+  std::tuple<Ts...> hs_;
+  message result_;
 };
 
 } // namespace detail

@@ -45,7 +45,7 @@ public:
 
   // -- virtual functions ------------------------------------------------------
 
-  /// Cleans up any state and produces a result message.
+  /// Produces a result message after closing the last inbound path.
   virtual message make_final_result() {
     return make_message();
   }

@@ -239,7 +239,8 @@ public:
     auto slot = next_slot_++;
     CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
                 << " on slot " << slot);
-    struct driver final : public stream_source_driver<int> {
+    using scatterer = broadcast_scatterer<int>;
+    struct driver final : public stream_source_driver<scatterer> {
     public:
       driver(int sentinel) : x_(0), sentinel_(sentinel) {
         // nop
@@ -272,7 +273,8 @@ public:
     auto slot = next_slot_++;
     CAF_MESSAGE(name_ << " starts forwarding to " << ref.name()
                 << " on slot " << slot);
-    struct driver final : public stream_stage_driver<int, int> {
+    using scatterer = broadcast_scatterer<int>;
+    struct driver final : public stream_stage_driver<int, none_t, scatterer> {
     public:
       driver(vector<int>* log) : log_(log) {
         // nop
@@ -286,6 +288,19 @@ public:
         log_->insert(log_->end(), batch.begin(), batch.end());
         out.append(batch.begin(), batch.end());
       }
+
+      void add_result(message&) override {
+        // nop
+      }
+
+      message make_final_result() override {
+        return none;
+      }
+
+      void finalize(const error&) override {
+        // nop
+      }
+
     private:
       vector<int>* log_;
     };

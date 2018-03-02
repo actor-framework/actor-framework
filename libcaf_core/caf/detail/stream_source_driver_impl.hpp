@@ -27,18 +27,19 @@
 namespace caf {
 namespace detail {
 
-template <class Output, class Pull, class Done, class Finalize,
+template <class Scatterer, class Pull, class Done, class Finalize,
           class HandshakeData>
 class stream_source_driver_impl;
 
 /// Identifies an unbound sequence of messages.
-template <class Output, class Pull, class Done, class Finalize, class... Ts>
-class stream_source_driver_impl<Output, Pull, Done, Finalize, std::tuple<Ts...>>
-  final : public stream_source_driver<Output, Ts...> {
+template <class Scatterer, class Pull, class Done, class Finalize, class... Ts>
+class stream_source_driver_impl<Scatterer, Pull, Done, Finalize,
+                                std::tuple<Ts...>>
+  final : public stream_source_driver<Scatterer, Ts...> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_source_driver<Output, Ts...>;
+  using super = stream_source_driver<Scatterer, Ts...>;
 
   using output_type = typename super::output_type;
 

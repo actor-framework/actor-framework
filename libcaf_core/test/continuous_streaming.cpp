@@ -104,7 +104,7 @@ TESTEE(sum_up) {
 }
 
 TESTEE_STATE(stream_multiplexer) {
-  stream_stage_ptr<int, int, std::string> stage;
+  stream_stage_ptr<int, message, int, broadcast_scatterer<int>, string> stage;
 };
 
 TESTEE(stream_multiplexer) {

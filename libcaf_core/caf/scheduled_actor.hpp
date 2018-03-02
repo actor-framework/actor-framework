@@ -39,6 +39,9 @@
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
+#include "caf/make_sink_result.hpp"
+#include "caf/make_source_result.hpp"
+#include "caf/make_stage_result.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/output_stream.hpp"
 #include "caf/response_handle.hpp"
@@ -413,27 +416,28 @@ public:
   // -- stream management ------------------------------------------------------
 
   /// Creates an output path for given source.
-  template <class Out, class... Ts>
-  output_stream<Out, Ts...>
-  add_output_path(stream_source_ptr<Out, Ts...> mgr) {
+  template <class Out, class Scatterer, class... Ts>
+  make_source_result<Out, Scatterer, Ts...>
+  add_output_path(stream_source_ptr<Out, Scatterer, Ts...> mgr) {
     auto slot = assign_next_pending_slot(mgr);
     return {slot, std::move(mgr)};
   }
 
   /// Creates an output path for given stage.
-  template <class In, class Out, class... Ts>
-  output_stream<Out, Ts...>
-  add_output_path(stream_stage_ptr<In, Out, Ts...> mgr) {
+  template <class In, class Result, class Out, class Scatterer, class... Ts>
+  make_source_result<Out, Scatterer, Ts...>
+  add_output_path(stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
     auto slot = assign_next_pending_slot(mgr);
     return {slot, std::move(mgr)};
   }
 
   /// Creates an input path for given stage.
-  template <class In, class Out, class... Ts>
-  output_stream<Out, Ts...>
-  add_input_path(const stream<In>&, stream_stage_ptr<In, Out, Ts...> mgr) {
+  template <class In, class Result, class Out, class Scatterer, class... Ts>
+  make_sink_result<In, Result>
+  add_input_path(const stream<In>&,
+                 stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
     auto slot = assign_next_slot(mgr);
-    return {slot, 0, std::move(mgr)};
+    return {slot, std::move(mgr)};
   }
 
   /// Creates a new stream source and starts streaming to `dest`.
@@ -445,37 +449,33 @@ public:
   /// @param res_handler Function object for receiving the stream result.
   /// @param scatterer_type Configures the policy for downstream communication.
   /// @returns A stream object with a pointer to the generated `stream_manager`.
-  template <class Driver,
-            class Scatterer = broadcast_scatterer<typename Driver::output_type>,
-            class... Ts>
-  typename Driver::output_stream_type make_source(Ts&&... xs) {
-    auto mgr = detail::make_stream_source<Driver, Scatterer>(
-      this, std::forward<Ts>(xs)...);
+  template <class Driver, class... Ts>
+  typename Driver::make_source_result_type make_source(Ts&&... xs) {
+    using detail::make_stream_source;
+    auto mgr = make_stream_source<Driver>(this, std::forward<Ts>(xs)...);
     auto slot = assign_next_pending_slot(mgr);
     return {slot, std::move(mgr)};
   }
 
   template <class... Ts, class Init, class Pull, class Done, class Finalize,
             class Scatterer =
-              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
-            class Trait = stream_source_trait_t<Pull>>
-  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>>
+  make_source_result_t<Scatterer, Ts...>
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
               Finalize finalize, policy::arg<Scatterer> = {}) {
     using tuple_type = std::tuple<detail::decay_t<Ts>...>;
-    using driver =
-      detail::stream_source_driver_impl<typename Trait::output, Pull, Done,
-                                        Finalize, tuple_type>;
-    return make_source<driver, Scatterer>(std::move(init), std::move(pull),
-                                          std::move(done), std::move(finalize),
-                                          std::move(xs));
+    using driver = detail::stream_source_driver_impl<Scatterer, Pull, Done,
+                                                     Finalize, tuple_type>;
+    return make_source<driver>(std::move(init), std::move(pull),
+                               std::move(done), std::move(finalize),
+                               std::move(xs));
   }
 
-  template <class... Ts, class Init, class Pull, class Done,
+  template <class Init, class Pull, class Done,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
-  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_source_result_t<Scatterer>
   make_source(Init init, Pull pull, Done done,
               policy::arg<Scatterer> scatterer_type = {}) {
     auto finalize = [](typename Trait::state, const error&) {};
@@ -483,11 +483,11 @@ public:
                        scatterer_type);
   }
 
-  template <class... Ts, class Init, class Pull, class Done, class Finalize,
+  template <class Init, class Pull, class Done, class Finalize,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
-  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_source_result_t<Scatterer>
   make_source(Init init, Pull pull, Done done, Finalize finalize,
               policy::arg<Scatterer> scatterer_type = {}) {
     return make_source(std::make_tuple(), init, pull, done, finalize,
@@ -498,7 +498,7 @@ public:
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
-  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_source_result_t<Scatterer, Ts...>
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
               policy::arg<Scatterer> scatterer_type = {}) {
     auto finalize = [](typename Trait::state, const error&) {};
@@ -507,7 +507,9 @@ public:
   }
 
   template <class Driver, class Input, class... Ts>
-  stream_result<typename Driver::output_type> make_sink(const stream<Input>&,
+  stream_result<typename Driver::output_type>
+
+  make_sink(const stream<Input>&,
                                                         Ts&&... xs) {
     auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
     auto slot = assign_next_slot(mgr);
@@ -524,24 +526,21 @@ public:
                              std::move(fin));
   }
 
-  template <class Driver,
-            class Scatterer = broadcast_scatterer<typename Driver::output_type>,
-            class Input = int, class... Ts>
-  typename Driver::output_stream_type make_stage(const stream<Input>& in,
-                                                 Ts&&... xs) {
+  template <class Driver, class In, class... Ts>
+  typename Driver::make_stage_result_type make_stage(const stream<In>&,
+                                                     Ts&&... xs) {
     using detail::make_stream_stage;
-    auto mgr = make_stream_stage<Driver, Scatterer>(this,
-                                                    std::forward<Ts>(xs)...);
-    assign_slot(in.slot(), mgr);
-    auto slot = assign_next_pending_slot(mgr);
-    return {in.slot(), slot, std::move(mgr)};
+    auto mgr = make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
+    auto in = assign_next_slot(mgr);
+    auto out = assign_next_pending_slot(mgr);
+    return {in, out, std::move(mgr)};
   }
 
   template <class In, class... Ts, class Init, class Fun, class Cleanup,
             class Scatterer =
               broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
             class Trait = stream_stage_trait_t<Fun>>
-  output_stream<typename Trait::output, detail::decay_t<Ts>...>
+  make_stage_result_t<In, Scatterer, Ts...>
   make_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
              Cleanup cleanup, policy::arg<Scatterer> scatterer_type = {}) {
     CAF_IGNORE_UNUSED(scatterer_type);
@@ -562,22 +561,19 @@ public:
                   "Expected signature `void (State&, downstream<Out>&, In)` "
                   "for consume function");
     using driver =
-      detail::stream_stage_driver_impl<typename Trait::input, output_type, Fun,
+      detail::stream_stage_driver_impl<typename Trait::input, Scatterer, Fun,
                                        Cleanup,
                                        std::tuple<detail::decay_t<Ts>...>>;
-    return make_stage<driver, Scatterer>(in, std::move(init), std::move(fun),
-                                         std::move(cleanup), std::move(xs));
+    return make_stage<driver>(in, std::move(init), std::move(fun),
+                              std::move(cleanup), std::move(xs));
   }
 
   /// Returns a stream manager (implementing a continuous stage) without in- or
   /// outbound path. The returned manager is not connected to any slot and thus
   /// not stored by the actor automatically.
-  template <class Driver,
-            class Scatterer = broadcast_scatterer<typename Driver::output_type>,
-            class Input = int, class... Ts>
+  template <class Driver, class... Ts>
   typename Driver::stage_ptr_type make_continuous_stage(Ts&&... xs) {
-    auto ptr = detail::make_stream_stage<Driver, Scatterer>(
-      this, std::forward<Ts>(xs)...);
+    auto ptr = detail::make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
     ptr->continuous(true);
     return std::move(ptr);
   }
@@ -586,8 +582,8 @@ public:
             class Scatterer =
               broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
             class Trait = stream_stage_trait_t<Fun>>
-  stream_stage_ptr<typename Trait::input, typename Trait::output,
-                   detail::decay_t<Ts>...>
+  stream_stage_ptr<typename Trait::input, message, typename Trait::output,
+                   Scatterer, detail::decay_t<Ts>...>
   make_continuous_stage(std::tuple<Ts...> xs, Init init, Fun fun,
                         Cleanup cleanup,
                         policy::arg<Scatterer> scatterer_type = {}) {
@@ -607,19 +603,19 @@ public:
                   "Expected signature `void (State&, downstream<Out>&, In)` "
                   "for consume function");
     using driver =
-      detail::stream_stage_driver_impl<typename Trait::input, output_type, Fun,
+      detail::stream_stage_driver_impl<typename Trait::input, Scatterer, Fun,
                                        Cleanup,
                                        std::tuple<detail::decay_t<Ts>...>>;
-    return make_continuous_stage<driver, Scatterer>(
-      std::move(init), std::move(fun), std::move(cleanup), std::move(xs));
+    return make_continuous_stage<driver>(std::move(init), std::move(fun),
+                                         std::move(cleanup), std::move(xs));
   }
 
   template <class Init, class Fun, class Cleanup,
             class Scatterer =
               broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
             class Trait = stream_stage_trait_t<Fun>>
-  stream_stage_ptr<typename stream_stage_trait_t<Fun>::input,
-                   typename stream_stage_trait_t<Fun>::output>
+  stream_stage_ptr<typename stream_stage_trait_t<Fun>::input, message,
+                   typename stream_stage_trait_t<Fun>::output, Scatterer>
   make_continuous_stage(Init init, Fun fun, Cleanup cleanup,
                         policy::arg<Scatterer> scatterer_type = {}) {
     return make_continuous_stage(std::make_tuple(), std::move(init),
