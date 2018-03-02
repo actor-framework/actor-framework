@@ -96,8 +96,6 @@
 #include "caf/typed_actor_pointer.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/typed_response_promise.hpp"
-#include "caf/random_topic_scatterer.hpp"
-#include "caf/broadcast_topic_scatterer.hpp"
 #include "caf/typed_event_based_actor.hpp"
 #include "caf/abstract_composable_behavior.hpp"
 

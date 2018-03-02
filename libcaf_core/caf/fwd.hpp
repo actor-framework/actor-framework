@@ -27,7 +27,6 @@ namespace caf {
 // -- 1 param templates --------------------------------------------------------
 
 template <class> class behavior_type_of;
-template <class> class broadcast_scatterer;
 template <class> class downstream;
 template <class> class expected;
 template <class> class intrusive_ptr;
@@ -48,6 +47,7 @@ template <class, class> class make_sink_result;
 
 template <class, class, int> class actor_cast_access;
 
+template <class, class, class> class broadcast_scatterer;
 template <class, class, class> class broadcast_topic_scatterer;
 template <class, class, class> class random_topic_scatterer;
 
