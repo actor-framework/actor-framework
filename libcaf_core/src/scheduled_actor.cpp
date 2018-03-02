@@ -1071,7 +1071,7 @@ scheduled_actor::advance_streams(actor_clock::time_point now) {
   if ((bitmask & 0x02) != 0) {
     auto cycle = stream_ticks_.interval();
     cycle *= credit_round_ticks_;
-    auto bc_us = home_system().config().streaming_desired_batch_commplexity_us;
+    auto bc_us = home_system().config().streaming_desired_batch_complexity_us;
     auto bc = std::chrono::microseconds(bc_us);
     auto& qs = get<2>(mailbox_.queue().queues()).queues();
     for (auto& kvp : qs) {

@@ -92,7 +92,7 @@ public:
     struct calculation_result {
       /// Number of items per credit cycle.
       long max_throughput;
-      /// Number of items per batch to reach the desired batch commplexity.
+      /// Number of items per batch to reach the desired batch complexity.
       long items_per_batch;
     };
 
