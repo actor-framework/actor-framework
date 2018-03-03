@@ -78,6 +78,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/behavior_policy.hpp"
+#include "caf/fused_scatterer.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/response_handle.hpp"
