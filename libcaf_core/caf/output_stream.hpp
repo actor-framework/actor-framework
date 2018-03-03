@@ -60,6 +60,14 @@ public:
     // nop
   }
 
+  output_stream(stream_slot in_slot, stream_slot out_slot,
+                stream_manager_ptr mgr)
+      : in_(in_slot),
+        out_(out_slot),
+        ptr_(std::move(mgr)) {
+    // nop
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Returns the slot of the origin stream if `ptr()` is a stage or 0 if
