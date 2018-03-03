@@ -431,11 +431,26 @@ public:
     return {slot, std::move(mgr)};
   }
 
+  /// Creates an output path for the given stage without any type checking.
+  template <class Out, class... Ts>
+  output_stream<Out, Ts...> add_unsafe_output_path(stream_manager_ptr mgr) {
+    auto slot = assign_next_pending_slot(mgr);
+    return {0, slot, std::move(mgr)};
+  }
+
   /// Creates an input path for given stage.
   template <class In, class Result, class Out, class Scatterer, class... Ts>
   make_sink_result<In, Result>
   add_input_path(const stream<In>&,
                  stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
+    auto slot = assign_next_slot(mgr);
+    return {slot, std::move(mgr)};
+  }
+
+  /// Creates an input path for given stage.
+  template <class Result, class In>
+  stream_result<Result> add_unsafe_input_path(const stream<In>&,
+                                              stream_manager_ptr mgr) {
     auto slot = assign_next_slot(mgr);
     return {slot, std::move(mgr)};
   }
