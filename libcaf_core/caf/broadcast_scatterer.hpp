@@ -66,6 +66,26 @@ public:
     state_map_[slot].filter = std::move(filter);
   }
 
+  /// Returns the broadcast states for all paths.
+  state_map_type& states() {
+    return state_map_;
+  }
+
+  /// Returns the broadcast states for all paths.
+  const state_map_type& states() const {
+    return state_map_;
+  }
+
+  /// Returns the selector for filtering outgoing data.
+  select_type& selector() {
+    return select_;
+  }
+
+  /// Returns the selector for filtering outgoing data.
+  const select_type& selector() const {
+    return select_;
+  }
+
   // -- overridden functions ---------------------------------------------------
 
   typename super::path_ptr add_path(stream_slots slots,
@@ -152,12 +172,11 @@ private:
                    typename state_map_type::value_type& y) {
         // TODO: replace with `if constexpr` when switching to C++17
         auto& st = y.second;
-        if (std::is_same<Select, detail::select_all>::value) {
+        if (std::is_same<select_type, detail::select_all>::value) {
           st.buf.insert(st.buf.end(), chunk.begin(), chunk.end());
         } else {
-          Select select;
           for (auto& piece : chunk)
-            if (select(st.filter, piece))
+            if (select_(st.filter, piece))
               st.buf.emplace_back(piece);
         }
         x.second->emit_batches(this->self_, st.buf, force_underfull);
@@ -167,6 +186,7 @@ private:
   }
 
   state_map_type state_map_;
+  select_type select_;
 };
 
 } // namespace caf
