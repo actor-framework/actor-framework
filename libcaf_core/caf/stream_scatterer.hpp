@@ -19,17 +19,9 @@
 #ifndef CAF_STREAM_SCATTERER_HPP
 #define CAF_STREAM_SCATTERER_HPP
 
-#include <cstddef>
 #include <memory>
 
-#include "caf/actor_control_block.hpp"
-#include "caf/duration.hpp"
 #include "caf/fwd.hpp"
-#include "caf/mailbox_element.hpp"
-#include "caf/optional.hpp"
-#include "caf/stream_slot.hpp"
-
-#include "caf/detail/unordered_flat_map.hpp"
 
 namespace caf {
 
@@ -45,10 +37,26 @@ public:
   using path_ptr = path_type*;
 
   /// Unique pointer to an outbound path.
-  using path_unique_ptr = std::unique_ptr<path_type>;
+  using unique_path_ptr = std::unique_ptr<path_type>;
 
-  /// Maps slots to paths.
-  using map_type = detail::unordered_flat_map<stream_slot, path_unique_ptr>;
+  /// Function object for iterating over all paths.
+  struct path_visitor {
+    virtual ~path_visitor();
+    virtual void operator()(outbound_path& x) = 0;
+  };
+
+  /// Predicate object for paths.
+  struct path_predicate {
+    virtual ~path_predicate();
+    virtual bool operator()(const outbound_path& x) const noexcept = 0;
+  };
+
+  /// Selects a check algorithms.
+  enum path_algorithm {
+    all_of,
+    any_of,
+    none_of
+  };
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -56,48 +64,7 @@ public:
 
   virtual ~stream_scatterer();
 
-  // -- path management --------------------------------------------------------
-
-  /// Adds a path to `target` to the scatterer.
-  /// @returns The added path on success, `nullptr` otherwise.
-  virtual path_ptr add_path(stream_slots slots, strong_actor_ptr target);
-
-  /// Returns the current number of paths.
-  size_t num_paths() const noexcept;
-
-  /// Removes a path from the scatterer and returns it.
-  path_unique_ptr take_path(stream_slot slots) noexcept;
-
-  /// Returns the path associated to `slots` or `nullptr`.
-  path_ptr path(stream_slot slots) noexcept;
-
-  /// Returns `true` if there is no data pending and no unacknowledged batch on
-  /// any path.
-  bool clean() const noexcept;
-
-  /// Removes all paths gracefully.
-  void close();
-
-  /// Removes all paths with an error message.
-  void abort(error reason);
-
-  /// Returns `true` if no downstream exists and `!continuous()`,
-  /// `false` otherwise.
-  inline bool empty() const noexcept {
-    return paths_.empty();
-  }
-
-  /// Returns the minimum amount of credit on all output paths.
-  size_t min_credit() const noexcept;
-
-  /// Returns the maximum amount of credit on all output paths.
-  size_t max_credit() const noexcept;
-
-  /// Returns the total amount of credit on all output paths, i.e., the sum of
-  /// all individual credits.
-  size_t total_credit() const noexcept;
-
-  // -- state access -----------------------------------------------------------
+  // -- properties -------------------------------------------------------------
 
   local_actor* self() const {
     return self_;
@@ -109,7 +76,79 @@ public:
   /// stream and never has outbound paths.
   virtual bool terminal() const noexcept;
 
-  // -- pure virtual memeber functions -----------------------------------------
+  // -- path management --------------------------------------------------------
+
+  /// Applies `f` to each path.
+  template <class F>
+  void for_each_path(F f) {
+    struct impl : path_visitor {
+      F fun;
+      impl(F x) : fun(std::move(x)) {
+        // nop
+      }
+      void operator()(outbound_path& x) override {
+        fun(x);
+      }
+    };
+    impl g{std::move(f)};
+    for_each_path_impl(g);
+  }
+
+  /// Checks whether `predicate` holds true for all paths.
+  template <class Predicate>
+  bool all_paths(Predicate predicate) const noexcept {
+    return check_paths(path_algorithm::all_of, std::move(predicate));
+  }
+
+  /// Checks whether `predicate` holds true for any path.
+  template <class Predicate>
+  bool any_path(Predicate predicate) const noexcept {
+    return check_paths(path_algorithm::any_of, std::move(predicate));
+  }
+
+  /// Checks whether `predicate` holds true for no path.
+  template <class Predicate>
+  bool no_path(Predicate predicate) const noexcept {
+    return check_paths(path_algorithm::none_of, std::move(predicate));
+  }
+
+  /// Returns the current number of paths.
+  virtual size_t num_paths() const noexcept = 0;
+
+  /// Adds a path to `target` to the scatterer.
+  /// @returns The added path on success, `nullptr` otherwise.
+  virtual path_ptr add_path(stream_slots slots, strong_actor_ptr target) = 0;
+
+  /// Removes a path from the scatterer and returns it.
+  virtual unique_path_ptr take_path(stream_slot slots) noexcept = 0;
+
+  /// Returns the path associated to `slots` or `nullptr`.
+  virtual path_ptr path(stream_slot slots) noexcept = 0;
+
+  /// Returns `true` if there is no data pending and no unacknowledged batch on
+  /// any path.
+  bool clean() const noexcept;
+
+  /// Removes all paths gracefully.
+  virtual void close();
+
+  /// Removes all paths with an error message.
+  virtual void abort(error reason);
+
+  /// Returns `num_paths() == 0`.
+  inline bool empty() const noexcept {
+    return num_paths() == 0;
+  }
+
+  /// Returns the minimum amount of credit on all output paths.
+  size_t min_credit() const;
+
+  /// Returns the maximum amount of credit on all output paths.
+  size_t max_credit() const;
+
+  /// Returns the total amount of credit on all output paths, i.e., the sum of
+  /// all individual credits.
+  size_t total_credit() const;
 
   /// Sends batches to sinks.
   virtual void emit_batches() = 0;
@@ -128,17 +167,46 @@ public:
   /// this scatterer.
   virtual message make_handshake_token(stream_slot slot) const = 0;
 
+  /// Silently removes all paths.
+  virtual void clear_paths() = 0;
+
 protected:
   // -- customization points ---------------------------------------------------
+
+  /// Applies `f` to each path.
+  virtual void for_each_path_impl(path_visitor& f) = 0;
+
+  /// Dispatches the predicate to `std::all_of`, `std::any_of`, or
+  /// `std::none_of`.
+  virtual bool check_paths_impl(path_algorithm algo,
+                                path_predicate& pred) const noexcept = 0;
 
   /// Emits a regular (`reason == nullptr`) or irregular (`reason != nullptr`)
   /// shutdown if `silent == false`.
   /// @warning moves `*reason` if `reason == nullptr`
-  virtual void about_to_erase(map_type::iterator i, bool silent, error* reason);
+  virtual void about_to_erase(path_ptr ptr, bool silent, error* reason);
+
+  // -- helper functions -------------------------------------------------------
+
+  /// Delegates to `check_paths_impl`.
+  template <class Predicate>
+  bool check_paths(path_algorithm algorithm,
+                   Predicate predicate) const noexcept {
+    struct impl : path_predicate {
+      Predicate fun;
+      impl(Predicate x) : fun(std::move(x)) {
+        // nop
+      }
+      bool operator()(const outbound_path& x) const noexcept override {
+        return fun(x);
+      }
+    };
+    impl g{std::move(predicate)};
+    return check_paths_impl(algorithm, g);
+  }
 
   // -- member variables -------------------------------------------------------
 
-  map_type paths_;
   local_actor* self_;
 };
 

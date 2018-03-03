@@ -24,21 +24,19 @@
 #include <cstddef>
 #include <iterator>
 
-#include "caf/actor_control_block.hpp"
 #include "caf/logger.hpp"
-#include "caf/sec.hpp"
-#include "caf/stream_scatterer.hpp"
+#include "caf/stream_scatterer_impl.hpp"
 
 namespace caf {
 
 /// Mixin for streams with any number of downstreams. `Subtype` must provide a
 /// member function `buf()` returning a queue with `std::deque`-like interface.
 template <class T>
-class buffered_scatterer : public stream_scatterer {
+class buffered_scatterer : public stream_scatterer_impl {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_scatterer;
+  using super = stream_scatterer_impl;
 
   using value_type = T;
 

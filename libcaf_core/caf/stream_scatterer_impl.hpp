@@ -16,19 +16,36 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INVALID_STREAM_SCATTERER_HPP
-#define CAF_INVALID_STREAM_SCATTERER_HPP
+#ifndef CAF_STREAM_SCATTERER_IMPL_HPP
+#define CAF_STREAM_SCATTERER_IMPL_HPP
+
+#include <cstddef>
+#include <memory>
 
 #include "caf/stream_scatterer.hpp"
+
+#include "caf/detail/unordered_flat_map.hpp"
 
 namespace caf {
 
 /// Type-erased policy for dispatching data to sinks.
-class invalid_stream_scatterer : public stream_scatterer {
+class stream_scatterer_impl : public stream_scatterer {
 public:
-  invalid_stream_scatterer(local_actor* self);
+  // -- member types -----------------------------------------------------------
 
-  ~invalid_stream_scatterer() override;
+  /// Base type.
+  using super = stream_scatterer;
+
+  /// Maps slots to paths.
+  using map_type = detail::unordered_flat_map<stream_slot, unique_path_ptr>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit stream_scatterer_impl(local_actor* self);
+
+  virtual ~stream_scatterer_impl();
+
+  // -- path management --------------------------------------------------------
 
   size_t num_paths() const noexcept override;
 
@@ -38,15 +55,7 @@ public:
 
   path_ptr path(stream_slot slots) noexcept override;
 
-  void emit_batches() override;
-
-  void force_emit_batches() override;
-
-  size_t capacity() const noexcept override;
-
-  size_t buffered() const noexcept override;
-
-  message make_handshake_token(stream_slot slot) const override;
+  void clear_paths() override;
 
 protected:
   void for_each_path_impl(path_visitor& f) override;
@@ -54,9 +63,11 @@ protected:
   bool check_paths_impl(path_algorithm algo,
                         path_predicate& pred) const noexcept override;
 
-  void clear_paths() override;
+  // -- member variables -------------------------------------------------------
+
+  map_type paths_;
 };
 
 } // namespace caf
 
-#endif // CAF_INVALID_STREAM_SCATTERER_HPP
+#endif // CAF_STREAM_SCATTERER_IMPL_HPP

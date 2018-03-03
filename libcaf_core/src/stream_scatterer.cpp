@@ -28,13 +28,13 @@
 
 namespace caf {
 
-namespace {
+stream_scatterer::stream_scatterer::path_visitor::~path_visitor() {
+  // nop
+}
 
-using pointer = stream_scatterer::path_ptr;
-
-using unique_pointer = stream_scatterer::path_unique_ptr;
-
-} // namespace <anonymous>
+stream_scatterer::stream_scatterer::path_predicate::~path_predicate() {
+  // nop
+}
 
 stream_scatterer::stream_scatterer(local_actor* self) : self_(self) {
   // nop
@@ -44,124 +44,65 @@ stream_scatterer::~stream_scatterer() {
   // nop
 }
 
-pointer stream_scatterer::add_path(stream_slots slots,
-                                   strong_actor_ptr target) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target));
-  auto res = paths_.emplace(slots.sender, nullptr);
-  if (res.second) {
-    auto ptr = new outbound_path(slots, std::move(target));
-    res.first->second.reset(ptr);
-    return ptr;
-  }
-  return nullptr;
-}
-
-size_t stream_scatterer::num_paths() const noexcept {
-  return paths_.size();
-}
-
-unique_pointer stream_scatterer::take_path(stream_slot slot) noexcept {
-  unique_pointer result;
-  auto i = paths_.find(slot);
-  if (i != paths_.end()) {
-    result.swap(i->second);
-    paths_.erase(i);
-  }
-  return result;
-}
-
-pointer stream_scatterer::path(stream_slot slot) noexcept {
-  auto i = paths_.find(slot);
-  return i != paths_.end() ? i->second.get() : nullptr;
-}
-
 bool stream_scatterer::clean() const noexcept {
-  auto pred = [](const map_type::value_type& kvp) {
-    auto& p = *kvp.second;
-    return p.next_batch_id == p.next_ack_id;
+  auto pred = [](const outbound_path& x) {
+    return x.next_batch_id == x.next_ack_id;
   };
-  return buffered() == 0 && std::all_of(paths_.begin(), paths_.end(), pred);
+  return buffered() == 0 && all_paths(pred);
 }
 
 void stream_scatterer::close() {
-  CAF_LOG_TRACE(CAF_ARG(paths_));
-  if (paths_.empty())
-    return;
-  for (auto i = paths_.begin(); i != paths_.end(); ++i)
-    about_to_erase(i, false, nullptr);
-  paths_.clear();
+  CAF_LOG_TRACE("");
+  for_each_path([&](outbound_path& x) { about_to_erase(&x, false, nullptr); });
+  clear_paths();
 }
 
 void stream_scatterer::abort(error reason) {
-  CAF_LOG_TRACE(CAF_ARG(reason) << CAF_ARG(paths_));
-  if (paths_.empty())
-    return;
-  auto i = paths_.begin();
-  auto s = paths_.end() - 1;
-  for (; i != s; ++i) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
+  for_each_path([&](outbound_path& x) {
     auto tmp = reason;
-    about_to_erase(i, false, &tmp);
-  }
-  about_to_erase(i, false, &reason);
-  paths_.clear();
+    about_to_erase(&x, false, &tmp);
+  });
+  clear_paths();
 }
 
-namespace {
-
-template <class BinOp>
-struct accumulate_helper {
-  using value_type = stream_scatterer::map_type::value_type;
-  BinOp op;
-  size_t operator()(size_t x, const value_type& y) const noexcept {
-    return op(x, y.second->open_credit);
-  }
-  size_t operator()(const value_type& x, size_t y) const noexcept {
-    return op(x.second->open_credit, y);
-  }
-};
-
-template <class BinOp>
-struct accumulate_helper<BinOp> make_accumulate_helper(BinOp f) {
-  return {f};
-}
-
-template <class F, class T, class Container>
-T fold(F fun, T init, const Container& xs) {
-  return std::accumulate(xs.begin(), xs.end(), std::move(init),
-                         make_accumulate_helper(std::move(fun)));
-}
-
-using bin_op_fptr = const size_t& (*)(const size_t&, const size_t&);
-
-} // namespace <anonymous>
-
-size_t stream_scatterer::min_credit() const noexcept {
+size_t stream_scatterer::min_credit() const {
   if (empty())
     return 0u;
-  return fold(static_cast<bin_op_fptr>(&std::min<size_t>),
-              std::numeric_limits<size_t>::max(), paths_);
+  auto result = std::numeric_limits<size_t>::max();
+  const_cast<stream_scatterer*>(this)->for_each_path([&](outbound_path& x) {
+    result = std::min(result, static_cast<size_t>(x.open_credit));
+  });
+  return result;
 }
 
-size_t stream_scatterer::max_credit() const noexcept {
-  return fold(static_cast<bin_op_fptr>(&std::max<size_t>),
-              size_t{0u}, paths_);
+size_t stream_scatterer::max_credit() const {
+  size_t result = 0;
+  const_cast<stream_scatterer*>(this)->for_each_path([&](outbound_path& x) {
+    result = std::max(result, static_cast<size_t>(x.open_credit));
+  });
+  return result;
 }
 
-size_t stream_scatterer::total_credit() const noexcept {
-  return fold(std::plus<size_t>{}, size_t{0u}, paths_);
+size_t stream_scatterer::total_credit() const {
+  size_t result = 0;
+  const_cast<stream_scatterer*>(this)->for_each_path([&](outbound_path& x) {
+    result += static_cast<size_t>(x.open_credit);
+  });
+  return result;
 }
 
 bool stream_scatterer::terminal() const noexcept {
   return false;
 }
 
-void stream_scatterer::about_to_erase(map_type::iterator i, bool silent,
+void stream_scatterer::about_to_erase(outbound_path* ptr, bool silent,
                                       error* reason) {
   if (!silent) {
     if (reason == nullptr)
-      i->second->emit_regular_shutdown(self_);
+      ptr->emit_regular_shutdown(self_);
     else
-      i->second->emit_irregular_shutdown(self_, std::move(*reason));
+      ptr->emit_irregular_shutdown(self_, std::move(*reason));
   }
 }
 

@@ -108,11 +108,11 @@ public:
   }
 
 protected:
-  void about_to_erase(typename super::map_type::iterator i, bool silent,
+  void about_to_erase(outbound_path* ptr, bool silent,
                       error* reason) override {
-    CAF_LOG_DEBUG("remove cache:" << CAF_ARG2("slot", i->second->slots.sender));
-    state_map_.erase(i->second->slots.sender);
-    super::about_to_erase(i, silent, reason);
+    CAF_LOG_DEBUG("remove cache:" << CAF_ARG2("slot", ptr->slots.sender));
+    state_map_.erase(ptr->slots.sender);
+    super::about_to_erase(ptr, silent, reason);
   }
 
 private:

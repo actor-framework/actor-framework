@@ -19,6 +19,7 @@
 #include "caf/invalid_stream_scatterer.hpp"
 
 #include "caf/logger.hpp"
+#include "caf/outbound_path.hpp"
 #include "caf/stream.hpp"
 
 namespace caf {
@@ -30,6 +31,24 @@ invalid_stream_scatterer::invalid_stream_scatterer(local_actor* self)
 
 invalid_stream_scatterer::~invalid_stream_scatterer() {
   // nop
+}
+
+size_t invalid_stream_scatterer::num_paths() const noexcept {
+  return 0;
+}
+
+auto invalid_stream_scatterer::add_path(stream_slots, strong_actor_ptr)
+-> path_ptr {
+  return nullptr;
+}
+
+auto invalid_stream_scatterer::take_path(stream_slot) noexcept
+-> unique_path_ptr {
+  return unique_path_ptr{nullptr};
+}
+
+auto invalid_stream_scatterer::path(stream_slot) noexcept -> path_ptr {
+  return nullptr;
 }
 
 void invalid_stream_scatterer::emit_batches() {
@@ -50,6 +69,28 @@ size_t invalid_stream_scatterer::buffered() const noexcept {
 
 message invalid_stream_scatterer::make_handshake_token(stream_slot slot) const {
   return make_message(stream<message>{slot});
+}
+
+void invalid_stream_scatterer::for_each_path_impl(path_visitor&) {
+  // nop
+}
+
+bool invalid_stream_scatterer::check_paths_impl(path_algorithm algo,
+                                                path_predicate&)
+                                               const noexcept {
+  // Return the result for empty ranges as specified by the C++ standard.
+  switch (algo) {
+    default: // all_of
+      return true;
+    case path_algorithm::any_of:
+      return false;
+    case path_algorithm::none_of:
+      return true;
+  }
+}
+
+void invalid_stream_scatterer::clear_paths() {
+  // nop
 }
 
 } // namespace caf
