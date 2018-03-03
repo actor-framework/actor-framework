@@ -128,15 +128,6 @@ public:
   /// this scatterer.
   virtual message make_handshake_token(stream_slot slot) const = 0;
 
-  // -- convenience functions --------------------------------------------------
-
-  /// Removes a path from the scatterer.
-  bool remove_path(stream_slots slot, const strong_actor_ptr& x,
-                   error reason, bool silent);
-
-  /// Convenience function for calling `find(x, actor_cast<actor_addr>(x))`.
-  path_ptr find(stream_slot slot, const strong_actor_ptr& x);
-
 protected:
   // -- customization points ---------------------------------------------------
 

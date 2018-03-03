@@ -190,9 +190,6 @@ public:
   /// A reference-counting pointer to a `stream_manager`.
   using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
-  /// A container for associating stream IDs to handlers.
-  using streams_map = std::unordered_map<stream_id, stream_manager_ptr>;
-
   /// The message ID of an outstanding response with its callback.
   using pending_response = std::pair<const message_id, behavior>;
 
