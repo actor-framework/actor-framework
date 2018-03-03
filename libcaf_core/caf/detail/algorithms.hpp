@@ -26,16 +26,16 @@
 namespace caf {
 namespace detail {
 
-/// Calls `f` for all elements in the given containers. Behavior is undefined
-/// for containers of different sizes.
-/// @pre All containers have the same size.
+/// Like `std::for_each`, but for multiple containers.
+/// @pre `x.size() <= y.size()` for each `y` in `xs`
 template <class F, class Container, class... Containers>
 void zip_foreach(F f, Container&& x, Containers&&... xs) {
   for (size_t i = 0; i < x.size(); ++i)
     f(x[i], xs[i]...);
 }
 
-/// Like `std::accumulate`, but for multiple containers of equal size.
+/// Like `std::accumulate`, but for multiple containers.
+/// @pre `x.size() <= y.size()` for each `y` in `xs`
 template <class F, class T, class Container, class... Containers>
 T zip_fold(F f, T init, Container&& x, Containers&&... xs) {
   for (size_t i = 0; i < x.size(); ++i)
@@ -58,6 +58,7 @@ struct container_view {
 };
 
 /// Returns a container view for `x`.
+/// @relates container_view
 template <class F, class Container>
 container_view<F, Container> make_container_view(Container& x) {
   return {x};
