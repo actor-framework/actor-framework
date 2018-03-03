@@ -70,8 +70,29 @@ public:
 
   typename super::path_ptr add_path(stream_slots slots,
                                     strong_actor_ptr target) override {
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target));
+    // Make sure we have state for the slot.
     state_map_.emplace(slots.sender, path_state{});
-    return super::add_path(slots, target);
+    // Append to `paths_`.
+    auto index = this->paths_.size();
+    auto result = super::add_path(slots, target);
+    if (result == nullptr)
+      return nullptr;
+    // Make sure state_map_ and paths_ are always equally sorted, otherwise
+    // we'll run into UB when calling `zip_foreach`.
+    CAF_ASSERT(index == this->paths_.size() - 1);
+    CAF_ASSERT(result->slots == slots);
+    CAF_ASSERT(this->paths_.container().back().first == slots.sender);
+    CAF_ASSERT(this->paths_.container().back().second.get() == result);
+    auto& ys = state_map_.container();
+    if (ys[index].first != slots.sender) {
+      auto i = state_map_.find(slots.sender);
+      CAF_ASSERT(i != ys.end());
+      CAF_ASSERT(std::distance(ys.begin(), i) > static_cast<ptrdiff_t>(index));
+      using std::swap;
+      swap(ys[index], *i);
+    }
+    return result;
   }
 
   void emit_batches() override {
@@ -96,7 +117,7 @@ protected:
 
 private:
   void emit_batches_impl(bool force_underfull) {
-    CAF_ASSERT(this->paths_.size() == state_map_.size());
+    CAF_ASSERT(this->paths_.size() <= state_map_.size());
     if (this->paths_.empty())
       return;
     // Calculate the chunk size, i.e., how many more items we can put to our
