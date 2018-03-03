@@ -73,13 +73,6 @@ public:
   /// Returns the path associated to `slots` or `nullptr`.
   path_ptr path(stream_slot slots) noexcept;
 
-  /// Returns the stored state for `x` if `x` is a known path and associated to
-  /// `sid`, otherwise `nullptr`.
-  path_ptr path_at(size_t index) noexcept;
-
-  /// Removes a path from the scatterer and returns it.
-  path_unique_ptr take_path_at(size_t index) noexcept;
-
   /// Returns `true` if there is no data pending and no unacknowledged batch on
   /// any path.
   bool clean() const noexcept;

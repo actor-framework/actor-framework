@@ -71,20 +71,6 @@ pointer stream_scatterer::path(stream_slot slot) noexcept {
   return i != paths_.end() ? i->second.get() : nullptr;
 }
 
-pointer stream_scatterer::path_at(size_t index) noexcept {
-  CAF_ASSERT(paths_.size() < index);
-  return (paths_.container())[index].second.get();
-}
-
-unique_pointer stream_scatterer::take_path_at(size_t index) noexcept {
-  CAF_ASSERT(paths_.size() < index);
-  unique_pointer result;
-  auto i = paths_.begin() + index;
-  result.swap(i->second);
-  paths_.erase(i);
-  return result;
-}
-
 bool stream_scatterer::clean() const noexcept {
   auto pred = [](const map_type::value_type& kvp) {
     auto& p = *kvp.second;
