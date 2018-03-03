@@ -56,6 +56,10 @@ pointer stream_scatterer::add_path(stream_slots slots,
   return nullptr;
 }
 
+size_t stream_scatterer::num_paths() const noexcept {
+  return paths_.size();
+}
+
 unique_pointer stream_scatterer::take_path(stream_slot slot) noexcept {
   unique_pointer result;
   auto i = paths_.find(slot);

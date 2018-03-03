@@ -49,7 +49,7 @@ public:
       : super(cfg),
         cstr_name(cstr),
         bs(this),
-        next_slot(0) {
+        next_slot(1) {
     // nop
   }
 
@@ -86,39 +86,24 @@ public:
   }
 
   void add_path_to(entity& x, int desired_batch_size) {
-    auto p = bs.add_path({next_slot++, 0}, x.ctrl());
-    p->desired_batch_size = desired_batch_size;
-  }
-
-  void give_credit(int) {
-    // end of recursion
-  }
-
-  template <class... Ts>
-  void give_credit(int num, entity& x, Ts&... xs) {
-    auto pred = [&](const stream_scatterer::map_type::value_type& kvp) {
-      return actor_cast<abstract_actor*>(kvp.second->hdl) == &x;
-    };
-    auto& ps = bs.paths();
-    auto i = std::find_if(ps.begin(), ps.end(), pred);
-    CAF_REQUIRE(i != ps.end());
-    i->second->open_credit += num;
-    give_credit(num, xs...);
+    auto ptr = bs.add_path({next_slot++, 0}, x.ctrl());
+    CAF_REQUIRE(ptr != nullptr);
+    ptr->desired_batch_size = desired_batch_size;
+    paths.emplace_back(ptr);
   }
 
   size_t credit_for(entity& x) {
-    auto pred = [&](const stream_scatterer::map_type::value_type& kvp) {
-      return actor_cast<abstract_actor*>(kvp.second->hdl) == &x;
+    auto pred = [&](outbound_path* ptr) {
+      return ptr->hdl == &x;
     };
-    auto& ps = bs.paths();
-    auto i = std::find_if(ps.begin(), ps.end(), pred);
-    CAF_REQUIRE(i != ps.end());
-    return i->second->open_credit;
+    auto i = std::find_if(paths.begin(), paths.end(), pred);
+    CAF_REQUIRE(i != paths.end());
+    return (*i)->open_credit;
   }
 
   void new_round(int num, bool force_emit) {
-    for (auto& kvp : bs.paths())
-      kvp.second->open_credit += num;
+    for (auto& ptr : paths)
+      ptr->open_credit += num;
     if (force_emit)
       bs.force_emit_batches();
     else
@@ -133,10 +118,16 @@ public:
 
   const char* cstr_name;
 
+  /// Scatterer-under-test.
   broadcast_scatterer<int> bs;
 
+  /// Dummy mailbox.
   std::vector<message> mbox;
 
+  /// All outbound paths managed by `bs`.
+  std::vector<outbound_path*> paths;
+
+  /// Next free ID.
   stream_slot next_slot;
 };
 

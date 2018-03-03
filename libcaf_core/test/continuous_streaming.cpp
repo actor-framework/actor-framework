@@ -163,17 +163,17 @@ CAF_TEST(depth_3_pipeline_with_fork) {
   self->send(snk1, join_atom::value, stg);
   self->send(snk2, join_atom::value, stg);
   sched.run();
-  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_MESSAGE("connect source to the stage (fork)");
   self->send(stg * src, "numbers.txt");
   sched.run();
-  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
   auto predicate = [&] {
     return st.stage->inbound_paths().empty() && st.stage->out().clean();
   };
   sched.run_dispatch_loop(predicate, cycle);
-  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 2u);
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk1).state.x, 1275);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk2).state.x, 1275);
@@ -189,18 +189,18 @@ CAF_TEST(depth_3_pipeline_with_join) {
   CAF_MESSAGE("connect sink to the stage");
   self->send(snk, join_atom::value, stg);
   sched.run();
-  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 1u);
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_MESSAGE("connect sources to the stage (join)");
   self->send(stg * src1, "numbers.txt");
   self->send(stg * src2, "numbers.txt");
   sched.run();
-  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 1u);
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 2u);
   auto predicate = [&] {
     return st.stage->inbound_paths().empty() && st.stage->out().clean();
   };
   sched.run_dispatch_loop(predicate, cycle);
-  CAF_CHECK_EQUAL(st.stage->out().paths().size(), 1u);
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 2550);
   self->send_exit(stg, exit_reason::kill);

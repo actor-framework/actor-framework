@@ -58,14 +58,12 @@ public:
 
   // -- path management --------------------------------------------------------
 
-  /// Returns the container that stores all paths.
-  inline const map_type& paths() const noexcept {
-    return paths_;
-  }
-
   /// Adds a path to `target` to the scatterer.
   /// @returns The added path on success, `nullptr` otherwise.
   virtual path_ptr add_path(stream_slots slots, strong_actor_ptr target);
+
+  /// Returns the current number of paths.
+  size_t num_paths() const noexcept;
 
   /// Removes a path from the scatterer and returns it.
   path_unique_ptr take_path(stream_slot slots) noexcept;
