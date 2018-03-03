@@ -90,6 +90,10 @@ public:
     return buf_.size();
   }
 
+  message make_handshake_token(stream_slot slot) const override {
+    return make_message(stream<T>{slot});
+  }
+
   buffer_type& buf() {
     return buf_;
   }

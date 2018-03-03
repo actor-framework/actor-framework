@@ -19,6 +19,7 @@
 #include "caf/invalid_stream_scatterer.hpp"
 
 #include "caf/logger.hpp"
+#include "caf/stream.hpp"
 
 namespace caf {
 
@@ -45,6 +46,10 @@ size_t invalid_stream_scatterer::capacity() const noexcept {
 
 size_t invalid_stream_scatterer::buffered() const noexcept {
   return 0u;
+}
+
+message invalid_stream_scatterer::make_handshake_token(stream_slot slot) const {
+  return make_message(stream<message>{slot});
 }
 
 } // namespace caf

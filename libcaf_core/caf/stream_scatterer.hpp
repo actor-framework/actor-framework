@@ -133,6 +133,10 @@ public:
   /// Returns the size of the output buffer.
   virtual size_t buffered() const noexcept = 0;
 
+  /// Returns `make_message(stream<T>{slot})`, where `T` is the value type of
+  /// this scatterer.
+  virtual message make_handshake_token(stream_slot slot) const = 0;
+
   // -- convenience functions --------------------------------------------------
 
   /// Removes a path from the scatterer.

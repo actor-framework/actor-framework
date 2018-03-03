@@ -37,6 +37,8 @@ public:
   size_t capacity() const noexcept override;
 
   size_t buffered() const noexcept override;
+
+  message make_handshake_token(stream_slot slot) const override;
 };
 
 } // namespace caf
