@@ -45,6 +45,16 @@ public:
 
   virtual ~stream_scatterer_impl();
 
+  // -- properties -------------------------------------------------------------
+
+  inline const map_type& paths() const {
+    return paths_;
+  }
+
+  inline map_type& paths() {
+    return paths_;
+  }
+
   // -- path management --------------------------------------------------------
 
   size_t num_paths() const noexcept override;
