@@ -58,6 +58,7 @@
 #include "caf/ref_counted.hpp"
 #include "caf/thread_hook.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/stream_slot.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/scoped_actor.hpp"
