@@ -58,14 +58,17 @@ void stream_manager::handle(inbound_path*, downstream_msg::forced_close& x) {
   abort(std::move(x.reason));
 }
 
-void stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
+bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
   auto path = out().add_path(slots.invert(), x.rebind_to);
+  if (path == nullptr)
+    return false;
   path->open_credit = x.initial_demand;
   path->desired_batch_size = x.desired_batch_size;
   --pending_handshakes_;
   push();
   in_flight_promises_.erase(slots.sender);
+  return true;
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {

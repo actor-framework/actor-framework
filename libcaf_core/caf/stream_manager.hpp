@@ -70,7 +70,7 @@ public:
 
   virtual void handle(inbound_path* from, downstream_msg::forced_close& x);
 
-  virtual void handle(stream_slots, upstream_msg::ack_open& x);
+  virtual bool handle(stream_slots, upstream_msg::ack_open& x);
 
   virtual void handle(stream_slots slots, upstream_msg::ack_batch& x);
 
