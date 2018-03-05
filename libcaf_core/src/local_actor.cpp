@@ -134,6 +134,10 @@ void local_actor::erase_inbound_path_later(stream_slot) {
   CAF_LOG_ERROR("local_actor::erase_inbound_path_later called");
 }
 
+void local_actor::erase_inbound_path_later(stream_slot, error) {
+  CAF_LOG_ERROR("local_actor::erase_inbound_path_later called");
+}
+
 void local_actor::erase_inbound_paths_later(const stream_manager*) {
   CAF_LOG_ERROR("local_actor::erase_inbound_paths_later called");
 }

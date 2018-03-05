@@ -737,6 +737,8 @@ public:
 
   void erase_inbound_path_later(stream_slot slot) override;
 
+  void erase_inbound_path_later(stream_slot slot, error reason) override;
+
   void erase_inbound_paths_later(const stream_manager* mgr) override;
 
   void erase_inbound_paths_later(const stream_manager* mgr,

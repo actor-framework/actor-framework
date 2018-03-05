@@ -176,6 +176,14 @@ void stream_manager::deregister_input_path(inbound_path* ptr) noexcept {
   CAF_LOG_DEBUG(inbound_paths_.size() << "paths remaining");
 }
 
+void stream_manager::remove_input_path(stream_slot slot, error reason,
+                                       bool silent) {
+  if (silent)
+    self_->erase_inbound_path_later(slot);
+  else
+    self_->erase_inbound_path_later(slot, std::move(reason));
+}
+
 void stream_manager::add_promise(response_promise x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_ASSERT(out().terminal());

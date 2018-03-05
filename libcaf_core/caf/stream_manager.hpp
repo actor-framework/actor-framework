@@ -138,6 +138,9 @@ public:
   ///       This function is called from the destructor of `inbound_path`.
   virtual void deregister_input_path(inbound_path* x) noexcept;
 
+  /// Removes an input path
+  virtual void remove_input_path(stream_slot slot, error reason, bool silent);
+
   // -- mutators ---------------------------------------------------------------
 
   /// Adds a response promise to a sink for delivering the final result.

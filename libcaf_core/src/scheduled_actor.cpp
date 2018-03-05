@@ -842,6 +842,22 @@ void scheduled_actor::erase_inbound_path_later(stream_slot slot) {
   get_downstream_queue().erase_later(slot);
 }
 
+void scheduled_actor::erase_inbound_path_later(stream_slot slot, error reason) {
+  auto& q = get_downstream_queue();
+  auto e = q.queues().end();
+  auto i = q.queues().find(slot);
+  if (i != e) {
+    auto& path = i->second.policy().handler;
+    if (path != nullptr) {
+      if (reason == none)
+        path->emit_regular_shutdown(this);
+      else
+        path->emit_irregular_shutdown(this, std::move(reason));
+    }
+    q.erase_later(slot);
+  }
+}
+
 void scheduled_actor::erase_inbound_paths_later(const stream_manager* ptr) {
   CAF_LOG_TRACE("");
   for (auto& kvp : get_downstream_queue().queues()) {
