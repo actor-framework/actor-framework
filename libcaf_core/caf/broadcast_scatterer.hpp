@@ -59,11 +59,18 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Sets the filter for `x` to `f` and inserts `x` into the appropriate lane.
-  /// @pre `x` is not registered on *any* lane
+  /// Sets the filter for `slot` to `filter`. Inserts a new element if `slot`
+  /// is a new path.
   void set_filter(stream_slot slot, filter_type filter) {
     CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(filter));
     state_map_[slot].filter = std::move(filter);
+  }
+
+  /// Returns the filter for `slot`. Inserts a new element if `slot` is a new
+  /// path.
+  filter_type& filter(stream_slot slot) {
+    CAF_LOG_TRACE(CAF_ARG(slot));
+    return state_map_[slot].filter;
   }
 
   /// Returns the broadcast states for all paths.
