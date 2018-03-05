@@ -60,13 +60,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit stream_scatterer(local_actor* self);
+  explicit stream_scatterer(scheduled_actor* self);
 
   virtual ~stream_scatterer();
 
   // -- properties -------------------------------------------------------------
 
-  local_actor* self() const {
+  scheduled_actor* self() const {
     return self_;
   }
 
@@ -208,7 +208,7 @@ protected:
 
   // -- member variables -------------------------------------------------------
 
-  local_actor* self_;
+  scheduled_actor* self_;
 };
 
 } // namespace caf

@@ -46,7 +46,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffered_scatterer(local_actor* self) : super(self) {
+  buffered_scatterer(scheduled_actor* self) : super(self) {
     // nop
   }
 

@@ -37,7 +37,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_sink(local_actor* self) : stream_manager(self) {
+  stream_sink(scheduled_actor* self) : stream_manager(self) {
     // nop
   }
 };

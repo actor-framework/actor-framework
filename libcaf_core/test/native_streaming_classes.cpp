@@ -149,12 +149,12 @@ using mboxqueue =
 
 // -- entity and mailbox visitor -----------------------------------------------
 
-class entity : public extend<local_actor, entity>::with<mixin::sender> {
+class entity : public scheduled_actor {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Base type.
-  using super = extend<local_actor, entity>::with<mixin::sender>;
+  using super = scheduled_actor;
 
   /// Defines the messaging interface.
   using signatures = none_t;

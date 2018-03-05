@@ -732,17 +732,26 @@ public:
 
   // -- inbound_path management ------------------------------------------------
 
-  inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
-                                  strong_actor_ptr sender) override;
+  /// Creates a new path for incoming stream traffic from `sender`.
+  virtual inbound_path* make_inbound_path(stream_manager_ptr mgr,
+                                          stream_slots slots,
+                                          strong_actor_ptr sender);
 
-  void erase_inbound_path_later(stream_slot slot) override;
+  /// Silently closes incoming stream traffic on `slot`.
+  virtual void erase_inbound_path_later(stream_slot slot);
 
-  void erase_inbound_path_later(stream_slot slot, error reason) override;
+  /// Closes incoming stream traffic on `slot`. Emits a drop message on the
+  /// path if `reason == none` and a `forced_drop` message otherwise.
+  virtual void erase_inbound_path_later(stream_slot slot, error reason);
 
-  void erase_inbound_paths_later(const stream_manager* mgr) override;
+  /// Silently closes all inbound paths for `mgr`.
+  virtual void erase_inbound_paths_later(const stream_manager* mgr);
 
-  void erase_inbound_paths_later(const stream_manager* mgr,
-                                 error reason) override;
+  /// Closes all incoming stream traffic for a manager. Emits a drop message on
+  /// each path if `reason == none` and a `forced_drop` message on each path
+  /// otherwise.
+  virtual void erase_inbound_paths_later(const stream_manager* mgr,
+                                         error reason);
 
   // -- handling of stream message ---------------------------------------------
 

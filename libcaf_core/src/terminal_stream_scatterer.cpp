@@ -22,7 +22,7 @@
 
 namespace caf {
 
-terminal_stream_scatterer::terminal_stream_scatterer(local_actor* self)
+terminal_stream_scatterer::terminal_stream_scatterer(scheduled_actor* self)
     : super(self) {
   // nop
 }

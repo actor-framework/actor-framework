@@ -116,7 +116,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  fused_scatterer(local_actor* self)
+  fused_scatterer(scheduled_actor* self)
       : super(self),
         nested_(self, detail::pack_repeat<Ts...>(self)) {
     detail::init_ptr_array<0, sizeof...(Ts) + 1>::apply(ptrs_, nested_);

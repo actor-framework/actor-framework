@@ -170,7 +170,7 @@ using scatterer = fused_scatterer<int_scatterer, string_scatterer>;
 
 class fused_stage : public stream_manager {
 public:
-  fused_stage(local_actor* self) : stream_manager(self), out_(self) {
+  fused_stage(scheduled_actor* self) : stream_manager(self), out_(self) {
     continuous(true);
   }
 

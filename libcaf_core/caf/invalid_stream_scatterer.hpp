@@ -26,7 +26,7 @@ namespace caf {
 /// Type-erased policy for dispatching data to sinks.
 class invalid_stream_scatterer : public stream_scatterer {
 public:
-  invalid_stream_scatterer(local_actor* self);
+  invalid_stream_scatterer(scheduled_actor* self);
 
   ~invalid_stream_scatterer() override;
 

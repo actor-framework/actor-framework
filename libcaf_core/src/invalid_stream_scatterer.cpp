@@ -24,7 +24,7 @@
 
 namespace caf {
 
-invalid_stream_scatterer::invalid_stream_scatterer(local_actor* self)
+invalid_stream_scatterer::invalid_stream_scatterer(scheduled_actor* self)
     : stream_scatterer(self) {
   // nop
 }

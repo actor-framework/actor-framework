@@ -53,7 +53,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  broadcast_scatterer(local_actor* selfptr) : super(selfptr) {
+  broadcast_scatterer(scheduled_actor* selfptr) : super(selfptr) {
     // nop
   }
 

@@ -43,7 +43,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
-  stream_source_impl(local_actor* self, Ts&&... xs)
+  stream_source_impl(scheduled_actor* self, Ts&&... xs)
       : stream_manager(self),
         super(self),
         at_end_(false),
@@ -87,7 +87,7 @@ private:
 };
 
 template <class Driver, class... Ts>
-typename Driver::source_ptr_type make_stream_source(local_actor* self,
+typename Driver::source_ptr_type make_stream_source(scheduled_actor* self,
                                                     Ts&&... xs) {
   using impl = stream_source_impl<Driver>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);

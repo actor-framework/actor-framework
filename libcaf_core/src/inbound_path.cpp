@@ -21,7 +21,7 @@
 #include "caf/send.hpp"
 #include "caf/logger.hpp"
 #include "caf/no_stages.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/scheduled_actor.hpp"
 
 namespace caf {
 

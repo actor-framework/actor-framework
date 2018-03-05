@@ -125,25 +125,4 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   return true;
 }
 
-inbound_path* local_actor::make_inbound_path(stream_manager_ptr, stream_slots,
-                                             strong_actor_ptr) {
-  return nullptr;
-}
-
-void local_actor::erase_inbound_path_later(stream_slot) {
-  CAF_LOG_ERROR("local_actor::erase_inbound_path_later called");
-}
-
-void local_actor::erase_inbound_path_later(stream_slot, error) {
-  CAF_LOG_ERROR("local_actor::erase_inbound_path_later called");
-}
-
-void local_actor::erase_inbound_paths_later(const stream_manager*) {
-  CAF_LOG_ERROR("local_actor::erase_inbound_paths_later called");
-}
-
-void local_actor::erase_inbound_paths_later(const stream_manager*, error) {
-  CAF_LOG_ERROR("local_actor::erase_inbound_paths_later called");
-}
-
 } // namespace caf

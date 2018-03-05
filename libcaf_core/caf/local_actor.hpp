@@ -400,27 +400,6 @@ public:
 
   message_id new_request_id(message_priority mp);
 
-  /// Creates a new path for incoming stream traffic from `sender`.
-  virtual inbound_path* make_inbound_path(stream_manager_ptr mgr,
-                                          stream_slots slots,
-                                          strong_actor_ptr sender);
-
-  /// Silently closes incoming stream traffic on `slot`.
-  virtual void erase_inbound_path_later(stream_slot slot);
-
-  /// Closes incoming stream traffic on `slot`. Emits a drop message on the
-  /// path if `reason == none` and a `forced_drop` message otherwise.
-  virtual void erase_inbound_path_later(stream_slot slot, error reason);
-
-  /// Silently closes all inbound paths for `mgr`.
-  virtual void erase_inbound_paths_later(const stream_manager* mgr);
-
-  /// Closes all incoming stream traffic for a manager. Emits a drop message on
-  /// each path if `reason == none` and a `forced_drop` message on each path
-  /// otherwise.
-  virtual void erase_inbound_paths_later(const stream_manager* mgr,
-                                         error reason);
-
 protected:
   // -- member variables -------------------------------------------------------
 

@@ -43,7 +43,7 @@ public:
   using input_type = typename driver_type::input_type;
 
   template <class... Ts>
-  stream_sink_impl(local_actor* self, Ts&&... xs)
+  stream_sink_impl(scheduled_actor* self, Ts&&... xs)
       : stream_manager(self),
         driver_(std::forward<Ts>(xs)...),
         out_(self) {
@@ -84,7 +84,7 @@ private:
 };
 
 template <class Driver, class... Ts>
-stream_manager_ptr make_stream_sink(local_actor* self, Ts&&... xs) {
+stream_manager_ptr make_stream_sink(scheduled_actor* self, Ts&&... xs) {
   using impl = stream_sink_impl<Driver>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }

@@ -41,7 +41,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit stream_scatterer_impl(local_actor* self);
+  explicit stream_scatterer_impl(scheduled_actor* self);
 
   virtual ~stream_scatterer_impl();
 

@@ -40,7 +40,7 @@ public:
 
   using inbound_paths_list = std::vector<inbound_path*>;
 
-  stream_manager(local_actor* selfptr,
+  stream_manager(scheduled_actor* selfptr,
                  stream_priority prio = stream_priority::normal);
 
   ~stream_manager() override;
@@ -171,7 +171,7 @@ public:
   }
 
   /// Returns the parent actor.
-  inline local_actor* self() {
+  inline scheduled_actor* self() {
     return self_;
   }
 
@@ -209,7 +209,7 @@ protected:
   virtual void output_closed(error reason);
 
   /// Points to the parent actor.
-  local_actor* self_;
+  scheduled_actor* self_;
 
   /// Stores non-owning pointers to all input paths.
   inbound_paths_list inbound_paths_;

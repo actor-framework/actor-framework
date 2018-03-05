@@ -22,7 +22,7 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/outbound_path.hpp"
 
@@ -36,7 +36,7 @@ stream_scatterer::stream_scatterer::path_predicate::~path_predicate() {
   // nop
 }
 
-stream_scatterer::stream_scatterer(local_actor* self) : self_(self) {
+stream_scatterer::stream_scatterer(scheduled_actor* self) : self_(self) {
   // nop
 }
 

@@ -24,7 +24,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/broadcast_scatterer.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/scheduled_actor.hpp"
 
 #include "caf/mixin/sender.hpp"
 
@@ -35,11 +35,11 @@ using namespace caf;
 namespace {
 
 // Mocks just enough of an actor to receive and send batches.
-class entity : public extend<local_actor, entity>::with<mixin::sender> {
+class entity : public scheduled_actor {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = extend<local_actor, entity>::with<mixin::sender>;
+  using super = scheduled_actor;
 
   using signatures = none_t;
 

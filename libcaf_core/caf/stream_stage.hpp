@@ -40,7 +40,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_stage(local_actor* self)
+  stream_stage(scheduled_actor* self)
       : stream_manager(self),
         left_super(self),
         right_super(self) {

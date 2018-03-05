@@ -25,7 +25,8 @@
 
 namespace caf {
 
-stream_scatterer_impl::stream_scatterer_impl(local_actor* self) : super(self) {
+stream_scatterer_impl::stream_scatterer_impl(scheduled_actor* self)
+    : super(self) {
   // nop
 }
 

@@ -24,7 +24,7 @@
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/inbound_path.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/outbound_path.hpp"
@@ -34,7 +34,7 @@
 
 namespace caf {
 
-stream_manager::stream_manager(local_actor* selfptr, stream_priority prio)
+stream_manager::stream_manager(scheduled_actor* selfptr, stream_priority prio)
     : self_(selfptr),
       pending_handshakes_(0),
       priority_(prio),

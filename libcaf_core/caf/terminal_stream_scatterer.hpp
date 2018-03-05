@@ -29,7 +29,7 @@ class terminal_stream_scatterer : public invalid_stream_scatterer {
 public:
   using super = invalid_stream_scatterer;
 
-  terminal_stream_scatterer(local_actor* self);
+  terminal_stream_scatterer(scheduled_actor* self);
 
   ~terminal_stream_scatterer() override;
 
