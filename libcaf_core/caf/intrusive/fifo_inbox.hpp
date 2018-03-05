@@ -72,7 +72,7 @@ public:
   // -- queue and stack status functions ---------------------------------------
 
   /// Returns an approximation of the current size.
-  size_t count(size_t = 0) noexcept CAF_DEPRECATED {
+  size_t count(size_t) noexcept CAF_DEPRECATED {
     return size();
   }
 
