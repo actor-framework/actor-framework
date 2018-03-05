@@ -120,7 +120,8 @@ public:
   virtual path_ptr add_path(stream_slots slots, strong_actor_ptr target) = 0;
 
   /// Removes a path from the scatterer and returns it.
-  virtual unique_path_ptr take_path(stream_slot slots) noexcept = 0;
+  virtual bool remove_path(stream_slot slots, error reason,
+                           bool silent) noexcept = 0;
 
   /// Returns the path associated to `slots` or `nullptr`.
   virtual path_ptr path(stream_slot slots) noexcept = 0;

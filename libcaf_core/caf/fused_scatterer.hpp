@@ -168,13 +168,14 @@ public:
     return result;
   }
 
-  unique_path_ptr take_path(stream_slot slot) noexcept override {
+  bool remove_path(stream_slot slot, error reason,
+                   bool silent) noexcept override {
     auto i = paths_.find(slot);
     if (i == paths_.end())
-      return nullptr;
+      return false;
     auto owner = i->second.owner;
     paths_.erase(i);
-    return owner->take_path(slot);
+    return owner->remove_path(slot, std::move(reason), silent);
   }
 
   path_ptr path(stream_slot slot) noexcept override {

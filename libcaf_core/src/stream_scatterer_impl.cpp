@@ -49,16 +49,15 @@ size_t stream_scatterer_impl::num_paths() const noexcept {
   return paths_.size();
 }
 
-auto stream_scatterer_impl::take_path(stream_slot slot) noexcept
--> unique_path_ptr {
-  unique_path_ptr result;
+bool stream_scatterer_impl::remove_path(stream_slot slot, error reason,
+                                        bool silent) noexcept {
   auto i = paths_.find(slot);
   if (i != paths_.end()) {
-    about_to_erase(i->second.get(), true, nullptr);
-    result.swap(i->second);
+    about_to_erase(i->second.get(), silent, &reason);
     paths_.erase(i);
+    return true;
   }
-  return result;
+  return false;
 }
 
 auto stream_scatterer_impl::path(stream_slot slot) noexcept -> path_ptr {

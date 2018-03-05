@@ -83,11 +83,12 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::drop&) {
-  out().take_path(slots.receiver);
+  error tmp;
+  out().remove_path(slots.receiver, std::move(tmp), true);
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
-  if (out().path(slots.receiver) != nullptr)
+  if (out().remove_path(slots.receiver, x.reason, true))
     abort(std::move(x.reason));
 }
 

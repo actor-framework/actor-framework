@@ -42,9 +42,8 @@ auto invalid_stream_scatterer::add_path(stream_slots, strong_actor_ptr)
   return nullptr;
 }
 
-auto invalid_stream_scatterer::take_path(stream_slot) noexcept
--> unique_path_ptr {
-  return unique_path_ptr{nullptr};
+bool invalid_stream_scatterer::remove_path(stream_slot, error, bool) noexcept {
+  return false;
 }
 
 auto invalid_stream_scatterer::path(stream_slot) noexcept -> path_ptr {

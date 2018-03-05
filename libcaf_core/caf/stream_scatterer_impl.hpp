@@ -61,7 +61,8 @@ public:
 
   path_ptr add_path(stream_slots slots, strong_actor_ptr target) override;
 
-  unique_path_ptr take_path(stream_slot slots) noexcept override;
+  bool remove_path(stream_slot slots, error reason,
+                   bool silent) noexcept override;
 
   path_ptr path(stream_slot slots) noexcept override;
 
