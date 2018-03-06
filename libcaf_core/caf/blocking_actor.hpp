@@ -367,7 +367,6 @@ public:
   virtual bool await_data(timeout_type timeout);
 
   /// Returns the next element from the mailbox or `nullptr`.
-  /// The default implementation simply returns `next_message()`.
   virtual mailbox_element_ptr dequeue();
 
   /// Returns the queue for storing incoming messages.
@@ -417,6 +416,16 @@ public:
   bool cleanup(error&& fail_state, execution_unit* host) override;
 
   sec build_pipeline(stream_slot in, stream_slot out, stream_manager_ptr mgr);
+
+  // -- backwards compatibility ------------------------------------------------
+
+  inline mailbox_element_ptr next_message() {
+    return dequeue();
+  }
+
+  inline bool has_next_message() {
+    return !mailbox_.empty();
+  }
 
   /// @endcond
 

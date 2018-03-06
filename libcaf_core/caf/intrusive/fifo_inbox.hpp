@@ -36,6 +36,8 @@
 #include "caf/intrusive/lifo_inbox.hpp"
 #include "caf/intrusive/new_round_result.hpp"
 
+#include "caf/detail/enqueue_result.hpp"
+
 namespace caf {
 namespace intrusive {
 
@@ -72,11 +74,6 @@ public:
   // -- queue and stack status functions ---------------------------------------
 
   /// Returns an approximation of the current size.
-  size_t count(size_t) noexcept CAF_DEPRECATED {
-    return size();
-  }
-
-  /// Returns an approximation of the current size.
   size_t size() noexcept {
     fetch_more();
     return queue_.total_task_size();
@@ -98,10 +95,12 @@ public:
     return inbox_.blocked();
   }
 
+  /// Appends `ptr` to the inbox.
   inbox_result push_back(pointer ptr) noexcept {
     return inbox_.push_front(ptr);
   }
 
+  /// Appends `ptr` to the inbox.
   inbox_result push_back(unique_pointer ptr) noexcept {
     return push_back(ptr.release());
   }
@@ -110,6 +109,24 @@ public:
   inbox_result emplace_back(Ts&&... xs) {
     return push_back(new value_type(std::forward<Ts>(xs)...));
   }
+
+  // -- backwards compatibility ------------------------------------------------
+
+  /// @cond PRIVATE
+
+  detail::enqueue_result enqueue(pointer ptr) noexcept {
+    return static_cast<detail::enqueue_result>(inbox_.push_front(ptr));
+  }
+
+  size_t count() noexcept {
+    return size();
+  }
+
+  size_t count(size_t) noexcept {
+    return size();
+  }
+
+  /// @endcond
 
   // -- queue management -------------------------------------------------------
 
