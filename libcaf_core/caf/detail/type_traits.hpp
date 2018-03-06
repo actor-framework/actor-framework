@@ -636,6 +636,12 @@ struct is_actor_handle<actor> : std::true_type {};
 template <class... Ts>
 struct is_actor_handle<typed_actor<Ts...>> : std::true_type {};
 
+template <class T>
+struct is_stream : std::false_type {};
+
+template <class T>
+struct is_stream<stream<T>> : std::true_type {};
+
 } // namespace detail
 } // namespace caf
 
