@@ -626,6 +626,16 @@ struct is_specialization : std::false_type { };
 template <template <class...> class T, class... Ts>
 struct is_specialization<T, T<Ts...>> : std::true_type { };
 
+/// Checks whether `T` is an `actor` or a `typed_actor<...>`.
+template <class T>
+struct is_actor_handle : std::false_type {};
+
+template <>
+struct is_actor_handle<actor> : std::true_type {};
+
+template <class... Ts>
+struct is_actor_handle<typed_actor<Ts...>> : std::true_type {};
+
 } // namespace detail
 } // namespace caf
 
