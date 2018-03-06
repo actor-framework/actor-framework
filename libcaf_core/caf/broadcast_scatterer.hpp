@@ -19,6 +19,8 @@
 #ifndef CAF_BROADCAST_SCATTERER_HPP
 #define CAF_BROADCAST_SCATTERER_HPP
 
+#include <algorithm>
+
 #include "caf/buffered_scatterer.hpp"
 #include "caf/outbound_path.hpp"
 
@@ -71,6 +73,36 @@ public:
   filter_type& filter(stream_slot slot) {
     CAF_LOG_TRACE(CAF_ARG(slot));
     return state_map_[slot].filter;
+  }
+
+  /// Returns whether all filters satisfy the predicate as if applying
+  /// `std::all_of`.
+  template <class UnaryPredicate>
+  bool all_filters(UnaryPredicate predicate) {
+    return std::all_of(state_map_.begin(), state_map_.end(),
+                       [&](const typename state_map_type::value_type& kvp) {
+                         return predicate(kvp.second);
+                       });
+  }
+
+  /// Returns whether any filter satisfies the predicate as if applying
+  /// `std::any_of`.
+  template <class UnaryPredicate>
+  bool any_filter(UnaryPredicate predicate) {
+    return std::any_of(state_map_.begin(), state_map_.end(),
+                       [&](const typename state_map_type::value_type& kvp) {
+                         return predicate(kvp.second);
+                       });
+  }
+
+  /// Returns whether no filter satisfies the predicate as if applying
+  /// `std::none_of`.
+  template <class UnaryPredicate>
+  bool no_filter(UnaryPredicate predicate) {
+    return std::none_of(state_map_.begin(), state_map_.end(),
+                        [&](const typename state_map_type::value_type& kvp) {
+                          return predicate(kvp.second);
+                        });
   }
 
   /// Returns the broadcast states for all paths.
