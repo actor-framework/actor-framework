@@ -23,7 +23,9 @@
 #include <cstddef>
 
 #include "caf/logger.hpp"
+#include "caf/stream.hpp"
 #include "caf/stream_scatterer.hpp"
+#include "caf/stream_slot.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
