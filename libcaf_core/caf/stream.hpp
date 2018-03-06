@@ -45,17 +45,7 @@ public:
 
   /// Convenience constructor for returning the result of `self->new_stream`
   /// and similar functions.
-  explicit stream(stream_slot id = 0, stream_manager_ptr sptr = nullptr)
-      : slot_(id),
-        ptr_(std::move(sptr)) {
-    // nop
-  }
-
-  /// Convenience constructor for returning the result of `self->new_stream`
-  /// and similar functions.
-  stream(stream other,  stream_manager_ptr sptr)
-      : slot_(std::move(other.slot_)),
-        ptr_(std::move(sptr)) {
+  explicit stream(stream_slot id = 0) : slot_(id) {
     // nop
   }
 
@@ -64,16 +54,6 @@ public:
   /// Returns the actor-specific stream slot ID.
   inline stream_slot slot() const {
     return slot_;
-  }
-
-  /// Returns the handler assigned to this stream on this actor.
-  inline stream_manager_ptr& ptr() noexcept {
-    return ptr_;
-  }
-
-  /// Returns the handler assigned to this stream on this actor.
-  inline const stream_manager_ptr& ptr() const noexcept {
-    return ptr_;
   }
 
   // -- serialization support --------------------------------------------------
@@ -87,7 +67,6 @@ private:
   // -- member variables -------------------------------------------------------
 
   stream_slot slot_;
-  stream_manager_ptr ptr_;
 };
 
 } // namespace caf
