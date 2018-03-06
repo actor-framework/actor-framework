@@ -32,8 +32,9 @@
 #include "caf/make_message.hpp"
 #include "caf/stream_result.hpp"
 
-#include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
@@ -101,6 +102,9 @@ public:
   /// Wraps arbitrary values into a `message` and calls the visitor recursively.
   template <class... Ts>
   void operator()(Ts&... xs) {
+    static_assert(detail::conjunction<!detail::is_stream<Ts>::value...>::value,
+                  "returning a stream<T> from a message handler achieves not "
+                  "what you would expect and is most likely a mistake");
     auto tmp = make_message(std::move(xs)...);
     (*this)(tmp);
   }
@@ -139,12 +143,6 @@ public:
   template <class... Ts>
   void operator()(delegated<Ts...>&) {
     (*this)();
-  }
-
-  /// Calls `(*this)(x.ptr)`.
-  template <class T>
-  void operator()(stream<T>& x) {
-    (*this)(x.slot(), x.ptr());
   }
 
   /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
