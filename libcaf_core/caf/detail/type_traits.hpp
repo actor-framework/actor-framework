@@ -642,6 +642,18 @@ struct is_stream : std::false_type {};
 template <class T>
 struct is_stream<stream<T>> : std::true_type {};
 
+template <class T>
+struct is_result : std::false_type {};
+
+template <class T>
+struct is_result<result<T>> : std::true_type {};
+
+template <class T>
+struct is_expected : std::false_type {};
+
+template <class T>
+struct is_expected<expected<T>> : std::true_type {};
+
 } // namespace detail
 } // namespace caf
 
