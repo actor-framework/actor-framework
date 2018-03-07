@@ -319,7 +319,7 @@ public:
     // was called and we run as a stage.
     auto mgr = forwarder;
     if (mgr == nullptr) {
-      struct driver final : public stream_sink_driver<int> {
+      struct driver final : public stream_sink_driver<int, void> {
       public:
         driver(std::vector<int>* log) : log_(log) {
           // nop

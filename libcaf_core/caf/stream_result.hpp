@@ -20,9 +20,10 @@
 #define CAF_STREAM_RESULT_HPP
 
 #include "caf/fwd.hpp"
+#include "caf/make_sink_result.hpp"
 #include "caf/none.hpp"
-#include "caf/stream_slot.hpp"
 #include "caf/stream_manager.hpp"
+#include "caf/stream_slot.hpp"
 
 #include "caf/meta/type_name.hpp"
 
@@ -37,18 +38,18 @@ public:
   stream_result& operator=(stream_result&&) = default;
   stream_result& operator=(const stream_result&) = default;
 
-  stream_result(none_t = none) : slot_(0) {
+  stream_result(none_t = none) : in_(0) {
     // nop
   }
 
-  stream_result(stream_slot id) : slot_(id) {
+  stream_result(stream_slot id) : in_(id) {
     // nop
   }
 
   /// Convenience constructor for returning the result of `self->new_stream_result`
   /// and similar functions.
   stream_result(stream_slot id, stream_manager_ptr sptr)
-      : slot_(id),
+      : in_(id),
         ptr_(std::move(sptr)) {
     // nop
   }
@@ -56,14 +57,21 @@ public:
   /// Convenience constructor for returning the result of `self->new_stream_result`
   /// and similar functions.
   stream_result(stream_result other,  stream_manager_ptr sptr)
-      : slot_(other.slot_),
+      : in_(other.in_),
         ptr_(std::move(sptr)) {
     // nop
   }
 
+  template <class In>
+  stream_result(make_sink_result<In, T> other)
+      : in_(other.in()),
+        ptr_(other.ptr()) {
+    // nop
+    }
+
   /// Returns the unique identifier for this stream_result.
-  inline stream_slot slot() const noexcept {
-    return slot_;
+  inline stream_slot in() const noexcept {
+    return in_;
   }
 
   /// Returns the handler assigned to this stream on this actor.
@@ -79,11 +87,11 @@ public:
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f,
                                                  stream_result& x) {
-    return f(meta::type_name("stream_result"), x.slot_);
+    return f(meta::type_name("stream_result"), x.in_);
   }
 
 private:
-  stream_slot slot_;
+  stream_slot in_;
   stream_manager_ptr ptr_;
 };
 

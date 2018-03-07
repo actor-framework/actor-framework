@@ -402,19 +402,6 @@ void scheduled_actor::quit(error x) {
 
 // -- stream management --------------------------------------------------------
 
-void scheduled_actor::add_unsafe_outbound_path(
-  stream_manager_ptr mgr, strong_actor_ptr next, stream_slot slot,
-  strong_actor_ptr origin, mailbox_element::forwarding_stack stages,
-  message_id mid) {
-  CAF_ASSERT(next != nullptr);
-  CAF_ASSERT(mgr->out().terminal() == false);
-  CAF_ASSERT(pending_stream_managers_[slot] == mgr);
-  // Build pipeline by forwarding handshake along the path.
-  mgr->send_handshake(std::move(next), slot, std::move(origin),
-                      std::move(stages), mid);
-  mgr->generate_messages();
-}
-
 sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
                                     stream_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG(in) << CAF_ARG(out) << CAF_ARG(mgr));
@@ -444,9 +431,9 @@ sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
   if (out != 0 && mgr->out().path(out) == nullptr) {
     if (next == nullptr)
       return fail(sec::no_downstream_stages_defined);
-    add_unsafe_outbound_path(mgr, std::move(next), out, current_sender(),
-                             take_current_forwarding_stack(),
-                             current_message_id());
+    mgr->add_unsafe_outbound_path(std::move(next), out, current_sender(),
+                                  take_current_forwarding_stack(),
+                                  current_message_id());
   }
   return sec::none;
 }
@@ -940,18 +927,11 @@ stream_slot scheduled_actor::next_slot() {
 }
 
 void scheduled_actor::assign_slot(stream_slot x, stream_manager_ptr mgr) {
-  CAF_LOG_TRACE("");
+  CAF_LOG_TRACE(CAF_ARG(x));
   if (stream_managers_.empty())
     stream_ticks_.start(clock().now());
   CAF_ASSERT(stream_managers_.count(x) == 0);
   stream_managers_.emplace(x, std::move(mgr));
-}
-
-stream_slot scheduled_actor::assign_next_slot(stream_manager_ptr mgr) {
-  CAF_LOG_TRACE("");
-  auto x = next_slot();
-  assign_slot(x, std::move(mgr));
-  return x;
 }
 
 void scheduled_actor::assign_pending_slot(stream_slot x,
@@ -961,7 +941,15 @@ void scheduled_actor::assign_pending_slot(stream_slot x,
   pending_stream_managers_.emplace(x, std::move(mgr));
 }
 
-stream_slot scheduled_actor::assign_next_pending_slot(stream_manager_ptr mgr) {
+stream_slot scheduled_actor::assign_next_slot_to(stream_manager_ptr mgr) {
+  CAF_LOG_TRACE("");
+  auto x = next_slot();
+  assign_slot(x, std::move(mgr));
+  return x;
+}
+
+stream_slot
+scheduled_actor::assign_next_pending_slot_to(stream_manager_ptr mgr) {
   CAF_LOG_TRACE("");
   auto x = next_slot();
   assign_pending_slot(x, std::move(mgr));

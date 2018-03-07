@@ -21,6 +21,7 @@
 
 #include <tuple>
 
+#include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_manager.hpp"
 
@@ -45,6 +46,9 @@ public:
     return out_;
   }
 
+  /// Creates a new output path to the current sender.
+  make_source_result<Out, Scatterer, Ts...> add_outbound_path();
+
 protected:
   Scatterer out_;
 };
@@ -57,6 +61,18 @@ template <class Scatterer, class... Ts>
 using stream_source_ptr_t =
   stream_source_ptr<typename Scatterer::value_type, Scatterer,
                     detail::decay_t<Ts>...>;
+
+} // namespace caf
+
+#include "caf/make_source_result.hpp"
+
+namespace caf {
+
+template <class Out, class Scatterer, class... Ts>
+make_source_result<Out, Scatterer, Ts...>
+stream_source<Out, Scatterer, Ts...>::add_outbound_path() {
+  return {this->assign_next_pending_slot(), this};
+}
 
 } // namespace caf
 

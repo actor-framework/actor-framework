@@ -30,12 +30,23 @@
 namespace caf {
 
 /// Identifies an unbound sequence of messages.
-template <class Input>
+template <class Input, class Result>
 class stream_sink_driver {
 public:
   // -- member types -----------------------------------------------------------
 
   using input_type = Input;
+
+  using result_type = Result;
+
+  /// Implemented `stream_sink` interface.
+  using sink_type = stream_sink<input_type, result_type>;
+
+  /// Smart pointer to the interface type.
+  using sink_ptr_type = intrusive_ptr<sink_type>;
+
+  /// Wrapper type holding a pointer to `sink_type`.
+  using make_sink_result_type = make_sink_result<input_type, result_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

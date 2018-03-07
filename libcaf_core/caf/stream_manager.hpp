@@ -175,7 +175,33 @@ public:
     return self_;
   }
 
+  /// Creates an outbound path to the current sender without any type checking.
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class Out, class... Ts>
+  output_stream<Out, Ts...> add_unsafe_outbound_path();
+
+  /// Creates an outbound path to `next` without any type checking.
+  /// @pre `next != nullptr`
+  /// @pre `self()->pending_stream_managers_[slot] == this`
+  /// @pre `out().terminal() == false`
+  /// @private
+  void add_unsafe_outbound_path(strong_actor_ptr next, stream_slot slot,
+                                strong_actor_ptr origin,
+                                mailbox_element::forwarding_stack stages,
+                                message_id mid);
+
+  /// Creates an inbound path to the current sender without any type checking.
+  template <class Result, class In>
+  stream_result<Result> add_unsafe_inbound_path(const stream<In>& in);
+
 protected:
+  // -- modifiers for self -----------------------------------------------------
+
+  stream_slot assign_next_slot();
+
+  stream_slot assign_next_pending_slot();
+
   // -- implementation hooks ---------------------------------------------------
 
   virtual void finalize(const error& reason);
@@ -235,6 +261,25 @@ protected:
 /// A reference counting pointer to a `stream_manager`.
 /// @relates stream_manager
 using stream_manager_ptr = intrusive_ptr<stream_manager>;
+
+} // namespace caf
+
+#include "caf/output_stream.hpp"
+#include "caf/stream_result.hpp"
+
+namespace caf {
+
+template <class Out, class... Ts>
+output_stream<Out, Ts...>
+stream_manager::add_unsafe_outbound_path() {
+  return {0, this->assign_next_pending_slot(), this};
+}
+
+template <class Result, class In>
+stream_result<Result>
+stream_manager::add_unsafe_inbound_path(const stream<In>&) {
+  return {this->assign_next_slot(), this};
+}
 
 } // namespace caf
 

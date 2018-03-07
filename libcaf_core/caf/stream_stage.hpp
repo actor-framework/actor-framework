@@ -21,6 +21,7 @@
 
 #include <tuple>
 
+#include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_sink.hpp"
 #include "caf/stream_source.hpp"

@@ -25,6 +25,7 @@
 #include "caf/message_id.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
+#include "caf/stream_sink.hpp"
 #include "caf/stream_sink_trait.hpp"
 #include "caf/terminal_stream_scatterer.hpp"
 
@@ -34,9 +35,9 @@ namespace caf {
 namespace detail {
 
 template <class Driver>
-class stream_sink_impl : public stream_manager {
+class stream_sink_impl : public Driver::sink_type {
 public:
-  using super = stream_manager;
+  using super = typename Driver::sink_type;
 
   using driver_type = Driver;
 
@@ -45,6 +46,7 @@ public:
   template <class... Ts>
   stream_sink_impl(scheduled_actor* self, Ts&&... xs)
       : stream_manager(self),
+        super(self),
         driver_(std::forward<Ts>(xs)...),
         out_(self) {
     // nop
@@ -84,7 +86,8 @@ private:
 };
 
 template <class Driver, class... Ts>
-stream_manager_ptr make_stream_sink(scheduled_actor* self, Ts&&... xs) {
+typename Driver::sink_ptr_type make_stream_sink(scheduled_actor* self,
+                                                Ts&&... xs) {
   using impl = stream_sink_impl<Driver>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }

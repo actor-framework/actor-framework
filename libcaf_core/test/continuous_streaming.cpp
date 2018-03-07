@@ -127,11 +127,11 @@ TESTEE(stream_multiplexer) {
   return {
     [=](join_atom) {
       CAF_MESSAGE("received 'join' request");
-      return self->add_outbound_path(self->state.stage);
+      return self->state.stage->add_outbound_path();
     },
     [=](const stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
-      return self->add_inbound_path(in, self->state.stage);
+      return self->state.stage->add_inbound_path(in);
     },
   };
 }

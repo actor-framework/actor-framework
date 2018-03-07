@@ -197,6 +197,25 @@ void stream_manager::deliver_promises(message x) {
   promises_.clear();
 }
 
+void stream_manager::add_unsafe_outbound_path(
+  strong_actor_ptr next, stream_slot slot, strong_actor_ptr origin,
+  mailbox_element::forwarding_stack stages, message_id mid) {
+  CAF_ASSERT(next != nullptr);
+  CAF_ASSERT(out().terminal() == false);
+  // Build pipeline by forwarding handshake along the path.
+  send_handshake(std::move(next), slot, std::move(origin),
+                 std::move(stages), mid);
+  generate_messages();
+}
+
+stream_slot stream_manager::assign_next_slot() {
+  return self_->assign_next_slot_to(this);
+}
+
+stream_slot stream_manager::assign_next_pending_slot() {
+  return self_->assign_next_pending_slot_to(this);
+}
+
 void stream_manager::finalize(const error&) {
   // nop
 }

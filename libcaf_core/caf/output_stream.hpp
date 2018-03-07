@@ -21,7 +21,6 @@
 
 #include "caf/fwd.hpp"
 #include "caf/make_source_result.hpp"
-#include "caf/make_stage_result.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/invalid_stream.hpp"
 
@@ -52,14 +51,6 @@ public:
   template <class S>
   output_stream(make_source_result<T, S, Ts...> x)
       : in_(0),
-        out_(x.out()),
-        ptr_(std::move(x.ptr())) {
-    // nop
-  }
-
-  template <class I, class R, class S>
-  output_stream(make_stage_result<I, R, T, S, Ts...> x)
-      : in_(x.in()),
         out_(x.out()),
         ptr_(std::move(x.ptr())) {
     // nop

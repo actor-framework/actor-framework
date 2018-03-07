@@ -176,7 +176,7 @@ public:
   /// Calls `(*this)(x.ptr)`.
   template <class T>
   void operator()(stream_result<T>& x) {
-    (*this)(x.slot(), 0, x.ptr());
+    (*this)(x.in(), 0, x.ptr());
   }
 
   // -- visit API: return true if T was visited, false if T was skipped --------

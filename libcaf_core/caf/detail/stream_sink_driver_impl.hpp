@@ -28,18 +28,16 @@ namespace caf {
 namespace detail {
 
 /// Identifies an unbound sequence of messages.
-template <class Input, class Process, class Finalize>
-class stream_sink_driver_impl final : public stream_sink_driver<Input> {
+template <class Input, class Result, class Process, class Finalize>
+class stream_sink_driver_impl final : public stream_sink_driver<Input, Result> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_sink_driver<Input>;
+  using super = stream_sink_driver<Input, Result>;
 
-  using input_type = typename super::input_type;
+  using typename super::input_type;
 
   using trait = stream_sink_trait_t<Process, Finalize>;
-
-  using output_type = typename trait::output;
 
   using state_type = typename trait::state;
 

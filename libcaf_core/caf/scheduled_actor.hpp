@@ -413,58 +413,6 @@ public:
 
   // -- stream management ------------------------------------------------------
 
-  /// Creates an output path for given source.
-  template <class Out, class Scatterer, class... Ts>
-  make_source_result<Out, Scatterer, Ts...>
-  add_outbound_path(stream_source_ptr<Out, Scatterer, Ts...> mgr) {
-    auto slot = assign_next_pending_slot(mgr);
-    return {slot, std::move(mgr)};
-  }
-
-  /// Creates an output path for given stage.
-  template <class In, class Result, class Out, class Scatterer, class... Ts>
-  make_source_result<Out, Scatterer, Ts...>
-  add_outbound_path(stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
-    auto slot = assign_next_pending_slot(mgr);
-    return {slot, std::move(mgr)};
-  }
-
-  /// Creates an output path for the given stage without any type checking.
-  /// @private
-  template <class Out, class... Ts>
-  output_stream<Out, Ts...> add_unsafe_outbound_path(stream_manager_ptr mgr) {
-    auto slot = assign_next_pending_slot(mgr);
-    return {0, slot, std::move(mgr)};
-  }
-
-  /// Creates an output path for the given stage without any type checking.
-  /// @pre `next != nullptr`
-  /// @pre `pending_stream_managers_[slot] == mgr`
-  /// @pre `mgr->out().terminal() == false`
-  /// @private
-  void add_unsafe_outbound_path(stream_manager_ptr mgr, strong_actor_ptr next,
-                                stream_slot slot, strong_actor_ptr origin,
-                                mailbox_element::forwarding_stack stages,
-                                message_id mid);
-
-  /// Creates an input path for given stage.
-  template <class In, class Result, class Out, class Scatterer, class... Ts>
-  make_sink_result<In, Result>
-  add_inbound_path(const stream<In>&,
-                   stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
-    auto slot = assign_next_slot(mgr);
-    return {slot, std::move(mgr)};
-  }
-
-  /// Creates an input path for given stage.
-  /// @private
-  template <class Result, class In>
-  stream_result<Result> add_unsafe_inbound_path(const stream<In>&,
-                                                stream_manager_ptr mgr) {
-    auto slot = assign_next_slot(mgr);
-    return {slot, std::move(mgr)};
-  }
-
   /// Creates a new stream source from `Driver`.
   /// @param dest Actor handle to the stream destination.
   /// @param xs User-defined handshake payload.
@@ -478,8 +426,7 @@ public:
   typename Driver::make_source_result_type make_source(Ts&&... xs) {
     using detail::make_stream_source;
     auto mgr = make_stream_source<Driver>(this, std::forward<Ts>(xs)...);
-    auto slot = assign_next_pending_slot(mgr);
-    return {slot, std::move(mgr)};
+    return mgr->add_outbound_path();
   }
 
   template <class... Ts, class Init, class Pull, class Done, class Finalize,
@@ -552,9 +499,9 @@ public:
     auto result = make_source(std::move(xs), std::move(init), std::move(pull),
                               std::move(done), scatterer_arg);
     auto mid = new_request_id(message_priority::normal);
-    add_unsafe_outbound_path(result.ptr(), actor_cast<strong_actor_ptr>(dest),
-                             result.out(), actor_cast<strong_actor_ptr>(this),
-                             no_stages, mid);
+    result.ptr()->add_unsafe_outbound_path(
+      actor_cast<strong_actor_ptr>(dest), result.out(),
+      actor_cast<strong_actor_ptr>(this), no_stages, mid);
     behavior tmp{
       [=](handle_res_result& x) mutable { handle_res(std::move(x)); },
       [=](error& err) mutable { handle_res(std::move(err)); }
@@ -580,13 +527,10 @@ public:
   }
 
   template <class Driver, class Input, class... Ts>
-  stream_result<typename Driver::output_type>
-
-  make_sink(const stream<Input>&,
-                                                        Ts&&... xs) {
+  stream_result<typename Driver::result_type>
+  make_sink(const stream<Input>& src, Ts&&... xs) {
     auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
-    auto slot = assign_next_slot(mgr);
-    return {slot, std::move(mgr)};
+    return mgr->add_inbound_path(src);
   }
 
   template <class Input, class Init, class Fun, class Finalize,
@@ -594,18 +538,19 @@ public:
   stream_result<typename Trait::output>
   make_sink(const stream<Input>& in, Init init, Fun fun, Finalize fin) {
     using driver = detail::stream_sink_driver_impl<typename Trait::input,
+                                                   typename Trait::output,
                                                    Fun, Finalize>;
     return make_sink<driver>(in, std::move(init), std::move(fun),
                              std::move(fin));
   }
 
   template <class Driver, class In, class... Ts>
-  typename Driver::make_stage_result_type make_stage(const stream<In>&,
+  typename Driver::make_stage_result_type make_stage(const stream<In>& src,
                                                      Ts&&... xs) {
     using detail::make_stream_stage;
     auto mgr = make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
-    auto in = assign_next_slot(mgr);
-    auto out = assign_next_pending_slot(mgr);
+    auto in = mgr->add_inbound_path(src).in();
+    auto out = mgr->add_outbound_path().out();
     return {in, out, std::move(mgr)};
   }
 
@@ -896,15 +841,15 @@ public:
   /// Assigns slot `x` to `mgr`, i.e., adds a new entry to `stream_managers_`.
   void assign_slot(stream_slot x, stream_manager_ptr mgr);
 
-  /// Convenience function for calling `assign_slot(next_slot(), mgr)`.
-  stream_slot assign_next_slot(stream_manager_ptr mgr);
-
   /// Assigns slot `x` to the pending manager `mgr`, i.e., adds a new entry to
   /// `pending_stream_managers_`.
   void assign_pending_slot(stream_slot x, stream_manager_ptr mgr);
 
   /// Convenience function for calling `assign_slot(next_slot(), mgr)`.
-  stream_slot assign_next_pending_slot(stream_manager_ptr mgr);
+  stream_slot assign_next_slot_to(stream_manager_ptr mgr);
+
+  /// Convenience function for calling `assign_slot(next_slot(), mgr)`.
+  stream_slot assign_next_pending_slot_to(stream_manager_ptr mgr);
 
   /// Adds a new stream manager to the actor and starts cycle management if
   /// needed.
