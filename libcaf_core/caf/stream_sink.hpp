@@ -23,6 +23,7 @@
 
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_manager.hpp"
+#include "caf/stream_result.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -35,6 +36,8 @@ public:
 
   using input_type = In;
 
+  using result_type = Result;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   stream_sink(scheduled_actor* self) : stream_manager(self) {
@@ -44,23 +47,14 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Creates a new input path to the current sender.
-  make_sink_result<In, Result> add_inbound_path(const stream<In>& in);
+  stream_result<result_type, intrusive_ptr<stream_sink>>
+  add_inbound_path(const stream<input_type>&) {
+    return {this->assign_next_slot(), this};
+  }
 };
 
 template <class In, class Result>
 using stream_sink_ptr = intrusive_ptr<stream_sink<In, Result>>;
-
-} // namespace caf
-
-#include "caf/make_sink_result.hpp"
-
-namespace caf {
-
-template <class In, class Result>
-make_sink_result<In, Result>
-stream_sink<In, Result>::add_inbound_path(const stream<In>&) {
-  return {this->assign_next_slot(), this};
-}
 
 } // namespace caf
 

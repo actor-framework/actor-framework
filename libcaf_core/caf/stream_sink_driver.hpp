@@ -24,8 +24,9 @@
 #include <vector>
 
 #include "caf/fwd.hpp"
-#include "caf/message.hpp"
 #include "caf/make_message.hpp"
+#include "caf/message.hpp"
+#include "caf/stream_sink.hpp"
 
 namespace caf {
 
@@ -44,9 +45,6 @@ public:
 
   /// Smart pointer to the interface type.
   using sink_ptr_type = intrusive_ptr<sink_type>;
-
-  /// Wrapper type holding a pointer to `sink_type`.
-  using make_sink_result_type = make_sink_result<input_type, result_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

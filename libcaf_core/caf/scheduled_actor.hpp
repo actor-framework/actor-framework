@@ -39,7 +39,6 @@
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
-#include "caf/make_sink_result.hpp"
 #include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"
 #include "caf/no_stages.hpp"
@@ -526,19 +525,19 @@ public:
                        scatterer_arg);
   }
 
-  template <class Driver, class Input, class... Ts>
-  stream_result<typename Driver::result_type>
-  make_sink(const stream<Input>& src, Ts&&... xs) {
+  template <class Driver, class... Ts>
+  stream_result<typename Driver::result_type, typename Driver::sink_ptr_type>
+  make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
     auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
     return mgr->add_inbound_path(src);
   }
 
   template <class Input, class Init, class Fun, class Finalize,
             class Trait = stream_sink_trait_t<Fun, Finalize>>
-  stream_result<typename Trait::output>
+  stream_result<typename Trait::result, typename Trait::pointer>
   make_sink(const stream<Input>& in, Init init, Fun fun, Finalize fin) {
     using driver = detail::stream_sink_driver_impl<typename Trait::input,
-                                                   typename Trait::output,
+                                                   typename Trait::result,
                                                    Fun, Finalize>;
     return make_sink<driver>(in, std::move(init), std::move(fun),
                              std::move(fin));

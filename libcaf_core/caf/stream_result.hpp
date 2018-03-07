@@ -20,7 +20,6 @@
 #define CAF_STREAM_RESULT_HPP
 
 #include "caf/fwd.hpp"
-#include "caf/make_sink_result.hpp"
 #include "caf/none.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_slot.hpp"
@@ -30,9 +29,15 @@
 namespace caf {
 
 /// Terminates a stream by reducing it to a single value.
-template <class T>
+template <class T, class Pointer /* = stream_manager_ptr */>
 class stream_result {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using pointer_type = Pointer;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   stream_result(stream_result&&) = default;
   stream_result(const stream_result&) = default;
   stream_result& operator=(stream_result&&) = default;
@@ -42,32 +47,27 @@ public:
     // nop
   }
 
-  stream_result(stream_slot id) : in_(id) {
-    // nop
-  }
-
-  /// Convenience constructor for returning the result of `self->new_stream_result`
-  /// and similar functions.
-  stream_result(stream_slot id, stream_manager_ptr sptr)
+  stream_result(stream_slot id, Pointer mgr = nullptr)
       : in_(id),
-        ptr_(std::move(sptr)) {
+        ptr_(std::move(mgr)) {
     // nop
   }
 
-  /// Convenience constructor for returning the result of `self->new_stream_result`
-  /// and similar functions.
-  stream_result(stream_result other,  stream_manager_ptr sptr)
-      : in_(other.in_),
-        ptr_(std::move(sptr)) {
-    // nop
-  }
-
-  template <class In>
-  stream_result(make_sink_result<In, T> other)
+  template <class CompatiblePointer>
+  stream_result(stream_result<T, CompatiblePointer> other)
       : in_(other.in()),
-        ptr_(other.ptr()) {
+        ptr_(std::move(other.ptr())) {
     // nop
-    }
+  }
+
+  template <class CompatiblePointer>
+  stream_result& operator=(stream_result<T, CompatiblePointer> other) {
+    in_ = other.in();
+    ptr_ = std::move(other.ptr());
+    return *this;
+  }
+
+  // -- properties -------------------------------------------------------------
 
   /// Returns the unique identifier for this stream_result.
   inline stream_slot in() const noexcept {
@@ -75,14 +75,16 @@ public:
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline stream_manager_ptr& ptr() noexcept {
+  inline pointer_type& ptr() noexcept {
     return ptr_;
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline const stream_manager_ptr& ptr() const noexcept {
+  inline const pointer_type& ptr() const noexcept {
     return ptr_;
   }
+
+  // -- serialization support --------------------------------------------------
 
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f,
@@ -91,8 +93,10 @@ public:
   }
 
 private:
+  // -- member variables -------------------------------------------------------
+
   stream_slot in_;
-  stream_manager_ptr ptr_;
+  pointer_type ptr_;
 };
 
 } // namespace caf

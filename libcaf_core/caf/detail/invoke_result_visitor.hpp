@@ -153,13 +153,6 @@ public:
   }
 
   /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
-  template <class In, class Result>
-  void operator()(make_sink_result<In, Result>& x) {
-    stream_manager_ptr ptr{std::move(x.ptr())};
-    (*this)(x.in(), 0, ptr);
-  }
-
-  /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
   template <class T, class S, class... Ts>
   void operator()(make_source_result<T, S, Ts...>& x) {
     stream_manager_ptr ptr{std::move(x.ptr())};
@@ -174,9 +167,10 @@ public:
   }
 
   /// Calls `(*this)(x.ptr)`.
-  template <class T>
-  void operator()(stream_result<T>& x) {
-    (*this)(x.in(), 0, x.ptr());
+  template <class T, class P>
+  void operator()(stream_result<T, P>& x) {
+    stream_manager_ptr ptr{std::move(x.ptr())};
+    (*this)(x.in(), 0, ptr);
   }
 
   // -- visit API: return true if T was visited, false if T was skipped --------

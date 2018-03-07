@@ -19,8 +19,9 @@
 #ifndef CAF_STREAM_SINK_TRAIT_HPP
 #define CAF_STREAM_SINK_TRAIT_HPP
 
-#include "caf/message.hpp"
 #include "caf/make_message.hpp"
+#include "caf/message.hpp"
+#include "caf/stream_sink.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -67,7 +68,7 @@ struct stream_sink_trait_void_finalize {
 // -- trait implementation -----------------------------------------------------
 
 /// Base type for all sink traits.
-template <class State, class In, class Out>
+template <class State, class In, class Result>
 struct stream_sink_trait_base {
   /// Defines the state element for the function objects.
   using state = State;
@@ -76,7 +77,10 @@ struct stream_sink_trait_base {
   using input = In;
 
   /// Defines the result type of the sink.
-  using output = Out;
+  using result = Result;
+
+  /// Defines a pointer to a sink.
+  using pointer = stream_sink_ptr<input, result>;
 };
 
 /// Defines required type aliases for stream sinks.

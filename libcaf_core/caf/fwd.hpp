@@ -33,7 +33,6 @@ template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
 template <class> class stream;
-template <class> class stream_result;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
 
@@ -228,6 +227,10 @@ using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
+
+// -- templates that depend on others ------------------------------------------
+
+template <class, class = stream_manager_ptr> class stream_result;
 
 } // namespace caf
 
