@@ -47,7 +47,10 @@ public:
   }
 
   /// Creates a new output path to the current sender.
-  make_source_result<Out, Scatterer, Ts...> add_outbound_path();
+  output_stream<Out, std::tuple<Ts...>, intrusive_ptr<stream_source>>
+  add_outbound_path() {
+    return {0, this->assign_next_pending_slot(), this};
+  }
 
 protected:
   Scatterer out_;
@@ -61,18 +64,6 @@ template <class Scatterer, class... Ts>
 using stream_source_ptr_t =
   stream_source_ptr<typename Scatterer::value_type, Scatterer,
                     detail::decay_t<Ts>...>;
-
-} // namespace caf
-
-#include "caf/make_source_result.hpp"
-
-namespace caf {
-
-template <class Out, class Scatterer, class... Ts>
-make_source_result<Out, Scatterer, Ts...>
-stream_source<Out, Scatterer, Ts...>::add_outbound_path() {
-  return {this->assign_next_pending_slot(), this};
-}
 
 } // namespace caf
 

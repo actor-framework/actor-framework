@@ -29,71 +29,28 @@
 
 namespace caf {
 
-/// Wraps the result of a `make_source` or `add_output_path` function call.
-template <class T, class Scatterer, class... Ts>
-class make_source_result {
-public:
-  // -- member types -----------------------------------------------------------
-
-  /// Type of a single element.
-  using value_type = T;
+/// Helper trait for deducing an `output_stream` from the arguments to
+/// `scheduled_actor::make_source`.
+template <class Scatterer, class... Ts>
+struct make_source_result {
+  /// Element type.
+  using value_type = typename Scatterer::value_type;
 
   /// Fully typed stream manager as returned by `make_source`.
-  using type = stream_source<T, Scatterer, Ts...>;
+  using source_type = stream_source<value_type, Scatterer, Ts...>;
 
   /// Pointer to a fully typed stream manager.
-  using ptr_type = intrusive_ptr<type>;
+  using source_ptr_type = intrusive_ptr<source_type>;
 
-  // -- constructors, destructors, and assignment operators --------------------
-
-  make_source_result(make_source_result&&) = default;
-
-  make_source_result(const make_source_result&) = default;
-
-  make_source_result(stream_slot out_slot, ptr_type ptr)
-      : out_(out_slot),
-        ptr_(std::move(ptr)) {
-    // nop
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the output slot.
-  inline stream_slot out() const {
-    return out_;
-  }
-
-  /// Returns the handler assigned to this stream on this actor.
-  inline ptr_type& ptr() noexcept {
-    return ptr_;
-  }
-
-  /// Returns the handler assigned to this stream on this actor.
-  inline const ptr_type& ptr() const noexcept {
-    return ptr_;
-  }
-
-  // -- serialization support --------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 make_source_result& x) {
-    return f(meta::type_name("make_source_result"), x.out_);
-  }
-
-private:
-  // -- member variables -------------------------------------------------------
-
-  stream_slot out_;
-  ptr_type ptr_;
+  /// The return type for `scheduled_actor::make_source`.
+  using type = output_stream<value_type, std::tuple<Ts...>, source_ptr_type>;
 };
 
-/// Helper type for defining a `make_source_result` from a `Scatterer` plus
-/// additional handshake types.
+/// Helper type for defining an `output_stream` from a `Scatterer` plus
+/// the types of the handshake arguments.
 template <class Scatterer, class... Ts>
 using make_source_result_t =
-  make_source_result<typename Scatterer::value_type, Scatterer,
-                     detail::decay_t<Ts>...>;
+  typename make_source_result<Scatterer, detail::decay_t<Ts>...>::type;
 
 } // namespace caf
 

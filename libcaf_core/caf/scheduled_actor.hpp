@@ -39,7 +39,6 @@
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
-#include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/output_stream.hpp"
@@ -422,7 +421,7 @@ public:
   /// @param scatterer_type Configures the policy for downstream communication.
   /// @returns A stream object with a pointer to the generated `stream_manager`.
   template <class Driver, class... Ts>
-  typename Driver::make_source_result_type make_source(Ts&&... xs) {
+  typename Driver::output_stream_type make_source(Ts&&... xs) {
     using detail::make_stream_source;
     auto mgr = make_stream_source<Driver>(this, std::forward<Ts>(xs)...);
     return mgr->add_outbound_path();
@@ -483,8 +482,9 @@ public:
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
-                      typename make_source_result_t<Scatterer, Ts...>::ptr_type>
+  detail::enable_if_t<
+    detail::is_actor_handle<ActorHandle>::value,
+    typename make_source_result_t<Scatterer, Ts...>::pointer_type>
   make_source(const ActorHandle& dest, std::tuple<Ts...> xs, Init init,
               Pull pull, Done done, HandleResult handle_res,
               policy::arg<Scatterer> scatterer_arg = {}) {
@@ -516,7 +516,7 @@ public:
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
   detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
-                      typename make_source_result_t<Scatterer>::ptr_type>
+                      typename make_source_result_t<Scatterer>::pointer_type>
   make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
               HandleResult handle_res,
               policy::arg<Scatterer> scatterer_arg = {}) {

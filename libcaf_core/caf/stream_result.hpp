@@ -84,14 +84,6 @@ public:
     return ptr_;
   }
 
-  // -- serialization support --------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 stream_result& x) {
-    return f(meta::type_name("stream_result"), x.in_);
-  }
-
 private:
   // -- member variables -------------------------------------------------------
 

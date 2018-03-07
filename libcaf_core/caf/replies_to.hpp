@@ -51,7 +51,7 @@ struct replies_to {
   /// @private
   template <class O, class... Os>
   using with_stream = typed_mpi<detail::type_list<Is...>,
-                                output_stream<O, Os...>>;
+                                output_stream_t<O, Os...>>;
 };
 
 template <class... Is>

@@ -20,9 +20,8 @@
 #define CAF_OUTPUT_STREAM_HPP
 
 #include "caf/fwd.hpp"
-#include "caf/make_source_result.hpp"
-#include "caf/stream_slot.hpp"
 #include "caf/invalid_stream.hpp"
+#include "caf/stream_slot.hpp"
 
 #include "caf/meta/type_name.hpp"
 
@@ -30,69 +29,76 @@ namespace caf {
 
 /// Identifies an unbound sequence of elements annotated with the additional
 /// handshake arguments emitted to the next stage.
-template <class T, class... Ts>
-class output_stream {
+template <class T, class... Ts, class Pointer /*  = stream_manager_ptr */>
+class output_stream<T, std::tuple<Ts...>, Pointer> {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Type of a single element.
   using value_type = T;
 
+  /// Type of the handshake.
+  using tuple_type = std::tuple<Ts...>;
+
+  /// Type of the stream manager pointer.
+  using pointer_type = Pointer;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   output_stream(output_stream&&) = default;
-
   output_stream(const output_stream&) = default;
+  output_stream& operator=(output_stream&&) = default;
+  output_stream& operator=(const output_stream&) = default;
 
   output_stream(invalid_stream_t) : in_(0), out_(0) {
     // nop
   }
 
-  template <class S>
-  output_stream(make_source_result<T, S, Ts...> x)
-      : in_(0),
-        out_(x.out()),
-        ptr_(std::move(x.ptr())) {
-    // nop
-  }
-
   output_stream(stream_slot in_slot, stream_slot out_slot,
-                stream_manager_ptr mgr)
+                pointer_type mgr)
       : in_(in_slot),
         out_(out_slot),
         ptr_(std::move(mgr)) {
     // nop
   }
 
+  template <class CompatiblePointer>
+  output_stream(output_stream<T, tuple_type, CompatiblePointer> x)
+      : in_(x.in()),
+        out_(x.out()),
+        ptr_(std::move(x.ptr())) {
+    // nop
+  }
+
+  template <class CompatiblePointer>
+  output_stream& operator=(output_stream<T, tuple_type, CompatiblePointer> x) {
+    in_ = x.in();
+    out_ = x.out();
+    ptr_ = std::move(x.ptr());
+    return *this;
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Returns the slot of the origin stream if `ptr()` is a stage or 0 if
   /// `ptr()` is a source.
-  inline stream_slot in() const {
+  inline stream_slot in() const noexcept {
     return in_;
   }
 
   /// Returns the output slot.
-  inline stream_slot out() const {
+  inline stream_slot out() const noexcept {
     return out_;
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline stream_manager_ptr& ptr() noexcept {
+  inline pointer_type& ptr() noexcept {
     return ptr_;
   }
 
   /// Returns the handler assigned to this stream on this actor.
-  inline const stream_manager_ptr& ptr() const noexcept {
+  inline const pointer_type& ptr() const noexcept {
     return ptr_;
-  }
-
-  // -- serialization support --------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 output_stream& x) {
-    return f(meta::type_name("output_stream"), x.in_, x.out_);
   }
 
 private:
@@ -100,8 +106,12 @@ private:
 
   stream_slot in_;
   stream_slot out_;
-  stream_manager_ptr ptr_;
+  pointer_type ptr_;
 };
+
+/// Convenience alias for `output_stream<T, std::tuple<Ts...>>`.
+template <class T, class... Ts>
+using output_stream_t = output_stream<T, std::tuple<Ts...>>;
 
 } // namespace caf
 

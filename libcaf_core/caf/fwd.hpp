@@ -19,8 +19,9 @@
 #ifndef CAF_FWD_HPP
 #define CAF_FWD_HPP
 
-#include <memory>
 #include <cstdint>
+#include <memory>
+#include <tuple>
 
 namespace caf {
 
@@ -63,9 +64,7 @@ template <class...> class typed_event_based_actor;
 
 template <class, class, class, class, class...> class make_stage_result;
 template <class, class, class, class, class...> class stream_stage;
-template <class, class, class...> class make_source_result;
 template <class, class, class...> class stream_source;
-template <class, class...> class output_stream;
 
 // -- classes ------------------------------------------------------------------
 
@@ -228,9 +227,13 @@ using stream_manager_ptr = intrusive_ptr<stream_manager>;
 using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
-// -- templates that depend on others ------------------------------------------
+// -- templates with default parameters ----------------------------------------
 
-template <class, class = stream_manager_ptr> class stream_result;
+template <class, class = std::tuple<>, class = stream_manager_ptr>
+class output_stream;
+
+template <class, class = stream_manager_ptr>
+class stream_result;
 
 } // namespace caf
 

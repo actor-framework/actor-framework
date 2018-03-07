@@ -65,7 +65,7 @@ std::function<bool(const buf&)> is_done(scheduled_actor* self) {
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
   return {
-    [=](string& fname) -> output_stream<int, string> {
+    [=](string& fname) -> output_stream_t<int, string> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       CAF_CHECK_EQUAL(self->mailbox().empty(), true);
       return self->make_source(

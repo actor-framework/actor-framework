@@ -89,8 +89,8 @@ template <class Y, class... Xs>
 struct dmi<expected<Y> (Xs...)> : dmi<Y (Xs...)> {};
 
 // case #5: function returning an output_stream<>
-template <class Y, class... Ys, class... Xs>
-struct dmi<output_stream<Y, Ys...> (Xs...)> : dmi<Y (Xs...)> {
+template <class Y, class... Ys, class P, class... Xs>
+struct dmi<output_stream<Y, std::tuple<Ys...>, P> (Xs...)> : dmi<Y (Xs...)> {
   using type =
     typed_mpi<type_list<typename param_decay<Xs>::type...>,
               output_tuple<stream<Y>, strip_and_convert_t<Ys>...>>;
