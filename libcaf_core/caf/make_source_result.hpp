@@ -33,7 +33,7 @@ namespace caf {
 /// `scheduled_actor::make_source`.
 template <class Scatterer, class... Ts>
 struct make_source_result {
-  /// Element type.
+  /// Type of a single element.
   using value_type = typename Scatterer::value_type;
 
   /// Fully typed stream manager as returned by `make_source`.

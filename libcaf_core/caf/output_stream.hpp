@@ -23,8 +23,6 @@
 #include "caf/invalid_stream.hpp"
 #include "caf/stream_slot.hpp"
 
-#include "caf/meta/type_name.hpp"
-
 namespace caf {
 
 /// Identifies an unbound sequence of elements annotated with the additional

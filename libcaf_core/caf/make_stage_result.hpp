@@ -20,86 +20,38 @@
 #define CAF_MAKE_STAGE_RESULT_HPP
 
 #include "caf/fwd.hpp"
+#include "caf/output_stream.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/stream_stage.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
-#include "caf/meta/type_name.hpp"
-
 namespace caf {
 
-/// Identifies an unbound sequence of elements annotated with the additional
-/// handshake arguments emitted to the next stage.
-template <class In, class Result, class Out, class Scatterer, class... Ts>
+/// Helper trait for deducing an `output_stream` from the arguments to
+/// `scheduled_actor::make_stage`.
+template <class In, class Result, class Scatterer, class... Ts>
 class make_stage_result {
 public:
-  // -- member types -----------------------------------------------------------
-
   /// Type of a single element.
-  using value_type = Out;
+  using value_type = typename Scatterer::value_type;
 
   /// Fully typed stream manager as returned by `make_stage`.
-  using ptr_type = stream_stage_ptr<In, Result, Out, Scatterer, Ts...>;
+  using stage_type = stream_stage<In, Result, value_type, Scatterer, Ts...>;
 
-  // -- constructors, destructors, and assignment operators --------------------
+  /// Pointer to a fully typed stream manager.
+  using stage_ptr_type = intrusive_ptr<stage_type>;
 
-  make_stage_result(make_stage_result&&) = default;
-
-  make_stage_result(const make_stage_result&) = default;
-
-  make_stage_result(stream_slot in_slot, stream_slot out_slot, ptr_type ptr)
-      : in_(in_slot),
-        out_(out_slot),
-        ptr_(std::move(ptr)) {
-    // nop
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the slot of the origin stream if `ptr()` is a stage or 0 if
-  /// `ptr()` is a source.
-  inline stream_slot in() const {
-    return in_;
-  }
-
-  /// Returns the output slot.
-  inline stream_slot out() const {
-    return out_;
-  }
-
-  /// Returns the handler assigned to this stream on this actor.
-  inline ptr_type& ptr() noexcept {
-    return ptr_;
-  }
-
-  /// Returns the handler assigned to this stream on this actor.
-  inline const ptr_type& ptr() const noexcept {
-    return ptr_;
-  }
-
-  // -- serialization support --------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 make_stage_result& x) {
-    return f(meta::type_name("make_stage_result"), x.in_, x.out_);
-  }
-
-private:
-  // -- member variables -------------------------------------------------------
-
-  stream_slot in_;
-  stream_slot out_;
-  ptr_type ptr_;
+  /// The return type for `scheduled_actor::make_sink`.
+  using type = output_stream<value_type, std::tuple<Ts...>, stage_ptr_type>;
 };
 
 /// Helper type for defining a `make_stage_result` from a `Scatterer` plus
 /// additional handshake types. Hardwires `message` as result type.
 template <class In, class Scatterer, class... Ts>
 using make_stage_result_t =
-  make_stage_result<In, message, typename Scatterer::value_type, Scatterer,
-                    detail::decay_t<Ts>...>;
+  typename make_stage_result<In, message, Scatterer,
+                             detail::decay_t<Ts>...>::type;
 
 } // namespace caf
 

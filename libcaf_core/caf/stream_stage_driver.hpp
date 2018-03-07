@@ -50,9 +50,6 @@ public:
   /// Type of the output stream.
   using stream_type = stream<output_type>;
 
-  /// Type of the output stream including handshake argument types.
-  using output_stream_type = output_stream<output_type, Ts...>;
-
   /// Tuple for creating the `open_stream_msg` handshake.
   using handshake_tuple_type = std::tuple<stream_type, Ts...>;
 
@@ -63,10 +60,10 @@ public:
   /// Smart pointer to the interface type.
   using stage_ptr_type = intrusive_ptr<stage_type>;
 
-  /// Wrapper type holding a pointer to `stage_type`.
-  using make_stage_result_type =
-    make_stage_result<input_type, result_type, output_type, scatterer_type,
-                      Ts...>;
+  /// Type of the output stream including handshake argument types.
+  using output_stream_type = output_stream<output_type, std::tuple<Ts...>,
+                                           stage_ptr_type>;
+
 
   // -- constructors, destructors, and assignment operators --------------------
 

@@ -151,13 +151,6 @@ public:
     (*this)(x.in(), x.out(), ptr);
   }
 
-  /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
-  template <class In, class Result, class Out, class S, class... Ts>
-  void operator()(make_stage_result<In, Result, Out, S, Ts...>& x) {
-    stream_manager_ptr ptr{std::move(x.ptr())};
-    (*this)(x.in(), x.out(), ptr);
-  }
-
   /// Calls `(*this)(x.in(), 0, x.ptr())`.
   template <class T, class P>
   void operator()(stream_result<T, P>& x) {

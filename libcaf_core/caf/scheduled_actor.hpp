@@ -544,8 +544,8 @@ public:
   }
 
   template <class Driver, class In, class... Ts>
-  typename Driver::make_stage_result_type make_stage(const stream<In>& src,
-                                                     Ts&&... xs) {
+  typename Driver::output_stream_type make_stage(const stream<In>& src,
+                                                 Ts&&... xs) {
     using detail::make_stream_stage;
     auto mgr = make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
     auto in = mgr->add_inbound_path(src).in();
