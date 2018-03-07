@@ -55,6 +55,8 @@ struct stream_stage_trait_invoke_all {
 template <class F>
 struct stream_stage_trait;
 
+/// Deduces the input type, output type and the state type for a stream stage
+/// from its `process` implementation.
 template <class State, class In, class Out>
 struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
   using state = State;
@@ -73,9 +75,11 @@ struct stream_stage_trait<void (State&, downstream<Out>&, std::vector<In>&&)> {
 
 // -- convenience alias --------------------------------------------------------
 
-template <class F>
+/// Convenience alias for extracting the function signature from `Process` and
+/// passing it to `stream_stage_trait`.
+template <class Process>
 using stream_stage_trait_t =
-  stream_stage_trait<typename detail::get_callable_trait<F>::fun_sig>;
+  stream_stage_trait<typename detail::get_callable_trait<Process>::fun_sig>;
 
 } // namespace caf
 

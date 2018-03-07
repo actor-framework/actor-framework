@@ -23,7 +23,9 @@
 
 namespace caf {
 
-template <class F>
+/// Deduces the output type and the state type for a stream source from its
+/// `pull` implementation.
+template <class Pull>
 struct stream_source_trait;
 
 template <class State, class T>
@@ -32,9 +34,11 @@ struct stream_source_trait<void (State&, downstream<T>&, size_t)> {
   using state = State;
 };
 
-template <class F>
+/// Convenience alias for extracting the function signature from `Pull` and
+/// passing it to `stream_source_trait`.
+template <class Pull>
 using stream_source_trait_t =
-  stream_source_trait<typename detail::get_callable_trait<F>::fun_sig>;
+  stream_source_trait<typename detail::get_callable_trait<Pull>::fun_sig>;
 
 } // namespace caf
 
