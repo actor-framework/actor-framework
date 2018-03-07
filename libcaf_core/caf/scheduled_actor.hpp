@@ -416,7 +416,7 @@ public:
   /// Creates an output path for given source.
   template <class Out, class Scatterer, class... Ts>
   make_source_result<Out, Scatterer, Ts...>
-  add_output_path(stream_source_ptr<Out, Scatterer, Ts...> mgr) {
+  add_outbound_path(stream_source_ptr<Out, Scatterer, Ts...> mgr) {
     auto slot = assign_next_pending_slot(mgr);
     return {slot, std::move(mgr)};
   }
@@ -424,7 +424,7 @@ public:
   /// Creates an output path for given stage.
   template <class In, class Result, class Out, class Scatterer, class... Ts>
   make_source_result<Out, Scatterer, Ts...>
-  add_output_path(stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
+  add_outbound_path(stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
     auto slot = assign_next_pending_slot(mgr);
     return {slot, std::move(mgr)};
   }
@@ -432,7 +432,7 @@ public:
   /// Creates an output path for the given stage without any type checking.
   /// @private
   template <class Out, class... Ts>
-  output_stream<Out, Ts...> add_unsafe_output_path(stream_manager_ptr mgr) {
+  output_stream<Out, Ts...> add_unsafe_outbound_path(stream_manager_ptr mgr) {
     auto slot = assign_next_pending_slot(mgr);
     return {0, slot, std::move(mgr)};
   }
@@ -442,16 +442,16 @@ public:
   /// @pre `pending_stream_managers_[slot] == mgr`
   /// @pre `mgr->out().terminal() == false`
   /// @private
-  void add_unsafe_output_path(stream_manager_ptr mgr, strong_actor_ptr next,
-                              stream_slot slot, strong_actor_ptr origin,
-                              mailbox_element::forwarding_stack stages,
-                              message_id mid);
+  void add_unsafe_outbound_path(stream_manager_ptr mgr, strong_actor_ptr next,
+                                stream_slot slot, strong_actor_ptr origin,
+                                mailbox_element::forwarding_stack stages,
+                                message_id mid);
 
   /// Creates an input path for given stage.
   template <class In, class Result, class Out, class Scatterer, class... Ts>
   make_sink_result<In, Result>
-  add_input_path(const stream<In>&,
-                 stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
+  add_inbound_path(const stream<In>&,
+                   stream_stage_ptr<In, Result, Out, Scatterer, Ts...> mgr) {
     auto slot = assign_next_slot(mgr);
     return {slot, std::move(mgr)};
   }
@@ -459,8 +459,8 @@ public:
   /// Creates an input path for given stage.
   /// @private
   template <class Result, class In>
-  stream_result<Result> add_unsafe_input_path(const stream<In>&,
-                                              stream_manager_ptr mgr) {
+  stream_result<Result> add_unsafe_inbound_path(const stream<In>&,
+                                                stream_manager_ptr mgr) {
     auto slot = assign_next_slot(mgr);
     return {slot, std::move(mgr)};
   }
@@ -552,9 +552,9 @@ public:
     auto result = make_source(std::move(xs), std::move(init), std::move(pull),
                               std::move(done), scatterer_arg);
     auto mid = new_request_id(message_priority::normal);
-    add_unsafe_output_path(result.ptr(), actor_cast<strong_actor_ptr>(dest),
-                           result.out(), actor_cast<strong_actor_ptr>(this),
-                           no_stages, mid);
+    add_unsafe_outbound_path(result.ptr(), actor_cast<strong_actor_ptr>(dest),
+                             result.out(), actor_cast<strong_actor_ptr>(this),
+                             no_stages, mid);
     behavior tmp{
       [=](handle_res_result& x) mutable { handle_res(std::move(x)); },
       [=](error& err) mutable { handle_res(std::move(err)); }

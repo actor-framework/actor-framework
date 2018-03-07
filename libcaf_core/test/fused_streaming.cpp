@@ -225,24 +225,24 @@ TESTEE(stream_multiplexer) {
     [=](join_atom, ints_atom) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for integers");
-      auto result = self->add_unsafe_output_path<int>(stg);
+      auto result = self->add_unsafe_outbound_path<int>(stg);
       stg->out().assign<int_scatterer>(result.out());
       return result;
     },
     [=](join_atom, strings_atom) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for integers");
-      auto result = self->add_unsafe_output_path<string>(stg);
+      auto result = self->add_unsafe_outbound_path<string>(stg);
       stg->out().assign<string_scatterer>(result.out());
       return result;
     },
     [=](const stream<int>& in) {
       CAF_MESSAGE("received handshake for integers");
-      return self->add_unsafe_input_path<void>(in, self->state.stage);
+      return self->add_unsafe_inbound_path<void>(in, self->state.stage);
     },
     [=](const stream<string>& in) {
       CAF_MESSAGE("received handshake for strings");
-      return self->add_unsafe_input_path<void>(in, self->state.stage);
+      return self->add_unsafe_inbound_path<void>(in, self->state.stage);
     }
   };
 }

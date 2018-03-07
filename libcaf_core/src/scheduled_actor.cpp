@@ -402,7 +402,7 @@ void scheduled_actor::quit(error x) {
 
 // -- stream management --------------------------------------------------------
 
-void scheduled_actor::add_unsafe_output_path(
+void scheduled_actor::add_unsafe_outbound_path(
   stream_manager_ptr mgr, strong_actor_ptr next, stream_slot slot,
   strong_actor_ptr origin, mailbox_element::forwarding_stack stages,
   message_id mid) {
@@ -444,9 +444,9 @@ sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
   if (out != 0 && mgr->out().path(out) == nullptr) {
     if (next == nullptr)
       return fail(sec::no_downstream_stages_defined);
-    add_unsafe_output_path(mgr, std::move(next), out, current_sender(),
-                           take_current_forwarding_stack(),
-                           current_message_id());
+    add_unsafe_outbound_path(mgr, std::move(next), out, current_sender(),
+                             take_current_forwarding_stack(),
+                             current_message_id());
   }
   return sec::none;
 }

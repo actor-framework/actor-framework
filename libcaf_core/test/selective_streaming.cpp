@@ -132,12 +132,12 @@ TESTEE(log_dispatcher) {
     [=](join_atom, level lvl) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request");
-      auto result = self->add_output_path(stg);
+      auto result = self->add_outbound_path(stg);
       stg->out().set_filter(result.out(), lvl);
       return result;
     },
     [=](const stream<value_type>& in) {
-      return self->add_input_path(in, self->state.stage);
+      return self->add_inbound_path(in, self->state.stage);
     }
   };
 }
