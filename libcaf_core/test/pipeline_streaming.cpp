@@ -36,8 +36,34 @@ namespace {
 
 TESTEE_SETUP();
 
+using buf = std::deque<int>;
+
+std::function<void(buf&)> init(size_t buf_size) {
+  return [=](buf& xs) {
+    xs.resize(buf_size);
+    std::iota(xs.begin(), xs.end(), 1);
+  };
+}
+
+void push_from_buf(buf& xs, downstream<int>& out, size_t num) {
+  CAF_MESSAGE("push " << num << " messages downstream");
+  auto n = std::min(num, xs.size());
+  for (size_t i = 0; i < n; ++i)
+    out.push(xs[i]);
+  xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
+}
+
+std::function<bool(const buf&)> is_done(scheduled_actor* self) {
+  return [=](const buf& xs) {
+    if (xs.empty()) {
+      CAF_MESSAGE(self->name() << " is done sending");
+      return true;
+    }
+    return false;
+  };
+}
+
 VARARGS_TESTEE(file_reader, size_t buf_size) {
-  using buf = std::deque<int>;
   return {
     [=](string& fname) -> output_stream<int, string> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
@@ -45,27 +71,32 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
       return self->make_source(
         // forward file name in handshake to next stage
         std::forward_as_tuple(std::move(fname)),
-        // initialize state
-        [=](buf& xs) {
-          xs.resize(buf_size);
-          std::iota(xs.begin(), xs.end(), 1);
-        },
-        // get next element
-        [](buf& xs, downstream<int>& out, size_t num) {
-          CAF_MESSAGE("push " << num << " messages downstream");
-          auto n = std::min(num, xs.size());
-          for (size_t i = 0; i < n; ++i)
-            out.push(xs[i]);
-          xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
-        },
-        // check whether we reached the end
-        [=](const buf& xs) {
-          if (xs.empty()) {
-            CAF_MESSAGE(self->name() << " is done");
-            return true;
-          }
-          return false;
-        });
+        init(buf_size),
+        push_from_buf,
+        is_done(self)
+      );
+    },
+    [=](string& fname, actor dest) {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+      auto rp = self->make_response_promise();
+      self->make_source(
+        // next stage in the stream
+        dest,
+        // forward file name in handshake to next stage
+        std::forward_as_tuple(std::move(fname)),
+        init(buf_size),
+        push_from_buf,
+        is_done(self),
+        [=](expected<int> x) mutable {
+          CAF_MESSAGE(self->name() << " received the result");
+          if (x)
+            rp.deliver(*x);
+          else
+            rp.deliver(std::move(x.error()));
+        }
+      );
+      return rp;
     }
   };
 }
@@ -230,6 +261,30 @@ CAF_TEST(depth_2_pipeline_50_items) {
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
   expect((int), from(snk).to(self).with(1275));
+  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
+  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+}
+
+CAF_TEST(depth_2_pipeline_setup2_50_items) {
+  auto src = sys.spawn(file_reader, 50);
+  auto snk = sys.spawn(sum_up);
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(src, "numbers.txt", snk);
+  expect((string, actor), from(self).to(src).with("numbers.txt", snk));
+  expect((open_stream_msg), from(src).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(src));
+  CAF_MESSAGE("start data transmission (a single batch)");
+  expect((downstream_msg::batch), from(src).to(snk));
+  sched.clock().current_time += cycle;
+  sched.dispatch();
+  expect((timeout_msg), from(snk).to(snk));
+  expect((timeout_msg), from(src).to(src));
+  expect((upstream_msg::ack_batch), from(snk).to(src));
+  CAF_MESSAGE("expect close message from src and then result from snk");
+  expect((downstream_msg::close), from(src).to(snk));
+  expect((int), from(snk).to(src).with(1275));
+  expect((int), from(src).to(self).with(1275));
   CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
   CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
 }

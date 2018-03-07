@@ -402,6 +402,19 @@ void scheduled_actor::quit(error x) {
 
 // -- stream management --------------------------------------------------------
 
+void scheduled_actor::add_unsafe_output_path(
+  stream_manager_ptr mgr, strong_actor_ptr next, stream_slot slot,
+  strong_actor_ptr origin, mailbox_element::forwarding_stack stages,
+  message_id mid) {
+  CAF_ASSERT(next != nullptr);
+  CAF_ASSERT(mgr->out().terminal() == false);
+  CAF_ASSERT(pending_stream_managers_[slot] == mgr);
+  // Build pipeline by forwarding handshake along the path.
+  mgr->send_handshake(std::move(next), slot, std::move(origin),
+                      std::move(stages), mid);
+  mgr->generate_messages();
+}
+
 sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
                                     stream_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG(in) << CAF_ARG(out) << CAF_ARG(mgr));
@@ -428,15 +441,12 @@ sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
       mgr->add_promise(make_response_promise());
     }
   }
-  if (out != 0) {
-    CAF_ASSERT(mgr->out().terminal() == false);
-    CAF_ASSERT(pending_stream_managers_[out] == mgr);
+  if (out != 0 && mgr->out().path(out) == nullptr) {
     if (next == nullptr)
       return fail(sec::no_downstream_stages_defined);
-    // Build pipeline by forwarding handshake along the path.
-    mgr->send_handshake(std::move(next), out, current_sender(),
-                        take_current_forwarding_stack(), current_message_id());
-    mgr->generate_messages();
+    add_unsafe_output_path(mgr, std::move(next), out, current_sender(),
+                           take_current_forwarding_stack(),
+                           current_message_id());
   }
   return sec::none;
 }

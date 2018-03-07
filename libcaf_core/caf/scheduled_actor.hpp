@@ -50,6 +50,7 @@
 #include "caf/stream.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_result.hpp"
+#include "caf/stream_result_handler_trait.hpp"
 #include "caf/stream_result_trait.hpp"
 #include "caf/stream_source_trait.hpp"
 #include "caf/to_string.hpp"
@@ -429,11 +430,22 @@ public:
   }
 
   /// Creates an output path for the given stage without any type checking.
+  /// @private
   template <class Out, class... Ts>
   output_stream<Out, Ts...> add_unsafe_output_path(stream_manager_ptr mgr) {
     auto slot = assign_next_pending_slot(mgr);
     return {0, slot, std::move(mgr)};
   }
+
+  /// Creates an output path for the given stage without any type checking.
+  /// @pre `next != nullptr`
+  /// @pre `pending_stream_managers_[slot] == mgr`
+  /// @pre `mgr->out().terminal() == false`
+  /// @private
+  void add_unsafe_output_path(stream_manager_ptr mgr, strong_actor_ptr next,
+                              stream_slot slot, strong_actor_ptr origin,
+                              mailbox_element::forwarding_stack stages,
+                              message_id mid);
 
   /// Creates an input path for given stage.
   template <class In, class Result, class Out, class Scatterer, class... Ts>
@@ -445,6 +457,7 @@ public:
   }
 
   /// Creates an input path for given stage.
+  /// @private
   template <class Result, class In>
   stream_result<Result> add_unsafe_input_path(const stream<In>&,
                                               stream_manager_ptr mgr) {
@@ -452,7 +465,7 @@ public:
     return {slot, std::move(mgr)};
   }
 
-  /// Creates a new stream source and starts streaming to `dest`.
+  /// Creates a new stream source from `Driver`.
   /// @param dest Actor handle to the stream destination.
   /// @param xs User-defined handshake payload.
   /// @param init Function object for initializing the state of the source.
@@ -516,6 +529,54 @@ public:
     auto finalize = [](typename Trait::state, const error&) {};
     return make_source(std::move(xs), init, pull, done, finalize,
                        scatterer_type);
+  }
+
+  /// Creates a new stream source and adds `dest` as first outbound path to it.
+  template <class ActorHandle, class... Ts, class Init, class Pull, class Done,
+            class HandleResult,
+            class Scatterer =
+              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
+            class Trait = stream_source_trait_t<Pull>>
+  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
+                      typename make_source_result_t<Scatterer, Ts...>::ptr_type>
+  make_source(const ActorHandle& dest, std::tuple<Ts...> xs, Init init,
+              Pull pull, Done done, HandleResult handle_res,
+              policy::arg<Scatterer> scatterer_arg = {}) {
+    // TODO: type-check whether `dest` is a valid next stage
+    // Expect `handle_result` to have signature `void (expected<T>)`.
+    using handle_res_trait = stream_result_handler_trait_t<HandleResult>;
+    static_assert(handle_res_trait::valid,
+                  "expected a result handler with signature "
+                  "'void (expected<T>)'");
+    using handle_res_result = typename handle_res_trait::result;
+    auto result = make_source(std::move(xs), std::move(init), std::move(pull),
+                              std::move(done), scatterer_arg);
+    auto mid = new_request_id(message_priority::normal);
+    add_unsafe_output_path(result.ptr(), actor_cast<strong_actor_ptr>(dest),
+                           result.out(), actor_cast<strong_actor_ptr>(this),
+                           no_stages, mid);
+    behavior tmp{
+      [=](handle_res_result& x) mutable { handle_res(std::move(x)); },
+      [=](error& err) mutable { handle_res(std::move(err)); }
+    };
+    add_multiplexed_response_handler(mid.response_id(), std::move(tmp));
+    return result.ptr();
+  }
+
+  /// Creates a new stream source and adds `dest` as first outbound path to it.
+  template <class ActorHandle, class Init, class Pull, class Done,
+            class HandleResult,
+            class Scatterer =
+              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
+            class Trait = stream_source_trait_t<Pull>>
+  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
+                      typename make_source_result_t<Scatterer>::ptr_type>
+  make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
+              HandleResult handle_res,
+              policy::arg<Scatterer> scatterer_arg = {}) {
+    return make_source(dest, std::make_tuple(), std::move(init),
+                       std::move(pull), std::move(done), std::move(handle_res),
+                       scatterer_arg);
   }
 
   template <class Driver, class Input, class... Ts>
