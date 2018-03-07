@@ -90,10 +90,7 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
         is_done(self),
         [=](expected<int> x) mutable {
           CAF_MESSAGE(self->name() << " received the result");
-          if (x)
-            rp.deliver(*x);
-          else
-            rp.deliver(std::move(x.error()));
+          rp.deliver(std::move(x));
         }
       );
       return rp;

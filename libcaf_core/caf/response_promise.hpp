@@ -54,18 +54,25 @@ public:
 
   /// Satisfies the promise by sending a non-error response message.
   template <class T, class... Ts>
-  typename std::enable_if<
-    (sizeof...(Ts) > 0) || !std::is_convertible<T, error>::value,
-    response_promise
-  >::type
-  deliver(T&&x, Ts&&... xs) {
-    static_assert(!detail::is_specialization<result, T>::value
-                  && !detail::disjunction<
-                       detail::is_specialization<result, Ts>::value...
-                     >::value,
-                  "it is not possible to deliver objects of type result<...>");
+  detail::enable_if_t<
+    ((sizeof...(Ts) > 0) || !std::is_convertible<T, error>::value)
+    && !detail::is_expected<detail::decay_t<T>>::value,
+    response_promise>
+  deliver(T&& x, Ts&&... xs) {
+    using ts = detail::type_list<detail::decay_t<T>, detail::decay_t<Ts>...>;
+    static_assert(!detail::tl_exists<ts, detail::is_result>::value,
+                  "it is not possible to deliver objects of type result<T>");
+    static_assert(!detail::tl_exists<ts, detail::is_expected>::value,
+                  "mixing expected<T> with regular values is not supported");
     return deliver_impl(make_message(std::forward<T>(x),
                                      std::forward<Ts>(xs)...));
+  }
+
+  template <class T>
+  response_promise deliver(expected<T> x) {
+    if (x)
+      return deliver(std::move(*x));
+    return deliver(std::move(x.error()));
   }
 
   /// Satisfies the promise by delegating to another actor.
