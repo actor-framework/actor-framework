@@ -16,62 +16,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_HPP
-#define CAF_STREAM_HPP
+#ifndef CAF_INVALID_STREAM_HPP
+#define CAF_INVALID_STREAM_HPP
 
-#include "caf/fwd.hpp"
-#include "caf/invalid_stream.hpp"
-#include "caf/stream_manager.hpp"
-#include "caf/stream_slot.hpp"
-
-#include "caf/meta/type_name.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
-/// Identifies an unbound sequence of elements.
-template <class T>
-class stream {
-public:
-  // -- member types -----------------------------------------------------------
+struct invalid_stream_t {};
 
-  /// Type of a single element.
-  using value_type = T;
-
-  // -- constructors and destructors -------------------------------------------
-
-  stream(stream&&) = default;
-  stream(const stream&) = default;
-  stream& operator=(stream&&) = default;
-  stream& operator=(const stream&) = default;
-
-  explicit stream(stream_slot id = 0) : slot_(id) {
-    // nop
-  }
-
-  explicit stream(invalid_stream_t) : slot_(0) {
-    // nop
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the actor-specific stream slot ID.
-  inline stream_slot slot() const {
-    return slot_;
-  }
-
-  // -- serialization support --------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, stream& x) {
-    return f(meta::type_name("stream"), x.slot_);
-  }
-
-private:
-  // -- member variables -------------------------------------------------------
-
-  stream_slot slot_;
-};
+constexpr invalid_stream_t invalid_stream = invalid_stream_t{};
 
 } // namespace caf
 
-#endif // CAF_STREAM_HPP
+#endif // CAF_INVALID_STREAM_HPP

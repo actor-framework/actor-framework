@@ -23,6 +23,7 @@
 #include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/invalid_stream.hpp"
 
 #include "caf/meta/type_name.hpp"
 
@@ -43,6 +44,10 @@ public:
   output_stream(output_stream&&) = default;
 
   output_stream(const output_stream&) = default;
+
+  output_stream(invalid_stream_t) : in_(0), out_(0) {
+    // nop
+  }
 
   template <class S>
   output_stream(make_source_result<T, S, Ts...> x)
