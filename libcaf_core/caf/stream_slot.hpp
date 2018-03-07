@@ -29,6 +29,9 @@ namespace caf {
 /// connection over IP.
 using stream_slot = uint16_t;
 
+/// Identifies an invalid slot.
+constexpr stream_slot invalid_stream_slot = 0;
+
 /// Maps two `stream_slot` values into a pair for storing sender and receiver
 /// slot information.
 struct stream_slots : detail::comparable<stream_slots>{
