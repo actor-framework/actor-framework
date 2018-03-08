@@ -140,9 +140,18 @@ static void sum_map(std::unordered_map<K, V>& dst, const std::unordered_map<K, V
 
 namespace std {
 
+    template<>
+    struct hash<caf::instrumentation::msgtype_id> {
+        size_t operator()(const caf::instrumentation::msgtype_id&) const noexcept;
+    };
+
+    
 template<>
-struct hash<caf::instrumentation::msgtype_id> {
-  size_t operator()(const caf::instrumentation::msgtype_id&) const noexcept;
+    struct hash<caf::instrumentation::msgtype_id::type_t> {
+        size_t operator()(const caf::instrumentation::msgtype_id::type_t& t) const noexcept
+        {
+            return std::hash<int>()(int(t));
+        }
 };
 
 template<>
