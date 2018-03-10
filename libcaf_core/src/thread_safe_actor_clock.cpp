@@ -35,52 +35,66 @@ void thread_safe_actor_clock::set_receive_timeout(time_point t,
                                                   abstract_actor* self,
                                                   uint32_t id) {
   guard_type guard{mx_};
-  super::set_receive_timeout(t, self, id);
-  cv_.notify_all();
+  if (!done_) {
+    super::set_receive_timeout(t, self, id);
+    cv_.notify_all();
+  }
 }
 
 void thread_safe_actor_clock::set_request_timeout(time_point t,
                                                   abstract_actor* self,
                                                   message_id id) {
   guard_type guard{mx_};
-  super::set_request_timeout(t, self, id);
-  cv_.notify_all();
+  if (!done_) {
+    super::set_request_timeout(t, self, id);
+    cv_.notify_all();
+  }
 }
 
 void thread_safe_actor_clock::cancel_receive_timeout(abstract_actor* self) {
   guard_type guard{mx_};
-  super::cancel_receive_timeout(self);
-  cv_.notify_all();
+  if (!done_) {
+    super::cancel_receive_timeout(self);
+    cv_.notify_all();
+  }
 }
 
 void thread_safe_actor_clock::cancel_request_timeout(abstract_actor* self,
                                                      message_id id) {
   guard_type guard{mx_};
-  super::cancel_request_timeout(self, id);
-  cv_.notify_all();
+  if (!done_) {
+    super::cancel_request_timeout(self, id);
+    cv_.notify_all();
+  }
 }
 
 void thread_safe_actor_clock::cancel_timeouts(abstract_actor* self) {
   guard_type guard{mx_};
-  super::cancel_timeouts(self);
-  cv_.notify_all();
+  if (!done_) {
+    super::cancel_timeouts(self);
+    cv_.notify_all();
+  }
 }
 
 void thread_safe_actor_clock::schedule_message(time_point t,
                                                strong_actor_ptr receiver,
                                                mailbox_element_ptr content) {
   guard_type guard{mx_};
-  super::schedule_message(t, std::move(receiver), std::move(content));
-  cv_.notify_all();
+  if (!done_) {
+    super::schedule_message(t, std::move(receiver), std::move(content));
+    cv_.notify_all();
+  }
 }
 
 void thread_safe_actor_clock::schedule_message(time_point t, group target,
                                                strong_actor_ptr sender,
                                                message content) {
   guard_type guard{mx_};
-  super::schedule_message(t, std::move(target), std::move(sender),
-                          std::move(content));
-  cv_.notify_all();
+  if (!done_) {
+    super::schedule_message(t, std::move(target), std::move(sender),
+                            std::move(content));
+    cv_.notify_all();
+  }
 }
 
 void thread_safe_actor_clock::run_dispatch_loop() {
@@ -104,6 +118,7 @@ void thread_safe_actor_clock::run_dispatch_loop() {
       }
     }
   }
+  schedule_.clear();
 }
 
 void thread_safe_actor_clock::cancel_dispatch_loop() {
