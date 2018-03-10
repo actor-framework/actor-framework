@@ -108,7 +108,7 @@ public:
 
   actor_system_config();
 
-  actor_system_config(actor_system_config&&);
+  actor_system_config(actor_system_config&&) = default;
 
   actor_system_config(const actor_system_config&) = delete;
   actor_system_config& operator=(const actor_system_config&) = delete;
