@@ -31,17 +31,15 @@
 namespace caf {
 
 /// Identifies an unbound sequence of messages.
-template <class Input, class Result>
+template <class Input>
 class stream_sink_driver {
 public:
   // -- member types -----------------------------------------------------------
 
   using input_type = Input;
 
-  using result_type = Result;
-
   /// Implemented `stream_sink` interface.
-  using sink_type = stream_sink<input_type, result_type>;
+  using sink_type = stream_sink<input_type>;
 
   /// Smart pointer to the interface type.
   using sink_ptr_type = intrusive_ptr<sink_type>;
@@ -54,11 +52,7 @@ public:
 
   // -- virtual functions ------------------------------------------------------
 
-  /// Produces a result message after closing the last inbound path.
-  virtual message make_final_result() {
-    return make_message();
-  }
-
+  /// Called after closing the last inbound path.
   virtual void finalize(const error&) {
     // nop
   }
@@ -66,7 +60,7 @@ public:
   // -- pure virtual functions -------------------------------------------------
 
   /// Processes a single batch.
-  virtual void process(std::vector<input_type>&& batch) = 0;
+  virtual void process(std::vector<input_type>& batch) = 0;
 };
 
 } // namespace caf

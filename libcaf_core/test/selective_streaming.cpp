@@ -100,16 +100,20 @@ TESTEE(log_producer) {
           }
           return false;
         },
+        unit,
         policy::arg<scatterer>::value
       );
-      res.ptr()->out().set_filter(res.out(), lvl);
+      auto& out = res.ptr()->out();
+      static_assert(std::is_same<decltype(out), scatterer&>::value,
+                    "source has wrong scatterer type");
+      out.set_filter(res.out(), lvl);
       return res;
     }
   };
 }
 
 TESTEE_STATE(log_dispatcher) {
-  stream_stage_ptr<value_type, message, value_type, scatterer> stage;
+  stream_stage_ptr<value_type, value_type, scatterer> stage;
 };
 
 TESTEE(log_dispatcher) {
@@ -123,7 +127,7 @@ TESTEE(log_dispatcher) {
       out.push(std::move(x));
     },
     // cleanup
-    [=](unit_t&) {
+    [=](unit_t&, const error&) {
       CAF_MESSAGE(self->name() << " is done");
     },
     policy::arg<scatterer>::value
@@ -161,7 +165,7 @@ TESTEE(log_consumer) {
           self->state.log.emplace_back(std::move(x));
         },
         // cleanup and produce result message
-        [=](unit_t&) {
+        [=](unit_t&, const error&) {
           CAF_MESSAGE(self->name() << " is done");
         }
       );

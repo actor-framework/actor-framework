@@ -115,12 +115,12 @@ public:
   /// Returns the current number of paths.
   virtual size_t num_paths() const noexcept = 0;
 
-  /// Adds a path to `target` to the scatterer.
+  /// Adds a pending path to `target` to the scatterer.
   /// @returns The added path on success, `nullptr` otherwise.
-  virtual path_ptr add_path(stream_slots slots, strong_actor_ptr target) = 0;
+  path_ptr add_path(stream_slot slot, strong_actor_ptr target);
 
   /// Removes a path from the scatterer and returns it.
-  virtual bool remove_path(stream_slot slots, error reason,
+  virtual bool remove_path(stream_slot slot, error reason,
                            bool silent) noexcept = 0;
 
   /// Returns the path associated to `slots` or `nullptr`.
@@ -164,15 +164,14 @@ public:
   /// Returns the size of the output buffer.
   virtual size_t buffered() const noexcept = 0;
 
-  /// Returns `make_message(stream<T>{slot})`, where `T` is the value type of
-  /// this scatterer.
-  virtual message make_handshake_token(stream_slot slot) const = 0;
-
   /// Silently removes all paths.
   virtual void clear_paths() = 0;
 
 protected:
   // -- customization points ---------------------------------------------------
+
+  /// Inserts `ptr` to the implementation-specific container.
+  virtual bool insert_path(unique_path_ptr ptr) = 0;
 
   /// Applies `f` to each path.
   virtual void for_each_path_impl(path_visitor& f) = 0;

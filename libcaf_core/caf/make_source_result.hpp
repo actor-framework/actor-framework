@@ -23,9 +23,7 @@
 #include "caf/stream_slot.hpp"
 #include "caf/stream_source.hpp"
 
-#include "caf/detail/type_traits.hpp"
-
-#include "caf/meta/type_name.hpp"
+#include "caf/detail/implicit_conversions.hpp"
 
 namespace caf {
 
@@ -37,7 +35,7 @@ struct make_source_result {
   using value_type = typename Scatterer::value_type;
 
   /// Fully typed stream manager as returned by `make_source`.
-  using source_type = stream_source<value_type, Scatterer, Ts...>;
+  using source_type = stream_source<value_type, Scatterer>;
 
   /// Pointer to a fully typed stream manager.
   using source_ptr_type = intrusive_ptr<source_type>;
@@ -50,7 +48,8 @@ struct make_source_result {
 /// the types of the handshake arguments.
 template <class Scatterer, class... Ts>
 using make_source_result_t =
-  typename make_source_result<Scatterer, detail::decay_t<Ts>...>::type;
+  typename make_source_result<Scatterer,
+                              detail::strip_and_convert_t<Ts>...>::type;
 
 } // namespace caf
 

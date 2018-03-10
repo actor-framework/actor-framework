@@ -28,49 +28,9 @@
 
 namespace caf {
 
-/// Identifies an unbound sequence of elements.
+/// Empty marker type for streaming handshakes.
 template <class T>
-class stream {
-public:
-  // -- member types -----------------------------------------------------------
-
-  /// Type of a single element.
-  using value_type = T;
-
-  // -- constructors and destructors -------------------------------------------
-
-  stream(stream&&) = default;
-  stream(const stream&) = default;
-  stream& operator=(stream&&) = default;
-  stream& operator=(const stream&) = default;
-
-  explicit stream(stream_slot id = 0) : slot_(id) {
-    // nop
-  }
-
-  explicit stream(invalid_stream_t) : slot_(0) {
-    // nop
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the actor-specific stream slot ID.
-  inline stream_slot slot() const {
-    return slot_;
-  }
-
-  // -- serialization support --------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, stream& x) {
-    return f(meta::type_name("stream"), x.slot_);
-  }
-
-private:
-  // -- member variables -------------------------------------------------------
-
-  stream_slot slot_;
-};
+class stream {};
 
 } // namespace caf
 

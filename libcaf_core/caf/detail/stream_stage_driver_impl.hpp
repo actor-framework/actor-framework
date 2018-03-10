@@ -27,22 +27,16 @@
 namespace caf {
 namespace detail {
 
-template <class Input, class Scatterer, class Process, class Finalize,
-          class HandshakeData>
-class stream_stage_driver_impl;
-
 /// Default implementation for a `stream_stage_driver` that hardwires `message`
 /// as result type and implements `process` and `finalize` using user-provided
 /// function objects (usually lambdas).
-template <class Input, class Scatterer, class Process, class Finalize,
-          class... Ts>
-class stream_stage_driver_impl<Input, Scatterer, Process, Finalize,
-                               std::tuple<Ts...>>
-  final : public stream_stage_driver<Input, message, Scatterer, Ts...> {
+template <class Input, class Scatterer, class Process, class Finalize>
+class stream_stage_driver_impl final
+    : public stream_stage_driver<Input, Scatterer> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_stage_driver<Input, message, Scatterer, Ts...>;
+  using super = stream_stage_driver<Input, Scatterer>;
 
   using typename super::input_type;
 
@@ -50,47 +44,30 @@ public:
 
   using typename super::stream_type;
 
-  using typename super::handshake_tuple_type;
-
   using trait = stream_stage_trait_t<Process>;
 
   using state_type = typename trait::state;
 
-  template <class Init, class Tuple>
-  stream_stage_driver_impl(Init init, Process f, Finalize fin, Tuple&& hs)
+  template <class Init>
+  stream_stage_driver_impl(Init init, Process f, Finalize fin)
       : process_(std::move(f)),
-        fin_(std::move(fin)),
-        hs_(std::forward<Tuple>(hs)) {
+        fin_(std::move(fin)) {
     init(state_);
   }
 
-  handshake_tuple_type make_handshake(stream_slot slot) const override {
-    return std::tuple_cat(std::make_tuple(stream_type{slot}), hs_);
+  void process(downstream<output_type>& out,
+               std::vector<input_type>& batch) override {
+    trait::process::invoke(process_, state_, out, batch);
   }
 
-  void process(std::vector<input_type>&& batch,
-               downstream<output_type>& out) override {
-    trait::process::invoke(process_, state_, std::move(batch), out);
-  }
-
-  void add_result(message& x) override {
-    // The default driver assumes to receive only a single result.
-    result_ = std::move(x);
-  }
-
-  message make_final_result() override {
-    return std::move(result_);
-  }
-
-  void finalize(const error&) override {
-    return fin_(state_);
+  void finalize(const error& err) override {
+    return fin_(state_, err);
   }
 
 private:
   state_type state_;
   Process process_;
   Finalize fin_;
-  std::tuple<Ts...> hs_;
   message result_;
 };
 

@@ -21,15 +21,12 @@
 
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
-#include "caf/stream_manager.hpp"
 #include "caf/stream_slot.hpp"
-
-#include "caf/meta/type_name.hpp"
 
 namespace caf {
 
 /// Terminates a stream by reducing it to a single value.
-template <class T, class Pointer /* = stream_manager_ptr */>
+template <class Pointer /* = stream_manager_ptr */>
 class stream_result {
 public:
   // -- member types -----------------------------------------------------------
@@ -54,14 +51,14 @@ public:
   }
 
   template <class CompatiblePointer>
-  stream_result(stream_result<T, CompatiblePointer> other)
+  stream_result(stream_result<CompatiblePointer> other)
       : in_(other.in()),
         ptr_(std::move(other.ptr())) {
     // nop
   }
 
   template <class CompatiblePointer>
-  stream_result& operator=(stream_result<T, CompatiblePointer> other) {
+  stream_result& operator=(stream_result<CompatiblePointer> other) {
     in_ = other.in();
     ptr_ = std::move(other.ptr());
     return *this;

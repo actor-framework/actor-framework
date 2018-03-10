@@ -56,96 +56,100 @@ void push_from_buf(buf& xs, downstream<int>& out, size_t num) {
 std::function<bool(const buf&)> is_done(scheduled_actor* self) {
   return [=](const buf& xs) {
     if (xs.empty()) {
-      CAF_MESSAGE(self->name() << " is done sending");
+      CAF_MESSAGE(self->name() << " exhausted its buffer");
       return true;
     }
     return false;
   };
 }
 
-VARARGS_TESTEE(file_reader, size_t buf_size) {
-  return {
-    [=](string& fname) -> output_stream_t<int, string> {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
-      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
-      return self->make_source(
-        // forward file name in handshake to next stage
-        std::forward_as_tuple(std::move(fname)),
-        init(buf_size),
-        push_from_buf,
-        is_done(self)
-      );
-    },
-    [=](string& fname, actor dest) {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
-      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
-      auto rp = self->make_response_promise();
-      self->make_source(
-        // next stage in the stream
-        dest,
-        // forward file name in handshake to next stage
-        std::forward_as_tuple(std::move(fname)),
-        init(buf_size),
-        push_from_buf,
-        is_done(self),
-        [=](expected<int> x) mutable {
-          CAF_MESSAGE(self->name() << " received the result");
-          rp.deliver(std::move(x));
-        }
-      );
-      return rp;
+template <class T>
+std::function<void (T&, const error&)> fin(scheduled_actor* self) {
+  return [=](T&, const error& err) {
+    if (err == none) {
+      CAF_MESSAGE(self->name() << " is done");
+    } else {
+      CAF_MESSAGE(self->name() << " aborted with error");
     }
   };
 }
 
-TESTEE(sum_up) {
+VARARGS_TESTEE(file_reader, size_t buf_size) {
   return {
-    [=](stream<int>& in, const string& fname) {
+    [=](string& fname) -> output_stream_t<int> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
+      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+      return self->make_source(
+        init(buf_size),
+        push_from_buf,
+        is_done(self),
+        fin<buf>(self)
+      );
+    },
+    [=](string& fname, actor next) {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+      self->make_source(
+        next,
+        init(buf_size),
+        push_from_buf,
+        is_done(self),
+        fin<buf>(self)
+      );
+    }
+  };
+}
+
+TESTEE_STATE(sum_up) {
+  int x = 0;
+};
+
+TESTEE(sum_up) {
+  using intptr = int*;
+  return {
+    [=](stream<int>& in) {
       return self->make_sink(
         // input stream
         in,
         // initialize state
-        [](int& x) {
-          x = 0;
+        [=](intptr& x) {
+          x = &self->state.x;
         },
         // processing step
-        [](int& x, int y) {
-          x += y;
+        [](intptr& x, int y) {
+          *x += y;
         },
-        // cleanup and produce result message
-        [=](int& x) -> int {
-          CAF_MESSAGE(self->name() << " is done");
-          return x;
-        }
+        fin<intptr>(self)
       );
     }
   };
 }
 
+TESTEE_STATE(delayed_sum_up) {
+  int x = 0;
+};
+
 TESTEE(delayed_sum_up) {
+  using intptr = int*;
   self->set_default_handler(skip);
   return {
     [=](ok_atom) {
       self->become(
-        [=](stream<int>& in, const std::string& fname) {
-          CAF_CHECK_EQUAL(fname, "numbers.txt");
+        [=](stream<int>& in) {
+          self->set_default_handler(print_and_drop);
           return self->make_sink(
             // input stream
             in,
             // initialize state
-            [](int& x) {
-              x = 0;
+            [=](intptr& x) {
+              x = &self->state.x;
             },
             // processing step
-            [](int& x, int y) {
-              x += y;
+            [](intptr& x, int y) {
+              *x += y;
             },
-            // cleanup and produce result message
-            [=](int& x) -> int {
-              CAF_MESSAGE(self->name() << " is done");
-              return x;
-            }
+            // cleanup
+            fin<intptr>(self)
           );
         }
       );
@@ -156,8 +160,8 @@ TESTEE(delayed_sum_up) {
 TESTEE(broken_sink) {
   CAF_IGNORE_UNUSED(self);
   return {
-    [=](stream<int>&, const std::string& fname) {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
+    [=](stream<int>&, const actor&) {
+      // nop
     }
   };
 }
@@ -165,13 +169,10 @@ TESTEE(broken_sink) {
 TESTEE(filter) {
   CAF_IGNORE_UNUSED(self);
   return {
-    [=](stream<int>& in, std::string& fname) {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
+    [=](stream<int>& in) {
       return self->make_stage(
         // input stream
         in,
-        // forward file name in handshake to next stage
-        std::forward_as_tuple(std::move(fname)),
         // initialize state
         [](unit_t&) {
           // nop
@@ -182,9 +183,7 @@ TESTEE(filter) {
             out.push(x);
         },
         // cleanup
-        [=](unit_t&) {
-          CAF_MESSAGE(self->name() << " is done");
-        }
+        fin<unit_t>(self)
       );
     }
   };
@@ -193,13 +192,10 @@ TESTEE(filter) {
 TESTEE(doubler) {
   CAF_IGNORE_UNUSED(self);
   return {
-    [=](stream<int>& in, std::string& fname) {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
+    [=](stream<int>& in) {
       return self->make_stage(
         // input stream
         in,
-        // forward file name in handshake to next stage
-        std::forward_as_tuple(std::move(fname)),
         // initialize state
         [](unit_t&) {
           // nop
@@ -209,9 +205,7 @@ TESTEE(doubler) {
           out.push(x * 2);
         },
         // cleanup
-        [=](unit_t&) {
-          CAF_MESSAGE(self->name() << " is done");
-        }
+        fin<unit_t>(self)
       );
     }
   };
@@ -228,11 +222,6 @@ struct fixture : test_coordinator_fixture<> {
   }
 };
 
-error fail_state(const actor& x) {
-  auto ptr = actor_cast<abstract_actor*>(x);
-  return dynamic_cast<monitorable_actor&>(*ptr).fail_state();
-}
-
 } // namespace <anonymous>
 
 // -- unit tests ---------------------------------------------------------------
@@ -246,7 +235,7 @@ CAF_TEST(depth_2_pipeline_50_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
@@ -257,9 +246,7 @@ CAF_TEST(depth_2_pipeline_50_items) {
   expect((upstream_msg::ack_batch), from(snk).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  expect((int), from(snk).to(self).with(1275));
-  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 1275);
 }
 
 CAF_TEST(depth_2_pipeline_setup2_50_items) {
@@ -280,10 +267,7 @@ CAF_TEST(depth_2_pipeline_setup2_50_items) {
   expect((upstream_msg::ack_batch), from(snk).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  expect((int), from(snk).to(src).with(1275));
-  expect((int), from(src).to(self).with(1275));
-  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 1275);
 }
 
 CAF_TEST(delayed_depth_2_pipeline_50_items) {
@@ -293,13 +277,13 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(snk));
   disallow((upstream_msg::ack_open), from(snk).to(src));
   disallow((upstream_msg::forced_drop), from(snk).to(src));
   CAF_MESSAGE("send 'ok' to trigger sink to handle open_stream_msg");
   self->send(snk, ok_atom::value);
   expect((ok_atom), from(self).to(snk));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
@@ -310,9 +294,7 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
   expect((upstream_msg::ack_batch), from(snk).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  expect((int), from(snk).to(self).with(1275));
-  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+  CAF_CHECK_EQUAL(deref<delayed_sum_up_actor>(snk).state.x, 1275);
 }
 
 CAF_TEST(depth_2_pipeline_500_items) {
@@ -322,7 +304,7 @@ CAF_TEST(depth_2_pipeline_500_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (loop until src sends 'close')");
   do {
@@ -340,9 +322,7 @@ CAF_TEST(depth_2_pipeline_500_items) {
   } while (!received<downstream_msg::close>(snk));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::close), from(src).to(snk));
-  expect((int), from(snk).to(self).with(125250));
-  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 125250);
 }
 
 CAF_TEST(depth_2_pipeline_error_during_handshake) {
@@ -352,9 +332,9 @@ CAF_TEST(depth_2_pipeline_error_during_handshake) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((std::string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(snk));
   expect((upstream_msg::forced_drop), from(snk).to(src));
-  expect((error), from(snk).to(self).with(sec::stream_init_failed));
+  // TODO: expect((error), from(snk).to(self).with(sec::stream_init_failed));
 }
 
 CAF_TEST(depth_2_pipeline_error_at_source) {
@@ -365,7 +345,7 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (and abort source)");
   self->send_exit(src, exit_reason::kill);
@@ -373,9 +353,7 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
   expect((exit_msg), from(self).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::forced_close), from(src).to(snk));
-  expect((error), from(snk).to(self));
-  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(src), exit_reason::kill);
+  // TODO: expect((error), from(snk).to(self));
 }
 
 CAF_TEST(depth_2_pipelin_error_at_sink) {
@@ -386,16 +364,14 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(snk));
   CAF_MESSAGE("start data transmission (and abort sink)");
   self->send_exit(snk, exit_reason::kill);
   expect((upstream_msg::ack_open), from(snk).to(src));
   expect((exit_msg), from(self).to(snk));
   CAF_MESSAGE("expect close and result messages from snk");
   expect((upstream_msg::forced_drop), from(snk).to(src));
-  expect((error), from(snk).to(self));
-  CAF_CHECK_EQUAL(fail_state(src), exit_reason::normal);
-  CAF_CHECK_EQUAL(fail_state(snk), exit_reason::kill);
+  // TODO: expect((error), from(snk).to(self));
 }
 
 CAF_TEST(depth_3_pipeline_50_items) {
@@ -413,8 +389,8 @@ CAF_TEST(depth_3_pipeline_50_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * stg * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(stg));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(stg));
+  expect((open_stream_msg), from(stg).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(stg));
   expect((upstream_msg::ack_open), from(stg).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
@@ -430,7 +406,7 @@ CAF_TEST(depth_3_pipeline_50_items) {
   CAF_MESSAGE("the stage shuts down and the sink produces its final result");
   expect((upstream_msg::ack_batch), from(snk).to(stg));
   expect((downstream_msg::close), from(stg).to(snk));
-  expect((int), from(snk).to(self).with(625));
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 625);
 }
 
 CAF_TEST(depth_4_pipeline_500_items) {
@@ -443,16 +419,16 @@ CAF_TEST(depth_4_pipeline_500_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * stg2 * stg1 * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(self).to(stg1));
-  expect((open_stream_msg), from(self).to(stg2));
-  expect((open_stream_msg), from(self).to(snk));
+  expect((open_stream_msg), from(src).to(stg1));
+  expect((open_stream_msg), from(stg1).to(stg2));
+  expect((open_stream_msg), from(stg2).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(stg2));
   expect((upstream_msg::ack_open), from(stg2).to(stg1));
   expect((upstream_msg::ack_open), from(stg1).to(src));
   CAF_MESSAGE("start data transmission");
   sched.run_dispatch_loop(cycle);
   CAF_MESSAGE("check sink result");
-  expect((int), from(snk).to(self).with(125000));
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 125000);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

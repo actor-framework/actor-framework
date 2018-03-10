@@ -96,8 +96,17 @@ bool stream_scatterer::terminal() const noexcept {
   return false;
 }
 
+stream_scatterer::path_ptr stream_scatterer::add_path(stream_slot slot,
+                                                      strong_actor_ptr target) {
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(target));
+  unique_path_ptr ptr{new outbound_path(slot, std::move(target))};
+  auto result = ptr.get();
+  return insert_path(std::move(ptr)) ? result : nullptr;
+}
+
 void stream_scatterer::about_to_erase(outbound_path* ptr, bool silent,
                                       error* reason) {
+  CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(silent) << CAF_ARG(reason));
   if (!silent) {
     if (reason == nullptr)
       ptr->emit_regular_shutdown(self_);

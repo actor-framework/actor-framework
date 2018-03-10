@@ -23,10 +23,17 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "caf/actor.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/make_message.hpp"
+#include "caf/message_builder.hpp"
+#include "caf/output_stream.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/stream_result.hpp"
+#include "caf/stream_scatterer.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/upstream_msg.hpp"
 
@@ -44,25 +51,6 @@ public:
                  stream_priority prio = stream_priority::normal);
 
   ~stream_manager() override;
-
-  /// Handles `stream_msg::open` messages by creating a new slot for incoming
-  /// traffic.
-  /// @param slot Slot ID used by the sender, i.e., the slot ID for upstream
-  ///             messages back to the sender.
-  /// @param hdl Handle to the sender.
-  /// @param original_stage Handle to the initial receiver of the handshake.
-  /// @param priority Affects credit assignment and maximum bandwidth.
-  /// @param result_cb Callback for the listener of the final stream result.
-  ///                  Ignored when returning `nullptr`, because the previous
-  ///                  stage is responsible for it until this manager
-  ///                  acknowledges the handshake.
-  /// @returns An error if the stream manager rejects the handshake.
-  /// @pre `hdl != nullptr`
-  /*
-  virtual error open(stream_slot slot, strong_actor_ptr hdl,
-                     strong_actor_ptr original_stage, stream_priority priority,
-                     response_promise result_cb);
-  */
 
   virtual void handle(inbound_path* from, downstream_msg::batch& x);
 
@@ -98,14 +86,9 @@ public:
 
   /// Sends a handshake to `dest`.
   /// @pre `dest != nullptr`
-  virtual void send_handshake(strong_actor_ptr dest, stream_slot slot,
-                              strong_actor_ptr stream_origin,
-                              mailbox_element::forwarding_stack fwd_stack,
-                              message_id handshake_mid);
-
-  /// Sends a handshake to `dest`.
-  /// @pre `dest != nullptr`
-  void send_handshake(strong_actor_ptr dest, stream_slot slot);
+  virtual void send_handshake(strong_actor_ptr next, stream_slot slot,
+                              mailbox_element::forwarding_stack stages,
+                              message handshake);
 
   // -- implementation hooks for sources ---------------------------------------
 
@@ -141,15 +124,6 @@ public:
   /// Removes an input path
   virtual void remove_input_path(stream_slot slot, error reason, bool silent);
 
-  // -- mutators ---------------------------------------------------------------
-
-  /// Adds a response promise to a sink for delivering the final result.
-  /// @pre `out().terminal() == true`
-  void add_promise(response_promise x);
-
-  /// Calls `x.deliver()`
-  void deliver_promises(message x);
-
   // -- properties -------------------------------------------------------------
 
   /// Returns whether this stream remains open even if no in- or outbound paths
@@ -178,22 +152,79 @@ public:
   /// Creates an outbound path to the current sender without any type checking.
   /// @pre `out().terminal() == false`
   /// @private
-  template <class Out, class... Ts>
-  output_stream<Out, Ts...> add_unsafe_outbound_path();
+  template <class Out>
+  output_stream_t<Out> add_unsafe_outbound_path() {
+    auto handshake = make_message(stream<Out>{});
+    return {0, add_unsafe_outbound_path_impl(std::move(handshake)), this};
+  }
 
-  /// Creates an outbound path to `next` without any type checking.
+  /// Creates an outbound path to the current sender without any type checking.
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class Out, class... Ts>
+  output_stream_t<Out, detail::strip_and_convert_t<Ts>...>
+  add_unsafe_outbound_path(std::tuple<Ts...> xs) {
+    auto tk = std::make_tuple(stream<Out>{});
+    auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
+    return {0, add_unsafe_outbound_path_impl(std::move(handshake)), this};
+  }
+
+  /// Creates an outbound path to `next`, only checking whether the interface
+  /// of `next` allows handshakes of type `Out`.
   /// @pre `next != nullptr`
   /// @pre `self()->pending_stream_managers_[slot] == this`
   /// @pre `out().terminal() == false`
   /// @private
-  void add_unsafe_outbound_path(strong_actor_ptr next, stream_slot slot,
-                                strong_actor_ptr origin,
-                                mailbox_element::forwarding_stack stages,
-                                message_id mid);
+  template <class Out, class Handle>
+  output_stream_t<Out> add_unsafe_outbound_path(Handle next) {
+    // TODO: type checking
+    auto handshake = make_message(stream<Out>{});
+    auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
+    auto slot = add_unsafe_outbound_path_impl(std::move(hdl),
+                                              std::move(handshake));
+    return {0, slot, this};
+  }
+
+  /// Creates an outbound path to `next`, only checking whether the interface
+  /// of `next` allows handshakes of type `Out` with arguments `Ts...`.
+  /// @pre `next != nullptr`
+  /// @pre `self()->pending_stream_managers_[slot] == this`
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class Out, class Handle, class... Ts>
+  output_stream_t<Out, detail::strip_and_convert_t<Ts>...>
+  add_unsafe_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
+    // TODO: type checking
+    auto tk = std::make_tuple(stream<Out>{});
+    auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
+    auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
+    auto slot = add_unsafe_outbound_path_impl(std::move(hdl),
+                                              std::move(handshake));
+    return {0, slot, this};
+  }
 
   /// Creates an inbound path to the current sender without any type checking.
-  template <class Result, class In>
-  stream_result<Result> add_unsafe_inbound_path(const stream<In>& in);
+  /// @pre `current_sender() != nullptr`
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class In>
+  stream_result<> add_unsafe_inbound_path(const stream<In>&) {
+    return {add_unsafe_inbound_path_impl(), this};
+  }
+
+  /// Adds `next` as a new outbound path.
+  /// @private
+  stream_slot
+  add_unsafe_outbound_path_impl(strong_actor_ptr next, message handshake,
+                                mailbox_element::forwarding_stack stages = {});
+
+  /// Adds `self_->current_sender()` as outbound path.
+  /// @private
+  stream_slot add_unsafe_outbound_path_impl(message handshake);
+
+  /// Adds
+  /// @pre Current message is an `open_stream_msg`.
+  stream_slot add_unsafe_inbound_path_impl();
 
 protected:
   // -- modifiers for self -----------------------------------------------------
@@ -222,10 +253,6 @@ protected:
 
   // -- implementation hooks for sources ---------------------------------------
 
-  /// Returns a type-erased `stream<T>` as handshake token for downstream
-  /// actors. Returns an empty message for sinks.
-  virtual message make_handshake(stream_slot slot) const;
-
   /// Called whenever new credit becomes available. The default implementation
   /// logs an error (sources are expected to override this hook).
   virtual void downstream_demand(outbound_path* ptr, long demand);
@@ -233,6 +260,8 @@ protected:
   /// Called when `out().closed()` changes to `true`. The default
   /// implementation does nothing.
   virtual void output_closed(error reason);
+
+  // -- member variables -------------------------------------------------------
 
   /// Points to the parent actor.
   scheduled_actor* self_;
@@ -246,13 +275,6 @@ protected:
   /// Configures the importance of outgoing traffic.
   stream_priority priority_;
 
-  /// Stores response promises for dellivering the final result.
-  std::vector<response_promise> promises_;
-
-  /// Stores promises while a handshake is active. The sink at the associated
-  /// key becomes responsible for the promise after receiving `ack_open`.
-  std::map<stream_slot, response_promise> in_flight_promises_;
-
   /// Stores whether this stream shall remain open even if no in- or outbound
   /// paths exist.
   bool continuous_;
@@ -261,25 +283,6 @@ protected:
 /// A reference counting pointer to a `stream_manager`.
 /// @relates stream_manager
 using stream_manager_ptr = intrusive_ptr<stream_manager>;
-
-} // namespace caf
-
-#include "caf/output_stream.hpp"
-#include "caf/stream_result.hpp"
-
-namespace caf {
-
-template <class Out, class... Ts>
-output_stream<Out, Ts...>
-stream_manager::add_unsafe_outbound_path() {
-  return {0, this->assign_next_pending_slot(), this};
-}
-
-template <class Result, class In>
-stream_result<Result>
-stream_manager::add_unsafe_inbound_path(const stream<In>&) {
-  return {this->assign_next_slot(), this};
-}
 
 } // namespace caf
 

@@ -29,14 +29,12 @@
 
 namespace caf {
 
-template <class In, class Result>
+template <class In>
 class stream_sink : public virtual stream_manager {
 public:
   // -- member types -----------------------------------------------------------
 
   using input_type = In;
-
-  using result_type = Result;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -47,14 +45,14 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Creates a new input path to the current sender.
-  stream_result<result_type, intrusive_ptr<stream_sink>>
+  stream_result<intrusive_ptr<stream_sink>>
   add_inbound_path(const stream<input_type>&) {
-    return {this->assign_next_slot(), this};
+    return {add_unsafe_inbound_path_impl(), this};
   }
 };
 
-template <class In, class Result>
-using stream_sink_ptr = intrusive_ptr<stream_sink<In, Result>>;
+template <class In>
+using stream_sink_ptr = intrusive_ptr<stream_sink<In>>;
 
 } // namespace caf
 

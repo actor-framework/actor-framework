@@ -27,46 +27,26 @@
 namespace caf {
 namespace detail {
 
-template <class Scatterer, class Pull, class Done, class Finalize,
-          class HandshakeData>
-class stream_source_driver_impl;
-
 /// Identifies an unbound sequence of messages.
-template <class Scatterer, class Pull, class Done, class Finalize, class... Ts>
-class stream_source_driver_impl<Scatterer, Pull, Done, Finalize,
-                                std::tuple<Ts...>>
-  final : public stream_source_driver<Scatterer, Ts...> {
+template <class Scatterer, class Pull, class Done, class Finalize>
+class stream_source_driver_impl final : public stream_source_driver<Scatterer> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_source_driver<Scatterer, Ts...>;
+  using super = stream_source_driver<Scatterer>;
 
   using output_type = typename super::output_type;
-
-  using stream_type = stream<output_type>;
-
-  using output_stream_type = typename super::output_stream_type;
-
-  using tuple_type = std::tuple<Ts...>;
-
-  using handshake_tuple_type = typename super::handshake_tuple_type;
 
   using trait = stream_source_trait_t<Pull>;
 
   using state_type = typename trait::state;
 
-  template <class Init, class Tuple>
-  stream_source_driver_impl(Init init, Pull f, Done pred, Finalize fin,
-                            Tuple&& hs)
+  template <class Init>
+  stream_source_driver_impl(Init init, Pull f, Done pred, Finalize fin)
       : pull_(std::move(f)),
         done_(std::move(pred)),
-        finalize_(std::move(fin)),
-        hs_(std::forward<Tuple>(hs)) {
+        finalize_(std::move(fin)) {
     init(state_);
-  }
-
-  handshake_tuple_type make_handshake(stream_slot slot) const override {
-    return std::tuple_cat(std::make_tuple(stream_type{slot}), hs_);
   }
 
   void pull(downstream<output_type>& out, size_t num) override {
@@ -86,7 +66,6 @@ private:
   Pull pull_;
   Done done_;
   Finalize finalize_;
-  tuple_type hs_;
 };
 
 } // namespace detail

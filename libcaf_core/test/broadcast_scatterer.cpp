@@ -86,9 +86,10 @@ public:
   }
 
   void add_path_to(entity& x, int desired_batch_size) {
-    auto ptr = bs.add_path({next_slot++, 0}, x.ctrl());
+    auto ptr = bs.add_path(next_slot++, x.ctrl());
     CAF_REQUIRE(ptr != nullptr);
     ptr->desired_batch_size = desired_batch_size;
+    ptr->slots.receiver = x.next_slot++;
     paths.emplace_back(ptr);
   }
 

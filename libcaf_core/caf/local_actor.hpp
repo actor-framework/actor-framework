@@ -276,6 +276,12 @@ public:
     return current_element_;
   }
 
+  /// Returns a pointer to the currently processed mailbox element.
+  /// @private
+  inline  void current_mailbox_element(mailbox_element* ptr) {
+    current_element_ = ptr;
+  }
+
   /// Adds a unidirectional `monitor` to `whom`.
   /// @note Each call to `monitor` creates a new, independent monitor.
   template <class Handle>

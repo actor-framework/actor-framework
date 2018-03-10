@@ -19,8 +19,10 @@
 #include "caf/invalid_stream_scatterer.hpp"
 
 #include "caf/logger.hpp"
+#include "caf/message_builder.hpp"
 #include "caf/outbound_path.hpp"
 #include "caf/stream.hpp"
+#include "caf/stream_slot.hpp"
 
 namespace caf {
 
@@ -35,11 +37,6 @@ invalid_stream_scatterer::~invalid_stream_scatterer() {
 
 size_t invalid_stream_scatterer::num_paths() const noexcept {
   return 0;
-}
-
-auto invalid_stream_scatterer::add_path(stream_slots, strong_actor_ptr)
--> path_ptr {
-  return nullptr;
 }
 
 bool invalid_stream_scatterer::remove_path(stream_slot, error, bool) noexcept {
@@ -66,8 +63,8 @@ size_t invalid_stream_scatterer::buffered() const noexcept {
   return 0u;
 }
 
-message invalid_stream_scatterer::make_handshake_token(stream_slot slot) const {
-  return make_message(stream<message>{slot});
+bool invalid_stream_scatterer::insert_path(unique_path_ptr) {
+  return false;
 }
 
 void invalid_stream_scatterer::for_each_path_impl(path_visitor&) {

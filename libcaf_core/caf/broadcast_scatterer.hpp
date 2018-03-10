@@ -41,6 +41,9 @@ public:
   /// Type of `paths_`.
   using typename super::map_type;
 
+  /// Unique pointer to an outbound path.
+  using typename super::unique_path_ptr;
+
   /// Enables or disables output per path.
   using filter_type = Filter;
 
@@ -127,18 +130,24 @@ public:
 
   // -- overridden functions ---------------------------------------------------
 
-  typename super::path_ptr add_path(stream_slots slots,
-                                    strong_actor_ptr target) override {
-    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target));
-    // Make sure we have state for the slot.
-    state_map_.emplace(slots.sender, path_state{});
-    // Append to `paths_`.
-    auto index = this->paths_.size();
-    auto result = super::add_path(slots, target);
-    if (result == nullptr)
-      return nullptr;
+  bool insert_path(unique_path_ptr ptr) override {
+    CAF_LOG_TRACE(CAF_ARG(ptr));
     // Make sure state_map_ and paths_ are always equally sorted, otherwise
     // we'll run into UB when calling `zip_foreach`.
+    CAF_ASSERT(state_map_.size() == this->paths_.size());
+    auto slot = ptr->slots.sender;
+    // Append to the regular path map.
+    if (!super::insert_path(std::move(ptr)))
+      return false;
+    // Append to the state map.
+    if (!state_map_.emplace(slot, path_state{}).second) {
+      super::remove_path(slot, none, true);
+      return false;
+    }
+    return true;
+    // Make sure state_map_ and paths_ are always equally sorted, otherwise
+    // we'll run into UB when calling `zip_foreach`.
+    /*
     CAF_ASSERT(index == this->paths_.size() - 1);
     CAF_ASSERT(result->slots == slots);
     CAF_ASSERT(this->paths_.container().back().first == slots.sender);
@@ -152,6 +161,7 @@ public:
       swap(ys[index], *i);
     }
     return result;
+    */
   }
 
   void emit_batches() override {

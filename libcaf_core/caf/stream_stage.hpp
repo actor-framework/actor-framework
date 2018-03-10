@@ -28,16 +28,15 @@
 
 namespace caf {
 
-template <class In, class Result, class Out, class Scatterer,
-          class... HandshakeData>
-class stream_stage : public stream_source<Out, Scatterer, HandshakeData...>,
-                     public stream_sink<In, Result> {
+template <class In, class Out, class Scatterer>
+class stream_stage : public stream_source<Out, Scatterer>,
+                     public stream_sink<In> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using left_super = stream_source<Out, Scatterer, HandshakeData...>;
+  using left_super = stream_source<Out, Scatterer>;
 
-  using right_super = stream_sink<In, Result>;
+  using right_super = stream_sink<In>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -49,10 +48,9 @@ public:
   }
 };
 
-template <class In, class Result, class Out, class Scatterer,
-          class... HandshakeData>
+template <class In, class Out, class Scatterer>
 using stream_stage_ptr =
-  intrusive_ptr<stream_stage<In, Result, Out, Scatterer, HandshakeData...>>;
+  intrusive_ptr<stream_stage<In, Out, Scatterer>>;
 
 } // namespace caf
 

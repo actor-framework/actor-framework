@@ -48,8 +48,6 @@
 #include "caf/stream.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_result.hpp"
-#include "caf/stream_result_handler_trait.hpp"
-#include "caf/stream_result_trait.hpp"
 #include "caf/stream_source_trait.hpp"
 #include "caf/to_string.hpp"
 
@@ -313,8 +311,18 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the queue for storing incoming messages.
-  inline mailbox_type& mailbox() {
+  inline mailbox_type& mailbox() noexcept {
     return mailbox_;
+  }
+
+  /// Returns map for all active streams.
+  inline stream_manager_map& stream_managers() noexcept {
+    return stream_managers_;
+  }
+
+  /// Returns map for all pending streams.
+  inline stream_manager_map& pending_stream_managers() noexcept {
+    return pending_stream_managers_;
   }
 
   // -- event handlers ---------------------------------------------------------
@@ -420,146 +428,122 @@ public:
   /// @param res_handler Function object for receiving the stream result.
   /// @param scatterer_type Configures the policy for downstream communication.
   /// @returns A stream object with a pointer to the generated `stream_manager`.
-  template <class Driver, class... Ts>
-  typename Driver::output_stream_type make_source(Ts&&... xs) {
+  template <class Driver, class... Ts, class Init, class Pull, class Done,
+            class Finalize = unit_t>
+  make_source_result_t<typename Driver::scatterer_type, Ts...>
+  make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
+              Finalize finalize = {}) {
     using detail::make_stream_source;
-    auto mgr = make_stream_source<Driver>(this, std::forward<Ts>(xs)...);
-    return mgr->add_outbound_path();
+    auto mgr = make_stream_source<Driver>(this, std::move(init),
+                                          std::move(pull), std::move(done),
+                                          std::move(finalize));
+    return mgr->add_outbound_path(std::move(xs));
   }
 
-  template <class... Ts, class Init, class Pull, class Done, class Finalize,
+  template <class... Ts, class Init, class Pull, class Done,
+            class Finalize = unit_t,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>>
   make_source_result_t<Scatterer, Ts...>
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
-              Finalize finalize, policy::arg<Scatterer> = {}) {
-    using tuple_type = std::tuple<detail::decay_t<Ts>...>;
+              Finalize finalize = {}, policy::arg<Scatterer> = {}) {
     using driver = detail::stream_source_driver_impl<Scatterer, Pull, Done,
-                                                     Finalize, tuple_type>;
-    return make_source<driver>(std::move(init), std::move(pull),
-                               std::move(done), std::move(finalize),
-                               std::move(xs));
+                                                     Finalize>;
+    return make_source<driver>(std::move(xs), std::move(init), std::move(pull),
+                               std::move(done), std::move(finalize));
   }
 
-  template <class Init, class Pull, class Done,
+  template <class Init, class Pull, class Done, class Finalize = unit_t,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
   make_source_result_t<Scatterer>
-  make_source(Init init, Pull pull, Done done,
-              policy::arg<Scatterer> scatterer_type = {}) {
-    auto finalize = [](typename Trait::state, const error&) {};
-    return make_source(std::make_tuple(), init, pull, done, finalize,
-                       scatterer_type);
-  }
-
-  template <class Init, class Pull, class Done, class Finalize,
-            class Scatterer =
-              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
-            class Trait = stream_source_trait_t<Pull>>
-  make_source_result_t<Scatterer>
-  make_source(Init init, Pull pull, Done done, Finalize finalize,
+  make_source(Init init, Pull pull, Done done, Finalize finalize = {},
               policy::arg<Scatterer> scatterer_type = {}) {
     return make_source(std::make_tuple(), init, pull, done, finalize,
-                       scatterer_type);
-  }
-
-  template <class... Ts, class Init, class Pull, class Done,
-            class Scatterer =
-              broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
-            class Trait = stream_source_trait_t<Pull>>
-  make_source_result_t<Scatterer, Ts...>
-  make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
-              policy::arg<Scatterer> scatterer_type = {}) {
-    auto finalize = [](typename Trait::state, const error&) {};
-    return make_source(std::move(xs), init, pull, done, finalize,
                        scatterer_type);
   }
 
   /// Creates a new stream source and adds `dest` as first outbound path to it.
   template <class ActorHandle, class... Ts, class Init, class Pull, class Done,
-            class HandleResult,
+            class Finalize = unit_t,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<
-    detail::is_actor_handle<ActorHandle>::value,
-    typename make_source_result_t<Scatterer, Ts...>::pointer_type>
+  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
+                      typename make_source_result_t<Scatterer>::pointer_type>
   make_source(const ActorHandle& dest, std::tuple<Ts...> xs, Init init,
-              Pull pull, Done done, HandleResult handle_res,
-              policy::arg<Scatterer> scatterer_arg = {}) {
-    // TODO: type-check whether `dest` is a valid next stage
-    // Expect `handle_result` to have signature `void (expected<T>)`.
-    using handle_res_trait = stream_result_handler_trait_t<HandleResult>;
-    static_assert(handle_res_trait::valid,
-                  "expected a result handler with signature "
-                  "'void (expected<T>)'");
-    using handle_res_result = typename handle_res_trait::result;
-    auto result = make_source(std::move(xs), std::move(init), std::move(pull),
-                              std::move(done), scatterer_arg);
-    auto mid = new_request_id(message_priority::normal);
-    result.ptr()->add_unsafe_outbound_path(
-      actor_cast<strong_actor_ptr>(dest), result.out(),
-      actor_cast<strong_actor_ptr>(this), no_stages, mid);
-    behavior tmp{
-      [=](handle_res_result& x) mutable { handle_res(std::move(x)); },
-      [=](error& err) mutable { handle_res(std::move(err)); }
-    };
-    add_multiplexed_response_handler(mid.response_id(), std::move(tmp));
-    return result.ptr();
+              Pull pull, Done done, Finalize fin = {},
+              policy::arg<Scatterer> = {}) {
+    // TODO: type checking of dest
+    using output_type = typename Trait::output;
+    using driver = detail::stream_source_driver_impl<Scatterer, Pull, Done,
+                                                     Finalize>;
+    auto mgr = detail::make_stream_source<driver>(this, std::move(init),
+                                                  std::move(pull),
+                                                  std::move(done),
+                                                  std::move(fin));
+    auto tk = std::make_tuple(stream<output_type>{});
+    auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
+    auto slot = mgr->add_unsafe_outbound_path_impl(
+      actor_cast<strong_actor_ptr>(dest), std::move(handshake));
+    if (slot == invalid_stream_slot) {
+      CAF_LOG_WARNING("unable to assign a slot in make_source");
+    }
+    return mgr;
   }
 
   /// Creates a new stream source and adds `dest` as first outbound path to it.
   template <class ActorHandle, class Init, class Pull, class Done,
-            class HandleResult,
+            class Finalize = unit_t,
             class Scatterer =
               broadcast_scatterer<typename stream_source_trait_t<Pull>::output>,
             class Trait = stream_source_trait_t<Pull>>
   detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
                       typename make_source_result_t<Scatterer>::pointer_type>
   make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
-              HandleResult handle_res,
+              Finalize fin = {},
               policy::arg<Scatterer> scatterer_arg = {}) {
     return make_source(dest, std::make_tuple(), std::move(init),
-                       std::move(pull), std::move(done), std::move(handle_res),
+                       std::move(pull), std::move(done), std::move(fin),
                        scatterer_arg);
   }
 
   template <class Driver, class... Ts>
-  stream_result<typename Driver::result_type, typename Driver::sink_ptr_type>
+  stream_result<typename Driver::sink_ptr_type>
   make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
     auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
     return mgr->add_inbound_path(src);
   }
 
-  template <class Input, class Init, class Fun, class Finalize,
-            class Trait = stream_sink_trait_t<Fun, Finalize>>
-  stream_result<typename Trait::result, typename Trait::pointer>
-  make_sink(const stream<Input>& in, Init init, Fun fun, Finalize fin) {
+  template <class Input, class Init, class Fun, class Finalize = unit_t,
+            class Trait = stream_sink_trait_t<Fun>>
+  stream_result<typename Trait::pointer>
+  make_sink(const stream<Input>& in, Init init, Fun fun, Finalize fin = {}) {
     using driver = detail::stream_sink_driver_impl<typename Trait::input,
-                                                   typename Trait::result,
                                                    Fun, Finalize>;
     return make_sink<driver>(in, std::move(init), std::move(fun),
                              std::move(fin));
   }
 
-  template <class Driver, class In, class... Ts>
-  typename Driver::output_stream_type make_stage(const stream<In>& src,
-                                                 Ts&&... xs) {
+  template <class Driver, class In, class... Ts, class... Us>
+  make_stage_result_t<In, typename Driver::scatterer_type, Ts...>
+  make_stage(const stream<In>& src, std::tuple<Ts...> xs, Us&&... ys) {
     using detail::make_stream_stage;
-    auto mgr = make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
+    auto mgr = make_stream_stage<Driver>(this, std::forward<Us>(ys)...);
     auto in = mgr->add_inbound_path(src).in();
-    auto out = mgr->add_outbound_path().out();
+    auto out = mgr->add_outbound_path(std::move(xs)).out();
     return {in, out, std::move(mgr)};
   }
 
-  template <class In, class... Ts, class Init, class Fun, class Cleanup,
+  template <class In, class... Ts, class Init, class Fun,
+            class Finalize = unit_t,
             class Scatterer =
               broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
             class Trait = stream_stage_trait_t<Fun>>
   make_stage_result_t<In, Scatterer, Ts...>
   make_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
-             Cleanup cleanup, policy::arg<Scatterer> scatterer_type = {}) {
+             Finalize fin = {}, policy::arg<Scatterer> scatterer_type = {}) {
     CAF_IGNORE_UNUSED(scatterer_type);
     CAF_ASSERT(current_mailbox_element() != nullptr);
     CAF_ASSERT(
@@ -577,12 +561,21 @@ public:
                   >::value,
                   "Expected signature `void (State&, downstream<Out>&, In)` "
                   "for consume function");
-    using driver =
-      detail::stream_stage_driver_impl<typename Trait::input, Scatterer, Fun,
-                                       Cleanup,
-                                       std::tuple<detail::decay_t<Ts>...>>;
-    return make_stage<driver>(in, std::move(init), std::move(fun),
-                              std::move(cleanup), std::move(xs));
+    using driver = detail::stream_stage_driver_impl<typename Trait::input,
+                                                    Scatterer, Fun, Finalize>;
+    return make_stage<driver>(in, std::move(xs), std::move(init),
+                              std::move(fun), std::move(fin));
+  }
+
+  template <class In, class Init, class Fun, class Finalize = unit_t,
+            class Scatterer =
+              broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
+            class Trait = stream_stage_trait_t<Fun>>
+  make_stage_result_t<In, Scatterer>
+  make_stage(const stream<In>& in, Init init, Fun fun, Finalize fin = {},
+             policy::arg<Scatterer> scatterer_type = {}) {
+    return make_stage(in, std::make_tuple(), std::move(init), std::move(fun),
+                      std::move(fin), scatterer_type);
   }
 
   /// Returns a stream manager (implementing a continuous stage) without in- or
@@ -595,14 +588,12 @@ public:
     return std::move(ptr);
   }
 
-  template <class... Ts, class Init, class Fun, class Cleanup,
+  template <class Init, class Fun, class Cleanup,
             class Scatterer =
               broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
             class Trait = stream_stage_trait_t<Fun>>
-  stream_stage_ptr<typename Trait::input, message, typename Trait::output,
-                   Scatterer, detail::decay_t<Ts>...>
-  make_continuous_stage(std::tuple<Ts...> xs, Init init, Fun fun,
-                        Cleanup cleanup,
+  stream_stage_ptr<typename Trait::input, typename Trait::output, Scatterer>
+  make_continuous_stage(Init init, Fun fun, Cleanup cleanup,
                         policy::arg<Scatterer> scatterer_type = {}) {
     CAF_IGNORE_UNUSED(scatterer_type);
     using input_type = typename Trait::input;
@@ -619,32 +610,13 @@ public:
                   >::value,
                   "Expected signature `void (State&, downstream<Out>&, In)` "
                   "for consume function");
-    using driver =
-      detail::stream_stage_driver_impl<typename Trait::input, Scatterer, Fun,
-                                       Cleanup,
-                                       std::tuple<detail::decay_t<Ts>...>>;
+    using driver = detail::stream_stage_driver_impl<typename Trait::input,
+                                                    Scatterer, Fun, Cleanup>;
     return make_continuous_stage<driver>(std::move(init), std::move(fun),
-                                         std::move(cleanup), std::move(xs));
-  }
-
-  template <class Init, class Fun, class Cleanup,
-            class Scatterer =
-              broadcast_scatterer<typename stream_stage_trait_t<Fun>::output>,
-            class Trait = stream_stage_trait_t<Fun>>
-  stream_stage_ptr<typename stream_stage_trait_t<Fun>::input, message,
-                   typename stream_stage_trait_t<Fun>::output, Scatterer>
-  make_continuous_stage(Init init, Fun fun, Cleanup cleanup,
-                        policy::arg<Scatterer> scatterer_type = {}) {
-    return make_continuous_stage(std::make_tuple(), std::move(init),
-                                std::move(fun), std::move(cleanup),
-                                scatterer_type);
+                                         std::move(cleanup));
   }
 
   /// @cond PRIVATE
-
-  /// Builds the pipeline after receiving an `open_stream_msg`. Sends a stream
-  /// handshake to the next actor if `mgr->out().terminal() == false`.
-  sec build_pipeline(stream_slot in, stream_slot out, stream_manager_ptr mgr);
 
   // -- timeout management -----------------------------------------------------
 
@@ -758,7 +730,7 @@ public:
   virtual void erase_inbound_paths_later(const stream_manager* mgr,
                                          error reason);
 
-  // -- handling of stream message ---------------------------------------------
+  // -- handling of stream messages --------------------------------------------
 
   void handle_upstream_msg(stream_slots slots, actor_addr& sender,
                            upstream_msg::ack_open& x);
@@ -856,6 +828,9 @@ public:
 
   /// Removes the stream manager mapped to `id` in `O(log n)`.
   void erase_stream_manager(stream_slot id);
+
+  /// Removes the stream manager mapped to `id` in `O(log n)`.
+  void erase_pending_stream_manager(stream_slot id);
 
   /// Removes all entries for `mgr` in `O(n)`.
   void erase_stream_manager(const stream_manager_ptr& mgr);

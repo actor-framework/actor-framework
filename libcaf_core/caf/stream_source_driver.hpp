@@ -27,7 +27,7 @@
 namespace caf {
 
 /// Identifies an unbound sequence of messages.
-template <class Scatterer, class... Ts>
+template <class Scatterer>
 class stream_source_driver {
 public:
   // -- member types -----------------------------------------------------------
@@ -42,17 +42,13 @@ public:
   using stream_type = stream<output_type>;
 
   /// Tuple for creating the `open_stream_msg` handshake.
-  using handshake_tuple_type = std::tuple<stream_type, Ts...>;
+  using handshake_tuple_type = std::tuple<stream_type>;
 
   /// Implemented `stream_source` interface.
-  using source_type = stream_source<output_type, scatterer_type, Ts...>;
+  using source_type = stream_source<output_type, scatterer_type>;
 
   /// Smart pointer to the interface type.
   using source_ptr_type = intrusive_ptr<source_type>;
-
-  /// Type of the output stream including handshake argument types.
-  using output_stream_type = output_stream<output_type, std::tuple<Ts...>,
-                                           source_ptr_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -68,9 +64,6 @@ public:
   }
 
   // -- pure virtual functions -------------------------------------------------
-
-  /// Generates handshake data for the next actor in the pipeline.
-  virtual handshake_tuple_type make_handshake(stream_slot slot) const = 0;
 
   /// Generates more stream elements.
   virtual void pull(downstream<output_type>& out, size_t num) = 0;

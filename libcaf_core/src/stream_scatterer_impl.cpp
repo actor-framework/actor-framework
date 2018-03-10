@@ -34,24 +34,13 @@ stream_scatterer_impl::~stream_scatterer_impl() {
   // nop
 }
 
-outbound_path* stream_scatterer_impl::add_path(stream_slots slots,
-                                               strong_actor_ptr target) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target));
-  auto res = paths_.emplace(slots.sender, nullptr);
-  if (res.second) {
-    auto ptr = new outbound_path(slots, std::move(target));
-    res.first->second.reset(ptr);
-    return ptr;
-  }
-  return nullptr;
-}
-
 size_t stream_scatterer_impl::num_paths() const noexcept {
   return paths_.size();
 }
 
 bool stream_scatterer_impl::remove_path(stream_slot slot, error reason,
                                         bool silent) noexcept {
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(reason) << CAF_ARG(silent));
   auto i = paths_.find(slot);
   if (i != paths_.end()) {
     about_to_erase(i->second.get(), silent, &reason);
@@ -68,6 +57,14 @@ auto stream_scatterer_impl::path(stream_slot slot) noexcept -> path_ptr {
 
 void stream_scatterer_impl::clear_paths() {
   paths_.clear();
+}
+
+bool stream_scatterer_impl::insert_path(unique_path_ptr ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  CAF_ASSERT(ptr != nullptr);
+  auto slot = ptr->slots.sender;
+  CAF_ASSERT(slot != invalid_stream_slot);
+  return paths_.emplace(slot, std::move(ptr)).second;
 }
 
 void stream_scatterer_impl::for_each_path_impl(path_visitor& f) {

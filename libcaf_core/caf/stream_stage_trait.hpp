@@ -32,19 +32,19 @@ namespace detail {
 // -- invoke helper to support element-wise and batch-wise processing ----------
 
 struct stream_stage_trait_invoke_one {
-  template <class F, class State, class In, class Out>
-  static void invoke(F& f, State& st, std::vector<In>&& xs,
-                     downstream<Out>& out) {
+  template <class F, class State, class Out, class In>
+  static void invoke(F& f, State& st, downstream<Out>& out,
+                     std::vector<In>& xs) {
     for (auto& x : xs)
       f(st, out, std::move(x));
   }
 };
 
 struct stream_stage_trait_invoke_all {
-  template <class F, class State, class In, class Out>
-  static void invoke(F& f, State& st, std::vector<In>&& xs,
-                     downstream<Out>& out) {
-    f(st, out, std::move(xs));
+  template <class F, class State, class Out, class In>
+  static void invoke(F& f, State& st, downstream<Out>& out,
+                     std::vector<In>& xs) {
+    f(st, out, xs);
   }
 };
 
@@ -66,7 +66,7 @@ struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
 };
 
 template <class State, class In, class Out>
-struct stream_stage_trait<void (State&, downstream<Out>&, std::vector<In>&&)> {
+struct stream_stage_trait<void (State&, downstream<Out>&, std::vector<In>&)> {
   using state = State;
   using input = In;
   using output = Out;

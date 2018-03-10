@@ -23,13 +23,14 @@
 
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
+#include "caf/logger.hpp"
 #include "caf/stream_manager.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
-template <class Out, class Scatterer, class... Ts>
+template <class Out, class Scatterer>
 class stream_source : public virtual stream_manager {
 public:
   // -- member types -----------------------------------------------------------
@@ -47,23 +48,49 @@ public:
   }
 
   /// Creates a new output path to the current sender.
-  output_stream<Out, std::tuple<Ts...>, intrusive_ptr<stream_source>>
+  output_stream<Out, std::tuple<>, intrusive_ptr<stream_source>>
   add_outbound_path() {
-    return {0, this->assign_next_pending_slot(), this};
+    CAF_LOG_TRACE("");
+    return this->add_unsafe_outbound_path<Out>().rebind(this);
+  }
+
+  /// Creates a new output path to the current sender with custom handshake.
+  template <class... Ts>
+  output_stream<Out, std::tuple<detail::strip_and_convert_t<Ts>...>,
+                intrusive_ptr<stream_source>>
+  add_outbound_path(std::tuple<Ts...> xs) {
+    CAF_LOG_TRACE(CAF_ARG(xs));
+    return this->add_unsafe_outbound_path<Out>(std::move(xs)).rebind(this);
+  }
+
+  /// Creates a new output path to the current sender.
+  template <class Handle>
+  output_stream<Out, std::tuple<>, intrusive_ptr<stream_source>>
+  add_outbound_path(const Handle& next) {
+    CAF_LOG_TRACE(CAF_ARG(next));
+    return this->add_unsafe_outbound_path<Out>(next).rebind(this);
+  }
+
+  /// Creates a new output path to the current sender with custom handshake.
+  template <class Handle, class... Ts>
+  output_stream<Out, std::tuple<detail::strip_and_convert_t<Ts>...>,
+                intrusive_ptr<stream_source>>
+  add_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
+    CAF_LOG_TRACE(CAF_ARG(next) << CAF_ARG(xs));
+    return this->add_unsafe_outbound_path<Out>(next, std::move(xs))
+           .rebind(this);
   }
 
 protected:
   Scatterer out_;
 };
 
-template <class Out, class Scatterer, class... HandshakeData>
-using stream_source_ptr =
-  intrusive_ptr<stream_source<Out, Scatterer, HandshakeData...>>;
+template <class Out, class Scatterer>
+using stream_source_ptr = intrusive_ptr<stream_source<Out, Scatterer>>;
 
-template <class Scatterer, class... Ts>
+template <class Scatterer>
 using stream_source_ptr_t =
-  stream_source_ptr<typename Scatterer::value_type, Scatterer,
-                    detail::decay_t<Ts>...>;
+  stream_source_ptr<typename Scatterer::value_type, Scatterer>;
 
 } // namespace caf
 

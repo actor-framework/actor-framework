@@ -400,44 +400,6 @@ void scheduled_actor::quit(error x) {
   setf(is_terminated_flag);
 }
 
-// -- stream management --------------------------------------------------------
-
-sec scheduled_actor::build_pipeline(stream_slot in, stream_slot out,
-                                    stream_manager_ptr mgr) {
-  CAF_LOG_TRACE(CAF_ARG(in) << CAF_ARG(out) << CAF_ARG(mgr));
-  auto fail = [&](sec code) {
-    auto rp = make_response_promise();
-    rp.deliver(code);
-    return code;
-  };
-  // Check arguments.
-  if (mgr == nullptr || (in | out) == 0) {
-    CAF_LOG_ERROR("build_pipeline called with invalid arguments");
-    return sec::invalid_stream_state;
-  }
-  // Get handle to the next stage in the pipeline.
-  auto next = take_current_next_stage();
-  if (in != 0) {
-    CAF_ASSERT(stream_managers_[in] == mgr);
-    // Sinks must always terminate the stream and store a response promise to
-    // ship the final result.
-    if (mgr->out().terminal()) {
-      CAF_ASSERT(out == 0);
-      if (next != nullptr)
-        return fail(sec::cannot_add_downstream);
-      mgr->add_promise(make_response_promise());
-    }
-  }
-  if (out != 0 && mgr->out().path(out) == nullptr) {
-    if (next == nullptr)
-      return fail(sec::no_downstream_stages_defined);
-    mgr->add_unsafe_outbound_path(std::move(next), out, current_sender(),
-                                  take_current_forwarding_stack(),
-                                  current_message_id());
-  }
-  return sec::none;
-}
-
 // -- timeout management -------------------------------------------------------
 
 uint64_t scheduled_actor::set_receive_timeout(actor_clock::time_point x) {
@@ -970,14 +932,30 @@ void scheduled_actor::erase_stream_manager(stream_slot id) {
     stream_ticks_.stop();
 }
 
+void scheduled_actor::erase_pending_stream_manager(stream_slot id) {
+  CAF_LOG_TRACE(CAF_ARG(id));
+  pending_stream_managers_.erase(id);
+}
+
 void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
-  auto i = stream_managers_.begin();
-  auto e = stream_managers_.end();
-  while (i != e)
-    if (i->second == mgr)
-      i = stream_managers_.erase(i);
-    else
-      ++i;
+  { // Lifetime scope of first iterator pair.
+    auto i = stream_managers_.begin();
+    auto e = stream_managers_.end();
+    while (i != e)
+      if (i->second == mgr)
+        i = stream_managers_.erase(i);
+      else
+        ++i;
+  }
+  { // Lifetime scope of second iterator pair.
+    auto i = pending_stream_managers_.begin();
+    auto e = pending_stream_managers_.end();
+    while (i != e)
+      if (i->second == mgr)
+        i = pending_stream_managers_.erase(i);
+      else
+        ++i;
+  }
   if (stream_managers_.empty())
     stream_ticks_.stop();
 }
@@ -987,9 +965,6 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   // Fetches a stream manger from a behavior.
   struct visitor : detail::invoke_result_visitor {
-    stream_manager_ptr ptr;
-    stream_slot in_slot;
-    stream_slot out_slot;
     void operator()() override {
       // nop
     }
@@ -1000,13 +975,6 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
 
     void operator()(message&) override {
       // nop
-    }
-
-    void operator()(stream_slot in, stream_slot out,
-                    stream_manager_ptr& x) override {
-      ptr = std::move(x);
-      in_slot = in;
-      out_slot = out;
     }
 
     void operator()(const none_t&) override {
@@ -1048,6 +1016,7 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
       CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
       return fallback();
     case match_case::result::match: {
+      /*
       if (f.ptr == nullptr) {
         CAF_LOG_WARNING("actor did not return a stream manager after "
                         "handling open_stream_msg");
@@ -1060,6 +1029,7 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
       path->emit_ack_open(this, actor_cast<actor_addr>(osm.original_stage));
       // Propagate handshake down the pipeline.
       build_pipeline(f.in_slot, f.out_slot, std::move(f.ptr));
+      */
       return im_success;
     }
     default:

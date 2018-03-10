@@ -78,21 +78,21 @@ TESTEE(sum_up) {
   return {
     [=](stream<int>& in, const string& fname) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
+      using int_ptr = int*;
       return self->make_sink(
         // input stream
         in,
         // initialize state
-        [](unit_t&) {
-          // nop
+        [=](int_ptr& x) {
+          x = &self->state.x;
         },
         // processing step
-        [=](unit_t&, int y) {
-          self->state.x += y;
+        [](int_ptr& x , int y) {
+          *x += y;
         },
-        // cleanup and produce result message
-        [=](unit_t&) -> int {
+        // cleanup
+        [=](int_ptr&, const error&) {
           CAF_MESSAGE(self->name() << " is done");
-          return self->state.x;
         }
       );
     },
@@ -104,13 +104,11 @@ TESTEE(sum_up) {
 }
 
 TESTEE_STATE(stream_multiplexer) {
-  stream_stage_ptr<int, message, int, broadcast_scatterer<int>, string> stage;
+  stream_stage_ptr<int, int, broadcast_scatterer<int>> stage;
 };
 
 TESTEE(stream_multiplexer) {
   self->state.stage = self->make_continuous_stage(
-    // handshake data
-    std::make_tuple(std::string{"numbers.txt"}),
     // initialize state
     [](unit_t&) {
       // nop
@@ -120,14 +118,15 @@ TESTEE(stream_multiplexer) {
       out.push(x);
     },
     // cleanup
-    [=](unit_t&) {
+    [=](unit_t&, const error&) {
       CAF_MESSAGE(self->name() << " is done");
     }
   );
   return {
     [=](join_atom) {
       CAF_MESSAGE("received 'join' request");
-      return self->state.stage->add_outbound_path();
+      return self->state.stage->add_outbound_path(
+        std::make_tuple("numbers.txt"));
     },
     [=](const stream<int>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");

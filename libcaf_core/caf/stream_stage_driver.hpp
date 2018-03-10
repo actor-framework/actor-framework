@@ -29,17 +29,13 @@
 namespace caf {
 
 /// Encapsulates user-provided functionality for generating a stream stage.
-template <class Input, class Result, class Scatterer, class... Ts>
+template <class Input, class Scatterer>
 class stream_stage_driver {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Element type of the input stream.
   using input_type = Input;
-
-  /// Result type shipped to the client after processing all elements of the
-  /// stream.
-  using result_type = Result;
 
   /// Policy for distributing data to outbound paths.
   using scatterer_type = Scatterer;
@@ -50,20 +46,11 @@ public:
   /// Type of the output stream.
   using stream_type = stream<output_type>;
 
-  /// Tuple for creating the `open_stream_msg` handshake.
-  using handshake_tuple_type = std::tuple<stream_type, Ts...>;
-
   /// Implemented `stream_stage` interface.
-  using stage_type = stream_stage<input_type, result_type,
-                                  output_type, Scatterer, Ts...>;
+  using stage_type = stream_stage<input_type, output_type, Scatterer>;
 
   /// Smart pointer to the interface type.
   using stage_ptr_type = intrusive_ptr<stage_type>;
-
-  /// Type of the output stream including handshake argument types.
-  using output_stream_type = output_stream<output_type, std::tuple<Ts...>,
-                                           stage_ptr_type>;
-
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -73,22 +60,14 @@ public:
 
   // -- virtual functions ------------------------------------------------------
 
-  /// Generates handshake data for the next actor in the pipeline.
-  virtual handshake_tuple_type make_handshake(stream_slot slot) const = 0;
-
   /// Processes a single batch.
-  virtual void process(std::vector<input_type>&& batch,
-                       downstream<output_type>& out) = 0;
-
-  /// Handles the result of an outbound path.
-  virtual void add_result(message&) = 0;
-
-  /// Produces a result message after receiving the result messages of all
-  /// outbound paths and closing all paths.
-  virtual message make_final_result() = 0;
+  virtual void process(downstream<output_type>& out,
+                       std::vector<input_type>& batch) = 0;
 
   /// Cleans up any state.
-  virtual void finalize(const error&) = 0;
+  virtual void finalize(const error&) {
+    // nop
+  }
 };
 
 } // namespace caf

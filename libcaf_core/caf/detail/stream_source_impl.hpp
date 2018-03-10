@@ -72,10 +72,6 @@ public:
     return hint != this->out_.capacity();
   }
 
-  message make_handshake(stream_slot slot) const override {
-    return make_message_from_tuple(driver_.make_handshake(slot));
-  }
-
 protected:
   void finalize(const error& reason) override {
     driver_.finalize(reason);

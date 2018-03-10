@@ -60,14 +60,25 @@ void stream_manager::handle(inbound_path*, downstream_msg::forced_close& x) {
 
 bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
-  auto path = out().add_path(slots.invert(), x.rebind_to);
-  if (path == nullptr)
+  auto ptr = out().path(slots.receiver);
+  if (ptr == nullptr)
     return false;
-  path->open_credit = x.initial_demand;
-  path->desired_batch_size = x.desired_batch_size;
+  if (!ptr->pending()) {
+    CAF_LOG_ERROR("received repeated ack_open");
+    return false;
+  }
+  if (ptr->hdl != x.rebind_from) {
+    CAF_LOG_ERROR("received ack_open with invalid rebind_from");
+    return false;
+  }
+  if (x.rebind_from != x.rebind_to) {
+    ptr->hdl = x.rebind_to;
+  }
+  ptr->slots.receiver = slots.sender;
+  ptr->open_credit = x.initial_demand;
+  ptr->desired_batch_size = x.desired_batch_size;
   --pending_handshakes_;
   push();
-  in_flight_promises_.erase(slots.sender);
   return true;
 }
 
@@ -98,19 +109,10 @@ void stream_manager::stop() {
   error tmp;
   finalize(tmp);
   self_->erase_inbound_paths_later(this);
-  if (!promises_.empty())
-    deliver_promises(make_final_result());
 }
 
 void stream_manager::abort(error reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  if (!promises_.empty() || !in_flight_promises_.empty()) {
-    auto msg = make_message(reason);
-    deliver_promises(msg);
-    for (auto& kvp : in_flight_promises_)
-      kvp.second.deliver(msg);
-    in_flight_promises_.clear();
-  }
   out().abort(reason);
   finalize(reason);
   self_->erase_inbound_paths_later(this, std::move(reason));
@@ -127,25 +129,17 @@ bool stream_manager::congested() const noexcept {
   return false;
 }
 
-void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot,
-                                    strong_actor_ptr client,
-                                    mailbox_element::forwarding_stack fwd_stack,
-                                    message_id mid) {
-  CAF_ASSERT(dest != nullptr);
+void stream_manager::send_handshake(strong_actor_ptr next, stream_slot slot,
+                                    mailbox_element::forwarding_stack stages,
+                                    message handshake) {
+  CAF_ASSERT(next != nullptr);
+  CAF_ASSERT(slot != invalid_stream_slot);
   ++pending_handshakes_;
-  in_flight_promises_.emplace(
-    slot, response_promise{self()->ctrl(), client, fwd_stack, mid});
-  dest->enqueue(
-    make_mailbox_element(std::move(client), mid, std::move(fwd_stack),
-                         open_stream_msg{slot, make_handshake(slot),
-                                         self_->ctrl(), dest, priority_}),
+  next->enqueue(
+    make_mailbox_element(self_->ctrl(), make_message_id(), std::move(stages),
+                         open_stream_msg{slot, std::move(handshake),
+                                         self_->ctrl(), next, priority_}),
     self_->context());
-}
-
-void stream_manager::send_handshake(strong_actor_ptr dest, stream_slot slot) {
-  mailbox_element::forwarding_stack fwd_stack;
-  send_handshake(std::move(dest), slot, nullptr, std::move(fwd_stack),
-                 make_message_id());
 }
 
 bool stream_manager::generate_messages() {
@@ -184,28 +178,67 @@ void stream_manager::remove_input_path(stream_slot slot, error reason,
     self_->erase_inbound_path_later(slot, std::move(reason));
 }
 
-void stream_manager::add_promise(response_promise x) {
-  CAF_LOG_TRACE(CAF_ARG(x));
-  CAF_ASSERT(out().terminal());
-  promises_.emplace_back(std::move(x));
-}
-
-void stream_manager::deliver_promises(message x) {
-  CAF_LOG_TRACE(CAF_ARG(x));
-  for (auto& p : promises_)
-    p.deliver(x);
-  promises_.clear();
-}
-
-void stream_manager::add_unsafe_outbound_path(
-  strong_actor_ptr next, stream_slot slot, strong_actor_ptr origin,
-  mailbox_element::forwarding_stack stages, message_id mid) {
-  CAF_ASSERT(next != nullptr);
+stream_slot stream_manager::add_unsafe_outbound_path_impl(
+  strong_actor_ptr next, message handshake,
+  mailbox_element::forwarding_stack stages) {
+  CAF_LOG_TRACE(CAF_ARG(next) << CAF_ARG(handshake) << CAF_ARG(stages));
   CAF_ASSERT(out().terminal() == false);
+  if (next == nullptr) {
+    CAF_LOG_WARNING("add_outbound_path called with next == nullptr");
+    auto rp = self_->make_response_promise();
+    rp.deliver(sec::no_downstream_stages_defined);
+    return invalid_stream_slot;
+  }
+  auto slot = self_->assign_next_pending_slot_to(this);
+  auto path = out().add_path(slot, next);
+  CAF_IGNORE_UNUSED(path);
+  CAF_ASSERT(path != nullptr);
   // Build pipeline by forwarding handshake along the path.
-  send_handshake(std::move(next), slot, std::move(origin),
-                 std::move(stages), mid);
+  send_handshake(std::move(next), slot, std::move(stages),
+                 std::move(handshake));
   generate_messages();
+  return slot;
+}
+
+stream_slot stream_manager::add_unsafe_outbound_path_impl(message handshake) {
+  CAF_LOG_TRACE(CAF_ARG(handshake));
+  // Call take_current_next_stage explicitly before calling
+  // take_current_forwarding_stack to avoid UB due to undefined evaluation
+  // order.
+  auto next = self_->take_current_next_stage();
+  auto stages = self_->take_current_forwarding_stack();
+  // Sources simply forward the original request.
+  return add_unsafe_outbound_path_impl(std::move(next), std::move(handshake),
+                                       std::move(stages));
+}
+
+stream_slot stream_manager::add_unsafe_inbound_path_impl() {
+  CAF_LOG_TRACE("");
+  auto x = self_->current_mailbox_element();
+  if (x == nullptr || !x->content().match_elements<open_stream_msg>()) {
+    CAF_LOG_ERROR("add_unsafe_inbound_path called, but current message "
+                  "is not an open_stream_msg");
+    return invalid_stream_slot;
+  }
+  auto& osm = x->content().get_mutable_as<open_stream_msg>(0);
+  auto fail = [&](sec code) {
+    stream_slots path_id{osm.slot, 0};
+    inbound_path::emit_irregular_shutdown(self_, path_id,
+                                          std::move(osm.prev_stage), code);
+    return invalid_stream_slot;
+  };
+  if (out().terminal() && self_->current_next_stage() != nullptr) {
+    // Sinks must always terminate the stream.
+    CAF_LOG_WARNING("add_unsafe_inbound_path called in a sink, but the "
+                    "handshake has further stages");
+    return fail(sec::cannot_add_downstream);
+  }
+  auto slot = assign_next_slot();
+  stream_slots path_id{osm.slot, slot};
+  auto ptr = self_->make_inbound_path(this, path_id, std::move(osm.prev_stage));
+  CAF_ASSERT(ptr != nullptr);
+  ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
+  return slot;
 }
 
 stream_slot stream_manager::assign_next_slot() {
@@ -231,11 +264,6 @@ error stream_manager::process_batch(message&) {
 
 void stream_manager::output_closed(error) {
   // nop
-}
-
-message stream_manager::make_handshake(stream_slot) const {
-  CAF_LOG_ERROR("stream_manager::make_handshake called");
-  return none;
 }
 
 void stream_manager::downstream_demand(outbound_path*, long) {

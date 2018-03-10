@@ -27,6 +27,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
+#include "caf/logger.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/system_messages.hpp"
@@ -64,8 +65,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  /// Constructs a path for given handle and stream ID.
-  outbound_path(stream_slots id, strong_actor_ptr ptr);
+  /// Constructs a pending path for given slot and handle.
+  outbound_path(stream_slot sender_slot, strong_actor_ptr receiver_hdl);
 
   ~outbound_path();
 
@@ -83,10 +84,14 @@ public:
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(local_actor* self, long xs_size, message xs);
 
-  /// Calls `emit_batch` for each
+  /// Calls `emit_batch` for each chunk in the cache, whereas each chunk is of
+  /// size `desired_batch_size`. Does nothing for pending paths.
   template <class T>
   void emit_batches(local_actor* self, std::vector<T>& cache,
                     bool force_underfull) {
+    CAF_LOG_TRACE(CAF_ARG(cache) << CAF_ARG(force_underfull));
+    if (pending())
+      return;
     CAF_ASSERT(desired_batch_size > 0);
     if (cache.size() == desired_batch_size) {
       emit_batch(self, desired_batch_size, make_message(std::move(cache)));
@@ -119,6 +124,14 @@ public:
   static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
                                       const strong_actor_ptr& hdl,
                                       error reason);
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns whether this path is pending, i.e., didn't receive an `ack_open`
+  /// yet.
+  inline bool pending() const noexcept {
+    return slots.receiver == invalid_stream_slot;
+  }
 
   // -- member variables -------------------------------------------------------
 

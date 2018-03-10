@@ -107,14 +107,24 @@ public:
   /// A tuple holding all nested scatterers.
   using nested_scatterers = std::tuple<T, Ts...>;
 
+  /// Pointer to an outbound path.
+  using typename super::path_ptr;
+
+  /// Unique pointer to an outbound path.
+  using typename super::unique_path_ptr;
+
   /// State held for each slot.
   struct non_owning_ptr {
-    outbound_path* ptr;
+    path_ptr ptr;
     stream_scatterer* owner;
   };
 
   /// Maps slots to path and nested scatterer.
   using map_type = detail::unordered_flat_map<stream_slot, non_owning_ptr>;
+
+  /// Maps slots to paths that haven't a scatterer assigned yet.
+  using unassigned_map_type = detail::unordered_flat_map<stream_slot,
+                                                         unique_path_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -135,9 +145,34 @@ public:
     // return std::get<U>(substreams_);
   }
 
+  /// Requires a previous call to `add_path` for given slot.
   template <class U>
   void assign(stream_slot slot) {
-    paths_.emplace(slot, non_owning_ptr{nullptr, &get<U>()});
+    // Fetch pointer from the unassigned paths.
+    auto i = unassigned_paths_.find(slot);
+    if (i == unassigned_paths_.end()) {
+      CAF_LOG_ERROR("cannot assign nested scatterer to unknown slot");
+      return;
+    }
+    // Error or not, remove entry from unassigned_paths_ before leaving.
+    auto cleanup = detail::make_scope_guard([&] {
+      unassigned_paths_.erase(i);
+    });
+    // Transfer ownership to nested scatterer.
+    auto ptr = i->second.get();
+    CAF_ASSERT(ptr != nullptr);
+    auto owner = &get<U>();
+    if (!owner->insert_path(std::move(i->second))) {
+      CAF_LOG_ERROR("slot exists as unassigned and assigned");
+      return;
+    }
+    // Store owner and path in our map.
+    auto er = paths_.emplace(slot, non_owning_ptr{ptr, owner});
+    if (!er.second) {
+      CAF_LOG_ERROR("slot already mapped");
+      owner->remove_path(slot, sec::invalid_stream_state, false);
+      return;
+    }
   }
 
   // -- overridden functions ---------------------------------------------------
@@ -146,32 +181,9 @@ public:
     return paths_.size();
   }
 
-  /// Requires a previous call to `assign<T>(slot.sender)`.
-  path_ptr add_path(stream_slots slots, strong_actor_ptr target) override {
-    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(target));
-    auto e = paths_.end();
-    auto i = paths_.find(slots.sender);
-    if (i == e) {
-      CAF_LOG_ERROR("no scatterer assigned:" << CAF_ARG(slots.sender));
-      return nullptr;
-    }
-    if (i->second.ptr != nullptr) {
-      CAF_LOG_ERROR("multiple calls to add_path:" << CAF_ARG(slots.sender));
-      return nullptr;
-    }
-    auto result = i->second.owner->add_path(slots, target);
-    if (result == nullptr) {
-      CAF_LOG_ERROR("nested scatterer unable to add path:"
-                    << CAF_ARG(slots.sender));
-      paths_.erase(i);
-      return nullptr;
-    }
-    i->second.ptr = result;
-    return result;
-  }
-
   bool remove_path(stream_slot slot, error reason,
                    bool silent) noexcept override {
+    CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(reason) << CAF_ARG(silent));
     auto i = paths_.find(slot);
     if (i == paths_.end())
       return false;
@@ -229,21 +241,21 @@ public:
     return result;
   }
 
-  message make_handshake_token(stream_slot slot) const override {
-    auto i = paths_.find(slot);
-    if (i != paths_.end())
-      return i->second.owner->make_handshake_token(slot);
-    CAF_LOG_ERROR("no scatterer available:" << CAF_ARG(slot));
-    return make_message(stream<message>{slot});
-  }
-
   void clear_paths() override {
+    CAF_LOG_TRACE("");
     for (auto ptr : ptrs_)
       ptr->clear_paths();
     paths_.clear();
   }
 
 protected:
+  bool insert_path(unique_path_ptr ptr) override {
+    CAF_LOG_TRACE(CAF_ARG(ptr));
+    CAF_ASSERT(ptr != nullptr);
+    auto slot = ptr->slots.sender;
+    return unassigned_paths_.emplace(slot, std::move(ptr)).second;
+  }
+
   void for_each_path_impl(path_visitor& f) override {
     for (auto& kvp : paths_)
       f(*kvp.second.ptr);
@@ -268,6 +280,7 @@ private:
   nested_scatterers nested_;
   stream_scatterer* ptrs_[sizeof...(Ts) + 1];
   map_type paths_;
+  unassigned_map_type unassigned_paths_;
 };
 
 } // namespace caf

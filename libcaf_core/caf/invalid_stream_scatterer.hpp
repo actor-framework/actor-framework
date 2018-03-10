@@ -32,8 +32,6 @@ public:
 
   size_t num_paths() const noexcept override;
 
-  path_ptr add_path(stream_slots slots, strong_actor_ptr target) override;
-
   bool remove_path(stream_slot slots, error reason,
                    bool silent) noexcept override;
 
@@ -47,9 +45,9 @@ public:
 
   size_t buffered() const noexcept override;
 
-  message make_handshake_token(stream_slot slot) const override;
-
 protected:
+  bool insert_path(unique_path_ptr) override;
+
   void for_each_path_impl(path_visitor& f) override;
 
   bool check_paths_impl(path_algorithm algo,

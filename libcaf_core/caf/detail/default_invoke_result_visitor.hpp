@@ -56,12 +56,6 @@ public:
     delegate(x);
   }
 
-  void operator()(stream_slot in, stream_slot out,
-                  stream_manager_ptr& mgr) override {
-    // TODO: error handling
-    self_->build_pipeline(in, out, std::move(mgr));
-  }
-
 private:
   void deliver(response_promise& rp, error& x) {
     CAF_LOG_DEBUG("report error back to requesting actor");

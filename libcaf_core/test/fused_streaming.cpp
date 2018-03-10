@@ -105,21 +105,22 @@ TESTEE_STATE(sum_up) {
 };
 
 TESTEE(sum_up) {
+  using intptr = int*;
   return {
     [=](stream<int>& in) {
       return self->make_sink(
         // input stream
         in,
         // initialize state
-        [](unit_t&) {
-          // nop
+        [=](intptr& x) {
+          x = &self->state.x;
         },
         // processing step
-        [=](unit_t&, int y) {
-          self->state.x += y;
+        [](intptr& x, int y) {
+          *x += y;
         },
         // cleanup and produce result message
-        [=](unit_t&) {
+        [=](intptr&, const error&) {
           CAF_MESSAGE(self->name() << " is done");
         }
       );
@@ -150,7 +151,7 @@ TESTEE(collect) {
           self->state.strings.emplace_back(std::move(y));
         },
         // cleanup and produce result message
-        [=](unit_t&) {
+        [=](unit_t&, const error&) {
           CAF_MESSAGE(self->name() << " is done");
         }
       );
@@ -170,6 +171,8 @@ using scatterer = fused_scatterer<int_scatterer, string_scatterer>;
 
 class fused_stage : public stream_manager {
 public:
+  using super = stream_manager;
+
   fused_stage(scheduled_actor* self) : stream_manager(self), out_(self) {
     continuous(true);
   }
@@ -184,22 +187,20 @@ public:
     using int_vec = std::vector<int>;
     using string_vec = std::vector<string>;
     if (batch.xs.match_elements<int_vec>()) {
+      CAF_MESSAGE("handle an integer batch");
       auto& xs = batch.xs.get_mutable_as<int_vec>(0);
       auto& buf = out_.get<int_scatterer>().buf();
       buf.insert(buf.end(), xs.begin(), xs.end());
       return;
     }
     if (batch.xs.match_elements<string_vec>()) {
+      CAF_MESSAGE("handle a string batch");
       auto& xs = batch.xs.get_mutable_as<string_vec>(0);
       auto& buf = out_.get<string_scatterer>().buf();
       buf.insert(buf.end(), xs.begin(), xs.end());
       return;
     }
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
-  }
-
-  message make_handshake(stream_slot slot) const override {
-    return out_.make_handshake_token(slot);
   }
 
   bool congested() const noexcept override {
@@ -212,7 +213,6 @@ public:
 
 private:
   scatterer out_;
-  std::map<stream_slot, stream_scatterer*> scatterers_;
 };
 
 TESTEE_STATE(stream_multiplexer) {
@@ -231,18 +231,18 @@ TESTEE(stream_multiplexer) {
     },
     [=](join_atom, strings_atom) {
       auto& stg = self->state.stage;
-      CAF_MESSAGE("received 'join' request for integers");
+      CAF_MESSAGE("received 'join' request for strings");
       auto result = stg->add_unsafe_outbound_path<string>();
       stg->out().assign<string_scatterer>(result.out());
       return result;
     },
     [=](const stream<int>& in) {
       CAF_MESSAGE("received handshake for integers");
-      return self->state.stage->add_unsafe_inbound_path<void>(in);
+      return self->state.stage->add_unsafe_inbound_path(in);
     },
     [=](const stream<string>& in) {
       CAF_MESSAGE("received handshake for strings");
-      return self->state.stage->add_unsafe_inbound_path<void>(in);
+      return self->state.stage->add_unsafe_inbound_path(in);
     }
   };
 }

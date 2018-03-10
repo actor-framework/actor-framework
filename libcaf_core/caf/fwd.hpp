@@ -34,6 +34,7 @@ template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
 template <class> class stream;
+template <class> class stream_sink;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
 
@@ -41,7 +42,7 @@ template <class> struct timeout_definition;
 
 // -- 2 param templates --------------------------------------------------------
 
-template <class, class> class make_sink_result;
+template <class, class> class stream_source;
 
 // -- 3 param templates --------------------------------------------------------
 
@@ -50,20 +51,18 @@ template <class, class, int> class actor_cast_access;
 template <class, class, class> class broadcast_scatterer;
 template <class, class, class> class broadcast_topic_scatterer;
 template <class, class, class> class random_topic_scatterer;
+template <class, class, class> class stream_stage;
 
 // -- variadic templates -------------------------------------------------------
 
-template <class...> class result;
 template <class...> class delegated;
+template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
-template <class...> class typed_response_promise;
 template <class...> class typed_event_based_actor;
+template <class...> class typed_response_promise;
 
 // -- variadic templates with fixed arguments ----------------------------------
-
-template <class, class, class, class, class...> class stream_stage;
-template <class, class, class...> class stream_source;
 
 // -- classes ------------------------------------------------------------------
 
@@ -100,6 +99,7 @@ class proxy_registry;
 class stream_manager;
 class actor_companion;
 class mailbox_element;
+class message_builder;
 class message_handler;
 class scheduled_actor;
 class stream_scatterer;
@@ -231,7 +231,7 @@ using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 template <class, class = std::tuple<>, class = stream_manager_ptr>
 class output_stream;
 
-template <class, class = stream_manager_ptr>
+template <class = stream_manager_ptr>
 class stream_result;
 
 } // namespace caf

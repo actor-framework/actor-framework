@@ -67,16 +67,11 @@ public:
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<input_type>;
     if (x.xs.match_elements<vec_type>()) {
-      auto& xs = x.xs.get_mutable_as<vec_type>(0);
       downstream<output_type> ds{this->out_.buf()};
-      driver_.process(std::move(xs), ds);
+      driver_.process(ds, x.xs.get_mutable_as<vec_type>(0));
       return;
     }
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
-  }
-
-  message make_handshake(stream_slot slot) const override {
-    return make_message_from_tuple(driver_.make_handshake(slot));
   }
 
   bool congested() const noexcept override {

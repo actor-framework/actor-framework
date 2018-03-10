@@ -181,7 +181,6 @@ public:
       : super(cfg),
         mbox(unit, unit, unit, unit, unit),
         name_(cstr_name),
-        next_slot_(static_cast<stream_slot>(id())),
         global_time_(global_time),
         tick_emitter_(global_time == nullptr ? clock_type::now()
                                              : *global_time) {
@@ -236,18 +235,11 @@ public:
 
   void start_streaming(entity& ref, int num_messages) {
     CAF_REQUIRE_NOT_EQUAL(num_messages, 0);
-    auto slot = next_slot_++;
-    CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
-                << " on slot " << slot);
     using scatterer = broadcast_scatterer<int>;
     struct driver final : public stream_source_driver<scatterer> {
     public:
       driver(int sentinel) : x_(0), sentinel_(sentinel) {
         // nop
-      }
-
-      handshake_tuple_type make_handshake(stream_slot slot) const override {
-        return std::make_tuple(stream_type{slot});
       }
 
       void pull(downstream<int>& out, size_t hint) override {
@@ -263,38 +255,23 @@ public:
       int x_;
       int sentinel_;
     };
-    auto ptr = detail::make_stream_source<driver>(this, num_messages);
-    ptr->send_handshake(ref.ctrl(), slot);
-    ptr->generate_messages();
-    pending_managers_.emplace(slot, std::move(ptr));
+    auto mgr = detail::make_stream_source<driver>(this, num_messages);
+    auto res = mgr->add_outbound_path(ref.ctrl());
+    CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
+                << " on slot " << res.out());
   }
 
   void forward_to(entity& ref) {
-    auto slot = next_slot_++;
-    CAF_MESSAGE(name_ << " starts forwarding to " << ref.name()
-                << " on slot " << slot);
     using scatterer = broadcast_scatterer<int>;
-    struct driver final : public stream_stage_driver<int, none_t, scatterer> {
+    struct driver final : public stream_stage_driver<int, scatterer> {
     public:
       driver(vector<int>* log) : log_(log) {
         // nop
       }
 
-      handshake_tuple_type make_handshake(stream_slot slot) const override {
-        return std::make_tuple(stream_type{slot});
-      }
-
-      void process(vector<int>&& batch, downstream<int>& out) override {
+      void process(downstream<int>& out, vector<int>& batch) override {
         log_->insert(log_->end(), batch.begin(), batch.end());
         out.append(batch.begin(), batch.end());
-      }
-
-      void add_result(message&) override {
-        // nop
-      }
-
-      message make_final_result() override {
-        return none;
       }
 
       void finalize(const error&) override {
@@ -305,27 +282,25 @@ public:
       vector<int>* log_;
     };
     forwarder = detail::make_stream_stage<driver>(this, &data);
-    forwarder->send_handshake(ref.ctrl(), slot);
-    pending_managers_.emplace(slot, forwarder);
+    auto res = forwarder->add_outbound_path(ref.ctrl());
+    CAF_MESSAGE(name_ << " starts forwarding to " << ref.name()
+                << " on slot " << res.out());
   }
 
   void operator()(open_stream_msg& hs) {
     TRACE(name_, stream_handshake_msg,
           CAF_ARG2("sender", name_of(hs.prev_stage)));
-    auto slot = next_slot_++;
-    //stream_slots id{slot, hs.sender_slot};
-    stream_slots id{hs.slot, slot};
     // Create required state if no forwarder exists yet, otherwise `forward_to`
     // was called and we run as a stage.
-    auto mgr = forwarder;
+    stream_sink_ptr<int> mgr = forwarder;
     if (mgr == nullptr) {
-      struct driver final : public stream_sink_driver<int, void> {
+      struct driver final : public stream_sink_driver<int> {
       public:
         driver(std::vector<int>* log) : log_(log) {
           // nop
         }
 
-        void process(std::vector<int>&& xs) override {
+        void process(std::vector<int>& xs) override {
           log_->insert(log_->end(), xs.begin(), xs.end());
         }
       private:
@@ -333,11 +308,9 @@ public:
       };
       mgr = detail::make_stream_sink<driver>(this, &data);
     }
-    managers_.emplace(slot, mgr);
-    // Create a new queue in the mailbox for incoming traffic.
-    auto path = make_inbound_path(mgr, id, std::move(hs.prev_stage));
-    CAF_REQUIRE_NOT_EQUAL(path, nullptr);
-    path->emit_ack_open(this, actor_cast<actor_addr>(hs.original_stage));
+    CAF_REQUIRE(hs.msg.match_elements<stream<int>>());
+    auto& in = hs.msg.get_as<stream<int>>(0);
+    mgr->add_inbound_path(in);
   }
 
   void operator()(stream_slots slots, actor_addr& sender,
@@ -345,33 +318,14 @@ public:
     TRACE(name_, ack_open, CAF_ARG(slots),
           CAF_ARG2("sender", name_of(x.rebind_to)), CAF_ARG(x));
     CAF_REQUIRE_EQUAL(sender, x.rebind_to);
-    // Get the manager for that stream, move it from `pending_managers_` to
-    // `managers_`, and handle `x`.
-    auto i = pending_managers_.find(slots.receiver);
-    CAF_REQUIRE_NOT_EQUAL(i, pending_managers_.end());
-    auto res = managers_.emplace(slots.receiver, std::move(i->second));
-    pending_managers_.erase(i);
-    CAF_REQUIRE(res.second);
-    res.first->second->handle(slots, x);
-    res.first->second->out().force_emit_batches();
+    scheduled_actor::handle_upstream_msg(slots, sender, x);
   }
 
   void operator()(stream_slots slots, actor_addr& sender,
                   upstream_msg::ack_batch& x) {
     TRACE(name_, ack_batch, CAF_ARG(slots),
           CAF_ARG2("sender", name_of(sender)), CAF_ARG(x));
-    // Get the manager for that stream.
-    auto i = managers_.find(slots.receiver);
-    CAF_REQUIRE_NOT_EQUAL(i, managers_.end());
-    i->second->handle(slots, x);
-    i->second->out().force_emit_batches();
-    if (i->second->done()) {
-      CAF_MESSAGE(name_ << " is done sending batches");
-      // Purge the manager from the map.
-      auto mgr = i->second;
-      erase_stream_manager(mgr);
-      mgr->stop();
-    }
+    scheduled_actor::handle_upstream_msg(slots, sender, x);
   }
 
   void advance_time() {
@@ -380,7 +334,7 @@ public:
     auto f = [&](tick_type x) {
       if (x % ticks_per_force_batches_interval == 0) {
         // Force batches on all output paths.
-        for (auto& kvp : managers_)
+        for (auto& kvp : stream_managers())
           kvp.second->out().force_emit_batches();
       }
       if (x % ticks_per_credit_interval == 0) {
@@ -422,20 +376,6 @@ public:
     CAF_FAIL("unexpected function call");
   }
 
-  void erase_stream_manager(stream_slot id) {
-    managers_.erase(id);
-  }
-
-  void erase_stream_manager(const stream_manager_ptr& mgr) {
-    auto i = managers_.begin();
-    auto e = managers_.end();
-    while (i != e)
-      if (i->second == mgr)
-        i = managers_.erase(i);
-      else
-        ++i;
-  }
-
   time_point now() {
     return global_time_ == nullptr ? clock_type::now() : *global_time_;
   }
@@ -444,11 +384,8 @@ public:
 
   mboxqueue mbox;
   const char* name_;
-  stream_slot next_slot_ = 1;
   vector<int> data; // Keeps track of all received data from all batches.
-  stream_manager_ptr forwarder;
-  std::map<stream_slot, stream_manager_ptr> managers_;
-  std::map<stream_slot, stream_manager_ptr> pending_managers_;
+  stream_stage_ptr<int, int, broadcast_scatterer<int>> forwarder;
 
   tick_type ticks_per_force_batches_interval;
   tick_type ticks_per_credit_interval;
@@ -474,7 +411,9 @@ struct msg_visitor {
   result_type operator()(is_default_async, default_queue&, mailbox_element& x) {
     CAF_REQUIRE_EQUAL(x.content().type_token(),
                       make_type_token<open_stream_msg>());
+    self->current_mailbox_element(&x);
     (*self)(x.content().get_mutable_as<open_stream_msg>(0));
+    self->current_mailbox_element(nullptr);
     return intrusive::task_result::resume;
   }
 
@@ -485,6 +424,7 @@ struct msg_visitor {
 
   result_type operator()(is_umsg, umsg_queue&, mailbox_element& x) {
     CAF_REQUIRE(x.content().type_token() == make_type_token<upstream_msg>());
+    self->current_mailbox_element(&x);
     auto& um = x.content().get_mutable_as<upstream_msg>(0);
     auto f = detail::make_overload(
       [&](upstream_msg::ack_open& y) {
@@ -501,6 +441,7 @@ struct msg_visitor {
       }
     );
     visit(f, um.content);
+    self->current_mailbox_element(nullptr);
     return intrusive::task_result::resume;
   }
 
@@ -508,6 +449,7 @@ struct msg_visitor {
                          policy::downstream_messages::nested_queue_type& q,
                          mailbox_element& x) {
     CAF_REQUIRE(x.content().type_token() == make_type_token<downstream_msg>());
+    self->current_mailbox_element(&x);
     auto inptr = q.policy().handler.get();
     if (inptr == nullptr)
       return intrusive::task_result::stop;
@@ -525,13 +467,13 @@ struct msg_visitor {
       [&](downstream_msg::close& y) {
         TRACE(self->name(), close, CAF_ARG(dm.slots));
         auto slots = dm.slots;
-        auto i = self->managers_.find(slots.receiver);
-        CAF_REQUIRE_NOT_EQUAL(i, self->managers_.end());
+        auto i = self->stream_managers().find(slots.receiver);
+        CAF_REQUIRE_NOT_EQUAL(i, self->stream_managers().end());
         i->second->handle(inptr, y);
         q.policy().handler.reset();
         qs.erase_later(slots.receiver);
         if (!i->second->done()) {
-          self->managers_.erase(i);
+          self->stream_managers().erase(i);
         } else {
           // Close the manager and remove it on all registered slots.
           auto mgr = i->second;
@@ -544,7 +486,9 @@ struct msg_visitor {
         CAF_FAIL("did not expect downstream_msg::forced_close");
         return intrusive::task_result::stop;
       });
-    return visit(f, dm.content);
+    auto result = visit(f, dm.content);
+    self->current_mailbox_element(nullptr);
+    return result;
   }
 
   // -- member variables -------------------------------------------------------
@@ -610,8 +554,8 @@ struct fixture {
     entity* xs[] = {&alice, &bob, &carl};
     for (auto x : xs) {
       CAF_CHECK(get<2>(x->mbox.queues()).queues().empty());
-      CAF_CHECK(x->pending_managers_.empty());
-      CAF_CHECK(x->managers_.empty());
+      CAF_CHECK(x->pending_stream_managers().empty());
+      CAF_CHECK(x->stream_managers().empty());
     }
   }
 
@@ -627,7 +571,7 @@ struct fixture {
   template <class... Ts>
   void next_cycle(Ts&... xs) {
     entity* es[] = {&xs...};
-    //CAF_MESSAGE("advance clock by " << tc.credit_interval.count() << "ns");
+    CAF_MESSAGE("advance clock by " << tc.credit_interval.count() << "ns");
     sched.clock().current_time += tc.credit_interval;
     for (auto e : es)
       e->advance_time();
@@ -653,7 +597,7 @@ struct fixture {
   bool done_streaming() {
     entity* es[] = {&alice, &bob, &carl};
     return std::all_of(std::begin(es), std::end(es),
-                       [](entity* e) { return e->managers_.empty(); });
+                       [](entity* e) { return e->stream_managers().empty(); });
   }
 };
 
@@ -672,7 +616,9 @@ CAF_TEST_FIXTURE_SCOPE(native_streaming_classes_tests, fixture)
 CAF_TEST(depth_2_pipeline_30_items) {
   alice.start_streaming(bob, 30);
   loop(alice, bob);
-  next_cycle(alice, bob); // a single credit round is enough
+  next_cycle(alice, bob); // emit first ack_batch
+  loop(alice, bob);
+  next_cycle(alice, bob); // to emit final ack_batch
   loop(alice, bob);
   CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
 }
@@ -688,9 +634,11 @@ CAF_TEST(depth_3_pipeline_30_items) {
   bob.forward_to(carl);
   alice.start_streaming(bob, 30);
   loop(alice, bob, carl);
-  next_cycle(alice, bob, carl);
+  next_cycle(alice, bob, carl); // emit first ack_batch
   loop(alice, bob, carl);
   next_cycle(alice, bob, carl);
+  loop(alice, bob, carl);
+  next_cycle(alice, bob, carl); // emit final ack_batch
   loop(alice, bob, carl);
   CAF_CHECK_EQUAL(bob.data, make_iota(0, 30));
   CAF_CHECK_EQUAL(carl.data, make_iota(0, 30));

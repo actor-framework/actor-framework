@@ -99,6 +99,15 @@ public:
     return ptr_;
   }
 
+  // -- conversions ------------------------------------------------------------
+
+  /// Rebinds the `ptr()` property.
+  template <class Manager>
+  output_stream<value_type, tuple_type, intrusive_ptr<Manager>>
+  rebind(Manager* ptr) const noexcept {
+    return {in_, out_, ptr};
+  }
+
 private:
   // -- member variables -------------------------------------------------------
 
