@@ -67,8 +67,13 @@ message message_builder::to_message() const {
 
 message message_builder::move_to_message() {
   message result;
-  result.vals().reset(static_cast<detail::dynamic_message_data*>(data_.detach()), false);
+  using pointer = detail::dynamic_message_data*;
+  result.vals().reset(static_cast<pointer>(data_.detach()), false);
   return result;
+}
+
+message message_builder::extract(message_handler f) const {
+  return to_message().extract(std::move(f));
 }
 
 optional<message> message_builder::apply(message_handler handler) {
