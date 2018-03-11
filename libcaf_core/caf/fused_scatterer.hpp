@@ -23,6 +23,8 @@
 #include <cstddef>
 
 #include "caf/logger.hpp"
+#include "caf/outbound_path.hpp"
+#include "caf/sec.hpp"
 #include "caf/stream.hpp"
 #include "caf/stream_scatterer.hpp"
 #include "caf/stream_slot.hpp"
