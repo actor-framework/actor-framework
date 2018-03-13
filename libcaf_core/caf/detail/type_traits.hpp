@@ -490,6 +490,20 @@ public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
+/// Checks wheter `F` is callable with arguments of types `Ts...`.
+template <class F, class... Ts>
+struct is_callable_with {
+  template <class U>
+  static auto sfinae(U*)
+  -> decltype((std::declval<U&>())(std::declval<Ts>()...), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<F>(nullptr));
+  static constexpr bool value = type::value;
+};
+
 /// Checks wheter `F` takes mutable references.
 ///
 /// A manipulator is a functor that manipulates its arguments via

@@ -21,6 +21,7 @@
 #define CAF_STREAM_SOURCE_DRIVER_IMPL_HPP
 
 #include "caf/none.hpp"
+#include "caf/stream_finalize_trait.hpp"
 #include "caf/stream_source_driver.hpp"
 #include "caf/stream_source_trait.hpp"
 
@@ -45,7 +46,7 @@ public:
   stream_source_driver_impl(Init init, Pull f, Done pred, Finalize fin)
       : pull_(std::move(f)),
         done_(std::move(pred)),
-        finalize_(std::move(fin)) {
+        fin_(std::move(fin)) {
     init(state_);
   }
 
@@ -58,14 +59,14 @@ public:
   }
 
   void finalize(const error& err) override {
-    finalize_(state_, err);
+    stream_finalize_trait<Finalize, state_type>::invoke(fin_, state_, err);
   }
 
 private:
   state_type state_;
   Pull pull_;
   Done done_;
-  Finalize finalize_;
+  Finalize fin_;
 };
 
 } // namespace detail

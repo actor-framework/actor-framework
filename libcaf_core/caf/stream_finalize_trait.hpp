@@ -16,46 +16,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STREAM_STAGE_HPP
-#define CAF_DETAIL_STREAM_STAGE_HPP
+#ifndef CAF_STREAM_FINALIZE_TRAIT_HPP
+#define CAF_STREAM_FINALIZE_TRAIT_HPP
 
-#include <tuple>
-
-#include "caf/fwd.hpp"
-#include "caf/intrusive_ptr.hpp"
+#include "caf/make_message.hpp"
+#include "caf/message.hpp"
 #include "caf/stream_sink.hpp"
-#include "caf/stream_source.hpp"
+
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
-template <class In, class Out, class Scatterer>
-class stream_stage : public stream_source<Out, Scatterer>,
-                     public stream_sink<In> {
-public:
-  // -- member types -----------------------------------------------------------
+/// Dispatches a finalize call to a function taking either one or two arguments.
+template <class Fun, class State,
+          bool AcceptsTwoArgs =
+            detail::is_callable_with<Fun, State&, const error&>::value>
+struct stream_finalize_trait;
 
-  using left_super = stream_source<Out, Scatterer>;
-
-  using right_super = stream_sink<In>;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  stream_stage(scheduled_actor* self)
-      : stream_manager(self),
-        left_super(self),
-        right_super(self) {
-    // nop
-  }
-
-  Scatterer& out() override {
-    return left_super::out();
+/// Specializes the trait for callbacks that only take the state.
+template <class Fun, class State>
+struct stream_finalize_trait<Fun, State, false>{
+  static void invoke(Fun& f, State& st, const error&) {
+    static_assert(detail::is_callable_with<Fun, State&>::value,
+                  "Finalize function neither accepts (State&, const error&) "
+                  "nor (State&)");
+    f(st);
   }
 };
 
-template <class In, class Out, class Scatterer>
-using stream_stage_ptr =
-  intrusive_ptr<stream_stage<In, Out, Scatterer>>;
+/// Specializes the trait for callbacks that take state and error.
+template <class Fun, class State>
+struct stream_finalize_trait<Fun, State, true>{
+  static void invoke(Fun& f, State& st, const error& err) {
+    f(st, err);
+  }
+};
+
 
 } // namespace caf
 
-#endif // CAF_DETAIL_STREAM_STAGE_HPP
+#endif // CAF_STREAM_FINALIZE_TRAIT_HPP

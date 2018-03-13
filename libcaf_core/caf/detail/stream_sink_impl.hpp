@@ -26,8 +26,6 @@
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_sink.hpp"
-#include "caf/stream_sink_trait.hpp"
-#include "caf/terminal_stream_scatterer.hpp"
 
 #include "caf/policy/arg.hpp"
 
@@ -47,13 +45,8 @@ public:
   stream_sink_impl(scheduled_actor* self, Ts&&... xs)
       : stream_manager(self),
         super(self),
-        driver_(std::forward<Ts>(xs)...),
-        out_(self) {
+        driver_(std::forward<Ts>(xs)...) {
     // nop
-  }
-
-  terminal_stream_scatterer& out() override {
-    return out_;
   }
 
   void handle(inbound_path*, downstream_msg::batch& x) override {
@@ -73,7 +66,6 @@ protected:
 
 private:
   driver_type driver_;
-  terminal_stream_scatterer out_;
 };
 
 template <class Driver, class... Ts>

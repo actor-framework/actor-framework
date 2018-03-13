@@ -21,6 +21,7 @@
 #define CAF_STREAM_SINK_DRIVER_IMPL_HPP
 
 #include "caf/none.hpp"
+#include "caf/stream_finalize_trait.hpp"
 #include "caf/stream_sink_driver.hpp"
 #include "caf/stream_sink_trait.hpp"
 
@@ -44,7 +45,7 @@ public:
   template <class Init>
   stream_sink_driver_impl(Init init, Process f, Finalize fin)
       : process_(std::move(f)),
-        finalize_(std::move(fin)) {
+        fin_(std::move(fin)) {
     init(state_);
   }
 
@@ -53,12 +54,12 @@ public:
   }
 
   void finalize(const error& err) override {
-    finalize_(state_, err);
+    stream_finalize_trait<Finalize, state_type>::invoke(fin_, state_, err);
   }
 
 private:
   Process process_;
-  Finalize finalize_;
+  Finalize fin_;
   state_type state_;
 };
 

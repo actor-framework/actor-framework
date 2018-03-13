@@ -24,6 +24,7 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_result.hpp"
+#include "caf/terminal_stream_scatterer.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -38,7 +39,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_sink(scheduled_actor* self) : stream_manager(self) {
+  stream_sink(scheduled_actor* self) : stream_manager(self), dummy_out_(self) {
     // nop
   }
 
@@ -48,6 +49,10 @@ public:
     return !this->continuous() && this->inbound_paths_.empty();
   }
 
+  stream_scatterer& out() override {
+    return dummy_out_;
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Creates a new input path to the current sender.
@@ -55,6 +60,9 @@ public:
   add_inbound_path(const stream<input_type>&) {
     return {add_unchecked_inbound_path_impl(), this};
   }
+
+private:
+  terminal_stream_scatterer dummy_out_;
 };
 
 template <class In>

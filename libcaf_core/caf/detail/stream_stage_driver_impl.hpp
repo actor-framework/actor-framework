@@ -20,6 +20,7 @@
 #ifndef CAF_STREAM_STAGE_DRIVER_IMPL_HPP
 #define CAF_STREAM_STAGE_DRIVER_IMPL_HPP
 
+#include "caf/stream_finalize_trait.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/stream_stage_driver.hpp"
 #include "caf/stream_stage_trait.hpp"
@@ -61,7 +62,7 @@ public:
   }
 
   void finalize(const error& err) override {
-    return fin_(state_, err);
+    stream_finalize_trait<Finalize, state_type>::invoke(fin_, state_, err);
   }
 
 private:
