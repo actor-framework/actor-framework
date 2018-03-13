@@ -55,9 +55,13 @@ response_promise::response_promise(strong_actor_ptr self, mailbox_element& src)
   // nop
 }
 
-response_promise response_promise::deliver(error x) {
-  //if (id_.valid())
-  return deliver_impl(make_message(std::move(x)));
+void response_promise::deliver(error x) {
+  deliver_impl(make_message(std::move(x)));
+}
+
+void response_promise::deliver(unit_t) {
+  if (id_.valid())
+    deliver_impl(make_message());
 }
 
 bool response_promise::async() const {
@@ -72,26 +76,24 @@ execution_unit* response_promise::context() {
            ->context();
 }
 
-response_promise response_promise::deliver_impl(message msg) {
+void response_promise::deliver_impl(message msg) {
+  CAF_LOG_TRACE(CAF_ARG(msg));
   if (!stages_.empty()) {
     auto next = std::move(stages_.back());
     stages_.pop_back();
     next->enqueue(make_mailbox_element(std::move(source_), id_,
                                        std::move(stages_), std::move(msg)),
                   context());
-    return *this;
+    return;
   }
   if (source_) {
     source_->enqueue(std::move(self_), id_.response_id(),
                      std::move(msg), context());
     source_.reset();
-    return *this;
+    return;
   }
-  if (self_)
-    CAF_LOG_INFO("response promise already satisfied");
-  else
-    CAF_LOG_INFO("invalid response promise");
-  return *this;
+  CAF_LOG_INFO_IF(self_ != nullptr, "response promise already satisfied");
+  CAF_LOG_INFO_IF(self_ == nullptr, "invalid response promise");
 }
 
 } // namespace caf
