@@ -30,7 +30,10 @@ namespace caf {
 
 /// Empty marker type for streaming handshakes.
 template <class T>
-class stream {};
+class stream {
+public:
+  using value_type = T;
+};
 
 } // namespace caf
 
