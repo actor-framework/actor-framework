@@ -152,9 +152,9 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class Out>
-  output_stream_t<Out> add_unsafe_outbound_path() {
+  output_stream_t<Out> add_unchecked_outbound_path() {
     auto handshake = make_message(stream<Out>{});
-    return {0, add_unsafe_outbound_path_impl(std::move(handshake)), this};
+    return {0, add_unchecked_outbound_path_impl(std::move(handshake)), this};
   }
 
   /// Creates an outbound path to the current sender without any type checking.
@@ -162,10 +162,10 @@ public:
   /// @private
   template <class Out, class... Ts>
   output_stream_t<Out, detail::strip_and_convert_t<Ts>...>
-  add_unsafe_outbound_path(std::tuple<Ts...> xs) {
+  add_unchecked_outbound_path(std::tuple<Ts...> xs) {
     auto tk = std::make_tuple(stream<Out>{});
     auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
-    return {0, add_unsafe_outbound_path_impl(std::move(handshake)), this};
+    return {0, add_unchecked_outbound_path_impl(std::move(handshake)), this};
   }
 
   /// Creates an outbound path to `next`, only checking whether the interface
@@ -175,11 +175,11 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class Out, class Handle>
-  output_stream_t<Out> add_unsafe_outbound_path(Handle next) {
+  output_stream_t<Out> add_unchecked_outbound_path(Handle next) {
     // TODO: type checking
     auto handshake = make_message(stream<Out>{});
     auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
-    auto slot = add_unsafe_outbound_path_impl(std::move(hdl),
+    auto slot = add_unchecked_outbound_path_impl(std::move(hdl),
                                               std::move(handshake));
     return {0, slot, this};
   }
@@ -192,12 +192,12 @@ public:
   /// @private
   template <class Out, class Handle, class... Ts>
   output_stream_t<Out, detail::strip_and_convert_t<Ts>...>
-  add_unsafe_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
+  add_unchecked_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
     // TODO: type checking
     auto tk = std::make_tuple(stream<Out>{});
     auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
     auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
-    auto slot = add_unsafe_outbound_path_impl(std::move(hdl),
+    auto slot = add_unchecked_outbound_path_impl(std::move(hdl),
                                               std::move(handshake));
     return {0, slot, this};
   }
@@ -207,27 +207,27 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class In>
-  stream_result<> add_unsafe_inbound_path(const stream<In>&) {
-    return {add_unsafe_inbound_path_impl(), this};
+  stream_result<> add_unchecked_inbound_path(const stream<In>&) {
+    return {add_unchecked_inbound_path_impl(), this};
   }
 
   /// Adds a new outbound path to `rp.next()`.
   /// @private
-  stream_slot add_unsafe_outbound_path_impl(response_promise& rp,
+  stream_slot add_unchecked_outbound_path_impl(response_promise& rp,
                                             message handshake);
 
   /// Adds a new outbound path to `next`.
   /// @private
-  stream_slot add_unsafe_outbound_path_impl(strong_actor_ptr next,
+  stream_slot add_unchecked_outbound_path_impl(strong_actor_ptr next,
                                             message handshake);
 
-  /// Calls `add_unsafe_outbound_path_impl(make_response_promise(), handshake)`.
+  /// Calls `add_unchecked_outbound_path_impl(make_response_promise(), handshake)`.
   /// @private
-  stream_slot add_unsafe_outbound_path_impl(message handshake);
+  stream_slot add_unchecked_outbound_path_impl(message handshake);
 
   /// Adds the current sender as an inbound path.
   /// @pre Current message is an `open_stream_msg`.
-  stream_slot add_unsafe_inbound_path_impl();
+  stream_slot add_unchecked_inbound_path_impl();
 
 protected:
   // -- modifiers for self -----------------------------------------------------

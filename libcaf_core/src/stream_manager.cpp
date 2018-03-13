@@ -176,7 +176,7 @@ void stream_manager::remove_input_path(stream_slot slot, error reason,
     self_->erase_inbound_path_later(slot, std::move(reason));
 }
 
-stream_slot stream_manager::add_unsafe_outbound_path_impl(response_promise& rp,
+stream_slot stream_manager::add_unchecked_outbound_path_impl(response_promise& rp,
                                                           message handshake) {
   CAF_LOG_TRACE(CAF_ARG(rp) << CAF_ARG(handshake));
   CAF_ASSERT(out().terminal() == false);
@@ -195,31 +195,31 @@ stream_slot stream_manager::add_unsafe_outbound_path_impl(response_promise& rp,
   return slot;
 }
 
-stream_slot stream_manager::add_unsafe_outbound_path_impl(strong_actor_ptr next,
+stream_slot stream_manager::add_unchecked_outbound_path_impl(strong_actor_ptr next,
                                                           message handshake) {
   CAF_LOG_TRACE(CAF_ARG(next) << CAF_ARG(handshake));
   response_promise rp{self_->ctrl(), nullptr, {next}, make_message_id()};
-  return add_unsafe_outbound_path_impl(rp, std::move(handshake));
+  return add_unchecked_outbound_path_impl(rp, std::move(handshake));
 }
 
-stream_slot stream_manager::add_unsafe_outbound_path_impl(message handshake) {
+stream_slot stream_manager::add_unchecked_outbound_path_impl(message handshake) {
   CAF_LOG_TRACE(CAF_ARG(handshake));
   auto rp = self_->make_response_promise();
-  return add_unsafe_outbound_path_impl(rp, std::move(handshake));
+  return add_unchecked_outbound_path_impl(rp, std::move(handshake));
 }
 
-stream_slot stream_manager::add_unsafe_inbound_path_impl() {
+stream_slot stream_manager::add_unchecked_inbound_path_impl() {
   CAF_LOG_TRACE("");
   auto x = self_->current_mailbox_element();
   if (x == nullptr || !x->content().match_elements<open_stream_msg>()) {
-    CAF_LOG_ERROR("add_unsafe_inbound_path called, but current message "
+    CAF_LOG_ERROR("add_unchecked_inbound_path called, but current message "
                   "is not an open_stream_msg");
     return invalid_stream_slot;
   }
   auto& osm = x->content().get_mutable_as<open_stream_msg>(0);
   if (out().terminal() && !self_->current_forwarding_stack().empty()) {
     // Sinks must always terminate the stream.
-    CAF_LOG_WARNING("add_unsafe_inbound_path called in a sink, but the "
+    CAF_LOG_WARNING("add_unchecked_inbound_path called in a sink, but the "
                     "handshake has further stages");
     stream_slots path_id{osm.slot, 0};
     auto code = sec::cannot_add_downstream;

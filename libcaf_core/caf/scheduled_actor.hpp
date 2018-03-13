@@ -485,7 +485,7 @@ public:
                                                   std::move(fin));
     auto tk = std::make_tuple(stream<output_type>{});
     auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
-    auto slot = mgr->add_unsafe_outbound_path_impl(
+    auto slot = mgr->add_unchecked_outbound_path_impl(
       actor_cast<strong_actor_ptr>(dest), std::move(handshake));
     if (slot == invalid_stream_slot) {
       CAF_LOG_WARNING("unable to assign a slot in make_source");

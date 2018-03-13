@@ -51,7 +51,7 @@ public:
   output_stream<Out, std::tuple<>, intrusive_ptr<stream_source>>
   add_outbound_path() {
     CAF_LOG_TRACE("");
-    return this->add_unsafe_outbound_path<Out>().rebind(this);
+    return this->add_unchecked_outbound_path<Out>().rebind(this);
   }
 
   /// Creates a new output path to the current sender with custom handshake.
@@ -60,7 +60,7 @@ public:
                 intrusive_ptr<stream_source>>
   add_outbound_path(std::tuple<Ts...> xs) {
     CAF_LOG_TRACE(CAF_ARG(xs));
-    return this->add_unsafe_outbound_path<Out>(std::move(xs)).rebind(this);
+    return this->add_unchecked_outbound_path<Out>(std::move(xs)).rebind(this);
   }
 
   /// Creates a new output path to the current sender.
@@ -68,7 +68,7 @@ public:
   output_stream<Out, std::tuple<>, intrusive_ptr<stream_source>>
   add_outbound_path(const Handle& next) {
     CAF_LOG_TRACE(CAF_ARG(next));
-    return this->add_unsafe_outbound_path<Out>(next).rebind(this);
+    return this->add_unchecked_outbound_path<Out>(next).rebind(this);
   }
 
   /// Creates a new output path to the current sender with custom handshake.
@@ -77,7 +77,7 @@ public:
                 intrusive_ptr<stream_source>>
   add_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
     CAF_LOG_TRACE(CAF_ARG(next) << CAF_ARG(xs));
-    return this->add_unsafe_outbound_path<Out>(next, std::move(xs))
+    return this->add_unchecked_outbound_path<Out>(next, std::move(xs))
            .rebind(this);
   }
 

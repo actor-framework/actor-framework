@@ -56,10 +56,6 @@ public:
     return out_;
   }
 
-  bool done() const override {
-    return !this->continuous() && this->inbound_paths_.empty();
-  }
-
   void handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<input_type>;

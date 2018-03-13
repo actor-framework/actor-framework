@@ -42,12 +42,18 @@ public:
     // nop
   }
 
+  // -- overridden member functions --------------------------------------------
+
+  bool done() const override {
+    return !this->continuous() && this->inbound_paths_.empty();
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Creates a new input path to the current sender.
   stream_result<intrusive_ptr<stream_sink>>
   add_inbound_path(const stream<input_type>&) {
-    return {add_unsafe_inbound_path_impl(), this};
+    return {add_unchecked_inbound_path_impl(), this};
   }
 };
 
