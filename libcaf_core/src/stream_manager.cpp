@@ -176,6 +176,15 @@ void stream_manager::remove_input_path(stream_slot slot, error reason,
     self_->erase_inbound_path_later(slot, std::move(reason));
 }
 
+inbound_path* stream_manager::get_inbound_path(stream_slot x) const {
+  auto pred = [=](inbound_path* ptr) {
+    return ptr->slots.receiver == x;
+  };
+  auto e = inbound_paths_.end();
+  auto i = std::find_if(inbound_paths_.begin(), e, pred);
+  return i != e ? *i : nullptr;
+}
+
 stream_slot stream_manager::add_unchecked_outbound_path_impl(response_promise& rp,
                                                           message handshake) {
   CAF_LOG_TRACE(CAF_ARG(rp) << CAF_ARG(handshake));

@@ -143,6 +143,9 @@ public:
     return inbound_paths_;
   }
 
+  /// Returns the inbound paths at slot `x`.
+  inbound_path* get_inbound_path(stream_slot x) const;
+
   /// Returns the parent actor.
   inline scheduled_actor* self() {
     return self_;
@@ -207,8 +210,8 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class In>
-  stream_result<> add_unchecked_inbound_path(const stream<In>&) {
-    return {add_unchecked_inbound_path_impl(), this};
+  stream_slot add_unchecked_inbound_path(const stream<In>&) {
+    return add_unchecked_inbound_path_impl();
   }
 
   /// Adds a new outbound path to `rp.next()`.
