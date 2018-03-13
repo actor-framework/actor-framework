@@ -115,6 +115,9 @@ public:
   /// Unique pointer to an outbound path.
   using typename super::unique_path_ptr;
 
+  // Lists all tempate parameters `[T, Ts...]`;
+  using param_list = detail::type_list<T, Ts...>;
+
   /// State held for each slot.
   struct non_owning_ptr {
     path_ptr ptr;
@@ -140,8 +143,15 @@ public:
 
   template <class U>
   U& get() {
-    static constexpr size_t i =
-      detail::tl_index_of<detail::type_list<T, Ts...>, U>::value;
+    static constexpr auto i = detail::tl_index_of<param_list, U>::value;
+    return std::get<i>(nested_);
+    // TODO: replace with this line when switching to C++14
+    // return std::get<U>(substreams_);
+  }
+
+  template <class U>
+  const U& get() const {
+    static constexpr auto i = detail::tl_index_of<param_list, U>::value;
     return std::get<i>(nested_);
     // TODO: replace with this line when switching to C++14
     // return std::get<U>(substreams_);
