@@ -990,6 +990,8 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
     stream_slots path_id{osm.slot, 0};
     inbound_path::emit_irregular_shutdown(this, path_id, osm.prev_stage,
                                           make_error(x, reason));
+    auto rp = make_response_promise();
+    rp.deliver(sec::stream_init_failed);
   };
   // Utility for invoking the default handler.
   auto fallback = [&] {

@@ -235,7 +235,7 @@ CAF_TEST(depth_2_pipeline_50_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
@@ -256,7 +256,7 @@ CAF_TEST(depth_2_pipeline_setup2_50_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(src, "numbers.txt", snk);
   expect((string, actor), from(self).to(src).with("numbers.txt", snk));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(strong_actor_ptr{nullptr}).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
@@ -277,13 +277,13 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(self).to(snk));
   disallow((upstream_msg::ack_open), from(snk).to(src));
   disallow((upstream_msg::forced_drop), from(snk).to(src));
   CAF_MESSAGE("send 'ok' to trigger sink to handle open_stream_msg");
   self->send(snk, ok_atom::value);
   expect((ok_atom), from(self).to(snk));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
@@ -304,7 +304,7 @@ CAF_TEST(depth_2_pipeline_500_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (loop until src sends 'close')");
   do {
@@ -332,9 +332,9 @@ CAF_TEST(depth_2_pipeline_error_during_handshake) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((std::string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::forced_drop), from(snk).to(src));
-  // TODO: expect((error), from(snk).to(self).with(sec::stream_init_failed));
+  expect((error), from(snk).to(self).with(sec::stream_init_failed));
 }
 
 CAF_TEST(depth_2_pipeline_error_at_source) {
@@ -345,7 +345,7 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (and abort source)");
   self->send_exit(src, exit_reason::kill);
@@ -353,7 +353,6 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
   expect((exit_msg), from(self).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::forced_close), from(src).to(snk));
-  // TODO: expect((error), from(snk).to(self));
 }
 
 CAF_TEST(depth_2_pipelin_error_at_sink) {
@@ -364,14 +363,13 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(snk));
+  expect((open_stream_msg), from(self).to(snk));
   CAF_MESSAGE("start data transmission (and abort sink)");
   self->send_exit(snk, exit_reason::kill);
   expect((upstream_msg::ack_open), from(snk).to(src));
   expect((exit_msg), from(self).to(snk));
   CAF_MESSAGE("expect close and result messages from snk");
   expect((upstream_msg::forced_drop), from(snk).to(src));
-  // TODO: expect((error), from(snk).to(self));
 }
 
 CAF_TEST(depth_3_pipeline_50_items) {
@@ -389,8 +387,8 @@ CAF_TEST(depth_3_pipeline_50_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * stg * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(stg));
-  expect((open_stream_msg), from(stg).to(snk));
+  expect((open_stream_msg), from(self).to(stg));
+  expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(stg));
   expect((upstream_msg::ack_open), from(stg).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
@@ -419,9 +417,9 @@ CAF_TEST(depth_4_pipeline_500_items) {
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * stg2 * stg1 * src, "numbers.txt");
   expect((string), from(self).to(src).with("numbers.txt"));
-  expect((open_stream_msg), from(src).to(stg1));
-  expect((open_stream_msg), from(stg1).to(stg2));
-  expect((open_stream_msg), from(stg2).to(snk));
+  expect((open_stream_msg), from(self).to(stg1));
+  expect((open_stream_msg), from(self).to(stg2));
+  expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(stg2));
   expect((upstream_msg::ack_open), from(stg2).to(stg1));
   expect((upstream_msg::ack_open), from(stg1).to(src));

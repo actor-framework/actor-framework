@@ -86,9 +86,8 @@ public:
 
   /// Sends a handshake to `dest`.
   /// @pre `dest != nullptr`
-  virtual void send_handshake(strong_actor_ptr next, stream_slot slot,
-                              mailbox_element::forwarding_stack stages,
-                              message handshake);
+  virtual void deliver_handshake(response_promise& rp, stream_slot slot,
+                                 message handshake);
 
   // -- implementation hooks for sources ---------------------------------------
 
@@ -212,17 +211,21 @@ public:
     return {add_unsafe_inbound_path_impl(), this};
   }
 
-  /// Adds `next` as a new outbound path.
+  /// Adds a new outbound path to `rp.next()`.
   /// @private
-  stream_slot
-  add_unsafe_outbound_path_impl(strong_actor_ptr next, message handshake,
-                                mailbox_element::forwarding_stack stages = {});
+  stream_slot add_unsafe_outbound_path_impl(response_promise& rp,
+                                            message handshake);
 
-  /// Adds `self_->current_sender()` as outbound path.
+  /// Adds a new outbound path to `next`.
+  /// @private
+  stream_slot add_unsafe_outbound_path_impl(strong_actor_ptr next,
+                                            message handshake);
+
+  /// Calls `add_unsafe_outbound_path_impl(make_response_promise(), handshake)`.
   /// @private
   stream_slot add_unsafe_outbound_path_impl(message handshake);
 
-  /// Adds
+  /// Adds the current sender as an inbound path.
   /// @pre Current message is an `open_stream_msg`.
   stream_slot add_unsafe_inbound_path_impl();
 
