@@ -29,26 +29,26 @@ namespace caf {
 
 /// Helper trait for deducing an `output_stream` from the arguments to
 /// `scheduled_actor::make_source`.
-template <class Scatterer, class... Ts>
+template <class DownstreamManager, class... Ts>
 struct make_source_result {
   /// Type of a single element.
-  using value_type = typename Scatterer::value_type;
+  using output_type = typename DownstreamManager::output_type;
 
   /// Fully typed stream manager as returned by `make_source`.
-  using source_type = stream_source<value_type, Scatterer>;
+  using source_type = stream_source<output_type, DownstreamManager>;
 
   /// Pointer to a fully typed stream manager.
   using source_ptr_type = intrusive_ptr<source_type>;
 
   /// The return type for `scheduled_actor::make_source`.
-  using type = output_stream<value_type, std::tuple<Ts...>, source_ptr_type>;
+  using type = output_stream<output_type, std::tuple<Ts...>, source_ptr_type>;
 };
 
-/// Helper type for defining an `output_stream` from a `Scatterer` plus
+/// Helper type for defining an `output_stream` from a downstream manager plus
 /// the types of the handshake arguments.
-template <class Scatterer, class... Ts>
+template <class DownstreamManager, class... Ts>
 using make_source_result_t =
-  typename make_source_result<Scatterer,
+  typename make_source_result<DownstreamManager,
                               detail::strip_and_convert_t<Ts>...>::type;
 
 } // namespace caf

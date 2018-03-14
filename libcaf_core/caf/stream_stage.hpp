@@ -28,13 +28,13 @@
 
 namespace caf {
 
-template <class In, class Out, class Scatterer>
-class stream_stage : public stream_source<Out, Scatterer>,
+template <class In, class Out, class DownstreamManager>
+class stream_stage : public stream_source<Out, DownstreamManager>,
                      public stream_sink<In> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using left_super = stream_source<Out, Scatterer>;
+  using left_super = stream_source<Out, DownstreamManager>;
 
   using right_super = stream_sink<In>;
 
@@ -47,14 +47,14 @@ public:
     // nop
   }
 
-  Scatterer& out() override {
+  DownstreamManager& out() override {
     return left_super::out();
   }
 };
 
-template <class In, class Out, class Scatterer>
+template <class In, class Out, class DownstreamManager>
 using stream_stage_ptr =
-  intrusive_ptr<stream_stage<In, Out, Scatterer>>;
+  intrusive_ptr<stream_stage<In, Out, DownstreamManager>>;
 
 } // namespace caf
 

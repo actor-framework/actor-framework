@@ -36,7 +36,7 @@
 
 namespace caf {
 
-/// State for a single path to a sink on a `stream_scatterer`.
+/// State for a single path to a sink of a `downstream_manager`.
 class outbound_path {
 public:
   // -- member types -----------------------------------------------------------

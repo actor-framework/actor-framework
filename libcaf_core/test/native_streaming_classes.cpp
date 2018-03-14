@@ -36,8 +36,9 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/broadcast_scatterer.hpp"
-#include "caf/buffered_scatterer.hpp"
+#include "caf/broadcast_downstream_manager.hpp"
+#include "caf/buffered_downstream_manager.hpp"
+#include "caf/downstream_manager.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/inbound_path.hpp"
 #include "caf/mailbox_element.hpp"
@@ -45,7 +46,6 @@
 #include "caf/outbound_path.hpp"
 #include "caf/send.hpp"
 #include "caf/stream_manager.hpp"
-#include "caf/stream_scatterer.hpp"
 #include "caf/stream_sink_driver.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/stream_source_driver.hpp"
@@ -235,8 +235,8 @@ public:
 
   void start_streaming(entity& ref, int num_messages) {
     CAF_REQUIRE_NOT_EQUAL(num_messages, 0);
-    using scatterer = broadcast_scatterer<int>;
-    struct driver final : public stream_source_driver<scatterer> {
+    using downstream_manager = broadcast_downstream_manager<int>;
+    struct driver final : public stream_source_driver<downstream_manager> {
     public:
       driver(int sentinel) : x_(0), sentinel_(sentinel) {
         // nop
@@ -262,8 +262,8 @@ public:
   }
 
   void forward_to(entity& ref) {
-    using scatterer = broadcast_scatterer<int>;
-    struct driver final : public stream_stage_driver<int, scatterer> {
+    using downstream_manager = broadcast_downstream_manager<int>;
+    struct driver final : public stream_stage_driver<int, downstream_manager> {
     public:
       driver(vector<int>* log) : log_(log) {
         // nop
@@ -385,7 +385,7 @@ public:
   mboxqueue mbox;
   const char* name_;
   vector<int> data; // Keeps track of all received data from all batches.
-  stream_stage_ptr<int, int, broadcast_scatterer<int>> forwarder;
+  stream_stage_ptr<int, int, broadcast_downstream_manager<int>> forwarder;
 
   tick_type ticks_per_force_batches_interval;
   tick_type ticks_per_credit_interval;

@@ -16,17 +16,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FUSED_SCATTERER
-#define CAF_FUSED_SCATTERER
+#ifndef CAF_FUSED_DOWNSTREAM_MANAGER_HPP
+#define CAF_FUSED_DOWNSTREAM_MANAGER_HPP
 
 #include <tuple>
 #include <cstddef>
 
+#include "caf/downstream_manager.hpp"
 #include "caf/logger.hpp"
 #include "caf/outbound_path.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream.hpp"
-#include "caf/stream_scatterer.hpp"
 #include "caf/stream_slot.hpp"
 
 #include "caf/detail/type_list.hpp"
@@ -63,13 +63,13 @@ private:
   Iter i_;
 };
 
-struct scatterer_selector {
-  inline stream_scatterer* operator()(const message&) {
+struct downstream_manager_selector {
+  inline downstream_manager* operator()(const message&) {
     return nullptr;
   }
 
   template <class T, class... Ts>
-  stream_scatterer* operator()(const message& msg, T& x, Ts&... xs) {
+  downstream_manager* operator()(const message& msg, T& x, Ts&... xs) {
     if (msg.match_element<stream<typename T::value_type>>(0))
       return &x;
     return (*this)(msg, xs...);
@@ -79,7 +79,7 @@ struct scatterer_selector {
 template <size_t I, size_t E>
 struct init_ptr_array {
   template <class... Ts>
-  static void apply(stream_scatterer* (&xs)[E], std::tuple<Ts...>& ys)  {
+  static void apply(downstream_manager* (&xs)[E], std::tuple<Ts...>& ys)  {
     xs[I] = &std::get<I>(ys);
     init_ptr_array<I + 1, E>::apply(xs, ys);
   }
@@ -88,26 +88,24 @@ struct init_ptr_array {
 template <size_t I>
 struct init_ptr_array<I, I> {
   template <class... Ts>
-  static void apply(stream_scatterer* (&)[I], std::tuple<Ts...>&)  {
+  static void apply(downstream_manager* (&)[I], std::tuple<Ts...>&)  {
     // nop
   }
 };
 
-
 } // namespace detail
 
-/// A scatterer that delegates to any number of sub-scatterers. Data is only
-/// pushed to the main scatterer `T` per default.
+/// A downstream manager that delegates to any number of sub-managers.
 template <class T, class... Ts>
-class fused_scatterer : public stream_scatterer {
+class fused_downstream_manager : public downstream_manager {
 public:
   // -- member and nested types ------------------------------------------------
 
   /// Base type.
-  using super = stream_scatterer;
+  using super = downstream_manager;
 
-  /// A tuple holding all nested scatterers.
-  using nested_scatterers = std::tuple<T, Ts...>;
+  /// A tuple holding all nested managers.
+  using nested_managers = std::tuple<T, Ts...>;
 
   /// Pointer to an outbound path.
   using typename super::path_ptr;
@@ -121,19 +119,19 @@ public:
   /// State held for each slot.
   struct non_owning_ptr {
     path_ptr ptr;
-    stream_scatterer* owner;
+    downstream_manager* owner;
   };
 
-  /// Maps slots to path and nested scatterer.
+  /// Maps slots to path and nested managers.
   using map_type = detail::unordered_flat_map<stream_slot, non_owning_ptr>;
 
-  /// Maps slots to paths that haven't a scatterer assigned yet.
+  /// Maps slots to paths that haven't a managers assigned yet.
   using unassigned_map_type = detail::unordered_flat_map<stream_slot,
                                                          unique_path_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  fused_scatterer(scheduled_actor* self)
+  fused_downstream_manager(scheduled_actor* self)
       : super(self),
         nested_(self, detail::pack_repeat<Ts...>(self)) {
     detail::init_ptr_array<0, sizeof...(Ts) + 1>::apply(ptrs_, nested_);
@@ -163,14 +161,14 @@ public:
     // Fetch pointer from the unassigned paths.
     auto i = unassigned_paths_.find(slot);
     if (i == unassigned_paths_.end()) {
-      CAF_LOG_ERROR("cannot assign nested scatterer to unknown slot");
+      CAF_LOG_ERROR("cannot assign nested manager to unknown slot");
       return;
     }
     // Error or not, remove entry from unassigned_paths_ before leaving.
     auto cleanup = detail::make_scope_guard([&] {
       unassigned_paths_.erase(i);
     });
-    // Transfer ownership to nested scatterer.
+    // Transfer ownership to nested manager.
     auto ptr = i->second.get();
     CAF_ASSERT(ptr != nullptr);
     auto owner = &get<U>();
@@ -188,6 +186,10 @@ public:
   }
 
   // -- overridden functions ---------------------------------------------------
+
+  bool terminal() const noexcept override {
+    return false;
+  }
 
   size_t num_paths() const noexcept override {
     return paths_.size();
@@ -289,13 +291,12 @@ protected:
   }
 
 private:
-  nested_scatterers nested_;
-  stream_scatterer* ptrs_[sizeof...(Ts) + 1];
+  nested_managers nested_;
+  downstream_manager* ptrs_[sizeof...(Ts) + 1];
   map_type paths_;
   unassigned_map_type unassigned_paths_;
 };
 
 } // namespace caf
 
-#endif // CAF_FUSED_SCATTERER
-
+#endif // CAF_FUSED_DOWNSTREAM_MANAGER_HPP

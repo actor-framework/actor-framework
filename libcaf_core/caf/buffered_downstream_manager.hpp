@@ -16,37 +16,37 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BUFFERED_SCATTERER_HPP
-#define CAF_BUFFERED_SCATTERER_HPP
+#ifndef CAF_BUFFERED_DOWNSTREAM_MANAGER_HPP
+#define CAF_BUFFERED_DOWNSTREAM_MANAGER_HPP
 
 #include <deque>
 #include <vector>
 #include <cstddef>
 #include <iterator>
 
+#include "caf/downstream_manager_base.hpp"
 #include "caf/logger.hpp"
-#include "caf/stream_scatterer_impl.hpp"
 
 namespace caf {
 
 /// Mixin for streams with any number of downstreams. `Subtype` must provide a
 /// member function `buf()` returning a queue with `std::deque`-like interface.
 template <class T>
-class buffered_scatterer : public stream_scatterer_impl {
+class buffered_downstream_manager : public downstream_manager_base {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_scatterer_impl;
+  using super = downstream_manager_base;
 
-  using value_type = T;
+  using output_type = T;
 
-  using buffer_type = std::deque<value_type>;
+  using buffer_type = std::deque<output_type>;
 
-  using chunk_type = std::vector<value_type>;
+  using chunk_type = std::vector<output_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffered_scatterer(scheduled_actor* self) : super(self) {
+  buffered_downstream_manager(scheduled_actor* self) : super(self) {
     // nop
   }
 
@@ -78,6 +78,10 @@ public:
     return get_chunk(buf_, n);
   }
 
+  bool terminal() const noexcept override {
+    return false;
+  }
+
   size_t capacity() const noexcept override {
     // TODO: get rid of magic number
     static constexpr size_t max_buf_size = 100;
@@ -102,4 +106,4 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_BUFFERED_SCATTERER_HPP
+#endif // CAF_BUFFERED_DOWNSTREAM_MANAGER_HPP

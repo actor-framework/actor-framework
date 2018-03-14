@@ -48,9 +48,7 @@ template <class, class> class stream_source;
 
 template <class, class, int> class actor_cast_access;
 
-template <class, class, class> class broadcast_scatterer;
-template <class, class, class> class broadcast_topic_scatterer;
-template <class, class, class> class random_topic_scatterer;
+template <class, class, class> class broadcast_downstream_manager;
 template <class, class, class> class stream_stage;
 
 // -- variadic templates -------------------------------------------------------
@@ -102,15 +100,16 @@ class mailbox_element;
 class message_builder;
 class message_handler;
 class scheduled_actor;
-class stream_scatterer;
 class response_promise;
 class event_based_actor;
 class type_erased_tuple;
 class type_erased_value;
+class downstream_manager;
 class actor_control_block;
 class actor_system_config;
 class uniform_type_info_map;
 class forwarding_actor_proxy;
+class downstream_manager_base;
 
 // -- structs ------------------------------------------------------------------
 

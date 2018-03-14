@@ -40,7 +40,7 @@ public:
 
   using driver_type = Driver;
 
-  using scatterer_type = typename Driver::scatterer_type;
+  using downstream_manager_type = typename Driver::downstream_manager_type;
 
   using input_type = typename driver_type::input_type;
 

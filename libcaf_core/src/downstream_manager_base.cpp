@@ -16,77 +16,76 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/invalid_stream_scatterer.hpp"
+#include "caf/downstream_manager_base.hpp"
+
+#include <functional>
 
 #include "caf/logger.hpp"
-#include "caf/message_builder.hpp"
 #include "caf/outbound_path.hpp"
-#include "caf/stream.hpp"
-#include "caf/stream_slot.hpp"
 
 namespace caf {
 
-invalid_stream_scatterer::invalid_stream_scatterer(scheduled_actor* self)
-    : stream_scatterer(self) {
+downstream_manager_base::downstream_manager_base(scheduled_actor* self)
+    : super(self) {
   // nop
 }
 
-invalid_stream_scatterer::~invalid_stream_scatterer() {
+downstream_manager_base::~downstream_manager_base() {
   // nop
 }
 
-size_t invalid_stream_scatterer::num_paths() const noexcept {
-  return 0;
+size_t downstream_manager_base::num_paths() const noexcept {
+  return paths_.size();
 }
 
-bool invalid_stream_scatterer::remove_path(stream_slot, error, bool) noexcept {
+bool downstream_manager_base::remove_path(stream_slot slot, error reason,
+                                          bool silent) noexcept {
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(reason) << CAF_ARG(silent));
+  auto i = paths_.find(slot);
+  if (i != paths_.end()) {
+    about_to_erase(i->second.get(), silent, &reason);
+    paths_.erase(i);
+    return true;
+  }
   return false;
 }
 
-auto invalid_stream_scatterer::path(stream_slot) noexcept -> path_ptr {
-  return nullptr;
+auto downstream_manager_base::path(stream_slot slot) noexcept -> path_ptr {
+  auto i = paths_.find(slot);
+  return i != paths_.end() ? i->second.get() : nullptr;
 }
 
-void invalid_stream_scatterer::emit_batches() {
-  // nop
+void downstream_manager_base::clear_paths() {
+  paths_.clear();
 }
 
-void invalid_stream_scatterer::force_emit_batches() {
-  // nop
+bool downstream_manager_base::insert_path(unique_path_ptr ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  CAF_ASSERT(ptr != nullptr);
+  auto slot = ptr->slots.sender;
+  CAF_ASSERT(slot != invalid_stream_slot);
+  return paths_.emplace(slot, std::move(ptr)).second;
 }
 
-size_t invalid_stream_scatterer::capacity() const noexcept {
-  return 0u;
+void downstream_manager_base::for_each_path_impl(path_visitor& f) {
+  for (auto& kvp : paths_)
+    f(*kvp.second);
 }
 
-size_t invalid_stream_scatterer::buffered() const noexcept {
-  return 0u;
-}
-
-bool invalid_stream_scatterer::insert_path(unique_path_ptr) {
-  return false;
-}
-
-void invalid_stream_scatterer::for_each_path_impl(path_visitor&) {
-  // nop
-}
-
-bool invalid_stream_scatterer::check_paths_impl(path_algorithm algo,
-                                                path_predicate&)
+bool downstream_manager_base::check_paths_impl(path_algorithm algo,
+                                               path_predicate& pred)
                                                const noexcept {
-  // Return the result for empty ranges as specified by the C++ standard.
+  auto f = [&](const map_type::value_type& x) {
+    return pred(*x.second);
+  };
   switch (algo) {
     default: // all_of
-      return true;
+      return std::all_of(paths_.begin(), paths_.end(), f);
     case path_algorithm::any_of:
-      return false;
+      return std::any_of(paths_.begin(), paths_.end(), f);
     case path_algorithm::none_of:
-      return true;
+      return std::none_of(paths_.begin(), paths_.end(), f);
   }
-}
-
-void invalid_stream_scatterer::clear_paths() {
-  // nop
 }
 
 } // namespace caf

@@ -30,7 +30,6 @@
 #include "caf/outbound_path.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/sec.hpp"
-#include "caf/stream_scatterer.hpp"
 
 namespace caf {
 

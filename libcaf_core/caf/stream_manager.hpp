@@ -25,6 +25,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/downstream_manager.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
@@ -33,7 +34,6 @@
 #include "caf/output_stream.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/stream_result.hpp"
-#include "caf/stream_scatterer.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/upstream_msg.hpp"
 
@@ -98,8 +98,8 @@ public:
 
   // -- pure virtual member functions ------------------------------------------
 
-  /// Returns the scatterer for outgoing data.
-  virtual stream_scatterer& out() = 0;
+  /// Returns the manager for downstream communication.
+  virtual downstream_manager& out() = 0;
 
   /// Returns whether the stream has reached the end and can be discarded
   /// safely.

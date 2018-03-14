@@ -31,13 +31,13 @@ namespace detail {
 /// Default implementation for a `stream_stage_driver` that hardwires `message`
 /// as result type and implements `process` and `finalize` using user-provided
 /// function objects (usually lambdas).
-template <class Input, class Scatterer, class Process, class Finalize>
+template <class Input, class DownstreamManager, class Process, class Finalize>
 class stream_stage_driver_impl final
-    : public stream_stage_driver<Input, Scatterer> {
+    : public stream_stage_driver<Input, DownstreamManager> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_stage_driver<Input, Scatterer>;
+  using super = stream_stage_driver<Input, DownstreamManager>;
 
   using typename super::input_type;
 

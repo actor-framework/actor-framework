@@ -26,7 +26,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/atom.hpp"
-#include "caf/broadcast_scatterer.hpp"
+#include "caf/broadcast_downstream_manager.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
@@ -55,7 +55,7 @@ struct select {
   }
 };
 
-using scatterer = broadcast_scatterer<value_type, level, select>;
+using downstream_manager = broadcast_downstream_manager<value_type, level, select>;
 
 using buf = std::vector<value_type>;
 
@@ -101,11 +101,11 @@ TESTEE(log_producer) {
           return false;
         },
         unit,
-        policy::arg<scatterer>::value
+        policy::arg<downstream_manager>::value
       );
       auto& out = res.ptr()->out();
-      static_assert(std::is_same<decltype(out), scatterer&>::value,
-                    "source has wrong scatterer type");
+      static_assert(std::is_same<decltype(out), downstream_manager&>::value,
+                    "source has wrong downstream_manager type");
       out.set_filter(res.out(), lvl);
       return res;
     }
@@ -113,7 +113,7 @@ TESTEE(log_producer) {
 }
 
 TESTEE_STATE(log_dispatcher) {
-  stream_stage_ptr<value_type, value_type, scatterer> stage;
+  stream_stage_ptr<value_type, value_type, downstream_manager> stage;
 };
 
 TESTEE(log_dispatcher) {
@@ -130,7 +130,7 @@ TESTEE(log_dispatcher) {
     [=](unit_t&, const error&) {
       CAF_MESSAGE(self->name() << " is done");
     },
-    policy::arg<scatterer>::value
+    policy::arg<downstream_manager>::value
   );
   return {
     [=](join_atom, level lvl) {

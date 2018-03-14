@@ -53,12 +53,16 @@ struct stream_stage_trait_invoke_all {
 // -- trait implementation -----------------------------------------------------
 
 template <class F>
-struct stream_stage_trait;
+struct stream_stage_trait {
+  static constexpr bool valid = false;
+  using output = unit_t;
+};
 
 /// Deduces the input type, output type and the state type for a stream stage
 /// from its `process` implementation.
 template <class State, class In, class Out>
 struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
+  static constexpr bool valid = true;
   using state = State;
   using input = In;
   using output = Out;
@@ -67,6 +71,7 @@ struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
 
 template <class State, class In, class Out>
 struct stream_stage_trait<void (State&, downstream<Out>&, std::vector<In>&)> {
+  static constexpr bool valid = true;
   using state = State;
   using input = In;
   using output = Out;

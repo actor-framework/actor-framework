@@ -55,7 +55,6 @@ set (LIBCAF_CORE_SRCS
      src/group_manager.cpp
      src/group_module.cpp
      src/inbound_path.cpp
-     src/invalid_stream_scatterer.cpp
      src/invoke_result_visitor.cpp
      src/local_actor.cpp
      src/logger.cpp
@@ -95,12 +94,11 @@ set (LIBCAF_CORE_SRCS
      src/stream_aborter.cpp
      src/stream_manager.cpp
      src/stream_priority.cpp
-     src/stream_scatterer.cpp
-     src/stream_scatterer_impl.cpp
+     src/downstream_manager.cpp
+     src/downstream_manager_base.cpp
      src/stringification_inspector.cpp
      src/sync_request_bouncer.cpp
      src/term.cpp
-     src/terminal_stream_scatterer.cpp
      src/test_actor_clock.cpp
      src/test_coordinator.cpp
      src/thread_safe_actor_clock.cpp

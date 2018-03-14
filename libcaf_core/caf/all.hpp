@@ -78,7 +78,6 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/behavior_policy.hpp"
-#include "caf/fused_scatterer.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/response_handle.hpp"
@@ -99,6 +98,7 @@
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/typed_response_promise.hpp"
 #include "caf/typed_event_based_actor.hpp"
+#include "caf/fused_downstream_manager.hpp"
 #include "caf/abstract_composable_behavior.hpp"
 
 #include "caf/decorator/sequencer.hpp"

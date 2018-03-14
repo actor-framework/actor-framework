@@ -30,7 +30,7 @@
 
 namespace caf {
 
-template <class Out, class Scatterer>
+template <class Out, class DownstreamManager>
 class stream_source : public virtual stream_manager {
 public:
   // -- member types -----------------------------------------------------------
@@ -43,7 +43,7 @@ public:
     // nop
   }
 
-  Scatterer& out() override {
+  DownstreamManager& out() override {
     return out_;
   }
 
@@ -82,15 +82,15 @@ public:
   }
 
 protected:
-  Scatterer out_;
+  DownstreamManager out_;
 };
 
-template <class Out, class Scatterer>
-using stream_source_ptr = intrusive_ptr<stream_source<Out, Scatterer>>;
+template <class Out, class DownstreamManager>
+using stream_source_ptr = intrusive_ptr<stream_source<Out, DownstreamManager>>;
 
-template <class Scatterer>
+template <class DownstreamManager>
 using stream_source_ptr_t =
-  stream_source_ptr<typename Scatterer::value_type, Scatterer>;
+  stream_source_ptr<typename DownstreamManager::output_type, DownstreamManager>;
 
 } // namespace caf
 

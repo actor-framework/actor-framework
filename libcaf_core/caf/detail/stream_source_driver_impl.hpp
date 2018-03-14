@@ -29,12 +29,13 @@ namespace caf {
 namespace detail {
 
 /// Identifies an unbound sequence of messages.
-template <class Scatterer, class Pull, class Done, class Finalize>
-class stream_source_driver_impl final : public stream_source_driver<Scatterer> {
+template <class DownstreamManager, class Pull, class Done, class Finalize>
+class stream_source_driver_impl final
+    : public stream_source_driver<DownstreamManager> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_source_driver<Scatterer>;
+  using super = stream_source_driver<DownstreamManager>;
 
   using output_type = typename super::output_type;
 

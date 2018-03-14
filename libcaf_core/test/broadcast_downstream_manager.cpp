@@ -17,13 +17,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE broadcast_scatterer
+#define CAF_SUITE broadcast_downstream_manager
 
 #include <memory>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/broadcast_scatterer.hpp"
+#include "caf/broadcast_downstream_manager.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include "caf/mixin/sender.hpp"
@@ -119,8 +119,8 @@ public:
 
   const char* cstr_name;
 
-  /// Scatterer-under-test.
-  broadcast_scatterer<int> bs;
+  /// Manager-under-test.
+  broadcast_downstream_manager<int> bs;
 
   /// Dummy mailbox.
   std::vector<message> mbox;
@@ -317,7 +317,7 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
 
 // -- unit tests ---------------------------------------------------------------
 
-CAF_TEST_FIXTURE_SCOPE(broadcast_scatterer, fixture)
+CAF_TEST_FIXTURE_SCOPE(broadcast_downstream_manager, fixture)
 
 CAF_TEST(one_path_force) {
   // Give alice 100 elements to send and a path to bob with desired batch size

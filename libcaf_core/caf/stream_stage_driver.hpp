@@ -29,7 +29,7 @@
 namespace caf {
 
 /// Encapsulates user-provided functionality for generating a stream stage.
-template <class Input, class Scatterer>
+template <class Input, class DownstreamManager>
 class stream_stage_driver {
 public:
   // -- member types -----------------------------------------------------------
@@ -38,16 +38,16 @@ public:
   using input_type = Input;
 
   /// Policy for distributing data to outbound paths.
-  using scatterer_type = Scatterer;
+  using downstream_manager_type = DownstreamManager;
 
   /// Element type of the output stream.
-  using output_type = typename scatterer_type::value_type;
+  using output_type = typename downstream_manager_type::output_type;
 
   /// Type of the output stream.
   using stream_type = stream<output_type>;
 
   /// Implemented `stream_stage` interface.
-  using stage_type = stream_stage<input_type, output_type, Scatterer>;
+  using stage_type = stream_stage<input_type, output_type, DownstreamManager>;
 
   /// Smart pointer to the interface type.
   using stage_ptr_type = intrusive_ptr<stage_type>;

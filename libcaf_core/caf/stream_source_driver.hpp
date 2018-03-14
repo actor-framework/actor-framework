@@ -27,25 +27,23 @@
 namespace caf {
 
 /// Identifies an unbound sequence of messages.
-template <class Scatterer>
+template <class DownstreamManager>
 class stream_source_driver {
 public:
   // -- member types -----------------------------------------------------------
 
-  /// Policy for distributing data to outbound paths.
-  using scatterer_type = Scatterer;
+  /// Type of the downstream manager, i.e., the type returned by
+  /// `stream_manager::out()`.
+  using downstream_manager_type = DownstreamManager;
 
   /// Element type of the output stream.
-  using output_type = typename scatterer_type::value_type;
+  using output_type = typename downstream_manager_type::output_type;
 
   /// Type of the output stream.
   using stream_type = stream<output_type>;
 
-  /// Tuple for creating the `open_stream_msg` handshake.
-  using handshake_tuple_type = std::tuple<stream_type>;
-
   /// Implemented `stream_source` interface.
-  using source_type = stream_source<output_type, scatterer_type>;
+  using source_type = stream_source<output_type, downstream_manager_type>;
 
   /// Smart pointer to the interface type.
   using source_ptr_type = intrusive_ptr<source_type>;
@@ -65,8 +63,8 @@ public:
 
   // -- pure virtual functions -------------------------------------------------
 
-  /// Generates more stream elements.
-  virtual void pull(downstream<output_type>& out, size_t num) = 0;
+  /// Generates more elements for `dst`.
+  virtual void pull(downstream<output_type>& dst, size_t num) = 0;
 
   /// Returns `true` if the source is done sending, otherwise `false`.
   virtual bool done() const noexcept = 0;

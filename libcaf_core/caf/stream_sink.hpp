@@ -24,7 +24,6 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_result.hpp"
-#include "caf/terminal_stream_scatterer.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -49,7 +48,7 @@ public:
     return !this->continuous() && this->inbound_paths_.empty();
   }
 
-  stream_scatterer& out() override {
+  downstream_manager& out() override {
     return dummy_out_;
   }
 
@@ -62,7 +61,7 @@ public:
   }
 
 private:
-  terminal_stream_scatterer dummy_out_;
+  downstream_manager dummy_out_;
 };
 
 template <class In>

@@ -16,30 +16,46 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PUSH5_SCATTERER_HPP
-#define CAF_PUSH5_SCATTERER_HPP
+#ifndef CAF_DEFAULT_DOWNSTREAM_MANAGER_HPP
+#define CAF_DEFAULT_DOWNSTREAM_MANAGER_HPP
 
-#include "caf/broadcast_scatterer.hpp"
+#include "caf/broadcast_downstream_manager.hpp"
+#include "caf/stream_source_trait.hpp"
+#include "caf/stream_stage_trait.hpp"
+
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
-namespace detail {
 
-/// Always pushs exactly 5 elements to sinks. Used in unit tests only.
-template <class T>
-class push5_scatterer : public broadcast_scatterer<T> {
-public:
-  using super = broadcast_scatterer<T>;
+/// Selects a downstream manager implementation based on the signature of
+/// various handlers.
+template <class F>
+struct default_downstream_manager {
+  /// The function signature of `F`.
+  using fun_sig = typename detail::get_callable_trait<F>::fun_sig;
 
-  push5_scatterer(local_actor* self) : super(self) {
-    // nop
-  }
+  /// The source trait for `F`.
+  using source_trait = stream_source_trait<fun_sig>;
 
-  long min_buffer_size() const override {
-    return 5;
-  }
+  /// The stage trait for `F`.
+  using stage_trait = stream_stage_trait<fun_sig>;
+
+  /// The output type as returned by the source or stage trait.
+  using output_type =
+    typename std::conditional<
+      source_trait::valid,
+      typename source_trait::output,
+      typename stage_trait::output
+    >::type;
+
+  /// The default downstream manager deduced by this trait.
+  using type = broadcast_downstream_manager<output_type>;
 };
 
-} // namespace detail
+template <class F>
+using default_downstream_manager_t =
+  typename default_downstream_manager<F>::type;
+
 } // namespace caf
 
-#endif // CAF_PUSH5_SCATTERER_HPP
+#endif // CAF_DEFAULT_DOWNSTREAM_MANAGER_HPP

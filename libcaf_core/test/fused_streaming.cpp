@@ -26,7 +26,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/fused_scatterer.hpp"
+#include "caf/fused_downstream_manager.hpp"
 #include "caf/stateful_actor.hpp"
 
 using std::string;
@@ -37,9 +37,9 @@ namespace {
 
 TESTEE_SETUP();
 
-using int_scatterer = broadcast_scatterer<int>;
+using int_downstream_manager = broadcast_downstream_manager<int>;
 
-using string_scatterer = broadcast_scatterer<string>;
+using string_downstream_manager = broadcast_downstream_manager<string>;
 
 using ints_atom = atom_constant<atom("ints")>;
 
@@ -163,11 +163,11 @@ TESTEE(collect) {
   };
 }
 
-using int_scatterer = broadcast_scatterer<int>;
+using int_downstream_manager = broadcast_downstream_manager<int>;
 
-using string_scatterer = broadcast_scatterer<string>;
+using string_downstream_manager = broadcast_downstream_manager<string>;
 
-using scatterer = fused_scatterer<int_scatterer, string_scatterer>;
+using downstream_manager = fused_downstream_manager<int_downstream_manager, string_downstream_manager>;
 
 class fused_stage : public stream_manager {
 public:
@@ -189,14 +189,14 @@ public:
     if (batch.xs.match_elements<int_vec>()) {
       CAF_MESSAGE("handle an integer batch");
       auto& xs = batch.xs.get_mutable_as<int_vec>(0);
-      auto& buf = out_.get<int_scatterer>().buf();
+      auto& buf = out_.get<int_downstream_manager>().buf();
       buf.insert(buf.end(), xs.begin(), xs.end());
       return;
     }
     if (batch.xs.match_elements<string_vec>()) {
       CAF_MESSAGE("handle a string batch");
       auto& xs = batch.xs.get_mutable_as<string_vec>(0);
-      auto& buf = out_.get<string_scatterer>().buf();
+      auto& buf = out_.get<string_downstream_manager>().buf();
       buf.insert(buf.end(), xs.begin(), xs.end());
       return;
     }
@@ -207,12 +207,12 @@ public:
     return out_.capacity() == 0;
   }
 
-  scatterer& out() noexcept override {
+  downstream_manager& out() noexcept override {
     return out_;
   }
 
 private:
-  scatterer out_;
+  downstream_manager out_;
 };
 
 TESTEE_STATE(stream_multiplexer) {
@@ -226,14 +226,14 @@ TESTEE(stream_multiplexer) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for integers");
       auto result = stg->add_unchecked_outbound_path<int>();
-      stg->out().assign<int_scatterer>(result.out());
+      stg->out().assign<int_downstream_manager>(result.out());
       return result;
     },
     [=](join_atom, strings_atom) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for strings");
       auto result = stg->add_unchecked_outbound_path<string>();
-      stg->out().assign<string_scatterer>(result.out());
+      stg->out().assign<string_downstream_manager>(result.out());
       return result;
     },
     [=](const stream<int>& in) {

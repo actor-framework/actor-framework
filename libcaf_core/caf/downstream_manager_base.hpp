@@ -16,34 +16,35 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SCATTERER_IMPL_HPP
-#define CAF_STREAM_SCATTERER_IMPL_HPP
+#ifndef CAFDOWNSTREAM_MANAGER_BASE_HPP
+#define CAFDOWNSTREAM_MANAGER_BASE_HPP
 
 #include <cstddef>
 #include <memory>
 
-#include "caf/stream_scatterer.hpp"
+#include "caf/downstream_manager.hpp"
 
 #include "caf/detail/unordered_flat_map.hpp"
 
 namespace caf {
 
-/// Type-erased policy for dispatching data to sinks.
-class stream_scatterer_impl : public stream_scatterer {
+/// The default downstream manager base stores outbound paths in an unordered
+/// map. It always takes ownership of the pahts by using unique pointers.
+class downstream_manager_base : public downstream_manager {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Base type.
-  using super = stream_scatterer;
+  using super = downstream_manager;
 
   /// Maps slots to paths.
   using map_type = detail::unordered_flat_map<stream_slot, unique_path_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit stream_scatterer_impl(scheduled_actor* self);
+  explicit downstream_manager_base(scheduled_actor* self);
 
-  virtual ~stream_scatterer_impl();
+  virtual ~downstream_manager_base();
 
   // -- properties -------------------------------------------------------------
 
@@ -81,4 +82,4 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_STREAM_SCATTERER_IMPL_HPP
+#endif // CAFDOWNSTREAM_MANAGER_BASE_HPP

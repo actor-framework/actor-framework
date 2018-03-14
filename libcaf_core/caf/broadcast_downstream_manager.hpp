@@ -16,27 +16,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BROADCAST_SCATTERER_HPP
-#define CAF_BROADCAST_SCATTERER_HPP
+#ifndef CAF_BROADCAST_DOWNSTREAM_MANAGER_HPP
+#define CAF_BROADCAST_DOWNSTREAM_MANAGER_HPP
 
 #include <algorithm>
 
-#include "caf/buffered_scatterer.hpp"
+#include "caf/buffered_downstream_manager.hpp"
 #include "caf/outbound_path.hpp"
 
 #include "caf/detail/algorithms.hpp"
 #include "caf/detail/path_state.hpp"
 #include "caf/detail/select_all.hpp"
+#include "caf/detail/unordered_flat_map.hpp"
 
 namespace caf {
 
 template <class T, class Filter = unit_t, class Select = detail::select_all>
-class broadcast_scatterer : public buffered_scatterer<T> {
+class broadcast_downstream_manager : public buffered_downstream_manager<T> {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Base type.
-  using super = buffered_scatterer<T>;
+  using super = buffered_downstream_manager<T>;
 
   /// Type of `paths_`.
   using typename super::map_type;
@@ -58,7 +59,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  broadcast_scatterer(scheduled_actor* selfptr) : super(selfptr) {
+  broadcast_downstream_manager(scheduled_actor* selfptr) : super(selfptr) {
     // nop
   }
 
@@ -240,4 +241,4 @@ private:
 
 } // namespace caf
 
-#endif // CAF_BROADCAST_SCATTERER_HPP
+#endif // CAF_BROADCAST_DOWNSTREAM_MANAGER_HPP

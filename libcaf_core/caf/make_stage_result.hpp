@@ -30,27 +30,27 @@ namespace caf {
 
 /// Helper trait for deducing an `output_stream` from the arguments to
 /// `scheduled_actor::make_stage`.
-template <class In, class Scatterer, class... Ts>
+template <class In, class DownstreamManager, class... Ts>
 class make_stage_result {
 public:
   /// Type of a single element.
-  using value_type = typename Scatterer::value_type;
+  using output_type = typename DownstreamManager::output_type;
 
   /// Fully typed stream manager as returned by `make_stage`.
-  using stage_type = stream_stage<In, value_type, Scatterer>;
+  using stage_type = stream_stage<In, output_type, DownstreamManager>;
 
   /// Pointer to a fully typed stream manager.
   using stage_ptr_type = intrusive_ptr<stage_type>;
 
   /// The return type for `scheduled_actor::make_sink`.
-  using type = output_stream<value_type, std::tuple<Ts...>, stage_ptr_type>;
+  using type = output_stream<output_type, std::tuple<Ts...>, stage_ptr_type>;
 };
 
-/// Helper type for defining a `make_stage_result` from a `Scatterer` plus
-/// additional handshake types. Hardwires `message` as result type.
-template <class In, class Scatterer, class... Ts>
+/// Helper type for defining a `make_stage_result` from a downstream manager
+/// plus additional handshake types. Hardwires `message` as result type.
+template <class In, class DownstreamManager, class... Ts>
 using make_stage_result_t =
-  typename make_stage_result<In, Scatterer,
+  typename make_stage_result<In, DownstreamManager,
                              detail::strip_and_convert_t<Ts>...>::type;
 
 } // namespace caf

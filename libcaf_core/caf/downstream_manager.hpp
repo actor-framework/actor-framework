@@ -16,8 +16,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SCATTERER_HPP
-#define CAF_STREAM_SCATTERER_HPP
+#ifndef CAFDOWNSTREAM_MANAGER_HPP
+#define CAFDOWNSTREAM_MANAGER_HPP
 
 #include <memory>
 
@@ -25,8 +25,12 @@
 
 namespace caf {
 
-/// Type-erased policy for dispatching data to sinks.
-class stream_scatterer {
+/// Manages downstream communication for a `stream_manager`. The downstream
+/// manager owns the `outbound_path` objects, has a buffer for storing pending
+/// output and is responsible for the dispatching policy (broadcasting, for
+/// example). The default implementation terminates the stream and never
+/// accepts any pahts.
+class downstream_manager {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -60,9 +64,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit stream_scatterer(scheduled_actor* self);
+  explicit downstream_manager(scheduled_actor* self);
 
-  virtual ~stream_scatterer();
+  virtual ~downstream_manager();
 
   // -- properties -------------------------------------------------------------
 
@@ -70,9 +74,7 @@ public:
     return self_;
   }
 
-  // -- meta information -------------------------------------------------------
-
-  /// Returns `true` if thie scatterer belongs to a sink, i.e., terminates the
+  /// Returns `true` if this manager belongs to a sink, i.e., terminates the
   /// stream and never has outbound paths.
   virtual bool terminal() const noexcept;
 
@@ -113,18 +115,18 @@ public:
   }
 
   /// Returns the current number of paths.
-  virtual size_t num_paths() const noexcept = 0;
+  virtual size_t num_paths() const noexcept;
 
-  /// Adds a pending path to `target` to the scatterer.
+  /// Adds a pending path to `target` to the manager.
   /// @returns The added path on success, `nullptr` otherwise.
   path_ptr add_path(stream_slot slot, strong_actor_ptr target);
 
-  /// Removes a path from the scatterer and returns it.
+  /// Removes a path from the manager and returns it.
   virtual bool remove_path(stream_slot slot, error reason,
-                           bool silent) noexcept = 0;
+                           bool silent) noexcept;
 
-  /// Returns the path associated to `slots` or `nullptr`.
-  virtual path_ptr path(stream_slot slots) noexcept = 0;
+  /// Returns the path associated to `slot` or `nullptr`.
+  virtual path_ptr path(stream_slot slot) noexcept;
 
   /// Returns `true` if there is no data pending and no unacknowledged batch on
   /// any path.
@@ -152,34 +154,34 @@ public:
   size_t total_credit() const;
 
   /// Sends batches to sinks.
-  virtual void emit_batches() = 0;
+  virtual void emit_batches();
 
   /// Sends batches to sinks regardless of whether or not the batches reach the
   /// desired batch size.
-  virtual void force_emit_batches() = 0;
+  virtual void force_emit_batches();
 
   /// Returns the currently available capacity for the output buffer.
-  virtual size_t capacity() const noexcept = 0;
+  virtual size_t capacity() const noexcept;
 
   /// Returns the size of the output buffer.
-  virtual size_t buffered() const noexcept = 0;
+  virtual size_t buffered() const noexcept;
 
   /// Silently removes all paths.
-  virtual void clear_paths() = 0;
+  virtual void clear_paths();
 
 protected:
   // -- customization points ---------------------------------------------------
 
   /// Inserts `ptr` to the implementation-specific container.
-  virtual bool insert_path(unique_path_ptr ptr) = 0;
+  virtual bool insert_path(unique_path_ptr ptr);
 
   /// Applies `f` to each path.
-  virtual void for_each_path_impl(path_visitor& f) = 0;
+  virtual void for_each_path_impl(path_visitor& f);
 
   /// Dispatches the predicate to `std::all_of`, `std::any_of`, or
   /// `std::none_of`.
   virtual bool check_paths_impl(path_algorithm algo,
-                                path_predicate& pred) const noexcept = 0;
+                                path_predicate& pred) const noexcept;
 
   /// Emits a regular (`reason == nullptr`) or irregular (`reason != nullptr`)
   /// shutdown if `silent == false`.
@@ -212,4 +214,4 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_STREAM_SCATTERER_HPP
+#endif // CAFDOWNSTREAM_MANAGER_HPP
