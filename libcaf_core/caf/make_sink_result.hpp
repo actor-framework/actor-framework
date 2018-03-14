@@ -16,78 +16,71 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_RESULT_HPP
-#define CAF_STREAM_RESULT_HPP
+#ifndef CAF_MAKE_SINK_RESULT_HPP
+#define CAF_MAKE_SINK_RESULT_HPP
 
 #include "caf/fwd.hpp"
-#include "caf/none.hpp"
+#include "caf/stream_sink.hpp"
 #include "caf/stream_slot.hpp"
 
 namespace caf {
 
-/// Terminates a stream by reducing it to a single value.
-template <class Pointer /* = stream_manager_ptr */>
-class stream_result {
+/// Returns a stream sink with the slot ID of its first inbound path.
+template <class In>
+class make_sink_result {
 public:
   // -- member types -----------------------------------------------------------
 
-  using pointer_type = Pointer;
+  /// Type of a single element.
+  using input_type = In;
+
+  /// Fully typed stream manager as returned by `make_source`.
+  using sink_type = stream_sink<In>;
+
+  /// Pointer to a fully typed stream manager.
+  using sink_ptr_type = intrusive_ptr<sink_type>;
+
+  /// The return type for `scheduled_actor::make_sink`.
+  using output_stream_type = stream<input_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_result(stream_result&&) = default;
-  stream_result(const stream_result&) = default;
-  stream_result& operator=(stream_result&&) = default;
-  stream_result& operator=(const stream_result&) = default;
-
-  stream_result(none_t = none) : in_(0) {
+  make_sink_result() noexcept : slot_(0) {
     // nop
   }
 
-  stream_result(stream_slot id, Pointer mgr = nullptr)
-      : in_(id),
-        ptr_(std::move(mgr)) {
+  make_sink_result(stream_slot slot, sink_ptr_type ptr) noexcept
+      : slot_(slot),
+        ptr_(std::move(ptr)) {
     // nop
   }
 
-  template <class CompatiblePointer>
-  stream_result(stream_result<CompatiblePointer> other)
-      : in_(other.in()),
-        ptr_(std::move(other.ptr())) {
-    // nop
-  }
-
-  template <class CompatiblePointer>
-  stream_result& operator=(stream_result<CompatiblePointer> other) {
-    in_ = other.in();
-    ptr_ = std::move(other.ptr());
-    return *this;
-  }
+  make_sink_result(make_sink_result&&) = default;
+  make_sink_result(const make_sink_result&) = default;
+  make_sink_result& operator=(make_sink_result&&) = default;
+  make_sink_result& operator=(const make_sink_result&) = default;
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the unique identifier for this stream_result.
-  inline stream_slot in() const noexcept {
-    return in_;
+  inline stream_slot inbound_slot() const noexcept {
+    return slot_;
   }
 
-  /// Returns the handler assigned to this stream on this actor.
-  inline pointer_type& ptr() noexcept {
+  inline sink_ptr_type& ptr() noexcept {
     return ptr_;
   }
 
-  /// Returns the handler assigned to this stream on this actor.
-  inline const pointer_type& ptr() const noexcept {
+  inline const sink_ptr_type& ptr() const noexcept {
     return ptr_;
   }
 
 private:
   // -- member variables -------------------------------------------------------
 
-  stream_slot in_;
-  pointer_type ptr_;
+  stream_slot slot_;
+  sink_ptr_type ptr_;
 };
 
 } // namespace caf
 
-#endif // CAF_STREAM_RESULT_HPP
+#endif // CAF_MAKE_SINK_RESULT_HPP

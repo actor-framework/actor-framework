@@ -258,7 +258,7 @@ public:
     auto mgr = detail::make_stream_source<driver>(this, num_messages);
     auto res = mgr->add_outbound_path(ref.ctrl());
     CAF_MESSAGE(name_ << " starts streaming to " << ref.name()
-                << " on slot " << res.out());
+                << " on slot " << res.value());
   }
 
   void forward_to(entity& ref) {
@@ -284,7 +284,7 @@ public:
     forwarder = detail::make_stream_stage<driver>(this, &data);
     auto res = forwarder->add_outbound_path(ref.ctrl());
     CAF_MESSAGE(name_ << " starts forwarding to " << ref.name()
-                << " on slot " << res.out());
+                << " on slot " << res.value());
   }
 
   void operator()(open_stream_msg& hs) {

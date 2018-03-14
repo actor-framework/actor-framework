@@ -61,6 +61,8 @@ template <class...> class typed_event_based_actor;
 template <class...> class typed_response_promise;
 
 // -- variadic templates with fixed arguments ----------------------------------
+//
+template <class, class...> class output_stream;
 
 // -- classes ------------------------------------------------------------------
 
@@ -224,14 +226,6 @@ using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
-
-// -- templates with default parameters ----------------------------------------
-
-template <class, class = std::tuple<>, class = stream_manager_ptr>
-class output_stream;
-
-template <class = stream_manager_ptr>
-class stream_result;
 
 } // namespace caf
 

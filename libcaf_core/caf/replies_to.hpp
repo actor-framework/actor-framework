@@ -22,6 +22,7 @@
 #include <string>
 
 #include "caf/illegal_message_element.hpp"
+#include "caf/output_stream.hpp"
 #include "caf/stream.hpp"
 
 #include "caf/detail/type_list.hpp"
@@ -51,7 +52,7 @@ struct replies_to {
   /// @private
   template <class O, class... Os>
   using with_stream = typed_mpi<detail::type_list<Is...>,
-                                output_stream_t<O, Os...>>;
+                                output_stream<O, Os...>>;
 };
 
 template <class... Is>

@@ -39,7 +39,7 @@ TESTEE_SETUP();
 VARARGS_TESTEE(file_reader, size_t buf_size) {
   using buf = std::deque<int>;
   return {
-    [=](string& fname) -> output_stream_t<int, string> {
+    [=](string& fname) -> output_stream<int, string> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       CAF_CHECK_EQUAL(self->mailbox().empty(), true);
       return self->make_source(

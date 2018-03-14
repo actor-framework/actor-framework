@@ -226,14 +226,14 @@ TESTEE(stream_multiplexer) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for integers");
       auto result = stg->add_unchecked_outbound_path<int>();
-      stg->out().assign<int_downstream_manager>(result.out());
+      stg->out().assign<int_downstream_manager>(result);
       return result;
     },
     [=](join_atom, strings_atom) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for strings");
       auto result = stg->add_unchecked_outbound_path<string>();
-      stg->out().assign<string_downstream_manager>(result.out());
+      stg->out().assign<string_downstream_manager>(result);
       return result;
     },
     [=](const stream<int>& in) {

@@ -23,7 +23,6 @@
 
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_manager.hpp"
-#include "caf/stream_result.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -55,9 +54,8 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Creates a new input path to the current sender.
-  stream_result<intrusive_ptr<stream_sink>>
-  add_inbound_path(const stream<input_type>&) {
-    return {add_unchecked_inbound_path_impl(), this};
+  inbound_stream_slot<input_type> add_inbound_path(const stream<input_type>&) {
+    return {add_unchecked_inbound_path_impl()};
   }
 
 private:

@@ -81,20 +81,20 @@ struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
                                                  output_tuple<Out...>>, Xs...>,
                      Ys,
                      detail::type_list<typed_mpi<detail::type_list<Out...>,
-                                                 output_stream_t<M, Ms...>>,
+                                                 output_stream<M, Ms...>>,
                                        Zs...>,
                      detail::type_list<Rs...>>
     : composed_type<detail::type_list<Xs...>, Ys, Ys,
                     detail::type_list<Rs...,
                                       typed_mpi<detail::type_list<In...>,
-                                                output_stream_t<M, Ms...>>>> {
+                                                output_stream<M, Ms...>>>> {
 };
 
 // case #3
 template <class... In, class O, class... Out, class... Xs, class Ys,
           class M, class... Ms, class... Zs, class... Rs>
 struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
-                                            output_stream_t<O, Out...>>, Xs...>,
+                                            output_stream<O, Out...>>, Xs...>,
                      Ys,
                      detail::type_list<typed_mpi<detail::type_list<O, Out...>,
                                             output_tuple<M, Ms...>>, Zs...>,
@@ -102,22 +102,22 @@ struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
     : composed_type<detail::type_list<Xs...>, Ys, Ys,
                     detail::type_list<Rs...,
                                       typed_mpi<detail::type_list<In...>,
-                                                output_stream_t<M, Ms...>>>> {
+                                                output_stream<M, Ms...>>>> {
 };
 
 // case #4
 template <class... In, class O, class... Out, class... Xs, class Ys,
           class M, class... Ms, class... Zs, class... Rs>
 struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
-                                            output_stream_t<O, Out...>>, Xs...>,
+                                            output_stream<O, Out...>>, Xs...>,
                      Ys,
                      detail::type_list<typed_mpi<detail::type_list<O, Out...>,
-                                            output_stream_t<M, Ms...>>, Zs...>,
+                                            output_stream<M, Ms...>>, Zs...>,
                      detail::type_list<Rs...>>
     : composed_type<detail::type_list<Xs...>, Ys, Ys,
                     detail::type_list<Rs...,
                                       typed_mpi<detail::type_list<In...>,
-                                                output_stream_t<M, Ms...>>>> {
+                                                output_stream<M, Ms...>>>> {
 };
 
 // default case (recurse over Zs)

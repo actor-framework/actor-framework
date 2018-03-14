@@ -76,7 +76,7 @@ std::function<void (T&, const error&)> fin(scheduled_actor* self) {
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
   return {
-    [=](string& fname) -> output_stream_t<int> {
+    [=](string& fname) -> output_stream<int> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       CAF_CHECK_EQUAL(self->mailbox().empty(), true);
       return self->make_source(

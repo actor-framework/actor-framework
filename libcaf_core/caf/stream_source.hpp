@@ -48,38 +48,32 @@ public:
   }
 
   /// Creates a new output path to the current sender.
-  output_stream<output_type, std::tuple<>, intrusive_ptr<stream_source>>
-  add_outbound_path() {
+  outbound_stream_slot<output_type> add_outbound_path() {
     CAF_LOG_TRACE("");
-    return this->add_unchecked_outbound_path<output_type>().rebind(this);
+    return this->add_unchecked_outbound_path<output_type>();
   }
 
   /// Creates a new output path to the current sender with custom handshake.
   template <class... Ts>
-  output_stream<output_type, std::tuple<detail::strip_and_convert_t<Ts>...>,
-                intrusive_ptr<stream_source>>
+  outbound_stream_slot<output_type, detail::strip_and_convert_t<Ts>...>
   add_outbound_path(std::tuple<Ts...> xs) {
     CAF_LOG_TRACE(CAF_ARG(xs));
-    return this->add_unchecked_outbound_path<output_type>(std::move(xs))
-           .rebind(this);
+    return this->add_unchecked_outbound_path<output_type>(std::move(xs));
   }
 
   /// Creates a new output path to the current sender.
   template <class Handle>
-  output_stream<output_type, std::tuple<>, intrusive_ptr<stream_source>>
-  add_outbound_path(const Handle& next) {
+  outbound_stream_slot<output_type> add_outbound_path(const Handle& next) {
     CAF_LOG_TRACE(CAF_ARG(next));
-    return this->add_unchecked_outbound_path<output_type>(next).rebind(this);
+    return this->add_unchecked_outbound_path<output_type>(next);
   }
 
   /// Creates a new output path to the current sender with custom handshake.
   template <class Handle, class... Ts>
-  output_stream<output_type, std::tuple<detail::strip_and_convert_t<Ts>...>,
-                intrusive_ptr<stream_source>>
+  outbound_stream_slot<output_type, detail::strip_and_convert_t<Ts>...>
   add_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
     CAF_LOG_TRACE(CAF_ARG(next) << CAF_ARG(xs));
-    return this->add_unchecked_outbound_path<output_type>(next, std::move(xs))
-           .rebind(this);
+    return this->add_unchecked_outbound_path<output_type>(next, std::move(xs));
   }
 
 protected:

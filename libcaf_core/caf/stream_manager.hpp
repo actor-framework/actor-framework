@@ -33,7 +33,6 @@
 #include "caf/message_builder.hpp"
 #include "caf/output_stream.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/stream_result.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/upstream_msg.hpp"
 
@@ -155,20 +154,20 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class Out>
-  output_stream_t<Out> add_unchecked_outbound_path() {
+  outbound_stream_slot<Out> add_unchecked_outbound_path() {
     auto handshake = make_message(stream<Out>{});
-    return {0, add_unchecked_outbound_path_impl(std::move(handshake)), this};
+    return add_unchecked_outbound_path_impl(std::move(handshake));
   }
 
   /// Creates an outbound path to the current sender without any type checking.
   /// @pre `out().terminal() == false`
   /// @private
   template <class Out, class... Ts>
-  output_stream_t<Out, detail::strip_and_convert_t<Ts>...>
+  outbound_stream_slot<Out, detail::strip_and_convert_t<Ts>...>
   add_unchecked_outbound_path(std::tuple<Ts...> xs) {
     auto tk = std::make_tuple(stream<Out>{});
     auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
-    return {0, add_unchecked_outbound_path_impl(std::move(handshake)), this};
+    return add_unchecked_outbound_path_impl(std::move(handshake));
   }
 
   /// Creates an outbound path to `next`, only checking whether the interface
@@ -178,13 +177,12 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class Out, class Handle>
-  output_stream_t<Out> add_unchecked_outbound_path(Handle next) {
-    // TODO: type checking
+  outbound_stream_slot<Out> add_unchecked_outbound_path(Handle next) {
+    // TODO: type-check whether `next` accepts our handshake
     auto handshake = make_message(stream<Out>{});
     auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
-    auto slot = add_unchecked_outbound_path_impl(std::move(hdl),
-                                              std::move(handshake));
-    return {0, slot, this};
+    return add_unchecked_outbound_path_impl(std::move(hdl),
+                                            std::move(handshake));
   }
 
   /// Creates an outbound path to `next`, only checking whether the interface
@@ -194,15 +192,14 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class Out, class Handle, class... Ts>
-  output_stream_t<Out, detail::strip_and_convert_t<Ts>...>
+  outbound_stream_slot<Out, detail::strip_and_convert_t<Ts>...>
   add_unchecked_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
-    // TODO: type checking
+    // TODO: type-check whether `next` accepts our handshake
     auto tk = std::make_tuple(stream<Out>{});
     auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
     auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
-    auto slot = add_unchecked_outbound_path_impl(std::move(hdl),
-                                              std::move(handshake));
-    return {0, slot, this};
+    return add_unchecked_outbound_path_impl(std::move(hdl),
+                                            std::move(handshake));
   }
 
   /// Creates an inbound path to the current sender without any type checking.

@@ -21,6 +21,8 @@
 
 #include <cstdint>
 
+#include "caf/output_stream.hpp"
+
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
@@ -63,6 +65,90 @@ struct stream_slots : detail::comparable<stream_slots>{
     return reinterpret_cast<const int32_t&>(*this)
            - reinterpret_cast<int32_t&>(other);
   }
+};
+
+/// Wraps a stream slot ID for inbound paths with the full type information of
+/// the path creation.
+template <class In>
+class inbound_stream_slot {
+public:
+  // -- member types -----------------------------------------------------------
+
+  /// Type of a single element.
+  using input_type = In;
+
+  /// The return type for `scheduled_actor::make_source`.
+  using input_stream_type = stream<input_type>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  constexpr inbound_stream_slot(stream_slot value = 0): value_(value) {
+    // nop
+  }
+
+  inbound_stream_slot(inbound_stream_slot&&) = default;
+  inbound_stream_slot(const inbound_stream_slot&) = default;
+  inbound_stream_slot& operator=(inbound_stream_slot&&) = default;
+  inbound_stream_slot& operator=(const inbound_stream_slot&) = default;
+
+  // -- conversion operators ---------------------------------------------------
+
+  constexpr operator stream_slot() const noexcept {
+    return value_;
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  constexpr stream_slot value() const noexcept {
+    return value_;
+  }
+
+private:
+  stream_slot value_;
+};
+
+/// Wraps a stream slot ID for outbound paths with the full type information of
+/// the path creation.
+template <class OutputType, class... HandshakeArgs>
+class outbound_stream_slot {
+public:
+  // -- member types -----------------------------------------------------------
+
+  /// Type of a single element.
+  using output_type = OutputType;
+
+  /// The return type for `scheduled_actor::make_source`.
+  using output_stream_type = output_stream<output_type, HandshakeArgs...>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  constexpr outbound_stream_slot(stream_slot value = 0): value_(value) {
+    // nop
+  }
+
+  outbound_stream_slot(outbound_stream_slot&&) = default;
+  outbound_stream_slot(const outbound_stream_slot&) = default;
+  outbound_stream_slot& operator=(outbound_stream_slot&&) = default;
+  outbound_stream_slot& operator=(const outbound_stream_slot&) = default;
+
+  // -- conversion operators ---------------------------------------------------
+
+  constexpr operator output_stream_type() const noexcept {
+    return {};
+  }
+
+  constexpr operator stream_slot() const noexcept {
+    return value_;
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  constexpr stream_slot value() const noexcept {
+    return value_;
+  }
+
+private:
+  stream_slot value_;
 };
 
 /// @relates stream_slots

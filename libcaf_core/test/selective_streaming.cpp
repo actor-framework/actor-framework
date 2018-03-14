@@ -106,7 +106,7 @@ TESTEE(log_producer) {
       auto& out = res.ptr()->out();
       static_assert(std::is_same<decltype(out), downstream_manager&>::value,
                     "source has wrong downstream_manager type");
-      out.set_filter(res.out(), lvl);
+      out.set_filter(res.outbound_slot(), lvl);
       return res;
     }
   };
@@ -137,11 +137,11 @@ TESTEE(log_dispatcher) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request");
       auto result = stg->add_outbound_path();
-      stg->out().set_filter(result.out(), lvl);
+      stg->out().set_filter(result, lvl);
       return result;
     },
     [=](const stream<value_type>& in) {
-      return self->state.stage->add_inbound_path(in);
+      self->state.stage->add_inbound_path(in);
     }
   };
 }

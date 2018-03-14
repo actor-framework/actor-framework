@@ -21,16 +21,18 @@
 
 #include <tuple>
 
-#include "caf/fwd.hpp"
-#include "caf/none.hpp"
-#include "caf/unit.hpp"
-#include "caf/skip.hpp"
-#include "caf/result.hpp"
-#include "caf/message.hpp"
 #include "caf/expected.hpp"
-#include "caf/optional.hpp"
+#include "caf/fwd.hpp"
 #include "caf/make_message.hpp"
-#include "caf/stream_result.hpp"
+#include "caf/make_sink_result.hpp"
+#include "caf/make_source_result.hpp"
+#include "caf/make_stage_result.hpp"
+#include "caf/message.hpp"
+#include "caf/none.hpp"
+#include "caf/optional.hpp"
+#include "caf/result.hpp"
+#include "caf/skip.hpp"
+#include "caf/unit.hpp"
 
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/int_list.hpp"
@@ -139,15 +141,39 @@ public:
     (*this)();
   }
 
-  /// Calls `(*this)(x.in(), x.out(), x.ptr())`.
-  template <class Out, class Tuple, class P>
-  void operator()(output_stream<Out, Tuple, P>&) {
+  /// Calls `(*this)()`.
+  template <class Out, class... Ts>
+  void operator()(output_stream<Out, Ts...>&) {
     (*this)();
   }
 
-  /// Calls `(*this)(x.in(), 0, x.ptr())`.
-  template <class T>
-  void operator()(stream_result<T>&) {
+  /// Calls `(*this)()`.
+  template <class Out, class... Ts>
+  void operator()(outbound_stream_slot<Out, Ts...>&) {
+    (*this)();
+  }
+
+  /// Calls `(*this)()`.
+  template <class In>
+  void operator()(inbound_stream_slot<In>&) {
+    (*this)();
+  }
+
+  /// Calls `(*this)()`.
+  template <class In>
+  void operator()(make_sink_result<In>&) {
+    (*this)();
+  }
+
+  /// Calls `(*this)()`.
+  template <class DownstreamManager, class... Ts>
+  void operator()(make_source_result<DownstreamManager, Ts...>&) {
+    (*this)();
+  }
+
+  /// Calls `(*this)()`.
+  template <class In, class DownstreamManager, class... Ts>
+  void operator()(make_stage_result<In, DownstreamManager, Ts...>&) {
     (*this)();
   }
 

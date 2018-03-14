@@ -40,6 +40,8 @@
 #include "caf/invoke_message_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
+#include "caf/make_sink_result.hpp"
+#include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/output_stream.hpp"
@@ -48,8 +50,9 @@
 #include "caf/sec.hpp"
 #include "caf/stream.hpp"
 #include "caf/stream_manager.hpp"
-#include "caf/stream_result.hpp"
+#include "caf/stream_sink_trait.hpp"
 #include "caf/stream_source_trait.hpp"
+#include "caf/stream_stage_trait.hpp"
 #include "caf/to_string.hpp"
 
 #include "caf/policy/arg.hpp"
@@ -437,7 +440,8 @@ public:
     auto mgr = make_stream_source<Driver>(this, std::move(init),
                                           std::move(pull), std::move(done),
                                           std::move(fin));
-    return mgr->add_outbound_path(std::move(xs));
+    auto slot = mgr->add_outbound_path(std::move(xs));
+    return {slot, std::move(mgr)};
   }
 
   /// Creates a new stream source from given arguments.
@@ -463,7 +467,8 @@ public:
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  make_source_result_t<DownstreamManager>
+  detail::enable_if_t<!detail::is_actor_handle<Init>::value,
+                      make_source_result_t<DownstreamManager>>
   make_source(Init init, Pull pull, Done done, Finalize finalize = {},
               policy::arg<DownstreamManager> token = {}) {
     return make_source(std::make_tuple(), init, pull, done, finalize,
@@ -487,15 +492,8 @@ public:
                                                   std::move(pull),
                                                   std::move(done),
                                                   std::move(fin));
-    return mgr->add_outbound_path(dest, std::move(xs));
-    /*
-    auto slot = mgr->add_unchecked_outbound_path_impl(
-      actor_cast<strong_actor_ptr>(dest), std::move(handshake));
-    if (slot == invalid_stream_slot) {
-      CAF_LOG_WARNING("unable to assign a slot in make_source");
-    }
-    return mgr;
-    */
+    auto slot = mgr->add_outbound_path(dest, std::move(xs));
+    return {slot, std::move(mgr)};
   }
 
   /// Creates a new stream source and adds `dest` as first outbound path to it.
@@ -513,18 +511,18 @@ public:
   }
 
   template <class Driver, class... Ts>
-  stream_result<typename Driver::sink_ptr_type>
+  make_sink_result<typename Driver::input_type>
   make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
     auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
-    return mgr->add_inbound_path(src);
+    auto slot = mgr->add_inbound_path(src);
+    return {slot, std::move(mgr)};
   }
 
-  template <class Input, class Init, class Fun, class Finalize = unit_t,
+  template <class In, class Init, class Fun, class Finalize = unit_t,
             class Trait = stream_sink_trait_t<Fun>>
-  stream_result<typename Trait::pointer>
-  make_sink(const stream<Input>& in, Init init, Fun fun, Finalize fin = {}) {
-    using driver = detail::stream_sink_driver_impl<typename Trait::input,
-                                                   Fun, Finalize>;
+  make_sink_result<In> make_sink(const stream<In>& in, Init init, Fun fun,
+                                 Finalize fin = {}) {
+    using driver = detail::stream_sink_driver_impl<In, Fun, Finalize>;
     return make_sink<driver>(in, std::move(init), std::move(fun),
                              std::move(fin));
   }
@@ -534,8 +532,8 @@ public:
   make_stage(const stream<In>& src, std::tuple<Ts...> xs, Us&&... ys) {
     using detail::make_stream_stage;
     auto mgr = make_stream_stage<Driver>(this, std::forward<Us>(ys)...);
-    auto in = mgr->add_inbound_path(src).in();
-    auto out = mgr->add_outbound_path(std::move(xs)).out();
+    auto in = mgr->add_inbound_path(src);
+    auto out = mgr->add_outbound_path(std::move(xs));
     return {in, out, std::move(mgr)};
   }
 
