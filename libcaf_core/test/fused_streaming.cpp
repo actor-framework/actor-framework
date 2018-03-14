@@ -167,7 +167,8 @@ using int_downstream_manager = broadcast_downstream_manager<int>;
 
 using string_downstream_manager = broadcast_downstream_manager<string>;
 
-using downstream_manager = fused_downstream_manager<int_downstream_manager, string_downstream_manager>;
+using fused_manager =
+  fused_downstream_manager<int_downstream_manager, string_downstream_manager>;
 
 class fused_stage : public stream_manager {
 public:
@@ -207,12 +208,12 @@ public:
     return out_.capacity() == 0;
   }
 
-  downstream_manager& out() noexcept override {
+  fused_manager& out() noexcept override {
     return out_;
   }
 
 private:
-  downstream_manager out_;
+  fused_manager out_;
 };
 
 TESTEE_STATE(stream_multiplexer) {

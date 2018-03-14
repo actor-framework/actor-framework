@@ -85,7 +85,7 @@ public:
   bool all_filters(UnaryPredicate predicate) {
     return std::all_of(state_map_.begin(), state_map_.end(),
                        [&](const typename state_map_type::value_type& kvp) {
-                         return predicate(kvp.second);
+                         return predicate(kvp.second.filter);
                        });
   }
 
@@ -95,7 +95,7 @@ public:
   bool any_filter(UnaryPredicate predicate) {
     return std::any_of(state_map_.begin(), state_map_.end(),
                        [&](const typename state_map_type::value_type& kvp) {
-                         return predicate(kvp.second);
+                         return predicate(kvp.second.filter);
                        });
   }
 
@@ -105,7 +105,7 @@ public:
   bool no_filter(UnaryPredicate predicate) {
     return std::none_of(state_map_.begin(), state_map_.end(),
                         [&](const typename state_map_type::value_type& kvp) {
-                          return predicate(kvp.second);
+                          return predicate(kvp.second.filter);
                         });
   }
 

@@ -133,7 +133,7 @@ public:
 
   fused_downstream_manager(scheduled_actor* self)
       : super(self),
-        nested_(self, detail::pack_repeat<Ts...>(self)) {
+        nested_(self, detail::pack_repeat<Ts>(self)...) {
     detail::init_ptr_array<0, sizeof...(Ts) + 1>::apply(ptrs_, nested_);
   }
 
