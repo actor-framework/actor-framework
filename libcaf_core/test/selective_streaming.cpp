@@ -113,7 +113,7 @@ TESTEE(log_producer) {
 }
 
 TESTEE_STATE(log_dispatcher) {
-  stream_stage_ptr<value_type, value_type, downstream_manager> stage;
+  stream_stage_ptr<value_type, downstream_manager> stage;
 };
 
 TESTEE(log_dispatcher) {

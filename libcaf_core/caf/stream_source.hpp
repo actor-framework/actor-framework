@@ -30,12 +30,12 @@
 
 namespace caf {
 
-template <class Out, class DownstreamManager>
+template <class DownstreamManager>
 class stream_source : public virtual stream_manager {
 public:
   // -- member types -----------------------------------------------------------
 
-  using output_type = Out;
+  using output_type = typename DownstreamManager::output_type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -48,36 +48,37 @@ public:
   }
 
   /// Creates a new output path to the current sender.
-  output_stream<Out, std::tuple<>, intrusive_ptr<stream_source>>
+  output_stream<output_type, std::tuple<>, intrusive_ptr<stream_source>>
   add_outbound_path() {
     CAF_LOG_TRACE("");
-    return this->add_unchecked_outbound_path<Out>().rebind(this);
+    return this->add_unchecked_outbound_path<output_type>().rebind(this);
   }
 
   /// Creates a new output path to the current sender with custom handshake.
   template <class... Ts>
-  output_stream<Out, std::tuple<detail::strip_and_convert_t<Ts>...>,
+  output_stream<output_type, std::tuple<detail::strip_and_convert_t<Ts>...>,
                 intrusive_ptr<stream_source>>
   add_outbound_path(std::tuple<Ts...> xs) {
     CAF_LOG_TRACE(CAF_ARG(xs));
-    return this->add_unchecked_outbound_path<Out>(std::move(xs)).rebind(this);
+    return this->add_unchecked_outbound_path<output_type>(std::move(xs))
+           .rebind(this);
   }
 
   /// Creates a new output path to the current sender.
   template <class Handle>
-  output_stream<Out, std::tuple<>, intrusive_ptr<stream_source>>
+  output_stream<output_type, std::tuple<>, intrusive_ptr<stream_source>>
   add_outbound_path(const Handle& next) {
     CAF_LOG_TRACE(CAF_ARG(next));
-    return this->add_unchecked_outbound_path<Out>(next).rebind(this);
+    return this->add_unchecked_outbound_path<output_type>(next).rebind(this);
   }
 
   /// Creates a new output path to the current sender with custom handshake.
   template <class Handle, class... Ts>
-  output_stream<Out, std::tuple<detail::strip_and_convert_t<Ts>...>,
+  output_stream<output_type, std::tuple<detail::strip_and_convert_t<Ts>...>,
                 intrusive_ptr<stream_source>>
   add_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
     CAF_LOG_TRACE(CAF_ARG(next) << CAF_ARG(xs));
-    return this->add_unchecked_outbound_path<Out>(next, std::move(xs))
+    return this->add_unchecked_outbound_path<output_type>(next, std::move(xs))
            .rebind(this);
   }
 
@@ -85,12 +86,8 @@ protected:
   DownstreamManager out_;
 };
 
-template <class Out, class DownstreamManager>
-using stream_source_ptr = intrusive_ptr<stream_source<Out, DownstreamManager>>;
-
 template <class DownstreamManager>
-using stream_source_ptr_t =
-  stream_source_ptr<typename DownstreamManager::output_type, DownstreamManager>;
+using stream_source_ptr = intrusive_ptr<stream_source<DownstreamManager>>;
 
 } // namespace caf
 

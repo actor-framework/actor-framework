@@ -35,6 +35,7 @@ template <class> class optional;
 template <class> class param;
 template <class> class stream;
 template <class> class stream_sink;
+template <class> class stream_source;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
 
@@ -42,14 +43,13 @@ template <class> struct timeout_definition;
 
 // -- 2 param templates --------------------------------------------------------
 
-template <class, class> class stream_source;
+template <class, class> class stream_stage;
 
 // -- 3 param templates --------------------------------------------------------
 
 template <class, class, int> class actor_cast_access;
 
 template <class, class, class> class broadcast_downstream_manager;
-template <class, class, class> class stream_stage;
 
 // -- variadic templates -------------------------------------------------------
 

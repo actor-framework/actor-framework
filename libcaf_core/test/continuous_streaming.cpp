@@ -104,7 +104,7 @@ TESTEE(sum_up) {
 }
 
 TESTEE_STATE(stream_multiplexer) {
-  stream_stage_ptr<int, int, broadcast_downstream_manager<int>> stage;
+  stream_stage_ptr<int, broadcast_downstream_manager<int>> stage;
 };
 
 TESTEE(stream_multiplexer) {

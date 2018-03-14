@@ -43,7 +43,7 @@ public:
   using stream_type = stream<output_type>;
 
   /// Implemented `stream_source` interface.
-  using source_type = stream_source<output_type, downstream_manager_type>;
+  using source_type = stream_source<downstream_manager_type>;
 
   /// Smart pointer to the interface type.
   using source_ptr_type = intrusive_ptr<source_type>;

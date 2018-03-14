@@ -35,7 +35,7 @@ struct make_source_result {
   using output_type = typename DownstreamManager::output_type;
 
   /// Fully typed stream manager as returned by `make_source`.
-  using source_type = stream_source<output_type, DownstreamManager>;
+  using source_type = stream_source<DownstreamManager>;
 
   /// Pointer to a fully typed stream manager.
   using source_ptr_type = intrusive_ptr<source_type>;

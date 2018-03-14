@@ -385,7 +385,7 @@ public:
   mboxqueue mbox;
   const char* name_;
   vector<int> data; // Keeps track of all received data from all batches.
-  stream_stage_ptr<int, int, broadcast_downstream_manager<int>> forwarder;
+  stream_stage_ptr<int, broadcast_downstream_manager<int>> forwarder;
 
   tick_type ticks_per_force_batches_interval;
   tick_type ticks_per_credit_interval;

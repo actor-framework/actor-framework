@@ -593,8 +593,7 @@ public:
   template <class Init, class Fun, class Cleanup,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>
-  stream_stage_ptr<typename Trait::input, typename Trait::output,
-                   DownstreamManager>
+  stream_stage_ptr<typename Trait::input, DownstreamManager>
   make_continuous_stage(Init init, Fun fun, Cleanup cleanup,
                         policy::arg<DownstreamManager> token = {}) {
     CAF_IGNORE_UNUSED(token);

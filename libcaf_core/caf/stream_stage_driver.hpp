@@ -47,7 +47,7 @@ public:
   using stream_type = stream<output_type>;
 
   /// Implemented `stream_stage` interface.
-  using stage_type = stream_stage<input_type, output_type, DownstreamManager>;
+  using stage_type = stream_stage<input_type, DownstreamManager>;
 
   /// Smart pointer to the interface type.
   using stage_ptr_type = intrusive_ptr<stage_type>;

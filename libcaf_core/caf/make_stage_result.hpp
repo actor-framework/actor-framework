@@ -37,7 +37,7 @@ public:
   using output_type = typename DownstreamManager::output_type;
 
   /// Fully typed stream manager as returned by `make_stage`.
-  using stage_type = stream_stage<In, output_type, DownstreamManager>;
+  using stage_type = stream_stage<In, DownstreamManager>;
 
   /// Pointer to a fully typed stream manager.
   using stage_ptr_type = intrusive_ptr<stage_type>;

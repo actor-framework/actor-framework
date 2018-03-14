@@ -28,13 +28,13 @@
 
 namespace caf {
 
-template <class In, class Out, class DownstreamManager>
-class stream_stage : public stream_source<Out, DownstreamManager>,
+template <class In, class DownstreamManager>
+class stream_stage : public stream_source<DownstreamManager>,
                      public stream_sink<In> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using left_super = stream_source<Out, DownstreamManager>;
+  using left_super = stream_source<DownstreamManager>;
 
   using right_super = stream_sink<In>;
 
@@ -52,9 +52,8 @@ public:
   }
 };
 
-template <class In, class Out, class DownstreamManager>
-using stream_stage_ptr =
-  intrusive_ptr<stream_stage<In, Out, DownstreamManager>>;
+template <class In, class DownstreamManager>
+using stream_stage_ptr = intrusive_ptr<stream_stage<In, DownstreamManager>>;
 
 } // namespace caf
 
