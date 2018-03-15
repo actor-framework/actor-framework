@@ -359,6 +359,81 @@ protected:
 };
 
 template <class... Ts>
+class allow_clause {
+public:
+  allow_clause(caf::scheduler::test_coordinator& sched)
+      : sched_(sched),
+        dest_(nullptr) {
+    peek_ = [=] {
+      if (dest_ != nullptr)
+        return try_extract<Ts...>(dest_) != caf::none;
+      return false;
+    };
+  }
+
+  allow_clause(allow_clause&& other) = default;
+
+  ~allow_clause() {
+    if (peek_ != nullptr) {
+      if (peek_())
+        run_once();
+    }
+  }
+
+  allow_clause& from(const wildcard&) {
+    return *this;
+  }
+
+  template <class Handle>
+  allow_clause& from(const Handle& whom) {
+    src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
+    return *this;
+  }
+
+  template <class Handle>
+  allow_clause& to(const Handle& whom) {
+    if (sched_.prioritize(whom))
+      dest_ = &sched_.next_job<caf::scheduled_actor>();
+    return *this;
+  }
+
+  allow_clause& to(const caf::scoped_actor& whom) {
+    dest_ = whom.ptr();
+    return *this;
+  }
+
+  template <class... Us>
+  void with(Us&&... xs) {
+    // TODO: move tmp into lambda when switching to C++14
+    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
+    peek_ = [=] {
+      using namespace caf::detail;
+      elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
+      auto ys = try_extract<Ts...>(dest_);
+      if (ys != caf::none) {
+        auto ys_indices = get_indices(*ys);
+        return apply_args(inspector, ys_indices, *ys);
+      }
+      return false;
+    };
+  }
+
+protected:
+  void run_once() {
+    auto dptr = dynamic_cast<caf::blocking_actor*>(dest_);
+    if (dptr == nullptr)
+      sched_.run_once();
+    else
+      dptr->dequeue(); // Drop message.
+  }
+
+  caf::scheduler::test_coordinator& sched_;
+  caf::strong_actor_ptr src_;
+  caf::local_actor* dest_;
+  std::function<bool ()> peek_;
+};
+
+template <class... Ts>
 class disallow_clause {
 public:
   disallow_clause() {
@@ -521,6 +596,13 @@ struct test_coordinator_fixture {
   do {                                                                         \
     CAF_MESSAGE("expect" << #types << "." << #fields);                         \
     expect_clause<CAF_EXPAND(CAF_DSL_LIST types)>{sched}.fields;               \
+  } while (false)
+
+/// Convenience macro for defining allow clauses.
+#define allow(types, fields)                                                   \
+  do {                                                                         \
+    CAF_MESSAGE("allow" << #types << "." << #fields);                          \
+    allow_clause<CAF_EXPAND(CAF_DSL_LIST types)>{sched}.fields;                \
   } while (false)
 
 /// Convenience macro for defining disallow clauses.
