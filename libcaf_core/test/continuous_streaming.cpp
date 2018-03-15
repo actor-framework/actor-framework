@@ -135,16 +135,7 @@ TESTEE(stream_multiplexer) {
   };
 }
 
-struct fixture : test_coordinator_fixture<> {
-  std::chrono::microseconds cycle;
-
-  fixture() : cycle(cfg.streaming_credit_round_interval_us) {
-    // Configure the clock to measure each batch item with 1us.
-    sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
-    // Make sure the current time isn't invalid.
-    sched.clock().current_time += cycle;
-  }
-};
+using fixture = test_coordinator_fixture<>;
 
 } // namespace <anonymous>
 
@@ -171,7 +162,7 @@ CAF_TEST(depth_3_pipeline_with_fork) {
   auto predicate = [&] {
     return st.stage->inbound_paths().empty() && st.stage->out().clean();
   };
-  sched.run_dispatch_loop(predicate, cycle);
+  sched.run_dispatch_loop(predicate, streaming_cycle);
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk1).state.x, 1275);
@@ -198,7 +189,7 @@ CAF_TEST(depth_3_pipeline_with_join) {
   auto predicate = [&] {
     return st.stage->inbound_paths().empty() && st.stage->out().clean();
   };
-  sched.run_dispatch_loop(predicate, cycle);
+  sched.run_dispatch_loop(predicate, streaming_cycle);
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 2550);

@@ -173,16 +173,7 @@ TESTEE(log_consumer) {
   };
 }
 
-struct fixture : test_coordinator_fixture<> {
-  std::chrono::microseconds cycle;
-
-  fixture() : cycle(cfg.streaming_credit_round_interval_us) {
-    // Configure the clock to measure each batch item with 1us.
-    sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
-    // Make sure the current time isn't invalid.
-    sched.clock().current_time += cycle;
-  }
-};
+using fixture = test_coordinator_fixture<>;
 
 } // namespace <anonymous>
 
@@ -196,7 +187,7 @@ CAF_TEST(select_all) {
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, level::all);
-  sched.run_dispatch_loop(cycle);
+  sched.run_dispatch_loop(streaming_cycle);
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk).state.log,
                   make_log(level::all));
 }
@@ -207,7 +198,7 @@ CAF_TEST(select_trace) {
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, level::trace);
-  sched.run_dispatch_loop(cycle);
+  sched.run_dispatch_loop(streaming_cycle);
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk).state.log,
                   make_log(level::trace));
 }
@@ -226,7 +217,7 @@ CAF_TEST(forking) {
   auto predicate = [&] {
     return st.stage->inbound_paths().empty() && st.stage->out().clean();
   };
-  sched.run_dispatch_loop(predicate, cycle);
+  sched.run_dispatch_loop(predicate, streaming_cycle);
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk1).state.log,
                   make_log(level::trace));
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk2).state.log,

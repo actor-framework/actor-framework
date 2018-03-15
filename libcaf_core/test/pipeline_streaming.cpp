@@ -211,16 +211,7 @@ TESTEE(doubler) {
   };
 }
 
-struct fixture : test_coordinator_fixture<> {
-  std::chrono::microseconds cycle;
-
-  fixture() : cycle(cfg.streaming_credit_round_interval_us) {
-    // Configure the clock to measure each batch item with 1us.
-    sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
-    // Make sure the current time isn't invalid.
-    sched.clock().current_time += cycle;
-  }
-};
+using fixture = test_coordinator_fixture<>;
 
 } // namespace <anonymous>
 
@@ -239,7 +230,7 @@ CAF_TEST(depth_2_pipeline_50_items) {
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
-  sched.clock().current_time += cycle;
+  sched.clock().current_time += credit_round_interval;
   sched.dispatch();
   expect((timeout_msg), from(snk).to(snk));
   expect((timeout_msg), from(src).to(src));
@@ -260,7 +251,7 @@ CAF_TEST(depth_2_pipeline_setup2_50_items) {
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
-  sched.clock().current_time += cycle;
+  sched.clock().current_time += credit_round_interval;
   sched.dispatch();
   expect((timeout_msg), from(snk).to(snk));
   expect((timeout_msg), from(src).to(src));
@@ -287,7 +278,7 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (a single batch)");
   expect((downstream_msg::batch), from(src).to(snk));
-  sched.clock().current_time += cycle;
+  sched.clock().current_time += credit_round_interval;
   sched.dispatch();
   expect((timeout_msg), from(snk).to(snk));
   expect((timeout_msg), from(src).to(src));
@@ -313,7 +304,7 @@ CAF_TEST(depth_2_pipeline_500_items) {
       expect((downstream_msg::batch), from(src).to(snk));
     }
     CAF_MESSAGE("trigger timeouts");
-    sched.clock().current_time += cycle;
+    sched.clock().current_time += credit_round_interval;
     sched.dispatch();
     expect((timeout_msg), from(snk).to(snk));
     expect((timeout_msg), from(src).to(src));
@@ -377,7 +368,7 @@ CAF_TEST(depth_3_pipeline_50_items) {
   auto stg = sys.spawn(filter);
   auto snk = sys.spawn(sum_up);
   auto next_cycle = [&] {
-    sched.clock().current_time += cycle;
+    sched.clock().current_time += credit_round_interval;
     sched.dispatch();
     expect((timeout_msg), from(snk).to(snk));
     expect((timeout_msg), from(stg).to(stg));
@@ -424,7 +415,7 @@ CAF_TEST(depth_4_pipeline_500_items) {
   expect((upstream_msg::ack_open), from(stg2).to(stg1));
   expect((upstream_msg::ack_open), from(stg1).to(src));
   CAF_MESSAGE("start data transmission");
-  sched.run_dispatch_loop(cycle);
+  sched.run_dispatch_loop(credit_round_interval);
   CAF_MESSAGE("check sink result");
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 125000);
 }

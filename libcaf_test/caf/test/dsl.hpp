@@ -20,6 +20,8 @@
 #include "caf/meta/annotation.hpp"
 #include "caf/test/unit_test.hpp"
 
+#include "caf/detail/gcd.hpp"
+
 namespace {
 
 struct wildcard { };
@@ -421,24 +423,57 @@ protected:
   std::function<void ()> check_;
 };
 
+/// A fixture with a deterministic scheduler setup.
 template <class Config = caf::actor_system_config>
 struct test_coordinator_fixture {
+  /// A deterministic scheduler type.
   using scheduler_type = caf::scheduler::test_coordinator;
 
+  /// Convenience alias for std::chrono::microseconds.
+  using us_t = std::chrono::microseconds;
+
+  /// The user-generated system config.
   Config cfg;
+
+  /// Host system for (scheduled) actors.
   caf::actor_system sys;
+
+  /// A scoped actor for conveniently sending and receiving messages.
   caf::scoped_actor self;
+
+  /// Deterministic scheduler.
   scheduler_type& sched;
+
+  /// Duration between two credit rounds.
+  caf::timespan credit_round_interval;
+
+  /// Max send delay for stream batches.
+  caf::timespan max_batch_delay;
+
+  /// Duration a single cycle, computed as GCD of credit-round-interval and
+  /// max-batch-delay. Using this duration for `sched.run_dispatch_loop()`
+  /// advances the clock in ideal steps.
+  caf::timespan streaming_cycle;
 
   test_coordinator_fixture()
       : sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
                .set("scheduler.policy", caf::atom("testing"))),
-        self(sys),
-        sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
-    // nop
+        self(sys, true),
+        sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
+        credit_round_interval(us_t{cfg.streaming_credit_round_interval_us}),
+        max_batch_delay(us_t{cfg.streaming_max_batch_delay_us}) {
+    // Configure the clock to measure each batch item with 1us.
+    sched.clock().time_per_unit.emplace(caf::atom("batch"),
+                                        caf::timespan{1000});
+    // Compute reasonable step size.
+    auto cycle_count = caf::detail::gcd(credit_round_interval.count(),
+                                        max_batch_delay.count());
+    streaming_cycle = caf::timespan{cycle_count};
+    // Make sure the current time isn't 0.
+    sched.clock().current_time += streaming_cycle;
   }
 
-  ~test_coordinator_fixture() {
+  virtual ~test_coordinator_fixture() {
     sched.clock().cancel_all();
     sched.run();
   }
