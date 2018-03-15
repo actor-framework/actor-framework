@@ -139,6 +139,13 @@ size_t downstream_manager::buffered() const noexcept {
   return 0;
 }
 
+bool downstream_manager::stalled() const noexcept {
+  auto no_credit = [](const outbound_path& x) {
+    return x.open_credit == 0;
+  };
+  return capacity() == 0 && all_paths(no_credit);
+}
+
 void downstream_manager::clear_paths() {
   // nop
 }

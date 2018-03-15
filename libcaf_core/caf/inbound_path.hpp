@@ -147,6 +147,10 @@ public:
   void emit_ack_batch(local_actor* self, long queued_items, timespan cycle,
                       timespan desired_batch_complexity);
 
+  /// Returns whether the path received no input since last emitting
+  /// `ack_batch`, i.e., `last_acked_batch_id == last_batch_id`.
+  bool up_to_date();
+
   /// Sends a `stream_msg::close` on this path.
   void emit_regular_shutdown(local_actor* self);
 

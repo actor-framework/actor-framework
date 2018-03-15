@@ -100,9 +100,14 @@ public:
   /// Returns the manager for downstream communication.
   virtual downstream_manager& out() = 0;
 
-  /// Returns whether the stream has reached the end and can be discarded
+  /// Returns whether the manager has reached the end and can be discarded
   /// safely.
   virtual bool done() const = 0;
+
+  /// Returns whether the manager cannot make any progress on its own at the
+  /// moment. For example, a source is idle if it has filled its output buffer
+  /// and there isn't any credit left.
+  virtual bool idle() const noexcept = 0;
 
   /// Advances time.
   virtual void cycle_timeout(size_t cycle_nr);
@@ -138,12 +143,16 @@ public:
   }
 
   /// Returns the list of inbound paths.
-  inline const inbound_paths_list& inbound_paths() const {
+  inline const inbound_paths_list& inbound_paths() const  noexcept{
     return inbound_paths_;
   }
 
   /// Returns the inbound paths at slot `x`.
-  inbound_path* get_inbound_path(stream_slot x) const;
+  inbound_path* get_inbound_path(stream_slot x) const noexcept;
+
+  /// Queries whether all inbound paths are up-to-date. A sink is idle if this
+  /// function returns `true`.
+  bool inbound_paths_up_to_date() const noexcept;
 
   /// Returns the parent actor.
   inline scheduled_actor* self() {

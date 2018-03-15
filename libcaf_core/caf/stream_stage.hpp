@@ -47,6 +47,13 @@ public:
     // nop
   }
 
+  bool idle() const noexcept override {
+    // A stage is idle if it can't make progress on its downstream manager or
+    // if it has no pending work at all.
+    auto& dm = this->out_;
+    return dm.stalled() || (dm.clean() && right_super::idle());
+  }
+
   DownstreamManager& out() override {
     return left_super::out();
   }

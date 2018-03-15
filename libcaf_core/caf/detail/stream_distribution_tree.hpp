@@ -144,6 +144,11 @@ public:
            && inbound_paths_.empty() && out_.clean();
   }
 
+  bool idle() const noexcept override {
+    // Same as `stream_stage<...>`::idle().
+  return out_.stalled() || (out_.clean() && this->inbound_paths_up_to_date());
+  }
+
   downstream_manager_type& out() override {
     return out_;
   }

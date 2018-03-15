@@ -101,7 +101,7 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
                                   timespan cycle, timespan complexity) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items) << CAF_ARG(cycle)
                 << CAF_ARG(complexity));
-  if (last_acked_batch_id == last_batch_id)
+  if (up_to_date())
     return;
   auto x = stats.calculate(cycle, complexity);
   // Hand out enough credit to fill our queue for 2 cycles.
@@ -113,10 +113,15 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
     assigned_credit += credit;
   CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(batch_size));
   unsafe_send_as(self, hdl,
-                 make<upstream_msg::ack_batch>(slots.invert(), self->address(),
+                 make<upstream_msg::ack_batch>(slots.invert(),
+                                               self->address(),
                                                static_cast<int32_t>(credit),
                                                batch_size, last_batch_id));
   last_acked_batch_id = last_batch_id;
+}
+
+bool inbound_path::up_to_date() {
+  return last_acked_batch_id == last_batch_id;
 }
 
 void inbound_path::emit_regular_shutdown(local_actor* self) {

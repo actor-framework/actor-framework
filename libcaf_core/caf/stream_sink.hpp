@@ -19,8 +19,10 @@
 #ifndef CAF_DETAIL_STREAM_SINK_HPP
 #define CAF_DETAIL_STREAM_SINK_HPP
 
+#include <algorithm>
 #include <tuple>
 
+#include "caf/inbound_path.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_manager.hpp"
 
@@ -45,6 +47,12 @@ public:
 
   bool done() const override {
     return !this->continuous() && this->inbound_paths_.empty();
+  }
+
+  bool idle() const noexcept override {
+    // A sink is idle if there's no pending batch and a new credit round would
+    // emit no `ack_batch` messages.
+    return this->inbound_paths_up_to_date();
   }
 
   downstream_manager& out() override {

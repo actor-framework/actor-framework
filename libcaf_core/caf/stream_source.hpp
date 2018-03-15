@@ -43,6 +43,11 @@ public:
     // nop
   }
 
+  bool idle() const noexcept override {
+    // A source is idle if it can't make any progress on its downstream.
+    return out_.stalled();
+  }
+
   DownstreamManager& out() override {
     return out_;
   }

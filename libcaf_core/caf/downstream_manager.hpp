@@ -160,11 +160,15 @@ public:
   /// desired batch size.
   virtual void force_emit_batches();
 
-  /// Returns the currently available capacity for the output buffer.
+  /// Queries the currently available capacity for the output buffer.
   virtual size_t capacity() const noexcept;
 
-  /// Returns the size of the output buffer.
+  /// Queries the size of the output buffer.
   virtual size_t buffered() const noexcept;
+
+  /// Queries whether the manager cannot make any progress, because its buffer
+  /// is full and no more credit is available.
+  bool stalled() const noexcept;
 
   /// Silently removes all paths.
   virtual void clear_paths();

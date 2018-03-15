@@ -440,8 +440,23 @@ bool scheduled_actor::is_active_receive_timeout(uint64_t tid) const {
 
 uint64_t scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
   CAF_LOG_TRACE(x);
+  // Do not request 'infinite' timeouts.
   if (x == actor_clock::time_point::max())
     return 0;
+  // Do not request a timeout if all streams are idle.
+  std::vector<stream_manager_ptr> mgrs;
+  for (auto& kvp : stream_managers_)
+    mgrs.emplace_back(kvp.second);
+  std::sort(mgrs.begin(), mgrs.end());
+  auto e = std::unique(mgrs.begin(), mgrs.end());
+  auto idle = [=](const stream_manager_ptr& x) {
+    return x->idle();
+  };
+  if (std::all_of(mgrs.begin(), e, idle)) {
+    CAF_LOG_DEBUG("suppress stream timeout");
+    return 0;
+  }
+  // Delegate call.
   return set_timeout(stream_atom::value, x);
 }
 

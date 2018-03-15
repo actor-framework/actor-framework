@@ -175,13 +175,19 @@ void stream_manager::remove_input_path(stream_slot slot, error reason,
     self_->erase_inbound_path_later(slot, std::move(reason));
 }
 
-inbound_path* stream_manager::get_inbound_path(stream_slot x) const {
+inbound_path* stream_manager::get_inbound_path(stream_slot x) const noexcept {
   auto pred = [=](inbound_path* ptr) {
     return ptr->slots.receiver == x;
   };
   auto e = inbound_paths_.end();
   auto i = std::find_if(inbound_paths_.begin(), e, pred);
   return i != e ? *i : nullptr;
+}
+
+
+bool stream_manager::inbound_paths_up_to_date() const noexcept {
+  auto up_to_date = [](inbound_path* x) { return x->up_to_date(); };
+  return std::all_of(inbound_paths_.begin(), inbound_paths_.end(), up_to_date);
 }
 
 stream_slot stream_manager::add_unchecked_outbound_path_impl(response_promise& rp,

@@ -159,10 +159,7 @@ CAF_TEST(depth_3_pipeline_with_fork) {
   sched.run();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
-  auto predicate = [&] {
-    return st.stage->inbound_paths().empty() && st.stage->out().clean();
-  };
-  sched.run_dispatch_loop(predicate, streaming_cycle);
+  sched.run_dispatch_loop(streaming_cycle);
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk1).state.x, 1275);
@@ -186,10 +183,7 @@ CAF_TEST(depth_3_pipeline_with_join) {
   sched.run();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 2u);
-  auto predicate = [&] {
-    return st.stage->inbound_paths().empty() && st.stage->out().clean();
-  };
-  sched.run_dispatch_loop(predicate, streaming_cycle);
+  sched.run_dispatch_loop(streaming_cycle);
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 2550);

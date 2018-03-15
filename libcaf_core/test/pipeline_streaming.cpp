@@ -306,8 +306,8 @@ CAF_TEST(depth_2_pipeline_500_items) {
     CAF_MESSAGE("trigger timeouts");
     sched.clock().current_time += credit_round_interval;
     sched.dispatch();
-    expect((timeout_msg), from(snk).to(snk));
-    expect((timeout_msg), from(src).to(src));
+    allow((timeout_msg), from(snk).to(snk));
+    allow((timeout_msg), from(src).to(src));
     CAF_MESSAGE("process ack_batch in source");
     expect((upstream_msg::ack_batch), from(snk).to(src));
   } while (!received<downstream_msg::close>(snk));
@@ -370,9 +370,9 @@ CAF_TEST(depth_3_pipeline_50_items) {
   auto next_cycle = [&] {
     sched.clock().current_time += credit_round_interval;
     sched.dispatch();
-    expect((timeout_msg), from(snk).to(snk));
-    expect((timeout_msg), from(stg).to(stg));
-    expect((timeout_msg), from(src).to(src));
+    allow((timeout_msg), from(snk).to(snk));
+    allow((timeout_msg), from(stg).to(stg));
+    allow((timeout_msg), from(src).to(src));
   };
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(stg) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");

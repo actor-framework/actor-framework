@@ -183,6 +183,10 @@ public:
            && out_.clean();
   }
 
+  bool idle() const noexcept override {
+    return inbound_paths_up_to_date() && out_.stalled();
+  }
+
   void handle(inbound_path*, downstream_msg::batch& batch) override {
     using std::make_move_iterator;
     using int_vec = std::vector<int>;
