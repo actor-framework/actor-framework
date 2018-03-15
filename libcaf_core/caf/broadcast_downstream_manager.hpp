@@ -177,6 +177,23 @@ public:
     emit_batches_impl(true);
   }
 
+  /// Forces the manager flush its buffer to the individual path buffers.
+  void fan_out_flush() {
+    auto& buf = this->buf_;
+    for (auto& kvp : state_map_.container()) {
+      // TODO: replace with `if constexpr` when switching to C++17
+      auto& st = kvp.second;
+      if (std::is_same<select_type, detail::select_all>::value) {
+        st.buf.insert(st.buf.end(), buf.begin(), buf.end());
+      } else {
+        for (auto& piece : buf)
+          if (select_(st.filter, piece))
+            st.buf.emplace_back(piece);
+      }
+    }
+    buf.clear();
+  }
+
 protected:
   void about_to_erase(outbound_path* ptr, bool silent,
                       error* reason) override {
