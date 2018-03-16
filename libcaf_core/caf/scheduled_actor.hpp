@@ -671,7 +671,9 @@ public:
   inline bool has_behavior() const {
     return !bhvr_stack_.empty()
            || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty();
+           || !multiplexed_responses_.empty()
+           || !stream_managers_.empty()
+           || !pending_stream_managers_.empty();
   }
 
   inline behavior& current_behavior() {
