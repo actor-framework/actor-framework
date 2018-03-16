@@ -24,6 +24,7 @@
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/logger.hpp"
+#include "caf/outbound_path.hpp"
 #include "caf/stream_manager.hpp"
 
 #include "caf/detail/type_traits.hpp"
@@ -44,8 +45,13 @@ public:
   }
 
   bool idle() const noexcept override {
-    // A source is idle if it can't make any progress on its downstream.
-    return out_.stalled();
+    // A source is idle if it can't make any progress on its downstream or if
+    // it's not producing new data despite having credit.
+    auto some_credit = [](const outbound_path& x) {
+      return x.open_credit > 0;
+    };
+    return out_.stalled()
+           || (out_.buffered() == 0 && out_.all_paths(some_credit));
   }
 
   DownstreamManager& out() override {
