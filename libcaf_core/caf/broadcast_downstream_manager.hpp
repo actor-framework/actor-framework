@@ -65,6 +65,16 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  size_t buffered() const noexcept override {
+    // We have a central buffer, but also an additional buffer at each path. We
+    // return the maximum size to reflect the current worst case.
+    size_t central_buf = this->buf_.size();
+    size_t max_path_buf = 0;
+    for (auto& kvp : state_map_)
+      max_path_buf = std::max(max_path_buf, kvp.second.buf.size());
+    return central_buf + max_path_buf;
+  }
+
   /// Sets the filter for `slot` to `filter`. Inserts a new element if `slot`
   /// is a new path.
   void set_filter(stream_slot slot, filter_type filter) {
