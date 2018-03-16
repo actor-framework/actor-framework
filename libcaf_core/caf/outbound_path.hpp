@@ -50,14 +50,6 @@ public:
   /// Stores batches until receiving corresponding ACKs.
   using cache_type = std::deque<std::pair<int64_t, downstream_msg::batch>>;
 
-  // -- nested classes ---------------------------------------------------------
-
-  /// Stores information about the initiator of the steam.
-  struct client_data {
-    strong_actor_ptr hdl;
-    message_id mid;
-  };
-
   // -- constants --------------------------------------------------------------
 
   /// Stream aborter flag to monitor a path.
@@ -72,15 +64,12 @@ public:
 
   // -- downstream communication -----------------------------------------------
 
-  /// Sends a stream handshake.
+  /// Sends an `open_stream_msg` handshake.
   static void emit_open(local_actor* self, stream_slot slot,
                         strong_actor_ptr to, message handshake_data,
                         stream_priority prio);
 
-  /// Sends a `stream_msg::batch` on this path, decrements `open_credit` by
-  /// Sets `open_credit` to `initial_credit` and clears `cached_handshake`.
-  void handle_ack_open(long initial_credit);
-
+  /// Sends a `downstream_msg::batch` on this path. Decrements `open_credit` by
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(local_actor* self, long xs_size, message xs);
 
@@ -114,13 +103,13 @@ public:
       emit_batch(self, cache.size(), make_message(std::move(cache)));
   }
 
-  /// Sends a `stream_msg::drop` on this path.
+  /// Sends a `downstream_msg::close` on this path.
   void emit_regular_shutdown(local_actor* self);
 
-  /// Sends a `stream_msg::forced_drop` on this path.
+  /// Sends a `downstream_msg::forced_close` on this path.
   void emit_irregular_shutdown(local_actor* self, error reason);
 
-  /// Sends a `stream_msg::forced_drop` on this path.
+  /// Sends a `downstream_msg::forced_close`.
   static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
                                       const strong_actor_ptr& hdl,
                                       error reason);
@@ -144,39 +133,22 @@ public:
   /// Next expected batch ID.
   int64_t next_batch_id;
 
-  /// Currently available credit for this path.
+  /// Currently available credit on this path.
   long open_credit;
 
-  /// Batch size configured by the downstream actor.
+  /// Ideal batch size. Configured by the sink.
   uint64_t desired_batch_size;
 
-  /// Next expected batch ID to be acknowledged. Actors can receive a more
-  /// advanced batch ID in an ACK message, since CAF uses accumulative ACKs.
+  /// ID of the first unacknowledged batch. Note that CAF uses accumulative
+  /// ACKs, i.e., receiving an ACK with a higher ID is not an error.
   int64_t next_ack_id;
-
-  /// Caches the initiator of the stream (client) with the original request ID
-  /// until the stream handshake is either confirmed or aborted. Once
-  /// confirmed, the next stage takes responsibility for answering to the
-  /// client.
-  client_data cd;
-
-  /// Stores whether an error occurred during stream processing.
-  error shutdown_reason;
 };
-
-/// @relates outbound_path::client_data
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        outbound_path::client_data& x) {
-  return f(x.hdl, x.mid);
-}
 
 /// @relates outbound_path
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
   return f(meta::type_name("outbound_path"), x.slots, x.hdl, x.next_batch_id,
-           x.open_credit, x.desired_batch_size, x.next_ack_id, x.cd,
-           x.shutdown_reason);
+           x.open_credit, x.desired_batch_size, x.next_ack_id);
 }
 
 } // namespace caf

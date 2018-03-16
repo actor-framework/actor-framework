@@ -37,7 +37,7 @@
 
 namespace caf {
 
-/// Stream messages that travel upstream, i.e., acks and drop messages.
+/// Stream messages that flow upstream, i.e., acks and drop messages.
 struct upstream_msg : tag::boxing_type {
   // -- nested types -----------------------------------------------------------
 
@@ -135,13 +135,13 @@ struct upstream_msg : tag::boxing_type {
   content_type content;
 };
 
-/// Allows the testing DSL to unbox `stream_msg` automagically.
+/// Allows the testing DSL to unbox `upstream_msg` automagically.
 template <class T>
 const T& get(const upstream_msg& x) {
   return get<T>(x.content);
 }
 
-/// Allows the testing DSL to check whether `stream_msg` holds a `T`.
+/// Allows the testing DSL to check whether `upstream_msg` holds a `T`.
 template <class T>
 bool is(const upstream_msg& x) {
   return holds_alternative<T>(x.content);
@@ -187,7 +187,7 @@ typename Inspector::result_type inspect(Inspector& f,
 /// @relates upstream_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, upstream_msg& x) {
-  return f(meta::type_name("stream_msg"), x.slots, x.sender, x.content);
+  return f(meta::type_name("upstream_msg"), x.slots, x.sender, x.content);
 }
 
 } // namespace caf

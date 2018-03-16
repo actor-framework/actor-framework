@@ -120,30 +120,28 @@ public:
 
   ~inbound_path();
 
-  /// Updates `last_batch_id` and `assigned_credit` before calling
-  /// `mgr->handle(this, x)`.
+  /// Updates `last_batch_id` and `assigned_credit` before dispatching to the
+  /// manager.
   void handle(downstream_msg::batch& x);
 
-  /// Calls `mgr->handle(this, x)`.
-  inline void handle(downstream_msg::close& x) {
+  /// Dispatches any `downstream_msg` other than `batch` directly to the
+  /// manager.
+  template <class T>
+  void handle(T& x) {
     mgr->handle(this, x);
   }
 
-  /// Calls `mgr->handle(this, x)`.
-  inline void handle(downstream_msg::forced_close& x) {
-    mgr->handle(this, x);
-  }
-
-  /// Emits a `stream_msg::ack_batch` on this path and sets `assigned_credit`
-  /// to `initial_demand`.
+  /// Emits an `upstream_msg::ack_batch`.
   void emit_ack_open(local_actor* self, actor_addr rebind_from);
 
-  /// Sends a `stream_msg::ack_batch` with credit for the next round. Credit is
-  /// calculated as `max_queue_size - (assigned_credit - queued_items)`, whereas
-  /// `max_queue_size` is `2 * ...`.
-  /// @param self Points to the parent actor.
-  /// @param queued_items Counts the accumulated size of all batches that are
-  ///                     currently waiting in the mailbox.
+  /// Sends an `upstream_msg::ack_batch` for granting new credit. Credit is
+  /// calculated from sampled batch durations, the cycle duration and the
+  /// desired batch complexity.
+  /// @param self Points to the parent actor, i.e., sender of the message.
+  /// @param queued_items Accumulated size of all batches that are currently
+  ///                     waiting in the mailbox.
+  /// @param cycle Time between credit rounds.
+  /// @param desired_batch_complexity Desired processing time per batch.
   void emit_ack_batch(local_actor* self, long queued_items, timespan cycle,
                       timespan desired_batch_complexity);
 
@@ -151,13 +149,13 @@ public:
   /// `ack_batch`, i.e., `last_acked_batch_id == last_batch_id`.
   bool up_to_date();
 
-  /// Sends a `stream_msg::close` on this path.
+  /// Sends an `upstream_msg::drop` on this path.
   void emit_regular_shutdown(local_actor* self);
 
-  /// Sends a `stream_msg::forced_close` on this path.
+  /// Sends an `upstream_msg::forced_drop` on this path.
   void emit_irregular_shutdown(local_actor* self, error reason);
 
-  /// Sends a `stream_msg::forced_close` on this path.
+  /// Sends an `upstream_msg::forced_drop`.
   static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
                                       const strong_actor_ptr& hdl,
                                       error reason);

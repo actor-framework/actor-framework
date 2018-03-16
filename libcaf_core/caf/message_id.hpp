@@ -69,12 +69,12 @@ public:
   /// Identifies one-to-one messages with normal priority.
   static constexpr uint64_t default_message_category = 0; // 0b00
 
-  /// Identifies stream messages received from upstream actors, e.g.,
-  /// `stream_msg::batch`.
+  /// Identifies stream messages that flow upstream, e.g.,
+  /// `upstream_msg::ack_batch`.
   static constexpr uint64_t upstream_message_category = 1; // 0b01
 
-  /// Identifies stream messages received from downstream actors, e.g.,
-  /// `stream_msg::ack_batch`.
+  /// Identifies stream messages that flow downstream, e.g.,
+  /// `downstream_msg::batch`.
   static constexpr uint64_t downstream_message_category = 2; // 0b10
 
   /// Identifies one-to-one messages with high priority.

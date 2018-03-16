@@ -111,7 +111,7 @@ struct open_stream_msg {
   stream_priority priority;
 };
 
-/// @relates stream_handshake_msg
+/// @relates open_stream_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
   return f(meta::type_name("open_stream_msg"), x.slot, x.msg, x.prev_stage,

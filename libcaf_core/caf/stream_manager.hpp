@@ -38,8 +38,7 @@
 
 namespace caf {
 
-/// Manages a single stream with any number of down- and upstream actors.
-/// @relates stream_msg
+/// Manages a single stream with any number of in- and outbound paths.
 class stream_manager : public ref_counted {
 public:
   // -- member types -----------------------------------------------------------
