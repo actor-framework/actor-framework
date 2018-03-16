@@ -87,22 +87,22 @@ struct mailbox_category_corrector {
 template <>
 struct mailbox_category_corrector<downstream_msg> {
   static message_id apply(message_id x) {
-    // Downstream messages are always asynchronous. (TODO: true?)
-    CAF_ASSERT(x.is_async());
     CAF_IGNORE_UNUSED(x);
-    return make_message_id(message_id::downstream_message_category
-                           << message_id::category_offset);
+    auto result = make_message_id(message_id::downstream_message_category
+                                  << message_id::category_offset);
+    CAF_ASSERT(x.is_async() || x == result);
+    return result;
   }
 };
 
 template <>
 struct mailbox_category_corrector<upstream_msg> {
   static message_id apply(message_id x) {
-    // Upstream messages are always asynchronous. (TODO: true?)
-    CAF_ASSERT(x.is_async());
     CAF_IGNORE_UNUSED(x);
-    return make_message_id(message_id::upstream_message_category
-                           << message_id::category_offset);
+    auto result = make_message_id(message_id::upstream_message_category
+                                  << message_id::category_offset);
+    CAF_ASSERT(x.is_async() || x == result);
+    return result;
   }
 };
 
