@@ -89,8 +89,8 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   });
   if (!set_fail_state)
     return false;
-  CAF_LOG_INFO("cleanup" << CAF_ARG(id())
-               << CAF_ARG(node()) << CAF_ARG(reason));
+  CAF_LOG_DEBUG("cleanup" << CAF_ARG(id())
+                << CAF_ARG(node()) << CAF_ARG(reason));
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(reason, host);
