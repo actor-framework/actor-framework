@@ -270,7 +270,7 @@ public:
 
   /// Greatest common divisor of `streaming_max_batch_delay_us` and
   /// `streaming_credit_round_interval_us`.
-  size_t streaming_tick_duration_us;
+  size_t streaming_tick_duration_us() const noexcept;
 
   // -- scheduling parameters --------------------------------------------------
 

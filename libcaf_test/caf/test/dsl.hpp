@@ -541,9 +541,8 @@ struct test_coordinator_fixture {
     sched.clock().time_per_unit.emplace(caf::atom("batch"),
                                         caf::timespan{1000});
     // Compute reasonable step size.
-    auto cycle_count = caf::detail::gcd(credit_round_interval.count(),
-                                        max_batch_delay.count());
-    streaming_cycle = caf::timespan{cycle_count};
+    auto cycle_us = cfg.streaming_tick_duration_us();
+    streaming_cycle = caf::timespan{us_t{cycle_us}};
     // Make sure the current time isn't 0.
     sched.clock().current_time += streaming_cycle;
   }

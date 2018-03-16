@@ -115,7 +115,6 @@ actor_system_config::actor_system_config()
   streaming_desired_batch_complexity_us = 50;
   streaming_max_batch_delay_us = 50000;
   streaming_credit_round_interval_us = 100000;
-  streaming_tick_duration_us = 50000;
   scheduler_policy = atom("stealing");
   scheduler_max_threads = std::max(std::thread::hardware_concurrency(), 4u);
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
@@ -474,9 +473,6 @@ actor_system_config& actor_system_config::parse(message& args,
       cout << x.name() << "=" << x.to_string() << endl;
     });
   }
-  // Set dependent parameters.
-  streaming_tick_duration_us = detail::gcd(streaming_max_batch_delay_us,
-                                           streaming_credit_round_interval_us);
   return *this;
 }
 
@@ -502,6 +498,11 @@ actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
     f(0, cv, none);
   }
   return *this;
+}
+
+size_t actor_system_config::streaming_tick_duration_us() const noexcept {
+  return caf::detail::gcd(streaming_credit_round_interval_us,
+                          streaming_max_batch_delay_us);
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,
