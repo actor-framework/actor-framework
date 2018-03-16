@@ -22,6 +22,7 @@
 
 #include "caf/resumable.hpp"
 #include "caf/monitorable_actor.hpp"
+#include "caf/actor_system_config.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -157,6 +158,10 @@ std::pair<size_t, size_t>
 test_coordinator::run_dispatch_loop(std::function<bool()> predicate,
                                     timespan cycle) {
   std::pair<size_t, size_t> res{0, 0};
+  if (cycle.count() == 0) {
+    auto x = system().config().streaming_tick_duration_us();
+    cycle = std::chrono::microseconds(x);
+  }
   for (;;) {
     size_t progress = 0;
     while (try_run_once()) {

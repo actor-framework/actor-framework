@@ -116,14 +116,15 @@ public:
 
   /// Loops until no job or delayed message remains or `predicate` returns
   /// `true`. Returns the total number of events (first) and dispatched delayed
-  /// messages (second). Advances time by `cycle` between to calls to
-  /// `dispatch()`.
+  /// messages (second). Advances time by `cycle` nanoseconds between to calls
+  /// to `dispatch()` or the default tick-duration when passing 0ns.
   std::pair<size_t, size_t> run_dispatch_loop(std::function<bool()> predicate,
                                               timespan cycle = timespan{0});
 
   /// Loops until no job or delayed message remains. Returns the total number
   /// of events (first) and dispatched delayed messages (second). Advances time
-  /// by `cycle` between to calls to `dispatch()`.
+  /// by `cycle` nanoseconds between to calls to `dispatch()` or the default
+  /// tick-duration when passing 0ns.
   std::pair<size_t, size_t> run_dispatch_loop(timespan cycle = timespan{0});
 
   template <class F>
