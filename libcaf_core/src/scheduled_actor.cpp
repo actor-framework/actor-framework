@@ -357,8 +357,11 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
     // Set a new receive timeout if we called our behavior at least once.
     if (handled_msgs > 0)
       set_receive_timeout();
-    // Set a new stream timeout if we called `advance_streams` at least once.
-    if (!stream_managers_.empty() && tout.time_since_epoch().count() != 0) {
+    // Set a new stream timeout.
+    if (!stream_managers_.empty()) {
+      // Make sure we call `advance_streams` at least once.
+      if (tout.time_since_epoch().count() != 0)
+        tout = advance_streams(clock().now());
       set_stream_timeout(tout);
     }
   };
@@ -445,8 +448,10 @@ bool scheduled_actor::is_active_receive_timeout(uint64_t tid) const {
 uint64_t scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
   CAF_LOG_TRACE(x);
   // Do not request 'infinite' timeouts.
-  if (x == actor_clock::time_point::max())
+  if (x == actor_clock::time_point::max()) {
+    CAF_LOG_DEBUG("drop infinite timeout");
     return 0;
+  }
   // Do not request a timeout if all streams are idle.
   std::vector<stream_manager_ptr> mgrs;
   for (auto& kvp : stream_managers_)
@@ -1062,8 +1067,10 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
 actor_clock::time_point
 scheduled_actor::advance_streams(actor_clock::time_point now) {
   CAF_LOG_TRACE("");
-  if (!stream_ticks_.started())
+  if (!stream_ticks_.started()) {
+    CAF_LOG_DEBUG("tick emitter not started yet");
     return actor_clock::time_point::max();
+  }
   /// Advance time for driving forced batches and credit.
   auto bitmask = stream_ticks_.timeouts(now, {max_batch_delay_ticks_,
                                               credit_round_ticks_});
