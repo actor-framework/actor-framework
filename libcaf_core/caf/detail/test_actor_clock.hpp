@@ -28,6 +28,8 @@ class test_actor_clock : public simple_actor_clock {
 public:
   time_point current_time;
 
+  test_actor_clock();
+
   time_point now() const noexcept override;
 
   duration_type difference(atom_value measurement, long units, time_point t0,

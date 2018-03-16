@@ -21,6 +21,12 @@
 namespace caf {
 namespace detail {
 
+test_actor_clock::test_actor_clock() : current_time(duration_type{1}) {
+  // This ctor makes sure that the clock isn't at the default-constructed
+  // time_point, because that value has special meaning (for the tick_emitter,
+  // for example).
+}
+
 test_actor_clock::time_point test_actor_clock::now() const noexcept {
   return current_time;
 }
