@@ -32,6 +32,8 @@
 #include "caf/stream_slot.hpp"
 #include "caf/system_messages.hpp"
 
+#include "caf/detail/type_traits.hpp"
+
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
@@ -73,6 +75,26 @@ public:
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(local_actor* self, long xs_size, message xs);
 
+  template <class Iterator>
+  Iterator emit_batches_impl(local_actor* self, Iterator i, Iterator e,
+                             bool force_underfull) {
+    CAF_LOG_TRACE(CAF_ARG(force_underfull));
+    using type = detail::decay_t<decltype(*i)>;
+    while (std::distance(i, e) >= static_cast<ptrdiff_t>(desired_batch_size)) {
+      std::vector<type> tmp{std::make_move_iterator(i),
+                            std::make_move_iterator(i + desired_batch_size)};
+      emit_batch(self, desired_batch_size, make_message(std::move(tmp)));
+      i += desired_batch_size;
+    }
+    if (i != e && force_underfull) {
+      std::vector<type> tmp{std::make_move_iterator(i),
+                            std::make_move_iterator(e)};
+      emit_batch(self, tmp.size(), make_message(std::move(tmp)));
+      return e;
+    }
+    return i;
+  }
+
   /// Calls `emit_batch` for each chunk in the cache, whereas each chunk is of
   /// size `desired_batch_size`. Does nothing for pending paths.
   template <class T>
@@ -82,25 +104,16 @@ public:
     if (pending())
       return;
     CAF_ASSERT(desired_batch_size > 0);
-    if (cache.size() == desired_batch_size) {
-      emit_batch(self, desired_batch_size, make_message(std::move(cache)));
+    auto first = cache.begin();
+    auto last = first + std::min(open_credit, static_cast<long>(cache.size()));
+    if (first == last)
       return;
-    }
-    auto i = cache.begin();
-    auto e = cache.end();
-    while (std::distance(i, e) >= static_cast<ptrdiff_t>(desired_batch_size)) {
-      std::vector<T> tmp{std::make_move_iterator(i),
-                         std::make_move_iterator(i + desired_batch_size)};
-      emit_batch(self, desired_batch_size, make_message(std::move(tmp)));
-      i += desired_batch_size;
-    }
-    if (i == e) {
+    auto i = emit_batches_impl(self, first, last, force_underfull);
+    if (i == cache.end()) {
       cache.clear();
-      return;
+    } else if (i != first) {
+      cache.erase(first, i);
     }
-    cache.erase(cache.begin(), i);
-    if (force_underfull)
-      emit_batch(self, cache.size(), make_message(std::move(cache)));
   }
 
   /// Sends a `downstream_msg::close` on this path.
