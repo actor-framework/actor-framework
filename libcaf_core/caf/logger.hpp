@@ -256,6 +256,9 @@ public:
   /// @warning The returned vector can have pointers into `format_str`.
   static line_format parse_format(const char* format_str);
 
+  /// Skips path in `filename`.
+  static const char* skip_path(const char* filename);
+
   /// Returns a string representation of the joined groups of `x` if `x` is an
   /// actor with the `subscriber` mixin.
   template <class T>
@@ -371,8 +374,8 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
         && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
       CAF_UNIFYN(caf_logger)                                                   \
         ->log(new ::caf::logger::event{                                        \
-          loglvl, component, CAF_PRETTY_FUN, __FILE__, __LINE__,               \
-          (::caf::logger::line_builder{} << message).get(),                    \
+          loglvl, component, CAF_PRETTY_FUN, caf::logger::skip_path(__FILE__), \
+          __LINE__, (::caf::logger::line_builder{} << message).get(),          \
           ::std::this_thread::get_id(),                                        \
           CAF_UNIFYN(caf_logger)->thread_local_aid(),                          \
           ::caf::make_timestamp()});                                           \

@@ -399,6 +399,11 @@ logger::line_format logger::parse_format(const char* format_str) {
   return res;
 }
 
+const char* logger::skip_path(const char* path) {
+  auto ptr = strrchr(path, '/');
+  return ptr == nullptr ? path : (ptr + 1);
+}
+
 void logger::run() {
 #if defined(CAF_LOG_LEVEL)
   log_first_line();
