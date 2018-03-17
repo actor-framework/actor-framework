@@ -59,6 +59,7 @@ void stream_manager::handle(inbound_path*, downstream_msg::forced_close& x) {
 
 bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+  CAF_ASSERT(x.desired_batch_size > 0);
   auto ptr = out().path(slots.receiver);
   if (ptr == nullptr)
     return false;
@@ -83,6 +84,7 @@ bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
 
 void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+  CAF_ASSERT(x.desired_batch_size > 0);
   auto path = out().path(slots.receiver);
   if (path != nullptr) {
     path->open_credit += x.new_capacity;
