@@ -285,6 +285,9 @@ void logger::render_fun_prefix(std::ostream& out, const char* pretty_fun) {
   // skip "virtual" prefix if present
   if (strncmp(pretty_fun, "virtual ", std::min<size_t>(strsize, 8)) == 0)
     jump_to_next_whitespace();
+  // skip "static" prefix if present
+  if (strncmp(pretty_fun, "static ", std::min<size_t>(strsize, 7)) == 0)
+    jump_to_next_whitespace();
   // skip return type
   jump_to_next_whitespace();
   if (first == last)
