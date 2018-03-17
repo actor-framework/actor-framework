@@ -178,6 +178,7 @@ const char* scheduled_actor::name() const {
 }
 
 void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
+  CAF_PUSH_AID_FROM_PTR(this);
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)

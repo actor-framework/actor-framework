@@ -46,6 +46,7 @@ void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
 }
 
 void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {
+  CAF_PUSH_AID_FROM_PTR(this);
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));

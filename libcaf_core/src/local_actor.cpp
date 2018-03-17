@@ -112,7 +112,7 @@ error local_actor::load_state(deserializer&, const unsigned int) {
 }
 
 void local_actor::initialize() {
-  // nop
+  CAF_LOG_TRACE(CAF_ARG2("id", id()) << CAF_ARG2("name", name()));
 }
 
 bool local_actor::cleanup(error&& fail_state, execution_unit* host) {

@@ -738,7 +738,9 @@ public:
                            upstream_msg::ack_open& x);
 
   template <class T>
-  void handle_upstream_msg(stream_slots slots, actor_addr&, T& x) {
+  void handle_upstream_msg(stream_slots slots, actor_addr& sender, T& x) {
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(sender) << CAF_ARG(x));
+    CAF_IGNORE_UNUSED(sender);
     auto i = stream_managers_.find(slots.receiver);
     if (i == stream_managers_.end()) {
       auto j = pending_stream_managers_.find(slots.receiver);
