@@ -83,9 +83,15 @@ public:
   }
 
   size_t capacity() const noexcept override {
-    // TODO: get rid of magic number
-    static constexpr size_t max_buf_size = 100;
-    return buf_.size() < max_buf_size ? max_buf_size - buf_.size() : 0u;
+    // Our goal is to cache up to 2 full batches, whereby we pick the highest
+    // batch size available to us (optimistic estimate).
+    size_t desired = 1;
+    for (auto& kvp : this->paths_)
+      desired = std::max(static_cast<size_t>(kvp.second->desired_batch_size),
+                         desired);
+    desired *= 2;
+    auto stored = buffered();
+    return stored < desired ? desired - stored : 0u;
   }
 
   size_t buffered() const noexcept override {
