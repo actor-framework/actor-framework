@@ -149,7 +149,7 @@ actor_system_config::actor_system_config()
        "sets the desired timespan for a single batch")
   .add(streaming_max_batch_delay_us, "max-batch-delay-us",
        "sets the maximum delay for sending underfull batches in microseconds")
-  .add(streaming_credit_round_interval_us, "credit-cycle-interval-us",
+  .add(streaming_credit_round_interval_us, "credit-round-interval-us",
        "sets the length of credit intervals in microseconds");
   opt_group{options_, "scheduler"}
   .add(scheduler_policy, "policy",
