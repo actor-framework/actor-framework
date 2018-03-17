@@ -106,7 +106,7 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
   auto x = stats.calculate(cycle, complexity);
   // Hand out enough credit to fill our queue for 2 cycles.
   auto credit = std::max((x.max_throughput * 2)
-                         - (assigned_credit - queued_items),
+                         - (assigned_credit + queued_items),
                          0l);
   auto batch_size = static_cast<int32_t>(x.items_per_batch);
   if (credit != 0)
