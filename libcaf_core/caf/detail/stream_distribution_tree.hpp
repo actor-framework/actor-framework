@@ -22,11 +22,10 @@
 #include <memory>
 #include <unordered_map>
 
-#include "caf/broadcast_downstream_manager.hpp"
+#include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream_manager.hpp"
-#include "caf/stream_stage.hpp"
 
 namespace caf {
 namespace detail {
@@ -80,39 +79,25 @@ public:
     return policy_;
   }
 
-  void close_remote_input();
-
-
-  // -- Overridden member functions of `stream_manager` ------------------------
-
-  /// Terminates the core actor with log output `log_message` if `at_end`
-  /// returns `true`.
-  /*
-  void shutdown_if_at_end(const char* log_message) {
-    CAF_IGNORE_UNUSED(log_message);
-    if (policy_.at_end()) {
-      CAF_LOG_DEBUG(log_message);
-      self_->quit(caf::exit_reason::user_shutdown);
-    }
-  }
-  */
-
   // -- overridden member functions of `stream_manager` ------------------------
 
   void handle(inbound_path* path, downstream_msg::batch& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
+    CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(x));
     auto slot = path->slots.receiver;
     policy_.before_handle_batch(slot, path->hdl);
     policy_.handle_batch(slot, path->hdl, x.xs);
     policy_.after_handle_batch(slot, path->hdl);
   }
 
-  void handle(inbound_path* from, downstream_msg::close&) override {
-    policy_.path_closed(from->slots.receiver);
+  void handle(inbound_path* path, downstream_msg::close& x) override {
+    CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(x));
+    CAF_IGNORE_UNUSED(x);
+    policy_.path_closed(path->slots.receiver);
   }
 
-  void handle(inbound_path* from, downstream_msg::forced_close& x) override {
-    policy_.path_force_closed(from->slots.receiver, x.reason);
+  void handle(inbound_path* path, downstream_msg::forced_close& x) override {
+    CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(x));
+    policy_.path_force_closed(path->slots.receiver, x.reason);
   }
 
   bool handle(stream_slots slots, upstream_msg::ack_open& x) override {
@@ -127,13 +112,17 @@ public:
     return false;
   }
 
-  void handle(stream_slots slots, upstream_msg::drop&) override {
+  void handle(stream_slots slots, upstream_msg::drop& x) override {
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+    CAF_IGNORE_UNUSED(x);
     auto slot = slots.receiver;
     if (out().remove_path(slots.receiver, none, true))
       policy_.path_dropped(slot);
   }
 
   void handle(stream_slots slots, upstream_msg::forced_drop& x) override {
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+    CAF_IGNORE_UNUSED(x);
     auto slot = slots.receiver;
     if (out().remove_path(slots.receiver, x.reason, true))
       policy_.path_force_dropped(slot, x.reason);
