@@ -111,7 +111,7 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
   desired_batch_size = static_cast<int32_t>(x.items_per_batch);
   if (credit != 0)
     assigned_credit += credit;
-  CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(batch_size));
+  CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(desired_batch_size));
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_batch>(slots.invert(),
                                                self->address(),
