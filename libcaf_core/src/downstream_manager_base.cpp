@@ -43,7 +43,7 @@ bool downstream_manager_base::remove_path(stream_slot slot, error reason,
   CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(reason) << CAF_ARG(silent));
   auto i = paths_.find(slot);
   if (i != paths_.end()) {
-    about_to_erase(i->second.get(), silent, &reason);
+    about_to_erase(i->second.get(), silent, reason ? &reason : nullptr);
     paths_.erase(i);
     return true;
   }
