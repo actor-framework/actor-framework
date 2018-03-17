@@ -62,6 +62,12 @@ bool downstream_messages::enabled(const nested_queue_type& q) noexcept {
   return !congested;
 }
 
+auto downstream_messages::quantum(const nested_queue_type& q,
+                                  deficit_type x) noexcept -> deficit_type {
+  // TODO: adjust quantum based on the stream priority
+  return x * q.policy().handler->desired_batch_size;
+}
+
 } // namespace policy
 } // namespace caf
 

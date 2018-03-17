@@ -94,10 +94,8 @@ public:
 
   static bool enabled(const nested_queue_type& q) noexcept;
 
-  static inline deficit_type quantum(const nested_queue_type&,
-                                     deficit_type x) noexcept {
-    return x;
-  }
+  static deficit_type quantum(const nested_queue_type& q,
+                              deficit_type x) noexcept;
 
   // -- constructors, destructors, and assignment operators --------------------
 

@@ -56,6 +56,9 @@ public:
   /// Stores slot IDs for sender (hdl) and receiver (self).
   stream_slots slots;
 
+  /// Stores the last computed desired batch size.
+  int32_t desired_batch_size;
+
   /// Amount of credit we have signaled upstream.
   int32_t assigned_credit;
 

@@ -61,6 +61,7 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
     : mgr(std::move(mgr_ptr)),
       hdl(std::move(ptr)),
       slots(id),
+      desired_batch_size(initial_credit),
       assigned_credit(0),
       prio(stream_priority::normal),
       last_acked_batch_id(0),
@@ -89,7 +90,6 @@ void inbound_path::handle(downstream_msg::batch& x) {
 void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(rebind_from));
   assigned_credit = initial_credit;
-  int32_t desired_batch_size = initial_credit;
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_open>(
                    slots.invert(), self->address(), std::move(rebind_from),
@@ -108,7 +108,7 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
   auto credit = std::max((x.max_throughput * 2)
                          - (assigned_credit + queued_items),
                          0l);
-  auto batch_size = static_cast<int32_t>(x.items_per_batch);
+  desired_batch_size = static_cast<int32_t>(x.items_per_batch);
   if (credit != 0)
     assigned_credit += credit;
   CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(batch_size));
@@ -116,7 +116,8 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
                  make<upstream_msg::ack_batch>(slots.invert(),
                                                self->address(),
                                                static_cast<int32_t>(credit),
-                                               batch_size, last_batch_id));
+                                               desired_batch_size,
+                                               last_batch_id));
   last_acked_batch_id = last_batch_id;
 }
 
