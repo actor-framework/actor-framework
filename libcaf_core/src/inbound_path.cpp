@@ -132,7 +132,8 @@ bool inbound_path::up_to_date() {
 
 void inbound_path::emit_regular_shutdown(local_actor* self) {
   CAF_LOG_TRACE(CAF_ARG(slots));
-  unsafe_send_as(self, hdl, make<upstream_msg::drop>(slots, self->address()));
+  unsafe_send_as(self, hdl,
+                 make<upstream_msg::drop>(slots.invert(), self->address()));
 }
 
 void inbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
