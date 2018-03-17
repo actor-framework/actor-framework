@@ -269,6 +269,8 @@ struct upstream_msg_visitor {
 intrusive::task_result scheduled_actor::mailbox_visitor::
 operator()(size_t, upstream_queue&, mailbox_element& x) {
   CAF_ASSERT(x.content().type_token() == make_type_token<upstream_msg>());
+  self->current_mailbox_element(&x);
+  CAF_LOG_RECEIVE_EVENT((&x));
   auto& um = x.content().get_mutable_as<upstream_msg>(0);
   upstream_msg_visitor f{self, um};
   visit(f, um.content);
@@ -326,6 +328,8 @@ operator()(size_t, downstream_queue& qs, stream_slot,
            policy::downstream_messages::nested_queue_type& q,
            mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
+  self->current_mailbox_element(&x);
+  CAF_LOG_RECEIVE_EVENT((&x));
   CAF_ASSERT(x.content().type_token() == make_type_token<downstream_msg>());
   auto& dm = x.content().get_mutable_as<downstream_msg>(0);
   downstream_msg_visitor f{self, qs, q, dm};
