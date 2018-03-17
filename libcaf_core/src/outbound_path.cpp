@@ -47,7 +47,10 @@ void outbound_path::emit_open(local_actor* self, stream_slot slot,
                 << CAF_ARG(prio));
   CAF_ASSERT(self != nullptr);
   CAF_ASSERT(to != nullptr);
-  // TODO: attach an aborter to `to`
+  // Make sure we receive errors from this point on.
+  stream_aborter::add(to, self->address(), slot,
+                      stream_aborter::sink_aborter);
+  // Send message.
   unsafe_send_as(self, to,
                  open_stream_msg{slot, std::move(handshake_data), self->ctrl(),
                                  nullptr, prio});

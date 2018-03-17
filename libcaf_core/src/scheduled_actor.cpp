@@ -291,7 +291,11 @@ struct downstream_msg_visitor {
     // Do *not* store a reference here since we potentially reset `inptr`.
     auto mgr = inptr->mgr;
     inptr->handle(x);
-    CAF_ASSERT(inptr->slots == dm.slots);
+    // The sender slot can be 0. This is the case for forced_close or
+    // forced_drop messages from stream aborters.
+    CAF_ASSERT(inptr->slots == dm.slots
+               || (dm.slots.sender == 0
+                   && dm.slots.receiver == inptr->slots.receiver));
     // TODO: replace with `if constexpr` when switching to C++17
     if (std::is_same<T, downstream_msg::close>::value
         || std::is_same<T, downstream_msg::forced_close>::value) {

@@ -38,9 +38,6 @@ namespace caf {
 /// State for a path to an upstream actor (source).
 class inbound_path {
 public:
-  /// Stream aborter flag to monitor a path.
-  static constexpr const auto aborter_type = stream_aborter::source_aborter;
-
   /// Message type for propagating graceful shutdowns.
   using regular_shutdown = upstream_msg::drop;
 

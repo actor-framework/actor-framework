@@ -23,6 +23,7 @@
 #include "caf/downstream_msg.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
+#include "caf/no_stages.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/upstream_msg.hpp"
 
@@ -35,18 +36,19 @@ stream_aborter::~stream_aborter() {
 void stream_aborter::actor_exited(const error& rsn, execution_unit* host) {
   CAF_ASSERT(observed_ != observer_);
   auto observer = actor_cast<strong_actor_ptr>(observer_);
-  if (observer != nullptr)
-  {
-    if (mode_ == source_aborter)
-      observer->enqueue(nullptr, make_message_id(),
-                        make_message(caf::make<downstream_msg::forced_close>(
-                          slots_, observed_, rsn)),
-                        host);
-    else
-      observer->enqueue(nullptr, make_message_id(),
-                        make_message(caf::make<upstream_msg::forced_drop>(
-                          slots_, observed_, rsn)),
-                        host);
+  if (observer != nullptr) {
+    stream_slots slots{0, slot_};
+    mailbox_element_ptr ptr;
+    if (mode_ == source_aborter) {
+      using msg_type = downstream_msg::forced_close;
+      ptr = make_mailbox_element(nullptr, make_message_id(), no_stages,
+                                 caf::make<msg_type>(slots, observed_, rsn));
+    } else {
+      using msg_type = upstream_msg::forced_drop;
+      ptr = make_mailbox_element(nullptr, make_message_id(), no_stages,
+                                 caf::make<msg_type>(slots, observed_, rsn));
+    }
+    observer->enqueue(std::move(ptr), host);
   }
 }
 
@@ -54,37 +56,37 @@ bool stream_aborter::matches(const attachable::token& what) {
   if (what.subtype != attachable::token::stream_aborter)
     return false;
   auto& ot = *reinterpret_cast<const token*>(what.ptr);
-  return ot.observer == observer_ && ot.slots == slots_;
+  return ot.observer == observer_ && ot.slot == slot_;
 }
 
 stream_aborter::stream_aborter(actor_addr&& observed, actor_addr&& observer,
-                               stream_slots slots, mode m)
+                               stream_slot slot, mode m)
     : observed_(std::move(observed)),
       observer_(std::move(observer)),
-      slots_(slots),
+      slot_(slot),
       mode_(m) {
   // nop
 }
 
 void stream_aborter::add(strong_actor_ptr observed, actor_addr observer,
-                         stream_slots slots, mode m) {
-  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(slots));
+                         stream_slot slot, mode m) {
+  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(slot));
   auto ptr = make_stream_aborter(observed->address(), std::move(observer),
-                                 slots, m);
+                                 slot, m);
   observed->get()->attach(std::move(ptr));
 }
 
 void stream_aborter::del(strong_actor_ptr observed, const actor_addr& observer,
-                         stream_slots slots, mode m) {
-  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(slots));
-  token tk{observer, slots, m};
+                         stream_slot slot, mode m) {
+  CAF_LOG_TRACE(CAF_ARG(observed) << CAF_ARG(observer) << CAF_ARG(slot));
+  token tk{observer, slot, m};
   observed->get()->detach(tk);
 }
 
 attachable_ptr make_stream_aborter(actor_addr observed, actor_addr observer,
-                                   stream_slots slots, stream_aborter::mode m) {
+                                   stream_slot slot, stream_aborter::mode m) {
   return attachable_ptr{
-    new stream_aborter(std::move(observed), std::move(observer), slots, m)};
+    new stream_aborter(std::move(observed), std::move(observer), slot, m)};
 }
 
 } // namespace caf

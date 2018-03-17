@@ -89,7 +89,12 @@ void inbound_path::handle(downstream_msg::batch& x) {
 
 void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(rebind_from));
+  // Update state.
   assigned_credit = initial_credit;
+  // Make sure we receive errors from this point on.
+  stream_aborter::add(hdl, self->address(), slots.receiver,
+                      stream_aborter::source_aborter);
+  // Send message.
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_open>(
                    slots.invert(), self->address(), std::move(rebind_from),
