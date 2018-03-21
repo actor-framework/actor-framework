@@ -179,6 +179,12 @@ using tick_atom = atom_constant<atom("tick")>;
 /// Used for pending out of order messages.
 using pending_atom = atom_constant<atom("pending")>;
 
+/// Used as timeout type for `timeout_msg`.
+using receive_atom = atom_constant<atom("receive")>;
+
+/// Used as timeout type for `timeout_msg`.
+using stream_atom = atom_constant<atom("stream")>;
+
 } // namespace caf
 
 namespace std {

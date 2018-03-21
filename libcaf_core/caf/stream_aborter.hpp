@@ -19,10 +19,10 @@
 #ifndef CAF_STREAM_ABORTER_HPP
 #define CAF_STREAM_ABORTER_HPP
 
-#include "caf/fwd.hpp"
-#include "caf/stream_id.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
+#include "caf/fwd.hpp"
+#include "caf/stream_slot.hpp"
 
 namespace caf {
 
@@ -35,10 +35,13 @@ public:
 
   struct token {
     const actor_addr& observer;
-    const stream_id& sid;
+    stream_slot slot;
     mode m;
     static constexpr size_t token_type = attachable::token::stream_aborter;
   };
+
+  stream_aborter(actor_addr&& observed, actor_addr&& observer,
+                 stream_slot slot, mode m);
 
   ~stream_aborter() override;
 
@@ -46,29 +49,23 @@ public:
 
   bool matches(const attachable::token& what) override;
 
-  inline static attachable_ptr make(actor_addr observed, actor_addr observer,
-                                    const stream_id& sid, mode m) {
-    return attachable_ptr{
-      new stream_aborter(std::move(observed), std::move(observer), sid, m)};
-  }
-
   /// Adds a stream aborter to `observed`.
   static void add(strong_actor_ptr observed, actor_addr observer,
-                  const stream_id& sid, mode m);
+                  stream_slot slot, mode m);
 
   /// Removes a stream aborter from `observed`.
   static void del(strong_actor_ptr observed, const actor_addr& observer,
-                  const stream_id& sid, mode m);
+                  stream_slot slot, mode m);
 
 private:
-  stream_aborter(actor_addr&& observed, actor_addr&& observer,
-                 const stream_id& type, mode m);
-
   actor_addr observed_;
   actor_addr observer_;
-  stream_id sid_;
+  stream_slot slot_;
   mode mode_;
 };
+
+attachable_ptr make_stream_aborter(actor_addr observed, actor_addr observer,
+                                   stream_slot slot, stream_aborter::mode m);
 
 } // namespace caf
 

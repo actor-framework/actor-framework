@@ -246,27 +246,6 @@ public:
   }
 };
 
-behavior high_priority_testee(event_based_actor* self) {
-  self->send(self, b_atom::value);
-  self->send<message_priority::high>(self, a_atom::value);
-  // 'a' must be self->received before 'b'
-  return {
-    [=](b_atom) {
-      CAF_ERROR("received 'b' before 'a'");
-      self->quit();
-    },
-    [=](a_atom) {
-      CAF_MESSAGE("received \"a\" atom");
-      self->become (
-        [=](b_atom) {
-          CAF_MESSAGE("received \"b\" atom, about to quit");
-          self->quit();
-        }
-      );
-    }
-  };
-}
-
 behavior master(event_based_actor* self) {
   return (
     [=](ok_atom) {
@@ -303,11 +282,11 @@ public:
     for (int i = 0; i < 100; ++i) {
       send(this, ok_atom::value);
     }
-    CAF_CHECK_EQUAL(mailbox().count(), 100u);
+    CAF_CHECK_EQUAL(mailbox().size(), 100u);
     for (int i = 0; i < 100; ++i) {
       send(this, ok_atom::value);
     }
-    CAF_CHECK_EQUAL(mailbox().count(), 200u);
+    CAF_CHECK_EQUAL(mailbox().size(), 200u);
     return {};
   }
 };
@@ -334,10 +313,6 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
-CAF_TEST(priorities) {
-  system.spawn<priority_aware>(high_priority_testee);
-}
-
 CAF_TEST(count_mailbox) {
   system.spawn<counting_actor>();
 }
@@ -357,7 +332,9 @@ CAF_TEST(self_receive_with_zero_timeout) {
     [&] {
       CAF_ERROR("Unexpected message");
     },
-    after(chrono::seconds(0)) >> [] { /* mailbox empty */ }
+    after(chrono::seconds(0)) >> [] {
+      // mailbox empty
+    }
   );
 }
 
@@ -375,18 +352,6 @@ CAF_TEST(mirror) {
 CAF_TEST(detached_mirror) {
   scoped_actor self{system};
   auto mirror = self->spawn<simple_mirror, detached>();
-  self->send(mirror, "hello mirror");
-  self->receive (
-    [](const std::string& msg) {
-      CAF_CHECK_EQUAL(msg, "hello mirror");
-    }
-  );
-}
-
-CAF_TEST(priority_aware_mirror) {
-  scoped_actor self{system};
-  auto mirror = self->spawn<simple_mirror, priority_aware>();
-  CAF_MESSAGE("spawned mirror");
   self->send(mirror, "hello mirror");
   self->receive (
     [](const std::string& msg) {
@@ -588,16 +553,6 @@ CAF_TEST(move_only_argument) {
   };
   auto f = make_function_view(system.spawn(impl, std::move(uptr)));
   CAF_CHECK_EQUAL(to_string(f(1.f)), "(42)");
-  /*
-  auto testee = system.spawn(f, std::move(uptr));
-  scoped_actor self{system};
-  self->request(testee, infinite, 1.f).receive(
-    [](int i) {
-      CAF_CHECK_EQUAL(i, 42);
-    },
-    ERROR_HANDLER
-  );
-  */
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

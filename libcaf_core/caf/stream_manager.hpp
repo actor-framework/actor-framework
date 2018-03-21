@@ -23,109 +23,50 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "caf/actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/downstream_manager.hpp"
+#include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/make_message.hpp"
+#include "caf/message_builder.hpp"
+#include "caf/output_stream.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/stream_slot.hpp"
+#include "caf/upstream_msg.hpp"
 
 namespace caf {
 
-/// Manages a single stream with any number of down- and upstream actors.
-/// @relates stream_msg
+/// Manages a single stream with any number of in- and outbound paths.
 class stream_manager : public ref_counted {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using inbound_paths_list = std::vector<inbound_path*>;
+
+  stream_manager(scheduled_actor* selfptr,
+                 stream_priority prio = stream_priority::normal);
+
   ~stream_manager() override;
 
-  /// Handles `stream_msg::open` messages.
-  /// @returns Initial credit to the source.
-  /// @param hdl Handle to the sender.
-  /// @param original_stage Handle to the initial receiver of the handshake.
-  /// @param priority Affects credit assignment and maximum bandwidth.
-  /// @param redeployable Configures whether `hdl` could get redeployed, i.e.,
-  ///                     can resume after an abort.
-  /// @param result_cb Callback for the listener of the final stream result.
-  ///                  Ignored when returning `nullptr`, because the previous
-  ///                  stage is responsible for it until this manager
-  ///                  acknowledges the handshake.
-  /// @pre `hdl != nullptr`
-  virtual error open(const stream_id& sid, strong_actor_ptr hdl,
-                     strong_actor_ptr original_stage, stream_priority priority,
-                     bool redeployable, response_promise result_cb);
+  virtual void handle(inbound_path* from, downstream_msg::batch& x);
 
-  /// Handles `stream_msg::ack_open` messages, i.e., finalizes the stream
-  /// handshake.
-  /// @param sid ID of the outgoing stream.
-  /// @param rebind_from Receiver of the original `open` message.
-  /// @param rebind_to Sender of this confirmation.
-  /// @param initial_demand Credit received with this `ack_open`.
-  /// @param redeployable Denotes whether the runtime can redeploy
-  ///                     `rebind_to` on failure.
-  /// @pre `hdl != nullptr`
-  virtual error ack_open(const stream_id& sid, const actor_addr& rebind_from,
-                         strong_actor_ptr rebind_to, long initial_demand,
-                         bool redeployable);
+  virtual void handle(inbound_path* from, downstream_msg::close& x);
 
-  /// Handles `stream_msg::batch` messages.
-  /// @param hdl Handle to the sender.
-  /// @param xs_size Size of the vector stored in `xs`.
-  /// @param xs A type-erased vector of size `xs_size`.
-  /// @param xs_id ID of this batch (must be ACKed).
-  /// @pre `hdl != nullptr`
-  /// @pre `xs_size > 0`
-  virtual error batch(const stream_id& sid, const actor_addr& hdl, long xs_size,
-                      message& xs, int64_t xs_id);
+  virtual void handle(inbound_path* from, downstream_msg::forced_close& x);
 
-  /// Handles `stream_msg::ack_batch` messages.
-  /// @param hdl Handle to the sender.
-  /// @param new_demand New credit for sending data.
-  /// @param cumulative_batch_id Id of last handled batch.
-  /// @pre `hdl != nullptr`
-  virtual error ack_batch(const stream_id& sid, const actor_addr& hdl,
-                          long new_demand, int64_t cumulative_batch_id);
+  virtual bool handle(stream_slots, upstream_msg::ack_open& x);
 
-  /// Handles `stream_msg::close` messages.
-  /// @param hdl Handle to the sender.
-  /// @pre `hdl != nullptr`
-  virtual error close(const stream_id& sid, const actor_addr& hdl);
+  virtual void handle(stream_slots slots, upstream_msg::ack_batch& x);
 
-  /// Handles `stream_msg::drop` messages.
-  /// @param hdl Handle to the sender.
-  /// @pre `hdl != nullptr`
-  virtual error drop(const stream_id& sid, const actor_addr& hdl);
+  virtual void handle(stream_slots slots, upstream_msg::drop& x);
 
-  /// Handles `stream_msg::drop` messages. The default implementation calls
-  /// `abort(reason)` and returns `sec::unhandled_stream_error`.
-  /// @param hdl Handle to the sender.
-  /// @param reason Reported error from the source.
-  /// @pre `hdl != nullptr`
-  /// @pre `err != none`
-  virtual error forced_close(const stream_id& sid, const actor_addr& hdl,
-                             error reason);
+  virtual void handle(stream_slots slots, upstream_msg::forced_drop& x);
 
-  /// Handles `stream_msg::drop` messages. The default implementation calls
-  /// `abort(reason)` and returns `sec::unhandled_stream_error`.
-  /// @param hdl Handle to the sender.
-  /// @param reason Reported error from the sink.
-  /// @pre `hdl != nullptr`
-  /// @pre `err != none`
-  virtual error forced_drop(const stream_id& sid, const actor_addr& hdl,
-                            error reason);
-
-  /// Adds a new sink to the stream.
-  virtual bool add_sink(const stream_id& sid, strong_actor_ptr origin,
-                        strong_actor_ptr sink_ptr,
-                        mailbox_element::forwarding_stack stages,
-                        message_id handshake_mid, message handshake_data,
-                        stream_priority prio, bool redeployable);
-
-  /// Adds the source `hdl` to a stream. Convenience function for calling
-  /// `in().add_path(sid, hdl).second`.
-  virtual bool add_source(const stream_id& sid, strong_actor_ptr source_ptr,
-                          strong_actor_ptr original_stage, stream_priority prio,
-                          bool redeployable, response_promise result_cb);
-
-  /// Pushes new data to downstream actors by sending batches. The amount of
-  /// pushed data is limited by the available credit.
-  virtual void push();
+  /// Closes all output and input paths and sends the final result to the
+  /// client.
+  virtual void stop();
 
   /// Aborts a stream after any stream message handler returned a non-default
   /// constructed error `reason` or the parent actor terminates with a
@@ -133,21 +74,18 @@ public:
   /// @param reason Previous error or non-default exit reason of the parent.
   virtual void abort(error reason);
 
-  /// Closes the stream when the parent terminates with default exit reason or
-  /// the stream reached its end.
-  virtual void close();
+  /// Pushes new data to downstream actors by sending batches. The amount of
+  /// pushed data is limited by the available credit.
+  virtual void push();
 
-  // -- implementation hooks for all children classes --------------------------
+  /// Returns true if the handler is not able to process any further batches
+  /// since it is unable to make progress sending on its own.
+  virtual bool congested() const noexcept;
 
-  /// Returns the stream edge for incoming data.
-  virtual stream_gatherer& in() = 0;
-
-  /// Returns the stream edge for outgoing data.
-  virtual stream_scatterer& out() = 0;
-
-  /// Returns whether the stream has reached the end and can be discarded
-  /// safely.
-  virtual bool done() const = 0;
+  /// Sends a handshake to `dest`.
+  /// @pre `dest != nullptr`
+  virtual void deliver_handshake(response_promise& rp, stream_slot slot,
+                                 message handshake);
 
   // -- implementation hooks for sources ---------------------------------------
 
@@ -156,7 +94,160 @@ public:
   /// messages.
   virtual bool generate_messages();
 
+  // -- pure virtual member functions ------------------------------------------
+
+  /// Returns the manager for downstream communication.
+  virtual downstream_manager& out() = 0;
+
+  /// Returns whether the manager has reached the end and can be discarded
+  /// safely.
+  virtual bool done() const = 0;
+
+  /// Returns whether the manager cannot make any progress on its own at the
+  /// moment. For example, a source is idle if it has filled its output buffer
+  /// and there isn't any credit left.
+  virtual bool idle() const noexcept = 0;
+
+  /// Advances time.
+  virtual void cycle_timeout(size_t cycle_nr);
+
+  // -- input path management --------------------------------------------------
+
+  /// Informs the manager that a new input path opens.
+  /// @note The lifetime of inbound paths is managed by the downstream queue.
+  ///       This function is called from the constructor of `inbound_path`.
+  virtual void register_input_path(inbound_path* x);
+
+  /// Informs the manager that an input path closes.
+  /// @note The lifetime of inbound paths is managed by the downstream queue.
+  ///       This function is called from the destructor of `inbound_path`.
+  virtual void deregister_input_path(inbound_path* x) noexcept;
+
+  /// Removes an input path
+  virtual void remove_input_path(stream_slot slot, error reason, bool silent);
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns whether this stream remains open even if no in- or outbound paths
+  /// exist. The default is `false`. Does not keep a source alive past the
+  /// point where its driver returns `done() == true`.
+  inline bool continuous() const noexcept {
+    return continuous_;
+  }
+
+  /// Sets whether this stream remains open even if no in- or outbound paths
+  /// exist.
+  inline void continuous(bool x) noexcept {
+    continuous_ = x;
+  }
+
+  /// Returns the list of inbound paths.
+  inline const inbound_paths_list& inbound_paths() const  noexcept{
+    return inbound_paths_;
+  }
+
+  /// Returns the inbound paths at slot `x`.
+  inbound_path* get_inbound_path(stream_slot x) const noexcept;
+
+  /// Queries whether all inbound paths are up-to-date. A sink is idle if this
+  /// function returns `true`.
+  bool inbound_paths_up_to_date() const noexcept;
+
+  /// Returns the parent actor.
+  inline scheduled_actor* self() {
+    return self_;
+  }
+
+  /// Creates an outbound path to the current sender without any type checking.
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class Out>
+  outbound_stream_slot<Out> add_unchecked_outbound_path() {
+    auto handshake = make_message(stream<Out>{});
+    return add_unchecked_outbound_path_impl(std::move(handshake));
+  }
+
+  /// Creates an outbound path to the current sender without any type checking.
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class Out, class... Ts>
+  outbound_stream_slot<Out, detail::strip_and_convert_t<Ts>...>
+  add_unchecked_outbound_path(std::tuple<Ts...> xs) {
+    auto tk = std::make_tuple(stream<Out>{});
+    auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
+    return add_unchecked_outbound_path_impl(std::move(handshake));
+  }
+
+  /// Creates an outbound path to `next`, only checking whether the interface
+  /// of `next` allows handshakes of type `Out`.
+  /// @pre `next != nullptr`
+  /// @pre `self()->pending_stream_managers_[slot] == this`
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class Out, class Handle>
+  outbound_stream_slot<Out> add_unchecked_outbound_path(Handle next) {
+    // TODO: type-check whether `next` accepts our handshake
+    auto handshake = make_message(stream<Out>{});
+    auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
+    return add_unchecked_outbound_path_impl(std::move(hdl),
+                                            std::move(handshake));
+  }
+
+  /// Creates an outbound path to `next`, only checking whether the interface
+  /// of `next` allows handshakes of type `Out` with arguments `Ts...`.
+  /// @pre `next != nullptr`
+  /// @pre `self()->pending_stream_managers_[slot] == this`
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class Out, class Handle, class... Ts>
+  outbound_stream_slot<Out, detail::strip_and_convert_t<Ts>...>
+  add_unchecked_outbound_path(const Handle& next, std::tuple<Ts...> xs) {
+    // TODO: type-check whether `next` accepts our handshake
+    auto tk = std::make_tuple(stream<Out>{});
+    auto handshake = make_message_from_tuple(std::tuple_cat(tk, std::move(xs)));
+    auto hdl = actor_cast<strong_actor_ptr>(std::move(next));
+    return add_unchecked_outbound_path_impl(std::move(hdl),
+                                            std::move(handshake));
+  }
+
+  /// Creates an inbound path to the current sender without any type checking.
+  /// @pre `current_sender() != nullptr`
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class In>
+  stream_slot add_unchecked_inbound_path(const stream<In>&) {
+    return add_unchecked_inbound_path_impl();
+  }
+
+  /// Adds a new outbound path to `rp.next()`.
+  /// @private
+  stream_slot add_unchecked_outbound_path_impl(response_promise& rp,
+                                            message handshake);
+
+  /// Adds a new outbound path to `next`.
+  /// @private
+  stream_slot add_unchecked_outbound_path_impl(strong_actor_ptr next,
+                                            message handshake);
+
+  /// Calls `add_unchecked_outbound_path_impl(make_response_promise(), handshake)`.
+  /// @private
+  stream_slot add_unchecked_outbound_path_impl(message handshake);
+
+  /// Adds the current sender as an inbound path.
+  /// @pre Current message is an `open_stream_msg`.
+  stream_slot add_unchecked_inbound_path_impl();
+
 protected:
+  // -- modifiers for self -----------------------------------------------------
+
+  stream_slot assign_next_slot();
+
+  stream_slot assign_next_pending_slot();
+
+  // -- implementation hooks ---------------------------------------------------
+
+  virtual void finalize(const error& reason);
+
   // -- implementation hooks for sinks -----------------------------------------
 
   /// Called when the gatherer closes to produce the final stream result for
@@ -173,10 +264,6 @@ protected:
 
   // -- implementation hooks for sources ---------------------------------------
 
-  /// Returns a type-erased `stream<T>` as handshake token for downstream
-  /// actors. Returns an empty message for sinks.
-  virtual message make_output_token(const stream_id&) const;
-
   /// Called whenever new credit becomes available. The default implementation
   /// logs an error (sources are expected to override this hook).
   virtual void downstream_demand(outbound_path* ptr, long demand);
@@ -185,11 +272,23 @@ protected:
   /// implementation does nothing.
   virtual void output_closed(error reason);
 
-  /// Pointer to the parent actor.
-  local_actor* self_;
+  // -- member variables -------------------------------------------------------
+
+  /// Points to the parent actor.
+  scheduled_actor* self_;
+
+  /// Stores non-owning pointers to all input paths.
+  inbound_paths_list inbound_paths_;
 
   /// Keeps track of pending handshakes.
-  
+  long pending_handshakes_;
+
+  /// Configures the importance of outgoing traffic.
+  stream_priority priority_;
+
+  /// Stores whether this stream shall remain open even if no in- or outbound
+  /// paths exist.
+  bool continuous_;
 };
 
 /// A reference counting pointer to a `stream_manager`.

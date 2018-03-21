@@ -31,12 +31,13 @@ thread_safe_actor_clock::thread_safe_actor_clock() : done_(false) {
   // nop
 }
 
-void thread_safe_actor_clock::set_receive_timeout(time_point t,
+void thread_safe_actor_clock::set_ordinary_timeout(time_point t,
                                                   abstract_actor* self,
-                                                  uint32_t id) {
+                                                  atom_value type,
+                                                  uint64_t id) {
   guard_type guard{mx_};
   if (!done_) {
-    super::set_receive_timeout(t, self, id);
+    super::set_ordinary_timeout(t, self, type, id);
     cv_.notify_all();
   }
 }
@@ -51,10 +52,11 @@ void thread_safe_actor_clock::set_request_timeout(time_point t,
   }
 }
 
-void thread_safe_actor_clock::cancel_receive_timeout(abstract_actor* self) {
+void thread_safe_actor_clock::cancel_ordinary_timeout(abstract_actor* self,
+                                                      atom_value type) {
   guard_type guard{mx_};
   if (!done_) {
-    super::cancel_receive_timeout(self);
+    super::cancel_ordinary_timeout(self, type);
     cv_.notify_all();
   }
 }
@@ -95,6 +97,12 @@ void thread_safe_actor_clock::schedule_message(time_point t, group target,
                             std::move(content));
     cv_.notify_all();
   }
+}
+
+void thread_safe_actor_clock::cancel_all() {
+  guard_type guard{mx_};
+  super::cancel_all();
+  cv_.notify_all();
 }
 
 void thread_safe_actor_clock::run_dispatch_loop() {

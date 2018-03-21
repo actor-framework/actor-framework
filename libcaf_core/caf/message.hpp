@@ -23,28 +23,29 @@
 #include <sstream>
 #include <type_traits>
 
-#include "caf/fwd.hpp"
-#include "caf/skip.hpp"
 #include "caf/atom.hpp"
-#include "caf/none.hpp"
 #include "caf/config.hpp"
-#include "caf/optional.hpp"
-#include "caf/make_counted.hpp"
+#include "caf/fwd.hpp"
 #include "caf/index_mapping.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/none.hpp"
+#include "caf/optional.hpp"
+#include "caf/skip.hpp"
+#include "caf/type_nr.hpp"
 
-#include "caf/detail/int_list.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/comparable.hpp"
-#include "caf/detail/type_traits.hpp"
-#include "caf/detail/message_data.hpp"
 #include "caf/detail/implicit_conversions.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/message_data.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 class message_handler;
 
 /// Describes a fixed-length, copy-on-write, type-erased
 /// tuple with elements of any type.
-class message {
+class message : public type_erased_tuple {
 public:
   // -- nested types -----------------------------------------------------------
 
@@ -74,7 +75,33 @@ public:
   message& operator=(message&&) noexcept;
   explicit message(data_ptr  ptr) noexcept;
 
-  ~message();
+  ~message() override;
+
+  // -- implementation of type_erased_tuple ------------------------------------
+
+  void* get_mutable(size_t p) override;
+
+  error load(size_t pos, deserializer& source) override;
+
+  size_t size() const noexcept override;
+
+  uint32_t type_token() const noexcept override;
+
+  rtti_pair type(size_t pos) const noexcept override;
+
+  const void* get(size_t pos) const noexcept override;
+
+  std::string stringify(size_t pos) const override;
+
+  type_erased_value_ptr copy(size_t pos) const override;
+
+  error save(size_t pos, serializer& sink) const override;
+
+  bool shared() const noexcept override;
+
+  error load(deserializer& source) override;
+
+  error save(serializer& sink) const override;
 
   // -- factories --------------------------------------------------------------
 
@@ -91,16 +118,6 @@ public:
 
   /// Concatenates `*this` and `x`.
   message& operator+=(const message& x);
-
-  /// Returns a mutable pointer to the element at position `p`.
-  void* get_mutable(size_t p);
-
-  /// Returns the value at position `p` as mutable reference of type `T`.
-  template <class T>
-  T& get_mutable_as(size_t p) {
-    CAF_ASSERT(match_element(p, type_nr<T>::value, &typeid(T)));
-    return *reinterpret_cast<T*>(get_mutable(p));
-  }
 
   /// Returns `handler(*this)`.
   optional<message> apply(message_handler handler);
@@ -212,7 +229,7 @@ public:
 
   /// Returns a const pointer to the element at position `p`.
   inline const void* at(size_t p) const noexcept {
-    CAF_ASSERT(vals_);
+    CAF_ASSERT(vals_ != nullptr);
     return vals_->get(p);
   }
 
@@ -226,21 +243,7 @@ public:
     return vals_;
   }
 
-  /// Returns a type hint for the pattern matching engine.
-  inline uint32_t type_token() const noexcept {
-    return vals_ ? vals_->type_token() : 0xFFFFFFFF;
-  }
-
-  /// Returns whether there are more than one references to the content.
-  inline bool shared() const noexcept {
-    return vals_ ? vals_->shared() : false;
-  }
-
   /// Returns the size of this message.
-  inline size_t size() const noexcept {
-    return vals_ ? vals_->size() : 0;
-  }
-
   /// Creates a new message from the first n values.
   inline message take(size_t n) const {
     return n >= size() ? *this : drop_right(size() - n);
@@ -251,66 +254,24 @@ public:
     return n >= size() ? *this : drop(size() - n);
   }
 
-  /// Returns true if `size() == 0, otherwise false.
-  inline bool empty() const {
-    return size() == 0;
-  }
-
-  /// Returns the value at position `p` as const reference of type `T`.
-  template <class T>
-  const T& get_as(size_t p) const {
-    CAF_ASSERT(match_element(p, type_nr<T>::value, &typeid(T)));
-    return *reinterpret_cast<const T*>(at(p));
-  }
-
-  /// Queries whether the element at position `p` is of type `T`.
-  template <class T>
-  bool match_element(size_t p) const noexcept {
-    return vals_ ? vals_->match_element<T>(p) : false;
-  }
-
-  /// Queries whether the types of this message are `Ts...`.
-  template <class... Ts>
-  bool match_elements() const noexcept {
-    detail::type_list<Ts...> token;
-    return match_elements(token);
-  }
-
-  /// Queries the run-time type information for the element at position `pos`.
-  inline std::pair<uint16_t, const std::type_info*>
-  type(size_t pos) const noexcept {
-    CAF_ASSERT(vals_ && vals_->size() > pos);
-    return vals_->type(pos);
-  }
-
-  /// Checks whether the type of the stored value at position `pos`
-  /// matches type number `n` and run-time type information `p`.
-  bool match_element(size_t pos, uint16_t n,
-                     const std::type_info* p) const noexcept {
-    CAF_ASSERT(vals_);
-    return vals_->matches(pos, n, p);
-  }
-
-  inline bool match_elements(detail::type_list<>) const noexcept {
-    return !vals_ || vals_->empty();
-  }
-
-  template <class T, class... Ts>
-  bool match_elements(detail::type_list<T, Ts...>) const noexcept {
-    return vals_ ? vals_->match_elements<T, Ts...>() : false;
-  }
-
   /// @cond PRIVATE
 
   /// @pre `!empty()`
-  type_erased_tuple& content() {
-    CAF_ASSERT(vals_);
+  inline type_erased_tuple& content() {
+    CAF_ASSERT(vals_ != nullptr);
+    return *vals_;
+  }
+
+  inline const type_erased_tuple& content() const {
+    CAF_ASSERT(vals_ != nullptr);
     return *vals_;
   }
 
   /// @endcond
 
 private:
+  // -- private helpers --------------------------------------------------------
+
   template <size_t P>
   static bool match_elements_impl(std::integral_constant<size_t, P>,
                                   detail::type_list<>) noexcept {
@@ -329,17 +290,24 @@ private:
 
   static message concat_impl(std::initializer_list<data_ptr> xs);
 
+  // -- member functions -------------------------------------------------------
+
   data_ptr vals_;
 };
 
-/// @relates message
-error inspect(serializer& sink, message& msg);
+// -- nested types -------------------------------------------------------------
 
-/// @relates message
-error inspect(deserializer& source, message& msg);
-
-/// @relates message
-std::string to_string(const message& msg);
+/// Stores the result of `message::extract_opts`.
+struct message::cli_res {
+  /// Stores the remaining (unmatched) arguments.
+  message remainder;
+  /// Stores the names of all active options.
+  std::set<std::string> opts;
+  /// Stores the automatically generated help text.
+  std::string helptext;
+  /// Stores errors during option parsing.
+  std::string error;
+};
 
 /// Stores the name of a command line option ("<long name>[,<short name>]")
 /// along with a description and a callback.
@@ -384,11 +352,7 @@ struct message::cli_arg {
   /// Creates a CLI argument for converting from strings,
   /// storing its matched argument in `dest`.
   template <class T>
-  cli_arg(typename std::enable_if<
-            type_nr<T>::value != 0,
-            std::string
-          >::type nstr,
-          std::string tstr, T& arg)
+  cli_arg(std::string nstr, std::string tstr, T& arg)
       : name(std::move(nstr)),
         text(std::move(tstr)),
         flag(nullptr) {
@@ -415,7 +379,7 @@ struct message::cli_arg {
         flag(nullptr) {
     fun = [&arg](const std::string& str) -> bool {
       T x;
-      std::istringstream iss{ str };
+      std::istringstream iss{str};
       if (iss >> x) {
         arg.emplace_back(std::move(x));
         return true;
@@ -425,17 +389,16 @@ struct message::cli_arg {
   }
 };
 
-/// Stores the result of `message::extract_opts`.
-struct message::cli_res {
-  /// Stores the remaining (unmatched) arguments.
-  message remainder;
-  /// Stores the names of all active options.
-  std::set<std::string> opts;
-  /// Stores the automatically generated help text.
-  std::string helptext;
-  /// Stores errors during option parsing.
-  std::string error;
-};
+// -- related non-members ------------------------------------------------------
+
+/// @relates message
+error inspect(serializer& sink, message& msg);
+
+/// @relates message
+error inspect(deserializer& source, message& msg);
+
+/// @relates message
+std::string to_string(const message& msg);
 
 /// @relates message
 inline message operator+(const message& lhs, const message& rhs) {

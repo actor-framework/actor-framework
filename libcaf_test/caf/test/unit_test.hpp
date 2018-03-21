@@ -19,22 +19,24 @@
 #ifndef CAF_TEST_UNIT_TEST_HPP
 #define CAF_TEST_UNIT_TEST_HPP
 
-#include <map>
 #include <cmath>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
 #include <mutex>
+#include <sstream>
+#include <string>
 #include <thread>
 #include <vector>
-#include <string>
-#include <memory>
-#include <fstream>
-#include <sstream>
-#include <iostream>
 
+#include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
-#include "caf/term.hpp"
 #include "caf/logger.hpp"
 #include "caf/optional.hpp"
-#include "caf/deep_to_string.hpp"
+#include "caf/term.hpp"
+
+#include "caf/detail/arg_wrapper.hpp"
 
 namespace caf {
 namespace test {
@@ -193,12 +195,10 @@ public:
 
   template <class T>
   void log(level lvl, const T& x) {
-    if (lvl <= level_console_) {
+    if (lvl <= level_console_)
       *console_ << x;
-    }
-    if (lvl <= level_file_) {
+    if (lvl <= level_file_)
       file_ << x;
-    }
   }
 
   /// Output stream for logging purposes.
@@ -208,9 +208,33 @@ public:
 
     stream(const stream&) = default;
 
+    struct reset_flags_t {};
+
+    stream& operator<<(reset_flags_t) {
+      behind_text_ = false;
+      behind_arg_ = false;
+      return *this;
+    }
+
     template <class T>
     stream& operator<<(const T& x) {
       parent_.log(lvl_, x);
+      behind_text_ = true;
+      behind_arg_ = false;
+      return *this;
+    }
+
+    template <class T>
+    stream& operator<<(const caf::detail::arg_wrapper<T>& x) {
+      if (behind_arg_)
+        parent_.log(lvl_, ", ");
+      else if (behind_text_)
+        parent_.log(lvl_, " ");
+      parent_.log(lvl_, x.name);
+      parent_.log(lvl_, " = ");
+      parent_.log(lvl_, deep_to_string(x.value));
+      behind_text_ = false;
+      behind_arg_ = true;
       return *this;
     }
 
@@ -222,6 +246,8 @@ public:
     }
 
   private:
+    bool behind_text_;
+    bool behind_arg_;
     logger& parent_;
     level lvl_;
   };
@@ -414,8 +440,9 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_TEST_PRINT(level, msg, colorcode)                                  \
   (::caf::test::logger::instance().level()                                     \
-   << ::caf::term:: colorcode << "  -> " << ::caf::term::reset << msg          \
-   << " [line " << __LINE__ << "]\n")
+   << ::caf::term::colorcode << "  -> " << ::caf::term::reset                  \
+   << ::caf::test::logger::stream::reset_flags_t{} << msg << " [line "         \
+   << __LINE__ << "]\n")
 
 #define CAF_TEST_PRINT_ERROR(msg)   CAF_TEST_PRINT(info, msg, red)
 #define CAF_TEST_PRINT_INFO(msg)    CAF_TEST_PRINT(info, msg, yellow)

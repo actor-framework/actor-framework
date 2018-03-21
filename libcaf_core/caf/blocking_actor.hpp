@@ -23,26 +23,39 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "caf/fwd.hpp"
-#include "caf/send.hpp"
-#include "caf/none.hpp"
-#include "caf/after.hpp"
-#include "caf/extend.hpp"
-#include "caf/behavior.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/typed_actor.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_marker.hpp"
-#include "caf/mailbox_element.hpp"
+#include "caf/after.hpp"
+#include "caf/behavior.hpp"
+#include "caf/extend.hpp"
+#include "caf/fwd.hpp"
 #include "caf/is_timeout_or_catch_all.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/none.hpp"
+#include "caf/send.hpp"
+#include "caf/typed_actor.hpp"
 
-#include "caf/detail/type_list.hpp"
+#include "caf/policy/arg.hpp"
+#include "caf/policy/priority_aware.hpp"
+#include "caf/policy/downstream_messages.hpp"
+#include "caf/policy/normal_messages.hpp"
+#include "caf/policy/upstream_messages.hpp"
+#include "caf/policy/urgent_messages.hpp"
+
 #include "caf/detail/apply_args.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/blocking_behavior.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
 
-#include "caf/mixin/sender.hpp"
+#include "caf/intrusive/drr_cached_queue.hpp"
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
+
 #include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
 #include "caf/mixin/subscriber.hpp"
 
 namespace caf {
@@ -66,7 +79,39 @@ class blocking_actor
                   mixin::subscriber>,
       public dynamically_typed_actor_base {
 public:
-  // -- member types -----------------------------------------------------------
+  // -- nested and member types ------------------------------------------------
+
+  /// Base type.
+  using super = extended_base;
+
+  /// Stores asynchronous messages with default priority.
+  using default_queue = intrusive::drr_cached_queue<policy::normal_messages>;
+
+  /// Stores asynchronous messages with hifh priority.
+  using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
+
+  /// Configures the FIFO inbox with two nested queues:
+  ///
+  ///   1. Default asynchronous messages
+  ///   2. High-priority asynchronous messages
+  struct mailbox_policy {
+    using deficit_type = size_t;
+
+    using mapped_type = mailbox_element;
+
+    using unique_pointer = mailbox_element_ptr;
+
+    using queue_type =
+      intrusive::wdrr_fixed_multiplexed_queue<policy::priority_aware,
+                                              default_queue, urgent_queue>;
+
+    static constexpr size_t default_queue_index = 0;
+
+    static constexpr size_t urgent_queue_index = 1;
+  };
+
+  /// A queue optimized for single-reader-many-writers.
+  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
   /// Absolute timeout type.
   using timeout_type = std::chrono::high_resolution_clock::time_point;
@@ -172,6 +217,23 @@ public:
     void until(const bool& bvalue) {
       until([&] { return bvalue; });
     }
+  };
+
+  struct mailbox_visitor {
+    blocking_actor* self;
+    bool& done;
+    receive_cond& rcc;
+    message_id mid;
+    detail::blocking_behavior& bhvr;
+
+    // Dispatches messages with high and normal priority to the same handler.
+    template <class Queue>
+    intrusive::task_result operator()(size_t, Queue&, mailbox_element& x) {
+      return (*this)(x);
+    }
+
+    // Consumes `x`.
+    intrusive::task_result operator()(mailbox_element& x);
   };
 
   // -- constructors and destructors -------------------------------------------
@@ -305,9 +367,12 @@ public:
   virtual bool await_data(timeout_type timeout);
 
   /// Returns the next element from the mailbox or `nullptr`.
-  /// The default implementation simply returns `next_message()`.
   virtual mailbox_element_ptr dequeue();
 
+  /// Returns the queue for storing incoming messages.
+  inline mailbox_type& mailbox() {
+    return mailbox_;
+  }
   /// @cond PRIVATE
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
@@ -348,6 +413,20 @@ public:
   void receive_impl(receive_cond& rcc, message_id mid,
                     detail::blocking_behavior& bhvr);
 
+  bool cleanup(error&& fail_state, execution_unit* host) override;
+
+  sec build_pipeline(stream_slot in, stream_slot out, stream_manager_ptr mgr);
+
+  // -- backwards compatibility ------------------------------------------------
+
+  inline mailbox_element_ptr next_message() {
+    return dequeue();
+  }
+
+  inline bool has_next_message() {
+    return !mailbox_.empty();
+  }
+
   /// @endcond
 
 private:
@@ -369,6 +448,11 @@ private:
       res += attach_functor(x);
     return res;
   }
+
+  // -- member variables -------------------------------------------------------
+
+  // used by both event-based and blocking actors
+  mailbox_type mailbox_;
 };
 
 } // namespace caf

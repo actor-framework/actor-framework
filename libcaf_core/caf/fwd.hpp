@@ -19,46 +19,52 @@
 #ifndef CAF_FWD_HPP
 #define CAF_FWD_HPP
 
-#include <memory>
 #include <cstdint>
+#include <memory>
+#include <tuple>
 
 namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
 
+template <class> class behavior_type_of;
+template <class> class downstream;
+template <class> class expected;
+template <class> class intrusive_ptr;
+template <class> class optional;
 template <class> class param;
 template <class> class stream;
-template <class> class optional;
-template <class> class expected;
-template <class> class downstream;
-template <class> class intrusive_ptr;
-template <class> class behavior_type_of;
+template <class> class stream_sink;
+template <class> class stream_source;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
 
 template <class> struct timeout_definition;
 
+// -- 2 param templates --------------------------------------------------------
+
+template <class, class> class stream_stage;
+
 // -- 3 param templates --------------------------------------------------------
 
 template <class, class, int> class actor_cast_access;
 
-template <class, class, class> class broadcast_topic_scatterer;
-template <class, class, class> class random_topic_scatterer;
+template <class, class, class> class broadcast_downstream_manager;
 
 // -- variadic templates -------------------------------------------------------
 
 template <class...> class result;
 template <class...> class variant;
 template <class...> class delegated;
+template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
-template <class...> class typed_response_promise;
 template <class...> class typed_event_based_actor;
+template <class...> class typed_response_promise;
 
-// -- variadic templates with 1 fixed argument ---------------------------------
-
-template <class, class...> class fused_scatterer;
-template <class, class...> class annotated_stream;
+// -- variadic templates with fixed arguments ----------------------------------
+//
+template <class, class...> class output_stream;
 
 // -- classes ------------------------------------------------------------------
 
@@ -70,7 +76,6 @@ class node_id;
 class behavior;
 class duration;
 class resumable;
-class stream_id;
 class actor_addr;
 class actor_pool;
 class message_id;
@@ -94,31 +99,33 @@ class blocking_actor;
 class execution_unit;
 class proxy_registry;
 class stream_manager;
-class random_gatherer;
-class stream_gatherer;
 class actor_companion;
 class mailbox_element;
+class message_builder;
 class message_handler;
 class scheduled_actor;
-class stream_scatterer;
 class response_promise;
 class event_based_actor;
 class type_erased_tuple;
 class type_erased_value;
-class stream_msg_visitor;
+class downstream_manager;
 class actor_control_block;
 class actor_system_config;
 class uniform_type_info_map;
 class forwarding_actor_proxy;
+class downstream_manager_base;
 
 // -- structs ------------------------------------------------------------------
 
 struct unit_t;
 struct exit_msg;
 struct down_msg;
-struct stream_msg;
 struct timeout_msg;
+struct stream_slots;
+struct upstream_msg;
 struct group_down_msg;
+struct downstream_msg;
+struct open_stream_msg;
 struct invalid_actor_t;
 struct invalid_actor_addr_t;
 struct illegal_message_element;
@@ -132,6 +139,15 @@ enum class atom_value : uint64_t;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using stream_slot = uint16_t;
+
+// -- intrusive containers -----------------------------------------------------
+
+namespace intrusive {
+
+enum class task_result;
+
+} // namespace intrusive
 
 // -- marker classes for mixins ------------------------------------------------
 

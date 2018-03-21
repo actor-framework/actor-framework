@@ -23,9 +23,9 @@
 
 namespace caf {
 
-enum class message_priority : uint32_t {
+enum class message_priority {
   normal,
-  high
+  high = 3 // 0b11, see message_id.hpp why this is important
 };
 
 } // namespace caf

@@ -28,23 +28,23 @@
 #include <algorithm>
 #include <type_traits>
 
-#include "caf/locks.hpp"
-#include "caf/string_algorithms.hpp"
-
-#include "caf/group.hpp"
-#include "caf/logger.hpp"
-#include "caf/type_nr.hpp"
-#include "caf/message.hpp"
-#include "caf/duration.hpp"
-#include "caf/timestamp.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/stream_msg.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/actor_factory.hpp"
 #include "caf/abstract_group.hpp"
-#include "caf/proxy_registry.hpp"
-#include "caf/message_builder.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_factory.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/downstream_msg.hpp"
+#include "caf/duration.hpp"
+#include "caf/group.hpp"
+#include "caf/locks.hpp"
+#include "caf/logger.hpp"
+#include "caf/message.hpp"
+#include "caf/message_builder.hpp"
+#include "caf/proxy_registry.hpp"
+#include "caf/string_algorithms.hpp"
+#include "caf/timestamp.hpp"
+#include "caf/type_nr.hpp"
+#include "caf/upstream_msg.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -60,8 +60,8 @@ const char* numbered_type_names[] = {
   "@atom",
   "@charbuf",
   "@down",
+  "@downstream_msg",
   "@duration",
-  "@timestamp",
   "@error",
   "@exit",
   "@group",
@@ -74,13 +74,14 @@ const char* numbered_type_names[] = {
   "@message",
   "@message_id",
   "@node",
+  "@open_stream_msg",
   "@str",
-  "@stream_msg",
   "@strmap",
   "@strong_actor_ptr",
   "@strset",
   "@strvec",
   "@timeout",
+  "@timestamp",
   "@u16",
   "@u16str",
   "@u32",
@@ -88,6 +89,7 @@ const char* numbered_type_names[] = {
   "@u64",
   "@u8",
   "@unit",
+  "@upstream_msg",
   "@weak_actor_ptr",
   "bool",
   "double",

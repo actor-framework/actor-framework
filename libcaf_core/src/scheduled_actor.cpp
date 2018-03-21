@@ -18,14 +18,17 @@
 
 #include "caf/scheduled_actor.hpp"
 
-#include "caf/config.hpp"
-#include "caf/to_string.hpp"
 #include "caf/actor_ostream.hpp"
-#include "caf/stream_msg_visitor.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/config.hpp"
+#include "caf/inbound_path.hpp"
+#include "caf/to_string.hpp"
 
+#include "caf/scheduler/abstract_coordinator.hpp"
+
+#include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/detail/default_invoke_result_visitor.hpp"
 
 namespace caf {
 
@@ -95,7 +98,8 @@ error scheduled_actor::default_exception_handler(pointer ptr,
 // -- constructors and destructors ---------------------------------------------
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
-    : local_actor(cfg),
+    : super(cfg),
+      mailbox_(unit, unit, unit, unit, unit),
       timeout_id_(0),
       default_handler_(print_and_drop),
       error_handler_(default_error_handler),
@@ -106,7 +110,18 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
       , exception_handler_(default_exception_handler)
 # endif // CAF_NO_EXCEPTIONS
       {
-  // nop
+  auto& sys_cfg = home_system().config();
+  auto interval = sys_cfg.streaming_tick_duration_us();
+  CAF_ASSERT(interval != 0);
+  stream_ticks_.interval(std::chrono::microseconds(interval));
+  CAF_ASSERT(sys_cfg.streaming_max_batch_delay_us != 0);
+  max_batch_delay_ticks_ = sys_cfg.streaming_max_batch_delay_us / interval;
+  CAF_ASSERT(max_batch_delay_ticks_ != 0);
+  CAF_ASSERT(sys_cfg.streaming_credit_round_interval_us != 0);
+  credit_round_ticks_ = sys_cfg.streaming_credit_round_interval_us / interval;
+  CAF_ASSERT(credit_round_ticks_ != 0);
+  CAF_LOG_DEBUG(CAF_ARG(interval) << CAF_ARG(max_batch_delay_ticks_)
+                << CAF_ARG(credit_round_ticks_));
 }
 
 scheduled_actor::~scheduled_actor() {
@@ -125,8 +140,8 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  switch (mailbox().enqueue(ptr.release())) {
-    case detail::enqueue_result::unblocked_reader: {
+  switch (mailbox().push_back(std::move(ptr))) {
+    case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
       // add a reference count to this actor and re-schedule it
       intrusive_ptr_add_ref(ctrl());
@@ -141,7 +156,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       }
       break;
     }
-    case detail::enqueue_result::queue_closed: {
+    case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
       if (mid.is_request()) {
         detail::sync_request_bouncer f{exit_reason()};
@@ -149,7 +164,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       }
       break;
     }
-    case detail::enqueue_result::success:
+    case intrusive::inbox_result::success:
       // enqueued to a running actors' mailbox; nothing to do
       CAF_LOG_ACCEPT_EVENT(false);
       break;
@@ -163,6 +178,7 @@ const char* scheduled_actor::name() const {
 }
 
 void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
+  CAF_PUSH_AID_FROM_PTR(this);
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)
@@ -184,23 +200,41 @@ void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
 }
 
 bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
+  CAF_LOG_TRACE(CAF_ARG(fail_state));
   // Shutdown hosting thread when running detached.
   if (getf(is_detached_flag)) {
     CAF_ASSERT(private_thread_ != nullptr);
     private_thread_->shutdown();
   }
-  // Clear all state.
+  // Clear state for open requests.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
-  if (fail_state != none)
-    for (auto& kvp : streams_)
+  // Clear state for open streams.
+  if (fail_state == none) {
+    for (auto& kvp : stream_managers_)
+      kvp.second->stop();
+    for (auto& kvp : pending_stream_managers_)
+      kvp.second->stop();
+  } else {
+    for (auto& kvp : stream_managers_)
       kvp.second->abort(fail_state);
-  else
-    for (auto& kvp : streams_)
-      kvp.second->close();
-  streams_.clear();
+    for (auto& kvp : pending_stream_managers_)
+      kvp.second->abort(fail_state);
+  }
+  stream_managers_.clear();
+  pending_stream_managers_.clear();
+  get_downstream_queue().cleanup();
+  // Clear mailbox.
+  if (!mailbox_.closed()) {
+    mailbox_.close();
+    get_default_queue().flush_cache();
+    get_urgent_queue().flush_cache();
+    detail::sync_request_bouncer bounce{fail_state};
+    while (mailbox_.queue().new_round(1000, bounce).consumed_items)
+      ; // nop
+  }
   // Dispatch to parent's `cleanup` function.
-  return local_actor::cleanup(std::move(fail_state), host);
+  return super::cleanup(std::move(fail_state), host);
 }
 
 // -- overridden functions of resumable ----------------------------------------
@@ -217,51 +251,152 @@ void scheduled_actor::intrusive_ptr_release_impl() {
   intrusive_ptr_release(ctrl());
 }
 
+namespace {
+
+// TODO: replace with generic lambda when switching to C++14
+struct upstream_msg_visitor {
+  scheduled_actor* selfptr;
+  upstream_msg& um;
+
+  template <class T>
+  void operator()(T& x) {
+    selfptr->handle_upstream_msg(um.slots, um.sender, x);
+  }
+};
+
+} // namespace <anonymous>
+
+intrusive::task_result scheduled_actor::mailbox_visitor::
+operator()(size_t, upstream_queue&, mailbox_element& x) {
+  CAF_ASSERT(x.content().type_token() == make_type_token<upstream_msg>());
+  self->current_mailbox_element(&x);
+  CAF_LOG_RECEIVE_EVENT((&x));
+  auto& um = x.content().get_mutable_as<upstream_msg>(0);
+  upstream_msg_visitor f{self, um};
+  visit(f, um.content);
+  return intrusive::task_result::resume;
+}
+
+namespace {
+
+// TODO: replace with generic lambda when switching to C++14
+struct downstream_msg_visitor {
+  scheduled_actor* selfptr;
+  scheduled_actor::downstream_queue& qs_ref;
+  policy::downstream_messages::nested_queue_type& q_ref;
+  downstream_msg& dm;
+
+  template <class T>
+  intrusive::task_result operator()(T& x) {
+    auto& inptr = q_ref.policy().handler;
+    if (inptr == nullptr)
+      return intrusive::task_result::stop;
+    // Do *not* store a reference here since we potentially reset `inptr`.
+    auto mgr = inptr->mgr;
+    inptr->handle(x);
+    // The sender slot can be 0. This is the case for forced_close or
+    // forced_drop messages from stream aborters.
+    CAF_ASSERT(inptr->slots == dm.slots
+               || (dm.slots.sender == 0
+                   && dm.slots.receiver == inptr->slots.receiver));
+    // TODO: replace with `if constexpr` when switching to C++17
+    if (std::is_same<T, downstream_msg::close>::value
+        || std::is_same<T, downstream_msg::forced_close>::value) {
+      inptr.reset();
+      qs_ref.erase_later(dm.slots.receiver);
+      selfptr->erase_stream_manager(dm.slots.receiver);
+      if (mgr->done()) {
+        selfptr->erase_stream_manager(mgr);
+        mgr->stop();
+      }
+      return intrusive::task_result::stop;
+    }
+    else if (mgr->done()) {
+      CAF_LOG_DEBUG("path is done receiving and closes its manager");
+      selfptr->erase_stream_manager(mgr);
+      mgr->stop();
+      return intrusive::task_result::stop;
+    }
+    return intrusive::task_result::resume;
+  }
+};
+
+} // namespace <anonymous>
+
+intrusive::task_result scheduled_actor::mailbox_visitor::
+operator()(size_t, downstream_queue& qs, stream_slot,
+           policy::downstream_messages::nested_queue_type& q,
+           mailbox_element& x) {
+  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
+  self->current_mailbox_element(&x);
+  CAF_LOG_RECEIVE_EVENT((&x));
+  CAF_ASSERT(x.content().type_token() == make_type_token<downstream_msg>());
+  auto& dm = x.content().get_mutable_as<downstream_msg>(0);
+  downstream_msg_visitor f{self, qs, q, dm};
+  return visit(f, dm.content);
+}
+
+intrusive::task_result
+scheduled_actor::mailbox_visitor::operator()(mailbox_element& x) {
+  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
+  switch (self->reactivate(x)) {
+    case activation_result::terminated:
+      result = resume_result::done;
+      return intrusive::task_result::stop;
+    case activation_result::success:
+      return ++handled_msgs < max_throughput
+             ? intrusive::task_result::resume
+             : intrusive::task_result::stop_all;
+    case activation_result::skipped:
+      return intrusive::task_result::skip;
+    default:
+      return intrusive::task_result::resume;
+  }
+}
+
 resumable::resume_result
 scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   CAF_PUSH_AID(id());
+  CAF_LOG_TRACE(CAF_ARG(max_throughput));
   if (!activate(ctx))
     return resume_result::done;
   size_t handled_msgs = 0;
-  auto reset_timeout_if_needed = [&] {
-    if (handled_msgs > 0 && !bhvr_stack_.empty())
-      request_timeout(bhvr_stack_.back().timeout());
-  };
-  mailbox_element_ptr ptr;
-  while (handled_msgs < max_throughput) {
-    do {
-      ptr = next_message();
-      if (!ptr) {
-        reset_timeout_if_needed();
-        if (mailbox().try_block())
-          return resumable::awaiting_message;
-      }
-    } while (!ptr);
-    switch (reactivate(*ptr)) {
-      case activation_result::terminated:
-        return resume_result::done;
-      case activation_result::success:
-        ++handled_msgs;
-        // iterate cache to see if we are now able
-        // to process previously skipped messages
-        while (consume_from_cache()) {
-          ++handled_msgs;
-          bhvr_stack_.cleanup();
-          if (finalize()) {
-            CAF_LOG_DEBUG("actor finalized while processing cache");
-            return resume_result::done;
-          }
-        }
-        break;
-      case activation_result::skipped:
-        push_to_cache(std::move(ptr));
-        break;
-      default:
-        break;
+  actor_clock::time_point tout{actor_clock::duration_type{0}};
+  auto reset_timeouts_if_needed = [&] {
+    // Set a new receive timeout if we called our behavior at least once.
+    if (handled_msgs > 0)
+      set_receive_timeout();
+    // Set a new stream timeout.
+    if (!stream_managers_.empty()) {
+      // Make sure we call `advance_streams` at least once.
+      if (tout.time_since_epoch().count() != 0)
+        tout = advance_streams(clock().now());
+      set_stream_timeout(tout);
     }
+  };
+  auto result = resume_result::awaiting_message;
+  mailbox_visitor f{this, result, handled_msgs, max_throughput};
+  mailbox_element_ptr ptr;
+  // Timeout for calling `advance_streams`.
+  while (handled_msgs < max_throughput) {
+    CAF_LOG_DEBUG("start new DRR round");
+    // TODO: maybe replace '3' with configurable / adaptive value?
+    // Dispatch on the different message categories in our mailbox.
+    if (!mailbox_.new_round(3, f).consumed_items) {
+      reset_timeouts_if_needed();
+      if (mailbox().try_block())
+        return resumable::awaiting_message;
+    }
+    // Immediately stop if the visitor reports an error.
+    if (result != awaiting_message)
+      return result;
+    auto now = clock().now();
+    if (now >= tout)
+      tout = advance_streams(now);
   }
-  reset_timeout_if_needed();
-  if (!has_next_message() && mailbox().try_block())
+  CAF_LOG_DEBUG("max throughput reached");
+  reset_timeouts_if_needed();
+  if (mailbox().try_block())
     return resumable::awaiting_message;
   // time's up
   return resumable::resume_later;
@@ -281,42 +416,66 @@ void scheduled_actor::quit(error x) {
   setf(is_terminated_flag);
 }
 
-// -- stream management --------------------------------------------------------
-
-void scheduled_actor::trigger_downstreams() {
-  for (auto& s : streams_)
-    s.second->push();
-}
-
 // -- timeout management -------------------------------------------------------
 
-uint32_t scheduled_actor::request_timeout(const duration& d) {
+uint64_t scheduled_actor::set_receive_timeout(actor_clock::time_point x) {
+  CAF_LOG_TRACE(x);
+  setf(has_timeout_flag);
+  return set_timeout(receive_atom::value, x);
+}
+
+uint64_t scheduled_actor::set_receive_timeout() {
+  CAF_LOG_TRACE("");
+  if (bhvr_stack_.empty())
+    return 0;
+  auto d = bhvr_stack_.back().timeout();
   if (!d.valid()) {
     unsetf(has_timeout_flag);
     return 0;
   }
-  setf(has_timeout_flag);
-  auto result = ++timeout_id_;
-  auto msg = make_message(timeout_msg{result});
-  CAF_LOG_TRACE("send new timeout_msg, " << CAF_ARG(timeout_id_));
   if (d.is_zero()) {
     // immediately enqueue timeout message if duration == 0s
-    enqueue(ctrl(), invalid_message_id, std::move(msg), context());
-  } else {
-    auto t = clock().now();
-    t += d;
-    clock().set_receive_timeout(t, this, result);
+    auto id = ++timeout_id_;
+    auto type = receive_atom::value;
+    eq_impl(make_message_id(), nullptr, context(), timeout_msg{type, id});
+    return id;
   }
-  return result;
+  auto t = clock().now();
+  t += d;
+  return set_receive_timeout(t);
 }
 
-void scheduled_actor::reset_timeout(uint32_t timeout_id) {
-  if (is_active_timeout(timeout_id))
+void scheduled_actor::reset_receive_timeout(uint64_t timeout_id) {
+  if (is_active_receive_timeout(timeout_id))
     unsetf(has_timeout_flag);
 }
 
-bool scheduled_actor::is_active_timeout(uint32_t tid) const {
+bool scheduled_actor::is_active_receive_timeout(uint64_t tid) const {
   return getf(has_timeout_flag) && timeout_id_ == tid;
+}
+
+uint64_t scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
+  CAF_LOG_TRACE(x);
+  // Do not request 'infinite' timeouts.
+  if (x == actor_clock::time_point::max()) {
+    CAF_LOG_DEBUG("drop infinite timeout");
+    return 0;
+  }
+  // Do not request a timeout if all streams are idle.
+  std::vector<stream_manager_ptr> mgrs;
+  for (auto& kvp : stream_managers_)
+    mgrs.emplace_back(kvp.second);
+  std::sort(mgrs.begin(), mgrs.end());
+  auto e = std::unique(mgrs.begin(), mgrs.end());
+  auto idle = [=](const stream_manager_ptr& x) {
+    return x->idle();
+  };
+  if (std::all_of(mgrs.begin(), e, idle)) {
+    CAF_LOG_DEBUG("suppress stream timeout");
+    return 0;
+  }
+  // Delegate call.
+  return set_timeout(stream_atom::value, x);
 }
 
 // -- message processing -------------------------------------------------------
@@ -337,6 +496,7 @@ void scheduled_actor::add_multiplexed_response_handler(message_id response_id,
 
 scheduled_actor::message_category
 scheduled_actor::categorize(mailbox_element& x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
   auto& content = x.content();
   switch (content.type_token()) {
     case make_type_token<atom_value, atom_value, std::string>():
@@ -360,11 +520,19 @@ scheduled_actor::categorize(mailbox_element& x) {
       }
       return message_category::ordinary;
     case make_type_token<timeout_msg>(): {
+      CAF_ASSERT(!x.mid.valid());
       auto& tm = content.get_as<timeout_msg>(0);
       auto tid = tm.timeout_id;
-      CAF_ASSERT(!x.mid.valid());
-      return is_active_timeout(tid) ? message_category::timeout
-                                    : message_category::expired_timeout;
+      if (tm.type == receive_atom::value) {
+        CAF_LOG_DEBUG("handle ordinary timeout message");
+        if (is_active_receive_timeout(tid) && !bhvr_stack_.empty())
+          bhvr_stack_.back().handle_timeout();
+      } else {
+        CAF_ASSERT(tm.type == atom("stream"));
+        CAF_LOG_DEBUG("handle stream timeout message");
+        set_stream_timeout(advance_streams(clock().now()));
+      }
+      return message_category::internal;
     }
     case make_type_token<exit_msg>(): {
       auto em = content.move_if_unshared<exit_msg>(0);
@@ -389,10 +557,10 @@ scheduled_actor::categorize(mailbox_element& x) {
       call_handler(error_handler_, this, err);
       return message_category::internal;
     }
-    case make_type_token<stream_msg>(): {
-      auto& bs = bhvr_stack();
-      handle_stream_msg(x, bs.empty() ? nullptr : &bs.back());
-      return message_category::internal;
+    case make_type_token<open_stream_msg>(): {
+      return handle_open_stream_msg(x) != im_skipped
+             ? message_category::internal
+             : message_category::skipped;
     }
     default:
       return message_category::ordinary;
@@ -409,17 +577,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
     return f(in.content()) != none;
   };
-  auto stream_invoke = [](ptr_t p, behavior& f, mailbox_element& in) -> bool {
-    // The only legal stream message in a response is `stream_open`.
-    auto& var = in.content().get_as<stream_msg>(0).content;
-    if (holds_alternative<stream_msg::open>(var))
-      return p->handle_stream_msg(in, &f);
-    return false;
-  };
   auto select_invoke_fun = [&]() -> fun_t {
-    if (x.content().type_token() != make_type_token<stream_msg>())
-      return ordinary_invoke;
-    return stream_invoke;
+    return ordinary_invoke;
   };
   // Short-circuit awaited responses.
   if (!awaited_responses_.empty()) {
@@ -445,30 +604,23 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     // neither awaited nor multiplexed, probably an expired timeout
     if (mrh == multiplexed_responses_.end())
       return im_dropped;
-    if (!invoke(this, mrh->second, x)) {
+    auto bhvr = std::move(mrh->second);
+    multiplexed_responses_.erase(mrh);
+    if (!invoke(this, bhvr, x)) {
       // try again with error if first attempt failed
       auto msg = make_message(make_error(sec::unexpected_response,
                                          x.move_content_to_message()));
-      mrh->second(msg);
+      bhvr(msg);
     }
-    multiplexed_responses_.erase(mrh);
     return im_success;
   }
   // Dispatch on the content of x.
   switch (categorize(x)) {
-    case message_category::expired_timeout:
-      CAF_LOG_DEBUG("dropped expired timeout message");
-      return im_dropped;
+    case message_category::skipped:
+      return im_skipped;
     case message_category::internal:
       CAF_LOG_DEBUG("handled system message");
       return im_success;
-    case message_category::timeout: {
-      CAF_LOG_DEBUG("handle timeout message");
-      if (bhvr_stack_.empty())
-        return im_dropped;
-      bhvr_stack_.back().handle_timeout();
-      return im_success;
-    }
     case message_category::ordinary: {
       detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
       bool skipped = false;
@@ -524,26 +676,6 @@ void scheduled_actor::consume(mailbox_element_ptr x) {
   }
 }
 
-bool scheduled_actor::consume_from_cache() {
-  CAF_LOG_TRACE("");
-  auto& cache = mailbox().cache();
-  auto i = cache.continuation();
-  auto e = cache.end();
-  while (i != e)
-    switch (consume(*i)) {
-      case im_success:
-        cache.erase(i);
-        return true;
-      case im_skipped:
-        ++i;
-        break;
-      case im_dropped:
-        i = cache.erase(i);
-        break;
-    }
-  return false;
-}
-
 bool scheduled_actor::activate(execution_unit* ctx) {
   CAF_LOG_TRACE("");
   CAF_ASSERT(ctx != nullptr);
@@ -587,8 +719,8 @@ auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
   if (!activate(ctx))
     return activation_result::terminated;
   auto res = reactivate(x);
-  if (res == activation_result::success && !bhvr_stack_.empty())
-    request_timeout(bhvr_stack_.back().timeout());
+  if (res == activation_result::success)
+    set_receive_timeout();
   return res;
 }
 
@@ -634,8 +766,8 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
   if (discard_old && !bhvr_stack_.empty())
     bhvr_stack_.pop_back();
   // request_timeout simply resets the timeout when it's invalid
-  request_timeout(bhvr.timeout());
   bhvr_stack_.push_back(std::move(bhvr));
+  set_receive_timeout();
 }
 
 bool scheduled_actor::finalize() {
@@ -649,67 +781,327 @@ bool scheduled_actor::finalize() {
   return true;
 }
 
-bool scheduled_actor::handle_stream_msg(mailbox_element& x,
-                                        behavior* active_behavior) {
-  CAF_LOG_TRACE(CAF_ARG(x));
-  CAF_ASSERT(x.content().match_elements<stream_msg>());
-  auto& sm = x.content().get_mutable_as<stream_msg>(0);
-  if (sm.sender == nullptr) {
-    CAF_LOG_ERROR("received a stream_msg with invalid sender field");
-    return false;
+void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
+  using namespace intrusive;
+  auto& p = mailbox_.queue().policy();
+  auto& qs = mailbox_.queue().queues();
+  // TODO: use generic lambda to avoid code duplication when switching to C++14
+  if (p.id_of(*ptr) == mailbox_policy::default_queue_index) {
+    auto& q = std::get<mailbox_policy::default_queue_index>(qs);
+    q.inc_total_task_size(q.policy().task_size(*ptr));
+    q.cache().push_back(ptr.release());
+  } else {
+    auto& q = std::get<mailbox_policy::default_queue_index>(qs);
+    q.inc_total_task_size(q.policy().task_size(*ptr));
+    q.cache().push_back(ptr.release());
   }
-  stream_msg_visitor f{this, sm, active_behavior};
-  auto result = visit(f, sm.content);
-  if (streams_.empty() && !has_behavior())
-    quit(exit_reason::normal);
+}
+
+scheduled_actor::default_queue& scheduled_actor::get_default_queue() {
+  constexpr size_t queue_id = mailbox_policy::default_queue_index;
+  return get<queue_id>(mailbox_.queue().queues());
+}
+
+scheduled_actor::upstream_queue& scheduled_actor::get_upstream_queue() {
+  constexpr size_t queue_id = mailbox_policy::upstream_queue_index;
+  return get<queue_id>(mailbox_.queue().queues());
+}
+
+scheduled_actor::downstream_queue& scheduled_actor::get_downstream_queue() {
+  constexpr size_t queue_id = mailbox_policy::downstream_queue_index;
+  return get<queue_id>(mailbox_.queue().queues());
+}
+
+scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {
+  constexpr size_t queue_id = mailbox_policy::urgent_queue_index;
+  return get<queue_id>(mailbox_.queue().queues());
+}
+
+inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
+                                                 stream_slots slots,
+                                                 strong_actor_ptr sender) {
+  auto& qs = mailbox_.queue().queues();
+  auto res = get<2>(qs).queues().emplace(slots.receiver, nullptr);
+  if (!res.second)
+    return nullptr;
+  auto path = new inbound_path(std::move(mgr), slots, std::move(sender));
+  res.first->second.policy().handler.reset(path);
+  return path;
+}
+
+void scheduled_actor::erase_inbound_path_later(stream_slot slot) {
+  CAF_LOG_TRACE(CAF_ARG(slot));
+  get_downstream_queue().erase_later(slot);
+}
+
+void scheduled_actor::erase_inbound_path_later(stream_slot slot, error reason) {
+  auto& q = get_downstream_queue();
+  auto e = q.queues().end();
+  auto i = q.queues().find(slot);
+  if (i != e) {
+    auto& path = i->second.policy().handler;
+    if (path != nullptr) {
+      if (reason == none)
+        path->emit_regular_shutdown(this);
+      else
+        path->emit_irregular_shutdown(this, std::move(reason));
+    }
+    q.erase_later(slot);
+  }
+}
+
+void scheduled_actor::erase_inbound_paths_later(const stream_manager* ptr) {
+  CAF_LOG_TRACE("");
+  for (auto& kvp : get_downstream_queue().queues()) {
+    auto& path = kvp.second.policy().handler;
+    if (path != nullptr && path->mgr == ptr)
+      erase_inbound_path_later(kvp.first);
+  }
+}
+
+void scheduled_actor::erase_inbound_paths_later(const stream_manager* ptr,
+                                                error reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
+  using fn = void (*)(local_actor*, inbound_path&, error&);
+  fn regular = [](local_actor* self, inbound_path& in, error&) {
+    in.emit_regular_shutdown(self);
+  };
+  fn irregular = [](local_actor* self, inbound_path& in, error& rsn) {
+    in.emit_irregular_shutdown(self, rsn);
+  };
+  auto f = reason == none ? regular : irregular;
+  for (auto& kvp : get_downstream_queue().queues()) {
+    auto& path = kvp.second.policy().handler;
+    if (path != nullptr && path->mgr == ptr) {
+      f(this, *path, reason);
+      erase_inbound_path_later(kvp.first);
+    }
+  }
+}
+
+void scheduled_actor::handle_upstream_msg(stream_slots slots,
+                                          actor_addr& sender,
+                                          upstream_msg::ack_open& x) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(sender) << CAF_ARG(x));
+  CAF_ASSERT(sender == x.rebind_to);
+  // Get the manager for that stream, move it from `pending_managers_` to
+  // `managers_`, and handle `x`.
+  auto i = pending_stream_managers_.find(slots.receiver);
+  if (i == pending_stream_managers_.end()) {
+    CAF_LOG_WARNING("found no corresponding manager for received ack_open");
+    return;
+  }
+  auto ptr = std::move(i->second);
+  pending_stream_managers_.erase(i);
+  if (!add_stream_manager(slots.receiver, ptr)) {
+    CAF_LOG_WARNING("unable to add stream manager after receiving ack_open");
+    return;
+  }
+  ptr->handle(slots, x);
+}
+
+uint64_t scheduled_actor::set_timeout(atom_value type,
+                                      actor_clock::time_point x) {
+  CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(x));
+  auto id = ++timeout_id_;
+  CAF_LOG_DEBUG("set timeout:" << CAF_ARG(type) << CAF_ARG(x));
+  clock().set_ordinary_timeout(x, this, type, id);
+  return id;
+}
+
+stream_slot scheduled_actor::next_slot() {
+  stream_slot result = 1;
+  auto nslot = [](const stream_manager_map& x) -> stream_slot {
+    return x.rbegin()->first + 1;
+  };
+  if (!stream_managers_.empty())
+    result = std::max(nslot(stream_managers_), result);
+  if (!pending_stream_managers_.empty())
+    result = std::max(nslot(pending_stream_managers_), result);
   return result;
 }
 
-bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
-                                 const stream_id& sid,
-                                 strong_actor_ptr source_ptr,
-                                 strong_actor_ptr original_stage,
-                                 stream_priority prio, bool redeployable,
-                                 response_promise result_cb) {
-  CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid) << CAF_ARG(source_ptr)
-                << CAF_ARG(original_stage) << CAF_ARG(prio)
-                << CAF_ARG(redeployable) << CAF_ARG(result_cb));
-  CAF_ASSERT(mgr != nullptr);
-  if (!source_ptr) {
-    CAF_LOG_ERROR("cannot add invalid source");
-    return false;
-  }
-  if (!sid.valid()) {
-    CAF_LOG_ERROR("cannot add source with invalid stream ID");
-    return false;
-  }
-  return mgr->add_source(sid, std::move(source_ptr),
-                         std::move(original_stage), prio, redeployable,
-                         std::move(result_cb));
+void scheduled_actor::assign_slot(stream_slot x, stream_manager_ptr mgr) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  if (stream_managers_.empty())
+    stream_ticks_.start(clock().now());
+  CAF_ASSERT(stream_managers_.count(x) == 0);
+  stream_managers_.emplace(x, std::move(mgr));
 }
 
-bool scheduled_actor::add_source(const stream_manager_ptr& mgr,
-                                 const stream_id& sid,
-                                 response_promise result_cb) {
-  CAF_LOG_TRACE(CAF_ARG(mgr) << CAF_ARG(sid));
-  CAF_ASSERT(mgr != nullptr);
-  CAF_ASSERT(current_mailbox_element() != nullptr);
-  if (!current_mailbox_element()->content().match_elements<stream_msg>()) {
-    CAF_LOG_ERROR("scheduled_actor::add_source called outside "
-                  "a stream_msg handler");
-    return false;
+void scheduled_actor::assign_pending_slot(stream_slot x,
+                                          stream_manager_ptr mgr) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_ASSERT(pending_stream_managers_.count(x) == 0);
+  pending_stream_managers_.emplace(x, std::move(mgr));
+}
+
+stream_slot scheduled_actor::assign_next_slot_to(stream_manager_ptr mgr) {
+  CAF_LOG_TRACE("");
+  auto x = next_slot();
+  assign_slot(x, std::move(mgr));
+  return x;
+}
+
+stream_slot
+scheduled_actor::assign_next_pending_slot_to(stream_manager_ptr mgr) {
+  CAF_LOG_TRACE("");
+  auto x = next_slot();
+  assign_pending_slot(x, std::move(mgr));
+  return x;
+}
+
+bool scheduled_actor::add_stream_manager(stream_slot id,
+                                         stream_manager_ptr mgr) {
+  CAF_LOG_TRACE(CAF_ARG(id));
+  if (stream_managers_.empty())
+    stream_ticks_.start(clock().now());
+  return stream_managers_.emplace(id, std::move(mgr)).second;
+}
+
+void scheduled_actor::erase_stream_manager(stream_slot id) {
+  CAF_LOG_TRACE(CAF_ARG(id));
+  if (stream_managers_.erase(id) != 0 && stream_managers_.empty())
+    stream_ticks_.stop();
+}
+
+void scheduled_actor::erase_pending_stream_manager(stream_slot id) {
+  CAF_LOG_TRACE(CAF_ARG(id));
+  pending_stream_managers_.erase(id);
+}
+
+void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
+  { // Lifetime scope of first iterator pair.
+    auto i = stream_managers_.begin();
+    auto e = stream_managers_.end();
+    while (i != e)
+      if (i->second == mgr)
+        i = stream_managers_.erase(i);
+      else
+        ++i;
   }
-  auto& sm = current_mailbox_element()->content().get_mutable_as<stream_msg>(0);
-  if (!holds_alternative<stream_msg::open>(sm.content)) {
-    CAF_LOG_ERROR("scheduled_actor::add_source called outside "
-                  "a stream_msg::open handler");
-    return false;
+  { // Lifetime scope of second iterator pair.
+    auto i = pending_stream_managers_.begin();
+    auto e = pending_stream_managers_.end();
+    while (i != e)
+      if (i->second == mgr)
+        i = pending_stream_managers_.erase(i);
+      else
+        ++i;
   }
-  auto& opn = get<stream_msg::open>(sm.content);
-  auto source_ptr = std::move(opn.prev_stage);
-  return mgr->add_source(sid, std::move(source_ptr),
-                         std::move(opn.original_stage), opn.priority,
-                         opn.redeployable, std::move(result_cb));
+  if (stream_managers_.empty())
+    stream_ticks_.stop();
+}
+
+invoke_message_result
+scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  // Fetches a stream manger from a behavior.
+  struct visitor : detail::invoke_result_visitor {
+    void operator()() override {
+      // nop
+    }
+
+    void operator()(error&) override {
+      // nop
+    }
+
+    void operator()(message&) override {
+      // nop
+    }
+
+    void operator()(const none_t&) override {
+      // nop
+    }
+  };
+  // Extract the handshake part of the message.
+  CAF_ASSERT(x.content().match_elements<open_stream_msg>());
+  auto& osm = x.content().get_mutable_as<open_stream_msg>(0);
+  visitor f;
+  // Utility lambda for aborting the stream on error.
+  auto fail = [&](sec x, const char* reason) {
+    stream_slots path_id{osm.slot, 0};
+    inbound_path::emit_irregular_shutdown(this, path_id, osm.prev_stage,
+                                          make_error(x, reason));
+    auto rp = make_response_promise();
+    rp.deliver(sec::stream_init_failed);
+  };
+  // Utility for invoking the default handler.
+  auto fallback = [&] {
+    auto sres = call_handler(default_handler_, this, x);
+    switch (sres.flag) {
+      default:
+        CAF_LOG_DEBUG("default handler was called for open_stream_msg:"
+                      << osm.msg);
+        fail(sec::stream_init_failed, "dropped open_stream_msg (no match)");
+        return im_dropped;
+      case rt_skip:
+        CAF_LOG_DEBUG("default handler skipped open_stream_msg:"
+                      << osm.msg);
+        return im_skipped;
+    }
+  };
+  // Invoke behavior and dispatch on the result.
+  auto& bs = bhvr_stack();
+  if (bs.empty())
+    return fallback();
+  auto res = (bs.back())(f, osm.msg);
+  switch (res) {
+    case match_case::result::no_match:
+      CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
+      return fallback();
+    case match_case::result::match: {
+      /*
+      if (f.ptr == nullptr) {
+        CAF_LOG_WARNING("actor did not return a stream manager after "
+                        "handling open_stream_msg");
+        fail(sec::stream_init_failed, "behavior did not create a manager");
+        return im_dropped;
+      }
+      stream_slots path_id{osm.slot, f.in_slot};
+      auto path = make_inbound_path(f.ptr, path_id, std::move(osm.prev_stage));
+      CAF_ASSERT(path != nullptr);
+      path->emit_ack_open(this, actor_cast<actor_addr>(osm.original_stage));
+      // Propagate handshake down the pipeline.
+      build_pipeline(f.in_slot, f.out_slot, std::move(f.ptr));
+      */
+      return im_success;
+    }
+    default:
+      CAF_LOG_DEBUG("behavior skipped open_stream_msg:" << osm.msg);
+      return im_skipped; // nop
+  }
+}
+
+actor_clock::time_point
+scheduled_actor::advance_streams(actor_clock::time_point now) {
+  CAF_LOG_TRACE("");
+  if (!stream_ticks_.started()) {
+    CAF_LOG_DEBUG("tick emitter not started yet");
+    return actor_clock::time_point::max();
+  }
+  /// Advance time for driving forced batches and credit.
+  auto bitmask = stream_ticks_.timeouts(now, {max_batch_delay_ticks_,
+                                              credit_round_ticks_});
+  // Force batches on all output paths.
+  if ((bitmask & 0x01) != 0) {
+    for (auto& kvp : stream_managers_)
+      kvp.second->out().force_emit_batches();
+  }
+  // Fill up credit on each input path.
+  if ((bitmask & 0x02) != 0) {
+    auto cycle = stream_ticks_.interval();
+    cycle *= credit_round_ticks_;
+    auto bc_us = home_system().config().streaming_desired_batch_complexity_us;
+    auto bc = std::chrono::microseconds(bc_us);
+    auto& qs = get<2>(mailbox_.queue().queues()).queues();
+    for (auto& kvp : qs) {
+      auto inptr = kvp.second.policy().handler.get();
+      inptr->emit_ack_batch(this, kvp.second.total_task_size(), cycle, bc);
+    }
+  }
+  return stream_ticks_.next_timeout(now, {max_batch_delay_ticks_,
+                                          credit_round_ticks_});
 }
 
 } // namespace caf

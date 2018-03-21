@@ -49,21 +49,23 @@ public:
   virtual time_point now() const noexcept;
 
   /// Returns the difference between `t0` and `t1`, allowing the clock to
-  /// return any arbitrary value depending on the measurement that took place.
-  virtual duration_type difference(atom_value measurement, time_point t0,
-                                   time_point t1) const noexcept;
+  /// return an arbitrary value depending on the measurement that took place
+  /// and the units measured.
+  virtual duration_type difference(atom_value measurement, long units,
+                                   time_point t0, time_point t1) const noexcept;
 
   /// Schedules a `timeout_msg` for `self` at time point `t`, overriding any
   /// previous receive timeout.
-  virtual void set_receive_timeout(time_point t, abstract_actor* self,
-                                   uint32_t id) = 0;
+  virtual void set_ordinary_timeout(time_point t, abstract_actor* self,
+                                   atom_value type, uint64_t id) = 0;
 
   /// Schedules a `sec::request_timeout` for `self` at time point `t`.
   virtual void set_request_timeout(time_point t, abstract_actor* self,
                                    message_id id) = 0;
 
   /// Cancels a pending receive timeout.
-  virtual void cancel_receive_timeout(abstract_actor* self) = 0;
+  virtual void cancel_ordinary_timeout(abstract_actor* self,
+                                       atom_value type) = 0;
 
   /// Cancels the pending request timeout for `id`.
   virtual void cancel_request_timeout(abstract_actor* self, message_id id) = 0;
@@ -78,6 +80,9 @@ public:
   /// Schedules an arbitrary message to `target` for time point `t`.
   virtual void schedule_message(time_point t, group target,
                                 strong_actor_ptr sender, message content) = 0;
+
+  /// Cancels all timeouts and scheduled messages.
+  virtual void cancel_all() = 0;
 };
 
 } // namespace caf

@@ -19,43 +19,76 @@
 #ifndef CAF_STREAM_SINK_TRAIT_HPP
 #define CAF_STREAM_SINK_TRAIT_HPP
 
-#include "caf/message.hpp"
 #include "caf/make_message.hpp"
+#include "caf/message.hpp"
+#include "caf/stream_sink.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
-template <class Fun, class Fin>
+namespace detail {
+
+// -- invoke helper to support element-wise and batch-wise processing ----------
+
+struct stream_sink_trait_invoke_one {
+  template <class F, class State, class In>
+  static void invoke(F& f, State& st, std::vector<In>& xs) {
+    for (auto& x : xs)
+      f(st, std::move(x));
+  }
+};
+
+struct stream_sink_trait_invoke_all {
+  template <class F, class State, class In>
+  static void invoke(F& f, State& st, std::vector<In>& xs) {
+    f(st, xs);
+  }
+};
+
+} // namespace detail
+
+// -- trait implementation -----------------------------------------------------
+
+/// Base type for all sink traits.
+template <class State, class In>
+struct stream_sink_trait_base {
+  /// Defines the state element for the function objects.
+  using state = State;
+
+  /// Defines the type of a single stream element.
+  using input = In;
+
+  /// Defines a pointer to a sink.
+  using pointer = stream_sink_ptr<input>;
+};
+
+/// Defines required type aliases for stream sinks.
+template <class Fun>
 struct stream_sink_trait;
 
-template <class State, class In, class Out>
-struct stream_sink_trait<void (State&, In), Out (State&)> {
-  using state = State;
-  using input = In;
-  using output = Out;
-  template <class F>
-  static message make_result(state& st, F f) {
-    return make_message(f(st));
-  }
-};
-
+/// Specializes the trait for element-wise processing.
 template <class State, class In>
-struct stream_sink_trait<void (State&, In), void (State&)> {
-  using state = State;
-  using input = In;
-  using output = void;
-  template <class F>
-  static message make_result(state& st, F& f) {
-    f(st);
-    return make_message();
-  }
+struct stream_sink_trait<void(State&, In)>
+    : stream_sink_trait_base<State, In> {
+  /// Defines a helper for dispatching to the processing function object.
+  using process = detail::stream_sink_trait_invoke_one;
 };
 
-template <class Fun, class Fin>
+/// Specializes the trait for batch-wise processing.
+template <class State, class In>
+struct stream_sink_trait<void(State&, std::vector<In>&)>
+    : stream_sink_trait_base<State, In> {
+  /// Defines a helper for dispatching to the processing function object.
+  using process = detail::stream_sink_trait_invoke_all;
+};
+
+// -- convenience alias --------------------------------------------------------
+
+/// Derives a sink trait from the signatures of Fun and Fin.
+template <class Fun>
 using stream_sink_trait_t =
-  stream_sink_trait<typename detail::get_callable_trait<Fun>::fun_sig,
-                    typename detail::get_callable_trait<Fin>::fun_sig>;
+  stream_sink_trait<typename detail::get_callable_trait<Fun>::fun_sig>;
 
 } // namespace caf
 

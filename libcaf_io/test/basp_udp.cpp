@@ -545,7 +545,7 @@ public:
                 actor_cast<strong_actor_ptr>(whom), std::move(sigs), "", false);
     CAF_MESSAGE("publish from tmp to mma with port _");
     expect((atom_value, uint16_t, strong_actor_ptr, sig_t, std::string, bool),
-           from(tmp).to(mma).with(_));
+           from(tmp).to(mma));
     CAF_MESSAGE("publish: from mma to tmp with port " << port);
     expect((uint16_t), from(mma).to(tmp).with(port));
   }
@@ -618,7 +618,7 @@ CAF_TEST(remote_address_and_port_udp) {
   self()->send(mm, get_atom::value, mars().id);
   do {
     mpx()->exec_runnable();
-  } while (!self()->has_next_message());
+  } while (self()->mailbox().empty());
   CAF_MESSAGE("receive result of MM");
   self()->receive(
     [&](const node_id& nid, const std::string& addr, uint16_t port) {

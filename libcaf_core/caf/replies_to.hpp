@@ -22,6 +22,8 @@
 #include <string>
 
 #include "caf/illegal_message_element.hpp"
+#include "caf/output_stream.hpp"
+#include "caf/stream.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_pair.hpp"
@@ -37,32 +39,10 @@ std::string replies_to_type_name(size_t input_size,
 /// @endcond
 
 template <class...>
-struct output_stream {};
-
-template <class...>
 struct output_tuple {};
 
 template <class Input, class Output>
 struct typed_mpi {};
-
-/*
-<detail::type_list<Is...>,
-                 detail::type_list<Ls...>> {
-  static_assert(sizeof...(Is) > 0, "template parameter pack Is empty");
-  static_assert(sizeof...(Ls) > 0, "template parameter pack Ls empty");
-  using input = detail::type_list<Is...>;
-  using output = detail::type_list<Ls...>;
-  static_assert(!detail::tl_exists<
-                  input_types,
-                  is_illegal_message_element
-                >::value
-                && !detail::tl_exists<
-                  output_types,
-                  is_illegal_message_element
-                >::value,
-                "interface definition contains an illegal message type");
-};
-*/
 
 template <class... Is>
 struct replies_to {
@@ -70,8 +50,9 @@ struct replies_to {
   using with = typed_mpi<detail::type_list<Is...>, output_tuple<Os...>>;
 
   /// @private
-  template <class... Os>
-  using with_stream = typed_mpi<detail::type_list<Is...>, output_stream<Os...>>;
+  template <class O, class... Os>
+  using with_stream = typed_mpi<detail::type_list<Is...>,
+                                output_stream<O, Os...>>;
 };
 
 template <class... Is>

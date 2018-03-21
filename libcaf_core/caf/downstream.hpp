@@ -48,6 +48,11 @@ public:
     buf_.emplace_back(std::forward<Ts>(xs)...);
   }
 
+  template <class Iterator, class Sentinel>
+  void append(Iterator first, Sentinel last) {
+    buf_.insert(buf_.end(), first, last);
+  }
+
   // @private
   queue_type& buf() {
     return buf_;

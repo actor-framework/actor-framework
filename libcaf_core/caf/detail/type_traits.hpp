@@ -490,6 +490,20 @@ public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
+/// Checks wheter `F` is callable with arguments of types `Ts...`.
+template <class F, class... Ts>
+struct is_callable_with {
+  template <class U>
+  static auto sfinae(U*)
+  -> decltype((std::declval<U&>())(std::declval<Ts>()...), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<F>(nullptr));
+  static constexpr bool value = type::value;
+};
+
 /// Checks wheter `F` takes mutable references.
 ///
 /// A manipulator is a functor that manipulates its arguments via
@@ -543,6 +557,19 @@ template <class T>
 class has_name<T, true> {
 public:
   static constexpr bool value = false;
+};
+
+template <class T>
+class has_peek_all {
+private:
+  template <class U>
+  static int fun(const U*,
+                 decltype(std::declval<U&>().peek_all(unit))* = nullptr);
+
+  static char fun(const void*);
+
+public:
+  static constexpr bool value = sizeof(fun(static_cast<T*>(nullptr))) > 1;
 };
 
 CAF_HAS_MEMBER_TRAIT(size);
@@ -626,6 +653,34 @@ struct transfer_const<const T, U> {
 
 template <class T, class U>
 using transfer_const_t = typename transfer_const<T, U>::type;
+
+/// Checks whether `T` is an `actor` or a `typed_actor<...>`.
+template <class T>
+struct is_actor_handle : std::false_type {};
+
+template <>
+struct is_actor_handle<actor> : std::true_type {};
+
+template <class... Ts>
+struct is_actor_handle<typed_actor<Ts...>> : std::true_type {};
+
+template <class T>
+struct is_stream : std::false_type {};
+
+template <class T>
+struct is_stream<stream<T>> : std::true_type {};
+
+template <class T>
+struct is_result : std::false_type {};
+
+template <class T>
+struct is_result<result<T>> : std::true_type {};
+
+template <class T>
+struct is_expected : std::false_type {};
+
+template <class T>
+struct is_expected<expected<T>> : std::true_type {};
 
 } // namespace detail
 } // namespace caf

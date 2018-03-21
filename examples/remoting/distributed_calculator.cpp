@@ -48,31 +48,30 @@ behavior calculator_fun() {
   };
 }
 
-/* State transition of the client for connecting to the server:
- *
- *                    +-------------+
- *                    |    init     |
- *                    +-------------+
- *                           |
- *                           V
- *                    +-------------+
- *                    | unconnected |<------------------\
- *                    +-------------+                   |
- *                           |                          |
- *                           | {connect Host Port}      |
- *                           |                          |
- *                           V                          |
- *                    +-------------+  {error}          |
- *    /-------------->| connecting  |------------------>|
- *    |               +-------------+                   ^
- *    |                      |                          |
- *    |                      | {ok, Calculator}         |
- *    |{connect Host Port}   |                          |
- *    |                      V                          |
- *    |               +-------------+   {DOWN server}   |
- *    \---------------|   running   |-------------------/
- *                    +-------------+
- */
+// State transition of the client for connecting to the server:
+//
+//                    +-------------+
+//                    |    init     |
+//                    +-------------+
+//                           |
+//                           V
+//                    +-------------+
+//                    | unconnected |<------------------\
+//                    +-------------+                   |
+//                           |                          |
+//                           | {connect Host Port}      |
+//                           |                          |
+//                           V                          |
+//                    +-------------+  {error}          |
+//    /-------------->| connecting  |------------------>|
+//    |               +-------------+                   ^
+//    |                      |                          |
+//    |                      | {ok, Calculator}         |
+//    |{connect Host Port}   |                          |
+//    |                      V                          |
+//    |               +-------------+   {DOWN server}   |
+//    \---------------|   running   |-------------------/
+//                    +-------------+
 
 namespace client {
 

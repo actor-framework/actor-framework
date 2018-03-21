@@ -22,6 +22,7 @@
 
 #include "caf/resumable.hpp"
 #include "caf/monitorable_actor.hpp"
+#include "caf/actor_system_config.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -153,17 +154,36 @@ size_t test_coordinator::dispatch() {
   return clock().dispatch();
 }
 
-std::pair<size_t, size_t> test_coordinator::run_dispatch_loop() {
-  std::pair<size_t, size_t> res;
-  size_t i = 0;
-  do {
-    auto x = run();
-    auto y = dispatch();
-    res.first += x;
-    res.second += y;
-    i = x + y;
-  } while (i > 0);
-  return res;
+std::pair<size_t, size_t>
+test_coordinator::run_dispatch_loop(std::function<bool()> predicate,
+                                    timespan cycle) {
+  std::pair<size_t, size_t> res{0, 0};
+  if (cycle.count() == 0) {
+    auto x = system().config().streaming_tick_duration_us();
+    cycle = std::chrono::microseconds(x);
+  }
+  for (;;) {
+    size_t progress = 0;
+    while (try_run_once()) {
+      ++progress;
+      res.first += 1;
+      if (predicate())
+        return res;
+    }
+    clock().current_time += cycle;
+    while (dispatch_once()) {
+      ++progress;
+      res.second += 1;
+      if (predicate())
+        return res;
+    }
+    if (progress == 0)
+      return res;
+  }
+}
+
+std::pair<size_t, size_t> test_coordinator::run_dispatch_loop(timespan cycle) {
+  return run_dispatch_loop([] { return false; }, cycle);
 }
 
 void test_coordinator::inline_next_enqueue() {

@@ -113,9 +113,7 @@ private:
   I last_;
 };
 
-/**
- * @relates input_range
- */
+/// @relates input_range
 template <class I>
 input_range_impl<I> make_input_range(I first, I last) {
   return {first, last};

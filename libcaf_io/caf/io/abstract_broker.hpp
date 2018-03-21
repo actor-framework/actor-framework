@@ -24,7 +24,6 @@
 
 #include "caf/scheduled_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
-#include "caf/detail/intrusive_partitioned_list.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -425,7 +424,6 @@ private:
   scribe_map scribes_;
   doorman_map doormen_;
   datagram_servant_map datagram_servants_;
-  detail::intrusive_partitioned_list<mailbox_element, detail::disposer> cache_;
   std::vector<char> dummy_wr_buf_;
 };
 

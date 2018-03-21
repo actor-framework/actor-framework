@@ -46,6 +46,7 @@ void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
 }
 
 void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {
+  CAF_PUSH_AID_FROM_PTR(this);
   CAF_ASSERT(eu != nullptr);
   CAF_ASSERT(eu == &backend());
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
@@ -64,7 +65,6 @@ bool abstract_broker::cleanup(error&& reason, execution_unit* host) {
   CAF_ASSERT(doormen_.empty());
   CAF_ASSERT(scribes_.empty());
   CAF_ASSERT(datagram_servants_.empty());
-  cache_.clear();
   return local_actor::cleanup(std::move(reason), host);
 }
 

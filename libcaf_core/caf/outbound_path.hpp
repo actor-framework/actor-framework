@@ -24,39 +24,121 @@
 #include <cstdint>
 #include <cstddef>
 
-#include "caf/fwd.hpp"
-#include "caf/stream_id.hpp"
-#include "caf/stream_msg.hpp"
-#include "caf/stream_aborter.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/downstream_msg.hpp"
+#include "caf/fwd.hpp"
+#include "caf/logger.hpp"
+#include "caf/stream_aborter.hpp"
+#include "caf/stream_slot.hpp"
+#include "caf/system_messages.hpp"
+
+#include "caf/detail/type_traits.hpp"
 
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
-/// State for a single path to a sink on a `stream_scatterer`.
+/// State for a single path to a sink of a `downstream_manager`.
 class outbound_path {
 public:
+  // -- member types -----------------------------------------------------------
+
+  /// Propagates graceful shutdowns.
+  using regular_shutdown = downstream_msg::close;
+
+  /// Propagates errors.
+  using irregular_shutdown = downstream_msg::forced_close;
+
+  /// Stores batches until receiving corresponding ACKs.
+  using cache_type = std::deque<std::pair<int64_t, downstream_msg::batch>>;
+
+  // -- constants --------------------------------------------------------------
+
   /// Stream aborter flag to monitor a path.
   static constexpr const auto aborter_type = stream_aborter::sink_aborter;
 
-  /// Message type for propagating graceful shutdowns.
-  using regular_shutdown = stream_msg::close;
+  // -- constructors, destructors, and assignment operators --------------------
 
-  /// Message type for propagating errors.
-  using irregular_shutdown = stream_msg::forced_close;
+  /// Constructs a pending path for given slot and handle.
+  outbound_path(stream_slot sender_slot, strong_actor_ptr receiver_hdl);
 
-  /// Stores information about the initiator of the steam.
-  struct client_data {
-    strong_actor_ptr hdl;
-    message_id mid;
-  };
+  ~outbound_path();
 
-  /// Pointer to the parent actor.
-  local_actor* self;
+  // -- downstream communication -----------------------------------------------
 
-  /// Stream ID used by the sink.
-  stream_id sid;
+  /// Sends an `open_stream_msg` handshake.
+  static void emit_open(local_actor* self, stream_slot slot,
+                        strong_actor_ptr to, message handshake_data,
+                        stream_priority prio);
+
+  /// Sends a `downstream_msg::batch` on this path. Decrements `open_credit` by
+  /// `xs_size` and increments `next_batch_id` by 1.
+  void emit_batch(local_actor* self, long xs_size, message xs);
+
+  template <class Iterator>
+  Iterator emit_batches_impl(local_actor* self, Iterator i, Iterator e,
+                             bool force_underfull) {
+    CAF_LOG_TRACE(CAF_ARG(force_underfull));
+    using type = detail::decay_t<decltype(*i)>;
+    while (std::distance(i, e) >= static_cast<ptrdiff_t>(desired_batch_size)) {
+      std::vector<type> tmp{std::make_move_iterator(i),
+                            std::make_move_iterator(i + desired_batch_size)};
+      emit_batch(self, desired_batch_size, make_message(std::move(tmp)));
+      i += desired_batch_size;
+    }
+    if (i != e && force_underfull) {
+      std::vector<type> tmp{std::make_move_iterator(i),
+                            std::make_move_iterator(e)};
+      emit_batch(self, tmp.size(), make_message(std::move(tmp)));
+      return e;
+    }
+    return i;
+  }
+
+  /// Calls `emit_batch` for each chunk in the cache, whereas each chunk is of
+  /// size `desired_batch_size`. Does nothing for pending paths.
+  template <class T>
+  void emit_batches(local_actor* self, std::vector<T>& cache,
+                    bool force_underfull) {
+    CAF_LOG_TRACE(CAF_ARG(cache) << CAF_ARG(force_underfull));
+    if (pending())
+      return;
+    CAF_ASSERT(desired_batch_size > 0);
+    auto first = cache.begin();
+    auto last = first + std::min(open_credit, static_cast<long>(cache.size()));
+    if (first == last)
+      return;
+    auto i = emit_batches_impl(self, first, last, force_underfull);
+    if (i == cache.end()) {
+      cache.clear();
+    } else if (i != first) {
+      cache.erase(first, i);
+    }
+  }
+
+  /// Sends a `downstream_msg::close` on this path.
+  void emit_regular_shutdown(local_actor* self);
+
+  /// Sends a `downstream_msg::forced_close` on this path.
+  void emit_irregular_shutdown(local_actor* self, error reason);
+
+  /// Sends a `downstream_msg::forced_close`.
+  static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
+                                      const strong_actor_ptr& hdl,
+                                      error reason);
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns whether this path is pending, i.e., didn't receive an `ack_open`
+  /// yet.
+  inline bool pending() const noexcept {
+    return slots.receiver == invalid_stream_slot;
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  /// Slot IDs for sender (self) and receiver (hdl).
+  stream_slots slots;
 
   /// Handle to the sink.
   strong_actor_ptr hdl;
@@ -64,57 +146,22 @@ public:
   /// Next expected batch ID.
   int64_t next_batch_id;
 
-  /// Currently available credit for this path.
+  /// Currently available credit on this path.
   long open_credit;
 
-  /// Stores whether the downstream actor is failsafe, i.e., allows the runtime
-  /// to redeploy it on failure. If this field is set to `false` then
-  /// `unacknowledged_batches` is unused.
-  bool redeployable;
+  /// Ideal batch size. Configured by the sink.
+  uint64_t desired_batch_size;
 
-  /// Next expected batch ID to be acknowledged. Actors can receive a more
-  /// advanced batch ID in an ACK message, since CAF uses accumulative ACKs.
+  /// ID of the first unacknowledged batch. Note that CAF uses accumulative
+  /// ACKs, i.e., receiving an ACK with a higher ID is not an error.
   int64_t next_ack_id;
-
-  /// Caches batches until receiving an ACK.
-  std::deque<std::pair<int64_t, stream_msg::batch>> unacknowledged_batches;
-
-  /// Caches the initiator of the stream (client) with the original request ID
-  /// until the stream handshake is either confirmed or aborted. Once
-  /// confirmed, the next stage takes responsibility for answering to the
-  /// client.
-  client_data cd;
-
-  /// Stores whether an error occurred during stream processing.
-  error shutdown_reason;
-
-  /// Constructs a path for given handle and stream ID.
-  outbound_path(local_actor* selfptr, const stream_id& id,
-                strong_actor_ptr ptr);
-
-  ~outbound_path();
-
-  /// Sets `open_credit` to `initial_credit` and clears `cached_handshake`.
-  void handle_ack_open(long initial_credit);
-
-  void emit_open(strong_actor_ptr origin,
-                 mailbox_element::forwarding_stack stages, message_id mid,
-                 message handshake_data, stream_priority prio,
-                 bool is_redeployable);
-
-  /// Emits a `stream_msg::batch` on this path, decrements `open_credit` by
-  /// `xs_size` and increments `next_batch_id` by 1.
-  void emit_batch(long xs_size, message xs);
-
-  static void emit_irregular_shutdown(local_actor* self, const stream_id& sid,
-                                      const strong_actor_ptr& hdl,
-                                      error reason);
 };
 
+/// @relates outbound_path
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
-  return f(meta::type_name("outbound_path"), x.hdl, x.sid, x.next_batch_id,
-           x.open_credit, x.redeployable, x.unacknowledged_batches);
+  return f(meta::type_name("outbound_path"), x.slots, x.hdl, x.next_batch_id,
+           x.open_credit, x.desired_batch_size, x.next_ack_id);
 }
 
 } // namespace caf

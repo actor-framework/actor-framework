@@ -102,9 +102,18 @@ void anon_send(const Dest& dest, Ts&&... xs) {
   using token = detail::type_list<detail::strip_and_convert_t<Ts>...>;
   static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                 "receiver does not accept given message");
-  if (dest)
+  if (dest != nullptr)
     dest->eq_impl(make_message_id(P), nullptr, nullptr,
                   std::forward<Ts>(xs)...);
+}
+
+/// Anonymously sends `dest` a message.
+template <message_priority P = message_priority::normal, class... Ts>
+void anon_send(const strong_actor_ptr& dest, Ts&&... xs) {
+  static_assert(sizeof...(Ts) > 0, "no message to send");
+  if (dest != nullptr)
+    dest->get()->eq_impl(make_message_id(P), nullptr, nullptr,
+                         std::forward<Ts>(xs)...);
 }
 
 /// Anonymously sends `dest` an exit message.

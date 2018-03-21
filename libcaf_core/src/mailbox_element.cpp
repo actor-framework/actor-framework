@@ -18,25 +18,43 @@
 
 #include "caf/mailbox_element.hpp"
 
+#include "caf/message_builder.hpp"
+#include "caf/type_nr.hpp"
+
 namespace caf {
 
 namespace {
 
+message_id dynamic_category_correction(const message& msg, message_id mid) {
+  auto tt = msg.type_token();
+  if (tt == make_type_token<downstream_msg>())
+    return mailbox_category_corrector<downstream_msg>::apply(mid);
+  if (tt == make_type_token<upstream_msg>())
+    return mailbox_category_corrector<upstream_msg>::apply(mid);
+  return mid;
+}
+
 /// Wraps a `message` into a mailbox element.
-class mailbox_element_wrapper : public mailbox_element {
+class mailbox_element_wrapper final : public mailbox_element {
 public:
   mailbox_element_wrapper(strong_actor_ptr&& x0, message_id x1,
                           forwarding_stack&& x2, message&& x3)
-      : mailbox_element(std::move(x0), x1, std::move(x2)),
+      : mailbox_element(std::move(x0), dynamic_category_correction(x3, x1),
+                        std::move(x2)),
         msg_(std::move(x3)) {
-    // nop
+    /// Make sure that `content` can access the raw pointer safely.
+    if (msg_.vals().raw_ptr() == nullptr) {
+      message_builder mb;
+      msg_ = mb.to_message();
+    }
   }
 
   type_erased_tuple& content() override {
-    auto ptr = msg_.vals().raw_ptr();
-    if (ptr != nullptr)
-      return *ptr;
-    return dummy_;
+    return msg_;
+  }
+
+  const type_erased_tuple& content() const override {
+    return msg_.content();
   }
 
   message move_content_to_message() override {
@@ -54,19 +72,13 @@ private:
 
 } // namespace <anonymous>
 
-mailbox_element::mailbox_element()
-    : next(nullptr),
-      prev(nullptr),
-      marked(false) {
+mailbox_element::mailbox_element() {
   // nop
 }
 
 mailbox_element::mailbox_element(strong_actor_ptr&& x, message_id y,
                                  forwarding_stack&& z)
-    : next(nullptr),
-      prev(nullptr),
-      marked(false),
-      sender(std::move(x)),
+    :sender(std::move(x)),
       mid(y),
       stages(std::move(z)) {
   // nop
@@ -76,25 +88,9 @@ mailbox_element::~mailbox_element() {
   // nop
 }
 
-type_erased_tuple& mailbox_element::content() {
-  return dummy_;
-}
-
-message mailbox_element::move_content_to_message() {
-  return {};
-}
-
-message mailbox_element::copy_content_to_message() const {
-  return {};
-}
-
-const type_erased_tuple& mailbox_element::content() const {
-  return const_cast<mailbox_element*>(this)->content();
-}
-
-mailbox_element_ptr make_mailbox_element(strong_actor_ptr sender, message_id id,
-                                         mailbox_element::forwarding_stack stages,
-                                         message msg) {
+mailbox_element_ptr
+make_mailbox_element(strong_actor_ptr sender, message_id id,
+                     mailbox_element::forwarding_stack stages, message msg) {
   auto ptr = new mailbox_element_wrapper(std::move(sender), id,
                                          std::move(stages), std::move(msg));
   return mailbox_element_ptr{ptr};

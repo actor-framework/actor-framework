@@ -46,8 +46,8 @@
 #include "caf/composable_behavior_based_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 
-#include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/init_fun_factory.hpp"
+#include "caf/detail/spawn_fwd.hpp"
 
 namespace caf {
 
@@ -502,6 +502,26 @@ public:
   /// @warning must be called by thread which is about to terminate
   void thread_terminates();
 
+  template <class C, spawn_options Os, class... Ts>
+  infer_handle_from_class_t<C>
+  spawn_impl(actor_config& cfg, Ts&&... xs) {
+    static_assert(is_unbound(Os),
+                  "top-level spawns cannot have monitor or link flag");
+    // TODO: use `if constexpr` when switching to C++17
+    if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
+      cfg.flags |= abstract_actor::is_detached_flag;
+    if (has_hide_flag(Os))
+      cfg.flags |= abstract_actor::is_hidden_flag;
+    if (cfg.host == nullptr)
+      cfg.host = dummy_execution_unit();
+    CAF_SET_LOGGER_SYS(this);
+    auto res = make_actor<C>(next_actor_id(), node(), this,
+                             cfg, std::forward<Ts>(xs)...);
+    auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
+    ptr->launch(cfg.host, has_lazy_init_flag(Os), has_hide_flag(Os));
+    return res;
+  }
+
   /// @endcond
 
 private:
@@ -517,28 +537,6 @@ private:
                                             execution_unit* ctx,
                                             bool check_interface,
                                             optional<const mpi&> expected_ifs);
-
-  template <class C, spawn_options Os, class... Ts>
-  infer_handle_from_class_t<C>
-  spawn_impl(actor_config& cfg, Ts&&... xs) {
-    static_assert(is_unbound(Os),
-                  "top-level spawns cannot have monitor or link flag");
-    cfg.flags = has_priority_aware_flag(Os)
-                ? abstract_actor::is_priority_aware_flag
-                : 0;
-    if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
-      cfg.flags |= abstract_actor::is_detached_flag;
-    if (has_hide_flag(Os))
-      cfg.flags |= abstract_actor::is_hidden_flag;
-    if (!cfg.host)
-      cfg.host = dummy_execution_unit();
-    CAF_SET_LOGGER_SYS(this);
-    auto res = make_actor<C>(next_actor_id(), node(), this,
-                             cfg, std::forward<Ts>(xs)...);
-    auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
-    ptr->launch(cfg.host, has_lazy_init_flag(Os), has_hide_flag(Os));
-    return res;
-  }
 
   /// Sets the internal actor for dynamic spawn operations.
   inline void spawn_serv(strong_actor_ptr x) {

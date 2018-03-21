@@ -23,15 +23,13 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "caf/fwd.hpp"
-#include "caf/group.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/fwd.hpp"
+#include "caf/group.hpp"
+#include "caf/stream_slot.hpp"
 
 #include "caf/meta/type_name.hpp"
-
-#include "caf/detail/tbind.hpp"
-#include "caf/detail/type_list.hpp"
 
 namespace caf {
 
@@ -82,14 +80,42 @@ typename Inspector::result_type inspect(Inspector& f, group_down_msg& x) {
 /// Signalizes a timeout event.
 /// @note This message is handled implicitly by the runtime system.
 struct timeout_msg {
+  /// Type of the timeout (either `receive_atom` or `cycle_atom`).
+  atom_value type;
   /// Actor-specific timeout ID.
-  uint32_t timeout_id;
+  uint64_t timeout_id;
 };
 
 /// @relates timeout_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, timeout_msg& x) {
-  return f(meta::type_name("timeout_msg"), x.timeout_id);
+  return f(meta::type_name("timeout_msg"), x.type, x.timeout_id);
+}
+
+/// Demands the receiver to open a new stream from the sender to the receiver.
+struct open_stream_msg {
+  /// Reserved slot on the source.
+  stream_slot slot;
+
+  /// Contains a type-erased stream<T> object as first argument followed by
+  /// any number of user-defined additional handshake data.
+  message msg;
+
+  /// Identifies the previous stage in the pipeline.
+  strong_actor_ptr prev_stage;
+
+  /// Identifies the original receiver of this message.
+  strong_actor_ptr original_stage;
+
+  /// Configures the priority for stream elements.
+  stream_priority priority;
+};
+
+/// @relates open_stream_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
+  return f(meta::type_name("open_stream_msg"), x.slot, x.msg, x.prev_stage,
+           x.original_stage, x.priority);
 }
 
 } // namespace caf

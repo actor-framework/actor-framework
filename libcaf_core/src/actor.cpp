@@ -109,7 +109,7 @@ actor actor::splice_impl(std::initializer_list<actor> xs) {
 }
 
 bool operator==(const actor& lhs, abstract_actor* rhs) {
-  return actor_cast<abstract_actor*>(lhs) == rhs;
+  return lhs ? actor_cast<abstract_actor*>(lhs) == rhs : rhs == nullptr;
 }
 
 bool operator==(abstract_actor* lhs, const actor& rhs) {

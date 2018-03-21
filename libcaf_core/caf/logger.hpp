@@ -37,10 +37,14 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/deep_to_string.hpp"
 
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/singly_linked.hpp"
+
+#include "caf/detail/arg_wrapper.hpp"
+#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
-#include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/single_reader_queue.hpp"
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -65,29 +69,69 @@ public:
   friend class actor_system;
 
   /// Encapsulates a single logging event.
-  struct event {
-    /// Intrusive pointer to the next logging event.
-    event* next;
-    /// Intrusive pointer to the previous logging event.
-    event* prev;
+  struct event : intrusive::singly_linked<event> {
+    event() = default;
+
+    event(int lvl, const char* cat, const char* fun, const char* fn, int line,
+          std::string msg, std::thread::id t, actor_id a, timestamp ts);
+
     /// Level/priority of the event.
     int level;
+
     /// Name of the category (component) logging the event.
     const char* category_name;
+
     /// Name of the current context as reported by `__PRETTY_FUNCTION__`.
     const char* pretty_fun;
+
     /// Name of the current file.
     const char* file_name;
+
     /// Current line in the file.
     int line_number;
+
     /// User-provided message.
     std::string message;
+
     /// Thread ID of the caller.
     std::thread::id tid;
+
     /// Actor ID of the caller.
     actor_id aid;
+
     /// Timestamp of the event.
     timestamp tstamp;
+  };
+
+  struct policy {
+    // -- member types ---------------------------------------------------------
+
+    using mapped_type = event;
+
+    using task_size_type = long;
+
+    using deleter_type = std::default_delete<event>;
+
+    using unique_pointer = std::unique_ptr<event, deleter_type>;
+
+    using queue_type = intrusive::drr_queue<policy>;
+
+    using deficit_type = long;
+
+    // -- static member functions ----------------------------------------------
+
+    static inline void release(mapped_type* ptr) noexcept {
+      detail::disposer d;
+      d(ptr);
+    }
+
+    static inline task_size_type task_size(const mapped_type&) noexcept {
+      return 1;
+    }
+
+    static inline deficit_type quantum(const queue_type&, deficit_type x) {
+      return x;
+    }
   };
 
   /// Internal representation of format string entites.
@@ -119,22 +163,6 @@ public:
   /// Stores a parsed format string as list of fields.
   using line_format = std::vector<field>;
 
-  /// Enables automagical string conversion for `CAF_ARG`.
-  template <class T>
-  struct arg_wrapper {
-    const char* name;
-    const T& value;
-    arg_wrapper(const char* x, const T& y) : name(x), value(y) {
-      // nop
-    }
-  };
-
-  /// Used to implement `CAF_ARG`.
-  template <class T>
-  static arg_wrapper<T> make_arg_wrapper(const char* name, const T& value) {
-    return {name, value};
-  }
-
   /// Utility class for building user-defined log messages with `CAF_ARG`.
   class line_builder {
   public:
@@ -150,7 +178,7 @@ public:
     }
 
     template <class T>
-    line_builder& operator<<(const arg_wrapper<T>& x) {
+    line_builder& operator<<(const detail::arg_wrapper<T>& x) {
       if (behind_arg_)
         str_ += ", ";
       else if (!str_.empty())
@@ -228,6 +256,9 @@ public:
   /// @warning The returned vector can have pointers into `format_str`.
   static line_format parse_format(const char* format_str);
 
+  /// Skips path in `filename`.
+  static const char* skip_path(const char* filename);
+
   /// Returns a string representation of the joined groups of `x` if `x` is an
   /// actor with the `subscriber` mixin.
   template <class T>
@@ -276,7 +307,7 @@ private:
   std::thread thread_;
   std::mutex queue_mtx_;
   std::condition_variable queue_cv_;
-  detail::single_reader_queue<event> queue_;
+  intrusive::fifo_inbox<policy> queue_;
   std::thread::id parent_thread_;
   timestamp t0_;
   line_format file_format_;
@@ -303,9 +334,9 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_LOG_LEVEL_DEBUG 3
 #define CAF_LOG_LEVEL_TRACE 4
 
-#define CAF_ARG(argument) caf::logger::make_arg_wrapper(#argument, argument)
+#define CAF_ARG(argument) caf::detail::make_arg_wrapper(#argument, argument)
 
-#define CAF_ARG2(argname, argval) caf::logger::make_arg_wrapper(argname, argval)
+#define CAF_ARG2(argname, argval) caf::detail::make_arg_wrapper(argname, argval)
 
 #ifdef CAF_MSVC
 #define CAF_PRETTY_FUN __FUNCSIG__
@@ -343,7 +374,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
         && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
       CAF_UNIFYN(caf_logger)                                                   \
         ->log(new ::caf::logger::event{                                        \
-          nullptr, nullptr, loglvl, component, CAF_PRETTY_FUN, __FILE__,       \
+          loglvl, component, CAF_PRETTY_FUN, caf::logger::skip_path(__FILE__), \
           __LINE__, (::caf::logger::line_builder{} << message).get(),          \
           ::std::this_thread::get_id(),                                        \
           CAF_UNIFYN(caf_logger)->thread_local_aid(),                          \

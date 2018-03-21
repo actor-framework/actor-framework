@@ -22,11 +22,10 @@
 #include <memory>
 #include <unordered_map>
 
+#include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/stream_manager.hpp"
-#include "caf/random_gatherer.hpp"
 #include "caf/scheduled_actor.hpp"
-#include "caf/broadcast_scatterer.hpp"
+#include "caf/stream_manager.hpp"
 
 namespace caf {
 namespace detail {
@@ -44,80 +43,26 @@ namespace detail {
 /// Policies need to provide the following member types and functions:
 ///
 /// ~~~{.cpp}
-/// struct policy {
-///   /// Any number of user-defined arguments.
-///   policy(...);
-///
-///   /// Tuple of available substream scatterers to subscribers. Each
-///   /// element of the tuple is a subtype of `topic_scatterer<T>` (or
-///   /// provides a similar interface).
-///   using substream_scatterers = ...;
-///
-///   /// A compile-time index type identifying individual substreams.
-///   using substream_index_type = ...;
-///
-///   /// Represent a single topic for filtering stream data.
-///   using topic_type = ...;
-///
-///   /// Groups multiple topics into a single selection filter.
-///   using filter_type = ...;
-///
-///   /// Policy for gathering data from peers.
-///   using gatherer_type = ...;
-///
-///   /// Policy for scattering data to peers.
-///   using scatterer_type = ...;
-///
-///   /// Decides whether a filter applies to a given message.
-///   bool selected(const filter_type& sieve, const message& sand) const;
-///
-///   // + one overload to `selected` for each substream data type.
-///
-///   /// Accesses individual substream scatterers by index.
-///   auto& substream(substream_scatterers&, substream_index_type);
-///
-///   /// Accesses individual substream scatterers by stream ID.
-///   stream_scatterer* substream(substream_scatterers&, const stream_id&);
-///
-///   /// Returns true if the substreams have no data pending and the policy
-///   /// decides to shutdown this peer.
-///   bool at_end() const;
-///
-///   /// Returns true if outgoing data originating on this peer is
-///   /// forwarded to all substreams. Otherwise, the substreams receive data
-///   /// produced on other peers exclusively.
-///   bool substream_local_data() const;
-///
-///   /// Handles a batch if matches the data types managed by any of the
-///   /// substreams. Returns `none` if the batch is a peer message, otherwise
-///   /// the error resulting from handling the batch.
-///   optional<error> batch(const stream_id& sid, const actor_addr& hdl,
-///                         long xs_size, message& xs, int64_t xs_id);
-///
-///   ///
-///   void push_to_substreams(message msg);
+/// TODO
 /// };
 /// ~~~
 template <class Policy>
 class stream_distribution_tree : public stream_manager {
 public:
   // -- nested types -----------------------------------------------------------
-  
+
   using super = stream_manager;
 
-  using gatherer_type = typename Policy::gatherer_type;
-
-  using scatterer_type = typename Policy::scatterer_type;
+  using downstream_manager_type = typename Policy::downstream_manager_type;
 
   // --- constructors and destructors ------------------------------------------
 
   template <class... Ts>
   stream_distribution_tree(scheduled_actor* selfptr, Ts&&... xs)
-      : self_(selfptr),
-        in_(selfptr),
+      : super(selfptr),
         out_(selfptr),
         policy_(this, std::forward<Ts>(xs)...) {
-    // nop
+    continuous(true);
   }
 
   ~stream_distribution_tree() override {
@@ -125,7 +70,7 @@ public:
   }
 
   // -- Accessors --------------------------------------------------------------
- 
+
   inline Policy& policy() {
     return policy_;
   }
@@ -134,109 +79,71 @@ public:
     return policy_;
   }
 
-  void close_remote_input();
-
-
-  // -- Overridden member functions of `stream_manager` ------------------------
-
-  /// Terminates the core actor with log output `log_message` if `at_end`
-  /// returns `true`.
-  void shutdown_if_at_end(const char* log_message) {
-    CAF_IGNORE_UNUSED(log_message);
-    if (policy_.at_end()) {
-      CAF_LOG_DEBUG(log_message);
-      self_->quit(caf::exit_reason::user_shutdown);
-    }
-  }
-
   // -- overridden member functions of `stream_manager` ------------------------
 
-  error ack_open(const stream_id& sid, const actor_addr& rebind_from,
-                 strong_actor_ptr rebind_to, long initial_demand,
-                 bool redeployable) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(rebind_from) << CAF_ARG(rebind_to)
-                  << CAF_ARG(initial_demand) << CAF_ARG(redeployable));
-    auto res = super::ack_open(sid, rebind_from, rebind_to, initial_demand,
-                               redeployable);
-    if (res == none)
-      policy_.ack_open_success(sid, rebind_from, rebind_to);
-    else
-      policy_.ack_open_failure(sid, rebind_from, rebind_to, res);
-    return res;
+  void handle(inbound_path* path, downstream_msg::batch& x) override {
+    CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(x));
+    auto slot = path->slots.receiver;
+    policy_.before_handle_batch(slot, path->hdl);
+    policy_.handle_batch(slot, path->hdl, x.xs);
+    policy_.after_handle_batch(slot, path->hdl);
   }
 
-  error process_batch(message& xs) override {
-    CAF_LOG_TRACE(CAF_ARG(xs));
-    policy_.handle_batch(xs);
-    return none;
+  void handle(inbound_path* path, downstream_msg::close& x) override {
+    CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(x));
+    CAF_IGNORE_UNUSED(x);
+    policy_.path_closed(path->slots.receiver);
   }
 
-  error batch(const stream_id& sid, const actor_addr& hdl, long xs_size,
-              message& xs, int64_t xs_id) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl) << CAF_ARG(xs_size)
-                  << CAF_ARG(xs) << CAF_ARG(xs_id));
-    policy_.before_handle_batch(sid, hdl, xs_size, xs, xs_id);
-    auto res = super::batch(sid, hdl, xs_size, xs, xs_id);
-    policy_.after_handle_batch(sid, hdl, xs_id);
-    push();
-    return res;
+  void handle(inbound_path* path, downstream_msg::forced_close& x) override {
+    CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(x));
+    policy_.path_force_closed(path->slots.receiver, x.reason);
   }
 
-  bool done() const override {
+  bool handle(stream_slots slots, upstream_msg::ack_open& x) override {
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+    auto rebind_from = x.rebind_from;
+    auto rebind_to = x.rebind_to;
+    if (super::handle(slots, x)) {
+      policy_.ack_open_success(slots.receiver, rebind_from, rebind_to);
+      return true;
+    }
+    policy_.ack_open_failure(slots.receiver, rebind_from, rebind_to);
     return false;
   }
 
-  gatherer_type& in() override {
-    return in_;
+  void handle(stream_slots slots, upstream_msg::drop& x) override {
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+    CAF_IGNORE_UNUSED(x);
+    auto slot = slots.receiver;
+    if (out().remove_path(slots.receiver, none, true))
+      policy_.path_dropped(slot);
   }
 
-  scatterer_type& out() override {
+  void handle(stream_slots slots, upstream_msg::forced_drop& x) override {
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+    CAF_IGNORE_UNUSED(x);
+    auto slot = slots.receiver;
+    if (out().remove_path(slots.receiver, x.reason, true))
+      policy_.path_force_dropped(slot, x.reason);
+  }
+
+  bool done() const override {
+    return !continuous() && pending_handshakes_ == 0
+           && inbound_paths_.empty() && out_.clean();
+  }
+
+  bool idle() const noexcept override {
+    // Same as `stream_stage<...>`::idle().
+  return out_.stalled() || (out_.clean() && this->inbound_paths_up_to_date());
+  }
+
+  downstream_manager_type& out() override {
     return out_;
   }
 
-  void downstream_demand(outbound_path*, long) override {
-    CAF_LOG_TRACE("");
-    push();
-    in_.assign_credit(out_.credit());
-  }
-
-  error close(const stream_id& sid, const actor_addr& hdl) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl));
-    if (in_.remove_path(sid, hdl, none, true))
-      return policy_.path_closed(sid, hdl);
-    return none;
-  }
-
-  error drop(const stream_id& sid, const actor_addr& hdl) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl));
-    if (out_.remove_path(sid, hdl, none, true))
-      return policy_.path_dropped(sid, hdl);
-    return none;
-  }
-
-  error forced_close(const stream_id& sid, const actor_addr& hdl,
-                     error reason) override {
-    CAF_LOG_TRACE(CAF_ARG(sid) << CAF_ARG(hdl) << CAF_ARG(reason));
-    if (in_.remove_path(sid, hdl, reason, true))
-      return policy_.path_force_closed(sid, hdl, std::move(reason));
-    return none;
-  }
-
-  error forced_drop(const stream_id& sid, const actor_addr& hdl,
-                     error reason) override {
-    if (out_.remove_path(sid, hdl, reason, true))
-      return policy_.path_force_dropped(sid, hdl, std::move(reason));
-    return none;
-  }
-
-  scheduled_actor* self() {
-    return self_;
-  }
-
 private:
-  scheduled_actor* self_;
-  gatherer_type in_;
-  scatterer_type out_;
+  downstream_manager_type out_;
   Policy policy_;
 };
 

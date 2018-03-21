@@ -29,30 +29,6 @@
 namespace caf {
 namespace detail {
 
-/*
-template <class Input, class X, class... Ts>
-struct mpi_splice_one;
-
-template <class Input, class X>
-struct mpi_splice_one<Input, X> {
-  using type = X;
-};
-
-template <class Input, class X, class... Ts>
-struct mpi_splice_one<Input, X, none_t, Ts...> {
-  using type = none_t;
-};
-
-template <class Input, class... Ys, class... Zs, class... Ts>
-struct mpi_splice_one<Input,
-                      typed_mpi<Input, type_list<Ys...>>,
-                      typed_mpi<Input, type_list<Zs...>>,
-                      Ts...>
-: mpi_splice_one<typed_mpi<type_list<Xs...>, type_list<Ys..., Zs...>>, Ts...> {
-  // combine signatures with same input
-};
-*/
-
 template <class T, class... Lists>
 struct mpi_splice_by_input;
 

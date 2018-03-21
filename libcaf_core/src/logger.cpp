@@ -36,9 +36,10 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/actor_system_config.hpp"
 
+#include "caf/intrusive/task_result.hpp"
+
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/single_reader_queue.hpp"
 
 namespace caf {
 
@@ -112,6 +113,21 @@ inline logger* get_current_logger() {
 
 } // namespace <anonymous>
 
+logger::event::event(int lvl, const char* cat, const char* fun, const char* fn,
+                     int line, std::string msg, std::thread::id t, actor_id a,
+                     timestamp ts)
+    : level(lvl),
+      category_name(cat),
+      pretty_fun(fun),
+      file_name(fn),
+      line_number(line),
+      message(std::move(msg)),
+      tid(std::move(t)),
+      aid(a),
+      tstamp(ts) {
+  // nop
+}
+
 logger::line_builder::line_builder() : behind_arg_(false) {
   // nop
 }
@@ -165,7 +181,7 @@ actor_id logger::thread_local_aid(actor_id aid) {
 void logger::log(event* x) {
   CAF_ASSERT(x->level >= 0 && x->level <= 4);
   if (!inline_output_) {
-    queue_.synchronized_enqueue(queue_mtx_, queue_cv_,x);
+    queue_.synchronized_push_back(queue_mtx_, queue_cv_,x);
   } else {
     std::unique_ptr<event> ptr{x};
     handle_event(*ptr);
@@ -205,7 +221,10 @@ logger::~logger() {
   system_.logger_dtor_cv_.notify_one();
 }
 
-logger::logger(actor_system& sys) : system_(sys), inline_output_(false) {
+logger::logger(actor_system& sys)
+    : system_(sys),
+      inline_output_(false),
+      queue_(policy{}) {
   // nop
 }
 
@@ -265,6 +284,9 @@ void logger::render_fun_prefix(std::ostream& out, const char* pretty_fun) {
   };
   // skip "virtual" prefix if present
   if (strncmp(pretty_fun, "virtual ", std::min<size_t>(strsize, 8)) == 0)
+    jump_to_next_whitespace();
+  // skip "static" prefix if present
+  if (strncmp(pretty_fun, "static ", std::min<size_t>(strsize, 7)) == 0)
     jump_to_next_whitespace();
   // skip return type
   jump_to_next_whitespace();
@@ -377,22 +399,30 @@ logger::line_format logger::parse_format(const char* format_str) {
   return res;
 }
 
+const char* logger::skip_path(const char* path) {
+  auto ptr = strrchr(path, '/');
+  return ptr == nullptr ? path : (ptr + 1);
+}
+
 void logger::run() {
 #if defined(CAF_LOG_LEVEL)
   log_first_line();
   // receive log entries from other threads and actors
-  std::unique_ptr<event> ptr;
-  for (;;) {
-    // make sure we have data to read
-    queue_.synchronized_await(queue_mtx_, queue_cv_);
-    // read & process event
-    ptr.reset(queue_.try_pop());
-    CAF_ASSERT(ptr != nullptr);
+  bool stop = false;
+  auto f = [&](event& x) {
     // empty message means: shut down
-    if (ptr->message.empty())
-      break;
-    handle_event(*ptr);
-  }
+    if (x.message.empty()) {
+      stop = true;
+      return intrusive::task_result::stop;
+    }
+    handle_event(x);
+    return intrusive::task_result::resume;
+  };
+  do {
+    // make sure we have data to read and consume events
+    queue_.synchronized_await(queue_mtx_, queue_cv_);
+    queue_.new_round(1000, f);
+  } while (!stop);
   log_last_line();
 #endif
 }
@@ -432,9 +462,7 @@ void logger::log_first_line() {
   msg += to_string(system_.config().logger_verbosity);
   msg += ", node = ";
   msg += to_string(system_.node());
-  event tmp{nullptr,
-            nullptr,
-            CAF_LOG_LEVEL_INFO,
+  event tmp{CAF_LOG_LEVEL_INFO,
             CAF_LOG_COMPONENT,
             CAF_PRETTY_FUN,
             __FILE__,
@@ -447,9 +475,7 @@ void logger::log_first_line() {
 }
 
 void logger::log_last_line() {
-  event tmp{nullptr,
-            nullptr,
-            CAF_LOG_LEVEL_INFO,
+  event tmp{CAF_LOG_LEVEL_INFO,
             CAF_LOG_COMPONENT,
             CAF_PRETTY_FUN,
             __FILE__,
@@ -521,7 +547,7 @@ void logger::stop() {
   if (!thread_.joinable())
     return;
   // an empty string means: shut down
-  queue_.synchronized_enqueue(queue_mtx_, queue_cv_, new event);
+  queue_.synchronized_push_back(queue_mtx_, queue_cv_, new event);
   thread_.join();
 #endif
 }

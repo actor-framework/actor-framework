@@ -25,6 +25,7 @@
 
 #include "caf/message_builder.hpp"
 
+#include "caf/detail/gcd.hpp"
 #include "caf/detail/parse_ini.hpp"
 
 namespace caf {
@@ -111,9 +112,11 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   // (1) hard-coded defaults
+  streaming_desired_batch_complexity_us = 50;
+  streaming_max_batch_delay_us = 50000;
+  streaming_credit_round_interval_us = 100000;
   scheduler_policy = atom("stealing");
-  scheduler_max_threads = std::max(std::thread::hardware_concurrency(),
-                                   unsigned{4});
+  scheduler_max_threads = std::max(std::thread::hardware_concurrency(), 4u);
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
   scheduler_enable_profiling = false;
   scheduler_profiling_ms_resolution = 100;
@@ -141,6 +144,13 @@ actor_system_config::actor_system_config()
   middleman_cached_udp_buffers = 10;
   middleman_max_pending_msgs = 10;
   // fill our options vector for creating INI and CLI parsers
+  opt_group{options_, "streaming"}
+  .add(streaming_desired_batch_complexity_us, "desired-batch-complexity-us",
+       "sets the desired timespan for a single batch")
+  .add(streaming_max_batch_delay_us, "max-batch-delay-us",
+       "sets the maximum delay for sending underfull batches in microseconds")
+  .add(streaming_credit_round_interval_us, "credit-round-interval-us",
+       "sets the length of credit intervals in microseconds");
   opt_group{options_, "scheduler"}
   .add(scheduler_policy, "policy",
        "sets the scheduling policy to either 'stealing' (default) or 'sharing'")
@@ -367,6 +377,7 @@ actor_system_config& actor_system_config::parse(message& args,
     if (bootstrap_node.empty())
       std::cerr << "running in slave mode without bootstrap node" << endl;
   }
+  // Verify settings.
   auto verify_atom_opt = [](std::initializer_list<atom_value> xs, atom_value& x,
                             const char* xname) {
     if (std::find(xs.begin(), xs.end(), x) == xs.end()) {
@@ -419,6 +430,11 @@ actor_system_config& actor_system_config::set(const char* cn, config_value cv) {
     f(0, cv, none);
   }
   return *this;
+}
+
+size_t actor_system_config::streaming_tick_duration_us() const noexcept {
+  return caf::detail::gcd(streaming_credit_round_interval_us,
+                          streaming_max_batch_delay_us);
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,

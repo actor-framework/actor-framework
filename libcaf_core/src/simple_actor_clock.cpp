@@ -25,25 +25,23 @@
 namespace caf {
 namespace detail {
 
-bool simple_actor_clock::receive_predicate::
+bool simple_actor_clock::ordinary_predicate::
 operator()(const secondary_map::value_type& x) const noexcept {
-  return holds_alternative<receive_timeout>(x.second->second);
+  auto ptr = get_if<ordinary_timeout>(&x.second->second);
+  return ptr != nullptr ? ptr->type == type : false;
 }
 
 bool simple_actor_clock::request_predicate::
 operator()(const secondary_map::value_type& x) const noexcept {
-  if (holds_alternative<request_timeout>(x.second->second)) {
-    auto& rt = get<request_timeout>(x.second->second);
-    return rt.id == id;
-  }
-  return false;
+  auto ptr = get_if<request_timeout>(&x.second->second);
+  return ptr != nullptr ? ptr->id == id : false;
 }
 
-void simple_actor_clock::visitor::operator()(receive_timeout& x) {
+void simple_actor_clock::visitor::operator()(ordinary_timeout& x) {
   CAF_ASSERT(x.self != nullptr);
   x.self->get()->eq_impl(make_message_id(), x.self, nullptr,
-                         timeout_msg{x.id});
-  receive_predicate pred;
+                         timeout_msg{x.type, x.id});
+  ordinary_predicate pred{x.type};
   thisptr->drop_lookup(x.self->get(), pred);
 }
 
@@ -63,16 +61,17 @@ void simple_actor_clock::visitor::operator()(group_msg& x) {
                     std::move(x.content));
 }
 
-void simple_actor_clock::set_receive_timeout(time_point t, abstract_actor* self,
-                                             uint32_t id) {
-  receive_predicate pred;
+void simple_actor_clock::set_ordinary_timeout(time_point t, abstract_actor* self,
+                                             atom_value type, uint64_t id) {
+  ordinary_predicate pred{type};
   auto i = lookup(self, pred);
   auto sptr = actor_cast<strong_actor_ptr>(self);
+  ordinary_timeout tmp{std::move(sptr), type, id};
   if (i != actor_lookup_.end()) {
     schedule_.erase(i->second);
-    i->second = schedule_.emplace(t, receive_timeout{std::move(sptr), id});
+    i->second = schedule_.emplace(t, std::move(tmp));
   } else {
-    auto j = schedule_.emplace(t, receive_timeout{std::move(sptr), id});
+    auto j = schedule_.emplace(t, std::move(tmp));
     actor_lookup_.emplace(self, j);
   }
 }
@@ -82,17 +81,19 @@ void simple_actor_clock::set_request_timeout(time_point t, abstract_actor* self,
   request_predicate pred{id};
   auto i = lookup(self, pred);
   auto sptr = actor_cast<strong_actor_ptr>(self);
+  request_timeout tmp{std::move(sptr), id};
   if (i != actor_lookup_.end()) {
     schedule_.erase(i->second);
-    i->second = schedule_.emplace(t, request_timeout{std::move(sptr), id});
+    i->second = schedule_.emplace(t, std::move(tmp));
   } else {
-    auto j = schedule_.emplace(t, request_timeout{std::move(sptr), id});
+    auto j = schedule_.emplace(t, std::move(tmp));
     actor_lookup_.emplace(self, j);
   }
 }
 
-void simple_actor_clock::cancel_receive_timeout(abstract_actor* self) {
-  receive_predicate pred;
+void simple_actor_clock::cancel_ordinary_timeout(abstract_actor* self,
+                                                 atom_value type) {
+  ordinary_predicate pred{type};
   cancel(self, pred);
 }
 
@@ -122,6 +123,11 @@ void simple_actor_clock::schedule_message(time_point t, group target,
                                           message content) {
   schedule_.emplace(
     t, group_msg{std::move(target), std::move(sender), std::move(content)});
+}
+
+void simple_actor_clock::cancel_all() {
+  actor_lookup_.clear();
+  schedule_.clear();
 }
 
 } // namespace detail

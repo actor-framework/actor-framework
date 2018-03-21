@@ -16,6 +16,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/local_actor.hpp"
+
 #include <string>
 #include <condition_variable>
 
@@ -26,21 +28,14 @@
 #include "caf/resumable.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/exit_reason.hpp"
-#include "caf/local_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/detail/private_thread.hpp"
-#include "caf/detail/sync_request_bouncer.hpp"
-
 namespace caf {
 
-// local actors are created with a reference count of one that is adjusted
-// later on in spawn(); this prevents subtle bugs that lead to segfaults,
-// e.g., when calling address() in the ctor of a derived class
 local_actor::local_actor(actor_config& cfg)
     : monitorable_actor(cfg),
       context_(cfg.host),
@@ -88,66 +83,9 @@ void local_actor::on_exit() {
   // nop
 }
 
-
 message_id local_actor::new_request_id(message_priority mp) {
   auto result = ++last_request_id_;
   return mp == message_priority::normal ? result : result.with_high_priority();
-}
-
-mailbox_element_ptr local_actor::next_message() {
-  if (!getf(is_priority_aware_flag))
-    return mailbox_element_ptr{mailbox().try_pop()};
-  // we partition the mailbox into four segments in this case:
-  // <-------- ! was_skipped --------> | <--------  was_skipped  -------->
-  // <-- high prio --><-- low prio --> | <-- high prio --><-- low prio -->
-  auto& cache = mailbox().cache();
-  auto i = cache.begin();
-  auto e = cache.separator();
-  // read elements from mailbox if we don't have a high
-  // priority message or if cache is empty
-  if (i == e || !i->is_high_priority()) {
-    // insert points for high priority
-    auto hp_pos = i;
-    // read whole mailbox at once
-    auto tmp = mailbox().try_pop();
-    while (tmp != nullptr) {
-      cache.insert(tmp->is_high_priority() ? hp_pos : e, tmp);
-      // adjust high priority insert point on first low prio element insert
-      if (hp_pos == e && !tmp->is_high_priority())
-        --hp_pos;
-      tmp = mailbox().try_pop();
-    }
-  }
-  mailbox_element_ptr result;
-  i = cache.begin();
-  if (i != e)
-    result.reset(cache.take(i));
-  return result;
-}
-
-bool local_actor::has_next_message() {
-  if (!getf(is_priority_aware_flag))
-    return mailbox_.can_fetch_more();
-  auto& mbox = mailbox();
-  auto& cache = mbox.cache();
-  return cache.begin() != cache.separator() || mbox.can_fetch_more();
-}
-
-void local_actor::push_to_cache(mailbox_element_ptr ptr) {
-  CAF_ASSERT(ptr != nullptr);
-  CAF_LOG_TRACE(CAF_ARG(*ptr));
-  if (!getf(is_priority_aware_flag) || !ptr->is_high_priority()) {
-    mailbox().cache().insert(mailbox().cache().end(), ptr.release());
-    return;
-  }
-  auto high_prio = [](const mailbox_element& val) {
-    return val.is_high_priority();
-  };
-  auto& cache = mailbox().cache();
-  auto e = cache.end();
-  cache.insert(std::partition_point(cache.continuation(),
-                                    e, high_prio),
-               ptr.release());
 }
 
 void local_actor::send_exit(const actor_addr& whom, error reason) {
@@ -174,15 +112,11 @@ error local_actor::load_state(deserializer&, const unsigned int) {
 }
 
 void local_actor::initialize() {
-  // nop
+  CAF_LOG_TRACE(CAF_ARG2("id", id()) << CAF_ARG2("name", name()));
 }
 
 bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(fail_state));
-  if (!mailbox_.closed()) {
-    detail::sync_request_bouncer f{fail_state};
-    mailbox_.close(f);
-  }
   // tell registry we're done
   unregister_from_system();
   monitorable_actor::cleanup(std::move(fail_state), host);

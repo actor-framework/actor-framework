@@ -42,6 +42,9 @@ public:
 
   response_promise(none_t);
 
+  response_promise(strong_actor_ptr self, strong_actor_ptr source,
+                   forwarding_stack stages, message_id id);
+
   response_promise(strong_actor_ptr self, mailbox_element& src);
 
   response_promise(response_promise&&) = default;
@@ -51,18 +54,25 @@ public:
 
   /// Satisfies the promise by sending a non-error response message.
   template <class T, class... Ts>
-  typename std::enable_if<
-    (sizeof...(Ts) > 0) || !std::is_convertible<T, error>::value,
-    response_promise
-  >::type
-  deliver(T&&x, Ts&&... xs) {
-    static_assert(!detail::is_specialization<result, T>::value
-                  && !detail::disjunction<
-                       detail::is_specialization<result, Ts>::value...
-                     >::value,
-                  "it is not possible to deliver objects of type result<...>");
+  detail::enable_if_t<((sizeof...(Ts) > 0)
+                       || (!std::is_convertible<T, error>::value
+                           && !std::is_same<detail::decay_t<T>, unit_t>::value))
+                        && !detail::is_expected<detail::decay_t<T>>::value>
+  deliver(T&& x, Ts&&... xs) {
+    using ts = detail::type_list<detail::decay_t<T>, detail::decay_t<Ts>...>;
+    static_assert(!detail::tl_exists<ts, detail::is_result>::value,
+                  "it is not possible to deliver objects of type result<T>");
+    static_assert(!detail::tl_exists<ts, detail::is_expected>::value,
+                  "mixing expected<T> with regular values is not supported");
     return deliver_impl(make_message(std::forward<T>(x),
                                      std::forward<Ts>(xs)...));
+  }
+
+  template <class T>
+  void deliver(expected<T> x) {
+    if (x)
+      return deliver(std::move(*x));
+    return deliver(std::move(x.error()));
   }
 
   /// Satisfies the promise by delegating to another actor.
@@ -92,15 +102,18 @@ public:
   }
 
   /// Satisfies the promise by sending an error response message.
-  /// For non-requests, nothing is done.
-  response_promise deliver(error x);
+  void deliver(error x);
+
+  /// Satisfies the promise by sending an empty message if this promise has a
+  /// valid message ID, i.e., `async() == false`.
+  void deliver(unit_t x);
 
   /// Returns whether this response promise replies to an asynchronous message.
   bool async() const;
 
   /// Queries whether this promise is a valid promise that is not satisfied yet.
   inline bool pending() const {
-    return !stages_.empty() || source_;
+    return source_ != nullptr || !stages_.empty();
   }
 
   /// Returns the source of the corresponding request.
@@ -113,6 +126,12 @@ public:
     return stages_;
   }
 
+  /// Returns the actor that will receive the response, i.e.,
+  /// `stages().front()` if `!stages().empty()` or `source()` otherwise.
+  inline strong_actor_ptr next() const {
+    return stages_.empty() ? source_ : stages_.front();
+  }
+
   /// Returns the message ID of the corresponding request.
   inline message_id id() const {
     return id_;
@@ -121,7 +140,7 @@ public:
 private:
   execution_unit* context();
 
-  response_promise deliver_impl(message msg);
+  void deliver_impl(message msg);
 
   strong_actor_ptr self_;
   strong_actor_ptr source_;

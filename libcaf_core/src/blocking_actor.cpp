@@ -51,7 +51,8 @@ bool blocking_actor::accept_one_cond::post() {
 }
 
 blocking_actor::blocking_actor(actor_config& cfg)
-    : extended_base(cfg.add_flag(local_actor::is_blocking_flag)) {
+    : super(cfg.add_flag(local_actor::is_blocking_flag)),
+      mailbox_(unit, unit, unit) {
   // nop
 }
 
@@ -67,7 +68,7 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   auto mid = ptr->mid;
   auto src = ptr->sender;
   // returns false if mailbox has been closed
-  if (!mailbox().synchronized_enqueue(mtx_, cv_, ptr.release())) {
+  if (!mailbox().synchronized_push_back(mtx_, cv_, std::move(ptr))) {
     CAF_LOG_REJECT_EVENT();
     if (mid.is_request()) {
       detail::sync_request_bouncer srb{exit_reason()};
@@ -83,6 +84,7 @@ const char* blocking_actor::name() const {
 }
 
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
+  CAF_PUSH_AID_FROM_PTR(this);
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(getf(is_blocking_flag));
   if (!hide)
@@ -148,284 +150,129 @@ void blocking_actor::fail_state(error err) {
   fail_state_ = std::move(err);
 }
 
-namespace {
-
-class message_sequence {
-public:
-  virtual ~message_sequence() {
-    // nop
+intrusive::task_result
+blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
+  CAF_LOG_TRACE(CAF_ARG(x));
+  CAF_LOG_RECEIVE_EVENT((&x));
+  auto check_if_done = [&]() -> intrusive::task_result {
+    // Stop consuming items when reaching the end of the user-defined receive
+    // loop either via post or pre condition.
+    if (rcc.post() && rcc.pre())
+      return intrusive::task_result::resume;
+    done = true;
+    return intrusive::task_result::stop;
+  };
+  // Skip messages that don't match our message ID.
+  if (mid.valid()) {
+    if (mid != x.mid) {
+      CAF_LOG_SKIP_EVENT();
+      return intrusive::task_result::skip;
+    }
+  } else if (x.mid.is_response()) {
+    CAF_LOG_SKIP_EVENT();
+    return intrusive::task_result::skip;
   }
-  virtual bool at_end() = 0;
-  virtual bool await_value(bool reset_timeout) = 0;
-  virtual mailbox_element& value() = 0;
-  virtual void advance() = 0;
-  virtual void erase_and_advance() = 0;
-};
-
-class cached_sequence : public message_sequence {
-public:
-  using cache_type = local_actor::mailbox_type::cache_type;
-  using iterator = cache_type::iterator;
-
-  cached_sequence(cache_type& cache)
-      : cache_(cache),
-        i_(cache.continuation()),
-        e_(cache.end()) {
-    // iterater to the first un-marked element
-    i_ = advance_impl(i_);
-  }
-
-  bool at_end() override {
-    return i_ == e_;
-  }
-
-  void advance() override {
-    CAF_ASSERT(i_->marked);
-    i_->marked = false;
-    i_ = advance_impl(i_.next());
-  }
-
-  void erase_and_advance() override {
-    CAF_ASSERT(i_->marked);
-    i_ = advance_impl(cache_.erase(i_));
-  }
-
-  bool await_value(bool) override {
-    return true;
-  }
-
-  mailbox_element& value() override {
-    CAF_ASSERT(i_->marked);
-    return *i_;
-  }
-
-public:
-  iterator advance_impl(iterator i) {
-    while (i != e_) {
-      if (!i->marked) {
-        i->marked = true;
-        return i;
+  // Automatically unlink from actors after receiving an exit.
+  if (x.content().match_elements<exit_msg>())
+    self->unlink_from(x.content().get_as<exit_msg>(0).source);
+  // Blocking actors can nest receives => push/pop `current_element_`
+  auto prev_element = self->current_element_;
+  self->current_element_ = &x;
+  auto g = detail::make_scope_guard([&] {
+    self->current_element_ = prev_element;
+  });
+  // Dispatch on x.
+  detail::default_invoke_result_visitor<blocking_actor> visitor{self};
+  switch (bhvr.nested(visitor, x.content())) {
+    default:
+      return check_if_done();
+    case match_case::no_match:
+      { // Blocking actors can have fallback handlers for catch-all rules.
+        auto sres = bhvr.fallback(*self->current_element_);
+        if (sres.flag != rt_skip) {
+          visitor.visit(sres);
+          CAF_LOG_FINALIZE_EVENT();
+          return check_if_done();
+        }
       }
-      ++i;
-    }
-    return i;
+      // Response handlers must get re-invoked with an error when receiving an
+      // unexpected message.
+      if (mid.valid()) {
+        auto err = make_error(sec::unexpected_response,
+                              x.move_content_to_message());
+        mailbox_element_view<error> tmp{std::move(x.sender), x.mid,
+                                        std::move(x.stages), err};
+        self->current_element_ = &tmp;
+        bhvr.nested(tmp.content());
+        CAF_LOG_FINALIZE_EVENT();
+        return check_if_done();
+      }
+      CAF_ANNOTATE_FALLTHROUGH;
+    case match_case::skip:
+      CAF_LOG_SKIP_EVENT();
+      return intrusive::task_result::skip;
   }
-
-  cache_type& cache_;
-  iterator i_;
-  iterator e_;
-};
-
-class mailbox_sequence : public message_sequence {
-public:
-  mailbox_sequence(blocking_actor* self, duration rel_timeout)
-      : self_(self),
-        rel_tout_(rel_timeout) {
-    next_timeout();
-
-  }
-
-  bool at_end() override {
-    return false;
-  }
-
-  void advance() override {
-    if (ptr_)
-      self_->push_to_cache(std::move(ptr_));
-    next_timeout();
-  }
-
-  void erase_and_advance() override {
-    ptr_.reset();
-    next_timeout();
-  }
-
-  bool await_value(bool reset_timeout) override {
-    if (!rel_tout_.valid()) {
-      self_->await_data();
-      return true;
-    }
-    if (reset_timeout)
-      next_timeout();
-    return self_->await_data(abs_tout_);
-  }
-
-  mailbox_element& value() override {
-    ptr_ = self_->dequeue();
-    CAF_ASSERT(ptr_ != nullptr);
-    return *ptr_;
-  }
-
-private:
-  void next_timeout() {
-    abs_tout_ = std::chrono::high_resolution_clock::now();
-    abs_tout_ += rel_tout_;
-  }
-
-  blocking_actor* self_;
-  duration rel_tout_;
-  std::chrono::high_resolution_clock::time_point abs_tout_;
-  mailbox_element_ptr ptr_;
-};
-
-class message_sequence_combinator : public message_sequence {
-public:
-  using pointer = message_sequence*;
-
-  message_sequence_combinator(pointer first, pointer second)
-      : ptr_(first),
-        fallback_(second) {
-    // nop
-  }
-
-  bool at_end() override {
-    if (ptr_->at_end()) {
-      if (fallback_ == nullptr)
-        return true;
-      ptr_ = fallback_;
-      fallback_ = nullptr;
-      return at_end();
-    }
-    return false;
-  }
-
-  void advance() override {
-    ptr_->advance();
-  }
-
-  void erase_and_advance() override {
-    ptr_->erase_and_advance();
-  }
-
-  bool await_value(bool reset_timeout) override {
-    return ptr_->await_value(reset_timeout);
-  }
-
-  mailbox_element& value() override {
-    return ptr_->value();
-  }
-
-private:
-  pointer ptr_;
-  pointer fallback_;
-};
-
-} // namespace <anonymous>
+}
 
 void blocking_actor::receive_impl(receive_cond& rcc,
                                   message_id mid,
                                   detail::blocking_behavior& bhvr) {
   CAF_LOG_TRACE(CAF_ARG(mid));
-  // we start iterating the cache and iterating mailbox elements afterwards
-  cached_sequence seq1{mailbox().cache()};
-  mailbox_sequence seq2{this, bhvr.timeout()};
-  message_sequence_combinator seq{&seq1, &seq2};
-  detail::default_invoke_result_visitor<blocking_actor> visitor{this};
-  // read incoming messages until we have a match or a timeout
-  for (;;) {
-    // check loop pre-condition
-    if (!rcc.pre())
-      return;
-    // mailbox sequence is infinite, but at_end triggers the
-    // transition from seq1 to seq2 if we iterated our cache
-    if (seq.at_end())
-      CAF_RAISE_ERROR("reached the end of an infinite sequence");
-    // reset the timeout each iteration
-    if (!seq.await_value(true)) {
-      // short-circuit "loop body"
-      bhvr.handle_timeout();
-      if (!rcc.post())
-        return;
-      continue;
-    }
-    // skip messages in the loop body until we have a match
-    bool skipped;
-    bool timed_out;
-    do {
-      skipped = false;
-      timed_out = false;
-      auto& x = seq.value();
-      CAF_LOG_RECEIVE_EVENT((&x));
-      // skip messages that don't match our message ID
-      if ((mid.valid() && mid != x.mid)
-          || (!mid.valid() && x.mid.is_response())) {
-        skipped = true;
-        CAF_LOG_SKIP_EVENT();
-      } else {
-        // automatically unlink from actors when receiving exit messages
-        if (x.content().match_elements<exit_msg>())
-          unlink_from(x.content().get_as<exit_msg>(0).source);
-        // blocking actors can use nested receives => restore current_element_
-        auto prev_element = current_element_;
-        current_element_ = &x;
-        switch (bhvr.nested(visitor, x.content())) {
-          case match_case::skip:
-            skipped = true;
-            CAF_LOG_SKIP_EVENT();
-            break;
-          default:
-            break;
-          case match_case::no_match: {
-            auto sres = bhvr.fallback(*current_element_);
-            // when dealing with response messages, there's either a match
-            // on the first handler or we produce an error to
-            // get a match on the second (error) handler
-            if (sres.flag != rt_skip) {
-              visitor.visit(sres);
-              CAF_LOG_FINALIZE_EVENT();
-            } else if (mid.valid()) {
-             // invoke again with an unexpected_response error
-             auto& old = *current_element_;
-             auto err = make_error(sec::unexpected_response,
-                                   old.move_content_to_message());
-             mailbox_element_view<error> tmp{std::move(old.sender), old.mid,
-                                             std::move(old.stages), err};
-             current_element_ = &tmp;
-             bhvr.nested(tmp.content());
-              CAF_LOG_FINALIZE_EVENT();
-            } else {
-              skipped = true;
-              CAF_LOG_SKIP_EVENT();
-            }
-          }
-        }
-        current_element_ = prev_element;
-      }
-      if (skipped) {
-        seq.advance();
-        if (seq.at_end())
-          CAF_RAISE_ERROR("reached the end of an infinite sequence");
-        if (!seq.await_value(false)) {
-          timed_out = true;
-        }
-      }
-    } while (skipped && !timed_out);
-    if (timed_out) {
-      bhvr.handle_timeout();
-      if (!rcc.post())
-        return;
+  // Set to `true` by the visitor when done.
+  bool done = false;
+  // Make sure each receive sees all mailbox elements.
+  mailbox_visitor f{this, done, rcc, mid, bhvr};
+  mailbox().flush_cache();
+  // Check pre-condition once before entering the message consumption loop. The
+  // consumer performs any future check on pre and post conditions via
+  // check_if_done.
+  if (!rcc.pre())
+    return;
+  // Read incoming messages for as long as the user's receive loop accepts more
+  // messages.
+  do {
+    // Reset the timeout each iteration.
+    auto rel_tout = bhvr.timeout();
+    if (!rel_tout.valid()) {
+      await_data();
     } else {
-      if (rcc.post())
-        seq.erase_and_advance();
-      else
-        return;
+      auto abs_tout = std::chrono::high_resolution_clock::now();
+      abs_tout += rel_tout;
+      if (!await_data(abs_tout)) {
+        // Short-circuit "loop body".
+        bhvr.handle_timeout();
+        if (rcc.post() && rcc.pre())
+          continue;
+        else
+          return;
+      }
     }
-  }
+    mailbox_.new_round(3, f);
+  } while (!done);
 }
 
 void blocking_actor::await_data() {
-  if (!has_next_message())
-    mailbox().synchronized_await(mtx_, cv_);
+  mailbox().synchronized_await(mtx_, cv_);
 }
 
 bool blocking_actor::await_data(timeout_type timeout) {
-  if (has_next_message())
-    return true;
   return mailbox().synchronized_await(mtx_, cv_, timeout);
 }
 
 mailbox_element_ptr blocking_actor::dequeue() {
-  return next_message();
+  mailbox().fetch_more();
+  auto& qs = mailbox_.queue().queues();
+  auto& q1 = get<mailbox_policy::urgent_queue_index>(qs);
+  if (!q1.empty()) {
+    q1.inc_deficit(1);
+    return q1.take_front();
+  }
+  auto& q2 = get<mailbox_policy::default_queue_index>(qs);
+  if (!q2.empty()) {
+    q2.inc_deficit(1);
+    return q2.take_front();
+  }
+  return nullptr;
 }
 
 void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
@@ -442,6 +289,12 @@ void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
     auto fun = make_blocking_behavior(&bhvr);
     receive_impl(rcc, mid, fun);
   }
+}
+
+sec blocking_actor::build_pipeline(stream_slot, stream_slot,
+                                   stream_manager_ptr) {
+  CAF_LOG_ERROR("blocking_actor::build_pipeline called");
+  return sec::bad_function_call;
 }
 
 size_t blocking_actor::attach_functor(const actor& x) {
@@ -461,6 +314,18 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
     anon_send(self, wait_for_atom::value);
   });
   return 1;
+}
+
+bool blocking_actor::cleanup(error&& fail_state, execution_unit* host) {
+  if (!mailbox_.closed()) {
+    mailbox_.close();
+    // TODO: messages that are stuck in the cache can get lost
+    detail::sync_request_bouncer bounce{fail_state};
+    while (mailbox_.queue().new_round(1000, bounce).consumed_items)
+      ; // nop
+  }
+  // Dispatch to parent's `cleanup` function.
+  return super::cleanup(std::move(fail_state), host);
 }
 
 } // namespace caf

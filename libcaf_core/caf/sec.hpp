@@ -31,6 +31,8 @@ namespace caf {
 /// SEC stands for "System Error Code". This enum contains
 /// error codes used internally by CAF.
 enum class sec : uint8_t {
+  /// No error.
+  none = 0,
   /// Indicates that an actor dropped an unexpected message.
   unexpected_message = 1,
   /// Indicates that a response message did not match the provided handler.
