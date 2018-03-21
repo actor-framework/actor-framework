@@ -49,15 +49,15 @@ CAF_TEST(constuctors) {
   CAF_CHECK_EQUAL(a.capacity(), 0ul);
   CAF_CHECK_EQUAL(a.data(), nullptr);
   CAF_CHECK(a.empty());
-  CAF_CHECK_EQUAL(b.size(), 0ul);
+  CAF_CHECK_EQUAL(b.size(), 1024ul);
   CAF_CHECK_EQUAL(b.capacity(), 1024ul);
   CAF_CHECK(b.data() != nullptr);
-  CAF_CHECK(b.empty());
+  CAF_CHECK(!b.empty());
   receive_buffer other{std::move(b)};
-  CAF_CHECK_EQUAL(other.size(), 0ul);
+  CAF_CHECK_EQUAL(other.size(), 1024ul);
   CAF_CHECK_EQUAL(other.capacity(), 1024ul);
   CAF_CHECK(other.data() != nullptr);
-  CAF_CHECK(other.empty());
+  CAF_CHECK(!other.empty());
 }
 
 CAF_TEST(reserve) {
@@ -165,7 +165,7 @@ CAF_TEST(swap) {
   for (auto c : vec)
     a.push_back(c);
   std::swap(a, b);
-  CAF_CHECK_EQUAL(a.size(), 0ul);
+  CAF_CHECK_EQUAL(a.size(), 1024ul);
   CAF_CHECK_EQUAL(a.capacity(), 1024ul);
   CAF_CHECK(a.data() != nullptr);
   CAF_CHECK_EQUAL(b.size(), vec.size());

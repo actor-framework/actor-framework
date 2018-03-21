@@ -46,11 +46,11 @@ public:
                                      std::default_delete<value_type[]>>;
 
   /// Create an empty container.
-  receive_buffer();
+  receive_buffer() noexcept;
 
-  /// Create an empty container with `size` storage. Data in the storage is
-  /// not initialized.
-  receive_buffer(size_t size);
+  /// Create an empty container of size `count`. Data in the storage is not
+  /// initialized.
+  receive_buffer(size_t count);
 
   /// Move constructor.
   receive_buffer(receive_buffer&& other) noexcept;
@@ -75,18 +75,18 @@ public:
   }
 
   /// Returns the number of stored elements.
-  size_type size() const noexcept {
+  inline size_type size() const noexcept {
     return size_;
   }
 
   /// Returns the number of elements that the container has allocated space for.
-  size_type capacity() const noexcept {
+  inline size_type capacity() const noexcept {
     return capacity_;
   }
 
   /// Returns the maximum possible number of elements the container
   /// could theoretically hold.
-  size_type max_size() const noexcept {
+  inline size_type max_size() const noexcept {
     return std::numeric_limits<size_t>::max();
   }
 

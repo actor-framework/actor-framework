@@ -32,63 +32,41 @@ namespace caf {
 namespace io {
 namespace network {
 
-receive_buffer::receive_buffer()
+receive_buffer::receive_buffer() noexcept
     : buffer_(nullptr),
       capacity_(0),
       size_(0) {
   // nop
 }
 
-receive_buffer::receive_buffer(size_type size)
-    : buffer_(new value_type[size]),
-      capacity_(size),
-      size_(0) {
-  // nop
+receive_buffer::receive_buffer(size_type count) : receive_buffer() {
+  resize(count);
 }
 
 receive_buffer::receive_buffer(receive_buffer&& other) noexcept
-    : capacity_(std::move(other.capacity_)),
-      size_(std::move(other.size_)) {
-  buffer_ = std::move(other.buffer_);
-  other.size_ = 0;
-  other.capacity_ = 0;
-  other.buffer_.reset();
+    : receive_buffer() {
+  swap(other);
 }
 
 receive_buffer::receive_buffer(const receive_buffer& other)
-    : capacity_(other.capacity_),
-      size_(other.size_) {
-  if (other.size_ == 0) {
-    buffer_.reset();
-  } else {
-    buffer_.reset(new value_type[other.size_]);
-    std::copy(other.cbegin(), other.cend(), buffer_.get());
-  }
+    : receive_buffer(other.size()) {
+  std::copy(other.cbegin(), other.cend(), buffer_.get());
 }
 
 receive_buffer& receive_buffer::operator=(receive_buffer&& other) noexcept {
-  size_ = std::move(other.size_);
-  capacity_ = std::move(other.capacity_);
-  buffer_ = std::move(other.buffer_);
-  other.clear();
+  receive_buffer tmp{std::move(other)};
+  swap(tmp);
   return *this;
 }
 
 receive_buffer& receive_buffer::operator=(const receive_buffer& other) {
-  size_ = other.size_;
-  capacity_ = other.capacity_;
-  if (other.size_ == 0) {
-    buffer_.reset();
-  } else {
-    buffer_.reset(new value_type[other.size_]);
-    std::copy(other.cbegin(), other.cend(), buffer_.get());
-  }
+  resize(other.size());
+  std::copy(other.cbegin(), other.cend(), buffer_.get());
   return *this;
 }
 
 void receive_buffer::resize(size_type new_size) {
-  if (new_size > capacity_)
-    increase_by(new_size - capacity_);
+  reserve(new_size);
   size_ = new_size;
 }
 
@@ -104,14 +82,13 @@ void receive_buffer::shrink_to_fit() {
 
 void receive_buffer::clear() {
   size_ = 0;
-  buffer_ptr new_buffer{new value_type[capacity_]};
-  std::swap(buffer_, new_buffer);
 }
 
 void receive_buffer::swap(receive_buffer& other) noexcept {
-  std::swap(capacity_, other.capacity_);
-  std::swap(size_, other.size_);
-  std::swap(buffer_, other.buffer_);
+  using std::swap;
+  swap(capacity_, other.capacity_);
+  swap(size_, other.size_);
+  swap(buffer_, other.buffer_);
 }
 
 void receive_buffer::push_back(value_type value) {
@@ -127,9 +104,10 @@ void receive_buffer::increase_by(size_t bytes) {
   if (!buffer_) {
     buffer_.reset(new value_type[bytes]);
   } else {
+    using std::swap;
     buffer_ptr new_buffer{new value_type[capacity_ + bytes]};
     std::copy(begin(), end(), new_buffer.get());
-    std::swap(buffer_, new_buffer);
+    swap(buffer_, new_buffer);
   }
   capacity_ += bytes;
 }
@@ -140,9 +118,10 @@ void receive_buffer::shrink_by(size_t bytes) {
   if (new_size == 0) {
     buffer_.reset();
   } else {
+    using std::swap;
     buffer_ptr new_buffer{new value_type[new_size]};
     std::copy(begin(), begin() + new_size, new_buffer.get());
-    std::swap(buffer_, new_buffer);
+    swap(buffer_, new_buffer);
   }
   capacity_ = new_size;
 }
