@@ -28,6 +28,8 @@
 using namespace std;
 using namespace caf;
 
+namespace {
+
 template <class... Ts>
 void print(const char* format, Ts... xs) {
   char buf[200];
@@ -68,6 +70,8 @@ struct fixture {
     x.store(m);
   }
 };
+
+} // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(inbound_path_tests, fixture)
 

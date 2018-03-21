@@ -28,21 +28,19 @@
 using namespace caf;
 using caf::io::network::receive_buffer;
 
+namespace {
+
 struct fixture {
+  receive_buffer a;
+  receive_buffer b;
+  std::vector<char> vec;
 
-receive_buffer a;
-receive_buffer b;
-std::vector<char> vec;
-
-fixture()
-  : a{},
-    b{1024ul},
-    vec{'h', 'a', 'l', 'l', 'o'} {
-  // nop
-}
-
+  fixture() :  b(1024ul), vec{'h', 'a', 'l', 'l', 'o'} {
+    // nop
+  }
 };
 
+} // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(receive_buffer_tests, fixture)
 
