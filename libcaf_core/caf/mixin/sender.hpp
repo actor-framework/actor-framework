@@ -80,7 +80,7 @@ public:
                        typename res_t::type
                      >::valid,
                   "this actor does not accept the response message");
-    if (dest != nullptr)
+    if (dest)
       dest->eq_impl(make_message_id(P), dptr()->ctrl(),
                     dptr()->context(), std::forward<Ts>(xs)...);
   }
@@ -94,7 +94,7 @@ public:
                   "statically typed actors can only send() to other "
                   "statically typed actors; use anon_send() or request() when "
                   "communicating with dynamically typed actors");
-    if (dest != nullptr)
+    if (dest)
       dest->get()->eq_impl(make_message_id(P), dptr()->ctrl(),
                            dptr()->context(), std::forward<Ts>(xs)...);
   }
