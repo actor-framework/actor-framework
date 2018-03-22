@@ -101,7 +101,8 @@ actor_system_config::actor_system_config()
       slave_mode(false),
       logger_filename(logger_file_name),
       logger_filter(logger_component_filter),
-      slave_mode_fun(nullptr) {
+      slave_mode_fun(nullptr),
+      config_file_path("caf-application.ini") {
   // add `vector<T>` and `stream<T>` for each statically known type
   add_message_type_impl<stream<actor>>("stream<@actor>");
   add_message_type_impl<stream<actor_addr>>("stream<@addr>");
@@ -282,18 +283,7 @@ actor_system_config& actor_system_config::parse(int argc, char** argv,
   message args;
   if (argc > 1)
     args = message_builder(argv + 1, argv + argc).move_to_message();
-  // set default config file name if not set by user
-  if (ini_file_cstr == nullptr)
-    ini_file_cstr = "caf-application.ini";
-  std::string config_file_name;
-  // CLI file name has priority over default file name
-  args.extract_opts({
-    {"caf#config-file", "", config_file_name}
-  });
-  if (config_file_name.empty())
-    config_file_name = ini_file_cstr;
-  std::ifstream ini{config_file_name};
-  return parse(args, ini);
+  return parse(args, ini_file_cstr);
 }
 
 actor_system_config& actor_system_config::parse(int argc, char** argv,
@@ -306,9 +296,12 @@ actor_system_config& actor_system_config::parse(int argc, char** argv,
 
 actor_system_config& actor_system_config::parse(message& args,
                                                 const char* ini_file_cstr) {
-  if (ini_file_cstr == nullptr)
-    ini_file_cstr = "caf-application.ini";
-  std::ifstream ini{ini_file_cstr};
+  // Override default config file name if set by user.
+  if (ini_file_cstr != nullptr)
+    config_file_path = ini_file_cstr;
+  // CLI arguments always win.
+  extract_config_file_path(args);
+  std::ifstream ini{config_file_path};
   return parse(args, ini);
 }
 
@@ -457,6 +450,13 @@ std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
   auto tmp = static_cast<exit_reason>(x);
   return deep_to_string(meta::type_name("exit_reason"), tmp,
                         meta::omittable_if_empty(), xs);
+}
+
+void actor_system_config::extract_config_file_path(message& args) {
+  auto res = args.extract_opts({
+    {"caf#config-file", "", config_file_path}
+  });
+  args = res.remainder;
 }
 
 } // namespace caf

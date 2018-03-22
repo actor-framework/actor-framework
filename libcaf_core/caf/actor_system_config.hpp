@@ -358,6 +358,12 @@ public:
 
   error_renderer_map error_renderers;
 
+  // -- parsing parameters -----------------------------------------------------
+
+  /// Configures the file path for the INI file, `caf-application.ini` per
+  /// default.
+  std::string config_file_path;
+
   // -- convenience functions --------------------------------------------------
 
   template <class F>
@@ -393,7 +399,7 @@ private:
 
   static std::string render_exit_reason(uint8_t, atom_value, const message&);
 
-  std::string extract_config_file_name(message& args);
+  void extract_config_file_path(message& args);
 
   option_vector options_;
 };
