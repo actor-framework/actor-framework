@@ -214,7 +214,7 @@ protected:
                                    uint16_t port) override {
     CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
     auto fd = io::network::new_tcp_connection(host, port);
-    if (fd == io::network::invalid_native_socket)
+    if (!fd)
       return std::move(fd.error());
     io::network::nonblocking(*fd, true);
     auto sssn = make_session(system(), *fd, false);
@@ -231,7 +231,7 @@ protected:
                                  bool reuse) override {
     CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(reuse));
     auto fd = io::network::new_tcp_acceptor_impl(port, addr, reuse);
-    if (fd == io::network::invalid_native_socket)
+    if (!fd)
       return std::move(fd.error());
     return make_counted<doorman_impl>(mpx(), *fd);
   }
