@@ -115,6 +115,12 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
+  /// Parses `args` as tuple of strings containing CLI options and tries to
+  /// open `ini_file_cstr` as INI formatted config file. The parsers tries to
+  /// open `caf-application.ini` if `ini_file_cstr` is `nullptr`.
+  actor_system_config& parse(message& args,
+                             const char* ini_file_cstr = nullptr);
+
   /// Parses `args` as tuple of strings containing CLI options
   /// and `ini_stream` as INI formatted input stream.
   actor_system_config& parse(message& args, std::istream& ini);
@@ -123,10 +129,9 @@ public:
   /// `ini_stream` as INI formatted input stream.
   actor_system_config& parse(int argc, char** argv, std::istream& ini);
 
-  /// Parses the CLI options `{argc, argv}` and
-  /// tries to open `config_file_name` as INI formatted config file.
-  /// The parsers tries to open `caf-application.ini` if `config_file_name`
-  /// is `nullptr`.
+  /// Parses the CLI options `{argc, argv}` and tries to open `ini_file_cstr`
+  /// as INI formatted config file. The parsers tries to open
+  /// `caf-application.ini` if `ini_file_cstr` is `nullptr`.
   actor_system_config& parse(int argc, char** argv,
                              const char* ini_file_cstr = nullptr);
 

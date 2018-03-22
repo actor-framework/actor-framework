@@ -305,6 +305,14 @@ actor_system_config& actor_system_config::parse(int argc, char** argv,
 }
 
 actor_system_config& actor_system_config::parse(message& args,
+                                                const char* ini_file_cstr) {
+  if (ini_file_cstr == nullptr)
+    ini_file_cstr = "caf-application.ini";
+  std::ifstream ini{ini_file_cstr};
+  return parse(args, ini);
+}
+
+actor_system_config& actor_system_config::parse(message& args,
                                                 std::istream& ini) {
   // (2) content of the INI file overrides hard-coded defaults
   if (ini.good()) {
