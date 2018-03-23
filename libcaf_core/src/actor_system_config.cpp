@@ -101,8 +101,8 @@ actor_system_config::actor_system_config()
       slave_mode(false),
       logger_filename(logger_file_name),
       logger_filter(logger_component_filter),
-      slave_mode_fun(nullptr),
-      config_file_path("caf-application.ini") {
+      config_file_path("caf-application.ini"),
+      slave_mode_fun(nullptr) {
   // add `vector<T>` and `stream<T>` for each statically known type
   add_message_type_impl<stream<actor>>("stream<@actor>");
   add_message_type_impl<stream<actor_addr>>("stream<@addr>");
