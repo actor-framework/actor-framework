@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_WEAK_INTRUSIVE_PTR_HPP
-#define CAF_WEAK_INTRUSIVE_PTR_HPP
+#pragma once
 
 #include <cstddef>
 #include <algorithm>
@@ -186,4 +185,3 @@ bool operator!=(const weak_intrusive_ptr<X>& lhs,
 
 } // namespace caf
 
-#endif // CAF_WEAK_INTRUSIVE_PTR_HPP

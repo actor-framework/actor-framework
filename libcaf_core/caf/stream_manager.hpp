@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_MANAGER_HPP
-#define CAF_STREAM_MANAGER_HPP
+#pragma once
 
 #include <vector>
 #include <cstdint>
@@ -297,4 +296,3 @@ using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 } // namespace caf
 
-#endif // CAF_STREAM_MANAGER_HPP

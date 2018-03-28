@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TEST_UNIT_TEST_HPP
-#define CAF_TEST_UNIT_TEST_HPP
+#pragma once
 
 #include <cmath>
 #include <fstream>
@@ -624,4 +623,3 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
   CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::greater_than_or_equal>,   \
                    x, y)
 
-#endif // CAF_TEST_UNIT_TEST_HPP

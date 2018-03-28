@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_WORK_STEALING_HPP
-#define CAF_POLICY_WORK_STEALING_HPP
+#pragma once
 
 #include <deque>
 #include <chrono>
@@ -180,4 +179,3 @@ public:
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_WORK_STEALING_HPP

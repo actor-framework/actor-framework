@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_CONFIG_HPP
-#define CAF_ACTOR_CONFIG_HPP
+#pragma once
 
 #include <string>
 #include <functional>
@@ -50,4 +49,3 @@ std::string to_string(const actor_config& x);
 
 } // namespace caf
 
-#endif // CAF_ACTOR_CONFIG_HPP

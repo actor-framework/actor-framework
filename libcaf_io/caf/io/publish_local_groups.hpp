@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_UNPUBLISH_HPP
-#define CAF_IO_UNPUBLISH_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -41,4 +40,3 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_UNPUBLISH_HPP

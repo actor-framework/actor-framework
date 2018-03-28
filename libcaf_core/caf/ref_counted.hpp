@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REF_COUNTED_HPP
-#define CAF_REF_COUNTED_HPP
+#pragma once
 
 #include <atomic>
 #include <cstddef>
@@ -72,4 +71,3 @@ inline void intrusive_ptr_release(ref_counted* p) {
 
 } // namespace caf
 
-#endif // CAF_REF_COUNTED_HPP

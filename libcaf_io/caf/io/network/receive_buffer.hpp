@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_RECEIVE_BUFFER_HPP
-#define CAF_IO_NETWORK_RECEIVE_BUFFER_HPP
+#pragma once
 
 #include <memory>
 #include <cstddef>
@@ -195,4 +194,3 @@ private:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_RECEIVE_BUFFER_HPP

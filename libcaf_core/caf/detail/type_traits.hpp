@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TYPE_TRAITS_HPP
-#define CAF_DETAIL_TYPE_TRAITS_HPP
+#pragma once
 
 #include <tuple>
 #include <chrono>
@@ -685,4 +684,3 @@ struct is_expected<expected<T>> : std::true_type {};
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TYPE_TRAITS_HPP

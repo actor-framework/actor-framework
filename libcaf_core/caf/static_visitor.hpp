@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STATIC_VISITOR_HPP
-#define CAF_STATIC_VISITOR_HPP
+#pragma once
 
 namespace caf {
 
@@ -28,4 +27,3 @@ struct static_visitor {
 
 } // namespace caf
 
-#endif // CAF_STATIC_VISITOR_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_CLOSE_HPP
-#define CAF_IO_CLOSE_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -36,4 +35,3 @@ inline expected<void> close(actor_system& sys, uint16_t port) {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_CLOSE_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SEND_HPP
-#define CAF_SEND_HPP
+#pragma once
 
 #include "caf/actor.hpp"
 #include "caf/message.hpp"
@@ -141,4 +140,3 @@ inline void anon_send_exit(const weak_actor_ptr& to, exit_reason reason) {
 
 } // namespace caf
 
-#endif // CAF_SEND_HPP

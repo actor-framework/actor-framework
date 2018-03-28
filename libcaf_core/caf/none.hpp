@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_NONE_HPP
-#define CAF_NONE_HPP
+#pragma once
 
 #include <string>
 
@@ -48,4 +47,3 @@ inline std::string to_string(const none_t&) {
 
 } // namespace caf
 
-#endif // CAF_NONE_HPP

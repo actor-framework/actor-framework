@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_TYPED_BROKER_HPP
-#define CAF_IO_TYPED_BROKER_HPP
+#pragma once
 
 #include <map>
 #include <vector>
@@ -172,4 +171,3 @@ protected:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_TYPED_BROKER_HPP

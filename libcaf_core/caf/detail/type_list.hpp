@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TYPE_LIST_HPP
-#define CAF_DETAIL_TYPE_LIST_HPP
+#pragma once
 
 #include <cstddef>
 #include <typeinfo>
@@ -1230,4 +1229,3 @@ using tl_replicate_t = typename tl_replicate<N, T>::type;
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TYPE_LIST_HPP

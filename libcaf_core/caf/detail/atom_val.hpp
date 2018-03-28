@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_ATOM_VAL_HPP
-#define CAF_DETAIL_ATOM_VAL_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -57,4 +56,3 @@ constexpr uint64_t atom_val(const char* cstr, uint64_t interim = 0xF) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_ATOM_VAL_HPP

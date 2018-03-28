@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RESPONSE_TYPE_HPP
-#define CAF_RESPONSE_TYPE_HPP
+#pragma once
 
 #include <tuple>
 
@@ -91,4 +90,3 @@ using response_type_unbox_t = typename response_type_unbox<Ts, Xs>::type;
 
 } // namespace caf
 
-#endif // CAF_RESPONSE_TYPE_HPP

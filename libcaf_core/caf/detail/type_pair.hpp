@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TYPE_PAIR_HPP
-#define CAF_DETAIL_TYPE_PAIR_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -46,4 +45,3 @@ struct is_type_pair<type_pair<First, Second>> {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TYPE_PAIR_HPP

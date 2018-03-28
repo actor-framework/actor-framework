@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_CAS_WEAK_HPP
-#define CAF_DETAIL_CAS_WEAK_HPP
+#pragma once
 
 #include <atomic>
 
@@ -39,4 +38,3 @@ bool cas_weak(std::atomic<T>* obj, T* expected, T desired) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_CAS_WEAK_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_DOORMAN_HPP
-#define CAF_IO_DOORMAN_HPP
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -66,4 +65,3 @@ using doorman_ptr = intrusive_ptr<doorman>;
 // BASP broker.
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::doorman_ptr)
 
-#endif // CAF_IO_DOORMAN_HPP

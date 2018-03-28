@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_CLOCK
-#define CAF_ACTOR_CLOCK
+#pragma once
 
 #include <chrono>
 
@@ -87,4 +86,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_ACTOR_CLOCK

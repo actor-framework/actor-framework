@@ -52,8 +52,7 @@
  *     available at http://www.esat.kuleuven.be/~cosicart/ps/AB-9601/.
 \******************************************************************************/
 
-#ifndef CAF_DETAIL_RIPEMD_160_HPP
-#define CAF_DETAIL_RIPEMD_160_HPP
+#pragma once
 
 #include <array>
 #include <string>
@@ -67,4 +66,3 @@ void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data);
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_RIPEMD_160_HPP

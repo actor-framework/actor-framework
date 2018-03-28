@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_RESPONSE_PROMISE_HPP
-#define CAF_TYPED_RESPONSE_PROMISE_HPP
+#pragma once
 
 #include "caf/response_promise.hpp"
 
@@ -90,4 +89,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_TYPED_RESPONSE_PROMISE_HPP

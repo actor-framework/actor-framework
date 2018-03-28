@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_ENUM_TO_STRING_HPP
-#define CAF_DETAIL_ENUM_TO_STRING_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -35,4 +34,3 @@ const char* enum_to_string(E x, const char* (&lookup_table)[N]) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_ENUM_TO_STRING_HPP

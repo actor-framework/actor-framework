@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MESSAGE_ID_HPP
-#define CAF_MESSAGE_ID_HPP
+#pragma once
 
 #include <string>
 #include <cstdint>
@@ -268,4 +267,3 @@ struct hash<caf::message_id> {
 
 } // namespace std
 
-#endif // CAF_MESSAGE_ID_HPP

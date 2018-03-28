@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_VARIANT_HPP
-#define CAF_VARIANT_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -521,4 +520,3 @@ inspect(Inspector& f, variant<Ts...>& x) {
 
 } // namespace caf
 
-#endif // CAF_VARIANT_HPP

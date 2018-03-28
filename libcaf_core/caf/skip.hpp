@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SKIP_HPP
-#define CAF_SKIP_HPP
+#pragma once
 
 #include <functional>
 
@@ -55,4 +54,3 @@ constexpr skip_t skip = skip_t{};
 
 } // namespace caf
 
-#endif // CAF_SKIP_HPP

@@ -20,8 +20,7 @@
  *      Based on http://beej.us/guide/bgnet/examples/pack2.c      *
 \ ******************************************************************************/
 
-#ifndef CAF_DETAIL_IEEE_754_HPP
-#define CAF_DETAIL_IEEE_754_HPP
+#pragma once
 
 #include <cmath>
 #include <cstdint>
@@ -136,4 +135,3 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_IEEE_754_HPP

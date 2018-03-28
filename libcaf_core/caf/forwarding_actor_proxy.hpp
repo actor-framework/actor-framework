@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FORWARDING_ACTOR_PROXY_HPP
-#define CAF_FORWARDING_ACTOR_PROXY_HPP
+#pragma once
 
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
@@ -53,4 +52,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_FORWARDING_ACTOR_PROXY_HPP

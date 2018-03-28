@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BASP_CONNECTION_STATE_HPP
-#define CAF_IO_BASP_CONNECTION_STATE_HPP
+#pragma once
 
 
 namespace caf {
@@ -51,5 +50,4 @@ inline std::string to_string(connection_state x) {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BASP_CONNECTION_STATE_HPP
 

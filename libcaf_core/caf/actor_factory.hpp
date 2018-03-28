@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_FACTORY_HPP
-#define CAF_ACTOR_FACTORY_HPP
+#pragma once
 
 #include <set>
 #include <string>
@@ -203,4 +202,3 @@ actor_factory make_actor_factory() {
 
 } // namespace caf
 
-#endif // CAF_ACTOR_FACTORY_HPP

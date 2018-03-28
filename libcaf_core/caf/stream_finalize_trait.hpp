@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_FINALIZE_TRAIT_HPP
-#define CAF_STREAM_FINALIZE_TRAIT_HPP
+#pragma once
 
 #include "caf/make_message.hpp"
 #include "caf/message.hpp"
@@ -55,4 +54,3 @@ struct stream_finalize_trait<Fun, State, true>{
 
 } // namespace caf
 
-#endif // CAF_STREAM_FINALIZE_TRAIT_HPP

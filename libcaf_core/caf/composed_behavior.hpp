@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_COMPOSED_STATE_HPP
-#define CAF_COMPOSED_STATE_HPP
+#pragma once
 
 #include "caf/param.hpp"
 #include "caf/composable_behavior.hpp"
@@ -74,4 +73,3 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_COMPOSED_STATE_HPP

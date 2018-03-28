@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENSSL_SESSION_HPP
-#define CAF_OPENSSL_SESSION_HPP
+#pragma once
 
 #include <memory>
 
@@ -87,4 +86,3 @@ session_ptr make_session(actor_system& sys, native_socket fd,
 } // namespace openssl
 } // namespace caf
 
-#endif // CAF_OPENSSL_SESSION_HPP

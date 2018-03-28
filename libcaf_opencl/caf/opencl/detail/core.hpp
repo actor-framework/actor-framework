@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_CORE_HPP
-#define CAF_OPENCL_CORE_HPP
+#pragma once
 
 namespace caf {
 
@@ -34,4 +33,3 @@ using namespace caf::detail;
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_CORE_HPP

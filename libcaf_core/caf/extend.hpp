@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_EXTEND_HPP
-#define CAF_EXTEND_HPP
+#pragma once
 
 namespace caf {
 
@@ -56,4 +55,3 @@ struct extend {
 
 } // namespace caf
 
-#endif // CAF_EXTEND_HPP

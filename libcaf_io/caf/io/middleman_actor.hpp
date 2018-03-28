@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_MIDDLEMAN_ACTOR_HPP
-#define CAF_IO_MIDDLEMAN_ACTOR_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
@@ -129,4 +128,3 @@ middleman_actor make_middleman_actor(actor_system& sys, actor db);
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_MIDDLEMAN_ACTOR_HPP

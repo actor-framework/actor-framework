@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_GROUP_HPP
-#define CAF_GROUP_HPP
+#pragma once
 
 #include <string>
 #include <utility>
@@ -161,4 +160,3 @@ struct hash<caf::group> {
 };
 } // namespace std
 
-#endif // CAF_GROUP_HPP

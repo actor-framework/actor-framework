@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_SYSTEM_MESSAGES_HPP
-#define CAF_IO_SYSTEM_MESSAGES_HPP
+#pragma once
 
 #include <tuple>
 #include <vector>
@@ -186,4 +185,3 @@ inspect(Inspector& f, datagram_servant_closed_msg& x) {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_SYSTEM_MESSAGES_HPP

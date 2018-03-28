@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAMBUF_HPP
-#define CAF_STREAMBUF_HPP
+#pragma once
 
 #include <algorithm>
 #include <cstddef>
@@ -324,4 +323,3 @@ using vectorbuf = containerbuf<std::vector<char>>;
 
 } // namespace caf
 
-#endif // CAF_STREAMBUF_HPP

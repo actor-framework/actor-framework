@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DATA_PROCESSOR_HPP
-#define CAF_DATA_PROCESSOR_HPP
+#pragma once
 
 #include <chrono>
 #include <string>
@@ -584,4 +583,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_DATA_PROCESSOR_HPP

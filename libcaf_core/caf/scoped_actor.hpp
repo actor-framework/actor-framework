@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SCOPED_ACTOR_HPP
-#define CAF_SCOPED_ACTOR_HPP
+#pragma once
 
 #include "caf/none.hpp"
 #include "caf/actor_cast.hpp"
@@ -88,4 +87,3 @@ std::string to_string(const scoped_actor& x);
 
 } // namespace caf
 
-#endif // CAF_SCOPED_ACTOR_HPP

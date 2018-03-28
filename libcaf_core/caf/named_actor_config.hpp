@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_NAMED_ACTOR_CONFIG_HPP
-#define CAF_NAMED_ACTOR_CONFIG_HPP
+#pragma once
 
 #include <cstddef>
 
@@ -43,4 +42,3 @@ typename Inspector::result_type inspect(Inspector& f, named_actor_config& x) {
 
 } // namespace caf
 
-#endif //CAF_NAMED_ACTOR_CONFIG_HPP

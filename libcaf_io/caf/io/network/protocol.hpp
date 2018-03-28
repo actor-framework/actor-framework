@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_PROTOCOL_HPP
-#define CAF_IO_NETWORK_PROTOCOL_HPP
+#pragma once
 
 #include <cstddef>
 #include <string>
@@ -69,4 +68,3 @@ std::string to_string(const protocol& x);
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_PROTOCOL_HPP

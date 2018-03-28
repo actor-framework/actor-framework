@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_DISPOSER_HPP
-#define CAF_DETAIL_DISPOSER_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -42,5 +41,4 @@ public:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_DISPOSER_HPP
 

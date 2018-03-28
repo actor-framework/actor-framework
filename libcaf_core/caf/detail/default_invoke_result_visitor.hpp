@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_DEFAULT_INVOKE_VISITOR_HPP
-#define CAF_DETAIL_DEFAULT_INVOKE_VISITOR_HPP
+#pragma once
 
 #include "caf/local_actor.hpp"
 
@@ -91,4 +90,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_DEFAULT_INVOKE_VISITOR_HPP

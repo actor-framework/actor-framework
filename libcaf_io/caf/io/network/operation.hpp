@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_OPERATION_HPP
-#define CAF_IO_NETWORK_OPERATION_HPP
+#pragma once
 
 #include <string>
 
@@ -42,4 +41,3 @@ inline std::string to_string(operation op) {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_OPERATION_HPP

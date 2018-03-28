@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_UNORDERED_FLAT_MAP_HPP
-#define CAF_DETAIL_UNORDERED_FLAT_MAP_HPP
+#pragma once
 
 #include <vector>
 #include <algorithm>
@@ -303,5 +302,4 @@ bool operator>=(const unordered_flat_map<K, T, A>& xs,
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_UNORDERED_FLAT_MAP_HPP
 

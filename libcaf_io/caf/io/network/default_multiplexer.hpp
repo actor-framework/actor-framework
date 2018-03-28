@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP
-#define CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP
+#pragma once
 
 #include <thread>
 
@@ -1079,4 +1078,3 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr,
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_DEFAULT_MULTIPLEXER_HPP

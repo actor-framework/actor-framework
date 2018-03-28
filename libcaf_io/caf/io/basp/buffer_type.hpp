@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BASP_BUFFER_TYPE_HPP
-#define CAF_IO_BASP_BUFFER_TYPE_HPP
+#pragma once
 
 #include <vector>
 
@@ -36,5 +35,4 @@ using buffer_type = std::vector<char>;
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BASP_BUFFER_TYPE_HPP
 

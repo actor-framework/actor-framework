@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_ACTOR_FACADE_HPP
-#define CAF_OPENCL_ACTOR_FACADE_HPP
+#pragma once
 
 #include <ostream>
 #include <iostream>
@@ -474,4 +473,3 @@ public:
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_ACTOR_FACADE_HPP

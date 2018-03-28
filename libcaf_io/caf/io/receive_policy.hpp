@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_RECEIVE_POLICY_HPP
-#define CAF_IO_RECEIVE_POLICY_HPP
+#pragma once
 
 #include <string>
 #include <cstddef>
@@ -65,4 +64,3 @@ public:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_RECEIVE_POLICY_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TO_STRING_HPP
-#define CAF_TO_STRING_HPP
+#pragma once
 
 #include <string>
 
@@ -45,4 +44,3 @@ std::string to_string(const T& x) {
 
 } // namespace caf
 
-#endif // CAF_TO_STRING_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DEFAULT_ATTACHABLE_HPP
-#define CAF_DEFAULT_ATTACHABLE_HPP
+#pragma once
 
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
@@ -80,4 +79,3 @@ private:
 } // namespace caf
 
 
-#endif // CAF_DEFAULT_ATTACHABLE_HPP

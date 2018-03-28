@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TEST_UNIT_TEST_IMPL_HPP
-#define CAF_TEST_UNIT_TEST_IMPL_HPP
+#pragma once
 
 #include <regex>
 #include <cctype>
@@ -573,4 +572,3 @@ int main(int argc, char** argv) {
 }
 #endif // CAF_TEST_UNIT_TEST_IMPL_HPP
 
-#endif // CAF_TEST_UNIT_TEST_IMPL_HPP

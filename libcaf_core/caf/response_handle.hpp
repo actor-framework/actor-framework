@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RESPONSE_HANDLE_HPP
-#define CAF_RESPONSE_HANDLE_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -181,4 +180,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_RESPONSE_HANDLE_HPP

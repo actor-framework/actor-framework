@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAFDOWNSTREAM_MANAGER_BASE_HPP
-#define CAFDOWNSTREAM_MANAGER_BASE_HPP
+#pragma once
 
 #include <cstddef>
 #include <memory>
@@ -82,4 +81,3 @@ protected:
 
 } // namespace caf
 
-#endif // CAFDOWNSTREAM_MANAGER_BASE_HPP

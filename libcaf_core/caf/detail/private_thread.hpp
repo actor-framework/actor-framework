@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_PRIVATE_THREAD_HPP
-#define CAF_DETAIL_PRIVATE_THREAD_HPP
+#pragma once
 
 #include <atomic>
 #include <mutex>
@@ -66,4 +65,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_PRIVATE_THREAD_HPP

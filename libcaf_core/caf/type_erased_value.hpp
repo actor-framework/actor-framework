@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPE_ERASED_VALUE_HPP
-#define CAF_TYPE_ERASED_VALUE_HPP
+#pragma once
 
 #include <cstdint>
 #include <typeinfo>
@@ -113,4 +112,3 @@ inline std::string to_string(const type_erased_value& x) {
 
 } // namespace caf
 
-#endif // CAF_TYPE_ERASED_VALUE_HPP

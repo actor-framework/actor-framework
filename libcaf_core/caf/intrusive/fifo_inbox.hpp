@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_FIFO_INBOX_HPP
-#define CAF_INTRUSIVE_FIFO_INBOX_HPP
+#pragma once
 
 #include "caf/config.hpp"
 
@@ -234,4 +233,3 @@ private:
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_FIFO_INBOX_HPP

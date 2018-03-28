@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_GET_MAC_ADDRESSES_HPP
-#define CAF_DETAIL_GET_MAC_ADDRESSES_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -34,4 +33,3 @@ std::vector<iface_info> get_mac_addresses();
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_GET_MAC_ADDRESSES_HPP

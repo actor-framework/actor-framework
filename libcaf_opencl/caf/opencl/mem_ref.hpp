@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_MEM_REF_HPP
-#define CAF_OPENCL_MEM_REF_HPP
+#pragma once
 
 #include <ios>
 #include <vector>
@@ -184,4 +183,3 @@ struct allowed_unsafe_message_type<opencl::mem_ref<T>> : std::true_type {};
   
 } // namespace caf
 
-#endif // CAF_OPENCL_MEM_REF_HPP

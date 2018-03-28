@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_SENDER_HPP
-#define CAF_MIXIN_SENDER_HPP
+#pragma once
 
 #include <tuple>
 #include <chrono>
@@ -200,4 +199,3 @@ private:
 } // namespace mixin
 } // namespace caf
 
-#endif // CAF_MIXIN_SENDER_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STATEFUL_ACTOR_HPP
-#define CAF_STATEFUL_ACTOR_HPP
+#pragma once
 
 #include <new>
 #include <type_traits>
@@ -131,4 +130,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_STATEFUL_ACTOR_HPP

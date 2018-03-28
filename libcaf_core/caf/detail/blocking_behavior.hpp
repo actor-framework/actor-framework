@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BLOCKING_BEHAVIOR_HPP
-#define CAF_BLOCKING_BEHAVIOR_HPP
+#pragma once
 
 #include "caf/behavior.hpp"
 #include "caf/catch_all.hpp"
@@ -146,4 +145,3 @@ constexpr make_blocking_behavior_t make_blocking_behavior = make_blocking_behavi
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_BLOCKING_BEHAVIOR_HPP

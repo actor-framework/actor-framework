@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_SPAWN_FWD_HPP
-#define CAF_DETAIL_SPAWN_FWD_HPP
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -56,4 +55,3 @@ spawn_fwd(typename std::remove_reference<T>::type&& arg) noexcept {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SPAWN_FWD_HPP

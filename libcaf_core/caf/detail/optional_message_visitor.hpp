@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_OPTIONAL_MESSAGE_VISITOR_HPP
-#define CAF_DETAIL_OPTIONAL_MESSAGE_VISITOR_HPP
+#pragma once
 
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
@@ -137,4 +136,3 @@ public:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_OPTIONAL_MESSAGE_VISITOR_HPP

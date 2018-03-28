@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MESSAGE_BUILDER_HPP
-#define CAF_MESSAGE_BUILDER_HPP
+#pragma once
 
 #include <vector>
 
@@ -143,4 +142,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_MESSAGE_BUILDER_HPP

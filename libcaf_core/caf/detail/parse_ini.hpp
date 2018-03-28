@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_PARSE_INI_HPP
-#define CAF_DETAIL_PARSE_INI_HPP
+#pragma once
 
 #include <string>
 #include <istream>
@@ -54,4 +53,3 @@ constexpr parse_ini_t parse_ini = parse_ini_t{};
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_PARSE_INI_HPP

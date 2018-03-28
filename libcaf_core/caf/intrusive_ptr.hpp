@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_PTR_HPP
-#define CAF_INTRUSIVE_PTR_HPP
+#pragma once
 
 #include <string>
 #include <cstddef>
@@ -254,4 +253,3 @@ std::string to_string(const intrusive_ptr<T>& x) {
 
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_PTR_HPP

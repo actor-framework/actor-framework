@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TRY_MATCH_HPP
-#define CAF_DETAIL_TRY_MATCH_HPP
+#pragma once
 
 #include <array>
 #include <numeric>
@@ -80,4 +79,3 @@ bool try_match(const type_erased_tuple& xs, const meta_element* iter,
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TRY_MATCH_HPP

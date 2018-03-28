@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_LOGGER_HPP
-#define CAF_LOGGER_HPP
+#pragma once
 
 #include <thread>
 #include <fstream>
@@ -542,4 +541,3 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
                  << "; REASON =" << deep_to_string(rsn).c_str()                \
                  << "; NODE =" << thisptr->node())
 
-#endif // CAF_LOGGER_HPP

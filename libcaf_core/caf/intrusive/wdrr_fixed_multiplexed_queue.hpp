@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_WDRR_FIXED_MULTIPLEXED_QUEUE_HPP
-#define CAF_INTRUSIVE_WDRR_FIXED_MULTIPLEXED_QUEUE_HPP
+#pragma once
 
 #include <tuple>
 #include <type_traits>
@@ -293,4 +292,3 @@ private:
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_WDRR_FIXED_MULTIPLEXED_QUEUE_HPP

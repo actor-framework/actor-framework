@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IS_MESSAGE_SINK_HPP
-#define CAF_IS_MESSAGE_SINK_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -39,4 +38,3 @@ struct is_message_sink<typed_actor<Ts...>> : std::true_type { };
 
 } // namespace caf
 
-#endif // CAF_IS_MESSAGE_SINK_HPP

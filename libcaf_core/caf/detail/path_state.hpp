@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_PATH_STATE_HPP
-#define CAF_DETAIL_PATH_STATE_HPP
+#pragma once
 
 #include <new>
 #include <vector>
@@ -74,4 +73,3 @@ struct path_state<unit_t, T> {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_PATH_STATE_HPP

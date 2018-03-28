@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_NATIVE_SOCKET_HPP
-#define CAF_IO_NETWORK_NATIVE_SOCKET_HPP
+#pragma once
 
 #include <cstddef>
 
@@ -45,4 +44,3 @@ namespace network {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_NATIVE_SOCKET_HPP

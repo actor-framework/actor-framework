@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_META_TYPE_NAME_HPP
-#define CAF_META_TYPE_NAME_HPP
+#pragma once
 
 #include "caf/meta/annotation.hpp"
 
@@ -39,4 +38,3 @@ type_name_t constexpr type_name(const char* cstr) {
 } // namespace meta
 } // namespace caf
 
-#endif // CAF_META_TYPE_NAME_HPP

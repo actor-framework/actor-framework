@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REMOTE_ACTOR_REGISTRY_HPP
-#define CAF_REMOTE_ACTOR_REGISTRY_HPP
+#pragma once
 
 #include <utility>
 #include <functional>
@@ -113,4 +112,3 @@ private:
 
 } // namespace caf
 
-#endif

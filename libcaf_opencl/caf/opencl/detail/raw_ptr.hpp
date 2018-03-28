@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_SMART_PTR_HPP
-#define CAF_OPENCL_SMART_PTR_HPP
+#pragma once
 
 #include <memory>
 #include <algorithm>
@@ -57,4 +56,3 @@ CAF_OPENCL_PTR_ALIAS(raw_device_ptr, cl_device_id,
 CAF_OPENCL_PTR_ALIAS(raw_command_queue_ptr, cl_command_queue,
                      clRetainCommandQueue, clReleaseCommandQueue)
 
-#endif // CAF_OPENCL_SMART_PTR_HPP

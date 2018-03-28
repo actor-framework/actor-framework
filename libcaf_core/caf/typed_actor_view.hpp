@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_ACTOR_VIEW_HPP
-#define CAF_TYPED_ACTOR_VIEW_HPP
+#pragma once
 
 #include "caf/scheduled_actor.hpp"
 
@@ -139,4 +138,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_TYPED_ACTOR_VIEW_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ABSTRACT_COMPOSABLE_STATE_HPP
-#define CAF_ABSTRACT_COMPOSABLE_STATE_HPP
+#pragma once
 
 #include <utility>
 
@@ -35,4 +34,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_ABSTRACT_COMPOSABLE_STATE_HPP

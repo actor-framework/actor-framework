@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ILLEGAL_MESSAGE_ELEMENT_HPP
-#define CAF_ILLEGAL_MESSAGE_ELEMENT_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -35,4 +34,3 @@ struct is_illegal_message_element
 
 } // namespace caf
 
-#endif // CAF_ILLEGAL_MESSAGE_ELEMENT_HPP

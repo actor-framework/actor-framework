@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MESSAGE_DATA_HPP
-#define CAF_DETAIL_MESSAGE_DATA_HPP
+#pragma once
 
 #include <string>
 #include <iterator>
@@ -153,4 +152,3 @@ inline bool operator!=(std::nullptr_t, const message_data::cow_ptr& x) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MESSAGE_DATA_HPP

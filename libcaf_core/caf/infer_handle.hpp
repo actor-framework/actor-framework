@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INFER_HANDLE_HPP
-#define CAF_INFER_HANDLE_HPP
+#pragma once
 
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
@@ -182,4 +181,3 @@ struct is_handle<typed_actor<Ts...>> : std::true_type {};
 
 } // namespace caf
 
-#endif // CAF_INFER_HANDLE_HPP

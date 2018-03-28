@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_SCHEDULER_POLICY_HPP
-#define CAF_POLICY_SCHEDULER_POLICY_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -92,4 +91,3 @@ public:
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_SCHEDULER_POLICY_HPP

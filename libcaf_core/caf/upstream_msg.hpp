@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UPSTREAM_MSG_HPP
-#define CAF_UPSTREAM_MSG_HPP
+#pragma once
 
 #include <utility>
 #include <vector>
@@ -192,4 +191,3 @@ typename Inspector::result_type inspect(Inspector& f, upstream_msg& x) {
 
 } // namespace caf
 
-#endif // CAF_UPSTREAM_MSG_HPP

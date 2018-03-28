@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_META_LOAD_CALLBACK_HPP
-#define CAF_META_LOAD_CALLBACK_HPP
+#pragma once
 
 #include "caf/meta/annotation.hpp"
 
@@ -47,4 +46,3 @@ load_callback_t<F> load_callback(F fun) {
 } // namespace meta
 } // namespace caf
 
-#endif // CAF_META_LOAD_CALLBACK_HPP

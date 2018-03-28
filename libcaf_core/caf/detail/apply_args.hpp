@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_APPLY_ARGS_HPP
-#define CAF_DETAIL_APPLY_ARGS_HPP
+#pragma once
 
 #include <utility>
 
@@ -78,4 +77,3 @@ auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_APPLY_ARGS_HPP

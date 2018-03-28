@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OUTPUT_STREAM_HPP
-#define CAF_OUTPUT_STREAM_HPP
+#pragma once
 
 namespace caf {
 
@@ -30,4 +29,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_OUTPUT_STREAM_HPP

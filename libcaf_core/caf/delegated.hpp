@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DELEGATED_HPP
-#define CAF_DELEGATED_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -37,4 +36,3 @@ inline bool operator==(const delegated<Ts...>&, const delegated<Ts...>&) {
 
 } // namespace caf
 
-#endif // CAF_DELEGATED_HPP

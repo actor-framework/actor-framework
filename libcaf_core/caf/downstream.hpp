@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DOWNSTREAM_HPP
-#define CAF_DOWNSTREAM_HPP
+#pragma once
 
 #include <deque>
 #include <vector>
@@ -64,4 +63,3 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_DOWNSTREAM_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_EXPECTED_HPP
-#define CAF_EXPECTED_HPP
+#pragma once
 
 #include "caf/config.hpp"
 
@@ -471,4 +470,3 @@ auto operator<<(ostream& oss, const caf::expected<T>& x)
 
 } // namespace std
 
-#endif

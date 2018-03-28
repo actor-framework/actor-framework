@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FUNCTOR_ATTACHABLE_HPP
-#define CAF_FUNCTOR_ATTACHABLE_HPP
+#pragma once
 
 #include "caf/attachable.hpp"
 
@@ -68,4 +67,3 @@ struct functor_attachable<F, 0> : attachable {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_FUNCTOR_ATTACHABLE_HPP

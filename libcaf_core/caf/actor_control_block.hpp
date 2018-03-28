@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_CONTROL_BLOCK_HPP
-#define CAF_ACTOR_CONTROL_BLOCK_HPP
+#pragma once
 
 #include <atomic>
 
@@ -251,4 +250,3 @@ struct hash<caf::weak_actor_ptr> {
 
 } // namespace std
 
-#endif // CAF_ACTOR_CONTROL_BLOCK_HPP

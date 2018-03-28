@@ -19,8 +19,7 @@
 // This file is referenced in the manual, do not modify without updating refs!
 // ConfiguringActorApplications: 50-54
 
-#ifndef CAF_ALLOWED_UNSAFE_MESSAGE_TYPE_HPP
-#define CAF_ALLOWED_UNSAFE_MESSAGE_TYPE_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -52,4 +51,3 @@ struct is_allowed_unsafe_message_type<const T&>
   struct allowed_unsafe_message_type<type_name> : std::true_type {};           \
   }
 
-#endif // CAF_ALLOWED_UNSAFE_MESSAGE_TYPE_HPP

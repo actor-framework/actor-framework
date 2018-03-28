@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BINARY_SERIALIZER_HPP
-#define CAF_BINARY_SERIALIZER_HPP
+#pragma once
 
 #include "caf/stream_serializer.hpp"
 #include "caf/streambuf.hpp"
@@ -30,4 +29,3 @@ using binary_serializer = stream_serializer<vectorbuf>;
 
 } // namespace caf
 
-#endif // CAF_BINARY_SERIALIZER_HPP

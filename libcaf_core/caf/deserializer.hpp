@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DESERIALIZER_HPP
-#define CAF_DESERIALIZER_HPP
+#pragma once
 
 #include <string>
 #include <cstddef>
@@ -87,4 +86,3 @@ operator>>(deserializer& source, T& x) {
 
 } // namespace caf
 
-#endif // CAF_DESERIALIZER_HPP

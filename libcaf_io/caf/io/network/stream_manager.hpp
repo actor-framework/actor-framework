@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_STREAM_MANAGER_HPP
-#define CAF_IO_NETWORK_STREAM_MANAGER_HPP
+#pragma once
 
 #include <cstddef>
 
@@ -49,4 +48,3 @@ public:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_STREAM_MANAGER_HPP

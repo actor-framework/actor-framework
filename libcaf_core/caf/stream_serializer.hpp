@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SERIALIZER_HPP
-#define CAF_STREAM_SERIALIZER_HPP
+#pragma once
 
 #include <string>
 #include <limits>
@@ -188,4 +187,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_STREAM_SERIALIZER_HPP

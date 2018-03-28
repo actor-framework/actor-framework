@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_SAFE_EQUAL_HPP
-#define CAF_DETAIL_SAFE_EQUAL_HPP
+#pragma once
 
 #include <cmath> // fabs
 #include <limits>
@@ -62,4 +61,3 @@ safe_equal(const T& lhs, const U& rhs) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SAFE_EQUAL_HPP

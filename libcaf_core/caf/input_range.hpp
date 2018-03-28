@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INPUT_RANGE_HPP
-#define CAF_INPUT_RANGE_HPP
+#pragma once
 
 #include <iterator>
 
@@ -121,4 +120,3 @@ input_range_impl<I> make_input_range(I first, I last) {
 
 } // namespace caf
 
-#endif // CAF_INPUT_RANGE_HPP

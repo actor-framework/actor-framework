@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_THREAD_SAFE_ACTOR_CLOCK_HPP
-#define CAF_DETAIL_THREAD_SAFE_ACTOR_CLOCK_HPP
+#pragma once
 
 #include <mutex>
 #include <atomic>
@@ -67,4 +66,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_THREAD_SAFE_ACTOR_CLOCK_HPP

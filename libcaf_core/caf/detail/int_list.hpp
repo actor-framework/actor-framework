@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_INT_LIST_HPP
-#define CAF_DETAIL_INT_LIST_HPP
+#pragma once
 
 #include "caf/detail/type_list.hpp"
 
@@ -121,4 +120,3 @@ struct il_range<Last, Last, Is...> {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_INT_LIST_HPP

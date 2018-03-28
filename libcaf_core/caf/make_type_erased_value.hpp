@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_TYPE_ERASED_VALUE_HPP
-#define CAF_MAKE_TYPE_ERASED_VALUE_HPP
+#pragma once
 
 #include <cstdint>
 #include <typeinfo>
@@ -49,4 +48,3 @@ struct type_erased_value_factory {
 
 } // namespace caf
 
-#endif // CAF_MAKE_TYPE_ERASED_VALUE_HPP

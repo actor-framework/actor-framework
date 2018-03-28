@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_GET_PROCESS_ID_HPP
-#define CAF_DETAIL_GET_PROCESS_ID_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -31,4 +30,3 @@ unsigned get_process_id();
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_GET_PROCESS_ID_HPP

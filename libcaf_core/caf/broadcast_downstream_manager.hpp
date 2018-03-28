@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BROADCAST_DOWNSTREAM_MANAGER_HPP
-#define CAF_BROADCAST_DOWNSTREAM_MANAGER_HPP
+#pragma once
 
 #include <algorithm>
 
@@ -268,4 +267,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_BROADCAST_DOWNSTREAM_MANAGER_HPP

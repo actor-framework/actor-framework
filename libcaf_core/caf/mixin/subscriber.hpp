@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_SUBSCRIBER_HPP
-#define CAF_MIXIN_SUBSCRIBER_HPP
+#pragma once
 
 #include <unordered_set>
 
@@ -101,4 +100,3 @@ private:
 } // namespace mixin
 } // namespace caf
 
-#endif // CAF_MIXIN_SUBSCRIBER_HPP

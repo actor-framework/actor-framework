@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BASP_HEADER_HPP
-#define CAF_IO_BASP_HEADER_HPP
+#pragma once
 
 #include <string>
 #include <cstdint>
@@ -150,4 +149,3 @@ constexpr size_t header_size = node_id::serialized_size * 2
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BASP_HEADER_HPP

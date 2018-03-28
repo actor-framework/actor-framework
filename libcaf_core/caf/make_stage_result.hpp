@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_STAGE_RESULT_HPP
-#define CAF_MAKE_STAGE_RESULT_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/output_stream.hpp"
@@ -106,4 +105,3 @@ using make_stage_result_t =
 
 } // namespace caf
 
-#endif // CAF_MAKE_STAGE_RESULT_HPP

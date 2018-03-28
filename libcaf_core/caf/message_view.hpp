@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MESSAGE_VIEW_HPP
-#define CAF_MESSAGE_VIEW_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 
@@ -40,4 +39,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_MESSAGE_VIEW_HPP

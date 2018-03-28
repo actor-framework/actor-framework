@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ABSTRACT_GROUP_HPP
-#define CAF_ABSTRACT_GROUP_HPP
+#pragma once
 
 #include <string>
 #include <memory>
@@ -91,4 +90,3 @@ using abstract_group_ptr = intrusive_ptr<abstract_group>;
 
 } // namespace caf
 
-#endif // CAF_ABSTRACT_GROUP_HPP

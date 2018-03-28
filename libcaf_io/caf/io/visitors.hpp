@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_VISITORS_HPP
-#define CAF_IO_VISITORS_HPP
+#pragma once
 
 #include "caf/io/abstract_broker.hpp"
 
@@ -58,4 +57,3 @@ struct hash_visitor {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_VISITORS_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UNIT_HPP
-#define CAF_UNIT_HPP
+#pragma once
 
 #include <string>
 
@@ -87,4 +86,3 @@ struct unlift_void<unit_t> {
 
 } // namespace caf
 
-#endif // CAF_UNIT_HPP

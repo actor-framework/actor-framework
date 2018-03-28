@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TIMESTAMP_HPP
-#define CAF_TIMESTAMP_HPP
+#pragma once
 
 #include <chrono>
 #include <string>
@@ -43,4 +42,3 @@ void append_timestamp_to_string(std::string& x, const timestamp& y);
 
 } // namespace caf
 
-#endif // CAF_TIMESTAMP_HPP

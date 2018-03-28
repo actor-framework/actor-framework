@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENSSL_MIDDLEMAN_ACTOR_HPP
-#define CAF_OPENSSL_MIDDLEMAN_ACTOR_HPP
+#pragma once
 
 #include "caf/io/middleman_actor.hpp"
 
@@ -30,4 +29,3 @@ io::middleman_actor make_middleman_actor(actor_system& sys, actor db);
 } // namespace openssl
 } // namespace caf
 
-#endif // CAF_OPENSSL_MIDDLEMAN_ACTOR_HPP

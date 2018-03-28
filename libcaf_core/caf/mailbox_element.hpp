@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAILBOX_ELEMENT_HPP
-#define CAF_MAILBOX_ELEMENT_HPP
+#pragma once
 
 #include <cstddef>
 
@@ -225,4 +224,3 @@ make_mailbox_element(strong_actor_ptr sender, message_id id,
 
 } // namespace caf
 
-#endif // CAF_MAILBOX_ELEMENT_HPP

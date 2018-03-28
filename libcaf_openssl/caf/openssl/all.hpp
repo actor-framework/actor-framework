@@ -16,11 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENSSL_ALL_HPP
-#define CAF_OPENSSL_ALL_HPP
+#pragma once
 
 #include "caf/openssl/manager.hpp"
 #include "caf/openssl/publish.hpp"
 #include "caf/openssl/remote_actor.hpp"
 
-#endif // CAF_OPENSSL_ALL_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_SELECT_INTEGER_TYPE_HPP
-#define CAF_DETAIL_SELECT_INTEGER_TYPE_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -70,4 +69,3 @@ struct select_integer_type<8> {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SELECT_INTEGER_TYPE_HPP

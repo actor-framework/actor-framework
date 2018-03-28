@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_ENQUEUE_RESULT_HPP
-#define CAF_DETAIL_ENQUEUE_RESULT_HPP
+#pragma once
 
 #include "caf/intrusive/inbox_result.hpp"
 
@@ -31,4 +30,3 @@ using enqueue_result = intrusive::inbox_result;
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_DETAIL_ENQUEUE_RESULT_HPP

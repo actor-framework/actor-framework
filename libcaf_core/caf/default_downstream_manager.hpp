@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DEFAULT_DOWNSTREAM_MANAGER_HPP
-#define CAF_DEFAULT_DOWNSTREAM_MANAGER_HPP
+#pragma once
 
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/stream_source_trait.hpp"
@@ -58,4 +57,3 @@ using default_downstream_manager_t =
 
 } // namespace caf
 
-#endif // CAF_DEFAULT_DOWNSTREAM_MANAGER_HPP

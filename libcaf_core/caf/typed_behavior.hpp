@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_BEHAVIOR_HPP
-#define CAF_TYPED_BEHAVIOR_HPP
+#pragma once
 
 #include "caf/behavior.hpp"
 #include "caf/deduce_mpi.hpp"
@@ -262,4 +261,3 @@ struct is_typed_behavior<typed_behavior<Sigs...>> : std::true_type { };
 
 } // namespace caf
 
-#endif // CAF_TYPED_BEHAVIOR_HPP

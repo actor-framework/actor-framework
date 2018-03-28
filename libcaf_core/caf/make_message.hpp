@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_MESSAGE_HPP
-#define CAF_MAKE_MESSAGE_HPP
+#pragma once
 
 #include <tuple>
 #include <sstream>
@@ -120,4 +119,3 @@ message make_message_from_tuple(std::tuple<Ts...> xs) {
 
 } // namespace caf
 
-#endif // CAF_MAKE_MESSAGE_HPP

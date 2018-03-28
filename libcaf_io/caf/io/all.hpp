@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ALL_HPP
-#define CAF_IO_ALL_HPP
+#pragma once
 
 #include "caf/io/publish.hpp"
 #include "caf/io/broker.hpp"
@@ -37,4 +36,3 @@
 
 #include "caf/io/basp/all.hpp"
 
-#endif // CAF_IO_ALL_HPP

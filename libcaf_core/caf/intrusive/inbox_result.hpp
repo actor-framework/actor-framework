@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_INBOX_RESULT_HPP
-#define CAF_INTRUSIVE_INBOX_RESULT_HPP
+#pragma once
 
 namespace caf {
 namespace intrusive {
@@ -41,4 +40,3 @@ enum class inbox_result {
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_INBOX_RESULT_HPP

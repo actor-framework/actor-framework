@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_ASIO_MULTIPLEXER_HPP
-#define CAF_IO_NETWORK_ASIO_MULTIPLEXER_HPP
+#pragma once
 
 #include "caf/config.hpp"
 
@@ -505,4 +504,3 @@ private:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_ASIO_MULTIPLEXER_HPP

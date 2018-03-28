@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_SELECT_ALL_HPP
-#define CAF_DETAIL_SELECT_ALL_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -32,4 +31,3 @@ struct select_all {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SELECT_ALL_HPP

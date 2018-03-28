@@ -30,8 +30,7 @@
 // announced, different class versions in a single actor system would
 // cause inconsistencies that are not recoverable.
 
-#ifndef CAF_DETAIL_PRETTY_TYPE_NAME_HPP
-#define CAF_DETAIL_PRETTY_TYPE_NAME_HPP
+#pragma once
 
 #include <string>
 #include <typeinfo>
@@ -48,4 +47,3 @@ std::string pretty_type_name(const std::type_info& x);
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_PRETTY_TYPE_NAME_HPP

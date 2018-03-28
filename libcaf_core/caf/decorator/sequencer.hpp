@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DECORATOR_SEQUENCER_HPP
-#define CAF_DECORATOR_SEQUENCER_HPP
+#pragma once
 
 #include "caf/actor_addr.hpp"
 #include "caf/mailbox_element.hpp"
@@ -59,4 +58,3 @@ private:
 } // namespace decorator
 } // namespace caf
 
-#endif // CAF_DECORATOR_SEQUENCER_HPP

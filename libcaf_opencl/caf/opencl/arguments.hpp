@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_ARGUMENTS
-#define CAF_OPENCL_ARGUMENTS
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -492,4 +491,3 @@ struct to_output_arg {
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_ARGUMENTS

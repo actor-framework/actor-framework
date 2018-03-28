@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_SINGLY_LINKED_HPP
-#define CAF_INTRUSIVE_SINGLY_LINKED_HPP
+#pragma once
 
 namespace caf {
 namespace intrusive {
@@ -62,4 +61,3 @@ const T* promote(const singly_linked<T>* ptr) {
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_SINGLY_LINKED_HPP

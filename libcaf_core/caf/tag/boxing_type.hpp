@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TAG_BOXING_TYPE_HPP
-#define CAF_TAG_BOXING_TYPE_HPP
+#pragma once
 
 namespace caf {
 namespace tag {
@@ -28,4 +27,3 @@ struct boxing_type {};
 } // namespace tag
 } // namespace caf
 
-#endif // CAF_TAG_BOXING_TYPE_HPP

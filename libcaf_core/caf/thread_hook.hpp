@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_THREAD_HOOK_HPP
-#define CAF_THREAD_HOOK_HPP
+#pragma once
 
 namespace caf {
 
@@ -44,4 +43,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_THREAD_HOOK_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_DEVICE_HPP
-#define CAF_OPENCL_DEVICE_HPP
+#pragma once
 
 #include <vector>
 
@@ -329,4 +328,3 @@ inline const std::string& device::name() const {
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_DEVICE_HPP

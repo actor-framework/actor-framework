@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_WORK_SHARING_HPP
-#define CAF_POLICY_WORK_SHARING_HPP
+#pragma once
 
 #include <list>
 #include <mutex>
@@ -122,4 +121,3 @@ public:
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_WORK_SHARING_HPP

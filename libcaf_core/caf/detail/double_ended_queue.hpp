@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_DOUBLE_ENDED_QUEUE_HPP
-#define CAF_DETAIL_DOUBLE_ENDED_QUEUE_HPP
+#pragma once
 
 #include "caf/config.hpp"
 
@@ -243,4 +242,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_DOUBLE_ENDED_QUEUE_HPP

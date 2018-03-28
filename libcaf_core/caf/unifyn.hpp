@@ -16,11 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UNIFYN_HPP
-#define CAF_UNIFYN_HPP
+#pragma once
 
 #define CAF_CONCAT_(LHS, RHS) LHS ## RHS
 #define CAF_CONCAT(LHS, RHS) CAF_CONCAT_(LHS, RHS)
 #define CAF_UNIFYN(NAME) CAF_CONCAT(NAME, __LINE__)
 
-#endif // CAF_UNIFYN_HPP

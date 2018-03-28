@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_ARG_HPP
-#define CAF_POLICY_ARG_HPP
+#pragma once
 
 namespace caf {
 namespace policy {
@@ -35,4 +34,3 @@ const arg<Ts...> arg<Ts...>::value = arg<Ts...>{};
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_ARG_HPP

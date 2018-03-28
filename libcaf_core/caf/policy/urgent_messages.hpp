@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_URGENT_MESSAGES_HPP
-#define CAF_POLICY_URGENT_MESSAGES_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
@@ -63,4 +62,3 @@ public:
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_URGENT_MESSAGES_HPP
