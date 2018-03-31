@@ -126,12 +126,11 @@ public:
   }
 
   result(expected<void> x) {
-    if (x) {
-      flag = rt_value;
-    } else {
-      flag = rt_error;
-      err = std::move(x.error());
-    }
+    init(x);
+  }
+
+  result(expected<unit_t> x) {
+    init(x);
   }
 
   result(skip_t) : flag(rt_skip) {
@@ -142,7 +141,15 @@ public:
     // nop
   }
 
+  result(delegated<unit_t>) : flag(rt_delegated) {
+    // nop
+  }
+
   result(const typed_response_promise<void>&) : flag(rt_delegated) {
+    // nop
+  }
+
+  result(const typed_response_promise<unit_t>&) : flag(rt_delegated) {
     // nop
   }
 
@@ -153,6 +160,17 @@ public:
   result_runtime_type flag;
   message value;
   error err;
+
+private:
+  template <class T>
+  void init(T& x) {
+    if (x) {
+      flag = rt_value;
+    } else {
+      flag = rt_error;
+      err = std::move(x.error());
+    }
+  }
 };
 
 template <>

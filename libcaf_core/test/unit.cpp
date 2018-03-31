@@ -28,17 +28,23 @@
 
 using namespace caf;
 
-using unit_res_atom = atom_constant<atom("unitRes")>;
-using void_res_atom = atom_constant<atom("voidRes")>;
-using unit_raw_atom = atom_constant<atom("unitRaw")>;
-using void_raw_atom = atom_constant<atom("voidRaw")>;
+using unit_res_atom   = atom_constant<atom("unitRes")>;
+using void_res_atom   = atom_constant<atom("voidRes")>;
+using unit_raw_atom   = atom_constant<atom("unitRaw")>;
+using void_raw_atom   = atom_constant<atom("voidRaw")>;
+using typed_unit_atom = atom_constant<atom("typedUnit")>;
 
-behavior testee(event_based_actor*) {
+behavior testee(event_based_actor* self) {
   return {
-    [] (unit_res_atom) -> result<unit_t> { return unit; },
-    [] (void_res_atom) -> result<void>   { return {}; },
-    [] (unit_raw_atom) -> unit_t         { return unit; },
-    [] (void_raw_atom) -> void           { }
+    [] (unit_res_atom)   -> result<unit_t> { return unit; },
+    [] (void_res_atom)   -> result<void>   { return {}; },
+    [] (unit_raw_atom)   -> unit_t         { return unit; },
+    [] (void_raw_atom)   -> void           { },
+    [=](typed_unit_atom) -> result<unit_t> {
+      auto rp = self->make_response_promise<unit_t>();
+      rp.deliver(unit);
+      return rp;
+    }
   };
 }
 
@@ -48,7 +54,8 @@ CAF_TEST(unit_results) {
   scoped_actor self{sys};
   auto aut = sys.spawn(testee);
   atom_value as[] = {unit_res_atom::value, void_res_atom::value,
-                     unit_raw_atom::value, void_raw_atom::value};
+                     unit_raw_atom::value, void_raw_atom::value,
+                     typed_unit_atom::value};
   for (auto a : as) {
     self->request(aut, infinite, a).receive(
       [&] {
@@ -60,4 +67,3 @@ CAF_TEST(unit_results) {
     );
   }
 }
-
