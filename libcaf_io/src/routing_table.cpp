@@ -85,7 +85,7 @@ void routing_table::add(const node_id& nid) {
 bool routing_table::reachable(const node_id& dest) {
   auto i = node_information_base_.find(dest);
   if (i != node_information_base_.end())
-    return i->second.details.cs == connectivity::established;
+    return i->second.details.conn == connectivity::established;
   return false;
 }
 
@@ -94,7 +94,7 @@ bool routing_table::status(const node_id& nid,
   auto i = node_information_base_.find(nid);
   if (i == node_information_base_.end())
     return false;
-  i->second.details.cs = new_status;
+  i->second.details.conn = new_status;
   return true;
 }
 
@@ -103,7 +103,7 @@ routing_table::status(const node_id& nid) {
   auto i = node_information_base_.find(nid);
   if (i == node_information_base_.end())
     return none;
-  return i->second.details.cs;
+  return i->second.details.conn;
 }
 
 bool routing_table::forwarder(const node_id& nid,

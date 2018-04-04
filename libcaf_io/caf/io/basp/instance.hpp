@@ -130,6 +130,11 @@ public:
 
     /// Returns a reference to the sent buffer.
     virtual buffer_type& get_buffer(connection_handle hdl) = 0;
+    
+    /// Returns a reference to a buffer to be sent to node with `nid`.
+    /// If communication with the node is esstablished, it picks the first
+    /// available handle, otherwise a buffer for a pending message is returned.
+    virtual buffer_type& get_buffer(node_id nid) = 0;
 
     /// Returns the buffer accessed through a call to `get_buffer` when
     /// passing a datagram handle and removes it from the callee.

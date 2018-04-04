@@ -201,9 +201,11 @@ void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
                               visit(seq_num_visitor{this}, *c.hdl));
     instance.flush(*c.hdl);
   } else {
-    // TODO: Buffer message!
-    CAF_CRITICAL("ibasp_broker_state::send_kill_proxy_instance with buffering "
-                 "not implemented!");
+    // TODO: Buffer message until communication is enstablished.
+    buffer_type buf;
+    instance.write_kill_proxy(self->context(), buf,
+                              nid, aid, rsn, 0);
+    pending_connectivity[nid].emplace_back(std::move(buf));
   }
 }
 
@@ -383,12 +385,13 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
     return;
   }
   auto c = std::move(*ec);
+  // send message to SpawnServ of remote node
+  basp::header hdr{basp::message_type::dispatch_message,
+                   basp::header::named_receiver_flag,
+                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                   0}; // sequence number only available with connectivity
   if (c.conn == basp::routing_table::connectivity::established) {
-    // send message to SpawnServ of remote node
-    basp::header hdr{basp::message_type::dispatch_message,
-                     basp::header::named_receiver_flag,
-                     0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
-                     visit(seq_num_visitor{this}, *c.hdl)};
+    hdr.sequence_number = visit(seq_num_visitor{this}, *c.hdl);
     // writing std::numeric_limits<actor_id>::max() is a hack to get
     // this send-to-named-actor feature working with older CAF releases
     instance.write(self->context(), get_buffer(*c.hdl),
@@ -396,8 +399,9 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
     instance.flush(*c.hdl);
   } else {
     // TODO: Implement this, can it happen?
-    CAF_CRITICAL("basp_broker_state::learned_new_node with buffering not "
-                 "implemented!");
+    buffer_type buf;
+    instance.write(self->context(), buf, hdr, &writer);
+    pending_connectivity[nid].emplace_back(std::move(buf));
   }
 }
 
@@ -510,7 +514,7 @@ void basp_broker_state::add_pending(execution_unit* ctx,
   if (ep.pending.size() >= max_pending_messages)
     deliver_pending(ctx, ep, true);
   else if (!ep.did_set_timeout)
-    self->delayed_send(self, pending_to, pending_atom::value,
+    self->delayed_send(self, pending_timeout, pending_atom::value,
                        get<datagram_handle>(ep.hdl));
 }
 
@@ -535,7 +539,7 @@ bool basp_broker_state::deliver_pending(execution_unit* ctx,
   }
   // Set a timeout if there are still pending messages.
   if (!ep.pending.empty() && !ep.did_set_timeout)
-    self->delayed_send(self, pending_to, pending_atom::value,
+    self->delayed_send(self, pending_timeout, pending_atom::value,
                        get<datagram_handle>(ep.hdl));
   return true;
 }
@@ -565,6 +569,17 @@ basp_broker_state::get_buffer(datagram_handle) {
 basp_broker_state::buffer_type&
 basp_broker_state::get_buffer(connection_handle hdl) {
   return self->wr_buf(hdl);
+}
+
+basp_broker_state::buffer_type&
+basp_broker_state::get_buffer(node_id nid) {
+  auto ec = instance.tbl().lookup(nid);
+  if (ec && ec->conn == basp::routing_table::connectivity::established && ec->hdl) {
+    return get_buffer(*(ec->hdl));
+  }
+  auto msgs = pending_connectivity[nid];
+  msgs.emplace_back();
+  return msgs.back();
 }
 
 basp_broker_state::buffer_type
@@ -737,24 +752,26 @@ behavior basp_broker::make_behavior() {
         return sec::no_route_to_receiving_node;
       }
       auto c = std::move(*ec);
+      if (system().node() == src->node())
+        system().registry().put(src->id(), src);
+      auto writer = make_callback([&](serializer& sink) -> error {
+        return sink(dest_name, cme->stages, const_cast<message&>(msg));
+      });
+      basp::header hdr{basp::message_type::dispatch_message,
+                       basp::header::named_receiver_flag,
+                       0, cme->mid.integer_value(), state.this_node(),
+                       dest_node, src->id(), invalid_actor_id,
+                       0};
       if (c.conn == basp::routing_table::connectivity::established) {
-        if (system().node() == src->node())
-          system().registry().put(src->id(), src);
-        auto writer = make_callback([&](serializer& sink) -> error {
-          return sink(dest_name, cme->stages, const_cast<message&>(msg));
-        });
-        basp::header hdr{basp::message_type::dispatch_message,
-                         basp::header::named_receiver_flag,
-                         0, cme->mid.integer_value(), state.this_node(),
-                         dest_node, src->id(), invalid_actor_id,
-                         visit(seq_num_visitor{&state}, *c.hdl)};
+        hdr.sequence_number = visit(seq_num_visitor{&state}, *c.hdl);
         state.instance.write(context(), state.get_buffer(*c.hdl),
                              hdr, &writer);
         state.instance.flush(*c.hdl);
       } else {
         // TODO: Buffer the message in the basp broker.
-        CAF_CRITICAL("basp_broker forward_atom with buffering "
-                     "not implemented!");
+        std::vector<char> buf;
+        state.instance.write(context(), buf, hdr, &writer);
+        state.pending_connectivity[dest_node].emplace_back(buf);
       }
       return delegated<message>();
     },

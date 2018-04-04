@@ -254,20 +254,21 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   CAF_ASSERT(receiver && system().node() != receiver->node());
   auto ec = tbl_.lookup(receiver->node());
   /// TODO: Let's assume that the handle is valid if the status is established.
-  if (!ec || ec->cs == routing_table::connectivity::failed) {
+  if (!ec || ec->conn == routing_table::connectivity::failed) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
   }
   auto c = std::move(*ec);
-  if (c.cs == routing_table::connectivity::established) {
-    auto writer = make_callback([&](serializer& sink) -> error {
-      return sink(const_cast<std::vector<strong_actor_ptr>&>(forwarding_stack),
-                  const_cast<message&>(msg));
-    });
-    header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
-               sender ? sender->node() : this_node(), receiver->node(),
-               sender ? sender->id() : invalid_actor_id, receiver->id(),
-               visit(seq_num_visitor{callee_}, *c.hdl)};
+  auto writer = make_callback([&](serializer& sink) -> error {
+    return sink(const_cast<std::vector<strong_actor_ptr>&>(forwarding_stack),
+                const_cast<message&>(msg));
+  });
+  header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
+             sender ? sender->node() : this_node(), receiver->node(),
+             sender ? sender->id() : invalid_actor_id, receiver->id(),
+             0};
+  if (c.conn == routing_table::connectivity::established) {
+    hdr.sequence_number = visit(seq_num_visitor{callee_}, *c.hdl);
     write(ctx, callee_.get_buffer(*c.hdl), hdr, &writer);
     flush(*c.hdl);
     notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
@@ -275,8 +276,11 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   } else {
     // lr.cs == routing_table::communication::pending
     // TODO: Buffer the message in the basp broker.
-    CAF_CRITICAL("instance::disaptch with buffering not implemented!");
-    return false;
+    write(ctx, callee_.get_buffer(receiver->node()), hdr, &writer);
+    // TODO: should the hook really be called here, or should we delay this
+    // until communication is established?
+    notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
+    return true;
   }
 }
 

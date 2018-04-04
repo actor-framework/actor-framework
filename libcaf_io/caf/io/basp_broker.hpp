@@ -110,6 +110,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   buffer_type& get_buffer(connection_handle hdl) override;
 
   // inherited from basp::instance::callee
+  buffer_type& get_buffer(node_id nid) override;
+
+  // inherited from basp::instance::callee
   buffer_type pop_datagram_buffer(datagram_handle hdl) override;
 
   // inherited from basp::instance::callee
@@ -169,9 +172,13 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // maximum queue size for pending messages of endpoints with ordering
   const size_t max_pending_messages;
+  
+  // buffer messages for nodes while connectivity is established
+  std::unordered_map<node_id, std::vector<buffer_type>> pending_connectivity;
 
   // timeout for delivery of pending messages of endpoints with ordering
-  const std::chrono::milliseconds pending_to = std::chrono::milliseconds(100);
+  const std::chrono::milliseconds pending_timeout
+    = std::chrono::milliseconds(100);
 
   // returns the node identifier of the underlying BASP instance
   const node_id& this_node() const {
