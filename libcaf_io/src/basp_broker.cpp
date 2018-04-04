@@ -104,8 +104,9 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   //       send trigger an error message if we cannot contact the remote node.
   // We need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node.
-  auto ehdl = instance.tbl().lookup(nid);
-  if (!ehdl) {
+  auto ec = instance.tbl().lookup(nid);
+  // TODO: Should this communication already be established?
+  if (!ec) {
     // This happens if and only if we don't have a path to `nid`
     // and current_context_->hdl has been blacklisted.
     CAF_LOG_INFO("cannot create a proxy instance for an actor "
@@ -138,7 +139,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
                                 get_buffer(this_context->hdl),
                                 nid, aid,
                                 ctx.requires_ordering ? ctx.seq_outgoing++ : 0);
-  instance.flush(*ehdl);
+  instance.flush(*ec->hdl);
   mm->notify<hook::new_remote_actor>(res);
   return res;
 }
@@ -185,18 +186,25 @@ void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
   if (rsn == none)
     rsn = exit_reason::unknown;
-  auto ehdl = instance.tbl().lookup(nid);
-  if (!ehdl) {
-    CAF_LOG_INFO("cannot send exit message for proxy, no route to host:"
+  auto ec = instance.tbl().lookup(nid);
+  /// TODO: Let's assume that the handle is valid if the status is established.
+  if (!ec || ec->conn == basp::routing_table::connectivity::failed) {
+    CAF_LOG_INFO("cannot send exit message for proxy, host unreachable"
                  << CAF_ARG(nid));
     return;
   }
-  auto hdl = std::move(*ehdl);
-  instance.write_kill_proxy(self->context(),
-                            get_buffer(hdl),
-                            nid, aid, rsn,
-                            visit(seq_num_visitor{this}, hdl));
-  instance.flush(hdl);
+  auto c = std::move(*ec);
+  if (c.conn == basp::routing_table::connectivity::established) {
+    instance.write_kill_proxy(self->context(),
+                              get_buffer(*c.hdl),
+                              nid, aid, rsn,
+                              visit(seq_num_visitor{this}, *c.hdl));
+    instance.flush(*c.hdl);
+  } else {
+    // TODO: Buffer message!
+    CAF_CRITICAL("ibasp_broker_state::send_kill_proxy_instance with buffering "
+                 "not implemented!");
+  }
 }
 
 void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
@@ -369,22 +377,28 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
     auto msg = make_message(sys_atom::value, get_atom::value, "info");
     return sink(name_atm, stages, msg);
   });
-  auto ehdl = instance.tbl().lookup(nid);
-  if (!ehdl) {
+  auto ec = instance.tbl().lookup(nid);
+  if (!ec || ec->conn == basp::routing_table::connectivity::failed) {
     CAF_LOG_ERROR("learned_new_node called, but no route to nid");
     return;
   }
-  auto hdl = std::move(*ehdl);
-  // send message to SpawnServ of remote node
-  basp::header hdr{basp::message_type::dispatch_message,
-                   basp::header::named_receiver_flag,
-                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
-                   visit(seq_num_visitor{this}, hdl)};
-  // writing std::numeric_limits<actor_id>::max() is a hack to get
-  // this send-to-named-actor feature working with older CAF releases
-  instance.write(self->context(), get_buffer(hdl),
-                 hdr, &writer);
-  instance.flush(hdl);
+  auto c = std::move(*ec);
+  if (c.conn == basp::routing_table::connectivity::established) {
+    // send message to SpawnServ of remote node
+    basp::header hdr{basp::message_type::dispatch_message,
+                     basp::header::named_receiver_flag,
+                     0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                     visit(seq_num_visitor{this}, *c.hdl)};
+    // writing std::numeric_limits<actor_id>::max() is a hack to get
+    // this send-to-named-actor feature working with older CAF releases
+    instance.write(self->context(), get_buffer(*c.hdl),
+                   hdr, &writer);
+    instance.flush(*c.hdl);
+  } else {
+    // TODO: Implement this, can it happen?
+    CAF_CRITICAL("basp_broker_state::learned_new_node with buffering not "
+                 "implemented!");
+  }
 }
 
 void basp_broker_state::set_context(connection_handle hdl) {
@@ -717,25 +731,31 @@ behavior basp_broker::make_behavior() {
                     << ", " << CAF_ARG(msg));
       if (!src)
         return sec::invalid_argument;
-      auto ehdl = this->state.instance.tbl().lookup(dest_node);
-      if (!ehdl) {
-        CAF_LOG_ERROR("receiving node unknown");
+      auto ec = this->state.instance.tbl().lookup(dest_node);
+      if (!ec || ec->conn == basp::routing_table::connectivity::failed) {
+        CAF_LOG_ERROR("host unknown or unreachable");
         return sec::no_route_to_receiving_node;
       }
-      auto hdl = std::move(*ehdl);
-      if (system().node() == src->node())
-        system().registry().put(src->id(), src);
-      auto writer = make_callback([&](serializer& sink) -> error {
-        return sink(dest_name, cme->stages, const_cast<message&>(msg));
-      });
-      basp::header hdr{basp::message_type::dispatch_message,
-                       basp::header::named_receiver_flag,
-                       0, cme->mid.integer_value(), state.this_node(),
-                       dest_node, src->id(), invalid_actor_id,
-                       visit(seq_num_visitor{&state}, hdl)};
-      state.instance.write(context(), state.get_buffer(hdl),
-                           hdr, &writer);
-      state.instance.flush(hdl);
+      auto c = std::move(*ec);
+      if (c.conn == basp::routing_table::connectivity::established) {
+        if (system().node() == src->node())
+          system().registry().put(src->id(), src);
+        auto writer = make_callback([&](serializer& sink) -> error {
+          return sink(dest_name, cme->stages, const_cast<message&>(msg));
+        });
+        basp::header hdr{basp::message_type::dispatch_message,
+                         basp::header::named_receiver_flag,
+                         0, cme->mid.integer_value(), state.this_node(),
+                         dest_node, src->id(), invalid_actor_id,
+                         visit(seq_num_visitor{&state}, *c.hdl)};
+        state.instance.write(context(), state.get_buffer(*c.hdl),
+                             hdr, &writer);
+        state.instance.flush(*c.hdl);
+      } else {
+        // TODO: Buffer the message in the basp broker.
+        CAF_CRITICAL("basp_broker forward_atom with buffering "
+                     "not implemented!");
+      }
       return delegated<message>();
     },
     // Received from underlying broker implementation.
@@ -866,10 +886,10 @@ behavior basp_broker::make_behavior() {
     -> std::tuple<node_id, std::string, uint16_t> {
       std::string addr;
       uint16_t port = 0;
-      auto ehdl = state.instance.tbl().lookup(x);
-      if (ehdl) {
-        addr = visit(addr_visitor{this}, *ehdl);
-        port = visit(port_visitor{this}, *ehdl);
+      auto ec = state.instance.tbl().lookup(x);
+      if (ec && ec->hdl) {
+        addr = visit(addr_visitor{this}, *ec->hdl);
+        port = visit(port_visitor{this}, *ec->hdl);
       }
       return std::make_tuple(x, std::move(addr), port);
     },

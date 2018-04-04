@@ -170,9 +170,6 @@ public:
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
 
-  /// Returns the handle for communication with `target` or `none` on error.
-  optional<endpoint_handle> lookup(const node_id& target);
-
   /// Flushes the underlying buffer of `hdl`.
   void flush(endpoint_handle hdl);
 

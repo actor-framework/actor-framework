@@ -51,6 +51,7 @@ namespace basp {
 
 /// Stores routing information for a single broker participating as
 /// BASP peer and provides both direct and indirect paths.
+// TODO: Rename `routing_table`.
 class routing_table {
 public:
   using endpoint_handle = variant<connection_handle, datagram_handle>;
@@ -58,6 +59,24 @@ public:
   explicit routing_table(abstract_broker* parent);
 
   virtual ~routing_table();
+
+  /// Describes the communication status for a remote endpoint.
+  enum connectivity {
+    /// There is currently an ongoing communication attempt.
+    pending,
+    /// Communication with the node is established.
+    established,
+    /// Communication failure detected.
+    failed
+  };
+
+  /// Result for lookups that includes the state and a potential handle.
+  struct contact {
+    /// Tracks the state to determine if we can sent messages or have to buffer.
+    connectivity conn;
+    /// Servant handle to communicate with the node -- if already created.
+    optional<endpoint_handle> hdl;
+  };
 
   /// Describes a function object for erase operations that
   /// is called for each indirectly lost connection.
@@ -67,13 +86,17 @@ public:
   /// `none` if `hdl` is unknown.
   node_id lookup(const endpoint_handle& hdl) const;
 
-  /// Returns the handle for communication with `nid` or
-  /// `none` if `nid` is unknown.
-  optional<endpoint_handle> lookup(const node_id& nid) const;
+  /// Returns the state for communication with `nid` along with a handle
+  /// if communication is established or `none` if `nid` is unknown.
+  optional<contact> lookup(const node_id& nid) const;
 
-  /// Adds a new direct route to the table.
+  /// Adds a new endpoint to the table.
   /// @pre `hdl != invalid_connection_handle && nid != none`
   void add(const endpoint_handle& hdl, const node_id& nid);
+
+  /// Adds a new node that is not reachable yet. It's state is set to `pending`.
+  /// @pre `nid != none`
+  void add(const node_id& nid);
 
   /// Removes a direct connection and calls `cb` for any node
   /// that became unreachable as a result of this operation,
@@ -88,7 +111,35 @@ public:
     return parent_;
   }
 
+  /// Set the communication state of node with `nid`.
+  bool status(const node_id& nid, connectivity new_status);
+
+  /// Get the communication state of node with `nid`.
+  optional<connectivity> status(const node_id& nid);
+
+  /// Set the forwarding node that first mentioned `hdl`.
+  bool forwarder(const node_id& nid, endpoint_handle hdl);
+
+  /// Get the forwarding node that first mentioned `hdl`
+  /// or `none` if the node is unknown.
+  optional<endpoint_handle> forwarder(const node_id& nid);
+
+  /// Add `addrs` to the addresses to reach `nid`.
+  bool addresses(const node_id& nid, network::address_listing addrs);
+
+  /// Get the addresses to reach `nid` or `none` if the node is unknown.
+  optional<const network::address_listing&> addresses(const node_id& nid);
+
 public:
+  /// Entry to bundle information for a remote endpoint.
+  struct node_info {
+    contact details;
+    /// Interfaces of the nodes for sharing with neighbors.
+    network::address_listing addrs;
+    /// The endpoint who told us about the node.
+    optional<endpoint_handle> origin;
+  };
+
   template <class Map, class Fallback>
   typename Map::mapped_type
   get_opt(const Map& m, const typename Map::key_type& k, Fallback&& x) const {
@@ -99,10 +150,12 @@ public:
   }
 
   abstract_broker* parent_;
-  std::unordered_map<endpoint_handle, node_id> direct_by_hdl_;
+  std::unordered_map<endpoint_handle, node_id> nid_by_hdl_;
   // TODO: Do we need a list as a second argument as there could be
   //       multiple handles for different technologies?
-  std::unordered_map<node_id, endpoint_handle> direct_by_nid_;
+  //std::unordered_map<node_id, endpoint_handle> hdl_by_nid_;
+
+  std::unordered_map<node_id, node_info> node_information_base_;
 };
 
 /// @}

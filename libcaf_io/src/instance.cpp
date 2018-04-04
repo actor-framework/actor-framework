@@ -59,9 +59,8 @@ instance::instance(abstract_broker* parent, callee& lstnr)
   CAF_ASSERT(this_node_ != none);
 }
 
-connection_state instance::handle(execution_unit* ctx,
-                                  new_data_msg& dm, header& hdr,
-                                  bool is_payload) {
+connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
+                                  header& hdr, bool is_payload) {
   CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
   // Function object providing cleanup code on errors.
   auto err = [&]() -> connection_state {
@@ -95,33 +94,8 @@ connection_state instance::handle(execution_unit* ctx,
   CAF_LOG_DEBUG(CAF_ARG(hdr));
   // Needs forwarding?
   if (!is_handshake(hdr) && !is_heartbeat(hdr) && hdr.dest_node != this_node_) {
-    CAF_LOG_DEBUG("forward message");
-    auto ehdl = lookup(hdr.dest_node);
-    if (ehdl) {
-      binary_serializer bs{ctx, callee_.get_buffer(*ehdl)};
-      auto e = bs(hdr);
-      if (e)
-        return err();
-      if (payload != nullptr)
-        bs.apply_raw(payload->size(), payload->data());
-      flush(*ehdl);
-      notify<hook::message_forwarded>(hdr, payload);
-    } else {
-      CAF_LOG_INFO("cannot forward message, no route to destination");
-      if (hdr.source_node != this_node_) {
-        // TODO: Signalize error back to sending node.
-        auto reverse_path = lookup(hdr.source_node);
-        if (!reverse_path) {
-          CAF_LOG_WARNING("cannot send error message: no route to source");
-        } else {
-          CAF_LOG_WARNING("not implemented yet: signalize forward failure");
-        }
-      } else {
-        CAF_LOG_WARNING("lost packet with probably spoofed source");
-      }
-      notify<hook::message_forwarding_failed>(hdr, payload);
-    }
-    return await_header;
+    // TODO: Forwarding should no longer happen.
+    return err();
   }
   if (!handle(ctx, dm.handle, hdr, payload, true, none, none))
     return err();
@@ -177,34 +151,9 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
   ep.seq_incoming += 1;
   // TODO: Add optional reliability here.
   if (!is_handshake(ep.hdr) && !is_heartbeat(ep.hdr)
-      && ep.hdr.dest_node != this_node_) {
-    CAF_LOG_DEBUG("forward message");
-    auto ehdl = lookup(ep.hdr.dest_node);
-    if (ehdl) {
-      binary_serializer bs{ctx, callee_.get_buffer(*ehdl)};
-      auto ex = bs(ep.hdr);
-      if (ex)
-        return err();
-      if (payload != nullptr)
-        bs.apply_raw(payload->size(), payload->data());
-      flush(*ehdl);
-      notify<hook::message_forwarded>(ep.hdr, payload);
-    } else {
-      CAF_LOG_INFO("cannot forward message, no route to destination");
-      if (ep.hdr.source_node != this_node_) {
-        // TODO: Signalize error back to sending node.
-        auto reverse_path = lookup(ep.hdr.source_node);
-        if (!reverse_path) {
-          CAF_LOG_WARNING("cannot send error message: no route to source");
-        } else {
-          CAF_LOG_WARNING("not implemented yet: signalize forward failure");
-        }
-      } else {
-        CAF_LOG_WARNING("lost packet with probably spoofed source");
-      }
-      notify<hook::message_forwarding_failed>(ep.hdr, payload);
-    }
-    return true;
+       && ep.hdr.dest_node != this_node_) {
+    // TODO: Forwarding should no longer happen.
+    return err();
   }
   if (!handle(ctx, dm.handle, ep.hdr, payload, false, ep, ep.local_port))
     return err();
@@ -216,16 +165,12 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
 
 void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");
-  for (auto& kvp: tbl_.direct_by_hdl_) {
+  for (auto& kvp: tbl_.nid_by_hdl_) {
     CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
     write_heartbeat(ctx, callee_.get_buffer(kvp.first),
                     kvp.second, visit(seq_num_visitor{callee_}, kvp.first));
     callee_.flush(kvp.first);
   }
-}
-
-optional<instance::endpoint_handle> instance::lookup(const node_id& target) {
-  return tbl_.lookup(target);
 }
 
 void instance::flush(endpoint_handle hdl) {
@@ -307,23 +252,32 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
                 << CAF_ARG(mid) << CAF_ARG(msg));
   CAF_ASSERT(receiver && system().node() != receiver->node());
-  auto ehdl = lookup(receiver->node());
-  if (!ehdl) {
+  auto ec = tbl_.lookup(receiver->node());
+  /// TODO: Let's assume that the handle is valid if the status is established.
+  if (!ec || ec->cs == routing_table::connectivity::failed) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
   }
-  auto writer = make_callback([&](serializer& sink) -> error {
-    return sink(const_cast<std::vector<strong_actor_ptr>&>(forwarding_stack),
-                const_cast<message&>(msg));
-  });
-  header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
-             sender ? sender->node() : this_node(), receiver->node(),
-             sender ? sender->id() : invalid_actor_id, receiver->id(),
-             visit(seq_num_visitor{callee_}, *ehdl)};
-  write(ctx, callee_.get_buffer(*ehdl), hdr, &writer);
-  flush(*ehdl);
-  notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
-  return true;
+  auto c = std::move(*ec);
+  if (c.cs == routing_table::connectivity::established) {
+    auto writer = make_callback([&](serializer& sink) -> error {
+      return sink(const_cast<std::vector<strong_actor_ptr>&>(forwarding_stack),
+                  const_cast<message&>(msg));
+    });
+    header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
+               sender ? sender->node() : this_node(), receiver->node(),
+               sender ? sender->id() : invalid_actor_id, receiver->id(),
+               visit(seq_num_visitor{callee_}, *c.hdl)};
+    write(ctx, callee_.get_buffer(*c.hdl), hdr, &writer);
+    flush(*c.hdl);
+    notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
+    return true;
+  } else {
+    // lr.cs == routing_table::communication::pending
+    // TODO: Buffer the message in the basp broker.
+    CAF_CRITICAL("instance::disaptch with buffering not implemented!");
+    return false;
+  }
 }
 
 void instance::write(execution_unit* ctx, buffer_type& buf,

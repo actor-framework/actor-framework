@@ -309,9 +309,10 @@ public:
              make_message(sys_atom::value, get_atom::value, "info"));
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
-    auto ehdl= tbl().lookup(n.id);
-    CAF_REQUIRE(ehdl);
-    CAF_CHECK_EQUAL(*ehdl, n.endpoint);
+    auto ec= tbl().lookup(n.id);
+    CAF_REQUIRE(ec);
+    CAF_REQUIRE(ec->hdl);
+    CAF_CHECK_EQUAL(*ec->hdl, n.endpoint);
   }
 
   std::pair<basp::header, buffer> read_from_out_buf(datagram_handle hdl) {
