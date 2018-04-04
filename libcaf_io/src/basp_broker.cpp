@@ -551,6 +551,38 @@ void basp_broker_state::drop_pending(basp::endpoint_context& ep,
   ep.pending.erase(seq);
 }
 
+void basp_broker_state::send_buffered_messages(execution_unit*,
+                                               node_id nid,
+                                               connection_handle hdl) {
+  if (pending_connectivity.count(nid) > 0) {
+    for (auto& msg : pending_connectivity[nid]) {
+      auto& buf = get_buffer(hdl);
+      buf.insert(buf.end(), msg.begin(), msg.end());
+    }
+  }
+  flush(hdl);
+}
+
+void basp_broker_state::send_buffered_messages(execution_unit* ctx,
+                                               node_id nid,
+                                               datagram_handle hdl) {
+  if (pending_connectivity.count(nid) > 0) {
+    for (auto& msg : pending_connectivity[nid]) {
+      // TODO: add sequence number
+      auto seq_num = next_sequence_number(hdl);
+      auto seq_size = sizeof(basp::sequence_type);
+      auto offset = basp::header_size - seq_size;
+      auto& buf = get_buffer(hdl);
+      stream_serializer<charbuf> out{ctx, buf.data() + offset, seq_size};
+      auto err = out(seq_num);
+      if (err)
+        CAF_LOG_ERROR(CAF_ARG(err));
+      buf.insert(buf.end(), msg.begin(), msg.end());
+    }
+  }
+  flush(hdl);
+}
+
 basp_broker_state::buffer_type&
 basp_broker_state::get_buffer(endpoint_handle hdl) {
   if (hdl.is<connection_handle>())

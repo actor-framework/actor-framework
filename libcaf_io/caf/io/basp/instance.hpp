@@ -119,6 +119,16 @@ public:
     /// Drop pending messages with sequence number `seq`.
     virtual void drop_pending(endpoint_context& ep, sequence_type seq) = 0;
 
+    /// Send messages that were buffered while connectivity establishment
+    /// was pending using `hdl`.
+    virtual void send_buffered_messages(execution_unit* ctx, node_id nid,
+                                        connection_handle hdl) = 0;
+
+    /// Send messages that were buffered while connectivity establishment
+    /// was pending using `hdl`.
+    virtual void send_buffered_messages(execution_unit* ctx, node_id nid,
+                                        datagram_handle hdl) = 0;
+
     /// Returns a reference to the current sent buffer, dispatching the call
     /// based on the type contained in `hdl`.
     virtual buffer_type& get_buffer(endpoint_handle hdl) = 0;
@@ -130,7 +140,7 @@ public:
 
     /// Returns a reference to the sent buffer.
     virtual buffer_type& get_buffer(connection_handle hdl) = 0;
-    
+
     /// Returns a reference to a buffer to be sent to node with `nid`.
     /// If communication with the node is esstablished, it picks the first
     /// available handle, otherwise a buffer for a pending message is returned.
@@ -323,7 +333,7 @@ public:
           return false;
         }
         // Close this connection if we already established communication.
-        // TODO: Should we allow multiple "connections" over different
+        // FIXME: Should we allow multiple "connections" over different
         // transport protocols?
         if (tbl_.lookup(hdr.source_node)) {
           CAF_LOG_INFO("close connection since we already have a "
@@ -334,13 +344,16 @@ public:
         // Add this node to our contacts.
         CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
         tbl_.add(hdl, hdr.source_node);
-        // TODO: Add status, addresses, ... ?
+        tbl_.status(hdr.source_node, routing_table::connectivity::established);
+        // TODO: Add addresses to share with other nodes?
         // Write handshake as client in response.
         if (tcp_based)
           write_client_handshake(ctx, callee_.get_buffer(hdl), hdr.source_node);
         callee_.learned_new_node(hdr.source_node);
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         flush(hdl);
+        // TODO: Do we always want to do this or only if `tcp_based`?
+        callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         break;
       }
       case message_type::client_handshake: {
@@ -370,7 +383,8 @@ public:
           // Add this node to our contacts.
           CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
           tbl_.add(hdl, hdr.source_node);
-          // TODO: Add status, addresses, ... ?
+          tbl_.status(hdr.source_node, routing_table::connectivity::established);
+          // TODO: Add addresses for future sharing of contact info.
         }
         // Since udp is unreliable we answer, maybe our message was lost.
         if (!tcp_based) {
@@ -380,8 +394,11 @@ public:
         }
         // We have to call this after `write_server_handshake` because
         // `learned_new_node` expects there to be an entry in the routing table.
-        if (new_node)
+        if (new_node) {
           callee_.learned_new_node(hdr.source_node);
+          // TODO: Only send buffered messaged for new nodes?
+          callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
+        }
         break;
       }
       case message_type::dispatch_message: {

@@ -101,6 +101,14 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void drop_pending(basp::endpoint_context& ep, uint16_t seq) override;
 
   // inherited from basp::instance::callee
+  void send_buffered_messages(execution_unit* ctx, node_id nid,
+                              connection_handle hdl) override;
+
+  // inherited from basp::instance::callee
+  void send_buffered_messages(execution_unit* ctx, node_id nid,
+                              datagram_handle hdl) override;
+
+  // inherited from basp::instance::callee
   buffer_type& get_buffer(endpoint_handle hdl) override;
 
   // inherited from basp::instance::callee
@@ -172,7 +180,7 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // maximum queue size for pending messages of endpoints with ordering
   const size_t max_pending_messages;
-  
+
   // buffer messages for nodes while connectivity is established
   std::unordered_map<node_id, std::vector<buffer_type>> pending_connectivity;
 
