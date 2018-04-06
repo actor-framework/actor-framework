@@ -48,6 +48,8 @@ public:
 
     using unique_pointer = mailbox_element_ptr;
 
+    using handler_type = std::unique_ptr<inbound_path>;
+
     static task_size_type task_size(const mailbox_element& x) noexcept;
 
     // -- constructors, destructors, and assignment operators ------------------
@@ -69,7 +71,7 @@ public:
 
     // -- member variables -----------------------------------------------------
 
-    std::unique_ptr<inbound_path> handler;
+    handler_type handler;
   };
 
   // -- member types -----------------------------------------------------------
