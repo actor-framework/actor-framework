@@ -569,24 +569,6 @@ CAF_TEST(client_handshake_and_dispatch) {
   );
 }
 
-CAF_TEST(message_forwarding) {
-  // connect two remote nodes
-  connect_node(jupiter());
-  connect_node(mars());
-  auto msg = make_message(1, 2, 3);
-  // send a message from node 0 to node 1, forwarded by this node
-  mock(jupiter().connection,
-       {basp::message_type::dispatch_message, 0, 0, 0,
-        jupiter().id, mars().id,
-        invalid_actor_id, mars().dummy_actor->id()},
-       msg)
-  .receive(mars().connection,
-          basp::message_type::dispatch_message, no_flags, any_vals,
-          no_operation_data, jupiter().id, mars().id,
-          invalid_actor_id, mars().dummy_actor->id(),
-          msg);
-}
-
 CAF_TEST(publish_and_connect) {
   auto ax = accept_handle::from_int(4242);
   mpx()->provide_acceptor(4242, ax);

@@ -668,28 +668,6 @@ CAF_TEST(client_handshake_and_dispatch_udp) {
   );
 }
 
-CAF_TEST(message_forwarding_udp) {
-  // connect two remote nodes
-  CAF_MESSAGE("establish communication with Jupiter");
-  establish_communication(jupiter());
-  CAF_MESSAGE("establish communication with Mars");
-  establish_communication(mars());
-  CAF_MESSAGE("send dispatch message to ... ");
-  auto msg = make_message(1, 2, 3);
-  // send a message from node 0 to node 1, forwarded by this node
-  mock(endpoint_handle(), jupiter().endpoint,
-       {basp::message_type::dispatch_message, 0, 0, 0,
-        jupiter().id, mars().id,
-        invalid_actor_id, mars().dummy_actor->id(),
-        1}, // increment sequence number
-       msg)
-  .receive(mars().endpoint,
-           basp::message_type::dispatch_message, no_flags, any_vals,
-           no_operation_data, jupiter().id, mars().id,
-           invalid_actor_id, mars().dummy_actor->id(),
-           msg);
-}
-
 CAF_TEST(publish_and_connect_udp) {
   auto dx = datagram_handle::from_int(4242);
   mpx()->provide_datagram_servant(4242, dx);
