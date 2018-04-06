@@ -189,17 +189,19 @@ public:
     return apply(fun, result_token, args_token);
   }
 
-private:
+  /// @private
   template <class T, class... Ts>
   bool match_elements(detail::type_list<T, Ts...>) const noexcept {
     detail::meta_elements<detail::type_list<T, Ts...>> xs;
     return detail::try_match(*this, &xs.arr[0], 1 + sizeof...(Ts));
   }
 
+  /// @private
   inline bool match_elements(detail::type_list<>) const noexcept {
     return empty();
   }
 
+private:
   template <class F, class R, class... Ts>
   optional<R> apply(F& fun, detail::type_list<R>,
                     detail::type_list<Ts...> tk) {
