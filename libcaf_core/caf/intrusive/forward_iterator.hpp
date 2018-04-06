@@ -101,7 +101,7 @@ public:
     return promote(ptr);
   }
 
-  const pointer operator->() const {
+  const_pointer operator->() const {
     return promote(ptr);
   }
 };
