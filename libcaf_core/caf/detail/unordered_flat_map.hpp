@@ -178,7 +178,7 @@ public:
   std::pair<iterator, bool> insert(const_iterator hint, value_type x) {
     auto i = find(x.first);
     if (i == end())
-      return {xs_.insert(hint, std::move(x)), true};
+      return {xs_.insert(gcc48_iterator_workaround(hint), std::move(x)), true};
     return {i, false};
   }
 
@@ -201,11 +201,12 @@ public:
   // -- removal ----------------------------------------------------------------
 
   iterator erase(const_iterator i) {
-    return xs_.erase(i);
+    return xs_.erase(gcc48_iterator_workaround(i));
   }
 
   iterator erase(const_iterator first, const_iterator last) {
-    return xs_.erase(first, last);
+    return xs_.erase(gcc48_iterator_workaround(first),
+                     gcc48_iterator_workaround(last));
   }
 
   size_type erase(const key_type& x) {
@@ -268,6 +269,21 @@ public:
   }
 
 private:
+  // GCC < 4.9 has a broken STL: vector::erase accepts iterator instead of
+  // const_iterator.
+  // TODO: remove when dropping support for GCC 4.8.
+#if defined(CAF_GCC) && CAF_COMPILER_VERSION < 49000
+  iterator gcc48_iterator_workaround(const_iterator i) {
+    auto j = begin();
+    std::advance(j, std::distance(cbegin(), i));
+    return j;
+  }
+#else
+  const_iterator gcc48_iterator_workaround(const_iterator i) {
+    return i;
+  }
+#endif
+
   vector_type xs_;
 };
 
