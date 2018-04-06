@@ -80,7 +80,7 @@ public:
   message_builder& append_tuple(std::integral_constant<size_t, N>,
                                 std::integral_constant<size_t, N>,
                                 std::tuple<Ts...>&) {
-    // end of recursion
+    return *this;
   }
 
   template <size_t I, size_t N, class... Ts>
@@ -88,13 +88,13 @@ public:
                                 std::integral_constant<size_t, N> e,
                                 std::tuple<Ts...>& xs) {
     append(std::move(std::get<I>(xs)));
-    append_tuple(std::integral_constant<size_t, I + 1>{}, e, xs);
+    return append_tuple(std::integral_constant<size_t, I + 1>{}, e, xs);
   }
 
   template <class... Ts>
   message_builder& append_tuple(std::tuple<Ts...> xs) {
-    append_tuple(std::integral_constant<size_t, 0>{},
-                 std::integral_constant<size_t, sizeof...(Ts)>{}, xs);
+    return append_tuple(std::integral_constant<size_t, 0>{},
+                        std::integral_constant<size_t, sizeof...(Ts)>{}, xs);
   }
 
   /// Converts the buffer to an actual message object without
