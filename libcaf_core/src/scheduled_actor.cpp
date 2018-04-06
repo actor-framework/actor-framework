@@ -820,8 +820,9 @@ scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {
 inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
                                                  stream_slots slots,
                                                  strong_actor_ptr sender) {
+  using policy_type = policy::downstream_messages::nested;
   auto& qs = mailbox_.queue().queues();
-  auto res = get<2>(qs).queues().emplace(slots.receiver, nullptr);
+  auto res = get<2>(qs).queues().emplace(slots.receiver, policy_type{nullptr});
   if (!res.second)
     return nullptr;
   auto path = new inbound_path(std::move(mgr), slots, std::move(sender));

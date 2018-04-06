@@ -352,7 +352,9 @@ public:
 
   inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
                                   strong_actor_ptr sender) override {
-    auto res = get<2>(mbox.queues()).queues().emplace(slots.receiver, nullptr);
+    using policy_type = policy::downstream_messages::nested;
+    auto res = get<2>(mbox.queues())
+               .queues().emplace(slots.receiver, policy_type{nullptr});
     if (!res.second)
       return nullptr;
     auto path = new inbound_path(std::move(mgr), slots, std::move(sender));

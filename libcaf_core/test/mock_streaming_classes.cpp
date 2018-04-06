@@ -303,8 +303,8 @@ struct entity {
   mbox_queue mbox;
   const char* name;
   entity(const char* cstr_name)
-      : mbox(mbox_policy{}, handshake_queue_policy{}, nullptr,
-             dmsg_queue_policy{}),
+      : mbox(mbox_policy{}, handshake_queue_policy{},
+             umsg_queue_policy{nullptr}, dmsg_queue_policy{}),
         name(cstr_name) {
     // nop
   }
@@ -338,7 +338,7 @@ struct entity {
     // Create a new queue in the mailbox for incoming traffic.
     get<2>(mbox.queues())
       .queues()
-      .emplace(slot, std::unique_ptr<in>{new in(mgr)});
+      .emplace(slot, inner_dmsg_queue_policy{std::unique_ptr<in>{new in(mgr)}});
     // Acknowledge stream.
     sender->enqueue<umsg>(this, id.invert(), umsg::ack_handshake{10});
   }
