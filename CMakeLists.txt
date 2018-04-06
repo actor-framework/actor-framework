@@ -261,7 +261,7 @@ if(CAF_MORE_WARNINGS)
                "-Wnon-virtual-dtor -Wnonnull -Woverflow "
                "-Woverlength-strings -Wparentheses "
                "-Wpmf-conversions -Wpointer-arith -Wreorder "
-               "-Wreturn-type -Wsequence-point -Wshadow "
+               "-Wreturn-type -Wsequence-point "
                "-Wsign-compare -Wswitch -Wtype-limits -Wundef "
                "-Wuninitialized -Wunused -Wvla -Wwrite-strings")
   endif()
