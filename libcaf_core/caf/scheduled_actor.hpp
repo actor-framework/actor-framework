@@ -188,9 +188,6 @@ public:
   /// A queue optimized for single-reader-many-writers.
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
-  /// A reference-counting pointer to a `stream_manager`.
-  using stream_manager_ptr = intrusive_ptr<stream_manager>;
-
   /// The message ID of an outstanding response with its callback.
   using pending_response = std::pair<const message_id, behavior>;
 
