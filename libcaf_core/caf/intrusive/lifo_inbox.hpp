@@ -157,8 +157,11 @@ public:
   /// @warning Call only from the reader (owner).
   void close() noexcept {
     deleter_type d;
-    static_assert(noexcept(d(std::declval<pointer>())),
-                  "deleter is not noexcept");
+    // We assume the node destructor to never throw. However, the following
+    // static assert fails. Unfortunately, std::default_delete's apply operator
+    // is not noexcept (event for types that have a noexcept destructor).
+    // static_assert(noexcept(d(std::declval<pointer>())),
+    //               "deleter is not noexcept");
     close(d);
   }
 
