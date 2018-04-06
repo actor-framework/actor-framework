@@ -55,10 +55,9 @@ public:
 
   static constexpr size_t num_queues = sizeof...(Qs) + 1;
 
-  template <class... Ps>
-  wdrr_fixed_multiplexed_queue(policy_type p0,
-                               typename Q::policy_type p1, Ps... ps)
-      : qs_(std::move(p1), std::forward<Ps>(ps)...),
+  wdrr_fixed_multiplexed_queue(policy_type p0, typename Q::policy_type p1,
+                               typename Qs::policy_type... ps)
+      : qs_(std::move(p1), std::move(ps)...),
         policy_(std::move(p0)) {
     // nop
   }
