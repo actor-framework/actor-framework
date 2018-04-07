@@ -58,6 +58,8 @@ void outbound_path::emit_open(local_actor* self, stream_slot slot,
 
 void outbound_path::emit_batch(local_actor* self, long xs_size, message xs) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(xs_size) << CAF_ARG(xs));
+  CAF_ASSERT(xs_size > 0);
+  CAF_ASSERT(xs_size <= std::numeric_limits<int32_t>::max());
   CAF_ASSERT(open_credit >= xs_size);
   open_credit -= xs_size;
   auto bid = next_batch_id++;

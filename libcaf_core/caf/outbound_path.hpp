@@ -89,7 +89,8 @@ public:
     if (i != e && force_underfull) {
       std::vector<type> tmp{std::make_move_iterator(i),
                             std::make_move_iterator(e)};
-      emit_batch(self, tmp.size(), make_message(std::move(tmp)));
+      auto tmp_size = static_cast<long>(tmp.size());
+      emit_batch(self, tmp_size, make_message(std::move(tmp)));
       return e;
     }
     return i;
