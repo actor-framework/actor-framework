@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BEHAVIOR_HPP
-#define CAF_BEHAVIOR_HPP
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -145,4 +144,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_BEHAVIOR_HPP

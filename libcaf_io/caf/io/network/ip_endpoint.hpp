@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_IP_ENDPOINT_HPP
-#define CAF_IO_IP_ENDPOINT_HPP
+#pragma once
 
 #include <deque>
 #include <vector>
@@ -147,4 +146,3 @@ struct hash<caf::io::network::ip_endpoint> {
 } // namespace std
 
 
-#endif // CAF_IO_IP_ENDPOINT_HPP

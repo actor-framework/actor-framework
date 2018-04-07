@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ARG_WRAPPER_HPP
-#define CAF_ARG_WRAPPER_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -41,4 +40,3 @@ static arg_wrapper<T> make_arg_wrapper(const char* name, const T& value) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_ARG_WRAPPER_HPP

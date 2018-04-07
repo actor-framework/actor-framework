@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STRINGIFICATION_INSPECTOR_HPP
-#define CAF_DETAIL_STRINGIFICATION_INSPECTOR_HPP
+#pragma once
 
 #include <chrono>
 #include <functional>
@@ -305,4 +304,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_STRINGIFICATION_INSPECTOR_HPP

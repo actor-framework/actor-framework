@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STREAM_STAGE_IMPL_HPP
-#define CAF_DETAIL_STREAM_STAGE_IMPL_HPP
+#pragma once
 
 #include "caf/downstream.hpp"
 #include "caf/logger.hpp"
@@ -97,4 +96,3 @@ typename Driver::stage_ptr_type make_stream_stage(scheduled_actor* self,
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_STREAM_STAGE_IMPL_HPP

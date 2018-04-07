@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DEDUCE_MPI_HPP
-#define CAF_DEDUCE_MPI_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -126,4 +125,3 @@ using deduce_mpi_t = typename detail::dmfou<typename param_decay<T>::type>::type
 
 } // namespace caf
 
-#endif // CAF_DEDUCE_MPI_HPP

@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TICK_EMITTER_HPP
-#define CAF_DETAIL_TICK_EMITTER_HPP
+#pragma once
 
 #include <chrono>
 #include <initializer_list>
@@ -94,5 +93,4 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TICK_EMITTER_HPP
 

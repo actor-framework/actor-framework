@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_ACTOR_HPP
-#define CAF_MAKE_ACTOR_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -55,4 +54,3 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
 
 } // namespace caf
 
-#endif // CAF_MAKE_ACTOR_HPP

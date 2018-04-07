@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_COUNTED_HPP
-#define CAF_MAKE_COUNTED_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -38,4 +37,3 @@ intrusive_ptr<T> make_counted(Ts&&... xs) {
 
 } // namespace caf
 
-#endif // CAF_MAKE_COUNTED_HPP

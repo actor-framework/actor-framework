@@ -20,8 +20,7 @@
 // without updating the references in the *.tex files!
 // Manual references: lines 32-93 (Error.tex)
 
-#ifndef CAF_SEC_HPP
-#define CAF_SEC_HPP
+#pragma once
 
 #include "caf/error.hpp"
 #include "caf/make_message.hpp"
@@ -132,4 +131,3 @@ error make_error(sec code, T&& x, Ts&&... xs) {
 
 } // namespace caf
 
-#endif // CAF_SEC_HPP

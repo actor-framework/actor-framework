@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PARAM_HPP
-#define CAF_PARAM_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -114,4 +113,3 @@ struct param_decay {
 
 } // namespace caf
 
-#endif // CAF_PARAM_HPP

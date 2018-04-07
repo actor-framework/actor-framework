@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SINK_TRAIT_HPP
-#define CAF_STREAM_SINK_TRAIT_HPP
+#pragma once
 
 #include "caf/make_message.hpp"
 #include "caf/message.hpp"
@@ -92,4 +91,3 @@ using stream_sink_trait_t =
 
 } // namespace caf
 
-#endif // CAF_STREAM_SINK_TRAIT_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MESSAGE_HPP
-#define CAF_MESSAGE_HPP
+#pragma once
 
 #include <tuple>
 #include <sstream>
@@ -407,4 +406,3 @@ inline message operator+(const message& lhs, const message& rhs) {
 
 } // namespace caf
 
-#endif // CAF_MESSAGE_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BUFFERED_DOWNSTREAM_MANAGER_HPP
-#define CAF_BUFFERED_DOWNSTREAM_MANAGER_HPP
+#pragma once
 
 #include <deque>
 #include <vector>
@@ -112,4 +111,3 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_BUFFERED_DOWNSTREAM_MANAGER_HPP

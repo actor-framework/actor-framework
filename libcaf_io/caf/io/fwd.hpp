@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_FWD_HPP
-#define CAF_IO_FWD_HPP
+#pragma once
 
 namespace caf {
 
@@ -60,4 +59,3 @@ class multiplexer;
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_FWD_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BASP_ALL_HPP
-#define CAF_IO_BASP_ALL_HPP
+#pragma once
 
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp/version.hpp"
@@ -142,4 +141,3 @@
 ///
 /// ![](basp_sequence.png)
 
-#endif // CAF_IO_BASP_ALL_HPP

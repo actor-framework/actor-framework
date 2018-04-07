@@ -16,11 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SCHEDULER_HPP
-#define CAF_SCHEDULER_HPP
+#pragma once
 
 #include "caf/scheduler/worker.hpp"
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-#endif // CAF_SCHEDULER_HPP

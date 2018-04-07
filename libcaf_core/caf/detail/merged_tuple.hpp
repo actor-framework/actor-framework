@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_MERGED_TUPLE_HPP
-#define CAF_DETAIL_MERGED_TUPLE_HPP
+#pragma once
 
 #include "caf/message.hpp"
 #include "caf/actor_addr.hpp"
@@ -90,4 +89,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_MERGED_TUPLE_HPP

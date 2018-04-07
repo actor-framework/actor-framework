@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_RAW_ACCESS_HPP
-#define CAF_DETAIL_RAW_ACCESS_HPP
+#pragma once
 
 #include "caf/actor.hpp"
 #include "caf/group.hpp"
@@ -74,4 +73,3 @@ public:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_RAW_ACCESS_HPP

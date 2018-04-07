@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_GROUP_MODULE_HPP
-#define CAF_GROUP_MODULE_HPP
+#pragma once
 
 #include <string>
 #include <memory>
@@ -70,4 +69,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_GROUP_MODULE_HPP

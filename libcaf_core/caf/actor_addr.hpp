@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_ADDR_HPP
-#define CAF_ACTOR_ADDR_HPP
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -172,4 +171,3 @@ struct hash<caf::actor_addr> {
 };
 } // namespace std
 
-#endif // CAF_ACTOR_ADDR_HPP

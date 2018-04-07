@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STREAM_SOURCE_IMPL_HPP
-#define CAF_DETAIL_STREAM_SOURCE_IMPL_HPP
+#pragma once
 
 #include "caf/downstream.hpp"
 #include "caf/fwd.hpp"
@@ -92,4 +91,3 @@ typename Driver::source_ptr_type make_stream_source(scheduled_actor* self,
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_STREAM_SOURCE_IMPL_HPP

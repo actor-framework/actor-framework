@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SERIALIZER_HPP
-#define CAF_SERIALIZER_HPP
+#pragma once
 
 #include <string>
 #include <cstddef> // size_t
@@ -87,4 +86,3 @@ operator<<(serializer& sink, const T& x) {
 
 } // namespace caf
 
-#endif // CAF_SERIALIZER_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INVOKE_MESSAGE_RESULT_HPP
-#define CAF_INVOKE_MESSAGE_RESULT_HPP
+#pragma once
 
 #include <string>
 
@@ -36,5 +35,4 @@ inline std::string to_string(invoke_message_result x) {
 
 } // namespace caf
 
-#endif // CAF_INVOKE_MESSAGE_RESULT_HPP
 

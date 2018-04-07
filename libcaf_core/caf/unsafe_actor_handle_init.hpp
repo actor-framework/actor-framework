@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_UNSAFE_ACTOR_HANDLE_INIT_HPP
-#define CAF_UNSAFE_ACTOR_HANDLE_INIT_HPP
+#pragma once
 
 namespace caf {
 
@@ -29,4 +28,3 @@ static constexpr unsafe_actor_handle_init_t unsafe_actor_handle_init
 
 } // namespace caf
 
-#endif // CAF_UNSAFE_ACTOR_HANDLE_INIT_HPP

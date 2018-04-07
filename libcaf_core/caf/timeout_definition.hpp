@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TIMEOUT_DEFINITION_HPP
-#define CAF_TIMEOUT_DEFINITION_HPP
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -72,4 +71,3 @@ using generic_timeout_definition = timeout_definition<std::function<void()>>;
 
 } // namespace caf
 
-#endif // CAF_TIMEOUT_DEFINITION_HPP

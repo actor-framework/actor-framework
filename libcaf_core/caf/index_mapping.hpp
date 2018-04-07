@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INDEX_MAPPING_HPP
-#define CAF_INDEX_MAPPING_HPP
+#pragma once
 
 #include <tuple>
 #include <string>
@@ -55,4 +54,3 @@ typename Inspector::result_type inspect(Inspector& f, index_mapping& x) {
 
 } // namespace caf
 
-#endif // CAF_INDEX_MAPPING_HPP

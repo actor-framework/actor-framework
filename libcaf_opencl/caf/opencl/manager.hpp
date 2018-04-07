@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_MANAGER_HPP
-#define CAF_OPENCL_MANAGER_HPP
+#pragma once
 
 #include <atomic>
 #include <vector>
@@ -278,4 +277,3 @@ private:
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_MANAGER_HPP

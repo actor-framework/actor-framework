@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_SYNC_REQUEST_BOUNCER_HPP
-#define CAF_DETAIL_SYNC_REQUEST_BOUNCER_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -49,4 +48,3 @@ struct sync_request_bouncer {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SYNC_REQUEST_BOUNCER_HPP

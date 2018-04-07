@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STREAM_STAGE_HPP
-#define CAF_DETAIL_STREAM_STAGE_HPP
+#pragma once
 
 #include <tuple>
 
@@ -64,4 +63,3 @@ using stream_stage_ptr = intrusive_ptr<stream_stage<In, DownstreamManager>>;
 
 } // namespace caf
 
-#endif // CAF_DETAIL_STREAM_STAGE_HPP

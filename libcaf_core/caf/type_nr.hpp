@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPE_NR_HPP
-#define CAF_TYPE_NR_HPP
+#pragma once
 
 #include <map>
 #include <set>
@@ -151,4 +150,3 @@ constexpr uint32_t make_type_token_from_list() {
 
 } // namespace caf
 
-#endif // CAF_TYPE_NR_HPP

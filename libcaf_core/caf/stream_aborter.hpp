@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_ABORTER_HPP
-#define CAF_STREAM_ABORTER_HPP
+#pragma once
 
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
@@ -70,4 +69,3 @@ attachable_ptr make_stream_aborter(actor_addr observed, actor_addr observer,
 } // namespace caf
 
 
-#endif // CAF_STREAM_ABORTER_HPP

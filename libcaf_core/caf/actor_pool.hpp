@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_POOL_HPP
-#define CAF_ACTOR_POOL_HPP
+#pragma once
 
 #include <vector>
 #include <functional>
@@ -122,4 +121,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_ACTOR_POOL_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_TYPE_ERASED_VIEW_HPP
-#define CAF_MAKE_TYPE_ERASED_VIEW_HPP
+#pragma once
 
 #include <functional>
 
@@ -37,4 +36,3 @@ make_type_erased_view(T& x) {
 
 } // namespace caf
 
-#endif // CAF_MAKE_TYPE_ERASED_VIEW_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BASP_ENDPOINT_CONTEXT_HPP
-#define CAF_IO_BASP_ENDPOINT_CONTEXT_HPP
+#pragma once
 
 #include <unordered_map>
 
@@ -66,4 +65,3 @@ struct endpoint_context {
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BASP_ENDPOINT_CONTEXT_HPP

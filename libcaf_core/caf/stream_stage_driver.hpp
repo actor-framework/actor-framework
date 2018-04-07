@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_STAGE_DRIVER_HPP
-#define CAF_STREAM_STAGE_DRIVER_HPP
+#pragma once
 
 #include <tuple>
 #include <vector>
@@ -72,4 +71,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_STREAM_STAGE_DRIVER_HPP

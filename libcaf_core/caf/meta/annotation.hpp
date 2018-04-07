@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_META_ANNOTATION_HPP
-#define CAF_META_ANNOTATION_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -48,4 +47,3 @@ struct is_annotation<T&&> : is_annotation<T> {};
 } // namespace meta
 } // namespace caf
 
-#endif // CAF_META_ANNOTATION_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENSSL_PUBLISH_HPP
-#define CAF_OPENSSL_PUBLISH_HPP
+#pragma once
 
 #include <set>
 #include <string>
@@ -59,4 +58,3 @@ expected<uint16_t> publish(const Handle& whom, uint16_t port,
 } // namespace openssl
 } // namespace caf
 
-#endif // CAF_OPENSSL_PUBLISH_HPP

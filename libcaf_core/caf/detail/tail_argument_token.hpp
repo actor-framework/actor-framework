@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TAIL_ARGUMENT_TOKEN_HPP
-#define CAF_DETAIL_TAIL_ARGUMENT_TOKEN_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -27,4 +26,3 @@ struct tail_argument_token { };
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TAIL_ARGUMENT_TOKEN_HPP

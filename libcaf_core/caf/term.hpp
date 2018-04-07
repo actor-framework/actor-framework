@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TERM_HPP
-#define CAF_TERM_HPP
+#pragma once
 
 #include <iosfwd>
 
@@ -67,4 +66,3 @@ std::ostream& operator<<(std::ostream& out, term x);
 
 } // namespace caf
 
-#endif // CAF_TERM_HPP

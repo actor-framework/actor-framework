@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OUTBOUND_PATH_HPP
-#define CAF_OUTBOUND_PATH_HPP
+#pragma once
 
 #include <deque>
 #include <vector>
@@ -167,4 +166,3 @@ typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
 
 } // namespace caf
 
-#endif // CAF_OUTBOUND_PATH_HPP

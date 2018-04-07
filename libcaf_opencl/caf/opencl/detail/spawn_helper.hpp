@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP
-#define CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP
+#pragma once
 
 #include "caf/opencl/actor_facade.hpp"
 
@@ -66,4 +65,3 @@ struct cl_spawn_helper {
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_DETAIL_SPAWN_HELPER_HPP

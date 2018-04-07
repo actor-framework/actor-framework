@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPED_ACTOR_POINTER_HPP
-#define CAF_TYPED_ACTOR_POINTER_HPP
+#pragma once
 
 #include "caf/typed_actor_view.hpp"
 
@@ -81,4 +80,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_TYPED_ACTOR_POINTER_HPP

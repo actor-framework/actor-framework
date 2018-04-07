@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ERROR_HPP
-#define CAF_ERROR_HPP
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -254,4 +253,3 @@ bool operator!=(E x, const error& y) {
 
 } // namespace caf
 
-#endif // CAF_ERROR_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TRY_SERIALIZE_HPP
-#define CAF_DETAIL_TRY_SERIALIZE_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -35,4 +34,3 @@ void try_serialize(Processor&, void*) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TRY_SERIALIZE_HPP

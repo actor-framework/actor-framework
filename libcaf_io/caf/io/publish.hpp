@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_PUBLISH_HPP
-#define CAF_IO_PUBLISH_HPP
+#pragma once
 
 #include <set>
 #include <string>
@@ -50,4 +49,3 @@ expected<uint16_t> publish(const Handle& whom, uint16_t port,
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_PUBLISH_HPP

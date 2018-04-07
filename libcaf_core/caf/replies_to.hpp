@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLIES_TO_HPP
-#define CAF_REPLIES_TO_HPP
+#pragma once
 
 #include <string>
 
@@ -60,4 +59,3 @@ using reacts_to = typed_mpi<detail::type_list<Is...>, output_tuple<void>>;
 
 } // namespace caf
 
-#endif // CAF_REPLIES_TO_HPP

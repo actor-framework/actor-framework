@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_COMPOSED_TYPE_HPP
-#define CAF_COMPOSED_TYPE_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/replies_to.hpp"
@@ -138,4 +137,3 @@ using composed_type_t =
 
 } // namespace caf
 
-#endif // CAF_COMPOSED_TYPE_HPP

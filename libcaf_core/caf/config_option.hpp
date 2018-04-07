@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CONFIG_OPTION_HPP
-#define CAF_CONFIG_OPTION_HPP
+#pragma once
 
 #include <memory>
 #include <string>
@@ -285,4 +284,3 @@ make_config_option(T& storage, const char* category,
 
 } // namespace caf
 
-#endif // CAF_CONFIG_OPTION_HPP

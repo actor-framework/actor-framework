@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STREAM_DISTRIBUTION_TREE_HPP
-#define CAF_DETAIL_STREAM_DISTRIBUTION_TREE_HPP
+#pragma once
 
 #include <memory>
 #include <unordered_map>
@@ -150,4 +149,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_STREAM_DISTRIBUTION_TREE_HPP

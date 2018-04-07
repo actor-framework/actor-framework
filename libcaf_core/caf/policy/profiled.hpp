@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_POLICY_PROFILED_HPP
-#define CAF_POLICY_PROFILED_HPP
+#pragma once
 
 #include "caf/resumable.hpp"
 #include "caf/abstract_actor.hpp"
@@ -70,4 +69,3 @@ struct profiled : Policy {
 } // namespace policy
 } // namespace caf
 
-#endif // CAF_POLICY_PROFILED_HPP

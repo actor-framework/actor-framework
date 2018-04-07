@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OTHERS_HPP
-#define CAF_OTHERS_HPP
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -41,4 +40,3 @@ constexpr others_t others = others_t{};
 
 } // namespace caf
 
-#endif // CAF_OTHERS_HPP

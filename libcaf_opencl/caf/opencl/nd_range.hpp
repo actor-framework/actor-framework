@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_ND_RANGE_HPP
-#define CAF_OPENCL_ND_RANGE_HPP
+#pragma once
 
 #include "caf/opencl/global.hpp"
 
@@ -71,4 +70,3 @@ private:
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_ND_RANGE_HPP

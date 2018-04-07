@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_COMPANION_HPP
-#define CAF_ACTOR_COMPANION_HPP
+#pragma once
 
 #include <memory>
 #include <functional>
@@ -111,4 +110,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_ACTOR_COMPANION_HPP

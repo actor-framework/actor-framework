@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IS_TYPED_ACTOR_HPP
-#define CAF_IS_TYPED_ACTOR_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 
@@ -34,4 +33,3 @@ struct is_typed_actor<typed_actor<Ts...>> : std::true_type { };
 
 } // namespace caf
 
-#endif //CAF_IS_TYPED_ACTOR_HPP

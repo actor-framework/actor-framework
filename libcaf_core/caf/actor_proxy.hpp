@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_PROXY_HPP
-#define CAF_ACTOR_PROXY_HPP
+#pragma once
 
 #include <atomic>
 #include <cstdint>
@@ -43,4 +42,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_ACTOR_PROXY_HPP

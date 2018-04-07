@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_SINK_RESULT_HPP
-#define CAF_MAKE_SINK_RESULT_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/stream_sink.hpp"
@@ -83,4 +82,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_MAKE_SINK_RESULT_HPP

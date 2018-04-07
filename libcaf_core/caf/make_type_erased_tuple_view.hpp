@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAKE_TYPE_ERASED_TUPLE_HPP
-#define CAF_MAKE_TYPE_ERASED_TUPLE_HPP
+#pragma once
 
 #include <tuple>
 #include <cstddef>
@@ -38,4 +37,3 @@ detail::type_erased_tuple_view<Ts...> make_type_erased_tuple_view(Ts&... xs) {
 
 } // namespace caf
 
-#endif // CAF_MAKE_TYPE_ERASED_TUPLE_HPP

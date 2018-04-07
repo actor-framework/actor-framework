@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BEHAVIOR_POLICY_HPP
-#define CAF_BEHAVIOR_POLICY_HPP
+#pragma once
 
 namespace caf {
 
@@ -34,4 +33,3 @@ constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
 
 } // namespace caf
 
-#endif // CAF_BEHAVIOR_POLICY_HPP

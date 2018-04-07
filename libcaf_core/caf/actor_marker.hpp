@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_MARKER_HPP
-#define CAF_ACTOR_MARKER_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 
@@ -43,4 +42,3 @@ struct actor_marker<behavior> {
 
 } // namespace caf
 
-#endif // CAF_ACTOR_MARKER_HPP

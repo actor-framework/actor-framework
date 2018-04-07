@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MATCH_CASE_HPP
-#define CAF_MATCH_CASE_HPP
+#pragma once
 
 #include <tuple>
 #include <type_traits>
@@ -221,4 +220,3 @@ operator,(T, U) {
 
 } // namespace caf
 
-#endif // CAF_MATCH_CASE_HPP

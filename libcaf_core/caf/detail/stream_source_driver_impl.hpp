@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SOURCE_DRIVER_IMPL_HPP
-#define CAF_STREAM_SOURCE_DRIVER_IMPL_HPP
+#pragma once
 
 #include "caf/none.hpp"
 #include "caf/stream_finalize_trait.hpp"
@@ -73,4 +72,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_STREAM_SOURCE_DRIVER_IMPL_HPP

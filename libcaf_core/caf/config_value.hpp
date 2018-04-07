@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CONFIG_VALUE_HPP
-#define CAF_CONFIG_VALUE_HPP
+#pragma once
 
 #include <string>
 #include <cstdint>
@@ -32,4 +31,3 @@ using config_value = variant<std::string, double, int64_t, bool, atom_value>;
 
 } // namespace caf
 
-#endif // CAF_CONFIG_VALUE_HPP

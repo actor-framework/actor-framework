@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_COMMAND_HPP
-#define CAF_OPENCL_COMMAND_HPP
+#pragma once
 
 #include <tuple>
 #include <vector>
@@ -257,4 +256,3 @@ private:
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_COMMAND_HPP

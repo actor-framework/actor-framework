@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
  
-#ifndef CAF_OPENCL_DETAIL_COMMAND_HELPER_HPP
-#define CAF_OPENCL_DETAIL_COMMAND_HELPER_HPP
+#pragma once
 
 #include "caf/detail/type_list.hpp"
 
@@ -58,5 +57,4 @@ struct tuple_type_of<detail::type_list<Ts...>> {
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_DETAIL_COMMAND_HELPER_HPP
 

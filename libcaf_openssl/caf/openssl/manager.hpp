@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENSSL_MANAGER_HPP
-#define CAF_OPENSSL_MANAGER_HPP
+#pragma once
 
 #include <set>
 #include <string>
@@ -79,4 +78,3 @@ private:
 } // namespace openssl
 } // namespace caf
 
-#endif // CAF_OPENSSL_MANAGER_HPP

@@ -17,9 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_ALL_HPP
-#define CAF_OPENCL_ALL_HPP
+#pragma once
 
 #include "caf/opencl/manager.hpp"
 
-#endif // CAF_OPENCL_ALL_HPP

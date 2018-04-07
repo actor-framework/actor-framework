@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_CONNECT_HPP
-#define CAF_IO_CONNECT_HPP
+#pragma once
 
 #include <string>
 #include <cstdint>
@@ -41,4 +40,3 @@ inline expected<node_id> connect(actor_system& sys, std::string host,
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_CONNECT_HPP

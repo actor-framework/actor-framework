@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RESULT_HPP
-#define CAF_RESULT_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/none.hpp"
@@ -189,4 +188,3 @@ struct is_result<result<Ts...>> : std::true_type {};
 
 } // namespace caf
 
-#endif // CAF_RESULT_HPP

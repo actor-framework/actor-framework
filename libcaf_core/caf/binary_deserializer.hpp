@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BINARY_DESERIALIZER_HPP
-#define CAF_BINARY_DESERIALIZER_HPP
+#pragma once
 
 #include "caf/stream_deserializer.hpp"
 #include "caf/streambuf.hpp"
@@ -30,4 +29,3 @@ using binary_deserializer = stream_deserializer<charbuf>;
 
 } // namespace caf
 
-#endif // CAF_BINARY_DESERIALIZER_HPP

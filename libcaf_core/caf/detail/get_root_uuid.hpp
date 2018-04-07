@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_GET_ROOT_UUID_HPP
-#define CAF_DETAIL_GET_ROOT_UUID_HPP
+#pragma once
 
 #include <string>
 
@@ -29,4 +28,3 @@ std::string get_root_uuid();
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_GET_ROOT_UUID_HPP

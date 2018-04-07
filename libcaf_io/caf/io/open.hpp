@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_OPEN_HPP
-#define CAF_IO_OPEN_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -38,4 +37,3 @@ inline expected<uint16_t> open(actor_system& sys, uint16_t port,
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_OPEN_HPP

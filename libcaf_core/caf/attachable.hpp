@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ATTACHABLE_HPP
-#define CAF_ATTACHABLE_HPP
+#pragma once
 
 #include <memory>
 #include <cstdint>
@@ -91,4 +90,3 @@ using attachable_ptr = std::unique_ptr<attachable>;
 
 } // namespace caf
 
-#endif // CAF_ATTACHABLE_HPP

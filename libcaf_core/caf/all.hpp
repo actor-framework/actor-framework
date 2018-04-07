@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ALL_HPP
-#define CAF_ALL_HPP
+#pragma once
 
 #include "caf/config.hpp"
 
@@ -403,4 +402,3 @@
 /// An event-based "Dining Philosophers" implementation.
 /// @example dining_philosophers.cpp
 
-#endif // CAF_ALL_HPP

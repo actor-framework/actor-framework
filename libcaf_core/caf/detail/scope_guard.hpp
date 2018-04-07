@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_SCOPE_GUARD_HPP
-#define CAF_DETAIL_SCOPE_GUARD_HPP
+#pragma once
 
 #include <utility>
 
@@ -66,4 +65,3 @@ scope_guard<Fun> make_scope_guard(Fun f) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SCOPE_GUARD_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_DEEP_TO_STRING_HPP
-#define CAF_DETAIL_DEEP_TO_STRING_HPP
+#pragma once
 
 #include <array>
 #include <tuple>
@@ -63,4 +62,3 @@ std::string deep_to_string_as_tuple(Ts&&... xs) {
 
 } // namespace caf
 
-#endif // CAF_DETAIL_DEEP_TO_STRING_HPP

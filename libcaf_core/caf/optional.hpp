@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPTIONAL_HPP
-#define CAF_OPTIONAL_HPP
+#pragma once
 
 #include <new>
 #include <utility>
@@ -495,4 +494,3 @@ bool operator>=(const T& lhs, const optional<T>& rhs) {
 
 } // namespace caf
 
-#endif // CAF_OPTIONAL_HPP

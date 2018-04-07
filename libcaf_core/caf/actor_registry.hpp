@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_REGISTRY_HPP
-#define CAF_ACTOR_REGISTRY_HPP
+#pragma once
 
 #include <mutex>
 #include <thread>
@@ -135,4 +134,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_ACTOR_REGISTRY_HPP

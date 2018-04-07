@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_OSTREAM_HPP
-#define CAF_ACTOR_OSTREAM_HPP
+#pragma once
 
 #include "caf/actor.hpp"
 #include "caf/deep_to_string.hpp"
@@ -115,4 +114,3 @@ caf::actor_ostream& endl(caf::actor_ostream& o);
 caf::actor_ostream& flush(caf::actor_ostream& o);
 } // namespace std
 
-#endif // CAF_ACTOR_OSTREAM_HPP

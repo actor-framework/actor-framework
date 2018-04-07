@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTERFACE_MISMATCH_HPP
-#define CAF_INTERFACE_MISMATCH_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/replies_to.hpp"
@@ -127,4 +126,3 @@ using interface_mismatch_t = detail::imi<0, Found, Expected,
 
 } // namespace caf
 
-#endif // CAF_INTERFACE_MISMATCH_HPP

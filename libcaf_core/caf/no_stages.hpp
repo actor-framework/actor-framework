@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_NO_STAGES_HPP
-#define CAF_NO_STAGES_HPP
+#pragma once
 
 #include "caf/mailbox_element.hpp"
 
@@ -39,4 +38,3 @@ constexpr no_stages_t no_stages = no_stages_t{};
 
 } // namespace caf
 
-#endif // CAF_NO_STAGES_HPP

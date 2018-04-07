@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TYPE_ERASED_TUPLE_VIEW_HPP
-#define CAF_DETAIL_TYPE_ERASED_TUPLE_VIEW_HPP
+#pragma once
 
 #include <tuple>
 #include <cstddef>
@@ -139,4 +138,3 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TYPE_ERASED_TUPLE_VIEW_HPP

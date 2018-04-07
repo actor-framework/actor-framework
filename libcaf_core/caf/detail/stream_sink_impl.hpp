@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_STREAM_SINK_IMPL_HPP
-#define CAF_DETAIL_STREAM_SINK_IMPL_HPP
+#pragma once
 
 #include "caf/config.hpp"
 #include "caf/logger.hpp"
@@ -78,4 +77,3 @@ typename Driver::sink_ptr_type make_stream_sink(scheduled_actor* self,
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_STREAM_SINK_IMPL_HPP

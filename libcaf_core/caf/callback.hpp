@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_NAMED_CALLBACK_HPP
-#define CAF_NAMED_CALLBACK_HPP
+#pragma once
 
 #include "caf/error.hpp"
 #include "caf/config.hpp"
@@ -83,4 +82,3 @@ typename select_callback<F>::type make_callback(F fun) {
 
 CAF_POP_WARNINGS
 
-#endif // CAF_NAMED_CALLBACK_HPP

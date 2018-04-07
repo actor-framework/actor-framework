@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_OVERLOAD_HPP
-#define CAF_DETAIL_OVERLOAD_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -51,4 +50,3 @@ overload<Fs...> make_overload(Fs... fs) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_OVERLOAD_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ATOM_HPP
-#define CAF_ATOM_HPP
+#pragma once
 
 #include <string>
 #include <functional>
@@ -199,4 +198,3 @@ struct hash<caf::atom_value> {
 
 } // namespace std
 
-#endif // CAF_ATOM_HPP

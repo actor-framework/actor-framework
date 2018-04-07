@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_EXEC_MAIN_HPP
-#define CAF_EXEC_MAIN_HPP
+#pragma once
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -101,4 +100,3 @@ int exec_main(F fun, int argc, char** argv,
     return ::caf::exec_main<__VA_ARGS__>(caf_main, argc, argv);                \
   }
 
-#endif // CAF_EXEC_MAIN_HPP

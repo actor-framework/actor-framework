@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SCHEDULER_PROFILED_COORDINATOR_HPP
-#define CAF_SCHEDULER_PROFILED_COORDINATOR_HPP
+#pragma once
 
 #include "caf/config.hpp"
 
@@ -298,4 +297,3 @@ public:
 } // namespace scheduler
 } // namespace caf
 
-#endif // CAF_SCHEDULER_PROFILED_COORDINATOR_HPP

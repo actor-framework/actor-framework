@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RAW_EVENT_BASED_ACTOR_HPP
-#define CAF_RAW_EVENT_BASED_ACTOR_HPP
+#pragma once
 
 #include "caf/event_based_actor.hpp"
 
@@ -47,4 +46,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_RAW_EVENT_BASED_ACTOR_HPP

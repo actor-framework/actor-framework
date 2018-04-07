@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_CONCATENATED_TUPLE_HPP
-#define CAF_DETAIL_CONCATENATED_TUPLE_HPP
+#pragma once
 
 #include <vector>
 #include <algorithm>
@@ -86,5 +85,4 @@ private:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_CONCATENATED_TUPLE_HPP
 

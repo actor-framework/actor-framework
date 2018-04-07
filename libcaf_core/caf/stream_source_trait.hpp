@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SOURCE_TRAIT_HPP
-#define CAF_STREAM_SOURCE_TRAIT_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 
@@ -49,4 +48,3 @@ using stream_source_trait_t =
 
 } // namespace caf
 
-#endif // CAF_STREAM_SOURCE_TRAIT_HPP

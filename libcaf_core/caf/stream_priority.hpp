@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_PRIORITY_HPP
-#define CAF_STREAM_PRIORITY_HPP
+#pragma once
 
 #include <string>
 
@@ -45,4 +44,3 @@ std::string to_string(stream_priority x);
 
 } // namespace caf
 
-#endif // CAF_STREAM_PRIORITY_HPP

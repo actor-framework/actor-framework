@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP
-#define CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP
+#pragma once
 
 #include "caf/stateful_actor.hpp"
 #include "caf/message_handler.hpp"
@@ -50,4 +49,3 @@ class composable_behavior_based_actor : public stateful_actor<State, Base> {
 
 } // namespace caf
 
-#endif // CAF_COMPOSABLE_STATE_BASED_ACTOR_HPP

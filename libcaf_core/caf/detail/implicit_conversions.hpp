@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_IMPLICIT_CONVERSIONS_HPP
-#define CAF_DETAIL_IMPLICIT_CONVERSIONS_HPP
+#pragma once
 
 #include <string>
 #include <type_traits>
@@ -147,4 +146,3 @@ using strip_and_convert_t = typename strip_and_convert<T>::type;
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_IMPLICIT_CONVERSIONS_HPP

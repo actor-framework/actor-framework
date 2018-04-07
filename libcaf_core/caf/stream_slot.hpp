@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_SLOT_HPP
-#define CAF_STREAM_SLOT_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -159,4 +158,3 @@ typename Inspector::result_type inspect(Inspector& f, stream_slots& x) {
 
 } // namespace caf
 
-#endif // CAF_STREAM_SLOT_HPP

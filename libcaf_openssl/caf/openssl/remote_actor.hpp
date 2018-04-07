@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENSSL_REMOTE_ACTOR_HPP
-#define CAF_OPENSSL_REMOTE_ACTOR_HPP
+#pragma once
 
 #include <set>
 #include <string>
@@ -53,4 +52,3 @@ expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
 } // namespace openssl
 } // namespace caf
 
-#endif // CAF_OPENSSL_REMOTE_ACTOR_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BROKER_SERVANT_HPP
-#define CAF_IO_BROKER_SERVANT_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
@@ -128,5 +127,4 @@ protected:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BROKER_SERVANT_HPP
 

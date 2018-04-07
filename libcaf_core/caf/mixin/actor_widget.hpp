@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MIXIN_ACTOR_WIDGET_HPP
-#define CAF_MIXIN_ACTOR_WIDGET_HPP
+#pragma once
 
 #include "caf/config.hpp"
 #include "caf/make_actor.hpp"
@@ -115,4 +114,3 @@ private:
 } // namespace mixin
 } // namespace caf
 
-#endif // CAF_MIXIN_ACTOR_WIDGET_HPP

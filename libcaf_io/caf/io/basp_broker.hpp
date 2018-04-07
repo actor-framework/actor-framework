@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BASP_BROKER_HPP
-#define CAF_IO_BASP_BROKER_HPP
+#pragma once
 
 #include <map>
 #include <set>
@@ -217,4 +216,3 @@ public:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BASP_BROKER_HPP

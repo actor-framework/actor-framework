@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DECORATOR_SPLITTER_HPP
-#define CAF_DECORATOR_SPLITTER_HPP
+#pragma once
 
 #include <vector>
 
@@ -57,4 +56,3 @@ private:
 } // namespace decorator
 } // namespace caf
 
-#endif // CAF_DECORATOR_SPLITTER_HPP

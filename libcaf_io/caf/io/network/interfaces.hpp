@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_INTERFACES_HPP
-#define CAF_IO_NETWORK_INTERFACES_HPP
+#pragma once
 
 #include <map>
 #include <vector>
@@ -89,4 +88,3 @@ public:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_INTERFACES_HPP

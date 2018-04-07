@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_META_HEX_FORMATTED_HPP
-#define CAF_META_HEX_FORMATTED_HPP
+#pragma once
 
 #include "caf/meta/annotation.hpp"
 
@@ -38,4 +37,3 @@ constexpr hex_formatted_t hex_formatted() {
 } // namespace meta
 } // namespace caf
 
-#endif // CAF_META_HEX_FORMATTED_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TEST_COORDINATOR_HPP
-#define CAF_TEST_COORDINATOR_HPP
+#pragma once
 
 #include "caf/config.hpp"
 
@@ -164,5 +163,4 @@ private:
 } // namespace scheduler
 } // namespace caf
 
-#endif // CAF_TEST_COORDINATOR_HPP
 

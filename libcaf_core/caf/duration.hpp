@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DURATION_HPP
-#define CAF_DURATION_HPP
+#pragma once
 
 #include <string>
 #include <chrono>
@@ -174,4 +173,3 @@ operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {
 
 } // namespace caf
 
-#endif // CAF_DURATION_HPP

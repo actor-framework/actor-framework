@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_NODE_ID_HPP
-#define CAF_NODE_ID_HPP
+#pragma once
 
 #include <array>
 #include <string>
@@ -219,4 +218,3 @@ struct hash<caf::node_id> {
 
 } // namespace std
 
-#endif // CAF_NODE_ID_HPP

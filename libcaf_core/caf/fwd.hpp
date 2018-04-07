@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_FWD_HPP
-#define CAF_FWD_HPP
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -231,4 +230,3 @@ using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
 
 } // namespace caf
 
-#endif // CAF_FWD_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_REMOTE_GROUP_HPP
-#define CAF_IO_REMOTE_GROUP_HPP
+#pragma once
 
 #include <string>
 #include <cstdint>
@@ -43,4 +42,3 @@ inline expected<group> remote_group(actor_system& sys,
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_REMOTE_GROUP_HPP

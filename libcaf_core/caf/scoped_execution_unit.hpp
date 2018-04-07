@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SCOPED_EXECUTION_UNIT_HPP
-#define CAF_SCOPED_EXECUTION_UNIT_HPP
+#pragma once
 
 #include "caf/execution_unit.hpp"
 
@@ -36,4 +35,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_SCOPED_EXECUTION_UNIT_HPP

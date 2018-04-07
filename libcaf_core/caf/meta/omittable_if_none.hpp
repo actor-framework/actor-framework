@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_META_OMITTABLE_IF_NONE_HPP
-#define CAF_META_OMITTABLE_IF_NONE_HPP
+#pragma once
 
 #include "caf/meta/annotation.hpp"
 
@@ -38,4 +37,3 @@ constexpr omittable_if_none_t omittable_if_none() {
 } // namespace meta
 } // namespace caf
 
-#endif // CAF_META_OMITTABLE_IF_NONE_HPP

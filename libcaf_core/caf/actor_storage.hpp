@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_STORAGE_HPP
-#define CAF_ACTOR_STORAGE_HPP
+#pragma once
 
 #include <new>
 #include <atomic>
@@ -143,4 +142,3 @@ void intrusive_ptr_release(actor_storage<T>* x) {
 #pragma GCC diagnostic pop
 #endif
 
-#endif // CAF_ACTOR_STORAGE_HPP

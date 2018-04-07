@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_ALGORITHMS_HPP
-#define CAF_DETAIL_ALGORITHMS_HPP
+#pragma once
 
 #include <vector>
 
@@ -67,4 +66,3 @@ container_view<F, Container> make_container_view(Container& x) {
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_ALGORITHMS_HPP

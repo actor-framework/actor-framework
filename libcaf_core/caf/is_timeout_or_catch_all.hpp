@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IS_TIMEOUT_OR_CATCH_ALL_HPP
-#define CAF_IS_TIMEOUT_OR_CATCH_ALL_HPP
+#pragma once
 
 #include "caf/catch_all.hpp"
 #include "caf/timeout_definition.hpp"
@@ -35,4 +34,3 @@ struct is_timeout_or_catch_all<timeout_definition<T>> : std::true_type {};
 
 } // namespace caf
 
-#endif // CAF_IS_TIMEOUT_OR_CATCH_ALL_HPP

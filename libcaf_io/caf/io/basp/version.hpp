@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BASP_VERSION_HPP
-#define CAF_IO_BASP_VERSION_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -37,5 +36,4 @@ constexpr uint64_t version = 2;
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BASP_VERSION_HPP
 

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_SQUASHED_INT_HPP
-#define CAF_DETAIL_SQUASHED_INT_HPP
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -59,5 +58,4 @@ using squashed_int_t = typename squashed_int<T>::type;
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SQUASHED_INT_HPP
 

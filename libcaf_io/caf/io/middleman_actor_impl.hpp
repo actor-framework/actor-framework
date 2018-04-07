@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_MIDDLEMAN_ACTOR_IMPL_HPP
-#define CAF_IO_MIDDLEMAN_ACTOR_IMPL_HPP
+#pragma once
 
 #include "caf/fwd.hpp"
 #include "caf/atom.hpp"
@@ -96,4 +95,3 @@ private:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_MIDDLEMAN_ACTOR_IMPL_HPP

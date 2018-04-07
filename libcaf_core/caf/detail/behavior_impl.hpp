@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_BEHAVIOR_IMPL_HPP
-#define CAF_DETAIL_BEHAVIOR_IMPL_HPP
+#pragma once
 
 #include <tuple>
 #include <type_traits>
@@ -242,4 +241,3 @@ constexpr make_behavior_impl_t make_behavior_impl = make_behavior_impl_t{};
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_BEHAVIOR_IMPL_HPP

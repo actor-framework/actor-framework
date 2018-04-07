@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_BROKER_HPP
-#define CAF_IO_BROKER_HPP
+#pragma once
 
 #include <map>
 #include <vector>
@@ -90,4 +89,3 @@ using stateful_broker = stateful_actor<State, broker>;
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_BROKER_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_INIT_FUN_FACTORY_HPP
-#define CAF_DETAIL_INIT_FUN_FACTORY_HPP
+#pragma once
 
 #include <tuple>
 #include <functional>
@@ -109,4 +108,3 @@ public:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_INIT_FUN_FACTORY_HPP

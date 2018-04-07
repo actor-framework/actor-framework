@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_GLOBAL_HPP
-#define CAF_OPENCL_GLOBAL_HPP
+#pragma once
 
 #include <string>
 #include <iostream>
@@ -71,4 +70,3 @@ std::string event_status(cl_event event);
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_GLOBAL_HPP

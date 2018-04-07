@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_EMBEDDED_HPP
-#define CAF_DETAIL_EMBEDDED_HPP
+#pragma once
 
 #include "caf/ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -54,5 +53,4 @@ protected:
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_EMBEDDED_HPP
 

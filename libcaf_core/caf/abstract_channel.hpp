@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ABSTRACT_CHANNEL_HPP
-#define CAF_ABSTRACT_CHANNEL_HPP
+#pragma once
 
 #include <atomic>
 
@@ -91,4 +90,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_ABSTRACT_CHANNEL_HPP

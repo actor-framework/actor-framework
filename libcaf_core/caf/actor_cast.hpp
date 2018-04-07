@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_ACTOR_CAST_HPP
-#define CAF_ACTOR_CAST_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -180,4 +179,3 @@ T actor_cast(U&& what) {
 
 } // namespace caf
 
-#endif // CAF_ACTOR_CAST_HPP

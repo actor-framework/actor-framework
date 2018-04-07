@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_BLOCKING_ACTOR_HPP
-#define CAF_BLOCKING_ACTOR_HPP
+#pragma once
 
 #include <chrono>
 #include <mutex>
@@ -457,4 +456,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_BLOCKING_ACTOR_HPP

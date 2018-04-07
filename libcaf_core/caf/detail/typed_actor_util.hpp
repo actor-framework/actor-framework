@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_DETAIL_TYPED_ACTOR_DETAIL_HPP
-#define CAF_DETAIL_TYPED_ACTOR_DETAIL_HPP
+#pragma once
 
 #include <tuple>
 
@@ -144,4 +143,3 @@ struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_TYPED_ACTOR_DETAIL_HPP

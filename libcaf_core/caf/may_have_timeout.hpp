@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MAY_HAVE_TIMEOUT_HPP
-#define CAF_MAY_HAVE_TIMEOUT_HPP
+#pragma once
 
 namespace caf {
 
@@ -46,4 +45,3 @@ struct may_have_timeout<timeout_definition<F>> {
 
 } // namespace caf
 
-#endif // CAF_MAY_HAVE_TIMEOUT_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CATCH_ALL_HPP
-#define CAF_CATCH_ALL_HPP
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -60,4 +59,3 @@ struct is_catch_all<catch_all<T>> : std::true_type {};
 
 } // namespace caf
 
-#endif // CAF_CATCH_ALL_HPP

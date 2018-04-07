@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_ACCEPT_HANDLE_HPP
-#define CAF_IO_ACCEPT_HANDLE_HPP
+#pragma once
 
 #include <functional>
 
@@ -81,4 +80,3 @@ struct hash<caf::io::accept_handle> {
 
 } // namespace std
 
-#endif // CAF_IO_ACCEPT_HANDLE_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SCHEDULER_WORKER_HPP
-#define CAF_SCHEDULER_WORKER_HPP
+#pragma once
 
 #include <cstddef>
 
@@ -157,4 +156,3 @@ private:
 } // namespace scheduler
 } // namespace caf
 
-#endif // CAF_SCHEDULER_WORKER_HPP

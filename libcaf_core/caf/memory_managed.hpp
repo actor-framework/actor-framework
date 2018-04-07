@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_MEMORY_MANAGED_HPP
-#define CAF_MEMORY_MANAGED_HPP
+#pragma once
 
 namespace caf {
 
@@ -41,4 +40,3 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_MEMORY_MANAGED_HPP

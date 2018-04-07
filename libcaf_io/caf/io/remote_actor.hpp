@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_REMOTE_ACTOR_HPP
-#define CAF_IO_REMOTE_ACTOR_HPP
+#pragma once
 
 #include <set>
 #include <string>
@@ -44,4 +43,3 @@ expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_REMOTE_ACTOR_HPP

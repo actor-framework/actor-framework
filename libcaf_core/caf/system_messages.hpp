@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SYSTEM_MESSAGES_HPP
-#define CAF_SYSTEM_MESSAGES_HPP
+#pragma once
 
 #include <vector>
 #include <cstdint>
@@ -120,4 +119,3 @@ typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
 
 } // namespace caf
 
-#endif // CAF_SYSTEM_MESSAGES_HPP

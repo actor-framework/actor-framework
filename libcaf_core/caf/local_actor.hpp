@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_LOCAL_ACTOR_HPP
-#define CAF_LOCAL_ACTOR_HPP
+#pragma once
 
 #include <atomic>
 #include <cstdint>
@@ -424,4 +423,3 @@ protected:
 
 } // namespace caf
 
-#endif // CAF_LOCAL_ACTOR_HPP

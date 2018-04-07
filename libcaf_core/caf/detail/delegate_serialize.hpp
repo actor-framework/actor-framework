@@ -30,8 +30,7 @@
 // announced, different class versions in a single actor system would
 // cause inconsistencies that are not recoverable.
 
-#ifndef CAF_DETAIL_SERIALIZATION_HPP
-#define CAF_DETAIL_SERIALIZATION_HPP
+#pragma once
 
 #include <utility>
 #include <type_traits>
@@ -69,4 +68,3 @@ auto delegate_serialize(Processor& proc, U& x)
 } // namespace detail
 } // namespace caf
 
-#endif // CAF_DETAIL_SERIALIZATION_HPP

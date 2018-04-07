@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_COMPARABLE_HPP
-#define CAF_COMPARABLE_HPP
+#pragma once
 
 namespace caf {
 namespace detail {
@@ -109,4 +108,3 @@ class comparable<Subclass, Subclass> {
 } // namespace details
 } // namespace caf
 
-#endif // CAF_COMPARABLE_HPP

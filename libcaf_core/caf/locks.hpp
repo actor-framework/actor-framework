@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_LOCKS_HPP
-#define CAF_LOCKS_HPP
+#pragma once
 
 #include <mutex>
 
@@ -95,4 +94,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_LOCKS_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
-#define CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP
+#pragma once
 
 #include "caf/io/network/manager.hpp"
 
@@ -45,4 +44,3 @@ public:
 } // namespace io
 } // namespace caf
 
-#endif // CAF_IO_NETWORK_ACCEPTOR_MANAGER_HPP

@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_NEW_ROUND_RESULT_HPP
-#define CAF_INTRUSIVE_NEW_ROUND_RESULT_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -55,4 +54,3 @@ constexpr new_round_result operator|(new_round_result x, new_round_result y) {
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_NEW_ROUND_RESULT_HPP

@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STREAM_STAGE_TRAIT_HPP
-#define CAF_STREAM_STAGE_TRAIT_HPP
+#pragma once
 
 #include <vector>
 
@@ -88,4 +87,3 @@ using stream_stage_trait_t =
 
 } // namespace caf
 
-#endif // CAF_STREAM_STAGE_TRAIT_HPP

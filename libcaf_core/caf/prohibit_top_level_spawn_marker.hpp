@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PROHIBIT_TOP_LEVEL_SPAWN_MARKER_HPP
-#define CAF_PROHIBIT_TOP_LEVEL_SPAWN_MARKER_HPP
+#pragma once
 
 namespace caf {
 
@@ -27,4 +26,3 @@ struct prohibit_top_level_spawn_marker {
 
 } // namespace caf
 
-#endif // CAF_PROHIBIT_TOP_LEVEL_SPAWN_MARKER_HPP

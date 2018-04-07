@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_INTRUSIVE_FORWARD_ITERATOR_HPP
-#define CAF_INTRUSIVE_FORWARD_ITERATOR_HPP
+#pragma once
 
 #include <cstddef>
 #include <iterator>
@@ -123,4 +122,3 @@ bool operator!=(const forward_iterator<T>& x,
 } // namespace intrusive
 } // namespace caf
 
-#endif // CAF_INTRUSIVE_FORWARD_ITERATOR_HPP

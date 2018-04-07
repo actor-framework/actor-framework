@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_GROUP_MANAGER_HPP
-#define CAF_GROUP_MANAGER_HPP
+#pragma once
 
 #include <map>
 #include <mutex>
@@ -96,4 +95,3 @@ private:
 
 } // namespace caf
 
-#endif // CAF_GROUP_MANAGER_HPP

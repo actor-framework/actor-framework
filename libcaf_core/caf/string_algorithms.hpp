@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_STRING_ALGORITHMS_HPP
-#define CAF_STRING_ALGORITHMS_HPP
+#pragma once
 
 #include <cmath>     // fabs
 #include <string>
@@ -158,4 +157,3 @@ inline std::string convert_to_str(std::string value) {
 
 } // namespace caf
 
-#endif // CAF_STRING_ALGORITHMS_HPP

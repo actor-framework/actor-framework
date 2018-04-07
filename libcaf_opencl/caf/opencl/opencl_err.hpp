@@ -17,8 +17,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENCL_OPENCL_ERR_HPP
-#define CAF_OPENCL_OPENCL_ERR_HPP
+#pragma once
 
 
 #include "caf/opencl/global.hpp"
@@ -84,4 +83,3 @@ R v3get(const char* fname, F f, Ts&&... vs) {
 } // namespace opencl
 } // namespace caf
 
-#endif // CAF_OPENCL_OPENCL_ERR_HPP

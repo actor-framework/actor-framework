@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_SPAWN_OPTIONS_HPP
-#define CAF_SPAWN_OPTIONS_HPP
+#pragma once
 
 namespace caf {
 
@@ -132,4 +131,3 @@ constexpr spawn_options make_unbound(spawn_options opts) {
 
 } // namespace caf
 
-#endif // CAF_SPAWN_OPTIONS_HPP

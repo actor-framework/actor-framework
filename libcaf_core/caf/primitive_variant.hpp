@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_PRIMITIVE_VARIANT_HPP
-#define CAF_PRIMITIVE_VARIANT_HPP
+#pragma once
 
 #include <new>
 #include <cstdint>
@@ -40,4 +39,3 @@ using primitive_variant = variant<int8_t, int16_t, int32_t, int64_t,
 
 } // namespace caf
 
-#endif // CAF_PRIMITIVE_VARIANT_HPP

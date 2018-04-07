@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_OPENSSL_UNPUBLISH_HPP
-#define CAF_OPENSSL_UNPUBLISH_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -49,4 +48,3 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
 } // namespace openssl
 } // namespace caf
 
-#endif // CAF_OPENSSL_UNPUBLISH_HPP

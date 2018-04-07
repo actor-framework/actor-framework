@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_RESUMABLE_HPP
-#define CAF_RESUMABLE_HPP
+#pragma once
 
 #include <type_traits>
 
@@ -93,4 +92,3 @@ intrusive_ptr_release(T* ptr) {
 
 } // namespace caf
 
-#endif // CAF_RESUMABLE_HPP

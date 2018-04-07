@@ -16,8 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_TYPE_ERASED_TUPLE_HPP
-#define CAF_TYPE_ERASED_TUPLE_HPP
+#pragma once
 
 #include <tuple>
 #include <cstddef>
@@ -270,4 +269,3 @@ public:
 
 } // namespace caf
 
-#endif // CAF_TYPE_ERASED_TUPLE_HPP
