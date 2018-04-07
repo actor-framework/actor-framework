@@ -28,7 +28,6 @@ add(message_passing promises)
 add(message_passing calculator)
 add(message_passing delegating)
 add(message_passing fixed_stack)
-add(message_passing prioritizing)
 add(message_passing dancing_kirby)
 
 # dynamic behavior changes using 'become'
