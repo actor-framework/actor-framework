@@ -332,8 +332,11 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
+    // TODO: replace this workaround with the make_tuple() line when dropping
+    //       support for GCC 4.8.
+    std::tuple<typename std::decay<Us>::type...> tmp{std::forward<Us>(xs)...};
+    //auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     // TODO: move tmp into lambda when switching to C++14
-    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     peek_ = [=] {
       using namespace caf::detail;
       elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
