@@ -71,8 +71,7 @@ Example for the Impatient
 ```cpp
 // libcaf_example/caf/example/my_class.hpp
 
-#ifndef CAF_EXAMPLE_MY_CLASS_HPP
-#define CAF_EXAMPLE_MY_CLASS_HPP
+#pragma once
 
 #include <string>
 
@@ -118,8 +117,6 @@ private:
 
 } // namespace example
 } // namespace caf
-
-#endif // CAF_EXAMPLE_MY_CLASS_HPP
 ```
 
 ```cpp
@@ -329,8 +326,7 @@ Headers
   is located at `libcaf_example/caf/example/my_class.hpp` and the
   source file at `libcaf_example/src/my_class.cpp`.
 
-- All header files should use `#define` guards to prevent multiple inclusion.
-  The symbol name is `<RELATIVE>_<PATH>_<TO>_<FILE>_HPP`.
+- All header files use `#pragma once` to prevent multiple inclusion.
 
 - Do not `#include` when a forward declaration suffices.
 
