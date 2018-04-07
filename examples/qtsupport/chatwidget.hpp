@@ -1,3 +1,5 @@
+#pragma once
+
 #include <exception>
 
 #include "caf/all.hpp"
