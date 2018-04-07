@@ -102,11 +102,11 @@ public:
     name_ = new_name;
   }
 
-  /// Prints the name to `STDIN`.
+  /// Prints the name to `std::cout`.
   void print_name() const;
 
   /// Does something (maybe).
-  void do_something() noexcept;
+  void do_something();
 
   /// Does something else but is guaranteed to never throw.
   void do_something_else() noexcept;
@@ -153,15 +153,18 @@ void my_class::do_something() {
               << "refuse to do something."
               << std::endl;
   } else {
-    std::cout << "You gave me the name " << name()
-              << "... Do you really think I'm willing to do something "
+    std::cout << "You gave me the name \"" << name()
+              << "\"... Do you really think I'm willing to do something "
                  "for you after insulting me like that?"
               << std::endl;
   }
 }
 
 void my_class::do_something_else() noexcept {
-  switch (default_name[0]) {
+  // Do nothing if we don't have a name.
+  if (name().empty())
+    return;
+  switch (name.front()) {
     case 'a':
       // handle a
       break;
@@ -230,7 +233,7 @@ General
 
   ```cpp
   // example.hpp
-  
+
   #include <vector>
 
   #include <sys/types.h>
@@ -244,11 +247,11 @@ General
 
   ```cpp
   // example.cpp
-  
+
   #include "caf/example.hpp" // header for this .cpp file
-  
+
   #include "caf/config.hpp" // needed for #ifdef guards
-  
+
   #include <algorithm>
 
   #ifdef CAF_WINDOWS
@@ -290,6 +293,10 @@ Naming
   ```cpp
   class person {
   public:
+    person(std::string name) : name_(std::move(name)) {
+      // nop
+    }
+
     const std::string& name() const {
       return name_
     }
@@ -305,11 +312,15 @@ Naming
 
 - Use `T` for generic, unconstrained template parameters and `x`
   for generic function arguments. Suffix both with `s` for
-  template parameter packs:
+  template parameter packs and lists:
 
   ```cpp
   template <class... Ts>
   void print(const Ts&... xs) {
+    // ...
+  }
+
+  void print(const std::vector<T>& xs) {
     // ...
   }
   ```
@@ -333,7 +344,7 @@ Headers
 - Each library component must provide a `fwd.hpp` header providing forward
   declartations for all types used in the user API.
 
-- Each library component must provide an `all.hpp` header that contains the
+- Each library component should provide an `all.hpp` header that contains the
   main page for the documentation and includes all headers for the user API.
 
 - Use `inline` for small functions (rule of thumb: 10 lines or less).
@@ -385,7 +396,7 @@ with an insane amount of syntax noise. In CAF, we make excessive use of
 templates. To keep the code readable despite all the syntax noise, we have some
 extra rules for formatting metaprogramming code.
 
-- Brake `using name = ...` statements always directly after `=` if it
+- Break `using name = ...` statements always directly after `=` if it
   does not fit in one line.
 
 - Consider the *semantics* of a metaprogramming function. For example,
