@@ -60,20 +60,10 @@ public:
 
   virtual ~routing_table();
 
-  /// Describes the communication status for a remote endpoint.
-  enum connectivity {
-    /// There is currently an ongoing communication attempt.
-    pending,
-    /// Communication with the node is established.
-    established,
-    /// Communication failure detected.
-    failed
-  };
-
-  /// Result for lookups that includes the state and a potential handle.
-  struct contact {
-    /// Tracks the state to determine if we can sent messages or have to buffer.
-    connectivity conn;
+  /// Result for a lookup of a node.
+  struct lookup_result {
+    /// Tracks whether the node is already known.
+    bool known;
     /// Servant handle to communicate with the node -- if already created.
     optional<endpoint_handle> hdl;
   };
@@ -88,7 +78,7 @@ public:
 
   /// Returns the state for communication with `nid` along with a handle
   /// if communication is established or `none` if `nid` is unknown.
-  optional<contact> lookup(const node_id& nid) const;
+  lookup_result lookup(const node_id& nid) const;
 
   /// Adds a new endpoint to the table.
   /// @pre `hdl != invalid_connection_handle && nid != none`
@@ -111,12 +101,6 @@ public:
     return parent_;
   }
 
-  /// Set the communication state of node with `nid`.
-  bool status(const node_id& nid, connectivity new_status);
-
-  /// Get the communication state of node with `nid`.
-  optional<connectivity> status(const node_id& nid);
-
   /// Set the forwarding node that first mentioned `hdl`.
   bool forwarder(const node_id& nid, endpoint_handle hdl);
 
@@ -133,7 +117,8 @@ public:
 public:
   /// Entry to bundle information for a remote endpoint.
   struct node_info {
-    contact details;
+    /// Handle for the node if communication is established.
+    optional<endpoint_handle> hdl;
     /// Interfaces of the nodes for sharing with neighbors.
     network::address_listing addrs;
     /// The endpoint who told us about the node.

@@ -37,17 +37,11 @@ node_id routing_table::lookup(const endpoint_handle& hdl) const {
   return get_opt(nid_by_hdl_, hdl, none);
 }
 
-optional<routing_table::contact>
-routing_table::lookup(const node_id& nid) const {
+routing_table::lookup_result routing_table::lookup(const node_id& nid) const {
   auto i = node_information_base_.find(nid);
   if (i != node_information_base_.end())
-    return i->second.details;
-  /*
-  auto i = hdl_by_nid_.find(nid);
-  if (i != hdl_by_nid_.end())
-    return i->second;
-  */
-  return none;
+    return {true, i->second.hdl};
+  return {false, none};
 }
 
 void routing_table::erase(const endpoint_handle& hdl, erase_callback& cb) {
@@ -68,16 +62,14 @@ void routing_table::add(const endpoint_handle& hdl, const node_id& nid) {
   CAF_ASSERT(node_information_base_.count(nid) == 0);
   nid_by_hdl_.emplace(hdl, nid);
   //hdl_by_nid_.emplace(nid, hdl);
-  node_information_base_[nid] = node_info{{connectivity::established,
-                                          hdl}, {}, none};
+  node_information_base_[nid] = node_info{hdl, {}, none};
   parent_->parent().notify<hook::new_connection_established>(nid);
 }
 
 void routing_table::add(const node_id& nid) {
   //CAF_ASSERT(hdl_by_nid_.count(nid) == 0);
   CAF_ASSERT(node_information_base_.count(nid) == 0);
-  node_information_base_[nid] = node_info{{connectivity::pending,
-                                          none}, {}, none};
+  node_information_base_[nid] = node_info{none, {}, none};
   // TODO: Some new related hook?
   //parent_->parent().notify<hook::new_connection_established>(nid);
 }
@@ -85,25 +77,8 @@ void routing_table::add(const node_id& nid) {
 bool routing_table::reachable(const node_id& dest) {
   auto i = node_information_base_.find(dest);
   if (i != node_information_base_.end())
-    return i->second.details.conn == connectivity::established;
+    return i->second.hdl != none;
   return false;
-}
-
-bool routing_table::status(const node_id& nid,
-                           routing_table::connectivity new_status) {
-  auto i = node_information_base_.find(nid);
-  if (i == node_information_base_.end())
-    return false;
-  i->second.details.conn = new_status;
-  return true;
-}
-
-optional<routing_table::connectivity>
-routing_table::status(const node_id& nid) {
-  auto i = node_information_base_.find(nid);
-  if (i == node_information_base_.end())
-    return none;
-  return i->second.details.conn;
 }
 
 bool routing_table::forwarder(const node_id& nid,

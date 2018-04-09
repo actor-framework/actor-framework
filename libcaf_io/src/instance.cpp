@@ -252,13 +252,11 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
                 << CAF_ARG(mid) << CAF_ARG(msg));
   CAF_ASSERT(receiver && system().node() != receiver->node());
-  auto ec = tbl_.lookup(receiver->node());
-  /// TODO: Let's assume that the handle is valid if the status is established.
-  if (!ec || ec->conn == routing_table::connectivity::failed) {
+  auto res = tbl_.lookup(receiver->node());
+  if (!res.known) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
   }
-  auto c = std::move(*ec);
   auto writer = make_callback([&](serializer& sink) -> error {
     return sink(const_cast<std::vector<strong_actor_ptr>&>(forwarding_stack),
                 const_cast<message&>(msg));
@@ -267,15 +265,14 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
              sender ? sender->node() : this_node(), receiver->node(),
              sender ? sender->id() : invalid_actor_id, receiver->id(),
              0};
-  if (c.conn == routing_table::connectivity::established) {
-    hdr.sequence_number = visit(seq_num_visitor{callee_}, *c.hdl);
-    write(ctx, callee_.get_buffer(*c.hdl), hdr, &writer);
-    flush(*c.hdl);
+  if (res.hdl) {
+    auto hdl = std::move(*res.hdl);
+    hdr.sequence_number = visit(seq_num_visitor{callee_}, hdl);
+    write(ctx, callee_.get_buffer(hdl), hdr, &writer);
+    flush(hdl);
     notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
     return true;
   } else {
-    // lr.cs == routing_table::communication::pending
-    // TODO: Buffer the message in the basp broker.
     write(ctx, callee_.get_buffer(receiver->node()), hdr, &writer);
     // TODO: should the hook really be called here, or should we delay this
     // until communication is established?

@@ -335,7 +335,7 @@ public:
         // Close this connection if we already established communication.
         // FIXME: Should we allow multiple "connections" over different
         // transport protocols?
-        if (tbl_.lookup(hdr.source_node)) {
+        if (tbl_.lookup(hdr.source_node).hdl) {
           CAF_LOG_INFO("close connection since we already have a "
                        "connection: " << CAF_ARG(hdr.source_node));
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
@@ -344,7 +344,6 @@ public:
         // Add this node to our contacts.
         CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
         tbl_.add(hdl, hdr.source_node);
-        tbl_.status(hdr.source_node, routing_table::connectivity::established);
         // TODO: Add addresses to share with other nodes?
         // Write handshake as client in response.
         if (tcp_based)
@@ -372,7 +371,7 @@ public:
           }
         }
         auto new_node = (this_node() != hdr.source_node
-                         && !tbl_.lookup(hdr.source_node));
+                         && !tbl_.lookup(hdr.source_node).known);
         if (!new_node) {
           if (tcp_based) {
             CAF_LOG_INFO("received second client handshake:"
@@ -383,7 +382,6 @@ public:
           // Add this node to our contacts.
           CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
           tbl_.add(hdl, hdr.source_node);
-          tbl_.status(hdr.source_node, routing_table::connectivity::established);
           // TODO: Add addresses for future sharing of contact info.
         }
         // Since udp is unreliable we answer, maybe our message was lost.
