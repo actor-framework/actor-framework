@@ -58,6 +58,10 @@ public:
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
   }
 
+  bool congested() const noexcept override {
+    return driver_.congested();
+  }
+
 protected:
   void finalize(const error& reason) override {
     driver_.finalize(reason);
