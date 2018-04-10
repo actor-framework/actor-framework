@@ -341,7 +341,6 @@ scheduled_actor::mailbox_visitor::operator()(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
   switch (self->reactivate(x)) {
     case activation_result::terminated:
-      result = resume_result::done;
       return intrusive::task_result::stop;
     case activation_result::success:
       return ++handled_msgs < max_throughput
@@ -359,7 +358,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
   CAF_PUSH_AID(id());
   CAF_LOG_TRACE(CAF_ARG(max_throughput));
   if (!activate(ctx))
-    return resume_result::done;
+    return resumable::done;
   size_t handled_msgs = 0;
   actor_clock::time_point tout{actor_clock::duration_type{0}};
   auto reset_timeouts_if_needed = [&] {
@@ -374,8 +373,7 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
       set_stream_timeout(tout);
     }
   };
-  auto result = resume_result::awaiting_message;
-  mailbox_visitor f{this, result, handled_msgs, max_throughput};
+  mailbox_visitor f{this, handled_msgs, max_throughput};
   mailbox_element_ptr ptr;
   // Timeout for calling `advance_streams`.
   while (handled_msgs < max_throughput) {
@@ -387,9 +385,11 @@ scheduled_actor::resume(execution_unit* ctx, size_t max_throughput) {
       if (mailbox().try_block())
         return resumable::awaiting_message;
     }
-    // Immediately stop if the visitor reports an error.
-    if (result != awaiting_message)
-      return result;
+    // Check whether the visitor left the actor without behavior.
+    if (finalize()) {
+      return resumable::done;
+    }
+    // Advance streams, i.e., try to generating credit or to emit batches.
     auto now = clock().now();
     if (now >= tout)
       tout = advance_streams(now);
@@ -771,6 +771,12 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
 }
 
 bool scheduled_actor::finalize() {
+  CAF_LOG_TRACE("");
+  // Repeated calls always return `true` but have no side effects.
+  if (getf(is_cleaned_up_flag))
+    return true;
+  // An actor is considered alive as long as it has a behavior and didn't set
+  // the terminated flag.
   if (has_behavior() && !getf(is_terminated_flag))
     return false;
   CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
@@ -778,6 +784,7 @@ bool scheduled_actor::finalize() {
   bhvr_stack_.clear();
   bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
+  CAF_ASSERT(getf(is_cleaned_up_flag));
   return true;
 }
 

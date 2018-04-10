@@ -214,7 +214,6 @@ public:
   /// Consumes messages from the mailbox.
   struct mailbox_visitor {
     scheduled_actor* self;
-    resume_result& result;
     size_t& handled_msgs;
     size_t max_throughput;
 
