@@ -70,24 +70,24 @@ public:
   template <class F>
   void update(time_point now, F& consumer) {
     CAF_ASSERT(interval_.count() != 0);
-    auto diff = now - start_;
-    auto current_tick_id = diff.count() / interval_.count();
+    auto d = now - start_;
+    auto current_tick_id = static_cast<size_t>(d.count() / interval_.count());
     while (last_tick_id_ < current_tick_id)
       consumer(++last_tick_id_);
   }
 
   /// Advances time by `t` and returns all triggered periods as bitmask.
-  long timeouts(time_point t, std::initializer_list<long> periods);
+  size_t timeouts(time_point t, std::initializer_list<size_t> periods);
 
   /// Returns the next time point after `t` that would trigger any of the tick
   /// periods, i.e., returns the next time where any of the tick periods
   /// triggers `tick id % period == 0`.
-  time_point next_timeout(time_point t, std::initializer_list<long> periods);
+  time_point next_timeout(time_point t, std::initializer_list<size_t> periods);
 
 private:
   time_point start_;
   duration_type interval_;
-  long last_tick_id_;
+  size_t last_tick_id_;
 };
 
 } // namespace detail

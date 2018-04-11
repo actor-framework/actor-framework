@@ -94,7 +94,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
     // actor lives in its own thread
     ptr->home_system->thread_started();
     auto this_ptr = ptr->get();
-    CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != 0);
+    CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != nullptr);
     auto self = static_cast<blocking_actor*>(this_ptr);
     CAF_SET_LOGGER_SYS(ptr->home_system);
     CAF_PUSH_AID_FROM_PTR(self);

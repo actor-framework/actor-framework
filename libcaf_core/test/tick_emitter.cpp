@@ -72,14 +72,15 @@ CAF_TEST(ticks) {
   auto cycle = detail::gcd(credit_interval.count(),
                            force_batch_interval.count());
   CAF_CHECK_EQUAL(cycle, 50);
-  auto force_batch_frequency = force_batch_interval.count() / cycle;
-  auto credit_frequency = credit_interval.count() / cycle;
+  auto force_batch_frequency =
+    static_cast<size_t>(force_batch_interval.count() / cycle);
+  auto credit_frequency = static_cast<size_t>(credit_interval.count() / cycle);
   detail::tick_emitter tctrl{time_point{timespan{100}}};
   tctrl.interval(timespan{cycle});
-  vector<long> ticks;
-  int force_batch_triggers = 0;
-  int credit_triggers = 0;
-  auto f = [&](long tick_id) {
+  vector<size_t> ticks;
+  size_t force_batch_triggers = 0;
+  size_t credit_triggers = 0;
+  auto f = [&](size_t tick_id) {
     ticks.push_back(tick_id);
     if (tick_id % force_batch_frequency == 0)
       ++force_batch_triggers;
@@ -89,13 +90,13 @@ CAF_TEST(ticks) {
   CAF_MESSAGE("trigger 4 ticks");
   tctrl.update(time_point{timespan{300}}, f);
   CAF_CHECK_EQUAL(deep_to_string(ticks), "[1, 2, 3, 4]");
-  CAF_CHECK_EQUAL(force_batch_triggers, 4);
-  CAF_CHECK_EQUAL(credit_triggers, 1);
+  CAF_CHECK_EQUAL(force_batch_triggers, 4lu);
+  CAF_CHECK_EQUAL(credit_triggers, 1lu);
   CAF_MESSAGE("trigger 3 more ticks");
   tctrl.update(time_point{timespan{475}}, f);
   CAF_CHECK_EQUAL(deep_to_string(ticks), "[1, 2, 3, 4, 5, 6, 7]");
-  CAF_CHECK_EQUAL(force_batch_triggers, 7);
-  CAF_CHECK_EQUAL(credit_triggers, 1);
+  CAF_CHECK_EQUAL(force_batch_triggers, 7lu);
+  CAF_CHECK_EQUAL(credit_triggers, 1lu);
 }
 
 CAF_TEST(timeouts) {
@@ -107,23 +108,23 @@ CAF_TEST(timeouts) {
   CAF_MESSAGE("advance until the first 5-tick-period ends");
   now += interval * 5;
   auto bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x01);
+  CAF_CHECK_EQUAL(bitmask, 0x01u);
   CAF_MESSAGE("advance until the first 7-tick-period ends");
   now += interval * 2;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x02);
+  CAF_CHECK_EQUAL(bitmask, 0x02u);
   CAF_MESSAGE("advance until both tick period ends");
   now += interval * 7;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x03);
+  CAF_CHECK_EQUAL(bitmask, 0x03u);
   CAF_MESSAGE("advance until both tick period end multiple times");
   now += interval * 21;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x03);
+  CAF_CHECK_EQUAL(bitmask, 0x03u);
   CAF_MESSAGE("advance without any timeout");
   now += interval * 1;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x00);
+  CAF_CHECK_EQUAL(bitmask, 0x00u);
 }
 
 CAF_TEST(next_timeout) {

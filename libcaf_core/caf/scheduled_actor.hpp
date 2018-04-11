@@ -885,10 +885,10 @@ protected:
   detail::tick_emitter stream_ticks_;
 
   /// Number of ticks per batch delay.
-  long max_batch_delay_ticks_;
+  size_t max_batch_delay_ticks_;
 
   /// Number of ticks of each credit round.
-  long credit_round_ticks_;
+  size_t credit_round_ticks_;
 
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;

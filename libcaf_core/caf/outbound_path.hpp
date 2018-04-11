@@ -72,14 +72,15 @@ public:
 
   /// Sends a `downstream_msg::batch` on this path. Decrements `open_credit` by
   /// `xs_size` and increments `next_batch_id` by 1.
-  void emit_batch(local_actor* self, long xs_size, message xs);
+  void emit_batch(local_actor* self, int32_t xs_size, message xs);
 
   template <class Iterator>
   Iterator emit_batches_impl(local_actor* self, Iterator i, Iterator e,
                              bool force_underfull) {
     CAF_LOG_TRACE(CAF_ARG(force_underfull));
     using type = detail::decay_t<decltype(*i)>;
-    while (std::distance(i, e) >= static_cast<ptrdiff_t>(desired_batch_size)) {
+    // Signed Desired Batch Size.
+    while (std::distance(i, e) >= desired_batch_size) {
       std::vector<type> tmp{std::make_move_iterator(i),
                             std::make_move_iterator(i + desired_batch_size)};
       emit_batch(self, desired_batch_size, make_message(std::move(tmp)));
@@ -88,7 +89,7 @@ public:
     if (i != e && force_underfull) {
       std::vector<type> tmp{std::make_move_iterator(i),
                             std::make_move_iterator(e)};
-      auto tmp_size = static_cast<long>(tmp.size());
+      auto tmp_size = static_cast<int32_t>(tmp.size());
       emit_batch(self, tmp_size, make_message(std::move(tmp)));
       return e;
     }
@@ -104,8 +105,10 @@ public:
     if (pending())
       return;
     CAF_ASSERT(desired_batch_size > 0);
+    CAF_ASSERT(cache.size() < std::numeric_limits<int32_t>::max());
     auto first = cache.begin();
-    auto last = first + std::min(open_credit, static_cast<long>(cache.size()));
+    auto last = first + std::min(open_credit,
+                                 static_cast<int32_t>(cache.size()));
     if (first == last)
       return;
     auto i = emit_batches_impl(self, first, last, force_underfull);
@@ -147,10 +150,10 @@ public:
   int64_t next_batch_id;
 
   /// Currently available credit on this path.
-  long open_credit;
+  int32_t open_credit;
 
   /// Ideal batch size. Configured by the sink.
-  uint64_t desired_batch_size;
+  int32_t desired_batch_size;
 
   /// ID of the first unacknowledged batch. Note that CAF uses accumulative
   /// ACKs, i.e., receiving an ACK with a higher ID is not an error.

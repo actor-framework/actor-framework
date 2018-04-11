@@ -81,7 +81,7 @@ struct fixture {
   void fill_ys() {
     char buf[] = {'\0', '\0'};
     for (int i = 0; i < 4; ++i) {
-      buf[0] = 'a' + i;
+      buf[0] = static_cast<char>('a' + i);
       ys.emplace(i + 1, buf);
     }
   }

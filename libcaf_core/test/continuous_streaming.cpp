@@ -144,7 +144,7 @@ using fixture = test_coordinator_fixture<>;
 CAF_TEST_FIXTURE_SCOPE(local_streaming_tests, fixture)
 
 CAF_TEST(depth_3_pipeline_with_fork) {
-  auto src = sys.spawn(file_reader, 50);
+  auto src = sys.spawn(file_reader, 50u);
   auto stg = sys.spawn(stream_multiplexer);
   auto snk1 = sys.spawn(sum_up);
   auto snk2 = sys.spawn(sum_up);
@@ -168,8 +168,8 @@ CAF_TEST(depth_3_pipeline_with_fork) {
 }
 
 CAF_TEST(depth_3_pipeline_with_join) {
-  auto src1 = sys.spawn(file_reader, 50);
-  auto src2 = sys.spawn(file_reader, 50);
+  auto src1 = sys.spawn(file_reader, 50u);
+  auto src2 = sys.spawn(file_reader, 50u);
   auto stg = sys.spawn(stream_multiplexer);
   auto snk = sys.spawn(sum_up);
   auto& st = deref<stream_multiplexer_actor>(stg).state;

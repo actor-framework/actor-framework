@@ -1099,13 +1099,14 @@ scheduled_actor::advance_streams(actor_clock::time_point now) {
   // Fill up credit on each input path.
   if ((bitmask & 0x02) != 0) {
     auto cycle = stream_ticks_.interval();
-    cycle *= credit_round_ticks_;
+    cycle *= static_cast<decltype(cycle)>credit_round_ticks_;
     auto bc_us = home_system().config().streaming_desired_batch_complexity_us;
     auto bc = std::chrono::microseconds(bc_us);
     auto& qs = get<2>(mailbox_.queue().queues()).queues();
     for (auto& kvp : qs) {
       auto inptr = kvp.second.policy().handler.get();
-      inptr->emit_ack_batch(this, kvp.second.total_task_size(), cycle, bc);
+      auto bs = static_cast<int32_t>(kvp.second.total_task_size());
+      inptr->emit_ack_batch(this, bs, cycle, bc);
     }
   }
   return stream_ticks_.next_timeout(now, {max_batch_delay_ticks_,

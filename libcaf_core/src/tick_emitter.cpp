@@ -54,12 +54,12 @@ void tick_emitter::interval(duration_type x) {
   interval_ = x;
 }
 
-long tick_emitter::timeouts(time_point now,
-                            std::initializer_list<long> periods) {
+size_t tick_emitter::timeouts(time_point now,
+                              std::initializer_list<size_t> periods) {
   CAF_LOG_TRACE(CAF_ARG(now) << CAF_ARG(periods));
-  long result = 0;
-  auto f = [&](long tick) {
-    long n = 0;
+  size_t result = 0;
+  auto f = [&](size_t tick) {
+    size_t n = 0;
     for (auto p : periods) {
       if (tick % p == 0)
         result |= 1l << n;
@@ -71,16 +71,17 @@ long tick_emitter::timeouts(time_point now,
 }
 
 tick_emitter::time_point
-tick_emitter::next_timeout(time_point t, std::initializer_list<long> periods) {
+tick_emitter::next_timeout(time_point t,
+                           std::initializer_list<size_t> periods) {
   CAF_ASSERT(interval_.count() != 0);
-  auto is_trigger = [&](long tick_id) {
+  auto is_trigger = [&](size_t tick_id) {
     for (auto period : periods)
       if (tick_id % period == 0)
         return true;
     return false;
   };
   auto diff = t - start_;
-  auto this_tick = diff.count() / interval_.count();
+  auto this_tick = static_cast<size_t>(diff.count() / interval_.count());
   auto tick_id = this_tick + 1;
   while (!is_trigger(tick_id))
     ++tick_id;

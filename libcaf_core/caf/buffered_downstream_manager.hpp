@@ -55,12 +55,12 @@ public:
   }
 
   /// @pre `n <= buf_.size()`
-  static chunk_type get_chunk(buffer_type& buf, long n) {
+  static chunk_type get_chunk(buffer_type& buf, size_t n) {
     CAF_LOG_TRACE(CAF_ARG(buf) << CAF_ARG(n));
     chunk_type xs;
     if (!buf.empty() && n > 0) {
-      xs.reserve(std::min(static_cast<size_t>(n), buf.size()));
-      if (static_cast<size_t>(n) < buf.size()) {
+      xs.reserve(std::min(n, buf.size()));
+      if (n < buf.size()) {
         auto first = buf.begin();
         auto last = first + static_cast<ptrdiff_t>(n);
         std::move(first, last, std::back_inserter(xs));
@@ -73,7 +73,7 @@ public:
     return xs;
   }
 
-  chunk_type get_chunk(long n) {
+  chunk_type get_chunk(size_t n) {
     return get_chunk(buf_, n);
   }
 

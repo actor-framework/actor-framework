@@ -19,6 +19,7 @@
 
 #define CAF_SUITE broadcast_downstream_manager
 
+#include <cstdint>
 #include <memory>
 
 #include "caf/actor_system.hpp"
@@ -85,7 +86,7 @@ public:
     // nop
   }
 
-  void add_path_to(entity& x, int desired_batch_size) {
+  void add_path_to(entity& x, int32_t desired_batch_size) {
     auto ptr = bs.add_path(next_slot++, x.ctrl());
     CAF_REQUIRE(ptr != nullptr);
     ptr->desired_batch_size = desired_batch_size;
@@ -93,7 +94,7 @@ public:
     paths.emplace_back(ptr);
   }
 
-  size_t credit_for(entity& x) {
+  long credit_for(entity& x) {
     auto pred = [&](outbound_path* ptr) {
       return ptr->hdl == &x;
     };
@@ -198,7 +199,7 @@ struct fixture {
 
   batch_type make_batch(int first, int last) {
     batch_type result;
-    result.resize((last + 1) - first);
+    result.resize(static_cast<size_t>((last + 1) - first));
     std::iota(result.begin(), result.end(), first);
     return result;
   }
@@ -298,7 +299,7 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
 #define FOR                                                                    \
   struct CONCAT(for_helper_, __LINE__) {                                       \
     entity& who;                                                               \
-    size_t amount;                                                             \
+    long amount;                                                               \
     void operator<<(entity& x) const {                                         \
       CAF_CHECK_EQUAL(who.credit_for(x), amount);                              \
     }                                                                          \

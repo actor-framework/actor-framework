@@ -172,7 +172,7 @@ public:
   using duration_type = time_point::duration;
 
   /// The type of a single tick.
-  using tick_type = long;
+  using tick_type = size_t;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -186,8 +186,10 @@ public:
                                              : *global_time) {
     auto cycle = detail::gcd(credit_interval.count(),
                              force_batches_interval.count());
-    ticks_per_force_batches_interval = force_batches_interval.count() / cycle;
-    ticks_per_credit_interval = credit_interval.count() / cycle;
+    ticks_per_force_batches_interval =
+      static_cast<size_t>(force_batches_interval.count() / cycle);
+    ticks_per_credit_interval =
+      static_cast<size_t>(credit_interval.count() / cycle);
     tick_emitter_.interval(duration_type{cycle});
   }
 
@@ -342,8 +344,8 @@ public:
         auto& qs = get<2>(mbox.queues()).queues();
         for (auto& kvp : qs) {
           auto inptr = kvp.second.policy().handler.get();
-          inptr->emit_ack_batch(this, kvp.second.total_task_size(), cycle,
-                                desired_batch_complexity);
+          auto bs = static_cast<int32_t>(kvp.second.total_task_size());
+          inptr->emit_ack_batch(this, bs, cycle, desired_batch_complexity);
         }
       }
     };
@@ -604,7 +606,9 @@ struct fixture {
 };
 
 vector<int> make_iota(int first, int last) {
-  vector<int> result(last - first);
+  CAF_ASSERT(first < last);
+  vector<int> result;
+  result.resize(static_cast<size_t>(last - first));
   std::iota(result.begin(), result.end(), first);
   return result;
 }

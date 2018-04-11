@@ -129,10 +129,10 @@ struct dmsg {
 
 struct umsg {
   struct ack_handshake {
-    long credit;
+    int32_t credit;
   };
   struct ack_batch {
-    long credit;
+    int32_t credit;
   };
   struct drop {
     // nop

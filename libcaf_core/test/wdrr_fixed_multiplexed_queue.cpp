@@ -98,7 +98,7 @@ struct fetch_helper {
                          inode& x) {
     if (!result.empty())
       result += ',';
-    result += to_string(I);
+    result += std::to_string(I);
     result += ':';
     result += to_string(x);
     return task_result::resume;
@@ -124,7 +124,7 @@ struct fixture {
     auto f = [&](size_t id, drr_queue<inode_policy>&, inode& x) {
       if (!result.empty())
         result += ',';
-      result += to_string(id);
+      result += std::to_string(id);
       result += ':';
       result += to_string(x);
       return task_result::resume;
