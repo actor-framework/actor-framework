@@ -46,7 +46,7 @@ private:
   void forward_msg(strong_actor_ptr sender, message_id mid, message msg,
                    const forwarding_stack* fwd = nullptr);
 
-  mutable detail::shared_spinlock mtx_;
+  mutable detail::shared_spinlock broker_mtx_;
   actor broker_;
 };
 

@@ -45,7 +45,7 @@ void forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
   if (msg.match_elements<exit_msg>())
     unlink_from(msg.get_as<exit_msg>(0).source);
   forwarding_stack tmp;
-  shared_lock<detail::shared_spinlock> guard(mtx_);
+  shared_lock<detail::shared_spinlock> guard(broker_mtx_);
   if (broker_)
     broker_->enqueue(nullptr, invalid_message_id,
                      make_message(forward_atom::value, std::move(sender),
@@ -85,7 +85,7 @@ void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
   CAF_ASSERT(ctx != nullptr);
   actor tmp;
   { // lifetime scope of guard
-    std::unique_lock<detail::shared_spinlock> guard(mtx_);
+    std::unique_lock<detail::shared_spinlock> guard(broker_mtx_);
     broker_.swap(tmp); // manually break cycle
   }
   cleanup(std::move(rsn), ctx);
