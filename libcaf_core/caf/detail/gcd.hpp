@@ -23,7 +23,7 @@ namespace caf {
 namespace detail {
 
 template <class T>
-static T gcd(T a, T b) {
+T gcd(T a, T b) {
   T r;
   while (b != 0) {
     r = a % b;

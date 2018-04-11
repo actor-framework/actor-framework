@@ -33,7 +33,7 @@ struct arg_wrapper {
 
 /// Used to implement `CAF_ARG`.
 template <class T>
-static arg_wrapper<T> make_arg_wrapper(const char* name, const T& value) {
+arg_wrapper<T> make_arg_wrapper(const char* name, const T& value) {
   return {name, value};
 }
 
