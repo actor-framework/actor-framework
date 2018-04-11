@@ -94,13 +94,13 @@ public:
     paths.emplace_back(ptr);
   }
 
-  long credit_for(entity& x) {
+  size_t credit_for(entity& x) {
     auto pred = [&](outbound_path* ptr) {
       return ptr->hdl == &x;
     };
     auto i = std::find_if(paths.begin(), paths.end(), pred);
     CAF_REQUIRE(i != paths.end());
-    return (*i)->open_credit;
+    return static_cast<size_t>((*i)->open_credit);
   }
 
   void new_round(int num, bool force_emit) {
@@ -274,7 +274,7 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
 
 #define AFTER
 
-#define HAS ; auto CONCAT(amount, __LINE__) =
+#define HAS ; size_t CONCAT(amount, __LINE__) =
 
 #define CREDIT ;
 
@@ -299,7 +299,7 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
 #define FOR                                                                    \
   struct CONCAT(for_helper_, __LINE__) {                                       \
     entity& who;                                                               \
-    long amount;                                                               \
+    size_t amount;                                                             \
     void operator<<(entity& x) const {                                         \
       CAF_CHECK_EQUAL(who.credit_for(x), amount);                              \
     }                                                                          \
