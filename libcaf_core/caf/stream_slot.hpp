@@ -58,11 +58,12 @@ struct stream_slots : detail::comparable<stream_slots>{
     return {receiver, sender};
   }
 
-  inline int_fast32_t compare(stream_slots other) const noexcept {
-    static_assert(sizeof(stream_slots) == sizeof(int32_t),
-                  "sizeof(stream_slots) != sizeof(int32_t)");
-    return reinterpret_cast<const int32_t&>(*this)
-           - reinterpret_cast<int32_t&>(other);
+  inline long compare(stream_slots other) const noexcept {
+    static_assert(sizeof(long) >= sizeof(int32_t),
+                  "sizeof(long) < sizeof(int32_t)");
+    long x = (sender << 16) | receiver;
+    long y = (other.sender << 16) | other.receiver;
+    return x - y;
   }
 };
 
