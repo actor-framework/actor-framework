@@ -43,7 +43,7 @@ public:
 
   explicit downstream_manager_base(scheduled_actor* self);
 
-  virtual ~downstream_manager_base();
+  ~downstream_manager_base() override;
 
   // -- properties -------------------------------------------------------------
 
