@@ -81,6 +81,7 @@
     _Pragma("clang diagnostic ignored \"-Wdocumentation\"")                    \
     _Pragma("clang diagnostic ignored \"-Wold-style-cast\"")                   \
     _Pragma("clang diagnostic ignored \"-Wsign-conversion\"")                  \
+    _Pragma("clang diagnostic ignored \"-Wunused-template\"")                  \
     _Pragma("clang diagnostic ignored \"-Wshorten-64-to-32\"")                 \
     _Pragma("clang diagnostic ignored \"-Wunreachable-code\"")                 \
     _Pragma("clang diagnostic ignored \"-Wdouble-promotion\"")                 \

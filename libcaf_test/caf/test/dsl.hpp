@@ -19,10 +19,13 @@
 #pragma once
 
 #include "caf/all.hpp"
+#include "caf/config.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/test/unit_test.hpp"
 
 #include "caf/detail/gcd.hpp"
+
+CAF_PUSH_WARNINGS
 
 namespace {
 
@@ -648,3 +651,4 @@ struct test_coordinator_fixture {
   TESTEE_SCAFFOLD(tname);                                                      \
   behavior tname(tname##_actor* self, __VA_ARGS__)
 
+CAF_POP_WARNINGS
