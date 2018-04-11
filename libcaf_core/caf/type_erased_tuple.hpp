@@ -45,6 +45,7 @@ public:
 
   type_erased_tuple() = default;
   type_erased_tuple(const type_erased_tuple&) = default;
+  type_erased_tuple& operator=(const type_erased_tuple&) = default;
 
   virtual ~type_erased_tuple();
 

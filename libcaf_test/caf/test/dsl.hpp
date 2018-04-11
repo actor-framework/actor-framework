@@ -170,6 +170,8 @@ public:
     *this = x;
   }
 
+  caf_handle(const caf_handle&) = default;
+
   inline caf_handle& operator=(caf::abstract_actor* x)  {
     ptr_ = x;
     return *this;
