@@ -462,7 +462,7 @@ public:
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<!detail::is_actor_handle<Init>::value,
+  detail::enable_if_t<!detail::is_actor_handle<Init>::value && Trait::valid,
                       make_source_result_t<DownstreamManager>>
   make_source(Init init, Pull pull, Done done, Finalize finalize = {},
               policy::arg<DownstreamManager> token = {}) {
@@ -496,7 +496,7 @@ public:
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
+  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value && Trait::valid,
                       make_source_result_t<DownstreamManager>>
   make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
               Finalize fin = {},
