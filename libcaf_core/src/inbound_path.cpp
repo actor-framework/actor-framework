@@ -43,12 +43,12 @@ auto inbound_path::stats_t::calculate(timespan c, timespan d)
   }
   if (total_ns == 0)
     return {1, 1};
-  // Instead of C * (N / t) we calculate N * (C / t) to avoid imprecisions due
-  // to double rounding for very small numbers.
-  auto ct = static_cast<double>(c.count()) / total_ns;
-  auto dt = static_cast<double>(d.count()) / total_ns;
-  return {std::max(static_cast<long>(total_items * ct), 1l),
-          std::max(static_cast<long>(total_items * dt), 1l)};
+  // Instead of C * (N / t) we calculate (C * N) / t to avoid double conversion
+  // and rounding errors.
+  auto cl = static_cast<long>(c.count());
+  auto dl = static_cast<long>(d.count());
+  return {std::max((cl * total_items) / total_ns, 1l),
+          std::max((dl * total_items) / total_ns, 1l)};
 }
 
 void inbound_path::stats_t::store(measurement x) {
