@@ -101,6 +101,7 @@ set (LIBCAF_CORE_SRCS
      src/term.cpp
      src/test_actor_clock.cpp
      src/test_coordinator.cpp
+     src/thread_hook.cpp
      src/thread_safe_actor_clock.cpp
      src/tick_emitter.cpp
      src/timestamp.cpp
