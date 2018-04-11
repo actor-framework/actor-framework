@@ -76,7 +76,6 @@ buf make_log(level lvl) {
 TESTEE_SETUP();
 
 TESTEE(log_producer) {
-  using buf = std::vector<value_type>;
   return {
     [=](level lvl) -> output_stream<value_type> {
       auto res = self->make_source(
