@@ -102,7 +102,7 @@ struct fetch_helper {
     result += ':';
     result += to_string(x);
     return task_result::resume;
-  };
+  }
 };
 
 struct fixture {
