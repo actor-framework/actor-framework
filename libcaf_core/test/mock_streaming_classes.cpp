@@ -462,7 +462,6 @@ struct msg_visitor {
         (*inptr->mgr)(x.sender, dm.slots, inptr, y);
       },
       [&](dmsg::close& y) {
-        auto self = inptr->mgr->self;
         (*self)(x.sender, dm.slots, inptr, y);
       });
     visit(f, dm.content);
