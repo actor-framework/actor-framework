@@ -59,7 +59,7 @@ struct fixture {
           c, n, t, m);
     print("- items/batch B = max(D * N / t, 1) = max(%ld * %ld / %ld, 1) = %ld",
           d, n, t, b);
-    auto cr = x.calculate(timespan(1000), timespan(100));
+    auto cr = x.calculate(timespan(c), timespan(d));
     CAF_CHECK_EQUAL(cr.items_per_batch, b);
     CAF_CHECK_EQUAL(cr.max_throughput, m);
   }
