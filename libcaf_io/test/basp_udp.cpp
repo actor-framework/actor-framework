@@ -56,6 +56,7 @@ constexpr uint64_t no_operation_data = 0;
 
 constexpr auto basp_atom = caf::atom("BASP");
 constexpr auto spawn_serv_atom = caf::atom("SpawnServ");
+// TODO: Will probably be removed when the new default autoconnect works.
 // constexpr auto config_serv_atom = caf::atom("ConfigServ");
 
 } // namespace <anonymous>
@@ -806,6 +807,7 @@ CAF_TEST(actor_serialize_and_deserialize_udp) {
           std::vector<actor_id>{}, msg);
 }
 
+// TODO: Will be reactivated and adjusted when new conenction feature works.
 /*
 CAF_TEST(indirect_connections_udp) {
   // this node receives a message from jupiter via mars and responds via mars
@@ -1002,6 +1004,7 @@ CAF_TEST_FIXTURE_SCOPE_END()
 
 CAF_TEST_FIXTURE_SCOPE(basp_udp_tests_with_autoconn, autoconn_enabled_fixture)
 
+// TODO: Will probably be removed when the new default autoconnect works.
 /*
 CAF_TEST(automatic_connection_udp) {
   // this tells our BASP broker to enable the automatic connection feature

@@ -274,7 +274,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
     return true;
   } else {
     write(ctx, callee_.get_buffer(receiver->node()), hdr, &writer);
-    // TODO: should the hook really be called here, or should we delay this
+    // TODO: Should the hook really be called here, or should we delay this
     // until communication is established?
     notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
     return true;

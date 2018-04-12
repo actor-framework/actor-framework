@@ -95,12 +95,13 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
     return nullptr;
   // This member function is being called whenever we deserialize a
   // payload received from a remote node; if a remote node A sends
-  // us a handle to a third node B, then we assume that A offers a route to B.
+  // us a handle to a third node B, then we assume that A can tell us
+  // how to contact B.
   auto lr = instance.tbl().lookup(nid);
-  // TODO: make sure the lr is addressed as intended, seems wrong atm.
-  if (nid != this_context->id && !lr.known)
+  if (nid != this_context->id && !lr.known) {
     // TODO: Try to establish communication with the new node.
     CAF_CRITICAL("Not implemented.");
+  }
   // TODO: Everything below has to happen once we establish communication?
   //       I'm not sure yet, the functors can be attached earlier and we could
   //       send trigger an error message if we cannot contact the remote node.

@@ -136,10 +136,6 @@ public:
 
   abstract_broker* parent_;
   std::unordered_map<endpoint_handle, node_id> nid_by_hdl_;
-  // TODO: Do we need a list as a second argument as there could be
-  //       multiple handles for different technologies?
-  //std::unordered_map<node_id, endpoint_handle> hdl_by_nid_;
-
   std::unordered_map<node_id, node_info> node_information_base_;
 };
 
