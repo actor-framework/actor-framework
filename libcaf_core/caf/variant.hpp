@@ -451,7 +451,7 @@ bool operator==(const variant<Ts...>& x, const T& y) {
 /// @relates variant
 template <class T>
 struct variant_reader {
-  size_t& type_tag;
+  uint8_t& type_tag;
   T& x;
 };
 
@@ -467,7 +467,8 @@ template <class Inspector, class... Ts>
 typename std::enable_if<Inspector::reads_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, variant<Ts...>& x) {
-  auto type_tag = x.index();
+  // We use a single byte for the type index on the wire.
+  auto type_tag = static_cast<uint8_t>(x.index());
   variant_reader<variant<Ts...>> helper{type_tag, x};
   return f(meta::omittable(), type_tag, helper);
 }
@@ -475,7 +476,7 @@ inspect(Inspector& f, variant<Ts...>& x) {
 /// @relates variant
 template <class T>
 struct variant_writer {
-  size_t& type_tag;
+  uint8_t& type_tag;
   T& x;
 };
 
@@ -513,7 +514,8 @@ template <class Inspector, class... Ts>
 typename std::enable_if<Inspector::writes_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, variant<Ts...>& x) {
-  size_t type_tag;
+  // We use a single byte for the type index on the wire.
+  uint8_t type_tag;
   variant_writer<variant<Ts...>> helper{type_tag, x};
   return f(meta::omittable(), type_tag, helper);
 }

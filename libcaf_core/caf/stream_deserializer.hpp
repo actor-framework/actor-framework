@@ -85,7 +85,16 @@ public:
   }
 
   error begin_sequence(size_t& num_elements) override {
-    return varbyte_decode(num_elements);
+    // We serialize a `size_t` always in 32-bit, to guarantee compatibility
+    // with 32-bit nodes in the network.
+    // TODO: protect with `if constexpr (sizeof(size_t) > sizeof(uint32_t))`
+    //       when switching to C++17 and pass `num_elements` directly to
+    //       `varbyte_decode` in the `else` case
+    uint32_t x;
+    auto result = varbyte_decode(x);
+    if (!result)
+      num_elements = static_cast<size_t>(x);
+    return result;
   }
 
   error end_sequence() override {
