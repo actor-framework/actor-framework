@@ -332,7 +332,7 @@ public:
     auto ptr = next_mailbox_element(dest_);
     CAF_REQUIRE(ptr != nullptr);
     if (src_)
-      CAF_CHECK_EQUAL(ptr->sender, src_);
+      CAF_REQUIRE_EQUAL(ptr->sender, src_);
     return *this;
   }
 
@@ -353,7 +353,7 @@ public:
       elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
       auto ys = extract<Ts...>(dest_);
       auto ys_indices = get_indices(ys);
-      CAF_CHECK(apply_args(inspector, ys_indices, ys));
+      CAF_REQUIRE(apply_args(inspector, ys_indices, ys));
     };
   }
 
