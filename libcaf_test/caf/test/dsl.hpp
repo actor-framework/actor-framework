@@ -384,10 +384,7 @@ public:
   allow_clause(allow_clause&& other) = default;
 
   ~allow_clause() {
-    if (peek_ != nullptr) {
-      if (peek_())
-        run_once();
-    }
+    eval();
   }
 
   allow_clause& from(const wildcard&) {
@@ -426,6 +423,16 @@ public:
       }
       return false;
     };
+  }
+
+  bool eval() {
+    if (peek_ != nullptr) {
+      if (peek_()) {
+        run_once();
+        return true;
+      }
+    }
+    return false;
   }
 
 protected:
@@ -609,10 +616,12 @@ struct test_coordinator_fixture {
 
 /// Convenience macro for defining allow clauses.
 #define allow(types, fields)                                                   \
-  do {                                                                         \
+  ([&] {                                                                       \
     CAF_MESSAGE("allow" << #types << "." << #fields);                          \
-    allow_clause<CAF_EXPAND(CAF_DSL_LIST types)>{sched}.fields;                \
-  } while (false)
+    allow_clause<CAF_EXPAND(CAF_DSL_LIST types)> x{sched};                     \
+    x.fields;                                                                  \
+    return x.eval();                                                           \
+  })()
 
 /// Convenience macro for defining disallow clauses.
 #define disallow(types, fields)                                                \
