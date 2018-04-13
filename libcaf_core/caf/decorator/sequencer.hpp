@@ -47,7 +47,7 @@ public:
   message_types_set message_types() const override;
 
 protected:
-  void on_cleanup() override;
+  void on_cleanup(const error& reason) override;
 
 private:
   strong_actor_ptr f_;

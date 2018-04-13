@@ -119,9 +119,9 @@ bool local_actor::cleanup(error&& fail_state, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(fail_state));
   // tell registry we're done
   unregister_from_system();
+  CAF_LOG_TERMINATE_EVENT(this, fail_state);
   monitorable_actor::cleanup(std::move(fail_state), host);
   clock().cancel_timeouts(this);
-  CAF_LOG_TERMINATE_EVENT(this, fail_state);
   return true;
 }
 

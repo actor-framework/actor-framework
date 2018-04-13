@@ -82,7 +82,7 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
         fail_state_ = std::move(reason);
       attachables_head_.swap(head);
       flags(flags() | is_terminated_flag | is_cleaned_up_flag);
-      on_cleanup();
+      on_cleanup(fail_state_);
       return true;
     }
     return false;
@@ -104,7 +104,7 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   return true;
 }
 
-void monitorable_actor::on_cleanup() {
+void monitorable_actor::on_cleanup(const error&) {
   // nop
 }
 

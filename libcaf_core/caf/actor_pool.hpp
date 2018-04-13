@@ -102,8 +102,10 @@ public:
 
   actor_pool(actor_config& cfg);
 
+  void on_destroy() override;
+
 protected:
-  void on_cleanup() override;
+  void on_cleanup(const error& reason) override;
 
 private:
   bool filter(upgrade_lock<detail::shared_spinlock>&,

@@ -126,8 +126,19 @@ actor_pool::actor_pool(actor_config& cfg) : monitorable_actor(cfg) {
   register_at_system();
 }
 
-void actor_pool::on_cleanup() {
-  // nop
+void actor_pool::on_destroy() {
+  CAF_PUSH_AID_FROM_PTR(this);
+  if (!getf(is_cleaned_up_flag)) {
+    cleanup(exit_reason::unreachable, nullptr);
+    monitorable_actor::on_destroy();
+    unregister_from_system();
+  }
+}
+
+void actor_pool::on_cleanup(const error& reason) {
+  CAF_PUSH_AID_FROM_PTR(this);
+  CAF_IGNORE_UNUSED(reason);
+  CAF_LOG_TERMINATE_EVENT(this, reason);
 }
 
 bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,

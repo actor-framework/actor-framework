@@ -76,7 +76,7 @@ sequencer::message_types_set sequencer::message_types() const {
   return msg_types_;
 }
 
-void sequencer::on_cleanup() {
+void sequencer::on_cleanup(const error&) {
   f_.reset();
   g_.reset();
 }
