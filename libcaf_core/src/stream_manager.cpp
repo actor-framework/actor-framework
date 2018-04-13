@@ -187,9 +187,15 @@ inbound_path* stream_manager::get_inbound_path(stream_slot x) const noexcept {
 }
 
 
-bool stream_manager::inbound_paths_up_to_date() const noexcept {
-  auto up_to_date = [](inbound_path* x) { return x->up_to_date(); };
-  return std::all_of(inbound_paths_.begin(), inbound_paths_.end(), up_to_date);
+bool stream_manager::inbound_paths_idle() const noexcept {
+  auto f = [](inbound_path* x) {
+    return x->up_to_date() && x->assigned_credit > 0;
+  };
+  return std::all_of(inbound_paths_.begin(), inbound_paths_.end(), f);
+}
+
+int32_t stream_manager::acquire_credit(inbound_path*, int32_t desired) {
+  return desired;
 }
 
 stream_slot stream_manager::add_unchecked_outbound_path_impl(response_promise& rp,

@@ -148,14 +148,19 @@ public:
   /// Returns the inbound paths at slot `x`.
   inbound_path* get_inbound_path(stream_slot x) const noexcept;
 
-  /// Queries whether all inbound paths are up-to-date. A sink is idle if this
-  /// function returns `true`.
-  bool inbound_paths_up_to_date() const noexcept;
+  /// Queries whether all inbound paths are up-to-date and have non-zero
+  /// credit. A sink is idle if this function returns `true`.
+  bool inbound_paths_idle() const noexcept;
 
   /// Returns the parent actor.
   inline scheduled_actor* self() {
     return self_;
   }
+
+  /// Acquires credit on an inbound path. The calculated credit to fill our
+  /// queue fro two cycles is `desired`, but the manager is allowed to return
+  /// any non-negative value.
+  virtual int32_t acquire_credit(inbound_path* path, int32_t desired);
 
   /// Creates an outbound path to the current sender without any type checking.
   /// @pre `out().terminal() == false`

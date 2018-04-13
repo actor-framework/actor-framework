@@ -1098,6 +1098,7 @@ scheduled_actor::advance_streams(actor_clock::time_point now) {
   }
   // Fill up credit on each input path.
   if ((bitmask & 0x02) != 0) {
+    CAF_LOG_DEBUG("new credit round");
     auto cycle = stream_ticks_.interval();
     cycle *= static_cast<decltype(cycle)::rep>(credit_round_ticks_);
     auto bc_us = home_system().config().streaming_desired_batch_complexity_us;

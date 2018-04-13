@@ -58,6 +58,10 @@ public:
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
   }
 
+  int32_t acquire_credit(inbound_path* path, int32_t desired) override {
+    return driver_.acquire_credit(path, desired);
+  }
+
   bool congested() const noexcept override {
     return driver_.congested();
   }

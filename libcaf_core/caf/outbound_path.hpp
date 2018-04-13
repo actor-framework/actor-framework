@@ -79,13 +79,14 @@ public:
                              bool force_underfull) {
     CAF_LOG_TRACE(CAF_ARG(force_underfull));
     using type = detail::decay_t<decltype(*i)>;
-    // Signed Desired Batch Size.
+    // Ship full batches.
     while (std::distance(i, e) >= desired_batch_size) {
       std::vector<type> tmp{std::make_move_iterator(i),
                             std::make_move_iterator(i + desired_batch_size)};
       emit_batch(self, desired_batch_size, make_message(std::move(tmp)));
       i += desired_batch_size;
     }
+    // Ship underful batch only if `force_underful` is set.
     if (i != e && force_underfull) {
       std::vector<type> tmp{std::make_move_iterator(i),
                             std::make_move_iterator(e)};

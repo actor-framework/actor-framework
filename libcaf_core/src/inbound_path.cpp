@@ -90,7 +90,7 @@ void inbound_path::handle(downstream_msg::batch& x) {
 void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(rebind_from));
   // Update state.
-  assigned_credit = initial_credit;
+  assigned_credit = mgr->acquire_credit(this, initial_credit);
   // Make sure we receive errors from this point on.
   stream_aborter::add(hdl, self->address(), slots.receiver,
                       stream_aborter::source_aborter);
@@ -98,23 +98,25 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_open>(
                    slots.invert(), self->address(), std::move(rebind_from),
-                   self->ctrl(), static_cast<int32_t>(assigned_credit),
-                   desired_batch_size));
+                   self->ctrl(), assigned_credit, desired_batch_size));
 }
 
 void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
                                   timespan cycle, timespan complexity) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items) << CAF_ARG(cycle)
                 << CAF_ARG(complexity));
-  if (up_to_date())
-    return;
   auto x = stats.calculate(cycle, complexity);
   // Hand out enough credit to fill our queue for 2 cycles.
   auto credit = std::max((x.max_throughput * 2)
                          - (assigned_credit + queued_items),
                          0l);
+  // The manager can restrict or adjust the amount of credit.
+  credit = mgr->acquire_credit(this, credit);
+  if (credit == 0 && up_to_date()) {
+    return;
+  }
   desired_batch_size = static_cast<int32_t>(x.items_per_batch);
-  if (credit != 0)
+  if (credit > 0)
     assigned_credit += credit;
   CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(desired_batch_size));
   unsafe_send_as(self, hdl,

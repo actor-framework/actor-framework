@@ -184,7 +184,7 @@ public:
   }
 
   bool idle() const noexcept override {
-    return inbound_paths_up_to_date() && out_.stalled();
+    return inbound_paths_idle() && out_.stalled();
   }
 
   void handle(inbound_path*, downstream_msg::batch& batch) override {

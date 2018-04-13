@@ -51,7 +51,7 @@ public:
   bool idle() const noexcept override {
     // A sink is idle if there's no pending batch and a new credit round would
     // emit no `ack_batch` messages.
-    return this->inbound_paths_up_to_date();
+    return this->inbound_paths_idle();
   }
 
   downstream_manager& out() override {
