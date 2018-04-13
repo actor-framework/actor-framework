@@ -215,11 +215,15 @@ inline caf::mailbox_element* next_mailbox_element(caf_handle x) {
   CAF_ASSERT(x.get() != nullptr);
   auto sptr = dynamic_cast<caf::scheduled_actor*>(x.get());
   if (sptr != nullptr) {
-    return sptr->mailbox().blocked() ? nullptr : sptr->mailbox().peek();
+    return sptr->mailbox().closed() || sptr->mailbox().blocked()
+           ? nullptr
+           : sptr->mailbox().peek();
   }
   auto bptr = dynamic_cast<caf::blocking_actor*>(x.get());
   CAF_ASSERT(bptr != nullptr);
-  return bptr->mailbox().blocked() ? nullptr : bptr->mailbox().peek();
+  return bptr->mailbox().closed() || bptr->mailbox().blocked()
+         ? nullptr
+         : bptr->mailbox().peek();
 }
 
 // -- introspection of the next mailbox element --------------------------------
