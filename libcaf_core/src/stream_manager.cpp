@@ -21,6 +21,8 @@
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/inbound_path.hpp"
@@ -110,6 +112,30 @@ void stream_manager::stop() {
   error tmp;
   finalize(tmp);
   self_->erase_inbound_paths_later(this);
+}
+
+void stream_manager::advance() {
+  CAF_LOG_TRACE("");
+  // Try to emit more credit.
+  if (!inbound_paths_.empty()) {
+    using std::chrono::microseconds;
+    auto& cfg = self_->system().config();
+    microseconds bc{cfg.streaming_desired_batch_complexity_us};
+    microseconds interval{cfg.streaming_tick_duration_us()};
+    auto& mbox = self_->mailbox();
+    auto& qs = get<2>(mbox.queue().queues()).queues();
+    // Iterate all queues for inbound traffic.
+    for (auto& kvp : qs) {
+      auto inptr = kvp.second.policy().handler.get();
+      // Ignore inbound paths of other managers.
+      if (inptr->mgr.get() == this) {
+        auto bs = static_cast<int32_t>(kvp.second.total_task_size());
+        inptr->emit_ack_batch(self_, bs, interval, bc);
+      }
+    }
+  }
+  // Try to generate more batches.
+  push();
 }
 
 void stream_manager::abort(error reason) {

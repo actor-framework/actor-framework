@@ -67,6 +67,10 @@ public:
   /// client.
   virtual void stop();
 
+  /// Tries to advance the stream by generating more credit or by sending
+  /// batches.
+  void advance();
+
   /// Aborts a stream after any stream message handler returned a non-default
   /// constructed error `reason` or the parent actor terminates with a
   /// non-default error.
