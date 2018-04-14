@@ -49,8 +49,10 @@ public:
   using state_type = typename trait::state;
 
   template <class Init>
-  stream_stage_driver_impl(Init init, Process f, Finalize fin)
-      : process_(std::move(f)),
+  stream_stage_driver_impl(DownstreamManager& out, Init init, Process f,
+                           Finalize fin)
+      : super(out),
+        process_(std::move(f)),
         fin_(std::move(fin)) {
     init(state_);
   }
@@ -68,7 +70,6 @@ private:
   state_type state_;
   Process process_;
   Finalize fin_;
-  message result_;
 };
 
 } // namespace detail

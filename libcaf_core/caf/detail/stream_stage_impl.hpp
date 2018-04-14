@@ -51,7 +51,7 @@ public:
   stream_stage_impl(scheduled_actor* self, Ts&&... xs)
       : stream_manager(self),
         super(self),
-        driver_(std::forward<Ts>(xs)...) {
+        driver_(this->out_, std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -74,7 +74,7 @@ public:
   }
 
   bool congested() const noexcept override {
-    return this->out_.capacity() == 0;
+    return driver_.congested();
   }
 
   int32_t acquire_credit(inbound_path* path, int32_t desired) override {

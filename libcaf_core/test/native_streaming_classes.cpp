@@ -267,7 +267,11 @@ public:
     using downstream_manager = broadcast_downstream_manager<int>;
     struct driver final : public stream_stage_driver<int, downstream_manager> {
     public:
-      driver(vector<int>* log) : log_(log) {
+      using super = stream_stage_driver<int, downstream_manager>;
+
+      driver(downstream_manager& out, vector<int>* log)
+        : super(out),
+          log_(log) {
         // nop
       }
 
