@@ -99,8 +99,6 @@ actor_system_config::~actor_system_config() {
 actor_system_config::actor_system_config()
     : cli_helptext_printed(false),
       slave_mode(false),
-      logger_filename(logger_file_name),
-      logger_filter(logger_component_filter),
       config_file_path("caf-application.ini"),
       slave_mode_fun(nullptr) {
   // add `vector<T>` and `stream<T>` for each statically known type

@@ -305,11 +305,6 @@ public:
   atom_value logger_verbosity;
   bool logger_inline_output;
 
-  // -- backward compatibility -------------------------------------------------
-
-  std::string& logger_filename CAF_DEPRECATED;
-  std::string& logger_filter CAF_DEPRECATED;
-
   // -- middleman parameters ---------------------------------------------------
 
   atom_value middleman_network_backend;
