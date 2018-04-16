@@ -55,6 +55,9 @@ namespace basp {
 class routing_table {
 public:
   using endpoint_handle = variant<connection_handle, datagram_handle>;
+  using address_endpoint = std::pair<uint16_t, network::address_listing>;
+  using address_map = std::map<network::protocol::transport,
+                               address_endpoint>;
 
   explicit routing_table(abstract_broker* parent);
 
@@ -82,9 +85,14 @@ public:
 
   /// Adds a new endpoint to the table.
   /// @pre `hdl != invalid_connection_handle && nid != none`
-  void add(const endpoint_handle& hdl, const node_id& nid);
+  void add(const node_id& nid, const endpoint_handle& hdl);
 
-  /// Adds a new node that is not reachable yet. It's state is set to `pending`.
+  /// Add a new endpoint to the table.
+  /// @pre `origin != none && nid != none`
+  void add(const node_id& nid, const node_id& origin);
+
+  /// Adds a new endpoint to the table that has no attached information.
+  /// that propagated information about the node.
   /// @pre `nid != none`
   void add(const node_id& nid);
 
@@ -93,7 +101,7 @@ public:
   /// including the node that is assigned as direct path for `hdl`.
   void erase(const endpoint_handle& hdl, erase_callback& cb);
 
-  /// Queries whether `dest` is reachable.
+  /// Queries whether `dest` is reachable directly.
   bool reachable(const node_id& dest);
 
   /// Returns the parent broker.
@@ -102,17 +110,35 @@ public:
   }
 
   /// Set the forwarding node that first mentioned `hdl`.
-  bool forwarder(const node_id& nid, endpoint_handle hdl);
+  bool origin(const node_id& nid, const node_id& origin);
 
   /// Get the forwarding node that first mentioned `hdl`
   /// or `none` if the node is unknown.
-  optional<endpoint_handle> forwarder(const node_id& nid);
+  optional<node_id> origin(const node_id& nid);
 
-  /// Add `addrs` to the addresses to reach `nid`.
-  bool addresses(const node_id& nid, network::address_listing addrs);
+  /// Set the handle for communication with `nid`.
+  bool handle(const node_id& nid, const endpoint_handle& hdl);
+
+  /// Get the handle for communication with `nid`
+  /// or `none` if the node is unknown.
+  optional<endpoint_handle> handle(const node_id& nid);
+
+  /// Set `addrs` as the addresses to reach `nid`.
+  bool addresses(const node_id& nid, address_map addrs);
+
+  /// Set `addrs` as the addresses to reach `nid` with `proto`.
+  bool addresses(const node_id& nid, network::protocol::transport proto,
+                 address_endpoint addrs);
 
   /// Get the addresses to reach `nid` or `none` if the node is unknown.
-  optional<const network::address_listing&> addresses(const node_id& nid);
+  optional<const address_map&> addresses(const node_id& nid);
+
+  /// Add a port, address pair under a key to the local addresses.
+  void local_addresses(network::protocol::transport proto,
+                       address_endpoint addrs);
+
+  /// Get a reference to an address map for the local node.
+  const address_map& local_addresses();
 
 public:
   /// Entry to bundle information for a remote endpoint.
@@ -120,9 +146,9 @@ public:
     /// Handle for the node if communication is established.
     optional<endpoint_handle> hdl;
     /// Interfaces of the nodes for sharing with neighbors.
-    network::address_listing addrs;
+    address_map addrs;
     /// The endpoint who told us about the node.
-    optional<endpoint_handle> origin;
+    optional<node_id> origin;
   };
 
   template <class Map, class Fallback>
@@ -137,6 +163,7 @@ public:
   abstract_broker* parent_;
   std::unordered_map<endpoint_handle, node_id> nid_by_hdl_;
   std::unordered_map<node_id, node_info> node_information_base_;
+  address_map local_addrs_;
 };
 
 /// @}

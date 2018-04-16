@@ -50,20 +50,24 @@ void routing_table::erase(const endpoint_handle& hdl, erase_callback& cb) {
     return;
   cb(i->second);
   parent_->parent().notify<hook::connection_lost>(i->second);
-  // TODO: Should we keep address information and set the state to 'none'?
   node_information_base_.erase(i->second);
-  //hdl_by_nid_.erase(i->second);
   nid_by_hdl_.erase(i->first);
+  // TODO: Look through other nodes and remove this one as an origin?
 }
 
-void routing_table::add(const endpoint_handle& hdl, const node_id& nid) {
+void routing_table::add(const node_id& nid, const endpoint_handle& hdl) {
   CAF_ASSERT(nid_by_hdl_.count(hdl) == 0);
-  //CAF_ASSERT(hdl_by_nid_.count(nid) == 0);
   CAF_ASSERT(node_information_base_.count(nid) == 0);
   nid_by_hdl_.emplace(hdl, nid);
-  //hdl_by_nid_.emplace(nid, hdl);
   node_information_base_[nid] = node_info{hdl, {}, none};
   parent_->parent().notify<hook::new_connection_established>(nid);
+}
+
+void routing_table::add(const node_id& nid, const node_id& origin) {
+  CAF_ASSERT(node_information_base_.count(nid) == 0);
+  node_information_base_[nid] = node_info{none, {}, origin};
+  // TODO: Some new related hook?
+  //parent_->parent().notify<hook::new_connection_established>(nid);
 }
 
 void routing_table::add(const node_id& nid) {
@@ -81,8 +85,8 @@ bool routing_table::reachable(const node_id& dest) {
   return false;
 }
 
-bool routing_table::forwarder(const node_id& nid,
-                              routing_table::endpoint_handle origin) {
+bool routing_table::origin(const node_id& nid,
+                           const node_id& origin) {
   auto i = node_information_base_.find(nid);
   if (i == node_information_base_.end())
     return false;
@@ -90,32 +94,65 @@ bool routing_table::forwarder(const node_id& nid,
   return true;
 }
 
-optional<routing_table::endpoint_handle>
-routing_table::forwarder(const node_id& nid) {
+optional<node_id>
+routing_table::origin(const node_id& nid) {
   auto i = node_information_base_.find(nid);
   if (i == node_information_base_.end())
     return none;
   return i->second.origin;
 }
 
-bool routing_table::addresses(const node_id& nid,
-                              network::address_listing addrs) {
+bool routing_table::handle(const node_id& nid,
+                           const routing_table::endpoint_handle& hdl) {
   auto i = node_information_base_.find(nid);
   if (i == node_information_base_.end())
     return false;
-  for (auto& p : addrs) {
-    auto& existing = i->second.addrs[p.first];
-    existing.insert(existing.end(), p.second.begin(), p.second.end());
-  }
+  i->second.hdl = hdl;
   return true;
 }
 
-optional<const network::address_listing&>
+optional<routing_table::endpoint_handle>
+routing_table::handle(const node_id& nid) {
+  auto i = node_information_base_.find(nid);
+  if (i == node_information_base_.end())
+    return none;
+  return i->second.hdl;
+}
+
+bool routing_table::addresses(const node_id& nid,
+                              routing_table::address_map addrs) {
+  auto i = node_information_base_.find(nid);
+  if (i == node_information_base_.end())
+    return false;
+  i->second.addrs = addrs;
+  return true;
+}
+
+bool routing_table::addresses(const node_id& nid,
+                              network::protocol::transport proto,
+                              routing_table::address_endpoint addrs) {
+  auto i = node_information_base_.find(nid);
+  if (i == node_information_base_.end())
+    return false;
+  i->second.addrs[proto] = addrs;
+  return true;
+}
+
+optional<const routing_table::address_map&>
 routing_table::addresses(const node_id& nid) {
   auto i = node_information_base_.find(nid);
   if (i == node_information_base_.end())
     return none;
   return i->second.addrs;
+}
+
+void routing_table::local_addresses(network::protocol::transport key,
+                                    routing_table::address_endpoint addrs) {
+  local_addrs_[key] = addrs;
+}
+
+const routing_table::address_map& routing_table::local_addresses() {
+  return local_addrs_;
 }
 
 } // namespace basp

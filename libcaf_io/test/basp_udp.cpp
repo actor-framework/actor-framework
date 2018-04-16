@@ -289,14 +289,16 @@ public:
     mock(src, hdl,
          {basp::message_type::client_handshake, 0, 0, 0,
           n.id, this_node(),
-          invalid_actor_id, invalid_actor_id}, std::string{})
+          invalid_actor_id, invalid_actor_id}, std::string{},
+          basp::routing_table::address_map{})
     // upon receiving the client handshake, the server should answer
     // with the server handshake and send the dispatch_message blow
     .receive(hdl,
              basp::message_type::server_handshake, no_flags,
              any_vals, basp::version, this_node(), node_id{none},
              published_actor_id, invalid_actor_id, std::string{},
-             published_actor_id, published_actor_ifs)
+             published_actor_id, published_actor_ifs,
+             basp::routing_table::address_map{})
     // upon receiving our client handshake, BASP will check
     // whether there is a SpawnServ actor on this node
     .receive(hdl,
@@ -606,7 +608,8 @@ CAF_TEST(non_empty_server_handshake_udp) {
                         basp::version, this_node(), none,
                         self()->id(), invalid_actor_id, 0};
   to_buf(expected_buf, expected, nullptr, std::string{},
-         self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
+         self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"},
+         basp::routing_table::address_map{});
   CAF_CHECK_EQUAL(hexstr(buf), hexstr(expected_buf));
 }
 
@@ -695,9 +698,10 @@ CAF_TEST(remote_actor_and_send_udp) {
   auto na = registry()->named_actors();
   mock()
   .receive(jupiter().endpoint,
-           basp::message_type::client_handshake, no_flags, 1u,
+           basp::message_type::client_handshake, no_flags, 2u,
            no_operation_data, this_node(), node_id(),
-           invalid_actor_id, invalid_actor_id, std::string{});
+           invalid_actor_id, invalid_actor_id, std::string{},
+           basp::routing_table::address_map{});
   mock(jupiter().endpoint,
        {basp::message_type::server_handshake, 0, 0, basp::version,
         jupiter().id, none,
@@ -705,7 +709,8 @@ CAF_TEST(remote_actor_and_send_udp) {
         0}, // sequence number, first message
        std::string{},
        jupiter().dummy_actor->id(),
-       uint32_t{0})
+       uint32_t{0},
+       basp::routing_table::address_map{})
   .receive(jupiter().endpoint,
            basp::message_type::dispatch_message,
            basp::header::named_receiver_flag, any_vals,
@@ -888,9 +893,10 @@ CAF_TEST(out_of_order_delivery_udp) {
   auto na = registry()->named_actors();
   mock()
   .receive(jupiter().endpoint,
-           basp::message_type::client_handshake, no_flags, 1u,
+           basp::message_type::client_handshake, no_flags, 2u,
            no_operation_data, this_node(), node_id(),
-           invalid_actor_id, invalid_actor_id, std::string{});
+           invalid_actor_id, invalid_actor_id, std::string{},
+           basp::routing_table::address_map{});
   mock(jupiter().endpoint, jupiter().endpoint,
        {basp::message_type::server_handshake, 0, 0, basp::version,
         jupiter().id, none,
@@ -898,7 +904,8 @@ CAF_TEST(out_of_order_delivery_udp) {
         0}, // sequence number, first message
        std::string{},
        jupiter().dummy_actor->id(),
-       uint32_t{0})
+       uint32_t{0},
+       basp::routing_table::address_map{})
   .receive(jupiter().endpoint,
            basp::message_type::dispatch_message,
            basp::header::named_receiver_flag, any_vals,

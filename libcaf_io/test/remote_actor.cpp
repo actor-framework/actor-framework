@@ -54,7 +54,11 @@ struct fixture {
   io::middleman& client_side_mm = client_side.middleman();
 };
 
-behavior make_pong_behavior() {
+behavior make_pong_behavior(event_based_actor* self) {
+  self->set_exit_handler([=](exit_msg& m) {
+    CAF_MESSAGE("Pong received exit message.");
+    self->quit(m.reason);
+  });
   return {
     [](int val) -> int {
       ++val;

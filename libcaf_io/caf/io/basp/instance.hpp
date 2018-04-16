@@ -309,6 +309,7 @@ public:
       case message_type::server_handshake: {
         actor_id aid = invalid_actor_id;
         std::set<std::string> sigs;
+        basp::routing_table::address_map addrs;
         if (!payload_valid()) {
           CAF_LOG_ERROR("fail to receive the app identifier");
           return false;
@@ -322,7 +323,7 @@ public:
             CAF_LOG_ERROR("app identifier mismatch");
             return false;
           }
-          e = bd(aid, sigs);
+          e = bd(aid, sigs, addrs);
           if (e)
             return false;
         }
@@ -343,7 +344,8 @@ public:
         }
         // Add this node to our contacts.
         CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
-        tbl_.add(hdl, hdr.source_node);
+        tbl_.add(hdr.source_node, hdl);
+        tbl_.addresses(hdr.source_node, addrs);
         // TODO: Add addresses to share with other nodes?
         // Write handshake as client in response.
         if (tcp_based)
@@ -356,6 +358,7 @@ public:
         break;
       }
       case message_type::client_handshake: {
+        basp::routing_table::address_map addrs;
         if (!payload_valid()) {
           CAF_LOG_ERROR("fail to receive the app identifier");
           return false;
@@ -369,6 +372,9 @@ public:
             CAF_LOG_ERROR("app identifier mismatch");
             return false;
           }
+          e = bd(addrs);
+          if (e)
+            return false;
         }
         auto new_node = (this_node() != hdr.source_node
                          && !tbl_.lookup(hdr.source_node).known);
@@ -381,8 +387,8 @@ public:
         } else {
           // Add this node to our contacts.
           CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
-          tbl_.add(hdl, hdr.source_node);
-          // TODO: Add addresses for future sharing of contact info.
+          tbl_.add(hdr.source_node, hdl);
+          tbl_.addresses(hdr.source_node, addrs);
         }
         // Since udp is unreliable we answer, maybe our message was lost.
         if (!tcp_based) {

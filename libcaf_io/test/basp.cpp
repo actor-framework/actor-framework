@@ -291,24 +291,26 @@ public:
     mock(hdl,
          {basp::message_type::client_handshake, 0, 0, 0,
           n.id, this_node(),
-          invalid_actor_id, invalid_actor_id}, std::string{})
+          invalid_actor_id, invalid_actor_id}, std::string{},
+          basp::routing_table::address_map{})
     .receive(hdl,
             basp::message_type::server_handshake, no_flags,
             any_vals, basp::version, this_node(), node_id{none},
             published_actor_id, invalid_actor_id, std::string{},
             published_actor_id,
-            published_actor_ifs)
+            published_actor_ifs,
+            basp::routing_table::address_map{})
     // upon receiving our client handshake, BASP will check
     // whether there is a SpawnServ actor on this node
     .receive(hdl,
-            basp::message_type::dispatch_message,
-            basp::header::named_receiver_flag, any_vals,
-            no_operation_data,
-            this_node(), n.id,
-            any_vals, invalid_actor_id,
-            spawn_serv_atom,
-            std::vector<actor_addr>{},
-            make_message(sys_atom::value, get_atom::value, "info"));
+             basp::message_type::dispatch_message,
+             basp::header::named_receiver_flag, any_vals,
+             no_operation_data,
+             this_node(), n.id,
+             any_vals, invalid_actor_id,
+             spawn_serv_atom,
+             std::vector<actor_addr>{},
+             make_message(sys_atom::value, get_atom::value, "info"));
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
     auto res = tbl().lookup(n.id);
@@ -509,7 +511,8 @@ CAF_TEST(non_empty_server_handshake) {
                         basp::version, this_node(), none,
                         self()->id(), invalid_actor_id};
   to_buf(expected_buf, expected, nullptr, std::string{},
-         self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
+         self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"},
+         basp::routing_table::address_map{});
   CAF_CHECK_EQUAL(hexstr(buf), hexstr(expected_buf));
 }
 
@@ -600,23 +603,25 @@ CAF_TEST(remote_actor_and_send) {
         jupiter().dummy_actor->id(), invalid_actor_id},
        std::string{},
        jupiter().dummy_actor->id(),
-       uint32_t{0})
+       uint32_t{0},
+       basp::routing_table::address_map{})
   .receive(jupiter().connection,
-          basp::message_type::client_handshake, no_flags, 1u,
-          no_operation_data, this_node(), jupiter().id,
-          invalid_actor_id, invalid_actor_id, std::string{})
+           basp::message_type::client_handshake, no_flags, 2u,
+           no_operation_data, this_node(), jupiter().id,
+           invalid_actor_id, invalid_actor_id, std::string{},
+           basp::routing_table::address_map{})
   .receive(jupiter().connection,
-          basp::message_type::dispatch_message,
-          basp::header::named_receiver_flag, any_vals,
-          no_operation_data, this_node(), jupiter().id,
-          any_vals, invalid_actor_id,
-          spawn_serv_atom,
-          std::vector<actor_id>{},
-          make_message(sys_atom::value, get_atom::value, "info"))
+           basp::message_type::dispatch_message,
+           basp::header::named_receiver_flag, any_vals,
+           no_operation_data, this_node(), jupiter().id,
+           any_vals, invalid_actor_id,
+           spawn_serv_atom,
+           std::vector<actor_id>{},
+           make_message(sys_atom::value, get_atom::value, "info"))
   .receive(jupiter().connection,
-          basp::message_type::announce_proxy, no_flags, no_payload,
-          no_operation_data, this_node(), jupiter().id,
-          invalid_actor_id, jupiter().dummy_actor->id());
+           basp::message_type::announce_proxy, no_flags, no_payload,
+           no_operation_data, this_node(), jupiter().id,
+           invalid_actor_id, jupiter().dummy_actor->id());
   CAF_MESSAGE("BASP broker should've send the proxy");
   f.receive(
     [&](node_id nid, strong_actor_ptr res, std::set<std::string> ifs) {

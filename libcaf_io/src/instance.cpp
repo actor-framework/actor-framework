@@ -325,11 +325,11 @@ void instance::write_server_handshake(execution_unit* ctx,
       return e;
     if (pa != nullptr) {
       auto i = pa->first ? pa->first->id() : invalid_actor_id;
-      return sink(i, pa->second);
+      return sink(i, pa->second, tbl_.local_addresses());
     }
     auto aid = invalid_actor_id;
     std::set<std::string> tmp;
-    return sink(aid, tmp);
+    return sink(aid, tmp, tbl_.local_addresses());
   });
   header hdr{message_type::server_handshake, 0, 0, version,
              this_node_, none,
@@ -346,7 +346,8 @@ void instance::write_client_handshake(execution_unit* ctx,
                                       uint16_t sequence_number) {
   CAF_LOG_TRACE(CAF_ARG(remote_side));
   auto writer = make_callback([&](serializer& sink) -> error {
-    return sink(const_cast<std::string&>(app_identifier));
+    return sink(const_cast<std::string&>(app_identifier),
+                tbl_.local_addresses());
   });
   header hdr{message_type::client_handshake, 0, 0, 0,
              this_node, remote_side, invalid_actor_id, invalid_actor_id,
