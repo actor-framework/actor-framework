@@ -78,6 +78,7 @@ public:
   Iterator emit_batches_impl(local_actor* self, Iterator i, Iterator e,
                              bool force_underfull) {
     CAF_LOG_TRACE(CAF_ARG(force_underfull));
+    CAF_ASSERT(desired_batch_size > 0);
     using type = detail::decay_t<decltype(*i)>;
     // Ship full batches.
     while (std::distance(i, e) >= desired_batch_size) {
