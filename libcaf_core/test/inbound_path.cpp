@@ -46,13 +46,13 @@ struct fixture {
     CAF_CHECK_EQUAL(sampling_size % 2, 0u);
   }
 
-  void calculate(long total_items, long total_time) {
-    long c = 1000;
-    long d = 100;
-    long n = total_items;
-    long t = total_time;
-    long m = t > 0 ? std::max((c * n) / t, 1l) : 1l;
-    long b = t > 0 ? std::max((d * n) / t, 1l) : 1l;
+  void calculate(int32_t total_items, int32_t total_time) {
+    int32_t c = 1000;
+    int32_t d = 100;
+    int32_t n = total_items;
+    int32_t t = total_time;
+    int32_t m = t > 0 ? std::max((c * n) / t, 1) : 1;
+    int32_t b = t > 0 ? std::max((d * n) / t, 1) : 1;
     print("with a cycle C = %ldns, desied complexity D = %ld,", c, d);
     print("number of items N = %ld, and time delta t = %ld:", n, t);
     print("- throughput M = max(C * N / t, 1) = max(%ld * %ld / %ld, 1) = %ld",
@@ -64,7 +64,7 @@ struct fixture {
     CAF_CHECK_EQUAL(cr.max_throughput, m);
   }
 
-  void store(long batch_size, long calculation_time_ns) {
+  void store(int32_t batch_size, int32_t calculation_time_ns) {
     inbound_path::stats_t::measurement m{batch_size,
                                          timespan{calculation_time_ns}};
     x.store(m);

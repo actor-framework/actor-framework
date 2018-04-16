@@ -35,20 +35,30 @@ auto inbound_path::stats_t::calculate(timespan c, timespan d)
   // Max throughput = C * (N / t), where C = cycle length, N = measured items,
   // and t = measured time. Desired batch size is the same formula with D
   // instead of C.
-  long total_ns = 0;
-  long total_items = 0;
+  // We compute our values in 64-bit for more precision before truncating to a
+  // 32-bit integer type at the end.
+  int64_t total_ns = 0;
+  int64_t total_items = 0;
   for (auto& x : measurements) {
-    total_ns += static_cast<long>(x.calculation_time.count());
+    total_ns += x.calculation_time.count();
     total_items += x.batch_size;
   }
   if (total_ns == 0)
     return {1, 1};
+  /// Helper for truncating a 64-bit integer to a 32-bit integer with a minimum
+  /// value of 1.
+  auto clamp = [](int64_t x) -> int32_t {
+    static constexpr auto upper_bound = std::numeric_limits<int32_t>::max();
+    if (x > upper_bound)
+      return upper_bound;
+    if (x <= 0)
+      return 1;
+    return static_cast<int32_t>(x);
+  };
   // Instead of C * (N / t) we calculate (C * N) / t to avoid double conversion
   // and rounding errors.
-  auto cl = static_cast<long>(c.count());
-  auto dl = static_cast<long>(d.count());
-  return {std::max((cl * total_items) / total_ns, 1l),
-          std::max((dl * total_items) / total_ns, 1l)};
+  return {clamp((c.count() * total_items) / total_ns),
+          clamp((d.count() * total_items) / total_ns)};
 }
 
 void inbound_path::stats_t::store(measurement x) {
@@ -101,7 +111,7 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
                    self->ctrl(), assigned_credit, desired_batch_size));
 }
 
-void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
+void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
                                   timespan cycle, timespan complexity) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items) << CAF_ARG(cycle)
                 << CAF_ARG(complexity));
@@ -109,7 +119,7 @@ void inbound_path::emit_ack_batch(local_actor* self, long queued_items,
   // Hand out enough credit to fill our queue for 2 cycles.
   auto credit = std::max((x.max_throughput * 2)
                          - (assigned_credit + queued_items),
-                         0l);
+                         0);
   // The manager can restrict or adjust the amount of credit.
   credit = mgr->acquire_credit(this, credit);
   if (credit == 0 && up_to_date()) {

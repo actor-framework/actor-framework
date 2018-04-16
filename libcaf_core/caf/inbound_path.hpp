@@ -82,7 +82,7 @@ public:
     /// Wraps a time measurement for a single processed batch.
     struct measurement {
       /// Number of items in the batch.
-      long batch_size;
+      int32_t batch_size;
       /// Elapsed time for processing all elements of the batch.
       timespan calculation_time;
     };
@@ -90,9 +90,9 @@ public:
     /// Wraps the resulf of `stats_t::calculate()`.
     struct calculation_result {
       /// Number of items per credit cycle.
-      long max_throughput;
+      int32_t max_throughput;
       /// Number of items per batch to reach the desired batch complexity.
-      long items_per_batch;
+      int32_t items_per_batch;
     };
 
     stats_t();
@@ -141,7 +141,7 @@ public:
   ///                     waiting in the mailbox.
   /// @param cycle Time between credit rounds.
   /// @param desired_batch_complexity Desired processing time per batch.
-  void emit_ack_batch(local_actor* self, long queued_items, timespan cycle,
+  void emit_ack_batch(local_actor* self, int32_t queued_items, timespan cycle,
                       timespan desired_batch_complexity);
 
   /// Returns whether the path received no input since last emitting
