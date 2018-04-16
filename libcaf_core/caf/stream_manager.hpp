@@ -262,10 +262,6 @@ protected:
   /// all listeners. The default implementation returns an empty message.
   virtual message make_final_result();
 
-  /// Called to handle incoming data. The default implementation logs an error
-  /// (sinks are expected to override this member function).
-  virtual error process_batch(message& msg);
-
   /// Called when `in().closed()` changes to `true`. The default
   /// implementation does nothing.
   virtual void input_closed(error reason);

@@ -304,11 +304,6 @@ message stream_manager::make_final_result() {
   return none;
 }
 
-error stream_manager::process_batch(message&) {
-  CAF_LOG_ERROR("stream_manager::process_batch called");
-  return sec::invalid_stream_state;
-}
-
 void stream_manager::output_closed(error) {
   // nop
 }
