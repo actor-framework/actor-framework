@@ -89,6 +89,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - TRACE
     --with-address-sanitizer    build with address sanitizer if available
     --with-asan                 alias for --with-address-sanitier
+    --enable-asan               alias for --with-address-sanitier
     --with-gcov                 build with gcov coverage enabled
 
   Influential Environment Variables (only on first invocation):
@@ -246,6 +247,9 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
         --with-asan)
+            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
+            ;;
+        --enable-asan)
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
         --with-gcov)
