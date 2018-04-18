@@ -206,7 +206,9 @@ public:
 protected:
   void about_to_erase(outbound_path* ptr, bool silent,
                       error* reason) override {
-    CAF_LOG_DEBUG("remove cache:" << CAF_ARG2("slot", ptr->slots.sender));
+    CAF_ASSERT(ptr != nullptr);
+    CAF_LOG_TRACE(CAF_ARG2("slot", ptr->slots.sender) << CAF_ARG(silent) <<
+                  CAF_ARG(reason));
     state_map_.erase(ptr->slots.sender);
     super::about_to_erase(ptr, silent, reason);
   }

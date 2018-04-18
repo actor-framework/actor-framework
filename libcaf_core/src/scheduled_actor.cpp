@@ -843,6 +843,7 @@ void scheduled_actor::erase_inbound_path_later(stream_slot slot) {
 }
 
 void scheduled_actor::erase_inbound_path_later(stream_slot slot, error reason) {
+  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(reason));
   auto& q = get_downstream_queue();
   auto e = q.queues().end();
   auto i = q.queues().find(slot);
