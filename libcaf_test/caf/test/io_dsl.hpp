@@ -157,7 +157,7 @@ public:
 
   // Convenience function for transmitting all "network" traffic.
   void network_traffic() {
-    run_exhaustively([](planet_type* x) {
+    repeat([](planet_type* x) {
       return x->mpx.try_exec_runnable() || x->mpx.read_data();
     });
   }
@@ -165,10 +165,24 @@ public:
   // Convenience function for transmitting all "network" traffic and running
   // all executables on earth and mars.
   void exec_all() {
-    run_exhaustively([](planet_type* x) {
+    auto advance = [](planet_type* x) {
       return x->mpx.try_exec_runnable() || x->mpx.read_data()
              || x->sched.try_run_once();
-    });
+    };
+    auto trigger_timeouts = [](planet_type* x) {
+      auto& sched = x->sched;
+      sched.clock().current_time += x->credit_round_interval;
+      sched.dispatch();
+    };
+    for (;;) {
+      // Exhaust all messages in the system.
+      repeat(advance);
+      // Try to "revive" the system by dispatching timeouts.
+      once_for_each(trigger_timeouts);
+      // Stop if the timeouts didn't cause new activity.
+      if (!on_any(advance))
+        return;
+    }
   }
 
   void prepare_connection(planet_type& server, planet_type& client,
@@ -179,10 +193,21 @@ public:
 
 private:
   template <class F>
-  void run_exhaustively(F f) {
+  bool on_any(F f) {
     planet_type* planets[] = {&earth, &mars};
-    while (std::any_of(std::begin(planets), std::end(planets), f))
+    return std::any_of(std::begin(planets), std::end(planets), f);
+  }
+
+  template <class F>
+  void repeat(F f) {
+    while (on_any(f))
       ; // rince and repeat
+  }
+
+  template <class F>
+  void once_for_each(F f) {
+    planet_type* planets[] = {&earth, &mars};
+    std::for_each(std::begin(planets), std::end(planets), f);
   }
 };
 
