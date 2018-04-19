@@ -556,8 +556,8 @@ struct test_coordinator_fixture {
                .set("scheduler.policy", caf::atom("testing"))),
         self(sys, true),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
-        credit_round_interval(us_t{cfg.streaming_credit_round_interval_us}),
-        max_batch_delay(us_t{cfg.streaming_max_batch_delay_us}) {
+        credit_round_interval(cfg.streaming_credit_round_interval()),
+        max_batch_delay(cfg.streaming_max_batch_delay()) {
     // Configure the clock to measure each batch item with 1us.
     sched.clock().time_per_unit.emplace(caf::atom("batch"),
                                         caf::timespan{1000});

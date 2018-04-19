@@ -263,18 +263,42 @@ public:
 
   // -- streaming parameters ---------------------------------------------------
 
-  /// Maximum delay for sending underfull batches.
+  /// @private
   size_t streaming_desired_batch_complexity_us;
 
-  /// Maximum delay for sending underfull batches.
+  /// @private
   size_t streaming_max_batch_delay_us;
 
-  /// Timespan between two credit rounds.
+  /// @private
   size_t streaming_credit_round_interval_us;
 
-  /// Greatest common divisor of `streaming_max_batch_delay_us` and
-  /// `streaming_credit_round_interval_us`.
+  /// @private
   size_t streaming_tick_duration_us() const noexcept;
+
+  /// Returns the greatest common divisor of `streaming_max_batch_delay` and
+  /// `streaming_credit_round_interval`.
+  inline timespan streaming_tick_duration() const noexcept {
+    using us_t = std::chrono::microseconds;
+    return timespan{us_t{streaming_tick_duration_us()}};
+  }
+
+  /// Returns the desired timespan in a sink or stage for processing a single
+  /// batch.
+  inline timespan streaming_desired_batch_complexity() const noexcept {
+    using us_t = std::chrono::microseconds;
+    return timespan{us_t{streaming_desired_batch_complexity_us}};
+  }
+  /// Returns the maximum delay for sending underfull batches.
+  inline timespan streaming_max_batch_delay() const noexcept {
+    using us_t = std::chrono::microseconds;
+    return timespan{us_t{streaming_max_batch_delay_us}};
+  }
+
+  // Returns the desired timespan between two credit rounds.
+  inline timespan streaming_credit_round_interval() const noexcept {
+    using us_t = std::chrono::microseconds;
+    return timespan{us_t{streaming_credit_round_interval_us}};
+  }
 
   // -- scheduling parameters --------------------------------------------------
 
