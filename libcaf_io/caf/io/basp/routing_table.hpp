@@ -123,13 +123,6 @@ public:
   /// or `none` if the node is unknown.
   optional<endpoint_handle> handle(const node_id& nid);
 
-  /// Set `addrs` as the addresses to reach `nid`.
-  bool addresses(const node_id& nid, address_map addrs);
-
-  /// Set `addrs` as the addresses to reach `nid` with `proto`.
-  bool addresses(const node_id& nid, network::protocol::transport proto,
-                 address_endpoint addrs);
-
   /// Get the addresses to reach `nid` or `none` if the node is unknown.
   optional<const address_map&> addresses(const node_id& nid);
 
@@ -145,8 +138,6 @@ public:
   struct node_info {
     /// Handle for the node if communication is established.
     optional<endpoint_handle> hdl;
-    /// Interfaces of the nodes for sharing with neighbors.
-    address_map addrs;
     /// The endpoint who told us about the node.
     optional<node_id> origin;
   };

@@ -34,7 +34,8 @@ const char* connection_helper_state::name = "connection_helper";
 
 behavior datagram_connection_broker(broker* self, uint16_t port,
                                     network::address_listing addresses,
-                                    actor system_broker) {
+                                    actor system_broker,
+                                    basp::instance* instance) {
   auto& mx = self->system().middleman().backend();
   auto& this_node = self->system().node();
   auto& app_id = self->system().config().middleman_app_identifier;
@@ -44,10 +45,10 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
       if (eptr) {
         auto hdl = (*eptr)->hdl();
         self->add_datagram_servant(std::move(*eptr));
-        basp::instance::write_client_handshake(self->context(),
-                                               self->wr_buf(hdl),
-                                               none, this_node,
-                                               app_id);
+        instance->write_client_handshake(self->context(),
+                                         self->wr_buf(hdl),
+                                         none, this_node,
+                                         app_id);
       }
     }
   }
@@ -59,15 +60,35 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
     },
     after(autoconnect_timeout) >> [=]() {
       CAF_LOG_TRACE(CAF_ARG(""));
-      // nothing heard in about 10 minutes... just a call it a day, then
+      // nothing heard in about 10 minutes... just call it a day, then
       CAF_LOG_INFO("aborted direct connection attempt after 10min");
       self->quit(exit_reason::user_shutdown);
     }
   };
 }
 
+
+bool establish_stream_connection(stateful_actor<connection_helper_state>* self,
+                                 const actor& b, uint16_t port,
+                                 network::address_listing& addresses) {
+  auto& mx = self->system().middleman().backend();
+  for (auto& kvp : addresses) {
+    for (auto& addr : kvp.second) {
+      auto hdl = mx.new_tcp_scribe(addr, port);
+      if (hdl) {
+        // gotcha! send scribe to our BASP broker
+        // to initiate handshake etc.
+        CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
+        self->send(b, connect_atom::value, *hdl, port);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
-                           actor b) {
+                           actor b, basp::instance* i) {
   CAF_LOG_TRACE(CAF_ARG(b));
   self->monitor(b);
   self->set_down_handler([=](down_msg& dm) {
@@ -84,34 +105,42 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
       msg.apply({
         [&](uint16_t port, network::address_listing& addresses) {
           if (item == "basp.default-connectivity-tcp") {
-            auto& mx = self->system().middleman().backend();
-            for (auto& kvp : addresses) {
-              for (auto& addr : kvp.second) {
-                auto hdl = mx.new_tcp_scribe(addr, port);
-                if (hdl) {
-                  // gotcha! send scribe to our BASP broker
-                  // to initiate handshake etc.
-                  CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
-                  self->send(b, connect_atom::value, *hdl, port);
-                  return;
-                }
-              }
-            }
-            CAF_LOG_INFO("could not connect to node directly");
+            if (!establish_stream_connection(self, b, port, addresses))
+              CAF_LOG_INFO("could not connect to node");
           } else if (item == "basp.default-connectivity-udp") {
             // create new broker to try addresses for communication via UDP
             if (self->system().config().middleman_detach_utility_actors) {
               self->system().middleman().spawn_broker<detached + hidden>(
-                datagram_connection_broker, port, std::move(addresses), b
+                datagram_connection_broker, port, std::move(addresses), b, i
               );
             } else {
               self->system().middleman().spawn_broker<hidden>(
-                datagram_connection_broker, port, std::move(addresses), b
+                datagram_connection_broker, port, std::move(addresses), b, i
               );
             }
           } else {
             CAF_LOG_INFO("aborted direct connection attempt, unknown item: "
                          << CAF_ARG(item));
+          }
+        },
+        [&](basp::routing_table::address_map& addrs) {
+          if (addrs.count(network::protocol::tcp) > 0) {
+            auto eps = addrs[network::protocol::tcp];
+            if (!establish_stream_connection(self, b, eps.first, eps.second))
+              CAF_LOG_ERROR("could not connect to node ");
+          }
+          if (addrs.count(network::protocol::udp) > 0) {
+            auto eps = addrs[network::protocol::udp];
+            // create new broker to try addresses for communication via UDP
+            if (self->system().config().middleman_detach_utility_actors) {
+              self->system().middleman().spawn_broker<detached + hidden>(
+                datagram_connection_broker, eps.first, std::move(eps.second), b, i
+              );
+            } else {
+              self->system().middleman().spawn_broker<hidden>(
+                datagram_connection_broker, eps.first, std::move(eps.second), b, i
+              );
+            }
           }
         }
       });

@@ -86,6 +86,9 @@ public:
     /// Called whenever BASP learns the ID of a remote node.
     virtual void learned_new_node(const node_id& nid) = 0;
 
+    /// Get contact information for `nid` and establish communication.
+    virtual void establish_communication(const node_id& nid) = 0;
+
     /// Called if a heartbeat was received from `nid`
     virtual void handle_heartbeat(const node_id& nid) = 0;
 
@@ -255,12 +258,12 @@ public:
                               uint16_t sequence_number = 0);
 
   /// Writes the client handshake to `buf`.
-  static void write_client_handshake(execution_unit* ctx,
-                                     buffer_type& buf,
-                                     const node_id& remote_side,
-                                     const node_id& this_node,
-                                     const std::string& app_identifier,
-                                     uint16_t sequence_number = 0);
+  void write_client_handshake(execution_unit* ctx,
+                              buffer_type& buf,
+                              const node_id& remote_side,
+                              const node_id& this_node,
+                              const std::string& app_identifier,
+                              uint16_t sequence_number = 0);
 
   /// Writes the client handshake to `buf`.
   void write_client_handshake(execution_unit* ctx,
@@ -334,8 +337,6 @@ public:
           return false;
         }
         // Close this connection if we already established communication.
-        // FIXME: Should we allow multiple "connections" over different
-        // transport protocols?
         if (tbl_.lookup(hdr.source_node).hdl) {
           CAF_LOG_INFO("close connection since we already have a "
                        "connection: " << CAF_ARG(hdr.source_node));
@@ -345,7 +346,9 @@ public:
         // Add this node to our contacts.
         CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
         tbl_.add(hdr.source_node, hdl);
-        tbl_.addresses(hdr.source_node, addrs);
+        auto config_server = system().registry().get(atom("ConfigServ"));
+        anon_send(actor_cast<actor>(config_server), put_atom::value,
+                  to_string(hdr.source_node), make_message(addrs));
         // TODO: Add addresses to share with other nodes?
         // Write handshake as client in response.
         if (tcp_based)
@@ -376,8 +379,9 @@ public:
           if (e)
             return false;
         }
-        auto new_node = (this_node() != hdr.source_node
-                         && !tbl_.lookup(hdr.source_node).known);
+        // Handshakes were only exchanged if `hdl` is set.
+        auto lr = tbl_.lookup(hdr.source_node);
+        auto new_node = (this_node() != hdr.source_node && !lr.hdl);
         if (!new_node) {
           if (tcp_based) {
             CAF_LOG_INFO("received second client handshake:"
@@ -387,8 +391,14 @@ public:
         } else {
           // Add this node to our contacts.
           CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
-          tbl_.add(hdr.source_node, hdl);
-          tbl_.addresses(hdr.source_node, addrs);
+          // Either add a new node or add the handle to a known one.
+          if (lr.known)
+            tbl_.handle(hdr.source_node, hdl);
+          else
+            tbl_.add(hdr.source_node, hdl);
+          auto config_server = system().registry().get(atom("ConfigServ"));
+          anon_send(actor_cast<actor>(config_server), put_atom::value,
+                    to_string(hdr.source_node), make_message(addrs));
         }
         // Since udp is unreliable we answer, maybe our message was lost.
         if (!tcp_based) {
@@ -398,6 +408,8 @@ public:
         }
         // We have to call this after `write_server_handshake` because
         // `learned_new_node` expects there to be an entry in the routing table.
+        // TODO: Can we move this in the else block above with the changes to
+        // the routing table?
         if (new_node) {
           callee_.learned_new_node(hdr.source_node);
           // TODO: Only send buffered messaged for new nodes?

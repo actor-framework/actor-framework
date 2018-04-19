@@ -82,6 +82,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // performs bookkeeping such as managing `spawn_servers`
   void learned_new_node(const node_id& nid) override;
 
+  // get contact information for `nid` and establish communication
+  void establish_communication(const node_id& nid) override;
+
   // inherited from basp::instance::callee
   uint16_t next_sequence_number(connection_handle hdl) override;
 

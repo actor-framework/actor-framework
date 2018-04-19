@@ -99,15 +99,13 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // how to contact B.
   auto lr = instance.tbl().lookup(nid);
   if (nid != this_context->id && !lr.known) {
-    // TODO: Try to establish communication with the new node.
-    CAF_CRITICAL("Not implemented.");
+    instance.tbl().add(nid, this_context->id);
+    establish_communication(nid);
   }
-  // TODO: Everything below has to happen once we establish communication?
-  //       I'm not sure yet, the functors can be attached earlier and we could
-  //       send trigger an error message if we cannot contact the remote node.
   // We need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node.
-  // TODO: Should this communication already be established?
+  // TODO: Communication setup might still be in progress.
+  /*
   if (lr.known && !lr.hdl) {
     // This happens if and only if we don't have a path to `nid`
     // and current_context_->hdl has been blacklisted.
@@ -115,6 +113,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
                  "running on a node we don't have a route to");
     return nullptr;
   }
+  */
   // Create proxy and add functor that will be called if we
   // receive a kill_proxy_instance message.
   auto mm = &system().middleman();
@@ -135,13 +134,21 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   CAF_LOG_INFO("successfully created proxy instance, "
                "write announce_proxy_instance:"
                << CAF_ARG(nid) << CAF_ARG(aid));
-  auto& ctx = *this_context;
-  // Tell remote side we are monitoring this actor now.
-  instance.write_announce_proxy(self->context(),
-                                get_buffer(this_context->hdl),
-                                nid, aid,
-                                ctx.requires_ordering ? ctx.seq_outgoing++ : 0);
-  instance.flush(*lr.hdl);
+  // TODO: Can it happen that things have changed here?
+  lr = instance.tbl().lookup(nid);
+  if (lr.hdl) {
+    auto& ctx = *this_context;
+    // Tell remote side we are monitoring this actor now.
+    instance.write_announce_proxy(self->context(),
+                                  get_buffer(nid),
+                                  nid, aid,
+                                  ctx.requires_ordering ? ctx.seq_outgoing++ : 0);
+    instance.flush(*lr.hdl);
+  } else {
+    instance.write_announce_proxy(self->context(),
+                                  get_buffer(nid),
+                                  nid, aid,0);
+  }
   mm->notify<hook::new_remote_actor>(res);
   return res;
 }
@@ -403,6 +410,61 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   }
 }
 
+void basp_broker_state::establish_communication(const node_id& nid) {
+  // TODO: Split this by functionality, address query & connecting?
+  CAF_ASSERT(this_context != nullptr);
+  CAF_LOG_TRACE(CAF_ARG(nid));
+  learned_new_node(nid);
+  if (!enable_automatic_connections)
+    return;
+  // this member function gets only called once, after adding a new
+  // indirect connection to the routing table; hence, spawning
+  // our helper here exactly once and there is no need to track
+  // in-flight connection requests
+  if (instance.tbl().lookup(nid).hdl) {
+    CAF_LOG_ERROR("establish_communication called with established connection");
+    return;
+  }
+  auto origin = instance.tbl().origin(nid);
+  if (!origin) {
+    CAF_LOG_ERROR("establish_communication called, but no node known "
+                  "to ask for contact information");
+    return;
+  }
+  auto ehdl = instance.tbl().handle(*origin);
+  if (!ehdl) {
+    CAF_LOG_ERROR("establish_communication called, but node with contact "
+                  "information is no longer reachable");
+    return;
+  }
+  auto hdl = std::move(*ehdl);
+  using namespace detail;
+  auto try_connect = [&](std::string item) {
+    auto tmp = system().config().middleman_detach_utility_actors
+          ? system().spawn<detached + hidden>(connection_helper, self, &instance)
+          : system().spawn<hidden>(connection_helper, self, &instance);
+    system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
+    auto writer = make_callback([&item](serializer& sink) -> error {
+      auto name_atm = atom("ConfigServ");
+      std::vector<actor_id> stages;
+      auto msg = make_message(get_atom::value, std::move(item));
+      return sink(name_atm, stages, msg);
+    });
+    basp::header hdr{basp::message_type::dispatch_message,
+                     basp::header::named_receiver_flag,
+                     0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                     visit(seq_num_visitor{this}, hdl)};
+    instance.write(self->context(), get_buffer(hdl),
+                   hdr, &writer);
+    instance.flush(hdl);
+  };
+  auto item = to_string(nid);
+  if (enable_tcp)
+    try_connect(item);
+  if (enable_udp)
+    try_connect(item);
+}
+
 void basp_broker_state::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
   auto i = ctx_tcp.find(hdl);
@@ -661,6 +723,8 @@ behavior basp_broker::make_behavior() {
       if (res) {
         auto port = res->second;
         auto addrs = network::interfaces::list_addresses(false);
+        state.instance.tbl().local_addresses(network::protocol::tcp,
+                                             {port, addrs});
         auto config_server = system().registry().get(atom("ConfigServ"));
         send(actor_cast<actor>(config_server), put_atom::value,
              "basp.default-connectivity-tcp",
@@ -672,6 +736,8 @@ behavior basp_broker::make_behavior() {
       if (res) {
         auto port = res->second;
         auto addrs = network::interfaces::list_addresses(false);
+        state.instance.tbl().local_addresses(network::protocol::udp,
+                                             {port, addrs});
         auto config_server = system().registry().get(atom("ConfigServ"));
         send(actor_cast<actor>(config_server), put_atom::value,
               "basp.default-connectivity-udp",

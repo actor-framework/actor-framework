@@ -49,10 +49,11 @@ struct connection_helper_state {
 behavior datagram_connection_broker(broker* self,
                                     uint16_t port,
                                     network::address_listing addresses,
-                                    actor system_broker);
+                                    actor system_broker,
+                                    basp::instance* instance);
 
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
-                           actor b);
+                           actor b, basp::instance* i);
 } // namespace io
 } // namespace caf
 
