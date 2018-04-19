@@ -131,6 +131,31 @@ private:
   }
 };
 
+template <class Iterator>
+void exec_all_fixtures(Iterator first, Iterator last) {
+  using fixture_ptr = caf::detail::decay_t<decltype(*first)>;
+  auto advance = [](fixture_ptr x) {
+    return x->sched.try_run_once() || x->mpx.read_data()
+           || x->mpx.try_exec_runnable() || x->mpx.try_accept_connection();
+  };
+  auto trigger_timeouts = [](fixture_ptr x) {
+    auto& sched = x->sched;
+    sched.clock().current_time += x->credit_round_interval;
+    sched.dispatch();
+  };
+  for (;;) {
+    // Exhaust all messages in the system.
+    while (std::any_of(first, last, advance))
+      ; // repeat
+    // Try to "revive" the system by dispatching timeouts.
+    std::for_each(first, last, trigger_timeouts);
+    // Stop if the timeouts didn't cause new activity.
+    if (std::none_of(first, last, advance))
+      return;
+  }
+}
+
+
 /// Binds `test_coordinator_fixture<Config>` to `test_node_fixture`.
 template <class Config = caf::actor_system_config>
 using test_node_fixture_t = test_node_fixture<test_coordinator_fixture<Config>>;
@@ -157,57 +182,25 @@ public:
 
   // Convenience function for transmitting all "network" traffic.
   void network_traffic() {
-    repeat([](planet_type* x) {
+    auto f = [](planet_type* x) {
       return x->mpx.try_exec_runnable() || x->mpx.read_data();
-    });
+    };
+    planet_type* planets[] = {&earth, &mars};
+    while (std::any_of(std::begin(planets), std::end(planets), f))
+      ; // repeat
   }
 
   // Convenience function for transmitting all "network" traffic and running
   // all executables on earth and mars.
   void exec_all() {
-    auto advance = [](planet_type* x) {
-      return x->mpx.try_exec_runnable() || x->mpx.read_data()
-             || x->sched.try_run_once();
-    };
-    auto trigger_timeouts = [](planet_type* x) {
-      auto& sched = x->sched;
-      sched.clock().current_time += x->credit_round_interval;
-      sched.dispatch();
-    };
-    for (;;) {
-      // Exhaust all messages in the system.
-      repeat(advance);
-      // Try to "revive" the system by dispatching timeouts.
-      once_for_each(trigger_timeouts);
-      // Stop if the timeouts didn't cause new activity.
-      if (!on_any(advance))
-        return;
-    }
+    planet_type* planets[] = {&earth, &mars};
+    exec_all_fixtures(std::begin(planets), std::end(planets));
   }
 
   void prepare_connection(planet_type& server, planet_type& client,
                           std::string host, uint16_t port) {
     server.mpx.prepare_connection(server.acc, server.conn, client.mpx,
                                   std::move(host), port, client.conn);
-  }
-
-private:
-  template <class F>
-  bool on_any(F f) {
-    planet_type* planets[] = {&earth, &mars};
-    return std::any_of(std::begin(planets), std::end(planets), f);
-  }
-
-  template <class F>
-  void repeat(F f) {
-    while (on_any(f))
-      ; // rince and repeat
-  }
-
-  template <class F>
-  void once_for_each(F f) {
-    planet_type* planets[] = {&earth, &mars};
-    std::for_each(std::begin(planets), std::end(planets), f);
   }
 };
 
