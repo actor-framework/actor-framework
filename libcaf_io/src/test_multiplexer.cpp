@@ -744,8 +744,9 @@ bool test_multiplexer::try_accept_connection() {
       doormen.emplace_back(&kvp.second);
   }
   // Try accepting a new connection on all existing doorman.
-  return std::any_of(doormen.begin(), doormen.end(),
-                     [](doorman_data* x) { return x->ptr->new_connection(); });
+  return std::any_of(doormen.begin(), doormen.end(), [](doorman_data* x) {
+    return x->ptr != nullptr ? x->ptr->new_connection() : false;
+  });
 }
 
 bool test_multiplexer::try_read_data() {
