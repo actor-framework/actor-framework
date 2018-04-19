@@ -133,7 +133,7 @@ actor_system_config::actor_system_config()
   logger_verbosity = atom("trace");
   logger_inline_output = false;
   middleman_network_backend = atom("default");
-  middleman_enable_automatic_connections = false;
+  middleman_enable_automatic_connections = true;
   middleman_max_consecutive_reads = 50;
   middleman_heartbeat_interval = 0;
   middleman_detach_utility_actors = true;

@@ -211,6 +211,7 @@ void abstract_broker::add_datagram_servant(datagram_servant_ptr ptr) {
   ptr->set_parent(this);
   auto hdls = ptr->hdls();
   launch_servant(ptr);
+  add_hdl_for_datagram_servant(ptr, ptr->hdl());
   for (auto& hdl : hdls)
     add_hdl_for_datagram_servant(ptr, hdl);
 }

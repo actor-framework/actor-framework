@@ -349,7 +349,6 @@ public:
         auto config_server = system().registry().get(atom("ConfigServ"));
         anon_send(actor_cast<actor>(config_server), put_atom::value,
                   to_string(hdr.source_node), make_message(addrs));
-        // TODO: Add addresses to share with other nodes?
         // Write handshake as client in response.
         if (tcp_based)
           write_client_handshake(ctx, callee_.get_buffer(hdl), hdr.source_node);
