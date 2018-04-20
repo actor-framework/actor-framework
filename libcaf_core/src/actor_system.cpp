@@ -291,25 +291,28 @@ actor_system::actor_system(actor_system_config& cfg)
 }
 
 actor_system::~actor_system() {
-  CAF_LOG_DEBUG("shutdown actor system");
-  if (await_actors_before_shutdown_)
-    await_all_actors_done();
-  // shutdown internal actors
-  for (auto& x : internal_actors_) {
-    anon_send_exit(x, exit_reason::user_shutdown);
-    x = nullptr;
+  {
+    CAF_LOG_TRACE("");
+    CAF_LOG_DEBUG("shutdown actor system");
+    if (await_actors_before_shutdown_)
+      await_all_actors_done();
+    // shutdown internal actors
+    for (auto& x : internal_actors_) {
+      anon_send_exit(x, exit_reason::user_shutdown);
+      x = nullptr;
+    }
+    registry_.erase(atom("SpawnServ"));
+    registry_.erase(atom("ConfigServ"));
+    registry_.erase(atom("StreamServ"));
+    // group module is the first one, relies on MM
+    groups_.stop();
+    // stop modules in reverse order
+    for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)
+      if (*i)
+        (*i)->stop();
+    await_detached_threads();
+    registry_.stop();
   }
-  registry_.erase(atom("SpawnServ"));
-  registry_.erase(atom("ConfigServ"));
-  registry_.erase(atom("StreamServ"));
-  // group module is the first one, relies on MM
-  groups_.stop();
-  // stop modules in reverse order
-  for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)
-    if (*i)
-      (*i)->stop();
-  await_detached_threads();
-  registry_.stop();
   // reset logger and wait until dtor was called
   CAF_SET_LOGGER_SYS(nullptr);
   logger_.reset();
