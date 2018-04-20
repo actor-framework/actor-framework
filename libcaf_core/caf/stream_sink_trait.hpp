@@ -82,6 +82,14 @@ struct stream_sink_trait<void(State&, std::vector<In>&)>
   using process = detail::stream_sink_trait_invoke_all;
 };
 
+/// Specializes the trait for batch-wise processing with const references.
+template <class State, class In>
+struct stream_sink_trait<void(State&, const std::vector<In>&)>
+    : stream_sink_trait_base<State, In> {
+  /// Defines a helper for dispatching to the processing function object.
+  using process = detail::stream_sink_trait_invoke_all;
+};
+
 // -- convenience alias --------------------------------------------------------
 
 /// Derives a sink trait from the signatures of Fun and Fin.
