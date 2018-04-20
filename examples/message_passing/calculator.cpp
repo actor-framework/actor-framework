@@ -30,7 +30,7 @@ class typed_calculator;
 
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {
-  return behavior{
+  return {
     [](add_atom, int a, int b) {
       return a + b;
     },
@@ -144,6 +144,8 @@ void caf_main(actor_system& system) {
   auto a6 = system.spawn<typed_calculator>();
   scoped_actor self{system};
   tester(self, a1, 1, 2, a2, 3, 4, a3, 5, 6, a4, 7, 8, a5, 9, 10, a6, 11, 12);
+  self->send_exit(a1, exit_reason::user_shutdown);
+  self->send_exit(a4, exit_reason::user_shutdown);
 }
 
 } // namespace <anonymous>
