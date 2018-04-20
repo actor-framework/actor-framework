@@ -171,9 +171,7 @@ bool check(test* parent, const char *file, size_t line,
 } // namespace detail
 
 logger::stream::stream(logger& parent, logger::level lvl)
-    : behind_text_(false),
-      behind_arg_(false),
-      parent_(parent),
+    : parent_(parent),
       lvl_(lvl) {
   // nop
 }

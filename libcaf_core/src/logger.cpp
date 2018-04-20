@@ -28,13 +28,14 @@
 
 #include "caf/config.hpp"
 
-#include "caf/term.hpp"
-#include "caf/locks.hpp"
-#include "caf/timestamp.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/string_algorithms.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/locks.hpp"
+#include "caf/string_algorithms.hpp"
+#include "caf/term.hpp"
+#include "caf/timestamp.hpp"
 
 #include "caf/intrusive/task_result.hpp"
 
@@ -128,15 +129,22 @@ logger::event::event(int lvl, const char* cat, const char* fun, const char* fn,
   // nop
 }
 
-logger::line_builder::line_builder() : behind_arg_(false) {
+logger::line_builder::line_builder() {
   // nop
 }
 
+logger::line_builder& logger::line_builder::
+operator<<(const local_actor* self) {
+  if (!str_.empty() && str_.back() != ' ')
+    str_ += " ";
+  str_ += self->name();
+  return *this;
+}
+
 logger::line_builder& logger::line_builder::operator<<(const std::string& str) {
-  if (!str_.empty())
+  if (!str_.empty() && str_.back() != ' ')
     str_ += " ";
   str_ += str;
-  behind_arg_ = false;
   return *this;
 }
 
@@ -144,7 +152,13 @@ logger::line_builder& logger::line_builder::operator<<(const char* str) {
   if (!str_.empty())
     str_ += " ";
   str_ += str;
-  behind_arg_ = false;
+  return *this;
+}
+
+logger::line_builder& logger::line_builder::operator<<(char x) {
+  if (!str_.empty())
+    str_ += " ";
+  str_ += x;
   return *this;
 }
 

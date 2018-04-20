@@ -210,30 +210,29 @@ public:
     struct reset_flags_t {};
 
     stream& operator<<(reset_flags_t) {
-      behind_text_ = false;
-      behind_arg_ = false;
+      return *this;
+    }
+
+    stream& operator<<(caf::term x) {
+      parent_.log(lvl_, x);
       return *this;
     }
 
     template <class T>
     stream& operator<<(const T& x) {
-      parent_.log(lvl_, x);
-      behind_text_ = true;
-      behind_arg_ = false;
-      return *this;
-    }
-
-    template <class T>
-    stream& operator<<(const caf::detail::arg_wrapper<T>& x) {
-      if (behind_arg_)
-        parent_.log(lvl_, ", ");
-      else if (behind_text_)
-        parent_.log(lvl_, " ");
-      parent_.log(lvl_, x.name);
-      parent_.log(lvl_, " = ");
-      parent_.log(lvl_, deep_to_string(x.value));
-      behind_text_ = false;
-      behind_arg_ = true;
+      struct simple_fwd_t {
+        const T& operator()(const T& y) const {
+          return y;
+        }
+      };
+      using fwd =
+        typename std::conditional<
+          std::is_same<char, T>::value || std::is_convertible<T, std::string>::value,
+          simple_fwd_t,
+          deep_to_string_t
+        >::type;
+      fwd f;
+      parent_.log(lvl_, f(x));
       return *this;
     }
 
@@ -245,8 +244,6 @@ public:
     }
 
   private:
-    bool behind_text_;
-    bool behind_arg_;
     logger& parent_;
     level lvl_;
   };

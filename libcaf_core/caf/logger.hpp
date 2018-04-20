@@ -168,36 +168,26 @@ public:
     line_builder();
 
     template <class T>
-    line_builder& operator<<(const T& x) {
+    detail::enable_if_t<!std::is_pointer<T>::value, line_builder&>
+    operator<<(const T& x) {
       if (!str_.empty())
         str_ += " ";
       str_ += deep_to_string(x);
-      behind_arg_ = false;
       return *this;
     }
 
-    template <class T>
-    line_builder& operator<<(const detail::arg_wrapper<T>& x) {
-      if (behind_arg_)
-        str_ += ", ";
-      else if (!str_.empty())
-        str_ += " ";
-      str_ += x.name;
-      str_ += " = ";
-      str_ += deep_to_string(x.value);
-      behind_arg_ = true;
-      return *this;
-    }
+    line_builder& operator<<(const local_actor* self);
 
     line_builder& operator<<(const std::string& str);
 
     line_builder& operator<<(const char* str);
 
+    line_builder& operator<<(char x);
+
     std::string get() const;
 
   private:
     std::string str_;
-    bool behind_arg_;
   };
 
   /// Returns the ID of the actor currently associated to the calling thread.
@@ -336,6 +326,9 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_ARG(argument) caf::detail::make_arg_wrapper(#argument, argument)
 
 #define CAF_ARG2(argname, argval) caf::detail::make_arg_wrapper(argname, argval)
+
+#define CAF_ARG3(argname, first, last)                                         \
+  caf::detail::make_arg_wrapper(argname, first, last)
 
 #ifdef CAF_MSVC
 #define CAF_PRETTY_FUN __FUNCSIG__

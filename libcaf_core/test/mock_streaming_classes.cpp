@@ -53,21 +53,12 @@ namespace {
 struct print_with_comma_t {
   bool first = true;
   template <class T>
-  std::ostream&  operator()(std::ostream& out, const T& x) {
+  std::ostream& operator()(std::ostream& out, const T& x) {
     if (!first)
       out << ", ";
     else
       first = false;
-    return out << x;
-  }
-
-  template <class T>
-  std::ostream& operator()(std::ostream& out, const detail::arg_wrapper<T>& x) {
-    if (!first)
-      out << ", ";
-    else
-      first = false;
-    return out << x.name << " = " << deep_to_string(x.value);
+    return out << deep_to_string(x);
   }
 };
 
