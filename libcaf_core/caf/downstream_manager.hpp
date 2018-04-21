@@ -63,15 +63,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit downstream_manager(scheduled_actor* self);
+  explicit downstream_manager(stream_manager* parent);
 
   virtual ~downstream_manager();
 
   // -- properties -------------------------------------------------------------
 
-  scheduled_actor* self() const {
-    return self_;
-  }
+  scheduled_actor* self() const noexcept;
+
+  stream_manager* parent() const noexcept;
 
   /// Returns `true` if this manager belongs to a sink, i.e., terminates the
   /// stream and never has outbound paths.
@@ -212,7 +212,7 @@ protected:
 
   // -- member variables -------------------------------------------------------
 
-  scheduled_actor* self_;
+  stream_manager* parent_;
 };
 
 } // namespace caf

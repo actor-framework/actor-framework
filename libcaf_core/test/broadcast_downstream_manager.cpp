@@ -35,6 +35,33 @@ using namespace caf;
 
 namespace {
 
+using bcast_manager = broadcast_downstream_manager<int>;
+
+// Mocks just enough of a stream manager to serve our entity.
+class mock_stream_manager : public stream_manager {
+public:
+  using super = stream_manager;
+
+  mock_stream_manager(scheduled_actor* self) : super(self), out_(this) {
+    // nop
+  }
+
+  bcast_manager& out() override {
+    return out_;
+  }
+
+  bool done() const override {
+    return false;
+  }
+
+  bool idle() const noexcept override {
+    return false;
+  }
+
+private:
+  bcast_manager out_;
+};
+
 // Mocks just enough of an actor to receive and send batches.
 class entity : public scheduled_actor {
 public:
@@ -49,7 +76,7 @@ public:
   entity(actor_config& cfg, const char* cstr)
       : super(cfg),
         cstr_name(cstr),
-        bs(this),
+        mgr(this),
         next_slot(1) {
     // nop
   }
@@ -87,7 +114,7 @@ public:
   }
 
   void add_path_to(entity& x, int32_t desired_batch_size) {
-    auto ptr = bs.add_path(next_slot++, x.ctrl());
+    auto ptr = mgr.out().add_path(next_slot++, x.ctrl());
     CAF_REQUIRE(ptr != nullptr);
     ptr->desired_batch_size = desired_batch_size;
     ptr->slots.receiver = x.next_slot++;
@@ -107,9 +134,9 @@ public:
     for (auto& ptr : paths)
       ptr->open_credit += num;
     if (force_emit)
-      bs.force_emit_batches();
+      mgr.out().force_emit_batches();
     else
-      bs.emit_batches();
+      mgr.out().emit_batches();
   }
 
   const char* name() const override {
@@ -121,7 +148,7 @@ public:
   const char* cstr_name;
 
   /// Manager-under-test.
-  broadcast_downstream_manager<int> bs;
+  mock_stream_manager mgr;
 
   /// Dummy mailbox.
   std::vector<message> mbox;
@@ -309,7 +336,7 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
     <<
 
 #define TOTAL                                                                  \
-  CAF_CHECK_EQUAL(CONCAT(who, __LINE__).bs.total_credit(),                     \
+  CAF_CHECK_EQUAL(CONCAT(who, __LINE__).mgr.out().total_credit(),              \
                   CONCAT(amount, __LINE__))
 
 #define BATCH(first, last) make_batch(first, last)
@@ -325,7 +352,7 @@ CAF_TEST(one_path_force) {
   // of 10.
   alice.add_path_to(bob, 10);
   for (int i = 1; i <= 100; ++i)
-    alice.bs.push(i);
+    alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED FORCE_SENDING 3 ELEMENTS {
     ENTITY bob RECEIVED BATCH(1, 3);
@@ -364,7 +391,7 @@ CAF_TEST(one_path_without_force) {
   // of 10.
   alice.add_path_to(bob, 10);
   for (int i = 1; i <= 100; ++i)
-    alice.bs.push(i);
+    alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED SENDING 3 ELEMENTS {
     ENTITY bob RECEIVED none;
@@ -404,7 +431,7 @@ CAF_TEST(two_paths_different_sizes_force) {
   alice.add_path_to(bob, 10);
   alice.add_path_to(carl, 7);
   for (int i = 1; i <= 100; ++i)
-    alice.bs.push(i);
+    alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED FORCE_SENDING 3 ELEMENTS {
     ENTITY bob RECEIVED BATCH(1, 3);
@@ -455,7 +482,7 @@ CAF_TEST(two_paths_different_sizes_without_force) {
   alice.add_path_to(bob, 10);
   alice.add_path_to(carl, 7);
   for (int i = 1; i <= 100; ++i)
-    alice.bs.push(i);
+    alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED SENDING 3 ELEMENTS {
     ENTITY bob RECEIVED none;

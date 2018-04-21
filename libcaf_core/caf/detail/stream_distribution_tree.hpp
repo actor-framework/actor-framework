@@ -59,7 +59,7 @@ public:
   template <class... Ts>
   stream_distribution_tree(scheduled_actor* selfptr, Ts&&... xs)
       : super(selfptr),
-        out_(selfptr),
+        out_(this),
         policy_(this, std::forward<Ts>(xs)...) {
     continuous(true);
   }

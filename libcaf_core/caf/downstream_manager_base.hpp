@@ -41,7 +41,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit downstream_manager_base(scheduled_actor* self);
+  explicit downstream_manager_base(stream_manager* parent);
 
   ~downstream_manager_base() override;
 

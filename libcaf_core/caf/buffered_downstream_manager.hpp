@@ -45,7 +45,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffered_downstream_manager(scheduled_actor* self) : super(self) {
+  explicit buffered_downstream_manager(stream_manager* parent) : super(parent) {
     // nop
   }
 

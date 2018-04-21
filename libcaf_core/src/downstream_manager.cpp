@@ -39,7 +39,8 @@ downstream_manager::downstream_manager::path_predicate::~path_predicate() {
   // nop
 }
 
-downstream_manager::downstream_manager(scheduled_actor* self) : self_(self) {
+downstream_manager::downstream_manager(stream_manager* parent)
+    : parent_(parent) {
   // nop
 }
 
@@ -48,6 +49,14 @@ downstream_manager::~downstream_manager() {
 }
 
 // -- properties ---------------------------------------------------------------
+
+scheduled_actor* downstream_manager::self() const noexcept {
+  return parent_->self();
+}
+
+stream_manager* downstream_manager::parent() const noexcept {
+  return parent_;
+}
 
 bool downstream_manager::terminal() const noexcept {
   return true;
@@ -177,9 +186,9 @@ void downstream_manager::about_to_erase(outbound_path* ptr, bool silent,
   CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(silent) << CAF_ARG(reason));
   if (!silent) {
     if (reason == nullptr)
-      ptr->emit_regular_shutdown(self_);
+      ptr->emit_regular_shutdown(self());
     else
-      ptr->emit_irregular_shutdown(self_, std::move(*reason));
+      ptr->emit_irregular_shutdown(self(), std::move(*reason));
   }
 }
 

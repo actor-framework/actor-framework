@@ -130,9 +130,9 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  fused_downstream_manager(scheduled_actor* self)
-      : super(self),
-        nested_(self, detail::pack_repeat<Ts>(self)...) {
+  fused_downstream_manager(stream_manager* parent)
+      : super(parent),
+        nested_(parent, detail::pack_repeat<Ts>(parent)...) {
     detail::init_ptr_array<0, sizeof...(Ts) + 1>::apply(ptrs_, nested_);
   }
 

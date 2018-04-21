@@ -58,7 +58,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  broadcast_downstream_manager(scheduled_actor* selfptr) : super(selfptr) {
+  broadcast_downstream_manager(stream_manager* parent) : super(parent) {
     // nop
   }
 
@@ -242,7 +242,7 @@ private:
     if (chunk.empty()) {
       auto g = [&](typename map_type::value_type& x,
                    typename state_map_type::value_type& y) {
-        x.second->emit_batches(this->self_, y.second.buf, force_underfull);
+        x.second->emit_batches(this->self(), y.second.buf, force_underfull);
       };
       detail::zip_foreach(g, this->paths_.container(), state_map_.container());
     } else {
@@ -257,7 +257,7 @@ private:
             if (select_(st.filter, piece))
               st.buf.emplace_back(piece);
         }
-        x.second->emit_batches(this->self_, st.buf, force_underfull);
+        x.second->emit_batches(this->self(), st.buf, force_underfull);
       };
       detail::zip_foreach(g, this->paths_.container(), state_map_.container());
     }

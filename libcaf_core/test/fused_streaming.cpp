@@ -174,7 +174,7 @@ class fused_stage : public stream_manager {
 public:
   using super = stream_manager;
 
-  fused_stage(scheduled_actor* self) : stream_manager(self), out_(self) {
+  fused_stage(scheduled_actor* self) : stream_manager(self), out_(this) {
     continuous(true);
   }
 

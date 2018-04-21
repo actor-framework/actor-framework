@@ -25,8 +25,8 @@
 
 namespace caf {
 
-downstream_manager_base::downstream_manager_base(scheduled_actor* self)
-    : super(self) {
+downstream_manager_base::downstream_manager_base(stream_manager* parent)
+    : super(parent) {
   // nop
 }
 
