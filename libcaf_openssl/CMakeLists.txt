@@ -6,12 +6,13 @@ project(caf_openssl C CXX)
 file(GLOB_RECURSE LIBCAF_OPENSSL_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
-set (LIBCAF_OPENSSL_SRCS
-     src/manager.cpp
-     src/middleman_actor.cpp
-     src/publish.cpp
-     src/remote_actor.cpp
-     src/session.cpp)
+set(LIBCAF_OPENSSL_SRCS
+  src/manager.cpp
+  src/middleman_actor.cpp
+  src/publish.cpp
+  src/remote_actor.cpp
+  src/session.cpp
+)
 
 add_custom_target(libcaf_openssl)
 

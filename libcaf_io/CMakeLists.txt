@@ -6,36 +6,36 @@ project(caf_io C CXX)
 file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
-set (LIBCAF_IO_SRCS
-     src/abstract_broker.cpp
-     src/acceptor_manager.cpp
-     src/basp_broker.cpp
-     src/broker.cpp
-     src/default_multiplexer.cpp
-     src/doorman.cpp
-     src/hook.cpp
-     src/interfaces.cpp
-     src/manager.cpp
-     src/middleman.cpp
-     src/middleman_actor.cpp
-     src/middleman_actor_impl.cpp
-     src/multiplexer.cpp
-     src/protocol.cpp
-     src/scribe.cpp
-     src/stream_manager.cpp
-     src/test_multiplexer.cpp
-     src/acceptor_manager.cpp
-     src/multiplexer.cpp
-     src/datagram_servant.cpp
-     src/datagram_manager.cpp
-     src/ip_endpoint.cpp
-     src/connection_helper.cpp
-     src/receive_buffer.cpp
-     # BASP files
-     src/header.cpp
-     src/message_type.cpp
-     src/routing_table.cpp
-     src/instance.cpp)
+set(LIBCAF_IO_SRCS
+  src/abstract_broker.cpp
+  src/acceptor_manager.cpp
+  src/acceptor_manager.cpp
+  src/basp_broker.cpp
+  src/broker.cpp
+  src/connection_helper.cpp
+  src/datagram_manager.cpp
+  src/datagram_servant.cpp
+  src/default_multiplexer.cpp
+  src/doorman.cpp
+  src/header.cpp
+  src/hook.cpp
+  src/instance.cpp
+  src/interfaces.cpp
+  src/ip_endpoint.cpp
+  src/manager.cpp
+  src/message_type.cpp
+  src/middleman.cpp
+  src/middleman_actor.cpp
+  src/middleman_actor_impl.cpp
+  src/multiplexer.cpp
+  src/multiplexer.cpp
+  src/protocol.cpp
+  src/receive_buffer.cpp
+  src/routing_table.cpp
+  src/scribe.cpp
+  src/stream_manager.cpp
+  src/test_multiplexer.cpp
+)
 
 add_custom_target(libcaf_io)
 

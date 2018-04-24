@@ -8,13 +8,15 @@ file(GLOB_RECURSE LIBCAF_OPENCL_HDRS "caf/*.hpp")
 add_custom_target(libcaf_opencl)
 
 # list cpp files excluding platform-dependent files
-set (LIBCAF_OPENCL_SRCS
-     src/global.cpp
-     src/manager.cpp
-     src/program.cpp
-     src/opencl_err.cpp
-     src/platform.cpp
-     src/device.cpp)
+set(LIBCAF_OPENCL_SRCS
+  src/device.cpp
+  src/global.cpp
+  src/manager.cpp
+  src/opencl_err.cpp
+  src/platform.cpp
+  src/program.cpp
+)
+
 # build shared library if not compiling static only
 if(NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_opencl_shared SHARED ${LIBCAF_OPENCL_SRCS}
@@ -31,6 +33,7 @@ if(NOT CAF_BUILD_STATIC_ONLY)
     install(TARGETS libcaf_opencl_shared LIBRARY DESTINATION lib)
   endif()
 endif()
+
 # build static library only if --build-static or --build-static-only was set
 if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_opencl_static STATIC ${LIBCAF_OPENCL_SRCS}
@@ -42,7 +45,9 @@ if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   set_target_properties(libcaf_opencl_static PROPERTIES OUTPUT_NAME caf_opencl_static)
   install(TARGETS libcaf_opencl_static ARCHIVE DESTINATION lib)
 endif()
+
 link_directories(${LD_DIRS})
 include_directories(. ${INCLUDE_DIRS})
+
 # install includes
 install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
