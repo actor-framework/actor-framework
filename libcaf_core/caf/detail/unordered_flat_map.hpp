@@ -268,18 +268,15 @@ public:
   }
 
 private:
-  // GCC < 4.9 has a broken STL: vector::erase accepts iterator instead of
-  // const_iterator.
-  // TODO: remove when dropping support for GCC 4.8.
-#if defined(CAF_GCC) && CAF_COMPILER_VERSION < 49000
+#ifdef CAF_HAVE_VECTOR_ERASE_CONST_ITERATOR
+  const_iterator gcc48_iterator_workaround(const_iterator i) {
+    return i;
+  }
+#else
   iterator gcc48_iterator_workaround(const_iterator i) {
     auto j = begin();
     std::advance(j, std::distance(cbegin(), i));
     return j;
-  }
-#else
-  const_iterator gcc48_iterator_workaround(const_iterator i) {
-    return i;
   }
 #endif
 

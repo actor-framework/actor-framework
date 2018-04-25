@@ -406,6 +406,20 @@ else()
   set(CAF_USE_ASIO_INT -1)
 endif()
 
+# GCC (libstdc++) < 4.9 has a broken STL: vector::erase accepts iterator
+# instead of const_iterator.
+# TODO: remove when dropping support for GCC 4.8.
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+#include <vector>
+int main(int argc, char** argv) {
+  std::vector<int> v;
+  std::vector<int>::const_iterator it = v.begin();
+  v.erase(it);
+  return 0;
+}
+" CAF_HAVE_VECTOR_ERASE_CONST_ITERATOR)
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core/caf/detail/build_config.hpp"
                IMMEDIATE @ONLY)

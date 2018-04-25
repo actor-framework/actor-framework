@@ -41,3 +41,4 @@
 #define CAF_NO_EXCEPTIONS
 #endif
 
+#cmakedefine CAF_HAVE_VECTOR_ERASE_CONST_ITERATOR
