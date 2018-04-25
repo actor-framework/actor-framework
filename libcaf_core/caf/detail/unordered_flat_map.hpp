@@ -27,6 +27,7 @@
 #include "caf/config.hpp"
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
@@ -271,17 +272,29 @@ private:
   // GCC < 4.9 has a broken STL: vector::erase accepts iterator instead of
   // const_iterator.
   // TODO: remove when dropping support for GCC 4.8.
-#if defined(CAF_GCC) && CAF_COMPILER_VERSION < 49000
-  iterator gcc48_iterator_workaround(const_iterator i) {
+  template <class Iter>
+  struct is_valid_erase_iter {
+    template <class U>
+    static auto sfinae(U* x) -> decltype(std::declval<vector_type&>().erase(*x),
+                                         std::true_type{});
+
+    template <class U>
+    static auto sfinae(...) -> std::false_type;
+
+    static constexpr bool value = decltype(sfinae<Iter>(nullptr))::value;
+  };
+
+  template <class I, class E = enable_if_t<!is_valid_erase_iter<I>::value>>
+  iterator gcc48_iterator_workaround(I i) {
     auto j = begin();
     std::advance(j, std::distance(cbegin(), i));
     return j;
   }
-#else
-  const_iterator gcc48_iterator_workaround(const_iterator i) {
+
+  template <class I, class E = enable_if_t<is_valid_erase_iter<I>::value>>
+  const_iterator gcc48_iterator_workaround(I i) {
     return i;
   }
-#endif
 
   vector_type xs_;
 };
