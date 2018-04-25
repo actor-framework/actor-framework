@@ -25,21 +25,24 @@
 
 namespace {
 
+/// A fixture containing all required state to simulate a single CAF node.
 template <class BaseFixture =
             test_coordinator_fixture<caf::actor_system_config>>
 class test_node_fixture : public BaseFixture {
 public:
   using super = BaseFixture;
 
+  using exec_all_nodes_fun = std::function<void ()>;
+
+  exec_all_nodes_fun exec_all_nodes;
   caf::io::middleman& mm;
   caf::io::network::test_multiplexer& mpx;
   caf::io::basp_broker* basp;
-  caf::io::connection_handle conn;
-  caf::io::accept_handle acc;
-  test_node_fixture* peer = nullptr;
 
-  test_node_fixture()
-      : mm(this->sys.middleman()),
+  /// @param fun A function object for delegating to the parent's `exec_all`.
+  test_node_fixture(exec_all_nodes_fun fun)
+      : exec_all_nodes(std::move(fun)),
+        mm(this->sys.middleman()),
         mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())),
         basp(get_basp_broker()) {
     // nop
@@ -49,78 +52,31 @@ public:
   // all executables on this node.
   void exec_all() {
     while (mpx.try_exec_runnable() || mpx.read_data()
-           || this->sched.try_run_once()) {
+           || mpx.try_accept_connection() || this->sched.try_run_once()) {
       // rince and repeat
     }
   }
 
-  void publish(caf::actor whom, uint16_t port) {
-    auto ma = mm.actor_handle();
-    auto& sys = this->sys;
-    auto& sched = this->sched;
-    caf::scoped_actor self{sys};
-    std::set<std::string> sigs;
-    // Make sure no pending BASP broker messages are in the queue.
-    mpx.flush_runnables();
-    // Trigger middleman actor.
-    self->send(ma, caf::publish_atom::value, port,
-               caf::actor_cast<caf::strong_actor_ptr>(std::move(whom)),
-               std::move(sigs), "", false);
-    // Wait for the message of the middleman actor.
-    expect((caf::atom_value, uint16_t, caf::strong_actor_ptr,
-            std::set<std::string>, std::string, bool),
-           from(self)
-           .to(sys.middleman().actor_handle())
-           .with(caf::publish_atom::value, port, _, _, _, false));
-    mpx.exec_runnable();
-    // Fetch response.
-    self->receive(
-      [](uint16_t) {
-        // nop
-      },
-      [&](caf::error& err) {
-        CAF_FAIL(sys.render(err));
-      }
-    );
+  /// Convenience function for calling `mm.publish` and requiring a valid
+  /// result.
+  template <class Handle>
+  uint16_t publish(Handle whom, uint16_t port, const char* in = nullptr,
+                   bool reuse = false) {
+    this->sched.inline_next_enqueue();
+    auto res = mm.publish(whom, port, in, reuse);
+    CAF_REQUIRE(res);
+    return *res;
   }
 
-  caf::actor remote_actor(std::string host, uint16_t port) {
-    CAF_MESSAGE("remote actor: " << host << ":" << port);
-    auto& sys = this->sys;
-    auto& sched = this->sched;
-    // both schedulers must be idle at this point
-    CAF_REQUIRE(!sched.has_job());
-    CAF_REQUIRE(!peer->sched.has_job());
-    // get necessary handles
-    auto ma = mm.actor_handle();
-    caf::scoped_actor self{sys};
-    // make sure no pending BASP broker messages are in the queue
-    mpx.flush_runnables();
-    // trigger middleman actor
-    self->send(ma, caf::connect_atom::value, std::move(host), port);
-    expect((caf::atom_value, std::string, uint16_t),
-           from(self).to(ma).with(caf::connect_atom::value, _, port));
-    CAF_MESSAGE("wait for the message of the middleman actor in BASP");
-    mpx.exec_runnable();
-    CAF_MESSAGE("tell peer to accept the connection");
-    peer->mpx.accept_connection(peer->acc);
-    CAF_MESSAGE("run handshake between the two BASP broker instances");
-    while (sched.try_run_once() || peer->sched.try_run_once()
-           || mpx.try_exec_runnable() || peer->mpx.try_exec_runnable()
-           || mpx.read_data() || peer->mpx.read_data()) {
-      // re-run until handhsake is fully completed
-    }
-    CAF_MESSAGE("fetch remote actor proxy");
-    caf::actor result;
-    self->receive(
-      [&](caf::node_id&, caf::strong_actor_ptr& ptr, std::set<std::string>&) {
-        result = caf::actor_cast<caf::actor>(std::move(ptr));
-      },
-      [&](caf::error& err) {
-        CAF_FAIL(sys.render(err));
-      }
-    );
-    return result;
+  /// Convenience function for calling `mm.remote_actor` and requiring a valid
+  /// result.
+  template <class Handle = caf::actor>
+  Handle remote_actor(std::string host, uint16_t port) {
+    this->sched.inline_next_enqueue();
+    this->sched.after_next_enqueue(exec_all_nodes);
+    auto res = mm.remote_actor<Handle>(std::move(host), port);
+    CAF_REQUIRE(res);
+    return *res;
   }
 
 private:
@@ -160,47 +116,100 @@ void exec_all_fixtures(Iterator first, Iterator last) {
 template <class Config = caf::actor_system_config>
 using test_node_fixture_t = test_node_fixture<test_coordinator_fixture<Config>>;
 
-/// A simple fixture that includes two nodes (`earth` and `mars`) that are
-/// connected to each other.
+/// Base fixture for simulated network settings with any number of CAF nodes.
+template <class PlanetType>
+class fake_network_fixture_base {
+public:
+  using planets_vector = std::vector<PlanetType*>;
+
+  using connection_handle = caf::io::connection_handle;
+
+  using accept_handle = caf::io::accept_handle;
+
+  fake_network_fixture_base(planets_vector xs) : planets_(std::move(xs)) {
+    // nop
+  }
+
+  /// Returns a unique acceptor handle.
+  accept_handle next_accept_handle() {
+    return accept_handle::from_int(++hdl_id_);
+  }
+
+  /// Returns a unique connection handle.
+  connection_handle next_connection_handle() {
+    return connection_handle::from_int(++hdl_id_);
+  }
+
+  /// Prepare a connection from `client` (calls `remote_actor`) to `server`
+  /// (calls `publish`).
+  /// @returns randomly picked connection handles for the server and the client.
+  std::pair<connection_handle, connection_handle>
+  prepare_connection(PlanetType& server, PlanetType& client,
+                     std::string host, uint16_t port,
+                     accept_handle server_accept_hdl) {
+    auto server_hdl = next_connection_handle();
+    auto client_hdl = next_connection_handle();
+    server.mpx.prepare_connection(server_accept_hdl, server_hdl, client.mpx,
+                                  std::move(host), port, client_hdl);
+    return std::make_pair(server_hdl, client_hdl);
+  }
+
+  /// Prepare a connection from `client` (calls `remote_actor`) to `server`
+  /// (calls `publish`).
+  /// @returns randomly picked connection handles for the server and the client.
+  std::pair<connection_handle, connection_handle>
+  prepare_connection(PlanetType& server, PlanetType& client,
+                     std::string host, uint16_t port) {
+    return prepare_connection(server, client, std::move(host), port,
+                              next_accept_handle());
+  }
+
+  // Convenience function for transmitting all "network" traffic (no new
+  // connections are accepted).
+  void network_traffic() {
+    auto f = [](PlanetType* x) {
+      return x->mpx.try_exec_runnable() || x->mpx.read_data();
+    };
+    while (std::any_of(std::begin(planets_), std::end(planets_), f))
+      ; // repeat
+  }
+
+  // Convenience function for transmitting all "network" traffic, trying to
+  // accept all pending connections, and running all broker and regular actor
+  // messages.
+  void exec_all() {
+    exec_all_fixtures(std::begin(planets_), std::end(planets_));
+  }
+
+  /// Type-erased callback for calling `exec_all`.
+  std::function<void ()> exec_all_callback() {
+    return [&] { exec_all(); };
+  }
+
+private:
+  int64_t hdl_id_ = 0;
+  std::vector<PlanetType*> planets_;
+};
+
+/// A simple fixture that includes two nodes (`earth` and `mars`) that can
+/// connect to each other.
 template <class BaseFixture =
             test_coordinator_fixture<caf::actor_system_config>>
-class point_to_point_fixture {
+class point_to_point_fixture
+    : public fake_network_fixture_base<test_node_fixture<BaseFixture>> {
 public:
   using planet_type = test_node_fixture<BaseFixture>;
+
+  using super = fake_network_fixture_base<planet_type>;
 
   planet_type earth;
   planet_type mars;
 
-  point_to_point_fixture() {
-    mars.peer = &earth;
-    earth.peer = &mars;
-    earth.acc = caf::io::accept_handle::from_int(1);
-    earth.conn = caf::io::connection_handle::from_int(2);
-    mars.acc = caf::io::accept_handle::from_int(3);
-    mars.conn = caf::io::connection_handle::from_int(4);
-  }
-
-  // Convenience function for transmitting all "network" traffic.
-  void network_traffic() {
-    auto f = [](planet_type* x) {
-      return x->mpx.try_exec_runnable() || x->mpx.read_data();
-    };
-    planet_type* planets[] = {&earth, &mars};
-    while (std::any_of(std::begin(planets), std::end(planets), f))
-      ; // repeat
-  }
-
-  // Convenience function for transmitting all "network" traffic and running
-  // all executables on earth and mars.
-  void exec_all() {
-    planet_type* planets[] = {&earth, &mars};
-    exec_all_fixtures(std::begin(planets), std::end(planets));
-  }
-
-  void prepare_connection(planet_type& server, planet_type& client,
-                          std::string host, uint16_t port) {
-    server.mpx.prepare_connection(server.acc, server.conn, client.mpx,
-                                  std::move(host), port, client.conn);
+  point_to_point_fixture()
+    : super({&earth, &mars}),
+      earth(this->exec_all_callback()),
+      mars(this->exec_all_callback()) {
+    // nop
   }
 };
 
@@ -208,6 +217,35 @@ public:
 template <class Config = caf::actor_system_config>
 using point_to_point_fixture_t =
   point_to_point_fixture<test_coordinator_fixture<Config>>;
+
+/// A simple fixture that includes three nodes (`earth`, `mars`, and `jupiter`)
+/// that can connect to each other.
+template <class BaseFixture =
+            test_coordinator_fixture<caf::actor_system_config>>
+class belt_fixture
+    : public fake_network_fixture_base<test_node_fixture<BaseFixture>> {
+public:
+  using planet_type = test_node_fixture<BaseFixture>;
+
+  using super = fake_network_fixture_base<planet_type>;
+
+  planet_type earth;
+  planet_type mars;
+  planet_type jupiter;
+
+  belt_fixture()
+    : super({&earth, &mars, &jupiter}),
+      earth(this->exec_all_callback()),
+      mars(this->exec_all_callback()),
+      jupiter(this->exec_all_callback()) {
+    // nop
+  }
+};
+
+/// Binds `test_coordinator_fixture<Config>` to `belt_fixture`.
+template <class Config = caf::actor_system_config>
+using belt_fixture_t =
+  belt_fixture<test_coordinator_fixture<Config>>;
 
 }// namespace <anonymous>
 
