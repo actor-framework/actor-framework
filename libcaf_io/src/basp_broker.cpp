@@ -97,6 +97,11 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // payload received from a remote node; if a remote node A sends
   // us a handle to a third node B, then we assume that A can tell us
   // how to contact B.
+  // TODO: This should probably happen somewhere else, but is usually only
+  //       performed in `finalize_handshake` which is only called on receipt
+  //       of server handshakes.
+  if (this_context->id == none)
+    this_context->id = instance.tbl().lookup(this_context->hdl);
   auto lr = instance.tbl().lookup(nid);
   if (nid != this_context->id && !lr.known) {
     instance.tbl().add(nid, this_context->id);
@@ -414,7 +419,6 @@ void basp_broker_state::establish_communication(const node_id& nid) {
   // TODO: Split this by functionality, address query & connecting?
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
-  learned_new_node(nid);
   if (!enable_automatic_connections)
     return;
   // this member function gets only called once, after adding a new
@@ -452,7 +456,7 @@ void basp_broker_state::establish_communication(const node_id& nid) {
     });
     basp::header hdr{basp::message_type::dispatch_message,
                      basp::header::named_receiver_flag,
-                     0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                     0, 0, this_node(), *origin, tmp.id(), invalid_actor_id,
                      visit(seq_num_visitor{this}, hdl)};
     instance.write(self->context(), get_buffer(hdl),
                    hdr, &writer);
@@ -669,7 +673,7 @@ basp_broker_state::get_buffer(node_id nid) {
   if (res.known && res.hdl) {
     return get_buffer(*res.hdl);
   }
-  auto msgs = pending_connectivity[nid];
+  auto& msgs = pending_connectivity[nid];
   msgs.emplace_back();
   return msgs.back();
 }

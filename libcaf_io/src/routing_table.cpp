@@ -108,6 +108,7 @@ bool routing_table::handle(const node_id& nid,
   if (i == node_information_base_.end())
     return false;
   i->second.hdl = hdl;
+  nid_by_hdl_.emplace(hdl, nid);
   return true;
 }
 

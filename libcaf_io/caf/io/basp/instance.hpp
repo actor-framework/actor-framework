@@ -337,7 +337,8 @@ public:
           return false;
         }
         // Close this connection if we already established communication.
-        if (tbl_.lookup(hdr.source_node).hdl) {
+        auto lr = tbl_.lookup(hdr.source_node);
+        if (lr.hdl) {
           CAF_LOG_INFO("close connection since we already have a "
                        "connection: " << CAF_ARG(hdr.source_node));
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
@@ -345,7 +346,10 @@ public:
         }
         // Add this node to our contacts.
         CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
-        tbl_.add(hdr.source_node, hdl);
+        if (lr.known)
+          tbl_.handle(hdr.source_node, hdl);
+        else
+          tbl_.add(hdr.source_node, hdl);
         auto config_server = system().registry().get(atom("ConfigServ"));
         anon_send(actor_cast<actor>(config_server), put_atom::value,
                   to_string(hdr.source_node), make_message(addrs));
