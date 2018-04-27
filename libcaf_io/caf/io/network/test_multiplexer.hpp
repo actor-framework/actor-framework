@@ -367,10 +367,6 @@ private:
   pending_endpoints_map pending_endpoints_;
   datagram_data_map datagram_data_;
 
-  // extra state for making sure the test multiplexer is not used in a
-  // multithreaded setup
-  std::thread::id tid_;
-
   // Configures shortcuts for runnables.
   size_t inline_runnables_;
 

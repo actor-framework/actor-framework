@@ -294,13 +294,11 @@ void middleman::start() {
   // Launch backend.
   if (system_.config().middleman_detach_multiplexer)
     backend_supervisor_ = backend().make_supervisor();
-  if (!backend_supervisor_) {
-    // The only backend that returns a `nullptr` is the `test_multiplexer`
-    // which does not have its own thread but uses the main thread instead.
-    // Other backends can set `middleman_detach_multiplexer` to false to
-    // suppress creation of the supervisor.
-    backend().thread_id(std::this_thread::get_id());
-  } else {
+  // The only backend that returns a `nullptr` by default is the
+  // `test_multiplexer` which does not have its own thread but uses the main
+  // thread instead. Other backends can set `middleman_detach_multiplexer` to
+  // false to suppress creation of the supervisor.
+  if (backend_supervisor_ != nullptr) {
     std::atomic<bool> init_done{false};
     std::mutex mtx;
     std::condition_variable cv;

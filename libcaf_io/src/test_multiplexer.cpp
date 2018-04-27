@@ -72,7 +72,6 @@ test_multiplexer::datagram_data::
 
 test_multiplexer::test_multiplexer(actor_system* sys)
     : multiplexer(sys),
-      tid_(std::this_thread::get_id()),
       inline_runnables_(0),
       servant_ids_(0) {
   CAF_ASSERT(sys != nullptr);
