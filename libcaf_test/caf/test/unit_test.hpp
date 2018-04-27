@@ -552,8 +552,10 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 // -- Convenience macros -------------------------------------------------------
 
 #define CAF_MESSAGE(msg)                                                       \
-  CAF_LOG_INFO(msg);                                                           \
-  CAF_TEST_PRINT_VERBOSE(msg)
+  do {                                                                         \
+    CAF_LOG_INFO(msg);                                                         \
+    CAF_TEST_PRINT_VERBOSE(msg);                                               \
+  } while (false)
 
 // -- CAF_CHECK* predicate family ----------------------------------------------
 
