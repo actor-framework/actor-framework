@@ -183,7 +183,7 @@ endif()
 ################################################################################
 
 # check for g++ >= 4.8 or clang++ > = 3.2
-if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK)
+if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK AND NOT CMAKE_CROSSCOMPILING)
   try_run(ProgramResult
           CompilationSucceeded
           "${CMAKE_CURRENT_BINARY_DIR}"
@@ -547,22 +547,24 @@ if(NOT CAF_NO_OPENSSL)
               "Disable OpenSSL. Required >= 1.0.1 due to TLSv1.2 support.")
       set(CAF_NO_OPENSSL yes)
     else()
-      # Check if openssl headers and library versions match
-      set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
-      set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
-      check_c_source_runs("
-        #include <openssl/opensslv.h>
-        #include <openssl/crypto.h>
-        int main() {
-          if (SSLeay() == OPENSSL_VERSION_NUMBER) {
-            return 0;
+      if(NOT CMAKE_CROSSCOMPILING)
+        # Check if openssl headers and library versions match
+        set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
+        set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
+        check_c_source_runs("
+          #include <openssl/opensslv.h>
+          #include <openssl/crypto.h>
+          int main() {
+            if (SSLeay() == OPENSSL_VERSION_NUMBER) {
+              return 0;
+            }
+            return -1;
           }
-          return -1;
-        }
-      " OPENSSL_CORRECT_VERSION_NUMBER)
-      if (NOT OPENSSL_CORRECT_VERSION_NUMBER)
-        message(FATAL_ERROR
-          "OpenSSL library version does not match headers")
+        " OPENSSL_CORRECT_VERSION_NUMBER)
+        if (NOT OPENSSL_CORRECT_VERSION_NUMBER)
+          message(FATAL_ERROR
+            "OpenSSL library version does not match headers")
+        endif()
       endif()
       include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
       add_optional_caf_lib(openssl)
