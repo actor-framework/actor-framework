@@ -1,23 +1,24 @@
 #!/usr/bin/env groovy
 
-// The options we use for the builds.
-def unix_opts = "-DCAF_NO_PROTOBUF_EXAMPLES:BOOL=yes " +
-                "-DCAF_NO_QT_EXAMPLES:BOOL=yes " +
-                "-DCAF_MORE_WARNINGS:BOOL=yes" +
-                "-DCAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes" +
-                "-DCAF_ENABLE_RUNTIME_CHECKS:BOOL=yes" +
-                "-DCAF_USE_ASIO:BOOL=yes" +
-                "-DCAF_NO_BENCHMARKS:BOOL=yes" +
-                "-DOPENSSL_ROOT_DIR=/usr/local/opt/openssl" +
-                "-DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl"
+// Builds options on UNIX.
+unixOpts = "-DCAF_NO_PROTOBUF_EXAMPLES:BOOL=yes " +
+           "-DCAF_NO_QT_EXAMPLES:BOOL=yes " +
+           "-DCAF_MORE_WARNINGS:BOOL=yes" +
+           "-DCAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes" +
+           "-DCAF_ENABLE_RUNTIME_CHECKS:BOOL=yes" +
+           "-DCAF_USE_ASIO:BOOL=yes" +
+           "-DCAF_NO_BENCHMARKS:BOOL=yes" +
+           "-DOPENSSL_ROOT_DIR=/usr/local/opt/openssl" +
+           "-DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl"
 
-def ms_opts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
-              "-DCAF_NO_BENCHMARKS:BOOL=yes " +
-              "-DCAF_NO_EXAMPLES:BOOL=yes " +
-              "-DCAF_NO_MEM_MANAGEMENT:BOOL=yes " +
-              "-DCAF_NO_OPENCL:BOOL=yes " +
-              "-DCAF_LOG_LEVEL:INT=0 " +
-              "-DCMAKE_CXX_FLAGS=\"/MP\""
+// Builds options on Windows.
+msOpts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
+         "-DCAF_NO_BENCHMARKS:BOOL=yes " +
+         "-DCAF_NO_EXAMPLES:BOOL=yes " +
+         "-DCAF_NO_MEM_MANAGEMENT:BOOL=yes " +
+         "-DCAF_NO_OPENCL:BOOL=yes " +
+         "-DCAF_LOG_LEVEL:INT=0 " +
+         "-DCMAKE_CXX_FLAGS=\"/MP\""
 
 pipeline {
   agent none
@@ -151,7 +152,7 @@ def unixBuild(buildType = 'Debug',
       buildDir: 'build',
       buildType: "$buildType",
       cleanBuild: cleanBuild,
-      cmakeArgs: "$unix_opts $buildOpts",
+      cmakeArgs: "$unixOpts $buildOpts",
       generator: "$generator",
       installation: 'cmake in search path',
       preloadScript: '../cmake/jenkins.cmake',
@@ -180,7 +181,7 @@ def msBuild(buildType = 'Debug',
     def ret = bat(returnStatus: true,
               script: """cmake -E make_directory build
                          cd build
-                         cmake -DCMAKE_buildType=${buildType} -G "${generator}" ${ms_opts} ..
+                         cmake -DCMAKE_buildType=$buildType -G "$generator" $msOpts ..
                          IF /I "%ERRORLEVEL%" NEQ "0" (
                            EXIT 1
                          )
