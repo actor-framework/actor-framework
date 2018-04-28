@@ -73,6 +73,10 @@ pipeline {
           agent { label 'macOS && gcc' }
           steps { unixBuild() }
         }
+        stage ('FreeBSD') {
+          agent { label 'FreeBSD' }
+          steps { unixBuild() }
+        }
         stage('Leak Sanitizer') {
           agent { label 'Linux && LeakSanitizer' }
           steps { unixBuild() }
