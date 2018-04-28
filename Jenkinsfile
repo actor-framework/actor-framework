@@ -148,6 +148,7 @@ def unixBuild(buildType = 'Debug',
               generator = 'Unix Makefiles',
               buildOpts = '',
               cleanBuild = true) {
+  echo "building on $NODE_NAME"
   deleteDir()
   unstash('caf-sources')
   dir('caf-sources') {
@@ -176,6 +177,7 @@ def msBuild(buildType = 'Debug',
             generator = 'Visual Studio 15 2017',
             buildOpts = '',
             cleanBuild = true) {
+  echo "building on $NODE_NAME"
   deleteDir()
   unstash('caf-sources')
   dir('caf-sources') {
