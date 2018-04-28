@@ -42,15 +42,20 @@ def msbuild_opts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
 
 pipeline {
   agent none
-
+  environment {
+    LD_LIBRARY_PATH = "$WORKSPACE/caf-sources/build/lib"
+    DYLD_LIBRARY_PATH = "$WORKSPACE/caf-sources/build/lib"
+    ASAN_OPTIONS = 'detect_leaks=1'
+  }
   stages {
-    stage ('Preparation') {
+    stage ('Git Checkout') {
       steps {
         node ('master') {
-          echo "Starting Jenkins stuff"
-          // TODO: pull github branch into mirror
-          // TODO: set URL, refs, prNum?
-          // TODO: maybe static tests?
+          deleteDir()
+          dir('caf-sources') {
+              checkout scm
+          }
+          stash includes: 'caf-sources/**', name: 'caf-sources'
         }
       }
     }
@@ -59,32 +64,32 @@ pipeline {
         // gcc builds
         stage ("Linux && gcc4.8") {
           agent { label "Linux && gcc4.8" }
-          steps { do_unix_stuff("Linux && gcc4.8", gcc_cmake_opts) }
+          steps { do_unix_stuff(gcc_cmake_opts) }
         }
         stage ("Linux && gcc4.9") {
           agent { label "Linux && gcc4.9" }
-          steps { do_unix_stuff("Linux && gcc4.9", gcc_cmake_opts) }
+          steps { do_unix_stuff(gcc_cmake_opts) }
         }
         stage ("Linux && gcc5.1") {
           agent { label "Linux && gcc5.1" }
-          steps { do_unix_stuff("Linux && gcc5.1", gcc_cmake_opts) }
+          steps { do_unix_stuff(gcc_cmake_opts) }
         }
         stage ("Linux && gcc6.3") {
           agent { label "Linux && gcc6.3" }
-          steps { do_unix_stuff("Linux && gcc6.3", gcc_cmake_opts) }
+          steps { do_unix_stuff(gcc_cmake_opts) }
         }
         stage ("Linux && gcc7.2") {
           agent { label "Linux && gcc7.2" }
-          steps { do_unix_stuff("Linux && gcc7.2", gcc_cmake_opts) }
+          steps { do_unix_stuff(gcc_cmake_opts) }
         }
         // clang builds
         stage ("macOS && clang") {
           agent { label "macOS && clang" }
-          steps { do_unix_stuff("macOS && clang", clang_cmake_opts) }
+          steps { do_unix_stuff(clang_cmake_opts) }
         }
         stage('Linux && clang && LeakSanitizer') {
           agent { label "Linux && clang && LeakSanitizer" }
-          steps { do_unix_stuff("Linux && clang && LeakSanitizer", clang_cmake_opts) }
+          steps { do_unix_stuff(clang_cmake_opts) }
         }
         // windows builds
         stage('msbuild') {
@@ -116,41 +121,36 @@ pipeline {
   }
 }
 
-def do_unix_stuff(tags,
-                  cmake_opts = "",
+def do_unix_stuff(cmake_opts = "",
                   build_type = "Debug",
                   generator = "Unix Makefiles",
                   build_opts = "",
                   clean_build = true) {
   deleteDir()
-  // TODO: pull from mirror, not from GitHub, (RIOT fetch func?)
-  checkout scm
-  // Configure and build.
-  cmakeBuild buildDir: 'build', buildType: "$build_type", cleanBuild: clean_build, cmakeArgs: "$cmake_opts", generator: "$generator", installation: 'cmake in search path', preloadScript: '../cmake/jenkins.cmake', sourceDir: '.', steps: [[args: 'all']]
-  // Some setup also done in previous setups.
-  ret = sh(returnStatus: true,
-           script: """#!/bin/bash +ex
-                      cd build || exit 1
-                      if [ `uname` = "Darwin" ] ; then
-                        export DYLD_LIBRARY_PATH="$PWD/build/lib"
-                      elif [ `uname` = "FreeBSD" ] ; then
-                        export LD_LIBRARY_PATH="$PWD/build/lib"
-                      else
-                        export LD_LIBRARY_PATH="$PWD/build/lib"
-                        export ASAN_OPTIONS=detect_leaks=1
-                      fi
-                      exit 0""")
-  if (ret) {
-    echo "[!!!] Setting up variables failed!"
-    currentBuild.result = 'FAILURE'
-    return
+  unstash('caf-sources')
+  dir('caf-sources') {
+    // Configure and build.
+    cmakeBuild([
+      buildDir: 'build',
+      buildType: "$build_type",
+      cleanBuild: clean_build,
+      cmakeArgs: "$cmake_opts",
+      generator: "$generator",
+      installation: 'cmake in search path',
+      preloadScript: '../cmake/jenkins.cmake',
+      sourceDir: '.',
+      steps: [[args: 'all']],
+    ])
+    // Test.
+    ctest([
+      arguments: '--output-on-failure',
+      installation: 'cmake auto install',
+      workingDir: 'build',
+    ])
   }
-  // Test.
-  ctest arguments: '--output-on-failure', installation: 'cmake auto install', workingDir: 'build'
 }
 
-def do_ms_stuff(tags,
-                cmake_opts = "",
+def do_ms_stuff(cmake_opts = "",
                 build_type = "Debug",
                 generator = "Visual Studio 15 2017",
                 build_opts = "",
