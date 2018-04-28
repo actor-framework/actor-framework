@@ -40,40 +40,40 @@ pipeline {
     }
     stage ('Build & Test') {
       parallel {
-        stage ('Linux && gcc4.8') {
-          agent { label "${STAGE_NAME}" }
+        stage ('GCC 4.8') {
+          agent { label 'Linux && gcc4.8' }
           steps { unixBuild() }
         }
-        stage ('Linux && gcc4.9') {
-          agent { label "${STAGE_NAME}" }
+        stage ('GCC 4.9') {
+          agent { label 'Linux && gcc4.9' }
           steps { unixBuild() }
         }
-        stage ('Linux && gcc5.1') {
-          agent { label "${STAGE_NAME}" }
+        stage ('GCC 5') {
+          agent { label 'Linux && gcc5.1' }
           steps { unixBuild() }
         }
-        stage ('Linux && gcc6.3') {
-          agent { label "${STAGE_NAME}" }
+        stage ('GCC 6') {
+          agent { label 'Linux && gcc6.3' }
           steps { unixBuild() }
         }
-        stage ('Linux && gcc7.2') {
-          agent { label "${STAGE_NAME}" }
+        stage ('GCC 7') {
+          agent { label 'Linux && gcc7.2' }
           steps { unixBuild() }
         }
-        stage ('Linux && clang') {
-          agent { label "${STAGE_NAME}" }
+        stage ('Clang on Linux') {
+          agent { label 'Linux && clang' }
           steps { unixBuild() }
         }
-        stage ('macOS && clang') {
-          agent { label "${STAGE_NAME}" }
+        stage ('Clang on Mac') {
+          agent { label 'macOS && clang' }
           steps { unixBuild() }
         }
-        stage ('macOS && gcc') {
-          agent { label "${STAGE_NAME}" }
+        stage ('GCC on Mac') {
+          agent { label 'macOS && gcc' }
           steps { unixBuild() }
         }
-        stage('Linux && LeakSanitizer') {
-          agent { label "${STAGE_NAME}" }
+        stage('Leak Sanitizer') {
+          agent { label 'Linux && LeakSanitizer' }
           steps { unixBuild() }
         }
         stage('Logging') {
@@ -107,8 +107,8 @@ pipeline {
             }
           }
         }
-        stage('msbuild') {
-          agent { label "${STAGE_NAME}" }
+        stage('Windows (MSVC)') {
+          agent { label "msbuild" }
           environment {
             PATH = 'C:\\Windows\\System32;C:\\Program Files\\CMake\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin'
           }
