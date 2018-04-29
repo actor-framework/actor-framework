@@ -177,13 +177,21 @@ public:
   }
 
   template <class T>
-  enable_if_tt<std::is_pointer<T>> consume(T ptr) {
+  enable_if_t<std::is_pointer<T>::value
+              && !std::is_same<decay_t<T>, void>::value>
+  consume(T ptr) {
     if (ptr) {
       result_ += '*';
       consume(*ptr);
     } else {
       result_ += "<null>";
     }
+  }
+
+  inline void consume(const void* ptr) {
+    result_ += "0x";
+    auto int_val = reinterpret_cast<intptr_t>(ptr);
+    consume(int_val);
   }
 
   /// Print duration types with nanosecond resolution.
