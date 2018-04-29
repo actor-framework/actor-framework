@@ -194,10 +194,29 @@ public:
 
   template <class T>
   void log(level lvl, const T& x) {
+    struct simple_fwd_t {
+      const T& operator()(const T& y) const {
+        return y;
+      }
+    };
+    using fwd =
+      typename std::conditional<
+        std::is_same<char, T>::value
+        || std::is_convertible<T, std::string>::value
+        || std::is_same<caf::term, T>::value,
+        simple_fwd_t,
+        deep_to_string_t
+      >::type;
+    fwd f;
+    auto y = f(x);
     if (lvl <= level_console_)
-      *console_ << x;
+      *console_ << y;
     if (lvl <= level_file_)
-      file_ << x;
+      file_ << y;
+  }
+
+  inline void log(level lvl, const std::nullptr_t&) {
+    log(lvl, "<null>");
   }
 
   /// Output stream for logging purposes.
@@ -213,34 +232,10 @@ public:
       return *this;
     }
 
-    stream& operator<<(caf::term x) {
-      parent_.log(lvl_, x);
-      return *this;
-    }
-
     template <class T>
     stream& operator<<(const T& x) {
-      struct simple_fwd_t {
-        const T& operator()(const T& y) const {
-          return y;
-        }
-      };
-      using fwd =
-        typename std::conditional<
-          std::is_same<char, T>::value || std::is_convertible<T, std::string>::value,
-          simple_fwd_t,
-          deep_to_string_t
-        >::type;
-      fwd f;
-      parent_.log(lvl_, f(x));
+      parent_.log(lvl_, x);
       return *this;
-    }
-
-    template <class T>
-    stream& operator<<(const optional<T>& x) {
-      if (!x)
-        return *this << "-none-";
-      return *this << *x;
     }
 
   private:
@@ -360,46 +355,6 @@ struct adder {
   }
 };
 
-template <class T>
-struct showable_base {
-  explicit showable_base(const T& x) : value(x) {
-    // nop
-  }
-
-  const T& value;
-};
-
-// showable_base<T> picks up to_string() via ADL
-template <class T>
-std::ostream& operator<<(std::ostream& out, const showable_base<T>& x) {
-  auto str = caf::deep_to_string(x.value);
-  if (str == "<unprintable>")
-    out << term::blue << "<unprintable>" << term::reset;
-  else
-    out << str;
-  return out;
-}
-
-template <class T>
-class showable : public showable_base<T> {
-public:
-  explicit showable(const T& x) : showable_base<T>(x) {
-    // nop
-  }
-};
-
-// showable<T> picks up custom operator<< overloads for std::ostream
-template <class T>
-auto operator<<(std::ostream& out, const showable<T>& p)
--> decltype(out << std::declval<const T&>()) {
-  return out << p.value;
-}
-
-template <class T>
-showable<T> show(const T &x) {
-  return showable<T>{x};
-}
-
 bool check(test* parent, const char *file, size_t line,
            const char *expr, bool should_fail, bool result);
 
@@ -419,8 +374,8 @@ bool check(test* parent, const char *file, size_t line,
         << term::blue << file << term::yellow << ":"
         << term::blue << line << fill(line) << term::reset
         << expr << term::magenta << " ("
-        << term::red << show(x) << term::magenta
-        << " !! " << term::red << show(y) << term::magenta
+        << term::red << x << term::magenta
+        << " !! " << term::red << y << term::magenta
         << ')' << term::reset_endl;
     parent->fail(should_fail);
   }
