@@ -17,8 +17,7 @@ msOpts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
          "-DCAF_NO_EXAMPLES:BOOL=yes " +
          "-DCAF_NO_MEM_MANAGEMENT:BOOL=yes " +
          "-DCAF_NO_OPENCL:BOOL=yes " +
-         "-DCAF_LOG_LEVEL:INT=0 " +
-         "-DCMAKE_CXX_FLAGS=\"/MP\""
+         "-DCAF_LOG_LEVEL:INT=0 "
 
 pipeline {
   agent none
