@@ -32,6 +32,7 @@
 #include "caf/message_builder.hpp"
 #include "caf/output_stream.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/stream.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/upstream_msg.hpp"
 
