@@ -938,6 +938,11 @@ void test_multiplexer::virtual_send(datagram_handle dst, datagram_handle ep,
   read_data(dst);
 }
 
+void test_multiplexer::detach(connection_handle hdl,
+                              bool invoke_detach_message) {
+  scribe_data_[hdl].ptr->detach(this, invoke_detach_message);
+}
+
 void test_multiplexer::exec_runnable() {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");

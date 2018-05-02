@@ -256,6 +256,10 @@ public:
   void virtual_send(datagram_handle src, datagram_handle ep,
                     const buffer_type&);
 
+  /// Detaches a scribe identified by `hdl` and optianlly makes it send a
+  /// disconnect message to its broker.
+  void detach(connection_handle hdl, bool invoke_detach_message = false);
+
   /// Waits until a `runnable` is available and executes it.
   void exec_runnable();
 
