@@ -70,7 +70,7 @@ pipeline {
         }
         stage ('GCC on Mac') {
           agent { label 'macOS && gcc' }
-          steps { unixBuild() }
+          steps { unixBuild('Debug', '-DCMAKE_CXX_COMPILER=g++') }
         }
         stage ('FreeBSD') {
           agent { label 'FreeBSD' }
@@ -82,7 +82,7 @@ pipeline {
         }
         stage('Logging') {
           agent { label 'Linux' }
-          steps { unixBuild([buildOpts: '-D CAF_LOG_LEVEL=4']) }
+          steps { unixBuild('Debug', '-DCAF_LOG_LEVEL=4') }
         }
         stage('Release') {
           agent { label 'Linux' }
@@ -91,7 +91,7 @@ pipeline {
         stage('Coverage') {
           agent { label "gcovr" }
           steps {
-            unixBuild([buildOpts: '-D CAF_ENABLE_GCOV=yes'])
+            unixBuild('Debug', '-DCAF_ENABLE_GCOV=yes')
             dir('caf-sources') {
               sh 'gcovr -e libcaf_test -e ".*/test/.*" -x -r .. > coverage.xml'
               cobertura([
@@ -144,8 +144,8 @@ pipeline {
 }
 
 def unixBuild(buildType = 'Debug',
-              generator = 'Unix Makefiles',
               buildOpts = '',
+              generator = 'Unix Makefiles',
               cleanBuild = true) {
   echo "building on $NODE_NAME"
   deleteDir()
@@ -173,8 +173,8 @@ def unixBuild(buildType = 'Debug',
 }
 
 def msBuild(buildType = 'Debug',
-            generator = 'Visual Studio 15 2017',
             buildOpts = '',
+            generator = 'Visual Studio 15 2017',
             cleanBuild = true) {
   echo "building on $NODE_NAME"
   deleteDir()
