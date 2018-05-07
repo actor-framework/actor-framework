@@ -24,7 +24,6 @@ pipeline {
   environment {
     LD_LIBRARY_PATH = "$WORKSPACE/caf-sources/build/lib"
     DYLD_LIBRARY_PATH = "$WORKSPACE/caf-sources/build/lib"
-    ASAN_OPTIONS = 'detect_leaks=1'
   }
   stages {
     stage ('Git Checkout') {
@@ -148,7 +147,8 @@ def unixBuild(buildType = 'Debug',
               generator = 'Unix Makefiles',
               cleanBuild = true) {
   echo "building on $NODE_NAME"
-  withEnv(["label_exp="+STAGE_NAME.toLowerCase()]) {
+  withEnv(["label_exp="+STAGE_NAME.toLowerCase(),
+           "ASAN_OPTIONS=detect_leaks="+(STAGE_NAME.contains("Linux") ? 1 : 0)]) {
     deleteDir()
     unstash('caf-sources')
     dir('caf-sources') {
