@@ -70,7 +70,7 @@ pipeline {
         }
         stage ('GCC on Mac') {
           agent { label 'macOS && gcc' }
-          steps { unixBuild('Debug', '-DCMAKE_CXX_COMPILER=g++') }
+          steps { unixBuild('Debug') }
         }
         stage ('FreeBSD') {
           agent { label 'FreeBSD' }
@@ -148,27 +148,29 @@ def unixBuild(buildType = 'Debug',
               generator = 'Unix Makefiles',
               cleanBuild = true) {
   echo "building on $NODE_NAME"
-  deleteDir()
-  unstash('caf-sources')
-  dir('caf-sources') {
-    // Configure and build.
-    cmakeBuild([
-      buildDir: 'build',
-      buildType: "$buildType",
-      cleanBuild: cleanBuild,
-      cmakeArgs: "$unixOpts $buildOpts",
-      generator: "$generator",
-      installation: 'cmake in search path',
-      preloadScript: '../cmake/jenkins.cmake',
-      sourceDir: '.',
-      steps: [[args: 'all']],
-    ])
-    // Test.
-    ctest([
-      arguments: '--output-on-failure',
-      installation: 'cmake in search path',
-      workingDir: 'build',
-    ])
+  withEnv(["label_exp="+STAGE_NAME.toLowerCase()]) {
+    deleteDir()
+    unstash('caf-sources')
+    dir('caf-sources') {
+      // Configure and build.
+      cmakeBuild([
+        buildDir: 'build',
+        buildType: "$buildType",
+        cleanBuild: cleanBuild,
+        cmakeArgs: "$unixOpts $buildOpts",
+        generator: "$generator",
+        installation: 'cmake in search path',
+        preloadScript: '../cmake/jenkins.cmake',
+        sourceDir: '.',
+        steps: [[args: 'all']],
+      ])
+      // Test.
+      ctest([
+        arguments: '--output-on-failure',
+        installation: 'cmake in search path',
+        workingDir: 'build',
+      ])
+    }
   }
 }
 
