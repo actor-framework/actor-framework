@@ -350,8 +350,8 @@ public:
           tbl_.handle(hdr.source_node, hdl);
         else
           tbl_.add(hdr.source_node, hdl);
-        auto config_server = system().registry().get(atom("ConfigServ"));
-        anon_send(actor_cast<actor>(config_server), put_atom::value,
+        auto peer_server = system().registry().get(atom("PeerServ"));
+        anon_send(actor_cast<actor>(peer_server), put_atom::value,
                   to_string(hdr.source_node), make_message(addrs));
         // Write handshake as client in response.
         if (tcp_based)
@@ -399,8 +399,8 @@ public:
             tbl_.handle(hdr.source_node, hdl);
           else
             tbl_.add(hdr.source_node, hdl);
-          auto config_server = system().registry().get(atom("ConfigServ"));
-          anon_send(actor_cast<actor>(config_server), put_atom::value,
+          auto peer_server = system().registry().get(atom("PeerServ"));
+          anon_send(actor_cast<actor>(peer_server), put_atom::value,
                     to_string(hdr.source_node), make_message(addrs));
         }
         // Since udp is unreliable we answer, maybe our message was lost.

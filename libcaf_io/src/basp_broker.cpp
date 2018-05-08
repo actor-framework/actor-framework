@@ -449,7 +449,7 @@ void basp_broker_state::establish_communication(const node_id& nid) {
           : system().spawn<hidden>(connection_helper, self, &instance);
     system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
     auto writer = make_callback([&item](serializer& sink) -> error {
-      auto name_atm = atom("ConfigServ");
+      auto name_atm = atom("PeerServ");
       std::vector<actor_id> stages;
       auto msg = make_message(get_atom::value, std::move(item));
       return sink(name_atm, stages, msg);
@@ -876,6 +876,7 @@ behavior basp_broker::make_behavior() {
     },
     // Received from underlying broker implementation.
     [=](const new_connection_msg& msg) {
+      auto res = state.instance.tbl().lookup(msg.handle);
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
       auto& bi = state.instance;
       bi.write_server_handshake(context(), state.get_buffer(msg.handle),
