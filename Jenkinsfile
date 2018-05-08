@@ -1,5 +1,66 @@
 #!/usr/bin/env groovy
 
+// Our build matrix. The keys are the operating system labels and the values
+// are lists of tool labels.
+buildMatrix = [
+  // Release and debug builds for various OS/Compiler combinations.
+  ['Linux', [
+    builds: ['debug'],
+    tools: ['gcc4.8', 'gcc4.9', 'gcc5.1', 'gcc6.3', 'gcc7.2', 'clang'],
+  ]],
+  ['Linux', [
+    builds: ['release'],
+    tools: ['gcc', 'clang'],
+  ]],
+  ['macOS', [
+    builds: ['debug', 'release'],
+    tools: ['gcc', 'clang'],
+  ]],
+  ['FreeBSD', [
+    builds: ['debug', 'release'],
+    tools: ['clang'],
+  ]],
+  ['Windows', [
+    builds: ['debug', 'release'],
+    tools: ['msvc'],
+  ]],
+  // Additional builds with logging enabled.
+  ['Linux', [
+    cmakeArgs: '-D CAF_LOG_LEVEL=4',
+    builds: ['debug', 'release'],
+    tools: ['gcc'],
+  ]],
+  ['macOS', [
+    cmakeArgs: '-D CAF_LOG_LEVEL=4',
+    builds: ['debug', 'release'],
+    tools: ['clang'],
+  ]],
+  // Additional debug builds with ASAN enabled.
+  ['Linux', [
+    cmakeArgs: '-D CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
+    builds: ['debug'],
+    tools: ['gcc'],
+  ]],
+  ['macOS', [
+    cmakeArgs: '-D CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
+    builds: ['debug'],
+    tools: ['clang'],
+  ]],
+  // Additional debug build with coverage.
+  ['Linux', [
+    cmakeArgs: '-D CAF_ENABLE_GCOV:BOOL=yes',
+    builds: ['debug'],
+    tools: ['gcovr'],
+    extraSteps: ['coverageReport'],
+  ]],
+]
+
+// Optional environment variables for combinations of labels.
+buildEnvironments = [
+  'macOS && gcc': ['CXX=g++'],
+  'Linux && clang': ['CXX=clang++'],
+]
+
 // Builds options on UNIX.
 unixOpts = "-DCAF_NO_PROTOBUF_EXAMPLES:BOOL=yes " +
            "-DCAF_NO_QT_EXAMPLES:BOOL=yes " +
@@ -19,6 +80,122 @@ msOpts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
          "-DCAF_NO_OPENCL:BOOL=yes " +
          "-DCAF_LOG_LEVEL:INT=0 "
 
+// Called *after* a build succeeded.
+def coverageReport() {
+  dir('caf-sources') {
+    sh 'gcovr -e libcaf_test -e ".*/test/.*" -x -r .. > coverage.xml'
+    cobertura([
+      autoUpdateHealth: false,
+      autoUpdateStability: false,
+      coberturaReportFile: '**/coverage.xml',
+      conditionalCoverageTargets: '70, 0, 0',
+      failUnhealthy: false,
+      failUnstable: false,
+      lineCoverageTargets: '80, 0, 0',
+      maxNumberOfBuilds: 0,
+      methodCoverageTargets: '80, 0, 0',
+      onlyStable: false,
+      sourceEncoding: 'ASCII',
+      zoomCoverageChart: false,
+    ])
+  }
+}
+
+def buildSteps(buildType, cmakeArgs) {
+  echo "build stage: $STAGE_NAME"
+  deleteDir()
+  unstash('caf-sources')
+  dir('caf-sources') {
+    if (STAGE_NAME.contains('Windows')) {
+      echo "Windows build on $NODE_NAME"
+      withEnv(['PATH=C:\\Windows\\System32;C:\\Program Files\\CMake\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin']) {
+          // Configure and build.
+          def ret = bat(returnStatus: true,
+                    script: """cmake -E make_directory build
+                               cd build
+                               cmake -D CMAKE_BUILD_TYPE=$buildType -G "Visual Studio 15 2017" $cmakeArgs $msOpts ..
+                               IF /I "%ERRORLEVEL%" NEQ "0" (
+                                 EXIT 1
+                               )
+                               EXIT 0""")
+          if (ret) {
+            echo "[!!!] Configure failed!"
+            currentBuild.result = 'FAILURE'
+            return
+          }
+          // bat "echo \"Step: Build for '${tags}'\""
+          ret = bat(returnStatus: true,
+                    script: """cd build
+                               cmake --build .
+                               IF /I "%ERRORLEVEL%" NEQ "0" (
+                                 EXIT 1
+                               )
+                               EXIT 0""")
+          if (ret) {
+            echo "[!!!] Build failed!"
+            currentBuild.result = 'FAILURE'
+            return
+          }
+          // Test.
+          ctest([
+            arguments: '--output-on-failure',
+            installation: 'cmake auto install',
+            workingDir: 'build',
+          ])
+      }
+    } else {
+      echo "Unix build on $NODE_NAME"
+      def leakCheck = STAGE_NAME.contains("Linux") && !STAGE_NAME.contains("clang")
+      withEnv(["label_exp=" + STAGE_NAME.toLowerCase(),
+               "ASAN_OPTIONS=detect_leaks=" + (leakCheck ? 1 : 0)]) {
+        // Configure and build.
+        cmakeBuild([
+          buildDir: 'build',
+          buildType: "$buildType",
+          cmakeArgs: "$unixOpts $cmakeArgs",
+          generator: 'Unix Makefiles',
+          installation: 'cmake in search path',
+          preloadScript: '../cmake/jenkins.cmake',
+          sourceDir: '.',
+          steps: [[args: 'all']],
+        ])
+        // Test.
+        ctest([
+          arguments: '--output-on-failure',
+          installation: 'cmake in search path',
+          workingDir: 'build',
+        ])
+      }
+    }
+  }
+}
+
+// Builds a stage for given builds. Results in a parallel stage `if builds.size() > 1`.
+def makeBuildStage(builds, lblExpr, settings) {
+  if (builds.size() == 1) {
+    def buildType = builds[0]
+    return {
+      node(lblExpr) {
+        stage("$lblExpr: $buildType") {
+          withEnv(buildEnvironments[lblExpr] ?: []) {
+            buildSteps(buildType, settings['cmakeArgs'] ?: '')
+            (settings['extraSteps'] ?: []).each { fun -> "$fun"() }
+          }
+        }
+      }
+    }
+  }
+  return {
+    node('master') {
+      stage("$lblExpr: Fan Out") {
+        parallel builds.collectEntries { buildType ->
+          ["$lblExpr: $buildType": makeBuildStage([buildType], lblExpr, settings)]
+        }
+      }
+    }
+  }
+}
+
 pipeline {
   agent none
   environment {
@@ -27,95 +204,34 @@ pipeline {
   }
   stages {
     stage ('Git Checkout') {
+      agent { label 'master' }
       steps {
-        node ('master') {
-          deleteDir()
-          dir('caf-sources') {
-            checkout scm
-          }
-          stash includes: 'caf-sources/**', name: 'caf-sources'
+        deleteDir()
+        dir('caf-sources') {
+          git([
+            url: 'https://github.com/actor-framework/actor-framework.git',
+            branch: 'master',
+          ])
         }
+        stash includes: 'caf-sources/**', name: 'caf-sources'
       }
     }
-    stage ('Build & Test') {
-      parallel {
-        stage ('GCC 4.8') {
-          agent { label 'Linux && gcc4.8' }
-          steps { unixBuild() }
-        }
-        stage ('GCC 4.9') {
-          agent { label 'Linux && gcc4.9' }
-          steps { unixBuild() }
-        }
-        stage ('GCC 5') {
-          agent { label 'Linux && gcc5.1' }
-          steps { unixBuild() }
-        }
-        stage ('GCC 6') {
-          agent { label 'Linux && gcc6.3' }
-          steps { unixBuild() }
-        }
-        stage ('GCC 7') {
-          agent { label 'Linux && gcc7.2' }
-          steps { unixBuild() }
-        }
-        stage ('Clang on Linux') {
-          agent { label 'Linux && clang' }
-          steps { unixBuild() }
-        }
-        stage ('Clang on Mac') {
-          agent { label 'macOS && clang' }
-          steps { unixBuild() }
-        }
-        stage ('GCC on Mac') {
-          agent { label 'macOS && gcc' }
-          steps { unixBuild('Debug') }
-        }
-        stage ('FreeBSD') {
-          agent { label 'FreeBSD' }
-          steps { unixBuild() }
-        }
-        stage('Leak Sanitizer') {
-          agent { label 'Linux && LeakSanitizer' }
-          steps { unixBuild() }
-        }
-        stage('Logging') {
-          agent { label 'Linux' }
-          steps { unixBuild('Debug', '-DCAF_LOG_LEVEL=4') }
-        }
-        stage('Release') {
-          agent { label 'Linux' }
-          steps { unixBuild('Release') }
-        }
-        stage('Coverage') {
-          agent { label "gcovr" }
-          steps {
-            unixBuild('Debug', '-DCAF_ENABLE_GCOV=yes')
-            dir('caf-sources') {
-              sh 'gcovr -e libcaf_test -e ".*/test/.*" -x -r .. > coverage.xml'
-              cobertura([
-                autoUpdateHealth: false,
-                autoUpdateStability: false,
-                coberturaReportFile: '**/coverage.xml',
-                conditionalCoverageTargets: '70, 0, 0',
-                failUnhealthy: false,
-                failUnstable: false,
-                lineCoverageTargets: '80, 0, 0',
-                maxNumberOfBuilds: 0,
-                methodCoverageTargets: '80, 0, 0',
-                onlyStable: false,
-                sourceEncoding: 'ASCII',
-                zoomCoverageChart: false,
-              ])
-            }
+    // Start builds.
+    stage('Builds') {
+      steps {
+        script {
+          // Create stages for our building everything in our build
+          // matrix in parallel.
+          def xs = [:]
+          buildMatrix.eachWithIndex { entry, index ->
+              def (os, settings) = entry
+              settings['tools'].eachWithIndex { tool, toolIndex ->
+                  def labelExpr = "$os && $tool"
+                  def builds = settings['builds']
+                  xs["Build $os [$index:$toolIndex]"] = makeBuildStage(builds, labelExpr, settings)
+              }
           }
-        }
-        stage('Windows (MSVC)') {
-          agent { label "msbuild" }
-          environment {
-            PATH = 'C:\\Windows\\System32;C:\\Program Files\\CMake\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin'
-          }
-          steps { msBuild() }
+          parallel xs
         }
       }
     }
@@ -139,84 +255,5 @@ pipeline {
         to: 'hiesgen;neverlord' // add multiple separated with ';'
       )
     }
-  }
-}
-
-def unixBuild(buildType = 'Debug',
-              buildOpts = '',
-              generator = 'Unix Makefiles',
-              cleanBuild = true) {
-  echo "building on $NODE_NAME"
-  withEnv(["label_exp="+STAGE_NAME.toLowerCase(),
-           "ASAN_OPTIONS=detect_leaks="+(STAGE_NAME.contains("Linux") ? 1 : 0)]) {
-    deleteDir()
-    unstash('caf-sources')
-    dir('caf-sources') {
-      // Configure and build.
-      cmakeBuild([
-        buildDir: 'build',
-        buildType: "$buildType",
-        cleanBuild: cleanBuild,
-        cmakeArgs: "$unixOpts $buildOpts",
-        generator: "$generator",
-        installation: 'cmake in search path',
-        preloadScript: '../cmake/jenkins.cmake',
-        sourceDir: '.',
-        steps: [[args: 'all']],
-      ])
-      // Test.
-      ctest([
-        arguments: '--output-on-failure',
-        installation: 'cmake in search path',
-        workingDir: 'build',
-      ])
-    }
-  }
-}
-
-def msBuild(buildType = 'Debug',
-            buildOpts = '',
-            generator = 'Visual Studio 15 2017',
-            cleanBuild = true) {
-  echo "building on $NODE_NAME"
-  deleteDir()
-  unstash('caf-sources')
-  dir('caf-sources') {
-    // Configure and build.
-    // installation can be either 'cmake auto install' or 'cmake in search path'
-    // cmakeBuild buildDir: 'build', buildType: "$buildType", cleanBuild: cleanBuild, cmakeArgs: "$ms_opts", generator: "$generator", installation: 'cmake in search path', preloadScript: '../cmake/jenkins.cmake', sourceDir: '.', steps: [[args: 'all']]
-    def ret = bat(returnStatus: true,
-              script: """cmake -E make_directory build
-                         cd build
-                         cmake -DCMAKE_buildType=$buildType -G "$generator" $msOpts ..
-                         IF /I "%ERRORLEVEL%" NEQ "0" (
-                           EXIT 1
-                         )
-                         cat build/CMakeCache.txt
-                         EXIT 0""")
-    if (ret) {
-      echo "[!!!] Configure failed!"
-      currentBuild.result = 'FAILURE'
-      return
-    }
-    // bat "echo \"Step: Build for '${tags}'\""
-    ret = bat(returnStatus: true,
-              script: """cd build
-                         cmake --build .
-                         IF /I "%ERRORLEVEL%" NEQ "0" (
-                           EXIT 1
-                         )
-                         EXIT 0""")
-    if (ret) {
-      echo "[!!!] Build failed!"
-      currentBuild.result = 'FAILURE'
-      return
-    }
-    // Test.
-    ctest([
-      arguments: '--output-on-failure',
-      installation: 'cmake auto install',
-      workingDir: 'build',
-    ])
   }
 }
