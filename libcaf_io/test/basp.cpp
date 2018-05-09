@@ -52,7 +52,7 @@ constexpr uint64_t no_operation_data = 0;
 
 constexpr auto basp_atom = caf::atom("BASP");
 constexpr auto spawn_serv_atom = caf::atom("SpawnServ");
-constexpr auto config_serv_atom = caf::atom("ConfigServ");
+constexpr auto peer_serv_atom = caf::atom("PeerServ");
 
 } // namespace <anonymous>
 
@@ -749,7 +749,7 @@ CAF_TEST(read_address_after_handshake) {
   auto& addrs = instance().tbl().local_addresses();
   connect_node(mars(), ax, self()->id(), std::set<string>{}, addrs);
   CAF_MESSAGE("Look for mars address information in our config server");
-  auto config_server = sys.registry().get(config_serv_atom);
+  auto config_server = sys.registry().get(peer_serv_atom);
   self()->send(actor_cast<actor>(config_server), get_atom::value,
                to_string(mars().id));
   sched.run();
