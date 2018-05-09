@@ -32,7 +32,8 @@ outbound_path::outbound_path(stream_slot sender_slot,
       next_batch_id(1),
       open_credit(0),
       desired_batch_size(50),
-      next_ack_id(1) {
+      next_ack_id(1),
+      closing(false) {
   // nop
 }
 

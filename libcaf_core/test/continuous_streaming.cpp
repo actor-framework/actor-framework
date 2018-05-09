@@ -132,6 +132,9 @@ TESTEE(stream_multiplexer) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       return self->state.stage->add_inbound_path(in);
     },
+    [=](close_atom, stream_slot slot) {
+      self->state.stage.out().close(slot);
+    },
   };
 }
 
@@ -160,6 +163,32 @@ CAF_TEST(depth_3_pipeline_with_fork) {
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
   run_exhaustively();
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk1).state.x, 1275);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk2).state.x, 1275);
+  self->send_exit(stg, exit_reason::kill);
+}
+
+CAF_TEST(depth_3_pipeline_with_fork) {
+  auto src = sys.spawn(file_reader, 100000u);
+  auto stg = sys.spawn(stream_multiplexer);
+  auto snk1 = sys.spawn(sum_up);
+  auto snk2 = sys.spawn(sum_up);
+  auto& st = deref<stream_multiplexer_actor>(stg).state;
+  CAF_MESSAGE("connect sinks to the stage (fork)");
+  self->send(snk1, join_atom::value, stg);
+  self->send(snk2, join_atom::value, stg);
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
+  CAF_MESSAGE("connect source to the stage (fork)");
+  self->send(stg * src, "numbers.txt");
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
+  CAF_MESSAGE("run until sink 1 received at least 50 items");
+  auto pred = [&] { return deref<sum_up_actor>(snk1).state.x < 1275; };
+  sched.run_dispatch_loop(pred, streaming_cycle);
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk1).state.x, 1275);

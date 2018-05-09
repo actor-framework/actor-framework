@@ -80,21 +80,47 @@ bool downstream_manager::remove_path(stream_slot, error, bool) noexcept {
   return false;
 }
 
+downstream_manager::const_path_ptr
+downstream_manager::path(stream_slot slot) const noexcept {
+  // The `const` is restored when returning the pointer.
+  return const_cast<downstream_manager&>(*this).path(slot);
+}
+
 auto downstream_manager::path(stream_slot) noexcept -> path_ptr {
   return nullptr;
 }
 
 bool downstream_manager::clean() const noexcept {
   auto pred = [](const outbound_path& x) {
-    return x.next_batch_id == x.next_ack_id;
+    return x.clean();
   };
   return buffered() == 0 && all_paths(pred);
 }
 
+bool downstream_manager::clean(stream_slot slot) const noexcept {
+  auto ptr = path(slot);
+  return ptr != nullptr ? buffered(slot) == 0 && ptr->clean() : false;
+}
+
 void downstream_manager::close() {
   CAF_LOG_TRACE("");
-  for_each_path([&](outbound_path& x) { about_to_erase(&x, false, nullptr); });
-  clear_paths();
+  if (clean()) {
+    for_each_path([&](outbound_path& x) { about_to_erase(&x, false, nullptr); });
+    clear_paths();
+  } else {
+    for_each_path([&](outbound_path& x) { x.closing = true; });
+  }
+}
+
+void downstream_manager::close(stream_slot slot) {
+  CAF_LOG_TRACE(CAF_ARG(slot));
+  if (clean(slot))
+    remove_path(slot, none, false);
+  else {
+    auto ptr = path(slot);
+    if (ptr != nullptr)
+      ptr->closing = true;
+  }
 }
 
 void downstream_manager::abort(error reason) {
@@ -145,6 +171,10 @@ size_t downstream_manager::capacity() const noexcept {
 }
 
 size_t downstream_manager::buffered() const noexcept {
+  return 0;
+}
+
+size_t downstream_manager::buffered(stream_slot) const noexcept {
   return 0;
 }
 
