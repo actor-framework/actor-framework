@@ -109,39 +109,39 @@ def buildSteps(buildType, cmakeArgs) {
     if (STAGE_NAME.contains('Windows')) {
       echo "Windows build on $NODE_NAME"
       withEnv(['PATH=C:\\Windows\\System32;C:\\Program Files\\CMake\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin']) {
-          // Configure and build.
-          def ret = bat(returnStatus: true,
-                    script: """cmake -E make_directory build
-                               cd build
-                               cmake -D CMAKE_BUILD_TYPE=$buildType -G "Visual Studio 15 2017" $cmakeArgs $msOpts ..
-                               IF /I "%ERRORLEVEL%" NEQ "0" (
-                                 EXIT 1
-                               )
-                               EXIT 0""")
-          if (ret) {
-            echo "[!!!] Configure failed!"
-            currentBuild.result = 'FAILURE'
-            return
-          }
-          // bat "echo \"Step: Build for '${tags}'\""
-          ret = bat(returnStatus: true,
-                    script: """cd build
-                               cmake --build .
-                               IF /I "%ERRORLEVEL%" NEQ "0" (
-                                 EXIT 1
-                               )
-                               EXIT 0""")
-          if (ret) {
-            echo "[!!!] Build failed!"
-            currentBuild.result = 'FAILURE'
-            return
-          }
-          // Test.
-          ctest([
-            arguments: '--output-on-failure',
-            installation: 'cmake auto install',
-            workingDir: 'build',
-          ])
+      // Configure and build.
+      def ret = bat(returnStatus: true,
+                script: """cmake -E make_directory build
+                           cd build
+                           cmake -D CMAKE_BUILD_TYPE=$buildType -G "Visual Studio 15 2017" $cmakeArgs $msOpts ..
+                           IF /I "%ERRORLEVEL%" NEQ "0" (
+                             EXIT 1
+                           )
+                           EXIT 0""")
+      if (ret) {
+        echo "[!!!] Configure failed!"
+        currentBuild.result = 'FAILURE'
+        return
+      }
+      // bat "echo \"Step: Build for '${tags}'\""
+      ret = bat(returnStatus: true,
+                script: """cd build
+                           cmake --build .
+                           IF /I "%ERRORLEVEL%" NEQ "0" (
+                             EXIT 1
+                           )
+                           EXIT 0""")
+      if (ret) {
+        echo "[!!!] Build failed!"
+        currentBuild.result = 'FAILURE'
+        return
+      }
+      // Test.
+      ctest([
+        arguments: '--output-on-failure',
+        installation: 'cmake auto install',
+        workingDir: 'build',
+      ])
       }
     } else {
       echo "Unix build on $NODE_NAME"
@@ -171,28 +171,22 @@ def buildSteps(buildType, cmakeArgs) {
 }
 
 // Builds a stage for given builds. Results in a parallel stage `if builds.size() > 1`.
-def makeBuildStage(builds, lblExpr, settings) {
-  if (builds.size() == 1) {
-    def buildType = builds[0]
-    return {
-      node(lblExpr) {
-        stage("$lblExpr: $buildType") {
-          withEnv(buildEnvironments[lblExpr] ?: []) {
-            buildSteps(buildType, settings['cmakeArgs'] ?: '')
-            (settings['extraSteps'] ?: []).each { fun -> "$fun"() }
+def makeBuildStages(matrixIndex, builds, lblExpr, settings) {
+  builds.collectEntries { buildType ->
+    def id = "$matrixIndex $lblExpr: $buildType"
+    [
+      (id):
+      {
+        node(lblExpr) {
+          stage(id) {
+            withEnv(buildEnvironments[lblExpr] ?: []) {
+              buildSteps(buildType, settings['cmakeArgs'] ?: '')
+              (settings['extraSteps'] ?: []).each { fun -> "$fun"() }
+            }
           }
         }
       }
-    }
-  }
-  return {
-    node('master') {
-      stage("$lblExpr: Fan Out") {
-        parallel builds.collectEntries { buildType ->
-          ["$lblExpr: $buildType": makeBuildStage([buildType], lblExpr, settings)]
-        }
-      }
-    }
+    ]
   }
 }
 
@@ -220,15 +214,16 @@ pipeline {
     stage('Builds') {
       steps {
         script {
-          // Create stages for our building everything in our build
-          // matrix in parallel.
+          // Create stages for building everything in our build matrix in
+          // parallel.
           def xs = [:]
           buildMatrix.eachWithIndex { entry, index ->
               def (os, settings) = entry
               settings['tools'].eachWithIndex { tool, toolIndex ->
-                  def labelExpr = "$os && $tool"
-                  def builds = settings['builds']
-                  xs["Build $os [$index:$toolIndex]"] = makeBuildStage(builds, labelExpr, settings)
+                def matrixIndex = "[$index:$toolIndex]"
+                def builds = settings['builds']
+                def labelExpr = "$os && $tool"
+                xs << makeBuildStages(matrixIndex, builds, labelExpr, settings)
               }
           }
           parallel xs
