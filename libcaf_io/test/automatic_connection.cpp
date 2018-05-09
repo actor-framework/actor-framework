@@ -215,13 +215,13 @@ CAF_TEST(break_triangle_simple_tcp) {
   {
     simple_config conf;
     actor_system mars(conf);
-
+    // Earth.
     CAF_MESSAGE("setting up Earth");
     on_earth = earth.spawn(test_actor, "Earth", false);
     auto earth_port = earth.middleman().publish(on_earth, 0);
     CAF_REQUIRE(earth_port);
     CAF_MESSAGE("Earth reachable via " << *earth_port);
-
+    // Mars.
     CAF_MESSAGE("setting up Mars");
     auto from_earth = mars.middleman().remote_actor("localhost", *earth_port);
     CAF_REQUIRE(from_earth);
@@ -230,17 +230,19 @@ CAF_TEST(break_triangle_simple_tcp) {
     auto mars_port = mars.middleman().publish(on_mars, 0);
     CAF_REQUIRE(mars_port);
     CAF_MESSAGE("Mars reachable via " << *mars_port);
-
+    // Jupiter.
     CAF_MESSAGE("setting up Jupiter");
     auto from_mars = jupiter.middleman().remote_actor("localhost", *mars_port);
     CAF_REQUIRE(from_mars);
     on_jupiter = jupiter.spawn(test_actor, "Jupiter", false);
     anon_send(on_jupiter, set_atom::value, *from_mars);
-
+    // Trigger the connection setup.
     CAF_MESSAGE("forwarding an actor from Jupiter to Earth via Mars");
     anon_send(on_jupiter, begin_atom::value);
     mars.await_all_actors_done();
+    // Leaving the scope will shutdown Mars.
   }
+  // Let the remaining nodes communicate.
   anon_send(on_earth, msg_atom::value);
   jupiter.await_all_actors_done();
   earth.await_all_actors_done();
@@ -254,7 +256,7 @@ CAF_TEST(build_triangle_tcp) {
   CAF_MESSAGE("Earth  : " << to_string(earth.sys.node()));
   CAF_MESSAGE("Mars   : " << to_string(mars.sys.node()));
   CAF_MESSAGE("Jupiter: " << to_string(jupiter.sys.node()));
-
+  // Earth.
   CAF_MESSAGE("setting up Earth");
   auto on_earth = earth.sys.spawn(test_actor, "Earth", true);
   CAF_MESSAGE("run initialization code");
@@ -263,7 +265,7 @@ CAF_TEST(build_triangle_tcp) {
   prepare_connection(earth, mars, "earth", port_earth);
   CAF_MESSAGE("publish dummy on earth");
   earth.publish(on_earth, port_earth);
-
+  // Mars.
   CAF_MESSAGE("setting up Mars");
   auto from_earth = mars.remote_actor("earth", port_earth);
   CAF_REQUIRE(from_earth);
@@ -275,21 +277,20 @@ CAF_TEST(build_triangle_tcp) {
   prepare_connection(mars, jupiter, "mars", port_mars);
   CAF_MESSAGE("publish dummy on mars");
   mars.publish(on_mars, port_mars);
-
+  // Jupiter
   CAF_MESSAGE("setting up Jupiter");
   auto from_mars = jupiter.remote_actor("mars", port_mars);
   CAF_REQUIRE(from_mars);
   auto on_jupiter = jupiter.sys.spawn(test_actor, "Jupiter", true);
   anon_send(on_jupiter, set_atom::value, from_mars);
   exec_all();
-
   // This handle will be created by the test multiplexer for the automatically
   // opened socket when automatic connections are enabled.
   auto hdl_jupiter = accept_handle::from_int(std::numeric_limits<int64_t>::max());
   // Prepare automatic connection between Jupiter and Earth.
   prepare_connection(jupiter, earth, "jupiter", port_jupiter, hdl_jupiter);
   // Add the address information for this test to the config server on Mars.
-  auto mars_config_server = mars.sys.registry().get(atom("ConfigServ"));
+  auto mars_config_server = mars.sys.registry().get(atom("PeerServ"));
   network::address_listing interfaces{
     {network::protocol::ipv4, std::vector<std::string>{"jupiter"}}
   };
@@ -298,7 +299,7 @@ CAF_TEST(build_triangle_tcp) {
   };
   anon_send(actor_cast<actor>(mars_config_server), put_atom::value,
             to_string(jupiter.sys.node()), make_message(addrs));
-
+  // Trigger the automatic connection setup.
   CAF_MESSAGE("forwarding an actor from Jupiter to Earth via Mars");
   anon_send(on_jupiter, begin_atom::value);
   exec_all();
@@ -309,7 +310,7 @@ CAF_TEST(break_triangle_tcp)  {
   CAF_MESSAGE("Mars   : " << to_string(mars.sys.node()));
   CAF_MESSAGE("Jupiter: " << to_string(jupiter.sys.node()));
   connection_handle em, me, mj, jm;
-
+  // Earth.
   CAF_MESSAGE("setting up Earth");
   auto on_earth = earth.sys.spawn(test_actor, "Earth", false);
   CAF_MESSAGE("run initialization code");
@@ -318,7 +319,7 @@ CAF_TEST(break_triangle_tcp)  {
   std::tie(em, me) = prepare_connection(earth, mars, "earth", port_earth);
   CAF_MESSAGE("publish dummy on earth");
   earth.publish(on_earth, port_earth);
-
+  // Mars.
   CAF_MESSAGE("setting up Mars");
   auto from_earth = mars.remote_actor("earth", port_earth);
   CAF_REQUIRE(from_earth);
@@ -330,21 +331,20 @@ CAF_TEST(break_triangle_tcp)  {
   std::tie(mj, jm) = prepare_connection(mars, jupiter, "mars", port_mars);
   CAF_MESSAGE("publish dummy on mars");
   mars.publish(on_mars, port_mars);
-
+  // Jupiter.
   CAF_MESSAGE("setting up Jupiter");
   auto from_mars = jupiter.remote_actor("mars", port_mars);
   CAF_REQUIRE(from_mars);
   auto on_jupiter = jupiter.sys.spawn(test_actor, "Jupiter", false);
   anon_send(on_jupiter, set_atom::value, from_mars);
   exec_all();
-
   // This handle will be created by the test multiplexer for the automatically
   // opened socket when automatic connections are enabled.
   auto hdl_jupiter = accept_handle::from_int(std::numeric_limits<int64_t>::max());
   // Prepare automatic connection between Jupiter and Earth.
   prepare_connection(jupiter, earth, "jupiter", port_jupiter, hdl_jupiter);
   // Add the address information for this test to the config server on Mars.
-  auto mars_config_server = mars.sys.registry().get(atom("ConfigServ"));
+  auto mars_config_server = mars.sys.registry().get(atom("PeerServ"));
   network::address_listing interfaces{
     {network::protocol::ipv4, std::vector<std::string>{"jupiter"}}
   };
@@ -353,24 +353,20 @@ CAF_TEST(break_triangle_tcp)  {
   };
   anon_send(actor_cast<actor>(mars_config_server), put_atom::value,
             to_string(jupiter.sys.node()), make_message(addrs));
-
+  // Trigger the automatic connection setup between the edge nodes.
   CAF_MESSAGE("forwarding an actor from Jupiter to Earth via Mars");
   anon_send(on_jupiter, begin_atom::value);
   exec_all();
-
-  // TODO: Shut everything the intermediate node
-  // - send disconnect messages (i.e., detach the related scribes)
-  // - shutdown the broker
-  // - do something about the scribes?
+  // Shutdown the connections to the intermediate node.
   earth.mpx.detach(em, true);
   mars.mpx.detach(me, true);
   mars.mpx.detach(mj, true);
   jupiter.mpx.detach(jm, true);
   exec_all();
-
+  // Shutdown its basp broker.
   anon_send_exit(mars.basp, exit_reason::kill);
   exec_all();
-
+  // Let the remaining nodes communicate.
   anon_send(on_earth, msg_atom::value);
   exec_all();
 }
