@@ -215,7 +215,7 @@ behavior peer_serv_impl(stateful_actor<peer_state>* self) {
       unsubscribe_all(actor_cast<actor>(std::move(ptr)));
   });
   return {
-    // set a key/value pair
+    // Set a key/value pair.
     [=](put_atom, const std::string& key, message& msg) {
       CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(msg));
       if (key == wildcard || key.empty())
@@ -223,7 +223,7 @@ behavior peer_serv_impl(stateful_actor<peer_state>* self) {
       auto& vp = self->state.data[key];
       vp.first = std::move(msg);
       for (auto& subscriber_ptr : vp.second) {
-        // we never put a nullptr in our map
+        // We never put a nullptr in our map.
         auto subscriber = actor_cast<actor>(subscriber_ptr);
         if (subscriber != self->current_sender()) {
           self->send(subscriber, key, vp.first);
@@ -232,29 +232,30 @@ behavior peer_serv_impl(stateful_actor<peer_state>* self) {
       }
       self->state.data[key].second.clear();
     },
-    // get a key/value pair
+    // Get a key/value pair.
     [=](get_atom, std::string& key) {
-      auto subscriber = actor_cast<strong_actor_ptr>(self->current_sender());
-      CAF_LOG_TRACE(CAF_ARG(key));
-      // Get the value ...
-      if (key == wildcard || key.empty())
-        return;
-      auto d = self->state.data.find(key);
-      if (d != self->state.data.end()) {
-        self->send(subscriber, std::move(key), d->second.first);
-        return;
-      }
-      // ... or sub if it is not available.
-      CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(subscriber));
-      if (subscriber) {
-        self->state.data[key].second.insert(subscriber);
+      auto sender = actor_cast<strong_actor_ptr>(self->current_sender());
+      if (sender) {
+        CAF_LOG_TRACE(CAF_ARG(key));
+        // Get the value ...
+        if (key == wildcard || key.empty())
+          return;
+        auto d = self->state.data.find(key);
+        if (d != self->state.data.end()) {
+          self->send(actor_cast<actor>(sender), std::move(key),
+                     d->second.first);
+          return;
+        }
+        // ... or sub if it is not available.
+        CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(sender));
+        self->state.data[key].second.insert(sender);
         auto& subscribers = self->state.subscribers;
-        auto s = subscribers.find(subscriber);
+        auto s = subscribers.find(sender);
         if (s != subscribers.end()) {
           s->second.insert(key);
         } else {
-          self->monitor(subscriber);
-          subscribers.emplace(subscriber, peer_state::topic_set{key});
+          self->monitor(sender);
+          subscribers.emplace(sender, peer_state::topic_set{key});
         }
       }
     }
