@@ -60,7 +60,7 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
     },
     after(autoconnect_timeout) >> [=]() {
       CAF_LOG_TRACE(CAF_ARG(""));
-      // nothing heard in about 10 minutes... just call it a day, then
+      // Nothing heard in about 10 minutes... just call it a day, then.
       CAF_LOG_INFO("aborted direct connection attempt after 10min");
       self->quit(exit_reason::user_shutdown);
     }
@@ -76,7 +76,7 @@ bool establish_stream_connection(stateful_actor<connection_helper_state>* self,
     for (auto& addr : kvp.second) {
       auto hdl = mx.new_tcp_scribe(addr, port);
       if (hdl) {
-        // gotcha! send scribe to our BASP broker
+        // Gotcha! Send scribe to our BASP broker
         // to initiate handshake etc.
         CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
         self->send(b, connect_atom::value, *hdl, port);
@@ -96,33 +96,17 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
     self->quit(std::move(dm.reason));
   });
   return {
-    // this config is send from the remote `ConfigServ`
+    // This config is send from the remote `PeerServ`.
     [=](const std::string& item, message& msg) {
       CAF_LOG_TRACE(CAF_ARG(item) << CAF_ARG(msg));
       CAF_LOG_DEBUG("received requested config:" << CAF_ARG(msg));
-      // whatever happens, we are done afterwards
+      if (item.empty() || msg.empty()) {
+        CAF_LOG_DEBUG("skipping empty info");
+        return;
+      }
+      // Whatever happens, we are done afterwards.
       self->quit();
       msg.apply({
-        [&](uint16_t port, network::address_listing& addresses) {
-          if (item == "basp.default-connectivity-tcp") {
-            if (!establish_stream_connection(self, b, port, addresses))
-              CAF_LOG_INFO("could not connect to node");
-          } else if (item == "basp.default-connectivity-udp") {
-            // create new broker to try addresses for communication via UDP
-            if (self->system().config().middleman_detach_utility_actors) {
-              self->system().middleman().spawn_broker<detached + hidden>(
-                datagram_connection_broker, port, std::move(addresses), b, i
-              );
-            } else {
-              self->system().middleman().spawn_broker<hidden>(
-                datagram_connection_broker, port, std::move(addresses), b, i
-              );
-            }
-          } else {
-            CAF_LOG_INFO("aborted direct connection attempt, unknown item: "
-                         << CAF_ARG(item));
-          }
-        },
         [&](basp::routing_table::address_map& addrs) {
           if (addrs.count(network::protocol::tcp) > 0) {
             auto eps = addrs[network::protocol::tcp];
@@ -131,7 +115,7 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
           }
           if (addrs.count(network::protocol::udp) > 0) {
             auto eps = addrs[network::protocol::udp];
-            // create new broker to try addresses for communication via UDP
+            // Create new broker to try addresses for communication via UDP.
             if (self->system().config().middleman_detach_utility_actors) {
               self->system().middleman().spawn_broker<detached + hidden>(
                 datagram_connection_broker, eps.first, std::move(eps.second), b, i
@@ -147,7 +131,7 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
     },
     after(autoconnect_timeout) >> [=] {
       CAF_LOG_TRACE(CAF_ARG(""));
-      // nothing heard in about 10 minutes... just a call it a day, then
+      // Nothing heard in about 10 minutes... just a call it a day, then.
       CAF_LOG_INFO("aborted direct connection attempt after 10min");
       self->quit(exit_reason::user_shutdown);
     }
