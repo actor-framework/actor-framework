@@ -170,6 +170,8 @@ std::vector<iface_info> get_mac_addresses() {
 #include <iterator>
 #include <algorithm>
 
+#pragma comment(lib, "Iphlpapi.lib")
+
 namespace {
 
 constexpr size_t working_buffer_size = 15 * 1024; // 15kb by default
