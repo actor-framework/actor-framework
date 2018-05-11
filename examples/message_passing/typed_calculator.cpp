@@ -32,11 +32,12 @@ calculator_type::behavior_type typed_calculator_fun(calculator_type::pointer) {
 }
 
 class typed_calculator_class : public calculator_type::base {
-protected:
+public:
   typed_calculator_class(actor_config& cfg) : calculator_type::base(cfg) {
     // nop
   }
 
+protected:
   behavior_type make_behavior() override {
     return {
       [](plus_atom, int x, int y) {
@@ -52,10 +53,10 @@ protected:
 void tester(event_based_actor* self, const calculator_type& testee) {
   self->link_to(testee);
   // first test: 2 + 1 = 3
-  self->request(testee, plus_atom::value, 2, 1).then(
+  self->request(testee, infinite, plus_atom::value, 2, 1).then(
     [=](result_atom, int r1) {
       // second test: 2 - 1 = 1
-      self->request(testee, minus_atom::value, 2, 1).then(
+      self->request(testee, infinite, minus_atom::value, 2, 1).then(
         [=](result_atom, int r2) {
           // both tests succeeded
           if (r1 == 3 && r2 == 1) {
@@ -74,13 +75,14 @@ void tester(event_based_actor* self, const calculator_type& testee) {
   );
 }
 
-} // namespace <anonymous>
-
-int main() {
-  actor_system system;
+void caf_main(actor_system& system) {
   // test function-based impl
   system.spawn(tester, system.spawn(typed_calculator_fun));
   system.await_all_actors_done();
   // test class-based impl
   system.spawn(tester, system.spawn<typed_calculator_class>());
 }
+
+} // namespace <anonymous>
+
+CAF_MAIN()

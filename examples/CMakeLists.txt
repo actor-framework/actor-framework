@@ -21,14 +21,15 @@ add(. aout)
 add(. hello_world)
 
 # basic message passing primitives
-add(message_passing cell)
-add(message_passing divider)
-add(message_passing request)
-add(message_passing promises)
 add(message_passing calculator)
-add(message_passing delegating)
-add(message_passing fixed_stack)
+add(message_passing cell)
 add(message_passing dancing_kirby)
+add(message_passing delegating)
+add(message_passing divider)
+add(message_passing fixed_stack)
+add(message_passing promises)
+add(message_passing request)
+add(message_passing typed_calculator)
 
 # dynamic behavior changes using 'become'
 add(dynamic_behavior skip_messages)
