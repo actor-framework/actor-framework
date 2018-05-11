@@ -110,6 +110,7 @@ std::vector<iface_info> get_mac_addresses() {
   ifc.ifc_buf = buf;
   if (ioctl(sck, SIOCGIFCONF, &ifc) < 0) {
     perror("ioctl(SIOCGIFCONF)");
+    close(sck);
     return {};
   }
   std::vector<iface_info> result;
@@ -124,6 +125,7 @@ std::vector<iface_info> get_mac_addresses() {
     // get mac address
     if (ioctl(sck, SIOCGIFHWADDR, item) < 0) {
       perror("ioctl(SIOCGIFHWADDR)");
+      close(sck);
       return {};
     }
     std::ostringstream oss;
@@ -140,6 +142,7 @@ std::vector<iface_info> get_mac_addresses() {
       result.push_back({item->ifr_name, std::move(addr)});
     }
   }
+  close(sck);
   return result;
 }
 
