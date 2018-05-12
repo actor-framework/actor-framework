@@ -92,6 +92,9 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
     path->open_credit += x.new_capacity;
     path->desired_batch_size = x.desired_batch_size;
     path->next_ack_id = x.acknowledged_id + 1;
+    // Gravefully remove path after receiving its final ACK.
+    if (path->closing && out().clean(slots.receiver))
+      out().remove_path(slots.receiver, none, false);
     push();
   }
 }

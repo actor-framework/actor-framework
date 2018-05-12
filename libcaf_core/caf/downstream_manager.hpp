@@ -39,6 +39,9 @@ public:
   /// Pointer to an outbound path.
   using path_ptr = path_type*;
 
+  /// Pointer to an immutable outbound path.
+  using const_path_ptr = const path_type*;
+
   /// Unique pointer to an outbound path.
   using unique_path_ptr = std::unique_ptr<path_type>;
 
@@ -95,6 +98,9 @@ public:
     for_each_path_impl(g);
   }
 
+  /// Returns all used slots.
+  std::vector<stream_slot> path_slots();
+
   /// Checks whether `predicate` holds true for all paths.
   template <class Predicate>
   bool all_paths(Predicate predicate) const noexcept {
@@ -120,19 +126,31 @@ public:
   /// @returns The added path on success, `nullptr` otherwise.
   path_ptr add_path(stream_slot slot, strong_actor_ptr target);
 
-  /// Removes a path from the manager and returns it.
+  /// Removes a path from the manager.
   virtual bool remove_path(stream_slot slot, error reason,
                            bool silent) noexcept;
 
   /// Returns the path associated to `slot` or `nullptr`.
   virtual path_ptr path(stream_slot slot) noexcept;
 
-  /// Returns `true` if there is no data pending and no unacknowledged batch on
-  /// any path.
+  /// Returns the path associated to `slot` or `nullptr`.
+  const_path_ptr path(stream_slot slot) const noexcept;
+
+  /// Returns `true` if there is no data pending and all batches are
+  /// acknowledged batch on all paths.
   bool clean() const noexcept;
+
+  /// Returns `true` if `slot` is unknown or if there is no data pending and
+  /// all batches are acknowledged on `slot`. The default implementation
+  /// returns `false` for all paths, even if `clean()` return `true`.
+  bool clean(stream_slot slot) const noexcept;
 
   /// Removes all paths gracefully.
   virtual void close();
+
+  /// Removes path `slot` gracefully by sending pending batches before removing
+  /// it. Effectively calls `path(slot)->closing = true`.
+  virtual void close(stream_slot slot);
 
   /// Removes all paths with an error message.
   virtual void abort(error reason);
@@ -164,6 +182,9 @@ public:
 
   /// Queries the size of the output buffer.
   virtual size_t buffered() const noexcept;
+
+  /// Queries an estimate of the size of the output buffer for `slot`.
+  virtual size_t buffered(stream_slot slot) const noexcept;
 
   /// Queries whether the manager cannot make any progress, because its buffer
   /// is full and no more credit is available.

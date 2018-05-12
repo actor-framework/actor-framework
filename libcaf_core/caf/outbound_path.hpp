@@ -140,6 +140,11 @@ public:
     return slots.receiver == invalid_stream_slot;
   }
 
+  /// Returns whether no pending ACKs exist.
+  inline bool clean() const noexcept {
+    return next_batch_id == next_ack_id;
+  }
+
   // -- member variables -------------------------------------------------------
 
   /// Slot IDs for sender (self) and receiver (hdl).
@@ -160,6 +165,13 @@ public:
   /// ID of the first unacknowledged batch. Note that CAF uses accumulative
   /// ACKs, i.e., receiving an ACK with a higher ID is not an error.
   int64_t next_ack_id;
+
+  /// Stores whether an outbound path is marked for removal. The
+  /// `downstream_manger` no longer sends new batches to a closing path, but
+  /// buffered batches are still shipped. The owning `stream_manager` removes
+  /// the path when receiving an `upstream_msg::ack_batch` and no pending
+  /// batches for this path exist.
+  bool closing;
 };
 
 /// @relates outbound_path

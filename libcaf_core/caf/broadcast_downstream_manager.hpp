@@ -74,6 +74,12 @@ public:
     return central_buf + max_path_buf;
   }
 
+  size_t buffered(stream_slot slot) const noexcept override {
+    auto i = state_map_.find(slot);
+    return this->buf_.size()
+           + (i != state_map_.end() ? i->second.buf.size() : 0u);
+  }
+
   /// Sets the filter for `slot` to `filter`. Inserts a new element if `slot`
   /// is a new path.
   void set_filter(stream_slot slot, filter_type filter) {
@@ -220,31 +226,30 @@ private:
       return;
     // Calculate the chunk size, i.e., how many more items we can put to our
     // caches at the most.
-    struct get_credit {
-      inline size_t operator()(typename map_type::value_type& x) {
-        return static_cast<size_t>(x.second->open_credit);
-      }
+    auto not_closing = [&](typename map_type::value_type& x,
+                           typename state_map_type::value_type&) {
+      return !x.second->closing;
     };
-    struct get_cache_size {
-      inline size_t operator()(typename state_map_type::value_type& x) {
-        return x.second.buf.size();
-      }
+    // Returns the minimum of `interim` and `get_credit(x) - get_cache_size(y)`.
+    auto f = [&](size_t interim, typename map_type::value_type& x,
+                 typename state_map_type::value_type& y) {
+      auto credit = static_cast<size_t>(x.second->open_credit);
+      auto cache_size = y.second.buf.size();
+      return std::min(interim, credit > cache_size ? credit - cache_size : 0u);
     };
-    auto f = [](size_t x, size_t credit, size_t cache_size) {
-      auto y = credit > cache_size ? credit - cache_size : 0u;
-      return x < y ? x : y;
-    };
-    auto chunk_size = detail::zip_fold(
-      f, std::numeric_limits<size_t>::max(),
-      detail::make_container_view<get_credit>(this->paths_.container()),
-      detail::make_container_view<get_cache_size>(state_map_.container()));
+    auto chunk_size = detail::zip_fold_if(f, not_closing,
+                                          std::numeric_limits<size_t>::max(),
+                                          this->paths_.container(),
+                                          state_map_.container());
+
     auto chunk = this->get_chunk(chunk_size);
     if (chunk.empty()) {
       auto g = [&](typename map_type::value_type& x,
                    typename state_map_type::value_type& y) {
         x.second->emit_batches(this->self(), y.second.buf, force_underfull);
       };
-      detail::zip_foreach(g, this->paths_.container(), state_map_.container());
+      detail::zip_foreach_if(g, not_closing, this->paths_.container(),
+                             state_map_.container());
     } else {
       auto g = [&](typename map_type::value_type& x,
                    typename state_map_type::value_type& y) {
@@ -259,7 +264,8 @@ private:
         }
         x.second->emit_batches(this->self(), st.buf, force_underfull);
       };
-      detail::zip_foreach(g, this->paths_.container(), state_map_.container());
+      detail::zip_foreach_if(g, not_closing, this->paths_.container(),
+                             state_map_.container());
     }
   }
 

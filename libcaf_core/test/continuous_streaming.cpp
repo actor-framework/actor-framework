@@ -34,10 +34,18 @@ using namespace caf;
 
 namespace {
 
+/// Returns the sum of natural numbers up until `n`, i.e., 1 + 2 + ... + n.
+int sum(int n) {
+  return (n * (n + 1)) / 2;
+}
+
 TESTEE_SETUP();
 
+TESTEE_STATE(file_reader) {
+  std::vector<int> buf;
+};
+
 VARARGS_TESTEE(file_reader, size_t buf_size) {
-  using buf = std::deque<int>;
   return {
     [=](string& fname) -> output_stream<int, string> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
@@ -46,12 +54,14 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
         // forward file name in handshake to next stage
         std::forward_as_tuple(std::move(fname)),
         // initialize state
-        [=](buf& xs) {
+        [=](unit_t&) {
+          auto& xs = self->state.buf;
           xs.resize(buf_size);
           std::iota(xs.begin(), xs.end(), 1);
         },
         // get next element
-        [](buf& xs, downstream<int>& out, size_t num) {
+        [=](unit_t&, downstream<int>& out, size_t num) {
+          auto& xs = self->state.buf;
           CAF_MESSAGE("push " << num << " messages downstream");
           auto n = std::min(num, xs.size());
           for (size_t i = 0; i < n; ++i)
@@ -59,8 +69,8 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
           xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
         },
         // check whether we reached the end
-        [=](const buf& xs) {
-          if (xs.empty()) {
+        [=](const unit_t&) {
+          if (self->state.buf.empty()) {
             CAF_MESSAGE(self->name() << " is done");
             return true;
           }
@@ -132,6 +142,10 @@ TESTEE(stream_multiplexer) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       return self->state.stage->add_inbound_path(in);
     },
+    [=](close_atom, int sink_index) {
+      auto& out = self->state.stage->out();
+      out.close(out.path_slots().at(static_cast<size_t>(sink_index)));
+    },
   };
 }
 
@@ -187,6 +201,46 @@ CAF_TEST(depth_3_pipeline_with_join) {
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 2550);
+  self->send_exit(stg, exit_reason::kill);
+}
+
+CAF_TEST(closing_downstreams_before_end_of_stream) {
+  auto src = sys.spawn(file_reader, 10000u);
+  auto stg = sys.spawn(stream_multiplexer);
+  auto snk1 = sys.spawn(sum_up);
+  auto snk2 = sys.spawn(sum_up);
+  auto& st = deref<stream_multiplexer_actor>(stg).state;
+  CAF_MESSAGE("connect sinks to the stage (fork)");
+  self->send(snk1, join_atom::value, stg);
+  self->send(snk2, join_atom::value, stg);
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
+  CAF_MESSAGE("connect source to the stage (fork)");
+  self->send(stg * src, "numbers.txt");
+  sched.run();
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
+  CAF_MESSAGE("do a single round of credit");
+  sched.clock().current_time += streaming_cycle;
+  sched.dispatch();
+  sched.run();
+  CAF_MESSAGE("make sure the stream isn't done yet");
+  CAF_REQUIRE(!deref<file_reader_actor>(src).state.buf.empty());
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
+  CAF_MESSAGE("get the next not-yet-buffered integer");
+  auto next_pending = deref<file_reader_actor>(src).state.buf.front();
+  CAF_REQUIRE_GREATER(next_pending, 0);
+  auto sink1_result = sum(next_pending - 1);
+  CAF_MESSAGE("gracefully close sink 1, next pending: " << next_pending);
+  self->send(stg, close_atom::value, 0);
+  expect((atom_value, int), from(self).to(stg));
+  CAF_MESSAGE("ship remaining elements");
+  run_exhaustively();
+  CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
+  CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);
+  CAF_CHECK_LESS(deref<sum_up_actor>(snk1).state.x, sink1_result);
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk2).state.x, sum(10000));
   self->send_exit(stg, exit_reason::kill);
 }
 

@@ -25,12 +25,22 @@
 namespace caf {
 namespace detail {
 
-/// Like `std::for_each`, but for multiple containers.
+/// Like `std::for_each`, but for multiple containers and filters elements by
+/// predicate.
 /// @pre `x.size() <= y.size()` for each `y` in `xs`
 template <class F, class Container, class... Containers>
 void zip_foreach(F f, Container&& x, Containers&&... xs) {
   for (size_t i = 0; i < x.size(); ++i)
     f(x[i], xs[i]...);
+}
+
+/// Like `std::for_each`, but for multiple containers.
+/// @pre `x.size() <= y.size()` for each `y` in `xs`
+template <class F, class Predicate, class Container, class... Containers>
+void zip_foreach_if(F f, Predicate p, Container&& x, Containers&&... xs) {
+  for (size_t i = 0; i < x.size(); ++i)
+    if (p(x[i], xs[i]...))
+      f(x[i], xs[i]...);
 }
 
 /// Like `std::accumulate`, but for multiple containers.
@@ -39,6 +49,18 @@ template <class F, class T, class Container, class... Containers>
 T zip_fold(F f, T init, Container&& x, Containers&&... xs) {
   for (size_t i = 0; i < x.size(); ++i)
     init = f(init, x[i], xs[i]...);
+  return init;
+}
+
+/// Like `std::accumulate`, but for multiple containers and filters elements by
+/// predicate.
+/// @pre `x.size() <= y.size()` for each `y` in `xs`
+template <class F, class Predicate, class T, class Container,
+          class... Containers>
+T zip_fold_if(F f, Predicate p, T init, Container&& x, Containers&&... xs) {
+  for (size_t i = 0; i < x.size(); ++i)
+    if (p(x[i], xs[i]...))
+      init = f(init, x[i], xs[i]...);
   return init;
 }
 
