@@ -113,12 +113,9 @@ bool downstream_manager::clean(stream_slot slot) const noexcept {
 
 void downstream_manager::close() {
   CAF_LOG_TRACE("");
-  if (clean()) {
-    for_each_path([&](outbound_path& x) { about_to_erase(&x, false, nullptr); });
-    clear_paths();
-  } else {
-    for_each_path([&](outbound_path& x) { x.closing = true; });
-  }
+  auto slots = path_slots();
+  for (auto slot : slots)
+    close(slot);
 }
 
 void downstream_manager::close(stream_slot slot) {
