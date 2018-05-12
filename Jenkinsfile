@@ -48,7 +48,9 @@ buildMatrix = [
   ]],
   // Additional debug build with coverage.
   ['Linux', [
-    cmakeArgs: '-D CAF_ENABLE_GCOV:BOOL=yes',
+    cmakeArgs: '-D CAF_ENABLE_GCOV:BOOL=yes '
+               + '-D CAF_NO_EXCEPTIONS:BOOL=yes '
+               + '-D CAF_FORCE_NO_EXCEPTIONS:BOOL=yes',
     builds: ['debug'],
     tools: ['gcovr'],
     extraSteps: ['coverageReport'],
@@ -109,39 +111,39 @@ def buildSteps(buildType, cmakeArgs) {
     if (STAGE_NAME.contains('Windows')) {
       echo "Windows build on $NODE_NAME"
       withEnv(['PATH=C:\\Windows\\System32;C:\\Program Files\\CMake\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin']) {
-      // Configure and build.
-      def ret = bat(returnStatus: true,
-                script: """cmake -E make_directory build
-                           cd build
-                           cmake -D CMAKE_BUILD_TYPE=$buildType -G "Visual Studio 15 2017" $cmakeArgs $msOpts ..
-                           IF /I "%ERRORLEVEL%" NEQ "0" (
-                             EXIT 1
-                           )
-                           EXIT 0""")
-      if (ret) {
-        echo "[!!!] Configure failed!"
-        currentBuild.result = 'FAILURE'
-        return
-      }
-      // bat "echo \"Step: Build for '${tags}'\""
-      ret = bat(returnStatus: true,
-                script: """cd build
-                           cmake --build .
-                           IF /I "%ERRORLEVEL%" NEQ "0" (
-                             EXIT 1
-                           )
-                           EXIT 0""")
-      if (ret) {
-        echo "[!!!] Build failed!"
-        currentBuild.result = 'FAILURE'
-        return
-      }
-      // Test.
-      ctest([
-        arguments: '--output-on-failure',
-        installation: 'cmake auto install',
-        workingDir: 'build',
-      ])
+          // Configure and build.
+          def ret = bat(returnStatus: true,
+                    script: """cmake -E make_directory build
+                               cd build
+                               cmake -D CMAKE_BUILD_TYPE=$buildType -G "Visual Studio 15 2017" $cmakeArgs $msOpts ..
+                               IF /I "%ERRORLEVEL%" NEQ "0" (
+                                 EXIT 1
+                               )
+                               EXIT 0""")
+          if (ret) {
+            echo "[!!!] Configure failed!"
+            currentBuild.result = 'FAILURE'
+            return
+          }
+          // bat "echo \"Step: Build for '${tags}'\""
+          ret = bat(returnStatus: true,
+                    script: """cd build
+                               cmake --build .
+                               IF /I "%ERRORLEVEL%" NEQ "0" (
+                                 EXIT 1
+                               )
+                               EXIT 0""")
+          if (ret) {
+            echo "[!!!] Build failed!"
+            currentBuild.result = 'FAILURE'
+            return
+          }
+          // Test.
+          ctest([
+            arguments: '--output-on-failure',
+            installation: 'cmake auto install',
+            workingDir: 'build',
+          ])
       }
     } else {
       echo "Unix build on $NODE_NAME"
@@ -252,3 +254,4 @@ pipeline {
     }
   }
 }
+
