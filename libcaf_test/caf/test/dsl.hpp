@@ -578,6 +578,12 @@ struct test_coordinator_fixture {
     sched.run_dispatch_loop(streaming_cycle);
   }
 
+  /// Dispatches messages and timeouts until no activity remains.
+  template <class Predicate>
+  void run_exhaustively_while(Predicate predicate) {
+    sched.run_dispatch_loop(predicate, streaming_cycle);
+  }
+
   template <class T = int>
   caf::expected<T> fetch_result() {
     caf::expected<T> result = caf::error{};
