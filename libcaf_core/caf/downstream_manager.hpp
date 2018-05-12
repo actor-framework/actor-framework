@@ -19,8 +19,10 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "caf/fwd.hpp"
+#include "caf/stream_slot.hpp"
 
 namespace caf {
 

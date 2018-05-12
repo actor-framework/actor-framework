@@ -22,6 +22,7 @@
 #include <memory>
 
 #include "caf/downstream_manager.hpp"
+#include "caf/outbound_path.hpp"
 
 #include "caf/detail/unordered_flat_map.hpp"
 
