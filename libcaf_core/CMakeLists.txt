@@ -46,6 +46,7 @@ set(LIBCAF_CORE_SRCS
   src/downstream_messages.cpp
   src/duration.cpp
   src/dynamic_message_data.cpp
+  src/ec.cpp
   src/error.cpp
   src/event_based_actor.cpp
   src/execution_unit.cpp
