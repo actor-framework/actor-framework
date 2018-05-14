@@ -100,5 +100,19 @@
   ps.code = error_code;                                                        \
   return;
 
+// Makes an unconditional epsiolon transition into another state.
 #define epsilon(target) goto e_##target;
+
+// Makes an epsiolon transition into another state if the `statement` is true.
+#define checked_epsilon(statement, target)                                     \
+  if (statement)                                                               \
+    goto e_##target;
+
+// Transitions into the `target` FSM.
+#define invoke_fsm(fsm_call, target)                                           \
+  fsm_call;                                                                    \
+  if (ps.code > ec::trailing_character)                                        \
+    return;                                                                    \
+  ch = ps.current();                                                           \
+  goto s_##target;
 
