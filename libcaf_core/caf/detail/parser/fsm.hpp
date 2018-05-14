@@ -70,6 +70,11 @@
     goto s_##target;                                                           \
   }
 
+#define default_action(target, statement)                                      \
+  statement;                                                                   \
+  ch = ps.next();                                                              \
+  goto s_##target;
+
 #define checked_action(predicate, target, statement, error_code)               \
   if (predicate(ch)) {                                                         \
     if (statement) {                                                           \
@@ -80,6 +85,16 @@
       return;                                                                  \
     }                                                                          \
   }
+
+#define invalid_input(predicate, error_code)                                   \
+  if (predicate(ch)) {                                                         \
+    ps.code = error_code;                                                      \
+    return;                                                                    \
+  }
+
+#define default_failure(error_code)                                            \
+  ps.code = error_code;                                                        \
+  return;
 
 #define epsilon(target) goto e_##target;
 
