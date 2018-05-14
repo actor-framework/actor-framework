@@ -64,7 +64,6 @@ void read_atom(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   state(read_chars) {
     input(is_char<'\''>, done)
     checked_action(is_legal, read_chars, append(ch), ec::too_many_characters)
-    invalid_input(is_char<'\n'>, ec::unexpected_newline)
   }
   term_state(done) {
     input(is_char<' '>, done)

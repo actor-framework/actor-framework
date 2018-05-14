@@ -18,6 +18,13 @@
 
 #pragma once
 
+#define CAF_FSM_EVAL_MISMATCH_EC                                               \
+  if (mismatch_ec == ec::unexpected_character)                                 \
+    ps.code = ch != '\n' ? mismatch_ec : ec::unexpected_newline;               \
+  else                                                                         \
+    ps.code = mismatch_ec;                                                     \
+  return;
+
 #define start()                                                                \
   char ch = ps.current();                                                      \
   goto s_init;                                                                 \
@@ -28,8 +35,7 @@
     static constexpr ec mismatch_ec = ec::unexpected_character
 
 #define state(name)                                                            \
-  ps.code = mismatch_ec;                                                       \
-  return;                                                                      \
+  CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
   {                                                                            \
     static constexpr ec mismatch_ec = ec::unexpected_character;                \
@@ -39,8 +45,7 @@
     e_##name : __attribute__((unused));
 
 #define term_state(name)                                                       \
-  ps.code = mismatch_ec;                                                       \
-  return;                                                                      \
+  CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
   {                                                                            \
     static constexpr ec mismatch_ec = ec::trailing_character;                  \
@@ -50,8 +55,7 @@
     e_##name : __attribute__((unused));
 
 #define fin()                                                                  \
-  ps.code = mismatch_ec;                                                       \
-  return;                                                                      \
+  CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
   s_fin:                                                                       \
   ps.code = ec::success;                                                       \
