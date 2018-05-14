@@ -32,8 +32,7 @@ namespace caf {
 namespace detail {
 namespace parser {
 
-/// Reads a number, i.e., on success produces either an `int64_t` or a
-/// `double`.
+/// Reads a boolean.
 template <class Iterator, class Sentinel, class Consumer>
 void read_bool(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   bool res = false;
