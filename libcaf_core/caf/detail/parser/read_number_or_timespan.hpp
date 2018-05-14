@@ -1,0 +1,116 @@
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright 2011-2018 Dominik Charousset                                     *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
+
+#pragma once
+
+#include <chrono>
+#include <cstdint>
+#include <string>
+
+#include "caf/none.hpp"
+#include "caf/optional.hpp"
+#include "caf/timestamp.hpp"
+#include "caf/variant.hpp"
+
+#include "caf/detail/scope_guard.hpp"
+
+#include "caf/detail/parser/ec.hpp"
+#include "caf/detail/parser/fsm.hpp"
+#include "caf/detail/parser/is_char.hpp"
+#include "caf/detail/parser/read_number.hpp"
+#include "caf/detail/parser/state.hpp"
+
+namespace caf {
+namespace detail {
+namespace parser {
+
+/// Reads a number or a duration, i.e., on success produces an `int64_t`, a
+/// `double`, or a `timespan`.
+template <class Iterator, class Sentinel, class Consumer>
+void read_number_or_timespan(state<Iterator, Sentinel>& ps,
+                             Consumer& consumer) {
+  using namespace std::chrono;
+  struct interim_consumer {
+    variant<none_t, int64_t, double> interim;
+    void value(int64_t x) {
+      interim = x;
+    }
+    void value(double x) {
+      interim = x;
+    }
+  };
+  optional<timespan> res;
+  interim_consumer ic;
+  auto has_int = [&] { return holds_alternative<int64_t>(ic.interim); };
+  auto has_dbl = [&] { return holds_alternative<double>(ic.interim); };
+  auto get_int = [&] { return get<int64_t>(ic.interim); };
+  auto g = make_scope_guard([&] {
+    if (ps.code <= ec::trailing_character) {
+      if (res != none) {
+        consumer.value(*res);
+      } else if (!holds_alternative<none_t>(ic.interim)) {
+        if (has_int())
+          consumer.value(get_int());
+        else
+          consumer.value(get<double>(ic.interim));
+      }
+    }
+  });
+  start();
+  state(init) {
+    invoke_fsm(read_number(ps, ic), has_number)
+  }
+  term_state(has_number) {
+    checked_epsilon(has_int(), has_integer)
+    checked_epsilon(has_dbl(), has_double)
+  }
+  term_state(has_double) {
+    invalid_input(is_char<'u'>, ec::fractional_timespan)
+    invalid_input(is_char<'n'>, ec::fractional_timespan)
+    invalid_input(is_char<'m'>, ec::fractional_timespan)
+    invalid_input(is_char<'s'>, ec::fractional_timespan)
+  }
+  term_state(has_integer) {
+    input(is_char<'u'>, have_u)
+    input(is_char<'n'>, have_n)
+    input(is_char<'m'>, have_m)
+    action(is_char<'s'>, done, res = seconds(get_int()))
+  }
+  state(have_u) {
+    action(is_char<'s'>, done, res = microseconds(get_int()))
+  }
+  state(have_n) {
+    action(is_char<'s'>, done, res = nanoseconds(get_int()))
+  }
+  state(have_m) {
+    input(is_char<'i'>, have_mi)
+    action(is_char<'s'>, done, res = milliseconds(get_int()))
+  }
+  state(have_mi) {
+    action(is_char<'n'>, done, res = minutes(get_int()))
+  }
+  term_state(done) {
+    // nop
+  }
+  fin();
+}
+
+} // namespace parser
+} // namespace detail
+} // namespace caf
+

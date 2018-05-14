@@ -33,10 +33,10 @@ enum class ec : uint8_t {
   unexpected_eof,
   /// Parser stopped after reading an unexpected character.
   unexpected_character,
-  /// Cannot construct a negative caf::duration.
-  negative_duration,
-  /// Cannot construct a caf::duration with a value exceeding uint32_t.
-  duration_overflow,
+  /// Parsed integer exceeds the number of available bits of a `timespan`.
+  timespan_overflow,
+  /// Tried constructing a `timespan` with from a floating point number.
+  fractional_timespan,
   /// Too many characters for an atom.
   too_many_characters,
   /// Unrecognized character after escaping `\`.
