@@ -32,7 +32,7 @@ using detail::parser::ec;
 
 namespace {
 
-struct atom_parser_consumer {
+struct bool_parser_consumer {
   bool x;
   inline void value(bool y) {
     x = y;
@@ -41,10 +41,10 @@ struct atom_parser_consumer {
 
 using res_t = variant<ec, bool>;
 
-struct atom_parser {
+struct bool_parser {
   res_t operator()(std::string str) {
     detail::parser::state<std::string::iterator> res;
-    atom_parser_consumer f;
+    bool_parser_consumer f;
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_bool(res, f);
@@ -55,7 +55,7 @@ struct atom_parser {
 };
 
 struct fixture {
-  atom_parser p;
+  bool_parser p;
 };
 
 } // namespace <anonymous>
