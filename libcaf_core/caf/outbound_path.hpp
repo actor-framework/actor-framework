@@ -103,7 +103,8 @@ public:
   template <class T>
   void emit_batches(local_actor* self, std::vector<T>& cache,
                     bool force_underfull) {
-    CAF_LOG_TRACE(CAF_ARG(cache) << CAF_ARG(force_underfull));
+    CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(open_credit) << CAF_ARG(cache)
+                  << CAF_ARG(force_underfull));
     if (pending())
       return;
     CAF_ASSERT(desired_batch_size > 0);
