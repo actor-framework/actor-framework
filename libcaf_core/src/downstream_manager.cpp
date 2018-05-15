@@ -73,6 +73,16 @@ std::vector<stream_slot> downstream_manager::path_slots() {
   return xs;
 }
 
+std::vector<stream_slot> downstream_manager::open_path_slots() {
+  std::vector<stream_slot> xs;
+  xs.reserve(num_paths());
+  for_each_path([&](outbound_path& x) {
+    if (!x.closing)
+      xs.emplace_back(x.slots.sender);
+  });
+  return xs;
+}
+
 size_t downstream_manager::num_paths() const noexcept {
   return 0;
 }
@@ -113,20 +123,25 @@ bool downstream_manager::clean(stream_slot slot) const noexcept {
 
 void downstream_manager::close() {
   CAF_LOG_TRACE("");
-  auto slots = path_slots();
-  for (auto slot : slots)
+  auto open_slots = open_path_slots();
+  for (auto slot : open_slots)
     close(slot);
 }
 
 void downstream_manager::close(stream_slot slot) {
   CAF_LOG_TRACE(CAF_ARG(slot));
-  if (clean(slot))
-    remove_path(slot, none, false);
-  else {
-    auto ptr = path(slot);
-    if (ptr != nullptr)
-      ptr->closing = true;
+  auto ptr = path(slot);
+  if (ptr == nullptr) {
+    CAF_LOG_DEBUG("cannot close unknown slot:" << slot);
+    return;
   }
+  if (buffered(slot) == 0 && ptr->clean()) {
+    CAF_LOG_DEBUG("path clean, remove immediately;" << CAF_ARG(slot));
+    remove_path(slot, none, false);
+    return;
+  }
+  CAF_LOG_DEBUG("path not clean, set to closing;" << CAF_ARG(slot));
+  ptr->closing = true;
 }
 
 void downstream_manager::abort(error reason) {

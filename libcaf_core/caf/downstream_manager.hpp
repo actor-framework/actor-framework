@@ -103,6 +103,10 @@ public:
   /// Returns all used slots.
   std::vector<stream_slot> path_slots();
 
+  /// Returns all open slots, i.e., slots assigned to outbound paths with
+  /// `closing == false`.
+  std::vector<stream_slot> open_path_slots();
+
   /// Checks whether `predicate` holds true for all paths.
   template <class Predicate>
   bool all_paths(Predicate predicate) const noexcept {
