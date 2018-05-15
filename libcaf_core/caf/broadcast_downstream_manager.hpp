@@ -82,16 +82,18 @@ public:
 
   /// Sets the filter for `slot` to `filter`. Inserts a new element if `slot`
   /// is a new path.
-  void set_filter(stream_slot slot, filter_type filter) {
-    CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(filter));
-    state_map_[slot].filter = std::move(filter);
+  void set_filter(stream_slot slot, filter_type new_filter) {
+    CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(new_filter));
+    filter(slot) = std::move(new_filter);
   }
 
   /// Returns the filter for `slot`. Inserts a new element if `slot` is a new
   /// path.
   filter_type& filter(stream_slot slot) {
-    CAF_LOG_TRACE(CAF_ARG(slot));
-    return state_map_[slot].filter;
+    auto i = state_map_.find(slot);
+    if (i != state_map_.end())
+      return i->second.filter;
+    CAF_RAISE_ERROR("invalid slot");
   }
 
   /// Returns whether all filters satisfy the predicate as if applying
@@ -153,31 +155,17 @@ public:
     CAF_ASSERT(state_map_.size() == this->paths_.size());
     auto slot = ptr->slots.sender;
     // Append to the regular path map.
-    if (!super::insert_path(std::move(ptr)))
+    if (!super::insert_path(std::move(ptr))) {
+      CAF_LOG_DEBUG("unable to insert path at slot" << slot);
       return false;
+    }
     // Append to the state map.
     if (!state_map_.emplace(slot, path_state{}).second) {
+      CAF_LOG_DEBUG("unable to add state for slot" << slot);
       super::remove_path(slot, none, true);
       return false;
     }
     return true;
-    // Make sure state_map_ and paths_ are always equally sorted, otherwise
-    // we'll run into UB when calling `zip_foreach`.
-    /*
-    CAF_ASSERT(index == this->paths_.size() - 1);
-    CAF_ASSERT(result->slots == slots);
-    CAF_ASSERT(this->paths_.container().back().first == slots.sender);
-    CAF_ASSERT(this->paths_.container().back().second.get() == result);
-    auto& ys = state_map_.container();
-    if (ys[index].first != slots.sender) {
-      auto i = state_map_.find(slots.sender);
-      CAF_ASSERT(i != ys.end());
-      CAF_ASSERT(std::distance(ys.begin(), i) > static_cast<ptrdiff_t>(index));
-      using std::swap;
-      swap(ys[index], *i);
-    }
-    return result;
-    */
   }
 
   void emit_batches() override {
@@ -195,9 +183,14 @@ public:
   /// Forces the manager flush its buffer to the individual path buffers.
   void fan_out_flush() {
     auto& buf = this->buf_;
-    for (auto& kvp : state_map_.container()) {
+    auto f = [&](typename map_type::value_type& x,
+                 typename state_map_type::value_type& y) {
+      // Don't push new data into a closing path.
+      if (x.second->closing)
+        return;
+      // Push data from the global buffer to path buffers.
+      auto& st = y.second;
       // TODO: replace with `if constexpr` when switching to C++17
-      auto& st = kvp.second;
       if (std::is_same<select_type, detail::select_all>::value) {
         st.buf.insert(st.buf.end(), buf.begin(), buf.end());
       } else {
@@ -205,7 +198,8 @@ public:
           if (select_(st.filter, piece))
             st.buf.emplace_back(piece);
       }
-    }
+    };
+    detail::zip_foreach(f, this->paths_.container(), state_map_.container());
     buf.clear();
   }
 
@@ -241,31 +235,47 @@ private:
                                           std::numeric_limits<size_t>::max(),
                                           this->paths_.container(),
                                           state_map_.container());
+    if (chunk_size == std::numeric_limits<size_t>::max()) {
+      // All paths are closing, simply try forcing out more data and return.
+      auto g = [&](typename map_type::value_type& x,
+                   typename state_map_type::value_type& y) {
+        // Always force batches on closing paths.
+        x.second->emit_batches(this->self(), y.second.buf, true);
+      };
+      detail::zip_foreach(g, this->paths_.container(), state_map_.container());
+      return;
+    }
 
     auto chunk = this->get_chunk(chunk_size);
     if (chunk.empty()) {
       auto g = [&](typename map_type::value_type& x,
                    typename state_map_type::value_type& y) {
-        x.second->emit_batches(this->self(), y.second.buf, force_underfull);
+        // Always force batches on closing paths.
+        x.second->emit_batches(this->self(), y.second.buf,
+                               force_underfull || x.second->closing);
       };
-      detail::zip_foreach_if(g, not_closing, this->paths_.container(),
-                             state_map_.container());
+      detail::zip_foreach(g, this->paths_.container(), state_map_.container());
     } else {
       auto g = [&](typename map_type::value_type& x,
                    typename state_map_type::value_type& y) {
-        // TODO: replace with `if constexpr` when switching to C++17
         auto& st = y.second;
-        if (std::is_same<select_type, detail::select_all>::value) {
-          st.buf.insert(st.buf.end(), chunk.begin(), chunk.end());
-        } else {
-          for (auto& piece : chunk)
-            if (select_(st.filter, piece))
-              st.buf.emplace_back(piece);
+        // Don't enqueue new data into a closing path.
+        if (!x.second->closing) {
+          // Push data from the global buffer to path buffers.
+          // TODO: replace with `if constexpr` when switching to C++17
+          if (std::is_same<select_type, detail::select_all>::value) {
+            st.buf.insert(st.buf.end(), chunk.begin(), chunk.end());
+          } else {
+            for (auto& piece : chunk)
+              if (select_(st.filter, piece))
+                st.buf.emplace_back(piece);
+          }
         }
-        x.second->emit_batches(this->self(), st.buf, force_underfull);
+        // Always force batches on closing paths.
+        x.second->emit_batches(this->self(), st.buf,
+                               force_underfull || x.second->closing);
       };
-      detail::zip_foreach_if(g, not_closing, this->paths_.container(),
-                             state_map_.container());
+      detail::zip_foreach(g, this->paths_.container(), state_map_.container());
     }
   }
 
