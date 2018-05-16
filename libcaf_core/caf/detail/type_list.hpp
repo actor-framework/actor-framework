@@ -1226,6 +1226,18 @@ struct tl_replicate<0, T> {
 template <size_t N, class T>
 using tl_replicate_t = typename tl_replicate<N, T>::type;
 
+/// Construct a type list from types that take a list of variadic template
+/// arguments.
+template <class>
+struct tl_from;
+
+template <template <class...> class T, class... Ts>
+struct tl_from<T<Ts...>> {
+  using type = type_list<Ts...>;
+};
+
+template <class T>
+using tl_from_t = typename tl_from<T>::type;
+
 } // namespace detail
 } // namespace caf
-
