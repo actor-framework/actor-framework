@@ -75,6 +75,9 @@ struct is_variant<const variant<Ts...>&> : std::true_type {};
 template <class... Ts>
 struct is_variant<const variant<Ts...>&&> : std::true_type {};
 
+template <class... Ts>
+using is_variant_t = typename is_variant<Ts...>::type;
+
 template <class T>
 struct variant_assign_helper {
   using result_type = void;
