@@ -149,3 +149,23 @@ CAF_TEST(n_ary_visit) {
   CAF_CHECK_EQUAL(visit(f, a, b, c, d), "(42, 'foo', \"bar\", 123)");
 }
 
+CAF_TEST(less_than) {
+  using variant_type = variant<char, int>;
+  auto a = variant_type{'x'};
+  auto b = variant_type{'y'};
+  CAF_CHECK(a < b);
+  CAF_CHECK(!(a > b));
+  CAF_CHECK(a <= b);
+  CAF_CHECK(!(a >= b));
+  b = 42;
+  CAF_CHECK(a < b);
+  CAF_CHECK(!(a > b));
+  CAF_CHECK(a <= b);
+  CAF_CHECK(!(a >= b));
+  a = 42;
+  CAF_CHECK(!(a < b));
+  CAF_CHECK(!(a > b));
+  CAF_CHECK(a <= b);
+  CAF_CHECK(a >= b);
+  b = 'x';
+}

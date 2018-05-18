@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <functional>
 #include <type_traits>
 
 #include "caf/config.hpp"
@@ -417,7 +418,7 @@ bool holds_alternative(const variant<Ts...>& data) {
 }
 
 /// @relates variant
-template <class T>
+template <class T, template <class> class Predicate>
 struct variant_compare_helper {
   using result_type = bool;
   const T& lhs;
@@ -427,21 +428,21 @@ struct variant_compare_helper {
   template <class U>
   bool operator()(const U& rhs) const {
     auto ptr = get_if<U>(&lhs);
-    return ptr ? *ptr == rhs : false;
+    return ptr && Predicate<U>{}(*ptr, rhs);
   }
 };
 
 /// @relates variant
 template <class... Ts>
 bool operator==(const variant<Ts...>& x, const variant<Ts...>& y) {
-  variant_compare_helper<variant<Ts...>> f{x};
+  variant_compare_helper<variant<Ts...>, std::equal_to> f{x};
   return visit(f, y);
 }
 
 /// @relates variant
 template <class T, class... Ts>
 bool operator==(const T& x, const variant<Ts...>& y) {
-  variant_compare_helper<variant<Ts...>> f{y};
+  variant_compare_helper<variant<Ts...>, std::equal_to> f{y};
   return f(x);
 }
 
@@ -449,6 +450,58 @@ bool operator==(const T& x, const variant<Ts...>& y) {
 template <class T, class... Ts>
 bool operator==(const variant<Ts...>& x, const T& y) {
   return y == x;
+}
+
+/// @relates variant
+template <class... Ts>
+bool operator<(const variant<Ts...>& x, const variant<Ts...>& y) {
+  if (y.valueless_by_exception())
+    return false;
+  if (x.valueless_by_exception())
+    return true;
+  if (x.index() != y.index())
+    return x.index() < y.index();
+  variant_compare_helper<variant<Ts...>, std::less> f{x};
+  return visit(f, y);
+}
+
+/// @relates variant
+template <class... Ts>
+bool operator>(const variant<Ts...>& x, const variant<Ts...>& y) {
+  if (x.valueless_by_exception())
+    return false;
+  if (y.valueless_by_exception())
+    return true;
+  if (x.index() != y.index())
+    return x.index() > y.index();
+  variant_compare_helper<variant<Ts...>, std::greater> f{x};
+  return visit(f, y);
+}
+
+/// @relates variant
+template <class... Ts>
+bool operator<=(const variant<Ts...>& x, const variant<Ts...>& y) {
+  if (x.valueless_by_exception())
+    return true;
+  if (y.valueless_by_exception())
+    return false;
+  if (x.index() != y.index())
+    return x.index() < y.index();
+  variant_compare_helper<variant<Ts...>, std::less_equal> f{x};
+  return visit(f, y);
+}
+
+/// @relates variant
+template <class... Ts>
+bool operator>=(const variant<Ts...>& x, const variant<Ts...>& y) {
+  if (y.valueless_by_exception())
+    return true;
+  if (x.valueless_by_exception())
+    return false;
+  if (x.index() != y.index())
+    return x.index() >= y.index();
+  variant_compare_helper<variant<Ts...>, std::greater_equal> f{x};
+  return visit(f, y);
 }
 
 /// @relates variant
