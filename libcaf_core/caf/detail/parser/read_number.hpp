@@ -90,7 +90,7 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   });
   // Switches from parsing an integer to parsing a double.
   auto ch_res = [&](result_type_t x) {
-    CAF_ASSERT(result_type = integer);
+    CAF_ASSERT(result_type == integer);
     result_type = x;
     // We parse doubles as positive number and restore the sign in `g`.
     dbl_res = result_type == negative_double
