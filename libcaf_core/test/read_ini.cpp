@@ -36,12 +36,33 @@ struct test_consumer {
   log_type log;
 
   void begin_section(std::string name) {
-    name.insert(0, "begin section: ");
-    log.emplace_back(std::move(name));
+    add_entry("sec: ", std::move(name));
   }
 
   void end_section() {
-    log.emplace_back("end section");
+    log.emplace_back("eos");
+  }
+
+  void begin_list() {
+    log.emplace_back("lst");
+  }
+
+  void end_list() {
+    log.emplace_back("eol");
+  }
+
+  void key(std::string name) {
+    add_entry("key: ", std::move(name));
+  }
+
+  template <class T>
+  void value(T x) {
+    add_entry("value: ", deep_to_string(x));
+  }
+
+  void add_entry(const char* prefix, std::string str) {
+    str.insert(0, prefix);
+    log.emplace_back(std::move(str));
   }
 };
 
@@ -53,7 +74,7 @@ struct fixture {
     res.e = str.end();
     detail::parser::read_ini(res, f);
     if (res.code == detail::parser::ec::success != expect_success)
-      CAF_FAIL("unexpected parser result state");
+      CAF_MESSAGE("unexpected parser result state: " << res.code);
     return std::move(f.log);
   }
 };
@@ -63,13 +84,54 @@ log_type make_log(Ts&&... xs) {
   return log_type{std::forward<Ts>(xs)...};
 }
 
+const char* ini0 = R"(
+[logger]
+padding= 10
+file-name = "foobar.ini" ; our file name
+
+[scheduler] ; more settings
+  timing  =  2us ; using microsecond resolution
+impl =       'foo';some atom
+x_ =.123
+some-bool=true
+some-other-bool=false
+some-list=[
+; here we have some list entries
+123,
+  23 ; twenty-three!
+  ,
+  "abc",
+  'def', ; some comment and a trailing comma
+]
+)";
+
+const auto ini0_log = make_log(
+  "sec: logger", "key: padding", "value: 10", "key: file-name",
+  "value: \"foobar.ini\"", "eos", "sec: scheduler", "key: timing",
+  "value: 2000ns", "key: impl", "value: 'foo'", "key: x_",
+  "value: " + deep_to_string(.123), "key: some-bool", "value: true",
+  "key: some-other-bool", "value: false", "key: some-list", "lst", "value: 123",
+  "value: 23", "value: \"abc\"", "value: 'def'", "eol", "eos");
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(read_ini_tests, fixture)
 
-CAF_TEST(empty inits) {
+CAF_TEST(empty inis) {
   CAF_CHECK_EQUAL(parse(";foo"), make_log());
-  CAF_CHECK_EQUAL(parse("[foo]"), make_log("begin section: foo", "end section"));
+  CAF_CHECK_EQUAL(parse(""), make_log());
+  CAF_CHECK_EQUAL(parse("  "), make_log());
+  CAF_CHECK_EQUAL(parse(" \n "), make_log());
+  CAF_CHECK_EQUAL(parse(";hello\n;world"), make_log());
+}
+
+CAF_TEST(section with valid key-value pairs) {
+  CAF_CHECK_EQUAL(parse("[foo]"), make_log("sec: foo", "eos"));
+  CAF_CHECK_EQUAL(parse("  [foo]"), make_log("sec: foo", "eos"));
+  CAF_CHECK_EQUAL(parse("  [  foo]  "), make_log("sec: foo", "eos"));
+  CAF_CHECK_EQUAL(parse("  [  foo  ]  "), make_log("sec: foo", "eos"));
+  CAF_CHECK_EQUAL(parse("\n[a-b];foo\n;bar"), make_log("sec: a-b", "eos"));
+  CAF_CHECK_EQUAL(parse(ini0), ini0_log);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

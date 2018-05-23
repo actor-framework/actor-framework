@@ -121,3 +121,12 @@
   ch = ps.current();                                                           \
   goto s_##target;
 
+#define invoke_fsm_if(predicate, fsm_call, target)                             \
+  if (predicate(ch)) {                                                         \
+    fsm_call;                                                                  \
+    if (ps.code > ec::trailing_character)                                      \
+      return;                                                                  \
+    ch = ps.current();                                                         \
+    goto s_##target;                                                           \
+  }
+
