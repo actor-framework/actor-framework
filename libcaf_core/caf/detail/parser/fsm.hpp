@@ -90,6 +90,11 @@
     }                                                                          \
   }
 
+// Unconditionally jumps to target for any input.
+#define any_input(target)                                                      \
+  ch = ps.next();                                                              \
+  goto s_##target;
+
 #define invalid_input(predicate, error_code)                                   \
   if (predicate(ch)) {                                                         \
     ps.code = error_code;                                                      \
