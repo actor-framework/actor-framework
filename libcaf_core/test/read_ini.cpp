@@ -35,20 +35,20 @@ using log_type = std::vector<std::string>;
 struct test_consumer {
   log_type log;
 
-  void begin_section(std::string name) {
-    add_entry("sec: ", std::move(name));
+  void begin_map() {
+    log.emplace_back("{");
   }
 
-  void end_section() {
-    log.emplace_back("eos");
+  void end_map() {
+    log.emplace_back("}");
   }
 
   void begin_list() {
-    log.emplace_back("lst");
+    log.emplace_back("[");
   }
 
   void end_list() {
-    log.emplace_back("eol");
+    log.emplace_back("]");
   }
 
   void key(std::string name) {
@@ -106,12 +106,12 @@ some-list=[
 )";
 
 const auto ini0_log = make_log(
-  "sec: logger", "key: padding", "value: 10", "key: file-name",
-  "value: \"foobar.ini\"", "eos", "sec: scheduler", "key: timing",
+  "key: logger", "{", "key: padding", "value: 10", "key: file-name",
+  "value: \"foobar.ini\"", "}", "key: scheduler", "{", "key: timing",
   "value: 2000ns", "key: impl", "value: 'foo'", "key: x_",
   "value: " + deep_to_string(.123), "key: some-bool", "value: true",
-  "key: some-other-bool", "value: false", "key: some-list", "lst", "value: 123",
-  "value: 23", "value: \"abc\"", "value: 'def'", "eol", "eos");
+  "key: some-other-bool", "value: false", "key: some-list", "[", "value: 123",
+  "value: 23", "value: \"abc\"", "value: 'def'", "]", "}");
 
 } // namespace <anonymous>
 
@@ -126,11 +126,11 @@ CAF_TEST(empty inis) {
 }
 
 CAF_TEST(section with valid key-value pairs) {
-  CAF_CHECK_EQUAL(parse("[foo]"), make_log("sec: foo", "eos"));
-  CAF_CHECK_EQUAL(parse("  [foo]"), make_log("sec: foo", "eos"));
-  CAF_CHECK_EQUAL(parse("  [  foo]  "), make_log("sec: foo", "eos"));
-  CAF_CHECK_EQUAL(parse("  [  foo  ]  "), make_log("sec: foo", "eos"));
-  CAF_CHECK_EQUAL(parse("\n[a-b];foo\n;bar"), make_log("sec: a-b", "eos"));
+  CAF_CHECK_EQUAL(parse("[foo]"), make_log("key: foo", "{", "}"));
+  CAF_CHECK_EQUAL(parse("  [foo]"), make_log("key: foo", "{", "}"));
+  CAF_CHECK_EQUAL(parse("  [  foo]  "), make_log("key: foo", "{", "}"));
+  CAF_CHECK_EQUAL(parse("  [  foo  ]  "), make_log("key: foo", "{", "}"));
+  CAF_CHECK_EQUAL(parse("\n[a-b];foo\n;bar"), make_log("key: a-b", "{", "}"));
   CAF_CHECK_EQUAL(parse(ini0), ini0_log);
 }
 

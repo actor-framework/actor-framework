@@ -20,6 +20,8 @@
 
 #include <ctype.h>
 
+#include <stack>
+
 #include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/is_char.hpp"
@@ -33,7 +35,97 @@ namespace caf {
 namespace detail {
 namespace parser {
 
-/// Reads an INI formateed input and produces a series of key/value pairs.
+// Example input:
+//
+// [section1]
+// value1 = 123
+// value2 = "string"
+// subsection1 = {
+// value3 = 1.23
+// value4 = 4e20
+// }
+// [section2]
+// value5 = 'atom'
+// value6 = [1, 'two', "three", {
+//   a = "b",
+//   b = "c",
+// }]
+//
+
+template <class Iterator, class Sentinel, class Consumer>
+void read_ini_comment(state<Iterator, Sentinel>& ps, Consumer&) {
+  start();
+  state(init) {
+    input(is_char<';'>, await_newline)
+  }
+  term_state(await_newline) {
+    input(is_char<'\n'>, done)
+    any_input(await_newline)
+  }
+  term_state(done) {
+    // nop
+  }
+  fin();
+}
+
+template <class Iterator, class Sentinel, class Consumer>
+void read_ini_value(state<Iterator, Sentinel>& ps, Consumer& consumer);
+
+template <class Iterator, class Sentinel, class Consumer>
+void read_ini_list(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+  start();
+  state(init) {
+    action(is_char<'['>, before_value, consumer.begin_list())
+  }
+  state(before_value) {
+    input(is_char<' '>, before_value)
+    input(is_char<'\t'>, before_value)
+    input(is_char<'\n'>, before_value)
+    action(is_char<']'>, done, consumer.end_list())
+    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), before_value)
+    invoke_fsm(read_ini_value(ps, consumer), after_value)
+  }
+  state(after_value) {
+    input(is_char<' '>, after_value)
+    input(is_char<'\t'>, after_value)
+    input(is_char<'\n'>, after_value)
+    input(is_char<','>, before_value)
+    action(is_char<']'>, done, consumer.end_list())
+    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), after_value)
+  }
+  term_state(done) {
+    // nop
+  }
+  fin();
+}
+
+template <class Iterator, class Sentinel, class Consumer>
+void read_ini_map(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+  // TODO: implement me
+}
+
+template <class Iterator, class Sentinel, class Consumer>
+void read_ini_value(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+  auto is_f_or_t = [](char x) {
+    return x == 'f' || x == 'F' || x == 't' || x == 'T';
+  };
+  start();
+  state(init) {
+    invoke_fsm_if(is_char<'"'>, read_string(ps, consumer), done)
+    invoke_fsm_if(is_char<'\''>, read_atom(ps, consumer), done)
+    invoke_fsm_if(is_char<'.'>, read_number(ps, consumer), done)
+    invoke_fsm_if(is_f_or_t, read_bool(ps, consumer), done)
+    invoke_fsm_if(isdigit, read_number_or_timespan(ps, consumer), done)
+    invoke_fsm_if(is_char<'['>, read_ini_list(ps, consumer), done)
+    invoke_fsm_if(is_char<'{'>, read_ini_map(ps, consumer), done)
+  }
+  term_state(done) {
+    // nop
+  }
+  fin();
+}
+
+/// Reads an INI formatted input.
 template <class Iterator, class Sentinel, class Consumer>
 void read_ini(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   using std::swap;
@@ -41,41 +133,32 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   auto is_alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
   };
-  auto is_f_or_t = [](char x) {
-    return x == 'f' || x == 'F' || x == 't' || x == 'T';
-  };
   bool in_section = false;
-  auto begin_section = [&] {
-    if (in_section)
-      consumer.end_section();
-    else
-      in_section = true;
-    std::string section_key;
-    swap(tmp, section_key);
-    consumer.begin_section(std::move(section_key));
-  };
   auto emit_key = [&] {
     std::string key;
     swap(tmp, key);
     consumer.key(std::move(key));
   };
+  auto begin_section = [&] {
+    if (in_section)
+      consumer.end_map();
+    else
+      in_section = true;
+    emit_key();
+    consumer.begin_map();
+  };
   auto g = make_scope_guard([&] {
     if (ps.code <= ec::trailing_character && in_section)
-      consumer.end_section();
+      consumer.end_map();
   });
   start();
+  // Scanning for first section.
   term_state(init) {
     input(is_char<' '>, init)
     input(is_char<'\t'>, init)
     input(is_char<'\n'>, init)
-    input(is_char<';'>, leading_comment)
+    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), init)
     input(is_char<'['>, start_section)
-  }
-  // A comment before the first section starts. Jumps back to init after
-  // hitting newline.
-  term_state(leading_comment) {
-    input(is_char<'\n'>, init)
-    any_input(leading_comment)
   }
   // Read the section key after reading an '['.
   state(start_section) {
@@ -100,13 +183,8 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     input(is_char<'\t'>, dispatch)
     input(is_char<'\n'>, dispatch)
     input(is_char<'['>, read_section_name)
-    input(is_char<';'>, comment)
+    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), dispatch)
     action(isalnum, read_key_name, tmp = ch)
-  }
-  // Comment after section or value.
-  term_state(comment) {
-    input(is_char<'\n'>, dispatch)
-    any_input(comment)
   }
   // Reads a key of a "key=value" line.
   state(read_key_name) {
@@ -123,48 +201,13 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   state(await_value) {
     input(is_char<' '>, await_value)
     input(is_char<'\t'>, await_value)
-    action(is_char<'['>, read_list_value, consumer.begin_list())
-    invoke_fsm_if(is_char<'"'>, read_string(ps, consumer), await_eol)
-    invoke_fsm_if(is_char<'\''>, read_atom(ps, consumer), await_eol)
-    invoke_fsm_if(is_char<'.'>, read_number(ps, consumer), await_eol)
-    invoke_fsm_if(is_f_or_t, read_bool(ps, consumer), await_eol)
-    invoke_fsm_if(isdigit, read_number_or_timespan(ps, consumer), await_eol)
-  }
-  // Reads a list entry in a "key=[value1, value2, ...]" statement.
-  state(read_list_value) {
-    input(is_char<' '>, read_list_value)
-    input(is_char<'\t'>, read_list_value)
-    input(is_char<'\n'>, read_list_value)
-    action(is_char<']'>, await_eol, consumer.end_list())
-    invoke_fsm_if(is_char<'"'>, read_string(ps, consumer), after_list_value)
-    invoke_fsm_if(is_char<'\''>, read_atom(ps, consumer), after_list_value)
-    invoke_fsm_if(is_char<'.'>, read_number(ps, consumer), after_list_value)
-    invoke_fsm_if(is_f_or_t, read_bool(ps, consumer), after_list_value)
-    invoke_fsm_if(isdigit, read_number_or_timespan(ps, consumer), after_list_value)
-    input(is_char<';'>, comment_in_list)
-  }
-  state(comment_in_list) {
-    input(is_char<'\n'>, read_list_value)
-    any_input(comment_in_list)
-  }
-  // Scans for the next entry after reading a "," while parsing a list.
-  state(after_list_value) {
-    input(is_char<' '>, after_list_value)
-    input(is_char<'\t'>, after_list_value)
-    input(is_char<'\n'>, after_list_value)
-    input(is_char<','>, read_list_value)
-    action(is_char<']'>, await_eol, consumer.end_list())
-    input(is_char<';'>, comment_after_list_value)
-  }
-  state(comment_after_list_value) {
-    input(is_char<'\n'>, after_list_value)
-    any_input(comment_after_list_value)
+    invoke_fsm(read_ini_value(ps, consumer), await_eol)
   }
   // Waits for end-of-line after reading a value
   term_state(await_eol) {
     input(is_char<' '>, await_eol)
     input(is_char<'\t'>, await_eol)
-    input(is_char<';'>, comment)
+    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), dispatch)
     input(is_char<'\n'>, dispatch)
   }
   fin();
