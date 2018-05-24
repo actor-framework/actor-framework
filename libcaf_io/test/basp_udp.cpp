@@ -209,6 +209,10 @@ public:
     return dhdl_;
   }
 
+  intptr_t default_sender() {
+    return default_sender_;
+  }
+
   // implementation of the Binary Actor System Protocol
   basp::instance& instance() {
     return aut()->state.instance;
@@ -273,9 +277,10 @@ public:
 
   void establish_communication(node& n,
                                optional<datagram_handle> dx = none,
+                               optional<intptr_t> endpoint_id = none,
                                actor_id published_actor_id = invalid_actor_id,
                                const set<string>& published_actor_ifs
-                                 = std::set<std::string>{},
+                                 = set<std::string>{},
                                 const basp::routing_table::address_map& am = {}) {
     auto src = dx ? *dx : dhdl_;
     CAF_MESSAGE("establish communication on node " << n.name
@@ -284,9 +289,10 @@ public:
     // send the client handshake and receive the server handshake
     // and a dispatch_message as answers
     auto hdl = n.endpoint;
-    mpx_->add_pending_endpoint(src, hdl);
-    CAF_MESSAGE("Send client handshake");
-    mock(src, hdl,
+    auto ep = endpoint_id ? *endpoint_id : default_sender_;
+    mpx_->add_pending_endpoint(ep, hdl);
+    CAF_MESSAGE("send client handshake");
+    mock(src, ep,
          {basp::message_type::client_handshake, 0, 0, 0,
           n.id, this_node(),
           invalid_actor_id, invalid_actor_id}, std::string{},
@@ -377,11 +383,8 @@ public:
       while (oq.empty())
         this_->mpx()->exec_runnable();
       CAF_MESSAGE("output queue has " << oq.size() << " messages");
-      auto dh = oq.front().first;
       buffer& ob = oq.front().second;
-      CAF_MESSAGE("next datagram has " << ob.size()
-                  << " bytes, servant ID = " << dh.id());
-      CAF_CHECK_EQUAL(dh.id(), hdl.id());
+      CAF_REQUIRE_EQUAL(this_->mpx()->endpoint_id(hdl), oq.front().first);
       basp::header hdr;
       { // lifetime scope of source
         binary_deserializer source{this_->mpx(), ob};
@@ -412,39 +415,41 @@ public:
     }
 
     template <class... Ts>
-    mock_t& enqueue_back(datagram_handle hdl, datagram_handle ep,
+    mock_t& enqueue_back(datagram_handle hdl, intptr_t sender_id,
                          basp::header hdr, const Ts&... xs) {
       buffer buf;
       this_->to_buf(buf, hdr, nullptr, xs...);
       CAF_MESSAGE("adding msg " << to_string(hdr.operation)
                   << " with " << (buf.size() - basp::header_size)
                   << " bytes payload to back of queue");
-      this_->mpx()->virtual_network_buffer(hdl).emplace_back(ep, buf);
+      this_->mpx()->virtual_network_buffer(hdl).emplace_back(sender_id, buf);
       return *this;
     }
 
     template <class... Ts>
     mock_t& enqueue_back(datagram_handle hdl, basp::header hdr,
                          Ts&&... xs) {
-      return enqueue_back(hdl, hdl, hdr, std::forward<Ts>(xs)...);
+      return enqueue_back(hdl, this_->default_sender(), hdr,
+                          std::forward<Ts>(xs)...);
     }
 
     template <class... Ts>
-    mock_t& enqueue_front(datagram_handle hdl, datagram_handle ep,
+    mock_t& enqueue_front(datagram_handle hdl, intptr_t sender_id,
                           basp::header hdr, const Ts&... xs) {
       buffer buf;
       this_->to_buf(buf, hdr, nullptr, xs...);
       CAF_MESSAGE("adding msg " << to_string(hdr.operation)
                   << " with " << (buf.size() - basp::header_size)
                   << " bytes payload to front of queue");
-      this_->mpx()->virtual_network_buffer(hdl).emplace_front(ep, buf);
+      this_->mpx()->virtual_network_buffer(hdl).emplace_front(sender_id, buf);
       return *this;
     }
 
     template <class... Ts>
     mock_t& enqueue_front(datagram_handle hdl, basp::header hdr,
                           Ts&&... xs) {
-      return enqueue_front(hdl, hdl, hdr, std::forward<Ts>(xs)...);
+      return enqueue_front(hdl, this_->default_sender(), hdr,
+                           std::forward<Ts>(xs)...);
     }
 
     mock_t& deliver(datagram_handle hdl, size_t num_messages = 1) {
@@ -466,19 +471,19 @@ public:
     CAF_MESSAGE("virtually send " << to_string(hdr.operation)
                 << " with " << (buf.size() - basp::header_size)
                 << " bytes payload");
-    mpx()->virtual_send(hdl, hdl, buf);
+    mpx()->virtual_send(hdl, default_sender_, buf);
     return {this};
   }
 
   template <class... Ts>
-  mock_t mock(datagram_handle hdl, datagram_handle ep, basp::header hdr,
+  mock_t mock(datagram_handle hdl, intptr_t sender_id, basp::header hdr,
               const Ts&... xs) {
     buffer buf;
     to_buf(buf, hdr, nullptr, xs...);
     CAF_MESSAGE("virtually send " << to_string(hdr.operation)
                 << " with " << (buf.size() - basp::header_size)
                 << " bytes payload");
-    mpx()->virtual_send(hdl, ep, buf);
+    mpx()->virtual_send(hdl, sender_id, buf);
     return {this};
   }
 
@@ -492,6 +497,7 @@ public:
 private:
   basp_broker* aut_;
   datagram_handle dhdl_;
+  intptr_t default_sender_ = static_cast<intptr_t>(0xdeadbeef);
   network::test_multiplexer* mpx_;
   node_id this_node_;
   unique_ptr<scoped_actor> self_;
@@ -637,7 +643,7 @@ CAF_TEST(client_handshake_and_dispatch_udp) {
   establish_communication(jupiter());
   CAF_MESSAGE("send dispatch message");
   // send a message via `dispatch` from node 0 on endpoint 1
-  mock(endpoint_handle(), jupiter().endpoint,
+  mock(jupiter().endpoint, default_sender(),
        {basp::message_type::dispatch_message, 0, 0, 0,
         jupiter().id, this_node(), jupiter().dummy_actor->id(), self()->id(),
         1}, // increment sequence number
@@ -676,13 +682,13 @@ CAF_TEST(publish_and_connect_udp) {
   auto res = sys.middleman().publish_udp(self(), 4242);
   CAF_REQUIRE(res == 4242);
   mpx()->flush_runnables(); // process publish message in basp_broker
-  establish_communication(jupiter(), dx, self()->id());
+  establish_communication(jupiter(), dx, default_sender(), self()->id());
 }
 
 CAF_TEST(remote_actor_and_send_udp) {
   constexpr const char* lo = "localhost";
   CAF_MESSAGE("self: " << to_string(self()->address()));
-  mpx()->provide_datagram_servant(lo, 4242, jupiter().endpoint);
+  mpx()->provide_datagram_servant(lo, 4242, jupiter().endpoint, default_sender());
   CAF_REQUIRE(mpx()->has_pending_remote_endpoint(lo, 4242));
   auto mm1 = sys.middleman().actor_handle();
   actor result;
@@ -691,7 +697,7 @@ CAF_TEST(remote_actor_and_send_udp) {
   // wait until BASP broker has received and processed the connect message
   while (!aut()->valid(jupiter().endpoint))
     mpx()->exec_runnable();
-  CAF_REQUIRE(!mpx()->has_pending_scribe(lo, 4242));
+  CAF_REQUIRE(!mpx()->has_pending_remote_endpoint(lo, 4242));
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_MESSAGE("client handshake => server handshake => proxy announcement");
   auto na = registry()->named_actors();
@@ -701,7 +707,7 @@ CAF_TEST(remote_actor_and_send_udp) {
            no_operation_data, this_node(), node_id(),
            invalid_actor_id, invalid_actor_id, std::string{},
            basp::routing_table::address_map{});
-  mock(jupiter().endpoint,
+  mock(jupiter().endpoint, default_sender(),
        {basp::message_type::server_handshake, 0, 0, basp::version,
         jupiter().id, none,
         jupiter().dummy_actor->id(), invalid_actor_id,
@@ -792,7 +798,7 @@ CAF_TEST(actor_serialize_and_deserialize_udp) {
   registry()->put(testee->id(), actor_cast<strong_actor_ptr>(testee));
   CAF_MESSAGE("send message via BASP (from proxy)");
   auto msg = make_message(actor_cast<actor_addr>(prx));
-  mock(endpoint_handle(), jupiter().endpoint,
+  mock(jupiter().endpoint,
        {basp::message_type::dispatch_message, 0, 0, 0,
         prx->node(), this_node(),
         prx->id(), testee->id(),
@@ -820,7 +826,7 @@ CAF_TEST(out_of_order_delivery_udp) {
   // timeouts that deliver pending message.
   constexpr const char* lo = "localhost";
   CAF_MESSAGE("self: " << to_string(self()->address()));
-  mpx()->provide_datagram_servant(lo, 4242, jupiter().endpoint);
+  mpx()->provide_datagram_servant(lo, 4242, jupiter().endpoint, default_sender());
   CAF_REQUIRE(mpx()->has_pending_remote_endpoint(lo, 4242));
   auto mm1 = sys.middleman().actor_handle();
   actor result;
@@ -831,7 +837,7 @@ CAF_TEST(out_of_order_delivery_udp) {
     sched.run();
     mpx()->exec_runnable();
   }
-  CAF_REQUIRE(!mpx()->has_pending_scribe(lo, 4242));
+  CAF_REQUIRE(!mpx()->has_pending_remote_endpoint(lo, 4242));
   // build a fake server handshake containing the id of our first pseudo actor
   CAF_MESSAGE("client handshake => server handshake => proxy announcement");
   auto na = registry()->named_actors();
@@ -841,7 +847,7 @@ CAF_TEST(out_of_order_delivery_udp) {
            no_operation_data, this_node(), node_id(),
            invalid_actor_id, invalid_actor_id, std::string{},
            basp::routing_table::address_map{});
-  mock(jupiter().endpoint, jupiter().endpoint,
+  mock(jupiter().endpoint, default_sender(),
        {basp::message_type::server_handshake, 0, 0, basp::version,
         jupiter().id, none,
         jupiter().dummy_actor->id(), invalid_actor_id,
@@ -984,7 +990,7 @@ CAF_TEST(read_address_after_handshake) {
   mpx()->flush_runnables();
   CAF_MESSAGE("contacting mars");
   auto& addrs = instance().tbl().local_addresses();
-  establish_communication(mars(), dh, self()->id(), std::set<string>{}, addrs);
+  establish_communication(mars(), dh, default_sender(), self()->id(), std::set<string>{}, addrs);
   CAF_MESSAGE("Look for mars address information in our config server");
   auto config_server = sys.registry().get(peer_serv_atom);
   self()->send(actor_cast<actor>(config_server), get_atom::value,
