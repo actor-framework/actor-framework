@@ -632,19 +632,19 @@ void basp_broker_state::send_buffered_messages(execution_unit* ctx,
                                                datagram_handle hdl) {
   if (pending_connectivity.count(nid) > 0) {
     for (auto& msg : pending_connectivity[nid]) {
-      // TODO: Validate that this actually works.
       auto seq_num = next_sequence_number(hdl);
       auto seq_size = sizeof(basp::sequence_type);
       auto offset = basp::header_size - seq_size;
-      auto& buf = get_buffer(hdl);
+      auto& buf = msg;
       stream_serializer<charbuf> out{ctx, buf.data() + offset, seq_size};
       auto err = out(seq_num);
       if (err)
         CAF_LOG_ERROR(CAF_ARG(err));
-      buf.insert(buf.end(), msg.begin(), msg.end());
+      self->enqueue_datagram(hdl, std::move(buf));
+      self->flush(hdl);
     }
+    pending_connectivity[nid].clear();
   }
-  flush(hdl);
 }
 
 basp_broker_state::buffer_type&
@@ -720,13 +720,22 @@ behavior basp_broker::make_behavior() {
   state.enable_udp = system().config().middleman_enable_udp;
   if (system().config().middleman_enable_automatic_connections) {
     CAF_LOG_INFO("enable automatic connections");
+    auto addrs = network::interfaces::list_addresses(false);
+    for (auto& p : addrs) {
+      auto& vec = p.second;
+      // Remove link local addresses.
+      vec.erase(std::remove_if(std::begin(vec), std::end(vec),
+                               [](const std::string& str) {
+                                 return str.find("fe80") == 0;
+                               }),
+                vec.end());
+    }
     // Open a random port and store a record for our peers how to
     // connect to this broker directly in the configuration server.
     if (state.enable_tcp) {
       auto res = add_tcp_doorman(uint16_t{0});
       if (res) {
         auto port = res->second;
-        auto addrs = network::interfaces::list_addresses(false);
         state.instance.tbl().local_addresses(network::protocol::tcp,
                                              {port, addrs});
         auto config_server = system().registry().get(atom("ConfigServ"));
@@ -739,7 +748,6 @@ behavior basp_broker::make_behavior() {
       auto res = add_udp_datagram_servant(uint16_t{0});
       if (res) {
         auto port = res->second;
-        auto addrs = network::interfaces::list_addresses(false);
         state.instance.tbl().local_addresses(network::protocol::udp,
                                              {port, addrs});
         auto config_server = system().registry().get(atom("ConfigServ"));

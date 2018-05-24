@@ -46,8 +46,7 @@ struct connection_helper_state {
   static const char* name;
 };
 
-behavior datagram_connection_broker(broker* self,
-                                    uint16_t port,
+behavior datagram_connection_broker(broker* self, uint16_t port,
                                     network::address_listing addresses,
                                     actor system_broker,
                                     basp::instance* instance);

@@ -45,13 +45,17 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
       if (eptr) {
         auto hdl = (*eptr)->hdl();
         self->add_datagram_servant(std::move(*eptr));
-        instance->write_client_handshake(self->context(),
-                                         self->wr_buf(hdl),
+        std::vector<char> buf;
+        instance->write_client_handshake(self->context(), buf,
                                          none, this_node,
                                          app_id);
+        self->enqueue_datagram(hdl, std::move(buf));
+        self->flush(hdl);
       }
     }
   }
+  // We are not interested in attempts that do not work.
+  self->set_default_handler(drop);
   return {
     [=](new_datagram_msg& msg) {
       auto hdl = msg.handle;
@@ -61,7 +65,7 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
     after(autoconnect_timeout) >> [=]() {
       CAF_LOG_TRACE(CAF_ARG(""));
       // Nothing heard in about 10 minutes... just call it a day, then.
-      CAF_LOG_INFO("aborted direct connection attempt after 10min");
+      CAF_LOG_INFO("aborted direct connection attempt after 10 min");
       self->quit(exit_reason::user_shutdown);
     }
   };
@@ -76,8 +80,7 @@ bool establish_stream_connection(stateful_actor<connection_helper_state>* self,
     for (auto& addr : kvp.second) {
       auto hdl = mx.new_tcp_scribe(addr, port);
       if (hdl) {
-        // Gotcha! Send scribe to our BASP broker
-        // to initiate handshake etc.
+        // Gotcha! Send scribe to our BASP broker to initiate handshake etc.
         CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
         self->send(b, connect_atom::value, *hdl, port);
         return true;

@@ -68,6 +68,17 @@ public:
     return *res;
   }
 
+  /// Convenience function for calling `mm.publish` and requiring a valid
+  /// result.
+  template <class Handle>
+  uint16_t publish_udp(Handle whom, uint16_t port, const char* in = nullptr,
+                       bool reuse = false) {
+    this->sched.inline_next_enqueue();
+    auto res = mm.publish_udp(whom, port, in, reuse);
+    CAF_REQUIRE(res);
+    return *res;
+  }
+
   /// Convenience function for calling `mm.remote_actor` and requiring a valid
   /// result.
   template <class Handle = caf::actor>
@@ -75,6 +86,17 @@ public:
     this->sched.inline_next_enqueue();
     this->sched.after_next_enqueue(exec_all_nodes);
     auto res = mm.remote_actor<Handle>(std::move(host), port);
+    CAF_REQUIRE(res);
+    return *res;
+  }
+
+  /// Convenience function for calling `mm.remote_actor` and requiring a valid
+  /// result.
+  template <class Handle = caf::actor>
+  Handle remote_actor_udp(std::string host, uint16_t port) {
+    this->sched.inline_next_enqueue();
+    this->sched.after_next_enqueue(exec_all_nodes);
+    auto res = mm.remote_actor_udp<Handle>(std::move(host), port);
     CAF_REQUIRE(res);
     return *res;
   }
@@ -126,6 +148,8 @@ public:
 
   using accept_handle = caf::io::accept_handle;
 
+  using datagram_handle = caf::io::datagram_handle;
+
   fake_network_fixture_base(planets_vector xs) : planets_(std::move(xs)) {
     // nop
   }
@@ -138,6 +162,11 @@ public:
   /// Returns a unique connection handle.
   connection_handle next_connection_handle() {
     return connection_handle::from_int(++hdl_id_);
+  }
+
+  /// Returns a unique datagram handle.
+  datagram_handle next_datagram_handle() {
+    return datagram_handle::from_int(++hdl_id_);
   }
 
   /// Prepare a connection from `client` (calls `remote_actor`) to `server`
@@ -163,6 +192,31 @@ public:
     return prepare_connection(server, client, std::move(host), port,
                               next_accept_handle());
   }
+
+  /// Prepares comminication between `client` (calls `remote_actor_udp`) and
+  /// `server` (calls `publish_udp`).
+  /// @returns randomly picked datagram handles for the server and the client.
+  std::pair<datagram_handle, datagram_handle>
+  prepare_endpoints(PlanetType& server, PlanetType& client,
+                    std::string host, uint16_t port,
+                    datagram_handle server_endpoint) {
+    auto server_hdl = next_datagram_handle();
+    auto client_hdl = next_datagram_handle();
+    server.mpx.prepare_endpoints(server_endpoint, server_hdl, client.mpx,
+                                 std::move(host), port, client_hdl);
+    return std::make_pair(server_hdl, client_hdl);
+  }
+
+  /// Prepares comminication between `client` (calls `remote_actor_udp`) and
+  /// `server` (calls `publish_udp`).
+  /// @returns randomly picked datagram handles for the server and the client.
+  std::pair<datagram_handle, datagram_handle>
+  prepare_endpoints(PlanetType& server, PlanetType& client,
+                    std::string host, uint16_t port) {
+    return prepare_endpoints(server, client, std::move(host), port,
+                             next_datagram_handle());
+  }
+
 
   // Convenience function for transmitting all "network" traffic (no new
   // connections are accepted).
