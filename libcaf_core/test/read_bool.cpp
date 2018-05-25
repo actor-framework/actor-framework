@@ -64,19 +64,7 @@ CAF_TEST_FIXTURE_SCOPE(read_bool_tests, fixture)
 
 CAF_TEST(valid booleans) {
   CAF_CHECK_EQUAL(p("true"), true);
-  CAF_CHECK_EQUAL(p(" true"), true);
-  CAF_CHECK_EQUAL(p("  true"), true);
-  CAF_CHECK_EQUAL(p("true "), true);
-  CAF_CHECK_EQUAL(p("true  "), true);
-  CAF_CHECK_EQUAL(p("  true  "), true);
-  CAF_CHECK_EQUAL(p("\t true \t\t\t "), true);
   CAF_CHECK_EQUAL(p("false"), false);
-  CAF_CHECK_EQUAL(p(" false"), false);
-  CAF_CHECK_EQUAL(p("  false"), false);
-  CAF_CHECK_EQUAL(p("false "), false);
-  CAF_CHECK_EQUAL(p("false  "), false);
-  CAF_CHECK_EQUAL(p("  false  "), false);
-  CAF_CHECK_EQUAL(p("\t false \t\t\t "), false);
 }
 
 CAF_TEST(invalid booleans) {
@@ -84,10 +72,12 @@ CAF_TEST(invalid booleans) {
   CAF_CHECK_EQUAL(p("t"), ec::unexpected_eof);
   CAF_CHECK_EQUAL(p("tr"), ec::unexpected_eof);
   CAF_CHECK_EQUAL(p("tru"), ec::unexpected_eof);
+  CAF_CHECK_EQUAL(p(" true"), ec::unexpected_character);
   CAF_CHECK_EQUAL(p("f"), ec::unexpected_eof);
   CAF_CHECK_EQUAL(p("fa"), ec::unexpected_eof);
   CAF_CHECK_EQUAL(p("fal"), ec::unexpected_eof);
   CAF_CHECK_EQUAL(p("fals"), ec::unexpected_eof);
+  CAF_CHECK_EQUAL(p(" false"), ec::unexpected_character);
   CAF_CHECK_EQUAL(p("tr\nue"), ec::unexpected_newline);
   CAF_CHECK_EQUAL(p("trues"), ec::trailing_character);
 }

@@ -73,36 +73,33 @@ void read_number_or_timespan(state<Iterator, Sentinel>& ps,
   });
   start();
   state(init) {
-    invoke_fsm(read_number(ps, ic), has_number)
+    fsm_epsilon(read_number(ps, ic), has_number)
   }
   term_state(has_number) {
-    checked_epsilon(has_int(), has_integer)
-    checked_epsilon(has_dbl(), has_double)
+    epsilon_if(has_int(), has_integer)
+    epsilon_if(has_dbl(), has_double)
   }
   term_state(has_double) {
-    invalid_input(is_char<'u'>, ec::fractional_timespan)
-    invalid_input(is_char<'n'>, ec::fractional_timespan)
-    invalid_input(is_char<'m'>, ec::fractional_timespan)
-    invalid_input(is_char<'s'>, ec::fractional_timespan)
+    error_transition(ec::fractional_timespan, "unms")
   }
   term_state(has_integer) {
-    input(is_char<'u'>, have_u)
-    input(is_char<'n'>, have_n)
-    input(is_char<'m'>, have_m)
-    action(is_char<'s'>, done, res = seconds(get_int()))
+    transition(have_u, 'u')
+    transition(have_n, 'n')
+    transition(have_m, 'm')
+    transition(done, 's', res = seconds(get_int()))
   }
   state(have_u) {
-    action(is_char<'s'>, done, res = microseconds(get_int()))
+    transition(done, 's', res = microseconds(get_int()))
   }
   state(have_n) {
-    action(is_char<'s'>, done, res = nanoseconds(get_int()))
+    transition(done, 's', res = nanoseconds(get_int()))
   }
   state(have_m) {
-    input(is_char<'i'>, have_mi)
-    action(is_char<'s'>, done, res = milliseconds(get_int()))
+    transition(have_mi, 'i')
+    transition(done, 's', res = milliseconds(get_int()))
   }
   state(have_mi) {
-    action(is_char<'n'>, done, res = minutes(get_int()))
+    transition(done, 'n', res = minutes(get_int()))
   }
   term_state(done) {
     // nop

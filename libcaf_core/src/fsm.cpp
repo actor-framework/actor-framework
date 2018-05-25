@@ -16,57 +16,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
-
-#include <cstdint>
-#include <string>
-
-#include "caf/detail/scope_guard.hpp"
-
-#include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
-#include "caf/detail/parser/is_char.hpp"
-#include "caf/detail/parser/state.hpp"
 
 namespace caf {
 namespace detail {
-namespace parser {
 
-/// Reads a number, i.e., on success produces either an `int64_t` or a
-/// `double`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  std::string res;
-  auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= ec::trailing_character)
-      consumer.value(std::move(res));
-  });
-  start();
-  state(init) {
-    transition(init, " \t")
-    transition(read_chars, '"')
-  }
-  state(read_chars) {
-    transition(escape, '\\')
-    transition(done, '"')
-    error_transition(ec::unexpected_newline, '\n')
-    transition(read_chars, any_char, res += ch)
-  }
-  state(escape) {
-    transition(read_chars, 'n', res += '\n')
-    transition(read_chars, 'r', res += '\r')
-    transition(read_chars, 't', res += '\t')
-    transition(read_chars, '\\', res += '\\')
-    transition(read_chars, '"', res += '"')
-    error_transition(ec::illegal_escape_sequence)
-  }
-  term_state(done) {
-    transition(done, " \t")
-  }
-  fin();
-}
+const char alphanumeric_chars[63] = "0123456789"
+                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                    "abcdefghijklmnopqrstuvwxyz";
 
-} // namespace parser
+const char alphabetic_chars[53] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                  "abcdefghijklmnopqrstuvwxyz";
+
+const char hexadecimal_chars[23] = "0123456789ABCDEFabcdef";
+
+const char decimal_chars[11] = "0123456789";
+
+const char octal_chars[9] = "01234567";
+
 } // namespace detail
 } // namespace caf
 

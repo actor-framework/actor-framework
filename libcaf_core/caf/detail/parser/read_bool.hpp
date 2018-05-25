@@ -42,35 +42,32 @@ void read_bool(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   });
   start();
   state(init) {
-    input(is_char<' '>, init)
-    input(is_char<'\t'>, init)
-    input(is_char<'f'>, has_f)
-    input(is_char<'t'>, has_t)
+    transition(has_f, 'f')
+    transition(has_t, 't')
   }
   state(has_f) {
-    input(is_char<'a'>, has_fa)
+    transition(has_fa, 'a')
   }
   state(has_fa) {
-    input(is_char<'l'>, has_fal)
+    transition(has_fal, 'l')
   }
   state(has_fal) {
-    input(is_char<'s'>, has_fals)
+    transition(has_fals, 's')
   }
   state(has_fals) {
-    action(is_char<'e'>, done, res = false)
+    transition(done, 'e', res = false)
   }
   state(has_t) {
-    input(is_char<'r'>, has_tr)
+    transition(has_tr, 'r')
   }
   state(has_tr) {
-    input(is_char<'u'>, has_tru)
+    transition(has_tru, 'u')
   }
   state(has_tru) {
-    action(is_char<'e'>, done, res = true)
+    transition(done, 'e', res = true)
   }
   term_state(done) {
-    input(is_char<' '>, done)
-    input(is_char<'\t'>, done)
+    // nop
   }
   fin();
 }

@@ -57,17 +57,15 @@ void read_atom(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   });
   start();
   state(init) {
-    input(is_char<' '>, init)
-    input(is_char<'\t'>, init)
-    input(is_char<'\''>, read_chars)
+    transition(init, " \t")
+    transition(read_chars, '\'')
   }
   state(read_chars) {
-    input(is_char<'\''>, done)
-    checked_action(is_legal, read_chars, append(ch), ec::too_many_characters)
+    transition(done, '\'')
+    transition(read_chars, is_legal, append(ch), ec::too_many_characters)
   }
   term_state(done) {
-    input(is_char<' '>, done)
-    input(is_char<'\t'>, done)
+    transition(done, " \t")
   }
   fin();
 }

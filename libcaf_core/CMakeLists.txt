@@ -52,6 +52,7 @@ set(LIBCAF_CORE_SRCS
   src/execution_unit.cpp
   src/exit_reason.cpp
   src/forwarding_actor_proxy.cpp
+  src/fsm.cpp
   src/get_mac_addresses.cpp
   src/get_process_id.cpp
   src/get_root_uuid.cpp

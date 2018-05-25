@@ -105,35 +105,34 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   // Definition of our parser FSM.
   start();
   state(init) {
-    input(is_char<' '>, init)
-    input(is_char<'\t'>, init)
-    input(is_char<'+'>, has_plus)
-    input(is_char<'-'>, has_minus)
-    input(is_char<'0'>, pos_zero)
+    transition(init, " \t")
+    transition(has_plus, '+')
+    transition(has_minus, '-')
+    transition(pos_zero, '0')
     epsilon(has_plus)
   }
   // "+" or "-" alone aren't numbers.
   state(has_plus) {
-    action(is_char<'.'>, leading_dot, ch_res(positive_double))
-    input(is_char<'0'>, pos_zero)
+    transition(leading_dot, '.', ch_res(positive_double))
+    transition(pos_zero, '0')
     epsilon(pos_dec)
   }
   state(has_minus) {
-    action(is_char<'.'>, leading_dot, ch_res(negative_double))
-    input(is_char<'0'>, neg_zero)
+    transition(leading_dot, '.', ch_res(negative_double))
+    transition(neg_zero, '0')
     epsilon(neg_dec)
   }
   // Disambiguate base.
   term_state(pos_zero) {
-    input(is_ichar<'b'>, start_pos_bin)
-    input(is_ichar<'x'>, start_pos_hex)
-    action(is_char<'.'>, trailing_dot, ch_res(positive_double))
+    transition(start_pos_bin, "bB")
+    transition(start_pos_hex, "xX")
+    transition(trailing_dot, '.', ch_res(positive_double))
     epsilon(pos_oct)
   }
   term_state(neg_zero) {
-    input(is_ichar<'b'>, start_neg_bin)
-    input(is_ichar<'x'>, start_neg_hex)
-    action(is_char<'.'>, trailing_dot, ch_res(negative_double))
+    transition(start_neg_bin, "bB")
+    transition(start_neg_hex, "xX")
+    transition(trailing_dot, '.', ch_res(negative_double))
     epsilon(neg_oct)
   }
   // Binary integers.
@@ -141,102 +140,96 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     epsilon(pos_bin)
   }
   term_state(pos_bin) {
-    checked_action(is_digit<2>, pos_bin, add_ascii<2>(int_res, ch),
-                   ec::integer_overflow)
+    transition(pos_bin, "01", add_ascii<2>(int_res, ch), ec::integer_overflow)
   }
   state(start_neg_bin) {
     epsilon(neg_bin)
   }
   term_state(neg_bin) {
-    checked_action(is_digit<2>, neg_bin, sub_ascii<2>(int_res, ch),
-                   ec::integer_underflow)
+    transition(neg_bin, "01", sub_ascii<2>(int_res, ch), ec::integer_underflow)
   }
   // Octal integers.
   state(start_pos_oct) {
     epsilon(pos_oct)
   }
   term_state(pos_oct) {
-    checked_action(is_digit<8>, pos_oct, add_ascii<8>(int_res, ch),
-                   ec::integer_overflow)
+    transition(pos_oct, octal_chars, add_ascii<8>(int_res, ch),
+               ec::integer_overflow)
   }
   state(start_neg_oct) {
     epsilon(neg_oct)
   }
   term_state(neg_oct) {
-    checked_action(is_digit<8>, neg_oct, sub_ascii<8>(int_res, ch),
-                   ec::integer_underflow)
+    transition(neg_oct, octal_chars, sub_ascii<8>(int_res, ch),
+               ec::integer_underflow)
   }
   // Hexal integers.
   state(start_pos_hex) {
     epsilon(pos_hex)
   }
   term_state(pos_hex) {
-    checked_action(is_digit<16>, pos_hex, add_ascii<16>(int_res, ch),
-                   ec::integer_overflow)
+    transition(pos_hex, hexadecimal_chars, add_ascii<16>(int_res, ch),
+               ec::integer_overflow)
   }
   state(start_neg_hex) {
     epsilon(neg_hex)
   }
   term_state(neg_hex) {
-    checked_action(is_digit<16>, neg_hex, sub_ascii<16>(int_res, ch),
-                   ec::integer_underflow)
+    transition(neg_hex, hexadecimal_chars, sub_ascii<16>(int_res, ch),
+               ec::integer_underflow)
   }
   // Reads the integer part of the mantissa or a positive decimal integer.
   term_state(pos_dec) {
-    checked_action(is_digit<10>, pos_dec, add_ascii<10>(int_res, ch),
-                   ec::integer_overflow)
-    action(is_ichar<'e'>, has_e, ch_res(positive_double))
-    action(is_char<'.'>, trailing_dot, ch_res(positive_double))
+    transition(pos_dec, decimal_chars, add_ascii<10>(int_res, ch),
+               ec::integer_overflow)
+    transition(has_e, "eE", ch_res(positive_double))
+    transition(trailing_dot, '.', ch_res(positive_double))
   }
   // Reads the integer part of the mantissa or a negative decimal integer.
   term_state(neg_dec) {
-    checked_action(is_digit<10>, neg_dec, sub_ascii<10>(int_res, ch),
-                   ec::integer_underflow)
-    action(is_ichar<'e'>, has_e, ch_res(negative_double))
-    action(is_char<'.'>, trailing_dot, ch_res(negative_double))
+    transition(neg_dec, decimal_chars, sub_ascii<10>(int_res, ch),
+               ec::integer_underflow)
+    transition(has_e, "eE", ch_res(negative_double))
+    transition(trailing_dot, '.', ch_res(negative_double))
   }
   // ".", "+.", etc. aren't valid numbers, so this state isn't terminal.
   state(leading_dot) {
-    checked_action(is_digit<10>, after_dot, rd_decimal(ch),
-                   ec::exponent_underflow)
+    transition(after_dot, decimal_chars, rd_decimal(ch), ec::exponent_underflow)
   }
   // "1." is a valid number, so a trailing dot is a terminal state.
   term_state(trailing_dot) {
-    checked_action(is_digit<10>, after_dot, rd_decimal(ch),
-                   ec::exponent_underflow)
-    input(is_ichar<'e'>, has_e)
+    epsilon(after_dot)
   }
   // Read the decimal part of a mantissa.
   term_state(after_dot) {
-    checked_action(is_digit<10>, after_dot, rd_decimal(ch),
-                   ec::exponent_underflow)
-    input(is_ichar<'e'>, has_e)
+    transition(after_dot, decimal_chars, rd_decimal(ch), ec::exponent_underflow)
+    transition(has_e, "eE")
   }
   // "...e", "...e+", and "...e-" aren't valid numbers, so these states are not
   // terminal.
   state(has_e) {
-    input(is_char<'+'>, has_plus_after_e)
-    input(is_char<'-'>, has_minus_after_e)
-    checked_action(is_digit<10>, pos_exp, add_ascii<10>(exp, ch),
-                   ec::exponent_overflow)
+    transition(has_plus_after_e, '+')
+    transition(has_minus_after_e, '-')
+    transition(pos_exp, decimal_chars, add_ascii<10>(exp, ch),
+               ec::exponent_overflow)
   }
   state(has_plus_after_e) {
-    checked_action(is_digit<10>, pos_exp, add_ascii<10>(exp, ch),
-                   ec::exponent_overflow)
+    transition(pos_exp, decimal_chars, add_ascii<10>(exp, ch),
+               ec::exponent_overflow)
   }
   state(has_minus_after_e) {
-    checked_action(is_digit<10>, neg_exp, sub_ascii<10>(exp, ch),
-                   ec::exponent_underflow)
+    transition(neg_exp, decimal_chars, sub_ascii<10>(exp, ch),
+               ec::exponent_underflow)
   }
   // Read a positive exponent.
   term_state(pos_exp) {
-    checked_action(is_digit<10>, pos_exp, add_ascii<10>(exp, ch),
-                   ec::exponent_overflow)
+    transition(pos_exp, decimal_chars, add_ascii<10>(exp, ch),
+               ec::exponent_overflow)
   }
   // Read a negative exponent.
   term_state(neg_exp) {
-    checked_action(is_digit<10>, neg_exp, sub_ascii<10>(exp, ch),
-                   ec::exponent_underflow)
+    transition(neg_exp, decimal_chars, sub_ascii<10>(exp, ch),
+               ec::exponent_underflow)
   }
   fin();
 }

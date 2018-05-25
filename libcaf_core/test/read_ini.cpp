@@ -66,6 +66,16 @@ struct test_consumer {
   }
 };
 
+
+
+struct ini_consumer {
+  using inner_map = std::map<std::string, config_value>;
+  using section_map = std::map<std::string, inner_map>;
+
+  section_map sections;
+  section_map::iterator current_section;
+};
+
 struct fixture {
   expected<log_type> parse(std::string str, bool expect_success = true) {
     detail::parser::state<std::string::iterator> res;

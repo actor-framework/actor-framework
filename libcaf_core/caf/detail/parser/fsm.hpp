@@ -18,6 +18,40 @@
 
 #pragma once
 
+#include <cstring>
+
+namespace caf {
+namespace detail {
+
+struct any_char_t {};
+
+constexpr any_char_t any_char = any_char_t{};
+
+inline constexpr bool in_whitelist(any_char_t, char) {
+  return true;
+}
+
+inline constexpr bool in_whitelist(char whitelist, char ch) {
+  return whitelist == ch;
+}
+
+inline bool in_whitelist(const char* whitelist, char ch) {
+  return strchr(whitelist, ch) != nullptr;
+}
+
+inline bool in_whitelist(bool (*filter)(char), char ch) {
+  return filter(ch);
+}
+
+extern const char alphanumeric_chars[63];
+extern const char alphabetic_chars[53];
+extern const char hexadecimal_chars[23];
+extern const char decimal_chars[11];
+extern const char octal_chars[9];
+
+} // namespace detail
+} // namespace caf
+
 #define CAF_FSM_EVAL_MISMATCH_EC                                               \
   if (mismatch_ec == ec::unexpected_character)                                 \
     ps.code = ch != '\n' ? mismatch_ec : ec::unexpected_newline;               \
@@ -61,72 +95,115 @@
   ps.code = ec::success;                                                       \
   return;
 
-#define input(predicate, target)                                               \
-  if (predicate(ch)) {                                                         \
-    ch = ps.next();                                                            \
-    goto s_##target;                                                           \
-  }
-
-#define action(predicate, target, statement)                                   \
-  if (predicate(ch)) {                                                         \
-    statement;                                                                 \
-    ch = ps.next();                                                            \
-    goto s_##target;                                                           \
-  }
-
-#define default_action(target, statement)                                      \
-  statement;                                                                   \
+#define CAF_TRANSITION_IMPL1(target)                                           \
   ch = ps.next();                                                              \
   goto s_##target;
 
-#define checked_action(predicate, target, statement, error_code)               \
-  if (predicate(ch)) {                                                         \
-    if (statement) {                                                           \
-      ch = ps.next();                                                          \
-      goto s_##target;                                                         \
-    } else {                                                                   \
+#define CAF_TRANSITION_IMPL2(target, whitelist)                                \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    CAF_TRANSITION_IMPL1(target)                                               \
+  }
+
+#define CAF_TRANSITION_IMPL3(target, whitelist, action)                        \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    action;                                                                    \
+    CAF_TRANSITION_IMPL1(target)                                               \
+  }
+
+#define CAF_TRANSITION_IMPL4(target, whitelist, action, error_code)            \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    if (!action) {                                                             \
       ps.code = error_code;                                                    \
       return;                                                                  \
     }                                                                          \
+    CAF_TRANSITION_IMPL1(target)                                               \
   }
 
-// Unconditionally jumps to target for any input.
-#define any_input(target)                                                      \
-  ch = ps.next();                                                              \
-  goto s_##target;
+/// Transitions to target state if a predicate (optional argument 1) holds for
+/// the current token and executes an action (optional argument 2) before
+/// entering the new state.
+#define transition(...)                                                        \
+  CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
-#define invalid_input(predicate, error_code)                                   \
-  if (predicate(ch)) {                                                         \
+#define CAF_ERROR_TRANSITION_IMPL2(error_code, whitelist)                      \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
     ps.code = error_code;                                                      \
     return;                                                                    \
   }
 
-#define default_failure(error_code)                                            \
+#define CAF_ERROR_TRANSITION_IMPL1(error_code)                                 \
   ps.code = error_code;                                                        \
   return;
 
-// Makes an unconditional epsiolon transition into another state.
-#define epsilon(target) goto e_##target;
+/// Stops the FSM with reason `error_code` if `predicate` holds for the current
+/// token.
+#define error_transition(...)                                                  \
+  CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+
+#define CAF_EPSILON_IMPL1(target) goto s_##target;
+
+#define CAF_EPSILON_IMPL2(target, whitelist)                                   \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    CAF_EPSILON_IMPL1(target)                                                  \
+  }
+
+#define CAF_EPSILON_IMPL3(target, whitelist, action)                           \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    action;                                                                    \
+    CAF_EPSILON_IMPL1(target)                                                  \
+  }
+
+#define CAF_EPSILON_IMPL4(target, whitelist, action, error_code)               \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    if (!action) {                                                             \
+      ps.code = error_code;                                                    \
+      return;                                                                  \
+    }                                                                          \
+    CAF_EPSILON_IMPL1(target)                                                  \
+  }
+
+// Makes an epsilon transition into another state.
+#define epsilon(...) CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 // Makes an epsiolon transition into another state if the `statement` is true.
-#define checked_epsilon(statement, target)                                     \
-  if (statement)                                                               \
-    goto e_##target;
+#define epsilon_if(statement, ...)                                             \
+  if (statement) {                                                             \
+    epsilon(__VA_ARGS__)                                                       \
+  }
 
-// Transitions into the `target` FSM.
-#define invoke_fsm(fsm_call, target)                                           \
+#define CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                \
   fsm_call;                                                                    \
   if (ps.code > ec::trailing_character)                                        \
     return;                                                                    \
   ch = ps.current();                                                           \
   goto s_##target;
 
-#define invoke_fsm_if(predicate, fsm_call, target)                             \
-  if (predicate(ch)) {                                                         \
-    fsm_call;                                                                  \
-    if (ps.code > ec::trailing_character)                                      \
+#define CAF_FSM_EPSILON_IMPL3(fsm_call, target, whitelist)                     \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
+  }
+
+#define CAF_FSM_EPSILON_IMPL4(fsm_call, target, whitelist, action)             \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    action;                                                                    \
+    CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
+  }
+
+#define CAF_FSM_EPSILON_IMPL5(fsm_call, target, whitelist, action, error_code) \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    if (!action) {                                                             \
+      ps.code = error_code;                                                    \
       return;                                                                  \
-    ch = ps.current();                                                         \
-    goto s_##target;                                                           \
+    }                                                                          \
+    CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
+  }
+
+/// Makes an epsilon transition into another FSM, resuming at state `target`.
+#define fsm_epsilon(...)                                                       \
+  CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
+
+#define fsm_epsilon_if(statement, ...)                                         \
+  if (statement) {                                                             \
+    fsm_epsilon(__VA_ARGS__)                                                   \
   }
 

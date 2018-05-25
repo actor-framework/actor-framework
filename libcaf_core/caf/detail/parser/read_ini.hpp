@@ -24,7 +24,6 @@
 
 #include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
-#include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_atom.hpp"
 #include "caf/detail/parser/read_bool.hpp"
 #include "caf/detail/parser/read_number_or_timespan.hpp"
@@ -56,11 +55,11 @@ template <class Iterator, class Sentinel, class Consumer>
 void read_ini_comment(state<Iterator, Sentinel>& ps, Consumer&) {
   start();
   state(init) {
-    input(is_char<';'>, await_newline)
+    transition(await_newline, ';')
   }
   term_state(await_newline) {
-    input(is_char<'\n'>, done)
-    any_input(await_newline)
+    transition(done, '\n')
+    transition(await_newline)
   }
   term_state(done) {
     // nop
@@ -75,23 +74,19 @@ template <class Iterator, class Sentinel, class Consumer>
 void read_ini_list(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   start();
   state(init) {
-    action(is_char<'['>, before_value, consumer.begin_list())
+    transition(before_value, '[', consumer.begin_list())
   }
   state(before_value) {
-    input(is_char<' '>, before_value)
-    input(is_char<'\t'>, before_value)
-    input(is_char<'\n'>, before_value)
-    action(is_char<']'>, done, consumer.end_list())
-    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), before_value)
-    invoke_fsm(read_ini_value(ps, consumer), after_value)
+    transition(before_value, " \t\n")
+    transition(done, ']', consumer.end_list())
+    fsm_epsilon(read_ini_comment(ps, consumer), before_value, ';')
+    fsm_epsilon(read_ini_value(ps, consumer), after_value)
   }
   state(after_value) {
-    input(is_char<' '>, after_value)
-    input(is_char<'\t'>, after_value)
-    input(is_char<'\n'>, after_value)
-    input(is_char<','>, before_value)
-    action(is_char<']'>, done, consumer.end_list())
-    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), after_value)
+    transition(after_value, " \t\n")
+    transition(before_value, ',')
+    transition(done, ']', consumer.end_list())
+    fsm_epsilon(read_ini_comment(ps, consumer), after_value, ';')
   }
   term_state(done) {
     // nop
@@ -102,46 +97,40 @@ void read_ini_list(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 template <class Iterator, class Sentinel, class Consumer>
 void read_ini_map(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   std::string key;
-  auto is_alnum_or_dash = [](char x) {
+  auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
   };
   start();
   state(init) {
-    action(is_char<'{'>, await_key_name, consumer.begin_map())
+    transition(await_key_name, '{', consumer.begin_map())
   }
   state(await_key_name) {
-    input(is_char<' '>, await_key_name)
-    input(is_char<'\t'>, await_key_name)
-    input(is_char<'\n'>, await_key_name)
-    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), await_key_name)
-    action(isalnum, read_key_name, key = ch)
-    action(is_char<'}'>, done, consumer.end_map())
+    transition(await_key_name, " \t\n")
+    fsm_epsilon(read_ini_comment(ps, consumer), await_key_name, ';')
+    transition(read_key_name, alphabetic_chars, key = ch)
+    transition(done, '}', consumer.end_map())
   }
   // Reads a key of a "key=value" line.
   state(read_key_name) {
-    action(is_alnum_or_dash, read_key_name, key += ch)
+    transition(read_key_name, alnum_or_dash, key += ch)
     epsilon(await_assignment)
   }
   // Reads the assignment operator in a "key=value" line.
   state(await_assignment) {
-    input(is_char<' '>, await_assignment)
-    input(is_char<'\t'>, await_assignment)
-    action(is_char<'='>, await_value, consumer.key(std::move(key)))
+    transition(await_assignment, " \t")
+    transition(await_value, '=', consumer.key(std::move(key)))
   }
   // Reads the value in a "key=value" line.
   state(await_value) {
-    input(is_char<' '>, await_value)
-    input(is_char<'\t'>, await_value)
-    invoke_fsm(read_ini_value(ps, consumer), after_value)
+    transition(await_value, " \t")
+    fsm_epsilon(read_ini_value(ps, consumer), after_value)
   }
   // Waits for end-of-line after reading a value
   state(after_value) {
-    input(is_char<' '>, after_value)
-    input(is_char<'\t'>, after_value)
-    input(is_char<'\n'>, after_value)
-    input(is_char<','>, await_key_name)
-    action(is_char<'}'>, done, consumer.end_map())
-    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), after_value)
+    transition(after_value, " \t\n")
+    transition(await_key_name, ',')
+    transition(done, '}', consumer.end_map())
+    fsm_epsilon(read_ini_comment(ps, consumer), after_value, ';')
   }
   term_state(done) {
     //nop
@@ -151,18 +140,15 @@ void read_ini_map(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 
 template <class Iterator, class Sentinel, class Consumer>
 void read_ini_value(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  auto is_f_or_t = [](char x) {
-    return x == 'f' || x == 'F' || x == 't' || x == 'T';
-  };
   start();
   state(init) {
-    invoke_fsm_if(is_char<'"'>, read_string(ps, consumer), done)
-    invoke_fsm_if(is_char<'\''>, read_atom(ps, consumer), done)
-    invoke_fsm_if(is_char<'.'>, read_number(ps, consumer), done)
-    invoke_fsm_if(is_f_or_t, read_bool(ps, consumer), done)
-    invoke_fsm_if(isdigit, read_number_or_timespan(ps, consumer), done)
-    invoke_fsm_if(is_char<'['>, read_ini_list(ps, consumer), done)
-    invoke_fsm_if(is_char<'{'>, read_ini_map(ps, consumer), done)
+    fsm_epsilon(read_string(ps, consumer), done, '"')
+    fsm_epsilon(read_atom(ps, consumer), done, '\'')
+    fsm_epsilon(read_number(ps, consumer), done, '.')
+    fsm_epsilon(read_bool(ps, consumer), done, "ft")
+    fsm_epsilon(read_number_or_timespan(ps, consumer), done, decimal_chars)
+    fsm_epsilon(read_ini_list(ps, consumer), done, '[')
+    fsm_epsilon(read_ini_map(ps, consumer), done, '{')
   }
   term_state(done) {
     // nop
@@ -175,7 +161,7 @@ template <class Iterator, class Sentinel, class Consumer>
 void read_ini(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   using std::swap;
   std::string tmp;
-  auto is_alnum_or_dash = [](char x) {
+  auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
   };
   bool in_section = false;
@@ -199,61 +185,52 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   start();
   // Scanning for first section.
   term_state(init) {
-    input(is_char<' '>, init)
-    input(is_char<'\t'>, init)
-    input(is_char<'\n'>, init)
-    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), init)
-    input(is_char<'['>, start_section)
+    transition(init, " \t\n")
+    fsm_epsilon(read_ini_comment(ps, consumer), init, ';')
+    transition(start_section, '[')
   }
   // Read the section key after reading an '['.
   state(start_section) {
-    input(is_char<' '>, start_section)
-    input(is_char<'\t'>, start_section)
-    action(isalpha, read_section_name, tmp = ch)
+    transition(start_section, " \t")
+    transition(read_section_name, alphabetic_chars, tmp = ch)
   }
   // Reads a section name such as "[foo]".
   state(read_section_name) {
-    action(is_alnum_or_dash, read_section_name, tmp += ch)
+    transition(read_section_name, alnum_or_dash, tmp += ch)
     epsilon(close_section)
   }
   // Wait for the closing ']', preceded by any number of whitespaces.
   state(close_section) {
-    input(is_char<' '>, close_section)
-    input(is_char<'\t'>, close_section)
-    action(is_char<']'>, dispatch, begin_section())
+    transition(close_section, " \t")
+    transition(dispatch, ']', begin_section())
   }
   // Dispatches to read sections, comments, or key/value pairs.
   term_state(dispatch) {
-    input(is_char<' '>, dispatch)
-    input(is_char<'\t'>, dispatch)
-    input(is_char<'\n'>, dispatch)
-    input(is_char<'['>, read_section_name)
-    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), dispatch)
-    action(isalnum, read_key_name, tmp = ch)
+    transition(dispatch, " \t\n")
+    transition(read_section_name, '[')
+    fsm_epsilon(read_ini_comment(ps, consumer), dispatch, ';')
+    transition(read_key_name, alphanumeric_chars, tmp = ch)
   }
   // Reads a key of a "key=value" line.
   state(read_key_name) {
-    action(is_alnum_or_dash, read_key_name, tmp += ch)
+    transition(read_key_name, alnum_or_dash, tmp += ch)
     epsilon(await_assignment)
   }
   // Reads the assignment operator in a "key=value" line.
   state(await_assignment) {
-    input(is_char<' '>, await_assignment)
-    input(is_char<'\t'>, await_assignment)
-    action(is_char<'='>, await_value, emit_key())
+    transition(await_assignment, " \t")
+    transition(await_value, '=', emit_key())
   }
   // Reads the value in a "key=value" line.
   state(await_value) {
-    input(is_char<' '>, await_value)
-    input(is_char<'\t'>, await_value)
-    invoke_fsm(read_ini_value(ps, consumer), await_eol)
+    transition(await_value, " \t")
+    fsm_epsilon(read_ini_value(ps, consumer), await_eol)
   }
   // Waits for end-of-line after reading a value
   term_state(await_eol) {
-    input(is_char<' '>, await_eol)
-    input(is_char<'\t'>, await_eol)
-    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), dispatch)
-    input(is_char<'\n'>, dispatch)
+    transition(await_eol, " \t")
+    fsm_epsilon(read_ini_comment(ps, consumer), dispatch, ';')
+    transition(dispatch, '\n')
   }
   fin();
 }
