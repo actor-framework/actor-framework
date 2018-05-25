@@ -101,7 +101,52 @@ void read_ini_list(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 
 template <class Iterator, class Sentinel, class Consumer>
 void read_ini_map(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  // TODO: implement me
+  std::string key;
+  auto is_alnum_or_dash = [](char x) {
+    return isalnum(x) || x == '-' || x == '_';
+  };
+  start();
+  state(init) {
+    action(is_char<'{'>, await_key_name, consumer.begin_map())
+  }
+  state(await_key_name) {
+    input(is_char<' '>, await_key_name)
+    input(is_char<'\t'>, await_key_name)
+    input(is_char<'\n'>, await_key_name)
+    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), await_key_name)
+    action(isalnum, read_key_name, key = ch)
+    action(is_char<'}'>, done, consumer.end_map())
+  }
+  // Reads a key of a "key=value" line.
+  state(read_key_name) {
+    action(is_alnum_or_dash, read_key_name, key += ch)
+    epsilon(await_assignment)
+  }
+  // Reads the assignment operator in a "key=value" line.
+  state(await_assignment) {
+    input(is_char<' '>, await_assignment)
+    input(is_char<'\t'>, await_assignment)
+    action(is_char<'='>, await_value, consumer.key(std::move(key)))
+  }
+  // Reads the value in a "key=value" line.
+  state(await_value) {
+    input(is_char<' '>, await_value)
+    input(is_char<'\t'>, await_value)
+    invoke_fsm(read_ini_value(ps, consumer), after_value)
+  }
+  // Waits for end-of-line after reading a value
+  state(after_value) {
+    input(is_char<' '>, after_value)
+    input(is_char<'\t'>, after_value)
+    input(is_char<'\n'>, after_value)
+    input(is_char<','>, await_key_name)
+    action(is_char<'}'>, done, consumer.end_map())
+    invoke_fsm_if(is_char<';'>, read_ini_comment(ps, consumer), after_value)
+  }
+  term_state(done) {
+    //nop
+  }
+  fin();
 }
 
 template <class Iterator, class Sentinel, class Consumer>

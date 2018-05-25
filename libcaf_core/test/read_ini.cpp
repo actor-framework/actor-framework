@@ -103,6 +103,14 @@ some-list=[
   "abc",
   'def', ; some comment and a trailing comma
 ]
+some-map={
+; here we have some list entries
+entry1=123,
+  entry2=23 ; twenty-three!
+  ,
+ entry3= "abc",
+ entry4 = 'def', ; some comment and a trailing comma
+}
 )";
 
 const auto ini0_log = make_log(
@@ -111,7 +119,9 @@ const auto ini0_log = make_log(
   "value: 2000ns", "key: impl", "value: 'foo'", "key: x_",
   "value: " + deep_to_string(.123), "key: some-bool", "value: true",
   "key: some-other-bool", "value: false", "key: some-list", "[", "value: 123",
-  "value: 23", "value: \"abc\"", "value: 'def'", "]", "}");
+  "value: 23", "value: \"abc\"", "value: 'def'", "]", "key: some-map", "{",
+  "key: entry1", "value: 123", "key: entry2", "value: 23", "key: entry3",
+  "value: \"abc\"", "key: entry4", "value: 'def'", "}", "}");
 
 } // namespace <anonymous>
 
