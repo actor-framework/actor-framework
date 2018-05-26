@@ -22,8 +22,11 @@
 #include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/default_sum_type_access.hpp"
 #include "caf/fwd.hpp"
 #include "caf/static_visitor.hpp"
+#include "caf/sum_type.hpp"
+#include "caf/sum_type_access.hpp"
 
 #include "caf/meta/omittable.hpp"
 
@@ -35,13 +38,6 @@
   case n:                                                                      \
     return f(std::forward<Us>(xs)...,                                          \
              x.get(std::integral_constant<int, (n <= max_type_id ? n : 0)>()))
-
-#define CAF_VARIANT_DISPATCH_CASE(n)                                           \
-  case n:                                                                      \
-    return next.template apply_impl<Result>(                                   \
-      std::forward<Variant>(next), std::forward<Visitor>(f),                   \
-      std::forward<Us>(xs)...,                                                 \
-      x.get(std::integral_constant<int, (n <= max_type_id ? n : 0)>()))
 
 #define CAF_VARIANT_ASSIGN_CASE(n)                                             \
   case n: {                                                                    \
@@ -56,10 +52,6 @@
 namespace caf {
 
 constexpr size_t variant_npos = static_cast<size_t>(-1);
-
-struct variant_marker_t {};
-
-constexpr variant_marker_t variant_marker = variant_marker_t{};
 
 template <class T>
 struct is_variant : std::false_type {};
@@ -190,6 +182,15 @@ public:
   }
 
   /// @cond PRIVATE
+
+  inline variant& data() {
+    return *this;
+  }
+
+  inline const variant& data() const {
+    return *this;
+  }
+
   template <int Pos>
   bool is(std::integral_constant<int, Pos>) const {
     return type_ == Pos;
@@ -219,17 +220,17 @@ public:
   template <class Result, class Visitor, class... Variants>
   Result apply(Visitor&& visitor, Variants&&... xs) const {
     return apply_impl<Result>(*this, std::forward<Visitor>(visitor),
-                              std::forward<Variants>(xs)..., variant_marker);
+                              std::forward<Variants>(xs)...);
   }
 
   template <class Result, class Visitor, class... Variants>
   Result apply(Visitor&& visitor, Variants&&... xs) {
     return apply_impl<Result>(*this, std::forward<Visitor>(visitor),
-                              std::forward<Variants>(xs)..., variant_marker);
+                              std::forward<Variants>(xs)...);
   }
 
   template <class Result, class Self, class Visitor, class... Us>
-  static Result apply_impl(Self& x, Visitor&& f, variant_marker_t, Us&&... xs) {
+  static Result apply_impl(Self& x, Visitor&& f, Us&&... xs) {
     switch (x.type_) {
       default: CAF_RAISE_ERROR("invalid type found");
       CAF_VARIANT_CASE(0);
@@ -255,33 +256,6 @@ public:
     }
   }
 
-  template <class Result, class Self, class Visitor, class Variant, class... Us>
-  static detail::enable_if_t<is_variant<Variant>::value, Result>
-  apply_impl(Self& x, Visitor&& f, Variant&& next, Us&&... xs) {
-    switch (x.type_) {
-      default: CAF_RAISE_ERROR("invalid type found");
-      CAF_VARIANT_DISPATCH_CASE(0);
-      CAF_VARIANT_DISPATCH_CASE(1);
-      CAF_VARIANT_DISPATCH_CASE(2);
-      CAF_VARIANT_DISPATCH_CASE(3);
-      CAF_VARIANT_DISPATCH_CASE(4);
-      CAF_VARIANT_DISPATCH_CASE(5);
-      CAF_VARIANT_DISPATCH_CASE(6);
-      CAF_VARIANT_DISPATCH_CASE(7);
-      CAF_VARIANT_DISPATCH_CASE(8);
-      CAF_VARIANT_DISPATCH_CASE(9);
-      CAF_VARIANT_DISPATCH_CASE(10);
-      CAF_VARIANT_DISPATCH_CASE(11);
-      CAF_VARIANT_DISPATCH_CASE(12);
-      CAF_VARIANT_DISPATCH_CASE(13);
-      CAF_VARIANT_DISPATCH_CASE(14);
-      CAF_VARIANT_DISPATCH_CASE(15);
-      CAF_VARIANT_DISPATCH_CASE(16);
-      CAF_VARIANT_DISPATCH_CASE(17);
-      CAF_VARIANT_DISPATCH_CASE(18);
-      CAF_VARIANT_DISPATCH_CASE(19);
-    }
-  }
   /// @endcond
 
 private:
@@ -343,55 +317,14 @@ private:
   detail::variant_data<typename lift_void<Ts>::type...> data_;
 };
 
+/// Enable `holds_alternative`, `get`, `get_if`, and `visit` for `variant`.
 /// @relates variant
-template <class T, class... Us>
-T& get(variant<Us...>& value) {
-  using namespace detail;
-  int_token<tl_index_where<type_list<Us...>,
-                           tbind<is_same_ish, T>::template type>::value> token;
-  // silence compiler error about "binding to unrelated types" such as
-  // 'signed char' to 'char' (which is obvious bullshit)
-  return reinterpret_cast<T&>(value.get(token));
-}
-
-/// @relates variant
-template <class T, class... Us>
-const T& get(const variant<Us...>& value) {
-  // compiler implicitly restores const because of the return type
-  return get<T>(const_cast<variant<Us...>&>(value));
-}
-
-/// @relates variant
-template <class T, class... Us>
-T* get_if(variant<Us...>* value) {
-  using namespace detail;
-  int_token<tl_index_where<type_list<Us...>,
-                           tbind<is_same_ish, T>::template type>::value> token;
-  if (value->is(token))
-    return &get<T>(*value);
-  return nullptr;
-}
-
-/// @relates variant
-template <class T, class... Us>
-const T* get_if(const variant<Us...>* value) {
-  // compiler implicitly restores const because of the return type
-  return get_if<T>(const_cast<variant<Us...>*>(value));
-}
-
-/// @relates variant
-template <class Visitor, class Variant, class... Variants,
-          class Result = variant_visit_result_t<Visitor, Variant, Variants...>>
-detail::enable_if_t<is_variant<Variant>::value, Result>
-visit(Visitor&& f, Variant&& x, Variants&&... xs) {
-  return x.template apply<Result>(std::forward<Visitor>(f),
-                                  std::forward<Variants>(xs)...);
-}
-
-template <class T, class... Ts>
-bool holds_alternative(const variant<Ts...>& data) {
-  return data.template is<T>();
-}
+/// @relates SumType
+template <class... Ts>
+struct sum_type_access<variant<Ts...>>
+    : default_sum_type_access<variant<Ts...>> {
+  // nop
+};
 
 /// @relates variant
 template <class T, template <class> class Predicate>
