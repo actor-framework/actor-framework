@@ -681,6 +681,32 @@ struct is_expected : std::false_type {};
 template <class T>
 struct is_expected<expected<T>> : std::true_type {};
 
+// Checks whether `T` and `U` are integers of the same size and signedness.
+template <class T, class U,
+          bool Enable = std::is_integral<T>::value
+                        && std::is_integral<U>::value
+                        && !std::is_same<T, bool>::value>
+struct is_equal_int_type {
+  static constexpr bool value = sizeof(T) == sizeof(U)
+                                && std::is_signed<T>::value
+                                   == std::is_signed<U>::value;
+};
+
+template <class T, typename U>
+struct is_equal_int_type<T, U, false> : std::false_type { };
+
+/// Compares `T` to `U` und evaluates to `true_type` if either
+/// `T == U or if T and U are both integral types of the
+/// same size and signedness. This works around the issue that
+/// `uint8_t != unsigned char on some compilers.
+template <class T, typename U>
+struct is_same_ish
+    : std::conditional<
+        std::is_same<T, U>::value,
+        std::true_type,
+        is_equal_int_type<T, U>
+      >::type { };
+
 } // namespace detail
 } // namespace caf
 

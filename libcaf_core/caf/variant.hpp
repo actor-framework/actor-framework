@@ -120,31 +120,6 @@ using variant_visit_result_t =
   typename variant_visit_result<detail::decay_t<F>,
                                 detail::decay_t<Ts>...>::type;
 
-template <class T, class U,
-          bool Enable = std::is_integral<T>::value
-                        && std::is_integral<U>::value
-                        && !std::is_same<T, bool>::value>
-struct is_equal_int_type {
-  static constexpr bool value = sizeof(T) == sizeof(U)
-                                && std::is_signed<T>::value
-                                   == std::is_signed<U>::value;
-};
-
-template <class T, typename U>
-struct is_equal_int_type<T, U, false> : std::false_type { };
-
-/// Compares `T` to `U` und evaluates to `true_type` if either
-/// `T == U or if T and U are both integral types of the
-/// same size and signedness. This works around the issue that
-/// `uint8_t != unsigned char on some compilers.
-template <class T, typename U>
-struct is_same_ish
-    : std::conditional<
-        std::is_same<T, U>::value,
-        std::true_type,
-        is_equal_int_type<T, U>
-      >::type { };
-
 /// A variant represents always a valid value of one of the types `Ts...`.
 template <class... Ts>
 class variant {
@@ -318,6 +293,7 @@ private:
 
   template <class U>
   void set(U&& arg) {
+    using namespace detail;
     using type = typename std::decay<U>::type;
     static constexpr int type_id =
       detail::tl_index_where<
