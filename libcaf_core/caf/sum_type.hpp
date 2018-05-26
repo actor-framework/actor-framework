@@ -62,7 +62,7 @@ detail::enable_if_t<SumType<U>(), const T&> get(const U& x) {
   using namespace detail;
   using trait = sum_type_access<U>;
   int_token<tl_index_where<typename trait::types,
-                           tbind<is_same_ish, T>::template type>::x> token;
+                           tbind<is_same_ish, T>::template type>::value> token;
   // Silence compiler error about "binding to unrelated types" such as
   // 'signed char' to 'char' (which is obvious bullshit).
   return reinterpret_cast<const T&>(trait::get(x, token));
@@ -91,7 +91,7 @@ detail::enable_if_t<SumType<U>(), const T*> get_if(const U* x) {
     int_token<tl_index_where<typename trait::types,
                              tbind<is_same_ish, T>::template type>::value>;
   token_type token;
-  static_assert(token_type::x != -1, "T is not part of the sum type");
+  static_assert(token_type::value != -1, "T is not part of the sum type");
   return trait::is(*x, token) ? &trait::get(*x, token) : nullptr;
 }
 
