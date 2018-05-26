@@ -54,12 +54,9 @@ namespace parser {
 template <class Iterator, class Sentinel, class Consumer>
 void read_ini_comment(state<Iterator, Sentinel>& ps, Consumer&) {
   start();
-  state(init) {
-    transition(await_newline, ';')
-  }
-  term_state(await_newline) {
+  term_state(init) {
     transition(done, '\n')
-    transition(await_newline)
+    transition(init)
   }
   term_state(done) {
     // nop
@@ -71,10 +68,10 @@ template <class Iterator, class Sentinel, class Consumer>
 void read_ini_value(state<Iterator, Sentinel>& ps, Consumer& consumer);
 
 template <class Iterator, class Sentinel, class Consumer>
-void read_ini_list(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+void read_ini_list(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   start();
   state(init) {
-    transition(before_value, '[', consumer.begin_list())
+    epsilon(before_value)
   }
   state(before_value) {
     transition(before_value, " \t\n")
@@ -95,14 +92,14 @@ void read_ini_list(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 }
 
 template <class Iterator, class Sentinel, class Consumer>
-void read_ini_map(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   std::string key;
   auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
   };
   start();
   state(init) {
-    transition(await_key_name, '{', consumer.begin_map())
+    epsilon(await_key_name)
   }
   state(await_key_name) {
     transition(await_key_name, " \t\n")
@@ -147,8 +144,8 @@ void read_ini_value(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     fsm_epsilon(read_number(ps, consumer), done, '.')
     fsm_epsilon(read_bool(ps, consumer), done, "ft")
     fsm_epsilon(read_number_or_timespan(ps, consumer), done, decimal_chars)
-    fsm_epsilon(read_ini_list(ps, consumer), done, '[')
-    fsm_epsilon(read_ini_map(ps, consumer), done, '{')
+    fsm_transition(read_ini_list(ps, consumer.begin_list()), done, '[')
+    fsm_transition(read_ini_map(ps, consumer.begin_map()), done, '{')
   }
   term_state(done) {
     // nop

@@ -35,20 +35,24 @@ using log_type = std::vector<std::string>;
 struct test_consumer {
   log_type log;
 
-  void begin_map() {
+  test_consumer& begin_map() {
     log.emplace_back("{");
+    return *this;
   }
 
-  void end_map() {
+  test_consumer& end_map() {
     log.emplace_back("}");
+    return *this;
   }
 
-  void begin_list() {
+  test_consumer& begin_list() {
     log.emplace_back("[");
+    return *this;
   }
 
-  void end_list() {
+  test_consumer& end_list() {
     log.emplace_back("]");
+    return *this;
   }
 
   void key(std::string name) {

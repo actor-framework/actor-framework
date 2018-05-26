@@ -20,6 +20,8 @@
 
 #include <cstring>
 
+#include "caf/detail/pp.hpp"
+
 namespace caf {
 namespace detail {
 
@@ -59,15 +61,18 @@ extern const char octal_chars[9];
     ps.code = mismatch_ec;                                                     \
   return;
 
+/// Starts the definition of an FSM.
 #define start()                                                                \
   char ch = ps.current();                                                      \
   goto s_init;                                                                 \
   s_unexpected_eof:                                                            \
+  __attribute__((unused));                                                     \
   ps.code = ec::unexpected_eof;                                                \
   return;                                                                      \
   {                                                                            \
     static constexpr ec mismatch_ec = ec::unexpected_character
 
+/// Defines a non-terminal state in the FSM.
 #define state(name)                                                            \
   CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
@@ -78,6 +83,7 @@ extern const char octal_chars[9];
       goto s_unexpected_eof;                                                   \
     e_##name : __attribute__((unused));
 
+/// Defines a terminal state in the FSM.
 #define term_state(name)                                                       \
   CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
@@ -88,6 +94,7 @@ extern const char octal_chars[9];
       goto s_fin;                                                              \
     e_##name : __attribute__((unused));
 
+/// Ends the definition of an FSM.
 #define fin()                                                                  \
   CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
@@ -169,6 +176,44 @@ extern const char octal_chars[9];
 #define epsilon_if(statement, ...)                                             \
   if (statement) {                                                             \
     epsilon(__VA_ARGS__)                                                       \
+  }
+
+#define CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                             \
+  ps.next();                                                                   \
+  fsm_call;                                                                    \
+  if (ps.code > ec::trailing_character)                                        \
+    return;                                                                    \
+  ch = ps.current();                                                           \
+  goto s_##target;
+
+#define CAF_FSM_TRANSITION_IMPL3(fsm_call, target, whitelist)                  \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
+  }
+
+#define CAF_FSM_TRANSITION_IMPL4(fsm_call, target, whitelist, action)          \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    action;                                                                    \
+    CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
+  }
+
+#define CAF_FSM_TRANSITION_IMPL5(fsm_call, target, whitelist, action,          \
+                                 error_code)                                   \
+  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+    if (!action) {                                                             \
+      ps.code = error_code;                                                    \
+      return;                                                                  \
+    }                                                                          \
+    CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
+  }
+
+/// Makes an transition transition into another FSM, resuming at state `target`.
+#define fsm_transition(...)                                                    \
+  CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+
+#define fsm_transition_if(statement, ...)                                      \
+  if (statement) {                                                             \
+    fsm_transition(__VA_ARGS__)                                                \
   }
 
 #define CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                \
