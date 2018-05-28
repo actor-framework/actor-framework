@@ -26,6 +26,7 @@
 #include <type_traits>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
@@ -214,13 +215,15 @@ bool operator!=(const T* x, const intrusive_ptr<T>& y) {
 
 /// @relates intrusive_ptr
 template <class T, class U>
-bool operator==(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
+detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+operator==(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
   return x.get() == y.get();
 }
 
 /// @relates intrusive_ptr
 template <class T, class U>
-bool operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
+detail::enable_if_t<detail::is_comparable<T*, U*>::value, bool>
+operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
   return x.get() != y.get();
 }
 
