@@ -65,10 +65,12 @@ struct compare_visitor {
 
 struct equality_operator {
   template <class T, class U,
-            typename std::enable_if<(std::is_floating_point<T>::value
-                                     || std::is_floating_point<U>::value)
-                                    && detail::is_comparable<T, U>::value,
-                                    int>::type = 0>
+            detail::enable_if_t<((std::is_floating_point<T>::value
+                                  && std::is_convertible<U, double>::value)
+                                 || (std::is_floating_point<U>::value
+                                     && std::is_convertible<T, double>::value))
+                                  && detail::is_comparable<T, U>::value,
+                                int> = 0>
   bool operator()(const T& t, const U& u) const {
     auto x = static_cast<long double>(t);
     auto y = static_cast<long double>(u);
@@ -78,10 +80,12 @@ struct equality_operator {
   }
 
   template <class T, class U,
-            typename std::enable_if<!std::is_floating_point<T>::value
-                                    && !std::is_floating_point<U>::value
-                                    && detail::is_comparable<T, U>::value,
-                                    int>::type = 0>
+            detail::enable_if_t<!((std::is_floating_point<T>::value
+                                   && std::is_convertible<U, double>::value)
+                                  || (std::is_floating_point<U>::value
+                                      && std::is_convertible<T, double>::value))
+                                  && detail::is_comparable<T, U>::value,
+                                int> = 0>
   bool operator()(const T& x, const U& y) const {
     return x == y;
   }
