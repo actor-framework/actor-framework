@@ -138,6 +138,18 @@ struct test_visitor {
 
 } // namespace <anonymous>
 
+CAF_TEST(constructors) {
+  variant<int, string> a{42};
+  variant<string, atom_value> b{atom("foo")};
+  variant<float, int, string> c{string{"bar"}};
+  variant<int, string, double> d{123};
+  CAF_CHECK_EQUAL(a, 42);
+  CAF_CHECK_EQUAL(b, atom("foo"));
+  CAF_CHECK_EQUAL(d, 123);
+  CAF_CHECK_EQUAL(d, 123.0); // the unit test framework supports fuzzy compare
+  CAF_CHECK_NOT_EQUAL(d, std::string{"123"});
+}
+
 CAF_TEST(n_ary_visit) {
   variant<int, string> a{42};
   variant<string, atom_value> b{atom("foo")};

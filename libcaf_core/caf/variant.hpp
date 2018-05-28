@@ -193,7 +193,7 @@ public:
 
   template <int Pos>
   bool is(std::integral_constant<int, Pos>) const {
-    return type_ == Pos;
+    return type_ == static_cast<size_t>(Pos);
   }
 
   template <class T>
@@ -346,19 +346,6 @@ template <class... Ts>
 bool operator==(const variant<Ts...>& x, const variant<Ts...>& y) {
   variant_compare_helper<variant<Ts...>, std::equal_to> f{x};
   return visit(f, y);
-}
-
-/// @relates variant
-template <class T, class... Ts>
-bool operator==(const T& x, const variant<Ts...>& y) {
-  variant_compare_helper<variant<Ts...>, std::equal_to> f{y};
-  return f(x);
-}
-
-/// @relates variant
-template <class T, class... Ts>
-bool operator==(const variant<Ts...>& x, const T& y) {
-  return y == x;
 }
 
 /// @relates variant

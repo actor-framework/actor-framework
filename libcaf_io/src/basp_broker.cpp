@@ -490,7 +490,7 @@ void basp_broker_state::cleanup(connection_handle hdl) {
   auto i = ctx_tcp.find(hdl);
   if (i != ctx_tcp.end()) {
     auto& ref = i->second;
-    CAF_ASSERT(i->first == ref.hdl);
+    CAF_ASSERT(i->first == get<connection_handle>(ref.hdl));
     if (ref.callback) {
       CAF_LOG_DEBUG("connection closed during handshake");
       ref.callback->deliver(sec::disconnect_during_handshake);
@@ -513,7 +513,7 @@ void basp_broker_state::cleanup(datagram_handle hdl) {
   auto i = ctx_udp.find(hdl);
   if (i != ctx_udp.end()) {
     auto& ref = i->second;
-    CAF_ASSERT(i->first == ref.hdl);
+    CAF_ASSERT(i->first == get<datagram_handle>(ref.hdl));
     if (ref.callback) {
       CAF_LOG_DEBUG("connection closed during handshake");
       ref.callback->deliver(sec::disconnect_during_handshake);

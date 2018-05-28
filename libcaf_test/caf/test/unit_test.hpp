@@ -34,6 +34,7 @@
 #include "caf/logger.hpp"
 #include "caf/optional.hpp"
 #include "caf/term.hpp"
+#include "caf/variant.hpp"
 
 #include "caf/detail/arg_wrapper.hpp"
 
@@ -51,12 +52,24 @@ struct negated {
   }
 };
 
-struct equal_to {
+template <class T, class Comparator>
+struct compare_visitor {
+  const T& rhs;
+
+  template <class U>
+  bool operator()(const U& lhs) const {
+    Comparator f;
+    return f(lhs, rhs);
+  }
+};
+
+struct equality_operator {
   template <class T, class U,
-            typename std::enable_if<std::is_floating_point<T>::value
-                                    || std::is_floating_point<U>::value,
+            typename std::enable_if<(std::is_floating_point<T>::value
+                                     || std::is_floating_point<U>::value)
+                                    && detail::is_comparable<T, U>::value,
                                     int>::type = 0>
-  bool operator()(const T& t, const U& u) {
+  bool operator()(const T& t, const U& u) const {
     auto x = static_cast<long double>(t);
     auto y = static_cast<long double>(u);
     auto max = std::max(std::abs(x), std::abs(y));
@@ -66,21 +79,79 @@ struct equal_to {
 
   template <class T, class U,
             typename std::enable_if<!std::is_floating_point<T>::value
-                                    && !std::is_floating_point<U>::value,
+                                    && !std::is_floating_point<U>::value
+                                    && detail::is_comparable<T, U>::value,
                                     int>::type = 0>
-  bool operator()(const T& x, const U& y) {
+  bool operator()(const T& x, const U& y) const {
     return x == y;
+  }
+
+  template <class T, class U,
+            typename std::enable_if<!detail::is_comparable<T, U>::value,
+                                    int>::type = 0>
+  bool operator()(const T&, const U&) const {
+    return false;
   }
 };
 
-// note: we could use negated<equal_to>, but that would give us `!(x == y)`
-// instead of `x != y` and thus messes with coverage testing
-struct not_equal_to {
-  template <class T, class U>
-  bool operator()(const T& x, const U& y) {
+struct inequality_operator {
+  template <class T, class U,
+            typename std::enable_if<(std::is_floating_point<T>::value
+                                     || std::is_floating_point<U>::value)
+                                    && detail::is_comparable<T, U>::value,
+                                    int>::type = 0>
+  bool operator()(const T& x, const U& y) const {
+    equality_operator f;
+    return !f(x, y);
+  }
+
+  template <class T, class U,
+            typename std::enable_if<!std::is_floating_point<T>::value
+                                    && !std::is_floating_point<U>::value
+                                    && detail::is_comparable<T, U>::value,
+                                    int>::type = 0>
+  bool operator()(const T& x, const U& y) const {
     return x != y;
   }
+
+  template <class T, class U,
+            typename std::enable_if<!detail::is_comparable<T, U>::value,
+                                    int>::type = 0>
+  bool operator()(const T&, const U&) const {
+    return true;
+  }
 };
+
+template <class Operator>
+struct comparison {
+  // -- default case -----------------------------------------------------------
+
+  template <class T, class U>
+  detail::enable_if_t<!SumType<T>() && !SumType<U>(), bool>
+  operator()(const T& x, const U& y) {
+    Operator f;
+    return f(x, y);
+  }
+
+  // -- automagic unboxing of sum types ----------------------------------------
+
+  template <class T, class U>
+  detail::enable_if_t<SumType<T>(), bool>
+  operator()(const T& lhs, const U& rhs) const {
+    compare_visitor<U, comparison> f{rhs};
+    return visit(f, lhs);
+  }
+
+  template <class T, class U>
+  detail::enable_if_t<!SumType<T>() && SumType<U>(), bool>
+  operator()(const T& lhs, const U& rhs) const {
+    return (*this)(rhs, lhs);
+  }
+};
+
+using equal_to = comparison<equality_operator>;
+
+using not_equal_to = comparison<inequality_operator>;
 
 struct less_than {
   template <class T, class U>

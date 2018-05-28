@@ -48,6 +48,16 @@ struct anything { };
 anything any_vals;
 
 template <class T>
+bool operator==(anything, const T&) {
+  return true;
+}
+
+template <class T>
+bool operator==(const T&, anything) {
+  return true;
+}
+
+template <class T>
 using maybe = caf::variant<anything, T>;
 
 constexpr uint8_t no_flags = 0;
@@ -61,16 +71,6 @@ constexpr auto config_serv_atom = caf::atom("ConfigServ");
 } // namespace <anonymous>
 
 namespace caf {
-
-template <class T, class U>
-bool operator==(const maybe<T>& x, const U& y) {
-  return get_if<anything>(&x) != nullptr || get<T>(x) == y;
-}
-
-template <class T, class U>
-bool operator==(const T& x, const maybe<U>& y) {
-  return (y == x);
-}
 
 template <class T>
 std::string to_string(const maybe<T>& x) {
