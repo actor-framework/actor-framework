@@ -183,11 +183,11 @@ public:
 
   /// @cond PRIVATE
 
-  inline variant& data() {
+  inline variant& get_data() {
     return *this;
   }
 
-  inline const variant& data() const {
+  inline const variant& get_data() const {
     return *this;
   }
 

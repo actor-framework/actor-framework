@@ -27,7 +27,7 @@
 namespace caf {
 
 /// Allows specializing the `sum_type_access` trait for any type that simply
-/// wraps a `variant` and exposes it with a `data()` member function.
+/// wraps a `variant` and exposes it with a `get_data()` member function.
 template <class T>
 struct default_sum_type_access {
   using types = typename T::types;
@@ -38,31 +38,31 @@ struct default_sum_type_access {
 
   template <int Pos>
   static bool is(const T& x, std::integral_constant<int, Pos> token) {
-    return x.data().is(token);
+    return x.get_data().is(token);
   }
 
   template <int Pos>
   static typename detail::tl_at<types, Pos>::type&
   get(T& x, std::integral_constant<int, Pos> token) {
-    return x.data().get(token);
+    return x.get_data().get(token);
   }
 
   template <int Pos>
   static const typename detail::tl_at<types, Pos>::type&
   get(const T& x, std::integral_constant<int, Pos> token) {
-    return x.data().get(token);
+    return x.get_data().get(token);
   }
 
   template <class Result, class Visitor, class... Ts>
   static Result apply(T& x, Visitor&& visitor, Ts&&... xs) {
-    return x.data().template apply<Result>(std::forward<Visitor>(visitor),
-                                           std::forward<Ts>(xs)...);
+    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
+                                               std::forward<Ts>(xs)...);
   }
 
   template <class Result, class Visitor, class... Ts>
   static Result apply(const T& x, Visitor&& visitor, Ts&&... xs) {
-    return x.data().template apply<Result>(std::forward<Visitor>(visitor),
-                                           std::forward<Ts>(xs)...);
+    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
+                                               std::forward<Ts>(xs)...);
   }
 };
 
