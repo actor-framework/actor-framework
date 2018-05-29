@@ -47,23 +47,24 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  using T0 = int64_t;
+  using integer = int64_t;
 
-  using T1 = bool;
+  using boolean = bool;
 
-  using T2 = double;
+  using real = double;
 
-  using T3 = atom_value;
+  using atom = atom_value;
 
-  using T4 = timespan;
+  using timespan = caf::timespan;
 
-  using T5 = std::string;
+  using string = std::string;
 
-  using T6 = std::vector<config_value>;
+  using list = std::vector<config_value>;
 
-  using T7 = std::map<std::string, config_value>;
+  using dictionary = std::map<std::string, config_value>;
 
-  using types = detail::type_list<T0, T1, T2, T3, T4, T5, T6, T7>;
+  using types = detail::type_list<integer, boolean, real, atom, timespan,
+                                  string, list, dictionary>;
 
   using variant_type = detail::tl_apply_t<types, variant>;
 
@@ -104,6 +105,18 @@ public:
   /// calling `convert_to_list` if needed.
   void append(config_value x);
 
+  /// Returns a human-readable type name of the current value.
+  const char* type_name() const noexcept;
+
+  /// Returns a human-readable type name for `T`.
+  template <class T>
+  static const char* type_name_of() noexcept {
+    using namespace detail;
+    static constexpr auto index = tl_index_of<types, T>::value;
+    static_assert(index != -1, "T is not a valid config value type");
+    return type_name_at_index(static_cast<size_t>(index));
+  }
+
   /// Returns the underlying variant.
   inline variant_type& get_data() {
     return data_;
@@ -115,10 +128,18 @@ public:
   }
 
 private:
+  // -- properties -------------------------------------------------------------
+
+  static const char* type_name_at_index(size_t index) noexcept;
+
   // -- auto conversion of related types ---------------------------------------
 
   inline void set(bool x) {
     data_ = x;
+  }
+
+  inline void set(float x) {
+    data_ = static_cast<double>(x);
   }
 
   inline void set(const char* x) {
@@ -127,23 +148,14 @@ private:
 
   template <class T>
   detail::enable_if_t<
-    detail::is_one_of<detail::decay_t<T>, T2, T3, T4, T5, T6, T7>::value>
-  set(T&& x) {
-    data_ = std::forward<T>(x);
+    detail::is_one_of<T, real, atom, timespan, string, list, dictionary>::value>
+  set(T x) {
+    data_ = std::move(x);
   }
 
   template <class T>
   detail::enable_if_t<std::is_integral<T>::value> set(T x) {
     data_ = static_cast<int64_t>(x);
-  }
-
-  inline void convert(timespan x) {
-    data_ = x;
-  }
-
-  template <class Rep, class Ratio>
-  void convert(std::chrono::duration<Rep, Ratio> x) {
-    data_ = std::chrono::duration_cast<timespan>(x);
   }
 
   // -- member variables -------------------------------------------------------

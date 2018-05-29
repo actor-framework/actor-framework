@@ -23,12 +23,27 @@
 
 namespace caf {
 
+namespace {
+
+const char* type_names[] {
+  "integer",
+  "boolean",
+  "real",
+  "atom",
+  "timespan",
+  "string",
+  "list",
+  "dictionary",
+};
+
+} // namespace <anonymous>
+
 config_value::~config_value() {
   // nop
 }
 
 void config_value::convert_to_list() {
-  if (holds_alternative<T6>(data_))
+  if (holds_alternative<list>(data_))
     return;
   using std::swap;
   config_value tmp;
@@ -38,7 +53,15 @@ void config_value::convert_to_list() {
 
 void config_value::append(config_value x) {
   convert_to_list();
-  get<T6>(data_).emplace_back(std::move(x));
+  get<list>(data_).emplace_back(std::move(x));
+}
+
+const char* config_value::type_name() const noexcept {
+  return type_name_at_index(data_.index());
+}
+
+const char* config_value::type_name_at_index(size_t index) noexcept {
+  return type_names[index];
 }
 
 bool operator<(const config_value& x, const config_value& y) {

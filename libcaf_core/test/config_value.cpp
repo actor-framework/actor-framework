@@ -33,28 +33,33 @@
 using namespace std;
 using namespace caf;
 
-struct tostring_visitor : static_visitor<string> {
-  template <class T>
-  inline string operator()(const T& value) {
-    return to_string(value);
-  }
-};
+namespace {
+
+using list = config_value::list;
+
+using dictionary = config_value::dictionary;
+
+} // namespace <anonymous>
 
 CAF_TEST(default_constructed) {
   config_value x;
   CAF_CHECK_EQUAL(holds_alternative<int64_t>(x), true);
   CAF_CHECK_EQUAL(get<int64_t>(x), 0);
+  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<int64_t>());
 }
 
 CAF_TEST(list) {
   auto x = make_config_value_list(1, 2, 3);
   CAF_CHECK_EQUAL(to_string(x), "[1, 2, 3]");
+  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<list>());
 }
 
 CAF_TEST(convert_to_list) {
   config_value x{int64_t{42}};
+  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<int64_t>());
   CAF_CHECK_EQUAL(to_string(x), "42");
   x.convert_to_list();
+  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<list>());
   CAF_CHECK_EQUAL(to_string(x), "[42]");
   x.convert_to_list();
   CAF_CHECK_EQUAL(to_string(x), "[42]");
@@ -70,12 +75,13 @@ CAF_TEST(append) {
 }
 
 CAF_TEST(maps) {
-  std::map<std::string, config_value> xs;
+  dictionary xs;
   xs["num"] = int64_t{42};
   xs["atm"] = atom("hello");
   xs["str"] = string{"foobar"};
   xs["dur"] = timespan{100};
   config_value x{xs};
+  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<dictionary>());
   CAF_CHECK_EQUAL(
     to_string(x),
     R"([("atm", 'hello'), ("dur", 100ns), ("num", 42), ("str", "foobar")])");
