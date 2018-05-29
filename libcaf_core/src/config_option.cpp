@@ -23,8 +23,8 @@
 namespace caf {
 
 const char* type_name_visitor_tbl[] {
-  "a boolean", 
-  "a float", 
+  "a boolean",
+  "a float",
   "a double",
   "a string",
   "an atom_value",
@@ -76,10 +76,12 @@ void config_option::report_type_error(size_t ln, config_value& x,
                                       optional<std::ostream&> out) {
   if (!out)
     return;
+  /*
   type_name_visitor tnv;
   *out << "error in line " << ln << ": expected "
        << expected << " found "
        << visit(tnv, x) << '\n';
+       */
 }
 
 } // namespace caf

@@ -47,16 +47,8 @@ CAF_TEST(default_constructed) {
 }
 
 CAF_TEST(list) {
-  std::vector<config_value> xs;
-  xs.emplace_back(int64_t{1});
-  xs.emplace_back(atom("foo"));
-  xs.emplace_back(string("bar"));
-  config_value x{xs};
-  CAF_CHECK_EQUAL(to_string(x), "[1, 'foo', \"bar\"]");
-  auto ys = xs;
-  xs.emplace_back(std::move(ys));
-  x = xs;
-  CAF_CHECK_EQUAL(to_string(x), "[1, 'foo', \"bar\", [1, 'foo', \"bar\"]]");
+  auto x = make_config_value_list(1, 2, 3);
+  CAF_CHECK_EQUAL(to_string(x), "[1, 2, 3]");
 }
 
 CAF_TEST(convert_to_list) {

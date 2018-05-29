@@ -26,10 +26,13 @@
 
 #include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/default_sum_type_access.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
+#include "caf/sum_type.hpp"
+#include "caf/sum_type_access.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/variant.hpp"
-
-#include "caf/detail/comparable.hpp"
 
 namespace caf {
 
@@ -38,20 +41,33 @@ namespace caf {
 /// contain lists of themselves.
 class config_value {
 public:
-  using T0 = int64_t;
-  using T1 = bool;
-  using T2 = double;
-  using T3 = atom_value;
-  using T4 = timespan;
-  using T5 = std::string;
-  using T6 = std::vector<config_value>;
-  using T7 = std::map<std::string, config_value>;
+  // -- friends ----------------------------------------------------------------
 
-  using type0 = T0;
+  friend struct default_sum_type_access<config_value>;
+
+  // -- member types -----------------------------------------------------------
+
+  using T0 = int64_t;
+
+  using T1 = bool;
+
+  using T2 = double;
+
+  using T3 = atom_value;
+
+  using T4 = timespan;
+
+  using T5 = std::string;
+
+  using T6 = std::vector<config_value>;
+
+  using T7 = std::map<std::string, config_value>;
 
   using types = detail::type_list<T0, T1, T2, T3, T4, T5, T6, T7>;
 
-  using variant_type = variant<T0, T1, T2, T3, T4, T5, T6, T7>;
+  using variant_type = detail::tl_apply_t<types, variant>;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   config_value() = default;
 
@@ -78,6 +94,8 @@ public:
 
   ~config_value();
 
+  // -- properties -------------------------------------------------------------
+
   /// Converts the value to a list with one element. Does nothing if the value
   /// already is a list.
   void convert_to_list();
@@ -86,46 +104,15 @@ public:
   /// calling `convert_to_list` if needed.
   void append(config_value x);
 
-  inline size_t index() const {
-    return data_.index();
-  }
-
-  inline bool valueless_by_exception() const {
-    return data_.valueless_by_exception();
-  }
-
-  template <class Visitor>
-  auto apply(Visitor&& visitor) -> decltype(visitor(std::declval<T0&>())) {
-    return data_.apply(visitor);
-  }
-
-  template <class Visitor>
-  auto apply(Visitor&& visitor) const
-  -> decltype(visitor(std::declval<const T0&>())) {
-    return data_.apply(visitor);
-  }
-
-  template <int Pos>
-  const typename detail::tl_at<types, Pos>::type&
-  get(std::integral_constant<int, Pos> token) const {
-    return data_.get(token);
-  }
-
-  template <int Pos>
-  typename detail::tl_at<types, Pos>::type&
-  get(std::integral_constant<int, Pos> token) {
-    return data_.get(token);
-  }
-
-  inline variant_type& data() {
+  /// Returns the underlying variant.
+  inline variant_type& get_data() {
     return data_;
   }
 
-  inline const variant_type& data() const {
+  /// Returns the underlying variant.
+  inline const variant_type& get_data() const {
     return data_;
   }
-
-  /// @endcond
 
 private:
   // -- auto conversion of related types ---------------------------------------
@@ -164,6 +151,12 @@ private:
   variant_type data_;
 };
 
+/// Enable `holds_alternative`, `get`, `get_if`, and `visit` for `config_value`.
+/// @relates config_value
+/// @relates SumType
+template <>
+struct sum_type_access<config_value> : default_sum_type_access<config_value> {};
+
 /// @relates config_value
 bool operator<(const config_value& x, const config_value& y);
 
@@ -181,58 +174,18 @@ inline bool operator!=(const config_value& x, const config_value& y) {
 }
 
 /// @relates config_value
-template <class Visitor>
-auto visit(Visitor&& f, config_value& x)
-  -> decltype(f(std::declval<int64_t&>())) {
-  return visit(std::forward<Visitor>(f), x.data());
-}
+std::string to_string(const config_value& x);
 
-/// @relates config_value
-template <class Visitor>
-auto visit(Visitor&& f, const config_value& x)
-  -> decltype(f(std::declval<const int64_t&>())) {
-  return visit(std::forward<Visitor>(f), x.data());
-}
-
-/// @relates config_value
-template <class T>
-bool holds_alternative(const config_value& x) {
-  return holds_alternative<T>(x.data());
-}
-
-/// @relates config_value
-template <class T>
-T& get(config_value& x) {
-  return get<T>(x.data());
-}
-
-/// @relates config_value
-template <class T>
-const T& get(const config_value& x) {
-  return get<T>(x.data());
-}
-
-/// @relates config_value
-template <class T>
-T* get_if(config_value* x) {
-  return x != nullptr ? get_if<T>(&(x->data())) : nullptr;
-}
-
-/// @relates config_value
-template <class T>
-const T* get_if(const config_value* x) {
-  return x != nullptr ? get_if<T>(&(x->data())) : nullptr;
-}
-
-/// @relates config_value
-inline std::string to_string(const config_value& x) {
-  return deep_to_string(x.data());
+template <class... Ts>
+config_value make_config_value_list(Ts&&... xs) {
+  std::vector<config_value> lst{config_value{std::forward<Ts>(xs)}...};
+  return config_value{std::move(lst)};
 }
 
 /// @relates config_value
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, config_value& x) {
-  return f(meta::type_name("config_value"), x.data());
+  return f(meta::type_name("config_value"), x.get_data());
 }
 
 } // namespace caf

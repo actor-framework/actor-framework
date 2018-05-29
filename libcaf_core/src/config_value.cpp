@@ -23,41 +23,6 @@
 
 namespace caf {
 
-namespace {
-
-struct less_comparator {
-  template <class T, class U>
-  detail::enable_if_t<std::is_same<T, U>::value, bool>
-  operator()(const T& x, const U& y) const {
-    return x < y;
-  }
-
-  template <class T, class U>
-  detail::enable_if_t<!std::is_same<T, U>::value, bool>
-  operator()(const T&, const U&) const {
-    // Sort by type index when comparing different types.
-    using namespace detail;
-    using types = config_value::types;
-    return tl_index_of<types, T>::value < tl_index_of<types, U>::value;
-  }
-};
-
-struct equal_comparator {
-  template <class T, class U>
-  detail::enable_if_t<std::is_same<T, U>::value, bool>
-  operator()(const T& x, const U& y) const {
-    return x == y;
-  }
-
-  template <class T, class U>
-  detail::enable_if_t<!std::is_same<T, U>::value, bool>
-  operator()(const T&, const U&) const {
-    return false;
-  }
-};
-
-} // namespace <anonymous>
-
 config_value::~config_value() {
   // nop
 }
@@ -65,24 +30,27 @@ config_value::~config_value() {
 void config_value::convert_to_list() {
   if (holds_alternative<T6>(data_))
     return;
-  config_value tmp{std::move(*this)};
-  set(T6{std::move(tmp)});
+  using std::swap;
+  config_value tmp;
+  swap(*this, tmp);
+  data_ = std::vector<config_value>{std::move(tmp)};
 }
 
 void config_value::append(config_value x) {
   convert_to_list();
-  auto& xs = caf::get<T6>(data_);
-  xs.emplace_back(std::move(x));
+  get<T6>(data_).emplace_back(std::move(x));
 }
 
 bool operator<(const config_value& x, const config_value& y) {
-  less_comparator cmp;
-  return visit(cmp, x.data(), y.data());
+  return x.get_data() < y.get_data();
 }
 
 bool operator==(const config_value& x, const config_value& y) {
-  equal_comparator cmp;
-  return visit(cmp, x.data(), y.data());
+  return x.get_data() == y.get_data();
+}
+
+std::string to_string(const config_value& x) {
+  return deep_to_string(x.get_data());
 }
 
 } // namespace caf
