@@ -85,11 +85,11 @@ public:
   }
 
 private:
-  inline union_type& data() {
+  inline union_type& get_data() {
     return *this;
   }
 
-  inline const union_type& data() const {
+  inline const union_type& get_data() const {
     return *this;
   }
 
