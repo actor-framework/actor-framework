@@ -453,7 +453,7 @@ std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
 void actor_system_config::extract_config_file_path(message& args) {
   auto res = args.extract_opts({
     {"caf#config-file", "", config_file_path}
-  });
+  }, nullptr, true);
   args = res.remainder;
 }
 
