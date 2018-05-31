@@ -861,7 +861,9 @@ protected:
             else
               consumed = reader_->consume(&backend(), itr->second, rd_buf_);
             prepare_next_read();
-            if (!consumed) {
+            if (!consumed
+                || (reader_->parent() != nullptr
+                    && reader_->parent()->finalize())) {
               passivate();
               return;
             }

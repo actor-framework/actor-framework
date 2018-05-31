@@ -276,6 +276,7 @@ void abstract_broker::move_datagram_servant(datagram_servant_ptr ptr) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->parent() != nullptr && ptr->parent() != this);
   ptr->set_parent(this);
+  launch_servant(ptr);
   CAF_ASSERT(ptr->parent() == this);
   auto hdls = ptr->hdls();
   for (auto& hdl : hdls)
