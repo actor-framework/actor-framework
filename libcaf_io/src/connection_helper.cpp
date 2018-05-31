@@ -71,7 +71,6 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
   };
 }
 
-
 bool establish_stream_connection(stateful_actor<connection_helper_state>* self,
                                  const actor& b, uint16_t port,
                                  network::address_listing& addresses) {

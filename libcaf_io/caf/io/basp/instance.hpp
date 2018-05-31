@@ -354,12 +354,12 @@ public:
         anon_send(actor_cast<actor>(peer_server), put_atom::value,
                   to_string(hdr.source_node), make_message(addrs));
         // Write handshake as client in response.
-        if (tcp_based)
+        if (tcp_based) {
           write_client_handshake(ctx, callee_.get_buffer(hdl), hdr.source_node);
+          flush(hdl);
+        }
         callee_.learned_new_node(hdr.source_node);
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
-        flush(hdl);
-        // TODO: Do we always want to do this or only if `tcp_based`?
         callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         break;
       }
@@ -385,11 +385,23 @@ public:
         // Handshakes were only exchanged if `hdl` is set.
         auto lr = tbl_.lookup(hdr.source_node);
         auto new_node = (this_node() != hdr.source_node && !lr.hdl);
+        auto pending = lr.known && !lr.hdl;
+        if (pending && hdr.source_node < this_node()) {
+          CAF_LOG_INFO("simultaneous handshake, let the other node act as "
+                       "the server");
+          break;
+        }
         if (!new_node) {
           if (tcp_based) {
             CAF_LOG_INFO("received second client handshake:"
                          << CAF_ARG(hdr.source_node));
             break;
+          } else  {
+            if (lr.hdl && get_if<datagram_handle>(&(*lr.hdl)) == nullptr
+                && get_if<datagram_handle>(&(*lr.hdl))->id() != hdl.id()) {
+              CAF_LOG_INFO("dropping repeated handshake on different handle");
+              break;
+            }
           }
         } else {
           // Add this node to our contacts.
@@ -405,7 +417,7 @@ public:
         }
         // Since udp is unreliable we answer, maybe our message was lost.
         if (!tcp_based) {
-          uint16_t seq = (ep && ep->requires_ordering) ? ep->seq_outgoing++ : 0;
+          uint16_t seq = ep->requires_ordering ? ep->seq_outgoing++ : 0;
           write_server_handshake(ctx, callee_.get_buffer(hdl), port, seq);
           callee_.flush(hdl);
         }
@@ -413,11 +425,9 @@ public:
         // `learned_new_node` expects there to be an entry in the routing table.
         // TODO: Can we move this in the else block above with the changes to
         // the routing table?
-        if (new_node) {
+        if (new_node)
           callee_.learned_new_node(hdr.source_node);
-          // TODO: Only send buffered messaged for new nodes?
-          callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
-        }
+        callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         break;
       }
       case message_type::dispatch_message: {

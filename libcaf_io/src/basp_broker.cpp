@@ -142,17 +142,16 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // TODO: Can it happen that things have changed here?
   lr = instance.tbl().lookup(nid);
   if (lr.hdl) {
-    auto& ctx = *this_context;
     // Tell remote side we are monitoring this actor now.
     instance.write_announce_proxy(self->context(),
-                                  get_buffer(nid),
+                                  get_buffer(*lr.hdl),
                                   nid, aid,
-                                  ctx.requires_ordering ? ctx.seq_outgoing++ : 0);
-    instance.flush(*lr.hdl);
+                                  visit(seq_num_visitor{this}, *lr.hdl));
+    flush(*lr.hdl);
   } else {
     instance.write_announce_proxy(self->context(),
                                   get_buffer(nid),
-                                  nid, aid,0);
+                                  nid, aid, 0);
   }
   mm->notify<hook::new_remote_actor>(res);
   return res;
@@ -212,12 +211,10 @@ void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
                               get_buffer(hdl),
                               nid, aid, rsn,
                               visit(seq_num_visitor{this}, hdl));
-    instance.flush(hdl);
+    flush(hdl);
   } else {
-    buffer_type buf;
-    instance.write_kill_proxy(self->context(), buf,
+    instance.write_kill_proxy(self->context(), get_buffer(nid),
                               nid, aid, rsn, 0);
-    pending_connectivity[nid].emplace_back(std::move(buf));
   }
 }
 
@@ -407,11 +404,9 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
     // writing std::numeric_limits<actor_id>::max() is a hack to get
     // this send-to-named-actor feature working with older CAF releases
     instance.write(self->context(), get_buffer(hdl), hdr, &writer);
-    instance.flush(hdl);
+    flush(hdl);
   } else {
-    buffer_type buf;
-    instance.write(self->context(), buf, hdr, &writer);
-    pending_connectivity[nid].emplace_back(std::move(buf));
+    instance.write(self->context(), get_buffer(nid), hdr, &writer);
   }
 }
 
@@ -460,7 +455,7 @@ void basp_broker_state::establish_communication(const node_id& nid) {
                      visit(seq_num_visitor{this}, hdl)};
     instance.write(self->context(), get_buffer(hdl),
                    hdr, &writer);
-    instance.flush(hdl);
+    flush(hdl);
   };
   auto item = to_string(nid);
   if (enable_tcp)
@@ -590,8 +585,9 @@ bool basp_broker_state::deliver_pending(execution_unit* ctx,
   std::vector<char>* payload = nullptr;
   auto i = ep.pending.begin();
   // Force delivery of at least the first messages, if desired.
-  if (force)
+  if (force) {
     ep.seq_incoming = i->first;
+  }
   while (i != ep.pending.end() && i->first == ep.seq_incoming) {
     ep.hdr = std::move(i->second.first);
     payload = &i->second.second;
@@ -670,9 +666,8 @@ basp_broker_state::get_buffer(connection_handle hdl) {
 basp_broker_state::buffer_type&
 basp_broker_state::get_buffer(node_id nid) {
   auto res = instance.tbl().lookup(nid);
-  if (res.known && res.hdl) {
+  if (res.known && res.hdl)
     return get_buffer(*res.hdl);
-  }
   auto& msgs = pending_connectivity[nid];
   msgs.emplace_back();
   return msgs.back();
@@ -694,8 +689,9 @@ void basp_broker_state::flush(endpoint_handle hdl) {
 }
 
 void basp_broker_state::flush(datagram_handle hdl) {
-  if (!cached_buffers.empty() && !cached_buffers.top().empty())
+  if (!cached_buffers.empty() && !cached_buffers.top().empty()) {
     self->enqueue_datagram(hdl, pop_datagram_buffer(hdl));
+  }
   self->flush(hdl);
 }
 
@@ -874,11 +870,10 @@ behavior basp_broker::make_behavior() {
         hdr.sequence_number = visit(seq_num_visitor{&state}, hdl);
         state.instance.write(context(), state.get_buffer(hdl),
                              hdr, &writer);
-        state.instance.flush(hdl);
+        state.flush(hdl);
       } else {
-        std::vector<char> buf;
-        state.instance.write(context(), buf, hdr, &writer);
-        state.pending_connectivity[dest_node].emplace_back(buf);
+        state.instance.write(context(), state.get_buffer(dest_node), hdr,
+                             &writer);
       }
       return delegated<message>();
     },

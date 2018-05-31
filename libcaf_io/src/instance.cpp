@@ -182,7 +182,7 @@ void instance::write(execution_unit* ctx, instance::endpoint_handle hdl,
   CAF_LOG_TRACE(CAF_ARG(hdr));
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
   write(ctx, callee_.get_buffer(hdl), hdr, writer);
-  flush(hdl);
+  callee_.flush(hdl);
 }
 
 void instance::add_published_actor(uint16_t port,
@@ -269,7 +269,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
     auto hdl = std::move(*res.hdl);
     hdr.sequence_number = visit(seq_num_visitor{callee_}, hdl);
     write(ctx, callee_.get_buffer(hdl), hdr, &writer);
-    flush(hdl);
+    callee_.flush(hdl);
     notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
     return true;
   } else {
