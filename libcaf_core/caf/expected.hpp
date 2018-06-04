@@ -25,9 +25,10 @@
 #include <ostream>
 #include <type_traits>
 
-#include "caf/unit.hpp"
+#include "caf/deep_to_string.hpp"
 #include "caf/error.hpp"
 #include "caf/unifyn.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 
