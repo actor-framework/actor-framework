@@ -168,5 +168,4 @@ visit(Visitor&& f, T&& x, Ts&&... xs) {
                                                       std::forward<Ts>(xs)...);
 }
 
-
 } // namespace caf
