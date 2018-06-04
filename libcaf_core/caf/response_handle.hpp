@@ -74,6 +74,10 @@ public:
     then_impl(f, e);
   }
 
+  Self* self() {
+    return self_;
+  }
+
 private:
   template <class F>
   void await_impl(F& f) const {
@@ -172,6 +176,9 @@ public:
     self_->varargs_receive(rc, mid_, std::move(ef), std::move(ca));
   }
 
+  Self* self() {
+    return self_;
+  }
 
 private:
   message_id mid_;
