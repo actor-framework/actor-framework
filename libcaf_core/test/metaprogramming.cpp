@@ -280,3 +280,31 @@ CAF_TEST(composed_types) {
   CAF_CHECK_EQUAL(dot_op(if_b, if_a), if_ba);
   CAF_CHECK_EQUAL(dot_op(if_b, if_c), if_bc);
 }
+
+struct foo {};
+struct bar {};
+bool operator==(const bar&, const bar&);
+class baz {
+public:
+  baz() = default;
+
+  explicit baz(std::string);
+
+  friend bool operator==(const baz&, const baz&);
+
+private:
+  std::string str_;
+};
+
+CAF_TEST(is_comparable) {
+  CAF_CHECK((is_comparable<double, std::string>::value) == false);
+  CAF_CHECK((is_comparable<foo, foo>::value) == false);
+  CAF_CHECK((is_comparable<bar, bar>::value) == true);
+  CAF_CHECK((is_comparable<double, bar>::value) == false);
+  CAF_CHECK((is_comparable<bar, double>::value) == false);
+  CAF_CHECK((is_comparable<baz, baz>::value) == true);
+  CAF_CHECK((is_comparable<double, baz>::value) == false);
+  CAF_CHECK((is_comparable<baz, double>::value) == false);
+  CAF_CHECK((is_comparable<std::string, baz>::value) == false);
+  CAF_CHECK((is_comparable<baz, std::string>::value) == false);
+}
