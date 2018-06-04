@@ -168,18 +168,23 @@ public:
   // -- insertion -------------------------------------------------------------
 
   std::pair<iterator, bool> insert(value_type x) {
-    return insert(end(), std::move(x));
+    auto i = find(x.first);
+    if (i == end()) {
+      xs_.emplace_back(std::move(x));
+      return {xs_.end() - 1, true};
+    }
+    return {i, false};
   }
 
-  std::pair<iterator, bool> insert(iterator hint, value_type x) {
+  iterator insert(iterator hint, value_type x) {
     return insert(static_cast<const_iterator>(hint), std::move(x));
   }
 
-  std::pair<iterator, bool> insert(const_iterator hint, value_type x) {
+  iterator insert(const_iterator hint, value_type x) {
     auto i = find(x.first);
-    if (i == end())
-      return {xs_.insert(gcc48_iterator_workaround(hint), std::move(x)), true};
-    return {i, false};
+    return i == end()
+           ? xs_.insert(gcc48_iterator_workaround(hint), std::move(x))
+           : i;
   }
 
   template <class InputIterator>
@@ -190,11 +195,11 @@ public:
 
   template <class... Ts>
   std::pair<iterator, bool> emplace(Ts&&... xs) {
-    return emplace_hint(end(), std::forward<Ts>(xs)...);
+    return insert(value_type(std::forward<Ts>(xs)...));
   }
 
   template <class... Ts>
-  std::pair<iterator, bool> emplace_hint(const_iterator hint, Ts&&... xs) {
+  iterator emplace_hint(const_iterator hint, Ts&&... xs) {
     return insert(hint, value_type(std::forward<Ts>(xs)...));
   }
 
