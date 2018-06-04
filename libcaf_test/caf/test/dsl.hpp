@@ -519,6 +519,31 @@ protected:
   std::function<void ()> check_;
 };
 
+template <class... Ts>
+struct test_coordinator_fixture_fetch_helper {
+  template <class Self, class Interface>
+  std::tuple<Ts...>
+  operator()(caf::response_handle<Self, Interface, true>& from) const {
+    std::tuple<Ts...> result;
+    from.receive(
+      [&](Ts&... xs) { result = std::make_tuple(std::move(xs)...); },
+      [&](caf::error& err) { FAIL(from.self()->system().render(err)); });
+    return result;
+  }
+};
+
+template <class T>
+struct test_coordinator_fixture_fetch_helper<T> {
+  template <class Self, class Interface>
+  T operator()(caf::response_handle<Self, Interface, true>& from) const {
+    T result;
+    from.receive(
+      [&](T& x) { result = std::move(x); },
+      [&](caf::error& err) { FAIL(from.self()->system().render(err)); });
+    return result;
+  }
+};
+
 /// A fixture with a deterministic scheduler setup.
 template <class Config = caf::actor_system_config>
 struct test_coordinator_fixture {
@@ -584,21 +609,23 @@ struct test_coordinator_fixture {
     sched.run_dispatch_loop(predicate, streaming_cycle);
   }
 
-  template <class T = int>
-  caf::expected<T> fetch_result() {
-    caf::expected<T> result = caf::error{};
-    self->receive(
-      [&](T& x) {
-        result = std::move(x);
-      },
-      [&](caf::error& x) {
-        result = std::move(x);
-      },
-      caf::after(std::chrono::seconds(0)) >> [&] {
-        result = caf::sec::request_timeout;
-      }
-    );
-    return result;
+  /// Sends a request to `from`, then calls `run_exhaustively`, and finally
+  /// fetches and returns the result.
+  template <class T, class... Ts, class Handle, class... Us>
+  typename std::conditional<sizeof...(Ts) == 0, T, std::tuple<T, Ts...>>::type
+  request(Handle from, Us... args) {
+    auto res_hdl = self->request(from, caf::infinite, std::move(args)...);
+    run_exhaustively();
+    test_coordinator_fixture_fetch_helper<T, Ts...> f;
+    return f(res_hdl);
+  }
+
+  /// Unboxes an expected value or fails the test if it doesn't exist.
+  template <class T>
+  T unbox(caf::expected<T> x) {
+    if (!x)
+      FAIL(sys.render(x.error()));
+    return std::move(*x);
   }
 
   template <class T>
