@@ -32,7 +32,8 @@ auto autoconnect_timeout = std::chrono::minutes(10);
 
 const char* connection_helper_state::name = "connection_helper";
 
-behavior datagram_connection_broker(broker* self, uint16_t port,
+behavior datagram_connection_broker(broker* self,
+                                    uint16_t port,
                                     network::address_listing addresses,
                                     actor system_broker,
                                     basp::instance* instance) {
@@ -47,8 +48,7 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
         self->add_datagram_servant(std::move(*eptr));
         std::vector<char> buf;
         instance->write_client_handshake(self->context(), buf,
-                                         none, this_node,
-                                         app_id);
+                                         none, this_node, app_id);
         self->enqueue_datagram(hdl, std::move(buf));
         self->flush(hdl);
       }
@@ -72,7 +72,8 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
 }
 
 bool establish_stream_connection(stateful_actor<connection_helper_state>* self,
-                                 const actor& b, uint16_t port,
+                                 const actor& system_broker,
+                                 uint16_t port,
                                  network::address_listing& addresses) {
   auto& mx = self->system().middleman().backend();
   for (auto& kvp : addresses) {
@@ -81,7 +82,7 @@ bool establish_stream_connection(stateful_actor<connection_helper_state>* self,
       if (hdl) {
         // Gotcha! Send scribe to our BASP broker to initiate handshake etc.
         CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
-        self->send(b, connect_atom::value, *hdl, port);
+        self->send(system_broker, connect_atom::value, *hdl, port);
         return true;
       }
     }
@@ -90,9 +91,9 @@ bool establish_stream_connection(stateful_actor<connection_helper_state>* self,
 }
 
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
-                           actor b, basp::instance* i) {
-  CAF_LOG_TRACE(CAF_ARG(b));
-  self->monitor(b);
+                           actor system_broker, basp::instance* i) {
+  CAF_LOG_TRACE(CAF_ARG(system_broker));
+  self->monitor(system_broker);
   self->set_down_handler([=](down_msg& dm) {
     CAF_LOG_TRACE(CAF_ARG(dm));
     self->quit(std::move(dm.reason));
@@ -112,21 +113,17 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
         [&](basp::routing_table::address_map& addrs) {
           if (addrs.count(network::protocol::tcp) > 0) {
             auto eps = addrs[network::protocol::tcp];
-            if (!establish_stream_connection(self, b, eps.first, eps.second))
+            if (!establish_stream_connection(self, system_broker, eps.first,
+                                             eps.second))
               CAF_LOG_ERROR("could not connect to node ");
           }
           if (addrs.count(network::protocol::udp) > 0) {
             auto eps = addrs[network::protocol::udp];
             // Create new broker to try addresses for communication via UDP.
-            if (self->system().config().middleman_detach_utility_actors) {
-              self->system().middleman().spawn_broker<detached + hidden>(
-                datagram_connection_broker, eps.first, std::move(eps.second), b, i
-              );
-            } else {
-              self->system().middleman().spawn_broker<hidden>(
-                datagram_connection_broker, eps.first, std::move(eps.second), b, i
-              );
-            }
+            auto b = self->system().middleman().spawn_broker(
+              datagram_connection_broker, eps.first, std::move(eps.second),
+              system_broker, i
+            );
           }
         }
       });
