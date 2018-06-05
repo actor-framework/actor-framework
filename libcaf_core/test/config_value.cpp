@@ -39,6 +39,33 @@ using list = config_value::list;
 
 using dictionary = config_value::dictionary;
 
+struct dictionary_builder {
+  dictionary dict;
+
+  dictionary_builder&& add(const char* key, config_value value) && {
+    dict.emplace(key, std::move(value));
+    return std::move(*this);
+  }
+
+  dictionary make() && {
+    return std::move(dict);
+  }
+
+  config_value make_cv() && {
+    return config_value{std::move(dict)};
+  }
+};
+
+dictionary_builder dict() {
+  return {};
+}
+
+template <class... Ts>
+config_value cfg_lst(Ts&&... xs) {
+  config_value::list lst{config_value{std::forward<Ts>(xs)}...};
+  return config_value{std::move(lst)};
+}
+
 } // namespace <anonymous>
 
 CAF_TEST(default_constructed) {
@@ -49,9 +76,13 @@ CAF_TEST(default_constructed) {
 }
 
 CAF_TEST(list) {
-  auto x = make_config_value_list(1, 2, 3);
-  CAF_CHECK_EQUAL(to_string(x), "[1, 2, 3]");
-  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<list>());
+  using integer_list = std::vector<int64_t>;
+  auto xs = make_config_value_list(1, 2, 3);
+  CAF_CHECK_EQUAL(to_string(xs), "[1, 2, 3]");
+  CAF_CHECK_EQUAL(xs.type_name(), config_value::type_name_of<list>());
+  CAF_CHECK_EQUAL(holds_alternative<config_value::list>(xs), true);
+  CAF_CHECK_EQUAL(holds_alternative<integer_list>(xs), true);
+  CAF_CHECK_EQUAL(get<integer_list>(xs), integer_list({1, 2, 3}));
 }
 
 CAF_TEST(convert_to_list) {
@@ -74,15 +105,40 @@ CAF_TEST(append) {
   CAF_CHECK_EQUAL(to_string(x), "[1, 2, 'foo']");
 }
 
-CAF_TEST(maps) {
-  dictionary xs;
-  xs["num"] = int64_t{42};
-  xs["atm"] = atom("hello");
-  xs["str"] = string{"foobar"};
-  xs["dur"] = timespan{100};
-  config_value x{xs};
-  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<dictionary>());
-  CAF_CHECK_EQUAL(
-    to_string(x),
-    R"([("atm", 'hello'), ("dur", 100ns), ("num", 42), ("str", "foobar")])");
+CAF_TEST(homogeneous dictionary) {
+  using integer_map = std::map<std::string, int64_t>;
+  auto xs = dict()
+              .add("value-1", config_value{1})
+              .add("value-2", config_value{2})
+              .add("value-3", config_value{3})
+              .add("value-4", config_value{4})
+              .make();
+  integer_map ys{
+    {"value-1", 1},
+    {"value-2", 2},
+    {"value-3", 3},
+    {"value-4", 4},
+  };
+  CAF_CHECK_EQUAL(get<int64_t>(xs, "value-1"), 1);
+  CAF_CHECK_EQUAL(get<integer_map>(config_value{xs}), ys);
+}
+
+CAF_TEST(heterogeneous dictionary) {
+  using string_list = std::vector<std::string>;
+  auto xs = dict()
+              .add("scheduler", dict()
+                                  .add("policy", config_value{atom("none")})
+                                  .add("max-threads", config_value{2})
+                                  .make_cv())
+              .add("nodes", dict()
+                              .add("preload", cfg_lst("sun", "venus", "mercury",
+                                                      "earth", "mars"))
+                              .make_cv())
+
+              .make();
+  CAF_CHECK_EQUAL(get<atom_value>(xs, {"scheduler", "policy"}), atom("none"));
+  CAF_CHECK_EQUAL(get<int64_t>(xs, {"scheduler", "max-threads"}), 2);
+  CAF_CHECK_EQUAL(get_if<double>(&xs, {"scheduler", "max-threads"}), none);
+  string_list nodes{"sun", "venus", "mercury", "earth", "mars"};
+  CAF_CHECK_EQUAL(get<string_list>(xs, {"nodes", "preload"}), nodes);
 }

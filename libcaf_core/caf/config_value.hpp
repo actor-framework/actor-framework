@@ -29,6 +29,7 @@
 #include "caf/default_sum_type_access.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
+#include "caf/optional.hpp"
 #include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"
 #include "caf/timestamp.hpp"
@@ -163,11 +164,308 @@ private:
   variant_type data_;
 };
 
+/*
 /// Enable `holds_alternative`, `get`, `get_if`, and `visit` for `config_value`.
 /// @relates config_value
 /// @relates SumType
+///
 template <>
 struct sum_type_access<config_value> : default_sum_type_access<config_value> {};
+*/
+
+template <class T>
+struct config_value_access;
+
+template <class T>
+bool holds_alternative(const config_value& x) {
+  return config_value_access<T>::is(x);
+}
+
+template <class T>
+auto get_if(const config_value* x)
+-> decltype(config_value_access<T>::get_if(x)) {
+  return config_value_access<T>::get_if(x);
+}
+
+template <class T>
+auto get(const config_value& x) -> decltype(config_value_access<T>::get(x)) {
+  return config_value_access<T>::get(x);
+}
+
+template <class Visitor>
+auto visit(Visitor&& f, config_value& x)
+-> decltype(visit(std::forward<Visitor>(f), x.get_data())) {
+  return visit(std::forward<Visitor>(f), x.get_data());
+}
+
+template <class Visitor>
+auto visit(Visitor&& f, const config_value& x)
+-> decltype(visit(std::forward<Visitor>(f), x.get_data())) {
+  return visit(std::forward<Visitor>(f), x.get_data());
+}
+
+template <class T>
+struct default_config_value_access {
+  static bool is(const config_value& x) {
+    return holds_alternative<T>(x.get_data());
+  }
+
+  static const T* get_if(const config_value* x) {
+    return caf::get_if<T>(&(x->get_data()));
+  }
+
+  static const T& get(const config_value& x) {
+    return caf::get<T>(x.get_data());
+  }
+};
+
+#define CAF_CONFIG_VALUE_DEFAULT_ACCESS(subtype)                               \
+  template <>                                                                  \
+  struct config_value_access<config_value::subtype>                            \
+      : default_config_value_access<config_value::subtype> {}
+
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(integer);
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(boolean);
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(real);
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(atom);
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(timespan);
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(string);
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(list);
+CAF_CONFIG_VALUE_DEFAULT_ACCESS(dictionary);
+
+/// Implements automagic unboxing of `std::vector<T>` from a homogeneous
+/// `config_value::list`.
+/// @relates config_value
+template <class T>
+struct config_value_access<std::vector<T>> {
+  using vector_type = std::vector<T>;
+
+  static bool is(const config_value& x) {
+    auto lst = caf::get_if<config_value::list>(&x);
+    if (lst != nullptr) {
+      return std::all_of(lst->begin(), lst->end(), [](const config_value& x) {
+        return caf::holds_alternative<T>(x);
+      });
+    }
+    return false;
+  }
+
+  static optional<vector_type> get_if(const config_value* x) {
+    vector_type result;
+    auto extract = [&](const config_value& y) {
+      auto opt = caf::get_if<T>(&y);
+      if (opt) {
+        result.emplace_back(*opt);
+        return true;
+      }
+      return false;
+    };
+    auto lst = caf::get_if<config_value::list>(x);
+    if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
+      return result;
+    return none;
+  }
+
+  static vector_type get(const config_value& x) {
+    auto result = get_if(&x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+};
+
+/// Implements automagic unboxing of `std::map<std::string, V>` from a
+/// homogeneous `config_value::dictionary`.
+/// @relates config_value
+template <class V>
+struct config_value_access<std::map<std::string, V>> {
+  using map_type = std::map<std::string, V>;
+
+  using kvp = std::pair<const std::string, config_value>;
+
+  static bool is(const config_value& x) {
+    auto lst = caf::get_if<config_value::dictionary>(&x);
+    if (lst != nullptr) {
+      return std::all_of(lst->begin(), lst->end(), [](const kvp& x) {
+        return config_value_access<V>::is(x.second);
+      });
+    }
+    return false;
+  }
+
+  static optional<map_type> get_if(const config_value* x) {
+    map_type result;
+    auto extract = [&](const kvp& y) {
+      auto opt = caf::get_if<V>(&(y.second));
+      if (opt) {
+        result.emplace(y.first, std::move(*opt));
+        return true;
+      }
+      return false;
+    };
+    auto lst = caf::get_if<config_value::dictionary>(x);
+    if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
+      return result;
+    return none;
+  }
+
+  static map_type get(const config_value& x) {
+    auto result = get_if(&x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+};
+
+/// Retrieves.
+/// @relates config_value
+template <class T>
+optional<T> get_if(const config_value::dictionary* xs,
+                   std::initializer_list<std::string> path) {
+  // Sanity check.
+  if (path.size() == 0)
+    return none;
+  // Resolve path, i.e., find the requested submap.
+  auto current = xs;
+  auto leaf = path.end() - 1;
+  for (auto i = path.begin(); i != leaf; ++i) {
+    auto j = current->find(*i);
+    if (j == current->end())
+      return none;
+    current = caf::get_if<config_value::dictionary>(&j->second);
+    if (current == nullptr)
+      return none;
+  }
+  // Get the leaf value.
+  auto j = current->find(*leaf);
+  if (j == current->end())
+    return none;
+  auto result = caf::get_if<T>(&j->second);
+  if (result)
+    return *result;
+  return none;
+}
+
+/// @relates config_value
+template <class T>
+optional<T> get_if(const config_value::dictionary* xs, std::string path) {
+  return get_if<T>(xs, {path});
+}
+
+/// @relates config_value
+template <class T>
+T get(const config_value::dictionary& xs,
+      std::initializer_list<std::string> path) {
+  auto result = get_if<T>(&xs, std::move(path));
+  if (!result)
+    CAF_RAISE_ERROR("invalid type found");
+  return std::move(*result);
+}
+
+/// @relates config_value
+template <class T>
+T get(const config_value::dictionary& xs, std::string path) {
+  return get<T>(xs, {path});
+}
+
+/// @relates config_value
+template <class T>
+T get_or(const config_value::dictionary& xs,
+         std::initializer_list<std::string> path, const T& default_value) {
+  auto result = get<T>(xs, std::move(path));
+  if (result)
+    return *result;
+  return default_value;
+}
+
+/// @relates config_value
+template <class T>
+T get_or(const config_value::dictionary& xs, std::string path,
+         const T& default_value) {
+  return get_or(xs, {path}, default_value);
+}
+
+/*
+
+template <class T>
+struct config_value_access<std::vector<T>> {
+  using vector_type = std::vector<T>;
+
+  static bool is(const config_value& x) {
+    auto lst = caf::get_if<config_value::list>(&x);
+    if (lst != nullptr) {
+      return std::all_of(lst->begin(), lst->end(), [](const config_value& x) {
+        return caf::holds_alternative<T>(x);
+      });
+    }
+    return false;
+  }
+
+  static optional<vector_type> get_if(const config_value* x) {
+    vector_type result;
+    auto extract = [&](const config_value& y) {
+      auto opt = caf::get_if<T>(&y);
+      if (opt) {
+        result.emplace_back(*opt);
+        return true;
+      }
+      return false;
+    };
+    auto lst = caf::get_if<config_value::list>(x);
+    if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
+      return result;
+    return none;
+  }
+
+  static vector_type get(const config_value& x) {
+    auto result = get_if(x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+};
+
+template <class V>
+struct config_value_access<std::map<std::string, V>> {
+  using map_type = std::map<std::string, V>;
+
+  using kvp = std::pair<const std::string, config_value>;
+
+  static bool is(const config_value& x) {
+    auto lst = caf::get_if<config_value::dictionary>(&x);
+    if (lst != nullptr) {
+      return std::all_of(lst->begin(), lst->end(), [](const kvp& x) {
+        return config_value_access<V>::is(x.second);
+      });
+    }
+    return false;
+  }
+
+  static optional<map_type> get_if(const config_value* x) {
+    map_type result;
+    auto extract = [&](const kvp& y) {
+      auto opt = caf::get_if<V>(y.second);
+      if (opt) {
+        result.emplace_back(y.first, *opt);
+        return true;
+      }
+      return false;
+    };
+    auto lst = caf::get_if<config_value::dictionary>(x);
+    if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
+      return result;
+    return none;
+  }
+
+  static map_type get(const config_value& x) {
+    auto result = get_if(x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+};
+
+*/
 
 /// @relates config_value
 bool operator<(const config_value& x, const config_value& y);
