@@ -32,7 +32,8 @@ const char* message_type_strings[] = {
   "dispatch_message",
   "announce_proxy_instance",
   "kill_proxy_instance",
-  "heartbeat"
+  "heartbeat",
+  "acknowledge_handshake"
 };
 
 } // namespace <anonymous>

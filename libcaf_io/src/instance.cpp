@@ -364,6 +364,17 @@ void instance::write_client_handshake(execution_unit* ctx,
                          sequence_number);
 }
 
+
+void instance::write_acknowledge_handshake(execution_unit* ctx,
+                                           buffer_type& buf,
+                                           const node_id& remote_side,
+                                           uint16_t sequence_number) {
+  header hdr{message_type::acknowledge_handshake, 0, 0, 0,
+             this_node_, remote_side, invalid_actor_id, invalid_actor_id,
+             sequence_number};
+  write(ctx, buf, hdr);
+}
+
 void instance::write_announce_proxy(execution_unit* ctx, buffer_type& buf,
                                     const node_id& dest_node, actor_id aid,
                                     uint16_t sequence_number) {

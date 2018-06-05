@@ -270,6 +270,11 @@ public:
                               buffer_type& buf, const node_id& remote_side,
                               uint16_t sequence_number = 0);
 
+  /// Writes the acknowledge handshake to finish a UDP handshake to `buf`.
+  void write_acknowledge_handshake(execution_unit* ctx,
+                                   buffer_type& buf, const node_id& remote_side,
+                                   uint16_t sequence_number = 0);
+
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
                             const node_id& dest_node, actor_id aid,
@@ -310,26 +315,25 @@ public:
     // Handle message to ourselves.
     switch (hdr.operation) {
       case message_type::server_handshake: {
-        actor_id aid = invalid_actor_id;
-        std::set<std::string> sigs;
-        basp::routing_table::address_map addrs;
         if (!payload_valid()) {
           CAF_LOG_ERROR("fail to receive the app identifier");
           return false;
-        } else {
-          binary_deserializer bd{ctx, *payload};
-          std::string remote_appid;
-          auto e = bd(remote_appid);
-          if (e)
-            return false;
-          if (remote_appid != callee_.system().config().middleman_app_identifier) {
-            CAF_LOG_ERROR("app identifier mismatch");
-            return false;
-          }
-          e = bd(aid, sigs, addrs);
-          if (e)
-            return false;
         }
+        binary_deserializer bd{ctx, *payload};
+        actor_id aid = invalid_actor_id;
+        std::set<std::string> sigs;
+        basp::routing_table::address_map addrs;
+        std::string remote_appid;
+        auto e = bd(remote_appid);
+        if (e)
+          return false;
+        if (remote_appid != callee_.system().config().middleman_app_identifier) {
+          CAF_LOG_ERROR("app identifier mismatch");
+          return false;
+        }
+        e = bd(aid, sigs, addrs);
+        if (e)
+          return false;
         // Close self connection after handshake is done.
         if (hdr.source_node == this_node_) {
           CAF_LOG_INFO("close connection to self immediately");
@@ -338,6 +342,7 @@ public:
         }
         // Close this connection if we already established communication.
         auto lr = tbl_.lookup(hdr.source_node);
+        // TODO: Anything additional or different for UDP?
         if (lr.hdl) {
           CAF_LOG_INFO("close connection since we already have a "
                        "connection: " << CAF_ARG(hdr.source_node));
@@ -356,8 +361,12 @@ public:
         // Write handshake as client in response.
         if (tcp_based) {
           write_client_handshake(ctx, callee_.get_buffer(hdl), hdr.source_node);
-          flush(hdl);
+        } else {
+          auto seq = ep->requires_ordering ? ep->seq_outgoing++ : 0;
+          write_acknowledge_handshake(ctx, callee_.get_buffer(hdl),
+                                      hdr.source_node, seq);
         }
+        flush(hdl);
         callee_.learned_new_node(hdr.source_node);
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
         callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
@@ -368,42 +377,28 @@ public:
         if (!payload_valid()) {
           CAF_LOG_ERROR("fail to receive the app identifier");
           return false;
-        } else {
-          binary_deserializer bd{ctx, *payload};
-          std::string remote_appid;
-          auto e = bd(remote_appid);
-          if (e)
-            return false;
-          if (remote_appid != callee_.system().config().middleman_app_identifier) {
-            CAF_LOG_ERROR("app identifier mismatch");
-            return false;
-          }
-          e = bd(addrs);
-          if (e)
-            return false;
         }
+        binary_deserializer bd{ctx, *payload};
+        std::string remote_appid;
+        auto e = bd(remote_appid);
+        if (e)
+          return false;
+        if (remote_appid != callee_.system().config().middleman_app_identifier) {
+          CAF_LOG_ERROR("app identifier mismatch");
+          return false;
+        }
+        e = bd(addrs);
+        if (e)
+          return false;
         // Handshakes were only exchanged if `hdl` is set.
         auto lr = tbl_.lookup(hdr.source_node);
         auto new_node = (this_node() != hdr.source_node && !lr.hdl);
-        auto pending = lr.known && !lr.hdl;
-        if (pending && hdr.source_node < this_node()) {
-          CAF_LOG_INFO("simultaneous handshake, let the other node act as "
-                       "the server");
-          break;
-        }
-        if (!new_node) {
-          if (tcp_based) {
+        if (tcp_based) {
+          if (!new_node) {
             CAF_LOG_INFO("received second client handshake:"
                          << CAF_ARG(hdr.source_node));
             break;
-          } else  {
-            if (lr.hdl && get_if<datagram_handle>(&(*lr.hdl)) == nullptr
-                && get_if<datagram_handle>(&(*lr.hdl))->id() != hdl.id()) {
-              CAF_LOG_INFO("dropping repeated handshake on different handle");
-              break;
-            }
           }
-        } else {
           // Add this node to our contacts.
           CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
           // Either add a new node or add the handle to a known one.
@@ -411,22 +406,38 @@ public:
             tbl_.handle(hdr.source_node, hdl);
           else
             tbl_.add(hdr.source_node, hdl);
-          auto peer_server = system().registry().get(atom("PeerServ"));
-          anon_send(actor_cast<actor>(peer_server), put_atom::value,
-                    to_string(hdr.source_node), make_message(addrs));
-        }
-        // Since udp is unreliable we answer, maybe our message was lost.
-        if (!tcp_based) {
+          callee_.learned_new_node(hdr.source_node);
+          callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
+        } else {
+          if (!lr.known)
+            tbl_.add(hdr.source_node);
           uint16_t seq = ep->requires_ordering ? ep->seq_outgoing++ : 0;
           write_server_handshake(ctx, callee_.get_buffer(hdl), port, seq);
           callee_.flush(hdl);
         }
-        // We have to call this after `write_server_handshake` because
-        // `learned_new_node` expects there to be an entry in the routing table.
-        // TODO: Can we move this in the else block above with the changes to
-        // the routing table?
-        if (new_node)
-          callee_.learned_new_node(hdr.source_node);
+        auto peer_server = system().registry().get(atom("PeerServ"));
+        anon_send(actor_cast<actor>(peer_server), put_atom::value,
+                  to_string(hdr.source_node), make_message(addrs));
+        break;
+      }
+      case message_type::acknowledge_handshake: {
+        if (tcp_based) {
+          CAF_LOG_ERROR("received acknowledge handshake via tcp");
+          break;
+        }
+        auto lr = tbl_.lookup(hdr.source_node);
+        if (!lr.known) {
+          CAF_LOG_DEBUG("dropping acknowledge handshake from unknown node");
+          break;
+        }
+        if (lr.hdl) {
+          CAF_LOG_DEBUG("dropping repeated acknowledge handshake");
+          // TODO: Or should we just adopt the new handle?
+          break;
+        }
+        CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
+        tbl_.handle(hdr.source_node, hdl);
+        callee_.learned_new_node(hdr.source_node);
         callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         break;
       }

@@ -73,52 +73,59 @@ bool zero(T val) {
 }
 
 bool server_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && zero(hdr.dest_actor)
-       && !zero(hdr.operation_data);
+  return valid(hdr.source_node)
+      && zero(hdr.dest_actor)
+      && !zero(hdr.operation_data);
 }
 
 bool client_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor);
+  return valid(hdr.source_node)
+      && hdr.source_node != hdr.dest_node
+      && zero(hdr.source_actor)
+      && zero(hdr.dest_actor);
 }
 
 bool dispatch_message_valid(const header& hdr) {
-  return  valid(hdr.dest_node)
-       && (!zero(hdr.dest_actor) || hdr.has(header::named_receiver_flag))
-       && !zero(hdr.payload_len);
+  return valid(hdr.dest_node)
+      && (!zero(hdr.dest_actor) || hdr.has(header::named_receiver_flag))
+      && !zero(hdr.payload_len);
 }
 
 bool announce_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && !zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
+  return valid(hdr.source_node)
+      && valid(hdr.dest_node)
+      && hdr.source_node != hdr.dest_node
+      && zero(hdr.source_actor)
+      && !zero(hdr.dest_actor)
+      && zero(hdr.payload_len)
+      && zero(hdr.operation_data);
 }
 
 bool kill_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && !zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && !zero(hdr.payload_len)
-       && zero(hdr.operation_data);
+  return valid(hdr.source_node)
+      && valid(hdr.dest_node)
+      && hdr.source_node != hdr.dest_node
+      && !zero(hdr.source_actor)
+      && zero(hdr.dest_actor)
+      && !zero(hdr.payload_len)
+      && zero(hdr.operation_data);
 }
 
 bool heartbeat_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
+  return valid(hdr.source_node)
+      && valid(hdr.dest_node)
+      && hdr.source_node != hdr.dest_node
+      && zero(hdr.source_actor)
+      && zero(hdr.dest_actor)
+      && zero(hdr.payload_len)
+      && zero(hdr.operation_data);
+}
+
+bool acknowledge_handshake_valid(const header& hdr) {
+  return valid(hdr.source_node)
+      && hdr.source_node != hdr.dest_node
+      && zero(hdr.source_actor)
+      && zero(hdr.dest_actor);
 }
 
 } // namespace <anonymous>
@@ -139,6 +146,8 @@ bool valid(const header& hdr) {
       return kill_proxy_instance_valid(hdr);
     case message_type::heartbeat:
       return heartbeat_valid(hdr);
+    case message_type::acknowledge_handshake:
+      return acknowledge_handshake_valid(hdr);
   }
 }
 

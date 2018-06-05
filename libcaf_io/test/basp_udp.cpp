@@ -294,17 +294,21 @@ public:
     CAF_MESSAGE("send client handshake");
     mock(src, ep,
          {basp::message_type::client_handshake, 0, 0, 0,
-          n.id, this_node(),
-          invalid_actor_id, invalid_actor_id}, std::string{},
-          basp::routing_table::address_map{})
+          n.id, this_node(), invalid_actor_id, invalid_actor_id},
+         std::string{}, basp::routing_table::address_map{})
     // upon receiving the client handshake, the server should answer
     // with the server handshake and send the dispatch_message blow
     .receive(hdl,
              basp::message_type::server_handshake, no_flags,
              any_vals, basp::version, this_node(), node_id{none},
              published_actor_id, invalid_actor_id, std::string{},
-             published_actor_id, published_actor_ifs, am)
-    // upon receiving our client handshake, BASP will check
+             published_actor_id, published_actor_ifs, am);
+    // UDP uses a three-way handshake, so let's answer with the final message.
+    mock(src, ep,
+         {basp::message_type::acknowledge_handshake, 0,0,0,
+          n.id, this_node(), invalid_actor_id, invalid_actor_id,
+          1})
+    // upon receiving our acknowledge handshake, BASP will check
     // whether there is a SpawnServ actor on this node
     .receive(hdl,
              basp::message_type::dispatch_message,
@@ -562,6 +566,26 @@ public:
 
 CAF_TEST_FIXTURE_SCOPE(basp_udp_tests, fixture)
 
+CAF_TEST(empty_client_handshake_udp) {
+  // test whether basp instance correctly sends a
+  // client handshake when there's no actor published
+  buffer buf;
+  instance().write_client_handshake(mpx(), buf, none);
+  basp::header hdr;
+  buffer payload;
+  std::tie(hdr, payload) = from_buf(buf);
+  basp::header expected{basp::message_type::client_handshake, 0,
+                        static_cast<uint32_t>(payload.size()), 0,
+                        this_node(), none,
+                        invalid_actor_id, invalid_actor_id,
+                        0};
+  CAF_CHECK(basp::valid(hdr));
+  CAF_CHECK(basp::is_handshake(hdr));
+  CAF_MESSAGE("got      : " << to_string(hdr));
+  CAF_MESSAGE("expecting: " << to_string(expected));
+  CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
+}
+
 CAF_TEST(empty_server_handshake_udp) {
   // test whether basp instance correctly sends a
   // client handshake when there's no actor published
@@ -581,15 +605,15 @@ CAF_TEST(empty_server_handshake_udp) {
   CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
 }
 
-CAF_TEST(empty_client_handshake_udp) {
-  // test whether basp instance correctly sends a
-  // client handshake when there's no actor published
+CAF_TEST(empty_acknowledge_handshake_udp) {
+  // test whether a basp instance correctly sends an
+  // acknowldge handshake
   buffer buf;
-  instance().write_client_handshake(mpx(), buf, none);
+  instance().write_acknowledge_handshake(mpx(), buf, none);
   basp::header hdr;
   buffer payload;
   std::tie(hdr, payload) = from_buf(buf);
-  basp::header expected{basp::message_type::client_handshake, 0,
+  basp::header expected{basp::message_type::acknowledge_handshake, 0,
                         static_cast<uint32_t>(payload.size()), 0,
                         this_node(), none,
                         invalid_actor_id, invalid_actor_id,
@@ -646,7 +670,7 @@ CAF_TEST(client_handshake_and_dispatch_udp) {
   mock(jupiter().endpoint, default_sender(),
        {basp::message_type::dispatch_message, 0, 0, 0,
         jupiter().id, this_node(), jupiter().dummy_actor->id(), self()->id(),
-        1}, // increment sequence number
+        2}, // increment sequence number
        std::vector<actor_addr>{},
        make_message(1, 2, 3))
   .receive(jupiter().endpoint,
@@ -716,6 +740,11 @@ CAF_TEST(remote_actor_and_send_udp) {
        jupiter().dummy_actor->id(),
        uint32_t{0},
        basp::routing_table::address_map{})
+  .receive(jupiter().endpoint,
+           basp::message_type::acknowledge_handshake,
+           no_flags, no_payload, no_operation_data,
+           this_node(), jupiter().id,
+           invalid_actor_id, invalid_actor_id)
   .receive(jupiter().endpoint,
            basp::message_type::dispatch_message,
            basp::header::named_receiver_flag, any_vals,
@@ -802,7 +831,7 @@ CAF_TEST(actor_serialize_and_deserialize_udp) {
        {basp::message_type::dispatch_message, 0, 0, 0,
         prx->node(), this_node(),
         prx->id(), testee->id(),
-        1}, // sequence number, first message after handshake
+        2}, // sequence number, previous messages: client and ack handshake
        std::vector<actor_id>{},
        msg);
   // testee must've responded (process forwarded message in BASP broker)
@@ -856,6 +885,9 @@ CAF_TEST(out_of_order_delivery_udp) {
        jupiter().dummy_actor->id(),
        uint32_t{0},
        basp::routing_table::address_map{})
+  .receive(jupiter().endpoint, basp::message_type::acknowledge_handshake,
+           no_flags, no_payload, no_operation_data,
+           this_node(), jupiter().id, invalid_actor_id, invalid_actor_id)
   .receive(jupiter().endpoint,
            basp::message_type::dispatch_message,
            basp::header::named_receiver_flag, any_vals,
