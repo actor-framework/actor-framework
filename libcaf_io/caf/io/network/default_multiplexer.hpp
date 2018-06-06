@@ -503,7 +503,7 @@ private:
   std::vector<intrusive_ptr<resumable>> internally_posted_;
 
   /// Sequential ids for handles of datagram servants
-  int64_t servant_ids_;
+  std::atomic<int64_t> servant_ids_;
 };
 
 inline connection_handle conn_hdl_from_socket(native_socket fd) {
