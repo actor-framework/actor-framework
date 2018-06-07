@@ -40,6 +40,7 @@ set(LIBCAF_CORE_SRCS
   src/config_value.cpp
   src/decorated_tuple.cpp
   src/default_attachable.cpp
+  src/defaults.cpp
   src/deserializer.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
