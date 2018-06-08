@@ -27,6 +27,7 @@
 #include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/default_sum_type_access.hpp"
+#include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/optional.hpp"
@@ -164,46 +165,45 @@ private:
   variant_type data_;
 };
 
-/*
-/// Enable `holds_alternative`, `get`, `get_if`, and `visit` for `config_value`.
 /// @relates config_value
-/// @relates SumType
-///
-template <>
-struct sum_type_access<config_value> : default_sum_type_access<config_value> {};
-*/
-
 template <class T>
 struct config_value_access;
 
+/// @relates config_value
 template <class T>
-bool holds_alternative(const config_value& x) {
+auto holds_alternative(const config_value& x)
+-> decltype(config_value_access<T>::is(x)) {
   return config_value_access<T>::is(x);
 }
 
+/// @relates config_value
 template <class T>
 auto get_if(const config_value* x)
 -> decltype(config_value_access<T>::get_if(x)) {
   return config_value_access<T>::get_if(x);
 }
 
+/// @relates config_value
 template <class T>
 auto get(const config_value& x) -> decltype(config_value_access<T>::get(x)) {
   return config_value_access<T>::get(x);
 }
 
+/// @relates config_value
 template <class Visitor>
 auto visit(Visitor&& f, config_value& x)
 -> decltype(visit(std::forward<Visitor>(f), x.get_data())) {
   return visit(std::forward<Visitor>(f), x.get_data());
 }
 
+/// @relates config_value
 template <class Visitor>
 auto visit(Visitor&& f, const config_value& x)
 -> decltype(visit(std::forward<Visitor>(f), x.get_data())) {
   return visit(std::forward<Visitor>(f), x.get_data());
 }
 
+/// @relates config_value_access
 template <class T>
 struct default_config_value_access {
   static bool is(const config_value& x) {
@@ -232,6 +232,48 @@ CAF_CONFIG_VALUE_DEFAULT_ACCESS(timespan);
 CAF_CONFIG_VALUE_DEFAULT_ACCESS(string);
 CAF_CONFIG_VALUE_DEFAULT_ACCESS(list);
 CAF_CONFIG_VALUE_DEFAULT_ACCESS(dictionary);
+
+/// Checks whether `x` is a `config_value::integer` that can convert to `T`.
+/// @relates config_value
+template <class T>
+detail::enable_if_t<std::is_integral<T>::value
+                    && !std::is_same<T, typename config_value::integer>::value
+                    && !std::is_same<T, bool>::value,
+                    bool>
+holds_alternative(const config_value& x) {
+  using cvi = typename config_value::integer;
+  auto ptr = config_value_access<cvi>::get_if(&x);
+  return ptr != nullptr && detail::bounds_checker<T>::check(*ptr);
+}
+
+/// Tries to convert the value of `x` to `T`.
+/// @relates config_value
+template <class T>
+detail::enable_if_t<std::is_integral<T>::value
+                    && !std::is_same<T, typename config_value::integer>::value
+                    && !std::is_same<T, bool>::value,
+                    optional<T>>
+get_if(const config_value* x) {
+  using cvi = typename config_value::integer;
+  auto ptr = config_value_access<cvi>::get_if(x);
+  if (ptr != nullptr && detail::bounds_checker<T>::check(*ptr))
+    return static_cast<T>(*ptr);
+  return none;
+}
+
+/// Converts the value of `x` to `T`.
+/// @relates config_value
+template <class T>
+detail::enable_if_t<std::is_integral<T>::value
+                    && !std::is_same<T, typename config_value::integer>::value
+                    && !std::is_same<T, bool>::value,
+                    T>
+get(const config_value& x) {
+  auto res = get_if<T>(&x);
+  if (res)
+    return *res;
+  CAF_RAISE_ERROR("invalid type found");
+}
 
 /// Implements automagic unboxing of `std::vector<T>` from a homogeneous
 /// `config_value::list`.

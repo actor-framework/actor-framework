@@ -67,37 +67,6 @@ config_value cfg_lst(Ts&&... xs) {
   return config_value{std::move(lst)};
 }
 
-template <class T>
-detail::enable_if_t<std::is_integral<T>::value
-                    && !std::is_same<T, typename config_value::integer>::value,
-                    optional<T>>
-get_if(const config_value* x) {
-  using cvi = typename config_value::integer;
-  auto ptr = config_value_access<cvi>::get_if(x);
-  if (ptr && detail::bounds_checker<T>::check(*ptr))
-    return static_cast<T>(*ptr);
-  return none;
-}
-
-template <>
-optional<uint64_t> get_if<uint64_t>(const config_value* x) {
-  auto ptr = get_if<typename config_value::integer>(x);
-  if (ptr && *ptr >= 0)
-    return static_cast<uint64_t>(*ptr);
-  return none;
-}
-
-template <class T>
-detail::enable_if_t<std::is_integral<T>::value
-                    && !std::is_same<T, typename config_value::integer>::value,
-                    T>
-get(const config_value& x) {
-  auto res = get_if<T>(&x);
-  if (res)
-    return *res;
-  CAF_RAISE_ERROR("invalid type found");
-}
-
 } // namespace <anonymous>
 
 CAF_TEST(default_constructed) {
@@ -109,9 +78,17 @@ CAF_TEST(default_constructed) {
 
 CAF_TEST(integer) {
   config_value x{4200};
+  CAF_CHECK_EQUAL(holds_alternative<int64_t>(x), true);
   CAF_CHECK_EQUAL(get<int64_t>(x), 4200);
-  CAF_CHECK_EQUAL(get<size_t>(x), 4200u);
-  CAF_CHECK_EQUAL(get_if<uint8_t>(&x), caf::none);
+  CAF_CHECK(get_if<int64_t>(&x) != nullptr);
+  CAF_CHECK_EQUAL(holds_alternative<uint64_t>(x), true);
+  CAF_CHECK_EQUAL(get<uint64_t>(x), 4200u);
+  CAF_CHECK_EQUAL(get_if<uint64_t>(&x), uint64_t{4200});
+  CAF_CHECK_EQUAL(holds_alternative<int16_t>(x), true);
+  CAF_CHECK_EQUAL(get<int16_t>(x), 4200);
+  CAF_CHECK_EQUAL(get_if<int16_t>(&x), int16_t{4200});
+  CAF_CHECK_EQUAL(holds_alternative<int8_t>(x), false);
+  CAF_CHECK_EQUAL(get_if<int8_t>(&x), caf::none);
 }
 
 CAF_TEST(list) {
