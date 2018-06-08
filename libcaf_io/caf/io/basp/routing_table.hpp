@@ -133,6 +133,12 @@ public:
   /// Get a reference to an address map for the local node.
   const address_map& local_addresses();
 
+  // Set the received client handshake flag for `nid`.
+  bool received_client_handshake(const node_id& nid, bool flag);
+  
+  // Get the received client handshake flag for `nid`.
+  bool received_client_handshake(const node_id& nid);
+
 public:
   /// Entry to bundle information for a remote endpoint.
   struct node_info {
@@ -140,6 +146,9 @@ public:
     optional<endpoint_handle> hdl;
     /// The endpoint who told us about the node.
     optional<node_id> origin;
+    /// Track if we received a client handshake to solve simultaneous
+    /// handshake with UDP.
+    bool received_client_handshake;
   };
 
   template <class Map, class Fallback>

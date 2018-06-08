@@ -348,6 +348,12 @@ public:
                        "connection: " << CAF_ARG(hdr.source_node));
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
           return false;
+        } else if (!tcp_based && (tbl_.received_client_handshake(hdr.source_node)
+                   && this_node() < hdr.source_node)) {
+          CAF_LOG_INFO("simultaneous handshake, let the other node proceed: "
+                       << CAF_ARG(hdr.source_node));
+          callee_.finalize_handshake(hdr.source_node, aid, sigs);
+          return false;
         }
         // Add this node to our contacts.
         CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
@@ -411,6 +417,7 @@ public:
         } else {
           if (!lr.known)
             tbl_.add(hdr.source_node);
+          tbl_.received_client_handshake(hdr.source_node, true);
           uint16_t seq = ep->requires_ordering ? ep->seq_outgoing++ : 0;
           write_server_handshake(ctx, callee_.get_buffer(hdl), port, seq);
           callee_.flush(hdl);
@@ -437,6 +444,7 @@ public:
         }
         CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
         tbl_.handle(hdr.source_node, hdl);
+        tbl_.received_client_handshake(hdr.source_node, false);
         callee_.learned_new_node(hdr.source_node);
         callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         break;

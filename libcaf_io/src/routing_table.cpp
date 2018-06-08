@@ -59,13 +59,13 @@ void routing_table::add(const node_id& nid, const endpoint_handle& hdl) {
   CAF_ASSERT(nid_by_hdl_.count(hdl) == 0);
   CAF_ASSERT(node_information_base_.count(nid) == 0);
   nid_by_hdl_.emplace(hdl, nid);
-  node_information_base_[nid] = node_info{hdl, none};
+  node_information_base_[nid] = node_info{hdl, none, false};
   parent_->parent().notify<hook::new_connection_established>(nid);
 }
 
 void routing_table::add(const node_id& nid, const node_id& origin) {
   CAF_ASSERT(node_information_base_.count(nid) == 0);
-  node_information_base_[nid] = node_info{none, origin};
+  node_information_base_[nid] = node_info{none, origin, false};
   // TODO: Some new related hook?
   //parent_->parent().notify<hook::new_connection_established>(nid);
 }
@@ -73,7 +73,7 @@ void routing_table::add(const node_id& nid, const node_id& origin) {
 void routing_table::add(const node_id& nid) {
   //CAF_ASSERT(hdl_by_nid_.count(nid) == 0);
   CAF_ASSERT(node_information_base_.count(nid) == 0);
-  node_information_base_[nid] = node_info{none, none};
+  node_information_base_[nid] = node_info{none, none, false};
   // TODO: Some new related hook?
   //parent_->parent().notify<hook::new_connection_established>(nid);
 }
@@ -127,6 +127,21 @@ void routing_table::local_addresses(network::protocol::transport key,
 
 const routing_table::address_map& routing_table::local_addresses() {
   return local_addrs_;
+}
+
+bool routing_table::received_client_handshake(const node_id& nid, bool flag) {
+  auto i = node_information_base_.find(nid);
+  if (i == node_information_base_.end())
+    return false;
+  i->second.received_client_handshake = flag;
+  return true;
+}
+
+bool routing_table::received_client_handshake(const node_id& nid) {
+  auto i = node_information_base_.find(nid);
+  if (i == node_information_base_.end())
+    return false;
+  return i->second.received_client_handshake;
 }
 
 } // namespace basp
