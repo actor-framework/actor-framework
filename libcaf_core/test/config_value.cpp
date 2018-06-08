@@ -124,19 +124,25 @@ CAF_TEST(append) {
 CAF_TEST(homogeneous dictionary) {
   using integer_map = std::map<std::string, int64_t>;
   auto xs = dict()
-              .add("value-1", config_value{1})
+              .add("value-1", config_value{100000})
               .add("value-2", config_value{2})
               .add("value-3", config_value{3})
               .add("value-4", config_value{4})
               .make();
   integer_map ys{
-    {"value-1", 1},
+    {"value-1", 100000},
     {"value-2", 2},
     {"value-3", 3},
     {"value-4", 4},
   };
-  CAF_CHECK_EQUAL(get<int64_t>(xs, "value-1"), 1);
-  CAF_CHECK_EQUAL(get<integer_map>(config_value{xs}), ys);
+  config_value xs_cv{xs};
+  CAF_CHECK_EQUAL(get_if<int64_t>(&xs, "value-1"), int64_t{100000});
+  CAF_CHECK_EQUAL(get_if<int32_t>(&xs, "value-1"), int32_t{100000});
+  CAF_CHECK_EQUAL(get_if<int16_t>(&xs, "value-1"), none);
+  CAF_CHECK_EQUAL(get<int64_t>(xs, "value-1"), 100000);
+  CAF_CHECK_EQUAL(get<int32_t>(xs, "value-1"), 100000);
+  CAF_CHECK_EQUAL(get_if<integer_map>(&xs_cv), ys);
+  CAF_CHECK_EQUAL(get<integer_map>(xs_cv), ys);
 }
 
 CAF_TEST(heterogeneous dictionary) {
@@ -152,9 +158,9 @@ CAF_TEST(heterogeneous dictionary) {
                               .make_cv())
 
               .make();
-  CAF_CHECK_EQUAL(get<atom_value>(xs, {"scheduler", "policy"}), atom("none"));
-  CAF_CHECK_EQUAL(get<int64_t>(xs, {"scheduler", "max-threads"}), 2);
-  CAF_CHECK_EQUAL(get_if<double>(&xs, {"scheduler", "max-threads"}), none);
+  CAF_CHECK_EQUAL(get<atom_value>(xs, "scheduler.policy"), atom("none"));
+  CAF_CHECK_EQUAL(get<int64_t>(xs, "scheduler.max-threads"), 2);
+  CAF_CHECK_EQUAL(get_if<double>(&xs, "scheduler.max-threads"), none);
   string_list nodes{"sun", "venus", "mercury", "earth", "mars"};
-  CAF_CHECK_EQUAL(get<string_list>(xs, {"nodes", "preload"}), nodes);
+  CAF_CHECK_EQUAL(get<string_list>(xs, "nodes.preload"), nodes);
 }

@@ -31,6 +31,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/optional.hpp"
+#include "caf/string_algorithms.hpp"
 #include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"
 #include "caf/timestamp.hpp"
@@ -359,11 +360,14 @@ struct config_value_access<std::map<std::string, V>> {
   }
 };
 
-/// Retrieves.
+/// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
 optional<T> get_if(const config_value::dictionary* xs,
-                   std::initializer_list<std::string> path) {
+                   const std::string& name) {
+  // Split the name into a path.
+  std::vector<std::string> path;
+  split(path, name, ".");
   // Sanity check.
   if (path.size() == 0)
     return none;
@@ -388,43 +392,26 @@ optional<T> get_if(const config_value::dictionary* xs,
   return none;
 }
 
+/// Retrieves the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-optional<T> get_if(const config_value::dictionary* xs, std::string path) {
-  return get_if<T>(xs, {path});
-}
-
-/// @relates config_value
-template <class T>
-T get(const config_value::dictionary& xs,
-      std::initializer_list<std::string> path) {
-  auto result = get_if<T>(&xs, std::move(path));
-  if (!result)
-    CAF_RAISE_ERROR("invalid type found");
-  return std::move(*result);
-}
-
-/// @relates config_value
-template <class T>
-T get(const config_value::dictionary& xs, std::string path) {
-  return get<T>(xs, {path});
-}
-
-/// @relates config_value
-template <class T>
-T get_or(const config_value::dictionary& xs,
-         std::initializer_list<std::string> path, const T& default_value) {
-  auto result = get<T>(xs, std::move(path));
+T get(const config_value::dictionary& xs, const std::string& name) {
+  auto result = get_if<T>(&xs, name);
   if (result)
-    return *result;
-  return default_value;
+    return std::move(*result);
+  CAF_RAISE_ERROR("invalid type or name found");
 }
 
+/// Retrieves the value associated to `name` from `xs` or returns
+/// `default_value`.
 /// @relates config_value
 template <class T>
-T get_or(const config_value::dictionary& xs, std::string path,
+T get_or(const config_value::dictionary& xs, const std::string& name,
          const T& default_value) {
-  return get_or(xs, {path}, default_value);
+  auto result = get_if<T>(&xs, name);
+  if (result)
+    return std::move(*result);
+  return default_value;
 }
 
 /// @relates config_value
