@@ -234,6 +234,24 @@ CAF_CONFIG_VALUE_DEFAULT_ACCESS(string);
 CAF_CONFIG_VALUE_DEFAULT_ACCESS(list);
 CAF_CONFIG_VALUE_DEFAULT_ACCESS(dictionary);
 
+template <>
+struct config_value_access<float> {
+  static bool is(const config_value& x) {
+    return holds_alternative<double>(x.get_data());
+  }
+
+  static optional<float> get_if(const config_value* x) {
+    auto res = caf::get_if<double>(&(x->get_data()));
+    if (res)
+      return static_cast<float>(*res);
+    return none;
+  }
+
+  static float get(const config_value& x) {
+    return static_cast<float>(caf::get<double>(x.get_data()));
+  }
+};
+
 /// Checks whether `x` is a `config_value::integer` that can convert to `T`.
 /// @relates config_value
 template <class T>
