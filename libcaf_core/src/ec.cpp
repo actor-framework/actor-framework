@@ -18,6 +18,8 @@
 
 #include "caf/detail/parser/ec.hpp"
 
+#include "caf/error.hpp"
+
 namespace {
 
 constexpr const char* tbl[] = {
@@ -41,6 +43,10 @@ constexpr const char* tbl[] = {
 namespace caf {
 namespace detail {
 namespace parser {
+
+error make_error(ec code) {
+  return {static_cast<uint8_t>(code), atom("parser")};
+}
 
 const char* to_string(ec x) {
   return tbl[static_cast<uint8_t>(x)];

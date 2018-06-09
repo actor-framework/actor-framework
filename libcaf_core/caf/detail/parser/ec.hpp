@@ -20,6 +20,8 @@
 
 #include <cstdint>
 
+#include "caf/fwd.hpp"
+
 namespace caf {
 namespace detail {
 namespace parser {
@@ -52,6 +54,8 @@ enum class ec : uint8_t {
   /// Exponent of parsed double is greater than the maximum supported exponent.
   exponent_overflow,
 };
+
+error make_error(ec code);
 
 const char* to_string(ec x);
 
