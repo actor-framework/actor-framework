@@ -28,6 +28,7 @@
 #include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/bounds_checker.hpp"
+#include "caf/detail/parser/ec.hpp"
 #include "caf/none.hpp"
 #include "caf/variant.hpp"
 
@@ -76,7 +77,7 @@ CAF_TEST(default_constructed) {
   CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<int64_t>());
 }
 
-CAF_TEST(integer) {
+CAF_TEST(positive integer) {
   config_value x{4200};
   CAF_CHECK_EQUAL(holds_alternative<int64_t>(x), true);
   CAF_CHECK_EQUAL(get<int64_t>(x), 4200);
@@ -89,6 +90,22 @@ CAF_TEST(integer) {
   CAF_CHECK_EQUAL(get_if<int16_t>(&x), int16_t{4200});
   CAF_CHECK_EQUAL(holds_alternative<int8_t>(x), false);
   CAF_CHECK_EQUAL(get_if<int8_t>(&x), caf::none);
+}
+
+CAF_TEST(negative integer) {
+  config_value x{-1};
+  CAF_CHECK_EQUAL(holds_alternative<int64_t>(x), true);
+  CAF_CHECK_EQUAL(get<int64_t>(x), -1);
+  CAF_CHECK(get_if<int64_t>(&x) != nullptr);
+  CAF_CHECK_EQUAL(holds_alternative<uint64_t>(x), false);
+  CAF_CHECK_EQUAL(get_if<uint64_t>(&x), none);
+  CAF_CHECK_EQUAL(holds_alternative<int16_t>(x), true);
+  CAF_CHECK_EQUAL(get<int16_t>(x), -1);
+  CAF_CHECK_EQUAL(get_if<int16_t>(&x), int16_t{-1});
+  CAF_CHECK_EQUAL(holds_alternative<int8_t>(x), true);
+  CAF_CHECK_EQUAL(get_if<int8_t>(&x), int8_t{-1});
+  CAF_CHECK_EQUAL(holds_alternative<uint8_t>(x), false);
+  CAF_CHECK_EQUAL(get_if<uint8_t>(&x), none);
 }
 
 CAF_TEST(timespan) {
