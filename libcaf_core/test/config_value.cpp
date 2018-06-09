@@ -91,6 +91,14 @@ CAF_TEST(integer) {
   CAF_CHECK_EQUAL(get_if<int8_t>(&x), caf::none);
 }
 
+CAF_TEST(timespan) {
+  timespan ns500{500};
+  config_value x{ns500};
+  CAF_CHECK_EQUAL(holds_alternative<timespan>(x), true);
+  CAF_CHECK_EQUAL(get<timespan>(x), ns500);
+  CAF_CHECK_NOT_EQUAL(get_if<timespan>(&x), nullptr);
+}
+
 CAF_TEST(list) {
   using integer_list = std::vector<int64_t>;
   auto xs = make_config_value_list(1, 2, 3);
