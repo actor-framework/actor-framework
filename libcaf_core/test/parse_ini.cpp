@@ -129,6 +129,7 @@ struct fixture {
       message_visitor mv;
       anon_send(config_server, put_atom::value,
                 std::move(key), visit(mv, value));
+      return true;
     };
     load_impl(consume, str);
   }
@@ -137,6 +138,7 @@ struct fixture {
     auto consume = [&](size_t, std::string key, config_value& value,
                        optional<std::ostream&>) {
       values.emplace(std::move(key), std::move(value));
+      return true;
     };
     load_impl(consume, str);
   }

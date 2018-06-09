@@ -56,23 +56,24 @@ public:
       sinks_.emplace(x->full_name(), x->to_sink());
   }
 
-  void operator()(size_t ln, const std::string& name, config_value& cv,
+  bool operator()(size_t ln, const std::string& name, config_value& cv,
                   optional<std::ostream&> out) {
     auto i = sinks_.find(name);
     if (i != sinks_.end()) {
       (i->second)(ln, cv, none);
-      return;
+      return true;
     }
     // check whether this is an individual actor config
     if (name.compare(0, actor_conf_prefix_size, actor_conf_prefix) == 0) {
       auto substr = name.substr(actor_conf_prefix_size);
       named_actor_sink_(ln, substr, cv);
-      return;
+      return true;
     }
     if (out)
-        *out << "error in line " << ln
-             << R"(: unrecognized parameter name ")" << name << R"(")"
-             << std::endl;
+      *out << "error in line " << ln
+        << R"(: unrecognized parameter name ")" << name << R"(")"
+        << std::endl;
+    return false;
   }
 
 private:

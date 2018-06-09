@@ -34,7 +34,7 @@ struct parse_ini_t {
   /// Denotes an optional error output stream
   using opt_err = optional<std::ostream&>;
   /// Denotes a callback for consuming configuration values.
-  using config_consumer = std::function<void (size_t, std::string,
+  using config_consumer = std::function<bool (size_t, std::string,
                                               config_value&, opt_err)>;
 
   /// Parse the given input stream as INI formatted data and
