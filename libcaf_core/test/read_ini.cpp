@@ -40,9 +40,8 @@ struct test_consumer {
     return *this;
   }
 
-  test_consumer& end_map() {
+  void end_map() {
     log.emplace_back("}");
-    return *this;
   }
 
   test_consumer& begin_list() {
@@ -50,9 +49,8 @@ struct test_consumer {
     return *this;
   }
 
-  test_consumer& end_list() {
+  void end_list() {
     log.emplace_back("]");
-    return *this;
   }
 
   void key(std::string name) {
@@ -69,8 +67,6 @@ struct test_consumer {
     log.emplace_back(std::move(str));
   }
 };
-
-
 
 struct ini_consumer {
   using inner_map = std::map<std::string, config_value>;
