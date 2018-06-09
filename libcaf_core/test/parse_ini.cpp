@@ -61,6 +61,7 @@ bar=034
 baz=-0.23
 buzz=1E-34
 bazz=0b10101010110011
+bizz=-1
 )__";
 
 constexpr const char* case3 = R"__("
@@ -225,12 +226,13 @@ struct fixture {
 
   void check_case2() {
     CAF_CHECK(errors.empty());
-    CAF_CHECK(num_values() == 5);
+    CAF_CHECK(num_values() == 6);
     CAF_CHECK(value_is("test.foo", -0xff));
     CAF_CHECK(value_is("test.bar", 034));
     CAF_CHECK(value_is("test.baz", -0.23));
     CAF_CHECK(value_is("test.buzz", 1E-34));
     CAF_CHECK(value_is("test.bazz", 10931));
+    CAF_CHECK(value_is("test.bizz", -1));
   }
 
   void check_case3() {
