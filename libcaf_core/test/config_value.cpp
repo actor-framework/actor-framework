@@ -189,3 +189,45 @@ CAF_TEST(heterogeneous dictionary) {
   string_list nodes{"sun", "venus", "mercury", "earth", "mars"};
   CAF_CHECK_EQUAL(get<string_list>(xs, "nodes.preload"), nodes);
 }
+
+CAF_TEST(successful parsing) {
+  auto parse = [](const std::string& str) {
+    auto x = config_value::parse(str);
+    if (!x)
+      CAF_FAIL("cannot parse" << str << ": assumed a result but got an error");
+    return std::move(*x);
+  };
+  using di = std::map<string, int>; // Dictionary-of-integers.
+  using ls = std::vector<string>; // List-of-strings.
+  using li = std::vector<int>; // List-of-integers.
+  using lli = std::vector<li>; // List-of-list-of-integers.
+  using std::chrono::milliseconds;
+  CAF_CHECK_EQUAL(get<int64_t>(parse("123")), 123);
+  CAF_CHECK_EQUAL(get<int64_t>(parse("+123")), 123);
+  CAF_CHECK_EQUAL(get<int64_t>(parse("-1")), -1);
+  CAF_CHECK_EQUAL(get<double>(parse("1.")), 1.);
+  CAF_CHECK_EQUAL(get<atom_value>(parse("'abc'")), atom("abc"));
+  CAF_CHECK_EQUAL(get<string>(parse("\"abc\"")), "abc");
+  CAF_CHECK_EQUAL(get<string>(parse("abc")), "abc");
+  CAF_CHECK_EQUAL(get<li>(parse("[1, 2, 3]")), li({1, 2, 3}));
+  CAF_CHECK_EQUAL(get<ls>(parse("[abc, def, ghi]")), ls({"abc", "def", "ghi"}));
+  CAF_CHECK_EQUAL(get<lli>(parse("[[1, 2], [3]]")), lli({li{1, 2}, li{3}}));
+  CAF_CHECK_EQUAL(get<timespan>(parse("10ms")), milliseconds(10));
+  CAF_CHECK_EQUAL(get<di>(parse("{a=1,b=2}")), di({{"a", 1}, {"b", 2}}));
+}
+
+CAF_TEST(unsuccessful parsing) {
+  auto parse = [](const std::string& str) {
+    auto x = config_value::parse(str);
+    if (x)
+      CAF_FAIL("assumed an error but got a result");
+    return std::move(x.error());
+  };
+  using detail::parser::ec;
+  CAF_CHECK_EQUAL(parse("10msb"), ec::trailing_character);
+  CAF_CHECK_EQUAL(parse("10foo"), ec::trailing_character);
+  CAF_CHECK_EQUAL(parse("[1,"), ec::unexpected_eof);
+  CAF_CHECK_EQUAL(parse("{a=,"), ec::unexpected_character);
+  CAF_CHECK_EQUAL(parse("{a=1,"), ec::unexpected_eof);
+  CAF_CHECK_EQUAL(parse("{a=1 b=2}"), ec::unexpected_character);
+}
