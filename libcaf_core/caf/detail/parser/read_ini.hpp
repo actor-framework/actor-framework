@@ -143,7 +143,7 @@ void read_ini_value(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     fsm_epsilon(read_atom(ps, consumer), done, '\'')
     fsm_epsilon(read_number(ps, consumer), done, '.')
     fsm_epsilon(read_bool(ps, consumer), done, "ft")
-    fsm_epsilon(read_number_or_timespan(ps, consumer), done, decimal_chars)
+    fsm_epsilon(read_number_or_timespan(ps, consumer), done, "0123456789+-")
     fsm_transition(read_ini_list(ps, consumer.begin_list()), done, '[')
     fsm_transition(read_ini_map(ps, consumer.begin_map()), done, '{')
   }
