@@ -53,6 +53,8 @@ enum class ec : uint8_t {
   exponent_underflow,
   /// Exponent of parsed double is greater than the maximum supported exponent.
   exponent_overflow,
+  /// Parsed type does not match the expected type.
+  type_mismatch,
 };
 
 error make_error(ec code);

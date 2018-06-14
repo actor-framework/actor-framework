@@ -36,6 +36,7 @@ constexpr const char* tbl[] = {
   "integer_underflow",
   "exponent_underflow",
   "exponent_overflow",
+  "type_mismatch",
 };
 
 } // namespace <anonymous>
