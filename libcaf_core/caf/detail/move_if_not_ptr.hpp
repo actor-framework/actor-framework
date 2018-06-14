@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright (C) 2011 - 2014                                                  *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,40 +18,29 @@
 
 #pragma once
 
-#include <string>
-#include <istream>
-#include <functional>
+#include <type_traits>
 
-#include "caf/atom.hpp"
-#include "caf/variant.hpp"
-#include "caf/optional.hpp"
-#include "caf/config_value.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
 
 
+/// Moves the value from `x` if it is not a pointer (e.g., `optional` or
+/// `expected`), returns `*x` otherwise.
+template <class T>
+T& move_if_not_ptr(T* x) {
+  return *x;
+}
 
-struct parse_ini_t {
-  /// Denotes an optional error output stream
-  using opt_err = optional<std::ostream&>;
-  /// Denotes a callback for consuming configuration values.
-  using config_consumer = std::function<bool (size_t, std::string,
-                                              config_value&, opt_err)>;
-
-  /// Parse the given input stream as INI formatted data and
-  /// calls the consumer with every key-value pair.
-  /// @param input Input stream of INI formatted text.
-  /// @param consumer_fun Callback consuming generated key-value pairs.
-  /// @param errors Output stream for parser errors.
-  void operator()(std::istream& input,
-                  const config_consumer& consumer_fun,
-                  opt_err errors = none) const;
-
-};
-
-constexpr parse_ini_t parse_ini = parse_ini_t{};
+/// Moves the value from `x` if it is not a pointer (e.g., `optional` or
+/// `expected`), returns `*x` otherwise.
+template <class T, class E = enable_if_t<!std::is_pointer<T>::value>>
+T&& move_if_not_ptr(T& x) {
+  return std::move(*x);
+}
 
 } // namespace detail
 } // namespace caf
+
 

@@ -35,6 +35,10 @@ using log_type = std::vector<std::string>;
 struct test_consumer {
   log_type log;
 
+  test_consumer() = default;
+  test_consumer(const test_consumer&) = delete;
+  test_consumer& operator=(const test_consumer&) = delete;
+
   test_consumer& begin_map() {
     log.emplace_back("{");
     return *this;
@@ -83,7 +87,7 @@ struct fixture {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_ini(res, f);
-    if (res.code == detail::parser::ec::success != expect_success)
+    if (res.code == pec::success != expect_success)
       CAF_MESSAGE("unexpected parser result state: " << res.code);
     return std::move(f.log);
   }

@@ -23,14 +23,14 @@
 #include "caf/fwd.hpp"
 
 namespace caf {
-namespace detail {
-namespace parser {
 
-enum class ec : uint8_t {
+/// PEC stands for "Parser Error Code". This enum contains error codes used by
+/// various CAF parsers.
+enum class pec : uint8_t {
   /// Not-an-error.
-  success,
+  success = 0,
   /// Parser succeeded but found trailing character(s).
-  trailing_character,
+  trailing_character = 1,
   /// Parser stopped after reaching the end while still expecting input.
   unexpected_eof,
   /// Parser stopped after reading an unexpected character.
@@ -38,7 +38,7 @@ enum class ec : uint8_t {
   /// Parsed integer exceeds the number of available bits of a `timespan`.
   timespan_overflow,
   /// Tried constructing a `timespan` with from a floating point number.
-  fractional_timespan,
+  fractional_timespan = 5,
   /// Too many characters for an atom.
   too_many_characters,
   /// Unrecognized character after escaping `\`.
@@ -48,19 +48,27 @@ enum class ec : uint8_t {
   /// Parsed positive integer exceeds the number of available bits.
   integer_overflow,
   /// Parsed negative integer exceeds the number of available bits.
-  integer_underflow,
+  integer_underflow = 10,
   /// Exponent of parsed double is less than the minimum supported exponent.
   exponent_underflow,
   /// Exponent of parsed double is greater than the maximum supported exponent.
   exponent_overflow,
   /// Parsed type does not match the expected type.
   type_mismatch,
+  /// Stopped at an unrecognized option name.
+  not_an_option,
+  /// Stopped at an unparseable argument.
+  illegal_argument = 15,
+  /// Stopped because an argument was omitted.
+  missing_argument,
+  /// Stopped because the key of a category was taken.
+  illegal_category,
 };
 
-error make_error(ec code);
+error make_error(pec code);
 
-const char* to_string(ec x);
+error make_error(pec code, size_t line, size_t column);
 
-} // namespace parser
-} // namespace detail
+const char* to_string(pec x);
+
 } // namespace caf

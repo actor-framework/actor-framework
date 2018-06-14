@@ -28,8 +28,6 @@
 
 using namespace caf;
 
-using detail::parser::ec;
-
 namespace {
 
 struct bool_parser_consumer {
@@ -39,7 +37,7 @@ struct bool_parser_consumer {
   }
 };
 
-using res_t = variant<ec, bool>;
+using res_t = variant<pec, bool>;
 
 struct bool_parser {
   res_t operator()(std::string str) {
@@ -48,7 +46,7 @@ struct bool_parser {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_bool(res, f);
-    if (res.code == ec::success)
+    if (res.code == pec::success)
       return f.x;
     return res.code;
   }
@@ -68,18 +66,18 @@ CAF_TEST(valid booleans) {
 }
 
 CAF_TEST(invalid booleans) {
-  CAF_CHECK_EQUAL(p(""), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("t"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("tr"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("tru"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p(" true"), ec::unexpected_character);
-  CAF_CHECK_EQUAL(p("f"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("fa"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("fal"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("fals"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p(" false"), ec::unexpected_character);
-  CAF_CHECK_EQUAL(p("tr\nue"), ec::unexpected_newline);
-  CAF_CHECK_EQUAL(p("trues"), ec::trailing_character);
+  CAF_CHECK_EQUAL(p(""), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("t"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("tr"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("tru"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p(" true"), pec::unexpected_character);
+  CAF_CHECK_EQUAL(p("f"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("fa"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("fal"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("fals"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p(" false"), pec::unexpected_character);
+  CAF_CHECK_EQUAL(p("tr\nue"), pec::unexpected_newline);
+  CAF_CHECK_EQUAL(p("trues"), pec::trailing_character);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

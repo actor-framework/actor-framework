@@ -20,15 +20,14 @@
 
 #include <cstdint>
 
-#include "caf/detail/scope_guard.hpp"
-
 #include "caf/detail/parser/add_ascii.hpp"
-#include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/is_digit.hpp"
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
 namespace detail {
@@ -53,7 +52,7 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   int64_t int_res = 0;
   // Computes the result on success.
   auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= ec::trailing_character) {
+    if (ps.code <= pec::trailing_character) {
       if (result_type == integer) {
         consumer.value(int_res);
         return;
@@ -63,11 +62,11 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
       exp += dec_exp;
       // 2) Check whether exponent is in valid range.
       if (exp < -max_double_exponent) {
-        ps.code = ec::exponent_underflow;
+        ps.code = pec::exponent_underflow;
         return;
       }
       if (exp > max_double_exponent) {
-        ps.code = ec::exponent_overflow;
+        ps.code = pec::exponent_overflow;
         return;
       }
       // 3) Scale result.
@@ -140,13 +139,13 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     epsilon(pos_bin)
   }
   term_state(pos_bin) {
-    transition(pos_bin, "01", add_ascii<2>(int_res, ch), ec::integer_overflow)
+    transition(pos_bin, "01", add_ascii<2>(int_res, ch), pec::integer_overflow)
   }
   state(start_neg_bin) {
     epsilon(neg_bin)
   }
   term_state(neg_bin) {
-    transition(neg_bin, "01", sub_ascii<2>(int_res, ch), ec::integer_underflow)
+    transition(neg_bin, "01", sub_ascii<2>(int_res, ch), pec::integer_underflow)
   }
   // Octal integers.
   state(start_pos_oct) {
@@ -154,14 +153,14 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   }
   term_state(pos_oct) {
     transition(pos_oct, octal_chars, add_ascii<8>(int_res, ch),
-               ec::integer_overflow)
+               pec::integer_overflow)
   }
   state(start_neg_oct) {
     epsilon(neg_oct)
   }
   term_state(neg_oct) {
     transition(neg_oct, octal_chars, sub_ascii<8>(int_res, ch),
-               ec::integer_underflow)
+               pec::integer_underflow)
   }
   // Hexal integers.
   state(start_pos_hex) {
@@ -169,32 +168,32 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   }
   term_state(pos_hex) {
     transition(pos_hex, hexadecimal_chars, add_ascii<16>(int_res, ch),
-               ec::integer_overflow)
+               pec::integer_overflow)
   }
   state(start_neg_hex) {
     epsilon(neg_hex)
   }
   term_state(neg_hex) {
     transition(neg_hex, hexadecimal_chars, sub_ascii<16>(int_res, ch),
-               ec::integer_underflow)
+               pec::integer_underflow)
   }
   // Reads the integer part of the mantissa or a positive decimal integer.
   term_state(pos_dec) {
     transition(pos_dec, decimal_chars, add_ascii<10>(int_res, ch),
-               ec::integer_overflow)
+               pec::integer_overflow)
     transition(has_e, "eE", ch_res(positive_double))
     transition(trailing_dot, '.', ch_res(positive_double))
   }
   // Reads the integer part of the mantissa or a negative decimal integer.
   term_state(neg_dec) {
     transition(neg_dec, decimal_chars, sub_ascii<10>(int_res, ch),
-               ec::integer_underflow)
+               pec::integer_underflow)
     transition(has_e, "eE", ch_res(negative_double))
     transition(trailing_dot, '.', ch_res(negative_double))
   }
   // ".", "+.", etc. aren't valid numbers, so this state isn't terminal.
   state(leading_dot) {
-    transition(after_dot, decimal_chars, rd_decimal(ch), ec::exponent_underflow)
+    transition(after_dot, decimal_chars, rd_decimal(ch), pec::exponent_underflow)
   }
   // "1." is a valid number, so a trailing dot is a terminal state.
   term_state(trailing_dot) {
@@ -202,7 +201,7 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   }
   // Read the decimal part of a mantissa.
   term_state(after_dot) {
-    transition(after_dot, decimal_chars, rd_decimal(ch), ec::exponent_underflow)
+    transition(after_dot, decimal_chars, rd_decimal(ch), pec::exponent_underflow)
     transition(has_e, "eE")
   }
   // "...e", "...e+", and "...e-" aren't valid numbers, so these states are not
@@ -211,25 +210,25 @@ void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     transition(has_plus_after_e, '+')
     transition(has_minus_after_e, '-')
     transition(pos_exp, decimal_chars, add_ascii<10>(exp, ch),
-               ec::exponent_overflow)
+               pec::exponent_overflow)
   }
   state(has_plus_after_e) {
     transition(pos_exp, decimal_chars, add_ascii<10>(exp, ch),
-               ec::exponent_overflow)
+               pec::exponent_overflow)
   }
   state(has_minus_after_e) {
     transition(neg_exp, decimal_chars, sub_ascii<10>(exp, ch),
-               ec::exponent_underflow)
+               pec::exponent_underflow)
   }
   // Read a positive exponent.
   term_state(pos_exp) {
     transition(pos_exp, decimal_chars, add_ascii<10>(exp, ch),
-               ec::exponent_overflow)
+               pec::exponent_overflow)
   }
   // Read a negative exponent.
   term_state(neg_exp) {
     transition(neg_exp, decimal_chars, sub_ascii<10>(exp, ch),
-               ec::exponent_underflow)
+               pec::exponent_underflow)
   }
   fin();
 }

@@ -18,40 +18,43 @@
 
 #pragma once
 
-#include <string>
-#include <istream>
-#include <functional>
-
-#include "caf/atom.hpp"
-#include "caf/variant.hpp"
-#include "caf/optional.hpp"
+#include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
-namespace detail {
 
+/// Creates a config option that synchronizes with `storage`.
+template <class T>
+config_option make_config_option(const char* category, const char* name,
+                                 const char* description) {
+  config_option::vtbl_type vtbl{
+    [](const config_value& x) -> error {
+      if (holds_alternative<T>(x))
+        return none;
+      return make_error(pec::type_mismatch);
+    },
+    nullptr
+  };
+  return {category, name, description, std::is_same<T, bool>::value, vtbl};
+}
 
+/// Creates a config option that synchronizes with `storage`.
+template <class T>
+config_option make_config_option(T& storage, const char* category,
+                                 const char* name, const char* description) {
+  config_option::vtbl_type vtbl{
+    [](const config_value& x) -> error {
+      if (holds_alternative<T>(x))
+        return none;
+      return make_error(pec::type_mismatch);
+    },
+    [](void* ptr, const config_value& x) {
+      *static_cast<T*>(ptr) = get<T>(x);
+    }
+  };
+  return {category, name, description, std::is_same<T, bool>::value,
+          vtbl, &storage};
+}
 
-struct parse_ini_t {
-  /// Denotes an optional error output stream
-  using opt_err = optional<std::ostream&>;
-  /// Denotes a callback for consuming configuration values.
-  using config_consumer = std::function<bool (size_t, std::string,
-                                              config_value&, opt_err)>;
-
-  /// Parse the given input stream as INI formatted data and
-  /// calls the consumer with every key-value pair.
-  /// @param input Input stream of INI formatted text.
-  /// @param consumer_fun Callback consuming generated key-value pairs.
-  /// @param errors Output stream for parser errors.
-  void operator()(std::istream& input,
-                  const config_consumer& consumer_fun,
-                  opt_err errors = none) const;
-
-};
-
-constexpr parse_ini_t parse_ini = parse_ini_t{};
-
-} // namespace detail
 } // namespace caf
-

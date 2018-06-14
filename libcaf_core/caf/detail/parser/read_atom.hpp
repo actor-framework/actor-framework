@@ -23,13 +23,11 @@
 #include <string>
 
 #include "caf/atom.hpp"
-
-#include "caf/detail/scope_guard.hpp"
-
-#include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/state.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
 namespace detail {
@@ -52,7 +50,7 @@ void read_atom(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     return true;
   };
   auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= ec::trailing_character)
+    if (ps.code <= pec::trailing_character)
       consumer.value(atom(buf));
   });
   start();
@@ -62,7 +60,7 @@ void read_atom(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   }
   state(read_chars) {
     transition(done, '\'')
-    transition(read_chars, is_legal, append(ch), ec::too_many_characters)
+    transition(read_chars, is_legal, append(ch), pec::too_many_characters)
   }
   term_state(done) {
     transition(done, " \t")

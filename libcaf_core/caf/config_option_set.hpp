@@ -1,0 +1,132 @@
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright 2011-2018 Dominik Charousset                                     *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
+
+#pragma once
+
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "caf/config_option.hpp"
+#include "caf/fwd.hpp"
+#include "caf/make_config_option.hpp"
+#include "caf/pec.hpp"
+
+namespace caf {
+
+/// A set of `config_option` objects that parses CLI arguments into a
+/// `config_value::dictionary`.
+class config_option_set {
+public:
+  // -- member types -----------------------------------------------------------
+
+  /// An iterator over CLI arguments.
+  using argument_iterator = std::vector<std::string>::const_iterator;
+
+  /// The result of `parse` member functions.
+  using parse_result = std::pair<pec, argument_iterator>;
+
+  /// List of config options.
+  using option_vector = std::vector<config_option>;
+
+  /// Pointer to a config option.
+  using option_pointer = const config_option*;
+
+  /// An iterator over ::config_option unique pointers.
+  using iterator = option_vector::iterator;
+
+  /// Maps string keys to arbitrary (config) values.
+  using dictionary = std::map<std::string, config_value>;
+
+  /// Categorized settings.
+  using config_map = std::map<std::string, dictionary>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  config_option_set();
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the first `config_option` that matches the CLI name.
+  /// @param name Config option name formatted as
+  ///             `<prefix>#<category>.<long-name>`. Users can omit `<prefix>`
+  ///             for options that have an empty prefix and `<category>`
+  ///             if the category is "global".
+  option_pointer cli_long_name_lookup(const std::string& name) const;
+
+  /// Returns the first `config_option` that matches the CLI short option name.
+  option_pointer cli_short_name_lookup(char short_name) const;
+
+  /// Returns the first `config_option` that matches category and long name.
+  option_pointer qualified_name_lookup(const std::string& category,
+                                       const std::string& long_name) const;
+
+  /// Returns the first `config_option` that matches the qualified name.
+  /// @param name Config option name formatted as `<category>.<long-name>`.
+  option_pointer qualified_name_lookup(const std::string& name) const;
+
+  /// Returns the number of stored config options.
+  inline size_t size() const noexcept {
+    return opts_.size();
+  }
+
+  /// Returns an iterator to the first ::config_option object.
+  inline iterator begin() noexcept {
+    return opts_.begin();
+  }
+
+  /// Returns the past-the-end iterator.
+  inline iterator end() noexcept {
+    return opts_.end();
+  }
+
+  /// Adds a config option to the set.
+  template <class T>
+  config_option_set& add(const char* category, const char* name,
+                         const char* description = "") {
+    opts_.emplace_back(make_config_option<T>(category, name, description));
+    return *this;
+  }
+
+  /// Adds a config option to the set that synchronizes its value with `ref`.
+  template <class T>
+  config_option_set& add(T& ref, const char* category, const char* name,
+                         const char* description = "") {
+    opts_.emplace_back(make_config_option<T>(ref, category, name, description));
+    return *this;
+  }
+
+  // -- parsing ----------------------------------------------------------------
+
+  /// Parses a given range as CLI arguments into `config`.
+  parse_result parse(config_map& config, argument_iterator begin,
+                     argument_iterator end) const;
+
+  /// Parses a given range as CLI arguments into `config`.
+  parse_result parse(config_map& config,
+                     const std::vector<std::string>& args) const;
+
+private:
+  // -- member variables -------------------------------------------------------
+
+  option_vector opts_;
+};
+
+} // namespace caf

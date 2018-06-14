@@ -25,15 +25,11 @@
 #include <vector>
 
 #include "caf/atom.hpp"
-#include "caf/deep_to_string.hpp"
-#include "caf/default_sum_type_access.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/optional.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/sum_type.hpp"
-#include "caf/sum_type_access.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/variant.hpp"
 
@@ -44,10 +40,6 @@ namespace caf {
 /// contain lists of themselves.
 class config_value {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  friend struct default_sum_type_access<config_value>;
-
   // -- member types -----------------------------------------------------------
 
   using integer = int64_t;
@@ -450,6 +442,67 @@ T get_or(const config_value::dictionary& xs, const std::string& name,
   if (result)
     return std::move(*result);
   return default_value;
+}
+
+/// Tries to retrieve the value associated to `name` from `xs`.
+/// @relates config_value
+template <class T>
+optional<T> get_if(const std::map<std::string, config_value::dictionary>* xs,
+                   const std::string& name) {
+  // Get the category.
+  auto pos = name.find('.');
+  if (pos == std::string::npos)
+    return none;
+  auto i = xs->find(name.substr(0, pos));
+  if (i == xs->end())
+    return none;
+  return get_if<T>(&i->second, name.substr(pos + 1));
+}
+
+/// Retrieves the value associated to `name` from `xs`.
+/// @relates config_value
+template <class T>
+T get(const std::map<std::string, config_value::dictionary>& xs,
+      const std::string& name) {
+  auto result = get_if<T>(&xs, name);
+  if (result)
+    return std::move(*result);
+  CAF_RAISE_ERROR("invalid type or name found");
+}
+
+/// Retrieves the value associated to `name` from `xs` or returns
+/// `default_value`.
+/// @relates config_value
+template <class T>
+T get_or(const std::map<std::string, config_value::dictionary>& xs,
+         const std::string& name, const T& default_value) {
+  auto result = get_if<T>(&xs, name);
+  if (result)
+    return std::move(*result);
+  return default_value;
+}
+
+/// Tries to retrieve the value associated to `name` from `cfg`.
+/// @relates config_value
+template <class T>
+optional<T> get_if(const actor_system_config* cfg, const std::string& name) {
+  return get_if<T>(&content(*cfg), name);
+}
+
+/// Retrieves the value associated to `name` from `cfg`.
+/// @relates config_value
+template <class T>
+T get(const actor_system_config& cfg, const std::string& name) {
+  return get<T>(content(cfg), name);
+}
+
+/// Retrieves the value associated to `name` from `cfg` or returns
+/// `default_value`.
+/// @relates config_value
+template <class T>
+T get_or(const actor_system_config& cfg, const std::string& name,
+         const T& default_value) {
+  return get_or(content(cfg), name, default_value);
 }
 
 /// @relates config_value

@@ -23,70 +23,18 @@
 #include <fstream>
 #include <sstream>
 
-#include "caf/message_builder.hpp"
-
 #include "caf/detail/gcd.hpp"
-#include "caf/detail/parse_ini.hpp"
+#include "caf/detail/ini_consumer.hpp"
+#include "caf/detail/parser/read_ini.hpp"
+#include "caf/detail/parser/read_string.hpp"
+#include "caf/message_builder.hpp"
 
 namespace caf {
 
-namespace {
-
-using option_vector = actor_system_config::option_vector;
-const char actor_conf_prefix[] = "actor:";
-constexpr size_t actor_conf_prefix_size = 6;
-
-class actor_system_config_reader {
-public:
-  using sink = std::function<void (size_t, config_value&,
-                                   optional<std::ostream&>)>;
-
-  using named_actor_sink = std::function<void (size_t, const std::string&,
-                                               config_value&)>;
-
-  actor_system_config_reader(option_vector& xs, option_vector& ys,
-                             named_actor_sink na_sink)
-      : named_actor_sink_(std::move(na_sink)){
-    add_opts(xs);
-    add_opts(ys);
-  }
-
-  void add_opts(option_vector& xs) {
-    for (auto& x : xs)
-      sinks_.emplace(x->full_name(), x->to_sink());
-  }
-
-  bool operator()(size_t ln, const std::string& name, config_value& cv,
-                  optional<std::ostream&> out) {
-    auto i = sinks_.find(name);
-    if (i != sinks_.end()) {
-      (i->second)(ln, cv, none);
-      return true;
-    }
-    // check whether this is an individual actor config
-    if (name.compare(0, actor_conf_prefix_size, actor_conf_prefix) == 0) {
-      auto substr = name.substr(actor_conf_prefix_size);
-      named_actor_sink_(ln, substr, cv);
-      return true;
-    }
-    if (out)
-      *out << "error in line " << ln
-        << R"(: unrecognized parameter name ")" << name << R"(")"
-        << std::endl;
-    return false;
-  }
-
-private:
-  std::map<std::string, sink> sinks_;
-  named_actor_sink named_actor_sink_;
-};
-
-} // namespace <anonymous>
-
-actor_system_config::opt_group::opt_group(option_vector& xs,
+actor_system_config::opt_group::opt_group(config_option_set& xs,
                                           const char* category)
     : xs_(xs),
-      cat_(category) {
+      category_(category) {
   // nop
 }
 
@@ -279,21 +227,35 @@ actor_system_config::make_help_text(const std::vector<message::cli_arg>& xs) {
 
 actor_system_config& actor_system_config::parse(int argc, char** argv,
                                                 const char* ini_file_cstr) {
-  message args;
-  if (argc > 1)
-    args = message_builder(argv + 1, argv + argc).move_to_message();
-  return parse(args, ini_file_cstr);
+  if (argc < 2)
+    return *this;
+  string_list args{argv + 1, argv + argc};
+  return parse(std::move(args), ini_file_cstr);
 }
 
 actor_system_config& actor_system_config::parse(int argc, char** argv,
                                                 std::istream& ini) {
-  message args;
-  if (argc > 1)
-    args = message_builder(argv + 1, argv + argc).move_to_message();
-  return parse(args, ini);
+  if (argc < 2)
+    return *this;
+  string_list args{argv + 1, argv + argc};
+  return parse(std::move(args), ini);
 }
 
-actor_system_config& actor_system_config::parse(message& args,
+actor_system_config& actor_system_config::parse(string_list args,
+                                                std::istream& ini) {
+  // (2) content of the INI file overrides hard-coded defaults
+  if (ini.good()) {
+    detail::ini_consumer consumer{options_, content};
+    detail::parser::state<std::istream_iterator<char>> res;
+    res.i = std::istream_iterator<char>{ini};
+    detail::parser::read_ini(res, consumer);
+  }
+  // (3) CLI options override the content of the INI file
+  options_.parse(content, args);
+  return *this;
+}
+
+actor_system_config& actor_system_config::parse(string_list args,
                                                 const char* ini_file_cstr) {
   // Override default config file name if set by user.
   if (ini_file_cstr != nullptr)
@@ -301,111 +263,25 @@ actor_system_config& actor_system_config::parse(message& args,
   // CLI arguments always win.
   extract_config_file_path(args);
   std::ifstream ini{config_file_path};
-  return parse(args, ini);
+  return parse(std::move(args), ini);
 }
 
-actor_system_config& actor_system_config::parse(message& args,
+actor_system_config& actor_system_config::parse(message& msg,
+                                                const char* ini_file_cstr) {
+  string_list args;
+  for (size_t i = 0; i < msg.size(); ++i)
+    if (msg.match_element<std::string>(i))
+      args.emplace_back(msg.get_as<std::string>(i));
+  return parse(std::move(args), ini_file_cstr);
+}
+
+actor_system_config& actor_system_config::parse(message& msg,
                                                 std::istream& ini) {
-  // (2) content of the INI file overrides hard-coded defaults
-  if (ini.good()) {
-    using conf_sink = std::function<void (size_t, config_value&,
-                                          optional<std::ostream&>)>;
-    using conf_sinks = std::unordered_map<std::string, conf_sink>;
-    using conf_mapping = std::pair<option_vector, conf_sinks>;
-    hash_map<std::string, conf_mapping> ovs;
-    auto nac_sink = [&](size_t ln, const std::string& nm, config_value& cv) {
-      std::string actor_name{nm.begin(), std::find(nm.begin(), nm.end(), '.')};
-      auto ac = named_actor_configs.find(actor_name);
-      if (ac == named_actor_configs.end())
-        ac = named_actor_configs.emplace(actor_name,
-                                         named_actor_config{}).first;
-      auto& ov = ovs[actor_name];
-      if (ov.first.empty()) {
-        opt_group(ov.first, ac->first.c_str())
-        .add(ac->second.strategy, "strategy", "")
-        .add(ac->second.low_watermark, "low-watermark", "")
-        .add(ac->second.max_pending, "max-pending", "");
-        for (auto& opt : ov.first)
-          ov.second.emplace(opt->full_name(), opt->to_sink());
-      }
-      auto i = ov.second.find(nm);
-      if (i != ov.second.end())
-        i->second(ln, cv, none);
-      else
-        std::cerr << "error in line " << ln
-                  << R"(: unrecognized parameter name ")" << nm << R"(")"
-                  << std::endl;
-    };
-    actor_system_config_reader consumer{options_, custom_options_, nac_sink};
-    detail::parse_ini(ini, consumer, std::cerr);
-  }
-  // (3) CLI options override the content of the INI file
-  std::string dummy; // caf#config-file either ignored or already open
-  std::vector<message::cli_arg> cargs;
-  for (auto& x : options_)
-    cargs.emplace_back(x->to_cli_arg(true));
-  cargs.emplace_back("caf#dump-config", "print config in INI format to stdout");
-  //cargs.emplace_back("caf#help", "print this text");
-  cargs.emplace_back("caf#config-file", "parse INI file", dummy);
-  cargs.emplace_back("caf#slave-mode", "run in slave mode");
-  cargs.emplace_back("caf#slave-name", "set name for this slave", slave_name);
-  cargs.emplace_back("caf#bootstrap-node", "set bootstrapping", bootstrap_node);
-  for (auto& x : custom_options_)
-    cargs.emplace_back(x->to_cli_arg(false));
-  using std::placeholders::_1;
-  auto res = args.extract_opts(std::move(cargs),
-                               std::bind(&actor_system_config::make_help_text,
-                                         this, _1));
-  using std::cerr;
-  using std::cout;
-  using std::endl;
-  args_remainder = std::move(res.remainder);
-  if (!res.error.empty()) {
-    cli_helptext_printed = true;
-    std::cerr << res.error << endl;
-    return *this;
-  }
-  if (res.opts.count("help") != 0u) {
-    cli_helptext_printed = true;
-    cout << res.helptext << endl;
-    return *this;
-  }
-  if (res.opts.count("caf#slave-mode") != 0u) {
-    slave_mode = true;
-    if (slave_name.empty())
-      std::cerr << "running in slave mode but no name was configured" << endl;
-    if (bootstrap_node.empty())
-      std::cerr << "running in slave mode without bootstrap node" << endl;
-  }
-  // Verify settings.
-  auto verify_atom_opt = [](std::initializer_list<atom_value> xs, atom_value& x,
-                            const char* xname) {
-    if (std::find(xs.begin(), xs.end(), x) == xs.end()) {
-      cerr << "[WARNING] invalid value for " << xname
-           << " defined, falling back to "
-           << deep_to_string(*xs.begin()) << endl;
-      x = *xs.begin();
-    }
-  };
-  verify_atom_opt({atom("default"),
-#                  ifdef CAF_USE_ASIO
-                   atom("asio")
-#                  endif
-                  }, middleman_network_backend, "middleman.network-backend");
-  verify_atom_opt({atom("stealing"), atom("sharing"), atom("testing")},
-                  scheduler_policy, "scheduler.policy ");
-  if (res.opts.count("caf#dump-config") != 0u) {
-    cli_helptext_printed = true;
-    std::string category;
-    for_each_option([&](const config_option& x) {
-      if (category != x.category()) {
-        category = x.category();
-        cout << "[" << category << "]" << endl;
-      }
-      cout << x.name() << "=" << x.to_string() << endl;
-    });
-  }
-  return *this;
+  string_list args;
+  for (size_t i = 0; i < msg.size(); ++i)
+    if (msg.match_element<std::string>(i))
+      args.emplace_back(msg.get_as<std::string>(i));
+  return parse(std::move(args), ini);
 }
 
 actor_system_config&
@@ -420,15 +296,12 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
   return *this;
 }
 
-actor_system_config& actor_system_config::set_impl(const char* cn,
-                                                   config_value cv) {
-  auto e = options_.end();
-  auto i = std::find_if(options_.begin(), e, [cn](const option_ptr& ptr) {
-    return ptr->full_name() == cn;
-  });
-  if (i != e) {
-    auto f = (*i)->to_sink();
-    f(0, cv, none);
+actor_system_config& actor_system_config::set_impl(const char* name,
+                                                   config_value value) {
+  auto opt = options_.qualified_name_lookup(name);
+  if (opt != nullptr && opt->check(value) == none) {
+    opt->store(value);
+    content[opt->category()][name] = std::move(value);
   }
   return *this;
 }
@@ -452,11 +325,46 @@ std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
                         meta::omittable_if_empty(), xs);
 }
 
-void actor_system_config::extract_config_file_path(message& args) {
-  auto res = args.extract_opts({
-    {"caf#config-file", "", config_file_path}
+void actor_system_config::extract_config_file_path(string_list& args) {
+  static constexpr const char needle[] = "--caf#config-file=";
+  auto last = args.end();
+  auto i = std::find_if(args.begin(), last, [](const std::string& arg) {
+    return arg.compare(0, sizeof(needle) - 1, needle) == 0;
   });
-  args = res.remainder;
+  if (i == last)
+    return;
+  auto arg_begin = i->begin() + sizeof(needle);
+  auto arg_end = i->end();
+  if (arg_begin == arg_end) {
+    // Missing value.
+    // TODO: print warning?
+    return;
+  }
+  if (*arg_begin == '"') {
+    detail::parser::state<std::string::const_iterator> res;
+    res.i = arg_begin;
+    res.e = arg_end;
+    struct consumer {
+      std::string result;
+      void value(std::string&& x) {
+        result = std::move(x);
+      }
+    };
+    consumer f;
+    detail::parser::read_string(res, f);
+    if (res.code == pec::success)
+      config_file_path = std::move(f.result);
+    // TODO: else print warning?
+  } else {
+    // We support unescaped strings for convenience on the CLI.
+    config_file_path = std::string{arg_begin, arg_end};
+  }
+  args.erase(i);
+}
+
+const std::map<std::string, std::map<std::string, config_value>>&
+content(const actor_system_config& cfg) {
+  return cfg.content;
 }
 
 } // namespace caf

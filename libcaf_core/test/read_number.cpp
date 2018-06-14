@@ -28,8 +28,6 @@
 
 using namespace caf;
 
-using detail::parser::ec;
-
 namespace {
 
 struct numbers_parser_consumer {
@@ -43,7 +41,7 @@ struct numbers_parser_consumer {
 };
 
 struct res_t {
-  variant<ec, double, int64_t> val;
+  variant<pec, double, int64_t> val;
   template <class T>
   res_t(T&& x) : val(std::forward<T>(x)) {
     // nop
@@ -57,8 +55,8 @@ bool operator==(const res_t& x, const res_t& y) {
   caf::test::equal_to f;
   using caf::get;
   using caf::holds_alternative;
-  if (holds_alternative<ec>(x.val))
-    return f(get<ec>(x.val), get<ec>(y.val));
+  if (holds_alternative<pec>(x.val))
+    return f(get<pec>(x.val), get<pec>(y.val));
   if (holds_alternative<double>(x.val))
     return f(get<double>(x.val), get<double>(y.val));
   return f(get<int64_t>(x.val), get<int64_t>(y.val));
@@ -71,7 +69,7 @@ struct numbers_parser {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_number(res, f);
-    if (res.code == ec::success)
+    if (res.code == pec::success)
       return f.x;
     return res.code;
   }
@@ -126,7 +124,7 @@ CAF_TEST(octal numbers) {
   CHECK_NUMBER(-00);
   CHECK_NUMBER(-0123);
   // invalid numbers
-  CAF_CHECK_EQUAL(p("018"), ec::trailing_character);
+  CAF_CHECK_EQUAL(p("018"), pec::trailing_character);
 }
 
 CAF_TEST(decimal numbers) {
@@ -147,11 +145,11 @@ CAF_TEST(hexadecimal numbers) {
   CHECK_NUMBER(-0x123);
   CHECK_NUMBER(-0xaf01);
   // invalid numbers
-  CAF_CHECK_EQUAL(p("0xFG"), ec::trailing_character);
+  CAF_CHECK_EQUAL(p("0xFG"), pec::trailing_character);
   CAF_CHECK_EQUAL(p("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-                  ec::integer_overflow);
+                  pec::integer_overflow);
   CAF_CHECK_EQUAL(p("-0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-                  ec::integer_underflow);
+                  pec::integer_underflow);
 }
 
 CAF_TEST(floating point numbers) {
@@ -196,8 +194,8 @@ CAF_TEST(integer mantissa with negative exponent) {
   CHECK_NUMBER(1e-5);
   CHECK_NUMBER(1e-6);
   // invalid numbers
-  CAF_CHECK_EQUAL(p("-9.9999e-e511"), ec::unexpected_character);
-  CAF_CHECK_EQUAL(p("-9.9999e-511"), ec::exponent_underflow);
+  CAF_CHECK_EQUAL(p("-9.9999e-e511"), pec::unexpected_character);
+  CAF_CHECK_EQUAL(p("-9.9999e-511"), pec::exponent_underflow);
 }
 
 CAF_TEST(fractional mantissa with positive exponent) {

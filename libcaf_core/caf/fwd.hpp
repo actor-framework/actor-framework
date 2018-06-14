@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <tuple>
 
@@ -137,6 +138,12 @@ struct prohibit_top_level_spawn_marker;
 
 enum class stream_priority;
 enum class atom_value : uint64_t;
+
+// -- functions ----------------------------------------------------------------
+
+/// @relates actor_system_config
+const std::map<std::string, std::map<std::string, config_value>>&
+content(const actor_system_config&);
 
 // -- aliases ------------------------------------------------------------------
 

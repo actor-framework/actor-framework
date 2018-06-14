@@ -31,6 +31,7 @@
 #include "caf/thread_hook.hpp"
 #include "caf/config_value.hpp"
 #include "caf/config_option.hpp"
+#include "caf/config_option_set.hpp"
 #include "caf/actor_factory.hpp"
 #include "caf/is_typed_actor.hpp"
 #include "caf/type_erased_value.hpp"
@@ -74,13 +75,13 @@ public:
 
   using error_renderer_map = hash_map<atom_value, error_renderer>;
 
-  using option_ptr = std::unique_ptr<config_option>;
-
-  using option_vector = std::vector<option_ptr>;
-
   using group_module_factory = std::function<group_module* ()>;
 
   using group_module_factory_vector = std::vector<group_module_factory>;
+
+  using config_map = std::map<std::string, config_value::dictionary>;
+
+  using string_list = std::vector<std::string>;
 
   // -- nested classes ---------------------------------------------------------
 
@@ -88,17 +89,23 @@ public:
 
   class opt_group {
   public:
-    opt_group(option_vector& xs, const char* category);
+    opt_group(config_option_set& xs, const char* category);
 
     template <class T>
-    opt_group& add(T& storage, const char* name, const char* explanation) {
-      xs_.emplace_back(make_config_option(storage, cat_, name, explanation));
+    opt_group& add(T& storage, const char* name, const char* description) {
+      xs_.add(storage, category_, name, description);
+      return *this;
+    }
+
+    template <class T>
+    opt_group& add(const char* name, const char* description) {
+      xs_.add<T>(category_, name, description);
       return *this;
     }
 
   private:
-    option_vector& xs_;
-    const char* cat_;
+    config_option_set& xs_;
+    const char* category_;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -112,17 +119,28 @@ public:
   actor_system_config(const actor_system_config&) = delete;
   actor_system_config& operator=(const actor_system_config&) = delete;
 
+  // -- properties -------------------------------------------------------------
+
+  /// @private
+  std::map<std::string, config_value::dictionary> content;
+
+  /// Sets a config by using its INI name `config_name` to `config_value`.
+  template <class T>
+  actor_system_config& set(const char* name, T&& value) {
+    return set_impl(name, config_value{std::forward<T>(value)});
+  }
+
   // -- modifiers --------------------------------------------------------------
+
+  /// Parses `args` as tuple of strings containing CLI options
+  /// and `ini_stream` as INI formatted input stream.
+  actor_system_config& parse(string_list args, std::istream& ini);
 
   /// Parses `args` as tuple of strings containing CLI options and tries to
   /// open `ini_file_cstr` as INI formatted config file. The parsers tries to
   /// open `caf-application.ini` if `ini_file_cstr` is `nullptr`.
-  actor_system_config& parse(message& args,
+  actor_system_config& parse(string_list args,
                              const char* ini_file_cstr = nullptr);
-
-  /// Parses `args` as tuple of strings containing CLI options
-  /// and `ini_stream` as INI formatted input stream.
-  actor_system_config& parse(message& args, std::istream& ini);
 
   /// Parses the CLI options `{argc, argv}` and
   /// `ini_stream` as INI formatted input stream.
@@ -133,6 +151,11 @@ public:
   /// `caf-application.ini` if `ini_file_cstr` is `nullptr`.
   actor_system_config& parse(int argc, char** argv,
                              const char* ini_file_cstr = nullptr);
+
+  actor_system_config&
+  parse(message& args, const char* ini_file_cstr = nullptr) CAF_DEPRECATED;
+
+  actor_system_config& parse(message& args, std::istream& ini) CAF_DEPRECATED;
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
@@ -235,12 +258,6 @@ public:
   actor_system_config& add_thread_hook(Ts&&... ts) {
     thread_hooks_.emplace_back(new Hook(std::forward<Ts>(ts)...));
     return *this;
-  }
-
-  /// Sets a config by using its INI name `config_name` to `config_value`.
-  template <class T>
-  actor_system_config& set(const char* cn, T&& x) {
-    return set_impl(cn, config_value{std::forward<T>(x)});
   }
 
   // -- parser and CLI state ---------------------------------------------------
@@ -385,16 +402,6 @@ public:
   /// default.
   std::string config_file_path;
 
-  // -- convenience functions --------------------------------------------------
-
-  template <class F>
-  void for_each_option(F f) const {
-    const option_vector* all_options[] = { &options_, &custom_options_ };
-    for (auto& opt_vec : all_options)
-      for (auto& opt : *opt_vec)
-        f(*opt);
-  }
-
   // -- utility for caf-run ----------------------------------------------------
 
   // Config parameter for individual actor types.
@@ -405,7 +412,7 @@ public:
 protected:
   virtual std::string make_help_text(const std::vector<message::cli_arg>&);
 
-  option_vector custom_options_;
+  config_option_set custom_options_;
 
 private:
   template <class T>
@@ -416,15 +423,15 @@ private:
                                      &make_type_erased_value<T>);
   }
 
-  actor_system_config& set_impl(const char* cn, config_value cv);
+  actor_system_config& set_impl(const char* name, config_value value);
 
   static std::string render_sec(uint8_t, atom_value, const message&);
 
   static std::string render_exit_reason(uint8_t, atom_value, const message&);
 
-  void extract_config_file_path(message& args);
+  void extract_config_file_path(string_list& args);
 
-  option_vector options_;
+  config_option_set options_;
 };
 
 } // namespace caf

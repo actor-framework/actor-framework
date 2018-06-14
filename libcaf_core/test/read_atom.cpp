@@ -28,8 +28,6 @@
 
 using namespace caf;
 
-using detail::parser::ec;
-
 namespace {
 
 struct atom_parser_consumer {
@@ -39,7 +37,7 @@ struct atom_parser_consumer {
   }
 };
 
-using res_t = variant<ec, atom_value>;
+using res_t = variant<pec, atom_value>;
 
 struct atom_parser {
   res_t operator()(std::string str) {
@@ -48,7 +46,7 @@ struct atom_parser {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_atom(res, f);
-    if (res.code == ec::success)
+    if (res.code == pec::success)
       return f.x;
     return res.code;
   }
@@ -79,11 +77,11 @@ CAF_TEST(non-empty atom) {
 }
 
 CAF_TEST(invalid atoms) {
-  CAF_CHECK_EQUAL(p("'abc"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("'ab\nc'"), ec::unexpected_newline);
-  CAF_CHECK_EQUAL(p("abc"), ec::unexpected_character);
-  CAF_CHECK_EQUAL(p("'abc' def"), ec::trailing_character);
-  CAF_CHECK_EQUAL(p("'12345678901'"), ec::too_many_characters);
+  CAF_CHECK_EQUAL(p("'abc"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("'ab\nc'"), pec::unexpected_newline);
+  CAF_CHECK_EQUAL(p("abc"), pec::unexpected_character);
+  CAF_CHECK_EQUAL(p("'abc' def"), pec::trailing_character);
+  CAF_CHECK_EQUAL(p("'12345678901'"), pec::too_many_characters);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

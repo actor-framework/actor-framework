@@ -21,12 +21,11 @@
 #include <cstdint>
 #include <string>
 
-#include "caf/detail/scope_guard.hpp"
-
-#include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/state.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
 namespace detail {
@@ -37,7 +36,7 @@ template <class Iterator, class Sentinel, class Consumer>
 void read_bool(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   bool res = false;
   auto g = make_scope_guard([&] {
-    if (ps.code <= ec::trailing_character)
+    if (ps.code <= pec::trailing_character)
       consumer.value(res);
   });
   start();

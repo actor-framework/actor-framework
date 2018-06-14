@@ -37,6 +37,7 @@ set(LIBCAF_CORE_SRCS
   src/blocking_behavior.cpp
   src/concatenated_tuple.cpp
   src/config_option.cpp
+  src/config_option_set.cpp
   src/config_value.cpp
   src/decorated_tuple.cpp
   src/default_attachable.cpp
@@ -47,7 +48,6 @@ set(LIBCAF_CORE_SRCS
   src/downstream_messages.cpp
   src/duration.cpp
   src/dynamic_message_data.cpp
-  src/ec.cpp
   src/error.cpp
   src/event_based_actor.cpp
   src/execution_unit.cpp
@@ -61,6 +61,7 @@ set(LIBCAF_CORE_SRCS
   src/group_manager.cpp
   src/group_module.cpp
   src/inbound_path.cpp
+  src/ini_consumer.cpp
   src/invoke_result_visitor.cpp
   src/local_actor.cpp
   src/logger.cpp
@@ -77,6 +78,7 @@ set(LIBCAF_CORE_SRCS
   src/node_id.cpp
   src/outbound_path.cpp
   src/parse_ini.cpp
+  src/pec.cpp
   src/pretty_type_name.cpp
   src/private_thread.cpp
   src/proxy_registry.cpp

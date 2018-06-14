@@ -19,10 +19,11 @@
 
 #include "caf/config_value.hpp"
 
-#include "caf/detail/parser/ec.hpp"
+#include "caf/detail/ini_consumer.hpp"
 #include "caf/detail/parser/read_ini.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
 
@@ -49,133 +50,24 @@ config_value::~config_value() {
 
 // -- parsing ------------------------------------------------------------------
 
-namespace {
-
-struct abstract_consumer {
-  virtual ~abstract_consumer() {
-    // nop
-  }
-
-  template <class T>
-  void value(T&& x) {
-    value_impl(config_value{std::forward<T>(x)});
-  }
-
-  virtual void value_impl(config_value&& x) = 0;
-};
-
-struct list_consumer;
-
-struct map_consumer : abstract_consumer {
-  using map_type = config_value::dictionary;
-
-  using iterator = map_type::iterator;
-
-  map_consumer begin_map() {
-    return {this};
-  }
-
-  void end_map() {
-    parent->value_impl(config_value{std::move(xs)});
-  }
-
-  list_consumer begin_list();
-
-  void key(std::string name) {
-    i = xs.emplace_hint(xs.end(), std::make_pair(std::move(name), config_value{}));
-  }
-
-  void value_impl(config_value&& x) override {
-    i->second = std::move(x);
-  }
-
-  map_consumer(abstract_consumer* ptr) : i(xs.end()), parent(ptr) {
-    // nop
-  }
-
-  map_consumer(map_consumer&& other)
-      : xs(std::move(other.xs)),
-        i(xs.end()),
-        parent(other.parent) {
-    // nop
-  }
-
-  map_type xs;
-  iterator i;
-  abstract_consumer* parent;
-};
-
-struct list_consumer : abstract_consumer {
-  void end_list() {
-    parent->value_impl(config_value{std::move(xs)});
-  }
-
-  map_consumer begin_map() {
-    return {this};
-  }
-
-  list_consumer begin_list() {
-    return {this};
-  }
-
-  void value_impl(config_value&& x) override {
-    xs.emplace_back(std::move(x));
-  }
-
-  list_consumer(abstract_consumer* ptr) : parent(ptr) {
-    // nop
-  }
-
-  list_consumer(list_consumer&& other)
-      : xs(std::move(other.xs)),
-        parent(other.parent) {
-    // nop
-  }
-
-  config_value::list xs;
-  abstract_consumer* parent;
-};
-
-list_consumer map_consumer::begin_list() {
-  return {this};
-}
-
-struct consumer : abstract_consumer {
-  config_value result;
-
-  map_consumer begin_map() {
-    return {this};
-  }
-
-  list_consumer begin_list() {
-    return {this};
-  }
-
-  void value_impl(config_value&& x) override {
-    result = std::move(x);
-  }
-};
-
-} // namespace <anonymous>
-
 expected<config_value> config_value::parse(std::string::const_iterator first,
                                            std::string::const_iterator last) {
   using namespace detail;
   auto i = first;
   // Sanity check.
   if (i == last)
-    return make_error(parser::ec::unexpected_eof);
+    return make_error(pec::unexpected_eof);
   // Skip to beginning of the argument.
   while (isspace(*i))
     if (++i == last)
-      return make_error(parser::ec::unexpected_eof);
+      return make_error(pec::unexpected_eof);
   // Dispatch to parser.
   parser::state<std::string::const_iterator> res;
-  consumer f;
+  detail::ini_value_consumer f;
   res.i = i;
   res.e = last;
   parser::read_ini_value(res, f);
-  if (res.code == detail::parser::ec::success)
+  if (res.code == pec::success)
     return std::move(f.result);
   // Assume an unescaped string unless the first character clearly indicates
   // otherwise.

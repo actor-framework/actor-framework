@@ -20,7 +20,7 @@
 
 #include <cstdint>
 
-#include "caf/detail/parser/ec.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
 namespace detail {
@@ -30,7 +30,7 @@ template <class Iterator, class Sentinel = Iterator>
 struct state {
   Iterator i;
   Sentinel e;
-  ec code;
+  pec code;
   int32_t line = 1;
   int32_t column = 1;
 

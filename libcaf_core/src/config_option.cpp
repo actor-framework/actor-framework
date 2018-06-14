@@ -20,6 +20,28 @@
 
 #include <iostream>
 
+#include "caf/config.hpp"
+#include "caf/error.hpp"
+
+using std::move;
+using std::string;
+
+namespace {
+
+string get_long_name(const char* name) {
+  auto i= strchr(name, ',');
+  return i != nullptr ? string{name, i} : string{name};
+}
+
+string get_short_names(const char* name) {
+  auto substr = strchr(name, ',');
+  if (substr != nullptr)
+    return ++substr;
+  return string{};
+}
+
+} // namespace <anonymous>
+
 namespace caf {
 
 const char* type_name_visitor_tbl[] {
@@ -39,49 +61,36 @@ const char* type_name_visitor_tbl[] {
   "a duration"
 };
 
-config_option::config_option(const char* cat, const char* nm, const char* expl)
-    : category_(cat),
-      name_(nm),
-      explanation_(expl),
-      short_name_('\0') {
-  auto last = name_.end();
-  auto comma = std::find(name_.begin(), last, ',');
-  if (comma != last) {
-    auto i = comma;
-    ++i;
-    if (i != last)
-      short_name_ = *i;
-    name_.erase(comma, last);
-  }
-}
-
-config_option::~config_option() {
+config_option::config_option(string category, const char* name,
+                             string description, bool is_flag,
+                             const vtbl_type& vtbl, void* value)
+    : category_(move(category)),
+      long_name_(get_long_name(name)),
+      short_names_(get_short_names(name)),
+      description_(move(description)),
+      is_flag_(is_flag),
+      vtbl_(vtbl),
+      value_(value) {
   // nop
 }
 
-std::string config_option::full_name() const {
-  std::string res = category();
-  res += '.';
-  auto name_begin = name();
-  const char* name_end = strchr(name(), ',');
-  if (name_end != nullptr)
-    res.insert(res.end(), name_begin, name_end);
-  else
-    res += name();
-  return res;
+string config_option::full_name() const {
+  std::string result = category();
+  result += '.';
+  result += long_name_;
+  return result;
 }
 
-void config_option::report_type_error(size_t ln, config_value& x,
-                                      const char* expected,
-                                      optional<std::ostream&> out) {
-  if (!out)
-    return;
-  /*
-  type_name_visitor tnv;
-  *out << "error in line " << ln << ": expected "
-       << expected << " found "
-       << visit(tnv, x) << '\n';
-       */
+error config_option::check(const config_value& x) const {
+  CAF_ASSERT(vtbl_.check != nullptr);
+  return vtbl_.check(x);
+}
+
+void config_option::store(const config_value& x) const {
+  if (value_ != nullptr) {
+    CAF_ASSERT(vtbl_.store != nullptr);
+    vtbl_.store(value_, x);
+  }
 }
 
 } // namespace caf

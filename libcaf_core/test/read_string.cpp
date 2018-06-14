@@ -28,8 +28,6 @@
 
 using namespace caf;
 
-using detail::parser::ec;
-
 namespace {
 
 struct string_parser_consumer {
@@ -39,7 +37,7 @@ struct string_parser_consumer {
   }
 };
 
-using res_t = variant<ec, std::string>;
+using res_t = variant<pec, std::string>;
 
 struct string_parser {
   res_t operator()(std::string str) {
@@ -48,7 +46,7 @@ struct string_parser {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_string(res, f);
-    if (res.code == ec::success)
+    if (res.code == pec::success)
       return f.x;
     return res.code;
   }
@@ -93,11 +91,11 @@ CAF_TEST(string with escaped characters) {
 }
 
 CAF_TEST(invalid strings) {
-  CAF_CHECK_EQUAL(p(R"("abc)"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("\"ab\nc\""), ec::unexpected_newline);
-  CAF_CHECK_EQUAL(p(R"("foo \i bar")"), ec::illegal_escape_sequence);
-  CAF_CHECK_EQUAL(p(R"(foo)"), ec::unexpected_character);
-  CAF_CHECK_EQUAL(p(R"("abc" def)"), ec::trailing_character);
+  CAF_CHECK_EQUAL(p(R"("abc)"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("\"ab\nc\""), pec::unexpected_newline);
+  CAF_CHECK_EQUAL(p(R"("foo \i bar")"), pec::illegal_escape_sequence);
+  CAF_CHECK_EQUAL(p(R"(foo)"), pec::unexpected_character);
+  CAF_CHECK_EQUAL(p(R"("abc" def)"), pec::trailing_character);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

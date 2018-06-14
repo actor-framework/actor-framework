@@ -22,18 +22,16 @@
 #include <cstdint>
 #include <string>
 
-#include "caf/none.hpp"
-#include "caf/optional.hpp"
-#include "caf/timestamp.hpp"
-#include "caf/variant.hpp"
-
-#include "caf/detail/scope_guard.hpp"
-
-#include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_number.hpp"
 #include "caf/detail/parser/state.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/none.hpp"
+#include "caf/optional.hpp"
+#include "caf/pec.hpp"
+#include "caf/timestamp.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace detail {
@@ -60,7 +58,7 @@ void read_number_or_timespan(state<Iterator, Sentinel>& ps,
   auto has_dbl = [&] { return holds_alternative<double>(ic.interim); };
   auto get_int = [&] { return get<int64_t>(ic.interim); };
   auto g = make_scope_guard([&] {
-    if (ps.code <= ec::trailing_character) {
+    if (ps.code <= pec::trailing_character) {
       if (res != none) {
         consumer.value(*res);
       } else if (!holds_alternative<none_t>(ic.interim)) {
@@ -80,7 +78,7 @@ void read_number_or_timespan(state<Iterator, Sentinel>& ps,
     epsilon_if(has_dbl(), has_double)
   }
   term_state(has_double) {
-    error_transition(ec::fractional_timespan, "unms")
+    error_transition(pec::fractional_timespan, "unms")
   }
   term_state(has_integer) {
     transition(have_u, 'u')

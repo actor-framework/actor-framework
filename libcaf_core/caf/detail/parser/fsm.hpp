@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include "caf/detail/pp.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
 namespace detail {
@@ -55,8 +56,8 @@ extern const char octal_chars[9];
 } // namespace caf
 
 #define CAF_FSM_EVAL_MISMATCH_EC                                               \
-  if (mismatch_ec == ec::unexpected_character)                                 \
-    ps.code = ch != '\n' ? mismatch_ec : ec::unexpected_newline;               \
+  if (mismatch_ec == caf::pec::unexpected_character)                           \
+    ps.code = ch != '\n' ? mismatch_ec : caf::pec::unexpected_newline;         \
   else                                                                         \
     ps.code = mismatch_ec;                                                     \
   return;
@@ -67,17 +68,17 @@ extern const char octal_chars[9];
   goto s_init;                                                                 \
   s_unexpected_eof:                                                            \
   __attribute__((unused));                                                     \
-  ps.code = ec::unexpected_eof;                                                \
+  ps.code = caf::pec::unexpected_eof;                                          \
   return;                                                                      \
   {                                                                            \
-    static constexpr ec mismatch_ec = ec::unexpected_character
+    static constexpr auto mismatch_ec = caf::pec::unexpected_character
 
 /// Defines a non-terminal state in the FSM.
 #define state(name)                                                            \
   CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
   {                                                                            \
-    static constexpr ec mismatch_ec = ec::unexpected_character;                \
+    static constexpr auto mismatch_ec = caf::pec::unexpected_character;        \
     s_##name : __attribute__((unused));                                        \
     if (ch == '\0')                                                            \
       goto s_unexpected_eof;                                                   \
@@ -88,7 +89,7 @@ extern const char octal_chars[9];
   CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
   {                                                                            \
-    static constexpr ec mismatch_ec = ec::trailing_character;                  \
+    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
     s_##name : __attribute__((unused));                                        \
     if (ch == '\0')                                                            \
       goto s_fin;                                                              \
@@ -99,7 +100,7 @@ extern const char octal_chars[9];
   CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
   s_fin:                                                                       \
-  ps.code = ec::success;                                                       \
+  ps.code = caf::pec::success;                                                 \
   return;
 
 #define CAF_TRANSITION_IMPL1(target)                                           \
@@ -181,7 +182,7 @@ extern const char octal_chars[9];
 #define CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                             \
   ps.next();                                                                   \
   fsm_call;                                                                    \
-  if (ps.code > ec::trailing_character)                                        \
+  if (ps.code > caf::pec::trailing_character)                                  \
     return;                                                                    \
   ch = ps.current();                                                           \
   goto s_##target;
@@ -218,7 +219,7 @@ extern const char octal_chars[9];
 
 #define CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                \
   fsm_call;                                                                    \
-  if (ps.code > ec::trailing_character)                                        \
+  if (ps.code > caf::pec::trailing_character)                                  \
     return;                                                                    \
   ch = ps.current();                                                           \
   goto s_##target;

@@ -28,8 +28,8 @@
 #include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/bounds_checker.hpp"
-#include "caf/detail/parser/ec.hpp"
 #include "caf/none.hpp"
+#include "caf/pec.hpp"
 #include "caf/variant.hpp"
 
 using namespace std;
@@ -236,11 +236,10 @@ CAF_TEST(unsuccessful parsing) {
       CAF_FAIL("assumed an error but got a result");
     return std::move(x.error());
   };
-  using detail::parser::ec;
-  CAF_CHECK_EQUAL(parse("10msb"), ec::trailing_character);
-  CAF_CHECK_EQUAL(parse("10foo"), ec::trailing_character);
-  CAF_CHECK_EQUAL(parse("[1,"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(parse("{a=,"), ec::unexpected_character);
-  CAF_CHECK_EQUAL(parse("{a=1,"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(parse("{a=1 b=2}"), ec::unexpected_character);
+  CAF_CHECK_EQUAL(parse("10msb"), pec::trailing_character);
+  CAF_CHECK_EQUAL(parse("10foo"), pec::trailing_character);
+  CAF_CHECK_EQUAL(parse("[1,"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(parse("{a=,"), pec::unexpected_character);
+  CAF_CHECK_EQUAL(parse("{a=1,"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(parse("{a=1 b=2}"), pec::unexpected_character);
 }

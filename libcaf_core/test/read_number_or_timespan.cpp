@@ -29,8 +29,6 @@
 using namespace caf;
 using namespace std::chrono;
 
-using detail::parser::ec;
-
 namespace {
 
 struct number_or_timespan_parser_consumer {
@@ -42,7 +40,7 @@ struct number_or_timespan_parser_consumer {
 };
 
 struct res_t {
-  variant<ec, double, int64_t, timespan> val;
+  variant<pec, double, int64_t, timespan> val;
   template <class T>
   res_t(T&& x) : val(std::forward<T>(x)) {
     // nop
@@ -60,8 +58,8 @@ bool operator==(const res_t& x, const res_t& y) {
   caf::test::equal_to f;
   using caf::get;
   using caf::holds_alternative;
-  if (holds_alternative<ec>(x.val))
-    return f(get<ec>(x.val), get<ec>(y.val));
+  if (holds_alternative<pec>(x.val))
+    return f(get<pec>(x.val), get<pec>(y.val));
   if (holds_alternative<double>(x.val))
     return f(get<double>(x.val), get<double>(y.val));
   if (holds_alternative<int64_t>(x.val))
@@ -76,7 +74,7 @@ struct number_or_timespan_parser {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_number_or_timespan(res, f);
-    if (res.code == ec::success)
+    if (res.code == pec::success)
       return f.x;
     return res.code;
   }
@@ -117,20 +115,20 @@ CAF_TEST(valid numbers and timespans) {
 }
 
 CAF_TEST(invalid timespans) {
-  CAF_CHECK_EQUAL(p("12.3s"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3n"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3ns"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3m"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3ms"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3n"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3ns"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3mi"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("12.3min"), ec::fractional_timespan);
-  CAF_CHECK_EQUAL(p("123ss"), ec::trailing_character);
-  CAF_CHECK_EQUAL(p("123m"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("123mi"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("123u"), ec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("123n"), ec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("12.3s"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3n"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3ns"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3m"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3ms"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3n"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3ns"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3mi"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("12.3min"), pec::fractional_timespan);
+  CAF_CHECK_EQUAL(p("123ss"), pec::trailing_character);
+  CAF_CHECK_EQUAL(p("123m"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("123mi"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("123u"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(p("123n"), pec::unexpected_eof);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

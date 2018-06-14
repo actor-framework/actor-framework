@@ -23,10 +23,10 @@
 
 #include "caf/detail/scope_guard.hpp"
 
-#include "caf/detail/parser/ec.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/state.hpp"
+#include "caf/pec.hpp"
 
 namespace caf {
 namespace detail {
@@ -38,7 +38,7 @@ template <class Iterator, class Sentinel, class Consumer>
 void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   std::string res;
   auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= ec::trailing_character)
+    if (ps.code <= pec::trailing_character)
       consumer.value(std::move(res));
   });
   start();
@@ -49,7 +49,7 @@ void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   state(read_chars) {
     transition(escape, '\\')
     transition(done, '"')
-    error_transition(ec::unexpected_newline, '\n')
+    error_transition(pec::unexpected_newline, '\n')
     transition(read_chars, any_char, res += ch)
   }
   state(escape) {
@@ -58,7 +58,7 @@ void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     transition(read_chars, 't', res += '\t')
     transition(read_chars, '\\', res += '\\')
     transition(read_chars, '"', res += '"')
-    error_transition(ec::illegal_escape_sequence)
+    error_transition(pec::illegal_escape_sequence)
   }
   term_state(done) {
     transition(done, " \t")
