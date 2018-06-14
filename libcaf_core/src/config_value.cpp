@@ -158,22 +158,22 @@ struct consumer : abstract_consumer {
 
 } // namespace <anonymous>
 
-expected<config_value> config_value::parse(const std::string& str) {
+expected<config_value> config_value::parse(std::string::const_iterator first,
+                                           std::string::const_iterator last) {
   using namespace detail;
-  auto i = str.begin();
-  auto e = str.end();
+  auto i = first;
   // Sanity check.
-  if (i == e)
+  if (i == last)
     return make_error(parser::ec::unexpected_eof);
   // Skip to beginning of the argument.
   while (isspace(*i))
-    if (++i == e)
+    if (++i == last)
       return make_error(parser::ec::unexpected_eof);
   // Dispatch to parser.
   parser::state<std::string::const_iterator> res;
   consumer f;
   res.i = i;
-  res.e = e;
+  res.e = last;
   parser::read_ini_value(res, f);
   if (res.code == detail::parser::ec::success)
     return std::move(f.result);
@@ -188,8 +188,12 @@ expected<config_value> config_value::parse(const std::string& str) {
     default:
       if (isdigit(*i))
         return make_error(res.code);
-      return config_value{str};
+      return config_value{std::string{first, last}};
   }
+}
+
+expected<config_value> config_value::parse(const std::string& str) {
+  return parse(str.begin(), str.end());
 }
 
 // -- properties ---------------------------------------------------------------

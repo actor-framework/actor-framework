@@ -68,13 +68,18 @@ config_value cfg_lst(Ts&&... xs) {
   return config_value{std::move(lst)};
 }
 
+// TODO: switch to std::operator""s when switching to C++14
+std::string operator"" _s(const char* str, size_t size) {
+  return std::string(str, size);
+}
+
 } // namespace <anonymous>
 
 CAF_TEST(default_constructed) {
   config_value x;
   CAF_CHECK_EQUAL(holds_alternative<int64_t>(x), true);
   CAF_CHECK_EQUAL(get<int64_t>(x), 0);
-  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<int64_t>());
+  CAF_CHECK_EQUAL(x.type_name(), "integer"_s);
 }
 
 CAF_TEST(positive integer) {
@@ -85,6 +90,9 @@ CAF_TEST(positive integer) {
   CAF_CHECK_EQUAL(holds_alternative<uint64_t>(x), true);
   CAF_CHECK_EQUAL(get<uint64_t>(x), 4200u);
   CAF_CHECK_EQUAL(get_if<uint64_t>(&x), uint64_t{4200});
+  CAF_CHECK_EQUAL(holds_alternative<int>(x), true);
+  CAF_CHECK_EQUAL(get<int>(x), 4200);
+  CAF_CHECK_EQUAL(get_if<int>(&x), 4200);
   CAF_CHECK_EQUAL(holds_alternative<int16_t>(x), true);
   CAF_CHECK_EQUAL(get<int16_t>(x), 4200);
   CAF_CHECK_EQUAL(get_if<int16_t>(&x), int16_t{4200});
@@ -99,6 +107,9 @@ CAF_TEST(negative integer) {
   CAF_CHECK(get_if<int64_t>(&x) != nullptr);
   CAF_CHECK_EQUAL(holds_alternative<uint64_t>(x), false);
   CAF_CHECK_EQUAL(get_if<uint64_t>(&x), none);
+  CAF_CHECK_EQUAL(holds_alternative<int>(x), true);
+  CAF_CHECK_EQUAL(get<int>(x), -1);
+  CAF_CHECK_EQUAL(get_if<int>(&x), -1);
   CAF_CHECK_EQUAL(holds_alternative<int16_t>(x), true);
   CAF_CHECK_EQUAL(get<int16_t>(x), -1);
   CAF_CHECK_EQUAL(get_if<int16_t>(&x), int16_t{-1});
@@ -120,7 +131,7 @@ CAF_TEST(list) {
   using integer_list = std::vector<int64_t>;
   auto xs = make_config_value_list(1, 2, 3);
   CAF_CHECK_EQUAL(to_string(xs), "[1, 2, 3]");
-  CAF_CHECK_EQUAL(xs.type_name(), config_value::type_name_of<list>());
+  CAF_CHECK_EQUAL(xs.type_name(), "list"_s);
   CAF_CHECK_EQUAL(holds_alternative<config_value::list>(xs), true);
   CAF_CHECK_EQUAL(holds_alternative<integer_list>(xs), true);
   CAF_CHECK_EQUAL(get<integer_list>(xs), integer_list({1, 2, 3}));
@@ -128,10 +139,10 @@ CAF_TEST(list) {
 
 CAF_TEST(convert_to_list) {
   config_value x{int64_t{42}};
-  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<int64_t>());
+  CAF_CHECK_EQUAL(x.type_name(), "integer"_s);
   CAF_CHECK_EQUAL(to_string(x), "42");
   x.convert_to_list();
-  CAF_CHECK_EQUAL(x.type_name(), config_value::type_name_of<list>());
+  CAF_CHECK_EQUAL(x.type_name(), "list"_s);
   CAF_CHECK_EQUAL(to_string(x), "[42]");
   x.convert_to_list();
   CAF_CHECK_EQUAL(to_string(x), "[42]");
@@ -194,7 +205,8 @@ CAF_TEST(successful parsing) {
   auto parse = [](const std::string& str) {
     auto x = config_value::parse(str);
     if (!x)
-      CAF_FAIL("cannot parse" << str << ": assumed a result but got an error");
+      CAF_FAIL("cannot parse " << str << ": assumed a result but error "
+               << to_string(x.error()));
     return std::move(*x);
   };
   using di = std::map<string, int>; // Dictionary-of-integers.
@@ -210,7 +222,8 @@ CAF_TEST(successful parsing) {
   CAF_CHECK_EQUAL(get<string>(parse("\"abc\"")), "abc");
   CAF_CHECK_EQUAL(get<string>(parse("abc")), "abc");
   CAF_CHECK_EQUAL(get<li>(parse("[1, 2, 3]")), li({1, 2, 3}));
-  CAF_CHECK_EQUAL(get<ls>(parse("[abc, def, ghi]")), ls({"abc", "def", "ghi"}));
+  CAF_CHECK_EQUAL(get<ls>(parse("[\"abc\", \"def\", \"ghi\"]")),
+                  ls({"abc", "def", "ghi"}));
   CAF_CHECK_EQUAL(get<lli>(parse("[[1, 2], [3]]")), lli({li{1, 2}, li{3}}));
   CAF_CHECK_EQUAL(get<timespan>(parse("10ms")), milliseconds(10));
   CAF_CHECK_EQUAL(get<di>(parse("{a=1,b=2}")), di({{"a", 1}, {"b", 2}}));

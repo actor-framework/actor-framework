@@ -101,6 +101,10 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Tries to parse a value from `str`.
+  static expected<config_value> parse(std::string::const_iterator first,
+                                      std::string::const_iterator last);
+
+  /// Tries to parse a value from `str`.
   static expected<config_value> parse(const std::string& str);
 
   // -- properties -------------------------------------------------------------
@@ -115,15 +119,6 @@ public:
 
   /// Returns a human-readable type name of the current value.
   const char* type_name() const noexcept;
-
-  /// Returns a human-readable type name for `T`.
-  template <class T>
-  static const char* type_name_of() noexcept {
-    using namespace detail;
-    static constexpr auto index = tl_index_of<types, T>::value;
-    static_assert(index != -1, "T is not a valid config value type");
-    return type_name_at_index(static_cast<size_t>(index));
-  }
 
   /// Returns the underlying variant.
   inline variant_type& get_data() {
@@ -184,9 +179,22 @@ auto holds_alternative(const config_value& x)
 
 /// @relates config_value
 template <class T>
+auto get_if(config_value* x)
+-> decltype(config_value_access<T>::get_if(x)) {
+  return config_value_access<T>::get_if(x);
+}
+
+/// @relates config_value
+template <class T>
 auto get_if(const config_value* x)
 -> decltype(config_value_access<T>::get_if(x)) {
   return config_value_access<T>::get_if(x);
+}
+
+/// @relates config_value
+template <class T>
+auto get(config_value& x) -> decltype(config_value_access<T>::get(x)) {
+  return config_value_access<T>::get(x);
 }
 
 /// @relates config_value
@@ -216,10 +224,17 @@ struct default_config_value_access {
     return holds_alternative<T>(x.get_data());
   }
 
+  static T* get_if(config_value* x) {
+    return caf::get_if<T>(&(x->get_data()));
+  }
+
   static const T* get_if(const config_value* x) {
     return caf::get_if<T>(&(x->get_data()));
   }
 
+  static T& get(config_value& x) {
+    return caf::get<T>(x.get_data());
+  }
   static const T& get(const config_value& x) {
     return caf::get<T>(x.get_data());
   }
