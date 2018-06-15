@@ -20,6 +20,7 @@
 
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
+#include "caf/detail/type_name.hpp"
 #include "caf/pec.hpp"
 
 namespace caf {
@@ -34,7 +35,10 @@ config_option make_config_option(const char* category, const char* name,
         return none;
       return make_error(pec::type_mismatch);
     },
-    nullptr
+    nullptr,
+    [] {
+      return detail::type_name<T>();
+    }
   };
   return {category, name, description, std::is_same<T, bool>::value, vtbl};
 }
@@ -51,6 +55,9 @@ config_option make_config_option(T& storage, const char* category,
     },
     [](void* ptr, const config_value& x) {
       *static_cast<T*>(ptr) = get<T>(x);
+    },
+    [] {
+      return detail::type_name<T>();
     }
   };
   return {category, name, description, std::is_same<T, bool>::value,

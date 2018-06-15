@@ -268,7 +268,10 @@ public:
   bool cli_helptext_printed;
 
   /// Stores CLI arguments that were not consumed by CAF.
-  message args_remainder;
+  message args_remainder CAF_DEPRECATED;
+
+  /// Stores CLI arguments that were not consumed by CAF.
+  string_list remainder;
 
   // -- caf-run parameters -----------------------------------------------------
 
@@ -430,8 +433,6 @@ private:
   static std::string render_exit_reason(uint8_t, atom_value, const message&);
 
   void extract_config_file_path(string_list& args);
-
-  config_option_set options_;
 };
 
 } // namespace caf

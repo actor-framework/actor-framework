@@ -100,4 +100,18 @@ CAF_TEST(parse with ref syncing) {
   CAF_CHECK_EQUAL(get<int>(cfg, "foo.i"), 42);
 }
 
+CAF_TEST(implicit global) {
+  opts.add<int>("global", "value").add<bool>("global", "help");
+  CAF_MESSAGE("test long option with argument");
+  std::map<std::string, config_value::dictionary> cfg;
+  auto res = opts.parse(cfg, {"--value=42"});
+  CAF_CHECK_EQUAL(res.first, pec::success);
+  CAF_CHECK_EQUAL(get_if<int>(&cfg, "global.value"), 42);
+  CAF_MESSAGE("test long option flag");
+  cfg.clear();
+  res = opts.parse(cfg, {"--help"});
+  CAF_CHECK_EQUAL(res.first, pec::success);
+  CAF_CHECK_EQUAL(get_or(cfg, "global.help", false), true);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -18,6 +18,9 @@
 
 #include "caf/config_option_set.hpp"
 
+#include <map>
+#include <set>
+
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/algorithms.hpp"
@@ -25,10 +28,92 @@
 
 using std::string;
 
+namespace {
+
+struct string_builder {
+  std::string result;
+};
+
+template <size_t N>
+string_builder& operator<<(string_builder& builder, const char (&cstr)[N]) {
+  builder.result.append(cstr, N - 1);
+  return builder;
+}
+
+string_builder& operator<<(string_builder& builder, char c) {
+  builder.result += c;
+  return builder;
+}
+
+string_builder& operator<<(string_builder& builder, const std::string& str) {
+  builder.result += str;
+  return builder;
+}
+
+void insert(string_builder& builder, size_t count, char ch) {
+  builder.result.insert(builder.result.end(), count, ch);
+}
+
+} // namespace <anonymous>
+
 namespace caf {
 
 config_option_set::config_option_set() {
   // nop
+}
+
+std::string config_option_set::help_text(bool global_only) const {
+  //<--- argument --------> <---- desciption ---->
+  // (-w|--write) <string> : output file
+  auto build_argument = [](const config_option& x) {
+    string_builder sb;
+    if (x.short_names().empty()) {
+      sb << "  --";
+      if (x.category() != "global")
+        sb << x.category() << '.';
+      sb << x.long_name();
+      if (!x.is_flag())
+        sb << '=';
+    } else {
+      sb << "  (";
+      for (auto c : x.short_names())
+        sb << '-' << c << '|';
+      sb << "--";
+      if (x.category() != "global")
+        sb << x.category() << '.';
+      sb << x.long_name() << ") ";
+    }
+    if (!x.is_flag())
+      sb << "<" << x.type_name() << '>';
+    return std::move(sb.result);
+  };
+  // Sort argument + description by category.
+  using pair = std::pair<std::string, option_pointer>;
+  std::set<std::string> categories;
+  std::multimap<std::string, pair> args;
+  size_t max_arg_size = 0;
+  for (auto& opt : opts_) {
+    if (!global_only || opt.category() == "global") {
+      auto arg = build_argument(opt);
+      max_arg_size = std::max(max_arg_size, arg.size());
+      categories.emplace(opt.category());
+      args.emplace(opt.category(), std::make_pair(std::move(arg), &opt));
+    }
+  }
+  // Build help text by iterating over all categories in the multimap.
+  string_builder builder;
+  for (auto& category : categories) {
+    auto rng = args.equal_range(category);
+    builder << category << " options:\n";
+    for (auto i = rng.first; i != rng.second; ++i) {
+      builder << i->second.first;
+      CAF_ASSERT(max_arg_size >= i->second.first.size());
+      insert(builder, max_arg_size - i->second.first.size(), ' ');
+      builder << " : " << i->second.second->description() << '\n';
+    }
+    builder << '\n';
+  }
+  return std::move(builder.result);
 }
 
 auto config_option_set::parse(config_map& config, argument_iterator first,
@@ -75,12 +160,17 @@ auto config_option_set::parse(config_map& config, argument_iterator first,
     if (i->compare(0, 2, "--") == 0) {
       // Long options use the syntax "--<name>=<value>" and consume only a
       // single argument.
-      auto assign_op = i->find('=');//std::find(i->begin(), i->end(), '=');
-      auto name = i->substr(2, assign_op - 2);
+      static constexpr auto npos = std::string::npos;
+      auto assign_op = i->find('=');
+      auto name = assign_op == npos ? i->substr(2)
+                                    : i->substr(2, assign_op - 2);
       auto opt = cli_long_name_lookup(name);
       if (opt == nullptr)
         return {pec::not_an_option, i};
-      auto code = consume(*opt, i->begin() + assign_op + 1, i->end());
+      auto code = consume(*opt,
+                          assign_op == npos ? i->end()
+                                            : i->begin() + assign_op + 1,
+                          i->end());
       if (code != pec::success)
         return {code, i};
       ++i;

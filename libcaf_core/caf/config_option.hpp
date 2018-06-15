@@ -33,6 +33,7 @@ public:
   struct vtbl_type {
     error (*check)(const config_value&);
     void (*store)(void*, const config_value&);
+    std::string (*type_name)();
   };
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -77,6 +78,9 @@ public:
   /// Stores `x` in this option unless it is stateless.
   /// @pre `check(x) == none`.
   void store(const config_value& x) const;
+
+  /// Returns a human-readable representation of this option's expected type.
+  std::string type_name() const;
 
 private:
   std::string category_;

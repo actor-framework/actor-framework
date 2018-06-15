@@ -44,23 +44,6 @@ string get_short_names(const char* name) {
 
 namespace caf {
 
-const char* type_name_visitor_tbl[] {
-  "a boolean",
-  "a float",
-  "a double",
-  "a string",
-  "an atom_value",
-  "an 8-bit integer",
-  "an 8-bit unsigned integer",
-  "a 16-bit integer",
-  "a 16-bit unsigned integer",
-  "a 32-bit integer",
-  "a 32-bit unsigned integer",
-  "a 64-bit integer",
-  "a 64-bit unsigned integer",
-  "a duration"
-};
-
 config_option::config_option(string category, const char* name,
                              string description, bool is_flag,
                              const vtbl_type& vtbl, void* value)
@@ -91,6 +74,11 @@ void config_option::store(const config_value& x) const {
     CAF_ASSERT(vtbl_.store != nullptr);
     vtbl_.store(value_, x);
   }
+}
+
+std::string config_option::type_name() const {
+  CAF_ASSERT(vtbl_.type_name != nullptr);
+  return vtbl_.type_name();
 }
 
 } // namespace caf

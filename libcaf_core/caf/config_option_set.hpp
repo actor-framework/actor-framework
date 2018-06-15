@@ -113,6 +113,9 @@ public:
     return *this;
   }
 
+  /// Generates human-readable help text for all options.
+  std::string help_text(bool global_only = true) const;
+
   // -- parsing ----------------------------------------------------------------
 
   /// Parses a given range as CLI arguments into `config`.

@@ -29,6 +29,8 @@
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/message_builder.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 namespace caf {
 
 actor_system_config::opt_group::opt_group(config_option_set& xs,
@@ -92,14 +94,19 @@ actor_system_config::actor_system_config()
   middleman_cached_udp_buffers = 10;
   middleman_max_pending_msgs = 10;
   // fill our options vector for creating INI and CLI parsers
-  opt_group{options_, "streaming"}
+  opt_group{custom_options_, "global"}
+  .add<bool>(cli_helptext_printed, "help,h?", "print help and exit")
+  .add<bool>(cli_helptext_printed, "long-help",
+             "print all help options and exit")
+  .add<bool>("dump-config", "print configuration in INI format and exit");
+  opt_group{custom_options_, "streaming"}
   .add(streaming_desired_batch_complexity_us, "desired-batch-complexity-us",
        "sets the desired timespan for a single batch")
   .add(streaming_max_batch_delay_us, "max-batch-delay-us",
        "sets the maximum delay for sending underfull batches in microseconds")
   .add(streaming_credit_round_interval_us, "credit-round-interval-us",
        "sets the length of credit intervals in microseconds");
-  opt_group{options_, "scheduler"}
+  opt_group{custom_options_, "scheduler"}
   .add(scheduler_policy, "policy",
        "sets the scheduling policy to either 'stealing' (default) or 'sharing'")
   .add(scheduler_max_threads, "max-threads",
@@ -112,7 +119,7 @@ actor_system_config::actor_system_config()
        "sets the rate in ms in which the profiler collects data")
   .add(scheduler_profiling_output_file, "profiling-output-file",
        "sets the output file for the profiler");
-  opt_group(options_, "work-stealing")
+  opt_group(custom_options_, "work-stealing")
   .add(work_stealing_aggressive_poll_attempts, "aggressive-poll-attempts",
        "sets the number of zero-sleep-interval polling attempts")
   .add(work_stealing_aggressive_steal_interval, "aggressive-steal-interval",
@@ -127,7 +134,7 @@ actor_system_config::actor_system_config()
        "sets the frequency of steal attempts during relaxed polling")
   .add(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
        "sets the sleep interval between poll attempts during relaxed polling");
-  opt_group{options_, "logger"}
+  opt_group{custom_options_, "logger"}
   .add(logger_file_name, "file-name",
        "sets the filesystem path of the log file")
   .add(logger_file_format, "file-format",
@@ -146,7 +153,7 @@ actor_system_config::actor_system_config()
        "deprecated (use file-name instead)")
   .add(logger_component_filter, "filter",
        "deprecated (use console-component-filter instead)");
-  opt_group{options_, "middleman"}
+  opt_group{custom_options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
   .add(middleman_app_identifier, "app-identifier",
@@ -171,10 +178,10 @@ actor_system_config::actor_system_config()
   .add(middleman_max_pending_msgs, "max-pending-messages",
        "sets the max number of UDP pending messages due to ordering "
        "(default: 10)");
-  opt_group(options_, "opencl")
+  opt_group(custom_options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");
-  opt_group(options_, "openssl")
+  opt_group(custom_options_, "openssl")
   .add(openssl_certificate, "certificate",
        "sets the path to the file containining the certificate for this node PEM format")
   .add(openssl_key, "key",
@@ -227,31 +234,100 @@ actor_system_config::make_help_text(const std::vector<message::cli_arg>& xs) {
 
 actor_system_config& actor_system_config::parse(int argc, char** argv,
                                                 const char* ini_file_cstr) {
-  if (argc < 2)
-    return *this;
-  string_list args{argv + 1, argv + argc};
+  string_list args;
+  if (argc > 1)
+    args.assign(argv + 1, argv + argc);
   return parse(std::move(args), ini_file_cstr);
 }
 
 actor_system_config& actor_system_config::parse(int argc, char** argv,
                                                 std::istream& ini) {
-  if (argc < 2)
-    return *this;
-  string_list args{argv + 1, argv + argc};
+  string_list args;
+  if (argc > 1)
+    args.assign(argv + 1, argv + argc);
   return parse(std::move(args), ini);
 }
 
+namespace {
+
+struct ini_iter {
+  std::istream* ini;
+  char ch;
+
+  explicit ini_iter(std::istream* istr) : ini(istr) {
+    ini->get(ch);
+  }
+
+  ini_iter() : ini(nullptr) {
+    // nop
+  }
+
+  ini_iter(const ini_iter&) = default;
+
+  ini_iter& operator=(const ini_iter&) = default;
+
+  inline char operator*() const {
+    return ch;
+  }
+
+  inline ini_iter& operator++() {
+    ini->get(ch);
+    return *this;
+  }
+};
+
+struct ini_sentinel { };
+
+bool operator!=(ini_iter iter, ini_sentinel) {
+  return !iter.ini->fail();
+}
+
+} // namespace <anonymous>
+
 actor_system_config& actor_system_config::parse(string_list args,
                                                 std::istream& ini) {
-  // (2) content of the INI file overrides hard-coded defaults
+  // Content of the INI file overrides hard-coded defaults.
   if (ini.good()) {
-    detail::ini_consumer consumer{options_, content};
-    detail::parser::state<std::istream_iterator<char>> res;
-    res.i = std::istream_iterator<char>{ini};
+    detail::ini_consumer consumer{custom_options_, content};
+    detail::parser::state<ini_iter, ini_sentinel> res;
+    res.i = ini_iter{&ini};
     detail::parser::read_ini(res, consumer);
+    if (res.i != res.e)
+      std::cerr << "*** error in config file [line " << res.line << " col "
+                << res.column << "]: " << to_string(res.code) << std::endl;
   }
-  // (3) CLI options override the content of the INI file
-  options_.parse(content, args);
+  // CLI options override the content of the INI file.
+  using std::make_move_iterator;
+  auto res = custom_options_.parse(content, args);
+  if (res.second != args.end()) {
+    if (res.first != pec::success) {
+      std::cerr << "error: at argument \"" << *res.second
+                << "\": " << to_string(res.first) << std::endl;
+      cli_helptext_printed = true;
+    }
+    auto first = args.begin();
+    first += std::distance(args.cbegin(), res.second);
+    remainder.insert(remainder.end(), make_move_iterator(first),
+                     make_move_iterator(args.end()));
+    args_remainder = message_builder{remainder.begin(), remainder.end()}
+                     .move_to_message();
+  }
+  // Generate help text if needed.
+  if (cli_helptext_printed) {
+    bool long_help = get_or(content, "global.long-help", false);
+    std::cout << custom_options_.help_text(!long_help) << std::endl;
+  }
+  // Generate INI dump if needed.
+  if (!cli_helptext_printed && get_or(content, "global.dump-config", false)) {
+    for (auto& category : content) {
+      std::cout << '[' << category.first << "]\n";
+      for (auto& kvp : category.second)
+        if (kvp.first != "dump-config")
+          std::cout << kvp.first << '=' << to_string(kvp.second) << '\n';
+    }
+    std::cout << std::flush;
+    cli_helptext_printed = true;
+  }
   return *this;
 }
 
@@ -298,7 +374,7 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
 
 actor_system_config& actor_system_config::set_impl(const char* name,
                                                    config_value value) {
-  auto opt = options_.qualified_name_lookup(name);
+  auto opt = custom_options_.qualified_name_lookup(name);
   if (opt != nullptr && opt->check(value) == none) {
     opt->store(value);
     content[opt->category()][name] = std::move(value);
@@ -368,3 +444,5 @@ content(const actor_system_config& cfg) {
 }
 
 } // namespace caf
+
+CAF_POP_WARNINGS
