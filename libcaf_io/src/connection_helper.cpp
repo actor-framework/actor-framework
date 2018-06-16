@@ -99,16 +99,16 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
             }
             CAF_LOG_INFO("could not connect to node directly");
           } else if (item == "basp.default-connectivity-udp") {
+            auto& sys = self->system();
             // create new broker to try addresses for communication via UDP
-            if (self->system().config().middleman_detach_utility_actors) {
-              self->system().middleman().spawn_broker<detached + hidden>(
-                datagram_connection_broker, port, std::move(addresses), b
-              );
-            } else {
+            if (get_or(sys.config(), "middleman.attach-utility-actors", false))
               self->system().middleman().spawn_broker<hidden>(
                 datagram_connection_broker, port, std::move(addresses), b
               );
-            }
+            else
+              self->system().middleman().spawn_broker<detached + hidden>(
+                datagram_connection_broker, port, std::move(addresses), b
+              );
           } else {
             CAF_LOG_INFO("aborted direct connection attempt, unknown item: "
                          << CAF_ARG(item));

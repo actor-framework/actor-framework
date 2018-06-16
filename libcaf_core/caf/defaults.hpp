@@ -73,13 +73,10 @@ extern const bool inline_output;
 namespace middleman {
 
 extern const atom_value network_backend;
-extern const bool enable_automatic_connections;
 extern const size_t max_consecutive_reads;
 extern const size_t heartbeat_interval;
 extern const bool detach_utility_actors;
 extern const bool detach_multiplexer;
-extern const bool enable_tcp;
-extern const bool enable_udp;
 extern const size_t cached_udp_buffers;
 extern const size_t max_pending_msgs;
 

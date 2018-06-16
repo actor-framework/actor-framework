@@ -163,12 +163,15 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // get a 'SpawnServ' instance on the remote side
   std::unordered_map<node_id, actor> spawn_servers;
 
-  // can be enabled by the user to let CAF automatically try
-  // to establish new connections at runtime to optimize
-  // routing paths by forming a mesh between all nodes
-  bool enable_automatic_connections = false;
-  bool enable_tcp = true;
-  bool enable_udp = false;
+  /// Configures whether BASP automatically open new connections to optimize
+  /// routing paths by forming a mesh between all nodes.
+  bool automatic_connections = false;
+
+  /// Configures whether BASP allows TCP connections.
+  bool allow_tcp = true;
+
+  /// Configures whether BASP allows UDP connections.
+  bool allow_udp = false;
 
   // reusable send buffers for UDP communication
   const size_t max_buffers;

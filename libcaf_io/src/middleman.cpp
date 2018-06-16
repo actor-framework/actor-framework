@@ -292,7 +292,7 @@ void middleman::start() {
   for (auto& f : system().config().hook_factories)
     hooks_.emplace_back(f(system_));
   // Launch backend.
-  if (system_.config().middleman_detach_multiplexer)
+  if (!get_or(config(), "middleman.manual-multiplexing", false))
     backend_supervisor_ = backend().make_supervisor();
   // The only backend that returns a `nullptr` by default is the
   // `test_multiplexer` which does not have its own thread but uses the main
@@ -342,7 +342,7 @@ void middleman::stop() {
       }
     }
   });
-  if (system_.config().middleman_detach_multiplexer) {
+  if (!get_or(config(), "middleman.manual-multiplexing", false)) {
     backend_supervisor_.reset();
     if (thread_.joinable())
       thread_.join();
@@ -354,7 +354,7 @@ void middleman::stop() {
   named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
-  if (system().config().middleman_detach_utility_actors)
+  if (!get_or(config(), "middleman.attach-utility-actors", false))
     self->wait_for(manager_);
   destroy(manager_);
 }
@@ -362,7 +362,7 @@ void middleman::stop() {
 void middleman::init(actor_system_config& cfg) {
   // never detach actors when using the testing multiplexer
   if (cfg.middleman_network_backend == atom("testing"))
-    cfg.middleman_detach_utility_actors = false;
+    cfg.set("middleman.attach-utility-actors", true);
   // add remote group module to config
   struct remote_groups : group_module {
   public:

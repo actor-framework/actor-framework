@@ -94,7 +94,13 @@ public:
   /// Deletes all proxies.
   void clear();
 
+  /// Returns the hosting actor system.
   inline actor_system& system() {
+    return system_;
+  }
+
+  /// Returns the hosting actor system.
+  inline const actor_system& system() const {
     return system_;
   }
 

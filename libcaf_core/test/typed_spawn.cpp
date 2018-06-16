@@ -410,10 +410,10 @@ CAF_TEST(event_testee_series) {
   self->send(et, "hello again event testee!");
   self->send(et, "goodbye event testee!");
   typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
-  set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
-                    "caf::replies_to<@str>::with<void>",
-                    "caf::replies_to<float>::with<void>",
-                    "caf::replies_to<@i32>::with<@i32>"};
+  std::set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
+                         "caf::replies_to<@str>::with<void>",
+                         "caf::replies_to<float>::with<void>",
+                         "caf::replies_to<@i32>::with<@i32>"};
   CAF_CHECK_EQUAL(join(sub_et->message_types(), ","), join(iface, ","));
   self->send(sub_et, get_state_msg{});
   // we expect three 42s

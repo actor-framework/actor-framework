@@ -77,8 +77,8 @@ basp_broker_state::basp_broker_state(broker* selfptr)
                              static_cast<proxy_registry::backend&>(*this)),
       self(selfptr),
       instance(selfptr, *this),
-      max_buffers(self->system().config().middleman_cached_udp_buffers),
-      max_pending_messages(self->system().config().middleman_max_pending_msgs) {
+      max_buffers(self->config().middleman_cached_udp_buffers),
+      max_pending_messages(self->config().middleman_max_pending_msgs) {
   CAF_ASSERT(this_node() != none);
 }
 
@@ -395,7 +395,7 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
   learned_new_node(nid);
-  if (!enable_automatic_connections)
+  if (!automatic_connections)
     return;
   // this member function gets only called once, after adding a new
   // indirect connection to the routing table; hence, spawning
@@ -412,9 +412,9 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   }
   using namespace detail;
   auto try_connect = [&](std::string item) {
-    auto tmp = system().config().middleman_detach_utility_actors
-               ? system().spawn<detached + hidden>(connection_helper, self)
-               : system().spawn<hidden>(connection_helper, self);
+    auto tmp = get_or(config(), "middleman.attach-utility-actors", false)
+               ? system().spawn<hidden>(connection_helper, self)
+               : system().spawn<detached + hidden>(connection_helper, self);
     system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
     auto writer = make_callback([&item](serializer& sink) -> error {
       auto name_atm = atom("ConfigServ");
@@ -430,9 +430,9 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
                    hdr, &writer);
     instance.flush(*path);
   };
-  if (enable_tcp)
+  if (allow_tcp)
     try_connect("basp.default-connectivity-tcp");
-  if (enable_udp)
+  if (allow_udp)
     try_connect("basp.default-connectivity-udp");
 }
 
@@ -640,13 +640,13 @@ basp_broker::basp_broker(actor_config& cfg)
 
 behavior basp_broker::make_behavior() {
   CAF_LOG_TRACE(CAF_ARG(system().node()));
-  state.enable_tcp = system().config().middleman_enable_tcp;
-  state.enable_udp = system().config().middleman_enable_udp;
-  if (system().config().middleman_enable_automatic_connections) {
+  state.allow_tcp = !get_or(config(), "middleman.disable-tcp", false);
+  state.allow_udp = get_or(config(), "middleman.enable-udp", false);
+  if (get_or(config(), "middleman.enable-automatic-connections", false)) {
     CAF_LOG_INFO("enable automatic connections");
     // open a random port and store a record for our peers how to
     // connect to this broker directly in the configuration server
-    if (state.enable_tcp) {
+    if (state.allow_tcp) {
       auto res = add_tcp_doorman(uint16_t{0});
       if (res) {
         auto port = res->second;
@@ -657,7 +657,7 @@ behavior basp_broker::make_behavior() {
              make_message(port, std::move(addrs)));
       }
     }
-    if (state.enable_udp) {
+    if (state.allow_udp) {
       auto res = add_udp_datagram_servant(uint16_t{0});
       if (res) {
         auto port = res->second;
@@ -668,9 +668,9 @@ behavior basp_broker::make_behavior() {
               make_message(port, std::move(addrs)));
       }
     }
-    state.enable_automatic_connections = true;
+    state.automatic_connections = true;
   }
-  auto heartbeat_interval = system().config().middleman_heartbeat_interval;
+  auto heartbeat_interval = config().middleman_heartbeat_interval;
   if (heartbeat_interval > 0) {
     CAF_LOG_INFO("enable heartbeat" << CAF_ARG(heartbeat_interval));
     send(this, tick_atom::value, heartbeat_interval);

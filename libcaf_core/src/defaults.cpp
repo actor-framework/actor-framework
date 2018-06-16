@@ -85,13 +85,8 @@ const bool inline_output = false;
 namespace middleman {
 
 const atom_value network_backend = atom("default");
-const bool enable_automatic_connections = false;
 const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;
-const bool detach_utility_actors = true;
-const bool detach_multiplexer = true;
-const bool enable_tcp = true;
-const bool enable_udp = false;
 const size_t cached_udp_buffers = 10;
 const size_t max_pending_msgs = 10;
 

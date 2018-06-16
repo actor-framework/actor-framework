@@ -99,8 +99,14 @@ public:
       return namespace_;
     }
 
+    /// Returns the hosting actor system.
     inline actor_system& system() {
       return namespace_.system();
+    }
+
+    /// Returns the system-wide configuration.
+    inline const actor_system_config& config() const {
+      return namespace_.system().config();
     }
 
     /// Returns the next outgoing sequence number for a connection.

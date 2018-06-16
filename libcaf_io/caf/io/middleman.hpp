@@ -156,6 +156,11 @@ public:
     return system_;
   }
 
+  /// Returns the systemw-wide configuration.
+  inline const actor_system_config& config() const {
+    return system_.config();
+  }
+
   /// Returns a handle to the actor managing the middleman singleton.
   middleman_actor actor_handle();
 

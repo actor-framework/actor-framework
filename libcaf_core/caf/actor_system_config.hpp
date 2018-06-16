@@ -356,13 +356,8 @@ public:
 
   atom_value middleman_network_backend;
   std::string middleman_app_identifier;
-  bool middleman_enable_automatic_connections;
   size_t middleman_max_consecutive_reads;
   size_t middleman_heartbeat_interval;
-  bool middleman_detach_utility_actors;
-  bool middleman_detach_multiplexer;
-  bool middleman_enable_tcp;
-  bool middleman_enable_udp;
   size_t middleman_cached_udp_buffers;
   size_t middleman_max_pending_msgs;
 

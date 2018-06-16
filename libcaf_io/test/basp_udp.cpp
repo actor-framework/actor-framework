@@ -114,12 +114,12 @@ public:
       : sys(cfg.load<io::middleman, network::test_multiplexer>()
           .set("middleman.enable-automatic-connections", autoconn)
           .set("middleman.enable-udp", true)
-          .set("middleman.enable-tcp", false)
+          .set("middleman.disable-tcp", true)
           .set("scheduler.policy", autoconn || use_test_coordinator
                                     ? caf::atom("testing")
                                     : caf::atom("stealing"))
-          .set("middleman.detach-utility-actors",
-               !(autoconn || use_test_coordinator))) {
+          .set("middleman.attach-utility-actors",
+               autoconn || use_test_coordinator)) {
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);

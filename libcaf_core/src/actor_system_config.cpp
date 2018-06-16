@@ -84,13 +84,8 @@ actor_system_config::actor_system_config()
   logger_verbosity = atom("trace");
   logger_inline_output = false;
   middleman_network_backend = atom("default");
-  middleman_enable_automatic_connections = false;
   middleman_max_consecutive_reads = 50;
   middleman_heartbeat_interval = 0;
-  middleman_detach_utility_actors = true;
-  middleman_detach_multiplexer = true;
-  middleman_enable_tcp = true;
-  middleman_enable_udp = false;
   middleman_cached_udp_buffers = 10;
   middleman_max_pending_msgs = 10;
   // fill our options vector for creating INI and CLI parsers
@@ -154,24 +149,22 @@ actor_system_config::actor_system_config()
   .add(logger_component_filter, "filter",
        "deprecated (use console-component-filter instead)");
   opt_group{custom_options_, "middleman"}
+  .add<bool>("enable-automatic-connections",
+             "enables automatic connection management")
+  .add<bool>("attach-utility-actors",
+             "schedule utility actors instead of dedicating individual threads")
+  .add<bool>("manual-multiplexing",
+             "disables background activity of the multiplexer")
+  .add<bool>("disable-tcp", "disables communication via TCP")
+  .add<bool>("enable-udp", "enable communication via UDP")
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
   .add(middleman_app_identifier, "app-identifier",
        "sets the application identifier of this node")
-  .add(middleman_enable_automatic_connections, "enable-automatic-connections",
-       "enables or disables automatic connection management (off per default)")
   .add(middleman_max_consecutive_reads, "max-consecutive-reads",
        "sets the maximum number of consecutive I/O reads per broker")
   .add(middleman_heartbeat_interval, "heartbeat-interval",
        "sets the interval (ms) of heartbeat, 0 (default) means disabling it")
-  .add(middleman_detach_utility_actors, "detach-utility-actors",
-       "enables or disables detaching of utility actors")
-  .add(middleman_detach_multiplexer, "detach-multiplexer",
-       "enables or disables background activity of the multiplexer")
-  .add(middleman_enable_tcp, "enable-tcp",
-       "enable communication via TCP (on by default)")
-  .add(middleman_enable_udp, "enable-udp",
-       "enable communication via UDP (off by default)")
   .add(middleman_cached_udp_buffers, "cached-udp-buffers",
        "sets the max number of UDP send buffers that will be cached for reuse "
        "(default: 10)")
@@ -377,7 +370,7 @@ actor_system_config& actor_system_config::set_impl(const char* name,
   auto opt = custom_options_.qualified_name_lookup(name);
   if (opt != nullptr && opt->check(value) == none) {
     opt->store(value);
-    content[opt->category()][name] = std::move(value);
+    content[opt->category()][opt->long_name()] = std::move(value);
   }
   return *this;
 }

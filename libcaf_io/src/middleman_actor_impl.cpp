@@ -79,17 +79,23 @@ const char* middleman_actor_impl::name() const {
 
 auto middleman_actor_impl::make_behavior() -> behavior_type {
   CAF_LOG_TRACE("");
+  auto tcp_disabled = [=] {
+    return get_or(config(), "middleman.disable-tcp", false);
+  };
+  auto udp_disabled = [=] {
+    return !get_or(config(), "middleman.enable-udp", false);
+  };
   return {
     [=](publish_atom, uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
         std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
-      if (!system().config().middleman_enable_tcp)
+      if (tcp_disabled())
         return make_error(sec::feature_disabled);
       return put(port, whom, sigs, addr.c_str(), reuse);
     },
     [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
-      if (!system().config().middleman_enable_tcp)
+      if (tcp_disabled())
         return make_error(sec::feature_disabled);
       strong_actor_ptr whom;
       mpi_set sigs;
@@ -97,7 +103,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     },
     [=](connect_atom, std::string& hostname, uint16_t port) -> get_res {
       CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
-      if (!system().config().middleman_enable_tcp)
+      if (tcp_disabled())
         return make_error(sec::feature_disabled);
       auto rp = make_response_promise();
       endpoint key{std::move(hostname), port};
@@ -153,13 +159,13 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     [=](publish_udp_atom, uint16_t port, strong_actor_ptr& whom,
         mpi_set& sigs, std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
-      if (!system().config().middleman_enable_udp)
+      if (udp_disabled())
         return make_error(sec::feature_disabled);
       return put_udp(port, whom, sigs, addr.c_str(), reuse);
     },
     [=](contact_atom, std::string& hostname, uint16_t port) -> get_res {
       CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
-      if (!system().config().middleman_enable_udp)
+      if (udp_disabled())
         return make_error(sec::feature_disabled);
       auto rp = make_response_promise();
       endpoint key{std::move(hostname), port};
