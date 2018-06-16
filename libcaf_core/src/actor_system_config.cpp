@@ -34,20 +34,6 @@ CAF_PUSH_DEPRECATED_WARNING
 
 namespace caf {
 
-actor_system_config::opt_group::opt_group(config_option_set& xs,
-                                          const char* category)
-    : xs_(xs),
-      category_(category) {
-  // nop
-}
-
-actor_system_config::opt_group&
-actor_system_config::opt_group::add_neg(bool& storage, const char* name,
-                                        const char* description) {
-  xs_.add(make_negated_config_option(storage, category_, name, description));
-  return *this;
-}
-
 actor_system_config::~actor_system_config() {
   // nop
 }

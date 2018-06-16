@@ -84,6 +84,7 @@ class actor_system_config;
 class behavior;
 class blocking_actor;
 class config_option;
+class config_option_adder;
 class config_option_set;
 class config_value;
 class deserializer;

@@ -26,16 +26,17 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "caf/actor_factory.hpp"
+#include "caf/config_option.hpp"
+#include "caf/config_option_adder.hpp"
+#include "caf/config_option_set.hpp"
+#include "caf/config_value.hpp"
 #include "caf/fwd.hpp"
+#include "caf/is_typed_actor.hpp"
+#include "caf/named_actor_config.hpp"
 #include "caf/stream.hpp"
 #include "caf/thread_hook.hpp"
-#include "caf/config_value.hpp"
-#include "caf/config_option.hpp"
-#include "caf/config_option_set.hpp"
-#include "caf/actor_factory.hpp"
-#include "caf/is_typed_actor.hpp"
 #include "caf/type_erased_value.hpp"
-#include "caf/named_actor_config.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -83,33 +84,9 @@ public:
 
   using string_list = std::vector<std::string>;
 
-  // -- nested classes ---------------------------------------------------------
-
   using named_actor_config_map = hash_map<std::string, named_actor_config>;
 
-  class opt_group {
-  public:
-    opt_group(config_option_set& xs, const char* category);
-
-    template <class T>
-    opt_group& add(T& storage, const char* name, const char* description) {
-      xs_.add(storage, category_, name, description);
-      return *this;
-    }
-
-    template <class T>
-    opt_group& add(const char* name, const char* description) {
-      xs_.add<T>(category_, name, description);
-      return *this;
-    }
-
-    opt_group& add_neg(bool& storage, const char* name,
-                       const char* description);
-
-  private:
-    config_option_set& xs_;
-    const char* category_;
-  };
+  using opt_group = config_option_adder;
 
   // -- constructors, destructors, and assignment operators --------------------
 

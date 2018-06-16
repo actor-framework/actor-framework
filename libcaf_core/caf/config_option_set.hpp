@@ -101,18 +101,17 @@ public:
   template <class T>
   config_option_set& add(const char* category, const char* name,
                          const char* description = "") {
-    opts_.emplace_back(make_config_option<T>(category, name, description));
-    return *this;
+    return add(make_config_option<T>(category, name, description));
   }
 
   /// Adds a config option to the set that synchronizes its value with `ref`.
   template <class T>
   config_option_set& add(T& ref, const char* category, const char* name,
                          const char* description = "") {
-    opts_.emplace_back(make_config_option<T>(ref, category, name, description));
-    return *this;
+    return add(make_config_option<T>(ref, category, name, description));
   }
 
+  /// Adds a config option to the set.
   /// @private
   config_option_set& add(config_option&& opt);
 
