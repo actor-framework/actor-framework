@@ -19,25 +19,12 @@
 #pragma once
 
 #include <chrono>
-#include <string>
 #include <cstdint>
-
-#include "caf/timespan.hpp"
 
 namespace caf {
 
-/// A portable timestamp with nanosecond resolution anchored at the UNIX epoch.
-using timestamp = std::chrono::time_point<std::chrono::system_clock, timespan>;
-
-/// Convenience function for returning a `timestamp` representing
-/// the current system time.
-timestamp make_timestamp();
-
-/// Converts the time-since-epoch of `x` to a `string`.
-std::string timestamp_to_string(const timestamp& x);
-
-/// Appends the time-since-epoch of `y` to `x`.
-void append_timestamp_to_string(std::string& x, const timestamp& y);
+/// A portable timespan type with nanosecond resolution.
+using timespan = std::chrono::duration<int64_t, std::nano>;
 
 } // namespace caf
 
