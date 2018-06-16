@@ -195,6 +195,11 @@ public:
     return context_->system();
   }
 
+  /// Returns the config of the hosting actor system.
+  inline const actor_system_config& config() const {
+    return system().config();
+  }
+
   /// Returns the clock of the actor system.
   inline actor_clock& clock() const {
     return home_system().clock();
