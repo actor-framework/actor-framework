@@ -457,8 +457,12 @@ optional<T> get_if(const std::map<std::string, config_value::dictionary>* xs,
                    const std::string& name) {
   // Get the category.
   auto pos = name.find('.');
-  if (pos == std::string::npos)
-    return none;
+  if (pos == std::string::npos) {
+    auto i = xs->find("global");
+    if (i == xs->end())
+      return none;
+    return get_if<T>(&i->second, name);
+  }
   auto i = xs->find(name.substr(0, pos));
   if (i == xs->end())
     return none;
