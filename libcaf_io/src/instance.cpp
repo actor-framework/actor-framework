@@ -18,12 +18,12 @@
 
 #include "caf/io/basp/instance.hpp"
 
-#include "caf/streambuf.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/binary_deserializer.hpp"
 #include "caf/actor_system_config.hpp"
-
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/defaults.hpp"
 #include "caf/io/basp/version.hpp"
+#include "caf/streambuf.hpp"
 
 namespace caf {
 namespace io {
@@ -364,8 +364,9 @@ void instance::write_server_handshake(execution_unit* ctx,
   }
   CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
   auto writer = make_callback([&](serializer& sink) -> error {
-    auto& ref = callee_.system().config().middleman_app_identifier;
-    auto e = sink(const_cast<std::string&>(ref));
+    auto id = get_or(callee_.config(), "middleman.app-identifier",
+                     defaults::middleman::app_identifier);
+    auto e = sink(id);
     if (e)
       return e;
     if (pa != nullptr) {
@@ -404,7 +405,8 @@ void instance::write_client_handshake(execution_unit* ctx,
                                       const node_id& remote_side,
                                       uint16_t sequence_number) {
   write_client_handshake(ctx, buf, remote_side, this_node_,
-                         callee_.system().config().middleman_app_identifier,
+                         get_or(callee_.config(), "middleman.app-identifier",
+                                defaults::middleman::app_identifier),
                          sequence_number);
 }
 

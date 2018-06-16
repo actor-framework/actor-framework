@@ -32,6 +32,7 @@
 #include "caf/config.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
+#include "caf/defaults.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/scoped_actor.hpp"
@@ -89,7 +90,9 @@ private:
 } // namespace <anonymous>
 
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
-  switch (atom_uint(sys.config().middleman_network_backend)) {
+  auto atm = get_or(sys.config(), "middleman.network-backend",
+                    defaults::middleman::network_backend);
+  switch (atom_uint(atm)) {
 # ifdef CAF_USE_ASIO
     case atom_uint(atom("asio")):
       return new mm_impl<network::asio_multiplexer>(sys);
@@ -361,7 +364,9 @@ void middleman::stop() {
 
 void middleman::init(actor_system_config& cfg) {
   // never detach actors when using the testing multiplexer
-  if (cfg.middleman_network_backend == atom("testing"))
+  auto network_backend = get_or(cfg, "middleman.network-backend",
+                                defaults::middleman::network_backend);
+  if (network_backend == atom("testing"))
     cfg.set("middleman.attach-utility-actors", true);
   // add remote group module to config
   struct remote_groups : group_module {

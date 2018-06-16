@@ -23,6 +23,7 @@
 #include <fstream>
 #include <sstream>
 
+#include "caf/defaults.hpp"
 #include "caf/detail/gcd.hpp"
 #include "caf/detail/ini_consumer.hpp"
 #include "caf/detail/parser/read_ini.hpp"
@@ -38,6 +39,13 @@ actor_system_config::opt_group::opt_group(config_option_set& xs,
     : xs_(xs),
       category_(category) {
   // nop
+}
+
+actor_system_config::opt_group&
+actor_system_config::opt_group::add_neg(bool& storage, const char* name,
+                                        const char* description) {
+  xs_.add(make_negated_config_option(storage, category_, name, description));
+  return *this;
 }
 
 actor_system_config::~actor_system_config() {
@@ -83,11 +91,14 @@ actor_system_config::actor_system_config()
   logger_console_format = "%m";
   logger_verbosity = atom("trace");
   logger_inline_output = false;
-  middleman_network_backend = atom("default");
-  middleman_max_consecutive_reads = 50;
-  middleman_heartbeat_interval = 0;
-  middleman_cached_udp_buffers = 10;
-  middleman_max_pending_msgs = 10;
+  middleman_network_backend = defaults::middleman::network_backend;
+  middleman_enable_automatic_connections = false;
+  middleman_max_consecutive_reads = defaults::middleman::max_consecutive_reads;
+  middleman_heartbeat_interval = defaults::middleman::heartbeat_interval;
+  middleman_detach_utility_actors = true;
+  middleman_detach_multiplexer = true;
+  middleman_cached_udp_buffers = defaults::middleman::cached_udp_buffers;
+  middleman_max_pending_msgs = defaults::middleman::max_pending_msgs;
   // fill our options vector for creating INI and CLI parsers
   opt_group{custom_options_, "global"}
   .add<bool>(cli_helptext_printed, "help,h?", "print help and exit")
@@ -149,28 +160,30 @@ actor_system_config::actor_system_config()
   .add(logger_component_filter, "filter",
        "deprecated (use console-component-filter instead)");
   opt_group{custom_options_, "middleman"}
-  .add<bool>("enable-automatic-connections",
-             "enables automatic connection management")
-  .add<bool>("attach-utility-actors",
-             "schedule utility actors instead of dedicating individual threads")
-  .add<bool>("manual-multiplexing",
-             "disables background activity of the multiplexer")
-  .add<bool>("disable-tcp", "disables communication via TCP")
-  .add<bool>("enable-udp", "enable communication via UDP")
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
   .add(middleman_app_identifier, "app-identifier",
        "sets the application identifier of this node")
+  .add(middleman_enable_automatic_connections, "enable-automatic-connections",
+       "enables automatic connection management")
   .add(middleman_max_consecutive_reads, "max-consecutive-reads",
        "sets the maximum number of consecutive I/O reads per broker")
   .add(middleman_heartbeat_interval, "heartbeat-interval",
        "sets the interval (ms) of heartbeat, 0 (default) means disabling it")
+  .add(middleman_detach_utility_actors, "detach-utility-actors",
+       "deprecated, see attach-utility-actors instead")
+  .add_neg(middleman_detach_utility_actors, "attach-utility-actors",
+           "schedule utility actors instead of dedicating individual threads")
+  .add(middleman_detach_multiplexer, "detach-multiplexer",
+       "deprecated, see manual-multiplexing instead")
+  .add_neg(middleman_detach_multiplexer, "manual-multiplexing",
+           "disables background activity of the multiplexer")
   .add(middleman_cached_udp_buffers, "cached-udp-buffers",
-       "sets the max number of UDP send buffers that will be cached for reuse "
-       "(default: 10)")
+       "sets the maximum for cached UDP send buffers (default: 10)")
   .add(middleman_max_pending_msgs, "max-pending-messages",
-       "sets the max number of UDP pending messages due to ordering "
-       "(default: 10)");
+       "sets the maximum for reordering of UDP receive buffers (default: 10)")
+  .add<bool>("disable-tcp", "disables communication via TCP")
+  .add<bool>("enable-udp", "enable communication via UDP");
   opt_group(custom_options_, "opencl")
   .add(opencl_device_ids, "device-ids",
        "restricts which OpenCL devices are accessed by CAF");

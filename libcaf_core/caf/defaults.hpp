@@ -72,6 +72,7 @@ extern const bool inline_output;
 
 namespace middleman {
 
+extern const char* app_identifier;
 extern const atom_value network_backend;
 extern const size_t max_consecutive_reads;
 extern const size_t heartbeat_interval;

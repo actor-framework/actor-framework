@@ -317,7 +317,10 @@ public:
           auto e = bd(remote_appid);
           if (e)
             return false;
-          if (remote_appid != callee_.system().config().middleman_app_identifier) {
+          auto appid = get_if<std::string>(&callee_.config(),
+                                           "middleman.app-identifier");
+          if ((appid && *appid != remote_appid)
+              || (!appid && !remote_appid.empty())) {
             CAF_LOG_ERROR("app identifier mismatch");
             return false;
           }
@@ -368,7 +371,10 @@ public:
           auto e = bd(remote_appid);
           if (e)
             return false;
-          if (remote_appid != callee_.system().config().middleman_app_identifier) {
+          auto appid = get_if<std::string>(&callee_.config(),
+                                           "middleman.app-identifier");
+          if ((appid && *appid != remote_appid)
+              || (!appid && !remote_appid.empty())) {
             CAF_LOG_ERROR("app identifier mismatch");
             return false;
           }

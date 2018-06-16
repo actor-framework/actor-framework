@@ -18,25 +18,23 @@
 
 #include "caf/io/basp_broker.hpp"
 
-#include <limits>
 #include <chrono>
-
-#include "caf/sec.hpp"
-#include "caf/send.hpp"
-#include "caf/after.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/actor_system_config.hpp"
-#include "caf/forwarding_actor_proxy.hpp"
+#include <limits>
 
 #include "caf/actor_registry.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/after.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-
+#include "caf/event_based_actor.hpp"
+#include "caf/forwarding_actor_proxy.hpp"
 #include "caf/io/basp/all.hpp"
-#include "caf/io/middleman.hpp"
 #include "caf/io/connection_helper.hpp"
-
+#include "caf/io/middleman.hpp"
 #include "caf/io/network/interfaces.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/sec.hpp"
+#include "caf/send.hpp"
 
 namespace caf {
 namespace io {
@@ -77,8 +75,10 @@ basp_broker_state::basp_broker_state(broker* selfptr)
                              static_cast<proxy_registry::backend&>(*this)),
       self(selfptr),
       instance(selfptr, *this),
-      max_buffers(self->config().middleman_cached_udp_buffers),
-      max_pending_messages(self->config().middleman_max_pending_msgs) {
+      max_buffers(get_or(self->config(), "middleman.cached-udp-buffers",
+                         defaults::middleman::cached_udp_buffers)),
+      max_pending_messages(get_or(self->config(), "middleman.max-pending-msgs",
+                                  defaults::middleman::max_pending_msgs)) {
   CAF_ASSERT(this_node() != none);
 }
 
@@ -670,7 +670,8 @@ behavior basp_broker::make_behavior() {
     }
     state.automatic_connections = true;
   }
-  auto heartbeat_interval = config().middleman_heartbeat_interval;
+  auto heartbeat_interval = get_or(config(), "middleman.heartbeat-interval",
+                                   defaults::middleman::heartbeat_interval);
   if (heartbeat_interval > 0) {
     CAF_LOG_INFO("enable heartbeat" << CAF_ARG(heartbeat_interval));
     send(this, tick_atom::value, heartbeat_interval);

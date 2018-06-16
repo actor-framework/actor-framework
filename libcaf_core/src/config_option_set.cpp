@@ -62,6 +62,11 @@ config_option_set::config_option_set() {
   // nop
 }
 
+config_option_set& config_option_set::add(config_option&& opt) {
+  opts_.emplace_back(std::move(opt));
+  return *this;
+}
+
 std::string config_option_set::help_text(bool global_only) const {
   //<--- argument --------> <---- desciption ---->
   // (-w|--write) <string> : output file

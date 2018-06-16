@@ -18,18 +18,16 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-#include "caf/config.hpp"
-#include "caf/optional.hpp"
-#include "caf/make_counted.hpp"
 #include "caf/actor_system_config.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
-
+#include "caf/config.hpp"
+#include "caf/defaults.hpp"
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
-
-#include "caf/io/network/protocol.hpp"
 #include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/protocol.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/optional.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
@@ -1067,6 +1065,9 @@ void pipe_reader::init(native_socket sock_fd) {
 
 stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
     : event_handler(backend_ref, sockfd),
+      max_consecutive_reads_(
+        get_or(backend().system().config(), "middleman.max-consecutive-reads",
+               defaults::middleman::max_consecutive_reads)),
       read_threshold_(1),
       collected_(0),
       ack_writes_(false),
@@ -1128,10 +1129,6 @@ void stream::removed_from_loop(operation op) {
     case operation::write: writer_.reset(); break;
     case operation::propagate_error: break;
   }
-}
-
-size_t stream::max_consecutive_reads() {
-  return backend().system().config().middleman_max_consecutive_reads;
 }
 
 void stream::prepare_next_read() {
@@ -1203,12 +1200,15 @@ void acceptor::removed_from_loop(operation op) {
 
 datagram_handler::datagram_handler(default_multiplexer& backend_ref,
                                    native_socket sockfd)
-  : event_handler(backend_ref, sockfd),
-    max_datagram_size_(receive_buffer_size),
-    rd_buf_(receive_buffer_size),
-    send_buffer_size_(0),
-    ack_writes_(false),
-    writing_(false) {
+    : event_handler(backend_ref, sockfd),
+      max_consecutive_reads_(
+        get_or(backend().system().config(), "middleman.max-consecutive-reads",
+               defaults::middleman::max_consecutive_reads)),
+      max_datagram_size_(receive_buffer_size),
+      rd_buf_(receive_buffer_size),
+      send_buffer_size_(0),
+      ack_writes_(false),
+      writing_(false) {
   allow_udp_connreset(sockfd, false);
   auto es = send_buffer_size(sockfd);
   if (!es)
@@ -1303,10 +1303,6 @@ void datagram_handler::removed_from_loop(operation op) {
     case operation::write: writer_.reset(); break;
     case operation::propagate_error: break;
   };
-}
-
-size_t datagram_handler::max_consecutive_reads() {
-  return backend().system().config().middleman_max_consecutive_reads;
 }
 
 void datagram_handler::prepare_next_read() {

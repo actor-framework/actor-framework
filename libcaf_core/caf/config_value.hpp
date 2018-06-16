@@ -435,7 +435,7 @@ T get(const config_value::dictionary& xs, const std::string& name) {
 /// Retrieves the value associated to `name` from `xs` or returns
 /// `default_value`.
 /// @relates config_value
-template <class T>
+template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
 T get_or(const config_value::dictionary& xs, const std::string& name,
          const T& default_value) {
   auto result = get_if<T>(&xs, name);
@@ -443,6 +443,12 @@ T get_or(const config_value::dictionary& xs, const std::string& name,
     return std::move(*result);
   return default_value;
 }
+
+/// Retrieves the value associated to `name` from `xs` or returns
+/// `default_value`.
+/// @relates config_value
+std::string get_or(const config_value::dictionary& xs, const std::string& name,
+                   const char* default_value);
 
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
@@ -473,7 +479,7 @@ T get(const std::map<std::string, config_value::dictionary>& xs,
 /// Retrieves the value associated to `name` from `xs` or returns
 /// `default_value`.
 /// @relates config_value
-template <class T>
+template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
 T get_or(const std::map<std::string, config_value::dictionary>& xs,
          const std::string& name, const T& default_value) {
   auto result = get_if<T>(&xs, name);
@@ -481,6 +487,12 @@ T get_or(const std::map<std::string, config_value::dictionary>& xs,
     return std::move(*result);
   return default_value;
 }
+
+/// Retrieves the value associated to `name` from `xs` or returns
+/// `default_value`.
+/// @relates config_value
+std::string get_or(const std::map<std::string, config_value::dictionary>& xs,
+                   const std::string& name, const char* default_value);
 
 /// Tries to retrieve the value associated to `name` from `cfg`.
 /// @relates config_value
@@ -499,11 +511,14 @@ T get(const actor_system_config& cfg, const std::string& name) {
 /// Retrieves the value associated to `name` from `cfg` or returns
 /// `default_value`.
 /// @relates config_value
-template <class T>
+template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
 T get_or(const actor_system_config& cfg, const std::string& name,
          const T& default_value) {
   return get_or(content(cfg), name, default_value);
 }
+
+std::string get_or(const actor_system_config& cfg, const std::string& name,
+                   const char* default_value);
 
 /// @relates config_value
 bool operator<(const config_value& x, const config_value& y);

@@ -202,12 +202,17 @@ CAF_TEST(heterogeneous dictionary) {
 }
 
 CAF_TEST(successful parsing) {
-  auto parse = [](const std::string& str) {
+  // Store the parsed value on the stack, because the unit test framework takes
+  // references when comparing values. Since we call get<T>() on the result of
+  // parse(), we would end up with a reference to a temporary.
+  config_value parsed;
+  auto parse = [&](const std::string& str) -> config_value& {
     auto x = config_value::parse(str);
     if (!x)
       CAF_FAIL("cannot parse " << str << ": assumed a result but error "
                << to_string(x.error()));
-    return std::move(*x);
+    parsed = std::move(*x);
+    return parsed;
   };
   using di = std::map<string, int>; // Dictionary-of-integers.
   using ls = std::vector<string>; // List-of-strings.

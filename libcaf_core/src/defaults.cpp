@@ -84,6 +84,7 @@ const bool inline_output = false;
 
 namespace middleman {
 
+const char* app_identifier = "";
 const atom_value network_backend = atom("default");
 const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;

@@ -584,7 +584,7 @@ protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
     CAF_LOG_TRACE(CAF_ARG(op));
-    auto mcr = max_consecutive_reads();
+    auto mcr = max_consecutive_reads_;
     switch (op) {
       case io::network::operation::read: {
         // Loop until an error occurs or we have nothing more to read
@@ -651,11 +651,12 @@ protected:
   }
 
 private:
-  size_t max_consecutive_reads();
 
   void prepare_next_read();
 
   void prepare_next_write();
+
+  size_t max_consecutive_reads_;
 
   // state for reading
   manager_ptr reader_;
@@ -840,7 +841,7 @@ protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
     CAF_LOG_TRACE(CAF_ARG(op));
-    auto mcr = max_consecutive_reads();
+    auto mcr = max_consecutive_reads_;
     switch (op) {
       case io::network::operation::read: {
         // Loop until an error occurs or we have nothing more to read
@@ -910,7 +911,7 @@ protected:
   }
 
 private:
-  size_t max_consecutive_reads();
+  size_t max_consecutive_reads_;
 
   void prepare_next_read();
 

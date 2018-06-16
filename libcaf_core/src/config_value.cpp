@@ -124,5 +124,26 @@ std::string to_string(const config_value& x) {
   return deep_to_string(x.get_data());
 }
 
+std::string get_or(const config_value::dictionary& xs, const std::string& name,
+                   const char* default_value) {
+  auto result = get_if<std::string>(&xs, name);
+  if (result)
+    return std::move(*result);
+  return default_value;
+}
+
+std::string get_or(const std::map<std::string, config_value::dictionary>& xs,
+                   const std::string& name, const char* default_value) {
+  auto result = get_if<std::string>(&xs, name);
+  if (result)
+    return std::move(*result);
+  return default_value;
+}
+
+std::string get_or(const actor_system_config& cfg, const std::string& name,
+                   const char* default_value) {
+  return get_or(content(cfg), name, default_value);
+}
+
 } // namespace caf
 

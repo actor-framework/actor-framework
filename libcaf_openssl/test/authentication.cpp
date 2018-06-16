@@ -55,9 +55,9 @@ public:
     load<openssl::manager>();
     add_message_type<std::vector<int>>("std::vector<int>");
     actor_system_config::parse(test::engine::argc(), test::engine::argv());
-    middleman_detach_multiplexer = false;
-    middleman_detach_utility_actors = false;
-    scheduler_policy = atom("testing");
+    set("middleman.manual-multiplexing", true);
+    set("middleman.attach-utility-actors", true);
+    set("scheduler.policy", atom("testing"));
   }
 
   static std::string data_dir() {

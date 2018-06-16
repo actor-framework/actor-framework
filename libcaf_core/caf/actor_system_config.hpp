@@ -103,6 +103,9 @@ public:
       return *this;
     }
 
+    opt_group& add_neg(bool& storage, const char* name,
+                       const char* description);
+
   private:
     config_option_set& xs_;
     const char* category_;
@@ -354,12 +357,15 @@ public:
 
   // -- middleman parameters ---------------------------------------------------
 
-  atom_value middleman_network_backend;
-  std::string middleman_app_identifier;
-  size_t middleman_max_consecutive_reads;
-  size_t middleman_heartbeat_interval;
-  size_t middleman_cached_udp_buffers;
-  size_t middleman_max_pending_msgs;
+  atom_value middleman_network_backend CAF_DEPRECATED;
+  std::string middleman_app_identifier CAF_DEPRECATED;
+  bool middleman_enable_automatic_connections CAF_DEPRECATED;
+  size_t middleman_max_consecutive_reads CAF_DEPRECATED;
+  size_t middleman_heartbeat_interval CAF_DEPRECATED;
+  bool middleman_detach_utility_actors CAF_DEPRECATED;
+  bool middleman_detach_multiplexer CAF_DEPRECATED;
+  size_t middleman_cached_udp_buffers CAF_DEPRECATED;
+  size_t middleman_max_pending_msgs CAF_DEPRECATED;
 
   // -- OpenCL parameters ------------------------------------------------------
 

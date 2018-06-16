@@ -16,69 +16,55 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
-
-#include "caf/config_option.hpp"
-#include "caf/config_value.hpp"
-#include "caf/detail/type_name.hpp"
-#include "caf/pec.hpp"
+#include "caf/make_config_option.hpp"
 
 namespace caf {
 
-/// Creates a config option that synchronizes with `storage`.
-template <class T>
-config_option make_config_option(const char* category, const char* name,
-                                 const char* description) {
-  config_option::vtbl_type vtbl{
-    [](const config_value& x) -> error {
-      if (holds_alternative<T>(x))
-        return none;
-      return make_error(pec::type_mismatch);
-    },
-    nullptr,
-    [] {
-      return detail::type_name<T>();
-    }
-  };
-  return {category, name, description, false, vtbl};
+namespace {
+
+using vtbl_type = config_option::vtbl_type;
+
+error bool_check(const config_value& x) {
+  if (holds_alternative<bool>(x))
+    return none;
+  return make_error(pec::type_mismatch);
 }
 
-/// Creates a config option that synchronizes with `storage`.
-template <class T>
-config_option make_config_option(T& storage, const char* category,
-                                 const char* name, const char* description) {
-  config_option::vtbl_type vtbl{
-    [](const config_value& x) -> error {
-      if (holds_alternative<T>(x))
-        return none;
-      return make_error(pec::type_mismatch);
-    },
-    [](void* ptr, const config_value& x) {
-      *static_cast<T*>(ptr) = get<T>(x);
-    },
-    [] {
-      return detail::type_name<T>();
-    }
-  };
-  return {category, name, description, false, vtbl, &storage};
+void bool_store(void* ptr, const config_value& x) {
+  *static_cast<bool*>(ptr) = get<bool>(x);
 }
 
-// -- backward compatbility, do not use for new code ! -------------------------
+void bool_store_neg(void* ptr, const config_value& x) {
+  *static_cast<bool*>(ptr) = !get<bool>(x);
+}
 
-// Inverts the value when writing to `storage`.
+std::string bool_name() {
+  return detail::type_name<bool>();
+}
+
+constexpr vtbl_type bool_vtbl{bool_check, bool_store, bool_name};
+
+constexpr vtbl_type bool_neg_vtbl{bool_check, bool_store_neg, bool_name};
+
+} // namespace anonymous
+
 config_option make_negated_config_option(bool& storage, const char* category,
                                          const char* name,
-                                         const char* description);
-
-// -- specializations for common types.
+                                         const char* description) {
+  return {category, name, description, true, bool_neg_vtbl, &storage};
+}
 
 template <>
 config_option make_config_option<bool>(const char* category, const char* name,
-                                       const char* description);
+                                       const char* description) {
+  return {category, name, description, true, bool_vtbl};
+}
 
 template <>
 config_option make_config_option<bool>(bool& storage, const char* category,
                                        const char* name,
-                                       const char* description);
+                                       const char* description) {
+  return {category, name, description, true, bool_vtbl, &storage};
+}
 
 } // namespace caf
