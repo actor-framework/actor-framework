@@ -124,7 +124,7 @@ void stream_manager::advance() {
     using std::chrono::microseconds;
     auto& cfg = self_->system().config();
     microseconds bc{cfg.streaming_desired_batch_complexity_us};
-    microseconds interval{cfg.streaming_tick_duration_us()};
+    microseconds interval{cfg.streaming_credit_round_interval_us};
     auto& mbox = self_->mailbox();
     auto& qs = get<2>(mbox.queue().queues()).queues();
     // Iterate all queues for inbound traffic.
