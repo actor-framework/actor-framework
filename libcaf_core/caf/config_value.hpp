@@ -158,6 +158,10 @@ private:
   variant_type data_;
 };
 
+/// Organizes config values into categories.
+/// @relates config_value
+using config_value_map = std::map<std::string, config_value::dictionary>;
+
 /// @relates config_value
 template <class T>
 struct config_value_access;
@@ -453,8 +457,7 @@ std::string get_or(const config_value::dictionary& xs, const std::string& name,
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-optional<T> get_if(const std::map<std::string, config_value::dictionary>* xs,
-                   const std::string& name) {
+optional<T> get_if(const config_value_map* xs, const std::string& name) {
   // Get the category.
   auto pos = name.find('.');
   if (pos == std::string::npos) {
@@ -472,8 +475,7 @@ optional<T> get_if(const std::map<std::string, config_value::dictionary>* xs,
 /// Retrieves the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-T get(const std::map<std::string, config_value::dictionary>& xs,
-      const std::string& name) {
+T get(const config_value_map& xs, const std::string& name) {
   auto result = get_if<T>(&xs, name);
   if (result)
     return std::move(*result);
@@ -484,8 +486,8 @@ T get(const std::map<std::string, config_value::dictionary>& xs,
 /// `default_value`.
 /// @relates config_value
 template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const std::map<std::string, config_value::dictionary>& xs,
-         const std::string& name, const T& default_value) {
+T get_or(const config_value_map& xs, const std::string& name,
+         const T& default_value) {
   auto result = get_if<T>(&xs, name);
   if (result)
     return std::move(*result);
@@ -495,8 +497,8 @@ T get_or(const std::map<std::string, config_value::dictionary>& xs,
 /// Retrieves the value associated to `name` from `xs` or returns
 /// `default_value`.
 /// @relates config_value
-std::string get_or(const std::map<std::string, config_value::dictionary>& xs,
-                   const std::string& name, const char* default_value);
+std::string get_or(const config_value_map& xs, const std::string& name,
+                   const char* default_value);
 
 /// Tries to retrieve the value associated to `name` from `cfg`.
 /// @relates config_value
