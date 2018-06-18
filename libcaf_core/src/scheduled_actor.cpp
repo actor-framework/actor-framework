@@ -891,6 +891,7 @@ void scheduled_actor::erase_inbound_paths_later(const stream_manager* ptr,
 void scheduled_actor::handle_upstream_msg(stream_slots slots,
                                           actor_addr& sender,
                                           upstream_msg::ack_open& x) {
+  CAF_IGNORE_UNUSED(sender);
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(sender) << CAF_ARG(x));
   CAF_ASSERT(sender == x.rebind_to);
   // Get the manager for that stream, move it from `pending_managers_` to
