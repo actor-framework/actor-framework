@@ -59,8 +59,13 @@ behavior datagram_connection_broker(broker* self,
   return {
     [=](new_datagram_msg& msg) {
       auto hdl = msg.handle;
+      auto cap = msg.buf.capacity();
       self->send(system_broker, std::move(msg), self->take(hdl), port);
       self->quit();
+      // The buffer returned to the multiplexer will have capacity zero
+      // if we don't do this. Handling this case here is cheaper than
+      // checking before each receive in the multiplexer.
+      msg.buf.reserve(cap);
     },
     after(autoconnect_timeout) >> [=]() {
       CAF_LOG_TRACE(CAF_ARG(""));

@@ -908,7 +908,7 @@ bool test_multiplexer::try_read_data(datagram_handle hdl) {
   auto& from = rh.vn_buf.front();
   auto& to = data->rd_buf;
   to.first = from.first;
-  CAF_ASSERT(to.second.capacity() > from.second.size());
+  CAF_ASSERT(to.second.capacity() >= from.second.size());
   to.second.resize(from.second.size());
   std::copy(from.second.begin(), from.second.end(), to.second.begin());
   rh.vn_buf.pop_front();
