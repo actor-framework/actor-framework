@@ -19,6 +19,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 
 #include "caf/config.hpp"
@@ -280,7 +281,7 @@ private:
       destroy_data();
       type_ = type_id;
       auto& ref = data_.get(token);
-      new (&ref) type (std::forward<U>(arg));
+      new (std::addressof(ref)) type (std::forward<U>(arg));
     } else {
        data_.get(token) = std::forward<U>(arg);
     }

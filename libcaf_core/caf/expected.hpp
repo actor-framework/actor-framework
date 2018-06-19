@@ -68,23 +68,23 @@ public:
   expected(U x,
            typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
       : engaged_(true) {
-    new (&value_) T(std::move(x));
+    new (std::addressof(value_)) T(std::move(x));
   }
 
   expected(T&& x) noexcept(nothrow_move) : engaged_(true) {
-    new (&value_) T(std::move(x));
+    new (std::addressof(value_)) T(std::move(x));
   }
 
   expected(const T& x) noexcept(nothrow_copy) : engaged_(true) {
-    new (&value_) T(x);
+    new (std::addressof(value_)) T(x);
   }
 
   expected(caf::error e) noexcept : engaged_(false) {
-    new (&error_) caf::error{std::move(e)};
+    new (std::addressof(error_)) caf::error{std::move(e)};
   }
 
   expected(no_error_t) noexcept : engaged_(false) {
-    new (&error_) caf::error{};
+    new (std::addressof(error_)) caf::error{};
   }
 
   expected(const expected& other) noexcept(nothrow_copy) {
@@ -93,7 +93,7 @@ public:
 
   template <class Code, class E = enable_if_has_make_error_t<Code>>
   expected(Code code) : engaged_(false) {
-    new (&error_) caf::error(make_error(code));
+    new (std::addressof(error_)) caf::error(make_error(code));
   }
 
   expected(expected&& other) noexcept(nothrow_move) {
@@ -134,7 +134,7 @@ public:
     } else {
       destroy();
       engaged_ = true;
-      new (&value_) T(x);
+      new (std::addressof(value_)) T(x);
     }
     return *this;
   }
@@ -146,7 +146,7 @@ public:
     } else {
       destroy();
       engaged_ = true;
-      new (&value_) T(std::move(x));
+      new (std::addressof(value_)) T(std::move(x));
     }
     return *this;
   }
@@ -163,7 +163,7 @@ public:
     else {
       destroy();
       engaged_ = false;
-      new (&error_) caf::error(std::move(e));
+      new (std::addressof(error_)) caf::error(std::move(e));
     }
     return *this;
   }
@@ -248,17 +248,17 @@ public:
 private:
   void construct(expected&& other) noexcept(nothrow_move) {
     if (other.engaged_)
-      new (&value_) T(std::move(other.value_));
+      new (std::addressof(value_)) T(std::move(other.value_));
     else
-      new (&error_) caf::error(std::move(other.error_));
+      new (std::addressof(error_)) caf::error(std::move(other.error_));
     engaged_ = other.engaged_;
   }
 
   void construct(const expected& other) noexcept(nothrow_copy) {
     if (other.engaged_)
-      new (&value_) T(other.value_);
+      new (std::addressof(value_)) T(other.value_);
     else
-      new (&error_) caf::error(other.error_);
+      new (std::addressof(error_)) caf::error(other.error_);
     engaged_ = other.engaged_;
   }
 

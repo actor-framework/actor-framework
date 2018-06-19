@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <memory>
 #include <new>
 #include <utility>
 
@@ -157,7 +158,7 @@ class optional {
   void cr(V&& x) {
     CAF_ASSERT(!m_valid);
     m_valid = true;
-    new (&m_value) T(std::forward<V>(x));
+    new (std::addressof(m_value)) T(std::forward<V>(x));
   }
 
   bool m_valid;
