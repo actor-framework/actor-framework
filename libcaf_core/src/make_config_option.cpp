@@ -22,7 +22,7 @@ namespace caf {
 
 namespace {
 
-using vtbl_type = config_option::vtbl_type;
+using meta_state = config_option::meta_state;
 
 error bool_check(const config_value& x) {
   if (holds_alternative<bool>(x))
@@ -38,33 +38,30 @@ void bool_store_neg(void* ptr, const config_value& x) {
   *static_cast<bool*>(ptr) = !get<bool>(x);
 }
 
-std::string bool_name() {
-  return detail::type_name<bool>();
-}
+meta_state bool_meta{bool_check, bool_store, detail::type_name<bool>(), true};
 
-constexpr vtbl_type bool_vtbl{bool_check, bool_store, bool_name};
-
-constexpr vtbl_type bool_neg_vtbl{bool_check, bool_store_neg, bool_name};
+meta_state bool_neg_meta{bool_check, bool_store_neg, detail::type_name<bool>(),
+                        true};
 
 } // namespace anonymous
 
 config_option make_negated_config_option(bool& storage, const char* category,
                                          const char* name,
                                          const char* description) {
-  return {category, name, description, true, bool_neg_vtbl, &storage};
+  return {category, name, description, &bool_neg_meta, &storage};
 }
 
 template <>
 config_option make_config_option<bool>(const char* category, const char* name,
                                        const char* description) {
-  return {category, name, description, true, bool_vtbl};
+  return {category, name, description, &bool_meta};
 }
 
 template <>
 config_option make_config_option<bool>(bool& storage, const char* category,
                                        const char* name,
                                        const char* description) {
-  return {category, name, description, true, bool_vtbl, &storage};
+  return {category, name, description, &bool_meta, &storage};
 }
 
 } // namespace caf

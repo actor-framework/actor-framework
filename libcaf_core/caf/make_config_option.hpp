@@ -29,25 +29,24 @@ namespace caf {
 template <class T>
 config_option make_config_option(const char* category, const char* name,
                                  const char* description) {
-  config_option::vtbl_type vtbl{
+  static config_option::meta_state meta{
     [](const config_value& x) -> error {
       if (holds_alternative<T>(x))
         return none;
       return make_error(pec::type_mismatch);
     },
     nullptr,
-    [] {
-      return detail::type_name<T>();
-    }
+    detail::type_name<T>(),
+    false
   };
-  return {category, name, description, false, vtbl};
+  return {category, name, description, &meta};
 }
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
 config_option make_config_option(T& storage, const char* category,
                                  const char* name, const char* description) {
-  config_option::vtbl_type vtbl{
+  static config_option::meta_state meta{
     [](const config_value& x) -> error {
       if (holds_alternative<T>(x))
         return none;
@@ -56,11 +55,10 @@ config_option make_config_option(T& storage, const char* category,
     [](void* ptr, const config_value& x) {
       *static_cast<T*>(ptr) = get<T>(x);
     },
-    [] {
-      return detail::type_name<T>();
-    }
+    detail::type_name<T>(),
+    false
   };
-  return {category, name, description, false, vtbl, &storage};
+  return {category, name, description, &meta, &storage};
 }
 
 // -- backward compatbility, do not use for new code ! -------------------------

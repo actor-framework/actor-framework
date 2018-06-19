@@ -45,16 +45,15 @@ string get_short_names(const char* name) {
 namespace caf {
 
 config_option::config_option(string category, const char* name,
-                             string description, bool is_flag,
-                             const vtbl_type& vtbl, void* value)
+                             string description, const meta_state* meta,
+                             void* value)
     : category_(move(category)),
       long_name_(get_long_name(name)),
       short_names_(get_short_names(name)),
       description_(move(description)),
-      is_flag_(is_flag),
-      vtbl_(vtbl),
+      meta_(meta),
       value_(value) {
-  // nop
+  CAF_ASSERT(meta_ != nullptr);
 }
 
 string config_option::full_name() const {
@@ -65,20 +64,23 @@ string config_option::full_name() const {
 }
 
 error config_option::check(const config_value& x) const {
-  CAF_ASSERT(vtbl_.check != nullptr);
-  return vtbl_.check(x);
+  CAF_ASSERT(meta_->check != nullptr);
+  return meta_->check(x);
 }
 
 void config_option::store(const config_value& x) const {
   if (value_ != nullptr) {
-    CAF_ASSERT(vtbl_.store != nullptr);
-    vtbl_.store(value_, x);
+    CAF_ASSERT(meta_->store != nullptr);
+    meta_->store(value_, x);
   }
 }
 
-std::string config_option::type_name() const {
-  CAF_ASSERT(vtbl_.type_name != nullptr);
-  return vtbl_.type_name();
+const std::string& config_option::type_name() const noexcept {
+  return meta_->type_name;
+}
+
+bool config_option::is_flag() const noexcept {
+  return meta_->is_flag;
 }
 
 } // namespace caf

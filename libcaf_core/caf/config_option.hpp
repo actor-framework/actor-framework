@@ -29,18 +29,20 @@ class config_option {
 public:
   // -- member types -----------------------------------------------------------
 
-  /// Custom vtable-like struct for delegating to type-specific functions.
-  struct vtbl_type {
+  /// Custom vtable-like struct for delegating to type-specific functions and
+  /// storing type-specific information shared by several config options.
+  struct meta_state {
     error (*check)(const config_value&);
     void (*store)(void*, const config_value&);
-    std::string (*type_name)();
+    std::string type_name;
+    bool is_flag;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
 
   ///  Constructs a config option.
   config_option(std::string category, const char* name, std::string description,
-                bool is_flag, const vtbl_type& vtbl, void* storage = nullptr);
+                const meta_state* meta, void* storage = nullptr);
 
   config_option(config_option&&) = default;
 
@@ -65,10 +67,6 @@ public:
     return description_;
   }
 
-  inline bool is_flag() const noexcept {
-    return is_flag_;
-  }
-
   /// Returns the full name for this config option as "<category>.<long name>".
   std::string full_name() const;
 
@@ -80,15 +78,17 @@ public:
   void store(const config_value& x) const;
 
   /// Returns a human-readable representation of this option's expected type.
-  std::string type_name() const;
+  const std::string& type_name() const noexcept;
+
+  /// Returns whether this config option stores a boolean flag.
+  bool is_flag() const noexcept;
 
 private:
   std::string category_;
   std::string long_name_;
   std::string short_names_;
   std::string description_;
-  bool is_flag_;
-  vtbl_type vtbl_;
+  const meta_state* meta_;
   mutable void* value_;
 };
 
