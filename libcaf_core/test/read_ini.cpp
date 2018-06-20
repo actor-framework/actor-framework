@@ -87,7 +87,7 @@ struct fixture {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_ini(res, f);
-    if (res.code == pec::success != expect_success)
+    if ((res.code == pec::success) != expect_success)
       CAF_MESSAGE("unexpected parser result state: " << res.code);
     return std::move(f.log);
   }
