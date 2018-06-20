@@ -65,13 +65,17 @@ actor_system_config::actor_system_config()
   scheduler_max_throughput = std::numeric_limits<size_t>::max();
   scheduler_enable_profiling = false;
   scheduler_profiling_ms_resolution = 100;
-  work_stealing_aggressive_poll_attempts = 100;
-  work_stealing_aggressive_steal_interval = 10;
-  work_stealing_moderate_poll_attempts = 500;
-  work_stealing_moderate_steal_interval = 5;
-  work_stealing_moderate_sleep_duration_us = 50;
-  work_stealing_relaxed_steal_interval = 1;
-  work_stealing_relaxed_sleep_duration_us = 10000;
+  namespace ws = defaults::work_stealing;
+  auto to_us = [](timespan x) {
+    return static_cast<size_t>(x.count() / 1000);
+  };
+  work_stealing_aggressive_poll_attempts = ws::aggressive_poll_attempts;
+  work_stealing_aggressive_steal_interval = ws::aggressive_steal_interval;
+  work_stealing_moderate_poll_attempts = ws::moderate_poll_attempts;
+  work_stealing_moderate_steal_interval = ws::moderate_steal_interval;
+  work_stealing_moderate_sleep_duration_us = to_us(ws::moderate_sleep_duration);
+  work_stealing_relaxed_steal_interval = ws::relaxed_steal_interval;
+  work_stealing_relaxed_sleep_duration_us = to_us(ws::relaxed_sleep_duration);
   logger_file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
   logger_file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
   logger_console = atom("none");
@@ -88,9 +92,8 @@ actor_system_config::actor_system_config()
   middleman_max_pending_msgs = defaults::middleman::max_pending_msgs;
   // fill our options vector for creating INI and CLI parsers
   opt_group{custom_options_, "global"}
-  .add<bool>(cli_helptext_printed, "help,h?", "print help and exit")
-  .add<bool>(cli_helptext_printed, "long-help",
-             "print all help options and exit")
+  .add<bool>("help,h?", "print help and exit")
+  .add<bool>("long-help", "print all help options and exit")
   .add<bool>("dump-config", "print configuration in INI format and exit");
   opt_group{custom_options_, "streaming"}
   .add(streaming_desired_batch_complexity_us, "desired-batch-complexity-us",
@@ -114,19 +117,19 @@ actor_system_config::actor_system_config()
        "sets the output file for the profiler");
   opt_group(custom_options_, "work-stealing")
   .add(work_stealing_aggressive_poll_attempts, "aggressive-poll-attempts",
-       "sets the number of zero-sleep-interval polling attempts")
+       "number of zero-sleep-interval polling attempts")
   .add(work_stealing_aggressive_steal_interval, "aggressive-steal-interval",
-       "sets the frequency of steal attempts during aggressive polling")
+       "frequency of steal attempts during aggressive polling")
   .add(work_stealing_moderate_poll_attempts, "moderate-poll-attempts",
-       "sets the number of moderately aggressive polling attempts")
+       "number of moderately aggressive polling attempts")
   .add(work_stealing_moderate_steal_interval, "moderate-steal-interval",
-       "sets the frequency of steal attempts during moderate polling")
-  .add(work_stealing_moderate_sleep_duration_us, "moderate-sleep-duration",
-       "sets the sleep interval between poll attempts during moderate polling")
+       "frequency of steal attempts during moderate polling")
+  .add_us(work_stealing_moderate_sleep_duration_us, "moderate-sleep-duration",
+          "sleep duration between poll attempts during moderate polling")
   .add(work_stealing_relaxed_steal_interval, "relaxed-steal-interval",
-       "sets the frequency of steal attempts during relaxed polling")
-  .add(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
-       "sets the sleep interval between poll attempts during relaxed polling");
+       "frequency of steal attempts during relaxed polling")
+  .add_us(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
+          "sleep duration between poll attempts during relaxed polling");
   opt_group{custom_options_, "logger"}
   .add(logger_file_name, "file-name",
        "sets the filesystem path of the log file")
@@ -304,6 +307,9 @@ actor_system_config& actor_system_config::parse(string_list args,
                      make_move_iterator(args.end()));
     args_remainder = message_builder{remainder.begin(), remainder.end()}
                      .move_to_message();
+  } else {
+    cli_helptext_printed = get_or(content, "global.help", false)
+                           || get_or(content, "global.long-help", false);
   }
   // Generate help text if needed.
   if (cli_helptext_printed) {
