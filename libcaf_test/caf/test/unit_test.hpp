@@ -37,6 +37,7 @@
 #include "caf/variant.hpp"
 
 #include "caf/detail/arg_wrapper.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace test {
@@ -127,29 +128,36 @@ struct inequality_operator {
 };
 
 template <class Operator>
-struct comparison {
+class comparison {
+public:
   // -- default case -----------------------------------------------------------
 
   template <class T, class U>
-  detail::enable_if_t<!SumType<T>() && !SumType<U>(), bool>
-  operator()(const T& x, const U& y) {
+  bool operator()(const T& x, const U& y) const {
+    std::integral_constant<bool, SumType<T>()> lhs_is_sum_type;
+    std::integral_constant<bool, SumType<U>()> rhs_is_sum_type;
+    return cmp(x, y, lhs_is_sum_type, rhs_is_sum_type);
+  }
+
+private:
+  // -- automagic unboxing of sum types ----------------------------------------
+
+  template <class T, class U>
+  bool cmp(const T& x, const U& y, std::false_type, std::false_type) const {
     Operator f;
     return f(x, y);
   }
 
-  // -- automagic unboxing of sum types ----------------------------------------
-
   template <class T, class U>
-  detail::enable_if_t<SumType<T>(), bool>
-  operator()(const T& lhs, const U& rhs) const {
-    compare_visitor<U, comparison> f{rhs};
-    return visit(f, lhs);
+  bool cmp(const T& x, const U& y, std::true_type, bool) const {
+    compare_visitor<U, comparison> f{y};
+    return visit(f, x);
   }
 
   template <class T, class U>
-  detail::enable_if_t<!SumType<T>() && SumType<U>(), bool>
-  operator()(const T& lhs, const U& rhs) const {
-    return (*this)(rhs, lhs);
+  bool cmp(const T& x, const U& y, std::false_type, std::true_type) const {
+    compare_visitor<T, comparison> f{x};
+    return visit(f, y);
   }
 };
 
