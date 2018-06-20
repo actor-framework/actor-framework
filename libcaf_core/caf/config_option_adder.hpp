@@ -22,7 +22,6 @@
 
 #include "caf/config_option.hpp"
 #include "caf/fwd.hpp"
-#include "caf/make_config_option.hpp"
 
 namespace caf {
 
@@ -49,8 +48,13 @@ public:
 
   /// For backward compatibility only. Do not use for new code!
   /// @private
-  config_option_adder& add_neg(bool& storage, const char* name,
+  config_option_adder& add_neg(bool& ref, const char* name,
                                const char* description);
+
+  /// For backward compatibility only. Do not use for new code!
+  /// @private
+  config_option_adder& add_us(size_t& ref, const char* name,
+                              const char* description);
 
 private:
   // -- properties -------------------------------------------------------------
