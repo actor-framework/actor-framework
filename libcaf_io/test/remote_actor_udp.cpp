@@ -201,7 +201,9 @@ CAF_TEST(multiple_endpoints_udp) {
       }
     };
   });
-  server_sys.middleman().publish_udp(mirror, 12345);
+  auto res = server_sys.middleman().publish_udp(mirror, 0);
+  CAF_REQUIRE(res);
+  auto port = *res;
   auto client_fun = [](event_based_actor* self) -> behavior {
     return {
       [=](actor s) {
@@ -220,7 +222,7 @@ CAF_TEST(multiple_endpoints_udp) {
   actor_system client_sys{client_cfg};
   auto client = client_sys.spawn(client_fun);
   // acquire remote actor from the server
-  auto client_srv = client_sys.middleman().remote_actor_udp("localhost", 12345);
+  auto client_srv = client_sys.middleman().remote_actor_udp("localhost", port);
   CAF_REQUIRE(client_srv);
   // setup other clients
   for (int i = 0; i < 5; ++i) {
@@ -229,7 +231,7 @@ CAF_TEST(multiple_endpoints_udp) {
     CAF_MESSAGE("creating new client");
     auto other = other_sys.spawn(client_fun);
     // acquire remote actor from the server
-    auto other_srv = other_sys.middleman().remote_actor_udp("localhost", 12345);
+    auto other_srv = other_sys.middleman().remote_actor_udp("localhost", port);
     CAF_REQUIRE(other_srv);
     // establish communication and exit
     CAF_MESSAGE("client contacts server and exits");
