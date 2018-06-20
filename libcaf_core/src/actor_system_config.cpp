@@ -23,6 +23,7 @@
 #include <fstream>
 #include <sstream>
 
+#include "caf/config_option_adder.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/gcd.hpp"
 #include "caf/detail/ini_consumer.hpp"

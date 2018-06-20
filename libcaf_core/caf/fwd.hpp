@@ -135,6 +135,16 @@ struct invalid_actor_addr_t;
 struct illegal_message_element;
 struct prohibit_top_level_spawn_marker;
 
+// -- free template functions --------------------------------------------------
+
+template <class T>
+config_option make_config_option(const char* category, const char* name,
+                                 const char* description);
+
+template <class T>
+config_option make_config_option(T& storage, const char* category,
+                                 const char* name, const char* description);
+
 // -- enums --------------------------------------------------------------------
 
 enum class stream_priority;
