@@ -54,7 +54,6 @@ namespace scheduler {
 const atom_value policy = atom("stealing");
 const size_t max_threads = std::max(std::thread::hardware_concurrency(), 4u);
 const size_t max_throughput = std::numeric_limits<size_t>::max();
-const bool enable_profiling = false;
 const timespan profiling_resolution = ms(100);
 
 } // namespace scheduler
@@ -78,7 +77,6 @@ const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 const atom_value console = atom("none");
 const char* console_format = "%m";
 const atom_value verbosity = atom("trace");
-const bool inline_output = false;
 
 } // namespace logger
 

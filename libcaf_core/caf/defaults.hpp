@@ -42,7 +42,6 @@ namespace scheduler {
 extern const atom_value policy;
 extern const size_t max_threads;
 extern const size_t max_throughput;
-extern const bool enable_profiling;
 extern const timespan profiling_resolution;
 
 } // namespace scheduler
@@ -66,7 +65,6 @@ extern const char* file_format;
 extern const atom_value console;
 extern const char* console_format;
 extern const atom_value verbosity;
-extern const bool inline_output;
 
 } // namespace logger
 
@@ -76,8 +74,6 @@ extern const char* app_identifier;
 extern const atom_value network_backend;
 extern const size_t max_consecutive_reads;
 extern const size_t heartbeat_interval;
-extern const bool detach_utility_actors;
-extern const bool detach_multiplexer;
 extern const size_t cached_udp_buffers;
 extern const size_t max_pending_msgs;
 
