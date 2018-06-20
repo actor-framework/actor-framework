@@ -18,6 +18,7 @@
 
 #include "caf/config_option.hpp"
 
+#include <cstring>
 #include <iostream>
 
 #include "caf/config.hpp"
