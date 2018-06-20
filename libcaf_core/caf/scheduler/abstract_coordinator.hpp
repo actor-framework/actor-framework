@@ -65,6 +65,8 @@ public:
     return system_;
   }
 
+  const actor_system_config& config() const;
+
   inline size_t max_throughput() const {
     return max_throughput_;
   }

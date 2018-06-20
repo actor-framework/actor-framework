@@ -235,6 +235,10 @@ public:
  *                       implementation of coordinator                        *
  ******************************************************************************/
 
+const actor_system_config& abstract_coordinator::config() const {
+  return system_.config();
+}
+
 bool abstract_coordinator::detaches_utility_actors() const {
   return true;
 }

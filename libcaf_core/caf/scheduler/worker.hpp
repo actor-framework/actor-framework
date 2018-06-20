@@ -40,12 +40,13 @@ public:
   using coordinator_ptr = coordinator<Policy>*;
   using policy_data = typename Policy::worker_data;
 
-  worker(size_t worker_id, coordinator_ptr worker_parent, size_t throughput)
+  worker(size_t worker_id, coordinator_ptr worker_parent,
+         const policy_data& init, size_t throughput)
       : execution_unit(&worker_parent->system()),
         max_throughput_(throughput),
         id_(worker_id),
         parent_(worker_parent),
-        data_(worker_parent) {
+        data_(init) {
     // nop
   }
 

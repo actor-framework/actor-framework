@@ -313,13 +313,13 @@ public:
 
   // -- work-stealing parameters -----------------------------------------------
 
-  size_t work_stealing_aggressive_poll_attempts;
-  size_t work_stealing_aggressive_steal_interval;
-  size_t work_stealing_moderate_poll_attempts;
-  size_t work_stealing_moderate_steal_interval;
-  size_t work_stealing_moderate_sleep_duration_us;
-  size_t work_stealing_relaxed_steal_interval;
-  size_t work_stealing_relaxed_sleep_duration_us;
+  size_t work_stealing_aggressive_poll_attempts CAF_DEPRECATED;
+  size_t work_stealing_aggressive_steal_interval CAF_DEPRECATED;
+  size_t work_stealing_moderate_poll_attempts CAF_DEPRECATED;
+  size_t work_stealing_moderate_steal_interval CAF_DEPRECATED;
+  size_t work_stealing_moderate_sleep_duration_us CAF_DEPRECATED;
+  size_t work_stealing_relaxed_steal_interval CAF_DEPRECATED;
+  size_t work_stealing_relaxed_sleep_duration_us CAF_DEPRECATED;
 
   // -- logger parameters ------------------------------------------------------
 

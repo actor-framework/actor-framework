@@ -18,18 +18,18 @@
 
 #pragma once
 
-#include <deque>
+#include <array>
 #include <chrono>
-#include <thread>
-#include <random>
 #include <cstddef>
+#include <deque>
+#include <random>
+#include <thread>
 
-#include "caf/resumable.hpp"
 #include "caf/actor_system_config.hpp"
-
-#include "caf/policy/unprofiled.hpp"
-
 #include "caf/detail/double_ended_queue.hpp"
+#include "caf/policy/unprofiled.hpp"
+#include "caf/resumable.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf {
 namespace policy {
@@ -43,14 +43,12 @@ public:
   // A thread-safe queue implementation.
   using queue_type = detail::double_ended_queue<resumable>;
 
-  using usec = std::chrono::microseconds;
-
   // configuration for aggressive/moderate/relaxed poll strategies.
   struct poll_strategy {
     size_t attempts;
     size_t step_size;
     size_t steal_interval;
-    usec sleep_duration;
+    timespan sleep_duration;
   };
 
   // The coordinator has only a counter for round-robin enqueue to its workers.
@@ -65,23 +63,8 @@ public:
 
   // Holds job job queue of a worker and a random number generator.
   struct worker_data {
-    inline explicit worker_data(scheduler::abstract_coordinator* p)
-        : rengine(std::random_device{}()),
-          // no need to worry about wrap-around; if `p->num_workers() < 2`,
-          // `uniform` will not be used anyway
-          uniform(0, p->num_workers() - 2),
-          strategies{
-            {p->system().config().work_stealing_aggressive_poll_attempts, 1,
-             p->system().config().work_stealing_aggressive_steal_interval,
-             usec{0}},
-            {p->system().config().work_stealing_moderate_poll_attempts, 1,
-             p->system().config().work_stealing_moderate_steal_interval,
-             usec{p->system().config().work_stealing_moderate_sleep_duration_us}},
-            {1, 0, p->system().config().work_stealing_relaxed_steal_interval,
-            usec{p->system().config().work_stealing_relaxed_sleep_duration_us}}
-          } {
-      // nop
-    }
+    explicit worker_data(scheduler::abstract_coordinator* p);
+    worker_data(const worker_data& other);
 
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
@@ -89,7 +72,7 @@ public:
     // needed to generate pseudo random numbers
     std::default_random_engine rengine;
     std::uniform_int_distribution<size_t> uniform;
-    poll_strategy strategies[3];
+    std::array<poll_strategy, 3> strategies;
   };
 
   // Goes on a raid in quest for a shiny new job.
