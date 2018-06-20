@@ -32,10 +32,18 @@ public:
   /// Custom vtable-like struct for delegating to type-specific functions and
   /// storing type-specific information shared by several config options.
   struct meta_state {
+    /// Checks whether a value matches the option's type.
     error (*check)(const config_value&);
+
+    /// Stores a value in the given location.
     void (*store)(void*, const config_value&);
+
+    /// Tries to extrac a value from the given location. Exists for backward
+    /// compatibility only and will get removed with CAF 0.17.
+    config_value (*get)(const void*);
+
+    /// Human-readable name of the option's type.
     std::string type_name;
-    bool is_flag;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -82,6 +90,10 @@ public:
 
   /// Returns whether this config option stores a boolean flag.
   bool is_flag() const noexcept;
+
+  /// @private
+  // TODO: remove with CAF 0.17
+  optional<config_value> get() const;
 
 private:
   std::string category_;

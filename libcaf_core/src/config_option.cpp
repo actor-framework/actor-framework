@@ -21,7 +21,9 @@
 #include <iostream>
 
 #include "caf/config.hpp"
+#include "caf/config_value.hpp"
 #include "caf/error.hpp"
+#include "caf/optional.hpp"
 
 using std::move;
 using std::string;
@@ -80,7 +82,13 @@ const std::string& config_option::type_name() const noexcept {
 }
 
 bool config_option::is_flag() const noexcept {
-  return meta_->is_flag;
+  return type_name() == "boolean";
+}
+
+optional<config_value> config_option::get() const {
+  if (value_ != nullptr && meta_->get != nullptr)
+    return meta_->get(value_);
+  return none;
 }
 
 } // namespace caf

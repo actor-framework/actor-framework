@@ -18,11 +18,53 @@
 
 #include "caf/make_config_option.hpp"
 
+#include "caf/config_value.hpp"
+#include "caf/optional.hpp"
+
+using std::string;
+
 namespace caf {
 
 namespace {
 
 using meta_state = config_option::meta_state;
+
+template <class T>
+error check_impl(const config_value& x) {
+  if (holds_alternative<T>(x))
+    return none;
+  return make_error(pec::type_mismatch);
+}
+
+template <class T>
+void store_impl(void* ptr, const config_value& x) {
+  CAF_ASSERT(ptr != nullptr);
+  *static_cast<T*>(ptr) = get<T>(x);
+}
+
+template <class T>
+config_value get_impl(const void* ptr) {
+  CAF_ASSERT(ptr != nullptr);
+  return config_value{*static_cast<const T*>(ptr)};
+}
+
+#define DEFAULT_META(type)                                                     \
+  meta_state type##_meta{check_impl<type>, store_impl<type>, get_impl<type>,   \
+                         detail::type_name<type>()}
+
+#define DEFAULT_MAKE_IMPL(type)                                                \
+  template <>                                                                  \
+  config_option make_config_option<type>(type & storage, const char* category, \
+                                         const char* name,                     \
+                                         const char* description) {            \
+    return {category, name, description, &type##_meta, &storage};              \
+  }                                                                            \
+  template <>                                                                  \
+  config_option make_config_option<type>(const char* category,                 \
+                                         const char* name,                     \
+                                         const char* description) {            \
+    return {category, name, description, &type##_meta, nullptr};               \
+  }
 
 error bool_check(const config_value& x) {
   if (holds_alternative<bool>(x))
@@ -38,10 +80,42 @@ void bool_store_neg(void* ptr, const config_value& x) {
   *static_cast<bool*>(ptr) = !get<bool>(x);
 }
 
-meta_state bool_meta{bool_check, bool_store, detail::type_name<bool>(), true};
+config_value bool_get(const void* ptr) {
+  return config_value{static_cast<const bool*>(ptr)};
+}
 
-meta_state bool_neg_meta{bool_check, bool_store_neg, detail::type_name<bool>(),
-                        true};
+config_value bool_get_neg(const void* ptr) {
+  return config_value{!static_cast<const bool*>(ptr)};
+}
+
+meta_state bool_meta{bool_check, bool_store, bool_get,
+                     detail::type_name<bool>()};
+
+meta_state bool_neg_meta{bool_check, bool_store_neg, bool_get_neg,
+                         detail::type_name<bool>()};
+
+meta_state entangled_meta{
+  [](const config_value& x) -> error {
+    if (holds_alternative<timespan>(x))
+      return none;
+    return make_error(pec::type_mismatch);
+  },
+  [](void* ptr, const config_value& x) {
+    *static_cast<size_t*>(ptr) = get<timespan>(x).count() / 1000;
+  },
+  [](const void* ptr) -> config_value {
+    auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
+    timespan val{ival / 1000};
+    return config_value{val};
+  },
+  detail::type_name<timespan>()
+};
+
+DEFAULT_META(atom_value);
+
+DEFAULT_META(size_t);
+
+DEFAULT_META(string);
 
 } // namespace anonymous
 
@@ -51,17 +125,19 @@ config_option make_negated_config_option(bool& storage, const char* category,
   return {category, name, description, &bool_neg_meta, &storage};
 }
 
-template <>
-config_option make_config_option<bool>(const char* category, const char* name,
-                                       const char* description) {
-  return {category, name, description, &bool_meta};
+config_option make_us_resolution_config_option(size_t& storage,
+                                               const char* category,
+                                               const char* name,
+                                               const char* description) {
+  return {category, name, description, &entangled_meta, &storage};
 }
 
-template <>
-config_option make_config_option<bool>(bool& storage, const char* category,
-                                       const char* name,
-                                       const char* description) {
-  return {category, name, description, &bool_meta, &storage};
-}
+DEFAULT_MAKE_IMPL(atom_value)
+
+DEFAULT_MAKE_IMPL(bool)
+
+DEFAULT_MAKE_IMPL(size_t)
+
+DEFAULT_MAKE_IMPL(string)
 
 } // namespace caf

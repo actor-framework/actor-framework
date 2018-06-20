@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/type_name.hpp"
@@ -25,40 +27,42 @@
 
 namespace caf {
 
+namespace detail {
+
+template <class T>
+struct option_meta_state {
+  static config_option::meta_state instance;
+};
+
+template <class T>
+config_option::meta_state option_meta_state<T>::instance{
+  [](const config_value& x) -> error {
+    if (holds_alternative<T>(x))
+      return none;
+    return make_error(pec::type_mismatch);
+  },
+  [](void* ptr, const config_value& x) {
+    *static_cast<T*>(ptr) = get<T>(x);
+  },
+  nullptr,
+  detail::type_name<T>()
+};
+
+} // namespace detail
+
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
 config_option make_config_option(const char* category, const char* name,
                                  const char* description) {
-  static config_option::meta_state meta{
-    [](const config_value& x) -> error {
-      if (holds_alternative<T>(x))
-        return none;
-      return make_error(pec::type_mismatch);
-    },
-    nullptr,
-    detail::type_name<T>(),
-    false
-  };
-  return {category, name, description, &meta};
+  return {category, name, description, &detail::option_meta_state<T>::instance};
 }
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
 config_option make_config_option(T& storage, const char* category,
                                  const char* name, const char* description) {
-  static config_option::meta_state meta{
-    [](const config_value& x) -> error {
-      if (holds_alternative<T>(x))
-        return none;
-      return make_error(pec::type_mismatch);
-    },
-    [](void* ptr, const config_value& x) {
-      *static_cast<T*>(ptr) = get<T>(x);
-    },
-    detail::type_name<T>(),
-    false
-  };
-  return {category, name, description, &meta, &storage};
+  return {category, name, description, &detail::option_meta_state<T>::instance,
+          std::addressof(storage)};
 }
 
 // -- backward compatbility, do not use for new code ! -------------------------
@@ -68,15 +72,29 @@ config_option make_negated_config_option(bool& storage, const char* category,
                                          const char* name,
                                          const char* description);
 
-// -- specializations for common types.
+// Reads timespans, but stores an integer representing microsecond resolution.
+config_option make_us_resolution_config_option(size_t& storage,
+                                               const char* category,
+                                               const char* name,
+                                               const char* description);
 
-template <>
-config_option make_config_option<bool>(const char* category, const char* name,
-                                       const char* description);
+// -- specializations for common types -----------------------------------------
 
-template <>
-config_option make_config_option<bool>(bool& storage, const char* category,
-                                       const char* name,
-                                       const char* description);
+#define CAF_SPECIALIZE_MAKE_CONFIG_OPTION(type)                                \
+  template <>                                                                  \
+  config_option make_config_option<std::string>(                               \
+    std::string & storage, const char* category, const char* name,             \
+    const char* description);                                                  \
+  template <>                                                                  \
+  config_option make_config_option<std::string>(                               \
+    const char* category, const char* name, const char* description)
+
+CAF_SPECIALIZE_MAKE_CONFIG_OPTION(atom_value);
+
+CAF_SPECIALIZE_MAKE_CONFIG_OPTION(bool);
+
+CAF_SPECIALIZE_MAKE_CONFIG_OPTION(size_t);
+
+CAF_SPECIALIZE_MAKE_CONFIG_OPTION(std::string);
 
 } // namespace caf
