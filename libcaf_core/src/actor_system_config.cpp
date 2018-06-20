@@ -82,14 +82,15 @@ actor_system_config::actor_system_config()
   logger_console_format = "%m";
   logger_verbosity = atom("trace");
   logger_inline_output = false;
-  middleman_network_backend = defaults::middleman::network_backend;
+  namespace mm = defaults::middleman;
+  middleman_network_backend = mm::network_backend;
   middleman_enable_automatic_connections = false;
-  middleman_max_consecutive_reads = defaults::middleman::max_consecutive_reads;
-  middleman_heartbeat_interval = defaults::middleman::heartbeat_interval;
+  middleman_max_consecutive_reads = mm::max_consecutive_reads;
+  middleman_heartbeat_interval = mm::heartbeat_interval;
   middleman_detach_utility_actors = true;
   middleman_detach_multiplexer = true;
-  middleman_cached_udp_buffers = defaults::middleman::cached_udp_buffers;
-  middleman_max_pending_msgs = defaults::middleman::max_pending_msgs;
+  middleman_cached_udp_buffers = mm::cached_udp_buffers;
+  middleman_max_pending_msgs = mm::max_pending_msgs;
   // fill our options vector for creating INI and CLI parsers
   opt_group{custom_options_, "global"}
   .add<bool>("help,h?", "print help and exit")
@@ -282,6 +283,15 @@ bool operator!=(ini_iter iter, ini_sentinel) {
 
 actor_system_config& actor_system_config::parse(string_list args,
                                                 std::istream& ini) {
+  // Insert possibly user-defined values into the map to respect overrides to
+  // member variables.
+  // TODO: remove with CAF 0.17
+  for (auto& opt : custom_options_) {
+    auto val = opt.get();
+    auto fn = opt.full_name();
+    if (val)
+      content[opt.category()][opt.long_name()] = std::move(*val);
+  }
   // Content of the INI file overrides hard-coded defaults.
   if (ini.good()) {
     detail::ini_consumer consumer{custom_options_, content};
