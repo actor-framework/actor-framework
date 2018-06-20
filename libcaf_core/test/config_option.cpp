@@ -20,7 +20,9 @@
 #include "caf/test/unit_test.hpp"
 
 #include "caf/config_option.hpp"
-#include "caf/actor_system_config.hpp"
+#include "caf/make_config_option.hpp"
+#include "caf/config_value.hpp"
+#include "caf/expected.hpp"
 
 using namespace caf;
 

@@ -23,6 +23,10 @@
 #include <memory>
 #include <tuple>
 
+#include "caf/detail/is_one_of.hpp"
+#include "caf/detail/is_primitive_config_value.hpp"
+#include "caf/timespan.hpp"
+
 namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
@@ -150,16 +154,41 @@ config_option make_config_option(T& storage, const char* category,
 enum class stream_priority;
 enum class atom_value : uint64_t;
 
+// -- aliases ------------------------------------------------------------------
+
+using actor_id = uint64_t;
+using stream_slot = uint16_t;
+
+// -- free functions related to forwarded types --------------------------------
+
+template <class T>
+bool holds_alternative(const config_value&);
+
+template <class T>
+typename std::conditional<detail::is_primitive_config_value<T>::value, const T*,
+                          optional<T>>::type
+get_if(const config_value*);
+
+template <class T>
+typename std::conditional<detail::is_primitive_config_value<T>::value, T*,
+                          optional<T>>::type
+get_if(config_value*);
+
+template <class T>
+typename std::conditional<detail::is_primitive_config_value<T>::value, const T&,
+                          T>::type
+get(const config_value&);
+
+template <class T>
+typename std::conditional<detail::is_primitive_config_value<T>::value, T&,
+                          T>::type
+get(config_value&);
+
 // -- functions ----------------------------------------------------------------
 
 /// @relates actor_system_config
 const std::map<std::string, std::map<std::string, config_value>>&
 content(const actor_system_config&);
-
-// -- aliases ------------------------------------------------------------------
-
-using actor_id = uint64_t;
-using stream_slot = uint16_t;
 
 // -- intrusive containers -----------------------------------------------------
 

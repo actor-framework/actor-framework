@@ -29,6 +29,7 @@
 #include "caf/fwd.hpp"
 #include "caf/timestamp.hpp"
 
+#include "caf/detail/is_one_of.hpp"
 #include "caf/detail/type_list.hpp"
 
 #define CAF_HAS_MEMBER_TRAIT(name)                                             \
@@ -124,19 +125,6 @@ template <bool X, bool... Xs>
 struct disjunction<X, Xs...> {
   static constexpr bool value = X || disjunction<Xs...>::value;
 };
-
-/// Checks wheter `X` is in the template parameter pack Ts.
-template <class X, class... Ts>
-struct is_one_of;
-
-template <class X>
-struct is_one_of<X> : std::false_type {};
-
-template <class X, class... Ts>
-struct is_one_of<X, X, Ts...> : std::true_type {};
-
-template <class X, typename T0, class... Ts>
-struct is_one_of<X, T0, Ts...> : is_one_of<X, Ts...> {};
 
 /// Checks whether `T` is a `std::chrono::duration`.
 template <class T>
