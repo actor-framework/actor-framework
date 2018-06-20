@@ -81,11 +81,11 @@ void bool_store_neg(void* ptr, const config_value& x) {
 }
 
 config_value bool_get(const void* ptr) {
-  return config_value{static_cast<const bool*>(ptr)};
+  return config_value{*static_cast<const bool*>(ptr)};
 }
 
 config_value bool_get_neg(const void* ptr) {
-  return config_value{!static_cast<const bool*>(ptr)};
+  return config_value{!*static_cast<const bool*>(ptr)};
 }
 
 meta_state bool_meta{bool_check, bool_store, bool_get,
