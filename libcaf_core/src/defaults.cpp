@@ -72,11 +72,12 @@ const timespan relaxed_sleep_duration = ms(10);
 
 namespace logger {
 
-const char* file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
-const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 const atom_value console = atom("none");
-const char* console_format = "%m";
 const atom_value verbosity = atom("trace");
+const char* component_filter = "";
+const char* console_format = "%m";
+const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
+const char* file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
 
 } // namespace logger
 

@@ -323,13 +323,13 @@ public:
 
   // -- logger parameters ------------------------------------------------------
 
-  std::string logger_file_name;
-  std::string logger_file_format;
-  atom_value logger_console;
-  std::string logger_console_format;
-  std::string logger_component_filter;
-  atom_value logger_verbosity;
-  bool logger_inline_output;
+  std::string logger_file_name CAF_DEPRECATED;
+  std::string logger_file_format CAF_DEPRECATED;
+  atom_value logger_console CAF_DEPRECATED;
+  std::string logger_console_format CAF_DEPRECATED;
+  std::string logger_component_filter CAF_DEPRECATED;
+  atom_value logger_verbosity CAF_DEPRECATED;
+  bool logger_inline_output CAF_DEPRECATED;
 
   // -- middleman parameters ---------------------------------------------------
 

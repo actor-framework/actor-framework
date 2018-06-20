@@ -155,8 +155,7 @@ public:
   /// Represents a single format string field.
   struct field {
     field_type kind;
-    const char* first;
-    const char* last;
+    std::string text;
   };
 
   /// Stores a parsed format string as list of fields.
@@ -243,7 +242,7 @@ public:
 
   /// Parses `format_str` into a format description vector.
   /// @warning The returned vector can have pointers into `format_str`.
-  static line_format parse_format(const char* format_str);
+  static line_format parse_format(const std::string& format_str);
 
   /// Skips path in `filename`.
   static const char* skip_path(const char* filename);
@@ -271,6 +270,18 @@ public:
     return "[]";
   }
 
+  // -- individual flags -------------------------------------------------------
+
+  static constexpr int inline_output_flag = 0x01;
+
+  static constexpr int uncolored_console_flag = 0x02;
+
+  static constexpr int colored_console_flag = 0x04;
+
+  // -- composed flags ---------------------------------------------------------
+
+  static constexpr int console_output_flag = 0x06;
+
 private:
   void handle_event(event& x);
 
@@ -288,9 +299,17 @@ private:
 
   void stop();
 
+  inline bool has(int flag) const noexcept {
+    return (flags_ & flag) != 0;
+  }
+
+  inline void set(int flag) noexcept {
+    flags_ |= flag;
+  }
+
   actor_system& system_;
   int level_;
-  bool inline_output_;
+  int flags_;
   detail::shared_spinlock aids_lock_;
   std::unordered_map<std::thread::id, actor_id> aids_;
   std::thread thread_;
@@ -302,6 +321,7 @@ private:
   line_format file_format_;
   line_format console_format_;
   std::fstream file_;
+  std::string component_filter;
 };
 
 std::string to_string(logger::field_type x);

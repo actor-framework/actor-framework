@@ -149,7 +149,7 @@ actor_system_config::actor_system_config()
   .add(logger_file_name, "filename",
        "deprecated (use file-name instead)")
   .add(logger_component_filter, "filter",
-       "deprecated (use console-component-filter instead)");
+       "deprecated (use component-filter instead)");
   opt_group{custom_options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
