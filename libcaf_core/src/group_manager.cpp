@@ -55,7 +55,7 @@ void await_all_locals_down(actor_system& sys, std::initializer_list<actor> xs) {
       ys.push_back(x);
     }
   // Don't block when using the test coordinator.
-  if (sys.config().scheduler_policy != atom("testing"))
+  if (atom("testing") != get_or(sys.config(), "scheduler.policy", atom("")))
     self->wait_for(ys);
 }
 

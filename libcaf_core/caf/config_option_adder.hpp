@@ -56,6 +56,11 @@ public:
   config_option_adder& add_us(size_t& ref, const char* name,
                               const char* description);
 
+  /// For backward compatibility only. Do not use for new code!
+  /// @private
+  config_option_adder& add_ms(size_t& ref, const char* name,
+                              const char* description);
+
 private:
   // -- properties -------------------------------------------------------------
 

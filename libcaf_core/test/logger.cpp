@@ -34,7 +34,7 @@ namespace {
 
 struct fixture {
   fixture() {
-    cfg.scheduler_policy = caf::atom("testing");
+    cfg.set("scheduler.policy", atom("testing"));
   }
 
   void add(logger::field_type kind) {

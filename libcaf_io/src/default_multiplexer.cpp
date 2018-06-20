@@ -292,7 +292,8 @@ namespace network {
         epollfd_(invalid_native_socket),
         shadow_(1),
         pipe_reader_(*this),
-        servant_ids_(0) {
+        servant_ids_(0),
+        max_throughput_(0 ){
     init();
     epollfd_ = epoll_create1(EPOLL_CLOEXEC);
     if (epollfd_ == -1) {
@@ -843,6 +844,9 @@ void default_multiplexer::init() {
       CAF_CRITICAL("WSAStartup failed");
   }
 # endif
+  namespace sr = defaults::scheduler;
+  max_throughput_ = get_or(system().config(), "scheduler.max-throughput",
+                           sr::max_throughput);
 }
 
 bool default_multiplexer::poll_once(bool block) {
@@ -870,8 +874,7 @@ bool default_multiplexer::poll_once(bool block) {
 
 void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
   CAF_LOG_TRACE("");
-  auto mt = system().config().scheduler_max_throughput;
-  switch (ptr->resume(this, mt)) {
+  switch (ptr->resume(this, max_throughput_)) {
     case resumable::resume_later:
       // Delay resumable until next cycle.
       internally_posted_.emplace_back(ptr.release(), false);

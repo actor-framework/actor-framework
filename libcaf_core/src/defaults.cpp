@@ -52,6 +52,7 @@ const timespan credit_round_interval = ms(10);
 namespace scheduler {
 
 const atom_value policy = atom("stealing");
+const char* profiling_output_file = "";
 const size_t max_threads = std::max(std::thread::hardware_concurrency(), 4u);
 const size_t max_throughput = std::numeric_limits<size_t>::max();
 const timespan profiling_resolution = ms(100);

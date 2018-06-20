@@ -60,11 +60,15 @@ actor_system_config::actor_system_config()
   streaming_desired_batch_complexity_us = 50;
   streaming_max_batch_delay_us = 50000;
   streaming_credit_round_interval_us = 100000;
-  scheduler_policy = atom("stealing");
-  scheduler_max_threads = std::max(std::thread::hardware_concurrency(), 4u);
-  scheduler_max_throughput = std::numeric_limits<size_t>::max();
+  namespace sr = defaults::scheduler;
+  auto to_ms = [](timespan x) {
+    return static_cast<size_t>(x.count() / 1000000);
+  };
+  scheduler_policy = sr::policy;
+  scheduler_max_threads = sr::max_threads;
+  scheduler_max_throughput = sr::max_throughput;
   scheduler_enable_profiling = false;
-  scheduler_profiling_ms_resolution = 100;
+  scheduler_profiling_ms_resolution = to_ms(sr::profiling_resolution);
   namespace ws = defaults::work_stealing;
   auto to_us = [](timespan x) {
     return static_cast<size_t>(x.count() / 1000);
@@ -112,8 +116,10 @@ actor_system_config::actor_system_config()
        "sets the maximum number of messages an actor consumes before yielding")
   .add(scheduler_enable_profiling, "enable-profiling",
        "enables or disables profiler output")
-  .add(scheduler_profiling_ms_resolution, "profiling-ms-resolution",
-       "sets the rate in ms in which the profiler collects data")
+  .add_ms(scheduler_profiling_ms_resolution, "profiling-ms-resolution",
+       "deprecated (use profiling-resolution instead)")
+  .add_ms(scheduler_profiling_ms_resolution, "profiling-resolution",
+          "sets the rate in ms in which the profiler collects data")
   .add(scheduler_profiling_output_file, "profiling-output-file",
        "sets the output file for the profiler");
   opt_group(custom_options_, "work-stealing")

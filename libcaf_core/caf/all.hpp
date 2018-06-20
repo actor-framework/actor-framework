@@ -38,6 +38,7 @@
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"
 #include "caf/behavior.hpp"
+#include "caf/defaults.hpp"
 #include "caf/duration.hpp"
 #include "caf/expected.hpp"
 #include "caf/exec_main.hpp"

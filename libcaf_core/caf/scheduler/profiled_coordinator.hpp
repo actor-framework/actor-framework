@@ -38,13 +38,11 @@
 #include <unordered_map>
 
 #include "caf/actor_system_config.hpp"
-
-#include "caf/scheduler/coordinator.hpp"
-
+#include "caf/defaults.hpp"
+#include "caf/logger.hpp"
 #include "caf/policy/profiled.hpp"
 #include "caf/policy/work_stealing.hpp"
-
-#include "caf/logger.hpp"
+#include "caf/scheduler/coordinator.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -178,14 +176,19 @@ public:
   }
 
   void init(actor_system_config& cfg) override {
+    namespace sr = defaults::scheduler;
     super::init(cfg);
-    file_.open(cfg.scheduler_profiling_output_file);
+    auto fname = get_or(cfg, "scheduler.profiling-output-file",
+                        sr::profiling_output_file);
+    file_.open(fname);
     if (!file_)
       std::cerr << R"([WARNING] could not open file ")"
-                << cfg.scheduler_profiling_output_file
+                << fname
                 << R"(" (no profiler output will be generated))"
                 << std::endl;
-    resolution_ = msec{cfg.scheduler_profiling_ms_resolution};
+    auto res = get_or(cfg, "scheduler.profiling-resolution",
+                      sr::profiling_resolution);
+    resolution_ = std::chrono::duration_cast<msec>(res);
   }
 
   void start() override {

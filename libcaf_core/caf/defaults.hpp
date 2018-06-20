@@ -40,6 +40,7 @@ extern const timespan credit_round_interval;
 namespace scheduler {
 
 extern const atom_value policy;
+extern const char* profiling_output_file;
 extern const size_t max_threads;
 extern const size_t max_throughput;
 extern const timespan profiling_resolution;

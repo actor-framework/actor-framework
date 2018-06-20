@@ -504,6 +504,9 @@ private:
 
   /// Sequential ids for handles of datagram servants
   int64_t servant_ids_;
+
+  /// Maximum messages per resume run.
+  size_t max_throughput_;
 };
 
 inline connection_handle conn_hdl_from_socket(native_socket fd) {

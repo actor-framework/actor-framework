@@ -304,12 +304,12 @@ public:
 
   // -- scheduling parameters --------------------------------------------------
 
-  atom_value scheduler_policy;
-  size_t scheduler_max_threads;
-  size_t scheduler_max_throughput;
-  bool scheduler_enable_profiling;
-  size_t scheduler_profiling_ms_resolution;
-  std::string scheduler_profiling_output_file;
+  atom_value scheduler_policy CAF_DEPRECATED;
+  size_t scheduler_max_threads CAF_DEPRECATED;
+  size_t scheduler_max_throughput CAF_DEPRECATED;
+  bool scheduler_enable_profiling CAF_DEPRECATED;
+  size_t scheduler_profiling_ms_resolution CAF_DEPRECATED;
+  std::string scheduler_profiling_output_file CAF_DEPRECATED;
 
   // -- work-stealing parameters -----------------------------------------------
 

@@ -239,16 +239,18 @@ actor_system::actor_system(actor_system_config& cfg)
       profiled_sharing  = 0x0102
     };
     sched_conf sc = stealing;
-    if (cfg.scheduler_policy == atom("sharing"))
+    namespace sr = defaults::scheduler;
+    auto sr_policy = get_or(cfg, "scheduler.policy", sr::policy);
+    if (sr_policy == atom("sharing"))
       sc = sharing;
-    else if (cfg.scheduler_policy == atom("testing"))
+    else if (sr_policy == atom("testing"))
       sc = testing;
-    else if (cfg.scheduler_policy != atom("stealing"))
-      std::cerr << "[WARNING] " << deep_to_string(cfg.scheduler_policy)
+    else if (sr_policy != atom("stealing"))
+      std::cerr << "[WARNING] " << deep_to_string(sr_policy)
                 << " is an unrecognized scheduler pollicy, "
                    "falling back to 'stealing' (i.e. work-stealing)"
                 << std::endl;
-    if (cfg.scheduler_enable_profiling)
+    if (get_or(cfg, "scheduler.enable-profiling", false))
       sc = static_cast<sched_conf>(sc | profiled);
     switch (sc) {
       default: // any invalid configuration falls back to work stealing

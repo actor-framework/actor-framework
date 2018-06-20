@@ -94,7 +94,7 @@ meta_state bool_meta{bool_check, bool_store, bool_get,
 meta_state bool_neg_meta{bool_check, bool_store_neg, bool_get_neg,
                          detail::type_name<bool>()};
 
-meta_state entangled_meta{
+meta_state us_res_meta{
   [](const config_value& x) -> error {
     if (holds_alternative<timespan>(x))
       return none;
@@ -106,6 +106,23 @@ meta_state entangled_meta{
   [](const void* ptr) -> config_value {
     auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
     timespan val{ival / 1000};
+    return config_value{val};
+  },
+  detail::type_name<timespan>()
+};
+
+meta_state ms_res_meta{
+  [](const config_value& x) -> error {
+    if (holds_alternative<timespan>(x))
+      return none;
+    return make_error(pec::type_mismatch);
+  },
+  [](void* ptr, const config_value& x) {
+    *static_cast<size_t*>(ptr) = get<timespan>(x).count() / 1000000;
+  },
+  [](const void* ptr) -> config_value {
+    auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
+    timespan val{ival / 1000000};
     return config_value{val};
   },
   detail::type_name<timespan>()
@@ -129,7 +146,14 @@ config_option make_us_resolution_config_option(size_t& storage,
                                                const char* category,
                                                const char* name,
                                                const char* description) {
-  return {category, name, description, &entangled_meta, &storage};
+  return {category, name, description, &us_res_meta, &storage};
+}
+
+config_option make_ms_resolution_config_option(size_t& storage,
+                                               const char* category,
+                                               const char* name,
+                                               const char* description) {
+  return {category, name, description, &ms_res_meta, &storage};
 }
 
 DEFAULT_MAKE_IMPL(atom_value)

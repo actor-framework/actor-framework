@@ -79,6 +79,12 @@ config_option make_us_resolution_config_option(size_t& storage,
                                                const char* name,
                                                const char* description);
 
+// Reads timespans, but stores an integer representing millisecond resolution.
+config_option make_ms_resolution_config_option(size_t& storage,
+                                               const char* category,
+                                               const char* name,
+                                               const char* description);
+
 // -- specializations for common types -----------------------------------------
 
 #define CAF_SPECIALIZE_MAKE_CONFIG_OPTION(type)                                \
