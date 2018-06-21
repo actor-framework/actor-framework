@@ -71,6 +71,12 @@ middleman_actor_impl::middleman_actor_impl(actor_config& cfg,
 void middleman_actor_impl::on_exit() {
   CAF_LOG_TRACE("");
   broker_ = nullptr;
+  cached_tcp_.clear();
+  cached_udp_.clear();
+  for (auto& kvp : pending_)
+    for (auto& promise : kvp.second)
+      promise.deliver(make_error(sec::cannot_connect_to_node));
+  pending_.clear();
 }
 
 const char* middleman_actor_impl::name() const {
