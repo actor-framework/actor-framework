@@ -576,8 +576,10 @@ struct test_coordinator_fixture {
   /// advances the clock in ideal steps.
   caf::timespan streaming_cycle;
 
-  test_coordinator_fixture()
-      : sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
+  template <class... Ts>
+  explicit test_coordinator_fixture(Ts&&... xs)
+      : cfg(std::forward<Ts>(xs)...),
+        sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
                .set("scheduler.policy", caf::atom("testing"))),
         self(sys, true),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
