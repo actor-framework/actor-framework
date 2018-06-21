@@ -173,8 +173,9 @@ public:
   /// Sends an exit message to `dest`.
   template <class ActorHandle>
   void send_exit(const ActorHandle& dest, error reason) {
-    dest->eq_impl(make_message_id(), ctrl(), context(),
-                  exit_msg{address(), std::move(reason)});
+    if (dest)
+      dest->eq_impl(make_message_id(), ctrl(), context(),
+                    exit_msg{address(), std::move(reason)});
   }
 
   // -- miscellaneous actor operations -----------------------------------------
