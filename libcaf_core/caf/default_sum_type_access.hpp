@@ -36,7 +36,7 @@ struct default_sum_type_access {
 
   static constexpr bool specialized = true;
 
-  static constexpr bool is_mutable = true;
+  static constexpr bool immutable = false;
 
   template <int Pos>
   static bool is(const T& x, std::integral_constant<int, Pos> token) {

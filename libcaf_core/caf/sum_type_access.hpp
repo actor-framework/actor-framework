@@ -28,7 +28,7 @@ namespace caf {
 template <class T>
 struct sum_type_access {
   static constexpr bool specialized = false;
-  static constexpr bool is_mutable = false;
+  static constexpr bool immutable = false;
 };
 
 /// Evaluates to `true` if `T` specializes `sum_type_access`.
@@ -44,7 +44,7 @@ struct has_sum_type_access {
 template <class T>
 struct has_mutable_sum_type_access {
   static constexpr bool value = sum_type_access<T>::specialized
-                                && sum_type_access<T>::is_mutable;
+                                && !sum_type_access<T>::immutable;
 };
 
 } // namespace caf
