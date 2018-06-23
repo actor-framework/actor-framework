@@ -28,13 +28,23 @@ namespace caf {
 template <class T>
 struct sum_type_access {
   static constexpr bool specialized = false;
+  static constexpr bool is_mutable = false;
 };
 
-/// Evaluates to `true` if `T` specializes `sum_type_access`
+/// Evaluates to `true` if `T` specializes `sum_type_access`.
 /// @relates SumType
 template <class T>
 struct has_sum_type_access {
   static constexpr bool value = sum_type_access<T>::specialized;
+};
+
+/// Evaluates to `true` if `T` specializes `sum_type_access` and allows
+/// non-const element access.
+/// @relates SumType
+template <class T>
+struct has_mutable_sum_type_access {
+  static constexpr bool value = sum_type_access<T>::specialized
+                                && sum_type_access<T>::is_mutable;
 };
 
 } // namespace caf

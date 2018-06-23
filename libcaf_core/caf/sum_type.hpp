@@ -31,6 +31,13 @@ constexpr bool SumType() {
   return has_sum_type_access<typename std::decay<T>::type>::value;
 }
 
+/// Concept for checking whether `T` supports the sum type API by specializing
+/// `sum_type_access` and grants non-const element access.
+template <class T>
+constexpr bool MutableSumType() {
+  return has_mutable_sum_type_access<typename std::decay<T>::type>::value;
+}
+
 /// Concept for checking whether all `Ts` support the sum type API by
 /// specializing `sum_type_access`.
 template <class... Ts>
@@ -44,7 +51,7 @@ constexpr bool SumTypes() {
 /// @pre `holds_alternative<T>(x)`
 /// @relates SumType
 template <class T, class U>
-detail::enable_if_t<SumType<U>(), T&> get(U& x) {
+detail::enable_if_t<MutableSumType<U>(), T&> get(U& x) {
   using namespace detail;
   using trait = sum_type_access<U>;
   int_token<tl_index_where<typename trait::types,
@@ -72,7 +79,7 @@ detail::enable_if_t<SumType<U>(), const T&> get(const U& x) {
 /// `nullptr` otherwise.
 /// @relates SumType
 template <class T, class U>
-detail::enable_if_t<SumType<U>(), T*> get_if(U* x) {
+detail::enable_if_t<MutableSumType<U>(), T*> get_if(U* x) {
   using namespace detail;
   using trait = sum_type_access<U>;
   int_token<tl_index_where<typename trait::types,
