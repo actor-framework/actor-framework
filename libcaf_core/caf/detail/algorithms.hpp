@@ -85,6 +85,49 @@ container_view<F, Container> make_container_view(Container& x) {
   return {x};
 }
 
+/// Like `std::find`, but takes a range instead of an iterator pair and returns
+/// a pointer to the found object on success instead of returning an iterator.
+template <class T>
+typename T::value_type* ptr_find(T& xs, const typename T::value_type& x) {
+  for (auto& y : xs)
+    if (y == x)
+      return &y;
+  return nullptr;
+}
+
+/// Like `std::find`, but takes a range instead of an iterator pair and returns
+/// a pointer to the found object on success instead of returning an iterator.
+template <class T>
+const typename T::value_type* ptr_find(const T& xs,
+                                       const typename T::value_type& x) {
+  for (auto& y : xs)
+    if (y == x)
+      return &y;
+  return nullptr;
+}
+
+/// Like `std::find_if`, but takes a range instead of an iterator pair and
+/// returns a pointer to the found object on success instead of returning an
+/// iterator.
+template <class T, class Predicate>
+typename T::value_type* ptr_find_if(T& xs, Predicate pred) {
+  for (auto& x : xs)
+    if (pred(x))
+      return &x;
+  return nullptr;
+}
+
+/// Like `std::find_if`, but takes a range instead of an iterator pair and
+/// returns a pointer to the found object on success instead of returning an
+/// iterator.
+template <class T, class Predicate>
+const typename T::value_type* ptr_find_if(const T& xs, Predicate pred) {
+  for (auto& x : xs)
+    if (pred(x))
+      return &x;
+  return nullptr;
+}
+
 } // namespace detail
 } // namespace caf
 

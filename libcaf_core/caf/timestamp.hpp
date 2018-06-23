@@ -22,10 +22,9 @@
 #include <string>
 #include <cstdint>
 
-namespace caf {
+#include "caf/timespan.hpp"
 
-/// A portable timespan type with nanosecond resolution.
-using timespan = std::chrono::duration<int64_t, std::nano>;
+namespace caf {
 
 /// A portable timestamp with nanosecond resolution anchored at the UNIX epoch.
 using timestamp = std::chrono::time_point<std::chrono::system_clock, timespan>;

@@ -72,7 +72,7 @@ timer::behavior_type timer_impl2(timer::pointer self) {
 
 struct config : actor_system_config {
   config() {
-    scheduler_policy = atom("testing");
+    set("scheduler.policy", atom("testing"));
   }
 };
 

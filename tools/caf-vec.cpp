@@ -755,7 +755,7 @@ struct config : public actor_system_config {
          "Include hidden (system-level) actors")
     .add(verbosity, "verbosity,v", "Debug output (from 0 to 2)");
     // shutdown logging per default
-    logger_verbosity = atom("quiet");
+    set("logger.verbosity", atom("quiet"));
   }
 };
 
@@ -805,9 +805,9 @@ void caf_main(actor_system& sys, const config& cfg) {
   };
   // do a first pass on all files to extract node IDs and entities
   vector<intermediate_res> intermediate_results;
-  intermediate_results.resize(cfg.args_remainder.size());
-  for (size_t i = 0; i < cfg.args_remainder.size(); ++i) {
-    auto& file = cfg.args_remainder.get_as<string>(i);
+  intermediate_results.resize(cfg.remainder.size());
+  for (size_t i = 0; i < cfg.remainder.size(); ++i) {
+    auto& file = cfg.remainder[i];
     auto ptr = &intermediate_results[i];
     ptr->fname = file;
     ptr->fstream.reset(new std::ifstream(file));

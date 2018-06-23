@@ -16,10 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/io/connection_helper.hpp"
+
 #include <chrono>
 
+#include "caf/defaults.hpp"
 #include "caf/io/basp/instance.hpp"
-#include "caf/io/connection_helper.hpp"
 
 namespace caf {
 namespace io {
@@ -37,7 +39,8 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
                                     actor system_broker) {
   auto& mx = self->system().middleman().backend();
   auto& this_node = self->system().node();
-  auto& app_id = self->system().config().middleman_app_identifier;
+  auto app_id = get_or(self->config(), "middleman.app-identifier",
+                       defaults::middleman::app_identifier);
   for (auto& kvp : addresses) {
     for (auto& addr : kvp.second) {
       auto eptr = mx.new_remote_udp_endpoint(addr, port);
@@ -99,16 +102,16 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
             }
             CAF_LOG_INFO("could not connect to node directly");
           } else if (item == "basp.default-connectivity-udp") {
+            auto& sys = self->system();
             // create new broker to try addresses for communication via UDP
-            if (self->system().config().middleman_detach_utility_actors) {
-              self->system().middleman().spawn_broker<detached + hidden>(
-                datagram_connection_broker, port, std::move(addresses), b
-              );
-            } else {
+            if (get_or(sys.config(), "middleman.attach-utility-actors", false))
               self->system().middleman().spawn_broker<hidden>(
                 datagram_connection_broker, port, std::move(addresses), b
               );
-            }
+            else
+              self->system().middleman().spawn_broker<detached + hidden>(
+                datagram_connection_broker, port, std::move(addresses), b
+              );
           } else {
             CAF_LOG_INFO("aborted direct connection attempt, unknown item: "
                          << CAF_ARG(item));

@@ -61,19 +61,23 @@ public:
 
 protected:
   void start() override {
-    // initialize workers vector
+    // Create initial state for all workers.
+    typename worker_type::policy_data init{this};
+    // Prepare workers vector.
     auto num = num_workers();
     workers_.reserve(num);
+    // Create worker instanes.
     for (size_t i = 0; i < num; ++i)
-      workers_.emplace_back(new worker_type(i, this, max_throughput_));
-    // start all workers now that all workers have been initialized
+      workers_.emplace_back(new worker_type(i, this, init, max_throughput_));
+    // Start all workers.
     for (auto& w : workers_)
       w->start();
-    // launch thread for dispatching timeouts and delayed messages
+    // Launch an additional background thread for dispatching timeouts and
+    // delayed messages.
     timer_ = std::thread{[&] {
       clock_.run_dispatch_loop();
     }};
-    // run remaining startup code
+    // Run remaining startup code.
     super::start();
   }
 

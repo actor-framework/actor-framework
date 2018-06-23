@@ -18,20 +18,20 @@
 
 #pragma once
 
-#include <deque>
+#include <array>
 #include <chrono>
-#include <thread>
-#include <random>
-#include <cstddef>
-#include <mutex>
 #include <condition_variable>
+#include <cstddef>
+#include <deque>
+#include <mutex>
+#include <random>
+#include <thread>
 
-#include "caf/resumable.hpp"
 #include "caf/actor_system_config.hpp"
-
-#include "caf/policy/unprofiled.hpp"
-
 #include "caf/detail/double_ended_queue.hpp"
+#include "caf/policy/unprofiled.hpp"
+#include "caf/resumable.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf {
 namespace policy {
@@ -45,17 +45,15 @@ public:
   // A thread-safe queue implementation.
   using queue_type = detail::double_ended_queue<resumable>;
 
-  using usec = std::chrono::microseconds;
-
   // configuration for aggressive/moderate/relaxed poll strategies.
   struct poll_strategy {
     size_t attempts;
     size_t step_size;
     size_t steal_interval;
-    usec sleep_duration;
+    timespan sleep_duration;
   };
 
-  // what is needed to implement the waiting strategy. 
+  // what is needed to implement the waiting strategy.
   struct wait_strategy {
     std::mutex lock;
     std::condition_variable cv;
@@ -74,23 +72,8 @@ public:
 
   // Holds job job queue of a worker and a random number generator.
   struct worker_data {
-    inline explicit worker_data(scheduler::abstract_coordinator* p)
-        : rengine(std::random_device{}()),
-          // no need to worry about wrap-around; if `p->num_workers() < 2`,
-          // `uniform` will not be used anyway
-          uniform(0, p->num_workers() - 2),
-          strategies{
-            {p->system().config().work_stealing_aggressive_poll_attempts, 1,
-             p->system().config().work_stealing_aggressive_steal_interval,
-             usec{0}},
-            {p->system().config().work_stealing_moderate_poll_attempts, 1,
-             p->system().config().work_stealing_moderate_steal_interval,
-             usec{p->system().config().work_stealing_moderate_sleep_duration_us}},
-            {1, 0, p->system().config().work_stealing_relaxed_steal_interval,
-            usec{p->system().config().work_stealing_relaxed_sleep_duration_us}}
-          } {
-      // nop
-    }
+    explicit worker_data(scheduler::abstract_coordinator* p);
+    worker_data(const worker_data& other);
 
     // This queue is exposed to other workers that may attempt to steal jobs
     // from it and the central scheduling unit can push new jobs to the queue.
@@ -98,7 +81,7 @@ public:
     // needed to generate pseudo random numbers
     std::default_random_engine rengine;
     std::uniform_int_distribution<size_t> uniform;
-    poll_strategy strategies[3];
+    std::array<poll_strategy, 3> strategies;
     wait_strategy waitdata;
   };
 
@@ -130,10 +113,10 @@ public:
     auto& lock = d(self).waitdata.lock;
     auto& cv = d(self).waitdata.cv;
     { // guard scope
-      std::unique_lock<std::mutex> guard(lock);	
-      // check if the worker is sleeping 
-      if (d(self).waitdata.sleeping && !d(self).queue.empty() ) 
-        cv.notify_one(); 
+      std::unique_lock<std::mutex> guard(lock);
+      // check if the worker is sleeping
+      if (d(self).waitdata.sleeping && !d(self).queue.empty() )
+        cv.notify_one();
     }
   }
 
@@ -182,10 +165,10 @@ public:
     bool notimeout = true;
     size_t i=1;
     do {
-      { // guard scope 
+      { // guard scope
         std::unique_lock<std::mutex> guard(lock);
         sleeping = true;
-        if (!cv.wait_for(guard, relaxed.sleep_duration, 
+        if (!cv.wait_for(guard, relaxed.sleep_duration,
                          [&] { return !d(self).queue.empty(); }))
           notimeout = false;
         sleeping = false;
@@ -195,7 +178,7 @@ public:
       } else {
         notimeout = true;
         if ((i % relaxed.steal_interval) == 0)
-          job = try_steal(self);			    
+          job = try_steal(self);
       }
       ++i;
     } while(job == nullptr);

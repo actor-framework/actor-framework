@@ -16,220 +16,153 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE config_option
 #include "caf/test/unit_test.hpp"
 
 #include "caf/config_option.hpp"
-#include "caf/actor_system_config.hpp"
-
-// turn off several flags for overflows / sign conversion
-#ifdef CAF_CLANG
-#pragma clang diagnostic ignored "-Wsign-conversion"
-#pragma clang diagnostic ignored "-Wfloat-equal"
-#pragma clang diagnostic ignored "-Wconstant-conversion"
-#elif defined(CAF_GCC)
-#pragma GCC diagnostic ignored "-Woverflow"
-#endif
+#include "caf/make_config_option.hpp"
+#include "caf/config_value.hpp"
+#include "caf/expected.hpp"
 
 using namespace caf;
+
+using std::string;
 
 namespace {
 
 constexpr const char* category = "category";
 constexpr const char* name = "name";
 constexpr const char* explanation = "explanation";
-constexpr size_t line = 0;
 
 template<class T>
-constexpr T zero() { return 0; }
-
-template<class T, class U, class V> 
-constexpr T overflow() {
-  // +2 is necessary as after an overflow unsigned integral numbers 
-  // must differ from zero() in the tests
-  return static_cast<V>(std::numeric_limits<U>::max()) + 2;
+constexpr int64_t overflow() {
+  return static_cast<int64_t>(std::numeric_limits<T>::max()) + 1;
 }
 
-template <class T, class U> 
-std::tuple<T, std::string> run_config_option(const T& init_value, 
-                                             const U& test_value) {
-  std::stringstream ostr;
-  T output_value = init_value;
-  auto cv = config_value(test_value);
-  auto co = make_config_option(output_value, category, name, explanation);
-  auto f = co->to_sink(); 
-  f(line, cv, static_cast<std::ostream&>(ostr));
-  return std::make_tuple(output_value, ostr.str());
-}
-
-// only works with an integral types and double 
-template <class T, class U> 
-void check_num_general_usage() {
-  // check positive numbers
-  std::string error_str;
-  U test_value = 5;
-  T result;
-  std::tie(result, error_str) = run_config_option(zero<T>(), test_value); 
-  CAF_CHECK_EQUAL(result, static_cast<T>(test_value));
-  CAF_CHECK(error_str.empty());
-  // check negative numbers
-  test_value = -5;
-  std::tie(result, error_str) = run_config_option(zero<T>(), test_value); 
-  if (std::numeric_limits<T>::is_signed) {
-    CAF_CHECK_EQUAL(result, static_cast<T>(test_value));
-    CAF_CHECK(error_str.empty());
-  } else {
-    CAF_CHECK_EQUAL(result, zero<T>());
-    CAF_CHECK(!error_str.empty());
-  }
-  // check vector<T>
-  test_value = 5;
-  std::vector<T> vec_result;
-  std::tie(vec_result, error_str) = 
-           run_config_option(std::vector<T>{}, test_value);
-  CAF_CHECK(!vec_result.empty());
-  if (!vec_result.empty()) {
-    CAF_CHECK_EQUAL(*vec_result.begin(), static_cast<T>(test_value));
-  }
-}
-
-// only works with an integral types (no doubles)
-template <class T, class U> 
-void check_num_boundary_usage() {
-  std::string error_str;
-  T result;
-  U boundary_check = overflow<U,T,U>();
-  std::tie(result, error_str) = run_config_option(zero<T>(), boundary_check); 
-  T tmp = overflow<T, T, U>();
-  CAF_CHECK_NOT_EQUAL(result, tmp);
-  CAF_CHECK_EQUAL(result, zero<T>());
-  CAF_CHECK(!error_str.empty());
-}
-
-// only works with an integral types (no doubles)
-template <class T, class U> 
-void check_num_general_and_boundary_usage() {
-  check_num_general_usage<T, U>();
-  check_num_boundary_usage<T, U>();
-}
-
-// intended for atoms, strings, and bools 
-template <class T> 
-void check_non_num_general_usage(const T& init_value, const T& test_value) {
-  // general check
-  std::string error_str;
-  T result;
-  std::tie(result, error_str) = run_config_option(init_value, test_value);
-  CAF_CHECK_EQUAL(result, test_value);
-  // vector<T> check
-  std::vector<T> vec_result;
-  std::tie(vec_result, error_str) = 
-           run_config_option(std::vector<T>{}, test_value);
-  CAF_CHECK(!vec_result.empty());
-  if (!vec_result.empty()) {
-    CAF_CHECK_EQUAL(*vec_result.begin(), test_value);
-  }
-}
-
-void check_non_num_general_usage(bool init_value, bool test_value) {
-  // general check
-  std::string error_str;
-  bool result;
-  std::tie(result, error_str) = run_config_option(init_value, test_value);
-  CAF_CHECK_EQUAL(result, test_value);
-  // vector<T> check
-  // emplace_back() in class cli_arg do not support <bool> until C++14
-}
-
-}
-
-CAF_TEST(type_bool) {
-  check_non_num_general_usage(false, true);
-}
-
-CAF_TEST(type_int8_t) {
-  check_num_general_and_boundary_usage<int8_t, int64_t>();
-}
-
-CAF_TEST(type_uint8_t) {
-  check_num_general_and_boundary_usage<uint8_t, int64_t>();
-}
-
-CAF_TEST(type_int16_t) {
-  check_num_general_and_boundary_usage<int16_t, int64_t>();
-}
-
-CAF_TEST(type_uint16_t) {
-  check_num_general_and_boundary_usage<uint16_t, int64_t>();
-}
-
-CAF_TEST(type_int32_t) {
-  check_num_general_and_boundary_usage<int32_t, int64_t>();
-}
-
-CAF_TEST(type_uint32_t) {
-  check_num_general_and_boundary_usage<uint32_t, int64_t>();
-}
-
-CAF_TEST(type_uint64_t) {
-  check_num_general_usage<uint64_t, int64_t>();
-}
-
-CAF_TEST(type_int64_t) {
-  check_num_general_usage<int64_t, int64_t>();
-}
-
-CAF_TEST(type_float) {
-  check_num_general_usage<float, double>();
-  // check boundaries
-  std::string error_str;
-  float result;
-  float init_value = 0;
-  // *2 is required as +2 does not change the variable at this size anymore
-  double boundary_check = static_cast<double>(
-                                      std::numeric_limits<float>::max()) * 2;
-  std::tie(result, error_str) = run_config_option(init_value, boundary_check); 
-  float float_inf = std::numeric_limits<float>::infinity();
-  // Unit test does not compare inf values correct until now
-  bool tmp = float_inf == result;
-  CAF_CHECK_NOT_EQUAL(tmp, true);
-  CAF_CHECK_EQUAL(result, init_value);
-  CAF_CHECK_EQUAL(error_str.empty(), false);
-}
-
-CAF_TEST(type_double) {
-  check_num_general_usage<double, double>();
-}
-
-CAF_TEST(type_string) {
-  check_non_num_general_usage<std::string>("", "test string");
-}
-
-CAF_TEST(type_atom) {
-  // TODO: in class cli_arg std::istringstream do not support atom_value
-  // check_non_num_general_usage<atom_value>(atom(""), atom("test atom"));
+template<class T>
+constexpr int64_t underflow() {
+  return static_cast<int64_t>(std::numeric_limits<T>::min()) - 1;
 }
 
 template <class T>
-std::string v(const T& x) {
-  config_option::type_name_visitor v;
-  return v(x);
+optional<T> read(const std::string& arg) {
+  auto co = make_config_option<T>(category, name, explanation);
+  auto res = config_value::parse(arg);
+  if (res && holds_alternative<T>(*res)) {
+    CAF_CHECK_EQUAL(co.check(*res), none);
+    return get<T>(*res);
+  }
+  return none;
 }
 
-CAF_TEST(type_names) {
-  CAF_CHECK_EQUAL(v(true),             "a boolean");
-  CAF_CHECK_EQUAL(v(atom("")),         "an atom_value");
-  CAF_CHECK_EQUAL(v(std::string{}),    "a string");
-  CAF_CHECK_EQUAL(v(zero<float>()),    "a float");
-  CAF_CHECK_EQUAL(v(zero<double>()),   "a double");
-  CAF_CHECK_EQUAL(v(zero<int8_t>()),   "an 8-bit integer");
-  CAF_CHECK_EQUAL(v(zero<uint8_t>()),  "an 8-bit unsigned integer");
-  CAF_CHECK_EQUAL(v(zero<int16_t>()),  "a 16-bit integer");
-  CAF_CHECK_EQUAL(v(zero<uint16_t>()), "a 16-bit unsigned integer");
-  CAF_CHECK_EQUAL(v(zero<int32_t>()),  "a 32-bit integer");
-  CAF_CHECK_EQUAL(v(zero<uint32_t>()), "a 32-bit unsigned integer");
-  CAF_CHECK_EQUAL(v(zero<int64_t>()),  "a 64-bit integer");
-  CAF_CHECK_EQUAL(v(zero<uint64_t>()), "a 64-bit unsigned integer");
+// Unsigned integers.
+template <class T>
+void check_integer_options(std::true_type) {
+  using std::to_string;
+  // Run tests for positive integers.
+  T xzero = 0;
+  T xmax = std::numeric_limits<T>::max();
+  CAF_CHECK_EQUAL(read<T>(to_string(xzero)), xzero);
+  CAF_CHECK_EQUAL(read<T>(to_string(xmax)), xmax);
+  CAF_CHECK_EQUAL(read<T>(to_string(overflow<T>())), none);
+}
+
+// Signed integers.
+template <class T>
+void check_integer_options(std::false_type) {
+  using std::to_string;
+  // Run tests for positive integers.
+  std::true_type tk;
+  check_integer_options<T>(tk);
+  // Run tests for negative integers.
+  auto xmin = std::numeric_limits<T>::min();
+  CAF_CHECK_EQUAL(read<T>(to_string(xmin)), xmin);
+  CAF_CHECK_EQUAL(read<T>(to_string(underflow<T>())), none);
+}
+
+// only works with an integral types and double
+template <class T>
+void check_integer_options() {
+  std::integral_constant<bool, std::is_unsigned<T>::value> tk;
+  check_integer_options<T>(tk);
+}
+
+template <class T>
+T unbox(optional<T> x) {
+  if (!x)
+    CAF_FAIL("no value to unbox");
+  return std::move(*x);
+}
+
+} // namespace <anonymous>
+
+CAF_TEST(type_bool) {
+  CAF_CHECK_EQUAL(read<bool>("true"), true);
+  CAF_CHECK_EQUAL(read<bool>("false"), false);
+  CAF_CHECK_EQUAL(read<bool>("0"), none);
+  CAF_CHECK_EQUAL(read<bool>("1"), none);
+}
+
+CAF_TEST(type int8_t) {
+  check_integer_options<int8_t>();
+}
+
+CAF_TEST(type uint8_t) {
+  check_integer_options<uint8_t>();
+}
+
+CAF_TEST(type int16_t) {
+  check_integer_options<int16_t>();
+}
+
+CAF_TEST(type uint16_t) {
+  check_integer_options<uint16_t>();
+}
+
+CAF_TEST(type int32_t) {
+  check_integer_options<int32_t>();
+}
+
+CAF_TEST(type uint32_t) {
+  check_integer_options<uint32_t>();
+}
+
+CAF_TEST(type uint64_t) {
+  CAF_CHECK_EQUAL(unbox(read<uint64_t>("0")), 0u);
+  CAF_CHECK_EQUAL(read<uint64_t>("-1"), none);
+}
+
+CAF_TEST(type int64_t) {
+  CAF_CHECK_EQUAL(unbox(read<int64_t>("-1")), -1);
+  CAF_CHECK_EQUAL(unbox(read<int64_t>("0")),  0);
+  CAF_CHECK_EQUAL(unbox(read<int64_t>("1")),  1);
+}
+
+CAF_TEST(type float) {
+  CAF_CHECK_EQUAL(unbox(read<float>("-1.0")),  -1.0f);
+  CAF_CHECK_EQUAL(unbox(read<float>("-0.1")),  -0.1f);
+  CAF_CHECK_EQUAL(read<float>("0"),  none);
+  CAF_CHECK_EQUAL(read<float>("\"0.1\""),  none);
+}
+
+CAF_TEST(type double) {
+  CAF_CHECK_EQUAL(unbox(read<double>("-1.0")),  -1.0);
+  CAF_CHECK_EQUAL(unbox(read<double>("-0.1")),  -0.1);
+  CAF_CHECK_EQUAL(read<double>("0"),  none);
+  CAF_CHECK_EQUAL(read<double>("\"0.1\""),  none);
+}
+
+CAF_TEST(type string) {
+  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "foo");
+  CAF_CHECK_EQUAL(unbox(read<string>("foo")), "foo");
+}
+
+CAF_TEST(type atom) {
+  CAF_CHECK_EQUAL(unbox(read<atom_value>("'foo'")), atom("foo"));
+  CAF_CHECK_EQUAL(read<atom_value>("bar"), none);
+}
+
+CAF_TEST(type timespan) {
+  timespan dur{500};
+  CAF_CHECK_EQUAL(unbox(read<timespan>("500ns")), dur);
 }

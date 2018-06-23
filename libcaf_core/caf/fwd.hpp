@@ -19,8 +19,13 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <tuple>
+
+#include "caf/detail/is_one_of.hpp"
+#include "caf/detail/is_primitive_config_value.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf {
 
@@ -67,52 +72,56 @@ template <class, class...> class output_stream;
 
 // -- classes ------------------------------------------------------------------
 
-class actor;
-class error;
-class group;
-class message;
-class node_id;
-class behavior;
-class duration;
-class resumable;
-class actor_addr;
-class actor_pool;
-class message_id;
-class serializer;
-class actor_clock;
-class actor_proxy;
-class local_actor;
-class ref_counted;
-class actor_config;
-class actor_system;
-class deserializer;
-class group_module;
-class message_view;
-class scoped_actor;
-class inbound_path;
-class outbound_path;
 class abstract_actor;
 class abstract_group;
-class actor_registry;
-class blocking_actor;
-class execution_unit;
-class proxy_registry;
-class stream_manager;
+class actor;
+class actor_addr;
+class actor_clock;
 class actor_companion;
+class actor_config;
+class actor_control_block;
+class actor_pool;
+class actor_proxy;
+class actor_registry;
+class actor_system;
+class actor_system_config;
+class behavior;
+class blocking_actor;
+class config_option;
+class config_option_adder;
+class config_option_set;
+class config_value;
+class deserializer;
+class downstream_manager;
+class downstream_manager_base;
+class duration;
+class error;
+class event_based_actor;
+class execution_unit;
+class forwarding_actor_proxy;
+class group;
+class group_module;
+class inbound_path;
+class local_actor;
 class mailbox_element;
+class message;
 class message_builder;
 class message_handler;
-class scheduled_actor;
+class message_id;
+class message_view;
+class node_id;
+class outbound_path;
+class proxy_registry;
+class ref_counted;
 class response_promise;
-class event_based_actor;
+class resumable;
+class scheduled_actor;
+class scoped_actor;
+class serializer;
+class stream_manager;
 class type_erased_tuple;
 class type_erased_value;
-class downstream_manager;
-class actor_control_block;
-class actor_system_config;
 class uniform_type_info_map;
-class forwarding_actor_proxy;
-class downstream_manager_base;
 
 // -- structs ------------------------------------------------------------------
 
@@ -130,6 +139,16 @@ struct invalid_actor_addr_t;
 struct illegal_message_element;
 struct prohibit_top_level_spawn_marker;
 
+// -- free template functions --------------------------------------------------
+
+template <class T>
+config_option make_config_option(const char* category, const char* name,
+                                 const char* description);
+
+template <class T>
+config_option make_config_option(T& storage, const char* category,
+                                 const char* name, const char* description);
+
 // -- enums --------------------------------------------------------------------
 
 enum class stream_priority;
@@ -139,6 +158,12 @@ enum class atom_value : uint64_t;
 
 using actor_id = uint64_t;
 using stream_slot = uint16_t;
+
+// -- functions ----------------------------------------------------------------
+
+/// @relates actor_system_config
+const std::map<std::string, std::map<std::string, config_value>>&
+content(const actor_system_config&);
 
 // -- intrusive containers -----------------------------------------------------
 

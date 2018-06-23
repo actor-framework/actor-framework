@@ -520,6 +520,22 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr, atom_value& arg)
   // nop
 }
 
+message::cli_arg::cli_arg(std::string nstr, std::string tstr, timespan& arg)
+    : name(std::move(nstr)),
+      text(std::move(tstr)),
+      fun([&arg](const std::string& str) -> bool {
+        int64_t count;
+        std::istringstream iss{str};
+        if (iss >> count) {
+          arg = timespan{count};
+          return true;
+        }
+        return false;
+      }),
+      flag(nullptr) {
+  // nop
+}
+
 message::cli_arg::cli_arg(std::string nstr, std::string tstr, std::string& arg)
     : name(std::move(nstr)),
       text(std::move(tstr)),

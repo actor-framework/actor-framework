@@ -244,34 +244,39 @@ void bootstrap(actor_system& system,
     return 1;                                                                  \
   } while (true)
 
+struct config : actor_system_config {
+  config() {
+    opt_group{custom_options_, "global"}
+    .add(hostfile, "hostfile", "path to hostfile")
+    .add(wdir, "wdir", "working directory");
+  }
+  string hostfile;
+  string wdir;
+};
+
 int main(int argc, char** argv) {
-  actor_system_config cfg;
+  config cfg;
   cfg.parse(argc, argv);
   if (cfg.cli_helptext_printed)
     return 0;
   if (cfg.slave_mode)
     RETURN_WITH_ERROR("cannot use slave mode in caf-run tool");
-  string hostfile;
   std::unique_ptr<char, void (*)(void*)> pwd{getcwd(nullptr, 0), ::free};
-  string wdir;
-  auto res = cfg.args_remainder.extract_opts({
-    {"hostfile", "path to the hostfile", hostfile},
-    {"wdir", wdir}
-  });
-  if (hostfile.empty())
+  if (cfg.hostfile.empty())
     RETURN_WITH_ERROR("no hostfile specified or hostfile is empty");
-  auto& remainder = res.remainder;
+  auto& remainder = cfg.remainder;
   if (remainder.empty())
     RETURN_WITH_ERROR("empty command line");
-  auto cmd = std::move(remainder.get_mutable_as<std::string>(0));
+  auto cmd = std::move(remainder.front());
   vector<string> xs;
-  remainder.drop(1).extract([&](string& x) { xs.emplace_back(std::move(x)); });
-  auto hosts = read_hostfile(hostfile);
+  for (auto i = cfg.remainder.begin() + 1; i != cfg.remainder.end(); ++i)
+     xs.emplace_back(std::move(*i));
+  auto hosts = read_hostfile(cfg.hostfile);
   if (hosts.empty())
     RETURN_WITH_ERROR("no valid entry in hostfile");
   actor_system system{cfg};
   auto master = hosts.front();
   hosts.erase(hosts.begin());
-  bootstrap(system, (wdir.empty()) ? pwd.get() : wdir.c_str(), master,
+  bootstrap(system, (cfg.wdir.empty()) ? pwd.get() : cfg.wdir.c_str(), master,
             std::move(hosts), cmd, xs);
 }

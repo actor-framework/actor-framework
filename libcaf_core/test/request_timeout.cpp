@@ -265,7 +265,7 @@ behavior ping_multiplexed3(ping_actor* self, bool* had_timeout,
 
 struct config : actor_system_config {
   config() {
-    scheduler_policy = atom("testing");
+    set("scheduler.policy", atom("testing"));
   }
 };
 

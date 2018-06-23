@@ -37,8 +37,12 @@ set(LIBCAF_CORE_SRCS
   src/blocking_behavior.cpp
   src/concatenated_tuple.cpp
   src/config_option.cpp
+  src/config_option_adder.cpp
+  src/config_option_set.cpp
+  src/config_value.cpp
   src/decorated_tuple.cpp
   src/default_attachable.cpp
+  src/defaults.cpp
   src/deserializer.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
@@ -50,6 +54,7 @@ set(LIBCAF_CORE_SRCS
   src/execution_unit.cpp
   src/exit_reason.cpp
   src/forwarding_actor_proxy.cpp
+  src/fsm.cpp
   src/get_mac_addresses.cpp
   src/get_process_id.cpp
   src/get_root_uuid.cpp
@@ -57,10 +62,12 @@ set(LIBCAF_CORE_SRCS
   src/group_manager.cpp
   src/group_module.cpp
   src/inbound_path.cpp
+  src/ini_consumer.cpp
   src/invoke_result_visitor.cpp
   src/local_actor.cpp
   src/logger.cpp
   src/mailbox_element.cpp
+  src/make_config_option.cpp
   src/match_case.cpp
   src/memory_managed.cpp
   src/merged_tuple.cpp
@@ -72,7 +79,7 @@ set(LIBCAF_CORE_SRCS
   src/monitorable_actor.cpp
   src/node_id.cpp
   src/outbound_path.cpp
-  src/parse_ini.cpp
+  src/pec.cpp
   src/pretty_type_name.cpp
   src/private_thread.cpp
   src/proxy_registry.cpp

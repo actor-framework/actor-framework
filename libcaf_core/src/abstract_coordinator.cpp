@@ -27,22 +27,20 @@
 #include <unordered_map>
 #include <condition_variable>
 
-#include "caf/send.hpp"
-#include "caf/after.hpp"
-#include "caf/others.hpp"
-#include "caf/duration.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/scoped_actor.hpp"
 #include "caf/actor_ostream.hpp"
-#include "caf/system_messages.hpp"
-#include "caf/scheduled_actor.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-
-#include "caf/scheduler/coordinator.hpp"
-
-#include "caf/policy/work_stealing.hpp"
-
+#include "caf/after.hpp"
+#include "caf/defaults.hpp"
+#include "caf/duration.hpp"
 #include "caf/logger.hpp"
+#include "caf/others.hpp"
+#include "caf/policy/work_stealing.hpp"
+#include "caf/scheduled_actor.hpp"
+#include "caf/scheduler/coordinator.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/send.hpp"
+#include "caf/system_messages.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -235,6 +233,10 @@ public:
  *                       implementation of coordinator                        *
  ******************************************************************************/
 
+const actor_system_config& abstract_coordinator::config() const {
+  return system_.config();
+}
+
 bool abstract_coordinator::detaches_utility_actors() const {
   return true;
 }
@@ -247,8 +249,9 @@ void abstract_coordinator::start() {
 }
 
 void abstract_coordinator::init(actor_system_config& cfg) {
-  max_throughput_ = cfg.scheduler_max_throughput;
-  num_workers_ = cfg.scheduler_max_threads;
+  namespace sr = defaults::scheduler;
+  max_throughput_ = get_or(cfg, "scheduler.max-throughput", sr::max_throughput);
+  num_workers_ = get_or(cfg, "scheduler.max-threads", sr::max_threads);
 }
 
 actor_system::module::id_t abstract_coordinator::id() const {

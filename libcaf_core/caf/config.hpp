@@ -96,6 +96,9 @@
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wnon-virtual-dtor\"")
+#  define CAF_PUSH_DEPRECATED_WARNING                                          \
+    _Pragma("clang diagnostic push")                                           \
+    _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH [[clang::fallthrough]]
@@ -122,6 +125,9 @@
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
+#  define CAF_PUSH_DEPRECATED_WARNING                                          \
+    _Pragma("GCC diagnostic push")                                             \
+    _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("GCC diagnostic pop")
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
@@ -154,6 +160,8 @@
 #  define CAF_UNLIKELY(x) x
 #  define CAF_DEPRECATED
 #  define CAF_PUSH_WARNINGS
+#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING
+#  define CAF_PUSH_DEPRECATED_WARNING
 #  define CAF_POP_WARNINGS
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #endif

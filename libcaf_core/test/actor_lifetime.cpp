@@ -118,7 +118,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
 
 struct config : actor_system_config {
   config() {
-    scheduler_policy = atom("testing");
+    set("scheduler.policy", atom("testing"));
   }
 };
 

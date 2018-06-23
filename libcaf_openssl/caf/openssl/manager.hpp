@@ -53,6 +53,11 @@ public:
     return system_;
   }
 
+  /// Returns the system-wide configuration.
+  inline const actor_system_config& config() const {
+    return system_.config();
+  }
+
   /// Returns true if configured to require certificate-based authentication
   /// of peers.
   bool authentication_enabled();

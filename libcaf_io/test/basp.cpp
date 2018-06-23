@@ -129,7 +129,7 @@ public:
                   .set("middleman.enable-automatic-connections", autoconn)
                   .set("scheduler.policy", autoconn ? caf::atom("testing")
                                                     : caf::atom("stealing"))
-                  .set("middleman.detach-utility-actors", !autoconn)) {
+                  .set("middleman.attach-utility-actors", autoconn)) {
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);

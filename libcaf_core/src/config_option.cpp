@@ -18,67 +18,78 @@
 
 #include "caf/config_option.hpp"
 
+#include <cstring>
 #include <iostream>
+
+#include "caf/config.hpp"
+#include "caf/config_value.hpp"
+#include "caf/error.hpp"
+#include "caf/optional.hpp"
+
+using std::move;
+using std::string;
+
+namespace {
+
+string get_long_name(const char* name) {
+  auto i= strchr(name, ',');
+  return i != nullptr ? string{name, i} : string{name};
+}
+
+string get_short_names(const char* name) {
+  auto substr = strchr(name, ',');
+  if (substr != nullptr)
+    return ++substr;
+  return string{};
+}
+
+} // namespace <anonymous>
 
 namespace caf {
 
-const char* type_name_visitor_tbl[] {
-  "a boolean", 
-  "a float", 
-  "a double",
-  "a string",
-  "an atom_value",
-  "an 8-bit integer",
-  "an 8-bit unsigned integer",
-  "a 16-bit integer",
-  "a 16-bit unsigned integer",
-  "a 32-bit integer",
-  "a 32-bit unsigned integer",
-  "a 64-bit integer",
-  "a 64-bit unsigned integer"
-};
+config_option::config_option(string category, const char* name,
+                             string description, const meta_state* meta,
+                             void* value)
+    : category_(move(category)),
+      long_name_(get_long_name(name)),
+      short_names_(get_short_names(name)),
+      description_(move(description)),
+      meta_(meta),
+      value_(value) {
+  CAF_ASSERT(meta_ != nullptr);
+}
 
-config_option::config_option(const char* cat, const char* nm, const char* expl)
-    : category_(cat),
-      name_(nm),
-      explanation_(expl),
-      short_name_('\0') {
-  auto last = name_.end();
-  auto comma = std::find(name_.begin(), last, ',');
-  if (comma != last) {
-    auto i = comma;
-    ++i;
-    if (i != last)
-      short_name_ = *i;
-    name_.erase(comma, last);
+string config_option::full_name() const {
+  std::string result = category();
+  result += '.';
+  result += long_name_;
+  return result;
+}
+
+error config_option::check(const config_value& x) const {
+  CAF_ASSERT(meta_->check != nullptr);
+  return meta_->check(x);
+}
+
+void config_option::store(const config_value& x) const {
+  if (value_ != nullptr) {
+    CAF_ASSERT(meta_->store != nullptr);
+    meta_->store(value_, x);
   }
 }
 
-config_option::~config_option() {
-  // nop
+const std::string& config_option::type_name() const noexcept {
+  return meta_->type_name;
 }
 
-std::string config_option::full_name() const {
-  std::string res = category();
-  res += '.';
-  auto name_begin = name();
-  const char* name_end = strchr(name(), ',');
-  if (name_end != nullptr)
-    res.insert(res.end(), name_begin, name_end);
-  else
-    res += name();
-  return res;
+bool config_option::is_flag() const noexcept {
+  return type_name() == "boolean";
 }
 
-void config_option::report_type_error(size_t ln, config_value& x,
-                                      const char* expected,
-                                      optional<std::ostream&> out) {
-  if (!out)
-    return;
-  type_name_visitor tnv;
-  *out << "error in line " << ln << ": expected "
-       << expected << " found "
-       << visit(tnv, x) << '\n';
+optional<config_value> config_option::get() const {
+  if (value_ != nullptr && meta_->get != nullptr)
+    return meta_->get(value_);
+  return none;
 }
 
 } // namespace caf

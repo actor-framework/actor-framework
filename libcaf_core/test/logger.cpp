@@ -18,7 +18,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE logger 
+#define CAF_SUITE logger
 #include "caf/test/unit_test.hpp"
 
 #include <ctime>
@@ -34,16 +34,16 @@ namespace {
 
 struct fixture {
   fixture() {
-    cfg.scheduler_policy = caf::atom("testing");
+    cfg.set("scheduler.policy", atom("testing"));
   }
 
   void add(logger::field_type kind) {
-    lf.emplace_back(logger::field{kind, nullptr, nullptr});
+    lf.emplace_back(logger::field{kind, std::string{}});
   }
 
   template <size_t N>
   void add(logger::field_type kind, const char (&str)[N]) {
-    lf.emplace_back(logger::field{kind, str, str + (N - 1)}); // exclude \0
+    lf.emplace_back(logger::field{kind, std::string{str, str + (N - 1)}});
   }
 
   template <class F, class... Ts>
@@ -67,7 +67,6 @@ CAF_TEST_FIXTURE_SCOPE(logger_tests, fixture)
 // and finally serialization round-trip
 CAF_TEST(parse_default_format_strings) {
   actor_system sys{cfg};
-  CAF_CHECK_EQUAL(cfg.logger_file_format, file_format);
   add(logger::runtime_field);
   add(logger::plain_text_field, " ");
   add(logger::category_field);

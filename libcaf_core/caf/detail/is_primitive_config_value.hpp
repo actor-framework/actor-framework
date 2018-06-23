@@ -18,37 +18,32 @@
 
 #pragma once
 
-#include <string>
-#include <istream>
-#include <functional>
+#include <cstdint>
+#include <map>
+#include <vector>
 
-#include "caf/atom.hpp"
-#include "caf/variant.hpp"
-#include "caf/optional.hpp"
-#include "caf/config_value.hpp"
+#include "caf/detail/is_one_of.hpp"
+#include "caf/timespan.hpp"
+
+// -- forward declarations (this header cannot include fwd.hpp) ----------------
+
+namespace caf {
+
+class config_value;
+enum class atom_value : uint64_t;
+
+} // namespace caf
+
+// -- trait --------------------------------------------------------------------
 
 namespace caf {
 namespace detail {
 
-struct parse_ini_t {
-  /// Denotes an optional error output stream
-  using opt_err = optional<std::ostream&>;
-  /// Denotes a callback for consuming configuration values.
-  using config_consumer = std::function<void (size_t, std::string,
-                                              config_value&, opt_err)>;
-
-  /// Parse the given input stream as INI formatted data and
-  /// calls the consumer with every key-value pair.
-  /// @param input Input stream of INI formatted text.
-  /// @param consumer_fun Callback consuming generated key-value pairs.
-  /// @param errors Output stream for parser errors.
-  void operator()(std::istream& input,
-                  const config_consumer& consumer_fun,
-                  opt_err errors = none) const;
-
-};
-
-constexpr parse_ini_t parse_ini = parse_ini_t{};
+/// Checks wheter `T` is in a primitive value type in `config_value`.
+template <class T>
+using is_primitive_config_value =
+  is_one_of<T, int64_t, bool, double, atom_value, timespan, std::string,
+            std::vector<config_value>, std::map<std::string, config_value>>;
 
 } // namespace detail
 } // namespace caf

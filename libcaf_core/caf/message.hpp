@@ -340,6 +340,9 @@ struct message::cli_arg {
   cli_arg(std::string nstr, std::string tstr, atom_value& arg);
 
   /// Creates a CLI argument storing its matched argument in `dest`.
+  cli_arg(std::string nstr, std::string tstr, timespan& arg);
+
+  /// Creates a CLI argument storing its matched argument in `dest`.
   cli_arg(std::string nstr, std::string tstr, std::string& arg);
 
   /// Creates a CLI argument appending matched arguments to `dest`.

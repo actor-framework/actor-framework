@@ -41,18 +41,29 @@ public:
     load<io::middleman>();
     set("middleman.enable-udp", true);
     add_message_type<std::vector<int>>("std::vector<int>");
-    actor_system_config::parse(test::engine::argc(),
-                               test::engine::argv());
   }
 };
 
 struct fixture {
+  // State for the server.
   config server_side_config;
-  actor_system server_side{server_side_config};
+  actor_system server_side;
+  io::middleman& server_side_mm;
+
+  // State for the client.
   config client_side_config;
-  actor_system client_side{client_side_config};
-  io::middleman& server_side_mm = server_side.middleman();
-  io::middleman& client_side_mm = client_side.middleman();
+  actor_system client_side;
+  io::middleman& client_side_mm;
+
+  fixture()
+      : server_side(server_side_config.parse(test::engine::argc(),
+                                             test::engine::argv())),
+        server_side_mm(server_side.middleman()),
+        client_side(client_side_config.parse(test::engine::argc(),
+                                             test::engine::argv())),
+        client_side_mm(client_side.middleman()) {
+    // nop
+  }
 };
 
 behavior make_pong_behavior() {
