@@ -159,31 +159,6 @@ enum class atom_value : uint64_t;
 using actor_id = uint64_t;
 using stream_slot = uint16_t;
 
-// -- free functions related to forwarded types --------------------------------
-
-template <class T>
-bool holds_alternative(const config_value&);
-
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, const T*,
-                          optional<T>>::type
-get_if(const config_value*);
-
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, T*,
-                          optional<T>>::type
-get_if(config_value*);
-
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, const T&,
-                          T>::type
-get(const config_value&);
-
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, T&,
-                          T>::type
-get(config_value&);
-
 // -- functions ----------------------------------------------------------------
 
 /// @relates actor_system_config

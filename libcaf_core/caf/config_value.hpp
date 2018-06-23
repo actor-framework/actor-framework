@@ -30,6 +30,9 @@
 #include "caf/fwd.hpp"
 #include "caf/optional.hpp"
 #include "caf/string_algorithms.hpp"
+#include "caf/sum_type.hpp"
+#include "caf/sum_type_access.hpp"
+#include "caf/sum_type_token.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/variant.hpp"
 
@@ -122,6 +125,16 @@ public:
     return data_;
   }
 
+  /// Returns a pointer to the underlying variant.
+  inline variant_type* get_data_ptr() {
+    return &data_;
+  }
+
+  /// Returns a pointer to the underlying variant.
+  inline const variant_type* get_data_ptr() const {
+    return &data_;
+  }
+
 private:
   // -- properties -------------------------------------------------------------
 
@@ -158,54 +171,122 @@ private:
   variant_type data_;
 };
 
+// -- related type aliases -----------------------------------------------------
+
 /// Organizes config values into categories.
 /// @relates config_value
 using config_value_map = std::map<std::string, config_value::dictionary>;
 
+// -- SumType-like access ------------------------------------------------------
+
 /// @relates config_value
 template <class T>
-struct config_value_access {
-  static constexpr bool specialized = false;
+struct config_value_access;
+
+/// Delegates to config_value_access for all specialized versions.
+template <class T, bool IsIntegral = std::is_integral<T>::value>
+struct select_config_value_access {
+  using type = config_value_access<T>;
 };
 
-/// @relates config_value_access
+/// Catches all non-specialized integer types.
 template <class T>
-struct default_config_value_access {
+struct select_config_value_access<T, true> {
+  struct type {
+    static bool is(const config_value& x) {
+      auto ptr = caf::get_if<typename config_value::integer>(x.get_data_ptr());
+      return ptr != nullptr && detail::bounds_checker<T>::check(*ptr);
+    }
+
+    static optional<T> get_if(const config_value* x) {
+      auto ptr = caf::get_if<typename config_value::integer>(x->get_data_ptr());
+      if (ptr != nullptr && detail::bounds_checker<T>::check(*ptr))
+        return static_cast<T>(*ptr);
+      return none;
+    }
+
+    static T get(const config_value& x) {
+      auto res = get_if(&x);
+      CAF_ASSERT(res != none);
+      return *res;
+    }
+  };
+};
+
+template <class T>
+using select_config_value_access_t =
+  typename select_config_value_access<T>::type;
+
+template <>
+struct sum_type_access<config_value> {
+  using types = typename config_value::types;
+
+  using type0 = typename detail::tl_head<types>::type;
+
   static constexpr bool specialized = true;
 
-  static bool is(const config_value& x) {
-    return holds_alternative<T>(x.get_data());
+  template <class U, int Pos>
+  static bool is(const config_value& x, sum_type_token<U, Pos> token) {
+    return x.get_data().is(token.pos);
   }
 
-  static T* get_if(config_value* x) {
-    return caf::get_if<T>(&(x->get_data()));
+  template <class U>
+  static bool is(const config_value& x, sum_type_token<U, -1>) {
+    return select_config_value_access_t<U>::is(x);
   }
 
-  static const T* get_if(const config_value* x) {
-    return caf::get_if<T>(&(x->get_data()));
+  template <class U, int Pos>
+  static U& get(config_value& x, sum_type_token<U, Pos> token) {
+    return x.get_data().get(token.pos);
   }
 
-  static T& get(config_value& x) {
-    return caf::get<T>(x.get_data());
+  template <class U>
+  static U get(config_value& x, sum_type_token<U, -1>) {
+    return select_config_value_access_t<U>::get(x);
   }
-  static const T& get(const config_value& x) {
-    return caf::get<T>(x.get_data());
+
+  template <class U, int Pos>
+  static const U& get(const config_value& x, sum_type_token<U, Pos> token) {
+    return x.get_data().get(token.pos);
+  }
+
+  template <class U>
+  static U get(const config_value& x, sum_type_token<U, -1>) {
+    return select_config_value_access_t<U>::get(x);
+  }
+
+  template <class U, int Pos>
+  static U* get_if(config_value* x, sum_type_token<U, Pos> token) {
+    return is(*x, token) ? &get(*x, token) : nullptr;
+  }
+
+  template <class U>
+  static optional<U> get_if(config_value* x, sum_type_token<U, -1>) {
+    return select_config_value_access_t<U>::get_if(x);
+  }
+
+  template <class U, int Pos>
+  static const U* get_if(const config_value* x, sum_type_token<U, Pos> token) {
+    return is(*x, token) ? &get(*x, token) : nullptr;
+  }
+
+  template <class U>
+  static optional<U> get_if(const config_value* x, sum_type_token<U, -1>) {
+    return select_config_value_access_t<U>::get_if(x);
+  }
+
+  template <class Result, class Visitor, class... Ts>
+  static Result apply(config_value& x, Visitor&& visitor, Ts&&... xs) {
+    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
+                                               std::forward<Ts>(xs)...);
+  }
+
+  template <class Result, class Visitor, class... Ts>
+  static Result apply(const config_value& x, Visitor&& visitor, Ts&&... xs) {
+    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
+                                               std::forward<Ts>(xs)...);
   }
 };
-
-#define CAF_CONFIG_VALUE_DEFAULT_ACCESS(subtype)                               \
-  template <>                                                                  \
-  struct config_value_access<config_value::subtype>                            \
-      : default_config_value_access<config_value::subtype> {}
-
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(integer);
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(boolean);
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(real);
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(atom);
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(timespan);
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(string);
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(list);
-CAF_CONFIG_VALUE_DEFAULT_ACCESS(dictionary);
 
 template <>
 struct config_value_access<float> {
@@ -285,7 +366,7 @@ struct config_value_access<std::map<std::string, V>> {
     auto lst = caf::get_if<config_value::dictionary>(&x);
     if (lst != nullptr) {
       return std::all_of(lst->begin(), lst->end(), [](const kvp& x) {
-        return config_value_access<V>::is(x.second);
+        return holds_alternative<V>(x.second);
       });
     }
     return false;
@@ -314,6 +395,8 @@ struct config_value_access<std::map<std::string, V>> {
     return std::move(*result);
   }
 };
+
+// -- SumType-like access of dictionary values ---------------------------------
 
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
@@ -446,100 +529,6 @@ T get_or(const actor_system_config& cfg, const std::string& name,
 
 std::string get_or(const actor_system_config& cfg, const std::string& name,
                    const char* default_value);
-
-// -- SumType-like access ------------------------------------------------------
-
-/// Delegates to config_value_access for all specialized versions.
-template <class T, bool Specialized = config_value_access<T>::specialized>
-struct select_config_value_access {
-  using type = config_value_access<T>;
-};
-
-/// Catches all non-specialized integer types.
-template <class T>
-struct select_config_value_access<T, false> {
-  static_assert(std::is_integral<T>::value,
-                "T must be integral or specialize config_value_access");
-
-  struct type {
-    static bool is(const config_value& x) {
-      using cvi = typename config_value::integer;
-      auto ptr = config_value_access<cvi>::get_if(&x);
-      return ptr != nullptr && detail::bounds_checker<T>::check(*ptr);
-    }
-
-    static optional<T> get_if(const config_value* x) {
-      using cvi = typename config_value::integer;
-      auto ptr = config_value_access<cvi>::get_if(x);
-      if (ptr != nullptr && detail::bounds_checker<T>::check(*ptr))
-        return static_cast<T>(*ptr);
-      return none;
-    }
-
-    static T get(const config_value& x) {
-      auto res = get_if(&x);
-      CAF_ASSERT(res != none);
-      return *res;
-    }
-  };
-};
-
-template <class T>
-using select_config_value_access_t =
-  typename select_config_value_access<T>::type;
-
-/// @relates config_value
-template <class T>
-bool holds_alternative(const config_value& x) {
-  return select_config_value_access_t<T>::is(x);
-}
-
-/// @relates config_value
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, const T*,
-                          optional<T>>::type
-get_if(const config_value* x) {
-  return select_config_value_access_t<T>::get_if(x);
-}
-
-/// @relates config_value
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, T*,
-                          optional<T>>::type
-get_if(config_value* x) {
-  return select_config_value_access_t<T>::get_if(x);
-}
-
-/// @relates config_value
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, const T&,
-                          T>::type
-get(const config_value& x) {
-  return select_config_value_access_t<T>::get(x);
-}
-
-/// @relates config_value
-template <class T>
-typename std::conditional<detail::is_primitive_config_value<T>::value, T&,
-                          T>::type
-get(config_value& x) {
-  return select_config_value_access_t<T>::get(x);
-}
-
-/// @relates config_value
-template <class Visitor>
-auto visit(Visitor&& f, config_value& x)
--> decltype(visit(std::forward<Visitor>(f), x.get_data())) {
-  return visit(std::forward<Visitor>(f), x.get_data());
-}
-
-/// @relates config_value
-template <class Visitor>
-auto visit(Visitor&& f, const config_value& x)
--> decltype(visit(std::forward<Visitor>(f), x.get_data())) {
-  return visit(std::forward<Visitor>(f), x.get_data());
-}
-
 /// @relates config_value
 bool operator<(const config_value& x, const config_value& y);
 

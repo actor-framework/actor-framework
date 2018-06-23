@@ -21,6 +21,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/sum_type_access.hpp"
+#include "caf/sum_type_token.hpp"
 
 namespace caf {
 
@@ -40,59 +41,57 @@ constexpr bool SumTypes() {
   return tl_forall<types, has_sum_type_access>::value;
 }
 
+template <class Trait, class T, bool = Trait::specialized>
+struct sum_type_index {
+  static constexpr int value = -1;
+};
+
+template <class Trait, class T>
+struct sum_type_index<Trait, T, true> {
+  static constexpr int value =
+    detail::tl_index_of<typename Trait::types, T>::value;
+};
+
+template <class Trait, class T>
+constexpr sum_type_token<T, sum_type_index<Trait, T>::value>
+make_sum_type_token() {
+  return {};
+}
+
+
 /// Returns a reference to the value of a sum type.
 /// @pre `holds_alternative<T>(x)`
 /// @relates SumType
-template <class T, class U>
-detail::enable_if_t<SumType<U>(), T&> get(U& x) {
-  using namespace detail;
-  using trait = sum_type_access<U>;
-  int_token<tl_index_where<typename trait::types,
-                           tbind<is_same_ish, T>::template type>::value> token;
-  // Silence compiler error about "binding to unrelated types" such as
-  // 'signed char' to 'char' (which is obvious bullshit).
-  return reinterpret_cast<T&>(trait::get(x, token));
+template <class T, class U, class Trait = sum_type_access<U>>
+auto get(U& x) -> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
+  return Trait::get(x, make_sum_type_token<Trait, T>());
 }
 
 /// Returns a reference to the value of a sum type.
 /// @pre `holds_alternative<T>(x)`
 /// @relates SumType
-template <class T, class U>
-detail::enable_if_t<SumType<U>(), const T&> get(const U& x) {
-  using namespace detail;
-  using trait = sum_type_access<U>;
-  int_token<tl_index_where<typename trait::types,
-                           tbind<is_same_ish, T>::template type>::value> token;
-  // Silence compiler error about "binding to unrelated types" such as
-  // 'signed char' to 'char' (which is obvious bullshit).
-  return reinterpret_cast<const T&>(trait::get(x, token));
+template <class T, class U, class Trait = sum_type_access<U>>
+auto get(const U& x)
+-> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
+  return Trait::get(x, make_sum_type_token<Trait, T>());
 }
 
 /// Returns a pointer to the value of a sum type if it is of type `T`,
 /// `nullptr` otherwise.
 /// @relates SumType
-template <class T, class U>
-detail::enable_if_t<SumType<U>(), T*> get_if(U* x) {
-  using namespace detail;
-  using trait = sum_type_access<U>;
-  int_token<tl_index_where<typename trait::types,
-                           tbind<is_same_ish, T>::template type>::value> token;
-  return trait::is(*x, token) ? &trait::get(*x, token) : nullptr;
+template <class T, class U, class Trait = sum_type_access<U>>
+auto get_if(U* x)
+-> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
+  return Trait::get_if(x, make_sum_type_token<Trait, T>());
 }
 
 /// Returns a pointer to the value of a sum type if it is of type `T`,
 /// `nullptr` otherwise.
 /// @relates SumType
-template <class T, class U>
-detail::enable_if_t<SumType<U>(), const T*> get_if(const U* x) {
-  using namespace detail;
-  using trait = sum_type_access<U>;
-  using token_type =
-    int_token<tl_index_where<typename trait::types,
-                             tbind<is_same_ish, T>::template type>::value>;
-  token_type token;
-  static_assert(token_type::value != -1, "T is not part of the sum type");
-  return trait::is(*x, token) ? &trait::get(*x, token) : nullptr;
+template <class T, class U, class Trait = sum_type_access<U>>
+auto get_if(const U* x)
+-> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
+  return Trait::get_if(x, make_sum_type_token<Trait, T>());
 }
 
 /// Returns whether a sum type has a value of type `T`.
@@ -101,9 +100,7 @@ template <class T, class U>
 bool holds_alternative(const U& x) {
   using namespace detail;
   using trait = sum_type_access<U>;
-  int_token<tl_index_where<typename trait::types,
-                           tbind<is_same_ish, T>::template type>::value> token;
-  return trait::is(x, token);
+  return trait::is(x, make_sum_type_token<trait, T>());
 }
 
 template <bool Valid, class F, class... Ts>

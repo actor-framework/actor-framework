@@ -23,6 +23,7 @@
 #include <utility>
 
 #include "caf/detail/type_list.hpp"
+#include "caf/sum_type_token.hpp"
 
 namespace caf {
 
@@ -36,21 +37,29 @@ struct default_sum_type_access {
 
   static constexpr bool specialized = true;
 
-  template <int Pos>
-  static bool is(const T& x, std::integral_constant<int, Pos> token) {
-    return x.get_data().is(token);
+  template <class U, int Pos>
+  static bool is(const T& x, sum_type_token<U, Pos> token) {
+    return x.get_data().is(token.pos);
   }
 
-  template <int Pos>
-  static typename detail::tl_at<types, Pos>::type&
-  get(T& x, std::integral_constant<int, Pos> token) {
-    return x.get_data().get(token);
+  template <class U, int Pos>
+  static U& get(T& x, sum_type_token<U, Pos> token) {
+    return x.get_data().get(token.pos);
   }
 
-  template <int Pos>
-  static const typename detail::tl_at<types, Pos>::type&
-  get(const T& x, std::integral_constant<int, Pos> token) {
-    return x.get_data().get(token);
+  template <class U, int Pos>
+  static const U& get(const T& x, sum_type_token<U, Pos> token) {
+    return x.get_data().get(token.pos);
+  }
+
+  template <class U, int Pos>
+  static U* get_if(T* x, sum_type_token<U, Pos> token) {
+    return is(*x, token) ? &get(*x, token) : nullptr;
+  }
+
+  template <class U, int Pos>
+  static const U* get_if(const T* x, sum_type_token<U, Pos> token) {
+    return is(*x, token) ? &get(*x, token) : nullptr;
   }
 
   template <class Result, class Visitor, class... Ts>

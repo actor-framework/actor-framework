@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "caf/config_option.hpp"
+#include "caf/config_value.hpp"
 #include "caf/detail/type_name.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
