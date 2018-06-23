@@ -32,13 +32,6 @@ constexpr bool SumType() {
   return has_sum_type_access<typename std::decay<T>::type>::value;
 }
 
-/// Concept for checking whether `T` supports the sum type API by specializing
-/// `sum_type_access` and grants non-const element access.
-template <class T>
-constexpr bool MutableSumType() {
-  return has_mutable_sum_type_access<typename std::decay<T>::type>::value;
-}
-
 /// Concept for checking whether all `Ts` support the sum type API by
 /// specializing `sum_type_access`.
 template <class... Ts>

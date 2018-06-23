@@ -37,8 +37,6 @@ struct default_sum_type_access {
 
   static constexpr bool specialized = true;
 
-  static constexpr bool immutable = false;
-
   template <class U, int Pos>
   static bool is(const T& x, sum_type_token<U, Pos> token) {
     return x.get_data().is(token.pos);
