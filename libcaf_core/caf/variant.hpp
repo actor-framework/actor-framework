@@ -328,25 +328,31 @@ struct sum_type_access<variant<Ts...>>
 };
 
 /// @relates variant
-template <class T, template <class> class Predicate>
+template <template <class> class Predicate>
 struct variant_compare_helper {
-  using result_type = bool;
-  const T& lhs;
-  variant_compare_helper(const T& lhs_ref) : lhs(lhs_ref) {
-    // nop
+  template <class T>
+  bool operator()(const T& x, const T& y) const {
+    Predicate<T> f;
+    return f(x, y);
   }
-  template <class U>
-  bool operator()(const U& rhs) const {
-    auto ptr = get_if<U>(&lhs);
-    return ptr && Predicate<U>{}(*ptr, rhs);
+
+  template <class T, class U>
+  bool operator()(const T&, const U&) const {
+    return false;
   }
 };
 
 /// @relates variant
 template <class... Ts>
 bool operator==(const variant<Ts...>& x, const variant<Ts...>& y) {
-  variant_compare_helper<variant<Ts...>, std::equal_to> f{x};
-  return visit(f, y);
+  variant_compare_helper<std::equal_to> f;
+  return x.index() == y.index() && visit(f, x, y);
+}
+
+/// @relates variant
+template <class... Ts>
+bool operator!=(const variant<Ts...>& x, const variant<Ts...>& y) {
+  return !(x == y);
 }
 
 /// @relates variant
@@ -358,8 +364,8 @@ bool operator<(const variant<Ts...>& x, const variant<Ts...>& y) {
     return true;
   if (x.index() != y.index())
     return x.index() < y.index();
-  variant_compare_helper<variant<Ts...>, std::less> f{x};
-  return visit(f, y);
+  variant_compare_helper<std::less> f;
+  return visit(f, x, y);
 }
 
 /// @relates variant
@@ -371,34 +377,20 @@ bool operator>(const variant<Ts...>& x, const variant<Ts...>& y) {
     return true;
   if (x.index() != y.index())
     return x.index() > y.index();
-  variant_compare_helper<variant<Ts...>, std::greater> f{x};
-  return visit(f, y);
+  variant_compare_helper<std::greater> f;
+  return visit(f, x, y);
 }
 
 /// @relates variant
 template <class... Ts>
 bool operator<=(const variant<Ts...>& x, const variant<Ts...>& y) {
-  if (x.valueless_by_exception())
-    return true;
-  if (y.valueless_by_exception())
-    return false;
-  if (x.index() != y.index())
-    return x.index() < y.index();
-  variant_compare_helper<variant<Ts...>, std::less_equal> f{x};
-  return visit(f, y);
+  return !(x > y);
 }
 
 /// @relates variant
 template <class... Ts>
 bool operator>=(const variant<Ts...>& x, const variant<Ts...>& y) {
-  if (y.valueless_by_exception())
-    return true;
-  if (x.valueless_by_exception())
-    return false;
-  if (x.index() != y.index())
-    return x.index() >= y.index();
-  variant_compare_helper<variant<Ts...>, std::greater_equal> f{x};
-  return visit(f, y);
+  return !(x < y);
 }
 
 /// @relates variant

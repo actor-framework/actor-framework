@@ -65,6 +65,8 @@ struct compare_visitor {
 };
 
 struct equality_operator {
+  static constexpr bool default_value = false;
+
   template <class T, class U,
             detail::enable_if_t<((std::is_floating_point<T>::value
                                   && std::is_convertible<U, double>::value)
@@ -95,11 +97,13 @@ struct equality_operator {
             typename std::enable_if<!detail::is_comparable<T, U>::value,
                                     int>::type = 0>
   bool operator()(const T&, const U&) const {
-    return false;
+    return default_value;
   }
 };
 
 struct inequality_operator {
+  static constexpr bool default_value = true;
+
   template <class T, class U,
             typename std::enable_if<(std::is_floating_point<T>::value
                                      || std::is_floating_point<U>::value)
@@ -123,7 +127,18 @@ struct inequality_operator {
             typename std::enable_if<!detail::is_comparable<T, U>::value,
                                     int>::type = 0>
   bool operator()(const T&, const U&) const {
-    return true;
+    return default_value;
+  }
+};
+
+template <class F, class T>
+struct comparison_unbox_helper {
+  const F& f;
+  const T& rhs;
+
+  template <class U>
+  bool operator()(const U& lhs) const {
+    return f(lhs, rhs);
   }
 };
 
@@ -149,15 +164,23 @@ private:
   }
 
   template <class T, class U>
-  bool cmp(const T& x, const U& y, std::true_type, bool) const {
-    compare_visitor<U, comparison> f{y};
-    return visit(f, x);
+  bool cmp(const T& x, const U& y, std::true_type, std::false_type) const {
+    Operator f;
+    auto inner_x = caf::get_if<U>(&x);
+    return inner_x ? f(*inner_x, y) : Operator::default_value;
   }
 
   template <class T, class U>
   bool cmp(const T& x, const U& y, std::false_type, std::true_type) const {
-    compare_visitor<T, comparison> f{x};
-    return visit(f, y);
+    Operator f;
+    auto inner_y = caf::get_if<T>(&y);
+    return inner_y ? f(x, *inner_y) : Operator::default_value;
+  }
+
+  template <class T, class U>
+  bool cmp(const T& x, const U& y, std::true_type, std::true_type) const {
+    comparison_unbox_helper<comparison, U> f{*this, y};
+    return visit(f, x);
   }
 };
 

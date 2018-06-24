@@ -44,17 +44,42 @@ struct anything { };
 anything any_vals;
 
 template <class T>
-bool operator==(anything, const T&) {
-  return true;
+struct maybe {
+  maybe(T x) : val(std::move(x)) {
+    // nop
+  }
+
+  maybe(anything) {
+    // nop
+  }
+
+  caf::optional<T> val;
+};
+
+template <class T>
+std::string to_string(const maybe<T>& x) {
+  return to_string(x.val);
 }
 
 template <class T>
-bool operator==(const T&, anything) {
-  return true;
+bool operator==(const maybe<T>& x, const T& y) {
+  return x.val ? x.val == y : true;
 }
 
 template <class T>
-using maybe = caf::variant<anything, T>;
+bool operator==(const T& x, const maybe<T>& y) {
+  return y.val ? x == y.val : true;
+}
+
+template <class T>
+bool operator!=(const maybe<T>& x, const T& y) {
+  return !(x == y);
+}
+
+template <class T>
+bool operator!=(const T& x, const maybe<T>& y) {
+  return !(x == y);
+}
 
 constexpr uint8_t no_flags = 0;
 constexpr uint32_t no_payload = 0;
@@ -65,33 +90,6 @@ constexpr auto spawn_serv_atom = caf::atom("SpawnServ");
 constexpr auto config_serv_atom = caf::atom("ConfigServ");
 
 } // namespace <anonymous>
-
-namespace std {
-
-ostream& operator<<(ostream& out, const caf::io::basp::message_type& x) {
-  return out << to_string(x);
-}
-
-template <class T>
-ostream& operator<<(ostream& out, const maybe<T>& x) {
-  using std::to_string;
-  using caf::to_string;
-  using caf::io::basp::to_string;
-  if (caf::get_if<anything>(&x) != nullptr)
-    return out << "*";
-  return out << to_string(get<T>(x));
-}
-
-} // namespace std
-
-namespace caf {
-
-template <class T>
-std::string to_string(const maybe<T>& x) {
-  return !get_if<anything>(&x) ? std::string{"*"} : deep_to_string(get<T>(x));
-}
-
-} // namespace caf
 
 using namespace std;
 using namespace caf;
@@ -397,7 +395,7 @@ public:
         ob.erase(ob.begin(), ob.begin() + basp::header_size);
       }
       CAF_CHECK_EQUAL(operation, hdr.operation);
-      CAF_CHECK_EQUAL(flags, static_cast<size_t>(hdr.flags));
+      CAF_CHECK_EQUAL(flags, static_cast<uint8_t>(hdr.flags));
       CAF_CHECK_EQUAL(payload_len, hdr.payload_len);
       CAF_CHECK_EQUAL(operation_data, hdr.operation_data);
       CAF_CHECK_EQUAL(source_node, hdr.source_node);
