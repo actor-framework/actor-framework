@@ -48,6 +48,9 @@ std::vector<iface_info> get_mac_addresses() {
     }
     auto ifm = reinterpret_cast<if_msghdr*>(buf.data());
     auto sdl = reinterpret_cast<sockaddr_dl*>(ifm + 1);
+    constexpr auto mac_addr_len = 6;
+    if (sdl->sdl_alen != mac_addr_len)
+      continue;
     auto ptr = reinterpret_cast<unsigned char*>(LLADDR(sdl));
     auto uctoi = [](unsigned char c) -> unsigned {
       return static_cast<unsigned char>(c);
@@ -57,7 +60,7 @@ std::vector<iface_info> get_mac_addresses() {
     oss.fill('0');
     oss.width(2);
     oss << uctoi(*ptr++);
-    for (auto j = 0; j < 5; ++j) {
+    for (auto j = 0; j < mac_addr_len - 1; ++j) {
       oss << ":";
       oss.width(2);
       oss << uctoi(*ptr++);
