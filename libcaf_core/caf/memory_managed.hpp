@@ -32,7 +32,7 @@ public:
   ///                       reference of this object before calling this member
   ///                       function. This information is important when
   ///                       implementing a type with support for weak pointers.
-  virtual void request_deletion(bool decremented_rc) noexcept;
+  virtual void request_deletion(bool decremented_rc) const noexcept;
 
 protected:
   virtual ~memory_managed();

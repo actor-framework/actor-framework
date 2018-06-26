@@ -38,13 +38,13 @@ public:
   ref_counted& operator=(const ref_counted&);
 
   /// Increases reference count by one.
-  inline void ref() noexcept {
+  inline void ref() const noexcept {
     rc_.fetch_add(1, std::memory_order_relaxed);
   }
 
   /// Decreases reference count by one and calls `request_deletion`
   /// when it drops to zero.
-  void deref() noexcept;
+  void deref() const noexcept;
 
   /// Queries whether there is exactly one reference.
   inline bool unique() const noexcept {
@@ -56,16 +56,16 @@ public:
   }
 
 protected:
-  std::atomic<size_t> rc_;
+  mutable std::atomic<size_t> rc_;
 };
 
 /// @relates ref_counted
-inline void intrusive_ptr_add_ref(ref_counted* p) {
+inline void intrusive_ptr_add_ref(const ref_counted* p) {
   p->ref();
 }
 
 /// @relates ref_counted
-inline void intrusive_ptr_release(ref_counted* p) {
+inline void intrusive_ptr_release(const ref_counted* p) {
   p->deref();
 }
 

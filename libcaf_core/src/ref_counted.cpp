@@ -37,7 +37,7 @@ ref_counted& ref_counted::operator=(const ref_counted&) {
   return *this;
 }
 
-void ref_counted::deref() noexcept {
+void ref_counted::deref() const noexcept {
   if (unique()) {
     request_deletion(false);
     return;
