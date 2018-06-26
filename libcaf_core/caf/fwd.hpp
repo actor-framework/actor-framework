@@ -120,6 +120,7 @@ class scheduled_actor;
 class scoped_actor;
 class serializer;
 class stream_manager;
+class string_view;
 class type_erased_tuple;
 class type_erased_value;
 class uniform_type_info_map;
@@ -143,12 +144,12 @@ struct prohibit_top_level_spawn_marker;
 // -- free template functions --------------------------------------------------
 
 template <class T>
-config_option make_config_option(const char* category, const char* name,
-                                 const char* description);
+config_option make_config_option(string_view category, string_view name,
+                                 string_view description);
 
 template <class T>
-config_option make_config_option(T& storage, const char* category,
-                                 const char* name, const char* description);
+config_option make_config_option(T& storage, string_view category,
+                                 string_view name, string_view description);
 
 // -- enums --------------------------------------------------------------------
 

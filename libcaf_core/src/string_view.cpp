@@ -20,7 +20,7 @@
 
 #include <algorithm>
 #include <cstring>
-#include <cstring>
+#include <iostream>
 #include <stdexcept>
 
 #include "caf/config.hpp"
@@ -306,3 +306,13 @@ size_type string_view::find_last_not_of(const_pointer str,
 }
 
 } // namespace caf
+
+namespace std {
+
+std::ostream& operator<<(std::ostream& out, caf::string_view str) {
+  for (auto ch : str)
+    out.put(ch);
+  return out;
+}
+
+} // namespace std

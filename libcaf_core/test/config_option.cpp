@@ -30,9 +30,9 @@ using std::string;
 
 namespace {
 
-constexpr const char* category = "category";
-constexpr const char* name = "name";
-constexpr const char* explanation = "explanation";
+constexpr string_view category = "category";
+constexpr string_view name = "name";
+constexpr string_view explanation = "explanation";
 
 template<class T>
 constexpr int64_t overflow() {
@@ -45,7 +45,7 @@ constexpr int64_t underflow() {
 }
 
 template <class T>
-optional<T> read(const std::string& arg) {
+optional<T> read(string_view arg) {
   auto co = make_config_option<T>(category, name, explanation);
   auto res = config_value::parse(arg);
   if (res && holds_alternative<T>(*res)) {

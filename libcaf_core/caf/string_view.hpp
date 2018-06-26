@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstddef>
+#include <iosfwd>
 #include <iterator>
 #include <limits>
 #include <type_traits>
@@ -286,3 +287,9 @@ private:
 };
 
 } // namespace caf
+
+namespace std {
+
+std::ostream& operator<<(std::ostream& out, caf::string_view);
+
+} // namespace std

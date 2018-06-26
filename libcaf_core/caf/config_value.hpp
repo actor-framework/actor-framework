@@ -97,11 +97,11 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Tries to parse a value from `str`.
-  static expected<config_value> parse(std::string::const_iterator first,
-                                      std::string::const_iterator last);
+  static expected<config_value> parse(string_view::iterator first,
+                                      string_view::iterator last);
 
   /// Tries to parse a value from `str`.
-  static expected<config_value> parse(const std::string& str);
+  static expected<config_value> parse(string_view str);
 
   // -- properties -------------------------------------------------------------
 

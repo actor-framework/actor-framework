@@ -100,15 +100,15 @@ public:
 
   /// Adds a config option to the set.
   template <class T>
-  config_option_set& add(const char* category, const char* name,
-                         const char* description = "") {
+  config_option_set& add(string_view category, string_view name,
+                         string_view description = "") {
     return add(make_config_option<T>(category, name, description));
   }
 
   /// Adds a config option to the set that synchronizes its value with `ref`.
   template <class T>
-  config_option_set& add(T& ref, const char* category, const char* name,
-                         const char* description = "") {
+  config_option_set& add(T& ref, string_view category, string_view name,
+                         string_view description = "") {
     return add(make_config_option<T>(ref, category, name, description));
   }
 

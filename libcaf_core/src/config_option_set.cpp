@@ -34,19 +34,13 @@ struct string_builder {
   std::string result;
 };
 
-template <size_t N>
-string_builder& operator<<(string_builder& builder, const char (&cstr)[N]) {
-  builder.result.append(cstr, N - 1);
+string_builder& operator<<(string_builder& builder, char ch) {
+  builder.result += ch;
   return builder;
 }
 
-string_builder& operator<<(string_builder& builder, char c) {
-  builder.result += c;
-  return builder;
-}
-
-string_builder& operator<<(string_builder& builder, const std::string& str) {
-  builder.result += str;
+string_builder& operator<<(string_builder& builder, caf::string_view str) {
+  builder.result.append(str.data(), str.size());
   return builder;
 }
 
@@ -94,8 +88,8 @@ std::string config_option_set::help_text(bool global_only) const {
   };
   // Sort argument + description by category.
   using pair = std::pair<std::string, option_pointer>;
-  std::set<std::string> categories;
-  std::multimap<std::string, pair> args;
+  std::set<string_view> categories;
+  std::multimap<string_view, pair> args;
   size_t max_arg_size = 0;
   for (auto& opt : opts_) {
     if (!global_only || opt.category() == "global") {
@@ -132,7 +126,7 @@ auto config_option_set::parse(config_map& config, argument_iterator first,
   auto consume = [&](const config_option& opt, iter arg_begin, iter arg_end) {
     // Extract option name and category.
     auto opt_name = opt.long_name();
-    string opt_ctg = opt.category();
+    auto opt_ctg = opt.category();
     // Try inserting a new submap into the config or fill existing one.
     auto& submap = config[opt_ctg];
     // Flags only consume the current element.
@@ -145,7 +139,9 @@ auto config_option_set::parse(config_map& config, argument_iterator first,
     } else {
       if (arg_begin == arg_end)
         return pec::missing_argument;
-      auto val = config_value::parse(arg_begin, arg_end);
+      auto slice_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
+      string_view slice{&*arg_begin, slice_size};
+      auto val = config_value::parse(slice);
       if (!val)
         return pec::illegal_argument;
       if (opt.check(*val) != none)
