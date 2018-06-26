@@ -188,9 +188,8 @@ void append_to_string(std::string& x, const node_id& y) {
     x += "invalid-node";
     return;
   }
-  detail::stringification_inspector si{x};
-  si.consume_hex(reinterpret_cast<const uint8_t*>(y.host_id().data()),
-                 y.host_id().size());
+  detail::append_hex(x, reinterpret_cast<const uint8_t*>(y.host_id().data()),
+                     y.host_id().size());
   x += '#';
   x += std::to_string(y.process_id());
 }

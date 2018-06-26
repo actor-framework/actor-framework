@@ -21,53 +21,19 @@
 namespace caf {
 namespace detail {
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
-}
-
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
-}
-
-void stringification_inspector::consume(const char* cstr) {
-  if (cstr == nullptr || *cstr == '\0') {
-    result_ += R"("")";
+void append_hex(std::string& result, const uint8_t* xs, size_t n) {
+  if (n == 0) {
+    result += "00";
     return;
   }
-  if (*cstr == '"') {
-    // assume an already escaped string
-    result_ += cstr;
-    return;
+  auto tbl = "0123456789ABCDEF";
+  char buf[3] = {0, 0, 0};
+  for (size_t i = 0; i < n; ++i) {
+    auto c = xs[i];
+    buf[0] = tbl[c >> 4];
+    buf[1] = tbl[c & 0x0F];
+    result += buf;
   }
-  result_ += '"';
-  char c;
-  for(;;) {
-    switch (c = *cstr++) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-      case '\0':
-        goto end_of_string;
-    }
-  }
-  end_of_string:
-  result_ += '"';
 }
 
 } // namespace detail

@@ -35,8 +35,9 @@
 #include "caf/meta/omittable_if_none.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
 
-#include "caf/detail/int_list.hpp"
+#include "caf/detail/append_hex.hpp"
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/int_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -73,8 +74,6 @@ public:
   void consume(atom_value& x);
 
   void consume(const char* cstr);
-
-  void consume_hex(const uint8_t* xs, size_t n);
 
   inline void consume(bool& x) {
     result_ += x ? "true" : "false";
@@ -252,7 +251,8 @@ public:
   template <class T, class... Ts>
   void traverse(meta::hex_formatted_t, T& x, Ts&&... xs) {
     sep();
-    consume_hex(reinterpret_cast<uint8_t*>(deconst(x).data()), x.size());
+    append_hex(result_, reinterpret_cast<uint8_t*>(deconst(x).data()),
+               x.size());
     traverse(std::forward<Ts>(xs)...);
   }
 

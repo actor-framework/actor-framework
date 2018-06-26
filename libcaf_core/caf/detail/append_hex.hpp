@@ -16,59 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#pragma once
+
+#include <string>
 
 namespace caf {
 namespace detail {
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
-}
-
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
-}
-
-void stringification_inspector::consume(const char* cstr) {
-  if (cstr == nullptr || *cstr == '\0') {
-    result_ += R"("")";
-    return;
-  }
-  if (*cstr == '"') {
-    // assume an already escaped string
-    result_ += cstr;
-    return;
-  }
-  result_ += '"';
-  char c;
-  for(;;) {
-    switch (c = *cstr++) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-      case '\0':
-        goto end_of_string;
-    }
-  }
-  end_of_string:
-  result_ += '"';
-}
+void append_hex(std::string& result, const uint8_t* xs, size_t n);
 
 } // namespace detail
 } // namespace caf
