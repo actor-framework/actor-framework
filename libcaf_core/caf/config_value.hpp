@@ -27,6 +27,7 @@
 #include "caf/atom.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/optional.hpp"
 #include "caf/string_algorithms.hpp"
@@ -59,7 +60,7 @@ public:
 
   using list = std::vector<config_value>;
 
-  using dictionary = std::map<std::string, config_value>;
+  using dictionary = dictionary<config_value>;
 
   using types = detail::type_list<integer, boolean, real, atom, timespan,
                                   string, list, dictionary>;
@@ -175,7 +176,7 @@ private:
 
 /// Organizes config values into categories.
 /// @relates config_value
-using config_value_map = std::map<std::string, config_value::dictionary>;
+using config_value_map = dictionary<config_value::dictionary>;
 
 // -- SumType-like access ------------------------------------------------------
 
@@ -351,12 +352,12 @@ struct config_value_access<std::vector<T>> {
   }
 };
 
-/// Implements automagic unboxing of `std::map<std::string, V>` from a
-/// homogeneous `config_value::dictionary`.
+/// Implements automagic unboxing of `dictionary<V>` from a homogeneous
+/// `config_value::dictionary`.
 /// @relates config_value
 template <class V>
-struct config_value_access<std::map<std::string, V>> {
-  using map_type = std::map<std::string, V>;
+struct config_value_access<dictionary<V>> {
+  using map_type = dictionary<V>;
 
   using kvp = std::pair<const std::string, config_value>;
 
@@ -401,10 +402,9 @@ struct config_value_access<std::map<std::string, V>> {
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-optional<T> get_if(const config_value::dictionary* xs,
-                   const std::string& name) {
+optional<T> get_if(const config_value::dictionary* xs, string_view name) {
   // Split the name into a path.
-  std::vector<std::string> path;
+  std::vector<string_view> path;
   split(path, name, ".");
   // Sanity check.
   if (path.size() == 0)
@@ -433,7 +433,7 @@ optional<T> get_if(const config_value::dictionary* xs,
 /// Retrieves the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-T get(const config_value::dictionary& xs, const std::string& name) {
+T get(const config_value::dictionary& xs, string_view name) {
   auto result = get_if<T>(&xs, name);
   if (result)
     return std::move(*result);
@@ -444,7 +444,7 @@ T get(const config_value::dictionary& xs, const std::string& name) {
 /// `default_value`.
 /// @relates config_value
 template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const config_value::dictionary& xs, const std::string& name,
+T get_or(const config_value::dictionary& xs, string_view name,
          const T& default_value) {
   auto result = get_if<T>(&xs, name);
   if (result)
@@ -455,13 +455,13 @@ T get_or(const config_value::dictionary& xs, const std::string& name,
 /// Retrieves the value associated to `name` from `xs` or returns
 /// `default_value`.
 /// @relates config_value
-std::string get_or(const config_value::dictionary& xs, const std::string& name,
+std::string get_or(const config_value::dictionary& xs, string_view name,
                    const char* default_value);
 
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-optional<T> get_if(const config_value_map* xs, const std::string& name) {
+optional<T> get_if(const config_value_map* xs, string_view name) {
   // Get the category.
   auto pos = name.find('.');
   if (pos == std::string::npos) {
@@ -479,7 +479,7 @@ optional<T> get_if(const config_value_map* xs, const std::string& name) {
 /// Retrieves the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-T get(const config_value_map& xs, const std::string& name) {
+T get(const config_value_map& xs, string_view name) {
   auto result = get_if<T>(&xs, name);
   if (result)
     return std::move(*result);
@@ -490,8 +490,7 @@ T get(const config_value_map& xs, const std::string& name) {
 /// `default_value`.
 /// @relates config_value
 template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const config_value_map& xs, const std::string& name,
-         const T& default_value) {
+T get_or(const config_value_map& xs, string_view name, const T& default_value) {
   auto result = get_if<T>(&xs, name);
   if (result)
     return std::move(*result);
@@ -501,20 +500,20 @@ T get_or(const config_value_map& xs, const std::string& name,
 /// Retrieves the value associated to `name` from `xs` or returns
 /// `default_value`.
 /// @relates config_value
-std::string get_or(const config_value_map& xs, const std::string& name,
+std::string get_or(const config_value_map& xs, string_view name,
                    const char* default_value);
 
 /// Tries to retrieve the value associated to `name` from `cfg`.
 /// @relates config_value
 template <class T>
-optional<T> get_if(const actor_system_config* cfg, const std::string& name) {
+optional<T> get_if(const actor_system_config* cfg, string_view name) {
   return get_if<T>(&content(*cfg), name);
 }
 
 /// Retrieves the value associated to `name` from `cfg`.
 /// @relates config_value
 template <class T>
-T get(const actor_system_config& cfg, const std::string& name) {
+T get(const actor_system_config& cfg, string_view name) {
   return get<T>(content(cfg), name);
 }
 
@@ -522,12 +521,12 @@ T get(const actor_system_config& cfg, const std::string& name) {
 /// `default_value`.
 /// @relates config_value
 template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const actor_system_config& cfg, const std::string& name,
+T get_or(const actor_system_config& cfg, string_view name,
          const T& default_value) {
   return get_or(content(cfg), name, default_value);
 }
 
-std::string get_or(const actor_system_config& cfg, const std::string& name,
+std::string get_or(const actor_system_config& cfg, string_view name,
                    const char* default_value);
 /// @relates config_value
 bool operator<(const config_value& x, const config_value& y);

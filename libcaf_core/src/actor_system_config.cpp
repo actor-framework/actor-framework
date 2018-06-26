@@ -453,7 +453,7 @@ void actor_system_config::extract_config_file_path(string_list& args) {
   args.erase(i);
 }
 
-const std::map<std::string, std::map<std::string, config_value>>&
+const dictionary<dictionary<config_value>>&
 content(const actor_system_config& cfg) {
   return cfg.content;
 }

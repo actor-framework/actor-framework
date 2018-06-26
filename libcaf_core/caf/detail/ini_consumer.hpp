@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include <map>
 #include <string>
 
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
+#include "caf/dictionary.hpp"
 
 namespace caf {
 namespace detail {
@@ -183,7 +183,7 @@ public:
 
   using super = abstract_ini_consumer;
 
-  using config_map = std::map<std::string, config_value::dictionary>;
+  using config_map = dictionary<config_value::dictionary>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

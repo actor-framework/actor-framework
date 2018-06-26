@@ -30,6 +30,7 @@
 #include "caf/config_option.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
+#include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_typed_actor.hpp"
 #include "caf/named_actor_config.hpp"
@@ -79,7 +80,7 @@ public:
 
   using group_module_factory_vector = std::vector<group_module_factory>;
 
-  using config_map = std::map<std::string, config_value::dictionary>;
+  using config_map = dictionary<config_value::dictionary>;
 
   using string_list = std::vector<std::string>;
 
@@ -101,7 +102,7 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// @private
-  std::map<std::string, config_value::dictionary> content;
+  dictionary<config_value::dictionary> content;
 
   /// Sets a config by using its INI name `config_name` to `config_value`.
   template <class T>

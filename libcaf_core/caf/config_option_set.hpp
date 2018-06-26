@@ -54,10 +54,10 @@ public:
   using iterator = option_vector::iterator;
 
   /// Maps string keys to arbitrary (config) values.
-  using dictionary = std::map<std::string, config_value>;
+  using dictionary = dictionary<config_value>;
 
   /// Categorized settings.
-  using config_map = std::map<std::string, dictionary>;
+  using config_map = caf::dictionary<dictionary>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

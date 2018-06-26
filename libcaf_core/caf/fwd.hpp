@@ -32,6 +32,7 @@ namespace caf {
 // -- 1 param templates --------------------------------------------------------
 
 template <class> class behavior_type_of;
+template <class> class dictionary;
 template <class> class downstream;
 template <class> class expected;
 template <class> class intrusive_ptr;
@@ -162,8 +163,7 @@ using stream_slot = uint16_t;
 // -- functions ----------------------------------------------------------------
 
 /// @relates actor_system_config
-const std::map<std::string, std::map<std::string, config_value>>&
-content(const actor_system_config&);
+const dictionary<dictionary<config_value>>& content(const actor_system_config&);
 
 // -- intrusive containers -----------------------------------------------------
 
