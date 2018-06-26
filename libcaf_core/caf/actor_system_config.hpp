@@ -105,7 +105,7 @@ public:
 
   /// Sets a config by using its INI name `config_name` to `config_value`.
   template <class T>
-  actor_system_config& set(const char* name, T&& value) {
+  actor_system_config& set(string_view name, T&& value) {
     return set_impl(name, config_value{std::forward<T>(value)});
   }
 
@@ -403,7 +403,7 @@ private:
                                      &make_type_erased_value<T>);
   }
 
-  actor_system_config& set_impl(const char* name, config_value value);
+  actor_system_config& set_impl(string_view name, config_value value);
 
   static std::string render_sec(uint8_t, atom_value, const message&);
 

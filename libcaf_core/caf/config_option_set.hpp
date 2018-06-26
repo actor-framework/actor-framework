@@ -28,6 +28,7 @@
 #include "caf/fwd.hpp"
 #include "caf/make_config_option.hpp"
 #include "caf/pec.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -69,18 +70,18 @@ public:
   ///             `<prefix>#<category>.<long-name>`. Users can omit `<prefix>`
   ///             for options that have an empty prefix and `<category>`
   ///             if the category is "global".
-  option_pointer cli_long_name_lookup(const std::string& name) const;
+  option_pointer cli_long_name_lookup(string_view name) const;
 
   /// Returns the first `config_option` that matches the CLI short option name.
   option_pointer cli_short_name_lookup(char short_name) const;
 
   /// Returns the first `config_option` that matches category and long name.
-  option_pointer qualified_name_lookup(const std::string& category,
-                                       const std::string& long_name) const;
+  option_pointer qualified_name_lookup(string_view category,
+                                       string_view long_name) const;
 
   /// Returns the first `config_option` that matches the qualified name.
   /// @param name Config option name formatted as `<category>.<long-name>`.
-  option_pointer qualified_name_lookup(const std::string& name) const;
+  option_pointer qualified_name_lookup(string_view name) const;
 
   /// Returns the number of stored config options.
   inline size_t size() const noexcept {

@@ -224,12 +224,12 @@ config_option_set::parse(config_map& config,
 }
 
 config_option_set::option_pointer
-config_option_set::cli_long_name_lookup(const string& name) const {
+config_option_set::cli_long_name_lookup(string_view name) const {
   // We accept "caf#" prefixes for backward compatibility, but ignore them.
   size_t offset = name.compare(0, 4, "caf#") != 0 ? 0u : 4u;
   // Extract category and long name.
-  string category;
-  string long_name;
+  string_view category;
+  string_view long_name;
   auto sep = name.find('.', offset);
   if (sep == string::npos) {
     category = "global";
@@ -255,15 +255,15 @@ config_option_set::cli_short_name_lookup(char short_name) const {
 }
 
 config_option_set::option_pointer
-config_option_set::qualified_name_lookup(const std::string& category,
-                                         const std::string& long_name) const {
+config_option_set::qualified_name_lookup(string_view category,
+                                         string_view long_name) const {
   return detail::ptr_find_if(opts_, [&](const config_option& opt) {
     return opt.category() == category && opt.long_name() == long_name;
   });
 }
 
 config_option_set::option_pointer
-config_option_set::qualified_name_lookup(const std::string& name) const {
+config_option_set::qualified_name_lookup(string_view name) const {
   auto sep = name.find('.');
   if (sep == string::npos)
     return nullptr;

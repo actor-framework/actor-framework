@@ -387,7 +387,7 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
   return *this;
 }
 
-actor_system_config& actor_system_config::set_impl(const char* name,
+actor_system_config& actor_system_config::set_impl(string_view name,
                                                    config_value value) {
   auto opt = custom_options_.qualified_name_lookup(name);
   if (opt != nullptr && opt->check(value) == none) {
