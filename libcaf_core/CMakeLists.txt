@@ -100,7 +100,6 @@ set(LIBCAF_CORE_SRCS
   src/simple_actor_clock.cpp
   src/skip.cpp
   src/splitter.cpp
-  src/stream.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp
   src/stream_priority.cpp
