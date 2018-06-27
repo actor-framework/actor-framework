@@ -106,11 +106,20 @@ public:
     // nop
   }
 
+#ifdef CAF_GCC
   constexpr string_view(const char* cstr) noexcept
       : data_(cstr),
         size_(strlen(cstr)) {
     // nop
   }
+#else
+  template <size_t N>
+  constexpr string_view(const char (&cstr)[N]) noexcept
+      : data_(cstr),
+        size_(N - 1) {
+    // nop
+  }
+#endif
 
   constexpr string_view(const string_view&) noexcept = default;
 
