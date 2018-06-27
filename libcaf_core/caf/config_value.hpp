@@ -321,8 +321,8 @@ struct config_value_access<std::vector<T>> {
   static bool is(const config_value& x) {
     auto lst = caf::get_if<config_value::list>(&x);
     if (lst != nullptr) {
-      return std::all_of(lst->begin(), lst->end(), [](const config_value& x) {
-        return caf::holds_alternative<T>(x);
+      return std::all_of(lst->begin(), lst->end(), [](const config_value& y) {
+        return caf::holds_alternative<T>(y);
       });
     }
     return false;
@@ -366,8 +366,8 @@ struct config_value_access<dictionary<V>> {
   static bool is(const config_value& x) {
     auto lst = caf::get_if<config_value::dictionary>(&x);
     if (lst != nullptr) {
-      return std::all_of(lst->begin(), lst->end(), [](const kvp& x) {
-        return holds_alternative<V>(x.second);
+      return std::all_of(lst->begin(), lst->end(), [](const kvp& y) {
+        return holds_alternative<V>(y.second);
       });
     }
     return false;

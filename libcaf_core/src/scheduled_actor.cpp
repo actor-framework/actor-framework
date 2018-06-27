@@ -467,8 +467,8 @@ uint64_t scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
     mgrs.emplace_back(kvp.second);
   std::sort(mgrs.begin(), mgrs.end());
   auto e = std::unique(mgrs.begin(), mgrs.end());
-  auto idle = [=](const stream_manager_ptr& x) {
-    return x->idle();
+  auto idle = [=](const stream_manager_ptr& y) {
+    return y->idle();
   };
   if (std::all_of(mgrs.begin(), e, idle)) {
     CAF_LOG_DEBUG("suppress stream timeout");
@@ -1029,10 +1029,10 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   auto& osm = x.content().get_mutable_as<open_stream_msg>(0);
   visitor f;
   // Utility lambda for aborting the stream on error.
-  auto fail = [&](sec x, const char* reason) {
+  auto fail = [&](sec y, const char* reason) {
     stream_slots path_id{osm.slot, 0};
     inbound_path::emit_irregular_shutdown(this, path_id, osm.prev_stage,
-                                          make_error(x, reason));
+                                          make_error(y, reason));
     auto rp = make_response_promise();
     rp.deliver(sec::stream_init_failed);
   };
