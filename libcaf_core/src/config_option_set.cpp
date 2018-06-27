@@ -161,7 +161,7 @@ auto config_option_set::parse(config_map& config, argument_iterator first,
     if (i->compare(0, 2, "--") == 0) {
       // Long options use the syntax "--<name>=<value>" and consume only a
       // single argument.
-      static constexpr auto npos = std::string::npos;
+      auto npos = std::string::npos;
       auto assign_op = i->find('=');
       auto name = assign_op == npos ? i->substr(2)
                                     : i->substr(2, assign_op - 2);
