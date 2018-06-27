@@ -65,7 +65,6 @@ void* message::get_mutable(size_t p) {
 }
 
 error message::load(size_t pos, deserializer& source) {
-printf("load %d\n", (int) pos);
   CAF_ASSERT(vals_ != nullptr);
   return vals_->load(pos, source);
 }
@@ -99,7 +98,6 @@ type_erased_value_ptr message::copy(size_t pos) const {
 }
 
 error message::save(size_t pos, serializer& sink) const {
-printf("save %d\n", (int) pos);
   CAF_ASSERT(vals_ != nullptr);
   return vals_->save(pos, sink);
 }
