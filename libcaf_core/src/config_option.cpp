@@ -73,7 +73,7 @@ config_option::config_option(string_view category, string_view name,
   short_names_separator_ = pos();
   *i++ = ',';
   // <description>
-  copy(description.begin(), description.end(), i);
+  i = copy(description.begin(), description.end(), i);
   CAF_ASSERT(pos() == buf_size_);
 }
 
