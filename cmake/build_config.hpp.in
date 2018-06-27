@@ -33,10 +33,6 @@
 #define CAF_ENABLE_RUNTIME_CHECKS
 #endif
 
-#if @CAF_USE_ASIO_INT@ != -1
-#define CAF_USE_ASIO
-#endif
-
 #if @CAF_NO_EXCEPTIONS_INT@ != -1
 #define CAF_NO_EXCEPTIONS
 #endif

@@ -389,23 +389,6 @@ to_int_value(CAF_NO_EXCEPTIONS)
 to_int_value(CAF_NO_MEM_MANAGEMENT)
 to_int_value(CAF_ENABLE_RUNTIME_CHECKS)
 
-# find boost asio if the asio multiplexer should be used for testing
-if(CAF_USE_ASIO)
-  set(Boost_USE_MULTITHREADED ON)
-  find_package(Boost COMPONENTS system)
-  if(Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIRS})
-    set(LD_DIRS ${LD_DIRS} ${Boost_LIBRARIES})
-    list(APPEND LDFLAGS ${Boost_SYSTEM_LIBRARY})
-    set(CAF_USE_ASIO_INT 1)
-  else()
-    set(CAF_USE_ASIO no)
-    set(CAF_USE_ASIO_INT -1)
-  endif()
-else()
-  set(CAF_USE_ASIO_INT -1)
-endif()
-
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core/caf/detail/build_config.hpp"
                IMMEDIATE @ONLY)
@@ -639,11 +622,6 @@ if(NOT CAF_NO_UNIT_TESTS)
     string(REPLACE " " "_" test_name ${suite})
     set(caf_test ${EXECUTABLE_OUTPUT_PATH}/caf-test)
     add_test(${test_name} ${caf_test} -n -v 5 -s "${suite}" ${ARGN})
-    # add some extra unit testing options when testing ASIO as well
-    if(CAF_USE_ASIO AND "${suite}" MATCHES "^io_.+$" AND NOT "${suite}" MATCHES ".+_udp$")
-      add_test(${test_name}_asio ${caf_test} -n -v 5 -s
-               "${suite}" ${ARGN} -- "--caf#middleman.network-backend=asio")
-    endif()
   endmacro ()
   list(LENGTH suites num_suites)
   message(STATUS "Found ${num_suites} test suites")

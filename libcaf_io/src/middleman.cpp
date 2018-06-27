@@ -57,11 +57,6 @@
 #include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 
-#ifdef CAF_USE_ASIO
-#include "caf/io/network/asio_multiplexer.hpp"
-#include "caf/io/network/asio_multiplexer_impl.hpp"
-#endif // CAF_USE_ASIO
-
 #ifdef CAF_WINDOWS
 #include <io.h>
 #include <fcntl.h>
@@ -93,10 +88,6 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   auto atm = get_or(sys.config(), "middleman.network-backend",
                     defaults::middleman::network_backend);
   switch (atom_uint(atm)) {
-# ifdef CAF_USE_ASIO
-    case atom_uint(atom("asio")):
-      return new mm_impl<network::asio_multiplexer>(sys);
-# endif // CAF_USE_ASIO
     case atom_uint(atom("testing")):
       return new mm_impl<network::test_multiplexer>(sys);
     default:

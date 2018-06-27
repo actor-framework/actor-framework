@@ -76,9 +76,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --core-only                 sets no-examples, no-opencl, no-openssl,
                                 no-tools, no-python, and no-io
 
-  Testing:
-    --with-asio                 use ASIO multiplexer in unit tests
-
   Debugging:
     --with-runtime-checks       build with requirement checks at runtime
     --with-log-level=LVL        build with debugging output, possible values:
@@ -286,9 +283,6 @@ while [ $# -ne 0 ]; do
         --ios-min-ver=*)
             append_cache_entry CMAKE_OSX_ARCHITECTURES STRING "\$(ARCHS_STANDARD_32_64_BIT)"
             append_cache_entry CAF_IOS_DEPLOYMENT_TARGET STRING "$optarg"
-            ;;
-        --with-asio)
-            append_cache_entry CAF_USE_ASIO BOOL yes
             ;;
         --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
