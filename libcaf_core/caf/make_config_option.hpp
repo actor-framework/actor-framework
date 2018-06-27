@@ -32,23 +32,19 @@ namespace caf {
 namespace detail {
 
 template <class T>
-struct option_meta_state {
-  static config_option::meta_state instance;
-};
-
-template <class T>
-config_option::meta_state option_meta_state<T>::instance{
-  [](const config_value& x) -> error {
-    if (holds_alternative<T>(x))
-      return none;
-    return make_error(pec::type_mismatch);
-  },
-  [](void* ptr, const config_value& x) {
-    *static_cast<T*>(ptr) = get<T>(x);
-  },
-  nullptr,
-  detail::type_name<T>()
-};
+config_option::meta_state* option_meta_state_instance() {
+  static config_option::meta_state obj{
+    [](const config_value& x) -> error {
+      if (holds_alternative<T>(x))
+        return none;
+      return make_error(pec::type_mismatch);
+    },
+    [](void* ptr, const config_value& x) {
+      *static_cast<T*>(ptr) = get<T>(x);
+    },
+    nullptr, detail::type_name<T>()};
+  return &obj;
+}
 
 } // namespace detail
 
@@ -56,14 +52,14 @@ config_option::meta_state option_meta_state<T>::instance{
 template <class T>
 config_option make_config_option(const char* category, const char* name,
                                  const char* description) {
-  return {category, name, description, &detail::option_meta_state<T>::instance};
+  return {category, name, description, detail::option_meta_state_instance<T>()};
 }
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
 config_option make_config_option(T& storage, const char* category,
                                  const char* name, const char* description) {
-  return {category, name, description, &detail::option_meta_state<T>::instance,
+  return {category, name, description, detail::option_meta_state_instance<T>(),
           std::addressof(storage)};
 }
 
@@ -88,21 +84,30 @@ config_option make_ms_resolution_config_option(size_t& storage,
 
 // -- specializations for common types -----------------------------------------
 
-#define CAF_SPECIALIZE_MAKE_CONFIG_OPTION(type)                                \
+#define CAF_SPECIALIZE_META_STATE(type)                                        \
+  extern config_option::meta_state type##_meta_state;                          \
   template <>                                                                  \
-  config_option make_config_option<std::string>(                               \
-    std::string & storage, const char* category, const char* name,             \
-    const char* description);                                                  \
-  template <>                                                                  \
-  config_option make_config_option<std::string>(                               \
-    const char* category, const char* name, const char* description)
+  inline config_option::meta_state* option_meta_state_instance<type>() {       \
+    return &type##_meta_state;                                                 \
+  }
 
-CAF_SPECIALIZE_MAKE_CONFIG_OPTION(atom_value);
+namespace detail {
 
-CAF_SPECIALIZE_MAKE_CONFIG_OPTION(bool);
+CAF_SPECIALIZE_META_STATE(atom_value);
 
-CAF_SPECIALIZE_MAKE_CONFIG_OPTION(size_t);
+CAF_SPECIALIZE_META_STATE(bool);
 
-CAF_SPECIALIZE_MAKE_CONFIG_OPTION(std::string);
+CAF_SPECIALIZE_META_STATE(size_t);
+
+extern config_option::meta_state string_meta_state;
+
+template <>
+inline config_option::meta_state* option_meta_state_instance<std::string>() {
+  return &string_meta_state;
+}
+
+} // namespace detail
+
+#undef CAF_SPECIALIZE_META_STATE
 
 } // namespace caf

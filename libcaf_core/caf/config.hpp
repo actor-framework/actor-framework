@@ -93,6 +93,9 @@
     _Pragma("clang diagnostic ignored \"-Wimplicit-fallthrough\"")             \
     _Pragma("clang diagnostic ignored \"-Wused-but-marked-unused\"")           \
     _Pragma("clang diagnostic ignored \"-Wdisabled-macro-expansion\"")
+#  define CAF_PUSH_UNUSED_LABEL_WARNING                                        \
+    _Pragma("clang diagnostic push")                                           \
+    _Pragma("clang diagnostic ignored \"-Wunused-label\"")
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("clang diagnostic push")                                           \
     _Pragma("clang diagnostic ignored \"-Wnon-virtual-dtor\"")
@@ -122,6 +125,9 @@
     _Pragma("GCC diagnostic ignored \"-Wconversion\"")                         \
     _Pragma("GCC diagnostic ignored \"-Wfloat-equal\"")                        \
     _Pragma("GCC diagnostic ignored \"-Wc++14-extensions\"")
+#  define CAF_PUSH_UNUSED_LABEL_WARNING                                        \
+    _Pragma("GCC diagnostic push")                                             \
+    _Pragma("GCC diagnostic ignored \"-Wunused-label\"")
 #  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
@@ -144,9 +150,16 @@
 #  define CAF_UNLIKELY(x) x
 #  define CAF_DEPRECATED
 #  define CAF_DEPRECATED_MSG(msg)
-#  define CAF_PUSH_WARNINGS
-#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING
-#  define CAF_POP_WARNINGS
+#  define CAF_PUSH_WARNINGS                                                    \
+    __pragma(warning(push))
+#  define CAF_PUSH_UNUSED_LABEL_WARNING                                        \
+    __pragma(warning(push))                                                    \
+    __pragma(warning(disable: 4102))
+#  define CAF_PUSH_DEPRECATED_WARNING                                          \
+    __pragma(warning(push))
+#  define CAF_PUSH_NON_VIRTUAL_DTOR_WARNING                                    \
+    __pragma(warning(push))
+#  define CAF_POP_WARNINGS __pragma(warning(pop))
 #  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
 #  define CAF_COMPILER_VERSION _MSC_FULL_VER
 #  pragma warning( disable : 4624 )

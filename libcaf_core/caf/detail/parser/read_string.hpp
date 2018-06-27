@@ -28,6 +28,8 @@
 #include "caf/detail/parser/state.hpp"
 #include "caf/pec.hpp"
 
+CAF_PUSH_UNUSED_LABEL_WARNING
+
 namespace caf {
 namespace detail {
 namespace parser {
@@ -70,3 +72,4 @@ void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 } // namespace detail
 } // namespace caf
 
+CAF_POP_WARNINGS

@@ -21,6 +21,12 @@
 #include "caf/config_value.hpp"
 #include "caf/optional.hpp"
 
+#define DEFAULT_META(type)                                                     \
+  config_option::meta_state type##_meta_state {                                \
+    check_impl<type>, store_impl<type>, get_impl<type>,                        \
+    detail::type_name<type>()                                                  \
+  };                                                                           \
+
 using std::string;
 
 namespace caf {
@@ -48,24 +54,6 @@ config_value get_impl(const void* ptr) {
   return config_value{*static_cast<const T*>(ptr)};
 }
 
-#define DEFAULT_META(type)                                                     \
-  meta_state type##_meta{check_impl<type>, store_impl<type>, get_impl<type>,   \
-                         detail::type_name<type>()}
-
-#define DEFAULT_MAKE_IMPL(type)                                                \
-  template <>                                                                  \
-  config_option make_config_option<type>(type & storage, const char* category, \
-                                         const char* name,                     \
-                                         const char* description) {            \
-    return {category, name, description, &type##_meta, &storage};              \
-  }                                                                            \
-  template <>                                                                  \
-  config_option make_config_option<type>(const char* category,                 \
-                                         const char* name,                     \
-                                         const char* description) {            \
-    return {category, name, description, &type##_meta, nullptr};               \
-  }
-
 error bool_check(const config_value& x) {
   if (holds_alternative<bool>(x))
     return none;
@@ -87,9 +75,6 @@ config_value bool_get(const void* ptr) {
 config_value bool_get_neg(const void* ptr) {
   return config_value{!*static_cast<const bool*>(ptr)};
 }
-
-meta_state bool_meta{bool_check, bool_store, bool_get,
-                     detail::type_name<bool>()};
 
 meta_state bool_neg_meta{bool_check, bool_store_neg, bool_get_neg,
                          detail::type_name<bool>()};
@@ -128,13 +113,21 @@ meta_state ms_res_meta{
   detail::type_name<timespan>()
 };
 
+} // namespace
+
+namespace detail {
+
 DEFAULT_META(atom_value);
 
 DEFAULT_META(size_t);
 
 DEFAULT_META(string);
 
-} // namespace anonymous
+config_option::meta_state bool_meta_state{
+  bool_check, bool_store, bool_get, detail::type_name<bool>()
+};
+
+} // namespace detail
 
 config_option make_negated_config_option(bool& storage, const char* category,
                                          const char* name,
@@ -155,13 +148,5 @@ config_option make_ms_resolution_config_option(size_t& storage,
                                                const char* description) {
   return {category, name, description, &ms_res_meta, &storage};
 }
-
-DEFAULT_MAKE_IMPL(atom_value)
-
-DEFAULT_MAKE_IMPL(bool)
-
-DEFAULT_MAKE_IMPL(size_t)
-
-DEFAULT_MAKE_IMPL(string)
 
 } // namespace caf

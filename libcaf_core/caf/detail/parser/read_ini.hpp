@@ -22,6 +22,7 @@
 
 #include <stack>
 
+#include "caf/config.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/read_atom.hpp"
 #include "caf/detail/parser/read_bool.hpp"
@@ -29,6 +30,8 @@
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
+
+CAF_PUSH_UNUSED_LABEL_WARNING
 
 namespace caf {
 namespace detail {
@@ -243,3 +246,5 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
 } // namespace parser
 } // namespace detail
 } // namespace caf
+
+CAF_POP_WARNINGS

@@ -20,6 +20,7 @@
 
 #include <cstring>
 
+#include "caf/config.hpp"
 #include "caf/detail/pp.hpp"
 #include "caf/pec.hpp"
 
@@ -67,7 +68,6 @@ extern const char octal_chars[9];
   char ch = ps.current();                                                      \
   goto s_init;                                                                 \
   s_unexpected_eof:                                                            \
-  __attribute__((unused));                                                     \
   ps.code = caf::pec::unexpected_eof;                                          \
   return;                                                                      \
   {                                                                            \
@@ -79,10 +79,10 @@ extern const char octal_chars[9];
   }                                                                            \
   {                                                                            \
     static constexpr auto mismatch_ec = caf::pec::unexpected_character;        \
-    s_##name : __attribute__((unused));                                        \
+    s_##name :                                                                 \
     if (ch == '\0')                                                            \
       goto s_unexpected_eof;                                                   \
-    e_##name : __attribute__((unused));
+    e_##name :
 
 /// Defines a terminal state in the FSM.
 #define term_state(name)                                                       \
@@ -90,10 +90,11 @@ extern const char octal_chars[9];
   }                                                                            \
   {                                                                            \
     static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
-    s_##name : __attribute__((unused));                                        \
+    s_##name :                                                                 \
     if (ch == '\0')                                                            \
       goto s_fin;                                                              \
-    e_##name : __attribute__((unused));
+    e_##name :
+
 
 /// Ends the definition of an FSM.
 #define fin()                                                                  \
@@ -127,12 +128,6 @@ extern const char octal_chars[9];
     CAF_TRANSITION_IMPL1(target)                                               \
   }
 
-/// Transitions to target state if a predicate (optional argument 1) holds for
-/// the current token and executes an action (optional argument 2) before
-/// entering the new state.
-#define transition(...)                                                        \
-  CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
-
 #define CAF_ERROR_TRANSITION_IMPL2(error_code, whitelist)                      \
   if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
     ps.code = error_code;                                                      \
@@ -142,11 +137,6 @@ extern const char octal_chars[9];
 #define CAF_ERROR_TRANSITION_IMPL1(error_code)                                 \
   ps.code = error_code;                                                        \
   return;
-
-/// Stops the FSM with reason `error_code` if `predicate` holds for the current
-/// token.
-#define error_transition(...)                                                  \
-  CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 #define CAF_EPSILON_IMPL1(target) goto s_##target;
 
@@ -168,15 +158,6 @@ extern const char octal_chars[9];
       return;                                                                  \
     }                                                                          \
     CAF_EPSILON_IMPL1(target)                                                  \
-  }
-
-// Makes an epsilon transition into another state.
-#define epsilon(...) CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
-
-// Makes an epsiolon transition into another state if the `statement` is true.
-#define epsilon_if(statement, ...)                                             \
-  if (statement) {                                                             \
-    epsilon(__VA_ARGS__)                                                       \
   }
 
 #define CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                             \
@@ -208,15 +189,6 @@ extern const char octal_chars[9];
     CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
   }
 
-/// Makes an transition transition into another FSM, resuming at state `target`.
-#define fsm_transition(...)                                                    \
-  CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
-
-#define fsm_transition_if(statement, ...)                                      \
-  if (statement) {                                                             \
-    fsm_transition(__VA_ARGS__)                                                \
-  }
-
 #define CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                \
   fsm_call;                                                                    \
   if (ps.code > caf::pec::trailing_character)                                  \
@@ -244,12 +216,78 @@ extern const char octal_chars[9];
     CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
   }
 
+#ifdef CAF_MSVC
+
+/// Transitions to target state if a predicate (optional argument 1) holds for
+/// the current token and executes an action (optional argument 2) before
+/// entering the new state.
+#define transition(...)                                                        \
+  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__),   \
+             CAF_PP_EMPTY())
+
+/// Stops the FSM with reason `error_code` if `predicate` holds for the current
+/// token.
+#define error_transition(...)                                                  \
+  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__),\
+             CAF_PP_EMPTY())
+
+// Makes an epsilon transition into another state.
+#define epsilon(...)                                                           \
+  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__),      \
+             CAF_PP_EMPTY())
+
+/// Makes an transition transition into another FSM, resuming at state `target`.
+#define fsm_transition(...)                                                    \
+  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__),\
+             CAF_PP_EMPTY())
+
+/// Makes an epsilon transition into another FSM, resuming at state `target`.
+#define fsm_epsilon(...)                                                       \
+  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__),  \
+             CAF_PP_EMPTY())
+
+#else // CAF_MSVC
+
+/// Transitions to target state if a predicate (optional argument 1) holds for
+/// the current token and executes an action (optional argument 2) before
+/// entering the new state.
+#define transition(...)                                                        \
+  CAF_PP_OVERLOAD(CAF_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+
+/// Stops the FSM with reason `error_code` if `predicate` holds for the current
+/// token.
+#define error_transition(...)                                                  \
+  CAF_PP_OVERLOAD(CAF_ERROR_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+
+// Makes an epsilon transition into another state.
+#define epsilon(...) CAF_PP_OVERLOAD(CAF_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
+
+/// Makes an transition transition into another FSM, resuming at state `target`.
+#define fsm_transition(...)                                                    \
+  CAF_PP_OVERLOAD(CAF_FSM_TRANSITION_IMPL, __VA_ARGS__)(__VA_ARGS__)
+
 /// Makes an epsilon transition into another FSM, resuming at state `target`.
 #define fsm_epsilon(...)                                                       \
   CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
+#endif // CAF_MSVC
+
+// Makes an epsiolon transition into another state if the `statement` is true.
+#define epsilon_if(statement, ...)                                             \
+  if (statement) {                                                             \
+    epsilon(__VA_ARGS__)                                                       \
+  }
+
+/// Makes an transition transition into another FSM if `statement` is true,
+/// resuming at state `target`.
+#define fsm_transition_if(statement, ...)                                      \
+  if (statement) {                                                             \
+    fsm_transition(__VA_ARGS__)                                                \
+  }
+
+/// Makes an epsilon transition into another FSM if `statement` is true,
+/// resuming at state `target`.
 #define fsm_epsilon_if(statement, ...)                                         \
   if (statement) {                                                             \
     fsm_epsilon(__VA_ARGS__)                                                   \
   }
-

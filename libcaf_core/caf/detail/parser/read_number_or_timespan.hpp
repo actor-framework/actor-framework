@@ -33,6 +33,8 @@
 #include "caf/timestamp.hpp"
 #include "caf/variant.hpp"
 
+CAF_PUSH_UNUSED_LABEL_WARNING
+
 namespace caf {
 namespace detail {
 namespace parser {
@@ -109,3 +111,4 @@ void read_number_or_timespan(state<Iterator, Sentinel>& ps,
 } // namespace detail
 } // namespace caf
 
+CAF_POP_WARNINGS

@@ -21,11 +21,14 @@
 #include <cstdint>
 #include <string>
 
+#include "caf/config.hpp"
 #include "caf/detail/parser/fsm.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
+
+CAF_PUSH_UNUSED_LABEL_WARNING
 
 namespace caf {
 namespace detail {
@@ -75,3 +78,4 @@ void read_bool(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 } // namespace detail
 } // namespace caf
 
+CAF_POP_WARNINGS
