@@ -72,7 +72,7 @@ public:
   }
 
   static inline size_t id_of(const mailbox_element& x) noexcept {
-    return x.mid.category();
+    return static_cast<size_t>(x.mid.category());
   }
 };
 
