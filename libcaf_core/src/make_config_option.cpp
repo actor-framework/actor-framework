@@ -86,7 +86,8 @@ meta_state us_res_meta{
     return make_error(pec::type_mismatch);
   },
   [](void* ptr, const config_value& x) {
-    *static_cast<size_t*>(ptr) = get<timespan>(x).count() / 1000;
+    *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count())
+                                 / 1000;
   },
   [](const void* ptr) -> config_value {
     auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
