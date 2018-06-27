@@ -181,7 +181,7 @@ CAF_TEST(find_last_of) {
   CAF_CHECK_EQUAL(x.find_last_of("bc", 1), y.find_last_of("bc", 1));
   CAF_CHECK_EQUAL(x.find_last_of("bc", 1, 0), y.find_last_of("bc", 1, 0));
   CAF_CHECK_EQUAL(x.find_last_of("bc", 0, 1), y.find_last_of("bc", 0, 1));
-  CAF_CHECK_EQUAL(x.find_last_of("bc", 2, 10), y.find_last_of("bc", 2, 10));
+  CAF_CHECK_EQUAL(x.find_last_of("bc", 2, 2), y.find_last_of("bc", 2, 2));
 }
 
 CAF_TEST(find_first_not_of) {
@@ -200,8 +200,8 @@ CAF_TEST(find_first_not_of) {
                   y.find_first_not_of("bc", 1, 0));
   CAF_CHECK_EQUAL(x.find_first_not_of("bc", 0, 1),
                   y.find_first_not_of("bc", 0, 1));
-  CAF_CHECK_EQUAL(x.find_first_not_of("bc", 2, 10),
-                  y.find_first_not_of("bc", 2, 10));
+  CAF_CHECK_EQUAL(x.find_first_not_of("bc", 2, 2),
+                  y.find_first_not_of("bc", 2, 2));
 }
 
 CAF_TEST(find_last_not_of) {
@@ -220,8 +220,8 @@ CAF_TEST(find_last_not_of) {
                   y.find_last_not_of("bc", 1, 0));
   CAF_CHECK_EQUAL(x.find_last_not_of("bc", 0, 1),
                   y.find_last_not_of("bc", 0, 1));
-  CAF_CHECK_EQUAL(x.find_last_not_of("bc", 2, 10),
-                  y.find_last_not_of("bc", 2, 10));
+  CAF_CHECK_EQUAL(x.find_last_not_of("bc", 2, 2),
+                  y.find_last_not_of("bc", 2, 2));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
