@@ -60,7 +60,7 @@ public:
 
   using list = std::vector<config_value>;
 
-  using dictionary = dictionary<config_value>;
+  using dictionary = caf::dictionary<config_value>;
 
   using types = detail::type_list<integer, boolean, real, atom, timespan,
                                   string, list, dictionary>;

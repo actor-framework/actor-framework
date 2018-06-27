@@ -54,7 +54,7 @@ public:
   using iterator = option_vector::iterator;
 
   /// Maps string keys to arbitrary (config) values.
-  using dictionary = dictionary<config_value>;
+  using dictionary = caf::dictionary<config_value>;
 
   /// Categorized settings.
   using config_map = caf::dictionary<dictionary>;
