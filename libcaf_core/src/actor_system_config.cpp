@@ -295,7 +295,6 @@ actor_system_config& actor_system_config::parse(string_list args,
   // TODO: remove with CAF 0.17
   for (auto& opt : custom_options_) {
     auto val = opt.get();
-    auto fn = opt.full_name();
     if (val)
       content[opt.category()][opt.long_name()] = std::move(*val);
   }
