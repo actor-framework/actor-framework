@@ -57,11 +57,6 @@ public:
 
   // -- implementation of virtual functions ------------------------------------
 
-  bool done() const override {
-    return !this->continuous() && this->pending_handshakes_ == 0
-           && this->inbound_paths_.empty() && this->out_.clean();
-  }
-
   void handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<input_type>;

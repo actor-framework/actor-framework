@@ -46,6 +46,13 @@ public:
     // nop
   }
 
+  // -- overridden member functions --------------------------------------------
+
+  bool done() const override {
+    return !this->continuous() && this->inbound_paths_.empty()
+           && this->pending_handshakes_ == 0 && this->out_.clean();
+  }
+
   bool idle() const noexcept override {
     // A stage is idle if it can't make progress on its downstream manager or
     // if it has no pending work at all.
