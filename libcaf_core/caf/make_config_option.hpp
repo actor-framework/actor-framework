@@ -93,11 +93,11 @@ config_option make_ms_resolution_config_option(size_t& storage,
 
 namespace detail {
 
-CAF_SPECIALIZE_META_STATE(atom_value);
+CAF_SPECIALIZE_META_STATE(atom_value)
 
-CAF_SPECIALIZE_META_STATE(bool);
+CAF_SPECIALIZE_META_STATE(bool)
 
-CAF_SPECIALIZE_META_STATE(size_t);
+CAF_SPECIALIZE_META_STATE(size_t)
 
 extern config_option::meta_state string_meta_state;
 
