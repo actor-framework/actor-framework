@@ -31,8 +31,10 @@
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
 #include "caf/variant.hpp"
+#include "caf/string_view.hpp"
 
-using namespace std;
+using std::string;
+
 using namespace caf;
 
 namespace {
@@ -44,7 +46,7 @@ using dictionary = config_value::dictionary;
 struct dictionary_builder {
   dictionary dict;
 
-  dictionary_builder&& add(const char* key, config_value value) && {
+  dictionary_builder&& add(string_view key, config_value value) && {
     dict.emplace(key, std::move(value));
     return std::move(*this);
   }
@@ -69,8 +71,8 @@ config_value cfg_lst(Ts&&... xs) {
 }
 
 // TODO: switch to std::operator""s when switching to C++14
-std::string operator"" _s(const char* str, size_t size) {
-  return std::string(str, size);
+string operator"" _s(const char* str, size_t size) {
+  return string(str, size);
 }
 
 } // namespace <anonymous>
@@ -158,7 +160,7 @@ CAF_TEST(append) {
 }
 
 CAF_TEST(homogeneous dictionary) {
-  using integer_map = std::map<std::string, int64_t>;
+  using integer_map = caf::dictionary<int64_t>;
   auto xs = dict()
               .add("value-1", config_value{100000})
               .add("value-2", config_value{2})
@@ -182,7 +184,7 @@ CAF_TEST(homogeneous dictionary) {
 }
 
 CAF_TEST(heterogeneous dictionary) {
-  using string_list = std::vector<std::string>;
+  using string_list = std::vector<string>;
   auto xs = dict()
               .add("scheduler", dict()
                                   .add("policy", config_value{atom("none")})
@@ -206,7 +208,7 @@ CAF_TEST(successful parsing) {
   // references when comparing values. Since we call get<T>() on the result of
   // parse(), we would end up with a reference to a temporary.
   config_value parsed;
-  auto parse = [&](const std::string& str) -> config_value& {
+  auto parse = [&](const string& str) -> config_value& {
     auto x = config_value::parse(str);
     if (!x)
       CAF_FAIL("cannot parse " << str << ": assumed a result but error "
@@ -214,7 +216,7 @@ CAF_TEST(successful parsing) {
     parsed = std::move(*x);
     return parsed;
   };
-  using di = std::map<string, int>; // Dictionary-of-integers.
+  using di = caf::dictionary<int>; // Dictionary-of-integers.
   using ls = std::vector<string>; // List-of-strings.
   using li = std::vector<int>; // List-of-integers.
   using lli = std::vector<li>; // List-of-list-of-integers.
@@ -235,7 +237,7 @@ CAF_TEST(successful parsing) {
 }
 
 CAF_TEST(unsuccessful parsing) {
-  auto parse = [](const std::string& str) {
+  auto parse = [](const string& str) {
     auto x = config_value::parse(str);
     if (x)
       CAF_FAIL("assumed an error but got a result");

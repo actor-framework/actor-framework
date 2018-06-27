@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include <map>
 #include <string>
 #include <type_traits>
 #include <vector>
 
+#include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/timestamp.hpp"
 
@@ -127,7 +127,7 @@ struct type_name_builder<std::vector<T>, false> {
 };
 
 template <class T>
-struct type_name_builder<std::map<std::string, T>, false> {
+struct type_name_builder<dictionary<T>, false> {
   void operator()(std::string& result) const {
     result += "dictionary of ";
     type_name_builder<T> g;

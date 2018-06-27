@@ -62,7 +62,7 @@ CAF_TEST(lookup) {
 
 CAF_TEST(parse with ref syncing) {
   using ls = vector<string>; // list of strings
-  using ds = std::map<string, string>; // dictionary of strings
+  using ds = dictionary<string>; // dictionary of strings
   auto foo_i = 0;
   auto foo_f = 0.f;
   auto foo_b = false;
@@ -74,8 +74,8 @@ CAF_TEST(parse with ref syncing) {
     .add<bool>(foo_b, "foo", "b,b", "")
     .add<string>(bar_s, "bar", "s,s", "")
     .add<vector<string>>(bar_l, "bar", "l,l", "")
-    .add<std::map<string, string>>(bar_d, "bar", "d,d", "");
-  std::map<std::string, config_value::dictionary> cfg;
+    .add<dictionary<string>>(bar_d, "bar", "d,d", "");
+  dictionary<config_value::dictionary> cfg;
   vector<string> args{"-i42",
                       "-f",
                       "1e12",
@@ -103,7 +103,7 @@ CAF_TEST(parse with ref syncing) {
 CAF_TEST(implicit global) {
   opts.add<int>("global", "value").add<bool>("global", "help");
   CAF_MESSAGE("test long option with argument");
-  std::map<std::string, config_value::dictionary> cfg;
+  dictionary<config_value::dictionary> cfg;
   auto res = opts.parse(cfg, {"--value=42"});
   CAF_CHECK_EQUAL(res.first, pec::success);
   CAF_CHECK_EQUAL(get_if<int>(&cfg, "global.value"), 42);

@@ -50,15 +50,15 @@ config_option::meta_state* option_meta_state_instance() {
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
-config_option make_config_option(const char* category, const char* name,
-                                 const char* description) {
+config_option make_config_option(string_view category, string_view name,
+                                 string_view description) {
   return {category, name, description, detail::option_meta_state_instance<T>()};
 }
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
-config_option make_config_option(T& storage, const char* category,
-                                 const char* name, const char* description) {
+config_option make_config_option(T& storage, string_view category,
+                                 string_view name, string_view description) {
   return {category, name, description, detail::option_meta_state_instance<T>(),
           std::addressof(storage)};
 }
@@ -66,21 +66,21 @@ config_option make_config_option(T& storage, const char* category,
 // -- backward compatbility, do not use for new code ! -------------------------
 
 // Inverts the value when writing to `storage`.
-config_option make_negated_config_option(bool& storage, const char* category,
-                                         const char* name,
-                                         const char* description);
+config_option make_negated_config_option(bool& storage, string_view category,
+                                         string_view name,
+                                         string_view description);
 
 // Reads timespans, but stores an integer representing microsecond resolution.
 config_option make_us_resolution_config_option(size_t& storage,
-                                               const char* category,
-                                               const char* name,
-                                               const char* description);
+                                               string_view category,
+                                               string_view name,
+                                               string_view description);
 
 // Reads timespans, but stores an integer representing millisecond resolution.
 config_option make_ms_resolution_config_option(size_t& storage,
-                                               const char* category,
-                                               const char* name,
-                                               const char* description);
+                                               string_view category,
+                                               string_view name,
+                                               string_view description);
 
 // -- specializations for common types -----------------------------------------
 

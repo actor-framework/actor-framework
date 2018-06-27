@@ -129,23 +129,23 @@ config_option::meta_state bool_meta_state{
 
 } // namespace detail
 
-config_option make_negated_config_option(bool& storage, const char* category,
-                                         const char* name,
-                                         const char* description) {
+config_option make_negated_config_option(bool& storage, string_view category,
+                                         string_view name,
+                                         string_view description) {
   return {category, name, description, &bool_neg_meta, &storage};
 }
 
 config_option make_us_resolution_config_option(size_t& storage,
-                                               const char* category,
-                                               const char* name,
-                                               const char* description) {
+                                               string_view category,
+                                               string_view name,
+                                               string_view description) {
   return {category, name, description, &us_res_meta, &storage};
 }
 
 config_option make_ms_resolution_config_option(size_t& storage,
-                                               const char* category,
-                                               const char* name,
-                                               const char* description) {
+                                               string_view category,
+                                               string_view name,
+                                               string_view description) {
   return {category, name, description, &ms_res_meta, &storage};
 }
 

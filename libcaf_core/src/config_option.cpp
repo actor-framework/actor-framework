@@ -18,8 +18,9 @@
 
 #include "caf/config_option.hpp"
 
-#include <cstring>
-#include <iostream>
+#include <algorithm>
+#include <limits>
+#include <numeric>
 
 #include "caf/config.hpp"
 #include "caf/config_value.hpp"
@@ -29,41 +30,73 @@
 using std::move;
 using std::string;
 
-namespace {
-
-string get_long_name(const char* name) {
-  auto i= strchr(name, ',');
-  return i != nullptr ? string{name, i} : string{name};
-}
-
-string get_short_names(const char* name) {
-  auto substr = strchr(name, ',');
-  if (substr != nullptr)
-    return ++substr;
-  return string{};
-}
-
-} // namespace <anonymous>
-
 namespace caf {
 
-config_option::config_option(string category, const char* name,
-                             string description, const meta_state* meta,
+// -- constructors, destructors, and assignment operators ----------------------
+
+config_option::config_option(string_view category, string_view name,
+                             string_view description, const meta_state* meta,
                              void* value)
-    : category_(move(category)),
-      long_name_(get_long_name(name)),
-      short_names_(get_short_names(name)),
-      description_(move(description)),
-      meta_(meta),
+    : meta_(meta),
       value_(value) {
-  CAF_ASSERT(meta_ != nullptr);
+  using std::copy;
+  using std::accumulate;
+  auto comma = name.find(',');
+  auto long_name = name.substr(0, comma);
+  auto short_names = comma == string_view::npos ? string_view{}
+                                                : name.substr(comma + 1);
+  auto total_size = [](std::initializer_list<string_view> xs) {
+    return (xs.size() - 1) // one separator between all fields
+           + accumulate(xs.begin(), xs.end(), size_t{0},
+                        [](size_t x, string_view sv) { return x + sv.size(); });
+  };
+  auto ts = total_size({category, long_name, short_names, description});
+  CAF_ASSERT(ts <= std::numeric_limits<uint16_t>::max());
+  buf_size_ = static_cast<uint16_t>(ts);
+  buf_.reset(new char[ts]);
+  // fille the buffer with "<category>.<long-name>,<short-name>,<descriptions>"
+  auto first = buf_.get();
+  auto i = first;
+  auto pos = [&] {
+    return static_cast<uint16_t>(std::distance(first, i));
+  };
+  // <category>.
+  i = copy(category.begin(), category.end(), i);
+  category_separator_ = pos();
+  *i++ = '.';
+  // <long-name>,
+  i = copy(long_name.begin(), long_name.end(), i);
+  long_name_separator_ = pos();
+  *i++ = ',';
+  // <short-names>,
+  i = copy(short_names.begin(), short_names.end(), i);
+  short_names_separator_ = pos();
+  *i++ = ',';
+  // <description>
+  copy(description.begin(), description.end(), i);
+  CAF_ASSERT(pos() == buf_size_);
 }
 
-string config_option::full_name() const {
-  std::string result = category();
-  result += '.';
-  result += long_name_;
-  return result;
+// -- properties ---------------------------------------------------------------
+
+string_view config_option::category() const noexcept {
+  return buf_slice(0, category_separator_);
+}
+
+string_view config_option::long_name() const noexcept {
+  return buf_slice(category_separator_ + 1, long_name_separator_);
+}
+
+string_view config_option::short_names() const noexcept {
+  return buf_slice(long_name_separator_ + 1, short_names_separator_);
+}
+
+string_view config_option::description() const noexcept {
+  return buf_slice(short_names_separator_ + 1, buf_size_);
+}
+
+string_view config_option::full_name() const noexcept {
+  return buf_slice(0, long_name_separator_);
 }
 
 error config_option::check(const config_value& x) const {
@@ -78,7 +111,7 @@ void config_option::store(const config_value& x) const {
   }
 }
 
-const std::string& config_option::type_name() const noexcept {
+string_view config_option::type_name() const noexcept {
   return meta_->type_name;
 }
 
@@ -90,6 +123,11 @@ optional<config_value> config_option::get() const {
   if (value_ != nullptr && meta_->get != nullptr)
     return meta_->get(value_);
   return none;
+}
+
+string_view config_option::buf_slice(size_t from, size_t to) const noexcept {
+  CAF_ASSERT(from <= to);
+  return {buf_.get() + from, to - from};
 }
 
 } // namespace caf

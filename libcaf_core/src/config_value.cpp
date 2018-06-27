@@ -50,8 +50,8 @@ config_value::~config_value() {
 
 // -- parsing ------------------------------------------------------------------
 
-expected<config_value> config_value::parse(std::string::const_iterator first,
-                                           std::string::const_iterator last) {
+expected<config_value> config_value::parse(string_view::iterator first,
+                                           string_view::iterator last) {
   using namespace detail;
   auto i = first;
   // Sanity check.
@@ -62,7 +62,7 @@ expected<config_value> config_value::parse(std::string::const_iterator first,
     if (++i == last)
       return make_error(pec::unexpected_eof);
   // Dispatch to parser.
-  parser::state<std::string::const_iterator> res;
+  parser::state<string_view::iterator> res;
   detail::ini_value_consumer f;
   res.i = i;
   res.e = last;
@@ -84,7 +84,7 @@ expected<config_value> config_value::parse(std::string::const_iterator first,
   }
 }
 
-expected<config_value> config_value::parse(const std::string& str) {
+expected<config_value> config_value::parse(string_view str) {
   return parse(str.begin(), str.end());
 }
 
@@ -132,15 +132,15 @@ std::string get_or(const config_value::dictionary& xs, const std::string& name,
   return default_value;
 }
 
-std::string get_or(const std::map<std::string, config_value::dictionary>& xs,
-                   const std::string& name, const char* default_value) {
+std::string get_or(const dictionary<config_value::dictionary>& xs,
+                   string_view name, const char* default_value) {
   auto result = get_if<std::string>(&xs, name);
   if (result)
     return std::move(*result);
   return default_value;
 }
 
-std::string get_or(const actor_system_config& cfg, const std::string& name,
+std::string get_or(const actor_system_config& cfg, string_view name,
                    const char* default_value) {
   return get_or(content(cfg), name, default_value);
 }

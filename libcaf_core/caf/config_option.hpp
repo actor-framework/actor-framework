@@ -18,9 +18,11 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "caf/fwd.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -49,8 +51,8 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   ///  Constructs a config option.
-  config_option(std::string category, const char* name, std::string description,
-                const meta_state* meta, void* storage = nullptr);
+  config_option(string_view category, string_view name, string_view description,
+                const meta_state* meta, void* value = nullptr);
 
   config_option(config_option&&) = default;
 
@@ -58,25 +60,20 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  inline const std::string& category() const noexcept {
-    return category_;
-  }
+  /// Returns the category of the option.
+  string_view category() const noexcept;
 
-  /// Returns the
-  inline const std::string& long_name() const noexcept {
-    return long_name_;
-  }
+  /// Returns the name of the option.
+  string_view long_name() const noexcept;
 
-  inline const std::string& short_names() const noexcept {
-    return short_names_;
-  }
+  /// Returns (optional) one-letter short names of the option.
+  string_view short_names() const noexcept;
 
-  inline const std::string& description() const noexcept {
-    return description_;
-  }
+  /// Returns a human-readable description of the option.
+  string_view  description() const noexcept;
 
   /// Returns the full name for this config option as "<category>.<long name>".
-  std::string full_name() const;
+  string_view full_name() const noexcept;
 
   /// Checks whether `x` holds a legal value for this option.
   error check(const config_value& x) const;
@@ -86,7 +83,7 @@ public:
   void store(const config_value& x) const;
 
   /// Returns a human-readable representation of this option's expected type.
-  const std::string& type_name() const noexcept;
+  string_view type_name() const noexcept;
 
   /// Returns whether this config option stores a boolean flag.
   bool is_flag() const noexcept;
@@ -96,10 +93,13 @@ public:
   optional<config_value> get() const;
 
 private:
-  std::string category_;
-  std::string long_name_;
-  std::string short_names_;
-  std::string description_;
+  string_view buf_slice(size_t from, size_t to) const noexcept;
+
+  std::unique_ptr<char[]> buf_;
+  uint16_t category_separator_;
+  uint16_t long_name_separator_;
+  uint16_t short_names_separator_;
+  uint16_t buf_size_;
   const meta_state* meta_;
   mutable void* value_;
 };

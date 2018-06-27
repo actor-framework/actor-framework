@@ -32,6 +32,7 @@ namespace caf {
 // -- 1 param templates --------------------------------------------------------
 
 template <class> class behavior_type_of;
+template <class> class dictionary;
 template <class> class downstream;
 template <class> class expected;
 template <class> class intrusive_ptr;
@@ -119,6 +120,7 @@ class scheduled_actor;
 class scoped_actor;
 class serializer;
 class stream_manager;
+class string_view;
 class type_erased_tuple;
 class type_erased_value;
 class uniform_type_info_map;
@@ -142,12 +144,12 @@ struct prohibit_top_level_spawn_marker;
 // -- free template functions --------------------------------------------------
 
 template <class T>
-config_option make_config_option(const char* category, const char* name,
-                                 const char* description);
+config_option make_config_option(string_view category, string_view name,
+                                 string_view description);
 
 template <class T>
-config_option make_config_option(T& storage, const char* category,
-                                 const char* name, const char* description);
+config_option make_config_option(T& storage, string_view category,
+                                 string_view name, string_view description);
 
 // -- enums --------------------------------------------------------------------
 
@@ -162,8 +164,7 @@ using stream_slot = uint16_t;
 // -- functions ----------------------------------------------------------------
 
 /// @relates actor_system_config
-const std::map<std::string, std::map<std::string, config_value>>&
-content(const actor_system_config&);
+const dictionary<dictionary<config_value>>& content(const actor_system_config&);
 
 // -- intrusive containers -----------------------------------------------------
 

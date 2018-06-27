@@ -39,8 +39,8 @@ inline std::string is_any_of(std::string arg) {
 
 constexpr bool token_compress_on = false;
 
-template <class Container, class Delim>
-void split(Container& result, const std::string& str, const Delim& delims,
+template <class Container, class Str, class Delim>
+void split(Container& result, const Str& str, const Delim& delims,
            bool keep_all = true) {
   size_t pos = 0;
   size_t prev = 0;
@@ -53,9 +53,8 @@ void split(Container& result, const std::string& str, const Delim& delims,
     }
     prev = pos + 1;
   }
-  if (prev < str.size()) {
+  if (prev < str.size())
     result.push_back(str.substr(prev, std::string::npos));
-  }
 }
 
 template <class Iterator>
