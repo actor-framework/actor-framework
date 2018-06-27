@@ -110,7 +110,15 @@ ini_category_consumer::ini_category_consumer(ini_consumer* parent,
                                              std::string category)
     : super(parent),
       category_(std::move(category)) {
-  CAF_ASSERT(parent != nullptr);
+  CAF_ASSERT(parent_ != nullptr);
+}
+
+ini_category_consumer::ini_category_consumer(ini_category_consumer&& other)
+    : super(other.parent()),
+      category_(std::move(other.category_)),
+      xs_(std::move(other.xs_)),
+      current_key(std::move(other.current_key)) {
+  CAF_ASSERT(parent_ != nullptr);
 }
 
 void ini_category_consumer::end_map() {

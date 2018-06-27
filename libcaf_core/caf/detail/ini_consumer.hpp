@@ -37,6 +37,10 @@ public:
 
   explicit abstract_ini_consumer(abstract_ini_consumer* parent = nullptr);
 
+  abstract_ini_consumer(const abstract_ini_consumer&) = delete;
+
+  abstract_ini_consumer& operator=(const abstract_ini_consumer&) = delete;
+
   virtual ~abstract_ini_consumer();
 
   // -- properties -------------------------------------------------------------
@@ -150,7 +154,7 @@ public:
 
   ini_category_consumer(ini_consumer* parent, std::string category);
 
-  ini_category_consumer(ini_category_consumer&&) = default;
+  ini_category_consumer(ini_category_consumer&&);
 
   // -- properties -------------------------------------------------------------
 
