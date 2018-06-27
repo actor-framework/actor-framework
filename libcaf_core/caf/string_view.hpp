@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstring>
 #include <iosfwd>
 #include <iterator>
 #include <limits>
@@ -105,11 +106,10 @@ public:
     // nop
   }
 
-  template <size_t N>
-  constexpr string_view(const char (&cstr)[N]) noexcept
+  constexpr string_view(const char* cstr) noexcept
       : data_(cstr),
-        size_(N - 1) {
-    static_assert(N > 0, "");
+        size_(strlen(cstr)) {
+    // nop
   }
 
   constexpr string_view(const string_view&) noexcept = default;
