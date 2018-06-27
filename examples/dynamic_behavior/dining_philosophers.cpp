@@ -1,7 +1,7 @@
 /******************************************************************************\
  * This example is an implementation of the classical Dining Philosophers     *
  * exercise using only libcaf's event-based actor implementation.             *
-\ ******************************************************************************/
+\******************************************************************************/
 
 #include <map>
 #include <thread>
@@ -68,7 +68,7 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
 //
 //
 //                +-------------+     {busy|taken}
-//      /-------->|  thinking   |<------------------\
+//      +-------->|  thinking   |<------------------+
 //      |         +-------------+                   |
 //      |                |                          |
 //      |                | {eat}                    |
@@ -86,10 +86,10 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer self,
 //      |         +-------------+
 //      |           |    |
 //      |  {busy}   |    | {taken}
-//      \-----------/    |
+//      +-----------+    |
 //      |                V
 //      | {think} +-------------+
-//      \---------|   eating    |
+//      +---------|   eating    |
 //                +-------------+
 
 class philosopher : public event_based_actor {
