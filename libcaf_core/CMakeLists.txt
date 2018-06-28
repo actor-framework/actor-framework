@@ -36,6 +36,7 @@ set(LIBCAF_CORE_SRCS
   src/behavior_stack.cpp
   src/blocking_actor.cpp
   src/blocking_behavior.cpp
+  src/chars.cpp
   src/concatenated_tuple.cpp
   src/config_option.cpp
   src/config_option_adder.cpp
@@ -55,7 +56,6 @@ set(LIBCAF_CORE_SRCS
   src/execution_unit.cpp
   src/exit_reason.cpp
   src/forwarding_actor_proxy.cpp
-  src/fsm.cpp
   src/get_mac_addresses.cpp
   src/get_process_id.cpp
   src/get_root_uuid.cpp

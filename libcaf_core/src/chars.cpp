@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/parser/fsm.hpp"
+#include "caf/detail/parser/chars.hpp"
 
 namespace caf {
 namespace detail {
+namespace parser {
 
 const char alphanumeric_chars[63] = "0123456789"
                                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -34,6 +35,7 @@ const char decimal_chars[11] = "0123456789";
 
 const char octal_chars[9] = "01234567";
 
+} // namespace parser
 } // namespace detail
 } // namespace caf
 

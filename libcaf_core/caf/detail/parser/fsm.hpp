@@ -16,45 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+// This header intentionally has no `#pragma once`. Any parser that uses this
+// DSL is supposed to clean up all defines made in this header via
+// `include "caf/detail/parser/fsm_undef.hpp"` at the end.
 
-#include <cstring>
-
-#include "caf/config.hpp"
 #include "caf/detail/pp.hpp"
-#include "caf/pec.hpp"
-
-namespace caf {
-namespace detail {
-
-struct any_char_t {};
-
-constexpr any_char_t any_char = any_char_t{};
-
-inline constexpr bool in_whitelist(any_char_t, char) {
-  return true;
-}
-
-inline constexpr bool in_whitelist(char whitelist, char ch) {
-  return whitelist == ch;
-}
-
-inline bool in_whitelist(const char* whitelist, char ch) {
-  return strchr(whitelist, ch) != nullptr;
-}
-
-inline bool in_whitelist(bool (*filter)(char), char ch) {
-  return filter(ch);
-}
-
-extern const char alphanumeric_chars[63];
-extern const char alphabetic_chars[53];
-extern const char hexadecimal_chars[23];
-extern const char decimal_chars[11];
-extern const char octal_chars[9];
-
-} // namespace detail
-} // namespace caf
 
 #define CAF_FSM_EVAL_MISMATCH_EC                                               \
   if (mismatch_ec == caf::pec::unexpected_character)                           \
@@ -109,18 +75,18 @@ extern const char octal_chars[9];
   goto s_##target;
 
 #define CAF_TRANSITION_IMPL2(target, whitelist)                                \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     CAF_TRANSITION_IMPL1(target)                                               \
   }
 
 #define CAF_TRANSITION_IMPL3(target, whitelist, action)                        \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     action;                                                                    \
     CAF_TRANSITION_IMPL1(target)                                               \
   }
 
 #define CAF_TRANSITION_IMPL4(target, whitelist, action, error_code)            \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
       return;                                                                  \
@@ -129,7 +95,7 @@ extern const char octal_chars[9];
   }
 
 #define CAF_ERROR_TRANSITION_IMPL2(error_code, whitelist)                      \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     ps.code = error_code;                                                      \
     return;                                                                    \
   }
@@ -141,18 +107,18 @@ extern const char octal_chars[9];
 #define CAF_EPSILON_IMPL1(target) goto s_##target;
 
 #define CAF_EPSILON_IMPL2(target, whitelist)                                   \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     CAF_EPSILON_IMPL1(target)                                                  \
   }
 
 #define CAF_EPSILON_IMPL3(target, whitelist, action)                           \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     action;                                                                    \
     CAF_EPSILON_IMPL1(target)                                                  \
   }
 
 #define CAF_EPSILON_IMPL4(target, whitelist, action, error_code)               \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
       return;                                                                  \
@@ -169,19 +135,19 @@ extern const char octal_chars[9];
   goto s_##target;
 
 #define CAF_FSM_TRANSITION_IMPL3(fsm_call, target, whitelist)                  \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
   }
 
 #define CAF_FSM_TRANSITION_IMPL4(fsm_call, target, whitelist, action)          \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     action;                                                                    \
     CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
   }
 
 #define CAF_FSM_TRANSITION_IMPL5(fsm_call, target, whitelist, action,          \
                                  error_code)                                   \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
       return;                                                                  \
@@ -197,18 +163,18 @@ extern const char octal_chars[9];
   goto s_##target;
 
 #define CAF_FSM_EPSILON_IMPL3(fsm_call, target, whitelist)                     \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
   }
 
 #define CAF_FSM_EPSILON_IMPL4(fsm_call, target, whitelist, action)             \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     action;                                                                    \
     CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
   }
 
 #define CAF_FSM_EPSILON_IMPL5(fsm_call, target, whitelist, action, error_code) \
-  if (::caf::detail::in_whitelist(whitelist, ch)) {                            \
+  if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
     if (!action) {                                                             \
       ps.code = error_code;                                                    \
       return;                                                                  \

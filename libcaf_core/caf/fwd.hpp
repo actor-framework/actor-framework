@@ -103,6 +103,8 @@ class forwarding_actor_proxy;
 class group;
 class group_module;
 class inbound_path;
+class ipv4_address;
+class ipv6_address;
 class local_actor;
 class mailbox_element;
 class message;

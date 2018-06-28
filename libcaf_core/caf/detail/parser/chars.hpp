@@ -18,62 +18,43 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
-#include "caf/config.hpp"
-#include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
-#include "caf/detail/parser/state.hpp"
-#include "caf/detail/scope_guard.hpp"
-#include "caf/pec.hpp"
-
-CAF_PUSH_UNUSED_LABEL_WARNING
-
-#include "caf/detail/parser/fsm.hpp"
+#include <cstring>
 
 namespace caf {
 namespace detail {
 namespace parser {
 
-/// Reads a number, i.e., on success produces either an `int64_t` or a
-/// `double`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  std::string res;
-  auto g = caf::detail::make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      consumer.value(std::move(res));
-  });
-  start();
-  state(init) {
-    transition(init, " \t")
-    transition(read_chars, '"')
-  }
-  state(read_chars) {
-    transition(escape, '\\')
-    transition(done, '"')
-    error_transition(pec::unexpected_newline, '\n')
-    transition(read_chars, any_char, res += ch)
-  }
-  state(escape) {
-    transition(read_chars, 'n', res += '\n')
-    transition(read_chars, 'r', res += '\r')
-    transition(read_chars, 't', res += '\t')
-    transition(read_chars, '\\', res += '\\')
-    transition(read_chars, '"', res += '"')
-    error_transition(pec::illegal_escape_sequence)
-  }
-  term_state(done) {
-    transition(done, " \t")
-  }
-  fin();
+struct any_char_t {};
+
+constexpr any_char_t any_char = any_char_t{};
+
+constexpr bool in_whitelist(any_char_t, char) {
+  return true;
 }
+
+constexpr bool in_whitelist(char whitelist, char ch) {
+  return whitelist == ch;
+}
+
+inline bool in_whitelist(const char* whitelist, char ch) {
+  return strchr(whitelist, ch) != nullptr;
+}
+
+inline bool in_whitelist(bool (*filter)(char), char ch) {
+  return filter(ch);
+}
+
+extern const char alphanumeric_chars[63];
+
+extern const char alphabetic_chars[53];
+
+extern const char hexadecimal_chars[23];
+
+extern const char decimal_chars[11];
+
+extern const char octal_chars[9];
 
 } // namespace parser
 } // namespace detail
 } // namespace caf
 
-#include "caf/detail/parser/fsm_undef.hpp"
-
-CAF_POP_WARNINGS

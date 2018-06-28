@@ -16,60 +16,66 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+// This header intentionally has no `#pragma once`. See fsm.hpp.
 
-#include <cstdint>
+#undef CAF_FSM_EVAL_MISMATCH_EC
 
-#include "caf/pec.hpp"
+#undef start
 
-namespace caf {
-namespace detail {
-namespace parser {
+#undef state
 
-template <class Iterator, class Sentinel = Iterator>
-struct state {
-  Iterator i;
-  Sentinel e;
-  pec code;
-  int32_t line;
-  int32_t column;
+#undef term_state
 
-  state() : code(pec::success), line(1), column(1) {
-    // nop
-  }
+#undef fin
 
-  explicit state(Iterator first) : state() {
-    i = first;
-  }
+#undef CAF_TRANSITION_IMPL1
 
-  state(Iterator first, Sentinel last) : state() {
-    i = first;
-    e = last;
-  }
+#undef CAF_TRANSITION_IMPL2
 
-  /// Returns the null terminator when reaching the end of the string,
-  /// otherwise the next character.
-  char next() noexcept {
-    ++i;
-    if (i != e) {
-      auto c = *i;
-      if (c == '\n') {
-        ++line;
-        column = 1;
-      } else {
-        ++column;
-      }
-      return c;
-    }
-    return '\0';
-  }
+#undef CAF_TRANSITION_IMPL3
 
-  /// Returns the null terminator if `i == e`, otherwise the current character.
-  char current() const noexcept {
-    return i != e ? *i : '\0';
-  }
-};
+#undef CAF_TRANSITION_IMPL4
 
-} // namespace parser
-} // namespace detail
-} // namespace caf
+#undef CAF_ERROR_TRANSITION_IMPL2
+
+#undef CAF_ERROR_TRANSITION_IMPL1
+
+#undef CAF_EPSILON_IMPL1
+
+#undef CAF_EPSILON_IMPL2
+
+#undef CAF_EPSILON_IMPL3
+
+#undef CAF_EPSILON_IMPL4
+
+#undef CAF_FSM_TRANSITION_IMPL2
+
+#undef CAF_FSM_TRANSITION_IMPL3
+
+#undef CAF_FSM_TRANSITION_IMPL4
+
+#undef CAF_FSM_TRANSITION_IMPL5
+
+#undef CAF_FSM_EPSILON_IMPL2
+
+#undef CAF_FSM_EPSILON_IMPL3
+
+#undef CAF_FSM_EPSILON_IMPL4
+
+#undef CAF_FSM_EPSILON_IMPL5
+
+#undef transition
+
+#undef error_transition
+
+#undef epsilon
+
+#undef fsm_transition
+
+#undef fsm_epsilon
+
+#undef epsilon_if
+
+#undef fsm_transition_if
+
+#undef fsm_epsilon_if
