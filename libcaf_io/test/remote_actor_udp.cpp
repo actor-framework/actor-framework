@@ -196,7 +196,7 @@ CAF_TEST(remote_link_udp) {
 
 CAF_TEST(multiple_endpoints_udp) {
   config cfg;
-  // setup server
+  // Setup server.
   CAF_MESSAGE("creating server");
   actor_system server_sys{cfg};
   auto mirror = server_sys.spawn([]() -> behavior {
@@ -207,7 +207,9 @@ CAF_TEST(multiple_endpoints_udp) {
       }
     };
   });
-  server_sys.middleman().publish_udp(mirror, 12345);
+  auto port = server_sys.middleman().publish_udp(mirror, 0);
+  CAF_REQUIRE(port);
+  CAF_MESSAGE("server running on port " << port);
   auto client_fun = [](event_based_actor* self) -> behavior {
     return {
       [=](actor s) {
@@ -220,29 +222,29 @@ CAF_TEST(multiple_endpoints_udp) {
       }
     };
   };
-  // setup client a
+  // Setup a client.
   CAF_MESSAGE("creating first client");
   config client_cfg;
   actor_system client_sys{client_cfg};
   auto client = client_sys.spawn(client_fun);
-  // acquire remote actor from the server
-  auto client_srv = client_sys.middleman().remote_actor_udp("localhost", 12345);
+  // Acquire remote actor from the server.
+  auto client_srv = client_sys.middleman().remote_actor_udp("localhost", *port);
   CAF_REQUIRE(client_srv);
-  // setup other clients
+  // Setup other clients.
   for (int i = 0; i < 5; ++i) {
     config other_cfg;
     actor_system other_sys{other_cfg};
     CAF_MESSAGE("creating new client");
     auto other = other_sys.spawn(client_fun);
-    // acquire remote actor from the server
-    auto other_srv = other_sys.middleman().remote_actor_udp("localhost", 12345);
+    // Acquire remote actor from the new server.
+    auto other_srv = other_sys.middleman().remote_actor_udp("localhost", *port);
     CAF_REQUIRE(other_srv);
-    // establish communication and exit
+    // Establish communication and exit.
     CAF_MESSAGE("client contacts server and exits");
     anon_send(other, *other_srv);
     other_sys.await_all_actors_done();
   }
-  // establish communication and exit
+  // Start communicate from the first actor.
   CAF_MESSAGE("first client contacts server and exits");
   anon_send(client, *client_srv);
   client_sys.await_all_actors_done();
