@@ -203,10 +203,7 @@ pipeline {
       steps {
         deleteDir()
         dir('caf-sources') {
-          git([
-            url: 'https://github.com/actor-framework/actor-framework.git',
-            branch: 'master',
-          ])
+          checkout scm
         }
         stash includes: 'caf-sources/**', name: 'caf-sources'
       }
