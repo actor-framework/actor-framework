@@ -312,13 +312,9 @@ public:
   template <class... Ts>
   typename detail::make_response_promise_helper<Ts...>::type
   make_response_promise() {
-    auto& ptr = current_element_;
-    if (!ptr)
+    if (current_element_ == nullptr || current_element_->mid.is_answered())
       return {};
-    auto& mid = ptr->mid;
-    if (mid.is_answered())
-      return {};
-    return {this->ctrl(), *ptr};
+    return {this->ctrl(), *current_element_};
   }
 
   /// Creates a `response_promise` to respond to a request later on.
