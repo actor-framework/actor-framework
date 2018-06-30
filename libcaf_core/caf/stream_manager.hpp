@@ -231,14 +231,14 @@ public:
   /// Adds a new outbound path to `rp.next()`.
   /// @private
   stream_slot add_unchecked_outbound_path_impl(response_promise& rp,
-                                            message handshake);
+                                               message handshake);
 
   /// Adds a new outbound path to `next`.
   /// @private
   stream_slot add_unchecked_outbound_path_impl(strong_actor_ptr next,
-                                            message handshake);
+                                               message handshake);
 
-  /// Calls `add_unchecked_outbound_path_impl(make_response_promise(), handshake)`.
+  /// Adds a new outbound path to the current sender.
   /// @private
   stream_slot add_unchecked_outbound_path_impl(message handshake);
 
