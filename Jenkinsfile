@@ -67,7 +67,6 @@ buildEnvironments = [
 unixOpts = "-DCAF_NO_PROTOBUF_EXAMPLES:BOOL=yes " +
            "-DCAF_NO_QT_EXAMPLES:BOOL=yes " +
            "-DCAF_MORE_WARNINGS:BOOL=yes " +
-           "-DCAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes " +
            "-DCAF_ENABLE_RUNTIME_CHECKS:BOOL=yes " +
            "-DCAF_NO_BENCHMARKS:BOOL=yes " +
            "-DOPENSSL_ROOT_DIR=/usr/local/opt/openssl " +
