@@ -44,9 +44,8 @@ public:
 
 /// A cooperatively scheduled, event-based actor implementation. This is the
 /// recommended base class for user-defined actors.
-/// @extends local_actor
-class event_based_actor : public extend<scheduled_actor,
-                                        event_based_actor>::
+/// @extends scheduled_actor
+class event_based_actor : public extend<scheduled_actor, event_based_actor>::
                                  with<mixin::sender,
                                       mixin::requester,
                                       mixin::subscriber,

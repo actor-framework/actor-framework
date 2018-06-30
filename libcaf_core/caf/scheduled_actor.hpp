@@ -104,8 +104,7 @@ result<message> print_and_drop(scheduled_actor*, message_view&);
 /// Default handler function that simply drops messages.
 result<message> drop(scheduled_actor*, message_view&);
 
-/// A cooperatively scheduled, event-based actor implementation. This is the
-/// recommended base class for user-defined actors.
+/// A cooperatively scheduled, event-based actor implementation.
 /// @extends local_actor
 class scheduled_actor : public local_actor, public resumable {
 public:
