@@ -505,6 +505,36 @@ public:
                        std::move(pull), std::move(done), std::move(fin), token);
   }
 
+  /// Creates a new continuous stream source by instantiating the default
+  /// source implementation with `Driver. `The returned manager is not
+  /// connected to any slot and thus not stored by the actor automatically.
+  template <class Driver, class Init, class Pull, class Done,
+            class Finalize = unit_t>
+  typename Driver::source_ptr_type
+  make_continuous_source(Init init, Pull pull, Done done, Finalize fin = {}) {
+    using detail::make_stream_source;
+    auto mgr = make_stream_source<Driver>(this, std::move(init),
+                                          std::move(pull), std::move(done),
+                                          std::move(fin));
+    mgr->continuous(true);
+    return mgr;
+  }
+
+  /// Creates a new continuous stream source by instantiating the default
+  /// source implementation with `Driver. `The returned manager is not
+  /// connected to any slot and thus not stored by the actor automatically.
+  template <class Init, class Pull, class Done, class Finalize = unit_t,
+            class DownstreamManager = broadcast_downstream_manager<
+              typename stream_source_trait_t<Pull>::output>>
+  stream_source_ptr<DownstreamManager>
+  make_continuous_source(Init init, Pull pull, Done done, Finalize fin = {},
+                         policy::arg<DownstreamManager> = {}) {
+    using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
+                                                     Done, Finalize>;
+    return make_continuous_source<driver>(std::move(init), std::move(pull),
+                                          std::move(done), std::move(fin));
+  }
+
   template <class Driver, class... Ts>
   make_sink_result<typename Driver::input_type>
   make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
