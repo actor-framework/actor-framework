@@ -52,23 +52,22 @@ public:
     return memcmp(buf.data(), other.bytes().data(), Derived::num_bytes);
   }
 
-  // -- mutators ---------------------------------------------------------------
+  // -- transformations --------------------------------------------------------
 
-  /// Masks out lower bytes of the address. For example, calling `mask(1)` on
-  /// the IPv4 address `192.168.1.1` would produce `192.0.0.0`.
-  /// @pre `bytes_to_keep < num_bytes`
-  void mask(int bytes_to_keep) noexcept {
-    auto& buf = dref().bytes();
-    memset(buf.data() + bytes_to_keep, 0, Derived::num_bytes - bytes_to_keep);
-  }
-
-  /// Returns a copy of this address with that masks out lower bytes. For
-  /// example, calling `masked(1)` on the IPv4 address `192.168.1.1` would
-  /// return `192.0.0.0`.
-  /// @pre `bytes_to_keep < num_bytes`
-  Derived masked(int bytes_to_keep) const noexcept {
+  Derived network_address(size_t prefix_length) const noexcept {
+    static constexpr uint8_t netmask_tbl[] = {0x00, 0x80, 0xC0, 0xE0,
+                                              0xF0, 0xF8, 0xFC, 0xFE};
+    prefix_length = std::min(prefix_length, Derived::num_bytes * 8);
+    Derived netmask;
+    auto bytes_to_keep = prefix_length / 8;
+    auto remainder = prefix_length % 8;
+    size_t i = 0;
+    for (; i < bytes_to_keep; ++i)
+      netmask[i] = 0xFF;
+    if (remainder != 0)
+      netmask[i] = netmask_tbl[remainder];
     Derived result{dref()};
-    result.mask(bytes_to_keep);
+    result &= netmask;
     return result;
   }
 

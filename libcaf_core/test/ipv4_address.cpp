@@ -64,11 +64,17 @@ CAF_TEST(properties) {
   CAF_CHECK_EQUAL(addr(224, 0, 0, 254).is_multicast(), true);
   CAF_CHECK_EQUAL(addr(224, 0, 1, 1).is_multicast(), true);
   CAF_CHECK_EQUAL(addr(225, 0, 0, 1).is_multicast(), false);
-  CAF_CHECK_EQUAL(addr(1, 2, 3, 4).masked(0), addr(0, 0, 0, 0));
-  CAF_CHECK_EQUAL(addr(1, 2, 3, 4).masked(1), addr(1, 0, 0, 0));
-  CAF_CHECK_EQUAL(addr(1, 2, 3, 4).masked(2), addr(1, 2, 0, 0));
-  CAF_CHECK_EQUAL(addr(1, 2, 3, 4).masked(3), addr(1, 2, 3, 0));
-  CAF_CHECK_EQUAL(addr(1, 2, 3, 4).masked(4), addr(1, 2, 3, 4));
+}
+
+CAF_TEST(network addresses) {
+  auto all1 = addr(255, 255, 255, 255);
+  CAF_CHECK_EQUAL(all1.network_address(0), addr(0x00, 0x00, 0x00, 0x00));
+  CAF_CHECK_EQUAL(all1.network_address(7), addr(0xFE, 0x00, 0x00, 0x00));
+  CAF_CHECK_EQUAL(all1.network_address(8), addr(0xFF, 0x00, 0x00, 0x00));
+  CAF_CHECK_EQUAL(all1.network_address(9), addr(0xFF, 0x80, 0x00, 0x00));
+  CAF_CHECK_EQUAL(all1.network_address(31), addr(0xFF, 0xFF, 0xFF, 0xFE));
+  CAF_CHECK_EQUAL(all1.network_address(32), addr(0xFF, 0xFF, 0xFF, 0xFF));
+  CAF_CHECK_EQUAL(all1.network_address(33), addr(0xFF, 0xFF, 0xFF, 0xFF));
 }
 
 CAF_TEST(operators) {

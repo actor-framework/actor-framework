@@ -92,6 +92,13 @@ public:
     return bytes_.size();
   }
 
+  // -- inspection -------------------------------------------------------------
+
+  template <class Inspector>
+  friend typename Inspector::result_type inspect(Inspector& f, ipv4_address& x) {
+    return f(x.bits_);
+  }
+
 private:
   // -- member variables -------------------------------------------------------
 
