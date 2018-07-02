@@ -243,7 +243,7 @@ SSL_CTX* session::create_ssl_context() {
   } else {
     // No authentication.
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
-#ifdef CAF_SSL_HAS_ECDH_AUTO
+#if defined(CAF_SSL_HAS_ECDH_AUTO) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
     SSL_CTX_set_ecdh_auto(ctx, 1);
 #else
     auto ecdh = EC_KEY_new_by_curve_name(NID_secp384r1);
