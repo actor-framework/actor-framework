@@ -16,47 +16,53 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/logger.hpp"
+
+#include "caf/io/network/pipe_reader.hpp"
+#include "caf/io/network/socket_utils.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
 
-class multiplexer;
-class default_multiplexer;
+pipe_reader::pipe_reader(default_multiplexer& dm)
+    : event_handler(dm, invalid_native_socket) {
+  // nop
+}
+
+void pipe_reader::removed_from_loop(operation) {
+  // nop
+}
+
+resumable* pipe_reader::try_read_next() {
+  intptr_t ptrval;
+  // on windows, we actually have sockets, otherwise we have file handles
+# ifdef CAF_WINDOWS
+    auto res = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval),
+                    sizeof(ptrval), 0);
+# else
+    auto res = read(fd(), &ptrval, sizeof(ptrval));
+# endif
+  if (res != sizeof(ptrval))
+    return nullptr;
+  return reinterpret_cast<resumable*>(ptrval);
+}
+
+void pipe_reader::handle_event(operation op) {
+  CAF_LOG_TRACE(CAF_ARG(op));
+  if (op == operation::read) {
+    auto ptr = try_read_next();
+    if (ptr != nullptr)
+      backend().resume({ptr, false});
+  }
+  // else: ignore errors
+}
+
+void pipe_reader::init(native_socket sock_fd) {
+  fd_ = sock_fd;
+}
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
-

@@ -18,45 +18,51 @@
 
 #pragma once
 
+#include "caf/io/fwd.hpp"
+#include "caf/io/scribe.hpp"
+
+#include "caf/io/network/stream_impl.hpp"
+#include "caf/io/network/native_socket.hpp"
+
+#include "caf/io/network/policy/tcp.hpp"
+
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
 
-class multiplexer;
-class default_multiplexer;
-
+/// Default scribe implementation.
+class scribe_impl : public scribe {
+public:
+  scribe_impl(default_multiplexer& mx, native_socket sockfd);
+  
+  void configure_read(receive_policy::config config) override;
+  
+  void ack_writes(bool enable) override;
+  
+  std::vector<char>& wr_buf() override;
+  
+  std::vector<char>& rd_buf() override;
+  
+  void stop_reading() override;
+  
+  void flush() override;
+  
+  std::string addr() const override;
+  
+  uint16_t port() const override;
+  
+  void launch();
+  
+  void add_to_loop() override;
+  
+  void remove_from_loop() override;
+  
+protected:
+  bool launched_;
+  stream_impl<policy::tcp> stream_;
+};
+  
 } // namespace network
-
 } // namespace io
 } // namespace caf
 

@@ -18,45 +18,66 @@
 
 #pragma once
 
+#include "caf/io/fwd.hpp"
+#include "caf/io/datagram_servant.hpp"
+
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/datagram_handler_impl.hpp"
+
+#include "caf/io/network/policy/udp.hpp"
+
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
 
-class multiplexer;
-class default_multiplexer;
-
+/// Default datagram servant implementation.
+class datagram_servant_impl : public datagram_servant {
+  using id_type = int64_t;
+  
+public:
+  datagram_servant_impl(default_multiplexer& mx, native_socket sockfd,
+                        int64_t id);
+  
+  bool new_endpoint(network::receive_buffer& buf) override;
+  
+  void ack_writes(bool enable) override;
+  
+  std::vector<char>& wr_buf(datagram_handle hdl) override;
+  
+  void enqueue_datagram(datagram_handle hdl, std::vector<char> buf) override;
+  
+  network::receive_buffer& rd_buf() override;
+  
+  void stop_reading() override;
+  
+  void flush() override;
+  
+  std::string addr() const override;
+  
+  uint16_t port(datagram_handle hdl) const override;
+  
+  uint16_t local_port() const override;
+  
+  std::vector<datagram_handle> hdls() const override;
+  
+  void add_endpoint(const ip_endpoint& ep, datagram_handle hdl) override;
+  
+  void remove_endpoint(datagram_handle hdl) override;
+  
+  void launch() override;
+  
+  void add_to_loop() override;
+  
+  void remove_from_loop() override;
+  
+  void detach_handles() override;
+  
+private:
+  bool launched_;
+  datagram_handler_impl<policy::udp> handler_;
+};
+  
 } // namespace network
-
 } // namespace io
 } // namespace caf
 

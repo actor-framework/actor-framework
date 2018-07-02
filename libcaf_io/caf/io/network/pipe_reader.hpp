@@ -18,45 +18,26 @@
 
 #pragma once
 
+#include "caf/io/fwd.hpp"
+
+#include "caf/io/network/operation.hpp"
+#include "caf/io/network/event_handler.hpp"
+#include "caf/io/network/native_socket.hpp"
+
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
 
-class multiplexer;
-class default_multiplexer;
+/// An event handler for the internal event pipe.
+class pipe_reader : public event_handler {
+public:
+  pipe_reader(default_multiplexer& dm);
+  void removed_from_loop(operation op) override;
+  void handle_event(operation op) override;
+  void init(native_socket sock_fd);
+  resumable* try_read_next();
+};
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
-

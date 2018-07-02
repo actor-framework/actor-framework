@@ -35,6 +35,17 @@ set(LIBCAF_IO_SRCS
   src/scribe.cpp
   src/stream_manager.cpp
   src/test_multiplexer.cpp
+  src/acceptor.cpp
+  src/datagram_handler.cpp
+  src/datagram_servant_impl.cpp
+  src/doorman_impl.cpp
+  src/event_handler.cpp
+  src/pipe_reader.cpp
+  src/scribe_impl.cpp
+  src/stream.cpp
+  src/tcp.cpp
+  src/udp.cpp
+  src/socket_utils.cpp
 )
 
 add_custom_target(libcaf_io)

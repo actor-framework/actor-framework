@@ -16,47 +16,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/io/network/acceptor.hpp"
+
+#include "caf/logger.hpp"
 
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
 
-class multiplexer;
-class default_multiplexer;
+acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
+    : event_handler(backend_ref, sockfd),
+      sock_(invalid_native_socket) {
+  // nop
+}
+
+void acceptor::start(acceptor_manager* mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
+  CAF_ASSERT(mgr != nullptr);
+  activate(mgr);
+}
+
+void acceptor::activate(acceptor_manager* mgr) {
+  if (!mgr_) {
+    mgr_.reset(mgr);
+    event_handler::activate();
+  }
+}
+
+void acceptor::stop_reading() {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
+  close_read_channel();
+  passivate();
+}
+
+void acceptor::removed_from_loop(operation op) {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd()) << CAF_ARG(op));
+  if (op == operation::read)
+    mgr_.reset();
+}
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
-

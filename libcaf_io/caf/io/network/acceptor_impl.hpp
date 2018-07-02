@@ -18,45 +18,35 @@
 
 #pragma once
 
+#include "caf/io/fwd.hpp"
+
+#include "caf/io/network/acceptor.hpp"
+#include "caf/io/network/operation.hpp"
+#include "caf/io/network/native_socket.hpp"
+
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
 
-class multiplexer;
-class default_multiplexer;
+/// A concrete acceptor with a technology-dependent policy.
+template <class ProtocolPolicy>
+class acceptor_impl : public acceptor {
+public:
+  template <class... Ts>
+  acceptor_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
+    : acceptor(mpx, sockfd),
+      policy_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+  
+  void handle_event(io::network::operation op) override {
+    this->handle_event_impl(op, policy_);
+  }
+  
+private:
+  ProtocolPolicy policy_;
+};
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
-

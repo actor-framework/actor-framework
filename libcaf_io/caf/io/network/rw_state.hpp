@@ -19,44 +19,20 @@
 #pragma once
 
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
 
-class multiplexer;
-class default_multiplexer;
+
+/// Denotes the returned state of read and write operations on sockets.
+enum class rw_state {
+  /// Reports that bytes could be read or written.
+  success,
+  /// Reports that the socket is closed or faulty.
+  failure,
+  /// Reports that an empty buffer is in use and no operation was performed.
+  indeterminate
+};
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
-

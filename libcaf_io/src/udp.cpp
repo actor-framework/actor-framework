@@ -16,47 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/io/network/policy/udp.hpp"
 
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
+namespace policy {
+  
+read_datagram_fun udp::read_datagram = caf::io::network::read_datagram;
 
-class multiplexer;
-class default_multiplexer;
+write_datagram_fun udp::write_datagram = caf::io::network::write_datagram;
 
+} // policy
 } // namespace network
-
 } // namespace io
 } // namespace caf
-

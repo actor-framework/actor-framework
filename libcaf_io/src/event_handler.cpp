@@ -16,47 +16,57 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/io/network/event_handler.hpp"
+
+#include "caf/logger.hpp"
+
+#include "caf/io/network/socket_utils.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
+ 
+event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
+    : eventbf_(0),
+      fd_(sockfd),
+      read_channel_closed_(false),
+      backend_(dm) {
+  set_fd_flags();
+}
 
-class multiplexer;
-class default_multiplexer;
+event_handler::~event_handler() {
+  if (fd_ != invalid_native_socket) {
+    CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
+    closesocket(fd_);
+  }
+}
+
+void event_handler::close_read_channel() {
+  if (fd_ == invalid_native_socket || read_channel_closed_)
+    return;
+  ::shutdown(fd_, 0); // 0 identifies the read channel on Win & UNIX
+  read_channel_closed_ = true;
+}
+
+void event_handler::passivate() {
+  backend().del(operation::read, fd(), this);
+}
+
+void event_handler::activate() {
+  backend().add(operation::read, fd(), this);
+}
+
+void event_handler::set_fd_flags() {
+  if (fd_ == invalid_native_socket)
+    return;
+  // enable nonblocking IO, disable Nagle's algorithm, and suppress SIGPIPE
+  nonblocking(fd_, true);
+  tcp_nodelay(fd_, true);
+  allow_sigpipe(fd_, false);
+}
 
 } // namespace network
-
 } // namespace io
 } // namespace caf
 

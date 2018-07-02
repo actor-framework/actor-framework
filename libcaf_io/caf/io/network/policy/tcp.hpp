@@ -18,45 +18,30 @@
 
 #pragma once
 
+#include "caf/io/network/default_multiplexer.hpp"
+
 namespace caf {
-
-// -- templates from the parent namespace necessary for defining aliases -------
-
-template <class> class intrusive_ptr;
-
 namespace io {
-
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
 namespace network {
+namespace policy {
 
-class multiplexer;
-class default_multiplexer;
+/// Function signature of `read_some`.
+using read_some_fun = decltype(read_some)*;
 
+/// Function signature of `wite_some`.
+using write_some_fun = decltype(write_some)*;
+
+/// Function signature of `try_accept`.
+using try_accept_fun = decltype(try_accept)*;
+
+/// Policy object for wrapping default TCP operations.
+struct tcp {
+  static read_some_fun read_some;
+  static write_some_fun write_some;
+  static try_accept_fun try_accept;
+};
+
+} // namespace policy
 } // namespace network
-
 } // namespace io
 } // namespace caf
-
