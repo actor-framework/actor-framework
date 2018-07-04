@@ -36,6 +36,8 @@
 #include "caf/io/middleman_actor_impl.hpp"
 
 #include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/stream_impl.hpp"
+#include "caf/io/network/doorman_impl.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/openssl/session.hpp"
