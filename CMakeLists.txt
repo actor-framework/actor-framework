@@ -129,12 +129,6 @@ else()
 endif()
 
 ################################################################################
-#                        respect environment variables                         #
-################################################################################
-
-set(LDFLAGS $ENV{LDFLAGS})
-
-################################################################################
 #                              get version of CAF                              #
 ################################################################################
 
@@ -317,7 +311,7 @@ if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
   include(GenerateExportHeader)
-  list(APPEND LDFLAGS -lws2_32 -liphlpapi -lpsapi)
+  list(APPEND CAF_EXTRA_LDFLAGS -lws2_32 -liphlpapi -lpsapi)
   # build static to avoid runtime dependencies to GCC libraries
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
@@ -326,7 +320,7 @@ else()
   build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
-  list(APPEND LDFLAGS ws2_32 iphlpapi)
+  list(APPEND CAF_EXTRA_LDFLAGS ws2_32 iphlpapi)
 endif()
 # iOS support
 if(CAF_OSX_SYSROOT)
@@ -601,7 +595,7 @@ if(NOT CAF_NO_UNIT_TESTS)
                  libcaf_test/caf/test/unit_test_impl.hpp
                  ${CAF_ALL_UNIT_TESTS})
   target_link_libraries(caf-test
-                        ${LDFLAGS}
+                        ${CAF_EXTRA_LDFLAGS}
                         ${CAF_LIBRARIES}
                         ${PTHREAD_LIBRARIES})
   add_custom_target(all_unit_tests)
@@ -753,6 +747,8 @@ invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
 set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
+set(ALL_LD_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CAF_EXTRA_LDFLAGS}")
+string(STRIP "${ALL_LD_FLAGS}" ALL_LD_FLAGS)
 # done
 if(NOT CAF_NO_SUMMARY)
   message(STATUS
@@ -780,7 +776,7 @@ if(NOT CAF_NO_SUMMARY)
         "\n"
         "\nCXX:                   ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:              ${ALL_CXX_FLAGS}"
-        "\nLDFLAGS:               ${LDFLAGS}"
+        "\nLINKER_FLAGS (shared)  ${ALL_LD_FLAGS}"
         "\n"
         "\nSource directory:      ${CMAKE_CURRENT_SOURCE_DIR}"
         "\nBuild directory:       ${CMAKE_CURRENT_BINARY_DIR}"
