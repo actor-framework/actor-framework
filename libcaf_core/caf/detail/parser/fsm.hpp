@@ -61,6 +61,15 @@
       goto s_fin;                                                              \
     e_##name :
 
+/// Defines a state in the FSM that doesn't check for end-of-input. Unstable
+/// states are supposed to contain epsilon transitions only.
+#define unstable_state(name)                                                       \
+  CAF_FSM_EVAL_MISMATCH_EC                                                     \
+  }                                                                            \
+  {                                                                            \
+    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
+    s_##name :                                                                 \
+    e_##name :
 
 /// Ends the definition of an FSM.
 #define fin()                                                                  \
@@ -237,6 +246,12 @@
   CAF_PP_OVERLOAD(CAF_FSM_EPSILON_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 #endif // CAF_MSVC
+
+// Makes a transition into another state if the `statement` is true.
+#define transition_if(statement, ...)                                          \
+  if (statement) {                                                             \
+    transition(__VA_ARGS__)                                                    \
+  }
 
 // Makes an epsiolon transition into another state if the `statement` is true.
 #define epsilon_if(statement, ...)                                             \
