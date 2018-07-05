@@ -28,8 +28,7 @@
 
 namespace caf {
 
-class ipv4_address : public byte_address<ipv4_address>,
-                     detail::comparable<ipv4_address, ipv6_address> {
+class ipv4_address : public byte_address<ipv4_address> {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -47,14 +46,6 @@ public:
 
   ipv4_address(array_type bytes);
 
-  // -- comparison -------------------------------------------------------------
-
-  using super::compare;
-
-  /// Returns a negative number if `*this < other`, zero if `*this == other`
-  /// and a positive number if `*this > other`.
-  int compare(const ipv6_address& other) const noexcept;
-
   // -- properties -------------------------------------------------------------
 
   /// Returns whether this is a loopback address.
@@ -66,6 +57,12 @@ public:
   /// Returns the bits of the IP address in a single integer.
   inline uint32_t bits() const noexcept {
     return bits_;
+  }
+
+  /// Sets all bits of the IP address in a single 32-bit write.
+  /// @private
+  inline void bits(uint32_t value) noexcept {
+    bits_ = value;
   }
 
   /// Returns the bytes of the IP address as array.
