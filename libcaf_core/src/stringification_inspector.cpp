@@ -39,20 +39,20 @@ void stringification_inspector::consume(atom_value& x) {
   result_ += '\'';
 }
 
-void stringification_inspector::consume(const char* cstr) {
-  if (cstr == nullptr || *cstr == '\0') {
+void stringification_inspector::consume(string_view str) {
+  if (str.empty()) {
     result_ += R"("")";
     return;
   }
-  if (*cstr == '"') {
-    // assume an already escaped string
-    result_ += cstr;
+  if (str[0] == '"') {
+    // Assume an already escaped string.
+    result_.insert(result_.end(), str.begin(), str.end());
     return;
   }
+  // Escape string.
   result_ += '"';
-  char c;
-  for(;;) {
-    switch (c = *cstr++) {
+  for (char c : str) {
+    switch (c) {
       default:
         result_ += c;
         break;
@@ -62,11 +62,8 @@ void stringification_inspector::consume(const char* cstr) {
       case '"':
         result_ += R"(\")";
         break;
-      case '\0':
-        goto end_of_string;
     }
   }
-  end_of_string:
   result_ += '"';
 }
 
