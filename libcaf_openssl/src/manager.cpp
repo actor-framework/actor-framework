@@ -45,6 +45,7 @@ struct CRYPTO_dynlock_value {
 namespace caf {
 namespace openssl {
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static int init_count = 0;
 static std::mutex init_mutex;
 static std::vector<std::mutex> mutexes;
@@ -74,8 +75,10 @@ static void dynlock_destroy(CRYPTO_dynlock_value* dynlock,
                             const char* /* file */, int /* line */) {
   delete dynlock;
 }
+#endif
 
 manager::~manager() {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   std::lock_guard<std::mutex> lock{init_mutex};
   --init_count;
   if (init_count == 0) {
@@ -85,6 +88,7 @@ manager::~manager() {
     CRYPTO_set_dynlock_destroy_callback(nullptr);
     mutexes = std::vector<std::mutex>(0);
   }
+#endif
 }
 
 void manager::start() {
@@ -115,6 +119,7 @@ void manager::init(actor_system_config&) {
       CAF_RAISE_ERROR("No private key configured for SSL endpoint");
   }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   std::lock_guard<std::mutex> lock{init_mutex};
   ++init_count;
   if (init_count == 1) {
@@ -125,6 +130,7 @@ void manager::init(actor_system_config&) {
     CRYPTO_set_dynlock_destroy_callback(dynlock_destroy);
     // OpenSSL's default thread ID callback should work, so don't set our own.
   }
+#endif
 }
 
 actor_system::module::id_t manager::id() const {
