@@ -18,10 +18,11 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
+#include "caf/ipv6_address.hpp"
 
 namespace caf {
 
+/// An IP address. The address family is IPv6 unless `embeds_v4` returns true.
 using ip_address = ipv6_address;
 
 } // namespace caf
