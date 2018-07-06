@@ -104,7 +104,9 @@ class group;
 class group_module;
 class inbound_path;
 class ipv4_address;
+class ipv4_subnet;
 class ipv6_address;
+class ipv6_subnet;
 class local_actor;
 class mailbox_element;
 class message;
@@ -161,6 +163,8 @@ enum class atom_value : uint64_t;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using ip_address = ipv6_address;
+using ip_subnet = ipv6_subnet;
 using stream_slot = uint16_t;
 
 // -- functions ----------------------------------------------------------------
