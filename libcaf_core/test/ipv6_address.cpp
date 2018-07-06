@@ -32,36 +32,9 @@ namespace {
 
 using array_type = ipv6_address::array_type;
 
-void addr_fill(ipv6_address::array_type& arr,
-               std::initializer_list<uint16_t> chunks) {
-  union {
-    uint16_t i;
-    std::array<uint8_t, 2> a;
-  } tmp;
-  size_t p = 0;
-  for (auto chunk : chunks) {
-    tmp.i = detail::to_network_order(chunk);
-    arr[p++] = tmp.a[0];
-    arr[p++] = tmp.a[1];
-  }
-}
-
 ipv6_address addr(std::initializer_list<uint16_t> prefix,
-                  std::initializer_list<uint16_t> suffix) {
-  CAF_ASSERT((prefix.size() + suffix.size()) <= 8);
-  ipv6_address::array_type bytes;
-  bytes.fill(0);
-  addr_fill(bytes, suffix);
-  std::rotate(bytes.begin(), bytes.begin() + suffix.size() * 2, bytes.end());
-  addr_fill(bytes, prefix);
-  return ipv6_address{bytes};
-}
-
-ipv6_address addr(std::initializer_list<uint16_t> segments) {
-  ipv6_address::array_type bytes;
-  bytes.fill(0);
-  addr_fill(bytes, segments);
-  return ipv6_address{bytes};
+                  std::initializer_list<uint16_t> suffix = {}) {
+  return ipv6_address{prefix, suffix};
 }
 
 } // namespace <anonymous>

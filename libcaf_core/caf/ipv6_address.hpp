@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cstdint>
+#include <initializer_list>
 #include <string>
 
 #include "caf/byte_address.hpp"
@@ -41,12 +42,22 @@ public:
 
   using array_type = std::array<uint8_t, num_bytes>;
 
+  using uint16_ilist = std::initializer_list<uint16_t>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
+  /// Constructs an all-zero address.
   ipv6_address();
 
+  /// Constructs an address from given prefix and suffix.
+  /// @pre `prefix.size() + suffix.size() <= 8`
+  /// @warning assumes network byte order for prefix and suffix
+  ipv6_address(uint16_ilist prefix, uint16_ilist suffix);
+
+  /// Embeds an IPv4 address into an IPv6 address.
   explicit ipv6_address(ipv4_address addr);
 
+  /// Constructs an IPv6 address from given bytes.
   explicit ipv6_address(array_type bytes);
 
   // -- comparison -------------------------------------------------------------

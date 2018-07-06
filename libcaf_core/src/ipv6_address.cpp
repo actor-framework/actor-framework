@@ -86,6 +86,26 @@ ipv6_address::ipv6_address() {
   half_segments_[1] = 0;
 }
 
+ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) {
+  CAF_ASSERT((prefix.size() + suffix.size()) <= 8);
+  auto addr_fill = [&](uint16_ilist chunks) {
+    union {
+      uint16_t i;
+      std::array<uint8_t, 2> a;
+    } tmp;
+    size_t p = 0;
+    for (auto chunk : chunks) {
+      tmp.i = detail::to_network_order(chunk);
+      bytes_[p++] = tmp.a[0];
+      bytes_[p++] = tmp.a[1];
+    }
+  };
+  bytes_.fill(0);
+  addr_fill(suffix);
+  std::rotate(bytes_.begin(), bytes_.begin() + suffix.size() * 2, bytes_.end());
+  addr_fill(prefix);
+}
+
 ipv6_address::ipv6_address(ipv4_address addr) {
   std::copy(v4_prefix.begin(), v4_prefix.end(), quad_segments_.begin());
   quad_segments_.back() = addr.bits();
