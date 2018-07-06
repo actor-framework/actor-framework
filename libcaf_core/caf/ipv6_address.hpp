@@ -47,7 +47,7 @@ public:
 
   explicit ipv6_address(ipv4_address addr);
 
-  ipv6_address(array_type bytes);
+  explicit ipv6_address(array_type bytes);
 
   // -- comparison -------------------------------------------------------------
 

@@ -44,7 +44,7 @@ public:
 
   ipv4_address();
 
-  ipv4_address(array_type bytes);
+  explicit ipv4_address(array_type bytes);
 
   // -- properties -------------------------------------------------------------
 
