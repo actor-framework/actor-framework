@@ -40,7 +40,7 @@ public:
     return address_;
   }
 
-  /// Returns the prefix length of the netmask.
+  /// Returns the prefix length of the netmask in bits.
   inline uint8_t prefix_length() const noexcept {
     return prefix_length_;
   }
