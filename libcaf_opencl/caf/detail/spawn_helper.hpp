@@ -21,7 +21,6 @@
 #include "caf/opencl/actor_facade.hpp"
 
 namespace caf {
-namespace opencl {
 namespace detail {
 
 struct tuple_construct { };
@@ -62,6 +61,5 @@ struct cl_spawn_helper {
 };
 
 } // namespace detail
-} // namespace opencl
 } // namespace caf
 

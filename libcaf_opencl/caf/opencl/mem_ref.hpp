@@ -25,32 +25,10 @@
 #include "caf/optional.hpp"
 #include "caf/ref_counted.hpp"
 
-#include "caf/opencl/detail/core.hpp"
-#include "caf/opencl/detail/raw_ptr.hpp"
+#include "caf/detail/raw_ptr.hpp"
 
 namespace caf {
 namespace opencl {
-
-/// Updates the reference types in a message with a given event.
-struct msg_adding_event {
-  msg_adding_event(detail::raw_event_ptr event) : event_(event) {
-    // nop
-  }
-  template <class T, class... Ts>
-  message operator()(T& x, Ts&... xs) {
-    return make_message(add_event(std::move(x)), add_event(std::move(xs))...);
-  }
-  template <class... Ts>
-  message operator()(std::tuple<Ts...>& values) {
-    return apply_args(*this, detail::get_indices(values), values);
-  }
-  template <class T>
-  mem_ref<T> add_event(mem_ref<T> ref) {
-    ref.set_event(event_);
-    return std::move(ref);
-  }
-  detail::raw_event_ptr event_;
-};
 
 // Tag to separate mem_refs from other types in messages.
 struct ref_tag {};
@@ -145,9 +123,10 @@ public:
   }
 
   mem_ref(mem_ref&& other) = default;
-  mem_ref& operator=(mem_ref<T>&& other) = default;
   mem_ref(const mem_ref& other) = default;
+  mem_ref& operator=(mem_ref<T>&& other) = default;
   mem_ref& operator=(const mem_ref& other) = default;
+
   ~mem_ref() {
     // nop
   }
@@ -176,10 +155,30 @@ private:
   detail::raw_mem_ptr memory_;
 };
 
+/// Updates the reference types in a message with a given event.
+struct msg_adding_event {
+  msg_adding_event(detail::raw_event_ptr event) : event_(event) {
+    // nop
+  }
+  template <class T, class... Ts>
+  message operator()(T& x, Ts&... xs) {
+    return make_message(add_event(std::move(x)), add_event(std::move(xs))...);
+  }
+  template <class... Ts>
+  message operator()(std::tuple<Ts...>& values) {
+    return apply_args(*this, detail::get_indices(values), values);
+  }
+  template <class T>
+  mem_ref<T> add_event(mem_ref<T> ref) {
+    ref.set_event(event_);
+    return std::move(ref);
+  }
+  detail::raw_event_ptr event_;
+};
+
 } // namespace opencl
 
 template <class T>
 struct allowed_unsafe_message_type<opencl::mem_ref<T>> : std::true_type {};
   
 } // namespace caf
-

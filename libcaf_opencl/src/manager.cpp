@@ -26,8 +26,6 @@
 #include "caf/opencl/platform.hpp"
 #include "caf/opencl/opencl_err.hpp"
 
-#include "caf/opencl/detail/raw_ptr.hpp"
-
 using namespace std;
 
 namespace caf {

@@ -29,15 +29,13 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/response_promise.hpp"
 
+#include "caf/detail/raw_ptr.hpp"
 #include "caf/detail/scope_guard.hpp"
 
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/nd_range.hpp"
 #include "caf/opencl/arguments.hpp"
 #include "caf/opencl/opencl_err.hpp"
-
-#include "caf/opencl/detail/core.hpp"
-#include "caf/opencl/detail/raw_ptr.hpp"
 
 namespace caf {
 namespace opencl {

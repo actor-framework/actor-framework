@@ -27,6 +27,8 @@
 
 #include "caf/intrusive_ptr.hpp"
 
+#include "caf/detail/raw_ptr.hpp"
+#include "caf/detail/command_helper.hpp"
 #include "caf/detail/limited_vector.hpp"
 
 #include "caf/opencl/global.hpp"
@@ -36,10 +38,6 @@
 #include "caf/opencl/nd_range.hpp"
 #include "caf/opencl/arguments.hpp"
 #include "caf/opencl/opencl_err.hpp"
-
-#include "caf/opencl/detail/core.hpp"
-#include "caf/opencl/detail/raw_ptr.hpp"
-#include "caf/opencl/detail/command_helper.hpp"
 
 namespace caf {
 namespace opencl {
