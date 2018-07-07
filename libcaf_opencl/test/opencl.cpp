@@ -206,11 +206,11 @@ public:
     assert(data_.size() == num_elements);
   }
 
-  float& operator()(size_t column, size_t row) {
+  int& operator()(size_t column, size_t row) {
     return data_[column + row * Size];
   }
 
-  const float& operator()(size_t column, size_t row) const {
+  const int& operator()(size_t column, size_t row) const {
     return data_[column + row * Size];
   }
 
