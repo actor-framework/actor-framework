@@ -155,6 +155,28 @@ public:
     dec_total_task_size(policy_.task_size(x));
   }
 
+  /// @private
+  unique_pointer next(task_size_type& deficit) noexcept {
+    unique_pointer result;
+    if (!empty()) {
+      auto ptr = promote(head_.next);
+      auto ts = policy_.task_size(*ptr);
+      CAF_ASSERT(ts > 0);
+      if (ts <= deficit) {
+        deficit -= ts;
+        total_task_size_ -= ts;
+        head_.next = ptr->next;
+        if (total_task_size_ == 0) {
+          CAF_ASSERT(head_.next == &(tail_));
+          deficit = 0;
+          tail_.next = &(head_);
+        }
+        result.reset(ptr);
+      }
+    }
+    return result;
+  }
+
   // -- iterator access --------------------------------------------------------
 
   /// Returns an iterator to the dummy before the first element.

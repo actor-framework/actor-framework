@@ -84,7 +84,7 @@ CAF_TEST(default_constructed) {
   CAF_REQUIRE_EQUAL(queue.deficit(), 0);
   CAF_REQUIRE_EQUAL(queue.total_task_size(), 0);
   CAF_REQUIRE_EQUAL(queue.peek(), nullptr);
-  CAF_REQUIRE_EQUAL(queue.take_front(), nullptr);
+  CAF_REQUIRE_EQUAL(queue.next(), nullptr);
   CAF_REQUIRE_EQUAL(queue.begin(), queue.end());
   CAF_REQUIRE_EQUAL(queue.before_begin()->next, queue.end().ptr);
 }
@@ -98,7 +98,7 @@ CAF_TEST(inc_deficit) {
   queue.inc_deficit(100);
   CAF_REQUIRE_EQUAL(queue.deficit(), 100);
   // Deficit must drop back down to 0 once the queue becomes empty.
-  queue.take_front();
+  queue.next();
   CAF_REQUIRE_EQUAL(queue.deficit(), 0);
 }
 
@@ -128,6 +128,32 @@ CAF_TEST(new_round) {
   round_result = queue.new_round(1000, f);
   CAF_CHECK_EQUAL(round_result, make_new_round_result(false));
   CAF_CHECK_EQUAL(seq, "123456");
+  CAF_CHECK_EQUAL(queue.deficit(), 0);
+}
+
+CAF_TEST(next) {
+  std::string seq;
+  fill(queue, 1, 2, 3, 4, 5, 6);
+  auto f = [&](inode& x) {
+    seq += to_string(x);
+    return task_result::resume;
+  };
+  auto take = [&] {
+    queue.flush_cache();
+    queue.inc_deficit(queue.peek()->value);
+    return queue.next();
+  };
+  while (!queue.empty()) {
+    auto ptr = take();
+    f(*ptr);
+  }
+  CAF_CHECK_EQUAL(seq, "123456");
+  fill(queue, 5, 4, 3, 2, 1);
+  while (!queue.empty()) {
+    auto ptr = take();
+    f(*ptr);
+  }
+  CAF_CHECK_EQUAL(seq, "12345654321");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
 }
 

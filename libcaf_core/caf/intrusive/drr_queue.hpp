@@ -83,29 +83,6 @@ public:
     // nop
   }
 
-  /// Takes the first element out of the queue if the deficit allows it and
-  /// returns the element.
-  unique_pointer take_front() noexcept {
-    unique_pointer result;
-    if (!super::empty()) {
-      auto ptr = promote(super::head_.next);
-      auto ts = super::policy_.task_size(*ptr);
-      CAF_ASSERT(ts > 0);
-      if (ts <= deficit_) {
-        deficit_ -= ts;
-        super::total_task_size_ -= ts;
-        super::head_.next = ptr->next;
-        if (super::total_task_size_ == 0) {
-          CAF_ASSERT(super::head_.next == &(super::tail_));
-          deficit_ = 0;
-          super::tail_.next = &(super::head_);
-        }
-        result.reset(ptr);
-      }
-    }
-    return result;
-  }
-
   /// Consumes items from the queue until the queue is empty or there is not
   /// enough deficit to dequeue the next task.
   /// @returns `true` if `f` consumed at least one item.
@@ -115,13 +92,20 @@ public:
     return res.consumed_items;
   }
 
+  /// Takes the first element out of the queue if the deficit allows it and
+  /// returns the element.
+  /// @private
+  unique_pointer next() noexcept {
+    return super::next(deficit_);
+  }
+
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
   new_round_result new_round(deficit_type quantum, F& consumer) {
     if (!super::empty()) {
       deficit_ += quantum;
-      auto ptr = take_front();
+      auto ptr = next();
       if (ptr == nullptr)
         return {false, false};
       do {
@@ -133,7 +117,7 @@ public:
           case task_result::stop_all:
             return {true, true};
         }
-        ptr = take_front();
+        ptr = next();
       } while (ptr != nullptr);
       return {true, false};
     }

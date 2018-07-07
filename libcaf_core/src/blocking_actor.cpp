@@ -260,19 +260,15 @@ bool blocking_actor::await_data(timeout_type timeout) {
 }
 
 mailbox_element_ptr blocking_actor::dequeue() {
+  mailbox().flush_cache();
+  await_data();
   mailbox().fetch_more();
-  auto& qs = mailbox_.queue().queues();
-  auto& q1 = get<mailbox_policy::urgent_queue_index>(qs);
-  if (!q1.empty()) {
-    q1.inc_deficit(1);
-    return q1.take_front();
-  }
-  auto& q2 = get<mailbox_policy::default_queue_index>(qs);
-  if (!q2.empty()) {
-    q2.inc_deficit(1);
-    return q2.take_front();
-  }
-  return nullptr;
+  auto& qs = mailbox().queue().queues();
+  auto result = get<mailbox_policy::urgent_queue_index>(qs).take_front();
+  if (!result)
+   result = get<mailbox_policy::default_queue_index>(qs).take_front();
+  CAF_ASSERT(result != nullptr);
+  return result;
 }
 
 void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
