@@ -16,20 +16,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/network/policy/tcp.hpp"
+#include "caf/policy/tcp.hpp"
 
 namespace caf {
-namespace io {
-namespace network {
 namespace policy {
 
-read_some_fun tcp::read_some = caf::io::network::read_some;
+read_some_fun tcp::read_some = io::network::read_some;
 
-write_some_fun tcp::write_some = caf::io::network::write_some;
+write_some_fun tcp::write_some = io::network::write_some;
 
-try_accept_fun tcp::try_accept = caf::io::network::try_accept;
+try_accept_fun tcp::try_accept = io::network::try_accept;
   
 } // policy
-} // namespace network
-} // namespace io
 } // namespace caf

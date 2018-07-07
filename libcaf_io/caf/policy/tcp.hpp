@@ -21,18 +21,16 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {
-namespace io {
-namespace network {
 namespace policy {
 
 /// Function signature of `read_some`.
-using read_some_fun = decltype(read_some)*;
+using read_some_fun = decltype(io::network::read_some)*;
 
 /// Function signature of `wite_some`.
-using write_some_fun = decltype(write_some)*;
+using write_some_fun = decltype(io::network::write_some)*;
 
 /// Function signature of `try_accept`.
-using try_accept_fun = decltype(try_accept)*;
+using try_accept_fun = decltype(io::network::try_accept)*;
 
 /// Policy object for wrapping default TCP operations.
 struct tcp {
@@ -42,6 +40,4 @@ struct tcp {
 };
 
 } // namespace policy
-} // namespace network
-} // namespace io
 } // namespace caf

@@ -26,17 +26,11 @@
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
-#include "caf/io/network/stream.hpp"
-#include "caf/io/network/acceptor.hpp"
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/pipe_reader.hpp"
 #include "caf/io/network/scribe_impl.hpp"
 #include "caf/io/network/doorman_impl.hpp"
-#include "caf/io/network/datagram_handler.hpp"
 #include "caf/io/network/datagram_servant_impl.hpp"
-#include "caf/io/network/policy/tcp.hpp"
-#include "caf/io/network/policy/udp.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 

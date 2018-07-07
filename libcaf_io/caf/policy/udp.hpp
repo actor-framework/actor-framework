@@ -21,15 +21,13 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {
-namespace io {
-namespace network {
 namespace policy {
 
 /// Function signature of read_datagram
-using read_datagram_fun = decltype(read_datagram)*;
+using read_datagram_fun = decltype(io::network::read_datagram)*;
 
 /// Function signature of write_datagram
-using write_datagram_fun = decltype(write_datagram)*;
+using write_datagram_fun = decltype(io::network::write_datagram)*;
 
 /// Policy object for wrapping default UDP operations
 struct udp {
@@ -38,6 +36,4 @@ struct udp {
 };
 
 } // namespace policy
-} // namespace network
-} // namespace io
 } // namespace caf

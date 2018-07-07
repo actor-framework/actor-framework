@@ -24,7 +24,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/datagram_handler_impl.hpp"
 
-#include "caf/io/network/policy/udp.hpp"
+#include "caf/policy/udp.hpp"
 
 namespace caf {
 namespace io {

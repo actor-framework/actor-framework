@@ -16,18 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/network/policy/udp.hpp"
+#include "caf/policy/udp.hpp"
 
 namespace caf {
-namespace io {
-namespace network {
 namespace policy {
   
-read_datagram_fun udp::read_datagram = caf::io::network::read_datagram;
+read_datagram_fun udp::read_datagram = io::network::read_datagram;
 
-write_datagram_fun udp::write_datagram = caf::io::network::write_datagram;
+write_datagram_fun udp::write_datagram = io::network::write_datagram;
 
 } // policy
-} // namespace network
-} // namespace io
 } // namespace caf
