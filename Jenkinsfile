@@ -181,9 +181,13 @@ def makeBuildStages(matrixIndex, builds, lblExpr, settings) {
       {
         node(lblExpr) {
           stage(id) {
-            withEnv(buildEnvironments[lblExpr] ?: []) {
-              buildSteps(buildType, settings['cmakeArgs'] ?: '')
-              (settings['extraSteps'] ?: []).each { fun -> "$fun"() }
+            try {
+              withEnv(buildEnvironments[lblExpr] ?: []) {
+                buildSteps(buildType, settings['cmakeArgs'] ?: '')
+                (settings['extraSteps'] ?: []).each { fun -> "$fun"() }
+              }
+            } finally {
+              cleanWs()
             }
           }
         }
