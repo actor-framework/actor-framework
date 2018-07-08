@@ -51,13 +51,12 @@ struct state {
   /// otherwise the next character.
   char next() noexcept {
     ++i;
+    ++column;
     if (i != e) {
       auto c = *i;
       if (c == '\n') {
         ++line;
         column = 1;
-      } else {
-        ++column;
       }
       return c;
     }
