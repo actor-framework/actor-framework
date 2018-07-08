@@ -148,28 +148,23 @@ public:
     list_.dec_total_task_size(std::forward<T>(x));
   }
 
-  /// Takes the first element out of the queue (after flushing the cache) if
-  /// the deficit allows it and returns the element.
+  /// Takes the first element out of the queue if the deficit allows it and
+  /// returns the element.
+  /// @private
+  unique_pointer next() noexcept {
+    return list_.next(deficit_);
+  }
+
+  /// Takes the first element out of the queue (after flushing the cache)  and
+  /// returns it, ignoring the deficit count.
   unique_pointer take_front() noexcept {
     flush_cache();
-    unique_pointer result;
     if (!list_.empty()) {
-      auto ptr = list_.front();
-      auto ts = policy().task_size(*ptr);
-      CAF_ASSERT(ts > 0);
-      if (ts <= deficit_) {
-        deficit_ -= ts;
-        dec_total_task_size(ts);
-        list_.before_begin()->next = ptr->next;
-        if (total_task_size() == 0) {
-          CAF_ASSERT(list_.begin() == list_.end());
-          deficit_ = 0;
-          list_.end()->next = list_.before_begin().ptr;
-        }
-        result.reset(ptr);
-      }
+      // Don't modify the deficit counter.
+      auto dummy_deficit = std::numeric_limits<deficit_type>::max();
+      return list_.next(dummy_deficit);
     }
-    return result;
+    return nullptr;
   }
 
   /// Consumes items from the queue until the queue is empty, there is not
@@ -188,48 +183,39 @@ public:
       return {false, false};
     deficit_ += quantum;
     long consumed = 0;
-    auto ptr = list_.front();
-    auto ts = policy().task_size(*ptr);
-    while (ts <= deficit_) {
-      CAF_ASSERT(ts > 0);
-      dec_total_task_size(ts);
-      auto next = ptr->next;
-      // Make sure the queue is in a consistent state before calling `f` in
-      // case `f` recursively calls consume.
-      list_.before_begin()->next = next;
-      if (next == list_.end().ptr)
-        list_.end()->next = list_.before_begin().ptr;
-      CAF_ASSERT(total_task_size() != 0 || list_.begin() == list_.end());
-      // Always decrease the deficit_ counter, again because `f` is allowed
-      // to call consume again.
-      deficit_ -= ts;
-      auto res = consumer(*ptr);
-      if (res == task_result::skip) {
-        // Push the unconsumed item to the cache.
-        cache_.push_back(ptr);
-        if (list_.empty()) {
-          deficit_ = 0;
-          return {consumed != 0, false};
-        }
-        // Fix deficit counter since we didn't actually use it.
-        deficit_ += ts;
-      } else {
-        typename unique_pointer::deleter_type d;
-        d(ptr);
-        ++consumed;
-        if (!cache_.empty())
+    auto ptr = next();
+    if (ptr == nullptr)
+      return {false, false};
+    do {
+      auto consumer_res = consumer(*ptr);
+      switch (consumer_res) {
+        case task_result::skip:
+          // Fix deficit counter since we didn't actually use it.
+          deficit_ += policy().task_size(*ptr);
+          // Push the unconsumed item to the cache.
+          cache_.push_back(ptr.release());
+          if (list_.empty()) {
+            deficit_ = 0;
+            return {consumed != 0, false};
+          }
+          break;
+        case task_result::resume:
+          ++consumed;
           flush_cache();
-        if (list_.empty()) {
-          deficit_ = 0;
-          return {consumed != 0, res == task_result::stop_all};
-        }
-        if (res != task_result::resume)
-          return {consumed != 0, res == task_result::stop_all};
+          if (list_.empty()) {
+            deficit_ = 0;
+            return {consumed != 0, false};
+          }
+          break;
+        default:
+          ++consumed;
+          flush_cache();
+          if (list_.empty())
+            deficit_ = 0;
+          return {consumed != 0, consumer_res == task_result::stop_all};
       }
-      // Next iteration.
-      ptr = list_.front();
-      ts = policy().task_size(*ptr);
-    }
+      ptr = next();
+    } while (ptr != nullptr);
     return {consumed != 0, false};
   }
 

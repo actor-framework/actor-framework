@@ -145,6 +145,28 @@ CAF_TEST(skipping) {
   CAF_CHECK_EQUAL(seq, "246");
 }
 
+CAF_TEST(take_front) {
+  std::string seq;
+  fill(queue, 1, 2, 3, 4, 5, 6);
+  auto f = [&](inode& x) {
+    seq += to_string(x);
+    return task_result::resume;
+  };
+  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  while (!queue.empty()) {
+    auto ptr = queue.take_front();
+    f(*ptr);
+  }
+  CAF_CHECK_EQUAL(seq, "123456");
+  fill(queue, 5, 4, 3, 2, 1);
+  while (!queue.empty()) {
+    auto ptr = queue.take_front();
+    f(*ptr);
+  }
+  CAF_CHECK_EQUAL(seq, "12345654321");
+  CAF_CHECK_EQUAL(queue.deficit(), 0);
+}
+
 CAF_TEST(alternating_consumer) {
   using fun_type = std::function<task_result (inode&)>;
   fun_type f;
