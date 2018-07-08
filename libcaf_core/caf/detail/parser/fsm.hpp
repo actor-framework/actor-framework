@@ -50,17 +50,6 @@
       goto s_unexpected_eof;                                                   \
     e_##name :
 
-/// Defines a terminal state in the FSM.
-#define term_state(name)                                                       \
-  CAF_FSM_EVAL_MISMATCH_EC                                                     \
-  }                                                                            \
-  {                                                                            \
-    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
-    s_##name :                                                                 \
-    if (ch == '\0')                                                            \
-      goto s_fin;                                                              \
-    e_##name :
-
 /// Defines a state in the FSM that doesn't check for end-of-input. Unstable
 /// states are supposed to contain epsilon transitions only.
 #define unstable_state(name)                                                       \
@@ -78,6 +67,31 @@
   s_fin:                                                                       \
   ps.code = caf::pec::success;                                                 \
   return;
+
+/// Defines a terminal state in the FSM.
+#define CAF_TERM_STATE_IMPL1(name)                                                       \
+  CAF_FSM_EVAL_MISMATCH_EC                                                     \
+  }                                                                            \
+  {                                                                            \
+    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
+    s_##name :                                                                 \
+    if (ch == '\0')                                                            \
+      goto s_fin;                                                              \
+    e_##name :
+
+/// Defines a terminal state in the FSM.
+#define CAF_TERM_STATE_IMPL2(name, exit_statement)                                                       \
+  CAF_FSM_EVAL_MISMATCH_EC                                                     \
+  }                                                                            \
+  {                                                                            \
+    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
+    s_##name :                                                                 \
+    if (ch == '\0') {                                                          \
+      exit_statement;                                                          \
+      goto s_fin;                                                              \
+    }                                                                          \
+    e_##name :
+
 
 #define CAF_TRANSITION_IMPL1(target)                                           \
   ch = ps.next();                                                              \
@@ -193,6 +207,11 @@
 
 #ifdef CAF_MSVC
 
+/// Defines a terminal state in the FSM.
+#define term_state(...)                                                        \
+  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_TERM_STATE_IMPL, __VA_ARGS__)(__VA_ARGS__),   \
+             CAF_PP_EMPTY())
+
 /// Transitions to target state if a predicate (optional argument 1) holds for
 /// the current token and executes an action (optional argument 2) before
 /// entering the new state.
@@ -222,6 +241,10 @@
              CAF_PP_EMPTY())
 
 #else // CAF_MSVC
+
+/// Defines a terminal state in the FSM.
+#define term_state(...)                                                        \
+  CAF_PP_OVERLOAD(CAF_TERM_STATE_IMPL, __VA_ARGS__)(__VA_ARGS__)
 
 /// Transitions to target state if a predicate (optional argument 1) holds for
 /// the current token and executes an action (optional argument 2) before
