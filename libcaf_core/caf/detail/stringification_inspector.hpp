@@ -247,6 +247,7 @@ public:
     && !std::is_pointer<T>::value
     && !is_inspectable<stringification_inspector, T>::value
     && !std::is_arithmetic<T>::value
+    && !std::is_convertible<T, string_view>::value
     && !has_to_string<T>::value>
   consume(T&) {
     result_ += "<unprintable>";
