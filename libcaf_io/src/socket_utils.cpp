@@ -61,6 +61,11 @@ bool cc_not_minus1(int value) {
                       fun_name, last_socket_error_as_string())
   
 #ifdef CAF_WINDOWS
+// predicate for `ccall` meaning "expected result of f is a valid socket"
+bool cc_valid_socket(caf::io::network::native_socket fd) {
+  return fd != caf::io::network::invalid_native_socket;
+}
+
   // calls a C functions and calls exit() if `predicate(var)`  returns false
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
   auto var = expr;                                                             \
