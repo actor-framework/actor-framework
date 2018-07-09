@@ -53,6 +53,13 @@ public:
     inline authority_type() : port(0) {
       // nop
     }
+
+    /// Returns whether `host` is empty, i.e., the host is not an IP address
+    /// and the string is empty.
+    bool empty() const noexcept {
+      auto str = get_if<std::string>(&host);
+      return str != nullptr && str->empty();
+    }
   };
 
   /// Separates the query component into key-value pairs.
@@ -109,12 +116,6 @@ private:
 };
 
 // -- related free functions ---------------------------------------------------
-
-/// @relates uri
-std::string to_string(const uri::host_type& x);
-
-/// @relates uri
-std::string to_string(const uri::authority_type& x);
 
 /// @relates uri
 std::string to_string(const uri& x);

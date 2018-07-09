@@ -74,33 +74,6 @@ int uri::compare(string_view x) const noexcept {
 
 // -- related free functions ---------------------------------------------------
 
-std::string to_string(const uri::host_type& x) {
-  auto str = get_if<std::string>(&x);
-  if (str)
-    return *str;
-  auto addr = get<ip_address>(x);
-  if (addr.embeds_v4())
-    return to_string(addr.embedded_v4());
-  std::string result = to_string(addr);
-  result.insert(result.begin(), '[');
-  result += ']';
-  return result;
-}
-
-std::string to_string(const uri::authority_type& x) {
-  std::string result;
-  if (!x.userinfo.empty()) {
-    result += x.userinfo;
-    result += '@';
-  }
-  result += to_string(x.host);
-  if (x.port != 0) {
-    result += ':';
-    result += std::to_string(x.port);
-  }
-  return result;
-}
-
 std::string to_string(const uri& x) {
   auto x_str = x.str();
   std::string result{x_str.begin(), x_str.end()};

@@ -105,6 +105,10 @@ void read_uri_query(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   fin();
 }
 
+#define read_next_char(next_state)                                             \
+  transition(next_state, unprotected_char, str += ch)                          \
+  fsm_transition(read_uri_percent_encoded(ps, str), next_state, '%')
+
 template <class Iterator, class Sentinel, class Consumer>
 void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   // Local variables.
@@ -122,8 +126,8 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   auto path_char = [](char c) {
     return in_whitelist(alphanumeric_chars, c) || c == '/';
   };
-  auto authority_char = [](char c) {
-    return in_whitelist(alphanumeric_chars, c) || c == '.';
+  auto unprotected_char = [](char c) {
+    return in_whitelist(alphanumeric_chars, c) || in_whitelist("-._~", c);
   };
   // Utility setters for avoiding code duplication.
   auto set_path = [&] {
@@ -148,13 +152,12 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     epsilon(read_scheme)
   }
   state(read_scheme) {
-    fsm_transition(read_uri_percent_encoded(ps, str), read_scheme, '%')
-    transition(read_scheme, alphabetic_chars, str += ch)
+    read_next_char(read_scheme)
     transition(have_scheme, ':', consumer.scheme(take_str()))
   }
   state(have_scheme) {
     transition(disambiguate_path, '/')
-    transition(read_path, alphanumeric_chars, str += ch)
+    read_next_char(read_path)
     fsm_transition(read_uri_percent_encoded(ps, str), read_path, '%')
   }
   // This state is terminal, because "file:/" is a valid URI.
@@ -163,28 +166,32 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     epsilon(read_path, any_char, str += '/')
   }
   state(start_authority) {
-    transition(read_authority, authority_char, str += ch)
-    fsm_transition(read_ipv6_address(ps, ip_consumer), end_of_ipv6_host, '[')
+    read_next_char(read_authority)
+    fsm_transition(read_ipv6_address(ps, ip_consumer), await_end_of_ipv6, '[')
   }
-  state(end_of_ipv6_host) {
-    transition(end_of_host, ']')
+  state(await_end_of_ipv6) {
+    transition(end_of_ipv6_host, ']')
+  }
+  term_state(end_of_ipv6_host) {
+    transition(start_port, ':')
+    epsilon(end_of_authority)
   }
   term_state(end_of_host) {
     transition(start_port, ':', set_host())
     epsilon(end_of_authority, "/?#", set_host())
   }
   term_state(read_authority, set_host()) {
-    transition(read_authority, authority_char, str += ch)
+    read_next_char(read_authority)
     transition(start_host, '@', set_userinfo())
     transition(start_port, ':', set_host())
     epsilon(end_of_authority, "/?#", set_host())
   }
   state(start_host) {
-    transition(read_host, authority_char, str += ch)
-    fsm_transition(read_ipv6_address(ps, ip_consumer), end_of_ipv6_host, '[')
+    read_next_char(read_host)
+    fsm_transition(read_ipv6_address(ps, ip_consumer), await_end_of_ipv6, '[')
   }
   term_state(read_host, set_host()) {
-    transition(read_host, authority_char, str += ch)
+    read_next_char(read_host)
     transition(start_port, ':', set_host())
     epsilon(end_of_authority, "/?#", set_host())
   }
@@ -194,7 +201,7 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   term_state(read_port, consumer.port(port)) {
     transition(read_port, decimal_chars, add_ascii<10>(port, ch),
                pec::integer_overflow)
-    epsilon(end_of_authority, "/?#", set_host())
+    epsilon(end_of_authority, "/?#")
   }
   term_state(end_of_authority) {
     transition(read_path, '/')
@@ -203,6 +210,7 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   }
   term_state(read_path, set_path()) {
     transition(read_path, path_char, str += ch)
+    fsm_transition(read_uri_percent_encoded(ps, str), read_path, '%')
     transition(start_query, '?', set_path())
     transition(read_fragment, '#', set_path())
   }
@@ -214,7 +222,7 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     epsilon(done)
   }
   term_state(read_fragment, consumer.fragment(take_str())) {
-    transition(read_fragment, alphanumeric_chars, str += ch)
+    read_next_char(read_fragment)
   }
   term_state(done) {
     // nop

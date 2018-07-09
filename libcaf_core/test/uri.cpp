@@ -202,6 +202,7 @@ CAF_TEST(constructing) {
   CAF_CHECK_EQUAL(*(http << components), *(http_str << components))
 
 CAF_TEST(builder construction) {
+  // all combinations of components
   BUILD(file);
   BUILD(file << kvp);
   BUILD(file << frag);
@@ -238,11 +239,21 @@ CAF_TEST(builder construction) {
   BUILD(me << node << port80 << file << frag);
   BUILD(me << node << port80 << file << kvp);
   BUILD(me << node << port80 << file << kvp << frag);
+  // percent encoding
+  auto escaped = uri_builder{}
+                   .scheme("hi there")
+                   .userinfo("it's")
+                   .host("me/")
+                   .path("file 1")
+                   .fragment("[42]")
+                   .make();
+  CAF_CHECK_EQUAL(escaped, "hi%20there://it%27s@me%21/file%201#%5B42%5D");
 }
 
 #define ROUNDTRIP(str) CAF_CHECK_EQUAL(str##_u, str)
 
 CAF_TEST(from string) {
+  // all combinations of components
   ROUNDTRIP("http:file");
   ROUNDTRIP("http:file?a=1&b=2");
   ROUNDTRIP("http:file#42");
@@ -279,6 +290,7 @@ CAF_TEST(from string) {
   ROUNDTRIP("http://me@node:80/file?a=1&b=2");
   ROUNDTRIP("http://me@node:80/file#42");
   ROUNDTRIP("http://me@node:80/file?a=1&b=2#42");
+  // all combinations of with IPv6 host
   ROUNDTRIP("http://[::1]");
   ROUNDTRIP("http://[::1]?a=1&b=2");
   ROUNDTRIP("http://[::1]#42");
@@ -311,6 +323,8 @@ CAF_TEST(from string) {
   ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2");
   ROUNDTRIP("http://me@[::1]:80/file#42");
   ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2#42");
+  // percent encoding
+  ROUNDTRIP("hi%20there://it%27s@me%21/file%201#%5B42%5D");
 }
 
 CAF_TEST(empty components) {
