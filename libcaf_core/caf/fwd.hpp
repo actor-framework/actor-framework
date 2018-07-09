@@ -128,6 +128,8 @@ class string_view;
 class type_erased_tuple;
 class type_erased_value;
 class uniform_type_info_map;
+class uri;
+class uri_builder;
 
 // -- structs ------------------------------------------------------------------
 
@@ -239,10 +241,15 @@ template <class> class type_erased_value_impl;
 template <class> class stream_distribution_tree;
 
 class disposer;
-class message_data;
-class group_manager;
-class private_thread;
 class dynamic_message_data;
+class group_manager;
+class message_data;
+class private_thread;
+class uri_impl;
+
+void intrusive_ptr_add_ref(const uri_impl* p);
+
+void intrusive_ptr_release(const uri_impl* p);
 
 } // namespace detail
 

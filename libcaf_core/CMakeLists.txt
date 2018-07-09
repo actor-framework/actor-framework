@@ -122,6 +122,9 @@ set(LIBCAF_CORE_SRCS
   src/type_erased_value.cpp
   src/uniform_type_info_map.cpp
   src/unprofiled.cpp
+  src/uri.cpp
+  src/uri_builder.cpp
+  src/uri_impl.cpp
   src/work_sharing.cpp
   src/work_stealing.cpp
 )
