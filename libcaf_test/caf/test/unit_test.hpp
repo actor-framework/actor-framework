@@ -228,7 +228,7 @@ int main(int argc, char** argv);
 /// A sequence of *checks*.
 class test {
 public:
-  test(std::string test_name);
+  test(std::string test_name, bool disabled_by_default);
 
   virtual ~test();
 
@@ -248,6 +248,10 @@ public:
     return bad_;
   }
 
+  inline bool disabled() const noexcept {
+    return disabled_;
+  }
+
   virtual void run() = 0;
 
 private:
@@ -255,6 +259,7 @@ private:
   std::string name_;
   size_t good_;
   size_t bad_;
+  bool disabled_;
 };
 
 struct dummy_fixture { };
@@ -262,7 +267,8 @@ struct dummy_fixture { };
 template <class T>
 class test_impl : public test {
 public:
-  test_impl(std::string test_name) : test(std::move(test_name)) {
+  test_impl(std::string test_name, bool disabled_by_default)
+      : test(std::move(test_name), disabled_by_default) {
     // nop
   }
 
@@ -456,8 +462,8 @@ namespace detail {
 
 template <class T>
 struct adder {
-  adder(const char* suite_name, const char* test_name) {
-    engine::add(suite_name, std::unique_ptr<T>{new T(test_name)});
+  adder(const char* suite_name, const char* test_name, bool disabled) {
+    engine::add(suite_name, std::unique_ptr<T>{new T(test_name, disabled)});
   }
 };
 
@@ -594,15 +600,19 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     ::caf::test::engine::last_check_line(__LINE__);                            \
   } while (false)
 
-#define CAF_TEST(name)                                                         \
+#define CAF_TEST_IMPL(name, disabled_by_default)                               \
   namespace {                                                                  \
   struct CAF_UNIQUE(test) : caf_test_case_auto_fixture {                       \
     void run();                                                                \
   };                                                                           \
-  ::caf::test::detail::adder< ::caf::test::test_impl<CAF_UNIQUE(test)>>        \
-  CAF_UNIQUE(a) {CAF_XSTR(CAF_SUITE), CAF_XSTR(name)};                         \
+  ::caf::test::detail::adder<::caf::test::test_impl<CAF_UNIQUE(test)>>         \
+    CAF_UNIQUE(a){CAF_XSTR(CAF_SUITE), CAF_XSTR(name), disabled_by_default};   \
   } /* namespace <anonymous> */                                                \
   void CAF_UNIQUE(test)::run()
+
+#define CAF_TEST(name) CAF_TEST_IMPL(name, false)
+
+#define CAF_TEST_DISABLED(name) CAF_TEST_IMPL(name, true)
 
 #define CAF_TEST_FIXTURE_SCOPE(scope_name, fixture_name)                       \
   namespace scope_name { using caf_test_case_auto_fixture = fixture_name ;

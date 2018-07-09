@@ -91,11 +91,12 @@ void watchdog::stop() {
   delete s_watchdog;
 }
 
-test::test(std::string test_name)
+test::test(std::string test_name, bool disabled_by_default)
     : expected_failures_(0),
       name_(std::move(test_name)),
       good_(0),
-      bad_(0) {
+      bad_(0),
+      disabled_(disabled_by_default) {
   // nop
 }
 
@@ -334,6 +335,14 @@ bool engine::run(bool colorize,
            && !std::regex_search(x, blacklist);
   };
 # endif
+  auto test_enabled = [&](const std::regex& whitelist,
+                          const std::regex& blacklist,
+                          const test& x) {
+    // Disabled tests run iff explicitly requested by the user, i.e.,
+    // tests_str is not the ".*" catch-all default.
+    return (!x.disabled() || tests_str != ".*")
+           && enabled(whitelist, blacklist, x.name());
+  };
   std::vector<std::string> failed_tests;
   for (auto& p : instance().suites_) {
     if (!enabled(suites, not_suites, p.first))
@@ -343,7 +352,7 @@ bool engine::run(bool colorize,
     bool displayed_header = false;
     size_t tests_ran = 0;
     for (auto& t : p.second) {
-      if (!enabled(tests, not_tests, t->name()))
+      if (!test_enabled(tests, not_tests, *t))
         continue;
       instance().current_test_ = t.get();
       ++tests_ran;
