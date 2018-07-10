@@ -103,18 +103,14 @@ string_view string_view::substr(size_type pos, size_type n) const noexcept {
 int string_view::compare(string_view str) const noexcept {
   auto s0 = size();
   auto s1 = str.size();
-  if (s0 == s1) {
-    return strncmp(data(), str.data(), std::min(size(), str.size()));
-  } else if (s0 < s1) {
-    auto res = strncmp(data(), str.data(), std::min(size(), str.size()));
-    if (res == 0)
-      return -1;
-  } else {
-    auto res = strncmp(data(), str.data(), std::min(size(), str.size()));
-    if (res == 0)
-      return 1;
-  }
-  return 0;
+  auto fallback = [](int x, int y) {
+    return x == 0 ? y : x;
+  };
+  if (s0 == s1)
+    return strncmp(data(), str.data(), s0);
+  else if (s0 < s1)
+    return fallback(strncmp(data(), str.data(), s0), -1);
+  return fallback(strncmp(data(), str.data(), s1), 1);
 }
 
 int string_view::compare(size_type pos1, size_type n1,
