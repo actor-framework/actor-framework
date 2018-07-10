@@ -146,29 +146,29 @@ bool ipv6_address::is_loopback() const noexcept {
 
 namespace {
 
-using u16_iterator = const uint16_t*;
+using u16_iterator = ipv6_address::u16_array_type::const_iterator;
 
 using u16_range = std::pair<u16_iterator, u16_iterator>;
 
 u16_range longest_streak(u16_iterator first, u16_iterator last) {
-  auto zero = [](uint16_t x, uint16_t y) {
+  auto two_zeros = [](uint16_t x, uint16_t y) {
     return x == 0 && y == 0;
   };
   auto not_zero = [](uint16_t x) {
     return x != 0;
   };
   u16_range result;
-  result.first = std::adjacent_find(first, last, zero);
+  result.first = std::adjacent_find(first, last, two_zeros);
   if (result.first == last)
     return {last, last};
   result.second = std::find_if(result.first + 2, last, not_zero);
   if (result.second == last)
     return result;
   auto next_streak = longest_streak(result.second, last);
-  auto distance = [](u16_range x) {
+  auto range_size = [](u16_range x) {
     return std::distance(x.first, x.second);
   };
-  return distance(result) >= distance(next_streak) ? result : next_streak;
+  return range_size(result) >= range_size(next_streak) ? result : next_streak;
 }
 
 } // namespace <anonymous>
@@ -188,16 +188,16 @@ std::string to_string(ipv6_address x) {
   };
   auto add_chunks = [&](u16_iterator i, u16_iterator e) {
     if (i != e) {
-      add_chunk(*i++);
-      for (; i != e; ++i) {
+      add_chunk(*i);
+      for (++i; i != e; ++i) {
         result += ':';
         add_chunk(*i);
       }
     }
   };
   // Scan for the longest streak of 0 16-bit chunks for :: shorthand.
-  auto first = x.oct_segments_.begin();
-  auto last = x.oct_segments_.end();
+  auto first = x.oct_segments_.cbegin();
+  auto last = x.oct_segments_.cend();
   auto streak = longest_streak(first, last);
   // Put it all together.
   if (streak.first == last) {

@@ -42,6 +42,8 @@ public:
 
   using array_type = std::array<uint8_t, num_bytes>;
 
+  using u16_array_type = std::array<uint16_t, 8>;
+
   using uint16_ilist = std::initializer_list<uint16_t>;
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -121,7 +123,7 @@ private:
   union {
     std::array<uint64_t, 2> half_segments_;
     std::array<uint32_t, 4> quad_segments_;
-    std::array<uint16_t, 8> oct_segments_;
+    u16_array_type oct_segments_;
     array_type bytes_;
   };
 };
