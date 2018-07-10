@@ -202,7 +202,7 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   term_state(read_port, consumer.port(port)) {
     transition(read_port, decimal_chars, add_ascii<10>(port, ch),
                pec::integer_overflow)
-    epsilon(end_of_authority, "/?#")
+    epsilon(end_of_authority, "/?#", consumer.port(port))
   }
   term_state(end_of_authority) {
     transition(read_path, '/')
