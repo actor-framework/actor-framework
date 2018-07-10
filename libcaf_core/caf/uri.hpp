@@ -111,11 +111,22 @@ public:
 
   int compare(string_view x) const noexcept;
 
+  // -- friend functions -------------------------------------------------------
+
+  friend error inspect(caf::serializer& dst, uri& x);
+
+  friend error inspect(caf::deserializer& src, uri& x);
+
 private:
   impl_ptr impl_;
 };
 
 // -- related free functions ---------------------------------------------------
+
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, uri::authority_type& x) {
+  return f(x.userinfo, x.host, x.port);
+}
 
 /// @relates uri
 std::string to_string(const uri& x);

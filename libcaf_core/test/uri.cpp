@@ -114,11 +114,40 @@ struct uri_str_builder {
 };
 
 struct fixture {
-  uri_builder http;
-  uri_str_builder http_str;
+  // -- member types -----------------------------------------------------------
+
+  using buffer = std::vector<char>;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   fixture() {
     http.scheme("http");
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  uri_builder http;
+
+  uri_str_builder http_str;
+
+  // -- utility functions ------------------------------------------------------
+
+  buffer serialize(uri x) {
+    buffer buf;
+    binary_serializer dst{nullptr, buf};
+    auto err = inspect(dst, x);
+    if (err)
+      CAF_FAIL("unable to serialize " << x << ": " << to_string(err));
+    return buf;
+  }
+
+  uri deserialize(buffer buf) {
+    uri result;
+    binary_deserializer src{nullptr, buf};
+    auto err = inspect(src, result);
+    if (err)
+      CAF_FAIL("unable to deserialize from buffer: " << to_string(err));
+    return result;
   }
 };
 
@@ -202,6 +231,9 @@ CAF_TEST(constructing) {
   CAF_CHECK_EQUAL(*(http << components), *(http_str << components))
 
 CAF_TEST(builder construction) {
+  auto minimal = *(http << file);
+  CAF_CHECK_EQUAL(minimal.empty(), false);
+  CAF_CHECK_EQUAL(minimal, "http:file");
   // all combinations of components
   BUILD(file);
   BUILD(file << kvp);
@@ -327,6 +359,8 @@ CAF_TEST(from string) {
   ROUNDTRIP("hi%20there://it%27s@me%21/file%201#%5B42%5D");
 }
 
+#undef ROUNDTRIP
+
 CAF_TEST(empty components) {
   CAF_CHECK_EQUAL("foo:/"_u, "foo:/");
   CAF_CHECK_EQUAL("foo:/#"_u, "foo:/");
@@ -345,5 +379,85 @@ CAF_TEST(invalid uris) {
   CAF_CHECK("http://"_i);
   CAF_CHECK("http://foo:66000"_i);
 }
+
+#define SERIALIZATION_ROUNDTRIP(str)                                           \
+  CAF_CHECK_EQUAL(deserialize(serialize(str##_u)), str)
+
+CAF_TEST(serialization) {
+  // all combinations of components
+  SERIALIZATION_ROUNDTRIP("http:file");
+  SERIALIZATION_ROUNDTRIP("http:file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http:file#42");
+  SERIALIZATION_ROUNDTRIP("http:file?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://node");
+  SERIALIZATION_ROUNDTRIP("http://node?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://node#42");
+  SERIALIZATION_ROUNDTRIP("http://node?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://node:80");
+  SERIALIZATION_ROUNDTRIP("http://node:80?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://node:80#42");
+  SERIALIZATION_ROUNDTRIP("http://node:80?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node");
+  SERIALIZATION_ROUNDTRIP("http://me@node?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@node#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://node/file");
+  SERIALIZATION_ROUNDTRIP("http://node/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://node/file#42");
+  SERIALIZATION_ROUNDTRIP("http://node/file?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://node:80/file");
+  SERIALIZATION_ROUNDTRIP("http://node:80/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://node:80/file#42");
+  SERIALIZATION_ROUNDTRIP("http://node:80/file?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node/file");
+  SERIALIZATION_ROUNDTRIP("http://me@node/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@node/file#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node/file?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80/file");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80/file#42");
+  SERIALIZATION_ROUNDTRIP("http://me@node:80/file?a=1&b=2#42");
+  // all combinations of with IPv6 host
+  SERIALIZATION_ROUNDTRIP("http://[::1]");
+  SERIALIZATION_ROUNDTRIP("http://[::1]?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://[::1]#42");
+  SERIALIZATION_ROUNDTRIP("http://[::1]?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80#42");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://[::1]/file");
+  SERIALIZATION_ROUNDTRIP("http://[::1]/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://[::1]/file#42");
+  SERIALIZATION_ROUNDTRIP("http://[::1]/file?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80/file");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80/file#42");
+  SERIALIZATION_ROUNDTRIP("http://[::1]:80/file?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]/file");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]/file#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]/file?a=1&b=2#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80/file");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80/file#42");
+  SERIALIZATION_ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2#42");
+  // percent encoding
+  SERIALIZATION_ROUNDTRIP("hi%20there://it%27s@me%21/file%201#%5B42%5D");
+}
+
+#undef SERIALIZATION_ROUNDTRIP
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -18,10 +18,12 @@
 
 #include "caf/uri.hpp"
 
+#include "caf/deserializer.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/serializer.hpp"
 #include "caf/uri_builder.hpp"
 
 namespace caf {
@@ -70,6 +72,20 @@ int uri::compare(const uri& other) const noexcept {
 
 int uri::compare(string_view x) const noexcept {
   return string_view{str()}.compare(x);
+}
+
+// -- friend functions ---------------------------------------------------------
+
+error inspect(caf::serializer& dst, uri& x) {
+  return inspect(dst, const_cast<detail::uri_impl&>(*x.impl_));
+}
+
+error inspect(caf::deserializer& src, uri& x) {
+  auto impl = make_counted<detail::uri_impl>();
+  auto err = inspect(src, *impl);
+  if (err == none)
+    x = uri{std::move(impl)};
+  return err;
 }
 
 // -- related free functions ---------------------------------------------------

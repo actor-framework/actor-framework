@@ -23,10 +23,12 @@
 #include <string>
 #include <utility>
 
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/uri.hpp"
+#include "caf/meta/load_callback.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/string_view.hpp"
+#include "caf/uri.hpp"
 
 namespace caf {
 namespace detail {
@@ -63,6 +65,12 @@ public:
   /// The fragment component.
   std::string fragment;
 
+  // -- properties -------------------------------------------------------------
+
+  bool valid() const noexcept {
+    return !scheme.empty() && (!authority.empty() || !path.empty());
+  }
+
   // -- modifiers --------------------------------------------------------------
 
   /// Assembles the human-readable string representation for this URI.
@@ -83,6 +91,21 @@ private:
 
   mutable std::atomic<size_t> rc_;
 };
+
+// -- related free functions -------------------------------------------------
+
+/// @relates uri_impl
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, uri_impl& x) {
+  auto load = [&]() -> error {
+    x.str.clear();
+    if (x.valid())
+      x.assemble_str();
+    return none;
+  };
+  return f(x.scheme, x.authority, x.path, x.query, x.fragment,
+           meta::load_callback(load));
+}
 
 } // namespace detail
 } // namespace caf
