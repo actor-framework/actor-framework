@@ -21,7 +21,7 @@ buildMatrix = [
     tools: ['clang'],
   ]],
   ['FreeBSD', [
-    builds: ['debug', 'release'],
+    builds: ['debug'], // no release build for now, because it takes 1h
     tools: ['clang'],
   ]],
   ['Windows', [
