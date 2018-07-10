@@ -37,32 +37,31 @@
   ps.code = caf::pec::unexpected_eof;                                          \
   return;                                                                      \
   {                                                                            \
-    static constexpr auto mismatch_ec = caf::pec::unexpected_character
+    static_cast<void>(0); // dummy; init state closes parentheses
 
 /// Defines a non-terminal state in the FSM.
 #define state(name)                                                            \
-  CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
-  {                                                                            \
-    static constexpr auto mismatch_ec = caf::pec::unexpected_character;        \
+  for (;;) {                                                                   \
+    /* jumps back up here if no transition matches */                          \
+    ps.code = ch != '\n' ? caf::pec::unexpected_character                      \
+                         : caf::pec::unexpected_newline;                       \
+    return;                                                                    \
     s_##name :                                                                 \
     if (ch == '\0')                                                            \
       goto s_unexpected_eof;                                                   \
     e_##name :
 
 /// Defines a state in the FSM that doesn't check for end-of-input. Unstable
-/// states are supposed to contain epsilon transitions only.
-#define unstable_state(name)                                                       \
-  CAF_FSM_EVAL_MISMATCH_EC                                                     \
+/// states must make a transition and cause undefined behavior otherwise.
+#define unstable_state(name)                                                   \
   }                                                                            \
   {                                                                            \
-    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
     s_##name :                                                                 \
     e_##name :
 
 /// Ends the definition of an FSM.
 #define fin()                                                                  \
-  CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
   s_fin:                                                                       \
   ps.code = caf::pec::success;                                                 \
@@ -70,21 +69,25 @@
 
 /// Defines a terminal state in the FSM.
 #define CAF_TERM_STATE_IMPL1(name)                                                       \
-  CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
-  {                                                                            \
-    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
+  for (;;) {                                                                   \
+    /* jumps back up here if no transition matches */                          \
+    ps.code = caf::pec::trailing_character;                                    \
+    return;                                                                    \
     s_##name :                                                                 \
     if (ch == '\0')                                                            \
       goto s_fin;                                                              \
     e_##name :
 
-/// Defines a terminal state in the FSM.
+/// Defines a terminal state in the FSM that runs `exit_statement` when leaving
+/// the state with code `pec::success` or `pec::trailing_character`.
 #define CAF_TERM_STATE_IMPL2(name, exit_statement)                                                       \
-  CAF_FSM_EVAL_MISMATCH_EC                                                     \
   }                                                                            \
-  {                                                                            \
-    static constexpr auto mismatch_ec = caf::pec::trailing_character;          \
+  for (;;) {                                                                   \
+    /* jumps back up here if no transition matches */                          \
+    ps.code = caf::pec::trailing_character;                                    \
+    exit_statement;                                                            \
+    return;                                                                    \
     s_##name :                                                                 \
     if (ch == '\0') {                                                          \
       exit_statement;                                                          \
