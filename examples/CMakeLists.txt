@@ -8,10 +8,9 @@ include_directories(${LIBCAF_INCLUDE_DIRS})
 macro(add folder name)
   add_executable(${name} ${folder}/${name}.cpp ${ARGN})
   target_link_libraries(${name}
-                        ${LDFLAGS}
+                        ${CAF_EXTRA_LDFLAGS}
                         ${CAF_LIBRARIES}
-                        ${PTHREAD_LIBRARIES}
-                        ${WSLIB})
+                        ${PTHREAD_LIBRARIES})
   install(FILES ${folder}/${name}.cpp DESTINATION share/caf/examples/${folder})
   add_dependencies(${name} all_examples)
 endmacro()
