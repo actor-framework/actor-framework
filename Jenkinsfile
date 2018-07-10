@@ -3,18 +3,22 @@
 // Our build matrix. The keys are the operating system labels and the values
 // are lists of tool labels.
 buildMatrix = [
-  // Release and debug builds for various OS/Compiler combinations.
-  ['Linux', [
+  // Debug builds with ASAN + logging for various OS/compiler combinations.
+  ['unix', [
+    cmakeArgs: '-D CAF_LOG_LEVEL=4 '
+               + '-D CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
     builds: ['debug'],
-    tools: ['gcc4.8', 'gcc4.9', 'gcc5.1', 'gcc6.3', 'gcc7.2', 'clang'],
+    tools: ['gcc4.8', 'gcc4.9', 'gcc5', 'gcc6', 'gcc7', 'gcc8', 'clang'],
   ]],
+  // One release build per supported OS. FreeBSD and Windows have the least
+  // testing outside Jenkins, so we also explicitly schedule debug builds.
   ['Linux', [
     builds: ['release'],
     tools: ['gcc', 'clang'],
   ]],
   ['macOS', [
-    builds: ['debug', 'release'],
-    tools: ['gcc', 'clang'],
+    builds: ['release'],
+    tools: ['clang'],
   ]],
   ['FreeBSD', [
     builds: ['debug', 'release'],
@@ -24,30 +28,8 @@ buildMatrix = [
     builds: ['debug', 'release'],
     tools: ['msvc'],
   ]],
-  // Additional builds with logging enabled.
-  ['Linux', [
-    cmakeArgs: '-D CAF_LOG_LEVEL=4',
-    builds: ['debug', 'release'],
-    tools: ['gcc'],
-  ]],
-  ['macOS', [
-    cmakeArgs: '-D CAF_LOG_LEVEL=4',
-    builds: ['debug', 'release'],
-    tools: ['clang'],
-  ]],
-  // Additional debug builds with ASAN enabled.
-  ['Linux', [
-    cmakeArgs: '-D CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
-    builds: ['debug'],
-    tools: ['gcc'],
-  ]],
-  ['macOS', [
-    cmakeArgs: '-D CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
-    builds: ['debug'],
-    tools: ['clang'],
-  ]],
-  // Additional debug build with coverage.
-  ['Linux', [
+  // One Additional build for coverage reports.
+  ['unix', [
     cmakeArgs: '-D CAF_ENABLE_GCOV:BOOL=yes '
                + '-D CAF_NO_EXCEPTIONS:BOOL=yes '
                + '-D CAF_FORCE_NO_EXCEPTIONS:BOOL=yes',
