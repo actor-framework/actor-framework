@@ -98,7 +98,7 @@ void read_uri_query(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   });
   // FSM declaration.
   start();
-  // query may be empty
+  // Query may be empty.
   term_state(init) {
     read_next_char(read_key, key)
   }
