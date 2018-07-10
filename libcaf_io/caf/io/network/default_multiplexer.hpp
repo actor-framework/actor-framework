@@ -261,38 +261,6 @@ private:
   size_t max_throughput_;
 };
 
-/// Reads up to `len` bytes from `fd,` writing the received data
-/// to `buf`. Returns `true` as long as `fd` is readable and `false`
-/// if the socket has been closed or an IO error occured. The number
-/// of read bytes is stored in `result` (can be 0).
-rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len);
-
-/// Writes up to `len` bytes from `buf` to `fd`.
-/// Returns `true` as long as `fd` is readable and `false`
-/// if the socket has been closed or an IO error occured. The number
-/// of written bytes is stored in `result` (can be 0).
-rw_state write_some(size_t& result, native_socket fd, const void* buf,
-                    size_t len);
-
-/// Tries to accept a new connection from `fd`. On success,
-/// the new connection is stored in `result`. Returns true
-/// as long as
-bool try_accept(native_socket& result, native_socket fd);
-
-/// Write a datagram containing `buf_len` bytes to `fd` addressed
-/// at the endpoint in `sa` with size `sa_len`. Returns true as long
-/// as no IO error occurs. The number of written bytes is stored in
-/// `result` and the sender is stored in `ep`.
-bool read_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
-                   ip_endpoint& ep);
-
-/// Reveice a datagram of up to `len` bytes. Larger datagrams are truncated.
-/// Up to `sender_len` bytes of the receiver address is written into
-/// `sender_addr`. Returns `true` if no IO error occurred. The number of
-/// received bytes is stored in `result` (can be 0).
-bool write_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
-                    const ip_endpoint& ep);
-
 inline connection_handle conn_hdl_from_socket(native_socket fd) {
   return connection_handle::from_int(int64_from_native_socket(fd));
 }

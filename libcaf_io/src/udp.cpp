@@ -18,12 +18,50 @@
 
 #include "caf/policy/udp.hpp"
 
+#include "caf/logger.hpp"
+#include "caf/io/network/socket_utils.hpp"
+
+using caf::io::network::is_error;
+using caf::io::network::ip_endpoint;
+using caf::io::network::native_socket;
+
 namespace caf {
 namespace policy {
-  
-read_datagram_fun udp::read_datagram = io::network::read_datagram;
 
-write_datagram_fun udp::write_datagram = io::network::write_datagram;
+bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
+                        size_t buf_len, ip_endpoint& ep) {
+  CAF_LOG_TRACE(CAF_ARG(fd));
+  memset(ep.address(), 0, sizeof(sockaddr_storage));
+  socklen_t len = sizeof(sockaddr_storage);
+  auto sres = ::recvfrom(fd, static_cast<io::network::socket_recv_ptr>(buf),
+                         buf_len, 0, ep.address(), &len);
+  if (is_error(sres, true)) {
+    CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
+    return false;
+  }
+  if (sres == 0)
+    CAF_LOG_INFO("Received empty datagram");
+  else if (sres > static_cast<ssize_t>(buf_len))
+    CAF_LOG_WARNING("recvfrom cut of message, only received "
+                    << CAF_ARG(buf_len) << " of " << CAF_ARG(sres) << " bytes");
+  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+  *ep.length() = static_cast<size_t>(len);
+  return true;
+}
 
-} // policy
+bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
+                         size_t buf_len, const ip_endpoint& ep) {
+  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
+  socklen_t len = static_cast<socklen_t>(*ep.clength());
+  auto sres = ::sendto(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
+                       buf_len, 0, ep.caddress(), len);
+  if (is_error(sres, true)) {
+    CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
+    return false;
+  }
+  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+  return true;
+}
+
+} // namespace policy
 } // namespace caf

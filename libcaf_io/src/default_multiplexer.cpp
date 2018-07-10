@@ -419,84 +419,6 @@ namespace network {
   }
 
 #endif // CAF_EPOLL_MULTIPLEXER
-  
-// -- Free functions for sending and receiving data
-
-rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-  auto sres = ::recv(fd, reinterpret_cast<socket_recv_ptr>(buf),
-                     len, no_sigpipe_io_flag);
-  CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
-  if (is_error(sres, true) || sres == 0) {
-    // recv returns 0  when the peer has performed an orderly shutdown
-    return rw_state::failure;
-  }
-  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  return rw_state::success;
-}
-
-rw_state write_some(size_t& result, native_socket fd, const void* buf,
-                    size_t len) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
-  auto sres = ::send(fd, reinterpret_cast<socket_send_ptr>(buf),
-                     len, no_sigpipe_io_flag);
-  CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
-  if (is_error(sres, true))
-    return rw_state::failure;
-  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  return rw_state::success;
-}
-
-bool try_accept(native_socket& result, native_socket fd) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  sockaddr_storage addr;
-  memset(&addr, 0, sizeof(addr));
-  socklen_t addrlen = sizeof(addr);
-  result = ::accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
-  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
-  if (result == invalid_native_socket) {
-    auto err = last_socket_error();
-    if (!would_block_or_temporarily_unavailable(err)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool read_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
-                   ip_endpoint& ep) {
-  CAF_LOG_TRACE(CAF_ARG(fd));
-  memset(ep.address(), 0, sizeof(sockaddr_storage));
-  socklen_t len = sizeof(sockaddr_storage);
-  auto sres = ::recvfrom(fd, static_cast<socket_recv_ptr>(buf), buf_len, 0, ep.address(), &len);
-  if (is_error(sres, true)) {
-    CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
-    return false;
-  }
-  if (sres == 0)
-    CAF_LOG_INFO("Received empty datagram");
-  else if (sres > static_cast<ssize_t>(buf_len))
-    CAF_LOG_WARNING("recvfrom cut of message, only received " << CAF_ARG(buf_len)
-                    << " of " << CAF_ARG(sres) << " bytes");
-  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  *ep.length() = static_cast<size_t>(len);
-  return true;
-}
-
-bool write_datagram(size_t& result, native_socket fd, void* buf, size_t buf_len,
-                    const ip_endpoint& ep) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
-  socklen_t len = static_cast<socklen_t>(*ep.clength());
-  auto sres = ::sendto(fd, reinterpret_cast<socket_send_ptr>(buf), buf_len,
-                       0, ep.caddress(),
-                       len);
-  if (is_error(sres, true)) {
-    CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
-    return false;
-  }
-  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  return true;
-}
 
 // -- Helper functions for defining bitmasks of event handlers -----------------
 
@@ -527,7 +449,7 @@ int del_flag(operation op, int bf) {
   // weird stuff going on
   return 0;
 }
-  
+
 // -- Platform-independent parts of the default_multiplexer --------------------
 
 bool default_multiplexer::try_run_once() {
@@ -775,6 +697,8 @@ default_multiplexer::new_local_udp_endpoint(uint16_t port, const char* in,
 int64_t default_multiplexer::next_endpoint_id() {
   return servant_ids_++;
 }
+
+// -- Related helper functions -------------------------------------------------
 
 class socket_guard {
 public:

@@ -18,21 +18,29 @@
 
 #pragma once
 
-#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/network/native_socket.hpp"
 
 namespace caf {
 namespace policy {
 
-/// Function signature of read_datagram
-using read_datagram_fun = decltype(io::network::read_datagram)*;
-
-/// Function signature of write_datagram
-using write_datagram_fun = decltype(io::network::write_datagram)*;
-
 /// Policy object for wrapping default UDP operations
 struct udp {
-  static read_datagram_fun read_datagram;
-  static write_datagram_fun write_datagram;
+  /// Write a datagram containing `buf_len` bytes to `fd` addressed
+  /// at the endpoint in `sa` with size `sa_len`. Returns true as long
+  /// as no IO error occurs. The number of written bytes is stored in
+  /// `result` and the sender is stored in `ep`.
+  static bool read_datagram(size_t& result, io::network::native_socket fd,
+                            void* buf, size_t buf_len,
+                            io::network::ip_endpoint& ep);
+
+  /// Reveice a datagram of up to `len` bytes. Larger datagrams are truncated.
+  /// Up to `sender_len` bytes of the receiver address is written into
+  /// `sender_addr`. Returns `true` if no IO error occurred. The number of
+  /// received bytes is stored in `result` (can be 0).
+  static bool write_datagram(size_t& result, io::network::native_socket fd,
+                             void* buf, size_t buf_len,
+                             const io::network::ip_endpoint& ep);
 };
 
 } // namespace policy

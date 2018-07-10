@@ -18,25 +18,35 @@
 
 #pragma once
 
-#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/rw_state.hpp"
+#include "caf/io/network/native_socket.hpp"
 
 namespace caf {
 namespace policy {
 
-/// Function signature of `read_some`.
-using read_some_fun = decltype(io::network::read_some)*;
-
-/// Function signature of `wite_some`.
-using write_some_fun = decltype(io::network::write_some)*;
-
-/// Function signature of `try_accept`.
-using try_accept_fun = decltype(io::network::try_accept)*;
-
 /// Policy object for wrapping default TCP operations.
 struct tcp {
-  static read_some_fun read_some;
-  static write_some_fun write_some;
-  static try_accept_fun try_accept;
+  /// Reads up to `len` bytes from `fd,` writing the received data
+  /// to `buf`. Returns `true` as long as `fd` is readable and `false`
+  /// if the socket has been closed or an IO error occured. The number
+  /// of read bytes is stored in `result` (can be 0).
+  static io::network::rw_state read_some(size_t& result,
+                                         io::network::native_socket fd,
+                                         void* buf, size_t len);
+
+  /// Writes up to `len` bytes from `buf` to `fd`.
+  /// Returns `true` as long as `fd` is readable and `false`
+  /// if the socket has been closed or an IO error occured. The number
+  /// of written bytes is stored in `result` (can be 0).
+  static io::network::rw_state write_some(size_t& result,
+                                          io::network::native_socket fd,
+                                          const void* buf, size_t len);
+
+  /// Tries to accept a new connection from `fd`. On success,
+  /// the new connection is stored in `result`. Returns true
+  /// as long as
+  static bool try_accept(io::network::native_socket& result,
+                         io::network::native_socket fd);
 };
 
 } // namespace policy
