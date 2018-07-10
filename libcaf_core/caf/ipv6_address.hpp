@@ -100,11 +100,6 @@ public:
     return bytes_;
   }
 
-  /// Returns the number of bytes of an IPv6 address.
-  inline size_t size() const noexcept {
-    return bytes_.size();
-  }
-
   /// Returns whether this address contains only zeros, i.e., equals `::`.
   inline bool zero() const noexcept {
     return half_segments_[0] == 0 && half_segments_[1] == 0;

@@ -85,10 +85,6 @@ public:
     return bytes_;
   }
 
-  constexpr size_t size() const noexcept {
-    return bytes_.size();
-  }
-
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>

@@ -96,6 +96,7 @@ void uri_impl::add_encoded(string_view x, bool is_path) {
           str += ch;
           break;
         }
+        // fall through
       case ' ':
       case ':':
       case '?':

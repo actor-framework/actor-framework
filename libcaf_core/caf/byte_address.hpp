@@ -43,6 +43,13 @@ public:
     return dref().bytes()[index];
   }
 
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the number of bytes of the address.
+  size_t size() const noexcept {
+    return dref().bytes().size();
+  }
+
   // -- comparison -------------------------------------------------------------
 
   /// Returns a negative number if `*this < other`, zero if `*this == other`
