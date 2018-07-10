@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
 
 #include "caf/config.hpp"
 
@@ -30,7 +30,7 @@ namespace network {
   using native_socket = size_t;
   constexpr native_socket invalid_native_socket = static_cast<native_socket>(-1);
   inline int64_t int64_from_native_socket(native_socket sock) {
-    return sock == invalid_native_socket ? -1 : static_cast<uint64_t>(sock);
+    return sock == invalid_native_socket ? -1 : static_cast<int64_t>(sock);
   }
 #else
   using native_socket = int;
