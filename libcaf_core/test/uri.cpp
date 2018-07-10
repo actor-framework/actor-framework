@@ -87,16 +87,17 @@ struct uri_str_builder {
   uri_str_builder& query(uri::query_map map) {
     if (map.empty())
       return *this;
+    auto print_kvp = [&](const uri::query_map::value_type& kvp) {
+      res += kvp.first;
+      res += '=';
+      res += kvp.second;
+    };
     res += '?';
     auto i = map.begin();
-    res += i->first;
-    res += '=';
-    res += i->second;
-    for (; i != map.end(); ++i) {
+    print_kvp(*i);
+    for (++i; i != map.end(); ++i) {
       res += '&';
-      res += i->first;
-      res += '=';
-      res += i->second;
+      print_kvp(*i);
     }
     return *this;
   }
@@ -279,7 +280,7 @@ CAF_TEST(builder construction) {
                    .path("file 1")
                    .fragment("[42]")
                    .make();
-  CAF_CHECK_EQUAL(escaped, "hi%20there://it%27s@me%21/file%201#%5B42%5D");
+  CAF_CHECK_EQUAL(escaped, "hi%20there://it%27s@me%2F/file%201#%5B42%5D");
 }
 
 #define ROUNDTRIP(str) CAF_CHECK_EQUAL(str##_u, str)
