@@ -81,13 +81,16 @@ public:
   }
 
   inline void consume(const char* cstr) {
-    string_view tmp{cstr, strlen(cstr)};
-    consume(tmp);
+    if (cstr == nullptr) {
+      result_ += "null";
+    } else {
+      string_view tmp{cstr, strlen(cstr)};
+      consume(tmp);
+    }
   }
 
   inline void consume(char* cstr) {
-    string_view tmp{cstr, strlen(cstr)};
-    consume(tmp);
+    consume(const_cast<const char*>(cstr));
   }
 
   template <class T>
