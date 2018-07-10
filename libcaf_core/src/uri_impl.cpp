@@ -63,7 +63,7 @@ void uri_impl::assemble_str() {
       str += std::to_string(authority.port);
     }
     if (!path.empty()) {
-      addr += '/';
+      str += '/';
       add_encoded(path, true);
     }
   }
@@ -76,8 +76,7 @@ void uri_impl::assemble_str() {
       add_encoded(kvp.second);
     };
     add_kvp(*i);
-    ++i;
-    for (; i != query.end(); ++i) {
+    for (++i; i != query.end(); ++i) {
       str += '&';
       add_kvp(*i);
     }
