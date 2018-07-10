@@ -296,6 +296,8 @@ bool engine::run(bool colorize,
   || (defined(__clang__) && !defined(_LIBCPP_VERSION))
   // regex implementation is broken prior to 4.9
   using strvec = std::vector<std::string>;
+  using whitelist_type = strvec;
+  using blacklist_type = strvec;
   auto from_psv = [](const std::string& psv) -> strvec {
     // psv == pipe-separated-values
     strvec result;
@@ -318,6 +320,8 @@ bool engine::run(bool colorize,
                || std::binary_search(whitelist.begin(), whitelist.end(), x));
   };
 # else
+  using whitelist_type = std::regex;
+  using blacklist_type = std::regex;
   std::regex suites{suites_str};
   std::regex tests{tests_str};
   std::regex not_suites;
@@ -335,8 +339,8 @@ bool engine::run(bool colorize,
            && !std::regex_search(x, blacklist);
   };
 # endif
-  auto test_enabled = [&](const std::regex& whitelist,
-                          const std::regex& blacklist,
+  auto test_enabled = [&](const whitelist_type& whitelist,
+                          const blacklist_type& blacklist,
                           const test& x) {
     // Disabled tests run iff explicitly requested by the user, i.e.,
     // tests_str is not the ".*" catch-all default.
