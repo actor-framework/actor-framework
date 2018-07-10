@@ -39,11 +39,11 @@ public:
   policy_(std::forward<Ts>(xs)...) {
     // nop
   }
-  
+
   void handle_event(io::network::operation op) override {
     this->handle_event_impl(op, policy_);
   }
-  
+
 private:
   ProtocolPolicy policy_;
 };

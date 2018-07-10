@@ -31,61 +31,61 @@ namespace network {
 class event_handler {
 public:
   event_handler(default_multiplexer& dm, native_socket sockfd);
-  
+
   virtual ~event_handler();
-  
+
   /// Returns true once the requested operation is done, i.e.,
   /// to signalize the multiplexer to remove this handler.
   /// The handler remains in the event loop as long as it returns false.
   virtual void handle_event(operation op) = 0;
-  
+
   /// Callback to signalize that this handler has been removed
   /// from the event loop for operations of type `op`.
   virtual void removed_from_loop(operation op) = 0;
-  
+
   /// Returns the native socket handle for this handler.
   inline native_socket fd() const {
     return fd_;
   }
-  
+
   /// Returns the `multiplexer` this acceptor belongs to.
   inline default_multiplexer& backend() {
     return backend_;
   }
-  
+
   /// Returns the bit field storing the subscribed events.
   inline int eventbf() const {
     return eventbf_;
   }
-  
+
   /// Sets the bit field storing the subscribed events.
   inline void eventbf(int value) {
     eventbf_ = value;
   }
-  
+
   /// Checks whether `close_read` has been called.
   inline bool read_channel_closed() const {
     return read_channel_closed_;
   }
-  
+
   /// Closes the read channel of the underlying socket.
   void close_read_channel();
-  
+
   /// Removes the file descriptor from the event loop of the parent.
   void passivate();
-  
+
 protected:
   /// Adds the file descriptor to the event loop of the parent.
   void activate();
-  
+
   void set_fd_flags();
-  
+
   int eventbf_;
   native_socket fd_;
   bool read_channel_closed_;
   default_multiplexer& backend_;
 };
-  
+
 } // namespace network
 } // namespace io
 } // namespace caf

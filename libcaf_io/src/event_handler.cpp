@@ -26,7 +26,7 @@
 namespace caf {
 namespace io {
 namespace network {
- 
+
 event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
     : eventbf_(0),
       fd_(sockfd),

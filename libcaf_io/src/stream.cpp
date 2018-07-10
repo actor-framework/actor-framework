@@ -99,7 +99,7 @@ void stream::removed_from_loop(operation op) {
     case operation::propagate_error: break;
   }
 }
-  
+
 void stream::force_empty_write(const manager_ptr& mgr) {
   if (!writing_) {
     backend().add(operation::write, fd(), this);
@@ -201,7 +201,7 @@ void stream::handle_error_propagation() {
   // backend will delete this handler anyway,
   // no need to call backend().del() here
 }
-  
+
 } // namespace network
 } // namespace io
 } // namespace caf

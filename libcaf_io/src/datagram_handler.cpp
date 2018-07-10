@@ -29,7 +29,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 namespace {
-  
+
 constexpr size_t receive_buffer_size = std::numeric_limits<uint16_t>::max();
 
 } // namespace anonymous
@@ -162,7 +162,7 @@ void datagram_handler::prepare_next_write() {
     wr_offline_buf_.pop_front();
   }
 }
-  
+
 bool datagram_handler::handle_read_result(bool read_result) {
   if (!read_result) {
     reader_->io_failure(&backend(), operation::read);

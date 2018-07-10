@@ -34,25 +34,25 @@ namespace network {
 class doorman_impl : public doorman {
 public:
   doorman_impl(default_multiplexer& mx, native_socket sockfd);
-  
+
   bool new_connection() override;
-  
+
   void stop_reading() override;
-  
+
   void launch() override;
-  
+
   std::string addr() const override;
-  
+
   uint16_t port() const override;
-  
+
   void add_to_loop() override;
-  
+
   void remove_from_loop() override;
-  
+
 protected:
   acceptor_impl<policy::tcp> acceptor_;
 };
-  
+
 } // namespace network
 } // namespace io
 } // namespace caf

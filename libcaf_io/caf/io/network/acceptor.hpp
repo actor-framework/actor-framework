@@ -37,31 +37,31 @@ class acceptor : public event_handler {
 public:
   /// A manager providing the `accept` member function.
   using manager_type = acceptor_manager;
-  
+
   /// A smart pointer to an acceptor manager.
   using manager_ptr = intrusive_ptr<manager_type>;
-  
+
   acceptor(default_multiplexer& backend_ref, native_socket sockfd);
-  
+
   /// Returns the accepted socket. This member function should
   /// be called only from the `new_connection` callback.
   inline native_socket& accepted_socket() {
     return sock_;
   }
-  
+
   /// Starts this acceptor, forwarding all incoming connections to
   /// `manager`. The intrusive pointer will be released after the
   /// acceptor has been closed or an IO error occured.
   void start(acceptor_manager* mgr);
-  
+
   /// Activates the acceptor.
   void activate(acceptor_manager* mgr);
-  
+
   /// Closes the network connection and removes this handler from its parent.
   void stop_reading();
-  
+
   void removed_from_loop(operation op) override;
-  
+
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
@@ -76,7 +76,7 @@ protected:
       }
     }
   }
-  
+
 private:
   manager_ptr mgr_;
   native_socket sock_;
