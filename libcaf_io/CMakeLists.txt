@@ -46,6 +46,7 @@ set(LIBCAF_IO_SRCS
   src/tcp.cpp
   src/udp.cpp
   src/socket_utils.cpp
+  src/call_cfun.cpp
 )
 
 add_custom_target(libcaf_io)

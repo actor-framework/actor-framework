@@ -19,6 +19,8 @@
 #include "caf/sec.hpp"
 #include "caf/logger.hpp"
 
+#include "caf/detail/call_cfun.hpp"
+
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/socket_utils.hpp"
 
@@ -43,80 +45,49 @@ using std::string;
 
 namespace {
 
-// predicate for `ccall` meaning "expected result of f is 0"
-bool cc_zero(int value) {
-  return value == 0;
-}
-
-// predicate for `ccall` meaning "expected result of f is not -1"
-bool cc_not_minus1(int value) {
-  return value != -1;
-}
-  
-  // calls a C functions and returns an error if `predicate(var)`  returns false
-#define CALL_CFUN(var, predicate, fun_name, expr)                              \
-  auto var = expr;                                                             \
-  if (!predicate(var))                                                         \
-    return make_error(sec::network_syscall_failed,                             \
-                      fun_name, last_socket_error_as_string())
-  
 #ifdef CAF_WINDOWS
-// predicate for `ccall` meaning "expected result of f is a valid socket"
-bool cc_valid_socket(caf::io::network::native_socket fd) {
-  return fd != caf::io::network::invalid_native_socket;
-}
-
-  // calls a C functions and calls exit() if `predicate(var)`  returns false
-#define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
-  auto var = expr;                                                             \
-  if (!predicate(var)) {                                                       \
-    fprintf(stderr, "[FATAL] %s:%u: syscall failed: %s returned %s\n",         \
-           __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
-    abort();                                                                   \
-  } static_cast<void>(0)
-  
 #ifndef SIO_UDP_CONNRESET
 #define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
 #endif
 #endif // CAF_WINDOWS
-  
+
 } // namespace <anonymous>
 
 namespace caf {
 namespace io {
 namespace network {
-  
+
 #ifndef CAF_WINDOWS
-  
+
   string last_socket_error_as_string() {
     return strerror(errno);
   }
-  
+
   expected<void> nonblocking(native_socket fd, bool new_value) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
     // read flags for fd
-    CALL_CFUN(rf, cc_not_minus1, "fcntl", fcntl(fd, F_GETFL, 0));
+    CALL_CFUN(rf, detail::cc_not_minus1, "fcntl", fcntl(fd, F_GETFL, 0));
     // calculate and set new flags
     auto wf = new_value ? (rf | O_NONBLOCK) : (rf & (~(O_NONBLOCK)));
-    CALL_CFUN(set_res, cc_not_minus1, "fcntl", fcntl(fd, F_SETFL, wf));
+    CALL_CFUN(set_res, detail::cc_not_minus1, "fcntl", fcntl(fd, F_SETFL, wf));
     return unit;
   }
-  
+
   expected<void> allow_sigpipe(native_socket fd, bool new_value) {
     if (no_sigpipe_socket_flag != 0) {
       int value = new_value ? 0 : 1;
-      CALL_CFUN(res, cc_zero, "setsockopt",
+      CALL_CFUN(res, detail::cc_zero, "setsockopt",
                 setsockopt(fd, SOL_SOCKET, no_sigpipe_socket_flag, &value,
                            static_cast<unsigned>(sizeof(value))));
     }
     return unit;
   }
-  
+
   expected<void> allow_udp_connreset(native_socket, bool) {
     // nop; SIO_UDP_CONNRESET only exists on Windows
     return unit;
   }
-  
+
   std::pair<native_socket, native_socket> create_pipe() {
     int pipefds[2];
     if (pipe(pipefds) != 0) {
@@ -125,9 +96,9 @@ namespace network {
     }
     return {pipefds[0], pipefds[1]};
   }
-  
+
 #else // CAF_WINDOWS
-  
+
   string last_socket_error_as_string() {
     LPTSTR errorText = NULL;
     auto hresult = last_socket_error();
@@ -151,26 +122,27 @@ namespace network {
     }
     return result;
   }
-  
+
   expected<void> nonblocking(native_socket fd, bool new_value) {
     u_long mode = new_value ? 1 : 0;
-    CALL_CFUN(res, cc_zero, "ioctlsocket", ioctlsocket(fd, FIONBIO, &mode));
+    CALL_CFUN(res, detail::cc_zero, "ioctlsocket",
+              ioctlsocket(fd, FIONBIO, &mode));
     return unit;
   }
-  
+
   expected<void> allow_sigpipe(native_socket, bool) {
     // nop; SIGPIPE does not exist on Windows
     return unit;
   }
-  
+
   expected<void> allow_udp_connreset(native_socket fd, bool new_value) {
     DWORD bytes_returned = 0;
-    CALL_CFUN(res, cc_zero, "WSAIoctl",
+    CALL_CFUN(res, detail::cc_zero, "WSAIoctl",
               WSAIoctl(fd, SIO_UDP_CONNRESET, &new_value, sizeof(new_value),
                        NULL, 0, &bytes_returned, NULL, NULL));
     return unit;
   }
-  
+
   /**************************************************************************\
    * Based on work of others;                                               *
    * original header:                                                       *
@@ -205,7 +177,7 @@ namespace network {
   std::pair<native_socket, native_socket> create_pipe() {
     socklen_t addrlen = sizeof(sockaddr_in);
     native_socket socks[2] = {invalid_native_socket, invalid_native_socket};
-    CALL_CRITICAL_CFUN(listener, cc_valid_socket, "socket",
+    CALL_CRITICAL_CFUN(listener, detail::cc_valid_socket, "socket",
                        socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     union {
       sockaddr_in inaddr;
@@ -225,50 +197,50 @@ namespace network {
     });
     // bind listener to a local port
     int reuse = 1;
-    CALL_CRITICAL_CFUN(tmp1, cc_zero, "setsockopt",
+    CALL_CRITICAL_CFUN(tmp1, detail::cc_zero, "setsockopt",
                        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR,
                                   reinterpret_cast<char*>(&reuse),
                                   static_cast<int>(sizeof(reuse))));
-    CALL_CRITICAL_CFUN(tmp2, cc_zero, "bind",
+    CALL_CRITICAL_CFUN(tmp2, detail::cc_zero, "bind",
                        bind(listener, &a.addr,
                             static_cast<int>(sizeof(a.inaddr))));
     // read the port in use: win32 getsockname may only set the port number
     // (http://msdn.microsoft.com/library/ms738543.aspx):
     memset(&a, 0, sizeof(a));
-    CALL_CRITICAL_CFUN(tmp3, cc_zero, "getsockname",
+    CALL_CRITICAL_CFUN(tmp3, detail::cc_zero, "getsockname",
                        getsockname(listener, &a.addr, &addrlen));
     a.inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     a.inaddr.sin_family = AF_INET;
     // set listener to listen mode
-    CALL_CRITICAL_CFUN(tmp5, cc_zero, "listen", listen(listener, 1));
+    CALL_CRITICAL_CFUN(tmp5, detail::cc_zero, "listen", listen(listener, 1));
     // create read-only end of the pipe
     DWORD flags = 0;
-    CALL_CRITICAL_CFUN(read_fd, cc_valid_socket, "WSASocketW",
+    CALL_CRITICAL_CFUN(read_fd, detail::cc_valid_socket, "WSASocketW",
                        WSASocketW(AF_INET, SOCK_STREAM, 0, nullptr, 0, flags));
-    CALL_CRITICAL_CFUN(tmp6, cc_zero, "connect",
+    CALL_CRITICAL_CFUN(tmp6, detail::cc_zero, "connect",
                        connect(read_fd, &a.addr,
                                static_cast<int>(sizeof(a.inaddr))));
     // get write-only end of the pipe
-    CALL_CRITICAL_CFUN(write_fd, cc_valid_socket, "accept",
+    CALL_CRITICAL_CFUN(write_fd, detail::cc_valid_socket, "accept",
                        accept(listener, nullptr, nullptr));
     closesocket(listener);
     guard.disable();
     return std::make_pair(read_fd, write_fd);
   }
-  
+
 #endif
-  
+
 expected<int> send_buffer_size(native_socket fd) {
   int size;
   socklen_t ret_size = sizeof(size);
-  CALL_CFUN(res, cc_zero, "getsockopt",
+  CALL_CFUN(res, detail::cc_zero, "getsockopt",
             getsockopt(fd, SOL_SOCKET, SO_SNDBUF,
             reinterpret_cast<getsockopt_ptr>(&size), &ret_size));
   return size;
 }
 
 expected<void> send_buffer_size(native_socket fd, int new_value) {
-  CALL_CFUN(res, cc_zero, "setsockopt",
+  CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
                        reinterpret_cast<setsockopt_ptr>(&new_value),
                        static_cast<socklen_t>(sizeof(int))));
@@ -278,7 +250,7 @@ expected<void> send_buffer_size(native_socket fd, int new_value) {
 expected<void> tcp_nodelay(native_socket fd, bool new_value) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
   int flag = new_value ? 1 : 0;
-  CALL_CFUN(res, cc_zero, "setsockopt",
+  CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
                        reinterpret_cast<setsockopt_ptr>(&flag),
                        static_cast<socklen_t>(sizeof(flag))));
@@ -296,12 +268,12 @@ bool is_error(ssize_t res, bool is_nonblock) {
   }
   return false;
 }
-  
+
 expected<std::string> local_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
   sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
-  CALL_CFUN(tmp1, cc_zero, "getsockname", getsockname(fd, sa, &st_len));
+  CALL_CFUN(tmp1, detail::cc_zero, "getsockname", getsockname(fd, sa, &st_len));
   char addr[INET6_ADDRSTRLEN] {0};
   switch (sa->sa_family) {
     case AF_INET:
@@ -321,7 +293,7 @@ expected<std::string> local_addr_of_fd(native_socket fd) {
 expected<uint16_t> local_port_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
-  CALL_CFUN(tmp, cc_zero, "getsockname",
+  CALL_CFUN(tmp, detail::cc_zero, "getsockname",
             getsockname(fd, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
@@ -330,7 +302,7 @@ expected<std::string> remote_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
   sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
-  CALL_CFUN(tmp, cc_zero, "getpeername", getpeername(fd, sa, &st_len));
+  CALL_CFUN(tmp, detail::cc_zero, "getpeername", getpeername(fd, sa, &st_len));
   char addr[INET6_ADDRSTRLEN] {0};
   switch (sa->sa_family) {
     case AF_INET:
@@ -350,7 +322,7 @@ expected<std::string> remote_addr_of_fd(native_socket fd) {
 expected<uint16_t> remote_port_of_fd(native_socket fd) {
   sockaddr_storage st;
   socklen_t st_len = sizeof(st);
-  CALL_CFUN(tmp, cc_zero, "getpeername",
+  CALL_CFUN(tmp, detail::cc_zero, "getpeername",
             getpeername(fd, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
@@ -390,7 +362,7 @@ auto port_of(sockaddr& what) -> decltype(port_of(std::declval<sockaddr_in&>())) 
   }
   CAF_CRITICAL("invalid protocol family");
 }
-  
+
 } // namespace network
 } // namespace io
 } // namespace caf

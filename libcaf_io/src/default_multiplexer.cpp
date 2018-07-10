@@ -32,6 +32,8 @@
 #include "caf/io/network/doorman_impl.hpp"
 #include "caf/io/network/datagram_servant_impl.hpp"
 
+#include "caf/detail/call_cfun.hpp"
+
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #ifdef CAF_WINDOWS
@@ -58,43 +60,6 @@ namespace {
 // safe ourselves some typing
 constexpr auto ipv4 = caf::io::network::protocol::ipv4;
 constexpr auto ipv6 = caf::io::network::protocol::ipv6;
-
-// predicate for `ccall` meaning "expected result of f is 0"
-bool cc_zero(int value) {
-  return value == 0;
-}
-
-// predicate for `ccall` meaning "expected result of f is 1"
-bool cc_one(int value) {
-  return value == 1;
-}
-
-// predicate for `ccall` meaning "expected result of f is a valid socket"
-bool cc_valid_socket(caf::io::network::native_socket fd) {
-  return fd != caf::io::network::invalid_native_socket;
-}
-
-// calls a C functions and returns an error if `predicate(var)`  returns false
-#define CALL_CFUN(var, predicate, fun_name, expr)                              \
-  auto var = expr;                                                             \
-  if (!predicate(var))                                                         \
-    return make_error(sec::network_syscall_failed,                             \
-                      fun_name, last_socket_error_as_string())
-
-#ifdef CAF_WINDOWS
-// calls a C functions and calls exit() if `predicate(var)`  returns false
-#define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
-  auto var = expr;                                                             \
-  if (!predicate(var)) {                                                       \
-    fprintf(stderr, "[FATAL] %s:%u: syscall failed: %s returned %s\n",         \
-           __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
-    abort();                                                                   \
-  } static_cast<void>(0)
-
-#ifndef SIO_UDP_CONNRESET
-#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
-#endif
-#endif // CAF_WINDOWS
 
 } // namespace <anonymous>
 
@@ -759,7 +724,7 @@ new_tcp_connection(const std::string& host, uint16_t port,
   }
   auto proto = res->second;
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
-  CALL_CFUN(fd, cc_valid_socket, "socket",
+  CALL_CFUN(fd, detail::cc_valid_socket, "socket",
             socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
   socket_guard sguard(fd);
   if (proto == ipv6) {
@@ -783,7 +748,7 @@ new_tcp_connection(const std::string& host, uint16_t port,
 template <class SockAddrType>
 expected<void> read_port(native_socket fd, SockAddrType& sa) {
   socklen_t len = sizeof(SockAddrType);
-  CALL_CFUN(res, cc_zero, "getsockname",
+  CALL_CFUN(res, detail::cc_zero, "getsockname",
             getsockname(fd, reinterpret_cast<sockaddr*>(&sa), &len));
   return unit;
 }
@@ -797,7 +762,7 @@ expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
   sa.sin6_addr = in6addr_any;
   // also accept ipv4 requests on this socket
   int off = 0;
-  CALL_CFUN(res, cc_zero, "setsockopt",
+  CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
                        reinterpret_cast<setsockopt_ptr>(&off),
                        static_cast<socklen_t>(sizeof(off))));
@@ -809,12 +774,12 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                                              bool reuse_addr, bool any) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  CALL_CFUN(fd, cc_valid_socket, "socket", socket(Family, SockType, 0));
+  CALL_CFUN(fd, detail::cc_valid_socket, "socket", socket(Family, SockType, 0));
   // sguard closes the socket in case of exception
   socket_guard sguard{fd};
   if (reuse_addr) {
     int on = 1;
-    CALL_CFUN(tmp1, cc_zero, "setsockopt",
+    CALL_CFUN(tmp1, detail::cc_zero, "setsockopt",
               setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
                          reinterpret_cast<setsockopt_ptr>(&on),
                          static_cast<socklen_t>(sizeof(on))));
@@ -830,10 +795,10 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   family_of(sa) = Family;
   if (any)
     set_inaddr_any(fd, sa);
-  CALL_CFUN(tmp, cc_one, "inet_pton",
+  CALL_CFUN(tmp, detail::cc_one, "inet_pton",
             inet_pton(Family, addr, &addr_of(sa)));
   port_of(sa) = htons(port);
-  CALL_CFUN(res, cc_zero, "bind",
+  CALL_CFUN(res, detail::cc_zero, "bind",
             bind(fd, reinterpret_cast<sockaddr*>(&sa),
                  static_cast<socklen_t>(sizeof(sa))));
   return sguard.release();
@@ -868,7 +833,7 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
                       port, addr_str);
   }
   socket_guard sguard{fd};
-  CALL_CFUN(tmp2, cc_zero, "listen", listen(fd, SOMAXCONN));
+  CALL_CFUN(tmp2, detail::cc_zero, "listen", listen(fd, SOMAXCONN));
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd));
   return sguard.release();
