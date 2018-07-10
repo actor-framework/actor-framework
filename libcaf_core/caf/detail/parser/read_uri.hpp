@@ -67,6 +67,14 @@ void read_uri_percent_encoded(state<Iterator, Sentinel>& ps, std::string& str) {
   fin();
 }
 
+inline bool uri_unprotected_char(char c) {
+  return in_whitelist(alphanumeric_chars, c) || in_whitelist("-._~", c);
+}
+
+#define read_next_char(next_state, dest)                                       \
+  transition(next_state, uri_unprotected_char, dest += ch)                     \
+  fsm_transition(read_uri_percent_encoded(ps, dest), next_state, '%')
+
 template <class Iterator, class Sentinel, class Consumer>
 void read_uri_query(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   // Local variables.
@@ -92,22 +100,18 @@ void read_uri_query(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   start();
   // query may be empty
   term_state(init) {
-    transition(read_key, alphabetic_chars, key += ch)
+    read_next_char(read_key, key)
   }
   state(read_key) {
-    transition(read_key, alphanumeric_chars, key += ch)
+    read_next_char(read_key, key)
     transition(read_value, '=')
   }
   term_state(read_value, push()) {
-    transition(read_value, alphanumeric_chars, value += ch)
-    transition(read_key, '&', push())
+    read_next_char(read_value, value)
+    transition(init, '&', push())
   }
   fin();
 }
-
-#define read_next_char(next_state)                                             \
-  transition(next_state, unprotected_char, str += ch)                          \
-  fsm_transition(read_uri_percent_encoded(ps, str), next_state, '%')
 
 template <class Iterator, class Sentinel, class Consumer>
 void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
@@ -125,9 +129,6 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   // Allowed character sets.
   auto path_char = [](char c) {
     return in_whitelist(alphanumeric_chars, c) || c == '/';
-  };
-  auto unprotected_char = [](char c) {
-    return in_whitelist(alphanumeric_chars, c) || in_whitelist("-._~", c);
   };
   // Utility setters for avoiding code duplication.
   auto set_path = [&] {
@@ -152,12 +153,12 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     epsilon(read_scheme)
   }
   state(read_scheme) {
-    read_next_char(read_scheme)
+    read_next_char(read_scheme, str)
     transition(have_scheme, ':', consumer.scheme(take_str()))
   }
   state(have_scheme) {
     transition(disambiguate_path, '/')
-    read_next_char(read_path)
+    read_next_char(read_path, str)
     fsm_transition(read_uri_percent_encoded(ps, str), read_path, '%')
   }
   // This state is terminal, because "file:/" is a valid URI.
@@ -166,7 +167,7 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     epsilon(read_path, any_char, str += '/')
   }
   state(start_authority) {
-    read_next_char(read_authority)
+    read_next_char(read_authority, str)
     fsm_transition(read_ipv6_address(ps, ip_consumer), await_end_of_ipv6, '[')
   }
   state(await_end_of_ipv6) {
@@ -181,17 +182,17 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     epsilon(end_of_authority, "/?#", set_host())
   }
   term_state(read_authority, set_host()) {
-    read_next_char(read_authority)
+    read_next_char(read_authority, str)
     transition(start_host, '@', set_userinfo())
     transition(start_port, ':', set_host())
     epsilon(end_of_authority, "/?#", set_host())
   }
   state(start_host) {
-    read_next_char(read_host)
+    read_next_char(read_host, str)
     fsm_transition(read_ipv6_address(ps, ip_consumer), await_end_of_ipv6, '[')
   }
   term_state(read_host, set_host()) {
-    read_next_char(read_host)
+    read_next_char(read_host, str)
     transition(start_port, ':', set_host())
     epsilon(end_of_authority, "/?#", set_host())
   }
@@ -222,7 +223,7 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     epsilon(done)
   }
   term_state(read_fragment, consumer.fragment(take_str())) {
-    read_next_char(read_fragment)
+    read_next_char(read_fragment, str)
   }
   term_state(done) {
     // nop
