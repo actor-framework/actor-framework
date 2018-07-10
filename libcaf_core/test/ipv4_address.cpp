@@ -43,7 +43,8 @@ CAF_TEST(constructing) {
   ipv4_address localhost({127, 0, 0, 1});
   CAF_CHECK_EQUAL(localhost.bits(), to_network_order(0x7F000001u));
   CAF_CHECK_EQUAL(localhost.data(), array_type({127, 0, 0, 1}));
-  CAF_CHECK_EQUAL(ipv4_address().data(), array_type({0, 0, 0, 0}));
+  ipv4_address zero;
+  CAF_CHECK_EQUAL(zero.data(), array_type({0, 0, 0, 0}));
 }
 
 CAF_TEST(to and from string) {
