@@ -21,6 +21,12 @@
 #include "caf/logger.hpp"
 #include "caf/io/network/socket_utils.hpp"
 
+#ifdef CAF_WINDOWS
+using caf::io::network::ssize_t;
+#else
+# include <sys/types.h>
+#endif
+
 using caf::io::network::is_error;
 using caf::io::network::ip_endpoint;
 using caf::io::network::native_socket;
