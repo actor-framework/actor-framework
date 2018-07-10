@@ -66,6 +66,7 @@ msOpts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
 def coverageReport() {
   dir('caf-sources') {
     sh 'gcovr -e libcaf_test -e ".*/test/.*" -x -r .. > coverage.xml'
+    archiveArtifacts '**/coverage.xml'
     cobertura([
       autoUpdateHealth: false,
       autoUpdateStability: false,
