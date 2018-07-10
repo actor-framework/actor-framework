@@ -273,13 +273,13 @@
 
 #endif // CAF_MSVC
 
-// Makes a transition into another state if the `statement` is true.
+/// Makes a transition into another state if the `statement` is true.
 #define transition_if(statement, ...)                                          \
   if (statement) {                                                             \
     transition(__VA_ARGS__)                                                    \
   }
 
-// Makes an epsiolon transition into another state if the `statement` is true.
+/// Makes an epsiolon transition into another state if the `statement` is true.
 #define epsilon_if(statement, ...)                                             \
   if (statement) {                                                             \
     epsilon(__VA_ARGS__)                                                       \
