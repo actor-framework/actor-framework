@@ -571,7 +571,7 @@ public:
 
 CAF_TEST_FIXTURE_SCOPE(basp_udp_tests, fixture)
 
-CAF_TEST(empty_server_handshake_udp) {
+CAF_TEST_DISABLED(empty_server_handshake_udp) {
   // test whether basp instance correctly sends a
   // client handshake when there's no actor published
   buffer buf;
@@ -590,7 +590,7 @@ CAF_TEST(empty_server_handshake_udp) {
   CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
 }
 
-CAF_TEST(empty_client_handshake_udp) {
+CAF_TEST_DISABLED(empty_client_handshake_udp) {
   // test whether basp instance correctly sends a
   // client handshake when there's no actor published
   buffer buf;
@@ -610,7 +610,7 @@ CAF_TEST(empty_client_handshake_udp) {
   CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
 }
 
-CAF_TEST(non_empty_server_handshake_udp) {
+CAF_TEST_DISABLED(non_empty_server_handshake_udp) {
   // test whether basp instance correctly sends a
   // server handshake with published actors
   buffer buf;
@@ -626,7 +626,7 @@ CAF_TEST(non_empty_server_handshake_udp) {
   CAF_CHECK_EQUAL(hexstr(buf), hexstr(expected_buf));
 }
 
-CAF_TEST(remote_address_and_port_udp) {
+CAF_TEST_DISABLED(remote_address_and_port_udp) {
   CAF_MESSAGE("connect to Mars");
   establish_communication(mars());
   auto mm = sys.middleman().actor_handle();
@@ -646,7 +646,7 @@ CAF_TEST(remote_address_and_port_udp) {
   );
 }
 
-CAF_TEST(client_handshake_and_dispatch_udp) {
+CAF_TEST_DISABLED(client_handshake_and_dispatch_udp) {
   CAF_MESSAGE("establish communication with Jupiter");
   establish_communication(jupiter());
   CAF_MESSAGE("send dispatch message");
@@ -684,7 +684,7 @@ CAF_TEST(client_handshake_and_dispatch_udp) {
   );
 }
 
-CAF_TEST(message_forwarding_udp) {
+CAF_TEST_DISABLED(message_forwarding_udp) {
   // connect two remote nodes
   CAF_MESSAGE("establish communication with Jupiter");
   establish_communication(jupiter());
@@ -706,7 +706,7 @@ CAF_TEST(message_forwarding_udp) {
            msg);
 }
 
-CAF_TEST(publish_and_connect_udp) {
+CAF_TEST_DISABLED(publish_and_connect_udp) {
   auto dx = datagram_handle::from_int(4242);
   mpx()->provide_datagram_servant(4242, dx);
   auto res = sys.middleman().publish_udp(self(), 4242);
@@ -715,7 +715,7 @@ CAF_TEST(publish_and_connect_udp) {
   establish_communication(jupiter(), dx, self()->id());
 }
 
-CAF_TEST(remote_actor_and_send_udp) {
+CAF_TEST_DISABLED(remote_actor_and_send_udp) {
   constexpr const char* lo = "localhost";
   CAF_MESSAGE("self: " << to_string(self()->address()));
   mpx()->provide_datagram_servant(lo, 4242, jupiter().endpoint);
@@ -804,7 +804,7 @@ CAF_TEST(remote_actor_and_send_udp) {
   );
 }
 
-CAF_TEST(actor_serialize_and_deserialize_udp) {
+CAF_TEST_DISABLED(actor_serialize_and_deserialize_udp) {
   auto testee_impl = [](event_based_actor* testee_self) -> behavior {
     testee_self->set_default_handler(reflect_and_quit);
     return {
@@ -845,7 +845,7 @@ CAF_TEST(actor_serialize_and_deserialize_udp) {
           std::vector<actor_id>{}, msg);
 }
 
-CAF_TEST(indirect_connections_udp) {
+CAF_TEST_DISABLED(indirect_connections_udp) {
   // this node receives a message from jupiter via mars and responds via mars
   // and any ad-hoc automatic connection requests are ignored
   CAF_MESSAGE("self: " << to_string(self()->address()));
@@ -901,7 +901,7 @@ CAF_TEST_FIXTURE_SCOPE_END()
 
 CAF_TEST_FIXTURE_SCOPE(basp_udp_tests_with_manual_timer, manual_timer_fixture)
 
-CAF_TEST(out_of_order_delivery_udp) {
+CAF_TEST_DISABLED(out_of_order_delivery_udp) {
   // This test uses the test_coordinator to get control over the
   // timeouts that deliver pending message.
   constexpr const char* lo = "localhost";
@@ -1039,7 +1039,7 @@ CAF_TEST_FIXTURE_SCOPE_END()
 
 CAF_TEST_FIXTURE_SCOPE(basp_udp_tests_with_autoconn, autoconn_enabled_fixture)
 
-CAF_TEST(automatic_connection_udp) {
+CAF_TEST_DISABLED(automatic_connection_udp) {
   // this tells our BASP broker to enable the automatic connection feature
   //anon_send(aut(), ok_atom::value,
   //          "middleman.enable-automatic-connections", make_message(true));
