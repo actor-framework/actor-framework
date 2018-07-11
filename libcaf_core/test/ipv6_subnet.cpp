@@ -16,56 +16,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#include "caf/config.hpp"
 
-namespace caf {
-namespace detail {
+#define CAF_SUITE ipv6_subnet
+#include "caf/test/dsl.hpp"
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
+#include "caf/ipv6_subnet.hpp"
+
+using namespace caf;
+
+namespace {
+
+ipv6_subnet operator/(ipv6_address addr, uint8_t prefix) {
+  return {addr, prefix};
 }
 
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
+} // namespace <anonymous>
+
+CAF_TEST(constructing) {
+  auto zero = ipv6_address() / 128;
+  CAF_CHECK_EQUAL(zero.network_address(), ipv6_address());
+  CAF_CHECK_EQUAL(zero.prefix_length(), 128u);
 }
 
-void stringification_inspector::consume(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
-  }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str) {
-    switch (c) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-    }
-  }
-  result_ += '"';
+CAF_TEST(constains) {
+  auto local = ipv6_address{{0xbebe, 0xbebe}, {}} / 32;
+  CAF_CHECK(local.contains(ipv6_address({0xbebe, 0xbebe, 0xbebe}, {})));
+  CAF_CHECK(!local.contains(ipv6_address({0xbebe, 0xbebf}, {})));
 }
 
-} // namespace detail
-} // namespace caf
+CAF_TEST(embedding) {
+  ipv4_subnet v4_local{ipv4_address({127, 0, 0, 1}), 8};
+  ipv6_subnet local{v4_local};
+  CAF_CHECK(local.embeds_v4());
+  CAF_CHECK_EQUAL(local.prefix_length(), 104u);
+}
+

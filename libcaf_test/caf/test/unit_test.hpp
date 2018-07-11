@@ -328,7 +328,7 @@ public:
   }
 
   inline void log(level lvl, const std::nullptr_t&) {
-    log(lvl, "<null>");
+    log(lvl, "null");
   }
 
   /// Output stream for logging purposes.

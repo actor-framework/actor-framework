@@ -16,56 +16,60 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#include "caf/uri_builder.hpp"
+
+#include "caf/detail/uri_impl.hpp"
+#include "caf/make_counted.hpp"
 
 namespace caf {
-namespace detail {
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
+uri_builder::uri_builder() : impl_(make_counted<detail::uri_impl>()) {
+  // nop
 }
 
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
+uri_builder& uri_builder::scheme(std::string str) {
+  impl_->scheme = std::move(str);
+  return *this;
 }
 
-void stringification_inspector::consume(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
-  }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str) {
-    switch (c) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-    }
-  }
-  result_ += '"';
+uri_builder& uri_builder::userinfo(std::string str) {
+  impl_->authority.userinfo = std::move(str);
+  return *this;
 }
 
-} // namespace detail
+uri_builder& uri_builder::host(std::string str) {
+  impl_->authority.host = std::move(str);
+  return *this;
+}
+
+uri_builder& uri_builder::host(ip_address addr) {
+  impl_->authority.host = addr;
+  return *this;
+}
+
+uri_builder& uri_builder::port(uint16_t value) {
+  impl_->authority.port = value;
+  return *this;
+}
+
+uri_builder& uri_builder::path(std::string str) {
+  impl_->path = std::move(str);
+  return *this;
+}
+
+uri_builder& uri_builder::query(uri::query_map map) {
+  impl_->query = std::move(map);
+  return *this;
+}
+
+uri_builder& uri_builder::fragment(std::string str) {
+  impl_->fragment = std::move(str);
+  return *this;
+}
+
+uri uri_builder::make() {
+  impl_->assemble_str();
+  return uri{std::move(impl_)};
+}
+
 } // namespace caf

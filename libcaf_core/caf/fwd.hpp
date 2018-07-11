@@ -104,7 +104,9 @@ class group;
 class group_module;
 class inbound_path;
 class ipv4_address;
+class ipv4_subnet;
 class ipv6_address;
+class ipv6_subnet;
 class local_actor;
 class mailbox_element;
 class message;
@@ -126,6 +128,8 @@ class string_view;
 class type_erased_tuple;
 class type_erased_value;
 class uniform_type_info_map;
+class uri;
+class uri_builder;
 
 // -- structs ------------------------------------------------------------------
 
@@ -161,6 +165,8 @@ enum class atom_value : uint64_t;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using ip_address = ipv6_address;
+using ip_subnet = ipv6_subnet;
 using stream_slot = uint16_t;
 
 // -- functions ----------------------------------------------------------------
@@ -235,10 +241,15 @@ template <class> class type_erased_value_impl;
 template <class> class stream_distribution_tree;
 
 class disposer;
-class message_data;
-class group_manager;
-class private_thread;
 class dynamic_message_data;
+class group_manager;
+class message_data;
+class private_thread;
+class uri_impl;
+
+void intrusive_ptr_add_ref(const uri_impl* p);
+
+void intrusive_ptr_release(const uri_impl* p);
 
 } // namespace detail
 

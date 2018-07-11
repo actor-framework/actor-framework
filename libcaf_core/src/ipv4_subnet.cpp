@@ -16,56 +16,43 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#include "caf/ipv4_subnet.hpp"
 
 namespace caf {
-namespace detail {
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
+// -- constructors, destructors, and assignment operators --------------------
+
+ipv4_subnet::ipv4_subnet() {
+  // nop
 }
 
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
+ipv4_subnet::ipv4_subnet(ipv4_address network_address, uint8_t prefix_length)
+    : address_(network_address),
+      prefix_length_(prefix_length) {
+  // nop
 }
 
-void stringification_inspector::consume(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
-  }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str) {
-    switch (c) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-    }
-  }
-  result_ += '"';
+// -- properties ---------------------------------------------------------------
+
+bool ipv4_subnet::contains(ipv4_address addr) const noexcept {
+  return address_ == addr.network_address(prefix_length_);
 }
 
-} // namespace detail
+bool ipv4_subnet::contains(ipv4_subnet other) const noexcept {
+  // We can only contain a subnet if it's prefix is greater or equal.
+  if (prefix_length_ > other.prefix_length_)
+    return false;
+  return prefix_length_ == other.prefix_length_
+         ? address_ == other.address_
+         : address_ == other.address_.network_address(prefix_length_);
+}
+
+// -- comparison ---------------------------------------------------------------
+
+int ipv4_subnet::compare(const ipv4_subnet& other) const noexcept {
+  auto sub_res = address_.compare(other.address_);
+  return sub_res != 0 ? sub_res
+                      : static_cast<int>(prefix_length_) - other.prefix_length_;
+}
+
 } // namespace caf

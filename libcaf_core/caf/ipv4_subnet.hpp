@@ -16,56 +16,50 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#pragma once
+
+#include <cstdint>
+
+#include "caf/detail/comparable.hpp"
+#include "caf/ipv4_address.hpp"
 
 namespace caf {
-namespace detail {
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
-}
+class ipv4_subnet : detail::comparable<ipv4_subnet> {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
 
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
-}
+  ipv4_subnet();
 
-void stringification_inspector::consume(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
+  ipv4_subnet(ipv4_address network_address, uint8_t prefix_length);
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the network address for this subnet.
+  inline ipv4_address network_address() const noexcept {
+    return address_;
   }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str) {
-    switch (c) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-    }
-  }
-  result_ += '"';
-}
 
-} // namespace detail
+  /// Returns the prefix length of the netmask in bits.
+  inline uint8_t prefix_length() const noexcept {
+    return prefix_length_;
+  }
+
+  /// Returns whether `addr` belongs to this subnet.
+  bool contains(ipv4_address addr) const noexcept;
+
+  /// Returns whether this subnet includes `other`.
+  bool contains(ipv4_subnet other) const noexcept;
+
+  // -- comparison -------------------------------------------------------------
+
+  int compare(const ipv4_subnet& other) const noexcept;
+
+private:
+  // -- member variables -------------------------------------------------------
+
+  ipv4_address address_;
+  uint8_t prefix_length_;
+};
+
 } // namespace caf

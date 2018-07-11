@@ -25,8 +25,9 @@
 #include <vector>
 
 #include "caf/atom.hpp"
-#include "caf/none.hpp"
 #include "caf/error.hpp"
+#include "caf/none.hpp"
+#include "caf/string_view.hpp"
 
 #include "caf/meta/type_name.hpp"
 #include "caf/meta/omittable.hpp"
@@ -73,18 +74,23 @@ public:
 
   void consume(atom_value& x);
 
-  void consume(const char* cstr);
+  void consume(string_view str);
 
   inline void consume(bool& x) {
     result_ += x ? "true" : "false";
   }
 
-  inline void consume(char* cstr) {
-    consume(const_cast<const char*>(cstr));
+  inline void consume(const char* cstr) {
+    if (cstr == nullptr) {
+      result_ += "null";
+    } else {
+      string_view tmp{cstr, strlen(cstr)};
+      consume(tmp);
+    }
   }
 
-  inline void consume(std::string& str) {
-    consume(str.c_str());
+  inline void consume(char* cstr) {
+    consume(const_cast<const char*>(cstr));
   }
 
   template <class T>
@@ -132,6 +138,7 @@ public:
   template <class T>
   enable_if_t<is_iterable<T>::value
               && !is_inspectable<stringification_inspector, T>::value
+              && !std::is_convertible<T, string_view>::value
               && !has_to_string<T>::value>
   consume(T& xs) {
     result_ += '[';
@@ -243,6 +250,7 @@ public:
     && !std::is_pointer<T>::value
     && !is_inspectable<stringification_inspector, T>::value
     && !std::is_arithmetic<T>::value
+    && !std::is_convertible<T, string_view>::value
     && !has_to_string<T>::value>
   consume(T&) {
     result_ += "<unprintable>";

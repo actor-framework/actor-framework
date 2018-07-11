@@ -26,6 +26,8 @@
 
 #undef term_state
 
+#undef unstable_state
+
 #undef fin
 
 #undef CAF_TRANSITION_IMPL1
@@ -73,6 +75,8 @@
 #undef fsm_transition
 
 #undef fsm_epsilon
+
+#undef transition_if
 
 #undef epsilon_if
 

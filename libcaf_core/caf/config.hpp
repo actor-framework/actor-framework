@@ -136,7 +136,11 @@
     _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("GCC diagnostic pop")
-#  define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
+#  if __GNUC__ >= 7
+#    define CAF_ANNOTATE_FALLTHROUGH __attribute__((fallthrough))
+#  else
+#    define CAF_ANNOTATE_FALLTHROUGH static_cast<void>(0)
+#  endif
 #  define CAF_COMPILER_VERSION                                                 \
      (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
     // disable thread_local on GCC/macOS due to heap-use-after-free bug:

@@ -65,6 +65,10 @@ set(LIBCAF_CORE_SRCS
   src/inbound_path.cpp
   src/ini_consumer.cpp
   src/invoke_result_visitor.cpp
+  src/ipv4_address.cpp
+  src/ipv4_subnet.cpp
+  src/ipv6_address.cpp
+  src/ipv6_subnet.cpp
   src/local_actor.cpp
   src/logger.cpp
   src/mailbox_element.cpp
@@ -118,6 +122,9 @@ set(LIBCAF_CORE_SRCS
   src/type_erased_value.cpp
   src/uniform_type_info_map.cpp
   src/unprofiled.cpp
+  src/uri.cpp
+  src/uri_builder.cpp
+  src/uri_impl.cpp
   src/work_sharing.cpp
   src/work_stealing.cpp
 )

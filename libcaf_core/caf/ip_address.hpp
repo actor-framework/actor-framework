@@ -16,56 +16,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#pragma once
+
+#include "caf/ipv6_address.hpp"
 
 namespace caf {
-namespace detail {
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
-}
+/// An IP address. The address family is IPv6 unless `embeds_v4` returns true.
+using ip_address = ipv6_address;
 
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
-}
-
-void stringification_inspector::consume(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
-  }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str) {
-    switch (c) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-    }
-  }
-  result_ += '"';
-}
-
-} // namespace detail
 } // namespace caf

@@ -16,56 +16,57 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#pragma once
+
+#include <cstdint>
+#include <string>
+
+#include "caf/fwd.hpp"
+#include "caf/uri.hpp"
 
 namespace caf {
-namespace detail {
 
-void stringification_inspector::sep() {
-  if (!result_.empty())
-    switch (result_.back()) {
-      case '(':
-      case '[':
-      case ' ': // only at back if we've printed ", " before
-        break;
-      default:
-        result_ += ", ";
-    }
-}
+class uri_builder {
+public:
+  // -- member types -----------------------------------------------------------
 
-void stringification_inspector::consume(atom_value& x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
-}
+  /// Pointer to implementation.
+  using impl_ptr = intrusive_ptr<detail::uri_impl>;
 
-void stringification_inspector::consume(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
-  }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str) {
-    switch (c) {
-      default:
-        result_ += c;
-        break;
-      case '\\':
-        result_ += R"(\\)";
-        break;
-      case '"':
-        result_ += R"(\")";
-        break;
-    }
-  }
-  result_ += '"';
-}
+  // -- constructors, destructors, and assignment operators --------------------
 
-} // namespace detail
+  uri_builder();
+
+  uri_builder(uri_builder&&) = default;
+
+  uri_builder& operator=(uri_builder&&) = default;
+
+  // -- setter -----------------------------------------------------------------
+
+  uri_builder& scheme(std::string str);
+
+  uri_builder& userinfo(std::string str);
+
+  uri_builder& host(std::string str);
+
+  uri_builder& host(ip_address addr);
+
+  uri_builder& port(uint16_t value);
+
+  uri_builder& path(std::string str);
+
+  uri_builder& query(uri::query_map map);
+
+  uri_builder& fragment(std::string str);
+
+  // -- factory functions ------------------------------------------------------
+
+  uri make();
+
+private:
+  // -- member variables -------------------------------------------------------
+
+  impl_ptr impl_;
+};
+
 } // namespace caf

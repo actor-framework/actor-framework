@@ -99,7 +99,9 @@ CAF_TEST(compare) {
   CAF_CHECK(x.compare(0, 3, "abc") == 0);
   CAF_CHECK(x.compare(1, 2, y, 0, 2) == 0);
   CAF_CHECK(x.compare(2, 1, z, 0, 1) == 0);
-  CAF_CHECK(x.compare(2, 1, z, 0, 2) == 0);
+  CAF_CHECK(x.compare(2, 1, z, 0, 1) == 0);
+  // make sure substrings aren't equal
+  CAF_CHECK(string_view("a/") != string_view("a/b"));
 }
 
 CAF_TEST(copy) {

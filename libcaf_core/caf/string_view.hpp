@@ -52,11 +52,11 @@ struct is_string_like {
         decltype(x->size())
       >::value
     >::type* = nullptr,
-    // check if `x->compare(*x)` is well-formed and returns an integer
+    // check if `x->find('?', 0)` is well-formed and returns an integer
     // (distinguishes vectors from strings)
     typename std::enable_if<
       std::is_integral<
-        decltype(x->compare(*x))
+        decltype(x->find('?', 0))
       >::value
     >::type* = nullptr);
 
