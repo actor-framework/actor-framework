@@ -18,12 +18,21 @@
 
 #include "caf/policy/tcp.hpp"
 
+#include <cstring>
+
 #include "caf/logger.hpp"
-#include "caf/io/network/socket_utils.hpp"
+
+#ifdef CAF_WINDOWS
+# include <winsock2.h>
+#else
+# include <sys/types.h>
+# include <sys/socket.h>
+#endif
 
 using caf::io::network::is_error;
 using caf::io::network::rw_state;
 using caf::io::network::native_socket;
+using caf::io::network::socket_size_type;
 using caf::io::network::no_sigpipe_io_flag;
 
 namespace caf {
@@ -59,8 +68,8 @@ bool tcp::try_accept(native_socket& result, native_socket fd) {
   using namespace io::network;
   CAF_LOG_TRACE(CAF_ARG(fd));
   sockaddr_storage addr;
-  memset(&addr, 0, sizeof(addr));
-  socklen_t addrlen = sizeof(addr);
+  std::memset(&addr, 0, sizeof(addr));
+  socket_size_type addrlen = sizeof(addr);
   result = ::accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
   if (result == invalid_native_socket) {

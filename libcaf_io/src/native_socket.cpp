@@ -16,46 +16,106 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/io/network/native_socket.hpp"
+
 #include "caf/sec.hpp"
 #include "caf/logger.hpp"
 
 #include "caf/detail/call_cfun.hpp"
 
 #include "caf/io/network/protocol.hpp"
-#include "caf/io/network/socket_utils.hpp"
 
 #ifdef CAF_WINDOWS
+# ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+# endif
+# ifndef NOMINMAX
+#   define NOMINMAX
+# endif
+# ifdef CAF_MINGW
+#   undef _WIN32_WINNT
+#   undef WINVER
+#   define _WIN32_WINNT WindowsVista
+#   define WINVER WindowsVista
+#   include <w32api.h>
+# endif
 # include <winsock2.h>
-# include <ws2tcpip.h> // socklen_t, etc. (MSVC20xx)
 # include <windows.h>
-# include <io.h>
+# include <ws2tcpip.h>
+# include <ws2ipdef.h>
 #else
 # include <cerrno>
-# include <netdb.h>
 # include <fcntl.h>
-# include <sys/types.h>
+# include <unistd.h>
 # include <arpa/inet.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
+# include <netinet/ip.h>
 # include <netinet/tcp.h>
-# include <utility>
 #endif
 
 using std::string;
 
 namespace {
 
-#ifdef CAF_WINDOWS
-#ifndef SIO_UDP_CONNRESET
-#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
-#endif
-#endif // CAF_WINDOWS
+auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
+  return what.sin_port;
+}
 
-} // namespace <anonymous>
+auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
+  return what.sin6_port;
+}
+
+auto port_of(sockaddr& what) -> decltype(port_of(std::declval<sockaddr_in&>())) {
+  switch (what.sa_family) {
+    case AF_INET:
+      return port_of(reinterpret_cast<sockaddr_in&>(what));
+    case AF_INET6:
+      return port_of(reinterpret_cast<sockaddr_in6&>(what));
+    default:
+      break;
+  }
+  CAF_CRITICAL("invalid protocol family");
+}
+
+}
 
 namespace caf {
 namespace io {
 namespace network {
+
+#ifdef CAF_WINDOWS
+  int last_socket_error() { return WSAGetLastError(); }
+  bool would_block_or_temporarily_unavailable(int errcode) {
+    return errcode == WSAEWOULDBLOCK || errcode == WSATRY_AGAIN;
+  }
+  const int ec_out_of_memory = WSAENOBUFS;
+  const int ec_interrupted_syscall = WSAEINTR;
+#else
+  void closesocket(int fd) { close(fd); }
+  int last_socket_error() { return errno; }
+  bool would_block_or_temporarily_unavailable(int errcode) {
+    return errcode == EAGAIN || errcode == EWOULDBLOCK;
+  }
+  const int ec_out_of_memory = ENOMEM;
+  const int ec_interrupted_syscall = EINTR;
+#endif
+
+
+// platform-dependent SIGPIPE setup
+#if defined(CAF_MACOS) || defined(CAF_IOS) || defined(CAF_BSD)
+  // Use the socket option but no flags to recv/send on macOS/iOS/BSD.
+  const int no_sigpipe_socket_flag = SO_NOSIGPIPE;
+  const int no_sigpipe_io_flag = 0;
+#elif defined(CAF_WINDOWS)
+  // Do nothing on Windows (SIGPIPE does not exist).
+  const int no_sigpipe_socket_flag = 0;
+  const int no_sigpipe_io_flag = 0;
+#else
+  // Use flags to recv/send on Linux/Android but no socket option.
+  const int no_sigpipe_socket_flag = 0;
+  const int no_sigpipe_io_flag = MSG_NOSIGNAL;
+#endif
 
 #ifndef CAF_WINDOWS
 
@@ -114,7 +174,7 @@ namespace network {
                   (LPTSTR) & errorText, // output
                   0,                    // minimum size for output buffer
                   nullptr);             // arguments - see note
-    std::string result;
+    string result;
     if (errorText != nullptr) {
       result = errorText;
       // release memory allocated by FormatMessage()
@@ -138,7 +198,7 @@ namespace network {
   expected<void> allow_udp_connreset(native_socket fd, bool new_value) {
     DWORD bytes_returned = 0;
     CALL_CFUN(res, detail::cc_zero, "WSAIoctl",
-              WSAIoctl(fd, SIO_UDP_CONNRESET, &new_value, sizeof(new_value),
+              WSAIoctl(fd, _WSAIOW(IOC_VENDOR, 12), &new_value, sizeof(new_value),
                        NULL, 0, &bytes_returned, NULL, NULL));
     return unit;
   }
@@ -175,7 +235,7 @@ namespace network {
    * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.   *
    \**************************************************************************/
   std::pair<native_socket, native_socket> create_pipe() {
-    socklen_t addrlen = sizeof(sockaddr_in);
+    socket_size_type addrlen = sizeof(sockaddr_in);
     native_socket socks[2] = {invalid_native_socket, invalid_native_socket};
     CALL_CRITICAL_CFUN(listener, detail::cc_valid_socket, "socket",
                        socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
@@ -232,7 +292,7 @@ namespace network {
 
 expected<int> send_buffer_size(native_socket fd) {
   int size;
-  socklen_t ret_size = sizeof(size);
+  socket_size_type ret_size = sizeof(size);
   CALL_CFUN(res, detail::cc_zero, "getsockopt",
             getsockopt(fd, SOL_SOCKET, SO_SNDBUF,
             reinterpret_cast<getsockopt_ptr>(&size), &ret_size));
@@ -243,7 +303,7 @@ expected<void> send_buffer_size(native_socket fd, int new_value) {
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
                        reinterpret_cast<setsockopt_ptr>(&new_value),
-                       static_cast<socklen_t>(sizeof(int))));
+                       static_cast<socket_size_type>(sizeof(int))));
   return unit;
 }
 
@@ -253,11 +313,11 @@ expected<void> tcp_nodelay(native_socket fd, bool new_value) {
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
                        reinterpret_cast<setsockopt_ptr>(&flag),
-                       static_cast<socklen_t>(sizeof(flag))));
+                       static_cast<socket_size_type>(sizeof(flag))));
   return unit;
 }
 
-bool is_error(ssize_t res, bool is_nonblock) {
+bool is_error(signed_size_type res, bool is_nonblock) {
   if (res < 0) {
     auto err = last_socket_error();
     if (!is_nonblock || !would_block_or_temporarily_unavailable(err)) {
@@ -269,9 +329,9 @@ bool is_error(ssize_t res, bool is_nonblock) {
   return false;
 }
 
-expected<std::string> local_addr_of_fd(native_socket fd) {
+expected<string> local_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
-  socklen_t st_len = sizeof(st);
+  socket_size_type st_len = sizeof(st);
   sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
   CALL_CFUN(tmp1, detail::cc_zero, "getsockname", getsockname(fd, sa, &st_len));
   char addr[INET6_ADDRSTRLEN] {0};
@@ -292,15 +352,15 @@ expected<std::string> local_addr_of_fd(native_socket fd) {
 
 expected<uint16_t> local_port_of_fd(native_socket fd) {
   sockaddr_storage st;
-  socklen_t st_len = sizeof(st);
+  socket_size_type st_len = sizeof(st);
   CALL_CFUN(tmp, detail::cc_zero, "getsockname",
             getsockname(fd, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
 
-expected<std::string> remote_addr_of_fd(native_socket fd) {
+expected<string> remote_addr_of_fd(native_socket fd) {
   sockaddr_storage st;
-  socklen_t st_len = sizeof(st);
+  socket_size_type st_len = sizeof(st);
   sockaddr* sa = reinterpret_cast<sockaddr*>(&st);
   CALL_CFUN(tmp, detail::cc_zero, "getpeername", getpeername(fd, sa, &st_len));
   char addr[INET6_ADDRSTRLEN] {0};
@@ -321,49 +381,12 @@ expected<std::string> remote_addr_of_fd(native_socket fd) {
 
 expected<uint16_t> remote_port_of_fd(native_socket fd) {
   sockaddr_storage st;
-  socklen_t st_len = sizeof(st);
+  socket_size_type st_len = sizeof(st);
   CALL_CFUN(tmp, detail::cc_zero, "getpeername",
             getpeername(fd, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
 
-auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
-  return what.sin_addr;
-}
-
-auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
-  return what.sin_family;
-}
-
-auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
-  return what.sin_port;
-}
-
-auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
-  return what.sin6_addr;
-}
-
-auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
-  return what.sin6_family;
-}
-
-auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
-  return what.sin6_port;
-}
-
-auto port_of(sockaddr& what) -> decltype(port_of(std::declval<sockaddr_in&>())) {
-  switch (what.sa_family) {
-    case AF_INET:
-      return port_of(reinterpret_cast<sockaddr_in&>(what));
-    case AF_INET6:
-      return port_of(reinterpret_cast<sockaddr_in6&>(what));
-    default:
-      break;
-  }
-  CAF_CRITICAL("invalid protocol family");
-}
-
 } // namespace network
 } // namespace io
 } // namespace caf
-

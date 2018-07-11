@@ -20,8 +20,13 @@
 
 #include "caf/logger.hpp"
 
-#include "caf/io/network/socket_utils.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
+
+#ifdef CAF_WINDOWS
+# include <winsock2.h>
+#else
+# include <sys/socket.h>
+#endif
 
 namespace caf {
 namespace io {
@@ -69,4 +74,3 @@ void event_handler::set_fd_flags() {
 } // namespace network
 } // namespace io
 } // namespace caf
-

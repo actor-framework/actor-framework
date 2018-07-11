@@ -24,7 +24,7 @@
 namespace caf {
 namespace policy {
 
-/// Policy object for wrapping default UDP operations
+/// Policy object for wrapping default UDP operations.
 struct udp {
   /// Write a datagram containing `buf_len` bytes to `fd` addressed
   /// at the endpoint in `sa` with size `sa_len`. Returns true as long

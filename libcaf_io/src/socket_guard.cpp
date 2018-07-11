@@ -16,61 +16,36 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/detail/socket_guard.hpp"
+
+#include <unistd.h>
+
 #include "caf/logger.hpp"
 
-#include <cstdint>
-
-#include "caf/io/network/pipe_reader.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
-
-#ifdef CAF_WINDOWS
-# include <winsock2.h>
-#else
-# include <unistd.h>
-# include <sys/socket.h>
-#endif
-
 namespace caf {
-namespace io {
-namespace network {
+namespace detail {
 
-pipe_reader::pipe_reader(default_multiplexer& dm)
-    : event_handler(dm, invalid_native_socket) {
+socket_guard::socket_guard(io::network::native_socket fd) : fd_(fd) {
   // nop
 }
 
-void pipe_reader::removed_from_loop(operation) {
-  // nop
+socket_guard::~socket_guard() {
+  close();
 }
 
-resumable* pipe_reader::try_read_next() {
-  std::intptr_t ptrval;
-  // on windows, we actually have sockets, otherwise we have file handles
-# ifdef CAF_WINDOWS
-    auto res = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval),
-                    sizeof(ptrval), 0);
-# else
-    auto res = read(fd(), &ptrval, sizeof(ptrval));
-# endif
-  if (res != sizeof(ptrval))
-    return nullptr;
-  return reinterpret_cast<resumable*>(ptrval);
+io::network::native_socket socket_guard::release() {
+  auto fd = fd_;
+  fd_ = io::network::invalid_native_socket;
+  return fd;
 }
 
-void pipe_reader::handle_event(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(op));
-  if (op == operation::read) {
-    auto ptr = try_read_next();
-    if (ptr != nullptr)
-      backend().resume({ptr, false});
+void socket_guard::close() {
+  if (fd_ != io::network::invalid_native_socket) {
+    CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
+    io::network::closesocket(fd_);
+    fd_ = io::network::invalid_native_socket;
   }
-  // else: ignore errors
 }
 
-void pipe_reader::init(native_socket sock_fd) {
-  fd_ = sock_fd;
-}
-
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace detail
+} // namespace detail

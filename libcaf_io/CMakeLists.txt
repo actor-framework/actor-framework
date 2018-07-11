@@ -45,8 +45,9 @@ set(LIBCAF_IO_SRCS
   src/stream.cpp
   src/tcp.cpp
   src/udp.cpp
-  src/socket_utils.cpp
+  src/native_socket.cpp
   src/call_cfun.cpp
+  src/socket_guard.cpp
 )
 
 add_custom_target(libcaf_io)

@@ -19,17 +19,19 @@
 #include "caf/policy/udp.hpp"
 
 #include "caf/logger.hpp"
-#include "caf/io/network/socket_utils.hpp"
 
 #ifdef CAF_WINDOWS
-using caf::io::network::ssize_t;
+# include <winsock2.h>
 #else
 # include <sys/types.h>
+# include <sys/socket.h>
 #endif
 
 using caf::io::network::is_error;
 using caf::io::network::ip_endpoint;
 using caf::io::network::native_socket;
+using caf::io::network::signed_size_type;
+using caf::io::network::socket_size_type;
 
 namespace caf {
 namespace policy {
@@ -38,7 +40,7 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
                         size_t buf_len, ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   memset(ep.address(), 0, sizeof(sockaddr_storage));
-  socklen_t len = sizeof(sockaddr_storage);
+  socket_size_type len = sizeof(sockaddr_storage);
   auto sres = ::recvfrom(fd, static_cast<io::network::socket_recv_ptr>(buf),
                          buf_len, 0, ep.address(), &len);
   if (is_error(sres, true)) {
@@ -47,7 +49,7 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
   }
   if (sres == 0)
     CAF_LOG_INFO("Received empty datagram");
-  else if (sres > static_cast<ssize_t>(buf_len))
+  else if (sres > static_cast<signed_size_type>(buf_len))
     CAF_LOG_WARNING("recvfrom cut of message, only received "
                     << CAF_ARG(buf_len) << " of " << CAF_ARG(sres) << " bytes");
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
@@ -58,7 +60,7 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
 bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
                          size_t buf_len, const ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
-  socklen_t len = static_cast<socklen_t>(*ep.clength());
+  socket_size_type len = static_cast<socket_size_type>(*ep.clength());
   auto sres = ::sendto(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
                        buf_len, 0, ep.caddress(), len);
   if (is_error(sres, true)) {

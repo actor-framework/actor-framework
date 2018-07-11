@@ -25,7 +25,6 @@
 #include "caf/defaults.hpp"
 #include "caf/config_value.hpp"
 
-#include "caf/io/network/socket_utils.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {
@@ -96,7 +95,7 @@ void stream::removed_from_loop(operation op) {
   switch (op) {
     case operation::read:  reader_.reset(); break;
     case operation::write: writer_.reset(); break;
-    case operation::propagate_error: break;
+    case operation::propagate_error: ; // nop
   }
 }
 

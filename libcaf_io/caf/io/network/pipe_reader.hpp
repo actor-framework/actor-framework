@@ -32,9 +32,13 @@ namespace network {
 class pipe_reader : public event_handler {
 public:
   pipe_reader(default_multiplexer& dm);
+
   void removed_from_loop(operation op) override;
+
   void handle_event(operation op) override;
+
   void init(native_socket sock_fd);
+
   resumable* try_read_next();
 };
 

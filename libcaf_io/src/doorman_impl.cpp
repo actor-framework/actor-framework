@@ -23,7 +23,6 @@
 
 #include "caf/logger.hpp"
 
-#include "caf/io/network/socket_utils.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
 namespace caf {

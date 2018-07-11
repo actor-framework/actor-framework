@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <cstdio>
+#include <cstdlib>
+
 #include "caf/io/network/native_socket.hpp"
 
 namespace caf {
@@ -42,7 +45,6 @@ bool cc_valid_socket(caf::io::network::native_socket fd);
     return make_error(sec::network_syscall_failed,                             \
                       fun_name, last_socket_error_as_string())
 
-#ifdef CAF_WINDOWS
 // Calls a C functions and calls exit() if `predicate(var)` returns false.
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
   auto var = expr;                                                             \
@@ -51,11 +53,6 @@ bool cc_valid_socket(caf::io::network::native_socket fd);
            __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
     abort();                                                                   \
   } static_cast<void>(0)
-
-#ifndef SIO_UDP_CONNRESET
-#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
-#endif
-#endif // CAF_WINDOWS
 
 } // namespace detail
 } // namespace caf

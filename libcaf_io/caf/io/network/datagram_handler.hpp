@@ -29,7 +29,7 @@
 
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/event_handler.hpp"
-#include "caf/io/network/socket_utils.hpp"
+#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/datagram_manager.hpp"
 
 namespace caf {
@@ -101,6 +101,7 @@ public:
                     const manager_ptr mgr);
 
   std::unordered_map<datagram_handle, ip_endpoint>& endpoints();
+
   const std::unordered_map<datagram_handle, ip_endpoint>& endpoints() const;
 
   void remove_endpoint(datagram_handle hdl);

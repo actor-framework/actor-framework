@@ -42,14 +42,12 @@
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/pipe_reader.hpp"
-#include "caf/io/network/socket_utils.hpp"
+#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/datagram_manager.hpp"
-
-#include "caf/io/network/native_socket.hpp"
 
 #include "caf/logger.hpp"
 

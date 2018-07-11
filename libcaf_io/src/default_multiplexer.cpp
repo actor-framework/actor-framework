@@ -33,18 +33,21 @@
 #include "caf/io/network/datagram_servant_impl.hpp"
 
 #include "caf/detail/call_cfun.hpp"
+#include "caf/detail/socket_guard.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
-# include <ws2tcpip.h> // socklen_t, etc. (MSVC20xx)
+# include <ws2tcpip.h> // socket_size_type, etc. (MSVC20xx)
 # include <windows.h>
 # include <io.h>
+# include <unistd.h>
 #else
 # include <cerrno>
 # include <netdb.h>
 # include <fcntl.h>
+# include <unistd.h>
 # include <sys/types.h>
 # include <arpa/inet.h>
 # include <sys/socket.h>
@@ -57,9 +60,33 @@ using std::string;
 
 namespace {
 
-// safe ourselves some typing
+// Save ourselves some typing.
 constexpr auto ipv4 = caf::io::network::protocol::ipv4;
 constexpr auto ipv6 = caf::io::network::protocol::ipv6;
+
+auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
+  return what.sin_addr;
+}
+
+auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
+  return what.sin_family;
+}
+
+auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
+  return what.sin_port;
+}
+
+auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
+  return what.sin6_addr;
+}
+
+auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
+  return what.sin6_family;
+}
+
+auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
+  return what.sin6_port;
+}
 
 } // namespace <anonymous>
 
@@ -665,34 +692,6 @@ int64_t default_multiplexer::next_endpoint_id() {
 
 // -- Related helper functions -------------------------------------------------
 
-class socket_guard {
-public:
-  explicit socket_guard(native_socket fd) : fd_(fd) {
-    // nop
-  }
-
-  ~socket_guard() {
-    close();
-  }
-
-  native_socket release() {
-    auto fd = fd_;
-    fd_ = invalid_native_socket;
-    return fd;
-  }
-
-  void close() {
-    if (fd_ != invalid_native_socket) {
-      CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
-      closesocket(fd_);
-      fd_ = invalid_native_socket;
-    }
-  }
-
-private:
-  native_socket fd_;
-};
-
 template <int Family>
 bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
   CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
@@ -726,7 +725,7 @@ new_tcp_connection(const std::string& host, uint16_t port,
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
   CALL_CFUN(fd, detail::cc_valid_socket, "socket",
             socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
-  socket_guard sguard(fd);
+  detail::socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
       CAF_LOG_INFO("successfully connected to host via IPv6");
@@ -747,7 +746,7 @@ new_tcp_connection(const std::string& host, uint16_t port,
 
 template <class SockAddrType>
 expected<void> read_port(native_socket fd, SockAddrType& sa) {
-  socklen_t len = sizeof(SockAddrType);
+  socket_size_type len = sizeof(SockAddrType);
   CALL_CFUN(res, detail::cc_zero, "getsockname",
             getsockname(fd, reinterpret_cast<sockaddr*>(&sa), &len));
   return unit;
@@ -765,7 +764,7 @@ expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
   CALL_CFUN(res, detail::cc_zero, "setsockopt",
             setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
                        reinterpret_cast<setsockopt_ptr>(&off),
-                       static_cast<socklen_t>(sizeof(off))));
+                       static_cast<socket_size_type>(sizeof(off))));
   return unit;
 }
 
@@ -776,13 +775,13 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   CALL_CFUN(fd, detail::cc_valid_socket, "socket", socket(Family, SockType, 0));
   // sguard closes the socket in case of exception
-  socket_guard sguard{fd};
+  detail::socket_guard sguard{fd};
   if (reuse_addr) {
     int on = 1;
     CALL_CFUN(tmp1, detail::cc_zero, "setsockopt",
               setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
                          reinterpret_cast<setsockopt_ptr>(&on),
-                         static_cast<socklen_t>(sizeof(on))));
+                         static_cast<socket_size_type>(sizeof(on))));
   }
   using sockaddr_type =
     typename std::conditional<
@@ -800,7 +799,7 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   port_of(sa) = htons(port);
   CALL_CFUN(res, detail::cc_zero, "bind",
             bind(fd, reinterpret_cast<sockaddr*>(&sa),
-                 static_cast<socklen_t>(sizeof(sa))));
+                 static_cast<socket_size_type>(sizeof(sa))));
   return sguard.release();
 }
 
@@ -832,7 +831,7 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
     return make_error(sec::cannot_open_port, "tcp socket creation failed",
                       port, addr_str);
   }
-  socket_guard sguard{fd};
+  detail::socket_guard sguard{fd};
   CALL_CFUN(tmp2, detail::cc_zero, "listen", listen(fd, SOMAXCONN));
   // ok, no errors so far
   CAF_LOG_DEBUG(CAF_ARG(fd));
@@ -846,7 +845,7 @@ new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
   auto lep = new_local_udp_endpoint_impl(0, nullptr, false, preferred);
   if (!lep)
     return std::move(lep.error());
-  socket_guard sguard{(*lep).first};
+  detail::socket_guard sguard{(*lep).first};
   std::pair<native_socket, ip_endpoint> info;
   memset(std::get<1>(info).address(), 0, sizeof(sockaddr_storage));
   if (!interfaces::get_endpoint(host, port, std::get<1>(info), (*lep).second))

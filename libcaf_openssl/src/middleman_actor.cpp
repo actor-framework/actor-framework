@@ -42,6 +42,14 @@
 
 #include "caf/openssl/session.hpp"
 
+#ifdef CAF_WINDOWS
+# include <winsock2.h>
+# include <ws2tcpip.h> // socket_size_type, etc. (MSVC20xx)
+#else
+# include <sys/types.h>
+# include <sys/socket.h>
+#endif
+
 namespace caf {
 namespace openssl {
 
@@ -70,7 +78,7 @@ struct ssl_policy {
     CAF_LOG_TRACE(CAF_ARG(fd));
     sockaddr_storage addr;
     memset(&addr, 0, sizeof(addr));
-    socklen_t addrlen = sizeof(addr);
+    caf::io::network::socket_size_type addrlen = sizeof(addr);
     result = accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
     CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
     if (result == io::network::invalid_native_socket) {

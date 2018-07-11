@@ -18,13 +18,39 @@
 
 #pragma once
 
+#include <string>
 #include <cstdint>
 
 #include "caf/config.hpp"
+#include "caf/expected.hpp"
 
 namespace caf {
 namespace io {
 namespace network {
+
+// Annoying platform-dependent bootstrapping.
+#ifdef CAF_WINDOWS
+  using setsockopt_ptr = const char*;
+  using getsockopt_ptr = char*;
+  using socket_send_ptr = const char*;
+  using socket_recv_ptr = char*;
+  //using socket_size_type = int;
+#else
+  using setsockopt_ptr = const void*;
+  using getsockopt_ptr = void*;
+  using socket_send_ptr = const void*;
+  using socket_recv_ptr = void*;
+  using socket_size_type = unsigned;
+  void closesocket(int fd);
+#endif
+
+using signed_size_type = std::make_signed<size_t>::type;
+
+// More bootstrapping.
+extern const int ec_out_of_memory;
+extern const int ec_interrupted_syscall;
+extern const int no_sigpipe_socket_flag;
+extern const int no_sigpipe_io_flag;
 
 #ifdef CAF_WINDOWS
   using native_socket = size_t;
@@ -39,6 +65,57 @@ namespace network {
     return static_cast<int64_t>(sock);
   }
 #endif
+
+/// Returns the last socket error as an integer.
+int last_socket_error();
+
+/// Returns true if `errcode` indicates that an operation would
+/// block or return nothing at the moment and can be tried again
+/// at a later point.
+bool would_block_or_temporarily_unavailable(int errcode);
+
+/// Returns the last socket error as human-readable string.
+std::string last_socket_error_as_string();
+
+/// Creates two connected sockets. The former is the read handle
+/// and the latter is the write handle.
+std::pair<native_socket, native_socket> create_pipe();
+
+/// Sets fd to nonblocking if `set_nonblocking == true`
+/// or to blocking if `set_nonblocking == false`
+/// throws `network_error` on error
+expected<void> nonblocking(native_socket fd, bool new_value);
+
+/// Enables or disables Nagle's algorithm on `fd`.
+/// @throws network_error
+expected<void> tcp_nodelay(native_socket fd, bool new_value);
+
+/// Enables or disables `SIGPIPE` events from `fd`.
+expected<void> allow_sigpipe(native_socket fd, bool new_value);
+
+/// Enables or disables `SIO_UDP_CONNRESET`error on `fd`.
+expected<void> allow_udp_connreset(native_socket fd, bool new_value);
+
+/// Get the socket buffer size for `fd`.
+expected<int> send_buffer_size(native_socket fd);
+
+/// Set the socket buffer size for `fd`.
+expected<void> send_buffer_size(native_socket fd, int new_value);
+
+/// Convenience functions for checking the result of `recv` or `send`.
+bool is_error(signed_size_type res, bool is_nonblock);
+
+/// Returns the locally assigned port of `fd`.
+expected<uint16_t> local_port_of_fd(native_socket fd);
+
+/// Returns the locally assigned address of `fd`.
+expected<std::string> local_addr_of_fd(native_socket fd);
+
+/// Returns the port used by the remote host of `fd`.
+expected<uint16_t> remote_port_of_fd(native_socket fd);
+
+/// Returns the remote host address of `fd`.
+expected<std::string> remote_addr_of_fd(native_socket fd);
 
 } // namespace network
 } // namespace io

@@ -1,4 +1,3 @@
-
 /******************************************************************************
  *                       ____    _    _____                                   *
  *                      / ___|  / \  |  ___|    C++                           *
@@ -25,7 +24,6 @@
 #include "caf/defaults.hpp"
 #include "caf/config_value.hpp"
 
-#include "caf/io/network/socket_utils.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
 namespace {
@@ -75,7 +73,6 @@ void datagram_handler::ack_writes(bool x) {
   ack_writes_ = x;
 }
 
-
 void datagram_handler::write(datagram_handle hdl, const void* buf,
                              size_t num_bytes) {
   wr_offline_buf_.emplace_back();
@@ -95,7 +92,6 @@ void datagram_handler::flush(const manager_ptr& mgr) {
     prepare_next_write();
   }
 }
-
 
 std::unordered_map<datagram_handle, ip_endpoint>& datagram_handler::endpoints() {
   return ep_by_hdl_;
@@ -141,7 +137,7 @@ void datagram_handler::removed_from_loop(operation op) {
   switch (op) {
     case operation::read: reader_.reset(); break;
     case operation::write: writer_.reset(); break;
-    case operation::propagate_error: break;
+    case operation::propagate_error: ; // nop
   };
 }
 
