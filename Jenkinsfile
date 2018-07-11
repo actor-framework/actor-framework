@@ -134,8 +134,6 @@ def buildSteps(buildType, cmakeArgs) {
       }
     }
   }
-  // Release disk storage early.
-  deleteDir()
 }
 
 // Builds a stage for given builds. Results in a parallel stage `if builds.size() > 1`.
