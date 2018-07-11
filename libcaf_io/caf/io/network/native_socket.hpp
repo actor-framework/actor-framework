@@ -34,14 +34,13 @@ namespace network {
   using getsockopt_ptr = char*;
   using socket_send_ptr = const char*;
   using socket_recv_ptr = char*;
-  //using socket_size_type = int;
+  using socket_size_type = int;
 #else
   using setsockopt_ptr = const void*;
   using getsockopt_ptr = void*;
   using socket_send_ptr = const void*;
   using socket_recv_ptr = void*;
   using socket_size_type = unsigned;
-  void closesocket(int fd);
 #endif
 
 using signed_size_type = std::make_signed<size_t>::type;
@@ -68,6 +67,9 @@ extern const int no_sigpipe_io_flag;
 
 /// Returns the last socket error as an integer.
 int last_socket_error();
+
+/// Close socket `fd`.
+void close_socket(native_socket fd);
 
 /// Returns true if `errcode` indicates that an operation would
 /// block or return nothing at the moment and can be tried again

@@ -43,7 +43,7 @@ event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
 event_handler::~event_handler() {
   if (fd_ != invalid_native_socket) {
     CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
-    closesocket(fd_);
+    close_socket(fd_);
   }
 }
 

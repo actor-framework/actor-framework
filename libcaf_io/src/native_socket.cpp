@@ -85,22 +85,12 @@ namespace io {
 namespace network {
 
 #ifdef CAF_WINDOWS
-  int last_socket_error() { return WSAGetLastError(); }
-  bool would_block_or_temporarily_unavailable(int errcode) {
-    return errcode == WSAEWOULDBLOCK || errcode == WSATRY_AGAIN;
-  }
   const int ec_out_of_memory = WSAENOBUFS;
   const int ec_interrupted_syscall = WSAEINTR;
 #else
-  void closesocket(int fd) { close(fd); }
-  int last_socket_error() { return errno; }
-  bool would_block_or_temporarily_unavailable(int errcode) {
-    return errcode == EAGAIN || errcode == EWOULDBLOCK;
-  }
   const int ec_out_of_memory = ENOMEM;
   const int ec_interrupted_syscall = EINTR;
 #endif
-
 
 // platform-dependent SIGPIPE setup
 #if defined(CAF_MACOS) || defined(CAF_IOS) || defined(CAF_BSD)
@@ -118,6 +108,18 @@ namespace network {
 #endif
 
 #ifndef CAF_WINDOWS
+
+  int last_socket_error() {
+    return errno;
+  }
+
+  void close_socket(native_socket fd) {
+    close(fd);
+  }
+
+  bool would_block_or_temporarily_unavailable(int errcode) {
+    return errcode == EAGAIN || errcode == EWOULDBLOCK;
+  }
 
   string last_socket_error_as_string() {
     return strerror(errno);
@@ -158,6 +160,18 @@ namespace network {
   }
 
 #else // CAF_WINDOWS
+
+  int last_socket_error() {
+    return WSAGetLastError();
+  }
+
+  void close_socket(native_socket fd) {
+    closesocket(fd);
+  }
+
+  bool would_block_or_temporarily_unavailable(int errcode) {
+    return errcode == WSAEWOULDBLOCK || errcode == WSATRY_AGAIN;
+  }
 
   string last_socket_error_as_string() {
     LPTSTR errorText = NULL;
@@ -250,9 +264,9 @@ namespace network {
     // makes sure all sockets are closed in case of an error
     auto guard = detail::make_scope_guard([&] {
       auto e = WSAGetLastError();
-      closesocket(listener);
-      closesocket(socks[0]);
-      closesocket(socks[1]);
+      close_socket(listener);
+      close_socket(socks[0]);
+      close_socket(socks[1]);
       WSASetLastError(e);
     });
     // bind listener to a local port
@@ -283,7 +297,7 @@ namespace network {
     // get write-only end of the pipe
     CALL_CRITICAL_CFUN(write_fd, detail::cc_valid_socket, "accept",
                        accept(listener, nullptr, nullptr));
-    closesocket(listener);
+    close_socket(listener);
     guard.disable();
     return std::make_pair(read_fd, write_fd);
   }

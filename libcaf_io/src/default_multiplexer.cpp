@@ -628,9 +628,9 @@ void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
 
 default_multiplexer::~default_multiplexer() {
   if (epollfd_ != invalid_native_socket)
-    closesocket(epollfd_);
+    close_socket(epollfd_);
   // close write handle first
-  closesocket(pipe_.second);
+  close_socket(pipe_.second);
   // flush pipe before closing it
   nonblocking(pipe_.first, true);
   auto ptr = pipe_reader_.try_read_next();
@@ -639,7 +639,7 @@ default_multiplexer::~default_multiplexer() {
     ptr = pipe_reader_.try_read_next();
   }
   // do cleanup for pipe reader manually, since WSACleanup needs to happen last
-  closesocket(pipe_reader_.fd());
+  close_socket(pipe_reader_.fd());
   pipe_reader_.init(invalid_native_socket);
 # ifdef CAF_WINDOWS
   WSACleanup();

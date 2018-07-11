@@ -18,7 +18,11 @@
 
 #include "caf/detail/socket_guard.hpp"
 
-#include <unistd.h>
+#ifdef CAF_WINDOWS
+# include <winsock2.h>
+#else
+# include <unistd.h>
+#endif
 
 #include "caf/logger.hpp"
 
@@ -42,7 +46,7 @@ io::network::native_socket socket_guard::release() {
 void socket_guard::close() {
   if (fd_ != io::network::invalid_native_socket) {
     CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
-    io::network::closesocket(fd_);
+    io::network::close_socket(fd_);
     fd_ = io::network::invalid_native_socket;
   }
 }
