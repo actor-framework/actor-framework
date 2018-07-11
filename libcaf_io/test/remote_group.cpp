@@ -126,7 +126,7 @@ behavior make_server_behavior(event_based_actor* self) {
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_remote_group_tests, fixture)
 
-CAF_TEST(remote_group_conn) {
+CAF_TEST_DISABLED(remote_group_conn) {
   // server side
   CAF_EXP_THROW(port, server_side_mm.publish_local_groups(0));
   CAF_REQUIRE(port != 0);
@@ -134,7 +134,7 @@ CAF_TEST(remote_group_conn) {
   CAF_CHECK(client_side_mm.remote_group("whatever", local_host, port));
 }
 
-CAF_TEST(server_side_group_comm) {
+CAF_TEST_DISABLED(server_side_group_comm) {
   // server side
   CAF_EXP_THROW(port,
                 server_side_mm.publish(server_side.spawn(make_server_behavior),
@@ -155,7 +155,7 @@ CAF_TEST(server_side_group_comm) {
   client_side.spawn(make_client_behavior, server, grp);
 }
 
-CAF_TEST(client_side_group_comm) {
+CAF_TEST_DISABLED(client_side_group_comm) {
   // server side
   CAF_EXP_THROW(port,
                 server_side_mm.publish(server_side.spawn(make_server_behavior),
