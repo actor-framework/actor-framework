@@ -38,21 +38,35 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
-# include <ws2tcpip.h> // socket_size_type, etc. (MSVC20xx)
-# include <windows.h>
+# ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+# endif // WIN32_LEAN_AND_MEAN
+# ifndef NOMINMAX
+#   define NOMINMAX
+# endif
+# ifdef CAF_MINGW
+#   undef _WIN32_WINNT
+#   undef WINVER
+#   define _WIN32_WINNT WindowsVista
+#   define WINVER WindowsVista
+#   include <w32api.h>
+# endif
 # include <io.h>
-# include <unistd.h>
+# include <windows.h>
+# include <winsock2.h>
+# include <ws2ipdef.h>
+# include <ws2tcpip.h>
 #else
-# include <cerrno>
-# include <netdb.h>
-# include <fcntl.h>
 # include <unistd.h>
-# include <sys/types.h>
 # include <arpa/inet.h>
-# include <sys/socket.h>
+# include <cerrno>
+# include <fcntl.h>
+# include <netdb.h>
 # include <netinet/in.h>
+# include <netinet/ip.h>
 # include <netinet/tcp.h>
+# include <sys/socket.h>
+# include <sys/types.h>
 # include <utility>
 #endif
 
@@ -93,6 +107,30 @@ auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
 namespace caf {
 namespace io {
 namespace network {
+
+// poll vs epoll backend
+#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+# ifndef POLLRDHUP
+#   define POLLRDHUP POLLHUP
+# endif
+# ifndef POLLPRI
+#   define POLLPRI POLLIN
+# endif
+# ifdef CAF_WINDOWS
+    // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
+    //                Winsock provider, the WSAPoll function will fail.
+    const short input_mask  = POLLIN;
+# else
+    const short input_mask = POLLIN | POLLPRI;
+# endif
+  const short error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+  const short output_mask = POLLOUT;
+#else
+# define CAF_EPOLL_MULTIPLEXER
+  const int input_mask = EPOLLIN;
+  const int error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+  const int output_mask = EPOLLOUT;
+#endif
 
 // -- Platform-dependent abstraction over epoll() or poll() --------------------
 

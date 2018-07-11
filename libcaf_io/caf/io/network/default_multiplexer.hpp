@@ -57,16 +57,13 @@
 # ifndef CAF_WINDOWS
 #   include <poll.h>
 # endif
-# ifndef POLLRDHUP
-#   define POLLRDHUP POLLHUP
-# endif
-# ifndef POLLPRI
-#   define POLLPRI POLLIN
-# endif
 #else
 # define CAF_EPOLL_MULTIPLEXER
 # include <sys/epoll.h>
 #endif
+
+// Forward declaration for Windows.
+struct pollfd;
 
 namespace caf {
 namespace io {
@@ -74,23 +71,17 @@ namespace network {
 
 // poll vs epoll backend
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
-# ifdef CAF_WINDOWS
-    // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
-    //                Winsock provider, the WSAPoll function will fail.
-    constexpr short input_mask  = POLLIN;
-# else
-    constexpr short input_mask  = POLLIN | POLLPRI;
-# endif
-  constexpr short error_mask  = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
-  constexpr short output_mask = POLLOUT;
+  extern const short input_mask;
+  extern const short error_mask;
+  extern const short output_mask;
   class event_handler;
   using multiplexer_data = pollfd;
   using multiplexer_poll_shadow_data = std::vector<event_handler*>;
 #else
 # define CAF_EPOLL_MULTIPLEXER
-  constexpr int input_mask  = EPOLLIN;
-  constexpr int error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-  constexpr int output_mask = EPOLLOUT;
+  extern const int input_mask;
+  extern const int error_mask;
+  extern const int output_mask;
   using multiplexer_data = epoll_event;
   using multiplexer_poll_shadow_data = native_socket;
 #endif
