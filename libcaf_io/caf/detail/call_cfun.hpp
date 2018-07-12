@@ -21,22 +21,32 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "caf/error.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 namespace detail {
 
-// Predicate for `ccall` meaning "expected result of f is 0".
-bool cc_zero(int value);
+/// Predicate for `ccall` meaning "expected result of f is 0".
+inline bool cc_zero(int value) {
+  return value == 0;
+}
 
-// Predicate for `ccall` meaning "expected result of f is 1".
-bool cc_one(int value);
+/// Predicate for `ccall` meaning "expected result of f is 1".
+inline bool cc_one(int value) {
+  return value == 1;
+}
 
-// Predicate for `ccall` meaning "expected result of f is not -1".
-bool cc_not_minus1(int value);
+/// Predicate for `ccall` meaning "expected result of f is not -1".
+inline bool cc_not_minus1(int value) {
+  return value != -1;
+}
 
-// Predicate for `ccall` meaning "expected result of f is a valid socket".
-bool cc_valid_socket(caf::io::network::native_socket fd);
+/// Predicate for `ccall` meaning "expected result of f is a valid socket".
+inline bool cc_valid_socket(caf::io::network::native_socket fd) {
+  return fd != caf::io::network::invalid_native_socket;
+}
 
 /// Calls a C functions and returns an error if `predicate(var)` returns false.
 #define CALL_CFUN(var, predicate, fun_name, expr)                              \
@@ -45,7 +55,7 @@ bool cc_valid_socket(caf::io::network::native_socket fd);
     return make_error(sec::network_syscall_failed,                             \
                       fun_name, last_socket_error_as_string())
 
-// Calls a C functions and calls exit() if `predicate(var)` returns false.
+/// Calls a C functions and calls exit() if `predicate(var)` returns false.
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
   auto var = expr;                                                             \
   if (!predicate(var)) {                                                       \

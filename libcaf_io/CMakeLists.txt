@@ -46,7 +46,6 @@ set(LIBCAF_IO_SRCS
   src/tcp.cpp
   src/udp.cpp
   src/native_socket.cpp
-  src/call_cfun.cpp
   src/socket_guard.cpp
 )
 
