@@ -18,6 +18,8 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
+#include <utility>
+
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/optional.hpp"
@@ -67,7 +69,14 @@
 # include <netinet/tcp.h>
 # include <sys/socket.h>
 # include <sys/types.h>
-# include <utility>
+#ifdef CAF_POLL_MULTIPLEXER
+# include <poll.h>
+#elif defined(CAF_EPOLL_MULTIPLEXER)
+# include <sys/epoll.h>
+#else
+# error "neither CAF_POLL_MULTIPLEXER nor CAF_EPOLL_MULTIPLEXER defined"
+#endif
+
 #endif
 
 using std::string;
@@ -109,7 +118,7 @@ namespace io {
 namespace network {
 
 // poll vs epoll backend
-#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
+#ifdef CAF_POLL_MULTIPLEXER
 # ifndef POLLRDHUP
 #   define POLLRDHUP POLLHUP
 # endif
@@ -119,17 +128,16 @@ namespace network {
 # ifdef CAF_WINDOWS
     // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
     //                Winsock provider, the WSAPoll function will fail.
-    const short input_mask  = POLLIN;
+    const event_mask_type input_mask  = POLLIN;
 # else
-    const short input_mask = POLLIN | POLLPRI;
+    const event_mask_type input_mask = POLLIN | POLLPRI;
 # endif
-  const short error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
-  const short output_mask = POLLOUT;
+  const event_mask_type error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+  const event_mask_type output_mask = POLLOUT;
 #else
-# define CAF_EPOLL_MULTIPLEXER
-  const int input_mask = EPOLLIN;
-  const int error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-  const int output_mask = EPOLLOUT;
+  const event_mask_type input_mask = EPOLLIN;
+  const event_mask_type error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+  const event_mask_type output_mask = EPOLLOUT;
 #endif
 
 // -- Platform-dependent abstraction over epoll() or poll() --------------------

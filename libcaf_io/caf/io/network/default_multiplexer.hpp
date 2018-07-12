@@ -18,11 +18,10 @@
 
 #pragma once
 
-#include <thread>
-
-#include <vector>
-#include <string>
 #include <cstdint>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "caf/config.hpp"
 #include "caf/extend.hpp"
@@ -51,43 +50,48 @@
 
 #include "caf/logger.hpp"
 
-// poll xs epoll backend
-#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
-# define CAF_POLL_MULTIPLEXER
-# ifndef CAF_WINDOWS
-#   include <poll.h>
-# endif
-#else
-# define CAF_EPOLL_MULTIPLEXER
-# include <sys/epoll.h>
-#endif
+// Forward declaration of C types.
+extern "C" {
 
-// Forward declaration for Windows.
 struct pollfd;
+struct epoll_event;
+
+} // extern "C"
+
+// Pick a backend for the multiplexer, depending on the settings in config.hpp.
+#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL)
+#define CAF_POLL_MULTIPLEXER
+#else
+#define CAF_EPOLL_MULTIPLEXER
+#endif
 
 namespace caf {
 namespace io {
 namespace network {
 
-// poll vs epoll backend
-#if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL) // poll() multiplexer
-  extern const short input_mask;
-  extern const short error_mask;
-  extern const short output_mask;
-  class event_handler;
-  using multiplexer_data = pollfd;
-  using multiplexer_poll_shadow_data = std::vector<event_handler*>;
-#else
-# define CAF_EPOLL_MULTIPLEXER
-  extern const int input_mask;
-  extern const int error_mask;
-  extern const int output_mask;
-  using multiplexer_data = epoll_event;
-  using multiplexer_poll_shadow_data = native_socket;
-#endif
+// Define type aliases based on backend type.
+#ifdef CAF_POLL_MULTIPLEXER
 
-/// Platform-specific native acceptor socket type.
-using native_socket_acceptor = native_socket;
+using event_mask_type = short;
+using multiplexer_data = pollfd;
+using multiplexer_poll_shadow_data = std::vector<event_handler*>;
+
+#else // CAF_POLL_MULTIPLEXER
+
+using event_mask_type = int;
+using multiplexer_data = epoll_event;
+using multiplexer_poll_shadow_data = native_socket;
+
+#endif // CAF_POLL_MULTIPLEXER
+
+/// Defines the bitmask for input (read) socket events.
+extern const event_mask_type input_mask;
+
+/// Defines the bitmask for output (write) socket events.
+extern const event_mask_type output_mask;
+
+/// Defines the bitmask for error socket events.
+extern const event_mask_type error_mask;
 
 class default_multiplexer : public multiplexer {
 public:
@@ -189,7 +193,7 @@ private:
       auto bf = i->mask;
       i->mask = fun(op, bf);
       if (i->mask == bf) {
-        // didn't do a thing
+        // didn'""t do a thing
         CAF_LOG_DEBUG("squashing did not change the event");
       } else if (i->mask == old_bf) {
         // just turned into a nop
