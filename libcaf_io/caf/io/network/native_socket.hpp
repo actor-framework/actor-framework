@@ -122,4 +122,3 @@ expected<std::string> remote_addr_of_fd(native_socket fd);
 } // namespace network
 } // namespace io
 } // namespace caf
-

@@ -78,7 +78,7 @@ auto port_of(sockaddr& what) -> decltype(port_of(std::declval<sockaddr_in&>())) 
   CAF_CRITICAL("invalid protocol family");
 }
 
-}
+} // namespace <anonymous>
 
 namespace caf {
 namespace io {

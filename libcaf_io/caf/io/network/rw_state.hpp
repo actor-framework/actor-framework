@@ -22,7 +22,6 @@ namespace caf {
 namespace io {
 namespace network {
 
-
 /// Denotes the returned state of read and write operations on sockets.
 enum class rw_state {
   /// Reports that bytes could be read or written.
