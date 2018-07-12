@@ -38,4 +38,4 @@ private:
 };
 
 } // namespace detail
-} // namespace detail
+} // namespace caf
