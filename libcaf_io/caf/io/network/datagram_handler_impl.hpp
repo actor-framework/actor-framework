@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,44 +18,36 @@
 
 #pragma once
 
-#include <map>
-#include <memory>
+#include "caf/io/fwd.hpp"
 
-#include "caf/ref_counted.hpp"
-
-#include "caf/detail/raw_ptr.hpp"
-
-#include "caf/opencl/device.hpp"
-#include "caf/opencl/global.hpp"
+#include "caf/io/network/operation.hpp"
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/datagram_handler.hpp"
 
 namespace caf {
-namespace opencl {
+namespace io {
+namespace network {
 
-class program;
-using program_ptr = intrusive_ptr<program>;
-
-/// @brief A wrapper for OpenCL's cl_program.
-class program : public ref_counted {
+/// A concrete datagram_handler with a technology-dependent policy.
+template <class ProtocolPolicy>
+class datagram_handler_impl : public datagram_handler {
 public:
-  friend class manager;
-  template <bool PassConfig, class... Ts>
-  friend class actor_facade;
-  template <class T, class... Ts>
-  friend intrusive_ptr<T> caf::make_counted(Ts&&...);
+  template <class... Ts>
+  datagram_handler_impl(default_multiplexer& mpx, native_socket sockfd,
+                        Ts&&... xs)
+  : datagram_handler(mpx, sockfd),
+  policy_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  void handle_event(io::network::operation op) override {
+    this->handle_event_impl(op, policy_);
+  }
 
 private:
-  program(detail::raw_context_ptr context, detail::raw_command_queue_ptr queue,
-          detail::raw_program_ptr prog,
-          std::map<std::string, detail::raw_kernel_ptr> available_kernels);
-
-  ~program();
-
-  detail::raw_context_ptr context_;
-  detail::raw_program_ptr program_;
-  detail::raw_command_queue_ptr queue_;
-  std::map<std::string, detail::raw_kernel_ptr> available_kernels_;
+  ProtocolPolicy policy_;
 };
 
-} // namespace opencl
+} // namespace network
+} // namespace io
 } // namespace caf
-

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,46 +16,61 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/logger.hpp"
 
-#include <map>
-#include <memory>
+#include <cstdint>
 
-#include "caf/ref_counted.hpp"
+#include "caf/io/network/pipe_reader.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
 
-#include "caf/detail/raw_ptr.hpp"
-
-#include "caf/opencl/device.hpp"
-#include "caf/opencl/global.hpp"
+#ifdef CAF_WINDOWS
+# include <winsock2.h>
+#else
+# include <unistd.h>
+# include <sys/socket.h>
+#endif
 
 namespace caf {
-namespace opencl {
+namespace io {
+namespace network {
 
-class program;
-using program_ptr = intrusive_ptr<program>;
+pipe_reader::pipe_reader(default_multiplexer& dm)
+    : event_handler(dm, invalid_native_socket) {
+  // nop
+}
 
-/// @brief A wrapper for OpenCL's cl_program.
-class program : public ref_counted {
-public:
-  friend class manager;
-  template <bool PassConfig, class... Ts>
-  friend class actor_facade;
-  template <class T, class... Ts>
-  friend intrusive_ptr<T> caf::make_counted(Ts&&...);
+void pipe_reader::removed_from_loop(operation) {
+  // nop
+}
 
-private:
-  program(detail::raw_context_ptr context, detail::raw_command_queue_ptr queue,
-          detail::raw_program_ptr prog,
-          std::map<std::string, detail::raw_kernel_ptr> available_kernels);
+resumable* pipe_reader::try_read_next() {
+  std::intptr_t ptrval;
+  // on windows, we actually have sockets, otherwise we have file handles
+# ifdef CAF_WINDOWS
+    auto res = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval),
+                    sizeof(ptrval), 0);
+# else
+    auto res = read(fd(), &ptrval, sizeof(ptrval));
+# endif
+  if (res != sizeof(ptrval))
+    return nullptr;
+  return reinterpret_cast<resumable*>(ptrval);
+}
 
-  ~program();
+void pipe_reader::handle_event(operation op) {
+  CAF_LOG_TRACE(CAF_ARG(op));
+  if (op == operation::read) {
+    auto ptr = try_read_next();
+    if (ptr != nullptr)
+      backend().resume({ptr, false});
+  }
+  // else: ignore errors
+}
 
-  detail::raw_context_ptr context_;
-  detail::raw_program_ptr program_;
-  detail::raw_command_queue_ptr queue_;
-  std::map<std::string, detail::raw_kernel_ptr> available_kernels_;
-};
+void pipe_reader::init(native_socket sock_fd) {
+  fd_ = sock_fd;
+}
 
-} // namespace opencl
+} // namespace network
+} // namespace io
 } // namespace caf
-

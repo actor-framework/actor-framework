@@ -30,11 +30,9 @@
   inline void intrusive_ptr_add_ref(cltype ptr) { claddref(ptr); }             \
   inline void intrusive_ptr_release(cltype ptr) { clrelease(ptr); }            \
   namespace caf {                                                              \
-  namespace opencl {                                                           \
   namespace detail {                                                           \
   using aliasname = intrusive_ptr<std::remove_pointer<cltype>::type>;          \
   } /* namespace detail */                                                     \
-  } /* namespace opencl */                                                     \
   } // namespace caf
 
 

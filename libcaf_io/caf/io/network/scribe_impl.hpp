@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,44 +18,50 @@
 
 #pragma once
 
-#include <map>
-#include <memory>
+#include "caf/io/fwd.hpp"
+#include "caf/io/scribe.hpp"
 
-#include "caf/ref_counted.hpp"
+#include "caf/io/network/stream_impl.hpp"
+#include "caf/io/network/native_socket.hpp"
 
-#include "caf/detail/raw_ptr.hpp"
-
-#include "caf/opencl/device.hpp"
-#include "caf/opencl/global.hpp"
+#include "caf/policy/tcp.hpp"
 
 namespace caf {
-namespace opencl {
+namespace io {
+namespace network {
 
-class program;
-using program_ptr = intrusive_ptr<program>;
-
-/// @brief A wrapper for OpenCL's cl_program.
-class program : public ref_counted {
+/// Default scribe implementation.
+class scribe_impl : public scribe {
 public:
-  friend class manager;
-  template <bool PassConfig, class... Ts>
-  friend class actor_facade;
-  template <class T, class... Ts>
-  friend intrusive_ptr<T> caf::make_counted(Ts&&...);
+  scribe_impl(default_multiplexer& mx, native_socket sockfd);
 
-private:
-  program(detail::raw_context_ptr context, detail::raw_command_queue_ptr queue,
-          detail::raw_program_ptr prog,
-          std::map<std::string, detail::raw_kernel_ptr> available_kernels);
+  void configure_read(receive_policy::config config) override;
 
-  ~program();
+  void ack_writes(bool enable) override;
 
-  detail::raw_context_ptr context_;
-  detail::raw_program_ptr program_;
-  detail::raw_command_queue_ptr queue_;
-  std::map<std::string, detail::raw_kernel_ptr> available_kernels_;
+  std::vector<char>& wr_buf() override;
+
+  std::vector<char>& rd_buf() override;
+
+  void stop_reading() override;
+
+  void flush() override;
+
+  std::string addr() const override;
+
+  uint16_t port() const override;
+
+  void launch();
+
+  void add_to_loop() override;
+
+  void remove_from_loop() override;
+
+protected:
+  bool launched_;
+  stream_impl<policy::tcp> stream_;
 };
 
-} // namespace opencl
+} // namespace network
+} // namespace io
 } // namespace caf
-

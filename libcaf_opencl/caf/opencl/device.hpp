@@ -22,10 +22,11 @@
 
 #include "caf/sec.hpp"
 
+#include "caf/detail/raw_ptr.hpp"
+
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/opencl_err.hpp"
 
-#include "caf/opencl/detail/raw_ptr.hpp"
 
 namespace caf {
 namespace opencl {

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -15,46 +15,33 @@
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
- 
+
 #pragma once
 
-#include "caf/detail/type_list.hpp"
-
-#include "caf/opencl/arguments.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/network/native_socket.hpp"
 
 namespace caf {
-namespace opencl {
-namespace detail {
+namespace policy {
 
-// signature for the function that is applied to output arguments
-template <class List>
-struct output_function_sig;
+/// Policy object for wrapping default UDP operations.
+struct udp {
+  /// Write a datagram containing `buf_len` bytes to `fd` addressed
+  /// at the endpoint in `sa` with size `sa_len`. Returns true as long
+  /// as no IO error occurs. The number of written bytes is stored in
+  /// `result` and the sender is stored in `ep`.
+  static bool read_datagram(size_t& result, io::network::native_socket fd,
+                            void* buf, size_t buf_len,
+                            io::network::ip_endpoint& ep);
 
-template <class... Ts>
-struct output_function_sig<detail::type_list<Ts...>> {
-  using type = std::function<message (Ts&...)>;
+  /// Reveice a datagram of up to `len` bytes. Larger datagrams are truncated.
+  /// Up to `sender_len` bytes of the receiver address is written into
+  /// `sender_addr`. Returns `true` if no IO error occurred. The number of
+  /// received bytes is stored in `result` (can be 0).
+  static bool write_datagram(size_t& result, io::network::native_socket fd,
+                             void* buf, size_t buf_len,
+                             const io::network::ip_endpoint& ep);
 };
 
-// derive signature of the command that handles the kernel execution
-template <class T, class List>
-struct command_sig;
-
-template <class T, class... Ts>
-struct command_sig<T, detail::type_list<Ts...>> {
-  using type = command<T, Ts...>;
-};
-
-// derive type for a tuple matching the arguments as mem_refs
-template <class List>
-struct tuple_type_of;
-
-template <class... Ts>
-struct tuple_type_of<detail::type_list<Ts...>> {
-  using type = std::tuple<Ts...>;
-};
-
-} // namespace detail
-} // namespace opencl
+} // namespace policy
 } // namespace caf
-
-

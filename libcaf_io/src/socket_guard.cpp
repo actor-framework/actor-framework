@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,46 +16,40 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/detail/socket_guard.hpp"
 
-#include <map>
-#include <memory>
+#ifdef CAF_WINDOWS
+# include <winsock2.h>
+#else
+# include <unistd.h>
+#endif
 
-#include "caf/ref_counted.hpp"
-
-#include "caf/detail/raw_ptr.hpp"
-
-#include "caf/opencl/device.hpp"
-#include "caf/opencl/global.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
-namespace opencl {
+namespace detail {
 
-class program;
-using program_ptr = intrusive_ptr<program>;
+socket_guard::socket_guard(io::network::native_socket fd) : fd_(fd) {
+  // nop
+}
 
-/// @brief A wrapper for OpenCL's cl_program.
-class program : public ref_counted {
-public:
-  friend class manager;
-  template <bool PassConfig, class... Ts>
-  friend class actor_facade;
-  template <class T, class... Ts>
-  friend intrusive_ptr<T> caf::make_counted(Ts&&...);
+socket_guard::~socket_guard() {
+  close();
+}
 
-private:
-  program(detail::raw_context_ptr context, detail::raw_command_queue_ptr queue,
-          detail::raw_program_ptr prog,
-          std::map<std::string, detail::raw_kernel_ptr> available_kernels);
+io::network::native_socket socket_guard::release() {
+  auto fd = fd_;
+  fd_ = io::network::invalid_native_socket;
+  return fd;
+}
 
-  ~program();
+void socket_guard::close() {
+  if (fd_ != io::network::invalid_native_socket) {
+    CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
+    io::network::close_socket(fd_);
+    fd_ = io::network::invalid_native_socket;
+  }
+}
 
-  detail::raw_context_ptr context_;
-  detail::raw_program_ptr program_;
-  detail::raw_command_queue_ptr queue_;
-  std::map<std::string, detail::raw_kernel_ptr> available_kernels_;
-};
-
-} // namespace opencl
-} // namespace caf
-
+} // namespace detail
+} // namespace detail

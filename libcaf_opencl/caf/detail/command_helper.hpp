@@ -15,47 +15,43 @@
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
-
+ 
 #pragma once
 
-#include <map>
-#include <memory>
+#include "caf/detail/type_list.hpp"
 
-#include "caf/ref_counted.hpp"
-
-#include "caf/detail/raw_ptr.hpp"
-
-#include "caf/opencl/device.hpp"
-#include "caf/opencl/global.hpp"
+#include "caf/opencl/command.hpp"
 
 namespace caf {
-namespace opencl {
+namespace detail {
 
-class program;
-using program_ptr = intrusive_ptr<program>;
+// signature for the function that is applied to output arguments
+template <class List>
+struct output_function_sig;
 
-/// @brief A wrapper for OpenCL's cl_program.
-class program : public ref_counted {
-public:
-  friend class manager;
-  template <bool PassConfig, class... Ts>
-  friend class actor_facade;
-  template <class T, class... Ts>
-  friend intrusive_ptr<T> caf::make_counted(Ts&&...);
-
-private:
-  program(detail::raw_context_ptr context, detail::raw_command_queue_ptr queue,
-          detail::raw_program_ptr prog,
-          std::map<std::string, detail::raw_kernel_ptr> available_kernels);
-
-  ~program();
-
-  detail::raw_context_ptr context_;
-  detail::raw_program_ptr program_;
-  detail::raw_command_queue_ptr queue_;
-  std::map<std::string, detail::raw_kernel_ptr> available_kernels_;
+template <class... Ts>
+struct output_function_sig<detail::type_list<Ts...>> {
+  using type = std::function<message (Ts&...)>;
 };
 
-} // namespace opencl
+// derive signature of the command that handles the kernel execution
+template <class T, class List>
+struct command_sig;
+
+template <class T, class... Ts>
+struct command_sig<T, detail::type_list<Ts...>> {
+  using type = opencl::command<T, Ts...>;
+};
+
+// derive type for a tuple matching the arguments as mem_refs
+template <class List>
+struct tuple_type_of;
+
+template <class... Ts>
+struct tuple_type_of<detail::type_list<Ts...>> {
+  using type = std::tuple<Ts...>;
+};
+
+} // namespace detail
 } // namespace caf
 

@@ -18,45 +18,36 @@
 
 #pragma once
 
+#include "caf/io/network/rw_state.hpp"
+#include "caf/io/network/native_socket.hpp"
+
 namespace caf {
+namespace policy {
 
-// -- templates from the parent namespace necessary for defining aliases -------
+/// Policy object for wrapping default TCP operations.
+struct tcp {
+  /// Reads up to `len` bytes from `fd,` writing the received data
+  /// to `buf`. Returns `true` as long as `fd` is readable and `false`
+  /// if the socket has been closed or an IO error occured. The number
+  /// of read bytes is stored in `result` (can be 0).
+  static io::network::rw_state read_some(size_t& result,
+                                         io::network::native_socket fd,
+                                         void* buf, size_t len);
 
-template <class> class intrusive_ptr;
+  /// Writes up to `len` bytes from `buf` to `fd`.
+  /// Returns `true` as long as `fd` is readable and `false`
+  /// if the socket has been closed or an IO error occured. The number
+  /// of written bytes is stored in `result` (can be 0).
+  static io::network::rw_state write_some(size_t& result,
+                                          io::network::native_socket fd,
+                                          const void* buf, size_t len);
 
-namespace io {
+  /// Tries to accept a new connection from `fd`. On success,
+  /// the new connection is stored in `result`. Returns true
+  /// as long as
+  static bool try_accept(io::network::native_socket& result,
+                         io::network::native_socket fd);
+};
 
-// -- variadic templates -------------------------------------------------------
-
-template <class... Sigs>
-class typed_broker;
-
-// -- classes ------------------------------------------------------------------
-
-class scribe;
-class broker;
-class doorman;
-class middleman;
-class basp_broker;
-class receive_policy;
-class abstract_broker;
-class datagram_servant;
-
-// -- aliases ------------------------------------------------------------------
-
-using scribe_ptr = intrusive_ptr<scribe>;
-using doorman_ptr = intrusive_ptr<doorman>;
-using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
-
-// -- nested namespaces --------------------------------------------------------
-
-namespace network {
-
-class multiplexer;
-class default_multiplexer;
-
-} // namespace network
-
-} // namespace io
+} // namespace policy
 } // namespace caf
-

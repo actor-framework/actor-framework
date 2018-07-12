@@ -27,15 +27,14 @@
 #include "caf/config.hpp"
 #include "caf/actor_system.hpp"
 
+#include "caf/detail/raw_ptr.hpp"
+#include "caf/detail/spawn_helper.hpp"
+
 #include "caf/opencl/device.hpp"
 #include "caf/opencl/global.hpp"
 #include "caf/opencl/program.hpp"
 #include "caf/opencl/platform.hpp"
 #include "caf/opencl/actor_facade.hpp"
-
-#include "caf/opencl/detail/core.hpp"
-#include "caf/opencl/detail/raw_ptr.hpp"
-#include "caf/opencl/detail/spawn_helper.hpp"
 
 namespace caf {
 namespace opencl {
