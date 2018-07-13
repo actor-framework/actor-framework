@@ -236,7 +236,11 @@ logger::~logger() {
 
 logger::logger(actor_system& sys)
     : system_(sys),
+#ifdef CAF_LOG_LEVEL
       level_(CAF_LOG_LEVEL),
+#else
+      level_(0),
+#endif
       flags_(0),
       queue_(policy{}) {
   // nop
