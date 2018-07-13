@@ -132,7 +132,7 @@ CAF_TEST(find) {
   CAF_CHECK_EQUAL(x.find("bc", 1), y.find("bc", 1));
   CAF_CHECK_EQUAL(x.find("bc", 1, 0), y.find("bc", 1, 0));
   CAF_CHECK_EQUAL(x.find("bc", 0, 1), y.find("bc", 0, 1));
-  CAF_CHECK_EQUAL(x.find("bc", 2, 10), y.find("bc", 2, 10));
+  CAF_CHECK_EQUAL(x.find("bc", 2, 2), y.find("bc", 2, 2));
 }
 
 CAF_TEST(rfind) {
@@ -149,7 +149,7 @@ CAF_TEST(rfind) {
   CAF_CHECK_EQUAL(x.rfind("bc", 1), y.rfind("bc", 1));
   CAF_CHECK_EQUAL(x.rfind("bc", 1, 0), y.rfind("bc", 1, 0));
   CAF_CHECK_EQUAL(x.rfind("bc", 0, 1), y.rfind("bc", 0, 1));
-  CAF_CHECK_EQUAL(x.rfind("bc", 2, 10), y.rfind("bc", 2, 10));
+  CAF_CHECK_EQUAL(x.rfind("bc", 2, 2), y.rfind("bc", 2, 2));
 }
 
 CAF_TEST(find_first_of) {
@@ -166,7 +166,7 @@ CAF_TEST(find_first_of) {
   CAF_CHECK_EQUAL(x.find_first_of("bc", 1), y.find_first_of("bc", 1));
   CAF_CHECK_EQUAL(x.find_first_of("bc", 1, 0), y.find_first_of("bc", 1, 0));
   CAF_CHECK_EQUAL(x.find_first_of("bc", 0, 1), y.find_first_of("bc", 0, 1));
-  CAF_CHECK_EQUAL(x.find_first_of("bc", 2, 10), y.find_first_of("bc", 2, 10));
+  CAF_CHECK_EQUAL(x.find_first_of("bc", 2, 2), y.find_first_of("bc", 2, 2));
 }
 
 CAF_TEST(find_last_of) {
