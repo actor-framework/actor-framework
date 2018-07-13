@@ -169,8 +169,13 @@ void ini_consumer::key(std::string name) {
 
 void ini_consumer::value_impl(config_value&& x) {
   auto dict = get_if<config_value::dictionary>(&x);
-  if (dict != nullptr && !dict->empty())
-    cfg_.emplace(std::move(current_key), std::move(*dict));
+  if (dict != nullptr && !dict->empty()) {
+    // We need to "merge" values into the destination, because it can already
+    // contain any number of unrelated entries.
+    auto& dst = cfg_[current_key];
+    for (auto& entry : *dict)
+      dst.insert_or_assign(entry.first, std::move(entry.second));
+  }
 }
 
 } // namespace detail
