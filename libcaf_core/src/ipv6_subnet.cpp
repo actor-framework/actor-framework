@@ -22,7 +22,7 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators --------------------
 
-ipv6_subnet::ipv6_subnet() {
+ipv6_subnet::ipv6_subnet() : prefix_length_(0) {
   // nop
 }
 

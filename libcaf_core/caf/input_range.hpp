@@ -40,6 +40,8 @@ public:
     iterator(input_range* range) : xs_(range) {
       if (xs_)
         advance();
+      else
+        x_ = nullptr;
     }
 
     iterator(const iterator&) = default;

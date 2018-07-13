@@ -39,6 +39,7 @@ namespace caf {
 local_actor::local_actor(actor_config& cfg)
     : monitorable_actor(cfg),
       context_(cfg.host),
+      current_element_(nullptr),
       initial_behavior_fac_(std::move(cfg.init_fun)) {
   // nop
 }

@@ -236,6 +236,7 @@ logger::~logger() {
 
 logger::logger(actor_system& sys)
     : system_(sys),
+      level_(CAF_LOG_LEVEL),
       flags_(0),
       queue_(policy{}) {
   // nop
@@ -275,7 +276,7 @@ void logger::init(actor_system_config& cfg) {
       level_ = CAF_LOG_LEVEL_TRACE;
       break;
     default: {
-      level_ = CAF_LOG_LEVEL;
+      // nop
     }
   }
   // Parse the format string.

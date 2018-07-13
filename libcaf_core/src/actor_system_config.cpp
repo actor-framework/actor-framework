@@ -258,7 +258,7 @@ struct ini_iter {
     ini->get(ch);
   }
 
-  ini_iter() : ini(nullptr) {
+  ini_iter() : ini(nullptr), ch('\0') {
     // nop
   }
 

@@ -122,7 +122,9 @@ void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   policy_(home_system(), guard, workers_, what, eu);
 }
 
-actor_pool::actor_pool(actor_config& cfg) : monitorable_actor(cfg) {
+actor_pool::actor_pool(actor_config& cfg)
+    : monitorable_actor(cfg),
+      planned_reason_(exit_reason::normal) {
   register_at_system();
 }
 

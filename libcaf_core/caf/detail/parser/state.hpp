@@ -34,7 +34,7 @@ struct state {
   int32_t line;
   int32_t column;
 
-  state() : code(pec::success), line(1), column(1) {
+  state() : i(), e(), code(pec::success), line(1), column(1) {
     // nop
   }
 
