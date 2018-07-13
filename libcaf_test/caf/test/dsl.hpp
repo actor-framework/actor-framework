@@ -580,7 +580,8 @@ struct test_coordinator_fixture {
   explicit test_coordinator_fixture(Ts&&... xs)
       : cfg(std::forward<Ts>(xs)...),
         sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
-               .set("scheduler.policy", caf::atom("testing"))),
+               .set("scheduler.policy", caf::atom("testing"))
+               .set("middleman.network-backend", caf::atom("testing"))),
         self(sys, true),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
         credit_round_interval(cfg.streaming_credit_round_interval()),
