@@ -152,7 +152,7 @@ actor_system_config::actor_system_config()
   .add(logger_verbosity, "verbosity",
        "sets the verbosity (quiet|error|warning|info|debug|trace)")
   .add(logger_inline_output, "inline-output",
-       "sets whether a separate thread is used for I/O")
+       "sets whether a separate thread is used for I/O");
   opt_group{custom_options_, "middleman"}
   .add(middleman_network_backend, "network-backend",
        "sets the network backend to either 'default' or 'asio' (if available)")
