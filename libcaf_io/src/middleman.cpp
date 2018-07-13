@@ -168,7 +168,7 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
       }
     };
   };
-  auto gn = system().spawn<hidden>(group_nameserver);
+  auto gn = system().spawn<hidden + lazy_init>(group_nameserver);
   auto result = publish(gn, port, in, reuse);
   // link gn to our manager
   if (result)
@@ -357,8 +357,10 @@ void middleman::init(actor_system_config& cfg) {
   // never detach actors when using the testing multiplexer
   auto network_backend = get_or(cfg, "middleman.network-backend",
                                 defaults::middleman::network_backend);
-  if (network_backend == atom("testing"))
-    cfg.set("middleman.attach-utility-actors", true);
+  if (network_backend == atom("testing")) {
+    cfg.set("middleman.attach-utility-actors", true)
+       .set("middleman.manual-multiplexing", true);
+  }
   // add remote group module to config
   struct remote_groups : group_module {
   public:
