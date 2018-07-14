@@ -36,9 +36,10 @@ def read_lines(fp, ids):
                 indent = print_indented(line, indent)
 
 def read_ids(ids_file):
-    if os.path.isfile(ids_file):
-        with open(ids_file) as fp:
-            return fp.read().splitlines()
+    if ids_file and len(ids_file) > 0:
+        if os.path.isfile(ids_file):
+            with open(ids_file) as fp:
+                return fp.read().splitlines()
     return []
 
 def main():
