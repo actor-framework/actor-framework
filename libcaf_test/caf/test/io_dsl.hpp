@@ -176,6 +176,7 @@ public:
   // accept all pending connections, and running all broker and regular actor
   // messages.
   void exec_all() {
+    CAF_LOG_TRACE("");
     exec_all_fixtures(std::begin(planets_), std::end(planets_));
   }
 
