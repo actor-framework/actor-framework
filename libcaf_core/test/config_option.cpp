@@ -17,7 +17,7 @@
  ******************************************************************************/
 
 #define CAF_SUITE config_option
-#include "caf/test/unit_test.hpp"
+#include "caf/test/dsl.hpp"
 
 #include "caf/config_option.hpp"
 #include "caf/make_config_option.hpp"
@@ -85,13 +85,6 @@ template <class T>
 void check_integer_options() {
   std::integral_constant<bool, std::is_unsigned<T>::value> tk;
   check_integer_options<T>(tk);
-}
-
-template <class T>
-T unbox(optional<T> x) {
-  if (!x)
-    CAF_FAIL("no value to unbox");
-  return std::move(*x);
 }
 
 } // namespace <anonymous>

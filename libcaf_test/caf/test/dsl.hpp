@@ -581,6 +581,7 @@ struct test_coordinator_fixture {
       : cfg(std::forward<Ts>(xs)...),
         sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
                .set("scheduler.policy", caf::atom("testing"))
+               .set("logger.inline-output", true)
                .set("middleman.network-backend", caf::atom("testing"))),
         self(sys, true),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
@@ -623,14 +624,6 @@ struct test_coordinator_fixture {
     return f(res_hdl);
   }
 
-  /// Unboxes an expected value or fails the test if it doesn't exist.
-  template <class T>
-  T unbox(caf::expected<T> x) {
-    if (!x)
-      FAIL(sys.render(x.error()));
-    return std::move(*x);
-  }
-
   template <class T>
   const T& peek() {
     return sched.template peek<T>();
@@ -643,6 +636,22 @@ struct test_coordinator_fixture {
     return dynamic_cast<T&>(*ptr);
   }
 };
+
+/// Unboxes an expected value or fails the test if it doesn't exist.
+template <class T>
+T unbox(caf::expected<T> x) {
+  if (!x)
+    CAF_FAIL(to_string(x.error()));
+  return std::move(*x);
+}
+
+/// Unboxes an optional value or fails the test if it doesn't exist.
+template <class T>
+T unbox(caf::optional<T> x) {
+  if (!x)
+    CAF_FAIL("x == none");
+  return std::move(*x);
+}
 
 } // namespace <anonymous>
 
