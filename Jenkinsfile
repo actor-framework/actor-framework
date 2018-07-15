@@ -183,21 +183,21 @@ pipeline {
   }
   post {
     success {
-      echo "Success."
-      // TODO: Gitter?
+      emailext(
+        subject: "✅ CAF build #${env.BUILD_NUMBER} succeeded for branch ${env.GIT_BRANCH}",
+        recipientProviders: [culprits(), developers(), requestor(), upstreamDevelopers()],
+        body: "Job ${env.JOB_NAME} [${env.BUILD_NUMBER}] passed.\n\n" \
+              + "Check console output at ${env.BUILD_URL}.",
+      )
     }
     failure {
-      echo "Failure, sending mails!"
-      // TODO: Gitter?
       emailext(
-        subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-        body: """FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':
-                 Check console output at "${env.BUILD_URL}"
-                 Job: ${env.JOB_NAME}
-                 Build number: ${env.BUILD_NUMBER}""",
-        // TODO: Uncomment the following line:
-        // recipientProviders: [[$class: 'CulpritsRecipientProvider'], [$class: 'RequesterRecipientProvider']]
-        to: 'hiesgen;neverlord' // add multiple separated with ';'
+        subject: "⛔️ CAF build #${env.BUILD_NUMBER} failed for branch ${env.GIT_BRANCH}",
+        attachLog: true,
+        compressLog: true,
+        recipientProviders: [culprits(), developers(), requestor(), upstreamDevelopers()],
+        body: "Job ${env.JOB_NAME} [${env.BUILD_NUMBER}] failed!\n\n" \
+              + "Check console output at ${env.BUILD_URL} or see attached log.",
       )
     }
   }
