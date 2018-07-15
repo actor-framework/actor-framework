@@ -65,7 +65,7 @@ msOpts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
 // Called *after* a build succeeded.
 def coverageReport() {
   dir('caf-sources') {
-    sh 'gcovr -e libcaf_test -e ".*/test/.*" -x -r .. > coverage.xml'
+    sh 'gcovr -e examples -e tools -e libcaf_test -e ".*/test/.*" -e libcaf_core/caf/scheduler/profiled_coordinator.hpp -x -r .. > coverage.xml'
     archiveArtifacts '**/coverage.xml'
     cobertura([
       autoUpdateHealth: false,
