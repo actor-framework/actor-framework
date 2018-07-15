@@ -254,7 +254,7 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
         auto rp = self->make_response_promise();
         self->request(mm, infinite, connect_atom::value, host, port).then(
           [=](const node_id&, strong_actor_ptr& ptr,
-              const std::set<std::string>&) {
+              const std::set<std::string>&) mutable {
             auto hdl = actor_cast<actor>(ptr);
             self->request(hdl, infinite, get_atom::value, group_identifier)
             .then(
