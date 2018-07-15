@@ -1,41 +1,54 @@
 #!/usr/bin/env groovy
 
+// List of CMake arguments used by most builds.
+defaultCmakeArgs = '-DCAF_MORE_WARNINGS:BOOL=yes' \
+                   + ' -DCAF_ENABLE_RUNTIME_CHECKS:BOOL=yes' \
+                   + ' -DOPENSSL_ROOT_DIR=/usr/local/opt/openssl' \
+                   + ' -DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include' \
+
 // Our build matrix. The keys are the operating system labels and the values
 // are lists of tool labels.
 buildMatrix = [
   // Debug builds with ASAN + logging for various OS/compiler combinations.
   ['unix', [
-    cmakeArgs: '-D CAF_LOG_LEVEL=4 '
-               + '-D CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
     builds: ['debug'],
     tools: ['gcc4.8', 'gcc4.9', 'gcc5', 'gcc6', 'gcc7', 'gcc8', 'clang'],
+    cmakeArgs: defaultCmakeArgs
+               + ' -DCAF_LOG_LEVEL:STRING=4'
+               + ' -DCAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
   ]],
   // One release build per supported OS. FreeBSD and Windows have the least
   // testing outside Jenkins, so we also explicitly schedule debug builds.
   ['Linux', [
     builds: ['release'],
     tools: ['gcc', 'clang'],
+    cmakeArgs: defaultCmakeArgs,
   ]],
   ['macOS', [
     builds: ['release'],
     tools: ['clang'],
+    cmakeArgs: defaultCmakeArgs,
   ]],
   ['FreeBSD', [
     builds: ['debug'], // no release build for now, because it takes 1h
     tools: ['clang'],
+    cmakeArgs: defaultCmakeArgs,
   ]],
   ['Windows', [
     builds: ['debug', 'release'],
     tools: ['msvc'],
+    cmakeArgs: '-DCAF_BUILD_STATIC_ONLY:BOOL=yes'
+               + ' -DCAF_ENABLE_RUNTIME_CHECKS:BOOL=yes'
+               + ' -DCAF_NO_OPENCL:BOOL=yes',
   ]],
   // One Additional build for coverage reports.
   ['unix', [
-    cmakeArgs: '-D CAF_ENABLE_GCOV:BOOL=yes '
-               + '-D CAF_NO_EXCEPTIONS:BOOL=yes '
-               + '-D CAF_FORCE_NO_EXCEPTIONS:BOOL=yes',
     builds: ['debug'],
     tools: ['gcovr'],
     extraSteps: ['coverageReport'],
+    cmakeArgs: '-DCAF_ENABLE_GCOV:BOOL=yes '
+               + ' -DCAF_NO_EXCEPTIONS:BOOL=yes '
+               + ' -DCAF_FORCE_NO_EXCEPTIONS:BOOL=yes',
   ]],
 ]
 
@@ -44,23 +57,6 @@ buildEnvironments = [
   'macOS && gcc': ['CXX=g++'],
   'Linux && clang': ['CXX=clang++'],
 ]
-
-// Builds options on UNIX.
-unixOpts = "-DCAF_NO_PROTOBUF_EXAMPLES:BOOL=yes " +
-           "-DCAF_NO_QT_EXAMPLES:BOOL=yes " +
-           "-DCAF_MORE_WARNINGS:BOOL=yes " +
-           "-DCAF_ENABLE_RUNTIME_CHECKS:BOOL=yes " +
-           "-DCAF_NO_BENCHMARKS:BOOL=yes " +
-           "-DOPENSSL_ROOT_DIR=/usr/local/opt/openssl " +
-           "-DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include"
-
-// Builds options on Windows.
-msOpts = "-DCAF_BUILD_STATIC_ONLY:BOOL=yes " +
-         "-DCAF_NO_BENCHMARKS:BOOL=yes " +
-         "-DCAF_NO_EXAMPLES:BOOL=yes " +
-         "-DCAF_NO_MEM_MANAGEMENT:BOOL=yes " +
-         "-DCAF_NO_OPENCL:BOOL=yes " +
-         "-DCAF_LOG_LEVEL:INT=0 "
 
 // Called *after* a build succeeded.
 def coverageReport() {
@@ -84,6 +80,24 @@ def coverageReport() {
   }
 }
 
+def cmakeSteps(buildType, cmakeArgs) {
+  // Configure and build.
+  cmakeBuild([
+    buildDir: 'build',
+    buildType: buildType,
+    cmakeArgs: cmakeArgs,
+    installation: 'cmake in search path',
+    sourceDir: '.',
+    steps: [[withCmake: true]],
+  ])
+  // Run unit tests.
+  ctest([
+    arguments: '--output-on-failure',
+    installation: 'cmake in search path',
+    workingDir: 'build',
+  ])
+}
+
 def buildSteps(buildType, cmakeArgs) {
   echo "build stage: $STAGE_NAME"
   deleteDir()
@@ -92,45 +106,14 @@ def buildSteps(buildType, cmakeArgs) {
     if (STAGE_NAME.contains('Windows')) {
       echo "Windows build on $NODE_NAME"
       withEnv(['PATH=C:\\Windows\\System32;C:\\Program Files\\CMake\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin']) {
-          // Configure and build.
-          cmakeBuild([
-            buildDir: 'build',
-            buildType: "$buildType",
-            cmakeArgs: "$msOpts $cmakeArgs",
-            generator: 'Visual Studio 15 2017',
-            installation: 'cmake in search path',
-            sourceDir: '.',
-            steps: [[withCmake: true]],
-          ])
-          // Test.
-          ctest([
-            arguments: '--output-on-failure',
-            installation: 'cmake auto install',
-            workingDir: 'build',
-          ])
+        cmakeSteps(buildType, cmakeArgs)
       }
     } else {
       echo "Unix build on $NODE_NAME"
       def leakCheck = STAGE_NAME.contains("Linux") && !STAGE_NAME.contains("clang")
       withEnv(["label_exp=" + STAGE_NAME.toLowerCase(),
                "ASAN_OPTIONS=detect_leaks=" + (leakCheck ? 1 : 0)]) {
-        // Configure and build.
-        cmakeBuild([
-          buildDir: 'build',
-          buildType: "$buildType",
-          cmakeArgs: "$unixOpts $cmakeArgs",
-          generator: 'Unix Makefiles',
-          installation: 'cmake in search path',
-          preloadScript: '../cmake/jenkins.cmake',
-          sourceDir: '.',
-          steps: [[args: 'all']],
-        ])
-        // Test.
-        ctest([
-          arguments: '--output-on-failure',
-          installation: 'cmake in search path',
-          workingDir: 'build',
-        ])
+        cmakeSteps(buildType, cmakeArgs)
       }
     }
   }
