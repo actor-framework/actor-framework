@@ -72,8 +72,6 @@ public:
 
   virtual void remove_endpoint(datagram_handle hdl) = 0;
 
-  void io_failure(execution_unit* ctx, network::operation op) override;
-
   bool consume(execution_unit*, datagram_handle hdl,
                network::receive_buffer& buf) override;
 

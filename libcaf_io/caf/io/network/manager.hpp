@@ -63,8 +63,8 @@ public:
   /// Adds the I/O device to the event loop of the middleman.
   virtual void add_to_loop() = 0;
 
-  /// Called by the underlying I/O device to report failures.
-  virtual void io_failure(execution_unit* ctx, operation op) = 0;
+  /// Detaches this manager from its parent in case of an error.
+  void io_failure(execution_unit* ctx, operation op);
 
   /// Get the address of the underlying I/O device.
   virtual std::string addr() const = 0;
