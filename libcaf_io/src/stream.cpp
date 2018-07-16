@@ -196,8 +196,6 @@ void stream::handle_error_propagation() {
     reader_->io_failure(&backend(), operation::read);
   if (writer_)
     writer_->io_failure(&backend(), operation::write);
-  // backend will delete this handler anyway,
-  // no need to call backend().del() here
 }
 
 } // namespace network
