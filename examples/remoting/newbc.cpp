@@ -53,7 +53,7 @@ void caf_main(actor_system& system, const config&) {
   // Create an event handling actor to run in the multiplexer.
   actor_config cfg{&mpx};
   auto n = make_newb<detail::protocol_policy,
-                     detail::generic_policy>(system, cfg, mpx, -1);
+                     detail::mutating_policy>(system, cfg, mpx, -1);
   anon_send(n, 1);
   t.join();
 }
