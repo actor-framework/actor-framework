@@ -48,38 +48,51 @@ public:
 
 namespace detail {
 
-struct generic_policy {
-  generic_policy(int i)
+// Policies provide a newb with functionality. A protocol policy implements a
+// network protocol and provides implementations to read and write data as well
+// as for forking to new event handlers.
+//
+// After receiving data the policy stack of a newb is called in order to
+struct protocol_policy {
+  protocol_policy(int i)
       : idx{i} {
     // nop
+  }
+
+  void read() {
+
+  }
+
+  void write() {
+
+  }
+
+  void fork() {
+
   }
   int idx;
 };
 
-struct protocol_policy : public generic_policy {
-  protocol_policy(int i)
-      : generic_policy{i} {
-    // nop
-  }
-  // define a base protocol
-  // - create a socket
-  // - sending
-  //    * enqueue
-  //    *
-  // - receiving
-  // - fork
-};
-
-struct mutating_policy : public generic_policy {
+struct mutating_policy {
   mutating_policy(int i)
-      : generic_policy{i} {
+      : idx{i} {
     // nop
   }
-  // adjust a protocol
+
+  // Call on incoming data. Should return either a bool or a enum to
+  // know if furhter policies are called and how to continue processing.
+  void handle() {
+
+  }
+
+  int idx;
 };
 
 template <class T>
-struct is_network_policy_type : std::is_base_of<generic_policy, T> {};
+struct is_protocol_policy_type : std::is_base_of<protocol_policy, T> {};
+
+template <class T>
+struct is_mutating_policy_type : std::is_base_of<mutating_policy, T> {};
 
 } // namespace detail
 
@@ -232,8 +245,8 @@ private:
 template <class Protocol, class... Policies>
 actor make_newb(actor_system& sys, actor_config& cfg, default_multiplexer& mpx,
                 native_socket sockfd) {
-  using policy_types = detail::type_list<Protocol, Policies...>;
-  static_assert(detail::tl_forall<policy_types, detail::is_network_policy_type>::value,
+  using policy_types = detail::type_list<Policies...>;
+  static_assert(detail::tl_forall<policy_types, detail::is_mutating_policy_type>::value,
                 "Only network policies allowed as template parameters");
   static_assert(std::is_base_of<detail::protocol_policy, Protocol>::value,
                 "First template argument must be a protocol policy");
