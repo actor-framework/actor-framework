@@ -250,6 +250,8 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
                              middleman_actor mm) -> behavior {
     return {
       [=](get_atom) {
+        /// We won't receive a second message, so we drop our behavior here to
+        /// terminate the actor after both requests finish.
         self->unbecome();
         auto rp = self->make_response_promise();
         self->request(mm, infinite, connect_atom::value, host, port).then(
