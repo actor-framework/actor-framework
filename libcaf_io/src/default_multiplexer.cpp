@@ -205,10 +205,7 @@ namespace network {
         auto fd = ptr ? ptr->fd() : pipe_.first;
         handle_socket_event(fd, static_cast<int>(iter->events), ptr);
       }
-      for (auto& me : events_) {
-        handle(me);
-      }
-      events_.clear();
+      handle_internal_events();
       return true;
     }
   }
@@ -283,6 +280,10 @@ namespace network {
       remove_from_loop_if_needed(input_mask, operation::read);
       remove_from_loop_if_needed(output_mask, operation::write);
     }
+  }
+
+  size_t default_multiplexer::num_socket_handlers() const noexcept {
+    return shadow_;
   }
 
 #else // CAF_EPOLL_MULTIPLEXER
@@ -383,11 +384,8 @@ namespace network {
         // operations possible on the socket
         handle_socket_event(e.fd, e.mask, e.ptr);
       }
-      CAF_LOG_DEBUG(CAF_ARG(events_.size()));
       poll_res.clear();
-      for (auto& me : events_)
-        handle(me);
-      events_.clear();
+      handle_internal_events();
       return true;
     }
   }
@@ -454,6 +452,10 @@ namespace network {
       pollset_.insert(i, new_element);
       shadow_.insert(j, e.ptr);
     }
+  }
+
+  size_t default_multiplexer::num_socket_handlers() const noexcept {
+    return pollset_.size();
   }
 
 #endif // CAF_EPOLL_MULTIPLEXER
@@ -604,9 +606,7 @@ bool default_multiplexer::poll_once(bool block) {
     internally_posted_.swap(xs);
     for (auto& ptr : xs)
       resume(std::move(ptr));
-    for (auto& me : events_)
-      handle(me);
-    events_.clear();
+    handle_internal_events();
     // Try to swap back to internall_posted_ to re-use allocated memory.
     if (internally_posted_.empty()) {
       xs.swap(internally_posted_);
@@ -734,6 +734,13 @@ default_multiplexer::new_local_udp_endpoint(uint16_t port, const char* in,
 
 int64_t default_multiplexer::next_endpoint_id() {
   return servant_ids_++;
+}
+
+void default_multiplexer::handle_internal_events() {
+  CAF_LOG_TRACE(CAF_ARG2("num-events", events_.size()));
+  for (auto& e : events_)
+    handle(e);
+  events_.clear();
 }
 
 // -- Related helper functions -------------------------------------------------
