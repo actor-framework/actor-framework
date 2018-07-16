@@ -19,7 +19,7 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE openssl_authentication
-#include "caf/test/unit_test.hpp"
+#include "caf/test/dsl.hpp"
 
 #ifndef CAF_WINDOWS
 # include <unistd.h>
@@ -206,12 +206,12 @@ CAF_TEST(authentication_success) {
   exec_loop();
   CAF_MESSAGE("publish pong");
   loop_after_next_enqueue(server_side);
-  CAF_EXP_THROW(port, publish(spong, 0, local_host));
+  auto port = unbox(publish(spong, 0, local_host));
   exec_loop();
   // client side
   CAF_MESSAGE("connect to pong via port " << port);
   loop_after_next_enqueue(client_side);
-  CAF_EXP_THROW(pong, remote_actor(client_side, local_host, port));
+  auto pong = unbox(remote_actor(client_side, local_host, port));
   CAF_MESSAGE("spawn ping and exchange messages");
   auto sping = client_side.spawn(make_ping_behavior, pong);
   while (!terminated(sping))
@@ -230,7 +230,7 @@ CAF_TEST(authentication_failure) {
   exec_loop();
   loop_after_next_enqueue(server_side);
   CAF_MESSAGE("publish pong");
-  CAF_EXP_THROW(port, publish(spong, 0, local_host));
+  auto port = unbox(publish(spong, 0, local_host));
   exec_loop();
   // client side
   CAF_MESSAGE("connect to pong via port " << port);

@@ -19,7 +19,7 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE io_dynamic_remote_actor_tcp
-#include "caf/test/unit_test.hpp"
+#include "caf/test/dsl.hpp"
 
 #include <vector>
 #include <sstream>
@@ -145,14 +145,14 @@ CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 CAF_TEST(identity_semantics_tcp) {
   // server side
   auto server = server_side.spawn(make_pong_behavior);
-  CAF_EXP_THROW(port1, server_side_mm.publish(server, 0, local_host));
-  CAF_EXP_THROW(port2, server_side_mm.publish(server, 0, local_host));
+  auto port1 = unbox(server_side_mm.publish(server, 0, local_host));
+  auto port2 = unbox(server_side_mm.publish(server, 0, local_host));
   CAF_REQUIRE_NOT_EQUAL(port1, port2);
-  CAF_EXP_THROW(same_server, server_side_mm.remote_actor(local_host, port2));
+  auto same_server = unbox(server_side_mm.remote_actor(local_host, port2));
   CAF_REQUIRE_EQUAL(same_server, server);
   CAF_CHECK_EQUAL(same_server->node(), server_side.node());
-  CAF_EXP_THROW(server1, client_side_mm.remote_actor(local_host, port1));
-  CAF_EXP_THROW(server2, client_side_mm.remote_actor(local_host, port2));
+  auto server1 = unbox(client_side_mm.remote_actor(local_host, port1));
+  auto server2 = unbox(client_side_mm.remote_actor(local_host, port2));
   CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(local_host, port1));
   CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(local_host, port2));
   anon_send_exit(server, exit_reason::user_shutdown);
@@ -160,29 +160,28 @@ CAF_TEST(identity_semantics_tcp) {
 
 CAF_TEST(ping_pong_tcp) {
   // server side
-  CAF_EXP_THROW(port,
-                server_side_mm.publish(server_side.spawn(make_pong_behavior),
-                                       0, local_host));
+  auto port = unbox(server_side_mm.publish(
+    server_side.spawn(make_pong_behavior), 0, local_host));
   // client side
-  CAF_EXP_THROW(pong, client_side_mm.remote_actor(local_host, port));
+  auto pong = unbox(client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_ping_behavior, pong);
 }
 
 CAF_TEST(custom_message_type_tcp) {
   // server side
-  CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(make_sort_behavior),
-                                             0, local_host));
+  auto port = unbox(server_side_mm.publish(
+    server_side.spawn(make_sort_behavior), 0, local_host));
   // client side
-  CAF_EXP_THROW(sorter, client_side_mm.remote_actor(local_host, port));
+  auto sorter = unbox(client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_sort_requester_behavior, sorter);
 }
 
 CAF_TEST(remote_link_tcp) {
   // server side
-  CAF_EXP_THROW(port, server_side_mm.publish(server_side.spawn(fragile_mirror),
-                                             0, local_host));
+  auto port = unbox(
+    server_side_mm.publish(server_side.spawn(fragile_mirror), 0, local_host));
   // client side
-  CAF_EXP_THROW(mirror, client_side_mm.remote_actor(local_host, port));
+  auto mirror = unbox(client_side_mm.remote_actor(local_host, port));
   auto linker = client_side.spawn(linking_actor, mirror);
   scoped_actor self{client_side};
   self->wait_for(linker);

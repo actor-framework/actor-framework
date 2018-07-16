@@ -53,8 +53,6 @@ public:
   ~serializer() override;
 };
 
-#ifndef CAF_NO_EXCEPTIONS
-
 template <class T>
 typename std::enable_if<
   std::is_same<
@@ -66,7 +64,7 @@ operator&(serializer& sink, const T& x) {
   // implementations are required to never modify `x` while saving
   auto e = sink.apply(const_cast<T&>(x));
   if (e)
-    CAF_RAISE_ERROR(to_string(e));
+    CAF_RAISE_ERROR("error during serialization (using operator&)");
 }
 
 template <class T>
@@ -81,8 +79,6 @@ operator<<(serializer& sink, const T& x) {
   sink & x;
   return sink;
 }
-
-#endif // CAF_NO_EXCEPTIONS
 
 } // namespace caf
 

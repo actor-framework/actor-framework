@@ -262,7 +262,7 @@
 
 #ifdef CAF_NO_EXCEPTIONS
 # define CAF_RAISE_ERROR(msg)                                                  \
-  do { std::string str = msg; CAF_CRITICAL(str.c_str()); } while (true)
+  CAF_CRITICAL(msg)
 #else // CAF_NO_EXCEPTIONS
 # define CAF_RAISE_ERROR(msg)                                                  \
   throw std::runtime_error(msg)
