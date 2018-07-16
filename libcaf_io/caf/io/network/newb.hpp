@@ -19,6 +19,7 @@
 #pragma once
 
 #include "caf/scheduled_actor.hpp"
+#include "caf/detail/type_list.hpp"
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
@@ -32,39 +33,36 @@ namespace caf {
 namespace io {
 namespace network {
 
+template <class T, class... Xs>
 class newb;
 
 } // namespace network
 } // namespace io
 
-template <>
-class behavior_type_of<io::network::newb> {
+template <class T, class... Xs>
+class behavior_type_of<io::network::newb<T, Xs...>> {
 public:
   using type = behavior;
 };
 
-namespace io {
-namespace network {
 
-/**
- * TODO:
- *  - [ ] create a class `newb` that is an event handler and actor
- *  - [ ] get it running in the multiplexer
- *  - [ ] create a base policy class
- *  - [ ] is there a difference between a protocol policy and a guarantees?
- *  - [ ] build `make_policy` which creates a `newb` with multiple policies
- *  - [ ] get a call hierarchy in both directions
- *  - [ ] what should policy their constrcutors do?
- *  - [ ]
- */
+namespace detail {
 
-/*
-class policy {
-
+struct generic_policy {
+  generic_policy(int i)
+      : idx{i} {
+    // nop
+  }
+  int idx;
 };
 
-class protocol {
+struct protocol_policy : public generic_policy {
+  protocol_policy(int i)
+      : generic_policy{i} {
+    // nop
+  }
   // define a base protocol
+  // - create a socket
   // - sending
   //    * enqueue
   //    *
@@ -72,30 +70,54 @@ class protocol {
   // - fork
 };
 
-class mutation {
+struct mutating_policy : public generic_policy {
+  mutating_policy(int i)
+      : generic_policy{i} {
+    // nop
+  }
   // adjust a protocol
 };
-*/
 
-//template <class Protocol, class... Policies>
-class newb : public extend<scheduled_actor, newb>::
+template <class T>
+struct is_network_policy_type : std::is_base_of<generic_policy, T> {};
+
+} // namespace detail
+
+namespace io {
+namespace network {
+
+/**
+ * TODO:
+ *  - [x] create a class `newb` that is an event handler and actor
+ *  - [x] get it running in the multiplexer
+ *  - [ ] create a base policy class
+ *  - [x] build `make_policy` which creates a `newb` with multiple policies
+ *  - [ ] is there a difference between a protocol policy and a guarantee?
+ *  - [ ] get a call hierarchy in both directions
+ *  - [ ] what should policy their constrcutors do?
+ *  - [ ] ...
+ */
+
+template <class Protocol, class... Policies>
+class newb : public extend<scheduled_actor,
+                           newb<Protocol, Policies...>>::template
                     with<mixin::sender, mixin::requester,
                          mixin::behavior_changer>,
              public dynamically_typed_actor_base,
              public event_handler {
 public:
-  using super = extend<scheduled_actor, newb>::
-                with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+  using super = typename extend<scheduled_actor, newb<Protocol, Policies...>>::
+    template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   using signatures = none_t;
-
-  //  using base_protocol = Protocol;
 
   // -- constructors and destructors -------------------------------------------
 
   newb(actor_config& cfg, default_multiplexer& dm, native_socket sockfd)
       : super(cfg),
-        event_handler(dm, sockfd) {
+        event_handler(dm, sockfd),
+        protocol_{0},
+        policies_{Policies{1}...} {
     // nop
   }
 
@@ -121,10 +143,10 @@ public:
     CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
     // add implicit reference count held by middleman/multiplexer
     if (!hide)
-      register_at_system();
-    if (lazy && mailbox().try_block())
+      super::register_at_system();
+    if (lazy && super::mailbox().try_block())
       return;
-    intrusive_ptr_add_ref(ctrl());
+    intrusive_ptr_add_ref(super::ctrl());
     eu->exec_later(this);
   }
 
@@ -137,7 +159,7 @@ public:
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
-      become(std::move(bhvr));
+      this->become(std::move(bhvr));
     }
   }
 
@@ -151,7 +173,8 @@ public:
 
   // -- overridden modifiers of resumable --------------------------------------
 
-  resume_result resume(execution_unit* ctx, size_t mt) override {
+  multiplexer::runnable::resume_result resume(execution_unit* ctx,
+                                              size_t mt) override {
     CAF_ASSERT(ctx != nullptr);
     CAF_ASSERT(ctx == &backend());
     return scheduled_actor::resume(ctx, mt);
@@ -164,14 +187,15 @@ public:
   }
 
   void removed_from_loop(operation op) override {
-    std::cout << "removing myself from the loop!" << std::endl;
+    std::cout << "removing myself from the loop for "
+              << to_string(op) << std::endl;
   }
 
   // -- members ----------------------------------------------------------------
 
   /// Returns the `multiplexer` running this broker.
   network::multiplexer& backend() {
-    return system().middleman().backend();
+    return super::system().middleman().backend();
   }
 
   behavior make_behavior() {
@@ -185,7 +209,7 @@ public:
 
   void init_newb() {
     CAF_LOG_TRACE("");
-    setf(is_initialized_flag);
+    super::setf(super::is_initialized_flag);
   }
 
   /// @cond PRIVATE
@@ -201,8 +225,22 @@ public:
   /// @endcond
 
 private:
-//  std::tuple<Policies...> policies_;
+  Protocol protocol_;
+  std::tuple<Policies...> policies_;
 };
+
+template <class Protocol, class... Policies>
+actor make_newb(actor_system& sys, actor_config& cfg, default_multiplexer& mpx,
+                native_socket sockfd) {
+  using policy_types = detail::type_list<Protocol, Policies...>;
+  static_assert(detail::tl_forall<policy_types, detail::is_network_policy_type>::value,
+                "Only network policies allowed as template parameters");
+  static_assert(std::is_base_of<detail::protocol_policy, Protocol>::value,
+                "First template argument must be a protocol policy");
+  using newb_t = newb<Protocol, Policies...>;
+  auto res = sys.spawn_impl<newb_t, hidden>(cfg, mpx, sockfd);
+  return actor_cast<actor>(res);
+}
 
 } // namespace network
 } // namespace io
