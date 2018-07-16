@@ -10,6 +10,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 using namespace caf;
+using namespace caf::io::network;
 
 namespace {
 
@@ -28,46 +29,31 @@ public:
 };
 
 void caf_main(actor_system& system, const config&) {
-  io::network::default_multiplexer mpx{&system};
-//  std::thread t([&]() {
-//    std::cout << "starting multiplexer" << std::endl;
-//    mpx.run();
-//  });
-  auto backend_supervisor = mpx.make_supervisor();
+  default_multiplexer mpx{&system};
+  // Setup thread to run the multiplexer.
   std::thread t;
-  // The only backend that returns a `nullptr` by default is the
-  // `test_multiplexer` which does not have its own thread but uses the main
-  // thread instead. Other backends can set `middleman_detach_multiplexer` to
-  // false to suppress creation of the supervisor.
-  if (backend_supervisor != nullptr) {
-    std::atomic<bool> init_done{false};
-    std::mutex mtx;
-    std::condition_variable cv;
-    t = std::thread{[&] {
-      system.thread_started();
-      std::cout << "starting multiplexer" << std::endl;
-      {
-        std::unique_lock<std::mutex> guard{mtx};
-        mpx.thread_id(std::this_thread::get_id());
-        init_done = true;
-        cv.notify_one();
-      }
-      mpx.run();
-      system.thread_terminates();
-    }};
-    std::unique_lock<std::mutex> guard{mtx};
-    while (init_done == false)
-      cv.wait(guard);
-  }
-
+  std::atomic<bool> init_done{false};
+  std::mutex mtx;
+  std::condition_variable cv;
+  t = std::thread{[&] {
+    system.thread_started();
+    std::cout << "starting multiplexer" << std::endl;
+    {
+      std::unique_lock<std::mutex> guard{mtx};
+      mpx.thread_id(std::this_thread::get_id());
+      init_done = true;
+      cv.notify_one();
+    }
+    mpx.run();
+    system.thread_terminates();
+  }};
+  std::unique_lock<std::mutex> guard{mtx};
+  while (init_done == false)
+    cv.wait(guard);
+  // Create an event handling actor to run in the multiplexer.
   actor_config cfg{&mpx};
-//  io::network::newb n{cfg, mpx, -1};
-//  n.eq_impl(make_message_id(message_priority::normal), nullptr, nullptr, 1);
-//  auto n = make_actor<io::network::newb>(system.next_actor_id(), system.node(),+
-//                                         &system, cfg, mpx, -1);
-  auto res = system.spawn_impl<io::network::newb, hidden>(cfg, mpx, -1);
-//  auto m = caf::io::make_middleman_actor(system, res);
-  auto n = actor_cast<actor>(res);
+  auto n = make_newb<detail::protocol_policy,
+                     detail::generic_policy>(system, cfg, mpx, -1);
   anon_send(n, 1);
   t.join();
 }
