@@ -39,7 +39,7 @@ public:
   }
 };
 
-uint16_t port = 8080;
+const uint16_t port = 8080;
 
 const char* server = "mars";
 
