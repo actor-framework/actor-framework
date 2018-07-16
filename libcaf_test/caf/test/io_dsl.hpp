@@ -37,14 +37,12 @@ public:
   exec_all_nodes_fun exec_all_nodes;
   caf::io::middleman& mm;
   caf::io::network::test_multiplexer& mpx;
-  caf::io::basp_broker* basp;
 
   /// @param fun A function object for delegating to the parent's `exec_all`.
   test_node_fixture(exec_all_nodes_fun fun)
       : exec_all_nodes(std::move(fun)),
         mm(this->sys.middleman()),
-        mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())),
-        basp(get_basp_broker()) {
+        mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())) {
     // nop
   }
 
@@ -178,12 +176,17 @@ public:
   // accept all pending connections, and running all broker and regular actor
   // messages.
   void exec_all() {
+    CAF_LOG_TRACE("");
     exec_all_fixtures(std::begin(planets_), std::end(planets_));
   }
 
   /// Type-erased callback for calling `exec_all`.
   std::function<void ()> exec_all_callback() {
     return [&] { exec_all(); };
+  }
+
+  void loop_after_next_enqueue(PlanetType& planet) {
+    planet.sched.after_next_enqueue(exec_all_callback());
   }
 
 private:
@@ -209,7 +212,8 @@ public:
     : super({&earth, &mars}),
       earth(this->exec_all_callback()),
       mars(this->exec_all_callback()) {
-    // nop
+    // Run initialization code.
+    this->exec_all();
   }
 };
 

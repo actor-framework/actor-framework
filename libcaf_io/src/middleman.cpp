@@ -168,7 +168,7 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
       }
     };
   };
-  auto gn = system().spawn<hidden>(group_nameserver);
+  auto gn = system().spawn<hidden + lazy_init>(group_nameserver);
   auto result = publish(gn, port, in, reuse);
   // link gn to our manager
   if (result)
@@ -241,15 +241,40 @@ expected<group> middleman::remote_group(const std::string& group_uri) {
 }
 
 expected<group> middleman::remote_group(const std::string& group_identifier,
-                                        const std::string& host, uint16_t port) {
+                                        const std::string& host,
+                                        uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(group_identifier) << CAF_ARG(host) << CAF_ARG(port));
-  auto group_server = remote_actor(host, port);
-  if (!group_server)
-    return std::move(group_server.error());
-  scoped_actor self{system(), true};
-  self->send(*group_server, get_atom::value, group_identifier);
+  // Helper actor that first connects to the remote actor at `host:port` and
+  // then tries to get a valid group from that actor.
+  auto two_step_lookup = [=](event_based_actor* self,
+                             middleman_actor mm) -> behavior {
+    return {
+      [=](get_atom) {
+        /// We won't receive a second message, so we drop our behavior here to
+        /// terminate the actor after both requests finish.
+        self->unbecome();
+        auto rp = self->make_response_promise();
+        self->request(mm, infinite, connect_atom::value, host, port).then(
+          [=](const node_id&, strong_actor_ptr& ptr,
+              const std::set<std::string>&) mutable {
+            auto hdl = actor_cast<actor>(ptr);
+            self->request(hdl, infinite, get_atom::value, group_identifier)
+            .then(
+              [=](group& result) mutable {
+                rp.deliver(std::move(result));
+              }
+            );
+          }
+        );
+      }
+    };
+  };
+  // Spawn the helper actor and wait for the result.
   expected<group> result{sec::cannot_connect_to_node};
-  self->receive(
+  scoped_actor self{system(), true};
+  self->request(self->spawn<lazy_init>(two_step_lookup, actor_handle()),
+                infinite, get_atom::value)
+  .receive(
     [&](group& grp) {
       result = std::move(grp);
     },
@@ -357,8 +382,10 @@ void middleman::init(actor_system_config& cfg) {
   // never detach actors when using the testing multiplexer
   auto network_backend = get_or(cfg, "middleman.network-backend",
                                 defaults::middleman::network_backend);
-  if (network_backend == atom("testing"))
-    cfg.set("middleman.attach-utility-actors", true);
+  if (network_backend == atom("testing")) {
+    cfg.set("middleman.attach-utility-actors", true)
+       .set("middleman.manual-multiplexing", true);
+  }
   // add remote group module to config
   struct remote_groups : group_module {
   public:

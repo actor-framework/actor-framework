@@ -19,7 +19,7 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE io_dynamic_remote_group
-#include "caf/test/unit_test.hpp"
+#include "caf/test/io_dsl.hpp"
 
 #include <vector>
 #include <algorithm>
@@ -31,140 +31,98 @@ using namespace caf;
 
 namespace {
 
-constexpr char local_host[] = "127.0.0.1";
-
 class config : public caf::actor_system_config {
 public:
   config() {
     load<caf::io::middleman>();
     add_message_type<std::vector<actor>>("std::vector<actor>");
   }
-
-  config& parse() {
-    actor_system_config::parse(caf::test::engine::argc(),
-                               caf::test::engine::argv());
-    return *this;
-  }
 };
 
-struct fixture {
-  config server_side_cfg;
-  caf::actor_system server_side{server_side_cfg.parse()};
-  config client_side_cfg;
-  caf::actor_system client_side{client_side_cfg.parse()};
-  io::middleman& server_side_mm = server_side.middleman();
-  io::middleman& client_side_mm = client_side.middleman();
-};
+const uint16_t port = 8080;
 
-behavior make_reflector_behavior(event_based_actor* self) {
+const char* server = "mars";
+
+const char* group_name = "foobar";
+
+size_t received_messages = 0u;
+
+behavior group_receiver(event_based_actor* self) {
   self->set_default_handler(reflect_and_quit);
   return {
-    [] {
-      // nop
+    [](ok_atom) {
+      ++received_messages;
     }
   };
 }
 
-using spawn_atom = atom_constant<atom("Spawn")>;
-using get_group_atom = atom_constant<atom("GetGroup")>;
-
-struct await_reflector_reply_behavior {
-  event_based_actor* self;
-  int cnt;
-  int downs;
-  std::vector<actor> vec;
-
-  void operator()(const std::string& str, double val) {
-    CAF_CHECK_EQUAL(str, "Hello reflector!");
-    CAF_CHECK_EQUAL(val, 5.0);
-    if (++cnt == 7) {
-      for (const auto& actor : vec)
-        self->monitor(actor);
-      self->set_down_handler([=](down_msg&) {
-        if (++downs == 5)
-          self->quit();
-      });
-    }
+// Our server is `mars` and our client is `earth`.
+struct fixture : point_to_point_fixture<test_coordinator_fixture<config>> {
+  fixture() {
+    prepare_connection(mars, earth, server, port);
   }
+
+  ~fixture() {
+    for (auto& receiver : receivers)
+      anon_send_exit(receiver, exit_reason::user_shutdown);
+  }
+
+  void spawn_receivers(planet_type& planet, group grp, size_t count) {
+    for (size_t i = 0; i < count; ++i)
+      receivers.emplace_back(planet.sys.spawn_in_group(grp, group_receiver));
+  }
+
+  std::vector<actor> receivers;
 };
-
-// `grp` may be either local or remote
-void make_client_behavior(event_based_actor* self,
-                          const actor& server, group grp) {
-  self->set_default_handler(skip);
-  self->spawn_in_group(grp, make_reflector_behavior);
-  self->spawn_in_group(grp, make_reflector_behavior);
-  self->request(server, infinite, spawn_atom::value, grp).then(
-    [=](const std::vector<actor>& vec) {
-      auto is_remote = [=](actor actor) {
-        return actor->node() != self->node();
-      };
-      CAF_CHECK(std::all_of(vec.begin(), vec.end(), is_remote));
-      self->send(grp, "Hello reflector!", 5.0);
-      self->become(await_reflector_reply_behavior{self, 0, 0, vec});
-    }
-  );
-}
-
-behavior make_server_behavior(event_based_actor* self) {
-  return {
-    [=](get_group_atom) {
-      return self->system().groups().get_local("foobar");
-    },
-    [=](spawn_atom, group group) -> std::vector<actor> {
-      std::vector<actor> vec;
-      for (auto i = 0; i < 5; ++i) {
-        vec.push_back(self->spawn_in_group(group, make_reflector_behavior));
-      }
-      self->quit();
-      return vec;
-    }
-  };
-}
 
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_remote_group_tests, fixture)
 
-CAF_TEST_DISABLED(remote_group_conn) {
-  // server side
-  CAF_EXP_THROW(port, server_side_mm.publish_local_groups(0));
-  CAF_REQUIRE(port != 0);
-  // client side
-  CAF_CHECK(client_side_mm.remote_group("whatever", local_host, port));
+CAF_TEST(publish_local_groups) {
+  loop_after_next_enqueue(mars);
+  CAF_CHECK_EQUAL(mars.sys.middleman().publish_local_groups(port), port);
 }
 
-CAF_TEST_DISABLED(server_side_group_comm) {
-  // server side
-  CAF_EXP_THROW(port,
-                server_side_mm.publish(server_side.spawn(make_server_behavior),
-                                       0, local_host));
-  CAF_REQUIRE(port != 0);
-  // client side
-  CAF_EXP_THROW(server, client_side_mm.remote_actor(local_host, port));
-  scoped_actor group_resolver(client_side, true);
-  group grp;
-  group_resolver->request(server, infinite, get_group_atom::value).receive(
-    [&](const group& x) {
-      grp = x;
-    },
-    [&](error& err) {
-      CAF_FAIL("error: " << client_side.render(err));
-    }
-  );
-  client_side.spawn(make_client_behavior, server, grp);
+CAF_TEST(connecting to remote group) {
+  CAF_MESSAGE("publish local groups on mars");
+  loop_after_next_enqueue(mars);
+  CAF_CHECK_EQUAL(mars.sys.middleman().publish_local_groups(port), port);
+  CAF_MESSAGE("call remote_group on earth");
+  loop_after_next_enqueue(earth);
+  auto grp = unbox(earth.mm.remote_group(group_name, server, port));
+  CAF_CHECK(grp);
+  CAF_CHECK_EQUAL(grp->get()->identifier(), group_name);
 }
 
-CAF_TEST_DISABLED(client_side_group_comm) {
-  // server side
-  CAF_EXP_THROW(port,
-                server_side_mm.publish(server_side.spawn(make_server_behavior),
-                                       0, local_host));
-  CAF_REQUIRE(port != 0);
-  // client side
-  CAF_EXP_THROW(server, client_side_mm.remote_actor(local_host, port));
-  client_side.spawn(make_client_behavior, server,
-                    client_side.groups().get_local("foobar"));
+CAF_TEST_DISABLED(message transmission) {
+  CAF_MESSAGE("spawn 5 receivers on mars");
+  auto mars_grp = mars.sys.groups().get_local(group_name);
+  spawn_receivers(mars, mars_grp, 5u);
+  CAF_MESSAGE("publish local groups on mars");
+  loop_after_next_enqueue(mars);
+  CAF_CHECK_EQUAL(mars.sys.middleman().publish_local_groups(port), port);
+  CAF_MESSAGE("call remote_group on earth");
+  loop_after_next_enqueue(earth);
+  auto earth_grp = unbox(earth.mm.remote_group(group_name, server, port));
+  CAF_MESSAGE("spawn 5 more receivers on earth");
+  spawn_receivers(earth, earth_grp, 5u);
+  CAF_MESSAGE("send message on mars and expect 10 handled messages total");
+  {
+    received_messages = 0u;
+    scoped_actor self{mars.sys};
+    self->send(mars_grp, ok_atom::value);
+    exec_all();
+    CAF_CHECK_EQUAL(received_messages, 10u);
+  }
+  CAF_MESSAGE("send message on earth and again expect 10 handled messages");
+  {
+    received_messages = 0u;
+    scoped_actor self{earth.sys};
+    self->send(earth_grp, ok_atom::value);
+    exec_all();
+    CAF_CHECK_EQUAL(received_messages, 10u);
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
