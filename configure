@@ -14,19 +14,7 @@ use this configure script to access CMake equivalent functionality.\
 command="$0 $*"
 dirname_0=`dirname $0`
 sourcedir=`cd $dirname_0 && pwd`
-benchmark_suite_options=""
-if [ -d "$sourcedir/benchmarks/caf" ] ; then
-benchmark_suite_options="\
 
-  Benchmark Suite Options:
-    --with-javac=FILE           path to Java compiler
-    --with-java=FILE            path to Java Runtime
-    --with-scalac=FILE          path to Scala compiler
-    --with-erlc=FILE            path to Erlang compiler
-    --with-charmc=FILE          path to Charm++ compiler
-    --with-salsa=FILE           path to SALSA Lite jar
-"
-fi
 usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
@@ -105,7 +93,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - iphoneos: for iOS device
                                   - iphonesimulator: for iOS simulator
     --ios-min-ver=VERSION       set the ios deployment target version
-$benchmark_suite_options"
+"
 
 
 # Appends a CMake cache entry definition to the CMakeCacheEntries variable.
@@ -366,24 +354,6 @@ while [ $# -ne 0 ]; do
             ;;
         --static-runtime)
             append_cache_entry CAF_BUILD_STATIC_RUNTIME BOOL yes
-            ;;
-        --with-javac=*)
-            append_cache_entry CAF_JAVA_COMPILER FILEPATH "$optarg"
-            ;;
-        --with-java=*)
-            append_cache_entry CAF_JAVA_BIN FILEPATH "$optarg"
-            ;;
-        --with-scalac=*)
-            append_cache_entry CAF_SCALA_COMPILER FILEPATH "$optarg"
-            ;;
-        --with-erlc=*)
-            append_cache_entry CAF_ERLANG_COMPILER FILEPATH "$optarg"
-            ;;
-        --with-charmc=*)
-            append_cache_entry CAF_CHARM_COMPILER FILEPATH "$optarg"
-            ;;
-        --with-salsa=*)
-            append_cache_entry CAF_SALSA_JAR FILEPATH "$optarg"
             ;;
         --with-python-config=*)
             append_cache_entry CAF_PYTHON_CONFIG_BIN FILEPATH "$optarg"
