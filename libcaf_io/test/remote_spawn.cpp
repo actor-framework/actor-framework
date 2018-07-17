@@ -82,7 +82,10 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_REQUIRE(nid);
   CAF_REQUIRE_NOT_EQUAL(system.node(), *nid);
   auto calc = mm.remote_spawn<calculator>(*nid, "calculator", make_message());
-  CAF_REQUIRE_EQUAL(calc, sec::unexpected_actor_messaging_interface);
+  CAF_REQUIRE(!calc);
+  CAF_REQUIRE_EQUAL(calc.error().category(), atom("system"));
+  CAF_REQUIRE_EQUAL(static_cast<sec>(calc.error().code()),
+                    sec::unexpected_actor_messaging_interface);
   calc = mm.remote_spawn<calculator>(*nid, "typed_calculator", make_message());
   CAF_REQUIRE(calc);
   auto f1 = make_function_view(*calc);
