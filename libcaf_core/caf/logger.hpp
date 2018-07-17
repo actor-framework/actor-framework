@@ -360,7 +360,7 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_LOG_COMPONENT "caf"
 #endif // CAF_LOG_COMPONENT
 
-#ifndef CAF_LOG_LEVEL
+#if CAF_LOG_LEVEL == -1
 
 #define CAF_LOG_IMPL(unused1, unused2, unused3)
 

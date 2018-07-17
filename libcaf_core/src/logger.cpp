@@ -53,10 +53,7 @@ constexpr const char* log_level_name[] = {
   "TRACE"
 };
 
-#ifdef CAF_LOG_LEVEL
-
-static_assert(CAF_LOG_LEVEL >= 0 && CAF_LOG_LEVEL <= 4,
-              "assertion: 0 <= CAF_LOG_LEVEL <= 4");
+#if CAF_LOG_LEVEL >= 0
 
 #if defined(CAF_NO_THREAD_LOCAL)
 
