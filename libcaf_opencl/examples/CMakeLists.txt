@@ -12,7 +12,7 @@ if(OpenCL_LIBRARIES AND NOT CAF_NO_EXAMPLES)
   macro(add name folder)
     add_executable(${name} ${folder}/${name}.cpp ${ARGN})
     target_link_libraries(${name}
-                          ${LD_FLAGS}
+                          ${CAF_EXTRA_LDFLAGS}
                           ${CAF_LIBRARIES}
                           ${PTHREAD_LIBRARIES}
                           ${WSLIB}

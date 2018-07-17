@@ -21,7 +21,7 @@ set(LIBCAF_OPENCL_SRCS
 if(NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_opencl_shared SHARED ${LIBCAF_OPENCL_SRCS}
               ${LIBCAF_OPENCL_HDRS} ${OpenCL_INCLUDE_DIRS})
-  target_link_libraries(libcaf_opencl_shared ${LD_FLAGS}
+  target_link_libraries(libcaf_opencl_shared ${CAF_EXTRA_LDFLAGS}
                                              ${CAF_LIBRARY_CORE}
                                              ${OpenCL_LIBRARIES})
   set_target_properties(libcaf_opencl_shared
@@ -39,7 +39,7 @@ if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_opencl_static STATIC ${LIBCAF_OPENCL_SRCS}
                                           ${LIBCAF_OPENCL_HDRS}
                                           ${OpenCL_INCLUDE_DIRS})
-  target_link_libraries(libcaf_opencl_static ${LD_FLAGS}
+  target_link_libraries(libcaf_opencl_static ${CAF_EXTRA_LDFLAGS}
                                              ${CAF_LIBRARY_CORE_STATIC}
                                              ${OpenCL_LIBRARIES})
   set_target_properties(libcaf_opencl_static PROPERTIES OUTPUT_NAME caf_opencl_static)
