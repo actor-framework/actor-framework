@@ -167,6 +167,12 @@ public:
   /// Get the next id to create a new datagram handle
   int64_t next_endpoint_id();
 
+  /// Returns the number of socket handlers.
+  size_t num_socket_handlers() const noexcept;
+
+  /// Run all pending events generated from calls to `add` or `del`.
+  void handle_internal_events();
+
 private:
   /// Calls `epoll`, `kqueue`, or `poll` with or without blocking.
   bool poll_once_impl(bool block);

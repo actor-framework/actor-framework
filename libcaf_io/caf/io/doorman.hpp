@@ -43,8 +43,6 @@ public:
 
   ~doorman() override;
 
-  void io_failure(execution_unit* ctx, network::operation op) override;
-
   using doorman_base::new_connection;
 
   bool new_connection(execution_unit* ctx, connection_handle x);

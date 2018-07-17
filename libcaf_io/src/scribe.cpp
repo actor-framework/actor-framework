@@ -77,12 +77,5 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
   //parent()->consume(std::move(ptr));
 }
 
-void scribe::io_failure(execution_unit* ctx, network::operation op) {
-  CAF_LOG_TRACE(CAF_ARG(hdl()) << CAF_ARG(op));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  detach(ctx, true);
-}
-
 } // namespace io
 } // namespace caf

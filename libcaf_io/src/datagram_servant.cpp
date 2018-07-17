@@ -73,13 +73,6 @@ void datagram_servant::datagram_sent(execution_unit* ctx, datagram_handle hdl,
   invoke_mailbox_element_impl(ctx, tmp);
 }
 
-void datagram_servant::io_failure(execution_unit* ctx, network::operation op) {
-  CAF_LOG_TRACE(CAF_ARG(hdl()) << CAF_ARG(op));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  detach(ctx, true);
-}
-
 } // namespace io
 } // namespace caf
 

@@ -37,13 +37,6 @@ message doorman::detach_message() {
   return make_message(acceptor_closed_msg{hdl()});
 }
 
-void doorman::io_failure(execution_unit* ctx, network::operation op) {
-  CAF_LOG_TRACE(CAF_ARG(hdl().id()) << CAF_ARG(op));
-  // keep compiler happy when compiling w/o logging
-  static_cast<void>(op);
-  detach(ctx, true);
-}
-
 bool doorman::new_connection(execution_unit* ctx, connection_handle x) {
   msg().handle = x;
   return invoke_mailbox_element(ctx);
