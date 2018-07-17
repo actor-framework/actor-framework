@@ -56,14 +56,16 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --warnings-as-errors        build with '-Werror'
     --with-ccache               use ccache to improve build performance
 
+  Additional Examples:
+    --with-qt-examples          include Qt example(s)
+    --with-protobuf-examples    include Google Protobuf example(s)
+
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
 
   Remove Standard Features (even if all dependencies are available):
     --no-memory-management      build without memory management
     --no-examples               build without examples
-    --no-qt-examples            build without Qt examples
-    --no-protobuf-examples      build without Google Protobuf examples
     --no-curl-examples          build without libcurl examples
     --no-unit-tests             build without unit tests
     --no-opencl                 build without OpenCL module
@@ -338,11 +340,11 @@ while [ $# -ne 0 ]; do
         --no-examples)
             append_cache_entry CAF_NO_EXAMPLES BOOL yes
             ;;
-        --no-qt-examples)
-            append_cache_entry CAF_NO_QT_EXAMPLES BOOL yes
+        --with-qt-examples)
+            append_cache_entry CAF_BUILD_QT_EXAMPLES BOOL yes
             ;;
-        --no-protobuf-examples)
-            append_cache_entry CAF_NO_PROTOBUF_EXAMPLES BOOL yes
+        --with-protobuf-examples)
+            append_cache_entry CAF_BUILD_PROTOBUF_EXAMPLES BOOL yes
             ;;
         --no-curl-examples)
             append_cache_entry CAF_NO_CURL_EXAMPLES BOOL yes
