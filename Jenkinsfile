@@ -184,20 +184,18 @@ pipeline {
   post {
     success {
       emailext(
-        subject: "✅ CAF build #${env.BUILD_NUMBER} succeeded for branch ${env.GIT_BRANCH}",
+        subject: "✅ CAF build #${env.BUILD_NUMBER} succeeded for job ${env.JOB_NAME}",
         recipientProviders: [culprits(), developers(), requestor(), upstreamDevelopers()],
-        body: "Job ${env.JOB_NAME} [${env.BUILD_NUMBER}] passed.\n\n" \
-              + "Check console output at ${env.BUILD_URL}.",
+        body: "Check console output at ${env.BUILD_URL}.",
       )
     }
     failure {
       emailext(
-        subject: "⛔️ CAF build #${env.BUILD_NUMBER} failed for branch ${env.GIT_BRANCH}",
+        subject: "⛔️ CAF build #${env.BUILD_NUMBER} failed for job ${env.JOB_NAME}",
         attachLog: true,
         compressLog: true,
         recipientProviders: [culprits(), developers(), requestor(), upstreamDevelopers()],
-        body: "Job ${env.JOB_NAME} [${env.BUILD_NUMBER}] failed!\n\n" \
-              + "Check console output at ${env.BUILD_URL} or see attached log.",
+        body: "Check console output at ${env.BUILD_URL} or see attached log.",
       )
     }
   }
