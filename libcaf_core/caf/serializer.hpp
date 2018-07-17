@@ -22,14 +22,9 @@
 #include <cstddef> // size_t
 #include <type_traits>
 
-#include "caf/config.hpp"
-
-#ifndef CAF_NO_EXCEPTIONS
-#include <exception>
-#endif // CAF_NO_EXCEPTIONS
-
-#include "caf/fwd.hpp"
 #include "caf/data_processor.hpp"
+#include "caf/fwd.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf {
 

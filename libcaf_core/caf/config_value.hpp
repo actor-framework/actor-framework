@@ -30,6 +30,7 @@
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/optional.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"

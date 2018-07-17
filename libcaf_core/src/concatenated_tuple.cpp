@@ -16,12 +16,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/message.hpp"
-#include "caf/make_counted.hpp"
-
 #include "caf/detail/concatenated_tuple.hpp"
 
 #include <numeric>
+
+#include "caf/make_counted.hpp"
+#include "caf/message.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf {
 namespace detail {
@@ -115,7 +116,7 @@ std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
     else
       return {m.get(), idx};
   }
-  CAF_RAISE_ERROR("out of range: concatenated_tuple::select");
+  CAF_RAISE_ERROR(std::out_of_range, "concatenated_tuple::select out of range");
 }
 
 } // namespace detail

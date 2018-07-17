@@ -65,7 +65,6 @@ private:
                    size_t len, const char* debug_name);
   SSL_CTX* create_ssl_context();
   std::string get_ssl_error();
-  void raise_ssl_error(std::string msg);
   bool handle_ssl_result(int ret);
 
   actor_system& sys_;

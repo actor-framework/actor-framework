@@ -259,12 +259,3 @@
             __FILE__, __LINE__, error);                                        \
     ::abort();                                                                 \
   } while (false)
-
-#ifdef CAF_NO_EXCEPTIONS
-# define CAF_RAISE_ERROR(msg)                                                  \
-  CAF_CRITICAL(msg)
-#else // CAF_NO_EXCEPTIONS
-# define CAF_RAISE_ERROR(msg)                                                  \
-  throw std::runtime_error(msg)
-#endif // CAF_NO_EXCEPTIONS
-
