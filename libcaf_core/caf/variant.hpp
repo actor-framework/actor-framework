@@ -25,6 +25,7 @@
 #include "caf/config.hpp"
 #include "caf/default_sum_type_access.hpp"
 #include "caf/fwd.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/static_visitor.hpp"
 #include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"

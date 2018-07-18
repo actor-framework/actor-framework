@@ -24,9 +24,10 @@
 #include <algorithm>
 #include <functional>
 
-#include "caf/logger.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/logger.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/response_promise.hpp"
 
 #include "caf/detail/raw_ptr.hpp"
@@ -194,7 +195,7 @@ private:
                                    events.data(), &events.back());
     if (err != CL_SUCCESS) {
       this->deref(); // failed to enqueue command
-      CAF_RAISE_ERROR("clEnqueueReadBuffer: " + opencl_error(err));
+      CAF_RAISE_ERROR("failed to enqueue command");
     }
     pos += 1;
   }

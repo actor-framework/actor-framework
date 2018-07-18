@@ -443,18 +443,6 @@ inline std::string to_string(const expected<void>& x) {
   return "!" + to_string(x.error());
 }
 
-/// @cond PRIVATE
-/// Assigns the value of `expr` (which must return an `expected`)
-/// to a new variable named `var` or throws a `std::runtime_error` on error.
-/// @relates expected
-/// @experimental
-#define CAF_EXP_THROW(var, expr)                                               \
-  auto CAF_UNIFYN(tmp_var_) = expr;                                            \
-  if (!CAF_UNIFYN(tmp_var_))                                                  \
-    CAF_RAISE_ERROR(to_string(CAF_UNIFYN(tmp_var_).error()));                  \
-  auto& var = *CAF_UNIFYN(tmp_var_)
-/// @endcond
-
 } // namespace caf
 
 namespace std {

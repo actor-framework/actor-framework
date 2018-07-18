@@ -20,11 +20,12 @@
 
 #include <unordered_set>
 
+#include "caf/actor_system_config.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/raise_error.hpp"
+#include "caf/raw_event_based_actor.hpp"
 #include "caf/send.hpp"
 #include "caf/to_string.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/actor_system_config.hpp"
-#include "caf/raw_event_based_actor.hpp"
 
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"

@@ -48,8 +48,8 @@
 #include <utility>
 
 #include "caf/detail/get_mac_addresses.hpp"
-
 #include "caf/io/network/ip_endpoint.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf {
 namespace io {

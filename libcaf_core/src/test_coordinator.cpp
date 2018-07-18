@@ -20,9 +20,10 @@
 
 #include <limits>
 
-#include "caf/resumable.hpp"
-#include "caf/monitorable_actor.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/monitorable_actor.hpp"
+#include "caf/raise_error.hpp"
+#include "caf/resumable.hpp"
 
 namespace caf {
 namespace scheduler {

@@ -18,18 +18,17 @@
 
 #pragma once
 
-#include "caf/config.hpp"
-
 #include <deque>
 #include <chrono>
 #include <limits>
 #include <cstddef>
 #include <algorithm>
 
+#include "caf/config.hpp"
+#include "caf/detail/test_actor_clock.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
-
-#include "caf/detail/test_actor_clock.hpp"
 
 namespace caf {
 namespace scheduler {

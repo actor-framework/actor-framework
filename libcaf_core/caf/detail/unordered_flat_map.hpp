@@ -21,13 +21,11 @@
 
 #include <vector>
 #include <algorithm>
-#include <stdexcept>
 #include <functional>
-
-#include "caf/config.hpp"
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf {
 namespace detail {
@@ -231,11 +229,8 @@ public:
   mapped_type& at(const K& key) {
     auto i = find(key);
     if (i == end())
-#ifdef CAF_NO_EXCEPTIONS
-      CAF_CRITICAL("caf::detail::unordered_flat_map::at out of range");
-#else
-      throw std::out_of_range{"caf::detail::unordered_flat_map::at"};
-#endif
+      CAF_RAISE_ERROR(std::out_of_range,
+                      "caf::detail::unordered_flat_map::at out of range");
     return i->second;
   }
 

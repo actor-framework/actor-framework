@@ -22,6 +22,7 @@
 
 #include "caf/buffered_downstream_manager.hpp"
 #include "caf/outbound_path.hpp"
+#include "caf/raise_error.hpp"
 
 #include "caf/detail/algorithms.hpp"
 #include "caf/detail/path_state.hpp"

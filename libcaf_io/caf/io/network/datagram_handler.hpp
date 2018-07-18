@@ -22,6 +22,7 @@
 #include <unordered_map>
 
 #include "caf/logger.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/ref_counted.hpp"
 
 #include "caf/io/fwd.hpp"

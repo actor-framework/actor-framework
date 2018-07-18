@@ -19,7 +19,7 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE io_remote_spawn
-#include "caf/test/unit_test.hpp"
+#include "caf/test/dsl.hpp"
 
 #include <thread>
 #include <string>
@@ -82,7 +82,10 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_REQUIRE(nid);
   CAF_REQUIRE_NOT_EQUAL(system.node(), *nid);
   auto calc = mm.remote_spawn<calculator>(*nid, "calculator", make_message());
-  CAF_REQUIRE_EQUAL(calc, sec::unexpected_actor_messaging_interface);
+  CAF_REQUIRE(!calc);
+  CAF_REQUIRE_EQUAL(calc.error().category(), atom("system"));
+  CAF_REQUIRE_EQUAL(static_cast<sec>(calc.error().code()),
+                    sec::unexpected_actor_messaging_interface);
   calc = mm.remote_spawn<calculator>(*nid, "typed_calculator", make_message());
   CAF_REQUIRE(calc);
   auto f1 = make_function_view(*calc);
@@ -96,7 +99,7 @@ void run_client(int argc, char** argv, uint16_t port) {
 void run_server(int argc, char** argv) {
   config cfg{argc, argv};
   actor_system system{cfg};
-  CAF_EXP_THROW(port, system.middleman().open(0));
+  auto port = unbox(system.middleman().open(0));
   std::thread child{[=] { run_client(argc, argv, port); }};
   child.join();
 }

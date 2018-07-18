@@ -368,10 +368,8 @@ endif()
 #                       configure build_config.hpp header                      #
 ################################################################################
 
-if(CAF_LOG_LEVEL)
-  set(CAF_LOG_LEVEL_INT ${CAF_LOG_LEVEL})
-else()
-  set(CAF_LOG_LEVEL_INT -1)
+if(NOT CAF_LOG_LEVEL)
+  set(CAF_LOG_LEVEL "-1")
 endif()
 
 macro(to_int_value name)

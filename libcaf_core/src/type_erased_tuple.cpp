@@ -18,8 +18,9 @@
 
 #include "caf/type_erased_tuple.hpp"
 
-#include "caf/error.hpp"
 #include "caf/config.hpp"
+#include "caf/error.hpp"
+#include "caf/raise_error.hpp"
 
 #include "caf/detail/try_match.hpp"
 

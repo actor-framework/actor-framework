@@ -24,6 +24,7 @@
 #include <stdexcept>
 
 #include "caf/config.hpp"
+#include "caf/raise_error.hpp"
 
 namespace {
 
@@ -56,7 +57,7 @@ string_view::const_reverse_iterator string_view::crend() const noexcept {
 string_view::const_reference string_view::at(size_type pos) const {
   if (pos < size_)
     return data_[pos];
-  CAF_RAISE_ERROR("string_view::at out of range");
+  CAF_RAISE_ERROR(std::out_of_range, "string_view::at out of range");
 }
 
 // -- modifiers ----------------------------------------------------------------

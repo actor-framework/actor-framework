@@ -20,6 +20,7 @@
 #include <fstream>
 
 #include "caf/detail/type_list.hpp"
+#include "caf/raise_error.hpp"
 
 #include "caf/opencl/device.hpp"
 #include "caf/opencl/manager.hpp"
@@ -95,10 +96,7 @@ program_ptr manager::create_program_from_file(const char* path,
                      static_cast<streamsize>(kernel_source.size()));
     read_source.close();
   } else {
-    ostringstream oss;
-    oss << "No file at '" << path << "' found.";
-    CAF_LOG_ERROR(CAF_ARG(oss.str()));
-    CAF_RAISE_ERROR(oss.str());
+    CAF_RAISE_ERROR("create_program_from_file: path not found");
   }
   return create_program(kernel_source.c_str(), options, device_id);
 }
@@ -108,10 +106,7 @@ program_ptr manager::create_program(const char* kernel_source,
                                     uint32_t device_id) {
   auto dev = find_device(device_id);
   if (!dev) {
-    ostringstream oss;
-    oss << "No device with id '" << device_id << "' found.";
-    CAF_LOG_ERROR(CAF_ARG(oss.str()));
-    CAF_RAISE_ERROR(oss.str());
+    CAF_RAISE_ERROR("create_program: no device found");
   }
   return create_program(kernel_source, options, *dev);
 }
@@ -129,10 +124,7 @@ program_ptr manager::create_program_from_file(const char* path,
                      static_cast<streamsize>(kernel_source.size()));
     read_source.close();
   } else {
-    ostringstream oss;
-    oss << "No file at '" << path << "' found.";
-    CAF_LOG_ERROR(CAF_ARG(oss.str()));
-    CAF_RAISE_ERROR(oss.str());
+    CAF_RAISE_ERROR("create_program_from_file: path not found");
   }
   return create_program(kernel_source.c_str(), options, dev);
 }
@@ -150,8 +142,6 @@ program_ptr manager::create_program(const char* kernel_source,
   auto dev_tmp = dev->device_id_.get();
   auto err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
   if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clBuildProgram: " << opencl_error(err);
     if (err == CL_BUILD_PROGRAM_FAILURE) {
       size_t buildlog_buffer_size = 0;
       // get the log length
@@ -169,12 +159,11 @@ program_ptr manager::create_program(const char* kernel_source,
       // seems that just apple implemented the
       // pfn_notify callback, but we can get
       // the build log
-#ifndef __APPLE__
+#ifndef CAF_MACOS
       CAF_LOG_ERROR(CAF_ARG(ss.str()));
 #endif
-      oss << endl << ss.str();
     }
-    CAF_RAISE_ERROR(oss.str());
+    CAF_RAISE_ERROR("clBuildProgram failed");
   }
   cl_uint number_of_kernels = 0;
   clCreateKernelsInProgram(pptr.get(), 0u, nullptr, &number_of_kernels);
@@ -183,23 +172,16 @@ program_ptr manager::create_program(const char* kernel_source,
     vector<cl_kernel> kernels(number_of_kernels);
     err = clCreateKernelsInProgram(pptr.get(), number_of_kernels,
                                    kernels.data(), nullptr);
-    if (err != CL_SUCCESS) {
-      ostringstream oss;
-      oss << "clCreateKernelsInProgram: " << opencl_error(err);
-      CAF_RAISE_ERROR(oss.str());
-    }
+    if (err != CL_SUCCESS)
+      CAF_RAISE_ERROR("clCreateKernelsInProgram failed");
     for (cl_uint i = 0; i < number_of_kernels; ++i) {
       size_t len;
       clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, 0, nullptr, &len);
       vector<char> name(len);
       err = clGetKernelInfo(kernels[i], CL_KERNEL_FUNCTION_NAME, len,
                             reinterpret_cast<void*>(name.data()), nullptr);
-      if (err != CL_SUCCESS) {
-        ostringstream oss;
-        oss << "clGetKernelInfo (CL_KERNEL_FUNCTION_NAME): "
-            << opencl_error(err);
-        CAF_RAISE_ERROR(oss.str());
-      }
+      if (err != CL_SUCCESS)
+        CAF_RAISE_ERROR("clGetKernelInfo failed");
       detail::raw_kernel_ptr kernel;
       kernel.reset(move(kernels[i]));
       available_kernels.emplace(string(name.data()), move(kernel));

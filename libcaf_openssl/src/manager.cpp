@@ -26,11 +26,12 @@ CAF_POP_WARNINGS
 #include <vector>
 #include <mutex>
 
-#include "caf/expected.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/scoped_actor.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/expected.hpp"
+#include "caf/raise_error.hpp"
+#include "caf/scoped_actor.hpp"
 
 #include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"

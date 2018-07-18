@@ -19,7 +19,7 @@
 #include "caf/config.hpp"
 
 #define CAF_SUITE io_unpublish
-#include "caf/test/unit_test.hpp"
+#include "caf/test/dsl.hpp"
 
 #include <new>
 #include <thread>
@@ -100,7 +100,7 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(unpublish_tests, fixture)
 
 CAF_TEST(unpublishing) {
-  CAF_EXP_THROW(port, system.middleman().publish(testee, 0));
+  auto port = unbox(system.middleman().publish(testee, 0));
   CAF_REQUIRE(port != 0);
   CAF_MESSAGE("published actor on port " << port);
   CAF_MESSAGE("test invalid unpublish");

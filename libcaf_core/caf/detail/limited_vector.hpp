@@ -21,11 +21,11 @@
 #include <cstddef>
 #include <iterator>
 #include <algorithm>
-#include <stdexcept>
 #include <type_traits>
 #include <initializer_list>
 
 #include "caf/config.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf {
 namespace detail {
