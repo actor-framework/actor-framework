@@ -63,7 +63,12 @@ struct test_consumer {
 
   template <class T>
   void value(T x) {
-    add_entry("value: ", deep_to_string(x));
+    config_value cv{std::move(x)};
+    std::string entry = "value (";
+    entry += cv.type_name();
+    entry += "): ";
+    entry += to_string(cv);
+    log.emplace_back(std::move(entry));
   }
 
   void add_entry(const char* prefix, std::string str) {
@@ -87,8 +92,10 @@ struct fixture {
     res.i = str.begin();
     res.e = str.end();
     detail::parser::read_ini(res, f);
-    if ((res.code == pec::success) != expect_success)
+    if ((res.code == pec::success) != expect_success) {
       CAF_MESSAGE("unexpected parser result state: " << res.code);
+      CAF_MESSAGE("input remainder: " << std::string(res.i, res.e));
+    }
     return std::move(f.log);
   }
 };
@@ -125,17 +132,61 @@ entry1=123,
  entry3= "abc",
  entry4 = 'def', ; some comment and a trailing comma
 }
+[middleman]
+preconnect=[<
+tcp://localhost:8080
+
+   >,<udp://remotehost?trust=false>]
 )";
 
 const auto ini0_log = make_log(
-  "key: logger", "{", "key: padding", "value: 10", "key: file-name",
-  "value: \"foobar.ini\"", "}", "key: scheduler", "{", "key: timing",
-  "value: 2000ns", "key: impl", "value: 'foo'", "key: x_",
-  "value: " + deep_to_string(.123), "key: some-bool", "value: true",
-  "key: some-other-bool", "value: false", "key: some-list", "[", "value: 123",
-  "value: 23", "value: \"abc\"", "value: 'def'", "]", "key: some-map", "{",
-  "key: entry1", "value: 123", "key: entry2", "value: 23", "key: entry3",
-  "value: \"abc\"", "key: entry4", "value: 'def'", "}", "}");
+  "key: logger",
+  "{",
+    "key: padding",
+    "value (integer): 10",
+    "key: file-name",
+    "value (string): \"foobar.ini\"",
+  "}",
+  "key: scheduler",
+  "{",
+    "key: timing",
+    "value (timespan): 2000ns",
+    "key: impl",
+    "value (atom): 'foo'",
+    "key: x_",
+    "value (real): " + deep_to_string(.123),
+    "key: some-bool",
+    "value (boolean): true",
+    "key: some-other-bool",
+    "value (boolean): false",
+    "key: some-list",
+    "[",
+      "value (integer): 123",
+      "value (integer): 23",
+      "value (string): \"abc\"",
+      "value (atom): 'def'",
+    "]",
+    "key: some-map",
+    "{",
+      "key: entry1",
+      "value (integer): 123",
+      "key: entry2",
+      "value (integer): 23",
+      "key: entry3",
+      "value (string): \"abc\"",
+      "key: entry4",
+      "value (atom): 'def'",
+    "}",
+  "}",
+  "key: middleman",
+  "{",
+    "key: preconnect",
+    "[",
+      "value (uri): tcp://localhost:8080",
+      "value (uri): udp://remotehost?trust=false",
+    "]",
+  "}"
+);
 
 } // namespace <anonymous>
 

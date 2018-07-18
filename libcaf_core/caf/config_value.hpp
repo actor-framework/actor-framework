@@ -35,6 +35,7 @@
 #include "caf/sum_type_access.hpp"
 #include "caf/sum_type_token.hpp"
 #include "caf/timestamp.hpp"
+#include "caf/uri.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
@@ -62,7 +63,7 @@ public:
 
   using dictionary = caf::dictionary<config_value>;
 
-  using types = detail::type_list<integer, boolean, real, atom, timespan,
+  using types = detail::type_list<integer, boolean, real, atom, timespan, uri,
                                   string, list, dictionary>;
 
   using variant_type = detail::tl_apply_t<types, variant>;
@@ -156,8 +157,8 @@ private:
   }
 
   template <class T>
-  detail::enable_if_t<
-    detail::is_one_of<T, real, atom, timespan, string, list, dictionary>::value>
+  detail::enable_if_t<detail::is_one_of<T, real, atom, timespan, uri, string,
+                                        list, dictionary>::value>
   set(T x) {
     data_ = std::move(x);
   }
