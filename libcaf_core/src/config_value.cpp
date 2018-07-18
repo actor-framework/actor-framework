@@ -35,6 +35,7 @@ const char* type_names[] {
   "real",
   "atom",
   "timespan",
+  "uri",
   "string",
   "list",
   "dictionary",

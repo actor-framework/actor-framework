@@ -28,8 +28,10 @@
 #include "caf/detail/parser/read_bool.hpp"
 #include "caf/detail/parser/read_number_or_timespan.hpp"
 #include "caf/detail/parser/read_string.hpp"
+#include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
+#include "caf/uri_builder.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 
@@ -141,6 +143,32 @@ void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
 }
 
 template <class Iterator, class Sentinel, class Consumer>
+void read_ini_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+  uri_builder builder;
+  auto g = make_scope_guard([&] {
+    if (ps.code <= pec::trailing_character)
+      consumer.value(builder.make());
+  });
+  start();
+  state(init) {
+    transition(init, " \t\n")
+    transition(before_uri, '<')
+  }
+  state(before_uri) {
+    transition(before_uri, " \t\n")
+    fsm_epsilon(read_uri(ps, builder), after_uri)
+  }
+  state(after_uri) {
+    transition(after_uri, " \t\n")
+    transition(done, '>')
+  }
+  term_state(done) {
+    // nop
+  }
+  fin();
+}
+
+template <class Iterator, class Sentinel, class Consumer>
 void read_ini_value(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   start();
   state(init) {
@@ -149,6 +177,7 @@ void read_ini_value(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     fsm_epsilon(read_number(ps, consumer), done, '.')
     fsm_epsilon(read_bool(ps, consumer), done, "ft")
     fsm_epsilon(read_number_or_timespan(ps, consumer), done, "0123456789+-")
+    fsm_epsilon(read_ini_uri(ps, consumer), done, '<')
     fsm_transition(read_ini_list(ps, consumer.begin_list()), done, '[')
     fsm_transition(read_ini_map(ps, consumer.begin_map()), done, '{')
   }
