@@ -142,8 +142,6 @@ program_ptr manager::create_program(const char* kernel_source,
   auto dev_tmp = dev->device_id_.get();
   auto err = clBuildProgram(pptr.get(), 1, &dev_tmp, options, nullptr, nullptr);
   if (err != CL_SUCCESS) {
-    ostringstream oss;
-    oss << "clBuildProgram: " << opencl_error(err);
     if (err == CL_BUILD_PROGRAM_FAILURE) {
       size_t buildlog_buffer_size = 0;
       // get the log length
@@ -164,7 +162,6 @@ program_ptr manager::create_program(const char* kernel_source,
 #ifndef CAF_MACOS
       CAF_LOG_ERROR(CAF_ARG(ss.str()));
 #endif
-      oss << endl << ss.str();
     }
     CAF_RAISE_ERROR("clBuildProgram failed");
   }
