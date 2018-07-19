@@ -20,6 +20,9 @@
 
 //#include "caf/io/protocol_policy.hpp"
 
+#include <cstdint>
+#include <cstring>
+
 #include "caf/test/dsl.hpp"
 
 #include "caf/abstract_actor.hpp"
@@ -103,6 +106,9 @@ struct transport_policy {
 using transport_policy_ptr = std::unique_ptr<transport_policy>;
 
 struct accept_policy {
+  virtual ~accept_policy() {
+    // nop
+  }
   virtual std::pair<native_socket, transport_policy_ptr> accept() = 0;
   virtual void init(newb_base&) = 0;
 };
@@ -119,7 +125,7 @@ struct protocol_policy_base {
 
 template <class T>
 struct protocol_policy : protocol_policy_base {
-  virtual ~protocol_policy() {
+  virtual ~protocol_policy() override {
     // nop
   }
 
@@ -134,32 +140,40 @@ template <class T>
 using protocol_policy_ptr = std::unique_ptr<protocol_policy<T>>;
 
 struct basp_policy {
-  static constexpr size_t offset = sizeof(basp_header);
+  static constexpr size_t header_size = sizeof(basp_header);
+  static constexpr size_t offset = header_size;
   using type = new_basp_message;
   using result_type = expected<new_basp_message>;
-  result_type read(char*, size_t) {
+  result_type read(char* bytes, size_t count) {
     new_basp_message msg;
+    memcpy(&msg.header.from, bytes, sizeof(msg.header.from));
+    memcpy(&msg.header.to, bytes + sizeof(msg.header.from), sizeof(msg.header.to));
+    msg.payload = bytes + header_size;
+    msg.payload_size = count - header_size;
     return msg;
   }
-
+  scoped_execution_unit context;
 };
 
 template <class Next>
 struct ordering {
-  static constexpr size_t offset = Next::offset + sizeof(ordering_header);
+  static constexpr size_t header_size = sizeof(ordering_header);
+  static constexpr size_t offset = Next::offset + header_size;
   using type = typename Next::type;
   using result_type = typename Next::result_type;
   Next next;
   result_type read(char* bytes, size_t count) {
-    return next.read(bytes, count);
+    uint32_t seq;
+    memcpy(&seq, bytes, sizeof(seq));
+    return next.read(bytes + header_size, count - header_size);
   }
-
+  scoped_execution_unit context;
 };
 
 template <class T>
-struct policy_impl : protocol_policy<typename T::type> {
+struct protocol_policy_impl : protocol_policy<typename T::type> {
   T impl;
-  policy_impl() : impl() {
+  protocol_policy_impl() : impl() {
     // nop
   }
 
@@ -179,21 +193,25 @@ struct write_handle {
 
   ~write_handle() {
     protocol->write_header(*buf, header_offset);
-    // TODO: maybe trigger device
+    // TODO: maybe trigger transport policy
   }
 };
 
 template <class Message>
 struct newb {
-  std::unique_ptr<transport_policy> device;
-  std::unique_ptr<protocol_policy<Message>> policy;
+  std::unique_ptr<transport_policy> transport;
+  std::unique_ptr<protocol_policy<Message>> protocol;
+
+  virtual ~newb() {
+    // nop
+  }
 
   write_handle wr_buf() {
-    auto buf = device->wr_buf();
-    auto header_size = policy->offset();
+    auto buf = transport->wr_buf();
+    auto header_size = protocol->offset();
     auto header_offset = buf->size();
     buf->resize(buf->size() + header_size);
-    return {policy.get(), buf, header_offset};
+    return {protocol.get(), buf, header_offset};
   }
 
   void flush() {
@@ -201,15 +219,16 @@ struct newb {
   }
 
   error read_event() {
-    auto maybe_msg = device->read_some(*policy);
+    auto maybe_msg = transport->read_some(*protocol);
     if (!maybe_msg)
       return std::move(maybe_msg.error());
     // TODO: create message on the stack and call message handler
     handle(*maybe_msg);
+    return none;
   }
 
   void write_event() {
-    // device->write_some();
+    // transport->write_some();
   }
 
   virtual void handle(Message& msg) = 0;
@@ -240,16 +259,25 @@ struct newb_acceptor {
 };
 */
 
-// client: sys.middleman().spawn_client<policy>(sock, std::move(transport_policy_impl), my_client);
-// server: sys.middleman().spawn_server<policy>(sock, std::move(accept_policy_impl), my_server);
+// client: sys.middleman().spawn_client<protocol_policy>(sock, std::move(transport_protocol_policy_impl), my_client);
+// server: sys.middleman().spawn_server<protocol_policy>(sock, std::move(accept_protocol_policy_impl), my_server);
+
+
+struct dummy_basp_newb : newb<new_basp_message> {
+  void handle(new_basp_message& received_msg) override {
+    msg = received_msg;
+  }
+  new_basp_message msg;
+};
 
 struct fixture {
-  basp_newb self;
+  dummy_basp_newb self;
 
   fixture() {
-    self.device.reset(new transport_policy);
-    self.policy.reset(new policy_impl<ordering<basp_policy>>);
+    self.transport.reset(new transport_policy);
+    self.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>);
   }
+  scoped_execution_unit context;
 };
 
 } // namespace <anonymous>
@@ -257,6 +285,32 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(protocol_policy_tests, fixture)
 
 CAF_TEST(ordering and basp) {
+  CAF_MESSAGE("create some values for our buffer");
+  ordering_header ohdr{13};
+  basp_header bhdr{41, 43};
+  int payload = 1337;
+  CAF_MESSAGE("copy them into the buffer");
+  auto& buf = self.transport->receive_buffer;
+  // Make sure the buffer is big enough.
+  buf.resize(sizeof(ordering_header)
+              + sizeof(basp_header)
+              + sizeof(payload));
+  // Track an offset for writing.
+  size_t offset = 0;
+  memcpy(buf.data() + offset, &ohdr, sizeof(ordering_header));
+  offset += sizeof(ordering_header);
+  memcpy(buf.data() + offset, &bhdr, sizeof(basp_header));
+  offset += sizeof(basp_header);
+  memcpy(buf.data() + offset, &payload, sizeof(payload));
+  CAF_MESSAGE("trigger a read event");
+  self.read_event();
+  CAF_MESSAGE("check the basp header and payload");
+  CAF_CHECK_EQUAL(self.msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(self.msg.header.to, bhdr.to);
+  CAF_CHECK_EQUAL(self.msg.payload_size, sizeof(payload));
+  int return_payload = 0;
+  memcpy(&return_payload, self.msg.payload, self.msg.payload_size);
+  CAF_CHECK_EQUAL(return_payload, payload);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
