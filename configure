@@ -79,6 +79,11 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --enable-asan               alias for --with-address-sanitier
     --with-gcov                 build with gcov coverage enabled
 
+  Convenience options:
+    --dev-mode                  sets --build-type=debug, --no-examples,
+                                --no-tools, --with-runtime-checks,
+                                --log-level=trace, and --enable-asan
+
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
     CXXFLAGS                    C++ compiler flags
@@ -380,6 +385,14 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_NO_EXAMPLES BOOL yes
             append_cache_entry CAF_NO_OPENCL BOOL yes
             append_cache_entry CAF_NO_OPENSSL BOOL yes
+            ;;
+        --dev-mode)
+            append_cache_entry CMAKE_BUILD_TYPE STRING Debug
+            append_cache_entry CAF_NO_EXAMPLES BOOL yes
+            append_cache_entry CAF_NO_TOOLS BOOL yes
+            append_cache_entry CAF_LOG_LEVEL STRING 4
+            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
+            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
