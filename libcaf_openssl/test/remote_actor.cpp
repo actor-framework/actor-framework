@@ -61,6 +61,39 @@ struct fixture {
   }
 };
 
+class restricted_config : public actor_system_config {
+public:
+  restricted_config() {
+    load<io::middleman>();
+    load<openssl::manager>();
+    add_message_type<std::vector<int>>("std::vector<int>");
+    actor_system_config::parse(test::engine::argc(),
+                               test::engine::argv());
+    // Setting the "max consecutive reads" to 1 is highly likely to cause
+    // OpenSSL to buffer data internally and report "pending" data after a read
+    // operation.  In that case, the multiplexer must somehow be informed that
+    // an additional read is still necessary -- if there's no data left to read
+    // from the raw socket, then that fd isn't going to report read-readiness
+    // and so the data that OpenSSL has buffered may remain there until the
+    // socket has new data available (which depends on peer talkative-ness).
+    // Note this type of situation may still occur with the default settings,
+    // but this is just the easiest way to ensure that code path is tested.
+    set("middleman.max-consecutive-reads", 1);
+  }
+};
+
+struct restricted_fixture {
+  restricted_config server_side_config;
+  actor_system server_side{server_side_config};
+  restricted_config client_side_config;
+  actor_system client_side{client_side_config};
+  restricted_fixture() {
+#ifdef CAF_LINUX
+    signal(SIGPIPE, SIG_IGN);
+#endif
+  }
+};
+
 behavior make_pong_behavior() {
   return {
     [](int val) -> int {
@@ -194,6 +227,22 @@ CAF_TEST(remote_link) {
   CAF_MESSAGE("linker exited");
   self->wait_for(mirror);
   CAF_MESSAGE("mirror exited");
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(restricted_remote_actor_tests, restricted_fixture)
+
+using openssl::remote_actor;
+using openssl::publish;
+
+CAF_TEST(restricted_ping_pong) {
+  // server side
+  CAF_EXP_THROW(port,
+                publish(server_side.spawn(make_pong_behavior), 0, local_host));
+  // client side
+  CAF_EXP_THROW(pong, remote_actor(client_side, local_host, port));
+  client_side.spawn(make_ping_behavior, pong);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
