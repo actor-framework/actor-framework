@@ -59,6 +59,16 @@ CAF_POP_WARNINGS
 
 #endif // CAF_LINUX
 
+#ifdef CAF_WINDOWS
+#include <io.h>
+#define osread _read
+#define oswrite _write
+#else // Linux or macOS
+#include <unistd.h>
+#define osread read
+#define oswrite write
+#endif // CAF_WINDOWS
+
 namespace caf {
 namespace openssl {
 
@@ -79,7 +89,9 @@ session::session(actor_system& sys)
       ctx_(nullptr),
       ssl_(nullptr),
       connecting_(false),
-      accepting_(false) {
+      accepting_(false),
+      had_pending_(false),
+      pipe_fds_(io::network::create_pipe()) {
   // nop
 }
 
@@ -97,6 +109,9 @@ bool session::init() {
 session::~session() {
   SSL_free(ssl_);
   SSL_CTX_free(ctx_);
+  // The scribe's secondary/custom event handler will be in charge of closing
+  // the read-end.
+  close(pipe_fds_.second);
 }
 
 rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
@@ -161,7 +176,21 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
 rw_state session::read_some(size_t& result, native_socket, void* buf,
                             size_t len) {
   CAF_LOG_TRACE(CAF_ARG(len));
-  return do_some(SSL_read, result, buf, len, "read_some");
+  auto rval = do_some(SSL_read, result, buf, len, "read_some");
+  auto pending = SSL_pending(ssl_);
+  char byte = 'x';
+  if (had_pending_) {
+    if (!pending) {
+      had_pending_ = false;
+      while (osread(pipe_fds_.first, &byte, 1) != 1);
+    }
+  } else {
+    if (pending) {
+      had_pending_ = true;
+      while (oswrite(pipe_fds_.second, &byte, 1) != 1);
+    }
+  }
+  return rval;
 }
 
 rw_state session::write_some(size_t& result, native_socket, const void* buf,
@@ -297,6 +326,10 @@ bool session::handle_ssl_result(int ret) {
       CAF_LOG_INFO("SSL call failed:" << get_ssl_error());
       return false;
   }
+}
+
+int session::pending_read_fd() {
+  return pipe_fds_.first;
 }
 
 session_ptr make_session(actor_system& sys, native_socket fd,

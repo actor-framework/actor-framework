@@ -93,18 +93,50 @@ private:
   session_ptr session_;
 };
 
+class pending_handler : public io::network::event_handler {
+public:
+  pending_handler(default_mpx& dm, native_socket fd,
+                  io::network::stream_impl<ssl_policy>& stream)
+      : event_handler(dm, fd), stream_(stream), done_(false) {
+    activate();
+  }
+
+  void handle_event(io::network::operation op) override {
+    CAF_ASSERT(!done_);
+    stream_.handle_event(op);
+  }
+
+  void removed_from_loop(io::network::operation) override {
+    if (done_)
+      delete this;
+  }
+
+  void start() {
+    activate();
+  }
+
+  io::network::stream_impl<ssl_policy>& stream_;
+  bool done_;
+};
+
 class scribe_impl : public io::scribe {
   public:
     scribe_impl(default_mpx& mpx, native_socket sockfd,
-                session_ptr sptr)
+                native_socket pending_fd, session_ptr sptr)
         : scribe(io::network::conn_hdl_from_socket(sockfd)),
           launched_(false),
-          stream_(mpx, sockfd, std::move(sptr)) {
+          stream_(mpx, sockfd, std::move(sptr)),
+          pending_handler_(nullptr),
+          pending_fd_(pending_fd) {
       // nop
     }
 
     ~scribe_impl() {
       CAF_LOG_TRACE("");
+      if (pending_handler_) {
+        pending_handler_->done_ = true;
+        pending_handler_->passivate();
+      }
     }
 
     void configure_read(io::receive_policy::config config) override {
@@ -129,6 +161,11 @@ class scribe_impl : public io::scribe {
 
     void stop_reading() override {
       CAF_LOG_TRACE("");
+      if (pending_handler_) {
+        pending_handler_->done_ = true;
+        pending_handler_->passivate();
+        pending_handler_ = nullptr;
+      }
       stream_.stop_reading();
       detach(&stream_.backend(), false);
     }
@@ -161,21 +198,29 @@ class scribe_impl : public io::scribe {
       // or SSL_accept. Otherwise, the backend simply removes the socket for
       // write operations after the first "nop write".
       stream_.force_empty_write(this);
+      pending_handler_ = new pending_handler(stream_.backend(),
+                                             pending_fd_, stream_);
     }
 
     void add_to_loop() override {
       CAF_LOG_TRACE("");
+      if (pending_handler_)
+        pending_handler_->start();
       stream_.activate(this);
     }
 
     void remove_from_loop() override {
       CAF_LOG_TRACE("");
+      if (pending_handler_)
+        pending_handler_->passivate();
       stream_.passivate();
     }
 
   private:
     bool launched_;
     io::network::stream_impl<ssl_policy> stream_;
+    pending_handler* pending_handler_;
+    int pending_fd_;
 };
 
 class doorman_impl : public io::network::doorman_impl {
@@ -201,7 +246,8 @@ public:
       CAF_LOG_ERROR("Unable to create SSL session for accepted socket");
       return false;
     }
-    auto scrb = make_counted<scribe_impl>(dm, fd, std::move(sssn));
+    auto extrafd = sssn->pending_read_fd();
+    auto scrb = make_counted<scribe_impl>(dm, fd, extrafd, std::move(sssn));
     auto hdl = scrb->hdl();
     parent()->add_scribe(std::move(scrb));
     return doorman::new_connection(&dm, hdl);
@@ -234,7 +280,8 @@ protected:
     }
     CAF_LOG_DEBUG("successfully created an SSL session for:"
                   << CAF_ARG(host) << CAF_ARG(port));
-    return make_counted<scribe_impl>(mpx(), *fd, std::move(sssn));
+    auto extrafd = sssn->pending_read_fd();
+    return make_counted<scribe_impl>(mpx(), *fd, extrafd, std::move(sssn));
   }
 
   expected<io::doorman_ptr> open(uint16_t port, const char* addr,
