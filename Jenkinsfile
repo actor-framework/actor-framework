@@ -82,7 +82,7 @@ buildEnvironments = [
 // Called *after* a build succeeded.
 def coverageReport() {
     dir('caf-sources') {
-        sh 'gcovr -e examples -e tools -e libcaf_test -e ".*/test/.*" -e libcaf_core/caf/scheduler/profiled_coordinator.hpp -x -r .. > coverage.xml'
+        sh 'gcovr -e examples -e tools -e libcaf_test -e ".*/test/.*" -e libcaf_core/caf/scheduler/profiled_coordinator.hpp -x -r . > coverage.xml'
         archiveArtifacts '**/coverage.xml'
         cobertura([
             autoUpdateHealth: false,
