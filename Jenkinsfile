@@ -101,14 +101,16 @@ def coverageReport() {
     }
 }
 
-def cmakeSteps(buildType, cmakeArgs, installDir) {
-    def absInstallDir = pwd() + '/' + installDir
+def cmakeSteps(buildType, cmakeArgs, buildId) {
+    def installDir = "$WORKSPACE/$buildId"
     dir('caf-sources') {
         // Configure and build.
         cmakeBuild([
             buildDir: 'build',
             buildType: buildType,
-            cmakeArgs: "-DCMAKE_INSTALL_PREFIX=\"$absInstallDir\" " + cmakeArgs,
+            cmakeArgs: (cmakeArgs + [
+              "CMAKE_INSTALL_PREFIX=\"$installDir\"",
+            ]).collect { x -> '-D' + x }.join(' '),
             installation: 'cmake in search path',
             sourceDir: '.',
             steps: [[
@@ -127,38 +129,33 @@ def cmakeSteps(buildType, cmakeArgs, installDir) {
     if (PrettyJobBaseName == 'master') {
       zip([
           archive: true,
-          dir: installDir,
-          zipFile: "${installDir}.zip",
+          dir: buildId,
+          zipFile: "${buildId}.zip",
       ])
     }
 }
 
 // Builds `name` with CMake and runs the unit tests.
-def buildSteps(buildType, cmakeArgs, installDir) {
+def buildSteps(buildType, cmakeArgs, buildId) {
     echo "build stage: $STAGE_NAME"
     deleteDir()
-    dir(installDir) {
+    dir(buildId) {
         // Create directory.
     }
     unstash('caf-sources')
     if (STAGE_NAME.contains('Windows')) {
         echo "Windows build on $NODE_NAME"
         withEnv(['PATH=C:\\Windows\\System32;C:\\Program Files\\CMake\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin']) {
-            cmakeSteps(buildType, cmakeArgs, installDir)
+            cmakeSteps(buildType, cmakeArgs, buildId)
         }
     } else {
         echo "Unix build on $NODE_NAME"
         def leakCheck = STAGE_NAME.contains("Linux") && !STAGE_NAME.contains("clang")
         withEnv(["label_exp=" + STAGE_NAME.toLowerCase(),
                  "ASAN_OPTIONS=detect_leaks=" + (leakCheck ? 1 : 0)]) {
-            cmakeSteps(buildType, cmakeArgs, installDir)
+            cmakeSteps(buildType, cmakeArgs, buildId)
         }
     }
-}
-
-// Concatenates CMake flags into a single string.
-def makeFlags(xs) {
-    xs.collect { x -> '-D' + x }.join(' ')
 }
 
 // Builds a stage for given builds. Results in a parallel stage `if builds.size() > 1`.
@@ -171,9 +168,9 @@ def makeBuildStages(matrixIndex, builds, lblExpr, settings) {
                 node(lblExpr) {
                     stage(id) {
                       try {
-                          def installDir = "$lblExpr && $buildType"
+                          def buildId = "$lblExpr && $buildType"
                           withEnv(buildEnvironments[lblExpr] ?: []) {
-                              buildSteps(buildType, makeFlags(settings['cmakeArgs']), installDir)
+                              buildSteps(buildType, settings['cmakeArgs'], buildId)
                               (settings['extraSteps'] ?: []).each { fun -> "$fun"() }
                           }
                       } finally {
