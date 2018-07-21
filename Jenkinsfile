@@ -123,11 +123,14 @@ def cmakeSteps(buildType, cmakeArgs, installDir) {
             workingDir: 'build',
         ])
     }
-    zip([
-        archive: true,
-        dir: installDir,
-        zipFile: "${installDir}.zip",
-    ])
+    // Only generate artifacts for the master branch.
+    if (PrettyJobBaseName == 'master') {
+      zip([
+          archive: true,
+          dir: installDir,
+          zipFile: "${installDir}.zip",
+      ])
+    }
 }
 
 // Builds `name` with CMake and runs the unit tests.
@@ -188,9 +191,11 @@ pipeline {
     environment {
         LD_LIBRARY_PATH = "$WORKSPACE/caf-sources/build/lib"
         DYLD_LIBRARY_PATH = "$WORKSPACE/caf-sources/build/lib"
+        PrettyJobBaseName = env.JOB_BASE_NAME.replace('%2F', '/')
+        PrettyJobName = "CAF build #${env.BUILD_NUMBER} for $PrettyJobBaseName"
     }
     stages {
-        stage ('Git Checkout') {
+        stage('Git Checkout') {
             agent { label 'master' }
             steps {
                 deleteDir()
@@ -224,18 +229,18 @@ pipeline {
     post {
         success {
             emailext(
-                subject: "✅ CAF build #${env.BUILD_NUMBER} succeeded for job ${env.JOB_NAME}",
+                subject: "✅ $PrettyJobName succeeded",
                 recipientProviders: [culprits(), developers(), requestor(), upstreamDevelopers()],
                 body: "Check console output at ${env.BUILD_URL}.",
             )
         }
         failure {
             emailext(
-                subject: "⛔️ CAF build #${env.BUILD_NUMBER} failed for job ${env.JOB_NAME}",
+                subject: "⛔️ $PrettyJobName failed",
                 attachLog: true,
                 compressLog: true,
                 recipientProviders: [culprits(), developers(), requestor(), upstreamDevelopers()],
-                body: "Check console output at ${env.BUILD_URL} or see attached log.",
+                body: "Check console output at ${env.BUILD_URL} or see attached log.\n",
             )
         }
     }
