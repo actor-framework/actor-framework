@@ -38,7 +38,7 @@ buildMatrix = [
     // testing outside Jenkins, so we also explicitly schedule debug builds.
     ['Linux', [
         builds: ['release'],
-        tools: ['gcc', 'clang'],
+        tools: ['gcc8', 'clang'],
         cmakeArgs: releaseBuildFlags,
     ]],
     ['macOS', [
