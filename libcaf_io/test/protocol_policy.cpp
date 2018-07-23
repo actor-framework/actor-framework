@@ -391,14 +391,16 @@ struct newb_acceptor {
 // -- test classes -------------------------------------------------------------
 
 struct dummy_basp_newb : newb<new_basp_message> {
+  std::vector<caf::message> timeout_messages;
+  std::vector<new_basp_message> messages;
+
   void handle(new_basp_message& received_msg) override {
-    msg = received_msg;
+    messages.push_back(received_msg);
   }
+
   void set_timeout_impl(caf::message msg) override {
     timeout_messages.emplace_back(std::move(msg));
   }
-  std::vector<caf::message> timeout_messages;
-  new_basp_message msg;
 };
 
 struct fixture {
@@ -416,13 +418,6 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(protocol_policy_tests, fixture)
 
 CAF_TEST(ordering and basp read event) {
-  // Read process:
-  //  - read event happens
-  //  - read_event() called on newb
-  //  - read_some(protocol&) called on transport policy
-  //  - transport policies reads from network layer
-  //  - calls read on protocol policy
-  //  - the basp policy fills the expected result message with data
   CAF_MESSAGE("create some values for our buffer");
   ordering_header ohdr{0};
   basp_header bhdr{13, 42};
@@ -444,25 +439,19 @@ CAF_TEST(ordering and basp read event) {
   auto err = self.read_event();
   CAF_REQUIRE(!err);
   CAF_MESSAGE("check the basp header and payload");
-  CAF_CHECK_EQUAL(self.msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(self.msg.header.to, bhdr.to);
-  CAF_CHECK_EQUAL(self.msg.payload_size, sizeof(payload));
+  auto& msg = self.messages.front();
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
   int return_payload = 0;
-  memcpy(&return_payload, self.msg.payload, self.msg.payload_size);
+  memcpy(&return_payload, msg.payload, msg.payload_size);
   CAF_CHECK_EQUAL(return_payload, payload);
 }
 
 CAF_TEST(ordering and basp read event with timeout) {
-  // Read process:
-  //  - read event happens
-  //  - read_event() called on newb
-  //  - read_some(protocol&) called on transport policy
-  //  - transport policies reads from network layer
-  //  - calls read on protocol policy
-  //  - the ordering policy sets a timeout
-  //  -
   CAF_MESSAGE("create some values for our buffer");
-  // Should be an unexpected sequence number and lead to an error.
+  // Should be an unexpected sequence number and lead to an error. Since
+  // we start with 0, the 1 below should be out of order.
   ordering_header ohdr{1};
   basp_header bhdr{13, 42};
   int payload = 1337;
@@ -495,12 +484,87 @@ CAF_TEST(ordering and basp read event with timeout) {
   err = self.timeout_event(timeout_msg);
   CAF_REQUIRE(!err);
   CAF_MESSAGE("check delivered message");
-  CAF_CHECK_EQUAL(self.msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(self.msg.header.to, bhdr.to);
-  CAF_CHECK_EQUAL(self.msg.payload_size, sizeof(payload));
+  auto& msg = self.messages.front();
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
   int return_payload = 0;
-  memcpy(&return_payload, self.msg.payload, self.msg.payload_size);
+  memcpy(&return_payload, msg.payload, msg.payload_size);
   CAF_CHECK_EQUAL(return_payload, payload);
+}
+
+CAF_TEST(ordering and basp multiple messages) {
+  // Should enqueue the first message out of order as above, followed by the
+  // missing message. The result should be both messages in the receive buffer
+  // in the right order.
+  // The problem is that our API cannot currently express that. Simply returning
+  // a vector of `new_basp_message` objects doesn't work as the objects just
+  // include a pointer to the buffer. This makes sense as we want to avoid
+  // copying everything around. It would be much easier to just call `handle`
+  // on the newb since we already have the reference and so on ...
+  CAF_MESSAGE("create data for two messges");
+  // Message one.
+  ordering_header ohdr_first{0};
+  basp_header bhdr_first{10, 11};
+  int payload_first = 100;
+  // Message two.
+  ordering_header ohdr_second{1};
+  basp_header bhdr_second{12, 13};
+  int payload_second = 101;
+  auto& buf = self.transport->receive_buffer;
+  // Make sure the buffer is big enough.
+  buf.resize(sizeof(ordering_header)
+              + sizeof(basp_header)
+              + sizeof(payload_first));
+  CAF_MESSAGE("create event for the second message first");
+  // Track an offset for writing.
+  size_t offset = 0;
+  memcpy(buf.data() + offset, &ohdr_second, sizeof(ordering_header));
+  offset += sizeof(ordering_header);
+  memcpy(buf.data() + offset, &bhdr_second, sizeof(basp_header));
+  offset += sizeof(basp_header);
+  memcpy(buf.data() + offset, &payload_second, sizeof(payload_second));
+  CAF_MESSAGE("trigger a read event, expecting an error");
+  auto err = self.read_event();
+  CAF_REQUIRE(err);
+  CAF_MESSAGE("check if we have a pending timeout now");
+  CAF_REQUIRE(!self.timeout_messages.empty());
+  auto& timeout_msg = self.timeout_messages.back();
+  auto expected_timeout = false;
+  timeout_msg.apply([&](ordering_atom, uint32_t seq) {
+    if (seq == ohdr_second.seq_nr)
+      expected_timeout = true;
+  });
+  CAF_REQUIRE(expected_timeout);
+  CAF_MESSAGE("create event for the first message");
+  // Track an offset for writing.
+  offset = 0;
+  memcpy(buf.data() + offset, &ohdr_first, sizeof(ordering_header));
+  offset += sizeof(ordering_header);
+  memcpy(buf.data() + offset, &bhdr_first, sizeof(basp_header));
+  offset += sizeof(basp_header);
+  memcpy(buf.data() + offset, &payload_first, sizeof(payload_first));
+  CAF_MESSAGE("trigger a read event, expecting an error");
+  err = self.read_event();
+  CAF_REQUIRE(!err);
+  CAF_CHECK(self.messages.size() == 2);
+  CAF_MESSAGE("check handled messages");
+  // Message one
+  auto& msg = self.messages.front();
+  CAF_CHECK_EQUAL(msg.header.from, bhdr_first.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr_first.to);
+  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload_first));
+  int return_payload = 0;
+  memcpy(&return_payload, msg.payload, msg.payload_size);
+  CAF_CHECK_EQUAL(return_payload, payload_first);
+  // Message two
+  msg = self.messages.back();
+  CAF_CHECK_EQUAL(msg.header.from, bhdr_second.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr_second.to);
+  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload_second));
+  return_payload = 0;
+  memcpy(&return_payload, msg.payload, msg.payload_size);
+  CAF_CHECK_EQUAL(return_payload, payload_second);
 }
 
 CAF_TEST(ordering and basp write buf) {
@@ -531,11 +595,12 @@ CAF_TEST(ordering and basp write buf) {
   auto err = self.read_event();
   CAF_REQUIRE(!err);
   CAF_MESSAGE("check the basp header and payload");
-  CAF_CHECK_EQUAL(self.msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(self.msg.header.to, bhdr.to);
-  CAF_CHECK_EQUAL(self.msg.payload_size, sizeof(payload));
+  auto& msg = self.messages.front();
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
   int return_payload = 0;
-  memcpy(&return_payload, self.msg.payload, self.msg.payload_size);
+  memcpy(&return_payload, msg.payload, msg.payload_size);
   CAF_CHECK_EQUAL(return_payload, payload);
 }
 
