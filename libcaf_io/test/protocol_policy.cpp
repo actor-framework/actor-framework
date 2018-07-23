@@ -26,6 +26,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/abstract_actor.hpp"
+#include "caf/callback.hpp"
 #include "caf/config.hpp"
 
 #include "caf/io/network/native_socket.hpp"
@@ -60,6 +61,7 @@ using ordering_atom = atom_constant<atom("ordering")>;
 // -- aliases ------------------------------------------------------------------
 
 using byte_buffer = network::receive_buffer;
+using header_writer = caf::callback<byte_buffer&>;
 
 // -- dummy headers ------------------------------------------------------------
 
@@ -91,8 +93,8 @@ struct transport_policy {
     return none;
   }
 
-  byte_buffer* wr_buf() {
-    return &send_buffer;
+  byte_buffer& wr_buf() {
+    return send_buffer;
   }
 
 
@@ -133,7 +135,7 @@ struct protocol_policy_base {
     // nop
   }
 
-  virtual void write_header(byte_buffer& buf, size_t offset) = 0;
+//  virtual void write_header(byte_buffer& buf, size_t offset) = 0;
 
   virtual size_t offset() const noexcept = 0;
 };
@@ -148,23 +150,24 @@ struct protocol_policy : protocol_policy_base {
 
   virtual optional<T> timeout(newb<T>* parent, caf::message& msg) = 0;
 
-  void write_header(byte_buffer&, size_t) override {
-    // nop
-  }
-
+  /// TODO: Come up with something better than a write here?
+  /// Write header into buffer. Use push back to append only.
+  virtual size_t write_header(byte_buffer&, header_writer*) = 0;
 };
 
 template <class T>
 using protocol_policy_ptr = std::unique_ptr<protocol_policy<T>>;
 
+/// @relates protocol_policy
+/// Protocol policy layer for the BASP application protocol.
 struct basp_policy {
   static constexpr size_t header_size = sizeof(basp_header);
   static constexpr size_t offset = header_size;
-  using type = new_basp_message;
+  using message_type = new_basp_message;
   using result_type = optional<new_basp_message>;
   //newb<type>* parent;
 
-  result_type read(newb<type>*, char* bytes, size_t count) {
+  result_type read(newb<message_type>*, char* bytes, size_t count) {
     new_basp_message msg;
     memcpy(&msg.header.from, bytes, sizeof(msg.header.from));
     memcpy(&msg.header.to, bytes + sizeof(msg.header.from), sizeof(msg.header.to));
@@ -173,28 +176,37 @@ struct basp_policy {
     return msg;
   }
 
-  result_type timeout(newb<type>*, caf::message&) {
+  result_type timeout(newb<message_type>*, caf::message&) {
     return none;
+  }
+
+  size_t write_header(byte_buffer& buf, size_t offset, header_writer* hw) {
+    CAF_ASSERT(hw != nullptr);
+    (*hw)(buf);
+    return offset + header_size;
   }
 };
 
+/// @relates protocol_policy
+/// Protocol policy layer for ordering.
 template <class Next>
 struct ordering {
   static constexpr size_t header_size = sizeof(ordering_header);
   static constexpr size_t offset = Next::offset + header_size;
-  using type = typename Next::type;
+  using message_type = typename Next::message_type;
   using result_type = typename Next::result_type;
-  uint32_t next_seq = 0;
+  uint32_t next_seq_read = 0;
+  uint32_t next_seq_write = 0;
   Next next;
   std::unordered_map<uint32_t, std::vector<char>> pending;
 
-  result_type read(newb<type>* parent, char* bytes, size_t count) {
+  result_type read(newb<message_type>* parent, char* bytes, size_t count) {
     // TODO: What to do if we want to deliver multiple messages? For
     //       example when our buffer a missing message arrives and we
     //       can just deliver everything in our buffer?
     uint32_t seq;
     memcpy(&seq, bytes, sizeof(seq));
-    if (seq != next_seq) {
+    if (seq != next_seq_read) {
       CAF_MESSAGE("adding message to pending ");
       // TODO: Only works if we have datagrams.
       pending[seq] = std::vector<char>(bytes + header_size, bytes + count);
@@ -202,11 +214,11 @@ struct ordering {
                           caf::make_message(ordering_atom::value, seq));
       return none;
     }
-    next_seq++;
+    next_seq_read++;
     return next.read(parent, bytes + header_size, count - header_size);
   }
 
-  result_type timeout(newb<type>* parent, caf::message& msg) {
+  result_type timeout(newb<message_type>* parent, caf::message& msg) {
     // TODO: Same as above.
     auto matched = false;
     result_type was_pending = none;
@@ -221,18 +233,26 @@ struct ordering {
     if (matched)
       return was_pending;
     return next.timeout(parent, msg);
+  }
 
+  size_t write_header(byte_buffer& buf, size_t offset, header_writer* hw) {
+    std::array<char, sizeof (next_seq_write)> tmp;
+    memcpy(tmp.data(), &next_seq_write, sizeof(next_seq_write));
+    next_seq_write += 1;
+    for (auto& c : tmp)
+      buf.push_back(c);
+    return next.write_header(buf, offset + header_size, hw);
   }
 };
 
 template <class T>
-struct protocol_policy_impl : protocol_policy<typename T::type> {
+struct protocol_policy_impl : protocol_policy<typename T::message_type> {
   T impl;
   protocol_policy_impl() : impl() {
     // nop
   }
 
-  typename T::result_type read(newb<typename T::type>* parent, char* bytes,
+  typename T::result_type read(newb<typename T::message_type>* parent, char* bytes,
                                size_t count) override {
     return impl.read(parent, bytes, count);
   }
@@ -241,24 +261,31 @@ struct protocol_policy_impl : protocol_policy<typename T::type> {
     return T::offset;
   }
 
-  typename T::result_type timeout(newb<typename T::type>* parent,
+  typename T::result_type timeout(newb<typename T::message_type>* parent,
                                   caf::message& msg) override {
     return impl.timeout(parent, msg);
+  }
+
+  size_t write_header(byte_buffer& buf, header_writer* hw) override {
+    return impl.write_header(buf, 0, hw);
   }
 };
 
 // -- new broker classes -------------------------------------------------------
 
-/// Returned by funtion wr_buf
+/// @relates newb
+/// Returned by funtion wr_buf of newb.
 struct write_handle {
   protocol_policy_base* protocol;
   byte_buffer* buf;
   size_t header_offset;
 
+  /*
   ~write_handle() {
-    protocol->write_header(*buf, header_offset);
-    // TODO: maybe trigger transport policy
+    // TODO: maybe trigger transport policy for ... what again?
+    // Can we calculate added bytes for datagram things?
   }
+  */
 };
 
 template <class Message>
@@ -270,12 +297,19 @@ struct newb {
     // nop
   }
 
-  write_handle wr_buf() {
-    auto buf = transport->wr_buf();
-    auto header_size = protocol->offset();
-    auto header_offset = buf->size();
-    buf->resize(buf->size() + header_size);
-    return {protocol.get(), buf, header_offset};
+  write_handle wr_buf(header_writer* hw) {
+    // Write the buffer fist. That allows variable sized headers and
+    // should be straight forward. The arguments can be consumed by
+    // the protocol policy layers to write their header such as the
+    // information required to write the BASP header.
+    // - get the write buffer from the transport layer
+    // - let the protocol policies write their headers
+    // - return a
+    // TODO: We somehow need to tell the transport policy how much we've
+    // written to enable it to split the buffer into datagrams.
+    auto& buf = transport->wr_buf();
+    auto header_offset = protocol->write_header(buf, hw);
+    return {protocol.get(), &buf, header_offset};
   }
 
   // Send
@@ -469,8 +503,40 @@ CAF_TEST(ordering and basp read event with timeout) {
   CAF_CHECK_EQUAL(return_payload, payload);
 }
 
-CAF_TEST(ordering and basp write event) {
-  CAF_MESSAGE("Not implemented");
+CAF_TEST(ordering and basp write buf) {
+  basp_header bhdr{13, 42};
+  int payload = 1337;
+  CAF_MESSAGE("create a callback to write the BASP header");
+  auto hw = caf::make_callback([&](byte_buffer& buf) -> error {
+    std::array<char, sizeof (bhdr)> tmp;
+    memcpy(tmp.data(), &bhdr.from, sizeof(bhdr.from));
+    memcpy(tmp.data() + sizeof(bhdr.from), &bhdr.to, sizeof(bhdr.to));
+    for (char& c : tmp)
+      buf.push_back(c);
+    return none;
+  });
+  CAF_MESSAGE("get a write buffer");
+  auto whdl = self.wr_buf(&hw);
+  CAF_REQUIRE(whdl.buf != nullptr);
+  CAF_REQUIRE(whdl.header_offset == sizeof(basp_header) + sizeof(ordering_header));
+  CAF_REQUIRE(whdl.protocol != nullptr);
+  CAF_MESSAGE("write the payload");
+  std::array<char, sizeof(payload)> tmp;
+  memcpy(tmp.data(), &payload, sizeof(payload));
+  for (auto c : tmp)
+    whdl.buf->push_back(c);
+  CAF_MESSAGE("swap send and receive buffer of the payload");
+  std::swap(self.transport->receive_buffer, self.transport->send_buffer);
+  CAF_MESSAGE("trigger a read event");
+  auto err = self.read_event();
+  CAF_REQUIRE(!err);
+  CAF_MESSAGE("check the basp header and payload");
+  CAF_CHECK_EQUAL(self.msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(self.msg.header.to, bhdr.to);
+  CAF_CHECK_EQUAL(self.msg.payload_size, sizeof(payload));
+  int return_payload = 0;
+  memcpy(&return_payload, self.msg.payload, self.msg.payload_size);
+  CAF_CHECK_EQUAL(return_payload, payload);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
