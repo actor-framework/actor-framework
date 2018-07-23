@@ -137,7 +137,7 @@ public:
   // -- overridden modifiers of abstract_actor ---------------------------------
 
   void enqueue(mailbox_element_ptr ptr, execution_unit*) override {
-    CAF_PUSH_AID(id());
+    CAF_PUSH_AID(this->id());
     scheduled_actor::enqueue(std::move(ptr), &backend());
   }
 
@@ -168,7 +168,7 @@ public:
     init_newb();
     auto bhvr = make_behavior();
     CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                             << CAF_ARG(has_behavior()));
+                             << CAF_ARG(this->has_behavior()));
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
