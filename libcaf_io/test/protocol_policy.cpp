@@ -98,11 +98,11 @@ struct transport_policy {
   }
 
   template <class T>
-  error read_some(newb<T>* parent, protocol_policy<T>& policy) {
+  error read_some(protocol_policy<T>& policy) {
     auto err = read_some();
     if (err)
       return err;
-    return policy.read(parent, receive_buffer.data(), receive_buffer.size());
+    return policy.read(receive_buffer.data(), receive_buffer.size());
   }
 
   virtual error read_some() {
@@ -125,6 +125,18 @@ struct accept_policy {
   virtual void init(newb_base&) = 0;
 };
 
+struct accept_policy_impl : accept_policy {
+  std::pair<native_socket, transport_policy_ptr> accept() override {
+    native_socket sock{13337};
+    transport_policy_ptr ptr{new transport_policy};
+    return {sock, std::move(ptr)};
+  }
+
+  void init(newb_base&) override {
+    // nop
+  }
+};
+
 // -- protocol policies --------------------------------------------------------
 
 struct protocol_policy_base {
@@ -139,13 +151,14 @@ struct protocol_policy_base {
 
 template <class T>
 struct protocol_policy : protocol_policy_base {
+  using message_type = T;
   virtual ~protocol_policy() override {
     // nop
   }
 
-  virtual error read(newb<T>* parent, char* bytes, size_t count) = 0;
+  virtual error read(char* bytes, size_t count) = 0;
 
-  virtual error timeout(newb<T>* parent, caf::message& msg) = 0;
+  virtual error timeout(caf::message& msg) = 0;
 
   /// TODO: Come up with something better than a write here?
   /// Write header into buffer. Use push back to append only.
@@ -158,22 +171,21 @@ using protocol_policy_ptr = std::unique_ptr<protocol_policy<T>>;
 template <class T>
 struct protocol_policy_impl : protocol_policy<typename T::message_type> {
   T impl;
-  protocol_policy_impl() : impl() {
+
+  protocol_policy_impl(newb<typename T::message_type>* parent) : impl(parent) {
     // nop
   }
 
-  error read(newb<typename T::message_type>* parent, char* bytes,
-                               size_t count) override {
-    return impl.read(parent, bytes, count);
+  error read(char* bytes, size_t count) override {
+    return impl.read(bytes, count);
   }
 
   size_t offset() const noexcept override {
     return T::offset;
   }
 
-  error timeout(newb<typename T::message_type>* parent,
-                caf::message& msg) override {
-    return impl.timeout(parent, msg);
+  error timeout(caf::message& msg) override {
+    return impl.timeout(msg);
   }
 
   size_t write_header(byte_buffer& buf, header_writer* hw) override {
@@ -203,6 +215,9 @@ struct newb {
   std::unique_ptr<transport_policy> transport;
   std::unique_ptr<protocol_policy<Message>> protocol;
 
+  newb() = default;
+  newb(newb<Message>&&) = default;
+
   virtual ~newb() {
     // nop
   }
@@ -221,7 +236,7 @@ struct newb {
   }
 
   error read_event() {
-    return transport->read_some(this, *protocol);
+    return transport->read_some(*protocol);
   }
 
   void write_event() {
@@ -238,7 +253,7 @@ struct newb {
 
   // Called on self when a timeout is received.
   error timeout_event(caf::message& msg) {
-    return protocol->timeout(this, msg);
+    return protocol->timeout(msg);
   }
 
   // Allow protocol policies to enqueue a data for sending.
@@ -255,6 +270,22 @@ struct basp_newb : newb<new_basp_message> {
   void handle(new_basp_message&) override {
     // nop
   }
+};
+
+template <class ProtocolPolicy>
+struct newb_acceptor {
+  std::unique_ptr<accept_policy> acceptor;
+
+  error read_event() {
+    CAF_MESSAGE("read event on newb acceptor");
+    auto res = acceptor->accept();
+    native_socket sock{res.first};
+    transport_policy_ptr transport{std::move(res.second)};
+//    std::tie(sock, transport) = acceptor->accept();;
+    return create_newb(sock, std::move(transport));
+  }
+
+  virtual error create_newb(native_socket sock, transport_policy_ptr pol) = 0;
 };
 
 /*
@@ -290,9 +321,13 @@ struct basp_policy {
   static constexpr size_t offset = header_size;
   using message_type = new_basp_message;
   using result_type = optional<new_basp_message>;
-  //newb<type>* parent;
+  newb<message_type>* parent;
 
-  error read(newb<message_type>* parent, char* bytes, size_t count) {
+  basp_policy(newb<message_type>* parent) : parent(parent) {
+    // nop
+  }
+
+  error read(char* bytes, size_t count) {
     new_basp_message msg;
     memcpy(&msg.header.from, bytes, sizeof(msg.header.from));
     memcpy(&msg.header.to, bytes + sizeof(msg.header.from), sizeof(msg.header.to));
@@ -303,7 +338,7 @@ struct basp_policy {
     return none;
   }
 
-  error timeout(newb<message_type>*, caf::message&) {
+  error timeout(caf::message&) {
     return none;
   }
 
@@ -324,15 +359,20 @@ struct ordering {
   using result_type = typename Next::result_type;
   uint32_t seq_read = 0;
   uint32_t seq_write = 0;
+  newb<message_type>* parent;
   Next next;
   std::unordered_map<uint32_t, std::vector<char>> pending;
 
-  error deliver_pending(newb<message_type>* parent) {
+  ordering(newb<message_type>* parent) : parent(parent), next(parent) {
+    // nop
+  }
+
+  error deliver_pending() {
     if (pending.empty())
       return none;
     while (pending.count(seq_read) > 0) {
       auto& buf = pending[seq_read];
-      auto res = next.read(parent, buf.data(), buf.size());
+      auto res = next.read(buf.data(), buf.size());
       pending.erase(seq_read);
       if (res)
         return res;
@@ -340,28 +380,27 @@ struct ordering {
     return none;
   }
 
-  error read(newb<message_type>* parent, char* bytes, size_t count) {
+  error read(char* bytes, size_t count) {
     uint32_t seq;
     memcpy(&seq, bytes, sizeof(seq));
     // TODO: Use the comparison function from BASP instance.
     if (seq == seq_read) {
       seq_read += 1;
-      auto res = next.read(parent, bytes + header_size, count - header_size);
+      auto res = next.read(bytes + header_size, count - header_size);
       if (res)
         return res;
-      return deliver_pending(parent);
+      return deliver_pending();
     } else if (seq > seq_read) {
       pending[seq] = std::vector<char>(bytes + header_size, bytes + count);
       parent->set_timeout(std::chrono::seconds(2),
                           caf::make_message(ordering_atom::value, seq));
-      // TODO: Should this return an error?
       return none;
     }
     // Is late, drop it. TODO: Should this return an error?
     return none;
   }
 
-  error timeout(newb<message_type>* parent, caf::message& msg) {
+  error timeout(caf::message& msg) {
     // TODO: Can't we just set the seq_read to the sequence number and call
     //       deliver messages?
     error err = none;
@@ -369,13 +408,13 @@ struct ordering {
       if (pending.count(seq) > 0) {
         CAF_MESSAGE("found pending message");
         auto& buf = pending[seq];
-        err = next.read(parent, buf.data(), buf.size());
+        err = next.read(buf.data(), buf.size());
         seq_read = seq + 1;
       }
     });
     if (err)
       return err;
-    return deliver_pending(parent);
+    return deliver_pending();
   }
 
   size_t write_header(byte_buffer& buf, size_t offset, header_writer* hw) {
@@ -405,12 +444,25 @@ struct dummy_basp_newb : newb<new_basp_message> {
   }
 };
 
+template <class ProtocolPolicy>
+struct dummy_basp_newb_acceptor : newb_acceptor<ProtocolPolicy> {
+  std::vector<dummy_basp_newb> spawned;
+
+  error create_newb(native_socket, transport_policy_ptr pol) override {
+    spawned.emplace_back();
+    auto& n = spawned.back();
+    n.transport.reset(pol.release());
+    n.protocol.reset( new ProtocolPolicy(&n));
+    return none;
+  }
+};
+
 struct datagram_fixture {
   dummy_basp_newb self;
 
   datagram_fixture() {
     self.transport.reset(new transport_policy);
-    self.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>);
+    self.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>(&self));
   }
   scoped_execution_unit context;
 };
@@ -420,9 +472,17 @@ struct stream_fixture {
 
   stream_fixture() {
     self.transport.reset(new transport_policy);
-    self.protocol.reset(new protocol_policy_impl<basp_policy>);
+    self.protocol.reset(new protocol_policy_impl<basp_policy>(&self));
   }
   scoped_execution_unit context;
+};
+
+struct acceptor_fixture {
+  dummy_basp_newb_acceptor<protocol_policy_impl<ordering<basp_policy>>> self;
+
+  acceptor_fixture() {
+    self.acceptor.reset(new accept_policy_impl);
+  }
 };
 
 } // namespace <anonymous>
@@ -629,7 +689,7 @@ CAF_TEST(slicing and basp) {
 
 CAF_TEST_FIXTURE_SCOPE_END()
 
-CAF_TEST_FIXTURE_SCOPE(more_protocol_policy_tests, stream_fixture)
+CAF_TEST_FIXTURE_SCOPE(stream_policy_tests, stream_fixture)
 
 CAF_TEST(basp and streaming) {
   // TODO: As far as I can tell atm, we would need to reimplement the BASP
@@ -640,6 +700,47 @@ CAF_TEST(basp and streaming) {
   //  payload of the expected size. Or something like that.
   //  Easiest way is to implement BASP twice.
   CAF_MESSAGE("not implemented");
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(acceptor_policy_tests, acceptor_fixture)
+
+CAF_TEST(ordering and basp acceptor) {
+  CAF_MESSAGE("trigger read event on acceptor");
+  self.read_event();
+  CAF_MESSAGE("test if accept was successful");
+  // TODO: implement init to initialize the newb?
+  CAF_CHECK(!self.spawned.empty());
+  auto& bn = self.spawned.front();
+  CAF_MESSAGE("create some values for the newb");
+  ordering_header ohdr{0};
+  basp_header bhdr{13, 42};
+  int payload = 1337;
+  CAF_MESSAGE("copy them into the buffer");
+  auto& buf = bn.transport->receive_buffer;
+  // Make sure the buffer is big enough.
+  buf.resize(sizeof(ordering_header)
+              + sizeof(basp_header)
+              + sizeof(payload));
+  // Track an offset for writing.
+  size_t offset = 0;
+  memcpy(buf.data() + offset, &ohdr, sizeof(ordering_header));
+  offset += sizeof(ordering_header);
+  memcpy(buf.data() + offset, &bhdr, sizeof(basp_header));
+  offset += sizeof(basp_header);
+  memcpy(buf.data() + offset, &payload, sizeof(payload));
+  CAF_MESSAGE("trigger a read event");
+  auto err = bn.read_event();
+  CAF_REQUIRE(!err);
+  CAF_MESSAGE("check the basp header and payload");
+  auto& msg = bn.messages.front().first;
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
+  int return_payload = 0;
+  memcpy(&return_payload, msg.payload, msg.payload_size);
+  CAF_CHECK_EQUAL(return_payload, payload);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
