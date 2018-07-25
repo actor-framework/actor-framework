@@ -22,18 +22,25 @@
 
 #include <cstdint>
 #include <cstring>
+#include <tuple>
 
 #include "caf/test/dsl.hpp"
 
-#include "caf/abstract_actor.hpp"
 #include "caf/callback.hpp"
 #include "caf/config.hpp"
+#include "caf/scheduled_actor.hpp"
 
+#include "caf/io/middleman.hpp"
+
+#include "caf/io/network/event_handler.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/native_socket.hpp"
-// TODO: {receive_buffer => byte_buffer} (and use `byte` instead of `char`)
-#include "caf/io/network/receive_buffer.hpp"
 
 #include "caf/detail/enum_to_string.hpp"
+
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/behavior_changer.hpp"
 
 using namespace caf;
 using namespace caf::io;
@@ -54,13 +61,29 @@ struct protocol_policy;
 template <class T>
 struct newb;
 
+} // namespace <anonymous>
+
+namespace caf {
+
+template <class T>
+class behavior_type_of<newb<T>> {
+public:
+  using type = behavior;
+};
+
+} // namespace caf
+
+namespace {
+
 // -- atoms --------------------------------------------------------------------
 
+using expect_atom = atom_constant<atom("expect")>;
 using ordering_atom = atom_constant<atom("ordering")>;
+using send_atom = atom_constant<atom("send")>;
 
 // -- aliases ------------------------------------------------------------------
 
-using byte_buffer = network::receive_buffer;
+using byte_buffer = std::vector<char>;
 using header_writer = caf::callback<byte_buffer&>;
 
 // -- dummy headers ------------------------------------------------------------
@@ -70,17 +93,39 @@ struct basp_header {
   actor_id to;
 };
 
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& fun, basp_header& hdr) {
+  return fun(meta::type_name("basp_header"), hdr.from, hdr.to);
+}
+
 struct ordering_header {
   uint32_t seq_nr;
 };
+
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& fun, ordering_header& hdr) {
+  return fun(meta::type_name("ordering_header"), hdr.seq_nr);
+}
 
 // -- message types ------------------------------------------------------------
 
 struct new_basp_message {
   basp_header header;
-  const char* payload;
+  // TODO: should be const, but binary deserializer doesn't like that.
+  char* payload;
   size_t payload_size;
 };
+
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, new_basp_message& x) {
+  return f(meta::type_name("new_basp_message"), x.header);
+}
+
+} // namespace anonymous
+
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(new_basp_message);
+
+namespace {
 
 // -- transport policy ---------------------------------------------------------
 
@@ -158,7 +203,7 @@ struct protocol_policy : protocol_policy_base {
 
   virtual error read(char* bytes, size_t count) = 0;
 
-  virtual error timeout(caf::message& msg) = 0;
+  virtual error timeout(atom_value, uint32_t) = 0;
 
   /// TODO: Come up with something better than a write here?
   /// Write header into buffer. Use push back to append only.
@@ -184,8 +229,8 @@ struct protocol_policy_impl : protocol_policy<typename T::message_type> {
     return T::offset;
   }
 
-  error timeout(caf::message& msg) override {
-    return impl.timeout(msg);
+  error timeout(atom_value atm, uint32_t id) override {
+    return impl.timeout(atm, id);
   }
 
   size_t write_header(byte_buffer& buf, header_writer* hw) override {
@@ -211,16 +256,116 @@ struct write_handle {
 };
 
 template <class Message>
-struct newb {
-  std::unique_ptr<transport_policy> transport;
-  std::unique_ptr<protocol_policy<Message>> protocol;
+struct newb : public extend<scheduled_actor, newb<Message>>::template
+                     with<mixin::sender, mixin::requester,
+                          mixin::behavior_changer>,
+              public dynamically_typed_actor_base,
+              public network::event_handler {
+  using super = typename extend<scheduled_actor, newb<Message>>::
+    template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
+
+  using signatures = none_t;
+
+  // -- constructors and destructors -------------------------------------------
+
+  newb(actor_config& cfg, io::network::default_multiplexer& dm, native_socket sockfd)
+      : super(cfg),
+        event_handler(dm, sockfd) {
+    // nop
+  }
 
   newb() = default;
   newb(newb<Message>&&) = default;
 
-  virtual ~newb() {
+  ~newb() override {
     // nop
   }
+
+  // -- overridden modifiers of abstract_actor ---------------------------------
+
+  void enqueue(mailbox_element_ptr ptr, execution_unit*) override {
+    CAF_PUSH_AID(this->id());
+    scheduled_actor::enqueue(std::move(ptr), &backend());
+  }
+
+  void enqueue(strong_actor_ptr src, message_id mid, message msg,
+               execution_unit*) override {
+    enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
+            &backend());
+  }
+
+  resumable::subtype_t subtype() const override {
+    return resumable::io_actor;
+  }
+
+  // -- overridden modifiers of local_actor ------------------------------------
+
+  void launch(execution_unit* eu, bool lazy, bool hide) override {
+    CAF_PUSH_AID_FROM_PTR(this);
+    CAF_ASSERT(eu != nullptr);
+    CAF_ASSERT(eu == &backend());
+    CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
+    // add implicit reference count held by middleman/multiplexer
+    if (!hide)
+      super::register_at_system();
+    if (lazy && super::mailbox().try_block())
+      return;
+    intrusive_ptr_add_ref(super::ctrl());
+    eu->exec_later(this);
+  }
+
+  void initialize() override {
+    CAF_LOG_TRACE("");
+    init_newb();
+    auto bhvr = make_behavior();
+    CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
+                             << CAF_ARG(this->has_behavior()));
+    if (bhvr) {
+      // make_behavior() did return a behavior instead of using become()
+      CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
+      this->become(std::move(bhvr));
+    }
+  }
+
+  bool cleanup(error&& reason, execution_unit* host) override {
+    CAF_LOG_TRACE(CAF_ARG(reason));
+    // TODO: Ask policies, close socket.
+    return local_actor::cleanup(std::move(reason), host);
+  }
+
+  // -- overridden modifiers of resumable --------------------------------------
+
+  network::multiplexer::runnable::resume_result resume(execution_unit* ctx,
+                                                       size_t mt) override {
+    CAF_PUSH_AID_FROM_PTR(this);
+    CAF_ASSERT(ctx != nullptr);
+    CAF_ASSERT(ctx == &backend());
+    return scheduled_actor::resume(ctx, mt);
+  }
+
+  // -- overridden modifiers of event handler ----------------------------------
+
+  void handle_event(network::operation op) override {
+    CAF_PUSH_AID_FROM_PTR(this);
+    switch (op) {
+      case io::network::operation::read:
+        read_event();
+        break;
+      case io::network::operation::write:
+        write_event();
+        break;
+      case io::network::operation::propagate_error:
+        handle_error();
+    }
+  }
+
+  void removed_from_loop(network::operation op) override {
+    CAF_PUSH_AID_FROM_PTR(this);
+    std::cout << "removing myself from the loop for "
+              << to_string(op) << std::endl;
+  }
+
+  // -- members ----------------------------------------------------------------
 
   write_handle wr_buf(header_writer* hw) {
     // TODO: We somehow need to tell the transport policy how much we've
@@ -232,7 +377,7 @@ struct newb {
 
   // Send
   void flush() {
-
+    // TODO: send message
   }
 
   error read_event() {
@@ -240,48 +385,102 @@ struct newb {
   }
 
   void write_event() {
+    CAF_MESSAGE("got write event to handle: not implemented");
     // transport->write_some();
+  }
+
+  void handle_error() {
+    CAF_CRITICAL("got error to handle: not implemented");
   }
 
   // Protocol policies can set timeouts using a custom message.
   template<class Rep = int, class Period = std::ratio<1>>
-  void set_timeout(std::chrono::duration<Rep, Period>, caf::message msg) {
-    // TODO: Once this is an actor send yourself a delayed messge.
-    //       And on receict call ...
-    set_timeout_impl(std::move(msg));
-  }
-
-  // Called on self when a timeout is received.
-  error timeout_event(caf::message& msg) {
-    return protocol->timeout(msg);
+  void set_timeout(std::chrono::duration<Rep, Period> timeout,
+                   atom_value atm, uint32_t id) {
+    CAF_MESSAGE("sending myself a timeout");
+    this->delayed_send(this, timeout, atm, id);
+    // TODO: Use actor clock.
+    // TODO: Make this system messages and handle them separately.
   }
 
   // Allow protocol policies to enqueue a data for sending.
   // Probably required for reliability.
   // void direct_enqueue(char* bytes, size_t count);
 
-  virtual void handle(Message& msg) = 0;
-
-  // TODO: Only here for some first tests.
-  virtual void set_timeout_impl(caf::message) = 0;
-};
-
-struct basp_newb : newb<new_basp_message> {
-  void handle(new_basp_message&) override {
-    // nop
+  void handle(Message& msg) {
+    using tmp_t = mailbox_element_vals<Message>;
+    tmp_t tmp{strong_actor_ptr{}, make_message_id(),
+              mailbox_element::forwarding_stack{},
+              msg};
+    super::activate(&backend(), tmp);
   }
+
+  /// Returns the `multiplexer` running this broker.
+  network::multiplexer& backend() {
+    return event_handler::backend();
+  }
+
+  // Currently has to handle timeouts as well, see handler below:
+  virtual behavior make_behavior() = 0; /*{
+    std::cout << "creating newb behavior" << std::endl;
+    return {
+      [=](atom_value atm, uint32_t id) {
+        protocol->timeout(atm, id);
+      }
+    };
+  }*/
+
+  void init_newb() {
+    CAF_LOG_TRACE("");
+    super::setf(super::is_initialized_flag);
+  }
+
+  /// @cond PRIVATE
+
+  template <class... Ts>
+  void eq_impl(message_id mid, strong_actor_ptr sender,
+               execution_unit* ctx, Ts&&... xs) {
+    enqueue(make_mailbox_element(std::move(sender), mid,
+                                 {}, std::forward<Ts>(xs)...),
+            ctx);
+  }
+
+  /// @endcond
+
+  // -- policies ---------------------------------------------------------------
+
+  std::unique_ptr<transport_policy> transport;
+  std::unique_ptr<protocol_policy<Message>> protocol;
 };
 
 template <class ProtocolPolicy>
-struct newb_acceptor {
+struct newb_acceptor : public network::event_handler {
   std::unique_ptr<accept_policy> acceptor;
+
+  void handle_event(network::operation op) {
+    switch (op) {
+      case network::operation::read:
+        read_event();
+        break;
+      case network::operation::write:
+        // nop
+        break;
+      case network::operation::propagate_error:
+        CAF_MESSAGE("acceptor got error operation");
+        break;
+    }
+  }
+
+  void remove_from_loop(network::operation) {
+    CAF_MESSAGE("remove from loop not implemented in newb acceptor");
+    // TODO: implement
+  }
 
   error read_event() {
     CAF_MESSAGE("read event on newb acceptor");
-    auto res = acceptor->accept();
-    native_socket sock{res.first};
-    transport_policy_ptr transport{std::move(res.second)};
-//    std::tie(sock, transport) = acceptor->accept();;
+    native_socket sock;
+    transport_policy_ptr transport;
+    std::tie(sock, transport) = acceptor->accept();;
     return create_newb(sock, std::move(transport));
   }
 
@@ -329,16 +528,15 @@ struct basp_policy {
 
   error read(char* bytes, size_t count) {
     new_basp_message msg;
-    memcpy(&msg.header.from, bytes, sizeof(msg.header.from));
-    memcpy(&msg.header.to, bytes + sizeof(msg.header.from), sizeof(msg.header.to));
+    binary_deserializer bd(&parent->backend(), bytes, count);
+    bd(msg.header);
     msg.payload = bytes + header_size;
     msg.payload_size = count - header_size;
-    // Using the result for messages has some problems, so ...
     parent->handle(msg);
     return none;
   }
 
-  error timeout(caf::message&) {
+  error timeout(atom_value, uint32_t) {
     return none;
   }
 
@@ -381,8 +579,11 @@ struct ordering {
   }
 
   error read(char* bytes, size_t count) {
+    CAF_MESSAGE("ordering read, count = " << count);
     uint32_t seq;
-    memcpy(&seq, bytes, sizeof(seq));
+    binary_deserializer bd(&parent->backend(), bytes, count);
+    bd(seq);
+    CAF_MESSAGE("seq = " << seq << ", seq_read = " << seq_read);
     // TODO: Use the comparison function from BASP instance.
     if (seq == seq_read) {
       seq_read += 1;
@@ -392,29 +593,27 @@ struct ordering {
       return deliver_pending();
     } else if (seq > seq_read) {
       pending[seq] = std::vector<char>(bytes + header_size, bytes + count);
-      parent->set_timeout(std::chrono::seconds(2),
-                          caf::make_message(ordering_atom::value, seq));
+      parent->set_timeout(std::chrono::seconds(2), ordering_atom::value, seq);
       return none;
     }
     // Is late, drop it. TODO: Should this return an error?
     return none;
   }
 
-  error timeout(caf::message& msg) {
-    // TODO: Can't we just set the seq_read to the sequence number and call
-    //       deliver messages?
-    error err = none;
-    msg.apply([&](ordering_atom, uint32_t seq) {
-      if (pending.count(seq) > 0) {
+  error timeout(atom_value atm, uint32_t id) {
+    if (atm == ordering_atom::value) {
+      error err;
+      if (pending.count(id) > 0) {
         CAF_MESSAGE("found pending message");
-        auto& buf = pending[seq];
+        auto& buf = pending[id];
         err = next.read(buf.data(), buf.size());
-        seq_read = seq + 1;
+        seq_read = id + 1;
+        if (!err)
+          err = deliver_pending();
       }
-    });
-    if (err)
       return err;
-    return deliver_pending();
+    }
+    return next.timeout(atm, id);
   }
 
   size_t write_header(byte_buffer& buf, size_t offset, header_writer* hw) {
@@ -429,18 +628,70 @@ struct ordering {
 
 // -- test classes -------------------------------------------------------------
 
-struct dummy_basp_newb : newb<new_basp_message> {
-  std::vector<caf::message> timeout_messages;
-  std::vector<std::pair<new_basp_message, std::vector<char>>> messages;
 
-  void handle(new_basp_message& msg) override {
-    std::vector<char> payload{msg.payload, msg.payload + msg.payload_size};
-    messages.emplace_back(msg, payload);
-    messages.back().first.payload = messages.back().second.data();
+template <class Newb>
+actor make_newb(actor_system& sys, native_socket sockfd) {
+  auto& mpx = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
+  actor_config acfg{&mpx};
+  auto res = sys.spawn_impl<Newb, hidden + lazy_init>(acfg, mpx, sockfd);
+  return actor_cast<actor>(res);
+}
+
+template <class NewbAcceptor, class AcceptPolicy>
+NewbAcceptor make_newb_acceptor() {
+  NewbAcceptor na;
+  na.acceptor.reset(new accept_policy_impl);
+  return na;
+}
+
+struct dummy_basp_newb : newb<new_basp_message> {
+  using expexted_t = std::tuple<ordering_header, basp_header, int>;
+  std::vector<std::pair<atom_value, uint32_t>> timeout_messages;
+  std::vector<std::pair<new_basp_message, std::vector<char>>> messages;
+  std::deque<expexted_t> expected;
+
+  dummy_basp_newb(caf::actor_config& cfg, io::network::default_multiplexer& dm,
+                  native_socket sockfd)
+      : newb<new_basp_message>(cfg, dm, sockfd) {
+    // nop
   }
 
-  void set_timeout_impl(caf::message msg) override {
-    timeout_messages.emplace_back(std::move(msg));
+  behavior make_behavior() override {
+    set_default_handler(print_and_drop);
+    return {
+      // Must be implemented at the moment, will be cought by the broker in a
+      // later implementation.
+      [=](atom_value atm, uint32_t id) {
+        CAF_MESSAGE("timeout returned");
+        timeout_messages.emplace_back(atm, id);
+        protocol->timeout(atm, id);
+      },
+      // Append message to a buffer for checking the contents.
+      [=](new_basp_message& msg) {
+        CAF_ASSERT(!expected.empty());
+        auto& e = expected.front();
+        CAF_CHECK_EQUAL(msg.header.from, get<1>(e).from);
+        CAF_CHECK_EQUAL(msg.header.to, get<1>(e).to);
+        int pl;
+        binary_deserializer bd(&backend_, msg.payload, msg.payload_size);
+        bd(pl);
+        CAF_CHECK_EQUAL(pl, get<2>(e));
+        std::vector<char> payload{msg.payload, msg.payload + msg.payload_size};
+        messages.emplace_back(msg, payload);
+        messages.back().first.payload = messages.back().second.data();
+      },
+      [=](send_atom, ordering_header& ohdr, basp_header& bhdr, int payload) {
+        CAF_MESSAGE("send: ohdr = " << to_string(ohdr) << " bhdr = "
+                    << to_string(bhdr) << " payload = " << payload);
+        binary_serializer bs(&backend_, transport->receive_buffer);
+        bs(ohdr);
+        bs(bhdr);
+        bs(payload);
+      },
+      [=](expect_atom, ordering_header& ohdr, basp_header& bhdr, int payload) {
+        expected.push_back(std::make_tuple(ohdr, bhdr, payload));
+      }
+    };
   }
 };
 
@@ -457,68 +708,92 @@ struct dummy_basp_newb_acceptor : newb_acceptor<ProtocolPolicy> {
   }
 };
 
-struct datagram_fixture {
-  dummy_basp_newb self;
-
-  datagram_fixture() {
-    self.transport.reset(new transport_policy);
-    self.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>(&self));
+class config : public actor_system_config {
+public:
+  config() {
+    set("scheduler.policy", atom("testing"));
+    set("logger.inline-output", true);
+    set("middleman.manual-multiplexing", true);
+    set("middleman.attach-utility-actors", true);
+    load<io::middleman>();
   }
-  scoped_execution_unit context;
 };
 
-struct stream_fixture {
-  dummy_basp_newb self;
+struct dm_fixture {
+  config cfg;
+  actor_system sys;
+  network::default_multiplexer& mpx;
+  caf::scheduler::test_coordinator& sched;
+  actor self;
 
-  stream_fixture() {
-    self.transport.reset(new transport_policy);
-    self.protocol.reset(new protocol_policy_impl<basp_policy>(&self));
+  dm_fixture()
+      : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
+        mpx(dynamic_cast<network::default_multiplexer&>(sys.middleman().backend())),
+        sched(dynamic_cast<caf::scheduler::test_coordinator&>(sys.scheduler())) {
+    self = make_newb<dummy_basp_newb>(sys, network::invalid_native_socket);
+    auto& ref = deref<newb<new_basp_message>>(self);
+    ref.transport.reset(new transport_policy);
+    ref.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>(&ref));
   }
-  scoped_execution_unit context;
-};
 
-struct acceptor_fixture {
-  dummy_basp_newb_acceptor<protocol_policy_impl<ordering<basp_policy>>> self;
+  // -- supporting -------------------------------------------------------------
 
-  acceptor_fixture() {
-    self.acceptor.reset(new accept_policy_impl);
+  void exec_all() {
+    while (mpx.try_run_once()) {
+      // rince and repeat
+    }
+  }
+
+  template <class T = caf::scheduled_actor, class Handle = caf::actor>
+  T& deref(const Handle& hdl) {
+    auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
+    CAF_REQUIRE(ptr != nullptr);
+    return dynamic_cast<T&>(*ptr);
+  }
+
+  // -- serialization ----------------------------------------------------------
+
+  template <class T>
+  void to_buffer(ordering_header& hdr, T& x) {
+    binary_serializer bs(sys, x);
+    bs(hdr);
+  }
+
+  template <class T>
+  void to_buffer(basp_header& hdr, T& x) {
+    binary_serializer bs(sys, x);
+    bs(hdr);
+  }
+
+  template <class T, class U>
+  void to_buffer(U value, T& x) {
+    binary_serializer bs(sys, x);
+    bs(value);
+  }
+
+  template <class T>
+  void from_buffer(T& x, size_t offset, ordering_header& hdr) {
+    binary_deserializer bd(sys, x.data() + offset, sizeof(ordering_header));
+    bd(hdr);
+  }
+
+  template <class T>
+  void from_buffer(T& x, size_t offset, basp_header& hdr) {
+    binary_deserializer bd(sys, x.data() + offset, sizeof(basp_header));
+    bd(hdr);
+  }
+
+  template <class T>
+  void from_buffer(char* x, T& value) {
+    binary_deserializer bd(sys, x, sizeof(T));
+    bd(value);
   }
 };
 
 } // namespace <anonymous>
 
+/*
 CAF_TEST_FIXTURE_SCOPE(protocol_policy_tests, datagram_fixture)
-
-CAF_TEST(ordering and basp read event) {
-  CAF_MESSAGE("create some values for our buffer");
-  ordering_header ohdr{0};
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  CAF_MESSAGE("copy them into the buffer");
-  auto& buf = self.transport->receive_buffer;
-  // Make sure the buffer is big enough.
-  buf.resize(sizeof(ordering_header)
-              + sizeof(basp_header)
-              + sizeof(payload));
-  // Track an offset for writing.
-  size_t offset = 0;
-  memcpy(buf.data() + offset, &ohdr, sizeof(ordering_header));
-  offset += sizeof(ordering_header);
-  memcpy(buf.data() + offset, &bhdr, sizeof(basp_header));
-  offset += sizeof(basp_header);
-  memcpy(buf.data() + offset, &payload, sizeof(payload));
-  CAF_MESSAGE("trigger a read event");
-  auto err = self.read_event();
-  CAF_REQUIRE(!err);
-  CAF_MESSAGE("check the basp header and payload");
-  auto& msg = self.messages.front().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
-  int return_payload = 0;
-  memcpy(&return_payload, msg.payload, msg.payload_size);
-  CAF_CHECK_EQUAL(return_payload, payload);
-}
 
 CAF_TEST(ordering and basp read event with timeout) {
   CAF_MESSAGE("create some values for our buffer");
@@ -676,32 +951,6 @@ CAF_TEST(ordering and basp write buf) {
   CAF_CHECK_EQUAL(return_payload, payload);
 }
 
-CAF_TEST(slicing and basp) {
-  // TODO: Come up with a way to implement this with policies. What is missing
-  //  in the API? The problem here is that this is not just a write_header call
-  //  when acquireing the write buffer. There is more to it.
-  // TOUGHTS: For receipt this is located somewhere between ordering /
-  //  reliability and BASP. For sending it would need to split messages into
-  //  multiple parts after the BASP header was written but before ordering or
-  //  reliability add their headers.
-  CAF_MESSAGE("not implemented");
-}
-
-CAF_TEST_FIXTURE_SCOPE_END()
-
-CAF_TEST_FIXTURE_SCOPE(stream_policy_tests, stream_fixture)
-
-CAF_TEST(basp and streaming) {
-  // TODO: As far as I can tell atm, we would need to reimplement the BASP
-  //  policy as it works differently on datgrams and streams. Needs two reads
-  //  for streaming: once for the header and once for the payload.
-  // IDEA: We could let the policy track itself if it expects payload. When it
-  //  receives a message it dezerializes the header and tests if it still has a
-  //  payload of the expected size. Or something like that.
-  //  Easiest way is to implement BASP twice.
-  CAF_MESSAGE("not implemented");
-}
-
 CAF_TEST_FIXTURE_SCOPE_END()
 
 CAF_TEST_FIXTURE_SCOPE(acceptor_policy_tests, acceptor_fixture)
@@ -742,5 +991,93 @@ CAF_TEST(ordering and basp acceptor) {
   memcpy(&return_payload, msg.payload, msg.payload_size);
   CAF_CHECK_EQUAL(return_payload, payload);
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()
+*/
+
+CAF_TEST_FIXTURE_SCOPE(test_newb_creation, dm_fixture)
+
+CAF_TEST(ordering and basp read event) {
+  exec_all();
+  CAF_MESSAGE("create some values for our buffer");
+  ordering_header ohdr{0};
+  basp_header bhdr{13, 42};
+  int payload = 1337;
+  anon_send(self, expect_atom::value, ohdr, bhdr, payload);
+  exec_all();
+  CAF_MESSAGE("copy them into the buffer");
+  auto& dummy = deref<dummy_basp_newb>(self);
+  auto& buf = dummy.transport->receive_buffer;
+  // Write data to buffer.
+  to_buffer(ohdr, buf);
+  to_buffer(bhdr, buf);
+  to_buffer(payload, buf);
+  CAF_MESSAGE("trigger a read event");
+  auto err = dummy.read_event();
+  CAF_REQUIRE(!err);
+  CAF_MESSAGE("check the basp header and payload");
+  auto& msg = dummy.messages.front().first;
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  int return_payload = 0;
+  from_buffer(msg.payload, return_payload);
+  CAF_CHECK_EQUAL(return_payload, payload);
+}
+
+CAF_TEST(ordering and basp message passing) {
+  exec_all();
+  ordering_header ohdr{0};
+  basp_header bhdr{13, 42};
+  int payload = 1337;
+  CAF_MESSAGE("setup read event");
+  anon_send(self, expect_atom::value, ohdr, bhdr, payload);
+  anon_send(self, send_atom::value, ohdr, bhdr, payload);
+  exec_all();
+  auto& dummy = deref<dummy_basp_newb>(self);
+  dummy.handle_event(network::operation::read);
+  CAF_MESSAGE("check the basp header and payload");
+  auto& msg = dummy.messages.front().first;
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  int return_payload = 0;
+  from_buffer(msg.payload, return_payload);
+  CAF_CHECK_EQUAL(return_payload, payload);
+}
+
+
+CAF_TEST(ordering and basp read event with timeout) {
+  // Should be an unexpected sequence number and lead to an error. Since
+  // we start with 0, the 1 below should be out of order.
+  ordering_header ohdr{1};
+  basp_header bhdr{13, 42};
+  int payload = 1337;
+  CAF_MESSAGE("setup read event");
+  anon_send(self, expect_atom::value, ohdr, bhdr, payload);
+  anon_send(self, send_atom::value, ohdr, bhdr, payload);
+  exec_all();
+  auto& dummy = deref<dummy_basp_newb>(self);
+  CAF_MESSAGE("trigger read event");
+  auto err = dummy.read_event();
+  CAF_REQUIRE(!err);
+  CAF_MESSAGE("trigger waiting timeouts");
+  sched.run_dispatch_loop();
+  auto cnt = sched.clock().dispatch();
+  CAF_REQUIRE(cnt > 0);
+  CAF_MESSAGE("triggered " << cnt << " timeouts");
+  CAF_MESSAGE("check if we have a pending timeout now");
+  CAF_REQUIRE(!dummy.timeout_messages.empty());
+  auto& timeout_pair = dummy.timeout_messages.back();
+  CAF_CHECK_EQUAL(timeout_pair.first, ordering_atom::value);
+  CAF_CHECK_EQUAL(timeout_pair.second, ohdr.seq_nr);
+  CAF_REQUIRE(!dummy.messages.empty());
+  CAF_MESSAGE("check delivered message");
+  auto& msg = dummy.messages.front().first;
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  int return_payload = 0;
+  memcpy(&return_payload, msg.payload, msg.payload_size);
+  CAF_CHECK_EQUAL(return_payload, payload);
+}
+
 
 CAF_TEST_FIXTURE_SCOPE_END()
