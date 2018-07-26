@@ -18,8 +18,6 @@
 
 #define CAF_SUITE protocol_policy
 
-//#include "caf/io/protocol_policy.hpp"
-
 #include <cstdint>
 #include <cstring>
 #include <tuple>
@@ -28,24 +26,21 @@
 
 #include "caf/callback.hpp"
 #include "caf/config.hpp"
-#include "caf/scheduled_actor.hpp"
-
-#include "caf/io/middleman.hpp"
-
-#include "caf/io/network/event_handler.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/native_socket.hpp"
-
 #include "caf/detail/enum_to_string.hpp"
-
-#include "caf/mixin/sender.hpp"
-#include "caf/mixin/requester.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/event_handler.hpp"
+#include "caf/io/network/native_socket.hpp"
 #include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/scheduled_actor.hpp"
 
 using namespace caf;
 using namespace caf::io;
 
 using network::native_socket;
+using network::default_multiplexer;
 
 namespace {
 
@@ -167,19 +162,20 @@ struct accept_policy {
     // nop
   }
   virtual std::pair<native_socket, transport_policy_ptr> accept() = 0;
-  virtual void init(newb_base&) = 0;
+  virtual void init(network::event_handler&) = 0;
 };
 
 struct accept_policy_impl : accept_policy {
   std::pair<native_socket, transport_policy_ptr> accept() override {
+    // TODO: For UDP read the message into a buffer. Create a new socket.
+    //  Move the buffer into the transport policy as the new receive buffer.
     native_socket sock{13337};
     transport_policy_ptr ptr{new transport_policy};
     return {sock, std::move(ptr)};
   }
 
-  void init(newb_base&) override {
-    // TODO: there was something we wanted to do here ...
-    // nop
+  void init(network::event_handler& eh) override {
+    eh.handle_event(network::operation::read);
   }
 };
 
@@ -269,7 +265,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   // -- constructors and destructors -------------------------------------------
 
-  newb(actor_config& cfg, io::network::default_multiplexer& dm, native_socket sockfd)
+  newb(actor_config& cfg, default_multiplexer& dm, native_socket sockfd)
       : super(cfg),
         event_handler(dm, sockfd) {
     // nop
@@ -450,11 +446,18 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   std::unique_ptr<protocol_policy<Message>> protocol;
 };
 
-template <class ProtocolPolicy>
 struct newb_acceptor : public network::event_handler {
-  std::unique_ptr<accept_policy> acceptor;
 
-  void handle_event(network::operation op) {
+  // -- constructors and destructors -------------------------------------------
+
+  newb_acceptor(default_multiplexer& dm, native_socket sockfd)
+      : event_handler(dm, sockfd) {
+    // nop
+  }
+
+  // -- overridden modifiers of event handler ----------------------------------
+
+  void handle_event(network::operation op) override {
     switch (op) {
       case network::operation::read:
         read_event();
@@ -468,22 +471,29 @@ struct newb_acceptor : public network::event_handler {
     }
   }
 
-  void remove_from_loop(network::operation) {
+  void removed_from_loop(network::operation) override {
     CAF_MESSAGE("remove from loop not implemented in newb acceptor");
     // TODO: implement
   }
+
+  // -- members ----------------------------------------------------------------
 
   error read_event() {
     CAF_MESSAGE("read event on newb acceptor");
     native_socket sock;
     transport_policy_ptr transport;
     std::tie(sock, transport) = acceptor->accept();;
-    auto n = create_newb(sock, std::move(transport));
-    acceptor->init(n);
-    return n;
+    auto en = create_newb(sock, std::move(transport));
+    if (!en)
+      return std::move(en.error());
+    auto ptr = caf::actor_cast<caf::abstract_actor*>(*en);
+    acceptor->init(dynamic_cast<event_handler&>(*ptr));
+    return none;
   }
 
-  virtual error create_newb(native_socket sock, transport_policy_ptr pol) = 0;
+  virtual expected<actor> create_newb(native_socket sock, transport_policy_ptr pol) = 0;
+
+  std::unique_ptr<accept_policy> acceptor;
 };
 
 /*
@@ -629,17 +639,22 @@ struct ordering {
 
 template <class Newb>
 actor make_newb(actor_system& sys, native_socket sockfd) {
-  auto& mpx = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
+  auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
   actor_config acfg{&mpx};
   auto res = sys.spawn_impl<Newb, hidden + lazy_init>(acfg, mpx, sockfd);
   return actor_cast<actor>(res);
 }
 
+// TODO: I feel like this should include the ProtocolPolicy somehow.
 template <class NewbAcceptor, class AcceptPolicy>
-NewbAcceptor make_newb_acceptor() {
-  NewbAcceptor na;
-  na.acceptor.reset(new accept_policy_impl);
-  return na;
+std::unique_ptr<newb_acceptor> make_newb_acceptor(actor_system& sys,
+                                                  native_socket sockfd) {
+  auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
+  std::unique_ptr<newb_acceptor> ptr{new NewbAcceptor(mpx, sockfd)};
+  //std::unique_ptr<network::event_handler> ptr{new NewbAcceptor(mpx, sockfd)};
+  //static_cast<NewbAcceptor*>(ptr)->acceptor.reset(new AcceptPolicy);
+  ptr->acceptor.reset(new AcceptPolicy);
+  return ptr;
 }
 
 struct dummy_basp_newb : newb<new_basp_message> {
@@ -647,7 +662,7 @@ struct dummy_basp_newb : newb<new_basp_message> {
   std::vector<std::pair<new_basp_message, std::vector<char>>> messages;
   std::deque<std::pair<basp_header, int>> expected;
 
-  dummy_basp_newb(caf::actor_config& cfg, io::network::default_multiplexer& dm,
+  dummy_basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
                   native_socket sockfd)
       : newb<new_basp_message>(cfg, dm, sockfd) {
     // nop
@@ -714,16 +729,33 @@ struct dummy_basp_newb : newb<new_basp_message> {
 };
 
 template <class ProtocolPolicy>
-struct dummy_basp_newb_acceptor : newb_acceptor<ProtocolPolicy> {
-  std::vector<dummy_basp_newb> spawned;
+struct dummy_basp_newb_acceptor : newb_acceptor {
+  using message_tuple_t = std::tuple<ordering_header, basp_header, int>;
 
-  error create_newb(native_socket, transport_policy_ptr pol) override {
-    spawned.emplace_back();
-    auto& n = spawned.back();
-    n.transport.reset(pol.release());
-    n.protocol.reset( new ProtocolPolicy(&n));
-    return none;
+  dummy_basp_newb_acceptor(default_multiplexer& dm, native_socket sockfd)
+      : newb_acceptor(dm, sockfd) {
+    // nop
   }
+
+  expected<actor> create_newb(native_socket sockfd, transport_policy_ptr pol) override {
+    spawned.emplace_back(make_newb<dummy_basp_newb>(this->backend().system(), sockfd));
+    auto ptr = caf::actor_cast<caf::abstract_actor*>(spawned.back());
+    if (ptr == nullptr)
+      return sec::runtime_error;
+    auto& ref = dynamic_cast<dummy_basp_newb&>(*ptr);
+    ref.transport.reset(pol.release());
+    ref.protocol.reset(new ProtocolPolicy(&ref));
+    // TODO: Call read_some using the buffer of the ref as a destination.
+    binary_serializer bs(&backend(), ref.transport->receive_buffer);
+    bs(get<0>(msg));
+    bs(get<1>(msg));
+    bs(get<2>(msg));
+    ref.expected.emplace_back(get<1>(msg), get<2>(msg));
+    return spawned.back();
+  }
+
+  message_tuple_t msg;
+  std::vector<actor> spawned;
 };
 
 class config : public actor_system_config {
@@ -738,20 +770,25 @@ public:
 };
 
 struct dm_fixture {
+  using policy_t = protocol_policy_impl<ordering<basp_policy>>;
+  using acceptor_t = dummy_basp_newb_acceptor<policy_t>;
   config cfg;
   actor_system sys;
-  network::default_multiplexer& mpx;
-  caf::scheduler::test_coordinator& sched;
+  default_multiplexer& mpx;
+  scheduler::test_coordinator& sched;
   actor self;
+  std::unique_ptr<newb_acceptor> na;
 
   dm_fixture()
       : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
-        mpx(dynamic_cast<network::default_multiplexer&>(sys.middleman().backend())),
+        mpx(dynamic_cast<default_multiplexer&>(sys.middleman().backend())),
         sched(dynamic_cast<caf::scheduler::test_coordinator&>(sys.scheduler())) {
     self = make_newb<dummy_basp_newb>(sys, network::invalid_native_socket);
     auto& ref = deref<newb<new_basp_message>>(self);
     ref.transport.reset(new transport_policy);
     ref.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>(&ref));
+    na = make_newb_acceptor<acceptor_t, accept_policy_impl>(sys,
+                                                network::invalid_native_socket);
   }
 
   // -- supporting -------------------------------------------------------------
@@ -809,50 +846,6 @@ struct dm_fixture {
 };
 
 } // namespace <anonymous>
-
-/*
-
-CAF_TEST_FIXTURE_SCOPE(acceptor_policy_tests, acceptor_fixture)
-
-CAF_TEST(ordering and basp acceptor) {
-  CAF_MESSAGE("trigger read event on acceptor");
-  self.read_event();
-  CAF_MESSAGE("test if accept was successful");
-  // TODO: implement init to initialize the newb?
-  CAF_CHECK(!self.spawned.empty());
-  auto& bn = self.spawned.front();
-  CAF_MESSAGE("create some values for the newb");
-  ordering_header ohdr{0};
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  CAF_MESSAGE("copy them into the buffer");
-  auto& buf = bn.transport->receive_buffer;
-  // Make sure the buffer is big enough.
-  buf.resize(sizeof(ordering_header)
-              + sizeof(basp_header)
-              + sizeof(payload));
-  // Track an offset for writing.
-  size_t offset = 0;
-  memcpy(buf.data() + offset, &ohdr, sizeof(ordering_header));
-  offset += sizeof(ordering_header);
-  memcpy(buf.data() + offset, &bhdr, sizeof(basp_header));
-  offset += sizeof(basp_header);
-  memcpy(buf.data() + offset, &payload, sizeof(payload));
-  CAF_MESSAGE("trigger a read event");
-  auto err = bn.read_event();
-  CAF_REQUIRE(!err);
-  CAF_MESSAGE("check the basp header and payload");
-  auto& msg = bn.messages.front().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
-  int return_payload = 0;
-  memcpy(&return_payload, msg.payload, msg.payload_size);
-  CAF_CHECK_EQUAL(return_payload, payload);
-}
-
-CAF_TEST_FIXTURE_SCOPE_END()
-*/
 
 CAF_TEST_FIXTURE_SCOPE(test_newb_creation, dm_fixture)
 
@@ -964,6 +957,15 @@ CAF_TEST(ordering and basp write buf) {
   exec_all();
   deref<dummy_basp_newb>(self).handle_event(network::operation::read);
   // Message handler will check if the expected message was received.
+}
+
+CAF_TEST(ordering and basp acceptor) {
+  CAF_MESSAGE("trigger read event on acceptor");
+  // This will write a message into the receive buffer and trigger
+  // a read event on the newly created newb.
+  na->handle_event(network::operation::read);
+  auto& dummy = dynamic_cast<acceptor_t&>(*na.get());
+  CAF_CHECK(!dummy.spawned.empty());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
