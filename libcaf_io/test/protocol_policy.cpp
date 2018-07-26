@@ -235,7 +235,7 @@ struct protocol_policy_impl : protocol_policy<typename T::message_type> {
   }
 
   size_t write_header(byte_buffer& buf, header_writer* hw) override {
-    return impl.write_header(buf, 0, hw);
+    return impl.write_header(buf, hw);
   }
 };
 
@@ -372,6 +372,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     // TODO: We somehow need to tell the transport policy how much we've
     // written to enable it to split the buffer into datagrams.
     auto& buf = transport->wr_buf();
+    CAF_REQUIRE(buf.empty());
     auto header_offset = protocol->write_header(buf, hw);
     return {protocol.get(), &buf, header_offset};
   }
@@ -404,26 +405,21 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     // TODO: Make this system messages and handle them separately.
   }
 
-  // Allow protocol policies to enqueue a data for sending.
-  // Probably required for reliability.
-  // void direct_enqueue(char* bytes, size_t count);
-
-  virtual void handle(Message& msg) {
-    using tmp_t = mailbox_element_vals<Message>;
-    tmp_t tmp{strong_actor_ptr{}, make_message_id(),
-              mailbox_element::forwarding_stack{},
-              msg};
-    super::activate(&backend(), tmp);
-  }
+  // Allow protocol policies to enqueue a data for sending. Probably required for
+  // reliability to send ACKs. The problem is that only the headers of policies lower,
+  // well closer to the transport, should write their headers. So we're facing a
+  // similiar porblem to slicing here.
+  // void (char* bytes, size_t count);
 
   /// Returns the `multiplexer` running this broker.
   network::multiplexer& backend() {
     return event_handler::backend();
   }
 
-  // Currently has to handle timeouts as well, see handler below:
+  virtual void handle(Message& msg) = 0;
+
+  // Currently has to handle timeouts as well, see handler below.
   virtual behavior make_behavior() = 0; /*{
-    std::cout << "creating newb behavior" << std::endl;
     return {
       [=](atom_value atm, uint32_t id) {
         protocol->timeout(atm, id);
@@ -547,10 +543,10 @@ struct basp_policy {
     return none;
   }
 
-  size_t write_header(byte_buffer& buf, size_t offset, header_writer* hw) {
+  size_t write_header(byte_buffer& buf, header_writer* hw) {
     CAF_ASSERT(hw != nullptr);
     (*hw)(buf);
-    return offset + header_size;
+    return header_size;
   }
 };
 
@@ -586,21 +582,19 @@ struct ordering {
   }
 
   error read(char* bytes, size_t count) {
-    CAF_MESSAGE("ordering read, count = " << count);
-    uint32_t seq;
+    ordering_header hdr;
     binary_deserializer bd(&parent->backend(), bytes, count);
-    bd(seq);
-    CAF_MESSAGE("seq = " << seq << ", seq_read = " << seq_read);
+    bd(hdr);
     // TODO: Use the comparison function from BASP instance.
-    if (seq == seq_read) {
+    if (hdr.seq_nr == seq_read) {
       seq_read += 1;
       auto res = next.read(bytes + header_size, count - header_size);
       if (res)
         return res;
       return deliver_pending();
-    } else if (seq > seq_read) {
-      pending[seq] = std::vector<char>(bytes + header_size, bytes + count);
-      parent->set_timeout(std::chrono::seconds(2), ordering_atom::value, seq);
+    } else if (hdr.seq_nr > seq_read) {
+      pending[hdr.seq_nr] = std::vector<char>(bytes + header_size, bytes + count);
+      parent->set_timeout(std::chrono::seconds(2), ordering_atom::value, hdr.seq_nr);
       return none;
     }
     // Is late, drop it. TODO: Should this return an error?
@@ -611,7 +605,6 @@ struct ordering {
     if (atm == ordering_atom::value) {
       error err;
       if (pending.count(id) > 0) {
-        CAF_MESSAGE("found pending message");
         auto& buf = pending[id];
         err = next.read(buf.data(), buf.size());
         seq_read = id + 1;
@@ -623,13 +616,11 @@ struct ordering {
     return next.timeout(atm, id);
   }
 
-  size_t write_header(byte_buffer& buf, size_t offset, header_writer* hw) {
-    std::array<char, sizeof (seq_write)> tmp;
-    memcpy(tmp.data(), &seq_write, sizeof(seq_write));
+  size_t write_header(byte_buffer& buf, header_writer* hw) {
+    binary_serializer bs(&parent->backend(), buf);
+    bs(ordering_header{seq_write});
     seq_write += 1;
-    for (auto& c : tmp)
-      buf.push_back(c);
-    return next.write_header(buf, offset + header_size, hw);
+    return header_size + next.write_header(buf, hw);
   }
 };
 
@@ -652,10 +643,9 @@ NewbAcceptor make_newb_acceptor() {
 }
 
 struct dummy_basp_newb : newb<new_basp_message> {
-  using expexted_t = std::tuple<ordering_header, basp_header, int>;
   std::vector<std::pair<atom_value, uint32_t>> timeout_messages;
   std::vector<std::pair<new_basp_message, std::vector<char>>> messages;
-  std::deque<expexted_t> expected;
+  std::deque<std::pair<basp_header, int>> expected;
 
   dummy_basp_newb(caf::actor_config& cfg, io::network::default_multiplexer& dm,
                   native_socket sockfd)
@@ -667,15 +657,17 @@ struct dummy_basp_newb : newb<new_basp_message> {
     CAF_MESSAGE("handling new basp message = " << to_string(msg));
     CAF_ASSERT(!expected.empty());
     auto& e = expected.front();
-    CAF_CHECK_EQUAL(msg.header.from, get<1>(e).from);
-    CAF_CHECK_EQUAL(msg.header.to, get<1>(e).to);
+    CAF_CHECK_EQUAL(msg.header.from, e.first.from);
+    CAF_CHECK_EQUAL(msg.header.to, e.first.to);
     int pl;
-    binary_deserializer bd(&backend_, msg.payload, msg.payload_size);
+    binary_deserializer bd(&backend(), msg.payload, msg.payload_size);
     bd(pl);
-    CAF_CHECK_EQUAL(pl, get<2>(e));
+    CAF_CHECK_EQUAL(pl, e.second);
     std::vector<char> payload{msg.payload, msg.payload + msg.payload_size};
     messages.emplace_back(msg, payload);
     messages.back().first.payload = messages.back().second.data();
+    transport->receive_buffer.clear();
+    expected.pop_front();
   }
 
   behavior make_behavior() override {
@@ -688,20 +680,23 @@ struct dummy_basp_newb : newb<new_basp_message> {
         timeout_messages.emplace_back(atm, id);
         protocol->timeout(atm, id);
       },
-      // Append message to a buffer for checking the contents.
-      [=](new_basp_message& msg) {
-        CAF_MESSAGE("new basp message received = " << to_string(msg));
-        CAF_ASSERT(!expected.empty());
-        auto& e = expected.front();
-        CAF_CHECK_EQUAL(msg.header.from, get<1>(e).from);
-        CAF_CHECK_EQUAL(msg.header.to, get<1>(e).to);
-        int pl;
-        binary_deserializer bd(&backend_, msg.payload, msg.payload_size);
-        bd(pl);
-        CAF_CHECK_EQUAL(pl, get<2>(e));
-        std::vector<char> payload{msg.payload, msg.payload + msg.payload_size};
-        messages.emplace_back(msg, payload);
-        messages.back().first.payload = messages.back().second.data();
+      [=](send_atom, actor_id sender, actor_id receiver, int payload) {
+        CAF_MESSAGE("send: from = " << sender << " to = " << receiver
+                    << " payload = " << payload);
+        auto hw = caf::make_callback([&](byte_buffer& buf) -> error {
+          binary_serializer bs(&backend(), buf);
+          bs(basp_header{sender, receiver});
+          return none;
+        });
+        CAF_MESSAGE("get a write buffer");
+        auto whdl = wr_buf(&hw);
+        CAF_CHECK(whdl.buf != nullptr);
+        CAF_CHECK(whdl.protocol != nullptr);
+        CAF_MESSAGE("write the payload");
+        binary_serializer bs(&backend(), *whdl.buf);
+        bs(payload);
+        std::swap(transport->receive_buffer, transport->send_buffer);
+        transport->send_buffer.clear();
       },
       [=](send_atom, ordering_header& ohdr, basp_header& bhdr, int payload) {
         CAF_MESSAGE("send: ohdr = " << to_string(ohdr) << " bhdr = "
@@ -711,8 +706,8 @@ struct dummy_basp_newb : newb<new_basp_message> {
         bs(bhdr);
         bs(payload);
       },
-      [=](expect_atom, ordering_header& ohdr, basp_header& bhdr, int payload) {
-        expected.push_back(std::make_tuple(ohdr, bhdr, payload));
+      [=](expect_atom, basp_header& bhdr, int payload) {
+        expected.push_back(std::make_pair(bhdr, payload));
       }
     };
   }
@@ -816,165 +811,6 @@ struct dm_fixture {
 } // namespace <anonymous>
 
 /*
-CAF_TEST_FIXTURE_SCOPE(protocol_policy_tests, datagram_fixture)
-
-CAF_TEST(ordering and basp read event with timeout) {
-  CAF_MESSAGE("create some values for our buffer");
-  // Should be an unexpected sequence number and lead to an error. Since
-  // we start with 0, the 1 below should be out of order.
-  ordering_header ohdr{1};
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  CAF_MESSAGE("copy them into the buffer");
-  auto& buf = self.transport->receive_buffer;
-  // Make sure the buffer is big enough.
-  buf.resize(sizeof(ordering_header)
-              + sizeof(basp_header)
-              + sizeof(payload));
-  // Track an offset for writing.
-  size_t offset = 0;
-  memcpy(buf.data() + offset, &ohdr, sizeof(ordering_header));
-  offset += sizeof(ordering_header);
-  memcpy(buf.data() + offset, &bhdr, sizeof(basp_header));
-  offset += sizeof(basp_header);
-  memcpy(buf.data() + offset, &payload, sizeof(payload));
-  CAF_MESSAGE("trigger a read event");
-  auto err = self.read_event();
-  CAF_REQUIRE(!err);
-  CAF_MESSAGE("check if we have a pending timeout now");
-  CAF_REQUIRE(!self.timeout_messages.empty());
-  auto& timeout_msg = self.timeout_messages.back();
-  auto read_message = false;
-  timeout_msg.apply([&](ordering_atom, uint32_t seq) {
-    if (seq == ohdr.seq_nr)
-      read_message = true;
-  });
-  CAF_REQUIRE(read_message);
-  CAF_MESSAGE("trigger timeout");
-  err = self.timeout_event(timeout_msg);
-  CAF_REQUIRE(!err);
-  CAF_MESSAGE("check delivered message");
-  auto& msg = self.messages.front().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
-  int return_payload = 0;
-  memcpy(&return_payload, msg.payload, msg.payload_size);
-  CAF_CHECK_EQUAL(return_payload, payload);
-}
-
-CAF_TEST(ordering and basp multiple messages) {
-  // Should enqueue the first message out of order as above, followed by the
-  // missing message. The result should be both messages in the receive buffer
-  // in the right order.
-  // The problem is that our API cannot currently express that. Simply returning
-  // a vector of `new_basp_message` objects doesn't work as the objects just
-  // include a pointer to the buffer. This makes sense as we want to avoid
-  // copying everything around. It would be much easier to just call `handle`
-  // on the newb since we already have the reference and so on ...
-  CAF_MESSAGE("create data for two messges");
-  // Message one.
-  ordering_header ohdr_first{0};
-  basp_header bhdr_first{10, 11};
-  int payload_first = 100;
-  // Message two.
-  ordering_header ohdr_second{1};
-  basp_header bhdr_second{12, 13};
-  int payload_second = 101;
-  auto& buf = self.transport->receive_buffer;
-  // Make sure the buffer is big enough.
-  buf.resize(sizeof(ordering_header)
-              + sizeof(basp_header)
-              + sizeof(payload_first));
-  CAF_MESSAGE("create event for the second message first");
-  // Track an offset for writing.
-  size_t offset = 0;
-  memcpy(buf.data() + offset, &ohdr_second, sizeof(ordering_header));
-  offset += sizeof(ordering_header);
-  memcpy(buf.data() + offset, &bhdr_second, sizeof(basp_header));
-  offset += sizeof(basp_header);
-  memcpy(buf.data() + offset, &payload_second, sizeof(payload_second));
-  CAF_MESSAGE("trigger a read event, expecting an error");
-  auto err = self.read_event();
-  CAF_REQUIRE(!err);
-  CAF_MESSAGE("check if we have a pending timeout now");
-  CAF_REQUIRE(!self.timeout_messages.empty());
-  auto& timeout_msg = self.timeout_messages.back();
-  auto expected_timeout = false;
-  timeout_msg.apply([&](ordering_atom, uint32_t seq) {
-    if (seq == ohdr_second.seq_nr)
-      expected_timeout = true;
-  });
-  CAF_REQUIRE(expected_timeout);
-  CAF_MESSAGE("create event for the first message");
-  // Track an offset for writing.
-  offset = 0;
-  memcpy(buf.data() + offset, &ohdr_first, sizeof(ordering_header));
-  offset += sizeof(ordering_header);
-  memcpy(buf.data() + offset, &bhdr_first, sizeof(basp_header));
-  offset += sizeof(basp_header);
-  memcpy(buf.data() + offset, &payload_first, sizeof(payload_first));
-  // This not clean.
-  CAF_MESSAGE("trigger a read event");
-  err = self.read_event();
-  CAF_REQUIRE(!err);
-  CAF_CHECK(self.messages.size() == 2);
-  CAF_MESSAGE("check first message");
-  auto& msg = self.messages.front().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr_first.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr_first.to);
-  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload_first));
-  int return_payload = 0;
-  memcpy(&return_payload, msg.payload, msg.payload_size);
-  CAF_CHECK_EQUAL(return_payload, payload_first);
-  CAF_MESSAGE("check second message");
-  msg = self.messages.back().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr_second.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr_second.to);
-  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload_second));
-  return_payload = 0;
-  memcpy(&return_payload, msg.payload, msg.payload_size);
-  CAF_CHECK_EQUAL(return_payload, payload_second);
-}
-
-CAF_TEST(ordering and basp write buf) {
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  CAF_MESSAGE("create a callback to write the BASP header");
-  auto hw = caf::make_callback([&](byte_buffer& buf) -> error {
-    std::array<char, sizeof (bhdr)> tmp;
-    memcpy(tmp.data(), &bhdr.from, sizeof(bhdr.from));
-    memcpy(tmp.data() + sizeof(bhdr.from), &bhdr.to, sizeof(bhdr.to));
-    for (char& c : tmp)
-      buf.push_back(c);
-    return none;
-  });
-  CAF_MESSAGE("get a write buffer");
-  auto whdl = self.wr_buf(&hw);
-  CAF_REQUIRE(whdl.buf != nullptr);
-  CAF_REQUIRE(whdl.header_offset == sizeof(basp_header) + sizeof(ordering_header));
-  CAF_REQUIRE(whdl.protocol != nullptr);
-  CAF_MESSAGE("write the payload");
-  std::array<char, sizeof(payload)> tmp;
-  memcpy(tmp.data(), &payload, sizeof(payload));
-  for (auto c : tmp)
-    whdl.buf->push_back(c);
-  CAF_MESSAGE("swap send and receive buffer of the payload");
-  std::swap(self.transport->receive_buffer, self.transport->send_buffer);
-  CAF_MESSAGE("trigger a read event");
-  auto err = self.read_event();
-  CAF_REQUIRE(!err);
-  CAF_MESSAGE("check the basp header and payload");
-  auto& msg = self.messages.front().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  CAF_CHECK_EQUAL(msg.payload_size, sizeof(payload));
-  int return_payload = 0;
-  memcpy(&return_payload, msg.payload, msg.payload_size);
-  CAF_CHECK_EQUAL(return_payload, payload);
-}
-
-CAF_TEST_FIXTURE_SCOPE_END()
 
 CAF_TEST_FIXTURE_SCOPE(acceptor_policy_tests, acceptor_fixture)
 
@@ -1026,7 +862,7 @@ CAF_TEST(ordering and basp read event) {
   ordering_header ohdr{0};
   basp_header bhdr{13, 42};
   int payload = 1337;
-  anon_send(self, expect_atom::value, ohdr, bhdr, payload);
+  anon_send(self, expect_atom::value, bhdr, payload);
   exec_all();
   CAF_MESSAGE("copy them into the buffer");
   auto& dummy = deref<dummy_basp_newb>(self);
@@ -1054,7 +890,7 @@ CAF_TEST(ordering and basp message passing) {
   basp_header bhdr{13, 42};
   int payload = 1337;
   CAF_MESSAGE("setup read event");
-  anon_send(self, expect_atom::value, ohdr, bhdr, payload);
+  anon_send(self, expect_atom::value, bhdr, payload);
   anon_send(self, send_atom::value, ohdr, bhdr, payload);
   exec_all();
   auto& dummy = deref<dummy_basp_newb>(self);
@@ -1068,7 +904,6 @@ CAF_TEST(ordering and basp message passing) {
   CAF_CHECK_EQUAL(return_payload, payload);
 }
 
-
 CAF_TEST(ordering and basp read event with timeout) {
   // Should be an unexpected sequence number and lead to an error. Since
   // we start with 0, the 1 below should be out of order.
@@ -1076,31 +911,59 @@ CAF_TEST(ordering and basp read event with timeout) {
   basp_header bhdr{13, 42};
   int payload = 1337;
   CAF_MESSAGE("setup read event");
-  anon_send(self, expect_atom::value, ohdr, bhdr, payload);
+  anon_send(self, expect_atom::value, bhdr, payload);
   anon_send(self, send_atom::value, ohdr, bhdr, payload);
   exec_all();
-  auto& dummy = deref<dummy_basp_newb>(self);
   CAF_MESSAGE("trigger read event");
-  auto err = dummy.read_event();
+  auto err = deref<dummy_basp_newb>(self).read_event();
   CAF_REQUIRE(!err);
   CAF_MESSAGE("trigger waiting timeouts");
   // Trigger timeout.
   sched.dispatch();
   // Handle received message.
   exec_all();
-  //CAF_MESSAGE("check if we have a pending timeout now");
-  //CAF_REQUIRE(!dummy.timeout_messages.empty());
-  //auto& timeout_pair = dummy.timeout_messages.back();
-  //CAF_CHECK_EQUAL(timeout_pair.first, ordering_atom::value);
-  //CAF_CHECK_EQUAL(timeout_pair.second, ohdr.seq_nr);
-  //CAF_REQUIRE(!dummy.messages.empty());
-  //CAF_MESSAGE("check delivered message");
-  //auto& msg = dummy.messages.front().first;
-  //CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
-  //CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  //int return_payload = 0;
-  //CAF_CHECK_EQUAL(return_payload, payload);
+  // Message handler will check if the expected message was received.
 }
 
+CAF_TEST(ordering and basp multiple messages) {
+  CAF_MESSAGE("create data for two messges");
+  // Message one.
+  ordering_header ohdr_first{0};
+  basp_header bhdr_first{10, 11};
+  int payload_first = 100;
+  // Message two.
+  ordering_header ohdr_second{1};
+  basp_header bhdr_second{12, 13};
+  int payload_second = 101;
+  CAF_MESSAGE("setup read events");
+  anon_send(self, expect_atom::value, bhdr_first, payload_first);
+  anon_send(self, expect_atom::value, bhdr_second, payload_second);
+  exec_all();
+  auto& dummy = deref<dummy_basp_newb>(self);
+  auto& buf = dummy.transport->receive_buffer;
+  CAF_MESSAGE("read second message first");
+  to_buffer(ohdr_second, buf);
+  to_buffer(bhdr_second, buf);
+  to_buffer(payload_second, buf);
+  dummy.read_event();
+  CAF_MESSAGE("followed by first message");
+  buf.clear();
+  to_buffer(ohdr_first, buf);
+  to_buffer(bhdr_first, buf);
+  to_buffer(payload_first, buf);
+  dummy.read_event();
+}
+
+CAF_TEST(ordering and basp write buf) {
+  exec_all();
+  basp_header bhdr{13, 42};
+  int payload = 1337;
+  CAF_MESSAGE("setup read event");
+  anon_send(self, expect_atom::value, bhdr, payload);
+  anon_send(self, send_atom::value, bhdr.from, bhdr.to, payload);
+  exec_all();
+  deref<dummy_basp_newb>(self).handle_event(network::operation::read);
+  // Message handler will check if the expected message was received.
+}
 
 CAF_TEST_FIXTURE_SCOPE_END()
