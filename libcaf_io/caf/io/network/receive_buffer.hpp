@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include <memory>
 #include <cstddef>
+#include <cstring>
+#include <memory>
 
 #include "caf/allowed_unsafe_message_type.hpp"
 
@@ -142,7 +143,7 @@ public:
     return buffer_.get() + size_;
   }
 
-  /// Returns an iterator to the reverse beginning.
+  /// Returns jan iterator to the reverse beginning.
   inline reverse_iterator rbegin() noexcept {
     return reverse_iterator{buffer_.get() + size_};
   }
@@ -174,6 +175,22 @@ public:
 
   /// Insert `value` before `pos`.
   iterator insert(iterator pos, value_type value);
+
+  /// Insert `value` before `pos`.
+  template <class InputIterator>
+  iterator insert(iterator pos, InputIterator first, InputIterator last) {
+    auto n = std::distance(first, last);
+    if (n == 0)
+      return pos;
+    auto offset = static_cast<size_t>(std::distance(begin(), pos));
+    auto old_size = size_;
+    resize(old_size + n);
+    pos = begin() + offset;
+    if (offset != old_size) {
+      memmove(pos + n, pos, old_size - offset);
+    }
+    return std::copy(first, last, pos);
+  }
 
   /// Append `value`.
   void push_back(value_type value);
