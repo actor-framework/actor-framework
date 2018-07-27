@@ -59,6 +59,7 @@ public:
   bool try_connect(native_socket fd);
   bool try_accept(native_socket fd);
   const char* openssl_passphrase();
+  int pending_read_fd();
 
 private:
   rw_state do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
@@ -73,6 +74,8 @@ private:
   std::string openssl_passphrase_;
   bool connecting_;
   bool accepting_;
+  bool had_pending_;
+  std::pair<native_socket, native_socket> pipe_fds_;
 };
 
 /// @relates session
