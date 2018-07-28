@@ -41,6 +41,12 @@ struct udp {
   static bool write_datagram(size_t& result, io::network::native_socket fd,
                              void* buf, size_t buf_len,
                              const io::network::ip_endpoint& ep);
+
+  /// Always returns `false`. Native UDP I/O event handlers only rely on the
+  /// socket buffer.
+  static constexpr bool must_read_more(io::network::native_socket, size_t) {
+    return false;
+  }
 };
 
 } // namespace policy

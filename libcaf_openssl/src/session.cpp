@@ -197,6 +197,10 @@ bool session::try_accept(native_socket fd) {
   return handle_ssl_result(ret);
 }
 
+bool session::must_read_more(native_socket, size_t threshold) {
+  return static_cast<size_t>(SSL_pending(ssl_)) >= threshold;
+}
+
 const char* session::openssl_passphrase() {
   return openssl_passphrase_.c_str();
 }

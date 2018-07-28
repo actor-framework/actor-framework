@@ -89,6 +89,10 @@ struct ssl_policy {
     return session_->try_accept(result);
   }
 
+  bool must_read_more(native_socket fd, size_t threshold) {
+    return session_->must_read_more(fd, threshold);
+  }
+
 private:
   session_ptr session_;
 };

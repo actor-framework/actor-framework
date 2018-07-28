@@ -99,18 +99,37 @@ protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
     CAF_LOG_TRACE(CAF_ARG(op));
-    auto mcr = max_consecutive_reads_;
     switch (op) {
       case io::network::operation::read: {
-        // Loop until an error occurs or we have nothing more to read
-        // or until we have handled `mcr` reads.
-        size_t rb;
-        for (size_t i = 0; i < mcr; ++i) {
-          auto res = policy.read_some(rb, fd(), rd_buf_.data() + collected_,
-                                      rd_buf_.size() - collected_);
-          if (!handle_read_result(res, rb))
+        // Stores how many bytes the last read_some() procued.
+        size_t rb = 0;
+        // Threshold configured by the actor's read policy.
+        auto threshold = [&] {
+          CAF_ASSERT(read_threshold_ >= collected_);
+          return read_threshold_ - collected_;
+        };
+        // Returns how much bytes the next read_some() wants to read.
+        auto read_size = [&] {
+          return rd_buf_.size() - collected_;
+        };
+        // Returns `true` if we could read something, `false` otherwise.
+        auto read_some = [&] {
+          return policy.read_some(rb, fd(), rd_buf_.data() + collected_,
+                                  read_size());
+        };
+        // Loop until reaching the mcr threshold or an error occurs.
+        size_t reads = 0;
+        for (; reads < max_consecutive_reads_; ++reads)
+          if (!handle_read_result(read_some(), rb))
             return;
-        }
+        // Some policies (such as SSL) buffer data internally. In this case, we
+        // have to read more despite having reached max_consecutive_reads_.
+        // Otherwise, brokers can block despite having data to read and lose
+        // data at the end of a transmission.
+        if (reads == max_consecutive_reads_)
+          while (policy.must_read_more(fd(), threshold()))
+            if (!handle_read_result(read_some(), rb))
+              return;
         break;
       }
       case io::network::operation::write: {

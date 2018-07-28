@@ -47,6 +47,12 @@ struct tcp {
   /// as long as
   static bool try_accept(io::network::native_socket& result,
                          io::network::native_socket fd);
+
+  /// Always returns `false`. Native TCP I/O event handlers only rely on the
+  /// socket buffer.
+  static constexpr bool must_read_more(io::network::native_socket, size_t) {
+    return false;
+  }
 };
 
 } // namespace policy
