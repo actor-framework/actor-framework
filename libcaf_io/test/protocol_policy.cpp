@@ -1169,7 +1169,7 @@ struct dummy_basp_newb : newb<new_basp_message> {
         CAF_MESSAGE("write the payload");
         binary_serializer bs(&backend(), *whdl.buf);
         bs(payload);
-        std::swap(transport->receive_buffer, transport->send_buffer);
+        std::swap(transport->receive_buffer, transport->offline_buffer);
         transport->send_buffer.clear();
       },
       [=](send_atom, ordering_header& ohdr, basp_header& bhdr, int payload) {
