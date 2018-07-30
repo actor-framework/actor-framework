@@ -104,7 +104,7 @@ template <class T>
 struct newb;
 
 constexpr auto ipv4 = caf::io::network::protocol::ipv4;
-constexpr auto ipv6 = caf::io::network::protocol::ipv6;
+//constexpr auto ipv6 = caf::io::network::protocol::ipv6;
 
 auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
   return what.sin_addr;
@@ -150,6 +150,7 @@ using expect_atom = atom_constant<atom("expect")>;
 using ordering_atom = atom_constant<atom("ordering")>;
 using send_atom = atom_constant<atom("send")>;
 using shutdown_atom = atom_constant<atom("shutdown")>;
+using quit_atom = atom_constant<atom("quit")>;
 
 // -- aliases ------------------------------------------------------------------
 
@@ -228,19 +229,35 @@ struct transport_policy {
     // nop
   }
 
+  virtual void flush(network::event_handler*) {
+    // nop
+  }
+
   byte_buffer& wr_buf() {
     return offline_buffer;
   }
 
   template <class T>
   error read_some(network::event_handler* parent, protocol_policy<T>& policy) {
-    auto res = read_some(parent);
-    if (!res && should_deliver()) {
-      res = policy.read(receive_buffer.data(), receive_buffer.size());
-      prepare_next_read(parent);
+    CAF_LOG_TRACE("");
+    auto mcr = max_consecutive_reads;
+    for (size_t i = 0; i < mcr; ++i) {
+      auto res = read_some(parent);
+      // The return statements seems weird, needs cleanup.
+      if (res)
+        return res;
+      if (should_deliver()) {
+        res = policy.read(receive_buffer.data(), receive_buffer_length);
+        prepare_next_read(parent);
+        if (!res)
+          return res;
+      }
     }
-    return res;
+    return none;
   }
+
+  size_t receive_buffer_length;
+  size_t max_consecutive_reads = 50;
 
   byte_buffer offline_buffer;
   byte_buffer receive_buffer;
@@ -433,6 +450,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   void handle_event(network::operation op) override {
     CAF_PUSH_AID_FROM_PTR(this);
+    CAF_LOG_TRACE("");
     switch (op) {
       case io::network::operation::read:
         read_event();
@@ -446,12 +464,39 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   }
 
   void removed_from_loop(network::operation op) override {
+    CAF_MESSAGE("newb removed from loop: " << to_string(op));
     CAF_PUSH_AID_FROM_PTR(this);
-    std::cout << "removing myself from the loop for "
-              << to_string(op) << std::endl;
+    CAF_LOG_TRACE(CAF_ARG(op));
+    switch (op) {
+      case network::operation::read:  break;
+      case network::operation::write: break;
+      case network::operation::propagate_error: ; // nop
+    }
+    // nop
   }
 
   // -- members ----------------------------------------------------------------
+
+  void init_newb() {
+    CAF_LOG_TRACE("");
+    super::setf(super::is_initialized_flag);
+  }
+
+  void start() {
+    CAF_PUSH_AID_FROM_PTR(this);
+    CAF_LOG_TRACE("");
+    CAF_MESSAGE("starting newb");
+    activate();
+    if (transport)
+      transport->prepare_next_read(this);
+  }
+
+  void stop() {
+    CAF_PUSH_AID_FROM_PTR(this);
+    CAF_LOG_TRACE("");
+    close_read_channel();
+    passivate();
+  }
 
   write_handle wr_buf(header_writer* hw) {
     // TODO: We somehow need to tell the transport policy how much we've
@@ -463,9 +508,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     return {protocol.get(), &buf, hstart, hlen};
   }
 
-  // Send
   void flush() {
-    // TODO: send message
+    transport->flush(this);
   }
 
   error read_event() {
@@ -473,8 +517,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   }
 
   void write_event() {
-    CAF_MESSAGE("got write event to handle: not implemented");
-    // transport->write_some();
+    transport->write_some(this);
   }
 
   void handle_error() {
@@ -492,9 +535,9 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   }
 
   // Allow protocol policies to enqueue a data for sending. Probably required for
-  // reliability to send ACKs. The problem is that only the headers of policies lower,
-  // well closer to the transport, should write their headers. So we're facing a
-  // similiar porblem to slicing here.
+  // reliability to send ACKs. The problem is that only the headers of policies
+  // lower, well closer to the transport, should write their headers. So we're
+  // facing a similiar porblem to slicing here.
   // void (char* bytes, size_t count);
 
   /// Returns the `multiplexer` running this broker.
@@ -513,9 +556,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     };
   }*/
 
-  void init_newb() {
-    CAF_LOG_TRACE("");
-    super::setf(super::is_initialized_flag);
+  void configure_read(receive_policy::config config) {
+    transport->configure_read(config);
   }
 
   /// @cond PRIVATE
@@ -535,7 +577,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   std::unique_ptr<transport_policy> transport;
   std::unique_ptr<protocol_policy<Message>> protocol;
 };
-
+template <class Message>
 struct newb_acceptor : public network::event_handler {
 
   // -- constructors and destructors -------------------------------------------
@@ -548,6 +590,7 @@ struct newb_acceptor : public network::event_handler {
   // -- overridden modifiers of event handler ----------------------------------
 
   void handle_event(network::operation op) override {
+    CAF_MESSAGE("new event: " << to_string(op));
     switch (op) {
       case network::operation::read:
         read_event();
@@ -561,10 +604,14 @@ struct newb_acceptor : public network::event_handler {
     }
   }
 
-  void removed_from_loop(network::operation) override {
-    CAF_MESSAGE("remove from loop not implemented in newb acceptor");
-    close_read_channel();
-    // TODO: implement
+  void removed_from_loop(network::operation op) override {
+    CAF_MESSAGE("newb acceptor removed from loop: " << to_string(op));
+    CAF_LOG_TRACE(CAF_ARG(op));
+    switch (op) {
+      case network::operation::read:  break;
+      case network::operation::write: break;
+      case network::operation::propagate_error: ; // nop
+    }
   }
 
   // -- members ----------------------------------------------------------------
@@ -578,15 +625,25 @@ struct newb_acceptor : public network::event_handler {
     if (!en)
       return std::move(en.error());
     auto ptr = caf::actor_cast<caf::abstract_actor*>(*en);
-    acceptor->init(dynamic_cast<event_handler&>(*ptr));
+    CAF_ASSERT(ptr != nullptr);
+    auto& ref = dynamic_cast<newb<Message>&>(*ptr);
+    acceptor->init(ref);
+    ref.start();
     return none;
   }
 
-  void activate() {
-    event_handler::activate();
+  void start() {
+    activate();
   }
 
-  virtual expected<actor> create_newb(native_socket sock, transport_policy_ptr pol) = 0;
+  void stop() {
+    CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
+    close_read_channel();
+    passivate();
+  }
+
+  virtual expected<actor> create_newb(native_socket sock,
+                                      transport_policy_ptr pol) = 0;
 
   std::unique_ptr<accept_policy> acceptor;
 };
@@ -663,6 +720,8 @@ struct ordering {
   }
 
   error read(char* bytes, size_t count) {
+    if (count < header_size)
+      return sec::unexpected_message;
     ordering_header hdr;
     binary_deserializer bd(&parent->backend(), bytes, count);
     bd(hdr);
@@ -674,8 +733,10 @@ struct ordering {
         return res;
       return deliver_pending();
     } else if (hdr.seq_nr > seq_read) {
-      pending[hdr.seq_nr] = std::vector<char>(bytes + header_size, bytes + count);
-      parent->set_timeout(std::chrono::seconds(2), ordering_atom::value, hdr.seq_nr);
+      pending[hdr.seq_nr] = std::vector<char>(bytes + header_size,
+                                              bytes + count);
+      parent->set_timeout(std::chrono::seconds(2), ordering_atom::value,
+                          hdr.seq_nr);
       return none;
     }
     // Is late, drop it. TODO: Should this return an error?
@@ -806,7 +867,7 @@ actor make_newb(actor_system& sys, native_socket sockfd) {
 
 // TODO: I feel like this should include the ProtocolPolicy somehow.
 template <class NewbAcceptor, class AcceptPolicy>
-std::unique_ptr<newb_acceptor> make_newb_acceptor(actor_system& sys,
+std::unique_ptr<NewbAcceptor> make_newb_acceptor(actor_system& sys,
                                                   uint16_t port,
                                                   const char* addr = nullptr,
                                                   bool reuse_addr = false) {
@@ -816,9 +877,9 @@ std::unique_ptr<newb_acceptor> make_newb_acceptor(actor_system& sys,
     return nullptr;
   }
   auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-  std::unique_ptr<newb_acceptor> ptr{new NewbAcceptor(mpx, *sockfd)};
+  std::unique_ptr<NewbAcceptor> ptr{new NewbAcceptor(mpx, *sockfd)};
   ptr->acceptor.reset(new AcceptPolicy);
-  ptr->activate();
+  ptr->start();
   return ptr;
 }
 
@@ -830,6 +891,8 @@ struct tcp_basp_header {
   actor_id to;
 };
 
+constexpr size_t tcp_basp_header_len = sizeof(uint32_t) + sizeof(actor_id) * 2;
+
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun, tcp_basp_header& hdr) {
   return fun(meta::type_name("tcp_basp_header"),
@@ -839,16 +902,18 @@ typename Inspector::result_type inspect(Inspector& fun, tcp_basp_header& hdr) {
 struct new_tcp_basp_message {
   tcp_basp_header header;
   char* payload;
-  size_t payload_size;
+  size_t payload_len;
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, new_tcp_basp_message& msg) {
-  return fun(meta::type_name("new_tcp_basp_message"), msg.header, msg.payload_size);
+typename Inspector::result_type inspect(Inspector& fun,
+                                        new_tcp_basp_message& msg) {
+  return fun(meta::type_name("new_tcp_basp_message"), msg.header,
+             msg.payload_len);
 }
 
 struct tcp_basp {
-  static constexpr size_t header_size = sizeof(basp_header);
+  static constexpr size_t header_size = sizeof(tcp_basp_header);
   using message_type = new_tcp_basp_message;
   using result_type = optional<message_type>;
   newb<message_type>* parent;
@@ -860,24 +925,31 @@ struct tcp_basp {
   }
 
   error read_header(char* bytes, size_t count) {
-    if (count < header_size) {
-      CAF_MESSAGE("data left in packet to small to contain the basp header");
+    if (count < tcp_basp_header_len) {
+      CAF_LOG_DEBUG("buffer contains " << count << " bytes of expected "
+                    << tcp_basp_header_len);
       return sec::unexpected_message;
     }
-    binary_deserializer bd(&parent->backend(), bytes, count);
+    binary_deserializer bd{&parent->backend(), bytes, count};
     bd(msg.header);
+    CAF_LOG_DEBUG("read header " << CAF_ARG(msg.header));
+    size_t size = static_cast<size_t>(msg.header.payload_len);
+    parent->configure_read(receive_policy::exactly(size));
     expecting_header = false;
     return none;
   }
 
   error read_payload(char* bytes, size_t count) {
     if (count < msg.header.payload_len) {
+      CAF_LOG_DEBUG("buffer contains " << count << " bytes of expected "
+                    << msg.header.payload_len);
       return sec::unexpected_message;
     }
     msg.payload = bytes;
-    msg.payload_size = msg.header.payload_len;
+    msg.payload_len = msg.header.payload_len;
     parent->handle(msg);
     expecting_header = true;
+    parent->configure_read(receive_policy::exactly(tcp_basp_header_len));
     return none;
   }
 
@@ -908,13 +980,16 @@ struct tcp_basp {
 
 struct tcp_transport_policy : public transport_policy {
   error write_some(network::event_handler* parent) override {
-    const void* buf = send_buffer.data();
-    auto len = send_buffer.size();
-    auto sres = ::send(parent->fd(), reinterpret_cast<network::socket_send_ptr>(buf),
+    CAF_LOG_TRACE("");
+    const void* buf = send_buffer.data() + written;
+    auto len = send_buffer.size() - written;
+    auto sres = ::send(parent->fd(),
+                       reinterpret_cast<network::socket_send_ptr>(buf),
                        len, network::no_sigpipe_io_flag);
     if (network::is_error(sres, true))
       return sec::runtime_error;
-    //result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+    size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+    written += result;
     return none;
   }
 
@@ -923,25 +998,33 @@ struct tcp_transport_policy : public transport_policy {
   }
 
   error read_some(network::event_handler* parent) override {
-    size_t len = 1024;
+    CAF_LOG_TRACE("");
+    size_t len = receive_buffer.size() - collected;
     receive_buffer.resize(len);
-    void* buf = receive_buffer.data();
-    auto sres = ::recv(parent->fd(), reinterpret_cast<network::socket_recv_ptr>(buf),
+    void* buf = receive_buffer.data() + collected;
+    auto sres = ::recv(parent->fd(),
+                       reinterpret_cast<network::socket_recv_ptr>(buf),
                        len, network::no_sigpipe_io_flag);
     if (network::is_error(sres, true) || sres == 0) {
       // recv returns 0  when the peer has performed an orderly shutdown
       return sec::runtime_error;
     }
-    // auto result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+    size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+    collected += result;
+    //CAF_MESSAGE("received " << sres << " bytes (collected " << collected << ")");
+    receive_buffer_length = collected;
     return none;
   }
 
   bool should_deliver() override {
+    CAF_LOG_DEBUG(CAF_ARG(collected) << CAF_ARG(read_threshold));
     return collected >= read_threshold;
   }
 
   void prepare_next_read(network::event_handler*) override {
+    //CAF_MESSAGE("prepare next read flagged '" << to_string(rd_flag) << "'");
     collected = 0;
+    receive_buffer_length = 0;
     switch (rd_flag) {
       case receive_policy_flag::exactly:
         if (receive_buffer.size() != maximum)
@@ -965,6 +1048,7 @@ struct tcp_transport_policy : public transport_policy {
   }
 
   void prepare_next_write(network::event_handler* parent) override {
+    CAF_MESSAGE("prepare next wrtie");
     written = 0;
     send_buffer.clear();
     if (offline_buffer.empty()) {
@@ -976,8 +1060,20 @@ struct tcp_transport_policy : public transport_policy {
   }
 
   void configure_read(receive_policy::config config) override {
+    //CAF_MESSAGE("configure read: " << to_string(config.first) << " "
+                //<< config.second);
     rd_flag = config.first;
     maximum = config.second;
+  }
+
+  void flush(network::event_handler* parent) override {
+    CAF_ASSERT(parent != nullptr);
+    CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
+    if (!offline_buffer.empty() && !writing) {
+      parent->backend().add(network::operation::write, parent->fd(), parent);
+      writing = true;
+      prepare_next_write(parent);
+    }
   }
 
   // State for reading.
@@ -1030,11 +1126,13 @@ struct tcp_basp_newb : newb<new_tcp_basp_message> {
     // nop
   }
 
-  void handle(new_tcp_basp_message&) override {
-    // TODO:
-    //  - parse the payload of the message
-    //  - send it somewhere
-    //  - drop bytes from the buffer?
+  void handle(new_tcp_basp_message& msg) override {
+    CAF_PUSH_AID_FROM_PTR(this);
+    CAF_LOG_TRACE("");
+    std::string res;
+    binary_deserializer bd(&backend(), msg.payload, msg.payload_len);
+    bd(res);
+    send(responder, res);
   }
 
   behavior make_behavior() override {
@@ -1045,7 +1143,7 @@ struct tcp_basp_newb : newb<new_tcp_basp_message> {
       [=](atom_value atm, uint32_t id) {
         protocol->timeout(atm, id);
       },
-      [=](send_atom, actor_id sender, actor_id receiver, int payload) {
+      [=](send_atom, actor_id sender, actor_id receiver, std::string payload) {
         auto hw = caf::make_callback([&](byte_buffer& buf) -> error {
           binary_serializer bs(&backend(), buf);
           bs(basp_header{sender, receiver});
@@ -1058,6 +1156,15 @@ struct tcp_basp_newb : newb<new_tcp_basp_message> {
         CAF_MESSAGE("write the payload");
         binary_serializer bs(&backend(), *whdl.buf);
         bs(payload);
+        flush();
+        // TODO: Register for sending.
+      },
+      [=](quit_atom) {
+        CAF_MESSAGE("newb actor shutting down");
+        // Remove from multiplexer loop.
+        stop();
+        // Quit actor.
+        quit();
       }
     };
   }
@@ -1091,13 +1198,17 @@ struct tcp_accept_policy : public accept_policy {
 };
 
 template <class ProtocolPolicy>
-struct tcp_basp_acceptor : newb_acceptor {
+struct tcp_basp_acceptor
+    : public newb_acceptor<typename ProtocolPolicy::message_type> {
+  using super = newb_acceptor<typename ProtocolPolicy::message_type>;
+
   tcp_basp_acceptor(default_multiplexer& dm, native_socket sockfd)
-      : newb_acceptor(dm, sockfd) {
+      : super(dm, sockfd) {
     // nop
   }
 
-  expected<actor> create_newb(native_socket sockfd, transport_policy_ptr pol) override {
+  expected<actor> create_newb(native_socket sockfd,
+                              transport_policy_ptr pol) override {
     CAF_MESSAGE("creating new basp tcp newb");
     auto n = make_newb<tcp_basp_newb>(this->backend().system(), sockfd);
     auto ptr = caf::actor_cast<caf::abstract_actor*>(n);
@@ -1107,6 +1218,8 @@ struct tcp_basp_acceptor : newb_acceptor {
     ref.transport = std::move(pol);
     ref.protocol.reset(new ProtocolPolicy(&ref));
     ref.responder = responder;
+    // This should happen somewhere else?
+    ref.configure_read(receive_policy::exactly(tcp_basp_header_len));
     anon_send(responder, n);
     return n;
   }
@@ -1202,16 +1315,20 @@ struct accept_policy_impl : accept_policy {
 };
 
 template <class ProtocolPolicy>
-struct dummy_basp_newb_acceptor : newb_acceptor {
+struct dummy_basp_newb_acceptor
+    : newb_acceptor<typename ProtocolPolicy::message_type> {
+  using super = newb_acceptor<typename ProtocolPolicy::message_type>;
   using message_tuple_t = std::tuple<ordering_header, basp_header, int>;
 
   dummy_basp_newb_acceptor(default_multiplexer& dm, native_socket sockfd)
-      : newb_acceptor(dm, sockfd) {
+      : super(dm, sockfd) {
     // nop
   }
 
-  expected<actor> create_newb(native_socket sockfd, transport_policy_ptr pol) override {
-    spawned.emplace_back(make_newb<dummy_basp_newb>(this->backend().system(), sockfd));
+  expected<actor> create_newb(native_socket sockfd,
+                              transport_policy_ptr pol) override {
+    spawned.emplace_back(make_newb<dummy_basp_newb>(this->backend().system(),
+                                                    sockfd));
     auto ptr = caf::actor_cast<caf::abstract_actor*>(spawned.back());
     if (ptr == nullptr)
       return sec::runtime_error;
@@ -1219,7 +1336,7 @@ struct dummy_basp_newb_acceptor : newb_acceptor {
     ref.transport.reset(pol.release());
     ref.protocol.reset(new ProtocolPolicy(&ref));
     // TODO: Call read_some using the buffer of the ref as a destination.
-    binary_serializer bs(&backend(), ref.transport->receive_buffer);
+    binary_serializer bs(&this->backend(), ref.transport->receive_buffer);
     bs(get<0>(msg));
     bs(get<1>(msg));
     bs(get<2>(msg));
@@ -1255,10 +1372,10 @@ struct fixture {
   using newb_acceptor_t = tcp_basp_acceptor<protocol_policy_t>;
   using transport_policy_t = tcp_transport_policy;
 
-  config cfg;
+  io_config cfg;
   actor_system sys;
   default_multiplexer& mpx;
-  scheduler::test_coordinator& sched;
+//  scheduler::test_coordinator& sched;
 
   const char* host = "localhost";
   const uint16_t port = 12345;
@@ -1266,26 +1383,23 @@ struct fixture {
   // -- constructor ------------------------------------------------------------
 
   fixture()
-      : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
-        mpx(dynamic_cast<default_multiplexer&>(sys.middleman().backend())),
-        sched(dynamic_cast<caf::scheduler::test_coordinator&>(sys.scheduler())) {
+    : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
+        mpx(dynamic_cast<default_multiplexer&>(sys.middleman().backend())) {
+//      sched(dynamic_cast<caf::scheduler::test_coordinator&>(sys.scheduler())) {
     // nop
   }
 
   // -- supporting -------------------------------------------------------------
 
-  void exec_all() {
-    while (mpx.try_run_once()) {
-      // rince and repeat
-    }
-  }
+//  void exec_all() {
+//    while (mpx.try_run_once()) {
+//      // rince and repeat
+//    }
+//  }
 
-  template <class T = caf::scheduled_actor, class Handle = caf::actor>
-  T& deref(const Handle& hdl) {
-    auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
-    CAF_REQUIRE(ptr != nullptr);
-    return dynamic_cast<T&>(*ptr);
-  }
+//  void run_all() {
+//    sched.run_dispatch_loop();
+//  }
 };
 
 struct dm_fixture {
@@ -1296,7 +1410,7 @@ struct dm_fixture {
   default_multiplexer& mpx;
   scheduler::test_coordinator& sched;
   actor self;
-  std::unique_ptr<newb_acceptor> na;
+  std::unique_ptr<acceptor_t> na;
 
   dm_fixture()
       : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
@@ -1309,7 +1423,7 @@ struct dm_fixture {
     ref.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>(&ref));
     // Create acceptor.
     auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-    std::unique_ptr<newb_acceptor> ptr{new acceptor_t(mpx, invalid_native_socket)};
+    std::unique_ptr<acceptor_t> ptr{new acceptor_t(mpx, invalid_native_socket)};
     ptr->acceptor.reset(new accept_policy_impl);
     na = std::move(ptr);
   }
@@ -1349,6 +1463,7 @@ struct dm_fixture {
     bs(value);
   }
 
+  /*
   template <class T>
   void from_buffer(T& x, size_t offset, ordering_header& hdr) {
     binary_deserializer bd(sys, x.data() + offset, sizeof(ordering_header));
@@ -1360,6 +1475,7 @@ struct dm_fixture {
     binary_deserializer bd(sys, x.data() + offset, sizeof(basp_header));
     bd(hdr);
   }
+  */
 
   template <class T>
   void from_buffer(char* x, T& value) {
@@ -1496,46 +1612,79 @@ CAF_TEST_FIXTURE_SCOPE_END()
 CAF_TEST_FIXTURE_SCOPE(tcp_newbs, fixture)
 
 CAF_TEST(accept test) {
+  scoped_actor main_actor{sys};
   actor newb_actor;
-  auto tester = [](broker* self, connection_handle hdl) -> behavior {
+  auto testing = [&](broker* self, connection_handle hdl) -> behavior {
+    CAF_CHECK(hdl != invalid_connection_handle);
     return {
-      [=](send_atom) {
+      [=](send_atom, std::string str) {
+        CAF_MESSAGE("sending '" << str << "'");
         byte_buffer buf;
+        binary_serializer bs(sys, buf);
+        tcp_basp_header hdr{0, 1, 2};
+        bs(hdr);
+        auto header_len = buf.size();
+        CAF_REQUIRE(header_len == tcp_basp_header_len);
+        bs(str);
+        hdr.payload_len = buf.size() - header_len;
+        stream_serializer<charbuf> out{sys, buf.data(), sizeof(hdr.payload_len)};
+        out(hdr.payload_len);
+        CAF_MESSAGE("header len: " << header_len
+                    << ", packet_len: " << buf.size()
+                    << ", header: " << to_string(hdr));
         self->write(hdl, buf.size(), buf.data());
+        self->flush(hdl);
       },
-      [=](shutdown_atom) {
+      [=](quit_atom) {
+        CAF_MESSAGE("test broker shutting down");
         self->quit();
       }
     };
   };
-  auto helper = sys.spawn([&](event_based_actor* self) -> behavior {
-    self->set_default_handler(print_and_drop);
+  auto helper_actor = sys.spawn([&](event_based_actor* self, actor m) -> behavior {
     return {
-      [&](int i) {
-        CAF_MESSAGE("Got int message " << i);
+      [=](std::string str) {
+        CAF_MESSAGE("received '" << str << "'");
+        self->send(m, quit_atom::value);
       },
-      [&](actor a) {
-        CAF_MESSAGE("Got new newb handle");
-        newb_actor = a;
+      [=](actor a) {
+        CAF_MESSAGE("got new newb handle");
+        self->send(m, a);
+      },
+      [=](quit_atom) {
+        CAF_MESSAGE("helper shutting down");
+        self->quit();
       }
     };
-  });
-  exec_all();
+  }, main_actor);
   CAF_MESSAGE("creating new acceptor");
-  auto ptr = make_newb_acceptor<newb_acceptor_t, accept_policy_t>(sys, port);
-  dynamic_cast<newb_acceptor_t*>(ptr.get())->responder = helper;
-  exec_all();
-  CAF_MESSAGE("connecting from 'old' broker");
-  auto eb = sys.middleman().spawn_client(tester, host, port);
-  CAF_CHECK(eb);
-  auto e = std::move(*eb);
-  exec_all();
-  anon_send_exit(e, exit_reason::user_shutdown);
-  anon_send_exit(helper, exit_reason::user_shutdown);
-  ptr->passivate();
-  exec_all();
-  // Not a good solution but the newbs currently don't shut down cleanly.
-  sys.await_actors_before_shutdown(false);
+  auto newb_acceptor_ptr
+    = make_newb_acceptor<newb_acceptor_t, accept_policy_t>(sys, port);
+  dynamic_cast<newb_acceptor_t*>(newb_acceptor_ptr.get())->responder
+    = helper_actor;
+  CAF_MESSAGE("connecting from 'old-style' broker");
+  auto exp = sys.middleman().spawn_client(testing, host, port);
+  CAF_CHECK(exp);
+  auto test_broker = std::move(*exp);
+  main_actor->receive(
+    [&](actor a) {
+      newb_actor = a;
+    }
+  );
+  CAF_MESSAGE("sending test message");
+  main_actor->send(test_broker, send_atom::value, "hello world");
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  main_actor->receive(
+    [](quit_atom) {
+      CAF_MESSAGE("shutting down actors");
+    }
+  );
+  newb_acceptor_ptr->stop();
+  anon_send(newb_actor, quit_atom::value);
+  anon_send(helper_actor, quit_atom::value);
+  anon_send(test_broker, quit_atom::value);
+  sys.await_all_actors_done();
+  CAF_MESSAGE("done");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END();
