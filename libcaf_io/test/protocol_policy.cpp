@@ -505,6 +505,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     auto hstart = buf.size();
     protocol->write_header(buf, hw);
     auto hlen = buf.size() - hstart;
+    CAF_MESSAGE("returning write buffer starting at " << hstart << " and "
+                << hlen << " bytes of header");
     return {protocol.get(), &buf, hstart, hlen};
   }
 
@@ -972,29 +974,20 @@ struct tcp_basp {
 
   void prepare_for_sending(byte_buffer& buf, size_t hstart, size_t plen) {
     stream_serializer<charbuf> out{&parent->backend(), buf.data() + hstart,
-                                   sizeof(tcp_basp_header::payload_len)};
+                                   sizeof(uint32_t)};
     auto len = static_cast<uint32_t>(plen);
     out(len);
   }
 };
 
 struct tcp_transport_policy : public transport_policy {
-  error write_some(network::event_handler* parent) override {
-    CAF_LOG_TRACE("");
-    const void* buf = send_buffer.data() + written;
-    auto len = send_buffer.size() - written;
-    auto sres = ::send(parent->fd(),
-                       reinterpret_cast<network::socket_send_ptr>(buf),
-                       len, network::no_sigpipe_io_flag);
-    if (network::is_error(sres, true))
-      return sec::runtime_error;
-    size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-    written += result;
-    return none;
-  }
-
-  byte_buffer& wr_buf() {
-    return send_buffer;
+  tcp_transport_policy()
+      : read_threshold{0},
+        collected{0},
+        maximum{0},
+        writing{false},
+        written{0} {
+    // nop
   }
 
   error read_some(network::event_handler* parent) override {
@@ -1022,7 +1015,6 @@ struct tcp_transport_policy : public transport_policy {
   }
 
   void prepare_next_read(network::event_handler*) override {
-    //CAF_MESSAGE("prepare next read flagged '" << to_string(rd_flag) << "'");
     collected = 0;
     receive_buffer_length = 0;
     switch (rd_flag) {
@@ -1047,8 +1039,29 @@ struct tcp_transport_policy : public transport_policy {
     }
   }
 
+  void configure_read(receive_policy::config config) override {
+    rd_flag = config.first;
+    maximum = config.second;
+  }
+
+  error write_some(network::event_handler* parent) override {
+    CAF_LOG_TRACE("");
+    const void* buf = send_buffer.data() + written;
+    auto len = send_buffer.size() - written;
+    auto sres = ::send(parent->fd(),
+                       reinterpret_cast<network::socket_send_ptr>(buf),
+                       len, network::no_sigpipe_io_flag);
+    if (network::is_error(sres, true))
+      return sec::runtime_error;
+    size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
+    written += result;
+    auto remaining = send_buffer.size() - written;
+    if (remaining == 0)
+      prepare_next_write(parent);
+    return none;
+  }
+
   void prepare_next_write(network::event_handler* parent) override {
-    CAF_MESSAGE("prepare next wrtie");
     written = 0;
     send_buffer.clear();
     if (offline_buffer.empty()) {
@@ -1059,11 +1072,8 @@ struct tcp_transport_policy : public transport_policy {
     }
   }
 
-  void configure_read(receive_policy::config config) override {
-    //CAF_MESSAGE("configure read: " << to_string(config.first) << " "
-                //<< config.second);
-    rd_flag = config.first;
-    maximum = config.second;
+  byte_buffer& wr_buf() {
+    return send_buffer;
   }
 
   void flush(network::event_handler* parent) override {
@@ -1146,18 +1156,19 @@ struct tcp_basp_newb : newb<new_tcp_basp_message> {
       [=](send_atom, actor_id sender, actor_id receiver, std::string payload) {
         auto hw = caf::make_callback([&](byte_buffer& buf) -> error {
           binary_serializer bs(&backend(), buf);
-          bs(basp_header{sender, receiver});
+          bs(tcp_basp_header{0, sender, receiver});
           return none;
         });
-        CAF_MESSAGE("get a write buffer");
-        auto whdl = wr_buf(&hw);
-        CAF_CHECK(whdl.buf != nullptr);
-        CAF_CHECK(whdl.protocol != nullptr);
-        CAF_MESSAGE("write the payload");
-        binary_serializer bs(&backend(), *whdl.buf);
-        bs(payload);
+        {
+          // TODO: Need a better idea how to do this ... Maybe pass the write
+          //  handle to flush which then calls `perpare_for_sending`?
+          auto whdl = wr_buf(&hw);
+          CAF_CHECK(whdl.buf != nullptr);
+          CAF_CHECK(whdl.protocol != nullptr);
+          binary_serializer bs(&backend(), *whdl.buf);
+          bs(payload);
+        }
         flush();
-        // TODO: Register for sending.
       },
       [=](quit_atom) {
         CAF_MESSAGE("newb actor shutting down");
@@ -1364,6 +1375,11 @@ public:
   io_config() {
     load<io::middleman>();
   }
+};
+
+struct test_broker_state {
+  tcp_basp_header hdr;
+  bool expecting_header = true;
 };
 
 struct fixture {
@@ -1614,8 +1630,11 @@ CAF_TEST_FIXTURE_SCOPE(tcp_newbs, fixture)
 CAF_TEST(accept test) {
   scoped_actor main_actor{sys};
   actor newb_actor;
-  auto testing = [&](broker* self, connection_handle hdl) -> behavior {
+  auto testing = [&](stateful_broker<test_broker_state>* self,
+                     connection_handle hdl, actor m) -> behavior {
     CAF_CHECK(hdl != invalid_connection_handle);
+    self->configure_read(hdl, receive_policy::exactly(tcp_basp_header_len));
+    self->state.expecting_header = true;
     return {
       [=](send_atom, std::string str) {
         CAF_MESSAGE("sending '" << str << "'");
@@ -1638,12 +1657,28 @@ CAF_TEST(accept test) {
       [=](quit_atom) {
         CAF_MESSAGE("test broker shutting down");
         self->quit();
+      },
+      [=](new_data_msg& msg) {
+        auto& s = self->state;
+        size_t next_len = tcp_basp_header_len;
+        binary_deserializer bd(self->system(), msg.buf);
+        if (s.expecting_header) {
+          bd(s.hdr);
+          next_len = s.hdr.payload_len;
+          s.expecting_header = false;
+        } else {
+          std::string str;
+          bd(str);
+          CAF_MESSAGE("received '" << str << "'");
+          self->send(m, quit_atom::value);
+        }
+        self->configure_read(msg.handle, receive_policy::exactly(next_len));
       }
     };
   };
   auto helper_actor = sys.spawn([&](event_based_actor* self, actor m) -> behavior {
     return {
-      [=](std::string str) {
+      [=](const std::string& str) {
         CAF_MESSAGE("received '" << str << "'");
         self->send(m, quit_atom::value);
       },
@@ -1663,7 +1698,7 @@ CAF_TEST(accept test) {
   dynamic_cast<newb_acceptor_t*>(newb_acceptor_ptr.get())->responder
     = helper_actor;
   CAF_MESSAGE("connecting from 'old-style' broker");
-  auto exp = sys.middleman().spawn_client(testing, host, port);
+  auto exp = sys.middleman().spawn_client(testing, host, port, main_actor);
   CAF_CHECK(exp);
   auto test_broker = std::move(*exp);
   main_actor->receive(
@@ -1671,14 +1706,23 @@ CAF_TEST(accept test) {
       newb_actor = a;
     }
   );
-  CAF_MESSAGE("sending test message");
+  CAF_MESSAGE("sending message to newb");
   main_actor->send(test_broker, send_atom::value, "hello world");
   std::this_thread::sleep_for(std::chrono::seconds(1));
   main_actor->receive(
     [](quit_atom) {
-      CAF_MESSAGE("shutting down actors");
+      CAF_MESSAGE("check");
     }
   );
+  CAF_MESSAGE("sending message from newb");
+  main_actor->send(newb_actor, send_atom::value, actor_id{3}, actor_id{4},
+                   "dlrow olleh");
+  main_actor->receive(
+    [](quit_atom) {
+      CAF_MESSAGE("check");
+    }
+  );
+  CAF_MESSAGE("shutting everything down");
   newb_acceptor_ptr->stop();
   anon_send(newb_actor, quit_atom::value);
   anon_send(helper_actor, quit_atom::value);
