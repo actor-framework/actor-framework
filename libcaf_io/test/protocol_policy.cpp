@@ -286,11 +286,7 @@ struct protocol_policy_base {
     // nop
   }
 
-  /// TODO: Come up with something better than a write here?
-  /// Write header into buffer. Use push back to append only.
   virtual void write_header(byte_buffer&, header_writer*) = 0;
-
-  //virtual size_t offset() const noexcept = 0;
 
   virtual void prepare_for_sending(byte_buffer&, size_t, size_t) = 0;
 };
@@ -322,12 +318,6 @@ struct protocol_policy_impl : protocol_policy<typename T::message_type> {
     return impl.read(bytes, count);
   }
 
-  /*
-  size_t offset() const noexcept override {
-    return T::offset;
-  }
-  */
-
   error timeout(atom_value atm, uint32_t id) override {
     return impl.timeout(atm, id);
   }
@@ -345,7 +335,9 @@ struct protocol_policy_impl : protocol_policy<typename T::message_type> {
 
 /// @relates newb
 /// Returned by funtion wr_buf of newb.
+template <class Message>
 struct write_handle {
+  newb<Message>* parent;
   protocol_policy_base* protocol;
   byte_buffer* buf;
   size_t header_start;
@@ -355,6 +347,7 @@ struct write_handle {
     // Can we calculate added bytes for datagram things?
     auto payload_size = buf->size() - (header_start + header_len);
     protocol->prepare_for_sending(*buf, header_start, payload_size);
+    parent->flush();
   }
 };
 
@@ -498,7 +491,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     passivate();
   }
 
-  write_handle wr_buf(header_writer* hw) {
+  write_handle<Message> wr_buf(header_writer* hw) {
     // TODO: We somehow need to tell the transport policy how much we've
     // written to enable it to split the buffer into datagrams.
     auto& buf = transport->wr_buf();
@@ -507,7 +500,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     auto hlen = buf.size() - hstart;
     CAF_MESSAGE("returning write buffer starting at " << hstart << " and "
                 << hlen << " bytes of header");
-    return {protocol.get(), &buf, hstart, hlen};
+    return {this, protocol.get(), &buf, hstart, hlen};
   }
 
   void flush() {
@@ -1073,7 +1066,7 @@ struct tcp_transport_policy : public transport_policy {
   }
 
   byte_buffer& wr_buf() {
-    return send_buffer;
+    return offline_buffer;
   }
 
   void flush(network::event_handler* parent) override {
@@ -1108,12 +1101,6 @@ struct tcp_protocol_policy : protocol_policy<typename T::message_type> {
   error read(char* bytes, size_t count) override {
     return impl.read(bytes, count);
   }
-
-  /*
-  size_t offset() const noexcept override {
-    return T::offset;
-  }
-  */
 
   error timeout(atom_value atm, uint32_t id) override {
     return impl.timeout(atm, id);
@@ -1159,16 +1146,11 @@ struct tcp_basp_newb : newb<new_tcp_basp_message> {
           bs(tcp_basp_header{0, sender, receiver});
           return none;
         });
-        {
-          // TODO: Need a better idea how to do this ... Maybe pass the write
-          //  handle to flush which then calls `perpare_for_sending`?
-          auto whdl = wr_buf(&hw);
-          CAF_CHECK(whdl.buf != nullptr);
-          CAF_CHECK(whdl.protocol != nullptr);
-          binary_serializer bs(&backend(), *whdl.buf);
-          bs(payload);
-        }
-        flush();
+        auto whdl = wr_buf(&hw);
+        CAF_CHECK(whdl.buf != nullptr);
+        CAF_CHECK(whdl.protocol != nullptr);
+        binary_serializer bs(&backend(), *whdl.buf);
+        bs(payload);
       },
       [=](quit_atom) {
         CAF_MESSAGE("newb actor shutting down");
@@ -1627,7 +1609,7 @@ CAF_TEST_FIXTURE_SCOPE_END()
 
 CAF_TEST_FIXTURE_SCOPE(tcp_newbs, fixture)
 
-CAF_TEST(accept test) {
+CAF_TEST(tcp basp newb) {
   scoped_actor main_actor{sys};
   actor newb_actor;
   auto testing = [&](stateful_broker<test_broker_state>* self,
