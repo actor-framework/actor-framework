@@ -18,6 +18,8 @@
 
 #include "caf/detail/stringification_inspector.hpp"
 
+#include <ctime>
+
 namespace caf {
 namespace detail {
 
