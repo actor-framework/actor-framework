@@ -252,7 +252,7 @@ public:
     return disabled_;
   }
 
-  virtual void run() = 0;
+  virtual void run_test_impl() = 0;
 
 private:
   size_t expected_failures_;
@@ -272,9 +272,9 @@ public:
     // nop
   }
 
-  void run() override {
+  void run_test_impl() override {
     T impl;
-    impl.run();
+    impl.run_test_impl();
   }
 };
 
@@ -603,12 +603,12 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_TEST_IMPL(name, disabled_by_default)                               \
   namespace {                                                                  \
   struct CAF_UNIQUE(test) : caf_test_case_auto_fixture {                       \
-    void run();                                                                \
+    void run_test_impl();                                                      \
   };                                                                           \
   ::caf::test::detail::adder<::caf::test::test_impl<CAF_UNIQUE(test)>>         \
     CAF_UNIQUE(a){CAF_XSTR(CAF_SUITE), CAF_XSTR(name), disabled_by_default};   \
   } /* namespace <anonymous> */                                                \
-  void CAF_UNIQUE(test)::run()
+  void CAF_UNIQUE(test)::run_test_impl()
 
 #define CAF_TEST(name) CAF_TEST_IMPL(name, false)
 

@@ -18,41 +18,55 @@
 
 #pragma once
 
+#include <functional>
+
 #include "caf/io/all.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
 #include "caf/test/dsl.hpp"
 
-namespace {
+/// Ensures that `test_node_fixture` can override `run_exhaustively` even if
+/// the base fixture does not declare these member functions virtual.
+template <class BaseFixture>
+class test_node_fixture_base {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
+
+  virtual ~test_node_fixture_base() {
+    // nop
+  }
+
+  // -- interface functions ----------------------------------------------------
+
+  virtual bool advance() = 0;
+
+  virtual bool trigger_timeout() = 0;
+};
 
 /// A fixture containing all required state to simulate a single CAF node.
 template <class BaseFixture =
             test_coordinator_fixture<caf::actor_system_config>>
-class test_node_fixture : public BaseFixture {
+class test_node_fixture : public BaseFixture,
+                          test_node_fixture_base<BaseFixture> {
 public:
+  // -- member types -----------------------------------------------------------
+
+  /// Base type.
   using super = BaseFixture;
 
-  using exec_all_nodes_fun = std::function<void ()>;
-
-  exec_all_nodes_fun exec_all_nodes;
-  caf::io::middleman& mm;
-  caf::io::network::test_multiplexer& mpx;
+  /// Callback function type.
+  using run_all_nodes_fun = std::function<void()>;
 
   /// @param fun A function object for delegating to the parent's `exec_all`.
-  test_node_fixture(exec_all_nodes_fun fun)
-      : exec_all_nodes(std::move(fun)),
-        mm(this->sys.middleman()),
-        mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())) {
+  test_node_fixture(run_all_nodes_fun fun)
+      : mm(this->sys.middleman()),
+        mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())),
+        run_all_nodes(std::move(fun)) {
     // nop
   }
 
-  // Convenience function for transmitting all "network" traffic and running
-  // all executables on this node.
-  void exec_all() {
-    while (mpx.try_exec_runnable() || mpx.read_data()
-           || mpx.try_accept_connection() || this->sched.try_run_once()) {
-      // rince and repeat
-    }
+  test_node_fixture() : test_node_fixture([=] { this->run(); }) {
+    // nop
   }
 
   /// Convenience function for calling `mm.publish` and requiring a valid
@@ -71,17 +85,39 @@ public:
   template <class Handle = caf::actor>
   Handle remote_actor(std::string host, uint16_t port) {
     this->sched.inline_next_enqueue();
-    this->sched.after_next_enqueue(exec_all_nodes);
+    this->sched.after_next_enqueue(run_all_nodes);
     auto res = mm.remote_actor<Handle>(std::move(host), port);
     CAF_REQUIRE(res);
     return *res;
   }
 
-private:
-  caf::io::basp_broker* get_basp_broker() {
-    auto hdl = mm.named_broker<caf::io::basp_broker>(caf::atom("BASP"));
-    return dynamic_cast<caf::io::basp_broker*>(
-      caf::actor_cast<caf::abstract_actor*>(hdl));
+  // -- member variables -------------------------------------------------------
+
+  /// Reference to the node's middleman.
+  caf::io::middleman& mm;
+
+  /// Reference to the middleman's event multiplexer.
+  caf::io::network::test_multiplexer& mpx;
+
+  /// Callback for triggering all nodes when simulating a network of CAF nodes.
+  run_all_nodes_fun run_all_nodes;
+
+  // -- deprecated functions ---------------------------------------------------
+
+  void exec_all() CAF_DEPRECATED_MSG("use run() instead") {
+    this->run();
+  }
+
+  // -- overriding member functions --------------------------------------------
+
+  bool advance() override {
+    return mpx.try_exec_runnable() || mpx.read_data()
+           || mpx.try_accept_connection() || this->sched.try_run_once();
+  }
+
+  bool trigger_timeout() override {
+    // Same as in dsl.hpp, but we have to provide it here again.
+    return this->sched.trigger_timeout();
   }
 };
 
@@ -93,9 +129,7 @@ void exec_all_fixtures(Iterator first, Iterator last) {
            || x->mpx.try_exec_runnable() || x->mpx.try_accept_connection();
   };
   auto trigger_timeouts = [](fixture_ptr x) {
-    auto& sched = x->sched;
-    sched.clock().current_time += x->credit_round_interval;
-    sched.dispatch();
+    x->sched.trigger_timeouts();
   };
   for (;;) {
     // Exhaust all messages in the system.
@@ -109,14 +143,9 @@ void exec_all_fixtures(Iterator first, Iterator last) {
   }
 }
 
-
-/// Binds `test_coordinator_fixture<Config>` to `test_node_fixture`.
-template <class Config = caf::actor_system_config>
-using test_node_fixture_t = test_node_fixture<test_coordinator_fixture<Config>>;
-
 /// Base fixture for simulated network settings with any number of CAF nodes.
 template <class PlanetType>
-class fake_network_fixture_base {
+class test_network_fixture_base {
 public:
   using planets_vector = std::vector<PlanetType*>;
 
@@ -124,7 +153,7 @@ public:
 
   using accept_handle = caf::io::accept_handle;
 
-  fake_network_fixture_base(planets_vector xs) : planets_(std::move(xs)) {
+  test_network_fixture_base(planets_vector xs) : planets_(std::move(xs)) {
     // nop
   }
 
@@ -199,11 +228,11 @@ private:
 template <class BaseFixture =
             test_coordinator_fixture<caf::actor_system_config>>
 class point_to_point_fixture
-    : public fake_network_fixture_base<test_node_fixture<BaseFixture>> {
+    : public test_network_fixture_base<test_node_fixture<BaseFixture>> {
 public:
   using planet_type = test_node_fixture<BaseFixture>;
 
-  using super = fake_network_fixture_base<planet_type>;
+  using super = test_network_fixture_base<planet_type>;
 
   planet_type earth;
   planet_type mars;
@@ -217,21 +246,16 @@ public:
   }
 };
 
-/// Binds `test_coordinator_fixture<Config>` to `point_to_point_fixture`.
-template <class Config = caf::actor_system_config>
-using point_to_point_fixture_t =
-  point_to_point_fixture<test_coordinator_fixture<Config>>;
-
 /// A simple fixture that includes three nodes (`earth`, `mars`, and `jupiter`)
 /// that can connect to each other.
 template <class BaseFixture =
             test_coordinator_fixture<caf::actor_system_config>>
 class belt_fixture
-    : public fake_network_fixture_base<test_node_fixture<BaseFixture>> {
+    : public test_network_fixture_base<test_node_fixture<BaseFixture>> {
 public:
   using planet_type = test_node_fixture<BaseFixture>;
 
-  using super = fake_network_fixture_base<planet_type>;
+  using super = test_network_fixture_base<planet_type>;
 
   planet_type earth;
   planet_type mars;
@@ -245,13 +269,6 @@ public:
     // nop
   }
 };
-
-/// Binds `test_coordinator_fixture<Config>` to `belt_fixture`.
-template <class Config = caf::actor_system_config>
-using belt_fixture_t =
-  belt_fixture<test_coordinator_fixture<Config>>;
-
-}// namespace <anonymous>
 
 #define expect_on(where, types, fields)                                        \
   CAF_MESSAGE(#where << ": expect" << #types << "." << #fields);               \

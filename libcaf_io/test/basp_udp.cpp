@@ -1015,7 +1015,7 @@ CAF_TEST_DISABLED(out_of_order_delivery_udp) {
       ++expected_next;
     }
   );
-  sched.dispatch();
+  sched.trigger_timeouts();
   mpx()->flush_runnables();
   CAF_MESSAGE("force delivery via timeout that skips messages");
   const basp::sequence_type seq_and_payload = 23;
@@ -1023,7 +1023,7 @@ CAF_TEST_DISABLED(out_of_order_delivery_udp) {
   .enqueue_back(jupiter().endpoint, header_with_seq(seq_and_payload),
                 std::vector<actor_id>{}, make_message(seq_and_payload))
   .deliver(jupiter().endpoint, 1);
-  sched.dispatch();
+  sched.trigger_timeouts();
   mpx()->exec_runnable();
   self()->receive(
     [&](basp::sequence_type val) {

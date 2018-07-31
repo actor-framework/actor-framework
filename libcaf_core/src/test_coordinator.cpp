@@ -87,7 +87,7 @@ void test_coordinator::start() {
 }
 
 void test_coordinator::stop() {
-  run_dispatch_loop();
+  run_cycle();
 }
 
 void test_coordinator::enqueue(resumable* ptr) {
@@ -147,44 +147,53 @@ size_t test_coordinator::run(size_t max_count) {
   return res;
 }
 
-bool test_coordinator::dispatch_once() {
-  return clock().dispatch_once();
-}
-
-size_t test_coordinator::dispatch() {
-  return clock().dispatch();
-}
-
 std::pair<size_t, size_t>
-test_coordinator::run_dispatch_loop(std::function<bool()> predicate,
-                                    timespan cycle) {
-  std::pair<size_t, size_t> res{0, 0};
-  if (cycle.count() == 0) {
-    auto x = system().config().streaming_tick_duration_us();
-    cycle = std::chrono::microseconds(x);
-  }
-  for (;;) {
-    size_t progress = 0;
+test_coordinator::run_cycle_until(bool_predicate predicate,
+                                  timespan cycle_duration) {
+  CAF_LOG_TRACE(CAF_ARG(cycle_duration)
+                << CAF_ARG2("pending_jobs", jobs.size())
+                << CAF_ARG2("pending_timeouts", clock_.schedule().size()));
+  // Bookkeeping.
+  size_t events = 0;
+  size_t timeouts = 0;
+  // Loop until no activity remains.
+  while (!jobs.empty() || !clock_.schedule().empty()) {
     while (try_run_once()) {
-      ++progress;
-      res.first += 1;
-      if (predicate())
-        return res;
+      ++events;
+      if (predicate()) {
+        CAF_LOG_DEBUG("stop due to predicate;"
+                      << CAF_ARG(events) << CAF_ARG(timeouts));
+        return {events, timeouts};
+      }
     }
-    clock().current_time += cycle;
-    while (dispatch_once()) {
-      ++progress;
-      res.second += 1;
-      if (predicate())
-        return res;
+    if (!clock_.schedule().empty()) {
+      size_t triggered = 0;
+      auto next_tout = clock_.schedule().begin()->first;
+      if (next_tout <= clock_.now()) {
+        // Trigger expired timeout first without advancing time.
+        triggered = clock_.trigger_expired_timeouts();
+      } else {
+        // Compute how much cycles we need to trigger at least one timeout.
+        auto diff = next_tout - clock_.current_time;
+        auto num_cycles = diff.count() / cycle_duration.count();
+        auto advancement = num_cycles * cycle_duration;
+        // `num_cyles` can have one to few cycles since we's always rounding down.
+        if (clock_.current_time + advancement < next_tout)
+          advancement += cycle_duration;
+        // Advance time.
+        CAF_ASSERT(advancement.count() > 0);
+        triggered = clock_.advance_time(advancement);
+      }
+      CAF_ASSERT(triggered > 0);
+      timeouts += triggered;
     }
-    if (progress == 0)
-      return res;
   }
+  CAF_LOG_DEBUG("no activity left;" << CAF_ARG(events) << CAF_ARG(timeouts));
+  return {events, timeouts};
 }
 
-std::pair<size_t, size_t> test_coordinator::run_dispatch_loop(timespan cycle) {
-  return run_dispatch_loop([] { return false; }, cycle);
+std::pair<size_t, size_t> test_coordinator::run_cycle(timespan cycle_duration) {
+  return run_cycle_until([] { return false; }, cycle_duration);
 }
 
 void test_coordinator::inline_next_enqueue() {
@@ -198,6 +207,11 @@ void test_coordinator::inline_all_enqueues() {
 void test_coordinator::inline_all_enqueues_helper() {
   run_once_lifo();
   after_next_enqueue([=] { inline_all_enqueues_helper(); });
+}
+
+std::pair<size_t, size_t>
+test_coordinator::run_dispatch_loop(timespan cycle_duration) {
+  return run_cycle(cycle_duration);
 }
 
 } // namespace caf

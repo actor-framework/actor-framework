@@ -34,16 +34,25 @@ public:
   duration_type difference(atom_value measurement, long units, time_point t0,
                            time_point t1) const noexcept override;
 
-  /// Tries to dispatch the next timeout or delayed message regardless of its
-  /// timestamp. Returns `false` if `schedule().empty()`, otherwise `true`.
-  bool dispatch_once();
+  /// Triggers the next pending timeout regardless of its timestamp. Sets
+  /// `current_time` to the time point of the triggered timeout unless
+  /// `current_time` is already set to a later time.
+  /// @returns Whether a timeout was triggered.
+  bool trigger_timeout();
 
-  /// Dispatches all timeouts and delayed messages regardless of their
-  /// timestamp. Returns the number of dispatched events.
-  size_t dispatch();
+  /// Triggers all pending timeouts regardless of their timestamp. Sets
+  /// `current_time` to the time point of the latest timeout unless
+  /// `current_time` is already set to a later time.
+  /// @returns The number of triggered timeouts.
+  size_t trigger_timeouts();
+
+  /// Triggers all timeouts with timestamp <= now.
+  /// @returns The number of triggered timeouts.
+  size_t trigger_expired_timeouts();
 
   /// Advances the time by `x` and dispatches timeouts and delayed messages.
-  void advance_time(duration_type x);
+  /// @returns The number of triggered timeouts.
+  size_t advance_time(duration_type x);
 
   /// Configures the returned value for `difference`. For example, inserting
   /// `('foo', 120ns)` causes the clock to return `units * 120ns` for any call
