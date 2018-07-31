@@ -116,7 +116,7 @@
 #  define CAF_UNLIKELY(x) __builtin_expect((x), 0)
 #  define CAF_DEPRECATED __attribute__((deprecated))
 #  define CAF_DEPRECATED_MSG(msg) __attribute__((deprecated(msg)))
-#  define CAF_PUSH_WARNINGS
+#  define CAF_PUSH_WARNINGS                                                    \
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wshadow\"")                             \
     _Pragma("GCC diagnostic ignored \"-Wpragmas\"")                            \
@@ -220,10 +220,10 @@
 #  define CAF_POSIX
 #endif
 
-#if defined(CAF_WINDOWS)
-#  if defined(__clang__)
-     struct IUnknown; // fix for issue with static_cast<> in objbase.h (see https://github.com/philsquared/Catch/issues/690)
-#  endif
+#if defined(CAF_WINDOWS) && defined(CAF_CLANG)
+// Fix for issue with static_cast<> in objbase.h.
+// See: https://github.com/philsquared/Catch/issues/690.
+struct IUnknown;
 #endif
 
 #include <cstdio>
