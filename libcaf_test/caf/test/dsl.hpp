@@ -696,8 +696,7 @@ public:
 
   void run_exhaustively_until(bool_predicate predicate)
     CAF_DEPRECATED_MSG("use run_until() instead") {
-    auto res = sched.run_cycle_until(predicate, credit_round_interval);
-    return res.first + res.second;
+    sched.run_cycle_until(predicate, credit_round_interval);
   }
 
   void loop_after_next_enqueue()
