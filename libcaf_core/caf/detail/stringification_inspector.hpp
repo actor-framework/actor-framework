@@ -28,6 +28,8 @@
 #include "caf/error.hpp"
 #include "caf/none.hpp"
 #include "caf/string_view.hpp"
+#include "caf/timespan.hpp"
+#include "caf/timestamp.hpp"
 
 #include "caf/meta/type_name.hpp"
 #include "caf/meta/omittable.hpp"
@@ -75,6 +77,22 @@ public:
   void consume(atom_value& x);
 
   void consume(string_view str);
+
+  void consume(timespan& x);
+
+  void consume(timestamp& x);
+
+  template <class Clock, class Duration>
+  void consume(std::chrono::time_point<Clock, Duration>& x) {
+    timestamp tmp{std::chrono::duration_cast<timespan>(x.time_since_epoch())};
+    consume(tmp);
+  }
+
+  template <class Rep, class Period>
+  void consume(std::chrono::duration<Rep, Period>& x) {
+    auto tmp = std::chrono::duration_cast<timespan>(x);
+    consume(tmp);
+  }
 
   inline void consume(bool& x) {
     result_ += x ? "true" : "false";
