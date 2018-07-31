@@ -150,7 +150,7 @@ const auto ini0_log = make_log(
   "key: scheduler",
   "{",
     "key: timing",
-    "value (timespan): 2000ns",
+    "value (timespan): 2us",
     "key: impl",
     "value (atom): 'foo'",
     "key: x_",
