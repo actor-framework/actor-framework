@@ -551,9 +551,6 @@ public:
   /// A deterministic scheduler type.
   using scheduler_type = caf::scheduler::test_coordinator;
 
-  /// Callback for boolean predicates.
-  using bool_predicate = std::function<bool()>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
@@ -569,7 +566,7 @@ public:
     sched.clock().time_per_unit.emplace(caf::atom("batch"),
                                         caf::timespan{1000});
     // Make sure the current time isn't 0.
-    sched.clock().current_time += tick_duration();
+    sched.clock().current_time += std::chrono::hours(1);
     credit_round_interval = cfg.streaming_credit_round_interval();
   }
 
@@ -579,33 +576,26 @@ public:
 
   // -- DSL functions ----------------------------------------------------------
 
-  /// Returns the duration of a single clock tick.
-  virtual caf::timespan tick_duration() const {
-    return cfg.streaming_tick_duration();
-  }
-
   /// Advances the clock by a single tick duration.
   size_t advance_time(caf::timespan interval) {
     return sched.clock().advance_time(interval);
   }
 
-  /// Allows the next actor to consume one message from its mailbox.
-  /// @returns Whether a message was consumed.
-  bool consume_message() {
-    return sched.try_run_once();
+  /// Allows the next actor to consume one message from its mailbox. Fails the
+  /// test if no message was consumed.
+  void consume_message() {
+    if (!sched.try_run_once())
+      CAF_FAIL("no message to consume");
   }
 
-  /// Allows each actors to consume all messages from its mailbox.
+  /// Allows each actors to consume all messages from its mailbox. Fails the
+  /// test if no message was consumed.
   /// @returns The number of consumed messages.
   size_t consume_messages() {
-    return sched.run();
-  }
-
-  /// Advances the clock by `tick_duration()` and tries dispatching all pending
-  /// timeouts.
-  /// @returns The number of triggered timeouts.
-  size_t tick() {
-    return advance_time(tick_duration());
+    auto result = sched.run();
+    if (result == 0)
+      CAF_FAIL("no message to consume");
+    return result;
   }
 
   /// Consume messages and trigger timeouts until no activity remains.
@@ -618,10 +608,26 @@ public:
   /// Consume messages and trigger timeouts until `pred` becomes `true` or
   /// until no activity remains.
   /// @returns The total number of events, i.e., messages consumed and
-  ///          timeouts triggerd.
-  size_t run_until(bool_predicate pred) {
-    auto res = sched.run_cycle_until(pred, tick_duration());
-    return res.first + res.second;
+  ///          timeouts triggered.
+  template <class BoolPredicate>
+  size_t run_until(BoolPredicate predicate) {
+    CAF_LOG_TRACE("");
+    // Bookkeeping.
+    size_t events = 0;
+    // Loop until no activity remains.
+    while (sched.has_job() || sched.has_pending_timeout()) {
+      while (sched.try_run_once()) {
+        ++events;
+        if (predicate()) {
+          CAF_LOG_DEBUG("stop due to predicate:" << CAF_ARG(events));
+          return events;
+        }
+      }
+      if (trigger_timeout())
+        ++events;
+    }
+    CAF_LOG_DEBUG("no activity left:" << CAF_ARG(events));
+    return events;
   }
 
   /// Call `run()` when the next scheduled actor becomes ready.
@@ -630,7 +636,8 @@ public:
   }
 
   /// Call `run_until(predicate)` when the next scheduled actor becomes ready.
-  void run_until_after_next_ready_event(bool_predicate predicate) {
+  template <class BoolPredicate>
+  void run_until_after_next_ready_event(BoolPredicate predicate) {
     sched.after_next_enqueue([=] { run_until(predicate); });
   }
 
@@ -659,17 +666,17 @@ public:
     return dynamic_cast<T&>(*ptr);
   }
 
-  /// Tries to advance the simulation, e.g., by handling the next message or
-  /// mocking some network activity.
-  /// @private
-  virtual bool advance() {
-    return sched.try_run_once();
-  }
-
-  /// Tries to trigger a timeout.
-  /// @private
+  /// Triggers the next pending timeout.
   virtual bool trigger_timeout() {
     return sched.trigger_timeout();
+  }
+
+  /// Triggers all pending timeouts.
+  size_t trigger_timeouts() {
+    size_t timeouts = 0;
+    while (trigger_timeout())
+      ++timeouts;
+    return timeouts;
   }
 
   // -- member variables -------------------------------------------------------
@@ -686,24 +693,34 @@ public:
   /// Deterministic scheduler.
   scheduler_type& sched;
 
-  // -- deprecated functions ---------------------------------------------------
+  // -- deprecated functionality -----------------------------------------------
 
-  caf::timespan credit_round_interval CAF_DEPRECATED;
+  void run_exhaustively() CAF_DEPRECATED_MSG("use run() instead");
 
-  void run_exhaustively() CAF_DEPRECATED_MSG("use run() instead") {
-    run_exhaustively_until([] { return false; });
-  }
-
-  void run_exhaustively_until(bool_predicate predicate)
-    CAF_DEPRECATED_MSG("use run_until() instead") {
-    sched.run_cycle_until(predicate, credit_round_interval);
-  }
+  void run_exhaustively_until(std::function<bool()> f)
+    CAF_DEPRECATED_MSG("use run_until() instead");
 
   void loop_after_next_enqueue()
-    CAF_DEPRECATED_MSG("use run_after_next_ready_event() instead") {
-    sched.after_next_enqueue([=] { run(); });
-  }
+    CAF_DEPRECATED_MSG("use run_after_next_ready_event() instead");
+
+  caf::timespan credit_round_interval CAF_DEPRECATED;
 };
+
+template <class Config>
+void test_coordinator_fixture<Config>::run_exhaustively() {
+  run();
+}
+
+template <class Config>
+void test_coordinator_fixture<Config>::run_exhaustively_until(
+  std::function<bool()> f) {
+  run_until(std::move(f));
+}
+
+template <class Config>
+void test_coordinator_fixture<Config>::loop_after_next_enqueue() {
+  sched.after_next_enqueue([=] { run(); });
+}
 
 /// Unboxes an expected value or fails the test if it doesn't exist.
 template <class T>

@@ -105,6 +105,11 @@ public:
   /// left. Returns the number of processed events.
   size_t run(size_t max_count = std::numeric_limits<size_t>::max());
 
+  /// Returns whether at least one pending timeout exists.
+  bool has_pending_timeout() const {
+    return clock_.has_pending_timeout();
+  }
+
   /// Tries to trigger a single timeout.
   bool trigger_timeout() {
     return clock_.trigger_timeout();
@@ -119,23 +124,6 @@ public:
   size_t advance_time(timespan x) {
     return clock_.advance_time(x);
   }
-
-  /// Runs all events, then advances the time by `cycle_duration` and triggers
-  /// all timeouts, then repeats until no activity remains.
-  /// @param predicate Stop condition.
-  /// @param cycle_duration
-  /// @returns The number of scheduling events (first) and the number of
-  ///          triggered timeouts (second).
-  /// messages (second). Advances time by `cycle` nanoseconds between to calls
-  /// to `dispatch()` or the default tick-duration when passing 0ns.
-  std::pair<size_t, size_t> run_cycle_until(bool_predicate predicate,
-                                            timespan cycle_duration);
-
-  /// Loops until no job or delayed message remains. Returns the total number
-  /// of events (first) and dispatched delayed messages (second). Advances time
-  /// by `cycle` nanoseconds between to calls to `dispatch()` or the default
-  /// tick-duration when passing 0ns.
-  std::pair<size_t, size_t> run_cycle(timespan cycle_duration = timespan{1});
 
   template <class F>
   void after_next_enqueue(F f) {

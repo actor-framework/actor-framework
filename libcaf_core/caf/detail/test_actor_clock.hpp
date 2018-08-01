@@ -34,6 +34,11 @@ public:
   duration_type difference(atom_value measurement, long units, time_point t0,
                            time_point t1) const noexcept override;
 
+  /// Returns whether the actor clock has at least one pending timeout.
+  bool has_pending_timeout() const {
+    return !schedule_.empty();
+  }
+
   /// Triggers the next pending timeout regardless of its timestamp. Sets
   /// `current_time` to the time point of the triggered timeout unless
   /// `current_time` is already set to a later time.

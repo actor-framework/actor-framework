@@ -221,7 +221,7 @@ CAF_TEST(closing_downstreams_before_end_of_stream) {
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 1u);
   CAF_MESSAGE("do a single round of credit");
-  tick();
+  trigger_timeouts();
   consume_messages();
   CAF_MESSAGE("make sure the stream isn't done yet");
   CAF_REQUIRE(!deref<file_reader_actor>(src).state.buf.empty());

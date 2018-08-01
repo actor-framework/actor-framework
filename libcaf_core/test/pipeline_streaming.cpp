@@ -212,8 +212,8 @@ TESTEE(doubler) {
 }
 
 struct fixture : test_coordinator_fixture<> {
-  timespan tick_duration() const override {
-    return credit_round_interval;
+  void tick() {
+    advance_time(cfg.streaming_credit_round_interval());
   }
 };
 
