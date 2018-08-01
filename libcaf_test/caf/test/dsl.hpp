@@ -612,7 +612,7 @@ public:
   /// @returns The total number of events, i.e., messages consumed and
   ///          timeouts triggerd.
   size_t run() {
-    run_until([] { return false; });
+    return run_until([] { return false; });
   }
 
   /// Consume messages and trigger timeouts until `pred` becomes `true` or
