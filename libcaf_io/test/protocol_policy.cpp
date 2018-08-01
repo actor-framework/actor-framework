@@ -201,6 +201,10 @@ namespace {
 // -- transport policy ---------------------------------------------------------
 
 struct transport_policy {
+  transport_policy() : received_bytes{0}, max_consecutive_reads{50} {
+
+  }
+
   virtual ~transport_policy() {
     // nop
   }
@@ -247,7 +251,7 @@ struct transport_policy {
       if (res)
         return res;
       if (should_deliver()) {
-        res = policy.read(receive_buffer.data(), receive_buffer_length);
+        res = policy.read(receive_buffer.data(), received_bytes);
         prepare_next_read(parent);
         if (!res)
           return res;
@@ -256,8 +260,8 @@ struct transport_policy {
     return none;
   }
 
-  size_t receive_buffer_length;
-  size_t max_consecutive_reads = 50;
+  size_t received_bytes;
+  size_t max_consecutive_reads;
 
   byte_buffer offline_buffer;
   byte_buffer receive_buffer;
@@ -710,6 +714,7 @@ struct ordering {
   }
 
   error read(char* bytes, size_t count) {
+    CAF_MESSAGE("ordering: read (" << count << ")");
     if (count < header_size)
       return sec::unexpected_message;
     ordering_header hdr;
@@ -1025,7 +1030,7 @@ struct tcp_transport_policy : public transport_policy {
     }
     size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
     collected += result;
-    receive_buffer_length = collected;
+    received_bytes = collected;
     return none;
   }
 
@@ -1036,7 +1041,7 @@ struct tcp_transport_policy : public transport_policy {
 
   void prepare_next_read(network::event_handler*) override {
     collected = 0;
-    receive_buffer_length = 0;
+    received_bytes = 0;
     switch (rd_flag) {
       case receive_policy_flag::exactly:
         if (receive_buffer.size() != maximum)
@@ -1468,7 +1473,7 @@ struct udp_transport_policy : public transport_policy {
     else if (sres > static_cast<network::signed_size_type>(buf_len))
       CAF_LOG_WARNING("recvfrom cut of message, only received "
                       << CAF_ARG(buf_len) << " of " << CAF_ARG(sres) << " bytes");
-    receive_buffer_length = (sres > 0) ? static_cast<size_t>(sres) : 0;
+    received_bytes = (sres > 0) ? static_cast<size_t>(sres) : 0;
     *sender.length() = static_cast<size_t>(len);
     if (first_message) {
       endpoint = sender;
@@ -1479,11 +1484,11 @@ struct udp_transport_policy : public transport_policy {
 
   bool should_deliver() override {
     CAF_LOG_TRACE("");
-    return receive_buffer_length != 0 && sender == endpoint;
+    return received_bytes != 0 && sender == endpoint;
   }
 
   void prepare_next_read(network::event_handler*) override {
-    receive_buffer_length = 0;
+    received_bytes = 0;
     receive_buffer.resize(maximum);
   }
 
@@ -1747,6 +1752,7 @@ struct dummy_basp_newb : newb<new_basp_message> {
         bs(payload);
         std::swap(transport->receive_buffer, transport->offline_buffer);
         transport->send_buffer.clear();
+        transport->received_bytes = transport->receive_buffer.size();
       },
       [=](send_atom, ordering_header& ohdr, basp_header& bhdr, int payload) {
         CAF_MESSAGE("send: ohdr = " << to_string(ohdr) << " bhdr = "
@@ -1755,6 +1761,7 @@ struct dummy_basp_newb : newb<new_basp_message> {
         bs(ohdr);
         bs(bhdr);
         bs(payload);
+        transport->received_bytes = transport->receive_buffer.size();
       },
       [=](expect_atom, basp_header& bhdr, int payload) {
         expected.push_back(std::make_pair(bhdr, payload));
@@ -1798,11 +1805,13 @@ struct dummy_basp_newb_acceptor
     auto& ref = dynamic_cast<dummy_basp_newb&>(*ptr);
     ref.transport.reset(pol.release());
     ref.protocol.reset(new ProtocolPolicy(&ref));
+    ref.transport->max_consecutive_reads = 1;
     // TODO: Call read_some using the buffer of the ref as a destination.
     binary_serializer bs(&this->backend(), ref.transport->receive_buffer);
     bs(get<0>(msg));
     bs(get<1>(msg));
     bs(get<2>(msg));
+    ref.transport->received_bytes = ref.transport->receive_buffer.size();
     ref.expected.emplace_back(get<1>(msg), get<2>(msg));
     return spawned.back();
   }
@@ -1978,10 +1987,13 @@ CAF_TEST(ordering and basp read event) {
   CAF_MESSAGE("copy them into the buffer");
   auto& dummy = deref<dummy_basp_newb>(self);
   auto& buf = dummy.transport->receive_buffer;
+  dummy.transport->max_consecutive_reads = 1;
   // Write data to buffer.
-  to_buffer(ohdr, buf);
-  to_buffer(bhdr, buf);
-  to_buffer(payload, buf);
+  binary_serializer bs(sys, buf);
+  bs(ohdr);
+  bs(bhdr);
+  bs(payload);
+  dummy.transport->received_bytes = buf.size();
   CAF_MESSAGE("trigger a read event");
   auto err = dummy.read_event();
   CAF_REQUIRE(!err);
@@ -2005,6 +2017,7 @@ CAF_TEST(ordering and basp message passing) {
   anon_send(self, send_atom::value, ohdr, bhdr, payload);
   exec_all();
   auto& dummy = deref<dummy_basp_newb>(self);
+  dummy.transport->max_consecutive_reads = 1;
   dummy.handle_event(network::operation::read);
   CAF_MESSAGE("check the basp header and payload");
   auto& msg = dummy.messages.front().first;
@@ -2026,7 +2039,9 @@ CAF_TEST(ordering and basp read event with timeout) {
   anon_send(self, send_atom::value, ohdr, bhdr, payload);
   exec_all();
   CAF_MESSAGE("trigger read event");
-  auto err = deref<dummy_basp_newb>(self).read_event();
+  auto& dummy = deref<dummy_basp_newb>(self);
+  dummy.transport->max_consecutive_reads = 1;
+  auto err = dummy.read_event();
   CAF_REQUIRE(!err);
   CAF_MESSAGE("trigger waiting timeouts");
   // Trigger timeout.
@@ -2051,17 +2066,26 @@ CAF_TEST(ordering and basp multiple messages) {
   anon_send(self, expect_atom::value, bhdr_second, payload_second);
   exec_all();
   auto& dummy = deref<dummy_basp_newb>(self);
+  dummy.transport->max_consecutive_reads = 1;
   auto& buf = dummy.transport->receive_buffer;
   CAF_MESSAGE("read second message first");
-  to_buffer(ohdr_second, buf);
-  to_buffer(bhdr_second, buf);
-  to_buffer(payload_second, buf);
+  {
+    binary_serializer bs(sys, buf);
+    bs(ohdr_second);
+    bs(bhdr_second);
+    bs(payload_second);
+  }
+  dummy.transport->received_bytes = buf.size();
   dummy.read_event();
   CAF_MESSAGE("followed by first message");
   buf.clear();
-  to_buffer(ohdr_first, buf);
-  to_buffer(bhdr_first, buf);
-  to_buffer(payload_first, buf);
+  {
+    binary_serializer bs(sys, buf);
+    bs(ohdr_first);
+    bs(bhdr_first);
+    bs(payload_first);
+  }
+  dummy.transport->received_bytes = buf.size();
   dummy.read_event();
 }
 
@@ -2073,7 +2097,9 @@ CAF_TEST(ordering and basp write buf) {
   anon_send(self, expect_atom::value, bhdr, payload);
   anon_send(self, send_atom::value, bhdr.from, bhdr.to, payload);
   exec_all();
-  deref<dummy_basp_newb>(self).handle_event(network::operation::read);
+  auto& dummy = deref<dummy_basp_newb>(self);
+  dummy.transport->max_consecutive_reads = 1;
+  dummy.handle_event(network::operation::read);
   // Message handler will check if the expected message was received.
 }
 
