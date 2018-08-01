@@ -46,7 +46,7 @@ CAF_TEST(constains) {
 }
 
 CAF_TEST(embedding) {
-  ipv4_subnet v4_local{ipv4_address({127, 0, 0, 1}), 8};
+  ipv4_subnet v4_local{make_ipv4_address(127, 0, 0, 1), 8};
   ipv6_subnet local{v4_local};
   CAF_CHECK(local.embeds_v4());
   CAF_CHECK_EQUAL(local.prefix_length(), 104u);
