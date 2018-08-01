@@ -51,7 +51,8 @@ add(remoting group_chat)
 add(remoting group_server)
 add(remoting remote_spawn)
 add(remoting distributed_calculator)
-add(remoting newbc)
+add(remoting udp_newb)
+add(remoting tcp_newb)
 
 # basic I/O with brokers
 add(broker simple_broker)
