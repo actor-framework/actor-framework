@@ -272,6 +272,7 @@ using transport_policy_ptr = std::unique_ptr<transport_policy>;
 
 // -- accept policy ------------------------------------------------------------
 
+template <class Message>
 struct accept_policy {
   virtual ~accept_policy() {
     // nop
@@ -280,7 +281,7 @@ struct accept_policy {
   virtual std::pair<native_socket, transport_policy_ptr>
   accept(network::event_handler*) = 0;
 
-  virtual void init(network::event_handler&) = 0;
+  virtual void init(newb<Message>&) = 0;
 };
 
 // -- protocol policies --------------------------------------------------------
@@ -622,7 +623,6 @@ struct newb_acceptor : public network::event_handler {
     CAF_ASSERT(ptr != nullptr);
     auto& ref = dynamic_cast<newb<Message>&>(*ptr);
     acceptor->init(ref);
-    ref.start();
     return none;
   }
 
@@ -639,7 +639,7 @@ struct newb_acceptor : public network::event_handler {
   virtual expected<actor> create_newb(native_socket sock,
                                       transport_policy_ptr pol) = 0;
 
-  std::unique_ptr<accept_policy> acceptor;
+  std::unique_ptr<accept_policy<Message>> acceptor;
 };
 
 // -- policies -----------------------------------------------------------------
@@ -1197,7 +1197,7 @@ struct tcp_basp_newb : newb<new_tcp_basp_message> {
 };
 
 
-struct tcp_accept_policy : public accept_policy {
+struct tcp_accept_policy : public accept_policy<new_tcp_basp_message> {
   virtual std::pair<native_socket, transport_policy_ptr>
     accept(network::event_handler* parent) {
     using namespace io::network;
@@ -1216,8 +1216,8 @@ struct tcp_accept_policy : public accept_policy {
     return {result, std::move(ptr)};
   }
 
-  virtual void init(network::event_handler&) {
-
+  virtual void init(newb<new_tcp_basp_message>& n) {
+    n.start();
   }
 };
 
@@ -1644,7 +1644,7 @@ struct udp_basp_newb : newb<new_udp_basp_message> {
 };
 
 
-struct udp_accept_policy : public accept_policy {
+struct udp_accept_policy : public accept_policy<new_udp_basp_message> {
   virtual std::pair<native_socket, transport_policy_ptr>
   accept(network::event_handler*) {
     auto esock = new_udp_endpoint_impl(0, nullptr, false);
@@ -1655,8 +1655,8 @@ struct udp_accept_policy : public accept_policy {
     return {result, std::move(ptr)};
   }
 
-  virtual void init(network::event_handler&) {
-
+  virtual void init(newb<new_udp_basp_message>& n) {
+    n.start();
   }
 };
 
@@ -1770,7 +1770,7 @@ struct dummy_basp_newb : newb<new_basp_message> {
   }
 };
 
-struct accept_policy_impl : accept_policy {
+struct accept_policy_impl : accept_policy<new_basp_message> {
   std::pair<native_socket, transport_policy_ptr>
     accept(network::event_handler*) override {
     // TODO: For UDP read the message into a buffer. Create a new socket.
@@ -1779,8 +1779,8 @@ struct accept_policy_impl : accept_policy {
     return {invalid_native_socket, std::move(ptr)};
   }
 
-  void init(network::event_handler& eh) override {
-    eh.handle_event(network::operation::read);
+  void init(newb<new_basp_message>& n) override {
+    n.handle_event(network::operation::read);
   }
 };
 
