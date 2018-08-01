@@ -498,8 +498,6 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     auto hstart = buf.size();
     protocol->write_header(buf, hw);
     auto hlen = buf.size() - hstart;
-    CAF_MESSAGE("returning write buffer starting at " << hstart << " and "
-                << hlen << " bytes of header");
     return {this, protocol.get(), &buf, hstart, hlen};
   }
 
@@ -523,7 +521,6 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   template<class Rep = int, class Period = std::ratio<1>>
   void set_timeout(std::chrono::duration<Rep, Period> timeout,
                    atom_value atm, uint32_t id) {
-    CAF_MESSAGE("sending myself a timeout");
     this->delayed_send(this, timeout, atm, id);
     // TODO: Use actor clock.
     // TODO: Make this system messages and handle them separately.
@@ -600,7 +597,6 @@ struct newb_acceptor : public network::event_handler {
   }
 
   void removed_from_loop(network::operation op) override {
-    CAF_MESSAGE("newb acceptor removed from loop: " << to_string(op));
     CAF_LOG_TRACE(CAF_ARG(op));
     switch (op) {
       case network::operation::read:  break;
@@ -612,7 +608,6 @@ struct newb_acceptor : public network::event_handler {
   // -- members ----------------------------------------------------------------
 
   error read_event() {
-    CAF_MESSAGE("read event on newb acceptor");
     native_socket sock;
     transport_policy_ptr transport;
     std::tie(sock, transport) = acceptor->accept(this);
@@ -1025,12 +1020,11 @@ struct tcp_transport_policy : public transport_policy {
                        reinterpret_cast<network::socket_recv_ptr>(buf),
                        len, network::no_sigpipe_io_flag);
     if (network::is_error(sres, true) || sres == 0) {
-      // recv returns 0  when the peer has performed an orderly shutdown
+      // recv returns 0 when the peer has performed an orderly shutdown
       return sec::runtime_error;
     }
     size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
     collected += result;
-    //CAF_MESSAGE("received " << sres << " bytes (collected " << collected << ")");
     receive_buffer_length = collected;
     return none;
   }
@@ -1186,7 +1180,6 @@ struct tcp_basp_newb : newb<new_tcp_basp_message> {
         bs(payload);
       },
       [=](quit_atom) {
-        CAF_MESSAGE("newb actor shutting down");
         // Remove from multiplexer loop.
         stop();
         // Quit actor.
@@ -1283,7 +1276,7 @@ struct udp_ordering_header {
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun, udp_ordering_header& hdr) {
-  return fun(meta::type_name("udp_basp_header"), hdr.seq);
+  return fun(meta::type_name("udp_ordering_header"), hdr.seq);
 }
 
 constexpr size_t udp_ordering_header_len = sizeof(sequence_type);
@@ -1407,7 +1400,6 @@ struct udp_ordering {
     CAF_MESSAGE("read udp ordering header: " << to_string(hdr));
     // TODO: Use the comparison function from BASP instance.
     if (hdr.seq == seq_read) {
-      CAF_MESSAGE("it's the expected sequence number");
       seq_read += 1;
       auto res = next.read(bytes + header_size, count - header_size);
       if (res)
@@ -1420,11 +1412,12 @@ struct udp_ordering {
     return none;
   }
 
-  error timeout(atom_value atm, sequence_type id) {
+  error timeout(atom_value atm, uint32_t id) {
     if (atm == ordering_atom::value) {
       error err = none;
-      if (pending.count(id) > 0) {
-        seq_read = static_cast<sequence_type>(id);
+      sequence_type seq = static_cast<sequence_type>(id);
+      if (pending.count(seq) > 0) {
+        seq_read = static_cast<sequence_type>(seq);
         err = deliver_pending();
       }
       return err;
@@ -1456,13 +1449,11 @@ struct udp_transport_policy : public transport_policy {
   }
 
   error read_some(network::event_handler* parent) override {
-    CAF_MESSAGE("read some from sock " << parent->fd());
     CAF_LOG_TRACE(CAF_ARG(parent->fd()));
     memset(sender.address(), 0, sizeof(sockaddr_storage));
     network::socket_size_type len = sizeof(sockaddr_storage);
     auto buf_ptr = static_cast<network::socket_recv_ptr>(receive_buffer.data());
     auto buf_len = receive_buffer.size();
-    CAF_MESSAGE("receive buffer size: " << buf_len);
     auto sres = ::recvfrom(parent->fd(), buf_ptr, buf_len,
                            0, sender.address(), &len);
     if (network::is_error(sres, true)) {
@@ -1472,7 +1463,6 @@ struct udp_transport_policy : public transport_policy {
       CAF_LOG_DEBUG("try later");
       return sec::end_of_stream;
     }
-    CAF_MESSAGE("read " << sres << " bytes");
     if (sres == 0)
       CAF_LOG_INFO("Received empty datagram");
     else if (sres > static_cast<network::signed_size_type>(buf_len))
@@ -1630,19 +1620,13 @@ struct udp_basp_newb : newb<new_udp_basp_message> {
           bs(udp_basp_header{0, sender, receiver});
           return none;
         });
-        //{
-          // TODO: Need a better idea how to do this ... Maybe pass the write
-          //  handle to flush which then calls `perpare_for_sending`?
-          auto whdl = wr_buf(&hw);
-          CAF_CHECK(whdl.buf != nullptr);
-          CAF_CHECK(whdl.protocol != nullptr);
-          binary_serializer bs(&backend(), *whdl.buf);
-          bs(payload);
-        //}
-        //flush();
+        auto whdl = wr_buf(&hw);
+        CAF_CHECK(whdl.buf != nullptr);
+        CAF_CHECK(whdl.protocol != nullptr);
+        binary_serializer bs(&backend(), *whdl.buf);
+        bs(payload);
       },
       [=](quit_atom) {
-        CAF_MESSAGE("newb actor shutting down");
         // Remove from multiplexer loop.
         stop();
         // Quit actor.
@@ -1679,7 +1663,6 @@ struct udp_basp_acceptor
   udp_basp_acceptor(default_multiplexer& dm, native_socket sockfd)
       : super(dm, sockfd) {
     // nop
-    CAF_MESSAGE("Created newb acceptor with socket " << sockfd);
   }
 
   static expected<native_socket> create_socket(uint16_t port, const char* host,
@@ -1699,7 +1682,6 @@ struct udp_basp_acceptor
     ref.protocol.reset(new ProtocolPolicy(&ref));
     ref.responder = responder;
     // Read first message from this socket.
-    CAF_MESSAGE("Calling read_some with sock " << this->fd() << " on new udp newb");
     ref.transport->prepare_next_read(this);
     ref.transport->read_some(this, *ref.protocol.get());
     // Subsequent messages will be read from `sockfd`.
@@ -1758,11 +1740,9 @@ struct dummy_basp_newb : newb<new_basp_message> {
           bs(basp_header{sender, receiver});
           return none;
         });
-        CAF_MESSAGE("get a write buffer");
         auto whdl = wr_buf(&hw);
         CAF_CHECK(whdl.buf != nullptr);
         CAF_CHECK(whdl.protocol != nullptr);
-        CAF_MESSAGE("write the payload");
         binary_serializer bs(&backend(), *whdl.buf);
         bs(payload);
         std::swap(transport->receive_buffer, transport->offline_buffer);
@@ -2114,7 +2094,7 @@ CAF_TEST(tcp basp newb) {
   scoped_actor main_actor{sys};
   actor newb_actor;
   auto testing = [&](stateful_broker<tcp_test_broker_state>* self,
-                     connection_handle hdl, actor m) -> behavior {
+                     connection_handle hdl, actor) -> behavior {
     CAF_CHECK(hdl != invalid_connection_handle);
     self->configure_read(hdl, receive_policy::exactly(tcp_basp_header_len));
     self->state.expecting_header = true;
@@ -2128,7 +2108,7 @@ CAF_TEST(tcp basp newb) {
         auto header_len = buf.size();
         CAF_REQUIRE(header_len == tcp_basp_header_len);
         bs(str);
-        hdr.payload_len = buf.size() - header_len;
+        hdr.payload_len = static_cast<uint32_t>(buf.size() - header_len);
         stream_serializer<charbuf> out{sys, buf.data(), sizeof(hdr.payload_len)};
         out(hdr.payload_len);
         CAF_MESSAGE("header len: " << header_len
@@ -2153,7 +2133,23 @@ CAF_TEST(tcp basp newb) {
           std::string str;
           bd(str);
           CAF_MESSAGE("received '" << str << "'");
-          self->send(m, quit_atom::value);
+          std::reverse(std::begin(str), std::end(str));
+          byte_buffer buf;
+          binary_serializer bs(sys, buf);
+          tcp_basp_header hdr{0, 1, 2};
+          bs(hdr);
+          auto header_len = buf.size();
+          CAF_REQUIRE(header_len == tcp_basp_header_len);
+          bs(str);
+          hdr.payload_len = static_cast<uint32_t>(buf.size() - header_len);
+          stream_serializer<charbuf> out{sys, buf.data(), sizeof(hdr.payload_len)};
+          out(hdr.payload_len);
+          CAF_MESSAGE("header len: " << header_len
+                      << ", packet_len: " << buf.size()
+                      << ", header: " << to_string(hdr));
+          self->write(hdl, buf.size(), buf.data());
+          self->flush(hdl);
+//          self->send(m, quit_atom::value);
         }
         self->configure_read(msg.handle, receive_policy::exactly(next_len));
       }
@@ -2237,7 +2233,7 @@ CAF_TEST(udp basp newb) {
         auto header_len = buf.size();
         CAF_REQUIRE(header_len == udp_ordering_header_len + udp_basp_header_len);
         bs(str);
-        bhdr.payload_len = buf.size() - header_len;
+        bhdr.payload_len = static_cast<uint32_t>(buf.size() - header_len);
         stream_serializer<charbuf> out{sys, buf.data() + ordering_header_len,
                                        sizeof(bhdr.payload_len)};
         out(bhdr.payload_len);
@@ -2262,7 +2258,6 @@ CAF_TEST(udp basp newb) {
         bd(str);
         CAF_MESSAGE("received '" << str << "'");
         self->send(m, quit_atom::value);
-        self->state.hdl = msg.handle;
       }
     };
   };
