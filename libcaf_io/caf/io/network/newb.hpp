@@ -136,6 +136,12 @@ struct transport_policy {
     return none;
   }
 
+  virtual expected<native_socket>
+  connect(const std::string&, uint16_t,
+          optional<io::network::protocol::network> = none) {
+    return sec::bad_function_call;
+  }
+
   size_t received_bytes;
   size_t max_consecutive_reads;
 
@@ -153,6 +159,9 @@ struct accept_policy {
   virtual ~accept_policy() {
     // nop
   }
+
+  virtual expected<native_socket> create_socket(uint16_t port, const char* host,
+                                                bool reuse = false) = 0;
 
   virtual std::pair<native_socket, transport_policy_ptr>
   accept(network::event_handler*) = 0;
@@ -223,14 +232,15 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   newb(actor_config& cfg, default_multiplexer& dm, native_socket sockfd)
       : super(cfg),
         event_handler(dm, sockfd) {
-    // nop
+    CAF_LOG_TRACE("");
   }
 
   newb() = default;
+
   newb(newb<Message>&&) = default;
 
   ~newb() override {
-    // nop
+    CAF_LOG_TRACE("");
   }
 
   // -- overridden modifiers of abstract_actor ---------------------------------
@@ -298,6 +308,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   // -- overridden modifiers of event handler ----------------------------------
 
   void handle_event(network::operation op) override {
+    //std::cerr << "got event: " << to_string(op) << std::endl;
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
     switch (op) {
@@ -334,6 +345,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   void start() {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
+    intrusive_ptr_add_ref(super::ctrl());
     CAF_LOG_DEBUG("starting newb");
     activate();
     if (transport)
@@ -343,6 +355,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   void stop() {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
+    intrusive_ptr_release(super::ctrl());
     close_read_channel();
     passivate();
   }
@@ -493,8 +506,6 @@ struct newb_acceptor : public network::event_handler {
   virtual expected<actor> create_newb(native_socket sock,
                                       transport_policy_ptr pol) = 0;
 
-  // TODO: Has to implement a static create socket function ...
-
   std::unique_ptr<accept_policy<Message>> acceptor;
 };
 
@@ -508,21 +519,37 @@ actor make_newb(actor_system& sys, native_socket sockfd) {
   return actor_cast<actor>(res);
 }
 
-// TODO: I feel like this should include the ProtocolPolicy somehow.
+template <class Newb, class Transport, class Protocol>
+actor make_client_newb(actor_system& sys, std::string host, uint16_t port) {
+  transport_policy_ptr trans{new Transport};
+  expected<native_socket> esock = trans->connect(host, port);
+  if (!esock)
+    return {};
+  auto res = make_newb<Newb>(sys, *esock);
+  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
+  CAF_ASSERT(ptr != nullptr);
+  auto& ref = dynamic_cast<Newb&>(*ptr);
+  ref.transport = std::move(trans);
+  ref.protocol.reset(new Protocol(&ref));
+  ref.start();
+  return res;
+}
+
 template <class NewbAcceptor, class AcceptPolicy>
-std::unique_ptr<NewbAcceptor> make_newb_acceptor(actor_system& sys,
-                                                  uint16_t port,
-                                                  const char* addr = nullptr,
-                                                  bool reuse_addr = false) {
-  auto sockfd = NewbAcceptor::create_socket(port, addr, reuse_addr);
+std::unique_ptr<NewbAcceptor> make_server_newb(actor_system& sys,
+                                               uint16_t port,
+                                               const char* addr = nullptr,
+                                               bool reuse_addr = false) {
+  std::unique_ptr<AcceptPolicy> acc{new AcceptPolicy};
+  auto esock = acc->create_socket(port, addr, reuse_addr);
   // new_tcp_acceptor_impl(port, addr, reuse_addr);
-  if (!sockfd) {
+  if (!esock) {
     CAF_LOG_DEBUG("Could not open " << CAF_ARG(port) << CAF_ARG(addr));
     return nullptr;
   }
   auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-  std::unique_ptr<NewbAcceptor> ptr{new NewbAcceptor(mpx, *sockfd)};
-  ptr->acceptor.reset(new AcceptPolicy);
+  std::unique_ptr<NewbAcceptor> ptr{new NewbAcceptor(mpx, *esock)};
+  ptr->acceptor = std::move(acc);
   ptr->start();
   return ptr;
 }

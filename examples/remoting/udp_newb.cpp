@@ -55,123 +55,11 @@ using io::network::last_socket_error_as_string;
 
 namespace {
 
-constexpr auto ipv4 = caf::io::network::protocol::ipv4;
-//constexpr auto ipv6 = caf::io::network::protocol::ipv6;
-
-auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
-  return what.sin_addr;
-}
-
-auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
-  return what.sin_family;
-}
-
-auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
-  return what.sin_port;
-}
-
-auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
-  return what.sin6_addr;
-}
-
-auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
-  return what.sin6_family;
-}
-
-auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
-  return what.sin6_port;
-}
-
 // -- atoms --------------------------------------------------------------------
 
 using ordering_atom = atom_constant<atom("ordering")>;
 using send_atom = atom_constant<atom("send")>;
 using quit_atom = atom_constant<atom("quit")>;
-
-// -- network code -------------------------------------------------------------
-
-expected<void> set_inaddr_any(native_socket, sockaddr_in& sa) {
-  sa.sin_addr.s_addr = INADDR_ANY;
-  return unit;
-}
-
-expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
-  sa.sin6_addr = in6addr_any;
-  // also accept ipv4 requests on this socket
-  int off = 0;
-  CALL_CFUN(res, detail::cc_zero, "setsockopt",
-            setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
-                       reinterpret_cast<io::network::setsockopt_ptr>(&off),
-                       static_cast<io::network::socket_size_type>(sizeof(off))));
-  return unit;
-}
-
-template <int Family, int SockType = SOCK_STREAM>
-expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
-                                             bool reuse_addr, bool any) {
-  static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  CALL_CFUN(fd, detail::cc_valid_socket, "socket", socket(Family, SockType, 0));
-  // sguard closes the socket in case of exception
-  detail::socket_guard sguard{fd};
-  if (reuse_addr) {
-    int on = 1;
-    CALL_CFUN(tmp1, detail::cc_zero, "setsockopt",
-              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-                         reinterpret_cast<io::network::setsockopt_ptr>(&on),
-                         static_cast<io::network::socket_size_type>(sizeof(on))));
-  }
-  using sockaddr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in,
-      sockaddr_in6
-    >::type;
-  sockaddr_type sa;
-  memset(&sa, 0, sizeof(sockaddr_type));
-  family_of(sa) = Family;
-  if (any)
-    set_inaddr_any(fd, sa);
-  CALL_CFUN(tmp, detail::cc_one, "inet_pton",
-            inet_pton(Family, addr, &addr_of(sa)));
-  port_of(sa) = htons(port);
-  CALL_CFUN(res, detail::cc_zero, "bind",
-            bind(fd, reinterpret_cast<sockaddr*>(&sa),
-                 static_cast<io::network::socket_size_type>(sizeof(sa))));
-  return sguard.release();
-}
-
-expected<native_socket> new_udp_endpoint_impl(uint16_t port, const char* addr,
-                                              bool reuse) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  auto addrs = io::network::interfaces::server_address(port, addr);
-  auto addr_str = std::string{addr == nullptr ? "" : addr};
-  if (addrs.empty())
-    return make_error(sec::cannot_open_port, "No local interface available",
-                      addr_str);
-  bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
-  auto fd = invalid_native_socket;
-  for (auto& elem : addrs) {
-    auto host = elem.first.c_str();
-    auto p = elem.second == ipv4
-           ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host, reuse, any)
-           : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host, reuse, any);
-    if (!p) {
-      CAF_LOG_DEBUG(p.error());
-      continue;
-    }
-    fd = *p;
-    break;
-  }
-  if (fd == invalid_native_socket) {
-    CAF_LOG_WARNING("could not open udp socket on:" << CAF_ARG(port)
-                    << CAF_ARG(addr_str));
-    return make_error(sec::cannot_open_port, "udp socket creation failed",
-                      port, addr_str);
-  }
-  CAF_LOG_DEBUG(CAF_ARG(fd));
-  return fd;
-}
 
 // -- udp impls ----------------------------------------------------------------
 
@@ -227,24 +115,24 @@ struct udp_basp {
   }
 
   error read(char* bytes, size_t count) {
-    CAF_LOG_DEBUG("reading basp udp header");
+    std::cerr << "reading basp udp header" << std::endl;
     // Read header.
     if (count < udp_basp_header_len) {
-      CAF_LOG_DEBUG("not enought bytes for basp header");
-      CAF_LOG_DEBUG("buffer contains " << count << " bytes of expected "
-                    << udp_basp_header_len);
+      std::cerr << "not enought bytes for basp header" << std::endl;
+      std::cerr << "buffer contains " << count << " bytes of expected "
+                    << udp_basp_header_len << std::endl;
       return sec::unexpected_message;
     }
     binary_deserializer bd{&parent->backend(), bytes, count};
     bd(msg.header);
-    CAF_LOG_DEBUG("read basp header " << CAF_ARG(msg.header));
+    std::cerr << "read basp header " << to_string(msg.header) << std::endl;
     size_t payload_len = static_cast<size_t>(msg.header.payload_len);
     // Read payload.
     auto remaining = count - udp_basp_header_len;
     // TODO: Could be `!=` ?
     if (remaining < payload_len) {
-      CAF_LOG_DEBUG("only " << remaining << " bytes remaining of expected "
-                    << msg.header.payload_len);
+      std::cerr << "only " << remaining << " bytes remaining of expected "
+                    << msg.header.payload_len  << std::endl;
       return sec::unexpected_message;
     }
     msg.payload = bytes + udp_basp_header_len;
@@ -322,7 +210,7 @@ struct udp_ordering {
     udp_ordering_header hdr;
     binary_deserializer bd(&parent->backend(), bytes, count);
     bd(hdr);
-    CAF_LOG_DEBUG("read udp ordering header: " << to_string(hdr));
+    std::cerr << "read udp ordering header: " << to_string(hdr) << std::endl;
     // TODO: Use the comparison function from BASP instance.
     if (hdr.seq == seq_read) {
       seq_read += 1;
@@ -388,7 +276,7 @@ struct udp_transport_policy : public io::network::transport_policy {
       return sec::runtime_error;
     } else if (io::network::would_block_or_temporarily_unavailable(
                                         io::network::last_socket_error())) {
-      CAF_LOG_DEBUG("try later");
+      std::cerr << "try later" << std::endl;
       return sec::end_of_stream;
     }
     if (sres == 0)
@@ -434,6 +322,7 @@ struct udp_transport_policy : public io::network::transport_policy {
     send_sizes.pop_front();
     written += (sres > 0) ? static_cast<size_t>(sres) : 0;
     auto remaining = send_buffer.size() - written;
+    std::cerr << "wrote '" << written << "' got '" << remaining << "' bytes left to write" << std::endl;
     if (remaining == 0)
       prepare_next_write(parent);
     return none;
@@ -463,6 +352,7 @@ struct udp_transport_policy : public io::network::transport_policy {
       auto chunk_size = offline_buffer.size() - offline_sum;
       offline_sizes.push_back(chunk_size);
       offline_sum += chunk_size;
+      std::cerr << "adding chunk '" << chunk_size << "' up to total of '" << offline_sum << std::endl;
     }
     return offline_buffer;
   }
@@ -476,6 +366,16 @@ struct udp_transport_policy : public io::network::transport_policy {
       writing = true;
       prepare_next_write(parent);
     }
+  }
+
+  expected<native_socket>
+  connect(const std::string& host, uint16_t port,
+          optional<io::network::protocol::network> preferred = none) override {
+    auto res = io::network::new_remote_udp_endpoint_impl(host, port, preferred);
+    if (!res)
+      return std::move(res.error());
+    endpoint = res->second;
+    return res->first;
   }
 
   // State for reading.
@@ -527,7 +427,12 @@ struct udp_basp_newb : public io::network::newb<new_udp_basp_message> {
   udp_basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
                   native_socket sockfd)
       : newb<new_udp_basp_message>(cfg, dm, sockfd) {
+    std::cerr << "constructing udp newb" << std::endl;
     // nop
+  }
+
+  ~udp_basp_newb() {
+    std::cerr << "terminating udp newb" << std::endl;
   }
 
   void handle(new_udp_basp_message& msg) override {
@@ -574,14 +479,22 @@ struct udp_basp_newb : public io::network::newb<new_udp_basp_message> {
 
 struct udp_accept_policy
     : public io::network::accept_policy<new_udp_basp_message> {
+  expected<native_socket> create_socket(uint16_t port, const char* host,
+                                        bool reuse = false) override {
+    auto res = io::network::new_local_udp_endpoint_impl(port, host, reuse);
+    if (!res)
+      return std::move(res.error());
+    return (*res).first;
+  }
+
   std::pair<native_socket, io::network::transport_policy_ptr>
   accept(io::network::event_handler*) override {
-    auto esock = new_udp_endpoint_impl(0, nullptr, false);
-    if (!esock)
+    auto res = io::network::new_local_udp_endpoint_impl(0, nullptr);
+    if (!res)
       return {invalid_native_socket, nullptr};
-    auto result = std::move(*esock);
+    auto sock = std::move(res->second);
     io::network::transport_policy_ptr ptr{new udp_transport_policy};
-    return {result, std::move(ptr)};
+    return {sock, std::move(ptr)};
   }
 
   void init(io::network::newb<new_udp_basp_message>& n) override {
@@ -599,14 +512,9 @@ struct udp_basp_acceptor
     // nop
   }
 
-  static expected<native_socket> create_socket(uint16_t port, const char* host,
-                                               bool reuse = false) {
-    return new_udp_endpoint_impl(port, host, reuse);
-  }
-
   expected<actor> create_newb(native_socket sockfd,
                               io::network::transport_policy_ptr pol) override {
-    CAF_LOG_DEBUG("creating new basp udp newb");
+    std::cerr << "creating new basp udp newb" << std::endl;
     auto n = io::network::make_newb<udp_basp_newb>(this->backend().system(),
                                                    sockfd);
     auto ptr = caf::actor_cast<caf::abstract_actor*>(n);
@@ -651,7 +559,7 @@ void caf_main(actor_system& sys, const actor_system_config&) {
     self->state.hdl = std::move(*ehdl);
     return {
       [=](send_atom, std::string str) {
-        CAF_LOG_DEBUG("sending '" << str << "'");
+        std::cerr << "sending '" << str << "'" << std::endl;
         io::network::byte_buffer buf;
         udp_ordering_header ohdr{0};
         udp_basp_header bhdr{0, 1, 2};
@@ -668,15 +576,15 @@ void caf_main(actor_system& sys, const actor_system_config&) {
                                        buf.data() + ordering_header_len,
                                        sizeof(bhdr.payload_len)};
         out(bhdr.payload_len);
-        CAF_LOG_DEBUG("header len: " << header_len
+        std::cerr << "header len: " << header_len
                     << ", packet_len: " << buf.size()
                     << ", ordering header: " << to_string(ohdr)
-                    << ", basp header: " << to_string(bhdr));
+                    << ", basp header: " << to_string(bhdr) << std::endl;
         self->enqueue_datagram(self->state.hdl, std::move(buf));
         self->flush(self->state.hdl);
       },
       [=](quit_atom) {
-        CAF_LOG_DEBUG("test broker shutting down");
+        std::cerr << "test broker shutting down" << std::endl;
         self->quit();
       },
       [=](io::new_datagram_msg& msg) {
@@ -687,7 +595,7 @@ void caf_main(actor_system& sys, const actor_system_config&) {
         bd(ohdr);
         bd(bhdr);
         bd(str);
-        CAF_LOG_DEBUG("received '" << str << "'");
+        std::cerr << "received '" << str << "'" << std::endl;
         self->send(m, quit_atom::value);
       }
     };
@@ -695,26 +603,26 @@ void caf_main(actor_system& sys, const actor_system_config&) {
   auto helper_actor = sys.spawn([&](event_based_actor* self, actor m) -> behavior {
     return {
       [=](const std::string& str) {
-        CAF_LOG_DEBUG("received '" << str << "'");
+        std::cerr << "received '" << str << "'" << std::endl;
         self->send(m, quit_atom::value);
       },
       [=](actor a) {
-        CAF_LOG_DEBUG("got new newb handle");
+        std::cerr << "got new newb handle" << std::endl;
         self->send(m, a);
       },
       [=](quit_atom) {
-        CAF_LOG_DEBUG("helper shutting down");
+        std::cerr << "helper shutting down" << std::endl;
         self->quit();
       }
     };
   }, main_actor);
-  CAF_LOG_DEBUG("creating new acceptor");
+  std::cerr << "creating new acceptor" << std::endl;
   auto newb_acceptor_ptr
-    = io::network::make_newb_acceptor<udp_newb_acceptor_t,
-                                      udp_accept_policy_t>(sys, port);
+    = io::network::make_server_newb<udp_newb_acceptor_t,
+                                    udp_accept_policy_t>(sys, port);
   dynamic_cast<udp_newb_acceptor_t*>(newb_acceptor_ptr.get())->responder
     = helper_actor;
-  CAF_LOG_DEBUG("contacting from 'old-style' broker");
+  std::cerr << "contacting from 'old-style' broker" << std::endl;
   auto test_broker = sys.middleman().spawn_broker(testing, host, port, main_actor);
   main_actor->send(test_broker, send_atom::value, "hello world");
   std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -723,27 +631,27 @@ void caf_main(actor_system& sys, const actor_system_config&) {
       newb_actor = a;
     }
   );
-  CAF_LOG_DEBUG("new newb was created");
+  std::cerr << "new newb was created" << std::endl;
   main_actor->receive(
     [](quit_atom) {
-      CAF_LOG_DEBUG("check");
+      std::cerr << "check" << std::endl;
     }
   );
-  CAF_LOG_DEBUG("sending message from newb");
+  std::cerr << "sending message from newb" << std::endl;
   main_actor->send(newb_actor, send_atom::value, actor_id{3}, actor_id{4},
                    "dlrow olleh");
   main_actor->receive(
     [](quit_atom) {
-      CAF_LOG_DEBUG("check");
+      std::cerr << "check" << std::endl;
     }
   );
-  CAF_LOG_DEBUG("shutting everything down");
+  std::cerr << "shutting everything down" << std::endl;
   newb_acceptor_ptr->stop();
   anon_send(newb_actor, quit_atom::value);
   anon_send(helper_actor, quit_atom::value);
   anon_send(test_broker, quit_atom::value);
   sys.await_all_actors_done();
-  CAF_LOG_DEBUG("done");
+  std::cerr << "done" << std::endl;
 }
 
 } // namespace anonymous
