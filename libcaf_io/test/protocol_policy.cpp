@@ -303,6 +303,10 @@ struct dummy_basp_newb : network::newb<new_basp_message> {
 };
 
 struct accept_policy_impl : public network::accept_policy<new_basp_message> {
+  expected<native_socket> create_socket(uint16_t, const char*, bool) override {
+    return sec::bad_function_call;
+  }
+
   std::pair<native_socket, network::transport_policy_ptr>
     accept(network::event_handler*) override {
     // TODO: For UDP read the message into a buffer. Create a new socket.

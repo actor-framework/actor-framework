@@ -55,177 +55,61 @@ using io::network::last_socket_error_as_string;
 
 namespace {
 
-constexpr auto ipv4 = caf::io::network::protocol::ipv4;
-//constexpr auto ipv6 = caf::io::network::protocol::ipv6;
-
-auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
-  return what.sin_addr;
-}
-
-auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
-  return what.sin_family;
-}
-
-auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
-  return what.sin_port;
-}
-
-auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
-  return what.sin6_addr;
-}
-
-auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
-  return what.sin6_family;
-}
-
-auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
-  return what.sin6_port;
-}
-
 // -- atoms --------------------------------------------------------------------
 
 using ordering_atom = atom_constant<atom("ordering")>;
 using send_atom = atom_constant<atom("send")>;
 using quit_atom = atom_constant<atom("quit")>;
-
-// -- network code -------------------------------------------------------------
-
-expected<void> set_inaddr_any(native_socket, sockaddr_in& sa) {
-  sa.sin_addr.s_addr = INADDR_ANY;
-  return unit;
-}
-
-expected<void> set_inaddr_any(native_socket fd, sockaddr_in6& sa) {
-  sa.sin6_addr = in6addr_any;
-  // also accept ipv4 requests on this socket
-  int off = 0;
-  CALL_CFUN(res, detail::cc_zero, "setsockopt",
-            setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
-                       reinterpret_cast<io::network::setsockopt_ptr>(&off),
-                       static_cast<io::network::socket_size_type>(sizeof(off))));
-  return unit;
-}
-
-template <int Family, int SockType = SOCK_STREAM>
-expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
-                                             bool reuse_addr, bool any) {
-  static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  CALL_CFUN(fd, detail::cc_valid_socket, "socket", socket(Family, SockType, 0));
-  // sguard closes the socket in case of exception
-  detail::socket_guard sguard{fd};
-  if (reuse_addr) {
-    int on = 1;
-    CALL_CFUN(tmp1, detail::cc_zero, "setsockopt",
-              setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
-                         reinterpret_cast<io::network::setsockopt_ptr>(&on),
-                         static_cast<io::network::socket_size_type>(sizeof(on))));
-  }
-  using sockaddr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in,
-      sockaddr_in6
-    >::type;
-  sockaddr_type sa;
-  memset(&sa, 0, sizeof(sockaddr_type));
-  family_of(sa) = Family;
-  if (any)
-    set_inaddr_any(fd, sa);
-  CALL_CFUN(tmp, detail::cc_one, "inet_pton",
-            inet_pton(Family, addr, &addr_of(sa)));
-  port_of(sa) = htons(port);
-  CALL_CFUN(res, detail::cc_zero, "bind",
-            bind(fd, reinterpret_cast<sockaddr*>(&sa),
-                 static_cast<io::network::socket_size_type>(sizeof(sa))));
-  return sguard.release();
-}
-
-expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
-                                              bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  auto addrs = io::network::interfaces::server_address(port, addr);
-  auto addr_str = std::string{addr == nullptr ? "" : addr};
-  if (addrs.empty())
-    return make_error(sec::cannot_open_port, "No local interface available",
-                      addr_str);
-  bool any = addr_str.empty() || addr_str == "::" || addr_str == "0.0.0.0";
-  auto fd = invalid_native_socket;
-  for (auto& elem : addrs) {
-    auto hostname = elem.first.c_str();
-    auto p = elem.second == ipv4
-           ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
-           : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr, any);
-    if (!p) {
-      CAF_LOG_DEBUG(p.error());
-      continue;
-    }
-    fd = *p;
-    break;
-  }
-  if (fd == invalid_native_socket) {
-    CAF_LOG_WARNING("could not open tcp socket on:" << CAF_ARG(port)
-                    << CAF_ARG(addr_str));
-    return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                      port, addr_str);
-  }
-  detail::socket_guard sguard{fd};
-  CALL_CFUN(tmp2, detail::cc_zero, "listen", listen(fd, SOMAXCONN));
-  // ok, no errors so far
-  CAF_LOG_DEBUG(CAF_ARG(fd));
-  return sguard.release();
-}
+using responder_atom = atom_constant<atom("responder")>;
 
 // -- tcp impls ----------------------------------------------------------------
 
-struct tcp_basp_header {
+struct basp_header {
   uint32_t payload_len;
   actor_id from;
   actor_id to;
 };
 
-constexpr size_t tcp_basp_header_len = sizeof(uint32_t) + sizeof(actor_id) * 2;
+constexpr size_t basp_header_len = sizeof(uint32_t) + sizeof(actor_id) * 2;
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, tcp_basp_header& hdr) {
+typename Inspector::result_type inspect(Inspector& fun, basp_header& hdr) {
   return fun(meta::type_name("tcp_basp_header"),
              hdr.payload_len, hdr.from, hdr.to);
 }
 
-struct new_tcp_basp_message {
-  tcp_basp_header header;
+struct new_basp_message {
+  basp_header header;
   char* payload;
   size_t payload_len;
 };
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun,
-                                        new_tcp_basp_message& msg) {
-  return fun(meta::type_name("new_tcp_basp_message"), msg.header,
+                                        new_basp_message& msg) {
+  return fun(meta::type_name("tcp_new_basp_message"), msg.header,
              msg.payload_len);
 }
 
-struct tcp_basp {
-  static constexpr size_t header_size = sizeof(tcp_basp_header);
-  using message_type = new_tcp_basp_message;
+struct basp {
+  static constexpr size_t header_size = basp_header_len;
+  using message_type = new_basp_message;
   using result_type = optional<message_type>;
   io::network::newb<message_type>* parent;
   message_type msg;
   bool expecting_header = true;
 
-  tcp_basp(io::network::newb<message_type>* parent) : parent(parent) {
-    // nop
+  basp(io::network::newb<message_type>* parent) : parent(parent) {
+    // TODO: this is dangerous ...
+    // Maybe we need an init function that is called with `start()`?
+    parent->configure_read(io::receive_policy::exactly(basp_header_len));
   }
 
   error read_header(char* bytes, size_t count) {
-    if (count < tcp_basp_header_len) {
-      CAF_LOG_DEBUG("buffer contains " << count << " bytes of expected "
-                    << tcp_basp_header_len);
+    if (count < basp_header_len)
       return sec::unexpected_message;
-    }
     binary_deserializer bd{&parent->backend(), bytes, count};
     bd(msg.header);
-    CAF_LOG_DEBUG("read header " << CAF_ARG(msg.header));
     size_t size = static_cast<size_t>(msg.header.payload_len);
     parent->configure_read(io::receive_policy::exactly(size));
     expecting_header = false;
@@ -242,7 +126,7 @@ struct tcp_basp {
     msg.payload_len = msg.header.payload_len;
     parent->handle(msg);
     expecting_header = true;
-    parent->configure_read(io::receive_policy::exactly(tcp_basp_header_len));
+    parent->configure_read(io::receive_policy::exactly(basp_header_len));
     return none;
   }
 
@@ -273,8 +157,8 @@ struct tcp_basp {
   }
 };
 
-struct tcp_transport_policy : public io::network::transport_policy {
-  tcp_transport_policy()
+struct tcp_transport : public io::network::transport_policy {
+  tcp_transport()
       : read_threshold{0},
         collected{0},
         maximum{0},
@@ -285,6 +169,7 @@ struct tcp_transport_policy : public io::network::transport_policy {
 
   error read_some(io::network::event_handler* parent) override {
     CAF_LOG_TRACE("");
+    std::cerr << "read some called" << std::endl;
     size_t len = receive_buffer.size() - collected;
     receive_buffer.resize(len);
     void* buf = receive_buffer.data() + collected;
@@ -292,6 +177,7 @@ struct tcp_transport_policy : public io::network::transport_policy {
                        reinterpret_cast<io::network::socket_recv_ptr>(buf),
                        len, io::network::no_sigpipe_io_flag);
     if (io::network::is_error(sres, true) || sres == 0) {
+      std::cerr << "read some error" << std::endl;
       // recv returns 0 when the peer has performed an orderly shutdown
       return sec::runtime_error;
     }
@@ -380,6 +266,15 @@ struct tcp_transport_policy : public io::network::transport_policy {
     }
   }
 
+  expected<native_socket>
+  connect(const std::string& host, uint16_t port,
+          optional<io::network::protocol::network> preferred = none) override {
+    auto res = io::network::new_tcp_connection(host, port, preferred);
+    if (!res)
+      std::cerr << "failed to create new TCP connection" << std::endl;
+    return res;
+  }
+
   // State for reading.
   size_t read_threshold;
   size_t collected;
@@ -392,11 +287,11 @@ struct tcp_transport_policy : public io::network::transport_policy {
 };
 
 template <class T>
-struct tcp_protocol_policy
+struct tcp_protocol
     : public io::network::protocol_policy<typename T::message_type> {
   T impl;
 
-  tcp_protocol_policy(io::network::newb<typename T::message_type>* parent)
+  tcp_protocol(io::network::newb<typename T::message_type>* parent)
       : impl(parent) {
     // nop
   }
@@ -420,14 +315,21 @@ struct tcp_protocol_policy
   }
 };
 
-struct tcp_basp_newb : io::network::newb<new_tcp_basp_message> {
-  tcp_basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
-                native_socket sockfd)
-      : newb<new_tcp_basp_message>(cfg, dm, sockfd) {
+struct basp_newb : public io::network::newb<new_basp_message> {
+  basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
+            native_socket sockfd)
+      : newb<new_basp_message>(cfg, dm, sockfd) {
     // nop
+    CAF_LOG_TRACE("");
+    std::cerr << "constructing newb" << std::endl;
   }
 
-  void handle(new_tcp_basp_message& msg) override {
+  ~basp_newb() {
+    std::cerr << "terminating newb" << std::endl;
+    CAF_LOG_TRACE("");
+  }
+
+  void handle(new_basp_message& msg) override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
     std::string res;
@@ -447,7 +349,7 @@ struct tcp_basp_newb : io::network::newb<new_tcp_basp_message> {
       [=](send_atom, actor_id sender, actor_id receiver, std::string payload) {
         auto hw = caf::make_callback([&](io::network::byte_buffer& buf) -> error {
           binary_serializer bs(&backend(), buf);
-          bs(tcp_basp_header{0, sender, receiver});
+          bs(basp_header{0, sender, receiver});
           return none;
         });
         auto whdl = wr_buf(&hw);
@@ -456,7 +358,13 @@ struct tcp_basp_newb : io::network::newb<new_tcp_basp_message> {
         binary_serializer bs(&backend(), *whdl.buf);
         bs(payload);
       },
+      [=](responder_atom, actor r) {
+        aout(this) << "got responder assigned" << std::endl;
+        responder = r;
+        send(r, this);
+      },
       [=](quit_atom) {
+        aout(this) << "got quit message" << std::endl;
         // Remove from multiplexer loop.
         stop();
         // Quit actor.
@@ -469,10 +377,14 @@ struct tcp_basp_newb : io::network::newb<new_tcp_basp_message> {
 };
 
 
-struct tcp_accept_policy
-    : public io::network::accept_policy<new_tcp_basp_message> {
-  virtual std::pair<native_socket, io::network::transport_policy_ptr>
-    accept(io::network::event_handler* parent) {
+struct accept_tcp : public io::network::accept_policy<new_basp_message> {
+  expected<native_socket> create_socket(uint16_t port, const char* host,
+                                        bool reuse = false) override {
+    return io::network::new_tcp_acceptor_impl(port, host, reuse);
+  }
+
+  std::pair<native_socket, io::network::transport_policy_ptr>
+    accept(io::network::event_handler* parent) override {
     using namespace io::network;
     sockaddr_storage addr;
     std::memset(&addr, 0, sizeof(addr));
@@ -485,45 +397,48 @@ struct tcp_accept_policy
         return {invalid_native_socket, nullptr};
       }
     }
-    transport_policy_ptr ptr{new tcp_transport_policy};
+    std::cerr << "accepted connection" << std::endl;
+    transport_policy_ptr ptr{new tcp_transport};
     return {result, std::move(ptr)};
   }
 
-  virtual void init(io::network::newb<new_tcp_basp_message>& n) {
+  void init(io::network::newb<new_basp_message>& n) override {
     n.start();
   }
 };
 
 template <class ProtocolPolicy>
-struct tcp_basp_acceptor
+struct tcp_acceptor
     : public io::network::newb_acceptor<typename ProtocolPolicy::message_type> {
   using super = io::network::newb_acceptor<typename ProtocolPolicy::message_type>;
 
-
-  static expected<native_socket> create_socket(uint16_t port, const char* host,
-                                               bool reuse = false) {
-    return new_tcp_acceptor_impl(port, host, reuse);
+  tcp_acceptor(default_multiplexer& dm, native_socket sockfd)
+      : super(dm, sockfd) {
+    CAF_LOG_TRACE("");
+    std::cerr << "constructing newb acceptor" << std::endl;
+    // nop
   }
 
-  tcp_basp_acceptor(default_multiplexer& dm, native_socket sockfd)
-      : super(dm, sockfd) {
-    // nop
+  ~tcp_acceptor() {
+    CAF_LOG_TRACE("");
+    std::cerr << "terminating newb acceptor" << std::endl;
   }
 
   expected<actor> create_newb(native_socket sockfd,
                               io::network::transport_policy_ptr pol) override {
-    CAF_LOG_DEBUG("creating new basp tcp newb");
-    auto n = io::network::make_newb<tcp_basp_newb>(this->backend().system(),
-                                                   sockfd);
+    CAF_LOG_TRACE(CAF_ARG(sockfd));
+    std::cerr << "acceptor creating new newb" << std::endl;
+    auto n = io::network::make_newb<basp_newb>(this->backend().system(), sockfd);
     auto ptr = caf::actor_cast<caf::abstract_actor*>(n);
     if (ptr == nullptr)
       return sec::runtime_error;
-    auto& ref = dynamic_cast<tcp_basp_newb&>(*ptr);
+    auto& ref = dynamic_cast<basp_newb&>(*ptr);
+    // TODO: Transport has to be assigned before protocol ... which sucks.
+    //  (basp protocol calls configure read which accesses the transport.)
     ref.transport = std::move(pol);
     ref.protocol.reset(new ProtocolPolicy(&ref));
     ref.responder = responder;
-    // This should happen somewhere else?
-    ref.configure_read(io::receive_policy::exactly(tcp_basp_header_len));
+    // TODO: Just a workaround.
     anon_send(responder, n);
     return n;
   }
@@ -532,126 +447,61 @@ struct tcp_basp_acceptor
 };
 
 struct tcp_test_broker_state {
-  tcp_basp_header hdr;
+  basp_header hdr;
   bool expecting_header = true;
 };
 
 void caf_main(actor_system& sys, const actor_system_config&) {
-  using tcp_protocol_policy_t = tcp_protocol_policy<tcp_basp>;
-  using tcp_accept_policy_t = tcp_accept_policy;
-  using tcp_newb_acceptor_t = tcp_basp_acceptor<tcp_protocol_policy_t>;
-  using tcp_transport_policy_t = tcp_transport_policy;
-
+  using acceptor_t = tcp_acceptor<tcp_protocol<basp>>;
+  using io::network::make_server_newb;
+  using io::network::make_client_newb;
   const char* host = "localhost";
   const uint16_t port = 12345;
+  scoped_actor self{sys};
 
-  scoped_actor main_actor{sys};
-  actor newb_actor;
-  auto testing = [&](io::stateful_broker<tcp_test_broker_state>* self,
-                     io::connection_handle hdl, actor) -> behavior {
-    CAF_ASSERT(hdl != io::invalid_connection_handle);
-    self->configure_read(hdl, io::receive_policy::exactly(tcp_basp_header_len));
-    self->state.expecting_header = true;
+  auto running = [=](event_based_actor* self, std::string name, actor , actor b) -> behavior {
     return {
+      [=](std::string str) {
+        aout(self) << "[" << name << "] received '" << str << "'" << std::endl;
+      },
       [=](send_atom, std::string str) {
-        CAF_LOG_DEBUG("sending '" << str << "'");
-        io::network::byte_buffer buf;
-        binary_serializer bs(self->system(), buf);
-        tcp_basp_header hdr{0, 1, 2};
-        bs(hdr);
-        auto header_len = buf.size();
-        CAF_ASSERT(header_len == tcp_basp_header_len);
-        bs(str);
-        hdr.payload_len = static_cast<uint32_t>(buf.size() - header_len);
-        stream_serializer<charbuf> out{self->system(), buf.data(),
-                                       sizeof(hdr.payload_len)};
-        out(hdr.payload_len);
-        CAF_LOG_DEBUG("header len: " << header_len
-                    << ", packet_len: " << buf.size()
-                    << ", header: " << to_string(hdr));
-        self->write(hdl, buf.size(), buf.data());
-        self->flush(hdl);
+        aout(self) << "[" << name << "] sending '" << str << "'" << std::endl;
+        self->send(b, send_atom::value, self->id(), actor_id{}, str);
       },
-      [=](quit_atom) {
-        CAF_LOG_DEBUG("test broker shutting down");
-        self->quit();
-      },
-      [=](io::new_data_msg& msg) {
-        auto& s = self->state;
-        size_t next_len = tcp_basp_header_len;
-        binary_deserializer bd(self->system(), msg.buf);
-        if (s.expecting_header) {
-          bd(s.hdr);
-          next_len = s.hdr.payload_len;
-          s.expecting_header = false;
-        } else {
-          std::string str;
-          bd(str);
-          CAF_LOG_DEBUG("received '" << str << "'");
-          std::reverse(std::begin(str), std::end(str));
-          io::network::byte_buffer buf;
-          binary_serializer bs(self->system(), buf);
-          tcp_basp_header hdr{0, 1, 2};
-          bs(hdr);
-          auto header_len = buf.size();
-          CAF_ASSERT(header_len == tcp_basp_header_len);
-          bs(str);
-          hdr.payload_len = static_cast<uint32_t>(buf.size() - header_len);
-          stream_serializer<charbuf> out{self->system(), buf.data(),
-                                         sizeof(hdr.payload_len)};
-          out(hdr.payload_len);
-          CAF_LOG_DEBUG("header len: " << header_len
-                      << ", packet_len: " << buf.size()
-                      << ", header: " << to_string(hdr));
-          self->write(hdl, buf.size(), buf.data());
-          self->flush(hdl);
-//          self->send(m, quit_atom::value);
-        }
-        self->configure_read(msg.handle, io::receive_policy::exactly(next_len));
+    };
+  };
+  auto init = [=](event_based_actor* self, std::string name, actor m) -> behavior {
+    self->set_default_handler(skip);
+    return {
+      [=](actor b) {
+        aout(self) << "[" << name << "] got broker, let's do this" << std::endl;
+        self->become(running(self, name, m, b));
+        self->set_default_handler(print_and_drop);
       }
     };
   };
-  auto helper_actor = sys.spawn([&](event_based_actor* self, actor m) -> behavior {
-    return {
-      [=](const std::string& str) {
-        CAF_LOG_DEBUG("received '" << str << "'");
-        self->send(m, quit_atom::value);
-      },
-      [=](actor a) {
-        CAF_LOG_DEBUG("got new newb handle");
-        self->send(m, a);
-      },
-      [=](quit_atom) {
-        CAF_LOG_DEBUG("helper shutting down");
-        self->quit();
-      }
-    };
-  }, main_actor);
-  CAF_LOG_DEBUG("creating new acceptor");
-  auto newb_acceptor_ptr
-    = io::network::make_newb_acceptor<tcp_newb_acceptor_t, tcp_accept_policy_t>(sys, port);
-  dynamic_cast<tcp_newb_acceptor_t*>(newb_acceptor_ptr.get())->responder
-    = helper_actor;
-  CAF_LOG_DEBUG("connecting from 'old-style' broker");
-  auto exp = sys.middleman().spawn_client(testing, host, port, main_actor);
-  CAF_ASSERT(exp);
-  auto test_broker = std::move(*exp);
-  main_actor->receive(
-    [&](actor a) {
-      newb_actor = a;
+
+  auto server_helper = sys.spawn(init, "s", self);
+  auto client_helper = sys.spawn(init, "c", self);
+
+  aout(self) << "creating new server" << std::endl;
+  auto server_ptr = make_server_newb<acceptor_t, accept_tcp>(sys, port, nullptr, true);
+  server_ptr->responder = server_helper;
+
+  aout(self) << "creating new client" << std::endl;
+  auto client = make_client_newb<basp_newb, tcp_transport, tcp_protocol<basp>>(sys, host, port);
+  self->send(client, responder_atom::value, client_helper);
+
+  self->send(client_helper, send_atom::value, "hallo");
+  self->send(server_helper, send_atom::value, "hallo");
+
+  self->receive(
+    [&](quit_atom) {
+      aout(self) << "check" << std::endl;
     }
   );
-  CAF_LOG_DEBUG("sending message to newb");
-  main_actor->send(test_broker, send_atom::value, "hello world");
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  main_actor->receive(
-    [](quit_atom) {
-      CAF_LOG_DEBUG("check");
-    }
-  );
-  CAF_LOG_DEBUG("sending message from newb");
-  main_actor->send(newb_actor, send_atom::value, actor_id{3}, actor_id{4},
-                   "dlrow olleh");
+
+  /*
   main_actor->receive(
     [](quit_atom) {
       CAF_LOG_DEBUG("check");
@@ -664,6 +514,7 @@ void caf_main(actor_system& sys, const actor_system_config&) {
   anon_send(test_broker, quit_atom::value);
   sys.await_all_actors_done();
   CAF_LOG_DEBUG("done");
+  */
 }
 
 } // namespace anonymous
