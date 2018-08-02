@@ -144,7 +144,7 @@ public:
 
   std::pair<size_t, size_t>
   run_dispatch_loop(timespan cycle_duration = timespan{1})
-    CAF_DEPRECATED_MSG("use run_cycle() instead");
+    CAF_DEPRECATED_MSG("use the testing DSL's run() instead");
 
 protected:
   void start() override;
