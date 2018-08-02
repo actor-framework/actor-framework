@@ -40,9 +40,10 @@ ipv6_address addr(std::initializer_list<uint16_t> prefix,
 } // namespace <anonymous>
 
 CAF_TEST(constructing) {
-  ipv6_address localhost({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
-  CAF_CHECK_EQUAL(localhost.data(),
-                  array_type({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}));
+  ipv6_address::array_type localhost_bytes{{0, 0, 0, 0, 0, 0, 0, 0,
+                                            0, 0, 0, 0, 0, 0, 0, 1}};
+  ipv6_address localhost{localhost_bytes};
+  CAF_CHECK_EQUAL(localhost.data(), localhost_bytes);
   CAF_CHECK_EQUAL(localhost, addr({}, {0x01}));
 }
 
@@ -50,7 +51,7 @@ CAF_TEST(comparison) {
   CAF_CHECK_EQUAL(addr({1, 2, 3}), addr({1, 2, 3}));
   CAF_CHECK_NOT_EQUAL(addr({3, 2, 1}), addr({1, 2, 3}));
   CAF_CHECK_EQUAL(addr({}, {0xFFFF, 0x7F00, 0x0001}),
-                  ipv4_address({127, 0, 0, 1}));
+                  make_ipv4_address(127, 0, 0, 1));
 }
 
 CAF_TEST(from string) {

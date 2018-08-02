@@ -71,6 +71,12 @@ bool ipv4_address::is_multicast() const noexcept {
 
 // -- related free functions ---------------------------------------------------
 
+ipv4_address make_ipv4_address(uint8_t oct1, uint8_t oct2, uint8_t oct3,
+                               uint8_t oct4) {
+  ipv4_address::array_type bytes{{oct1, oct2, oct3, oct4}};
+  return ipv4_address{bytes};
+}
+
 std::string to_string(const ipv4_address& x) {
   using std::to_string;
   std::string result;

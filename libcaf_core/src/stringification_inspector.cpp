@@ -18,6 +18,8 @@
 
 #include "caf/detail/stringification_inspector.hpp"
 
+#include <ctime>
+
 namespace caf {
 namespace detail {
 
@@ -65,6 +67,37 @@ void stringification_inspector::consume(string_view str) {
     }
   }
   result_ += '"';
+}
+
+void stringification_inspector::consume(timespan& x) {
+  auto count = x.count();
+  auto res = [&](const char* suffix) {
+    result_ += std::to_string(count);
+    result_ += suffix;
+  };
+  // Check whether it's nano-, micro-, or milliseconds.
+  for (auto suffix : {"ns", "us", "ms"}) {
+    if (count % 1000 != 0)
+      return res(suffix);
+    count /= 1000;
+  }
+  // After the loop we only need to differentiate between seconds and minutes.
+  if (count % 60 != 0)
+    return res("s");
+  count /= 60;
+  return res("min");
+}
+
+void stringification_inspector::consume(timestamp& x) {
+  char buf[64];
+  auto y = std::chrono::time_point_cast<timestamp::clock::duration>(x);
+  auto z = timestamp::clock::to_time_t(y);
+  strftime(buf, sizeof(buf), "%FT%T", std::localtime(&z));
+  result_ += buf;
+  // time_t has no milliseconds, so we need to insert them manually.
+  auto ms = (x.time_since_epoch().count() / 1000000) % 1000;
+  result_ += '.';
+  result_ += std::to_string(ms);
 }
 
 } // namespace detail

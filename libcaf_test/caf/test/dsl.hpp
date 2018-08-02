@@ -27,12 +27,14 @@
 
 CAF_PUSH_WARNINGS
 
-namespace {
-
+/// The type of `_`.
 struct wildcard { };
 
+/// Allows ignoring individual messages elements in `expect` clauses, e.g.
+/// `expect((int, int), from(foo).to(bar).with(1, _))`.
 constexpr wildcard _ = wildcard{};
 
+/// @relates wildcard
 constexpr bool operator==(const wildcard&, const wildcard&) {
   return true;
 }
@@ -56,8 +58,6 @@ msg_cmp_rec(const caf::message& x, const std::tuple<Ts...>& ys) {
   return cmp_one<I>(x, std::get<I>(ys)) && msg_cmp_rec<I + 1>(x, ys);
 }
 
-} // namespace <anonymous>
-
 // allow comparing arbitrary `T`s to `message` objects for the purpose of the
 // testing DSL
 namespace caf {
@@ -73,8 +73,6 @@ bool operator==(const message& x, const T& y) {
 }
 
 } // namespace caf
-
-namespace {
 
 // dummy function to force ADL later on
 //int inspect(int, int);
@@ -189,16 +187,16 @@ public:
 
   caf_handle& operator=(const caf_handle&) = default;
 
-  inline pointer get() const {
+  pointer get() const {
     return ptr_;
   }
 
-  inline ptrdiff_t compare(const caf_handle& other) const {
+  ptrdiff_t compare(const caf_handle& other) const {
     return reinterpret_cast<ptrdiff_t>(ptr_)
            - reinterpret_cast<ptrdiff_t>(other.ptr_);
   }
 
-  inline ptrdiff_t compare(std::nullptr_t) const {
+  ptrdiff_t compare(std::nullptr_t) const {
     return reinterpret_cast<ptrdiff_t>(ptr_);
   }
 
@@ -546,12 +544,142 @@ struct test_coordinator_fixture_fetch_helper<T> {
 
 /// A fixture with a deterministic scheduler setup.
 template <class Config = caf::actor_system_config>
-struct test_coordinator_fixture {
+class test_coordinator_fixture {
+public:
+  // -- member types -----------------------------------------------------------
+
   /// A deterministic scheduler type.
   using scheduler_type = caf::scheduler::test_coordinator;
 
-  /// Convenience alias for std::chrono::microseconds.
-  using us_t = std::chrono::microseconds;
+  // -- constructors, destructors, and assignment operators --------------------
+
+  template <class... Ts>
+  explicit test_coordinator_fixture(Ts&&... xs)
+      : cfg(std::forward<Ts>(xs)...),
+        sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
+               .set("scheduler.policy", caf::atom("testing"))
+               .set("logger.inline-output", true)
+               .set("middleman.network-backend", caf::atom("testing"))),
+        self(sys, true),
+        sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
+    // Configure the clock to measure each batch item with 1us.
+    sched.clock().time_per_unit.emplace(caf::atom("batch"),
+                                        caf::timespan{1000});
+    // Make sure the current time isn't 0.
+    sched.clock().current_time += std::chrono::hours(1);
+    credit_round_interval = cfg.streaming_credit_round_interval();
+  }
+
+  virtual ~test_coordinator_fixture() {
+    run();
+  }
+
+  // -- DSL functions ----------------------------------------------------------
+
+  /// Advances the clock by a single tick duration.
+  size_t advance_time(caf::timespan interval) {
+    return sched.clock().advance_time(interval);
+  }
+
+  /// Allows the next actor to consume one message from its mailbox. Fails the
+  /// test if no message was consumed.
+  void consume_message() {
+    if (!sched.try_run_once())
+      CAF_FAIL("no message to consume");
+  }
+
+  /// Allows each actors to consume all messages from its mailbox. Fails the
+  /// test if no message was consumed.
+  /// @returns The number of consumed messages.
+  size_t consume_messages() {
+    auto result = sched.run();
+    if (result == 0)
+      CAF_FAIL("no message to consume");
+    return result;
+  }
+
+  /// Consume messages and trigger timeouts until no activity remains.
+  /// @returns The total number of events, i.e., messages consumed and
+  ///          timeouts triggerd.
+  size_t run() {
+    return run_until([] { return false; });
+  }
+
+  /// Consume messages and trigger timeouts until `pred` becomes `true` or
+  /// until no activity remains.
+  /// @returns The total number of events, i.e., messages consumed and
+  ///          timeouts triggered.
+  template <class BoolPredicate>
+  size_t run_until(BoolPredicate predicate) {
+    CAF_LOG_TRACE("");
+    // Bookkeeping.
+    size_t events = 0;
+    // Loop until no activity remains.
+    while (sched.has_job() || sched.has_pending_timeout()) {
+      while (sched.try_run_once()) {
+        ++events;
+        if (predicate()) {
+          CAF_LOG_DEBUG("stop due to predicate:" << CAF_ARG(events));
+          return events;
+        }
+      }
+      if (trigger_timeout())
+        ++events;
+    }
+    CAF_LOG_DEBUG("no activity left:" << CAF_ARG(events));
+    return events;
+  }
+
+  /// Call `run()` when the next scheduled actor becomes ready.
+  void run_after_next_ready_event() {
+    sched.after_next_enqueue([=] { run(); });
+  }
+
+  /// Call `run_until(predicate)` when the next scheduled actor becomes ready.
+  template <class BoolPredicate>
+  void run_until_after_next_ready_event(BoolPredicate predicate) {
+    sched.after_next_enqueue([=] { run_until(predicate); });
+  }
+
+  /// Sends a request to `hdl`, then calls `run()`, and finally fetches and
+  /// returns the result.
+  template <class T, class... Ts, class Handle, class... Us>
+  typename std::conditional<sizeof...(Ts) == 0, T, std::tuple<T, Ts...>>::type
+  request(Handle hdl, Us... args) {
+    auto res_hdl = self->request(hdl, caf::infinite, std::move(args)...);
+    run();
+    test_coordinator_fixture_fetch_helper<T, Ts...> f;
+    return f(res_hdl);
+  }
+
+  /// Returns the next message from the next pending actor's mailbox as `T`.
+  template <class T>
+  const T& peek() {
+    return sched.template peek<T>();
+  }
+
+  /// Dereferences `hdl` and downcasts it to `T`.
+  template <class T = caf::scheduled_actor, class Handle = caf::actor>
+  T& deref(const Handle& hdl) {
+    auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
+    CAF_REQUIRE(ptr != nullptr);
+    return dynamic_cast<T&>(*ptr);
+  }
+
+  /// Triggers the next pending timeout.
+  virtual bool trigger_timeout() {
+    return sched.trigger_timeout();
+  }
+
+  /// Triggers all pending timeouts.
+  size_t trigger_timeouts() {
+    size_t timeouts = 0;
+    while (trigger_timeout())
+      ++timeouts;
+    return timeouts;
+  }
+
+  // -- member variables -------------------------------------------------------
 
   /// The user-generated system config.
   Config cfg;
@@ -565,77 +693,34 @@ struct test_coordinator_fixture {
   /// Deterministic scheduler.
   scheduler_type& sched;
 
-  /// Duration between two credit rounds.
-  caf::timespan credit_round_interval;
+  // -- deprecated functionality -----------------------------------------------
 
-  /// Max send delay for stream batches.
-  caf::timespan max_batch_delay;
+  void run_exhaustively() CAF_DEPRECATED_MSG("use run() instead");
 
-  /// Duration a single cycle, computed as GCD of credit-round-interval and
-  /// max-batch-delay. Using this duration for `sched.run_dispatch_loop()`
-  /// advances the clock in ideal steps.
-  caf::timespan streaming_cycle;
+  void run_exhaustively_until(std::function<bool()> f)
+    CAF_DEPRECATED_MSG("use run_until() instead");
 
-  template <class... Ts>
-  explicit test_coordinator_fixture(Ts&&... xs)
-      : cfg(std::forward<Ts>(xs)...),
-        sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
-               .set("scheduler.policy", caf::atom("testing"))
-               .set("logger.inline-output", true)
-               .set("middleman.network-backend", caf::atom("testing"))),
-        self(sys, true),
-        sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
-        credit_round_interval(cfg.streaming_credit_round_interval()),
-        max_batch_delay(cfg.streaming_max_batch_delay()) {
-    // Configure the clock to measure each batch item with 1us.
-    sched.clock().time_per_unit.emplace(caf::atom("batch"),
-                                        caf::timespan{1000});
-    // Compute reasonable step size.
-    auto cycle_us = cfg.streaming_tick_duration_us();
-    streaming_cycle = caf::timespan{us_t{cycle_us}};
-    // Make sure the current time isn't 0.
-    sched.clock().current_time += streaming_cycle;
-  }
+  void loop_after_next_enqueue()
+    CAF_DEPRECATED_MSG("use run_after_next_ready_event() instead");
 
-  virtual ~test_coordinator_fixture() {
-    sched.clock().cancel_all();
-    sched.run();
-  }
-
-  /// Dispatches messages and timeouts until no activity remains.
-  void run_exhaustively() {
-    sched.run_dispatch_loop(streaming_cycle);
-  }
-
-  /// Dispatches messages and timeouts until no activity remains.
-  template <class Predicate>
-  void run_exhaustively_while(Predicate predicate) {
-    sched.run_dispatch_loop(predicate, streaming_cycle);
-  }
-
-  /// Sends a request to `from`, then calls `run_exhaustively`, and finally
-  /// fetches and returns the result.
-  template <class T, class... Ts, class Handle, class... Us>
-  typename std::conditional<sizeof...(Ts) == 0, T, std::tuple<T, Ts...>>::type
-  request(Handle from, Us... args) {
-    auto res_hdl = self->request(from, caf::infinite, std::move(args)...);
-    run_exhaustively();
-    test_coordinator_fixture_fetch_helper<T, Ts...> f;
-    return f(res_hdl);
-  }
-
-  template <class T>
-  const T& peek() {
-    return sched.template peek<T>();
-  }
-
-  template <class T = caf::scheduled_actor, class Handle = caf::actor>
-  T& deref(const Handle& hdl) {
-    auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
-    CAF_REQUIRE(ptr != nullptr);
-    return dynamic_cast<T&>(*ptr);
-  }
+  caf::timespan credit_round_interval CAF_DEPRECATED;
 };
+
+template <class Config>
+void test_coordinator_fixture<Config>::run_exhaustively() {
+  run();
+}
+
+template <class Config>
+void test_coordinator_fixture<Config>::run_exhaustively_until(
+  std::function<bool()> f) {
+  run_until(std::move(f));
+}
+
+template <class Config>
+void test_coordinator_fixture<Config>::loop_after_next_enqueue() {
+  sched.after_next_enqueue([=] { run(); });
+}
 
 /// Unboxes an expected value or fails the test if it doesn't exist.
 template <class T>
@@ -652,8 +737,6 @@ T unbox(caf::optional<T> x) {
     CAF_FAIL("x == none");
   return std::move(*x);
 }
-
-} // namespace <anonymous>
 
 /// Expands to its argument.
 #define CAF_EXPAND(x) x

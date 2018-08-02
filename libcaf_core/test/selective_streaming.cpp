@@ -186,7 +186,7 @@ CAF_TEST(select_all) {
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, level::all);
-  sched.run_dispatch_loop(streaming_cycle);
+  run();
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk).state.log,
                   make_log(level::all));
 }
@@ -197,7 +197,7 @@ CAF_TEST(select_trace) {
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * src, level::trace);
-  sched.run_dispatch_loop(streaming_cycle);
+  run();
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk).state.log,
                   make_log(level::trace));
 }
@@ -213,10 +213,9 @@ CAF_TEST(forking) {
   self->send(snk2 * stg, join_atom::value, level::error);
   sched.run();
   auto& st = deref<log_dispatcher_actor>(stg).state;
-  auto predicate = [&] {
+  run_until([&] {
     return st.stage->inbound_paths().empty() && st.stage->out().clean();
-  };
-  sched.run_dispatch_loop(predicate, streaming_cycle);
+  });
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk1).state.log,
                   make_log(level::trace));
   CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk2).state.log,

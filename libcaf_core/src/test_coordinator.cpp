@@ -87,7 +87,8 @@ void test_coordinator::start() {
 }
 
 void test_coordinator::stop() {
-  run_dispatch_loop();
+  while (run() > 0)
+    trigger_timeouts();
 }
 
 void test_coordinator::enqueue(resumable* ptr) {
@@ -147,46 +148,6 @@ size_t test_coordinator::run(size_t max_count) {
   return res;
 }
 
-bool test_coordinator::dispatch_once() {
-  return clock().dispatch_once();
-}
-
-size_t test_coordinator::dispatch() {
-  return clock().dispatch();
-}
-
-std::pair<size_t, size_t>
-test_coordinator::run_dispatch_loop(std::function<bool()> predicate,
-                                    timespan cycle) {
-  std::pair<size_t, size_t> res{0, 0};
-  if (cycle.count() == 0) {
-    auto x = system().config().streaming_tick_duration_us();
-    cycle = std::chrono::microseconds(x);
-  }
-  for (;;) {
-    size_t progress = 0;
-    while (try_run_once()) {
-      ++progress;
-      res.first += 1;
-      if (predicate())
-        return res;
-    }
-    clock().current_time += cycle;
-    while (dispatch_once()) {
-      ++progress;
-      res.second += 1;
-      if (predicate())
-        return res;
-    }
-    if (progress == 0)
-      return res;
-  }
-}
-
-std::pair<size_t, size_t> test_coordinator::run_dispatch_loop(timespan cycle) {
-  return run_dispatch_loop([] { return false; }, cycle);
-}
-
 void test_coordinator::inline_next_enqueue() {
   after_next_enqueue([=] { run_once_lifo(); });
 }
@@ -198,6 +159,17 @@ void test_coordinator::inline_all_enqueues() {
 void test_coordinator::inline_all_enqueues_helper() {
   run_once_lifo();
   after_next_enqueue([=] { inline_all_enqueues_helper(); });
+}
+
+std::pair<size_t, size_t>
+test_coordinator::run_dispatch_loop(timespan cycle_duration) {
+  size_t messages = 0;
+  size_t timeouts = 0;
+  while (has_job() || has_pending_timeout()) {
+    messages += run();
+    timeouts += advance_time(cycle_duration);
+  }
+  return {messages, timeouts};
 }
 
 } // namespace caf

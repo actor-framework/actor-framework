@@ -369,7 +369,7 @@ bool engine::run(bool colorize,
                     << '\n';
       auto start = std::chrono::high_resolution_clock::now();
       watchdog::start(max_runtime());
-      t->run();
+      t->run_test_impl();
       watchdog::stop();
       auto stop = std::chrono::high_resolution_clock::now();
       auto elapsed =

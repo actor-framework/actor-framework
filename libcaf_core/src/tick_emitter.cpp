@@ -56,7 +56,9 @@ void tick_emitter::interval(duration_type x) {
 
 size_t tick_emitter::timeouts(time_point now,
                               std::initializer_list<size_t> periods) {
-  CAF_LOG_TRACE(CAF_ARG(now) << CAF_ARG(periods));
+  CAF_LOG_TRACE(CAF_ARG(now) << CAF_ARG(periods)
+                << CAF_ARG(interval_) << CAF_ARG(start_));
+  CAF_ASSERT(now >= start_);
   size_t result = 0;
   auto f = [&](size_t tick) {
     size_t n = 0;

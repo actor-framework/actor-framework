@@ -31,20 +31,15 @@ using namespace caf;
 
 namespace {
 
-using array_type = ipv4_address::array_type;
-
-ipv4_address addr(uint8_t oct1, uint8_t oct2, uint8_t oct3, uint8_t oct4) {
-  return ipv4_address({oct1, oct2, oct3, oct4});
-}
+const auto addr = make_ipv4_address;
 
 } // namespace <anonymous>
 
 CAF_TEST(constructing) {
-  ipv4_address localhost({127, 0, 0, 1});
+  auto localhost = addr(127, 0, 0, 1);
   CAF_CHECK_EQUAL(localhost.bits(), to_network_order(0x7F000001u));
-  CAF_CHECK_EQUAL(localhost.data(), array_type({127, 0, 0, 1}));
   ipv4_address zero;
-  CAF_CHECK_EQUAL(zero.data(), array_type({0, 0, 0, 0}));
+  CAF_CHECK_EQUAL(zero.bits(), 0u);
 }
 
 CAF_TEST(to and from string) {

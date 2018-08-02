@@ -108,6 +108,11 @@ private:
 
 // -- related free functions ---------------------------------------------------
 
+/// Convenience function for creating an IPv4 address from octets.
+/// @relates ipv4_address
+ipv4_address make_ipv4_address(uint8_t oct1, uint8_t oct2, uint8_t oct3,
+                               uint8_t oct4);
+
 /// Returns a human-readable string representation of the address.
 /// @relates ipv4_address
 std::string to_string(const ipv4_address& x);

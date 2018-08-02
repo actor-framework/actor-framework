@@ -27,9 +27,7 @@ using namespace caf;
 
 namespace {
 
-ipv4_address addr(uint8_t oct1, uint8_t oct2, uint8_t oct3, uint8_t oct4) {
-  return ipv4_address({oct1, oct2, oct3, oct4});
-}
+const auto addr = make_ipv4_address;
 
 ipv4_subnet operator/(ipv4_address addr, uint8_t prefix) {
   return {addr, prefix};

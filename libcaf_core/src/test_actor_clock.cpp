@@ -18,6 +18,8 @@
 
 #include "caf/detail/test_actor_clock.hpp"
 
+#include "caf/logger.hpp"
+
 namespace caf {
 namespace detail {
 
@@ -40,35 +42,54 @@ test_actor_clock::difference(atom_value measurement, long units, time_point t0,
   return t0 == t1 ? duration_type{1} : t1 - t0;
 }
 
-bool test_actor_clock::dispatch_once() {
+bool test_actor_clock::trigger_timeout() {
+  CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule_.size()));
   if (schedule_.empty())
     return false;
   visitor f{this};
   auto i = schedule_.begin();
+  auto tout = i->first;
+  if (tout > current_time)
+    current_time = tout;
   visit(f, i->second);
   schedule_.erase(i);
   return true;
 }
 
-size_t test_actor_clock::dispatch() {
+size_t test_actor_clock::trigger_timeouts() {
+  CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule_.size()));
   if (schedule_.empty())
     return 0u;
   visitor f{this};
   auto result = schedule_.size();
-  for (auto& kvp : schedule_)
+  for (auto& kvp : schedule_) {
+    auto tout = kvp.first;
+    if (tout > current_time)
+      current_time = tout;
     visit(f, kvp.second);
+  }
   schedule_.clear();
   return result;
 }
 
-void test_actor_clock::advance_time(duration_type x) {
+size_t test_actor_clock::trigger_expired_timeouts() {
+  CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule_.size()));
   visitor f{this};
-  current_time += x;
+  size_t result = 0;
   auto i = schedule_.begin();
   while (i != schedule_.end() && i->first <= current_time) {
+    ++result;
     visit(f, i->second);
     i = schedule_.erase(i);
   }
+  return result;
+}
+
+size_t test_actor_clock::advance_time(duration_type x) {
+  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG2("schedule.size", schedule_.size()));
+  CAF_ASSERT(x.count() >= 0);
+  current_time += x;
+  return trigger_expired_timeouts();
 }
 
 } // namespace detail
