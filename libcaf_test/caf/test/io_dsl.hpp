@@ -38,7 +38,9 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  virtual bool advance() = 0;
+  virtual bool consume_message() = 0;
+
+  virtual bool handle_io_event() = 0;
 
   virtual bool trigger_timeout() = 0;
 };
@@ -110,9 +112,12 @@ public:
 
   // -- overriding member functions --------------------------------------------
 
-  bool advance() override {
-    return mpx.try_exec_runnable() || mpx.read_data()
-           || mpx.try_accept_connection() || this->sched.try_run_once();
+  bool consume_message() override {
+    return this->sched.try_run_once() || mpx.try_exec_runnable();
+  }
+
+  bool handle_io_event() override {
+    return mpx.read_data() || mpx.try_accept_connection();
   }
 
   bool trigger_timeout() override {

@@ -576,26 +576,51 @@ public:
 
   // -- DSL functions ----------------------------------------------------------
 
-  /// Advances the clock by a single tick duration.
-  size_t advance_time(caf::timespan interval) {
-    return sched.clock().advance_time(interval);
-  }
-
   /// Allows the next actor to consume one message from its mailbox. Fails the
   /// test if no message was consumed.
-  void consume_message() {
-    if (!sched.try_run_once())
-      CAF_FAIL("no message to consume");
+  virtual bool consume_message() {
+    return sched.try_run_once();
   }
 
   /// Allows each actors to consume all messages from its mailbox. Fails the
   /// test if no message was consumed.
   /// @returns The number of consumed messages.
   size_t consume_messages() {
-    auto result = sched.run();
-    if (result == 0)
-      CAF_FAIL("no message to consume");
+    size_t result = 0;
+    while (consume_message())
+      ++result;
     return result;
+  }
+
+  /// Allows an simulated I/O devices to handle an event.
+  virtual bool handle_io_event() {
+    return false;
+  }
+
+  /// Allows each simulated I/O device to handle all events.
+  size_t handle_io_events() {
+    size_t result = 0;
+    while (handle_io_event())
+      ++result;
+    return result;
+  }
+
+  /// Triggers the next pending timeout.
+  virtual bool trigger_timeout() {
+    return sched.trigger_timeout();
+  }
+
+  /// Triggers all pending timeouts.
+  size_t trigger_timeouts() {
+    size_t timeouts = 0;
+    while (trigger_timeout())
+      ++timeouts;
+    return timeouts;
+  }
+
+  /// Advances the clock by `interval`.
+  size_t advance_time(caf::timespan interval) {
+    return sched.clock().advance_time(interval);
   }
 
   /// Consume messages and trigger timeouts until no activity remains.
@@ -615,19 +640,30 @@ public:
     // Bookkeeping.
     size_t events = 0;
     // Loop until no activity remains.
-    while (sched.has_job() || sched.has_pending_timeout()) {
-      while (sched.try_run_once()) {
-        ++events;
+    for (;;) {
+      size_t progress = 0;
+      while (consume_message()) {
+        ++progress;
+        if (predicate()) {
+          CAF_LOG_DEBUG("stop due to predicate:" << CAF_ARG(events));
+          return events;
+        }
+      }
+      while (handle_io_event()) {
+        ++progress;
         if (predicate()) {
           CAF_LOG_DEBUG("stop due to predicate:" << CAF_ARG(events));
           return events;
         }
       }
       if (trigger_timeout())
-        ++events;
+        ++progress;
+      if (progress == 0) {
+        CAF_LOG_DEBUG("no activity left:" << CAF_ARG(events));
+        return events;
+      }
+      events += progress;
     }
-    CAF_LOG_DEBUG("no activity left:" << CAF_ARG(events));
-    return events;
   }
 
   /// Call `run()` when the next scheduled actor becomes ready.
@@ -664,19 +700,6 @@ public:
     auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
     CAF_REQUIRE(ptr != nullptr);
     return dynamic_cast<T&>(*ptr);
-  }
-
-  /// Triggers the next pending timeout.
-  virtual bool trigger_timeout() {
-    return sched.trigger_timeout();
-  }
-
-  /// Triggers all pending timeouts.
-  size_t trigger_timeouts() {
-    size_t timeouts = 0;
-    while (trigger_timeout())
-      ++timeouts;
-    return timeouts;
   }
 
   // -- member variables -------------------------------------------------------
