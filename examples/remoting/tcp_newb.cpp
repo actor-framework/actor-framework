@@ -149,8 +149,9 @@ struct basp {
   }
 
   void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t plen) {
-    stream_serializer<charbuf> out{&parent->backend(), buf.data() + hstart,
+                           size_t hstart, size_t offset, size_t plen) {
+    stream_serializer<charbuf> out{&parent->backend(),
+                                   buf.data() + hstart + offset,
                                    sizeof(uint32_t)};
     auto len = static_cast<uint32_t>(plen);
     out(len);
@@ -310,8 +311,8 @@ struct tcp_protocol
   }
 
   void prepare_for_sending(io::network::byte_buffer& buf, size_t hstart,
-                           size_t plen) override {
-    impl.prepare_for_sending(buf, hstart, plen);
+                           size_t offset, size_t plen) override {
+    impl.prepare_for_sending(buf, hstart, offset, plen);
   }
 };
 

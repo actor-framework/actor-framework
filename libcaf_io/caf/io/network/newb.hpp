@@ -182,7 +182,7 @@ struct protocol_policy_base {
 
   virtual void write_header(byte_buffer&, header_writer*) = 0;
 
-  virtual void prepare_for_sending(byte_buffer&, size_t, size_t) = 0;
+  virtual void prepare_for_sending(byte_buffer&, size_t, size_t, size_t) = 0;
 };
 
 template <class T>
@@ -211,7 +211,7 @@ struct write_handle {
   ~write_handle() {
     // Can we calculate added bytes for datagram things?
     auto payload_size = buf->size() - (header_start + header_len);
-    protocol->prepare_for_sending(*buf, header_start, payload_size);
+    protocol->prepare_for_sending(*buf, header_start, 0, payload_size);
     parent->flush();
   }
 };
@@ -308,7 +308,6 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   // -- overridden modifiers of event handler ----------------------------------
 
   void handle_event(network::operation op) override {
-    //std::cerr << "got event: " << to_string(op) << std::endl;
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
     switch (op) {

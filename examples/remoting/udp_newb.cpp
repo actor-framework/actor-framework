@@ -60,18 +60,19 @@ namespace {
 using ordering_atom = atom_constant<atom("ordering")>;
 using send_atom = atom_constant<atom("send")>;
 using quit_atom = atom_constant<atom("quit")>;
+using responder_atom = atom_constant<atom("responder")>;
 
 // -- udp impls ----------------------------------------------------------------
 
-struct udp_basp_header {
+struct udp_header {
   uint32_t payload_len;
   actor_id from;
   actor_id to;
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, udp_basp_header& hdr) {
-  return fun(meta::type_name("udp_basp_header"), hdr.payload_len,
+typename Inspector::result_type inspect(Inspector& fun, udp_header& hdr) {
+  return fun(meta::type_name("basp_header"), hdr.payload_len,
              hdr.from, hdr.to);
 }
 
@@ -79,60 +80,55 @@ constexpr size_t udp_basp_header_len = sizeof(uint32_t) + sizeof(actor_id) * 2;
 
 using sequence_type = uint16_t;
 
-struct udp_ordering_header {
+struct ordering_header {
   sequence_type seq;
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, udp_ordering_header& hdr) {
-  return fun(meta::type_name("udp_ordering_header"), hdr.seq);
+typename Inspector::result_type inspect(Inspector& fun, ordering_header& hdr) {
+  return fun(meta::type_name("ordering_header"), hdr.seq);
 }
 
 constexpr size_t udp_ordering_header_len = sizeof(sequence_type);
 
-struct new_udp_basp_message {
-  udp_basp_header header;
+struct new_basp_message {
+  udp_header header;
   char* payload;
   size_t payload_len;
 };
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun,
-                                        new_udp_basp_message& msg) {
-  return fun(meta::type_name("new_udp_basp_message"), msg.header,
+                                        new_basp_message& msg) {
+  return fun(meta::type_name("new_basp_message"), msg.header,
              msg.payload_len);
 }
 
-struct udp_basp {
+struct basp {
   static constexpr size_t header_size = udp_basp_header_len;
-  using message_type = new_udp_basp_message;
+  using message_type = new_basp_message;
   using result_type = optional<message_type>;
   io::network::newb<message_type>* parent;
   message_type msg;
 
-  udp_basp(io::network::newb<message_type>* parent) : parent(parent) {
+  basp(io::network::newb<message_type>* parent) : parent(parent) {
     // nop
   }
 
   error read(char* bytes, size_t count) {
-    std::cerr << "reading basp udp header" << std::endl;
     // Read header.
     if (count < udp_basp_header_len) {
-      std::cerr << "not enought bytes for basp header" << std::endl;
-      std::cerr << "buffer contains " << count << " bytes of expected "
-                    << udp_basp_header_len << std::endl;
+      CAF_LOG_DEBUG("not enought bytes for basp header");
       return sec::unexpected_message;
     }
     binary_deserializer bd{&parent->backend(), bytes, count};
     bd(msg.header);
-    std::cerr << "read basp header " << to_string(msg.header) << std::endl;
     size_t payload_len = static_cast<size_t>(msg.header.payload_len);
     // Read payload.
     auto remaining = count - udp_basp_header_len;
     // TODO: Could be `!=` ?
     if (remaining < payload_len) {
-      std::cerr << "only " << remaining << " bytes remaining of expected "
-                    << msg.header.payload_len  << std::endl;
+      CAF_LOG_ERROR("not enough bytes remaining to fit payload");
       return sec::unexpected_message;
     }
     msg.payload = bytes + udp_basp_header_len;
@@ -153,8 +149,9 @@ struct udp_basp {
   }
 
   void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t plen) {
-    stream_serializer<charbuf> out{&parent->backend(), buf.data() + hstart,
+                           size_t hstart, size_t offset, size_t plen) {
+    stream_serializer<charbuf> out{&parent->backend(),
+                                   buf.data() + hstart + offset,
                                    sizeof(uint32_t)};
     auto len = static_cast<uint32_t>(plen);
     out(len);
@@ -162,7 +159,7 @@ struct udp_basp {
 };
 
 template <class Next>
-struct udp_ordering {
+struct ordering {
   static constexpr size_t header_size = udp_ordering_header_len;
   using message_type = typename Next::message_type;
   using result_type = typename Next::result_type;
@@ -174,7 +171,7 @@ struct udp_ordering {
   Next next;
   std::unordered_map<sequence_type, std::vector<char>> pending;
 
-  udp_ordering(io::network::newb<message_type>* parent)
+  ordering(io::network::newb<message_type>* parent)
       : parent(parent),
         next(parent) {
     // nop
@@ -207,10 +204,9 @@ struct udp_ordering {
   error read(char* bytes, size_t count) {
     if (count < header_size)
       return sec::unexpected_message;
-    udp_ordering_header hdr;
+    ordering_header hdr;
     binary_deserializer bd(&parent->backend(), bytes, count);
     bd(hdr);
-    std::cerr << "read udp ordering header: " << to_string(hdr) << std::endl;
     // TODO: Use the comparison function from BASP instance.
     if (hdr.seq == seq_read) {
       seq_read += 1;
@@ -241,20 +237,20 @@ struct udp_ordering {
   void write_header(io::network::byte_buffer& buf,
                     io::network::header_writer* hw) {
     binary_serializer bs(&parent->backend(), buf);
-    bs(udp_ordering_header{seq_write});
+    bs(ordering_header{seq_write});
     seq_write += 1;
     next.write_header(buf, hw);
     return;
   }
 
   void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t plen) {
-    next.prepare_for_sending(buf, hstart, plen);
+                           size_t hstart, size_t offset, size_t plen) {
+    next.prepare_for_sending(buf, hstart, offset + header_size, plen);
   }
 };
 
-struct udp_transport_policy : public io::network::transport_policy {
-  udp_transport_policy()
+struct udp_transport : public io::network::transport_policy {
+  udp_transport()
       : maximum{std::numeric_limits<uint16_t>::max()},
         first_message{true},
         writing{false},
@@ -276,7 +272,6 @@ struct udp_transport_policy : public io::network::transport_policy {
       return sec::runtime_error;
     } else if (io::network::would_block_or_temporarily_unavailable(
                                         io::network::last_socket_error())) {
-      std::cerr << "try later" << std::endl;
       return sec::end_of_stream;
     }
     if (sres == 0)
@@ -308,6 +303,7 @@ struct udp_transport_policy : public io::network::transport_policy {
   }
 
   error write_some(io::network::event_handler* parent) override {
+    std::cerr << "sending on socket: " << parent->fd() << std::endl;
     using namespace caf::io::network;
     CAF_LOG_TRACE(CAF_ARG(parent->fd()) << CAF_ARG(send_buffer.size()));
     socket_size_type len = static_cast<socket_size_type>(*endpoint.clength());
@@ -315,7 +311,10 @@ struct udp_transport_policy : public io::network::transport_policy {
     auto buf_len = send_sizes.front();
     auto sres = ::sendto(parent->fd(), buf_ptr, buf_len,
                          0, endpoint.caddress(), len);
+    std::cerr << "sent " << sres << " bytes to " << to_string(endpoint) << std::endl;
     if (is_error(sres, true)) {
+      std::cerr << "sento failed: " << last_socket_error_as_string() << std::endl;
+      std::abort();
       CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
       return sec::runtime_error;
     }
@@ -395,11 +394,11 @@ struct udp_transport_policy : public io::network::transport_policy {
 };
 
 template <class T>
-struct udp_protocol_policy
+struct udp_protocol
     : public io::network::protocol_policy<typename T::message_type> {
   T impl;
 
-  udp_protocol_policy(io::network::newb<typename T::message_type>* parent)
+  udp_protocol(io::network::newb<typename T::message_type>* parent)
       : impl(parent) {
     // nop
   }
@@ -418,24 +417,19 @@ struct udp_protocol_policy
   }
 
   void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t plen) override {
-    impl.prepare_for_sending(buf, hstart, plen);
+                           size_t hstart, size_t offset, size_t plen) override {
+    impl.prepare_for_sending(buf, hstart, offset, plen);
   }
 };
 
-struct udp_basp_newb : public io::network::newb<new_udp_basp_message> {
-  udp_basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
-                  native_socket sockfd)
-      : newb<new_udp_basp_message>(cfg, dm, sockfd) {
-    std::cerr << "constructing udp newb" << std::endl;
+struct basp_newb : public io::network::newb<new_basp_message> {
+  basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
+            native_socket sockfd)
+      : newb<new_basp_message>(cfg, dm, sockfd) {
     // nop
   }
 
-  ~udp_basp_newb() {
-    std::cerr << "terminating udp newb" << std::endl;
-  }
-
-  void handle(new_udp_basp_message& msg) override {
+  void handle(new_basp_message& msg) override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
     std::string res;
@@ -455,7 +449,7 @@ struct udp_basp_newb : public io::network::newb<new_udp_basp_message> {
       [=](send_atom, actor_id sender, actor_id receiver, std::string payload) {
         auto hw = caf::make_callback([&](io::network::byte_buffer& buf) -> error {
           binary_serializer bs(&backend(), buf);
-          bs(udp_basp_header{0, sender, receiver});
+          bs(udp_header{0, sender, receiver});
           return none;
         });
         auto whdl = wr_buf(&hw);
@@ -464,7 +458,13 @@ struct udp_basp_newb : public io::network::newb<new_udp_basp_message> {
         binary_serializer bs(&backend(), *whdl.buf);
         bs(payload);
       },
+      [=](responder_atom, actor r) {
+        aout(this) << "got responder assigned" << std::endl;
+        responder = r;
+        send(r, this);
+      },
       [=](quit_atom) {
+        aout(this) << "got quit message" << std::endl;
         // Remove from multiplexer loop.
         stop();
         // Quit actor.
@@ -477,8 +477,8 @@ struct udp_basp_newb : public io::network::newb<new_udp_basp_message> {
 };
 
 
-struct udp_accept_policy
-    : public io::network::accept_policy<new_udp_basp_message> {
+struct accept_udp
+    : public io::network::accept_policy<new_basp_message> {
   expected<native_socket> create_socket(uint16_t port, const char* host,
                                         bool reuse = false) override {
     auto res = io::network::new_local_udp_endpoint_impl(port, host, reuse);
@@ -490,37 +490,37 @@ struct udp_accept_policy
   std::pair<native_socket, io::network::transport_policy_ptr>
   accept(io::network::event_handler*) override {
     auto res = io::network::new_local_udp_endpoint_impl(0, nullptr);
-    if (!res)
+    if (!res) {
+      CAF_LOG_DEBUG("failed to create local endpoint");
       return {invalid_native_socket, nullptr};
-    auto sock = std::move(res->second);
-    io::network::transport_policy_ptr ptr{new udp_transport_policy};
+    }
+    auto sock = std::move(res->first);
+    io::network::transport_policy_ptr ptr{new udp_transport};
     return {sock, std::move(ptr)};
   }
 
-  void init(io::network::newb<new_udp_basp_message>& n) override {
+  void init(io::network::newb<new_basp_message>& n) override {
     n.start();
   }
 };
 
 template <class ProtocolPolicy>
-struct udp_basp_acceptor
+struct udp_acceptor
     : public io::network::newb_acceptor<typename ProtocolPolicy::message_type> {
   using super = io::network::newb_acceptor<typename ProtocolPolicy::message_type>;
 
-  udp_basp_acceptor(default_multiplexer& dm, native_socket sockfd)
+  udp_acceptor(default_multiplexer& dm, native_socket sockfd)
       : super(dm, sockfd) {
     // nop
   }
 
   expected<actor> create_newb(native_socket sockfd,
                               io::network::transport_policy_ptr pol) override {
-    std::cerr << "creating new basp udp newb" << std::endl;
-    auto n = io::network::make_newb<udp_basp_newb>(this->backend().system(),
-                                                   sockfd);
+    auto n = io::network::make_newb<basp_newb>(this->backend().system(), sockfd);
     auto ptr = caf::actor_cast<caf::abstract_actor*>(n);
     if (ptr == nullptr)
       return sec::runtime_error;
-    auto& ref = dynamic_cast<udp_basp_newb&>(*ptr);
+    auto& ref = dynamic_cast<basp_newb&>(*ptr);
     ref.transport = std::move(pol);
     ref.protocol.reset(new ProtocolPolicy(&ref));
     ref.responder = responder;
@@ -542,116 +542,69 @@ struct udp_test_broker_state {
 // -- main ---------------------------------------------------------------------
 
 void caf_main(actor_system& sys, const actor_system_config&) {
-  using udp_protocol_policy_t = udp_protocol_policy<udp_ordering<udp_basp>>;
-  using udp_accept_policy_t = udp_accept_policy;
-  using udp_newb_acceptor_t = udp_basp_acceptor<udp_protocol_policy_t>;
-  using udp_transport_policy_t = udp_transport_policy;
-
+  using acceptor_t = udp_acceptor<udp_protocol<ordering<basp>>>;
+  using io::network::make_server_newb;
+  using io::network::make_client_newb;
   const char* host = "localhost";
   const uint16_t port = 12345;
+  scoped_actor self{sys};
 
-  scoped_actor main_actor{sys};
-  actor newb_actor;
-  auto testing = [&](io::stateful_broker<udp_test_broker_state>* self,
-                     std::string host, uint16_t port, actor m) -> behavior {
-    auto ehdl = self->add_udp_datagram_servant(host, port);
-    CAF_ASSERT(ehdl);
-    self->state.hdl = std::move(*ehdl);
+  auto running = [=](event_based_actor* self, std::string name, actor , actor b) -> behavior {
     return {
+      [=](std::string str) {
+        aout(self) << "[" << name << "] received '" << str << "'" << std::endl;
+      },
       [=](send_atom, std::string str) {
-        std::cerr << "sending '" << str << "'" << std::endl;
-        io::network::byte_buffer buf;
-        udp_ordering_header ohdr{0};
-        udp_basp_header bhdr{0, 1, 2};
-        binary_serializer bs(self->system(), buf);
-        bs(ohdr);
-        auto ordering_header_len = buf.size();
-        CAF_ASSERT(ordering_header_len == udp_ordering_header_len);
-        bs(bhdr);
-        auto header_len = buf.size();
-        CAF_ASSERT(header_len == udp_ordering_header_len + udp_basp_header_len);
-        bs(str);
-        bhdr.payload_len = static_cast<uint32_t>(buf.size() - header_len);
-        stream_serializer<charbuf> out{self->system(),
-                                       buf.data() + ordering_header_len,
-                                       sizeof(bhdr.payload_len)};
-        out(bhdr.payload_len);
-        std::cerr << "header len: " << header_len
-                    << ", packet_len: " << buf.size()
-                    << ", ordering header: " << to_string(ohdr)
-                    << ", basp header: " << to_string(bhdr) << std::endl;
-        self->enqueue_datagram(self->state.hdl, std::move(buf));
-        self->flush(self->state.hdl);
+        aout(self) << "[" << name << "] sending '" << str << "'" << std::endl;
+        self->send(b, send_atom::value, self->id(), actor_id{}, str);
       },
-      [=](quit_atom) {
-        std::cerr << "test broker shutting down" << std::endl;
-        self->quit();
-      },
-      [=](io::new_datagram_msg& msg) {
-        binary_deserializer bd(self->system(), msg.buf);
-        udp_ordering_header ohdr;
-        udp_basp_header bhdr;
-        std::string str;
-        bd(ohdr);
-        bd(bhdr);
-        bd(str);
-        std::cerr << "received '" << str << "'" << std::endl;
-        self->send(m, quit_atom::value);
+    };
+  };
+  auto init = [=](event_based_actor* self, std::string name, actor m) -> behavior {
+    self->set_default_handler(skip);
+    return {
+      [=](actor b) {
+        aout(self) << "[" << name << "] got broker, let's do this" << std::endl;
+        self->become(running(self, name, m, b));
+        self->set_default_handler(print_and_drop);
       }
     };
   };
-  auto helper_actor = sys.spawn([&](event_based_actor* self, actor m) -> behavior {
-    return {
-      [=](const std::string& str) {
-        std::cerr << "received '" << str << "'" << std::endl;
-        self->send(m, quit_atom::value);
-      },
-      [=](actor a) {
-        std::cerr << "got new newb handle" << std::endl;
-        self->send(m, a);
-      },
-      [=](quit_atom) {
-        std::cerr << "helper shutting down" << std::endl;
-        self->quit();
-      }
-    };
-  }, main_actor);
-  std::cerr << "creating new acceptor" << std::endl;
-  auto newb_acceptor_ptr
-    = io::network::make_server_newb<udp_newb_acceptor_t,
-                                    udp_accept_policy_t>(sys, port);
-  dynamic_cast<udp_newb_acceptor_t*>(newb_acceptor_ptr.get())->responder
-    = helper_actor;
-  std::cerr << "contacting from 'old-style' broker" << std::endl;
-  auto test_broker = sys.middleman().spawn_broker(testing, host, port, main_actor);
-  main_actor->send(test_broker, send_atom::value, "hello world");
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  main_actor->receive(
-    [&](actor a) {
-      newb_actor = a;
+
+  auto server_helper = sys.spawn(init, "s", self);
+  auto client_helper = sys.spawn(init, "c", self);
+
+  aout(self) << "creating new server" << std::endl;
+  auto server_ptr = make_server_newb<acceptor_t, accept_udp>(sys, port, nullptr, true);
+  server_ptr->responder = server_helper;
+
+  aout(self) << "creating new client" << std::endl;
+  auto client = make_client_newb<basp_newb, udp_transport, udp_protocol<ordering<basp>>>(sys, host, port);
+  self->send(client, responder_atom::value, client_helper);
+
+  self->send(client_helper, send_atom::value, "hallo");
+  self->send(server_helper, send_atom::value, "hallo");
+
+  self->receive(
+    [&](quit_atom) {
+      aout(self) << "check" << std::endl;
     }
   );
-  std::cerr << "new newb was created" << std::endl;
+
+  /*
   main_actor->receive(
     [](quit_atom) {
-      std::cerr << "check" << std::endl;
+      CAF_LOG_DEBUG("check");
     }
   );
-  std::cerr << "sending message from newb" << std::endl;
-  main_actor->send(newb_actor, send_atom::value, actor_id{3}, actor_id{4},
-                   "dlrow olleh");
-  main_actor->receive(
-    [](quit_atom) {
-      std::cerr << "check" << std::endl;
-    }
-  );
-  std::cerr << "shutting everything down" << std::endl;
+  CAF_LOG_DEBUG("shutting everything down");
   newb_acceptor_ptr->stop();
   anon_send(newb_actor, quit_atom::value);
   anon_send(helper_actor, quit_atom::value);
   anon_send(test_broker, quit_atom::value);
   sys.await_all_actors_done();
-  std::cerr << "done" << std::endl;
+  CAF_LOG_DEBUG("done");
+  */
 }
 
 } // namespace anonymous
