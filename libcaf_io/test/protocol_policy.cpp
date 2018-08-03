@@ -111,7 +111,7 @@ struct protocol_policy_impl
     return impl.write_header(buf, hw);
   }
 
-  void prepare_for_sending(byte_buffer&, size_t, size_t) override {
+  void prepare_for_sending(byte_buffer&, size_t, size_t, size_t) override {
     return;
   }
 };
