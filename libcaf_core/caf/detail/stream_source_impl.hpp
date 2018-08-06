@@ -76,9 +76,10 @@ protected:
     driver_.finalize(reason);
   }
 
+  Driver driver_;
+
 private:
   bool at_end_;
-  Driver driver_;
 };
 
 template <class Driver, class... Ts>

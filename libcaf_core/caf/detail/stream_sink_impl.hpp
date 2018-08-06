@@ -71,7 +71,6 @@ protected:
     driver_.finalize(reason);
   }
 
-private:
   driver_type driver_;
 };
 
