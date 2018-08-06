@@ -57,6 +57,8 @@ public:
 
   // -- implementation of virtual functions ------------------------------------
 
+  using super::handle;
+
   void handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<input_type>;
