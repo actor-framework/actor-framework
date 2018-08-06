@@ -74,6 +74,19 @@ namespace network {
 using byte_buffer = std::vector<char>;
 using header_writer = caf::callback<byte_buffer&>;
 
+// -- newb base ----------------------------------------------------------------
+
+struct newb_base : public network::event_handler {
+  newb_base(default_multiplexer& dm, native_socket sockfd)
+      : event_handler(dm, sockfd) {
+    // nop
+  }
+
+  virtual void start() = 0;
+  virtual void stop() = 0;
+  virtual void flush() = 0;
+};
+
 // -- transport policy ---------------------------------------------------------
 
 struct transport_policy {
@@ -154,7 +167,6 @@ using transport_policy_ptr = std::unique_ptr<transport_policy>;
 
 // -- accept policy ------------------------------------------------------------
 
-template <class Message>
 struct accept_policy {
   virtual ~accept_policy() {
     // nop
@@ -166,7 +178,7 @@ struct accept_policy {
   virtual std::pair<native_socket, transport_policy_ptr>
   accept(network::event_handler*) = 0;
 
-  virtual void init(newb<Message>&) = 0;
+  virtual void init(newb_base&) = 0;
 };
 
 // -- protocol policy ----------------------------------------------------------
@@ -221,7 +233,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
                      with<mixin::sender, mixin::requester,
                           mixin::behavior_changer>,
               public dynamically_typed_actor_base,
-              public network::event_handler {
+              public newb_base {
   using super = typename extend<scheduled_actor, newb<Message>>::
     template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
@@ -231,7 +243,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   newb(actor_config& cfg, default_multiplexer& dm, native_socket sockfd)
       : super(cfg),
-        event_handler(dm, sockfd) {
+        newb_base(dm, sockfd) {
     CAF_LOG_TRACE("");
   }
 
@@ -341,7 +353,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     super::setf(super::is_initialized_flag);
   }
 
-  void start() {
+  void start() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
     intrusive_ptr_add_ref(super::ctrl());
@@ -351,7 +363,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
       transport->prepare_next_read(this);
   }
 
-  void stop() {
+  void stop() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
     intrusive_ptr_release(super::ctrl());
@@ -369,7 +381,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     return {this, protocol.get(), &buf, hstart, hlen};
   }
 
-  void flush() {
+  void flush() override {
     transport->flush(this);
   }
 
@@ -505,7 +517,7 @@ struct newb_acceptor : public network::event_handler {
   virtual expected<actor> create_newb(native_socket sock,
                                       transport_policy_ptr pol) = 0;
 
-  std::unique_ptr<accept_policy<Message>> acceptor;
+  std::unique_ptr<accept_policy> acceptor;
 };
 
 // -- factories ----------------------------------------------------------------
@@ -552,7 +564,6 @@ std::unique_ptr<NewbAcceptor> make_server_newb(actor_system& sys,
   ptr->start();
   return ptr;
 }
-
 
 } // namespace network
 } // namespace io
