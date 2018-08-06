@@ -6,45 +6,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/call_cfun.hpp"
-
-#ifdef CAF_WINDOWS
-# ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN
-# endif // WIN32_LEAN_AND_MEAN
-# ifndef NOMINMAX
-#   define NOMINMAX
-# endif
-# ifdef CAF_MINGW
-#   undef _WIN32_WINNT
-#   undef WINVER
-#   define _WIN32_WINNT WindowsVista
-#   define WINVER WindowsVista
-#   include <w32api.h>
-# endif
-# include <io.h>
-# include <windows.h>
-# include <winsock2.h>
-# include <ws2ipdef.h>
-# include <ws2tcpip.h>
-#else
-# include <unistd.h>
-# include <arpa/inet.h>
-# include <cerrno>
-# include <fcntl.h>
-# include <netdb.h>
-# include <netinet/in.h>
-# include <netinet/ip.h>
-# include <netinet/tcp.h>
-# include <sys/socket.h>
-# include <sys/types.h>
-# ifdef CAF_POLL_MULTIPLEXER
-#   include <poll.h>
-# elif defined(CAF_EPOLL_MULTIPLEXER)
-#   include <sys/epoll.h>
-# else
-#   error "neither CAF_POLL_MULTIPLEXER nor CAF_EPOLL_MULTIPLEXER defined"
-# endif
-#endif
+#include "caf/policy/newb_udp.hpp"
 
 using namespace caf;
 
@@ -249,150 +211,6 @@ struct ordering {
   }
 };
 
-struct udp_transport : public io::network::transport_policy {
-  udp_transport()
-      : maximum{std::numeric_limits<uint16_t>::max()},
-        first_message{true},
-        writing{false},
-        written{0},
-        offline_sum{0} {
-    // nop
-  }
-
-  error read_some(io::network::event_handler* parent) override {
-    CAF_LOG_TRACE(CAF_ARG(parent->fd()));
-    memset(sender.address(), 0, sizeof(sockaddr_storage));
-    io::network::socket_size_type len = sizeof(sockaddr_storage);
-    auto buf_ptr = static_cast<io::network::socket_recv_ptr>(receive_buffer.data());
-    auto buf_len = receive_buffer.size();
-    auto sres = ::recvfrom(parent->fd(), buf_ptr, buf_len,
-                           0, sender.address(), &len);
-    if (io::network::is_error(sres, true)) {
-      CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
-      return sec::runtime_error;
-    } else if (io::network::would_block_or_temporarily_unavailable(
-                                        io::network::last_socket_error())) {
-      return sec::end_of_stream;
-    }
-    if (sres == 0)
-      CAF_LOG_INFO("Received empty datagram");
-    else if (sres > static_cast<io::network::signed_size_type>(buf_len))
-      CAF_LOG_WARNING("recvfrom cut of message, only received "
-                      << CAF_ARG(buf_len) << " of " << CAF_ARG(sres) << " bytes");
-    received_bytes = (sres > 0) ? static_cast<size_t>(sres) : 0;
-    *sender.length() = static_cast<size_t>(len);
-    if (first_message) {
-      endpoint = sender;
-      first_message = false;
-    }
-    return none;
-  }
-
-  bool should_deliver() override {
-    CAF_LOG_TRACE("");
-    return received_bytes != 0 && sender == endpoint;
-  }
-
-  void prepare_next_read(io::network::event_handler*) override {
-    received_bytes = 0;
-    receive_buffer.resize(maximum);
-  }
-
-  void configure_read(io::receive_policy::config) override {
-    // nop
-  }
-
-  error write_some(io::network::event_handler* parent) override {
-    std::cerr << "sending on socket: " << parent->fd() << std::endl;
-    using namespace caf::io::network;
-    CAF_LOG_TRACE(CAF_ARG(parent->fd()) << CAF_ARG(send_buffer.size()));
-    socket_size_type len = static_cast<socket_size_type>(*endpoint.clength());
-    auto buf_ptr = reinterpret_cast<socket_send_ptr>(send_buffer.data() + written);
-    auto buf_len = send_sizes.front();
-    auto sres = ::sendto(parent->fd(), buf_ptr, buf_len,
-                         0, endpoint.caddress(), len);
-    std::cerr << "sent " << sres << " bytes to " << to_string(endpoint) << std::endl;
-    if (is_error(sres, true)) {
-      std::cerr << "sento failed: " << last_socket_error_as_string() << std::endl;
-      std::abort();
-      CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
-      return sec::runtime_error;
-    }
-    send_sizes.pop_front();
-    written += (sres > 0) ? static_cast<size_t>(sres) : 0;
-    auto remaining = send_buffer.size() - written;
-    std::cerr << "wrote '" << written << "' got '" << remaining << "' bytes left to write" << std::endl;
-    if (remaining == 0)
-      prepare_next_write(parent);
-    return none;
-  }
-
-  void prepare_next_write(io::network::event_handler* parent) override {
-    written = 0;
-    send_buffer.clear();
-    send_sizes.clear();
-    if (offline_buffer.empty()) {
-      writing = false;
-      parent->backend().del(io::network::operation::write,
-                            parent->fd(), parent);
-    } else {
-      // Add size of last chunk.
-      offline_sizes.push_back(offline_buffer.size() - offline_sum);
-      // Switch buffers.
-      send_buffer.swap(offline_buffer);
-      send_sizes.swap(offline_sizes);
-      // Reset sum.
-      offline_sum = 0;
-    }
-  }
-
-  io::network::byte_buffer& wr_buf() {
-    if (!offline_buffer.empty()) {
-      auto chunk_size = offline_buffer.size() - offline_sum;
-      offline_sizes.push_back(chunk_size);
-      offline_sum += chunk_size;
-      std::cerr << "adding chunk '" << chunk_size << "' up to total of '" << offline_sum << std::endl;
-    }
-    return offline_buffer;
-  }
-
-  void flush(io::network::event_handler* parent) override {
-    CAF_ASSERT(parent != nullptr);
-    CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
-    if (!offline_buffer.empty() && !writing) {
-      parent->backend().add(io::network::operation::write,
-                            parent->fd(), parent);
-      writing = true;
-      prepare_next_write(parent);
-    }
-  }
-
-  expected<native_socket>
-  connect(const std::string& host, uint16_t port,
-          optional<io::network::protocol::network> preferred = none) override {
-    auto res = io::network::new_remote_udp_endpoint_impl(host, port, preferred);
-    if (!res)
-      return std::move(res.error());
-    endpoint = res->second;
-    return res->first;
-  }
-
-  // State for reading.
-  size_t maximum;
-  bool first_message;
-
-  // State for writing.
-  bool writing;
-  size_t written;
-  size_t offline_sum;
-  std::deque<size_t> send_sizes;
-  std::deque<size_t> offline_sizes;
-
-  // UDP endpoints.
-  io::network::ip_endpoint endpoint;
-  io::network::ip_endpoint sender;
-};
-
 template <class T>
 struct udp_protocol
     : public io::network::protocol_policy<typename T::message_type> {
@@ -476,34 +294,6 @@ struct basp_newb : public io::network::newb<new_basp_message> {
   actor responder;
 };
 
-
-struct accept_udp
-    : public io::network::accept_policy<new_basp_message> {
-  expected<native_socket> create_socket(uint16_t port, const char* host,
-                                        bool reuse = false) override {
-    auto res = io::network::new_local_udp_endpoint_impl(port, host, reuse);
-    if (!res)
-      return std::move(res.error());
-    return (*res).first;
-  }
-
-  std::pair<native_socket, io::network::transport_policy_ptr>
-  accept(io::network::event_handler*) override {
-    auto res = io::network::new_local_udp_endpoint_impl(0, nullptr);
-    if (!res) {
-      CAF_LOG_DEBUG("failed to create local endpoint");
-      return {invalid_native_socket, nullptr};
-    }
-    auto sock = std::move(res->first);
-    io::network::transport_policy_ptr ptr{new udp_transport};
-    return {sock, std::move(ptr)};
-  }
-
-  void init(io::network::newb<new_basp_message>& n) override {
-    n.start();
-  }
-};
-
 template <class ProtocolPolicy>
 struct udp_acceptor
     : public io::network::newb_acceptor<typename ProtocolPolicy::message_type> {
@@ -543,8 +333,10 @@ struct udp_test_broker_state {
 
 void caf_main(actor_system& sys, const actor_system_config&) {
   using acceptor_t = udp_acceptor<udp_protocol<ordering<basp>>>;
-  using io::network::make_server_newb;
-  using io::network::make_client_newb;
+  using caf::io::network::make_server_newb;
+  using caf::io::network::make_client_newb;
+  using caf::policy::udp_transport;
+  using caf::policy::accept_udp;
   const char* host = "localhost";
   const uint16_t port = 12345;
   scoped_actor self{sys};

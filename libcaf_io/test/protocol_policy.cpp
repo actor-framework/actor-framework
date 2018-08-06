@@ -302,7 +302,7 @@ struct dummy_basp_newb : network::newb<new_basp_message> {
   }
 };
 
-struct accept_policy_impl : public network::accept_policy<new_basp_message> {
+struct accept_policy_impl : public network::accept_policy {
   expected<native_socket> create_socket(uint16_t, const char*, bool) override {
     return sec::bad_function_call;
   }
@@ -315,7 +315,7 @@ struct accept_policy_impl : public network::accept_policy<new_basp_message> {
     return {invalid_native_socket, std::move(ptr)};
   }
 
-  void init(network::newb<new_basp_message>& n) override {
+  void init(network::newb_base& n) override {
     n.handle_event(network::operation::read);
   }
 };
