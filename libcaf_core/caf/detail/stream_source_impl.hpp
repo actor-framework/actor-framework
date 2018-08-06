@@ -45,8 +45,8 @@ public:
   stream_source_impl(scheduled_actor* self, Ts&&... xs)
       : stream_manager(self),
         super(self),
-        at_end_(false),
-        driver_(std::forward<Ts>(xs)...) {
+        driver_(std::forward<Ts>(xs)...),
+        at_end_(false) {
     // nop
   }
 
