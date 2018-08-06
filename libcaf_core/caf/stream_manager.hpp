@@ -259,10 +259,6 @@ protected:
 
   // -- implementation hooks for sinks -----------------------------------------
 
-  /// Called when the gatherer closes to produce the final stream result for
-  /// all listeners. The default implementation returns an empty message.
-  virtual message make_final_result();
-
   /// Called when `in().closed()` changes to `true`. The default
   /// implementation does nothing.
   virtual void input_closed(error reason);

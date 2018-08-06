@@ -303,10 +303,6 @@ void stream_manager::finalize(const error&) {
   // nop
 }
 
-message stream_manager::make_final_result() {
-  return none;
-}
-
 void stream_manager::output_closed(error) {
   // nop
 }
