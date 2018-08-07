@@ -135,6 +135,8 @@ bool is_tty(const std::ostream& out) {
 std::ostream& operator<<(std::ostream& out, term x) {
   if (is_tty(out))
     set_term_color(out, tty_codes[static_cast<size_t>(x)]);
+  else if (x == term::reset_endl)
+    out << '\n';
   return out;
 }
 
