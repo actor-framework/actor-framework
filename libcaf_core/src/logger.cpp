@@ -465,6 +465,7 @@ void logger::handle_event(event& x) {
     return;
   if (has(uncolored_console_flag)) {
     render(std::clog, console_format_, x);
+    std::clog << std::endl;
   } else {
     switch (x.level) {
       default:
