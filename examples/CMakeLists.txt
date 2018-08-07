@@ -54,6 +54,7 @@ add(remoting distributed_calculator)
 add(remoting basp_udp_newb)
 add(remoting basp_tcp_newb)
 add(remoting raw_tcp_newb)
+add(remoting raw_udp_newb)
 
 # basic I/O with brokers
 add(broker simple_broker)
