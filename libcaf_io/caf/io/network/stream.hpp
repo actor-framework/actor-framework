@@ -99,17 +99,23 @@ protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {
     CAF_LOG_TRACE(CAF_ARG(op));
-    auto mcr = max_consecutive_reads_;
     switch (op) {
       case io::network::operation::read: {
         // Loop until an error occurs or we have nothing more to read
         // or until we have handled `mcr` reads.
-        size_t rb;
-        for (size_t i = 0; i < mcr; ++i) {
+        size_t rb = 0;
+        auto threshold = [&] {
+          CAF_ASSERT(read_threshold_ >= collected_);
+          return read_threshold_ - collected_;
+        };
+        size_t reads = 0;
+        while (reads < max_consecutive_reads_
+               || policy.must_read_more(fd(), threshold())) {
           auto res = policy.read_some(rb, fd(), rd_buf_.data() + collected_,
                                       rd_buf_.size() - collected_);
           if (!handle_read_result(res, rb))
             return;
+          ++reads;
         }
         break;
       }

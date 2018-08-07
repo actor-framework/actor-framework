@@ -58,6 +58,9 @@ public:
                       size_t len);
   bool try_connect(native_socket fd);
   bool try_accept(native_socket fd);
+
+  bool must_read_more(native_socket, size_t threshold);
+
   const char* openssl_passphrase();
 
 private:

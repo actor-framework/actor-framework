@@ -46,6 +46,11 @@ public:
     add_message_type<std::vector<int>>("std::vector<int>");
     actor_system_config::parse(test::engine::argc(),
                                test::engine::argv());
+    // Setting the "max consecutive reads" to 1 is highly likely to cause
+    // OpenSSL to buffer data internally and report "pending" data after a read
+    // operation. This will trigger `must_read_more` in the SSL read policy
+    // with high probability.
+    set("middleman.max-consecutive-reads", 1);
   }
 };
 
