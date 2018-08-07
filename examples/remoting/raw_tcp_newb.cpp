@@ -27,7 +27,7 @@ struct new_data {
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun, new_data& data) {
-  return fun(meta::type_name("new_tcp_data"), data.payload_len);
+  return fun(meta::type_name("new_data"), data.payload_len);
 }
 
 struct raw_tcp {
