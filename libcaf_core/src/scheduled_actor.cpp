@@ -118,7 +118,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
   max_batch_delay_ticks_ = sys_cfg.stream_max_batch_delay.count()
                            / interval.count();
   CAF_ASSERT(max_batch_delay_ticks_ > 0);
-  CAF_ASSERT(sys_cfg.streaming_credit_round_interval_us > 0);
+  CAF_ASSERT(sys_cfg.stream_credit_round_interval.count() > 0);
   credit_round_ticks_ = sys_cfg.stream_credit_round_interval.count()
                         / interval.count();
   CAF_ASSERT(credit_round_ticks_ > 0);
