@@ -6,17 +6,17 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/call_cfun.hpp"
 #include "caf/policy/newb_udp.hpp"
+#include "caf/policy/newb_basp.hpp"
+#include "caf/policy/newb_ordering.hpp"
 
 using namespace caf;
+using namespace caf::policy;
 
 using caf::io::network::default_multiplexer;
 using caf::io::network::invalid_native_socket;
 using caf::io::network::make_client_newb;
 using caf::io::network::make_server_newb;
 using caf::io::network::native_socket;
-using caf::policy::accept_udp;
-using caf::policy::udp_protocol;
-using caf::policy::udp_transport;
 
 namespace {
 
@@ -30,190 +30,6 @@ using handshake_atom = atom_constant<atom("handshake")>;
 
 constexpr size_t chunk_size = 8192; //8192; //128; //1024;
 
-struct basp_header {
-  uint32_t payload_len;
-  actor_id from;
-  actor_id to;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, basp_header& hdr) {
-  return fun(meta::type_name("basp_header"), hdr.payload_len,
-             hdr.from, hdr.to);
-}
-
-constexpr size_t udp_basp_header_len = sizeof(uint32_t) + sizeof(actor_id) * 2;
-
-using sequence_type = uint16_t;
-
-struct ordering_header {
-  sequence_type seq;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, ordering_header& hdr) {
-  return fun(meta::type_name("ordering_header"), hdr.seq);
-}
-
-constexpr size_t udp_ordering_header_len = sizeof(sequence_type);
-
-struct new_basp_message {
-  basp_header header;
-  char* payload;
-  size_t payload_len;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun,
-                                        new_basp_message& msg) {
-  return fun(meta::type_name("new_basp_message"), msg.header,
-             msg.payload_len);
-}
-
-struct basp {
-  static constexpr size_t header_size = udp_basp_header_len;
-  using message_type = new_basp_message;
-  using result_type = optional<message_type>;
-  io::network::newb<message_type>* parent;
-  message_type msg;
-
-  basp(io::network::newb<message_type>* parent) : parent(parent) {
-    // nop
-  }
-
-  error read(char* bytes, size_t count) {
-    // Read header.
-    if (count < udp_basp_header_len) {
-      CAF_LOG_DEBUG("not enought bytes for basp header");
-      return sec::unexpected_message;
-    }
-    binary_deserializer bd{&parent->backend(), bytes, count};
-    bd(msg.header);
-    size_t payload_len = static_cast<size_t>(msg.header.payload_len);
-    // Read payload.
-    auto remaining = count - udp_basp_header_len;
-    // TODO: Could be `!=` ?
-    if (remaining < payload_len) {
-      CAF_LOG_ERROR("not enough bytes remaining to fit payload");
-      return sec::unexpected_message;
-    }
-    msg.payload = bytes + udp_basp_header_len;
-    msg.payload_len = msg.header.payload_len;
-    parent->handle(msg);
-    return none;
-  }
-
-  error timeout(atom_value, uint32_t) {
-    return none;
-  }
-
-  size_t write_header(io::network::byte_buffer& buf,
-                      io::network::header_writer* hw) {
-    CAF_ASSERT(hw != nullptr);
-    (*hw)(buf);
-    return header_size;
-  }
-
-  void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t offset, size_t plen) {
-    stream_serializer<charbuf> out{&parent->backend(),
-                                   buf.data() + hstart + offset,
-                                   sizeof(uint32_t)};
-    auto len = static_cast<uint32_t>(plen);
-    out(len);
-  }
-};
-
-template <class Next>
-struct ordering {
-  static constexpr size_t header_size = udp_ordering_header_len;
-  using message_type = typename Next::message_type;
-  using result_type = typename Next::result_type;
-  sequence_type seq_read = 0;
-  sequence_type seq_write = 0;
-  size_t max_pending_messages = 10;
-  std::chrono::milliseconds pending_to = std::chrono::milliseconds(100);
-  io::network::newb<message_type>* parent;
-  Next next;
-  std::unordered_map<sequence_type, std::vector<char>> pending;
-
-  ordering(io::network::newb<message_type>* parent)
-      : parent(parent),
-        next(parent) {
-    // nop
-  }
-
-  error deliver_pending() {
-    if (pending.empty())
-      return none;
-    while (pending.count(seq_read) > 0) {
-      auto& buf = pending[seq_read];
-      auto res = next.read(buf.data(), buf.size());
-      pending.erase(seq_read);
-      // TODO: Cancel timeout.
-      if (res)
-        return res;
-    }
-    return none;
-  }
-
-  error add_pending(char* bytes, size_t count, sequence_type seq) {
-    pending[seq] = std::vector<char>(bytes + header_size, bytes + count);
-    parent->set_timeout(pending_to, ordering_atom::value, seq);
-    if (pending.size() > max_pending_messages) {
-      seq_read = pending.begin()->first;
-      return deliver_pending();
-    }
-    return none;
-  }
-
-  error read(char* bytes, size_t count) {
-    if (count < header_size)
-      return sec::unexpected_message;
-    ordering_header hdr;
-    binary_deserializer bd(&parent->backend(), bytes, count);
-    bd(hdr);
-    // TODO: Use the comparison function from BASP instance.
-    if (hdr.seq == seq_read) {
-      seq_read += 1;
-      auto res = next.read(bytes + header_size, count - header_size);
-      if (res)
-        return res;
-      return deliver_pending();
-    } else if (hdr.seq > seq_read) {
-      add_pending(bytes, count, hdr.seq);
-      return none;
-    }
-    return none;
-  }
-
-  error timeout(atom_value atm, uint32_t id) {
-    if (atm == ordering_atom::value) {
-      error err = none;
-      sequence_type seq = static_cast<sequence_type>(id);
-      if (pending.count(seq) > 0) {
-        seq_read = static_cast<sequence_type>(seq);
-        err = deliver_pending();
-      }
-      return err;
-    }
-    return next.timeout(atm, id);
-  }
-
-  void write_header(io::network::byte_buffer& buf,
-                    io::network::header_writer* hw) {
-    binary_serializer bs(&parent->backend(), buf);
-    bs(ordering_header{seq_write});
-    seq_write += 1;
-    next.write_header(buf, hw);
-    return;
-  }
-
-  void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t offset, size_t plen) {
-    next.prepare_for_sending(buf, hstart, offset + header_size, plen);
-  }
-};
 
 struct raw_newb : public io::network::newb<new_basp_message> {
   using message_type = new_basp_message;
@@ -406,7 +222,8 @@ public:
 };
 
 void caf_main(actor_system& sys, const config& cfg) {
-  using acceptor_t = udp_acceptor<udp_protocol<ordering<basp>>>;
+  using policy_t = udp_protocol<ordering<datagram_basp>>;
+  using acceptor_t = udp_acceptor<policy_t>;
   const char* host = cfg.host.c_str();
   const uint16_t port = cfg.port;
   scoped_actor self{sys};
@@ -463,8 +280,8 @@ void caf_main(actor_system& sys, const config& cfg) {
     await_done("done");
   } else {
     std::cout << "creating new client" << std::endl;
-    auto client = make_client_newb<raw_newb, udp_transport,
-                                   udp_protocol<ordering<basp>>>(sys, host, port);
+    auto client = make_client_newb<raw_newb, udp_transport, policy_t>(sys, host,
+                                                                      port);
     self->send(client, responder_atom::value, helper);
     self->send(client, handshake_atom::value);
     await_done("let's start");

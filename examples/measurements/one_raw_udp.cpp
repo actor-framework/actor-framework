@@ -5,6 +5,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/call_cfun.hpp"
+#include "caf/policy/newb_raw.hpp"
 #include "caf/policy/newb_udp.hpp"
 
 using namespace caf;
@@ -30,49 +31,8 @@ using handshake_atom = atom_constant<atom("handshake")>;
 
 constexpr size_t chunk_size = 8192; //128; //1024;
 
-struct new_data {
-  char* payload;
-  size_t payload_len;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, new_data& data) {
-  return fun(meta::type_name("new_data"), data.payload_len);
-}
-
-struct raw_udp {
-  using message_type = new_data;
-  using result_type = optional<message_type>;
-  io::network::newb<message_type>* parent;
-  message_type msg;
-
-  raw_udp(io::network::newb<message_type>* parent) : parent(parent) {
-    // nop
-  }
-
-  error read(char* bytes, size_t count) {
-    msg.payload = bytes;
-    msg.payload_len = count;
-    parent->handle(msg);
-    return none;
-  }
-
-  error timeout(atom_value, uint32_t) {
-    return none;
-  }
-
-  size_t write_header(io::network::byte_buffer&,
-                      io::network::header_writer*) {
-    return 0;
-  }
-
-  void prepare_for_sending(io::network::byte_buffer&, size_t, size_t, size_t) {
-    // nop
-  }
-};
-
-struct raw_newb : public io::network::newb<new_data> {
-  using message_type = new_data;
+struct raw_newb : public io::network::newb<policy::raw_data_message> {
+  using message_type = policy::raw_data_message;
 
   raw_newb(caf::actor_config& cfg, default_multiplexer& dm,
             native_socket sockfd)
@@ -247,7 +207,7 @@ public:
 };
 
 void caf_main(actor_system& sys, const config& cfg) {
-  using acceptor_t = udp_acceptor<udp_protocol<raw_udp>>;
+  using acceptor_t = udp_acceptor<udp_protocol<policy::raw>>;
   const char* host = cfg.host.c_str();
   const uint16_t port = cfg.port;
   scoped_actor self{sys};
@@ -305,7 +265,7 @@ void caf_main(actor_system& sys, const config& cfg) {
   } else {
     std::cout << "creating new client" << std::endl;
     auto client = make_client_newb<raw_newb, udp_transport,
-                                   udp_protocol<raw_udp>>(sys, host, port);
+                                   udp_protocol<policy::raw>>(sys, host, port);
     self->send(client, responder_atom::value, helper);
     self->send(client, handshake_atom::value);
     await_done("let's start");

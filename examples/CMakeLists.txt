@@ -61,6 +61,7 @@ add(measurements one_raw_tcp)
 add(measurements one_raw_udp)
 add(measurements one_basp_tcp)
 add(measurements one_basp_udp)
+add(measurements four_udp)
 
 # basic I/O with brokers
 add(broker simple_broker)
