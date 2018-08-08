@@ -73,9 +73,7 @@ tcp_transport::tcp_transport()
 
 error tcp_transport::read_some(io::network::event_handler* parent) {
   CAF_LOG_TRACE("");
-  std::cerr << "read some called" << std::endl;
   size_t len = receive_buffer.size() - collected;
-  receive_buffer.resize(len);
   void* buf = receive_buffer.data() + collected;
   auto sres = ::recv(parent->fd(),
                      reinterpret_cast<io::network::socket_recv_ptr>(buf),
@@ -137,6 +135,7 @@ error tcp_transport::write_some(io::network::event_handler* parent) {
     return sec::runtime_error;
   size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   written += result;
+  count += 1;
   auto remaining = send_buffer.size() - written;
   if (remaining == 0)
     prepare_next_write(parent);
@@ -176,7 +175,7 @@ tcp_transport::connect(const std::string& host, uint16_t port,
 }
 
 expected<io::network::native_socket>
-accept_tcp::create_socket(uint16_t port,const char* host,bool reuse) {
+accept_tcp::create_socket(uint16_t port, const char* host, bool reuse) {
   return io::network::new_tcp_acceptor_impl(port, host, reuse);
 }
 
@@ -194,7 +193,6 @@ accept_tcp::accept(io::network::event_handler* parent) {
       return {invalid_native_socket, nullptr};
     }
   }
-  std::cerr << "accepted connection" << std::endl;
   transport_policy_ptr ptr{new tcp_transport};
   return {result, std::move(ptr)};
 }

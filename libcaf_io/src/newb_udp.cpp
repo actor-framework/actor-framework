@@ -106,7 +106,6 @@ void udp_transport::prepare_next_read(io::network::event_handler*) {
 }
 
 error udp_transport::write_some(io::network::event_handler* parent) {
-  std::cerr << "sending on socket: " << parent->fd() << std::endl;
   using namespace caf::io::network;
   CAF_LOG_TRACE(CAF_ARG(parent->fd()) << CAF_ARG(send_buffer.size()));
   socket_size_type len = static_cast<socket_size_type>(*endpoint.clength());
@@ -114,7 +113,6 @@ error udp_transport::write_some(io::network::event_handler* parent) {
   auto buf_len = send_sizes.front();
   auto sres = ::sendto(parent->fd(), buf_ptr, buf_len,
                        0, endpoint.caddress(), len);
-  std::cerr << "sent " << sres << " bytes to " << to_string(endpoint) << std::endl;
   if (is_error(sres, true)) {
     std::cerr << "sento failed: " << last_socket_error_as_string() << std::endl;
     std::abort();
@@ -124,7 +122,7 @@ error udp_transport::write_some(io::network::event_handler* parent) {
   send_sizes.pop_front();
   written += (sres > 0) ? static_cast<size_t>(sres) : 0;
   auto remaining = send_buffer.size() - written;
-  std::cerr << "wrote '" << written << "' got '" << remaining << "' bytes left to write" << std::endl;
+  count += 1;
   if (remaining == 0)
     prepare_next_write(parent);
   return none;
@@ -154,7 +152,6 @@ io::network::byte_buffer& udp_transport::wr_buf() {
     auto chunk_size = offline_buffer.size() - offline_sum;
     offline_sizes.push_back(chunk_size);
     offline_sum += chunk_size;
-    std::cerr << "adding chunk '" << chunk_size << "' up to total of '" << offline_sum << std::endl;
   }
   return offline_buffer;
 }

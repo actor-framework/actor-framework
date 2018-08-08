@@ -90,7 +90,7 @@ struct newb_base : public network::event_handler {
 // -- transport policy ---------------------------------------------------------
 
 struct transport_policy {
-  transport_policy() : received_bytes{0}, max_consecutive_reads{50} {
+  transport_policy() : received_bytes{0}, max_consecutive_reads{50}, count{0} {
     // nop
   }
 
@@ -126,7 +126,7 @@ struct transport_policy {
     // nop
   }
 
-  inline byte_buffer& wr_buf() {
+  virtual byte_buffer& wr_buf() {
     return offline_buffer;
   }
 
@@ -161,6 +161,7 @@ struct transport_policy {
   byte_buffer offline_buffer;
   byte_buffer receive_buffer;
   byte_buffer send_buffer;
+  size_t count;
 };
 
 using transport_policy_ptr = std::unique_ptr<transport_policy>;

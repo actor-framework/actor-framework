@@ -39,10 +39,6 @@ struct tcp_transport : public io::network::transport_policy {
 
   void prepare_next_write(io::network::event_handler* parent) override;
 
-  inline io::network::byte_buffer& wr_buf() {
-    return offline_buffer;
-  }
-
   void flush(io::network::event_handler* parent) override;
 
   expected<io::network::native_socket>
