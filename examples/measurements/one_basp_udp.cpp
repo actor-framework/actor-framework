@@ -1,6 +1,5 @@
 #include "caf/io/network/newb.hpp"
 
-#include "caf/config.hpp"
 #include "caf/logger.hpp"
 
 #include "caf/binary_deserializer.hpp"
@@ -10,21 +9,26 @@
 
 using namespace caf;
 
-using io::network::native_socket;
-using io::network::invalid_native_socket;
-using io::network::default_multiplexer;
-using io::network::last_socket_error_as_string;
+using caf::io::network::default_multiplexer;
+using caf::io::network::invalid_native_socket;
+using caf::io::network::make_client_newb;
+using caf::io::network::make_server_newb;
+using caf::io::network::native_socket;
+using caf::policy::accept_udp;
+using caf::policy::udp_protocol;
+using caf::policy::udp_transport;
 
 namespace {
 
-// -- atoms --------------------------------------------------------------------
-
+using interval_atom = atom_constant<atom("interval")>;
 using ordering_atom = atom_constant<atom("ordering")>;
 using send_atom = atom_constant<atom("send")>;
 using quit_atom = atom_constant<atom("quit")>;
 using responder_atom = atom_constant<atom("responder")>;
+using start_atom = atom_constant<atom("start")>;
+using handshake_atom = atom_constant<atom("handshake")>;
 
-// -- udp impls ----------------------------------------------------------------
+constexpr size_t chunk_size = 8192; //8192; //128; //1024;
 
 struct basp_header {
   uint32_t payload_len;
@@ -211,49 +215,43 @@ struct ordering {
   }
 };
 
-template <class T>
-struct udp_protocol
-    : public io::network::protocol_policy<typename T::message_type> {
-  T impl;
+struct raw_newb : public io::network::newb<new_basp_message> {
+  using message_type = new_basp_message;
 
-  udp_protocol(io::network::newb<typename T::message_type>* parent)
-      : impl(parent) {
-    // nop
-  }
-
-  error read(char* bytes, size_t count) override {
-    return impl.read(bytes, count);
-  }
-
-  error timeout(atom_value atm, uint32_t id) override {
-    return impl.timeout(atm, id);
-  }
-
-  void write_header(io::network::byte_buffer& buf,
-                    io::network::header_writer* hw) override {
-    impl.write_header(buf, hw);
-  }
-
-  void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t offset, size_t plen) override {
-    impl.prepare_for_sending(buf, hstart, offset, plen);
-  }
-};
-
-struct basp_newb : public io::network::newb<new_basp_message> {
-  basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
+  raw_newb(caf::actor_config& cfg, default_multiplexer& dm,
             native_socket sockfd)
-      : newb<new_basp_message>(cfg, dm, sockfd) {
+      : newb<message_type>(cfg, dm, sockfd),
+        running(true),
+        is_client(true),
+        interval_counter(0),
+        received_messages(0),
+        interval(5000) {
     // nop
+    CAF_LOG_TRACE("");
   }
 
-  void handle(new_basp_message& msg) override {
+  void handle(message_type& msg) override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
-    std::string res;
-    binary_deserializer bd(&backend(), msg.payload, msg.payload_len);
-    bd(res);
-    send(responder, res);
+    if (is_client) {
+      send(responder, handshake_atom::value);
+    } else if (msg.payload_len == 1) {
+      auto byte = *msg.payload;
+      if (byte == 'h')
+        std::cout << "I'll consider this the handshake" << std::endl;
+      else if (byte == 'q')
+        send(this, quit_atom::value);
+      send(this, handshake_atom::value);
+    } else {
+      if (msg.payload_len != chunk_size)
+        std::cout << "Hmmm, payload is " << msg.payload_len << " and not "
+                  << chunk_size << std::endl;
+      received_messages += 1;
+      if (received_messages % 1000 == 0)
+        std::cout << "received " << received_messages << " messages" << std::endl;
+      //std::cout << "received message" << std::endl;
+      // nop
+    }
   }
 
   behavior make_behavior() override {
@@ -264,34 +262,95 @@ struct basp_newb : public io::network::newb<new_basp_message> {
       [=](atom_value atm, uint32_t id) {
         protocol->timeout(atm, id);
       },
-      [=](send_atom, actor_id sender, actor_id receiver, std::string payload) {
+      [=](handshake_atom) {
         auto hw = caf::make_callback([&](io::network::byte_buffer& buf) -> error {
           binary_serializer bs(&backend(), buf);
-          bs(basp_header{0, sender, receiver});
+          bs(basp_header{0, id(), actor_id{}});
           return none;
         });
         auto whdl = wr_buf(&hw);
         CAF_ASSERT(whdl.buf != nullptr);
         CAF_ASSERT(whdl.protocol != nullptr);
         binary_serializer bs(&backend(), *whdl.buf);
-        bs(payload);
+        whdl.buf->push_back('h');
+      },
+      [=](send_atom, char c) {
+        if (running) {
+          delayed_send(this, interval, send_atom::value, char((c + 1) % 256));
+          auto hw = caf::make_callback([&](io::network::byte_buffer& buf) -> error {
+            binary_serializer bs(&backend(), buf);
+            bs(basp_header{0, id(), actor_id{}});
+            return none;
+          });
+          auto whdl = wr_buf(&hw);
+          CAF_ASSERT(whdl.buf != nullptr);
+          CAF_ASSERT(whdl.protocol != nullptr);
+          binary_serializer bs(&backend(), *whdl.buf);
+
+          auto start = whdl.buf->size();
+          whdl.buf->resize(start + chunk_size);
+          std::fill(whdl.buf->begin() + start, whdl.buf->end(), c);
+        }
       },
       [=](responder_atom, actor r) {
-        aout(this) << "got responder assigned" << std::endl;
+        std::cout << "got responder assigned" << std::endl;
         responder = r;
         send(r, this);
       },
+      [=](interval_atom) {
+        if (running) {
+          delayed_send(this, std::chrono::seconds(1), interval_atom::value);
+          data.emplace_back(interval,
+                            transport->count,
+                            transport->offline_buffer.size());
+          interval_counter += 1;
+          if (interval_counter % 10 == 0) {
+            auto cnt = interval.count();
+            auto dec = cnt > 1000 ? 1000 : (cnt > 100 ? 100 : 10);
+            interval -= std::chrono::microseconds(dec);
+          }
+          transport->count = 0;
+          if (interval.count() <= 0)
+            running = false;
+        } else {
+          std::map<size_t, std::vector<size_t>> aggregate;
+          for (auto& t : data) {
+            auto expected = (1000000 / get<0>(t).count());
+            aggregate[expected].push_back(get<1>(t));
+          }
+          for (auto& p : aggregate) {
+            std::cerr << p.first;
+            for (auto v : p.second)
+              std::cerr << ", " << v;
+            std::cerr << std::endl;
+          }
+          /*
+          for (auto& t : data)
+            std::cerr << (1000000 / get<0>(t).count()) << ", "
+                      << get<1>(t) << ", " << get<2>(t) << std::endl;
+          */
+          send(this, quit_atom::value);
+        }
+      },
       [=](quit_atom) {
-        aout(this) << "got quit message" << std::endl;
+        std::cout << "got quit message" << std::endl;
         // Remove from multiplexer loop.
         stop();
         // Quit actor.
         quit();
+        send(responder, quit_atom::value);
       }
     };
   }
 
+  bool running;
+  bool is_client;
   actor responder;
+  uint32_t interval_counter;
+  uint32_t received_messages;
+  std::chrono::microseconds interval;
+  // values: measurement point, current interval, messages sent in interval, offline buffer size
+  std::vector<std::tuple<std::chrono::microseconds, size_t, size_t>> data;
 };
 
 template <class ProtocolPolicy>
@@ -304,20 +363,27 @@ struct udp_acceptor
     // nop
   }
 
+  ~udp_acceptor() {
+    std::cout << "terminating udp acceptor" << std::endl;
+  }
+
   expected<actor> create_newb(native_socket sockfd,
                               io::network::transport_policy_ptr pol) override {
-    auto n = io::network::make_newb<basp_newb>(this->backend().system(), sockfd);
+    CAF_LOG_TRACE(CAF_ARG(sockfd));
+    std::cout << "creating newb" << std::endl;
+    auto n = io::network::make_newb<raw_newb>(this->backend().system(), sockfd);
     auto ptr = caf::actor_cast<caf::abstract_actor*>(n);
     if (ptr == nullptr)
       return sec::runtime_error;
-    auto& ref = dynamic_cast<basp_newb&>(*ptr);
+    auto& ref = dynamic_cast<raw_newb&>(*ptr);
     ref.transport = std::move(pol);
     ref.protocol.reset(new ProtocolPolicy(&ref));
     ref.responder = responder;
-    // Read first message from this socket.
+    // Read first message from this socket
+    ref.is_client = false;
     ref.transport->prepare_next_read(this);
     ref.transport->read_some(this, *ref.protocol.get());
-    // Subsequent messages will be read from `sockfd`.
+    // TODO: Just a workaround.
     anon_send(responder, n);
     return n;
   }
@@ -325,78 +391,88 @@ struct udp_acceptor
   actor responder;
 };
 
-struct udp_test_broker_state {
-  io::datagram_handle hdl;
+class config : public actor_system_config {
+public:
+  uint16_t port = 12345;
+  std::string host = "127.0.0.1";
+  bool is_server = false;
+
+  config() {
+    opt_group{custom_options_, "global"}
+    .add(port, "port,P", "set port")
+    .add(host, "host,H", "set host")
+    .add(is_server, "server,s", "set server");
+  }
 };
 
-// -- main ---------------------------------------------------------------------
-
-void caf_main(actor_system& sys, const actor_system_config&) {
+void caf_main(actor_system& sys, const config& cfg) {
   using acceptor_t = udp_acceptor<udp_protocol<ordering<basp>>>;
-  using caf::io::network::make_server_newb;
-  using caf::io::network::make_client_newb;
-  using caf::policy::udp_transport;
-  using caf::policy::accept_udp;
-  const char* host = "localhost";
-  const uint16_t port = 12345;
+  const char* host = cfg.host.c_str();
+  const uint16_t port = cfg.port;
   scoped_actor self{sys};
 
-  auto running = [=](event_based_actor* self, std::string name, actor , actor b) -> behavior {
+  auto running = [=](event_based_actor* self, std::string name,
+                     actor m, actor) -> behavior {
     return {
-      [=](std::string str) {
-        aout(self) << "[" << name << "] received '" << str << "'" << std::endl;
+      [=](handshake_atom) {
+        std::cout << "[" << name << "] got server" << std::endl;
+        self->send(m, quit_atom::value);
       },
-      [=](send_atom, std::string str) {
-        aout(self) << "[" << name << "] sending '" << str << "'" << std::endl;
-        self->send(b, send_atom::value, self->id(), actor_id{}, str);
-      },
+      [=](quit_atom) {
+        self->send(m, quit_atom::value);
+      }
     };
   };
-  auto init = [=](event_based_actor* self, std::string name, actor m) -> behavior {
+  auto init = [=](event_based_actor* self, std::string name,
+                  actor m) -> behavior {
     self->set_default_handler(skip);
     return {
       [=](actor b) {
-        aout(self) << "[" << name << "] got broker, let's do this" << std::endl;
+        std::cout << "[" << name << "] got broker, let's do this" << std::endl;
         self->become(running(self, name, m, b));
         self->set_default_handler(print_and_drop);
       }
     };
   };
 
-  auto server_helper = sys.spawn(init, "s", self);
-  auto client_helper = sys.spawn(init, "c", self);
+  auto dummy_broker = [](io::broker*) -> behavior {
+    return {
+      [](io::new_connection_msg&) {
+        std::cout << "got new connection" << std::endl;
+      }
+    };
+  };
 
-  aout(self) << "creating new server" << std::endl;
-  auto server_ptr = make_server_newb<acceptor_t, accept_udp>(sys, port, nullptr, true);
-  server_ptr->responder = server_helper;
+  auto name = cfg.is_server ? "server" : "client";
+  auto helper = sys.spawn(init, name, self);
 
-  aout(self) << "creating new client" << std::endl;
-  auto client = make_client_newb<basp_newb, udp_transport, udp_protocol<ordering<basp>>>(sys, host, port);
-  self->send(client, responder_atom::value, client_helper);
-
-  self->send(client_helper, send_atom::value, "hallo");
-  self->send(server_helper, send_atom::value, "hallo");
-
-  self->receive(
-    [&](quit_atom) {
-      aout(self) << "check" << std::endl;
-    }
-  );
-
-  /*
-  main_actor->receive(
-    [](quit_atom) {
-      CAF_LOG_DEBUG("check");
-    }
-  );
-  CAF_LOG_DEBUG("shutting everything down");
-  newb_acceptor_ptr->stop();
-  anon_send(newb_actor, quit_atom::value);
-  anon_send(helper_actor, quit_atom::value);
-  anon_send(test_broker, quit_atom::value);
-  sys.await_all_actors_done();
-  CAF_LOG_DEBUG("done");
-  */
+  actor nb;
+  auto await_done = [&](std::string msg) {
+    self->receive(
+      [&](quit_atom) {
+        std::cout << msg << std::endl;
+      }
+    );
+  };
+  if (cfg.is_server) {
+    std::cout << "creating new server" << std::endl;
+    auto server_ptr = make_server_newb<acceptor_t, accept_udp>(sys, port, nullptr,
+                                                               true);
+    // If I don't do this, our newb acceptor will never get events ...
+    auto b = sys.middleman().spawn_server(dummy_broker, port + 1);
+    await_done("done");
+  } else {
+    std::cout << "creating new client" << std::endl;
+    auto client = make_client_newb<raw_newb, udp_transport,
+                                   udp_protocol<ordering<basp>>>(sys, host, port);
+    self->send(client, responder_atom::value, helper);
+    self->send(client, handshake_atom::value);
+    await_done("let's start");
+    self->send(client, send_atom::value, char(0));
+    self->send(client, interval_atom::value);
+    await_done("done");
+    std::abort();
+  }
 }
 
 } // namespace anonymous

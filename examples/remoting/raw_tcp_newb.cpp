@@ -38,6 +38,7 @@ struct raw_tcp {
 
   raw_tcp(io::network::newb<message_type>* parent) : parent(parent) {
     // nop
+    parent->configure_read(io::receive_policy::exactly(1000));
   }
 
   error read(char* bytes, size_t count) {
@@ -80,9 +81,7 @@ struct raw_newb : public io::network::newb<new_data> {
   void handle(message_type& msg) override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
-    std::string res;
-    binary_deserializer bd(&backend(), msg.payload, msg.payload_len);
-    bd(res);
+    char res = *msg.payload;
     send(responder, res);
   }
 
@@ -94,15 +93,12 @@ struct raw_newb : public io::network::newb<new_data> {
       [=](atom_value atm, uint32_t id) {
         protocol->timeout(atm, id);
       },
-      [=](send_atom, std::string payload) {
+      [=](send_atom, char c) {
         auto whdl = wr_buf(nullptr);
         CAF_ASSERT(whdl.buf != nullptr);
         CAF_ASSERT(whdl.protocol != nullptr);
-        binary_serializer bs(&backend(), *whdl.buf);
-        auto from = whdl.buf->size();
         whdl.buf->resize(1000);
-        std::fill(whdl.buf->begin() + from, whdl.buf->end(), 0);
-        bs(payload);
+        std::fill(whdl.buf->begin(), whdl.buf->end(), c);
       },
       [=](responder_atom, actor r) {
         aout(this) << "got responder assigned" << std::endl;
@@ -168,12 +164,12 @@ void caf_main(actor_system& sys, const actor_system_config&) {
   auto running = [=](event_based_actor* self, std::string name,
                      actor, actor b) -> behavior {
     return {
-      [=](std::string str) {
-        aout(self) << "[" << name << "] received '" << str << "'" << std::endl;
+      [=](char c) {
+        aout(self) << "[" << name << "] received '" << c << "'" << std::endl;
       },
-      [=](send_atom, std::string str) {
-        aout(self) << "[" << name << "] sending '" << str << "'" << std::endl;
-        self->send(b, send_atom::value, self->id(), actor_id{}, str);
+      [=](send_atom, char c) {
+        aout(self) << "[" << name << "] sending '" << c << "'" << std::endl;
+        self->send(b, send_atom::value, c);
       },
     };
   };
@@ -202,29 +198,14 @@ void caf_main(actor_system& sys, const actor_system_config&) {
                                  tcp_protocol<raw_tcp>>(sys, host, port);
   self->send(client, responder_atom::value, client_helper);
 
-  self->send(client_helper, send_atom::value, "hallo");
-  self->send(server_helper, send_atom::value, "hallo");
+  self->send(client_helper, send_atom::value, 'a');
+  self->send(server_helper, send_atom::value, 'b');
 
   self->receive(
     [&](quit_atom) {
       aout(self) << "check" << std::endl;
     }
   );
-
-  /*
-  main_actor->receive(
-    [](quit_atom) {
-      CAF_LOG_DEBUG("check");
-    }
-  );
-  CAF_LOG_DEBUG("shutting everything down");
-  newb_acceptor_ptr->stop();
-  anon_send(newb_actor, quit_atom::value);
-  anon_send(helper_actor, quit_atom::value);
-  anon_send(test_broker, quit_atom::value);
-  sys.await_all_actors_done();
-  CAF_LOG_DEBUG("done");
-  */
 }
 
 } // namespace anonymous
