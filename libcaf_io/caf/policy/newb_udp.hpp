@@ -44,7 +44,7 @@ struct udp_transport : public io::network::transport_policy {
 
   void prepare_next_write(io::network::event_handler* parent) override;
 
-  io::network::byte_buffer& wr_buf();
+  io::network::byte_buffer& wr_buf() override;
 
   void flush(io::network::event_handler* parent) override;
 
