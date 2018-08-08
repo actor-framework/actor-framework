@@ -56,13 +56,6 @@ add(remoting basp_tcp_newb)
 add(remoting raw_tcp_newb)
 add(remoting raw_udp_newb)
 
-# measurements not meant to stay in CAF
-add(measurements one_raw_tcp)
-add(measurements one_raw_udp)
-add(measurements one_basp_tcp)
-add(measurements one_basp_udp)
-add(measurements four_udp)
-
 # basic I/O with brokers
 add(broker simple_broker)
 add(broker simple_http_broker)
