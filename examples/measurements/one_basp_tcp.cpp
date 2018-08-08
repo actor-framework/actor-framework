@@ -5,6 +5,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/call_cfun.hpp"
+#include "caf/policy/newb_basp.hpp"
 #include "caf/policy/newb_tcp.hpp"
 
 using namespace caf;
@@ -28,102 +29,8 @@ using responder_atom = atom_constant<atom("responder")>;
 
 constexpr size_t chunk_size = 1024; //128; //8192; //1024;
 
-struct basp_header {
-  uint32_t payload_len;
-  actor_id from;
-  actor_id to;
-};
-
-constexpr size_t basp_header_len = sizeof(uint32_t) + sizeof(actor_id) * 2;
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, basp_header& hdr) {
-  return fun(meta::type_name("tcp_basp_header"),
-             hdr.payload_len, hdr.from, hdr.to);
-}
-
-struct new_basp_message {
-  basp_header header;
-  char* payload;
-  size_t payload_len;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun,
-                                        new_basp_message& msg) {
-  return fun(meta::type_name("tcp_new_basp_message"), msg.header,
-             msg.payload_len);
-}
-
-struct basp {
-  static constexpr size_t header_size = basp_header_len;
-  using message_type = new_basp_message;
-  using result_type = optional<message_type>;
-  io::network::newb<message_type>* parent;
-  message_type msg;
-  bool expecting_header = true;
-
-  basp(io::network::newb<message_type>* parent) : parent(parent) {
-    // TODO: this is dangerous ...
-    // Maybe we need an init function that is called with `start()`?
-    parent->configure_read(io::receive_policy::exactly(basp_header_len));
-  }
-
-  error read_header(char* bytes, size_t count) {
-    if (count < basp_header_len)
-      return sec::unexpected_message;
-    binary_deserializer bd{&parent->backend(), bytes, count};
-    bd(msg.header);
-    size_t size = static_cast<size_t>(msg.header.payload_len);
-    parent->configure_read(io::receive_policy::exactly(size));
-    expecting_header = false;
-    return none;
-  }
-
-  error read_payload(char* bytes, size_t count) {
-    if (count < msg.header.payload_len) {
-      CAF_LOG_DEBUG("buffer contains " << count << " bytes of expected "
-                    << msg.header.payload_len);
-      return sec::unexpected_message;
-    }
-    msg.payload = bytes;
-    msg.payload_len = msg.header.payload_len;
-    parent->handle(msg);
-    expecting_header = true;
-    parent->configure_read(io::receive_policy::exactly(basp_header_len));
-    return none;
-  }
-
-  error read(char* bytes, size_t count) {
-    if (expecting_header)
-      return read_header(bytes, count);
-    else
-      return read_payload(bytes, count);
-  }
-
-  error timeout(atom_value, uint32_t) {
-    return none;
-  }
-
-  size_t write_header(io::network::byte_buffer& buf,
-                      io::network::header_writer* hw) {
-    CAF_ASSERT(hw != nullptr);
-    (*hw)(buf);
-    return header_size;
-  }
-
-  void prepare_for_sending(io::network::byte_buffer& buf,
-                           size_t hstart, size_t offset, size_t plen) {
-    stream_serializer<charbuf> out{&parent->backend(),
-                                   buf.data() + hstart + offset,
-                                   sizeof(uint32_t)};
-    auto len = static_cast<uint32_t>(plen);
-    out(len);
-  }
-};
-
-struct basp_newb : public io::network::newb<new_basp_message> {
-  using message_type = new_basp_message;
+struct basp_newb : public io::network::newb<policy::new_basp_message> {
+  using message_type = policy::new_basp_message;
 
   basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
             native_socket sockfd)
@@ -162,7 +69,7 @@ struct basp_newb : public io::network::newb<new_basp_message> {
           delayed_send(this, interval, send_atom::value, char((c + 1) % 256));
           auto hw = caf::make_callback([&](io::network::byte_buffer& buf) -> error {
             binary_serializer bs(&backend(), buf);
-            bs(basp_header{0, id(), actor_id{}});
+            bs(policy::basp_header{0, id(), actor_id{}});
             return none;
           });
           auto whdl = wr_buf(&hw);
@@ -199,6 +106,7 @@ struct basp_newb : public io::network::newb<new_basp_message> {
           for (auto& t : data) {
             auto expected = (1000000 / get<0>(t).count());
             aggregate[expected].push_back(get<1>(t));
+            std::cerr << expected << ", " << get<1>(t) << ", " << get<2>(t) << std::endl;
           }
           for (auto& p : aggregate) {
             std::cerr << p.first;
@@ -251,7 +159,7 @@ struct tcp_acceptor
     ref.transport = std::move(pol);
     ref.protocol.reset(new ProtocolPolicy(&ref));
     ref.responder = responder;
-    ref.configure_read(io::receive_policy::exactly(basp_header_len));
+    ref.configure_read(io::receive_policy::exactly(policy::basp_header_len));
     anon_send(responder, n);
     return n;
   }
@@ -274,7 +182,7 @@ public:
 };
 
 void caf_main(actor_system& sys, const config& cfg) {
-  using acceptor_t = tcp_acceptor<tcp_protocol<basp>>;
+  using acceptor_t = tcp_acceptor<tcp_protocol<policy::stream_basp>>;
   const char* host = cfg.host.c_str();
   const uint16_t port = cfg.port;
   scoped_actor self{sys};
@@ -332,7 +240,7 @@ void caf_main(actor_system& sys, const config& cfg) {
   } else {
     std::cout << "creating new client" << std::endl;
     auto client = make_client_newb<basp_newb, tcp_transport,
-                                   tcp_protocol<basp>>(sys, host, port);
+                                   tcp_protocol<policy::stream_basp>>(sys, host, port);
     self->send(client, responder_atom::value, helper);
     self->send(client, send_atom::value, char(0));
     self->send(client, interval_atom::value);

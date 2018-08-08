@@ -119,6 +119,7 @@ error udp_transport::write_some(io::network::event_handler* parent) {
     CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
     return sec::runtime_error;
   }
+  // TODO: This only works if we always write send_sizes.front()
   send_sizes.pop_front();
   written += (sres > 0) ? static_cast<size_t>(sres) : 0;
   auto remaining = send_buffer.size() - written;
