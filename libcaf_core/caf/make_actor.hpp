@@ -32,7 +32,7 @@ namespace caf {
 
 template <class T, class R = infer_handle_from_class_t<T>, class... Ts>
 R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
-#if defined(CAF_LOG_LEVEL) && CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
   actor_storage<T>* ptr = nullptr;
   if (logger::current_logger()->accepts(CAF_LOG_LEVEL_DEBUG,
                                         CAF_LOG_FLOW_COMPONENT)) {

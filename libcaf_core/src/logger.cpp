@@ -233,11 +233,7 @@ logger::~logger() {
 
 logger::logger(actor_system& sys)
     : system_(sys),
-#ifdef CAF_LOG_LEVEL
       level_(CAF_LOG_LEVEL),
-#else
-      level_(0),
-#endif
       flags_(0),
       queue_(policy{}) {
   // nop
@@ -245,7 +241,7 @@ logger::logger(actor_system& sys)
 
 void logger::init(actor_system_config& cfg) {
   CAF_IGNORE_UNUSED(cfg);
-#if defined(CAF_LOG_LEVEL)
+#if CAF_LOG_LEVEL >= 0
   namespace lg = defaults::logger;
   component_filter = get_or(cfg, "logger.component-filter",
                             lg::component_filter);
@@ -434,7 +430,7 @@ const char* logger::skip_path(const char* path) {
 }
 
 void logger::run() {
-#if defined(CAF_LOG_LEVEL)
+#if CAF_LOG_LEVEL >= 0
   log_first_line();
   // receive log entries from other threads and actors
   bool stop = false;
@@ -523,7 +519,7 @@ void logger::log_last_line() {
 }
 
 void logger::start() {
-#if defined(CAF_LOG_LEVEL)
+#if CAF_LOG_LEVEL >= 0
   parent_thread_ = std::this_thread::get_id();
   if (level_ == CAF_LOG_LEVEL_QUIET)
     return;
@@ -573,7 +569,7 @@ void logger::start() {
 }
 
 void logger::stop() {
-#if defined(CAF_LOG_LEVEL)
+#if CAF_LOG_LEVEL >= 0
   if (has(inline_output_flag)) {
     log_last_line();
     return;

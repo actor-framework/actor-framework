@@ -88,7 +88,7 @@ CAF_TEST(parse_default_format_strings) {
   add(logger::message_field);
   add(logger::newline_field);
   CAF_CHECK_EQUAL(logger::parse_format(file_format), lf);
-#ifdef CAF_LOG_LEVEL
+#if CAF_LOG_LEVEL >= 0
   // Not parsed when compiling without logging enabled.
   CAF_CHECK_EQUAL(sys.logger().file_format(), lf);
 #endif
