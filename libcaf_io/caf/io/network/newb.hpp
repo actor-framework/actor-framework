@@ -24,8 +24,6 @@
 #include <cstring>
 #include <tuple>
 
-#include "caf/test/dsl.hpp"
-
 #include "caf/callback.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/call_cfun.hpp"
