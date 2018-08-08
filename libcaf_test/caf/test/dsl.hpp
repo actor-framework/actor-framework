@@ -567,7 +567,7 @@ public:
                                         caf::timespan{1000});
     // Make sure the current time isn't 0.
     sched.clock().current_time += std::chrono::hours(1);
-    credit_round_interval = cfg.streaming_credit_round_interval();
+    credit_round_interval = cfg.stream_credit_round_interval;
   }
 
   virtual ~test_coordinator_fixture() {

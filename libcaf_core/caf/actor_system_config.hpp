@@ -264,44 +264,21 @@ public:
   /// Credentials for connecting to the bootstrap node.
   std::string bootstrap_node;
 
-  // -- streaming parameters ---------------------------------------------------
+  // -- stream parameters ------------------------------------------------------
 
   /// @private
-  size_t streaming_desired_batch_complexity_us;
+  timespan stream_desired_batch_complexity;
 
   /// @private
-  size_t streaming_max_batch_delay_us;
+  timespan stream_max_batch_delay;
 
   /// @private
-  size_t streaming_credit_round_interval_us;
+  timespan stream_credit_round_interval;
 
   /// @private
-  size_t streaming_tick_duration_us() const noexcept;
+  timespan stream_tick_duration() const noexcept;
 
-  /// Returns the greatest common divisor of `streaming_max_batch_delay` and
-  /// `streaming_credit_round_interval`.
-  inline timespan streaming_tick_duration() const noexcept {
-    using us_t = std::chrono::microseconds;
-    return timespan{us_t{streaming_tick_duration_us()}};
-  }
-
-  /// Returns the desired timespan in a sink or stage for processing a single
-  /// batch.
-  inline timespan streaming_desired_batch_complexity() const noexcept {
-    using us_t = std::chrono::microseconds;
-    return timespan{us_t{streaming_desired_batch_complexity_us}};
-  }
-  /// Returns the maximum delay for sending underfull batches.
-  inline timespan streaming_max_batch_delay() const noexcept {
-    using us_t = std::chrono::microseconds;
-    return timespan{us_t{streaming_max_batch_delay_us}};
-  }
-
-  // Returns the desired timespan between two credit rounds.
-  inline timespan streaming_credit_round_interval() const noexcept {
-    using us_t = std::chrono::microseconds;
-    return timespan{us_t{streaming_credit_round_interval_us}};
-  }
+  timespan streaming_credit_round_interval() const noexcept CAF_DEPRECATED;
 
   // -- scheduling parameters --------------------------------------------------
 

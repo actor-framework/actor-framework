@@ -121,10 +121,9 @@ void stream_manager::advance() {
   CAF_LOG_TRACE("");
   // Try to emit more credit.
   if (!inbound_paths_.empty()) {
-    using std::chrono::microseconds;
     auto& cfg = self_->system().config();
-    microseconds bc{cfg.streaming_desired_batch_complexity_us};
-    microseconds interval{cfg.streaming_credit_round_interval_us};
+    auto bc = cfg.stream_desired_batch_complexity;
+    auto interval = cfg.stream_credit_round_interval;
     auto& mbox = self_->mailbox();
     auto& qs = get<2>(mbox.queue().queues()).queues();
     // Iterate all queues for inbound traffic.

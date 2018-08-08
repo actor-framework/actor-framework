@@ -19,6 +19,7 @@
 #include "caf/defaults.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
 #include <thread>
 
@@ -41,7 +42,7 @@ constexpr caf::timespan ms(ms_t::rep x) {
 namespace caf {
 namespace defaults {
 
-namespace streaming {
+namespace stream {
 
 const timespan desired_batch_complexity = us(50);
 const timespan max_batch_delay = ms(5);

@@ -58,9 +58,9 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   // (1) hard-coded defaults
-  streaming_desired_batch_complexity_us = 50;
-  streaming_max_batch_delay_us = 50000;
-  streaming_credit_round_interval_us = 100000;
+  stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
+  stream_max_batch_delay = defaults::stream::max_batch_delay;
+  stream_credit_round_interval = defaults::stream::credit_round_interval;
   namespace sr = defaults::scheduler;
   auto to_ms = [](timespan x) {
     return static_cast<size_t>(x.count() / 1000000);
@@ -101,13 +101,13 @@ actor_system_config::actor_system_config()
   .add<bool>("help,h?", "print help and exit")
   .add<bool>("long-help", "print all help options and exit")
   .add<bool>("dump-config", "print configuration in INI format and exit");
-  opt_group{custom_options_, "streaming"}
-  .add(streaming_desired_batch_complexity_us, "desired-batch-complexity-us",
+  opt_group{custom_options_, "stream"}
+  .add(stream_desired_batch_complexity, "desired-batch-complexity",
        "sets the desired timespan for a single batch")
-  .add(streaming_max_batch_delay_us, "max-batch-delay-us",
-       "sets the maximum delay for sending underfull batches in microseconds")
-  .add(streaming_credit_round_interval_us, "credit-round-interval-us",
-       "sets the length of credit intervals in microseconds");
+  .add(stream_max_batch_delay, "max-batch-delay",
+       "sets the maximum delay for sending underfull batches")
+  .add(stream_credit_round_interval, "credit-round-interval",
+       "sets the length of credit intervals");
   opt_group{custom_options_, "scheduler"}
   .add(scheduler_policy, "policy",
        "sets the scheduling policy to either 'stealing' (default) or 'sharing'")
@@ -393,9 +393,14 @@ actor_system_config& actor_system_config::set_impl(string_view name,
   return *this;
 }
 
-size_t actor_system_config::streaming_tick_duration_us() const noexcept {
-  return caf::detail::gcd(streaming_credit_round_interval_us,
-                          streaming_max_batch_delay_us);
+timespan actor_system_config::stream_tick_duration() const noexcept {
+  auto ns_count = caf::detail::gcd(stream_credit_round_interval.count(),
+                                   stream_max_batch_delay.count());
+  return timespan{ns_count};
+}
+
+timespan actor_system_config::streaming_credit_round_interval() const noexcept {
+  return stream_credit_round_interval;
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,

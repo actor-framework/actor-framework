@@ -213,7 +213,7 @@ TESTEE(doubler) {
 
 struct fixture : test_coordinator_fixture<> {
   void tick() {
-    advance_time(cfg.streaming_credit_round_interval());
+    advance_time(cfg.stream_credit_round_interval);
   }
 };
 

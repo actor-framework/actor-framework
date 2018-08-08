@@ -29,7 +29,7 @@
 namespace caf {
 namespace defaults {
 
-namespace streaming {
+namespace stream {
 
 extern const timespan desired_batch_complexity;
 extern const timespan max_batch_delay;

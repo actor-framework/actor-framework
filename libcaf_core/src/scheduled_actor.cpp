@@ -111,15 +111,17 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
 # endif // CAF_NO_EXCEPTIONS
       {
   auto& sys_cfg = home_system().config();
-  auto interval = sys_cfg.streaming_tick_duration_us();
-  CAF_ASSERT(interval != 0);
-  stream_ticks_.interval(std::chrono::microseconds(interval));
-  CAF_ASSERT(sys_cfg.streaming_max_batch_delay_us != 0);
-  max_batch_delay_ticks_ = sys_cfg.streaming_max_batch_delay_us / interval;
-  CAF_ASSERT(max_batch_delay_ticks_ != 0);
-  CAF_ASSERT(sys_cfg.streaming_credit_round_interval_us != 0);
-  credit_round_ticks_ = sys_cfg.streaming_credit_round_interval_us / interval;
-  CAF_ASSERT(credit_round_ticks_ != 0);
+  auto interval = sys_cfg.stream_tick_duration();
+  CAF_ASSERT(interval.count() > 0);
+  stream_ticks_.interval(interval);
+  CAF_ASSERT(sys_cfg.stream_max_batch_delay.count() > 0);
+  max_batch_delay_ticks_ = sys_cfg.stream_max_batch_delay.count()
+                           / interval.count();
+  CAF_ASSERT(max_batch_delay_ticks_ > 0);
+  CAF_ASSERT(sys_cfg.streaming_credit_round_interval_us > 0);
+  credit_round_ticks_ = sys_cfg.stream_credit_round_interval.count()
+                        / interval.count();
+  CAF_ASSERT(credit_round_ticks_ > 0);
   CAF_LOG_DEBUG(CAF_ARG(interval) << CAF_ARG(max_batch_delay_ticks_)
                 << CAF_ARG(credit_round_ticks_));
 }
@@ -1103,8 +1105,7 @@ scheduled_actor::advance_streams(actor_clock::time_point now) {
     CAF_LOG_DEBUG("new credit round");
     auto cycle = stream_ticks_.interval();
     cycle *= static_cast<decltype(cycle)::rep>(credit_round_ticks_);
-    auto bc_us = home_system().config().streaming_desired_batch_complexity_us;
-    auto bc = std::chrono::microseconds(bc_us);
+    auto bc = home_system().config().stream_desired_batch_complexity;
     auto& qs = get<2>(mailbox_.queue().queues()).queues();
     for (auto& kvp : qs) {
       auto inptr = kvp.second.policy().handler.get();
