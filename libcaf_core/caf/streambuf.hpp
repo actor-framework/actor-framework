@@ -34,6 +34,11 @@ namespace caf {
 /// The base class for all stream buffer implementations.
 template <class CharT = char, class Traits = std::char_traits<CharT>>
 class stream_buffer : public std::basic_streambuf<CharT, Traits> {
+public:
+  using base = std::basic_streambuf<CharT, Traits>;
+  using pos_type = typename base::pos_type;
+  using off_type = typename base::off_type;
+
 protected:
   /// The standard only defines pbump(int), which can overflow on 64-bit
   /// architectures. All stream buffer implementations should therefore use
@@ -70,6 +75,65 @@ protected:
   typename std::enable_if<sizeof(T) == 8>::type
   safe_gbump(std::streamsize n) {
     this->gbump(static_cast<int>(n));
+  }
+
+  pos_type default_seekoff(off_type off, std::ios_base::seekdir dir,
+                           std::ios_base::openmode which) {
+    auto new_off = pos_type(off_type(-1));
+    auto get = (which & std::ios_base::in) == std::ios_base::in;
+    auto put = (which & std::ios_base::out) == std::ios_base::out;
+    if (!(get || put))
+      return new_off; // nothing to do
+    if (get) {
+      switch (dir) {
+        default:
+          return pos_type(off_type(-1));
+        case std::ios_base::beg:
+          new_off = 0;
+          break;
+        case std::ios_base::cur:
+          new_off = this->gptr() - this->eback();
+          break;
+        case std::ios_base::end:
+          new_off = this->egptr() - this->eback();
+          break;
+      }
+      new_off += off;
+      this->setg(this->eback(), this->eback() + new_off, this->egptr());
+    }
+    if (put) {
+      switch (dir) {
+        default:
+          return pos_type(off_type(-1));
+        case std::ios_base::beg:
+          new_off = 0;
+          break;
+        case std::ios_base::cur:
+          new_off = this->pptr() - this->pbase();
+          break;
+        case std::ios_base::end:
+          new_off = this->egptr() - this->pbase();
+          break;
+      }
+      new_off += off;
+      this->setp(this->pbase(), this->epptr());
+      safe_pbump(new_off);
+    }
+    return new_off;
+  }
+
+  pos_type default_seekpos(pos_type pos, std::ios_base::openmode which) {
+    auto get = (which & std::ios_base::in) == std::ios_base::in;
+    auto put = (which & std::ios_base::out) == std::ios_base::out;
+    if (!(get || put))
+      return pos_type(off_type(-1)); // nothing to do
+    if (get)
+      this->setg(this->eback(), this->eback() + pos, this->egptr());
+    if (put) {
+      this->setp(this->pbase(), this->epptr());
+      safe_pbump(pos);
+    }
+    return pos;
   }
 };
 
@@ -142,63 +206,12 @@ protected:
   pos_type seekpos(pos_type pos,
                    std::ios_base::openmode which
                      = std::ios_base::in | std::ios_base::out) override {
-    auto get = (which & std::ios_base::in) == std::ios_base::in;
-    auto put = (which & std::ios_base::out) == std::ios_base::out;
-    if (!(get || put))
-      return pos_type(off_type(-1)); // nothing to do
-    if (get)
-      this->setg(this->eback(), this->eback() + pos, this->egptr());
-    if (put) {
-      this->setp(this->pbase(), this->epptr());
-      this->safe_pbump(pos);
-    }
-    return pos;
+    return this->default_seekpos(pos, which);
   }
 
-  pos_type seekoff(off_type off,
-                   std::ios_base::seekdir dir,
+  pos_type seekoff(off_type off, std::ios_base::seekdir dir,
                    std::ios_base::openmode which) override {
-    auto new_off = pos_type(off_type(-1));
-    auto get = (which & std::ios_base::in) == std::ios_base::in;
-    auto put = (which & std::ios_base::out) == std::ios_base::out;
-    if (!(get || put))
-      return new_off; // nothing to do
-    if (get) {
-      switch (dir) {
-        default:
-          return pos_type(off_type(-1));
-        case std::ios_base::beg:
-          new_off = 0;
-          break;
-        case std::ios_base::cur:
-          new_off = this->gptr() - this->eback();
-          break;
-        case std::ios_base::end:
-          new_off = this->egptr() - this->eback();
-          break;
-      }
-      new_off += off;
-      this->setg(this->eback(), this->eback() + new_off, this->egptr());
-    }
-    if (put) {
-      switch (dir) {
-        default:
-          return pos_type(off_type(-1));
-        case std::ios_base::beg:
-          new_off = 0;
-          break;
-        case std::ios_base::cur:
-          new_off = this->pptr() - this->pbase();
-          break;
-        case std::ios_base::end:
-          new_off = this->egptr() - this->pbase();
-          break;
-      }
-      new_off += off;
-      this->setp(this->pbase(), this->epptr());
-      this->safe_pbump(new_off);
-    }
-    return new_off;
+    return this->default_seekoff(off, dir, which);
   }
 
   // -- put area -------------------------------------------------------------
@@ -252,9 +265,11 @@ public:
     >::type
   >
   containerbuf(Container& c) : container_(c) {
-    this->setg(const_cast<char_type*>(c.data()),
-               const_cast<char_type*>(c.data()),
-               const_cast<char_type*>(c.data()) + c.size());
+    // We use a const_cast because C++11 doesn't provide a non-const data()
+    // overload. Using std::data(c) would be the right way to write this.
+    auto data = const_cast<char_type*>(c.data());
+    auto size = static_cast<std::streamsize>(c.size());
+    setbuf(data, size);
   }
 
   // See note in arraybuf(arraybuf&&).
@@ -279,13 +294,55 @@ public:
     return traits_type::to_int_type(*this->gptr());
   }
 
-  // Hides base-class implementation to simplify single-character insert.
+  // Hides base-class implementation to simplify single-character insert
+  // without a put area.
   int_type sputc(char_type c) {
     container_.push_back(c);
     return c;
   }
 
+  // Hides base-class implementation to simplify multi-character insert without
+  // a put area.
+  std::streamsize sputn(const char_type* s, std::streamsize n) {
+    return xsputn(s, n);
+  }
+
 protected:
+  // -- positioning ----------------------------------------------------------
+
+  base* setbuf(char_type* s, std::streamsize n) override {
+    this->setg(s, s, s + n);
+    return this;
+  }
+
+  pos_type seekpos(pos_type pos,
+                   std::ios_base::openmode which
+                     = std::ios_base::in | std::ios_base::out) override {
+    // We only have a get area, so no put area (= out) operations.
+    if ((which & std::ios_base::out) == std::ios_base::out)
+      return pos_type(off_type(-1));
+    return this->default_seekpos(pos, which);
+  }
+
+  pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+                   std::ios_base::openmode which) override {
+    // We only have a get area, so no put area (= out) operations.
+    if ((which & std::ios_base::out) == std::ios_base::out)
+      return pos_type(off_type(-1));
+    return this->default_seekoff(off, dir, which);
+  }
+
+  // Synchronizes the get area with the underlying buffer.
+  int sync() override {
+    // See note in ctor for const_cast
+    auto data = const_cast<char_type*>(container_.data());
+    auto size = static_cast<std::streamsize>(container_.size());
+    setbuf(data, size);
+    return 0;
+  }
+
+  // -- get area -------------------------------------------------------------
+
   // We can't get obtain more characters on underflow, so we only optimize
   // multi-character sequential reads.
   std::streamsize xsgetn(char_type* s, std::streamsize n) override {
@@ -296,6 +353,8 @@ protected:
     this->safe_gbump(actual);
     return actual;
   }
+
+  // -- put area -------------------------------------------------------------
 
   // Should never get called, because there is always space in the buffer.
   // (But just in case, it does the same thing as sputc.)

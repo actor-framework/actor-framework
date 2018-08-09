@@ -125,3 +125,25 @@ CAF_TEST(containerbuf) {
   CAF_CHECK_EQUAL(buf.size(), data.size());
   CAF_CHECK(std::equal(buf.begin(), buf.end(), data.begin() /*, data.end() */));
 }
+
+CAF_TEST(containerbuf_reset_get_area) {
+  std::string str{"foobar"};
+  std::vector<char> buf;
+  vectorbuf vb{buf};
+  // We can always write to the underlying buffer; no put area needed.
+  auto n = vb.sputn(str.data(), str.size());
+  CAF_REQUIRE_EQUAL(n, 6);
+  // Readjust the get area.
+  CAF_REQUIRE_EQUAL(buf.size(), 6u);
+  vb.pubsetbuf(buf.data() + 3, buf.size() - 3);
+  // Now read from a new get area into a buffer.
+  char bar[3];
+  n = vb.sgetn(bar, 3);
+  CAF_CHECK_EQUAL(n, 3);
+  CAF_CHECK_EQUAL(std::string(bar, 3), "bar");
+  // Synchronize the get area after having messed with the underlying buffer.
+  buf.resize(1);
+  CAF_CHECK_EQUAL(vb.pubsync(), 0);
+  CAF_CHECK_EQUAL(vb.sbumpc(), 'f');
+  CAF_CHECK_EQUAL(vb.in_avail(), 0);
+}
