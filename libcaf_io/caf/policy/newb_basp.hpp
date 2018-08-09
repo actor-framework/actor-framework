@@ -20,6 +20,8 @@
 
 #include "caf/actor.hpp"
 #include "caf/io/network/newb.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 
 namespace caf {
 namespace policy {
