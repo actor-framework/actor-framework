@@ -268,7 +268,8 @@ public:
     // We use a const_cast because C++11 doesn't provide a non-const data()
     // overload. Using std::data(c) would be the right way to write this.
     auto data = const_cast<char_type*>(c.data());
-    setbuf(data, static_cast<std::streamsize>(c.size()));
+    auto size = static_cast<std::streamsize>(c.size());
+    setbuf(data, size);
   }
 
   // See note in arraybuf(arraybuf&&).
@@ -329,6 +330,15 @@ protected:
     if ((which & std::ios_base::out) == std::ios_base::out)
       return pos_type(off_type(-1));
     return this->default_seekoff(off, dir, which);
+  }
+
+  // Synchronizes the get area with the underlying buffer.
+  int sync() override {
+    // See note in ctor for const_cast
+    auto data = const_cast<char_type*>(container_.data());
+    auto size = static_cast<std::streamsize>(container_.size());
+    setbuf(data, size);
+    return 0;
   }
 
   // -- get area -------------------------------------------------------------

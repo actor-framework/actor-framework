@@ -141,4 +141,9 @@ CAF_TEST(containerbuf_reset_get_area) {
   n = vb.sgetn(bar, 3);
   CAF_CHECK_EQUAL(n, 3);
   CAF_CHECK_EQUAL(std::string(bar, 3), "bar");
+  // Synchronize the get area after having messed with the underlying buffer.
+  buf.resize(1);
+  CAF_CHECK_EQUAL(vb.pubsync(), 0);
+  CAF_CHECK_EQUAL(vb.sbumpc(), 'f');
+  CAF_CHECK_EQUAL(vb.in_avail(), 0);
 }
