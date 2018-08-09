@@ -1,5 +1,6 @@
 #include "caf/io/network/newb.hpp"
 
+#include "caf/all.hpp"
 #include "caf/logger.hpp"
 
 #include "caf/binary_deserializer.hpp"

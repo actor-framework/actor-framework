@@ -1,10 +1,9 @@
-#include "caf/io/network/newb.hpp"
-
-#include "caf/logger.hpp"
-
+#include "caf/all.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/call_cfun.hpp"
+#include "caf/io/network/newb.hpp"
+#include "caf/logger.hpp"
 #include "caf/policy/newb_tcp.hpp"
 
 using namespace caf;
