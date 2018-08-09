@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <chrono>
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/error.hpp"
 #include "caf/io/network/newb.hpp"
 
