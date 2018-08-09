@@ -487,7 +487,7 @@ CAF_TEST(timeouts) {
   CAF_REQUIRE(!err);
   CAF_MESSAGE("trigger waiting timeouts");
   // Trigger timeout.
-  sched.dispatch();
+  sched.trigger_timeout();
   // Handle received message.
   exec_all();
   // Message handler will check if the expected message was received.
