@@ -91,7 +91,7 @@ const atom_value network_backend = atom("default");
 const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;
 const size_t cached_udp_buffers = 10;
-const size_t max_pending_msgs = 10;
+const size_t max_pending_messages = 10;
 
 } // namespace middleman
 
