@@ -44,7 +44,7 @@ constexpr size_t reliability_header_len = sizeof(id_type) +
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun, reliability_header& hdr) {
-  return fun(meta::type_name("reliability_header"), hdr.id);
+  return fun(meta::type_name("reliability_header"), hdr.id, hdr.is_ack);
 }
 
 // TODO: Currently must be first layer. This is simpler for retransmitting and
@@ -55,14 +55,14 @@ struct reliability {
   using message_type = typename Next::message_type;
   using result_type = typename Next::result_type;
   id_type id_write = 0;
-  std::chrono::milliseconds retransmit_to = std::chrono::milliseconds(100);
+  std::chrono::milliseconds retransmit_to = std::chrono::milliseconds(200);
   io::network::newb<message_type>* parent;
   Next next;
   std::unordered_map<id_type, io::network::byte_buffer> unacked;
 
   reliability(io::network::newb<message_type>* parent)
       : parent(parent),
-        next(parent) {
+        next(parent, false) {
     // nop
   }
 
@@ -78,7 +78,7 @@ struct reliability {
     } else {
       // Send ack.
       auto& buf = parent->wr_buf();
-      binary_serializer bs(parent->backend(), buf);
+      binary_serializer bs(&parent->backend(), buf);
       bs(reliability_header{hdr.id, true});
       parent->flush();
       // Handle packet.
@@ -97,8 +97,9 @@ struct reliability {
         // Retransmit the packet.
         auto& packet = unacked[retransmit_id];
         auto& buf = parent->wr_buf();
-        buf.insert(buf.back(), packet.front(), packet.back());
+        buf.insert(buf.begin(), packet.begin(), packet.end());
         parent->flush();
+        //parent->set_timeout(retransmit_to, reliability_atom::value, id_write);
       }
       return err;
     }
@@ -108,8 +109,7 @@ struct reliability {
   void write_header(io::network::byte_buffer& buf,
                     io::network::header_writer* hw) {
     binary_serializer bs(&parent->backend(), buf);
-    bs(reliability_header{id_write});
-    id_write += 1;
+    bs(reliability_header{id_write, false});
     next.write_header(buf, hw);
     return;
   }
@@ -120,7 +120,8 @@ struct reliability {
     // Set timeout for retransmission.
     parent->set_timeout(retransmit_to, reliability_atom::value, id_write);
     // Add to unacked.
-    unacked.emplace(id_write, {buf.begin() + hstart, buf.end()});
+    unacked.emplace(id_write,
+                    io::network::byte_buffer(buf.begin() + hstart, buf.end()));
     id_write += 1;
   }
 };
