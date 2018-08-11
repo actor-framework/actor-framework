@@ -320,7 +320,7 @@ public:
   bool middleman_detach_utility_actors CAF_DEPRECATED;
   bool middleman_detach_multiplexer CAF_DEPRECATED;
   size_t middleman_cached_udp_buffers CAF_DEPRECATED;
-  size_t middleman_max_pending_msgs CAF_DEPRECATED;
+  size_t middleman_max_pending_messages CAF_DEPRECATED;
 
   // -- OpenCL parameters ------------------------------------------------------
 

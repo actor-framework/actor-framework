@@ -67,8 +67,8 @@ basp_broker_state::basp_broker_state(broker* selfptr)
       instance(selfptr, *this),
       max_buffers(get_or(self->config(), "middleman.cached-udp-buffers",
                          defaults::middleman::cached_udp_buffers)),
-      max_pending_messages(get_or(self->config(), "middleman.max-pending-msgs",
-                                  defaults::middleman::max_pending_msgs)) {
+      max_pending_messages(get_or(self->config(), "middleman.max-pending-messages",
+                                  defaults::middleman::max_pending_messages)) {
   CAF_ASSERT(this_node() != none);
 }
 

@@ -99,7 +99,7 @@ actor_system_config::actor_system_config()
   middleman_detach_utility_actors = true;
   middleman_detach_multiplexer = true;
   middleman_cached_udp_buffers = mm::cached_udp_buffers;
-  middleman_max_pending_msgs = mm::max_pending_msgs;
+  middleman_max_pending_messages = mm::max_pending_messages;
   // fill our options vector for creating INI and CLI parsers
   opt_group{custom_options_, "global"}
   .add<bool>("help,h?", "print help and exit")
@@ -183,7 +183,7 @@ actor_system_config::actor_system_config()
            "disables background activity of the multiplexer")
   .add(middleman_cached_udp_buffers, "cached-udp-buffers",
        "sets the maximum for cached UDP send buffers (default: 10)")
-  .add(middleman_max_pending_msgs, "max-pending-messages",
+  .add(middleman_max_pending_messages, "max-pending-messages",
        "sets the maximum for reordering of UDP receive buffers (default: 10)")
   .add<bool>("disable-tcp", "disables communication via TCP")
   .add<bool>("enable-udp", "enable communication via UDP");
