@@ -380,7 +380,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     return {this, protocol.get(), &buf, hstart, hlen};
   }
 
-  byte_buffer wr_buf() {
+  byte_buffer& wr_buf() {
     return transport->wr_buf();
   }
 
