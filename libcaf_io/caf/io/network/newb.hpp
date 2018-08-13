@@ -357,7 +357,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     CAF_LOG_TRACE("");
     intrusive_ptr_add_ref(super::ctrl());
     CAF_LOG_DEBUG("starting newb");
-    activate();
+    event_handler::activate();
     if (transport)
       transport->prepare_next_read(this);
   }
