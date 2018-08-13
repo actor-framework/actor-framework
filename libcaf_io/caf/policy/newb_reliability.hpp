@@ -55,7 +55,8 @@ struct reliability {
   using message_type = typename Next::message_type;
   using result_type = typename Next::result_type;
   id_type id_write = 0;
-  std::chrono::milliseconds retransmit_to = std::chrono::milliseconds(200);
+  // TODO: Make this configurable.
+  std::chrono::milliseconds retransmit_to = std::chrono::milliseconds(100);
   io::network::newb<message_type>* parent;
   Next next;
   std::unordered_map<id_type, io::network::byte_buffer> unacked;
@@ -92,16 +93,15 @@ struct reliability {
   error timeout(atom_value atm, uint32_t id) {
     if (atm == reliability_atom::value) {
       id_type retransmit_id = static_cast<id_type>(id);
-      error err = none;
       if (unacked.count(retransmit_id) > 0) {
         // Retransmit the packet.
         auto& packet = unacked[retransmit_id];
         auto& buf = parent->wr_buf();
         buf.insert(buf.begin(), packet.begin(), packet.end());
         parent->flush();
-        //parent->set_timeout(retransmit_to, reliability_atom::value, id_write);
+        parent->set_timeout(retransmit_to, reliability_atom::value, retransmit_id);
       }
-      return err;
+      return none;
     }
     return next.timeout(atm, id);
   }
