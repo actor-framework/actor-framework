@@ -244,7 +244,7 @@ void read_ipv6_address(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   // Stops parsing after reading "::" (all-zero address) or proceeds with
   // reading the suffix.
   term_state(has_sep) {
-    epsilon(rd_suffix)
+    epsilon(rd_suffix, hexadecimal_chars)
   }
   // Read part of the prefix, i.e., everything before "::".
   state(rd_prefix) {
