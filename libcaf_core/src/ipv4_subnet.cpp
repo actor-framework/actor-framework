@@ -18,6 +18,8 @@
 
 #include "caf/ipv4_subnet.hpp"
 
+#include "caf/detail/mask_bits.hpp"
+
 namespace caf {
 
 // -- constructors, destructors, and assignment operators --------------------
@@ -29,7 +31,7 @@ ipv4_subnet::ipv4_subnet() : prefix_length_(0) {
 ipv4_subnet::ipv4_subnet(ipv4_address network_address, uint8_t prefix_length)
     : address_(network_address),
       prefix_length_(prefix_length) {
-  // nop
+  detail::mask_bits(address_.bytes(), prefix_length_);
 }
 
 // -- properties ---------------------------------------------------------------

@@ -39,6 +39,16 @@ CAF_TEST(constructing) {
   CAF_CHECK_EQUAL(zero.prefix_length(), 128u);
 }
 
+CAF_TEST(equality) {
+  auto a = ipv6_address{{0xffff, 0xffff, 0xffff}, {}} / 27;
+  auto b = ipv6_address{{0xffff, 0xffff, 0xabab}, {}} / 27;
+  auto net = ipv6_address{{0xffff, 0xffe0}, {}};
+  CAF_CHECK_EQUAL(a.network_address(), net);
+  CAF_CHECK_EQUAL(a.network_address(), b.network_address());
+  CAF_CHECK_EQUAL(a.prefix_length(), b.prefix_length());
+  CAF_CHECK_EQUAL(a, b);
+}
+
 CAF_TEST(constains) {
   auto local = ipv6_address{{0xbebe, 0xbebe}, {}} / 32;
   CAF_CHECK(local.contains(ipv6_address({0xbebe, 0xbebe, 0xbebe}, {})));
