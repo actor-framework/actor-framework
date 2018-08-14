@@ -81,12 +81,24 @@ public:
 
   int compare(const ipv6_subnet& other) const noexcept;
 
+  // -- inspection -------------------------------------------------------------
+
+  template <class Inspector>
+  friend typename Inspector::result_type inspect(Inspector& f, ipv6_subnet& x) {
+    return f(x.address_, x.prefix_length_);
+  }
+
 private:
   // -- member variables -------------------------------------------------------
 
   ipv6_address address_;
   uint8_t prefix_length_;
 };
+
+// -- related free functions ---------------------------------------------------
+
+/// @relates ipv6_subnet
+std::string to_string(ipv6_subnet x);
 
 } // namespace caf
 

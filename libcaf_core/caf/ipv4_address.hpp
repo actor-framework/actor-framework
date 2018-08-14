@@ -46,6 +46,12 @@ public:
 
   explicit ipv4_address(array_type bytes);
 
+  static ipv4_address from_bits(uint32_t bits) {
+    ipv4_address result;
+    result.bits(bits);
+    return result;
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Returns whether this is a loopback address.

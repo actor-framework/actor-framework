@@ -62,4 +62,9 @@ private:
   uint8_t prefix_length_;
 };
 
+// -- related free functions ---------------------------------------------------
+
+/// @relates ipv4_subnet
+std::string to_string(ipv4_subnet x);
+
 } // namespace caf

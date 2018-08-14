@@ -84,5 +84,12 @@ int ipv6_subnet::compare(const ipv6_subnet& other) const noexcept {
                       : static_cast<int>(prefix_length_) - other.prefix_length_;
 }
 
+std::string to_string(ipv6_subnet x) {
+  auto result = to_string(x.network_address());
+  result += '/';
+  result += std::to_string(x.prefix_length());
+  return result;
+}
+
 } // namespace caf
 

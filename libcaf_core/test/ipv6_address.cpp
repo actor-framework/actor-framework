@@ -69,6 +69,8 @@ CAF_TEST(from string) {
   CAF_CHECK_EQUAL(from_string("::1:2"), addr({}, {0x01, 0x02}));
   CAF_CHECK_EQUAL(from_string("::1:2"), addr({}, {0x01, 0x02}));
   CAF_CHECK_EQUAL(from_string("1::1"), addr({0x01}, {0x01}));
+  CAF_CHECK_EQUAL(from_string("2a00:bdc0:e003::"),
+                  addr({0x2a00, 0xbdc0, 0xe003}, {}));
   CAF_CHECK_EQUAL(from_string("1::"), addr({0x01}, {}));
   CAF_CHECK_EQUAL(from_string("0.1.0.1"), addr({}, {0xFFFF, 0x01, 0x01}));
   CAF_CHECK_EQUAL(from_string("::ffff:127.0.0.1"),
