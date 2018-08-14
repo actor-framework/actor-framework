@@ -31,7 +31,11 @@ public:
 
   ipv4_subnet();
 
+  ipv4_subnet(const ipv4_subnet&) = default;
+
   ipv4_subnet(ipv4_address network_address, uint8_t prefix_length);
+
+  ipv4_subnet& operator=(const ipv4_subnet&) = default;
 
   // -- properties -------------------------------------------------------------
 

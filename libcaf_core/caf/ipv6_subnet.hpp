@@ -40,11 +40,15 @@ public:
 
   ipv6_subnet();
 
+  ipv6_subnet(const ipv6_subnet&) = default;
+
   explicit ipv6_subnet(ipv4_subnet subnet);
 
   ipv6_subnet(ipv4_address network_address, uint8_t prefix_length);
 
   ipv6_subnet(ipv6_address network_address, uint8_t prefix_length);
+
+  ipv6_subnet& operator=(const ipv6_subnet&) = default;
 
   // -- properties -------------------------------------------------------------
 
