@@ -33,15 +33,14 @@ inline uint32_t net_order(uint32_t value) {
 }
 
 struct ipv4_address_consumer {
-  size_t pos;
   ipv4_address& dest;
 
-  ipv4_address_consumer(ipv4_address& ref) : pos(0), dest(ref) {
+  ipv4_address_consumer(ipv4_address& ref) : dest(ref) {
     // nop
   }
 
-  void value(uint8_t octet) {
-    dest[pos++] = octet;
+  void value(ipv4_address val) {
+    dest = val;
   }
 };
 

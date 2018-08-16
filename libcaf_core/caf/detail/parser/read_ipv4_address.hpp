@@ -21,13 +21,14 @@
 #include <cstdint>
 
 #include "caf/config.hpp"
-#include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
+#include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/is_digit.hpp"
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/ipv4_address.hpp"
 #include "caf/pec.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
@@ -37,6 +38,15 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 namespace caf {
 namespace detail {
 namespace parser {
+
+struct read_ipv4_octet_consumer {
+  std::array<uint8_t, 4> bytes;
+  int octets = 0;
+
+  inline void value(uint8_t octet) {
+    bytes[octets++] = octet;
+  }
+};
 
 template <class Iterator, class Sentinel, class Consumer>
 void read_ipv4_octet(state<Iterator, Sentinel>& ps, Consumer& consumer) {
@@ -64,18 +74,23 @@ void read_ipv4_octet(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 /// `double`.
 template <class Iterator, class Sentinel, class Consumer>
 void read_ipv4_address(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  int octets = 0;
+  read_ipv4_octet_consumer f;
+  auto g = make_scope_guard([&] {
+    if (ps.code <= pec::trailing_character) {
+      ipv4_address result{f.bytes};
+      consumer.value(result);
+    }
+  });
   start();
   state(init) {
-    fsm_epsilon(read_ipv4_octet(ps, consumer), rd_dot, decimal_chars, ++octets)
+    fsm_epsilon(read_ipv4_octet(ps, f), rd_dot, decimal_chars)
   }
   state(rd_dot) {
     transition(rd_oct, '.')
   }
   state(rd_oct) {
-    fsm_epsilon_if(octets < 3, read_ipv4_octet(ps, consumer), rd_dot,
-                   decimal_chars, ++octets)
-    fsm_epsilon_if(octets == 3, read_ipv4_octet(ps, consumer), done)
+    fsm_epsilon_if(f.octets < 3, read_ipv4_octet(ps, f), rd_dot, decimal_chars)
+    fsm_epsilon_if(f.octets == 3, read_ipv4_octet(ps, f), done)
   }
   term_state(done) {
     // nop
