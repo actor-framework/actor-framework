@@ -60,7 +60,7 @@ public:
   ipv4_subnet embedded_v4() const noexcept;
 
   /// Returns the network address for this subnet.
-  inline ipv6_address network_address() const noexcept {
+  inline const ipv6_address& network_address() const noexcept {
     return address_;
   }
 

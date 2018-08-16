@@ -40,7 +40,7 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the network address for this subnet.
-  inline ipv4_address network_address() const noexcept {
+  inline const ipv4_address& network_address() const noexcept {
     return address_;
   }
 
