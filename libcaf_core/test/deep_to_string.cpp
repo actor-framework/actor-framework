@@ -24,10 +24,24 @@
 
 using namespace caf;
 
+namespace {
+
+void foobar() {
+  // nop
+}
+
+} // namespace <anonymous>
+
 CAF_TEST(timespans) {
   CAF_CHECK_EQUAL(deep_to_string(timespan{1}), "1ns");
   CAF_CHECK_EQUAL(deep_to_string(timespan{1000}), "1us");
   CAF_CHECK_EQUAL(deep_to_string(timespan{1000000}), "1ms");
   CAF_CHECK_EQUAL(deep_to_string(timespan{1000000000}), "1s");
   CAF_CHECK_EQUAL(deep_to_string(timespan{60000000000}), "1min");
+}
+
+CAF_TEST(pointers) {
+  auto i = 42;
+  CAF_CHECK_EQUAL(deep_to_string(&i), "*42");
+  CAF_CHECK_EQUAL(deep_to_string(foobar), "<fun>");
 }

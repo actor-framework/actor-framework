@@ -19,7 +19,6 @@
 #pragma once
 
 #include <chrono>
-#include <functional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -64,7 +63,7 @@ public:
 
   template <class... Ts>
   void operator()(Ts&&... xs) {
-    traverse(std::forward<Ts>(xs)...);
+    traverse(xs...);
   }
 
   /// Prints a separator to the result string.
@@ -201,9 +200,8 @@ public:
   }
 
   template <class T>
-  enable_if_t<std::is_pointer<T>::value
-              && !std::is_same<decay_t<T>, void>::value>
-  consume(T ptr) {
+  enable_if_t<!std::is_same<decay_t<T>, void>::value>
+  consume(T*& ptr) {
     if (ptr) {
       result_ += '*';
       consume(*ptr);
@@ -275,55 +273,65 @@ public:
   }
 
   template <class T, class... Ts>
-  void traverse(meta::hex_formatted_t, T& x, Ts&&... xs) {
+  void traverse(const meta::hex_formatted_t&, const T& x, const Ts&... xs) {
     sep();
     append_hex(result_, reinterpret_cast<uint8_t*>(deconst(x).data()),
                x.size());
-    traverse(std::forward<Ts>(xs)...);
+    traverse(xs...);
   }
 
   template <class T, class... Ts>
-  void traverse(meta::omittable_if_none_t, T& x, Ts&&... xs) {
+  void traverse(const meta::omittable_if_none_t&, const T& x, const Ts&... xs) {
     if (x != none) {
       sep();
       consume(x);
     }
-    traverse(std::forward<Ts>(xs)...);
+    traverse(xs...);
   }
 
   template <class T, class... Ts>
-  void traverse(meta::omittable_if_empty_t, T& x, Ts&&... xs) {
+  void traverse(const meta::omittable_if_empty_t&, const T& x,
+                const Ts&... xs) {
     if (!x.empty()) {
       sep();
       consume(x);
     }
-    traverse(std::forward<Ts>(xs)...);
+    traverse(xs...);
   }
 
   template <class T, class... Ts>
-  void traverse(meta::omittable_t, T&, Ts&&... xs) {
-    traverse(std::forward<Ts>(xs)...);
+  void traverse(const meta::omittable_t&, const T&, const Ts&... xs) {
+    traverse(xs...);
   }
 
   template <class... Ts>
-  void traverse(meta::type_name_t x, Ts&&... xs) {
+  void traverse(const meta::type_name_t& x, const Ts&... xs) {
     sep();
     result_ += x.value;
     result_ += '(';
-    traverse(std::forward<Ts>(xs)...);
+    traverse(xs...);
     result_ += ')';
   }
 
   template <class... Ts>
-  void traverse(const meta::annotation&, Ts&&... xs) {
-    traverse(std::forward<Ts>(xs)...);
+  void traverse(const meta::annotation&, const Ts&... xs) {
+    traverse(xs...);
   }
 
   template <class T, class... Ts>
-  enable_if_t<!meta::is_annotation<T>::value> traverse(T&& x, Ts&&... xs) {
+  enable_if_t<!meta::is_annotation<T>::value && !is_callable<T>::value>
+  traverse(const T& x, const Ts&... xs) {
     sep();
     consume(deconst(x));
-    traverse(std::forward<Ts>(xs)...);
+    traverse(xs...);
+  }
+
+  template <class T, class... Ts>
+  enable_if_t<!meta::is_annotation<T>::value && is_callable<T>::value>
+  traverse(const T&, const Ts&... xs) {
+    sep();
+    result_ += "<fun>";
+    traverse(xs...);
   }
 
 private:
