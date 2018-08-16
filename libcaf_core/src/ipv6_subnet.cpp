@@ -87,6 +87,8 @@ int ipv6_subnet::compare(const ipv6_subnet& other) const noexcept {
 }
 
 std::string to_string(ipv6_subnet x) {
+  if (x.embeds_v4())
+    return to_string(x.embedded_v4());
   auto result = to_string(x.network_address());
   result += '/';
   result += std::to_string(x.prefix_length());
