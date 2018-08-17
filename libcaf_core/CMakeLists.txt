@@ -95,6 +95,7 @@ set(LIBCAF_CORE_SRCS
   src/response_promise.cpp
   src/resumable.cpp
   src/ripemd_160.cpp
+  src/runtime_settings_map.cpp
   src/scheduled_actor.cpp
   src/scoped_actor.cpp
   src/scoped_execution_unit.cpp
