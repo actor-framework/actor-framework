@@ -27,26 +27,26 @@
 #include <functional>
 #include <condition_variable>
 
-#include "caf/fwd.hpp"
-#include "caf/logger.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/make_actor.hpp"
-#include "caf/actor_clock.hpp"
-#include "caf/infer_handle.hpp"
-#include "caf/actor_config.hpp"
-#include "caf/spawn_options.hpp"
-#include "caf/group_manager.hpp"
-#include "caf/is_typed_actor.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_clock.hpp"
+#include "caf/actor_config.hpp"
 #include "caf/actor_registry.hpp"
-#include "caf/string_algorithms.hpp"
-#include "caf/scoped_execution_unit.hpp"
-#include "caf/uniform_type_info_map.hpp"
 #include "caf/composable_behavior_based_actor.hpp"
-#include "caf/prohibit_top_level_spawn_marker.hpp"
-
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/spawn_fwd.hpp"
+#include "caf/fwd.hpp"
+#include "caf/group_manager.hpp"
+#include "caf/infer_handle.hpp"
+#include "caf/is_typed_actor.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_actor.hpp"
+#include "caf/prohibit_top_level_spawn_marker.hpp"
+#include "caf/runtime_settings_map.hpp"
+#include "caf/scoped_execution_unit.hpp"
+#include "caf/spawn_options.hpp"
+#include "caf/string_algorithms.hpp"
+#include "caf/uniform_type_info_map.hpp"
 
 namespace caf {
 
@@ -137,13 +137,13 @@ public:
   }
 
   /// Returns the internal actor for dynamic spawn operations.
-  inline const strong_actor_ptr& spawn_serv() const {
+  const strong_actor_ptr& spawn_serv() const {
     return internal_actors_[internal_actor_id(atom("SpawnServ"))];
   }
 
   /// Returns the internal actor for storing the runtime configuration
   /// for this actor system.
-  inline const strong_actor_ptr& config_serv() const {
+  const strong_actor_ptr& config_serv() const {
     return internal_actors_[internal_actor_id(atom("ConfigServ"))];
   }
 
@@ -226,7 +226,7 @@ public:
   /// Returns whether actor handles described by `xs`
   /// can be assigned to actor handles described by `ys`.
   /// @experimental
-  inline bool assignable(const mpi& xs, const mpi& ys) const {
+  bool assignable(const mpi& xs, const mpi& ys) const {
     if (ys.empty())
       return xs.empty();
     if (xs.size() == ys.size())
@@ -464,23 +464,33 @@ public:
 
   /// Returns whether this actor system calls `await_all_actors_done`
   /// in its destructor before shutting down.
-  inline bool await_actors_before_shutdown() const {
+  bool await_actors_before_shutdown() const {
     return await_actors_before_shutdown_;
   }
 
   /// Configures whether this actor system calls `await_all_actors_done`
   /// in its destructor before shutting down.
-  inline void await_actors_before_shutdown(bool x) {
+  void await_actors_before_shutdown(bool x) {
     await_actors_before_shutdown_ = x;
   }
 
   /// Returns the configuration of this actor system.
-  inline const actor_system_config& config() const {
+  const actor_system_config& config() const {
     return cfg_;
   }
 
   /// Returns the system-wide clock.
   actor_clock& clock() noexcept;
+
+  /// Returns application-specific, system-wide runtime settings.
+  runtime_settings_map& runtime_settings() {
+    return settings_;
+  }
+
+  /// Returns application-specific, system-wide runtime settings.
+  const runtime_settings_map& runtime_settings() const {
+    return settings_;
+  }
 
   /// @cond PRIVATE
 
@@ -538,33 +548,71 @@ private:
                                             optional<const mpi&> expected_ifs);
 
   /// Sets the internal actor for dynamic spawn operations.
-  inline void spawn_serv(strong_actor_ptr x) {
+  void spawn_serv(strong_actor_ptr x) {
     internal_actors_[internal_actor_id(atom("SpawnServ"))] = std::move(x);
   }
 
   /// Sets the internal actor for storing the runtime configuration.
-  inline void config_serv(strong_actor_ptr x) {
+  void config_serv(strong_actor_ptr x) {
     internal_actors_[internal_actor_id(atom("ConfigServ"))] = std::move(x);
   }
 
+  // -- member variables -------------------------------------------------------
+
+  /// Used to generate ascending actor IDs.
   std::atomic<size_t> ids_;
+
+  /// Stores runtime type information for builtin and user-defined types.
   uniform_type_info_map types_;
+
+  /// Identifies this actor system in a distributed setting.
   node_id node_;
+
+  /// Manages log output.
   intrusive_ptr<caf::logger> logger_;
+
+  /// Maps well-known actor names to actor handles.
   actor_registry registry_;
+
+  /// Maps well-known group names to group handles.
   group_manager groups_;
+
+  /// Stores optional actor system components.
   module_array modules_;
+
+  /// Provides pseudo scheduling context to actors.
   scoped_execution_unit dummy_execution_unit_;
+
+  /// Stores whether the system should wait for running actors on shutdown.
   bool await_actors_before_shutdown_;
-  // Stores SpawnServ, ConfigServ, and StreamServ
+
+  /// Stores SpawnServ, ConfigServ, and StreamServ.
   std::array<strong_actor_ptr, num_internal_actors> internal_actors_;
+
+  /// Counts the number of detached actors.
   std::atomic<size_t> detached;
+
+  /// Guards `detached`.
   mutable std::mutex detached_mtx;
+
+  /// Allows waiting on specific values for `detached`.
   mutable std::condition_variable detached_cv;
+
+  /// The system-wide, user-provided configuration.
   actor_system_config& cfg_;
-  std::mutex logger_dtor_mtx_;
-  std::condition_variable logger_dtor_cv_;
-  volatile bool logger_dtor_done_;
+
+  /// Stores whether the logger has run its destructor and stopped any thread,
+  /// file handle, etc.
+  std::atomic<bool> logger_dtor_done_;
+
+  /// Guards `logger_dtor_done_`.
+  mutable std::mutex logger_dtor_mtx_;
+
+  /// Allows waiting on specific values for `logger_dtor_done_`.
+  mutable std::condition_variable logger_dtor_cv_;
+
+  /// Stores custom, system-wide key-value pairs.
+  runtime_settings_map settings_;
 };
 
 } // namespace caf
