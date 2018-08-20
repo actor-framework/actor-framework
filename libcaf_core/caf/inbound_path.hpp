@@ -67,10 +67,6 @@ public:
   /// ID of the last received batch.
   int64_t last_batch_id;
 
-  /// Stores whether an error occurred during stream processing. Configures
-  /// whether the destructor sends `close` or `forced_close` messages.
-  error shutdown_reason;
-
   /// Amount of credit we assign sources after receiving `open`.
   static constexpr int initial_credit = 50;
 
