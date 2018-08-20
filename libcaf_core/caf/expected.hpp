@@ -21,7 +21,6 @@
 #include "caf/config.hpp"
 
 #include <new>
-#include <memory>
 #include <ostream>
 #include <type_traits>
 
