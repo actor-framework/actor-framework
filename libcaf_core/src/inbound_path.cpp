@@ -150,8 +150,11 @@ void inbound_path::emit_regular_shutdown(local_actor* self) {
 
 void inbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(reason));
-  unsafe_send_as(self, hdl,
-                 make<upstream_msg::forced_drop>(
+  /// Note that we always send abort messages anonymous. They can get send
+  /// after `self` already terminated and we must not form strong references
+  /// after that point. Since upstream messages contain the sender address
+  /// anyway, we only omit redundant information anyways.
+  anon_send(hdl, make<upstream_msg::forced_drop>(
                    slots.invert(), self->address(), std::move(reason)));
 }
 
@@ -159,8 +162,9 @@ void inbound_path::emit_irregular_shutdown(local_actor* self,
                                            stream_slots slots,
                                            const strong_actor_ptr& hdl,
                                            error reason) {
-  unsafe_send_as(self, hdl,
-                 make<upstream_msg::forced_drop>(
+  /// Note that we always send abort messages anonymous. See reasoning in first
+  /// function overload.
+  anon_send(hdl, make<upstream_msg::forced_drop>(
                    slots.invert(), self->address(), std::move(reason)));
 }
 
