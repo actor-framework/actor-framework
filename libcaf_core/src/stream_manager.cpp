@@ -55,7 +55,11 @@ void stream_manager::handle(inbound_path*, downstream_msg::close&) {
   // nop
 }
 
-void stream_manager::handle(inbound_path*, downstream_msg::forced_close& x) {
+void stream_manager::handle(inbound_path* in, downstream_msg::forced_close& x) {
+  CAF_ASSERT(in != nullptr);
+  CAF_LOG_TRACE(CAF_ARG2("slots", in->slots) << CAF_ARG(x));
+  // Reset the actor handle to make sure no further message travels upstream.
+  in->hdl = nullptr;
   abort(std::move(x.reason));
 }
 
