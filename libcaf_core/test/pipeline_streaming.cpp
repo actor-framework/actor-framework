@@ -272,7 +272,7 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   disallow((upstream_msg::ack_open), from(snk).to(src));
-  disallow((upstream_msg::forced_drop), from(snk).to(src));
+  disallow((upstream_msg::forced_drop), from(_).to(src));
   CAF_MESSAGE("send 'ok' to trigger sink to handle open_stream_msg");
   self->send(snk, ok_atom::value);
   expect((ok_atom), from(self).to(snk));
@@ -324,7 +324,7 @@ CAF_TEST(depth_2_pipeline_error_during_handshake) {
   self->send(snk * src, "numbers.txt");
   expect((std::string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
-  expect((upstream_msg::forced_drop), from(snk).to(src));
+  expect((upstream_msg::forced_drop), from(_).to(src));
   expect((error), from(snk).to(self).with(sec::stream_init_failed));
 }
 
@@ -343,7 +343,7 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
   expect((downstream_msg::batch), from(src).to(snk));
   expect((exit_msg), from(self).to(src));
   CAF_MESSAGE("expect close message from src and then result from snk");
-  expect((downstream_msg::forced_close), from(src).to(snk));
+  expect((downstream_msg::forced_close), from(_).to(snk));
 }
 
 CAF_TEST(depth_2_pipelin_error_at_sink) {
@@ -360,7 +360,7 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
   expect((upstream_msg::ack_open), from(snk).to(src));
   expect((exit_msg), from(self).to(snk));
   CAF_MESSAGE("expect close and result messages from snk");
-  expect((upstream_msg::forced_drop), from(snk).to(src));
+  expect((upstream_msg::forced_drop), from(_).to(src));
 }
 
 CAF_TEST(depth_3_pipeline_50_items) {
