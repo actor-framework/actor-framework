@@ -154,8 +154,9 @@ void inbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
   /// after `self` already terminated and we must not form strong references
   /// after that point. Since upstream messages contain the sender address
   /// anyway, we only omit redundant information anyways.
-  anon_send(hdl, make<upstream_msg::forced_drop>(
-                   slots.invert(), self->address(), std::move(reason)));
+  anon_send(actor_cast<actor>(hdl),
+            make<upstream_msg::forced_drop>(slots.invert(), self->address(),
+                                            std::move(reason)));
 }
 
 void inbound_path::emit_irregular_shutdown(local_actor* self,
@@ -164,8 +165,8 @@ void inbound_path::emit_irregular_shutdown(local_actor* self,
                                            error reason) {
   /// Note that we always send abort messages anonymous. See reasoning in first
   /// function overload.
-  anon_send(hdl, make<upstream_msg::forced_drop>(
-                   slots.invert(), self->address(), std::move(reason)));
+  anon_send(actor_cast<actor>(hdl),
+            make<upstream_msg::forced_drop>(slots.invert(), self->address(),
+                                            std::move(reason)));
 }
-
 } // namespace caf

@@ -106,15 +106,6 @@ void anon_send(const Dest& dest, Ts&&... xs) {
                   std::forward<Ts>(xs)...);
 }
 
-/// Anonymously sends `dest` a message.
-template <message_priority P = message_priority::normal, class... Ts>
-void anon_send(const strong_actor_ptr& dest, Ts&&... xs) {
-  static_assert(sizeof...(Ts) > 0, "no message to send");
-  if (dest)
-    dest->get()->eq_impl(make_message_id(P), nullptr, nullptr,
-                         std::forward<Ts>(xs)...);
-}
-
 /// Anonymously sends `dest` an exit message.
 template <class Dest>
 void anon_send_exit(const Dest& dest, exit_reason reason) {
