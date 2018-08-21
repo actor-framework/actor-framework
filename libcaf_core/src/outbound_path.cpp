@@ -78,9 +78,13 @@ void outbound_path::emit_regular_shutdown(local_actor* self) {
 
 void outbound_path::emit_irregular_shutdown(local_actor* self, error reason) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(reason));
-  unsafe_send_as(self, hdl,
-                 make<downstream_msg::forced_close>(slots, self->address(),
-                                                    std::move(reason)));
+  /// Note that we always send abort messages anonymous. They can get send
+  /// after `self` already terminated and we must not form strong references
+  /// after that point. Since downstream messages contain the sender address
+  /// anyway, we only omit redundant information.
+  anon_send(actor_cast<actor>(hdl),
+            make<downstream_msg::forced_close>(slots, self->address(),
+                                               std::move(reason)));
 }
 
 void outbound_path::emit_irregular_shutdown(local_actor* self,
@@ -88,9 +92,11 @@ void outbound_path::emit_irregular_shutdown(local_actor* self,
                                             const strong_actor_ptr& hdl,
                                             error reason) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(hdl) << CAF_ARG(reason));
-  unsafe_send_as(self, hdl,
-                 make<downstream_msg::forced_close>(slots, self->address(),
-                                                    std::move(reason)));
+  /// Note that we always send abort messages anonymous. See reasoning in first
+  /// function overload.
+  anon_send(actor_cast<actor>(hdl),
+            make<downstream_msg::forced_close>(slots, self->address(),
+                                               std::move(reason)));
 }
 
 } // namespace caf
