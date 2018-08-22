@@ -118,11 +118,11 @@ meta_state ms_res_meta{
 
 namespace detail {
 
-DEFAULT_META(atom_value);
+DEFAULT_META(atom_value)
 
-DEFAULT_META(size_t);
+DEFAULT_META(size_t)
 
-DEFAULT_META(string);
+DEFAULT_META(string)
 
 config_option::meta_state bool_meta_state{
   bool_check, bool_store, bool_get, detail::type_name<bool>()

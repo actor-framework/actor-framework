@@ -212,7 +212,7 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
   if (!callee_.deliver_pending(ctx, ep, false))
     return err();
   return true;
-};
+}
 
 void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");
