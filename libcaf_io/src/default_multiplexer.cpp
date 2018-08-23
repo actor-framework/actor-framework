@@ -712,7 +712,7 @@ default_multiplexer::new_datagram_servant_for_endpoint(native_socket fd,
   auto ds = new_datagram_servant(fd);
   ds->add_endpoint(ep, ds->hdl());
   return ds;
-};
+}
 
 expected<datagram_servant_ptr>
 default_multiplexer::new_remote_udp_endpoint(const std::string& host,

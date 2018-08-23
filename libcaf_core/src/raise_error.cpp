@@ -24,6 +24,7 @@ namespace caf {
 namespace detail {
 
 void log_cstring_error(const char* cstring) {
+  CAF_IGNORE_UNUSED(cstring);
   CAF_LOG_ERROR(cstring);
 }
 
