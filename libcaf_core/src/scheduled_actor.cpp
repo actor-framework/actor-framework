@@ -90,6 +90,12 @@ void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
     default_error_handler(ptr, x.reason);
 }
 
+void scheduled_actor::default_timeout_handler(scheduled_actor* ptr,
+                                              timeout_msg& x) {
+  aout(ptr) << "*** unhandled timeout message [id: " << ptr->id()
+            << "]: " << to_string(x) << std::endl;
+}
+
 # ifndef CAF_NO_EXCEPTIONS
 error scheduled_actor::default_exception_handler(pointer ptr,
                                                  std::exception_ptr& x) {
@@ -120,6 +126,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
       error_handler_(default_error_handler),
       down_handler_(default_down_handler),
       exit_handler_(default_exit_handler),
+      timeout_handler_(default_timeout_handler),
       private_thread_(nullptr)
 # ifndef CAF_NO_EXCEPTIONS
       , exception_handler_(default_exception_handler)
@@ -571,10 +578,11 @@ scheduled_actor::categorize(mailbox_element& x) {
         CAF_LOG_DEBUG("handle ordinary timeout message");
         if (is_active_receive_timeout(tid) && !bhvr_stack_.empty())
           bhvr_stack_.back().handle_timeout();
-      } else {
-        CAF_ASSERT(tm.type == atom("stream"));
+      } else if (tm.type == atom("stream")) {
         CAF_LOG_DEBUG("handle stream timeout message");
         set_stream_timeout(advance_streams(clock().now()));
+      } else {
+        call_handler(timeout_handler_, this, tm);
       }
       return message_category::internal;
     }

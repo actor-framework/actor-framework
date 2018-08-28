@@ -206,6 +206,9 @@ public:
   /// Function object for handling exit messages.
   using exit_handler = std::function<void (pointer, exit_msg&)>;
 
+  /// Function object for handling timeouts.
+  using timeout_handler = std::function<void(pointer, timeout_msg&)>;
+
 # ifndef CAF_NO_EXCEPTIONS
   /// Function object for handling exit messages.
   using exception_handler = std::function<error (pointer, std::exception_ptr&)>;
@@ -245,6 +248,8 @@ public:
   static void default_down_handler(pointer ptr, down_msg& x);
 
   static void default_exit_handler(pointer ptr, exit_msg& x);
+
+  static void default_timeout_handler(pointer ptr, timeout_msg& x);
 
 # ifndef CAF_NO_EXCEPTIONS
   static error default_exception_handler(pointer ptr, std::exception_ptr& x);
@@ -388,6 +393,19 @@ public:
   template <class T>
   auto set_exit_handler(T fun) -> decltype(fun(std::declval<exit_msg&>())) {
     set_exit_handler([fun](scheduled_actor*, exit_msg& x) { fun(x); });
+  }
+
+  /// Sets a custom handler for timeout messages.
+  inline void set_timeout_handler(timeout_handler fun) {
+    if (fun)
+      timeout_handler_ = std::move(fun);
+    else
+      timeout_handler_ = default_timeout_handler;
+  }
+
+  template <class T>
+  auto set_timeout_handler(T fun) -> decltype (fun(std::declval<timeout_msg&>())) {
+    set_timeout_handler([fun](scheduled_actor*, timeout_msg& x) { fun(x); });
   }
 
 # ifndef CAF_NO_EXCEPTIONS
@@ -914,6 +932,9 @@ protected:
 
   /// Customization point for setting a default `exit_msg` callback.
   exit_handler exit_handler_;
+
+  /// Customization point for setting a default `timeout_msg` callback.
+  timeout_handler timeout_handler_;
 
   /// Stores stream managers for established streams.
   stream_manager_map stream_managers_;
