@@ -24,6 +24,7 @@
 #include <cstring>
 #include <tuple>
 
+#include "caf/actor_clock.hpp"
 #include "caf/callback.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/call_cfun.hpp"
@@ -245,8 +246,14 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   newb(actor_config& cfg, default_multiplexer& dm, native_socket sockfd)
       : super(cfg),
-        newb_base(dm, sockfd) {
+        newb_base(dm, sockfd),
+        value_(strong_actor_ptr{}, make_message_id(),
+               mailbox_element::forwarding_stack{}, Message{}){
     CAF_LOG_TRACE("");
+    scheduled_actor::set_timeout_handler([&](timeout_msg& msg) {
+      if (protocol)
+        protocol->timeout(msg.type, msg.timeout_id);
+    });
   }
 
   newb() = default;
@@ -405,9 +412,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   template<class Rep = int, class Period = std::ratio<1>>
   void set_timeout(std::chrono::duration<Rep, Period> timeout,
                    atom_value atm, uint32_t id) {
-    this->delayed_send(this, timeout, atm, id);
-    // TODO: Use actor clock.
-    // TODO: Make this system messages and handle them separately.
+    auto n = actor_clock::clock_type::now();
+    scheduled_actor::clock().set_ordinary_timeout(n + timeout, this, atm, id);
   }
 
   // Allow protocol policies to enqueue a data for sending. Probably required for
@@ -421,16 +427,12 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     return event_handler::backend();
   }
 
-  virtual void handle(Message& msg) = 0;
+  void handle(Message& m) {
+    std::swap(msg(), m);
+    scheduled_actor::activate(scheduled_actor::context(), value_);
+  }
 
-  // Currently has to handle timeouts as well, see handler below.
-  virtual behavior make_behavior() = 0; /*{
-    return {
-      [=](atom_value atm, uint32_t id) {
-        protocol->timeout(atm, id);
-      }
-    };
-  }*/
+  virtual behavior make_behavior() = 0;
 
   void configure_read(receive_policy::config config) {
     transport->configure_read(config);
@@ -452,6 +454,15 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   std::unique_ptr<transport_policy> transport;
   std::unique_ptr<protocol_policy<Message>> protocol;
+
+private:
+  // -- message element --------------------------------------------------------
+
+  Message& msg() {
+    return value_.template get_mutable_as<Message>(0);
+  }
+
+  mailbox_element_vals<Message> value_;
 };
 
 // -- new broker acceptor ------------------------------------------------------
