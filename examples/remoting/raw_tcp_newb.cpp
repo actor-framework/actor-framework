@@ -79,20 +79,13 @@ struct raw_newb : public io::network::newb<new_data> {
     CAF_LOG_TRACE("");
   }
 
-  void handle(message_type& msg) override {
-    CAF_PUSH_AID_FROM_PTR(this);
-    CAF_LOG_TRACE("");
-    char res = *msg.payload;
-    send(responder, res);
-  }
-
   behavior make_behavior() override {
     set_default_handler(print_and_drop);
     return {
-      // Must be implemented at the moment, will be cought by the broker in a
-      // later implementation.
-      [=](atom_value atm, uint32_t id) {
-        protocol->timeout(atm, id);
+      [=](message_type& msg) {
+        CAF_LOG_TRACE("");
+        char res = *msg.payload;
+        send(responder, res);
       },
       [=](send_atom, char c) {
         auto whdl = wr_buf(nullptr);
