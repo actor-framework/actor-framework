@@ -52,7 +52,6 @@ struct protocol_policy;
 template <class T>
 struct newb;
 
-
 } // namespace io
 } // namespace network
 
@@ -176,6 +175,10 @@ struct accept_policy {
 
   virtual std::pair<native_socket, transport_policy_ptr>
   accept(network::event_handler*) = 0;
+
+  virtual error multiplex_write() {
+    return none;
+  };
 
   virtual void init(newb_base&) = 0;
 };
@@ -371,8 +374,6 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   }
 
   write_handle<Message> wr_buf(header_writer* hw) {
-    // TODO: We somehow need to tell the transport policy how much we've
-    // written to enable it to split the buffer into datagrams.
     auto& buf = transport->wr_buf();
     auto hstart = buf.size();
     protocol->write_header(buf, hw);
@@ -507,8 +508,12 @@ struct newb_acceptor : public network::event_handler {
     return none;
   }
 
+  error write_event() {
+    return acceptor->multiplex_write();
+  }
+
   void start() {
-    activate();
+    event_handler::activate();
   }
 
   void stop() {
