@@ -131,22 +131,15 @@ struct basp_newb : public io::network::newb<new_basp_message> {
     CAF_LOG_TRACE("");
   }
 
-  void handle(new_basp_message& msg) override {
-    CAF_PUSH_AID_FROM_PTR(this);
-    CAF_LOG_TRACE("");
-    std::string res;
-    binary_deserializer bd(&backend(), msg.payload, msg.payload_len);
-    bd(res);
-    send(responder, res);
-  }
-
   behavior make_behavior() override {
     set_default_handler(print_and_drop);
     return {
-      // Must be implemented at the moment, will be cought by the broker in a
-      // later implementation.
-      [=](atom_value atm, uint32_t id) {
-        protocol->timeout(atm, id);
+      [=](new_basp_message& msg) {
+        CAF_LOG_TRACE("");
+        std::string res;
+        binary_deserializer bd(&backend(), msg.payload, msg.payload_len);
+        bd(res);
+        send(responder, res);
       },
       [=](send_atom, actor_id sender, actor_id receiver, std::string payload) {
         auto hw = caf::make_callback([&](io::network::byte_buffer& buf) -> error {

@@ -242,32 +242,24 @@ struct dummy_basp_newb : network::newb<new_basp_message> {
     // nop
   }
 
-  void handle(new_basp_message& msg) override {
-    CAF_MESSAGE("handling new basp message = " << to_string(msg));
-    CAF_ASSERT(!expected.empty());
-    auto& e = expected.front();
-    CAF_CHECK_EQUAL(msg.header.from, e.first.from);
-    CAF_CHECK_EQUAL(msg.header.to, e.first.to);
-    int pl;
-    binary_deserializer bd(&backend(), msg.payload, msg.payload_size);
-    bd(pl);
-    CAF_CHECK_EQUAL(pl, e.second);
-    std::vector<char> payload{msg.payload, msg.payload + msg.payload_size};
-    messages.emplace_back(msg, payload);
-    messages.back().first.payload = messages.back().second.data();
-    transport->receive_buffer.clear();
-    expected.pop_front();
-  }
-
   behavior make_behavior() override {
     set_default_handler(print_and_drop);
     return {
-      // Must be implemented at the moment, will be cought by the broker in a
-      // later implementation.
-      [=](atom_value atm, uint32_t id) {
-        CAF_MESSAGE("timeout returned");
-        timeout_messages.emplace_back(atm, id);
-        protocol->timeout(atm, id);
+      [=](new_basp_message& msg) {
+        CAF_MESSAGE("handling new basp message = " << to_string(msg));
+        CAF_ASSERT(!expected.empty());
+        auto& e = expected.front();
+        CAF_CHECK_EQUAL(msg.header.from, e.first.from);
+        CAF_CHECK_EQUAL(msg.header.to, e.first.to);
+        int pl;
+        binary_deserializer bd(&backend(), msg.payload, msg.payload_size);
+        bd(pl);
+        CAF_CHECK_EQUAL(pl, e.second);
+        std::vector<char> payload{msg.payload, msg.payload + msg.payload_size};
+        messages.emplace_back(msg, payload);
+        messages.back().first.payload = messages.back().second.data();
+        transport->receive_buffer.clear();
+        expected.pop_front();
       },
       [=](send_atom, actor_id sender, actor_id receiver, int payload) {
         CAF_MESSAGE("send: from = " << sender << " to = " << receiver
@@ -485,12 +477,14 @@ CAF_TEST(timeouts) {
   dummy.transport->max_consecutive_reads = 1;
   auto err = dummy.read_event();
   CAF_REQUIRE(!err);
+  CAF_CHECK(!dummy.expected.empty());
   CAF_MESSAGE("trigger waiting timeouts");
   // Trigger timeout.
   sched.trigger_timeout();
   // Handle received message.
   exec_all();
   // Message handler will check if the expected message was received.
+  CAF_CHECK(dummy.expected.empty());
 }
 
 CAF_TEST(message ordering) {
