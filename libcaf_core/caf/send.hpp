@@ -66,11 +66,13 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
                   nullptr, std::forward<Ts>(xs)...);
 }
 
-template <class Source, class Dest, class... Ts>
+template <message_priority P = message_priority::normal, class Source,
+          class Dest, class... Ts>
 void unsafe_send_as(Source* src, const Dest& dest, Ts&&... xs) {
-  actor_cast<abstract_actor*>(dest)->eq_impl(make_message_id(), src->ctrl(),
-                                             src->context(),
-                                             std::forward<Ts>(xs)...);
+  if (dest)
+    actor_cast<abstract_actor*>(dest)->eq_impl(make_message_id(P),
+                                               src->ctrl(), src->context(),
+                                               std::forward<Ts>(xs)...);
 }
 
 template <class... Ts>
