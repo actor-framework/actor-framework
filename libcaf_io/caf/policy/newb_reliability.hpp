@@ -63,7 +63,7 @@ struct reliability {
 
   reliability(io::network::newb<message_type>* parent)
       : parent(parent),
-        next(parent, false) {
+        next(parent) {
     // nop
   }
 
