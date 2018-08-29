@@ -35,27 +35,19 @@ def read_lines(fp, ids):
             if rx_res != None and rx_res.group(1) in ids:
                 indent = print_indented(line, indent)
 
-def read_ids(ids_file):
-    if ids_file and len(ids_file) > 0:
-        if os.path.isfile(ids_file):
-            with open(ids_file) as fp:
-                return fp.read().splitlines()
-    return []
-
 def main():
     parser = argparse.ArgumentParser(description='Add a new C++ class.')
-    parser.add_argument('-i', dest='ids_file', help='only include actors with IDs from file')
+    parser.add_argument('-i', dest='ids', action='append', help='only include actors with given ID(s)')
     parser.add_argument("log", help='path to the log file or "-" for reading from STDIN')
     args = parser.parse_args()
     filepath = args.log
-    ids = read_ids(args.ids_file)
     if filepath == '-':
-        read_lines(fileinput.input(), ids)
+        read_lines(fileinput.input(), args.ids)
     else:
         if not os.path.isfile(filepath):
             sys.exit()
         with open(filepath) as fp:
-            read_lines(fp, ids)
+            read_lines(fp, args.ids)
 
 if __name__ == "__main__":
     main()
