@@ -287,8 +287,8 @@ template <class Inspector, class T>
 typename std::enable_if<Inspector::writes_state,
                         typename Inspector::result_type>::type
 inspect(Inspector& f, optional<T>& x) {
-  bool flag;
-  typename optional<T>::type tmp;
+  bool flag = false;
+  typename optional<T>::type tmp{};
   optional_inspect_helper<T> helper{flag, tmp};
   auto guard = detail::make_scope_guard([&] {
     if (flag)
@@ -298,7 +298,6 @@ inspect(Inspector& f, optional<T>& x) {
   });
   return f(flag, helper);
 }
-
 
 /// @relates optional
 template <class T>
