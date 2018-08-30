@@ -474,7 +474,7 @@ public:
       return apply(dur);
     }
     if (Derived::writes_state) {
-      Duration dur;
+      Duration dur{};
       auto e = apply(dur);
       t = std::chrono::time_point<std::chrono::system_clock, Duration>{dur};
       return e;
