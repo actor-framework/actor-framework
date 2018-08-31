@@ -300,7 +300,7 @@ struct accept_policy_impl : public network::accept_policy {
   }
 
   std::pair<native_socket, network::transport_policy_ptr>
-    accept(network::event_handler*) override {
+  accept(network::newb_base*) override {
     // TODO: For UDP read the message into a buffer. Create a new socket.
     //  Move the buffer into the transport policy as the new receive buffer.
     network::transport_policy_ptr ptr{new network::transport_policy};
@@ -427,8 +427,7 @@ CAF_TEST(read event) {
   bs(payload);
   dummy.transport->received_bytes = buf.size();
   CAF_MESSAGE("trigger a read event");
-  auto err = dummy.read_event();
-  CAF_REQUIRE(!err);
+  dummy.read_event();
   CAF_MESSAGE("check the basp header and payload");
   CAF_REQUIRE(!dummy.messages.empty());
   auto& msg = dummy.messages.front().first;
@@ -475,8 +474,7 @@ CAF_TEST(timeouts) {
   CAF_MESSAGE("trigger read event");
   auto& dummy = deref<dummy_basp_newb>(self);
   dummy.transport->max_consecutive_reads = 1;
-  auto err = dummy.read_event();
-  CAF_REQUIRE(!err);
+  dummy.read_event();
   CAF_CHECK(!dummy.expected.empty());
   CAF_MESSAGE("trigger waiting timeouts");
   // Trigger timeout.

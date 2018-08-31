@@ -71,7 +71,7 @@ udp_transport::udp_transport()
   // nop
 }
 
-error udp_transport::read_some(io::network::event_handler* parent) {
+io::network::rw_state udp_transport::read_some(io::network::newb_base* parent) {
   CAF_LOG_TRACE(CAF_ARG(parent->fd()));
   memset(sender.address(), 0, sizeof(sockaddr_storage));
   io::network::socket_size_type len = sizeof(sockaddr_storage);
@@ -80,11 +80,8 @@ error udp_transport::read_some(io::network::event_handler* parent) {
   auto sres = ::recvfrom(parent->fd(), buf_ptr, buf_len,
                          0, sender.address(), &len);
   if (io::network::is_error(sres, true)) {
-    CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
-    return sec::runtime_error;
-  } else if (io::network::would_block_or_temporarily_unavailable(
-                                      io::network::last_socket_error())) {
-    return sec::end_of_stream;
+    CAF_LOG_ERROR("recvfrom failed" << CAF_ARG(sres));
+    return io::network::rw_state::failure;
   }
   if (sres == 0)
     CAF_LOG_INFO("Received empty datagram");
@@ -97,15 +94,15 @@ error udp_transport::read_some(io::network::event_handler* parent) {
     endpoint = sender;
     first_message = false;
   }
-  return none;
+  return io::network::rw_state::success;
 }
 
-void udp_transport::prepare_next_read(io::network::event_handler*) {
+void udp_transport::prepare_next_read(io::network::newb_base*) {
   received_bytes = 0;
   receive_buffer.resize(maximum);
 }
 
-error udp_transport::write_some(io::network::event_handler* parent) {
+io::network::rw_state udp_transport::write_some(io::network::newb_base* parent) {
   using namespace caf::io::network;
   CAF_LOG_TRACE(CAF_ARG(parent->fd()) << CAF_ARG(send_buffer.size()));
   socket_size_type len = static_cast<socket_size_type>(*endpoint.clength());
@@ -114,22 +111,24 @@ error udp_transport::write_some(io::network::event_handler* parent) {
   auto sres = ::sendto(parent->fd(), buf_ptr, buf_len,
                        0, endpoint.caddress(), len);
   if (is_error(sres, true)) {
-    std::cerr << "sento failed: " << last_socket_error_as_string() << std::endl;
-    std::abort();
-    CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
-    return sec::runtime_error;
+    CAF_LOG_ERROR("sendto failed" << CAF_ARG(sres));
+    return io::network::rw_state::failure;
   }
+  size_t sent_bytes = (sres > 0) ? static_cast<size_t>(sres) : 0;
   // TODO: This only works if we always write send_sizes.front()
+  if (sent_bytes != buf_len) {
+    CAF_LOG_ERROR("failed to send complete datagram");
+    return io::network::rw_state::failure;
+  }
   send_sizes.pop_front();
-  written += (sres > 0) ? static_cast<size_t>(sres) : 0;
+  written += sent_bytes;
   auto remaining = send_buffer.size() - written;
-  count += 1;
   if (remaining == 0)
     prepare_next_write(parent);
-  return none;
+  return io::network::rw_state::success;
 }
 
-void udp_transport::prepare_next_write(io::network::event_handler* parent) {
+void udp_transport::prepare_next_write(io::network::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   send_sizes.clear();
@@ -157,7 +156,7 @@ io::network::byte_buffer& udp_transport::wr_buf() {
   return offline_buffer;
 }
 
-void udp_transport::flush(io::network::event_handler* parent) {
+void udp_transport::flush(io::network::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
@@ -187,7 +186,7 @@ accept_udp::create_socket(uint16_t port, const char* host, bool reuse) {
 }
 
 std::pair<io::network::native_socket, io::network::transport_policy_ptr>
-accept_udp::accept(io::network::event_handler*) {
+accept_udp::accept(io::network::newb_base*) {
   auto res = io::network::new_local_udp_endpoint_impl(0, nullptr);
   if (!res) {
     CAF_LOG_DEBUG("failed to create local endpoint");
