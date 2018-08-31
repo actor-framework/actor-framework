@@ -49,6 +49,7 @@ set(LIBCAF_IO_SRCS
   src/socket_guard.cpp
   src/newb_tcp.cpp
   src/newb_udp.cpp
+  src/newb.cpp
 )
 
 add_custom_target(libcaf_io)

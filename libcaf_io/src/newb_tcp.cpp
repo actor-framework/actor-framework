@@ -71,7 +71,7 @@ tcp_transport::tcp_transport()
   // nop
 }
 
-error tcp_transport::read_some(io::network::event_handler* parent) {
+io::network::rw_state tcp_transport::read_some(io::network::newb_base* parent) {
   CAF_LOG_TRACE("");
   size_t len = receive_buffer.size() - collected;
   void* buf = receive_buffer.data() + collected;
@@ -79,14 +79,14 @@ error tcp_transport::read_some(io::network::event_handler* parent) {
                      reinterpret_cast<io::network::socket_recv_ptr>(buf),
                      len, io::network::no_sigpipe_io_flag);
   if (io::network::is_error(sres, true) || sres == 0) {
-    std::cerr << "read some error" << std::endl;
-    // recv returns 0 when the peer has performed an orderly shutdown
-    return sec::runtime_error;
+    // Recv returns 0 when the peer has performed an orderly shutdown.
+    CAF_LOG_DEBUG("recv failed" << CAF_ARG(sres));
+    return io::network::rw_state::failure;
   }
   size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   collected += result;
   received_bytes = collected;
-  return none;
+  return io::network::rw_state::success;
 }
 
 bool tcp_transport::should_deliver() {
@@ -94,7 +94,7 @@ bool tcp_transport::should_deliver() {
   return collected >= read_threshold;
 }
 
-void tcp_transport::prepare_next_read(io::network::event_handler*) {
+void tcp_transport::prepare_next_read(io::network::newb_base*) {
   collected = 0;
   received_bytes = 0;
   switch (rd_flag) {
@@ -109,7 +109,7 @@ void tcp_transport::prepare_next_read(io::network::event_handler*) {
       read_threshold = 1;
       break;
     case io::receive_policy_flag::at_least: {
-      // read up to 10% more, but at least allow 100 bytes more
+      // Read up to 10% more, but at least allow 100 bytes more.
       auto maximumsize = maximum + std::max<size_t>(100, maximum / 10);
       if (receive_buffer.size() != maximumsize)
         receive_buffer.resize(maximumsize);
@@ -124,25 +124,27 @@ void tcp_transport::configure_read(io::receive_policy::config config) {
   maximum = config.second;
 }
 
-error tcp_transport::write_some(io::network::event_handler* parent) {
+io::network::rw_state tcp_transport::write_some(io::network::newb_base* parent) {
   CAF_LOG_TRACE("");
   const void* buf = send_buffer.data() + written;
   auto len = send_buffer.size() - written;
   auto sres = ::send(parent->fd(),
                      reinterpret_cast<io::network::socket_send_ptr>(buf),
                      len, io::network::no_sigpipe_io_flag);
-  if (io::network::is_error(sres, true))
-    return sec::runtime_error;
+  if (io::network::is_error(sres, true)) {
+    CAF_LOG_ERROR("send failed"
+                  << CAF_ARG(io::network::last_socket_error_as_string()));
+    return io::network::rw_state::failure;
+  }
   size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   written += result;
-  count += 1;
   auto remaining = send_buffer.size() - written;
   if (remaining == 0)
     prepare_next_write(parent);
-  return none;
+  return io::network::rw_state::success;
 }
 
-void tcp_transport::prepare_next_write(io::network::event_handler* parent) {
+void tcp_transport::prepare_next_write(io::network::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   if (offline_buffer.empty()) {
@@ -154,7 +156,7 @@ void tcp_transport::prepare_next_write(io::network::event_handler* parent) {
   }
 }
 
-void tcp_transport::flush(io::network::event_handler* parent) {
+void tcp_transport::flush(io::network::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
@@ -180,7 +182,7 @@ accept_tcp::create_socket(uint16_t port, const char* host, bool reuse) {
 }
 
 std::pair<io::network::native_socket, io::network::transport_policy_ptr>
-accept_tcp::accept(io::network::event_handler* parent) {
+accept_tcp::accept(io::network::newb_base* parent) {
   using namespace io::network;
   sockaddr_storage addr;
   std::memset(&addr, 0, sizeof(addr));

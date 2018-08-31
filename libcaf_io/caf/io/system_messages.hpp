@@ -30,7 +30,10 @@
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/datagram_handle.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/network/operation.hpp"
 #include "caf/io/network/receive_buffer.hpp"
+
+
 
 namespace caf {
 namespace io {
@@ -182,6 +185,17 @@ inspect(Inspector& f, datagram_servant_closed_msg& x) {
   return f(meta::type_name("datagram_servant_closed_msg"), x.handles);
 }
 
+// Signals a read error to a newb.
+struct io_error_msg {
+  caf::io::network::operation op;
+  error err;
+};
+
+template <class Inspector>
+typename Inspector::result_type
+inspect(Inspector& f, io_error_msg& x) {
+  return f(meta::type_name("io_error_msg"), x.op, x.err);
+}
+
 } // namespace io
 } // namespace caf
-

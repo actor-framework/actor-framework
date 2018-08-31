@@ -27,19 +27,19 @@ namespace policy {
 struct tcp_transport : public io::network::transport_policy {
   tcp_transport();
 
-  error read_some(io::network::event_handler* parent) override;
+  io::network::rw_state read_some(io::network::newb_base* parent) override;
 
   bool should_deliver() override;
 
-  void prepare_next_read(io::network::event_handler*) override;
+  void prepare_next_read(io::network::newb_base*) override;
 
   void configure_read(io::receive_policy::config config) override;
 
-  error write_some(io::network::event_handler* parent) override;
+  io::network::rw_state write_some(io::network::newb_base* parent) override;
 
-  void prepare_next_write(io::network::event_handler* parent) override;
+  void prepare_next_write(io::network::newb_base* parent) override;
 
-  void flush(io::network::event_handler* parent) override;
+  void flush(io::network::newb_base* parent) override;
 
   expected<io::network::native_socket>
   connect(const std::string& host, uint16_t port,
@@ -61,7 +61,7 @@ struct accept_tcp : public io::network::accept_policy {
   create_socket(uint16_t port,const char* host,bool reuse = false) override;
 
   std::pair<io::network::native_socket, io::network::transport_policy_ptr>
-  accept(io::network::event_handler* parent) override;
+  accept(io::network::newb_base* parent) override;
 
   void init(io::network::newb_base& n) override;
 };

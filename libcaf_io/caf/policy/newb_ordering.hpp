@@ -140,8 +140,6 @@ struct ordering {
   }
 
   error timeout(atom_value atm, uint32_t id) {
-    std::cout << "got timeout message" << std::endl;
-    std::abort();
     if (atm == ordering_atom::value) {
       error err = none;
       sequence_type seq = static_cast<sequence_type>(id);
