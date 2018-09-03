@@ -118,7 +118,6 @@ struct transport_policy {
       auto read_result = read_some(parent);
       switch (read_result) {
         case rw_state::success:
-//          std::cout << "read success" << std::endl;
           if (received_bytes == 0)
             return none;
           if (should_deliver()) {
@@ -129,11 +128,9 @@ struct transport_policy {
           }
           break;
         case rw_state::indeterminate:
-          std::cout << "read indeterminate" << std::endl;
           // No error, but don't continue reading.
           return none;
         case rw_state::failure:
-          std::cout << "read failure" << std::endl;
           // Reading failed.
           return sec::runtime_error;
       }
@@ -198,6 +195,35 @@ struct protocol_policy : protocol_policy_base {
 template <class T>
 using protocol_policy_ptr = std::unique_ptr<protocol_policy<T>>;
 
+template <class T>
+struct generic_protocol
+    : public io::network::protocol_policy<typename T::message_type> {
+  T impl;
+
+  generic_protocol(io::network::newb<typename T::message_type>* parent)
+      : impl(parent) {
+    // nop
+  }
+
+  error read(char* bytes, size_t count) override {
+    return impl.read(bytes, count);
+  }
+
+  error timeout(atom_value atm, uint32_t id) override {
+    return impl.timeout(atm, id);
+  }
+
+  void write_header(io::network::byte_buffer& buf,
+                    io::network::header_writer* hw) override {
+    impl.write_header(buf, hw);
+  }
+
+  void prepare_for_sending(io::network::byte_buffer& buf, size_t hstart,
+                           size_t offset, size_t plen) override {
+    impl.prepare_for_sending(buf, hstart, offset, plen);
+  }
+};
+
 // -- new broker classes -------------------------------------------------------
 
 /// @relates newb
@@ -228,6 +254,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   using signatures = none_t;
+
+  using message_type = Message;
 
   // -- constructors and destructors -------------------------------------------
 
@@ -275,7 +303,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     CAF_ASSERT(eu != nullptr);
     CAF_ASSERT(eu == &backend());
     CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
-    // add implicit reference count held by middleman/multiplexer
+    // Add implicit reference count held by middleman/multiplexer.
     if (!hide)
       super::register_at_system();
     if (lazy && super::mailbox().try_block())
@@ -291,7 +319,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
                              << CAF_ARG(this->has_behavior()));
     if (bhvr) {
-      // make_behavior() did return a behavior instead of using become()
+      // make_behavior() did return a behavior instead of using become().
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
       this->become(std::move(bhvr));
     }
@@ -446,7 +474,14 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   }
 
   /// Override this to set the behavior of the broker.
-  virtual behavior make_behavior() = 0;
+  virtual behavior make_behavior() {
+    behavior res;
+    if (this->initial_behavior_fac_) {
+      res = this->initial_behavior_fac_(this);
+      this->initial_behavior_fac_ = nullptr;
+    }
+    return res;
+  }
 
   /// Configure the number of bytes read for the next packet. (Can be ignored by
   /// the transport policy if its protocol does not support this functionality.)
@@ -564,6 +599,97 @@ struct newb_acceptor : public newb_base {
 
 // -- factories ----------------------------------------------------------------
 
+// Goal:
+// spawn_newb<protocol>(behavior, transport, sockfd);
+// spawn_client<protocol>(behavior, transport, host, port);
+// spawn_server<protocol>(behavior, transport, port);
+// TODO: Should the server be an actor as well? Would give us a place to handle
+//  its failures and the previously existing `new_endpoint_msg`.
+
+// Primary template.
+template<class T>
+struct function_traits : function_traits<decltype(&T::operator())> {
+};
+
+// Partial specialization for function type.
+template<class R, class... Args>
+struct function_traits<R(Args...)> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+// Partial specialization for function pointer.
+template<class R, class... Args>
+struct function_traits<R (*)(Args...)> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+// Partial specialization for std::function.
+template<class R, class... Args>
+struct function_traits<std::function<R(Args...)>> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+// Partial specialization for pointer-to-member-function (i.e., operator()'s).
+template<class T, class R, class... Args>
+struct function_traits<R (T::*)(Args...)> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+template<class T, class R, class... Args>
+struct function_traits<R (T::*)(Args...) const> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+template<class T>
+using first_argument_type
+ = typename std::tuple_element<0, typename function_traits<T>::argument_types>::type;
+
+/// Spawns a new "newb" broker.
+template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_handle_from_fun<F>::type
+spawn_newb(actor_system& sys, F fun, transport_policy_ptr transport,
+           native_socket sockfd, Ts&&... xs) {
+  using impl = typename infer_handle_from_fun<F>::impl;
+  using first = first_argument_type<F>;
+  using message = typename std::remove_pointer<first>::type::message_type;
+  auto& dm = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
+  // Setup the config.
+  actor_config cfg{&dm};
+  detail::init_fun_factory<impl, F> fac;
+  auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
+  cfg.init_fun = [init_fun](local_actor* self) mutable -> behavior {
+    return init_fun(self);
+  };
+  auto res = sys.spawn_class<impl, Os>(cfg, dm, sockfd);
+  // Get a reference to the newb type.
+  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
+  CAF_ASSERT(ptr != nullptr);
+  auto& ref = dynamic_cast<newb<message>&>(*ptr);
+  // Set the policies.
+  ref.transport = std::move(transport);
+  ref.protocol.reset(new Protocol(&ref));
+  // Start the event handler.
+  ref.start();
+  return res;
+}
+
+/// Spawn a new "newb" broker client to connect to `host`:`port`.
+template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_handle_from_fun<F>::type
+spawn_client(actor_system& sys, F fun, transport_policy_ptr transport,
+             std::string host, uint16_t port, Ts&&... xs) {
+  expected<native_socket> esock = transport->connect(host, port);
+  if (!esock)
+    return std::move(esock.error());
+  return spawn_newb<Protocol>(sys, fun, std::move(transport),
+                              std::forward<Ts>(xs)...);
+}
+
 template <class Newb>
 actor make_newb(actor_system& sys, native_socket sockfd) {
   auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
@@ -606,6 +732,10 @@ std::unique_ptr<NewbAcceptor> make_server_newb(actor_system& sys,
   ptr->start();
   return ptr;
 }
+
+/// Convenience template alias for declaring state-based brokers.
+template <class Message, class State>
+using stateful_newb = stateful_actor<State, newb<Message>>;
 
 } // namespace network
 } // namespace io
