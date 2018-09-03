@@ -27,6 +27,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/io/network/newb.hpp"
+#include "caf/policy/newb_raw.hpp"
 
 using namespace caf;
 using namespace caf::io;
@@ -47,6 +48,9 @@ using ordering_atom = atom_constant<atom("ordering")>;
 using send_atom = atom_constant<atom("send")>;
 using shutdown_atom = atom_constant<atom("shutdown")>;
 using quit_atom = atom_constant<atom("quit")>;
+
+using set_atom = atom_constant<atom("set")>;
+using get_atom = atom_constant<atom("get")>;
 
 // -- dummy headers ------------------------------------------------------------
 
@@ -349,6 +353,10 @@ struct dummy_basp_newb_acceptor
   std::vector<actor> spawned;
 };
 
+struct test_state {
+  int i;
+};
+
 class config : public actor_system_config {
 public:
   config() {
@@ -376,7 +384,7 @@ struct fixture {
         sched(dynamic_cast<caf::scheduler::test_coordinator&>(sys.scheduler())) {
     // Create newb.
     self = network::make_newb<dummy_basp_newb>(sys,
-                                                   network::invalid_native_socket);
+                                               network::invalid_native_socket);
     auto& ref = deref<network::newb<new_basp_message>>(self);
     network::newb<new_basp_message>* self_ptr = &ref;
     ref.transport.reset(new network::transport_policy);
@@ -544,6 +552,76 @@ CAF_TEST(newb acceptor) {
   na->handle_event(network::operation::read);
   auto& dummy = dynamic_cast<acceptor_t&>(*na.get());
   CAF_CHECK(!dummy.spawned.empty());
+}
+
+CAF_TEST(spawn newb) {
+  using newb_t = io::network::newb<policy::raw_data_message>;
+  scoped_actor self{sys};
+  auto rcvd = false;
+  auto server = [&rcvd] (newb_t*) -> behavior {
+    return {
+      [&rcvd](int) {
+        rcvd = true;
+      },
+    };
+  };
+  CAF_MESSAGE("create newb");
+  network::transport_policy_ptr transport{new network::transport_policy};
+  auto esock = io::network::new_tcp_acceptor_impl(0, nullptr, true);
+  CAF_REQUIRE(esock);
+  using proto = io::network::generic_protocol<policy::raw>;
+  auto n = io::network::spawn_newb<proto>(sys, server, std::move(transport), *esock);
+  exec_all();
+  CAF_MESSAGE("send test message");
+  self->send(n, 3);
+  exec_all();
+  CAF_CHECK(rcvd);
+  CAF_MESSAGE("shutdown newb");
+  self->send_exit(n, exit_reason::user_shutdown);
+  exec_all();
+  CAF_MESSAGE("done");
+}
+
+CAF_TEST(spawn stateful newb) {
+  scoped_actor self{sys};
+  using  newb_t = io::network::stateful_newb<policy::raw_data_message, test_state>;
+  auto server = [] (newb_t* self) -> behavior {
+    self->state.i = 0;
+    return {
+      [=](set_atom, int i) {
+        self->state.i = i;
+      },
+      [=](get_atom) {
+        return self->state.i;
+      },
+    };
+  };
+  CAF_MESSAGE("create newb");
+  network::transport_policy_ptr transport{new network::transport_policy};
+  auto esock = io::network::new_tcp_acceptor_impl(0, nullptr, true);
+  CAF_REQUIRE(esock);
+  using proto = io::network::generic_protocol<policy::raw>;
+  auto n = io::network::spawn_newb<proto>(sys, server, std::move(transport), *esock);
+  exec_all();
+  CAF_MESSAGE("set value in state");
+  self->send(n, set_atom::value, 3);
+  exec_all();
+  CAF_MESSAGE("get value back");
+  self->send(n, get_atom::value);
+  exec_all();
+  self->receive(
+    [&](int r) {
+      CAF_CHECK_EQUAL(r, 3);
+      CAF_MESSAGE("matches expected value");
+    },
+    [&](const error& err) {
+      CAF_FAIL(sys.render(err));
+    }
+  );
+  CAF_MESSAGE("shutdown newb");
+  anon_send_exit(n, exit_reason::user_shutdown);
+  exec_all();
+  CAF_MESSAGE("done");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
