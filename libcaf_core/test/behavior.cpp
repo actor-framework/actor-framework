@@ -24,8 +24,12 @@
 
 #include <functional>
 
+#include "caf/send.hpp"
 #include "caf/behavior.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/message_handler.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/make_type_erased_tuple_view.hpp"
 
 using namespace caf;
@@ -92,6 +96,17 @@ CAF_TEST(multiple_lambda_construct) {
   CAF_CHECK_EQUAL(to_string(f(m1)), "*(2)");
   CAF_CHECK_EQUAL(to_string(f(m2)), "*(2)");
   CAF_CHECK_EQUAL(f(m3), none);
+}
+
+CAF_TEST(become_empty_behavior) {
+  actor_system_config cfg{};
+  actor_system sys{cfg};
+  auto make_bhvr = [](event_based_actor* self) -> behavior {
+    return {
+      [=](int) { self->become(behavior{}); }
+    };
+  };
+  anon_send(sys.spawn(make_bhvr), int{5});
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

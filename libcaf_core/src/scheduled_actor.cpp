@@ -768,7 +768,8 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
   if (discard_old && !bhvr_stack_.empty())
     bhvr_stack_.pop_back();
   // request_timeout simply resets the timeout when it's invalid
-  bhvr_stack_.push_back(std::move(bhvr));
+  if (bhvr)
+    bhvr_stack_.push_back(std::move(bhvr));
   set_receive_timeout();
 }
 
