@@ -91,7 +91,7 @@ meta_state us_res_meta{
   },
   [](const void* ptr) -> config_value {
     auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
-    timespan val{ival / 1000};
+    timespan val{ival * 1000};
     return config_value{val};
   },
   detail::type_name<timespan>()
@@ -108,7 +108,7 @@ meta_state ms_res_meta{
   },
   [](const void* ptr) -> config_value {
     auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
-    timespan val{ival / 1000000};
+    timespan val{ival * 1000000};
     return config_value{val};
   },
   detail::type_name<timespan>()
