@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE protocol_policy
+#define CAF_SUITE newb
 
 #include "caf/config.hpp"
 
