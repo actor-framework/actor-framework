@@ -27,10 +27,13 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/io/network/newb.hpp"
+#include "caf/policy/newb_basp.hpp"
+#include "caf/policy/newb_ordering.hpp"
 #include "caf/policy/newb_raw.hpp"
 
 using namespace caf;
 using namespace caf::io;
+using namespace caf::policy;
 
 using io::network::byte_buffer;
 using io::network::header_writer;
@@ -52,249 +55,79 @@ using quit_atom = atom_constant<atom("quit")>;
 using set_atom = atom_constant<atom("set")>;
 using get_atom = atom_constant<atom("get")>;
 
-// -- dummy headers ------------------------------------------------------------
-
-struct basp_header {
-  actor_id from;
-  actor_id to;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, basp_header& hdr) {
-  return fun(meta::type_name("basp_header"), hdr.from, hdr.to);
-}
-
-struct ordering_header {
-  uint32_t seq_nr;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, ordering_header& hdr) {
-  return fun(meta::type_name("ordering_header"), hdr.seq_nr);
-}
-
-// -- message type -------------------------------------------------------------
-
-struct new_basp_message {
-  basp_header header;
-  // TODO: should be const, but binary deserializer doesn't like that.
-  char* payload;
-  size_t payload_size;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, new_basp_message& x) {
-  return f(meta::type_name("new_basp_message"), x.header);
-}
-
-} // namespace anonymous
-
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(new_basp_message);
-
-namespace {
-
-template <class T>
-struct protocol_policy_impl
-    : public network::protocol_policy<typename T::message_type> {
-  T impl;
-
-  protocol_policy_impl(network::newb<typename T::message_type>* parent)
-      : impl(parent) {
-    // nop
-  }
-
-  error read(char* bytes, size_t count) override {
-    return impl.read(bytes, count);
-  }
-
-  error timeout(atom_value atm, uint32_t id) override {
-    return impl.timeout(atm, id);
-  }
-
-  void write_header(byte_buffer& buf, header_writer* hw) override {
-    return impl.write_header(buf, hw);
-  }
-
-  void prepare_for_sending(byte_buffer&, size_t, size_t, size_t) override {
-    return;
-  }
-};
-
-struct basp_policy {
-  static constexpr size_t header_size = sizeof(basp_header);
-  static constexpr size_t offset = header_size;
-  using message_type = new_basp_message;
-  using result_type = optional<new_basp_message>;
-  network::newb<message_type>* parent;
-
-  basp_policy(network::newb<message_type>* parent) : parent(parent) {
-    // nop
-  }
-
-  error read(char* bytes, size_t count) {
-    if (count < header_size) {
-      CAF_MESSAGE("data left in packet to small to contain the basp header");
-      return sec::unexpected_message;
-    }
-    new_basp_message msg;
-    binary_deserializer bd(&parent->backend(), bytes, count);
-    bd(msg.header);
-    msg.payload = bytes + header_size;
-    msg.payload_size = count - header_size;
-    parent->handle(msg);
-    return none;
-  }
-
-  error timeout(atom_value, uint32_t) {
-    return none;
-  }
-
-  void write_header(byte_buffer& buf, header_writer* hw) {
-    CAF_ASSERT(hw != nullptr);
-    (*hw)(buf);
-    return;
-  }
-};
-
-template <class Next>
-struct ordering {
-  static constexpr size_t header_size = sizeof(ordering_header);
-  static constexpr size_t offset = Next::offset + header_size;
-  using message_type = typename Next::message_type;
-  using result_type = typename Next::result_type;
-  uint32_t seq_read = 0;
-  uint32_t seq_write = 0;
-  network::newb<message_type>* parent;
-  Next next;
-  std::unordered_map<uint32_t, std::vector<char>> pending;
-
-  ordering(network::newb<message_type>* parent)
-      : parent(parent), next(parent) {
-    // nop
-  }
-
-  error deliver_pending() {
-    if (pending.empty())
-      return none;
-    while (pending.count(seq_read) > 0) {
-      auto& buf = pending[seq_read];
-      auto res = next.read(buf.data(), buf.size());
-      pending.erase(seq_read);
-      if (res)
-        return res;
-    }
-    return none;
-  }
-
-  error read(char* bytes, size_t count) {
-    CAF_MESSAGE("ordering: read (" << count << ")");
-    if (count < header_size)
-      return sec::unexpected_message;
-    ordering_header hdr;
-    binary_deserializer bd(&parent->backend(), bytes, count);
-    bd(hdr);
-    // TODO: Use the comparison function from BASP instance.
-    if (hdr.seq_nr == seq_read) {
-      seq_read += 1;
-      auto res = next.read(bytes + header_size, count - header_size);
-      if (res)
-        return res;
-      return deliver_pending();
-    } else if (hdr.seq_nr > seq_read) {
-      pending[hdr.seq_nr] = std::vector<char>(bytes + header_size,
-                                              bytes + count);
-      parent->set_timeout(std::chrono::seconds(2), ordering_atom::value,
-                          hdr.seq_nr);
-      return none;
-    }
-    // Is late, drop it. TODO: Should this return an error?
-    return none;
-  }
-
-  error timeout(atom_value atm, uint32_t id) {
-    if (atm == ordering_atom::value) {
-      error err;
-      if (pending.count(id) > 0) {
-        auto& buf = pending[id];
-        err = next.read(buf.data(), buf.size());
-        seq_read = id + 1;
-        if (!err)
-          err = deliver_pending();
-      }
-      return err;
-    }
-    return next.timeout(atm, id);
-  }
-
-  void write_header(byte_buffer& buf, header_writer* hw) {
-    binary_serializer bs(&parent->backend(), buf);
-    bs(ordering_header{seq_write});
-    seq_write += 1;
-    next.write_header(buf, hw);
-    return;
-  }
-};
-
-struct dummy_basp_newb : network::newb<new_basp_message> {
+struct test_state {
+  int value;
   std::vector<std::pair<atom_value, uint32_t>> timeout_messages;
-  std::vector<std::pair<new_basp_message, std::vector<char>>> messages;
-  std::deque<std::pair<basp_header, int>> expected;
+  std::vector<std::pair<new_basp_msg, std::vector<char>>> messages;
+  std::deque<std::pair<basp_header, uint32_t>> expected;
+};
 
-  dummy_basp_newb(caf::actor_config& cfg, default_multiplexer& dm,
-                  native_socket sockfd)
-      : newb<new_basp_message>(cfg, dm, sockfd) {
-    // nop
-  }
-
-  behavior make_behavior() override {
-    set_default_handler(print_and_drop);
-    return {
-      [=](new_basp_message& msg) {
-        CAF_MESSAGE("handling new basp message = " << to_string(msg));
-        CAF_ASSERT(!expected.empty());
-        auto& e = expected.front();
-        CAF_CHECK_EQUAL(msg.header.from, e.first.from);
-        CAF_CHECK_EQUAL(msg.header.to, e.first.to);
-        int pl;
-        binary_deserializer bd(&backend(), msg.payload, msg.payload_size);
-        bd(pl);
-        CAF_CHECK_EQUAL(pl, e.second);
-        std::vector<char> payload{msg.payload, msg.payload + msg.payload_size};
-        messages.emplace_back(msg, payload);
-        messages.back().first.payload = messages.back().second.data();
-        transport->receive_buffer.clear();
-        expected.pop_front();
-      },
-      [=](send_atom, actor_id sender, actor_id receiver, int payload) {
-        CAF_MESSAGE("send: from = " << sender << " to = " << receiver
-                    << " payload = " << payload);
+behavior dummy_broker(network::stateful_newb<new_basp_msg, test_state>* self) {
+  return {
+    [=](new_basp_msg& msg) {
+      auto& s = self->state;
+      CAF_MESSAGE("handling new basp message = " << to_string(msg));
+      CAF_ASSERT(!s.expected.empty());
+      auto& e = s.expected.front();
+      CAF_CHECK_EQUAL(msg.header.from, e.first.from);
+      CAF_CHECK_EQUAL(msg.header.to, e.first.to);
+      int pl;
+      binary_deserializer bd(&self->backend(), msg.payload, msg.payload_len);
+      bd(pl);
+      CAF_CHECK_EQUAL(pl, e.second);
+      std::vector<char> payload{msg.payload, msg.payload + msg.payload_len};
+      s.messages.emplace_back(msg, payload);
+      s.messages.back().first.payload = s.messages.back().second.data();
+      self->transport->receive_buffer.clear();
+      s.expected.pop_front();
+    },
+    [=](send_atom, actor_id sender, actor_id receiver, uint32_t payload) {
+      CAF_MESSAGE("send: from = " << sender << " to = " << receiver
+                  << " payload = " << payload);
+      {
         auto hw = caf::make_callback([&](byte_buffer& buf) -> error {
-          binary_serializer bs(&backend(), buf);
-          bs(basp_header{sender, receiver});
+          binary_serializer bs(&self->backend(), buf);
+          bs(basp_header{0, sender, receiver});
           return none;
         });
-        auto whdl = wr_buf(&hw);
+        auto whdl = self->wr_buf(&hw);
         CAF_CHECK(whdl.buf != nullptr);
         CAF_CHECK(whdl.protocol != nullptr);
-        binary_serializer bs(&backend(), *whdl.buf);
+        binary_serializer bs(&self->backend(), *whdl.buf);
         bs(payload);
-        std::swap(transport->receive_buffer, transport->offline_buffer);
-        transport->send_buffer.clear();
-        transport->received_bytes = transport->receive_buffer.size();
-      },
-      [=](send_atom, ordering_header& ohdr, basp_header& bhdr, int payload) {
-        CAF_MESSAGE("send: ohdr = " << to_string(ohdr) << " bhdr = "
-                    << to_string(bhdr) << " payload = " << payload);
-        binary_serializer bs(&backend_, transport->receive_buffer);
-        bs(ohdr);
-        bs(bhdr);
-        bs(payload);
-        transport->received_bytes = transport->receive_buffer.size();
-      },
-      [=](expect_atom, basp_header& bhdr, int payload) {
-        expected.push_back(std::make_pair(bhdr, payload));
       }
-    };
+      std::swap(self->transport->receive_buffer, self->transport->offline_buffer);
+      self->transport->send_buffer.clear();
+      self->transport->received_bytes = self->transport->receive_buffer.size();
+    },
+    [=](send_atom, ordering_header& ohdr, basp_header& bhdr, uint32_t payload) {
+      CAF_MESSAGE("send: ohdr = " << to_string(ohdr) << " bhdr = "
+                  << to_string(bhdr) << " payload = " << payload);
+      auto& buf = self->transport->receive_buffer;
+      binary_serializer bs(&self->backend(), buf);
+      bs(ohdr);
+      auto bhdr_start = buf.size();
+      bs(bhdr);
+      auto payload_start = buf.size();
+      bs(payload);
+      auto packet_len = buf.size();
+      self->transport->received_bytes = packet_len;
+      stream_serializer<charbuf> out{&self->backend(),
+                                     buf.data() + bhdr_start,
+                                     sizeof(uint32_t)};
+      auto payload_len = static_cast<uint32_t>(packet_len - payload_start);
+      out(payload_len);
+    },
+    [=](expect_atom, basp_header& bhdr, uint32_t payload) {
+      self->state.expected.push_back(std::make_pair(bhdr, payload));
+    }
+  };
+}
+
+struct dummy_transport : public network::transport_policy {
+  io::network::rw_state read_some(network::newb_base*) {
+    return receive_buffer.size() > 0 ? network::rw_state::success : network::rw_state::indeterminate;
+    //return io::network::rw_state::success;
   }
 };
 
@@ -305,10 +138,10 @@ struct accept_policy_impl : public network::accept_policy {
 
   std::pair<native_socket, network::transport_policy_ptr>
   accept(network::newb_base*) override {
-    // TODO: For UDP read the message into a buffer. Create a new socket.
-    //  Move the buffer into the transport policy as the new receive buffer.
-    network::transport_policy_ptr ptr{new network::transport_policy};
-    return {invalid_native_socket, std::move(ptr)};
+    auto esock = network::new_local_udp_endpoint_impl(0, nullptr);
+    CAF_REQUIRE(esock);
+    network::transport_policy_ptr ptr{new dummy_transport};
+    return {esock->first, std::move(ptr)};
   }
 
   void init(network::newb_base& n) override {
@@ -316,10 +149,10 @@ struct accept_policy_impl : public network::accept_policy {
   }
 };
 
-template <class ProtocolPolicy>
+template <class Protocol>
 struct dummy_basp_newb_acceptor
-    : public network::newb_acceptor<typename ProtocolPolicy::message_type> {
-  using super = network::newb_acceptor<typename ProtocolPolicy::message_type>;
+    : public network::newb_acceptor<typename Protocol::message_type> {
+  using super = network::newb_acceptor<typename Protocol::message_type>;
   using message_tuple_t = std::tuple<ordering_header, basp_header, int>;
 
   dummy_basp_newb_acceptor(default_multiplexer& dm, native_socket sockfd)
@@ -329,32 +162,28 @@ struct dummy_basp_newb_acceptor
 
   expected<actor> create_newb(native_socket sockfd,
                               network::transport_policy_ptr pol) override {
+
     spawned.emplace_back(
-      network::make_newb<dummy_basp_newb>(this->backend().system(), sockfd)
+      network::spawn_newb<Protocol>(this->backend().system(), dummy_broker,
+                                    std::move(pol), sockfd)
     );
     auto ptr = caf::actor_cast<caf::abstract_actor*>(spawned.back());
     if (ptr == nullptr)
       return sec::runtime_error;
-    auto& ref = dynamic_cast<dummy_basp_newb&>(*ptr);
-    ref.transport.reset(pol.release());
-    ref.protocol.reset(new ProtocolPolicy(&ref));
-    ref.transport->max_consecutive_reads = 1;
-    // TODO: Call read_some using the buffer of the ref as a destination.
-    binary_serializer bs(&this->backend(), ref.transport->receive_buffer);
-    bs(get<0>(msg));
-    bs(get<1>(msg));
-    bs(get<2>(msg));
-    ref.transport->received_bytes = ref.transport->receive_buffer.size();
-    ref.expected.emplace_back(get<1>(msg), get<2>(msg));
+//    auto& ref
+//        = dynamic_cast<network::stateful_newb<new_basp_msg, test_state>&>(*ptr);
+//    // TODO: Call read_some using the buffer of the ref as a destination.
+//    binary_serializer bs(&this->backend(), ref.transport->receive_buffer);
+//    bs(get<0>(msg));
+//    bs(get<1>(msg));
+//    bs(get<2>(msg));
+//    ref.transport->received_bytes = ref.transport->receive_buffer.size();
+//    ref.state.expected.emplace_back(get<1>(msg), get<2>(msg));
     return spawned.back();
   }
 
   message_tuple_t msg;
   std::vector<actor> spawned;
-};
-
-struct test_state {
-  int i;
 };
 
 class config : public actor_system_config {
@@ -369,8 +198,9 @@ public:
 };
 
 struct fixture {
-  using policy_t = protocol_policy_impl<ordering<basp_policy>>;
-  using acceptor_t = dummy_basp_newb_acceptor<policy_t>;
+  using newb_t = network::stateful_newb<new_basp_msg, test_state>;
+  using protocol_t = network::generic_protocol<ordering<datagram_basp>>;
+  using acceptor_t = dummy_basp_newb_acceptor<protocol_t>;
   config cfg;
   actor_system sys;
   default_multiplexer& mpx;
@@ -382,18 +212,27 @@ struct fixture {
       : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
         mpx(dynamic_cast<default_multiplexer&>(sys.middleman().backend())),
         sched(dynamic_cast<caf::scheduler::test_coordinator&>(sys.scheduler())) {
+    // Create a socket;
+    auto esock = network::new_local_udp_endpoint_impl(0, nullptr);
+    CAF_REQUIRE(esock);
     // Create newb.
-    self = network::make_newb<dummy_basp_newb>(sys,
-                                               network::invalid_native_socket);
-    auto& ref = deref<network::newb<new_basp_message>>(self);
-    network::newb<new_basp_message>* self_ptr = &ref;
-    ref.transport.reset(new network::transport_policy);
-    ref.protocol.reset(new protocol_policy_impl<ordering<basp_policy>>(self_ptr));
+    network::transport_policy_ptr pol{new dummy_transport};
+    self = network::spawn_newb<protocol_t>(sys, dummy_broker,
+                                           std::move(pol), esock->first);
+    // And another socket.
+    esock = network::new_local_udp_endpoint_impl(0, nullptr);
+    CAF_REQUIRE(esock);
     // Create acceptor.
     auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-    std::unique_ptr<acceptor_t> ptr{new acceptor_t(mpx, invalid_native_socket)};
+    std::unique_ptr<acceptor_t> ptr{new acceptor_t(mpx, esock->first)};
     ptr->acceptor.reset(new accept_policy_impl);
     na = std::move(ptr);
+  }
+
+  ~fixture() {
+    anon_send_exit(self, exit_reason::user_shutdown);
+    exec_all();
+    na->stop();
   }
 
   // -- supporting -------------------------------------------------------------
@@ -410,155 +249,33 @@ struct fixture {
     CAF_REQUIRE(ptr != nullptr);
     return dynamic_cast<T&>(*ptr);
   }
+
+  void write_packet(byte_buffer& buf, const ordering_header& ohdr,
+                    const basp_header& bhdr, uint32_t payload) {
+    // Write header and payload.
+    binary_serializer bs(sys, buf);
+    bs(ohdr);
+    auto bhdr_start = buf.size();
+    bs(bhdr);
+    auto payload_start = buf.size();
+    bs(payload);
+    auto packet_len = buf.size();
+    // Write payload size into basp header.
+    stream_serializer<charbuf> out{sys, buf.data() + bhdr_start,
+                                   sizeof(uint32_t)};
+    auto payload_len = static_cast<uint32_t>(packet_len - payload_start);
+    out(payload_len);
+  }
 };
 
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(newb_basics, fixture)
 
-CAF_TEST(read event) {
-  exec_all();
-  CAF_MESSAGE("create some values for our buffer");
-  ordering_header ohdr{0};
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  anon_send(self, expect_atom::value, bhdr, payload);
-  exec_all();
-  CAF_MESSAGE("copy them into the buffer");
-  auto& dummy = deref<dummy_basp_newb>(self);
-  auto& buf = dummy.transport->receive_buffer;
-  dummy.transport->max_consecutive_reads = 1;
-  // Write data to buffer.
-  binary_serializer bs(sys, buf);
-  bs(ohdr);
-  bs(bhdr);
-  bs(payload);
-  dummy.transport->received_bytes = buf.size();
-  CAF_MESSAGE("trigger a read event");
-  dummy.read_event();
-  CAF_MESSAGE("check the basp header and payload");
-  CAF_REQUIRE(!dummy.messages.empty());
-  auto& msg = dummy.messages.front().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  int return_payload = 0;
-  binary_deserializer bd(sys, msg.payload, msg.payload_size);
-  bd(return_payload);
-  CAF_CHECK_EQUAL(return_payload, payload);
-}
-
-CAF_TEST(message passing) {
-  exec_all();
-  ordering_header ohdr{0};
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  CAF_MESSAGE("setup read event");
-  anon_send(self, expect_atom::value, bhdr, payload);
-  anon_send(self, send_atom::value, ohdr, bhdr, payload);
-  exec_all();
-  auto& dummy = deref<dummy_basp_newb>(self);
-  dummy.transport->max_consecutive_reads = 1;
-  dummy.handle_event(network::operation::read);
-  CAF_MESSAGE("check the basp header and payload");
-  auto& msg = dummy.messages.front().first;
-  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
-  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  int return_payload = 0;
-  binary_deserializer bd(sys, msg.payload, msg.payload_size);
-  bd(return_payload);
-  CAF_CHECK_EQUAL(return_payload, payload);
-}
-
-CAF_TEST(timeouts) {
-  // Should be an unexpected sequence number and lead to an error. Since
-  // we start with 0, the 1 below should be out of order.
-  ordering_header ohdr{1};
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  CAF_MESSAGE("setup read event");
-  anon_send(self, expect_atom::value, bhdr, payload);
-  anon_send(self, send_atom::value, ohdr, bhdr, payload);
-  exec_all();
-  CAF_MESSAGE("trigger read event");
-  auto& dummy = deref<dummy_basp_newb>(self);
-  dummy.transport->max_consecutive_reads = 1;
-  dummy.read_event();
-  CAF_CHECK(!dummy.expected.empty());
-  CAF_MESSAGE("trigger waiting timeouts");
-  // Trigger timeout.
-  sched.trigger_timeout();
-  // Handle received message.
-  exec_all();
-  // Message handler will check if the expected message was received.
-  CAF_CHECK(dummy.expected.empty());
-}
-
-CAF_TEST(message ordering) {
-  CAF_MESSAGE("create data for two messges");
-  // Message one.
-  ordering_header ohdr_first{0};
-  basp_header bhdr_first{10, 11};
-  int payload_first = 100;
-  // Message two.
-  ordering_header ohdr_second{1};
-  basp_header bhdr_second{12, 13};
-  int payload_second = 101;
-  CAF_MESSAGE("setup read events");
-  anon_send(self, expect_atom::value, bhdr_first, payload_first);
-  anon_send(self, expect_atom::value, bhdr_second, payload_second);
-  exec_all();
-  auto& dummy = deref<dummy_basp_newb>(self);
-  dummy.transport->max_consecutive_reads = 1;
-  auto& buf = dummy.transport->receive_buffer;
-  CAF_MESSAGE("read second message first");
-  {
-    binary_serializer bs(sys, buf);
-    bs(ohdr_second);
-    bs(bhdr_second);
-    bs(payload_second);
-  }
-  dummy.transport->received_bytes = buf.size();
-  dummy.read_event();
-  CAF_MESSAGE("followed by first message");
-  buf.clear();
-  {
-    binary_serializer bs(sys, buf);
-    bs(ohdr_first);
-    bs(bhdr_first);
-    bs(payload_first);
-  }
-  dummy.transport->received_bytes = buf.size();
-  dummy.read_event();
-}
-
-CAF_TEST(write buf) {
-  exec_all();
-  basp_header bhdr{13, 42};
-  int payload = 1337;
-  CAF_MESSAGE("setup read event");
-  anon_send(self, expect_atom::value, bhdr, payload);
-  anon_send(self, send_atom::value, bhdr.from, bhdr.to, payload);
-  exec_all();
-  auto& dummy = deref<dummy_basp_newb>(self);
-  dummy.transport->max_consecutive_reads = 1;
-  dummy.handle_event(network::operation::read);
-  // Message handler will check if the expected message was received.
-}
-
-CAF_TEST(newb acceptor) {
-  CAF_MESSAGE("trigger read event on acceptor");
-  // This will write a message into the receive buffer and trigger
-  // a read event on the newly created newb.
-  na->handle_event(network::operation::read);
-  auto& dummy = dynamic_cast<acceptor_t&>(*na.get());
-  CAF_CHECK(!dummy.spawned.empty());
-}
-
 CAF_TEST(spawn newb) {
-  using newb_t = io::network::newb<policy::raw_data_message>;
   scoped_actor self{sys};
   auto rcvd = false;
-  auto server = [&rcvd] (newb_t*) -> behavior {
+  auto my_newb = [&rcvd] (newb_t*) -> behavior {
     return {
       [&rcvd](int) {
         rcvd = true;
@@ -566,11 +283,11 @@ CAF_TEST(spawn newb) {
     };
   };
   CAF_MESSAGE("create newb");
-  network::transport_policy_ptr transport{new network::transport_policy};
-  auto esock = io::network::new_tcp_acceptor_impl(0, nullptr, true);
+  auto esock = network::new_local_udp_endpoint_impl(0, nullptr);
   CAF_REQUIRE(esock);
-  using proto = io::network::generic_protocol<policy::raw>;
-  auto n = io::network::spawn_newb<proto>(sys, server, std::move(transport), *esock);
+  network::transport_policy_ptr transport{new dummy_transport};
+  auto n = io::network::spawn_newb<protocol_t>(sys, my_newb, std::move(transport),
+                                               esock->first);
   exec_all();
   CAF_MESSAGE("send test message");
   self->send(n, 3);
@@ -584,24 +301,23 @@ CAF_TEST(spawn newb) {
 
 CAF_TEST(spawn stateful newb) {
   scoped_actor self{sys};
-  using  newb_t = io::network::stateful_newb<policy::raw_data_message, test_state>;
-  auto server = [] (newb_t* self) -> behavior {
-    self->state.i = 0;
+  auto my_newb = [] (newb_t* self) -> behavior {
+    self->state.value = 0;
     return {
       [=](set_atom, int i) {
-        self->state.i = i;
+        self->state.value = i;
       },
       [=](get_atom) {
-        return self->state.i;
+        return self->state.value;
       },
     };
   };
   CAF_MESSAGE("create newb");
-  network::transport_policy_ptr transport{new network::transport_policy};
-  auto esock = io::network::new_tcp_acceptor_impl(0, nullptr, true);
+  auto esock = network::new_local_udp_endpoint_impl(0, nullptr);
   CAF_REQUIRE(esock);
-  using proto = io::network::generic_protocol<policy::raw>;
-  auto n = io::network::spawn_newb<proto>(sys, server, std::move(transport), *esock);
+  network::transport_policy_ptr transport{new dummy_transport};
+  auto n = io::network::spawn_newb<protocol_t>(sys, my_newb, std::move(transport),
+                                               esock->first);
   exec_all();
   CAF_MESSAGE("set value in state");
   self->send(n, set_atom::value, 3);
@@ -622,6 +338,127 @@ CAF_TEST(spawn stateful newb) {
   anon_send_exit(n, exit_reason::user_shutdown);
   exec_all();
   CAF_MESSAGE("done");
+}
+
+CAF_TEST(read event) {
+  exec_all();
+  CAF_MESSAGE("create some values for our buffer");
+  const ordering_header ohdr{0};
+  const basp_header bhdr{0, 13, 42};
+  const uint32_t payload = 1337;
+  CAF_MESSAGE("set the expected message");
+  anon_send(self, expect_atom::value, bhdr, payload);
+  exec_all();
+  CAF_MESSAGE("copy them into the buffer");
+  auto& dummy = deref<newb_t>(self);
+  auto& buf = dummy.transport->receive_buffer;
+  write_packet(buf, ohdr, bhdr, payload);
+  dummy.transport->received_bytes = buf.size();
+  CAF_MESSAGE("trigger a read event");
+  dummy.read_event();
+  CAF_MESSAGE("check the basp header and payload");
+  CAF_REQUIRE(!dummy.state.messages.empty());
+  auto& msg = dummy.state.messages.front().first;
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  uint32_t return_payload = 0;
+  binary_deserializer bd(sys, msg.payload, msg.payload_len);
+  bd(return_payload);
+  CAF_CHECK_EQUAL(return_payload, payload);
+}
+
+CAF_TEST(message passing) {
+  exec_all();
+  const ordering_header ohdr{0};
+  const basp_header bhdr{0, 13, 42};
+  const uint32_t payload = 1337;
+  CAF_MESSAGE("setup read event");
+  anon_send(self, expect_atom::value, bhdr, payload);
+  anon_send(self, send_atom::value, ohdr, bhdr, payload);
+  exec_all();
+  auto& dummy = deref<newb_t>(self);
+  dummy.handle_event(network::operation::read);
+  CAF_MESSAGE("check the basp header and payload");
+  auto& msg = dummy.state.messages.front().first;
+  CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
+  CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
+  int return_payload = 0;
+  binary_deserializer bd(sys, msg.payload, msg.payload_len);
+  bd(return_payload);
+  CAF_CHECK_EQUAL(return_payload, payload);
+}
+
+CAF_TEST(timeouts) {
+  // Should be an unexpected sequence number and lead to an error. Since
+  // we start with 0, the 1 below should be out of order.
+  const ordering_header ohdr{1};
+  const basp_header bhdr{0, 13, 42};
+  const uint32_t payload = 1337;
+  CAF_MESSAGE("setup read event");
+  anon_send(self, expect_atom::value, bhdr, payload);
+  anon_send(self, send_atom::value, ohdr, bhdr, payload);
+  exec_all();
+  CAF_MESSAGE("trigger read event");
+  auto& dummy = deref<newb_t>(self);
+  dummy.read_event();
+  CAF_CHECK(!dummy.state.expected.empty());
+  CAF_MESSAGE("trigger waiting timeouts");
+  // Trigger timeout.
+  sched.trigger_timeout();
+  // Handle received message.
+  exec_all();
+  // Message handler will check if the expected message was received.
+  CAF_CHECK(dummy.state.expected.empty());
+}
+
+CAF_TEST(message ordering) {
+  CAF_MESSAGE("create data for two messges");
+  // Message one.
+  const ordering_header ohdr_first{0};
+  const basp_header bhdr_first{0, 10, 11};
+  const uint32_t payload_first = 100;
+  // Message two.
+  const ordering_header ohdr_second{1};
+  const basp_header bhdr_second{0, 12, 13};
+  const uint32_t payload_second = 101;
+  CAF_MESSAGE("setup read events");
+  anon_send(self, expect_atom::value, bhdr_first, payload_first);
+  anon_send(self, expect_atom::value, bhdr_second, payload_second);
+  exec_all();
+  auto& dummy = deref<newb_t>(self);
+  auto& buf = dummy.transport->receive_buffer;
+  CAF_MESSAGE("read second message first");
+  write_packet(buf, ohdr_second, bhdr_second, payload_second);
+  dummy.transport->received_bytes = buf.size();
+  dummy.read_event();
+  CAF_MESSAGE("followed by first message");
+  buf.clear();
+  write_packet(buf, ohdr_first, bhdr_first, payload_first);
+  dummy.transport->received_bytes = buf.size();
+  dummy.read_event();
+}
+
+CAF_TEST(write buf) {
+  exec_all();
+  const basp_header bhdr{0, 13, 42};
+  const uint32_t payload = 1337;
+  CAF_MESSAGE("setup read event");
+  anon_send(self, expect_atom::value, bhdr, payload);
+  anon_send(self, send_atom::value, bhdr.from, bhdr.to, payload);
+  exec_all();
+  auto& dummy = deref<newb_t>(self);
+  dummy.handle_event(network::operation::read);
+  // Message handler will check if the expected message was received.
+}
+
+CAF_TEST(newb acceptor) {
+  CAF_MESSAGE("trigger read event on acceptor");
+  na->handle_event(network::operation::read);
+  auto& dummy = dynamic_cast<acceptor_t&>(*na.get());
+  CAF_CHECK(!dummy.spawned.empty());
+  CAF_MESSAGE("shutdown the create newb");
+  for (actor& d : dummy.spawned)
+    anon_send_exit(d, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
