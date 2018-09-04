@@ -680,13 +680,13 @@ spawn_newb(actor_system& sys, F fun, transport_policy_ptr transport,
 
 /// Spawn a new "newb" broker client to connect to `host`:`port`.
 template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
-typename infer_handle_from_fun<F>::type
+expected<typename infer_handle_from_fun<F>::type>
 spawn_client(actor_system& sys, F fun, transport_policy_ptr transport,
              std::string host, uint16_t port, Ts&&... xs) {
   expected<native_socket> esock = transport->connect(host, port);
   if (!esock)
     return std::move(esock.error());
-  return spawn_newb<Protocol>(sys, fun, std::move(transport),
+  return spawn_newb<Protocol>(sys, fun, std::move(transport), *esock,
                               std::forward<Ts>(xs)...);
 }
 
