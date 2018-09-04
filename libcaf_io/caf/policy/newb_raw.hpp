@@ -24,18 +24,18 @@
 namespace caf {
 namespace policy {
 
-struct raw_data_message {
+struct new_raw_msg {
   char* payload;
   size_t payload_len;
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, raw_data_message& data) {
+typename Inspector::result_type inspect(Inspector& fun, new_raw_msg& data) {
   return fun(meta::type_name("raw_data_message"), data.payload_len);
 }
 
 struct raw {
-  using message_type = raw_data_message;
+  using message_type = new_raw_msg;
   using result_type = optional<message_type>;
   io::network::newb<message_type>* parent;
   message_type msg;

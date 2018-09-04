@@ -40,7 +40,7 @@ typename Inspector::result_type inspect(Inspector& fun, basp_header& hdr) {
 
 constexpr size_t basp_header_len = sizeof(uint32_t) + sizeof(actor_id) * 2;
 
-struct new_basp_message {
+struct new_basp_msg {
   basp_header header;
   char* payload;
   size_t payload_len;
@@ -48,14 +48,14 @@ struct new_basp_message {
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun,
-                                        new_basp_message& msg) {
+                                        new_basp_msg& msg) {
   return fun(meta::type_name("new_basp_message"), msg.header,
              msg.payload_len);
 }
 
 struct datagram_basp {
   static constexpr size_t header_size = basp_header_len;
-  using message_type = new_basp_message;
+  using message_type = new_basp_msg;
   using result_type = optional<message_type>;
   io::network::newb<message_type>* parent;
   message_type msg;
@@ -109,7 +109,7 @@ struct datagram_basp {
 
 struct stream_basp {
   static constexpr size_t header_size = basp_header_len;
-  using message_type = new_basp_message;
+  using message_type = new_basp_msg;
   using result_type = optional<message_type>;
   io::network::newb<message_type>* parent;
   message_type msg;
