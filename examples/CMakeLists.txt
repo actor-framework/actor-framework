@@ -30,6 +30,9 @@ add(message_passing promises)
 add(message_passing request)
 add(message_passing typed_calculator)
 
+# streaming API
+add(streaming integer_stream)
+
 # dynamic behavior changes using 'become'
 add(dynamic_behavior skip_messages)
 add(dynamic_behavior dining_philosophers)
