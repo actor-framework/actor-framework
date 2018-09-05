@@ -327,7 +327,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   bool cleanup(error&& reason, execution_unit* host) override {
     CAF_LOG_TRACE(CAF_ARG(reason));
-    // TODO: Ask policies, close socket.
+    // TODO: Should policies be notified here?
+    stop();
     return local_actor::cleanup(std::move(reason), host);
   }
 
