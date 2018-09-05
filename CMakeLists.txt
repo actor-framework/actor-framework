@@ -597,77 +597,57 @@ if(NOT CAF_NO_UNIT_TESTS)
 endif()
 
 
-################################################################################
-#                                Doxygen setup                                 #
-################################################################################
+# -- Fetch branch name and SHA if available ------------------------------------
 
-# check for doxygen and add custom "doc" target to Makefile
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile"
-                 @ONLY)
-  add_custom_target(doc "${DOXYGEN_EXECUTABLE}"
-                    "${CMAKE_HOME_DIRECTORY}/Doxyfile"
-                    WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}"
-                    COMMENT "Generating API documentation with Doxygen"
-                    VERBATIM)
-endif(DOXYGEN_FOUND)
+find_package(Git QUIET)
 
-################################################################################
-#                                Manual setup                                  #
-################################################################################
+set(CAF_RELEASE "${CAF_VERSION}")
 
-set(MANUAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/manual")
-if(EXISTS "${MANUAL_DIR}"
-   AND EXISTS "${MANUAL_DIR}/variables.tex.in"
-   AND EXISTS "${MANUAL_DIR}/conf.py.in")
+if(GIT_FOUND)
   # retrieve current branch name for CAF
-  execute_process(COMMAND git rev-parse --abbrev-ref HEAD
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                  OUTPUT_VARIABLE GIT_BRANCH
+                  RESULT_VARIABLE gitBranchResult
+                  OUTPUT_VARIABLE gitBranch
+                  ERROR_QUIET
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
   # retrieve current SHA1 hash for CAF
-  execute_process(COMMAND git log --pretty=format:%h -n 1
+  execute_process(COMMAND ${GIT_EXECUTABLE} log --pretty=format:%h -n 1
                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                  OUTPUT_VARIABLE CAF_SHA
+                  RESULT_VARIABLE gitShaResult
+                  OUTPUT_VARIABLE gitSha
+                  ERROR_QUIET
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  # retrieve current SHA1 hash for the Manual
-  execute_process(COMMAND git log --pretty=format:%h -n 1
-                  WORKING_DIRECTORY ${MANUAL_DIR}
-                  OUTPUT_VARIABLE CAF_MANUAL_SHA
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(${GIT_BRANCH} STREQUAL "master")
-    # retrieve current tag name for CAF
-    execute_process(COMMAND git describe --tags --contains ${CAF_SHA}
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                    RESULT_VARIABLE GIT_TAG_RES
-                    OUTPUT_VARIABLE GIT_TAG
-                    ERROR_QUIET
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    # prefer tag name over auto-generated version
-    if(GIT_TAG_RES STREQUAL "0")
-      set(CAF_RELEASE "${GIT_TAG}")
-    else()
-      set(CAF_RELEASE "${CAF_VERSION}")
+  if(gitBranchResult EQUAL 0 AND gitShaResult EQUAL 0)
+    # generate semantic CAF version for manual
+    set(CAF_RELEASE "${CAF_VERSION}+exp.sha.${gitSha}")
+    # check whether we're building the manual for a stable release
+    if(gitBranch STREQUAL "master")
+      # retrieve current tag name for CAF
+      execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --contains ${gitSha}
+                      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                      RESULT_VARIABLE gitTagResult
+                      OUTPUT_VARIABLE gitTag
+                      ERROR_QUIET
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+      # tags indicate stable releases -> use tag name as release version
+      if(gitTagResult EQUAL 0)
+        set(CAF_RELEASE "${gitTag}")
+      endif()
     endif()
-  else()
-    set(CAF_RELEASE "${CAF_VERSION}+exp.sha.${CAF_SHA}")
   endif()
-  MESSAGE(STATUS "Set manual version to ${CAF_RELEASE}")
-  configure_file("${MANUAL_DIR}/variables.tex.in"
-                 "${MANUAL_DIR}/variables.tex"
-                 IMMEDIATE @ONLY)
-  configure_file("${MANUAL_DIR}/conf.py.in"
-                 "${MANUAL_DIR}/conf.py"
-                 IMMEDIATE @ONLY)
-  configure_file("${MANUAL_DIR}/index_header.rst.in"
-                 "${MANUAL_DIR}/index_header.rst"
-                 IMMEDIATE @ONLY)
-  configure_file("${MANUAL_DIR}/index_footer.rst.in"
-                 "${MANUAL_DIR}/index_footer.rst"
-                 IMMEDIATE @ONLY)
 endif()
+
+message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
+
+# -- Setup for building manual and API documentation ---------------------------
+
+# we need the examples and some headers relative to the build/doc/tex directory
+file(COPY examples/ DESTINATION examples)
+file(COPY libcaf_core/caf/exit_reason.hpp DESTINATION libcaf_core/caf/)
+file(COPY libcaf_core/caf/sec.hpp DESTINATION libcaf_core/caf/)
+
+add_subdirectory(doc)
 
 ################################################################################
 #                     Add additional project files to GUI                      #

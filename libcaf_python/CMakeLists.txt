@@ -3,7 +3,7 @@ project(caf_cash CXX)
 
 # check whether submodules are available
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/pybind/CMakeLists.txt")
-  message(WARNING "pybind submodule not loaded, skip libcaf_python")
+  message(STATUS "Pybind submodule not loaded, skip libcaf_python.")
   set(CAF_NO_PYTHON yes)
 else()
   if(NOT "${CAF_PYTHON_CONFIG_BIN}" STREQUAL "")

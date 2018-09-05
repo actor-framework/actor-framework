@@ -18,7 +18,7 @@
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
-// Manual references: lines 32-93 (Error.tex)
+// Manual references: lines 32-117 (Error.tex)
 
 #pragma once
 
