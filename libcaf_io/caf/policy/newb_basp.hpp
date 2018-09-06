@@ -49,7 +49,7 @@ struct new_basp_msg {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun,
                                         new_basp_msg& msg) {
-  return fun(meta::type_name("new_basp_message"), msg.header,
+  return fun(meta::type_name("new_basp_msg"), msg.header,
              msg.payload_len);
 }
 
