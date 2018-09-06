@@ -63,12 +63,12 @@ namespace caf {
 namespace policy {
 
 tcp_transport::tcp_transport()
-    : read_threshold{0},
+    : read_threshold{1},
       collected{0},
       maximum{0},
       writing{false},
       written{0} {
-  // nop
+  configure_read(io::receive_policy::at_most(1024));
 }
 
 io::network::rw_state tcp_transport::read_some(io::network::newb_base* parent) {
@@ -78,9 +78,15 @@ io::network::rw_state tcp_transport::read_some(io::network::newb_base* parent) {
   auto sres = ::recv(parent->fd(),
                      reinterpret_cast<io::network::socket_recv_ptr>(buf),
                      len, io::network::no_sigpipe_io_flag);
-  if (io::network::is_error(sres, true) || sres == 0) {
-    // Recv returns 0 when the peer has performed an orderly shutdown.
+  if (sres < 0) {
+    auto err = io::network::last_socket_error();
+    if (io::network::would_block_or_temporarily_unavailable(err))
+      return io::network::rw_state::indeterminate;
     CAF_LOG_DEBUG("recv failed" << CAF_ARG(sres));
+    return io::network::rw_state::failure;
+  } else if (sres == 0) {
+    // Recv returns 0 when the peer has performed an orderly shutdown.
+    CAF_LOG_DEBUG("peer shutdown");
     return io::network::rw_state::failure;
   }
   size_t result = (sres > 0) ? static_cast<size_t>(sres) : 0;
@@ -148,8 +154,7 @@ void tcp_transport::prepare_next_write(io::network::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   if (offline_buffer.empty()) {
-    parent->backend().del(io::network::operation::write,
-                          parent->fd(), parent);
+    parent->backend().del(io::network::operation::write, parent->fd(), parent);
     writing = false;
   } else {
     send_buffer.swap(offline_buffer);
@@ -160,8 +165,7 @@ void tcp_transport::flush(io::network::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
-    parent->backend().add(io::network::operation::write,
-                          parent->fd(), parent);
+    parent->backend().add(io::network::operation::write, parent->fd(), parent);
     writing = true;
     prepare_next_write(parent);
   }
@@ -170,10 +174,7 @@ void tcp_transport::flush(io::network::newb_base* parent) {
 expected<io::network::native_socket>
 tcp_transport::connect(const std::string& host, uint16_t port,
                        optional<io::network::protocol::network> preferred) {
-  auto res = io::network::new_tcp_connection(host, port, preferred);
-  if (!res)
-    std::cerr << "failed to create new TCP connection" << std::endl;
-  return res;
+  return io::network::new_tcp_connection(host, port, preferred);
 }
 
 expected<io::network::native_socket>
