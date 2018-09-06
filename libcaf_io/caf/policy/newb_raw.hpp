@@ -31,7 +31,7 @@ struct new_raw_msg {
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun, new_raw_msg& data) {
-  return fun(meta::type_name("raw_data_message"), data.payload_len);
+  return fun(meta::type_name("new_raw_msg"), data.payload_len);
 }
 
 struct raw {
