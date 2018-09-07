@@ -60,14 +60,12 @@ result<message> drop(scheduled_actor*, message_view&) {
 // -- static helper functions --------------------------------------------------
 
 void scheduled_actor::default_error_handler(scheduled_actor* ptr, error& x) {
-  ptr->fail_state_ = std::move(x);
-  ptr->setf(is_terminated_flag);
+  ptr->quit(std::move(x));
 }
 
 void scheduled_actor::default_down_handler(scheduled_actor* ptr, down_msg& x) {
   aout(ptr) << "*** unhandled down message [id: " << ptr->id()
-             << ", name: " << ptr->name() << "]: " << to_string(x)
-             << std::endl;
+            << ", name: " << ptr->name() << "]: " << to_string(x) << std::endl;
 }
 
 void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
@@ -542,8 +540,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       unlink_from(em.source);
       // exit_reason::kill is always fatal
       if (em.reason == exit_reason::kill) {
-        fail_state_ = std::move(em.reason);
-        setf(is_terminated_flag);
+        quit(std::move(em.reason));
       } else {
         call_handler(exit_handler_, this, em);
       }
