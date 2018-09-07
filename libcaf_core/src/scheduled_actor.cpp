@@ -762,6 +762,10 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
 // -- behavior management ----------------------------------------------------
 
 void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
+  if (getf(is_terminated_flag)) {
+    CAF_LOG_WARNING("called become() on a terminated actor");
+    return;
+  }
   if (discard_old && !bhvr_stack_.empty())
     bhvr_stack_.pop_back();
   // request_timeout simply resets the timeout when it's invalid
