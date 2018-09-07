@@ -165,18 +165,36 @@ using transport_policy_ptr = std::unique_ptr<transport_policy>;
 // -- accept policy ------------------------------------------------------------
 
 struct accept_policy {
+  accept_policy(bool manual_read = false)
+      : manual_read(manual_read) {
+    // nop
+  }
+
   virtual ~accept_policy();
 
   virtual expected<native_socket> create_socket(uint16_t port, const char* host,
                                                 bool reuse = false) = 0;
 
-  virtual std::pair<native_socket, transport_policy_ptr> accept(newb_base*) = 0;
+  virtual std::pair<native_socket, transport_policy_ptr> accept(newb_base*) {
+    return {0, nullptr};
+  }
 
-  virtual error multiplex_write() {
+  /// If `requires_raw_data` is set to true, the acceptor will only call
+  /// this function for new read event and let the policy handle everything
+  /// else.
+  virtual void read_event(newb_base*) {
+    // nop
+  }
+
+  virtual error write_event(newb_base*) {
     return none;
   }
 
-  virtual void init(newb_base&) = 0;
+  virtual void init(newb_base&) {
+    // nop
+  }
+
+  bool manual_read;
 };
 
 // -- protocol policy ----------------------------------------------------------
@@ -340,7 +358,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   bool cleanup(error&& reason, execution_unit* host) override {
     CAF_LOG_TRACE(CAF_ARG(reason));
-    stop(); // ???
+    stop();
     // TODO: Should policies be notified here?
     return local_actor::cleanup(std::move(reason), host);
   }
@@ -385,7 +403,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
         break;
       case network::operation::propagate_error: ; // nop
     }
-    // Quit if there is nothing left to do.
+    // Event handler reference no longer necessary.
     if (!reading_ && !writing_)
       intrusive_ptr_release(super::ctrl());
   }
@@ -395,8 +413,10 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   void start() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
-    intrusive_ptr_add_ref(super::ctrl());
-    CAF_LOG_DEBUG("starting newb");
+    // This is our own reference used to manage the lifetime matching
+    // as an event handler.
+    if (!reading_ && !writing_)
+      intrusive_ptr_add_ref(super::ctrl());
     start_reading();
     if (transport)
       transport->prepare_next_read(this);
@@ -411,20 +431,20 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   }
 
   void io_error(operation op, error err) override {
-    // TODO: This message is not always handled correctly.
-    //  Don't know why yet ...
-    auto mptr = make_mailbox_element(nullptr, invalid_message_id, {},
-                                     io_error_msg{op, std::move(err)});
-    switch (scheduled_actor::consume(*mptr)) {
-      case im_success:
-        this->finalize();
-        break;
-      case im_skipped:
-        this->push_to_cache(std::move(mptr));
-        break;
-      case im_dropped:
-        CAF_LOG_INFO("broker dropped read error message");
-        break;
+    if (!this->getf(this->is_cleaned_up_flag)) {
+      auto mptr = make_mailbox_element(nullptr, invalid_message_id, {},
+                                       io_error_msg{op, std::move(err)});
+      switch (scheduled_actor::consume(*mptr)) {
+        case im_success:
+          this->finalize();
+          break;
+        case im_skipped:
+          this->push_to_cache(std::move(mptr));
+          break;
+        case im_dropped:
+          CAF_LOG_INFO("broker dropped read error message");
+          break;
+      }
     }
     switch (op) {
       case operation::read:
@@ -633,8 +653,8 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
   }
 
   void io_error(operation op, error err) override {
-    std::cerr << "operation " << to_string(op) << " failed: "
-              << backend().system().render(err) << std::endl;
+    CAF_LOG_ERROR("operation " << to_string(op) << " failed: "
+                  << backend().system().render(err));
     stop();
   }
 
@@ -663,22 +683,26 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
   // -- members ----------------------------------------------------------------
 
   void read_event() {
-    native_socket sock;
-    transport_policy_ptr transport;
-    std::tie(sock, transport) = acceptor->accept(this);
-    auto en = create_newb(sock, std::move(transport));
-    if (!en) {
-      io_error(operation::read, std::move(en.error()));
-      return;
+    if (acceptor->manual_read) {
+      acceptor->read_event(this);
+    } else {
+      native_socket sock;
+      transport_policy_ptr transport;
+      std::tie(sock, transport) = acceptor->accept(this);
+      auto en = create_newb(sock, std::move(transport));
+      if (!en) {
+        io_error(operation::read, std::move(en.error()));
+        return;
+      }
+      auto ptr = caf::actor_cast<caf::abstract_actor*>(*en);
+      CAF_ASSERT(ptr != nullptr);
+      auto& ref = dynamic_cast<newb<Message>&>(*ptr);
+      acceptor->init(ref);
     }
-    auto ptr = caf::actor_cast<caf::abstract_actor*>(*en);
-    CAF_ASSERT(ptr != nullptr);
-    auto& ref = dynamic_cast<newb<Message>&>(*ptr);
-    acceptor->init(ref);
   }
 
   void write_event() {
-    acceptor->multiplex_write();
+    acceptor->write_event(this);
   }
 
   virtual expected<actor> create_newb(native_socket sock,
