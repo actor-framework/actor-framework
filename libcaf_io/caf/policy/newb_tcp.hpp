@@ -67,33 +67,7 @@ struct accept_tcp : public io::network::accept_policy {
 };
 
 template <class T>
-struct tcp_protocol
-    : public io::network::protocol_policy<typename T::message_type> {
-  T impl;
-
-  tcp_protocol(io::network::newb<typename T::message_type>* parent)
-      : impl(parent) {
-    // nop
-  }
-
-  error read(char* bytes, size_t count) override {
-    return impl.read(bytes, count);
-  }
-
-  error timeout(atom_value atm, uint32_t id) override {
-    return impl.timeout(atm, id);
-  }
-
-  void write_header(io::network::byte_buffer& buf,
-                    io::network::header_writer* hw) override {
-    impl.write_header(buf, hw);
-  }
-
-  void prepare_for_sending(io::network::byte_buffer& buf, size_t hstart,
-                           size_t offset, size_t plen) override {
-    impl.prepare_for_sending(buf, hstart, offset, plen);
-  }
-};
+using tcp_protocol = io::network::generic_protocol<T>;
 
 } // namespace policy
 } // namespace caf
