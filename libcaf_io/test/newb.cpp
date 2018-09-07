@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE newb
+#define CAF_SUITE io_newbs
 
 #include "caf/config.hpp"
 
@@ -71,7 +71,7 @@ behavior dummy_broker(network::stateful_newb<new_basp_msg, test_state>* self) {
       auto& e = s.expected.front();
       CAF_CHECK_EQUAL(msg.header.from, e.first.from);
       CAF_CHECK_EQUAL(msg.header.to, e.first.to);
-      int pl;
+      uint32_t pl;
       binary_deserializer bd(&self->backend(), msg.payload, msg.payload_len);
       bd(pl);
       CAF_CHECK_EQUAL(pl, e.second);
@@ -382,7 +382,7 @@ CAF_TEST(message passing) {
   auto& msg = dummy.state.messages.front().first;
   CAF_CHECK_EQUAL(msg.header.from, bhdr.from);
   CAF_CHECK_EQUAL(msg.header.to, bhdr.to);
-  int return_payload = 0;
+  uint32_t return_payload = 0;
   binary_deserializer bd(sys, msg.payload, msg.payload_len);
   bd(return_payload);
   CAF_CHECK_EQUAL(return_payload, payload);
