@@ -441,7 +441,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   void start_reading() override {
     if (!reading_) {
-      activate();
+      event_handler::activate();
       reading_ = true;
     }
   }
