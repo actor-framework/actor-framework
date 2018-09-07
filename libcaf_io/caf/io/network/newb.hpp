@@ -618,8 +618,11 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
   // -- base requirements ------------------------------------------------------
 
   void start() override {
-    start_reading();
     ref();
+    start_reading();
+    backend().post([]() {
+      // nop
+    });
   }
 
   void stop() override {
