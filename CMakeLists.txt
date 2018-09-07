@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.4)
+cmake_minimum_required(VERSION 2.8.12)
 project(caf C CXX)
 
 include(CheckCSourceCompiles)
@@ -98,7 +98,6 @@ if(CAF_USE_CCACHE)
   if(CCACHE_PROGRAM)
     message(STATUS "Using ccache command: ${CCACHE_PROGRAM}")
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
   else()
     message(STATUS "Unable to find ccache")
   endif()
@@ -365,37 +364,18 @@ if (DEFINED CMAKE_LD_LIBS)
 endif()
 
 ################################################################################
-#                       configure build_config.hpp header                      #
+#                                setup logging                                 #
 ################################################################################
 
 if(NOT CAF_LOG_LEVEL)
   set(CAF_LOG_LEVEL "-1")
 endif()
 
-macro(to_int_value name)
-  if(${name})
-    set(${name}_INT 1)
-  else()
-    set(${name}_INT -1)
-  endif()
-endmacro()
-
-to_int_value(CAF_NO_EXCEPTIONS)
-to_int_value(CAF_NO_MEM_MANAGEMENT)
-to_int_value(CAF_ENABLE_RUNTIME_CHECKS)
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_config.hpp.in"
-               "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core/caf/detail/build_config.hpp"
-               IMMEDIATE @ONLY)
-
-
 ################################################################################
 #                           setup for install target                           #
 ################################################################################
 
 # install includes from core
-install(DIRECTORY libcaf_core/caf/
-        DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
 # install includes from io
 install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
