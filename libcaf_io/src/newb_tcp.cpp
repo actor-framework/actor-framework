@@ -154,7 +154,7 @@ void tcp_transport::prepare_next_write(io::network::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   if (offline_buffer.empty()) {
-    parent->backend().del(io::network::operation::write, parent->fd(), parent);
+    parent->stop_writing();
     writing = false;
   } else {
     send_buffer.swap(offline_buffer);
@@ -165,7 +165,7 @@ void tcp_transport::flush(io::network::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
-    parent->backend().add(io::network::operation::write, parent->fd(), parent);
+    parent->start_writing();
     writing = true;
     prepare_next_write(parent);
   }
