@@ -28,6 +28,7 @@
 
 #include "caf/actor_factory.hpp"
 #include "caf/config_option.hpp"
+#include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
 #include "caf/dictionary.hpp"
