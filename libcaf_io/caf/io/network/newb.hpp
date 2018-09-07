@@ -83,6 +83,15 @@ struct newb_base : public network::event_handler {
   virtual void stop() = 0;
 
   virtual void io_error(operation op, error err) = 0;
+
+  virtual void start_reading() = 0;
+
+  virtual void stop_reading() = 0;
+
+  virtual void start_writing() = 0;
+
+  virtual void stop_writing() = 0;
+
 };
 
 // -- transport policy ---------------------------------------------------------
@@ -296,6 +305,10 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     return resumable::io_actor;
   }
 
+  const char* name() const override {
+    return "newb";
+  }
+
   // -- overridden modifiers of local_actor ------------------------------------
 
   void launch(execution_unit* eu, bool lazy, bool hide) override {
@@ -327,8 +340,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   bool cleanup(error&& reason, execution_unit* host) override {
     CAF_LOG_TRACE(CAF_ARG(reason));
+    stop(); // ???
     // TODO: Should policies be notified here?
-    stop();
     return local_actor::cleanup(std::move(reason), host);
   }
 
@@ -364,26 +377,27 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE(CAF_ARG(op));
     switch (op) {
-      case network::operation::read:  break;
-      case network::operation::write: break;
+      case network::operation::read:
+        reading_ = false;
+        break;
+      case network::operation::write:
+        writing_ = false;
+        break;
       case network::operation::propagate_error: ; // nop
     }
-    // nop
+    // Quit if there is nothing left to do.
+    if (!reading_ && !writing_)
+      intrusive_ptr_release(super::ctrl());
   }
 
-  // -- members ----------------------------------------------------------------
-
-  void init_newb() {
-    CAF_LOG_TRACE("");
-    super::setf(super::is_initialized_flag);
-  }
+  // -- base requirements ------------------------------------------------------
 
   void start() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
     intrusive_ptr_add_ref(super::ctrl());
     CAF_LOG_DEBUG("starting newb");
-    event_handler::activate();
+    start_reading();
     if (transport)
       transport->prepare_next_read(this);
   }
@@ -391,12 +405,14 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   void stop() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
-    intrusive_ptr_release(super::ctrl());
     close_read_channel();
-    passivate();
+    stop_reading();
+    stop_writing();
   }
 
   void io_error(operation op, error err) override {
+    // TODO: This message is not always handled correctly.
+    //  Don't know why yet ...
     auto mptr = make_mailbox_element(nullptr, invalid_message_id, {},
                                      io_error_msg{op, std::move(err)});
     switch (scheduled_actor::consume(*mptr)) {
@@ -412,15 +428,44 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     }
     switch (op) {
       case operation::read:
-        passivate();
+        stop_reading();
         break;
       case operation::write:
-        event_handler::backend().del(operation::write, fd(), this);
+        stop_writing();
         break;
       case operation::propagate_error:
         // TODO: What should happen here?
         break;
     }
+  }
+
+  void start_reading() override {
+    if (!reading_) {
+      activate();
+      reading_ = true;
+    }
+  }
+
+  void stop_reading() override {
+    passivate();
+  }
+
+  void start_writing() override {
+    if (!writing_) {
+      event_handler::backend().add(operation::write, fd(), this);
+      writing_ = true;
+    }
+  }
+
+  void stop_writing() override {
+    event_handler::backend().del(operation::write, fd(), this);
+  }
+
+  // -- members ----------------------------------------------------------------
+
+  void init_newb() {
+    CAF_LOG_TRACE("");
+    super::setf(super::is_initialized_flag);
   }
 
   /// Get a write buffer to write data to be sent by this broker.
@@ -515,17 +560,23 @@ private:
   }
 
   mailbox_element_vals<Message> value_;
+  bool reading_;
+  bool writing_;
 };
 
 // -- new broker acceptor ------------------------------------------------------
 
 template <class Message>
-struct newb_acceptor : public newb_base {
+struct newb_acceptor : public newb_base, public caf::ref_counted {
 
   // -- constructors and destructors -------------------------------------------
 
   newb_acceptor(default_multiplexer& dm, native_socket sockfd)
       : newb_base(dm, sockfd) {
+    // nop
+  }
+
+  ~newb_acceptor() {
     // nop
   }
 
@@ -549,11 +600,61 @@ struct newb_acceptor : public newb_base {
 
   void removed_from_loop(network::operation op) override {
     CAF_LOG_TRACE(CAF_ARG(op));
+    CAF_LOG_DEBUG("newb removed from loop: " << to_string(op));
     switch (op) {
-      case network::operation::read:  break;
-      case network::operation::write: break;
+      case network::operation::read:
+        reading_ = false;
+        break;
+      case network::operation::write:
+        writing_ = false;
+        break;
       case network::operation::propagate_error: ; // nop
     }
+    // Quit if there is nothing left to do.
+    if (!reading_ && !writing_)
+      deref();
+  }
+
+  // -- base requirements ------------------------------------------------------
+
+  void start() override {
+    start_reading();
+    ref();
+  }
+
+  void stop() override {
+    CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
+    close_read_channel();
+    stop_reading();
+    stop_writing();
+  }
+
+  void io_error(operation op, error err) override {
+    std::cerr << "operation " << to_string(op) << " failed: "
+              << backend().system().render(err) << std::endl;
+    stop();
+  }
+
+  void start_reading() override {
+    if (!reading_) {
+      activate();
+      reading_ = true;
+    }
+  }
+
+  void stop_reading() override {
+    passivate();
+  }
+
+  void start_writing() override {
+    if (!writing_) {
+      event_handler::backend().add(operation::write, fd(), this);
+      writing_ = true;
+    }
+  }
+
+  void stop_writing() override {
+    event_handler::backend().del(operation::write, fd(), this);
   }
 
   // -- members ----------------------------------------------------------------
@@ -577,26 +678,18 @@ struct newb_acceptor : public newb_base {
     acceptor->multiplex_write();
   }
 
-  void start() override {
-    event_handler::activate();
-  }
-
-  void stop() override {
-    CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
-    close_read_channel();
-    passivate();
-  }
-
-  void io_error(operation op, error err) override {
-    std::cerr << "operation " << to_string(op) << " failed: "
-              << backend().system().render(err) << std::endl;
-  }
-
   virtual expected<actor> create_newb(native_socket sock,
                                       transport_policy_ptr pol) = 0;
 
   std::unique_ptr<accept_policy> acceptor;
+
+private:
+  bool reading_;
+  bool writing_;
 };
+
+template <class T>
+using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<T>>;
 
 // -- factories ----------------------------------------------------------------
 
@@ -716,10 +809,10 @@ actor make_client_newb(actor_system& sys, std::string host, uint16_t port) {
 }
 
 template <class NewbAcceptor, class AcceptPolicy>
-std::unique_ptr<NewbAcceptor> make_server_newb(actor_system& sys,
-                                               uint16_t port,
-                                               const char* addr = nullptr,
-                                               bool reuse_addr = false) {
+caf::intrusive_ptr<NewbAcceptor> make_server_newb(actor_system& sys,
+                                                  uint16_t port,
+                                                  const char* addr = nullptr,
+                                                  bool reuse_addr = false) {
   std::unique_ptr<AcceptPolicy> acc{new AcceptPolicy};
   auto esock = acc->create_socket(port, addr, reuse_addr);
   // new_tcp_acceptor_impl(port, addr, reuse_addr);
@@ -728,7 +821,7 @@ std::unique_ptr<NewbAcceptor> make_server_newb(actor_system& sys,
     return nullptr;
   }
   auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-  std::unique_ptr<NewbAcceptor> ptr{new NewbAcceptor(mpx, *esock)};
+  auto ptr = caf::make_counted<NewbAcceptor>(mpx, *esock);
   ptr->acceptor = std::move(acc);
   ptr->start();
   return ptr;

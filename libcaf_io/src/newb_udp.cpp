@@ -134,8 +134,7 @@ void udp_transport::prepare_next_write(io::network::newb_base* parent) {
   send_sizes.clear();
   if (offline_buffer.empty()) {
     writing = false;
-    parent->backend().del(io::network::operation::write,
-                          parent->fd(), parent);
+    parent->stop_writing();
   } else {
     // Add size of last chunk.
     offline_sizes.push_back(offline_buffer.size() - offline_sum);
@@ -160,8 +159,7 @@ void udp_transport::flush(io::network::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
-    parent->backend().add(io::network::operation::write,
-                          parent->fd(), parent);
+    parent->start_writing();
     writing = true;
     prepare_next_write(parent);
   }

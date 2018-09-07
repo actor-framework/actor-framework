@@ -206,7 +206,7 @@ struct fixture {
   default_multiplexer& mpx;
   scheduler::test_coordinator& sched;
   actor self;
-  std::unique_ptr<acceptor_t> na;
+  caf::intrusive_ptr<acceptor_t> na;
 
   fixture()
       : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
@@ -224,7 +224,7 @@ struct fixture {
     CAF_REQUIRE(esock);
     // Create acceptor.
     auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-    std::unique_ptr<acceptor_t> ptr{new acceptor_t(mpx, esock->first)};
+    auto ptr = make_counted<acceptor_t>(mpx, esock->first);
     ptr->acceptor.reset(new accept_policy_impl);
     na = std::move(ptr);
   }
