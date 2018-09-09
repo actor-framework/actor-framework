@@ -33,19 +33,6 @@ network transparent messaging, and more.
 
 ## Get CAF
 
-### Linux Packages
-
-We provide binary packages for several Linux distributions using the
-*openSUSE Build Service*. Please follow the linked installation guides below
-or alternatively visit our OBS project homepage:
-https://build.opensuse.org/package/show/devel:libraries:caf/caf
-
-package   | description          | link
-----------|----------------------|-----------------------------
-caf       | binaries only        | [stable][obs]     [nightly][obs-nightly]
-caf-devel | binaries and headers | [stable][obs-dev] [nightly][obs-dev-nightly]
-
-
 ### FreeBSD Ports
 
 We maintain a port for CAF, which you can install as follows:
