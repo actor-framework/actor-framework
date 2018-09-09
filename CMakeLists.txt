@@ -375,18 +375,9 @@ endif()
 #                           setup for install target                           #
 ################################################################################
 
-# install includes from core
-# install includes from io
-install(DIRECTORY libcaf_io/caf/ DESTINATION include/caf
-        FILES_MATCHING PATTERN "*.hpp")
 # install includes from test
 install(DIRECTORY libcaf_test/caf/ DESTINATION include/caf
         FILES_MATCHING PATTERN "*.hpp")
-# install includes from opencl
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
-  install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
-        FILES_MATCHING PATTERN "*.hpp")
-endif()
 
 # process cmake_uninstall.cmake.in
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"

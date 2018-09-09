@@ -128,23 +128,14 @@ set(LIBCAF_CORE_SRCS
 )
 
 # configure build_config.hpp header
-macro(to_int_value name)
-  if(${name})
-    set(${name}_INT 1)
-  else()
-    set(${name}_INT -1)
-  endif()
-endmacro()
-
-to_int_value(CAF_NO_EXCEPTIONS)
-to_int_value(CAF_NO_MEM_MANAGEMENT)
-to_int_value(CAF_ENABLE_RUNTIME_CHECKS)
-
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
                @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
         DESTINATION include/caf/detail
+)
+list(APPEND LIBCAF_CORE_HDRS
+  "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
 )
 
 add_custom_target(libcaf_core)
@@ -159,10 +150,11 @@ if (NOT CAF_BUILD_STATIC_ONLY)
     $<INSTALL_INTERFACE:include>
   )
   set_target_properties(libcaf_core_shared
-                        PROPERTIES
-                        SOVERSION ${CAF_VERSION}
-                        VERSION ${CAF_VERSION}
-                        OUTPUT_NAME caf_core)
+    PROPERTIES
+    SOVERSION ${CAF_VERSION}
+    VERSION ${CAF_VERSION}
+    OUTPUT_NAME caf_core
+  )
   install(TARGETS libcaf_core_shared
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
