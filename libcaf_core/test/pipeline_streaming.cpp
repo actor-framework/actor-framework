@@ -419,4 +419,24 @@ CAF_TEST(depth_4_pipeline_500_items) {
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 125000);
 }
 
+CAF_TEST_DISABLED(depth_3_pipeline_graceful_shutdown) {
+  auto src = sys.spawn(file_reader, 50u);
+  auto stg = sys.spawn(filter);
+  auto snk = sys.spawn(sum_up);
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(stg) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(snk * stg * src, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(stg));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(stg));
+  expect((upstream_msg::ack_open), from(stg).to(src));
+  CAF_MESSAGE("start data transmission (a single batch) and stop the stage");
+  anon_send_exit(stg, exit_reason::user_shutdown);
+  CAF_MESSAGE("expect the stage to still transfer pending items to the sink");
+  run();
+  CAF_MESSAGE("check sink result");
+  CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 625);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
