@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 project(caf_io C CXX)
 
 # get header files; only needed by CMake generators,
@@ -55,16 +55,18 @@ add_custom_target(libcaf_io)
 if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_io_shared SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
   target_link_libraries(libcaf_io_shared ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARY_CORE})
+  target_include_directories(libcaf_io_shared PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>
+  )
   set_target_properties(libcaf_io_shared
                         PROPERTIES
                         SOVERSION ${CAF_VERSION}
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_io)
-  if (CYGWIN)
-    install(TARGETS libcaf_io_shared RUNTIME DESTINATION bin)
-  else()
-    install(TARGETS libcaf_io_shared LIBRARY DESTINATION lib)
-  endif()
+  install(TARGETS libcaf_io_shared
+          RUNTIME DESTINATION bin
+          LIBRARY DESTINATION lib)
   add_dependencies(libcaf_io_shared libcaf_io)
 endif ()
 
@@ -72,16 +74,16 @@ endif ()
 if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
   add_library(libcaf_io_static STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
   target_link_libraries(libcaf_io_static ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARY_CORE_STATIC})
+  target_include_directories(libcaf_io_static PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>
+  )
   set_target_properties(libcaf_io_static PROPERTIES OUTPUT_NAME caf_io_static)
   install(TARGETS libcaf_io_static ARCHIVE DESTINATION lib)
   add_dependencies(libcaf_io_static libcaf_io)
 endif ()
 
-link_directories(${LD_DIRS})
-include_directories(. ${INCLUDE_DIRS})
-
 # install includes
-if(NOT WIN32)
-  install(DIRECTORY caf/ DESTINATION include/caf FILES_MATCHING PATTERN "*.hpp")
-endif()
-
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/caf
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.hpp")

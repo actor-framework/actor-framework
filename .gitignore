@@ -12,7 +12,6 @@ manual
 *.swp
 bii/*
 .idea/
-libcaf_core/caf/detail/build_config.hpp
 .ycm_extra_conf.pyc
 blog_release_note.md
 github_release_note.md
