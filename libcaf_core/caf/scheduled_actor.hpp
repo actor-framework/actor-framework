@@ -690,19 +690,14 @@ public:
 
   // -- behavior management ----------------------------------------------------
 
-  /// Returns whether `true` if the behavior stack is not empty or
-  /// if outstanding responses exist, `false` otherwise.
-  inline bool has_behavior() const {
-    return !bhvr_stack_.empty()
-           || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty()
-           || !stream_managers_.empty()
-           || !pending_stream_managers_.empty();
+  /// Returns whether `true` if the behavior stack is not empty.
+  inline bool has_behavior() const noexcept {
+    return !bhvr_stack_.empty();
   }
 
   inline behavior& current_behavior() {
     return !awaited_responses_.empty() ? awaited_responses_.front().second
-                                        : bhvr_stack_.back();
+                                       : bhvr_stack_.back();
   }
 
   /// Installs a new behavior without performing any type checks.
@@ -870,6 +865,19 @@ public:
   /// Advances credit and batch timeouts and returns the timestamp when to call
   /// this function again.
   actor_clock::time_point advance_streams(actor_clock::time_point now);
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns `true` if the actor has a behavior, awaits responses, or
+  /// participates in streams.
+  /// @private
+  inline bool alive() const noexcept {
+    return !bhvr_stack_.empty()
+           || !awaited_responses_.empty()
+           || !multiplexed_responses_.empty()
+           || !stream_managers_.empty()
+           || !pending_stream_managers_.empty();
+  }
 
   /// @endcond
 

@@ -680,10 +680,8 @@ bool scheduled_actor::activate(execution_unit* ctx) {
   CAF_ASSERT(ctx != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
   context(ctx);
-  if (getf(is_initialized_flag)
-      && (!has_behavior() || getf(is_terminated_flag))) {
-    CAF_LOG_DEBUG_IF(!has_behavior(),
-                     "resume called on an actor without behavior");
+  if (getf(is_initialized_flag) && (!alive() || getf(is_terminated_flag))) {
+    CAF_LOG_DEBUG_IF(!alive(), "resume called on an actor without behavior");
     CAF_LOG_DEBUG_IF(getf(is_terminated_flag),
                      "resume called on a terminated actor");
     return false;
@@ -781,7 +779,7 @@ bool scheduled_actor::finalize() {
     return true;
   // An actor is considered alive as long as it has a behavior and didn't set
   // the terminated flag.
-  if (has_behavior() && !getf(is_terminated_flag))
+  if (alive() && !getf(is_terminated_flag))
     return false;
   CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
   on_exit();

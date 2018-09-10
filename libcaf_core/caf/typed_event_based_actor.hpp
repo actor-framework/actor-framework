@@ -73,7 +73,7 @@ public:
     this->setf(abstract_actor::is_initialized_flag);
     auto bhvr = make_behavior();
     CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                             << CAF_ARG(this->has_behavior()));
+                            << CAF_ARG2("alive", this->alive()));
     if (bhvr) {
       // make_behavior() did return a behavior instead of using become()
       CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
