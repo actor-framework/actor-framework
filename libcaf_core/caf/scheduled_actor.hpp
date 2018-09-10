@@ -690,7 +690,7 @@ public:
 
   // -- behavior management ----------------------------------------------------
 
-  /// Returns whether `true` if the behavior stack is not empty.
+  /// Returns `true` if the behavior stack is not empty.
   inline bool has_behavior() const noexcept {
     return !bhvr_stack_.empty();
   }
