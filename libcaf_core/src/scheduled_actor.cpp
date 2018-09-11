@@ -57,6 +57,23 @@ result<message> drop(scheduled_actor*, message_view&) {
   return sec::unexpected_message;
 }
 
+// -- implementation details ---------------------------------------------------
+
+namespace {
+
+template <class T>
+void silently_ignore(scheduled_actor*, T&) {
+  // nop
+}
+
+result<message> drop_after_quit(scheduled_actor* self, message_view&) {
+  if (self->current_message_id().is_request())
+    return make_error(sec::request_receiver_down);
+  return make_message();
+}
+
+} // namespace
+
 // -- static helper functions --------------------------------------------------
 
 void scheduled_actor::default_error_handler(scheduled_actor* ptr, error& x) {
@@ -210,17 +227,10 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   awaited_responses_.clear();
   multiplexed_responses_.clear();
   // Clear state for open streams.
-  if (fail_state == none) {
-    for (auto& kvp : stream_managers_)
-      kvp.second->stop();
-    for (auto& kvp : pending_stream_managers_)
-      kvp.second->stop();
-  } else {
-    for (auto& kvp : stream_managers_)
-      kvp.second->abort(fail_state);
-    for (auto& kvp : pending_stream_managers_)
-      kvp.second->abort(fail_state);
-  }
+  for (auto& kvp : stream_managers_)
+    kvp.second->stop(fail_state);
+  for (auto& kvp : pending_stream_managers_)
+    kvp.second->stop(fail_state);
   stream_managers_.clear();
   pending_stream_managers_.clear();
   get_downstream_queue().cleanup();
@@ -334,7 +344,7 @@ operator()(size_t, downstream_queue& qs, stream_slot,
   CAF_ASSERT(x.content().type_token() == make_type_token<downstream_msg>());
   auto& dm = x.content().get_mutable_as<downstream_msg>(0);
   downstream_msg_visitor f{self, qs, q, dm};
-    auto res = visit(f, dm.content);
+  auto res = visit(f, dm.content);
   return ++handled_msgs < max_throughput ? res
                                          : intrusive::task_result::stop_all;
 }
@@ -415,8 +425,40 @@ proxy_registry* scheduled_actor::proxy_registry_ptr() {
 
 void scheduled_actor::quit(error x) {
   CAF_LOG_TRACE(CAF_ARG(x));
+  // Make sure repeated calls to quit don't do anything.
+  if (getf(is_shutting_down_flag))
+    return;
+  // Mark this actor as about-to-die.
+  setf(is_shutting_down_flag);
+  // Store shutdown reason.
   fail_state_ = std::move(x);
-  setf(is_terminated_flag);
+  // Clear state for handling regular messages.
+  bhvr_stack_.clear();
+  awaited_responses_.clear();
+  multiplexed_responses_.clear();
+  // Ignore future exit, down and error messages.
+  set_exit_handler(silently_ignore<exit_msg>);
+  set_down_handler(silently_ignore<down_msg>);
+  set_error_handler(silently_ignore<error>);
+  // Drop future messages and produce sec::request_receiver_down for requests.
+  set_default_handler(drop_after_quit);
+  // Tell all streams to shut down.
+  std::vector<stream_manager_ptr> managers;
+  for (auto& smm : {stream_managers_, pending_stream_managers_})
+    for (auto& kvp : smm)
+      managers.emplace_back(kvp.second);
+  // Make sure we shutdown each manager exactly once.
+  std::sort(managers.begin(), managers.end());
+  auto e = std::unique(managers.begin(), managers.end());
+  for (auto i = managers.begin(); i != e; ++i) {
+    auto& mgr = *i;
+    mgr->shutdown();
+    // Managers can become done after calling quit if they were continous.
+    if (mgr->done()) {
+      mgr->stop();
+      erase_stream_manager(mgr);
+    }
+  }
 }
 
 // -- timeout management -------------------------------------------------------
@@ -542,11 +584,10 @@ scheduled_actor::categorize(mailbox_element& x) {
       // make sure to get rid of attachables if they're no longer needed
       unlink_from(em.source);
       // exit_reason::kill is always fatal
-      if (em.reason == exit_reason::kill) {
+      if (em.reason == exit_reason::kill)
         quit(std::move(em.reason));
-      } else {
+      else
         call_handler(exit_handler_, this, em);
-      }
       return message_category::internal;
     }
     case make_type_token<down_msg>(): {
@@ -683,10 +724,8 @@ bool scheduled_actor::activate(execution_unit* ctx) {
   CAF_ASSERT(ctx != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
   context(ctx);
-  if (getf(is_initialized_flag) && (!alive() || getf(is_terminated_flag))) {
-    CAF_LOG_DEBUG_IF(!alive(), "resume called on an actor without behavior");
-    CAF_LOG_DEBUG_IF(getf(is_terminated_flag),
-                     "resume called on a terminated actor");
+  if (getf(is_initialized_flag) && !alive()) {
+    CAF_LOG_ERROR("activate called on a terminated actor");
     return false;
   }
 # ifndef CAF_NO_EXCEPTIONS
@@ -695,7 +734,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
     if (!getf(is_initialized_flag)) {
       initialize();
       if (finalize()) {
-        CAF_LOG_DEBUG("actor_done() returned true right after make_behavior()");
+        CAF_LOG_DEBUG("finalize() returned true right after make_behavior()");
         return false;
       }
       CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
@@ -763,7 +802,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
 // -- behavior management ----------------------------------------------------
 
 void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
-  if (getf(is_terminated_flag)) {
+  if (getf(is_terminated_flag | is_shutting_down_flag)) {
     CAF_LOG_WARNING("called become() on a terminated actor");
     return;
   }
@@ -782,11 +821,12 @@ bool scheduled_actor::finalize() {
     return true;
   // An actor is considered alive as long as it has a behavior and didn't set
   // the terminated flag.
-  if (alive() && !getf(is_terminated_flag))
+  if (alive())
     return false;
-  CAF_LOG_DEBUG("actor either has no behavior or has set an exit reason");
+  setf(is_terminated_flag);
+  CAF_LOG_DEBUG("actor has no behavior and is ready for cleanup");
+  CAF_ASSERT(!has_behavior());
   on_exit();
-  bhvr_stack_.clear();
   bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
   CAF_ASSERT(getf(is_cleaned_up_flag));

@@ -215,6 +215,12 @@ struct fixture : test_coordinator_fixture<> {
   void tick() {
     advance_time(cfg.stream_credit_round_interval);
   }
+
+  /// Simulate a hard error on an actor such as an uncaught exception or a
+  /// disconnect from a remote actor.
+  void hard_kill(const actor& x) {
+    deref(x).cleanup(exit_reason::kill, nullptr);
+  }
 };
 
 } // namespace <anonymous>
@@ -339,10 +345,8 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));
   CAF_MESSAGE("start data transmission (and abort source)");
-  self->send_exit(src, exit_reason::kill);
+  hard_kill(src);
   expect((downstream_msg::batch), from(src).to(snk));
-  expect((exit_msg), from(self).to(src));
-  CAF_MESSAGE("expect close message from src and then result from snk");
   expect((downstream_msg::forced_close), from(_).to(snk));
 }
 
@@ -356,10 +360,8 @@ CAF_TEST(depth_2_pipelin_error_at_sink) {
   expect((string), from(self).to(src).with("numbers.txt"));
   expect((open_stream_msg), from(self).to(snk));
   CAF_MESSAGE("start data transmission (and abort sink)");
-  self->send_exit(snk, exit_reason::kill);
+  hard_kill(snk);
   expect((upstream_msg::ack_open), from(snk).to(src));
-  expect((exit_msg), from(self).to(snk));
-  CAF_MESSAGE("expect close and result messages from snk");
   expect((upstream_msg::forced_drop), from(_).to(src));
 }
 

@@ -39,7 +39,7 @@ stream_manager::stream_manager(scheduled_actor* selfptr, stream_priority prio)
     : self_(selfptr),
       pending_handshakes_(0),
       priority_(prio),
-      continuous_(false) {
+      flags_(0) {
   // nop
 }
 
@@ -60,7 +60,7 @@ void stream_manager::handle(inbound_path* in, downstream_msg::forced_close& x) {
   CAF_LOG_TRACE(CAF_ARG2("slots", in->slots) << CAF_ARG(x));
   // Reset the actor handle to make sure no further message travels upstream.
   in->hdl = nullptr;
-  abort(std::move(x.reason));
+  stop(std::move(x.reason));
 }
 
 bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
@@ -104,21 +104,31 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::drop&) {
-  error tmp;
-  out().remove_path(slots.receiver, std::move(tmp), true);
+  out().close(slots.receiver);
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
   if (out().remove_path(slots.receiver, x.reason, true))
-    abort(std::move(x.reason));
+    stop(std::move(x.reason));
 }
 
-void stream_manager::stop() {
+void stream_manager::stop(error reason) {
+  if (reason)
+    out().abort(reason);
+  else
+    out().close();
+  finalize(reason);
+  self_->erase_inbound_paths_later(this, std::move(reason));
+}
+
+void stream_manager::shutdown() {
   CAF_LOG_TRACE("");
-  out().close();
-  error tmp;
-  finalize(tmp);
-  self_->erase_inbound_paths_later(this);
+  // Mark as shutting down and reset other flags.
+  if (shutting_down())
+    return;
+  flags_ = is_shutting_down_flag;
+  for (auto ipath : inbound_paths_)
+    ipath->emit_regular_shutdown(self_);
 }
 
 void stream_manager::advance() {
@@ -142,13 +152,6 @@ void stream_manager::advance() {
   }
   // Try to generate more batches.
   push();
-}
-
-void stream_manager::abort(error reason) {
-  CAF_LOG_TRACE(CAF_ARG(reason));
-  out().abort(reason);
-  finalize(reason);
-  self_->erase_inbound_paths_later(this, std::move(reason));
 }
 
 void stream_manager::push() {

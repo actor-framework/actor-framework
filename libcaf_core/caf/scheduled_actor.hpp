@@ -764,7 +764,7 @@ public:
     if (i == stream_managers_.end()) {
       auto j = pending_stream_managers_.find(slots.receiver);
       if (j != pending_stream_managers_.end()) {
-        j->second->abort(sec::stream_init_failed);
+        j->second->stop(sec::stream_init_failed);
         pending_stream_managers_.erase(j);
         return;
       }
