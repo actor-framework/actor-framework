@@ -274,7 +274,8 @@ operator()(size_t, upstream_queue&, mailbox_element& x) {
   auto& um = x.content().get_mutable_as<upstream_msg>(0);
   upstream_msg_visitor f{self, um};
   visit(f, um.content);
-  return intrusive::task_result::resume;
+  return ++handled_msgs < max_throughput ? intrusive::task_result::resume
+                                         : intrusive::task_result::stop_all;
 }
 
 namespace {
@@ -333,7 +334,9 @@ operator()(size_t, downstream_queue& qs, stream_slot,
   CAF_ASSERT(x.content().type_token() == make_type_token<downstream_msg>());
   auto& dm = x.content().get_mutable_as<downstream_msg>(0);
   downstream_msg_visitor f{self, qs, q, dm};
-  return visit(f, dm.content);
+    auto res = visit(f, dm.content);
+  return ++handled_msgs < max_throughput ? res
+                                         : intrusive::task_result::stop_all;
 }
 
 intrusive::task_result
