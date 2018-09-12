@@ -197,6 +197,8 @@ struct accept_policy {
   bool manual_read;
 };
 
+using accept_policy_ptr = std::unique_ptr<accept_policy>;
+
 // -- protocol policy ----------------------------------------------------------
 
 struct protocol_policy_base {
@@ -584,15 +586,134 @@ private:
   bool writing_;
 };
 
+
+/// Convenience template alias for declaring state-based brokers.
+template <class Message, class State>
+using stateful_newb = stateful_actor<State, newb<Message>>;
+
+// Primary template.
+template<class T>
+struct function_traits : function_traits<decltype(&T::operator())> {
+};
+
+// Partial specialization for function type.
+template<class R, class... Args>
+struct function_traits<R(Args...)> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+// Partial specialization for function pointer.
+template<class R, class... Args>
+struct function_traits<R (*)(Args...)> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+// Partial specialization for std::function.
+template<class R, class... Args>
+struct function_traits<std::function<R(Args...)>> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+// Partial specialization for pointer-to-member-function (i.e., operator()'s).
+template<class T, class R, class... Args>
+struct function_traits<R (T::*)(Args...)> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+template<class T, class R, class... Args>
+struct function_traits<R (T::*)(Args...) const> {
+    using result_type = R;
+    using argument_types = std::tuple<Args...>;
+};
+
+template<class T>
+using first_argument_type
+ = typename std::tuple_element<0, typename function_traits<T>::argument_types>::type;
+
+/// Spawns a new "newb" broker.
+template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
+typename infer_handle_from_fun<F>::type
+spawn_newb(actor_system& sys, F fun, transport_policy_ptr transport,
+           native_socket sockfd, Ts&&... xs) {
+  using impl = typename infer_handle_from_fun<F>::impl;
+  using first = first_argument_type<F>;
+  using message = typename std::remove_pointer<first>::type::message_type;
+  auto& dm = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
+  // Setup the config.
+  actor_config cfg{&dm};
+  detail::init_fun_factory<impl, F> fac;
+  auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
+  cfg.init_fun = [init_fun](local_actor* self) mutable -> behavior {
+    return init_fun(self);
+  };
+  auto res = sys.spawn_class<impl, Os>(cfg, dm, sockfd);
+  // Get a reference to the newb type.
+  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
+  CAF_ASSERT(ptr != nullptr);
+  auto& ref = dynamic_cast<newb<message>&>(*ptr);
+  // Set the policies.
+  ref.transport = std::move(transport);
+  ref.protocol.reset(new Protocol(&ref));
+  // Start the event handler.
+  ref.start();
+  return res;
+}
+
+/// Spawn a new "newb" broker client to connect to `host`:`port`.
+template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
+expected<typename infer_handle_from_fun<F>::type>
+spawn_client(actor_system& sys, F fun, transport_policy_ptr transport,
+             std::string host, uint16_t port, Ts&&... xs) {
+  expected<native_socket> esock = transport->connect(host, port);
+  if (!esock)
+    return std::move(esock.error());
+  return spawn_newb<Protocol>(sys, fun, std::move(transport), *esock,
+                              std::forward<Ts>(xs)...);
+}
+
+// TODO: Remove these two.
+
+template <class Newb>
+actor make_newb(actor_system& sys, native_socket sockfd) {
+  auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
+  actor_config acfg{&mpx};
+  auto res = sys.spawn_impl<Newb, hidden + lazy_init>(acfg, mpx, sockfd);
+  return actor_cast<actor>(res);
+}
+
+template <class Newb, class Transport, class Protocol>
+actor make_client_newb(actor_system& sys, std::string host, uint16_t port) {
+  transport_policy_ptr trans{new Transport};
+  expected<native_socket> esock = trans->connect(host, port);
+  if (!esock)
+    return {};
+  auto res = make_newb<Newb>(sys, *esock);
+  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
+  CAF_ASSERT(ptr != nullptr);
+  auto& ref = dynamic_cast<Newb&>(*ptr);
+  ref.transport = std::move(trans);
+  ref.protocol.reset(new Protocol(&ref));
+  ref.start();
+  return res;
+}
+
+
 // -- new broker acceptor ------------------------------------------------------
 
-template <class Message>
+template <class Protocol, class Fun>
 struct newb_acceptor : public newb_base, public caf::ref_counted {
+  using newb_type = typename std::remove_pointer<first_argument_type<Fun>>::type;
+  using message_type = typename newb_type::message_type;
 
   // -- constructors and destructors -------------------------------------------
 
-  newb_acceptor(default_multiplexer& dm, native_socket sockfd)
-      : newb_base(dm, sockfd) {
+  newb_acceptor(default_multiplexer& dm, native_socket sockfd, Fun f)
+      : newb_base(dm, sockfd),
+        fun_(std::move(f)) {
     // nop
   }
 
@@ -683,12 +804,12 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
   // -- members ----------------------------------------------------------------
 
   void read_event() {
-    if (acceptor->manual_read) {
-      acceptor->read_event(this);
+    if (accept_pol->manual_read) {
+      accept_pol->read_event(this);
     } else {
       native_socket sock;
       transport_policy_ptr transport;
-      std::tie(sock, transport) = acceptor->accept(this);
+      std::tie(sock, transport) = accept_pol->accept(this);
       auto en = create_newb(sock, std::move(transport));
       if (!en) {
         io_error(operation::read, std::move(en.error()));
@@ -696,167 +817,63 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
       }
       auto ptr = caf::actor_cast<caf::abstract_actor*>(*en);
       CAF_ASSERT(ptr != nullptr);
-      auto& ref = dynamic_cast<newb<Message>&>(*ptr);
-      acceptor->init(ref);
+      auto& ref = dynamic_cast<newb<message_type>&>(*ptr);
+      accept_pol->init(ref);
     }
   }
 
   void write_event() {
-    acceptor->write_event(this);
+    accept_pol->write_event(this);
   }
 
-  virtual expected<actor> create_newb(native_socket sock,
-                                      transport_policy_ptr pol) = 0;
+  virtual expected<actor> create_newb(native_socket sockfd,
+                                      transport_policy_ptr pol) {
+    CAF_LOG_TRACE(CAF_ARG(sockfd));
+    auto n = io::network::spawn_newb<Protocol>(this->backend().system(), fun_,
+                                               std::move(pol), sockfd);
+    auto ptr = caf::actor_cast<caf::abstract_actor*>(n);
+    if (ptr == nullptr) {
+      std::cerr << "failed to spawn newb" << std::endl;
+      return sec::runtime_error;
+    }
+//    auto& ref = dynamic_cast<newb_type&>(*ptr);
+    return n;
+  }
 
-  std::unique_ptr<accept_policy> acceptor;
+  std::unique_ptr<accept_policy> accept_pol;
 
 private:
+  Fun fun_;
   bool reading_;
   bool writing_;
 };
 
-template <class T>
-using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<T>>;
+template <class P, class F>
+using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<P, F>>;
 
-// -- factories ----------------------------------------------------------------
-
-// Goal:
-// spawn_newb<protocol>(behavior, transport, sockfd);
-// spawn_client<protocol>(behavior, transport, host, port);
-// spawn_server<protocol>(behavior, transport, port);
-// TODO: Should the server be an actor as well? Would give us a place to handle
-//  its failures and the previously existing `new_endpoint_msg`.
-
-// Primary template.
-template<class T>
-struct function_traits : function_traits<decltype(&T::operator())> {
-};
-
-// Partial specialization for function type.
-template<class R, class... Args>
-struct function_traits<R(Args...)> {
-    using result_type = R;
-    using argument_types = std::tuple<Args...>;
-};
-
-// Partial specialization for function pointer.
-template<class R, class... Args>
-struct function_traits<R (*)(Args...)> {
-    using result_type = R;
-    using argument_types = std::tuple<Args...>;
-};
-
-// Partial specialization for std::function.
-template<class R, class... Args>
-struct function_traits<std::function<R(Args...)>> {
-    using result_type = R;
-    using argument_types = std::tuple<Args...>;
-};
-
-// Partial specialization for pointer-to-member-function (i.e., operator()'s).
-template<class T, class R, class... Args>
-struct function_traits<R (T::*)(Args...)> {
-    using result_type = R;
-    using argument_types = std::tuple<Args...>;
-};
-
-template<class T, class R, class... Args>
-struct function_traits<R (T::*)(Args...) const> {
-    using result_type = R;
-    using argument_types = std::tuple<Args...>;
-};
-
-template<class T>
-using first_argument_type
- = typename std::tuple_element<0, typename function_traits<T>::argument_types>::type;
-
-/// Spawns a new "newb" broker.
-template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
-typename infer_handle_from_fun<F>::type
-spawn_newb(actor_system& sys, F fun, transport_policy_ptr transport,
-           native_socket sockfd, Ts&&... xs) {
-  using impl = typename infer_handle_from_fun<F>::impl;
-  using first = first_argument_type<F>;
-  using message = typename std::remove_pointer<first>::type::message_type;
+template <class Protocol, class Fun>
+acceptor_ptr<Protocol, Fun>
+make_acceptor(actor_system& sys, Fun fun, accept_policy_ptr pol,
+              native_socket sockfd) {
   auto& dm = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-  // Setup the config.
-  actor_config cfg{&dm};
-  detail::init_fun_factory<impl, F> fac;
-  auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
-  cfg.init_fun = [init_fun](local_actor* self) mutable -> behavior {
-    return init_fun(self);
-  };
-  auto res = sys.spawn_class<impl, Os>(cfg, dm, sockfd);
-  // Get a reference to the newb type.
-  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
-  CAF_ASSERT(ptr != nullptr);
-  auto& ref = dynamic_cast<newb<message>&>(*ptr);
-  // Set the policies.
-  ref.transport = std::move(transport);
-  ref.protocol.reset(new Protocol(&ref));
-  // Start the event handler.
-  ref.start();
+  auto res = make_counted<newb_acceptor<Protocol, Fun>>(dm, sockfd,
+                                                        std::move(fun));
+  res->accept_pol = std::move(pol);
+  res->start();
   return res;
 }
 
-/// Spawn a new "newb" broker client to connect to `host`:`port`.
-template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
-expected<typename infer_handle_from_fun<F>::type>
-spawn_client(actor_system& sys, F fun, transport_policy_ptr transport,
-             std::string host, uint16_t port, Ts&&... xs) {
-  expected<native_socket> esock = transport->connect(host, port);
-  if (!esock)
-    return std::move(esock.error());
-  return spawn_newb<Protocol>(sys, fun, std::move(transport), *esock,
-                              std::forward<Ts>(xs)...);
-}
-
-template <class Newb>
-actor make_newb(actor_system& sys, native_socket sockfd) {
-  auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-  actor_config acfg{&mpx};
-  auto res = sys.spawn_impl<Newb, hidden + lazy_init>(acfg, mpx, sockfd);
-  return actor_cast<actor>(res);
-}
-
-template <class Newb, class Transport, class Protocol>
-actor make_client_newb(actor_system& sys, std::string host, uint16_t port) {
-  transport_policy_ptr trans{new Transport};
-  expected<native_socket> esock = trans->connect(host, port);
-  if (!esock)
-    return {};
-  auto res = make_newb<Newb>(sys, *esock);
-  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
-  CAF_ASSERT(ptr != nullptr);
-  auto& ref = dynamic_cast<Newb&>(*ptr);
-  ref.transport = std::move(trans);
-  ref.protocol.reset(new Protocol(&ref));
-  ref.start();
-  return res;
-}
-
-template <class NewbAcceptor, class AcceptPolicy>
-caf::intrusive_ptr<NewbAcceptor> make_server_newb(actor_system& sys,
-                                                  uint16_t port,
-                                                  const char* addr = nullptr,
-                                                  bool reuse_addr = false) {
-  std::unique_ptr<AcceptPolicy> acc{new AcceptPolicy};
-  auto esock = acc->create_socket(port, addr, reuse_addr);
-  // new_tcp_acceptor_impl(port, addr, reuse_addr);
+template <class Protocol, class F>
+expected<caf::intrusive_ptr<newb_acceptor<Protocol, F>>>
+make_server(actor_system& sys, F fun, accept_policy_ptr pol,
+            uint16_t port, const char* addr = nullptr, bool reuse = false) {
+  auto esock = pol->create_socket(port, addr, reuse);
   if (!esock) {
-    CAF_LOG_DEBUG("Could not open " << CAF_ARG(port) << CAF_ARG(addr));
-    return nullptr;
+    CAF_LOG_ERROR("Could not open " << CAF_ARG(port) << CAF_ARG(addr));
+    return sec::cannot_open_port;
   }
-  auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-  auto ptr = caf::make_counted<NewbAcceptor>(mpx, *esock);
-  ptr->acceptor = std::move(acc);
-  ptr->start();
-  return ptr;
+  return make_acceptor<Protocol, F>(sys, std::move(fun), std::move(pol), *esock);
 }
-
-/// Convenience template alias for declaring state-based brokers.
-template <class Message, class State>
-using stateful_newb = stateful_actor<State, newb<Message>>;
 
 } // namespace network
 } // namespace io
