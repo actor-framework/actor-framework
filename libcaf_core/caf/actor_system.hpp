@@ -19,13 +19,14 @@
 #pragma once
 
 #include <array>
-#include <mutex>
 #include <atomic>
-#include <string>
-#include <memory>
+#include <condition_variable>
 #include <cstddef>
 #include <functional>
-#include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <typeinfo>
 
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_cast.hpp"
@@ -163,6 +164,9 @@ public:
     };
 
     virtual ~module();
+
+    /// Returns the human-redable name of the module.
+    const char* name() const noexcept;
 
     /// Starts any background threads needed by the module.
     virtual void start() = 0;

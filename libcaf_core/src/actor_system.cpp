@@ -203,6 +203,21 @@ actor_system::module::~module() {
   // nop
 }
 
+const char* actor_system::module::name() const noexcept {
+  switch (id()) {
+    case scheduler:
+      return "Scheduler";
+    case middleman:
+      return "Middleman";
+    case opencl_manager:
+      return "OpenCL Manager";
+    case openssl_manager:
+      return "OpenSSL Manager";
+    default:
+      return "???";
+  }
+}
+
 actor_system::actor_system(actor_system_config& cfg)
     : ids_(0),
       types_(*this),
@@ -310,9 +325,13 @@ actor_system::~actor_system() {
     // group module is the first one, relies on MM
     groups_.stop();
     // stop modules in reverse order
-    for (auto i = modules_.rbegin(); i != modules_.rend(); ++i)
-      if (*i)
-        (*i)->stop();
+    for (auto i = modules_.rbegin(); i != modules_.rend(); ++i) {
+      auto& ptr = *i;
+      if (ptr != nullptr) {
+        CAF_LOG_DEBUG("stop module" << ptr->name());
+        ptr->stop();
+      }
+    }
     await_detached_threads();
     registry_.stop();
   }
