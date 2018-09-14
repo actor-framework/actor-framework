@@ -42,6 +42,7 @@
 #include "caf/message_builder.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/string_algorithms.hpp"
+#include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/type_nr.hpp"
 #include "caf/upstream_msg.hpp"
@@ -81,6 +82,7 @@ const char* numbered_type_names[] = {
   "@strset",
   "@strvec",
   "@timeout",
+  "@timespan",
   "@timestamp",
   "@u16",
   "@u16str",
