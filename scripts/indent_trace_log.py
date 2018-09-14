@@ -25,7 +25,7 @@ def print_indented(line, indent):
 
 def read_lines(fp, ids):
     indent = ""
-    if len(ids) == 0:
+    if not ids or len(ids) == 0:
         for line in fp:
             indent = print_indented(line, indent)
     else:
