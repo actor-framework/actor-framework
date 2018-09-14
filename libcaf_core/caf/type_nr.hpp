@@ -24,8 +24,9 @@
 #include <vector>
 #include <cstdint>
 
-#include "caf/fwd.hpp"
 #include "caf/atom.hpp"
+#include "caf/fwd.hpp"
+#include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 
 #include "caf/detail/type_list.hpp"
@@ -65,6 +66,7 @@ using sorted_builtin_types =
     std::set<std::string>,              // @strset
     std::vector<std::string>,           // @strvec
     timeout_msg,                        // @timeout
+    timespan,                           // @timespan
     timestamp,                          // @timestamp
     uint16_t,                           // @u16
     std::u16string,                     // @u16_str
