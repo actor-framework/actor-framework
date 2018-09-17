@@ -23,7 +23,7 @@ namespace detail {
 
 namespace {
 
-using guard_type = std::unique_lock<std::mutex>;
+using guard_type = std::unique_lock<std::recursive_mutex>;
 
 } // namespace <anonymous>
 
@@ -110,6 +110,9 @@ void thread_safe_actor_clock::run_dispatch_loop() {
   guard_type guard{mx_};
   while (done_ == false) {
     // Wait for non-empty schedule.
+    // Note: The thread calling run_dispatch_loop() is guaranteed not to lock
+    //       the mutex recursively. Otherwise, cv_.wait() or cv_.wait_until()
+    //       would be unsafe, because wait operations call unlock() only once.
     if (schedule_.empty()) {
       cv_.wait(guard);
     } else {

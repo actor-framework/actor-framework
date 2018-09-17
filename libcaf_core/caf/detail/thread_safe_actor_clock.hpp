@@ -58,8 +58,8 @@ public:
   void cancel_dispatch_loop();
 
 private:
-  std::mutex mx_;
-  std::condition_variable cv_;
+  std::recursive_mutex mx_;
+  std::condition_variable_any cv_;
   std::atomic<bool> done_;
 };
 
