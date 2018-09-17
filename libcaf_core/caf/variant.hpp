@@ -118,9 +118,33 @@ using variant_visit_result_t =
 template <class... Ts>
 class variant {
 public:
+  // -- member types -----------------------------------------------------------
+
   using types = detail::type_list<Ts...>;
 
+  using type0 = typename detail::tl_at<types, 0>::type;
+
+  // -- constants --------------------------------------------------------------
+
+  /// Stores the ID for the last type.
   static constexpr int max_type_id = sizeof...(Ts) - 1;
+
+  /// Stores whether all types are nothrow constructible.
+  static constexpr bool nothrow_move_construct =
+    detail::conjunction<
+      std::is_nothrow_move_constructible<Ts>::value...
+    >::value;
+
+  /// Stores whether all types are nothrow assignable *and* constructible. We
+  /// need to check both, since assigning to a variant results in a
+  /// move-contruct unless the before and after types are the same.
+  static constexpr bool nothrow_move_assign =
+    nothrow_move_construct
+    && detail::conjunction<
+         std::is_nothrow_move_assignable<Ts>::value...
+       >::value;
+
+  // -- sanity checks ----------------------------------------------------------
 
   static_assert(sizeof...(Ts) <= 20, "Too many template arguments given.");
 
@@ -129,19 +153,7 @@ public:
   static_assert(!detail::tl_exists<types, std::is_reference>::value,
                 "Cannot create a variant of references");
 
-  using type0 = typename detail::tl_at<types, 0>::type;
-
-  variant& operator=(const variant& other) {
-    variant_assign_helper<variant> helper{*this};
-    other.template apply<void>(helper);
-    return *this;
-  }
-
-  variant& operator=(variant&& other) {
-    variant_move_helper<variant> helper{*this};
-    other.template apply<void>(helper);
-    return *this;
-  }
+  // -- constructors, destructors, and assignment operators --------------------
 
   variant() : type_(variant_npos) {
     // Never empty ...
@@ -151,14 +163,16 @@ public:
   }
 
   template <class U>
-  variant(U&& arg) : type_(variant_npos) {
+  variant(U&& arg)
+  noexcept(std::is_rvalue_reference<U&&>::value && nothrow_move_assign)
+      : type_(variant_npos) {
     set(std::forward<U>(arg));
   }
 
-  template <class U>
-  variant& operator=(U&& arg) {
-    set(std::forward<U>(arg));
-    return *this;
+  variant(variant&& other) noexcept(nothrow_move_construct)
+      : type_(variant_npos) {
+    variant_move_helper<variant> helper{*this};
+    other.template apply<void>(helper);
   }
 
   variant(const variant& other) : type_(variant_npos) {
@@ -166,14 +180,29 @@ public:
     other.template apply<void>(helper);
   }
 
-  variant(variant&& other) : type_(variant_npos) {
+  variant& operator=(const variant& other) {
+    variant_assign_helper<variant> helper{*this};
+    other.template apply<void>(helper);
+    return *this;
+  }
+
+  variant& operator=(variant&& other) noexcept(nothrow_move_assign) {
     variant_move_helper<variant> helper{*this};
     other.template apply<void>(helper);
+    return *this;
+  }
+
+  template <class U>
+  variant& operator=(U&& arg) noexcept(nothrow_move_assign) {
+    set(std::forward<U>(arg));
+    return *this;
   }
 
   ~variant() {
     destroy_data();
   }
+
+  // -- properties -------------------------------------------------------------
 
   constexpr size_t index() const {
     return static_cast<size_t>(type_);
