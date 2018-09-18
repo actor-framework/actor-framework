@@ -18,35 +18,37 @@
 
 #pragma once
 
-#include "caf/io/network/newb.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/policy/accept.hpp"
+#include "caf/policy/transport.hpp"
 
 namespace caf {
 namespace policy {
 
-struct udp_transport : public io::network::transport_policy {
+struct udp_transport : public transport {
   udp_transport();
 
-  io::network::rw_state read_some(io::network::newb_base* parent) override;
+  io::network::rw_state read_some(io::newb_base* parent) override;
 
   inline bool should_deliver() override {
     CAF_LOG_TRACE("");
     return received_bytes != 0 && sender == endpoint;
   }
 
-  void prepare_next_read(io::network::newb_base*) override;
+  void prepare_next_read(io::newb_base*) override;
 
   inline void configure_read(io::receive_policy::config) override {
     // nop
   }
 
-  io::network::rw_state write_some(io::network::newb_base* parent) override;
+  io::network::rw_state write_some(io::newb_base* parent) override;
 
-  void prepare_next_write(io::network::newb_base* parent) override;
+  void prepare_next_write(io::newb_base* parent) override;
 
-  io::network::byte_buffer& wr_buf() override;
+  byte_buffer& wr_buf() override;
 
-  void flush(io::network::newb_base* parent) override;
+  void flush(io::newb_base* parent) override;
 
   expected<io::network::native_socket>
   connect(const std::string& host, uint16_t port,
@@ -68,18 +70,18 @@ struct udp_transport : public io::network::transport_policy {
   io::network::ip_endpoint sender;
 };
 
-struct accept_udp : public io::network::accept_policy {
+struct accept_udp : public accept {
   expected<io::network::native_socket>
   create_socket(uint16_t port, const char* host, bool reuse = false) override;
 
-  std::pair<io::network::native_socket, io::network::transport_policy_ptr>
-  accept(io::network::newb_base*) override;
+  std::pair<io::network::native_socket, transport_ptr>
+  accept_event(io::newb_base*) override;
 
-  void init(io::network::newb_base& n) override;
+  void init(io::newb_base& n) override;
 };
 
 template <class T>
-using udp_protocol = io::network::generic_protocol<T>;
+using udp_protocol = generic_protocol<T>;
 
 } // namespace policy
 } // namespace caf

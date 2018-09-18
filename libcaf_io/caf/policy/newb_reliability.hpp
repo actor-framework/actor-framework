@@ -25,7 +25,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/error.hpp"
-#include "caf/io/network/newb.hpp"
+#include "caf/io/newb.hpp"
 
 namespace caf {
 namespace policy {
@@ -57,14 +57,13 @@ struct reliability {
   id_type id_write = 0;
   // TODO: Make this configurable.
   std::chrono::milliseconds retransmit_to = std::chrono::milliseconds(100);
-  io::network::newb<message_type>* parent;
+  io::newb<message_type>* parent;
   Next next;
-  std::unordered_map<id_type, io::network::byte_buffer> unacked;
+  std::unordered_map<id_type, io::byte_buffer> unacked;
 
-  reliability(io::network::newb<message_type>* parent)
-      : parent(parent),
-        next(parent) {
-    // nop
+  void init(io::newb<message_type>* n) {
+    parent = n;
+    next.init(parent);
   }
 
   error read(char* bytes, size_t count) {
@@ -106,22 +105,22 @@ struct reliability {
     return next.timeout(atm, id);
   }
 
-  void write_header(io::network::byte_buffer& buf,
-                    io::network::header_writer* hw) {
+  void write_header(io::byte_buffer& buf,
+                    io::header_writer* hw) {
     binary_serializer bs(&parent->backend(), buf);
     bs(reliability_header{id_write, false});
     next.write_header(buf, hw);
     return;
   }
 
-  void prepare_for_sending(io::network::byte_buffer& buf,
+  void prepare_for_sending(io::byte_buffer& buf,
                            size_t hstart, size_t offset, size_t plen) {
     next.prepare_for_sending(buf, hstart, offset + header_size, plen);
     // Set timeout for retransmission.
     parent->set_timeout(retransmit_to, reliability_atom::value, id_write);
     // Add to unacked.
     unacked.emplace(id_write,
-                    io::network::byte_buffer(buf.begin() + hstart, buf.end()));
+                    io::byte_buffer(buf.begin() + hstart, buf.end()));
     id_write += 1;
   }
 };

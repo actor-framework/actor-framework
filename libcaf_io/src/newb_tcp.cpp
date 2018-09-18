@@ -17,6 +17,7 @@
  ******************************************************************************/
 
 #include "caf/policy/newb_tcp.hpp"
+#include "caf/io/newb.hpp"
 
 #include "caf/config.hpp"
 
@@ -71,7 +72,7 @@ tcp_transport::tcp_transport()
   configure_read(io::receive_policy::at_most(1024));
 }
 
-io::network::rw_state tcp_transport::read_some(io::network::newb_base* parent) {
+io::network::rw_state tcp_transport::read_some(io::newb_base* parent) {
   CAF_LOG_TRACE("");
   size_t len = receive_buffer.size() - collected;
   void* buf = receive_buffer.data() + collected;
@@ -100,7 +101,7 @@ bool tcp_transport::should_deliver() {
   return collected >= read_threshold;
 }
 
-void tcp_transport::prepare_next_read(io::network::newb_base*) {
+void tcp_transport::prepare_next_read(io::newb_base*) {
   collected = 0;
   received_bytes = 0;
   switch (rd_flag) {
@@ -130,7 +131,7 @@ void tcp_transport::configure_read(io::receive_policy::config config) {
   maximum = config.second;
 }
 
-io::network::rw_state tcp_transport::write_some(io::network::newb_base* parent) {
+io::network::rw_state tcp_transport::write_some(io::newb_base* parent) {
   CAF_LOG_TRACE("");
   const void* buf = send_buffer.data() + written;
   auto len = send_buffer.size() - written;
@@ -150,7 +151,7 @@ io::network::rw_state tcp_transport::write_some(io::network::newb_base* parent) 
   return io::network::rw_state::success;
 }
 
-void tcp_transport::prepare_next_write(io::network::newb_base* parent) {
+void tcp_transport::prepare_next_write(io::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   if (offline_buffer.empty()) {
@@ -161,7 +162,7 @@ void tcp_transport::prepare_next_write(io::network::newb_base* parent) {
   }
 }
 
-void tcp_transport::flush(io::network::newb_base* parent) {
+void tcp_transport::flush(io::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
@@ -182,8 +183,8 @@ accept_tcp::create_socket(uint16_t port, const char* host, bool reuse) {
   return io::network::new_tcp_acceptor_impl(port, host, reuse);
 }
 
-std::pair<io::network::native_socket, io::network::transport_policy_ptr>
-accept_tcp::accept(io::network::newb_base* parent) {
+std::pair<io::network::native_socket, transport_ptr>
+accept_tcp::accept_event(io::newb_base* parent) {
   using namespace io::network;
   sockaddr_storage addr;
   std::memset(&addr, 0, sizeof(addr));
@@ -196,11 +197,11 @@ accept_tcp::accept(io::network::newb_base* parent) {
       return {invalid_native_socket, nullptr};
     }
   }
-  transport_policy_ptr ptr{new tcp_transport};
+  transport_ptr ptr{new tcp_transport};
   return {result, std::move(ptr)};
 }
 
-void accept_tcp::init(io::network::newb_base& n) {
+void accept_tcp::init(io::newb_base& n) {
   n.start();
 }
 

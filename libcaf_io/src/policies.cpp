@@ -16,54 +16,78 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
-
-#include "caf/actor.hpp"
-#include "caf/io/newb.hpp"
+#include "caf/policy/accept.hpp"
+#include "caf/policy/protocol.hpp"
+#include "caf/policy/transport.hpp"
 
 namespace caf {
 namespace policy {
 
-struct new_raw_msg {
-  char* payload;
-  size_t payload_len;
-};
+// -- transport_policy ---------------------------------------------------------
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, new_raw_msg& data) {
-  return fun(meta::type_name("new_raw_msg"), data.payload_len);
+transport::transport()
+  : received_bytes{0},
+    max_consecutive_reads{50} {
+  // nop
 }
 
-struct raw {
-  using message_type = new_raw_msg;
-  using result_type = optional<message_type>;
-  io::newb<message_type>* parent;
-  message_type msg;
+transport::~transport() {
+  // nop
+}
 
-  void init(io::newb<message_type>* n) {
-    this->parent = n;
-  }
+io::network::rw_state transport::write_some(io::newb_base*) {
+  return io::network::rw_state::indeterminate;
+}
 
-  error read(char* bytes, size_t count) {
-    msg.payload = bytes;
-    msg.payload_len = count;
-    parent->handle(msg);
-    return none;
-  }
+io::network::rw_state transport::read_some(io::newb_base*) {
+  return io::network::rw_state::indeterminate;
+}
 
-  error timeout(atom_value, uint32_t) {
-    return none;
-  }
+bool transport::should_deliver() {
+  return true;
+}
 
-  size_t write_header(io::byte_buffer&,
-                      io::header_writer*) {
-    return 0;
-  }
+bool transport::must_read_more(io::newb_base*) {
+  return false;
+}
 
-  void prepare_for_sending(io::byte_buffer&, size_t, size_t, size_t) {
-    // nop
-  }
-};
+void transport::prepare_next_read(io::newb_base*) {
+  // nop
+}
+
+void transport::prepare_next_write(io::newb_base*) {
+  // nop
+}
+
+void transport::configure_read(io::receive_policy::config) {
+  // nop
+}
+
+void transport::flush(io::newb_base*) {
+  // nop
+}
+
+byte_buffer& transport::wr_buf() {
+  return offline_buffer;
+}
+
+expected<io::network::native_socket>
+transport::connect(const std::string&, uint16_t,
+                          optional<io::network::protocol::network>) {
+  return sec::bad_function_call;
+}
+
+// -- accept_policy ------------------------------------------------------------
+
+accept::~accept() {
+  // nop
+}
+
+// -- protocol_policy_base -----------------------------------------------------
+
+protocol_base::~protocol_base() {
+  // nop
+}
 
 } // namespace policy
 } // namespace caf

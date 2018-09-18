@@ -19,7 +19,7 @@
 #pragma once
 
 #include "caf/actor.hpp"
-#include "caf/io/network/newb.hpp"
+#include "caf/io/newb.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 
@@ -57,11 +57,11 @@ struct datagram_basp {
   static constexpr size_t header_size = basp_header_len;
   using message_type = new_basp_msg;
   using result_type = optional<message_type>;
-  io::network::newb<message_type>* parent;
+  io::newb<message_type>* parent;
   message_type msg;
 
-  datagram_basp(io::network::newb<message_type>* parent) : parent(parent) {
-    // nop
+  void init(io::newb<message_type>* n) {
+    parent = n;
   }
 
   error read(char* bytes, size_t count) {
@@ -90,14 +90,14 @@ struct datagram_basp {
     return none;
   }
 
-  size_t write_header(io::network::byte_buffer& buf,
-                      io::network::header_writer* hw) {
+  size_t write_header(io::byte_buffer& buf,
+                      io::header_writer* hw) {
     CAF_ASSERT(hw != nullptr);
     (*hw)(buf);
     return header_size;
   }
 
-  void prepare_for_sending(io::network::byte_buffer& buf,
+  void prepare_for_sending(io::byte_buffer& buf,
                            size_t hstart, size_t offset, size_t plen) {
     stream_serializer<charbuf> out{&parent->backend(),
                                    buf.data() + hstart + offset,
@@ -111,13 +111,12 @@ struct stream_basp {
   static constexpr size_t header_size = basp_header_len;
   using message_type = new_basp_msg;
   using result_type = optional<message_type>;
-  io::network::newb<message_type>* parent;
+  io::newb<message_type>* parent;
   message_type msg;
   bool expecting_header = true;
 
-  stream_basp(io::network::newb<message_type>* parent) : parent(parent) {
-    // TODO: this is dangerous ...
-    // Maybe we need an init function that is called with `start()`?
+  void init(io::newb<message_type>* n) {
+    parent = n;
     parent->configure_read(io::receive_policy::exactly(basp_header_len));
   }
 
@@ -157,14 +156,14 @@ struct stream_basp {
     return none;
   }
 
-  size_t write_header(io::network::byte_buffer& buf,
-                      io::network::header_writer* hw) {
+  size_t write_header(io::byte_buffer& buf,
+                      io::header_writer* hw) {
     CAF_ASSERT(hw != nullptr);
     (*hw)(buf);
     return header_size;
   }
 
-  void prepare_for_sending(io::network::byte_buffer& buf,
+  void prepare_for_sending(io::byte_buffer& buf,
                            size_t hstart, size_t offset, size_t plen) {
     stream_serializer<charbuf> out{&parent->backend(),
                                    buf.data() + hstart + offset,
