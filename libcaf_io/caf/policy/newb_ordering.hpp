@@ -26,7 +26,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/error.hpp"
-#include "caf/io/network/newb.hpp"
+#include "caf/io/newb.hpp"
 
 namespace caf {
 namespace policy {
@@ -80,17 +80,22 @@ struct ordering {
   size_t max_pending_messages;
   bool use_timeouts;
   std::chrono::milliseconds pending_to = std::chrono::milliseconds(100);
-  io::network::newb<message_type>* parent;
+  io::newb<message_type>* parent;
   Next next;
   std::map<sequence_type, std::vector<char>, sequence_comperator> pending;
 
-  ordering(io::network::newb<message_type>* parent, bool use_timeouts = true)
-      : max_pending_messages(get_or(parent->config(),
-                                    "middleman.max-pending-messages",
-                                    caf::defaults::middleman::max_pending_messages)),
-        use_timeouts(use_timeouts),
-        parent(parent),
-        next(parent) {
+  void init(io::newb<message_type>* n, bool enable_timeouts = true) {
+    this->use_timeouts = enable_timeouts;
+    parent = n;
+    next.init(parent);
+    max_pending_messages = get_or(parent->config(),
+                                  "middleman.max-pending-messages",
+                                  max_pending_messages);
+  }
+
+  ordering()
+    : max_pending_messages(caf::defaults::middleman::max_pending_messages),
+      use_timeouts(false) {
     // nop
   }
 
@@ -152,8 +157,8 @@ struct ordering {
     return next.timeout(atm, id);
   }
 
-  void write_header(io::network::byte_buffer& buf,
-                    io::network::header_writer* hw) {
+  void write_header(io::byte_buffer& buf,
+                    io::header_writer* hw) {
     binary_serializer bs(&parent->backend(), buf);
     bs(ordering_header{seq_write});
     seq_write += 1;
@@ -161,7 +166,7 @@ struct ordering {
     return;
   }
 
-  void prepare_for_sending(io::network::byte_buffer& buf,
+  void prepare_for_sending(io::byte_buffer& buf,
                            size_t hstart, size_t offset, size_t plen) {
     next.prepare_for_sending(buf, hstart, offset + header_size, plen);
   }

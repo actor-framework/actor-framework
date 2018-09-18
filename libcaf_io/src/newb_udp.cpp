@@ -20,6 +20,9 @@
 
 #include "caf/config.hpp"
 
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/newb.hpp"
+
 #ifdef CAF_WINDOWS
 # ifndef WIN32_LEAN_AND_MEAN
 #   define WIN32_LEAN_AND_MEAN
@@ -71,7 +74,7 @@ udp_transport::udp_transport()
   // nop
 }
 
-io::network::rw_state udp_transport::read_some(io::network::newb_base* parent) {
+io::network::rw_state udp_transport::read_some(io::newb_base* parent) {
   CAF_LOG_TRACE(CAF_ARG(parent->fd()));
   memset(sender.address(), 0, sizeof(sockaddr_storage));
   io::network::socket_size_type len = sizeof(sockaddr_storage);
@@ -97,12 +100,12 @@ io::network::rw_state udp_transport::read_some(io::network::newb_base* parent) {
   return io::network::rw_state::success;
 }
 
-void udp_transport::prepare_next_read(io::network::newb_base*) {
+void udp_transport::prepare_next_read(io::newb_base*) {
   received_bytes = 0;
   receive_buffer.resize(maximum);
 }
 
-io::network::rw_state udp_transport::write_some(io::network::newb_base* parent) {
+io::network::rw_state udp_transport::write_some(io::newb_base* parent) {
   using namespace caf::io::network;
   CAF_LOG_TRACE(CAF_ARG(parent->fd()) << CAF_ARG(send_buffer.size()));
   socket_size_type len = static_cast<socket_size_type>(*endpoint.clength());
@@ -128,7 +131,7 @@ io::network::rw_state udp_transport::write_some(io::network::newb_base* parent) 
   return io::network::rw_state::success;
 }
 
-void udp_transport::prepare_next_write(io::network::newb_base* parent) {
+void udp_transport::prepare_next_write(io::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   send_sizes.clear();
@@ -146,7 +149,7 @@ void udp_transport::prepare_next_write(io::network::newb_base* parent) {
   }
 }
 
-io::network::byte_buffer& udp_transport::wr_buf() {
+io::byte_buffer& udp_transport::wr_buf() {
   if (!offline_buffer.empty()) {
     auto chunk_size = offline_buffer.size() - offline_sum;
     offline_sizes.push_back(chunk_size);
@@ -155,7 +158,7 @@ io::network::byte_buffer& udp_transport::wr_buf() {
   return offline_buffer;
 }
 
-void udp_transport::flush(io::network::newb_base* parent) {
+void udp_transport::flush(io::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
@@ -183,19 +186,19 @@ accept_udp::create_socket(uint16_t port, const char* host, bool reuse) {
   return (*res).first;
 }
 
-std::pair<io::network::native_socket, io::network::transport_policy_ptr>
-accept_udp::accept(io::network::newb_base*) {
+std::pair<io::network::native_socket, transport_ptr>
+accept_udp::accept_event(io::newb_base*) {
   auto res = io::network::new_local_udp_endpoint_impl(0, nullptr);
   if (!res) {
     CAF_LOG_DEBUG("failed to create local endpoint");
     return {io::network::invalid_native_socket, nullptr};
   }
   auto sock = std::move(res->first);
-  io::network::transport_policy_ptr ptr{new udp_transport};
+  transport_ptr ptr{new udp_transport};
   return {sock, std::move(ptr)};
 }
 
-void accept_udp::init(io::network::newb_base& n) {
+void accept_udp::init(io::newb_base& n) {
   n.start();
 }
 

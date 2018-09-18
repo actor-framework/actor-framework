@@ -25,7 +25,6 @@
 #include <tuple>
 
 #include "caf/actor_clock.hpp"
-#include "caf/callback.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/call_cfun.hpp"
@@ -41,11 +40,13 @@
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
+#include "caf/policy/accept.hpp"
+#include "caf/policy/protocol.hpp"
+#include "caf/policy/transport.hpp"
 #include "caf/scheduled_actor.hpp"
 
 namespace caf {
 namespace io {
-namespace network {
 
 // -- forward declarations -----------------------------------------------------
 
@@ -56,34 +57,32 @@ template <class T>
 struct newb;
 
 } // namespace io
-} // namespace network
 
 // -- required to make newb an actor ------------------------------------------
 
 template <class T>
-class behavior_type_of<io::network::newb<T>> {
+class behavior_type_of<io::newb<T>> {
 public:
   using type = behavior;
 };
 
 namespace io {
-namespace network {
 
 // -- aliases ------------------------------------------------------------------
 
-using byte_buffer = std::vector<char>;
-using header_writer = caf::callback<byte_buffer&>;
+using byte_buffer = caf::policy::byte_buffer;
+using header_writer = caf::policy::header_writer;
 
 // -- newb base ----------------------------------------------------------------
 
 struct newb_base : public network::event_handler {
-  newb_base(default_multiplexer& dm, native_socket sockfd);
+  newb_base(network::default_multiplexer& dm, network::native_socket sockfd);
 
   virtual void start() = 0;
 
   virtual void stop() = 0;
 
-  virtual void io_error(operation op, error err) = 0;
+  virtual void io_error(network::operation op, error err) = 0;
 
   virtual void start_reading() = 0;
 
@@ -95,165 +94,6 @@ struct newb_base : public network::event_handler {
 
 };
 
-// -- transport policy ---------------------------------------------------------
-
-struct transport_policy {
-  transport_policy();
-
-  virtual ~transport_policy();
-
-  virtual io::network::rw_state write_some(newb_base*);
-
-  virtual io::network::rw_state read_some(newb_base*);
-
-  virtual bool should_deliver();
-
-  virtual bool must_read_more(newb_base*);
-
-  virtual void prepare_next_read(newb_base*);
-
-  virtual void prepare_next_write(newb_base*);
-
-  virtual void configure_read(receive_policy::config);
-
-  virtual void flush(newb_base*);
-
-  virtual byte_buffer& wr_buf();
-
-  template <class T>
-  error read_some(newb_base* parent, protocol_policy<T>& policy) {
-    CAF_LOG_TRACE("");
-    size_t reads = 0;
-    while (reads < max_consecutive_reads || must_read_more(parent)) {
-      auto read_result = read_some(parent);
-      switch (read_result) {
-        case rw_state::success:
-          if (received_bytes == 0)
-            return none;
-          if (should_deliver()) {
-            auto res = policy.read(receive_buffer.data(), received_bytes);
-            prepare_next_read(parent);
-            if (res)
-              return res;
-          }
-          break;
-        case rw_state::indeterminate:
-          // No error, but don't continue reading.
-          return none;
-        case rw_state::failure:
-          // Reading failed.
-          return sec::runtime_error;
-      }
-      ++reads;
-    }
-    return none;
-  }
-
-  virtual expected<native_socket>
-  connect(const std::string&, uint16_t,
-          optional<io::network::protocol::network> = none);
-
-  size_t received_bytes;
-  size_t max_consecutive_reads;
-
-  byte_buffer offline_buffer;
-  byte_buffer receive_buffer;
-  byte_buffer send_buffer;
-};
-
-using transport_policy_ptr = std::unique_ptr<transport_policy>;
-
-// -- accept policy ------------------------------------------------------------
-
-struct accept_policy {
-  accept_policy(bool manual_read = false)
-      : manual_read(manual_read) {
-    // nop
-  }
-
-  virtual ~accept_policy();
-
-  virtual expected<native_socket> create_socket(uint16_t port, const char* host,
-                                                bool reuse = false) = 0;
-
-  virtual std::pair<native_socket, transport_policy_ptr> accept(newb_base*) {
-    return {0, nullptr};
-  }
-
-  /// If `requires_raw_data` is set to true, the acceptor will only call
-  /// this function for new read event and let the policy handle everything
-  /// else.
-  virtual void read_event(newb_base*) {
-    // nop
-  }
-
-  virtual error write_event(newb_base*) {
-    return none;
-  }
-
-  virtual void init(newb_base&) {
-    // nop
-  }
-
-  bool manual_read;
-};
-
-using accept_policy_ptr = std::unique_ptr<accept_policy>;
-
-// -- protocol policy ----------------------------------------------------------
-
-struct protocol_policy_base {
-  virtual ~protocol_policy_base();
-
-  virtual error read(char* bytes, size_t count) = 0;
-
-  virtual error timeout(atom_value, uint32_t) = 0;
-
-  virtual void write_header(byte_buffer&, header_writer*) = 0;
-
-  virtual void prepare_for_sending(byte_buffer&, size_t, size_t, size_t) = 0;
-};
-
-template <class T>
-struct protocol_policy : protocol_policy_base {
-  using message_type = T;
-  virtual ~protocol_policy() override {
-    // nop
-  }
-};
-
-template <class T>
-using protocol_policy_ptr = std::unique_ptr<protocol_policy<T>>;
-
-template <class T>
-struct generic_protocol
-    : public io::network::protocol_policy<typename T::message_type> {
-  T impl;
-
-  generic_protocol(io::network::newb<typename T::message_type>* parent)
-      : impl(parent) {
-    // nop
-  }
-
-  error read(char* bytes, size_t count) override {
-    return impl.read(bytes, count);
-  }
-
-  error timeout(atom_value atm, uint32_t id) override {
-    return impl.timeout(atm, id);
-  }
-
-  void write_header(io::network::byte_buffer& buf,
-                    io::network::header_writer* hw) override {
-    impl.write_header(buf, hw);
-  }
-
-  void prepare_for_sending(io::network::byte_buffer& buf, size_t hstart,
-                           size_t offset, size_t plen) override {
-    impl.prepare_for_sending(buf, hstart, offset, plen);
-  }
-};
-
 // -- new broker classes -------------------------------------------------------
 
 /// @relates newb
@@ -261,7 +101,7 @@ struct generic_protocol
 template <class Message>
 struct write_handle {
   newb<Message>* parent;
-  protocol_policy_base* protocol;
+  policy::protocol_base* protocol;
   byte_buffer* buf;
   size_t header_start;
   size_t header_len;
@@ -289,18 +129,23 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   // -- constructors and destructors -------------------------------------------
 
-  newb(actor_config& cfg, default_multiplexer& dm, native_socket sockfd)
+  newb(actor_config& cfg, network::default_multiplexer& dm,
+       network::native_socket sockfd,
+       policy::transport_ptr transport,
+       policy::protocol_ptr<Message> protocol)
       : super(cfg),
         newb_base(dm, sockfd),
+        trans(std::move(transport)),
+        proto(std::move(protocol)),
         value_(strong_actor_ptr{}, make_message_id(),
                mailbox_element::forwarding_stack{}, Message{}),
         reading_(false),
         writing_(false) {
     CAF_LOG_TRACE("");
     scheduled_actor::set_timeout_handler([&](timeout_msg& msg) {
-      if (protocol)
-        protocol->timeout(msg.type, msg.timeout_id);
+      proto->timeout(msg.type, msg.timeout_id);
     });
+    proto->init(this);
   }
 
   newb() = default;
@@ -423,8 +268,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     if (!reading_ && !writing_)
       intrusive_ptr_add_ref(super::ctrl());
     start_reading();
-    if (transport)
-      transport->prepare_next_read(this);
+    if (trans)
+      trans->prepare_next_read(this);
   }
 
   void stop() override {
@@ -435,7 +280,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     stop_writing();
   }
 
-  void io_error(operation op, error err) override {
+  void io_error(network::operation op, error err) override {
+    using network::operation;
     if (!this->getf(this->is_cleaned_up_flag)) {
       auto mptr = make_mailbox_element(nullptr, invalid_message_id, {},
                                        io_error_msg{op, std::move(err)});
@@ -477,13 +323,13 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   void start_writing() override {
     if (!writing_) {
-      event_handler::backend().add(operation::write, fd(), this);
+      event_handler::backend().add(network::operation::write, fd(), this);
       writing_ = true;
     }
   }
 
   void stop_writing() override {
-    event_handler::backend().del(operation::write, fd(), this);
+    event_handler::backend().del(network::operation::write, fd(), this);
   }
 
   // -- members ----------------------------------------------------------------
@@ -495,30 +341,30 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   /// Get a write buffer to write data to be sent by this broker.
   write_handle<Message> wr_buf(header_writer* hw) {
-    auto& buf = transport->wr_buf();
+    auto& buf = trans->wr_buf();
     auto hstart = buf.size();
-    protocol->write_header(buf, hw);
+    proto->write_header(buf, hw);
     auto hlen = buf.size() - hstart;
-    return {this, protocol.get(), &buf, hstart, hlen};
+    return {this, proto.get(), &buf, hstart, hlen};
   }
 
   byte_buffer& wr_buf() {
-    return transport->wr_buf();
+    return trans->wr_buf();
   }
 
   void flush() {
-    transport->flush(this);
+    trans->flush(this);
   }
 
   void read_event() {
-    auto err = transport->read_some(this, *protocol);
+    auto err = trans->read_some(this, *proto);
     if (err)
-      io_error(operation::read, std::move(err));
+      io_error(network::operation::read, std::move(err));
   }
 
   void write_event() {
-    if (transport->write_some(this) == rw_state::failure)
-      io_error(operation::write, sec::runtime_error);
+    if (trans->write_some(this) == network::rw_state::failure)
+      io_error(network::operation::write, sec::runtime_error);
   }
 
   void handle_error() {
@@ -557,7 +403,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   /// Configure the number of bytes read for the next packet. (Can be ignored by
   /// the transport policy if its protocol does not support this functionality.)
   void configure_read(receive_policy::config config) {
-    transport->configure_read(config);
+    trans->configure_read(config);
   }
 
   /// @cond PRIVATE
@@ -572,8 +418,8 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   // -- policies ---------------------------------------------------------------
 
-  std::unique_ptr<transport_policy> transport;
-  std::unique_ptr<protocol_policy<Message>> protocol;
+  policy::transport_ptr trans;
+  policy::protocol_ptr<Message> proto;
 
   /// @endcond
 
@@ -640,27 +486,26 @@ using first_argument_type
 /// Spawns a new "newb" broker.
 template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
 typename infer_handle_from_fun<F>::type
-spawn_newb(actor_system& sys, F fun, transport_policy_ptr transport,
-           native_socket sockfd, Ts&&... xs) {
+spawn_newb(actor_system& sys, F fun, policy::transport_ptr transport,
+           network::native_socket sockfd, Ts&&... xs) {
   using impl = typename infer_handle_from_fun<F>::impl;
   using first = first_argument_type<F>;
   using message = typename std::remove_pointer<first>::type::message_type;
-  auto& dm = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
+  auto& dm = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
   // Setup the config.
-  actor_config cfg{&dm};
+  actor_config cfg(&dm);
   detail::init_fun_factory<impl, F> fac;
   auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
   cfg.init_fun = [init_fun](local_actor* self) mutable -> behavior {
     return init_fun(self);
   };
-  auto res = sys.spawn_class<impl, Os>(cfg, dm, sockfd);
+  policy::protocol_ptr<message> proto(new Protocol());
+  auto res = sys.spawn_class<impl, Os>(cfg, dm, sockfd, std::move(transport),
+                                       std::move(proto));
   // Get a reference to the newb type.
   auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
   CAF_ASSERT(ptr != nullptr);
   auto& ref = dynamic_cast<newb<message>&>(*ptr);
-  // Set the policies.
-  ref.transport = std::move(transport);
-  ref.protocol.reset(new Protocol(&ref));
   // Start the event handler.
   ref.start();
   return res;
@@ -669,41 +514,14 @@ spawn_newb(actor_system& sys, F fun, transport_policy_ptr transport,
 /// Spawn a new "newb" broker client to connect to `host`:`port`.
 template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
 expected<typename infer_handle_from_fun<F>::type>
-spawn_client(actor_system& sys, F fun, transport_policy_ptr transport,
+spawn_client(actor_system& sys, F fun, policy::transport_ptr transport,
              std::string host, uint16_t port, Ts&&... xs) {
-  expected<native_socket> esock = transport->connect(host, port);
+  expected<network::native_socket> esock = transport->connect(host, port);
   if (!esock)
     return std::move(esock.error());
   return spawn_newb<Protocol>(sys, fun, std::move(transport), *esock,
                               std::forward<Ts>(xs)...);
 }
-
-// TODO: Remove these two.
-
-template <class Newb>
-actor make_newb(actor_system& sys, native_socket sockfd) {
-  auto& mpx = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
-  actor_config acfg{&mpx};
-  auto res = sys.spawn_impl<Newb, hidden + lazy_init>(acfg, mpx, sockfd);
-  return actor_cast<actor>(res);
-}
-
-template <class Newb, class Transport, class Protocol>
-actor make_client_newb(actor_system& sys, std::string host, uint16_t port) {
-  transport_policy_ptr trans{new Transport};
-  expected<native_socket> esock = trans->connect(host, port);
-  if (!esock)
-    return {};
-  auto res = make_newb<Newb>(sys, *esock);
-  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
-  CAF_ASSERT(ptr != nullptr);
-  auto& ref = dynamic_cast<Newb&>(*ptr);
-  ref.transport = std::move(trans);
-  ref.protocol.reset(new Protocol(&ref));
-  ref.start();
-  return res;
-}
-
 
 // -- new broker acceptor ------------------------------------------------------
 
@@ -714,8 +532,10 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
 
   // -- constructors and destructors -------------------------------------------
 
-  newb_acceptor(default_multiplexer& dm, native_socket sockfd, Fun f, Ts&&... xs)
+  newb_acceptor(network::default_multiplexer& dm, network::native_socket sockfd,
+                Fun f, policy::accept_policy_ptr pol, Ts&&... xs)
       : newb_base(dm, sockfd),
+        accept_pol(std::move(pol)),
         fun_(std::move(f)),
         reading_(false),
         writing_(false),
@@ -781,7 +601,7 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
     stop_writing();
   }
 
-  void io_error(operation op, error err) override {
+  void io_error(network::operation op, error err) override {
     CAF_LOG_ERROR("operation " << to_string(op) << " failed: "
                   << backend().system().render(err));
     stop();
@@ -800,13 +620,13 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
 
   void start_writing() override {
     if (!writing_) {
-      event_handler::backend().add(operation::write, fd(), this);
+      event_handler::backend().add(network::operation::write, fd(), this);
       writing_ = true;
     }
   }
 
   void stop_writing() override {
-    event_handler::backend().del(operation::write, fd(), this);
+    event_handler::backend().del(network::operation::write, fd(), this);
   }
 
   // -- members ----------------------------------------------------------------
@@ -815,12 +635,12 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
     if (accept_pol->manual_read) {
       accept_pol->read_event(this);
     } else {
-      native_socket sock;
-      transport_policy_ptr transport;
-      std::tie(sock, transport) = accept_pol->accept(this);
+      network::native_socket sock;
+      policy::transport_ptr transport;
+      std::tie(sock, transport) = accept_pol->accept_event(this);
       auto en = create_newb(sock, std::move(transport));
       if (!en) {
-        io_error(operation::read, std::move(en.error()));
+        io_error(network::operation::read, std::move(en.error()));
         return;
       }
       auto ptr = caf::actor_cast<caf::abstract_actor*>(*en);
@@ -834,28 +654,19 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
     accept_pol->write_event(this);
   }
 
-  virtual expected<actor> create_newb(native_socket sockfd,
-                                      transport_policy_ptr pol) {
+  virtual expected<actor> create_newb(network::native_socket sockfd,
+                                      policy::transport_ptr pol) {
     CAF_LOG_TRACE(CAF_ARG(sockfd));
-//    auto n = io::network::spawn_newb<Protocol>(this->backend().system(), fun_,
-//                                               std::move(pol), sockfd);
     auto n = detail::apply_args_prefixed(
-      io::network::spawn_newb<Protocol, no_spawn_options, Fun, Ts...>,
+      io::spawn_newb<Protocol, no_spawn_options, Fun, Ts...>,
       detail::get_indices(args_),
       args_, this->backend().system(),
       fun_, std::move(pol), sockfd
     );
-    auto ptr = caf::actor_cast<caf::abstract_actor*>(n);
-    if (ptr == nullptr) {
-      // TODO: Clean this up!
-      std::cerr << "failed to spawn newb" << std::endl;
-      return sec::runtime_error;
-    }
-//    auto& ref = dynamic_cast<newb_type&>(*ptr);
     return n;
   }
 
-  std::unique_ptr<accept_policy> accept_pol;
+  policy::accept_policy_ptr accept_pol;
 
 private:
   Fun fun_;
@@ -869,20 +680,20 @@ using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<P, F, Ts...>>;
 
 template <class Protocol, class Fun, class... Ts>
 acceptor_ptr<Protocol, Fun, Ts...>
-make_acceptor(actor_system& sys, Fun fun, accept_policy_ptr pol,
-              native_socket sockfd, Ts&&... xs) {
-  auto& dm = dynamic_cast<default_multiplexer&>(sys.middleman().backend());
+make_acceptor(actor_system& sys, Fun fun, policy::accept_policy_ptr pol,
+              network::native_socket sockfd, Ts&&... xs) {
+  auto& dm = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
   auto res = make_counted<newb_acceptor<Protocol, Fun, Ts...>>(dm, sockfd,
                                                                std::move(fun),
+                                                               std::move(pol),
                                                                std::forward<Ts>(xs)...);
-  res->accept_pol = std::move(pol);
   res->start();
   return res;
 }
 
 template <class Protocol, class F, class... Ts>
 expected<caf::intrusive_ptr<newb_acceptor<Protocol, F, Ts...>>>
-make_server(actor_system& sys, F fun, accept_policy_ptr pol,
+make_server(actor_system& sys, F fun, policy::accept_policy_ptr pol,
             uint16_t port, const char* addr, bool reuse, Ts&&... xs) {
   auto esock = pol->create_socket(port, addr, reuse);
   if (!esock) {
@@ -895,13 +706,12 @@ make_server(actor_system& sys, F fun, accept_policy_ptr pol,
 
 template <class Protocol, class F>
 expected<caf::intrusive_ptr<newb_acceptor<Protocol, F>>>
-make_server(actor_system& sys, F fun, accept_policy_ptr pol,
+make_server(actor_system& sys, F fun, policy::accept_policy_ptr pol,
             uint16_t port, const char* addr = nullptr, bool reuse = false) {
  return make_server<Protocol, F>(sys, std::move(fun), std::move(pol), port,
                                  addr, reuse);
 }
 
-} // namespace network
 } // namespace io
 } // namespace caf
 

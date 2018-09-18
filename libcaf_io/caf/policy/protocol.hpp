@@ -18,51 +18,78 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
-#include "caf/io/newb.hpp"
+#include "caf/config.hpp"
+
+#include "caf/callback.hpp"
+#include "caf/error.hpp"
 
 namespace caf {
+namespace io {
+
+struct newb_base;
+
+template <class T>
+struct newb;
+
+} // namespace io
+
 namespace policy {
 
-struct new_raw_msg {
-  char* payload;
-  size_t payload_len;
+using byte_buffer = std::vector<char>;
+using header_writer = caf::callback<byte_buffer&>;
+
+struct protocol_base {
+  virtual ~protocol_base();
+
+  virtual error read(char* bytes, size_t count) = 0;
+
+  virtual error timeout(atom_value, uint32_t) = 0;
+
+  virtual void write_header(byte_buffer&, header_writer*) = 0;
+
+  virtual void prepare_for_sending(byte_buffer&, size_t, size_t, size_t) = 0;
 };
 
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, new_raw_msg& data) {
-  return fun(meta::type_name("new_raw_msg"), data.payload_len);
-}
-
-struct raw {
-  using message_type = new_raw_msg;
-  using result_type = optional<message_type>;
-  io::newb<message_type>* parent;
-  message_type msg;
-
-  void init(io::newb<message_type>* n) {
-    this->parent = n;
-  }
-
-  error read(char* bytes, size_t count) {
-    msg.payload = bytes;
-    msg.payload_len = count;
-    parent->handle(msg);
-    return none;
-  }
-
-  error timeout(atom_value, uint32_t) {
-    return none;
-  }
-
-  size_t write_header(io::byte_buffer&,
-                      io::header_writer*) {
-    return 0;
-  }
-
-  void prepare_for_sending(io::byte_buffer&, size_t, size_t, size_t) {
+template <class T>
+struct protocol : protocol_base {
+  using message_type = T;
+  virtual ~protocol() override {
     // nop
   }
+
+  virtual void init(io::newb<message_type>* parent) = 0;
+};
+
+template <class T>
+using protocol_ptr = std::unique_ptr<protocol<T>>;
+
+template <class T>
+struct generic_protocol
+    : public protocol<typename T::message_type> {
+
+  void init(io::newb<typename T::message_type>* parent) override {
+    impl.init(parent);
+  }
+
+  error read(char* bytes, size_t count) override {
+    return impl.read(bytes, count);
+  }
+
+  error timeout(atom_value atm, uint32_t id) override {
+    return impl.timeout(atm, id);
+  }
+
+  void write_header(byte_buffer& buf, header_writer* hw) override {
+    impl.write_header(buf, hw);
+  }
+
+  void prepare_for_sending(byte_buffer& buf, size_t hstart,
+                           size_t offset, size_t plen) override {
+    impl.prepare_for_sending(buf, hstart, offset, plen);
+  }
+
+private:
+  T impl;
 };
 
 } // namespace policy
