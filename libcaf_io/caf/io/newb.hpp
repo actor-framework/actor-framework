@@ -533,7 +533,7 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
   // -- constructors and destructors -------------------------------------------
 
   newb_acceptor(network::default_multiplexer& dm, network::native_socket sockfd,
-                Fun f, policy::accept_policy_ptr pol, Ts&&... xs)
+                Fun f, policy::accept_ptr pol, Ts&&... xs)
       : newb_base(dm, sockfd),
         accept_pol(std::move(pol)),
         fun_(std::move(f)),
@@ -666,7 +666,7 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
     return n;
   }
 
-  policy::accept_policy_ptr accept_pol;
+  policy::accept_ptr accept_pol;
 
 private:
   Fun fun_;
@@ -680,7 +680,7 @@ using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<P, F, Ts...>>;
 
 template <class Protocol, class Fun, class... Ts>
 acceptor_ptr<Protocol, Fun, Ts...>
-make_acceptor(actor_system& sys, Fun fun, policy::accept_policy_ptr pol,
+make_acceptor(actor_system& sys, Fun fun, policy::accept_ptr pol,
               network::native_socket sockfd, Ts&&... xs) {
   auto& dm = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
   auto res = make_counted<newb_acceptor<Protocol, Fun, Ts...>>(dm, sockfd,
@@ -693,7 +693,7 @@ make_acceptor(actor_system& sys, Fun fun, policy::accept_policy_ptr pol,
 
 template <class Protocol, class F, class... Ts>
 expected<caf::intrusive_ptr<newb_acceptor<Protocol, F, Ts...>>>
-make_server(actor_system& sys, F fun, policy::accept_policy_ptr pol,
+make_server(actor_system& sys, F fun, policy::accept_ptr pol,
             uint16_t port, const char* addr, bool reuse, Ts&&... xs) {
   auto esock = pol->create_socket(port, addr, reuse);
   if (!esock) {
@@ -706,7 +706,7 @@ make_server(actor_system& sys, F fun, policy::accept_policy_ptr pol,
 
 template <class Protocol, class F>
 expected<caf::intrusive_ptr<newb_acceptor<Protocol, F>>>
-make_server(actor_system& sys, F fun, policy::accept_policy_ptr pol,
+make_server(actor_system& sys, F fun, policy::accept_ptr pol,
             uint16_t port, const char* addr = nullptr, bool reuse = false) {
  return make_server<Protocol, F>(sys, std::move(fun), std::move(pol), port,
                                  addr, reuse);

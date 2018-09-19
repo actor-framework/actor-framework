@@ -65,7 +65,7 @@ struct accept {
   bool manual_read;
 };
 
-using accept_policy_ptr = std::unique_ptr<accept>;
+using accept_ptr = std::unique_ptr<accept>;
 
 } // namespace policy
 } // namespace caf
