@@ -778,13 +778,15 @@ public:
       return;
     }
     CAF_ASSERT(i->second != nullptr);
-    i->second->handle(slots, x);
-    if (i->second->done()) {
-      CAF_LOG_INFO("done sending:" << CAF_ARG(slots));
-      i->second->stop();
-      stream_managers_.erase(i);
-      if (stream_managers_.empty())
-        stream_ticks_.stop();
+    auto ptr = i->second;
+    ptr->handle(slots, x);
+    if (ptr->done()) {
+      CAF_LOG_DEBUG("done sending:" << CAF_ARG(slots));
+      ptr->stop();
+      erase_stream_manager(ptr);
+    } else if (ptr->out().path(slots.receiver) == nullptr) {
+      CAF_LOG_DEBUG("done sending on path:" << CAF_ARG(slots.receiver));
+      erase_stream_manager(slots.receiver);
     }
   }
 

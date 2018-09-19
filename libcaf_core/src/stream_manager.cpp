@@ -127,6 +127,9 @@ void stream_manager::shutdown() {
   if (shutting_down())
     return;
   flags_ = is_shutting_down_flag;
+  CAF_LOG_DEBUG("emit shutdown messages on" << inbound_paths_.size()
+                << "inbound paths;" << CAF_ARG2("out.clean", out().clean())
+                << CAF_ARG2("out.paths", out().num_paths()));
   for (auto ipath : inbound_paths_)
     ipath->emit_regular_shutdown(self_);
 }

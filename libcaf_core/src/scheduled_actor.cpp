@@ -823,7 +823,6 @@ bool scheduled_actor::finalize() {
   // the terminated flag.
   if (alive())
     return false;
-  setf(is_terminated_flag);
   CAF_LOG_DEBUG("actor has no behavior and is ready for cleanup");
   CAF_ASSERT(!has_behavior());
   on_exit();
@@ -1018,6 +1017,7 @@ void scheduled_actor::erase_stream_manager(stream_slot id) {
   CAF_LOG_TRACE(CAF_ARG(id));
   if (stream_managers_.erase(id) != 0 && stream_managers_.empty())
     stream_ticks_.stop();
+  CAF_LOG_DEBUG(CAF_ARG2("stream_managers_.size", stream_managers_.size()));
 }
 
 void scheduled_actor::erase_pending_stream_manager(stream_slot id) {
@@ -1026,7 +1026,8 @@ void scheduled_actor::erase_pending_stream_manager(stream_slot id) {
 }
 
 void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
-  { // Lifetime scope of first iterator pair.
+  CAF_LOG_TRACE("");
+  if (!stream_managers_.empty()) {
     auto i = stream_managers_.begin();
     auto e = stream_managers_.end();
     while (i != e)
@@ -1034,6 +1035,8 @@ void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
         i = stream_managers_.erase(i);
       else
         ++i;
+    if (stream_managers_.empty())
+      stream_ticks_.stop();
   }
   { // Lifetime scope of second iterator pair.
     auto i = pending_stream_managers_.begin();
@@ -1044,8 +1047,9 @@ void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
       else
         ++i;
   }
-  if (stream_managers_.empty())
-    stream_ticks_.stop();
+  CAF_LOG_DEBUG(CAF_ARG2("stream_managers_.size", stream_managers_.size())
+                << CAF_ARG2("pending_stream_managers_.size",
+                            pending_stream_managers_.size()));
 }
 
 invoke_message_result
