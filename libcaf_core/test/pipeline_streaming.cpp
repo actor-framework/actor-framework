@@ -421,7 +421,7 @@ CAF_TEST(depth_4_pipeline_500_items) {
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 125000);
 }
 
-CAF_TEST_DISABLED(depth_3_pipeline_graceful_shutdown) {
+CAF_TEST(depth_3_pipeline_graceful_shutdown) {
   auto src = sys.spawn(file_reader, 50u);
   auto stg = sys.spawn(filter);
   auto snk = sys.spawn(sum_up);
