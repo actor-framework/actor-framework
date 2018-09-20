@@ -198,11 +198,12 @@ pipeline {
                 deleteDir()
                 dir('caf-sources') {
                     checkout scm
+                    sh './scripts/get-release-version.sh'
                 }
                 stash includes: 'caf-sources/**', name: 'caf-sources'
             }
         }
-        // Start builds.
+        /*
         stage('Builds') {
             steps {
                 script {
@@ -219,6 +220,26 @@ pipeline {
                         }
                     }
                     parallel xs
+                }
+            }
+        }
+        */
+        stage('Documentation') {
+            agent { label 'pandoc' }
+            steps {
+                deleteDir()
+                unstash('caf-sources')
+                dir('caf-sources') {
+                    // Configure and build.
+                    cmakeBuild([
+                        buildDir: 'build',
+                        installation: 'cmake in search path',
+                        sourceDir: '.',
+                        steps: [[
+                            args: '--target doc',
+                            withCmake: true,
+                        ]],
+                    ])
                 }
             }
         }
