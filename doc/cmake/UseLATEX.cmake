@@ -1258,21 +1258,9 @@ function(latex_process_images dvi_outputs_var pdf_outputs_var)
       latex_get_filename_component(path "${output_dir}/${file}" PATH)
       make_directory("${path}")
 
-      # Do conversions for dvi.
-      latex_convert_image(output_files "${file}" .eps "${convert_flags}"
-        "${LATEX_DVI_IMAGE_EXTENSIONS}" "${ARGN}")
-      list(APPEND dvi_outputs ${output_files})
-
-      # Do conversions for pdf.
-      if(is_raster)
-        latex_convert_image(output_files "${file}" .png "${convert_flags}"
-          "${LATEX_PDF_IMAGE_EXTENSIONS}" "${ARGN}")
-        list(APPEND pdf_outputs ${output_files})
-      else()
-        latex_convert_image(output_files "${file}" .pdf "${convert_flags}"
-          "${LATEX_PDF_IMAGE_EXTENSIONS}" "${ARGN}")
-        list(APPEND pdf_outputs ${output_files})
-      endif()
+      latex_convert_image(output_files "${file}" .pdf "${convert_flags}"
+        "${LATEX_PDF_IMAGE_EXTENSIONS}" "${ARGN}")
+      list(APPEND pdf_outputs ${output_files})
     else()
       message(WARNING "Could not find file ${CMAKE_CURRENT_SOURCE_DIR}/${file}.  Are you sure you gave relative paths to IMAGES?")
     endif()
@@ -1607,7 +1595,7 @@ function(add_latex_targets_internal)
     else()
       set(bib_compiler ${BIBTEX_COMPILER})
       set(bib_compiler_flags ${BIBTEX_COMPILER_ARGS})
-    endif() 
+    endif()
     if(LATEX_MULTIBIB_NEWCITES)
       foreach (multibib_auxfile ${LATEX_MULTIBIB_NEWCITES})
         latex_get_filename_component(multibib_target ${multibib_auxfile} NAME_WE)
