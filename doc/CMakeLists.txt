@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(doc NONE)
 
+add_custom_target(doc)
+
 # -- list all .tex source files ------------------------------------------------
 
 set(sources
@@ -70,6 +72,7 @@ else()
                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
                     COMMENT "Generating API documentation with Doxygen"
                     VERBATIM)
+  add_dependencies(doc doxygen)
 endif()
 
 # -- Pandoc utility macro ------------------------------------------------------
@@ -106,6 +109,7 @@ else()
                      IMAGE_DIRS "pdf"
                      FORCE_PDF
                      TARGET_NAME manual)
+  add_dependencies(doc manual)
   find_program(PANDOC_EXECUTABLE pandoc)
   if(NOT EXISTS ${PANDOC_EXECUTABLE})
     message(STATUS "Pandoc not found, skip generating reFormattedText version of the manual.")
@@ -120,6 +124,7 @@ else()
     else()
       message(STATUS "Add optional target: rst.")
       add_custom_target(rst)
+      add_dependencies(doc rst)
       foreach(texfile ${sources})
         generate_rst(${texfile})
       endforeach()
