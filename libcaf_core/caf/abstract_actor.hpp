@@ -131,6 +131,7 @@ public:
   static constexpr int has_used_aout_flag      = 0x0400; // local_actor
   static constexpr int is_terminated_flag      = 0x0800; // local_actor
   static constexpr int is_cleaned_up_flag      = 0x1000; // monitorable_actor
+  static constexpr int is_shutting_down_flag   = 0x2000; // scheduled_actor
 
   inline void setf(int flag) {
     auto x = flags();

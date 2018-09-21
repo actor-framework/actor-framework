@@ -78,7 +78,8 @@ struct upstream_msg : tag::boxing_type {
     int64_t acknowledged_id;
   };
 
-  /// Informs a source that a sink orderly drops out of a stream.
+  /// Asks the source to discard any remaining credit and close this path
+  /// after receiving an ACK for the last batch.
   struct drop {
     /// Allows the testing DSL to unbox this type automagically.
     using outer_type = upstream_msg;

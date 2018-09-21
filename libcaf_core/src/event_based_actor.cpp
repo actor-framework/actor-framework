@@ -38,7 +38,7 @@ void event_based_actor::initialize() {
   setf(is_initialized_flag);
   auto bhvr = make_behavior();
   CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                           << CAF_ARG(has_behavior()));
+                           << CAF_ARG2("alive", alive()));
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()
     CAF_LOG_DEBUG("make_behavior() did return a valid behavior");

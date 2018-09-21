@@ -348,13 +348,7 @@ void logger::render_time_diff(std::ostream& out, timestamp t0, timestamp tn) {
 }
 
 void logger::render_date(std::ostream& out, timestamp x) {
-  auto y = std::chrono::time_point_cast<timestamp::clock::duration>(x);
-  auto z = timestamp::clock::to_time_t(y);
-  // strftime workaround: std::put_time not available on GCC 4.8
-  // out << std::put_time(std::localtime(&z), "%F %T");
-  char buf[50];
-  if (strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&z)))
-    out << buf;
+  out << deep_to_string(x);
 }
 
 void logger::render(std::ostream& out, const line_format& lf,

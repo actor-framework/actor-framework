@@ -371,8 +371,10 @@ public:
     }
   }
 
-  void erase_inbound_paths_later(const stream_manager*, error) override {
-    CAF_FAIL("unexpected function call");
+  void erase_inbound_paths_later(const stream_manager* mgr,
+                                 error err) override {
+    CAF_REQUIRE_EQUAL(err, none);
+    erase_inbound_paths_later(mgr);
   }
 
   time_point now() {

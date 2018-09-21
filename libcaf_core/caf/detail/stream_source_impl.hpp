@@ -52,6 +52,11 @@ public:
 
   // -- implementation of virtual functions ------------------------------------
 
+  void shutdown() override {
+    super::shutdown();
+    at_end_ = true;
+  }
+
   bool done() const override {
     return this->pending_handshakes_ == 0 && at_end_ && this->out_.clean();
   }

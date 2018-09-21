@@ -690,19 +690,14 @@ public:
 
   // -- behavior management ----------------------------------------------------
 
-  /// Returns whether `true` if the behavior stack is not empty or
-  /// if outstanding responses exist, `false` otherwise.
-  inline bool has_behavior() const {
-    return !bhvr_stack_.empty()
-           || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty()
-           || !stream_managers_.empty()
-           || !pending_stream_managers_.empty();
+  /// Returns `true` if the behavior stack is not empty.
+  inline bool has_behavior() const noexcept {
+    return !bhvr_stack_.empty();
   }
 
   inline behavior& current_behavior() {
     return !awaited_responses_.empty() ? awaited_responses_.front().second
-                                        : bhvr_stack_.back();
+                                       : bhvr_stack_.back();
   }
 
   /// Installs a new behavior without performing any type checks.
@@ -769,7 +764,7 @@ public:
     if (i == stream_managers_.end()) {
       auto j = pending_stream_managers_.find(slots.receiver);
       if (j != pending_stream_managers_.end()) {
-        j->second->abort(sec::stream_init_failed);
+        j->second->stop(sec::stream_init_failed);
         pending_stream_managers_.erase(j);
         return;
       }
@@ -783,13 +778,15 @@ public:
       return;
     }
     CAF_ASSERT(i->second != nullptr);
-    i->second->handle(slots, x);
-    if (i->second->done()) {
-      CAF_LOG_INFO("done sending:" << CAF_ARG(slots));
-      i->second->stop();
-      stream_managers_.erase(i);
-      if (stream_managers_.empty())
-        stream_ticks_.stop();
+    auto ptr = i->second;
+    ptr->handle(slots, x);
+    if (ptr->done()) {
+      CAF_LOG_DEBUG("done sending:" << CAF_ARG(slots));
+      ptr->stop();
+      erase_stream_manager(ptr);
+    } else if (ptr->out().path(slots.receiver) == nullptr) {
+      CAF_LOG_DEBUG("done sending on path:" << CAF_ARG(slots.receiver));
+      erase_stream_manager(slots.receiver);
     }
   }
 
@@ -870,6 +867,19 @@ public:
   /// Advances credit and batch timeouts and returns the timestamp when to call
   /// this function again.
   actor_clock::time_point advance_streams(actor_clock::time_point now);
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns `true` if the actor has a behavior, awaits responses, or
+  /// participates in streams.
+  /// @private
+  inline bool alive() const noexcept {
+    return !bhvr_stack_.empty()
+           || !awaited_responses_.empty()
+           || !multiplexed_responses_.empty()
+           || !stream_managers_.empty()
+           || !pending_stream_managers_.empty();
+  }
 
   /// @endcond
 

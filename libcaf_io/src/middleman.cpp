@@ -356,7 +356,7 @@ void middleman::stop() {
       auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(hdl));
       if (!ptr->getf(abstract_actor::is_terminated_flag)) {
         ptr->context(&backend());
-        ptr->setf(abstract_actor::is_terminated_flag);
+        ptr->quit();
         ptr->finalize();
       }
     }

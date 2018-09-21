@@ -97,7 +97,10 @@ void stringification_inspector::consume(timestamp& x) {
   // time_t has no milliseconds, so we need to insert them manually.
   auto ms = (x.time_since_epoch().count() / 1000000) % 1000;
   result_ += '.';
-  result_ += std::to_string(ms);
+  auto frac = std::to_string(ms);
+  if (frac.size() < 3)
+    frac.insert(0, 3 - frac.size(), '0');
+  result_ += frac;
 }
 
 } // namespace detail

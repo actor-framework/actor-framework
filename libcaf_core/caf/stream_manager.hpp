@@ -41,6 +41,16 @@ namespace caf {
 /// Manages a single stream with any number of in- and outbound paths.
 class stream_manager : public ref_counted {
 public:
+  // -- constants --------------------------------------------------------------
+
+  /// Configures whether this stream shall remain open even if no in- or
+  /// outbound paths exist.
+  static constexpr int is_continuous_flag = 0x0001;
+
+  /// Denotes whether the stream is about to stop, only sending already
+  /// buffered elements.
+  static constexpr int is_shutting_down_flag = 0x0002;
+
   // -- member types -----------------------------------------------------------
 
   using inbound_paths_list = std::vector<inbound_path*>;
@@ -66,17 +76,15 @@ public:
 
   /// Closes all output and input paths and sends the final result to the
   /// client.
-  virtual void stop();
+  virtual void stop(error reason = none);
+
+  /// Mark this stream as shutting down, only allowing flushing all related
+  /// buffers of in- and outbound paths.
+  virtual void shutdown();
 
   /// Tries to advance the stream by generating more credit or by sending
   /// batches.
   void advance();
-
-  /// Aborts a stream after any stream message handler returned a non-default
-  /// constructed error `reason` or the parent actor terminates with a
-  /// non-default error.
-  /// @param reason Previous error or non-default exit reason of the parent.
-  virtual void abort(error reason);
 
   /// Pushes new data to downstream actors by sending batches. The amount of
   /// pushed data is limited by the available credit.
@@ -132,17 +140,27 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  /// Returns whether this stream is shutting down.
+  bool shutting_down() const noexcept {
+    return getf(is_shutting_down_flag);
+  }
+
   /// Returns whether this stream remains open even if no in- or outbound paths
   /// exist. The default is `false`. Does not keep a source alive past the
   /// point where its driver returns `done() == true`.
   inline bool continuous() const noexcept {
-    return continuous_;
+    return getf(is_continuous_flag);
   }
 
   /// Sets whether this stream remains open even if no in- or outbound paths
   /// exist.
   inline void continuous(bool x) noexcept {
-    continuous_ = x;
+    if (!shutting_down()) {
+      if (x)
+        setf(is_continuous_flag);
+      else
+        unsetf(is_continuous_flag);
+    }
   }
 
   /// Returns the list of inbound paths.
@@ -287,9 +305,23 @@ protected:
   /// Configures the importance of outgoing traffic.
   stream_priority priority_;
 
-  /// Stores whether this stream shall remain open even if no in- or outbound
-  /// paths exist.
-  bool continuous_;
+  /// Stores individual flags, for continuous streaming or when shutting down.
+  int flags_;
+
+private:
+  void setf(int flag) noexcept {
+    auto x = flags_;
+    flags_ = x | flag;
+  }
+
+  void unsetf(int flag) noexcept {
+    auto x = flags_;
+    flags_ = x & ~flag;
+  }
+
+   bool getf(int flag) const noexcept {
+     return (flags_ & flag) != 0;
+   }
 };
 
 /// A reference counting pointer to a `stream_manager`.

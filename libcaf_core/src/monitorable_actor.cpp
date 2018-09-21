@@ -48,9 +48,10 @@ void monitorable_actor::attach(attachable_ptr ptr) {
     attach_impl(ptr);
     return true;
   });
-  CAF_LOG_DEBUG("cannot attach functor to terminated actor: call immediately");
-  if (!attached)
+  if (!attached) {
+    CAF_LOG_DEBUG("cannot attach functor to terminated actor: call immediately");
     ptr->actor_exited(fail_state, nullptr);
+  }
 }
 
 size_t monitorable_actor::detach(const attachable::token& what) {

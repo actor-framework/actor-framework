@@ -92,7 +92,8 @@ protected:
     invoke_mailbox_element_impl(ctx, value_);
     // only consume an activity token if actor did not produce them now
     if (prev && activity_tokens_ && --(*activity_tokens_) == 0) {
-      if (this->parent()->getf(abstract_actor::is_terminated_flag))
+      if (this->parent()->getf(abstract_actor::is_shutting_down_flag
+                               | abstract_actor::is_terminated_flag))
         return false;
       // tell broker it entered passive mode, this can result in
       // producing, why we check the condition again afterwards
