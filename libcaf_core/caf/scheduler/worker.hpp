@@ -20,11 +20,11 @@
 
 #include <cstddef>
 
+#include "caf/detail/double_ended_queue.hpp"
+#include "caf/detail/set_thread_name.hpp"
+#include "caf/execution_unit.hpp"
 #include "caf/logger.hpp"
 #include "caf/resumable.hpp"
-#include "caf/execution_unit.hpp"
-
-#include "caf/detail/double_ended_queue.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -54,6 +54,8 @@ public:
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
     auto this_worker = this;
     this_thread_ = std::thread{[this_worker] {
+      CAF_SET_LOGGER_SYS(&this_worker->system());
+      detail::set_thread_name("caf.multiplexer");
       this_worker->system().thread_started();
       this_worker->run();
       this_worker->system().thread_terminates();

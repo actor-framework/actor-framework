@@ -16,17 +16,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
-
 #include "caf/blocking_actor.hpp"
 
-#include "caf/logger.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/actor_registry.hpp"
+#include <utility>
 
-#include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/actor_registry.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
+#include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/detail/set_thread_name.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 
@@ -92,6 +92,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
   home_system().inc_detached_threads();
   std::thread([](strong_actor_ptr ptr) {
     // actor lives in its own thread
+    detail::set_thread_name("caf.actor");
     ptr->home_system->thread_started();
     auto this_ptr = ptr->get();
     CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != nullptr);

@@ -98,6 +98,7 @@ set(LIBCAF_CORE_SRCS
   src/sec.cpp
   src/sequencer.cpp
   src/serializer.cpp
+  src/set_thread_name.cpp
   src/shared_spinlock.cpp
   src/simple_actor_clock.cpp
   src/skip.cpp

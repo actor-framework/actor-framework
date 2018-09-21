@@ -25,10 +25,10 @@
 #include <memory>
 #include <condition_variable>
 
-#include "caf/scheduler/worker.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
-
+#include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler/worker.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -75,7 +75,11 @@ protected:
     // Launch an additional background thread for dispatching timeouts and
     // delayed messages.
     timer_ = std::thread{[&] {
+      CAF_SET_LOGGER_SYS(&system());
+      detail::set_thread_name("caf.clock");
+      system().thread_started();
       clock_.run_dispatch_loop();
+      system().thread_terminates();
     }};
     // Run remaining startup code.
     super::start();

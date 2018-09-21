@@ -34,6 +34,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/pretty_type_name.hpp"
+#include "caf/detail/set_thread_name.hpp"
 #include "caf/intrusive/task_result.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/locks.hpp"
@@ -555,6 +556,7 @@ void logger::start() {
     log_first_line();
   else
     thread_ = std::thread{[this] {
+      detail::set_thread_name("caf.logger");
       this->system_.thread_started();
       this->run();
       this->system_.thread_terminates();

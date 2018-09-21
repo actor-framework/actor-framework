@@ -19,6 +19,7 @@
 #include "caf/detail/private_thread.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/set_thread_name.hpp"
 #include "caf/logger.hpp"
 #include "caf/scheduled_actor.hpp"
 
@@ -87,6 +88,7 @@ void private_thread::shutdown() {
 }
 
 void private_thread::exec(private_thread* this_ptr) {
+  detail::set_thread_name("caf.actor");
   this_ptr->system_.thread_started();
   this_ptr->run();
   // make sure to not destroy the private thread object before the
