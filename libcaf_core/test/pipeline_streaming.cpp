@@ -74,6 +74,28 @@ std::function<void (T&, const error&)> fin(scheduled_actor* self) {
   };
 }
 
+TESTEE(infinite_source) {
+  return {
+    [=](string& fname) -> output_stream<int> {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+      return self->make_source(
+        [](int& x) {
+          x = 0;
+        },
+        [](int& x, downstream<int>& out, size_t num) {
+          for (size_t i = 0; i < num; ++i)
+            out.push(x++);
+        },
+        [](const int&) {
+          return false;
+        },
+        fin<int>(self)
+      );
+    }
+  };
+}
+
 VARARGS_TESTEE(file_reader, size_t buf_size) {
   return {
     [=](string& fname) -> output_stream<int> {
@@ -439,6 +461,23 @@ CAF_TEST(depth_3_pipeline_graceful_shutdown) {
   run();
   CAF_MESSAGE("check sink result");
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 625);
+}
+
+CAF_TEST(depth_3_pipeline_infinite_source) {
+  auto src = sys.spawn(infinite_source);
+  auto stg = sys.spawn(filter);
+  auto snk = sys.spawn(sum_up);
+  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(stg) << CAF_ARG(snk));
+  CAF_MESSAGE("initiate stream handshake");
+  self->send(snk * stg * src, "numbers.txt");
+  expect((string), from(self).to(src).with("numbers.txt"));
+  expect((open_stream_msg), from(self).to(stg));
+  expect((open_stream_msg), from(self).to(snk));
+  expect((upstream_msg::ack_open), from(snk).to(stg));
+  expect((upstream_msg::ack_open), from(stg).to(src));
+  CAF_MESSAGE("send exit to the source and expect the stream to terminate");
+  anon_send_exit(src, exit_reason::user_shutdown);
+  run();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
