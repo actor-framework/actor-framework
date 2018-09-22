@@ -1,0 +1,218 @@
+\documentclass[%
+  a4paper,%                                        % DIN A4
+  oneside,%                                        % einseitiger Druck
+  12pt,%                                           % 12pt Schriftgröße
+]{article}
+
+\usepackage[utf8]{inputenc}
+
+% include required packages
+
+\usepackage{array}
+\usepackage{capt-of}
+\usepackage{color}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{multicol}
+\usepackage{tabularx}
+\usepackage{url}
+\usepackage{xifthen}
+\usepackage{xspace}
+
+% font setup
+
+\usepackage[scaled=.90]{helvet}
+\usepackage{cmbright}
+\usepackage{courier}
+\usepackage{txfonts}
+
+% paragraph settings
+
+\parindent 0pt
+\parskip 8pt
+
+\pretolerance=150
+\tolerance=500
+\emergencystretch=\maxdimen
+\hbadness=10000
+
+\pagenumbering{arabic}
+
+% custom colors
+
+\definecolor{lightgrey}{rgb}{0.9,0.9,0.9}
+\definecolor{lightblue}{rgb}{0,0,1}
+
+\definecolor{grey}{rgb}{0.5,0.5,0.5}
+\definecolor{blue}{rgb}{0,0,1}
+\definecolor{violet}{rgb}{0.5,0,0.5}
+
+\definecolor{darkred}{rgb}{0.5,0,0}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+
+\input{tex/variables}
+
+\title{%
+\texttt{\huge{\textbf{CAF}}}\\
+~\\
+The C++ Actor Framework\\
+~\\
+~\\
+~\\
+User Manual\\
+\normalsize{Version \cafrelease}\\
+~\\
+~\\
+\tiny SHA \cafsha
+\vfill}
+
+\author{Dominik Charousset}
+
+\date{\today}
+
+% page setup
+\setlength{\voffset}{-1in}
+\setlength{\hoffset}{-0.75in}
+\addtolength{\textwidth}{1.5in}
+\addtolength{\textheight}{2in}
+\setlength{\headheight}{15pt}
+
+% include paragraphs in TOC
+\setcounter{tocdepth}{3}
+
+% more compact itemize
+\newenvironment{itemize*}%
+  {\begin{itemize}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{itemize}}
+
+\begin{document}
+\maketitle\thispagestyle{empty}
+\pagestyle{empty}
+\clearpage
+\tableofcontents
+\clearpage
+\setcounter{page}{1}
+\pagestyle{plain}
+
+% directory layout
+
+\graphicspath{{pdf/}}
+
+% custom commands
+
+\newcommand{\sref}[1]{\S\,\ref{#1}}
+\newcommand{\see}[1]{(see~\sref{#1})}
+
+\newcommand{\singlefig}[3]{
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=.6\columnwidth]{#1}
+    \caption{#2}
+    \label{#3}
+  \end{figure}
+}
+
+\newcommand{\experimental}{
+  {\color{darkred}\textsuperscript{experimental}}
+}
+
+
+\newcommand{\cppexample}[2][]{%
+\ifthenelse{\isempty{#1}}%
+{\lstinputlisting{../../examples/#2.cpp}}%
+{\lstinputlisting[language=C++,linerange={#1}]{../../examples/#2.cpp}}%
+}
+
+\newcommand{\iniexample}[2][]{%
+\ifthenelse{\isempty{#1}}%
+{\lstinputlisting[language=ini]{../../examples/#2.ini}}%
+{\lstinputlisting[language=ini,linerange={#1}]{../../examples/#2.ini}}%
+}
+
+\newcommand{\sourcefile}[2][]{%
+\ifthenelse{\isempty{#1}}%
+{\lstinputlisting[language=C++]{../../#2}}%
+{\lstinputlisting[language=C++,linerange={#1}]{../../#2}}%
+}
+
+% highlight for INI file syntax
+
+\lstdefinelanguage{ini}{%
+  basicstyle=\ttfamily\footnotesize,%
+%  columns=fullflexible,%
+  morecomment=[s][\color{blue}]{[}{]},%
+  morecomment=[l]{;},%
+  morecomment=[s]{<}{>},%
+  morestring=[b]",%
+  morestring=[b]',%
+  commentstyle=\color{violet},%
+  morekeywords={},%
+  otherkeywords={=,false,true},%
+  keywordstyle=\color{blue},%
+  stringstyle=\color{darkgreen},%
+}
+
+% code listings setup
+\lstset{%
+  language=C++,%
+  morekeywords={constexpr,nullptr,size_t,uint32_t,assert,override,final},%
+  basicstyle=\ttfamily\footnotesize,%
+  sensitive=true,%
+  keywordstyle=\color{blue},%
+  stringstyle=\color{darkgreen},%
+  commentstyle=\color{violet},%
+  showstringspaces=false,%
+  tabsize=2,%
+  frame=leftline,
+  rulecolor=\color{lightblue},
+  xleftmargin=20pt,
+}
+
+\lstset{
+  numberstyle=\tiny,
+  numbers=left,
+  numbersep=10pt,
+  xleftmargin=20pt,
+  %framesep=4.5mm,
+  %framexleftmargin=2.5mm,
+  framexleftmargin=5pt,
+  framesep=15pt,
+  fillcolor=\color{lightgrey},
+}
+
+% content
+\part{Core Library}
+\include{tex/Introduction}
+\include{tex/FirstSteps}
+\include{tex/TypeInspection}
+\include{tex/MessageHandlers}
+\include{tex/Actors}
+\include{tex/MessagePassing}
+\include{tex/Scheduler}
+\include{tex/Registry}
+\include{tex/ReferenceCounting}
+\include{tex/Error}
+\include{tex/ConfiguringActorApplications}
+\include{tex/Messages}
+\include{tex/GroupCommunication}
+\include{tex/ManagingGroupsOfWorkers}
+\include{tex/Streaming}
+
+\part{I/O Library}
+\include{tex/NetworkTransparency}
+\include{tex/Brokers}
+\include{tex/RemoteSpawn}
+
+\part{Appendix}
+\include{tex/FAQ}
+\include{tex/Utility}
+\include{tex/CommonPitfalls}
+\include{tex/UsingAout}
+\include{tex/MigrationGuides}
+
+\end{document}

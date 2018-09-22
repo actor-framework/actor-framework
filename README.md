@@ -119,6 +119,12 @@ A SNocs workspace is provided by GitHub user
 * FreeBSD 10
 * Windows >= 7 (currently static builds only)
 
+## Optional Dependencies
+
+* Doxygen (for the `doxygen` target)
+* LaTeX (for the `manual` target)
+* Pandoc and Python with pandocfilters (for the `rst` target)
+
 ## Scientific Use
 
 If you use CAF in a scientific context, please use one of the following citations:

@@ -1,0 +1,25 @@
+\section{OpenCL-based Actors}
+
+CAF supports transparent integration of OpenCL functions.
+
+
+\begin{lstlisting}
+// opencl kernel for matrix multiplication;
+// last parameter is, by convention, the output parameter
+constexpr const char* kernel_source = R"__(
+  __kernel void matrix_mult(__global float* matrix1,
+                            __global float* matrix2,
+                            __global float* output) {
+    // we only use square matrices, hence: width == height
+    size_t size = get_global_size(0); // == get_global_size_(1);
+    size_t x = get_global_id(0);
+    size_t y = get_global_id(1);
+    float result = 0;
+    for (size_t idx = 0; idx < size; ++idx)
+      result += matrix1[idx + y * size] * matrix2[x + idx * size];
+    output[x + y * size] = result;
+  }
+)__";
+\end{lstlisting}
+
+
