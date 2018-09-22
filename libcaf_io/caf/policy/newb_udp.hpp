@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/policy/accept.hpp"
@@ -70,14 +71,34 @@ struct udp_transport : public transport {
   io::network::ip_endpoint sender;
 };
 
-struct accept_udp : public accept {
+template <class Message>
+struct accept_udp : public accept<Message> {
   expected<io::network::native_socket>
-  create_socket(uint16_t port, const char* host, bool reuse = false) override;
+  create_socket(uint16_t port, const char* host, bool reuse = false) override {
+    auto res = io::network::new_local_udp_endpoint_impl(port, host, reuse);
+    if (!res)
+      return std::move(res.error());
+    return (*res).first;
+  }
 
   std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::newb_base*) override;
+  accept_event(io::newb_base*) override {
+    std::cout << "Accepting msg from UDP endpoint" << std::endl;
+    auto res = io::network::new_local_udp_endpoint_impl(0, nullptr, true);
+    if (!res) {
+      CAF_LOG_DEBUG("failed to create local endpoint" << CAF_ARG(res.error()));
+      return {io::network::invalid_native_socket, nullptr};
+    }
+    auto sock = std::move(res->first);
+    transport_ptr ptr{new udp_transport};
+    return {sock, std::move(ptr)};
+  }
 
-  void init(io::newb_base& n) override;
+  void init(io::newb_base* parent, io::newb<Message>& spawned) override {
+    spawned.trans->prepare_next_read(parent);
+    spawned.trans->read_some(parent, *spawned.proto.get());
+    spawned.start();
+  }
 };
 
 template <class T>

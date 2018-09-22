@@ -178,31 +178,8 @@ tcp_transport::connect(const std::string& host, uint16_t port,
   return io::network::new_tcp_connection(host, port, preferred);
 }
 
-expected<io::network::native_socket>
-accept_tcp::create_socket(uint16_t port, const char* host, bool reuse) {
-  return io::network::new_tcp_acceptor_impl(port, host, reuse);
-}
-
-std::pair<io::network::native_socket, transport_ptr>
-accept_tcp::accept_event(io::newb_base* parent) {
-  using namespace io::network;
-  sockaddr_storage addr;
-  std::memset(&addr, 0, sizeof(addr));
-  socket_size_type addrlen = sizeof(addr);
-  auto result = ::accept(parent->fd(), reinterpret_cast<sockaddr*>(&addr),
-                         &addrlen);
-  if (result == invalid_native_socket) {
-    auto err = last_socket_error();
-    if (!would_block_or_temporarily_unavailable(err)) {
-      return {invalid_native_socket, nullptr};
-    }
-  }
-  transport_ptr ptr{new tcp_transport};
-  return {result, std::move(ptr)};
-}
-
-void accept_tcp::init(io::newb_base& n) {
-  n.start();
+io::network::native_socket get_newb_socket(io::newb_base* n) {
+  return n->fd();
 }
 
 } // namespace policy

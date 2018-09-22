@@ -77,12 +77,6 @@ transport::connect(const std::string&, uint16_t,
   return sec::bad_function_call;
 }
 
-// -- accept_policy ------------------------------------------------------------
-
-accept::~accept() {
-  // nop
-}
-
 // -- protocol_policy_base -----------------------------------------------------
 
 protocol_base::~protocol_base() {

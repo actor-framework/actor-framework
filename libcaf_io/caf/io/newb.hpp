@@ -533,7 +533,7 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
   // -- constructors and destructors -------------------------------------------
 
   newb_acceptor(network::default_multiplexer& dm, network::native_socket sockfd,
-                Fun f, policy::accept_ptr pol, Ts&&... xs)
+                Fun f, policy::accept_ptr<message_type> pol, Ts&&... xs)
       : newb_base(dm, sockfd),
         accept_pol(std::move(pol)),
         fun_(std::move(f)),
@@ -541,6 +541,9 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
         writing_(false),
         args_(std::forward<Ts>(xs)...) {
     // nop
+    if (sockfd == io::network::invalid_native_socket) {
+      std::cerr << "Creating newb with invalid socket" << std::endl;
+    }
   }
 
   newb_acceptor(const newb_acceptor& other) = delete;
@@ -635,9 +638,16 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
     if (accept_pol->manual_read) {
       accept_pol->read_event(this);
     } else {
+      using newb_ptr = first_argument_type<Fun>;
+      using newb_type = typename std::remove_pointer<newb_ptr>::type;
+      using message = typename newb_type::message_type;
       network::native_socket sock;
       policy::transport_ptr transport;
       std::tie(sock, transport) = accept_pol->accept_event(this);
+      if (sock == network::invalid_native_socket) {
+        CAF_LOG_ERROR("failed to create socket for new endpoint");
+        return;
+      }
       auto en = create_newb(sock, std::move(transport));
       if (!en) {
         io_error(network::operation::read, std::move(en.error()));
@@ -645,8 +655,8 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
       }
       auto ptr = caf::actor_cast<caf::abstract_actor*>(*en);
       CAF_ASSERT(ptr != nullptr);
-      auto& ref = dynamic_cast<newb<message_type>&>(*ptr);
-      accept_pol->init(ref);
+      auto& ref = dynamic_cast<newb<message>&>(*ptr);
+      accept_pol->init(this, ref);
     }
   }
 
@@ -666,7 +676,7 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
     return n;
   }
 
-  policy::accept_ptr accept_pol;
+  policy::accept_ptr<message_type> accept_pol;
 
 private:
   Fun fun_;
@@ -678,9 +688,9 @@ private:
 template <class P, class F, class... Ts>
 using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<P, F, Ts...>>;
 
-template <class Protocol, class Fun, class... Ts>
+template <class Protocol, class Fun, class Message, class... Ts>
 acceptor_ptr<Protocol, Fun, Ts...>
-make_acceptor(actor_system& sys, Fun fun, policy::accept_ptr pol,
+make_acceptor(actor_system& sys, Fun fun, policy::accept_ptr<Message> pol,
               network::native_socket sockfd, Ts&&... xs) {
   auto& dm = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
   auto res = make_counted<newb_acceptor<Protocol, Fun, Ts...>>(dm, sockfd,
@@ -691,9 +701,9 @@ make_acceptor(actor_system& sys, Fun fun, policy::accept_ptr pol,
   return res;
 }
 
-template <class Protocol, class F, class... Ts>
+template <class Protocol, class F, class Message, class... Ts>
 expected<caf::intrusive_ptr<newb_acceptor<Protocol, F, Ts...>>>
-make_server(actor_system& sys, F fun, policy::accept_ptr pol,
+make_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
             uint16_t port, const char* addr, bool reuse, Ts&&... xs) {
   auto esock = pol->create_socket(port, addr, reuse);
   if (!esock) {
@@ -704,9 +714,9 @@ make_server(actor_system& sys, F fun, policy::accept_ptr pol,
                                     std::forward<Ts>(xs)...);
 }
 
-template <class Protocol, class F>
+template <class Protocol, class F, class Message>
 expected<caf::intrusive_ptr<newb_acceptor<Protocol, F>>>
-make_server(actor_system& sys, F fun, policy::accept_ptr pol,
+make_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
             uint16_t port, const char* addr = nullptr, bool reuse = false) {
  return make_server<Protocol, F>(sys, std::move(fun), std::move(pol), port,
                                  addr, reuse);

@@ -137,24 +137,6 @@ struct dummy_transport : public transport {
   }
 };
 
-struct accept_policy_impl : public accept {
-  expected<native_socket> create_socket(uint16_t, const char*, bool) override {
-    return sec::bad_function_call;
-  }
-
-  std::pair<native_socket, transport_ptr>
-  accept_event(newb_base*) override {
-    auto esock = network::new_local_udp_endpoint_impl(0, nullptr);
-    CAF_REQUIRE(esock);
-    transport_ptr ptr{new dummy_transport};
-    return {esock->first, std::move(ptr)};
-  }
-
-  void init(newb_base& n) override {
-    n.handle_event(network::operation::read);
-  }
-};
-
 // -- config for controlled scheduling and multiplexing ------------------------
 
 class config : public actor_system_config {
