@@ -284,6 +284,8 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,
                             optional<protocol::network> preferred = none);
 
+expected<native_socket> accept_tcp_connection(native_socket sockfd);
+
 } // namespace network
 } // namespace io
 } // namespace caf

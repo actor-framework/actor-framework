@@ -27,17 +27,23 @@ namespace io {
 
 struct newb_base;
 
+template<class Message>
+struct newb;
+
 } // namespace io
 
 namespace policy {
 
+template <class Message>
 struct accept {
   accept(bool manual_read = false)
       : manual_read(manual_read) {
     // nop
   }
 
-  virtual ~accept();
+  virtual ~accept() {
+    // nop
+  }
 
   virtual expected<io::network::native_socket>
   create_socket(uint16_t port, const char* host, bool reuse = false) = 0;
@@ -58,14 +64,15 @@ struct accept {
     return none;
   }
 
-  virtual void init(io::newb_base&) {
+  virtual void init(io::newb_base*, io::newb<Message>&) {
     // nop
   }
 
   bool manual_read;
 };
 
-using accept_ptr = std::unique_ptr<accept>;
+template <class Message>
+using accept_ptr = std::unique_ptr<accept<Message>>;
 
 } // namespace policy
 } // namespace caf

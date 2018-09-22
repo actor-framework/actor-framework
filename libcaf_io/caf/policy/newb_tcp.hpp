@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/policy/accept.hpp"
 #include "caf/policy/transport.hpp"
@@ -57,14 +58,28 @@ struct tcp_transport : public transport {
   size_t written;
 };
 
-struct accept_tcp : public accept {
+io::network::native_socket get_newb_socket(io::newb_base*);
+
+template <class Message>
+struct accept_tcp : public accept<Message> {
   expected<io::network::native_socket>
-  create_socket(uint16_t port,const char* host,bool reuse = false) override;
+  create_socket(uint16_t port,const char* host,bool reuse = false) override {
+    return io::network::new_tcp_acceptor_impl(port, host, reuse);
+  }
 
   std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::newb_base* parent) override;
+  accept_event(io::newb_base* parent) override {
+    auto esock = io::network::accept_tcp_connection(get_newb_socket(parent));
+    if (!esock) {
+      return {io::network::invalid_native_socket, nullptr};
+    }
+    transport_ptr ptr{new tcp_transport};
+    return {*esock, std::move(ptr)};
+  }
 
-  void init(io::newb_base& n) override;
+  void init(io::newb_base*, io::newb<Message>& spawned) override {
+    spawned.start();
+  }
 };
 
 template <class T>

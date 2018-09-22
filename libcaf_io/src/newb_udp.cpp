@@ -178,29 +178,5 @@ udp_transport::connect(const std::string& host, uint16_t port,
   return res->first;
 }
 
-expected<io::network::native_socket>
-accept_udp::create_socket(uint16_t port, const char* host, bool reuse) {
-  auto res = io::network::new_local_udp_endpoint_impl(port, host, reuse);
-  if (!res)
-    return std::move(res.error());
-  return (*res).first;
-}
-
-std::pair<io::network::native_socket, transport_ptr>
-accept_udp::accept_event(io::newb_base*) {
-  auto res = io::network::new_local_udp_endpoint_impl(0, nullptr);
-  if (!res) {
-    CAF_LOG_DEBUG("failed to create local endpoint");
-    return {io::network::invalid_native_socket, nullptr};
-  }
-  auto sock = std::move(res->first);
-  transport_ptr ptr{new udp_transport};
-  return {sock, std::move(ptr)};
-}
-
-void accept_udp::init(io::newb_base& n) {
-  n.start();
-}
-
 } // namespace policy
 } // namespace caf
