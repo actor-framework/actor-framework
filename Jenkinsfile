@@ -203,7 +203,6 @@ pipeline {
                 stash includes: 'caf-sources/**', name: 'caf-sources'
             }
         }
-        /*
         stage('Builds') {
             steps {
                 script {
@@ -223,7 +222,6 @@ pipeline {
                 }
             }
         }
-        */
         stage('Documentation') {
             agent { label 'pandoc' }
             steps {
