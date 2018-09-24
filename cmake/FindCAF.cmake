@@ -36,12 +36,14 @@ foreach (comp ${CAF_FIND_COMPONENTS})
   if (CAF_ROOT_DIR)
     set(header_hints
         "${CAF_ROOT_DIR}/include"
-        "${CAF_ROOT_DIR}/../libcaf_${comp}")
+        "${CAF_ROOT_DIR}/libcaf_${comp}"
+        "${CAF_ROOT_DIR}/../libcaf_${comp}"
+        "${CAF_ROOT_DIR}/../../libcaf_${comp}")
   endif ()
   find_path(CAF_INCLUDE_DIR_${UPPERCOMP}
             NAMES
               ${HDRNAME}
-              HINTS
+            HINTS
               ${header_hints}
               /usr/include
               /usr/local/include
@@ -51,18 +53,28 @@ foreach (comp ${CAF_FIND_COMPONENTS})
   mark_as_advanced(CAF_INCLUDE_DIR_${UPPERCOMP})
   if (NOT "${CAF_INCLUDE_DIR_${UPPERCOMP}}"
       STREQUAL "CAF_INCLUDE_DIR_${UPPERCOMP}-NOTFOUND")
-    # mark as found (set back to false in case library cannot be found)
+    # mark as found (set back to false when missing library or build header)
     set(CAF_${comp}_FOUND true)
-    # add to CAF_INCLUDE_DIRS only if path isn't already set
-    set(duplicate false)
-    foreach (p ${CAF_INCLUDE_DIRS})
-      if (${p} STREQUAL ${CAF_INCLUDE_DIR_${UPPERCOMP}})
-        set(duplicate true)
-      endif ()
-    endforeach ()
-    if (NOT duplicate)
-      set(CAF_INCLUDE_DIRS ${CAF_INCLUDE_DIRS} ${CAF_INCLUDE_DIR_${UPPERCOMP}})
+    # check for CMake-generated build header for the core component
+    if ("${comp}" STREQUAL "core")
+      find_path(caf_build_header_path
+                NAMES
+                  caf/detail/build_config.hpp
+                HINTS
+                  ${header_hints}
+                  /usr/include
+                  /usr/local/include
+                  /opt/local/include
+                  /sw/include
+                  ${CMAKE_INSTALL_PREFIX}/include)
+      if ("${caf_build_header_path}" STREQUAL "caf_build_header_path-NOTFOUND")
+        message(WARNING "Found all.hpp for CAF core, but not build_config.hpp")
+        set(CAF_${comp}_FOUND false)
+      else()
+        list(APPEND CAF_INCLUDE_DIRS "${caf_build_header_path}")
+      endif()
     endif()
+    list(APPEND CAF_INCLUDE_DIRS "${CAF_INCLUDE_DIR_${UPPERCOMP}}")
     # look for (.dll|.so|.dylib) file, again giving hints for non-installed CAFs
     # skip probe_event as it is header only
     if (NOT ${comp} STREQUAL "probe_event" AND NOT ${comp} STREQUAL "test")
@@ -89,6 +101,8 @@ foreach (comp ${CAF_FIND_COMPONENTS})
     endif ()
   endif ()
 endforeach ()
+
+list(REMOVE_DUPLICATES CAF_INCLUDE_DIRS)
 
 # let CMake check whether all requested components have been found
 include(FindPackageHandleStandardArgs)
