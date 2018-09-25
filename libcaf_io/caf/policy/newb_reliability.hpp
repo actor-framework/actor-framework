@@ -21,7 +21,6 @@
 #include <cstdint>
 #include <unordered_map>
 #include <chrono>
-#include <random>
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -61,13 +60,6 @@ struct reliability {
   io::newb<message_type>* parent;
   Next next;
   std::unordered_map<id_type, io::byte_buffer> unacked;
-  std::random_device rd;
-  std::mt19937 mt;
-  std::uniform_int_distribution<int> dist;
-
-  reliability() : mt(rd()), dist(0, 9) {
-    // nop
-  }
 
   void init(io::newb<message_type>* n) {
     parent = n;
@@ -80,17 +72,10 @@ struct reliability {
     reliability_header hdr;
     binary_deserializer bd(&parent->backend(), bytes, count);
     bd(hdr);
-    auto r = dist(mt);
-    if (r == 0) {
-      std::cerr << "not this time: " << hdr.id << std::endl;
-      return none;
-    }
     if (hdr.is_ack) {
       // TODO: Cancel timeout.
       unacked.erase(hdr.id);
-      std::cerr << "got ack for " << hdr.id << std::endl;
     } else {
-      std::cerr << "got header: " << hdr.id << std::endl;
       // Send ack.
       auto& buf = parent->wr_buf();
       binary_serializer bs(&parent->backend(), buf);
@@ -136,7 +121,6 @@ struct reliability {
     // Add to unacked.
     unacked.emplace(id_write,
                     io::byte_buffer(buf.begin() + hstart, buf.end()));
-    std::cerr << "awaiting ack for " << id_write << std::endl;
     id_write += 1;
   }
 };
