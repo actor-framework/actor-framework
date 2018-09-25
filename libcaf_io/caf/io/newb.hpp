@@ -607,6 +607,8 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
   void io_error(network::operation op, error err) override {
     CAF_LOG_ERROR("operation " << to_string(op) << " failed: "
                   << backend().system().render(err));
+    static_cast<void>(op);
+    static_cast<void>(err);
     stop();
   }
 
