@@ -375,8 +375,9 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   template<class Rep = int, class Period = std::ratio<1>>
   void set_timeout(std::chrono::duration<Rep, Period> timeout,
                    atom_value atm, uint32_t id) {
-    auto n = actor_clock::clock_type::now();
-    scheduled_actor::clock().set_ordinary_timeout(n + timeout, this, atm, id);
+    //auto n = actor_clock::clock_type::now();
+    //scheduled_actor::clock().set_ordinary_timeout(n + timeout, this, atm, id);
+    this->delayed_send(this, timeout, atm, id);
   }
 
   /// Returns the `multiplexer` running this broker.
@@ -541,9 +542,8 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
         writing_(false),
         args_(std::forward<Ts>(xs)...) {
     // nop
-    if (sockfd == io::network::invalid_native_socket) {
-      std::cerr << "Creating newb with invalid socket" << std::endl;
-    }
+    if (sockfd == io::network::invalid_native_socket)
+      CAF_LOG_ERROR("Creating newb with invalid socket");
   }
 
   newb_acceptor(const newb_acceptor& other) = delete;
