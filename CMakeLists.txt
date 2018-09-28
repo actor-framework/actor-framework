@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.4.0)
 project(caf C CXX)
 
 include(CheckCSourceCompiles)
@@ -20,10 +20,9 @@ if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
 endif()
 
-# Shared libs are currently not supported on Windows.
-if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
-  message(STATUS "CAF currently only supports static-only builds on Windows")
-  set(CAF_BUILD_STATIC_ONLY yes)
+# Auto-export all symbols from Windows DLL
+if(WIN32)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
 if(CAF_BUILD_STATIC_RUNTIME)
