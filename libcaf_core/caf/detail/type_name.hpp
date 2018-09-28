@@ -34,28 +34,28 @@ struct type_name_builder_int_size;
 
 template <>
 struct type_name_builder_int_size<1> {
-  inline void operator()(std::string& result) const {
+  void operator()(std::string& result) const {
     result += "8";
   }
 };
 
 template <>
 struct type_name_builder_int_size<2> {
-  inline void operator()(std::string& result) const {
+  void operator()(std::string& result) const {
     result += "16";
   }
 };
 
 template <>
 struct type_name_builder_int_size<4> {
-  inline void operator()(std::string& result) const {
+  void operator()(std::string& result) const {
     result += "32";
   }
 };
 
 template <>
 struct type_name_builder_int_size<8> {
-  inline void operator()(std::string& result) const {
+  void operator()(std::string& result) const {
     result += "64";
   }
 };
@@ -65,45 +65,32 @@ struct type_name_builder;
 
 template <>
 struct type_name_builder<bool, true> {
-  inline void operator()(std::string& result) const {
+  void operator()(std::string& result) const {
     result += "boolean";
   }
 };
 
-template <>
-struct type_name_builder<float, false> {
-  inline void operator()(std::string& result) const {
-    result += "32-bit real";
+#define CAF_TYPE_NAME_BUILDER_NOINT(class_name, pretty_name)                   \
+  template <>                                                                  \
+  struct type_name_builder<class_name, false> {                                \
+    void operator()(std::string& result) const {                               \
+      result += pretty_name;                                                   \
+    }                                                                          \
   }
-};
 
-template <>
-struct type_name_builder<double, false> {
-  inline void operator()(std::string& result) const {
-    result += "64-bit real";
-  }
-};
+CAF_TYPE_NAME_BUILDER_NOINT(float, "32-bit real");
 
-template <>
-struct type_name_builder<timespan, false> {
-  inline void operator()(std::string& result) const {
-    result += "timespan";
-  }
-};
+CAF_TYPE_NAME_BUILDER_NOINT(double, "64-bit real");
 
-template <>
-struct type_name_builder<std::string, false> {
-  inline void operator()(std::string& result) const {
-    result += "string";
-  }
-};
+CAF_TYPE_NAME_BUILDER_NOINT(timespan, "timespan");
 
-template <>
-struct type_name_builder<atom_value, false> {
-  inline void operator()(std::string& result) const {
-    result += "atom";
-  }
-};
+CAF_TYPE_NAME_BUILDER_NOINT(std::string, "string");
+
+CAF_TYPE_NAME_BUILDER_NOINT(atom_value, "atom");
+
+CAF_TYPE_NAME_BUILDER_NOINT(uri, "uri");
+
+#undef CAF_TYPE_NAME_BUILDER
 
 template <class T>
 struct type_name_builder<T, true> {
@@ -145,4 +132,3 @@ std::string type_name() {
 
 } // namespace detail
 } // namespace caf
-
