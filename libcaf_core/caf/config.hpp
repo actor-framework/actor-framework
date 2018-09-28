@@ -259,3 +259,22 @@ struct IUnknown;
             __FILE__, __LINE__, error);                                        \
     ::abort();                                                                 \
   } while (false)
+
+// Explicit symbol visibility macros.
+#ifdef CAF_MSVC
+#  define CAF_API_EXPORT __declspec(dllexport)
+#  define CAF_API_IMPORT __declspec(dllimport)
+#elif defined(CAF_CLANG) || defined(CAF_GCC)
+#  define CAF_API_EXPORT __attribute__ ((visibility("default")))
+#  define CAF_API_IMPORT
+#else
+#  define CAF_API_EXPORT
+#  define CAF_API_IMPORT
+#endif
+
+#ifdef libcaf_core_shared_EXPORTS
+#  define CAF_API CAF_API_EXPORT
+#else
+#  define CAF_API CAF_API_IMPORT
+#endif
+
