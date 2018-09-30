@@ -99,7 +99,7 @@ public:
   }
 
   template <message_priority P = message_priority::normal,
-            class Source = actor, class Dest = actor, class... Ts>
+            class Dest = actor, class... Ts>
   void anon_send(const Dest& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token =
@@ -157,16 +157,13 @@ public:
     if (dest) {
       auto& clock = dptr()->system().clock();
       auto t = clock.now() + rtime;
-      auto me = make_mailbox_element(dptr()->ctrl(), make_message_id(P),
-                                     no_stages, std::forward<Ts>(xs)...);
-      clock.schedule_message(t, actor_cast<strong_actor_ptr>(dest),
-                             std::move(me));
+      delayed_send_impl(clock, dptr()->ctrl(), dest, P, t,
+                        std::forward<Ts>(xs)...);
     }
   }
 
-  template <message_priority P = message_priority::normal, class Rep = int,
-            class Period = std::ratio<1>, class Source = actor,
-            class Dest = actor, class... Ts>
+  template <message_priority P = message_priority::normal, class Dest = actor,
+            class Rep = int, class Period = std::ratio<1>, class... Ts>
   void delayed_anon_send(const Dest& dest,
                          std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -183,16 +180,32 @@ public:
     if (dest) {
       auto& clock = dptr()->system().clock();
       auto t = clock.now() + rtime;
-      auto me = make_mailbox_element(nullptr, make_message_id(P), no_stages,
-                                     std::forward<Ts>(xs)...);
-      clock.schedule_message(t, actor_cast<strong_actor_ptr>(dest),
-                             std::move(me));
+      delayed_send_impl(clock, nullptr, dest, P, t, std::forward<Ts>(xs)...);
     }
   }
 
 private:
   Subtype* dptr() {
     return static_cast<Subtype*>(this);
+  }
+
+  template <class... Ts>
+  static void delayed_send_impl(actor_clock& clk, strong_actor_ptr src,
+                                const group& dst, message_priority,
+                                actor_clock::time_point tout, Ts&&... xs) {
+    clk.schedule_message(tout, dst, std::move(src),
+                         make_message(std::forward<Ts>(xs)...));
+  }
+
+  template <class ActorHandle, class... Ts>
+  static void delayed_send_impl(actor_clock& clk, strong_actor_ptr src,
+                                const ActorHandle& dst, message_priority prio,
+                                actor_clock::time_point tout,
+                                Ts&&... xs) {
+    clk.schedule_message(tout, actor_cast<strong_actor_ptr>(dst),
+                         make_mailbox_element(std::move(src),
+                                              make_message_id(prio), no_stages,
+                                              std::forward<Ts>(xs)...));
   }
 };
 
