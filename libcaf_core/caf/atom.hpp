@@ -65,13 +65,22 @@ struct atom_constant {
   constexpr atom_constant() {
     // nop
   }
+
   /// Returns the wrapped value.
   constexpr operator atom_value() const {
     return V;
   }
+
+  /// Returns the wrapped value as its base type.
   static constexpr uint64_t uint_value() {
     return static_cast<uint64_t>(V);
   }
+
+  /// Returns the wrapped value.
+  static constexpr atom_value get_value() {
+    return V;
+  }
+
   /// Returns an instance *of this constant* (*not* an `atom_value`).
   static const atom_constant value;
 };
