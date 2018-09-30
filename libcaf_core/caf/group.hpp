@@ -44,9 +44,6 @@ constexpr invalid_group_t invalid_group = invalid_group_t{};
 class group : detail::comparable<group>,
               detail::comparable<group, invalid_group_t> {
 public:
-  template <class, class, int>
-  friend class actor_cast_access;
-
   using signatures = none_t;
 
   group() = default;
