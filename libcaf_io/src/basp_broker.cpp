@@ -106,8 +106,8 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   if (!path) {
     // this happens if and only if we don't have a path to `nid`
     // and current_context_->hdl has been blacklisted
-    CAF_LOG_INFO("cannot create a proxy instance for an actor "
-                 "running on a node we don't have a route to");
+    CAF_LOG_DEBUG("cannot create a proxy instance for an actor "
+                  "running on a node we don't have a route to");
     return nullptr;
   }
   // create proxy and add functor that will be called if we
@@ -127,9 +127,9 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
         bptr->state.proxies().erase(nid, res->id(), rsn);
     });
   });
-  CAF_LOG_INFO("successfully created proxy instance, "
-               "write announce_proxy_instance:"
-               << CAF_ARG(nid) << CAF_ARG(aid));
+  CAF_LOG_DEBUG("successfully created proxy instance, "
+                "write announce_proxy_instance:"
+                << CAF_ARG(nid) << CAF_ARG(aid));
   auto& ctx = *this_context;
   // tell remote side we are monitoring this actor now
   instance.write_announce_proxy(self->context(),
@@ -159,7 +159,7 @@ void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
     if (nid == this_node()) {
       // connected to self
       ptr = actor_cast<strong_actor_ptr>(system().registry().get(aid));
-      CAF_LOG_INFO_IF(!ptr, "actor not found:" << CAF_ARG(aid));
+      CAF_LOG_DEBUG_IF(!ptr, "actor not found:" << CAF_ARG(aid));
     } else {
       ptr = namespace_.get_or_put(nid, aid);
       CAF_LOG_ERROR_IF(!ptr, "creating actor in finalize_handshake failed");
@@ -440,7 +440,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
   auto i = ctx_tcp.find(hdl);
   if (i == ctx_tcp.end()) {
-    CAF_LOG_INFO("create new BASP context:" << CAF_ARG(hdl));
+    CAF_LOG_DEBUG("create new BASP context:" << CAF_ARG(hdl));
     i = ctx_tcp.emplace(
       hdl,
       basp::endpoint_context{
@@ -460,7 +460,7 @@ void basp_broker_state::set_context(datagram_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
   auto i = ctx_udp.find(hdl);
   if (i == ctx_udp.end()) {
-    CAF_LOG_INFO("create new BASP context:" << CAF_ARG(hdl));
+    CAF_LOG_DEBUG("create new BASP context:" << CAF_ARG(hdl));
     i = ctx_udp.emplace(
       hdl,
       basp::endpoint_context{
@@ -643,7 +643,7 @@ behavior basp_broker::make_behavior() {
   state.allow_tcp = !get_or(config(), "middleman.disable-tcp", false);
   state.allow_udp = get_or(config(), "middleman.enable-udp", false);
   if (get_or(config(), "middleman.enable-automatic-connections", false)) {
-    CAF_LOG_INFO("enable automatic connections");
+    CAF_LOG_DEBUG("enable automatic connections");
     // open a random port and store a record for our peers how to
     // connect to this broker directly in the configuration server
     if (state.allow_tcp) {
@@ -673,7 +673,7 @@ behavior basp_broker::make_behavior() {
   auto heartbeat_interval = get_or(config(), "middleman.heartbeat-interval",
                                    defaults::middleman::heartbeat_interval);
   if (heartbeat_interval > 0) {
-    CAF_LOG_INFO("enable heartbeat" << CAF_ARG(heartbeat_interval));
+    CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval));
     send(this, tick_atom::value, heartbeat_interval);
   }
   return {
