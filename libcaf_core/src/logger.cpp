@@ -25,6 +25,7 @@
 #include <fstream>
 #include <algorithm>
 #include <condition_variable>
+#include <unordered_map>
 
 #include "caf/config.hpp"
 
@@ -214,7 +215,7 @@ bool logger::accepts(int level, const char* cname_begin,
                      const char* cname_end) {
   CAF_ASSERT(cname_begin != nullptr && cname_end != nullptr);
   CAF_ASSERT(level >= 0 && level <= 4);
-  if (level > level_)
+  if (level > max_level_)
     return false;
   if (!component_filter.empty()) {
     auto it = std::search(component_filter.begin(), component_filter.end(),
@@ -234,11 +235,40 @@ logger::~logger() {
 
 logger::logger(actor_system& sys)
     : system_(sys),
-      level_(CAF_LOG_LEVEL),
+      max_level_(CAF_LOG_LEVEL),
       flags_(0),
       queue_(policy{}) {
   // nop
 }
+
+namespace {
+int to_level_int(const atom_value atom) {
+  switch (atom_uint(atom)) {
+    case atom_uint("quiet"):
+    case atom_uint("QUIET"):
+      return CAF_LOG_LEVEL_QUIET;
+    case atom_uint("error"):
+    case atom_uint("ERROR"):
+      return CAF_LOG_LEVEL_ERROR;
+    case atom_uint("warning"):
+    case atom_uint("WARNING"):
+      return CAF_LOG_LEVEL_WARNING;
+    case atom_uint("info"):
+    case atom_uint("INFO"):
+      return CAF_LOG_LEVEL_INFO;
+    case atom_uint("debug"):
+    case atom_uint("DEBUG"):
+      return CAF_LOG_LEVEL_DEBUG;
+    case atom_uint("trace"):
+    case atom_uint("TRACE"):
+      return CAF_LOG_LEVEL_TRACE;
+    default: {
+      // nop
+    }
+  }
+  return CAF_LOG_LEVEL_QUIET;
+}
+} // namespace
 
 void logger::init(actor_system_config& cfg) {
   CAF_IGNORE_UNUSED(cfg);
@@ -247,39 +277,18 @@ void logger::init(actor_system_config& cfg) {
   component_filter = get_or(cfg, "logger.component-filter",
                             lg::component_filter);
   // Parse the configured log level.
-  auto verbosity = get_or(cfg, "logger.verbosity", lg::verbosity);
-  switch (static_cast<uint64_t>(verbosity)) {
-    case atom_uint("quiet"):
-    case atom_uint("QUIET"):
-      level_ = CAF_LOG_LEVEL_QUIET;
-      break;
-    case atom_uint("error"):
-    case atom_uint("ERROR"):
-      level_ = CAF_LOG_LEVEL_ERROR;
-      break;
-    case atom_uint("warning"):
-    case atom_uint("WARNING"):
-      level_ = CAF_LOG_LEVEL_WARNING;
-      break;
-    case atom_uint("info"):
-    case atom_uint("INFO"):
-      level_ = CAF_LOG_LEVEL_INFO;
-      break;
-    case atom_uint("debug"):
-    case atom_uint("DEBUG"):
-      level_ = CAF_LOG_LEVEL_DEBUG;
-      break;
-    case atom_uint("trace"):
-    case atom_uint("TRACE"):
-      level_ = CAF_LOG_LEVEL_TRACE;
-      break;
-    default: {
-      // nop
-    }
-  }
+  auto verbosity = get_if<atom_value>(&cfg, "logger.verbosity");
+  auto file_verbosity = verbosity ? *verbosity : lg::file_verbosity;
+  auto console_verbosity = verbosity ? *verbosity : lg::console_verbosity;
+  file_verbosity = get_or(cfg, "logger.file-verbosity", file_verbosity);
+  console_verbosity =
+    get_or(cfg, "logger.console-verbosity", console_verbosity);
+  file_level_ = to_level_int(file_verbosity);
+  console_level_ = to_level_int(console_verbosity);
+  max_level_ = std::max(file_level_, console_level_);
   // Parse the format string.
-  file_format_ = parse_format(get_or(cfg, "logger.file-format",
-                                     lg::file_format));
+  file_format_ =
+    parse_format(get_or(cfg, "logger.file-format", lg::file_format));
   console_format_ = parse_format(get_or(cfg,"logger.console-format",
                                         lg::console_format));
   // Set flags.
@@ -447,12 +456,15 @@ void logger::run() {
 #endif
 }
 
-void logger::handle_event(event& x) {
+void logger::handle_file_event(event& x) {
   // Print to file if available.
-  if (file_)
+  if (file_ && x.level <= file_level_)
     render(file_, file_format_, x);
+}
+
+void logger::handle_console_event(event& x) {
   // Stop if no console output is configured.
-  if (!has(console_output_flag))
+  if (!has(console_output_flag) || x.level > console_level_)
     return;
   if (has(uncolored_console_flag)) {
     render(std::clog, console_format_, x);
@@ -482,13 +494,19 @@ void logger::handle_event(event& x) {
   }
 }
 
+void logger::handle_event(event& x) {
+  handle_file_event(x);
+  handle_console_event(x);
+}
+
 void logger::log_first_line() {
-  std::string msg = "level = ";
-  msg += to_string(get_or(system_.config(), "logger.verbosity",
-                          defaults::logger::verbosity));
-  msg += ", node = ";
-  msg += to_string(system_.node());
-  event tmp{CAF_LOG_LEVEL_INFO,
+  auto make_event = [&](string_view config_val,
+                        const atom_value default_val) -> event {
+    std::string msg = "level = ";
+    msg += to_string(get_or(system_.config(), config_val, default_val));
+    msg += ", node = ";
+    msg += to_string(system_.node());
+    return {CAF_LOG_LEVEL_INFO,
             CAF_LOG_COMPONENT,
             CAF_PRETTY_FUN,
             __FILE__,
@@ -497,7 +515,11 @@ void logger::log_first_line() {
             std::this_thread::get_id(),
             0,
             make_timestamp()};
-  handle_event(tmp);
+  };
+  event file = make_event("logger.file-verbosity", defaults::logger::file_verbosity);
+  handle_file_event(file);
+  event console = make_event("logger.console-verbosity", defaults::logger::console_verbosity);
+  handle_console_event(console);
 }
 
 void logger::log_last_line() {
@@ -516,7 +538,7 @@ void logger::log_last_line() {
 void logger::start() {
 #if CAF_LOG_LEVEL >= 0
   parent_thread_ = std::this_thread::get_id();
-  if (level_ == CAF_LOG_LEVEL_QUIET)
+  if (max_level_ == CAF_LOG_LEVEL_QUIET)
     return;
   t0_ = make_timestamp();
   auto f = get_or(system_.config(), "logger.file-name",

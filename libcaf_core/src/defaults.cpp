@@ -48,7 +48,7 @@ const timespan desired_batch_complexity = us(50);
 const timespan max_batch_delay = ms(5);
 const timespan credit_round_interval = ms(10);
 
-} // namespace streaming
+} // namespace stream
 
 namespace scheduler {
 
@@ -74,12 +74,13 @@ const timespan relaxed_sleep_duration = ms(10);
 
 namespace logger {
 
-const atom_value console = atom("none");
-const atom_value verbosity = atom("trace");
 const char* component_filter = "";
+const atom_value console = atom("none");
 const char* console_format = "%m";
+const atom_value console_verbosity = atom("trace");
 const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 const char* file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
+const atom_value file_verbosity = atom("trace");
 
 } // namespace logger
 
