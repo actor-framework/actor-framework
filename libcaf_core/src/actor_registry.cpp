@@ -73,7 +73,7 @@ void actor_registry::put_impl(actor_id key, strong_actor_ptr val) {
       return;
   }
   // attach functor without lock
-  CAF_LOG_INFO("added actor:" << CAF_ARG(key));
+  CAF_LOG_DEBUG("added actor:" << CAF_ARG(key));
   actor_registry* reg = this;
   val->get()->attach_functor([key, reg]() {
     reg->erase(key);

@@ -330,19 +330,19 @@ public:
         }
         // close self connection after handshake is done
         if (hdr.source_node == this_node_) {
-          CAF_LOG_INFO("close connection to self immediately");
+          CAF_LOG_DEBUG("close connection to self immediately");
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
           return false;
         }
         // close this connection if we already have a direct connection
         if (tbl_.lookup_direct(hdr.source_node)) {
-          CAF_LOG_INFO("close connection since we already have a "
-                       "direct connection: " << CAF_ARG(hdr.source_node));
+          CAF_LOG_DEBUG("close connection since we already have a "
+                        "direct connection: " << CAF_ARG(hdr.source_node));
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
           return false;
         }
         // add direct route to this node and remove any indirect entry
-        CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
+        CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(hdr.source_node));
         tbl_.add_direct(hdl, hdr.source_node);
         auto was_indirect = tbl_.erase_indirect(hdr.source_node);
         // write handshake as client in response
@@ -381,12 +381,12 @@ public:
         }
         if (tcp_based) {
           if (tbl_.lookup_direct(hdr.source_node)) {
-            CAF_LOG_INFO("received second client handshake:"
+            CAF_LOG_DEBUG("received second client handshake:"
                          << CAF_ARG(hdr.source_node));
             break;
           }
           // add direct route to this node and remove any indirect entry
-          CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
+          CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(hdr.source_node));
           tbl_.add_direct(hdl, hdr.source_node);
           auto was_indirect = tbl_.erase_indirect(hdr.source_node);
           callee_.learned_new_node_directly(hdr.source_node, was_indirect);
@@ -395,7 +395,7 @@ public:
                           && !tbl_.lookup_direct(hdr.source_node));
           if (new_node) {
             // add direct route to this node and remove any indirect entry
-            CAF_LOG_INFO("new direct connection:" << CAF_ARG(hdr.source_node));
+            CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(hdr.source_node));
             tbl_.add_direct(hdl, hdr.source_node);
           }
           uint16_t seq = (ep && ep->requires_ordering) ? ep->seq_outgoing++ : 0;
