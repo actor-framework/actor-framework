@@ -290,6 +290,11 @@ private:
     return std::lower_bound(from, end(), key, cmp);
   }
 
+  template <size_t N>
+  static inline std::string copy(const char (&str)[N]) {
+    return std::string{str};
+  }
+
   // Copies the content of `str` into a new string.
   static inline std::string copy(string_view str) {
     return std::string{str.begin(), str.end()};

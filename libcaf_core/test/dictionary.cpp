@@ -79,6 +79,13 @@ CAF_TEST(swapping) {
   CAF_CHECK_NOT_EQUAL(xs, zs);
 }
 
+CAF_TEST(emplacing) {
+  int_dict xs;
+  CAF_CHECK_EQUAL(xs.emplace("x", 1).second, true);
+  CAF_CHECK_EQUAL(xs.emplace("y", 2).second, true);
+  CAF_CHECK_EQUAL(xs.emplace("y", 3).second, false);
+}
+
 CAF_TEST(insertion) {
   int_dict xs;
   CAF_CHECK_EQUAL(xs.insert("a", 1).second, true);
