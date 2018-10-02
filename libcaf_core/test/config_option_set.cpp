@@ -114,4 +114,25 @@ CAF_TEST(implicit global) {
   CAF_CHECK_EQUAL(get_or(cfg, "global.help", false), true);
 }
 
+CAF_TEST(atom parameters) {
+  opts.add<atom_value>("global", "value,v");
+  CAF_MESSAGE("test atom option without quotes");
+  auto parse_args = [&](std::vector<std::string> args) -> expected<atom_value> {
+    dictionary<config_value::dictionary> cfg;
+    auto res = opts.parse(cfg, std::move(args));
+    if (res.first != pec::success)
+      return res.first;
+    auto atm = get_if<atom_value>(&cfg, "global.value");
+    if (atm == none)
+      return sec::invalid_argument;
+    return *atm;
+  };
+  CAF_CHECK_EQUAL(parse_args({"-v", "'foobar'"}), atom("foobar"));
+  CAF_CHECK_EQUAL(parse_args({"-v'foobar'"}), atom("foobar"));
+  CAF_CHECK_EQUAL(parse_args({"--value='foobar'"}), atom("foobar"));
+  CAF_CHECK_EQUAL(parse_args({"-v", "foobar"}), atom("foobar"));
+  CAF_CHECK_EQUAL(parse_args({"-vfoobar"}), atom("foobar"));
+  CAF_CHECK_EQUAL(parse_args({"--value=foobar"}), atom("foobar"));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
