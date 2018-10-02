@@ -776,8 +776,12 @@ new_tcp_connection(const std::string& host, uint16_t port,
   }
   auto proto = res->second;
   CAF_ASSERT(proto == ipv4 || proto == ipv6);
+  int socktype = SOCK_STREAM;
+#ifdef SOCK_CLOEXEC
+  socktype |= SOCK_CLOEXEC;
+#endif
   CALL_CFUN(fd, detail::cc_valid_socket, "socket",
-            socket(proto == ipv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
+            socket(proto == ipv4 ? AF_INET : AF_INET6, socktype, 0));
   detail::socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
@@ -828,7 +832,11 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                                              bool reuse_addr, bool any) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  CALL_CFUN(fd, detail::cc_valid_socket, "socket", socket(Family, SockType, 0));
+  int socktype = SockType;
+#ifdef SOCK_CLOEXEC
+  socktype |= SOCK_CLOEXEC;
+#endif
+  CALL_CFUN(fd, detail::cc_valid_socket, "socket", socket(Family, socktype, 0));
   // sguard closes the socket in case of exception
   detail::socket_guard sguard{fd};
   if (reuse_addr) {
