@@ -16,14 +16,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE actor_factory
-#include "caf/test/unit_test.hpp"
-
-#include "caf/all.hpp"
 
 #include "caf/actor_registry.hpp"
+
+#include "caf/test/dsl.hpp"
+
+#include "caf/all.hpp"
 
 using namespace caf;
 
@@ -31,94 +30,80 @@ using std::endl;
 
 namespace {
 
-using down_atom = atom_constant<atom("down")>;
+behavior no_args_1() {
+  return {};
+}
 
-struct fixture {
-  actor_system_config cfg;
+behavior no_args_2(event_based_actor*) {
+  return {};
+}
 
-  void test_spawn(message args, bool expect_fail = false) {
-    actor_system system{cfg};
-    scoped_actor self{system};
-    CAF_MESSAGE("set aut");
-    strong_actor_ptr res;
-    std::set<std::string> ifs;
-    scoped_execution_unit context{&system};
-    actor_config actor_cfg{&context};
-    auto aut = system.spawn<actor>("test_actor", std::move(args));
-    if (expect_fail) {
-      CAF_REQUIRE(!aut);
-      return;
-    }
-    CAF_REQUIRE(aut);
-    self->wait_for(*aut);
-    CAF_MESSAGE("aut done");
-  }
+struct no_args_3 : event_based_actor {
+  using super = event_based_actor;
+
+  using super::super;
 };
 
-struct test_actor_no_args : event_based_actor {
-  using event_based_actor::event_based_actor;
-};
+behavior one_arg_1(int value) {
+  CAF_CHECK_EQUAL(value, 42);
+  return {};
+}
 
-struct test_actor_one_arg : event_based_actor {
-  test_actor_one_arg(actor_config& conf, int value) : event_based_actor(conf) {
+behavior one_arg_2(event_based_actor*, int value) {
+  CAF_CHECK_EQUAL(value, 42);
+  return {};
+}
+
+struct one_arg_3 : event_based_actor {
+  using super = event_based_actor;
+
+  one_arg_3(actor_config& conf, int value) : super(conf) {
     CAF_CHECK_EQUAL(value, 42);
   }
+};
+
+struct config : actor_system_config {
+  config() {
+    add_actor_type("no_args_1", no_args_1);
+    add_actor_type("no_args_2", no_args_2);
+    add_actor_type<no_args_3>("no_args_3");
+    add_actor_type("one_arg_1", one_arg_1);
+    add_actor_type("one_arg_2", one_arg_2);
+    add_actor_type<one_arg_3, const int&>("one_arg_3");
+  }
+};
+
+struct fixture : test_coordinator_fixture<config> {
+  template <class... Ts>
+  expected<actor> test_spawn(const char* name, Ts&&... xs) {
+    CAF_MESSAGE("spawn testee of type " << name);
+    actor_config actor_cfg{sys.dummy_execution_unit()};
+    return sys.spawn<actor>(name, make_message(std::forward<Ts>(xs)...));
+  }
+
+  error invalid_args = sec::cannot_spawn_actor_from_arguments;
 };
 
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(add_actor_type_tests, fixture)
 
-CAF_TEST(fun_no_args) {
-  auto test_actor_one_arg = [] {
-    CAF_MESSAGE("inside test_actor");
-  };
-  cfg.add_actor_type("test_actor", test_actor_one_arg);
-  test_spawn(make_message());
-  CAF_MESSAGE("test_spawn done");
+CAF_TEST(no_args) {
+  CAF_CHECK_NOT_EQUAL(test_spawn("no_args_1"), none);
+  CAF_CHECK_NOT_EQUAL(test_spawn("no_args_2"), none);
+  CAF_CHECK_NOT_EQUAL(test_spawn("no_args_3"), none);
+  CAF_CHECK_EQUAL(test_spawn("no_args_1", 42), invalid_args);
+  CAF_CHECK_EQUAL(test_spawn("no_args_2", 42), invalid_args);
+  CAF_CHECK_EQUAL(test_spawn("no_args_3", 42), invalid_args);
 }
 
-CAF_TEST(fun_no_args_selfptr) {
-  auto test_actor_one_arg = [](event_based_actor*) {
-    CAF_MESSAGE("inside test_actor");
-  };
-  cfg.add_actor_type("test_actor", test_actor_one_arg);
-  test_spawn(make_message());
-}
-CAF_TEST(fun_one_arg) {
-  auto test_actor_one_arg = [](int i) {
-    CAF_CHECK_EQUAL(i, 42);
-  };
-  cfg.add_actor_type("test_actor", test_actor_one_arg);
-  test_spawn(make_message(42));
-}
-
-CAF_TEST(fun_one_arg_selfptr) {
-  auto test_actor_one_arg = [](event_based_actor*, int i) {
-    CAF_CHECK_EQUAL(i, 42);
-  };
-  cfg.add_actor_type("test_actor", test_actor_one_arg);
-  test_spawn(make_message(42));
-}
-
-CAF_TEST(class_no_arg_invalid) {
-  cfg.add_actor_type<test_actor_no_args>("test_actor");
-  test_spawn(make_message(42), true);
-}
-
-CAF_TEST(class_no_arg_valid) {
-  cfg.add_actor_type<test_actor_no_args>("test_actor");
-  test_spawn(make_message());
-}
-
-CAF_TEST(class_one_arg_invalid) {
-  cfg.add_actor_type<test_actor_one_arg, const int&>("test_actor");
-  test_spawn(make_message(), true);
-}
-
-CAF_TEST(class_one_arg_valid) {
-  cfg.add_actor_type<test_actor_one_arg, const int&>("test_actor");
-  test_spawn(make_message(42));
+CAF_TEST(one_arg) {
+  CAF_CHECK_NOT_EQUAL(test_spawn("one_arg_1", 42), none);
+  CAF_CHECK_NOT_EQUAL(test_spawn("one_arg_2", 42), none);
+  CAF_CHECK_NOT_EQUAL(test_spawn("one_arg_3", 42), none);
+  CAF_CHECK_EQUAL(test_spawn("one_arg_1"), invalid_args);
+  CAF_CHECK_EQUAL(test_spawn("one_arg_2"), invalid_args);
+  CAF_CHECK_EQUAL(test_spawn("one_arg_3"), invalid_args);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
