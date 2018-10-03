@@ -53,7 +53,7 @@ if(NOT CAF_NO_PYTHON)
                         ${PTHREAD_LIBRARIES}
                         ${LIBEDIT_LIBRARIES}
                         ${PYTHON_LIBRARIES})
-  install(PROGRAMS ${EXECUTABLE_OUTPUT_PATH}/caf-python DESTINATION bin)
+  install(TARGETS caf-python DESTINATION bin)
 else()
   add_custom_target(caf-python SOURCES ${CAF_PYTHON_SRCS} ${CAF_PYTHON_HDRS})
 endif()
