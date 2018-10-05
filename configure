@@ -44,9 +44,10 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --warnings-as-errors        build with '-Werror'
     --with-ccache               use ccache to improve build performance
 
-  Additional Examples:
-    --with-qt-examples          include Qt example(s)
-    --with-protobuf-examples    include Google Protobuf example(s)
+  Optional Targets:
+    --with-qt-examples          build Qt example(s)
+    --with-protobuf-examples    build Google Protobuf example(s)
+    --with-tex-manual           build the LaTeX manual
 
   Installation Directories:
     --prefix=PREFIX             installation directory [/usr/local]
@@ -338,6 +339,9 @@ while [ $# -ne 0 ]; do
             ;;
         --with-protobuf-examples)
             append_cache_entry CAF_BUILD_PROTOBUF_EXAMPLES BOOL yes
+            ;;
+        --with-tex-manual)
+            append_cache_entry CAF_BUILD_TEX_MANUAL BOOL yes
             ;;
         --no-curl-examples)
             append_cache_entry CAF_NO_CURL_EXAMPLES BOOL yes

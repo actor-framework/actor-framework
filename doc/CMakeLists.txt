@@ -94,11 +94,8 @@ endmacro()
 
 # -- LaTeX setup ---------------------------------------------------------------
 
-find_package(LATEX QUIET)
-
-if(NOT LATEX_FOUND)
-  message(STATUS "LaTeX not found, skip building manual.")
-else()
+if (CAF_BUILD_TEX_MANUAL)
+  find_package(LATEX)
   message(STATUS "Add optional target: manual.")
   include("cmake/UseLATEX.cmake")
   # enable synctex for convenient editing
