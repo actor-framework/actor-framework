@@ -184,6 +184,9 @@ def makeBuildStages(matrixIndex, builds, lblExpr, settings) {
 }
 
 pipeline {
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '50', artifactNumToKeepStr: '10'))
+    }
     agent none
     environment {
         LD_LIBRARY_PATH = "$WORKSPACE/caf-sources/build/lib"
