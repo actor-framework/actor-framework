@@ -236,6 +236,7 @@ pipeline {
                         buildDir: 'build',
                         installation: 'cmake in search path',
                         sourceDir: '.',
+                        cmakeArgs: '-DCAF_BUILD_TEX_MANUAL=yes',
                         steps: [[
                             args: '--target doc',
                             withCmake: true,
