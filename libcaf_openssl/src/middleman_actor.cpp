@@ -80,6 +80,8 @@ struct ssl_policy {
     memset(&addr, 0, sizeof(addr));
     caf::io::network::socket_size_type addrlen = sizeof(addr);
     result = accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
+    // note accept4 is better to avoid races in setting CLOEXEC (but not posix)
+    io::network::child_process_inherit(result, false);
     CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
     if (result == io::network::invalid_native_socket) {
       auto err = io::network::last_socket_error();

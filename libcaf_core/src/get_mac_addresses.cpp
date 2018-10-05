@@ -101,7 +101,11 @@ namespace detail {
 
 std::vector<iface_info> get_mac_addresses() {
   // get a socket handle
-  int sck = socket(AF_INET, SOCK_DGRAM, 0);
+  int socktype = SOCK_DGRAM;
+#ifdef SOCK_CLOEXEC
+  socktype |= SOCK_CLOEXEC;
+#endif
+  int sck = socket(AF_INET, socktype, 0);
   if (sck < 0) {
     perror("socket");
     return {};

@@ -71,6 +71,8 @@ bool tcp::try_accept(native_socket& result, native_socket fd) {
   std::memset(&addr, 0, sizeof(addr));
   socket_size_type addrlen = sizeof(addr);
   result = ::accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
+  // note accept4 is better to avoid races in setting CLOEXEC (but not posix)
+  child_process_inherit(result, false);
   CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
   if (result == invalid_native_socket) {
     auto err = last_socket_error();

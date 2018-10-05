@@ -83,6 +83,11 @@ std::string last_socket_error_as_string();
 /// and the latter is the write handle.
 std::pair<native_socket, native_socket> create_pipe();
 
+/// Sets fd to be inherited by child processes if `new_value == true`
+/// or not if `new_value == false`.  Not implemented on Windows.
+/// throws `network_error` on error
+expected<void> child_process_inherit(native_socket fd, bool new_value);
+
 /// Sets fd to nonblocking if `set_nonblocking == true`
 /// or to blocking if `set_nonblocking == false`
 /// throws `network_error` on error
