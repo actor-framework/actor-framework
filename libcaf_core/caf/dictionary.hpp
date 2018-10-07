@@ -84,6 +84,10 @@ public:
 
   dictionary() = default;
 
+  dictionary(dictionary&&) = default;
+
+  dictionary(const dictionary&) = default;
+
   dictionary(std::initializer_list<value_type> xs) : xs_(xs) {
     // nop
   }
@@ -92,6 +96,10 @@ public:
   dictionary(InputIterator first, InputIterator last) : xs_(first, last) {
     // nop
   }
+
+  dictionary& operator=(dictionary&&) = default;
+
+  dictionary& operator=(const dictionary&) = default;
 
   // -- iterator access --------------------------------------------------------
 
@@ -187,6 +195,14 @@ public:
     return {xs_.emplace_hint(i, copy(std::forward<K>(key)),
                              std::forward<T>(value)),
             true};
+  }
+
+  iterator_bool_pair insert(value_type kvp) {
+    return emplace(kvp.first, std::move(kvp.second));
+  }
+
+  iterator insert(iterator hint, value_type kvp) {
+    return emplace_hint(hint, kvp.first, std::move(kvp.second));
   }
 
   template <class T>
