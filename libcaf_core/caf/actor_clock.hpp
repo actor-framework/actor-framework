@@ -56,7 +56,11 @@ public:
   /// Schedules a `timeout_msg` for `self` at time point `t`, overriding any
   /// previous receive timeout.
   virtual void set_ordinary_timeout(time_point t, abstract_actor* self,
-                                   atom_value type, uint64_t id) = 0;
+                                    atom_value type, uint64_t id) = 0;
+
+  /// Schedules a `timeout_msg` for `self` at time point `t`.
+  virtual void add_ordinary_timeout(time_point t, abstract_actor* self,
+                                    atom_value type, uint64_t id) = 0;
 
   /// Schedules a `sec::request_timeout` for `self` at time point `t`.
   virtual void set_request_timeout(time_point t, abstract_actor* self,

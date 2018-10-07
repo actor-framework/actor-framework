@@ -62,7 +62,7 @@ void simple_actor_clock::visitor::operator()(group_msg& x) {
 }
 
 void simple_actor_clock::set_ordinary_timeout(time_point t, abstract_actor* self,
-                                             atom_value type, uint64_t id) {
+                                              atom_value type, uint64_t id) {
   ordinary_predicate pred{type};
   auto i = lookup(self, pred);
   auto sptr = actor_cast<strong_actor_ptr>(self);
@@ -74,6 +74,14 @@ void simple_actor_clock::set_ordinary_timeout(time_point t, abstract_actor* self
     auto j = schedule_.emplace(t, std::move(tmp));
     actor_lookup_.emplace(self, j);
   }
+}
+
+void simple_actor_clock::add_ordinary_timeout(time_point t, abstract_actor* self,
+                                              atom_value type, uint64_t id) {
+  auto sptr = actor_cast<strong_actor_ptr>(self);
+  ordinary_timeout tmp{std::move(sptr), type, id};
+  auto j = schedule_.emplace(t, std::move(tmp));
+  actor_lookup_.emplace(self, j);
 }
 
 void simple_actor_clock::set_request_timeout(time_point t, abstract_actor* self,
