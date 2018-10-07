@@ -49,7 +49,7 @@ behavior testee(stateful_actor<testee_state, raw_event_based_actor>* self,
     [=](add_atom) {
       auto n = t->now() + seconds(10);
       self->state.timeout_id += 1;
-      t->add_ordinary_timeout(n, self, atom(""), self->state.timeout_id);
+      t->set_multi_timeout(n, self, atom(""), self->state.timeout_id);
     },
     [=](put_atom) {
       auto n = t->now() + seconds(10);
@@ -129,15 +129,15 @@ CAF_TEST(override_receive_timeout) {
   expect((timeout_msg), from(aut).to(aut).with(tid{43}));
 }
 
-CAF_TEST(add_receive_timeout) {
-  // Have AUT call t.set_receive_timeout().
+CAF_TEST(multi_timeout) {
+  // Have AUT call t.set_multi_timeout().
   self->send(aut, add_atom::value);
   expect((add_atom), from(self).to(aut).with(_));
   CAF_CHECK_EQUAL(t.schedule().size(), 1u);
   CAF_CHECK_EQUAL(t.actor_lookup().size(), 1u);
   // Advance time just a little bit.
   t.advance_time(seconds(5));
-  // Have AUT call t.set_timeout() again.
+  // Have AUT call t.set_multi_timeout() again.
   self->send(aut, add_atom::value);
   expect((add_atom), from(self).to(aut).with(_));
   CAF_CHECK_EQUAL(t.schedule().size(), 2u);
@@ -154,6 +154,34 @@ CAF_TEST(add_receive_timeout) {
   CAF_CHECK_EQUAL(t.actor_lookup().size(), 0u);
   // Have AUT receive the timeout.
   expect((timeout_msg), from(aut).to(aut).with(tid{43}));
+}
+
+CAF_TEST(mixed_receive_and_multi_timeouts) {
+  // Have AUT call t.set_receive_timeout().
+  self->send(aut, add_atom::value);
+  expect((add_atom), from(self).to(aut).with(_));
+  CAF_CHECK_EQUAL(t.schedule().size(), 1u);
+  CAF_CHECK_EQUAL(t.actor_lookup().size(), 1u);
+  // Advance time just a little bit.
+  t.advance_time(seconds(5));
+  // Have AUT call t.set_multi_timeout() again.
+  self->send(aut, ok_atom::value);
+  expect((ok_atom), from(self).to(aut).with(_));
+  CAF_CHECK_EQUAL(t.schedule().size(), 2u);
+  CAF_CHECK_EQUAL(t.actor_lookup().size(), 2u);
+  // Advance time to send timeout message.
+  t.advance_time(seconds(5));
+  CAF_CHECK_EQUAL(t.schedule().size(), 1u);
+  CAF_CHECK_EQUAL(t.actor_lookup().size(), 1u);
+  // Have AUT receive the timeout.
+  expect((timeout_msg), from(aut).to(aut).with(tid{42}));
+  // Advance time to send second timeout message.
+  t.advance_time(seconds(5));
+  CAF_CHECK_EQUAL(t.schedule().size(), 0u);
+  CAF_CHECK_EQUAL(t.actor_lookup().size(), 0u);
+  // Have AUT receive the timeout.
+  expect((timeout_msg), from(aut).to(aut).with(tid{43}));
+
 }
 
 CAF_TEST(single_request_timeout) {

@@ -59,8 +59,8 @@ public:
                                     atom_value type, uint64_t id) = 0;
 
   /// Schedules a `timeout_msg` for `self` at time point `t`.
-  virtual void add_ordinary_timeout(time_point t, abstract_actor* self,
-                                    atom_value type, uint64_t id) = 0;
+  virtual void set_multi_timeout(time_point t, abstract_actor* self,
+                                 atom_value type, uint64_t id) = 0;
 
   /// Schedules a `sec::request_timeout` for `self` at time point `t`.
   virtual void set_request_timeout(time_point t, abstract_actor* self,
