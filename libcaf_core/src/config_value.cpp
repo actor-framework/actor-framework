@@ -146,5 +146,49 @@ std::string get_or(const actor_system_config& cfg, string_view name,
   return get_or(content(cfg), name, default_value);
 }
 
+void put_impl(config_value::dictionary& dict,
+              const std::vector<string_view>& path, config_value& value) {
+  // Sanity check.
+  if (path.empty())
+    return;
+  // Navigate path.
+  auto last = path.end();
+  auto back = last - 1;
+  auto current = &dict;
+  // Resolve path by navigating the map-of-maps of create the necessary layout
+  // when needed.
+  for (auto i = path.begin(); i != back; ++i) {
+    auto iter = current->emplace(*i, config_value::dictionary{}).first;
+    if (auto val = get_if<config_value::dictionary>(&iter->second)) {
+      current = val;
+    } else {
+      iter->second = config_value::dictionary{};
+      current = &get<config_value::dictionary>(iter->second);
+    }
+  }
+  // Set key-value pair on the leaf.
+  current->insert_or_assign(*back, std::move(value));
+}
+
+void put_impl(config_value::dictionary& dict, string_view key,
+              config_value& value) {
+  std::vector<string_view> path;
+  split(path, key, ".");
+  put_impl(dict, path, value);
+}
+
+void put_impl(dictionary<config_value::dictionary>& dict, string_view key,
+              config_value& value) {
+  // Split the name into a path.
+  std::vector<string_view> path;
+  split(path, key, ".");
+  // Sanity check. At the very least, we need a category and a key.
+  if (path.size() < 2)
+    return;
+  auto category = path.front();
+  path.erase(path.begin());
+  put_impl(dict[category], path, value);
+}
+
 } // namespace caf
 
