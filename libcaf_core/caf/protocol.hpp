@@ -28,12 +28,12 @@ namespace caf {
 /// Bundles protocol information for network and transport layer communication.
 struct protocol {
   /// Denotes a network protocol, i.e., IPv4 or IPv6.
-  enum network {
+  enum network : uint8_t {
     ipv4,
     ipv6
   };
   /// Denotes a transport protocol, i.e., TCP or UDP.
-  enum transport {
+  enum transport : uint8_t {
     tcp,
     udp
   };
