@@ -61,6 +61,7 @@ set(LIBCAF_CORE_SRCS
   src/inbound_path.cpp
   src/ini_consumer.cpp
   src/invoke_result_visitor.cpp
+  src/ip_endpoint.cpp
   src/ipv4_address.cpp
   src/ipv4_subnet.cpp
   src/ipv6_address.cpp
