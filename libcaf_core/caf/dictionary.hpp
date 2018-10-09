@@ -189,11 +189,11 @@ public:
   iterator_bool_pair emplace(K&& key, T&& value) {
     auto i = lower_bound(key);
     if (i == end())
-      return xs_.emplace(copy(std::forward<K>(key)), std::forward<T>(value));
+      return xs_.emplace(copy(std::forward<K>(key)), V{std::forward<T>(value)});
     if (i->first == key)
       return {i, false};
     return {xs_.emplace_hint(i, copy(std::forward<K>(key)),
-                             std::forward<T>(value)),
+                             V{std::forward<T>(value)}),
             true};
   }
 
@@ -207,18 +207,18 @@ public:
 
   template <class T>
   iterator_bool_pair insert(string_view key, T&& value) {
-    return emplace(key, std::forward<T>(value));
+    return emplace(key, V{std::forward<T>(value)});
   }
 
   template <class K, class T>
   iterator emplace_hint(iterator hint, K&& key, T&& value) {
     if (hint == end() || hint->first > key)
-      return xs_.emplace(copy(std::forward<K>(key)), std::forward<T>(value))
+      return xs_.emplace(copy(std::forward<K>(key)), V{std::forward<T>(value)})
              .first;
     if (hint->first == key)
       return hint;
     return xs_.emplace_hint(hint, copy(std::forward<K>(key)),
-                            std::forward<T>(value));
+                            V{std::forward<T>(value)});
   }
 
   template <class T>
@@ -230,12 +230,12 @@ public:
   iterator_bool_pair insert_or_assign(string_view key, T&& value) {
     auto i = lower_bound(key);
     if (i == end())
-      return xs_.emplace(copy(key), std::forward<T>(value));
+      return xs_.emplace(copy(key), V{std::forward<T>(value)});
     if (i->first == key) {
-      i->second = std::forward<T>(value);
+      i->second = V{std::forward<T>(value)};
       return {i, false};
     }
-    return {xs_.emplace_hint(i, copy(key), std::forward<T>(value)), true};
+    return {xs_.emplace_hint(i, copy(key), V{std::forward<T>(value)}), true};
   }
 
   template <class T>
@@ -247,7 +247,7 @@ public:
       hint->second = std::forward<T>(value);
       return hint;
     }
-    return xs_.emplace_hint(hint, copy(key), std::forward<T>(value));
+    return xs_.emplace_hint(hint, copy(key), V{std::forward<T>(value)});
   }
 
   // -- lookup -----------------------------------------------------------------
