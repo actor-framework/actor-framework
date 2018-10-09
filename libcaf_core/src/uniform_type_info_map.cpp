@@ -40,6 +40,7 @@
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/message_builder.hpp"
+#include "caf/protocol.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/timespan.hpp"
@@ -76,6 +77,7 @@ const char* numbered_type_names[] = {
   "@message_id",
   "@node",
   "@open_stream_msg",
+  "@protocol",
   "@str",
   "@strmap",
   "@strong_actor_ptr",

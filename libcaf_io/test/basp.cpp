@@ -836,7 +836,7 @@ CAF_TEST(automatic_connection) {
   // create a dummy config server and respond to the name lookup
   CAF_MESSAGE("receive ConfigServ of jupiter");
   network::address_listing res;
-  res[network::protocol::ipv4].emplace_back("jupiter");
+  res[protocol::ipv4].emplace_back("jupiter");
   mock(mars().connection,
        {basp::message_type::dispatch_message, 0, 0, 0,
         this_node(), this_node(),

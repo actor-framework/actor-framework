@@ -83,6 +83,7 @@ set(LIBCAF_CORE_SRCS
   src/pec.cpp
   src/pretty_type_name.cpp
   src/private_thread.cpp
+  src/protocol.cpp
   src/proxy_registry.cpp
   src/raise_error.cpp
   src/raw_event_based_actor.cpp

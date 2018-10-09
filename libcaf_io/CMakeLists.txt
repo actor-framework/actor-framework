@@ -29,7 +29,6 @@ set(LIBCAF_IO_SRCS
   src/middleman_actor_impl.cpp
   src/multiplexer.cpp
   src/multiplexer.cpp
-  src/protocol.cpp
   src/receive_buffer.cpp
   src/routing_table.cpp
   src/scribe.cpp

@@ -41,6 +41,7 @@
 #include "caf/defaults.hpp"
 #include "caf/duration.hpp"
 #include "caf/expected.hpp"
+#include "caf/protocol.hpp"
 #include "caf/exec_main.hpp"
 #include "caf/resumable.hpp"
 #include "caf/streambuf.hpp"

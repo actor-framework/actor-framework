@@ -27,8 +27,8 @@
 
 #include "caf/optional.hpp"
 
-#include "caf/io/network/protocol.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
+#include "caf/protocol.hpp"
 
 namespace caf {
 namespace io {

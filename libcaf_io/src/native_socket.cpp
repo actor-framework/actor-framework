@@ -20,10 +20,9 @@
 
 #include "caf/sec.hpp"
 #include "caf/logger.hpp"
+#include "caf/protocol.hpp"
 
 #include "caf/detail/call_cfun.hpp"
-
-#include "caf/io/network/protocol.hpp"
 
 #ifdef CAF_WINDOWS
 # ifndef WIN32_LEAN_AND_MEAN

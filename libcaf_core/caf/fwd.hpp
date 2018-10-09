@@ -134,8 +134,9 @@ class uri_builder;
 // -- structs ------------------------------------------------------------------
 
 struct unit_t;
-struct exit_msg;
 struct down_msg;
+struct exit_msg;
+struct protocol;
 struct timeout_msg;
 struct stream_slots;
 struct upstream_msg;

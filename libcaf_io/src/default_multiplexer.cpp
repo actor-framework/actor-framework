@@ -23,12 +23,12 @@
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/optional.hpp"
+#include "caf/protocol.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/actor_system_config.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
-#include "caf/io/network/protocol.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/scribe_impl.hpp"
 #include "caf/io/network/doorman_impl.hpp"
@@ -84,8 +84,8 @@ using std::string;
 namespace {
 
 // Save ourselves some typing.
-constexpr auto ipv4 = caf::io::network::protocol::ipv4;
-constexpr auto ipv6 = caf::io::network::protocol::ipv6;
+constexpr auto ipv4 = caf::protocol::ipv4;
+constexpr auto ipv6 = caf::protocol::ipv6;
 
 auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
   return what.sin_addr;
