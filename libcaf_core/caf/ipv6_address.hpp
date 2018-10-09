@@ -117,6 +117,8 @@ public:
 
   friend std::string to_string(ipv6_address x);
 
+  friend struct std::hash<ipv6_address>;
+
 private:
   // -- member variables -------------------------------------------------------
 
@@ -131,3 +133,15 @@ private:
 error parse(string_view str, ipv6_address& dest);
 
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::ipv6_address> {
+  size_t operator()(const caf::ipv6_address& x) const noexcept {
+    hash<uint64_t> f;
+    return f(x.half_segments_[0]) ^ f(x.half_segments_[1]);
+  }
+};
+
+} // namespace std

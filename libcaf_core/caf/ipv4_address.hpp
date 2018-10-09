@@ -128,3 +128,15 @@ std::string to_string(const ipv4_address& x);
 error parse(string_view str, ipv4_address& dest);
 
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::ipv4_address> {
+  size_t operator()(const caf::ipv4_address& x) const noexcept {
+    hash<uint32_t> f;
+    return f(x.bits());
+  }
+};
+
+} // namespace std
