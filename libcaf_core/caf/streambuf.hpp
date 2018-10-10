@@ -365,11 +365,7 @@ protected:
   }
 
   std::streamsize xsputn(const char_type* s, std::streamsize n) override {
-    // TODO: Do a performance analysis whether the current implementation based
-    // on copy_n is faster than these two statements:
-    // (1) container_.resize(container_.size() + n);
-    // (2) std::memcpy(this->pptr(), s, n * sizeof(char_type));
-    std::copy_n(s, n, std::back_inserter(container_));
+    container_.insert(container_.end(), s, s + n);
     return n;
   }
 
