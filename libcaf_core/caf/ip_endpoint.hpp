@@ -26,9 +26,8 @@
 #include "caf/meta/type_name.hpp"
 #include "caf/protocol.hpp"
 
+struct addrinfo;
 struct sockaddr;
-struct sockaddr_in6;
-struct sockaddr_in;
 struct sockaddr_storage;
 
 namespace caf {
@@ -48,6 +47,11 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the remote IP address.
+  void address(ip_address x) noexcept {
+    address_ = x;
+  }
+
+  /// Returns the remote IP address.
   const ip_address& address() const noexcept {
     return address_;
   }
@@ -63,12 +67,12 @@ public:
   }
 
   /// Returns whether this endpoint has an IPv4 address.
-  bool is_v4() {
+  bool is_v4() const noexcept {
     return address_.embeds_v4();
   }
 
   /// Returns whether this endpoint has an IPv6 address.
-  bool is_v6() {
+  bool is_v6() const noexcept {
     return !is_v4();
   }
 
@@ -96,6 +100,19 @@ private:
   uint16_t port_;
   protocol::transport transport_;
 };
+
+/// Tries to set address and port of `x` from `saddr` with the transport
+/// protocol `tp`. Succeeds only if
+/// `y.sa_family == AF_INET || y.sa_family == AF_INET6`.
+bool try_assign(ip_endpoint& x, const sockaddr& saddr, protocol::transport tp);
+
+/// Tries to assign the content of `y` to `x`. Succeeds only if
+/// `y.ai_family == AF_INET || y.ai_family == AF_INET6`
+/// and `y.ai_protocol == IPPROTO_TCP || y.ai_protocol == IPPROTO_UDP`.
+bool try_assign(ip_endpoint& x, const addrinfo& y);
+
+/// Set address and port of `x` from `y`.
+void assign(sockaddr_storage& x, const ip_endpoint& y);
 
 } // namespace caf
 
