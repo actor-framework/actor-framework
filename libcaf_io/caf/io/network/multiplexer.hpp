@@ -22,18 +22,18 @@
 #include <thread>
 #include <functional>
 
-#include "caf/extend.hpp"
+#include "caf/execution_unit.hpp"
 #include "caf/expected.hpp"
+#include "caf/extend.hpp"
+#include "caf/ip_endpoint.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/protocol.hpp"
 #include "caf/resumable.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/execution_unit.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 
-#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 
 namespace caf {

@@ -32,15 +32,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-#include "caf/io/datagram_handle.hpp"
-#include "caf/io/datagram_servant.hpp"
-
-#include "caf/deep_to_string.hpp"
-
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
-
 namespace {
 
 struct anything { };

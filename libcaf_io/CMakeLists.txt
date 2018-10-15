@@ -21,7 +21,6 @@ set(LIBCAF_IO_SRCS
   src/hook.cpp
   src/instance.cpp
   src/interfaces.cpp
-  src/ip_endpoint.cpp
   src/manager.cpp
   src/message_type.cpp
   src/middleman.cpp

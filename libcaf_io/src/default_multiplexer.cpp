@@ -910,7 +910,6 @@ new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
     return std::move(lep.error());
   detail::socket_guard sguard{(*lep).first};
   std::pair<native_socket, ip_endpoint> info;
-  memset(std::get<1>(info).address(), 0, sizeof(sockaddr_storage));
   if (!interfaces::get_endpoint(host, port, std::get<1>(info), (*lep).second))
     return make_error(sec::cannot_connect_to_node, "no such host", host, port);
   get<0>(info) = sguard.release();

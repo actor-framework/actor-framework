@@ -21,8 +21,9 @@
 #include <vector>
 #include <unordered_map>
 
-#include "caf/scheduled_actor.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
+#include "caf/scheduled_actor.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -31,7 +32,6 @@
 #include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
 
-#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
@@ -219,9 +219,8 @@ public:
 
   /// Creates and assigns a new `datagram_servant` from a given socket `fd`
   /// for the remote endpoint `ep`.
-  datagram_handle
-  add_datagram_servant_for_endpoint(network::native_socket fd,
-                                    const network::ip_endpoint& ep);
+  datagram_handle add_datagram_servant_for_endpoint(network::native_socket fd,
+                                                    const ip_endpoint& ep);
 
   /// Creates a new `datagram_servant` for the remote endpoint `host` and `port`.
   /// @returns The handle to the new `datagram_servant`.

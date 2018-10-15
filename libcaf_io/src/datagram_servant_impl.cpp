@@ -48,7 +48,7 @@ bool datagram_servant_impl::new_endpoint(network::receive_buffer& buf) {
   // reply. In the case of CAF we can simply drop it as nothing but the
   // handshake could be communicated which we could not reply to.
   // Source: TCP/IP Illustrated, Chapter 10.2
-  if (network::port(handler_.sending_endpoint()) == 0)
+  if (handler_.sending_endpoint().port() == 0)
     return true;
   auto& dm = handler_.backend();
   auto hdl = datagram_handle::from_int(dm.next_endpoint_id());
@@ -99,7 +99,7 @@ uint16_t datagram_servant_impl::port(datagram_handle hdl) const {
   auto itr = eps.find(hdl);
   if (itr == eps.end())
     return 0;
-  return network::port(itr->second);
+  return itr->second.port();
 }
 
 uint16_t datagram_servant_impl::local_port() const {

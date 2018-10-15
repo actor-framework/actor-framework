@@ -48,7 +48,7 @@
 #include <utility>
 
 #include "caf/detail/get_mac_addresses.hpp"
-#include "caf/io/network/ip_endpoint.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/raise_error.hpp"
 
 namespace caf {
@@ -272,7 +272,7 @@ interfaces::server_address(uint16_t port, const char* host,
   }
   std::stable_sort(std::begin(results), std::end(results),
                    [](const addr_pair& lhs, const addr_pair& rhs) {
-                     return lhs.second > rhs.second;
+                     return lhs.second < rhs.second;
                    });
   return results;
 }
@@ -296,13 +296,9 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
   if (getaddrinfo(host.c_str(), port_hint, &hint, &tmp) != 0)
     return false;
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
-  for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
-    if (i->ai_family != AF_UNSPEC) {
-      memcpy(ep.address(), i->ai_addr, i->ai_addrlen);
-      *ep.length() = i->ai_addrlen;
+  for (auto i = addrs.get(); i != nullptr; i = i->ai_next)
+    if (try_assign(ep, *i))
       return true;
-    }
-  }
   return false;
 }
 

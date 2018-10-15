@@ -25,9 +25,8 @@
 #include <functional>
 #include <initializer_list>
 
+#include "caf/ip_endpoint.hpp"
 #include "caf/optional.hpp"
-
-#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/protocol.hpp"
 
 namespace caf {

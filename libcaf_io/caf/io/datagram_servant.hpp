@@ -20,12 +20,12 @@
 
 #include <vector>
 
+#include "caf/ip_endpoint.hpp"
 #include "caf/message.hpp"
 
 #include "caf/io/datagram_handle.hpp"
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/system_messages.hpp"
-#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 
@@ -67,8 +67,7 @@ public:
 
   /// Adds a new remote endpoint identified by the `ip_endpoint` to
   /// the related manager.
-  virtual void add_endpoint(const network::ip_endpoint& ep,
-                            datagram_handle hdl) = 0;
+  virtual void add_endpoint(const ip_endpoint& ep, datagram_handle hdl) = 0;
 
   virtual void remove_endpoint(datagram_handle hdl) = 0;
 

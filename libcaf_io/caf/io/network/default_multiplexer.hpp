@@ -25,6 +25,7 @@
 
 #include "caf/config.hpp"
 #include "caf/extend.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/ref_counted.hpp"
 
 #include "caf/io/fwd.hpp"
@@ -38,7 +39,6 @@
 
 #include "caf/io/network/rw_state.hpp"
 #include "caf/io/network/operation.hpp"
-#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/pipe_reader.hpp"
 #include "caf/io/network/native_socket.hpp"

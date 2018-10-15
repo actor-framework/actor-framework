@@ -129,10 +129,11 @@ std::vector<char>& abstract_broker::wr_buf(datagram_handle hdl) {
 void abstract_broker::enqueue_datagram(datagram_handle hdl,
                                        std::vector<char> buf) {
   auto x = by_id(hdl);
-  if (!x)
+  if (x)
+    x->enqueue_datagram(hdl, std::move(buf));
+  else
     CAF_LOG_ERROR("tried to access datagram_buffer() of an unknown"
                   "datagram_handle");
-  x->enqueue_datagram(hdl, std::move(buf));
 }
 
 void abstract_broker::write(datagram_handle hdl, size_t bs,
@@ -233,7 +234,7 @@ datagram_handle abstract_broker::add_datagram_servant(network::native_socket fd)
 
 datagram_handle
 abstract_broker::add_datagram_servant_for_endpoint(network::native_socket fd,
-                                                   const network::ip_endpoint& ep) {
+                                                   const ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   auto ptr = backend().new_datagram_servant_for_endpoint(fd, ep);
   auto hdl = ptr->hdl();

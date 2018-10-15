@@ -25,10 +25,10 @@
 #else
 # include <sys/types.h>
 # include <sys/socket.h>
+# include <netinet/in.h>
 #endif
 
 using caf::io::network::is_error;
-using caf::io::network::ip_endpoint;
 using caf::io::network::native_socket;
 using caf::io::network::signed_size_type;
 using caf::io::network::socket_size_type;
@@ -39,32 +39,47 @@ namespace policy {
 bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
                         size_t buf_len, ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd));
-  memset(ep.address(), 0, sizeof(sockaddr_storage));
-  socket_size_type len = sizeof(sockaddr_storage);
+  sockaddr_storage addr;
+  memset(&addr, 0, sizeof(sockaddr_storage));
+  auto len = static_cast<socket_size_type>(sizeof(sockaddr_storage));
   auto sres = ::recvfrom(fd, static_cast<io::network::socket_recv_ptr>(buf),
-                         buf_len, 0, ep.address(), &len);
+                         buf_len, 0, reinterpret_cast<sockaddr*>(&addr), &len);
   if (is_error(sres, true)) {
     CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
     return false;
   }
+  // A value of -1 here means that recvfrom returned "would block"
+  if (sres < 0) {
+    result = 0;
+    return true;
+  }
+  // Parse address of the sender.
+  if (!try_assign(ep, reinterpret_cast<sockaddr&>(addr), protocol::udp)) {
+    CAF_LOG_ERROR("recvfrom returned an invalid sender IP endpoint");
+    return false;
+  }
   if (sres == 0)
-    CAF_LOG_INFO("Received empty datagram");
+    CAF_LOG_DEBUG("Received empty datagram");
   else if (sres > static_cast<signed_size_type>(buf_len))
     CAF_LOG_WARNING("recvfrom cut of message, only received "
                     << CAF_ARG(buf_len) << " of " << CAF_ARG(sres) << " bytes");
-  result = (sres > 0) ? static_cast<size_t>(sres) : 0;
-  *ep.length() = static_cast<size_t>(len);
+  result = static_cast<size_t>(sres);
   return true;
 }
 
 bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
                          size_t buf_len, const ip_endpoint& ep) {
-  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
-  socket_size_type len = static_cast<socket_size_type>(*ep.clength());
+  CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len) << CAF_ARG(ep));
+  sockaddr_storage addr;
+  assign(addr, ep);
+  auto len = static_cast<socket_size_type>(ep.is_v4() ? sizeof(sockaddr_in) :
+                                                        sizeof(sockaddr_in6));
   auto sres = ::sendto(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
-                       buf_len, 0, ep.caddress(), len);
+                       buf_len, 0, reinterpret_cast<sockaddr*>(&addr), len);
   if (is_error(sres, true)) {
-    CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
+    CAF_LOG_ERROR("sendto failed:"
+                  << CAF_ARG2("last-socket-error",
+                              io::network::last_socket_error_as_string()));
     return false;
   }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
