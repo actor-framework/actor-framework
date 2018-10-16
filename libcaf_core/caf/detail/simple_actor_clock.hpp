@@ -42,6 +42,12 @@ public:
     uint64_t id;
   };
 
+  struct multi_timeout {
+    strong_actor_ptr self;
+    atom_value type;
+    uint64_t id;
+  };
+
   /// Request for a `sec::request_timeout` error.
   struct request_timeout {
     strong_actor_ptr self;
@@ -61,7 +67,7 @@ public:
     message content;
   };
 
-  using value_type = variant<ordinary_timeout, request_timeout,
+  using value_type = variant<ordinary_timeout, multi_timeout, request_timeout,
                              actor_msg, group_msg>;
 
   using map_type = std::multimap<time_point, value_type>;
@@ -69,6 +75,11 @@ public:
   using secondary_map = std::multimap<abstract_actor*, map_type::iterator>;
 
   struct ordinary_predicate {
+    atom_value type;
+    bool operator()(const secondary_map::value_type& x) const noexcept;
+  };
+
+  struct multi_predicate {
     atom_value type;
     bool operator()(const secondary_map::value_type& x) const noexcept;
   };
@@ -83,6 +94,8 @@ public:
 
     void operator()(ordinary_timeout& x);
 
+    void operator()(multi_timeout& x);
+
     void operator()(request_timeout& x);
 
     void operator()(actor_msg& x);
@@ -91,7 +104,10 @@ public:
   };
 
   void set_ordinary_timeout(time_point t, abstract_actor* self,
-                           atom_value type, uint64_t id) override;
+                            atom_value type, uint64_t id) override;
+
+  void set_multi_timeout(time_point t, abstract_actor* self,
+                         atom_value type, uint64_t id) override;
 
   void set_request_timeout(time_point t, abstract_actor* self,
                            message_id id) override;

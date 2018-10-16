@@ -31,6 +31,12 @@ operator()(const secondary_map::value_type& x) const noexcept {
   return ptr != nullptr ? ptr->type == type : false;
 }
 
+bool simple_actor_clock::multi_predicate::
+operator()(const secondary_map::value_type& x) const noexcept {
+  auto ptr = get_if<multi_timeout>(&x.second->second);
+  return ptr != nullptr ? ptr->type == type : false;
+}
+
 bool simple_actor_clock::request_predicate::
 operator()(const secondary_map::value_type& x) const noexcept {
   auto ptr = get_if<request_timeout>(&x.second->second);
@@ -42,6 +48,14 @@ void simple_actor_clock::visitor::operator()(ordinary_timeout& x) {
   x.self->get()->eq_impl(make_message_id(), x.self, nullptr,
                          timeout_msg{x.type, x.id});
   ordinary_predicate pred{x.type};
+  thisptr->drop_lookup(x.self->get(), pred);
+}
+
+void simple_actor_clock::visitor::operator()(multi_timeout& x) {
+  CAF_ASSERT(x.self != nullptr);
+  x.self->get()->eq_impl(make_message_id(), x.self, nullptr,
+                         timeout_msg{x.type, x.id});
+  multi_predicate pred{x.type};
   thisptr->drop_lookup(x.self->get(), pred);
 }
 
@@ -62,7 +76,7 @@ void simple_actor_clock::visitor::operator()(group_msg& x) {
 }
 
 void simple_actor_clock::set_ordinary_timeout(time_point t, abstract_actor* self,
-                                             atom_value type, uint64_t id) {
+                                              atom_value type, uint64_t id) {
   ordinary_predicate pred{type};
   auto i = lookup(self, pred);
   auto sptr = actor_cast<strong_actor_ptr>(self);
@@ -74,6 +88,14 @@ void simple_actor_clock::set_ordinary_timeout(time_point t, abstract_actor* self
     auto j = schedule_.emplace(t, std::move(tmp));
     actor_lookup_.emplace(self, j);
   }
+}
+
+void simple_actor_clock::set_multi_timeout(time_point t, abstract_actor* self,
+                                           atom_value type, uint64_t id) {
+  auto sptr = actor_cast<strong_actor_ptr>(self);
+  multi_timeout tmp{std::move(sptr), type, id};
+  auto j = schedule_.emplace(t, std::move(tmp));
+  actor_lookup_.emplace(self, j);
 }
 
 void simple_actor_clock::set_request_timeout(time_point t, abstract_actor* self,
