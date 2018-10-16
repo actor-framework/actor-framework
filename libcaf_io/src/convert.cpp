@@ -18,19 +18,19 @@
 
 #include "caf/io/convert.hpp"
 
+#include <cstring>
+
+#include "caf/config.hpp"
+
 #ifdef CAF_WINDOWS
-# include <windows.h>
 # include <winsock2.h>
 # include <ws2ipdef.h>
-# include <ws2tcpip.h>
 #else
-# include <arpa/inet.h>
-# include <netdb.h>
 # include <netinet/in.h>
-# include <netinet/ip.h>
 # include <sys/socket.h>
-# include <unistd.h>
 #endif
+
+#include "caf/detail/network_order.hpp"
 
 namespace caf {
 namespace io {
@@ -38,7 +38,7 @@ namespace io {
 bool convert(const sockaddr& src, protocol::transport tp, ip_endpoint& dst) {
   if (src.sa_family == AF_INET) {
     auto& v4 = reinterpret_cast<const sockaddr_in&>(src);
-    auto port = ntohs(v4.sin_port);
+    auto port = detail::to_network_order(v4.sin_port);
     ipv4_address::array_type bytes;
     static_assert(sizeof(in_addr) == ipv4_address::num_bytes,
                   "sizeof(in_addr) != ipv4_address::num_bytes");
@@ -48,7 +48,7 @@ bool convert(const sockaddr& src, protocol::transport tp, ip_endpoint& dst) {
   }
   if (src.sa_family == AF_INET6) {
     auto& v6 = reinterpret_cast<const sockaddr_in6&>(src);
-    auto port = ntohs(v6.sin6_port);
+    auto port = detail::to_network_order(v6.sin6_port);
     ipv6_address::array_type bytes;
     static_assert(sizeof(in6_addr) == ipv6_address::num_bytes,
                   "sizeof(in6_addr) != ipv6_address::num_bytes");
@@ -59,32 +59,19 @@ bool convert(const sockaddr& src, protocol::transport tp, ip_endpoint& dst) {
   return false;
 }
 
-bool convert(const addrinfo& src, ip_endpoint& dst) {
-  if (src.ai_addr == nullptr)
-    return false;
-  switch (src.ai_protocol) {
-    default:
-      return false;
-    case IPPROTO_TCP:
-      return convert(*src.ai_addr, protocol::tcp, dst);
-    case IPPROTO_UDP:
-      return convert(*src.ai_addr, protocol::udp, dst);
-  }
-}
-
 bool convert(const ip_endpoint& src, sockaddr_storage& dst) {
   memset(&dst, 0, sizeof(sockaddr_storage));
   auto& addr = reinterpret_cast<sockaddr&>(dst);
   if (src.is_v4()) {
     addr.sa_family = AF_INET;
     auto& v4 = reinterpret_cast<sockaddr_in&>(addr);
-    v4.sin_port = htons(src.port());
+    v4.sin_port = detail::from_network_order(src.port());
     auto v4_addr = src.address().embedded_v4();
     memcpy(&v4.sin_addr, v4_addr.bytes().data(), ipv4_address::num_bytes);
   } else {
     addr.sa_family = AF_INET6;
     auto& v6 = reinterpret_cast<sockaddr_in6&>(addr);
-    v6.sin6_port = htons(src.port());
+    v6.sin6_port = detail::from_network_order(src.port());
     memcpy(&v6.sin6_addr, src.address().bytes().data(),
            ipv6_address::num_bytes);
   }

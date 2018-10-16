@@ -297,9 +297,22 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
   if (getaddrinfo(host.c_str(), port_hint, &hint, &tmp) != 0)
     return false;
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
-  for (auto i = addrs.get(); i != nullptr; i = i->ai_next)
-    if (convert(*i, ep))
-      return true;
+  for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
+    if (i->ai_addr != nullptr) {
+      auto& addr = *(i->ai_addr);
+      switch (i->ai_protocol) {
+        default:
+          break;
+        case IPPROTO_TCP:
+          if (convert(addr, protocol::tcp, ep))
+            return true;
+          break;
+        case IPPROTO_UDP:
+          if (convert(addr, protocol::udp, ep))
+            return true;
+      }
+    }
+  }
   return false;
 }
 

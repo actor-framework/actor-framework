@@ -31,11 +31,6 @@ namespace io {
 /// Succeeds only if `y.sa_family == AF_INET || y.sa_family == AF_INET6`.
 bool convert(const sockaddr& src, protocol::transport tp, ip_endpoint& dst);
 
-/// Tries to assign the content of `x` to `y`. Succeeds only if
-/// `x.ai_family == AF_INET || x.ai_family == AF_INET6`
-/// and `x.ai_protocol == IPPROTO_TCP || x.ai_protocol == IPPROTO_UDP`.
-bool convert(const addrinfo& src, ip_endpoint& dst);
-
 /// Tries to assign the content of `x` to `y`.
 bool convert(const ip_endpoint& src, sockaddr_storage& dst);
 
