@@ -48,6 +48,7 @@
 #include <utility>
 
 #include "caf/detail/get_mac_addresses.hpp"
+#include "caf/io/convert.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/raise_error.hpp"
 
@@ -297,7 +298,7 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
     return false;
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next)
-    if (try_assign(ep, *i))
+    if (convert(*i, ep))
       return true;
   return false;
 }

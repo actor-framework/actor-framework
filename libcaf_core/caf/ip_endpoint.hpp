@@ -26,10 +26,6 @@
 #include "caf/meta/type_name.hpp"
 #include "caf/protocol.hpp"
 
-struct addrinfo;
-struct sockaddr;
-struct sockaddr_storage;
-
 namespace caf {
 
 class ip_endpoint : detail::comparable<ip_endpoint> {
@@ -100,19 +96,6 @@ private:
   uint16_t port_;
   protocol::transport transport_;
 };
-
-/// Tries to set address and port of `x` from `saddr` with the transport
-/// protocol `tp`. Succeeds only if
-/// `y.sa_family == AF_INET || y.sa_family == AF_INET6`.
-bool try_assign(ip_endpoint& x, const sockaddr& saddr, protocol::transport tp);
-
-/// Tries to assign the content of `y` to `x`. Succeeds only if
-/// `y.ai_family == AF_INET || y.ai_family == AF_INET6`
-/// and `y.ai_protocol == IPPROTO_TCP || y.ai_protocol == IPPROTO_UDP`.
-bool try_assign(ip_endpoint& x, const addrinfo& y);
-
-/// Set address and port of `x` from `y`.
-void assign(sockaddr_storage& x, const ip_endpoint& y);
 
 } // namespace caf
 

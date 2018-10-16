@@ -18,7 +18,7 @@
 
 #include "caf/policy/udp.hpp"
 
-#include "caf/logger.hpp"
+#include "caf/config.hpp"
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
@@ -27,6 +27,9 @@
 # include <sys/socket.h>
 # include <netinet/in.h>
 #endif
+
+#include "caf/io/convert.hpp"
+#include "caf/logger.hpp"
 
 using caf::io::network::is_error;
 using caf::io::network::native_socket;
@@ -54,7 +57,7 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
     return true;
   }
   // Parse address of the sender.
-  if (!try_assign(ep, reinterpret_cast<sockaddr&>(addr), protocol::udp)) {
+  if (!io::convert(reinterpret_cast<sockaddr&>(addr), protocol::udp, ep)) {
     CAF_LOG_ERROR("recvfrom returned an invalid sender IP endpoint");
     return false;
   }
@@ -71,7 +74,10 @@ bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
                          size_t buf_len, const ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len) << CAF_ARG(ep));
   sockaddr_storage addr;
-  assign(addr, ep);
+  if (!io::convert(ep, addr)) {
+    CAF_LOG_ERROR("failed to convert ip_endpoint to sockaddr_storage");
+    return false;
+  }
   auto len = static_cast<socket_size_type>(ep.is_v4() ? sizeof(sockaddr_in) :
                                                         sizeof(sockaddr_in6));
   auto sres = ::sendto(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),

@@ -16,35 +16,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#pragma once
+
 #include "caf/ip_endpoint.hpp"
 
+struct addrinfo;
+struct sockaddr;
+struct sockaddr_storage;
+
 namespace caf {
+namespace io {
 
-ip_endpoint::ip_endpoint() : port_(0), transport_(protocol::tcp) {
-  // nop
-}
+/// Tries to assign the content of `x` to `y`, using transport protocol `tp`.
+/// Succeeds only if `y.sa_family == AF_INET || y.sa_family == AF_INET6`.
+bool convert(const sockaddr& src, protocol::transport tp, ip_endpoint& dst);
 
-ip_endpoint::ip_endpoint(ip_address addr, uint16_t port, protocol::transport tp)
-    : address_(addr),
-      port_(port),
-      transport_(tp) {
-  // nop
-}
+/// Tries to assign the content of `x` to `y`. Succeeds only if
+/// `x.ai_family == AF_INET || x.ai_family == AF_INET6`
+/// and `x.ai_protocol == IPPROTO_TCP || x.ai_protocol == IPPROTO_UDP`.
+bool convert(const addrinfo& src, ip_endpoint& dst);
 
-ip_endpoint::ip_endpoint(ipv4_address addr, uint16_t port,
-                         protocol::transport tp)
-    : address_(addr),
-      port_(port),
-      transport_(tp) {
-  // nop
-}
+/// Tries to assign the content of `x` to `y`.
+bool convert(const ip_endpoint& src, sockaddr_storage& dst);
 
-int ip_endpoint::compare(const ip_endpoint& other) const noexcept {
-  auto sub_res = address_.compare(other.address());
-  auto compress = [](const ip_endpoint& x) {
-    return (x.port_ << 1) | x.transport_;
-  };
-  return sub_res != 0 ? sub_res : compress(*this) - compress(other);
-}
-
+} // namespace io
 } // namespace caf
