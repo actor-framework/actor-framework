@@ -61,12 +61,13 @@ extern const timespan relaxed_sleep_duration;
 
 namespace logger {
 
-extern const atom_value console;
-extern const atom_value verbosity;
 extern const char* component_filter;
+extern const atom_value console;
 extern const char* console_format;
+extern const atom_value console_verbosity;
 extern const char* file_format;
 extern const char* file_name;
+extern const atom_value file_verbosity;
 
 } // namespace logger
 

@@ -284,6 +284,8 @@ public:
 
 private:
   void handle_event(event& x);
+  void handle_file_event(event& x);
+  void handle_console_event(event& x);
 
   void log_first_line();
 
@@ -308,7 +310,9 @@ private:
   }
 
   actor_system& system_;
-  int level_;
+  int max_level_;
+  int console_level_;
+  int file_level_;
   int flags_;
   detail::shared_spinlock aids_lock_;
   std::unordered_map<std::thread::id, actor_id> aids_;
@@ -553,4 +557,3 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
                "TERMINATE ; ID =" << thisptr->id()                             \
                  << "; REASON =" << deep_to_string(rsn).c_str()                \
                  << "; NODE =" << thisptr->node())
-
