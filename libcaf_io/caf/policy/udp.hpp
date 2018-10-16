@@ -27,10 +27,9 @@ namespace policy {
 
 /// Policy object for wrapping default UDP operations.
 struct udp {
-  /// Write a datagram containing `buf_len` bytes to `fd` addressed
-  /// at the endpoint in `sa` with size `sa_len`. Returns true as long
-  /// as no IO error occurs. The number of written bytes is stored in
-  /// `result` and the sender is stored in `ep`.
+  /// Write a datagram containing `buf_len` bytes to `fd`. Returns true as long
+  /// as no IO error occurs. The number of written bytes is stored in `result`
+  /// and the sender is stored in `ep`.
   static bool read_datagram(size_t& result, io::network::native_socket fd,
                             void* buf, size_t buf_len, ip_endpoint& ep);
 
