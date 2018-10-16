@@ -149,7 +149,7 @@ actor_system_config::actor_system_config()
   .add(logger_console_format, "console-format",
        "sets the line format for printing individual log entires")
   .add<atom_value>("console-verbosity",
-       "sets the console output verbosity"
+       "sets the console output verbosity "
        "(quiet|error|warning|info|debug|trace)")
   .add(logger_component_filter, "component-filter",
        "exclude all listed components from logging")
