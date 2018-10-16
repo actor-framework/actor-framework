@@ -100,14 +100,17 @@ bool try_assign(ip_endpoint& x, const addrinfo& y) {
 
 void assign(sockaddr_storage& x, const ip_endpoint& y) {
   memset(&x, 0, sizeof(sockaddr_storage));
+  auto& addr = reinterpret_cast<sockaddr&>(x);
   if (y.is_v4()) {
-    x.ss_len = sizeof(sockaddr_in);
+    addr.sa_len = sizeof(sockaddr_in);
+    addr.sa_family = AF_INET;
     auto& v4 = reinterpret_cast<sockaddr_in&>(x);
     v4.sin_port = htons(y.port());
     auto v4_addr = y.address().embedded_v4();
     memcpy(&v4.sin_addr, v4_addr.bytes().data(), ipv4_address::num_bytes);
   } else {
-    x.ss_len = sizeof(sockaddr_in6);
+    addr.sa_len = sizeof(sockaddr_in6);
+    addr.sa_family = AF_INET6;
     auto& v6 = reinterpret_cast<sockaddr_in6&>(x);
     v6.sin6_port = htons(y.port());
     memcpy(&v6.sin6_addr, y.address().bytes().data(), ipv6_address::num_bytes);
