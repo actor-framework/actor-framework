@@ -5,8 +5,6 @@ project(caf_opencl C CXX)
 # e.g., for creating proper Xcode projects
 file(GLOB_RECURSE LIBCAF_OPENCL_HDRS "caf/*.hpp")
 
-add_custom_target(libcaf_opencl)
-
 # list cpp files excluding platform-dependent files
 set(LIBCAF_OPENCL_SRCS
   src/device.cpp
