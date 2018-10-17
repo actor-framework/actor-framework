@@ -22,6 +22,7 @@
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
+# include <ws2ipdef.h>
 #else
 # include <sys/types.h>
 # include <sys/socket.h>
