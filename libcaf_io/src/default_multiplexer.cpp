@@ -782,6 +782,7 @@ new_tcp_connection(const std::string& host, uint16_t port,
 #endif
   CALL_CFUN(fd, detail::cc_valid_socket, "socket",
             socket(proto == ipv4 ? AF_INET : AF_INET6, socktype, 0));
+  child_process_inherit(fd, false);
   detail::socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
@@ -837,6 +838,7 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   socktype |= SOCK_CLOEXEC;
 #endif
   CALL_CFUN(fd, detail::cc_valid_socket, "socket", socket(Family, socktype, 0));
+  child_process_inherit(fd, false);
   // sguard closes the socket in case of exception
   detail::socket_guard sguard{fd};
   if (reuse_addr) {
