@@ -25,6 +25,13 @@
 
 namespace caf {
 
+namespace {
+
+// TODO: consider making this parameter configurable
+constexpr int32_t max_batch_size = 128 * 1024;
+
+} // namespace <anonymous>
+
 outbound_path::outbound_path(stream_slot sender_slot,
                              strong_actor_ptr receiver_hdl)
     : slots(sender_slot, invalid_stream_slot),
@@ -63,6 +70,7 @@ void outbound_path::emit_batch(local_actor* self, int32_t xs_size, message xs) {
   CAF_ASSERT(xs_size <= std::numeric_limits<int32_t>::max());
   CAF_ASSERT(open_credit >= xs_size);
   open_credit -= xs_size;
+  CAF_ASSERT(open_credit >= 0);
   auto bid = next_batch_id++;
   downstream_msg::batch batch{static_cast<int32_t>(xs_size), std::move(xs),
                               bid};
@@ -97,6 +105,13 @@ void outbound_path::emit_irregular_shutdown(local_actor* self,
   anon_send(actor_cast<actor>(hdl),
             make<downstream_msg::forced_close>(slots, self->address(),
                                                std::move(reason)));
+}
+
+void outbound_path::set_desired_batch_size(int32_t value) noexcept {
+  if (value == desired_batch_size)
+    return;
+  desired_batch_size = value < 0 || value > max_batch_size ? max_batch_size
+                                                           : value;
 }
 
 } // namespace caf

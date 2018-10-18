@@ -82,7 +82,8 @@ bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   }
   ptr->slots.receiver = slots.sender;
   ptr->open_credit = x.initial_demand;
-  ptr->desired_batch_size = x.desired_batch_size;
+  CAF_ASSERT(ptr->open_credit >= 0);
+  ptr->set_desired_batch_size(x.desired_batch_size);
   --pending_handshakes_;
   push();
   return true;
@@ -94,7 +95,8 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
   auto path = out().path(slots.receiver);
   if (path != nullptr) {
     path->open_credit += x.new_capacity;
-    path->desired_batch_size = x.desired_batch_size;
+    CAF_ASSERT(path->open_credit >= 0);
+    path->set_desired_batch_size(x.desired_batch_size);
     path->next_ack_id = x.acknowledged_id + 1;
     // Gravefully remove path after receiving its final ACK.
     if (path->closing && out().clean(slots.receiver))

@@ -120,14 +120,15 @@ void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
   auto credit = std::max((x.max_throughput * 2)
                          - (assigned_credit + queued_items),
                          0);
+  // Protect against overflow on `assigned_credit`.
+  auto max_new_credit = std::numeric_limits<int32_t>::max() - assigned_credit;
   // The manager can restrict or adjust the amount of credit.
-  credit = mgr->acquire_credit(this, credit);
-  if (credit == 0 && up_to_date()) {
+  credit = std::min(mgr->acquire_credit(this, credit), max_new_credit);
+  if (credit == 0 && up_to_date())
     return;
-  }
-  desired_batch_size = static_cast<int32_t>(x.items_per_batch);
   if (credit > 0)
     assigned_credit += credit;
+  desired_batch_size = static_cast<int32_t>(x.items_per_batch);
   CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(desired_batch_size));
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_batch>(slots.invert(),

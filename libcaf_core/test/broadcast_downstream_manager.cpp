@@ -116,7 +116,7 @@ public:
   void add_path_to(entity& x, int32_t desired_batch_size) {
     auto ptr = mgr.out().add_path(next_slot++, x.ctrl());
     CAF_REQUIRE(ptr != nullptr);
-    ptr->desired_batch_size = desired_batch_size;
+    ptr->set_desired_batch_size(desired_batch_size);
     ptr->slots.receiver = x.next_slot++;
     paths.emplace_back(ptr);
   }

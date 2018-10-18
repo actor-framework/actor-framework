@@ -107,8 +107,9 @@ public:
                   << CAF_ARG(force_underfull));
     if (pending())
       return;
+    CAF_ASSERT(open_credit >= 0);
     CAF_ASSERT(desired_batch_size > 0);
-    CAF_ASSERT(cache.size() < std::numeric_limits<int32_t>::max());
+    CAF_ASSERT(cache.size() <= std::numeric_limits<int32_t>::max());
     auto first = cache.begin();
     auto last = first + std::min(open_credit,
                                  static_cast<int32_t>(cache.size()));
@@ -137,14 +138,16 @@ public:
 
   /// Returns whether this path is pending, i.e., didn't receive an `ack_open`
   /// yet.
-  inline bool pending() const noexcept {
+  bool pending() const noexcept {
     return slots.receiver == invalid_stream_slot;
   }
 
   /// Returns whether no pending ACKs exist.
-  inline bool clean() const noexcept {
+  bool clean() const noexcept {
     return next_batch_id == next_ack_id;
   }
+
+  void set_desired_batch_size(int32_t value) noexcept;
 
   // -- member variables -------------------------------------------------------
 
