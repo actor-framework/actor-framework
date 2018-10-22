@@ -68,6 +68,7 @@ extern const atom_value console_verbosity;
 extern const char* file_format;
 extern const char* file_name;
 extern const atom_value file_verbosity;
+extern const bool inline_output;
 
 } // namespace logger
 
