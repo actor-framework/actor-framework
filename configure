@@ -25,6 +25,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - MinSizeRel: minimal output size
                                   - Release: optimizations on, debugging off
                                   - RelWithDebInfo: release flags plus debugging
+    --extra-flags=STRING        additional compiler flags
     --build-dir=DIR             place build files in directory [build]
     --bin-dir=DIR               executable directory [build/bin]
     --lib-dir=DIR               library directory [build/lib]
@@ -87,7 +88,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
 
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
-    CXXFLAGS                    C++ compiler flags
+    CXXFLAGS                    C++ compiler flags (overrides defaults)
     LDFLAGS                     Additional linker flags
     CMAKE_GENERATOR     Selects a custom generator
 
@@ -318,6 +319,9 @@ while [ $# -ne 0 ]; do
             ;;
         --build-type=*)
             append_cache_entry CMAKE_BUILD_TYPE STRING "$optarg"
+            ;;
+        --extra-flags=*)
+            append_cache_entry EXTRA_FLAGS STRING "$optarg"
             ;;
         --build-dir=*)
             builddir="$optarg"
