@@ -81,7 +81,6 @@ const atom_value console_verbosity = atom("trace");
 const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 const char* file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
 const atom_value file_verbosity = atom("trace");
-const bool inline_output = false;
 
 } // namespace logger
 

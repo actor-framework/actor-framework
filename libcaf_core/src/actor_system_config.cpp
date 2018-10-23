@@ -86,7 +86,7 @@ actor_system_config::actor_system_config()
   logger_file_format = lg::file_format;
   logger_console = lg::console;
   logger_console_format = lg::console_format;
-  logger_inline_output = lg::inline_output;
+  logger_inline_output = false;
   logger_verbosity = lg::file_verbosity;
   namespace mm = defaults::middleman;
   middleman_network_backend = mm::network_backend;
