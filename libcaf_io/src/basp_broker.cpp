@@ -181,8 +181,6 @@ void basp_broker_state::purge_state(const node_id& nid) {
 void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
                                                  actor_id aid, error rsn) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
-  if (rsn == none)
-    rsn = exit_reason::unknown;
   auto path = instance.tbl().lookup(nid);
   if (!path) {
     CAF_LOG_INFO("cannot send exit message for proxy, no route to host:"
