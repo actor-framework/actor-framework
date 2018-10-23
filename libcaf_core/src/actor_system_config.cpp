@@ -81,11 +81,13 @@ actor_system_config::actor_system_config()
   work_stealing_moderate_sleep_duration_us = to_us(ws::moderate_sleep_duration);
   work_stealing_relaxed_steal_interval = ws::relaxed_steal_interval;
   work_stealing_relaxed_sleep_duration_us = to_us(ws::relaxed_sleep_duration);
-  logger_file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
-  logger_file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
-  logger_console = atom("none");
-  logger_console_format = "%m";
+  namespace lg = defaults::logger;
+  logger_file_name = lg::file_name;
+  logger_file_format = lg::file_format;
+  logger_console = lg::console;
+  logger_console_format = lg::console_format;
   logger_inline_output = false;
+  logger_verbosity = lg::file_verbosity;
   namespace mm = defaults::middleman;
   middleman_network_backend = mm::network_backend;
   middleman_enable_automatic_connections = false;
