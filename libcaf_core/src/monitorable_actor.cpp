@@ -91,10 +91,10 @@ bool monitorable_actor::cleanup(error&& reason, execution_unit* host) {
   if (!set_fail_state)
     return false;
   CAF_LOG_DEBUG("cleanup" << CAF_ARG(id())
-                << CAF_ARG(node()) << CAF_ARG(reason));
+                << CAF_ARG(node()) << CAF_ARG(fail_state_));
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
-    i->actor_exited(reason, host);
+    i->actor_exited(fail_state_, host);
   // tell printer to purge its state for us if we ever used aout()
   if (getf(abstract_actor::has_used_aout_flag)) {
     auto pr = home_system().scheduler().printer();
