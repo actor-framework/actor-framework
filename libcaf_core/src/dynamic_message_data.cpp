@@ -49,7 +49,7 @@ dynamic_message_data::~dynamic_message_data() {
 }
 
 message_data::cow_ptr dynamic_message_data::copy() const {
-  return make_counted<dynamic_message_data>(*this);
+  return message_data::cow_ptr{make_counted<dynamic_message_data>(*this)};
 }
 
 void* dynamic_message_data::get_mutable(size_t pos) {

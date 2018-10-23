@@ -45,7 +45,8 @@ decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
     for (auto& i : v)
       i = pmap[i];
   }
-  return make_counted<decorated_tuple>(std::move(d), std::move(v));
+  auto res = make_counted<decorated_tuple>(std::move(d), std::move(v));
+  return decorated_tuple::cow_ptr{res};
 }
 
 message_data::cow_ptr decorated_tuple::copy() const {

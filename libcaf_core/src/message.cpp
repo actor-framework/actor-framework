@@ -151,7 +151,7 @@ error message::load(deserializer& source) {
   err = source.end_object();
   if (err)
     return err;
-  message result{std::move(dmd)};
+  message result{detail::message_data::cow_ptr{std::move(dmd)}};
   swap(result);
   return none;
 }

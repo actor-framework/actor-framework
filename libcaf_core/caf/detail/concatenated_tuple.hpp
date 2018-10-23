@@ -70,9 +70,11 @@ public:
 
   error save(size_t pos, serializer& sink) const override;
 
-  // -- observers --------------------------------------------------------------
+  // -- element access ---------------------------------------------------------
 
-  std::pair<message_data*, size_t> select(size_t pos) const;
+  std::pair<message_data*, size_t> select(size_t pos);
+
+  std::pair<const message_data*, size_t> select(size_t pos) const;
 
 private:
   // -- data members -----------------------------------------------------------

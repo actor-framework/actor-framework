@@ -107,7 +107,20 @@ error concatenated_tuple::save(size_t pos, serializer& sink) const {
   return selected.first->save(selected.second, sink);
 }
 
-std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) const {
+std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) {
+  auto idx = pos;
+  for (auto& m : data_) {
+    auto s = m->size();
+    if (idx >= s)
+      idx -= s;
+    else
+      return {m.get_unshared(), idx};
+  }
+  CAF_RAISE_ERROR(std::out_of_range, "concatenated_tuple::select out of range");
+}
+
+std::pair<const message_data*, size_t>
+concatenated_tuple::select(size_t pos) const {
   auto idx = pos;
   for (const auto& m : data_) {
     auto s = m->size();

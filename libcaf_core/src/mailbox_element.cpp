@@ -42,8 +42,8 @@ public:
       : mailbox_element(std::move(x0), dynamic_category_correction(x3, x1),
                         std::move(x2)),
         msg_(std::move(x3)) {
-    /// Make sure that `content` can access the raw pointer safely.
-    if (msg_.vals().raw_ptr() == nullptr) {
+    /// Make sure that `content` can access the pointer safely.
+    if (msg_.vals() == nullptr) {
       message_builder mb;
       msg_ = mb.to_message();
     }

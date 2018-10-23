@@ -31,15 +31,5 @@ bool message_data::shared() const noexcept {
   return !unique();
 }
 
-message_data* message_data::cow_ptr::get_unshared() {
-  auto p = ptr_.get();
-  if (!p->unique()) {
-    auto cptr = p->copy();
-    ptr_.swap(cptr.ptr_);
-    return ptr_.get();
-  }
-  return p;
-}
-
 } // namespace detail
 } // namespace caf
