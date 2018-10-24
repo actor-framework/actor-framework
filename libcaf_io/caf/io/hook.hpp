@@ -19,6 +19,7 @@
 #pragma once
 
 #include <set>
+#include <string>
 #include <memory>
 #include <vector>
 
@@ -166,4 +167,3 @@ private:
 
 } // namespace io
 } // namespace caf
-
