@@ -53,20 +53,20 @@ merged_tuple::merged_tuple(data_type xs, mapping_type ys)
   }
 }
 
-merged_tuple::cow_ptr merged_tuple::copy() const {
-  return cow_ptr{make_counted<merged_tuple>(data_, mapping_)};
+merged_tuple* merged_tuple::copy() const {
+  return new merged_tuple(data_, mapping_);
 }
 
 void* merged_tuple::get_mutable(size_t pos) {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  return data_[p.first]->get_mutable(p.second);
+  return data_[p.first].unshared().get_mutable(p.second);
 }
 
 error merged_tuple::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
-  return data_[p.first]->load(p.second, source);
+  return data_[p.first].unshared().load(p.second, source);
 }
 
 size_t merged_tuple::size() const noexcept {

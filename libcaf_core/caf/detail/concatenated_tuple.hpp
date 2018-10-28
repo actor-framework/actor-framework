@@ -46,7 +46,7 @@ public:
 
   // -- overridden observers of message_data -----------------------------------
 
-  cow_ptr copy() const override;
+  concatenated_tuple* copy() const override;
 
   // -- overridden modifiers of type_erased_tuple ------------------------------
 

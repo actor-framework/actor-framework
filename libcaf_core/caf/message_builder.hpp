@@ -133,11 +133,7 @@ private:
 
   message_builder& emplace(type_erased_value_ptr);
 
-  detail::dynamic_message_data* data();
-
-  const detail::dynamic_message_data* data() const;
-
-  intrusive_ptr<ref_counted> data_; // hide dynamic_message_data implementation
+  intrusive_cow_ptr<detail::dynamic_message_data> data_;
 };
 
 } // namespace caf

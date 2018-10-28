@@ -53,8 +53,8 @@ auto concatenated_tuple::make(std::initializer_list<cow_ptr> xs) -> cow_ptr {
   return cow_ptr{make_counted<concatenated_tuple>(xs)};
 }
 
-message_data::cow_ptr concatenated_tuple::copy() const {
-  return cow_ptr(new concatenated_tuple(*this), false);
+concatenated_tuple* concatenated_tuple::copy() const {
+  return new concatenated_tuple(*this);
 }
 
 void* concatenated_tuple::get_mutable(size_t pos) {
@@ -114,7 +114,7 @@ std::pair<message_data*, size_t> concatenated_tuple::select(size_t pos) {
     if (idx >= s)
       idx -= s;
     else
-      return {m.get_unshared(), idx};
+      return {m.unshared_ptr(), idx};
   }
   CAF_RAISE_ERROR(std::out_of_range, "concatenated_tuple::select out of range");
 }

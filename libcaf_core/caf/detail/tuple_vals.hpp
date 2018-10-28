@@ -220,8 +220,8 @@ public:
 
   using super::copy;
 
-  message_data::cow_ptr copy() const override {
-    return message_data::cow_ptr(new tuple_vals(*this), false);
+  message_data* copy() const override {
+    return new tuple_vals(*this);
   }
 };
 

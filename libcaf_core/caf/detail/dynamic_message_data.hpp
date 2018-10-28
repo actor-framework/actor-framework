@@ -45,7 +45,7 @@ public:
 
   // -- overridden observers of message_data -----------------------------------
 
-  cow_ptr copy() const override;
+  dynamic_message_data* copy() const override;
 
   // -- overridden modifiers of type_erased_tuple ------------------------------
 
@@ -83,6 +83,12 @@ private:
   elements elements_;
   uint32_t type_token_;
 };
+
+void intrusive_ptr_add_ref(const dynamic_message_data*);
+
+void intrusive_ptr_release(const dynamic_message_data*);
+
+dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*&);
 
 } // namespace detail
 } // namespace caf

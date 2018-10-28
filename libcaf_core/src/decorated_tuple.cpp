@@ -49,18 +49,18 @@ decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
   return decorated_tuple::cow_ptr{res};
 }
 
-message_data::cow_ptr decorated_tuple::copy() const {
-  return cow_ptr(new decorated_tuple(*this), false);
+message_data* decorated_tuple::copy() const {
+  return new decorated_tuple(*this);
 }
 
 void* decorated_tuple::get_mutable(size_t pos) {
   CAF_ASSERT(pos < size());
-  return decorated_->get_mutable(mapping_[pos]);
+  return decorated_.unshared().get_mutable(mapping_[pos]);
 }
 
 error decorated_tuple::load(size_t pos, deserializer& source) {
   CAF_ASSERT(pos < size());
-  return decorated_->load(mapping_[pos], source);
+  return decorated_.unshared().load(mapping_[pos], source);
 }
 
 size_t decorated_tuple::size() const noexcept {

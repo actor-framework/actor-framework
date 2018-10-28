@@ -19,6 +19,7 @@
 #include "caf/detail/dynamic_message_data.hpp"
 
 #include "caf/error.hpp"
+#include "caf/intrusive_cow_ptr.hpp"
 #include "caf/make_counted.hpp"
 
 namespace caf {
@@ -48,8 +49,8 @@ dynamic_message_data::~dynamic_message_data() {
   // nop
 }
 
-message_data::cow_ptr dynamic_message_data::copy() const {
-  return message_data::cow_ptr{make_counted<dynamic_message_data>(*this)};
+dynamic_message_data* dynamic_message_data::copy() const {
+  return new dynamic_message_data(*this);
 }
 
 void* dynamic_message_data::get_mutable(size_t pos) {
@@ -107,6 +108,18 @@ void dynamic_message_data::append(type_erased_value_ptr x) {
 
 void dynamic_message_data::add_to_type_token(uint16_t typenr) {
   type_token_ = (type_token_ << 6) | typenr;
+}
+
+void intrusive_ptr_add_ref(const dynamic_message_data* ptr) {
+  intrusive_ptr_add_ref(static_cast<const ref_counted*>(ptr));
+}
+
+void intrusive_ptr_release(const dynamic_message_data* ptr) {
+  intrusive_ptr_release(static_cast<const ref_counted*>(ptr));
+}
+
+dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*& ptr) {
+  return default_intrusive_cow_ptr_unshare(ptr);
 }
 
 } // namespace detail
