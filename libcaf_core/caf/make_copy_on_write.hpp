@@ -18,47 +18,17 @@
 
 #pragma once
 
-#include <string>
-#include <iterator>
-#include <typeinfo>
-
-
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
-#include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/type_erased_tuple.hpp"
-
-#include "caf/detail/type_list.hpp"
 
 namespace caf {
-namespace detail {
 
-class message_data : public ref_counted, public type_erased_tuple {
-public:
-  // -- nested types -----------------------------------------------------------
+/// Constructs an object of type `T` in an `intrusive_cow_ptr`.
+/// @relates ref_counted
+/// @relates intrusive_cow_ptr
+template <class T, class... Ts>
+intrusive_cow_ptr<T> make_copy_on_write(Ts&&... xs) {
+  return intrusive_cow_ptr<T>(new T(std::forward<Ts>(xs)...), false);
+}
 
-  using cow_ptr = intrusive_cow_ptr<message_data>;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  message_data() = default;
-  message_data(const message_data&) = default;
-
-  ~message_data() override;
-
-  // -- pure virtual observers -------------------------------------------------
-
-  virtual message_data* copy() const = 0;
-
-  // -- observers --------------------------------------------------------------
-
-  using type_erased_tuple::copy;
-
-  bool shared() const noexcept override;
-};
-
-} // namespace detail
 } // namespace caf
 

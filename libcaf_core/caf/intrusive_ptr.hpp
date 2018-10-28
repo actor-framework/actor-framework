@@ -27,6 +27,7 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
@@ -35,14 +36,29 @@ namespace caf {
 template <class T>
 class intrusive_ptr {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  template <class>
+  friend class intrusive_cow_ptr;
+
+  // -- member types -----------------------------------------------------------
+
   using pointer = T*;
+
   using const_pointer = const T*;
+
   using element_type = T;
+
   using reference = T&;
+
   using const_reference = const T&;
+
+  // -- constants --------------------------------------------------------------
 
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   constexpr intrusive_ptr() noexcept : ptr_(nullptr) {
     // nop

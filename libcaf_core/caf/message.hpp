@@ -258,7 +258,7 @@ public:
   /// @pre `!empty()`
   inline type_erased_tuple& content() {
     CAF_ASSERT(vals_ != nullptr);
-    return *vals_;
+    return vals_.unshared();
   }
 
   inline const type_erased_tuple& content() const {

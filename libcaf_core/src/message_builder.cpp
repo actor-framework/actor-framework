@@ -16,12 +16,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/message_builder.hpp"
+
 #include <vector>
 
-#include "caf/message_builder.hpp"
-#include "caf/message_handler.hpp"
-
 #include "caf/detail/dynamic_message_data.hpp"
+#include "caf/make_copy_on_write.hpp"
+#include "caf/message_handler.hpp"
 
 namespace caf {
 
@@ -37,15 +38,18 @@ void message_builder::init() {
   // this should really be done by delegating
   // constructors, but we want to support
   // some compilers without that feature...
-  data_ = make_counted<detail::dynamic_message_data>();
+  data_ = make_copy_on_write<detail::dynamic_message_data>();
 }
 
 void message_builder::clear() {
-  data()->clear();
+  if (data_->unique())
+    data_.unshared().clear();
+  else
+    init();
 }
 
 size_t message_builder::size() const {
-  return data()->size();
+  return data_->size();
 }
 
 bool message_builder::empty() const {
@@ -53,23 +57,16 @@ bool message_builder::empty() const {
 }
 
 message_builder& message_builder::emplace(type_erased_value_ptr x) {
-  data()->append(std::move(x));
+  data_.unshared().append(std::move(x));
   return *this;
 }
 
 message message_builder::to_message() const {
-  // this const_cast is safe, because the message is
-  // guaranteed to detach its data before modifying it
-  detail::message_data::cow_ptr ptr;
-  ptr.reset(const_cast<detail::dynamic_message_data*>(data()));
-  return message{std::move(ptr)};
+  return message{data_};
 }
 
 message message_builder::move_to_message() {
-  message result;
-  using pointer = detail::dynamic_message_data*;
-  result.vals().reset(static_cast<pointer>(data_.detach()), false);
-  return result;
+  return message{std::move(data_)};
 }
 
 message message_builder::extract(message_handler f) const {
@@ -77,29 +74,13 @@ message message_builder::extract(message_handler f) const {
 }
 
 optional<message> message_builder::apply(message_handler handler) {
-  // avoid detaching of data_ by moving the data to a message object,
-  // calling message::apply and moving the data back
-  message::data_ptr ptr;
-  ptr.reset(static_cast<detail::dynamic_message_data*>(data_.detach()), false);
-  message msg{std::move(ptr)};
+  // Avoid detaching of data_ by moving the data to a message object,
+  // calling message::apply and moving the data back.
+  auto msg = move_to_message();
   auto res = msg.apply(std::move(handler));
-  data_.reset(msg.vals().release(), false);
+  data_.reset(static_cast<detail::dynamic_message_data*>(msg.vals().release()),
+              false);
   return res;
-}
-
-detail::dynamic_message_data* message_builder::data() {
-  // detach if needed, i.e., assume further non-const
-  // operations on data_ can cause race conditions if
-  // someone else holds a reference to data_
-  if (!data_->unique()) {
-    auto tmp = static_cast<detail::dynamic_message_data*>(data_.get())->copy();
-    data_.reset(tmp.release(), false);
-  }
-  return static_cast<detail::dynamic_message_data*>(data_.get());
-}
-
-const detail::dynamic_message_data* message_builder::data() const {
-  return static_cast<const detail::dynamic_message_data*>(data_.get());
 }
 
 } // namespace caf

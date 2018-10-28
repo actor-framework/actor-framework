@@ -19,10 +19,28 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 #include "caf/intrusive_ptr.hpp"
 
 namespace caf {
+
+/// Default implementation for unsharing values.
+/// @relates intrusive_cow_ptr
+template <class T>
+T* default_intrusive_cow_ptr_unshare(T*& ptr) {
+  if (!ptr->unique())
+    ptr = ptr->copy();
+  return ptr;
+}
+
+/// Customization point for allowing intrusive_cow_ptr<T> with a forward
+/// declared T.
+/// @relates intrusive_cow_ptr
+template <class T>
+T* intrusive_cow_ptr_unshare(T*& ptr) {
+  return default_intrusive_cow_ptr_unshare(ptr);
+}
 
 /// An intrusive, reference counting smart pointer implementation with
 /// copy-on-write optimization.
@@ -49,13 +67,19 @@ public:
 
   using counting_pointer = intrusive_ptr<T>;
 
-  // -- constructors, destructors, and assignment operators ------------------
+  // -- constructors, destructors, and assignment operators --------------------
 
   intrusive_cow_ptr() noexcept = default;
 
   intrusive_cow_ptr(intrusive_cow_ptr&&) noexcept = default;
 
   intrusive_cow_ptr(const intrusive_cow_ptr&) noexcept = default;
+
+  template <class Y>
+  intrusive_cow_ptr(intrusive_cow_ptr<Y> other) noexcept
+      : ptr_(other.detach(), false) {
+    // nop
+  }
 
   explicit intrusive_cow_ptr(counting_pointer p) noexcept : ptr_(std::move(p)) {
     // nop
@@ -75,14 +99,14 @@ public:
     return *this;
   }
 
-  // -- comparison -----------------------------------------------------------
+  // -- comparison -------------------------------------------------------------
 
   ptrdiff_t compare(std::nullptr_t) const noexcept {
     return reinterpret_cast<ptrdiff_t>(get());
   }
 
   ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return static_cast<ptrdiff_t>(get() - ptr);
+    return reinterpret_cast<intptr_t>(get()) - reinterpret_cast<intptr_t>(ptr);
   }
 
   ptrdiff_t compare(const counting_pointer& other) const noexcept {
@@ -93,7 +117,7 @@ public:
     return compare(other.get());
   }
 
-  // -- modifiers ------------------------------------------------------------
+  // -- modifiers --------------------------------------------------------------
 
   /// Swaps the managed object with `other`.
   void swap(intrusive_cow_ptr& other) noexcept {
@@ -121,30 +145,20 @@ public:
   /// count of exactly 1.
   void unshare() {
     if (ptr_ != nullptr)
-      static_cast<void>(get_unshared());
+      static_cast<void>(unshared());
   }
 
   /// Returns a mutable pointer to the managed object.
-  pointer operator->() {
-    return get_unshared();
+  pointer unshared_ptr() {
+    return intrusive_cow_ptr_unshare(ptr_.ptr_);
   }
 
   /// Returns a mutable reference to the managed object.
-  reference operator*() {
-    return *get_unshared();
+  reference unshared() {
+    return *unshared_ptr();
   }
 
-  /// Returns a mutable pointer to the managed object.
-  pointer get_unshared() {
-    auto p = ptr_.get();
-    if (!p->unique()) {
-      copy_reset(p->copy());
-      return ptr_.get();
-    }
-    return p;
-  }
-
-  // -- observers ------------------------------------------------------------
+  // -- observers --------------------------------------------------------------
 
   /// Returns a read-only pointer to the managed object.
   const_pointer get() const noexcept {
@@ -171,21 +185,6 @@ public:
   }
 
 private:
-  // -- allow T::copy to return raw, intrusive, or COW pointer -----------------
-
-  void copy_reset(pointer x) {
-    // Reference counted objects start with a reference count of 1.
-    reset(x, false);
-  }
-
-  void copy_reset(counting_pointer x) {
-    ptr_.swap(x);
-  }
-
-  void copy_reset(intrusive_cow_ptr x) {
-    swap(x);
-  }
-
   // -- member vairables -------------------------------------------------------
 
   counting_pointer ptr_;
