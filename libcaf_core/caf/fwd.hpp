@@ -35,6 +35,7 @@ template <class> class behavior_type_of;
 template <class> class dictionary;
 template <class> class downstream;
 template <class> class expected;
+template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
