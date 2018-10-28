@@ -191,7 +191,7 @@ CAF_TEST(remote_link_udp) {
   CAF_MESSAGE("mirror exited");
 }
 
-CAF_TEST(multiple_endpoints_udp) {
+CAF_TEST_DISABLED(multiple_endpoints_udp) {
   config cfg;
   // Setup server.
   CAF_MESSAGE("creating server");
