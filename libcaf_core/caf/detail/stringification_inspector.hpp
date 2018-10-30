@@ -52,6 +52,7 @@ public:
   using result_type = void;
 
   static constexpr bool reads_state = true;
+  static constexpr bool writes_state = false;
 
   // -- constructors, destructors, and assignment operators --------------------
 
