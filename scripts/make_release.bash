@@ -176,7 +176,7 @@ curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-fr
 if which brew &>/dev/null ; then
   file_url="https://github.com/actor-framework/actor-framework/archive/$tag_version.tar.gz"
   echo "\
-export HOMEBREW_GITHUB_TOKEN=\$(cat "$token_path")
+export HOMEBREW_GITHUB_API_TOKEN=\$(cat "$token_path")
 brew bump-formula-pr --message=\"Update CAF to version $tag_version\" --url=\"$file_url\" caf
 " >> .make-release-steps.bash
 fi
