@@ -29,8 +29,11 @@ namespace caf {
 /// @relates intrusive_cow_ptr
 template <class T>
 T* default_intrusive_cow_ptr_unshare(T*& ptr) {
-  if (!ptr->unique())
-    ptr = ptr->copy();
+  if (!ptr->unique()) {
+    auto new_ptr = ptr->copy();
+    intrusive_ptr_release(ptr);
+    ptr = new_ptr;
+  }
   return ptr;
 }
 
