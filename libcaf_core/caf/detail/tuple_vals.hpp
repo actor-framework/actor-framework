@@ -220,7 +220,7 @@ public:
 
   using super::copy;
 
-  message_data* copy() const override {
+  tuple_vals* copy() const override {
     return new tuple_vals(*this);
   }
 };
