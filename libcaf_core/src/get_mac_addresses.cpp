@@ -19,7 +19,7 @@
 #include "caf/detail/get_mac_addresses.hpp"
 
 #include "caf/config.hpp"
-#include "caf/detail/socket_guard.hpp"
+#include "caf/detail/scope_guard.hpp"
 
 #if defined(CAF_MACOS) || defined(CAF_BSD) || defined(CAF_IOS)
 
@@ -130,7 +130,9 @@ std::vector<iface_info> get_mac_addresses() {
     perror("socket");
     return {};
   }
-  socket_guard guard{sck};
+  auto g = make_scope_guard([&] {
+    close(sck);
+  });
   // query available interfaces
   char buf[1024] = {0};
   ifconf ifc;
