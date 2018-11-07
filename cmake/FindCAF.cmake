@@ -84,6 +84,7 @@ foreach (comp ${CAF_FIND_COMPONENTS})
       find_library(CAF_LIBRARY_${UPPERCOMP}
                    NAMES
                      "caf_${comp}"
+		     "caf_${comp}_static"
                    HINTS
                      ${library_hints}
                      /usr/lib
