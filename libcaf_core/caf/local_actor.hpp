@@ -246,7 +246,7 @@ public:
     CAF_ASSERT(current_element_);
     auto& stages = current_element_->stages;
     if (!stages.empty())
-      stages.back();
+      return stages.back();
     return nullptr;
   }
 
