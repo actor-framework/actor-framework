@@ -43,7 +43,7 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(config_option_set_tests, fixture)
 
 CAF_TEST(lookup) {
-  opts.add<int>("global", "opt1,1", "test option 1")
+  opts.add<int>("opt1,1", "test option 1")
     .add<float>("test", "opt2,2", "test option 2")
     .add<bool>("test", "flag,fl3", "test flag");
   CAF_CHECK_EQUAL(opts.size(), 3u);
@@ -101,7 +101,7 @@ CAF_TEST(parse with ref syncing) {
 }
 
 CAF_TEST(implicit global) {
-  opts.add<int>("global", "value").add<bool>("global", "help");
+  opts.add<int>("value", "some value").add<bool>("help", "print help text");
   CAF_MESSAGE("test long option with argument");
   dictionary<config_value::dictionary> cfg;
   auto res = opts.parse(cfg, {"--value=42"});
@@ -115,7 +115,7 @@ CAF_TEST(implicit global) {
 }
 
 CAF_TEST(atom parameters) {
-  opts.add<atom_value>("global", "value,v");
+  opts.add<atom_value>("value,v", "some value");
   CAF_MESSAGE("test atom option without quotes");
   auto parse_args = [&](std::vector<std::string> args) -> expected<atom_value> {
     dictionary<config_value::dictionary> cfg;
