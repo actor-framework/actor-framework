@@ -719,7 +719,6 @@ public:
     caf::binary_deserializer source{sys, buf};
     if (auto err = source(xs...))
       CAF_FAIL("deserialization failed: " << sys.render(err));
-    return buf;
   }
 
   template <class T>
