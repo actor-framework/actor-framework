@@ -53,6 +53,9 @@ public:
   /// An iterator over ::config_option unique pointers.
   using iterator = option_vector::iterator;
 
+  /// An iterator over ::config_option unique pointers.
+  using const_iterator = option_vector::const_iterator;
+
   /// Maps string keys to arbitrary (config) values.
   using dictionary = caf::dictionary<config_value>;
 
@@ -89,8 +92,18 @@ public:
     return opts_.begin();
   }
 
+  /// Returns an iterator to the first ::config_option object.
+  const_iterator begin() const noexcept {
+    return opts_.begin();
+  }
+
   /// Returns the past-the-end iterator.
   iterator end() noexcept {
+    return opts_.end();
+  }
+
+  /// Returns the past-the-end iterator.
+  const_iterator end() const noexcept {
     return opts_.end();
   }
 
