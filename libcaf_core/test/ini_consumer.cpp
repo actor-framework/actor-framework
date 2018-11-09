@@ -51,13 +51,13 @@ struct fixture {
   config_option_set::config_map config;
 
   fixture() {
-    options.add<bool>("global", "is_server")
-      .add<uint16_t>("global", "port")
-      .add<ls>("global", "nodes")
-      .add<string>("logger", "file-name")
-      .add<int>("scheduler", "padding")
-      .add<timespan>("scheduler", "timing")
-      .add<atom_value>("scheduler", "impl");
+    options.add<bool>("global", "is_server", "enables server mode")
+      .add<uint16_t>("global", "port", "sets local or remote port")
+      .add<ls>("global", "nodes", "list of remote nodes")
+      .add<string>("logger", "file-name", "log output file")
+      .add<int>("scheduler", "padding", "some integer")
+      .add<timespan>("scheduler", "timing", "some timespan")
+      .add<atom_value>("scheduler", "impl", "some atom");
   }
 };
 
