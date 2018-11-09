@@ -170,6 +170,8 @@ using ip_address = ipv6_address;
 using ip_subnet = ipv6_subnet;
 using stream_slot = uint16_t;
 
+using config_value_map = dictionary<dictionary<config_value>>;
+
 // -- functions ----------------------------------------------------------------
 
 /// @relates actor_system_config
