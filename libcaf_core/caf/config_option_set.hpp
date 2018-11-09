@@ -87,6 +87,11 @@ public:
     return opts_.size();
   }
 
+  /// Returns the number of stored config options.
+  bool empty() const noexcept {
+    return opts_.empty();
+  }
+
   /// Returns an iterator to the first ::config_option object.
   iterator begin() noexcept {
     return opts_.begin();
