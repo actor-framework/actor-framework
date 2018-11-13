@@ -27,7 +27,7 @@
 namespace caf {
 namespace io {
 
-enum class receive_policy_flag {
+enum class receive_policy_flag : unsigned {
   at_least,
   at_most,
   exactly

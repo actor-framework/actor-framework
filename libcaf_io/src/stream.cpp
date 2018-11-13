@@ -37,8 +37,6 @@ stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
                defaults::middleman::max_consecutive_reads)),
       read_threshold_(1),
       collected_(0),
-      ack_writes_(false),
-      writing_(false),
       written_(0) {
   configure_read(receive_policy::at_most(1024));
 }
@@ -57,12 +55,8 @@ void stream::activate(stream_manager* mgr) {
 }
 
 void stream::configure_read(receive_policy::config config) {
-  rd_flag_ = config.first;
+  state_.rd_flag = config.first;
   max_ = config.second;
-}
-
-void stream::ack_writes(bool x) {
-  ack_writes_ = x;
 }
 
 void stream::write(const void* buf, size_t num_bytes) {
@@ -75,18 +69,12 @@ void stream::write(const void* buf, size_t num_bytes) {
 void stream::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (!wr_offline_buf_.empty() && !writing_) {
+  if (!wr_offline_buf_.empty() && !state_.writing) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
-    writing_ = true;
+    state_.writing = true;
     prepare_next_write();
   }
-}
-
-void stream::stop_reading() {
-  CAF_LOG_TRACE("");
-  close_read_channel();
-  passivate();
 }
 
 void stream::removed_from_loop(operation op) {
@@ -99,16 +87,16 @@ void stream::removed_from_loop(operation op) {
 }
 
 void stream::force_empty_write(const manager_ptr& mgr) {
-  if (!writing_) {
+  if (!state_.writing) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
-    writing_ = true;
+    state_.writing = true;
   }
 }
 
 void stream::prepare_next_read() {
   collected_ = 0;
-  switch (rd_flag_) {
+  switch (state_.rd_flag) {
     case receive_policy_flag::exactly:
       if (rd_buf_.size() != max_)
         rd_buf_.resize(max_);
@@ -135,7 +123,7 @@ void stream::prepare_next_write() {
   written_ = 0;
   wr_buf_.clear();
   if (wr_offline_buf_.empty()) {
-    writing_ = false;
+    state_.writing = false;
     backend().del(operation::write, fd(), this);
   } else {
     wr_buf_.swap(wr_offline_buf_);
@@ -181,7 +169,7 @@ void stream::handle_write_result(rw_state write_result, size_t wb) {
       written_ += wb;
       CAF_ASSERT(written_ <= wr_buf_.size());
       auto remaining = wr_buf_.size() - written_;
-      if (ack_writes_)
+      if (state_.ack_writes)
         writer_->data_transferred(&backend(), wb,
                                   remaining + wr_offline_buf_.size());
       // prepare next send (or stop sending)

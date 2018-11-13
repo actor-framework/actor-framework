@@ -33,9 +33,9 @@ namespace io {
 namespace network {
 
 event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
-    : eventbf_(0),
-      fd_(sockfd),
-      read_channel_closed_(false),
+    : fd_(sockfd),
+      state_{true, false, false, receive_policy_flag::at_least},
+      eventbf_(0),
       backend_(dm) {
   set_fd_flags();
 }
@@ -48,14 +48,20 @@ event_handler::~event_handler() {
 }
 
 void event_handler::close_read_channel() {
-  if (fd_ == invalid_native_socket || read_channel_closed_)
+  if (fd_ == invalid_native_socket || read_channel_closed())
     return;
   ::shutdown(fd_, 0); // 0 identifies the read channel on Win & UNIX
-  read_channel_closed_ = true;
+  state_.reading = false;
 }
 
 void event_handler::passivate() {
   backend().del(operation::read, fd(), this);
+}
+
+void event_handler::stop_reading() {
+  CAF_LOG_TRACE("");
+  close_read_channel();
+  passivate();
 }
 
 void event_handler::activate() {

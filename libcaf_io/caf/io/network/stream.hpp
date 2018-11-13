@@ -59,8 +59,6 @@ public:
   ///          once the stream has been started.
   void configure_read(receive_policy::config config);
 
-  void ack_writes(bool x);
-
   /// Copies data to the write buffer.
   /// @warning Not thread safe.
   void write(const void* buf, size_t num_bytes);
@@ -84,10 +82,6 @@ public:
   /// @warning Must not be called outside the IO multiplexers event loop
   ///          once the stream has been started.
   void flush(const manager_ptr& mgr);
-
-  /// Closes the read channel of the underlying socket and removes
-  /// this handler from its parent.
-  void stop_reading();
 
   void removed_from_loop(operation op) override;
 
@@ -150,13 +144,10 @@ private:
   size_t read_threshold_;
   size_t collected_;
   size_t max_;
-  receive_policy_flag rd_flag_;
   buffer_type rd_buf_;
 
   // State for writing.
   manager_ptr writer_;
-  bool ack_writes_;
-  bool writing_;
   size_t written_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;

@@ -44,9 +44,7 @@ datagram_handler::datagram_handler(default_multiplexer& backend_ref,
                defaults::middleman::max_consecutive_reads)),
       max_datagram_size_(receive_buffer_size),
       rd_buf_(receive_buffer_size),
-      send_buffer_size_(0),
-      ack_writes_(false),
-      writing_(false) {
+      send_buffer_size_(0) {
   allow_udp_connreset(sockfd, false);
   auto es = send_buffer_size(sockfd);
   if (!es)
@@ -69,10 +67,6 @@ void datagram_handler::activate(datagram_manager* mgr) {
   }
 }
 
-void datagram_handler::ack_writes(bool x) {
-  ack_writes_ = x;
-}
-
 void datagram_handler::write(datagram_handle hdl, const void* buf,
                              size_t num_bytes) {
   wr_offline_buf_.emplace_back();
@@ -85,10 +79,10 @@ void datagram_handler::write(datagram_handle hdl, const void* buf,
 void datagram_handler::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (!wr_offline_buf_.empty() && !writing_) {
+  if (!wr_offline_buf_.empty() && !state_.writing) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
-    writing_ = true;
+    state_.writing = true;
     prepare_next_write();
   }
 }
@@ -127,12 +121,6 @@ void datagram_handler::remove_endpoint(datagram_handle hdl) {
   }
 }
 
-void datagram_handler::stop_reading() {
-  CAF_LOG_TRACE("");
-  close_read_channel();
-  passivate();
-}
-
 void datagram_handler::removed_from_loop(operation op) {
   switch (op) {
     case operation::read: reader_.reset(); break;
@@ -151,7 +139,7 @@ void datagram_handler::prepare_next_write() {
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
   wr_buf_.second.clear();
   if (wr_offline_buf_.empty()) {
-    writing_ = false;
+    state_.writing = false;
     backend().del(operation::write, fd(), this);
   } else {
     wr_buf_.swap(wr_offline_buf_.front());
@@ -189,7 +177,7 @@ void datagram_handler::handle_write_result(bool write_result, datagram_handle id
     backend().del(operation::write, fd(), this);
   } else if (wb > 0) {
     CAF_ASSERT(wb == buf.size());
-    if (ack_writes_)
+    if (state_.ack_writes)
       writer_->datagram_sent(&backend(), id, wb, std::move(buf));
     prepare_next_write();
   } else {
