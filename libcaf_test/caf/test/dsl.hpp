@@ -551,6 +551,9 @@ public:
   /// A deterministic scheduler type.
   using scheduler_type = caf::scheduler::test_coordinator;
 
+  /// A buffer for serializing or deserializing objects.
+  using byte_buffer = std::vector<char>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
@@ -700,6 +703,29 @@ public:
     auto ptr = caf::actor_cast<caf::abstract_actor*>(hdl);
     CAF_REQUIRE(ptr != nullptr);
     return dynamic_cast<T&>(*ptr);
+  }
+
+  template <class... Ts>
+  byte_buffer serialize(const Ts&... xs) {
+    byte_buffer buf;
+    caf::binary_serializer sink{sys, buf};
+    if (auto err = sink(xs...))
+      CAF_FAIL("serialization failed: " << sys.render(err));
+    return buf;
+  }
+
+  template <class... Ts>
+  void deserialize(const byte_buffer& buf, Ts&... xs) {
+    caf::binary_deserializer source{sys, buf};
+    if (auto err = source(xs...))
+      CAF_FAIL("deserialization failed: " << sys.render(err));
+  }
+
+  template <class T>
+  T roundtrip(const T& x) {
+    T result;
+    deserialize(serialize(x), result);
+    return result;
   }
 
   // -- member variables -------------------------------------------------------
