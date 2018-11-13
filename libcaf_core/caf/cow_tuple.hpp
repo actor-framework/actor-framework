@@ -20,9 +20,7 @@
 
 #include <tuple>
 
-#include "caf/detail/apply_args.hpp"
 #include "caf/detail/comparable.hpp"
-#include "caf/detail/message_data.hpp"
 #include "caf/detail/tuple_vals.hpp"
 #include "caf/make_copy_on_write.hpp"
 
