@@ -20,6 +20,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/newb_base.hpp"
 #include "caf/policy/accept.hpp"
 #include "caf/policy/transport.hpp"
 
@@ -29,19 +30,19 @@ namespace policy {
 struct tcp_transport : public transport {
   tcp_transport();
 
-  io::network::rw_state read_some(io::newb_base* parent) override;
+  io::network::rw_state read_some(io::network::newb_base* parent) override;
 
   bool should_deliver() override;
 
-  void prepare_next_read(io::newb_base*) override;
+  void prepare_next_read(io::network::newb_base*) override;
 
   void configure_read(io::receive_policy::config config) override;
 
-  io::network::rw_state write_some(io::newb_base* parent) override;
+  io::network::rw_state write_some(io::network::newb_base* parent) override;
 
-  void prepare_next_write(io::newb_base* parent) override;
+  void prepare_next_write(io::network::newb_base* parent) override;
 
-  void flush(io::newb_base* parent) override;
+  void flush(io::network::newb_base* parent) override;
 
   expected<io::network::native_socket>
   connect(const std::string& host, uint16_t port,
@@ -58,7 +59,7 @@ struct tcp_transport : public transport {
   size_t written;
 };
 
-io::network::native_socket get_newb_socket(io::newb_base*);
+io::network::native_socket get_newb_socket(io::network::newb_base*);
 
 template <class Message>
 struct accept_tcp : public accept<Message> {
@@ -68,7 +69,7 @@ struct accept_tcp : public accept<Message> {
   }
 
   std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::newb_base* parent) override {
+  accept_event(io::network::newb_base* parent) override {
     auto esock = io::network::accept_tcp_connection(get_newb_socket(parent));
     if (!esock) {
       return {io::network::invalid_native_socket, nullptr};
@@ -77,7 +78,7 @@ struct accept_tcp : public accept<Message> {
     return {*esock, std::move(ptr)};
   }
 
-  void init(io::newb_base*, io::newb<Message>& spawned) override {
+  void init(io::network::newb_base*, io::newb<Message>& spawned) override {
     spawned.start();
   }
 };

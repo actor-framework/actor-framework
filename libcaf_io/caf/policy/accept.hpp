@@ -49,22 +49,22 @@ struct accept {
   create_socket(uint16_t port, const char* host, bool reuse = false) = 0;
 
   virtual std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::newb_base*) {
+  accept_event(io::network::newb_base*) {
     return {0, nullptr};
   }
 
   /// If `requires_raw_data` is set to true, the acceptor will only call
   /// this function for new read event and let the policy handle everything
   /// else.
-  virtual void read_event(io::newb_base*) {
+  virtual void read_event(io::network::newb_base*) {
     // nop
   }
 
-  virtual error write_event(io::newb_base*) {
+  virtual error write_event(io::network::newb_base*) {
     return none;
   }
 
-  virtual void init(io::newb_base*, io::newb<Message>&) {
+  virtual void init(io::network::newb_base*, io::newb<Message>&) {
     // nop
   }
 

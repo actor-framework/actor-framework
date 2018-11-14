@@ -30,26 +30,26 @@ namespace policy {
 struct udp_transport : public transport {
   udp_transport();
 
-  io::network::rw_state read_some(io::newb_base* parent) override;
+  io::network::rw_state read_some(io::network::newb_base* parent) override;
 
   inline bool should_deliver() override {
     CAF_LOG_TRACE("");
     return received_bytes != 0 && sender == endpoint;
   }
 
-  void prepare_next_read(io::newb_base*) override;
+  void prepare_next_read(io::network::newb_base*) override;
 
   inline void configure_read(io::receive_policy::config) override {
     // nop
   }
 
-  io::network::rw_state write_some(io::newb_base* parent) override;
+  io::network::rw_state write_some(io::network::newb_base* parent) override;
 
-  void prepare_next_write(io::newb_base* parent) override;
+  void prepare_next_write(io::network::newb_base* parent) override;
 
   byte_buffer& wr_buf() override;
 
-  void flush(io::newb_base* parent) override;
+  void flush(io::network::newb_base* parent) override;
 
   expected<io::network::native_socket>
   connect(const std::string& host, uint16_t port,
@@ -82,7 +82,7 @@ struct accept_udp : public accept<Message> {
   }
 
   std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::newb_base*) override {
+  accept_event(io::network::newb_base*) override {
     std::cout << "Accepting msg from UDP endpoint" << std::endl;
     auto res = io::network::new_local_udp_endpoint_impl(0, nullptr, true);
     if (!res) {
@@ -94,7 +94,8 @@ struct accept_udp : public accept<Message> {
     return {sock, std::move(ptr)};
   }
 
-  void init(io::newb_base* parent, io::newb<Message>& spawned) override {
+  void init(io::network::newb_base* parent,
+            io::newb<Message>& spawned) override {
     spawned.trans->prepare_next_read(parent);
     spawned.trans->read_some(parent, *spawned.proto.get());
     spawned.start();

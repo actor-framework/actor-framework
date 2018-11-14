@@ -21,11 +21,7 @@
 namespace caf {
 namespace io {
 
-newb_base::newb_base(network::default_multiplexer& dm,
-                     network::native_socket sockfd)
-    : event_handler(dm, sockfd) {
-  // nop
-}
+// TODO: Delete this file.
 
 } // namespace io
 } // namespace caf

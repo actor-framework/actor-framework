@@ -130,7 +130,7 @@ behavior dummy_broker(stateful_newb<new_basp_msg, test_state>* self) {
 }
 
 struct dummy_transport : public transport {
-  io::network::rw_state read_some(newb_base*) {
+  io::network::rw_state read_some(network::newb_base*) {
     return receive_buffer.size() > 0 ? network::rw_state::success
                                      : network::rw_state::indeterminate;
     //return io::network::rw_state::success;

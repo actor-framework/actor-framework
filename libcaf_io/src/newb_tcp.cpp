@@ -72,7 +72,7 @@ tcp_transport::tcp_transport()
   configure_read(io::receive_policy::at_most(1024));
 }
 
-io::network::rw_state tcp_transport::read_some(io::newb_base* parent) {
+io::network::rw_state tcp_transport::read_some(io::network::newb_base* parent) {
   CAF_LOG_TRACE("");
   size_t len = receive_buffer.size() - collected;
   void* buf = receive_buffer.data() + collected;
@@ -101,7 +101,7 @@ bool tcp_transport::should_deliver() {
   return collected >= read_threshold;
 }
 
-void tcp_transport::prepare_next_read(io::newb_base*) {
+void tcp_transport::prepare_next_read(io::network::newb_base*) {
   collected = 0;
   received_bytes = 0;
   switch (rd_flag) {
@@ -131,7 +131,8 @@ void tcp_transport::configure_read(io::receive_policy::config config) {
   maximum = config.second;
 }
 
-io::network::rw_state tcp_transport::write_some(io::newb_base* parent) {
+io::network::rw_state
+tcp_transport::write_some(io::network::newb_base* parent) {
   CAF_LOG_TRACE("");
   const void* buf = send_buffer.data() + written;
   auto len = send_buffer.size() - written;
@@ -151,7 +152,7 @@ io::network::rw_state tcp_transport::write_some(io::newb_base* parent) {
   return io::network::rw_state::success;
 }
 
-void tcp_transport::prepare_next_write(io::newb_base* parent) {
+void tcp_transport::prepare_next_write(io::network::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   if (offline_buffer.empty()) {
@@ -162,7 +163,7 @@ void tcp_transport::prepare_next_write(io::newb_base* parent) {
   }
 }
 
-void tcp_transport::flush(io::newb_base* parent) {
+void tcp_transport::flush(io::network::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
@@ -178,7 +179,7 @@ tcp_transport::connect(const std::string& host, uint16_t port,
   return io::network::new_tcp_connection(host, port, preferred);
 }
 
-io::network::native_socket get_newb_socket(io::newb_base* n) {
+io::network::native_socket get_newb_socket(io::network::newb_base* n) {
   return n->fd();
 }
 

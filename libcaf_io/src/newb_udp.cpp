@@ -74,11 +74,12 @@ udp_transport::udp_transport()
   // nop
 }
 
-io::network::rw_state udp_transport::read_some(io::newb_base* parent) {
+io::network::rw_state udp_transport::read_some(io::network::newb_base* parent) {
   CAF_LOG_TRACE(CAF_ARG(parent->fd()));
   memset(sender.address(), 0, sizeof(sockaddr_storage));
   io::network::socket_size_type len = sizeof(sockaddr_storage);
-  auto buf_ptr = static_cast<io::network::socket_recv_ptr>(receive_buffer.data());
+  auto buf_ptr =
+    static_cast<io::network::socket_recv_ptr>(receive_buffer.data());
   auto buf_len = receive_buffer.size();
   auto sres = ::recvfrom(parent->fd(), buf_ptr, buf_len,
                          0, sender.address(), &len);
@@ -100,16 +101,18 @@ io::network::rw_state udp_transport::read_some(io::newb_base* parent) {
   return io::network::rw_state::success;
 }
 
-void udp_transport::prepare_next_read(io::newb_base*) {
+void udp_transport::prepare_next_read(io::network::newb_base*) {
   received_bytes = 0;
   receive_buffer.resize(maximum);
 }
 
-io::network::rw_state udp_transport::write_some(io::newb_base* parent) {
+io::network::rw_state
+udp_transport::write_some(io::network::newb_base* parent) {
   using namespace caf::io::network;
   CAF_LOG_TRACE(CAF_ARG(parent->fd()) << CAF_ARG(send_buffer.size()));
   socket_size_type len = static_cast<socket_size_type>(*endpoint.clength());
-  auto buf_ptr = reinterpret_cast<socket_send_ptr>(send_buffer.data() + written);
+  auto buf_ptr =
+    reinterpret_cast<socket_send_ptr>(send_buffer.data() + written);
   auto buf_len = send_sizes.front();
   auto sres = ::sendto(parent->fd(), buf_ptr, buf_len,
                        0, endpoint.caddress(), len);
@@ -131,7 +134,7 @@ io::network::rw_state udp_transport::write_some(io::newb_base* parent) {
   return io::network::rw_state::success;
 }
 
-void udp_transport::prepare_next_write(io::newb_base* parent) {
+void udp_transport::prepare_next_write(io::network::newb_base* parent) {
   written = 0;
   send_buffer.clear();
   send_sizes.clear();
@@ -158,7 +161,7 @@ io::byte_buffer& udp_transport::wr_buf() {
   return offline_buffer;
 }
 
-void udp_transport::flush(io::newb_base* parent) {
+void udp_transport::flush(io::network::newb_base* parent) {
   CAF_ASSERT(parent != nullptr);
   CAF_LOG_TRACE(CAF_ARG(offline_buffer.size()));
   if (!offline_buffer.empty() && !writing) {
