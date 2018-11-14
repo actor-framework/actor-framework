@@ -226,6 +226,10 @@ public:
     return emplace_hint(hint, key, std::forward<T>(value));
   }
 
+  void insert(const_iterator first, const_iterator last) {
+    xs_.insert(first, last);
+  }
+
   template <class T>
   iterator_bool_pair insert_or_assign(string_view key, T&& value) {
     auto i = lower_bound(key);
