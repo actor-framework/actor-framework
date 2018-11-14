@@ -81,8 +81,19 @@ void actor_registry::put_impl(actor_id key, strong_actor_ptr val) {
 }
 
 void actor_registry::erase(actor_id key) {
-  exclusive_guard guard{instances_mtx_};
-  entries_.erase(key);
+  // Stores a reference to the actor we're going to remove. This guarantees
+  // that we aren't releasing the last reference to an actor while erasing it.
+  // Releasing the final ref can trigger the actor to call its cleanup function
+  // that in turn calls this function and we can end up in a deadlock.
+  strong_actor_ptr ref;
+  { // Lifetime scope of guard.
+    exclusive_guard guard{instances_mtx_};
+    auto i = entries_.find(key);
+    if (i != entries_.end()) {
+      ref.swap(i->second);
+      entries_.erase(i);
+    }
+  }
 }
 
 void actor_registry::inc_running() {
@@ -126,17 +137,26 @@ strong_actor_ptr actor_registry::get_impl(atom_value key) const {
 }
 
 void actor_registry::put_impl(atom_value key, strong_actor_ptr value) {
-  if (value)
-    value->get()->attach_functor([=] {
-      system_.registry().put_impl(key, nullptr);
-    });
+  if (value == nullptr) {
+    erase(key);
+    return;
+  }
   exclusive_guard guard{named_entries_mtx_};
   named_entries_.emplace(key, std::move(value));
 }
 
 void actor_registry::erase(atom_value key) {
-  exclusive_guard guard{named_entries_mtx_};
-  named_entries_.erase(key);
+  // Stores a reference to the actor we're going to remove for the same
+  // reasoning as in erase(actor_id).
+  strong_actor_ptr ref;
+  { // Lifetime scope of guard.
+    exclusive_guard guard{named_entries_mtx_};
+    auto i = named_entries_.find(key);
+    if (i != named_entries_.end()) {
+      ref.swap(i->second);
+      named_entries_.erase(i);
+    }
+  }
 }
 
 auto actor_registry::named_actors() const -> name_map {
