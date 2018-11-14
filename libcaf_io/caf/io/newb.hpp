@@ -48,6 +48,10 @@
 namespace caf {
 namespace io {
 
+// -- atoms for the acceptor ---------------------------------------------------
+
+using quit_atom = caf::atom_constant<atom("quit")>;
+
 // -- forward declarations -----------------------------------------------------
 
 template <class T>
@@ -360,7 +364,8 @@ using first_argument_type
  = typename std::tuple_element<0, typename function_traits<T>::argument_types>::type;
 
 /// Spawns a new "newb" broker.
-template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
+template <class Protocol, spawn_options Os = no_spawn_options, class F,
+          class... Ts>
 typename infer_handle_from_fun<F>::type
 spawn_newb(actor_system& sys, F fun, policy::transport_ptr transport,
            network::native_socket sockfd, Ts&&... xs) {
@@ -401,35 +406,17 @@ spawn_client(actor_system& sys, F fun, policy::transport_ptr transport,
 
 // -- new broker acceptor ------------------------------------------------------
 
-struct acceptor_base : public network::event_handler {
-  acceptor_base(network::default_multiplexer& dm, network::native_socket sockfd);
-
-  virtual void start() = 0;
-
-  virtual void stop() = 0;
-
-  virtual void io_error(network::operation op, error err) = 0;
-
-  virtual void start_reading() = 0;
-
-  virtual void stop_reading() = 0;
-
-  virtual void start_writing() = 0;
-
-  virtual void stop_writing() = 0;
-
-};
-
 template <class Protocol, class Fun, class... Ts>
-struct newb_acceptor : public acceptor_base, public caf::ref_counted {
+struct newb_acceptor : network::newb_base {
   using newb_type = typename std::remove_pointer<first_argument_type<Fun>>::type;
   using message_type = typename newb_type::message_type;
 
   // -- constructors and destructors -------------------------------------------
 
-  newb_acceptor(network::default_multiplexer& dm, network::native_socket sockfd,
-                Fun f, policy::accept_ptr<message_type> pol, Ts&&... xs)
-      : acceptor_base(dm, sockfd),
+  newb_acceptor(actor_config& cfg, network::default_multiplexer& dm,
+                network::native_socket sockfd, Fun f,
+                policy::accept_ptr<message_type> pol, Ts&&... xs)
+      : newb_base(cfg, dm, sockfd),
         accept_pol(std::move(pol)),
         fun_(std::move(f)),
         reading_(false),
@@ -478,21 +465,26 @@ struct newb_acceptor : public acceptor_base, public caf::ref_counted {
     }
     // Quit if there is nothing left to do.
     if (!reading_ && !writing_)
-      deref();
+      intrusive_ptr_release(this->ctrl());
   }
 
   // -- base requirements ------------------------------------------------------
 
   void start() override {
-    ref();
+    CAF_PUSH_AID_FROM_PTR(this);
+    CAF_LOG_TRACE("");
+    if (!reading_ && !writing_)
+      intrusive_ptr_add_ref(this->ctrl());
     start_reading();
+    // TODO: Don't think this is needed anymore.
     backend().post([]() {
       // nop
     });
   }
 
   void stop() override {
-    CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
+    CAF_PUSH_AID_FROM_PTR(this);
+    CAF_LOG_TRACE("");
     close_read_channel();
     stop_reading();
     stop_writing();
@@ -508,7 +500,7 @@ struct newb_acceptor : public acceptor_base, public caf::ref_counted {
 
   void start_reading() override {
     if (!reading_) {
-      activate();
+      event_handler::activate();
       reading_ = true;
     }
   }
@@ -569,18 +561,96 @@ struct newb_acceptor : public acceptor_base, public caf::ref_counted {
       args_, this->backend().system(),
       fun_, std::move(pol), sockfd
     );
+    link_to(n);
+    children_.push_back(n);
     return n;
   }
 
+  virtual behavior make_behavior() override {
+    return {
+      [=](quit_atom) {
+        stop();
+      },
+      [=](caf::exit_msg& msg) {
+        auto itr = std::find(std::begin(children_), std::end(children_),
+                             msg.source);
+        if (itr != std::end(children_)) {
+          children_.erase(itr);
+        } else {
+          // TODO: Propagate shutdown reason somehow?
+          stop();
+        }
+      }
+    };
+  }
+
+  /// @cond PRIVATE
+
+  template <class... Us>
+  void eq_impl(message_id mid, strong_actor_ptr sender,
+               execution_unit* ctx, Us&&... xs) {
+    enqueue(make_mailbox_element(std::move(sender), mid,
+                                 {}, std::forward<Ts>(xs)...),
+            ctx);
+  }
+
   policy::accept_ptr<message_type> accept_pol;
+
+  /// @endcond
 
 private:
   Fun fun_;
   bool reading_;
   bool writing_;
   std::tuple<Ts...> args_;
+  std::vector<actor> children_;
 };
 
+template <class Protocol, spawn_options Os = no_spawn_options, class Fun,
+          class Message, class... Ts>
+infer_handle_from_class_t<newb_acceptor<Protocol, Fun, Ts...>>
+spawn_acceptor(actor_system& sys, Fun fun, policy::accept_ptr<Message> pol,
+               network::native_socket sockfd, Ts&&... xs) {
+  // TODO: check that fun accepts Message.
+  using acceptor_type = newb_acceptor<Protocol, Fun, Ts...>;
+  auto& dm =
+    dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
+  actor_config cfg(&dm);
+  auto res = sys.spawn_class<acceptor_type, Os>(cfg, dm, sockfd,
+                                                std::move(fun),
+                                                std::move(pol),
+                                                std::forward<Ts>(xs)...);
+  // Get a reference to the newb type.
+  auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
+  CAF_ASSERT(ptr != nullptr);
+  auto& ref = dynamic_cast<acceptor_type&>(*ptr);
+  // Start the event handler.
+  ref.start();
+  return res;
+}
+
+template <class Protocol, class F, class Message, class... Ts>
+expected<caf::intrusive_ptr<newb_acceptor<Protocol, F, Ts...>>>
+spawn_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
+            uint16_t port, const char* addr, bool reuse, Ts&&... xs) {
+  auto esock = pol->create_socket(port, addr, reuse);
+  if (!esock) {
+    CAF_LOG_ERROR("Could not open " << CAF_ARG(port) << CAF_ARG(addr));
+    return sec::cannot_open_port;
+  }
+  return spawn_acceptor<Protocol, F>(sys, std::move(fun), std::move(pol), *esock,
+                                    std::forward<Ts>(xs)...);
+}
+
+template <class Protocol, class F, class Message>
+expected<caf::intrusive_ptr<newb_acceptor<Protocol, F>>>
+spawn_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
+            uint16_t port, const char* addr = nullptr, bool reuse = false) {
+ return spawn_server<Protocol, F>(sys, std::move(fun), std::move(pol), port,
+                                 addr, reuse);
+}
+
+/*
 template <class P, class F, class... Ts>
 using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<P, F, Ts...>>;
 
@@ -588,7 +658,8 @@ template <class Protocol, class Fun, class Message, class... Ts>
 acceptor_ptr<Protocol, Fun, Ts...>
 make_acceptor(actor_system& sys, Fun fun, policy::accept_ptr<Message> pol,
               network::native_socket sockfd, Ts&&... xs) {
-  auto& dm = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
+  auto& dm =
+    dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
   auto res = make_counted<newb_acceptor<Protocol, Fun, Ts...>>(dm, sockfd,
                                                                std::move(fun),
                                                                std::move(pol),
@@ -617,6 +688,7 @@ make_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
  return make_server<Protocol, F>(sys, std::move(fun), std::move(pol), port,
                                  addr, reuse);
 }
+*/
 
 } // namespace io
 } // namespace caf
