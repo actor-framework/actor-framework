@@ -16,20 +16,6 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-// The rationale of this header is to provide a serialization API
-// that is compatbile to boost.serialization. In particular, the
-// design goals are:
-// - allow users to integrate existing boost.serialization-based code easily
-// - allow to switch out this header with the actual boost header in boost.actor
-//
-// Differences in semantics are:
-// - CAF does *not* respect class versions
-// - the `unsigned int` argument is always 0 and ignored by CAF
-//
-// Since CAF requires all runtime instances to have the same types
-// announced, different class versions in a single actor system would
-// cause inconsistencies that are not recoverable.
-
 #pragma once
 
 #include <string>
@@ -46,4 +32,3 @@ std::string pretty_type_name(const std::type_info& x);
 
 } // namespace detail
 } // namespace caf
-
