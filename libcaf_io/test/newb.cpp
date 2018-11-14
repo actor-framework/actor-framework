@@ -137,6 +137,14 @@ struct dummy_transport : public transport {
   }
 };
 
+template <class Message>
+struct dummy_accept : public accept<Message> {
+  expected<io::network::native_socket>
+  create_socket(uint16_t, const char*, bool = false) {
+    return network::invalid_native_socket;
+  }
+};
+
 // -- config for controlled scheduling and multiplexing ------------------------
 
 class config : public actor_system_config {
@@ -213,6 +221,25 @@ struct fixture {
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(newb_basics, fixture)
+
+CAF_TEST(spawn acceptor) {
+  auto newb_client= [] (newb_t* self) -> behavior {
+    return {
+      [=](quit_atom) {
+        self->stop();
+      },
+    };
+  };
+  CAF_MESSAGE("create newb acceptor");
+  auto esock = network::new_local_udp_endpoint_impl(0, nullptr);
+  accept_ptr<new_basp_msg> accept{new dummy_accept<new_basp_msg>};
+  CAF_REQUIRE(esock);
+  auto n = spawn_acceptor<protocol_t>(sys, newb_client, std::move(accept),
+                                      esock->first);
+  exec_all();
+  scoped_actor self{sys};
+  self->send(n, quit_atom::value);
+}
 
 CAF_TEST(spawn newb) {
   scoped_actor self{sys};
