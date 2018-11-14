@@ -22,6 +22,7 @@
 
 #include "caf/error.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/newb_base.hpp"
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/rw_state.hpp"
 #include "caf/io/receive_policy.hpp"
@@ -43,26 +44,26 @@ struct transport {
 
   virtual ~transport();
 
-  virtual io::network::rw_state write_some(io::newb_base*);
+  virtual io::network::rw_state write_some(io::network::newb_base*);
 
-  virtual io::network::rw_state read_some(io::newb_base*);
+  virtual io::network::rw_state read_some(io::network::newb_base*);
 
   virtual bool should_deliver();
 
-  virtual bool must_read_more(io::newb_base*);
+  virtual bool must_read_more(io::network::newb_base*);
 
-  virtual void prepare_next_read(io::newb_base*);
+  virtual void prepare_next_read(io::network::newb_base*);
 
-  virtual void prepare_next_write(io::newb_base*);
+  virtual void prepare_next_write(io::network::newb_base*);
 
   virtual void configure_read(io::receive_policy::config);
 
-  virtual void flush(io::newb_base*);
+  virtual void flush(io::network::newb_base*);
 
   virtual byte_buffer& wr_buf();
 
   template <class T>
-  error read_some(io::newb_base* parent, protocol<T>& policy) {
+  error read_some(io::network::newb_base* parent, protocol<T>& policy) {
     using io::network::rw_state;
     CAF_LOG_TRACE("");
     size_t reads = 0;

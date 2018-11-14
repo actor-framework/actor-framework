@@ -25,7 +25,6 @@
 #include <tuple>
 
 #include "caf/actor_clock.hpp"
-#include "caf/config.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/call_cfun.hpp"
 #include "caf/detail/enum_to_string.hpp"
@@ -36,6 +35,7 @@
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/newb_base.hpp"
 #include "caf/io/network/rw_state.hpp"
 #include "caf/mixin/behavior_changer.hpp"
 #include "caf/mixin/requester.hpp"
@@ -56,43 +56,10 @@ struct protocol_policy;
 template <class T>
 struct newb;
 
-} // namespace io
-
-// -- required to make newb an actor ------------------------------------------
-
-template <class T>
-class behavior_type_of<io::newb<T>> {
-public:
-  using type = behavior;
-};
-
-namespace io {
-
 // -- aliases ------------------------------------------------------------------
 
 using byte_buffer = caf::policy::byte_buffer;
 using header_writer = caf::policy::header_writer;
-
-// -- newb base ----------------------------------------------------------------
-
-struct newb_base : public network::event_handler {
-  newb_base(network::default_multiplexer& dm, network::native_socket sockfd);
-
-  virtual void start() = 0;
-
-  virtual void stop() = 0;
-
-  virtual void io_error(network::operation op, error err) = 0;
-
-  virtual void start_reading() = 0;
-
-  virtual void stop_reading() = 0;
-
-  virtual void start_writing() = 0;
-
-  virtual void stop_writing() = 0;
-
-};
 
 // -- new broker classes -------------------------------------------------------
 
@@ -115,16 +82,7 @@ struct write_handle {
 };
 
 template <class Message>
-struct newb : public extend<scheduled_actor, newb<Message>>::template
-                     with<mixin::sender, mixin::requester,
-                          mixin::behavior_changer>,
-              public dynamically_typed_actor_base,
-              public newb_base {
-  using super = typename extend<scheduled_actor, newb<Message>>::
-    template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
-
-  using signatures = none_t;
-
+struct newb : public network::newb_base {
   using message_type = Message;
 
   // -- constructors and destructors -------------------------------------------
@@ -133,8 +91,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
        network::native_socket sockfd,
        policy::transport_ptr transport,
        policy::protocol_ptr<Message> protocol)
-      : super(cfg),
-        newb_base(dm, sockfd),
+      : newb_base(cfg, dm, sockfd),
         trans(std::move(transport)),
         proto(std::move(protocol)),
         value_(strong_actor_ptr{}, make_message_id(),
@@ -142,7 +99,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
         reading_(false),
         writing_(false) {
     CAF_LOG_TRACE("");
-    scheduled_actor::set_timeout_handler([&](timeout_msg& msg) {
+    this->scheduled_actor::set_timeout_handler([&](timeout_msg& msg) {
       proto->timeout(msg.type, msg.timeout_id);
     });
     proto->init(this);
@@ -154,73 +111,6 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   ~newb() override {
     CAF_LOG_TRACE("");
-  }
-
-  // -- overridden modifiers of abstract_actor ---------------------------------
-
-  void enqueue(mailbox_element_ptr ptr, execution_unit*) override {
-    CAF_PUSH_AID(this->id());
-    scheduled_actor::enqueue(std::move(ptr), &backend());
-  }
-
-  void enqueue(strong_actor_ptr src, message_id mid, message msg,
-               execution_unit*) override {
-    enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
-            &backend());
-  }
-
-  resumable::subtype_t subtype() const override {
-    return resumable::io_actor;
-  }
-
-  const char* name() const override {
-    return "newb";
-  }
-
-  // -- overridden modifiers of local_actor ------------------------------------
-
-  void launch(execution_unit* eu, bool lazy, bool hide) override {
-    CAF_PUSH_AID_FROM_PTR(this);
-    CAF_ASSERT(eu != nullptr);
-    CAF_ASSERT(eu == &backend());
-    CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
-    // Add implicit reference count held by middleman/multiplexer.
-    if (!hide)
-      super::register_at_system();
-    if (lazy && super::mailbox().try_block())
-      return;
-    intrusive_ptr_add_ref(super::ctrl());
-    eu->exec_later(this);
-  }
-
-  void initialize() override {
-    CAF_LOG_TRACE("");
-    init_newb();
-    auto bhvr = make_behavior();
-    CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                             << CAF_ARG(this->has_behavior()));
-    if (bhvr) {
-      // make_behavior() did return a behavior instead of using become().
-      CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
-      this->become(std::move(bhvr));
-    }
-  }
-
-  bool cleanup(error&& reason, execution_unit* host) override {
-    CAF_LOG_TRACE(CAF_ARG(reason));
-    stop();
-    // TODO: Should policies be notified here?
-    return local_actor::cleanup(std::move(reason), host);
-  }
-
-  // -- overridden modifiers of resumable --------------------------------------
-
-  network::multiplexer::runnable::resume_result resume(execution_unit* ctx,
-                                                       size_t mt) override {
-    CAF_PUSH_AID_FROM_PTR(this);
-    CAF_ASSERT(ctx != nullptr);
-    CAF_ASSERT(ctx == &backend());
-    return scheduled_actor::resume(ctx, mt);
   }
 
   // -- overridden modifiers of event handler ----------------------------------
@@ -255,7 +145,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     }
     // Event handler reference no longer necessary.
     if (!reading_ && !writing_)
-      intrusive_ptr_release(super::ctrl());
+      intrusive_ptr_release(this->ctrl());
   }
 
   // -- base requirements ------------------------------------------------------
@@ -266,7 +156,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     // This is our own reference used to manage the lifetime matching
     // as an event handler.
     if (!reading_ && !writing_)
-      intrusive_ptr_add_ref(super::ctrl());
+      intrusive_ptr_add_ref(this->ctrl());
     start_reading();
     if (trans)
       trans->prepare_next_read(this);
@@ -285,7 +175,7 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
     if (!this->getf(this->is_cleaned_up_flag)) {
       auto mptr = make_mailbox_element(nullptr, invalid_message_id, {},
                                        io_error_msg{op, std::move(err)});
-      switch (scheduled_actor::consume(*mptr)) {
+      switch (this->scheduled_actor::consume(*mptr)) {
         case im_success:
           this->finalize();
           break;
@@ -334,11 +224,6 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
 
   // -- members ----------------------------------------------------------------
 
-  void init_newb() {
-    CAF_LOG_TRACE("");
-    super::setf(super::is_initialized_flag);
-  }
-
   /// Get a write buffer to write data to be sent by this broker.
   write_handle<Message> wr_buf(header_writer* hw) {
     auto& buf = trans->wr_buf();
@@ -375,9 +260,9 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   template<class Rep = int, class Period = std::ratio<1>>
   void set_timeout(std::chrono::duration<Rep, Period> timeout,
                    atom_value atm, uint32_t id) {
-    //auto n = actor_clock::clock_type::now();
-    //scheduled_actor::clock().set_ordinary_timeout(n + timeout, this, atm, id);
-    this->delayed_send(this, timeout, atm, id);
+    auto n = actor_clock::clock_type::now();
+    scheduled_actor::clock().set_multi_timeout(n + timeout, this, atm, id);
+    //this->delayed_send(this, timeout, atm, id);
   }
 
   /// Returns the `multiplexer` running this broker.
@@ -389,16 +274,6 @@ struct newb : public extend<scheduled_actor, newb<Message>>::template
   void handle(Message& m) {
     std::swap(msg(), m);
     scheduled_actor::activate(scheduled_actor::context(), value_);
-  }
-
-  /// Override this to set the behavior of the broker.
-  virtual behavior make_behavior() {
-    behavior res;
-    if (this->initial_behavior_fac_) {
-      res = this->initial_behavior_fac_(this);
-      this->initial_behavior_fac_ = nullptr;
-    }
-    return res;
   }
 
   /// Configure the number of bytes read for the next packet. (Can be ignored by
@@ -526,8 +401,27 @@ spawn_client(actor_system& sys, F fun, policy::transport_ptr transport,
 
 // -- new broker acceptor ------------------------------------------------------
 
+struct acceptor_base : public network::event_handler {
+  acceptor_base(network::default_multiplexer& dm, network::native_socket sockfd);
+
+  virtual void start() = 0;
+
+  virtual void stop() = 0;
+
+  virtual void io_error(network::operation op, error err) = 0;
+
+  virtual void start_reading() = 0;
+
+  virtual void stop_reading() = 0;
+
+  virtual void start_writing() = 0;
+
+  virtual void stop_writing() = 0;
+
+};
+
 template <class Protocol, class Fun, class... Ts>
-struct newb_acceptor : public newb_base, public caf::ref_counted {
+struct newb_acceptor : public acceptor_base, public caf::ref_counted {
   using newb_type = typename std::remove_pointer<first_argument_type<Fun>>::type;
   using message_type = typename newb_type::message_type;
 
@@ -535,7 +429,7 @@ struct newb_acceptor : public newb_base, public caf::ref_counted {
 
   newb_acceptor(network::default_multiplexer& dm, network::native_socket sockfd,
                 Fun f, policy::accept_ptr<message_type> pol, Ts&&... xs)
-      : newb_base(dm, sockfd),
+      : acceptor_base(dm, sockfd),
         accept_pol(std::move(pol)),
         fun_(std::move(f)),
         reading_(false),

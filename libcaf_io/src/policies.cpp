@@ -35,11 +35,11 @@ transport::~transport() {
   // nop
 }
 
-io::network::rw_state transport::write_some(io::newb_base*) {
+io::network::rw_state transport::write_some(io::network::newb_base*) {
   return io::network::rw_state::indeterminate;
 }
 
-io::network::rw_state transport::read_some(io::newb_base*) {
+io::network::rw_state transport::read_some(io::network::newb_base*) {
   return io::network::rw_state::indeterminate;
 }
 
@@ -47,15 +47,15 @@ bool transport::should_deliver() {
   return true;
 }
 
-bool transport::must_read_more(io::newb_base*) {
+bool transport::must_read_more(io::network::newb_base*) {
   return false;
 }
 
-void transport::prepare_next_read(io::newb_base*) {
+void transport::prepare_next_read(io::network::newb_base*) {
   // nop
 }
 
-void transport::prepare_next_write(io::newb_base*) {
+void transport::prepare_next_write(io::network::newb_base*) {
   // nop
 }
 
@@ -63,7 +63,7 @@ void transport::configure_read(io::receive_policy::config) {
   // nop
 }
 
-void transport::flush(io::newb_base*) {
+void transport::flush(io::network::newb_base*) {
   // nop
 }
 
