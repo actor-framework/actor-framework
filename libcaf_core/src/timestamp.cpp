@@ -16,6 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/deep_to_string.hpp"
 #include "caf/timestamp.hpp"
 
 namespace caf {
@@ -24,12 +25,12 @@ timestamp make_timestamp() {
   return std::chrono::system_clock::now();
 }
 
-std::string timestamp_to_string(const timestamp& x) {
-  return std::to_string(x.time_since_epoch().count());
+std::string timestamp_to_string(timestamp x) {
+  return deep_to_string(x.time_since_epoch().count());
 }
 
-void append_timestamp_to_string(std::string& x, const timestamp& y) {
-  x += std::to_string(y.time_since_epoch().count());
+void append_timestamp_to_string(std::string& x, timestamp y) {
+  x += timestamp_to_string(y);
 }
 
 } // namespace caf
