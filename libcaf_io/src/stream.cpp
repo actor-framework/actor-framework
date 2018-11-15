@@ -108,7 +108,9 @@ void stream::force_empty_write(const manager_ptr& mgr) {
 
 void stream::prepare_next_read() {
   collected_ = 0;
-  switch (state_.rd_flag) {
+  // This cast does nothing, but prevents a weird compiler error on GCC <= 4.9.
+  // TODO: remove cast when dropping support for GCC 4.9.
+  switch (static_cast<receive_policy_flag>(state_.rd_flag)) {
     case receive_policy_flag::exactly:
       if (rd_buf_.size() != max_)
         rd_buf_.resize(max_);
