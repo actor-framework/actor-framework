@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <map>
+#include <string>
 #include <vector>
 
 #include "caf/detail/is_one_of.hpp"
