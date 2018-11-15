@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "caf/io/network/rw_state.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/rw_state.hpp"
 
 namespace caf {
 namespace policy {

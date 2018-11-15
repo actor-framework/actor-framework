@@ -107,7 +107,7 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
     std::vector<char>& rd_buf() override {
       return mpx_->input_buffer(hdl());
     }
-    void stop_reading() override {
+    void graceful_shutdown() override {
       mpx_->stopped_reading(hdl()) = true;
       detach(mpx_, false);
     }
@@ -183,7 +183,7 @@ doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
       parent()->add_scribe(mpx_->new_scribe(ch));
       return doorman::new_connection(mpx_, ch);
     }
-    void stop_reading() override {
+    void graceful_shutdown() override {
       mpx_->stopped_reading(hdl()) = true;
       detach(mpx_, false);
     }
@@ -364,7 +364,7 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
       auto& buf = mpx_->input_buffer(hdl());
       return buf.second;
     }
-    void stop_reading() override {
+    void graceful_shutdown() override {
       mpx_->stopped_reading(hdl()) = true;
       detach_handles();
       detach(mpx_, false);

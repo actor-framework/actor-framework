@@ -78,12 +78,24 @@ void stream::flush(const manager_ptr& mgr) {
 }
 
 void stream::removed_from_loop(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(op));
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_) << CAF_ARG(op));
   switch (op) {
     case operation::read:  reader_.reset(); break;
     case operation::write: writer_.reset(); break;
     case operation::propagate_error: ; // nop
   }
+}
+
+void stream::graceful_shutdown() {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  // Ignore repeated calls.
+  if (state_.shutting_down)
+    return;
+  state_.shutting_down = true;
+  // Initiate graceful shutdown unless we have still data to send.
+  if (!state_.writing)
+    send_fin();
+  // Otherwise, send_fin() gets called after draining the send buffer.
 }
 
 void stream::force_empty_write(const manager_ptr& mgr) {
@@ -125,6 +137,8 @@ void stream::prepare_next_write() {
   if (wr_offline_buf_.empty()) {
     state_.writing = false;
     backend().del(operation::write, fd(), this);
+    if (state_.shutting_down)
+      send_fin();
   } else {
     wr_buf_.swap(wr_offline_buf_);
   }
@@ -184,6 +198,15 @@ void stream::handle_error_propagation() {
     reader_->io_failure(&backend(), operation::read);
   if (writer_)
     writer_->io_failure(&backend(), operation::write);
+}
+
+void stream::send_fin() {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  // Shutting down the write channel will cause TCP to send FIN for the
+  // graceful shutdown sequence. The peer then closes its connection as well
+  // and we will notice this by getting 0 as return value of recv without error
+  // (connection closed).
+  shutdown_write(fd_);
 }
 
 } // namespace network

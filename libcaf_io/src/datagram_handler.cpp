@@ -129,6 +129,19 @@ void datagram_handler::removed_from_loop(operation op) {
   };
 }
 
+void datagram_handler::graceful_shutdown() {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  // Ignore repeated calls.
+  if (state_.shutting_down)
+    return;
+  state_.shutting_down = true;
+  // Stop reading right away.
+  passivate();
+  // UDP is connectionless. Hence, there's no graceful way to shutdown
+  // anything. This handler gets destroyed automatically once it no longer is
+  // registered for reading or writing.
+}
+
 void datagram_handler::prepare_next_read() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.second.size())
                 << CAF_ARG(wr_offline_buf_.size()));

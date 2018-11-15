@@ -124,6 +124,15 @@ expected<uint16_t> remote_port_of_fd(native_socket fd);
 /// Returns the remote host address of `fd`.
 expected<std::string> remote_addr_of_fd(native_socket fd);
 
+/// Closes the read channel for a socket.
+void shutdown_read(native_socket fd);
+
+/// Closes the write channel for a socket.
+void shutdown_write(native_socket fd);
+
+/// Closes the both read and write channel for a socket.
+void shutdown_both(native_socket fd);
+
 } // namespace network
 } // namespace io
 } // namespace caf

@@ -48,7 +48,7 @@ public:
 
   network::receive_buffer& rd_buf() override;
 
-  void stop_reading() override;
+  void graceful_shutdown() override;
 
   void flush() override;
 

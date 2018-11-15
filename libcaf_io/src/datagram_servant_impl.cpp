@@ -75,9 +75,9 @@ network::receive_buffer& datagram_servant_impl::rd_buf() {
   return handler_.rd_buf();
 }
 
-void datagram_servant_impl::stop_reading() {
+void datagram_servant_impl::graceful_shutdown() {
   CAF_LOG_TRACE("");
-  handler_.stop_reading();
+  handler_.graceful_shutdown();
   detach_handles();
   detach(&handler_.backend(), false);
 }

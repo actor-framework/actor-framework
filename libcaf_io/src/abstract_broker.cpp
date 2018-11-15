@@ -340,18 +340,14 @@ bool abstract_broker::remove_endpoint(datagram_handle hdl) {
 
 void abstract_broker::close_all() {
   CAF_LOG_TRACE("");
-  while (!doormen_.empty()) {
-    // stop_reading will remove the doorman from doormen_
-    doormen_.begin()->second->stop_reading();
-  }
-  while (!scribes_.empty()) {
-    // stop_reading will remove the scribe from scribes_
-    scribes_.begin()->second->stop_reading();
-  }
-  while (!datagram_servants_.empty()) {
-    // stop reading will remove dgram servants from datagram_servants_
-    datagram_servants_.begin()->second->stop_reading();
-  }
+  // Calling graceful_shutdown causes the objects to detach from the broker by
+  // removing from the container.
+  while (!doormen_.empty())
+    doormen_.begin()->second->graceful_shutdown();
+  while (!scribes_.empty())
+    scribes_.begin()->second->graceful_shutdown();
+  while (!datagram_servants_.empty())
+    datagram_servants_.begin()->second->graceful_shutdown();
 }
 
 resumable::subtype_t abstract_broker::subtype() const {

@@ -92,6 +92,8 @@ public:
 
   void removed_from_loop(operation op) override;
 
+  void graceful_shutdown() override;
+
   void add_endpoint(datagram_handle hdl, const ip_endpoint& ep,
                     const manager_ptr mgr);
 

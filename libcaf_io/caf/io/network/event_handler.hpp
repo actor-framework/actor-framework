@@ -30,10 +30,21 @@ namespace network {
 /// A socket I/O event handler.
 class event_handler {
 public:
+  /// Stores various status flags and user-defined config parameters.
   struct state {
+    /// Stores whether the socket is currently registered for reading.
     bool reading : 1;
+
+    /// Stores whether the socket is currently registered for writing.
     bool writing : 1;
+
+    /// Stores whether the parent actor demanded write receipts.
     bool ack_writes : 1;
+
+    /// Stores whether graceful_shutdown() was called.
+    bool shutting_down : 1;
+
+    /// Stores what receive policy is currently active.
     receive_policy_flag rd_flag : 2;
   };
 
@@ -49,6 +60,10 @@ public:
   /// Callback to signalize that this handler has been removed
   /// from the event loop for operations of type `op`.
   virtual void removed_from_loop(operation op) = 0;
+
+  /// Shuts down communication on the managed socket, eventually removing
+  /// this event handler from the I/O loop.
+  virtual void graceful_shutdown() = 0;
 
   /// Returns the native socket handle for this handler.
   native_socket fd() const {
@@ -75,15 +90,8 @@ public:
     return !state_.reading;
   }
 
-  /// Closes the read channel of the underlying socket.
-  void close_read_channel();
-
   /// Removes the file descriptor from the event loop of the parent.
   void passivate();
-
-  /// Closes the read channel of the underlying socket and removes
-  /// this handler from its parent.
-  void stop_reading();
 
   /// Returns whether this event handlers signals successful writes to its
   /// parent actor.

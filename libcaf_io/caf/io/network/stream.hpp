@@ -85,6 +85,8 @@ public:
 
   void removed_from_loop(operation op) override;
 
+  void graceful_shutdown() override;
+
   /// Forces this stream to subscribe to write events if no data is in the
   /// write buffer.
   void force_empty_write(const manager_ptr& mgr);
@@ -136,6 +138,10 @@ private:
   void handle_write_result(rw_state write_result, size_t wb);
 
   void handle_error_propagation();
+
+  /// Initiates a graceful shutdown of the connection by sending FIN on the TCP
+  /// connection.
+  void send_fin();
 
   size_t max_consecutive_reads_;
 

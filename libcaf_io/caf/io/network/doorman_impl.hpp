@@ -37,7 +37,7 @@ public:
 
   bool new_connection() override;
 
-  void stop_reading() override;
+  void graceful_shutdown() override;
 
   void launch() override;
 

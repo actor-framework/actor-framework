@@ -43,6 +43,10 @@ void pipe_reader::removed_from_loop(operation) {
   // nop
 }
 
+void pipe_reader::graceful_shutdown() {
+  shutdown_read(fd_);
+}
+
 resumable* pipe_reader::try_read_next() {
   std::intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
