@@ -115,11 +115,10 @@ void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
                                   timespan cycle, timespan complexity) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items) << CAF_ARG(cycle)
                 << CAF_ARG(complexity));
+  CAF_IGNORE_UNUSED(queued_items);
   auto x = stats.calculate(cycle, complexity);
   // Hand out enough credit to fill our queue for 2 cycles.
-  auto credit = std::max((x.max_throughput * 2)
-                         - (assigned_credit + queued_items),
-                         0);
+  auto credit = std::max((x.max_throughput * 2) - assigned_credit, 0);
   // Protect against overflow on `assigned_credit`.
   auto max_new_credit = std::numeric_limits<int32_t>::max() - assigned_credit;
   // The manager can restrict or adjust the amount of credit.
