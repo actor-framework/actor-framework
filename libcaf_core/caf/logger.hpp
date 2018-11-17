@@ -27,14 +27,15 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "caf/fwd.hpp"
-#include "caf/config.hpp"
-#include "caf/unifyn.hpp"
-#include "caf/type_nr.hpp"
-#include "caf/timestamp.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/fwd.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/string_view.hpp"
+#include "caf/timestamp.hpp"
+#include "caf/type_nr.hpp"
+#include "caf/unifyn.hpp"
 
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -71,20 +72,24 @@ public:
   struct event : intrusive::singly_linked<event> {
     event() = default;
 
-    event(int lvl, const char* cat, const char* fun, const char* fn, int line,
-          std::string msg, std::thread::id t, actor_id a, timestamp ts);
+    event(int lvl, string_view cat, string_view full_fun, string_view fun,
+          string_view fn, int line, std::string msg, std::thread::id t,
+          actor_id a, timestamp ts);
 
     /// Level/priority of the event.
     int level;
 
     /// Name of the category (component) logging the event.
-    const char* category_name;
+    string_view category_name;
 
-    /// Name of the current context as reported by `__PRETTY_FUNCTION__`.
-    const char* pretty_fun;
+    /// Name of the current function as reported by `__PRETTY_FUNCTION__`.
+    string_view pretty_fun;
+
+    /// Name of the current function as reported by `__func__`.
+    string_view simple_fun;
 
     /// Name of the current file.
-    const char* file_name;
+    string_view file_name;
 
     /// Current line in the file.
     int line_number;
@@ -179,6 +184,8 @@ public:
 
     line_builder& operator<<(const std::string& str);
 
+    line_builder& operator<<(string_view str);
+
     line_builder& operator<<(const char* str);
 
     line_builder& operator<<(char x);
@@ -206,12 +213,7 @@ public:
 
   static logger* current_logger();
 
-  bool accepts(int level, const char* cname_begin, const char* cname_end);
-
-  template <size_t N>
-  bool accepts(int level, const char (&component)[N]) {
-    return accepts(level, component, component + N - 1);
-  }
+  bool accepts(int level, string_view cname);
 
   /** @endcond */
 
@@ -226,10 +228,10 @@ public:
   }
 
   /// Renders the prefix (namespace and class) of a fully qualified function.
-  static void render_fun_prefix(std::ostream& out, const char* pretty_fun);
+  static void render_fun_prefix(std::ostream& out, const event& x);
 
   /// Renders the name of a fully qualified function.
-  static void render_fun_name(std::ostream& out, const char* pretty_fun);
+  static void render_fun_name(std::ostream& out, const event& x);
 
   /// Renders the difference between `t0` and `tn` in milliseconds.
   static void render_time_diff(std::ostream& out, timestamp t0, timestamp tn);
@@ -245,7 +247,7 @@ public:
   static line_format parse_format(const std::string& format_str);
 
   /// Skips path in `filename`.
-  static const char* skip_path(const char* filename);
+  static string_view skip_path(string_view filename);
 
   /// Returns a string representation of the joined groups of `x` if `x` is an
   /// actor with the `subscriber` mixin.
@@ -383,18 +385,23 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #else // CAF_LOG_LEVEL
 
+#define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
+  ::caf::logger::event {                                                       \
+    loglvl, component, CAF_PRETTY_FUN, __func__,                               \
+      caf::logger::skip_path(__FILE__), __LINE__,                              \
+      (::caf::logger::line_builder{} << message).get(),                        \
+      ::std::this_thread::get_id(), aid, ::caf::make_timestamp()               \
+  }
+
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
   do {                                                                         \
     auto CAF_UNIFYN(caf_logger) = caf::logger::current_logger();               \
     if (CAF_UNIFYN(caf_logger) != nullptr                                      \
         && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
       CAF_UNIFYN(caf_logger)                                                   \
-        ->log(new ::caf::logger::event{                                        \
-          loglvl, component, CAF_PRETTY_FUN, caf::logger::skip_path(__FILE__), \
-          __LINE__, (::caf::logger::line_builder{} << message).get(),          \
-          ::std::this_thread::get_id(),                                        \
-          CAF_UNIFYN(caf_logger)->thread_local_aid(),                          \
-          ::caf::make_timestamp()});                                           \
+        ->log(                                                                 \
+          new CAF_LOG_MAKE_EVENT(CAF_UNIFYN(caf_logger)->thread_local_aid(),   \
+                                 component, loglvl, message));                 \
   } while (false)
 
 #define CAF_PUSH_AID(aarg)                                                     \
