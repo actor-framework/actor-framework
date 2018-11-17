@@ -368,7 +368,22 @@ endif()
 ################################################################################
 
 if(NOT CAF_LOG_LEVEL)
-  set(CAF_LOG_LEVEL "-1")
+  set(CAF_LOG_LEVEL "QUIET")
+endif()
+
+# set human-readable representation for log level
+if(CAF_LOG_LEVEL STREQUAL "ERROR")
+  set(CAF_LOG_LEVEL_INT 3)
+elseif(CAF_LOG_LEVEL STREQUAL "WARNING")
+  set(CAF_LOG_LEVEL_INT 6)
+elseif(CAF_LOG_LEVEL STREQUAL "INFO")
+  set(CAF_LOG_LEVEL_INT 9)
+elseif(CAF_LOG_LEVEL STREQUAL "DEBUG")
+  set(CAF_LOG_LEVEL_INT 12)
+elseif(CAF_LOG_LEVEL STREQUAL "TRACE")
+  set(CAF_LOG_LEVEL_INT 15)
+else()
+  set(CAF_LOG_LEVEL_INT 0)
 endif()
 
 ################################################################################
@@ -662,23 +677,6 @@ add_custom_target(gui_dummy SOURCES configure ${script_files})
 #                                print summary                                 #
 ################################################################################
 
-# set human-readable representation for log level
-set(LOG_LEVEL_STR "none")
-if(CAF_LOG_LEVEL)
-  if(${CAF_LOG_LEVEL} EQUAL 0)
-    set(LOG_LEVEL_STR "ERROR")
-  elseif(${CAF_LOG_LEVEL} EQUAL 1)
-    set(LOG_LEVEL_STR "WARNING")
-  elseif(${CAF_LOG_LEVEL} EQUAL 2)
-    set(LOG_LEVEL_STR "INFO")
-  elseif(${CAF_LOG_LEVEL} EQUAL 3)
-    set(LOG_LEVEL_STR "DEBUG")
-  elseif(${CAF_LOG_LEVEL} EQUAL 4)
-    set(LOG_LEVEL_STR "TRACE")
-  else()
-    set(LOG_LEVEL_STR "invalid")
-  endif()
-endif()
 # little helper macro to invert a boolean
 macro(invertYesNo in out)
   if(${in})

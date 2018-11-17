@@ -283,27 +283,7 @@ while [ $# -ne 0 ]; do
             ;;
         --with-log-level=*)
             level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
-            case $level in
-                ERROR)
-                    append_cache_entry CAF_LOG_LEVEL STRING 0
-                    ;;
-                WARNING)
-                    append_cache_entry CAF_LOG_LEVEL STRING 1
-                    ;;
-                INFO)
-                    append_cache_entry CAF_LOG_LEVEL STRING 2
-                    ;;
-                DEBUG)
-                    append_cache_entry CAF_LOG_LEVEL STRING 3
-                    ;;
-                TRACE)
-                    append_cache_entry CAF_LOG_LEVEL STRING 4
-                    ;;
-                *)
-                    echo "Invalid log level '$level'. Try '$0 --help' to see valid values."
-                    exit 1
-                    ;;
-            esac
+            append_cache_entry CAF_LOG_LEVEL STRING "$level"
             ;;
         --with-clang=*)
             clang="$optarg"
