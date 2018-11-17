@@ -447,11 +447,11 @@ void logger::render_fun_prefix(std::ostream& out, const event& x) {
           break;
       }
     }
-    // MSVC puts '__cdecl' between the return type and the function name.
-    skip("__cdecl ");
     reduced.remove_prefix(pos);
   };
   skip_return_type();
+  // MSVC puts '__cdecl' between the return type and the function name.
+  skip("__cdecl ");
   // We reached the function name itself and can recursively print the prefix.
   reduce_symbol(out, reduced);
 }
