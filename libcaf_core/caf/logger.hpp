@@ -366,6 +366,14 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_LOG_COMPONENT "caf"
 #endif // CAF_LOG_COMPONENT
 
+#define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
+  ::caf::logger::event {                                                       \
+    loglvl, component, CAF_PRETTY_FUN, __func__,                               \
+      caf::logger::skip_path(__FILE__), __LINE__,                              \
+      (::caf::logger::line_builder{} << message).get(),                        \
+      ::std::this_thread::get_id(), aid, ::caf::make_timestamp()               \
+  }
+
 #if CAF_LOG_LEVEL == -1
 
 #define CAF_LOG_IMPL(unused1, unused2, unused3)
@@ -384,14 +392,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOG_TRACE(unused)
 
 #else // CAF_LOG_LEVEL
-
-#define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
-  ::caf::logger::event {                                                       \
-    loglvl, component, CAF_PRETTY_FUN, __func__,                               \
-      caf::logger::skip_path(__FILE__), __LINE__,                              \
-      (::caf::logger::line_builder{} << message).get(),                        \
-      ::std::this_thread::get_id(), aid, ::caf::make_timestamp()               \
-  }
 
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
   do {                                                                         \
