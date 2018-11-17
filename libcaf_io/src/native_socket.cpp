@@ -419,6 +419,34 @@ expected<uint16_t> remote_port_of_fd(native_socket fd) {
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
 }
 
+// -- shutdown function family -------------------------------------------------
+
+namespace {
+
+#ifdef CAF_WINDOWS
+static constexpr int read_channel = SD_RECEIVE;
+static constexpr int write_channel = SD_SEND;
+static constexpr int both_channels = SD_BOTH;
+#else // CAF_WINDOWS
+static constexpr int read_channel = SHUT_RD;
+static constexpr int write_channel = SHUT_WR;
+static constexpr int both_channels = SHUT_RDWR;
+#endif // CAF_WINDOWS
+
+} // namespace <anonymous>
+
+void shutdown_read(native_socket fd) {
+  ::shutdown(fd, read_channel);
+}
+
+void shutdown_write(native_socket fd) {
+  ::shutdown(fd, write_channel);
+}
+
+void shutdown_both(native_socket fd) {
+  ::shutdown(fd, both_channels);
+}
+
 } // namespace network
 } // namespace io
 } // namespace caf

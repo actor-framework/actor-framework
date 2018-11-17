@@ -57,10 +57,9 @@ public:
   /// Activates the acceptor.
   void activate(acceptor_manager* mgr);
 
-  /// Closes the network connection and removes this handler from its parent.
-  void stop_reading();
-
   void removed_from_loop(operation op) override;
+
+  void graceful_shutdown() override;
 
 protected:
   template <class Policy>

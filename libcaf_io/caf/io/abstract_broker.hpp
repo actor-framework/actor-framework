@@ -286,7 +286,7 @@ public:
     auto x = by_id(hdl);
     if (!x)
       return false;
-    x->stop_reading();
+    x->graceful_shutdown();
     return true;
   }
 

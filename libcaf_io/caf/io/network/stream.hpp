@@ -59,8 +59,6 @@ public:
   ///          once the stream has been started.
   void configure_read(receive_policy::config config);
 
-  void ack_writes(bool x);
-
   /// Copies data to the write buffer.
   /// @warning Not thread safe.
   void write(const void* buf, size_t num_bytes);
@@ -85,11 +83,9 @@ public:
   ///          once the stream has been started.
   void flush(const manager_ptr& mgr);
 
-  /// Closes the read channel of the underlying socket and removes
-  /// this handler from its parent.
-  void stop_reading();
-
   void removed_from_loop(operation op) override;
+
+  void graceful_shutdown() override;
 
   /// Forces this stream to subscribe to write events if no data is in the
   /// write buffer.
@@ -143,6 +139,10 @@ private:
 
   void handle_error_propagation();
 
+  /// Initiates a graceful shutdown of the connection by sending FIN on the TCP
+  /// connection.
+  void send_fin();
+
   size_t max_consecutive_reads_;
 
   // State for reading.
@@ -150,13 +150,10 @@ private:
   size_t read_threshold_;
   size_t collected_;
   size_t max_;
-  receive_policy_flag rd_flag_;
   buffer_type rd_buf_;
 
   // State for writing.
   manager_ptr writer_;
-  bool ack_writes_;
-  bool writing_;
   size_t written_;
   buffer_type wr_buf_;
   buffer_type wr_offline_buf_;

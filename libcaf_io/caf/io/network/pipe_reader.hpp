@@ -35,6 +35,8 @@ public:
 
   void removed_from_loop(operation op) override;
 
+  void graceful_shutdown() override;
+
   void handle_event(operation op) override;
 
   void init(native_socket sock_fd);

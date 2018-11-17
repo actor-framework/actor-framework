@@ -133,9 +133,9 @@ class scribe_impl : public io::scribe {
       return stream_.rd_buf();
     }
 
-    void stop_reading() override {
+    void graceful_shutdown() override {
       CAF_LOG_TRACE("");
-      stream_.stop_reading();
+      stream_.graceful_shutdown();
       detach(&stream_.backend(), false);
     }
 

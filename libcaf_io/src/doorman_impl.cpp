@@ -49,9 +49,9 @@ bool doorman_impl::new_connection() {
   return doorman::new_connection(&dm, hdl);
 }
 
-void doorman_impl::stop_reading() {
+void doorman_impl::graceful_shutdown() {
   CAF_LOG_TRACE("");
-  acceptor_.stop_reading();
+  acceptor_.graceful_shutdown();
   detach(&acceptor_.backend(), false);
 }
 

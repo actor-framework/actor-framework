@@ -31,7 +31,7 @@ acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
 }
 
 void acceptor::start(acceptor_manager* mgr) {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
   CAF_ASSERT(mgr != nullptr);
   activate(mgr);
 }
@@ -43,16 +43,20 @@ void acceptor::activate(acceptor_manager* mgr) {
   }
 }
 
-void acceptor::stop_reading() {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd()));
-  close_read_channel();
-  passivate();
-}
-
 void acceptor::removed_from_loop(operation op) {
-  CAF_LOG_TRACE(CAF_ARG2("fd", fd()) << CAF_ARG(op));
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_) << CAF_ARG(op));
   if (op == operation::read)
     mgr_.reset();
+}
+
+void acceptor::graceful_shutdown() {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  // Ignore repeated calls.
+  if (state_.shutting_down)
+    return;
+  state_.shutting_down = true;
+  // Shutdown socket activity.
+  shutdown_both(fd_);
 }
 
 } // namespace network

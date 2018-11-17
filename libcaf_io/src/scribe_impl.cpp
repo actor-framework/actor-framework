@@ -55,9 +55,9 @@ std::vector<char>& scribe_impl::rd_buf() {
   return stream_.rd_buf();
 }
 
-void scribe_impl::stop_reading() {
+void scribe_impl::graceful_shutdown() {
   CAF_LOG_TRACE("");
-  stream_.stop_reading();
+  stream_.graceful_shutdown();
   detach(&stream_.backend(), false);
 }
 

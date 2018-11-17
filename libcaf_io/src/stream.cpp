@@ -37,8 +37,6 @@ stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
                defaults::middleman::max_consecutive_reads)),
       read_threshold_(1),
       collected_(0),
-      ack_writes_(false),
-      writing_(false),
       written_(0) {
   configure_read(receive_policy::at_most(1024));
 }
@@ -57,12 +55,8 @@ void stream::activate(stream_manager* mgr) {
 }
 
 void stream::configure_read(receive_policy::config config) {
-  rd_flag_ = config.first;
+  state_.rd_flag = config.first;
   max_ = config.second;
-}
-
-void stream::ack_writes(bool x) {
-  ack_writes_ = x;
 }
 
 void stream::write(const void* buf, size_t num_bytes) {
@@ -75,22 +69,16 @@ void stream::write(const void* buf, size_t num_bytes) {
 void stream::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (!wr_offline_buf_.empty() && !writing_) {
+  if (!wr_offline_buf_.empty() && !state_.writing) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
-    writing_ = true;
+    state_.writing = true;
     prepare_next_write();
   }
 }
 
-void stream::stop_reading() {
-  CAF_LOG_TRACE("");
-  close_read_channel();
-  passivate();
-}
-
 void stream::removed_from_loop(operation op) {
-  CAF_LOG_TRACE(CAF_ARG(op));
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_) << CAF_ARG(op));
   switch (op) {
     case operation::read:  reader_.reset(); break;
     case operation::write: writer_.reset(); break;
@@ -98,17 +86,31 @@ void stream::removed_from_loop(operation op) {
   }
 }
 
+void stream::graceful_shutdown() {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  // Ignore repeated calls.
+  if (state_.shutting_down)
+    return;
+  state_.shutting_down = true;
+  // Initiate graceful shutdown unless we have still data to send.
+  if (!state_.writing)
+    send_fin();
+  // Otherwise, send_fin() gets called after draining the send buffer.
+}
+
 void stream::force_empty_write(const manager_ptr& mgr) {
-  if (!writing_) {
+  if (!state_.writing) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
-    writing_ = true;
+    state_.writing = true;
   }
 }
 
 void stream::prepare_next_read() {
   collected_ = 0;
-  switch (rd_flag_) {
+  // This cast does nothing, but prevents a weird compiler error on GCC <= 4.9.
+  // TODO: remove cast when dropping support for GCC 4.9.
+  switch (static_cast<receive_policy_flag>(state_.rd_flag)) {
     case receive_policy_flag::exactly:
       if (rd_buf_.size() != max_)
         rd_buf_.resize(max_);
@@ -135,8 +137,10 @@ void stream::prepare_next_write() {
   written_ = 0;
   wr_buf_.clear();
   if (wr_offline_buf_.empty()) {
-    writing_ = false;
+    state_.writing = false;
     backend().del(operation::write, fd(), this);
+    if (state_.shutting_down)
+      send_fin();
   } else {
     wr_buf_.swap(wr_offline_buf_);
   }
@@ -181,7 +185,7 @@ void stream::handle_write_result(rw_state write_result, size_t wb) {
       written_ += wb;
       CAF_ASSERT(written_ <= wr_buf_.size());
       auto remaining = wr_buf_.size() - written_;
-      if (ack_writes_)
+      if (state_.ack_writes)
         writer_->data_transferred(&backend(), wb,
                                   remaining + wr_offline_buf_.size());
       // prepare next send (or stop sending)
@@ -196,6 +200,15 @@ void stream::handle_error_propagation() {
     reader_->io_failure(&backend(), operation::read);
   if (writer_)
     writer_->io_failure(&backend(), operation::write);
+}
+
+void stream::send_fin() {
+  CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+  // Shutting down the write channel will cause TCP to send FIN for the
+  // graceful shutdown sequence. The peer then closes its connection as well
+  // and we will notice this by getting 0 as return value of recv without error
+  // (connection closed).
+  shutdown_write(fd_);
 }
 
 } // namespace network

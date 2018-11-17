@@ -53,9 +53,8 @@ public:
   /// if `invoke_detach_message == true`.
   void detach(execution_unit* ctx, bool invoke_disconnect_message);
 
-  /// Causes the manager to stop read operations on its I/O device.
-  /// Unwritten bytes are still send before the socket will be closed.
-  virtual void stop_reading() = 0;
+  /// Causes the manager to gracefully close its connection.
+  virtual void graceful_shutdown() = 0;
 
   /// Removes the I/O device to the event loop of the middleman.
   virtual void remove_from_loop() = 0;

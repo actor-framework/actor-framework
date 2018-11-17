@@ -57,8 +57,6 @@ public:
   /// Activates the datagram handler.
   void activate(datagram_manager* mgr);
 
-  void ack_writes(bool x);
-
   /// Copies data to the write buffer.
   /// @warning Not thread safe.
   void write(datagram_handle hdl, const void* buf, size_t num_bytes);
@@ -66,7 +64,7 @@ public:
   /// Returns the write buffer of this enpoint.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  inline write_buffer_type& wr_buf(datagram_handle hdl) {
+  write_buffer_type& wr_buf(datagram_handle hdl) {
     wr_offline_buf_.emplace_back();
     wr_offline_buf_.back().first = hdl;
     return wr_offline_buf_.back().second;
@@ -75,14 +73,14 @@ public:
   /// Enqueues a buffer to be sent as a datagram.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  inline void enqueue_datagram(datagram_handle hdl, std::vector<char> buf) {
+  void enqueue_datagram(datagram_handle hdl, std::vector<char> buf) {
     wr_offline_buf_.emplace_back(hdl, move(buf));
   }
 
   /// Returns the read buffer of this stream.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  inline read_buffer_type& rd_buf() {
+  read_buffer_type& rd_buf() {
     return rd_buf_;
   }
 
@@ -92,11 +90,9 @@ public:
   ///          once the stream has been started.
   void flush(const manager_ptr& mgr);
 
-  /// Closes the read channel of the underlying socket and removes
-  /// this handler from its parent.
-  void stop_reading();
-
   void removed_from_loop(operation op) override;
+
+  void graceful_shutdown() override;
 
   void add_endpoint(datagram_handle hdl, const ip_endpoint& ep,
                     const manager_ptr mgr);
@@ -107,7 +103,7 @@ public:
 
   void remove_endpoint(datagram_handle hdl);
 
-  inline ip_endpoint& sending_endpoint() {
+  ip_endpoint& sending_endpoint() {
     return sender_;
   }
 
@@ -180,8 +176,6 @@ private:
 
   // state for writing
   int send_buffer_size_;
-  bool ack_writes_;
-  bool writing_;
   std::deque<job_type> wr_offline_buf_;
   job_type wr_buf_;
   manager_ptr writer_;
