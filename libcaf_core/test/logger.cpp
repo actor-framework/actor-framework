@@ -49,6 +49,13 @@ void global_fun() {
   CHECK_FUN_PREFIX("GLOBAL");
 }
 
+// Little helper that allows us to write a single check for all compilers.
+// Clang expands template parameters in __PRETTY_FUNCTION__, while GCC does
+// not. For example, Clang would produce "void foo<int>::bar()", while GCC
+// would produce "void foo<T>::bar() [with T = int]". A type called T gives
+// us always the same ouptut for the prefix.
+struct T {};
+
 namespace {
 
 struct fixture {
@@ -92,8 +99,8 @@ const int& ref_fun(const int& x) {
 
 template <class T>
 struct tpl {
-  static void run(std::string t_name) {
-    CHECK_FUN_PREFIX("$.tpl<" + t_name + ">");
+  static void run() {
+    CHECK_FUN_PREFIX("$.tpl<T>");
   }
 };
 
@@ -115,8 +122,8 @@ const int& ref_fun(const int& x) {
 
 template <class T>
 struct tpl {
-  static void run(std::string t_name) {
-    CHECK_FUN_PREFIX("$.foo.tpl<" + t_name + ">");
+  static void run() {
+    CHECK_FUN_PREFIX("$.foo.tpl<T>");
   }
 };
 
@@ -201,15 +208,11 @@ CAF_TEST(render_fun_prefix) {
   fun();
   ptr_fun(nullptr);
   ref_fun(i);
-  tpl<int>::run("int");
-  tpl<unsigned int>::run("unsigned%20int");
-  tpl<tpl<signed char>>::run("$.tpl<signed%20char>");
+  tpl<T>::run();
   foo::fun();
   foo::ptr_fun(nullptr);
   foo::ref_fun(i);
-  foo::tpl<int>::run("int");
-  foo::tpl<unsigned int>::run("unsigned%20int");
-  foo::tpl<foo::tpl<signed char>>::run("$.foo.tpl<signed%20char>");
+  foo::tpl<T>::run();
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
