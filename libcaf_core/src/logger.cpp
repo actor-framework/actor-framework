@@ -63,7 +63,12 @@ constexpr string_view fun_prefixes[] = {
   "unsigned ",
 };
 
-constexpr string_view anon_ns = "(anonymous namespace)";
+// Various spellings of the anonymous namespace as reported by CAF_PRETTY_FUN.
+constexpr string_view anon_ns[] = {
+  "(anonymous namespace)", // Clang
+  "{anonymous}", // GCC
+  "`anonymous-namespace'", // MSVC
+};
 
 /// Reduces symbol by printing all prefixes to `out` and returning the
 /// remainder. For example, "ns::foo::bar" prints "ns.foo" to `out` and returns
@@ -107,13 +112,17 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
       case ':':
         advance(2);
         break;
-      // This either marks the beginning of the argument list *or* on GCC
-      // is part of "(anonymous namespace)".
-      case '(':
-        if (starts_with(symbol, anon_ns)) {
+      // These characters are invalid in function names, unless they indicate
+      // an anonymous namespace or the beginning of the argument list.
+      case '`':
+      case '{':
+      case '(': {
+        auto pred = [&](string_view x) { return starts_with(symbol, x); };
+        auto i = std::find_if(std::begin(anon_ns), std::end(anon_ns), pred);
+        if (i != std::end(anon_ns)) {
           set_last("$");
           // The anonymous namespace is always followed by "::".
-          symbol.remove_prefix(anon_ns.size() + 2);
+          symbol.remove_prefix(i->size() + 2);
           pos = 0;
           break;
         }
@@ -123,6 +132,7 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
         if (!printed)
           out << "GLOBAL";
         return symbol;
+      }
       case '<':
         flush();
         out << '<';
@@ -437,6 +447,8 @@ void logger::render_fun_prefix(std::ostream& out, const event& x) {
           break;
       }
     }
+    // MSVC puts '__cdecl' between the return type and the function name.
+    skip("__cdecl ");
     reduced.remove_prefix(pos);
   };
   skip_return_type();
