@@ -496,6 +496,11 @@ public:
     return settings_;
   }
 
+  /// Returns the number of detached actors.
+  size_t detached_actors() {
+    return detached_.load();
+  }
+
   /// @cond PRIVATE
 
   /// Increases running-detached-threads-count by one.
@@ -594,13 +599,13 @@ private:
   std::array<strong_actor_ptr, num_internal_actors> internal_actors_;
 
   /// Counts the number of detached actors.
-  std::atomic<size_t> detached;
+  std::atomic<size_t> detached_;
 
   /// Guards `detached`.
-  mutable std::mutex detached_mtx;
+  mutable std::mutex detached_mtx_;
 
   /// Allows waiting on specific values for `detached`.
-  mutable std::condition_variable detached_cv;
+  mutable std::condition_variable detached_cv_;
 
   /// The system-wide, user-provided configuration.
   actor_system_config& cfg_;
