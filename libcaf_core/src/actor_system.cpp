@@ -226,7 +226,7 @@ actor_system::actor_system(actor_system_config& cfg)
       groups_(*this),
       dummy_execution_unit_(this),
       await_actors_before_shutdown_(true),
-      detached(0),
+      detached_(0),
       cfg_(cfg),
       logger_dtor_done_(false) {
   CAF_SET_LOGGER_SYS(this);
@@ -434,19 +434,19 @@ actor_clock& actor_system::clock() noexcept {
 }
 
 void actor_system::inc_detached_threads() {
-  ++detached;
+  ++detached_;
 }
 
 void actor_system::dec_detached_threads() {
-  std::unique_lock<std::mutex> guard{detached_mtx};
-  if (--detached == 0)
-    detached_cv.notify_all();
+  std::unique_lock<std::mutex> guard{detached_mtx_};
+  if (--detached_ == 0)
+    detached_cv_.notify_all();
 }
 
 void actor_system::await_detached_threads() {
-  std::unique_lock<std::mutex> guard{detached_mtx};
-  while (detached != 0)
-    detached_cv.wait(guard);
+  std::unique_lock<std::mutex> guard{detached_mtx_};
+  while (detached_ != 0)
+    detached_cv_.wait(guard);
 }
 
 void actor_system::thread_started() {
