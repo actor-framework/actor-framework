@@ -46,6 +46,12 @@ void split(std::vector<std::string>& result, string_view str,
 void split(std::vector<string_view>& result, string_view str,
            string_view delims, bool keep_all = true);
 
+void split(std::vector<std::string>& result, string_view str,
+           char delim, bool keep_all = true);
+
+void split(std::vector<string_view>& result, string_view str,
+           char delim, bool keep_all = true);
+
 template <class InputIterator>
 std::string join(InputIterator first, InputIterator last, string_view glue) {
   if (first == last)

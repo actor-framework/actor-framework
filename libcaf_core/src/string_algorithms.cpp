@@ -56,6 +56,16 @@ void split(std::vector<string_view>& result, string_view str,
   return split_impl(f, str, delims, keep_all);
 }
 
+void split(std::vector<std::string>& result, string_view str, char delim,
+           bool keep_all) {
+  split(result, str, string_view{&delim, 1}, keep_all);
+}
+
+void split(std::vector<string_view>& result, string_view str, char delim,
+           bool keep_all) {
+  split(result, str, string_view{&delim, 1}, keep_all);
+}
+
 void replace_all(std::string& str, string_view what, string_view with) {
   // end(what) - 1 points to the null-terminator
   auto next = [&](std::string::iterator pos) -> std::string::iterator {
