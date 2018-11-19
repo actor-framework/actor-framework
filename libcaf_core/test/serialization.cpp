@@ -475,6 +475,15 @@ CAF_TEST(long_sequences) {
   CAF_CHECK_EQUAL(n, m);
 }
 
+CAF_TEST(non-empty vector) {
+  CAF_MESSAGE("deserializing into a non-empty vector overrides any content");
+  std::vector<int> foo{1, 2, 3};
+  std::vector<int> bar{0};
+  auto buf = serialize(foo);
+  deserialize(buf, bar);
+  CAF_CHECK_EQUAL(foo, bar);
+}
+
 // -- our vector<bool> serialization packs into an uint64_t. Hence, the
 // critical sizes to test are 0, 1, 63, 64, and 65.
 

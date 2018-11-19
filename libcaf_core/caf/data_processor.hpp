@@ -285,6 +285,7 @@ public:
 
   template <class T>
   error fill_range(T& xs, size_t num_elements) {
+    xs.clear();
     auto insert_iter = std::inserter(xs, xs.end());
     for (size_t i = 0; i < num_elements; ++i) {
       typename std::remove_const<typename T::value_type>::type x;
@@ -299,6 +300,7 @@ public:
   /// Loads elements from type `U` before inserting to `xs`.
   template <class U, class T>
   error fill_range_c(T& xs, size_t num_elements) {
+    xs.clear();
     auto insert_iter = std::inserter(xs, xs.end());
     for (size_t i = 0; i < num_elements; ++i) {
       U x;
