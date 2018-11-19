@@ -106,6 +106,7 @@ set(LIBCAF_CORE_SRCS
   src/stream_aborter.cpp
   src/stream_manager.cpp
   src/stream_priority.cpp
+  src/string_algorithms.cpp
   src/string_view.cpp
   src/stringification_inspector.cpp
   src/sync_request_bouncer.cpp

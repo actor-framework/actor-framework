@@ -47,13 +47,115 @@ namespace caf {
 
 namespace {
 
-constexpr const char* log_level_name[] = {
+constexpr string_view log_level_name[] = {
   "ERROR",
   "WARN",
   "INFO",
   "DEBUG",
   "TRACE"
 };
+
+constexpr string_view fun_prefixes[] = {
+  "virtual ",
+  "static ",
+  "const ",
+  "signed ",
+  "unsigned ",
+};
+
+// Various spellings of the anonymous namespace as reported by CAF_PRETTY_FUN.
+constexpr string_view anon_ns[] = {
+  "(anonymous namespace)", // Clang
+  "{anonymous}", // GCC
+  "`anonymous-namespace'", // MSVC
+};
+
+// Reduces symbol by printing all prefixes to `out` and returning the
+// remainder. For example, "ns::foo::bar" prints "ns.foo" to `out` and returns
+// "bar".
+string_view reduce_symbol(std::ostream& out, string_view symbol) {
+  auto skip = [&](string_view str) {
+    if (starts_with(symbol, str))
+      symbol.remove_prefix(str.size());
+  };
+  // MSVC adds `struct` to symbol names. For example:
+  // void __cdecl `anonymous-namespace'::foo::tpl<struct T>::run(void)
+  //                                              ^~~~~~
+  skip("struct ");
+  string_view last = "";
+  bool printed = false;
+  // Prints the content of `last` and then replaces it with `y`.
+  auto set_last = [&](string_view y) {
+    if (!last.empty()) {
+      if (printed)
+        out << ".";
+      else
+        printed = true;
+      for (auto ch : last)
+        if (ch == ' ')
+          out << "%20";
+        else
+          out << ch;
+    }
+    last = y;
+  };
+  size_t pos = 0;
+  auto advance = [&](size_t n) {
+    set_last(symbol.substr(0, pos));
+    symbol.remove_prefix(pos + n);
+    pos = 0;
+  };
+  auto flush = [&] {
+    advance(1);
+    // Some compilers put a whitespace after nested templates that we wish to
+    // ignore here, e.g.,
+    // foo::tpl<foo::tpl<int> >::fun(int)
+    //                       ^
+    if (last != " ")
+      set_last("");
+  };
+  while (pos < symbol.size()) {
+    switch (symbol[pos]) {
+      // A colon can only appear as scope separator, i.e., "::".
+      case ':':
+        advance(2);
+        break;
+      // These characters are invalid in function names, unless they indicate
+      // an anonymous namespace or the beginning of the argument list.
+      case '`':
+      case '{':
+      case '(': {
+        auto pred = [&](string_view x) { return starts_with(symbol, x); };
+        auto i = std::find_if(std::begin(anon_ns), std::end(anon_ns), pred);
+        if (i != std::end(anon_ns)) {
+          set_last("$");
+          // The anonymous namespace is always followed by "::".
+          symbol.remove_prefix(i->size() + 2);
+          pos = 0;
+          break;
+        }
+        // We reached the end of the function name. Print "GLOBAL" if we didn't
+        // print anything yet as "global namespace".
+        set_last("");
+        if (!printed)
+          out << "GLOBAL";
+        return symbol;
+      }
+      case '<':
+        flush();
+        out << '<';
+        symbol = reduce_symbol(out, symbol);
+        break;
+      case '>':
+        flush();
+        out << '>';
+        return symbol;
+      default:
+        ++pos;
+    }
+  }
+  return symbol;
+}
 
 #if CAF_LOG_LEVEL >= 0
 
@@ -112,12 +214,13 @@ inline logger* get_current_logger() {
 
 } // namespace <anonymous>
 
-logger::event::event(int lvl, const char* cat, const char* fun, const char* fn,
-                     int line, std::string msg, std::thread::id t, actor_id a,
-                     timestamp ts)
+logger::event::event(int lvl, string_view cat, string_view full_fun,
+                     string_view fun, string_view fn, int line, std::string msg,
+                     std::thread::id t, actor_id a, timestamp ts)
     : level(lvl),
       category_name(cat),
-      pretty_fun(fun),
+      pretty_fun(full_fun),
+      simple_fun(fun),
       file_name(fn),
       line_number(line),
       message(std::move(msg)),
@@ -133,31 +236,30 @@ logger::line_builder::line_builder() {
 
 logger::line_builder& logger::line_builder::
 operator<<(const local_actor* self) {
-  if (!str_.empty() && str_.back() != ' ')
-    str_ += " ";
-  str_ += self->name();
-  return *this;
+  return *this << self->name();
 }
 
 logger::line_builder& logger::line_builder::operator<<(const std::string& str) {
+  return *this << str.c_str();
+}
+
+logger::line_builder& logger::line_builder::operator<<(string_view str) {
   if (!str_.empty() && str_.back() != ' ')
     str_ += " ";
-  str_ += str;
+  str_.insert(str_.end(), str.begin(), str.end());
   return *this;
 }
 
 logger::line_builder& logger::line_builder::operator<<(const char* str) {
-  if (!str_.empty())
+  if (!str_.empty() && str_.back() != ' ')
     str_ += " ";
   str_ += str;
   return *this;
 }
 
 logger::line_builder& logger::line_builder::operator<<(char x) {
-  if (!str_.empty())
-    str_ += " ";
-  str_ += x;
-  return *this;
+  const char buf[] = {x, '\0'};
+  return *this << buf;
 }
 
 std::string logger::line_builder::get() const {
@@ -211,15 +313,13 @@ logger* logger::current_logger() {
   return get_current_logger();
 }
 
-bool logger::accepts(int level, const char* cname_begin,
-                     const char* cname_end) {
-  CAF_ASSERT(cname_begin != nullptr && cname_end != nullptr);
+bool logger::accepts(int level, string_view cname) {
   CAF_ASSERT(level >= 0 && level <= 4);
   if (level > max_level_)
     return false;
   if (!component_filter.empty()) {
     auto it = std::search(component_filter.begin(), component_filter.end(),
-                          cname_begin, cname_end);
+                          cname.begin(), cname.end());
     return it != component_filter.end();
   }
   return true;
@@ -302,55 +402,62 @@ void logger::init(actor_system_config& cfg) {
 #endif
 }
 
-void logger::render_fun_prefix(std::ostream& out, const char* pretty_fun) {
-  auto first = pretty_fun;
-  // set end to beginning of arguments
-  const char* last = strchr(pretty_fun, '(');
-  if (last == nullptr)
-    return;
-  auto strsize = static_cast<size_t>(last - first);
-  auto jump_to_next_whitespace = [&] {
-    // leave `first` unchanged if no whitespaces is present,
-    // e.g., in constructor signatures
-    auto tmp = std::find(first, last, ' ');
-    if (tmp != last)
-      first = tmp + 1;
+void logger::render_fun_prefix(std::ostream& out, const event& x) {
+  // Extract the prefix of a function name. For example:
+  // virtual std::vector<int> my::namespace::foo(int);
+  //                          ^~~~~~~~~~~~~
+  // Here, we output Java-style "my.namespace" to `out`.
+  auto reduced = x.pretty_fun;
+  // Skip all prefixes that can preceed the return type.
+  auto skip = [&](string_view str) {
+    if (starts_with(reduced, str)) {
+      reduced.remove_prefix(str.size());
+      return true;
+    }
+    return false;
   };
-  // skip "virtual" prefix if present
-  if (strncmp(pretty_fun, "virtual ", std::min<size_t>(strsize, 8)) == 0)
-    jump_to_next_whitespace();
-  // skip "static" prefix if present
-  if (strncmp(pretty_fun, "static ", std::min<size_t>(strsize, 7)) == 0)
-    jump_to_next_whitespace();
-  // skip return type
-  jump_to_next_whitespace();
-  if (first == last)
-    return;
-  const char sep[] = "::"; // separator for namespaces and classes
-  auto sep_first = std::begin(sep);
-  auto sep_last = sep_first + 2; // using end() includes \0
-  auto colons = first;
-  decltype(colons) nextcs;
-  while ((nextcs = std::search(colons + 1, last, sep_first, sep_last)) != last)
-    colons = nextcs;
-  std::string result;
-  result.assign(first, colons);
-  detail::prettify_type_name(result);
-  out << result;
+  // Remove any type of the return type.
+  while (std::any_of(std::begin(fun_prefixes), std::end(fun_prefixes), skip))
+    ; // Repeat.
+  // Skip the return type.
+  auto skip_return_type = [&] {
+    size_t template_nesting = 0;
+    size_t pos = 0;
+    for (size_t pos = 0; pos < reduced.size(); ++pos) {
+      switch (reduced[pos]) {
+        case ' ':
+          if (template_nesting == 0) {
+            // Skip any pointers and references. We need to loop, because each
+            // pointer/reference can be const-qualified.
+            do {
+              pos = reduced.find_first_not_of(" *&", pos);
+              reduced.remove_prefix(pos);
+              pos = 0;
+            } while (skip("const"));
+            return;
+          }
+          break;
+        case '<':
+          ++template_nesting;
+          break;
+        case '>':
+          --template_nesting;
+          break;
+        default:
+          break;
+      }
+    }
+    reduced.remove_prefix(pos);
+  };
+  skip_return_type();
+  // MSVC puts '__cdecl' between the return type and the function name.
+  skip("__cdecl ");
+  // We reached the function name itself and can recursively print the prefix.
+  reduce_symbol(out, reduced);
 }
 
-void logger::render_fun_name(std::ostream& out, const char* pretty_fun) {
-  // Find the end of the function name by looking for the opening parenthesis
-  // trailing it.
-  CAF_ASSERT(pretty_fun != nullptr);
-  const char* e = strchr(pretty_fun, '(');
-  if (e == nullptr)
-    return;
-  /// Now look for the beginning of the function name.
-  using rev_iter = std::reverse_iterator<const char*>;
-  auto b = std::find_if(rev_iter(e), rev_iter(pretty_fun),
-                        [](char x) { return x == ':' || x == ' '; });
-  out.write(b.base(), e - b.base());
+void logger::render_fun_name(std::ostream& out, const event& e) {
+  out << e.simple_fun;
 }
 
 void logger::render_time_diff(std::ostream& out, timestamp t0, timestamp tn) {
@@ -366,12 +473,12 @@ void logger::render(std::ostream& out, const line_format& lf,
   for (auto& f : lf)
     switch (f.kind) {
       case category_field: out << x.category_name; break;
-      case class_name_field: render_fun_prefix(out, x.pretty_fun); break;
+      case class_name_field: render_fun_prefix(out, x); break;
       case date_field: render_date(out, x.tstamp); break;
       case file_field: out << x.file_name; break;
       case line_field: out << x.line_number; break;
       case message_field: out << x.message; break;
-      case method_field: render_fun_name(out, x.pretty_fun); break;
+      case method_field: render_fun_name(out, x); break;
       case newline_field: out << std::endl; break;
       case priority_field: out << log_level_name[x.level]; break;
       case runtime_field: render_time_diff(out, t0_, x.tstamp); break;
@@ -428,9 +535,11 @@ logger::line_format logger::parse_format(const std::string& format_str) {
   return res;
 }
 
-const char* logger::skip_path(const char* path) {
-  auto ptr = strrchr(path, '/');
-  return ptr == nullptr ? path : (ptr + 1);
+string_view logger::skip_path(string_view path) {
+  auto find_slash = [&] { return path.find('/'); };
+  for (auto p = find_slash(); p != string_view::npos; p = find_slash())
+    path.remove_prefix(p + 1);
+  return path;
 }
 
 void logger::run() {
@@ -509,6 +618,7 @@ void logger::log_first_line() {
     return {CAF_LOG_LEVEL_INFO,
             CAF_LOG_COMPONENT,
             CAF_PRETTY_FUN,
+            __func__,
             __FILE__,
             __LINE__,
             std::move(msg),
@@ -526,6 +636,7 @@ void logger::log_last_line() {
   event tmp{CAF_LOG_LEVEL_INFO,
             CAF_LOG_COMPONENT,
             CAF_PRETTY_FUN,
+            __func__,
             __FILE__,
             __LINE__,
             "EOF",
