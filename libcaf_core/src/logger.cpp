@@ -236,17 +236,11 @@ logger::line_builder::line_builder() {
 
 logger::line_builder& logger::line_builder::
 operator<<(const local_actor* self) {
-  if (!str_.empty() && str_.back() != ' ')
-    str_ += " ";
-  str_ += self->name();
-  return *this;
+  return *this << self->name();
 }
 
 logger::line_builder& logger::line_builder::operator<<(const std::string& str) {
-  if (!str_.empty() && str_.back() != ' ')
-    str_ += " ";
-  str_ += str;
-  return *this;
+  return *this << str.c_str();
 }
 
 logger::line_builder& logger::line_builder::operator<<(string_view str) {
@@ -257,17 +251,15 @@ logger::line_builder& logger::line_builder::operator<<(string_view str) {
 }
 
 logger::line_builder& logger::line_builder::operator<<(const char* str) {
-  if (!str_.empty())
+  if (!str_.empty() && str_.back() != ' ')
     str_ += " ";
   str_ += str;
   return *this;
 }
 
 logger::line_builder& logger::line_builder::operator<<(char x) {
-  if (!str_.empty())
-    str_ += " ";
-  str_ += x;
-  return *this;
+  const char buf[] = {x, '\0'};
+  return *this << buf;
 }
 
 std::string logger::line_builder::get() const {
