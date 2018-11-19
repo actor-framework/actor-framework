@@ -70,9 +70,9 @@ constexpr string_view anon_ns[] = {
   "`anonymous-namespace'", // MSVC
 };
 
-/// Reduces symbol by printing all prefixes to `out` and returning the
-/// remainder. For example, "ns::foo::bar" prints "ns.foo" to `out` and returns
-/// "bar".
+// Reduces symbol by printing all prefixes to `out` and returning the
+// remainder. For example, "ns::foo::bar" prints "ns.foo" to `out` and returns
+// "bar".
 string_view reduce_symbol(std::ostream& out, string_view symbol) {
   auto skip = [&](string_view str) {
     if (starts_with(symbol, str))
@@ -84,7 +84,7 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
   skip("struct ");
   string_view last = "";
   bool printed = false;
-  // Prints the content of `last` and then replaces it with `x`.
+  // Prints the content of `last` and then replaces it with `y`.
   auto set_last = [&](string_view y) {
     if (!last.empty()) {
       if (printed)
