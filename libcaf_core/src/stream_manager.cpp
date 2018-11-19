@@ -51,16 +51,23 @@ void stream_manager::handle(inbound_path*, downstream_msg::batch&) {
   CAF_LOG_WARNING("unimplemented base handler for batches called");
 }
 
-void stream_manager::handle(inbound_path*, downstream_msg::close&) {
-  // nop
+void stream_manager::handle(inbound_path* in, downstream_msg::close&) {
+  // Reset the actor handle to make sure no further messages travel upstream.
+  in->hdl = nullptr;
 }
 
 void stream_manager::handle(inbound_path* in, downstream_msg::forced_close& x) {
   CAF_ASSERT(in != nullptr);
   CAF_LOG_TRACE(CAF_ARG2("slots", in->slots) << CAF_ARG(x));
-  // Reset the actor handle to make sure no further message travels upstream.
+  // Reset the actor handle to make sure no further messages travel upstream.
   in->hdl = nullptr;
-  stop(std::move(x.reason));
+  // A continuous stream exists independent of sources. Hence, we ignore
+  // upstream errors in this case.
+  if (!continuous()) {
+    stop(std::move(x.reason));
+  } else {
+    CAF_LOG_INFO("received (and ignored) forced_close from a source");
+  }
 }
 
 bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
