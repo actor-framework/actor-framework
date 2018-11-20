@@ -282,8 +282,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_IOS_DEPLOYMENT_TARGET STRING "$optarg"
             ;;
         --with-log-level=*)
-            level=`echo "$optarg" | tr '[:lower:]' '[:upper:]'`
-            append_cache_entry CAF_LOG_LEVEL STRING "$level"
+            append_cache_entry CAF_LOG_LEVEL STRING "$optarg"
             ;;
         --with-clang=*)
             clang="$optarg"

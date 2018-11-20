@@ -367,23 +367,11 @@ endif()
 #                                setup logging                                 #
 ################################################################################
 
+# make sure log level is defined and all-uppercase
 if(NOT CAF_LOG_LEVEL)
   set(CAF_LOG_LEVEL "QUIET")
-endif()
-
-# set human-readable representation for log level
-if(CAF_LOG_LEVEL STREQUAL "ERROR")
-  set(CAF_LOG_LEVEL_INT 3)
-elseif(CAF_LOG_LEVEL STREQUAL "WARNING")
-  set(CAF_LOG_LEVEL_INT 6)
-elseif(CAF_LOG_LEVEL STREQUAL "INFO")
-  set(CAF_LOG_LEVEL_INT 9)
-elseif(CAF_LOG_LEVEL STREQUAL "DEBUG")
-  set(CAF_LOG_LEVEL_INT 12)
-elseif(CAF_LOG_LEVEL STREQUAL "TRACE")
-  set(CAF_LOG_LEVEL_INT 15)
 else()
-  set(CAF_LOG_LEVEL_INT 0)
+  string(TOUPPER "${CAF_LOG_LEVEL}" CAF_LOG_LEVEL)
 endif()
 
 ################################################################################
@@ -713,7 +701,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild static only:     ${CAF_BUILD_STATIC_ONLY}"
         "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
         "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
-        "\nLog level:             ${LOG_LEVEL_STR}"
+        "\nLog level:             ${CAF_LOG_LEVEL}"
         "\nWith mem. mgmt.:       ${CAF_BUILD_MEM_MANAGEMENT}"
         "\nWith exceptions:       ${CAF_BUILD_WITH_EXCEPTIONS}"
         "\n"

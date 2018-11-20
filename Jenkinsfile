@@ -17,7 +17,7 @@ releaseBuildFlags = defaultBuildFlags + [
 debugBuildFlags = defaultBuildFlags + [
     'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
     'CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
-    'CAF_LOG_LEVEL:STRING=4',
+    'CAF_LOG_LEVEL:STRING=TRACE',
 ]
 
 // Our build matrix. The keys are the operating system labels and the values
