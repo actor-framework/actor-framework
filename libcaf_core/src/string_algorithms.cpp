@@ -27,15 +27,15 @@ void split_impl(F consume, string_view str, string_view delims, bool keep_all) {
   size_t pos = 0;
   size_t prev = 0;
   while ((pos = str.find_first_of(delims, prev)) != std::string::npos) {
-    if (pos > prev) {
-      auto substr = str.substr(prev, pos - prev);
-      if (!substr.empty() || keep_all)
-        consume(substr);
-    }
+    auto substr = str.substr(prev, pos - prev);
+    if (keep_all || !substr.empty())
+      consume(substr);
     prev = pos + 1;
   }
   if (prev < str.size())
-    consume(str.substr(prev, std::string::npos));
+    consume(str.substr(prev));
+  else if (keep_all)
+    consume(string_view{});
 }
 
 } // namespace <anonymous>
