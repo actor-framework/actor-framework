@@ -65,8 +65,10 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-io                     build without I/O module
     --no-python                 build without python binding
     --no-summary                do not print configuration before building
-    --core-only                 sets no-examples, no-opencl, no-openssl,
-                                no-tools, no-python, and no-io
+    --libs-only                 sets no-examples, no-tools, no-python,
+                                and no-unit-tests
+    --core-only                 same as libs-only but also adds sets no-opencl,
+                                no-openssl, and no-io
 
   Debugging:
     --with-runtime-checks       build with requirement checks at runtime
@@ -386,13 +388,15 @@ while [ $# -ne 0 ]; do
         --no-summary)
             append_cache_entry CAF_NO_SUMMARY BOOL yes
             ;;
+        --libs-only)
+            for var in CAF_NO_TOOLS CAF_NO_PYTHON CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS; do
+              append_cache_entry $var BOOL yes
+            done
+            ;;
         --core-only)
-            append_cache_entry CAF_NO_TOOLS BOOL yes
-            append_cache_entry CAF_NO_IO BOOL yes
-            append_cache_entry CAF_NO_PYTHON BOOL yes
-            append_cache_entry CAF_NO_EXAMPLES BOOL yes
-            append_cache_entry CAF_NO_OPENCL BOOL yes
-            append_cache_entry CAF_NO_OPENSSL BOOL yes
+            for var in CAF_NO_TOOLS CAF_NO_PYTHON CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS CAF_NO_IO CAF_NO_OPENCL CAF_NO_OPENSSL ; do
+              append_cache_entry $var BOOL yes
+            done
             ;;
         --dev-mode)
             append_cache_entry CMAKE_BUILD_TYPE STRING Debug
