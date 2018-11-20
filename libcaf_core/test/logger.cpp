@@ -179,11 +179,11 @@ CAF_TEST(rendering) {
   // Rendering of events.
   logger::event e{
     CAF_LOG_LEVEL_WARNING,
+    42,
     "unit.test",
     "void ns::foo::bar()",
     "bar",
     "foo.cpp",
-    42,
     "hello world",
     std::this_thread::get_id(),
     0,

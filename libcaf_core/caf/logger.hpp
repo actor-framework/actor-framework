@@ -112,14 +112,17 @@ public:
 
     event& operator=(const event&) = default;
 
-    event(int lvl, string_view cat, string_view full_fun, string_view fun,
-          string_view fn, int line, std::string msg, std::thread::id t,
+    event(unsigned lvl, unsigned line, string_view cat, string_view full_fun,
+          string_view fun, string_view fn, std::string msg, std::thread::id t,
           actor_id a, timestamp ts);
 
     // -- member variables -----------------------------------------------------
 
     /// Level/priority of the event.
-    int level;
+    unsigned level;
+
+    /// Current line in the file.
+    unsigned line_number;
 
     /// Name of the category (component) logging the event.
     string_view category_name;
@@ -132,9 +135,6 @@ public:
 
     /// Name of the current file.
     string_view file_name;
-
-    /// Current line in the file.
-    int line_number;
 
     /// User-provided message.
     std::string message;
@@ -239,16 +239,16 @@ public:
     return console_format_;
   }
 
-  int verbosity() const noexcept {
-    return static_cast<int>(cfg_.verbosity);
+  unsigned verbosity() const noexcept {
+    return cfg_.verbosity;
   }
 
-  int file_verbosity() const noexcept {
-    return static_cast<int>(cfg_.file_verbosity);
+  unsigned file_verbosity() const noexcept {
+    return cfg_.file_verbosity;
   }
 
-  int console_verbosity() const noexcept {
-    return static_cast<int>(cfg_.console_verbosity);
+  unsigned console_verbosity() const noexcept {
+    return cfg_.console_verbosity;
   }
 
   // -- static utility functions -----------------------------------------------
@@ -433,8 +433,8 @@ bool operator==(const logger::field& x, const logger::field& y);
 
 #define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
   ::caf::logger::event {                                                       \
-    loglvl, component, CAF_PRETTY_FUN, __func__,                               \
-      caf::logger::skip_path(__FILE__), __LINE__,                              \
+    loglvl, __LINE__, component, CAF_PRETTY_FUN, __func__,                     \
+      caf::logger::skip_path(__FILE__),                                        \
       (::caf::logger::line_builder{} << message).get(),                        \
       ::std::this_thread::get_id(), aid, ::caf::make_timestamp()               \
   }

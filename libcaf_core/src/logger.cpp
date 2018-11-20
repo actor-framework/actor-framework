@@ -254,15 +254,16 @@ logger::config::config()
   // nop
 }
 
-logger::event::event(int lvl, string_view cat, string_view full_fun,
-                     string_view fun, string_view fn, int line, std::string msg,
-                     std::thread::id t, actor_id a, timestamp ts)
+logger::event::event(unsigned lvl, unsigned line, string_view cat,
+                     string_view full_fun, string_view fun, string_view fn,
+                     std::string msg, std::thread::id t, actor_id a,
+                     timestamp ts)
     : level(lvl),
+      line_number(line),
       category_name(cat),
       pretty_fun(full_fun),
       simple_fun(fun),
       file_name(fn),
-      line_number(line),
       message(std::move(msg)),
       tid(std::move(t)),
       aid(a),
