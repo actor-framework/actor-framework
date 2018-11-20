@@ -68,18 +68,6 @@ std::string join(const Container& c, string_view glue) {
   return join(c.begin(), c.end(), glue);
 }
 
-// end of recursion
-inline void splice(std::string&, string_view) {
-  // nop
-}
-
-template <class T, class... Ts>
-void splice(std::string& str, string_view glue, T&& arg, Ts&&... xs) {
-  str.insert(str.end(), glue.begin(), glue.end());
-  str += std::forward<T>(arg);
-  splice(str, glue, std::forward<Ts>(xs)...);
-}
-
 /// Replaces all occurrences of `what` by `with` in `str`.
 void replace_all(std::string& str, string_view what, string_view with);
 
@@ -89,18 +77,4 @@ bool starts_with(string_view str, string_view prefix);
 /// Returns whether `str` ends with `suffix`.
 bool ends_with(string_view str, string_view suffix);
 
-template <class T>
-typename std::enable_if<
-  std::is_arithmetic<T>::value,
-  std::string
->::type
-convert_to_str(T value) {
-  return std::to_string(value);
-}
-
-inline std::string convert_to_str(std::string value) {
-  return value;
-}
-
 } // namespace caf
-
