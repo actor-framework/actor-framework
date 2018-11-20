@@ -333,7 +333,6 @@ actor_id logger::thread_local_aid(actor_id aid) {
 }
 
 void logger::log(event&& x) {
-  CAF_ASSERT(x->level >= 0 && x->level <= 4);
   if (cfg_.inline_output)
     handle_event(x);
   else
@@ -352,7 +351,6 @@ logger* logger::current_logger() {
 }
 
 bool logger::accepts(int level, string_view cname) {
-  CAF_ASSERT(level >= 0 && level <= 4);
   if (level > cfg_.verbosity)
     return false;
   if (!component_filter.empty()) {
