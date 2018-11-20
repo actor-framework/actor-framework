@@ -64,7 +64,7 @@ std::string join(InputIterator first, InputIterator last, string_view glue) {
 }
 
 template <class Container>
-std::string join(const Container& c, const std::string& glue) {
+std::string join(const Container& c, string_view glue) {
   return join(c.begin(), c.end(), glue);
 }
 
