@@ -47,11 +47,6 @@ struct kvstate {
   std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
   std::unordered_map<strong_actor_ptr, topic_set> subscribers;
   static const char* name;
-  template <class Processor>
-  friend void serialize(Processor& proc, kvstate& x, unsigned int) {
-    proc & x.data;
-    proc & x.subscribers;
-  }
 };
 
 const char* kvstate::name = "config_server";

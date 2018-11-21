@@ -184,7 +184,7 @@ public:
       return pos;
     auto offset = static_cast<size_t>(std::distance(begin(), pos));
     auto old_size = size_;
-    resize(old_size + n);
+    resize(old_size + static_cast<size_t>(n));
     pos = begin() + offset;
     if (offset != old_size) {
       memmove(pos + n, pos, old_size - offset);

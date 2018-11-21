@@ -43,8 +43,8 @@ struct read_ipv4_octet_consumer {
   std::array<uint8_t, 4> bytes;
   int octets = 0;
 
-  inline void value(uint8_t octet) {
-    bytes[octets++] = octet;
+  void value(uint8_t octet) {
+    bytes[static_cast<size_t>(octets++)] = octet;
   }
 };
 

@@ -177,8 +177,9 @@ auto config_option_set::parse(config_map& config, argument_iterator first,
       if (opt == nullptr)
         return {pec::not_an_option, i};
       auto code = consume(*opt,
-                          assign_op == npos ? i->end()
-                                            : i->begin() + assign_op + 1,
+                          assign_op == npos
+                          ? i->end()
+                          : i->begin() + static_cast<ptrdiff_t>(assign_op + 1),
                           i->end());
       if (code != pec::success)
         return {code, i};
