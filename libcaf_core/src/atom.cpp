@@ -18,34 +18,57 @@
 
 #include "caf/atom.hpp"
 
+#include <array>
 #include <cstring>
+
+#include "caf/string_view.hpp"
 
 namespace caf {
 
-atom_value atom_from_string(const std::string& x) {
-  if (x.size() > 10)
-    return atom("");
-  char buf[11];
-  memcpy(buf, x.c_str(), x.size());
-  buf[x.size()] = '\0';
-  return atom(buf);
-}
+namespace {
 
-std::string to_string(const atom_value& what) {
+/// A buffer for decoding atom values.
+using atom_value_buf = std::array<char, 11>;
+
+size_t decode(atom_value_buf& buf, atom_value what) {
+  size_t pos = 0;
   auto x = static_cast<uint64_t>(what);
-  std::string result;
-  result.reserve(11);
-  // don't read characters before we found the leading 0xF
-  // first four bits set?
+  // Don't read characters before we found the leading 0xF.
   bool read_chars = ((x & 0xF000000000000000) >> 60) == 0xF;
   uint64_t mask = 0x0FC0000000000000;
   for (int bitshift = 54; bitshift >= 0; bitshift -= 6, mask >>= 6) {
     if (read_chars)
-      result += detail::decoding_table[(x & mask) >> bitshift];
+      buf[pos++] = detail::decoding_table[(x & mask) >> bitshift];
     else if (((x & mask) >> bitshift) == 0xF)
       read_chars = true;
   }
-  return result;
+  buf[pos] = '\0';
+  return pos;
+}
+
+} // namespace <anonymous>
+
+atom_value to_lowercase(atom_value x) {
+  atom_value_buf buf;
+  decode(buf, x);
+  for (auto ch = buf.data(); *ch != '\0'; ++ch)
+    *ch = static_cast<char>(tolower(*ch));
+  return static_cast<atom_value>(detail::atom_val(buf.data()));
+}
+
+atom_value atom_from_string(const std::string& x) {
+  if (x.size() > 10)
+    return atom("");
+  atom_value_buf buf;
+  memcpy(buf.data(), x.c_str(), x.size());
+  buf[x.size()] = '\0';
+  return static_cast<atom_value>(detail::atom_val(buf.data()));
+}
+
+std::string to_string(const atom_value& x) {
+  atom_value_buf str;
+  auto len = decode(str, x);
+  return std::string(str.begin(), str.begin() + len);
 }
 
 } // namespace caf

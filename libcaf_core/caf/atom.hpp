@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "caf/detail/atom_val.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
@@ -35,6 +36,9 @@ enum class atom_value : uint64_t {
 
 /// @relates atom_value
 std::string to_string(const atom_value& what);
+
+/// @relates atom_value
+atom_value to_lowercase(atom_value x);
 
 atom_value atom_from_string(const std::string& x);
 

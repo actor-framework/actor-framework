@@ -30,21 +30,20 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/detail/arg_wrapper.hpp"
+#include "caf/detail/pretty_type_name.hpp"
+#include "caf/detail/ringbuffer.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/detail/shared_spinlock.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/singly_linked.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/string_view.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/type_nr.hpp"
 #include "caf/unifyn.hpp"
-
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
-#include "caf/intrusive/singly_linked.hpp"
-
-#include "caf/detail/arg_wrapper.hpp"
-#include "caf/detail/pretty_type_name.hpp"
-#include "caf/detail/scope_guard.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 
 /*
  * To enable logging, you have to define CAF_DEBUG. This enables
@@ -66,18 +65,64 @@ namespace caf {
 /// default, the logger generates log4j compatible output.
 class logger : public ref_counted {
 public:
+  // -- friends ----------------------------------------------------------------
+
   friend class actor_system;
 
+  // -- constants --------------------------------------------------------------
+
+  /// Configures the size of the circular event queue.
+  static constexpr size_t queue_size = 128;
+
+  // -- member types -----------------------------------------------------------
+
+  /// Combines various logging-related flags and parameters into a bitfield.
+  struct config {
+    /// Stores `max(file_verbosity, console_verbosity)`.
+    unsigned verbosity : 4;
+
+    /// Configures the verbosity for file output.
+    unsigned file_verbosity : 4;
+
+    /// Configures the verbosity for console output.
+    unsigned console_verbosity : 4;
+
+    /// Configures whether the logger immediately writes its output in the
+    /// calling thread, bypassing its queue. Use this option only in
+    /// single-threaded test environments.
+    bool inline_output : 1;
+
+    /// Configures whether the logger generates colored output.
+    bool console_coloring : 1;
+
+    config();
+  };
+
   /// Encapsulates a single logging event.
-  struct event : intrusive::singly_linked<event> {
+  struct event {
+    // -- constructors, destructors, and assignment operators ------------------
+
     event() = default;
 
-    event(int lvl, string_view cat, string_view full_fun, string_view fun,
-          string_view fn, int line, std::string msg, std::thread::id t,
+    event(event&&) = default;
+
+    event(const event&) = default;
+
+    event& operator=(event&&) = default;
+
+    event& operator=(const event&) = default;
+
+    event(unsigned lvl, unsigned line, string_view cat, string_view full_fun,
+          string_view fun, string_view fn, std::string msg, std::thread::id t,
           actor_id a, timestamp ts);
 
+    // -- member variables -----------------------------------------------------
+
     /// Level/priority of the event.
-    int level;
+    unsigned level;
+
+    /// Current line in the file.
+    unsigned line_number;
 
     /// Name of the category (component) logging the event.
     string_view category_name;
@@ -91,9 +136,6 @@ public:
     /// Name of the current file.
     string_view file_name;
 
-    /// Current line in the file.
-    int line_number;
-
     /// User-provided message.
     std::string message;
 
@@ -105,37 +147,6 @@ public:
 
     /// Timestamp of the event.
     timestamp tstamp;
-  };
-
-  struct policy {
-    // -- member types ---------------------------------------------------------
-
-    using mapped_type = event;
-
-    using task_size_type = long;
-
-    using deleter_type = std::default_delete<event>;
-
-    using unique_pointer = std::unique_ptr<event, deleter_type>;
-
-    using queue_type = intrusive::drr_queue<policy>;
-
-    using deficit_type = long;
-
-    // -- static member functions ----------------------------------------------
-
-    static inline void release(mapped_type* ptr) noexcept {
-      detail::disposer d;
-      d(ptr);
-    }
-
-    static inline task_size_type task_size(const mapped_type&) noexcept {
-      return 1;
-    }
-
-    static inline deficit_type quantum(const queue_type&, deficit_type x) {
-      return x;
-    }
   };
 
   /// Internal representation of format string entites.
@@ -196,36 +207,51 @@ public:
     std::string str_;
   };
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  ~logger() override;
+
+  // -- logging ----------------------------------------------------------------
+
+  /// Writes an entry to the event-queue of the logger.
+  /// @thread-safe
+  void log(event&& x);
+
+  // -- properties -------------------------------------------------------------
+
   /// Returns the ID of the actor currently associated to the calling thread.
   actor_id thread_local_aid();
 
   /// Associates an actor ID to the calling thread and returns the last value.
   actor_id thread_local_aid(actor_id aid);
 
-  /// Writes an entry to the log file.
-  void log(event* x);
-
-  ~logger() override;
-
-  /** @cond PRIVATE */
-
-  static void set_current_actor_system(actor_system*);
-
-  static logger* current_logger();
-
-  bool accepts(int level, string_view cname);
-
-  /** @endcond */
+  /// Returns whether the logger is configured to accept input for given
+  /// component and log level.
+  bool accepts(unsigned level, string_view component_name);
 
   /// Returns the output format used for the log file.
-  inline const line_format& file_format() const {
+  const line_format& file_format() const {
     return file_format_;
   }
 
   /// Returns the output format used for the console.
-  inline const line_format& console_format() const {
+  const line_format& console_format() const {
     return console_format_;
   }
+
+  unsigned verbosity() const noexcept {
+    return cfg_.verbosity;
+  }
+
+  unsigned file_verbosity() const noexcept {
+    return cfg_.file_verbosity;
+  }
+
+  unsigned console_verbosity() const noexcept {
+    return cfg_.console_verbosity;
+  }
+
+  // -- static utility functions -----------------------------------------------
 
   /// Renders the prefix (namespace and class) of a fully qualified function.
   static void render_fun_prefix(std::ostream& out, const event& x);
@@ -239,15 +265,17 @@ public:
   /// Renders the date of `x` in ISO 8601 format.
   static void render_date(std::ostream& out, timestamp x);
 
-  /// Renders `x` using the line format `lf` to `out`.
-  void render(std::ostream& out, const line_format& lf, const event& x) const;
-
   /// Parses `format_str` into a format description vector.
   /// @warning The returned vector can have pointers into `format_str`.
   static line_format parse_format(const std::string& format_str);
 
   /// Skips path in `filename`.
   static string_view skip_path(string_view filename);
+
+  // -- utility functions ------------------------------------------------------
+
+  /// Renders `x` using the line format `lf` to `out`.
+  void render(std::ostream& out, const line_format& lf, const event& x) const;
 
   /// Returns a string representation of the joined groups of `x` if `x` is an
   /// actor with the `subscriber` mixin.
@@ -272,30 +300,37 @@ public:
     return "[]";
   }
 
-  // -- individual flags -------------------------------------------------------
+  // -- thread-local properties ------------------------------------------------
 
-  static constexpr int inline_output_flag = 0x01;
+  /// Stores the actor system for the current thread.
+  static void set_current_actor_system(actor_system*);
 
-  static constexpr int uncolored_console_flag = 0x02;
-
-  static constexpr int colored_console_flag = 0x04;
-
-  // -- composed flags ---------------------------------------------------------
-
-  static constexpr int console_output_flag = 0x06;
+  /// Returns the logger for the current thread or `nullptr` if none is
+  /// registered.
+  static logger* current_logger();
 
 private:
-  void handle_event(event& x);
-  void handle_file_event(event& x);
-  void handle_console_event(event& x);
+  // -- constructors, destructors, and assignment operators --------------------
+
+  logger(actor_system& sys);
+
+  // -- initialization ---------------------------------------------------------
+
+  void init(actor_system_config& cfg);
+
+  // -- event handling ---------------------------------------------------------
+
+  void handle_event(const event& x);
+
+  void handle_file_event(const event& x);
+
+  void handle_console_event(const event& x);
 
   void log_first_line();
 
   void log_last_line();
 
-  logger(actor_system& sys);
-
-  void init(actor_system_config& cfg);
+  // -- thread management ------------------------------------------------------
 
   void run();
 
@@ -303,78 +338,102 @@ private:
 
   void stop();
 
-  inline bool has(int flag) const noexcept {
-    return (flags_ & flag) != 0;
-  }
+  // -- member variables -------------------------------------------------------
 
-  inline void set(int flag) noexcept {
-    flags_ |= flag;
-  }
+  // Configures verbosity and output generation.
+  config cfg_;
 
-  actor_system& system_;
-  int max_level_;
-  int console_level_;
-  int file_level_;
-  int flags_;
-  detail::shared_spinlock aids_lock_;
-  std::unordered_map<std::thread::id, actor_id> aids_;
-  std::thread thread_;
-  std::mutex queue_mtx_;
-  std::condition_variable queue_cv_;
-  intrusive::fifo_inbox<policy> queue_;
-  std::thread::id parent_thread_;
-  timestamp t0_;
-  line_format file_format_;
-  line_format console_format_;
-  std::fstream file_;
+  // Filters events by component name.
   std::string component_filter;
+
+  // References the parent system.
+  actor_system& system_;
+
+  // Guards aids_.
+  detail::shared_spinlock aids_lock_;
+
+  // Maps thread IDs to actor IDs.
+  std::unordered_map<std::thread::id, actor_id> aids_;
+
+  // Identifies the thread that called `logger::start`.
+  std::thread::id parent_thread_;
+
+  // Timestamp of the first log event.
+  timestamp t0_;
+
+  // Format for generating file output.
+  line_format file_format_;
+
+  // Format for generating console output.
+  line_format console_format_;
+
+  // Stream for file output.
+  std::fstream file_;
+
+  // Filled with log events by other threads.
+  detail::ringbuffer<event, queue_size> queue_;
+
+  // Executes `logger::run`.
+  std::thread thread_;
 };
 
+/// @relates logger::field_type
 std::string to_string(logger::field_type x);
 
+/// @relates logger::field
 std::string to_string(const logger::field& x);
 
+/// @relates logger::field
 bool operator==(const logger::field& x, const logger::field& y);
 
 } // namespace caf
 
+// -- macro constants ----------------------------------------------------------
+
+/// Expands to a no-op.
 #define CAF_VOID_STMT static_cast<void>(0)
 
-#define CAF_CAT(a, b) a##b
-
-#define CAF_LOG_LEVEL_QUIET -1
-#define CAF_LOG_LEVEL_ERROR 0
-#define CAF_LOG_LEVEL_WARNING 1
-#define CAF_LOG_LEVEL_INFO 2
-#define CAF_LOG_LEVEL_DEBUG 3
-#define CAF_LOG_LEVEL_TRACE 4
-
-#define CAF_ARG(argument) caf::detail::make_arg_wrapper(#argument, argument)
-
-#define CAF_ARG2(argname, argval) caf::detail::make_arg_wrapper(argname, argval)
-
-#define CAF_ARG3(argname, first, last)                                         \
-  caf::detail::make_arg_wrapper(argname, first, last)
-
-#ifdef CAF_MSVC
-#define CAF_PRETTY_FUN __FUNCSIG__
-#else // CAF_MSVC
-#define CAF_PRETTY_FUN __PRETTY_FUNCTION__
-#endif // CAF_MSVC
-
 #ifndef CAF_LOG_COMPONENT
+/// Name of the current component when logging.
 #define CAF_LOG_COMPONENT "caf"
 #endif // CAF_LOG_COMPONENT
 
+// -- utility macros -----------------------------------------------------------
+
+#ifdef CAF_MSVC
+/// Expands to a string representation of the current funciton name that
+/// includes the full function name and its signature.
+#define CAF_PRETTY_FUN __FUNCSIG__
+#else // CAF_MSVC
+/// Expands to a string representation of the current funciton name that
+/// includes the full function name and its signature.
+#define CAF_PRETTY_FUN __PRETTY_FUNCTION__
+#endif // CAF_MSVC
+
+/// Concatenates `a` and `b` to a single preprocessor token.
+#define CAF_CAT(a, b) a##b
+
 #define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
   ::caf::logger::event {                                                       \
-    loglvl, component, CAF_PRETTY_FUN, __func__,                               \
-      caf::logger::skip_path(__FILE__), __LINE__,                              \
+    loglvl, __LINE__, component, CAF_PRETTY_FUN, __func__,                     \
+      caf::logger::skip_path(__FILE__),                                        \
       (::caf::logger::line_builder{} << message).get(),                        \
       ::std::this_thread::get_id(), aid, ::caf::make_timestamp()               \
   }
 
-#if CAF_LOG_LEVEL == -1
+/// Expands to `argument = <argument>` in log output.
+#define CAF_ARG(argument) caf::detail::make_arg_wrapper(#argument, argument)
+
+/// Expands to `argname = <argval>` in log output.
+#define CAF_ARG2(argname, argval) caf::detail::make_arg_wrapper(argname, argval)
+
+/// Expands to `argname = [argval, last)` in log output.
+#define CAF_ARG3(argname, first, last)                                         \
+  caf::detail::make_arg_wrapper(argname, first, last)
+
+// -- logging macros -----------------------------------------------------------
+
+#if CAF_LOG_LEVEL == CAF_LOG_LEVEL_QUIET
 
 #define CAF_LOG_IMPL(unused1, unused2, unused3)
 
@@ -391,7 +450,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #define CAF_LOG_TRACE(unused)
 
-#else // CAF_LOG_LEVEL
+#else // CAF_LOG_LEVEL == CAF_LOG_LEVEL_QUIET
 
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
   do {                                                                         \
@@ -399,8 +458,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
     if (CAF_UNIFYN(caf_logger) != nullptr                                      \
         && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
       CAF_UNIFYN(caf_logger)                                                   \
-        ->log(                                                                 \
-          new CAF_LOG_MAKE_EVENT(CAF_UNIFYN(caf_logger)->thread_local_aid(),   \
+        ->log(CAF_LOG_MAKE_EVENT(CAF_UNIFYN(caf_logger)->thread_local_aid(),   \
                                  component, loglvl, message));                 \
   } while (false)
 
@@ -458,60 +516,49 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 #define CAF_LOG_ERROR(output)                                                  \
   CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output)
 
-#endif // CAF_LOG_LEVEL
+#endif // CAF_LOG_LEVEL == CAF_LOG_LEVEL_QUIET
 
 #ifndef CAF_LOG_INFO
-#  define CAF_LOG_INFO(output) CAF_VOID_STMT
-#endif
+#define CAF_LOG_INFO(output) CAF_VOID_STMT
+#define CAF_LOG_INFO_IF(cond, output) CAF_VOID_STMT
+#else // CAF_LOG_INFO
+#define CAF_LOG_INFO_IF(cond, output)                                          \
+  if (cond)                                                                    \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output);               \
+  CAF_VOID_STMT
+#endif // CAF_LOG_INFO
 
 #ifndef CAF_LOG_DEBUG
-#  define CAF_LOG_DEBUG(output) CAF_VOID_STMT
-#endif
+#define CAF_LOG_DEBUG(output) CAF_VOID_STMT
+#define CAF_LOG_DEBUG_IF(cond, output) CAF_VOID_STMT
+#else // CAF_LOG_DEBUG
+#define CAF_LOG_DEBUG_IF(cond, output)                                         \
+  if (cond)                                                                    \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output);              \
+  CAF_VOID_STMT
+#endif // CAF_LOG_DEBUG
 
 #ifndef CAF_LOG_WARNING
-#  define CAF_LOG_WARNING(output) CAF_VOID_STMT
-#endif
+#define CAF_LOG_WARNING(output) CAF_VOID_STMT
+#define CAF_LOG_WARNING_IF(cond, output) CAF_VOID_STMT
+#else // CAF_LOG_WARNING
+#define CAF_LOG_WARNING_IF(cond, output)                                       \
+  if (cond)                                                                    \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output);            \
+  CAF_VOID_STMT
+#endif // CAF_LOG_WARNING
 
 #ifndef CAF_LOG_ERROR
-#  define CAF_LOG_ERROR(output) CAF_VOID_STMT
-#endif
-
-#ifdef CAF_LOG_LEVEL
-
-#define CAF_LOG_DEBUG_IF(cond, output)                                         \
-  if (cond) {                                                                  \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, output);              \
-  }                                                                            \
-  CAF_VOID_STMT
-
-#define CAF_LOG_INFO_IF(cond, output)                                          \
-  if (cond) {                                                                  \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_INFO, output);               \
-  }                                                                            \
-  CAF_VOID_STMT
-
-#define CAF_LOG_WARNING_IF(cond, output)                                       \
-  if (cond) {                                                                  \
-    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output);            \
-  }                                                                            \
-  CAF_VOID_STMT
-
+#define CAF_LOG_ERROR(output) CAF_VOID_STMT
+#define CAF_LOG_ERROR_IF(cond, output) CAF_VOID_STMT
+#else // CAF_LOG_ERROR
 #define CAF_LOG_ERROR_IF(cond, output)                                         \
-  if (cond) {                                                                  \
+  if (cond)                                                                    \
     CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output);              \
-  }                                                                            \
   CAF_VOID_STMT
+#endif // CAF_LOG_ERROR
 
-#else // CAF_LOG_LEVEL
-
-#define CAF_LOG_DEBUG_IF(unused1, unused2)
-#define CAF_LOG_INFO_IF(unused1, unused2)
-#define CAF_LOG_WARNING_IF(unused1, unused2)
-#define CAF_LOG_ERROR_IF(unused1, unused2)
-
-#endif // CAF_LOG_LEVEL
-
-// -- Standardized CAF events according to SE-0001.
+// -- macros for logging CE-0001 events ----------------------------------------
 
 /// The log component responsible for logging control flow events that are
 /// crucial for understanding happens-before relations. See RFC SE-0001.

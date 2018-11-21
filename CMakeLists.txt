@@ -367,8 +367,11 @@ endif()
 #                                setup logging                                 #
 ################################################################################
 
+# make sure log level is defined and all-uppercase
 if(NOT CAF_LOG_LEVEL)
-  set(CAF_LOG_LEVEL "-1")
+  set(CAF_LOG_LEVEL "QUIET")
+else()
+  string(TOUPPER "${CAF_LOG_LEVEL}" CAF_LOG_LEVEL)
 endif()
 
 ################################################################################
@@ -662,23 +665,6 @@ add_custom_target(gui_dummy SOURCES configure ${script_files})
 #                                print summary                                 #
 ################################################################################
 
-# set human-readable representation for log level
-set(LOG_LEVEL_STR "none")
-if(CAF_LOG_LEVEL)
-  if(${CAF_LOG_LEVEL} EQUAL 0)
-    set(LOG_LEVEL_STR "ERROR")
-  elseif(${CAF_LOG_LEVEL} EQUAL 1)
-    set(LOG_LEVEL_STR "WARNING")
-  elseif(${CAF_LOG_LEVEL} EQUAL 2)
-    set(LOG_LEVEL_STR "INFO")
-  elseif(${CAF_LOG_LEVEL} EQUAL 3)
-    set(LOG_LEVEL_STR "DEBUG")
-  elseif(${CAF_LOG_LEVEL} EQUAL 4)
-    set(LOG_LEVEL_STR "TRACE")
-  else()
-    set(LOG_LEVEL_STR "invalid")
-  endif()
-endif()
 # little helper macro to invert a boolean
 macro(invertYesNo in out)
   if(${in})
@@ -715,7 +701,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild static only:     ${CAF_BUILD_STATIC_ONLY}"
         "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
         "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
-        "\nLog level:             ${LOG_LEVEL_STR}"
+        "\nLog level:             ${CAF_LOG_LEVEL}"
         "\nWith mem. mgmt.:       ${CAF_BUILD_MEM_MANAGEMENT}"
         "\nWith exceptions:       ${CAF_BUILD_WITH_EXCEPTIONS}"
         "\n"
