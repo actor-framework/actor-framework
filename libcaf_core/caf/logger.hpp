@@ -371,7 +371,7 @@ private:
   std::fstream file_;
 
   // Filled with log events by other threads.
-  detail::ringbuffer<event, 128> queue_;
+  detail::ringbuffer<event, queue_size> queue_;
 
   // Executes `logger::run`.
   std::thread thread_;
