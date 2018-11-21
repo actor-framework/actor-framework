@@ -57,9 +57,7 @@ public:
     rd_pos_ = next(rp);
     // Wakeup a waiting producers if the queue became non-full.
     if (rp == next(wr_pos_))
-    {
       cv_full_.notify_all();
-    }
   }
 
   void push_back(T&& x) {
