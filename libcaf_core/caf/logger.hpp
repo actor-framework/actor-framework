@@ -227,7 +227,7 @@ public:
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
-  bool accepts(int level, string_view component_name);
+  bool accepts(unsigned level, string_view component_name);
 
   /// Returns the output format used for the log file.
   const line_format& file_format() const {

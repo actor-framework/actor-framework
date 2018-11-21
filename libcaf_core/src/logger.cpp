@@ -351,7 +351,7 @@ logger* logger::current_logger() {
   return get_current_logger();
 }
 
-bool logger::accepts(int level, string_view cname) {
+bool logger::accepts(unsigned level, string_view cname) {
   if (level > cfg_.verbosity)
     return false;
   if (!component_filter.empty()) {
