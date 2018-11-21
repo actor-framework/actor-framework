@@ -5,8 +5,6 @@ defaultBuildFlags = [
     'CAF_MORE_WARNINGS:BOOL=yes',
     'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
     'CAF_NO_OPENCL:BOOL=yes',
-    'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
-    'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
 ]
 
 // CMake flags for release builds.
@@ -18,6 +16,12 @@ debugBuildFlags = defaultBuildFlags + [
     'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
     'CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
     'CAF_LOG_LEVEL:STRING=TRACE',
+]
+
+// CMake flags for macOS builds only.
+macBuildFlags = [
+    'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
+    'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
 ]
 
 // Our build matrix. The keys are the operating system labels and the values
@@ -32,7 +36,7 @@ buildMatrix = [
     ['macOS', [
         builds: ['debug'],
         tools: ['clang'],
-        cmakeArgs: debugBuildFlags,
+        cmakeArgs: debugBuildFlags + macBuildFlags,
     ]],
     // One release build per supported OS. FreeBSD and Windows have the least
     // testing outside Jenkins, so we also explicitly schedule debug builds.
@@ -44,7 +48,7 @@ buildMatrix = [
     ['macOS', [
         builds: ['release'],
         tools: ['clang'],
-        cmakeArgs: releaseBuildFlags,
+        cmakeArgs: releaseBuildFlags + macBuildFlags,
     ]],
     ['FreeBSD', [
         builds: ['debug'], // no release build for now, because it takes 1h
