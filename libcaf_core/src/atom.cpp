@@ -59,10 +59,10 @@ atom_value to_lowercase(atom_value x) {
 atom_value atom_from_string(const std::string& x) {
   if (x.size() > 10)
     return atom("");
-  char buf[11];
-  memcpy(buf, x.c_str(), x.size());
+  atom_value_buf buf;
+  memcpy(buf.data(), x.c_str(), x.size());
   buf[x.size()] = '\0';
-  return atom(buf);
+  return static_cast<atom_value>(detail::atom_val(buf.data()));
 }
 
 std::string to_string(const atom_value& x) {
