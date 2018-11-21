@@ -381,7 +381,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CMAKE_BUILD_TYPE STRING Debug
             append_cache_entry CAF_NO_EXAMPLES BOOL yes
             append_cache_entry CAF_NO_TOOLS BOOL yes
-            append_cache_entry CAF_LOG_LEVEL STRING 4
+            append_cache_entry CAF_LOG_LEVEL STRING TRACE
             append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
