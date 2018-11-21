@@ -29,10 +29,6 @@ using namespace caf;
 
 namespace {
 
-struct fixture {
-
-};
-
 using str_list = std::vector<std::string>;
 
 str_list split(string_view str) {
@@ -51,16 +47,7 @@ std::string join(str_list vec) {
   return caf::join(vec, ",");
 }
 
-template <class... Ts>
-std::string splice(string_view glue, const Ts&... xs) {
-  std::string result;
-  caf::splice(result, glue, xs...);
-  return result;
-}
-
 } // namespace <anonymous>
-
-CAF_TEST_FIXTURE_SCOPE(string_algorithms_tests, fixture)
 
 CAF_TEST(splitting) {
   CAF_CHECK_EQUAL(split(""), str_list({""}));
@@ -96,6 +83,8 @@ CAF_TEST(starts with) {
   CAF_CHECK(starts_with("foobar", "fooba"));
   CAF_CHECK(starts_with("foobar", "foobar"));
   CAF_CHECK(!starts_with("foobar", "o"));
+  CAF_CHECK(!starts_with("foobar", "fa"));
+  CAF_CHECK(!starts_with("foobar", "foobaro"));
 }
 
 CAF_TEST(ends with) {
@@ -104,6 +93,6 @@ CAF_TEST(ends with) {
   CAF_CHECK(ends_with("foobar", "oobar"));
   CAF_CHECK(ends_with("foobar", "foobar"));
   CAF_CHECK(!ends_with("foobar", "a"));
+  CAF_CHECK(!ends_with("foobar", "car"));
+  CAF_CHECK(!ends_with("foobar", "afoobar"));
 }
-
-CAF_TEST_FIXTURE_SCOPE_END()
