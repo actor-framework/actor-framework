@@ -374,6 +374,12 @@ else()
   string(TOUPPER "${CAF_LOG_LEVEL}" CAF_LOG_LEVEL)
 endif()
 
+set(validLogLevels QUIET ERROR WARNING DEBUG TRACE)
+list(FIND validLogLevels "${CAF_LOG_LEVEL}" logLevelIndex)
+if(logLevelIndex LESS 0)
+  MESSAGE(FATAL_ERROR "Invalid log level: \"${CAF_LOG_LEVEL}\"")
+endif()
+
 ################################################################################
 #                           setup for install target                           #
 ################################################################################
