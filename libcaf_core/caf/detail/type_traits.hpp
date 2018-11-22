@@ -185,7 +185,7 @@ class is_comparable {
     static_cast<T1*>(nullptr), static_cast<T2*>(nullptr),
     static_cast<bool*>(nullptr),
     std::integral_constant<bool, std::is_arithmetic<T1>::value
-                                   && std::is_arithmetic<T1>::value>{}));
+                                   && std::is_arithmetic<T2>::value>{}));
 
 public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
