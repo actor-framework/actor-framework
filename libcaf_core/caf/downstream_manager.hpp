@@ -192,6 +192,9 @@ public:
   /// Queries an estimate of the size of the output buffer for `slot`.
   virtual size_t buffered(stream_slot slot) const noexcept;
 
+  /// Computes the maximum available downstream capacity.
+  virtual int32_t max_capacity() const noexcept;
+
   /// Queries whether the manager cannot make any progress, because its buffer
   /// is full and no more credit is available.
   bool stalled() const noexcept;

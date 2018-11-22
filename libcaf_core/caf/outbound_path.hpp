@@ -170,6 +170,9 @@ public:
   /// ACKs, i.e., receiving an ACK with a higher ID is not an error.
   int64_t next_ack_id;
 
+  /// Stores the maximum capacity of the downstream actor.
+  int32_t max_capacity;
+
   /// Stores whether an outbound path is marked for removal. The
   /// `downstream_manger` no longer sends new batches to a closing path, but
   /// buffered batches are still shipped. The owning `stream_manager` removes

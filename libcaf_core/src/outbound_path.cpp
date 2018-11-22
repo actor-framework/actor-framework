@@ -40,6 +40,7 @@ outbound_path::outbound_path(stream_slot sender_slot,
       open_credit(0),
       desired_batch_size(50),
       next_ack_id(1),
+      max_capacity(0),
       closing(false) {
   // nop
 }

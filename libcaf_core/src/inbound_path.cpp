@@ -112,29 +112,37 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
 }
 
 void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
+                                  int32_t max_downstream_capacity,
                                   timespan cycle, timespan complexity) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items) << CAF_ARG(cycle)
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items)
+                << CAF_ARG(max_downstream_capacity) << CAF_ARG(cycle)
                 << CAF_ARG(complexity));
   CAF_IGNORE_UNUSED(queued_items);
   auto x = stats.calculate(cycle, complexity);
-  // Hand out enough credit to fill our queue for 2 cycles.
-  auto credit = std::max((x.max_throughput * 2) - assigned_credit, 0);
+  // Hand out enough credit to fill our queue for 2 cycles but never exceed
+  // the downstream capacity.
+  auto max_capacity = std::min(x.max_throughput * 2, max_downstream_capacity);
+  CAF_ASSERT(max_capacity > 0);
   // Protect against overflow on `assigned_credit`.
   auto max_new_credit = std::numeric_limits<int32_t>::max() - assigned_credit;
+  // Compute the amount of credit we grant in this round.
+  auto credit = std::min(std::max(max_capacity - assigned_credit, 0),
+                         max_new_credit);
   // The manager can restrict or adjust the amount of credit.
   credit = std::min(mgr->acquire_credit(this, credit), max_new_credit);
   if (credit == 0 && up_to_date())
     return;
+  CAF_LOG_DEBUG(CAF_ARG(assigned_credit) << CAF_ARG(max_capacity)
+                << CAF_ARG(queued_items) << CAF_ARG(credit)
+                << CAF_ARG(desired_batch_size));
   if (credit > 0)
     assigned_credit += credit;
   desired_batch_size = static_cast<int32_t>(x.items_per_batch);
-  CAF_LOG_DEBUG(CAF_ARG(credit) << CAF_ARG(desired_batch_size));
   unsafe_send_as(self, hdl,
-                 make<upstream_msg::ack_batch>(slots.invert(),
-                                               self->address(),
+                 make<upstream_msg::ack_batch>(slots.invert(), self->address(),
                                                static_cast<int32_t>(credit),
                                                desired_batch_size,
-                                               last_batch_id));
+                                               last_batch_id, max_capacity));
   last_acked_batch_id = last_batch_id;
 }
 
