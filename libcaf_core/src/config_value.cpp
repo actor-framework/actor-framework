@@ -190,5 +190,16 @@ void put_impl(dictionary<config_value::dictionary>& dict, string_view key,
   put_impl(dict[category], path, value);
 }
 
+config_value::list& put_list(config_value::dictionary& xs, std::string name) {
+  auto i = xs.insert_or_assign(std::move(name), config_value::list{});
+  return get<config_value::list>(i.first->second);
+}
+
+config_value::dictionary& put_dictionary(config_value::dictionary& xs,
+                                         std::string name) {
+  auto i = xs.insert_or_assign(std::move(name), config_value::dictionary{});
+  return get<config_value::dictionary>(i.first->second);
+}
+
 } // namespace caf
 
