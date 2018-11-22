@@ -52,7 +52,7 @@ void insert(string_builder& builder, size_t count, char ch) {
 
 namespace caf {
 
-config_option_set& config_option_set::add(config_option&& opt) {
+config_option_set& config_option_set::add(config_option opt) {
   opts_.emplace_back(std::move(opt));
   return *this;
 }

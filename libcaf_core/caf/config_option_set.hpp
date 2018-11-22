@@ -166,8 +166,7 @@ public:
   }
 
   /// Adds a config option to the set.
-  /// @private
-  config_option_set& add(config_option&& opt);
+  config_option_set& add(config_option opt);
 
   /// Generates human-readable help text for all options.
   std::string help_text(bool global_only = true) const;

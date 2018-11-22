@@ -77,6 +77,34 @@ config_option::config_option(string_view category, string_view name,
   CAF_ASSERT(pos() == buf_size_);
 }
 
+config_option::config_option(const config_option& other)
+  : category_separator_{other.category_separator_},
+    long_name_separator_{other.long_name_separator_},
+    short_names_separator_{other.short_names_separator_},
+    buf_size_{other.buf_size_},
+    meta_{other.meta_},
+    value_{other.value_} {
+  buf_.reset(new char[buf_size_]);
+  std::copy_n(other.buf_.get(), buf_size_, buf_.get());
+}
+
+config_option& config_option::operator=(const config_option& other) {
+  config_option tmp{other};
+  swap(*this, tmp);
+  return *this;
+}
+
+void swap(config_option& first, config_option& second) noexcept {
+  using std::swap;
+  swap(first.buf_, second.buf_);
+  swap(first.category_separator_, second.category_separator_);
+  swap(first.long_name_separator_, second.long_name_separator_);
+  swap(first.short_names_separator_, second.short_names_separator_);
+  swap(first.buf_size_, second.buf_size_);
+  swap(first.meta_, second.meta_);
+  swap(first.value_, second.value_);
+}
+
 // -- properties ---------------------------------------------------------------
 
 string_view config_option::category() const noexcept {
