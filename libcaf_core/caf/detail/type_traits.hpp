@@ -159,7 +159,7 @@ struct is_primitive {
 };
 
 /// Checks whether `T1` is comparable with `T2`.
-template <class T1, typename T2>
+template <class T1, class T2>
 class is_comparable {
   // SFINAE: If you pass a "bool*" as third argument, then
   //     decltype(cmp_help_fun(...)) is bool if there's an
@@ -168,16 +168,25 @@ class is_comparable {
   //     cmp_help_fun(A*, B*, void*). If there's no operator==(A, B)
   //     available, then cmp_help_fun(A*, B*, void*) is the only
   //     candidate and thus decltype(cmp_help_fun(...)) is void.
-  template <class A, typename B>
+  template <class A, class B>
   static bool cmp_help_fun(const A* arg0, const B* arg1,
-                           decltype(*arg0 == *arg1)* = nullptr);
+                           decltype(*arg0 == *arg1)*,
+                           std::integral_constant<bool, false>);
 
-  template <class A, typename B>
-  static void cmp_help_fun(const A*, const B*, void* = nullptr);
+  // silences float-equal warnings caused by decltype(*arg0 == *arg1)
+  template <class A, class B>
+  static bool cmp_help_fun(const A*, const B*, bool*,
+                           std::integral_constant<bool, true>);
 
-  using result_type = decltype(cmp_help_fun(static_cast<T1*>(nullptr),
-                                            static_cast<T2*>(nullptr),
-                                            static_cast<bool*>(nullptr)));
+  template <class A, class B, class C>
+  static void cmp_help_fun(const A*, const B*, void*, C);
+
+  using result_type = decltype(cmp_help_fun(
+    static_cast<T1*>(nullptr), static_cast<T2*>(nullptr),
+    static_cast<bool*>(nullptr),
+    std::integral_constant<bool, std::is_arithmetic<T1>::value
+                                   && std::is_arithmetic<T1>::value>{}));
+
 public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
