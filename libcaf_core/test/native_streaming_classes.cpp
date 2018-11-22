@@ -340,7 +340,7 @@ public:
         for (auto& kvp : qs) {
           auto inptr = kvp.second.policy().handler.get();
           auto bs = static_cast<int32_t>(kvp.second.total_task_size());
-          inptr->emit_ack_batch(this, bs, cycle, desired_batch_complexity);
+          inptr->emit_ack_batch(this, bs, 30, cycle, desired_batch_complexity);
         }
       }
     };

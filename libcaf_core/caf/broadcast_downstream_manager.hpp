@@ -81,6 +81,18 @@ public:
            + (i != state_map_.end() ? i->second.buf.size() : 0u);
   }
 
+  int32_t max_capacity() const noexcept override {
+    // The maximum capacity is limited by the slowest downstream path.
+    auto result = std::numeric_limits<int32_t>::max();
+    for (auto& kvp : this->paths_) {
+      auto mc = kvp.second->max_capacity;
+      // max_capacity is 0 if and only if we didn't receive an ack_batch yet.
+      if (mc > 0)
+        result = std::min(result, mc);
+    }
+    return result;
+  }
+
   /// Sets the filter for `slot` to `filter`. Inserts a new element if `slot`
   /// is a new path.
   void set_filter(stream_slot slot, filter_type new_filter) {

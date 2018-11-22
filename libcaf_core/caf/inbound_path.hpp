@@ -137,7 +137,8 @@ public:
   ///                     waiting in the mailbox.
   /// @param cycle Time between credit rounds.
   /// @param desired_batch_complexity Desired processing time per batch.
-  void emit_ack_batch(local_actor* self, int32_t queued_items, timespan cycle,
+  void emit_ack_batch(local_actor* self, int32_t queued_items,
+                      int32_t max_downstream_capacity, timespan cycle,
                       timespan desired_batch_complexity);
 
   /// Returns whether the path received no input since last emitting

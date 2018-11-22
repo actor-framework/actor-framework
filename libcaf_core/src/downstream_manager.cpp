@@ -199,6 +199,10 @@ size_t downstream_manager::buffered(stream_slot) const noexcept {
   return 0;
 }
 
+int32_t downstream_manager::max_capacity() const noexcept {
+  return std::numeric_limits<int32_t>::max();
+}
+
 bool downstream_manager::stalled() const noexcept {
   auto no_credit = [](const outbound_path& x) {
     return x.open_credit == 0;

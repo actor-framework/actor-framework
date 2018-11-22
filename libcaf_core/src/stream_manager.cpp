@@ -102,7 +102,9 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
   auto path = out().path(slots.receiver);
   if (path != nullptr) {
     path->open_credit += x.new_capacity;
+    path->max_capacity = x.max_capacity;
     CAF_ASSERT(path->open_credit >= 0);
+    CAF_ASSERT(path->max_capacity >= 0);
     path->set_desired_batch_size(x.desired_batch_size);
     path->next_ack_id = x.acknowledged_id + 1;
     // Gravefully remove path after receiving its final ACK.
@@ -158,7 +160,7 @@ void stream_manager::advance() {
       // Ignore inbound paths of other managers.
       if (inptr->mgr.get() == this) {
         auto bs = static_cast<int32_t>(kvp.second.total_task_size());
-        inptr->emit_ack_batch(self_, bs, interval, bc);
+        inptr->emit_ack_batch(self_, bs, out().max_capacity(), interval, bc);
       }
     }
   }
