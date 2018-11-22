@@ -560,10 +560,6 @@ add_optional_caf_binaries(examples)
 # build tools if not being told otherwise
 add_optional_caf_binaries(tools)
 
-# build benchmarks if not being told otherwise
-add_optional_caf_binaries(benchmarks)
-
-
 ################################################################################
 #                               unit tests setup                               #
 ################################################################################
@@ -686,7 +682,6 @@ invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
-invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 invertYesNo(CAF_NO_OPENSSL CAF_BUILD_OPENSSL)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
@@ -715,7 +710,6 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild tools:           ${CAF_BUILD_TOOLS}"
         "\nBuild examples:        ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:      ${CAF_BUILD_UNIT_TESTS}"
-        "\nBuild benchmarks:      ${CAF_BUILD_BENCHMARKS}"
         "\nBuild OpenCL:          ${CAF_BUILD_OPENCL}"
         "\nBuild OpenSSL:         ${CAF_BUILD_OPENSSL}"
         "\nBuild Python:          ${CAF_BUILD_PYTHON}"

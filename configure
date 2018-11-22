@@ -60,7 +60,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-unit-tests             build without unit tests
     --no-opencl                 build without OpenCL module
     --no-openssl                build without OpenSSL module
-    --no-benchmarks             build without benchmarks
     --no-tools                  build without CAF tools such as caf-run
     --no-io                     build without I/O module
     --no-python                 build without python binding
@@ -351,9 +350,6 @@ while [ $# -ne 0 ]; do
             ;;
         --with-python-config=*)
             append_cache_entry CAF_PYTHON_CONFIG_BIN FILEPATH "$optarg"
-            ;;
-        --no-benchmarks)
-            append_cache_entry CAF_NO_BENCHMARKS BOOL yes
             ;;
         --no-tools)
             append_cache_entry CAF_NO_TOOLS BOOL yes
