@@ -87,7 +87,28 @@ void check_integer_options() {
   check_integer_options<T>(tk);
 }
 
+void compare(const config_option& lhs, const config_option& rhs) {
+  CAF_CHECK_EQUAL(lhs.category(), rhs.category());
+  CAF_CHECK_EQUAL(lhs.long_name(), rhs.long_name());
+  CAF_CHECK_EQUAL(lhs.short_names(), rhs.short_names());
+  CAF_CHECK_EQUAL(lhs.description(), rhs.description());
+  CAF_CHECK_EQUAL(lhs.full_name(), rhs.full_name());
+}
+
 } // namespace <anonymous>
+
+CAF_TEST(copy constructor) {
+  auto one = make_config_option<int>("cat1", "one", "option 1");
+  auto two = one;
+  compare(one, two);
+}
+
+CAF_TEST(copy assignment) {
+  auto one = make_config_option<int>("cat1", "one", "option 1");
+  auto two = make_config_option<int>("cat2", "two", "option 2");
+  two = one;
+  compare(one, two);
+}
 
 CAF_TEST(type_bool) {
   CAF_CHECK_EQUAL(read<bool>("true"), true);
