@@ -54,9 +54,17 @@ public:
   config_option(string_view category, string_view name, string_view description,
                 const meta_state* meta, void* value = nullptr);
 
+  config_option(const config_option&);
+
   config_option(config_option&&) = default;
 
+  config_option& operator=(const config_option&);
+
   config_option& operator=(config_option&&) = default;
+
+  // -- swap function ----------------------------------------------------------
+
+  friend void swap(config_option& first, config_option& second) noexcept;
 
   // -- properties -------------------------------------------------------------
 
