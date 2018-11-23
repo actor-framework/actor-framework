@@ -58,7 +58,8 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   add_message_type_impl<config_value_map>("config_value_map");
-  add_message_type_impl<config_value::list>("config_value_list");
+  add_message_type_impl<config_value::list>("config_value::list");
+  add_message_type_impl<config_value::dictionary>("config_value::dictionary");
   // (1) hard-coded defaults
   stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
   stream_max_batch_delay = defaults::stream::max_batch_delay;
