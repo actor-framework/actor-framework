@@ -70,21 +70,6 @@ bool operator==(const maybe<T>& x, const T& y) {
   return x.val ? x.val == y : true;
 }
 
-template <class T>
-bool operator==(const T& x, const maybe<T>& y) {
-  return y.val ? x == y.val : true;
-}
-
-template <class T>
-bool operator!=(const maybe<T>& x, const T& y) {
-  return !(x == y);
-}
-
-template <class T>
-bool operator!=(const T& x, const maybe<T>& y) {
-  return !(x == y);
-}
-
 constexpr uint8_t no_flags = 0;
 constexpr uint32_t no_payload = 0;
 constexpr uint64_t no_operation_data = 0;

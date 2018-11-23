@@ -122,10 +122,10 @@ using sum_type_visit_result_t =
   typename sum_type_visit_result<detail::decay_t<F>,
                                  detail::decay_t<Ts>...>::type;
 
-template <class Result, int I, class Visitor>
+template <class Result, size_t I, class Visitor>
 struct visit_impl_continuation;
 
-template <class Result, int I>
+template <class Result, size_t I>
 struct visit_impl {
   template <class Visitor, class T, class... Ts>
   static Result apply(Visitor&& f, T&& x, Ts&&... xs) {
@@ -145,7 +145,7 @@ struct visit_impl<Result, 0> {
 };
 
 
-template <class Result, int I, class Visitor>
+template <class Result, size_t I, class Visitor>
 struct visit_impl_continuation {
   Visitor& f;
   template <class... Ts>

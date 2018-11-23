@@ -130,12 +130,12 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
   CAF_ASSERT(interval.count() > 0);
   stream_ticks_.interval(interval);
   CAF_ASSERT(sys_cfg.stream_max_batch_delay.count() > 0);
-  max_batch_delay_ticks_ = sys_cfg.stream_max_batch_delay.count()
-                           / interval.count();
+  auto div = [](timespan x, timespan y) {
+    return static_cast<size_t>(x.count() / y.count());
+  };
+  max_batch_delay_ticks_ = div(sys_cfg.stream_max_batch_delay, interval);
   CAF_ASSERT(max_batch_delay_ticks_ > 0);
-  CAF_ASSERT(sys_cfg.stream_credit_round_interval.count() > 0);
-  credit_round_ticks_ = sys_cfg.stream_credit_round_interval.count()
-                        / interval.count();
+  credit_round_ticks_ = div(sys_cfg.stream_credit_round_interval, interval);
   CAF_ASSERT(credit_round_ticks_ > 0);
   CAF_LOG_DEBUG(CAF_ARG(interval) << CAF_ARG(max_batch_delay_ticks_)
                 << CAF_ARG(credit_round_ticks_));

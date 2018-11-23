@@ -109,7 +109,7 @@ class scribe_impl : public io::scribe {
       // nop
     }
 
-    ~scribe_impl() {
+    ~scribe_impl() override {
       CAF_LOG_TRACE("");
     }
 

@@ -75,10 +75,11 @@ void replace_all(std::string& str, string_view what, string_view with) {
   while (i != str.end()) {
     auto before = std::distance(str.begin(), i);
     CAF_ASSERT(before >= 0);
-    str.replace(i, i + what.size(), with.begin(), with.end());
+    auto ws = static_cast<decltype(before)>(what.size());
+    str.replace(i, i + ws, with.begin(), with.end());
     // Iterator i became invalidated -> use new iterator pointing to the first
     // character after the replaced text.
-    i = next(str.begin() + before + with.size());
+    i = next(str.begin() + before + ws);
   }
 }
 

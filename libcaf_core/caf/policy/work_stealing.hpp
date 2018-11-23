@@ -140,8 +140,9 @@ public:
     // dequeue attempts
     auto& strategies = d(self).strategies;
     resumable* job = nullptr;
-    for (int k = 0; k < 2; ++k) {  // iterate over the first two strategies
-      for (size_t i = 0; i < strategies[k].attempts; i += strategies[k].step_size) {
+    for (size_t k = 0; k < 2; ++k) {  // iterate over the first two strategies
+      for (size_t i = 0; i < strategies[k].attempts;
+           i += strategies[k].step_size) {
         job = d(self).queue.take_head();
         if (job)
           return job;

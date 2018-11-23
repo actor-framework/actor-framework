@@ -131,11 +131,11 @@ CAF_TEST(containerbuf_reset_get_area) {
   std::vector<char> buf;
   vectorbuf vb{buf};
   // We can always write to the underlying buffer; no put area needed.
-  auto n = vb.sputn(str.data(), str.size());
+  auto n = vb.sputn(str.data(), static_cast<std::streamsize>(str.size()));
   CAF_REQUIRE_EQUAL(n, 6);
   // Readjust the get area.
   CAF_REQUIRE_EQUAL(buf.size(), 6u);
-  vb.pubsetbuf(buf.data() + 3, buf.size() - 3);
+  vb.pubsetbuf(buf.data() + 3, static_cast<std::streamsize>(buf.size() - 3));
   // Now read from a new get area into a buffer.
   char bar[3];
   n = vb.sgetn(bar, 3);

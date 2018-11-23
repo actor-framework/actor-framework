@@ -39,44 +39,47 @@ CAF_POP_WARNINGS
 
 #include "caf/openssl/middleman_actor.hpp"
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 struct CRYPTO_dynlock_value {
   std::mutex mtx;
 };
 
-namespace caf {
-namespace openssl {
+namespace {
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-static int init_count = 0;
-static std::mutex init_mutex;
-static std::vector<std::mutex> mutexes;
+int init_count = 0;
 
-static void locking_function(int mode, int n,
-                             const char* /* file */, int /* line */) {
+std::mutex init_mutex;
+
+std::vector<std::mutex> mutexes;
+
+void locking_function(int mode, int n, const char*, int) {
   if (mode & CRYPTO_LOCK)
-    mutexes[n].lock();
+    mutexes[static_cast<size_t>(n)].lock();
   else
-    mutexes[n].unlock();
+    mutexes[static_cast<size_t>(n)].unlock();
 }
 
-static CRYPTO_dynlock_value* dynlock_create(const char* /* file */,
-                                            int /* line */) {
-  return new CRYPTO_dynlock_value{};
+CRYPTO_dynlock_value* dynlock_create(const char*, int) {
+  return new CRYPTO_dynlock_value;
 }
 
-static void dynlock_lock(int mode, CRYPTO_dynlock_value* dynlock,
-                         const char* /* file */, int /* line */) {
+void dynlock_lock(int mode, CRYPTO_dynlock_value* dynlock, const char*, int) {
   if (mode & CRYPTO_LOCK)
     dynlock->mtx.lock();
   else
     dynlock->mtx.unlock();
 }
 
-static void dynlock_destroy(CRYPTO_dynlock_value* dynlock,
-                            const char* /* file */, int /* line */) {
+void dynlock_destroy(CRYPTO_dynlock_value* dynlock, const char*, int) {
   delete dynlock;
 }
+
+} // namespace <anonymous>
+
 #endif
+
+namespace caf {
+namespace openssl {
 
 manager::~manager() {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -119,12 +122,11 @@ void manager::init(actor_system_config&) {
     if (system().config().openssl_key.size() == 0)
       CAF_RAISE_ERROR("No private key configured for SSL endpoint");
   }
-
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   std::lock_guard<std::mutex> lock{init_mutex};
   ++init_count;
   if (init_count == 1) {
-    mutexes = std::vector<std::mutex>(CRYPTO_num_locks());
+    mutexes = std::vector<std::mutex>{static_cast<size_t>(CRYPTO_num_locks())};
     CRYPTO_set_locking_callback(locking_function);
     CRYPTO_set_dynlock_create_callback(dynlock_create);
     CRYPTO_set_dynlock_lock_callback(dynlock_lock);

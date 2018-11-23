@@ -52,16 +52,6 @@ struct seq_num_visitor {
   basp_broker_state* state;
 };
 
-struct close_visitor {
-  using result_type = void;
-  close_visitor(broker* ptr) : b(ptr) { }
-  template <class T>
-  result_type operator()(const T& hdl) {
-    b->close(hdl);
-  }
-  broker* b;
-};
-
 } // namespace anonymous
 
 const char* basp_broker_state::name = "basp_broker";

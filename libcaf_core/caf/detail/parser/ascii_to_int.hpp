@@ -27,7 +27,9 @@ template <int Base, class T>
 struct ascii_to_int {
   // @pre `c` is a valid ASCII digit, i.e., matches [0-9].
   constexpr T operator()(char c) const {
-    return c - '0';
+    // Result is guaranteed to have a value between 0 and 10 and can be safely
+    // cast to any integer type.
+    return static_cast<T>(c - '0');
   }
 };
 
@@ -38,7 +40,11 @@ struct ascii_to_int<16, T> {
     // Numbers start at position 48 in the ASCII table.
     // Uppercase characters start at position 65 in the ASCII table.
     // Lowercase characters start at position 97 in the ASCII table.
-    return c <= '9' ? c - '0' : (c <= 'F' ? 10 + (c - 'A') : 10 + (c - 'a'));
+    // Result is guaranteed to have a value between 0 and 16 and can be safely
+    // cast to any integer type.
+    return static_cast<T>(c <= '9'
+                          ? c - '0'
+                          : (c <= 'F' ? 10 + (c - 'A') : 10 + (c - 'a')));
   }
 };
 

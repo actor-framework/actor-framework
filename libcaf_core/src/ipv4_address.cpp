@@ -94,7 +94,8 @@ error parse(string_view str, ipv4_address& dest) {
   parser::read_ipv4_address(res, f);
   if (res.code == pec::success)
     return none;
-  return make_error(res.code, res.line, res.column);
+  return make_error(res.code, static_cast<size_t>(res.line),
+                    static_cast<size_t>(res.column));
 }
 
 } // namespace caf

@@ -34,13 +34,6 @@
 
 namespace {
 
-struct tostring_visitor : caf::static_visitor<std::string> {
-  template <class T>
-  inline std::string operator()(const T& value) {
-    return to_string(value);
-  }
-};
-
 class union_type {
 public:
   friend struct caf::default_sum_type_access<union_type>;
@@ -57,11 +50,6 @@ public:
 
   ~union_type() {
     destroy();
-  }
-
-  template <class T>
-  union_type(T x) : union_type() {
-    *this = x;
   }
 
   union_type& operator=(T0 value) {

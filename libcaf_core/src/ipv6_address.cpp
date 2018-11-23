@@ -183,8 +183,8 @@ std::string to_string(ipv6_address x) {
   // Output buffer.
   std::string result;
   // Utility for appending chunks to the result.
-  auto add_chunk = [&](uint16_t x) {
-    append_v6_hex(result, reinterpret_cast<uint8_t*>(&x));
+  auto add_chunk = [&](uint16_t chunk) {
+    append_v6_hex(result, reinterpret_cast<uint8_t*>(&chunk));
   };
   auto add_chunks = [&](u16_iterator i, u16_iterator e) {
     if (i != e) {
@@ -217,7 +217,8 @@ error parse(string_view str, ipv6_address& dest) {
   parser::read_ipv6_address(res, f);
   if (res.code == pec::success)
     return none;
-  return make_error(res.code, res.line, res.column);
+  return make_error(res.code, static_cast<size_t>(res.line),
+                    static_cast<size_t>(res.column));
 }
 
 } // namespace caf

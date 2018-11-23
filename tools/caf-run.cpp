@@ -244,6 +244,8 @@ void bootstrap(actor_system& system,
     return 1;                                                                  \
   } while (true)
 
+namespace {
+
 struct config : actor_system_config {
   config() {
     opt_group{custom_options_, "global"}
@@ -253,6 +255,8 @@ struct config : actor_system_config {
   string hostfile;
   string wdir;
 };
+
+} // namespace <anonymous>
 
 int main(int argc, char** argv) {
   config cfg;
