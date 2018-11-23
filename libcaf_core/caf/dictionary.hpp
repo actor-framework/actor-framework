@@ -370,9 +370,9 @@ bool operator>=(const dictionary<T>& xs, const dictionary<T>& ys) {
 
 /// Convenience function for calling `dict.insert_or_assign(key, value)`.
 // @relates dictionary
-template <class T>
-void put(dictionary<T>& dict, string_view key, T value) {
-  dict.insert_or_assign(key, std::move(value));
+template <class T, class V>
+void put(dictionary<T>& dict, string_view key, V&& value) {
+  dict.insert_or_assign(key, std::forward<V>(value));
 }
 
 } // namespace caf
