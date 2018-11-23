@@ -194,6 +194,11 @@ bool stream_manager::generate_messages() {
   return false;
 }
 
+const downstream_manager& stream_manager::out() const {
+  // We restore the const when returning from this member function.
+  return const_cast<stream_manager*>(this)->out();
+}
+
 void stream_manager::cycle_timeout(size_t) {
   // TODO: make pure virtual
 }

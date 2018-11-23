@@ -111,6 +111,9 @@ public:
   /// Returns the manager for downstream communication.
   virtual downstream_manager& out() = 0;
 
+  /// Returns the manager for downstream communication.
+  const downstream_manager& out() const;
+
   /// Returns whether the manager has reached the end and can be discarded
   /// safely.
   virtual bool done() const = 0;
