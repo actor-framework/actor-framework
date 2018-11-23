@@ -328,6 +328,8 @@ private:
   map_type xs_;
 };
 
+// -- operators ----------------------------------------------------------------
+
 // @relates dictionary
 template <class T>
 bool operator==(const dictionary<T>& xs, const dictionary<T>& ys) {
@@ -362,6 +364,15 @@ bool operator>(const dictionary<T>& xs, const dictionary<T>& ys) {
 template <class T>
 bool operator>=(const dictionary<T>& xs, const dictionary<T>& ys) {
   return xs.container() >= ys.container();
+}
+
+// -- free functions -----------------------------------------------------------
+
+/// Convenience function for calling `dict.insert_or_assign(key, value)`.
+// @relates dictionary
+template <class T>
+void put(dictionary<T>& dict, string_view key, T value) {
+  dict.insert_or_assign(key, std::move(value));
 }
 
 } // namespace caf
