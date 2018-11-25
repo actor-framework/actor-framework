@@ -56,11 +56,11 @@ atom_value to_lowercase(atom_value x) {
   return static_cast<atom_value>(detail::atom_val(buf.data()));
 }
 
-atom_value atom_from_string(const std::string& x) {
+atom_value atom_from_string(string_view x) {
   if (x.size() > 10)
     return atom("");
   atom_value_buf buf;
-  memcpy(buf.data(), x.c_str(), x.size());
+  memcpy(buf.data(), x.data(), x.size());
   buf[x.size()] = '\0';
   return static_cast<atom_value>(detail::atom_val(buf.data()));
 }

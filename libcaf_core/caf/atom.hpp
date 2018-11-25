@@ -40,7 +40,7 @@ std::string to_string(const atom_value& what);
 /// @relates atom_value
 atom_value to_lowercase(atom_value x);
 
-atom_value atom_from_string(const std::string& x);
+atom_value atom_from_string(string_view x);
 
 /// Creates an atom from given string literal.
 template <size_t Size>
