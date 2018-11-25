@@ -132,6 +132,10 @@ class uniform_type_info_map;
 class uri;
 class uri_builder;
 
+// -- templates with default parameters ----------------------------------------
+
+template <class, class = event_based_actor> class stateful_actor;
+
 // -- structs ------------------------------------------------------------------
 
 struct unit_t;
