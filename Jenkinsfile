@@ -65,6 +65,8 @@ buildMatrix = [
         ],
     ]],
     // One Additional build for coverage reports.
+    /* TODO: this build exhausts all storage on the node and is temporarily
+     *       disabled until resolving the issue
     ['Linux', [
         builds: ['debug'],
         tools: ['gcc8 && gcovr'],
@@ -75,6 +77,7 @@ buildMatrix = [
             'CAF_FORCE_NO_EXCEPTIONS:BOOL=yes',
         ],
     ]],
+    */
 ]
 
 // Optional environment variables for combinations of labels.
@@ -155,8 +158,7 @@ def buildSteps(buildType, cmakeArgs, buildId) {
     } else {
         echo "Unix build on $NODE_NAME"
         def leakCheck = STAGE_NAME.contains("Linux") && !STAGE_NAME.contains("clang")
-        withEnv(["label_exp=" + STAGE_NAME.toLowerCase(),
-                 "ASAN_OPTIONS=detect_leaks=" + (leakCheck ? 1 : 0)]) {
+        withEnv(["label_exp=" + STAGE_NAME.toLowerCase()]) {
             cmakeSteps(buildType, cmakeArgs, buildId)
         }
     }
