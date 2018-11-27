@@ -157,8 +157,8 @@ def buildSteps(buildType, cmakeArgs, buildId) {
         }
     } else {
         echo "Unix build on $NODE_NAME"
-        def leakCheck = STAGE_NAME.contains("Linux") && !STAGE_NAME.contains("clang")
-        withEnv(["label_exp=" + STAGE_NAME.toLowerCase()]) {
+        withEnv(["label_exp=" + STAGE_NAME.toLowerCase(),
+                 "ASAN_OPTIONS=detect_leaks=0"]) {
             cmakeSteps(buildType, cmakeArgs, buildId)
         }
     }
