@@ -32,6 +32,7 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/pretty_type_name.hpp"
+#include "caf/detail/log_level.hpp"
 #include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
