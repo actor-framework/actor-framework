@@ -40,7 +40,7 @@ void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
   auto observer = actor_cast<strong_actor_ptr>(observer_);
   auto observed = actor_cast<strong_actor_ptr>(observed_);
   if (observer)
-    observer->enqueue(std::move(observed), make_message_id(),
+    observer->enqueue(std::move(observed), make_message_id(priority_),
                       factory(actor_cast<abstract_actor*>(observed_), rsn),
                       host);
 }
@@ -53,10 +53,12 @@ bool default_attachable::matches(const token& what) {
 }
 
 default_attachable::default_attachable(actor_addr observed, actor_addr observer,
-                                       observe_type type)
+                                       observe_type type,
+                                       message_priority priority)
     : observed_(std::move(observed)),
       observer_(std::move(observer)),
-      type_(type) {
+      type_(type),
+      priority_(priority) {
   // nop
 }
 

@@ -66,9 +66,10 @@ void local_actor::request_response_timeout(const duration& d, message_id mid) {
   clock().set_request_timeout(t, this, mid.response_id());
 }
 
-void local_actor::monitor(abstract_actor* ptr) {
+void local_actor::monitor(abstract_actor* ptr, message_priority priority) {
   if (ptr != nullptr)
-    ptr->attach(default_attachable::make_monitor(ptr->address(), address()));
+    ptr->attach(default_attachable::make_monitor(ptr->address(), address(),
+                                                 priority));
 }
 
 void local_actor::demonitor(const actor_addr& whom) {

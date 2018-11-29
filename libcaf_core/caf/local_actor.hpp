@@ -208,7 +208,7 @@ public:
 
   /// @cond PRIVATE
 
-  void monitor(abstract_actor* ptr);
+  void monitor(abstract_actor* ptr, message_priority prio);
 
   /// @endcond
 
@@ -289,9 +289,9 @@ public:
 
   /// Adds a unidirectional `monitor` to `whom`.
   /// @note Each call to `monitor` creates a new, independent monitor.
-  template <class Handle>
+  template <message_priority P = message_priority::normal, class Handle = actor>
   void monitor(const Handle& whom) {
-    monitor(actor_cast<abstract_actor*>(whom));
+    monitor(actor_cast<abstract_actor*>(whom), P);
   }
 
   /// Removes a monitor from `whom`.

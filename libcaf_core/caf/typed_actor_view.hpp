@@ -87,9 +87,9 @@ public:
     return self_->make_response_promise<Ts...>();
   }
 
-  template <class T>
-  void monitor(const T& x) {
-    self_->monitor(x);
+  template <message_priority P = message_priority::normal, class Handle = actor>
+  void monitor(const Handle& x) {
+    self_->monitor<P>(x);
   }
 
   template <class T>
