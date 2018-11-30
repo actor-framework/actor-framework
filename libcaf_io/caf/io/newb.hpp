@@ -152,6 +152,15 @@ struct newb : public network::newb_base {
       intrusive_ptr_release(this->ctrl());
   }
 
+  void graceful_shutdown() override {
+    CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+    // Ignore repeated calls.
+    if (state_.shutting_down)
+      return;
+    state_.shutting_down = true;
+    trans->shutdown(this, fd_);
+  }
+
   // -- base requirements ------------------------------------------------------
 
   void start() override {
@@ -169,9 +178,7 @@ struct newb : public network::newb_base {
   void stop() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
-    close_read_channel();
-    stop_reading();
-    stop_writing();
+    graceful_shutdown();
   }
 
   void io_error(network::operation op, error err) override {
@@ -193,7 +200,7 @@ struct newb : public network::newb_base {
     }
     switch (op) {
       case operation::read:
-        stop_reading();
+        graceful_shutdown();
         break;
       case operation::write:
         stop_writing();
@@ -217,13 +224,13 @@ struct newb : public network::newb_base {
 
   void start_writing() override {
     if (!writing_) {
-      event_handler::backend().add(network::operation::write, fd(), this);
+      event_handler::backend().add(network::operation::write, fd_, this);
       writing_ = true;
     }
   }
 
   void stop_writing() override {
-    event_handler::backend().del(network::operation::write, fd(), this);
+    event_handler::backend().del(network::operation::write, fd_, this);
   }
 
   // -- members ----------------------------------------------------------------
@@ -468,6 +475,15 @@ struct newb_acceptor : network::newb_base {
       intrusive_ptr_release(this->ctrl());
   }
 
+  void graceful_shutdown() override {
+    CAF_LOG_TRACE(CAF_ARG2("fd", fd_));
+    // Ignore repeated calls.
+    if (state_.shutting_down)
+      return;
+    state_.shutting_down = true;
+    accept_pol->shutdown(this, fd_);
+  }
+
   // -- base requirements ------------------------------------------------------
 
   void start() override {
@@ -485,9 +501,7 @@ struct newb_acceptor : network::newb_base {
   void stop() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
-    close_read_channel();
-    stop_reading();
-    stop_writing();
+    graceful_shutdown();
   }
 
   void io_error(network::operation op, error err) override {
@@ -511,13 +525,13 @@ struct newb_acceptor : network::newb_base {
 
   void start_writing() override {
     if (!writing_) {
-      event_handler::backend().add(network::operation::write, fd(), this);
+      event_handler::backend().add(network::operation::write, fd_, this);
       writing_ = true;
     }
   }
 
   void stop_writing() override {
-    event_handler::backend().del(network::operation::write, fd(), this);
+    event_handler::backend().del(network::operation::write, fd_, this);
   }
 
   // -- members ----------------------------------------------------------------

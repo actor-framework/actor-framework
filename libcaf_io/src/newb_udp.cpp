@@ -181,5 +181,10 @@ udp_transport::connect(const std::string& host, uint16_t port,
   return res->first;
 }
 
+void udp_transport::shutdown(io::network::newb_base* parent,
+                             io::network::native_socket) {
+    parent->stop_reading();
+}
+
 } // namespace policy
 } // namespace caf

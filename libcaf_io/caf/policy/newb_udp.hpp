@@ -55,6 +55,9 @@ struct udp_transport : public transport {
   connect(const std::string& host, uint16_t port,
           optional<io::network::protocol::network> preferred = none) override;
 
+  void shutdown(io::network::newb_base* parent,
+                io::network::native_socket sockfd) override;
+
   // State for reading.
   size_t maximum;
   bool first_message;
@@ -99,6 +102,11 @@ struct accept_udp : public accept<Message> {
     spawned.trans->prepare_next_read(parent);
     spawned.trans->read_some(parent, *spawned.proto.get());
     spawned.start();
+  }
+
+  void shutdown(io::network::newb_base* parent,
+                io::network::native_socket) override {
+    parent->passivate();
   }
 };
 

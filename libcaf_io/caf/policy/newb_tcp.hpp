@@ -48,6 +48,8 @@ struct tcp_transport : public transport {
   connect(const std::string& host, uint16_t port,
           optional<io::network::protocol::network> preferred = none) override;
 
+  void shutdown(io::network::newb_base*, io::network::native_socket) override;
+
   // State for reading.
   size_t read_threshold;
   size_t collected;
@@ -80,6 +82,11 @@ struct accept_tcp : public accept<Message> {
 
   void init(io::network::newb_base*, io::newb<Message>& spawned) override {
     spawned.start();
+  }
+
+  void shutdown(io::network::newb_base*,
+                io::network::native_socket sockfd) override {
+    io::network::shutdown_both(sockfd);
   }
 };
 

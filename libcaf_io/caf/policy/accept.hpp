@@ -19,8 +19,9 @@
 #pragma once
 
 #include "caf/config.hpp"
-#include "caf/policy/transport.hpp"
+#include "caf/expected.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/policy/transport.hpp"
 
 namespace caf {
 namespace io {
@@ -65,6 +66,11 @@ struct accept {
   }
 
   virtual void init(io::network::newb_base*, io::newb<Message>&) {
+    // nop
+  }
+
+  virtual void shutdown(io::network::newb_base*,
+                        io::network::native_socket) {
     // nop
   }
 
