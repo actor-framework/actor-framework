@@ -50,7 +50,6 @@ set(LIBCAF_IO_SRCS
   src/newb_base.cpp
   src/newb_tcp.cpp
   src/newb_udp.cpp
-  src/newb.cpp
   src/policies.cpp
 )
 
