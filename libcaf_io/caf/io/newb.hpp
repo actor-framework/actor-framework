@@ -178,6 +178,8 @@ struct newb : public network::newb_base {
   void stop() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
+    stop_reading();
+    stop_writing();
     graceful_shutdown();
   }
 
@@ -501,6 +503,8 @@ struct newb_acceptor : network::newb_base {
   void stop() override {
     CAF_PUSH_AID_FROM_PTR(this);
     CAF_LOG_TRACE("");
+    stop_reading();
+    stop_writing();
     graceful_shutdown();
   }
 
