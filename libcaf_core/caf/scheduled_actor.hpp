@@ -37,6 +37,7 @@
 #include "caf/fwd.hpp"
 #include "caf/inbound_path.hpp"
 #include "caf/invoke_message_result.hpp"
+#include "caf/is_actor_handle.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_sink_result.hpp"
@@ -461,7 +462,7 @@ public:
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<!detail::is_actor_handle<Init>::value && Trait::valid,
+  detail::enable_if_t<!is_actor_handle<Init>::value && Trait::valid,
                       make_source_result_t<DownstreamManager>>
   make_source(Init init, Pull pull, Done done, Finalize finalize = {},
               policy::arg<DownstreamManager> token = {}) {
@@ -474,7 +475,7 @@ public:
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value,
+  detail::enable_if_t<is_actor_handle<ActorHandle>::value,
                       make_source_result_t<DownstreamManager>>
   make_source(const ActorHandle& dest, std::tuple<Ts...> xs, Init init,
               Pull pull, Done done, Finalize fin = {},
@@ -495,7 +496,7 @@ public:
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<detail::is_actor_handle<ActorHandle>::value && Trait::valid,
+  detail::enable_if_t<is_actor_handle<ActorHandle>::value && Trait::valid,
                       make_source_result_t<DownstreamManager>>
   make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
               Finalize fin = {},
