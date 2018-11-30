@@ -787,6 +787,14 @@ T unbox(caf::optional<T> x) {
   return std::move(*x);
 }
 
+/// Unboxes an optional value or fails the test if it doesn't exist.
+template <class T>
+T unbox(T* x) {
+  if (x == nullptr)
+    CAF_FAIL("x == nullptr");
+  return *x;
+}
+
 /// Expands to its argument.
 #define CAF_EXPAND(x) x
 
