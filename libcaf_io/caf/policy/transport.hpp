@@ -1,8 +1,7 @@
 /******************************************************************************
  *                       ____    _    _____                                   *
  *                      / ___|  / \  |  ___|    C++                           *
- *                     | |     / _ \ | |_       Actor                         *
- *                     | |___ / ___ \|  _|      Framework                     *
+ *                     | |     / _ \ | |_       Actor                         * | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
  * Copyright 2011-2018 Dominik Charousset                                     *
@@ -95,6 +94,9 @@ struct transport {
   virtual expected<io::network::native_socket>
   connect(const std::string&, uint16_t,
           optional<io::network::protocol::network> = none);
+
+  virtual void shutdown(io::network::newb_base* parent,
+                        io::network::native_socket sockfd);
 
   size_t received_bytes;
   size_t max_consecutive_reads;

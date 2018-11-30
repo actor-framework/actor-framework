@@ -179,6 +179,11 @@ tcp_transport::connect(const std::string& host, uint16_t port,
   return io::network::new_tcp_connection(host, port, preferred);
 }
 
+void tcp_transport::shutdown(io::network::newb_base*,
+                             io::network::native_socket sockfd) {
+  io::network::shutdown_both(sockfd);
+}
+
 io::network::native_socket get_newb_socket(io::network::newb_base* n) {
   return n->fd();
 }

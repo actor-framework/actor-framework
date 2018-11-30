@@ -73,8 +73,13 @@ byte_buffer& transport::wr_buf() {
 
 expected<io::network::native_socket>
 transport::connect(const std::string&, uint16_t,
-                          optional<io::network::protocol::network>) {
+                   optional<io::network::protocol::network>) {
   return sec::bad_function_call;
+}
+
+void transport::shutdown(io::network::newb_base*,
+                         io::network::native_socket sockfd) {
+  io::network::shutdown_both(sockfd);
 }
 
 // -- protocol_policy_base -----------------------------------------------------
