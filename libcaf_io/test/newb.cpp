@@ -239,6 +239,8 @@ CAF_TEST(spawn acceptor) {
   exec_all();
   scoped_actor self{sys};
   self->send(n, quit_atom::value);
+  exec_all();
+
 }
 
 CAF_TEST(spawn newb) {
