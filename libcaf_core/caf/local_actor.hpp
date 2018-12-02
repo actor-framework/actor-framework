@@ -34,6 +34,8 @@
 #include "caf/behavior.hpp"
 #include "caf/check_typed_input.hpp"
 #include "caf/delegated.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/detail/typed_actor_util.hpp"
 #include "caf/duration.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
@@ -48,8 +50,6 @@
 #include "caf/spawn_options.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_response_promise.hpp"
-
-#include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
 
@@ -109,9 +109,16 @@ public:
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
+    using impl = infer_impl_from_fun_t<F>;
+    static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
+    static_assert(spawnable,
+                  "cannot spawn function-based actor with given arguments");
     actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_functor<make_unbound(Os)>(
-                           cfg, fun, std::forward<Ts>(xs)...));
+    static constexpr spawn_options unbound = make_unbound(Os);
+    detail::bool_token<spawnable> enabled;
+    return eval_opts(Os,
+                     system().spawn_functor<unbound>(enabled, cfg, fun,
+                                                     std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class Groups,

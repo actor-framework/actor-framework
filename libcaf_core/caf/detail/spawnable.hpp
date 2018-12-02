@@ -18,33 +18,21 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
+#include <type_traits>
+
+#include "caf/detail/type_traits.hpp"
+#include "caf/infer_handle.hpp"
 
 namespace caf {
+namespace detail {
 
-class statically_typed_actor_base {
-  // used as marker only
-};
+/// Returns whether the function object `F` is spawnable from the actor
+/// implementation `Impl` with arguments of type `Ts...`.
+template <class F, class Impl, class... Ts>
+constexpr bool spawnable() {
+  return is_callable_with<F, Ts...>::value
+         || is_callable_with<F, Impl*, Ts...>::value;
+}
 
-class dynamically_typed_actor_base {
-  // used as marker only
-};
-
-template <class T>
-struct actor_marker {
-  using type = statically_typed_actor_base;
-};
-
-template <>
-struct actor_marker<behavior> {
-  using type = dynamically_typed_actor_base;
-};
-
-template <class T>
-using is_statically_typed = std::is_base_of<statically_typed_actor_base, T>;
-
-template <class T>
-using is_dynamically_typed = std::is_base_of<dynamically_typed_actor_base, T>;
-
+} // namespace detail
 } // namespace caf
-

@@ -32,10 +32,12 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_config.hpp"
+#include "caf/actor_marker.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/composable_behavior_based_actor.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/spawn_fwd.hpp"
+#include "caf/detail/spawnable.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group_manager.hpp"
 #include "caf/infer_handle.hpp"
@@ -328,30 +330,27 @@ public:
     return spawn<composable_behavior_based_actor<S>, Os>();
   }
 
-  /// Called by `spawn_functor` to apply static assertions and
-  /// store an initialization function in `cfg` before calling `spawn_class`.
+  /// Called by `spawn` when used to create a functor-based actor to select a
+  /// proper implementation and then delegates to `spawn_impl`.
   /// @param cfg To-be-filled config for the actor.
   /// @param fun Function object for the actor's behavior; will be moved.
   /// @param xs Arguments for `fun`.
-  template <spawn_options Os, class C, class F, class... Ts>
-  infer_handle_from_class_t<C>
-  spawn_functor_impl(actor_config& cfg, F& fun, Ts&&... xs) {
-    detail::init_fun_factory<C, F> fac;
+  /// @private
+  template <spawn_options Os = no_spawn_options, class F, class... Ts>
+  infer_handle_from_fun_t<F> spawn_functor(std::true_type, actor_config& cfg,
+                                           F& fun, Ts&&... xs) {
+    using impl = infer_impl_from_fun_t<F>;
+    detail::init_fun_factory<impl, F> fac;
     cfg.init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
-    return spawn_impl<C, Os>(cfg);
+    return spawn_impl<impl, Os>(cfg);
   }
 
-  /// Called by `spawn` when used to create a functor-based actor to select
-  /// a proper implementation and then delegates to `spawn_functor_impl`.
-  /// Should not be called by users of the library directly.
-  /// @param cfg To-be-filled config for the actor.
-  /// @param fun Function object for the actor's behavior; will be moved.
-  /// @param xs Arguments for `fun`.
+  /// Fallback no-op overload.
+  /// @private
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  infer_handle_from_fun_t<F>
-  spawn_functor(actor_config& cfg, F& fun, Ts&&... xs) {
-    using impl = infer_impl_from_fun_t<F>;
-    return spawn_functor_impl<Os, impl>(cfg, fun, std::forward<Ts>(xs)...);
+  infer_handle_from_fun_t<F> spawn_functor(std::false_type, actor_config&, F&,
+                                           Ts&&...) {
+    return {};
   }
 
   /// Returns a new functor-based actor. The first argument must be the functor,
@@ -361,9 +360,14 @@ public:
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F>
   spawn(F fun, Ts&&... xs) {
-    check_invariants<infer_impl_from_fun_t<F>>();
+    using impl = infer_impl_from_fun_t<F>;
+    check_invariants<impl>();
+    static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
+    static_assert(spawnable,
+                  "cannot spawn function-based actor with given arguments");
     actor_config cfg;
-    return spawn_functor<Os>(cfg, fun, std::forward<Ts>(xs)...);
+    return spawn_functor<Os>(detail::bool_token<spawnable>{}, cfg, fun,
+                             std::forward<Ts>(xs)...);
   }
 
   /// Returns a new actor with run-time type `name`, constructed
@@ -393,7 +397,7 @@ public:
   infer_handle_from_class_t<T>
   spawn_class_in_groups(actor_config& cfg, Iter first, Iter last, Ts&&... xs) {
     static_assert(std::is_same<infer_handle_from_class_t<T>, actor>::value,
-                  "Only dynamically typed actors can be spawned in a group.");
+                  "only dynamically-typed actors can be spawned in a group");
     check_invariants<T>();
     auto irange = make_input_range(first, last);
     cfg.groups = &irange;
@@ -407,12 +411,19 @@ public:
   infer_handle_from_fun_t<F>
   spawn_fun_in_groups(actor_config& cfg, Iter first, Iter second,
                       F& fun, Ts&&... xs) {
-    static_assert(std::is_same<infer_handle_from_fun_t<F>, actor>::value,
-                  "Only dynamically actors can be spawned in a group.");
-    check_invariants<infer_impl_from_fun_t<F>>();
+    using impl = infer_impl_from_fun_t<F>;
+    check_invariants<impl>();
+    static constexpr bool dynamically_typed = is_dynamically_typed<impl>::value;
+    static_assert(dynamically_typed,
+                  "only dynamically-typed actors can join groups");
+    static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
+    static_assert(spawnable,
+                  "cannot spawn function-based actor with given arguments");
+    static constexpr bool enabled = dynamically_typed && spawnable;
     auto irange = make_input_range(first, second);
     cfg.groups = &irange;
-    return spawn_functor<Os>(cfg, fun, std::forward<Ts>(xs)...);
+    return spawn_functor<Os>(detail::bool_token<enabled>{}, cfg, fun,
+                             std::forward<Ts>(xs)...);
   }
 
   /// Returns a new functor-based actor subscribed to all groups in `gs`.

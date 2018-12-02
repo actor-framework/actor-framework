@@ -694,6 +694,10 @@ struct is_same_ish
         is_equal_int_type<T, U>
       >::type { };
 
+/// Utility for fallbacks calling `static_assert`.
+template <class>
+struct always_false : std::false_type {};
+
 } // namespace detail
 } // namespace caf
 

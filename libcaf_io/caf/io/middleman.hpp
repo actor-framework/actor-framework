@@ -255,8 +255,14 @@ public:
             class F = std::function<void(broker*)>, class... Ts>
   typename infer_handle_from_fun<F>::type
   spawn_broker(F fun, Ts&&... xs) {
+    using impl = infer_impl_from_fun_t<F>;
+    static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
+    static_assert(spawnable,
+                  "cannot spawn function-based broker with given arguments");
     actor_config cfg{&backend()};
-    return system().spawn_functor<Os>(cfg, fun, std::forward<Ts>(xs)...);
+    detail::bool_token<spawnable> enabled;
+    return system().spawn_functor<Os>(enabled, cfg, fun,
+                                      std::forward<Ts>(xs)...);
   }
 
   /// Returns a new functor-based broker connected
