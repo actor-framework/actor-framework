@@ -416,37 +416,3 @@ else
 
     configure "$compiler" "" "$bindir" "$libdir" "$CMakeGenerator"
 fi
-
-if [ -n "$CMakeGenerator" ] && [ "$CMakeGenerator" != "Unix" ]; then
-  # skip Makefile-specific code below when not using make
-  exit 0
-fi
-
-printf "DIRS := %s\n\n" "$workdirs" > $sourcedir/Makefile
-makefile=`cat <<'EOT'
-all:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
-
-test:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
-
-install:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
-
-uninstall:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@ || exit; done
-
-clean:
-	@for i in $(DIRS); do $(MAKE) -C $$i $@; done
-
-distclean:
-	rm -rf $(DIRS) Makefile
-
-doc:
-	$(MAKE) -C $(firstword $(DIRS)) $@
-
-.PHONY: all test install uninstall clean distclean doc
-EOT
-`
-
-echo "$makefile" >> $sourcedir/Makefile
