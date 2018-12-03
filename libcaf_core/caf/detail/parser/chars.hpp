@@ -20,6 +20,8 @@
 
 #include <cstring>
 
+#include "caf/config.hpp"
+
 namespace caf {
 namespace detail {
 namespace parser {
@@ -44,15 +46,15 @@ inline bool in_whitelist(bool (*filter)(char), char ch) {
   return filter(ch);
 }
 
-extern const char alphanumeric_chars[63];
+CAF_API extern const char alphanumeric_chars[63];
 
-extern const char alphabetic_chars[53];
+CAF_API extern const char alphabetic_chars[53];
 
-extern const char hexadecimal_chars[23];
+CAF_API extern const char hexadecimal_chars[23];
 
-extern const char decimal_chars[11];
+CAF_API extern const char decimal_chars[11];
 
-extern const char octal_chars[9];
+CAF_API extern const char octal_chars[9];
 
 } // namespace parser
 } // namespace detail
