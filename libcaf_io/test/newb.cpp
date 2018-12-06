@@ -177,7 +177,7 @@ struct fixture {
     // Create newb.
     transport_ptr transport{new dummy_transport};
     test_newb = spawn_newb<protocol_t>(sys, dummy_broker, std::move(transport),
-                                       esock->first);
+                                       esock->first, true);
   }
 
   ~fixture() {
@@ -258,7 +258,7 @@ CAF_TEST(spawn newb) {
   CAF_REQUIRE(esock);
   transport_ptr transport{new dummy_transport};
   auto n = spawn_newb<protocol_t>(sys, my_newb, std::move(transport),
-                                  esock->first);
+                                  esock->first, true);
   exec_all();
   CAF_MESSAGE("send test message");
   self->send(n, 3);
@@ -288,7 +288,7 @@ CAF_TEST(spawn stateful newb) {
   CAF_REQUIRE(esock);
   transport_ptr transport{new dummy_transport};
   auto n = spawn_newb<protocol_t>(sys, my_newb, std::move(transport),
-                                  esock->first);
+                                  esock->first, true);
   exec_all();
   CAF_MESSAGE("set value in state");
   self->send(n, set_atom::value, 3);
