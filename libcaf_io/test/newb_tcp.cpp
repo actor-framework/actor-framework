@@ -40,34 +40,6 @@ using shutdown_atom = atom_constant<atom("shutdown")>;
 
 constexpr auto host = "127.0.0.1";
 
-// behavior tcp_server(newb<new_raw_msg>* self, actor responder) {
-//   self->send(responder, alive_atom::value);
-//   self->configure_read(io::receive_policy::exactly(sizeof(uint32_t)));
-//   return {
-//     [=](new_raw_msg& msg) {
-//       // Read message.
-//       uint32_t data;
-//       binary_deserializer bd(self->system(), msg.payload, msg.payload_len);
-//       bd(data);
-//       // Write message.
-//       auto whdl = self->wr_buf(nullptr);
-//       binary_serializer bs(&self->backend(), *whdl.buf);
-//       bs(data + 1);
-//     },
-//     [=](io_error_msg& msg) {
-//       CAF_FAIL("server got io error: " << to_string(msg.op));
-//       self->quit();
-//       self->stop();
-//     },
-//     [=](caf::exit_msg&) {
-//       CAF_MESSAGE("parent shut down, doing the same");
-//       self->stop();
-//       self->quit();
-//       self->send(responder, shutdown_atom::value);
-//     }
-//   };
-// }
-
 behavior tcp_server(newb<new_raw_msg>* self, actor responder) {
   self->configure_read(io::receive_policy::exactly(sizeof(uint32_t)));
   return {
@@ -89,7 +61,7 @@ behavior tcp_server(newb<new_raw_msg>* self, actor responder) {
       self->send(responder, shutdown_atom::value);
     },
     [=](caf::exit_msg&) {
-      CAF_MESSAGE("parent shut down, doing the same");
+      CAF_FAIL("parent shut down, doing the same");
       self->stop();
       self->quit();
     }
@@ -112,8 +84,7 @@ behavior tcp_client(newb<new_raw_msg>* self, uint32_t value) {
       self->quit();
     },
     [=](io_error_msg&) {
-      CAF_MESSAGE("client: connection lost");
-      // self->send(responder, quit_atom::value);
+      CAF_FAIL("client: connection lost");
       self->stop();
       self->quit();
     }
@@ -149,6 +120,12 @@ CAF_TEST(newb tcp communication) {
                                                        host, port, 23);
     if (!eclient)
       CAF_FAIL("failed to start client: " << system.render(eclient.error()));
+    self->receive(
+      [&](shutdown_atom) {
+        CAF_MESSAGE("server instance shut down, cleaning up.");
+        self->send_exit(*eserver, exit_reason::user_shutdown);
+      }
+    );
   }
   system.await_all_actors_done();
 }

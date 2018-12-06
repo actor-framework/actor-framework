@@ -595,9 +595,6 @@ struct newb_acceptor : network::newb_base {
 
   virtual behavior make_behavior() override {
     return {
-      [=](quit_atom) {
-        stop();
-      },
       [=](children_atom) {
         return children_;
       },
@@ -681,8 +678,8 @@ template <class Protocol, class F, class Message>
 expected<infer_handle_from_class_t<newb_acceptor<Protocol, F>>>
 spawn_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
              uint16_t port) {
- return spawn_server<Protocol>(sys, std::move(fun), std::move(pol), port,
-                               nullptr, false);
+  return spawn_server<Protocol>(sys, std::move(fun), std::move(pol), port,
+                                nullptr, false);
 }
 
 } // namespace io
