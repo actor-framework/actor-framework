@@ -370,8 +370,8 @@ struct function_traits<R (T::*)(Args...) const> {
 };
 
 template<class T>
-using first_argument_type
- = typename std::tuple_element<0, typename function_traits<T>::argument_types>::type;
+using first_argument_type =
+  typename std::tuple_element<0, typename function_traits<T>::argument_types>::type;
 
 /// Spawns a new "newb" broker.
 template <class Protocol, spawn_options Os = no_spawn_options, class F,
@@ -382,7 +382,8 @@ spawn_newb(actor_system& sys, F fun, policy::transport_ptr transport,
   using impl = typename infer_handle_from_fun<F>::impl;
   using first = first_argument_type<F>;
   using message = typename std::remove_pointer<first>::type::message_type;
-  auto& dm = dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
+  auto& dm =
+      dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
   // Setup the config.
   actor_config cfg(&dm);
   detail::init_fun_factory<impl, F> fac;
@@ -405,7 +406,8 @@ spawn_newb(actor_system& sys, F fun, policy::transport_ptr transport,
 }
 
 /// Spawn a new "newb" broker client to connect to `host`:`port`.
-template <class Protocol, spawn_options Os = no_spawn_options, class F, class... Ts>
+template <class Protocol, spawn_options Os = no_spawn_options,
+          class F, class... Ts>
 expected<typename infer_handle_from_fun<F>::type>
 spawn_client(actor_system& sys, F fun, policy::transport_ptr transport,
              std::string host, uint16_t port, Ts&&... xs) {
@@ -427,13 +429,14 @@ struct newb_acceptor : network::newb_base {
 
   newb_acceptor(actor_config& cfg, network::default_multiplexer& dm,
                 network::native_socket sockfd, Fun f,
-                policy::accept_ptr<message_type> pol, Ts&&... xs)
+                policy::accept_ptr<message_type> pol,
+                std::tuple<Ts...> args)
       : newb_base(cfg, dm, sockfd),
         accept_pol(std::move(pol)),
         fun_(std::move(f)),
         reading_(false),
         writing_(false),
-        args_(std::forward<Ts>(xs)...) {
+        args_(std::move(args)) {
     // nop
     if (sockfd == io::network::invalid_native_socket)
       CAF_LOG_ERROR("Creating newb with invalid socket");
@@ -643,21 +646,19 @@ spawn_acceptor(actor_system& sys, Fun fun, policy::accept_ptr<Message> pol,
                network::native_socket sockfd, Ts&&... xs) {
   using first = first_argument_type<Fun>;
   using message = typename std::remove_pointer<first>::type::message_type;
+  using impl = newb_acceptor<Protocol, Fun, Ts...>;
   static_assert(std::is_same<message, Message>::value,
                 "Fun must accept a message type matching the protocol");
-  // TODO: Can we also check that the signature of Fun ends in Ts...?
-  using acceptor_type = newb_acceptor<Protocol, Fun, Ts...>;
   auto& dm =
     dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
   actor_config cfg(&dm);
-  auto res = sys.spawn_class<acceptor_type, Os>(cfg, dm, sockfd,
-                                                std::move(fun),
-                                                std::move(pol),
-                                                std::forward<Ts>(xs)...);
+  auto res = sys.spawn_class<impl, Os>(cfg, dm, sockfd,
+                                       std::move(fun), std::move(pol),
+                                       std::tuple<Ts...>(std::forward<Ts>(xs)...));
   // Get a reference to the newb type.
   auto ptr = caf::actor_cast<caf::abstract_actor*>(res);
   CAF_ASSERT(ptr != nullptr);
-  auto& ref = dynamic_cast<acceptor_type&>(*ptr);
+  auto& ref = dynamic_cast<impl&>(*ptr);
   // Start the event handler.
   ref.start();
   return res;
@@ -683,46 +684,6 @@ spawn_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
  return spawn_server<Protocol>(sys, std::move(fun), std::move(pol), port,
                                nullptr, false);
 }
-
-/*
-template <class P, class F, class... Ts>
-using acceptor_ptr = caf::intrusive_ptr<newb_acceptor<P, F, Ts...>>;
-
-template <class Protocol, class Fun, class Message, class... Ts>
-acceptor_ptr<Protocol, Fun, Ts...>
-make_acceptor(actor_system& sys, Fun fun, policy::accept_ptr<Message> pol,
-              network::native_socket sockfd, Ts&&... xs) {
-  auto& dm =
-    dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
-  auto res = make_counted<newb_acceptor<Protocol, Fun, Ts...>>(dm, sockfd,
-                                                               std::move(fun),
-                                                               std::move(pol),
-                                                               std::forward<Ts>(xs)...);
-  res->start();
-  return res;
-}
-
-template <class Protocol, class F, class Message, class... Ts>
-expected<caf::intrusive_ptr<newb_acceptor<Protocol, F, Ts...>>>
-make_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
-            uint16_t port, const char* addr, bool reuse, Ts&&... xs) {
-  auto esock = pol->create_socket(port, addr, reuse);
-  if (!esock) {
-    CAF_LOG_ERROR("Could not open " << CAF_ARG(port) << CAF_ARG(addr));
-    return sec::cannot_open_port;
-  }
-  return make_acceptor<Protocol, F>(sys, std::move(fun), std::move(pol), *esock,
-                                    std::forward<Ts>(xs)...);
-}
-
-template <class Protocol, class F, class Message>
-expected<caf::intrusive_ptr<newb_acceptor<Protocol, F>>>
-make_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
-            uint16_t port, const char* addr = nullptr, bool reuse = false) {
- return make_server<Protocol, F>(sys, std::move(fun), std::move(pol), port,
-                                 addr, reuse);
-}
-*/
 
 } // namespace io
 } // namespace caf
