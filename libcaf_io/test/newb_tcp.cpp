@@ -68,7 +68,7 @@ constexpr auto host = "127.0.0.1";
 //   };
 // }
 
-behavior tcp_server(newb<new_raw_msg>* self) {
+behavior tcp_server(newb<new_raw_msg>* self, actor responder) {
   self->configure_read(io::receive_policy::exactly(sizeof(uint32_t)));
   return {
     [=](new_raw_msg& msg) {
@@ -82,11 +82,11 @@ behavior tcp_server(newb<new_raw_msg>* self) {
       binary_serializer bs(&self->backend(), *whdl.buf);
       bs(data + 1);
     },
-    [=](io_error_msg& msg) {
-      //CAF_FAIL("server got io error: " << to_string(msg.op));
+    [=](io_error_msg&) {
       CAF_MESSAGE("server: connection lost");
       self->quit();
       self->stop();
+      self->send(responder, shutdown_atom::value);
     },
     [=](caf::exit_msg&) {
       CAF_MESSAGE("parent shut down, doing the same");
@@ -111,12 +111,9 @@ behavior tcp_client(newb<new_raw_msg>* self, uint32_t value) {
       self->stop();
       self->quit();
     },
-    [=](io_error_msg& msg) {
-      // CAF_FAIL("client got io error: " << to_string(msg.op));
-      // self->stop();
-      // self->quit();
-      // self->send(responder, quit_atom::value);
+    [=](io_error_msg&) {
       CAF_MESSAGE("client: connection lost");
+      // self->send(responder, quit_atom::value);
       self->stop();
       self->quit();
     }
@@ -135,7 +132,7 @@ CAF_TEST(newb tcp communication) {
     accept_ptr<policy::new_raw_msg> pol{new accept_tcp<policy::new_raw_msg>};
     auto eserver = io::spawn_server<tcp_protocol<raw>>(system, tcp_server,
                                                        std::move(pol), 0,
-                                                       nullptr, true);
+                                                       nullptr, true, self);
     if (!eserver)
       CAF_FAIL("failed to start server: " << system.render(eserver.error()));
     uint16_t port;
