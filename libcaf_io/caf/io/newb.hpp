@@ -50,6 +50,8 @@ namespace io {
 
 // -- atoms for the acceptor ---------------------------------------------------
 
+using children_atom = caf::atom_constant<atom("childern")>;
+using port_atom = caf::atom_constant<atom("port")>;
 using quit_atom = caf::atom_constant<atom("quit")>;
 
 // -- forward declarations -----------------------------------------------------
@@ -436,7 +438,9 @@ struct newb_acceptor : network::newb_base {
       CAF_LOG_ERROR("Creating newb with invalid socket");
   }
 
-  newb_acceptor(const newb_acceptor& other) = delete;
+  newb_acceptor() = default;
+
+  newb_acceptor(newb_acceptor&& other) = default;
 
   ~newb_acceptor() {
     // nop
@@ -589,6 +593,12 @@ struct newb_acceptor : network::newb_base {
       [=](quit_atom) {
         stop();
       },
+      [=](children_atom) {
+        return children_;
+      },
+      [=](port_atom) {
+        return network::local_port_of_fd(fd_);
+      },
       [=](caf::exit_msg& msg) {
         auto itr = std::find(std::begin(children_), std::end(children_),
                              msg.source);
@@ -629,7 +639,11 @@ template <class Protocol, spawn_options Os = no_spawn_options, class Fun,
 infer_handle_from_class_t<newb_acceptor<Protocol, Fun, Ts...>>
 spawn_acceptor(actor_system& sys, Fun fun, policy::accept_ptr<Message> pol,
                network::native_socket sockfd, Ts&&... xs) {
-  // TODO: check that fun accepts Message.
+  using first = first_argument_type<Fun>;
+  using message = typename std::remove_pointer<first>::type::message_type;
+  static_assert(std::is_same<message, Message>::value,
+                "Fun must accept a message type matching the protocol");
+  // TODO: Can we also check that the signature of Fun ends in Ts...?
   using acceptor_type = newb_acceptor<Protocol, Fun, Ts...>;
   auto& dm =
     dynamic_cast<network::default_multiplexer&>(sys.middleman().backend());
@@ -648,24 +662,24 @@ spawn_acceptor(actor_system& sys, Fun fun, policy::accept_ptr<Message> pol,
 }
 
 template <class Protocol, class F, class Message, class... Ts>
-expected<caf::intrusive_ptr<newb_acceptor<Protocol, F, Ts...>>>
+expected<infer_handle_from_class_t<newb_acceptor<Protocol, F, Ts...>>>
 spawn_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
-            uint16_t port, const char* addr, bool reuse, Ts&&... xs) {
+             uint16_t port, const char* addr, bool reuse, Ts&&... xs) {
   auto esock = pol->create_socket(port, addr, reuse);
   if (!esock) {
     CAF_LOG_ERROR("Could not open " << CAF_ARG(port) << CAF_ARG(addr));
     return sec::cannot_open_port;
   }
-  return spawn_acceptor<Protocol, F>(sys, std::move(fun), std::move(pol), *esock,
-                                    std::forward<Ts>(xs)...);
+  return spawn_acceptor<Protocol>(sys, std::move(fun), std::move(pol), *esock,
+                                  std::forward<Ts>(xs)...);
 }
 
 template <class Protocol, class F, class Message>
-expected<caf::intrusive_ptr<newb_acceptor<Protocol, F>>>
+expected<infer_handle_from_class_t<newb_acceptor<Protocol, F>>>
 spawn_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
-            uint16_t port, const char* addr = nullptr, bool reuse = false) {
- return spawn_server<Protocol, F>(sys, std::move(fun), std::move(pol), port,
-                                 addr, reuse);
+             uint16_t port) {
+ return spawn_server<Protocol>(sys, std::move(fun), std::move(pol), port,
+                               nullptr, false);
 }
 
 /*
@@ -710,4 +724,3 @@ make_server(actor_system& sys, F fun, policy::accept_ptr<Message> pol,
 
 } // namespace io
 } // namespace caf
-
