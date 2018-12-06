@@ -547,16 +547,24 @@ string_view logger::skip_path(string_view path) {
 }
 
 void logger::run() {
+  // Bail out without printing anything if the first event we receive is the
+  // shutdown (empty) event.
+  queue_.wait_nonempty();
+  if (queue_.front().message.empty())
+    return;
   log_first_line();
+  // Loop until receiving an empty message.
   for (;;) {
-    queue_.wait_nonempty();
+    // Handle current head of the queue.
     auto& e = queue_.front();
     if (e.message.empty()) {
       log_last_line();
       return;
     }
     handle_event(e);
+    // Prepare next iteration.
     queue_.pop_front();
+    queue_.wait_nonempty();
   }
 }
 
