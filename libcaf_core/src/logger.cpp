@@ -547,13 +547,18 @@ string_view logger::skip_path(string_view path) {
 }
 
 void logger::run() {
-  log_first_line();
+  auto at_least_one_event = false;
   for (;;) {
     queue_.wait_nonempty();
     auto& e = queue_.front();
     if (e.message.empty()) {
-      log_last_line();
+      if (at_least_one_event)
+        log_last_line();
       return;
+    }
+    if (!at_least_one_event) {
+      log_first_line();
+      at_least_one_event = true;
     }
     handle_event(e);
     queue_.pop_front();
