@@ -172,9 +172,6 @@ struct newb : public network::newb_base {
     // as an event handler.
     if (!reading_ && !writing_)
       intrusive_ptr_add_ref(this->ctrl());
-    start_reading();
-    if (trans)
-      trans->prepare_next_read(this);
   }
 
   void stop() override {
@@ -219,6 +216,8 @@ struct newb : public network::newb_base {
     if (!reading_) {
       event_handler::activate();
       reading_ = true;
+      if (trans)
+        trans->prepare_next_read(this);
     }
   }
 
@@ -379,7 +378,7 @@ template <class Protocol, spawn_options Os = no_spawn_options, class F,
           class... Ts>
 typename infer_handle_from_fun<F>::type
 spawn_newb(actor_system& sys, F fun, policy::transport_ptr transport,
-           network::native_socket sockfd, Ts&&... xs) {
+           network::native_socket sockfd, bool start_reading, Ts&&... xs) {
   using impl = typename infer_handle_from_fun<F>::impl;
   using first = first_argument_type<F>;
   using message = typename std::remove_pointer<first>::type::message_type;
@@ -400,6 +399,8 @@ spawn_newb(actor_system& sys, F fun, policy::transport_ptr transport,
   auto& ref = dynamic_cast<newb<message>&>(*ptr);
   // Start the event handler.
   ref.start();
+  if (start_reading)
+    ref.start_reading();
   return res;
 }
 
@@ -411,7 +412,7 @@ spawn_client(actor_system& sys, F fun, policy::transport_ptr transport,
   expected<network::native_socket> esock = transport->connect(host, port);
   if (!esock)
     return std::move(esock.error());
-  return spawn_newb<Protocol>(sys, fun, std::move(transport), *esock,
+  return spawn_newb<Protocol>(sys, fun, std::move(transport), *esock, true,
                               std::forward<Ts>(xs)...);
 }
 
@@ -581,7 +582,8 @@ struct newb_acceptor : network::newb_base {
       io::spawn_newb<Protocol, no_spawn_options, Fun, Ts...>,
       detail::get_indices(args_),
       args_, this->backend().system(),
-      fun_, std::move(pol), sockfd
+      fun_, std::move(pol), sockfd,
+      accept_pol->add_children_to_loop()
     );
     link_to(n);
     children_.push_back(n);

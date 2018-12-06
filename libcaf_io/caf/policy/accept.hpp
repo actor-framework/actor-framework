@@ -46,6 +46,10 @@ struct accept {
     // nop
   }
 
+  virtual bool add_children_to_loop() {
+    return true;
+  }
+
   virtual expected<io::network::native_socket>
   create_socket(uint16_t port, const char* host, bool reuse = false) = 0;
 
