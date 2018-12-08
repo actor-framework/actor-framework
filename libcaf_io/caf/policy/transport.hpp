@@ -30,12 +30,6 @@
 #include "caf/sec.hpp"
 
 namespace caf {
-namespace io {
-
-struct newb_base;
-
-} // namespace io
-
 namespace policy {
 
 struct transport {

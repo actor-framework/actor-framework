@@ -21,12 +21,11 @@
 #include "caf/config.hpp"
 #include "caf/expected.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/newb_base.hpp"
 #include "caf/policy/transport.hpp"
 
 namespace caf {
 namespace io {
-
-struct newb_base;
 
 template<class Message>
 struct newb;
