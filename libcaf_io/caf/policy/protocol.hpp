@@ -26,8 +26,6 @@
 namespace caf {
 namespace io {
 
-struct newb_base;
-
 template <class T>
 struct newb;
 
