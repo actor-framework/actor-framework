@@ -31,6 +31,7 @@
 #include "caf/detail/socket_guard.hpp"
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
+#include "caf/io/network/acceptor_base.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/interfaces.hpp"
@@ -421,7 +422,7 @@ spawn_client(actor_system& sys, F fun, policy::transport_ptr transport,
 // -- new broker acceptor ------------------------------------------------------
 
 template <class Protocol, class Fun, class... Ts>
-struct newb_acceptor : network::newb_base {
+struct newb_acceptor : network::acceptor_base {
   using newb_type = typename std::remove_pointer<first_argument_type<Fun>>::type;
   using message_type = typename newb_type::message_type;
 
@@ -431,7 +432,7 @@ struct newb_acceptor : network::newb_base {
                 network::native_socket sockfd, Fun f,
                 policy::accept_ptr<message_type> pol,
                 std::tuple<Ts...> args)
-      : newb_base(cfg, dm, sockfd),
+      : acceptor_base(cfg, dm, sockfd),
         accept_pol(std::move(pol)),
         fun_(std::move(f)),
         reading_(false),
@@ -562,7 +563,7 @@ struct newb_acceptor : network::newb_base {
         CAF_LOG_ERROR("failed to create socket for new endpoint");
         return;
       }
-      auto en = create_newb(sock, std::move(transport));
+      auto en = create_newb(sock, std::move(transport), true);
       if (!en) {
         io_error(network::operation::read, std::move(en.error()));
         return;
@@ -578,15 +579,16 @@ struct newb_acceptor : network::newb_base {
     accept_pol->write_event(this);
   }
 
-  virtual expected<actor> create_newb(network::native_socket sockfd,
-                                      policy::transport_ptr pol) {
+  expected<actor> create_newb(network::native_socket sockfd,
+                              policy::transport_ptr pol,
+                              bool add_children_to_loop) override {
     CAF_LOG_TRACE(CAF_ARG(sockfd));
     auto n = detail::apply_args_prefixed(
       io::spawn_newb<Protocol, no_spawn_options, Fun, Ts...>,
       detail::get_indices(args_),
       args_, this->backend().system(),
       fun_, std::move(pol), sockfd,
-      accept_pol->add_children_to_loop()
+      add_children_to_loop
     );
     link_to(n);
     children_.push_back(n);

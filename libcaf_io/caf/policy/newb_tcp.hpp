@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/io/network/acceptor_base.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/newb_base.hpp"
@@ -71,7 +72,7 @@ struct accept_tcp : public accept<Message> {
   }
 
   std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::network::newb_base* parent) override {
+  accept_event(io::network::acceptor_base* parent) override {
     auto esock = io::network::accept_tcp_connection(get_newb_socket(parent));
     if (!esock) {
       return {io::network::invalid_native_socket, nullptr};
@@ -80,11 +81,11 @@ struct accept_tcp : public accept<Message> {
     return {*esock, std::move(ptr)};
   }
 
-  void init(io::network::newb_base*, io::newb<Message>& spawned) override {
+  void init(io::network::acceptor_base*, io::newb<Message>& spawned) override {
     spawned.start();
   }
 
-  void shutdown(io::network::newb_base*,
+  void shutdown(io::network::acceptor_base*,
                 io::network::native_socket sockfd) override {
     io::network::shutdown_both(sockfd);
   }

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/io/network/acceptor_base.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
@@ -85,7 +86,7 @@ struct accept_udp : public accept<Message> {
   }
 
   std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::network::newb_base*) override {
+  accept_event(io::network::acceptor_base*) override {
     std::cout << "Accepting msg from UDP endpoint" << std::endl;
     auto res = io::network::new_local_udp_endpoint_impl(0, nullptr, true);
     if (!res) {
@@ -97,14 +98,14 @@ struct accept_udp : public accept<Message> {
     return {sock, std::move(ptr)};
   }
 
-  void init(io::network::newb_base* parent,
+  void init(io::network::acceptor_base* parent,
             io::newb<Message>& spawned) override {
     spawned.trans->prepare_next_read(parent);
     spawned.trans->read_some(parent, *spawned.proto.get());
     spawned.start();
   }
 
-  void shutdown(io::network::newb_base* parent,
+  void shutdown(io::network::acceptor_base* parent,
                 io::network::native_socket) override {
     parent->passivate();
   }

@@ -8,6 +8,7 @@ file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
 # list cpp files excluding platform-dependent files
 set(LIBCAF_IO_SRCS
   src/abstract_broker.cpp
+  src/acceptor_base.cpp
   src/acceptor_manager.cpp
   src/acceptor_manager.cpp
   src/basp_broker.cpp
