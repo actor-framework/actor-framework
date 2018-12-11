@@ -16,61 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
-
-#include "caf/config.hpp"
-#include "caf/expected.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/acceptor_base.hpp"
-#include "caf/policy/transport.hpp"
 
 namespace caf {
-namespace policy {
+namespace io {
+namespace network {
 
-template <class Message>
-struct accept {
-  accept(bool manual_read = false)
-      : manual_read(manual_read) {
-    // nop
-  }
+acceptor_base::acceptor_base(actor_config& cfg, default_multiplexer& dm,
+                             native_socket sockfd)
+    : newb_base(cfg, dm, sockfd) {
+  // nop
+}
 
-  virtual ~accept() {
-    // nop
-  }
-
-  virtual expected<io::network::native_socket>
-  create_socket(uint16_t port, const char* host, bool reuse = false) = 0;
-
-  virtual std::pair<io::network::native_socket, transport_ptr>
-  accept_event(io::network::acceptor_base*) {
-    return {0, nullptr};
-  }
-
-  /// If `requires_raw_data` is set to true, the acceptor will only call
-  /// this function for new read event and let the policy handle everything
-  /// else.
-  virtual void read_event(io::network::acceptor_base*) {
-    // nop
-  }
-
-  virtual error write_event(io::network::acceptor_base*) {
-    return none;
-  }
-
-  virtual void init(io::network::acceptor_base*, io::newb<Message>&) {
-    // nop
-  }
-
-  virtual void shutdown(io::network::acceptor_base*,
-                        io::network::native_socket) {
-    // nop
-  }
-
-  bool manual_read;
-};
-
-template <class Message>
-using accept_ptr = std::unique_ptr<accept<Message>>;
-
-} // namespace policy
+} // namespace network
+} // namespace io
 } // namespace caf
