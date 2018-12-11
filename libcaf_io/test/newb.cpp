@@ -50,7 +50,6 @@ using expect_atom = atom_constant<atom("expect")>;
 using ordering_atom = atom_constant<atom("ordering")>;
 using send_atom = atom_constant<atom("send")>;
 using shutdown_atom = atom_constant<atom("shutdown")>;
-using quit_atom = atom_constant<atom("quit")>;
 
 using set_atom = atom_constant<atom("set")>;
 using get_atom = atom_constant<atom("get")>;
@@ -223,10 +222,10 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(newb_basics, fixture)
 
 CAF_TEST(spawn acceptor) {
-  auto newb_client= [] (newb_t* self) -> behavior {
+  auto newb_server = [](newb_t* self) -> behavior {
     return {
-      [=](quit_atom) {
-        self->stop();
+      [=](int i) {
+        // nop, this is never used
       },
     };
   };
@@ -234,11 +233,11 @@ CAF_TEST(spawn acceptor) {
   auto esock = network::new_local_udp_endpoint_impl(0, nullptr);
   accept_ptr<new_basp_msg> accept{new dummy_accept<new_basp_msg>};
   CAF_REQUIRE(esock);
-  auto n = spawn_acceptor<protocol_t>(sys, newb_client, std::move(accept),
+  auto n = spawn_acceptor<protocol_t>(sys, newb_server, std::move(accept),
                                       esock->first);
   exec_all();
   scoped_actor self{sys};
-  self->send(n, quit_atom::value);
+  self->send_exit(n, exit_reason::user_shutdown);
   exec_all();
 
 }
