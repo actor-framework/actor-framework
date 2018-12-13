@@ -199,8 +199,7 @@ public:
 
   /// Returns the hosting actor system.
   inline actor_system& system() const {
-    CAF_ASSERT(context_);
-    return context_->system();
+    return home_system();
   }
 
   /// Returns the config of the hosting actor system.
