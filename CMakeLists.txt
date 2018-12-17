@@ -491,6 +491,9 @@ macro(add_optional_caf_binaries name)
   endif()
 endmacro()
 
+find_package(Threads)
+set(PTHREAD_LIBRARIES Threads::Threads)
+
 # build core and I/O library
 add_caf_lib(core)
 add_optional_caf_lib(io)

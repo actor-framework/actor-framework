@@ -145,7 +145,7 @@ add_custom_target(libcaf_core)
 # build shared library if not compiling static only
 if (NOT CAF_BUILD_STATIC_ONLY)
   add_library(libcaf_core_shared SHARED ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
-  target_link_libraries(libcaf_core_shared ${CAF_EXTRA_LDFLAGS})
+  target_link_libraries(libcaf_core_shared ${CAF_EXTRA_LDFLAGS} ${PTHREAD_LIBRARIES})
   target_include_directories(libcaf_core_shared PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
