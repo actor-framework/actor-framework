@@ -36,6 +36,7 @@
 #include "caf/delegated.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
+#include "caf/detail/unique_function.hpp"
 #include "caf/duration.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
@@ -426,7 +427,7 @@ protected:
   message_id last_request_id_;
 
   /// Factory function for returning initial behavior in function-based actors.
-  std::function<behavior (local_actor*)> initial_behavior_fac_;
+  detail::unique_function<behavior(local_actor*)> initial_behavior_fac_;
 };
 
 } // namespace caf

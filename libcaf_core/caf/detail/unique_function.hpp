@@ -19,6 +19,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 namespace caf {
 namespace detail {
@@ -70,6 +71,8 @@ public:
     return new impl(std::forward<F>(f));
   }
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   unique_function() : holds_wrapper_(false), fptr_(nullptr) {
     // nop
   }
@@ -104,6 +107,12 @@ public:
     // nop
   }
 
+  ~unique_function() {
+    destroy();
+  }
+
+  // -- assignment -------------------------------------------------------------
+
   unique_function& operator=(unique_function&& other) {
     destroy();
     if (other.holds_wrapper_) {
@@ -124,15 +133,15 @@ public:
 
   unique_function& operator=(const unique_function&) = delete;
 
-  ~unique_function() {
-    destroy();
+  void assign(raw_pointer f) {
+    *this = unique_function{f};
   }
 
-  R operator()(Ts... xs) {
-    if (holds_wrapper_)
-      return (*wptr_)(std::move(xs)...);
-    return (*fptr_)(std::move(xs)...);
+  void assign(wrapper_pointer ptr) {
+    *this = unique_function{ptr};
   }
+
+  // -- properties -------------------------------------------------------------
 
   bool is_nullptr() const noexcept {
     // No type dispatching needed, because the union puts both pointers into
@@ -142,6 +151,14 @@ public:
 
   bool holds_wrapper() const noexcept {
     return holds_wrapper_;
+  }
+
+  // -- operators --------------------------------------------------------------
+
+  R operator()(Ts... xs) {
+    if (holds_wrapper_)
+      return (*wptr_)(std::move(xs)...);
+    return (*fptr_)(std::move(xs)...);
   }
 
   explicit operator bool() const noexcept {
@@ -155,6 +172,8 @@ public:
   }
 
 private:
+  // -- destruction ------------------------------------------------------------
+
   /// Destroys the managed wrapper.
   void destroy() {
     if (holds_wrapper_)

@@ -23,12 +23,13 @@
 #include <memory>
 #include <thread>
 
-#include "caf/fwd.hpp"
-#include "caf/send.hpp"
-#include "caf/node_id.hpp"
-#include "caf/expected.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/detail/unique_function.hpp"
+#include "caf/expected.hpp"
+#include "caf/fwd.hpp"
+#include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
+#include "caf/send.hpp"
 
 #include "caf/io/hook.hpp"
 #include "caf/io/broker.hpp"
@@ -336,11 +337,11 @@ private:
     CAF_ASSERT(ptr != nullptr);
     detail::init_fun_factory<Impl, F> fac;
     actor_config cfg{&backend()};
-    auto init_fun = fac(std::move(fun), ptr->hdl(), std::forward<Ts>(xs)...);
-    cfg.init_fun = [ptr, init_fun](local_actor* self) mutable -> behavior {
+    auto fptr = fac.make(std::move(fun), ptr->hdl(), std::forward<Ts>(xs)...);
+    fptr->hook([=](local_actor* self) mutable {
       static_cast<abstract_broker*>(self)->add_scribe(std::move(ptr));
-      return init_fun(self);
-    };
+    });
+    cfg.init_fun.assign(fptr.release());
     return system().spawn_class<Impl, Os>(cfg);
   }
 
@@ -352,13 +353,13 @@ private:
       return eptr.error();
     auto ptr = std::move(*eptr);
     detail::init_fun_factory<Impl, F> fac;
-    auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
     port = ptr->port();
-    actor_config cfg{&backend()};
-    cfg.init_fun = [ptr, init_fun](local_actor* self) mutable -> behavior {
+    auto fptr = fac.make(std::move(fun), std::forward<Ts>(xs)...);
+    fptr->hook([=](local_actor* self) mutable {
       static_cast<abstract_broker*>(self)->add_doorman(std::move(ptr));
-      return init_fun(self);
-    };
+    });
+    actor_config cfg{&backend()};
+    cfg.init_fun.assign(fptr.release());
     return system().spawn_class<Impl, Os>(cfg);
   }
 
