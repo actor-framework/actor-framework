@@ -44,6 +44,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/outbound_path.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/send.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_sink_driver.hpp"
@@ -126,17 +127,18 @@ const char* name_of(const actor_addr& x) {
 
 // -- queues -------------------------------------------------------------------
 
-using default_queue = drr_queue<policy::normal_messages>;
+using mboxqueue = scheduled_actor::mailbox_policy::queue_type;
 
-using dmsg_queue = wdrr_dynamic_multiplexed_queue<policy::downstream_messages>;
+template <size_t Value>
+using uint_constant =  std::integral_constant<size_t, Value>;
 
-using umsg_queue = drr_queue<policy::upstream_messages>;
+using urgent_async_id = uint_constant<scheduled_actor::urgent_queue_index>;
 
-using urgent_queue = drr_queue<policy::urgent_messages>;
+using normal_async_id = uint_constant<scheduled_actor::normal_queue_index>;
 
-using mboxqueue =
-  wdrr_fixed_multiplexed_queue<policy::categorized, default_queue, umsg_queue,
-                               dmsg_queue, urgent_queue>;
+using umsg_id = uint_constant<scheduled_actor::upstream_queue_index>;
+
+using dmsg_id = uint_constant<scheduled_actor::downstream_queue_index>;
 
 // -- entity and mailbox visitor -----------------------------------------------
 
@@ -336,7 +338,7 @@ public:
       }
       if (x % ticks_per_credit_interval == 0) {
         // Fill credit on each input path up to 30.
-        auto& qs = get<2>(mbox.queues()).queues();
+        auto& qs = get<dmsg_id::value>(mbox.queues()).queues();
         for (auto& kvp : qs) {
           auto inptr = kvp.second.policy().handler.get();
           auto bs = static_cast<int32_t>(kvp.second.total_task_size());
@@ -350,7 +352,7 @@ public:
   inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
                                   strong_actor_ptr sender) override {
     using policy_type = policy::downstream_messages::nested;
-    auto res = get<2>(mbox.queues())
+    auto res = get<dmsg_id::value>(mbox.queues())
                .queues().emplace(slots.receiver, policy_type{nullptr});
     if (!res.second)
       return nullptr;
@@ -360,11 +362,11 @@ public:
   }
 
   void erase_inbound_path_later(stream_slot slot) override {
-    get<2>(mbox.queues()).erase_later(slot);
+    get<dmsg_id::value>(mbox.queues()).erase_later(slot);
   }
 
   void erase_inbound_paths_later(const stream_manager* mgr) override {
-    for (auto& kvp : get<2>(mbox.queues()).queues()) {
+    for (auto& kvp : get<dmsg_id::value>(mbox.queues()).queues()) {
       auto& path = kvp.second.policy().handler;
       if (path != nullptr && path->mgr == mgr)
         erase_inbound_path_later(kvp.first);
@@ -397,19 +399,18 @@ public:
 struct msg_visitor {
   // -- member types -----------------------------------------------------------
 
-  using is_default_async = std::integral_constant<size_t, 0>;
-
-  using is_umsg = std::integral_constant<size_t, 1>;
-
-  using is_dmsg = std::integral_constant<size_t, 2>;
-
-  using is_urgent_async = std::integral_constant<size_t, 3>;
-
   using result_type = intrusive::task_result;
 
   // -- operator() overloads ---------------------------------------------------
 
-  result_type operator()(is_default_async, default_queue&, mailbox_element& x) {
+  result_type operator()(urgent_async_id, entity::urgent_queue&,
+                         mailbox_element&) {
+    CAF_FAIL("unexpected function call");
+    return intrusive::task_result::stop;
+  }
+
+  result_type operator()(normal_async_id, entity::normal_queue&,
+                         mailbox_element& x) {
     CAF_REQUIRE_EQUAL(x.content().type_token(),
                       make_type_token<open_stream_msg>());
     self->current_mailbox_element(&x);
@@ -418,12 +419,7 @@ struct msg_visitor {
     return intrusive::task_result::resume;
   }
 
-  result_type operator()(is_urgent_async, urgent_queue&, mailbox_element&) {
-    CAF_FAIL("unexpected function call");
-    return intrusive::task_result::stop;
-  }
-
-  result_type operator()(is_umsg, umsg_queue&, mailbox_element& x) {
+  result_type operator()(umsg_id, entity::upstream_queue&, mailbox_element& x) {
     CAF_REQUIRE(x.content().type_token() == make_type_token<upstream_msg>());
     self->current_mailbox_element(&x);
     auto& um = x.content().get_mutable_as<upstream_msg>(0);
@@ -446,7 +442,7 @@ struct msg_visitor {
     return intrusive::task_result::resume;
   }
 
-  result_type operator()(is_dmsg, dmsg_queue& qs, stream_slot,
+  result_type operator()(dmsg_id, entity::downstream_queue& qs, stream_slot,
                          policy::downstream_messages::nested_queue_type& q,
                          mailbox_element& x) {
     CAF_REQUIRE(x.content().type_token() == make_type_token<downstream_msg>());
@@ -554,7 +550,7 @@ struct fixture {
     // Check whether all actors cleaned up their state properly.
     entity* xs[] = {&alice, &bob, &carl};
     for (auto x : xs) {
-      CAF_CHECK(get<2>(x->mbox.queues()).queues().empty());
+      CAF_CHECK(get<dmsg_id::value>(x->mbox.queues()).queues().empty());
       CAF_CHECK(x->pending_stream_managers().empty());
       CAF_CHECK(x->stream_managers().empty());
     }

@@ -36,7 +36,7 @@
 #include "caf/typed_actor.hpp"
 
 #include "caf/policy/arg.hpp"
-#include "caf/policy/priority_aware.hpp"
+#include "caf/policy/categorized.hpp"
 #include "caf/policy/downstream_messages.hpp"
 #include "caf/policy/normal_messages.hpp"
 #include "caf/policy/upstream_messages.hpp"
@@ -84,7 +84,7 @@ public:
   using super = extended_base;
 
   /// Stores asynchronous messages with default priority.
-  using default_queue = intrusive::drr_cached_queue<policy::normal_messages>;
+  using normal_queue = intrusive::drr_cached_queue<policy::normal_messages>;
 
   /// Stores asynchronous messages with hifh priority.
   using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
@@ -100,11 +100,10 @@ public:
 
     using unique_pointer = mailbox_element_ptr;
 
-    using queue_type =
-      intrusive::wdrr_fixed_multiplexed_queue<policy::priority_aware,
-                                              default_queue, urgent_queue>;
+    using queue_type = intrusive::wdrr_fixed_multiplexed_queue<
+      policy::categorized, normal_queue, urgent_queue>;
 
-    static constexpr size_t default_queue_index = 0;
+    static constexpr size_t normal_queue_index = 0;
 
     static constexpr size_t urgent_queue_index = 1;
   };

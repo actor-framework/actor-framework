@@ -142,7 +142,7 @@ public:
   using stream_manager_map = std::map<stream_slot, stream_manager_ptr>;
 
   /// Stores asynchronous messages with default priority.
-  using default_queue = intrusive::drr_cached_queue<policy::normal_messages>;
+  using normal_queue = intrusive::drr_cached_queue<policy::normal_messages>;
 
   /// Stores asynchronous messages with hifh priority.
   using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
@@ -171,18 +171,18 @@ public:
     using unique_pointer = mailbox_element_ptr;
 
     using queue_type =
-      intrusive::wdrr_fixed_multiplexed_queue<policy::categorized,
-                                              default_queue, upstream_queue,
-                                              downstream_queue, urgent_queue>;
-
-    static constexpr size_t default_queue_index = 0;
-
-    static constexpr size_t upstream_queue_index = 1;
-
-    static constexpr size_t downstream_queue_index = 2;
-
-    static constexpr size_t urgent_queue_index = 3;
+      intrusive::wdrr_fixed_multiplexed_queue<policy::categorized, urgent_queue,
+                                              normal_queue, upstream_queue,
+                                              downstream_queue>;
   };
+
+  static constexpr size_t urgent_queue_index = 0;
+
+  static constexpr size_t normal_queue_index = 1;
+
+  static constexpr size_t upstream_queue_index = 2;
+
+  static constexpr size_t downstream_queue_index = 3;
 
   /// A queue optimized for single-reader-many-writers.
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
@@ -718,7 +718,7 @@ public:
   void push_to_cache(mailbox_element_ptr ptr);
 
   /// Returns the default queue of the mailbox that stores ordinary messages.
-  default_queue& get_default_queue();
+  normal_queue& get_normal_queue();
 
   /// Returns the queue of the mailbox that stores `upstream_msg` messages.
   upstream_queue& get_upstream_queue();

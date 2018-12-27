@@ -41,8 +41,8 @@ response_promise::response_promise(strong_actor_ptr self,
       source_(std::move(source)),
       stages_(std::move(stages)),
       id_(mid) {
-  // form an invalid request promise when initialized from a
-  // response ID, since CAF always drops messages in this case
+  // Form an invalid request promise when initialized from a response ID, since
+  // we always drop messages in this case.
   if (mid.is_response()) {
     source_ = nullptr;
     stages_.clear();
@@ -60,8 +60,7 @@ void response_promise::deliver(error x) {
 }
 
 void response_promise::deliver(unit_t) {
-  if (id_.valid())
-    deliver_impl(make_message());
+  deliver_impl(make_message());
 }
 
 bool response_promise::async() const {

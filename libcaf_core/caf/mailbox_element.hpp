@@ -78,30 +78,22 @@ public:
 /// category for a `mailbox_element` matches its content.
 template <class...>
 struct mailbox_category_corrector {
-  static constexpr message_id apply(message_id x) {
+  static constexpr message_id apply(message_id x) noexcept {
     return x;
   }
 };
 
 template <>
 struct mailbox_category_corrector<downstream_msg> {
-  static message_id apply(message_id x) {
-    CAF_IGNORE_UNUSED(x);
-    auto result = make_message_id(message_id::downstream_message_category
-                                  << message_id::category_offset);
-    CAF_ASSERT(x.is_async() || x == result);
-    return result;
+  static constexpr message_id apply(message_id x) noexcept {
+    return x.with_category(message_id::downstream_message_category);
   }
 };
 
 template <>
 struct mailbox_category_corrector<upstream_msg> {
-  static message_id apply(message_id x) {
-    CAF_IGNORE_UNUSED(x);
-    auto result = make_message_id(message_id::upstream_message_category
-                                  << message_id::category_offset);
-    CAF_ASSERT(x.is_async() || x == result);
-    return result;
+  static constexpr message_id apply(message_id x) noexcept {
+    return x.with_category(message_id::upstream_message_category);
   }
 };
 

@@ -145,7 +145,7 @@ void monitorable_actor::add_link(abstract_actor* x) {
     }
   });
   if (send_exit_immediately)
-    x->enqueue(nullptr, invalid_message_id,
+    x->enqueue(nullptr, make_message_id(),
                  make_message(exit_msg{address(), fail_state}), nullptr);
 }
 
@@ -176,7 +176,7 @@ bool monitorable_actor::add_backlink(abstract_actor* x) {
     success = true;
   }
   if (send_exit_immediately)
-    x->enqueue(nullptr, invalid_message_id,
+    x->enqueue(nullptr, make_message_id(),
                make_message(exit_msg{address(), fail_state}), nullptr);
   return success;
 }

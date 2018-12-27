@@ -221,9 +221,9 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
   }
   if (workers_.empty()) {
     guard.unlock();
-    if (sender && mid.valid()) {
-      // tell client we have ignored this sync message by sending
-      // and empty message back
+    if (mid.is_request() && sender != nullptr) {
+      // Tell client we have ignored this request message by sending and empty
+      // message back.
       sender->enqueue(nullptr, mid.response_id(), message{}, eu);
     }
     return true;

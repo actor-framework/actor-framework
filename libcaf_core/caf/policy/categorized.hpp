@@ -63,7 +63,9 @@ public:
   template <template <class> class Queue>
   static deficit_type quantum(const Queue<urgent_messages>&,
                               deficit_type x) noexcept {
-    return x * static_cast<deficit_type>(message_priority::high);
+    // Allow actors to consume twice as many urgent as normal messages per
+    // credit round.
+    return x + x;
   }
 
   template <class Queue>
@@ -71,11 +73,10 @@ public:
     return x;
   }
 
-  static inline size_t id_of(const mailbox_element& x) noexcept {
+  static size_t id_of(const mailbox_element& x) noexcept {
     return static_cast<size_t>(x.mid.category());
   }
 };
 
 } // namespace policy
 } // namespace caf
-

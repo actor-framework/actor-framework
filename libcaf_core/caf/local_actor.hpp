@@ -88,7 +88,7 @@ public:
   // -- timeout management -----------------------------------------------------
 
   /// Requests a new timeout for `mid`.
-  /// @pre `mid.valid()`
+  /// @pre `mid.is_request()`
   void request_response_timeout(const duration& d, message_id mid);
 
   // -- spawn functions --------------------------------------------------------
