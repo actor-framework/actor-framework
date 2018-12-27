@@ -152,8 +152,7 @@ void stream_manager::advance() {
     auto& cfg = self_->system().config();
     auto bc = cfg.stream_desired_batch_complexity;
     auto interval = cfg.stream_credit_round_interval;
-    auto& mbox = self_->mailbox();
-    auto& qs = get<2>(mbox.queue().queues()).queues();
+    auto& qs = self_->get_downstream_queue().queues();
     // Iterate all queues for inbound traffic.
     for (auto& kvp : qs) {
       auto inptr = kvp.second.policy().handler.get();

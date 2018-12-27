@@ -39,6 +39,8 @@
 
 namespace {
 
+using caf::make_message_id;
+
 struct anything { };
 
 anything any_vals;
@@ -69,6 +71,7 @@ bool operator==(const maybe<T>& x, const T& y) {
 constexpr uint8_t no_flags = 0;
 constexpr uint32_t no_payload = 0;
 constexpr uint64_t no_operation_data = 0;
+constexpr uint64_t default_operation_data = make_message_id().integer_value();
 
 constexpr auto basp_atom = caf::atom("BASP");
 constexpr auto spawn_serv_atom = caf::atom("SpawnServ");
@@ -285,7 +288,7 @@ public:
     .receive(hdl,
             basp::message_type::dispatch_message,
             basp::header::named_receiver_flag, any_vals,
-            no_operation_data,
+            default_operation_data,
             this_node(), n.id,
             any_vals, invalid_actor_id,
             spawn_serv_atom,
@@ -374,7 +377,7 @@ public:
         auto end = first + hdr.payload_len;
         payload.assign(first, end);
         CAF_MESSAGE("erase " << std::distance(ob.begin(), end)
-                         << " bytes from output buffer");
+                    << " bytes from output buffer");
         ob.erase(ob.begin(), end);
       } else {
         ob.erase(ob.begin(), ob.begin() + basp::header_size);
@@ -559,13 +562,13 @@ CAF_TEST(message_forwarding) {
   auto msg = make_message(1, 2, 3);
   // send a message from node 0 to node 1, forwarded by this node
   mock(jupiter().connection,
-       {basp::message_type::dispatch_message, 0, 0, 0,
+       {basp::message_type::dispatch_message, 0, 0, default_operation_data,
         jupiter().id, mars().id,
         invalid_actor_id, mars().dummy_actor->id()},
        msg)
   .receive(mars().connection,
           basp::message_type::dispatch_message, no_flags, any_vals,
-          no_operation_data, jupiter().id, mars().id,
+          default_operation_data, jupiter().id, mars().id,
           invalid_actor_id, mars().dummy_actor->id(),
           msg);
 }
@@ -609,7 +612,7 @@ CAF_TEST(remote_actor_and_send) {
   .receive(jupiter().connection,
           basp::message_type::dispatch_message,
           basp::header::named_receiver_flag, any_vals,
-          no_operation_data, this_node(), jupiter().id,
+          default_operation_data, this_node(), jupiter().id,
           any_vals, invalid_actor_id,
           spawn_serv_atom,
           std::vector<actor_id>{},
@@ -645,7 +648,7 @@ CAF_TEST(remote_actor_and_send) {
   mock()
   .receive(jupiter().connection,
           basp::message_type::dispatch_message, no_flags, any_vals,
-          no_operation_data, this_node(), jupiter().id,
+          default_operation_data, this_node(), jupiter().id,
           invalid_actor_id, jupiter().dummy_actor->id(),
           std::vector<actor_id>{},
           make_message(42));
@@ -699,11 +702,10 @@ CAF_TEST(actor_serialize_and_deserialize) {
   while (mpx()->output_buffer(jupiter().connection).empty())
     mpx()->exec_runnable(); // process forwarded message in basp_broker
   // output buffer must contain the reflected message
-  mock()
-  .receive(jupiter().connection,
-          basp::message_type::dispatch_message, no_flags, any_vals,
-          no_operation_data, this_node(), prx->node(), testee->id(), prx->id(),
-          std::vector<actor_id>{}, msg);
+  mock().receive(jupiter().connection, basp::message_type::dispatch_message,
+                 no_flags, any_vals, default_operation_data, this_node(),
+                 prx->node(), testee->id(), prx->id(), std::vector<actor_id>{},
+                 msg);
 }
 
 CAF_TEST(indirect_connections) {
@@ -729,7 +731,7 @@ CAF_TEST(indirect_connections) {
   mx.receive(mars().connection,
              basp::message_type::dispatch_message,
              basp::header::named_receiver_flag, any_vals,
-             no_operation_data, this_node(), jupiter().id,
+             default_operation_data, this_node(), jupiter().id,
              any_vals, invalid_actor_id,
              spawn_serv_atom,
              std::vector<actor_id>{},
@@ -750,7 +752,7 @@ CAF_TEST(indirect_connections) {
   mock()
   .receive(mars().connection,
            basp::message_type::dispatch_message, no_flags, any_vals,
-           no_operation_data, this_node(), jupiter().id,
+           default_operation_data, this_node(), jupiter().id,
            self()->id(), jupiter().dummy_actor->id(),
            std::vector<actor_id>{},
            make_message("hello from earth!"));
@@ -795,15 +797,15 @@ CAF_TEST(automatic_connection) {
        make_message("hello from jupiter!"))
   .receive(mars().connection,
           basp::message_type::dispatch_message,
-          basp::header::named_receiver_flag, any_vals, no_operation_data,
-          this_node(), jupiter().id, any_vals, invalid_actor_id,
-          spawn_serv_atom,
+          basp::header::named_receiver_flag, any_vals,
+          default_operation_data, this_node(), jupiter().id,
+          any_vals, invalid_actor_id, spawn_serv_atom,
           std::vector<actor_id>{},
           make_message(sys_atom::value, get_atom::value, "info"))
   .receive(mars().connection,
           basp::message_type::dispatch_message,
           basp::header::named_receiver_flag, any_vals,
-          no_operation_data, this_node(), jupiter().id,
+          default_operation_data, this_node(), jupiter().id,
           any_vals, // actor ID of an actor spawned by the BASP broker
           invalid_actor_id,
           config_serv_atom,
@@ -864,7 +866,7 @@ CAF_TEST(automatic_connection) {
   mock()
   .receive(jupiter().connection,
           basp::message_type::dispatch_message, no_flags, any_vals,
-          no_operation_data, this_node(), jupiter().id,
+          default_operation_data, this_node(), jupiter().id,
           self()->id(), jupiter().dummy_actor->id(),
           std::vector<actor_id>{},
           make_message("hello from earth!"));

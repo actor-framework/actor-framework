@@ -19,13 +19,23 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 namespace caf {
 
+/// Denotes the urgency of asynchronous messages.
 enum class message_priority {
-  normal,
-  high = 3 // 0b11, see message_id.hpp why this is important
+  high = 0,
+  normal = 1,
 };
+
+/// @relates message_priority
+using high_message_priority_constant = std::integral_constant<
+  message_priority, message_priority::high>;
+
+/// @relates message_priority
+using normal_message_priority_constant = std::integral_constant<
+  message_priority, message_priority::normal>;
 
 } // namespace caf
 

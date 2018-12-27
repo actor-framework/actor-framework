@@ -66,14 +66,14 @@ public:
     CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(msg));
     shared_guard guard(mtx_);
     for (auto& s : subscribers_)
-      s->enqueue(sender, invalid_message_id, msg, host);
+      s->enqueue(sender, make_message_id(), msg, host);
   }
 
   void enqueue(strong_actor_ptr sender, message_id, message msg,
                execution_unit* host) override {
     CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(msg));
     send_all_subscribers(sender, msg, host);
-    broker_->enqueue(sender, invalid_message_id, msg, host);
+    broker_->enqueue(sender, make_message_id(), msg, host);
   }
 
   std::pair<bool, size_t> add_subscriber(strong_actor_ptr who) {
@@ -208,7 +208,7 @@ private:
     CAF_LOG_DEBUG(CAF_ARG(acquaintances_.size())
                   << CAF_ARG(src) << CAF_ARG(what));
     for (auto& acquaintance : acquaintances_)
-      acquaintance->enqueue(src, invalid_message_id, what, context());
+      acquaintance->enqueue(src, make_message_id(), what, context());
   }
 
   local_group_ptr group_;

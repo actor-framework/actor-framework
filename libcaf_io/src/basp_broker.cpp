@@ -292,7 +292,7 @@ void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
     self->parent().notify<hook::invalid_message_received>(src_nid, src,
                                                           invalid_actor_id,
                                                           mid, msg);
-    if (mid.valid() && src) {
+    if (mid.is_request() && src != nullptr) {
       detail::sync_request_bouncer srb{rsn};
       srb(src, mid);
     }
@@ -362,7 +362,8 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   // send message to SpawnServ of remote node
   basp::header hdr{basp::message_type::dispatch_message,
                    basp::header::named_receiver_flag,
-                   0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                   0, make_message_id().integer_value(), this_node(), nid,
+                   tmp.id(), invalid_actor_id,
                    visit(seq_num_visitor{this}, path->hdl)};
   // writing std::numeric_limits<actor_id>::max() is a hack to get
   // this send-to-named-actor feature working with older CAF releases
@@ -412,7 +413,8 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
     });
     basp::header hdr{basp::message_type::dispatch_message,
                      basp::header::named_receiver_flag,
-                     0, 0, this_node(), nid, tmp.id(), invalid_actor_id,
+                     0, make_message_id().integer_value(), this_node(), nid,
+                     tmp.id(), invalid_actor_id,
                      visit(seq_num_visitor{this}, path->hdl)};
     instance.write(self->context(), get_buffer(path->hdl),
                    hdr, &writer);

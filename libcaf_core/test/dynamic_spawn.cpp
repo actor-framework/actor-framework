@@ -16,16 +16,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE dynamic_spawn
-#include "caf/test/unit_test.hpp"
 
-#include <stack>
+#include "caf/actor_system.hpp"
+
+#include "caf/test/dsl.hpp"
+
 #include <atomic>
 #include <chrono>
-#include <iostream>
 #include <functional>
+#include <iostream>
+#include <stack>
 
 #include "caf/all.hpp"
 
@@ -311,6 +312,29 @@ struct fixture {
 
 } // namespace <anonymous>
 
+CAF_TEST_FIXTURE_SCOPE(dynamic_spawn_tests, test_coordinator_fixture<>)
+
+CAF_TEST(mirror) {
+  auto mirror = self->spawn<simple_mirror>();
+  auto dummy = self->spawn([=](event_based_actor* ptr) -> behavior {
+    ptr->send(mirror, "hello mirror");
+    return {
+      [](const std::string& msg) { CAF_CHECK_EQUAL(msg, "hello mirror"); }};
+  });
+  run();
+  /*
+  self->send(mirror, "hello mirror");
+  run();
+  self->receive (
+    [](const std::string& msg) {
+      CAF_CHECK_EQUAL(msg, "hello mirror");
+    }
+  );
+  */
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
+
 CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(count_mailbox) {
@@ -334,17 +358,6 @@ CAF_TEST(self_receive_with_zero_timeout) {
     },
     after(chrono::seconds(0)) >> [] {
       // mailbox empty
-    }
-  );
-}
-
-CAF_TEST(mirror) {
-  scoped_actor self{system};
-  auto mirror = self->spawn<simple_mirror>();
-  self->send(mirror, "hello mirror");
-  self->receive (
-    [](const std::string& msg) {
-      CAF_CHECK_EQUAL(msg, "hello mirror");
     }
   );
 }

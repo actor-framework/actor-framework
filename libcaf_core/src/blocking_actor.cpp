@@ -164,7 +164,7 @@ blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
     return intrusive::task_result::stop;
   };
   // Skip messages that don't match our message ID.
-  if (mid.valid()) {
+  if (mid.is_response()) {
     if (mid != x.mid) {
       CAF_LOG_SKIP_EVENT();
       return intrusive::task_result::skip;
@@ -198,7 +198,7 @@ blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
       }
       // Response handlers must get re-invoked with an error when receiving an
       // unexpected message.
-      if (mid.valid()) {
+      if (mid.is_response()) {
         auto err = make_error(sec::unexpected_response,
                               x.move_content_to_message());
         mailbox_element_view<error> tmp{std::move(x.sender), x.mid,
@@ -267,7 +267,7 @@ mailbox_element_ptr blocking_actor::dequeue() {
   auto& qs = mailbox().queue().queues();
   auto result = get<mailbox_policy::urgent_queue_index>(qs).take_front();
   if (!result)
-   result = get<mailbox_policy::default_queue_index>(qs).take_front();
+   result = get<mailbox_policy::normal_queue_index>(qs).take_front();
   CAF_ASSERT(result != nullptr);
   return result;
 }

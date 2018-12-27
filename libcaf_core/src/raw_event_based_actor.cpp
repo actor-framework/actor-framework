@@ -66,7 +66,7 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
   if (x.content().type_token() == make_type_token<timeout_msg>()) {
     auto& tm = content.get_as<timeout_msg>(0);
     auto tid = tm.timeout_id;
-    CAF_ASSERT(!x.mid.valid());
+    CAF_ASSERT(x.mid.is_async());
     if (is_active_receive_timeout(tid)) {
       CAF_LOG_DEBUG("handle timeout message");
       if (bhvr_stack_.empty())
