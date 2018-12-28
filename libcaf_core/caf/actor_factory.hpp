@@ -147,21 +147,19 @@ actor_factory make_actor_factory(F fun) {
     message_verifier<typename trait::arg_types> mv;
     if (!mv(msg, tk))
       return {};
-    cfg.init_fun = [=](local_actor* x) -> behavior {
-      CAF_ASSERT(cfg.host);
+    cfg.init_fun = actor_config::init_fun_type{[=](local_actor* x) -> behavior {
       using ctrait = typename detail::get_callable_trait<F>::type;
       using fd = fun_decorator<F, impl, behavior_t, trait::mode,
                                typename ctrait::result_type,
                                typename ctrait::arg_types>;
       fd f{fun, static_cast<impl*>(x)};
       empty_type_erased_tuple dummy_;
-      auto& ct = msg.empty() ? dummy_
-                             : const_cast<message&>(msg).content();
+      auto& ct = msg.empty() ? dummy_ : const_cast<message&>(msg).content();
       auto opt = ct.apply(f);
       if (!opt)
         return {};
       return std::move(*opt);
-    };
+    }};
     handle hdl = cfg.host->system().spawn_class<impl, no_spawn_options>(cfg);
     return {actor_cast<strong_actor_ptr>(std::move(hdl)),
             cfg.host->system().message_types<handle>()};

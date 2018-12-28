@@ -101,14 +101,14 @@ public:
 
 // quits after 5 timeouts
 actor spawn_event_testee2(scoped_actor& parent) {
-  struct impl : event_based_actor {
+  struct wrapper : event_based_actor {
     actor parent;
-    impl(actor_config& cfg, actor parent_actor)
+    wrapper(actor_config& cfg, actor parent_actor)
         : event_based_actor(cfg),
           parent(std::move(parent_actor)) {
       inc_actor_instances();
     }
-    ~impl() override {
+    ~wrapper() override {
       dec_actor_instances();
     }
     behavior wait4timeout(int remaining) {
@@ -127,7 +127,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
       return wait4timeout(5);
     }
   };
-  return parent->spawn<impl>(parent);
+  return parent->spawn<wrapper>(parent);
 }
 
 class testee_actor : public blocking_actor {
@@ -555,7 +555,7 @@ CAF_TEST(kill_the_immortal) {
 CAF_TEST(move_only_argument) {
   using unique_int = std::unique_ptr<int>;
   unique_int uptr{new int(42)};
-  auto impl = [](event_based_actor* self, unique_int ptr) -> behavior {
+  auto wrapper = [](event_based_actor* self, unique_int ptr) -> behavior {
     auto i = *ptr;
     return {
       [=](float) {
@@ -564,8 +564,24 @@ CAF_TEST(move_only_argument) {
       }
     };
   };
-  auto f = make_function_view(system.spawn(impl, std::move(uptr)));
+  auto f = make_function_view(system.spawn(wrapper, std::move(uptr)));
   CAF_CHECK_EQUAL(to_string(f(1.f)), "(42)");
+}
+
+CAF_TEST(move-only function object) {
+  struct move_only_fun {
+    move_only_fun() = default;
+    move_only_fun(const move_only_fun&) = delete;
+    move_only_fun(move_only_fun&&) = default;
+
+    behavior operator()(event_based_actor*)  {
+      return {};
+    }
+  };
+  actor_system_config cfg;
+  actor_system sys{cfg};
+  move_only_fun f;
+  sys.spawn(std::move(f));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

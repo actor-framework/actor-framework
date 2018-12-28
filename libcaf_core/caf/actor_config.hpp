@@ -19,26 +19,36 @@
 #pragma once
 
 #include <string>
-#include <functional>
 
-#include "caf/fwd.hpp"
-#include "caf/behavior.hpp"
-#include "caf/input_range.hpp"
 #include "caf/abstract_channel.hpp"
+#include "caf/behavior.hpp"
+#include "caf/detail/unique_function.hpp"
+#include "caf/fwd.hpp"
+#include "caf/input_range.hpp"
 
 namespace caf {
 
 /// Stores spawn-time flags and groups.
 class actor_config {
 public:
-  execution_unit* host;
-  int flags;
-  input_range<const group>* groups;
-  std::function<behavior (local_actor*)> init_fun;
+  // -- member types -----------------------------------------------------------
+
+  using init_fun_type = detail::unique_function<behavior(local_actor*)>;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   explicit actor_config(execution_unit* ptr = nullptr);
 
-  inline actor_config& add_flag(int x) {
+  // -- member variables -------------------------------------------------------
+
+  execution_unit* host;
+  int flags;
+  input_range<const group>* groups;
+  detail::unique_function<behavior(local_actor*)> init_fun;
+
+  // -- properties -------------------------------------------------------------
+
+  actor_config& add_flag(int x) {
     flags |= x;
     return *this;
   }
@@ -48,4 +58,3 @@ public:
 std::string to_string(const actor_config& x);
 
 } // namespace caf
-
