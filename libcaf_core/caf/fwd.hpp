@@ -175,6 +175,7 @@ using ip_subnet = ipv6_subnet;
 using stream_slot = uint16_t;
 
 using config_value_map = dictionary<dictionary<config_value>>;
+using settings = dictionary<config_value>;
 
 // -- functions ----------------------------------------------------------------
 
