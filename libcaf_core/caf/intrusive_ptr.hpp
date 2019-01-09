@@ -64,6 +64,10 @@ public:
     // nop
   }
 
+  constexpr intrusive_ptr(std::nullptr_t) noexcept : intrusive_ptr() {
+    // nop
+  }
+
   intrusive_ptr(pointer raw_ptr, bool add_ref = true) noexcept {
     set_ptr(raw_ptr, add_ref);
   }

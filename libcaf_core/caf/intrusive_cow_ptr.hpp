@@ -78,6 +78,10 @@ public:
 
   intrusive_cow_ptr(const intrusive_cow_ptr&) noexcept = default;
 
+  intrusive_cow_ptr(std::nullptr_t) noexcept {
+    // nop
+  }
+
   template <class Y>
   intrusive_cow_ptr(intrusive_cow_ptr<Y> other) noexcept
       : ptr_(other.detach(), false) {
