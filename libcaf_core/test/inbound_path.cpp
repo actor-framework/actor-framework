@@ -39,12 +39,6 @@ namespace {
 
 struct fixture {
   inbound_path::stats_t x;
-  size_t sampling_size = inbound_path::stats_sampling_size;
-
-  fixture() {
-    CAF_CHECK_EQUAL(x.measurements.size(), sampling_size);
-    CAF_CHECK_EQUAL(sampling_size % 2, 0u);
-  }
 
   void calculate(int32_t total_items, int32_t total_time) {
     int32_t c = 1000;
@@ -86,26 +80,11 @@ CAF_TEST(one_store) {
 }
 
 CAF_TEST(multiple_stores) {
-  CAF_MESSAGE("store a measurement: (50, 500ns), (60, 400ns), (40, 600ns)");
+  CAF_MESSAGE("store measurements: (50, 500ns), (60, 400ns), (40, 600ns)");
   store(50, 500);
   store(40, 600);
   store(60, 400);
   calculate(150, 1500);
-}
-
-CAF_TEST(overriding_stores) {
-  CAF_MESSAGE("fill measurements with (100, 1000ns)");
-  for (size_t i = 0; i < sampling_size; ++i)
-    store(100, 1000);
-  calculate(100, 1000);
-  CAF_MESSAGE("override first half of the measurements with (10, 1000ns)");
-  for (size_t i = 0; i < sampling_size / 2; ++i)
-    store(10, 1000);
-  calculate(55, 1000);
-  CAF_MESSAGE("override second half of the measurements with (10, 1000ns)");
-  for (size_t i = 0; i < sampling_size / 2; ++i)
-    store(10, 1000);
-  calculate(10, 1000);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -149,6 +149,7 @@ void stream_manager::advance() {
   CAF_LOG_TRACE("");
   // Try to emit more credit.
   if (!inbound_paths_.empty()) {
+    auto now = self_->clock().now();
     auto& cfg = self_->system().config();
     auto bc = cfg.stream_desired_batch_complexity;
     auto interval = cfg.stream_credit_round_interval;
@@ -159,7 +160,8 @@ void stream_manager::advance() {
       // Ignore inbound paths of other managers.
       if (inptr->mgr.get() == this) {
         auto bs = static_cast<int32_t>(kvp.second.total_task_size());
-        inptr->emit_ack_batch(self_, bs, out().max_capacity(), interval, bc);
+        inptr->emit_ack_batch(self_, bs, out().max_capacity(), now, interval,
+                              bc);
       }
     }
   }
