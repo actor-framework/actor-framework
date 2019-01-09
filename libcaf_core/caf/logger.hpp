@@ -613,3 +613,20 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
                "TERMINATE ; ID =" << thisptr->id()                             \
                  << "; REASON =" << deep_to_string(rsn).c_str()                \
                  << "; NODE =" << thisptr->node())
+
+// -- macros for logging streaming-related events ------------------------------
+
+/// The log component for logging streaming-related events that are crucial for
+/// understanding handshaking, credit decisions, etc.
+#define CAF_LOG_STREAM_COMPONENT "caf_stream"
+
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+#define CAF_STREAM_LOG_DEBUG(output)                                           \
+  CAF_LOG_IMPL(CAF_LOG_STREAM_COMPONENT, CAF_LOG_LEVEL_DEBUG, output)
+#define CAF_STREAM_LOG_DEBUG_IF(condition, output)                             \
+  if (condition)                                                               \
+    CAF_LOG_IMPL(CAF_LOG_STREAM_COMPONENT, CAF_LOG_LEVEL_DEBUG, output)
+#else
+#define CAF_STREAM_LOG_DEBUG(unused) CAF_VOID_STMT
+#define CAF_STREAM_LOG_DEBUG_IF(unused1, unused2) CAF_VOID_STMT
+#endif

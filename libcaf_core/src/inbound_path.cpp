@@ -88,10 +88,18 @@ void inbound_path::handle(downstream_msg::batch& x) {
   auto batch_size = x.xs_size;
   last_batch_id = x.id;
   auto t0 = clk.now();
+  CAF_STREAM_LOG_DEBUG("handle batch of size"
+                       << batch_size << "on slot" << slots.receiver << "with"
+                       << assigned_credit << "assigned credit");
   if (assigned_credit <= batch_size) {
     assigned_credit = 0;
     // Do not log a message when "running out of credit" for the first batch
     // that can easily consume the initial credit in one shot.
+    CAF_STREAM_LOG_DEBUG_IF(next_credit_decision.time_since_epoch().count() > 0,
+                            "source at slot" << slots.receiver
+                             << "ran out of credit with approx."
+                             << (next_credit_decision - t0)
+                             << "until next cycle");
   } else {
     assigned_credit -= batch_size;
     CAF_ASSERT(assigned_credit >= 0);
