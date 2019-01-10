@@ -77,7 +77,7 @@ uint32_t message::type_token() const noexcept {
   return vals_  != nullptr ? vals_->type_token() : 0xFFFFFFFF;
 }
 
-message::rtti_pair message::type(size_t pos) const noexcept {
+rtti_pair message::type(size_t pos) const noexcept {
   CAF_ASSERT(vals_ != nullptr);
   return vals_->type(pos);
 }

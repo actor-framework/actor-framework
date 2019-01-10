@@ -77,7 +77,7 @@ uint32_t merged_tuple::type_token() const noexcept {
   return type_token_;
 }
 
-merged_tuple::rtti_pair merged_tuple::type(size_t pos) const noexcept {
+rtti_pair merged_tuple::type(size_t pos) const noexcept {
   CAF_ASSERT(pos < mapping_.size());
   auto& p = mapping_[pos];
   return data_[p.first]->type(p.second);

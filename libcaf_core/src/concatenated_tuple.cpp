@@ -77,7 +77,7 @@ uint32_t concatenated_tuple::type_token() const noexcept {
   return type_token_;
 }
 
-message_data::rtti_pair concatenated_tuple::type(size_t pos) const noexcept {
+rtti_pair concatenated_tuple::type(size_t pos) const noexcept {
   CAF_ASSERT(pos < size());
   auto selected = select(pos);
   return selected.first->type(selected.second);

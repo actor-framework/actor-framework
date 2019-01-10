@@ -16,16 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#include "caf/message.hpp"
 
 #define CAF_SUITE match
+
 #include "caf/test/unit_test.hpp"
 
 #include <functional>
 
+#include "caf/make_type_erased_tuple_view.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
-#include "caf/make_type_erased_tuple_view.hpp"
+#include "caf/rtti_pair.hpp"
 
 using namespace caf;
 using namespace std;
@@ -34,17 +36,6 @@ using hi_atom = atom_constant<atom("hi")>;
 using ho_atom = atom_constant<atom("ho")>;
 
 namespace {
-
-using rtti_pair = std::pair<uint16_t, const std::type_info*>;
-
-std::string to_string(const rtti_pair& x) {
-  std::string result = "(";
-  result += std::to_string(x.first);
-  result += ", ";
-  result += x.second != nullptr ? x.second->name() : "<null>";
-  result += ")";
-  return result;
-}
 
 struct fixture {
   using array_type = std::array<bool, 4>;

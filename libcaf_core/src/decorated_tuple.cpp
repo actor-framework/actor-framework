@@ -71,7 +71,7 @@ uint32_t decorated_tuple::type_token() const noexcept {
   return type_token_;
 }
 
-message_data::rtti_pair decorated_tuple::type(size_t pos) const noexcept {
+rtti_pair decorated_tuple::type(size_t pos) const noexcept {
   CAF_ASSERT(pos < size());
   return decorated_->type(mapping_[pos]);
 }
