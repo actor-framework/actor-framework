@@ -28,11 +28,12 @@
 #include <unordered_map>
 
 #include "caf/abstract_actor.hpp"
+#include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
-#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/log_level.hpp"
+#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/shared_spinlock.hpp"
@@ -113,7 +114,7 @@ public:
 
     event& operator=(const event&) = default;
 
-    event(unsigned lvl, unsigned line, string_view cat, string_view full_fun,
+    event(unsigned lvl, unsigned line, atom_value cat, string_view full_fun,
           string_view fun, string_view fn, std::string msg, std::thread::id t,
           actor_id a, timestamp ts);
 
@@ -126,7 +127,7 @@ public:
     unsigned line_number;
 
     /// Name of the category (component) logging the event.
-    string_view category_name;
+    atom_value category_name;
 
     /// Name of the current function as reported by `__PRETTY_FUNCTION__`.
     string_view pretty_fun;
@@ -228,7 +229,7 @@ public:
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
-  bool accepts(unsigned level, string_view component_name);
+  bool accepts(unsigned level, atom_value component_name);
 
   /// Returns the output format used for the log file.
   const line_format& file_format() const {
@@ -345,7 +346,7 @@ private:
   config cfg_;
 
   // Filters events by component name.
-  std::string component_filter;
+  std::vector<atom_value> component_blacklist;
 
   // References the parent system.
   actor_system& system_;
@@ -416,7 +417,7 @@ bool operator==(const logger::field& x, const logger::field& y);
 
 #define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
   ::caf::logger::event {                                                       \
-    loglvl, __LINE__, component, CAF_PRETTY_FUN, __func__,                     \
+    loglvl, __LINE__, caf::atom(component), CAF_PRETTY_FUN, __func__,          \
       caf::logger::skip_path(__FILE__),                                        \
       (::caf::logger::line_builder{} << message).get(),                        \
       ::std::this_thread::get_id(), aid, ::caf::make_timestamp()               \
@@ -457,7 +458,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
   do {                                                                         \
     auto CAF_UNIFYN(caf_logger) = caf::logger::current_logger();               \
     if (CAF_UNIFYN(caf_logger) != nullptr                                      \
-        && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
+        && CAF_UNIFYN(caf_logger)->accepts(loglvl, caf::atom(component)))      \
       CAF_UNIFYN(caf_logger)                                                   \
         ->log(CAF_LOG_MAKE_EVENT(CAF_UNIFYN(caf_logger)->thread_local_aid(),   \
                                  component, loglvl, message));                 \
@@ -563,7 +564,7 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 /// The log component responsible for logging control flow events that are
 /// crucial for understanding happens-before relations. See RFC SE-0001.
-#define CAF_LOG_FLOW_COMPONENT "caf.flow"
+#define CAF_LOG_FLOW_COMPONENT "caf_flow"
 
 #define CAF_LOG_SPAWN_EVENT(ref, ctor_data)                                    \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
