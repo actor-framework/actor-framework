@@ -157,7 +157,9 @@ actor_system_config::actor_system_config()
        "sets the console output verbosity "
        "(quiet|error|warning|info|debug|trace)")
   .add(logger_component_filter, "component-filter",
-       "exclude all listed components from logging")
+       "DEPRECATED/IGNORED, use component-blacklist instead")
+  .add<std::vector<atom_value>>("component-blacklist",
+                                "exclude all listed components from logging")
   .add(logger_verbosity, "verbosity",
        "set file and console verbosity (deprecated)")
   .add(logger_inline_output, "inline-output",

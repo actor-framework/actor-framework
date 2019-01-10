@@ -180,7 +180,7 @@ CAF_TEST(rendering) {
   logger::event e{
     CAF_LOG_LEVEL_WARNING,
     42,
-    "unit.test",
+    atom("unit_test"),
     "void ns::foo::bar()",
     "bar",
     "foo.cpp",
@@ -199,7 +199,7 @@ CAF_TEST(rendering) {
   using namespace std::placeholders;
   auto render_event = bind(&logger::render, &lg, _1, _2, _3);
   CAF_CHECK_EQUAL(render(render_event, lf, e),
-                  "unit.test WARN actor0 ns.foo bar foo.cpp:42 hello world");
+                  "unit_test WARN actor0 ns.foo bar foo.cpp:42 hello world");
 }
 
 CAF_TEST(render_fun_prefix) {

@@ -254,7 +254,7 @@ logger::config::config()
   // nop
 }
 
-logger::event::event(unsigned lvl, unsigned line, string_view cat,
+logger::event::event(unsigned lvl, unsigned line, atom_value cat,
                      string_view full_fun, string_view fun, string_view fn,
                      std::string msg, std::thread::id t, actor_id a,
                      timestamp ts)
@@ -351,15 +351,11 @@ logger* logger::current_logger() {
   return get_current_logger();
 }
 
-bool logger::accepts(unsigned level, string_view cname) {
+bool logger::accepts(unsigned level, atom_value cname) {
   if (level > cfg_.verbosity)
     return false;
-  if (!component_filter.empty()) {
-    auto it = std::search(component_filter.begin(), component_filter.end(),
-                          cname.begin(), cname.end());
-    return it != component_filter.end();
-  }
-  return true;
+  return !std::any_of(component_blacklist.begin(), component_blacklist.end(),
+                      [=](atom_value name) { return name == cname; });
 }
 
 logger::logger(actor_system& sys) : system_(sys) {
@@ -377,8 +373,10 @@ logger::~logger() {
 void logger::init(actor_system_config& cfg) {
   CAF_IGNORE_UNUSED(cfg);
   namespace lg = defaults::logger;
-  component_filter = get_or(cfg, "logger.component-filter",
-                            lg::component_filter);
+  using atom_list = std::vector<atom_value>;
+  auto blacklist = get_if<atom_list>(&cfg, "logger.component-blacklist");
+  if (blacklist)
+    component_blacklist = move_if_optional(blacklist);
   // Parse the configured log level.
   auto verbosity = get_if<atom_value>(&cfg, "logger.verbosity");
   auto file_verbosity = verbosity ? *verbosity : lg::file_verbosity;
@@ -476,7 +474,7 @@ void logger::render(std::ostream& out, const line_format& lf,
                     const event& x) const {
   for (auto& f : lf)
     switch (f.kind) {
-      case category_field: out << x.category_name; break;
+      case category_field: out << to_string(x.category_name); break;
       case class_name_field: render_fun_prefix(out, x); break;
       case date_field: render_date(out, x.tstamp); break;
       case file_field: out << x.file_name; break;
@@ -617,8 +615,8 @@ void logger::log_first_line() {
     msg += to_string(get_or(system_.config(), config_name, default_value));
     msg += ", node = ";
     msg += to_string(system_.node());
-    msg += ", component_filter = ";
-    msg += deep_to_string(component_filter);
+    msg += ", component-blacklist = ";
+    msg += deep_to_string(component_blacklist);
     return msg;
   };
   namespace lg = defaults::logger;
