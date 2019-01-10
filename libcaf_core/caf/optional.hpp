@@ -305,6 +305,20 @@ std::string to_string(const optional<T>& x) {
   return x ? "*" + deep_to_string(*x) : "none";
 }
 
+/// Returns an rvalue to the value managed by `x`.
+/// @relates optional
+template <class T>
+T&& move_if_optional(optional<T>& x) {
+  return std::move(*x);
+}
+
+/// Returns `*x`.
+/// @relates optional
+template <class T>
+T& move_if_optional(T* x) {
+  return *x;
+}
+
 // -- [X.Y.8] comparison with optional ----------------------------------------
 
 /// @relates optional
@@ -493,4 +507,3 @@ bool operator>=(const T& lhs, const optional<T>& rhs) {
 }
 
 } // namespace caf
-
