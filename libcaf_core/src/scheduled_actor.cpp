@@ -879,14 +879,15 @@ scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {
 
 inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
                                                  stream_slots slots,
-                                                 strong_actor_ptr sender) {
+                                                 strong_actor_ptr sender,
+                                                 rtti_pair rtti) {
   static constexpr size_t queue_index = downstream_queue_index;
   using policy_type = policy::downstream_messages::nested;
   auto& qs = get<queue_index>(mailbox_.queue().queues()).queues();
   auto res = qs.emplace(slots.receiver, policy_type{nullptr});
   if (!res.second)
     return nullptr;
-  auto path = new inbound_path(std::move(mgr), slots, std::move(sender));
+  auto path = new inbound_path(std::move(mgr), slots, std::move(sender), rtti);
   res.first->second.policy().handler.reset(path);
   return path;
 }
@@ -1120,20 +1121,6 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
       CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
       return fallback();
     case match_case::result::match: {
-      /*
-      if (f.ptr == nullptr) {
-        CAF_LOG_WARNING("actor did not return a stream manager after "
-                        "handling open_stream_msg");
-        fail(sec::stream_init_failed, "behavior did not create a manager");
-        return im_dropped;
-      }
-      stream_slots path_id{osm.slot, f.in_slot};
-      auto path = make_inbound_path(f.ptr, path_id, std::move(osm.prev_stage));
-      CAF_ASSERT(path != nullptr);
-      path->emit_ack_open(this, actor_cast<actor_addr>(osm.original_stage));
-      // Propagate handshake down the pipeline.
-      build_pipeline(f.in_slot, f.out_slot, std::move(f.ptr));
-      */
       return im_success;
     }
     default:

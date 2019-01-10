@@ -25,6 +25,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/meta/type_name.hpp"
+#include "caf/rtti_pair.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_priority.hpp"
@@ -119,7 +120,7 @@ public:
 
   /// Constructs a path for given handle and stream ID.
   inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
-               strong_actor_ptr ptr);
+               strong_actor_ptr ptr, rtti_pair input_type);
 
   ~inbound_path();
 

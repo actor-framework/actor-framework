@@ -20,12 +20,14 @@
 
 #include <algorithm>
 #include <tuple>
-
-#include "caf/inbound_path.hpp"
-#include "caf/intrusive_ptr.hpp"
-#include "caf/stream_manager.hpp"
+#include <typeinfo>
 
 #include "caf/detail/type_traits.hpp"
+#include "caf/inbound_path.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/rtti_pair.hpp"
+#include "caf/stream_manager.hpp"
+#include "caf/type_nr.hpp"
 
 namespace caf {
 
@@ -62,10 +64,13 @@ public:
 
   /// Creates a new input path to the current sender.
   inbound_stream_slot<input_type> add_inbound_path(const stream<input_type>&) {
-    return {add_unchecked_inbound_path_impl()};
+    auto rtti = make_rtti_pair<input_type>();
+    return {this->add_unchecked_inbound_path_impl(rtti)};
   }
 
 private:
+  // -- member variables -------------------------------------------------------
+
   downstream_manager dummy_out_;
 };
 

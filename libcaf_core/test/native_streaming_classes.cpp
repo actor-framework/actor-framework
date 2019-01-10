@@ -233,11 +233,11 @@ public:
     using downstream_manager = broadcast_downstream_manager<int>;
     struct driver final : public stream_source_driver<downstream_manager> {
     public:
-      driver(int sentinel) : x_(0), sentinel_(sentinel) {
+      driver(int32_t sentinel) : x_(0), sentinel_(sentinel) {
         // nop
       }
 
-      void pull(downstream<int>& out, size_t hint) override {
+      void pull(downstream<int32_t>& out, size_t hint) override {
         auto y = std::min(sentinel_, x_ + static_cast<int>(hint));
         while (x_ < y)
           out.push(x_++);
@@ -247,8 +247,8 @@ public:
         return x_ == sentinel_;
       }
     private:
-      int x_;
-      int sentinel_;
+      int32_t x_;
+      int32_t sentinel_;
     };
     auto mgr = detail::make_stream_source<driver>(this, num_messages);
     auto res = mgr->add_outbound_path(ref.ctrl());
@@ -260,9 +260,9 @@ public:
     using downstream_manager = broadcast_downstream_manager<int>;
     struct driver final : public stream_stage_driver<int, downstream_manager> {
     public:
-      using super = stream_stage_driver<int, downstream_manager>;
+      using super = stream_stage_driver<int32_t, downstream_manager>;
 
-      driver(downstream_manager& out, vector<int>* log)
+      driver(downstream_manager& out, vector<int32_t>* log)
         : super(out),
           log_(log) {
         // nop
@@ -351,13 +351,15 @@ public:
   }
 
   inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
-                                  strong_actor_ptr sender) override {
+                                  strong_actor_ptr sender,
+                                  rtti_pair rtti) override {
     using policy_type = policy::downstream_messages::nested;
     auto res = get<dmsg_id::value>(mbox.queues())
                .queues().emplace(slots.receiver, policy_type{nullptr});
     if (!res.second)
       return nullptr;
-    auto path = new inbound_path(std::move(mgr), slots, std::move(sender));
+    auto path = new inbound_path(std::move(mgr), slots, std::move(sender),
+                                 rtti);
     res.first->second.policy().handler.reset(path);
     return path;
   }

@@ -26,12 +26,13 @@
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/inbound_path.hpp"
-#include "caf/scheduled_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/outbound_path.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
+#include "caf/type_nr.hpp"
 
 namespace caf {
 
@@ -288,7 +289,7 @@ stream_manager::add_unchecked_outbound_path_impl(message handshake) {
   return add_unchecked_outbound_path_impl(rp, std::move(handshake));
 }
 
-stream_slot stream_manager::add_unchecked_inbound_path_impl() {
+stream_slot stream_manager::add_unchecked_inbound_path_impl(rtti_pair rtti) {
   CAF_LOG_TRACE("");
   auto x = self_->current_mailbox_element();
   if (x == nullptr || !x->content().match_elements<open_stream_msg>()) {
@@ -311,7 +312,8 @@ stream_slot stream_manager::add_unchecked_inbound_path_impl() {
   }
   auto slot = assign_next_slot();
   stream_slots path_id{osm.slot, slot};
-  auto ptr = self_->make_inbound_path(this, path_id, std::move(osm.prev_stage));
+  auto ptr = self_->make_inbound_path(this, path_id, std::move(osm.prev_stage),
+                                      rtti);
   CAF_ASSERT(ptr != nullptr);
   ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
   return slot;

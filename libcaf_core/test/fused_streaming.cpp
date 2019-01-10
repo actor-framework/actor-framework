@@ -55,9 +55,9 @@ void push(std::deque<T>& xs, downstream<T>& out, size_t num) {
 }
 
 VARARGS_TESTEE(int_file_reader, size_t buf_size) {
-  using buf = std::deque<int>;
+  using buf = std::deque<int32_t>;
   return {
-    [=](string& fname) -> output_stream<int> {
+    [=](string& fname) -> output_stream<int32_t> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       return self->make_source(
         // initialize state
@@ -66,7 +66,7 @@ VARARGS_TESTEE(int_file_reader, size_t buf_size) {
           std::iota(xs.begin(), xs.end(), 1);
         },
         // get next element
-        [](buf& xs, downstream<int>& out, size_t num) {
+        [](buf& xs, downstream<int32_t>& out, size_t num) {
           push(xs, out, num);
         },
         // check whether we reached the end
@@ -107,7 +107,7 @@ TESTEE_STATE(sum_up) {
 TESTEE(sum_up) {
   using intptr = int*;
   return {
-    [=](stream<int>& in) {
+    [=](stream<int32_t>& in) {
       return self->make_sink(
         // input stream
         in,
@@ -116,7 +116,7 @@ TESTEE(sum_up) {
           x = &self->state.x;
         },
         // processing step
-        [](intptr& x, int y) {
+        [](intptr& x, int32_t y) {
           *x += y;
         },
         // cleanup and produce result message
@@ -241,7 +241,7 @@ TESTEE(stream_multiplexer) {
       stg->out().assign<string_downstream_manager>(result);
       return result;
     },
-    [=](const stream<int>& in) {
+    [=](const stream<int32_t>& in) {
       CAF_MESSAGE("received handshake for integers");
       return self->state.stage->add_unchecked_inbound_path(in);
     },
@@ -251,6 +251,12 @@ TESTEE(stream_multiplexer) {
     }
   };
 }
+
+struct config : actor_system_config {
+  config() {
+    add_message_type<std::deque<std::string>>("deque<string>");
+  }
+};
 
 using fixture = test_coordinator_fixture<>;
 
