@@ -53,6 +53,24 @@ behavior calculator_fun(event_based_actor*) {
   };
 }
 
+class calculator_class : public event_based_actor {
+public:
+  calculator_class(actor_config& cfg) : event_based_actor(cfg) {
+    // nop
+  }
+
+  behavior make_behavior() override {
+    return {
+      [](add_atom, int a, int b) {
+        return a + b;
+      },
+      [](sub_atom, int a, int b) {
+        return a - b;
+      }
+    };
+  }
+};
+
 // function-based, statically typed, event-based API
 calculator::behavior_type typed_calculator_fun() {
   return {
@@ -69,6 +87,7 @@ struct config : actor_system_config {
   config(int argc, char** argv) {
     parse(argc, argv);
     load<io::middleman>();
+    add_actor_type<calculator_class>("calculator-class");
     add_actor_type("calculator", calculator_fun);
     add_actor_type("typed_calculator", typed_calculator_fun);
   }
@@ -76,11 +95,12 @@ struct config : actor_system_config {
 
 void run_client(int argc, char** argv, uint16_t port) {
   config cfg{argc, argv};
-  actor_system system{cfg};
-  auto& mm = system.middleman();
+  actor_system sys{cfg};
+  scoped_actor self{sys};
+  auto& mm = sys.middleman();
   auto nid = mm.connect("localhost", port);
   CAF_REQUIRE(nid);
-  CAF_REQUIRE_NOT_EQUAL(system.node(), *nid);
+  CAF_REQUIRE_NOT_EQUAL(sys.node(), *nid);
   auto calc = mm.remote_spawn<calculator>(*nid, "calculator", make_message());
   CAF_REQUIRE(!calc);
   CAF_REQUIRE_EQUAL(calc.error().category(), atom("system"));
@@ -93,6 +113,16 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_REQUIRE_EQUAL(f1(sub_atom::value, 10, 20), -10);
   f1.reset();
   anon_send_exit(*calc, exit_reason::kill);
+  auto dyn_calc = unbox(mm.remote_spawn<actor>(*nid, "calculator-class", make_message()));
+  CAF_REQUIRE(dyn_calc);
+  self->request(dyn_calc, infinite, add_atom::value, 10, 20).receive(
+    [](int result) {
+      CAF_CHECK_EQUAL(result, 30);
+    },
+    [&](const error& err) {
+      CAF_FAIL("error: " << sys.render(err));
+    });
+  anon_send_exit(dyn_calc, exit_reason::kill);
   mm.close(port);
 }
 
