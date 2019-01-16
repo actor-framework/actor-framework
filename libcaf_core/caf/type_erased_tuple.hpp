@@ -23,24 +23,20 @@
 #include <cstdint>
 #include <typeinfo>
 
-#include "caf/fwd.hpp"
-#include "caf/type_nr.hpp"
-#include "caf/optional.hpp"
-#include "caf/type_erased_value.hpp"
-
-#include "caf/detail/try_match.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
+#include "caf/detail/try_match.hpp"
+#include "caf/fwd.hpp"
+#include "caf/optional.hpp"
+#include "caf/rtti_pair.hpp"
+#include "caf/type_erased_value.hpp"
+#include "caf/type_nr.hpp"
 
 namespace caf {
 
 /// Represents a tuple of type-erased values.
 class type_erased_tuple {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using rtti_pair = std::pair<uint16_t, const std::type_info*>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   type_erased_tuple() = default;

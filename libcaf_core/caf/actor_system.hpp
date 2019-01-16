@@ -53,14 +53,6 @@
 
 namespace caf {
 
-using rtti_pair = std::pair<uint16_t, const std::type_info*>;
-
-using rtti_pair_vec = std::vector<rtti_pair>;
-
-using rtti_pair_vec_triple = std::tuple<rtti_pair_vec,
-                                        rtti_pair_vec,
-                                        rtti_pair_vec>;
-
 template <class T>
 struct mpi_field_access {
   std::string operator()(const uniform_type_info_map& types) {

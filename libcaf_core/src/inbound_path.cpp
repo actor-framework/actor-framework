@@ -25,9 +25,8 @@
 
 namespace caf {
 
-inbound_path::stats_t::stats_t() : ring_iter(0) {
-  measurement x{0, timespan{0}};
-  measurements.resize(stats_sampling_size, x);
+inbound_path::stats_t::stats_t() : num_elements(0), processing_time(0) {
+  // nop
 }
 
 auto inbound_path::stats_t::calculate(timespan c, timespan d)
@@ -37,12 +36,7 @@ auto inbound_path::stats_t::calculate(timespan c, timespan d)
   // instead of C.
   // We compute our values in 64-bit for more precision before truncating to a
   // 32-bit integer type at the end.
-  int64_t total_ns = 0;
-  int64_t total_items = 0;
-  for (auto& x : measurements) {
-    total_ns += x.calculation_time.count();
-    total_items += x.batch_size;
-  }
+  int64_t total_ns = processing_time.count();
   if (total_ns == 0)
     return {1, 1};
   /// Helper for truncating a 64-bit integer to a 32-bit integer with a minimum
@@ -57,17 +51,22 @@ auto inbound_path::stats_t::calculate(timespan c, timespan d)
   };
   // Instead of C * (N / t) we calculate (C * N) / t to avoid double conversion
   // and rounding errors.
-  return {clamp((c.count() * total_items) / total_ns),
-          clamp((d.count() * total_items) / total_ns)};
+  return {clamp((c.count() * num_elements) / total_ns),
+          clamp((d.count() * num_elements) / total_ns)};
 }
 
 void inbound_path::stats_t::store(measurement x) {
-  measurements[ring_iter] = x;
-  ring_iter = (ring_iter + 1) % stats_sampling_size;
+  num_elements += x.batch_size;
+  processing_time += x.calculation_time;
+}
+
+void inbound_path::stats_t::reset() {
+  num_elements = 0;
+  processing_time = timespan{0};
 }
 
 inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
-                           strong_actor_ptr ptr)
+                           strong_actor_ptr ptr, rtti_pair in_type)
     : mgr(std::move(mgr_ptr)),
       hdl(std::move(ptr)),
       slots(id),
@@ -77,6 +76,10 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
       last_acked_batch_id(0),
       last_batch_id(0) {
   mgr->register_input_path(this);
+  CAF_STREAM_LOG_DEBUG(mgr->self()->name()
+                       << "opens input stream with element type"
+                       << *mgr->self()->system().types().portable_name(in_type)
+                       << "at slot" << id.receiver << "from" << hdl);
 }
 
 inbound_path::~inbound_path() {
@@ -85,14 +88,29 @@ inbound_path::~inbound_path() {
 
 void inbound_path::handle(downstream_msg::batch& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
+  auto& clk = clock();
   auto batch_size = x.xs_size;
-  assigned_credit -= batch_size;
   last_batch_id = x.id;
-  auto& clock = mgr->self()->clock();
-  auto t0 = clock.now();
+  auto t0 = clk.now();
+  CAF_STREAM_LOG_DEBUG(mgr->self()->name() << "handles batch of size"
+                       << batch_size << "on slot" << slots.receiver << "with"
+                       << assigned_credit << "assigned credit");
+  if (assigned_credit <= batch_size) {
+    assigned_credit = 0;
+    // Do not log a message when "running out of credit" for the first batch
+    // that can easily consume the initial credit in one shot.
+    CAF_STREAM_LOG_DEBUG_IF(next_credit_decision.time_since_epoch().count() > 0,
+                            mgr->self()->name() << "ran out of credit at slot"
+                            << slots.receiver << "with approx."
+                            << (next_credit_decision - t0)
+                            << "until next cycle");
+  } else {
+    assigned_credit -= batch_size;
+    CAF_ASSERT(assigned_credit >= 0);
+  }
   mgr->handle(this, x);
-  auto t1 = clock.now();
-  auto dt = clock.difference(atom("batch"), batch_size, t0, t1);
+  auto t1 = clk.now();
+  auto dt = clk.difference(atom("batch"), batch_size, t0, t1);
   stats.store({batch_size, dt});
   mgr->push();
 }
@@ -101,6 +119,7 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(rebind_from));
   // Update state.
   assigned_credit = mgr->acquire_credit(this, initial_credit);
+  CAF_ASSERT(assigned_credit >= 0);
   // Make sure we receive errors from this point on.
   stream_aborter::add(hdl, self->address(), slots.receiver,
                       stream_aborter::source_aborter);
@@ -109,18 +128,24 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
                  make<upstream_msg::ack_open>(
                    slots.invert(), self->address(), std::move(rebind_from),
                    self->ctrl(), assigned_credit, desired_batch_size));
+  last_credit_decision = clock().now();
 }
 
 void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
                                   int32_t max_downstream_capacity,
-                                  timespan cycle, timespan complexity) {
+                                  actor_clock::time_point now, timespan cycle,
+                                  timespan complexity) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items)
                 << CAF_ARG(max_downstream_capacity) << CAF_ARG(cycle)
                 << CAF_ARG(complexity));
   CAF_IGNORE_UNUSED(queued_items);
-  auto x = stats.calculate(cycle, complexity);
+  // Update timestamps.
+  last_credit_decision = now;
+  next_credit_decision = now + cycle;
   // Hand out enough credit to fill our queue for 2 cycles but never exceed
   // the downstream capacity.
+  auto x = stats.calculate(cycle, complexity);
+  auto stats_guard = detail::make_scope_guard([&] { stats.reset(); });
   auto max_capacity = std::min(x.max_throughput * 2, max_downstream_capacity);
   CAF_ASSERT(max_capacity > 0);
   // Protect against overflow on `assigned_credit`.
@@ -128,15 +153,23 @@ void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
   // Compute the amount of credit we grant in this round.
   auto credit = std::min(std::max(max_capacity - assigned_credit, 0),
                          max_new_credit);
+  CAF_ASSERT(credit >= 0);
   // The manager can restrict or adjust the amount of credit.
   credit = std::min(mgr->acquire_credit(this, credit), max_new_credit);
+  CAF_STREAM_LOG_DEBUG(mgr->self()->name() << "grants" << credit
+                       << "new credit at slot" << slots.receiver
+                       << "after receiving" << stats.num_elements
+                       << "elements that took" << stats.processing_time
+                       << CAF_ARG2("max_throughput", x.max_throughput)
+                       << CAF_ARG(max_downstream_capacity)
+                       << CAF_ARG(assigned_credit));
   if (credit == 0 && up_to_date())
     return;
   CAF_LOG_DEBUG(CAF_ARG(assigned_credit) << CAF_ARG(max_capacity)
                 << CAF_ARG(queued_items) << CAF_ARG(credit)
                 << CAF_ARG(desired_batch_size));
-  if (credit > 0)
-    assigned_credit += credit;
+  assigned_credit += credit;
+  CAF_ASSERT(assigned_credit >= 0);
   desired_batch_size = static_cast<int32_t>(x.items_per_batch);
   unsafe_send_as(self, hdl,
                  make<upstream_msg::ack_batch>(slots.invert(), self->address(),
@@ -177,4 +210,9 @@ void inbound_path::emit_irregular_shutdown(local_actor* self,
             make<upstream_msg::forced_drop>(slots.invert(), self->address(),
                                             std::move(reason)));
 }
+
+actor_clock& inbound_path::clock() {
+  return mgr->self()->clock();
+}
+
 } // namespace caf

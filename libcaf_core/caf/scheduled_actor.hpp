@@ -734,7 +734,8 @@ public:
   /// Creates a new path for incoming stream traffic from `sender`.
   virtual inbound_path* make_inbound_path(stream_manager_ptr mgr,
                                           stream_slots slots,
-                                          strong_actor_ptr sender);
+                                          strong_actor_ptr sender,
+                                          rtti_pair rtti);
 
   /// Silently closes incoming stream traffic on `slot`.
   virtual void erase_inbound_path_later(stream_slot slot);

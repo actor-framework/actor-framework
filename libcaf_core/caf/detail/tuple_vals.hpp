@@ -21,11 +21,12 @@
 #include <tuple>
 #include <stdexcept>
 
-#include "caf/type_nr.hpp"
-#include "caf/serializer.hpp"
-#include "caf/deserializer.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/make_type_erased_value.hpp"
+#include "caf/rtti_pair.hpp"
+#include "caf/serializer.hpp"
+#include "caf/type_nr.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -65,20 +66,6 @@ struct void_ptr_access {
   }
 };
 
-template <class T, uint16_t N = type_nr<T>::value>
-struct tuple_vals_type_helper {
-  static typename message_data::rtti_pair get() noexcept {
-    return {N, nullptr};
-  }
-};
-
-template <class T>
-struct tuple_vals_type_helper<T, 0> {
-  static typename message_data::rtti_pair get() noexcept {
-    return {0, &typeid(T)};
-  }
-};
-
 template <class Base, class... Ts>
 class tuple_vals_impl : public Base {
 public:
@@ -89,8 +76,6 @@ public:
   // -- member types -----------------------------------------------------------
 
   using super = message_data;
-
-  using rtti_pair = typename message_data::rtti_pair;
 
   using data_type = std::tuple<Ts...>;
 
@@ -107,7 +92,7 @@ public:
   template <class... Us>
   tuple_vals_impl(Us&&... xs)
       : data_(std::forward<Us>(xs)...),
-        types_{{tuple_vals_type_helper<Ts>::get()...}} {
+        types_{{make_rtti_pair<Ts>()...}} {
     // nop
   }
 

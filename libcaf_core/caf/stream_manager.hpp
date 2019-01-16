@@ -18,9 +18,10 @@
 
 #pragma once
 
-#include <vector>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
@@ -246,7 +247,7 @@ public:
   /// @private
   template <class In>
   stream_slot add_unchecked_inbound_path(const stream<In>&) {
-    return add_unchecked_inbound_path_impl();
+    return add_unchecked_inbound_path_impl(make_rtti_pair<In>());
   }
 
   /// Adds a new outbound path to `rp.next()`.
@@ -265,7 +266,7 @@ public:
 
   /// Adds the current sender as an inbound path.
   /// @pre Current message is an `open_stream_msg`.
-  stream_slot add_unchecked_inbound_path_impl();
+stream_slot add_unchecked_inbound_path_impl(rtti_pair rtti);
 
 protected:
   // -- modifiers for self -----------------------------------------------------

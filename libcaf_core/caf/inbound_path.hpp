@@ -21,16 +21,17 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/downstream_msg.hpp"
+#include "caf/meta/type_name.hpp"
+#include "caf/rtti_pair.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/upstream_msg.hpp"
-
-#include "caf/meta/type_name.hpp"
 
 namespace caf {
 
@@ -70,9 +71,6 @@ public:
   /// Amount of credit we assign sources after receiving `open`.
   static constexpr int initial_credit = 50;
 
-  /// Keep track of measurements for the last X batches.
-  static constexpr size_t stats_sampling_size = 16;
-
   /// Stores statistics for measuring complexity of incoming batches.
   struct stats_t {
     /// Wraps a time measurement for a single processed batch.
@@ -91,27 +89,38 @@ public:
       int32_t items_per_batch;
     };
 
+    /// Total number of elements in all processed batches.
+    int64_t num_elements;
+
+    /// Elapsed time for processing all elements of all batches.
+    timespan processing_time;
+
     stats_t();
-
-    /// Stores `stats_sampling_size` measurements in a ring.
-    std::vector<measurement> measurements;
-
-    /// Current position in `measurements`
-    size_t ring_iter;
 
     /// Returns the maximum number of items this actor could handle for given
     /// cycle length with a minimum of 1.
     calculation_result calculate(timespan cycle, timespan desired_complexity);
 
-    /// Stores a new measurement in the ring buffer.
+    /// Adds a measurement to this statistic.
     void store(measurement x);
+
+    /// Resets this statistic.
+    void reset();
   };
 
+  /// Summarizes how many elements we processed during the last cycle and how
+  /// much time we spent processing those elements.
   stats_t stats;
+
+  /// Stores the time point of the last credit decision for this source.
+  actor_clock::time_point last_credit_decision;
+
+  /// Stores the time point of the last credit decision for this source.
+  actor_clock::time_point next_credit_decision;
 
   /// Constructs a path for given handle and stream ID.
   inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
-               strong_actor_ptr ptr);
+               strong_actor_ptr ptr, rtti_pair input_type);
 
   ~inbound_path();
 
@@ -138,7 +147,8 @@ public:
   /// @param cycle Time between credit rounds.
   /// @param desired_batch_complexity Desired processing time per batch.
   void emit_ack_batch(local_actor* self, int32_t queued_items,
-                      int32_t max_downstream_capacity, timespan cycle,
+                      int32_t max_downstream_capacity,
+                      actor_clock::time_point now, timespan cycle,
                       timespan desired_batch_complexity);
 
   /// Returns whether the path received no input since last emitting
@@ -155,6 +165,9 @@ public:
   static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
                                       const strong_actor_ptr& hdl,
                                       error reason);
+
+private:
+  actor_clock& clock();
 };
 
 /// @relates inbound_path

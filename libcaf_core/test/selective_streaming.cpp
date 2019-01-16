@@ -172,7 +172,13 @@ TESTEE(log_consumer) {
   };
 }
 
-using fixture = test_coordinator_fixture<>;
+struct config : actor_system_config {
+  config() {
+    add_message_type<value_type>("value_type");
+  }
+};
+
+using fixture = test_coordinator_fixture<config>;
 
 } // namespace <anonymous>
 
