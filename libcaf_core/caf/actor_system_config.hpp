@@ -133,11 +133,6 @@ public:
   actor_system_config& parse(int argc, char** argv,
                              const char* ini_file_cstr = nullptr);
 
-  actor_system_config&
-  parse(message& args, const char* ini_file_cstr = nullptr) CAF_DEPRECATED;
-
-  actor_system_config& parse(message& args, std::istream& ini) CAF_DEPRECATED;
-
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
   /// @experimental
@@ -249,9 +244,6 @@ public:
   bool cli_helptext_printed;
 
   /// Stores CLI arguments that were not consumed by CAF.
-  message args_remainder CAF_DEPRECATED;
-
-  /// Stores CLI arguments that were not consumed by CAF.
   string_list remainder;
 
   // -- caf-run parameters -----------------------------------------------------
@@ -278,49 +270,6 @@ public:
 
   /// @private
   timespan stream_tick_duration() const noexcept;
-
-  timespan streaming_credit_round_interval() const noexcept CAF_DEPRECATED;
-
-  // -- scheduling parameters --------------------------------------------------
-
-  atom_value scheduler_policy CAF_DEPRECATED;
-  size_t scheduler_max_threads CAF_DEPRECATED;
-  size_t scheduler_max_throughput CAF_DEPRECATED;
-  bool scheduler_enable_profiling CAF_DEPRECATED;
-  size_t scheduler_profiling_ms_resolution CAF_DEPRECATED;
-  std::string scheduler_profiling_output_file CAF_DEPRECATED;
-
-  // -- work-stealing parameters -----------------------------------------------
-
-  size_t work_stealing_aggressive_poll_attempts CAF_DEPRECATED;
-  size_t work_stealing_aggressive_steal_interval CAF_DEPRECATED;
-  size_t work_stealing_moderate_poll_attempts CAF_DEPRECATED;
-  size_t work_stealing_moderate_steal_interval CAF_DEPRECATED;
-  size_t work_stealing_moderate_sleep_duration_us CAF_DEPRECATED;
-  size_t work_stealing_relaxed_steal_interval CAF_DEPRECATED;
-  size_t work_stealing_relaxed_sleep_duration_us CAF_DEPRECATED;
-
-  // -- logger parameters ------------------------------------------------------
-
-  std::string logger_file_name CAF_DEPRECATED;
-  std::string logger_file_format CAF_DEPRECATED;
-  atom_value logger_console CAF_DEPRECATED;
-  std::string logger_console_format CAF_DEPRECATED;
-  std::string logger_component_filter CAF_DEPRECATED;
-  atom_value logger_verbosity CAF_DEPRECATED;
-  bool logger_inline_output CAF_DEPRECATED;
-
-  // -- middleman parameters ---------------------------------------------------
-
-  atom_value middleman_network_backend CAF_DEPRECATED;
-  std::string middleman_app_identifier CAF_DEPRECATED;
-  bool middleman_enable_automatic_connections CAF_DEPRECATED;
-  size_t middleman_max_consecutive_reads CAF_DEPRECATED;
-  size_t middleman_heartbeat_interval CAF_DEPRECATED;
-  bool middleman_detach_utility_actors CAF_DEPRECATED;
-  bool middleman_detach_multiplexer CAF_DEPRECATED;
-  size_t middleman_cached_udp_buffers CAF_DEPRECATED;
-  size_t middleman_max_pending_msgs CAF_DEPRECATED;
 
   // -- OpenCL parameters ------------------------------------------------------
 

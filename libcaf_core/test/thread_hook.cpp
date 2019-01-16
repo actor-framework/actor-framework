@@ -33,13 +33,18 @@ using atomic_count = std::atomic<size_t>;
 size_t assumed_thread_count;
 size_t assumed_init_calls;
 
+std::mutex mx;
+
 struct dummy_thread_hook : thread_hook {
   void init(actor_system&) override {
     // nop
   }
 
   void thread_started() override {
-    // nop
+    void* array[20];                                                           \
+    auto caf_bt_size = ::backtrace(array, 20);                                 \
+    std::unique_lock<std::mutex> guard{mx};
+    ::backtrace_symbols_fd(array, caf_bt_size, 2);                             \
   }
 
   void thread_terminates() override {

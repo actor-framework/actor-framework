@@ -64,145 +64,79 @@ actor_system_config::actor_system_config()
   stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
   stream_max_batch_delay = defaults::stream::max_batch_delay;
   stream_credit_round_interval = defaults::stream::credit_round_interval;
-  namespace sr = defaults::scheduler;
-  auto to_ms = [](timespan x) {
-    return static_cast<size_t>(x.count() / 1000000);
-  };
-  scheduler_policy = sr::policy;
-  scheduler_max_threads = sr::max_threads;
-  scheduler_max_throughput = sr::max_throughput;
-  scheduler_enable_profiling = false;
-  scheduler_profiling_ms_resolution = to_ms(sr::profiling_resolution);
-  namespace ws = defaults::work_stealing;
-  auto to_us = [](timespan x) {
-    return static_cast<size_t>(x.count() / 1000);
-  };
-  work_stealing_aggressive_poll_attempts = ws::aggressive_poll_attempts;
-  work_stealing_aggressive_steal_interval = ws::aggressive_steal_interval;
-  work_stealing_moderate_poll_attempts = ws::moderate_poll_attempts;
-  work_stealing_moderate_steal_interval = ws::moderate_steal_interval;
-  work_stealing_moderate_sleep_duration_us = to_us(ws::moderate_sleep_duration);
-  work_stealing_relaxed_steal_interval = ws::relaxed_steal_interval;
-  work_stealing_relaxed_sleep_duration_us = to_us(ws::relaxed_sleep_duration);
-  namespace lg = defaults::logger;
-  logger_file_name = lg::file_name;
-  logger_file_format = lg::file_format;
-  logger_console = lg::console;
-  logger_console_format = lg::console_format;
-  logger_inline_output = false;
-  logger_verbosity = lg::file_verbosity;
-  namespace mm = defaults::middleman;
-  middleman_network_backend = mm::network_backend;
-  middleman_enable_automatic_connections = false;
-  middleman_max_consecutive_reads = mm::max_consecutive_reads;
-  middleman_heartbeat_interval = mm::heartbeat_interval;
-  middleman_detach_utility_actors = true;
-  middleman_detach_multiplexer = true;
-  middleman_cached_udp_buffers = mm::cached_udp_buffers;
-  middleman_max_pending_msgs = mm::max_pending_msgs;
   // fill our options vector for creating INI and CLI parsers
+  using std::string;
   opt_group{custom_options_, "global"}
-  .add<bool>("help,h?", "print help and exit")
-  .add<bool>("long-help", "print all help options and exit")
-  .add<bool>("dump-config", "print configuration in INI format and exit");
+    .add<bool>("help,h?", "print help text to STDERR and exit")
+    .add<bool>("long-help", "print long help text to STDERR and exit")
+    .add<bool>("dump-config", "print configuration to STDERR and exit");
   opt_group{custom_options_, "stream"}
-  .add(stream_desired_batch_complexity, "desired-batch-complexity",
-       "sets the desired timespan for a single batch")
-  .add(stream_max_batch_delay, "max-batch-delay",
-       "sets the maximum delay for sending underfull batches")
-  .add(stream_credit_round_interval, "credit-round-interval",
-       "sets the length of credit intervals");
+    .add<timespan>(stream_desired_batch_complexity, "desired-batch-complexity",
+                   "processing time per batch")
+    .add<timespan>(stream_max_batch_delay, "max-batch-delay",
+                   "maximum delay for partial batches")
+    .add<timespan>(stream_credit_round_interval, "credit-round-interval",
+                   "time between emitting credit");
   opt_group{custom_options_, "scheduler"}
-  .add(scheduler_policy, "policy",
-       "sets the scheduling policy to either 'stealing' (default) or 'sharing'")
-  .add(scheduler_max_threads, "max-threads",
-       "sets a fixed number of worker threads for the scheduler")
-  .add(scheduler_max_throughput, "max-throughput",
-       "sets the maximum number of messages an actor consumes before yielding")
-  .add(scheduler_enable_profiling, "enable-profiling",
-       "enables or disables profiler output")
-  .add_ms(scheduler_profiling_ms_resolution, "profiling-ms-resolution",
-       "deprecated (use profiling-resolution instead)")
-  .add_ms(scheduler_profiling_ms_resolution, "profiling-resolution",
-          "sets the rate in ms in which the profiler collects data")
-  .add(scheduler_profiling_output_file, "profiling-output-file",
-       "sets the output file for the profiler");
+    .add<atom_value>("policy", "'stealing' (default) or 'sharing'")
+    .add<size_t>("max-threads", "maximum number of worker threads")
+    .add<size_t>("max-throughput", "nr. of messages actors can consume per run")
+    .add<bool>("enable-profiling", "enables profiler output")
+    .add<timespan>("profiling-resolution", "data collection rate")
+    .add<string>("profiling-output-file", "output file for the profiler");
   opt_group(custom_options_, "work-stealing")
-  .add(work_stealing_aggressive_poll_attempts, "aggressive-poll-attempts",
-       "number of zero-sleep-interval polling attempts")
-  .add(work_stealing_aggressive_steal_interval, "aggressive-steal-interval",
-       "frequency of steal attempts during aggressive polling")
-  .add(work_stealing_moderate_poll_attempts, "moderate-poll-attempts",
-       "number of moderately aggressive polling attempts")
-  .add(work_stealing_moderate_steal_interval, "moderate-steal-interval",
-       "frequency of steal attempts during moderate polling")
-  .add_us(work_stealing_moderate_sleep_duration_us, "moderate-sleep-duration",
-          "sleep duration between poll attempts during moderate polling")
-  .add(work_stealing_relaxed_steal_interval, "relaxed-steal-interval",
-       "frequency of steal attempts during relaxed polling")
-  .add_us(work_stealing_relaxed_sleep_duration_us, "relaxed-sleep-duration",
-          "sleep duration between poll attempts during relaxed polling");
+    .add<size_t>("aggressive-poll-attempts", "nr. of aggressive steal attempts")
+    .add<size_t>("aggressive-steal-interval",
+                 "frequency of aggressive steal attempts")
+    .add<size_t>("moderate-poll-attempts", "nr. of moderate steal attempts")
+    .add<size_t>("moderate-steal-interval",
+                 "frequency of moderate steal attempts")
+    .add<timespan>("moderate-sleep-duration",
+                   "sleep duration between moderate steal attempts")
+    .add<size_t>("relaxed-steal-interval",
+                 "frequency of relaxed steal attempts")
+    .add<timespan>("relaxed-sleep-duration",
+                   "sleep duration between relaxed steal attempts");
   opt_group{custom_options_, "logger"}
-  .add(logger_file_name, "file-name",
-       "sets the filesystem path of the log file")
-  .add(logger_file_format, "file-format",
-       "sets the line format for individual log file entires")
-  .add<atom_value>("file-verbosity",
-       "sets the file output verbosity (quiet|error|warning|info|debug|trace)")
-  .add(logger_console, "console",
-       "sets the type of output to std::clog (none|colored|uncolored)")
-  .add(logger_console_format, "console-format",
-       "sets the line format for printing individual log entires")
-  .add<atom_value>("console-verbosity",
-       "sets the console output verbosity "
-       "(quiet|error|warning|info|debug|trace)")
-  .add(logger_component_filter, "component-filter",
-       "DEPRECATED/IGNORED, use component-blacklist instead")
-  .add<std::vector<atom_value>>("component-blacklist",
-                                "exclude all listed components from logging")
-  .add(logger_verbosity, "verbosity",
-       "set file and console verbosity (deprecated)")
-  .add(logger_inline_output, "inline-output",
-       "sets whether a separate thread is used for I/O");
+    .add<atom_value>("verbosity", "default verbosity for file and console")
+    .add<string>("file-name", "filesystem path of the log file")
+    .add<string>("file-format", "line format for individual log file entires")
+    .add<atom_value>("file-verbosity", "file output verbosity")
+    .add<atom_value>("console", "std::clog output: none, colored, or uncolored")
+    .add<string>("console-format", "line format for printed log entires")
+    .add<atom_value>("console-verbosity", "console output verbosity")
+    .add<std::vector<atom_value>>("component-blacklist",
+                                  "excluded components for logging")
+    .add<bool>("inline-output", "disable logger thread (for testing only!)");
   opt_group{custom_options_, "middleman"}
-  .add(middleman_network_backend, "network-backend",
-       "sets the network backend to either 'default' or 'asio' (if available)")
-  .add(middleman_app_identifier, "app-identifier",
-       "sets the application identifier of this node")
-  .add(middleman_enable_automatic_connections, "enable-automatic-connections",
-       "enables automatic connection management")
-  .add(middleman_max_consecutive_reads, "max-consecutive-reads",
-       "sets the maximum number of consecutive I/O reads per broker")
-  .add(middleman_heartbeat_interval, "heartbeat-interval",
-       "sets the interval (ms) of heartbeat, 0 (default) means disabling it")
-  .add(middleman_detach_utility_actors, "detach-utility-actors",
-       "deprecated, see attach-utility-actors instead")
-  .add_neg(middleman_detach_utility_actors, "attach-utility-actors",
-           "schedule utility actors instead of dedicating individual threads")
-  .add(middleman_detach_multiplexer, "detach-multiplexer",
-       "deprecated, see manual-multiplexing instead")
-  .add_neg(middleman_detach_multiplexer, "manual-multiplexing",
-           "disables background activity of the multiplexer")
-  .add(middleman_cached_udp_buffers, "cached-udp-buffers",
-       "sets the maximum for cached UDP send buffers (default: 10)")
-  .add(middleman_max_pending_msgs, "max-pending-messages",
-       "sets the maximum for reordering of UDP receive buffers (default: 10)")
-  .add<bool>("disable-tcp", "disables communication via TCP")
-  .add<bool>("enable-udp", "enable communication via UDP");
+    .add<atom_value>("network-backend",
+                     "either 'default' or 'asio' (if available)")
+    .add<string>("app-identifier", "application identifier of this node")
+    .add<bool>("enable-automatic-connections",
+               "enables automatic connection management")
+    .add<size_t>("max-consecutive-reads",
+                 "max. number of consecutive reads per broker")
+    .add<timespan>("heartbeat-interval", "interval of heartbeat messages")
+    .add<bool>("attach-utility-actors",
+               "schedule utility actors instead of dedicating threads")
+    .add<bool>("manual-multiplexing",
+               "disables background activity of the multiplexer")
+    .add<size_t>("cached-udp-buffers",
+                 "maximum for cached UDP send buffers (default: 10)")
+    .add<size_t>("max-pending-messages",
+                 "maximum for reordering of UDP receive buffers (default: 10)")
+    .add<bool>("disable-tcp", "disables communication via TCP")
+    .add<bool>("enable-udp", "enable communication via UDP");
   opt_group(custom_options_, "opencl")
-  .add(opencl_device_ids, "device-ids",
-       "restricts which OpenCL devices are accessed by CAF");
+    .add<std::vector<size_t>>("device-ids", "whitelist for OpenCL devices");
   opt_group(custom_options_, "openssl")
-  .add(openssl_certificate, "certificate",
-       "sets the path to the file containining the certificate for this node PEM format")
-  .add(openssl_key, "key",
-       "sets the path to the file containting the private key for this node")
-  .add(openssl_passphrase, "passphrase",
-       "sets the passphrase to decrypt the private key, if needed")
-  .add(openssl_capath, "capath",
-       "sets the path to an OpenSSL-style directory of trusted certificates")
-  .add(openssl_cafile, "cafile",
-       "sets the path to a file containing trusted certificates concatenated together in PEM format");
+    .add<string>("certificate", "path to the PEM-formatted certificate file")
+    .add<string>("key", "path to the private key file for this node")
+    .add<string>("passphrase", "passphrase to decrypt the private key")
+    .add<string>("capath",
+                 "path to an OpenSSL-style directory of trusted certificates")
+    .add<string>("cafile",
+                 "path to a file of concatenated PEM-formatted certificates");
   // add renderers for default error categories
   error_renderers.emplace(atom("system"), render_sec);
   error_renderers.emplace(atom("exit"), render_exit_reason);
@@ -328,8 +262,6 @@ actor_system_config& actor_system_config::parse(string_list args,
     first += std::distance(args.cbegin(), res.second);
     remainder.insert(remainder.end(), make_move_iterator(first),
                      make_move_iterator(args.end()));
-    args_remainder = message_builder{remainder.begin(), remainder.end()}
-                     .move_to_message();
   } else {
     cli_helptext_printed = get_or(content, "global.help", false)
                            || get_or(content, "global.long-help", false);
@@ -364,24 +296,6 @@ actor_system_config& actor_system_config::parse(string_list args,
   return parse(std::move(args), ini);
 }
 
-actor_system_config& actor_system_config::parse(message& msg,
-                                                const char* ini_file_cstr) {
-  string_list args;
-  for (size_t i = 0; i < msg.size(); ++i)
-    if (msg.match_element<std::string>(i))
-      args.emplace_back(msg.get_as<std::string>(i));
-  return parse(std::move(args), ini_file_cstr);
-}
-
-actor_system_config& actor_system_config::parse(message& msg,
-                                                std::istream& ini) {
-  string_list args;
-  for (size_t i = 0; i < msg.size(); ++i)
-    if (msg.match_element<std::string>(i))
-      args.emplace_back(msg.get_as<std::string>(i));
-  return parse(std::move(args), ini);
-}
-
 actor_system_config&
 actor_system_config::add_actor_factory(std::string name, actor_factory fun) {
   actor_factories.emplace(std::move(name), std::move(fun));
@@ -408,10 +322,6 @@ timespan actor_system_config::stream_tick_duration() const noexcept {
   auto ns_count = caf::detail::gcd(stream_credit_round_interval.count(),
                                    stream_max_batch_delay.count());
   return timespan{ns_count};
-}
-
-timespan actor_system_config::streaming_credit_round_interval() const noexcept {
-  return stream_credit_round_interval;
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,

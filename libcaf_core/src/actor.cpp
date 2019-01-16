@@ -43,10 +43,6 @@ actor::actor(const scoped_actor& x) : ptr_(actor_cast<strong_actor_ptr>(x)) {
   // nop
 }
 
-actor::actor(const unsafe_actor_handle_init_t&) : ptr_(nullptr) {
-  // nop
-}
-
 actor::actor(actor_control_block* ptr) : ptr_(ptr) {
   // nop
 }

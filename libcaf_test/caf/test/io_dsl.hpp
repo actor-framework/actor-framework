@@ -104,12 +104,6 @@ public:
   /// Callback for triggering all nodes when simulating a network of CAF nodes.
   run_all_nodes_fun run_all_nodes;
 
-  // -- deprecated functions ---------------------------------------------------
-
-  void exec_all() CAF_DEPRECATED_MSG("use run() instead") {
-    this->run();
-  }
-
   // -- overriding member functions --------------------------------------------
 
   bool consume_message() override {

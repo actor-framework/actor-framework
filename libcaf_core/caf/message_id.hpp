@@ -200,12 +200,6 @@ public:
     return f(meta::type_name("message_id"), x.value_);
   }
 
-  // -- deprecated functions ---------------------------------------------------
-
-  template <class... Ts>
-  static message_id make(Ts&&... xs)
-  CAF_DEPRECATED_MSG("use make_message_id instead");
-
 private:
   // -- member variables -------------------------------------------------------
 
@@ -239,13 +233,6 @@ constexpr message_id make_message_id(uint64_t value = 0) {
 /// @relates message_id
 constexpr message_id make_message_id(message_priority p) {
   return message_id{static_cast<uint64_t>(p) << message_id::category_offset};
-}
-
-// -- deprecated functions -----------------------------------------------------
-
-template <class... Ts>
-message_id message_id::make(Ts&&... xs) {
-  return make_message_id(std::forward<Ts>(xs)...);
 }
 
 } // namespace caf
