@@ -532,9 +532,16 @@ struct fixture {
     return *static_cast<entity*>(actor_cast<abstract_actor*>(hdl));
   }
 
+  static actor_system_config& init_config(actor_system_config& cfg) {
+    if (auto err = cfg.parse(caf::test::engine::argc(),
+                             caf::test::engine::argv()))
+      CAF_FAIL("parsing the config failed: " << to_string(err));
+    cfg.set("scheduler.policy", caf::atom("testing"));
+    return cfg;
+  }
+
   fixture()
-      : sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
-               .set("scheduler.policy", caf::atom("testing"))),
+      : sys(init_config(cfg)),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
         alice_hdl(spawn(sys, 0, "alice", tc)),
         bob_hdl(spawn(sys, 1, "bob", tc)),

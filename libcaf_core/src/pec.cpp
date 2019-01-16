@@ -18,6 +18,7 @@
 
 #include "caf/pec.hpp"
 
+#include "caf/config_value.hpp"
 #include "caf/error.hpp"
 #include "caf/make_message.hpp"
 
@@ -53,9 +54,18 @@ error make_error(pec code) {
 }
 
 error make_error(pec code, size_t line, size_t column) {
+  config_value::dictionary context;
+  context["line"] = line;
+  context["column"] = column;
   return {static_cast<uint8_t>(code), atom("parser"),
-          make_message(static_cast<uint32_t>(line),
-                       static_cast<uint32_t>(column))};
+          make_message(std::move(context))};
+}
+
+error make_error(pec code, std::string argument) {
+  config_value::dictionary context;
+  context["argument"] = std::move(argument);
+  return {static_cast<uint8_t>(code), atom("parser"),
+          make_message(std::move(context))};
 }
 
 const char* to_string(pec x) {

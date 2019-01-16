@@ -77,8 +77,9 @@ void run_client(int argc, char** argv, uint16_t port) {
   actor_system_config cfg;
   cfg.load<io::middleman>()
      .add_message_type<ping>("ping")
-     .add_message_type<pong>("pong")
-     .parse(argc, argv);
+     .add_message_type<pong>("pong");
+  if (auto err = cfg.parse(argc, argv))
+    CAF_FAIL("failed to parse config: " << to_string(err));
   actor_system sys{cfg};
   // check whether invalid_argument is thrown
   // when trying to connect to get an untyped

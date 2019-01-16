@@ -556,13 +556,20 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  static Config& init_config(Config& cfg) {
+    if (auto err = cfg.parse(caf::test::engine::argc(),
+                             caf::test::engine::argv()))
+      CAF_FAIL("failed to parse config: " << to_string(err));
+    cfg.set("scheduler.policy", caf::atom("testing"));
+    cfg.set("logger.inline-output", true);
+    cfg.set("middleman.network-backend", caf::atom("testing"));
+    return cfg;
+  }
+
   template <class... Ts>
   explicit test_coordinator_fixture(Ts&&... xs)
       : cfg(std::forward<Ts>(xs)...),
-        sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
-               .set("scheduler.policy", caf::atom("testing"))
-               .set("logger.inline-output", true)
-               .set("middleman.network-backend", caf::atom("testing"))),
+        sys(init_config(cfg)),
         self(sys, true),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
     // Configure the clock to measure each batch item with 1us.

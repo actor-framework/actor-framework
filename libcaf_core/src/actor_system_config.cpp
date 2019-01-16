@@ -32,8 +32,6 @@
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/message_builder.hpp"
 
-CAF_PUSH_DEPRECATED_WARNING
-
 namespace caf {
 
 actor_system_config::~actor_system_config() {
@@ -57,9 +55,9 @@ actor_system_config::actor_system_config()
   add_message_type_impl<std::vector<actor_addr>>("std::vector<@addr>");
   add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
-  add_message_type_impl<config_value_map>("config_value_map");
-  add_message_type_impl<config_value::list>("config_value::list");
-  add_message_type_impl<config_value::dictionary>("config_value::dictionary");
+  add_message_type_impl<settings>("settings");
+  add_message_type_impl<config_value::list>("std::vector<@config_value>");
+  add_message_type_impl<config_value::dictionary>("dictionary<@config_value>");
   // (1) hard-coded defaults
   stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
   stream_max_batch_delay = defaults::stream::max_batch_delay;
@@ -177,16 +175,15 @@ actor_system_config::make_help_text(const std::vector<message::cli_arg>& xs) {
   return oss.str();
 }
 
-actor_system_config& actor_system_config::parse(int argc, char** argv,
-                                                const char* ini_file_cstr) {
+error actor_system_config::parse(int argc, char** argv,
+                                 const char* ini_file_cstr) {
   string_list args;
   if (argc > 1)
     args.assign(argv + 1, argv + argc);
   return parse(std::move(args), ini_file_cstr);
 }
 
-actor_system_config& actor_system_config::parse(int argc, char** argv,
-                                                std::istream& ini) {
+error actor_system_config::parse(int argc, char** argv, std::istream& ini) {
   string_list args;
   if (argc > 1)
     args.assign(argv + 1, argv + argc);
@@ -229,16 +226,7 @@ bool operator!=(ini_iter iter, ini_sentinel) {
 
 } // namespace <anonymous>
 
-actor_system_config& actor_system_config::parse(string_list args,
-                                                std::istream& ini) {
-  // Insert possibly user-defined values into the map to respect overrides to
-  // member variables.
-  // TODO: remove with CAF 0.17
-  for (auto& opt : custom_options_) {
-    auto val = opt.get();
-    if (val)
-      content[opt.category()][opt.long_name()] = std::move(*val);
-  }
+error actor_system_config::parse(string_list args, std::istream& ini) {
   // Content of the INI file overrides hard-coded defaults.
   if (ini.good()) {
     detail::ini_consumer consumer{custom_options_, content};
@@ -246,14 +234,14 @@ actor_system_config& actor_system_config::parse(string_list args,
     res.i = ini_iter{&ini};
     detail::parser::read_ini(res, consumer);
     if (res.i != res.e)
-      std::cerr << "*** error in config file [line " << res.line << " col "
-                << res.column << "]: " << to_string(res.code) << std::endl;
+      return make_error(res.code, res.line, res.column);
   }
   // CLI options override the content of the INI file.
   using std::make_move_iterator;
   auto res = custom_options_.parse(content, args);
   if (res.second != args.end()) {
     if (res.first != pec::success) {
+      return make_error(res.first, *res.second);
       std::cerr << "error: at argument \"" << *res.second
                 << "\": " << to_string(res.first) << std::endl;
       cli_helptext_printed = true;
@@ -274,19 +262,20 @@ actor_system_config& actor_system_config::parse(string_list args,
   // Generate INI dump if needed.
   if (!cli_helptext_printed && get_or(content, "global.dump-config", false)) {
     for (auto& category : content) {
-      std::cout << '[' << category.first << "]\n";
-      for (auto& kvp : category.second)
-        if (kvp.first != "dump-config")
-          std::cout << kvp.first << '=' << to_string(kvp.second) << '\n';
+      if (auto dict = get_if<config_value::dictionary>(&category.second)) {
+        std::cout << '[' << category.first << "]\n";
+        for (auto& kvp : *dict)
+          if (kvp.first != "dump-config")
+            std::cout << kvp.first << '=' << to_string(kvp.second) << '\n';
+      }
     }
     std::cout << std::flush;
     cli_helptext_printed = true;
   }
-  return *this;
+  return none;
 }
 
-actor_system_config& actor_system_config::parse(string_list args,
-                                                const char* ini_file_cstr) {
+error actor_system_config::parse(string_list args, const char* ini_file_cstr) {
   // Override default config file name if set by user.
   if (ini_file_cstr != nullptr)
     config_file_path = ini_file_cstr;
@@ -313,7 +302,8 @@ actor_system_config& actor_system_config::set_impl(string_view name,
   auto opt = custom_options_.qualified_name_lookup(name);
   if (opt != nullptr && opt->check(value) == none) {
     opt->store(value);
-    content[opt->category()][opt->long_name()] = std::move(value);
+    auto& dict = content[opt->category()].as_dictionary();
+    dict[opt->long_name()] = std::move(value);
   }
   return *this;
 }
@@ -335,6 +325,13 @@ std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
                                                     const message& xs) {
   auto tmp = static_cast<exit_reason>(x);
   return deep_to_string(meta::type_name("exit_reason"), tmp,
+                        meta::omittable_if_empty(), xs);
+}
+
+std::string actor_system_config::render_pec(uint8_t x, atom_value,
+                                            const message& xs) {
+  auto tmp = static_cast<exit_reason>(x);
+  return deep_to_string(meta::type_name("parser_error"), tmp,
                         meta::omittable_if_empty(), xs);
 }
 
@@ -375,11 +372,8 @@ void actor_system_config::extract_config_file_path(string_list& args) {
   args.erase(i);
 }
 
-const dictionary<dictionary<config_value>>&
-content(const actor_system_config& cfg) {
+const settings& content(const actor_system_config& cfg) {
   return cfg.content;
 }
 
 } // namespace caf
-
-CAF_POP_WARNINGS

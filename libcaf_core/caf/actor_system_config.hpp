@@ -35,6 +35,7 @@
 #include "caf/fwd.hpp"
 #include "caf/is_typed_actor.hpp"
 #include "caf/named_actor_config.hpp"
+#include "caf/settings.hpp"
 #include "caf/stream.hpp"
 #include "caf/thread_hook.hpp"
 #include "caf/type_erased_value.hpp"
@@ -103,7 +104,7 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// @private
-  dictionary<config_value::dictionary> content;
+  settings content;
 
   /// Sets a config by using its INI name `config_name` to `config_value`.
   template <class T>
@@ -113,25 +114,23 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  /// Parses `args` as tuple of strings containing CLI options
-  /// and `ini_stream` as INI formatted input stream.
-  actor_system_config& parse(string_list args, std::istream& ini);
+  /// Parses `args` as tuple of strings containing CLI options and `ini_stream`
+  /// as INI formatted input stream.
+  error parse(string_list args, std::istream& ini);
 
   /// Parses `args` as tuple of strings containing CLI options and tries to
   /// open `ini_file_cstr` as INI formatted config file. The parsers tries to
   /// open `caf-application.ini` if `ini_file_cstr` is `nullptr`.
-  actor_system_config& parse(string_list args,
-                             const char* ini_file_cstr = nullptr);
+  error parse(string_list args, const char* ini_file_cstr = nullptr);
 
-  /// Parses the CLI options `{argc, argv}` and
-  /// `ini_stream` as INI formatted input stream.
-  actor_system_config& parse(int argc, char** argv, std::istream& ini);
+  /// Parses the CLI options `{argc, argv}` and `ini_stream` as INI formatted
+  /// input stream.
+  error parse(int argc, char** argv, std::istream& ini);
 
   /// Parses the CLI options `{argc, argv}` and tries to open `ini_file_cstr`
   /// as INI formatted config file. The parsers tries to open
   /// `caf-application.ini` if `ini_file_cstr` is `nullptr`.
-  actor_system_config& parse(int argc, char** argv,
-                             const char* ini_file_cstr = nullptr);
+  error parse(int argc, char** argv, const char* ini_file_cstr = nullptr);
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
@@ -337,8 +336,43 @@ private:
 
   static std::string render_exit_reason(uint8_t, atom_value, const message&);
 
+  static std::string render_pec(uint8_t, atom_value, const message&);
+
   void extract_config_file_path(string_list& args);
 };
 
-} // namespace caf
+/// @private
+const settings& content(const actor_system_config& cfg);
 
+/// Tries to retrieve the value associated to `name` from `cfg`.
+/// @relates config_value
+template <class T>
+optional<T> get_if(const actor_system_config* cfg, string_view name) {
+  return get_if<T>(&content(*cfg), name);
+}
+
+/// Retrieves the value associated to `name` from `cfg`.
+/// @relates config_value
+template <class T>
+T get(const actor_system_config& cfg, string_view name) {
+  return get<T>(content(cfg), name);
+}
+
+/// Retrieves the value associated to `name` from `cfg` or returns
+/// `default_value`.
+/// @relates config_value
+template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
+T get_or(const actor_system_config& cfg, string_view name,
+         const T& default_value) {
+  return get_or(content(cfg), name, default_value);
+}
+
+/// Retrieves the value associated to `name` from `cfg` or returns
+/// `default_value`.
+/// @relates config_value
+inline std::string get_or(const actor_system_config& cfg, string_view name,
+                          string_view default_value) {
+  return get_or(content(cfg), name, default_value);
+}
+
+} // namespace caf

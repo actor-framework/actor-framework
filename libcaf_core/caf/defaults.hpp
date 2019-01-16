@@ -22,6 +22,7 @@
 #include <cstddef>
 
 #include "caf/atom.hpp"
+#include "caf/string_view.hpp"
 #include "caf/timestamp.hpp"
 
 // -- hard-coded default values for various CAF options ------------------------
@@ -40,7 +41,7 @@ extern const timespan credit_round_interval;
 namespace scheduler {
 
 extern const atom_value policy;
-extern const char* profiling_output_file;
+extern string_view profiling_output_file;
 extern const size_t max_threads;
 extern const size_t max_throughput;
 extern const timespan profiling_resolution;
@@ -61,19 +62,19 @@ extern const timespan relaxed_sleep_duration;
 
 namespace logger {
 
-extern const char* component_filter;
+extern string_view component_filter;
 extern const atom_value console;
-extern const char* console_format;
+extern string_view console_format;
 extern const atom_value console_verbosity;
-extern const char* file_format;
-extern const char* file_name;
+extern string_view file_format;
+extern string_view file_name;
 extern const atom_value file_verbosity;
 
 } // namespace logger
 
 namespace middleman {
 
-extern const char* app_identifier;
+extern string_view app_identifier;
 extern const atom_value network_backend;
 extern const size_t max_consecutive_reads;
 extern const size_t heartbeat_interval;

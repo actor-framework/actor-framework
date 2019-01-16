@@ -20,9 +20,10 @@
 
 #include <algorithm>
 
-#include "caf/logger.hpp"
-#include "caf/defaults.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/config_value.hpp"
+#include "caf/defaults.hpp"
+#include "caf/logger.hpp"
 
 #include "caf/io/network/default_multiplexer.hpp"
 

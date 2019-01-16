@@ -41,10 +41,7 @@ struct dummy_thread_hook : thread_hook {
   }
 
   void thread_started() override {
-    void* array[20];                                                           \
-    auto caf_bt_size = ::backtrace(array, 20);                                 \
-    std::unique_lock<std::mutex> guard{mx};
-    ::backtrace_symbols_fd(array, caf_bt_size, 2);                             \
+    // nop
   }
 
   void thread_terminates() override {

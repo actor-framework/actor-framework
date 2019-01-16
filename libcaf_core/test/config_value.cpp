@@ -250,17 +250,3 @@ CAF_TEST(unsuccessful parsing) {
   CAF_CHECK_EQUAL(parse("{a=1,"), pec::unexpected_eof);
   CAF_CHECK_EQUAL(parse("{a=1 b=2}"), pec::unexpected_character);
 }
-
-CAF_TEST(put values) {
-  using v = config_value;
-  using d = config_value::dictionary;
-  using dd = caf::dictionary<d>;
-  dd content;
-  put(content, "a.b", 42);
-  CAF_CHECK_EQUAL(content, dd({{"a", d({{"b", v{42}}})}}));
-  put(content, "a.b.c", 1);
-  CAF_CHECK_EQUAL(content, dd({{"a", d({{"b", v{d({{"c", v{1}}})}}})}}));
-  put(content, "a.b.d", 2);
-  CAF_CHECK_EQUAL(content,
-                  dd({{"a", d({{"b", v{d({{"c", v{1}}, {"d", v{2}}})}}})}}));
-}
