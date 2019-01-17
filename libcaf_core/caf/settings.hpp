@@ -62,8 +62,9 @@ T get(const settings& xs, string_view name) {
   return std::move(*result);
 }
 
-template <class T,
-          class = typename std::enable_if<!std::is_pointer<T>::value>::type>
+template <class T, class = typename std::enable_if<
+                     !std::is_pointer<T>::value
+                     && !std::is_convertible<T, string_view>::value>::type>
 T get_or(const settings& xs, string_view name, T default_value) {
   auto result = get_if<T>(&xs, name);
   if (result)
@@ -75,21 +76,20 @@ std::string get_or(const settings& xs, string_view name,
                    string_view default_value);
 
 /// @private
-void put_impl(settings& dict, const std::vector<string_view>& path,
-              config_value& value);
+config_value& put_impl(settings& dict, const std::vector<string_view>& path,
+                       config_value& value);
 
 /// @private
-void put_impl(settings& dict, string_view key,
-              config_value& value);
+config_value& put_impl(settings& dict, string_view key, config_value& value);
 
 /// Converts `value` to a `config_value` and assigns it to `key`.
 /// @param dict Dictionary of key-value pairs.
 /// @param key Human-readable nested keys in the form `category.key`.
 /// @param value New value for given `key`.
 template <class T>
-void put(settings& dict, string_view key, T&& value) {
+config_value& put(settings& dict, string_view key, T&& value) {
   config_value tmp{std::forward<T>(value)};
-  put_impl(dict, key, tmp);
+  return put_impl(dict, key, tmp);
 }
 
 /// Inserts a new list named `name` into the dictionary `xs` and returns

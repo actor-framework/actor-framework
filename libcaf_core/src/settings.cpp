@@ -28,11 +28,10 @@ std::string get_or(const settings& xs, string_view name,
   return std::string{default_value.begin(), default_value.end()};
 }
 
-void put_impl(settings& dict, const std::vector<string_view>& path,
-              config_value& value) {
+config_value& put_impl(settings& dict, const std::vector<string_view>& path,
+                       config_value& value) {
   // Sanity check.
-  if (path.empty())
-    return;
+  CAF_ASSERT(!path.empty());
   // Navigate path.
   auto last = path.end();
   auto back = last - 1;
@@ -49,23 +48,26 @@ void put_impl(settings& dict, const std::vector<string_view>& path,
     }
   }
   // Set key-value pair on the leaf.
-  current->insert_or_assign(*back, std::move(value));
+  auto iter = current->insert_or_assign(*back, std::move(value)).first;
+  return iter->second;
 }
 
-void put_impl(settings& dict, string_view key, config_value& value) {
+config_value& put_impl(settings& dict, string_view key, config_value& value) {
   std::vector<string_view> path;
   split(path, key, ".");
-  put_impl(dict, path, value);
+  return put_impl(dict, path, value);
 }
 
 config_value::list& put_list(settings& xs, std::string name) {
-  auto i = xs.insert_or_assign(std::move(name), config_value::list{});
-  return get<config_value::list>(i.first->second);
+  config_value tmp{config_value::list{}};
+  auto& result = put_impl(xs, name, tmp);
+  return get<config_value::list>(result);
 }
 
 config_value::dictionary& put_dictionary(settings& xs, std::string name) {
-  auto i = xs.insert_or_assign(std::move(name), settings{});
-  return get<config_value::dictionary>(i.first->second);
+  config_value tmp{settings{}};
+  auto& result = put_impl(xs, name, tmp);
+  return get<config_value::dictionary>(result);
 }
 
 } // namespace caf
