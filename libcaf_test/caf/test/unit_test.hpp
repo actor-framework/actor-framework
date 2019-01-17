@@ -547,8 +547,8 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_CHECK_FUNC(func, x_expr, y_expr)                                   \
   do {                                                                         \
     func comparator;                                                           \
-    const auto& x_val___ = x_expr;                                             \
-    const auto& y_val___ = y_expr;                                             \
+    auto&& x_val___ = x_expr;                                                  \
+    auto&& y_val___ = y_expr;                                                  \
     static_cast<void>(::caf::test::detail::check(                              \
       ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
       CAF_FUNC_EXPR(func, x_expr, y_expr), false,                              \
@@ -587,8 +587,8 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_REQUIRE_FUNC(func, x_expr, y_expr)                                 \
   do {                                                                         \
     func comparator;                                                           \
-    const auto& x_val___ = x_expr;                                             \
-    const auto& y_val___ = y_expr;                                             \
+    auto&& x_val___ = x_expr;                                                  \
+    auto&& y_val___ = y_expr;                                                  \
     auto CAF_UNIQUE(__result) = ::caf::test::detail::check(                    \
       ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
       CAF_FUNC_EXPR(func, x_expr, y_expr), false,                              \
