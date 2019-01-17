@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "caf/atom.hpp"
@@ -32,6 +33,7 @@
 #include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
+#include "caf/string_view.hpp"
 #include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"
 #include "caf/sum_type_token.hpp"
@@ -111,6 +113,12 @@ public:
   /// already is a list.
   void convert_to_list();
 
+  /// Returns the value as a list, converting it to one if needed.
+  list& as_list();
+
+  /// Returns the value as a dictionary, converting it to one if needed.
+  dictionary& as_dictionary();
+
   /// Appends `x` to a list. Converts this config value to a list first by
   /// calling `convert_to_list` if needed.
   void append(config_value x);
@@ -173,12 +181,6 @@ private:
 
   variant_type data_;
 };
-
-// -- related type aliases -----------------------------------------------------
-
-/// Organizes config values into categories.
-/// @relates config_value
-using config_value_map = dictionary<config_value::dictionary>;
 
 // -- SumType-like access ------------------------------------------------------
 
@@ -401,168 +403,6 @@ struct config_value_access<dictionary<V>> {
 
 // -- SumType-like access of dictionary values ---------------------------------
 
-/// Tries to retrieve the value associated to `name` from `xs`.
-/// @relates config_value
-template <class T>
-optional<T> get_if(const config_value::dictionary* xs, string_view name) {
-  // Split the name into a path.
-  std::vector<string_view> path;
-  split(path, name, ".");
-  // Sanity check.
-  if (path.size() == 0)
-    return none;
-  // Resolve path, i.e., find the requested submap.
-  auto current = xs;
-  auto leaf = path.end() - 1;
-  for (auto i = path.begin(); i != leaf; ++i) {
-    auto j = current->find(*i);
-    if (j == current->end())
-      return none;
-    current = caf::get_if<config_value::dictionary>(&j->second);
-    if (current == nullptr)
-      return none;
-  }
-  // Get the leaf value.
-  auto j = current->find(*leaf);
-  if (j == current->end())
-    return none;
-  auto result = caf::get_if<T>(&j->second);
-  if (result)
-    return *result;
-  return none;
-}
-
-/// Retrieves the value associated to `name` from `xs`.
-/// @relates config_value
-template <class T>
-T get(const config_value::dictionary& xs, string_view name) {
-  auto result = get_if<T>(&xs, name);
-  if (result)
-    return std::move(*result);
-  CAF_RAISE_ERROR("invalid type or name found");
-}
-
-/// Retrieves the value associated to `name` from `xs` or returns
-/// `default_value`.
-/// @relates config_value
-template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const config_value::dictionary& xs, string_view name,
-         const T& default_value) {
-  auto result = get_if<T>(&xs, name);
-  if (result)
-    return std::move(*result);
-  return default_value;
-}
-
-/// Retrieves the value associated to `name` from `xs` or returns
-/// `default_value`.
-/// @relates config_value
-std::string get_or(const config_value::dictionary& xs, string_view name,
-                   const char* default_value);
-
-/// Tries to retrieve the value associated to `name` from `xs`.
-/// @relates config_value
-template <class T>
-optional<T> get_if(const config_value_map* xs, string_view name) {
-  // Get the category.
-  auto pos = name.find('.');
-  if (pos == std::string::npos) {
-    auto i = xs->find("global");
-    if (i == xs->end())
-      return none;
-    return get_if<T>(&i->second, name);
-  }
-  auto i = xs->find(name.substr(0, pos));
-  if (i == xs->end())
-    return none;
-  return get_if<T>(&i->second, name.substr(pos + 1));
-}
-
-/// Retrieves the value associated to `name` from `xs`.
-/// @relates config_value
-template <class T>
-T get(const config_value_map& xs, string_view name) {
-  auto result = get_if<T>(&xs, name);
-  if (result)
-    return std::move(*result);
-  CAF_RAISE_ERROR("invalid type or name found");
-}
-
-/// Retrieves the value associated to `name` from `xs` or returns
-/// `default_value`.
-/// @relates config_value
-template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const config_value_map& xs, string_view name, const T& default_value) {
-  auto result = get_if<T>(&xs, name);
-  if (result)
-    return std::move(*result);
-  return default_value;
-}
-
-/// Retrieves the value associated to `name` from `xs` or returns
-/// `default_value`.
-/// @relates config_value
-std::string get_or(const config_value_map& xs, string_view name,
-                   const char* default_value);
-
-/// Tries to retrieve the value associated to `name` from `cfg`.
-/// @relates config_value
-template <class T>
-optional<T> get_if(const actor_system_config* cfg, string_view name) {
-  return get_if<T>(&content(*cfg), name);
-}
-
-/// Retrieves the value associated to `name` from `cfg`.
-/// @relates config_value
-template <class T>
-T get(const actor_system_config& cfg, string_view name) {
-  return get<T>(content(cfg), name);
-}
-
-/// Retrieves the value associated to `name` from `cfg` or returns
-/// `default_value`.
-/// @relates config_value
-template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const actor_system_config& cfg, string_view name,
-         const T& default_value) {
-  return get_or(content(cfg), name, default_value);
-}
-
-std::string get_or(const actor_system_config& cfg, string_view name,
-                   const char* default_value);
-
-/// @private
-void put_impl(config_value::dictionary& dict,
-              const std::vector<string_view>& path, config_value& value);
-
-/// @private
-void put_impl(config_value::dictionary& dict, string_view key,
-              config_value& value);
-
-/// @private
-void put_impl(dictionary<config_value::dictionary>& dict, string_view key,
-              config_value& value);
-
-/// Converts `value` to a `config_value` and assigns it to `key`.
-/// @param dict Dictionary of key-value pairs.
-/// @param key Human-readable nested keys in the form `category.key`.
-/// @param value New value for given `key`.
-template <class T>
-void put(dictionary<config_value::dictionary>& dict, string_view key,
-         T&& value) {
-  config_value tmp{std::forward<T>(value)};
-  put_impl(dict, key, tmp);
-}
-
-/// Inserts a new list named `name` into the dictionary `xs` and returns
-/// a reference to it. Overrides existing entries with the same name.
-config_value::list& put_list(config_value::dictionary& xs, std::string name);
-
-/// Inserts a new list named `name` into the dictionary `xs` and returns
-/// a reference to it. Overrides existing entries with the same name.
-config_value::dictionary& put_dictionary(config_value::dictionary& xs,
-                                         std::string name);
-
 /// @relates config_value
 bool operator<(const config_value& x, const config_value& y);
 
@@ -595,4 +435,3 @@ typename Inspector::result_type inspect(Inspector& f, config_value& x) {
 }
 
 } // namespace caf
-

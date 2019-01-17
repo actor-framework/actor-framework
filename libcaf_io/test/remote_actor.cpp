@@ -40,6 +40,8 @@ public:
   config() {
     load<io::middleman>();
     add_message_type<std::vector<int>>("std::vector<int>");
+    if (auto err = parse(test::engine::argc(), test::engine::argv()))
+      CAF_FAIL("failed to parse config: " << to_string(err));
   }
 };
 
@@ -55,11 +57,9 @@ struct fixture {
   io::middleman& client_side_mm;
 
   fixture()
-      : server_side(server_side_config.parse(test::engine::argc(),
-                                             test::engine::argv())),
+      : server_side(server_side_config),
         server_side_mm(server_side.middleman()),
-        client_side(client_side_config.parse(test::engine::argc(),
-                                             test::engine::argv())),
+        client_side(client_side_config),
         client_side_mm(client_side.middleman()) {
     // nop
   }

@@ -31,10 +31,6 @@ actor_addr::actor_addr(std::nullptr_t) {
   // nop
 }
 
-actor_addr::actor_addr(const unsafe_actor_handle_init_t&) {
-  // nop
-}
-
 actor_addr& actor_addr::operator=(std::nullptr_t) {
   ptr_.reset();
   return *this;

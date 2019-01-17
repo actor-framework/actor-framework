@@ -153,7 +153,7 @@ ini_consumer* ini_category_consumer::dparent() {
 
 // -- ini_consumer -------------------------------------------------------------
 
-ini_consumer::ini_consumer(config_option_set& options, config_map& cfg)
+ini_consumer::ini_consumer(config_option_set& options, settings& cfg)
     : options_(options),
       cfg_(cfg) {
   // nop
@@ -168,13 +168,15 @@ void ini_consumer::key(std::string name) {
 }
 
 void ini_consumer::value_impl(config_value&& x) {
-  auto dict = get_if<config_value::dictionary>(&x);
-  if (dict != nullptr && !dict->empty()) {
+  using dict_type = config_value::dictionary;
+  auto dict = get_if<dict_type>(&x);
+  auto& dst = cfg_.emplace(current_key, dict_type{}).first->second;
+  if (dict != nullptr && !dict->empty() && holds_alternative<dict_type>(dst)) {
+    auto& dst_dict = get<dict_type>(dst);
     // We need to "merge" values into the destination, because it can already
     // contain any number of unrelated entries.
-    auto& dst = cfg_[current_key];
     for (auto& entry : *dict)
-      dst.insert_or_assign(entry.first, std::move(entry.second));
+      dst_dict.insert_or_assign(entry.first, std::move(entry.second));
   }
 }
 

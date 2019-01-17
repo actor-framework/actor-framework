@@ -556,13 +556,20 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  static Config& init_config(Config& cfg) {
+    if (auto err = cfg.parse(caf::test::engine::argc(),
+                             caf::test::engine::argv()))
+      CAF_FAIL("failed to parse config: " << to_string(err));
+    cfg.set("scheduler.policy", caf::atom("testing"));
+    cfg.set("logger.inline-output", true);
+    cfg.set("middleman.network-backend", caf::atom("testing"));
+    return cfg;
+  }
+
   template <class... Ts>
   explicit test_coordinator_fixture(Ts&&... xs)
       : cfg(std::forward<Ts>(xs)...),
-        sys(cfg.parse(caf::test::engine::argc(), caf::test::engine::argv())
-               .set("scheduler.policy", caf::atom("testing"))
-               .set("logger.inline-output", true)
-               .set("middleman.network-backend", caf::atom("testing"))),
+        sys(init_config(cfg)),
         self(sys, true),
         sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
     // Configure the clock to measure each batch item with 1us.
@@ -570,7 +577,6 @@ public:
                                         caf::timespan{1000});
     // Make sure the current time isn't 0.
     sched.clock().current_time += std::chrono::hours(1);
-    credit_round_interval = cfg.stream_credit_round_interval;
   }
 
   virtual ~test_coordinator_fixture() {
@@ -741,35 +747,7 @@ public:
 
   /// Deterministic scheduler.
   scheduler_type& sched;
-
-  // -- deprecated functionality -----------------------------------------------
-
-  void run_exhaustively() CAF_DEPRECATED_MSG("use run() instead");
-
-  void run_exhaustively_until(std::function<bool()> f)
-    CAF_DEPRECATED_MSG("use run_until() instead");
-
-  void loop_after_next_enqueue()
-    CAF_DEPRECATED_MSG("use run_after_next_ready_event() instead");
-
-  caf::timespan credit_round_interval CAF_DEPRECATED;
 };
-
-template <class Config>
-void test_coordinator_fixture<Config>::run_exhaustively() {
-  run();
-}
-
-template <class Config>
-void test_coordinator_fixture<Config>::run_exhaustively_until(
-  std::function<bool()> f) {
-  run_until(std::move(f));
-}
-
-template <class Config>
-void test_coordinator_fixture<Config>::loop_after_next_enqueue() {
-  sched.after_next_enqueue([=] { run(); });
-}
 
 /// Unboxes an expected value or fails the test if it doesn't exist.
 template <class T>

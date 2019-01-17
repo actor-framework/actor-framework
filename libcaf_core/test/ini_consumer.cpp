@@ -48,7 +48,7 @@ impl =       'foo';some atom
 struct fixture {
   detail::parser::state<std::string::const_iterator> res;
   config_option_set options;
-  config_option_set::config_map config;
+  settings config;
 
   fixture() {
     options.add<bool>("global", "is_server", "enables server mode")

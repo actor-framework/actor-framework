@@ -161,17 +161,6 @@ void test_coordinator::inline_all_enqueues_helper() {
   after_next_enqueue([=] { inline_all_enqueues_helper(); });
 }
 
-std::pair<size_t, size_t>
-test_coordinator::run_dispatch_loop(timespan cycle_duration) {
-  size_t messages = 0;
-  size_t timeouts = 0;
-  while (has_job() || has_pending_timeout()) {
-    messages += run();
-    timeouts += advance_time(cycle_duration);
-  }
-  return {messages, timeouts};
-}
-
 } // namespace caf
 } // namespace scheduler
 

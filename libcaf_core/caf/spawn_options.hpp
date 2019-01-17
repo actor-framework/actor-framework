@@ -63,10 +63,6 @@ constexpr spawn_options detached = spawn_options::detach_flag;
 /// Causes the runtime to ignore the new actor in `await_all_actors_done()`.
 constexpr spawn_options hidden = spawn_options::hide_flag;
 
-/// Causes the new actor to evaluate message priorities.
-constexpr spawn_options priority_aware CAF_DEPRECATED =
-  spawn_options::priority_aware_flag;
-
 /// Causes the new actor to delay its
 /// initialization until a message arrives.
 constexpr spawn_options lazy_init = spawn_options::lazy_init_flag;

@@ -164,7 +164,10 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
 
 void run_client(int argc, char** argv, uint16_t port) {
   actor_system_config cfg;
-  actor_system system{cfg.load<io::middleman>().parse(argc, argv)};
+  cfg.load<io::middleman>();
+  if (auto err = cfg.parse(argc, argv))
+    CAF_FAIL("failed to parse config: " << to_string(err));
+  actor_system system{cfg};
   auto p = system.spawn(ping, size_t{10});
   CAF_MESSAGE("spawn_client_typed...");
   auto cl = unbox(system.middleman().spawn_client(peer_fun,
@@ -176,7 +179,10 @@ void run_client(int argc, char** argv, uint16_t port) {
 
 void run_server(int argc, char** argv) {
   actor_system_config cfg;
-  actor_system system{cfg.load<io::middleman>().parse(argc, argv)};
+  cfg.load<io::middleman>();
+  if (auto err = cfg.parse(argc, argv))
+    CAF_FAIL("failed to parse config: " << to_string(err));
+  actor_system system{cfg};
   scoped_actor self{system};
   auto serv = system.middleman().spawn_broker(acceptor_fun, system.spawn(pong));
   std::thread child;
@@ -199,7 +205,5 @@ void run_server(int argc, char** argv) {
 } // namespace <anonymous>
 
 CAF_TEST(test_typed_broker) {
-  auto argc = test::engine::argc();
-  auto argv = test::engine::argv();
-  run_server(argc, argv);
+  run_server(test::engine::argc(), test::engine::argv());
 }

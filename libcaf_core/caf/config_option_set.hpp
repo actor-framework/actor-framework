@@ -33,7 +33,7 @@
 namespace caf {
 
 /// A set of `config_option` objects that parses CLI arguments into a
-/// `config_value::dictionary`.
+/// `settings` object.
 class config_option_set {
 public:
   // -- member types -----------------------------------------------------------
@@ -55,12 +55,6 @@ public:
 
   /// An iterator over ::config_option unique pointers.
   using const_iterator = option_vector::const_iterator;
-
-  /// Maps string keys to arbitrary (config) values.
-  using dictionary = caf::dictionary<config_value>;
-
-  /// Categorized settings.
-  using config_map = caf::dictionary<dictionary>;
 
   // -- properties -------------------------------------------------------------
 
@@ -174,11 +168,11 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Parses a given range as CLI arguments into `config`.
-  parse_result parse(config_map& config, argument_iterator begin,
+  parse_result parse(settings& config, argument_iterator begin,
                      argument_iterator end) const;
 
   /// Parses a given range as CLI arguments into `config`.
-  parse_result parse(config_map& config,
+  parse_result parse(settings& config,
                      const std::vector<std::string>& args) const;
 
 private:

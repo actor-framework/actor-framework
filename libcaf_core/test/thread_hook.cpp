@@ -33,6 +33,8 @@ using atomic_count = std::atomic<size_t>;
 size_t assumed_thread_count;
 size_t assumed_init_calls;
 
+std::mutex mx;
+
 struct dummy_thread_hook : thread_hook {
   void init(actor_system&) override {
     // nop

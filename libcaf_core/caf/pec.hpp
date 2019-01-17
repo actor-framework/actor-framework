@@ -65,10 +65,18 @@ enum class pec : uint8_t {
   illegal_category,
 };
 
+/// Returns an error object from given error code.
 error make_error(pec code);
 
+/// Returns an error object from given error code with additional context
+/// information for where the parser stopped in the input.
 error make_error(pec code, size_t line, size_t column);
 
+/// Returns an error object from given error code with additional context
+/// information for where the parser stopped in the argument.
+error make_error(pec code, std::string argument);
+
+/// @relates pec
 const char* to_string(pec x);
 
 } // namespace caf

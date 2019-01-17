@@ -53,7 +53,7 @@ const timespan credit_round_interval = ms(10);
 namespace scheduler {
 
 const atom_value policy = atom("stealing");
-const char* profiling_output_file = "";
+string_view profiling_output_file = "";
 const size_t max_threads = std::max(std::thread::hardware_concurrency(), 4u);
 const size_t max_throughput = std::numeric_limits<size_t>::max();
 const timespan profiling_resolution = ms(100);
@@ -74,19 +74,19 @@ const timespan relaxed_sleep_duration = ms(10);
 
 namespace logger {
 
-const char* component_filter = "";
+string_view component_filter = "";
 const atom_value console = atom("none");
-const char* console_format = "%m";
+string_view console_format = "%m";
 const atom_value console_verbosity = atom("trace");
-const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
-const char* file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
+string_view file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
+string_view file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
 const atom_value file_verbosity = atom("trace");
 
 } // namespace logger
 
 namespace middleman {
 
-const char* app_identifier = "";
+string_view app_identifier = "";
 const atom_value network_backend = atom("default");
 const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;

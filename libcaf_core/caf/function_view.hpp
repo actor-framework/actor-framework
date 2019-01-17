@@ -122,7 +122,7 @@ struct function_view_result {
 
 template <class... Ts>
 struct function_view_result<typed_actor<Ts...>> {
-  typed_actor<Ts...> value{unsafe_actor_handle_init};
+  typed_actor<Ts...> value{nullptr};
 };
 
 /// A function view for an actor hides any messaging from the caller.

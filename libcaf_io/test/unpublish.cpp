@@ -53,11 +53,17 @@ public:
   }
 };
 
+struct config : actor_system_config {
+  config() {
+    load<io::middleman>();
+    if (auto err = parse(test::engine::argc(), test::engine::argv()))
+      CAF_FAIL("failed to parse config: " << to_string(err));
+  }
+};
+
 struct fixture {
   fixture() {
-    new (&system) actor_system(cfg.load<io::middleman>()
-                                  .parse(test::engine::argc(),
-                                         test::engine::argv()));
+    new (&system) actor_system(cfg);
     testee = system.spawn<dummy>();
   }
 
@@ -90,7 +96,7 @@ struct fixture {
     return result;
   }
 
-  actor_system_config cfg;
+  config cfg;
   union { actor_system system; }; // manually control ctor/dtor
   actor testee;
 };

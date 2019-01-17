@@ -111,7 +111,7 @@ std::string config_option_set::help_text(bool global_only) const {
   return std::move(builder.result);
 }
 
-auto config_option_set::parse(config_map& config, argument_iterator first,
+auto config_option_set::parse(settings& config, argument_iterator first,
                               argument_iterator last) const
   -> std::pair<pec, argument_iterator> {
   // Sanity check.
@@ -124,7 +124,10 @@ auto config_option_set::parse(config_map& config, argument_iterator first,
     auto opt_name = opt.long_name();
     auto opt_ctg = opt.category();
     // Try inserting a new submap into the config or fill existing one.
-    auto& submap = config[opt_ctg];
+    auto& entry = config[opt_ctg];
+    if (!holds_alternative<config_value::dictionary>(entry))
+      entry = config_value::dictionary{};
+    auto& submap = get<config_value::dictionary>(entry);
     // Flags only consume the current element.
     if (opt.is_flag()) {
       if (arg_begin != arg_end)
@@ -223,7 +226,7 @@ auto config_option_set::parse(config_map& config, argument_iterator first,
 }
 
 config_option_set::parse_result
-config_option_set::parse(config_map& config,
+config_option_set::parse(settings& config,
                          const std::vector<string>& args) const {
   return parse(config, args.begin(), args.end());
 }
