@@ -361,18 +361,12 @@ T get(const actor_system_config& cfg, string_view name) {
 /// Retrieves the value associated to `name` from `cfg` or returns
 /// `default_value`.
 /// @relates config_value
-template <class T, class E = detail::enable_if_t<!std::is_pointer<T>::value>>
-T get_or(const actor_system_config& cfg, string_view name,
-         const T& default_value) {
-  return get_or(content(cfg), name, default_value);
-}
-
-/// Retrieves the value associated to `name` from `cfg` or returns
-/// `default_value`.
-/// @relates config_value
-inline std::string get_or(const actor_system_config& cfg, string_view name,
-                          string_view default_value) {
-  return get_or(content(cfg), name, default_value);
+template <class K, class V>
+auto get_or(const actor_system_config& cfg, K&& name, V&& default_value)
+  -> decltype(get_or(content(cfg), std::forward<K>(name),
+                     std::forward<V>(default_value))) {
+  return get_or(content(cfg), std::forward<K>(name),
+                std::forward<V>(default_value));
 }
 
 } // namespace caf
