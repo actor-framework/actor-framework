@@ -82,9 +82,9 @@ CAF_TEST(ini_consumer) {
   res.e = str.end();
   detail::parser::read_ini(res, consumer);
   CAF_CHECK_EQUAL(res.code, pec::success);
-  CAF_CHECK_EQUAL(get<bool>(config, "global.is_server"), true);
-  CAF_CHECK_EQUAL(get<uint16_t>(config, "global.port"), 4242u);
-  CAF_CHECK_EQUAL(get<ls>(config, "global.nodes"), ls({"sun", "venus"}));
+  CAF_CHECK_EQUAL(get<bool>(config, "is_server"), true);
+  CAF_CHECK_EQUAL(get<uint16_t>(config, "port"), 4242u);
+  CAF_CHECK_EQUAL(get<ls>(config, "nodes"), ls({"sun", "venus"}));
   CAF_CHECK_EQUAL(get<string>(config, "logger.file-name"), "foobar.ini");
   CAF_CHECK_EQUAL(get<timespan>(config, "scheduler.timing"), timespan(2000));
   CAF_CHECK_EQUAL(get<atom_value>(config, "scheduler.impl"), atom("foo"));

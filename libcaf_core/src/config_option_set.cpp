@@ -124,17 +124,15 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     auto opt_name = opt.long_name();
     auto opt_ctg = opt.category();
     // Try inserting a new submap into the config or fill existing one.
-    auto& entry = config[opt_ctg];
-    if (!holds_alternative<config_value::dictionary>(entry))
-      entry = config_value::dictionary{};
-    auto& submap = get<config_value::dictionary>(entry);
+    auto& entry = opt_ctg == "global" ? config
+                                      : config[opt_ctg].as_dictionary();
     // Flags only consume the current element.
     if (opt.is_flag()) {
       if (arg_begin != arg_end)
         return pec::illegal_argument;
       config_value cfg_true{true};
       opt.store(cfg_true);
-      submap[opt_name] = cfg_true;
+      entry[opt_name] = cfg_true;
     } else {
       if (arg_begin == arg_end)
         return pec::missing_argument;
@@ -158,7 +156,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
         }
       }
       opt.store(*val);
-      submap[opt_name] = std::move(*val);
+      entry[opt_name] = std::move(*val);
     }
     return pec::success;
   };

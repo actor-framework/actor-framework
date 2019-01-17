@@ -302,7 +302,9 @@ actor_system_config& actor_system_config::set_impl(string_view name,
   auto opt = custom_options_.qualified_name_lookup(name);
   if (opt != nullptr && opt->check(value) == none) {
     opt->store(value);
-    auto& dict = content[opt->category()].as_dictionary();
+    auto category = opt->category();
+    auto& dict = category == "global" ? content
+                                      : content[category].as_dictionary();
     dict[opt->long_name()] = std::move(value);
   }
   return *this;

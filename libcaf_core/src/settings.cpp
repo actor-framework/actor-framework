@@ -18,6 +18,8 @@
 
 #include "caf/settings.hpp"
 
+#include "caf/string_algorithms.hpp"
+
 namespace caf {
 
 std::string get_or(const settings& xs, string_view name,
@@ -32,6 +34,12 @@ config_value& put_impl(settings& dict, const std::vector<string_view>& path,
                        config_value& value) {
   // Sanity check.
   CAF_ASSERT(!path.empty());
+  // TODO: We implicitly swallow the `global.` suffix as a hotfix, but we
+  // actually should drop `global.` on the upper layers.
+  if (path.front() == "global") {
+    std::vector<string_view> new_path{path.begin() + 1, path.end()};
+    return put_impl(dict, new_path, value);
+  }
   // Navigate path.
   auto last = path.end();
   auto back = last - 1;

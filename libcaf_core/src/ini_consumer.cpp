@@ -170,13 +170,18 @@ void ini_consumer::key(std::string name) {
 void ini_consumer::value_impl(config_value&& x) {
   using dict_type = config_value::dictionary;
   auto dict = get_if<dict_type>(&x);
-  auto& dst = cfg_.emplace(current_key, dict_type{}).first->second;
-  if (dict != nullptr && !dict->empty() && holds_alternative<dict_type>(dst)) {
-    auto& dst_dict = get<dict_type>(dst);
-    // We need to "merge" values into the destination, because it can already
-    // contain any number of unrelated entries.
+  if (current_key != "global") {
+    auto& dst = cfg_.emplace(current_key, dict_type{}).first->second;
+    if (dict != nullptr && !dict->empty() && holds_alternative<dict_type>(dst)) {
+      auto& dst_dict = get<dict_type>(dst);
+      // We need to "merge" values into the destination, because it can already
+      // contain any number of unrelated entries.
+      for (auto& entry : *dict)
+        dst_dict.insert_or_assign(entry.first, std::move(entry.second));
+    }
+  } else {
     for (auto& entry : *dict)
-      dst_dict.insert_or_assign(entry.first, std::move(entry.second));
+      cfg_.insert_or_assign(entry.first, std::move(entry.second));
   }
 }
 
