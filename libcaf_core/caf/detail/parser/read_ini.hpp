@@ -239,7 +239,7 @@ void read_ini_section(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
 template <class Iterator, class Sentinel, class Consumer>
 void read_ini(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   using std::swap;
-  std::string tmp;
+  std::string tmp{"global"};
   auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
   };
@@ -255,6 +255,7 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     transition(init, " \t\n")
     fsm_epsilon(read_ini_comment(ps, consumer), init, ';')
     transition(start_section, '[')
+    fsm_epsilon_if(tmp == "global", read_ini_section(ps, begin_section()), init)
   }
   // Read the section key after reading an '['.
   state(start_section) {

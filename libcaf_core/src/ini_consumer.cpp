@@ -155,7 +155,8 @@ ini_consumer* ini_category_consumer::dparent() {
 
 ini_consumer::ini_consumer(config_option_set& options, settings& cfg)
     : options_(options),
-      cfg_(cfg) {
+      cfg_(cfg),
+      current_key("global") {
   // nop
 }
 
