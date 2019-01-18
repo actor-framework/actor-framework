@@ -559,6 +559,14 @@ message::cli_arg::cli_arg(std::string nstr, std::string tstr,
 
 // -- related non-members ------------------------------------------------------
 
+error inspect(serializer& sink, message& msg) {
+  return msg.save(sink);
+}
+
+error inspect(deserializer& source, message& msg) {
+  return msg.load(source);
+}
+
 std::string to_string(const message& msg) {
   if (msg.empty())
     return "<empty-message>";

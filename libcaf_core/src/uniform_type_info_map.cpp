@@ -60,6 +60,7 @@ const char* numbered_type_names[] = {
   "@addrvec",
   "@atom",
   "@charbuf",
+  "@config_value",
   "@down",
   "@downstream_msg",
   "@duration",

@@ -44,6 +44,7 @@ using sorted_builtin_types =
     std::vector<actor_addr>,            // @addrvec
     atom_value,                         // @atom
     std::vector<char>,                  // @charbuf
+    config_value,                       // @config_value
     down_msg,                           // @down
     downstream_msg,                     // @downstream_msg
     duration,                           // @duration
