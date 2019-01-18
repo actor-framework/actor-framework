@@ -75,6 +75,7 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
       prio(stream_priority::normal),
       last_acked_batch_id(0),
       last_batch_id(0) {
+  CAF_IGNORE_UNUSED(in_type);
   mgr->register_input_path(this);
   CAF_STREAM_LOG_DEBUG(mgr->self()->name()
                        << "opens input stream with element type"
