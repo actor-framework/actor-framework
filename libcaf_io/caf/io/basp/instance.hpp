@@ -22,6 +22,7 @@
 
 #include "caf/error.hpp"
 #include "caf/variant.hpp"
+#include "caf/defaults.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 
@@ -44,11 +45,12 @@ namespace basp {
 /// Describes a protocol instance managing multiple connections.
 class instance {
 public:
+  using endpoint_handle = routing_table::endpoint_handle;
   /// Provides a callback-based interface for certain BASP events.
   class callee {
   protected:
     using buffer_type = std::vector<char>;
-    using endpoint_handle = variant<connection_handle, datagram_handle>;
+    using endpoint_handle = instance::endpoint_handle;
   public:
     explicit callee(actor_system& sys, proxy_registry::backend& backend);
 
@@ -82,14 +84,11 @@ public:
                          std::vector<strong_actor_ptr>& forwarding_stack,
                          message& msg) = 0;
 
-    /// Called whenever BASP learns the ID of a remote node
-    /// to which it does not have a direct connection.
-    virtual void learned_new_node_directly(const node_id& nid,
-                                           bool was_known_indirectly) = 0;
+    /// Called whenever BASP learns the ID of a remote node.
+    virtual void learned_new_node(const node_id& nid) = 0;
 
-    /// Called whenever BASP learns the ID of a remote node
-    /// to which it does not have a direct connection.
-    virtual void learned_new_node_indirectly(const node_id& nid) = 0;
+    /// Get contact information for `nid` and establish communication.
+    virtual void establish_communication(const node_id& nid) = 0;
 
     /// Called if a heartbeat was received from `nid`
     virtual void handle_heartbeat(const node_id& nid) = 0;
@@ -130,6 +129,16 @@ public:
     /// Drop pending messages with sequence number `seq`.
     virtual void drop_pending(endpoint_context& ep, sequence_type seq) = 0;
 
+    /// Send messages that were buffered while connectivity establishment
+    /// was pending using `hdl`.
+    virtual void send_buffered_messages(execution_unit* ctx, node_id nid,
+                                        connection_handle hdl) = 0;
+
+    /// Send messages that were buffered while connectivity establishment
+    /// was pending using `hdl`.
+    virtual void send_buffered_messages(execution_unit* ctx, node_id nid,
+                                        datagram_handle hdl) = 0;
+
     /// Returns a reference to the current sent buffer, dispatching the call
     /// based on the type contained in `hdl`.
     virtual buffer_type& get_buffer(endpoint_handle hdl) = 0;
@@ -141,6 +150,11 @@ public:
 
     /// Returns a reference to the sent buffer.
     virtual buffer_type& get_buffer(connection_handle hdl) = 0;
+
+    /// Returns a reference to a buffer to be sent to node with `nid`.
+    /// If communication with the node is esstablished, it picks the first
+    /// available handle, otherwise a buffer for a pending message is returned.
+    virtual buffer_type& get_buffer(node_id nid) = 0;
 
     /// Returns the buffer accessed through a call to `get_buffer` when
     /// passing a datagram handle and removes it from the callee.
@@ -181,15 +195,12 @@ public:
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
 
-  /// Returns a route to `target` or `none` on error.
-  optional<routing_table::route> lookup(const node_id& target);
+  /// Flushes the underlying buffer of `hdl`.
+  void flush(endpoint_handle hdl);
 
-  /// Flushes the underlying buffer of `path`.
-  void flush(const routing_table::route& path);
-
-  /// Sends a BASP message and implicitly flushes the output buffer of `r`.
+  /// Sends a BASP message and implicitly flushes the output buffer of `hdl`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(execution_unit* ctx, const routing_table::route& r,
+  void write(execution_unit* ctx, endpoint_handle hdl,
              header& hdr, payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.
@@ -254,17 +265,22 @@ public:
                               uint16_t sequence_number = 0);
 
   /// Writes the client handshake to `buf`.
-  static void write_client_handshake(execution_unit* ctx,
-                                     buffer_type& buf,
-                                     const node_id& remote_side,
-                                     const node_id& this_node,
-                                     const std::string& app_identifier,
-                                     uint16_t sequence_number = 0);
+  void write_client_handshake(execution_unit* ctx,
+                              buffer_type& buf,
+                              const node_id& remote_side,
+                              const node_id& this_node,
+                              const std::string& app_identifier,
+                              uint16_t sequence_number = 0);
 
   /// Writes the client handshake to `buf`.
   void write_client_handshake(execution_unit* ctx,
                               buffer_type& buf, const node_id& remote_side,
                               uint16_t sequence_number = 0);
+
+  /// Writes the acknowledge handshake to finish a UDP handshake to `buf`.
+  void write_acknowledge_handshake(execution_unit* ctx,
+                                   buffer_type& buf, const node_id& remote_side,
+                                   uint16_t sequence_number = 0);
 
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
@@ -299,129 +315,147 @@ public:
   bool handle(execution_unit* ctx, const Handle& hdl, header& hdr,
               std::vector<char>* payload, bool tcp_based,
               optional<endpoint_context&> ep, optional<uint16_t> port) {
-    // function object for checking payload validity
+    // Function object for checking payload validity.
     auto payload_valid = [&]() -> bool {
       return payload != nullptr && payload->size() == hdr.payload_len;
     };
-    // handle message to ourselves
+    // Handle message to ourselves.
     switch (hdr.operation) {
       case message_type::server_handshake: {
+        if (!payload_valid())
+          return false;
+        binary_deserializer bd{ctx, *payload};
+        std::string remote_appid;
         actor_id aid = invalid_actor_id;
         std::set<std::string> sigs;
-        if (!payload_valid()) {
-          CAF_LOG_ERROR("fail to receive the app identifier");
+        basp::routing_table::address_map addrs;
+        if (auto err = bd(remote_appid, aid, sigs, addrs)) {
+          CAF_LOG_ERROR("unable to deserialize payload:"
+                        << callee_.system().render(err));
           return false;
-        } else {
-          binary_deserializer bd{ctx, *payload};
-          std::string remote_appid;
-          auto e = bd(remote_appid);
-          if (e)
-            return false;
-          auto appid = get_if<std::string>(&callee_.config(),
-                                           "middleman.app-identifier");
-          if ((appid && *appid != remote_appid)
-              || (!appid && !remote_appid.empty())) {
-            CAF_LOG_ERROR("app identifier mismatch");
-            return false;
-          }
-          e = bd(aid, sigs);
-          if (e)
-            return false;
         }
-        // close self connection after handshake is done
+        if (remote_appid != get_or(callee_.config(), "middleman.app-identifier",
+                                   defaults::middleman::app_identifier)) {
+          CAF_LOG_ERROR("app identifier mismatch");
+          return false;
+        }
+        // Close self connection after handshake is done.
         if (hdr.source_node == this_node_) {
           CAF_LOG_DEBUG("close connection to self immediately");
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
           return false;
         }
-        // close this connection if we already have a direct connection
-        if (tbl_.lookup_direct(hdr.source_node)) {
-          CAF_LOG_DEBUG("close connection since we already have a "
-                        "direct connection: " << CAF_ARG(hdr.source_node));
+        // Close this connection if we already established communication.
+        auto lr = tbl_.lookup(hdr.source_node);
+        // TODO: Anything additional or different for UDP?
+        if (lr.hdl) {
+          CAF_LOG_INFO("close redundant" << CAF_ARG(hdr.source_node));
+          callee_.finalize_handshake(hdr.source_node, aid, sigs);
+          return false;
+        } else if (!tcp_based && (tbl_.received_client_handshake(hdr.source_node)
+                   && this_node() < hdr.source_node)) {
+          CAF_LOG_INFO("simultaneous handshake, let the other node proceed: "
+                       << CAF_ARG(hdr.source_node));
           callee_.finalize_handshake(hdr.source_node, aid, sigs);
           return false;
         }
-        // add direct route to this node and remove any indirect entry
-        CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(hdr.source_node));
-        tbl_.add_direct(hdl, hdr.source_node);
-        auto was_indirect = tbl_.erase_indirect(hdr.source_node);
-        // write handshake as client in response
-        auto path = tbl_.lookup(hdr.source_node);
-        if (!path) {
-          CAF_LOG_ERROR("no route to host after server handshake");
-          return false;
-        }
+        // Add this node to our contacts.
+        CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
+        if (lr.known)
+          tbl_.handle(hdr.source_node, hdl);
+        else
+          tbl_.add(hdr.source_node, hdl);
+        auto peer_server = system().registry().get(atom("PeerServ"));
+        anon_send(actor_cast<actor>(peer_server), put_atom::value,
+                  to_string(hdr.source_node), make_message(addrs));
+        // Write handshake as client in response.
         if (tcp_based) {
-          auto ch = get<connection_handle>(path->hdl);
-          write_client_handshake(ctx, callee_.get_buffer(ch),
-                                 hdr.source_node);
+          write_client_handshake(ctx, callee_.get_buffer(hdl), hdr.source_node);
+        } else {
+          auto seq = ep->requires_ordering ? ep->seq_outgoing++ : 0;
+          write_acknowledge_handshake(ctx, callee_.get_buffer(hdl),
+                                      hdr.source_node, seq);
         }
-        callee_.learned_new_node_directly(hdr.source_node, was_indirect);
+        flush(hdl);
+        callee_.learned_new_node(hdr.source_node);
         callee_.finalize_handshake(hdr.source_node, aid, sigs);
-        flush(*path);
+        callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         break;
       }
       case message_type::client_handshake: {
         if (!payload_valid()) {
           CAF_LOG_ERROR("fail to receive the app identifier");
           return false;
-        } else {
-          binary_deserializer bd{ctx, *payload};
-          std::string remote_appid;
-          auto e = bd(remote_appid);
-          if (e)
-            return false;
-          auto appid = get_if<std::string>(&callee_.config(),
-                                           "middleman.app-identifier");
-          if ((appid && *appid != remote_appid)
-              || (!appid && !remote_appid.empty())) {
-            CAF_LOG_ERROR("app identifier mismatch");
-            return false;
-          }
         }
+        binary_deserializer bd{ctx, *payload};
+        std::string remote_appid;
+        basp::routing_table::address_map addrs;
+        if (auto err = bd(remote_appid, addrs)) {
+          CAF_LOG_ERROR("unable to deserialize payload:"
+                        << callee_.system().render(err));
+          return false;
+        }
+        if (remote_appid != get_or(callee_.config(), "middleman.app-identifier",
+                                   defaults::middleman::app_identifier)) {
+          CAF_LOG_ERROR("app identifier mismatch");
+          return false;
+        }
+        // Handshakes were only exchanged if `hdl` is set.
+        auto lr = tbl_.lookup(hdr.source_node);
+        auto new_node = (this_node() != hdr.source_node && !lr.hdl);
         if (tcp_based) {
-          if (tbl_.lookup_direct(hdr.source_node)) {
+          if (!new_node) {
             CAF_LOG_DEBUG("received second client handshake:"
-                         << CAF_ARG(hdr.source_node));
+                          << CAF_ARG(hdr.source_node));
             break;
           }
-          // add direct route to this node and remove any indirect entry
-          CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(hdr.source_node));
-          tbl_.add_direct(hdl, hdr.source_node);
-          auto was_indirect = tbl_.erase_indirect(hdr.source_node);
-          callee_.learned_new_node_directly(hdr.source_node, was_indirect);
+          // Add this node to our contacts.
+          CAF_LOG_DEBUG("new endpoint:" << CAF_ARG(hdr.source_node));
+          // Either add a new node or add the handle to a known one.
+          if (lr.known)
+            tbl_.handle(hdr.source_node, hdl);
+          else
+            tbl_.add(hdr.source_node, hdl);
+          callee_.learned_new_node(hdr.source_node);
+          callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         } else {
-          auto new_node = (this_node() != hdr.source_node
-                          && !tbl_.lookup_direct(hdr.source_node));
-          if (new_node) {
-            // add direct route to this node and remove any indirect entry
-            CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(hdr.source_node));
-            tbl_.add_direct(hdl, hdr.source_node);
-          }
-          uint16_t seq = (ep && ep->requires_ordering) ? ep->seq_outgoing++ : 0;
-          write_server_handshake(ctx,
-                                 callee_.get_buffer(hdl),
-                                 port, seq);
+          if (!lr.known)
+            tbl_.add(hdr.source_node);
+          tbl_.received_client_handshake(hdr.source_node, true);
+          uint16_t seq = ep->requires_ordering ? ep->seq_outgoing++ : 0;
+          write_server_handshake(ctx, callee_.get_buffer(hdl), port, seq);
           callee_.flush(hdl);
-          if (new_node) {
-            auto was_indirect = tbl_.erase_indirect(hdr.source_node);
-            callee_.learned_new_node_directly(hdr.source_node, was_indirect);
-          }
         }
+        auto peer_server = system().registry().get(atom("PeerServ"));
+        anon_send(actor_cast<actor>(peer_server), put_atom::value,
+                  to_string(hdr.source_node), make_message(addrs));
+        break;
+      }
+      case message_type::acknowledge_handshake: {
+        if (tcp_based) {
+          CAF_LOG_ERROR("received acknowledge handshake via tcp");
+          break;
+        }
+        auto lr = tbl_.lookup(hdr.source_node);
+        if (!lr.known) {
+          CAF_LOG_DEBUG("dropping acknowledge handshake from unknown node");
+          break;
+        }
+        if (lr.hdl) {
+          CAF_LOG_DEBUG("dropping repeated acknowledge handshake");
+          // TODO: Or should we just adopt the new handle?
+          break;
+        }
+        CAF_LOG_INFO("new endpoint:" << CAF_ARG(hdr.source_node));
+        tbl_.handle(hdr.source_node, hdl);
+        tbl_.received_client_handshake(hdr.source_node, false);
+        callee_.learned_new_node(hdr.source_node);
+        callee_.send_buffered_messages(ctx, hdr.source_node, hdl);
         break;
       }
       case message_type::dispatch_message: {
         if (!payload_valid())
           return false;
-        // in case the sender of this message was received via a third node,
-        // we assume that that node to offers a route to the original source
-        auto last_hop = tbl_.lookup_direct(hdl);
-        if (hdr.source_node != none
-            && hdr.source_node != this_node_
-            && last_hop != hdr.source_node
-            && !tbl_.lookup_direct(hdr.source_node)
-            && tbl_.add_indirect(last_hop, hdr.source_node))
-          callee_.learned_new_node_indirectly(hdr.source_node);
         binary_deserializer bd{ctx, *payload};
         auto receiver_name = static_cast<atom_value>(0);
         std::vector<strong_actor_ptr> forwarding_stack;

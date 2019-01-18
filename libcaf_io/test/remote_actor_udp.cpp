@@ -39,6 +39,7 @@ class config : public actor_system_config {
 public:
   config() {
     load<io::middleman>();
+    set("middleman.enable-tcp", false);
     set("middleman.enable-udp", true);
     add_message_type<std::vector<int>>("std::vector<int>");
     if (auto err = parse(test::engine::argc(), test::engine::argv()))
@@ -66,7 +67,11 @@ struct fixture {
   }
 };
 
-behavior make_pong_behavior() {
+behavior make_pong_behavior(event_based_actor* self) {
+  self->set_exit_handler([=](exit_msg& m) {
+    CAF_MESSAGE("Pong received exit message.");
+    self->quit(m.reason);
+  });
   return {
     [](int val) -> int {
       ++val;
@@ -204,8 +209,7 @@ CAF_TEST_DISABLED(multiple_endpoints_udp) {
       }
     };
   });
-  auto port = server_sys.middleman().publish_udp(mirror, 0);
-  CAF_REQUIRE(port);
+  auto port = unbox(server_sys.middleman().publish_udp(mirror, 0));
   CAF_MESSAGE("server running on port " << port);
   auto client_fun = [](event_based_actor* self) -> behavior {
     return {
@@ -225,7 +229,8 @@ CAF_TEST_DISABLED(multiple_endpoints_udp) {
   actor_system client_sys{client_cfg};
   auto client = client_sys.spawn(client_fun);
   // Acquire remote actor from the server.
-  auto client_srv = client_sys.middleman().remote_actor_udp("localhost", *port);
+  // acquire remote actor from the server
+  auto client_srv = client_sys.middleman().remote_actor_udp("localhost", port);
   CAF_REQUIRE(client_srv);
   // Setup other clients.
   for (int i = 0; i < 5; ++i) {
@@ -234,7 +239,7 @@ CAF_TEST_DISABLED(multiple_endpoints_udp) {
     CAF_MESSAGE("creating new client");
     auto other = other_sys.spawn(client_fun);
     // Acquire remote actor from the new server.
-    auto other_srv = other_sys.middleman().remote_actor_udp("localhost", *port);
+    auto other_srv = other_sys.middleman().remote_actor_udp("localhost", port);
     CAF_REQUIRE(other_srv);
     // Establish communication and exit.
     CAF_MESSAGE("client contacts server and exits");

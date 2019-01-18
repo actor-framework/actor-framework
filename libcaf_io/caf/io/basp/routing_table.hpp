@@ -29,6 +29,8 @@
 
 #include "caf/io/basp/buffer_type.hpp"
 
+#include "caf/io/network/interfaces.hpp"
+
 namespace std {
 
 template<>
@@ -49,73 +51,106 @@ namespace basp {
 
 /// Stores routing information for a single broker participating as
 /// BASP peer and provides both direct and indirect paths.
+// TODO: Rename `routing_table`.
 class routing_table {
 public:
   using endpoint_handle = variant<connection_handle, datagram_handle>;
+  using address_endpoint = std::pair<uint16_t, network::address_listing>;
+  using address_map = std::map<network::protocol::transport,
+                               address_endpoint>;
 
   explicit routing_table(abstract_broker* parent);
 
   virtual ~routing_table();
 
-  /// Describes a routing path to a node.
-  struct route {
-    const node_id& next_hop;
-    endpoint_handle hdl;
+  /// Result for a lookup of a node.
+  struct lookup_result {
+    /// Tracks whether the node is already known.
+    bool known;
+    /// Servant handle to communicate with the node -- if already created.
+    optional<endpoint_handle> hdl;
   };
 
   /// Describes a function object for erase operations that
   /// is called for each indirectly lost connection.
   using erase_callback = callback<const node_id&>;
 
-  /// Returns a route to `target` or `none` on error.
-  optional<route> lookup(const node_id& target);
-
-  /// Returns the ID of the peer connected via `hdl` or
+  /// Returns the ID of the peer reachable via `hdl` or
   /// `none` if `hdl` is unknown.
-  node_id lookup_direct(const endpoint_handle& hdl) const;
+  node_id lookup(const endpoint_handle& hdl) const;
 
-  /// Returns the handle offering a direct connection to `nid` or
-  /// `invalid_connection_handle` if no direct connection to `nid` exists.
-  optional<endpoint_handle> lookup_direct(const node_id& nid) const;
+  /// Returns the state for communication with `nid` along with a handle
+  /// if communication is established or `none` if `nid` is unknown.
+  lookup_result lookup(const node_id& nid) const;
 
-  /// Returns the next hop that would be chosen for `nid`
-  /// or `none` if there's no indirect route to `nid`.
-  node_id lookup_indirect(const node_id& nid) const;
-
-  /// Adds a new direct route to the table.
+  /// Adds a new endpoint to the table.
   /// @pre `hdl != invalid_connection_handle && nid != none`
-  void add_direct(const endpoint_handle& hdl, const node_id& nid);
+  void add(const node_id& nid, const endpoint_handle& hdl);
 
-  /// Adds a new indirect route to the table.
-  bool add_indirect(const node_id& hop, const node_id& dest);
+  /// Add a new endpoint to the table.
+  /// @pre `origin != none && nid != none`
+  void add(const node_id& nid, const node_id& origin);
 
-  /// Blacklist the route to `dest` via `hop`.
-  void blacklist(const node_id& hop, const node_id& dest);
+  /// Adds a new endpoint to the table that has no attached information.
+  /// that propagated information about the node.
+  /// @pre `nid != none`
+  void add(const node_id& nid);
 
   /// Removes a direct connection and calls `cb` for any node
   /// that became unreachable as a result of this operation,
   /// including the node that is assigned as direct path for `hdl`.
-  void erase_direct(const endpoint_handle& hdl, erase_callback& cb);
+  void erase(const endpoint_handle& hdl, erase_callback& cb);
 
-  /// Removes any entry for indirect connection to `dest` and returns
-  /// `true` if `dest` had an indirect route, otherwise `false`.
-  bool erase_indirect(const node_id& dest);
-
-  /// Queries whether `dest` is reachable.
+  /// Queries whether `dest` is reachable directly.
   bool reachable(const node_id& dest);
-
-  /// Removes all direct and indirect routes to `dest` and calls
-  /// `cb` for any node that became unreachable as a result of this
-  /// operation, including `dest`.
-  /// @returns the number of removed routes (direct and indirect)
-  size_t erase(const node_id& dest, erase_callback& cb);
 
   /// Returns the parent broker.
   inline abstract_broker* parent() {
     return parent_;
   }
 
+  /// Set the forwarding node that first mentioned `hdl`.
+  bool origin(const node_id& nid, const node_id& origin);
+
+  /// Get the forwarding node that first mentioned `hdl`
+  /// or `none` if the node is unknown.
+  optional<node_id> origin(const node_id& nid);
+
+  /// Set the handle for communication with `nid`.
+  bool handle(const node_id& nid, const endpoint_handle& hdl);
+
+  /// Get the handle for communication with `nid`
+  /// or `none` if the node is unknown.
+  optional<endpoint_handle> handle(const node_id& nid);
+
+  /// Get the addresses to reach `nid` or `none` if the node is unknown.
+  optional<const address_map&> addresses(const node_id& nid);
+
+  /// Add a port, address pair under a key to the local addresses.
+  void local_addresses(network::protocol::transport proto,
+                       address_endpoint addrs);
+
+  /// Get a reference to an address map for the local node.
+  const address_map& local_addresses();
+
+  // Set the received client handshake flag for `nid`.
+  bool received_client_handshake(const node_id& nid, bool flag);
+  
+  // Get the received client handshake flag for `nid`.
+  bool received_client_handshake(const node_id& nid);
+
 public:
+  /// Entry to bundle information for a remote endpoint.
+  struct node_info {
+    /// Handle for the node if communication is established.
+    optional<endpoint_handle> hdl;
+    /// The endpoint who told us about the node.
+    optional<node_id> origin;
+    /// Track if we received a client handshake to solve simultaneous
+    /// handshake with UDP.
+    bool received_client_handshake;
+  };
+
   template <class Map, class Fallback>
   typename Map::mapped_type
   get_opt(const Map& m, const typename Map::key_type& k, Fallback&& x) const {
@@ -125,16 +160,10 @@ public:
     return std::forward<Fallback>(x);
   }
 
-  using node_id_set = std::unordered_set<node_id>;
-
-  using indirect_entries = std::unordered_map<node_id,      // dest
-                                              node_id_set>; // hop
-
   abstract_broker* parent_;
-  std::unordered_map<endpoint_handle, node_id> direct_by_hdl_;
-  std::unordered_map<node_id, endpoint_handle> direct_by_nid_;
-  indirect_entries indirect_;
-  indirect_entries blacklist_;
+  std::unordered_map<endpoint_handle, node_id> nid_by_hdl_;
+  std::unordered_map<node_id, node_info> node_information_base_;
+  address_map local_addrs_;
 };
 
 /// @}

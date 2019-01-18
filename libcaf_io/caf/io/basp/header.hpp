@@ -124,7 +124,8 @@ inline bool operator!=(const header& lhs, const header& rhs) {
 /// Checks whether given header contains a handshake.
 inline bool is_handshake(const header& hdr) {
   return hdr.operation == message_type::server_handshake
-      || hdr.operation == message_type::client_handshake;
+      || hdr.operation == message_type::client_handshake
+      || hdr.operation == message_type::acknowledge_handshake;
 }
 
 /// Checks wheter given header contains a heartbeat.

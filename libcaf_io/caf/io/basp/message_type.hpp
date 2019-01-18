@@ -67,6 +67,10 @@ enum class message_type : uint8_t {
   ///
   /// ![](heartbeat.png)
   heartbeat = 0x05,
+
+  /// Last message in a BASP handshake for between two endpoints using UDP
+  /// as a transport protocol.
+  acknowledge_handshake = 0x06,
 };
 
 /// @relates message_type

@@ -80,14 +80,10 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
                std::vector<strong_actor_ptr>& stages, message& msg);
 
   // performs bookkeeping such as managing `spawn_servers`
-  void learned_new_node(const node_id& nid);
+  void learned_new_node(const node_id& nid) override;
 
-  // inherited from basp::instance::callee
-  void learned_new_node_directly(const node_id& nid,
-                                 bool was_indirectly_before) override;
-
-  // inherited from basp::instance::callee
-  void learned_new_node_indirectly(const node_id& nid) override;
+  // get contact information for `nid` and establish communication
+  void establish_communication(const node_id& nid) override;
 
   // inherited from basp::instance::callee
   uint16_t next_sequence_number(connection_handle hdl) override;
@@ -108,6 +104,14 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   void drop_pending(basp::endpoint_context& ep, uint16_t seq) override;
 
   // inherited from basp::instance::callee
+  void send_buffered_messages(execution_unit* ctx, node_id nid,
+                              connection_handle hdl) override;
+
+  // inherited from basp::instance::callee
+  void send_buffered_messages(execution_unit* ctx, node_id nid,
+                              datagram_handle hdl) override;
+
+  // inherited from basp::instance::callee
   buffer_type& get_buffer(endpoint_handle hdl) override;
 
   // inherited from basp::instance::callee
@@ -115,6 +119,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // inherited from basp::instance::callee
   buffer_type& get_buffer(connection_handle hdl) override;
+
+  // inherited from basp::instance::callee
+  buffer_type& get_buffer(node_id nid) override;
 
   // inherited from basp::instance::callee
   buffer_type pop_datagram_buffer(datagram_handle hdl) override;
@@ -180,8 +187,12 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // maximum queue size for pending messages of endpoints with ordering
   const size_t max_pending_messages;
 
+  // buffer messages for nodes while connectivity is established
+  std::unordered_map<node_id, std::vector<buffer_type>> pending_connectivity;
+
   // timeout for delivery of pending messages of endpoints with ordering
-  const std::chrono::milliseconds pending_to = std::chrono::milliseconds(100);
+  const std::chrono::milliseconds pending_timeout
+    = std::chrono::milliseconds(100);
 
   // returns the node identifier of the underlying BASP instance
   const node_id& this_node() const {

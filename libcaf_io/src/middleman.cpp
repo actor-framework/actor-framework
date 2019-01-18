@@ -420,6 +420,8 @@ void middleman::init(actor_system_config& cfg) {
   cfg.add_message_type<network::protocol>("@protocol")
      .add_message_type<network::address_listing>("@address_listing")
      .add_message_type<network::receive_buffer>("@receive_buffer")
+     .add_message_type<basp::routing_table::address_endpoint>("@address_endpoint")
+     .add_message_type<basp::routing_table::address_map>("@address_map")
      .add_message_type<new_data_msg>("@new_data_msg")
      .add_message_type<new_connection_msg>("@new_connection_msg")
      .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")

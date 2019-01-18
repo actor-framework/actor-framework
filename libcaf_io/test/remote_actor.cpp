@@ -39,6 +39,8 @@ class config : public actor_system_config {
 public:
   config() {
     load<io::middleman>();
+    set("middleman.enable-tcp", true);
+    set("middleman.enable-udp", false);
     add_message_type<std::vector<int>>("std::vector<int>");
     if (auto err = parse(test::engine::argc(), test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
@@ -65,7 +67,11 @@ struct fixture {
   }
 };
 
-behavior make_pong_behavior() {
+behavior make_pong_behavior(event_based_actor* self) {
+  self->set_exit_handler([=](exit_msg& m) {
+    CAF_MESSAGE("Pong received exit message.");
+    self->quit(m.reason);
+  });
   return {
     [](int val) -> int {
       ++val;

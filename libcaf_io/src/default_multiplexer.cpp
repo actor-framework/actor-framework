@@ -733,7 +733,7 @@ default_multiplexer::new_local_udp_endpoint(uint16_t port, const char* in,
 }
 
 int64_t default_multiplexer::next_endpoint_id() {
-  return servant_ids_++;
+  return servant_ids_.fetch_add(1);
 }
 
 void default_multiplexer::handle_internal_events() {

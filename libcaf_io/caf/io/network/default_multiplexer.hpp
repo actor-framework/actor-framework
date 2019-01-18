@@ -254,7 +254,7 @@ private:
   std::vector<intrusive_ptr<resumable>> internally_posted_;
 
   /// Sequential ids for handles of datagram servants
-  int64_t servant_ids_;
+  std::atomic<int64_t> servant_ids_;
 
   /// Maximum messages per resume run.
   size_t max_throughput_;

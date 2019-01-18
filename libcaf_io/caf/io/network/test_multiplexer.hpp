@@ -32,6 +32,7 @@ namespace network {
 
 class test_multiplexer : public multiplexer {
 private:
+  struct datagram_endpoint;
   struct datagram_data;
 
 public:
@@ -96,10 +97,13 @@ public:
 
   void provide_acceptor(uint16_t desired_port, accept_handle hdl);
 
+  // Provide a local datagram servant on port with `hdl`.
   void provide_datagram_servant(uint16_t desired_port, datagram_handle hdl);
 
+  // Provide a datagram servant for communication a remote endpoint
+  // with `endpoint_id`.
   void provide_datagram_servant(std::string host, uint16_t desired_port,
-                                datagram_handle hdl);
+                                datagram_handle hdl, intptr_t endpoint_id = 0);
 
   /// Generate an id for a new servant.
   int64_t next_endpoint_id();
@@ -108,10 +112,11 @@ public:
   using buffer_type = std::vector<char>;
 
   /// Buffers storing bytes for UDP related components.
+  using endpoint_id_type = std::intptr_t;
   using read_buffer_type = network::receive_buffer;
   using write_buffer_type = buffer_type;
-  using read_job_type = std::pair<datagram_handle, read_buffer_type>;
-  using write_job_type = std::pair<datagram_handle, write_buffer_type>;
+  using read_job_type = std::pair<endpoint_id_type, read_buffer_type>;
+  using write_job_type = std::pair<endpoint_id_type, write_buffer_type>;
   using write_job_queue_type = std::deque<write_job_type>;
 
   using shared_buffer_type = std::shared_ptr<buffer_type>;
@@ -176,8 +181,10 @@ public:
 
   datagram_servant_ptr& impl_ptr(datagram_handle hdl);
 
-  /// Returns a map with all servants related to the servant `hdl`.
-  std::set<datagram_handle>& servants(datagram_handle hdl);
+  using write_handle_map = std::map<endpoint_id_type, datagram_endpoint>;
+
+  /// Returns the endpoint for a specific `hdl`.
+  endpoint_id_type endpoint_id(datagram_handle hdl);
 
   /// Returns `true` if this handle has been closed
   /// for reading, `false` otherwise.
@@ -198,15 +205,27 @@ public:
                           test_multiplexer& peer, std::string host,
                           uint16_t port, connection_handle peer_hdl);
 
-  /// Stores `hdl` as a pending endpoint for `src`.
-  void add_pending_endpoint(datagram_handle src, datagram_handle hdl);
+  void add_pending_endpoint(intptr_t endpoint_id, datagram_handle hdl,
+                            shared_job_queue_type write_buffer
+                              = std::make_shared<write_job_queue_type>());
+
+  /// Add `hdl` as a pending endpoint to `src` and provide a datagram servant
+  /// on `peer` that connects the buffers of `hdl` and `peer_hdl`. Calls
+  /// `add_pending_endpoint(...)` and `peer.provide_endpoint(...)`.
+  void prepare_endpoints(datagram_handle src, datagram_handle hdl,
+                         test_multiplexer& peer, std::string host,
+                         uint16_t port, datagram_handle peer_hdl);
+
 
   using pending_connects_map = std::unordered_multimap<accept_handle,
                                                        connection_handle>;
 
   pending_connects_map& pending_connects();
 
-  using pending_endpoints_map = std::unordered_map<int64_t, datagram_handle>;
+//  using pending_endpoints_map = std::unordered_map<int64_t, datagram_handle>;
+  using pending_endpoints_map = std::map<intptr_t,
+                                         std::pair<datagram_handle,
+                                                   shared_job_queue_type>>;
 
   pending_endpoints_map& pending_endpoints();
 
@@ -219,7 +238,7 @@ public:
                                                         datagram_handle>;
 
   using pending_remote_datagram_endpoints_map
-    = std::map<std::pair<std::string, uint16_t>, datagram_handle>;
+    = std::map<std::pair<std::string, uint16_t>, std::pair<datagram_handle, intptr_t>>;
 
   bool has_pending_scribe(std::string x, uint16_t y);
 
@@ -237,6 +256,9 @@ public:
   /// Tries to read data from the external input buffer of `hdl`.
   bool try_read_data(connection_handle hdl);
 
+  /// Tries to read data from the external input queue of `hdl`.
+  bool try_read_data(datagram_handle hdl);
+
   /// Poll data on all scribes.
   bool read_data();
 
@@ -253,7 +275,7 @@ public:
 
   /// Appends `buf` to the virtual network buffer of `hdl`
   /// and calls `read_data(hdl)` afterwards.
-  void virtual_send(datagram_handle src, datagram_handle ep,
+  void virtual_send(datagram_handle hdl, endpoint_id_type endpoint,
                     const buffer_type&);
 
   /// Waits until a `runnable` is available and executes it.
@@ -323,24 +345,36 @@ private:
     doorman_data();
   };
 
-  struct datagram_data {
+  struct datagram_endpoint {
+    datagram_handle hdl;
     shared_job_queue_type vn_buf_ptr;
     shared_job_queue_type wr_buf_ptr;
     write_job_queue_type& vn_buf;
     write_job_queue_type& wr_buf;
-    read_job_type rd_buf;
+
+    datagram_endpoint(
+      datagram_handle hdl = datagram_handle(),
+      shared_job_queue_type input = std::make_shared<write_job_queue_type>(),
+      shared_job_queue_type output = std::make_shared<write_job_queue_type>()
+    );
+  };
+
+  struct datagram_data {
     datagram_servant_ptr ptr;
+    datagram_endpoint read_handle;
+    read_job_type rd_buf;
     bool stopped_reading;
     bool passive_mode;
     bool ack_writes;
-    uint16_t port;
+    uint16_t remote_port;
     uint16_t local_port;
-    std::set<datagram_handle> servants;
+    write_handle_map write_handles;
     size_t datagram_size;
 
     // Allows creating an entangled scribes where the input of this scribe is
     // the output of another scribe and vice versa.
     datagram_data(
+      datagram_handle hdl = datagram_handle{},
       shared_job_queue_type input = std::make_shared<write_job_queue_type>(),
       shared_job_queue_type output = std::make_shared<write_job_queue_type>()
     );

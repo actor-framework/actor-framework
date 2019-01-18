@@ -53,18 +53,27 @@ test_multiplexer::doorman_data::doorman_data()
   // nop
 }
 
-test_multiplexer::datagram_data::
-  datagram_data(shared_job_queue_type input,
-                        shared_job_queue_type output)
-    : vn_buf_ptr(std::move(input)),
-      wr_buf_ptr(std::move(output)),
-      vn_buf(*vn_buf_ptr),
-      wr_buf(*wr_buf_ptr),
-      rd_buf(datagram_handle::from_int(0), receive_buffer_size),
+
+test_multiplexer::datagram_endpoint::datagram_endpoint(datagram_handle hdl,
+                                                       shared_job_queue_type input,
+                                                       shared_job_queue_type output)
+  : hdl(hdl),
+    vn_buf_ptr(std::move(input)),
+    wr_buf_ptr(std::move(output)),
+    vn_buf(*vn_buf_ptr),
+    wr_buf(*wr_buf_ptr) {
+  // nop
+}
+
+test_multiplexer::datagram_data::datagram_data(datagram_handle hdl,
+                                               shared_job_queue_type input,
+                                               shared_job_queue_type output)
+    : read_handle(hdl, std::move(input), std::move(output)),
+      rd_buf(0, receive_buffer_size),
       stopped_reading(false),
       passive_mode(false),
       ack_writes(false),
-      port(0),
+      remote_port(0),
       local_port(0),
       datagram_size(receive_buffer_size) {
   // nop
@@ -78,7 +87,7 @@ test_multiplexer::test_multiplexer(actor_system* sys)
 }
 
 test_multiplexer::~test_multiplexer() {
-  // get rid of extra ref count
+  // Get rid of extra ref count.
   for (auto& ptr : resumables_)
     intrusive_ptr_release(ptr.get());
 }
@@ -131,7 +140,7 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
   };
   CAF_LOG_DEBUG(CAF_ARG(hdl));
   auto sptr = make_counted<impl>(hdl, this);
-  { // lifetime scope of guard
+  { // Lifetime scope of guard.
     guard_type guard{mx_};
     impl_ptr(hdl) = sptr;
   }
@@ -143,7 +152,7 @@ expected<scribe_ptr> test_multiplexer::new_tcp_scribe(const std::string& host,
                                                       uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
   connection_handle hdl;
-  { // lifetime scope of guard
+  { // Lifetime scope of guard.
     guard_type guard{mx_};
     auto i = scribes_.find(std::make_pair(host, port));
     if (i != scribes_.end()) {
@@ -207,7 +216,7 @@ doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
     test_multiplexer* mpx_;
   };
   auto dptr = make_counted<impl>(hdl, this);
-  { // lifetime scope of guard
+  { // Lifetime scope of guard.
     guard_type guard{mx_};
     auto& ref = doorman_data_[hdl];
     ref.ptr = dptr;
@@ -266,24 +275,30 @@ expected<datagram_servant_ptr>
 test_multiplexer::new_remote_udp_endpoint(const std::string& host,
                                           uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
+  auto key_pair = std::make_pair(host, port);
   datagram_handle hdl;
-  { // lifetime scope of guard
+  intptr_t ep;
+  { // Lifetime scope of guard.
     guard_type guard{mx_};
-    auto i = remote_endpoints_.find(std::make_pair(host, port));
+    auto i = remote_endpoints_.find(key_pair);
     if (i != remote_endpoints_.end()) {
-      hdl = i->second;
+      hdl = i->second.first;
+      ep = i->second.second;
       remote_endpoints_.erase(i);
     } else {
       return sec::cannot_connect_to_node;
     }
   }
   auto ptr = new_datagram_servant(hdl, port);
-  // Set state in the struct to enable direct communication?
-  { // lifetime scope of guard
+  // Set state in the struct to enable direct communication.
+  { // Lifetime scope of guard.
     guard_type guard{mx_};
     auto data = data_for_hdl(hdl);
-    data->servants.emplace(hdl);
-    local_port(hdl) = data->local_port;
+    data->write_handles.emplace(ep,
+                                datagram_endpoint(hdl,
+                                                  data->read_handle.vn_buf_ptr,
+                                                  data->read_handle.wr_buf_ptr));
+    data->remote_port = port;
   }
   return ptr;
 }
@@ -302,7 +317,7 @@ test_multiplexer::new_local_udp_endpoint(uint16_t desired_port,
       port = std::numeric_limits<uint16_t>::max();
       while (is_known_port(port))
         --port;
-      // Do the same for finding a local dgram handle
+      // Do the same for finding a local datagram handle.
       auto y = std::numeric_limits<int64_t>::max();
       while (is_known_handle(datagram_handle::from_int(y)))
         --y;
@@ -318,7 +333,9 @@ test_multiplexer::new_local_udp_endpoint(uint16_t desired_port,
       }
     }
   }
-  return new_datagram_servant(hdl, port);
+  auto tmp = new_datagram_servant(hdl, port);
+  auto data = data_for_hdl(hdl);
+  return tmp;
 }
 
 datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
@@ -332,17 +349,24 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
     }
     bool new_endpoint(network::receive_buffer& buf) override {
       datagram_handle dhdl;
+      shared_job_queue_type wr_buf_ptr;
+      auto data = mpx_->data_for_hdl(hdl());
       { // Try to get a connection handle of a pending connect.
         guard_type guard{mpx_->mx_};
         auto& pe = mpx_->pending_endpoints();
-        auto i = pe.find(hdl().id());
+        auto i = pe.find(data->rd_buf.first);
         if (i == pe.end())
           return false;
-        dhdl = i->second;
+        dhdl = i->second.first;
+        wr_buf_ptr = i->second.second;
         pe.erase(i);
       }
-      auto data = mpx_->data_for_hdl(hdl());
-      data->servants.emplace(dhdl);
+      data->write_handles.emplace(
+        std::make_pair(
+          data->rd_buf.first,
+          datagram_endpoint{dhdl, data->read_handle.vn_buf_ptr, wr_buf_ptr}
+        )
+      );
       mpx_->datagram_data_.emplace(dhdl, data);
       parent()->add_hdl_for_datagram_servant(this, dhdl);
       return consume(mpx_, dhdl, buf);
@@ -352,13 +376,11 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
     }
     std::vector<char>& wr_buf(datagram_handle dh) override {
       auto& buf = mpx_->output_buffer(dh);
-      buf.first = dh;
       return buf.second;
     }
-    void enqueue_datagram(datagram_handle dh,
-                          std::vector<char> buf) override {
+    void enqueue_datagram(datagram_handle dh, std::vector<char> buf) override {
       auto& q = mpx_->output_queue(dh);
-      q.emplace_back(dh, std::move(buf));
+      q.emplace_back(mpx_->endpoint_id(dh), std::move(buf));
     }
     network::receive_buffer& rd_buf() override {
       auto& buf = mpx_->input_buffer(hdl());
@@ -387,8 +409,10 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
     }
     std::vector<datagram_handle> hdls() const override {
       auto data = mpx_->data_for_hdl(hdl());
-      std::vector<datagram_handle> result(data->servants.begin(),
-                                          data->servants.end());
+      std::vector<datagram_handle> result;
+      result.reserve(data->write_handles.size());
+      for (auto& p : data->write_handles)
+        result.push_back(p.second.hdl);
       return result;
     }
     void add_to_loop() override {
@@ -402,20 +426,20 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
     }
     void remove_endpoint(datagram_handle dh) override {
       auto data = mpx_->data_for_hdl(hdl());
-      { // lifetime scope of guard
+      { // Lifetime scope of guard.
         guard_type guard{mpx_->mx_};
-        auto itr = std::find(data->servants.begin(), data->servants.end(), dh);
-        if (itr != data->servants.end())
-          data->servants.erase(itr);
+        auto endpoint_id = mpx_->endpoint_id(dh);
+        data->write_handles.erase(endpoint_id);
+        parent()->erase(dh);
       }
     }
     void detach_handles() override {
       auto data = mpx_->data_for_hdl(hdl());
-      for (auto& p : data->servants)
-        if (p != hdl())
-          parent()->erase(p);
-      data->servants.clear();
-      data->servants.emplace(hdl());
+      for (auto& p : data->write_handles)
+        if (p.second.hdl != hdl())
+          parent()->erase(p.second.hdl);
+      data->write_handles.clear();
+      data->write_handles.emplace(mpx_->endpoint_id(hdl()), hdl());
     }
   private:
     test_multiplexer* mpx_;
@@ -423,11 +447,10 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
   auto dptr = make_counted<impl>(hdl, this);
   CAF_LOG_INFO("new datagram servant" << hdl);
   auto data = data_for_hdl(hdl);
-  { // lifetime scope of guard
+  { // lifetime scope of guard.
     guard_type guard{mx_};
     data->ptr = dptr;
-    data->port = port;
-    data->servants.emplace(hdl);
+    data->remote_port = port;
   }
   return dptr;
 }
@@ -448,7 +471,7 @@ bool test_multiplexer::is_known_port(uint16_t x) const {
     return x == y.second.port;
   };
   auto pred2 = [&](const datagram_data_map::value_type& y) {
-    return x == y.second->port;
+    return x == y.second->remote_port;
   };
   return (doormen_.count(x) + local_endpoints_.count(x)) > 0
          || std::any_of(doorman_data_.begin(), doorman_data_.end(), pred1)
@@ -468,7 +491,7 @@ bool test_multiplexer::is_known_handle(datagram_handle x) const {
     return x == y.second;
   };
   auto pred2 = [&](const pending_remote_datagram_endpoints_map::value_type& y) {
-    return x == y.second;
+    return x == y.second.first;
   };
   return datagram_data_.count(x) > 0
     || std::any_of(local_endpoints_.begin(), local_endpoints_.end(), pred1)
@@ -476,7 +499,7 @@ bool test_multiplexer::is_known_handle(datagram_handle x) const {
 }
 
 auto test_multiplexer::make_supervisor() -> supervisor_ptr {
-  // not needed
+  // Not needed.
   return nullptr;
 }
 
@@ -519,15 +542,17 @@ void test_multiplexer::provide_datagram_servant(uint16_t desired_port,
 
 void test_multiplexer::provide_datagram_servant(std::string host,
                                                 uint16_t desired_port,
-                                                datagram_handle hdl) {
+                                                datagram_handle hdl,
+                                                intptr_t endpoint_id) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(desired_port) << CAF_ARG(hdl));
   guard_type guard{mx_};
-  remote_endpoints_.emplace(std::make_pair(std::move(host), desired_port), hdl);
+  if (endpoint_id == 0)
+    endpoint_id = static_cast<intptr_t>(hdl.id());
+  remote_endpoints_.emplace(std::make_pair(std::move(host), desired_port),
+                            std::make_pair(std::move(hdl), endpoint_id));
 }
 
-/// The external input buffer should be filled by
-/// the test program.
 test_multiplexer::buffer_type&
 test_multiplexer::virtual_network_buffer(connection_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
@@ -537,7 +562,7 @@ test_multiplexer::virtual_network_buffer(connection_handle hdl) {
 test_multiplexer::write_job_queue_type&
 test_multiplexer::virtual_network_buffer(datagram_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  return data_for_hdl(hdl)->vn_buf;
+  return data_for_hdl(hdl)->read_handle.vn_buf;
 }
 
 test_multiplexer::buffer_type&
@@ -555,15 +580,32 @@ test_multiplexer::input_buffer(connection_handle hdl) {
 test_multiplexer::write_job_type&
 test_multiplexer::output_buffer(datagram_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  auto& buf = data_for_hdl(hdl)->wr_buf;
+  auto data = data_for_hdl(hdl);
+  auto itr = std::find_if(std::begin(data->write_handles),
+                          std::end(data->write_handles),
+                          [&](write_handle_map::value_type& p) {
+                            return p.second.hdl == hdl;
+                          });
+  if (itr == std::end(data->write_handles))
+    CAF_RAISE_ERROR("write buffer for unknown endpoint");
+  auto& buf = itr->second.wr_buf;
   buf.emplace_back();
+  buf.back().first = itr->first;
   return buf.back();
 }
 
 test_multiplexer::write_job_queue_type&
 test_multiplexer::output_queue(datagram_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  return data_for_hdl(hdl)->wr_buf;
+  auto data = data_for_hdl(hdl);
+  auto itr = std::find_if(std::begin(data->write_handles),
+                          std::end(data->write_handles),
+                          [&](write_handle_map::value_type& p) {
+                            return p.second.hdl == hdl;
+                          });
+  if (itr == std::end(data->write_handles))
+    CAF_RAISE_ERROR("write queue for unknown endpoint");
+  return itr->second.wr_buf;
 }
 
 test_multiplexer::read_job_type&
@@ -616,7 +658,7 @@ uint16_t& test_multiplexer::port(accept_handle hdl) {
 }
 
 uint16_t& test_multiplexer::port(datagram_handle hdl) {
-  return data_for_hdl(hdl)->port;
+  return data_for_hdl(hdl)->remote_port;
 }
 
 uint16_t& test_multiplexer::local_port(datagram_handle hdl) {
@@ -627,8 +669,9 @@ datagram_servant_ptr& test_multiplexer::impl_ptr(datagram_handle hdl) {
   return data_for_hdl(hdl)->ptr;
 }
 
-std::set<datagram_handle>& test_multiplexer::servants(datagram_handle hdl) {
-  return data_for_hdl(hdl)->servants;
+test_multiplexer::endpoint_id_type
+test_multiplexer::endpoint_id(datagram_handle hdl) {
+  return reinterpret_cast<intptr_t>(data_for_hdl(hdl).get());
 }
 
 bool& test_multiplexer::stopped_reading(accept_handle hdl) {
@@ -656,8 +699,8 @@ test_multiplexer::data_for_hdl(datagram_handle hdl) {
   auto itr = datagram_data_.find(hdl);
   if (itr != datagram_data_.end())
     return itr->second;
-  // if it does not exist, create a new entry
-  datagram_data_.emplace(hdl, std::make_shared<datagram_data>());
+  // If it does not exist, create a new entry.
+  datagram_data_.emplace(hdl, std::make_shared<datagram_data>(hdl));
   return datagram_data_[hdl];
 }
 
@@ -689,10 +732,34 @@ void test_multiplexer::prepare_connection(accept_handle src,
   peer.provide_scribe(std::move(host), port, peer_hdl);
 }
 
-void test_multiplexer::add_pending_endpoint(datagram_handle src,
-                                            datagram_handle hdl) {
+void test_multiplexer::add_pending_endpoint(intptr_t endpoint_id, datagram_handle hdl,
+                                            shared_job_queue_type write_buffer) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  pending_endpoints_.emplace(src.id(), hdl);
+  pending_endpoints_.emplace(endpoint_id, std::make_pair(hdl, write_buffer));
+}
+
+void test_multiplexer::prepare_endpoints(datagram_handle src,
+                                         datagram_handle hdl,
+                                         test_multiplexer& peer,
+                                         std::string host, uint16_t port,
+                                         datagram_handle peer_hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
+  CAF_ASSERT(this != &peer);
+  CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(hdl) << CAF_ARG(host) << CAF_ARG(port)
+                << CAF_ARG(peer_hdl));
+  if (local_endpoints_.count(port) == 0)
+    provide_datagram_servant(port, src);
+  auto data = data_for_hdl(src);
+  auto src_id = reinterpret_cast<intptr_t>(data.get());
+  auto dd = std::make_shared<datagram_data>(peer_hdl, data->read_handle.wr_buf_ptr,
+                                                      data->read_handle.vn_buf_ptr);
+  auto res = peer.datagram_data_.emplace(peer_hdl, dd);
+  if (!res.second)
+    CAF_RAISE_ERROR("prepare_endpoints: peer handle already in use");
+  auto peer_id = reinterpret_cast<intptr_t>(res.first->second.get());
+  peer.provide_datagram_servant(std::move(host), port, peer_hdl, src_id);
+  add_pending_endpoint(peer_id, hdl,
+                       dd->read_handle.vn_buf_ptr);
 }
 
 test_multiplexer::pending_connects_map& test_multiplexer::pending_connects() {
@@ -751,13 +818,21 @@ bool test_multiplexer::try_accept_connection() {
 bool test_multiplexer::try_read_data() {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
-  // scribe_data might change while we traverse it
-  std::vector<connection_handle> xs;
-  xs.reserve(scribe_data_.size());
+  // scribe_data might change while we traverse it.
+  std::vector<connection_handle> chs;
+  chs.reserve(scribe_data_.size());
   for (auto& kvp : scribe_data_)
-    xs.emplace_back(kvp.first);
-  for (auto x : xs)
-    if (try_read_data(x))
+    chs.emplace_back(kvp.first);
+  for (auto ch : chs)
+    if (try_read_data(ch))
+      return true;
+  // datagram_data might change while we traverse it and multiple handles may
+  // share a read handle.
+  std::set<datagram_handle> dhs;
+  for (auto& kvp : datagram_data_)
+    dhs.insert(kvp.second->read_handle.hdl);
+  for (auto dh : dhs)
+    if (try_read_data(dh))
       return true;
   return false;
 }
@@ -810,18 +885,61 @@ bool test_multiplexer::try_read_data(connection_handle hdl) {
   return false;
 }
 
+bool test_multiplexer::try_read_data(datagram_handle hdl) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
+  CAF_LOG_TRACE(CAF_ARG(hdl));
+  flush_runnables();
+  if (passive_mode(hdl))
+    return false;
+  auto ditr = datagram_data_.find(hdl);
+  if (ditr == datagram_data_.end() || ditr->second->ptr == nullptr
+      || ditr->second->ptr->parent() == nullptr
+      || !ditr->second->ptr->parent()->getf(abstract_actor::is_initialized_flag))
+    return false;
+  auto& data = ditr->second;
+  auto& rh = data->read_handle;
+  if (rh.vn_buf.empty() || rh.vn_buf.front().second.empty())
+    return false;
+  // Since we can't swap std::vector and caf::io::network::receive_buffer
+  // just copy over the data. This is for testing and not performance critical.
+  auto& from = rh.vn_buf.front();
+  auto& to = data->rd_buf;
+  to.first = from.first;
+  CAF_ASSERT(to.second.capacity() >= from.second.size());
+  to.second.resize(from.second.size());
+  std::copy(from.second.begin(), from.second.end(), to.second.begin());
+  rh.vn_buf.pop_front();
+  auto sitr = data->write_handles.find(data->rd_buf.first);
+  if (sitr == data->write_handles.end()) {
+    if (!data->ptr->new_endpoint(data->rd_buf.second))
+      passive_mode(hdl) = true;
+  } else {
+    if (!data->ptr->consume(this, sitr->second.hdl, data->rd_buf.second))
+      passive_mode(hdl) = true;
+  }
+  return true;
+}
+
 bool test_multiplexer::read_data() {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
-  // scribe_data might change while we traverse it
-  std::vector<connection_handle> xs;
-  xs.reserve(scribe_data_.size());
+  // scribe_data might change while we traverse it.
+  std::vector<connection_handle> chs;
+  chs.reserve(scribe_data_.size());
   for (auto& kvp : scribe_data_)
-    xs.emplace_back(kvp.first);
+    chs.emplace_back(kvp.first);
   long hits = 0;
-  for (auto x : xs)
-    if (scribe_data_.count(x) > 0)
-      if (read_data(x))
+  for (auto ch : chs)
+    if (scribe_data_.count(ch) > 0)
+      if (read_data(ch))
+        ++hits;
+  // datagram_data might change while we traverse it.
+  std::set<datagram_handle> dhs;
+  for (auto& kvp : datagram_data_)
+    dhs.insert(kvp.second->read_handle.hdl);
+  for (auto dh : dhs)
+    if (datagram_data_.count(dh) > 0)
+      if (read_data(dh))
         ++hits;
   return hits > 0;
 }
@@ -837,7 +955,7 @@ bool test_multiplexer::read_data(connection_handle hdl) {
       || !sd.ptr->parent()->getf(abstract_actor::is_initialized_flag)) {
     return false;
   }
-  // count how many data packets we could dispatch
+  // Count how many data packets we could dispatch.
   long hits = 0;
   for (;;) {
     switch (sd.recv_conf.first) {
@@ -889,34 +1007,8 @@ bool test_multiplexer::read_data(connection_handle hdl) {
 bool test_multiplexer::read_data(datagram_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
-  flush_runnables();
-  if (passive_mode(hdl))
-    return false;
-  auto ditr = datagram_data_.find(hdl);
-  if (ditr == datagram_data_.end() || ditr->second->ptr->parent() == nullptr
-      || !ditr->second->ptr->parent()->getf(abstract_actor::is_initialized_flag))
-    return false;
-  auto& data = ditr->second;
-  if (data->vn_buf.back().second.empty())
-    return false;
-  // Since we can't swap std::vector and caf::io::network::receive_buffer
-  // just copy over the data. This is for testing and not performance critical.
-  auto& from = data->vn_buf.front();
-  auto& to = data->rd_buf;
-  to.first = from.first;
-  CAF_ASSERT(to.second.capacity() > from.second.size());
-  to.second.resize(from.second.size());
-  std::copy(from.second.begin(), from.second.end(), to.second.begin());
-  data->vn_buf.pop_front();
-  auto sitr = datagram_data_.find(data->rd_buf.first);
-  if (sitr == datagram_data_.end()) {
-    if (!data->ptr->new_endpoint(data->rd_buf.second))
-      passive_mode(hdl) = true;
-  } else {
-    if (!data->ptr->consume(this, data->rd_buf.first, data->rd_buf.second))
-      passive_mode(hdl) = true;
-  }
-  return true;
+  // Not really a distinction for udp.
+  return try_read_data(hdl);
 }
 
 void test_multiplexer::virtual_send(connection_handle hdl,
@@ -928,20 +1020,20 @@ void test_multiplexer::virtual_send(connection_handle hdl,
   read_data(hdl);
 }
 
-void test_multiplexer::virtual_send(datagram_handle dst, datagram_handle ep,
+void test_multiplexer::virtual_send(datagram_handle hdl, endpoint_id_type ep,
                                     const buffer_type& buf) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  CAF_LOG_TRACE(CAF_ARG(dst) << CAF_ARG(ep));
-  auto& vb = virtual_network_buffer(dst);
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(ep));
+  auto& vb = virtual_network_buffer(hdl);
   vb.emplace_back(ep, buf);
-  read_data(dst);
+  read_data(hdl);
 }
 
 void test_multiplexer::exec_runnable() {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
   resumable_ptr ptr;
-  { // critical section
+  { // Critical section.
     guard_type guard{mx_};
     while (resumables_.empty())
       cv_.wait(guard);
@@ -955,7 +1047,7 @@ bool test_multiplexer::try_exec_runnable() {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
   resumable_ptr ptr;
-  { // critical section
+  { // Critical section.
     guard_type guard{mx_};
     if (resumables_.empty())
       return false;
@@ -969,16 +1061,16 @@ bool test_multiplexer::try_exec_runnable() {
 void test_multiplexer::flush_runnables() {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE("");
-  // execute runnables in bursts, pick a small size to
-  // minimize time in the critical section
+  // Execute runnables in bursts, pick a small size to
+  // minimize time in the critical section.
   constexpr size_t max_runnable_count = 8;
   std::vector<resumable_ptr> runnables;
   runnables.reserve(max_runnable_count);
-  // runnables can create new runnables, so we need to double-check
-  // that `runnables_` is empty after each burst
+  // Runnables can create new runnables, so we need to double-check
+  // that `runnables_` is empty after each burst.
   do {
     runnables.clear();
-    { // critical section
+    { // Critical section.
       guard_type guard{mx_};
       while (!resumables_.empty() && runnables.size() < max_runnable_count) {
         runnables.emplace_back(std::move(resumables_.front()));
@@ -1033,7 +1125,7 @@ void test_multiplexer::exec(resumable_ptr& ptr) {
       intrusive_ptr_release(ptr.get());
       break;
     default:
-      ; // ignored
+      ; // Ignored.
   }
 }
 
