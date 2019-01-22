@@ -18,13 +18,14 @@
 
 #pragma once
 
-#include "caf/io/basp/header.hpp"
-#include "caf/io/basp/version.hpp"
-#include "caf/io/basp/instance.hpp"
 #include "caf/io/basp/buffer_type.hpp"
+#include "caf/io/basp/connection_state.hpp"
+#include "caf/io/basp/endpoint_context.hpp"
+#include "caf/io/basp/header.hpp"
+#include "caf/io/basp/instance.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"
-#include "caf/io/basp/connection_state.hpp"
+#include "caf/io/basp/version.hpp"
 
 /// @defgroup BASP Binary Actor Sytem Protocol
 ///

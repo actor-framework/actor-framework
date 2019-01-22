@@ -53,14 +53,6 @@ middleman_actor_impl::middleman_actor_impl(actor_config& cfg,
       else
         ++i;
     }
-    i = cached_udp_.begin();
-    e = cached_udp_.end();
-    while (i != e) {
-      if (get<1>(i->second) == dm.source)
-        i = cached_udp_.erase(i);
-      else
-        ++i;
-    }
   });
   set_exit_handler([=](exit_msg&) {
     // ignored, the MM links group nameservers
@@ -72,7 +64,6 @@ void middleman_actor_impl::on_exit() {
   CAF_LOG_TRACE("");
   broker_ = nullptr;
   cached_tcp_.clear();
-  cached_udp_.clear();
   for (auto& kvp : pending_)
     for (auto& promise : kvp.second)
       promise.deliver(make_error(sec::cannot_connect_to_node));
@@ -85,32 +76,20 @@ const char* middleman_actor_impl::name() const {
 
 auto middleman_actor_impl::make_behavior() -> behavior_type {
   CAF_LOG_TRACE("");
-  auto tcp_disabled = [=] {
-    return get_or(config(), "middleman.disable-tcp", false);
-  };
-  auto udp_disabled = [=] {
-    return !get_or(config(), "middleman.enable-udp", false);
-  };
   return {
     [=](publish_atom, uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
         std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
-      if (tcp_disabled())
-        return make_error(sec::feature_disabled);
       return put(port, whom, sigs, addr.c_str(), reuse);
     },
     [=](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
       CAF_LOG_TRACE("");
-      if (tcp_disabled())
-        return make_error(sec::feature_disabled);
       strong_actor_ptr whom;
       mpi_set sigs;
       return put(port, whom, sigs, addr.c_str(), reuse);
     },
     [=](connect_atom, std::string& hostname, uint16_t port) -> get_res {
       CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
-      if (tcp_disabled())
-        return make_error(sec::feature_disabled);
       auto rp = make_response_promise();
       endpoint key{std::move(hostname), port};
       // respond immediately if endpoint is cached
@@ -162,74 +141,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
           });
       return get_delegated{};
     },
-    [=](publish_udp_atom, uint16_t port, strong_actor_ptr& whom,
-        mpi_set& sigs, std::string& addr, bool reuse) -> put_res {
-      CAF_LOG_TRACE("");
-      if (udp_disabled())
-        return make_error(sec::feature_disabled);
-      return put_udp(port, whom, sigs, addr.c_str(), reuse);
-    },
-    [=](contact_atom, std::string& hostname, uint16_t port) -> get_res {
-      CAF_LOG_TRACE(CAF_ARG(hostname) << CAF_ARG(port));
-      if (udp_disabled())
-        return make_error(sec::feature_disabled);
-      auto rp = make_response_promise();
-      endpoint key{std::move(hostname), port};
-      // respond immediately if endpoint is cached
-      auto x = cached_udp(key);
-      if (x) {
-        CAF_LOG_DEBUG("found cached entry" << CAF_ARG(*x));
-        rp.deliver(get<0>(*x), get<1>(*x), get<2>(*x));
-        return get_delegated{};
-      }
-      // attach this promise to a pending request if possible
-      auto rps = pending(key);
-      if (rps) {
-        CAF_LOG_DEBUG("attach to pending request");
-        rps->emplace_back(std::move(rp));
-        return get_delegated{};
-      }
-      // connect to endpoint and initiate handshake etc.
-      auto r = contact(key.first, port);
-      if (!r) {
-        rp.deliver(std::move(r.error()));
-        return get_delegated{};
-      }
-      auto& ptr = *r;
-      std::vector<response_promise> tmp{std::move(rp)};
-      pending_.emplace(key, std::move(tmp));
-      request(broker_, infinite, contact_atom::value, std::move(ptr), port)
-        .then(
-          [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
-            auto i = pending_.find(key);
-            if (i == pending_.end())
-              return;
-            if (nid && addr) {
-              monitor(addr);
-              cached_udp_.emplace(key, std::make_tuple(nid, addr, sigs));
-            }
-            auto res = make_message(std::move(nid), std::move(addr),
-                                    std::move(sigs));
-            for (auto& promise : i->second)
-              promise.deliver(res);
-            pending_.erase(i);
-          },
-          [=](error& err) {
-            auto i = pending_.find(key);
-            if (i == pending_.end())
-              return;
-            for (auto& promise : i->second)
-              promise.deliver(err);
-            pending_.erase(i);
-          });
-      return get_delegated{};
-    },
     [=](unpublish_atom atm, actor_addr addr, uint16_t p) -> del_res {
-      CAF_LOG_TRACE("");
-      delegate(broker_, atm, std::move(addr), p);
-      return {};
-    },
-    [=](unpublish_udp_atom atm, actor_addr addr, uint16_t p) -> del_res {
       CAF_LOG_TRACE("");
       delegate(broker_, atm, std::move(addr), p);
       return {};

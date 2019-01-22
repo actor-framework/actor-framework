@@ -18,7 +18,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE io_basp_tcp
+#define CAF_SUITE io_basp
 #include "caf/test/dsl.hpp"
 
 #include <array>
@@ -771,10 +771,8 @@ CAF_TEST(automatic_connection) {
   // (this node receives a message from jupiter via mars and responds via mars,
   //  but then also establishes a connection to jupiter directly)
   auto check_node_in_tbl = [&](node& n) {
-    io::id_visitor id_vis;
     auto hdl = tbl().lookup_direct(n.id);
     CAF_REQUIRE(hdl);
-    CAF_CHECK_EQUAL(visit(id_vis, *hdl), n.connection.id());
   };
   mpx()->provide_scribe("jupiter", 8080, jupiter().connection);
   CAF_CHECK(mpx()->has_pending_scribe("jupiter", 8080));
