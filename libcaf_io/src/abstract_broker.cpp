@@ -88,9 +88,11 @@ void abstract_broker::ack_writes(connection_handle hdl, bool enable) {
 }
 
 std::vector<char>& abstract_broker::wr_buf(connection_handle hdl) {
+  CAF_ASSERT(hdl != invalid_connection_handle);
   auto x = by_id(hdl);
   if (!x) {
-    CAF_LOG_ERROR("tried to access wr_buf() of an unknown connection_handle");
+    CAF_LOG_ERROR("tried to access wr_buf() of an unknown connection_handle:"
+                  << CAF_ARG(hdl));
     return dummy_wr_buf_;
   }
   return x->wr_buf();

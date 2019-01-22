@@ -35,14 +35,12 @@ namespace basp {
 
 // stores meta information for active endpoints
 struct endpoint_context {
-  using pending_map = std::map<sequence_type, std::pair<basp::header,
-                                                        std::vector<char>>>;
   // denotes what message we expect from the remote node next
   basp::connection_state cstate;
   // our currently processed BASP header
   basp::header hdr;
   // the handle for I/O operations
-  variant<connection_handle, datagram_handle> hdl;
+  connection_handle hdl;
   // network-agnostic node identifier
   node_id id;
   // ports
@@ -50,15 +48,6 @@ struct endpoint_context {
   uint16_t local_port;
   // pending operations to be performed after handshake completed
   optional<response_promise> callback;
-  // protocols that do not implement ordering are ordered by CAF
-  bool requires_ordering;
-  // sequence numbers and a buffer to establish order
-  sequence_type seq_incoming;
-  sequence_type seq_outgoing;
-  // pending messages due to ordering
-  pending_map pending;
-  // track if a timeout to deliver pending messages is set
-  bool did_set_timeout;
 };
 
 } // namespace basp

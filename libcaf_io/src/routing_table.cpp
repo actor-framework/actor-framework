@@ -52,11 +52,11 @@ optional<routing_table::route> routing_table::lookup(const node_id& target) {
   return none;
 }
 
-node_id routing_table::lookup_direct(const endpoint_handle& hdl) const {
+node_id routing_table::lookup_direct(const connection_handle& hdl) const {
   return get_opt(direct_by_hdl_, hdl, none);
 }
 
-optional<routing_table::endpoint_handle>
+optional<connection_handle>
 routing_table::lookup_direct(const node_id& nid) const {
   auto i = direct_by_nid_.find(nid);
   if (i != direct_by_nid_.end())
@@ -83,7 +83,7 @@ void routing_table::blacklist(const node_id& hop, const node_id& dest) {
     indirect_.erase(i);
 }
 
-void routing_table::erase_direct(const endpoint_handle& hdl,
+void routing_table::erase_direct(const connection_handle& hdl,
                                  erase_callback& cb) {
   auto i = direct_by_hdl_.find(hdl);
   if (i == direct_by_hdl_.end())
@@ -105,7 +105,7 @@ bool routing_table::erase_indirect(const node_id& dest) {
   return true;
 }
 
-void routing_table::add_direct(const endpoint_handle& hdl,
+void routing_table::add_direct(const connection_handle& hdl,
                                const node_id& nid) {
   CAF_ASSERT(direct_by_hdl_.count(hdl) == 0);
   CAF_ASSERT(direct_by_nid_.count(nid) == 0);

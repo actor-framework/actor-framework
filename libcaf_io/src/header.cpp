@@ -43,8 +43,7 @@ std::string to_string(const header &hdr) {
       << to_string(hdr.source_node) << ", "
       << to_string(hdr.dest_node) << ", "
       << hdr.source_actor << ", "
-      << hdr.dest_actor << ", "
-      << hdr.sequence_number
+      << hdr.dest_actor
       << "}";
   return oss.str();
 }
@@ -57,8 +56,7 @@ bool operator==(const header& lhs, const header& rhs) {
       && lhs.source_node == rhs.source_node
       && lhs.dest_node == rhs.dest_node
       && lhs.source_actor == rhs.source_actor
-      && lhs.dest_actor == rhs.dest_actor
-      && lhs.sequence_number == rhs.sequence_number;
+      && lhs.dest_actor == rhs.dest_actor;
 }
 
 namespace {
