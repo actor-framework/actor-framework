@@ -200,15 +200,12 @@ public:
                               buffer_type& out_buf, optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  static void write_client_handshake(execution_unit* ctx,
-                                     buffer_type& buf,
-                                     const node_id& remote_side,
+  static void write_client_handshake(execution_unit* ctx, buffer_type& buf,
                                      const node_id& this_node,
                                      const std::string& app_identifier);
 
   /// Writes the client handshake to `buf`.
-  void write_client_handshake(execution_unit* ctx,
-                              buffer_type& buf, const node_id& remote_side);
+  void write_client_handshake(execution_unit* ctx, buffer_type& buf);
 
   /// Writes an `announce_proxy` to `buf`.
   void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
@@ -220,8 +217,7 @@ public:
                         const error& rsn);
 
   /// Writes a `heartbeat` to `buf`.
-  void write_heartbeat(execution_unit* ctx, buffer_type& buf,
-                       const node_id& remote_side);
+  void write_heartbeat(execution_unit* ctx, buffer_type& buf);
 
   const node_id& this_node() const {
     return this_node_;

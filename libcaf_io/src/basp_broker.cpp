@@ -338,9 +338,9 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   }
   // send message to SpawnServ of remote node
   basp::header hdr{basp::message_type::dispatch_message,
-                   basp::header::named_receiver_flag,
-                   0, make_message_id().integer_value(), this_node(), nid,
-                   tmp.id(), invalid_actor_id};
+                   basp::header::named_receiver_flag, 0,
+                   make_message_id().integer_value(), tmp.id(),
+                   invalid_actor_id};
   // writing std::numeric_limits<actor_id>::max() is a hack to get
   // this send-to-named-actor feature working with older CAF releases
   instance.write(self->context(), get_buffer(path->hdl),
@@ -388,9 +388,9 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
       return sink(name_atm, stages, msg);
     });
     basp::header hdr{basp::message_type::dispatch_message,
-                     basp::header::named_receiver_flag,
-                     0, make_message_id().integer_value(), this_node(), nid,
-                     tmp.id(), invalid_actor_id};
+                     basp::header::named_receiver_flag, 0,
+                     make_message_id().integer_value(), tmp.id(),
+                     invalid_actor_id};
     instance.write(self->context(), get_buffer(path->hdl),
                    hdr, &writer);
     instance.flush(*path);
@@ -403,7 +403,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
   auto i = ctx.find(hdl);
   if (i == ctx.end()) {
     CAF_LOG_DEBUG("create new BASP context:" << CAF_ARG(hdl));
-    basp::header hdr{basp::message_type::server_handshake, 0, 0, 0, none, none,
+    basp::header hdr{basp::message_type::server_handshake, 0, 0, 0,
                      invalid_actor_id, invalid_actor_id};
     i = ctx
           .emplace(hdl, basp::endpoint_context{basp::await_header, hdr, hdl,
@@ -544,9 +544,8 @@ behavior basp_broker::make_behavior() {
         return sink(dest_name, cme->stages, const_cast<message&>(msg));
       });
       basp::header hdr{basp::message_type::dispatch_message,
-                       basp::header::named_receiver_flag,
-                       0, cme->mid.integer_value(), state.this_node(),
-                       dest_node, src->id(), invalid_actor_id};
+                       basp::header::named_receiver_flag, 0,
+                       cme->mid.integer_value(), src->id(), invalid_actor_id};
       state.instance.write(context(), state.get_buffer(path->hdl),
                            hdr, &writer);
       state.instance.flush(*path);

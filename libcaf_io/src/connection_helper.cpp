@@ -48,8 +48,7 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
         auto hdl = (*eptr)->hdl();
         self->add_datagram_servant(std::move(*eptr));
         basp::instance::write_client_handshake(self->context(),
-                                               self->wr_buf(hdl),
-                                               none, this_node,
+                                               self->wr_buf(hdl), this_node,
                                                app_id);
       }
     }
