@@ -128,12 +128,15 @@ actor_system_config::actor_system_config()
   opt_group(custom_options_, "opencl")
     .add<std::vector<size_t>>("device-ids", "whitelist for OpenCL devices");
   opt_group(custom_options_, "openssl")
-    .add<string>("certificate", "path to the PEM-formatted certificate file")
-    .add<string>("key", "path to the private key file for this node")
-    .add<string>("passphrase", "passphrase to decrypt the private key")
-    .add<string>("capath",
+    .add<string>(openssl_certificate, "certificate",
+                 "path to the PEM-formatted certificate file")
+    .add<string>(openssl_key, "key",
+                 "path to the private key file for this node")
+    .add<string>(openssl_passphrase, "passphrase",
+                 "passphrase to decrypt the private key")
+    .add<string>(openssl_capath, "capath",
                  "path to an OpenSSL-style directory of trusted certificates")
-    .add<string>("cafile",
+    .add<string>(openssl_cafile, "cafile",
                  "path to a file of concatenated PEM-formatted certificates");
   // add renderers for default error categories
   error_renderers.emplace(atom("system"), render_sec);
