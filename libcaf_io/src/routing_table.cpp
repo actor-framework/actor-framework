@@ -152,6 +152,15 @@ size_t routing_table::erase(const node_id& dest, erase_callback& cb) {
   return res;
 }
 
+const routing_table::endpoint& routing_table::autoconnect_endpoint() {
+  return autoconnect_endpoint_;
+}
+
+void routing_table::autoconnect_endpoint(uint16_t port,
+                                         network::address_listing addrs) {
+  autoconnect_endpoint_ = {port, std::move(addrs)};
+}
+
 } // namespace basp
 } // namespace io
 } // namespace caf

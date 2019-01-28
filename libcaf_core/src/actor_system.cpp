@@ -166,6 +166,93 @@ behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
   };
 }
 
+// -- peer server --------------------------------------------------------------
+
+// A peer server keeps track of the addresses to reach its peers. All addresses
+// for a given node are stored under the string representation of its node id.
+// When an entry is requested that does not exist, the requester is subscribed
+// to the key. When the entry is set, it get a copy and is removed from the
+// subscribers.
+
+struct peer_state {
+  using key_type = std::string;
+  using mapped_type = message;
+  using subscriber_set = std::unordered_set<strong_actor_ptr>;
+  using topic_set = std::unordered_set<std::string>;
+  std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
+  std::unordered_map<strong_actor_ptr, topic_set> subscribers;
+  static const char* name;
+};
+
+const char* peer_state::name = "peer_server";
+
+behavior peer_serv_impl(stateful_actor<peer_state>* self) {
+  CAF_LOG_TRACE("");
+  std::string wildcard = "*";
+  auto unsubscribe_all = [=](actor subscriber) {
+    auto& subscribers = self->state.subscribers;
+    auto ptr = actor_cast<strong_actor_ptr>(subscriber);
+    auto i = subscribers.find(ptr);
+    if (i == subscribers.end())
+      return;
+    for (auto& key : i->second)
+      self->state.data[key].second.erase(ptr);
+    subscribers.erase(i);
+  };
+  self->set_down_handler([=](down_msg& dm) {
+    CAF_LOG_TRACE(CAF_ARG(dm));
+    auto ptr = actor_cast<strong_actor_ptr>(dm.source);
+    if (ptr)
+      unsubscribe_all(actor_cast<actor>(std::move(ptr)));
+  });
+  return {
+    // Set a key/value pair.
+    [=](put_atom, const std::string& key, message& msg) {
+      CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(msg));
+      if (key == wildcard || key.empty())
+        return;
+      auto& vp = self->state.data[key];
+      vp.first = std::move(msg);
+      for (auto& subscriber_ptr : vp.second) {
+        // We never put a nullptr in our map.
+        auto subscriber = actor_cast<actor>(subscriber_ptr);
+        if (subscriber != self->current_sender()) {
+          self->send(subscriber, key, vp.first);
+          self->state.subscribers[subscriber_ptr].erase(key);
+        }
+      }
+      self->state.data[key].second.clear();
+    },
+    // Get a key/value pair.
+    [=](get_atom, std::string& key) {
+      auto sender = actor_cast<strong_actor_ptr>(self->current_sender());
+      if (sender) {
+        CAF_LOG_TRACE(CAF_ARG(key));
+        // Get the value ...
+        if (key == wildcard || key.empty())
+          return;
+        auto d = self->state.data.find(key);
+        if (d != self->state.data.end()) {
+          self->send(actor_cast<actor>(sender), std::move(key),
+                     d->second.first);
+          return;
+        }
+        // ... or sub if it is not available.
+        CAF_LOG_TRACE(CAF_ARG(key) << CAF_ARG(sender));
+        self->state.data[key].second.insert(sender);
+        auto& subscribers = self->state.subscribers;
+        auto s = subscribers.find(sender);
+        if (s != subscribers.end()) {
+          s->second.insert(key);
+        } else {
+          self->monitor(sender);
+          subscribers.emplace(sender, peer_state::topic_set{key});
+        }
+      }
+    }
+  };
+}
+
 // -- stream server ------------------------------------------------------------
 
 // The stream server acts as a man-in-the-middle for all streams that cross the
@@ -292,10 +379,12 @@ actor_system::actor_system(actor_system_config& cfg)
   static constexpr auto Flags = hidden + lazy_init;
   spawn_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl)));
   config_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl)));
+  peer_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(peer_serv_impl)));
   // fire up remaining modules
   registry_.start();
   registry_.put(atom("SpawnServ"), spawn_serv());
   registry_.put(atom("ConfigServ"), config_serv());
+  registry_.put(atom("PeerServ"), peer_serv());
   for (auto& mod : modules_)
     if (mod)
       mod->start();

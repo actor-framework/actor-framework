@@ -24,6 +24,7 @@
 #include "caf/callback.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/basp/buffer_type.hpp"
+#include "caf/io/network/interfaces.hpp"
 #include "caf/node_id.hpp"
 
 namespace caf {
@@ -36,6 +37,7 @@ namespace basp {
 /// BASP peer and provides both direct and indirect paths.
 class routing_table {
 public:
+  using endpoint = std::pair<uint16_t, network::address_listing>;
 
   explicit routing_table(abstract_broker* parent);
 
@@ -99,6 +101,12 @@ public:
     return parent_;
   }
 
+  /// Returns the local autoconnect endpoint.
+  const endpoint& autoconnect_endpoint();
+
+  /// Set the local autoconenct endpoint.
+  void autoconnect_endpoint(uint16_t, network::address_listing);
+
 public:
   template <class Map, class Fallback>
   typename Map::mapped_type
@@ -119,6 +127,7 @@ public:
   std::unordered_map<node_id, connection_handle> direct_by_nid_;
   indirect_entries indirect_;
   indirect_entries blacklist_;
+  endpoint autoconnect_endpoint_;
 };
 
 /// @}

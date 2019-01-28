@@ -224,7 +224,7 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
   auto writer = make_callback([&](serializer& sink) -> error {
     auto appid = get_or(callee_.config(), "middleman.app-identifier",
                      defaults::middleman::app_identifier);
-    if (auto err = sink(this_node_, appid))
+    if (auto err = sink(this_node_, appid, tbl_.autoconnect_endpoint()))
       return err;
     if (pa != nullptr) {
       auto i = pa->first ? pa->first->id() : invalid_actor_id;
@@ -247,7 +247,8 @@ void instance::write_client_handshake(execution_unit* ctx,
   CAF_LOG_TRACE(CAF_ARG(this_node) << CAF_ARG(app_identifier));
   auto writer = make_callback([&](serializer& sink) -> error {
     return sink(const_cast<node_id&>(this_node),
-                const_cast<std::string&>(app_identifier));
+                const_cast<std::string&>(app_identifier),
+                tbl_.autoconnect_endpoint());
   });
   header hdr{message_type::client_handshake, 0, 0, 0, invalid_actor_id,
              invalid_actor_id};
@@ -297,6 +298,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       node_id source_node;
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
+      basp::routing_table::endpoint autoconn_addr;
       if (!payload_valid()) {
         CAF_LOG_ERROR("fail to receive the app identifier");
         return false;
@@ -311,7 +313,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
           CAF_LOG_ERROR("app identifier mismatch");
           return false;
         }
-        if (bd(aid, sigs))
+        if (bd(aid, sigs, autoconn_addr))
           return false;
       }
       // Close self connection immediately after handshake.
@@ -329,6 +331,10 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       // Add new route to this node.
       CAF_LOG_DEBUG("new connection:" << CAF_ARG(source_node));
       tbl_.add_direct(hdl, source_node);
+      // Store autoconnect address.
+      auto peer_server = system().registry().get(atom("PeerServ"));
+      anon_send(actor_cast<actor>(peer_server), put_atom::value,
+                to_string(source_node), make_message(std::move(autoconn_addr)));
       // write handshake as client in response
       auto path = tbl_.lookup(source_node);
       if (!path) {
@@ -349,7 +355,8 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       binary_deserializer bd{ctx, *payload};
       node_id source_node;
       std::string remote_appid;
-      if (bd(source_node, remote_appid))
+      basp::routing_table::endpoint autoconn_addr;
+      if (bd(source_node, remote_appid, autoconn_addr))
         return false;
       auto appid = get_if<std::string>(&callee_.config(),
                                        "middleman.app-identifier");
@@ -367,6 +374,10 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       CAF_LOG_DEBUG("new connection:" << CAF_ARG(source_node));
       tbl_.add_direct(hdl, source_node);
       callee_.learned_new_node_directly(source_node, false);
+      // Store autoconnect address.
+      auto peer_server = system().registry().get(atom("PeerServ"));
+      anon_send(actor_cast<actor>(peer_server), put_atom::value,
+                to_string(source_node), make_message(std::move(autoconn_addr)));
       break;
     }
     case message_type::dispatch_message: {

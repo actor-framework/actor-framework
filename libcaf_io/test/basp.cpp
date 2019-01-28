@@ -263,7 +263,8 @@ public:
   void connect_node(node& n,
                     optional<accept_handle> ax = none,
                     actor_id published_actor_id = invalid_actor_id,
-                    const set<string>& published_actor_ifs = std::set<std::string>{}) {
+                    const set<string>& published_actor_ifs = set<string>{},
+                    const basp::routing_table::endpoint& autoconn = {}) {
     auto src = ax ? *ax : ahdl_;
     CAF_MESSAGE("connect remote node " << n.name
                 << ", connection ID = " << n.connection.id()
@@ -276,10 +277,10 @@ public:
     mock(hdl,
          {basp::message_type::client_handshake, 0, 0, 0, invalid_actor_id,
           invalid_actor_id},
-         n.id, std::string{})
+         n.id, std::string{}, basp::routing_table::endpoint{})
       .receive(hdl, basp::message_type::server_handshake, no_flags, any_vals,
                basp::version, published_actor_id, invalid_actor_id, this_node(),
-               std::string{}, published_actor_id, published_actor_ifs)
+               std::string{}, autoconn, published_actor_id, published_actor_ifs)
       // upon receiving our client handshake, BASP will check
       // whether there is a SpawnServ actor on this node
       .receive(hdl, basp::message_type::dispatch_message,
@@ -480,7 +481,8 @@ CAF_TEST(non_empty_server_handshake) {
   basp::header expected{basp::message_type::server_handshake, 0, 0,
                         basp::version, self()->id(), invalid_actor_id};
   to_buf(expected_buf, expected, nullptr, this_node(), std::string{},
-         self()->id(), set<string>{"caf::replies_to<@u16>::with<@u16>"});
+         basp::routing_table::endpoint{}, self()->id(),
+         set<string>{"caf::replies_to<@u16>::with<@u16>"});
   CAF_CHECK_EQUAL(hexstr(buf), hexstr(expected_buf));
 }
 
@@ -566,10 +568,12 @@ CAF_TEST(remote_actor_and_send) {
   mock(jupiter().connection,
        {basp::message_type::server_handshake, 0, 0, basp::version,
         jupiter().dummy_actor->id(), invalid_actor_id},
-       jupiter().id, std::string{}, jupiter().dummy_actor->id(), uint32_t{0})
+       jupiter().id, std::string{}, jupiter().dummy_actor->id(), uint32_t{0},
+       basp::routing_table::endpoint{})
     .receive(jupiter().connection, basp::message_type::client_handshake,
              no_flags, any_vals, no_operation_data, invalid_actor_id,
-             invalid_actor_id, this_node(), std::string{})
+             invalid_actor_id, this_node(), std::string{},
+             basp::routing_table::endpoint{})
     .receive(jupiter().connection, basp::message_type::dispatch_message,
              basp::header::named_receiver_flag, any_vals,
              default_operation_data, any_vals, invalid_actor_id,
@@ -750,6 +754,47 @@ CAF_TEST_DISABLED(automatic_connection) {
                  jupiter().dummy_actor->id(), std::vector<actor_id>{},
                  make_message("hello from earth!"));
   CAF_CHECK_EQUAL(mpx()->output_buffer(mars().connection).size(), 0u);
+}
+
+CAF_TEST(read_address_after_handshake) {
+  auto check_node_in_tbl = [&](node& n) {
+    auto hdl = tbl().lookup_direct(n.id);
+    CAF_REQUIRE(hdl);
+  };
+  mpx()->provide_scribe("jupiter", 8080, jupiter().connection);
+  CAF_CHECK(mpx()->has_pending_scribe("jupiter", 8080));
+  CAF_MESSAGE("self: " << to_string(self()->address()));
+  auto ax = accept_handle::from_int(4242);
+  mpx()->provide_acceptor(4242, ax);
+  publish(self(), 4242);
+  mpx()->flush_runnables(); // process publish message in basp_broker
+  CAF_MESSAGE("connect to mars");
+  auto ep = instance().tbl().autoconnect_endpoint();
+  connect_node(mars(), ax, self()->id(), set<string>{}, ep);
+  check_node_in_tbl(mars());
+  CAF_MESSAGE("Look for mars address information in our peer server");
+  auto peer_server = sys.registry().get(atom("PeerServ"));
+  CAF_MESSAGE("Send request");
+  self()->send(actor_cast<actor>(peer_server), get_atom::value,
+               to_string(mars().id));
+  // process get request and send answer
+  do {
+    sched.run();
+    mpx()->flush_runnables();
+  } while (self()->mailbox().empty());
+  CAF_MESSAGE("Process reply");
+  self()->receive(
+    [&](const std::string& item, message& msg) {
+      // Check that we got an entry under the name of our peer.
+      CAF_REQUIRE_EQUAL(item, to_string(mars().id));
+      msg.apply(
+        [&](basp::routing_table::endpoint& ep) {
+          // The addresses of our dummy node, thus empty.
+          CAF_CHECK(ep.second.empty());
+        }
+      );
+    }
+  );
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -47,9 +47,12 @@ behavior datagram_connection_broker(broker* self, uint16_t port,
       if (eptr) {
         auto hdl = (*eptr)->hdl();
         self->add_datagram_servant(std::move(*eptr));
-        basp::instance::write_client_handshake(self->context(),
-                                               self->wr_buf(hdl), this_node,
-                                               app_id);
+        // TODO: UDP does not work at the moment.
+//        basp::instance::write_client_handshake(self->context(),
+//                                               self->wr_buf(hdl), this_node,
+//                                               app_id);
+        static_cast<void>(this_node);
+        static_cast<void>(hdl);
       }
     }
   }

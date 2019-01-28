@@ -200,9 +200,9 @@ public:
                               buffer_type& out_buf, optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  static void write_client_handshake(execution_unit* ctx, buffer_type& buf,
-                                     const node_id& this_node,
-                                     const std::string& app_identifier);
+  void write_client_handshake(execution_unit* ctx, buffer_type& buf,
+                              const node_id& this_node,
+                              const std::string& app_identifier);
 
   /// Writes the client handshake to `buf`.
   void write_client_handshake(execution_unit* ctx, buffer_type& buf);

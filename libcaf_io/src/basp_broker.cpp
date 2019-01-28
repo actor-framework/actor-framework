@@ -466,6 +466,18 @@ behavior basp_broker::make_behavior() {
     if (res) {
       auto port = res->second;
       auto addrs = network::interfaces::list_addresses(false);
+      // Remove link local addresses. These don't work for autoconnects.
+      for (auto& p : addrs) {
+        auto& vec = p.second;
+        vec.erase(std::remove_if(std::begin(vec), std::end(vec),
+                                 [](const std::string& str) {
+                                   return str.find("fe80") == 0;
+                                 }),
+                  vec.end());
+      }
+      // Set this as the propagated autoconnect endpoint.
+      state.instance.tbl().autoconnect_endpoint(port, addrs);
+      // Add a config serv entry.
       auto config_server = system().registry().get(atom("ConfigServ"));
       send(actor_cast<actor>(config_server), put_atom::value,
            "basp.default-connectivity-tcp",
