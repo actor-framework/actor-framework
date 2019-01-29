@@ -80,14 +80,8 @@ public:
                          std::vector<strong_actor_ptr>& forwarding_stack,
                          message& msg) = 0;
 
-    /// Called whenever BASP learns the ID of a remote node
-    /// to which it does not have a direct connection.
-    virtual void learned_new_node_directly(const node_id& nid,
-                                           bool was_known_indirectly) = 0;
-
-    /// Called whenever BASP learns the ID of a remote node
-    /// to which it does not have a direct connection.
-    virtual void learned_new_node_indirectly(const node_id& nid) = 0;
+    /// Called whenever BASP learns the ID of a remote node.
+    virtual void learned_new_node(const node_id& nid) = 0;
 
     /// Called if a heartbeat was received from `nid`
     virtual void handle_heartbeat(const node_id& nid) = 0;
@@ -107,8 +101,18 @@ public:
       return namespace_.system().config();
     }
 
+    /// Send messages that were buffered while connectivity establishment
+    /// was pending using `hdl`.
+    virtual void send_buffered_messages(execution_unit* ctx, node_id nid,
+                                        connection_handle hdl) = 0;
+
     /// Returns a reference to the sent buffer.
     virtual buffer_type& get_buffer(connection_handle hdl) = 0;
+
+    /// Returns a reference to a buffer to be sent to node with `nid`.
+    /// If communication with the node is esstablished, it picks the first
+    /// available handle, otherwise a buffer for a pending message is returned.
+    virtual buffer_type& get_buffer(node_id nid) = 0;
 
     /// Flushes the underlying write buffer of `hdl`.
     virtual void flush(connection_handle hdl) = 0;
@@ -135,15 +139,15 @@ public:
   void handle_heartbeat(execution_unit* ctx);
 
   /// Returns a route to `target` or `none` on error.
-  optional<routing_table::route> lookup(const node_id& target);
+  routing_table::lookup_result lookup(const node_id& target);
 
   /// Flushes the underlying buffer of `path`.
-  void flush(const routing_table::route& path);
+  void flush(connection_handle hdl);
 
   /// Sends a BASP message and implicitly flushes the output buffer of `r`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(execution_unit* ctx, const routing_table::route& r,
-             header& hdr, payload_writer* writer = nullptr);
+  void write(execution_unit* ctx, connection_handle hdl, header& hdr,
+             payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.
   void add_published_actor(uint16_t port,

@@ -25,6 +25,8 @@
 #include <thread>
 #include <vector>
 
+#include "caf/test/io_dsl.hpp"
+
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
@@ -38,6 +40,14 @@ using std::string;
 
 using ping_atom = atom_constant<atom("ping")>;
 using pong_atom = atom_constant<atom("pong")>;
+
+using set_atom = atom_constant<atom("set")>;
+using begin_atom = atom_constant<atom("begin")>;
+using middle_atom = atom_constant<atom("middle")>;
+using end_atom = atom_constant<atom("end")>;
+
+using msg_atom = atom_constant<atom("msg")>;
+using done_atom = atom_constant<atom("shutdown")>;
 
 /*
 
@@ -65,223 +75,282 @@ using pong_atom = atom_constant<atom("pong")>;
 
 */
 
-/*
-std::thread run_prog(const char* arg, uint16_t port, bool use_asio) {
-  return detail::run_sub_unit_test(invalid_actor,
-                                   test::engine::path(),
-                                   test::engine::max_runtime(),
-                                   CAF_XSTR(CAF_SUITE),
-                                   use_asio,
-                                   {"--port=" + std::to_string(port), arg});
-}
+namespace {
 
-// we run the same code on all three nodes, a simple ping-pong client
-struct testee_state {
-  std::set<actor> buddies;
-  uint16_t port = 0;
-  const char* name = "testee";
+constexpr uint16_t port_earth   = 12340;
+constexpr uint16_t port_mars    = 12341;
+constexpr uint16_t port_jupiter = 12342;
+
+// Used for the tests with the test backend.
+class config : public actor_system_config {
+public:
+  config() {
+    load<caf::io::middleman, io::network::test_multiplexer>();
+    set("scheduler.policy", caf::atom("testing"));
+    set("middleman.detach-utility-actors", false);
+    set("middleman.enable-automatic-connections", true);
+    set("middleman.enable-tcp", true);
+    set("middleman.enable-udp", false);
+  }
 };
 
-behavior testee(stateful_actor<testee_state>* self) {
+// Used for the tests with the default multiplexer backend.
+class simple_config : public actor_system_config {
+public:
+  simple_config() {
+    load<caf::io::middleman>();
+    set("middleman.enable-automatic-connections", true);
+    set("middleman.enable-tcp", true);
+    set("middleman.enable-udp", false);
+  }
+};
+
+class fixture {
+public:
+  fixture() : earth(cfg_earth), mars(cfg_mars), jupiter(cfg_jupiter) {
+    CAF_MESSAGE("Earth  : " << to_string(earth.node()));
+    CAF_MESSAGE("Mars   : " << to_string(mars.node()));
+    CAF_MESSAGE("Jupiter: " << to_string(jupiter.node()));
+  }
+
+  simple_config cfg_earth;
+  simple_config cfg_mars;
+  simple_config cfg_jupiter;
+  actor_system earth{cfg_earth};
+  actor_system mars{cfg_mars};
+  actor_system jupiter{cfg_jupiter};
+};
+
+struct cache {
+  actor tmp;
+};
+
+behavior test_actor(stateful_actor<cache>* self, std::string location,
+                    bool quit_directly) {
   return {
-    [self](ping_atom, actor buddy, bool please_broadcast) -> message {
-      if (please_broadcast)
-        for (auto& x : self->state.buddies)
-          if (x != buddy)
-            send_as(buddy, x, ping_atom::value, buddy, false);
-      self->state.buddies.emplace(std::move(buddy));
-      return make_message(pong_atom::value, self);
+    [=](set_atom, actor val) {
+      self->state.tmp = val;
     },
-    [self](pong_atom, actor buddy) {
-      self->state.buddies.emplace(std::move(buddy));
+    [=](begin_atom) {
+      CAF_REQUIRE(self->state.tmp);
+      CAF_MESSAGE("starting messaging on " << location);
+      self->send(self->state.tmp, middle_atom::value, self);
     },
-    [self](put_atom, uint16_t new_port) {
-      self->state.port = new_port;
+    [=](middle_atom, actor start) {
+      CAF_REQUIRE(self->state.tmp);
+      CAF_MESSAGE("forwaring message on " << location);
+      self->send(self->state.tmp, end_atom::value, start, self);
     },
-    [self](get_atom) {
-      return self->state.port;
+    [=](end_atom, actor start, actor middle) {
+      CAF_MESSAGE("message arrived on " << location);
+      if (quit_directly) {
+        CAF_MESSAGE("telling other nodes to quit from " << location);
+        self->send(start, done_atom::value);
+        self->send(middle, done_atom::value);
+        self->send(self, done_atom::value);
+      } else {
+        CAF_MESSAGE("telling intermediate node to quit from " << location);
+        self->state.tmp = start;
+        self->send(middle, done_atom::value);
+      }
+    },
+    [=](msg_atom) {
+      CAF_REQUIRE(self->state.tmp);
+      CAF_MESSAGE("telling tmp actor to quit from " << location);
+      self->send(self->state.tmp, done_atom::value);
+      self->send(self, done_atom::value);
+    },
+    [=](done_atom) {
+      CAF_MESSAGE("actor on " << location << " is quitting");
+      self->quit();
     }
   };
 }
 
-void run_earth(bool use_asio, bool as_server, uint16_t pub_port) {
-  scoped_actor self{system};
-  struct captain : hook {
-  public:
-    captain(actor parent) : parent_(std::move(parent)) {
-      // nop
-    }
+} // namespace <anonymous>
 
-    void new_connection_established_cb(const node_id& node) override {
-      anon_send(parent_, put_atom::value, node);
-      call_next<hook::new_connection_established>(node);
-    }
+CAF_TEST_FIXTURE_SCOPE(autoconn_tcp_simple_test, fixture)
 
-    void new_remote_actor_cb(const actor_addr& addr) override {
-      anon_send(parent_, put_atom::value, addr);
-      call_next<hook::new_remote_actor>(addr);
-    }
+CAF_TEST(build_triangle_simple_tcp) {
+  CAF_MESSAGE("setting up Earth");
+  auto on_earth = earth.spawn(test_actor, "Earth", true);
+  auto earth_port = earth.middleman().publish(on_earth, 0);
+  CAF_REQUIRE(earth_port);
+  CAF_MESSAGE("Earth reachable via " << *earth_port);
+  CAF_MESSAGE("setting up Mars");
+  auto from_earth = mars.middleman().remote_actor("localhost", *earth_port);
+  CAF_REQUIRE(from_earth);
+  auto on_mars = mars.spawn(test_actor, "Mars", true);
+  anon_send(on_mars, set_atom::value, *from_earth);
+  auto mars_port = mars.middleman().publish(on_mars, 0);
+  CAF_REQUIRE(mars_port);
+  CAF_MESSAGE("Mars reachable via " << *mars_port);
+  CAF_MESSAGE("setting up Jupiter");
+  auto from_mars = jupiter.middleman().remote_actor("localhost", *mars_port);
+  CAF_REQUIRE(from_mars);
+  auto on_jupiter = jupiter.spawn(test_actor, "Jupiter", true);
+  anon_send(on_jupiter, set_atom::value, *from_mars);
+  CAF_MESSAGE("forwarding an actor from Jupiter to Earth via Mars");
+  anon_send(on_jupiter, begin_atom::value);
+  jupiter.await_all_actors_done();
+  mars.await_all_actors_done();
+  earth.await_all_actors_done();
+}
 
-    void connection_lost_cb(const node_id& dest) override {
-      anon_send(parent_, delete_atom::value, dest);
-    }
+CAF_TEST(break_triangle_simple_tcp) {
+  actor on_earth;
+  actor on_jupiter;
+  {
+    simple_config conf;
+    actor_system mars(conf);
+    // Earth.
+    CAF_MESSAGE("setting up Earth");
+    on_earth = earth.spawn(test_actor, "Earth", false);
+    auto earth_port = earth.middleman().publish(on_earth, 0);
+    CAF_REQUIRE(earth_port);
+    CAF_MESSAGE("Earth reachable via " << *earth_port);
+    // Mars.
+    CAF_MESSAGE("setting up Mars");
+    auto from_earth = mars.middleman().remote_actor("localhost", *earth_port);
+    CAF_REQUIRE(from_earth);
+    auto on_mars = mars.spawn(test_actor, "Mars", false);
+    anon_send(on_mars, set_atom::value, *from_earth);
+    auto mars_port = mars.middleman().publish(on_mars, 0);
+    CAF_REQUIRE(mars_port);
+    CAF_MESSAGE("Mars reachable via " << *mars_port);
+    // Jupiter.
+    CAF_MESSAGE("setting up Jupiter");
+    auto from_mars = jupiter.middleman().remote_actor("localhost", *mars_port);
+    CAF_REQUIRE(from_mars);
+    on_jupiter = jupiter.spawn(test_actor, "Jupiter", false);
+    anon_send(on_jupiter, set_atom::value, *from_mars);
+    // Trigger the connection setup.
+    CAF_MESSAGE("forwarding an actor from Jupiter to Earth via Mars");
+    anon_send(on_jupiter, begin_atom::value);
+    mars.await_all_actors_done();
+    // Leaving the scope will shutdown Mars.
+  }
+  // Let the remaining nodes communicate.
+  anon_send(on_earth, msg_atom::value);
+  jupiter.await_all_actors_done();
+  earth.await_all_actors_done();
+}
 
-  private:
-    actor parent_;
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(autoconn_tcp_test,
+                       belt_fixture<test_coordinator_fixture<config>>)
+
+CAF_TEST(build_triangle_tcp) {
+  CAF_MESSAGE("Earth  : " << to_string(earth.sys.node()));
+  CAF_MESSAGE("Mars   : " << to_string(mars.sys.node()));
+  CAF_MESSAGE("Jupiter: " << to_string(jupiter.sys.node()));
+  // Earth.
+  CAF_MESSAGE("setting up Earth");
+  auto on_earth = earth.sys.spawn(test_actor, "Earth", true);
+  CAF_MESSAGE("run initialization code");
+  exec_all();
+  CAF_MESSAGE("prepare connection");
+  prepare_connection(earth, mars, "earth", port_earth);
+  CAF_MESSAGE("publish dummy on earth");
+  earth.publish(on_earth, port_earth);
+  // Mars.
+  CAF_MESSAGE("setting up Mars");
+  auto from_earth = mars.remote_actor("earth", port_earth);
+  CAF_REQUIRE(from_earth);
+  auto on_mars = mars.sys.spawn(test_actor, "Mars", true);
+  anon_send(on_mars, set_atom::value, from_earth);
+  CAF_MESSAGE("run initialization code");
+  exec_all();
+  CAF_MESSAGE("prepare connection");
+  prepare_connection(mars, jupiter, "mars", port_mars);
+  CAF_MESSAGE("publish dummy on mars");
+  mars.publish(on_mars, port_mars);
+  // Jupiter
+  CAF_MESSAGE("setting up Jupiter");
+  auto from_mars = jupiter.remote_actor("mars", port_mars);
+  CAF_REQUIRE(from_mars);
+  auto on_jupiter = jupiter.sys.spawn(test_actor, "Jupiter", true);
+  anon_send(on_jupiter, set_atom::value, from_mars);
+  exec_all();
+  // This handle will be created by the test multiplexer for the automatically
+  // opened socket when automatic connections are enabled.
+  auto hdl_jupiter = accept_handle::from_int(std::numeric_limits<int64_t>::max());
+  // Prepare automatic connection between Jupiter and Earth.
+  prepare_connection(jupiter, earth, "jupiter", port_jupiter, hdl_jupiter);
+  // Add the address information for this test to the config server on Mars.
+  auto mars_config_server = mars.sys.registry().get(atom("PeerServ"));
+  network::address_listing interfaces{
+    {network::protocol::ipv4, std::vector<std::string>{"jupiter"}}
   };
-  middleman::instance()->add_hook<captain>(self);
-  auto aut = system.spawn(testee);
-  auto port = publish(aut, pub_port);
-  CAF_MESSAGE("published testee at port " << port);
-  std::thread mars_process;
-  std::thread jupiter_process;
-  // launch process for Mars
-  if (!as_server) {
-    CAF_MESSAGE("launch process for Mars");
-    mars_process = run_prog("--mars", port, use_asio);
-  }
-  CAF_MESSAGE("wait for Mars to connect");
-  node_id mars;
-  self->receive(
-    [&](put_atom, const node_id& nid) {
-      mars = nid;
-      CAF_MESSAGE(CAF_ARG(mars));
-    }
-  );
-  actor_addr mars_addr;
-  uint16_t mars_port;
-  self->receive_while([&] { return mars_addr == invalid_actor_addr; })(
-    [&](put_atom, const actor_addr& addr) {
-      auto hdl = actor_cast<actor>(addr);
-      self->request(hdl, sys_atom::value, get_atom::value, "info").then(
-        [&](ok_atom, const string&, const actor_addr&, const string& name) {
-          if (name != "testee")
-            return;
-          mars_addr = addr;
-          CAF_MESSAGE(CAF_ARG(mars_addr));
-          self->request(actor_cast<actor>(mars_addr), get_atom::value).then(
-            [&](uint16_t mp) {
-              CAF_MESSAGE("mars published its actor at port " << mp);
-              mars_port = mp;
-            }
-          );
-        }
-      );
-    }
-  );
-  // launch process for Jupiter
-  if (!as_server) {
-    CAF_MESSAGE("launch process for Jupiter");
-    jupiter_process = run_prog("--jupiter", mars_port, use_asio);
-  }
-  CAF_MESSAGE("wait for Jupiter to connect");
-  self->receive(
-    [](put_atom, const node_id& jupiter) {
-      CAF_MESSAGE(CAF_ARG(jupiter));
-    }
-  );
-  actor_addr jupiter_addr;
-  self->receive_while([&] { return jupiter_addr == invalid_actor_addr; })(
-    [&](put_atom, const actor_addr& addr) {
-      auto hdl = actor_cast<actor>(addr);
-      self->request(hdl, sys_atom::value, get_atom::value, "info").then(
-        [&](ok_atom, const string&, const actor_addr&, const string& name) {
-          if (name != "testee")
-            return;
-          jupiter_addr = addr;
-          CAF_MESSAGE(CAF_ARG(jupiter_addr));
-        }
-      );
-    }
-  );
-  CAF_MESSAGE("shutdown Mars");
-  anon_send_exit(mars_addr, exit_reason::kill);
-  if (mars_process.joinable())
-    mars_process.join();
-  self->receive(
-    [&](delete_atom, const node_id& nid) {
-      CAF_CHECK(nid == mars);
-    }
-  );
-  CAF_MESSAGE("check whether we still can talk to Jupiter");
-  self->send(aut, ping_atom::value, self, true);
-  std::set<actor_addr> found;
-  int i = 0;
-  self->receive_for(i, 2)(
-    [&](pong_atom, const actor&) {
-      found.emplace(self->current_sender());
-    }
-  );
-  std::set<actor_addr> expected{aut.address(), jupiter_addr};
-  CAF_CHECK(found == expected);
-  CAF_MESSAGE("shutdown Jupiter");
-  anon_send_exit(jupiter_addr, exit_reason::kill);
-  if (jupiter_process.joinable())
-    jupiter_process.join();
-  anon_send_exit(aut, exit_reason::kill);
+  basp::routing_table::endpoint addrs{port_jupiter, interfaces};
+  anon_send(actor_cast<actor>(mars_config_server), put_atom::value,
+            to_string(jupiter.sys.node()), make_message(addrs));
+  // Trigger the automatic connection setup.
+  CAF_MESSAGE("forwarding an actor from Jupiter to Earth via Mars");
+  anon_send(on_jupiter, begin_atom::value);
+  exec_all();
 }
 
-void run_mars(uint16_t port_to_earth, uint16_t pub_port) {
-  auto aut = system.spawn(testee);
-  auto port = publish(aut, pub_port);
-  anon_send(aut, put_atom::value, port);
-  CAF_MESSAGE("published testee at port " << port);
-  auto earth = remote_actor("localhost", port_to_earth);
-  send_as(aut, earth, ping_atom::value, aut, false);
+CAF_TEST(break_triangle_tcp)  {
+  CAF_MESSAGE("Earth  : " << to_string(earth.sys.node()));
+  CAF_MESSAGE("Mars   : " << to_string(mars.sys.node()));
+  CAF_MESSAGE("Jupiter: " << to_string(jupiter.sys.node()));
+  // Earth.
+  CAF_MESSAGE("setting up Earth");
+  auto on_earth = earth.sys.spawn(test_actor, "Earth", false);
+  CAF_MESSAGE("run initialization code");
+  exec_all();
+  CAF_MESSAGE("prepare connection");
+  prepare_connection(earth, mars, "earth", port_earth);
+  CAF_MESSAGE("publish dummy on earth");
+  earth.publish(on_earth, port_earth);
+  // Mars.
+  CAF_MESSAGE("setting up Mars");
+  auto from_earth = mars.remote_actor("earth", port_earth);
+  CAF_REQUIRE(from_earth);
+  auto on_mars = mars.sys.spawn(test_actor, "Mars", false);
+  anon_send(on_mars, set_atom::value, from_earth);
+  CAF_MESSAGE("run initialization code");
+  exec_all();
+  CAF_MESSAGE("prepare connection");
+  prepare_connection(mars, jupiter, "mars", port_mars);
+  CAF_MESSAGE("publish dummy on mars");
+  mars.publish(on_mars, port_mars);
+  // Jupiter.
+  CAF_MESSAGE("setting up Jupiter");
+  auto from_mars = jupiter.remote_actor("mars", port_mars);
+  CAF_REQUIRE(from_mars);
+  auto on_jupiter = jupiter.sys.spawn(test_actor, "Jupiter", false);
+  anon_send(on_jupiter, set_atom::value, from_mars);
+  exec_all();
+  // This handle will be created by the test multiplexer for the automatically
+  // opened socket when automatic connections are enabled.
+  auto hdl_jupiter = accept_handle::from_int(std::numeric_limits<int64_t>::max());
+  // Prepare automatic connection between Jupiter and Earth.
+  prepare_connection(jupiter, earth, "jupiter", port_jupiter, hdl_jupiter);
+  // Add the address information for this test to the config server on Mars.
+  auto mars_config_server = mars.sys.registry().get(atom("PeerServ"));
+  network::address_listing interfaces{
+    {network::protocol::ipv4, std::vector<std::string>{"jupiter"}}
+  };
+  basp::routing_table::endpoint addrs{port_jupiter, interfaces};
+  anon_send(actor_cast<actor>(mars_config_server), put_atom::value,
+            to_string(jupiter.sys.node()), make_message(addrs));
+  // Trigger the automatic connection setup between the edge nodes.
+  CAF_MESSAGE("forwarding an actor from Jupiter to Earth via Mars");
+  anon_send(on_jupiter, begin_atom::value);
+  exec_all();
+  // Shutdown the basp broker of the intermediate node.
+  using caf::io::basp_broker;
+  auto bhdl = mars.mm.named_broker<basp_broker>(caf::atom("BASP"));
+  auto bactor =
+      dynamic_cast<basp_broker*>(caf::actor_cast<caf::abstract_actor*>(bhdl));
+  anon_send_exit(bactor, exit_reason::kill);
+  exec_all();
+  // Let the remaining nodes communicate.
+  anon_send(on_earth, msg_atom::value);
+  exec_all();
 }
 
-void run_jupiter(uint16_t port_to_mars) {
-  auto aut = system.spawn(testee);
-  auto mars = remote_actor("localhost", port_to_mars);
-  send_as(aut, mars, ping_atom::value, aut, true);
-}
-*/
-
-CAF_TEST(triangle_setup) {
-  // this unit test is temporarily disabled until problems
-  // with OBS are sorted out or new actor_system API is in place
-}
-
-/*
-CAF_TEST(triangle_setup) {
-  uint16_t port = 0;
-  uint16_t publish_port = 0;
-  auto argv = test::engine::argv();
-  auto argc = test::engine::argc();
-  auto r = message_builder(argv, argv + argc).extract_opts({
-    {"port,p", "port of remote side (when running mars or jupiter)", port},
-    {"mars", "run mars"},
-    {"jupiter", "run jupiter"},
-    {"use-asio", "use ASIO network backend (if available)"},
-    {"server,s", "run in server mode (don't run clients)", publish_port}
-  });
-  // check arguments
-  bool is_mars = r.opts.count("mars") > 0;
-  bool is_jupiter = r.opts.count("jupiter") > 0;
-  bool has_port = r.opts.count("port") > 0;
-  if (((is_mars || is_jupiter) && !has_port) || (is_mars && is_jupiter)) {
-    CAF_ERROR("need a port when running Mars or Jupiter and cannot "
-              "both at the same time");
-    return;
-  }
-  // enable automatic connections
-  anon_send(whereis(atom("ConfigServ")), put_atom::value,
-            "middleman.enable-automatic-connections", make_message(true));
-  auto use_asio = r.opts.count("use-asio") > 0;
-# ifdef CAF_USE_ASIO
-  if (use_asio) {
-    CAF_MESSAGE("enable ASIO backend");
-    set_middleman<network::asio_multiplexer>();
-  }
-# endif // CAF_USE_ASIO
-  auto as_server = r.opts.count("server") > 0;
-  if (is_mars)
-    run_mars(port, publish_port);
-  else if (is_jupiter)
-    run_jupiter(port);
-  else
-    run_earth(use_asio, as_server, publish_port);
-  await_all_actors_done();
-  shutdown();
-}
-*/
+CAF_TEST_FIXTURE_SCOPE_END()
