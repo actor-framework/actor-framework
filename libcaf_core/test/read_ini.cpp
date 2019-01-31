@@ -124,11 +124,10 @@ some-list=[
   "abc",
   'def', ; some comment and a trailing comma
 ]
-some-map={
+some-map{
 ; here we have some list entries
 entry1=123,
-  entry2=23 ; twenty-three!
-  ,
+  entry2=23 ; twenty-three! btw, comma is not mandatory
  entry3= "abc",
  entry4 = 'def', ; some comment and a trailing comma
 }

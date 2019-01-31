@@ -131,10 +131,19 @@ void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   }
   // Waits for end-of-line after reading a value
   state(after_value) {
-    transition(after_value, " \t\n")
+    transition(after_value, " \t")
+    transition(had_newline, "\n")
     transition(await_key_name, ',')
     transition(done, '}', consumer.end_map())
-    fsm_epsilon(read_ini_comment(ps, consumer), after_value, ';')
+    fsm_epsilon(read_ini_comment(ps, consumer), had_newline, ';')
+  }
+  // Allows users to skip the ',' for separating key/value pairs
+  state(had_newline) {
+    transition(had_newline, " \t\n")
+    transition(await_key_name, ',')
+    transition(done, '}', consumer.end_map())
+    fsm_epsilon(read_ini_comment(ps, consumer), had_newline, ';')
+    epsilon(read_key_name, alnum_or_dash)
   }
   term_state(done) {
     //nop
@@ -220,6 +229,8 @@ void read_ini_section(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   state(await_assignment) {
     transition(await_assignment, " \t")
     transition(await_value, '=', emit_key())
+    // The '=' is optional for maps, i.e., `key = {}` == `key {}`.
+    epsilon(await_value, '{', emit_key())
   }
   // Reads the value in a "key=value" line.
   state(await_value) {
