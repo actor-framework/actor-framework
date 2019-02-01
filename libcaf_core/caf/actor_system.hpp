@@ -123,12 +123,15 @@ public:
   friend class abstract_actor;
 
   /// The number of actors implictly spawned by the actor system on startup.
-  static constexpr size_t num_internal_actors = 2;
+  static constexpr size_t num_internal_actors = 3;
 
   /// Returns the ID of an internal actor by its name.
-  /// @pre x in {'SpawnServ', 'ConfigServ', 'StreamServ'}
+  /// @pre x in {'SpawnServ', 'ConfigServ', 'PeerServ', 'StreamServ'}
   static constexpr size_t internal_actor_id(atom_value x) {
-    return x == atom("SpawnServ") ? 0 : (x == atom("ConfigServ") ? 1 : 2);
+    return x == atom("SpawnServ") ? 0
+      : (x == atom("ConfigServ") ? 1
+        : (x == atom("PeerServ") ? 2
+          : 3));
   }
 
   /// Returns the internal actor for dynamic spawn operations.
@@ -141,6 +144,11 @@ public:
   const strong_actor_ptr& config_serv() const {
     return internal_actors_[internal_actor_id(atom("ConfigServ"))];
   }
+
+  /// Returns the internal actor for storing the addresses of its peers.
+    inline const strong_actor_ptr& peer_serv() const {
+      return internal_actors_[internal_actor_id(atom("PeerServ"))];
+    }
 
   actor_system() = delete;
   actor_system(const actor_system&) = delete;
@@ -567,6 +575,11 @@ private:
   /// Sets the internal actor for storing the runtime configuration.
   void config_serv(strong_actor_ptr x) {
     internal_actors_[internal_actor_id(atom("ConfigServ"))] = std::move(x);
+  }
+
+  /// Sets the internal actor for storing the peer addresses.
+  inline void peer_serv(strong_actor_ptr x) {
+    internal_actors_[internal_actor_id(atom("PeerServ"))] = std::move(x);
   }
 
   // -- member variables -------------------------------------------------------

@@ -77,17 +77,17 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
                std::vector<strong_actor_ptr>& stages, message& msg);
 
   // performs bookkeeping such as managing `spawn_servers`
-  void learned_new_node(const node_id& nid);
+  void learned_new_node(const node_id& nid) override;
 
   // inherited from basp::instance::callee
-  void learned_new_node_directly(const node_id& nid,
-                                 bool was_indirectly_before) override;
-
-  // inherited from basp::instance::callee
-  void learned_new_node_indirectly(const node_id& nid) override;
+  void send_buffered_messages(execution_unit* ctx, node_id nid,
+                              connection_handle hdl) override;
 
   // inherited from basp::instance::callee
   buffer_type& get_buffer(connection_handle hdl) override;
+
+  // inherited from basp::instance::callee
+  buffer_type& get_buffer(node_id nid) override;
 
   // inherited from basp::instance::callee
   void flush(connection_handle hdl) override;
@@ -101,6 +101,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   /// Cleans up any state for `hdl`.
   void cleanup(connection_handle hdl);
+
+  /// Try to establish a connection to node with `nid`.
+  void connect(const node_id& nid);
 
   // pointer to ourselves
   broker* self;
@@ -145,6 +148,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // sends kill_proxy_instance message to all nodes monitoring the terminated
   // actor
   void handle_down_msg(down_msg&);
+
+  // buffer messages for nodes while connectivity is established
+  std::unordered_map<node_id, std::vector<buffer_type>> pending_connectivity;
 
   static const char* name;
 };

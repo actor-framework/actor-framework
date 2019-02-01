@@ -55,7 +55,7 @@ connection_state instance::handle(execution_unit* ctx,
       callee_.purge_state(nid);
       return none;
     });
-    tbl_.erase_direct(dm.handle, cb);
+    tbl_.erase(dm.handle, cb);
     return close_connection;
   };
   std::vector<char>* payload = nullptr;
@@ -86,27 +86,27 @@ connection_state instance::handle(execution_unit* ctx,
 
 void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");
-  for (auto& kvp: tbl_.direct_by_hdl_) {
+  for (auto& kvp: tbl_.nid_by_hdl_) {
     CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
     write_heartbeat(ctx, callee_.get_buffer(kvp.first));
     callee_.flush(kvp.first);
   }
 }
 
-optional<routing_table::route> instance::lookup(const node_id& target) {
+routing_table::lookup_result instance::lookup(const node_id& target) {
   return tbl_.lookup(target);
 }
 
-void instance::flush(const routing_table::route& path) {
-  callee_.flush(path.hdl);
+void instance::flush(connection_handle hdl) {
+  callee_.flush(hdl);
 }
 
-void instance::write(execution_unit* ctx, const routing_table::route& r,
+void instance::write(execution_unit* ctx, connection_handle hdl,
                      header& hdr, payload_writer* writer) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
   CAF_ASSERT(hdr.payload_len == 0 || writer != nullptr);
-  write(ctx, callee_.get_buffer(r.hdl), hdr, writer);
-  flush(r);
+  write(ctx, callee_.get_buffer(hdl), hdr, writer);
+  flush(hdl);
 }
 
 void instance::add_published_actor(uint16_t port,
@@ -169,8 +169,8 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(receiver)
                 << CAF_ARG(mid) << CAF_ARG(msg));
   CAF_ASSERT(receiver && system().node() != receiver->node());
-  auto path = lookup(receiver->node());
-  if (!path) {
+  auto lr = lookup(receiver->node());
+  if (!lr.known) {
     notify<hook::message_sending_failed>(sender, receiver, mid, msg);
     return false;
   }
@@ -180,9 +180,14 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   });
   header hdr{message_type::dispatch_message, 0, 0, mid.integer_value(),
              sender ? sender->id() : invalid_actor_id, receiver->id()};
-  write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
-  flush(*path);
-  notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
+  if (lr.hdl) {
+    auto hdl = std::move(*lr.hdl);
+    write(ctx, callee_.get_buffer(hdl), hdr, &writer);
+    flush(hdl);
+  } else {
+    write(ctx, callee_.get_buffer(receiver->node()), hdr, &writer);
+  }
+  notify<hook::message_sent>(sender, receiver->node(), receiver, mid, msg);
   return true;
 }
 
@@ -224,7 +229,7 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
   auto writer = make_callback([&](serializer& sink) -> error {
     auto appid = get_or(callee_.config(), "middleman.app-identifier",
                      defaults::middleman::app_identifier);
-    if (auto err = sink(this_node_, appid))
+    if (auto err = sink(this_node_, appid, tbl_.autoconnect_endpoint()))
       return err;
     if (pa != nullptr) {
       auto i = pa->first ? pa->first->id() : invalid_actor_id;
@@ -247,7 +252,8 @@ void instance::write_client_handshake(execution_unit* ctx,
   CAF_LOG_TRACE(CAF_ARG(this_node) << CAF_ARG(app_identifier));
   auto writer = make_callback([&](serializer& sink) -> error {
     return sink(const_cast<node_id&>(this_node),
-                const_cast<std::string&>(app_identifier));
+                const_cast<std::string&>(app_identifier),
+                tbl_.autoconnect_endpoint());
   });
   header hdr{message_type::client_handshake, 0, 0, 0, invalid_actor_id,
              invalid_actor_id};
@@ -295,6 +301,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
   switch (hdr.operation) {
     case message_type::server_handshake: {
       node_id source_node;
+      basp::routing_table::endpoint autoconn_addr;
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
       if (!payload_valid()) {
@@ -303,7 +310,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       } else {
         binary_deserializer bd{ctx, *payload};
         std::string remote_appid;
-        if (bd(source_node, remote_appid))
+        if (bd(source_node, remote_appid, autoconn_addr))
           return false;
         auto appid = get_or(callee_.config(), "middleman.app-identifier",
                             defaults::middleman::app_identifier);
@@ -320,25 +327,28 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
         callee_.finalize_handshake(source_node, aid, sigs);
         return false;
       }
+      auto lr = tbl_.lookup(source_node);
       // Close redundant connections.
-      if (tbl_.lookup_direct(source_node)) {
+      if (lr.hdl) {
         CAF_LOG_DEBUG("close redundant connection:" << CAF_ARG(source_node));
         callee_.finalize_handshake(source_node, aid, sigs);
         return false;
       }
       // Add new route to this node.
       CAF_LOG_DEBUG("new connection:" << CAF_ARG(source_node));
-      tbl_.add_direct(hdl, source_node);
-      // write handshake as client in response
-      auto path = tbl_.lookup(source_node);
-      if (!path) {
-        CAF_LOG_ERROR("no route to host after server handshake");
-        return false;
-      }
-      write_client_handshake(ctx, callee_.get_buffer(path->hdl));
-      callee_.learned_new_node_directly(source_node, false);
+      if (lr.known)
+        tbl_.handle(source_node, hdl);
+      else
+        tbl_.add(source_node, hdl);
+      // Store autoconnect address.
+      auto peer_server = system().registry().get(atom("PeerServ"));
+      anon_send(actor_cast<actor>(peer_server), put_atom::value,
+                to_string(source_node), make_message(std::move(autoconn_addr)));
+      write_client_handshake(ctx, callee_.get_buffer(hdl));
+      flush(hdl);
+      callee_.learned_new_node(source_node);
       callee_.finalize_handshake(source_node, aid, sigs);
-      flush(*path);
+      callee_.send_buffered_messages(ctx, source_node, hdl);
       break;
     }
     case message_type::client_handshake: {
@@ -349,7 +359,9 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       binary_deserializer bd{ctx, *payload};
       node_id source_node;
       std::string remote_appid;
-      if (bd(source_node, remote_appid))
+      basp::routing_table::endpoint autoconn_addr;
+      // TODO: Read addrs separately.
+      if (bd(source_node, remote_appid, autoconn_addr))
         return false;
       auto appid = get_if<std::string>(&callee_.config(),
                                        "middleman.app-identifier");
@@ -358,22 +370,32 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
         CAF_LOG_ERROR("app identifier mismatch");
         return false;
       }
-      if (tbl_.lookup_direct(source_node)) {
+      auto lr = tbl_.lookup(source_node);
+      if (lr.hdl) {
         CAF_LOG_DEBUG("received second client handshake:"
                      << CAF_ARG(source_node));
         break;
       }
-      // Add route to this node.
+      // Add this node to our contacts.
       CAF_LOG_DEBUG("new connection:" << CAF_ARG(source_node));
-      tbl_.add_direct(hdl, source_node);
-      callee_.learned_new_node_directly(source_node, false);
+      // Either add a new node or add the handle to a known one.
+      if (lr.known)
+        tbl_.handle(source_node, hdl);
+      else
+        tbl_.add(source_node, hdl);
+      callee_.learned_new_node(source_node);
+      callee_.send_buffered_messages(ctx, source_node, hdl);
+      // Store autoconnect address.
+      auto peer_server = system().registry().get(atom("PeerServ"));
+      anon_send(actor_cast<actor>(peer_server), put_atom::value,
+                to_string(source_node), make_message(std::move(autoconn_addr)));
       break;
     }
     case message_type::dispatch_message: {
       // Sanity checks.
       if (!payload_valid())
         return false;
-      auto source_node = tbl_.lookup_direct(hdl);
+      auto source_node = tbl_.lookup(hdl);
       if (source_node == none) {
         CAF_LOG_ERROR("received dispatch_message before handshake");
         return false;
@@ -402,7 +424,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       break;
     }
     case message_type::announce_proxy: {
-      auto source_node = tbl_.lookup_direct(hdl);
+      auto source_node = tbl_.lookup(hdl);
       if (source_node == none) {
         CAF_LOG_ERROR("received announce_proxy before handshake");
         return false;
@@ -414,7 +436,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       // Sanity checks.
       if (!payload_valid())
         return false;
-      auto source_node = tbl_.lookup_direct(hdl);
+      auto source_node = tbl_.lookup(hdl);
       if (source_node == none) {
         CAF_LOG_ERROR("received announce_proxy before handshake");
         return false;
@@ -430,7 +452,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       break;
     }
     case message_type::heartbeat: {
-      auto source_node = tbl_.lookup_direct(hdl);
+      auto source_node = tbl_.lookup(hdl);
       if (source_node == none) {
         CAF_LOG_ERROR("received announce_proxy before handshake");
         return false;

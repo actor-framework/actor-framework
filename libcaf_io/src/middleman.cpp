@@ -389,7 +389,8 @@ void middleman::init(actor_system_config& cfg) {
      .add_message_type<accept_handle>("@accept_handle")
      .add_message_type<connection_handle>("@connection_handle")
      .add_message_type<connection_passivated_msg>("@connection_passivated_msg")
-     .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg");
+     .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg")
+     .add_message_type<basp::routing_table::endpoint>("@autoconnect_endpoint");
   // compute and set ID for this network node
   node_id this_node{node_id::data::create_singleton()};
   system().node_.swap(this_node);
