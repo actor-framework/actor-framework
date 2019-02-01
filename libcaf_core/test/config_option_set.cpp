@@ -37,6 +37,18 @@ namespace {
 
 struct fixture {
   config_option_set opts;
+
+  template <class T>
+  expected<T> read(std::vector<std::string> args)  {
+    settings cfg;
+    auto res = opts.parse(cfg, std::move(args));
+    if (res.first != pec::success)
+      return res.first;
+    auto x = get_if<T>(&cfg, "value");
+    if (x == none)
+      return sec::invalid_argument;
+    return *x;
+  }
 };
 
 } // namespace <anonymous>
@@ -101,39 +113,32 @@ CAF_TEST(parse with ref syncing) {
   CAF_CHECK_EQUAL(get<int>(cfg, "foo.i"), 42);
 }
 
-CAF_TEST(drop global) {
-  opts.add<int>("value", "some value").add<bool>("help", "print help text");
-  CAF_MESSAGE("test long option with argument");
-  settings cfg;
-  auto res = opts.parse(cfg, {"--value=42"});
-  CAF_CHECK_EQUAL(res.first, pec::success);
-  CAF_CHECK_EQUAL(get_if<int>(&cfg, "value"), 42);
-  CAF_MESSAGE("test long option flag");
-  cfg.clear();
-  res = opts.parse(cfg, {"--help"});
-  CAF_CHECK_EQUAL(res.first, pec::success);
-  CAF_CHECK_EQUAL(get_or(cfg, "help", false), true);
-}
-
 CAF_TEST(atom parameters) {
   opts.add<atom_value>("value,v", "some value");
-  CAF_MESSAGE("test atom option without quotes");
-  auto parse_args = [&](std::vector<std::string> args) -> expected<atom_value> {
-    settings cfg;
-    auto res = opts.parse(cfg, std::move(args));
-    if (res.first != pec::success)
-      return res.first;
-    auto atm = get_if<atom_value>(&cfg, "value");
-    if (atm == none)
-      return sec::invalid_argument;
-    return *atm;
-  };
-  CAF_CHECK_EQUAL(parse_args({"-v", "'foobar'"}), atom("foobar"));
-  CAF_CHECK_EQUAL(parse_args({"-v'foobar'"}), atom("foobar"));
-  CAF_CHECK_EQUAL(parse_args({"--value='foobar'"}), atom("foobar"));
-  CAF_CHECK_EQUAL(parse_args({"-v", "foobar"}), atom("foobar"));
-  CAF_CHECK_EQUAL(parse_args({"-vfoobar"}), atom("foobar"));
-  CAF_CHECK_EQUAL(parse_args({"--value=foobar"}), atom("foobar"));
+  CAF_CHECK_EQUAL(read<atom_value>({"-v", "foobar"}), atom("foobar"));
+  CAF_CHECK_EQUAL(read<atom_value>({"-vfoobar"}), atom("foobar"));
+  CAF_CHECK_EQUAL(read<atom_value>({"--value=foobar"}), atom("foobar"));
+}
+
+CAF_TEST(string parameters) {
+  opts.add<std::string>("value,v", "some value");
+  CAF_MESSAGE("test string option with and without quotes");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=\"foobar\""}), "\"foobar\"");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=foobar"}), "foobar");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"foobar\""}), "\"foobar\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "foobar"}), "foobar");
+  CAF_CHECK_EQUAL(read<std::string>({"-v\"foobar\""}), "\"foobar\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-vfoobar"}), "foobar");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=\"'abc'\""}), "\"'abc'\"");
+  CAF_CHECK_EQUAL(read<std::string>({"--value='abc'"}), "'abc'");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"'abc'\""}), "\"'abc'\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "'abc'"}), "'abc'");
+  CAF_CHECK_EQUAL(read<std::string>({"-v'abc'"}), "'abc'");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=\"123\""}), "\"123\"");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=123"}), "123");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"123\""}), "\"123\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "123"}), "123");
+  CAF_CHECK_EQUAL(read<std::string>({"-v123"}), "123");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

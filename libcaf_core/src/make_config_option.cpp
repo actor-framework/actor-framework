@@ -18,14 +18,15 @@
 
 #include "caf/make_config_option.hpp"
 
+#include <ctype.h>
+
 #include "caf/config_value.hpp"
 #include "caf/optional.hpp"
 
-#define DEFAULT_META(type)                                                     \
-  config_option::meta_state type##_meta_state {                                \
-    check_impl<type>, store_impl<type>, get_impl<type>,                        \
-    detail::type_name<type>()                                                  \
-  };                                                                           \
+#define DEFAULT_META(type, parse_fun)                                          \
+  config_option::meta_state type##_meta_state{                                 \
+    default_config_option_check<type>, default_config_option_store<type>,      \
+    get_impl<type>, parse_fun, detail::type_name<type>()};
 
 using std::string;
 
@@ -34,19 +35,6 @@ namespace caf {
 namespace {
 
 using meta_state = config_option::meta_state;
-
-template <class T>
-error check_impl(const config_value& x) {
-  if (holds_alternative<T>(x))
-    return none;
-  return make_error(pec::type_mismatch);
-}
-
-template <class T>
-void store_impl(void* ptr, const config_value& x) {
-  CAF_ASSERT(ptr != nullptr);
-  *static_cast<T*>(ptr) = get<T>(x);
-}
 
 template <class T>
 config_value get_impl(const void* ptr) {
@@ -76,7 +64,7 @@ config_value bool_get_neg(const void* ptr) {
   return config_value{!*static_cast<const bool*>(ptr)};
 }
 
-meta_state bool_neg_meta{bool_check, bool_store_neg, bool_get_neg,
+meta_state bool_neg_meta{bool_check, bool_store_neg, bool_get_neg, nullptr,
                          detail::type_name<bool>()};
 
 meta_state us_res_meta{
@@ -94,6 +82,7 @@ meta_state us_res_meta{
     timespan val{ival * 1000};
     return config_value{val};
   },
+  nullptr,
   detail::type_name<timespan>()
 };
 
@@ -112,21 +101,44 @@ meta_state ms_res_meta{
     timespan val{ival * 1000000};
     return config_value{val};
   },
+  nullptr,
   detail::type_name<timespan>()};
+
+expected<config_value> parse_atom(void* ptr, string_view str) {
+  if (str.size() > 10)
+    return make_error(pec::too_many_characters);
+  auto is_illegal = [](char c) {
+    return !(isalnum(c) || c == '_' || c == ' ');
+  };
+  auto i = std::find_if(str.begin(), str.end(), is_illegal);
+  if (i != str.end())
+    return make_error(pec::unexpected_character,
+                      std::string{"invalid character: "} + *i);
+  auto result = atom_from_string(str);
+  if (ptr != nullptr)
+    *reinterpret_cast<atom_value*>(ptr) = result;
+  return config_value{result};
+}
+
+expected<config_value> parse_string(void* ptr, string_view str) {
+  std::string result{str.begin(), str.end()};
+  if (ptr != nullptr)
+    *reinterpret_cast<std::string*>(ptr) = result;
+  return config_value{std::move(result)};
+}
 
 } // namespace
 
 namespace detail {
 
-DEFAULT_META(atom_value)
+DEFAULT_META(atom_value, parse_atom)
 
-DEFAULT_META(size_t)
+DEFAULT_META(size_t, default_config_option_parse<size_t>)
 
-DEFAULT_META(string)
+DEFAULT_META(string, parse_string)
 
-config_option::meta_state bool_meta_state{
-  bool_check, bool_store, bool_get, detail::type_name<bool>()
-};
+config_option::meta_state bool_meta_state{bool_check, bool_store, bool_get,
+                                          nullptr, detail::type_name<bool>()};
 
 } // namespace detail
 

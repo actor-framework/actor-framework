@@ -138,24 +138,13 @@ auto config_option_set::parse(settings& config, argument_iterator first,
         return pec::missing_argument;
       auto slice_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
       string_view slice{&*arg_begin, slice_size};
-      auto val = config_value::parse(slice);
-      if (!val)
+      auto val = opt.parse(slice);
+      if (!val) {
+        auto& err = val.error();
+        if (err.category() == atom("parser"))
+          return static_cast<pec>(err.code());
         return pec::illegal_argument;
-      if (opt.check(*val) != none) {
-        // The parser defaults to unescaped strings. For example, --foo=bar
-        // will interpret `bar` as a string. Hence, we'll get a type mismatch
-        // if `foo` expects an atom. We check this special case here to avoid
-        // the clumsy --foo="'bar'" notation on the command line.
-        if (holds_alternative<std::string>(*val)
-            && opt.type_name() == "atom"
-            && slice.substr(0, 1) != "\""
-            && slice.size() <= 10) {
-          *val = atom_from_string(std::string{slice.begin(), slice.end()});
-        } else {
-          return pec::type_mismatch;
-        }
       }
-      opt.store(*val);
       entry[opt_name] = std::move(*val);
     }
     return pec::success;

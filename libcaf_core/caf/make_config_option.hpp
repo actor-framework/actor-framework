@@ -24,25 +24,44 @@
 #include "caf/config_value.hpp"
 #include "caf/detail/type_name.hpp"
 #include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/pec.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 
 namespace detail {
 
 template <class T>
+error default_config_option_check(const config_value& x) {
+  if (holds_alternative<T>(x))
+    return none;
+  return make_error(pec::type_mismatch);
+}
+
+template <class T>
+void default_config_option_store(void* ptr, const config_value& x) {
+  *static_cast<T*>(ptr) = get<T>(x);
+}
+
+template <class T>
+expected<config_value> default_config_option_parse(void* ptr, string_view str) {
+  auto result = config_value::parse(str.begin(), str.end());
+  if (result) {
+    if (!holds_alternative<T>(*result))
+      return make_error(pec::type_mismatch);
+    if (ptr != nullptr)
+      *static_cast<T*>(ptr) = get<T>(*result);
+  }
+  return result;
+}
+
+template <class T>
 config_option::meta_state* option_meta_state_instance() {
   static config_option::meta_state obj{
-    [](const config_value& x) -> error {
-      if (holds_alternative<T>(x))
-        return none;
-      return make_error(pec::type_mismatch);
-    },
-    [](void* ptr, const config_value& x) {
-      *static_cast<T*>(ptr) = get<T>(x);
-    },
-    nullptr, detail::type_name<T>()};
+    default_config_option_check<T>, default_config_option_store<T>, nullptr,
+    default_config_option_parse<T>, detail::type_name<T>()};
   return &obj;
 }
 

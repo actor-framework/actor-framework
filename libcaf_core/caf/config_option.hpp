@@ -40,9 +40,13 @@ public:
     /// Stores a value in the given location.
     void (*store)(void*, const config_value&);
 
-    /// Tries to extrac a value from the given location. Exists for backward
+    /// Tries to extract a value from the given location. Exists for backward
     /// compatibility only and will get removed with CAF 0.17.
     config_value (*get)(const void*);
+
+    /// Tries to parse an input string. Stores and returns the parsed value on
+    /// success, returns an error otherwise.
+    expected<config_value> (*parse)(void*, string_view);
 
     /// Human-readable name of the option's type.
     std::string type_name;
@@ -96,6 +100,10 @@ public:
   /// Returns whether this config option stores a boolean flag.
   bool is_flag() const noexcept;
 
+  /// Tries to parse an input string. Stores and returns the parsed value on
+  /// success, returns an error otherwise.
+  expected<config_value> parse(string_view input) const;
+
   /// @private
   // TODO: remove with CAF 0.17
   optional<config_value> get() const;
@@ -113,4 +121,3 @@ private:
 };
 
 } // namespace caf
-
