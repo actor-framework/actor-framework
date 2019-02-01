@@ -25,6 +25,7 @@
 #include "caf/config.hpp"
 #include "caf/config_value.hpp"
 #include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/optional.hpp"
 
 using std::move;
@@ -145,6 +146,10 @@ string_view config_option::type_name() const noexcept {
 
 bool config_option::is_flag() const noexcept {
   return type_name() == "boolean";
+}
+
+expected<config_value> config_option::parse(string_view input) const {
+  return meta_->parse(value_, input);
 }
 
 optional<config_value> config_option::get() const {
