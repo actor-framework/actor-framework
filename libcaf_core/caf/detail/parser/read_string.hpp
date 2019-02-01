@@ -23,7 +23,6 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
@@ -36,8 +35,8 @@ namespace caf {
 namespace detail {
 namespace parser {
 
-/// Reads a number, i.e., on success produces either an `int64_t` or a
-/// `double`.
+/// Reads a quoted or unquoted string. Quoted strings allow escaping, while
+/// unquoted strings may only include alphanumeric characters.
 template <class Iterator, class Sentinel, class Consumer>
 void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   std::string res;
@@ -49,6 +48,7 @@ void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   state(init) {
     transition(init, " \t")
     transition(read_chars, '"')
+    transition(read_unquoted_chars, alphanumeric_chars, res += ch)
   }
   state(read_chars) {
     transition(escape, '\\')
@@ -63,6 +63,10 @@ void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     transition(read_chars, '\\', res += '\\')
     transition(read_chars, '"', res += '"')
     error_transition(pec::illegal_escape_sequence)
+  }
+  term_state(read_unquoted_chars) {
+    transition(read_unquoted_chars, alphanumeric_chars, res += ch)
+    epsilon(done)
   }
   term_state(done) {
     transition(done, " \t")

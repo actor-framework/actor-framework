@@ -77,25 +77,29 @@ CAF_TEST(empty string) {
   CAF_CHECK_EQUAL(p("\t \"\" \t\t\t "), ""_s);
 }
 
-CAF_TEST(non-empty string) {
+CAF_TEST(non-empty quoted string) {
   CAF_CHECK_EQUAL(p(R"("abc")"), "abc"_s);
   CAF_CHECK_EQUAL(p(R"("a b c")"), "a b c"_s);
   CAF_CHECK_EQUAL(p(R"(   "abcdefABCDEF"   )"), "abcdefABCDEF"_s);
 }
 
-CAF_TEST(string with escaped characters) {
+CAF_TEST(quoted string with escaped characters) {
   CAF_CHECK_EQUAL(p(R"("a\tb\tc")"), "a\tb\tc"_s);
   CAF_CHECK_EQUAL(p(R"("a\nb\r\nc")"), "a\nb\r\nc"_s);
   CAF_CHECK_EQUAL(p(R"("a\\b")"), "a\\b"_s);
-  //CAF_CHECK_EQUAL(p(R"("foo = \"bar\"")"), "foo = \"bar\""_s);
+}
+
+CAF_TEST(unquoted strings) {
+  CAF_CHECK_EQUAL(p(R"(foo)"), "foo"_s);
+  CAF_CHECK_EQUAL(p(R"( foo )"), "foo"_s);
+  CAF_CHECK_EQUAL(p(R"( 123 )"), "123"_s);
 }
 
 CAF_TEST(invalid strings) {
   CAF_CHECK_EQUAL(p(R"("abc)"), pec::unexpected_eof);
   CAF_CHECK_EQUAL(p("\"ab\nc\""), pec::unexpected_newline);
-  CAF_CHECK_EQUAL(p(R"("foo \i bar")"), pec::illegal_escape_sequence);
-  CAF_CHECK_EQUAL(p(R"(foo)"), pec::unexpected_character);
   CAF_CHECK_EQUAL(p(R"("abc" def)"), pec::trailing_character);
+  CAF_CHECK_EQUAL(p(R"( 123, )"), pec::trailing_character);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
