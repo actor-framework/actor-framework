@@ -101,20 +101,6 @@ CAF_TEST(parse with ref syncing) {
   CAF_CHECK_EQUAL(get<int>(cfg, "foo.i"), 42);
 }
 
-CAF_TEST(drop global) {
-  opts.add<int>("value", "some value").add<bool>("help", "print help text");
-  CAF_MESSAGE("test long option with argument");
-  settings cfg;
-  auto res = opts.parse(cfg, {"--value=42"});
-  CAF_CHECK_EQUAL(res.first, pec::success);
-  CAF_CHECK_EQUAL(get_if<int>(&cfg, "value"), 42);
-  CAF_MESSAGE("test long option flag");
-  cfg.clear();
-  res = opts.parse(cfg, {"--help"});
-  CAF_CHECK_EQUAL(res.first, pec::success);
-  CAF_CHECK_EQUAL(get_or(cfg, "help", false), true);
-}
-
 CAF_TEST(atom parameters) {
   opts.add<atom_value>("value,v", "some value");
   CAF_MESSAGE("test atom option without quotes");
