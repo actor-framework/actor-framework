@@ -174,7 +174,7 @@ def makeBuildStages(matrixIndex, builds, lblExpr, settings) {
                 node(lblExpr) {
                     stage(id) {
                       try {
-                          def buildId = "$lblExpr && $buildType"
+                          def buildId = "${lblExpr}_${buildType}".replace(' && ', '_')
                           withEnv(buildEnvironments[lblExpr] ?: []) {
                               buildSteps(buildType, settings['cmakeArgs'], buildId)
                               (settings['extraSteps'] ?: []).each { fun -> "$fun"() }
@@ -299,4 +299,3 @@ pipeline {
         }
     }
 }
-
