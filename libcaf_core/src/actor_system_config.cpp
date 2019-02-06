@@ -109,7 +109,8 @@ actor_system_config::actor_system_config()
   opt_group{custom_options_, "middleman"}
     .add<atom_value>("network-backend",
                      "either 'default' or 'asio' (if available)")
-    .add<string>("app-identifier", "application identifier of this node")
+    .add<std::vector<string>>("app-identifiers",
+                              "valid application identifiers of this node")
     .add<bool>("enable-automatic-connections",
                "enables automatic connection management")
     .add<size_t>("max-consecutive-reads",

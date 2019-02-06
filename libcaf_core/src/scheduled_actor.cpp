@@ -547,19 +547,18 @@ scheduled_actor::categorize(mailbox_element& x) {
     case make_type_token<atom_value, atom_value, std::string>():
       if (content.get_as<atom_value>(0) == sys_atom::value
           && content.get_as<atom_value>(1) == get_atom::value) {
+        auto rp = make_response_promise();
+        if (!rp.pending()) {
+          CAF_LOG_WARNING("received anonymous ('get', 'sys', $key) message");
+          return message_category::internal;
+        }
         auto& what = content.get_as<std::string>(2);
         if (what == "info") {
           CAF_LOG_DEBUG("reply to 'info' message");
-          x.sender->enqueue(
-            make_mailbox_element(ctrl(), x.mid.response_id(),
-                                  {}, ok_atom::value, std::move(what),
-                                  strong_actor_ptr{ctrl()}, name()),
-            context());
+          rp.deliver(ok_atom::value, std::move(what), strong_actor_ptr{ctrl()},
+                     name());
         } else {
-          x.sender->enqueue(
-            make_mailbox_element(ctrl(), x.mid.response_id(),
-                                  {}, sec::unsupported_sys_key),
-            context());
+          rp.deliver(make_error(sec::unsupported_sys_key));
         }
         return message_category::internal;
       }

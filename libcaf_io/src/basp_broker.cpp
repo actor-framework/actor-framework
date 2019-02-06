@@ -103,8 +103,8 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
                 << CAF_ARG(nid) << CAF_ARG(aid)
                 << CAF_ARG2("hdl", this_context->hdl));
   // tell remote side we are monitoring this actor now
-  instance.write_announce_proxy(self->context(), get_buffer(this_context->hdl),
-                                nid, aid);
+  instance.write_monitor_message(self->context(), get_buffer(this_context->hdl),
+                                 nid, aid);
   instance.flush(*path);
   mm->notify<hook::new_remote_actor>(res);
   return res;
@@ -156,8 +156,8 @@ void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
                  << CAF_ARG(nid));
     return;
   }
-  instance.write_kill_proxy(self->context(), get_buffer(path->hdl), nid, aid,
-                            rsn);
+  instance.write_down_message(self->context(), get_buffer(path->hdl), nid, aid,
+                              rsn);
   instance.flush(*path);
 }
 
@@ -324,28 +324,16 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   });
   spawn_servers.emplace(nid, tmp);
   using namespace detail;
-  system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
-  auto writer = make_callback([](serializer& sink) -> error {
-    auto name_atm = atom("SpawnServ");
-    std::vector<actor_id> stages;
-    auto msg = make_message(sys_atom::value, get_atom::value, "info");
-    return sink(name_atm, stages, msg);
-  });
-  auto path = instance.tbl().lookup(nid);
-  if (!path) {
-    CAF_LOG_ERROR("learned_new_node called, but no route to nid");
-    return;
+  auto tmp_ptr = actor_cast<strong_actor_ptr>(tmp);
+  system().registry().put(tmp.id(), tmp_ptr);
+  std::vector<strong_actor_ptr> stages;
+  if (!instance.dispatch(self->context(), tmp_ptr, stages, nid,
+                    static_cast<uint64_t>(atom("SpawnServ")),
+                    basp::header::named_receiver_flag, make_message_id(),
+                    make_message(sys_atom::value, get_atom::value, "info"))) {
+    CAF_LOG_ERROR("learned_new_node called, but no route to remote node"
+                  << CAF_ARG(nid));
   }
-  // send message to SpawnServ of remote node
-  basp::header hdr{basp::message_type::dispatch_message,
-                   basp::header::named_receiver_flag,
-                   0, make_message_id().integer_value(), this_node(), nid,
-                   tmp.id(), invalid_actor_id};
-  // writing std::numeric_limits<actor_id>::max() is a hack to get
-  // this send-to-named-actor feature working with older CAF releases
-  instance.write(self->context(), get_buffer(path->hdl),
-                 hdr, &writer);
-  instance.flush(*path);
 }
 
 void basp_broker_state::learned_new_node_directly(const node_id& nid,
@@ -362,40 +350,23 @@ void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
   learned_new_node(nid);
   if (!automatic_connections)
     return;
-  // this member function gets only called once, after adding a new
-  // indirect connection to the routing table; hence, spawning
-  // our helper here exactly once and there is no need to track
-  // in-flight connection requests
-  auto path = instance.tbl().lookup(nid);
-  if (!path) {
-    CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
-    return;
-  }
-  if (path->next_hop == nid) {
-    CAF_LOG_ERROR("learned_new_node_indirectly called with direct connection");
-    return;
-  }
+  // This member function gets only called once, after adding a new indirect
+  // connection to the routing table; hence, spawning our helper here exactly
+  // once and there is no need to track in-flight connection requests.
   using namespace detail;
-  auto try_connect = [&](std::string item) {
-    auto tmp = get_or(config(), "middleman.attach-utility-actors", false)
+  auto tmp = get_or(config(), "middleman.attach-utility-actors", false)
                ? system().spawn<hidden>(connection_helper, self)
                : system().spawn<detached + hidden>(connection_helper, self);
-    system().registry().put(tmp.id(), actor_cast<strong_actor_ptr>(tmp));
-    auto writer = make_callback([&item](serializer& sink) -> error {
-      auto name_atm = atom("ConfigServ");
-      std::vector<actor_id> stages;
-      auto msg = make_message(get_atom::value, std::move(item));
-      return sink(name_atm, stages, msg);
-    });
-    basp::header hdr{basp::message_type::dispatch_message,
-                     basp::header::named_receiver_flag,
-                     0, make_message_id().integer_value(), this_node(), nid,
-                     tmp.id(), invalid_actor_id};
-    instance.write(self->context(), get_buffer(path->hdl),
-                   hdr, &writer);
-    instance.flush(*path);
-  };
-  try_connect("basp.default-connectivity-tcp");
+  auto sender = actor_cast<strong_actor_ptr>(tmp);
+  system().registry().put(sender->id(), sender);
+  std::vector<strong_actor_ptr> fwd_stack;
+  if (!instance.dispatch(self->context(), sender, fwd_stack, nid,
+                         static_cast<uint64_t>(atom("ConfigServ")),
+                         basp::header::named_receiver_flag, make_message_id(),
+                         make_message(get_atom::value,
+                                      "basp.default-connectivity-tcp"))) {
+    CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
+  }
 }
 
 void basp_broker_state::set_context(connection_handle hdl) {
@@ -403,7 +374,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
   auto i = ctx.find(hdl);
   if (i == ctx.end()) {
     CAF_LOG_DEBUG("create new BASP context:" << CAF_ARG(hdl));
-    basp::header hdr{basp::message_type::server_handshake, 0, 0, 0, none, none,
+    basp::header hdr{basp::message_type::server_handshake, 0, 0, 0,
                      invalid_actor_id, invalid_actor_id};
     i = ctx
           .emplace(hdl, basp::endpoint_context{basp::await_header, hdr, hdl,
@@ -443,6 +414,10 @@ basp_broker_state::get_buffer(connection_handle hdl) {
 
 void basp_broker_state::flush(connection_handle hdl) {
   self->flush(hdl);
+}
+
+void basp_broker_state::handle_heartbeat() {
+  // nop
 }
 
 /******************************************************************************
@@ -513,8 +488,8 @@ behavior basp_broker::make_behavior() {
       }
       if (src && system().node() == src->node())
         system().registry().put(src->id(), src);
-      if (!state.instance.dispatch(context(), src, fwd_stack,
-                                   dest, mid, msg)
+      if (!state.instance.dispatch(context(), src, fwd_stack, dest->node(),
+                                   dest->id(), 0, mid, msg)
           && mid.is_request()) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
         srb(src, mid);
@@ -524,32 +499,22 @@ behavior basp_broker::make_behavior() {
     [=](forward_atom, const node_id& dest_node, atom_value dest_name,
         const message& msg) -> result<message> {
       auto cme = current_mailbox_element();
-      if (cme == nullptr)
+      if (cme == nullptr || cme->sender == nullptr)
         return sec::invalid_argument;
-      auto& src = cme->sender;
-      CAF_LOG_TRACE(CAF_ARG(src)
+      CAF_LOG_TRACE(CAF_ARG2("sender", cme->sender)
                     << ", " << CAF_ARG(dest_node)
                     << ", " << CAF_ARG(dest_name)
                     << ", " << CAF_ARG(msg));
-      if (!src)
-        return sec::invalid_argument;
-      auto path = this->state.instance.tbl().lookup(dest_node);
-      if (!path) {
-        CAF_LOG_ERROR("no route to receiving node");
-        return sec::no_route_to_receiving_node;
+      auto& sender = cme->sender;
+      if (system().node() == sender->node())
+        system().registry().put(sender->id(), sender);
+      if (!state.instance.dispatch(context(), sender, cme->stages,
+                                   dest_node, static_cast<uint64_t>(dest_name),
+                                   basp::header::named_receiver_flag, cme->mid,
+                                   msg)) {
+        detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
+        srb(sender, cme->mid);
       }
-      if (system().node() == src->node())
-        system().registry().put(src->id(), src);
-      auto writer = make_callback([&](serializer& sink) -> error {
-        return sink(dest_name, cme->stages, const_cast<message&>(msg));
-      });
-      basp::header hdr{basp::message_type::dispatch_message,
-                       basp::header::named_receiver_flag,
-                       0, cme->mid.integer_value(), state.this_node(),
-                       dest_node, src->id(), invalid_actor_id};
-      state.instance.write(context(), state.get_buffer(path->hdl),
-                           hdr, &writer);
-      state.instance.flush(*path);
       return delegated<message>();
     },
     // received from underlying broker implementation
