@@ -46,6 +46,7 @@ public:
 
   explicit ipv4_address(array_type bytes);
 
+  /// Constructs an IPv4 address from bits in network byte order.
   static ipv4_address from_bits(uint32_t bits) {
     ipv4_address result;
     result.bits(bits);
@@ -60,13 +61,14 @@ public:
   /// Returns whether this is a multicast address.
   bool is_multicast() const noexcept;
 
-  /// Returns the bits of the IP address in a single integer.
+  /// Returns the bits of the IP address in a single integer arranged in network
+  /// byte order.
   inline uint32_t bits() const noexcept {
     return bits_;
   }
 
-  /// Sets all bits of the IP address in a single 32-bit write.
-  /// @private
+  /// Sets all bits of the IP address with a single 32-bit write. Expects
+  /// argument in network byte order.
   inline void bits(uint32_t value) noexcept {
     bits_ = value;
   }
