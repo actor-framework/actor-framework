@@ -86,7 +86,7 @@ const atom_value file_verbosity = atom("trace");
 
 namespace middleman {
 
-string_view app_identifier = "";
+std::vector<std::string> app_identifiers{"generic-caf-app"};
 const atom_value network_backend = atom("default");
 const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;

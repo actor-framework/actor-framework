@@ -92,9 +92,8 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // inherited from basp::instance::callee
   void flush(connection_handle hdl) override;
 
-  void handle_heartbeat(const node_id&) override {
-    // nop
-  }
+  // inherited from basp::instance::callee
+  void handle_heartbeat() override;
 
   /// Sets `this_context` by either creating or accessing state for `hdl`.
   void set_context(connection_handle hdl);

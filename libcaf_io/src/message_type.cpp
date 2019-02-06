@@ -29,9 +29,10 @@ namespace {
 const char* message_type_strings[] = {
   "server_handshake",
   "client_handshake",
-  "dispatch_message",
-  "announce_proxy_instance",
-  "kill_proxy_instance",
+  "direct_message",
+  "routed_message",
+  "proxy_creation",
+  "proxy_destruction",
   "heartbeat"
 };
 
