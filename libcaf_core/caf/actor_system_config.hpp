@@ -339,6 +339,10 @@ private:
   static std::string render_pec(uint8_t, atom_value, const message&);
 
   void extract_config_file_path(string_list& args);
+
+  /// Adjusts the content of the configuration, e.g., for ensuring backwards
+  /// compatibility with older options.
+  error adjust_content();
 };
 
 /// @private

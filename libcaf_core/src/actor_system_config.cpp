@@ -111,6 +111,7 @@ actor_system_config::actor_system_config()
                      "either 'default' or 'asio' (if available)")
     .add<std::vector<string>>("app-identifiers",
                               "valid application identifiers of this node")
+    .add<string>("app-identifier", "DEPRECATED: use app-identifiers instead")
     .add<bool>("enable-automatic-connections",
                "enables automatic connection management")
     .add<size_t>("max-consecutive-reads",
@@ -276,7 +277,7 @@ error actor_system_config::parse(string_list args, std::istream& ini) {
     std::cout << std::flush;
     cli_helptext_printed = true;
   }
-  return none;
+  return adjust_content();
 }
 
 error actor_system_config::parse(string_list args, const char* ini_file_cstr) {
@@ -303,6 +304,11 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
 
 actor_system_config& actor_system_config::set_impl(string_view name,
                                                    config_value value) {
+  if (name == "middleman.app-identifier") {
+    // TODO: Print a warning with 0.18 and remove this code with 0.19.
+    value.convert_to_list();
+    return set_impl("middleman.app-identifiers", std::move(value));
+  }
   auto opt = custom_options_.qualified_name_lookup(name);
   if (opt != nullptr && opt->check(value) == none) {
     opt->store(value);
@@ -376,6 +382,25 @@ void actor_system_config::extract_config_file_path(string_list& args) {
     config_file_path = std::string{arg_begin, arg_end};
   }
   args.erase(i);
+}
+
+error actor_system_config::adjust_content() {
+  // TODO: Print a warning to STDERR if 'app-identifier' is present with 0.18
+  //       and remove this code with 0.19.
+  auto i = content.find("middleman");
+  if (i != content.end()) {
+    if (auto mm = get_if<settings>(&i->second)) {
+      auto j = mm->find("app-identifier");
+      if (j != mm->end()) {
+        if (!mm->contains("app-identifiers")) {
+          j->second.convert_to_list();
+          mm->emplace("app-identifiers", std::move(j->second));
+        }
+        mm->container().erase(j);
+      }
+    }
+  }
+  return none;
 }
 
 const settings& content(const actor_system_config& cfg) {
