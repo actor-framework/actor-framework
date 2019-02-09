@@ -80,7 +80,6 @@ bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
   }
   return false;
 }
-
 void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
   CAF_ASSERT(ctx != nullptr);
   actor tmp;
@@ -89,6 +88,36 @@ void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
     broker_.swap(tmp); // manually break cycle
   }
   cleanup(std::move(rsn), ctx);
+}
+
+resume_result forwarding_actor_proxy::resume(execution_unit* ctx,
+                                             size_t max_throughput) {
+  size_t handled_msgs = 0;
+  auto f = [](mailbox_element& x) {
+    std::vector<char> buf;
+    binary_serializer sink{ctx, buf};
+    if (auto err = sink(x.stages, x.content())) {
+      CAF_LOG_ERROR("unable to serialize message:" << CAF_ARG(x));
+    } else {
+      send(broker_, std::move(x.sender), x.mid, std::move(buf));
+    }
+    ++handled_msgs;
+  };
+  while (handled_msgs < max_throughput) {
+    if (!mailbox_.new_round(3, f).consumed_items && mailbox().try_block())
+      return resumable::awaiting_message;
+  }
+  if (mailbox().try_block())
+    return resumable::awaiting_message;
+  return resumable::resume_later;
+}
+
+void forwarding_actor_proxy::intrusive_ptr_add_ref_impl() {
+  ref();
+}
+
+void forwarding_actor_proxy::intrusive_ptr_release_impl() {
+  deref();
 }
 
 } // namespace caf

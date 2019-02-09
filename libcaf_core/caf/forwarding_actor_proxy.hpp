@@ -20,19 +20,58 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
-
 #include "caf/detail/shared_spinlock.hpp"
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
+#include "caf/policy/categorized.hpp"
+#include "caf/policy/normal_messages.hpp"
+#include "caf/policy/urgent_messages.hpp"
+#include "caf/resumable.hpp"
 
 namespace caf {
 
 /// Implements a simple proxy forwarding all operations to a manager.
-class forwarding_actor_proxy : public actor_proxy {
+class forwarding_actor_proxy : public actor_proxy, public resumable {
 public:
-  using forwarding_stack = std::vector<strong_actor_ptr>;
+  // -- member types -----------------------------------------------------------
+
+  /// Stores asynchronous messages with default priority.
+  using normal_queue = intrusive::drr_queue<policy::normal_messages>;
+
+  /// Stores asynchronous messages with hifh priority.
+  using urgent_queue = intrusive::drr_queue<policy::urgent_messages>;
+
+
+  /// Configures the FIFO inbox with two nested queues:
+  ///
+  ///   1. Default asynchronous messages
+  ///   2. High-priority asynchronous messages
+  struct mailbox_policy {
+    using deficit_type = size_t;
+
+    using mapped_type = mailbox_element;
+
+    using unique_pointer = mailbox_element_ptr;
+
+    using queue_type = intrusive::wdrr_fixed_multiplexed_queue<
+      policy::categorized, normal_queue, urgent_queue>;
+
+    static constexpr size_t normal_queue_index = 0;
+
+    static constexpr size_t urgent_queue_index = 1;
+  };
+
+  /// A queue optimized for single-reader-many-writers.
+  using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
+
+  // -- constructors and destructors -------------------------------------------
 
   forwarding_actor_proxy(actor_config& cfg, actor dest);
 
   ~forwarding_actor_proxy() override;
+
+  // -- overridden member functions --------------------------------------------
 
   void enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
@@ -42,9 +81,17 @@ public:
 
   void kill_proxy(execution_unit* ctx, error rsn) override;
 
+  resume_result resume(execution_unit*, size_t max_throughput) override;
+
+  void intrusive_ptr_add_ref_impl() override;
+
+  void intrusive_ptr_release_impl() override;
+
 private:
-  void forward_msg(strong_actor_ptr sender, message_id mid, message msg,
-                   const forwarding_stack* fwd = nullptr);
+  // -- member variables -------------------------------------------------------
+
+  // used by both event-based and blocking actors
+  mailbox_type mailbox_;
 
   mutable detail::shared_spinlock broker_mtx_;
   actor broker_;
