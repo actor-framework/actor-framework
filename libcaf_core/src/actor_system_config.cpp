@@ -318,6 +318,18 @@ timespan actor_system_config::stream_tick_duration() const noexcept {
                                    stream_max_batch_delay.count());
   return timespan{ns_count};
 }
+std::string actor_system_config::render(const error& err) {
+  std::string msg;
+  switch (static_cast<uint64_t>(err.category())) {
+    case atom_uint("system"):
+      return render_sec(err.code(), err.category(), err.context());
+    case atom_uint("exit"):
+      return render_exit_reason(err.code(), err.category(), err.context());
+    case atom_uint("parser"):
+      return render_pec(err.code(), err.category(), err.context());
+  }
+  return "unknown-error";
+}
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,
                                             const message& xs) {
@@ -335,7 +347,7 @@ std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
 
 std::string actor_system_config::render_pec(uint8_t x, atom_value,
                                             const message& xs) {
-  auto tmp = static_cast<exit_reason>(x);
+  auto tmp = static_cast<pec>(x);
   return deep_to_string(meta::type_name("parser_error"), tmp,
                         meta::omittable_if_empty(), xs);
 }
