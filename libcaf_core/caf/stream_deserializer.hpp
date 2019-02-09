@@ -18,22 +18,21 @@
 
 #pragma once
 
-#include <limits>
-#include <string>
-#include <sstream>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <limits>
+#include <sstream>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 
-#include "caf/sec.hpp"
-#include "caf/logger.hpp"
 #include "caf/deserializer.hpp"
-
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/logger.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 
@@ -127,65 +126,81 @@ protected:
     return none;
   }
 
-  error apply_builtin(builtin type, void* val) override {
-    CAF_ASSERT(val != nullptr);
-    switch (type) {
-      default: // i8_v or u8_v
-        CAF_ASSERT(type == i8_v || type == u8_v);
-        return apply_raw(sizeof(uint8_t), val);
-      case i16_v:
-      case u16_v:
-        return apply_int(*reinterpret_cast<uint16_t*>(val));
-      case i32_v:
-      case u32_v:
-        return apply_int(*reinterpret_cast<uint32_t*>(val));
-      case i64_v:
-      case u64_v:
-        return apply_int(*reinterpret_cast<uint64_t*>(val));
-      case float_v:
-        return apply_float(*reinterpret_cast<float*>(val));
-      case double_v:
-        return apply_float(*reinterpret_cast<double*>(val));
-      case ldouble_v: {
-        // the IEEE-754 conversion does not work for long double
-        // => fall back to string serialization (even though it sucks)
-        std::string tmp;
-        auto e = apply(tmp);
-        if (e)
-          return e;
-        std::istringstream iss{std::move(tmp)};
-        iss >> *reinterpret_cast<long double*>(val);
-        return none;
-      }
-      case string8_v: {
-        auto& str = *reinterpret_cast<std::string*>(val);
-        size_t str_size;
-        return error::eval([&] { return begin_sequence(str_size); },
-                           [&] { str.resize(str_size);
-                                 auto p = &str[0];
-                                 auto data = reinterpret_cast<char_type*>(p);
-                                 auto s = static_cast<streamsize>(str_size);
-                                 return range_check(streambuf_.sgetn(data, s),
-                                                    str_size); },
-                           [&] { return end_sequence(); });
-      }
-      case string16_v: {
-        auto& str = *reinterpret_cast<std::u16string*>(val);
-        str.clear();
-        size_t ns;
-        return error::eval([&] { return begin_sequence(ns); },
-                           [&] { return fill_range_c<uint16_t>(str, ns); },
-                           [&] { return end_sequence(); });
-      }
-      case string32_v: {
-        auto& str = *reinterpret_cast<std::u32string*>(val);
-        str.clear();
-        size_t ns;
-        return error::eval([&] { return begin_sequence(ns); },
-                           [&] { return fill_range_c<uint32_t>(str, ns); },
-                           [&] { return end_sequence(); });
-      }
-    }
+  error apply_impl(int8_t& x) override {
+    return apply_raw(sizeof(int8_t), &x);
+  }
+
+  error apply_impl(uint8_t& x) override {
+    return apply_raw(sizeof(uint8_t), &x);
+  }
+
+  error apply_impl(int16_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(uint16_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(int32_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(uint32_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(int64_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(uint64_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(float& x) override {
+    return apply_float(x);
+  }
+
+  error apply_impl(double& x) override {
+    return apply_float(x);
+  }
+
+  error apply_impl(long double& x) override {
+    // The IEEE-754 conversion does not work for long double
+    // => fall back to string serialization (even though it sucks).
+    std::string tmp;
+    if (auto err = apply(tmp))
+      return err;
+    std::istringstream iss{std::move(tmp)};
+    iss >> x;
+    return none;
+  }
+
+  error apply_impl(std::string& x) override {
+    size_t str_size;
+    if (auto err = begin_sequence(str_size))
+      return err;
+    x.resize(str_size);
+    auto s = static_cast<streamsize>(str_size);
+    auto data = reinterpret_cast<char_type*>(&x[0]);
+    if (auto err = range_check(streambuf_.sgetn(data, s), str_size))
+      return err;
+    return end_sequence();
+  }
+
+  error apply_impl(std::u16string& x) override {
+    size_t str_size;
+    return error::eval([&] { return begin_sequence(str_size); },
+                       [&] { return fill_range_c<uint16_t>(x, str_size); },
+                       [&] { return end_sequence(); });
+  }
+
+  error apply_impl(std::u32string& x) override {
+    size_t str_size;
+    return error::eval([&] { return begin_sequence(str_size); },
+                       [&] { return fill_range_c<uint32_t>(x, str_size); },
+                       [&] { return end_sequence(); });
   }
 
   error range_check(std::streamsize got, size_t need) {
@@ -197,20 +212,18 @@ protected:
 
   template <class T>
   error apply_int(T& x) {
-    T tmp;
-    auto e = apply_raw(sizeof(T), &tmp);
-    if (e)
-      return e;
-    x = detail::from_network_order(tmp);
+    typename std::make_unsigned<T>::type tmp = 0;
+    if (auto err = apply_raw(sizeof(T), &tmp))
+      return err;
+    x = static_cast<T>(detail::from_network_order(tmp));
     return none;
   }
 
   template <class T>
   error apply_float(T& x) {
     typename detail::ieee_754_trait<T>::packed_type tmp = 0;
-    auto e = apply_int(tmp);
-    if (e)
-      return e;
+    if (auto err = apply_int(tmp))
+      return err;
     x = detail::unpack754(tmp);
     return none;
   }
