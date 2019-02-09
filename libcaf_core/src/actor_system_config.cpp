@@ -254,16 +254,16 @@ error actor_system_config::parse(string_list args, std::istream& ini) {
     remainder.insert(remainder.end(), make_move_iterator(first),
                      make_move_iterator(args.end()));
   } else {
-    cli_helptext_printed = get_or(content, "global.help", false)
-                           || get_or(content, "global.long-help", false);
+    cli_helptext_printed = get_or(content, "help", false)
+                           || get_or(content, "long-help", false);
   }
   // Generate help text if needed.
   if (cli_helptext_printed) {
-    bool long_help = get_or(content, "global.long-help", false);
+    bool long_help = get_or(content, "long-help", false);
     std::cout << custom_options_.help_text(!long_help) << std::endl;
   }
   // Generate INI dump if needed.
-  if (!cli_helptext_printed && get_or(content, "global.dump-config", false)) {
+  if (!cli_helptext_printed && get_or(content, "dump-config", false)) {
     for (auto& category : content) {
       if (auto dict = get_if<config_value::dictionary>(&category.second)) {
         std::cout << '[' << category.first << "]\n";
