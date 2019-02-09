@@ -328,9 +328,10 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
   system().registry().put(tmp.id(), tmp_ptr);
   std::vector<strong_actor_ptr> stages;
   if (!instance.dispatch(self->context(), tmp_ptr, stages, nid,
-                    static_cast<uint64_t>(atom("SpawnServ")),
-                    basp::header::named_receiver_flag, make_message_id(),
-                    make_message(sys_atom::value, get_atom::value, "info"))) {
+                         static_cast<uint64_t>(atom("SpawnServ")),
+                         basp::header::named_receiver_flag, make_message_id(),
+                         make_message(sys_atom::value, get_atom::value,
+                                      "info"))) {
     CAF_LOG_ERROR("learned_new_node called, but no route to remote node"
                   << CAF_ARG(nid));
   }
