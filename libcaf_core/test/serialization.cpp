@@ -21,51 +21,52 @@
 #define CAF_SUITE serialization
 #include "caf/test/unit_test.hpp"
 
-#include <new>
-#include <set>
-#include <list>
-#include <stack>
-#include <tuple>
-#include <locale>
-#include <memory>
-#include <string>
-#include <limits>
-#include <vector>
-#include <cstring>
-#include <sstream>
+#include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <cassert>
-#include <iterator>
-#include <typeinfo>
-#include <iostream>
-#include <stdexcept>
-#include <algorithm>
 #include <functional>
+#include <iostream>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <locale>
+#include <memory>
+#include <new>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <stdexcept>
+#include <string>
+#include <tuple>
 #include <type_traits>
+#include <typeinfo>
+#include <vector>
 
-#include "caf/message.hpp"
-#include "caf/streambuf.hpp"
-#include "caf/serializer.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/deserializer.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/proxy_registry.hpp"
-#include "caf/message_handler.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/primitive_variant.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/binary_deserializer.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/make_type_erased_view.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/make_type_erased_tuple_view.hpp"
+#include "caf/make_type_erased_view.hpp"
+#include "caf/message.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/primitive_variant.hpp"
+#include "caf/proxy_registry.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/serializer.hpp"
+#include "caf/stream_deserializer.hpp"
+#include "caf/stream_serializer.hpp"
+#include "caf/streambuf.hpp"
 
+#include "caf/detail/enum_to_string.hpp"
+#include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/detail/enum_to_string.hpp"
-#include "caf/detail/get_mac_addresses.hpp"
 
 using namespace std;
 using namespace caf;
@@ -295,6 +296,7 @@ CAF_TEST(enum_classes) {
 
 CAF_TEST(strings) {
   auto buf = serialize(str);
+  std::cout << "buf: " << deep_to_string(buf) << std::endl;
   string x;
   deserialize(buf, x);
   CAF_CHECK_EQUAL(str, x);
@@ -388,7 +390,7 @@ CAF_TEST(multiple_messages) {
 CAF_TEST(type_erased_value) {
   auto buf = serialize(str);
   type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
-  binary_deserializer bd{&context, buf.data(), buf.size()};
+  binary_deserializer bd{&context, buf};
   ptr->load(bd);
   CAF_CHECK_EQUAL(str, *reinterpret_cast<const std::string*>(ptr->get()));
 }
