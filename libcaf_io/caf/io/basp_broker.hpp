@@ -138,10 +138,10 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // keeps a list of nodes that monitor a particular local actor
   monitored_actor_map monitored_actors;
 
-  // sends a kill_proxy message to a remote node
-  void send_kill_proxy_instance(const node_id& nid, actor_id aid, error err);
+  // sends a basp::down_message message to a remote node
+  void send_basp_down_message(const node_id& nid, actor_id aid, error err);
 
-  // sends kill_proxy_instance message to all nodes monitoring the terminated
+  // sends basp::down_message to all nodes monitoring the terminated
   // actor
   void handle_down_msg(down_msg&);
 
