@@ -52,10 +52,11 @@ void binary_serializer::seek(size_t offset) {
 
 void binary_serializer::skip(size_t num_bytes) {
   auto last = buf_.end();
-  if (write_pos_ + num_bytes <= last) {
+  auto remaining = static_cast<size_t>(std::distance(write_pos_, last));
+  if (remaining >= num_bytes) {
     write_pos_ += num_bytes;
   } else {
-    buf_.insert(last, num_bytes - (last - write_pos_), 0);
+    buf_.insert(last, num_bytes - remaining, 0);
     write_pos_ = buf_.end();
   }
 }
