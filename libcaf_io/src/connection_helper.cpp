@@ -34,41 +34,6 @@ auto autoconnect_timeout = std::chrono::minutes(10);
 
 const char* connection_helper_state::name = "connection_helper";
 
-behavior datagram_connection_broker(broker* self, uint16_t port,
-                                    network::address_listing addresses,
-                                    actor system_broker) {
-  auto& mx = self->system().middleman().backend();
-  auto& this_node = self->system().node();
-  auto app_id = get_or(self->config(), "middleman.app-identifier",
-                       defaults::middleman::app_identifier);
-  for (auto& kvp : addresses) {
-    for (auto& addr : kvp.second) {
-      auto eptr = mx.new_remote_udp_endpoint(addr, port);
-      if (eptr) {
-        auto hdl = (*eptr)->hdl();
-        self->add_datagram_servant(std::move(*eptr));
-        basp::instance::write_client_handshake(self->context(),
-                                               self->wr_buf(hdl),
-                                               none, this_node,
-                                               app_id);
-      }
-    }
-  }
-  return {
-    [=](new_datagram_msg& msg) {
-      auto hdl = msg.handle;
-      self->send(system_broker, std::move(msg), self->take(hdl), port);
-      self->quit();
-    },
-    after(autoconnect_timeout) >> [=]() {
-      CAF_LOG_TRACE(CAF_ARG(""));
-      // nothing heard in about 10 minutes... just a call it a day, then
-      CAF_LOG_INFO("aborted direct connection attempt after 10min");
-      self->quit(exit_reason::user_shutdown);
-    }
-  };
-}
-
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
                            actor b) {
   CAF_LOG_TRACE(CAF_ARG(b));
@@ -101,17 +66,6 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
               }
             }
             CAF_LOG_INFO("could not connect to node directly");
-          } else if (item == "basp.default-connectivity-udp") {
-            auto& sys = self->system();
-            // create new broker to try addresses for communication via UDP
-            if (get_or(sys.config(), "middleman.attach-utility-actors", false))
-              self->system().middleman().spawn_broker<hidden>(
-                datagram_connection_broker, port, std::move(addresses), b
-              );
-            else
-              self->system().middleman().spawn_broker<detached + hidden>(
-                datagram_connection_broker, port, std::move(addresses), b
-              );
           } else {
             CAF_LOG_INFO("aborted direct connection attempt, unknown item: "
                          << CAF_ARG(item));

@@ -40,8 +40,6 @@ std::string to_string(const header &hdr) {
       << to_bin(hdr.flags) << ", "
       << hdr.payload_len << ", "
       << hdr.operation_data << ", "
-      << to_string(hdr.source_node) << ", "
-      << to_string(hdr.dest_node) << ", "
       << hdr.source_actor << ", "
       << hdr.dest_actor
       << "}";
@@ -53,17 +51,11 @@ bool operator==(const header& lhs, const header& rhs) {
       && lhs.flags == rhs.flags
       && lhs.payload_len == rhs.payload_len
       && lhs.operation_data == rhs.operation_data
-      && lhs.source_node == rhs.source_node
-      && lhs.dest_node == rhs.dest_node
       && lhs.source_actor == rhs.source_actor
       && lhs.dest_actor == rhs.dest_actor;
 }
 
 namespace {
-
-bool valid(const node_id& val) {
-  return val != none;
-}
 
 template <class T>
 bool zero(T val) {
@@ -71,52 +63,33 @@ bool zero(T val) {
 }
 
 bool server_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && zero(hdr.dest_actor)
-       && !zero(hdr.operation_data);
+  return !zero(hdr.operation_data);
 }
 
 bool client_handshake_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor);
+  return zero(hdr.source_actor) && zero(hdr.dest_actor);
 }
 
-bool dispatch_message_valid(const header& hdr) {
-  return  valid(hdr.dest_node)
-       && (!zero(hdr.dest_actor) || hdr.has(header::named_receiver_flag))
-       && !zero(hdr.payload_len);
+bool direct_message_valid(const header& hdr) {
+  return !zero(hdr.dest_actor) && !zero(hdr.payload_len);
 }
 
-bool announce_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && !zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
+bool routed_message_valid(const header& hdr) {
+  return !zero(hdr.dest_actor) && !zero(hdr.payload_len);
 }
 
-bool kill_proxy_instance_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && !zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && !zero(hdr.payload_len)
-       && zero(hdr.operation_data);
+bool monitor_message_valid(const header& hdr) {
+  return !zero(hdr.payload_len) && zero(hdr.operation_data);
+}
+
+bool down_message_valid(const header& hdr) {
+  return !zero(hdr.source_actor) && zero(hdr.dest_actor)
+         && !zero(hdr.payload_len) && zero(hdr.operation_data);
 }
 
 bool heartbeat_valid(const header& hdr) {
-  return  valid(hdr.source_node)
-       && valid(hdr.dest_node)
-       && hdr.source_node != hdr.dest_node
-       && zero(hdr.source_actor)
-       && zero(hdr.dest_actor)
-       && zero(hdr.payload_len)
-       && zero(hdr.operation_data);
+  return zero(hdr.source_actor) && zero(hdr.dest_actor) && zero(hdr.payload_len)
+         && zero(hdr.operation_data);
 }
 
 } // namespace <anonymous>
@@ -129,12 +102,14 @@ bool valid(const header& hdr) {
       return server_handshake_valid(hdr);
     case message_type::client_handshake:
       return client_handshake_valid(hdr);
-    case message_type::dispatch_message:
-      return dispatch_message_valid(hdr);
-    case message_type::announce_proxy:
-      return announce_proxy_instance_valid(hdr);
-    case message_type::kill_proxy:
-      return kill_proxy_instance_valid(hdr);
+    case message_type::direct_message:
+      return direct_message_valid(hdr);
+    case message_type::routed_message:
+      return routed_message_valid(hdr);
+    case message_type::monitor_message:
+      return monitor_message_valid(hdr);
+    case message_type::down_message:
+      return down_message_valid(hdr);
     case message_type::heartbeat:
       return heartbeat_valid(hdr);
   }

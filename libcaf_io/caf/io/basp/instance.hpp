@@ -90,7 +90,7 @@ public:
     virtual void learned_new_node_indirectly(const node_id& nid) = 0;
 
     /// Called if a heartbeat was received from `nid`
-    virtual void handle_heartbeat(const node_id& nid) = 0;
+    virtual void handle_heartbeat() = 0;
 
     /// Returns the actor namespace associated to this BASP protocol instance.
     proxy_registry& proxies() {
@@ -162,7 +162,7 @@ public:
   /// Returns `true` if a path to destination existed, `false` otherwise.
   bool dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                 const std::vector<strong_actor_ptr>& forwarding_stack,
-                const strong_actor_ptr& receiver,
+                const node_id& dest_node, uint64_t dest_actor, uint8_t flags,
                 message_id mid, const message& msg);
 
   /// Returns the actor namespace associated to this BASP protocol instance.
@@ -200,28 +200,19 @@ public:
                               buffer_type& out_buf, optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  static void write_client_handshake(execution_unit* ctx,
-                                     buffer_type& buf,
-                                     const node_id& remote_side,
-                                     const node_id& this_node,
-                                     const std::string& app_identifier);
-
-  /// Writes the client handshake to `buf`.
-  void write_client_handshake(execution_unit* ctx,
-                              buffer_type& buf, const node_id& remote_side);
+  void write_client_handshake(execution_unit* ctx, buffer_type& buf);
 
   /// Writes an `announce_proxy` to `buf`.
-  void write_announce_proxy(execution_unit* ctx, buffer_type& buf,
-                            const node_id& dest_node, actor_id aid);
+  void write_monitor_message(execution_unit* ctx, buffer_type& buf,
+                             const node_id& dest_node, actor_id aid);
 
   /// Writes a `kill_proxy` to `buf`.
-  void write_kill_proxy(execution_unit* ctx, buffer_type& buf,
-                        const node_id& dest_node, actor_id aid,
-                        const error& rsn);
+  void write_down_message(execution_unit* ctx, buffer_type& buf,
+                          const node_id& dest_node, actor_id aid,
+                          const error& rsn);
 
   /// Writes a `heartbeat` to `buf`.
-  void write_heartbeat(execution_unit* ctx, buffer_type& buf,
-                       const node_id& remote_side);
+  void write_heartbeat(execution_unit* ctx, buffer_type& buf);
 
   const node_id& this_node() const {
     return this_node_;
@@ -241,6 +232,9 @@ public:
               std::vector<char>* payload);
 
 private:
+  void forward(execution_unit* ctx, const node_id& dest_node, const header& hdr,
+               std::vector<char>& payload);
+
   routing_table tbl_;
   published_actor_map published_actors_;
   node_id this_node_;
@@ -252,4 +246,3 @@ private:
 } // namespace basp
 } // namespace io
 } // namespace caf
-

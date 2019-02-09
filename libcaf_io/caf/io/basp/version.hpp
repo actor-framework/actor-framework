@@ -26,14 +26,11 @@ namespace basp {
 
 /// @addtogroup BASP
 
-/// The current BASP version. Different BASP versions will not
-/// be able to exchange messages.
-constexpr uint64_t version = 2;
+/// The current BASP version. Note: BASP is not backwards compatible.
+constexpr uint64_t version = 3;
 
 /// @}
 
 } // namespace basp
 } // namespace io
 } // namespace caf
-
-

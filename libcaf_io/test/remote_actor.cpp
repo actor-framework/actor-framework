@@ -18,7 +18,7 @@
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE io_dynamic_remote_actor_tcp
+#define CAF_SUITE io_dynamic_remote_actor
 #include "caf/test/dsl.hpp"
 
 #include <vector>
@@ -142,7 +142,7 @@ behavior linking_actor(event_based_actor* self, const actor& buddy) {
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 
-CAF_TEST(identity_semantics_tcp) {
+CAF_TEST(identity_semantics) {
   // server side
   auto server = server_side.spawn(make_pong_behavior);
   auto port1 = unbox(server_side_mm.publish(server, 0, local_host));
@@ -158,7 +158,7 @@ CAF_TEST(identity_semantics_tcp) {
   anon_send_exit(server, exit_reason::user_shutdown);
 }
 
-CAF_TEST(ping_pong_tcp) {
+CAF_TEST(ping_pong) {
   // server side
   auto port = unbox(server_side_mm.publish(
     server_side.spawn(make_pong_behavior), 0, local_host));
@@ -167,7 +167,7 @@ CAF_TEST(ping_pong_tcp) {
   client_side.spawn(make_ping_behavior, pong);
 }
 
-CAF_TEST(custom_message_type_tcp) {
+CAF_TEST(custom_message_type) {
   // server side
   auto port = unbox(server_side_mm.publish(
     server_side.spawn(make_sort_behavior), 0, local_host));
@@ -176,7 +176,7 @@ CAF_TEST(custom_message_type_tcp) {
   client_side.spawn(make_sort_requester_behavior, sorter);
 }
 
-CAF_TEST(remote_link_tcp) {
+CAF_TEST(remote_link) {
   // server side
   auto port = unbox(
     server_side_mm.publish(server_side.spawn(fragile_mirror), 0, local_host));

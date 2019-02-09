@@ -42,31 +42,35 @@ enum class message_type : uint8_t {
   /// ![](client_handshake.png)
   client_handshake = 0x01,
 
+  /// Transmits a direct message from source to destination.
+  ///
+  /// ![](direct_message.png)
+  direct_message = 0x02,
+
   /// Transmits a message from `source_node:source_actor` to
   /// `dest_node:dest_actor`.
   ///
-  /// ![](dispatch_message.png)
-  dispatch_message = 0x02,
+  /// ![](routed_message.png)
+  routed_message = 0x03,
 
   /// Informs the receiving node that the sending node has created a proxy
   /// instance for one of its actors. Causes the receiving node to attach
-  /// a functor to the actor that triggers a kill_proxy_instance
-  /// message on termination.
+  /// a functor to the actor that triggers a down_message on termination.
   ///
-  /// ![](announce_proxy_instance.png)
-  announce_proxy = 0x03,
+  /// ![](monitor_message.png)
+  monitor_message = 0x04,
 
   /// Informs the receiving node that it has a proxy for an actor
   /// that has been terminated.
   ///
-  /// ![](kill_proxy_instance.png)
-  kill_proxy = 0x04,
+  /// ![](down_message.png)
+  down_message = 0x05,
 
   /// Used to generate periodic traffic between two nodes
   /// in order to detect disconnects.
   ///
   /// ![](heartbeat.png)
-  heartbeat = 0x05,
+  heartbeat = 0x06,
 };
 
 /// @relates message_type
@@ -77,5 +81,3 @@ std::string to_string(message_type);
 } // namespace basp
 } // namespace io
 } // namespace caf
-
-
