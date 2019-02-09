@@ -72,10 +72,10 @@ binary_deserializer::binary_deserializer(execution_unit* ctx, const buffer& buf)
 }
 
 error binary_deserializer::begin_object(uint16_t& nr, std::string& name) {
-  if (nr != 0)
-    return apply(nr);
   if (auto err = apply(nr))
     return err;
+  if (nr != 0)
+    return none;
   return apply(name);
 }
 

@@ -197,7 +197,8 @@ struct fixture {
     message result;
     auto tmp = make_message(x);
     deserialize(serialize(tmp), result);
-    CAF_REQUIRE(result.match_elements<T>());
+    if (!result.match_elements<T>())
+      CAF_FAIL("expected: " << x << ", got: " << result);
     return result.get_as<T>(0);
   }
 
