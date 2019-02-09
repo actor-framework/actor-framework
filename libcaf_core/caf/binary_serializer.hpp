@@ -63,6 +63,16 @@ public:
 
   error apply_raw(size_t num_bytes, void* data) override;
 
+  // -- properties -------------------------------------------------------------
+
+  buffer& buf() {
+    return buf_;
+  }
+
+  const buffer& buf() const {
+    return buf_;
+  }
+
 protected:
   error apply_impl(int8_t&) override;
 
