@@ -82,7 +82,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
     return nullptr;
   }
   // create proxy and add functor that will be called if we
-  // receive a kill_proxy_instance message
+  // receive a basp::down_message
   auto mm = &system().middleman();
   actor_config cfg;
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
@@ -147,8 +147,8 @@ void basp_broker_state::purge_state(const node_id& nid) {
     kvp.second.erase(nid);
 }
 
-void basp_broker_state::send_kill_proxy_instance(const node_id& nid,
-                                                 actor_id aid, error rsn) {
+void basp_broker_state::send_basp_down_message(const node_id& nid, actor_id aid,
+                                               error rsn) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(rsn));
   auto path = instance.tbl().lookup(nid);
   if (!path) {
@@ -168,7 +168,7 @@ void basp_broker_state::proxy_announced(const node_id& nid, actor_id aid) {
   if (ptr == nullptr) {
     CAF_LOG_DEBUG("kill proxy immediately");
     // kill immediately if actor has already terminated
-    send_kill_proxy_instance(nid, aid, exit_reason::unknown);
+    send_basp_down_message(nid, aid, exit_reason::unknown);
   } else {
     auto entry = ptr->address();
     auto i = monitored_actors.find(entry);
@@ -187,7 +187,7 @@ void basp_broker_state::handle_down_msg(down_msg& dm) {
   if (i == monitored_actors.end())
     return;
   for (auto& nid : i->second)
-    send_kill_proxy_instance(nid, dm.source.id(), dm.reason);
+    send_basp_down_message(nid, dm.source.id(), dm.reason);
   monitored_actors.erase(i);
 }
 

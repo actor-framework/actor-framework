@@ -55,8 +55,7 @@ enum class message_type : uint8_t {
 
   /// Informs the receiving node that the sending node has created a proxy
   /// instance for one of its actors. Causes the receiving node to attach
-  /// a functor to the actor that triggers a kill_proxy_instance
-  /// message on termination.
+  /// a functor to the actor that triggers a down_message on termination.
   ///
   /// ![](monitor_message.png)
   monitor_message = 0x04,
