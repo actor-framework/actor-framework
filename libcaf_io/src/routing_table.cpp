@@ -73,16 +73,6 @@ node_id routing_table::lookup_indirect(const node_id& nid) const {
   return *i->second.begin();
 }
 
-void routing_table::blacklist(const node_id& hop, const node_id& dest) {
-  blacklist_[dest].emplace(hop);
-  auto i = indirect_.find(dest);
-  if (i == indirect_.end())
-    return;
-  i->second.erase(hop);
-  if (i->second.empty())
-    indirect_.erase(i);
-}
-
 void routing_table::erase_direct(const connection_handle& hdl,
                                  erase_callback& cb) {
   auto i = direct_by_hdl_.find(hdl);
@@ -115,15 +105,17 @@ void routing_table::add_direct(const connection_handle& hdl,
 }
 
 bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
-  auto i = blacklist_.find(dest);
-  if (i == blacklist_.end() || i->second.count(hop) == 0) {
-    auto& hops = indirect_[dest];
-    auto added_first = hops.empty();
-    hops.emplace(hop);
+  // Never add indirect entries if we already have direct connection.
+  if (lookup_direct(dest) != none)
+    return false;
+  // Never add indirect entries if we don't have a connection to the hop.
+  if (lookup_direct(hop) == none)
+    return false;
+  auto& hops = indirect_[dest];
+  auto result = hops.empty();
+  if (hops.emplace(hop).second)
     parent_->parent().notify<hook::new_route_added>(hop, dest);
-    return added_first;
-  }
-  return false; // blacklisted
+  return result;
 }
 
 bool routing_table::reachable(const node_id& dest) {

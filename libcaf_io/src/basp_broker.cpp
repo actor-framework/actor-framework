@@ -68,19 +68,10 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // payload received from a remote node; if a remote node A sends
   // us a handle to a third node B, then we assume that A offers a route to B
   if (nid != this_context->id
-      && !instance.tbl().lookup_direct(nid)
       && instance.tbl().add_indirect(this_context->id, nid))
     learned_new_node_indirectly(nid);
   // we need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node
-  auto path = instance.tbl().lookup(nid);
-  if (!path) {
-    // this happens if and only if we don't have a path to `nid`
-    // and current_context_->hdl has been blacklisted
-    CAF_LOG_DEBUG("cannot create a proxy instance for an actor "
-                  "running on a node we don't have a route to");
-    return nullptr;
-  }
   // create proxy and add functor that will be called if we
   // receive a basp::down_message
   auto mm = &system().middleman();
@@ -105,7 +96,7 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   // tell remote side we are monitoring this actor now
   instance.write_monitor_message(self->context(), get_buffer(this_context->hdl),
                                  nid, aid);
-  instance.flush(*path);
+  flush(this_context->hdl);
   mm->notify<hook::new_remote_actor>(res);
   return res;
 }

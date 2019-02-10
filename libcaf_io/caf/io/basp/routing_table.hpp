@@ -73,9 +73,6 @@ public:
   /// Adds a new indirect route to the table.
   bool add_indirect(const node_id& hop, const node_id& dest);
 
-  /// Blacklist the route to `dest` via `hop`.
-  void blacklist(const node_id& hop, const node_id& dest);
-
   /// Removes a direct connection and calls `cb` for any node
   /// that became unreachable as a result of this operation,
   /// including the node that is assigned as direct path for `hdl`.
@@ -118,7 +115,6 @@ public:
   std::unordered_map<connection_handle, node_id> direct_by_hdl_;
   std::unordered_map<node_id, connection_handle> direct_by_nid_;
   indirect_entries indirect_;
-  indirect_entries blacklist_;
 };
 
 /// @}
