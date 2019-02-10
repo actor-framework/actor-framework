@@ -30,7 +30,7 @@ namespace caf {
 forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor dest)
     : actor_proxy(cfg),
       broker_(std::move(dest)) {
-  // nop
+  anon_send(broker_, monitor_atom::value, ctrl());
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {

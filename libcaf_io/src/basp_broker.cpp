@@ -89,15 +89,6 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
         bptr->state.proxies().erase(nid, res->id(), rsn);
     });
   });
-  CAF_LOG_DEBUG("successfully created proxy instance, "
-                "write announce_proxy_instance:"
-                << CAF_ARG(nid) << CAF_ARG(aid)
-                << CAF_ARG2("hdl", this_context->hdl));
-  // tell remote side we are monitoring this actor now
-  instance.write_monitor_message(self->context(), get_buffer(this_context->hdl),
-                                 nid, aid);
-  flush(this_context->hdl);
-  mm->notify<hook::new_remote_actor>(res);
   return res;
 }
 
@@ -508,6 +499,27 @@ behavior basp_broker::make_behavior() {
         srb(sender, cme->mid);
       }
       return delegated<message>();
+    },
+    // received from proxy instances to signal that we need to send a BASP
+    // monitor_message to the origin node
+    [=](monitor_atom, const strong_actor_ptr& proxy) {
+      if (proxy == nullptr) {
+        CAF_LOG_WARNING("received a monitor message from an invalid proxy");
+        return;
+      }
+      auto route = state.instance.tbl().lookup(proxy->node());
+      if (route == none) {
+        CAF_LOG_DEBUG("connection to origin already lost, kill proxy");
+        state.instance.proxies().erase(proxy->node(), proxy->id());
+        return;
+      }
+      CAF_LOG_DEBUG("write monitor_message:" << CAF_ARG(proxy));
+      // tell remote side we are monitoring this actor now
+      auto hdl = route->hdl;
+      state.instance.write_monitor_message(context(), state.get_buffer(hdl),
+                                           proxy->node(), proxy->id());
+      flush(hdl);
+      system().middleman().notify<hook::new_remote_actor>(proxy);
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
