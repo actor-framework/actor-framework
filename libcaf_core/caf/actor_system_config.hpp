@@ -316,6 +316,16 @@ public:
 
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 
+  // -- default error rendering functions --------------------------------------
+
+  static std::string render(const error& err);
+
+  static std::string render_sec(uint8_t, atom_value, const message&);
+
+  static std::string render_exit_reason(uint8_t, atom_value, const message&);
+
+  static std::string render_pec(uint8_t, atom_value, const message&);
+
 protected:
   virtual std::string make_help_text(const std::vector<message::cli_arg>&);
 
@@ -331,12 +341,6 @@ private:
   }
 
   actor_system_config& set_impl(string_view name, config_value value);
-
-  static std::string render_sec(uint8_t, atom_value, const message&);
-
-  static std::string render_exit_reason(uint8_t, atom_value, const message&);
-
-  static std::string render_pec(uint8_t, atom_value, const message&);
 
   void extract_config_file_path(string_list& args);
 

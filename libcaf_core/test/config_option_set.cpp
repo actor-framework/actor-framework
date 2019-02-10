@@ -62,7 +62,6 @@ CAF_TEST(lookup) {
   CAF_CHECK_EQUAL(opts.size(), 3u);
   CAF_MESSAGE("lookup by long name");
   CAF_CHECK_NOT_EQUAL(opts.cli_long_name_lookup("opt1"), nullptr);
-  CAF_CHECK_NOT_EQUAL(opts.cli_long_name_lookup("global.opt1"), nullptr);
   CAF_CHECK_NOT_EQUAL(opts.cli_long_name_lookup("test.opt2"), nullptr);
   CAF_CHECK_NOT_EQUAL(opts.cli_long_name_lookup("test.flag"), nullptr);
   CAF_MESSAGE("lookup by short name");

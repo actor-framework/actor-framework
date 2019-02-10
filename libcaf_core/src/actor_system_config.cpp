@@ -256,16 +256,16 @@ error actor_system_config::parse(string_list args, std::istream& ini) {
     remainder.insert(remainder.end(), make_move_iterator(first),
                      make_move_iterator(args.end()));
   } else {
-    cli_helptext_printed = get_or(content, "global.help", false)
-                           || get_or(content, "global.long-help", false);
+    cli_helptext_printed = get_or(content, "help", false)
+                           || get_or(content, "long-help", false);
   }
   // Generate help text if needed.
   if (cli_helptext_printed) {
-    bool long_help = get_or(content, "global.long-help", false);
+    bool long_help = get_or(content, "long-help", false);
     std::cout << custom_options_.help_text(!long_help) << std::endl;
   }
   // Generate INI dump if needed.
-  if (!cli_helptext_printed && get_or(content, "global.dump-config", false)) {
+  if (!cli_helptext_printed && get_or(content, "dump-config", false)) {
     for (auto& category : content) {
       if (auto dict = get_if<config_value::dictionary>(&category.second)) {
         std::cout << '[' << category.first << "]\n";
@@ -325,6 +325,18 @@ timespan actor_system_config::stream_tick_duration() const noexcept {
                                    stream_max_batch_delay.count());
   return timespan{ns_count};
 }
+std::string actor_system_config::render(const error& err) {
+  std::string msg;
+  switch (static_cast<uint64_t>(err.category())) {
+    case atom_uint("system"):
+      return render_sec(err.code(), err.category(), err.context());
+    case atom_uint("exit"):
+      return render_exit_reason(err.code(), err.category(), err.context());
+    case atom_uint("parser"):
+      return render_pec(err.code(), err.category(), err.context());
+  }
+  return "unknown-error";
+}
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,
                                             const message& xs) {
@@ -342,7 +354,7 @@ std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
 
 std::string actor_system_config::render_pec(uint8_t x, atom_value,
                                             const message& xs) {
-  auto tmp = static_cast<exit_reason>(x);
+  auto tmp = static_cast<pec>(x);
   return deep_to_string(meta::type_name("parser_error"), tmp,
                         meta::omittable_if_empty(), xs);
 }

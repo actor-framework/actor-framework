@@ -20,7 +20,6 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
@@ -70,27 +69,31 @@ int exec_main(F fun, int argc, char** argv,
                 "second parameter of main function must take a subtype of "
                 "actor_system_config as const reference");
   using helper = exec_main_helper<typename trait::arg_types>;
-  // pass CLI options to config
+  // Pass CLI options to config.
   typename helper::config cfg;
-  cfg.parse(argc, argv, config_file_name);
-  // return immediately if a help text was printed
+  if (auto err = cfg.parse(argc, argv, config_file_name)) {
+    std::cerr << "error while parsing CLI and file options: "
+              << actor_system_config::render(err) << std::endl;
+    return EXIT_FAILURE;
+  }
+  // Return immediately if a help text was printed.
   if (cfg.cli_helptext_printed)
-    return 0;
-  // load modules
+    return EXIT_SUCCESS;
+  // Load modules.
   std::initializer_list<unit_t> unused{unit_t{cfg.template load<Ts>()}...};
   CAF_IGNORE_UNUSED(unused);
-  // pass config to the actor system
+  // Initialize the actor system.
   actor_system system{cfg};
   if (cfg.slave_mode) {
     if (!cfg.slave_mode_fun) {
       std::cerr << "cannot run slave mode, I/O module not loaded" << std::endl;
-      return 1;
+      return EXIT_FAILURE;
     }
     return cfg.slave_mode_fun(system, cfg);
   }
   helper f;
   f(fun, system, cfg);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 } // namespace caf
@@ -99,4 +102,3 @@ int exec_main(F fun, int argc, char** argv,
   int main(int argc, char** argv) {                                            \
     return ::caf::exec_main<__VA_ARGS__>(caf_main, argc, argv);                \
   }
-
