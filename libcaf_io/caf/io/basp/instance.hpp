@@ -68,18 +68,6 @@ public:
     /// for one of our local actors.
     virtual void proxy_announced(const node_id& nid, actor_id aid) = 0;
 
-    /// Called for each `dispatch_message` without `named_receiver_flag`.
-    virtual void deliver(const node_id& source_node, actor_id source_actor,
-                         actor_id dest_actor, message_id mid,
-                         std::vector<strong_actor_ptr>& forwarding_stack,
-                         message& msg) = 0;
-
-    /// Called for each `dispatch_message` with `named_receiver_flag`.
-    virtual void deliver(const node_id& source_node, actor_id source_actor,
-                         atom_value dest_actor, message_id mid,
-                         std::vector<strong_actor_ptr>& forwarding_stack,
-                         message& msg) = 0;
-
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
     virtual void learned_new_node_directly(const node_id& nid,
@@ -91,6 +79,9 @@ public:
 
     /// Called if a heartbeat was received from `nid`
     virtual void handle_heartbeat() = 0;
+
+    /// Returns the current CAF scheduler context.
+    virtual execution_unit* current_execution_unit() = 0;
 
     /// Returns the actor namespace associated to this BASP protocol instance.
     proxy_registry& proxies() {

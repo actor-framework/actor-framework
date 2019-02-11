@@ -61,21 +61,6 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // inherited from basp::instance::callee
   void proxy_announced(const node_id& nid, actor_id aid) override;
 
-  // inherited from basp::instance::callee
-  void deliver(const node_id& src_nid, actor_id src_aid,
-               actor_id dest_aid, message_id mid,
-               std::vector<strong_actor_ptr>& stages, message& msg) override;
-
-  // inherited from basp::instance::callee
-  void deliver(const node_id& src_nid, actor_id src_aid,
-               atom_value dest_name, message_id mid,
-               std::vector<strong_actor_ptr>& stages, message& msg) override;
-
-  // called from both overriden functions
-  void deliver(const node_id& src_nid, actor_id src_aid,
-               strong_actor_ptr dest, message_id mid,
-               std::vector<strong_actor_ptr>& stages, message& msg);
-
   // performs bookkeeping such as managing `spawn_servers`
   void learned_new_node(const node_id& nid);
 
@@ -94,6 +79,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
 
   // inherited from basp::instance::callee
   void handle_heartbeat() override;
+
+  // inherited from basp::instance::callee
+  execution_unit* current_execution_unit() override;
 
   /// Sets `this_context` by either creating or accessing state for `hdl`.
   void set_context(connection_handle hdl);

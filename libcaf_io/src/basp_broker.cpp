@@ -173,96 +173,6 @@ void basp_broker_state::handle_down_msg(down_msg& dm) {
   monitored_actors.erase(i);
 }
 
-void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
-                                actor_id dest_aid, message_id mid,
-                                std::vector<strong_actor_ptr>& stages,
-                                message& msg) {
-  CAF_LOG_TRACE(CAF_ARG(src_nid) << CAF_ARG(src_aid)
-                << CAF_ARG(dest_aid) << CAF_ARG(msg) << CAF_ARG(mid));
-  deliver(src_nid, src_aid, system().registry().get(dest_aid),
-          mid, stages, msg);
-}
-
-void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
-                                atom_value dest_name, message_id mid,
-                                std::vector<strong_actor_ptr>& stages,
-                                message& msg) {
-  CAF_LOG_TRACE(CAF_ARG(src_nid) << CAF_ARG(src_aid)
-                << CAF_ARG(dest_name) << CAF_ARG(msg) << CAF_ARG(mid));
-  deliver(src_nid, src_aid, system().registry().get(dest_name),
-          mid, stages, msg);
-}
-
-void basp_broker_state::deliver(const node_id& src_nid, actor_id src_aid,
-                                strong_actor_ptr dest, message_id mid,
-                                std::vector<strong_actor_ptr>& stages,
-                                message& msg) {
-  CAF_LOG_TRACE(CAF_ARG(src_nid) << CAF_ARG(src_aid) << CAF_ARG(dest)
-                << CAF_ARG(msg) << CAF_ARG(mid));
-  auto src = src_nid == this_node() ? system().registry().get(src_aid)
-                                    : proxies().get_or_put(src_nid, src_aid);
-  // Intercept link messages. Forwarding actor proxies signalize linking
-  // by sending link_atom/unlink_atom message with src = dest.
-  if (msg.type_token() == make_type_token<atom_value, strong_actor_ptr>()) {
-    switch (static_cast<uint64_t>(msg.get_as<atom_value>(0))) {
-      default:
-        break;
-      case link_atom::value.uint_value(): {
-        if (src_nid != this_node()) {
-          CAF_LOG_WARNING("received link message for another node");
-          return;
-        }
-        auto ptr = msg.get_as<strong_actor_ptr>(1);
-        if (!ptr) {
-          CAF_LOG_WARNING("received link message with invalid target");
-          return;
-        }
-        if (!src) {
-          CAF_LOG_DEBUG("received link for invalid actor, report error");
-          anon_send(actor_cast<actor>(ptr),
-                    make_error(sec::remote_linking_failed));
-          return;
-        }
-        static_cast<actor_proxy*>(ptr->get())->add_link(src->get());
-        return;
-      }
-      case unlink_atom::value.uint_value(): {
-        if (src_nid != this_node()) {
-          CAF_LOG_WARNING("received unlink message for an other node");
-          return;
-        }
-        const auto& ptr = msg.get_as<strong_actor_ptr>(1);
-        if (!ptr) {
-          CAF_LOG_DEBUG("received unlink message with invalid target");
-          return;
-        }
-        if (!src) {
-          CAF_LOG_DEBUG("received unlink for invalid actor, report error");
-          return;
-        }
-        static_cast<actor_proxy*>(ptr->get())->remove_link(src->get());
-        return;
-      }
-    }
-  }
-  if (!dest) {
-    auto rsn = exit_reason::remote_link_unreachable;
-    CAF_LOG_INFO("cannot deliver message, destination not found");
-    self->parent().notify<hook::invalid_message_received>(src_nid, src,
-                                                          invalid_actor_id,
-                                                          mid, msg);
-    if (mid.is_request() && src != nullptr) {
-      detail::sync_request_bouncer srb{rsn};
-      srb(src, mid);
-    }
-    return;
-  }
-  self->parent().notify<hook::message_received>(src_nid, src, dest, mid, msg);
-  dest->enqueue(make_mailbox_element(std::move(src), mid, std::move(stages),
-                                     std::move(msg)),
-                nullptr);
-}
-
 void basp_broker_state::learned_new_node(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
   if (spawn_servers.count(nid) > 0) {
@@ -321,14 +231,12 @@ void basp_broker_state::learned_new_node(const node_id& nid) {
 
 void basp_broker_state::learned_new_node_directly(const node_id& nid,
                                                   bool was_indirectly_before) {
-  CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
   if (!was_indirectly_before)
     learned_new_node(nid);
 }
 
 void basp_broker_state::learned_new_node_indirectly(const node_id& nid) {
-  CAF_ASSERT(this_context != nullptr);
   CAF_LOG_TRACE(CAF_ARG(nid));
   learned_new_node(nid);
   if (!automatic_connections)
@@ -401,6 +309,10 @@ void basp_broker_state::flush(connection_handle hdl) {
 
 void basp_broker_state::handle_heartbeat() {
   // nop
+}
+
+execution_unit* basp_broker_state::current_execution_unit() {
+  return self->context();
 }
 
 /******************************************************************************

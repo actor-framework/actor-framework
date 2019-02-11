@@ -22,6 +22,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/io/basp/remote_message_handler.hpp"
 #include "caf/io/basp/version.hpp"
 #include "caf/streambuf.hpp"
 
@@ -365,29 +366,6 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       callee_.learned_new_node_directly(source_node, was_indirect);
       break;
     }
-    case message_type::direct_message: {
-      // Deserialize payload.
-      binary_deserializer bd{ctx, *payload};
-      std::vector<strong_actor_ptr> forwarding_stack;
-      message msg;
-      if (auto err = bd(forwarding_stack, msg)) {
-        CAF_LOG_WARNING("unable to deserialize payload of direct message:"
-                        << ctx->system().render(err));
-        return false;
-      }
-      // Dispatch message to callee_.
-      auto source_node = tbl_.lookup_direct(hdl);
-      if (hdr.has(header::named_receiver_flag))
-        callee_.deliver(source_node, hdr.source_actor,
-                        static_cast<atom_value>(hdr.dest_actor),
-                        make_message_id(hdr.operation_data), forwarding_stack,
-                        msg);
-      else
-        callee_.deliver(source_node, hdr.source_actor, hdr.dest_actor,
-                        make_message_id(hdr.operation_data), forwarding_stack,
-                        msg);
-      break;
-    }
     case message_type::routed_message: {
       // Deserialize payload.
       binary_deserializer bd{ctx, *payload};
@@ -403,29 +381,32 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
         forward(ctx, dest_node, hdr, *payload);
         return true;
       }
-      std::vector<strong_actor_ptr> forwarding_stack;
-      message msg;
-      if (auto err = bd(forwarding_stack, msg)) {
-        CAF_LOG_WARNING("unable to deserialize payload of routed message:"
-                        << ctx->system().render(err));
-        return false;
-      }
-      // in case the sender of this message was received via a third node,
-      // we assume that that node to offers a route to the original source
       auto last_hop = tbl_.lookup_direct(hdl);
       if (source_node != none && source_node != this_node_
           && last_hop != source_node && !tbl_.lookup_direct(source_node)
           && tbl_.add_indirect(last_hop, source_node))
         callee_.learned_new_node_indirectly(source_node);
-      if (hdr.has(header::named_receiver_flag))
-        callee_.deliver(source_node, hdr.source_actor,
-                        static_cast<atom_value>(hdr.dest_actor),
-                        make_message_id(hdr.operation_data), forwarding_stack,
-                        msg);
-      else
-        callee_.deliver(source_node, hdr.source_actor, hdr.dest_actor,
-                        make_message_id(hdr.operation_data), forwarding_stack,
-                        msg);
+    }
+    // fall through
+    case message_type::direct_message: {
+      struct handler : remote_message_handler<handler> {
+        handler(proxy_registry* proxies, actor_system* system, node_id last_hop,
+                basp::header& hdr, buffer_type& payload)
+          : proxies_(proxies),
+            system_(system),
+            last_hop_(std::move(last_hop)),
+            hdr_(hdr),
+            payload_(payload) {
+          // nop
+        }
+        proxy_registry* proxies_;
+        actor_system* system_;
+        node_id last_hop_;
+        basp::header& hdr_;
+        buffer_type& payload_;
+      };
+      handler f{&proxies(), &system(), tbl_.lookup_direct(hdl), hdr, *payload};
+      f.handle_remote_message(callee_.current_execution_unit());
       break;
     }
     case message_type::monitor_message: {
