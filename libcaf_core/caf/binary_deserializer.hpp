@@ -18,8 +18,11 @@
 
 #pragma once
 
-#include "caf/stream_deserializer.hpp"
-#include "caf/streambuf.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+#include "caf/deserializer.hpp"
 
 namespace caf {
 
@@ -93,4 +96,3 @@ private:
 };
 
 } // namespace caf
-
