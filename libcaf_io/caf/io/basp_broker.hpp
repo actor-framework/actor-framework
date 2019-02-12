@@ -48,6 +48,9 @@ struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
   // inherited from proxy_registry::backend
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
 
+  // inherited from proxy_registry::backend
+  void set_last_hop(node_id* ptr) override;
+
   // inherited from basp::instance::callee
   void finalize_handshake(const node_id& nid, actor_id aid,
                           std::set<std::string>& sigs) override;

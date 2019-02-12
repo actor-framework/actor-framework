@@ -50,6 +50,8 @@ public:
     message msg;
     auto mid = make_message_id(dref.hdr_.operation_data);
     binary_deserializer source{ctx, dref.payload_};
+    // Registry setup.
+    dref.proxies_->set_last_hop(&dref.last_hop_);
     // Get the local receiver.
     if (dref.hdr_.has(basp::header::named_receiver_flag))
       dst = sys.registry().get(static_cast<atom_value>(dref.hdr_.dest_actor));

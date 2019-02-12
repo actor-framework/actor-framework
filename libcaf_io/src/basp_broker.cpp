@@ -36,6 +36,21 @@
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 
+namespace {
+
+#ifdef CAF_MSVC
+#  define THREAD_LOCAL thread_local
+#else
+#  define THREAD_LOCAL __thread
+#endif
+
+// Used by make_proxy to detect indirect connections.
+THREAD_LOCAL caf::node_id* t_last_hop = nullptr;
+
+#undef THREAD_LOCAL
+
+} // namespace
+
 namespace caf {
 namespace io {
 
@@ -64,17 +79,17 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   CAF_ASSERT(nid != this_node());
   if (nid == none || aid == invalid_actor_id)
     return nullptr;
+  auto mm = &system().middleman();
   // this member function is being called whenever we deserialize a
   // payload received from a remote node; if a remote node A sends
   // us a handle to a third node B, then we assume that A offers a route to B
-  if (nid != this_context->id
-      && instance.tbl().add_indirect(this_context->id, nid))
-    learned_new_node_indirectly(nid);
+  if (t_last_hop != nullptr && nid != *t_last_hop
+      && instance.tbl().add_indirect(*t_last_hop, nid))
+    mm->backend().dispatch([=] { learned_new_node_indirectly(nid); });
   // we need to tell remote side we are watching this actor now;
   // use a direct route if possible, i.e., when talking to a third node
   // create proxy and add functor that will be called if we
   // receive a basp::down_message
-  auto mm = &system().middleman();
   actor_config cfg;
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
     aid, nid, &(self->home_system()), cfg, self);
@@ -90,6 +105,10 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
     });
   });
   return res;
+}
+
+void basp_broker_state::set_last_hop(node_id* ptr) {
+  t_last_hop = ptr;
 }
 
 void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
@@ -269,6 +288,7 @@ void basp_broker_state::set_context(connection_handle hdl) {
           .first;
   }
   this_context = &i->second;
+  t_last_hop = &i->second.id;
 }
 
 void basp_broker_state::cleanup(connection_handle hdl) {

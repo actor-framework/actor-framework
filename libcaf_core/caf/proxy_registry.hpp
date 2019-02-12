@@ -42,6 +42,9 @@ public:
 
     /// Creates a new proxy instance.
     virtual strong_actor_ptr make_proxy(node_id, actor_id) = 0;
+
+    /// Sets the thread-local last-hop pointer to detect indirect connections.
+    virtual void set_last_hop(node_id* ptr) = 0;
   };
 
   proxy_registry(actor_system& sys, backend& be);
@@ -93,17 +96,21 @@ public:
   void clear();
 
   /// Returns the hosting actor system.
-  inline actor_system& system() {
+  actor_system& system() {
     return system_;
   }
 
   /// Returns the hosting actor system.
-  inline const actor_system& system() const {
+  const actor_system& system() const {
     return system_;
   }
 
-  inline size_t size() const {
+  size_t size() const {
     return proxies_.size();
+  }
+
+  void set_last_hop(node_id* ptr) {
+    backend_.set_last_hop(ptr);
   }
 
 private:
