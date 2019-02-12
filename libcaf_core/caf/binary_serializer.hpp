@@ -41,7 +41,7 @@ public:
 
   binary_serializer(execution_unit* ctx, buffer& buf);
 
-  // -- overridden member functions --------------------------------------------
+  // -- position management ----------------------------------------------------
 
   /// Sets the write position to given offset.
   /// @pre `offset <= buf.size()`
