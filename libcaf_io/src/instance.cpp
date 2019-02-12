@@ -52,11 +52,8 @@ connection_state instance::handle(execution_unit* ctx,
   CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
   // function object providing cleanup code on errors
   auto err = [&]() -> connection_state {
-    auto cb = make_callback([&](const node_id& nid) -> error {
+    if (auto nid = tbl_.erase_direct(dm.handle))
       callee_.purge_state(nid);
-      return none;
-    });
-    tbl_.erase_direct(dm.handle, cb);
     return close_connection;
   };
   std::vector<char>* payload = nullptr;
@@ -383,7 +380,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       }
       auto last_hop = tbl_.lookup_direct(hdl);
       if (source_node != none && source_node != this_node_
-          && last_hop != source_node && !tbl_.lookup_direct(source_node)
+          && last_hop != source_node
           && tbl_.add_indirect(last_hop, source_node))
         callee_.learned_new_node_indirectly(source_node);
     }

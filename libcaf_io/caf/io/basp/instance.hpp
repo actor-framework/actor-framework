@@ -20,19 +20,18 @@
 
 #include <limits>
 
-#include "caf/error.hpp"
-#include "caf/variant.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
-
-#include "caf/io/hook.hpp"
-#include "caf/io/middleman.hpp"
-
-#include "caf/io/basp/header.hpp"
+#include "caf/callback.hpp"
+#include "caf/error.hpp"
 #include "caf/io/basp/buffer_type.hpp"
+#include "caf/io/basp/connection_state.hpp"
+#include "caf/io/basp/header.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"
-#include "caf/io/basp/connection_state.hpp"
+#include "caf/io/hook.hpp"
+#include "caf/io/middleman.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace io {

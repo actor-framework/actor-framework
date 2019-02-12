@@ -279,11 +279,8 @@ void basp_broker_state::cleanup(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
   // Remove handle from the routing table and clean up any node-specific state
   // we might still have.
-  auto cb = make_callback([&](const node_id& nid) -> error {
+  if (auto nid = instance.tbl().erase_direct(hdl))
     purge_state(nid);
-    return none;
-  });
-  instance.tbl().erase_direct(hdl, cb);
   // Remove the context for `hdl`, making sure clients receive an error in case
   // this connection was closed during handshake.
   auto i = ctx.find(hdl);
