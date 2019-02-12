@@ -9,7 +9,7 @@ defaultReleaseBuildFlags = [
 
 // Default CMake flags for debug builds.
 defaultDebugBuildFlags = defaultReleaseBuildFlags + [
-    'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
+    'CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
     'CAF_LOG_LEVEL:STRING=TRACE',
 ]
 

@@ -284,7 +284,7 @@ if(NOT CAF_NO_AUTO_LIBCPP AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
 endif()
 # enable address sanitizer if requested by the user
-if(CAF_ENABLE_ADDRESS_SANITIZER)
+if(CAF_ENABLE_ADDRESS_SANITIZER AND NOT WIN32)
   # check whether address sanitizer is available
   set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
