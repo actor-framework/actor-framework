@@ -116,7 +116,6 @@ void instance::add_published_actor(uint16_t port,
   auto& entry = published_actors_[port];
   swap(entry.first, published_actor);
   swap(entry.second, published_interface);
-  notify<hook::actor_published>(entry.first, entry.second, port);
 }
 
 size_t instance::remove_published_actor(uint16_t port,
@@ -168,10 +167,8 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                 << CAF_ARG(msg));
   CAF_ASSERT(dest_node && this_node_ != dest_node);
   auto path = lookup(dest_node);
-  if (!path) {
-    //notify<hook::message_sending_failed>(sender, receiver, mid, msg);
+  if (!path)
     return false;
-  }
   auto& source_node = sender ? sender->node() : this_node_;
   if (dest_node == path->next_hop && source_node == this_node_) {
     header hdr{message_type::direct_message, flags, 0, mid.integer_value(),
@@ -189,7 +186,6 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   }
   flush(*path);
-  //notify<hook::message_sent>(sender, path->next_hop, receiver, mid, msg);
   return true;
 }
 
@@ -468,10 +464,8 @@ void instance::forward(execution_unit* ctx, const node_id& dest_node,
       return;
     }
     flush(*path);
-    notify<hook::message_forwarded>(hdr, &payload);
   } else {
     CAF_LOG_WARNING("cannot forward message, no route to destination");
-    notify<hook::message_forwarding_failed>(hdr, &payload);
   }
 }
 

@@ -29,7 +29,6 @@
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"
-#include "caf/io/hook.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/variant.hpp"
 
@@ -206,12 +205,6 @@ public:
 
   const node_id& this_node() const {
     return this_node_;
-  }
-
-  /// Invokes the callback(s) associated with given event.
-  template <hook::event_type Event, typename... Ts>
-  void notify(Ts&&... xs) {
-    system().middleman().template notify<Event>(std::forward<Ts>(xs)...);
   }
 
   actor_system& system() {

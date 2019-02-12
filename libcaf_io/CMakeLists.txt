@@ -18,7 +18,6 @@ set(LIBCAF_IO_SRCS
   src/default_multiplexer.cpp
   src/doorman.cpp
   src/header.cpp
-  src/hook.cpp
   src/instance.cpp
   src/interfaces.cpp
   src/ip_endpoint.cpp

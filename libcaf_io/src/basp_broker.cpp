@@ -428,7 +428,6 @@ behavior basp_broker::make_behavior() {
       state.instance.write_monitor_message(context(), state.get_buffer(hdl),
                                            proxy->node(), proxy->id());
       flush(hdl);
-      system().middleman().notify<hook::new_remote_actor>(proxy);
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {

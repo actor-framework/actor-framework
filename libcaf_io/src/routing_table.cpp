@@ -100,9 +100,6 @@ bool routing_table::erase_indirect(const node_id& dest) {
   auto i = indirect_.find(dest);
   if (i == indirect_.end())
     return false;
-  if (parent_->parent().has_hook())
-    for (auto& nid : i->second)
-      parent_->parent().notify<hook::route_lost>(nid, dest);
   indirect_.erase(i);
   return true;
 }
@@ -115,7 +112,6 @@ void routing_table::add_direct(const connection_handle& hdl,
   CAF_ASSERT(hdl_added && nid_added);
   CAF_IGNORE_UNUSED(hdl_added);
   CAF_IGNORE_UNUSED(nid_added);
-  parent_->parent().notify<hook::new_connection_established>(nid);
 }
 
 bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
@@ -129,8 +125,7 @@ bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
   // Add entry to our node ID set.
   auto& hops = indirect_[dest];
   auto result = hops.empty();
-  if (hops.emplace(hop).second)
-    parent_->parent().notify<hook::new_route_added>(hop, dest);
+  hops.emplace(hop);
   return result;
 }
 
