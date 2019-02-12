@@ -82,7 +82,6 @@ bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
 }
 
 void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
-  CAF_ASSERT(ctx != nullptr);
   actor tmp;
   { // lifetime scope of guard
     std::unique_lock<detail::shared_spinlock> guard(broker_mtx_);

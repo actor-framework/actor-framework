@@ -42,8 +42,6 @@ public:
 
     /// Creates a new proxy instance.
     virtual strong_actor_ptr make_proxy(node_id, actor_id) = 0;
-
-    virtual execution_unit* registry_context() = 0;
   };
 
   proxy_registry(actor_system& sys, backend& be);

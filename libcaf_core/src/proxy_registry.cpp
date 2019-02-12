@@ -115,7 +115,7 @@ void proxy_registry::kill_proxy(strong_actor_ptr& ptr, error rsn) {
   if (!ptr)
     return;
   auto pptr = static_cast<actor_proxy*>(actor_cast<abstract_actor*>(ptr));
-  pptr->kill_proxy(backend_.registry_context(), std::move(rsn));
+  pptr->kill_proxy(nullptr, std::move(rsn));
 }
 
 } // namespace caf

@@ -92,10 +92,6 @@ strong_actor_ptr basp_broker_state::make_proxy(node_id nid, actor_id aid) {
   return res;
 }
 
-execution_unit* basp_broker_state::registry_context() {
-  return self->context();
-}
-
 void basp_broker_state::finalize_handshake(const node_id& nid, actor_id aid,
                                            std::set<std::string>& sigs) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid) << CAF_ARG(sigs));
