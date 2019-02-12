@@ -98,14 +98,14 @@ public:
       switch (static_cast<uint64_t>(msg.get_as<atom_value>(0))) {
         default:
           break;
-        case link_atom::value.uint_value(): {
+        case link_atom::uint_value(): {
           if (ptr != nullptr)
             static_cast<actor_proxy*>(ptr->get())->add_link(dst->get());
           else
             CAF_LOG_WARNING("received link message with invalid target");
           return;
         }
-        case unlink_atom::value.uint_value(): {
+        case unlink_atom::uint_value(): {
           if (ptr != nullptr)
             static_cast<actor_proxy*>(ptr->get())->remove_link(dst->get());
           else
