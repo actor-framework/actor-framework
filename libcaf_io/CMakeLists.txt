@@ -47,6 +47,8 @@ set(LIBCAF_IO_SRCS
   src/tcp.cpp
   src/test_multiplexer.cpp
   src/udp.cpp
+  src/worker.cpp
+  src/worker_hub.cpp
 )
 
 add_custom_target(libcaf_io)
