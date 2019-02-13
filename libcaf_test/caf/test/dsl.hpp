@@ -464,7 +464,7 @@ public:
         return;
       auto res = try_extract<Ts...>(dest_);
       if (res != caf::none)
-        CAF_FAIL("received disallowed message: " << CAF_ARG(*res));
+        CAF_FAIL("received disallowed message: " << caf::deep_to_string(*ptr));
     };
   }
 
