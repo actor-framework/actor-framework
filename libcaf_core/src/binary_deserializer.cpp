@@ -24,6 +24,7 @@
 
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 
