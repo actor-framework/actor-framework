@@ -69,6 +69,9 @@ public:
   void push(execution_unit* ctx, uint64_t id, strong_actor_ptr receiver,
             mailbox_element_ptr content);
 
+  /// Marks given ID as dropped, effectively skipping it without effect.
+  void drop(execution_unit* ctx, uint64_t id);
+
   /// Returns the next ascending ID.
   uint64_t new_id();
 };

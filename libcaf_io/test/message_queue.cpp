@@ -145,4 +145,15 @@ CAF_TEST(push order 2-1-0) {
   expect((ok_atom, int), from(self).to(testee).with(_, 2));
 }
 
+CAF_TEST(dropping) {
+  acquire_ids(3);
+  push(2);
+  disallow((ok_atom, int), from(self).to(testee));
+  queue.drop(nullptr, 1);
+  disallow((ok_atom, int), from(self).to(testee));
+  push(0);
+  expect((ok_atom, int), from(self).to(testee).with(_, 0));
+  expect((ok_atom, int), from(self).to(testee).with(_, 2));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

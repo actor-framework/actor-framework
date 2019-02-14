@@ -18,6 +18,8 @@
 
 #include "caf/io/basp/message_queue.hpp"
 
+#include <iterator>
+
 namespace caf {
 namespace io {
 namespace basp {
@@ -29,7 +31,6 @@ message_queue::message_queue() : next_id(0), next_undelivered(0) {
 void message_queue::push(execution_unit* ctx, uint64_t id,
                          strong_actor_ptr receiver,
                          mailbox_element_ptr content) {
-  CAF_ASSERT(receiver != nullptr);
   std::unique_lock<std::mutex> guard{lock};
   CAF_ASSERT(id >= next_undelivered);
   CAF_ASSERT(id < next_id);
@@ -37,7 +38,8 @@ void message_queue::push(execution_unit* ctx, uint64_t id,
   auto last = pending.end();
   if (id == next_undelivered) {
     // Dispatch current head.
-    receiver->enqueue(std::move(content), ctx);
+    if (receiver != nullptr)
+      receiver->enqueue(std::move(content), ctx);
     // Check whether we can deliver more.
     if (first == last || first->id != next_undelivered + 1) {
       ++next_undelivered;
@@ -52,7 +54,8 @@ void message_queue::push(execution_unit* ctx, uint64_t id,
     CAF_ASSERT(last_hit != first);
     auto new_last = last_hit == last ? last : last_hit + 1;
     for (auto i = first; i != new_last; ++i)
-      i->receiver->enqueue(std::move(i->content), ctx);
+      if (i->receiver != nullptr)
+        i->receiver->enqueue(std::move(i->content), ctx);
     next_undelivered += static_cast<size_t>(std::distance(first, new_last)) + 1;
     pending.erase(first, new_last);
     CAF_ASSERT(next_undelivered <= next_id);
@@ -62,8 +65,12 @@ void message_queue::push(execution_unit* ctx, uint64_t id,
   auto pred = [&](const actor_msg& x) {
     return x.id >= id;
   };
-  auto i = std::find_if(first, last, pred);
-  pending.emplace(i, actor_msg{id, std::move(receiver), std::move(content)});
+  pending.emplace(std::find_if(first, last, pred),
+                  actor_msg{id, std::move(receiver), std::move(content)});
+}
+
+void message_queue::drop(execution_unit* ctx, uint64_t id) {
+  push(ctx, id, nullptr, nullptr);
 }
 
 uint64_t message_queue::new_id() {
