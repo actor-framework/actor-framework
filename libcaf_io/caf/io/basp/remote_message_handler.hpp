@@ -24,6 +24,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/io/basp/header.hpp"
@@ -50,6 +51,9 @@ public:
     message msg;
     auto mid = make_message_id(dref.hdr_.operation_data);
     binary_deserializer source{ctx, dref.payload_};
+    // Make sure to drop the message in case we return abnormally.
+    auto guard = detail::make_scope_guard(
+      [&] { dref.queue_->drop(ctx, dref.msg_id_); });
     // Registry setup.
     dref.proxies_->set_last_hop(&dref.last_hop_);
     // Get the local receiver.
@@ -117,9 +121,10 @@ public:
       }
     }
     // Ship the message.
-    dst->enqueue(make_mailbox_element(std::move(src), mid, std::move(stages),
-                                      std::move(msg)),
-                 ctx);
+    guard.disable();
+    dref.queue_->push(ctx, dref.msg_id_, std::move(dst),
+                      make_mailbox_element(std::move(src), mid,
+                                           std::move(stages), std::move(msg)));
   }
 };
 

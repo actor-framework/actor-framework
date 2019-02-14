@@ -563,6 +563,7 @@ public:
     cfg.set("scheduler.policy", caf::atom("testing"));
     cfg.set("logger.inline-output", true);
     cfg.set("middleman.network-backend", caf::atom("testing"));
+    cfg.set("middleman.workers", size_t{0});
     return cfg;
   }
 

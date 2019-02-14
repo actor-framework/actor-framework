@@ -111,11 +111,12 @@ struct node {
 class fixture {
 public:
   fixture(bool autoconn = false)
-      : sys(cfg.load<io::middleman, network::test_multiplexer>()
-                  .set("middleman.enable-automatic-connections", autoconn)
-                  .set("scheduler.policy", autoconn ? caf::atom("testing")
-                                                    : caf::atom("stealing"))
-                  .set("middleman.attach-utility-actors", autoconn)) {
+    : sys(cfg.load<io::middleman, network::test_multiplexer>()
+            .set("middleman.enable-automatic-connections", autoconn)
+            .set("middleman.workers", size_t{0})
+            .set("scheduler.policy",
+                 autoconn ? caf::atom("testing") : caf::atom("stealing"))
+            .set("middleman.attach-utility-actors", autoconn)) {
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);

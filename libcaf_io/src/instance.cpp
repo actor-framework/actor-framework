@@ -24,6 +24,8 @@
 #include "caf/defaults.hpp"
 #include "caf/io/basp/remote_message_handler.hpp"
 #include "caf/io/basp/version.hpp"
+#include "caf/io/basp/worker.hpp"
+#include "caf/settings.hpp"
 #include "caf/streambuf.hpp"
 
 namespace caf {
@@ -44,6 +46,10 @@ instance::instance(abstract_broker* parent, callee& lstnr)
       this_node_(parent->system().node()),
       callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
+  auto workers = get_or(config(), "middleman.workers",
+                        defaults::middleman::workers);
+  for (size_t i = 0; i < workers; ++i)
+    hub_.push_new_worker(queue_, proxies());
 }
 
 connection_state instance::handle(execution_unit* ctx,
@@ -219,7 +225,7 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
   }
   CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
   auto writer = make_callback([&](serializer& sink) -> error {
-    auto app_ids = get_or(callee_.config(), "middleman.app-identifiers",
+    auto app_ids = get_or(config(), "middleman.app-identifiers",
                           defaults::middleman::app_identifiers);
     auto aid = invalid_actor_id;
     auto iface = std::set<std::string>{};
@@ -299,7 +305,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
         return false;
       }
       // Check the application ID.
-      auto whitelist = get_or(callee_.config(), "middleman.app-identifiers",
+      auto whitelist = get_or(config(), "middleman.app-identifiers",
                               defaults::middleman::app_identifiers);
       auto i = std::find_first_of(app_ids.begin(), app_ids.end(),
                                   whitelist.begin(), whitelist.end());
@@ -382,24 +388,40 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
     }
     // fall through
     case message_type::direct_message: {
-      struct handler : remote_message_handler<handler> {
-        handler(proxy_registry* proxies, actor_system* system, node_id last_hop,
-                basp::header& hdr, buffer_type& payload)
-          : proxies_(proxies),
-            system_(system),
-            last_hop_(std::move(last_hop)),
-            hdr_(hdr),
-            payload_(payload) {
-          // nop
-        }
-        proxy_registry* proxies_;
-        actor_system* system_;
-        node_id last_hop_;
-        basp::header& hdr_;
-        buffer_type& payload_;
-      };
-      handler f{&proxies(), &system(), tbl_.lookup_direct(hdl), hdr, *payload};
-      f.handle_remote_message(callee_.current_execution_unit());
+      auto worker = hub_.pop();
+      auto last_hop = tbl_.lookup_direct(hdl);
+      if (worker != nullptr) {
+        CAF_LOG_DEBUG("launch BASP worker for deserializing a"
+                      << hdr.operation);
+        worker->launch(last_hop, hdr, *payload);
+      } else {
+        CAF_LOG_DEBUG("out of BASP workers, continue deserializing a"
+                      << hdr.operation);
+        // If no worker is available then we have no other choice than to take
+        // the performance hit and deserialize in this thread.
+        struct handler : remote_message_handler<handler> {
+          handler(message_queue* queue, proxy_registry* proxies,
+                  actor_system* system, node_id last_hop, basp::header& hdr,
+                  buffer_type& payload)
+            : queue_(queue),
+              proxies_(proxies),
+              system_(system),
+              last_hop_(std::move(last_hop)),
+              hdr_(hdr),
+              payload_(payload) {
+            msg_id_ = queue_->new_id();
+          }
+          message_queue* queue_;
+          proxy_registry* proxies_;
+          actor_system* system_;
+          node_id last_hop_;
+          basp::header& hdr_;
+          buffer_type& payload_;
+          uint64_t msg_id_;
+        };
+        handler f{&queue_, &proxies(), &system(), last_hop, hdr, *payload};
+        f.handle_remote_message(callee_.current_execution_unit());
+      }
       break;
     }
     case message_type::monitor_message: {

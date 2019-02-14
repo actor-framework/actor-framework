@@ -27,8 +27,10 @@
 #include "caf/io/basp/buffer_type.hpp"
 #include "caf/io/basp/connection_state.hpp"
 #include "caf/io/basp/header.hpp"
+#include "caf/io/basp/message_queue.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"
+#include "caf/io/basp/worker_hub.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/variant.hpp"
 
@@ -43,12 +45,18 @@ class instance {
 public:
   /// Provides a callback-based interface for certain BASP events.
   class callee {
-  protected:
-    using buffer_type = std::vector<char>;
   public:
+    // -- member types ---------------------------------------------------------
+
+    using buffer_type = std::vector<char>;
+
+    // -- constructors, destructors, and assignment operators ------------------
+
     explicit callee(actor_system& sys, proxy_registry::backend& backend);
 
     virtual ~callee();
+
+    // -- pure virtual functions -----------------------------------------------
 
     /// Called if a server handshake was received and
     /// the connection to `nid` is established.
@@ -84,16 +92,6 @@ public:
     /// Returns the actor namespace associated to this BASP protocol instance.
     proxy_registry& proxies() {
       return namespace_;
-    }
-
-    /// Returns the hosting actor system.
-    actor_system& system() {
-      return namespace_.system();
-    }
-
-    /// Returns the system-wide configuration.
-    const actor_system_config& config() const {
-      return namespace_.system().config();
     }
 
     /// Returns a reference to the sent buffer.
@@ -208,7 +206,11 @@ public:
   }
 
   actor_system& system() {
-    return callee_.system();
+    return callee_.proxies().system();
+  }
+
+  const actor_system_config& config() {
+    return system().config();
   }
 
   bool handle(execution_unit* ctx, connection_handle hdl, header& hdr,
@@ -222,6 +224,8 @@ private:
   published_actor_map published_actors_;
   node_id this_node_;
   callee& callee_;
+  message_queue queue_;
+  worker_hub hub_;
 };
 
 /// @}

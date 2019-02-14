@@ -92,6 +92,7 @@ const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;
 const size_t cached_udp_buffers = 10;
 const size_t max_pending_msgs = 10;
+const size_t workers = std::thread::hardware_concurrency() / 4;
 
 } // namespace middleman
 
