@@ -18,14 +18,93 @@
 
 #pragma once
 
-#include "caf/stream_serializer.hpp"
-#include "caf/streambuf.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+#include "caf/serializer.hpp"
 
 namespace caf {
 
-/// A stream serializer that writes into an unbounded contiguous character
-/// sequence.
-using binary_serializer = stream_serializer<vectorbuf>;
+/// Implements the serializer interface with a binary serialization protocol.
+class binary_serializer final : public serializer {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using super = serializer;
+
+  using buffer = std::vector<char>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  binary_serializer(actor_system& sys, buffer& buf);
+
+  binary_serializer(execution_unit* ctx, buffer& buf);
+
+  // -- position management ----------------------------------------------------
+
+  /// Sets the write position to given offset.
+  /// @pre `offset <= buf.size()`
+  void seek(size_t offset);
+
+  /// Jumps `num_bytes` forward. Resizes the buffer (filling it with zeros)
+  /// when skipping past the end.
+  void skip(size_t num_bytes);
+
+  // -- overridden member functions --------------------------------------------
+
+  error begin_object(uint16_t& typenr, std::string& name) override;
+
+  error end_object() override;
+
+  error begin_sequence(size_t& list_size) override;
+
+  error end_sequence() override;
+
+  error apply_raw(size_t num_bytes, void* data) override;
+
+  // -- properties -------------------------------------------------------------
+
+  buffer& buf() {
+    return buf_;
+  }
+
+  const buffer& buf() const {
+    return buf_;
+  }
+
+protected:
+  error apply_impl(int8_t&) override;
+
+  error apply_impl(uint8_t&) override;
+
+  error apply_impl(int16_t&) override;
+
+  error apply_impl(uint16_t&) override;
+
+  error apply_impl(int32_t&) override;
+
+  error apply_impl(uint32_t&) override;
+
+  error apply_impl(int64_t&) override;
+
+  error apply_impl(uint64_t&) override;
+
+  error apply_impl(float&) override;
+
+  error apply_impl(double&) override;
+
+  error apply_impl(long double&) override;
+
+  error apply_impl(std::string&) override;
+
+  error apply_impl(std::u16string&) override;
+
+  error apply_impl(std::u32string&) override;
+
+private:
+  buffer& buf_;
+  buffer::iterator write_pos_;
+};
 
 } // namespace caf
-

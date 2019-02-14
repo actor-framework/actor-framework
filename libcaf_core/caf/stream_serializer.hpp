@@ -125,65 +125,81 @@ protected:
     return none;
   }
 
-  error apply_builtin(builtin type, void* val) override {
-    CAF_ASSERT(val != nullptr);
-    switch (type) {
-      default: // i8_v or u8_v
-        CAF_ASSERT(type == i8_v || type == u8_v);
-        return apply_raw(sizeof(uint8_t), val);
-      case i16_v:
-      case u16_v:
-        return apply_int(*reinterpret_cast<uint16_t*>(val));
-      case i32_v:
-      case u32_v:
-        return apply_int(*reinterpret_cast<uint32_t*>(val));
-      case i64_v:
-      case u64_v:
-        return apply_int(*reinterpret_cast<uint64_t*>(val));
-      case float_v:
-        return apply_int(detail::pack754(*reinterpret_cast<float*>(val)));
-      case double_v:
-        return apply_int(detail::pack754(*reinterpret_cast<double*>(val)));
-      case ldouble_v: {
-        // the IEEE-754 conversion does not work for long double
-        // => fall back to string serialization (event though it sucks)
-        std::ostringstream oss;
-        oss << std::setprecision(std::numeric_limits<long double>::digits)
-            << *reinterpret_cast<long double*>(val);
-        auto tmp = oss.str();
-        return apply(tmp);
-      }
-      case string8_v: {
-        auto str = reinterpret_cast<std::string*>(val);
-        auto s = str->size();
-        auto data = reinterpret_cast<char_type*>(
-                      const_cast<std::string::value_type*>(str->data()));
-        return error::eval([&] { return begin_sequence(s); },
-                           [&] { return apply_raw(str->size(),  data); },
-                           [&] { return end_sequence(); });
-      }
-      case string16_v: {
-        auto str = reinterpret_cast<std::u16string*>(val);
-        auto s = str->size();
-        // the standard does not guarantee that char16_t is exactly 16 bits...
-        return error::eval([&] { return begin_sequence(s); },
-                           [&] { return consume_range_c<uint16_t>(*str); },
-                           [&] { return end_sequence(); });
-      }
-      case string32_v: {
-        auto str = reinterpret_cast<std::u32string*>(val);
-        auto s = str->size();
-        // the standard does not guarantee that char32_t is exactly 32 bits...
-        return error::eval([&] { return begin_sequence(s); },
-                           [&] { return consume_range_c<uint32_t>(*str); },
-                           [&] { return end_sequence(); });
-      }
-    }
+  error apply_impl(int8_t& x) override {
+    return apply_raw(sizeof(int8_t), &x);
+  }
+
+  error apply_impl(uint8_t& x) override {
+    return apply_raw(sizeof(uint8_t), &x);
+  }
+
+  error apply_impl(int16_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(uint16_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(int32_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(uint32_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(int64_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(uint64_t& x) override {
+    return apply_int(x);
+  }
+
+  error apply_impl(float& x) override {
+    return apply_int(detail::pack754(x));
+  }
+
+  error apply_impl(double& x) override {
+    return apply_int(detail::pack754(x));
+  }
+
+  error apply_impl(long double& x) override {
+    // The IEEE-754 conversion does not work for long double
+    // => fall back to string serialization (event though it sucks).
+    std::ostringstream oss;
+    oss << std::setprecision(std::numeric_limits<long double>::digits) << x;
+    auto tmp = oss.str();
+    return apply_impl(tmp);
+  }
+
+  error apply_impl(std::string& x) override {
+    auto str_size = x.size();
+    auto data = const_cast<char*>(x.c_str());
+    return error::eval([&] { return begin_sequence(str_size); },
+                       [&] { return apply_raw(x.size(), data); },
+                       [&] { return end_sequence(); });
+  }
+
+  error apply_impl(std::u16string& x) override {
+    auto str_size = x.size();
+    return error::eval([&] { return begin_sequence(str_size); },
+                       [&] { return consume_range_c<uint16_t>(x); },
+                       [&] { return end_sequence(); });
+  }
+
+  error apply_impl(std::u32string& x) override {
+    auto str_size = x.size();
+    return error::eval([&] { return begin_sequence(str_size); },
+                       [&] { return consume_range_c<uint32_t>(x); },
+                       [&] { return end_sequence(); });
   }
 
   template <class T>
   error apply_int(T x) {
-    auto y = detail::to_network_order(x);
+    using unsigned_type = typename std::make_unsigned<T>::type;
+    auto y = detail::to_network_order(static_cast<unsigned_type>(x));
     return apply_raw(sizeof(T), &y);
   }
 

@@ -18,14 +18,81 @@
 
 #pragma once
 
-#include "caf/stream_deserializer.hpp"
-#include "caf/streambuf.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+#include "caf/deserializer.hpp"
 
 namespace caf {
 
-/// A stream serializer that writes into an unbounded contiguous character
-/// sequence.
-using binary_deserializer = stream_deserializer<charbuf>;
+/// Implements the deserializer interface with a binary serialization protocol.
+class binary_deserializer final : public deserializer {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using super = deserializer;
+
+  using buffer = std::vector<char>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  binary_deserializer(actor_system& sys, const char* buf, size_t buf_size);
+
+  binary_deserializer(execution_unit* ctx, const char* buf, size_t buf_size);
+
+  binary_deserializer(actor_system& sys, const buffer& buf);
+
+  binary_deserializer(execution_unit* ctx, const buffer& buf);
+
+  // -- overridden member functions --------------------------------------------
+
+  error begin_object(uint16_t& typenr, std::string& name) override;
+
+  error end_object() override;
+
+  error begin_sequence(size_t& list_size) override;
+
+  error end_sequence() override;
+
+  error apply_raw(size_t num_bytes, void* data) override;
+
+protected:
+  error apply_impl(int8_t&) override;
+
+  error apply_impl(uint8_t&) override;
+
+  error apply_impl(int16_t&) override;
+
+  error apply_impl(uint16_t&) override;
+
+  error apply_impl(int32_t&) override;
+
+  error apply_impl(uint32_t&) override;
+
+  error apply_impl(int64_t&) override;
+
+  error apply_impl(uint64_t&) override;
+
+  error apply_impl(float&) override;
+
+  error apply_impl(double&) override;
+
+  error apply_impl(long double&) override;
+
+  error apply_impl(std::string&) override;
+
+  error apply_impl(std::u16string&) override;
+
+  error apply_impl(std::u32string&) override;
+
+private:
+  bool range_check(size_t read_size) {
+    return pos_ + read_size <= end_;
+  }
+
+  const char* pos_;
+  const char* end_;
+};
 
 } // namespace caf
-

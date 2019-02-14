@@ -198,24 +198,18 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
 void instance::write(execution_unit* ctx, buffer_type& buf,
                      header& hdr, payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
-  error err;
+  binary_serializer sink{ctx, buf};
   if (pw != nullptr) {
-    auto pos = buf.size();
-    // write payload first (skip first 72 bytes and write header later)
-    char placeholder[basp::header_size];
-    buf.insert(buf.end(), std::begin(placeholder), std::end(placeholder));
-    binary_serializer bs{ctx, buf};
-    (*pw)(bs);
-    auto plen = buf.size() - pos - basp::header_size;
-    CAF_ASSERT(plen <= std::numeric_limits<uint32_t>::max());
-    hdr.payload_len = static_cast<uint32_t>(plen);
-    stream_serializer<charbuf> out{ctx, buf.data() + pos, basp::header_size};
-    err = out(hdr);
-  } else {
-    binary_serializer bs{ctx, buf};
-    err = bs(hdr);
+    // Write the BASP header after the payload.
+    auto header_offset = buf.size();
+    sink.skip(header_size);
+    if (auto err = (*pw)(sink))
+      CAF_LOG_ERROR(CAF_ARG(err));
+    sink.seek(header_offset);
+    auto payload_len = buf.size() - (header_offset + basp::header_size);
+    hdr.payload_len = static_cast<uint32_t>(payload_len);
   }
-  if (err)
+  if (auto err = sink(hdr))
     CAF_LOG_ERROR(CAF_ARG(err));
 }
 
