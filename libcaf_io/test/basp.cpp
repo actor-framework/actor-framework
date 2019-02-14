@@ -200,17 +200,17 @@ public:
 
   // implementation of the Binary Actor System Protocol
   basp::instance& instance() {
-    return aut()->state.instance;
+    return aut()->instance;
   }
 
   // our routing table (filled by BASP)
   basp::routing_table& tbl() {
-    return aut()->state.instance.tbl();
+    return aut()->instance.tbl();
   }
 
   // access to proxy instances
   proxy_registry& proxies() {
-    return aut()->state.proxies();
+    return aut()->proxies();
   }
 
   // stores the singleton pointer for convenience
