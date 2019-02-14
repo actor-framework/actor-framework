@@ -18,6 +18,7 @@
 
 #include "caf/binary_serializer.hpp"
 
+#include <cstring>
 #include <iomanip>
 #include <sstream>
 
@@ -89,11 +90,11 @@ error binary_serializer::apply_raw(size_t num_bytes, void* data) {
     buf_.insert(last, ptr, ptr + num_bytes);
     write_pos_ = buf_.end();
   } else if (write_pos_ + num_bytes < last) {
-    std::copy(ptr, ptr + num_bytes, write_pos_);
+    memcpy(&(*write_pos_), ptr, num_bytes);
     write_pos_ += num_bytes;
   } else {
     auto remaining = static_cast<size_t>(last - write_pos_);
-    std::copy(ptr, ptr + remaining, write_pos_);
+    memcpy(&(*write_pos_), ptr, remaining);
     buf_.insert(last, ptr + remaining, ptr + num_bytes);
     write_pos_ = buf_.end();
   }
