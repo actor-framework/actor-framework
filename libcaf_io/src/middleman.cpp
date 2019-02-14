@@ -329,12 +329,18 @@ void middleman::stop() {
     while (backend().try_run_once())
       ; // nop
   }
-  named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
   if (!get_or(config(), "middleman.attach-utility-actors", false))
     self->wait_for(manager_);
   destroy(manager_);
+  // Note: we intentionally don't call `named_brokers_.clear()` here. The BASP
+  // broker must outlive the scheduler threads. The scheduler is stopped
+  // *after* the MM. However, the BASP workers still need to return to their
+  // hub safely, should some of them are still running at this point. By not
+  // clearing the container, we keep the BASP broker (and thus the BASP
+  // instance) alive until the MM module gets destroyed. At that point, all
+  // BASP workers are safe in their hub.
 }
 
 void middleman::init(actor_system_config& cfg) {
