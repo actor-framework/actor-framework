@@ -57,6 +57,18 @@ public:
 
   error apply_raw(size_t num_bytes, void* data) override;
 
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the current read position.
+  const char* pos() const {
+    return pos_;
+  }
+
+  /// Returns the past-the-end iterator.
+  const char* end() const {
+    return end_;
+  }
+
 protected:
   error apply_impl(int8_t&) override;
 
