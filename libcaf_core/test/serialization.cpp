@@ -60,6 +60,7 @@
 #include "caf/stream_deserializer.hpp"
 #include "caf/stream_serializer.hpp"
 #include "caf/streambuf.hpp"
+#include "caf/variant.hpp"
 
 #include "caf/detail/enum_to_string.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
@@ -528,6 +529,17 @@ SERIALIZATION_TEST(non_empty_vector) {
   auto buf = serialize(foo);
   deserialize(buf, bar);
   CAF_CHECK_EQUAL(foo, bar);
+}
+
+SERIALIZATION_TEST(variant_with_tree_types) {
+  CAF_MESSAGE("deserializing into a non-empty vector overrides any content");
+  using test_variant = variant<int, double, std::string>;
+  test_variant x{42};
+  CAF_CHECK_EQUAL(x, roundtrip(x));
+  x = 12.34;
+  CAF_CHECK_EQUAL(x, roundtrip(x));
+  x = std::string{"foobar"};
+  CAF_CHECK_EQUAL(x, roundtrip(x));
 }
 
 // -- our vector<bool> serialization packs into an uint64_t. Hence, the
