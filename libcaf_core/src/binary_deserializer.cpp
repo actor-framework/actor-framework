@@ -86,10 +86,17 @@ error binary_deserializer::end_object() {
 }
 
 error binary_deserializer::begin_sequence(size_t& list_size) {
-  auto s = static_cast<uint32_t>(list_size);
-  if (auto err = apply(s))
-    return err;
-  list_size = s;
+  // Use varbyte encoding to compress sequence size on the wire.
+  uint32_t x = 0;
+  int n = 0;
+  uint8_t low7;
+  do {
+    if (auto err = apply_impl(low7))
+      return err;
+    x |= static_cast<uint32_t>((low7 & 0x7F)) << (7 * n);
+    ++n;
+  } while (low7 & 0x80);
+  list_size = x;
   return none;
 }
 

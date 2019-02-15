@@ -71,8 +71,19 @@ error binary_serializer::end_object() {
 }
 
 error binary_serializer::begin_sequence(size_t& list_size) {
-  auto s = static_cast<uint32_t>(list_size);
-  return apply(s);
+  // Use varbyte encoding to compress sequence size on the wire.
+  // For 64-bit values, the encoded representation cannot get larger than 10
+  // bytes. A scratch space of 16 bytes suffices as upper bound.
+  uint8_t buf[16];
+  auto i = buf;
+  auto x = static_cast<uint32_t>(list_size);
+  while (x > 0x7f) {
+    *i++ = (static_cast<uint8_t>(x) & 0x7f) | 0x80;
+    x >>= 7;
+  }
+  *i++ = static_cast<uint8_t>(x) & 0x7f;
+  apply_raw(static_cast<size_t>(i - buf), buf);
+  return none;
 }
 
 error binary_serializer::end_sequence() {
