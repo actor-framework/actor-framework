@@ -60,14 +60,17 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the current read position.
-  const char* pos() const {
-    return pos_;
+  const char* current() const {
+    return current_;
   }
 
   /// Returns the past-the-end iterator.
   const char* end() const {
     return end_;
   }
+
+  /// Returns how many bytes are still available to read.
+  size_t remaining() const;
 
 protected:
   error apply_impl(int8_t&) override;
@@ -100,10 +103,10 @@ protected:
 
 private:
   bool range_check(size_t read_size) {
-    return pos_ + read_size <= end_;
+    return current_ + read_size <= end_;
   }
 
-  const char* pos_;
+  const char* current_;
   const char* end_;
 };
 
