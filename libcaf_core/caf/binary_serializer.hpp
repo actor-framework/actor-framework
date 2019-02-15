@@ -41,6 +41,14 @@ public:
 
   binary_serializer(execution_unit* ctx, buffer& buf);
 
+  binary_serializer(binary_serializer&&) = default;
+
+  binary_serializer& operator=(binary_serializer&&) = default;
+
+  binary_serializer(const binary_serializer&) = delete;
+
+  binary_serializer& operator=(const binary_serializer&) = delete;
+
   // -- position management ----------------------------------------------------
 
   /// Sets the write position to given offset.
@@ -104,7 +112,7 @@ protected:
 
 private:
   buffer& buf_;
-  buffer::iterator write_pos_;
+  size_t write_pos_;
 };
 
 } // namespace caf

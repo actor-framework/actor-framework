@@ -38,28 +38,24 @@ error apply_int(binary_serializer& bs, T x) {
 } // namespace <anonmyous>
 
 binary_serializer::binary_serializer(actor_system& sys, buffer& buf)
-  : super(sys), buf_(buf), write_pos_(buf.end()) {
+  : super(sys), buf_(buf), write_pos_(buf_.size()) {
   // nop
 }
 
 binary_serializer::binary_serializer(execution_unit* ctx, buffer& buf)
-  : super(ctx), buf_(buf), write_pos_(buf.end()) {
+  : super(ctx), buf_(buf), write_pos_(buf_.size()) {
   // nop
 }
 
 void binary_serializer::seek(size_t offset) {
-  write_pos_ = buf_.begin() + offset;
+  write_pos_ = offset;
 }
 
 void binary_serializer::skip(size_t num_bytes) {
-  auto last = buf_.end();
-  auto remaining = static_cast<size_t>(std::distance(write_pos_, last));
-  if (remaining >= num_bytes) {
-    write_pos_ += num_bytes;
-  } else {
-    buf_.insert(last, num_bytes - remaining, 0);
-    write_pos_ = buf_.end();
-  }
+  auto remaining = buf_.size() - write_pos_;
+  if (remaining < num_bytes)
+    buf_.insert(buf_.end(), num_bytes - remaining, 0);
+  write_pos_ += num_bytes;
 }
 
 error binary_serializer::begin_object(uint16_t& nr, std::string& name) {
@@ -84,20 +80,21 @@ error binary_serializer::end_sequence() {
 }
 
 error binary_serializer::apply_raw(size_t num_bytes, void* data) {
+  CAF_ASSERT(write_pos_ <= buf_.size());
   auto ptr = reinterpret_cast<char*>(data);
-  auto last = buf_.end();
-  if (write_pos_ == last) {
-    buf_.insert(last, ptr, ptr + num_bytes);
-    write_pos_ = buf_.end();
-  } else if (write_pos_ + num_bytes < last) {
-    memcpy(&(*write_pos_), ptr, num_bytes);
-    write_pos_ += num_bytes;
+  auto buf_size = buf_.size();
+  if (write_pos_ == buf_size) {
+    buf_.insert(buf_.end(), ptr, ptr + num_bytes);
+  } else if (write_pos_ + num_bytes <= buf_size) {
+    memcpy(buf_.data() + write_pos_, ptr, num_bytes);
   } else {
-    auto remaining = static_cast<size_t>(last - write_pos_);
-    memcpy(&(*write_pos_), ptr, remaining);
-    buf_.insert(last, ptr + remaining, ptr + num_bytes);
-    write_pos_ = buf_.end();
+    auto remaining = buf_size - write_pos_;
+    CAF_ASSERT(remaining < num_bytes);
+    memcpy(buf_.data() + write_pos_, ptr, remaining);
+    buf_.insert(buf_.end(), ptr + remaining, ptr + num_bytes);
   }
+  write_pos_ += num_bytes;
+  CAF_ASSERT(write_pos_ <= buf_.size());
   return none;
 }
 
