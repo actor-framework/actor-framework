@@ -45,42 +45,51 @@ proxy_registry::~proxy_registry() {
   clear();
 }
 
-size_t proxy_registry::count_proxies(const node_id& node) {
+size_t proxy_registry::count_proxies(const node_id& node) const {
+  std::unique_lock<std::mutex> guard {mtx_};
   auto i = proxies_.find(node);
-  return (i != proxies_.end()) ? i->second.size() : 0;
+  return i != proxies_.end() ? i->second.size() : 0;
 }
 
-strong_actor_ptr proxy_registry::get(const node_id& node, actor_id aid) {
-  auto& submap = proxies_[node];
-  auto i = submap.find(aid);
-  if (i != submap.end())
-    return i->second;
-  return nullptr;
+strong_actor_ptr proxy_registry::get(const node_id& node, actor_id aid) const {
+  std::unique_lock<std::mutex> guard{mtx_};
+  auto i = proxies_.find(node);
+  if (i == proxies_.end())
+    return nullptr;
+  auto j = i->second.find(aid);
+  return j != i->second.end() ? j->second : nullptr;
 }
 
 strong_actor_ptr proxy_registry::get_or_put(const node_id& nid, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  std::unique_lock<std::mutex> guard{mtx_};
   auto& result = proxies_[nid][aid];
   if (!result)
     result = backend_.make_proxy(nid, aid);
   return result;
 }
 
-std::vector<strong_actor_ptr> proxy_registry::get_all(const node_id& node) {
+std::vector<strong_actor_ptr> 
+proxy_registry::get_all(const node_id& node) const {
+  // Reserve at least some memory outside of the critical section.
   std::vector<strong_actor_ptr> result;
+  result.reserve(128);
+  std::unique_lock<std::mutex> guard{mtx_};
   auto i = proxies_.find(node);
   if (i != proxies_.end())
     for (auto& kvp : i->second)
-      result.push_back(kvp.second);
+      result.emplace_back(kvp.second);
   return result;
 }
 
 bool proxy_registry::empty() const {
+  std::unique_lock<std::mutex> guard{mtx_};
   return proxies_.empty();
 }
 
 void proxy_registry::erase(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
+  std::unique_lock<std::mutex> guard{mtx_};
   auto i = proxies_.find(nid);
   if (i == proxies_.end())
     return;
@@ -91,6 +100,7 @@ void proxy_registry::erase(const node_id& nid) {
 
 void proxy_registry::erase(const node_id& nid, actor_id aid, error rsn) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
+  std::unique_lock<std::mutex> guard{mtx_};
   auto i = proxies_.find(nid);
   if (i != proxies_.end()) {
     auto& submap = i->second;
@@ -105,6 +115,7 @@ void proxy_registry::erase(const node_id& nid, actor_id aid, error rsn) {
 }
 
 void proxy_registry::clear() {
+  std::unique_lock<std::mutex> guard{mtx_};
   for (auto& kvp : proxies_)
     for (auto& sub_kvp : kvp.second)
       kill_proxy(sub_kvp.second, exit_reason::remote_link_unreachable);
