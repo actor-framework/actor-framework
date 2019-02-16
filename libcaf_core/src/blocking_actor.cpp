@@ -79,6 +79,10 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   }
 }
 
+mailbox_element* blocking_actor::peek_at_next_mailbox_element() {
+  return mailbox().closed() || mailbox().blocked() ? nullptr : mailbox().peek();
+}
+
 const char* blocking_actor::name() const {
   return "blocking_actor";
 }
