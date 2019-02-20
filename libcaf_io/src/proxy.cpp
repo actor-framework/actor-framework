@@ -138,7 +138,19 @@ public:
     binary_serializer sink{self_.home_system(), buf};
     // Differntiate between routed and direct messages based on the sender.
     message_type msg_type;
-    if (x.sender == nullptr || x.sender->node() == self_.home_system().node()) {
+    bool local_sender;
+    if (x.sender == nullptr) {
+      local_sender = true;
+    } else if (x.sender->node() == self_.home_system().node()) {
+      // Actors that communicate to remotes are kept alive by putting them into
+      // the registry, which also allows to get their handle for response
+      // messages.
+      self_.home_system().registry().put(x.sender->id(), x.sender);
+      local_sender = true;
+    } else {
+      local_sender = false;
+    }
+    if (local_sender) {
       msg_type = message_type::direct_message;
       if (auto err = sink(x.stages)) {
         CAF_LOG_ERROR("cannot serialize stages:" << x);

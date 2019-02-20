@@ -34,6 +34,7 @@
 
 #include "caf/deep_to_string.hpp"
 
+#include "caf/io/basp/proxy.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
@@ -69,7 +70,6 @@ bool operator==(const maybe<T>& x, const T& y) {
 }
 
 constexpr uint8_t no_flags = 0;
-constexpr uint32_t no_payload = 0;
 constexpr uint64_t no_operation_data = 0;
 constexpr uint64_t default_operation_data = make_message_id().integer_value();
 
@@ -108,15 +108,24 @@ struct node {
   }
 };
 
+struct config : actor_system_config {
+  config(bool autoconn) {
+    load<io::middleman, network::test_multiplexer>();
+    set("middleman.enable-automatic-connections", autoconn);
+    set("middleman.workers", size_t{0});
+    set("scheduler.policy", caf::atom("testing"));
+    set("middleman.attach-utility-actors", autoconn);
+  }
+};
+
 class fixture {
 public:
+  using scheduler_type = caf::scheduler::test_coordinator;
+
   fixture(bool autoconn = false)
-    : sys(cfg.load<io::middleman, network::test_multiplexer>()
-            .set("middleman.enable-automatic-connections", autoconn)
-            .set("middleman.workers", size_t{0})
-            .set("scheduler.policy",
-                 autoconn ? caf::atom("testing") : caf::atom("stealing"))
-            .set("middleman.attach-utility-actors", autoconn)) {
+    : cfg(autoconn),
+      sys(cfg),
+      sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);
@@ -362,8 +371,8 @@ public:
       basp::header hdr;
       { // lifetime scope of source
         binary_deserializer source{this_->mpx(), ob};
-        auto e = source(hdr);
-        CAF_REQUIRE_EQUAL(e, none);
+        if (auto err = source(hdr))
+          CAF_FAIL("serializing the header failed: " << this_->sys.render(err));
       }
       buffer payload;
       if (hdr.payload_len > 0) {
@@ -409,8 +418,15 @@ public:
     return {this};
   }
 
-  actor_system_config cfg;
+  void run() {
+    while (mpx_->try_exec_runnable() || sched.try_run_once()) {
+      // repeat
+    }
+  }
+
+  config cfg;
   actor_system sys;
+  scheduler_type& sched;
 
 private:
   basp_broker* aut_;
@@ -419,26 +435,15 @@ private:
   node_id this_node_;
   unique_ptr<scoped_actor> self_;
   array<node, num_remote_nodes> nodes_;
-  /*
-  array<node_id, num_remote_nodes> remote_node_;
-  array<connection_handle, num_remote_nodes> remote_hdl_;
-  array<unique_ptr<scoped_actor>, num_remote_nodes> pseudo_remote_;
-  */
   actor_registry* registry_;
 };
 
 class autoconn_enabled_fixture : public fixture {
 public:
-  using scheduler_type = caf::scheduler::test_coordinator;
-
-  scheduler_type& sched;
   middleman_actor mma;
 
-
   autoconn_enabled_fixture()
-    : fixture(true),
-      sched(dynamic_cast<scheduler_type&>(sys.scheduler())),
-      mma(sys.middleman().actor_handle()) {
+    : fixture(true), mma(sys.middleman().actor_handle()) {
     // nop
   }
 
@@ -540,7 +545,8 @@ CAF_TEST(client_handshake_and_dispatch) {
       return a + b + c;
     }
   );
-  CAF_MESSAGE("exec message of forwarding proxy");
+  CAF_MESSAGE("exec message of BASP proxy");
+  sched.run();
   mpx()->exec_runnable();
   // deserialize and send message from out buf
   dispatch_out_buf(jupiter().connection);
@@ -614,7 +620,7 @@ CAF_TEST(remote_actor_and_send) {
     [&](node_id nid, strong_actor_ptr res, std::set<std::string> ifs) {
       CAF_REQUIRE(res);
       auto aptr = actor_cast<abstract_actor*>(res);
-      CAF_REQUIRE(dynamic_cast<forwarding_actor_proxy*>(aptr) != nullptr);
+      CAF_REQUIRE(dynamic_cast<io::basp::proxy*>(aptr) != nullptr);
       CAF_CHECK_EQUAL(proxies().count_proxies(jupiter().id), 1u);
       CAF_CHECK_EQUAL(nid, jupiter().id);
       CAF_CHECK_EQUAL(res->node(), jupiter().id);
@@ -632,6 +638,7 @@ CAF_TEST(remote_actor_and_send) {
   CAF_MESSAGE("send message to proxy");
   anon_send(actor_cast<actor>(result), 42);
   mpx()->flush_runnables();
+  sched.run();
 //  mpx()->exec_runnable(); // process forwarded message in basp_broker
   mock().receive(jupiter().connection, basp::message_type::direct_message,
                  no_flags, any_vals, default_operation_data, invalid_actor_id,
@@ -677,8 +684,8 @@ CAF_TEST(actor_serialize_and_deserialize) {
        std::vector<strong_actor_ptr>{}, msg);
   // testee must've responded (process forwarded message in BASP broker)
   CAF_MESSAGE("wait until BASP broker writes to its output buffer");
-  while (mpx()->output_buffer(jupiter().connection).empty())
-    mpx()->exec_runnable(); // process forwarded message in basp_broker
+  if (mpx()->output_buffer(jupiter().connection).empty())
+    run();
   // output buffer must contain the reflected message
   mock().receive(jupiter().connection, basp::message_type::direct_message,
                  no_flags, any_vals, default_operation_data, testee->id(),
@@ -721,7 +728,8 @@ CAF_TEST(indirect_connections) {
       return "hello from earth!";
     }
   );
-  mpx()->exec_runnable(); // process forwarded message in basp_broker
+  run();
+  CAF_MESSAGE("send response to jupiter (via mars)");
   mock().receive(mars().connection, basp::message_type::routed_message,
                  no_flags, any_vals, default_operation_data, self()->id(),
                  jupiter().dummy_actor->id(), this_node(), jupiter().id,
@@ -817,7 +825,7 @@ CAF_TEST(automatic_connection) {
       return "hello from earth!";
     }
   );
-  mpx()->exec_runnable(); // process forwarded message in basp_broker
+  run();
   CAF_MESSAGE("response message must take direct route now");
   mock().receive(jupiter().connection, basp::message_type::direct_message,
                  no_flags, any_vals, make_message_id().integer_value(),

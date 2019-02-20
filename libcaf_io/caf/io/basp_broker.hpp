@@ -31,7 +31,6 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
-#include "caf/forwarding_actor_proxy.hpp"
 
 #include "caf/io/basp/all.hpp"
 #include "caf/io/broker.hpp"

@@ -27,8 +27,8 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/forwarding_actor_proxy.hpp"
 #include "caf/io/basp/all.hpp"
+#include "caf/io/basp/proxy.hpp"
 #include "caf/io/connection_helper.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/io/network/interfaces.hpp"
@@ -131,10 +131,63 @@ behavior basp_broker::make_behavior() {
         ctx.cstate = next;
       }
     },
-    // received from proxy instances
+    // received from BASP proxy instances
+    [=](const strong_actor_ptr& dest, basp::header& hdr,
+        const std::vector<char>& payload) {
+      CAF_LOG_TRACE(CAF_ARG(dest) << CAF_ARG2("payload.size", payload.size()));
+      // Sanity checking.
+      if (dest == nullptr) {
+        CAF_LOG_WARNING("drop message due to invalid receiver");
+        return;
+      }
+      auto& dest_node = dest->node();
+      if (dest_node == system().node()) {
+        CAF_LOG_WARNING("drop message due to local receiver");
+        return;
+      }
+      // Get route to destination node.
+      auto route = instance.tbl().lookup(dest_node);
+      if (!route) {
+        CAF_LOG_DEBUG("drop message to unknown node:" << dest_node);
+        return;
+      }
+      // Get the output buffer.
+      auto& out_buf = get_buffer(route->hdl);
+      auto before = out_buf.size();
+      // Check whether we need to adjust the header. The BASP proxy only
+      // considers the sender when deciding on whether a message is direct or
+      // routed. However, we also need to look at the receiver and in case the
+      // next hop is not the receiver than we need to set the operation field
+      // accordingly and prefix the payload with the node IDs.
+      if (route->next_hop != dest->node()
+          && hdr.operation != basp::message_type::routed_message) {
+        hdr.operation = basp::message_type::routed_message;
+        hdr.payload_len += 2 * node_id::serialized_size;
+        binary_serializer sink(system(), out_buf);
+        if (auto err = sink(hdr, system().node(), dest_node)) {
+          CAF_LOG_ERROR("serialization error: " << system().render(err));
+          out_buf.resize(before);
+          return;
+        }
+        CAF_ASSERT(out_buf.size()
+                   == before + basp::header_size
+                        + 2 * node_id::serialized_size);
+      } else {
+        binary_serializer sink(system(), out_buf);
+        if (auto err = sink(hdr)) {
+          CAF_LOG_ERROR("serialization error: " << system().render(err));
+          out_buf.resize(before);
+          return;
+        }
+        CAF_ASSERT(out_buf.size() == before + basp::header_size);
+      }
+      out_buf.insert(out_buf.end(), payload.begin(), payload.end());
+      flush(route->hdl);
+    },
+    // received from forwarding_proxy instances
     [=](forward_atom, strong_actor_ptr& src,
-        const std::vector<strong_actor_ptr>& fwd_stack,
-        strong_actor_ptr& dest, message_id mid, const message& msg) {
+        const std::vector<strong_actor_ptr>& fwd_stack, strong_actor_ptr& dest,
+        message_id mid, const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(dest)
                     << CAF_ARG(mid) << CAF_ARG(msg));
       if (!dest || system().node() == dest->node()) {
@@ -266,8 +319,8 @@ behavior basp_broker::make_behavior() {
         return unit;
       return sec::cannot_close_invalid_port;
     },
-    [=](get_atom, const node_id& x)
-    -> std::tuple<node_id, std::string, uint16_t> {
+    [=](get_atom,
+        const node_id& x) -> std::tuple<node_id, std::string, uint16_t> {
       std::string addr;
       uint16_t port = 0;
       auto hdl = instance.tbl().lookup_direct(x);
@@ -281,8 +334,7 @@ behavior basp_broker::make_behavior() {
       instance.handle_heartbeat(context());
       delayed_send(this, std::chrono::milliseconds{interval},
                    tick_atom::value, interval);
-    }
-  };
+    }};
 }
 
 proxy_registry* basp_broker::proxy_registry_ptr() {
@@ -314,8 +366,8 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
   // create proxy and add functor that will be called if we
   // receive a basp::down_message
   actor_config cfg;
-  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
-    aid, nid, &(system()), cfg, this);
+  auto res = make_actor<basp::proxy, strong_actor_ptr>(aid, nid, &(system()),
+                                                       cfg, this);
   strong_actor_ptr selfptr{ctrl()};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
