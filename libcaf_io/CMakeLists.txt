@@ -37,6 +37,7 @@ set(LIBCAF_IO_SRCS
   src/native_socket.cpp
   src/pipe_reader.cpp
   src/protocol.cpp
+  src/proxy.cpp
   src/receive_buffer.cpp
   src/routing_table.cpp
   src/scribe.cpp
