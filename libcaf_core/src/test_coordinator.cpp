@@ -91,7 +91,7 @@ void test_coordinator::stop() {
     trigger_timeouts();
 }
 
-void test_coordinator::enqueue(resumable* ptr) {
+void test_coordinator::enqueue(resumable* ptr, execution_unit*) {
   CAF_LOG_TRACE("");
   jobs.push_back(ptr);
   if (after_next_enqueue_ != nullptr) {

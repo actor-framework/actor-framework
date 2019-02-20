@@ -64,7 +64,7 @@ public:
   }
 
   template <class Coordinator>
-  void central_enqueue(Coordinator* self, resumable* job) {
+  void central_enqueue(Coordinator* self, resumable* job, execution_unit*) {
     enqueue(self, job);
   }
 

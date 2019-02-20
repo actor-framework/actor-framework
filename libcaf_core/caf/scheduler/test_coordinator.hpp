@@ -147,7 +147,7 @@ protected:
 
   void stop() override;
 
-  void enqueue(resumable* ptr) override;
+  void enqueue(resumable* ptr, execution_unit* avoid) override;
 
 private:
   void inline_all_enqueues_helper();

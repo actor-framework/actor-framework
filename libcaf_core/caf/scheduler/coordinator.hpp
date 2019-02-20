@@ -145,8 +145,8 @@ protected:
     timer_.join();
   }
 
-  void enqueue(resumable* ptr) override {
-    policy_.central_enqueue(this, ptr);
+  void enqueue(resumable* ptr, execution_unit* avoid) override {
+    policy_.central_enqueue(this, ptr, avoid);
   }
 
   detail::thread_safe_actor_clock& clock() noexcept override {

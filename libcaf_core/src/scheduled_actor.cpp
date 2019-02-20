@@ -166,10 +166,12 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
         CAF_ASSERT(private_thread_ != nullptr);
         private_thread_->resume();
       } else {
-        if (eu != nullptr)
+        // We pull actors towards us for ordinary messages but push them away
+        // for stream processing.
+        if (eu != nullptr && !mid.is_stream_message())
           eu->exec_later(this);
         else
-          home_system().scheduler().enqueue(this);
+          home_system().scheduler().enqueue(this, eu);
       }
       break;
     }

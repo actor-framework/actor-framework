@@ -58,8 +58,8 @@ public:
     return utility_actors_.size();
   }
 
-  /// Puts `what` into the queue of a randomly chosen worker.
-  virtual void enqueue(resumable* what) = 0;
+  /// Puts `what` into the queue of a worker other than `avoid`.
+  virtual void enqueue(resumable* what, execution_unit* avoid = nullptr) = 0;
 
   inline actor_system& system() {
     return system_;

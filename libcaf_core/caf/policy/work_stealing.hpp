@@ -102,8 +102,11 @@ public:
   }
 
   template <class Coordinator>
-  void central_enqueue(Coordinator* self, resumable* job) {
+  void central_enqueue(Coordinator* self, resumable* job,
+                       execution_unit* avoid) {
     auto w = self->worker_by_id(d(self).next_worker++ % self->num_workers());
+    while (w == avoid)
+      w = self->worker_by_id(d(self).next_worker++ % self->num_workers());
     w->external_enqueue(job);
   }
 
