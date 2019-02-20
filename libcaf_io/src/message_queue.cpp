@@ -40,24 +40,20 @@ void message_queue::push(execution_unit* ctx, uint64_t id,
     // Dispatch current head.
     if (receiver != nullptr)
       receiver->enqueue(std::move(content), ctx);
+    auto next = id + 1;
     // Check whether we can deliver more.
-    if (first == last || first->id != next_undelivered + 1) {
-      ++next_undelivered;
+    if (first == last || first->id != next) {
+      next_undelivered = next;
       CAF_ASSERT(next_undelivered <= next_id);
       return;
     }
-    // We look for the last element that we cannot ship right away.
-    auto pred = [](const actor_msg& x, const actor_msg& y) {
-      return x.id + 1 > y.id;
-    };
-    auto last_hit = std::adjacent_find(first, last, pred);
-    CAF_ASSERT(last_hit != first);
-    auto new_last = last_hit == last ? last : last_hit + 1;
-    for (auto i = first; i != new_last; ++i)
+    // Deliver everything until reaching a non-consecutive ID or the end.
+    auto i = first;
+    for (; i != last && i->id == next; ++i, ++next)
       if (i->receiver != nullptr)
         i->receiver->enqueue(std::move(i->content), ctx);
-    next_undelivered += static_cast<size_t>(std::distance(first, new_last)) + 1;
-    pending.erase(first, new_last);
+    next_undelivered = next;
+    pending.erase(first, i);
     CAF_ASSERT(next_undelivered <= next_id);
     return;
   }
