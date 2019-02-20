@@ -9,27 +9,22 @@ AllowShortFunctionsOnASingleLine: false
 AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: true
 BinPackParameters: true
-BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBinaryOperators: true
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: false
 ColumnLimit: 80
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
-ConstructorInitializerIndentWidth: 4
+ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
 IndentCaseLabels: true
+IndentFunctionDeclarationAfterType: false
 IndentWidth: 2
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
-
-# Force pointers to the type
-DerivePointerAlignment: false
 PointerAlignment: Left
-
-# Put space after = and after control statements
 SpaceBeforeAssignmentOperators: true
-SpaceBeforeParens: ControlStatements
-
+SpaceAfterControlStatementKeyword: true
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
@@ -39,4 +34,3 @@ Standard: Cpp11
 UseTab: Never
 BreakConstructorInitializersBeforeComma: false
 ...
-
