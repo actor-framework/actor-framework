@@ -51,7 +51,7 @@ behavior testee_impl(stateful_actor<testee_state>* self) {
       return self->state.x;
     }
   };
-};
+}
 
 struct fixture {
   actor_system_config config;
