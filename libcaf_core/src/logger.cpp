@@ -188,8 +188,6 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
   return symbol;
 }
 
-#if CAF_LOG_LEVEL >= 0
-
 #if defined(CAF_NO_THREAD_LOCAL)
 
 pthread_key_t s_key;
@@ -231,17 +229,6 @@ inline logger* get_current_logger() {
 }
 
 #endif // CAF_NO_THREAD_LOCAL
-
-#else // CAF_LOG_LEVEL
-
-inline void set_current_logger(logger*) {
-  // nop
-}
-
-inline logger* get_current_logger() {
-  return nullptr;
-}
-#endif // CAF_LOG_LEVEL
 
 } // namespace <anonymous>
 
@@ -358,7 +345,7 @@ bool logger::accepts(unsigned level, atom_value cname) {
                       [=](atom_value name) { return name == cname; });
 }
 
-logger::logger(actor_system& sys) : system_(sys) {
+logger::logger(actor_system& sys) : system_(sys), t0_(make_timestamp()) {
   // nop
 }
 
@@ -402,6 +389,17 @@ void logger::init(actor_system_config& cfg) {
     // Disable console output if neither 'colored' nor 'uncolored' are present.
     cfg_.console_verbosity = CAF_LOG_LEVEL_QUIET;
   }
+}
+
+bool logger::open_file() {
+  if (file_verbosity() == CAF_LOG_LEVEL_QUIET || file_name_.empty())
+    return false;
+  file_.open(file_name_, std::ios::out | std::ios::app);
+  if (!file_) {
+    std::cerr << "unable to open log file " << file_name_ << std::endl;
+    return false;
+  }
+  return true;
 }
 
 void logger::render_fun_prefix(std::ostream& out, const event& x) {
@@ -550,6 +548,8 @@ void logger::run() {
   queue_.wait_nonempty();
   if (queue_.front().message.empty())
     return;
+  if (!open_file() && console_verbosity() == CAF_LOG_LEVEL_QUIET)
+    return;
   log_first_line();
   // Loop until receiving an empty message.
   for (;;) {
@@ -635,49 +635,48 @@ void logger::start() {
   parent_thread_ = std::this_thread::get_id();
   if (verbosity() == CAF_LOG_LEVEL_QUIET)
     return;
-  t0_ = make_timestamp();
-  auto f = get_or(system_.config(), "logger.file-name",
+  file_name_ = get_or(system_.config(), "logger.file-name",
                   defaults::logger::file_name);
-  if (f.empty()) {
+  if (file_name_.empty()) {
     // No need to continue if console and log file are disabled.
     if (console_verbosity() == CAF_LOG_LEVEL_QUIET)
       return;
   } else {
     // Replace placeholders.
     const char pid[] = "[PID]";
-    auto i = std::search(f.begin(), f.end(), std::begin(pid),
+    auto i = std::search(file_name_.begin(), file_name_.end(), std::begin(pid),
                          std::end(pid) - 1);
-    if (i != f.end()) {
+    if (i != file_name_.end()) {
       auto id = std::to_string(detail::get_process_id());
-      f.replace(i, i + sizeof(pid) - 1, id);
+      file_name_.replace(i, i + sizeof(pid) - 1, id);
     }
     const char ts[] = "[TIMESTAMP]";
-    i = std::search(f.begin(), f.end(), std::begin(ts), std::end(ts) - 1);
-    if (i != f.end()) {
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(ts),
+                    std::end(ts) - 1);
+    if (i != file_name_.end()) {
       auto t0_str = timestamp_to_string(t0_);
-      f.replace(i, i + sizeof(ts) - 1, t0_str);
+      file_name_.replace(i, i + sizeof(ts) - 1, t0_str);
     }
     const char node[] = "[NODE]";
-    i = std::search(f.begin(), f.end(), std::begin(node), std::end(node) - 1);
-    if (i != f.end()) {
+    i = std::search(file_name_.begin(), file_name_.end(), std::begin(node),
+                    std::end(node) - 1);
+    if (i != file_name_.end()) {
       auto nid = to_string(system_.node());
-      f.replace(i, i + sizeof(node) - 1, nid);
-    }
-    file_.open(f, std::ios::out | std::ios::app);
-    if (!file_) {
-      std::cerr << "unable to open log file " << f << std::endl;
-      return;
+      file_name_.replace(i, i + sizeof(node) - 1, nid);
     }
   }
-  if (cfg_.inline_output)
+  if (cfg_.inline_output) {
+    // Open file immediately for inline output.
+    open_file();
     log_first_line();
-  else
+  } else {
     thread_ = std::thread{[this] {
       detail::set_thread_name("caf.logger");
       this->system_.thread_started();
       this->run();
       this->system_.thread_terminates();
     }};
+  }
 }
 
 void logger::stop() {
