@@ -300,7 +300,7 @@ if(CAF_ENABLE_ADDRESS_SANITIZER AND NOT WIN32)
   endif()
   # restore CXX flags
   set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
-endif(CAF_ENABLE_ADDRESS_SANITIZER)
+endif()
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
     build_string("EXTRA_FLAGS" "-pthread")
