@@ -320,6 +320,8 @@ private:
 
   void init(actor_system_config& cfg);
 
+  bool open_file();
+
   // -- event handling ---------------------------------------------------------
 
   void handle_event(const event& x);
@@ -374,6 +376,9 @@ private:
 
   // Filled with log events by other threads.
   detail::ringbuffer<event, queue_size> queue_;
+
+  // Stores the assembled name of the log file.
+  std::string file_name_;
 
   // Executes `logger::run`.
   std::thread thread_;
@@ -434,25 +439,6 @@ bool operator==(const logger::field& x, const logger::field& y);
   caf::detail::make_arg_wrapper(argname, first, last)
 
 // -- logging macros -----------------------------------------------------------
-
-#if CAF_LOG_LEVEL == CAF_LOG_LEVEL_QUIET
-
-#define CAF_LOG_IMPL(unused1, unused2, unused3)
-
-// placeholder macros when compiling without logging
-inline caf::actor_id caf_set_aid_dummy() { return 0; }
-
-#define CAF_PUSH_AID(unused) CAF_VOID_STMT
-
-#define CAF_PUSH_AID_FROM_PTR(unused) CAF_VOID_STMT
-
-#define CAF_SET_AID(unused) caf_set_aid_dummy()
-
-#define CAF_SET_LOGGER_SYS(unused) CAF_VOID_STMT
-
-#define CAF_LOG_TRACE(unused)
-
-#else // CAF_LOG_LEVEL == CAF_LOG_LEVEL_QUIET
 
 #define CAF_LOG_IMPL(component, loglvl, message)                               \
   do {                                                                         \
@@ -517,8 +503,6 @@ inline caf::actor_id caf_set_aid_dummy() { return 0; }
 
 #define CAF_LOG_ERROR(output)                                                  \
   CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output)
-
-#endif // CAF_LOG_LEVEL == CAF_LOG_LEVEL_QUIET
 
 #ifndef CAF_LOG_INFO
 #define CAF_LOG_INFO(output) CAF_VOID_STMT

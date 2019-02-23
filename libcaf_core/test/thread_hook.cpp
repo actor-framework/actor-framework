@@ -121,7 +121,7 @@ CAF_TEST(counting_system_without_actor) {
   assumed_init_calls = 1;
   assumed_thread_count = get_or(cfg, "scheduler.max-threads",
                                 defaults::scheduler::max_threads)
-                         + 1; // caf.clock thread
+                         + 2; // caf.clock and caf.logger
   auto& sched = sys.scheduler();
   if (sched.detaches_utility_actors())
     assumed_thread_count += sched.num_utility_actors();
@@ -131,7 +131,7 @@ CAF_TEST(counting_system_with_actor) {
   assumed_init_calls = 1;
   assumed_thread_count = get_or(cfg, "scheduler.max-threads",
                                 defaults::scheduler::max_threads)
-                         + 2; // caf.clock thread plus detached actor
+                         + 3; // caf.clock, caf.logger, and detached actor
   auto& sched = sys.scheduler();
   if (sched.detaches_utility_actors())
     assumed_thread_count += sched.num_utility_actors();
