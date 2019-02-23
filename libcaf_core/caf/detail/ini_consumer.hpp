@@ -209,7 +209,7 @@ private:
 
   config_option_set& options_;
   settings& cfg_;
-  std::string current_key;
+  std::string current_key_;
   std::vector<error> warnings_;
 };
 
