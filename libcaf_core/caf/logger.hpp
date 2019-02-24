@@ -550,6 +550,8 @@ bool operator==(const logger::field& x, const logger::field& y);
 /// crucial for understanding happens-before relations. See RFC SE-0001.
 #define CAF_LOG_FLOW_COMPONENT "caf_flow"
 
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+
 #define CAF_LOG_SPAWN_EVENT(ref, ctor_data)                                    \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
                "SPAWN ; ID ="                                                  \
@@ -597,6 +599,28 @@ bool operator==(const logger::field& x, const logger::field& y);
                "TERMINATE ; ID =" << thisptr->id()                             \
                  << "; REASON =" << deep_to_string(rsn).c_str()                \
                  << "; NODE =" << thisptr->node())
+
+#else // CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
+
+#define CAF_LOG_SPAWN_EVENT(ref, ctor_data) CAF_VOID_STMT
+
+#define CAF_LOG_SEND_EVENT(ptr) CAF_VOID_STMT
+
+#define CAF_LOG_RECEIVE_EVENT(ptr) CAF_VOID_STMT
+
+#define CAF_LOG_REJECT_EVENT() CAF_VOID_STMT
+
+#define CAF_LOG_ACCEPT_EVENT(unblocked) CAF_VOID_STMT
+
+#define CAF_LOG_DROP_EVENT() CAF_VOID_STMT
+
+#define CAF_LOG_SKIP_EVENT() CAF_VOID_STMT
+
+#define CAF_LOG_FINALIZE_EVENT() CAF_VOID_STMT
+
+#define CAF_LOG_TERMINATE_EVENT(thisptr, rsn) CAF_VOID_STMT
+
+#endif // CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
 
 // -- macros for logging streaming-related events ------------------------------
 
