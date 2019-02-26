@@ -75,10 +75,11 @@ public:
     return central_buf + max_path_buf;
   }
 
+  /// Returns the number of buffered elements for this specific slot, ignoring
+  /// the central buffer.
   size_t buffered(stream_slot slot) const noexcept override {
     auto i = state_map_.find(slot);
-    return this->buf_.size()
-           + (i != state_map_.end() ? i->second.buf.size() : 0u);
+    return i != state_map_.end() ? i->second.buf.size() : 0u;
   }
 
   int32_t max_capacity() const noexcept override {
