@@ -69,7 +69,6 @@ bool operator==(const maybe<T>& x, const T& y) {
 }
 
 constexpr uint8_t no_flags = 0;
-constexpr uint32_t no_payload = 0;
 constexpr uint64_t no_operation_data = 0;
 constexpr uint64_t default_operation_data = make_message_id().integer_value();
 
