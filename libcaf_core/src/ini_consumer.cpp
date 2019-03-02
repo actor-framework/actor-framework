@@ -188,8 +188,13 @@ void ini_consumer::value_impl(config_value&& x) {
     std::string prev_key;
     swap(current_key_, prev_key);
     for (auto& entry : *dict) {
-      current_key_ = std::move(entry.first);
-      value_impl(std::move(entry.second));
+      if (holds_alternative<dict_type>(entry.second)) {
+        // Recurse into top-level maps.
+        current_key_ = std::move(entry.first);
+        value_impl(std::move(entry.second));
+      } else {
+        cfg_.insert_or_assign(entry.first, std::move(entry.second));
+      }
     }
     swap(prev_key, current_key_);
   }

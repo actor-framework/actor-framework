@@ -46,15 +46,15 @@ impl =       'foo';some atom
 
 const char test_ini2[] = R"(
 is_server = true
-port = 4242
-nodes = ["sun", "venus"]
 logger = {
   file-name = "foobar.ini"
 }
+port = 4242
 scheduler = {
   timing = 2us,
   impl = 'foo'
 }
+nodes = ["sun", "venus"]
 )";
 
 struct fixture {
