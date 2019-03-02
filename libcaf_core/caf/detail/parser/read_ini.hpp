@@ -266,7 +266,7 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     transition(init, " \t\n")
     fsm_epsilon(read_ini_comment(ps, consumer), init, ';')
     transition(start_section, '[')
-    fsm_epsilon_if(tmp == "global", read_ini_section(ps, begin_section()), init)
+    fsm_epsilon_if(tmp == "global", read_ini_section(ps, begin_section()), return_to_global)
   }
   // Read the section key after reading an '['.
   state(start_section) {
@@ -281,7 +281,10 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   // Wait for the closing ']', preceded by any number of whitespaces.
   state(close_section) {
     transition(close_section, " \t")
-    fsm_transition(read_ini_section(ps, begin_section()), init, ']')
+    fsm_transition(read_ini_section(ps, begin_section()), return_to_global, ']')
+  }
+  unstable_state(return_to_global) {
+    epsilon(init, any_char, tmp = "global")
   }
   fin();
 }

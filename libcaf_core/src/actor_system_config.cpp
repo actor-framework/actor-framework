@@ -310,7 +310,13 @@ actor_system_config& actor_system_config::set_impl(string_view name,
     return set_impl("middleman.app-identifiers", std::move(value));
   }
   auto opt = custom_options_.qualified_name_lookup(name);
-  if (opt != nullptr && opt->check(value) == none) {
+  if (opt == nullptr) {
+    std::cerr << "*** failed to set config parameter " << name
+              << ": invalid name" << std::endl;
+  } else if (auto err = opt->check(value)) {
+    std::cerr << "*** failed to set config parameter " << name << ": "
+              << to_string(err) << std::endl;
+  } else {
     opt->store(value);
     auto category = opt->category();
     auto& dict = category == "global" ? content
