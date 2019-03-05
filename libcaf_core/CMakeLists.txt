@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 2.8.12)
 project(caf_core C CXX)
 
 # get header files; only needed by CMake generators,

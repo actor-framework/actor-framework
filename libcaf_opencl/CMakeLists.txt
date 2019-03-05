@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
 project(caf_opencl C CXX)
 
 # get header files; only needed by CMake generators,
