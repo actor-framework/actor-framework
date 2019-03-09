@@ -143,7 +143,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
 
 scheduled_actor::~scheduled_actor() {
   // signalize to the private thread object that it is
-  // unrachable and can be destroyed as well
+  // unreachable and can be destroyed as well
   if (private_thread_ != nullptr)
     private_thread_->notify_self_destroyed();
 }
