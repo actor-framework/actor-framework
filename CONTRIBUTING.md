@@ -195,7 +195,7 @@ General
 - Never declare more than one variable per line.
 
 - Only separate functions with vertical whitespaces and use comments to
-  document logcial blocks inside functions.
+  document logical blocks inside functions.
 
 - Use `.hpp` as suffix for header files and `.cpp` as suffix for implementation
   files.
