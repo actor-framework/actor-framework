@@ -467,7 +467,7 @@ void basp_broker::learned_new_node(const node_id& nid) {
 }
 
 void basp_broker::learned_new_node_directly(const node_id& nid,
-                                                  bool was_indirectly_before) {
+                                            bool was_indirectly_before) {
   CAF_LOG_TRACE(CAF_ARG(nid));
   if (!was_indirectly_before)
     learned_new_node(nid);
@@ -533,7 +533,8 @@ void basp_broker::connection_cleanup(connection_handle hdl) {
   }
 }
 
-basp_broker::buffer_type& basp_broker::get_buffer(connection_handle hdl) {
+basp::instance::callee::buffer_type&
+basp_broker::get_buffer(connection_handle hdl) {
   return wr_buf(hdl);
 }
 

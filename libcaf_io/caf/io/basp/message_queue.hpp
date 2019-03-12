@@ -47,6 +47,18 @@ public:
 
   message_queue();
 
+  // -- mutators ---------------------------------------------------------------
+
+  /// Adds a new message to the queue or deliver it immediately if possible.
+  void push(execution_unit* ctx, uint64_t id, strong_actor_ptr receiver,
+            mailbox_element_ptr content);
+
+  /// Marks given ID as dropped, effectively skipping it without effect.
+  void drop(execution_unit* ctx, uint64_t id);
+
+  /// Returns the next ascending ID.
+  uint64_t new_id();
+
   // -- member variables -------------------------------------------------------
 
   /// Protects all other properties.
@@ -62,18 +74,6 @@ public:
   /// Keeps messages in sorted order in case a message other than
   /// `next_undelivered` gets ready first.
   std::vector<actor_msg> pending;
-
-  // -- mutators ---------------------------------------------------------------
-
-  /// Adds a new message to the queue or deliver it immediately if possible.
-  void push(execution_unit* ctx, uint64_t id, strong_actor_ptr receiver,
-            mailbox_element_ptr content);
-
-  /// Marks given ID as dropped, effectively skipping it without effect.
-  void drop(execution_unit* ctx, uint64_t id);
-
-  /// Returns the next ascending ID.
-  uint64_t new_id();
 };
 
 } // namespace basp

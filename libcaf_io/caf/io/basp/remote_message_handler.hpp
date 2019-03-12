@@ -61,7 +61,7 @@ public:
       dst = sys.registry().get(static_cast<atom_value>(dref.hdr_.dest_actor));
     else
       dst = sys.registry().get(dref.hdr_.dest_actor);
-    // Short circuit it we already know there's nothing to do.
+    // Short circuit if we already know there's nothing to do.
     if (dst == nullptr && !mid.is_request()) {
       CAF_LOG_INFO("drop asynchronous remote message: unknown destination");
       return;

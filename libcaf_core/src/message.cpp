@@ -156,7 +156,7 @@ error message::load(deserializer& source) {
   return none;
 }
 
-error message::save(serializer& sink, const type_erased_tuple& x){
+error message::save(serializer& sink, const type_erased_tuple& x) {
   if (sink.context() == nullptr)
     return sec::no_context;
   // build type name
