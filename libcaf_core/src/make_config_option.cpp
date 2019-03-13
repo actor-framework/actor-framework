@@ -138,7 +138,8 @@ DEFAULT_META(size_t, default_config_option_parse<size_t>)
 DEFAULT_META(string, parse_string)
 
 config_option::meta_state bool_meta_state{bool_check, bool_store, bool_get,
-                                          nullptr, detail::type_name<bool>()};
+                                          default_config_option_parse<bool>,
+                                          detail::type_name<bool>()};
 
 } // namespace detail
 

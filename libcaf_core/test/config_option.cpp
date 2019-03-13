@@ -47,7 +47,7 @@ constexpr int64_t underflow() {
 template <class T>
 optional<T> read(string_view arg) {
   auto co = make_config_option<T>(category, name, explanation);
-  auto res = config_value::parse(arg);
+  auto res = co.parse(arg);
   if (res && holds_alternative<T>(*res)) {
     CAF_CHECK_EQUAL(co.check(*res), none);
     return get<T>(*res);
@@ -167,13 +167,14 @@ CAF_TEST(type double) {
 }
 
 CAF_TEST(type string) {
-  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "foo");
   CAF_CHECK_EQUAL(unbox(read<string>("foo")), "foo");
+  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "\"foo\"");
 }
 
 CAF_TEST(type atom) {
-  CAF_CHECK_EQUAL(unbox(read<atom_value>("'foo'")), atom("foo"));
-  CAF_CHECK_EQUAL(read<atom_value>("bar"), none);
+  CAF_CHECK_EQUAL(unbox(read<atom_value>("foo")), atom("foo"));
+  CAF_CHECK_EQUAL(read<atom_value>("toomanycharacters"), none);
+  CAF_CHECK_EQUAL(read<atom_value>("illegal!"), none);
 }
 
 CAF_TEST(type timespan) {
