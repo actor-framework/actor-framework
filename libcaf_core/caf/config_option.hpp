@@ -100,6 +100,9 @@ public:
   /// Returns whether this config option stores a boolean flag.
   bool is_flag() const noexcept;
 
+  /// Returns whether the category is optional for CLI options.
+  bool has_flat_cli_name() const noexcept;
+
   /// Tries to parse an input string. Stores and returns the parsed value on
   /// success, returns an error otherwise.
   expected<config_value> parse(string_view input) const;
