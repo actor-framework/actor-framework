@@ -39,16 +39,18 @@ struct fixture {
   config_option_set opts;
 
   template <class T>
-  expected<T> read(std::vector<std::string> args)  {
+  expected<T> read(std::vector<std::string> args) {
     settings cfg;
     auto res = opts.parse(cfg, std::move(args));
     if (res.first != pec::success)
       return res.first;
-    auto x = get_if<T>(&cfg, "value");
+    auto x = get_if<T>(&cfg, key);
     if (x == none)
       return sec::invalid_argument;
     return *x;
   }
+
+  std::string key = "value";
 };
 
 } // namespace <anonymous>
@@ -138,6 +140,15 @@ CAF_TEST(string parameters) {
   CAF_CHECK_EQUAL(read<std::string>({"-v", "\"123\""}), "\"123\"");
   CAF_CHECK_EQUAL(read<std::string>({"-v", "123"}), "123");
   CAF_CHECK_EQUAL(read<std::string>({"-v123"}), "123");
+}
+
+CAF_TEST(flat CLI options) {
+  key = "foo.bar";
+  opts.add<std::string>("?foo", "bar,b", "some value");
+  CAF_CHECK(opts.begin()->has_flat_cli_name());
+  CAF_CHECK_EQUAL(read<std::string>({"-b", "foobar"}), "foobar");
+  CAF_CHECK_EQUAL(read<std::string>({"--bar=foobar"}), "foobar");
+  CAF_CHECK_EQUAL(read<std::string>({"--foo.bar=foobar"}), "foobar");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

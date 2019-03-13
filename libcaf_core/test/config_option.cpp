@@ -47,7 +47,7 @@ constexpr int64_t underflow() {
 template <class T>
 optional<T> read(string_view arg) {
   auto co = make_config_option<T>(category, name, explanation);
-  auto res = config_value::parse(arg);
+  auto res = co.parse(arg);
   if (res && holds_alternative<T>(*res)) {
     CAF_CHECK_EQUAL(co.check(*res), none);
     return get<T>(*res);
@@ -167,16 +167,26 @@ CAF_TEST(type double) {
 }
 
 CAF_TEST(type string) {
-  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "foo");
   CAF_CHECK_EQUAL(unbox(read<string>("foo")), "foo");
+  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "\"foo\"");
 }
 
 CAF_TEST(type atom) {
-  CAF_CHECK_EQUAL(unbox(read<atom_value>("'foo'")), atom("foo"));
-  CAF_CHECK_EQUAL(read<atom_value>("bar"), none);
+  CAF_CHECK_EQUAL(unbox(read<atom_value>("foo")), atom("foo"));
+  CAF_CHECK_EQUAL(read<atom_value>("toomanycharacters"), none);
+  CAF_CHECK_EQUAL(read<atom_value>("illegal!"), none);
 }
 
 CAF_TEST(type timespan) {
   timespan dur{500};
   CAF_CHECK_EQUAL(unbox(read<timespan>("500ns")), dur);
+}
+
+CAF_TEST(flat CLI parsing) {
+  auto x = make_config_option<std::string>("?foo", "bar,b", "test option");
+  CAF_CHECK_EQUAL(x.category(), "foo");
+  CAF_CHECK_EQUAL(x.long_name(), "bar");
+  CAF_CHECK_EQUAL(x.short_names(), "b");
+  CAF_CHECK_EQUAL(x.full_name(), "foo.bar");
+  CAF_CHECK_EQUAL(x.has_flat_cli_name(), true);
 }
