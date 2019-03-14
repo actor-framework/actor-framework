@@ -187,6 +187,9 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       break;
   }
 }
+mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
+  return mailbox().closed() || mailbox().blocked() ? nullptr : mailbox().peek();
+}
 
 // -- overridden functions of local_actor --------------------------------------
 

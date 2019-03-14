@@ -23,6 +23,9 @@
 #include <limits>
 #include <thread>
 
+using std::max;
+using std::min;
+
 namespace {
 
 using us_t = std::chrono::microseconds;
@@ -54,7 +57,7 @@ namespace scheduler {
 
 const atom_value policy = atom("stealing");
 string_view profiling_output_file = "";
-const size_t max_threads = std::max(std::thread::hardware_concurrency(), 4u);
+const size_t max_threads = max(std::thread::hardware_concurrency(), 4u);
 const size_t max_throughput = std::numeric_limits<size_t>::max();
 const timespan profiling_resolution = ms(100);
 
@@ -92,6 +95,7 @@ const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;
 const size_t cached_udp_buffers = 10;
 const size_t max_pending_msgs = 10;
+const size_t workers = min(3u, std::thread::hardware_concurrency() / 4u) + 1;
 
 } // namespace middleman
 

@@ -82,6 +82,7 @@ extern const size_t max_consecutive_reads;
 extern const size_t heartbeat_interval;
 extern const size_t cached_udp_buffers;
 extern const size_t max_pending_msgs;
+extern const size_t workers;
 
 } // namespace middleman
 

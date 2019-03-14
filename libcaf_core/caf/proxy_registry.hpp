@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <mutex>
 #include <utility>
 #include <functional>
 #include <unordered_map>
@@ -43,7 +44,8 @@ public:
     /// Creates a new proxy instance.
     virtual strong_actor_ptr make_proxy(node_id, actor_id) = 0;
 
-    virtual execution_unit* registry_context() = 0;
+    /// Sets the thread-local last-hop pointer to detect indirect connections.
+    virtual void set_last_hop(node_id* ptr) = 0;
   };
 
   proxy_registry(actor_system& sys, backend& be);
@@ -69,17 +71,17 @@ public:
   using proxy_map = std::map<actor_id, strong_actor_ptr>;
 
   /// Returns the number of proxies for `node`.
-  size_t count_proxies(const node_id& node);
+  size_t count_proxies(const node_id& node) const;
 
   /// Returns the proxy instance identified by `node` and `aid`.
-  strong_actor_ptr get(const node_id& node, actor_id aid);
+  strong_actor_ptr get(const node_id& node, actor_id aid) const;
 
   /// Returns the proxy instance identified by `node` and `aid`
   /// or creates a new (default) proxy instance.
   strong_actor_ptr get_or_put(const node_id& nid, actor_id aid);
 
   /// Returns all known proxies.
-  std::vector<strong_actor_ptr> get_all(const node_id& node);
+  std::vector<strong_actor_ptr> get_all(const node_id& node) const;
 
   /// Deletes all proxies for `node`.
   void erase(const node_id& nid);
@@ -95,26 +97,28 @@ public:
   void clear();
 
   /// Returns the hosting actor system.
-  inline actor_system& system() {
+  actor_system& system() {
     return system_;
   }
 
   /// Returns the hosting actor system.
-  inline const actor_system& system() const {
+  const actor_system& system() const {
     return system_;
   }
 
-  inline size_t size() const {
-    return proxies_.size();
+  /// Sets the thread-local last hop variable on the backend.
+  void set_last_hop(node_id* ptr) {
+    backend_.set_last_hop(ptr);
   }
 
 private:
+  /// @pre mtx_ is locked
   void kill_proxy(strong_actor_ptr&, error);
 
   actor_system& system_;
   backend& backend_;
+  mutable std::mutex mtx_;
   std::unordered_map<node_id, proxy_map> proxies_;
 };
 
 } // namespace caf
-

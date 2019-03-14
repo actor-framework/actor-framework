@@ -191,6 +191,10 @@ public:
     return ptr_;
   }
 
+  pointer operator->() const {
+    return get();
+  }
+
   ptrdiff_t compare(const caf_handle& other) const {
     return reinterpret_cast<ptrdiff_t>(ptr_)
            - reinterpret_cast<ptrdiff_t>(other.ptr_);
@@ -204,32 +208,12 @@ private:
   caf::abstract_actor* ptr_;
 };
 
-// -- access to an actor's mailbox ---------------------------------------------
-
-/// Returns a pointer to the next element in an actor's mailbox without taking
-/// it out of the mailbox.
-/// @pre `ptr` is alive and either a `scheduled_actor` or `blocking_actor`
-inline caf::mailbox_element* next_mailbox_element(caf_handle x) {
-  CAF_ASSERT(x.get() != nullptr);
-  auto sptr = dynamic_cast<caf::scheduled_actor*>(x.get());
-  if (sptr != nullptr) {
-    return sptr->mailbox().closed() || sptr->mailbox().blocked()
-           ? nullptr
-           : sptr->mailbox().peek();
-  }
-  auto bptr = dynamic_cast<caf::blocking_actor*>(x.get());
-  CAF_ASSERT(bptr != nullptr);
-  return bptr->mailbox().closed() || bptr->mailbox().blocked()
-         ? nullptr
-         : bptr->mailbox().peek();
-}
-
 // -- introspection of the next mailbox element --------------------------------
 
 /// @private
 template <class... Ts>
 caf::optional<std::tuple<Ts...>> default_extract(caf_handle x) {
-  auto ptr = next_mailbox_element(x);
+  auto ptr = x->peek_at_next_mailbox_element();
   if (ptr == nullptr || !ptr->content().template match_elements<Ts...>())
     return caf::none;
   return ptr->content().template get_as_tuple<Ts...>();
@@ -277,7 +261,7 @@ template <class T, class... Ts>
 std::tuple<T, Ts...> extract(caf_handle x) {
   auto result = try_extract<T, Ts...>(x);
   if (result == caf::none) {
-    auto ptr = next_mailbox_element(x);
+    auto ptr = x->peek_at_next_mailbox_element();
     if (ptr == nullptr)
       CAF_FAIL("Mailbox is empty");
     CAF_FAIL("Message does not match expected pattern: "
@@ -326,8 +310,8 @@ public:
   template <class Handle>
   expect_clause& to(const Handle& whom) {
     CAF_REQUIRE(sched_.prioritize(whom));
-    dest_ = &sched_.next_job<caf::scheduled_actor>();
-    auto ptr = next_mailbox_element(dest_);
+    dest_ = &sched_.next_job<caf::abstract_actor>();
+    auto ptr = dest_->peek_at_next_mailbox_element();
     CAF_REQUIRE(ptr != nullptr);
     if (src_)
       CAF_REQUIRE_EQUAL(ptr->sender, src_);
@@ -366,7 +350,7 @@ protected:
 
   caf::scheduler::test_coordinator& sched_;
   caf::strong_actor_ptr src_;
-  caf::local_actor* dest_;
+  caf::abstract_actor* dest_;
   std::function<void ()> peek_;
 };
 
@@ -402,7 +386,7 @@ public:
   template <class Handle>
   allow_clause& to(const Handle& whom) {
     if (sched_.prioritize(whom))
-      dest_ = &sched_.next_job<caf::scheduled_actor>();
+      dest_ = &sched_.next_job<caf::abstract_actor>();
     return *this;
   }
 
@@ -448,7 +432,7 @@ protected:
 
   caf::scheduler::test_coordinator& sched_;
   caf::strong_actor_ptr src_;
-  caf::local_actor* dest_;
+  caf::abstract_actor* dest_;
   std::function<bool ()> peek_;
 };
 
@@ -457,14 +441,14 @@ class disallow_clause {
 public:
   disallow_clause() {
     check_ = [=] {
-      auto ptr = next_mailbox_element(dest_);
+      auto ptr = dest_->peek_at_next_mailbox_element();
       if (ptr == nullptr)
         return;
       if (src_ != nullptr && ptr->sender != src_)
         return;
       auto res = try_extract<Ts...>(dest_);
       if (res != caf::none)
-        CAF_FAIL("received disallowed message: " << CAF_ARG(*res));
+        CAF_FAIL("received disallowed message: " << caf::deep_to_string(*ptr));
     };
   }
 
@@ -494,7 +478,7 @@ public:
     // TODO: move tmp into lambda when switching to C++14
     auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     check_ = [=] {
-      auto ptr = next_mailbox_element(dest_);
+      auto ptr = dest_->peek_at_next_mailbox_element();
       if (ptr == nullptr)
         return;
       if (src_ != nullptr && ptr->sender != src_)
@@ -563,6 +547,7 @@ public:
     cfg.set("scheduler.policy", caf::atom("testing"));
     cfg.set("logger.inline-output", true);
     cfg.set("middleman.network-backend", caf::atom("testing"));
+    cfg.set("middleman.workers", size_t{0});
     return cfg;
   }
 
