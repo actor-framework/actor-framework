@@ -156,19 +156,19 @@ error message::load(deserializer& source) {
   return none;
 }
 
-error message::save(serializer& sink, const type_erased_tuple& x) {
+error message::save(serializer& sink) const {
   if (sink.context() == nullptr)
     return sec::no_context;
   // build type name
   uint16_t zero = 0;
   std::string tname = "@<>";
-  if (x.empty())
+  if (empty())
     return error::eval([&] { return sink.begin_object(zero, tname); },
                        [&] { return sink.end_object(); });
   auto& types = sink.context()->system().types();
-  auto n = x.size();
+  auto n = size();
   for (size_t i = 0; i < n; ++i) {
-    auto rtti = x.type(i);
+    auto rtti = cvals()->type(i);
     auto ptr = types.portable_name(rtti);
     if (ptr == nullptr) {
       std::cerr << "[ERROR]: cannot serialize message because a type was "
@@ -185,7 +185,7 @@ error message::save(serializer& sink, const type_erased_tuple& x) {
   }
   auto save_loop = [&]() -> error {
     for (size_t i = 0; i < n; ++i) {
-      auto e = x.save(i, sink);
+      auto e = cvals()->save(i, sink);
       if (e)
         return e;
     }
@@ -194,10 +194,6 @@ error message::save(serializer& sink, const type_erased_tuple& x) {
   return error::eval([&] { return sink.begin_object(zero, tname); },
                      [&] { return save_loop();  },
                      [&] { return sink.end_object(); });
-}
-
-error message::save(serializer& sink) const {
-  return save(sink, *this);
 }
 
 // -- factories ----------------------------------------------------------------

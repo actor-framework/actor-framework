@@ -90,10 +90,6 @@ actor_system& abstract_actor::home_system() const noexcept {
   return *(actor_control_block::from(this)->home_system);
 }
 
-mailbox_element* abstract_actor::peek_at_next_mailbox_element() {
-  return nullptr;
-}
-
 void abstract_actor::register_at_system() {
   if (getf(is_registered_flag))
     return;

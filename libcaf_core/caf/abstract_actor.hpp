@@ -112,13 +112,6 @@ public:
 
   /// @cond PRIVATE
 
-  /// Called by the testing DSL to peek at the next element in the mailbox. Do
-  /// not call this function in production code! The default implementation
-  /// always returns `nullptr`.
-  /// @returns A pointer to the next mailbox element or `nullptr` if the
-  ///          mailbox is empty or the actor does not have a mailbox.
-  virtual mailbox_element* peek_at_next_mailbox_element();
-
   template <class... Ts>
   void eq_impl(message_id mid, strong_actor_ptr sender,
                execution_unit* ctx, Ts&&... xs) {

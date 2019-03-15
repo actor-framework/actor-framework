@@ -31,6 +31,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/send.hpp"
 
+#include "caf/io/hook.hpp"
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman_actor.hpp"
 #include "caf/io/network/multiplexer.hpp"
@@ -42,6 +43,8 @@ namespace io {
 class middleman : public actor_system::module {
 public:
   friend class ::caf::actor_system;
+
+  using hook_vector = std::vector<hook_uptr>;
 
   ~middleman() override;
 
@@ -145,6 +148,23 @@ public:
 
   /// Returns the IO backend used by this middleman.
   virtual network::multiplexer& backend() = 0;
+
+  /// Invokes the callback(s) associated with given event.
+  template <hook::event_type Event, typename... Ts>
+  void notify(Ts&&... ts) {
+    for (auto& hook : hooks_)
+      hook->handle<Event>(std::forward<Ts>(ts)...);
+  }
+
+  /// Returns whether this middleman has any hooks installed.
+  inline bool has_hook() const {
+    return !hooks_.empty();
+  }
+
+  /// Returns all installed hooks.
+  const hook_vector& hooks() const {
+    return hooks_;
+  }
 
   /// Returns the actor associated with `name` at `nid` or
   /// `invalid_actor` if `nid` is not connected or has no actor
@@ -328,6 +348,8 @@ private:
   std::thread thread_;
   // keeps track of "singleton-like" brokers
   std::map<atom_value, actor> named_brokers_;
+  // user-defined hooks
+  hook_vector hooks_;
   // actor offering asyncronous IO by managing this singleton instance
   middleman_actor manager_;
 };

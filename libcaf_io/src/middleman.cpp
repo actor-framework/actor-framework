@@ -270,6 +270,9 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
 
 void middleman::start() {
   CAF_LOG_TRACE("");
+  // Create hooks.
+  for (auto& f : system().config().hook_factories)
+    hooks_.emplace_back(f(system_));
   // Launch backend.
   if (!get_or(config(), "middleman.manual-multiplexing", false))
     backend_supervisor_ = backend().make_supervisor();
@@ -309,6 +312,7 @@ void middleman::stop() {
   CAF_LOG_TRACE("");
   backend().dispatch([=] {
     CAF_LOG_TRACE("");
+    notify<hook::before_shutdown>();
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {
@@ -329,18 +333,13 @@ void middleman::stop() {
     while (backend().try_run_once())
       ; // nop
   }
+  hooks_.clear();
+  named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
   if (!get_or(config(), "middleman.attach-utility-actors", false))
     self->wait_for(manager_);
   destroy(manager_);
-  // Note: we intentionally don't call `named_brokers_.clear()` here. The BASP
-  // broker must outlive the scheduler threads. The scheduler is stopped
-  // *after* the MM. However, the BASP workers still need to return to their
-  // hub safely, should some of them are still running at this point. By not
-  // clearing the container, we keep the BASP broker (and thus the BASP
-  // instance) alive until the MM module gets destroyed. At that point, all
-  // BASP workers are safe in their hub.
 }
 
 void middleman::init(actor_system_config& cfg) {
