@@ -20,19 +20,19 @@
 
 #include <limits>
 
+#include "caf/error.hpp"
+#include "caf/variant.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
-#include "caf/callback.hpp"
-#include "caf/error.hpp"
-#include "caf/io/basp/buffer_type.hpp"
-#include "caf/io/basp/connection_state.hpp"
+
+#include "caf/io/hook.hpp"
+#include "caf/io/middleman.hpp"
+
 #include "caf/io/basp/header.hpp"
-#include "caf/io/basp/message_queue.hpp"
+#include "caf/io/basp/buffer_type.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"
-#include "caf/io/basp/worker_hub.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/variant.hpp"
+#include "caf/io/basp/connection_state.hpp"
 
 namespace caf {
 namespace io {
@@ -45,18 +45,12 @@ class instance {
 public:
   /// Provides a callback-based interface for certain BASP events.
   class callee {
-  public:
-    // -- member types ---------------------------------------------------------
-
+  protected:
     using buffer_type = std::vector<char>;
-
-    // -- constructors, destructors, and assignment operators ------------------
-
+  public:
     explicit callee(actor_system& sys, proxy_registry::backend& backend);
 
     virtual ~callee();
-
-    // -- pure virtual functions -----------------------------------------------
 
     /// Called if a server handshake was received and
     /// the connection to `nid` is established.
@@ -74,6 +68,18 @@ public:
     /// for one of our local actors.
     virtual void proxy_announced(const node_id& nid, actor_id aid) = 0;
 
+    /// Called for each `dispatch_message` without `named_receiver_flag`.
+    virtual void deliver(const node_id& source_node, actor_id source_actor,
+                         actor_id dest_actor, message_id mid,
+                         std::vector<strong_actor_ptr>& forwarding_stack,
+                         message& msg) = 0;
+
+    /// Called for each `dispatch_message` with `named_receiver_flag`.
+    virtual void deliver(const node_id& source_node, actor_id source_actor,
+                         atom_value dest_actor, message_id mid,
+                         std::vector<strong_actor_ptr>& forwarding_stack,
+                         message& msg) = 0;
+
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
     virtual void learned_new_node_directly(const node_id& nid,
@@ -86,12 +92,19 @@ public:
     /// Called if a heartbeat was received from `nid`
     virtual void handle_heartbeat() = 0;
 
-    /// Returns the current CAF scheduler context.
-    virtual execution_unit* current_execution_unit() = 0;
-
     /// Returns the actor namespace associated to this BASP protocol instance.
     proxy_registry& proxies() {
       return namespace_;
+    }
+
+    /// Returns the hosting actor system.
+    actor_system& system() {
+      return namespace_.system();
+    }
+
+    /// Returns the system-wide configuration.
+    const actor_system_config& config() const {
+      return namespace_.system().config();
     }
 
     /// Returns a reference to the sent buffer.
@@ -205,12 +218,14 @@ public:
     return this_node_;
   }
 
-  actor_system& system() {
-    return callee_.proxies().system();
+  /// Invokes the callback(s) associated with given event.
+  template <hook::event_type Event, typename... Ts>
+  void notify(Ts&&... xs) {
+    system().middleman().template notify<Event>(std::forward<Ts>(xs)...);
   }
 
-  const actor_system_config& config() {
-    return system().config();
+  actor_system& system() {
+    return callee_.system();
   }
 
   bool handle(execution_unit* ctx, connection_handle hdl, header& hdr,
@@ -224,8 +239,6 @@ private:
   published_actor_map published_actors_;
   node_id this_node_;
   callee& callee_;
-  message_queue queue_;
-  worker_hub hub_;
 };
 
 /// @}

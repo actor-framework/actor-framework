@@ -262,8 +262,6 @@ public:
 
   void enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
 
-  mailbox_element* peek_at_next_mailbox_element() override;
-
   // -- overridden functions of local_actor ------------------------------------
 
   const char* name() const override;

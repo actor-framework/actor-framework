@@ -110,12 +110,11 @@ struct node {
 class fixture {
 public:
   fixture(bool autoconn = false)
-    : sys(cfg.load<io::middleman, network::test_multiplexer>()
-            .set("middleman.enable-automatic-connections", autoconn)
-            .set("middleman.workers", size_t{0})
-            .set("scheduler.policy",
-                 autoconn ? caf::atom("testing") : caf::atom("stealing"))
-            .set("middleman.attach-utility-actors", autoconn)) {
+      : sys(cfg.load<io::middleman, network::test_multiplexer>()
+                  .set("middleman.enable-automatic-connections", autoconn)
+                  .set("scheduler.policy", autoconn ? caf::atom("testing")
+                                                    : caf::atom("stealing"))
+                  .set("middleman.attach-utility-actors", autoconn)) {
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);
@@ -200,17 +199,17 @@ public:
 
   // implementation of the Binary Actor System Protocol
   basp::instance& instance() {
-    return aut()->instance;
+    return aut()->state.instance;
   }
 
   // our routing table (filled by BASP)
   basp::routing_table& tbl() {
-    return aut()->instance.tbl();
+    return aut()->state.instance.tbl();
   }
 
   // access to proxy instances
   proxy_registry& proxies() {
-    return aut()->proxies();
+    return aut()->state.proxies();
   }
 
   // stores the singleton pointer for convenience
@@ -313,7 +312,7 @@ public:
     buffer buf;
     std::tie(hdr, buf) = read_from_out_buf(hdl);
     CAF_MESSAGE("dispatch output buffer for connection " << hdl.id());
-    CAF_REQUIRE_EQUAL(hdr.operation, basp::message_type::direct_message);
+    CAF_REQUIRE(hdr.operation == basp::message_type::direct_message);
     binary_deserializer source{mpx_, buf};
     std::vector<strong_actor_ptr> stages;
     message msg;
@@ -354,9 +353,8 @@ public:
       buffer buf;
       this_->to_payload(buf, xs...);
       buffer& ob = this_->mpx()->output_buffer(hdl);
-      while (this_->mpx()->try_exec_runnable()) {
-        // repeat
-      }
+      while (ob.size() < basp::header_size)
+        this_->mpx()->exec_runnable();
       CAF_MESSAGE("output buffer has " << ob.size() << " bytes");
       basp::header hdr;
       { // lifetime scope of source
@@ -377,6 +375,12 @@ public:
         ob.erase(ob.begin(), ob.begin() + basp::header_size);
       }
       CAF_CHECK_EQUAL(operation, hdr.operation);
+      if (hdr.operation == basp::message_type::direct_message) {
+        binary_deserializer source{this_->mpx(), payload};
+        std::vector<strong_actor_ptr> fwd_stack;
+        message msg;
+        source(fwd_stack, msg);
+      }
       CAF_CHECK_EQUAL(flags, static_cast<uint8_t>(hdr.flags));
       CAF_CHECK_EQUAL(payload_len, hdr.payload_len);
       CAF_CHECK_EQUAL(operation_data, hdr.operation_data);

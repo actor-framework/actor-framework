@@ -266,11 +266,6 @@ public:
     return *vals_;
   }
 
-  /// Serializes the content of `x` as if `x` was an instance of `message`. The
-  /// resulting output of `sink` can then be used to deserialize a `message`
-  /// even if the serialized object had a different type.
-  static error save(serializer& sink, const type_erased_tuple& x);
-
   /// @endcond
 
 private:
