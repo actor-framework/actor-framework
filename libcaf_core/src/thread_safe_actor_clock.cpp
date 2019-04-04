@@ -52,6 +52,15 @@ void thread_safe_actor_clock::set_request_timeout(time_point t,
   }
 }
 
+void thread_safe_actor_clock::set_multi_timeout(time_point t, abstract_actor* self,
+                       atom_value type, uint64_t id) {
+  guard_type guard{mx_};
+  if (!done_) {
+    super::set_multi_timeout(t, self, type, id);
+    cv_.notify_all();
+  }
+}
+
 void thread_safe_actor_clock::cancel_ordinary_timeout(abstract_actor* self,
                                                       atom_value type) {
   guard_type guard{mx_};

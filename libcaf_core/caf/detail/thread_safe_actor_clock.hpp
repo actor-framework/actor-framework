@@ -39,6 +39,9 @@ public:
   void set_request_timeout(time_point t, abstract_actor* self,
                            message_id id) override;
 
+  void set_multi_timeout(time_point t, abstract_actor* self,
+                         atom_value type, uint64_t id) override;
+
   void cancel_ordinary_timeout(abstract_actor* self, atom_value type) override;
 
   void cancel_request_timeout(abstract_actor* self, message_id id) override;
