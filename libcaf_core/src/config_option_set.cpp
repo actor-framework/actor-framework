@@ -115,6 +115,19 @@ std::string config_option_set::help_text(bool global_only) const {
   return std::move(builder.result);
 }
 
+namespace {
+
+settings& select_entry(settings& config, string_view key){
+  auto sep = key.find('.');
+  if (sep == string_view::npos)
+    return config[key].as_dictionary();
+  auto prefix = key.substr(0, sep);
+  auto suffix = key.substr(sep + 1);
+  return select_entry(config[prefix].as_dictionary(), suffix);
+}
+
+} // namespace
+
 auto config_option_set::parse(settings& config, argument_iterator first,
                               argument_iterator last) const
   -> std::pair<pec, argument_iterator> {
@@ -128,8 +141,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     auto opt_name = opt.long_name();
     auto opt_ctg = opt.category();
     // Try inserting a new submap into the config or fill existing one.
-    auto& entry = opt_ctg == "global" ? config
-                                      : config[opt_ctg].as_dictionary();
+    auto& entry = opt_ctg == "global" ? config : select_entry(config, opt_ctg);
     // Flags only consume the current element.
     if (opt.is_flag()) {
       if (arg_begin != arg_end)
@@ -223,17 +235,17 @@ config_option_set::parse(settings& config,
 }
 
 config_option_set::option_pointer
-config_option_set::cli_long_name_lookup(string_view name) const {
+config_option_set::cli_long_name_lookup(string_view input) const {
   // We accept "caf#" prefixes for backward compatibility, but ignore them.
-  size_t offset = name.compare(0, 4, "caf#") != 0 ? 0u : 4u;
+  auto name = input.substr(input.compare(0, 4, "caf#") != 0 ? 0u : 4u);
   // Extract category and long name.
   string_view category;
   string_view long_name;
-  auto sep = name.find('.', offset);
+  auto sep = name.find_last_of('.');
   if (sep == string::npos) {
-    long_name = name.substr(offset);
+    long_name = name;
   } else {
-    category = name.substr(offset, sep);
+    category = name.substr(0, sep);
     long_name = name.substr(sep + 1);
   }
   // Scan all options for a match.
