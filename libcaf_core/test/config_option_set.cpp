@@ -151,4 +151,13 @@ CAF_TEST(flat CLI options) {
   CAF_CHECK_EQUAL(read<std::string>({"--foo.bar=foobar"}), "foobar");
 }
 
+CAF_TEST(flat CLI parsing with nested categories) {
+  key = "foo.goo.bar";
+  opts.add<std::string>("?foo.goo", "bar,b", "some value");
+  CAF_CHECK(opts.begin()->has_flat_cli_name());
+  CAF_CHECK_EQUAL(read<std::string>({"-b", "foobar"}), "foobar");
+  CAF_CHECK_EQUAL(read<std::string>({"--bar=foobar"}), "foobar");
+  CAF_CHECK_EQUAL(read<std::string>({"--foo.goo.bar=foobar"}), "foobar");
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

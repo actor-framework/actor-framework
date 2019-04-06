@@ -190,3 +190,12 @@ CAF_TEST(flat CLI parsing) {
   CAF_CHECK_EQUAL(x.full_name(), "foo.bar");
   CAF_CHECK_EQUAL(x.has_flat_cli_name(), true);
 }
+
+CAF_TEST(flat CLI parsing with nested categories) {
+  auto x = make_config_option<std::string>("?foo.goo", "bar,b", "test option");
+  CAF_CHECK_EQUAL(x.category(), "foo.goo");
+  CAF_CHECK_EQUAL(x.long_name(), "bar");
+  CAF_CHECK_EQUAL(x.short_names(), "b");
+  CAF_CHECK_EQUAL(x.full_name(), "foo.goo.bar");
+  CAF_CHECK_EQUAL(x.has_flat_cli_name(), true);
+}
