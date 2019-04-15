@@ -127,10 +127,10 @@ struct newb : public network::newb_base {
     CAF_LOG_TRACE("");
     switch (op) {
       case io::network::operation::read:
-        read_event();
+        read_event(this);
         break;
       case io::network::operation::write:
-        write_event();
+        write_event(this);
         break;
       case io::network::operation::propagate_error:
         handle_error();
@@ -256,14 +256,14 @@ struct newb : public network::newb_base {
     trans->flush(this);
   }
 
-  void read_event() {
-    auto err = trans->read_some(this, *proto);
+  void read_event(network::newb_base* base) override {
+    auto err = trans->read_some(base, *proto);
     if (err)
       io_error(network::operation::read, std::move(err));
   }
 
-  void write_event() {
-    if (trans->write_some(this) == network::rw_state::failure)
+  void write_event(network::newb_base* base) override {
+    if (trans->write_some(base) == network::rw_state::failure)
       io_error(network::operation::write, sec::runtime_error);
   }
 
@@ -457,11 +457,11 @@ struct newb_acceptor : network::acceptor_base {
     CAF_LOG_DEBUG("new event: " << to_string(op));
     switch (op) {
       case network::operation::read:
-        read_event();
+        read_event(this);
         break;
       case network::operation::write:
         // Required to multiplex over a single socket.
-        write_event();
+        write_event(this);
         break;
       case network::operation::propagate_error:
         CAF_LOG_DEBUG("acceptor got error operation");
@@ -549,7 +549,7 @@ struct newb_acceptor : network::acceptor_base {
 
   // -- members ----------------------------------------------------------------
 
-  void read_event() {
+  void read_event(network::newb_base*) override {
     if (accept_pol->manual_read) {
       accept_pol->read_event(this);
     } else {
@@ -575,7 +575,7 @@ struct newb_acceptor : network::acceptor_base {
     }
   }
 
-  void write_event() {
+  void write_event(network::newb_base* base) override {
     accept_pol->write_event(this);
   }
 
