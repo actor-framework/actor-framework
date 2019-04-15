@@ -186,7 +186,7 @@ struct newb : public network::newb_base {
   void io_error(network::operation op, error err) override {
     using network::operation;
     if (!this->getf(this->is_cleaned_up_flag)) {
-      auto mptr = make_mailbox_element(nullptr, invalid_message_id, {},
+      auto mptr = make_mailbox_element(nullptr, make_message_id(), {},
                                        io_error_msg{op, std::move(err)});
       switch (this->scheduled_actor::consume(*mptr)) {
         case im_success:
@@ -388,10 +388,7 @@ spawn_newb(actor_system& sys, F fun, policy::transport_ptr transport,
   // Setup the config.
   actor_config cfg(&dm);
   detail::init_fun_factory<impl, F> fac;
-  auto init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
-  cfg.init_fun = [init_fun](local_actor* self) mutable -> behavior {
-    return init_fun(self);
-  };
+  cfg.init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
   policy::protocol_ptr<message> proto(new Protocol());
   auto res = sys.spawn_class<impl, Os>(cfg, dm, sockfd, std::move(transport),
                                        std::move(proto));

@@ -166,8 +166,13 @@ struct fixture {
   scheduler::test_coordinator& sched;
   actor test_newb;
 
+  static actor_system_config& init(actor_system_config& cfg) {
+    cfg.parse(test::engine::argc(), test::engine::argv());
+    return cfg;
+  }
+
   fixture()
-      : sys(cfg.parse(test::engine::argc(), test::engine::argv())),
+      : sys(init(cfg)),
         mpx(dynamic_cast<default_multiplexer&>(sys.middleman().backend())),
         sched(dynamic_cast<caf::scheduler::test_coordinator&>(sys.scheduler())) {
     // Create a socket;

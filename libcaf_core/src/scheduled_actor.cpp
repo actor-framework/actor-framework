@@ -572,7 +572,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::ordinary;
     case make_type_token<timeout_msg>(): {
       CAF_ASSERT(x.mid.is_async());
-      auto& tm = content.get_as<timeout_msg>(0);
+      auto tm = content.move_if_unshared<timeout_msg>(0);
       auto tid = tm.timeout_id;
       if (tm.type == receive_atom::value) {
         CAF_LOG_DEBUG("handle ordinary timeout message");
