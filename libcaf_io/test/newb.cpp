@@ -325,7 +325,7 @@ CAF_TEST(read event) {
   write_packet(buf, ohdr, bhdr, payload);
   dummy.trans->received_bytes = buf.size();
   CAF_MESSAGE("trigger a read event");
-  dummy.read_event();
+  dummy.read_event(&dummy);
   CAF_MESSAGE("check the basp header and payload");
   CAF_REQUIRE(!dummy.state.messages.empty());
   auto& msg = dummy.state.messages.front().first;
@@ -370,7 +370,7 @@ CAF_TEST(timeouts) {
   exec_all();
   CAF_MESSAGE("trigger read event");
   auto& dummy = deref<newb_t>(test_newb);
-  dummy.read_event();
+  dummy.read_event(&dummy);
   CAF_CHECK(!dummy.state.expected.empty());
   CAF_MESSAGE("trigger waiting timeouts");
   // Trigger timeout.
@@ -400,12 +400,12 @@ CAF_TEST(message ordering) {
   CAF_MESSAGE("read second message first");
   write_packet(buf, ohdr_second, bhdr_second, payload_second);
   dummy.trans->received_bytes = buf.size();
-  dummy.read_event();
+  dummy.read_event(&dummy);
   CAF_MESSAGE("followed by first message");
   buf.clear();
   write_packet(buf, ohdr_first, bhdr_first, payload_first);
   dummy.trans->received_bytes = buf.size();
-  dummy.read_event();
+  dummy.read_event(&dummy);
 }
 
 CAF_TEST(write buf) {

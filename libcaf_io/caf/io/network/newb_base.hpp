@@ -109,6 +109,10 @@ struct newb_base : public extend<scheduled_actor, newb_base>::template
 
   virtual void stop_writing() = 0;
 
+  virtual void read_event(newb_base* = nullptr) = 0;
+
+  virtual void write_event(newb_base* = nullptr) = 0;
+
   // -- members ----------------------------------------------------------------
 
   void init_newb();
