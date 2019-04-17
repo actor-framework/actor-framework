@@ -19,6 +19,7 @@
    GroupCommunication
    ManagingGroupsOfWorkers
    Streaming
+   Testing
 
 .. toctree::
    :maxdepth: 2

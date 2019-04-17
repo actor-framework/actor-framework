@@ -1,0 +1,183 @@
+\section{Testing}
+\label{testing}
+
+CAF has built-in support for writing unit tests. The approach of testing is declarative
+and is very similar to the one in Boost.Test and Catch frameworks.
+
+There are four main concepts represented as macros in the testing framework.
+
+\begin{itemize}
+    \item check - represents a single verification of boolean operation
+    \item test - contains one or more checks
+    \item suite - groups tests together
+    \item fixture - equips a test with fixed data environment
+\end{itemize}
+
+Here is a very basic test case that captures the four main concepts described above.
+
+\begin{lstlisting}
+
+namespace n1 {
+
+struct fixture {};
+    
+CAF_TEST_FIXTURE_SCOPE(math_tests, fixture)
+
+CAF_TEST(divide) {
+    CAF_CHECK(1 / 1 == 0); // this would fail
+    CAF_CHECK(2 / 2 == 1); // this would pass
+    CAF_REQUIRE(3 + 3 == 5); // this would fail and stop test execution [uncomment to try]
+    CAF_CHECK(4 - 4 == 0); // You would not reach here because of failed REQUIRE
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
+    
+}
+\end{lstlisting}
+
+We have used few macros such as  \lstinline^CAF_CHECK^ and \lstinline^CAF_REQUIRE^ to validate our assertions. The main difference between 
+\lstinline^CAF_REQUIRE^ and  \lstinline^CAF_CHECK^ is that even if  \lstinline^CAF_CHECK^ fails the control flow will continue, however failure of assertion 
+by  \lstinline^CAF_REQUIRE^ will stop the test exeuction.
+
+
+\subsection{Testing Actors}
+
+A simple example of a test case is shown below. This example shows that you can create the actor system in your fixture, spawn actors and send messages to them.
+In other words, below code is not very different from your regular program however here we are using the macros such as \lstinline^CAF_CHECK^ and have arranged
+them as test cases.
+
+\begin{lstlisting}
+
+namespace n2 {
+    
+    #define ERROR_HANDLER [&](caf::error &err) { CAF_FAIL(sys.render(err)); }
+        
+    struct actor_fixture {
+        caf::actor_system_config cfg;
+        caf::actor_system sys;
+        caf::scoped_actor self;
+        
+        actor_fixture()
+            : sys(cfg),
+            self(sys) {}
+    
+        ~actor_fixture() {}
+    };
+    
+    caf::behavior adder(caf::event_based_actor *self) {
+        return {
+            [=](int x, int y) -> int {
+                return x+y;
+            }
+        };
+    }    
+        
+    CAF_TEST_FIXTURE_SCOPE(actor_tests, actor_fixture)
+    
+    CAF_TEST(simple_actor_test) {
+        auto adder_actor = sys.spawn(adder);
+        
+        self->request(adder_actor, caf::infinite, 3, 4).receive([=](int r){
+            CAF_CHECK(r == 7);
+        }, ERROR_HANDLER);
+    }
+    
+    CAF_TEST_FIXTURE_SCOPE_END()
+            
+}
+
+\end{lstlisting}
+
+While the above example works, very soon you would start to face following problems -
+
+\begin{itemize}
+
+    \item Significant amount of boilerplate
+    \item Above is a simple example of one actor, if you are unit testing one actor it would work however in most cases you would have an actor under test sending messages to 
+    other actors. Writing code to validate all messages exchanges would not be trivial.
+    \item When testing the primary goal is to check the interaction between the actors and not necessarily the scheduling on multiple threads and/or the asynchronous nature of it.
+    
+\end{itemize}
+
+Next section describes the usage of \lstinline^test_coordinator^ that helps eliminiate the boilerplate as well as provide more deterministic and synchornous way
+of writing tests.
+
+\subsection{Test Coordinator}
+
+CAF provides an implementation of coordinator (called  \lstinline^test_coordinator^) that you supply to the scheduler. This coordinator is specifically designed 
+for testing as it does not schedule your actors on multiple thread.
+
+There is also a fixture class called \lstinline^test_coordinator_fixture^ that is provided to hide the details and reduce the boilerplate for setting up the scheduler 
+with \lstinline^test_corrdinator^.
+
+\begin{lstlisting}
+
+namespace n3 {
+    
+using an_atom =
+    caf::atom_constant<caf::atom("an_atom")>;
+    
+caf::behavior ping(caf::event_based_actor* self) {
+    return {
+      [=](an_atom) -> std::string {
+          return "pong";
+      }  
+    };
+}
+    
+caf::behavior pong(caf::event_based_actor* self) {
+    return {
+      [=](an_atom, bool pang) -> std::string {
+          return pang ? "pang" : "ping";
+      }  
+    };
+}
+    
+    
+struct ping_pong_fixture : test_coordinator_fixture<> {
+};
+    
+CAF_TEST_FIXTURE_SCOPE(ping_pong_tests, ping_pong_fixture)
+
+CAF_TEST(ping_should_return_pong) {
+    auto ping_actor = sys.spawn(ping);
+    
+    self->send(ping_actor, an_atom::value);
+    
+    // check if we sent it correctly
+    expect((an_atom), from(self).to(ping_actor).with(an_atom::value));
+    // check the response we will get back
+    expect((std::string), from(ping_actor).to(self).with("pong"));
+}
+    
+
+CAF_TEST(pong_should_return_ping_or_pang) {
+    auto pong_actor = sys.spawn(pong);
+    
+    // check if we pass true that it should return pang
+    self->send(pong_actor, an_atom::value, true);
+    
+    // check if we sent it correctly
+    expect((an_atom, bool), from(self).to(pong_actor).with(an_atom::value, true));
+    // check the response we will get back
+    expect((std::string), from(pong_actor).to(self).with("pang"));
+    
+        
+    // check if we pass false that it should return ping
+    self->send(pong_actor, an_atom::value, false);
+    
+    // check if we sent it correctly
+    expect((an_atom, bool), from(self).to(pong_actor).with(an_atom::value, false));
+    // check the response we will get back
+    expect((std::string), from(pong_actor).to(self).with("ping"));
+    
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()
+    
+}
+
+\end{lstlisting}
+
+The above listings shows the declarative way testing of actors.
+A call to \emph{expect} macro essentially schedules the run using the \lstinline^test_coordinator^. 
