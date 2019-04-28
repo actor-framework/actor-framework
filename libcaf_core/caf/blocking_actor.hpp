@@ -86,7 +86,7 @@ public:
   /// Stores asynchronous messages with default priority.
   using normal_queue = intrusive::drr_cached_queue<policy::normal_messages>;
 
-  /// Stores asynchronous messages with hifh priority.
+  /// Stores asynchronous messages with high priority.
   using urgent_queue = intrusive::drr_cached_queue<policy::urgent_messages>;
 
   /// Configures the FIFO inbox with two nested queues:
