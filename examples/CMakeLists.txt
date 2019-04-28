@@ -55,6 +55,9 @@ add(remoting distributed_calculator)
 add(broker simple_broker)
 add(broker simple_http_broker)
 
+# testing DSL
+add(testing ping_pong)
+
 if(CAF_BUILD_PROTOBUF_EXAMPLES)
   find_package(Protobuf)
   if(PROTOBUF_FOUND AND PROTOBUF_PROTOC_EXECUTABLE)
