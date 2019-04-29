@@ -92,6 +92,10 @@ struct transport {
   virtual void shutdown(io::network::newb_base* parent,
                         io::network::native_socket sockfd);
 
+  virtual error timeout(io::network::newb_base*, atom_value, uint32_t) {
+    return sec::invalid_argument;
+  }
+
   size_t received_bytes;
   size_t max_consecutive_reads;
 

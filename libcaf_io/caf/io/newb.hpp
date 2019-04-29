@@ -54,6 +54,7 @@ namespace io {
 using children_atom = caf::atom_constant<atom("childern")>;
 using port_atom = caf::atom_constant<atom("port")>;
 using quit_atom = caf::atom_constant<atom("quit")>;
+using transport_atom = caf::atom_constant<atom("transport")>;
 
 // -- forward declarations -----------------------------------------------------
 
@@ -107,7 +108,11 @@ struct newb : public network::newb_base {
         writing_(false) {
     CAF_LOG_TRACE("");
     this->scheduled_actor::set_timeout_handler([&](timeout_msg& msg) {
-      proto->timeout(msg.type, msg.timeout_id);
+      if (msg.type == transport_atom::value) {
+        trans->timeout(this, msg.type, msg.timeout_id);
+      } else {
+        proto->timeout(msg.type, msg.timeout_id);
+      }
     });
     proto->init(this);
   }

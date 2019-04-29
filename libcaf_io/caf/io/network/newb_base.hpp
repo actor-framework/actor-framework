@@ -113,6 +113,15 @@ struct newb_base : public extend<scheduled_actor, newb_base>::template
 
   virtual void write_event(newb_base* = nullptr) = 0;
 
+  /// Set a timeout for a protocol policy layer.
+  template<class Rep = int, class Period = std::ratio<1>>
+  void set_timeout(std::chrono::duration<Rep, Period> timeout,
+                   atom_value atm, uint32_t id) {
+    auto n = actor_clock::clock_type::now();
+    scheduled_actor::clock().set_multi_timeout(n + timeout, this, atm, id);
+    //this->delayed_send(this, timeout, atm, id);
+  }
+
   // -- members ----------------------------------------------------------------
 
   void init_newb();
