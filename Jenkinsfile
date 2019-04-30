@@ -359,12 +359,12 @@ pipeline {
                         ]],
                     ])
                     sshagent(['84d71a75-cbb6-489a-8f4c-d0e2793201e9']) {
-                        sh '''
-                            if [ "$(cat branch.txt)" = "master" ]; then
+                        sh """
+                            if [ "${env.GIT_BRANCH}" = "origin/master" ]; then
                                 rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -r -z --delete build/doc/html/ www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/doc
                                 scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build/doc/manual.pdf www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/pdf/manual.pdf
                             fi
-                        '''
+                        """
                     }
                 }
                 dir('read-the-docs') {
@@ -372,20 +372,20 @@ pipeline {
                         credentialsId: '9b054212-9bb4-41fd-ad8e-b7d47495303f',
                         url: 'git@github.com:actor-framework/read-the-docs.git',
                     ])
-                    sh '''
-                        if [ "$(cat ../caf-sources/branch.txt)" = "master" ]; then
+                    sh """
+                        if [ "${env.GIT_BRANCH}" = "origin/master" ]; then
                             cp ../caf-sources/build/doc/rst/* .
-                            if [ -n "$(git status --porcelain)" ]; then
+                            if [ -n "\$(git status --porcelain)" ]; then
                                 git add .
                                 git commit -m "Update Manual"
                                 git push --set-upstream origin master
-                                if [ -z "$(grep 'exp.sha' ../caf-sources/release.txt)" ] ; then
-                                    git tag $(cat ../caf-sources/release.txt)
-                                    git push origin $(cat ../caf-sources/release.txt)
+                                if [ -z "\$(grep 'exp.sha' ../caf-sources/release.txt)" ] ; then
+                                    git tag \$(cat ../caf-sources/release.txt)
+                                    git push origin \$(cat ../caf-sources/release.txt)
                                 fi
                             fi
                         fi
-                    '''
+                    """
                 }
             }
         }
