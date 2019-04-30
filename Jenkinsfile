@@ -360,7 +360,7 @@ pipeline {
                     ])
                     sshagent(['84d71a75-cbb6-489a-8f4c-d0e2793201e9']) {
                         sh """
-                            if [ "${env.GIT_BRANCH}" = "origin/master" ]; then
+                            if [ "${env.GIT_BRANCH}" = "master" ]; then
                                 rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -r -z --delete build/doc/html/ www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/doc
                                 scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build/doc/manual.pdf www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/pdf/manual.pdf
                             fi
@@ -373,7 +373,7 @@ pipeline {
                         url: 'git@github.com:actor-framework/read-the-docs.git',
                     ])
                     sh """
-                        if [ "${env.GIT_BRANCH}" = "origin/master" ]; then
+                        if [ "${env.GIT_BRANCH}" = "master" ]; then
                             cp ../caf-sources/build/doc/rst/* .
                             if [ -n "\$(git status --porcelain)" ]; then
                                 git add .
