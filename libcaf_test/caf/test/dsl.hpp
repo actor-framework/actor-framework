@@ -413,8 +413,10 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
+    // TODO: replace this workaround with make_tuple() when dropping support
+    //       for GCC 4.8.
+    std::tuple<typename std::decay<Us>::type...> tmp{std::forward<Us>(xs)...};
     // TODO: move tmp into lambda when switching to C++14
-    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     peek_ = [=] {
       using namespace caf::detail;
       elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
@@ -491,8 +493,10 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
+    // TODO: replace this workaround with make_tuple() when dropping support
+    //       for GCC 4.8.
+    std::tuple<typename std::decay<Us>::type...> tmp{std::forward<Us>(xs)...};
     // TODO: move tmp into lambda when switching to C++14
-    auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     check_ = [=] {
       auto ptr = next_mailbox_element(dest_);
       if (ptr == nullptr)

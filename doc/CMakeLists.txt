@@ -31,6 +31,7 @@ set(sources
   tex/TypeInspection.tex
   tex/UsingAout.tex
   tex/Utility.tex
+  tex/Testing.tex
 )
 
 # -- process .in files -----------------------------------------------------

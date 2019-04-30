@@ -158,6 +158,13 @@ struct is_primitive {
                                 || std::is_convertible<T, atom_value>::value;
 };
 
+// Workaround for weird GCC 4.8 STL implementation that breaks
+// `std::is_convertible<T, atom_value>::value` for tuples containing atom
+// constants.
+// TODO: remove when dropping support for GCC 4.8.
+template <class... Ts>
+struct is_primitive<std::tuple<Ts...>> : std::false_type {};
+
 /// Checks whether `T1` is comparable with `T2`.
 template <class T1, class T2>
 class is_comparable {
