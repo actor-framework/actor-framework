@@ -123,9 +123,19 @@ if (CAF_BUILD_TEX_MANUAL)
       message(STATUS "Add optional target: rst.")
       add_custom_target(rst)
       add_dependencies(doc rst)
+      # generate .rst files for individual sections
       foreach(texfile ${sources})
         generate_rst(${texfile})
       endforeach()
+      # generate index.rst file from manual.tex
+      add_custom_target("index.rst"
+                        DEPENDS "tex/manual.tex"
+                        COMMAND "python"
+                                "${CMAKE_SOURCE_DIR}/scripts/make_index_rst.py"
+                                "${CMAKE_CURRENT_BINARY_DIR}/rst/index.rst"
+                                "${CMAKE_SOURCE_DIR}/doc/tex/manual.tex"
+                        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rst")
+      add_dependencies(rst "index.rst")
     endif()
   endif()
 endif()
