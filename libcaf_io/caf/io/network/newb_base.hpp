@@ -109,10 +109,6 @@ struct newb_base : public extend<scheduled_actor, newb_base>::template
 
   virtual void stop_writing() = 0;
 
-  virtual void read_event(newb_base* = nullptr) = 0;
-
-  virtual void write_event(newb_base* = nullptr) = 0;
-
   /// Set a timeout for a protocol policy layer.
   template<class Rep = int, class Period = std::ratio<1>>
   void set_timeout(std::chrono::duration<Rep, Period> timeout,
