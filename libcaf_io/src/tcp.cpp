@@ -43,11 +43,12 @@ rw_state tcp::read_some(size_t& result, native_socket fd, void* buf,
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   auto sres = ::recv(fd, reinterpret_cast<io::network::socket_recv_ptr>(buf),
                      len, no_sigpipe_io_flag);
-  CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
   if (is_error(sres, true) || sres == 0) {
     // recv returns 0  when the peer has performed an orderly shutdown
+	CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
     return rw_state::failure;
   }
+  CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   return rw_state::success;
 }
@@ -57,9 +58,11 @@ rw_state tcp::write_some(size_t& result, native_socket fd, const void* buf,
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
   auto sres = ::send(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
                      len, no_sigpipe_io_flag);
-  CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
-  if (is_error(sres, true))
+  if (is_error(sres, true)) {
+	CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
     return rw_state::failure;
+  }
+  CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
   return rw_state::success;
 }
@@ -73,13 +76,14 @@ bool tcp::try_accept(native_socket& result, native_socket fd) {
   result = ::accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
   // note accept4 is better to avoid races in setting CLOEXEC (but not posix)
   child_process_inherit(result, false);
-  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
   if (result == invalid_native_socket) {
     auto err = last_socket_error();
     if (!would_block_or_temporarily_unavailable(err)) {
+	  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
       return false;
     }
   }
+  CAF_LOG_DEBUG(CAF_ARG(fd) << CAF_ARG(result));
   return true;
 }
 
