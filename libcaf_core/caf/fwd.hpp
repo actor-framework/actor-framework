@@ -88,6 +88,8 @@ class actor_registry;
 class actor_system;
 class actor_system_config;
 class behavior;
+class binary_deserializer;
+class binary_serializer;
 class blocking_actor;
 class config_option;
 class config_option_adder;
