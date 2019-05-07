@@ -72,6 +72,13 @@ public:
   /// Returns how many bytes are still available to read.
   size_t remaining() const;
 
+  /// Jumps `num_bytes` forward.
+  /// @pre `num_bytes <= remaining()`
+  void skip(size_t num_bytes) {
+    current_ += num_bytes;
+  }
+
+
 protected:
   error apply_impl(int8_t&) override;
 
