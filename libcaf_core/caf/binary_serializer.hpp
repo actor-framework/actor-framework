@@ -81,6 +81,10 @@ public:
     return buf_;
   }
 
+  size_t write_pos() const noexcept {
+    return write_pos_;
+  }
+
 protected:
   error apply_impl(int8_t&) override;
 
