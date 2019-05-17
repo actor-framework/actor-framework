@@ -138,7 +138,8 @@ struct newb : public network::newb_base {
         write_event();
         break;
       case io::network::operation::propagate_error:
-        handle_error();
+        io_error(network::operation::propagate_error,
+                 make_error(sec::runtime_error));
     }
   }
 
@@ -270,10 +271,6 @@ struct newb : public network::newb_base {
   void write_event() {
     if (trans->write_some(this) == network::rw_state::failure)
       io_error(network::operation::write, sec::runtime_error);
-  }
-
-  void handle_error() {
-    CAF_CRITICAL("got error to handle: not implemented");
   }
 
   /// Set a timeout for a protocol policy layer.
