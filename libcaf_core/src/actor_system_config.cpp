@@ -373,7 +373,7 @@ void actor_system_config::extract_config_file_path(string_list& args) {
   });
   if (i == last)
     return;
-  auto arg_begin = i->begin() + sizeof(needle);
+  auto arg_begin = i->begin() + strlen(needle);
   auto arg_end = i->end();
   if (arg_begin == arg_end) {
     // Missing value.
