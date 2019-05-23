@@ -67,7 +67,8 @@ actor_system_config::actor_system_config()
   opt_group{custom_options_, "global"}
     .add<bool>("help,h?", "print help text to STDERR and exit")
     .add<bool>("long-help", "print long help text to STDERR and exit")
-    .add<bool>("dump-config", "print configuration to STDERR and exit");
+    .add<bool>("dump-config", "print configuration to STDERR and exit")
+    .add<string>("config-file", "set config file (default: caf-application.ini)");
   opt_group{custom_options_, "stream"}
     .add<timespan>(stream_desired_batch_complexity, "desired-batch-complexity",
                    "processing time per batch")
@@ -367,13 +368,26 @@ std::string actor_system_config::render_pec(uint8_t x, atom_value,
 
 void actor_system_config::extract_config_file_path(string_list& args) {
   static constexpr const char needle[] = "--caf#config-file=";
-  auto last = args.end();
-  auto i = std::find_if(args.begin(), last, [](const std::string& arg) {
-    return arg.compare(0, sizeof(needle) - 1, needle) == 0;
-  });
-  if (i == last)
-    return;
-  auto arg_begin = i->begin() + strlen(needle);
+  static constexpr const char needle_global[] = "--config-file=";
+  const auto last = args.end();
+  size_t len = 0;
+  auto i = args.begin();
+  // Look for match and set len and i.
+  auto check = [&](const char* str) {
+    i = std::find_if(args.begin(), last, [&](const std::string& arg) {
+      return arg.compare(0, strlen(str), str) == 0;
+    });
+    len = strlen(str);
+  };
+  // Check for global name.
+  check(needle_global);
+  if (i == last) {
+    // Check for full name.
+    check(needle);
+    if (i == last)
+      return;
+  }
+  auto arg_begin = i->begin() + len;
   auto arg_end = i->end();
   if (arg_begin == arg_end) {
     // Missing value.
