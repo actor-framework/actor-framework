@@ -231,7 +231,8 @@ public:
   /// Adds a hook type to the scheduler.
   template <class Hook, class... Ts>
   actor_system_config& add_thread_hook(Ts&&... ts) {
-    thread_hooks_.emplace_back(new Hook(std::forward<Ts>(ts)...));
+    std::unique_ptr<thread_hook> hook{new Hook(std::forward<Ts>(ts)...)};
+    thread_hooks_.emplace_back(std::move(hook));
     return *this;
   }
 
