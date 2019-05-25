@@ -63,6 +63,12 @@ Alternatively, you can use the current development version by using:
 brew install caf --HEAD
 ```
 
+### Conan
+
+A [Conan](https://conan.io/) recipe for CAF along with pre-built libraries
+for most platforms are available at [bincrafters/caf](https://bintray.com/bincrafters/public-conan/caf%3Abincrafters).
+
+
 ## Get the Sources
 
 * git clone https://github.com/actor-framework/actor-framework.git
