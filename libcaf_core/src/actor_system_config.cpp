@@ -24,6 +24,7 @@
 #include <sstream>
 
 #include "caf/config.hpp"
+#include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/gcd.hpp"
@@ -68,7 +69,7 @@ actor_system_config::actor_system_config()
     .add<bool>("help,h?", "print help text to STDERR and exit")
     .add<bool>("long-help", "print long help text to STDERR and exit")
     .add<bool>("dump-config", "print configuration to STDERR and exit")
-    .add<string>("config-file", "set config file (default: caf-application.ini)");
+    .add<string>(config_file_path, "config-file", "set config file (default: caf-application.ini)");
   opt_group{custom_options_, "stream"}
     .add<timespan>(stream_desired_batch_complexity, "desired-batch-complexity",
                    "processing time per batch")
@@ -367,53 +368,21 @@ std::string actor_system_config::render_pec(uint8_t x, atom_value,
 }
 
 void actor_system_config::extract_config_file_path(string_list& args) {
-  static constexpr const char needle[] = "--caf#config-file=";
-  static constexpr const char needle_global[] = "--config-file=";
-  const auto last = args.end();
-  size_t len = 0;
-  auto i = args.begin();
-  // Look for match and set len and i.
-  auto check = [&](const char* str) {
-    i = std::find_if(args.begin(), last, [&](const std::string& arg) {
-      return arg.compare(0, strlen(str), str) == 0;
-    });
-    len = strlen(str);
-  };
-  // Check for global name.
-  check(needle_global);
-  if (i == last) {
-    // Check for full name.
-    check(needle);
-    if (i == last)
-      return;
-  }
-  auto arg_begin = i->begin() + len;
-  auto arg_end = i->end();
-  if (arg_begin == arg_end) {
-    // Missing value.
-    // TODO: print warning?
+  auto ptr = custom_options_.qualified_name_lookup("global.config-file");
+  CAF_ASSERT(ptr != nullptr);
+  string_list::iterator i;
+  string_view path;
+  std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
+  if (i == args.end())
+    return;
+  if (path.empty()) {
+    args.erase(i);
     return;
   }
-  if (*arg_begin == '"') {
-    detail::parser::state<std::string::const_iterator> res;
-    res.i = arg_begin;
-    res.e = arg_end;
-    struct consumer {
-      std::string result;
-      void value(std::string&& x) {
-        result = std::move(x);
-      }
-    };
-    consumer f;
-    detail::parser::read_string(res, f);
-    if (res.code == pec::success)
-      config_file_path = std::move(f.result);
-    // TODO: else print warning?
-  } else {
-    // We support unescaped strings for convenience on the CLI.
-    config_file_path = std::string{arg_begin, arg_end};
-  }
-  args.erase(i);
+  auto evalue = ptr->parse(path);
+  if (!evalue)
+    return;
+  ptr->store(*evalue);
 }
 
 error actor_system_config::adjust_content() {
