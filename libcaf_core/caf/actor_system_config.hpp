@@ -342,7 +342,7 @@ private:
 
   actor_system_config& set_impl(string_view name, config_value value);
 
-  void extract_config_file_path(string_list& args);
+  error extract_config_file_path(string_list& args);
 
   /// Adjusts the content of the configuration, e.g., for ensuring backwards
   /// compatibility with older options.

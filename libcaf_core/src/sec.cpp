@@ -67,6 +67,7 @@ const char* sec_strings[] = {
   "unhandled_stream_error",
   "bad_function_call",
   "feature_disabled",
+  "cannot_open_file",
 };
 
 } // namespace <anonymous>

@@ -114,6 +114,8 @@ enum class sec : uint8_t {
   bad_function_call = 40,
   /// Feature is disabled in the actor system config.
   feature_disabled,
+  /// Failed to open file.
+  cannot_open_file,
 };
 
 /// @relates sec

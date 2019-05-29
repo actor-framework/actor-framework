@@ -35,6 +35,12 @@
 
 namespace caf {
 
+namespace {
+
+constexpr const char* default_config_file = "caf-application.ini";
+
+} // namespace anonymous
+
 actor_system_config::~actor_system_config() {
   // nop
 }
@@ -45,7 +51,7 @@ actor_system_config::~actor_system_config() {
 actor_system_config::actor_system_config()
     : cli_helptext_printed(false),
       slave_mode(false),
-      config_file_path("caf-application.ini"),
+      config_file_path(default_config_file),
       slave_mode_fun(nullptr) {
   // add `vector<T>` and `stream<T>` for each statically known type
   add_message_type_impl<stream<actor>>("stream<@actor>");
@@ -287,8 +293,11 @@ error actor_system_config::parse(string_list args, const char* ini_file_cstr) {
   if (ini_file_cstr != nullptr)
     config_file_path = ini_file_cstr;
   // CLI arguments always win.
-  extract_config_file_path(args);
+  if (auto err = extract_config_file_path(args))
+    return err;
   std::ifstream ini{config_file_path};
+  if (config_file_path != default_config_file && !ini)
+    return make_error(sec::cannot_open_file, config_file_path);
   return parse(std::move(args), ini);
 }
 
@@ -367,22 +376,23 @@ std::string actor_system_config::render_pec(uint8_t x, atom_value,
                         meta::omittable_if_empty(), xs);
 }
 
-void actor_system_config::extract_config_file_path(string_list& args) {
+error actor_system_config::extract_config_file_path(string_list& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
   string_list::iterator i;
   string_view path;
   std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
   if (i == args.end())
-    return;
+    return none;
   if (path.empty()) {
     args.erase(i);
-    return;
+    return make_error(pec::missing_argument, std::string{*i});
   }
   auto evalue = ptr->parse(path);
   if (!evalue)
-    return;
+    return std::move(evalue.error());
   ptr->store(*evalue);
+  return none;
 }
 
 error actor_system_config::adjust_content() {
