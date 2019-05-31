@@ -339,8 +339,6 @@ namespace network {
         presult = ::poll(pollset_.data(),
                          static_cast<nfds_t>(pollset_.size()), block ? -1 : 0);
 #     endif
-      CAF_LOG_DEBUG("poll() on" << pollset_.size()
-                    << "sockets reported" << presult << "event(s)");
       if (presult < 0) {
         switch (last_socket_error()) {
           case EINTR: {
@@ -362,6 +360,8 @@ namespace network {
         }
         continue; // rinse and repeat
       }
+      CAF_LOG_DEBUG("poll() on" << pollset_.size()
+                    << "sockets reported" << presult << "event(s)");
       if (presult == 0)
         return false;
       // scan pollset for events first, because we might alter pollset_

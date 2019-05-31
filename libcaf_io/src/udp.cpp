@@ -18,6 +18,7 @@
 
 #include "caf/policy/udp.hpp"
 
+#include "caf/io/network/native_socket.hpp"
 #include "caf/logger.hpp"
 
 #ifdef CAF_WINDOWS
@@ -32,6 +33,7 @@ using caf::io::network::ip_endpoint;
 using caf::io::network::native_socket;
 using caf::io::network::signed_size_type;
 using caf::io::network::socket_size_type;
+using caf::io::network::last_socket_error_as_string;
 
 namespace caf {
 namespace policy {
@@ -44,7 +46,7 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
   auto sres = ::recvfrom(fd, static_cast<io::network::socket_recv_ptr>(buf),
                          buf_len, 0, ep.address(), &len);
   if (is_error(sres, true)) {
-    CAF_LOG_ERROR("recvfrom returned" << CAF_ARG(sres));
+    CAF_LOG_ERROR("recvfrom failed:" << last_socket_error_as_string());
     return false;
   }
   if (sres == 0)
@@ -64,7 +66,7 @@ bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
   auto sres = ::sendto(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
                        buf_len, 0, ep.caddress(), len);
   if (is_error(sres, true)) {
-    CAF_LOG_ERROR("sendto returned" << CAF_ARG(sres));
+    CAF_LOG_ERROR("sendto failed:" << last_socket_error_as_string());
     return false;
   }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
