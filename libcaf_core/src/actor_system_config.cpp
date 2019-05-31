@@ -24,6 +24,7 @@
 #include <sstream>
 
 #include "caf/config.hpp"
+#include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/gcd.hpp"
@@ -33,6 +34,12 @@
 #include "caf/message_builder.hpp"
 
 namespace caf {
+
+namespace {
+
+constexpr const char* default_config_file = "caf-application.ini";
+
+} // namespace anonymous
 
 actor_system_config::~actor_system_config() {
   // nop
@@ -44,7 +51,7 @@ actor_system_config::~actor_system_config() {
 actor_system_config::actor_system_config()
     : cli_helptext_printed(false),
       slave_mode(false),
-      config_file_path("caf-application.ini"),
+      config_file_path(default_config_file),
       slave_mode_fun(nullptr) {
   // add `vector<T>` and `stream<T>` for each statically known type
   add_message_type_impl<stream<actor>>("stream<@actor>");
@@ -67,7 +74,8 @@ actor_system_config::actor_system_config()
   opt_group{custom_options_, "global"}
     .add<bool>("help,h?", "print help text to STDERR and exit")
     .add<bool>("long-help", "print long help text to STDERR and exit")
-    .add<bool>("dump-config", "print configuration to STDERR and exit");
+    .add<bool>("dump-config", "print configuration to STDERR and exit")
+    .add<string>(config_file_path, "config-file", "set config file (default: caf-application.ini)");
   opt_group{custom_options_, "stream"}
     .add<timespan>(stream_desired_batch_complexity, "desired-batch-complexity",
                    "processing time per batch")
@@ -285,8 +293,11 @@ error actor_system_config::parse(string_list args, const char* ini_file_cstr) {
   if (ini_file_cstr != nullptr)
     config_file_path = ini_file_cstr;
   // CLI arguments always win.
-  extract_config_file_path(args);
+  if (auto err = extract_config_file_path(args))
+    return err;
   std::ifstream ini{config_file_path};
+  if (config_file_path != default_config_file && !ini)
+    return make_error(sec::cannot_open_file, config_file_path);
   return parse(std::move(args), ini);
 }
 
@@ -365,41 +376,23 @@ std::string actor_system_config::render_pec(uint8_t x, atom_value,
                         meta::omittable_if_empty(), xs);
 }
 
-void actor_system_config::extract_config_file_path(string_list& args) {
-  static constexpr const char needle[] = "--caf#config-file=";
-  auto last = args.end();
-  auto i = std::find_if(args.begin(), last, [](const std::string& arg) {
-    return arg.compare(0, sizeof(needle) - 1, needle) == 0;
-  });
-  if (i == last)
-    return;
-  auto arg_begin = i->begin() + strlen(needle);
-  auto arg_end = i->end();
-  if (arg_begin == arg_end) {
-    // Missing value.
-    // TODO: print warning?
-    return;
+error actor_system_config::extract_config_file_path(string_list& args) {
+  auto ptr = custom_options_.qualified_name_lookup("global.config-file");
+  CAF_ASSERT(ptr != nullptr);
+  string_list::iterator i;
+  string_view path;
+  std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
+  if (i == args.end())
+    return none;
+  if (path.empty()) {
+    args.erase(i);
+    return make_error(pec::missing_argument, std::string{*i});
   }
-  if (*arg_begin == '"') {
-    detail::parser::state<std::string::const_iterator> res;
-    res.i = arg_begin;
-    res.e = arg_end;
-    struct consumer {
-      std::string result;
-      void value(std::string&& x) {
-        result = std::move(x);
-      }
-    };
-    consumer f;
-    detail::parser::read_string(res, f);
-    if (res.code == pec::success)
-      config_file_path = std::move(f.result);
-    // TODO: else print warning?
-  } else {
-    // We support unescaped strings for convenience on the CLI.
-    config_file_path = std::string{arg_begin, arg_end};
-  }
-  args.erase(i);
+  auto evalue = ptr->parse(path);
+  if (!evalue)
+    return std::move(evalue.error());
+  ptr->store(*evalue);
+  return none;
 }
 
 error actor_system_config::adjust_content() {
