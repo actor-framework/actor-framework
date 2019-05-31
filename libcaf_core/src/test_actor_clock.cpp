@@ -46,13 +46,16 @@ bool test_actor_clock::trigger_timeout() {
   CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule_.size()));
   if (schedule_.empty())
     return false;
-  visitor f{this};
   auto i = schedule_.begin();
   auto tout = i->first;
   if (tout > current_time)
     current_time = tout;
-  visit(f, i->second);
+  auto ptr = std::move(i->second);
   schedule_.erase(i);
+  auto backlink = ptr->backlink;
+  if (backlink != actor_lookup_.end())
+    actor_lookup_.erase(backlink);
+  ship(*ptr);
   return true;
 }
 
@@ -60,28 +63,9 @@ size_t test_actor_clock::trigger_timeouts() {
   CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule_.size()));
   if (schedule_.empty())
     return 0u;
-  visitor f{this};
-  auto result = schedule_.size();
-  for (auto& kvp : schedule_) {
-    auto tout = kvp.first;
-    if (tout > current_time)
-      current_time = tout;
-    visit(f, kvp.second);
-  }
-  schedule_.clear();
-  return result;
-}
-
-size_t test_actor_clock::trigger_expired_timeouts() {
-  CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule_.size()));
-  visitor f{this};
   size_t result = 0;
-  auto i = schedule_.begin();
-  while (i != schedule_.end() && i->first <= current_time) {
+  while (trigger_timeout())
     ++result;
-    visit(f, i->second);
-    i = schedule_.erase(i);
-  }
   return result;
 }
 

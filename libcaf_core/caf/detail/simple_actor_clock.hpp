@@ -18,10 +18,13 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
+#include <memory>
 
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/detail/make_unique.hpp"
 #include "caf/group.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
@@ -35,73 +38,234 @@ class simple_actor_clock : public actor_clock {
 public:
   // -- member types -----------------------------------------------------------
 
-  /// Request for a `timeout_msg`.
-  struct ordinary_timeout {
+  using super = simple_actor_clock;
+
+  struct event;
+
+  struct delayed_event;
+
+  /// Owning pointer to events.
+  using unique_event_ptr = std::unique_ptr<event>;
+
+  /// Owning pointer to delayed events.
+  using unique_delayed_event_ptr = std::unique_ptr<delayed_event>;
+
+  /// Maps timeouts to delayed events.
+  using schedule_map = std::multimap<time_point, unique_delayed_event_ptr>;
+
+  /// Maps actor IDs to schedule entries.
+  using actor_lookup_map = std::multimap<actor_id, schedule_map::iterator>;
+
+  /// Lists all possible subtypes of ::event.
+  enum event_type {
+    ordinary_timeout_type,
+    multi_timeout_type,
+    request_timeout_type,
+    actor_msg_type,
+    group_msg_type,
+    ordinary_timeout_cancellation_type,
+    multi_timeout_cancellation_type,
+    request_timeout_cancellation_type,
+    timeouts_cancellation_type,
+    drop_all_type,
+    shutdown_type,
+  };
+
+  /// Base class for clock events.
+  struct event {
+    event(event_type t) : subtype(t) {
+      // nop
+    }
+
+    virtual ~event();
+
+    /// Identifies the actual type of this object.
+    event_type subtype;
+  };
+
+  /// An event with a timeout attached to it.
+  struct delayed_event : event {
+    delayed_event(event_type type, time_point due) : event(type), due(due) {
+      // nop
+    }
+
+    /// Timestamp when this event should trigger.
+    time_point due;
+
+    /// Links back to the actor lookup map.
+    actor_lookup_map::iterator backlink;
+  };
+
+  /// An ordinary timeout event for actors. Only one timeout for any timeout
+  /// type can be active.
+  struct ordinary_timeout final : delayed_event {
+    static constexpr bool cancellable = true;
+
+    ordinary_timeout(time_point due, strong_actor_ptr self, atom_value type,
+                     uint64_t id)
+      : delayed_event(ordinary_timeout_type, due),
+        self(std::move(self)),
+        type(type),
+        id(id) {
+      // nop
+    }
+
     strong_actor_ptr self;
     atom_value type;
     uint64_t id;
   };
 
-  struct multi_timeout {
+  /// An timeout event for actors that allows multiple active timers for the
+  /// same type.
+  struct multi_timeout final : delayed_event {
+    static constexpr bool cancellable = true;
+
+    multi_timeout(time_point due, strong_actor_ptr self, atom_value type,
+                  uint64_t id)
+      : delayed_event(multi_timeout_type, due),
+        self(std::move(self)),
+        type(type),
+        id(id) {
+      // nop
+    }
+
     strong_actor_ptr self;
     atom_value type;
     uint64_t id;
   };
 
-  /// Request for a `sec::request_timeout` error.
-  struct request_timeout {
+  /// A delayed `sec::request_timeout` error that gets cancelled when the
+  /// request arrives in time.
+  struct request_timeout final: delayed_event {
+    static constexpr bool cancellable = true;
+
+    request_timeout(time_point due, strong_actor_ptr self, message_id id)
+      : delayed_event(request_timeout_type, due),
+        self(std::move(self)),
+        id(id) {
+      // nop
+    }
+
     strong_actor_ptr self;
     message_id id;
   };
 
-  /// Request for sending a message to an actor at a later time.
-  struct actor_msg {
+  /// A delayed ::message to an actor.
+  struct actor_msg final : delayed_event {
+    static constexpr bool cancellable = false;
+
+    actor_msg(time_point due, strong_actor_ptr receiver,
+              mailbox_element_ptr content)
+      : delayed_event(actor_msg_type, due),
+        receiver(std::move(receiver)),
+        content(std::move(content)) {
+      // nop
+    }
+
     strong_actor_ptr receiver;
     mailbox_element_ptr content;
   };
 
-  /// Request for sending a message to a group at a later time.
-  struct group_msg {
+  /// A delayed ::message to a group.
+  struct group_msg final : delayed_event {
+    static constexpr bool cancellable = false;
+
+    group_msg(time_point due, group target, strong_actor_ptr sender,
+              message content)
+      : delayed_event(group_msg_type, due),
+        target(std::move(target)),
+        sender(std::move(sender)),
+        content(std::move(content)) {
+      // nop
+    }
+
     group target;
     strong_actor_ptr sender;
     message content;
   };
 
-  using value_type = variant<ordinary_timeout, multi_timeout, request_timeout,
-                             actor_msg, group_msg>;
+  /// Cancels a delayed event.
+  struct cancellation : event {
+    cancellation(event_type t, actor_id aid) : event(t), aid(aid) {
+      //nop
+    }
 
-  using map_type = std::multimap<time_point, value_type>;
-
-  using secondary_map = std::multimap<abstract_actor*, map_type::iterator>;
-
-  struct ordinary_predicate {
-    atom_value type;
-    bool operator()(const secondary_map::value_type& x) const noexcept;
+    actor_id aid;
   };
 
-  struct multi_predicate {
+  /// Cancels matching ordinary timeouts.
+  struct ordinary_timeout_cancellation final : cancellation {
+    ordinary_timeout_cancellation(actor_id aid, atom_value type)
+      : cancellation(ordinary_timeout_cancellation_type, aid), type(type) {
+      // nop
+    }
+
     atom_value type;
-    bool operator()(const secondary_map::value_type& x) const noexcept;
   };
 
-  struct request_predicate {
+  /// Cancels the matching multi timeout.
+  struct multi_timeout_cancellation final : cancellation {
+    multi_timeout_cancellation(actor_id aid, atom_value type, uint64_t id)
+      : cancellation(ordinary_timeout_cancellation_type, aid),
+        type(type),
+        id(id) {
+      // nop
+    }
+
+    atom_value type;
+    uint64_t id;
+  };
+
+  /// Cancels a `sec::request_timeout` error.
+  struct request_timeout_cancellation final : cancellation {
+    request_timeout_cancellation(actor_id aid, message_id id)
+      : cancellation(request_timeout_cancellation_type, aid), id(id) {
+      // nop
+    }
+
     message_id id;
-    bool operator()(const secondary_map::value_type& x) const noexcept;
   };
 
-  struct visitor {
-    simple_actor_clock* thisptr;
-
-    void operator()(ordinary_timeout& x);
-
-    void operator()(multi_timeout& x);
-
-    void operator()(request_timeout& x);
-
-    void operator()(actor_msg& x);
-
-    void operator()(group_msg& x);
+  /// Cancels all timeouts for an actor.
+  struct timeouts_cancellation final : cancellation {
+    timeouts_cancellation(actor_id aid)
+      : cancellation(timeouts_cancellation_type, aid) {
+      // nop
+    }
   };
+
+  /// Cancels all timeouts and messages.
+  struct drop_all final : event {
+    drop_all() : event(drop_all_type) {
+      // nop
+    }
+  };
+
+  /// Shuts down the actor clock.
+  struct shutdown final : event {
+    shutdown() : event(shutdown_type) {
+      // nop
+    }
+  };
+
+  // -- properties -------------------------------------------------------------
+
+  const schedule_map& schedule() const {
+    return schedule_;
+  }
+
+  const actor_lookup_map& actor_lookup() const {
+    return actor_lookup_;
+  }
+
+  // -- convenience functions --------------------------------------------------
+
+  /// Triggers all timeouts with timestamp <= now.
+  /// @returns The number of triggered timeouts.
+  /// @private
+  size_t trigger_expired_timeouts();
+
+  // -- overridden member functions --------------------------------------------
 
   void set_ordinary_timeout(time_point t, abstract_actor* self,
                             atom_value type, uint64_t id) override;
@@ -126,20 +290,13 @@ public:
 
   void cancel_all() override;
 
-  inline const map_type& schedule() const {
-    return schedule_;
-  }
-
-  inline const secondary_map& actor_lookup() const {
-    return actor_lookup_;
-  }
-
 protected:
+  // -- helper functions -------------------------------------------------------
+
   template <class Predicate>
-  secondary_map::iterator lookup(abstract_actor* self,
-                                 Predicate pred) {
+  actor_lookup_map::iterator lookup(actor_id aid, Predicate pred) {
     auto e = actor_lookup_.end();
-    auto range = actor_lookup_.equal_range(self);
+    auto range = actor_lookup_.equal_range(aid);
     if (range.first == range.second)
       return e;
     auto i = std::find_if(range.first, range.second, pred);
@@ -147,8 +304,8 @@ protected:
   }
 
   template <class Predicate>
-  void cancel(abstract_actor* self, Predicate pred) {
-    auto i = lookup(self, pred);
+  void cancel(actor_id aid, Predicate pred) {
+    auto i = lookup(aid, pred);
     if (i != actor_lookup_.end()) {
       schedule_.erase(i->second);
       actor_lookup_.erase(i);
@@ -156,19 +313,58 @@ protected:
   }
 
   template <class Predicate>
-  void drop_lookup(abstract_actor* self, Predicate pred) {
-    auto i = lookup(self, pred);
+  void drop_lookup(actor_id aid, Predicate pred) {
+    auto i = lookup(aid, pred);
     if (i != actor_lookup_.end())
       actor_lookup_.erase(i);
   }
 
+  void handle(const ordinary_timeout_cancellation& x);
+
+  void handle(const multi_timeout_cancellation& x);
+
+  void handle(const request_timeout_cancellation& x);
+
+  void handle(const timeouts_cancellation& x);
+
+  void ship(delayed_event& x);
+
+  template <class T>
+  detail::enable_if_t<T::cancellable>
+  add_schedule_entry(time_point t, std::unique_ptr<T> x) {
+    auto id = x->self->id();
+    auto i = schedule_.emplace(t, std::move(x));
+    i->second->backlink = actor_lookup_.emplace(id, i);
+  }
+
+  template <class T>
+  detail::enable_if_t<!T::cancellable>
+  add_schedule_entry(time_point t, std::unique_ptr<T> x) {
+    auto i = schedule_.emplace(t, std::move(x));
+    i->second->backlink = actor_lookup_.end();
+  }
+
+  void add_schedule_entry(time_point t, std::unique_ptr<ordinary_timeout> x);
+
+  template <class T>
+  void add_schedule_entry(std::unique_ptr<T> x) {
+    auto due = x->due;
+    add_schedule_entry(due, std::move(x));
+  }
+
+  template <class T, class... Ts>
+  void new_schedule_entry(time_point t, Ts&&... xs) {
+    add_schedule_entry(t, detail::make_unique<T>(t, std::forward<Ts>(xs)...));
+  }
+
+  // -- member variables -------------------------------------------------------
+
   /// Timeout schedule.
-  map_type schedule_;
+  schedule_map schedule_;
 
   /// Secondary index for accessing timeouts by actor.
-  secondary_map actor_lookup_;
+  actor_lookup_map actor_lookup_;
 };
 
 } // namespace detail
 } // namespace caf
-

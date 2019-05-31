@@ -51,10 +51,6 @@ public:
   /// @returns The number of triggered timeouts.
   size_t trigger_timeouts();
 
-  /// Triggers all timeouts with timestamp <= now.
-  /// @returns The number of triggered timeouts.
-  size_t trigger_expired_timeouts();
-
   /// Advances the time by `x` and dispatches timeouts and delayed messages.
   /// @returns The number of triggered timeouts.
   size_t advance_time(duration_type x);
