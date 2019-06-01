@@ -421,12 +421,12 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_CAT(a, b) a##b
 
 #define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
-  ::caf::logger::event {                                                       \
+  ::caf::logger::event (                                                       \
     loglvl, __LINE__, caf::atom(component), CAF_PRETTY_FUN, __func__,          \
       caf::logger::skip_path(__FILE__),                                        \
       (::caf::logger::line_builder{} << message).get(),                        \
       ::std::this_thread::get_id(), aid, ::caf::make_timestamp()               \
-  }
+  )
 
 /// Expands to `argument = <argument>` in log output.
 #define CAF_ARG(argument) caf::detail::make_arg_wrapper(#argument, argument)
