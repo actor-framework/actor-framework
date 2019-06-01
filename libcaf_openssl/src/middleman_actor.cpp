@@ -85,7 +85,7 @@ struct ssl_policy {
       auto err = io::network::last_socket_error();
       if (!io::network::would_block_or_temporarily_unavailable(err))
         CAF_LOG_ERROR("accept failed:"
-                      << io::network::last_socket_error_as_string());
+                      << io::network::socket_error_as_string(err));
         return false;
     }
     io::network::child_process_inherit(result, false);

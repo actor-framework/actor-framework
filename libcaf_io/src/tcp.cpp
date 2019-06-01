@@ -34,8 +34,9 @@ using caf::io::network::is_error;
 using caf::io::network::rw_state;
 using caf::io::network::native_socket;
 using caf::io::network::socket_size_type;
+using caf::io::network::last_socket_error;
 using caf::io::network::no_sigpipe_io_flag;
-using caf::io::network::last_socket_error_as_string;
+using caf::io::network::socket_error_as_string;
 
 namespace caf {
 namespace policy {
@@ -46,7 +47,10 @@ rw_state tcp::read_some(size_t& result, native_socket fd, void* buf,
   auto sres = ::recv(fd, reinterpret_cast<io::network::socket_recv_ptr>(buf),
                      len, no_sigpipe_io_flag);
   if (is_error(sres, true)) {
-    CAF_LOG_ERROR("recv failed:" << last_socket_error_as_string());
+    // Make sure WSAGetLastError gets called immediately on Windows.
+    auto err = last_socket_error();
+    CAF_IGNORE_UNUSED(err);
+    CAF_LOG_ERROR("recv failed:" << socket_error_as_string(err));
     return rw_state::failure;
   } else if (sres == 0) {
     // recv returns 0  when the peer has performed an orderly shutdown
@@ -64,7 +68,10 @@ rw_state tcp::write_some(size_t& result, native_socket fd, const void* buf,
   auto sres = ::send(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
                      len, no_sigpipe_io_flag);
   if (is_error(sres, true)) {
-    CAF_LOG_ERROR("send failed:" << last_socket_error_as_string());
+    // Make sure WSAGetLastError gets called immediately on Windows.
+    auto err = last_socket_error();
+    CAF_IGNORE_UNUSED(err);
+    CAF_LOG_ERROR("send failed:" << socket_error_as_string(err));
     return rw_state::failure;
   }
   CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(fd) << CAF_ARG(sres));
@@ -83,7 +90,7 @@ bool tcp::try_accept(native_socket& result, native_socket fd) {
   if (result == invalid_native_socket) {
     auto err = last_socket_error();
     if (!would_block_or_temporarily_unavailable(err)) {
-      CAF_LOG_ERROR("accept failed:" << last_socket_error_as_string());
+      CAF_LOG_ERROR("accept failed:" << socket_error_as_string(err));
       return false;
     }
   }

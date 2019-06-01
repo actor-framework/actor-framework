@@ -33,7 +33,8 @@ using caf::io::network::ip_endpoint;
 using caf::io::network::native_socket;
 using caf::io::network::signed_size_type;
 using caf::io::network::socket_size_type;
-using caf::io::network::last_socket_error_as_string;
+using caf::io::network::last_socket_error;
+using caf::io::network::socket_error_as_string;
 
 namespace caf {
 namespace policy {
@@ -46,7 +47,10 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
   auto sres = ::recvfrom(fd, static_cast<io::network::socket_recv_ptr>(buf),
                          buf_len, 0, ep.address(), &len);
   if (is_error(sres, true)) {
-    CAF_LOG_ERROR("recvfrom failed:" << last_socket_error_as_string());
+    // Make sure WSAGetLastError gets called immediately on Windows.
+    auto err = last_socket_error();
+    CAF_IGNORE_UNUSED(err);
+    CAF_LOG_ERROR("recvfrom failed:" << socket_error_as_string(err));
     return false;
   }
   if (sres == 0)
@@ -66,7 +70,10 @@ bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
   auto sres = ::sendto(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
                        buf_len, 0, ep.caddress(), len);
   if (is_error(sres, true)) {
-    CAF_LOG_ERROR("sendto failed:" << last_socket_error_as_string());
+    // Make sure WSAGetLastError gets called immediately on Windows.
+    auto err = last_socket_error();
+    CAF_IGNORE_UNUSED(err);
+    CAF_LOG_ERROR("sendto failed:" << socket_error_as_string(err));
     return false;
   }
   result = (sres > 0) ? static_cast<size_t>(sres) : 0;
