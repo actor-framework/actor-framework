@@ -86,7 +86,7 @@ void read_uri_query(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     using std::swap;
     std::string res;
     swap(str, res);
-    return std::move(res);
+    return res;
   };
   auto push = [&] {
     result.emplace(take_str(key), take_str(value));
@@ -124,7 +124,7 @@ void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     using std::swap;
     std::string res;
     swap(str, res);
-    return std::move(res);
+    return res;
   };
   // Allowed character sets.
   auto path_char = [](char c) {

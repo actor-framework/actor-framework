@@ -610,7 +610,7 @@ public:
   typename Driver::stage_ptr_type make_continuous_stage(Ts&&... xs) {
     auto ptr = detail::make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
     ptr->continuous(true);
-    return std::move(ptr);
+    return ptr;
   }
 
   template <class Init, class Fun, class Cleanup,
