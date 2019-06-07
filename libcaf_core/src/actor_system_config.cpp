@@ -296,8 +296,6 @@ error actor_system_config::parse(string_list args, const char* ini_file_cstr) {
   if (auto err = extract_config_file_path(args))
     return err;
   std::ifstream ini{config_file_path};
-  if (config_file_path != default_config_file && !ini)
-    return make_error(sec::cannot_open_file, config_file_path);
   return parse(std::move(args), ini);
 }
 
