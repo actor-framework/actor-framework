@@ -79,6 +79,9 @@ bool would_block_or_temporarily_unavailable(int errcode);
 /// Returns the last socket error as human-readable string.
 std::string last_socket_error_as_string();
 
+/// Returns a human-readable string for a given socket error.
+std::string socket_error_as_string(int errcode);
+
 /// Creates two connected sockets. The former is the read handle
 /// and the latter is the write handle.
 std::pair<native_socket, native_socket> create_pipe();

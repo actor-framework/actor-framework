@@ -125,6 +125,11 @@ namespace network {
     return strerror(errno);
   }
 
+
+  string socket_error_as_string(int errcode) {
+    return strerror(errcode);
+  }
+
   expected<void> child_process_inherit(native_socket fd, bool new_value) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
     // read flags for fd
@@ -187,9 +192,12 @@ namespace network {
   }
 
   string last_socket_error_as_string() {
+    return socket_error_as_string(last_socket_error());
+  }
+
+  string socket_error_as_string(int errcode) {
     LPTSTR errorText = NULL;
-    auto hresult = last_socket_error();
-    FormatMessage( // use system message tables to retrieve error text
+    FormatMessage(// use system message tables to retrieve error text
                   FORMAT_MESSAGE_FROM_SYSTEM
                   // allocate buffer on local heap for error text
                   | FORMAT_MESSAGE_ALLOCATE_BUFFER
@@ -197,7 +205,7 @@ namespace network {
                   // (and CANNOT) pass insertion parameters
                   | FORMAT_MESSAGE_IGNORE_INSERTS,
                   nullptr, // unused with FORMAT_MESSAGE_FROM_SYSTEM
-                  hresult, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                  errcode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                   (LPTSTR) & errorText, // output
                   0,                    // minimum size for output buffer
                   nullptr);             // arguments - see note
