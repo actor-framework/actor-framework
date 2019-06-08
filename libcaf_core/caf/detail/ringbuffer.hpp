@@ -93,7 +93,7 @@ public:
     guard_type guard{mtx_};
     rd_pos_ = (first + n) % Size;
     // Wakeup a waiting producers if the queue became non-full.
-    if (first == next(last))
+    if (first == next(wr_pos_))
       cv_full_.notify_all();
     return i;
   }
