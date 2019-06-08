@@ -26,11 +26,12 @@ namespace basp {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-worker_hub::worker_hub() : head_(nullptr) {
+worker_hub::worker_hub() : head_(nullptr), running_(0) {
   // nop
 }
 
 worker_hub::~worker_hub() {
+  await_workers();
   auto head = head_.load();
   while (head != nullptr) {
     auto next = head->next_.load();
@@ -41,17 +42,27 @@ worker_hub::~worker_hub() {
 
 // -- properties ---------------------------------------------------------------
 
-void worker_hub::push_new_worker(message_queue& queue,
-                                 proxy_registry& proxies) {
-  push(new worker(*this, queue, proxies));
+void worker_hub::add_new_worker(message_queue& queue, proxy_registry& proxies) {
+  auto ptr = new worker(*this, queue, proxies);
+  auto next = head_.load();
+  for (;;) {
+    ptr->next_ = next;
+    if (head_.compare_exchange_strong(next, ptr))
+      return;
+  }
 }
 
 void worker_hub::push(pointer ptr) {
   auto next = head_.load();
   for (;;) {
     ptr->next_ = next;
-    if (head_.compare_exchange_strong(next, ptr))
+    if (head_.compare_exchange_strong(next, ptr)) {
+      if (--running_ == 0) {
+        std::unique_lock<std::mutex> guard{mtx_};
+        cv_.notify_all();
+      }
       return;
+    }
   }
 }
 
@@ -61,13 +72,22 @@ worker_hub::pointer worker_hub::pop() {
     return nullptr;
   for (;;) {
     auto next = result->next_.load();
-    if (head_.compare_exchange_strong(result, next))
+    if (head_.compare_exchange_strong(result, next)) {
+      if (result != nullptr)
+        ++running_;
       return result;
+    }
   }
 }
 
 worker_hub::pointer worker_hub::peek() {
   return head_.load();
+}
+
+void worker_hub::await_workers() {
+  std::unique_lock<std::mutex> guard{mtx_};
+  while (running_ != 0)
+    cv_.wait(guard);
 }
 
 } // namespace basp

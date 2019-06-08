@@ -73,6 +73,11 @@ basp_broker::~basp_broker() {
 // -- implementation of local_actor/broker -------------------------------------
 
 void basp_broker::on_exit() {
+  // Wait until all pending messages of workers have been shipped.
+  // TODO: this blocks the calling thread. This is only safe because we know
+  //       that the middleman calls this in its stop() function. However,
+  //       ultimately we should find a nonblocking solution here.
+  instance.hub().await_workers();
   // Release any obsolete state.
   ctx.clear();
   // Make sure all spawn servers are down before clearing the container.

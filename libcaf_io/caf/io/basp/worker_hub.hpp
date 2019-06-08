@@ -19,6 +19,7 @@
 #pragma once
 
 #include <atomic>
+#include <mutex>
 
 #include "caf/fwd.hpp"
 #include "caf/io/basp/fwd.hpp"
@@ -47,7 +48,7 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Creates a new worker and adds it to the hub.
-  void push_new_worker(message_queue&, proxy_registry&);
+  void add_new_worker(message_queue&, proxy_registry&);
 
   /// Add a worker to the hub.
   void push(pointer ptr);
@@ -62,10 +63,19 @@ public:
   ///          hub is currently empty.
   pointer peek();
 
+  /// Waits until all workers are back at the hub.
+  void await_workers();
+
 private:
   // -- member variables -------------------------------------------------------
 
   std::atomic<pointer> head_;
+
+  std::atomic<size_t> running_;
+
+  std::mutex mtx_;
+
+  std::condition_variable cv_;
 };
 
 } // namespace basp

@@ -49,7 +49,7 @@ instance::instance(abstract_broker* parent, callee& lstnr)
   auto workers = get_or(config(), "middleman.workers",
                         defaults::middleman::workers);
   for (size_t i = 0; i < workers; ++i)
-    hub_.push_new_worker(queue_, proxies());
+    hub_.add_new_worker(queue_, proxies());
 }
 
 connection_state instance::handle(execution_unit* ctx,

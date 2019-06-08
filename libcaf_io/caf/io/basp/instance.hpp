@@ -205,6 +205,10 @@ public:
     return this_node_;
   }
 
+  worker_hub& hub() {
+    return hub_;
+  }
+
   actor_system& system() {
     return callee_.proxies().system();
   }

@@ -105,7 +105,7 @@ CAF_TEST_FIXTURE_SCOPE(worker_tests, fixture)
 CAF_TEST(deliver serialized message) {
   CAF_MESSAGE("create the BASP worker");
   CAF_REQUIRE_EQUAL(hub.peek(), nullptr);
-  hub.push_new_worker(queue, proxies);
+  hub.add_new_worker(queue, proxies);
   CAF_REQUIRE_NOT_EQUAL(hub.peek(), nullptr);
   auto w = hub.pop();
   CAF_MESSAGE("create a fake message + BASP header");
