@@ -134,7 +134,8 @@ actor_system_config::actor_system_config()
     .add<size_t>("max-pending-messages",
                  "maximum for reordering of UDP receive buffers (default: 10)")
     .add<bool>("disable-tcp", "disables communication via TCP")
-    .add<bool>("enable-udp", "enable communication via UDP");
+    .add<bool>("enable-udp", "enable communication via UDP")
+    .add<size_t>("workers", "number of deserialization workers");
   opt_group(custom_options_, "opencl")
     .add<std::vector<size_t>>("device-ids", "whitelist for OpenCL devices");
   opt_group(custom_options_, "openssl")

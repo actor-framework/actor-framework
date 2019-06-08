@@ -149,6 +149,12 @@ using link_atom = atom_constant<atom("link")>;
 /// Used for removing networked links.
 using unlink_atom = atom_constant<atom("unlink")>;
 
+/// Used for monitor requests over network.
+using monitor_atom = atom_constant<atom("monitor")>;
+
+/// Used for removing networked monitors.
+using demonitor_atom = atom_constant<atom("demonitor")>;
+
 /// Used for publishing actors at a given port.
 using publish_atom = atom_constant<atom("publish")>;
 
