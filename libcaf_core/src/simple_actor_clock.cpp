@@ -94,7 +94,7 @@ void simple_actor_clock::ship(delayed_event& x) {
       break;
     }
     case multi_timeout_type: {
-      auto& dref = static_cast<ordinary_timeout&>(x);
+      auto& dref = static_cast<multi_timeout&>(x);
       auto& self = dref.self;
       self->get()->eq_impl(make_message_id(), self, nullptr,
                            timeout_msg{dref.type, dref.id});
@@ -134,7 +134,7 @@ void simple_actor_clock::handle(const ordinary_timeout_cancellation& x) {
 void simple_actor_clock::handle(const multi_timeout_cancellation& x) {
   auto pred = [&](const actor_lookup_map::value_type& kvp) {
     auto& y = *kvp.second->second;
-    if (y.subtype != ordinary_timeout_type)
+    if (y.subtype != multi_timeout_type)
       return false;
     auto& dref = static_cast<const multi_timeout&>(y);
     return x.type == dref.type && x.id == dref.id;

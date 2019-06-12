@@ -38,8 +38,6 @@ class simple_actor_clock : public actor_clock {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = simple_actor_clock;
-
   struct event;
 
   struct delayed_event;
@@ -136,7 +134,7 @@ public:
 
   /// A delayed `sec::request_timeout` error that gets cancelled when the
   /// request arrives in time.
-  struct request_timeout final: delayed_event {
+  struct request_timeout final : delayed_event {
     static constexpr bool cancellable = true;
 
     request_timeout(time_point due, strong_actor_ptr self, message_id id)
