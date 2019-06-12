@@ -62,8 +62,8 @@ basp_broker::basp_broker(actor_config& cfg)
     basp::instance::callee(super::system(),
                            static_cast<proxy_registry::backend&>(*this)),
     this_context(nullptr) {
-  CAF_ASSERT(this_node() != none);
   new (&instance) basp::instance(this, *this);
+  CAF_ASSERT(this_node() != none);
 }
 
 basp_broker::~basp_broker() {
