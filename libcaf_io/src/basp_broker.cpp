@@ -86,6 +86,7 @@ void basp_broker::on_exit() {
   // Clear remaining state.
   spawn_servers.clear();
   monitored_actors.clear();
+  proxies().clear();
   instance.~instance();
 }
 
