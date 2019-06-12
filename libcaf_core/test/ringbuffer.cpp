@@ -82,6 +82,40 @@ CAF_TEST(push_back) {
   CAF_CHECK_EQUAL(buf.front(), 0);
 }
 
+CAF_TEST(get all) {
+  using array_type = std::array<int, buf_size>;
+  using vector_type = std::vector<int>;
+  array_type tmp;
+  auto fetch_all = [&] {
+    auto i = tmp.begin();
+    auto e = buf.get_all(i);
+    return vector_type(i, e);
+  };
+  CAF_MESSAGE("add five element");
+  for (int i = 0; i < 5; ++i)
+    buf.push_back(std::move(i));
+  CAF_CHECK_EQUAL(buf.empty(), false);
+  CAF_CHECK_EQUAL(buf.full(), false);
+  CAF_CHECK_EQUAL(buf.size(), 5u);
+  CAF_CHECK_EQUAL(buf.front(), 0);
+  CAF_MESSAGE("drain elements");
+  CAF_CHECK_EQUAL(fetch_all(), vector_type({0, 1, 2, 3, 4}));
+  CAF_CHECK_EQUAL(buf.empty(), true);
+  CAF_CHECK_EQUAL(buf.full(), false);
+  CAF_CHECK_EQUAL(buf.size(), 0u);
+  CAF_MESSAGE("add 60 elements (wraps around)");
+  vector_type expected;
+  for (int i = 0; i < 60; ++i) {
+    expected.push_back(i);
+    buf.push_back(std::move(i));
+  }
+  CAF_CHECK_EQUAL(buf.size(), 60u);
+  CAF_CHECK_EQUAL(fetch_all(), expected);
+  CAF_CHECK_EQUAL(buf.empty(), true);
+  CAF_CHECK_EQUAL(buf.full(), false);
+  CAF_CHECK_EQUAL(buf.size(), 0u);
+}
+
 CAF_TEST(concurrent access) {
   std::vector<std::thread> producers;
   producers.emplace_back(producer, std::ref(buf), 0, 100);

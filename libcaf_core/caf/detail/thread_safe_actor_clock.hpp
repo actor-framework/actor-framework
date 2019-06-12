@@ -18,10 +18,14 @@
 
 #pragma once
 
-#include <mutex>
+#include <array>
 #include <atomic>
 #include <condition_variable>
+#include <memory>
+#include <mutex>
 
+#include "caf/abstract_actor.hpp"
+#include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/simple_actor_clock.hpp"
 
 namespace caf {
@@ -29,9 +33,15 @@ namespace detail {
 
 class thread_safe_actor_clock : public simple_actor_clock {
 public:
+  // -- constants --------------------------------------------------------------
+
+  static constexpr size_t buffer_size = 64;
+
+  // -- member types -----------------------------------------------------------
+
   using super = simple_actor_clock;
 
-  thread_safe_actor_clock();
+  // -- member functions -------------------------------------------------------
 
   void set_ordinary_timeout(time_point t, abstract_actor* self,
                            atom_value type, uint64_t id) override;
@@ -61,11 +71,14 @@ public:
   void cancel_dispatch_loop();
 
 private:
-  std::recursive_mutex mx_;
-  std::condition_variable_any cv_;
-  std::atomic<bool> done_;
+  void push(event* ptr);
+
+  /// Receives timer events from other threads.
+  detail::ringbuffer<unique_event_ptr, buffer_size> queue_;
+
+  /// Locally caches events for processing.
+  std::array<unique_event_ptr, buffer_size> events_;
 };
 
 } // namespace detail
 } // namespace caf
-

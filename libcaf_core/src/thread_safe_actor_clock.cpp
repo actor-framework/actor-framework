@@ -18,133 +18,148 @@
 
 #include "caf/detail/thread_safe_actor_clock.hpp"
 
+#include "caf/actor_control_block.hpp"
+#include "caf/logger.hpp"
+#include "caf/sec.hpp"
+#include "caf/system_messages.hpp"
+
 namespace caf {
 namespace detail {
 
-namespace {
-
-using guard_type = std::unique_lock<std::recursive_mutex>;
-
-} // namespace <anonymous>
-
-thread_safe_actor_clock::thread_safe_actor_clock() : done_(false) {
-  // nop
-}
-
 void thread_safe_actor_clock::set_ordinary_timeout(time_point t,
-                                                  abstract_actor* self,
-                                                  atom_value type,
-                                                  uint64_t id) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::set_ordinary_timeout(t, self, type, id);
-    cv_.notify_all();
-  }
+                                                   abstract_actor* self,
+                                                   atom_value type,
+                                                   uint64_t id) {
+  push(new ordinary_timeout(t, self->ctrl(), type, id));
 }
 
 void thread_safe_actor_clock::set_request_timeout(time_point t,
                                                   abstract_actor* self,
                                                   message_id id) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::set_request_timeout(t, self, id);
-    cv_.notify_all();
-  }
+  push(new request_timeout(t, self->ctrl(), id));
 }
 
-void thread_safe_actor_clock::set_multi_timeout(time_point t, abstract_actor* self,
-                       atom_value type, uint64_t id) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::set_multi_timeout(t, self, type, id);
-    cv_.notify_all();
-  }
+void thread_safe_actor_clock::set_multi_timeout(time_point t,
+                                                abstract_actor* self,
+                                                atom_value type, uint64_t id) {
+  push(new multi_timeout(t, self->ctrl(), type, id));
 }
 
 void thread_safe_actor_clock::cancel_ordinary_timeout(abstract_actor* self,
                                                       atom_value type) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::cancel_ordinary_timeout(self, type);
-    cv_.notify_all();
-  }
+  push(new ordinary_timeout_cancellation(self->id(), type));
 }
 
 void thread_safe_actor_clock::cancel_request_timeout(abstract_actor* self,
                                                      message_id id) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::cancel_request_timeout(self, id);
-    cv_.notify_all();
-  }
+  push(new request_timeout_cancellation(self->id(), id));
 }
 
 void thread_safe_actor_clock::cancel_timeouts(abstract_actor* self) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::cancel_timeouts(self);
-    cv_.notify_all();
-  }
+  push(new timeouts_cancellation(self->id()));
 }
 
 void thread_safe_actor_clock::schedule_message(time_point t,
                                                strong_actor_ptr receiver,
                                                mailbox_element_ptr content) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::schedule_message(t, std::move(receiver), std::move(content));
-    cv_.notify_all();
-  }
+  push(new actor_msg(t, std::move(receiver), std::move(content)));
 }
 
 void thread_safe_actor_clock::schedule_message(time_point t, group target,
                                                strong_actor_ptr sender,
                                                message content) {
-  guard_type guard{mx_};
-  if (!done_) {
-    super::schedule_message(t, std::move(target), std::move(sender),
-                            std::move(content));
-    cv_.notify_all();
-  }
+  push(new group_msg(t, std::move(target), std::move(sender),
+                     std::move(content)));
 }
 
 void thread_safe_actor_clock::cancel_all() {
-  guard_type guard{mx_};
-  super::cancel_all();
-  cv_.notify_all();
+  push(new drop_all);
 }
 
 void thread_safe_actor_clock::run_dispatch_loop() {
-  visitor f{this};
-  guard_type guard{mx_};
-  while (done_ == false) {
-    // Wait for non-empty schedule.
-    // Note: The thread calling run_dispatch_loop() is guaranteed not to lock
-    //       the mutex recursively. Otherwise, cv_.wait() or cv_.wait_until()
-    //       would be unsafe, because wait operations call unlock() only once.
+  for (;;) {
+    // Wait until queue is non-empty.
     if (schedule_.empty()) {
-      cv_.wait(guard);
+      queue_.wait_nonempty();
     } else {
-      auto tout = schedule_.begin()->first;
-      cv_.wait_until(guard, tout);
-    }
-    // Double-check whether schedule is non-empty and execute it.
-    if (!schedule_.empty()) {
-      auto t = now();
-      auto i = schedule_.begin();
-      while (i != schedule_.end() && i->first <= t) {
-        visit(f, i->second);
-        i = schedule_.erase(i);
+      auto t = schedule_.begin()->second->due;
+      if (!queue_.wait_nonempty(t)) {
+        // Handle timeout by shipping timed-out events and starting anew.
+        trigger_expired_timeouts();
+        continue;
       }
     }
+    // Push all elements from the queue to the events buffer.
+    auto i = events_.begin();
+    auto e = queue_.get_all(i);
+    for (; i != e; ++i) {
+      auto& x = *i;
+      CAF_ASSERT(x != nullptr);
+      switch (x->subtype) {
+        case ordinary_timeout_cancellation_type: {
+          handle(static_cast<ordinary_timeout_cancellation&>(*x));
+          break;
+        }
+        case request_timeout_cancellation_type: {
+          handle(static_cast<request_timeout_cancellation&>(*x));
+          break;
+        }
+        case timeouts_cancellation_type: {
+          handle(static_cast<timeouts_cancellation&>(*x));
+          break;
+        }
+        case drop_all_type: {
+          schedule_.clear();
+          actor_lookup_.clear();
+          break;
+        }
+        case shutdown_type: {
+          schedule_.clear();
+          actor_lookup_.clear();
+          // Call it a day.
+          return;
+        }
+        case ordinary_timeout_type: {
+          auto dptr = static_cast<ordinary_timeout*>(x.release());
+          add_schedule_entry(std::unique_ptr<ordinary_timeout>{dptr});
+          break;
+        }
+        case multi_timeout_type: {
+          auto dptr = static_cast<multi_timeout*>(x.release());
+          add_schedule_entry(std::unique_ptr<multi_timeout>{dptr});
+          break;
+        }
+        case request_timeout_type: {
+          auto dptr = static_cast<request_timeout*>(x.release());
+          add_schedule_entry(std::unique_ptr<request_timeout>{dptr});
+          break;
+        }
+        case actor_msg_type: {
+          auto dptr = static_cast<actor_msg*>(x.release());
+          add_schedule_entry(std::unique_ptr<actor_msg>{dptr});
+          break;
+        }
+        case group_msg_type: {
+          auto dptr = static_cast<group_msg*>(x.release());
+          add_schedule_entry(std::unique_ptr<group_msg>{dptr});
+          break;
+        }
+        default: {
+          CAF_LOG_ERROR("unexpected event type");
+          break;
+        }
+      }
+      x.reset();
+    }
   }
-  schedule_.clear();
 }
 
 void thread_safe_actor_clock::cancel_dispatch_loop() {
-  guard_type guard{mx_};
-  done_ = true;
-  cv_.notify_all();
+  push(new shutdown);
+}
+
+void thread_safe_actor_clock::push(event* ptr) {
+  queue_.push_back(unique_event_ptr{ptr});
 }
 
 } // namespace detail
