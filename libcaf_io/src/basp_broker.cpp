@@ -61,9 +61,9 @@ basp_broker::basp_broker(actor_config& cfg)
   : super(cfg),
     basp::instance::callee(super::system(),
                            static_cast<proxy_registry::backend&>(*this)),
-    instance(this, *this),
     this_context(nullptr) {
   CAF_ASSERT(this_node() != none);
+  new (&instance) basp::instance(this, *this);
 }
 
 basp_broker::~basp_broker() {
@@ -83,7 +83,10 @@ void basp_broker::on_exit() {
   // Make sure all spawn servers are down before clearing the container.
   for (auto& kvp : spawn_servers)
     anon_send_exit(kvp.second, exit_reason::kill);
+  // Clear remaining state.
   spawn_servers.clear();
+  monitored_actors.clear();
+  instance.~instance();
 }
 
 const char* basp_broker::name() const {

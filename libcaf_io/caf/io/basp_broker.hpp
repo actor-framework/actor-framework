@@ -130,7 +130,9 @@ public:
   // -- member variables -------------------------------------------------------
 
   /// Protocol instance of BASP.
-  basp::instance instance;
+  union {
+    basp::instance instance;
+  };
 
   /// Keeps context information for all open connections.
   ctx_map ctx;
