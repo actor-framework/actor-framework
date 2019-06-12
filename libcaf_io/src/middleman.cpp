@@ -302,7 +302,6 @@ void middleman::start() {
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>(atom("BASP"));
   manager_ = make_middleman_actor(system(), basp);
-  auto hdl = actor_cast<actor>(basp);
 }
 
 void middleman::stop() {
