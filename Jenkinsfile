@@ -46,7 +46,7 @@ config = [
             tools: ['clang'],
         ]],
         ['FreeBSD', [
-            builds: ['debug'], // no release build for now, because it takes 1h
+            builds: ['debug', 'release'],
             tools: ['clang'],
         ]],
         ['Windows', [
