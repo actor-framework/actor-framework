@@ -139,6 +139,15 @@ namespace network {
     CALL_CFUN(set_res, detail::cc_not_minus1, "fcntl", fcntl(fd, F_SETFD, wf));
     return unit;
   }
+  
+  expected<void> keepalive(native_socket fd, bool new_value) {
+    CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
+    int value = new_value ? 1 : 0;
+    CALL_CFUN(res, detail::cc_zero, "setsockopt",
+              setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &value,
+                         static_cast<unsigned>(sizeof(value))));
+    return unit;
+  }
 
   expected<void> nonblocking(native_socket fd, bool new_value) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
@@ -220,6 +229,15 @@ namespace network {
 
   expected<void> child_process_inherit(native_socket fd, bool new_value) {
     // nop; FIXME: possible to implement via SetHandleInformation ?
+    return unit;
+  }
+  
+  expected<void> keepalive(native_socket fd, bool new_value) {
+    CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
+    char = new_value ? 1 : 0;
+    CALL_CFUN(res, detail::cc_zero, "setsockopt",
+              setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &value,
+                         static_cast<int>(sizeof(value))));
     return unit;
   }
 

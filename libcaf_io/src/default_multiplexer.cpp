@@ -672,6 +672,7 @@ void default_multiplexer::exec_later(resumable* ptr) {
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {
   CAF_LOG_TRACE("");
+  keepalive(fd, true);
   return make_counted<scribe_impl>(*this, fd);
 }
 
