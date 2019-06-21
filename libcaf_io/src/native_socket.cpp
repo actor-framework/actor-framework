@@ -139,7 +139,7 @@ namespace network {
     CALL_CFUN(set_res, detail::cc_not_minus1, "fcntl", fcntl(fd, F_SETFD, wf));
     return unit;
   }
-  
+
   expected<void> keepalive(native_socket fd, bool new_value) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
     int value = new_value ? 1 : 0;
@@ -231,7 +231,7 @@ namespace network {
     // nop; FIXME: possible to implement via SetHandleInformation ?
     return unit;
   }
-  
+
   expected<void> keepalive(native_socket fd, bool new_value) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
     char value = new_value ? 1 : 0;
