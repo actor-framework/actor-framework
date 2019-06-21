@@ -234,7 +234,7 @@ namespace network {
   
   expected<void> keepalive(native_socket fd, bool new_value) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(new_value));
-    char = new_value ? 1 : 0;
+    char value = new_value ? 1 : 0;
     CALL_CFUN(res, detail::cc_zero, "setsockopt",
               setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &value,
                          static_cast<int>(sizeof(value))));
