@@ -91,6 +91,9 @@ std::pair<native_socket, native_socket> create_pipe();
 /// throws `network_error` on error
 expected<void> child_process_inherit(native_socket fd, bool new_value);
 
+/// Enables keepalive on `fd`. Throws `network_error` on error.
+expected<void> keepalive(native_socket fd, bool new_value);
+
 /// Sets fd to nonblocking if `set_nonblocking == true`
 /// or to blocking if `set_nonblocking == false`
 /// throws `network_error` on error
