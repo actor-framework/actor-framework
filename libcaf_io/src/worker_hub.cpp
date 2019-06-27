@@ -35,7 +35,7 @@ worker_hub::~worker_hub() {
   auto head = head_.load();
   while (head != nullptr) {
     auto next = head->next_.load();
-    delete head;
+    head->intrusive_ptr_release_impl();
     head = next;
   }
 }

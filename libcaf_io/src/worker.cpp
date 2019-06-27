@@ -54,6 +54,7 @@ void worker::launch(const node_id& last_hop, const basp::header& hdr,
   last_hop_ = last_hop;
   memcpy(&hdr_, &hdr, sizeof(basp::header));
   payload_.assign(payload.begin(), payload.end());
+  ref();
   system_->scheduler().enqueue(this);
 }
 
@@ -71,12 +72,11 @@ resumable::resume_result worker::resume(execution_unit* ctx, size_t) {
 }
 
 void worker::intrusive_ptr_add_ref_impl() {
-  // The basp::instance owns the hub (which owns this object) and must make
-  // sure to wait for pending workers at exit.
+  ref();
 }
 
 void worker::intrusive_ptr_release_impl() {
-  // nop
+  deref();
 }
 
 } // namespace basp

@@ -35,7 +35,9 @@ namespace io {
 namespace basp {
 
 /// Deserializes payloads for BASP messages asynchronously.
-class worker : public resumable, public remote_message_handler<worker> {
+class worker : public resumable,
+               public remote_message_handler<worker>,
+               public ref_counted {
 public:
   // -- friends ----------------------------------------------------------------
 
