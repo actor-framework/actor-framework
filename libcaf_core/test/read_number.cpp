@@ -22,9 +22,12 @@
 
 #include "caf/test/unit_test.hpp"
 
-#include "caf/variant.hpp"
-
+#include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/read_number.hpp"
+#include "caf/detail/parser/sub_ascii.hpp"
+#include "caf/expected.hpp"
+#include "caf/pec.hpp"
+#include "caf/variant.hpp"
 
 using namespace caf;
 
@@ -95,6 +98,51 @@ struct fixture {
 #define CHECK_NUMBER(x) CAF_CHECK_EQUAL(p(#x), res(x))
 
 CAF_TEST_FIXTURE_SCOPE(read_number_tests, fixture)
+
+CAF_TEST(add ascii - unsigned) {
+  using detail::parser::add_ascii;
+  auto rd = [](string_view str) -> expected<uint8_t> {
+    uint8_t x = 0;
+    for (auto c : str)
+      if (!add_ascii<10>(x, c))
+        return pec::integer_overflow;
+    return x;
+  };
+  for (int i = 0; i < 256; ++i)
+    CAF_CHECK_EQUAL(rd(std::to_string(i)), static_cast<uint8_t>(i));
+  for (int i = 256; i < 513; ++i)
+    CAF_CHECK_EQUAL(rd(std::to_string(i)), pec::integer_overflow);
+}
+
+CAF_TEST(add ascii - signed) {
+  auto rd = [](string_view str) -> expected<int8_t> {
+    int8_t x = 0;
+    for (auto c : str)
+      if (!detail::parser::add_ascii<10>(x, c))
+        return pec::integer_overflow;
+    return x;
+  };
+  for (int i = 0; i < 128; ++i)
+    CAF_CHECK_EQUAL(rd(std::to_string(i)), static_cast<int8_t>(i));
+  for (int i = 128; i < 513; ++i)
+    CAF_CHECK_EQUAL(rd(std::to_string(i)), pec::integer_overflow);
+}
+
+CAF_TEST(sub ascii) {
+  auto rd = [](string_view str) -> expected<int8_t> {
+    int8_t x = 0;
+    for (auto c : str)
+      if (!detail::parser::sub_ascii<10>(x, c))
+        return pec::integer_underflow;
+    return x;
+  };
+  // Using sub_ascii in this way behaves as if we'd prefix the number with a
+  // minus sign, i.e., "123" will result in -123.
+  for (int i = 1; i < 129; ++i)
+    CAF_CHECK_EQUAL(rd(std::to_string(i)), static_cast<int8_t>(-i));
+  for (int i = 129; i < 513; ++i)
+    CAF_CHECK_EQUAL(rd(std::to_string(i)), pec::integer_underflow);
+}
 
 CAF_TEST(binary numbers) {
   /* TODO: use this implementation when switching to C++14
