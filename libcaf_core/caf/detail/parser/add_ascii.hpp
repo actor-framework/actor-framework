@@ -19,7 +19,10 @@
 
 #pragma once
 
+#include <limits>
+
 #include "caf/detail/parser/ascii_to_int.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
@@ -29,11 +32,26 @@ namespace parser {
 // @returns `false` on an overflow, otherwise `true`.
 // @pre `isdigit(c) || (Base == 16 && isxdigit(c))`
 template <int Base, class T>
-bool add_ascii(T& x, char c) {
+bool add_ascii(T& x, char c, enable_if_tt<std::is_integral<T>, int> u = 0) {
+  CAF_IGNORE_UNUSED(u);
+  if (x > (std::numeric_limits<T>::max() / Base))
+    return false;
+  x *= Base;
   ascii_to_int<Base, T> f;
-  auto before = x;
+  auto y = f(c);
+  if (x > (std::numeric_limits<T>::max() - y))
+    return false;
+  x += y;
+  return true;
+}
+
+template <int Base, class T>
+bool add_ascii(T& x, char c,
+               enable_if_tt<std::is_floating_point<T>, int> u = 0) {
+  CAF_IGNORE_UNUSED(u);
+  ascii_to_int<Base, T> f;
   x = (x * Base) + f(c);
-  return before <= x;
+  return true;
 }
 
 } // namespace parser

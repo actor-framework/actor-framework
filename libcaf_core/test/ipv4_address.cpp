@@ -42,13 +42,34 @@ CAF_TEST(constructing) {
   CAF_CHECK_EQUAL(zero.bits(), 0u);
 }
 
-CAF_TEST(to and from string) {
-  ipv4_address x;
-  auto err = parse("255.255.255.255", x);
-  CAF_CHECK_EQUAL(err, pec::success);
-  CAF_CHECK_EQUAL(x.bits(), 0xFFFFFFFF);
-  CAF_CHECK_EQUAL(to_string(x), "255.255.255.255");
-  CAF_CHECK_EQUAL(x, addr(255, 255, 255, 255));
+CAF_TEST(to string) {
+  CAF_CHECK_EQUAL(to_string(addr(255, 255, 255, 255)), "255.255.255.255");
+}
+
+CAF_TEST(from string - valid inputs) {
+  auto from_string = [](string_view str) -> expected<ipv4_address> {
+    ipv4_address result;
+    if (auto err = parse(str, result))
+      return err;
+    return result;
+  };
+  CAF_CHECK_EQUAL(from_string("136.12.12.12"), addr(136, 12, 12, 12));
+  CAF_CHECK_EQUAL(from_string("255.255.255.255"), addr(255, 255, 255, 255));
+}
+
+CAF_TEST(from string - invalid inputs) {
+  auto should_fail = [](string_view str) {
+    ipv4_address result;
+    auto err = parse(str, result);
+    if (!err)
+      CAF_ERROR("error while parsing "
+                << str << ", expected an error but got: " << to_string(result));
+  };
+  should_fail("256.12.12.12");
+  should_fail("1136.12.12.12");
+  should_fail("1137.12.12.12");
+  should_fail("1279.12.12.12");
+  should_fail("1280.12.12.12");
 }
 
 CAF_TEST(properties) {
