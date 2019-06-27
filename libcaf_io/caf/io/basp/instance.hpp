@@ -100,6 +100,9 @@ public:
     /// Flushes the underlying write buffer of `hdl`.
     virtual void flush(connection_handle hdl) = 0;
 
+    /// Returns a handle to the callee actor.
+    virtual strong_actor_ptr this_actor() = 0;
+
   protected:
     proxy_registry namespace_;
   };
@@ -207,6 +210,10 @@ public:
 
   worker_hub& hub() {
     return hub_;
+  }
+
+  message_queue& queue() {
+    return queue_;
   }
 
   actor_system& system() {

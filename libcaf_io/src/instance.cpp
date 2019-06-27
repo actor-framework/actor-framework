@@ -451,11 +451,17 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
                         << ctx->system().render(err));
         return false;
       }
-      if (dest_node == this_node_)
-        callee_.proxies().erase(source_node, hdr.source_actor,
-                                std::move(fail_state));
-      else
+      if (dest_node == this_node_) {
+        // Delay this message to make sure we don't skip in-flight messages.
+        auto msg_id = queue_.new_id();
+        auto ptr = make_mailbox_element(
+          nullptr, make_message_id(), {}, delete_atom::value, source_node,
+          hdr.source_actor, std::move(fail_state));
+        queue_.push(callee_.current_execution_unit(), msg_id,
+                    callee_.this_actor(), std::move(ptr));
+      } else {
         forward(ctx, dest_node, hdr, *payload);
+      }
       break;
     }
     case message_type::heartbeat: {

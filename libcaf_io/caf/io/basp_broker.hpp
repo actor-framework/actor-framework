@@ -100,6 +100,8 @@ public:
 
   execution_unit* current_execution_unit() override;
 
+  strong_actor_ptr this_actor() override;
+
   // -- utility functions ------------------------------------------------------
 
   /// Performs bookkeeping such as managing `spawn_servers`.

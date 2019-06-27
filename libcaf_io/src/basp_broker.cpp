@@ -142,8 +142,8 @@ behavior basp_broker::make_behavior() {
     },
     // received from proxy instances
     [=](forward_atom, strong_actor_ptr& src,
-        const std::vector<strong_actor_ptr>& fwd_stack,
-        strong_actor_ptr& dest, message_id mid, const message& msg) {
+        const std::vector<strong_actor_ptr>& fwd_stack, strong_actor_ptr& dest,
+        message_id mid, const message& msg) {
       CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(dest)
                     << CAF_ARG(mid) << CAF_ARG(msg));
       if (!dest || system().node() == dest->node()) {
@@ -214,12 +214,32 @@ behavior basp_broker::make_behavior() {
     // received from underlying broker implementation
     [=](const connection_closed_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
-      connection_cleanup(msg.handle);
+      // We might still have pending messages from this connection. To make
+      // sure there's no BASP worker deserializing a message, we are sending
+      // us a message through the queue. This message gets delivered only
+      // after all received messages up to this point were deserialized
+      // and delivered.
+      auto& q = instance.queue();
+      auto msg_id = q.new_id();
+      q.push(context(), msg_id, ctrl(),
+             make_mailbox_element(nullptr, make_message_id(), {},
+                                  delete_atom::value, msg.handle));
     },
+    // received from the message handler above for connection_closed_msg
+    [=](delete_atom, connection_handle hdl) { connection_cleanup(hdl); },
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {
       CAF_LOG_TRACE("");
-      auto port = local_port(msg.handle);
+      // Same reasoning as in connection_closed_msg.
+      auto& q = instance.queue();
+      auto msg_id = q.new_id();
+      q.push(context(), msg_id, ctrl(),
+             make_mailbox_element(nullptr, make_message_id(), {},
+                                  delete_atom::value, msg.handle));
+    },
+    // received from the message handler above for acceptor_closed_msg
+    [=](delete_atom, accept_handle hdl) {
+      auto port = local_port(hdl);
       instance.remove_published_actor(port);
     },
     // received from middleman actor
@@ -252,6 +272,12 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));
       proxies().erase(nid, aid);
     },
+    // received from the BASP instance when receiving down_message
+    [=](delete_atom, const node_id& nid, actor_id aid, error& fail_state) {
+      CAF_LOG_TRACE(CAF_ARG(nid)
+                    << ", " << CAF_ARG(aid) << ", " << CAF_ARG(fail_state));
+      proxies().erase(nid, aid, std::move(fail_state));
+    },
     [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
       auto cb = make_callback(
@@ -275,8 +301,8 @@ behavior basp_broker::make_behavior() {
         return unit;
       return sec::cannot_close_invalid_port;
     },
-    [=](get_atom, const node_id& x)
-    -> std::tuple<node_id, std::string, uint16_t> {
+    [=](get_atom,
+        const node_id& x) -> std::tuple<node_id, std::string, uint16_t> {
       std::string addr;
       uint16_t port = 0;
       auto hdl = instance.tbl().lookup_direct(x);
@@ -290,8 +316,7 @@ behavior basp_broker::make_behavior() {
       instance.handle_heartbeat(context());
       delayed_send(this, std::chrono::milliseconds{interval},
                    tick_atom::value, interval);
-    }
-  };
+    }};
 }
 
 proxy_registry* basp_broker::proxy_registry_ptr() {
@@ -557,6 +582,10 @@ void basp_broker::handle_heartbeat() {
 
 execution_unit* basp_broker::current_execution_unit() {
   return context();
+}
+
+strong_actor_ptr basp_broker::this_actor() {
+  return ctrl();
 }
 
 } // namespace io
