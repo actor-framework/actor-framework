@@ -31,11 +31,9 @@ using namespace caf;
 namespace {
 
 behavior testee_impl() {
-  return {
-    [](ok_atom, int) {
-      // nop
-    }
-  };
+  return {[](ok_atom, int) {
+    // nop
+  }};
 }
 
 struct fixture : test_coordinator_fixture<> {
@@ -59,8 +57,7 @@ struct fixture : test_coordinator_fixture<> {
   }
 };
 
-
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(message_queue_tests, fixture)
 
@@ -77,7 +74,7 @@ CAF_TEST(ascending IDs) {
   CAF_CHECK_EQUAL(queue.next_undelivered, 0u);
 }
 
-CAF_TEST(push order 0-1-2) {
+CAF_TEST(push order 0 - 1 - 2) {
   acquire_ids(3);
   push(0);
   expect((ok_atom, int), from(self).to(testee).with(_, 0));
@@ -87,7 +84,7 @@ CAF_TEST(push order 0-1-2) {
   expect((ok_atom, int), from(self).to(testee).with(_, 2));
 }
 
-CAF_TEST(push order 0-2-1) {
+CAF_TEST(push order 0 - 2 - 1) {
   acquire_ids(3);
   push(0);
   expect((ok_atom, int), from(self).to(testee).with(_, 0));
@@ -98,7 +95,7 @@ CAF_TEST(push order 0-2-1) {
   expect((ok_atom, int), from(self).to(testee).with(_, 2));
 }
 
-CAF_TEST(push order 1-0-2) {
+CAF_TEST(push order 1 - 0 - 2) {
   acquire_ids(3);
   push(1);
   disallow((ok_atom, int), from(self).to(testee));
@@ -109,8 +106,7 @@ CAF_TEST(push order 1-0-2) {
   expect((ok_atom, int), from(self).to(testee).with(_, 2));
 }
 
-
-CAF_TEST(push order 1-2-0) {
+CAF_TEST(push order 1 - 2 - 0) {
   acquire_ids(3);
   push(1);
   disallow((ok_atom, int), from(self).to(testee));
@@ -122,7 +118,7 @@ CAF_TEST(push order 1-2-0) {
   expect((ok_atom, int), from(self).to(testee).with(_, 2));
 }
 
-CAF_TEST(push order 2-0-1) {
+CAF_TEST(push order 2 - 0 - 1) {
   acquire_ids(3);
   push(2);
   disallow((ok_atom, int), from(self).to(testee));
@@ -133,7 +129,7 @@ CAF_TEST(push order 2-0-1) {
   expect((ok_atom, int), from(self).to(testee).with(_, 2));
 }
 
-CAF_TEST(push order 2-1-0) {
+CAF_TEST(push order 2 - 1 - 0) {
   acquire_ids(3);
   push(2);
   disallow((ok_atom, int), from(self).to(testee));

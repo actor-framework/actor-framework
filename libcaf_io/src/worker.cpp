@@ -31,11 +31,11 @@ namespace basp {
 // -- constructors, destructors, and assignment operators ----------------------
 
 worker::worker(worker_hub& hub, message_queue& queue, proxy_registry& proxies)
-    : next_(nullptr),
-      hub_(&hub),
-      queue_(&queue),
-      proxies_(&proxies),
-      system_(&proxies.system()) {
+  : next_(nullptr),
+    hub_(&hub),
+    queue_(&queue),
+    proxies_(&proxies),
+    system_(&proxies.system()) {
   CAF_IGNORE_UNUSED(pad_);
 }
 

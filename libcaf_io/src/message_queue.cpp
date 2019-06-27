@@ -58,9 +58,7 @@ void message_queue::push(execution_unit* ctx, uint64_t id,
     return;
   }
   // Get the insertion point.
-  auto pred = [&](const actor_msg& x) {
-    return x.id >= id;
-  };
+  auto pred = [&](const actor_msg& x) { return x.id >= id; };
   pending.emplace(std::find_if(first, last, pred),
                   actor_msg{id, std::move(receiver), std::move(content)});
 }

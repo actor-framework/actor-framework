@@ -16,18 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
 #include <algorithm>
+#include <utility>
 
-#include "caf/node_id.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/serializer.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
+#include "caf/serializer.hpp"
 
-#include "caf/logger.hpp"
 #include "caf/actor_registry.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 
@@ -36,8 +36,7 @@ proxy_registry::backend::~backend() {
 }
 
 proxy_registry::proxy_registry(actor_system& sys, backend& be)
-    : system_(sys),
-      backend_(be) {
+  : system_(sys), backend_(be) {
   // nop
 }
 
@@ -46,7 +45,7 @@ proxy_registry::~proxy_registry() {
 }
 
 size_t proxy_registry::count_proxies(const node_id& node) const {
-  std::unique_lock<std::mutex> guard {mtx_};
+  std::unique_lock<std::mutex> guard{mtx_};
   auto i = proxies_.find(node);
   return i != proxies_.end() ? i->second.size() : 0;
 }
@@ -69,7 +68,7 @@ strong_actor_ptr proxy_registry::get_or_put(const node_id& nid, actor_id aid) {
   return result;
 }
 
-std::vector<strong_actor_ptr> 
+std::vector<strong_actor_ptr>
 proxy_registry::get_all(const node_id& node) const {
   // Reserve at least some memory outside of the critical section.
   std::vector<strong_actor_ptr> result;

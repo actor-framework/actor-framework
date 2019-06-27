@@ -18,17 +18,17 @@
 
 #pragma once
 
-#include <mutex>
-#include <utility>
 #include <functional>
+#include <mutex>
 #include <unordered_map>
+#include <utility>
 
-#include "caf/fwd.hpp"
-#include "caf/node_id.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/exit_reason.hpp"
+#include "caf/fwd.hpp"
+#include "caf/node_id.hpp"
 
 namespace caf {
 

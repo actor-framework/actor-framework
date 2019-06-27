@@ -36,11 +36,9 @@ using namespace caf;
 namespace {
 
 behavior testee_impl() {
-  return {
-    [](ok_atom) {
-      // nop
-    }
-  };
+  return {[](ok_atom) {
+    // nop
+  }};
 }
 
 class mock_actor_proxy : public actor_proxy {
@@ -61,7 +59,7 @@ public:
 class mock_proxy_registry_backend : public proxy_registry::backend {
 public:
   mock_proxy_registry_backend(actor_system& sys) : sys_(sys) {
-    //nop
+    // nop
   }
 
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override {
@@ -86,9 +84,9 @@ struct fixture : test_coordinator_fixture<> {
   actor testee;
 
   fixture()
-      : proxies_backend(sys),
-        proxies(sys, proxies_backend),
-        last_hop(123, "0011223344556677889900112233445566778899") {
+    : proxies_backend(sys),
+      proxies(sys, proxies_backend),
+      last_hop(123, "0011223344556677889900112233445566778899") {
     testee = sys.spawn<lazy_init>(testee_impl);
     sys.registry().put(testee.id(), testee);
   }
@@ -98,7 +96,7 @@ struct fixture : test_coordinator_fixture<> {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(worker_tests, fixture)
 
