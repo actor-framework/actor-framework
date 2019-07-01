@@ -31,6 +31,7 @@ namespace parser {
 // Subtracs integers when parsing negative integers.
 // @returns `false` on an underflow, otherwise `true`.
 // @pre `isdigit(c) || (Base == 16 && isxdigit(c))`
+// @warning can leave `x` in an intermediate state when retuning `false`
 template <int Base, class T>
 bool sub_ascii(T& x, char c, enable_if_tt<std::is_integral<T>, int> u = 0) {
   CAF_IGNORE_UNUSED(u);

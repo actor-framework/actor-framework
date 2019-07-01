@@ -31,6 +31,7 @@ namespace parser {
 // Sum up integers when parsing positive integers.
 // @returns `false` on an overflow, otherwise `true`.
 // @pre `isdigit(c) || (Base == 16 && isxdigit(c))`
+// @warning can leave `x` in an intermediate state when retuning `false`
 template <int Base, class T>
 bool add_ascii(T& x, char c, enable_if_tt<std::is_integral<T>, int> u = 0) {
   CAF_IGNORE_UNUSED(u);
