@@ -19,7 +19,10 @@
 
 #pragma once
 
+#include <limits>
+
 #include "caf/detail/parser/ascii_to_int.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
@@ -28,12 +31,28 @@ namespace parser {
 // Subtracs integers when parsing negative integers.
 // @returns `false` on an underflow, otherwise `true`.
 // @pre `isdigit(c) || (Base == 16 && isxdigit(c))`
+// @warning can leave `x` in an intermediate state when retuning `false`
 template <int Base, class T>
-bool sub_ascii(T& x, char c) {
+bool sub_ascii(T& x, char c, enable_if_tt<std::is_integral<T>, int> u = 0) {
+  CAF_IGNORE_UNUSED(u);
+  if (x < (std::numeric_limits<T>::min() / Base))
+    return false;
+  x *= Base;
   ascii_to_int<Base, T> f;
-  auto before = x;
+  auto y = f(c);
+  if (x < (std::numeric_limits<T>::min() + y))
+    return false;
+  x -= y;
+  return true;
+}
+
+template <int Base, class T>
+bool sub_ascii(T& x, char c,
+               enable_if_tt<std::is_floating_point<T>, int> u = 0) {
+  CAF_IGNORE_UNUSED(u);
+  ascii_to_int<Base, T> f;
   x = (x * Base) - f(c);
-  return before >= x;
+  return true;
 }
 
 } // namespace parser
