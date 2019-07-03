@@ -16,24 +16,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE socket
+#pragma once
 
-#include "caf/net/socket.hpp"
+#include <stdexcept>
 
-#include "caf/test/dsl.hpp"
+#include "caf/error.hpp"
+#include "caf/net/host.hpp"
 
-#include "host_fixture.hpp"
+namespace {
 
-using namespace caf;
-using namespace caf::net;
+struct host_fixture {
+  host_fixture() {
+    if (auto err = caf::net::this_host::startup())
+      throw std::logic_error("this_host::startup failed");
+  }
 
-CAF_TEST_FIXTURE_SCOPE(socket_tests, host_fixture)
+  ~host_fixture() {
+    caf::net::this_host::cleanup();
+  }
+};
 
-CAF_TEST(invalid socket) {
-  auto x = invalid_socket;
-  CAF_CHECK_EQUAL(x.id, invalid_socket_id);
-  CAF_CHECK_EQUAL(child_process_inherit(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(nonblocking(x, true), sec::network_syscall_failed);
-}
-
-CAF_TEST_FIXTURE_SCOPE_END()
+} // namespace

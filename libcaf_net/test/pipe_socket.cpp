@@ -16,24 +16,33 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE socket
+#define CAF_SUITE pipe_socket
 
-#include "caf/net/socket.hpp"
+#include "caf/net/pipe_socket.hpp"
 
 #include "caf/test/dsl.hpp"
+
+#include <vector>
 
 #include "host_fixture.hpp"
 
 using namespace caf;
 using namespace caf::net;
 
-CAF_TEST_FIXTURE_SCOPE(socket_tests, host_fixture)
+CAF_TEST_FIXTURE_SCOPE(pipe_socket_tests, host_fixture)
 
-CAF_TEST(invalid socket) {
-  auto x = invalid_socket;
-  CAF_CHECK_EQUAL(x.id, invalid_socket_id);
-  CAF_CHECK_EQUAL(child_process_inherit(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(nonblocking(x, true), sec::network_syscall_failed);
+CAF_TEST(send and receive) {
+  std::vector<char> send_buf{1, 2, 3, 4, 5, 6, 7, 8};
+  std::vector<char> receive_buf;
+  receive_buf.resize(100);
+  pipe_socket rd_sock;
+  pipe_socket wr_sock;
+  std::tie(rd_sock, wr_sock) = unbox(make_pipe());
+  CAF_CHECK_EQUAL(write(wr_sock, send_buf.data(), send_buf.size()),
+                  send_buf.size());
+  CAF_CHECK_EQUAL(read(rd_sock, receive_buf.data(), receive_buf.size()),
+                  send_buf.size());
+  CAF_CHECK(std::equal(send_buf.begin(), send_buf.end(), receive_buf.begin()));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

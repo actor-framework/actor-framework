@@ -16,9 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE socket
+#define CAF_SUITE network_socket
 
-#include "caf/net/socket.hpp"
+#include "caf/net/network_socket.hpp"
 
 #include "caf/test/dsl.hpp"
 
@@ -27,13 +27,19 @@
 using namespace caf;
 using namespace caf::net;
 
-CAF_TEST_FIXTURE_SCOPE(socket_tests, host_fixture)
+CAF_TEST_FIXTURE_SCOPE(network_socket_tests, host_fixture)
 
 CAF_TEST(invalid socket) {
-  auto x = invalid_socket;
-  CAF_CHECK_EQUAL(x.id, invalid_socket_id);
-  CAF_CHECK_EQUAL(child_process_inherit(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(nonblocking(x, true), sec::network_syscall_failed);
+  auto x = invalid_network_socket;
+  CAF_CHECK_EQUAL(keepalive(x, true), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(tcp_nodelay(x, true), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(allow_sigpipe(x, true), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(allow_udp_connreset(x, true), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(send_buffer_size(x), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(local_port(x), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(local_addr(x), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(remote_port(x), sec::network_syscall_failed);
+  CAF_CHECK_EQUAL(remote_addr(x), sec::network_syscall_failed);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

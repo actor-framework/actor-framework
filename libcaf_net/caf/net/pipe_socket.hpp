@@ -19,51 +19,48 @@
 #pragma once
 
 #include <cstddef>
-#include <limits>
+#include <system_error>
+#include <utility>
 
+#include "caf/fwd.hpp"
+#include "caf/net/abstract_socket.hpp"
+#include "caf/net/socket.hpp"
 #include "caf/net/socket_id.hpp"
 
 namespace caf {
 namespace net {
 
-template <class Derived>
-struct abstract_socket {
-  socket_id id;
+struct pipe_socket : abstract_socket<pipe_socket> {
+  using super = abstract_socket<pipe_socket>;
 
-  constexpr abstract_socket() : id(invalid_socket_id) {
-    // nop
-  }
+  using super::super;
 
-  constexpr abstract_socket(socket_id id) : id(id) {
-    // nop
-  }
-
-  constexpr abstract_socket(const Derived& other) : id(other.id) {
-    // nop
-  }
-
-  abstract_socket& operator=(const Derived& other) {
-    id = other.id;
-    return *this;
-  }
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, Derived& x) {
-    return f(x.id);
-  }
-
-  friend constexpr bool operator==(Derived x, Derived y) {
-    return x.id == y.id;
-  }
-
-  friend constexpr bool operator!=(Derived x, Derived y) {
-    return x.id != y.id;
-  }
-
-  friend constexpr bool operator<(Derived x, Derived y) {
-    return x.id < y.id;
+  constexpr operator socket() const noexcept {
+    return socket{id};
   }
 };
+
+/// Creates two connected sockets. The first socket is the read handle and the
+/// second socket is the write handle.
+/// @relates pipe_socket
+expected<std::pair<pipe_socket, pipe_socket>> make_pipe();
+
+/// Transmits data from `x` to its peer.
+/// @param x Connected endpoint.
+/// @param buf Points to the message to send.
+/// @param buf_size Specifies the size of the buffer in bytes.
+/// @returns The number of written bytes on success, otherwise an error code.
+/// @relates pipe_socket
+variant<size_t, std::errc> write(pipe_socket x, const void* buf,
+                                 size_t buf_size);
+
+/// Receives data from `x`.
+/// @param x Connected endpoint.
+/// @param buf Points to destination buffer.
+/// @param buf_size Specifies the maximum size of the buffer in bytes.
+/// @returns The number of received bytes on success, otherwise an error code.
+/// @relates pipe_socket
+variant<size_t, std::errc> read(pipe_socket x, void* buf, size_t buf_size);
 
 } // namespace net
 } // namespace caf

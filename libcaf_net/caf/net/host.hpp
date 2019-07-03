@@ -16,24 +16,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE socket
+#pragma once
 
-#include "caf/net/socket.hpp"
+#include "caf/fwd.hpp"
 
-#include "caf/test/dsl.hpp"
+namespace caf {
+namespace net {
 
-#include "host_fixture.hpp"
+struct this_host {
+  /// Initializes the network subsystem.
+  static error startup();
 
-using namespace caf;
-using namespace caf::net;
+  /// Release any resources of the network subsystem.
+  static void cleanup();
+};
 
-CAF_TEST_FIXTURE_SCOPE(socket_tests, host_fixture)
-
-CAF_TEST(invalid socket) {
-  auto x = invalid_socket;
-  CAF_CHECK_EQUAL(x.id, invalid_socket_id);
-  CAF_CHECK_EQUAL(child_process_inherit(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(nonblocking(x, true), sec::network_syscall_failed);
-}
-
-CAF_TEST_FIXTURE_SCOPE_END()
+} // namespace net
+} // namespace caf

@@ -7,6 +7,9 @@ file(GLOB_RECURSE LIBCAF_NET_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set(LIBCAF_NET_SRCS
+  src/host.cpp
+  src/network_socket.cpp
+  src/pipe_socket.cpp
   src/socket.cpp
 )
 

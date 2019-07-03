@@ -16,24 +16,42 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE socket
+#include "caf/net/host.hpp"
 
+#include "caf/config.hpp"
+#include "caf/detail/net_syscall.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
+#include "caf/error.hpp"
 #include "caf/net/socket.hpp"
+#include "caf/none.hpp"
 
-#include "caf/test/dsl.hpp"
+namespace caf {
+namespace net {
 
-#include "host_fixture.hpp"
+#ifdef CAF_WINDOWS
 
-using namespace caf;
-using namespace caf::net;
-
-CAF_TEST_FIXTURE_SCOPE(socket_tests, host_fixture)
-
-CAF_TEST(invalid socket) {
-  auto x = invalid_socket;
-  CAF_CHECK_EQUAL(x.id, invalid_socket_id);
-  CAF_CHECK_EQUAL(child_process_inherit(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(nonblocking(x, true), sec::network_syscall_failed);
+error this_host::startup() {
+  WSADATA WinsockData;
+  CAF_NET_SYSCALL("WSAStartup", result, !=, 0,
+                  WSAStartup(MAKEWORD(2, 2), &WinsockData));
+  return none;
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+void this_host::cleanup() {
+  WSACleanup();
+}
+
+#else // CAF_WINDOWS
+
+error this_host::startup() {
+  return none;
+}
+
+void this_host::cleanup() {
+  // nop
+}
+
+#endif // CAF_WINDOWS
+
+} // namespace net
+} // namespace caf
