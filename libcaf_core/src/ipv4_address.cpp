@@ -64,8 +64,8 @@ bool ipv4_address::is_loopback() const noexcept {
 }
 
 bool ipv4_address::is_multicast() const noexcept {
-  // All addresses in 224.0.0.0/8 are considered loopback addresses.
-  return (bits_ & net_order(0xFF000000)) == net_order(0xE0000000);
+  // All addresses in 224.0.0.0/4 are considered multicast addresses.
+  return (bits_ & net_order(0xF0000000)) == net_order(0xE0000000);
 }
 
 // -- related free functions ---------------------------------------------------
