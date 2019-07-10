@@ -32,6 +32,7 @@
 namespace caf {
 namespace net {
 
+/// A bidirectional network communication endpoint.
 struct network_socket : abstract_socket<network_socket> {
   using super = abstract_socket<network_socket>;
 
@@ -41,10 +42,6 @@ struct network_socket : abstract_socket<network_socket> {
     return socket{id};
   }
 };
-
-/// Identifies the invalid socket.
-/// @relates network_socket
-constexpr auto invalid_network_socket = network_socket{invalid_socket_id};
 
 /// Enables or disables keepalive on `x`.
 /// @relates network_socket

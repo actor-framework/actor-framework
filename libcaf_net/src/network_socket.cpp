@@ -132,7 +132,7 @@ error allow_sigpipe(network_socket x, bool new_value) {
 
 error allow_udp_connreset(network_socket x, bool) {
   // SIO_UDP_CONNRESET only exists on Windows
-  if (x == invalid_network_socket)
+  if (x == invalid_socket)
     return make_error(sec::network_syscall_failed, "WSAIoctl",
                       "invalid socket");
   return none;

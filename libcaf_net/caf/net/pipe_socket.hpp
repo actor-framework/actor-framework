@@ -30,6 +30,7 @@
 namespace caf {
 namespace net {
 
+/// A unidirectional communication endpoint for inter-process communication.
 struct pipe_socket : abstract_socket<pipe_socket> {
   using super = abstract_socket<pipe_socket>;
 
