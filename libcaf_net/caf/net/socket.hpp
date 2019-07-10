@@ -19,6 +19,7 @@
 #pragma once
 
 #include <string>
+#include <system_error>
 #include <type_traits>
 
 #include "caf/config.hpp"
@@ -52,20 +53,11 @@ void close(socket x);
 
 /// Returns the last socket error in this thread as an integer.
 /// @relates socket
-int last_socket_error();
+std::errc last_socket_error();
 
 /// Returns the last socket error as human-readable string.
 /// @relates socket
 std::string last_socket_error_as_string();
-
-/// Returns a human-readable string for a given socket error.
-/// @relates socket
-std::string socket_error_as_string(int errcode);
-
-/// Returns whether `errcode` indicates that an operation would block or return
-/// nothing at the moment and can be tried again at a later point.
-/// @relates socket
-bool would_block_or_temporarily_unavailable(int errcode);
 
 /// Sets x to be inherited by child processes if `new_value == true`
 /// or not if `new_value == false`.  Not implemented on Windows.
@@ -75,10 +67,6 @@ error child_process_inherit(socket x, bool new_value);
 /// Enables or disables nonblocking I/O on `x`.
 /// @relates socket
 error nonblocking(socket x, bool new_value);
-
-/// Convenience functions for checking the result of `recv` or `send`.
-/// @relates socket
-bool is_error(std::make_signed<size_t>::type res, bool is_nonblock);
 
 } // namespace net
 } // namespace caf

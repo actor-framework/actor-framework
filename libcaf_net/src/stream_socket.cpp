@@ -165,7 +165,7 @@ variant<size_t, std::errc> read(stream_socket x, void* buf, size_t buf_size) {
   auto res = ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf), buf_size,
                     no_sigpipe_io_flag);
   if (res < 0)
-    return static_cast<std::errc>(last_socket_error());
+    return last_socket_error();
   return static_cast<size_t>(res);
 }
 
@@ -174,7 +174,7 @@ variant<size_t, std::errc> write(stream_socket x, const void* buf,
   auto res = ::send(x.id, reinterpret_cast<socket_send_ptr>(buf), buf_size,
                     no_sigpipe_io_flag);
   if (res < 0)
-    return static_cast<std::errc>(last_socket_error());
+    return last_socket_error();
   return static_cast<size_t>(res);
 }
 

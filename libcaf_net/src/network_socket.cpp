@@ -22,8 +22,8 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/net_syscall.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/io/network/protocol.hpp"
