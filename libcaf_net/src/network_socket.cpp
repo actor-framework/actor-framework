@@ -85,7 +85,7 @@ error keepalive(network_socket x, bool new_value) {
 }
 
 error allow_sigpipe(network_socket x, bool) {
-  if (x == invalid_network_socket)
+  if (x == invalid_socket)
     return make_error(sec::network_syscall_failed, "setsockopt",
                       "invalid socket");
   return none;
@@ -123,7 +123,7 @@ error allow_sigpipe(network_socket x, bool new_value) {
                   setsockopt(x.id, SOL_SOCKET, SO_NOSIGPIPE, &value,
                              static_cast<unsigned>(sizeof(value))));
 #  else  // CAF_HAS_NO_SIGPIPE_SOCKET_FLAG
-  if (x == invalid_network_socket)
+  if (x == invalid_socket)
     return make_error(sec::network_syscall_failed, "setsockopt",
                       "invalid socket");
 #  endif // CAF_HAS_NO_SIGPIPE_SOCKET_FLAG

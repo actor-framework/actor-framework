@@ -60,7 +60,7 @@ error allow_sigpipe(network_socket x, bool new_value);
 error allow_udp_connreset(network_socket x, bool new_value);
 
 /// Get the socket buffer size for `x`.
-/// @pre `x != invalid_network_socket`
+/// @pre `x != invalid_socket`
 /// @relates network_socket
 expected<size_t> send_buffer_size(network_socket x);
 
