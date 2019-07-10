@@ -27,7 +27,7 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
-#include "caf/net/network_socket.hpp"
+#include "caf/net/stream_socket.hpp"
 #include "caf/sec.hpp"
 #include "caf/variant.hpp"
 
@@ -39,7 +39,7 @@ namespace net {
 expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   // Windows has no support for unidirectional pipes. Emulate pipes by using a
   // pair of regular TCP sockets with read/write channels closed appropriately.
-  if (auto result = make_network_socket_pair()) {
+  if (auto result = make_stream_socket_pair()) {
     shutdown_write(result->first);
     shutdown_read(result->second);
     return std::make_pair(socket_cast<pipe_socket>(result->first),
@@ -52,12 +52,12 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
 variant<size_t, std::errc> write(pipe_socket x, const void* buf,
                                  size_t buf_size) {
   // On Windows, a pipe consists of two stream sockets.
-  return write(network_socket{x.id}, buf, buf_size);
+  return write(socket_cast<stream_socket>(x), buf, buf_size);
 }
 
 variant<size_t, std::errc> read(pipe_socket x, void* buf, size_t buf_size) {
   // On Windows, a pipe consists of two stream sockets.
-  return read(network_socket{x.id}, buf, buf_size);
+  return read(socket_cast<stream_socket>(x), buf, buf_size);
 }
 
 #else // CAF_WINDOWS

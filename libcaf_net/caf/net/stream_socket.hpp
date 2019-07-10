@@ -1,0 +1,75 @@
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright 2011-2019 Dominik Charousset                                     *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
+
+#pragma once
+
+#include "caf/fwd.hpp"
+#include "caf/net/network_socket.hpp"
+
+namespace caf {
+namespace net {
+
+/// A connection-oriented network communication endpoint for bidirectional byte
+/// streams.
+struct stream_socket : abstract_socket<stream_socket> {
+  using super = abstract_socket<stream_socket>;
+
+  using super::super;
+
+  constexpr operator socket() const noexcept {
+    return socket{id};
+  }
+
+  constexpr operator network_socket() const noexcept {
+    return network_socket{id};
+  }
+};
+
+/// Creates two connected sockets to mimic network communication (usually for
+/// testing purposes).
+/// @relates stream_socket
+expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair();
+
+/// Enables or disables keepalive on `x`.
+/// @relates network_socket
+error keepalive(stream_socket x, bool new_value);
+
+/// Enables or disables Nagle's algorithm on `x`.
+/// @relates stream_socket
+error nodelay(stream_socket x, bool new_value);
+
+/// Receives data from `x`.
+/// @param x Connected endpoint.
+/// @param buf Points to destination buffer.
+/// @param buf_size Specifies the maximum size of the buffer in bytes.
+/// @returns The number of received bytes on success, 0 if the connection was
+///          closed and an error code otherwise.
+/// @relates pipe_socket
+variant<size_t, std::errc> read(stream_socket x, void* buf, size_t buf_size);
+
+/// Transmits data from `x` to its peer.
+/// @param x Connected endpoint.
+/// @param buf Points to the message to send.
+/// @param buf_size Specifies the size of the buffer in bytes.
+/// @returns The number of written bytes on success, otherwise an error code.
+/// @relates pipe_socket
+variant<size_t, std::errc> write(stream_socket x, const void* buf,
+                                 size_t buf_size);
+
+} // namespace net
+} // namespace caf

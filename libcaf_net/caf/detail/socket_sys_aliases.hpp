@@ -16,27 +16,30 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE network_socket
+#pragma once
 
-#include "caf/net/network_socket.hpp"
+#include "caf/config.hpp"
 
-#include "caf/test/dsl.hpp"
+namespace caf {
+namespace net {
 
-#include "host_fixture.hpp"
+#ifdef CAF_WINDOWS
 
-using namespace caf;
-using namespace caf::net;
+using setsockopt_ptr = const char*;
+using getsockopt_ptr = char*;
+using socket_send_ptr = const char*;
+using socket_recv_ptr = char*;
+using socket_size_type = int;
 
-CAF_TEST_FIXTURE_SCOPE(network_socket_tests, host_fixture)
+#else // CAF_WINDOWS
 
-CAF_TEST(invalid socket) {
-  network_socket x;
-  CAF_CHECK_EQUAL(allow_udp_connreset(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(send_buffer_size(x), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(local_port(x), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(local_addr(x), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(remote_port(x), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(remote_addr(x), sec::network_syscall_failed);
-}
+using setsockopt_ptr = const void*;
+using getsockopt_ptr = void*;
+using socket_send_ptr = const void*;
+using socket_recv_ptr = void*;
+using socket_size_type = unsigned;
 
-CAF_TEST_FIXTURE_SCOPE_END()
+#endif // CAF_WINDOWS
+
+} // namespace net
+} // namespace caf

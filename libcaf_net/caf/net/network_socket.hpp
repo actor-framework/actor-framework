@@ -43,14 +43,6 @@ struct network_socket : abstract_socket<network_socket> {
   }
 };
 
-/// Enables or disables keepalive on `x`.
-/// @relates network_socket
-error keepalive(network_socket x, bool new_value);
-
-/// Enables or disables Nagle's algorithm on `x`.
-/// @relates network_socket
-error tcp_nodelay(network_socket x, bool new_value);
-
 /// Enables or disables `SIGPIPE` events from `x`.
 /// @relates network_socket
 error allow_sigpipe(network_socket x, bool new_value);
@@ -95,29 +87,6 @@ void shutdown_write(network_socket x);
 /// Closes the both read and write channel for a socket.
 /// @relates network_socket
 void shutdown(network_socket x);
-
-/// Transmits data from `x` to its peer.
-/// @param x Connected endpoint.
-/// @param buf Points to the message to send.
-/// @param buf_size Specifies the size of the buffer in bytes.
-/// @returns The number of written bytes on success, otherwise an error code.
-/// @relates pipe_socket
-variant<size_t, std::errc> write(network_socket x, const void* buf,
-                                 size_t buf_size);
-
-/// Receives data from `x`.
-/// @param x Connected endpoint.
-/// @param buf Points to destination buffer.
-/// @param buf_size Specifies the maximum size of the buffer in bytes.
-/// @returns The number of received bytes on success, 0 if the connection was
-///          closed and an error code otherwise.
-/// @relates pipe_socket
-variant<size_t, std::errc> read(network_socket x, void* buf, size_t buf_size);
-
-/// Creates two connected sockets to mimic network communication (usually for
-/// testing purposes).
-/// @relates network_socket
-expected<std::pair<network_socket, network_socket>> make_network_socket_pair();
 
 } // namespace net
 } // namespace caf

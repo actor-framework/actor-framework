@@ -12,6 +12,7 @@ set(LIBCAF_NET_SRCS
   src/pipe_socket.cpp
   src/socket.cpp
   src/socket_manager.cpp
+  src/stream_socket.cpp
 )
 
 add_custom_target(libcaf_net)
