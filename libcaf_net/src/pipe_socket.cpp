@@ -85,14 +85,14 @@ variant<size_t, std::errc> write(pipe_socket x, const void* buf,
                                  size_t buf_size) {
   auto res = ::write(x.id, buf, buf_size);
   if (res < 0)
-    return static_cast<std::errc>(errno);
+    return static_cast<std::errc>(last_socket_error());
   return static_cast<size_t>(res);
 }
 
 variant<size_t, std::errc> read(pipe_socket x, void* buf, size_t buf_size) {
   auto res = ::read(x.id, buf, buf_size);
   if (res < 0)
-    return static_cast<std::errc>(errno);
+    return static_cast<std::errc>(last_socket_error());
   return static_cast<size_t>(res);
 }
 

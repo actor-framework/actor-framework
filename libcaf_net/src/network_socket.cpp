@@ -242,7 +242,7 @@ variant<size_t, std::errc> write(network_socket x, const void* buf,
   auto res = ::send(x.id, reinterpret_cast<socket_send_ptr>(buf), buf_size,
                     no_sigpipe_io_flag);
   if (res < 0)
-    return static_cast<std::errc>(errno);
+    return static_cast<std::errc>(last_socket_error());
   return static_cast<size_t>(res);
 }
 
@@ -250,7 +250,7 @@ variant<size_t, std::errc> read(network_socket x, void* buf, size_t buf_size) {
   auto res = ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf), buf_size,
                     no_sigpipe_io_flag);
   if (res < 0)
-    return static_cast<std::errc>(errno);
+    return static_cast<std::errc>(last_socket_error());
   return static_cast<size_t>(res);
 }
 
