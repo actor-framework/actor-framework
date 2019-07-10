@@ -62,11 +62,11 @@ error allow_udp_connreset(network_socket x, bool new_value);
 /// Get the socket buffer size for `x`.
 /// @pre `x != invalid_network_socket`
 /// @relates network_socket
-expected<int> send_buffer_size(network_socket x);
+expected<size_t> send_buffer_size(network_socket x);
 
 /// Set the socket buffer size for `x`.
 /// @relates network_socket
-error send_buffer_size(network_socket x, int new_value);
+error send_buffer_size(network_socket x, size_t capacity);
 
 /// Returns the locally assigned port of `x`.
 /// @relates network_socket
@@ -109,9 +109,15 @@ variant<size_t, std::errc> write(network_socket x, const void* buf,
 /// @param x Connected endpoint.
 /// @param buf Points to destination buffer.
 /// @param buf_size Specifies the maximum size of the buffer in bytes.
-/// @returns The number of received bytes on success, otherwise an error code.
+/// @returns The number of received bytes on success, 0 if the connection was
+///          closed and an error code otherwise.
 /// @relates pipe_socket
 variant<size_t, std::errc> read(network_socket x, void* buf, size_t buf_size);
+
+/// Creates two connected sockets to mimic network communication (usually for
+/// testing purposes).
+/// @relates network_socket
+expected<std::pair<network_socket, network_socket>> make_network_socket_pair();
 
 } // namespace net
 } // namespace caf

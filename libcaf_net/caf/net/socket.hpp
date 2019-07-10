@@ -40,6 +40,12 @@ struct socket : abstract_socket<socket> {
 /// Denotes the invalid socket.
 constexpr auto invalid_socket = socket{invalid_socket_id};
 
+/// Converts between different socket types.
+template <class To, class From>
+To socket_cast(From x) {
+  return To{x.id};
+}
+
 /// Close socket `x`.
 /// @relates socket
 void close(socket x);
