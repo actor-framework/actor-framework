@@ -120,8 +120,7 @@ behavior basp_broker::make_behavior() {
     CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval));
     send(this, tick_atom::value, heartbeat_interval);
   }
-  return {
-
+  return behavior{
     // received from underlying broker implementation
     [=](new_data_msg& msg) {
       CAF_LOG_TRACE(CAF_ARG(msg.handle));
@@ -148,8 +147,9 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(src)
                     << CAF_ARG(dest) << CAF_ARG(mid) << CAF_ARG(msg));
       if (!dest || system().node() == dest->node()) {
-        CAF_LOG_WARNING(
-          "cannot forward to invalid or local actor:" << CAF_ARG(dest));
+        CAF_LOG_WARNING("cannot forward to invalid "
+                        "or local actor:"
+                        << CAF_ARG(dest));
         return;
       }
       if (src && system().node() == src->node())
