@@ -352,15 +352,15 @@ Headers
 Breaking Statements
 -------------------
 
-- Break constructor initializers after the comma, use four spaces for
+- Break constructor initializers after the comma, use two spaces for
   indentation, and place each initializer on its own line (unless you don't
   need to break at all):
 
   ```cpp
   my_class::my_class()
-      : my_base_class(some_function()),
-        greeting_("Hello there! This is my_class!"),
-        some_bool_flag_(false) {
+    : my_base_class(some_function()),
+      greeting_("Hello there! This is my_class!"),
+      some_bool_flag_(false) {
     // ok
   }
   other_class::other_class() : name_("tommy"), buddy_("michael") {

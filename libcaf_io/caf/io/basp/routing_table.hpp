@@ -18,10 +18,11 @@
 
 #pragma once
 
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
-#include "caf/callback.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/basp/buffer_type.hpp"
 #include "caf/node_id.hpp"
@@ -47,10 +48,6 @@ public:
     connection_handle hdl;
   };
 
-  /// Describes a function object for erase operations that
-  /// is called for each indirectly lost connection.
-  using erase_callback = callback<const node_id&>;
-
   /// Returns a route to `target` or `none` on error.
   optional<route> lookup(const node_id& target);
 
@@ -73,52 +70,27 @@ public:
   /// Adds a new indirect route to the table.
   bool add_indirect(const node_id& hop, const node_id& dest);
 
-  /// Blacklist the route to `dest` via `hop`.
-  void blacklist(const node_id& hop, const node_id& dest);
-
-  /// Removes a direct connection and calls `cb` for any node
-  /// that became unreachable as a result of this operation,
-  /// including the node that is assigned as direct path for `hdl`.
-  void erase_direct(const connection_handle& hdl, erase_callback& cb);
+  /// Removes a direct connection and return the node ID that became
+  /// unreachable as a result of this operation.
+  node_id erase_direct(const connection_handle& hdl);
 
   /// Removes any entry for indirect connection to `dest` and returns
   /// `true` if `dest` had an indirect route, otherwise `false`.
   bool erase_indirect(const node_id& dest);
 
-  /// Queries whether `dest` is reachable.
-  bool reachable(const node_id& dest);
-
-  /// Removes all direct and indirect routes to `dest` and calls
-  /// `cb` for any node that became unreachable as a result of this
-  /// operation, including `dest`.
-  /// @returns the number of removed routes (direct and indirect)
-  size_t erase(const node_id& dest, erase_callback& cb);
-
   /// Returns the parent broker.
-  inline abstract_broker* parent() {
+  abstract_broker* parent() {
     return parent_;
   }
 
 public:
-  template <class Map, class Fallback>
-  typename Map::mapped_type
-  get_opt(const Map& m, const typename Map::key_type& k, Fallback&& x) const {
-    auto i = m.find(k);
-    if (i != m.end())
-      return i->second;
-    return std::forward<Fallback>(x);
-  }
-
   using node_id_set = std::unordered_set<node_id>;
 
-  using indirect_entries = std::unordered_map<node_id,      // dest
-                                              node_id_set>; // hop
-
   abstract_broker* parent_;
+  mutable std::mutex mtx_;
   std::unordered_map<connection_handle, node_id> direct_by_hdl_;
   std::unordered_map<node_id, connection_handle> direct_by_nid_;
-  indirect_entries indirect_;
-  indirect_entries blacklist_;
+  std::unordered_map<node_id, node_id_set> indirect_;
 };
 
 /// @}
@@ -126,4 +98,3 @@ public:
 } // namespace basp
 } // namespace io
 } // namespace caf
-

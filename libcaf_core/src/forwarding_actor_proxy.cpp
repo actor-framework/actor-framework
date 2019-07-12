@@ -30,7 +30,7 @@ namespace caf {
 forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor dest)
     : actor_proxy(cfg),
       broker_(std::move(dest)) {
-  // nop
+  anon_send(broker_, monitor_atom::value, ctrl());
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
@@ -82,7 +82,6 @@ bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
 }
 
 void forwarding_actor_proxy::kill_proxy(execution_unit* ctx, error rsn) {
-  CAF_ASSERT(ctx != nullptr);
   actor tmp;
   { // lifetime scope of guard
     std::unique_lock<detail::shared_spinlock> guard(broker_mtx_);

@@ -270,9 +270,6 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
 
 void middleman::start() {
   CAF_LOG_TRACE("");
-  // Create hooks.
-  for (auto& f : system().config().hook_factories)
-    hooks_.emplace_back(f(system_));
   // Launch backend.
   if (!get_or(config(), "middleman.manual-multiplexing", false))
     backend_supervisor_ = backend().make_supervisor();
@@ -305,14 +302,12 @@ void middleman::start() {
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>(atom("BASP"));
   manager_ = make_middleman_actor(system(), basp);
-  auto hdl = actor_cast<actor>(basp);
 }
 
 void middleman::stop() {
   CAF_LOG_TRACE("");
   backend().dispatch([=] {
     CAF_LOG_TRACE("");
-    notify<hook::before_shutdown>();
     // managers_ will be modified while we are stopping each manager,
     // because each manager will call remove(...)
     for (auto& kvp : named_brokers_) {
@@ -333,7 +328,6 @@ void middleman::stop() {
     while (backend().try_run_once())
       ; // nop
   }
-  hooks_.clear();
   named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);

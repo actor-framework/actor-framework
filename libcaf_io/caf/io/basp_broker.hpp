@@ -40,126 +40,125 @@
 namespace caf {
 namespace io {
 
-struct basp_broker_state : proxy_registry::backend, basp::instance::callee {
-  basp_broker_state(broker* selfptr);
+/// A broker implementation for the Binary Actor System Protocol (BASP).
+class basp_broker : public broker,
+                    public proxy_registry::backend,
+                    public basp::instance::callee {
+public:
+  // -- member types -----------------------------------------------------------
 
-  ~basp_broker_state() override;
+  using super = broker;
 
-  // inherited from proxy_registry::backend
+  using ctx_map = std::unordered_map<connection_handle, basp::endpoint_context>;
+
+  using monitored_actor_map = std::unordered_map<actor_addr,
+                                                 std::unordered_set<node_id>>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit basp_broker(actor_config& cfg);
+
+  ~basp_broker() override;
+
+  // -- implementation of broker -----------------------------------------------
+
+  void on_exit() override;
+
+  const char* name() const override;
+
+  behavior make_behavior() override;
+
+  proxy_registry* proxy_registry_ptr() override;
+
+  resume_result resume(execution_unit*, size_t) override;
+
+  // -- implementation of proxy_registry::backend ------------------------------
+
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
 
-  // inherited from proxy_registry::backend
-  execution_unit* registry_context() override;
+  void set_last_hop(node_id* ptr) override;
 
-  // inherited from basp::instance::callee
+  // -- implementation of basp::instance::callee -------------------------------
+
   void finalize_handshake(const node_id& nid, actor_id aid,
                           std::set<std::string>& sigs) override;
 
-  // inherited from basp::instance::callee
   void purge_state(const node_id& nid) override;
 
-  // inherited from basp::instance::callee
   void proxy_announced(const node_id& nid, actor_id aid) override;
 
-  // inherited from basp::instance::callee
-  void deliver(const node_id& src_nid, actor_id src_aid,
-               actor_id dest_aid, message_id mid,
-               std::vector<strong_actor_ptr>& stages, message& msg) override;
-
-  // inherited from basp::instance::callee
-  void deliver(const node_id& src_nid, actor_id src_aid,
-               atom_value dest_name, message_id mid,
-               std::vector<strong_actor_ptr>& stages, message& msg) override;
-
-  // called from both overriden functions
-  void deliver(const node_id& src_nid, actor_id src_aid,
-               strong_actor_ptr dest, message_id mid,
-               std::vector<strong_actor_ptr>& stages, message& msg);
-
-  // performs bookkeeping such as managing `spawn_servers`
-  void learned_new_node(const node_id& nid);
-
-  // inherited from basp::instance::callee
   void learned_new_node_directly(const node_id& nid,
                                  bool was_indirectly_before) override;
 
-  // inherited from basp::instance::callee
   void learned_new_node_indirectly(const node_id& nid) override;
 
-  // inherited from basp::instance::callee
   buffer_type& get_buffer(connection_handle hdl) override;
 
-  // inherited from basp::instance::callee
   void flush(connection_handle hdl) override;
 
-  // inherited from basp::instance::callee
   void handle_heartbeat() override;
+
+  execution_unit* current_execution_unit() override;
+
+  strong_actor_ptr this_actor() override;
+
+  // -- utility functions ------------------------------------------------------
+
+  /// Performs bookkeeping such as managing `spawn_servers`.
+  void learned_new_node(const node_id& nid);
 
   /// Sets `this_context` by either creating or accessing state for `hdl`.
   void set_context(connection_handle hdl);
 
   /// Cleans up any state for `hdl`.
-  void cleanup(connection_handle hdl);
+  void connection_cleanup(connection_handle hdl);
 
-  // pointer to ourselves
-  broker* self;
+  /// Sends a basp::down_message message to a remote node.
+  void send_basp_down_message(const node_id& nid, actor_id aid, error err);
 
-  // protocol instance of BASP
-  basp::instance instance;
+  // Sends basp::down_message to all nodes monitoring the terminated actor.
+  void handle_down_msg(down_msg&);
 
-  using ctx_map = std::unordered_map<connection_handle, basp::endpoint_context>;
+  // -- disambiguation for functions found in multiple base classes ------------
 
-  // keeps context information for all open connections
+  actor_system& system() {
+    return super::system();
+  }
+
+  const actor_system_config& config() {
+    return system().config();
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  /// Protocol instance of BASP.
+  union {
+    basp::instance instance;
+  };
+
+  /// Keeps context information for all open connections.
   ctx_map ctx;
 
-  // points to the current context for callbacks such as `make_proxy`
-  basp::endpoint_context* this_context = nullptr;
+  /// points to the current context for callbacks.
+  basp::endpoint_context* this_context;
 
-  // stores handles to spawn servers for other nodes; these servers
-  // are spawned whenever the broker learns a new node ID and try to
-  // get a 'SpawnServ' instance on the remote side
+  /// Stores handles to spawn servers for other nodes. These servers are
+  /// spawned whenever the broker learns a new node ID and tries to get a
+  /// 'SpawnServ' instance on the remote side.
   std::unordered_map<node_id, actor> spawn_servers;
 
   /// Configures whether BASP automatically open new connections to optimize
   /// routing paths by forming a mesh between all nodes.
   bool automatic_connections = false;
 
-  // timeout for delivery of pending messages of endpoints with ordering
-  const std::chrono::milliseconds pending_to = std::chrono::milliseconds(100);
-
-  // returns the node identifier of the underlying BASP instance
+  /// Returns the node identifier of the underlying BASP instance.
   const node_id& this_node() const {
     return instance.this_node();
   }
 
-  using monitored_actor_map =
-    std::unordered_map<actor_addr, std::unordered_set<node_id>>;
-
-  // keeps a list of nodes that monitor a particular local actor
+  /// Keeps track of nodes that monitor local actors.
   monitored_actor_map monitored_actors;
-
-  // sends a basp::down_message message to a remote node
-  void send_basp_down_message(const node_id& nid, actor_id aid, error err);
-
-  // sends basp::down_message to all nodes monitoring the terminated
-  // actor
-  void handle_down_msg(down_msg&);
-
-  static const char* name;
-};
-
-/// A broker implementation for the Binary Actor System Protocol (BASP).
-class basp_broker : public stateful_actor<basp_broker_state, broker> {
-public:
-  using super = stateful_actor<basp_broker_state, broker>;
-
-  explicit basp_broker(actor_config& cfg);
-
-  behavior make_behavior() override;
-  proxy_registry* proxy_registry_ptr() override;
-  resume_result resume(execution_unit*, size_t) override;
 };
 
 } // namespace io
 } // namespace caf
-
