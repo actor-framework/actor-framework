@@ -68,5 +68,10 @@ error child_process_inherit(socket x, bool new_value);
 /// @relates socket
 error nonblocking(socket x, bool new_value);
 
+/// Converts the result from `recv` or `send` to either an error code or a
+/// non-zero positive integer.
+/// @relates socket
+variant<size_t, sec> check_socket_io_res(std::make_signed<size_t>::type res);
+
 } // namespace net
 } // namespace caf

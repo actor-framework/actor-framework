@@ -49,13 +49,12 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   }
 }
 
-variant<size_t, std::errc> write(pipe_socket x, const void* buf,
-                                 size_t buf_size) {
+variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size) {
   // On Windows, a pipe consists of two stream sockets.
   return write(socket_cast<stream_socket>(x), buf, buf_size);
 }
 
-variant<size_t, std::errc> read(pipe_socket x, void* buf, size_t buf_size) {
+variant<size_t, sec> read(pipe_socket x, void* buf, size_t buf_size) {
   // On Windows, a pipe consists of two stream sockets.
   return read(socket_cast<stream_socket>(x), buf, buf_size);
 }
@@ -81,19 +80,14 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   return std::make_pair(pipe_socket{pipefds[0]}, pipe_socket{pipefds[1]});
 }
 
-variant<size_t, std::errc> write(pipe_socket x, const void* buf,
-                                 size_t buf_size) {
+variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size) {
   auto res = ::write(x.id, buf, buf_size);
-  if (res < 0)
-    return last_socket_error();
-  return static_cast<size_t>(res);
+  return check_socket_io_res(res);
 }
 
-variant<size_t, std::errc> read(pipe_socket x, void* buf, size_t buf_size) {
+variant<size_t, sec> read(pipe_socket x, void* buf, size_t buf_size) {
   auto res = ::read(x.id, buf, buf_size);
-  if (res < 0)
-    return last_socket_error();
-  return static_cast<size_t>(res);
+  return check_socket_io_res(res);
 }
 
 #endif // CAF_WINDOWS

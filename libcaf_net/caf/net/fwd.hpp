@@ -16,20 +16,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/socket_manager.hpp"
+#pragma once
 
-#include "caf/config.hpp"
+#include <memory>
+
+#include "caf/intrusive_ptr.hpp"
 
 namespace caf {
 namespace net {
 
-socket_manager::socket_manager(socket handle) : handle_(handle) {
-  CAF_ASSERT(handle != invalid_socket);
-}
+class multiplexer;
+class socket_manager;
 
-socket_manager::~socket_manager() {
-  close(handle_);
-}
+struct network_socket;
+struct pipe_socket;
+struct socket;
+struct stream_socket;
+
+using socket_manager_ptr = intrusive_ptr<socket_manager>;
+
+using multiplexer_ptr = std::shared_ptr<multiplexer>;
+
+using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
 } // namespace net
 } // namespace caf

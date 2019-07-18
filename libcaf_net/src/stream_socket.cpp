@@ -161,21 +161,16 @@ error nodelay(stream_socket x, bool new_value) {
   return none;
 }
 
-variant<size_t, std::errc> read(stream_socket x, void* buf, size_t buf_size) {
+variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size) {
   auto res = ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf), buf_size,
                     no_sigpipe_io_flag);
-  if (res < 0)
-    return last_socket_error();
-  return static_cast<size_t>(res);
+  return check_socket_io_res(res);
 }
 
-variant<size_t, std::errc> write(stream_socket x, const void* buf,
-                                 size_t buf_size) {
+variant<size_t, sec> write(stream_socket x, const void* buf, size_t buf_size) {
   auto res = ::send(x.id, reinterpret_cast<socket_send_ptr>(buf), buf_size,
                     no_sigpipe_io_flag);
-  if (res < 0)
-    return last_socket_error();
-  return static_cast<size_t>(res);
+  return check_socket_io_res(res);
 }
 
 } // namespace net

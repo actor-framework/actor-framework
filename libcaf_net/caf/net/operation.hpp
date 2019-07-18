@@ -18,51 +18,32 @@
 
 #pragma once
 
-#include "caf/error.hpp"
-#include "caf/net/socket.hpp"
-
 namespace caf {
 namespace net {
 
-/// Manages the lifetime of a single socket and handles any I/O events on it.
-class socket_manager {
-public:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit socket_manager(socket handle);
-
-  virtual ~socket_manager();
-
-  socket_manager(const socket_manager&) = delete;
-
-  socket_manager& operator=(const socket_manager&) = delete;
-
-  // -- properties -------------------------------------------------------------
-
-  socket handle() const noexcept {
-    return handle_;
-  }
-
-  // -- pure virtual member functions ------------------------------------------
-
-  /// Called whenever the socket received new data.
-  virtual error handle_read_event() = 0;
-
-  /// Called whenever the socket is allowed to send additional data.
-  virtual error handle_write_event() = 0;
-
-  /// Called if the remote side becomes unreachable.
-  /// @param reason A default-constructed error object (no error) if the remote
-  ///               host performed an ordinary shutdown (only for connection
-  ///               oriented sockets), otherwise an error code as reported by
-  ///               the operating system.
-  virtual void handle_shutdown_event(error reason) = 0;
-
-private:
-  // -- member variables -------------------------------------------------------
-
-  socket handle_;
+/// Values for representing bitmask of I/O operations.
+enum class operation {
+  none = 0x00,
+  read = 0x01,
+  write = 0x02,
+  read_write = 0x03,
 };
+
+constexpr operation operator|(operation x, operation y) {
+  return static_cast<operation>(static_cast<int>(x) | static_cast<int>(y));
+}
+
+constexpr operation operator&(operation x, operation y) {
+  return static_cast<operation>(static_cast<int>(x) & static_cast<int>(y));
+}
+
+constexpr operation operator^(operation x, operation y) {
+  return static_cast<operation>(static_cast<int>(x) ^ static_cast<int>(y));
+}
+
+constexpr operation operator~(operation x) {
+  return static_cast<operation>(~static_cast<int>(x));
+}
 
 } // namespace net
 } // namespace caf

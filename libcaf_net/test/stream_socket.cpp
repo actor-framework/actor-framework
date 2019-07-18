@@ -47,9 +47,9 @@ CAF_TEST(connected socket pair) {
   CAF_CHECK_NOT_EQUAL(unbox(send_buffer_size(x.second)), 0u);
   CAF_MESSAGE("verify nonblocking communication");
   CAF_CHECK_EQUAL(read(x.first, rd_buf.data(), rd_buf.size()),
-                  std::errc::operation_would_block);
+                  sec::unavailable_or_would_block);
   CAF_CHECK_EQUAL(read(x.second, rd_buf.data(), rd_buf.size()),
-                  std::errc::operation_would_block);
+                  sec::unavailable_or_would_block);
   CAF_MESSAGE("transfer data from first to second socket");
   CAF_CHECK_EQUAL(write(x.first, wr_buf.data(), wr_buf.size()), wr_buf.size());
   CAF_CHECK_EQUAL(read(x.second, rd_buf.data(), rd_buf.size()), wr_buf.size());
@@ -62,7 +62,8 @@ CAF_TEST(connected socket pair) {
   rd_buf.assign(rd_buf.size(), 0);
   CAF_MESSAGE("shut down first socket and observe shutdown on the second one");
   close(x.first);
-  CAF_CHECK_EQUAL(read(x.second, rd_buf.data(), rd_buf.size()), size_t{0});
+  CAF_CHECK_EQUAL(read(x.second, rd_buf.data(), rd_buf.size()),
+                  sec::socket_disconnected);
   CAF_MESSAGE("done (cleanup)");
   close(x.second);
 }
