@@ -166,8 +166,9 @@ config_option make_config_option(T& storage, string_view category,
 
 // -- enums --------------------------------------------------------------------
 
-enum class stream_priority;
 enum class atom_value : uint64_t;
+enum class sec : uint8_t;
+enum class stream_priority;
 
 // -- aliases ------------------------------------------------------------------
 

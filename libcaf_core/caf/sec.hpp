@@ -116,6 +116,14 @@ enum class sec : uint8_t {
   feature_disabled,
   /// Failed to open file.
   cannot_open_file,
+  /// A socket descriptor argument is invalid.
+  socket_invalid,
+  /// A socket became disconnected from the remote host (hang up).
+  socket_disconnected,
+  /// An operation on a socket (e.g. `poll`) failed.
+  socket_operation_failed = 45,
+  /// A resource is temporarily unavailable or would block.
+  unavailable_or_would_block,
 };
 
 /// @relates sec

@@ -68,6 +68,10 @@ const char* sec_strings[] = {
   "bad_function_call",
   "feature_disabled",
   "cannot_open_file",
+  "socket_invalid",
+  "socket_disconnected",
+  "socket_operation_failed",
+  "unavailable_or_would_block",
 };
 
 } // namespace <anonymous>
