@@ -134,6 +134,8 @@ void multiplexer::close_pipe() {
 }
 
 bool multiplexer::poll_once(bool blocking) {
+  if (pollset_.empty())
+    return false;
   // We'll call poll() until poll() succeeds or fails.
   for (;;) {
     int presult;
