@@ -52,10 +52,10 @@ public:
   }
 
   stream_socket handle() const noexcept {
-    return socket_cast<stream_socket>(socket_manager::handle());
+    return socket_cast<stream_socket>(handle_);
   }
 
-  bool handle_read_event() {
+  bool handle_read_event() override {
     if (read_capacity() < 1024)
       rd_buf_.resize(rd_buf_.size() + 2048);
     auto res = read(handle(), read_position_begin(), read_capacity());
@@ -67,7 +67,7 @@ public:
     return get<sec>(res) == sec::unavailable_or_would_block;
   }
 
-  bool handle_write_event() {
+  bool handle_write_event() override {
     if (wr_buf_.size() == 0)
       return false;
     auto res = write(handle(), wr_buf_.data(), wr_buf_.size());
@@ -79,7 +79,8 @@ public:
     return get<sec>(res) == sec::unavailable_or_would_block;
   }
 
-  void handle_error(sec) {
+  void handle_error(sec code) override {
+    CAF_FAIL("handle_error called with code " << code);
   }
 
   void send(string_view x) {
@@ -117,46 +118,57 @@ private:
 using dummy_manager_ptr = intrusive_ptr<dummy_manager>;
 
 struct fixture : host_fixture {
-  fixture() : manager_count(0) {
-    mpx = std::make_shared<multiplexer>();
-    CAF_REQUIRE_EQUAL(mpx->num_socket_managers(), 0u);
-    CAF_REQUIRE_EQUAL(mpx->init(), none);
-    CAF_REQUIRE_EQUAL(mpx->num_socket_managers(), 1u);
-    auto sockets = unbox(make_stream_socket_pair());
-    alice = make_counted<dummy_manager>(manager_count, sockets.first, mpx);
-    bob = make_counted<dummy_manager>(manager_count, sockets.second, mpx);
-    alice->mask_add(operation::read);
-    bob->mask_add(operation::read);
-    mpx->handle_updates();
-    CAF_REQUIRE_EQUAL(mpx->num_socket_managers(), 3u);
+  fixture() : manager_count(0), mpx(std::make_shared<multiplexer>()) {
+    // nop
   }
 
   ~fixture() {
-    alice.reset();
-    bob.reset();
     mpx.reset();
     CAF_REQUIRE_EQUAL(manager_count, 0u);
+  }
+
+  void exhaust() {
+    while (mpx->poll_once(false))
+      ; // Repeat.
   }
 
   size_t manager_count;
 
   multiplexer_ptr mpx;
-
-  dummy_manager_ptr alice;
-
-  dummy_manager_ptr bob;
 };
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(multiplexer_tests, fixture)
 
-CAF_TEST(poll once) {
+CAF_TEST(default construction) {
+  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 0u);
+}
+
+CAF_TEST(init) {
+  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 0u);
+  CAF_REQUIRE_EQUAL(mpx->init(), none);
+  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
+  mpx->close_pipe();
+  exhaust();
+  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 0u);
+  // Calling run must have no effect now.
+  mpx->run();
+}
+
+CAF_TEST(send and receive) {
+  CAF_REQUIRE_EQUAL(mpx->init(), none);
+  auto sockets = unbox(make_stream_socket_pair());
+  auto alice = make_counted<dummy_manager>(manager_count, sockets.first, mpx);
+  auto bob = make_counted<dummy_manager>(manager_count, sockets.second, mpx);
+  alice->mask_add(operation::read);
+  bob->mask_add(operation::read);
+  mpx->handle_updates();
+  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   alice->send("hello bob");
   alice->mask_add(operation::write);
   mpx->handle_updates();
-  while (mpx->poll_once(false))
-    ; // Repeat.
+  exhaust();
   CAF_CHECK_EQUAL(bob->receive(), "hello bob");
 }
 

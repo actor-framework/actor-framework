@@ -64,8 +64,14 @@ public:
 
   // -- thread-safe signaling --------------------------------------------------
 
+  /// Causes the multiplexer to update its event bitmask for `mgr`.
   /// @thread-safe
   void update(const socket_manager_ptr& mgr);
+
+  /// Closes the pipe for signaling updates to the multiplexer. After closing
+  /// the pipe, calls to `update` no longer have any effect.
+  /// @thread-safe
+  void close_pipe();
 
   // -- control flow -----------------------------------------------------------
 
@@ -76,19 +82,22 @@ public:
   /// Polls until no socket event handler remains.
   void run();
 
+  /// Processes all updates on the socket managers.
   void handle_updates();
 
+protected:
+  // -- utility functions ------------------------------------------------------
+
+  /// Handles an I/O event on given manager.
   void handle(const socket_manager_ptr& mgr, int mask);
 
-protected:
-  // -- convenience functions --------------------------------------------------
-
+  /// Adds a new socket manager to the pollset.
   void add(socket_manager_ptr mgr);
 
   // -- member variables -------------------------------------------------------
 
   /// Bookkeeping data for managed sockets.
-  std::vector<pollfd> pollset_;
+  pollfd_list pollset_;
 
   /// Maps sockets to their owning managers by storing the managers in the same
   /// order as their sockets appear in `pollset_`.
@@ -97,14 +106,14 @@ protected:
   /// Managers that updated their event mask and need updating.
   manager_list dirty_managers_;
 
-  /// Stores the ID of the thread this multiplexer is running in. Must be set
-  /// by the subclass.
+  /// Stores the ID of the thread this multiplexer is running in. Set when
+  /// calling `init()`.
   std::thread::id tid_;
 
-  ///
+  /// Used for pushing updates to the multiplexer's thread.
   pipe_socket write_handle_;
 
-  ///
+  /// Guards `write_handle_`.
   std::mutex write_lock_;
 };
 

@@ -115,10 +115,21 @@ void multiplexer::update(const socket_manager_ptr& mgr) {
     variant<size_t, sec> res;
     { // Lifetime scope of guard.
       std::lock_guard<std::mutex> guard{write_lock_};
-      res = write(write_handle_, &value, sizeof(intptr_t));
+      if (write_handle_ != invalid_socket)
+        res = write(write_handle_, &value, sizeof(intptr_t));
+      else
+        res = sec::socket_invalid;
     }
     if (holds_alternative<sec>(res))
       mgr->deref();
+  }
+}
+
+void multiplexer::close_pipe() {
+  std::lock_guard<std::mutex> guard{write_lock_};
+  if (write_handle_ != invalid_socket) {
+    close(write_handle_);
+    write_handle_ = pipe_socket{};
   }
 }
 
@@ -172,6 +183,11 @@ bool multiplexer::poll_once(bool blocking) {
     handle_updates();
     return true;
   }
+}
+
+void multiplexer::run() {
+  while (!pollset_.empty())
+    poll_once(true);
 }
 
 void multiplexer::handle_updates() {
