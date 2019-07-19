@@ -145,7 +145,8 @@ bool multiplexer::poll_once(bool blocking) {
                      blocking ? -1 : 0);
 #endif
     if (presult < 0) {
-      switch (last_socket_error()) {
+      auto code = last_socket_error();
+      switch (code) {
         case std::errc::interrupted: {
           // A signal was caught. Simply try again.
           CAF_LOG_DEBUG("received errc::interrupted, try again");
@@ -159,8 +160,11 @@ bool multiplexer::poll_once(bool blocking) {
         }
         default: {
           // Must not happen.
-          perror("poll() failed");
-          CAF_CRITICAL("poll() failed");
+          auto int_code = static_cast<int>(code);
+          auto msg = std::generic_category().message(int_code);
+          string_view prefix = "poll() failed: ";
+          msg.insert(msg.begin(), prefix.begin(), prefix.end());
+          CAF_CRITICAL(msg.c_str());
         }
       }
       // Rinse and repeat.
