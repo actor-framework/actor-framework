@@ -59,7 +59,7 @@ error nodelay(stream_socket x, bool new_value);
 /// @param buf_size Specifies the maximum size of the buffer in bytes.
 /// @returns The number of received bytes on success, an error code otherwise.
 /// @relates pipe_socket
-/// @post either the result is a `sec` or a positive (non-zero) integer.
+/// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size);
 
 /// Transmits data from `x` to its peer.
@@ -68,7 +68,7 @@ variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size);
 /// @param buf_size Specifies the size of the buffer in bytes.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates pipe_socket
-/// @post either the result is a `sec` or a positive (non-zero) integer.
+/// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> write(stream_socket x, const void* buf, size_t buf_size);
 
 } // namespace net

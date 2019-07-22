@@ -52,18 +52,18 @@ public:
     return handle_;
   }
 
-  /// Returns for which operations the socket is registered (read or write).
+  /// Returns registered operations (read, write, or both).
   operation mask() const noexcept;
 
   /// Adds given flag(s) to the event mask and updates the parent on success.
-  /// @returns `false` if `mask()` already contained `flag`, `true` otherwise.
+  /// @returns `false` if `mask() | flag == mask()`, `true` otherwise.
   /// @pre `has_parent()`
   /// @pre `flag != operation::none`
   bool mask_add(operation flag) noexcept;
 
   /// Deletes given flag(s) from the event mask and updates the parent on
   /// success.
-  /// @returns `false` if `mask()` already missed `flag`, `true` otherwise.
+  /// @returns `false` if `mask() & ~flag == mask()`, `true` otherwise.
   /// @pre `has_parent()`
   /// @pre `flag != operation::none`
   bool mask_del(operation flag) noexcept;
@@ -73,7 +73,7 @@ public:
   /// Called whenever the socket received new data.
   virtual bool handle_read_event() = 0;
 
-  /// Called whenever the socket is allowed to send additional data.
+  /// Called whenever the socket is allowed to send data.
   virtual bool handle_write_event() = 0;
 
   /// Called when the remote side becomes unreachable due to an error.

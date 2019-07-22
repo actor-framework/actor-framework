@@ -29,6 +29,7 @@ pollset_updater::pollset_updater(pipe_socket read_handle,
                                  multiplexer_ptr parent)
   : super(read_handle, std::move(parent)) {
   mask_ = operation::read;
+  nonblocking(read_handle, true);
 }
 
 pollset_updater::~pollset_updater() {
@@ -44,8 +45,9 @@ bool pollset_updater::handle_read_event() {
       socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
       if (auto ptr = parent_.lock())
         ptr->update(mgr);
+    } else {
+      return get<sec>(res) == sec::unavailable_or_would_block;
     }
-    return get<sec>(res) == sec::unavailable_or_would_block;
   }
 }
 

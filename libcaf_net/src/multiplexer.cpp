@@ -18,6 +18,8 @@
 
 #include "caf/net/multiplexer.hpp"
 
+#include <algorithm>
+
 #include "caf/config.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -97,11 +99,10 @@ size_t multiplexer::num_socket_managers() const noexcept {
 }
 
 ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
-  auto max_index = static_cast<ptrdiff_t>(managers_.size());
-  for (ptrdiff_t index = 0; index < max_index; ++index)
-    if (managers_[index] == mgr)
-      return index;
-  return -1;
+  auto first = managers_.begin();
+  auto last = managers_.end();
+  auto i = std::find(first, last, mgr);
+  return i == last ? -1 : std::distance(first, i);
 }
 
 void multiplexer::update(const socket_manager_ptr& mgr) {
