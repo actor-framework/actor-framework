@@ -71,5 +71,11 @@ variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size);
 /// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> write(stream_socket x, const void* buf, size_t buf_size);
 
+/// Converts the result from I/O operation on a ::stream_socket to either an
+/// error code or a non-zero positive integer.
+/// @relates stream_socket
+variant<size_t, sec>
+check_stream_socket_io_res(std::make_signed<size_t>::type res);
+
 } // namespace net
 } // namespace caf

@@ -82,15 +82,20 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
 
 variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size) {
   auto res = ::write(x.id, buf, buf_size);
-  return check_socket_io_res(res);
+  return check_pipe_socket_io_res(res);
 }
 
 variant<size_t, sec> read(pipe_socket x, void* buf, size_t buf_size) {
   auto res = ::read(x.id, buf, buf_size);
-  return check_socket_io_res(res);
+  return check_pipe_socket_io_res(res);
 }
 
 #endif // CAF_WINDOWS
+
+variant<size_t, sec>
+check_pipe_socket_io_res(std::make_signed<size_t>::type res) {
+  return check_stream_socket_io_res(res);
+}
 
 } // namespace net
 } // namespace caf
