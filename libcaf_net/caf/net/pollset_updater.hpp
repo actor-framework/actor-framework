@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <array>
+#include <cstdint>
+
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket_manager.hpp"
 
@@ -50,6 +53,10 @@ public:
   bool handle_write_event() override;
 
   void handle_error(sec code) override;
+
+private:
+  std::array<char, sizeof(intptr_t)> buf_;
+  size_t buf_size_;
 };
 
 } // namespace net

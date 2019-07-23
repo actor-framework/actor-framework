@@ -27,7 +27,7 @@ namespace net {
 
 pollset_updater::pollset_updater(pipe_socket read_handle,
                                  multiplexer_ptr parent)
-  : super(read_handle, std::move(parent)) {
+  : super(read_handle, std::move(parent)), buf_size_(0) {
   mask_ = operation::read;
   nonblocking(read_handle, true);
 }
@@ -38,13 +38,16 @@ pollset_updater::~pollset_updater() {
 
 bool pollset_updater::handle_read_event() {
   for (;;) {
-    intptr_t value;
-    auto res = read(handle(), &value, sizeof(intptr_t));
+    auto res = read(handle(), buf_.data(), buf_.size() - buf_size_);
     if (auto num_bytes = get_if<size_t>(&res)) {
-      CAF_ASSERT(*num_bytes == sizeof(intptr_t));
-      socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
-      if (auto ptr = parent_.lock())
-        ptr->update(mgr);
+      buf_size_ += *num_bytes;
+      if (buf_.size() == buf_size_) {
+        buf_size_ = 0;
+        auto value = *reinterpret_cast<intptr_t*>(buf_.data());
+        socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
+        if (auto ptr = parent_.lock())
+          ptr->update(mgr);
+      }
     } else {
       return get<sec>(res) == sec::unavailable_or_would_block;
     }
