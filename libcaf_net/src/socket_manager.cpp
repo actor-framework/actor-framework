@@ -16,57 +16,51 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
-
-#include <string>
-#include <system_error>
-#include <type_traits>
+#include "caf/net/socket_manager.hpp"
 
 #include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/net/multiplexer.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket or a ::pipe_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
-
-  using super::super;
-};
-
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
-
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
+socket_manager::socket_manager(socket handle, const multiplexer_ptr& parent)
+  : handle_(handle), mask_(operation::none), parent_(parent) {
+  CAF_ASSERT(parent != nullptr);
+  CAF_ASSERT(handle_ != invalid_socket);
 }
 
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
+socket_manager::~socket_manager() {
+  close(handle_);
+}
 
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
+operation socket_manager::mask() const noexcept {
+  return mask_.load();
+}
 
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
+bool socket_manager::mask_add(operation flag) noexcept {
+  CAF_ASSERT(flag != operation::none);
+  auto x = mask();
+  while ((x & flag) != flag)
+    if (mask_.compare_exchange_strong(x, x | flag)) {
+      if (auto ptr = parent_.lock())
+        ptr->update(this);
+      return true;
+    }
+  return false;
+}
 
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
+bool socket_manager::mask_del(operation flag) noexcept {
+  CAF_ASSERT(flag != operation::none);
+  auto x = mask();
+  while ((x & flag) != operation::none)
+    if (mask_.compare_exchange_strong(x, x & ~flag)) {
+      if (auto ptr = parent_.lock())
+        ptr->update(this);
+      return true;
+    }
+  return false;
+}
 
 } // namespace net
 } // namespace caf

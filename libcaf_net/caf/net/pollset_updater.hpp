@@ -18,55 +18,46 @@
 
 #pragma once
 
-#include <string>
-#include <system_error>
-#include <type_traits>
+#include <array>
+#include <cstdint>
 
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/net/pipe_socket.hpp"
+#include "caf/net/socket_manager.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket or a ::pipe_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+class pollset_updater : public socket_manager {
+public:
+  // -- member types -----------------------------------------------------------
 
-  using super::super;
+  using super = socket_manager;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  pollset_updater(pipe_socket read_handle, multiplexer_ptr parent);
+
+  ~pollset_updater() override;
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the managed socket.
+  pipe_socket handle() const noexcept {
+    return socket_cast<pipe_socket>(handle_);
+  }
+
+  // -- interface functions ----------------------------------------------------
+
+  bool handle_read_event() override;
+
+  bool handle_write_event() override;
+
+  void handle_error(sec code) override;
+
+private:
+  std::array<char, sizeof(intptr_t)> buf_;
+  size_t buf_size_;
 };
-
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
-
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
-}
-
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
-
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
-
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
-
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
 
 } // namespace net
 } // namespace caf

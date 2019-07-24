@@ -18,33 +18,49 @@
 
 #pragma once
 
-#include <cstddef>
-#include <system_error>
-#include <utility>
-
 #include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/net/network_socket.hpp"
 
 namespace caf {
 namespace net {
 
-/// A unidirectional communication endpoint for inter-process communication.
-struct pipe_socket : abstract_socket<pipe_socket> {
-  using super = abstract_socket<pipe_socket>;
+/// A connection-oriented network communication endpoint for bidirectional byte
+/// streams.
+struct stream_socket : abstract_socket<stream_socket> {
+  using super = abstract_socket<stream_socket>;
 
   using super::super;
 
   constexpr operator socket() const noexcept {
     return socket{id};
   }
+
+  constexpr operator network_socket() const noexcept {
+    return network_socket{id};
+  }
 };
 
-/// Creates two connected sockets. The first socket is the read handle and the
-/// second socket is the write handle.
+/// Creates two connected sockets to mimic network communication (usually for
+/// testing purposes).
+/// @relates stream_socket
+expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair();
+
+/// Enables or disables keepalive on `x`.
+/// @relates network_socket
+error keepalive(stream_socket x, bool new_value);
+
+/// Enables or disables Nagle's algorithm on `x`.
+/// @relates stream_socket
+error nodelay(stream_socket x, bool new_value);
+
+/// Receives data from `x`.
+/// @param x Connected endpoint.
+/// @param buf Points to destination buffer.
+/// @param buf_size Specifies the maximum size of the buffer in bytes.
+/// @returns The number of received bytes on success, an error code otherwise.
 /// @relates pipe_socket
-expected<std::pair<pipe_socket, pipe_socket>> make_pipe();
+/// @post either the result is a `sec` or a positive (non-zero) integer
+variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size);
 
 /// Transmits data from `x` to its peer.
 /// @param x Connected endpoint.
@@ -52,21 +68,14 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe();
 /// @param buf_size Specifies the size of the buffer in bytes.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates pipe_socket
-variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size);
+/// @post either the result is a `sec` or a positive (non-zero) integer
+variant<size_t, sec> write(stream_socket x, const void* buf, size_t buf_size);
 
-/// Receives data from `x`.
-/// @param x Connected endpoint.
-/// @param buf Points to destination buffer.
-/// @param buf_size Specifies the maximum size of the buffer in bytes.
-/// @returns The number of received bytes on success, otherwise an error code.
-/// @relates pipe_socket
-variant<size_t, sec> read(pipe_socket x, void* buf, size_t buf_size);
-
-/// Converts the result from I/O operation on a ::pipe_socket to either an
+/// Converts the result from I/O operation on a ::stream_socket to either an
 /// error code or a non-zero positive integer.
-/// @relates pipe_socket
+/// @relates stream_socket
 variant<size_t, sec>
-check_pipe_socket_io_res(std::make_signed<size_t>::type res);
+check_stream_socket_io_res(std::make_signed<size_t>::type res);
 
 } // namespace net
 } // namespace caf

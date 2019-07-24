@@ -18,55 +18,26 @@
 
 #pragma once
 
-#include <string>
-#include <system_error>
-#include <type_traits>
+#include <memory>
 
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/intrusive_ptr.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket or a ::pipe_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+class multiplexer;
+class socket_manager;
 
-  using super::super;
-};
+struct network_socket;
+struct pipe_socket;
+struct socket;
+struct stream_socket;
 
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
+using socket_manager_ptr = intrusive_ptr<socket_manager>;
 
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
-}
+using multiplexer_ptr = std::shared_ptr<multiplexer>;
 
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
-
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
-
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
-
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
+using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
 } // namespace net
 } // namespace caf

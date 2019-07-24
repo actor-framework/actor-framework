@@ -8,9 +8,13 @@ file(GLOB_RECURSE LIBCAF_NET_HDRS "caf/*.hpp")
 # list cpp files excluding platform-dependent files
 set(LIBCAF_NET_SRCS
   src/host.cpp
+  src/multiplexer.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
+  src/pollset_updater.cpp
   src/socket.cpp
+  src/socket_manager.cpp
+  src/stream_socket.cpp
 )
 
 add_custom_target(libcaf_net)

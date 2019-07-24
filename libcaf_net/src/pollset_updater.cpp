@@ -16,57 +16,51 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/net/pollset_updater.hpp"
 
-#include <string>
-#include <system_error>
-#include <type_traits>
-
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/net/multiplexer.hpp"
+#include "caf/sec.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket or a ::pipe_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
-
-  using super::super;
-};
-
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
-
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
+pollset_updater::pollset_updater(pipe_socket read_handle,
+                                 multiplexer_ptr parent)
+  : super(read_handle, std::move(parent)), buf_size_(0) {
+  mask_ = operation::read;
+  nonblocking(read_handle, true);
 }
 
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
+pollset_updater::~pollset_updater() {
+  // nop
+}
 
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
+bool pollset_updater::handle_read_event() {
+  for (;;) {
+    auto res = read(handle(), buf_.data(), buf_.size() - buf_size_);
+    if (auto num_bytes = get_if<size_t>(&res)) {
+      buf_size_ += *num_bytes;
+      if (buf_.size() == buf_size_) {
+        buf_size_ = 0;
+        auto value = *reinterpret_cast<intptr_t*>(buf_.data());
+        socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
+        if (auto ptr = parent_.lock())
+          ptr->update(mgr);
+      }
+    } else {
+      return get<sec>(res) == sec::unavailable_or_would_block;
+    }
+  }
+}
 
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
+bool pollset_updater::handle_write_event() {
+  return false;
+}
 
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
+void pollset_updater::handle_error(sec) {
+  // nop
+}
 
 } // namespace net
 } // namespace caf

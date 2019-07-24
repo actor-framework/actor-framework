@@ -18,10 +18,14 @@
 
 #include "caf/net/socket.hpp"
 
+#include <system_error>
+
 #include "caf/config.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/logger.hpp"
+#include "caf/sec.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace net {
@@ -32,15 +36,80 @@ void close(socket fd) {
   closesocket(fd.id);
 }
 
-int last_socket_error() {
-  return WSAGetLastError();
+#  define ERRC_CASE(wsa_code, stl_code)                                        \
+    case wsa_code:                                                             \
+      return errc::stl_code
+
+std::errc last_socket_error() {
+  // Unfortunately, MS does not define errc consistent with the WSA error
+  // codes. Hence, we cannot simply use static_cast<> but have to perform a
+  // switch-case.
+  using std::errc;
+  int wsa_code = WSAGetLastError();
+  switch (wsa_code) {
+    ERRC_CASE(WSA_INVALID_HANDLE, invalid_argument);
+    ERRC_CASE(WSA_NOT_ENOUGH_MEMORY, not_enough_memory);
+    ERRC_CASE(WSA_INVALID_PARAMETER, invalid_argument);
+    ERRC_CASE(WSAEINTR, interrupted);
+    ERRC_CASE(WSAEBADF, bad_file_descriptor);
+    ERRC_CASE(WSAEACCES, permission_denied);
+    ERRC_CASE(WSAEFAULT, bad_address);
+    ERRC_CASE(WSAEINVAL, invalid_argument);
+    ERRC_CASE(WSAEMFILE, too_many_files_open);
+    ERRC_CASE(WSAEWOULDBLOCK, operation_would_block);
+    ERRC_CASE(WSAEINPROGRESS, operation_in_progress);
+    ERRC_CASE(WSAEALREADY, connection_already_in_progress);
+    ERRC_CASE(WSAENOTSOCK, not_a_socket);
+    ERRC_CASE(WSAEDESTADDRREQ, destination_address_required);
+    ERRC_CASE(WSAEMSGSIZE, message_size);
+    ERRC_CASE(WSAEPROTOTYPE, wrong_protocol_type);
+    ERRC_CASE(WSAENOPROTOOPT, no_protocol_option);
+    ERRC_CASE(WSAEPROTONOSUPPORT, protocol_not_supported);
+    // Windows returns this error code if the *type* argument to socket() is
+    // invalid. POSIX returns EINVAL.
+    ERRC_CASE(WSAESOCKTNOSUPPORT, invalid_argument);
+    ERRC_CASE(WSAEOPNOTSUPP, operation_not_supported);
+    // Windows returns this error code if the *protocol* argument to socket() is
+    // invalid. POSIX returns EINVAL.
+    ERRC_CASE(WSAEPFNOSUPPORT, invalid_argument);
+    ERRC_CASE(WSAEAFNOSUPPORT, address_family_not_supported);
+    ERRC_CASE(WSAEADDRINUSE, address_in_use);
+    ERRC_CASE(WSAEADDRNOTAVAIL, address_not_available);
+    ERRC_CASE(WSAENETDOWN, network_down);
+    ERRC_CASE(WSAENETUNREACH, network_unreachable);
+    ERRC_CASE(WSAENETRESET, network_reset);
+    ERRC_CASE(WSAECONNABORTED, connection_aborted);
+    ERRC_CASE(WSAECONNRESET, connection_reset);
+    ERRC_CASE(WSAENOBUFS, no_buffer_space);
+    ERRC_CASE(WSAEISCONN, already_connected);
+    ERRC_CASE(WSAENOTCONN, not_connected);
+    // Windows returns this error code when writing to a socket with closed
+    // output channel. POSIX returns EPIPE.
+    ERRC_CASE(WSAESHUTDOWN, broken_pipe);
+    ERRC_CASE(WSAETIMEDOUT, timed_out);
+    ERRC_CASE(WSAECONNREFUSED, connection_refused);
+    ERRC_CASE(WSAELOOP, too_many_symbolic_link_levels);
+    ERRC_CASE(WSAENAMETOOLONG, filename_too_long);
+    ERRC_CASE(WSAEHOSTUNREACH, host_unreachable);
+    ERRC_CASE(WSAENOTEMPTY, directory_not_empty);
+    ERRC_CASE(WSANOTINITIALISED, network_down);
+    ERRC_CASE(WSAEDISCON, already_connected);
+    ERRC_CASE(WSAENOMORE, not_connected);
+    ERRC_CASE(WSAECANCELLED, operation_canceled);
+    ERRC_CASE(WSATRY_AGAIN, resource_unavailable_try_again);
+    ERRC_CASE(WSANO_RECOVERY, state_not_recoverable);
+  }
+  fprintf(stderr, "[FATAL] %s:%u: unrecognized WSA error code (%d)\n", __FILE__,
+          __LINE__, wsa_code);
+  abort();
 }
 
-std::string socket_error_as_string(int errcode) {
+std::string last_socket_error_as_string() {
+  int wsa_code = WSAGetLastError();
   LPTSTR errorText = NULL;
   FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER
                   | FORMAT_MESSAGE_IGNORE_INSERTS,
-                nullptr, errcode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                nullptr, wsa_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &errorText, 0, nullptr);
   std::string result;
   if (errorText != nullptr) {
@@ -49,10 +118,6 @@ std::string socket_error_as_string(int errcode) {
     LocalFree(errorText);
   }
   return result;
-}
-
-std::string last_socket_error_as_string() {
-  return socket_error_as_string(last_socket_error());
 }
 
 bool would_block_or_temporarily_unavailable(int errcode) {
@@ -79,12 +144,10 @@ void close(socket fd) {
   ::close(fd.id);
 }
 
-int last_socket_error() {
-  return errno;
-}
-
-std::string socket_error_as_string(int error_code) {
-  return strerror(error_code);
+std::errc last_socket_error() {
+  // TODO: Linux and macOS both have some non-POSIX error codes that should get
+  // mapped accordingly.
+  return static_cast<std::errc>(errno);
 }
 
 std::string last_socket_error_as_string() {
@@ -116,14 +179,6 @@ error nonblocking(socket x, bool new_value) {
 }
 
 #endif // CAF_WINDOWS
-
-bool is_error(std::make_signed<size_t>::type res, bool is_nonblock) {
-  if (res < 0) {
-    auto err = last_socket_error();
-    return !is_nonblock || !would_block_or_temporarily_unavailable(err);
-  }
-  return false;
-}
 
 } // namespace net
 } // namespace caf

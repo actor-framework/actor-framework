@@ -32,6 +32,7 @@
 namespace caf {
 namespace net {
 
+/// A bidirectional network communication endpoint.
 struct network_socket : abstract_socket<network_socket> {
   using super = abstract_socket<network_socket>;
 
@@ -42,18 +43,6 @@ struct network_socket : abstract_socket<network_socket> {
   }
 };
 
-/// Identifies the invalid socket.
-/// @relates network_socket
-constexpr auto invalid_network_socket = network_socket{invalid_socket_id};
-
-/// Enables or disables keepalive on `x`.
-/// @relates network_socket
-error keepalive(network_socket x, bool new_value);
-
-/// Enables or disables Nagle's algorithm on `x`.
-/// @relates network_socket
-error tcp_nodelay(network_socket x, bool new_value);
-
 /// Enables or disables `SIGPIPE` events from `x`.
 /// @relates network_socket
 error allow_sigpipe(network_socket x, bool new_value);
@@ -63,13 +52,13 @@ error allow_sigpipe(network_socket x, bool new_value);
 error allow_udp_connreset(network_socket x, bool new_value);
 
 /// Get the socket buffer size for `x`.
-/// @pre `x != invalid_network_socket`
+/// @pre `x != invalid_socket`
 /// @relates network_socket
-expected<int> send_buffer_size(network_socket x);
+expected<size_t> send_buffer_size(network_socket x);
 
 /// Set the socket buffer size for `x`.
 /// @relates network_socket
-error send_buffer_size(network_socket x, int new_value);
+error send_buffer_size(network_socket x, size_t capacity);
 
 /// Returns the locally assigned port of `x`.
 /// @relates network_socket
@@ -98,23 +87,6 @@ void shutdown_write(network_socket x);
 /// Closes the both read and write channel for a socket.
 /// @relates network_socket
 void shutdown(network_socket x);
-
-/// Transmits data from `x` to its peer.
-/// @param x Connected endpoint.
-/// @param buf Points to the message to send.
-/// @param buf_size Specifies the size of the buffer in bytes.
-/// @returns The number of written bytes on success, otherwise an error code.
-/// @relates pipe_socket
-variant<size_t, std::errc> write(network_socket x, const void* buf,
-                                 size_t buf_size);
-
-/// Receives data from `x`.
-/// @param x Connected endpoint.
-/// @param buf Points to destination buffer.
-/// @param buf_size Specifies the maximum size of the buffer in bytes.
-/// @returns The number of received bytes on success, otherwise an error code.
-/// @relates pipe_socket
-variant<size_t, std::errc> read(network_socket x, void* buf, size_t buf_size);
 
 } // namespace net
 } // namespace caf

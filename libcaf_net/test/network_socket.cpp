@@ -30,10 +30,7 @@ using namespace caf::net;
 CAF_TEST_FIXTURE_SCOPE(network_socket_tests, host_fixture)
 
 CAF_TEST(invalid socket) {
-  auto x = invalid_network_socket;
-  CAF_CHECK_EQUAL(keepalive(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(tcp_nodelay(x, true), sec::network_syscall_failed);
-  CAF_CHECK_EQUAL(allow_sigpipe(x, true), sec::network_syscall_failed);
+  network_socket x;
   CAF_CHECK_EQUAL(allow_udp_connreset(x, true), sec::network_syscall_failed);
   CAF_CHECK_EQUAL(send_buffer_size(x), sec::network_syscall_failed);
   CAF_CHECK_EQUAL(local_port(x), sec::network_syscall_failed);
