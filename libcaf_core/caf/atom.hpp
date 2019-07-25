@@ -116,6 +116,9 @@ using get_atom = atom_constant<atom("get")>;
 /// Used for request operations.
 using put_atom = atom_constant<atom("put")>;
 
+/// Used for signalizing resolved paths.
+using resolve_atom = atom_constant<atom("resolve")>;
+
 /// Used for signalizing updates, e.g., in a key-value store.
 using update_atom = atom_constant<atom("update")>;
 
