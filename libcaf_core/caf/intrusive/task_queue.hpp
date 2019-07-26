@@ -159,6 +159,14 @@ public:
   }
 
   /// @private
+  task_size_type next_task_size() const noexcept {
+    if (head_.next == nullptr)
+      return 0;
+    auto ptr = promote(head_.next);
+    return policy_.task_size(*ptr);
+  }
+
+  /// @private
   unique_pointer next(task_size_type& deficit) noexcept {
     unique_pointer result;
     if (!empty()) {
