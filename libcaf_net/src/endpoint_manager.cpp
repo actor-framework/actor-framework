@@ -65,7 +65,8 @@ std::unique_ptr<endpoint_manager::message> endpoint_manager::next_message() {
     return nullptr;
   q.inc_deficit(ts);
   auto result = q.next();
-  messages_.try_block();
+  if (q.empty())
+    messages_.try_block();
   return result;
 }
 
