@@ -78,7 +78,7 @@ public:
 
   /// Called when the remote side becomes unreachable due to an error.
   /// @param reason The error code as reported by the operating system.
-  virtual void handle_error(sec code) = 0;
+  virtual void handle_error(caf::sec code) = 0;
 
 protected:
   // -- member variables -------------------------------------------------------
