@@ -35,17 +35,39 @@ endpoint_manager::event::event(atom_value type, uint64_t id)
   // nop
 }
 
+endpoint_manager::message::message(mailbox_element_ptr msg,
+                                   std::vector<char> payload)
+  : msg(std::move(msg)), payload(std::move(payload)) {
+  // nop
+}
+
 endpoint_manager::endpoint_manager(socket handle, const multiplexer_ptr& parent,
                                    actor_system& sys)
   : super(handle, parent),
     sys_(sys),
     events_(event_policy{}),
     messages_(message_policy{}) {
-  // nop
+  events_.try_block();
+  messages_.try_block();
 }
 
 endpoint_manager::~endpoint_manager() {
   // nop
+}
+
+std::unique_ptr<endpoint_manager::message> endpoint_manager::next_message() {
+  if (messages_.blocked())
+    return nullptr;
+  messages_.fetch_more();
+  auto& q = messages_.queue();
+  auto ts = q.next_task_size();
+  if (ts == 0)
+    return nullptr;
+  q.inc_deficit(ts);
+  auto result = q.next();
+  if (q.empty())
+    messages_.try_block();
+  return result;
 }
 
 void endpoint_manager::resolve(std::string path, actor listener) {
@@ -61,6 +83,13 @@ void endpoint_manager::resolve(std::string path, actor listener) {
       anon_send(listener, resolve_atom::value,
                 make_error(sec::request_receiver_down));
   }
+}
+
+void endpoint_manager::enqueue(mailbox_element_ptr msg,
+                               std::vector<char> payload) {
+  auto ptr = new message(std::move(msg), std::move(payload));
+  if (messages_.push_back(ptr) == intrusive::inbox_result::unblocked_reader)
+    mask_add(operation::write);
 }
 
 } // namespace net
