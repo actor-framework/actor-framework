@@ -153,7 +153,7 @@ CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 using openssl::remote_actor;
 using openssl::publish;
 
-CAF_TEST(identity_semantics) {
+CAF_TEST_DISABLED(identity_semantics) {
   // server side
   auto server = server_side.spawn(make_pong_behavior);
   auto port1 = unbox(publish(server, 0, local_host));
@@ -169,7 +169,7 @@ CAF_TEST(identity_semantics) {
   anon_send_exit(server, exit_reason::user_shutdown);
 }
 
-CAF_TEST(ping_pong) {
+CAF_TEST_DISABLED(ping_pong) {
   // server side
   auto port = unbox(publish(server_side.spawn(make_pong_behavior),
                             0, local_host));
@@ -178,7 +178,7 @@ CAF_TEST(ping_pong) {
   client_side.spawn(make_ping_behavior, pong);
 }
 
-CAF_TEST(custom_message_type) {
+CAF_TEST_DISABLED(custom_message_type) {
   // server side
   auto port = unbox(publish(server_side.spawn(make_sort_behavior),
                             0, local_host));
@@ -187,7 +187,7 @@ CAF_TEST(custom_message_type) {
   client_side.spawn(make_sort_requester_behavior, sorter);
 }
 
-CAF_TEST(remote_link) {
+CAF_TEST_DISABLED(remote_link) {
   // server side
   auto port = unbox(publish(server_side.spawn(fragile_mirror), 0, local_host));
   // client side
