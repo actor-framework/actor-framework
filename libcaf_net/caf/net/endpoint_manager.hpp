@@ -41,6 +41,13 @@ public:
 
   using super = socket_manager;
 
+  /// Represents either an error or a serialized payload.
+  using maybe_buffer = expected<std::vector<char>>;
+
+  /// A function type for serializing message payloads.
+  using serialize_fun_type = maybe_buffer (*)(actor_system&,
+                                              const type_erased_tuple&);
+
   struct event : intrusive::singly_linked<event> {
     struct resolve_request {
       std::string path;
@@ -84,6 +91,8 @@ public:
 
     /// Serialized representation of of `msg->content()`.
     std::vector<char> payload;
+
+    message(mailbox_element_ptr msg, std::vector<char> payload);
   };
 
   struct message_policy {
@@ -113,23 +122,27 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  event_queue_type& event_queue() {
-    return events_;
+  actor_system& system() {
+    return sys_;
   }
 
-  message_queue_type& message_queue() {
-    return messages_;
-  }
+  std::unique_ptr<message> next_message();
 
   // -- event management -------------------------------------------------------
 
-  /// Resolves a path to a remote actor
+  /// Resolves a path to a remote actor.
   void resolve(std::string path, actor listener);
+
+  /// Enqueues a message to the endpoint.
+  void enqueue(mailbox_element_ptr msg, std::vector<char> payload);
 
   // -- pure virtual member functions ------------------------------------------
 
   /// Initializes the manager before adding it to the multiplexer's event loop.
   virtual error init() = 0;
+
+  /// @returns the protocol-specific function for serializing payloads.
+  virtual serialize_fun_type serialize_fun() const noexcept = 0;
 
 protected:
   /// Points to the hosting actor system.
