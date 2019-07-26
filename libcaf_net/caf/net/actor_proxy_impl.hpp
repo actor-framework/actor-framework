@@ -29,9 +29,6 @@ class actor_proxy_impl : public actor_proxy {
 public:
   using super = actor_proxy;
 
-  using serialize_fun = std::vector<char> (*)(actor_system&,
-                                              const type_erased_tuple&);
-
   actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst);
 
   ~actor_proxy_impl() override;
