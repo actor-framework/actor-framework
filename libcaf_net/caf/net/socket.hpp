@@ -31,7 +31,7 @@ namespace caf {
 namespace net {
 
 /// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket or a ::pipe_socket.
+/// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
 struct socket : abstract_socket<socket> {
   using super = abstract_socket<socket>;
 
