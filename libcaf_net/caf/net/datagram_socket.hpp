@@ -18,55 +18,36 @@
 
 #pragma once
 
-#include <string>
-#include <system_error>
-#include <type_traits>
-
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/net/network_socket.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+/// A datagram-oriented network communication endpoint.
+struct datagram_socket : abstract_socket<datagram_socket> {
+  using super = abstract_socket<datagram_socket>;
 
   using super::super;
+
+  constexpr operator socket() const noexcept {
+    return socket{id};
+  }
+
+  constexpr operator network_socket() const noexcept {
+    return network_socket{id};
+  }
 };
 
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
+/// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
+/// @relates datagram_socket
+error allow_connreset(datagram_socket x, bool new_value);
 
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
-}
-
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
-
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
-
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
-
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
+/// Converts the result from I/O operation on a ::datagram_socket to either an
+/// error code or a integer greater or equal to zero.
+/// @relates datagram_socket
+variant<size_t, sec>
+check_datagram_socket_io_res(std::make_signed<size_t>::type res);
 
 } // namespace net
 } // namespace caf
