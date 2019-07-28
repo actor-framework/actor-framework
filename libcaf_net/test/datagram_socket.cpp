@@ -27,9 +27,5 @@ using namespace caf::net;
 
 CAF_TEST(invalid_socket) {
   datagram_socket x;
-#ifdef CAF_WINDOWS
-  CAF_CHECK_EQUAL(allow_connreset(x, true), sec::network_syscall_failed);
-#else  // CAF_WINDOWS
-  CAF_CHECK_EQUAL(allow_connreset(x, true), none);
-#endif // CAF_WINDOWS
+  CAF_CHECK_NOT_EQUAL(allow_connreset(x, true), none);
 }

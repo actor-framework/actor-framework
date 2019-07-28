@@ -39,7 +39,9 @@ error allow_connreset(datagram_socket x, bool new_value) {
 
 #else // CAF_WINDOWS
 
-error allow_connreset(datagram_socket, bool) {
+error allow_connreset(datagram_socket x, bool) {
+  if (x == invalid_socket)
+    return sec::socket_invalid;
   // nop; SIO_UDP_CONNRESET only exists on Windows
   return none;
 }

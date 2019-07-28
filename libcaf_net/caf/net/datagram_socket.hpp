@@ -24,7 +24,7 @@
 namespace caf {
 namespace net {
 
-/// A unconnected datagram-oriented network communication endpoint.
+/// A datagram-oriented network communication endpoint.
 struct datagram_socket : abstract_socket<datagram_socket> {
   using super = abstract_socket<datagram_socket>;
 
