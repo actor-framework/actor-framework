@@ -676,10 +676,13 @@ template <class T>
 struct is_expected<expected<T>> : std::true_type {};
 
 // Checks whether `T` and `U` are integers of the same size and signedness.
+// clang-format off
 template <class T, class U,
           bool Enable = std::is_integral<T>::value
                         && std::is_integral<U>::value
-                        && !std::is_same<T, bool>::value>
+                        && !std::is_same<T, bool>::value
+                        && !std::is_same<U, bool>::value>
+// clang-format on
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
                                 && std::is_signed<T>::value
