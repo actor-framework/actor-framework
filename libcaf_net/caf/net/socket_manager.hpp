@@ -52,6 +52,10 @@ public:
     return handle_;
   }
 
+  multiplexer_ptr multiplexer() const {
+    return parent_.lock();
+  }
+
   /// Returns registered operations (read, write, or both).
   operation mask() const noexcept;
 

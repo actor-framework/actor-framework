@@ -18,8 +18,13 @@
 
 #pragma once
 
+#include <cstdint>
+
+#include "caf/expected.hpp"
+#include "caf/variant.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 namespace net {
@@ -76,6 +81,14 @@ variant<size_t, sec> write(stream_socket x, span<const byte> buf);
 /// @relates stream_socket
 variant<size_t, sec>
 check_stream_socket_io_res(std::make_signed<size_t>::type res);
+
+/// Creates a new TCP socket to accept connections on a given `port`
+/// optionally limiting connections initiated from `addr`. Setting
+/// `reuse_addr` to true allows rebinding to a port already in use.
+/// @relates stream_socket
+expected<stream_socket> make_accept_socket(uint16_t port,
+                                           const char* addr = nullptr,
+                                           bool reuse_addr = false);
 
 } // namespace net
 } // namespace caf

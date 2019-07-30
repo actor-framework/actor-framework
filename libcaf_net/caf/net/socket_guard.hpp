@@ -18,59 +18,25 @@
 
 #pragma once
 
-#include <string>
-#include <system_error>
-#include <type_traits>
-
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/net/socket.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+/// Closes the guarded socket when destroyed.
+class socket_guard {
+public:
+  explicit socket_guard(net::socket fd);
 
-  using super::super;
+  ~socket_guard();
+
+  net::socket release();
+
+  void close();
+
+private:
+  net::socket fd_;
 };
-
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
-
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
-}
-
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
-
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
-
-/// Returns the string representation of a given socket error code.
-/// @relates socket
-std::string socket_error_as_string(std::errc err);
-
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
-
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
 
 } // namespace net
 } // namespace caf

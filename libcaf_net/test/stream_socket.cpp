@@ -71,4 +71,9 @@ CAF_TEST(connected socket pair) {
   close(x.second);
 }
 
+CAF_TEST(create accept socket) {
+  auto acceptor = unbox(make_accept_socket(0, nullptr, false));
+  close(acceptor);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

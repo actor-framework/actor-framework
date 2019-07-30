@@ -11,11 +11,13 @@ set(LIBCAF_NET_SRCS
   src/datagram_socket.cpp
   src/endpoint_manager.cpp
   src/host.cpp
+  src/interfaces.cpp
   src/multiplexer.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
   src/pollset_updater.cpp
   src/socket.cpp
+  src/socket_guard.cpp
   src/socket_manager.cpp
   src/stream_socket.cpp
   src/scribe.cpp
