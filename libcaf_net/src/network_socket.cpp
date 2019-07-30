@@ -26,7 +26,6 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
-#include "caf/io/network/protocol.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 #include "caf/variant.hpp"
