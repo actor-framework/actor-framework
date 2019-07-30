@@ -143,10 +143,12 @@ CAF_TEST(constructors) {
   variant<string, atom_value> b{atom("foo")};
   variant<float, int, string> c{string{"bar"}};
   variant<int, string, double> d{123};
+  variant<bool, uint8_t> e{uint8_t{252}};
   CAF_CHECK_EQUAL(a, 42);
   CAF_CHECK_EQUAL(b, atom("foo"));
   CAF_CHECK_EQUAL(d, 123);
   CAF_CHECK_NOT_EQUAL(d, std::string{"123"});
+  CAF_CHECK_EQUAL(e, uint8_t{252});
 }
 
 CAF_TEST(n_ary_visit) {
